@@ -8,6 +8,7 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.LdRd
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.IndDecStab
@@ -108,28 +109,13 @@ def cfrMem (m1 : Mem) (q cv mi rp3 : Word) : Mem :=
   erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + 5) mi) (q + 6) rp3) (q + 7) 0)
     (q + 8) 0) (q + 9) 0
 
-/-- The model of `class_fe_r_rec(cv, mi, rp3)`. -/
-def cfrRecW (m : Mem) (cv mi rp3 : Word) : Option (Word × Mem) :=
-  match erAllocW m 10 with
-  | none => none
-  | some (q, m1) =>
-    if 4294967296 ≤ erRd (cfrMem m1 q cv mi rp3) (q + 1) then none
-    else some (q, cfrMem m1 q cv mi rp3)
-
-theorem cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+/-- **`class_fe_r_rec(cv, mi, rp3)`'s model `cfrRecW`** (generated). -/
+l_model cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "class_fe_r_rec" = some classFeRRec) (n : Nat) (s₀ : St) (cv mi rp3 : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r_rec" [cv, mi, rp3]
-    ⦃fun r s' => LocEq s' s₀ ∧ cfrRecW s₀.mem cv mi rp3 = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, classFeRRec]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erecAlloc_specW p ha n, erecPut_specW p hpu n] <;>
-      finish [cfrRecW, cfrMem, erRd]
+    (hp : p.lookup "class_fe_r_rec" = some classFeRRec)
+  fns [hp ↦ cfrRecW]
+  specs [erecAlloc_specW p ha n, erecPut_specW p hpu n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-! ## `class_fe_r_go`: the word model -/
 
@@ -139,71 +125,15 @@ def ferMi (m : Mem) (ro rl M : Word) : Word :=
 def ferRp (m : Mem) (ro rl M : Word) : Word :=
   if M < rl then rdW (m.arr64 IW) (rdW (m.arr64 IW) (ro + M) + 1) else 0
 
-def ferK5 (v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => some ([v, r5.headD 0, r5.tail.headD 0], m5)
-
-def ferK4 (n : Nat) (y : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => ferK5 (r4.headD 0) (consW n m4 y (r4.tail.headD 0) (r4.tail.tail.headD 0))
-
-mutual
-/-- **The model of `class_fe_r_go`.** -/
-def ferW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, cvo, cvl, rcl, ro, rl, vis, M =>
-    if cvl = 0 then some ([vis, 0, 0], m)
-    else if rcl = 0 then some ([vis, 0, 0], m)
-    else ferK1 p n cvo cvl rcl ro rl M (erRd m (rdW (m.arr64 IW) cvo))
-      (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).1 (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).2
-      vis (cfrRecW m (rdW (m.arr64 IW) cvo) (ferMi m ro rl M) (ferRp m ro rl M))
-def ferK1 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q vis : Word) :
-    Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (kq, m1) => ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1)
-def ferK2 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M nm c q : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m2) => ferK3 p n cvo cvl rcl ro rl M (rv.headD 0) (recW m2 3 [nm, c, q])
-def ferK3 (p : Prog) (n : Nat) (cvo cvl rcl ro rl M v : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (re, m3) => ferK4 n (re.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1))
-end
-
 section arms
-variable (p : Prog) (n : Nat) (m m1 m2 m3 m4 m5 : Mem)
-  (cvo cvl rcl ro rl vis M nm c q kq v y pp cgo cgl rco : Word) (r1 r2 r3 r4 r5 : List Word)
+variable (m : Mem) (ro rl M : Word)
 theorem ferMi_hit (h : M < rl) : ferMi m ro rl M = rdW (m.arr64 IW) (rdW (m.arr64 IW) (ro + M) + 2) := by
   simp [ferMi, h]
 theorem ferMi_miss (h : ¬ M < rl) : ferMi m ro rl M = 0 := by simp [ferMi, h]
 theorem ferRp_hit (h : M < rl) : ferRp m ro rl M = rdW (m.arr64 IW) (rdW (m.arr64 IW) (ro + M) + 1) := by
   simp [ferRp, h]
 theorem ferRp_miss (h : ¬ M < rl) : ferRp m ro rl M = 0 := by simp [ferRp, h]
-theorem ferW_nil1 (h : cvl = 0) : ferW p (n + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) := by
-  simp [ferW, h]
-theorem ferW_nil2 (h1 : ¬ cvl = 0) (h : rcl = 0) :
-    ferW p (n + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) := by
-  simp only [ferW]; rw [ite_eq_right h1, ite_eq_left h]
-theorem ferW_cons (h1 : ¬ cvl = 0) (h2 : ¬ rcl = 0) :
-    ferW p (n + 1) m cvo cvl rcl ro rl vis M =
-      ferK1 p n cvo cvl rcl ro rl M (erRd m (rdW (m.arr64 IW) cvo))
-        (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).1 (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).2
-        vis (cfrRecW m (rdW (m.arr64 IW) cvo) (ferMi m ro rl M) (ferRp m ro rl M)) := by
-  simp only [ferW]; rw [ite_eq_right h1, ite_eq_right h2]
-theorem ferK1_some : ferK1 p n cvo cvl rcl ro rl M nm c q vis (some (kq, m1)) =
-    ferK2 p n cvo cvl rcl ro rl M nm c q (callW p n "env_push" [vis, kq] m1) := by rw [ferK1]
-theorem ferK2_some : ferK2 p n cvo cvl rcl ro rl M nm c q (some (r2, m2)) =
-    ferK3 p n cvo cvl rcl ro rl M (r2.headD 0) (recW m2 3 [nm, c, q]) := by rw [ferK2]
-theorem ferK3_some : ferK3 p n cvo cvl rcl ro rl M v (some (r3, m3)) =
-    ferK4 n (r3.headD 0) (ferW p n m3 (cvo + 1) (cvl - 1) (rcl - 1) ro rl v (M + 1)) := by rw [ferK3]
-theorem ferK4_some : ferK4 n y (some (r4, m4)) =
-    ferK5 (r4.headD 0) (consW n m4 y (r4.tail.headD 0) (r4.tail.tail.headD 0)) := rfl
-theorem ferK5_some : ferK5 v (some (r5, m5)) = some ([v, r5.headD 0, r5.tail.headD 0], m5) := rfl
 end arms
-attribute [ind_grind] ferMi_hit ferMi_miss ferRp_hit ferRp_miss ferW_nil1 ferW_nil2 ferW_cons
-  ferK1_some ferK2_some ferK3_some ferK4_some ferK5_some
 
 /-- The lookups of `class_fe_r`. -/
 structure CfrProg (p : Prog) : Prop where
@@ -217,23 +147,12 @@ structure CfrProg (p : Prog) : Prop where
   go : p.lookup "class_fe_r_go" = some classFeRGo
   top : p.lookup "class_fe_r" = some classFeRL
 
-set_option maxHeartbeats 1000000 in
-theorem classFeRGo_spec (p : Prog) (h : CfrProg p) (n : Nat) :
-    ∀ (s₀ : St) (cvo cvl rcl ro rl vis M : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_fe_r_go" [cvo, cvl, rcl, ro, rl, vis, M]
-    ⦃fun r s' => LocEq s' s₀ ∧ ferW p n s₀.mem cvo cvl rcl ro rl vis M = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ cvo cvl rcl ro rl vis M
-    rw [invoke_eq _ h.go]; simp only [callFn, classFeRGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cvo cvl rcl ro rl vis M
-    rw [invoke_eq _ h.go]
-    simp only [callFn, classFeRGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, envRowGet_spec p h.rg n,
-        cfrRec_specW p h.rp.alloc h.rp.put h.frec n, callW_spec p n "env_push", rec3_specW p h.ia n h.rec3,
-        slCons_specW p h.ia h.copy h.cons n, ih] <;> finish (gen := 20) [rdW_eq, erRd]
+/-- **`class_fe_r_go`'s model `ferW`** (generated). -/
+l_model classFeRGo_spec (p : Prog) (h : CfrProg p)
+  fns [h.go ↦ ferW list]
+  specs [envRowGet_spec p h.rg n, cfrRec_specW p h.rp.alloc h.rp.put h.frec n, callW_spec p n "env_push",
+    rec3_specW p h.ia n h.rec3, slCons_specW p h.ia h.copy h.cons n]
+  grind [arena_grind] finish [rdW_eq]
 
 l_model classFeR_spec (p : Prog) (h : CfrProg p)
   fns [h.top ↦ ferAW]
@@ -264,6 +183,17 @@ theorem cfrMem_eq {m1 : Mem} {q cq mi rp3 : Word}
     | exact f0 _ (by simp) | exact f1 _ (by simp) | exact f2 _ (by simp) | exact f3 _ (by simp))
     only [erRd_erecPutMem_ne]
 
+/-- A run of `class_fe_r_rec`'s model: the allocation, then the ten writes (`cfrMem`). -/
+theorem cfrRecW_some {m m' : Mem} {cq mi rp3 q : Word} (h : cfrRecW m cq mi rp3 = some (q, m')) :
+    ∃ q1 m1, erAllocW m 10 = some (q1, m1) ∧ q1 = q ∧ m' = cfrMem m1 q1 cq mi rp3 := by
+  rw [cfrRecW.arm1] at h
+  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
+  · rw [h1, cfrRecW.k_erec_alloc.none] at h; cases h
+  rw [h1, cfrRecW.k_erec_alloc.eq_2] at h
+  iterate 11 (obtain ⟨-, h⟩ := of_ite_none h)
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨_, _, rfl, rfl, rfl⟩
+
 /-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record (K flag
 `false`) of the constant at `cq`. -/
 theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
@@ -271,14 +201,7 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp3.toNat false []) := by
-  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
-  · simp [cfrRecW, h1] at h
-  have e : cfrRecW m cq mi rp3 = if 4294967296 ≤ erRd (cfrMem m1 q1 cq mi rp3) (q1 + 1)
-      then none else some (q1, cfrMem m1 q1 cq mi rp3) := by simp [cfrRecW, h1]
-  rw [e] at h
-  split at h
-  · cases h
-  obtain ⟨rfl, rfl⟩ : q1 = q ∧ cfrMem m1 q1 cq mi rp3 = m' := by simpa using h
+  obtain ⟨q1, m1, h1, rfl, rfl⟩ := cfrRecW_some h
   have hcv0 := hcv
   simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
@@ -480,14 +403,7 @@ theorem ownC_erecPutMem (m : Mem) (a v : Word) : ownC (erecPutMem m a v) = ownC 
 
 theorem ownC_cfrRecW {m m' : Mem} {cq mi rp3 q : Word} (h : cfrRecW m cq mi rp3 = some (q, m')) :
     ownC m' = ownC m := by
-  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
-  · simp [cfrRecW, h1] at h
-  have e : cfrRecW m cq mi rp3 = if 4294967296 ≤ erRd (cfrMem m1 q1 cq mi rp3) (q1 + 1)
-      then none else some (q1, cfrMem m1 q1 cq mi rp3) := by simp [cfrRecW, h1]
-  rw [e] at h
-  split at h
-  · cases h
-  obtain ⟨rfl, rfl⟩ : q1 = q ∧ cfrMem m1 q1 cq mi rp3 = m' := by simpa using h
+  obtain ⟨q1, m1, h1, rfl, rfl⟩ := cfrRecW_some h
   have hm1 : m1 = erAllocMem m 10 := by
     unfold erAllocW at h1; split at h1 <;> (repeat' split at h1) <;> simp_all
   simp only [cfrMem, ownC_erecPutMem, hm1]
@@ -570,8 +486,8 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
       · simp [List.eq_nil_of_length_eq_zero (show rcs.length = 0 by rw [hrcs, hcl]; rfl)]
     rw [show ferW p (k + 1) m cvo cvl rcl ro rl vis M = some ([vis, 0, 0], m) by
       by_cases hvl : cvl = 0
-      · exact ferW_nil1 p k m cvo cvl rcl ro rl vis M hvl
-      · exact ferW_nil2 p k m cvo cvl rcl ro rl vis M hvl (hz.resolve_left hvl)] at h
+      · exact ferW.arm1 p k m cvo cvl rcl ro rl vis M hvl
+      · exact ferW.arm2 p k m cvo cvl rcl ro rl vis M hvl (hz.resolve_left hvl)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h); rw [hz']
     exact ⟨by simpa [ConRon.Arena.classFeR.go.eq_1] using hS, IWGrow.refl m,
       by simpa [ConRon.Arena.classFeR.go.eq_1] using SPL.nil (dec := decPrev) (m := m) 0 (by omega),
@@ -587,24 +503,30 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   obtain ⟨hcvp, hcvx⟩ := rec3CVX hcvS
   obtain ⟨w, hw, hwH, hwnm⟩ := decCV_name (show decCV (erA m) p0 = some cv from hcvp)
   have ew : erRd m (UInt64.ofNat p0) = w := erRd_of_erA (by rw [t0]; exact hw)
-  rw [ferW_cons (h1 := hvl) (h2 := hcl)] at h
-  rw [e0, ew] at h
+  have hj : ferW p (k + 1) m cvo cvl rcl ro rl vis M =
+      ferW.j1 p k cvo cvl rcl ro rl vis M (rdW (m.arr64 IW) cvo) (erRd m (rdW (m.arr64 IW) cvo))
+        (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).1 (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).2
+        (ferMi m ro rl M) (ferRp m ro rl M) m := by
+    by_cases hM : M < rl
+    · rw [ferW.arm3 (hc1 := hvl) (hc2 := hcl) (hc3 := hM), ferMi_hit (h := hM), ferRp_hit (h := hM)]; rfl
+    · rw [ferW.arm4 (hc1 := hvl) (hc2 := hcl) (hc3 := hM), ferMi_miss (h := hM), ferRp_miss (h := hM)]; rfl
+  rw [hj, ferW.j1.arm1, e0, ew] at h
   have hprev := rec3PrevD hS.check.env hwH
   obtain ⟨hmi, hrp⟩ := rec3FerMiRp (M := M) hrecs hsz
   -- the record
-  obtain ⟨⟨kq, m1⟩, h1, h⟩ := of_K h (by simp only [ferK1])
-  rw [ferK1_some] at h
+  obtain ⟨⟨kq, m1⟩, h1, h⟩ := of_K h (ferW.k_class_fe_r_rec.none ..)
+  rw [ferW.k_class_fe_r_rec.arm1] at h
   obtain ⟨hS1, hg1, hci⟩ := cfrRec_stage h1 hS (by rw [t0]; exact rec2DecCV_erecP hcvp hcvx)
   rw [hmi, hrp] at hci
   -- the push
-  obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (by simp only [ferK2])
-  rw [ferK2_some] at h
+  obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (ferW.k_env_push.none ..)
+  rw [ferW.k_env_push.arm1] at h
   obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.rs hp.rp.push h2 hS1 hci
   obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.rs hp.rp.push h2 hS1.check.env hci
   have hO1 : ownC m1 = ownC m := ownC_cfrRecW h1
   -- the displaced row
-  obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (by simp only [ferK3])
-  rw [ferK3_some] at h
+  obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (ferW.k_rec3.none ..)
+  rw [ferW.k_rec3.arm1] at h
   obtain ⟨hS3, hg3, hre, hget3, htop3⟩ := recW_stage h3 hS2 rfl
   have hO3 : ownC m3 = ownC m2 := ownC_iw (recW_post h3 hS2.iw.ctl hS2.iw.iwSize rfl).2.2.2.1
   -- the stack grows by the push
@@ -652,14 +574,14 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   have hcvl1 := rec2ToNat_pred hvl
   have hrcl1 := rec2ToNat_pred hcl
   have hM1 : (M + 1).toNat = M.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
-  rw [ferK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (ferW.k_class_fe_r_go.none ..)
+  rw [ferW.k_class_fe_r_go.arm1] at h
   obtain ⟨hS4, hg4, hsp4, cs', hcs4, hPop4⟩ := ih m3 m4 a (rv.headD 0) _ (cvo + 1) (cvl - 1) (rcl - 1) (M + 1)
     cvs' rcs' r4 _ h4 hS3
     (hrecs.grow (OMono.decPL (fun q => decRS_mono q) _ _) hg03)
     (by rw [hcvo1, hcvl1, hjv]; exact hcvsT.grow hg03) (by simp at hrcs; omega) (by omega) hPop3
-  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl
-  rw [ferK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h (ferW.k_sl_cons.none ..)
+  rw [ferW.k_sl_cons.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS5, hg5, hsp5⟩ := SPL.cons h5 hS4 hsp4 (hentS.grow hg4)
   obtain ⟨-, -, hcs5⟩ := SPL.cons h5 hS4 hcs4 (hentC.grow hg4)
