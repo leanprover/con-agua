@@ -48,7 +48,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
     (hoo : oo.toNat + cts.length < 2 ^ 63)
     (hptr : ∀ p (hp : p < ordered.length), ∃ k, ∃ _ : k < cts.length,
       wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k])
-    (h : installW n b.data m to tn oo cn ro rn np = some m') : DGrow m m' := by
+    (h : installW b.data n m to tn oo cn ro rn np = some m') : DGrow m m' := by
   obtain ⟨hTn, hTy, hCn, hCt, hRn, hRc⟩ := hF
   have hL := StateDR.lkR hD
   have hps := hL.psize
@@ -59,8 +59,9 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   cases n with
   | zero => simp [installW] at h
   | succ n =>
-  simp only [installW] at h
-  split at h; cases h; rename_i hbig
+  by_cases hbig : 4294967296 ≤ tn ∨ 4294967296 ≤ cn ∨ 4294967296 ≤ rn
+  · rw [installW.abort1 (hc1 := hbig)] at h; cases h
+  rw [installW.arm1 (hc1 := hbig)] at h
   have ht32 : tn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (.inl (UInt64.le_iff_toNat_le.mpr (by simp; omega)))
   have hc32 : cn.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
@@ -69,13 +70,17 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
     hbig (.inr (.inr (UInt64.le_iff_toNat_le.mpr (by simp; omega))))
   have hN : (tn + cn + rn).toNat = tys.length + cts.length + rcs.length := by
     rw [UInt64.toNat_add, UInt64.toNat_add]; omega
-  rcases h1 : allocW m DLP (tn + cn + rn) with _ | ⟨bo, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
+  rcases h1 : allocW m DLP (tn + cn + rn) with _ | ⟨bo, m₁⟩ <;>
+    simp only [h1, installW.k_dind_alloc.none, installW.k_dind_alloc.arm1, reduceCtorEq] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   rw [hN] at P3 P4
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
-  rcases h2 : instTypesW n b.data m₁ bo to tn 0 with _ | m₂ <;> simp only [h2, mK, reduceCtorEq] at h
-  rcases h3 : instCtorsW n b.data m₂ (bo + tn) oo cn 0 with _ | m₃ <;> simp only [h3, reduceCtorEq] at h
-  rcases h4 : instRecsW n b.data m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;> simp only [h4, reduceCtorEq] at h
+  rcases h2 : instTypesW b.data n m₁ bo to tn 0 with _ | m₂ <;>
+    simp only [h2, installW.k_inst_types.none, installW.k_inst_types.arm1, reduceCtorEq] at h
+  rcases h3 : instCtorsW b.data n m₂ (bo + tn) oo cn 0 with _ | m₃ <;>
+    simp only [h3, installW.k_inst_ctors.none, installW.k_inst_ctors.arm1, reduceCtorEq] at h
+  rcases h4 : instRecsW b.data n m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;>
+    simp only [h4, installW.k_inst_recs.none, installW.k_inst_recs.arm1, installW.k_decl_push_id, reduceCtorEq] at h
   have hifr1 : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types
@@ -119,7 +124,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   have hbtc : (bo + tn + cn).toNat = bo.toNat + tys.length + cts.length := by
     rw [widx2 _ _ (by rw [hbt]; omega), hbt, hCn]
   rw [instRecsW_eq] at h4
-  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m p => recRW n b.data m p)
+  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m p => recRW b.data n m p)
     (fun _ j => ro + 11 * j) m₃ (bo + tn + cn) rn hRn
     (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
@@ -281,8 +286,8 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   rw [liftE_some, applyIndE.k_install_ind_d.arm1]
   have hm2 : m₂.arr8 IN = b.data := by rw [hK2.arr8, hK1.arr8]; exact hm
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (install_spec p hAL hII b.data hsize n ⟨m₂, Locals.init []⟩ hm2 to tn (q.headD 0) cn ro rn
-      (q.tail.headD 0)) h3
+    (install_spec p hAL hII b.data hsize n ⟨m₂, Locals.init []⟩ to tn (q.headD 0) cn ro rn
+      (q.tail.headD 0) hm2) h3
   generalize q.headD 0 = oo at hW3 V1 V5 V6 V7
   generalize q.tail.headD 0 = np at hW3 V1 V8
   have hfr2 := V2.frame

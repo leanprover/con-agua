@@ -159,16 +159,17 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
   | 0, _, _, _, _, _, _, _, _, h => by simp [rulesGoW] at h
   | n + 1, m, m', j, hL, hRF, hlo, hlo1, hj, h => by
     have hps := hL.psize
-    simp only [rulesGoW] at h
-    split at h
-    · rename_i hlj
+    by_cases hlj : l ≤ j
+    · rw [rulesGoW.arm1 (hc1 := hlj)] at h
       cases h
       have : rules.length ≤ j.toNat := by rw [← hl]; exact UInt64.le_iff_toNat_le.mp hlj
       exact ⟨MemFrame.refl _ _ _, fun _ _ => rfl, fun k hk hk' => by omega⟩
-    rename_i hlj
+    rw [rulesGoW.arm2 (hc1 := hlj)] at h
     have hjl : j.toNat < rules.length := by
       rw [← hl]; exact Classical.byContradiction fun h' => hlj (UInt64.le_iff_toNat_le.mpr (by omega))
-    rcases h1 : ruleW m (lo + 11 * j) (o + 3 * j) with _ | m₁ <;> simp only [h1, mK, reduceCtorEq] at h
+    rcases h1 : ruleW m (lo + 11 * j) (o + 3 * j) with _ | m₁ <;>
+      simp only [h1, rulesGoW.k_parse_rule_d.none, rulesGoW.k_parse_rule_d.arm1, rulesGoW.k_ind_rules_go_id,
+        reduceCtorEq] at h
     have hw1 : (lo + 11 * j).toNat = lo.toNat + 11 * j.toNat := w_addmul lo j 11 (by decide) (by omega)
     have hw3 : (o + 3 * j).toNat = o.toNat + 3 * j.toNat := w_addmul o j 3 (by decide) (by omega)
     obtain ⟨R1, R2, R3, R4⟩ := ruleW_twin a hL (by rw [hw3]; exact hRF _ hjl) (by omega)
@@ -193,7 +194,7 @@ theorem rulesGoW_twin {st : StateD} (a : AState) {lo o l : Word} {rules : List R
 theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {o l lo ln : Word} {rules : List RuleRec} (hl : l.toNat = rules.length)
     (hRF : ∀ k (hk : k < rules.length), RuleF m (o.toNat + 3 * k) rules[k])
-    (ho : o.toNat + 3 * rules.length < 2 ^ 63) (h : rulesW n m o l = some ((lo, ln), m')) :
+    (ho : o.toNat + 3 * rules.length < 2 ^ 63) (h : rulesW n m o l = some (lo, ln, m')) :
     (rules.mapM (ConRon.Arena.Frontend.parseRuleD st)).run a = .ok (rules.map (fun ru => resOf (ConRon.Arena.Frontend.parseRuleD st ru) a), a) ∧
       PExt m m' ∧ lo.toNat = topN m DLP + 1 ∧ ln = l ∧ topN m' DLP = topN m DLP + 11 * rules.length ∧
       LkR m' st ∧
@@ -204,14 +205,17 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
   cases n with
   | zero => simp [rulesW] at h
   | succ n =>
-  simp only [rulesW] at h
-  split at h; cases h; rename_i hbig
+  by_cases hbig : 4294967296 ≤ l
+  · rw [rulesW.abort1 (hc1 := hbig)] at h; cases h
+  rw [rulesW.arm1 (hc1 := hbig)] at h
   have hl32 : l.toNat < 2 ^ 32 := Classical.byContradiction fun h' =>
     hbig (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-  rcases h1 : allocW m DLP (11 * l) with _ | ⟨lo1, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
-  rcases h2 : rulesGoW n m₁ lo1 o l 0 with _ | m₂ <;> simp only [h2, sliceK, reduceCtorEq] at h
+  rcases h1 : allocW m DLP (11 * l) with _ | ⟨lo1, m₁⟩ <;>
+    simp only [h1, rulesW.k_dind_alloc.none, rulesW.k_dind_alloc.arm1, reduceCtorEq] at h
+  rcases h2 : rulesGoW n m₁ lo1 o l 0 with _ | m₂ <;>
+    simp only [h2, rulesW.k_ind_rules_go.none, rulesW.k_ind_rules_go.arm1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+  obtain ⟨rfl, rfl, rfl⟩ := h
   have h11 : (11 * l).toNat = 11 * rules.length := by
     rw [UInt64.toNat_mul]; simp only [UInt64.reduceToNat]; rw [hl] at hl32 ⊢; omega
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
@@ -270,7 +274,7 @@ theorem recTailM_frame (m : Mem) (q r lo ln : Word) : MemFrame [DLP] [] m (recTa
 /-- **`ind_rec` against the twin's recursor constant.** -/
 theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {r q : Word} {rc : IndRecRec} (hF : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63)
-    (hIFL : topN m IFL < 2 ^ 62) (h : recRW n b.data m r = some (q, m')) :
+    (hIFL : topN m IFL < 2 ^ 62) (h : recRW b.data n m r = some (q, m')) :
     (recT st rc).run a = .ok (resOf (recT st rc) a, a) ∧ PExt m m' ∧ q.toNat = topN m DLP + 1 ∧
       LkR m' st ∧ RecAt m' q.toNat (resOf (recT st rc) a) := by
   have hps := hD.psize
@@ -280,10 +284,11 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   cases n with
   | zero => simp [recRW] at h
   | succ n =>
-  simp only [recRW] at h
+  rw [recRW.arm1] at h
   rcases h1 : allocW m DLP 10 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
-  · cases h
-  simp only [allocK] at h
+  · rw [recRW.k_dind_alloc.none] at h; cases h
+  rw [recRW.k_dind_alloc.arm1] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hps hpt h1
   simp only [show (10 : Word).toNat = 10 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
@@ -299,7 +304,8 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   have r10 : rdW (m₁.arr64 IFR) (r + 10) = wd m IFR (r.toNat + 10) := by
     rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r9, r10] at h
-  rcases h2 : rulesW n (m₁.set64 DLP q1 5) (wd m IFR (r.toNat + 9)) (wd m IFR (r.toNat + 10)) with _ | ⟨⟨lo, ln⟩, m₃⟩ <;> simp only [h2, pmK, reduceCtorEq] at h
+  rcases h2 : rulesW n (m₁.set64 DLP q1 5) (wd m IFR (r.toNat + 9)) (wd m IFR (r.toNat + 10)) with _ | ⟨lo, ln, m₃⟩ <;>
+    simp only [h2, recRW.k_ind_rules.none, recRW.k_ind_rules.arm1, reduceCtorEq] at h
   have hifl1 : (m₁.set64 DLP q1 5).arr64 IFL = m.arr64 IFL := Pq.other IFL (by decide) (by decide)
   obtain ⟨Q1, Q2, Q3, Q4, Q5, Q6, Q7⟩ := rulesW_twin a hL1 fL (fun k hk => (fR k hk).congr hifl1)
     (by omega) h2
@@ -312,7 +318,10 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   have s2 : rdW (m₃.arr64 IFR) (r + 2) = wd m IFR (r.toNat + 2) := by
     rw [hifr3, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [s0, s1, s2] at h
-  rcases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with _ | m₄ <;> simp only [h3, mK, reduceCtorEq] at h
+  rcases h3 : cvW b.data m₃ (q1 + 1) (wd m IFR r.toNat) (wd m IFR (r.toNat + 1)) (wd m IFR (r.toNat + 2)) with _ | m₄ <;>
+    simp only [h3, recRW.k_ind_cv.none, recRW.k_ind_cv.arm1, reduceCtorEq] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
+  replace h : some (q1, recTailM m₄ q1 r lo (wd m IFR (r.toNat + 10))) = some (q, m') := h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hq1 : (q1 + 1).toNat = q1.toNat + 1 := widx2 _ _ (by simp; omega)
   have ht3 : topN m₃ DLP = topN m DLP + 10 + 11 * rc.rules.length := by rw [Q5, ht1]

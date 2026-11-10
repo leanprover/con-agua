@@ -183,19 +183,21 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       LkR m' st ∧ RecAt m' q.toNat (resOf (tyT st ty) a) := by
   have hps := hD.psize
   have hpt := hD.ptop
-  unfold typeW at h
+  rw [typeW.arm1] at h
   rcases h1 : allocW m DLP 20 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
-  · cases h
-  simp only [allocK] at h
+  · rw [typeW.k_dind_alloc.none] at h; cases h
+  rw [typeW.k_dind_alloc.arm1] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
   simp only [show (20 : Word).toNat = 20 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
   cases h2 : cvW b.data (m₁.set64 DLP q1 3) (q1 + 1) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
       (rdW (m₁.arr64 IFR) (t + 2)) with
-  | none => rw [h2] at h; cases h
+  | none => rw [h2, typeW.k_ind_cv.none] at h; cases h
   | some m₂ =>
-  rw [h2] at h; simp only [mK, Option.some.injEq, Prod.mk.injEq] at h
+  rw [h2, typeW.k_ind_cv.arm1, capsW_eq, typeW.k_ind_caps.arm1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 3) := P1.set q1 3 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 3).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP
@@ -250,19 +252,21 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
       LkR m' st ∧ RecAt m' q.toNat (resOf (ctT st ct) a) := by
   have hps := hD.psize
   have hpt := hD.ptop
-  unfold ctorRW at h
+  rw [ctorRW.arm1] at h
   rcases h1 : allocW m DLP 7 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
-  · cases h
-  simp only [allocK] at h
+  · rw [ctorRW.k_dind_alloc.none] at h; cases h
+  rw [ctorRW.k_dind_alloc.arm1] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
   simp only [show (7 : Word).toNat = 7 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
   cases h2 : cvW b.data (m₁.set64 DLP q1 4) (q1 + 1) (rdW (m₁.arr64 IFR) c) (rdW (m₁.arr64 IFR) (c + 1))
       (rdW (m₁.arr64 IFR) (c + 2)) with
-  | none => rw [h2] at h; cases h
+  | none => rw [h2, ctorRW.k_ind_cv.none] at h; cases h
   | some m₂ =>
-  rw [h2] at h; simp only [mK, Option.some.injEq, Prod.mk.injEq] at h
+  rw [h2, ctorRW.k_ind_cv.arm1] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide), Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 4) := P1.set q1 4 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 4).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP
