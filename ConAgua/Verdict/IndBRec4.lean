@@ -60,62 +60,13 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `class_rule_check_domains`: `rbs.allM` (resolving at `feR`, naming no pushed recursor) -/
 
-mutual
-/-- **The model of `class_rule_check_domains`.** -/
-def crdW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, v, po, pl, o, l =>
-    if l = 0 then some ([1], m)
-    else crdK1 n v po pl o l (crfF m [v, rdW (m.arr64 IW) o])
-/-- After `consts_resolve_ffast`. -/
-def crdK1 (n : Nat) (v po pl o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rb, m2) =>
-    if rb.headD 0 = 0 then some ([0], m2)
-    else crdK2 n v po pl o l (maConstWk n m2 po pl (rdW (m2.arr64 IW) o))
-/-- After `mentions_any_const`. -/
-def crdK2 (n : Nat) (v po pl o l : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (b, m3) => if b ≠ 0 then some ([0], m3) else resK' (crdW n m3 v po pl (o + 1) (l - 1))
-end
-
-section arms
-variable (n : Nat) (m m2 : Mem) (v po pl o l b : Word) (rb : List Word)
-theorem crdW_nil (hl : l = 0) : crdW (n + 1) m v po pl o l = some ([1], m) := by simp [crdW, hl]
-theorem crdW_cons (hl : l ≠ 0) :
-    crdW (n + 1) m v po pl o l = crdK1 n v po pl o l (crfF m [v, rdW (m.arr64 IW) o]) := by
-  simp [crdW, hl]
-theorem crdK1_no (h : rb.headD 0 = 0) : crdK1 n v po pl o l (some (rb, m2)) = some ([0], m2) := by
-  rw [crdK1, ite_eq_left h]
-theorem crdK1_yes (h : rb.headD 0 ≠ 0) :
-    crdK1 n v po pl o l (some (rb, m2)) = crdK2 n v po pl o l (maConstWk n m2 po pl (rdW (m2.arr64 IW) o)) := by
-  rw [crdK1, ite_eq_right h]
-theorem crdK2_hit (h : b ≠ 0) : crdK2 n v po pl o l (some (b, m2)) = some ([0], m2) := by
-  simp only [crdK2]; exact ite_eq_left h
-theorem crdK2_miss (h : ¬ b ≠ 0) :
-    crdK2 n v po pl o l (some (b, m2)) = resK' (crdW n m2 v po pl (o + 1) (l - 1)) := by
-  simp only [crdK2]; exact ite_eq_right h
-end arms
-attribute [ind_grind] crdW_nil crdW_cons crdK1_no crdK1_yes crdK2_hit crdK2_miss
-
-theorem crdW_spec (p : Prog) (hp : p.lookup "class_rule_check_domains" = some classRuleCheckDomains)
-    (hcr : CrfF p) (hM : MaProg p) (n : Nat) :
-    ∀ (s₀ : St) (v po pl o l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rule_check_domains" [v, po, pl, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ crdW n s₀.mem v po pl o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ v po pl o l; rw [invoke_eq _ hp]; simp only [callFn, classRuleCheckDomains]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ v po pl o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, classRuleCheckDomains]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        crfF_spec p hcr n,
-        mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n, ih] <;>
-      finish (gen := 20)
+/-- **`class_rule_check_domains` is its model `crdW`** (generated). -/
+l_model crdW_spec (p : Prog) (hp : p.lookup "class_rule_check_domains" = some classRuleCheckDomains)
+    (hcr : CrfF p) (hM : MaProg p)
+  fns [hp ↦ crdW list]
+  specs [crfF_spec p hcr n,
+    mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n]
+  grind [arena_grind, ind_grind] finish [rdW_eq]
 
 /-- **The twin's domain test** of `classRuleCheck`: resolving at `fe`, naming none of `pushed`. -/
 def crdT (fe : IFEnv) (pushed : List NIdx) (b : EIdx) : AM Bool := do
@@ -159,7 +110,7 @@ theorem crdW_ok (fe : IFEnv) (v po pl : Word) (pushed : List NIdx) {env : ConLec
     obtain ⟨mp, hM⟩ := hma
     by_cases hl : l = 0
     · subst hl
-      rw [crdW_nil n m v po pl o 0 rfl] at h
+      rw [crdW.arm1 n m v po pl o 0 rfl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : xs = [] := by simpa [decHL, hslice?] using hd.symm
       subst this
@@ -177,19 +128,19 @@ theorem crdW_ok (fe : IFEnv) (v po pl : Word) (pushed : List NIdx) {env : ConLec
     | some rest =>
     rw [he, hr] at hxs
     obtain rfl := (Option.some.inj hxs).symm
-    rw [crdW_cons n m v po pl o l hl, hw] at h
-    obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [crdK1]) (fun _ _ => rfl)
+    rw [crdW.arm2 n m v po pl o l hl, hw] at h
+    obtain ⟨rb, m2, h2, h⟩ := kSome_inv h (by simp [crdW.k_consts_resolve_ffast]) (fun _ _ => rfl)
     obtain ⟨c, a2, hrun2, ⟨hS2, hg2, hceq, -⟩, hA2⟩ := crfF_ok v fe w hw32 m m2 a rb h2 ⟨hS, hA⟩
     obtain ⟨p1, -⟩ := ConRon.Bridge.Inductives.constsResolveFFast_pstep hok he hrun2
     have hM2 : maMR m2 mp := maMR_mfr (crfF_mfr h2) hM
     by_cases hz : rb.headD 0 = 0
-    · rw [crdK1_no n m2 v po pl o l rb hz] at h
+    · rw [crdW.k_consts_resolve_ffast.arm1 n v po pl o l rb m2 hz] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hc : c = false := by rw [← hceq, hz]; rfl
       subst hc
       refine ⟨false, a2, ?_, ⟨hS2, hg2, by simp [decW0B]⟩, hA2, ⟨mp, hM2⟩, p1⟩
       rw [allM_cons_run (crdT_run_false hrun2)]; rfl
-    rw [crdK1_yes n m2 v po pl o l rb hz] at h
+    rw [crdW.k_consts_resolve_ffast.arm2 n v po pl o l rb m2 hz] at h
     have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
     subst hc
     have hto : o.toNat < iwTop m := by omega
@@ -197,9 +148,9 @@ theorem crdW_ok (fe : IFEnv) (v po pl : Word) (pushed : List NIdx) {env : ConLec
       rw [← hw]; simp only [rdW]; rw [hg2.iwGet _ hto]
     rw [hw2] at h
     cases n with
-    | zero => simp [maConstWk, crdK2] at h
+    | zero => simp [maConstWk, crdW.k_mentions_any_const] at h
     | succ n' =>
-    obtain ⟨b3, m3, h3, h⟩ := kSome_inv h (by simp [crdK2]) (fun _ _ => rfl)
+    obtain ⟨b3, m3, h3, h⟩ := kSome_inv h (by simp [crdW.k_mentions_any_const]) (fun _ _ => rfl)
     have hT : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt
     have hpu2 : decHL m2 po.toNat pl.toNat = some pushed := by rw [decHL_grow hg2 hpb]; exact hpu
     obtain ⟨ws, hws, hnm, hwlt⟩ := slR_of_decHL m2 _ _ _ hpu2 (by have := hg2.iw; omega)
@@ -211,17 +162,17 @@ theorem crdW_ok (fe : IFEnv) (v po pl : Word) (pushed : List NIdx) {env : ConLec
       rw [hnm]; exact crdT_run_true hrun2 hrunM
     have hg23 := hg2.trans hg3
     by_cases hmz : b3 ≠ 0
-    · rw [crdK2_hit (n' + 1) m3 v po pl o l b3 hmz] at h
+    · rw [crdW.k_mentions_any_const.arm1 (n' + 1) v po pl o l b3 m3 hmz] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : mb = true := by rw [← hbm]; simpa using hmz
       subst this
       refine ⟨false, a2, ?_, ⟨hS3, hg23, by simp [decW0B]⟩, hA3, ⟨∅, hM3⟩, p1⟩
       rw [allM_cons_run hrunD]; rfl
-    rw [crdK2_miss (n' + 1) m3 v po pl o l b3 hmz] at h
+    rw [crdW.k_mentions_any_const.arm2 (n' + 1) v po pl o l b3 m3 (Classical.not_not.mp hmz)] at h
     have : mb = false := by rw [← hbm]; simpa using hmz
     subst this
     obtain ⟨r4, m4, h4, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-    rw [resK'_some] at h
+    rw [crdW.k_class_rule_check_domains.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨b4, a4, hrun4, ⟨hS4, hg4, hd4, hd41⟩, hA4, hM4, p4⟩ :=
       ih m3 m4 a2 (o + 1) (l - 1) xs' rest r4 h4 hS3
