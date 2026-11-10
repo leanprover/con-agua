@@ -199,25 +199,17 @@ theorem taGo_spec (n : Nat) : TaGoSpec p n ∧ TaNodeSpec p n := by
 
 end spec
 
-/-- **The model of `target_abs`**: clear the memo, the walk at `⟪CWF⟫`. -/
-def taAW (n : Nat) (m : Mem) (no nl lvls ho hl e : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) taSch.cs + 2 = 0 then none
-  else taGoW n (mclearG taSch m) no nl lvls ho hl CWF e
+/-- `target_abs_go`'s half of `taGo_spec`, as a triple (`target_abs`' callee spec). -/
+theorem taGo_specG (p : Prog) (L : TaLook p) (n : Nat) (s₀ : St) (no nl lvls ho hl f h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_abs_go" [no, nl, lvls, ho, hl, f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ taGoW n s₀.mem no nl lvls ho hl f h = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (taGo_spec p L n).1 s₀ no nl lvls ho hl f h
 
-theorem taAW_eq (n : Nat) (m : Mem) (no nl lvls ho hl e : Word) (h0 : rdW (m.arr64 CTL) taSch.cs + 2 ≠ 0) :
-    taAW n m no nl lvls ho hl e = taGoW n (mclearG taSch m) no nl lvls ho hl CWF e := by simp [taAW, h0]
-attribute [ind_grind] taAW_eq
-
-theorem targetAbs_spec (p : Prog) (L : TaLook p) (n : Nat) (s₀ : St) (no nl lvls ho hl e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_abs" [no, nl, lvls, ho, hl, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ taAW n s₀.mem no nl lvls ho hl e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (taGo_spec p L n).1
-  unfold TaGoSpec at ih
-  rw [invoke_eq _ L.top]
-  simp only [callFn, targetAbs]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec taSch p _ L.tc n, ih] <;>
-    finish
+/-- **`target_abs` is its model `taAW`** (generated): clear the memo, the walk at `⟪CWF⟫`. -/
+l_model targetAbs_spec (p : Prog) (hL : TaLook p)
+  fns [hL.top ↦ taAW]
+  specs [memoClearG_spec taSch p _ hL.tc n, taGo_specG p hL n]
+  grind [arena_grind] fold [CWF] pfuel
 
 /-! ## The relational side -/
 
@@ -614,7 +606,7 @@ theorem taAW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       taMR m' mp1 ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at hb
-  rw [taAW_eq n m no nl lvls ho hl e h0] at hb
+  rw [taAW.arm1 n m no nl lvls ho hl e h0] at hb
   have hf0 := mclearG_frame taSch m
   have hM0 := memoRG_clear taSch taSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
   obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb)

@@ -109,7 +109,7 @@ theorem taF_afr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
   simp only [taF] at h
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at h
-  rw [taAW_eq n m no nl lvls ho hl e h0] at h
+  rw [taAW.arm1 n m no nl lvls ho hl e h0] at h
   exact (AFr.of_frame (mclearG_frame taSch m)).trans ((taGoW_afr n).1 _ _ _ _ _ _ _ _ _ _ h)
 
 /-! ## The closedness reads -/

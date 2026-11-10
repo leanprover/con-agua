@@ -102,7 +102,7 @@ theorem taAW_mfr {n : Nat} {m m' : Mem} {no nl lvls ho hl e r : Word}
     (h : taAW n m no nl lvls ho hl e = some (r, m')) : MFr [TAM] [212, 213] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) taSch.cs + 2 = 0
   · simp [taAW, h0] at h
-  rw [taAW_eq n m no nl lvls ho hl e h0] at h
+  rw [taAW.arm1 n m no nl lvls ho hl e h0] at h
   exact MFr.trans ⟨_, _, mclearG_frame taSch m, by simp, by simp [taSch]⟩ ((taGoW_mfr n).1 _ _ _ _ _ _ _ _ _ _ h)
 
 theorem RcMR.setTa {m m' : Mem} (h : RcMR m) (hf : MFr [TAM] [212, 213] m m') (hn : ∃ mp, taMR m' mp) :
