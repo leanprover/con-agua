@@ -370,3 +370,23 @@ and a memory model at once: "ambiguous post"), `ls_put` (fuel-free over `b`), `a
 | `Front/FrontPreOK1` | 15.5 → 15.5 G | 2.6 → 2.3 |
 
 Lines: +48 −87 (**−39**).
+
+### Batch 12: helper `mgen3-misc` (round 2)
+
+36 functions; 30 files, +515 −1547 (**−1032**). `canon_expr_eq` (`DeclCanonExpr` 115.2 → 29.2 G,
+18.4 → 4.4 s), `DeclCanonLvl` (3; 58.9 → 38.6 G), `canon_rules_eq` (31.4 → 15.0 G),
+`DeclCanonNames` (2), `PropReadW`'s nine `callW`-style models (`pfuel`, tuples; 84.5 → 58.9 G),
+`IndRealOpf` (3, `pfuel`, the hand models by `rfl`), `IndRealNames` (4), `IndRealSpine` (4),
+`has_fvar_fast`, `abstract1_fast`'s adapter, `bb_memo`, `fvar_b` (all `pfuel`), `cv_new`,
+`struct_proj_bodies`, `InstLPSpec` (2; 48.2 → 36.1 G), `WhnfCoreProj` (2; 38.1 → 49.9 G),
+`rom_lvls_go` (the first ROM reader: `pre`, `keep`, `defs`/`nodefs`). Bridges: `cvNewW_some`,
+`spnPoolW_cons`, `slpW_cons_some`, `hffW_eq`, `recBytes_eq`. Kept: `sl_getd` (a total word
+model used in 7 other files), `intern_zero`/`intern_ls` (templates), `ls_match` (its post is the
+shape `ConsOK.match_` consumes), `has_loose_b_var_b_*` (unfolded by name in `NestCrest`),
+`bvar_b` (its model's argument order differs from L's, used in 8 files), `head_type_const`/
+`head_proof_const` (one hand model with a callee parameter, `cArmK1`), `type_sort_pw`/`proof_pw`
+(they splice loop blocks whose hand models live in `PropReadLoops`; "not a call: step p …"),
+`stk_push`/`stk_pool`/`rom_levels` (posts that are not model shapes; `rom_u64`'s `u64OK ∧ r =
+[u64W …]`), `Front/Apply`'s lookups (templates) and `apply_*` (their users are elsewhere).
+`PropReadW` keeps two imports the `shake` gate flags (allowlisted: `ld64_rdW_spec` named in the
+`l_model`s' `extra` only; `KnotSlot` re-exported to two importers).
