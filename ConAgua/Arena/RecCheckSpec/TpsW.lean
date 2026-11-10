@@ -18,7 +18,7 @@ public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 /-!
 # TpsW
 
-`decCN_cv`, `decCN_lt`, `decSC_cv`, `decSC_lt`, `tpsK4`, `tpsK3` and the lemmas only they use.
+`decCN_cv`, `decCN_lt`, `decSC_cv`, `decSC_lt`, the generated `tpsW` and the lemmas only they use.
 -/
 
 noncomputable section

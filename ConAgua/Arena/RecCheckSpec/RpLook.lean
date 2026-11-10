@@ -4,13 +4,15 @@ public import ConAgua.Arena.IndRealIlpN
 public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 public import ConAgua.Arena.IndPartsSpec.SetEqW
 public import ConAgua.Arena.IndReal
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 
 /-!
 # RpLook
 
-`RpLook`, `rpN0`, `rpAux`, `rpSetOk`, `namesTwin`, `tpnK2` and the lemmas only they use.
+`RpLook`, `rpN0`, `rpAux`, `rpSetOk`, `namesTwin`, the generated `tpnW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -78,25 +80,12 @@ def namesTwin (p : BlockShape) : AM Bool := do
   if rpSetOk ((rpAux p).map (·.cvR.name)) wantAux then pure (nameNodup (p.recs.map (·.cvR.name)))
   else pure false
 
-def tpnK2 (p : Prog) (n : Nat) (reco recl : Word) (rw : List Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rg, m) => tpnK3 p n reco recl
-      (callW p n "sl_set_eq" [rw.headD 0, rw.tail.headD 0, rg.headD 0, rg.tail.headD 0] m)
-def tpnK1 (p : Prog) (n : Nat) (reco recl auxo auxl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rw, m) => tpnK2 p n reco recl rw (callW p n "ptr_list_names" [auxo, auxl] m)
-/-- From `n₀` on. -/
-def tpnB (p : Prog) (n : Nat) (reco recl auxo auxl n0 : Word) (m : Mem) : Option (List Word × Mem) :=
-  tpnK1 p n reco recl auxo auxl (callW p n "block_rec_want_aux_names" [n0, 0, auxl] m)
-def tpnK0 (p : Prog) (n : Nat) (reco recl auxo auxl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => tpnB p n reco recl auxo auxl (r.headD 0) m
-
-/-- **The model of `target_rec_pins_names`** (body fuel `n`). -/
-def tpnW (p : Prog) (n : Nat) (m : Mem) (mo k reco recl auxo auxl : Word) : Option (List Word × Mem) :=
-  if k = 0 then tpnK0 p n reco recl auxo auxl (callW p n "intern_nanon" [] m)
-  else tpnB p n reco recl auxo auxl (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))) m
+/-- **`target_rec_pins_names` is its model `tpnW`** (generated; body fuel `n`). -/
+l_model tpn_spec (p : Prog) (hp : p.lookup "target_rec_pins_names" = some targetRecPinsNames)
+  fns [hp ↦ tpnW list]
+  specs [callW_spec p n "intern_nanon", callW_spec p n "block_rec_want_aux_names",
+    callW_spec p n "ptr_list_names", callW_spec p n "sl_set_eq", callW_spec p n "sl_nodup"]
+  grind [arena_grind, ind_grind] finish [rdW_eq, erRd] gen 20 pfuel
 
 end L.Ind
 
