@@ -31,10 +31,10 @@ theorem leqTopW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R :
   cases n with
   | zero => simp [leqTopW] at h
   | succ n =>
-    rw [leqTopW_succ] at h
-    rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, ltK₁, reduceCtorEq] at h
+    rw [leqTopW.arm1] at h
+    rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, leqTopW.k_lv_simp, reduceCtorEq] at h
     obtain ⟨he₁, hx₁⟩ := simpW_ok n _ _ _ _ _ hl e₁
-    rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, ltK₁.ltK₂, reduceCtorEq] at h
+    rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, leqTopW.k_lv_simp_2, reduceCtorEq] at h
     obtain ⟨he₂, hy⟩ := simpW_ok n _ _ _ _ _ (hr.mono he₁) e₂
     obtain ⟨he₃, hx⟩ := (leqOK hN n).1 _ _ _ _ _ _ _ _ _ 10000 0 (hx₁.mono he₂) hy rfl DR_zero
       (by decide) h
@@ -55,40 +55,40 @@ theorem equivW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R : 
   cases n with
   | zero => simp [equivW] at h
   | succ n =>
-    rw [equivW_succ] at h
+    rw [equivW.arm1] at h
     rw [isEquiv_eq]
     cases e₀ : lvEqW n m l r with
-    | none => rw [e₀] at h; simp [evK₁] at h
+    | none => rw [e₀, equivW.k_lv_eq.none] at h; cases h
     | some z₀ =>
       rw [e₀] at h
       have hz₀ := lvEqW_ok hN n l r L R z₀ hl hr e₀
       simp only [Level.beq, decide_eq_true_eq] at hz₀
       by_cases eLR : L = R
       · simp only [eLR, ↓reduceIte] at hz₀; subst hz₀
-        rw [evK₁_ne (hz := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+        rw [equivW.k_lv_eq.arm1 (hc1 := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
         exact ⟨HeapExt.refl _, by simp [eLR, encO]⟩
       simp only [eLR, ↓reduceIte] at hz₀; subst hz₀
-      rw [evK₁_zero] at h
-      rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, evK₁.evK₂, reduceCtorEq] at h
+      rw [equivW.k_lv_eq.arm2 (hc1 := rfl)] at h
+      rcases e₁ : simpW n m l with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, equivW.k_lv_simp, reduceCtorEq] at h
       obtain ⟨he₁, hx₁⟩ := simpW_ok n _ _ _ _ _ hl e₁
-      rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, evK₁.evK₃, reduceCtorEq] at h
+      rcases e₂ : simpW n m₁ r with _ | ⟨y, m₂⟩ <;> simp only [e₂, equivW.k_lv_simp_2, reduceCtorEq] at h
       obtain ⟨he₂, hy⟩ := simpW_ok n _ _ _ _ _ (hr.mono he₁) e₂
       have hx₁' := hx₁.mono he₂
       cases e₃ : lvEqW n m₂ x₁ y with
-      | none => rw [e₃] at h; simp [evK₁.evK₄] at h
+      | none => rw [e₃, equivW.k_lv_eq_2.none] at h; cases h
       | some z₁ =>
         rw [e₃] at h
         have hz₁ := lvEqW_ok hN n x₁ y _ _ z₁ hx₁' hy e₃
         simp only [Level.beq, decide_eq_true_eq] at hz₁
         by_cases eS : Level.simplify L = Level.simplify R
         · simp only [eS, ↓reduceIte] at hz₁; subst hz₁
-          rw [evK₄_ne (hz := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+          rw [equivW.k_lv_eq_2.arm1 (hc1 := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
           exact ⟨he₁.trans he₂, by simp [eLR, eS, encO]⟩
         simp only [eS, ↓reduceIte] at hz₁; subst hz₁
-        rw [evK₄_zero] at h
+        rw [equivW.k_lv_eq_2.arm2 (hc1 := rfl)] at h
         simp only [eLR, eS, ↓reduceIte]
         cases e₄ : leqW n m₂ 10000 x₁ y 4294967296 with
-        | none => rw [e₄] at h; simp [evK₁.evK₅] at h
+        | none => rw [e₄, equivW.k_lv_leq.none] at h; cases h
         | some w₄ =>
           obtain ⟨z, m₃⟩ := w₄
           rw [e₄] at h
@@ -98,12 +98,12 @@ theorem equivW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l r x : Word) (L R : 
             rfl
           by_cases hz2 : z = 2
           · subst hz2
-            rw [evK₅_go] at h
+            rw [equivW.k_lv_leq.arm2 (hc1 := rfl)] at h
             obtain ⟨he₄, hx⟩ := (leqOK hN n).1 _ _ _ _ _ _ _ _ _ 10000 0 (hy.mono he₃)
               (hx₁'.mono he₃) rfl DR_zero (by decide) h
             refine ⟨((he₁.trans he₂).trans he₃).trans he₄, ?_⟩
             rw [hlq, enc_eq2 hz, hx]; rfl
-          · rw [evK₅_stop (hz := hz2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+          · rw [equivW.k_lv_leq.arm1 (hc1 := hz2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
             refine ⟨(he₁.trans he₂).trans he₃, ?_⟩
             rw [hlq]; rw [hz] at hz2 ⊢; exact (enc_stop_and hz2).symm
 
@@ -145,7 +145,12 @@ theorem equivsW_ok (hN : NameRel N) (n : Nat) : ∀ (m m' : Mem) (a ln b k x : W
   | succ n ih =>
     intro m m' a ln b k x Ls Rs hL hR h
     by_cases c : ln = 0 ∨ k = 0
-    · rw [equivsW_end n m a ln b k c] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+    · rw [equivsW.eq_2] at h
+      simp only [c, ↓reduceIte] at h
+      have h' : (if ln = k then (2 : Word) else 1) = x ∧ m = m' := by
+        by_cases e : ln = k <;> simp only [e, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at h ⊢ <;>
+          exact h
+      obtain ⟨rfl, rfl⟩ := h'
       refine ⟨HeapExt.refl _, ?_⟩
       rcases c with c | c
       · subst c; rw [hL.zero]
@@ -158,12 +163,12 @@ theorem equivsW_ok (hN : NameRel N) (n : Nat) : ∀ (m m' : Mem) (a ln b k x : W
         · subst hk; rw [hL.zero]; rfl
         · obtain ⟨l, ls, rfl, -, -⟩ := hL.ne hk
           simp [hk, Level.isEquivList, encO]
-    · rw [equivsW_cons n m a ln b k c] at h
+    · rw [equivsW.arm3 n m a ln b k c] at h
       simp only [not_or] at c
       obtain ⟨l, ls, rfl, hl, hls⟩ := hL.ne c.1
       obtain ⟨r, rs, rfl, hr, hrs⟩ := hR.ne c.2
       cases e : equivW n m _ _ with
-      | none => rw [e] at h; simp [esK] at h
+      | none => rw [e, equivsW.k_lv_equiv.none] at h; cases h
       | some w =>
         obtain ⟨z, m₁⟩ := w
         rw [e] at h
@@ -174,11 +179,11 @@ theorem equivsW_ok (hN : NameRel N) (n : Nat) : ∀ (m m' : Mem) (a ln b k x : W
         rw [heq]
         by_cases hz2 : z = 2
         · subst hz2
-          rw [esK_go] at h
+          rw [equivsW.k_lv_equiv.arm2 (hc1 := rfl)] at h
           obtain ⟨he₂, hx⟩ := ih _ _ _ _ _ _ _ _ _ (hls.mono he₁) (hrs.mono he₁) h
           refine ⟨he₁.trans he₂, ?_⟩
           rw [enc_eq2 hz, hx]; rfl
-        · rw [esK_stop (hz := hz2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+        · rw [equivsW.k_lv_equiv.arm1 (hc1 := hz2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
           refine ⟨he₁, ?_⟩
           rw [hz] at hz2 ⊢; exact (enc_stop_and hz2).symm
 
