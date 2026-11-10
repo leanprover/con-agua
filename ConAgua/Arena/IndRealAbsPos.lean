@@ -85,7 +85,7 @@ theorem phsGoW_afr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i
 
 -- from IndPosSpec/DepthGo
 theorem phsW_afr {k : Nat} {m m' : Mem} {nn : Word} {r : List Word} (h : phsW k m nn = some (r, m')) : AFr m m' := by
-  simp only [phsW, phsA.eq_def, phsB.eq_def] at h
+  simp only [phsW.arm1, phsW.k_iw_alloc.eq_def, phsW.k_nest_phs_go.eq_def] at h
   afr_auto h [allocW_afr, phsGoW_afr k _ _ _ _ _]
 
 -- from IndPosSpec/DepthGo
@@ -148,7 +148,7 @@ theorem rpGoW_afr (n : Nat) :
 -- from IndPosSpec/DepthGo
 theorem rpConstW_afr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
     (h : rpConstW n m no nl us b nn e = some (r, m')) : AFr m m' := by
-  simp only [rpConstW, rpClrK.eq_def] at h
+  simp only [rpConstW, rpConstW.k_replace_apps_go.eq_def] at h
   split at h; · cases h
   split at h; · cases h
   rename_i hg; split at h; · cases h
@@ -248,9 +248,10 @@ theorem nagW_afr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r :
 -- from IndPosSpec/FgW
 theorem matesW_afr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW.eq_1] at h
   | n + 1, m, m', c, off, l, oO, oL, r, h => by
-    unfold matesW matesK1 matesK2 matesK3 at h
+    simp only [matesW.eq_2, matesW.k_sl_contains.eq_def, matesW.k_sl_snoc.eq_def,
+      matesW.k_nest_frame_mates_go.eq_def] at h
     afr_auto h [snocW_afr, matesW_afr n _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
@@ -265,10 +266,9 @@ theorem nfmW_afr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
     {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     AFr m m' := by
   cases n with
-  | zero => simp [nfmW] at h
+  | zero => simp [nfmW.eq_1] at h
   | succ n =>
-  simp only [nfmW] at h
-  unfold nfmK matesK3 at h
+  simp only [nfmW.arm1, nfmW.k_nest_block_of.eq_def, nfmW.k_nest_frame_mates_go.eq_def] at h
   afr_auto h [nboW_afr hg hb hp, matesW_afr _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
@@ -391,10 +391,9 @@ theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → AFr m m' := by
     intro m m' ctx r h
     cases k with
-    | zero => simp [rhWf] at h
+    | zero => simp [rhWf.eq_1] at h
     | succ k =>
-    simp only [rhWf] at h
-    unfold rhW rhA rhB at h
+    simp only [rhWf.arm1, rhWf.k_iw_alloc.eq_def, rhWf.k_nest_ctx_root_holes_go.eq_def] at h
     afr_auto h [allocW_afr, rhGoW_afr _ _ _ _ _ _ _ _ _ _ _ _ _]
   simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   afr_auto h [rh, appendW_afr]
@@ -412,7 +411,7 @@ theorem hbFastW_afr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
 -- from IndPosSpec/NestCrest
 theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : AFr m m' := by
-  unfold ncnW ncnK1 ncnK2 ncnK3 at h
+  simp only [ncnW.arm1, ncnW.k_rec5.eq_def, ncnW.k_nest_hole_img_ds.eq_def, ncnW.k_replace_fvars.eq_def] at h
   afr_auto h [posRecW_afr, rxDsW_afr, rxW_afr]
 
 -- from IndPosSpec/NestCrest
@@ -445,8 +444,8 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
   simp only [noConstWf, noConstW] at h
   split at h; · cases h
   refine (mclearG_afrS noSch rfl m).trans ?_
-  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩; · rw [hg] at h; simp [noClrK] at h
-  rw [hg] at h; simp only [noClrK] at h
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩; · rw [hg] at h; simp [noConstW.k_nest_occ_go] at h
+  rw [hg] at h; simp only [noConstW.k_nest_occ_go] at h
   split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((noW_afr n).1 _ _ _ _ _ _ _ _ _ hg).trans (mclearG_afrS noSch rfl m1)
@@ -454,9 +453,9 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
 /-- `pi_doms_occ` keeps `AbsOK`. -/
 theorem pdoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi n e : Word) (r : List Word),
     pdoW k m no nl lo hi n e = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW.eq_1] at h
   | k + 1, m, m', no, nl, lo, hi, n, e, r, h => by
-    simp only [pdoW, pdoK1.eq_def] at h
+    simp only [pdoW.eq_2, pdoW.k_nest_occ.eq_def, pdoW.k_pi_doms_occ.eq_def] at h
     afr_auto h [noConstWf_afr, pdoW_afr k _ _ _ _ _ _ _ _ _]
 
 /-- **`AbsOK` across `nest_uniform_ok`'s callees** (`nuW_ok`'s last conclusion). -/
@@ -481,8 +480,8 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
   rename_i x heq
   split at heq; · cases heq
   revert heq
-  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩; · simp [dpClrK]
-  simp only [dpClrK]
+  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩; · simp [dpConstW.k_depth_go]
+  simp only [dpConstW.k_depth_go]
   intro heq
   split at heq; · cases heq
   simp only [Option.some.injEq, Prod.mk.injEq] at heq; obtain ⟨-, rfl⟩ := heq

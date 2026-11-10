@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPos
-public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.IndPos
@@ -174,48 +173,6 @@ theorem canonW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IF
         rw [hrun2]
         rfl
       · exact ⟨rfl, lt_of_notbig hrb, rfl⟩
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (c off l oO oL b : Word) (r r2 : List Word)
-theorem matesW_nil (h : l = 0) : matesW (n + 1) m c off l oO oL = some ([oO, oL], m) := by simp [matesW, h]
-theorem matesW_cons (h : l ≠ 0) : matesW (n + 1) m c off l oO oL =
-    matesK1 n m c off l oO oL (containsW n m oO oL (erRd m off)) := by simp [matesW, h]
-theorem matesK1_skip (h : erRd m off = c ∨ b ≠ 0) : matesK1 n m c off l oO oL (some b) =
-    matesK3 (matesW n m c (off + 1) (l - 1) oO oL) := by simp only [matesK1]; rw [ite_eq_left h]
-theorem matesK1_add (h : ¬ (erRd m off = c ∨ b ≠ 0)) : matesK1 n m c off l oO oL (some b) =
-    matesK2 n c off l (snocW n m oO oL (erRd m off)) := by simp only [matesK1]; rw [ite_eq_right h]
-theorem matesK2_some : matesK2 n c off l (some (r2, m2)) =
-    matesK3 (matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0)) := by rw [matesK2]
-theorem matesK3_some : matesK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [matesK3]
-end arms
-grind_pattern [ind_grind] matesW_nil => matesW (n + 1) m c off l oO oL
-grind_pattern [ind_grind] matesW_cons => matesW (n + 1) m c off l oO oL
-grind_pattern [ind_grind] matesK1_skip => matesK1 n m c off l oO oL (some b)
-grind_pattern [ind_grind] matesK1_add => matesK1 n m c off l oO oL (some b)
-grind_pattern [ind_grind] matesK2_some => matesK2 n c off l (some (r2, m2))
-grind_pattern [ind_grind] matesK3_some => matesK3 (some (r, m2))
-
-section spec
-variable (p : Prog) (hc : p.lookup "sl_contains" = some slContains) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
-  (hp : p.lookup "nest_frame_mates_go" = some nestFrameMatesGoL)
-include hc ha hcp hsn hp
-
-theorem nestFrameMatesGo_spec (n : Nat) : ∀ (s₀ : St) (c off l oO oL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_mates_go" [c, off, l, oO, oL]
-    ⦃fun r s' => LocEq s' s₀ ∧ matesW n s₀.mem c off l oO oL = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ c off l oO oL
-    rw [invoke_eq _ hp]; simp only [callFn, nestFrameMatesGoL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ c off l oO oL
-    simp only [invoke_eq _ hp, callFn, nestFrameMatesGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slContains_spec p hc n, slSnoc_specW p ha hcp hsn n, ih] <;> finish (gen := 20) [erRd]
-
-end spec
 
 /-- **`sl_snoc`'s pool**: the new slice at the old top, the source's words then `x`. -/
 theorem snocW_core {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word}

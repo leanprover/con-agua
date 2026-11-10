@@ -176,9 +176,6 @@ theorem word_add_toNat {a b : Word} (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).t
 
 /-! ## `nest_ctx_root_holes(_go)` refines `NestCtx.rootHoles` -/
 
-def rhB (q nl : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m2 => some ([q, nl], m2)
 /-- The pointers at `q, …, q + j - 1` decode to the first `j` holes, every read in `P`. -/
 def HolesAt (m : Mem) (q j : Nat) (hs : List NestHole) (P : Nat → Prop) : Prop :=
   ∀ i < j, ∃ w : Word, (m.arr64 IW)[q + i]? = some w ∧ decNH m w.toNat = hs[i]? ∧ NHIn m w.toNat P

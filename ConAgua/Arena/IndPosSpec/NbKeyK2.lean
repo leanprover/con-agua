@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.NcnW
 public import ConAgua.Arena.IndPosSpec.DepthGo
 
 @[expose] public section
@@ -8,7 +7,7 @@ public import ConAgua.Arena.IndPosSpec.DepthGo
 /-!
 # NbKeyK2
 
-`wfWf`, `ncnWf`: callees' models at any exec fuel.
+`wfWf`: a callee's model at any exec fuel.
 -/
 
 noncomputable section
@@ -30,13 +29,6 @@ def wfWf : Nat → Mem → Word → Option (List Word × Mem)
     | none => none
     | some (r, m1) => some ([r], m1)
   | _, _, _ => none
-
-/-- `nest_ctor_nf` at any exec fuel. -/
-def ncnWf : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | k + 1, m, ctx, po, pl, us, dO, dL, cv, closed => match ncnW k m ctx po pl us dO dL cv closed with
-    | none => none
-    | some (r, m1) => some ([r], m1)
-  | _, _, _, _, _, _, _, _, _, _ => none
 
 end L.Ind
 

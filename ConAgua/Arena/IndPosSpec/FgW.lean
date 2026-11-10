@@ -112,26 +112,28 @@ theorem matesW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) :
     ∀ (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → StageR vis fe m a → StageR vis fe m' a := by
   induction n with
-  | zero => intro m m' c off l oO oL r h; simp [matesW] at h
+  | zero => intro m m' c off l oO oL r h; simp [matesW.eq_1] at h
   | succ n ih =>
     intro m m' c off l oO oL r h hS
     by_cases hl : l = 0
-    · rw [matesW_nil n m c off l oO oL hl] at h; cases h; exact hS
-    rw [matesW_cons n m c off l oO oL hl] at h
-    rcases hb : containsW n m oO oL (erRd m off) with _ | b <;> rw [hb] at h; · simp [matesK1] at h
-    simp only [matesK1] at h
-    split at h
-    · cases hr : matesW n m c (off + 1) (l - 1) oO oL with
-      | none => rw [hr] at h; simp [matesK3] at h
-      | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr hS
-    · cases hs : snocW n m oO oL (erRd m off) with
-      | none => rw [hs] at h; simp [matesK2] at h
+    · rw [matesW.arm1 (hc1 := hl)] at h; cases h; exact hS
+    rw [matesW.arm2 (hc1 := hl), erRd_foldN] at h
+    rcases hb : containsW n m oO oL (erRd m off) with _ | b <;> rw [hb] at h
+    · rw [matesW.k_sl_contains.none] at h; cases h
+    by_cases hk : erRd m off = c ∨ b ≠ 0
+    · rw [matesW.k_sl_contains.arm1 (hc1 := hk)] at h
+      cases hr : matesW n m c (off + 1) (l - 1) oO oL with
+      | none => rw [hr, matesW.k_nest_frame_mates_go.none] at h; cases h
+      | some pr => rw [hr, matesW.k_nest_frame_mates_go.arm1] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr hS
+    · rw [matesW.k_sl_contains.arm2 (hc1 := hk), erRd_foldN] at h
+      cases hs : snocW n m oO oL (erRd m off) with
+      | none => rw [hs, matesW.k_sl_snoc.none] at h; cases h
       | some pr =>
         obtain ⟨r2, m2⟩ := pr
-        simp only [hs, matesK2] at h
+        rw [hs, matesW.k_sl_snoc.arm1] at h
         cases hr : matesW n m2 c (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) with
-        | none => rw [hr] at h; simp [matesK3] at h
-        | some pr => rw [hr, matesK3_some] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr (snocW_stage hs hS)
+        | none => rw [hr, matesW.k_nest_frame_mates_go.none] at h; cases h
+        | some pr => rw [hr, matesW.k_nest_frame_mates_go.arm1] at h; cases h; exact ih _ _ _ _ _ _ _ _ hr (snocW_stage hs hS)
 
 
 end L.Ind
@@ -527,9 +529,10 @@ theorem nagW_mfr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r :
 
 theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List Word),
     matesW n m c off l oO oL = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW.eq_1] at h
   | n + 1, m, m', c, off, l, oO, oL, r, h => by
-    unfold matesW matesK1 matesK2 matesK3 at h
+    simp only [matesW.eq_2, matesW.k_sl_contains.eq_def, matesW.k_sl_snoc.eq_def,
+      matesW.k_nest_frame_mates_go.eq_def] at h
     mfr_auto h [snocW_mfr, matesW_mfr n _ _ _ _ _ _ _ _]
 
 /-- `env_find` reads only. -/
@@ -565,10 +568,10 @@ theorem nfmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestFrameMates fe (decI c)) ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   cases n with
-  | zero => simp [nfmW] at h
+  | zero => simp [nfmW.eq_1] at h
   | succ n =>
-  simp only [nfmW] at h
-  rcases hbo : nboW p n m vis c with _ | ⟨r1, m1⟩ <;> rw [hbo] at h; · simp [nfmK] at h
+  rw [nfmW.arm1] at h
+  rcases hbo : nboW p n m vis c with _ | ⟨r1, m1⟩ <;> rw [hbo] at h; · rw [nfmW.k_nest_block_of.none] at h; cases h
   have hm1 := nboW_mem L.hg hbr L.hf hbo
   subst hm1
   -- the block slice
@@ -596,10 +599,10 @@ theorem nfmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     · simp only [h0, h3, ite_false, ne_eq, not_false_eq_true, ite_true, Option.some.injEq, Prod.mk.injEq] at hbo
       obtain ⟨rfl, -⟩ := hbo
       simp only [ite_eq_right h0, ite_eq_right h3, List.headD_cons, List.tail_cons] at key ⊢; exact key
-  rw [nfmK_some] at h
+  rw [nfmW.k_nest_block_of.arm1] at h
   rcases hmt : matesW n m1 c (r1.headD 0) (r1.tail.headD 0) 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h
-  · simp [matesK3] at h
-  rw [matesK3_some] at h
+  · rw [nfmW.k_nest_frame_mates_go.none] at h; cases h
+  rw [nfmW.k_nest_frame_mates_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨h1, h2, -, h4⟩ := matesW_ok n _ _ c _ _ 0 0 _ [] r2 hmt hS.iw.iwSize hS.iw.ctl hS.iw.erSize hc hsl
     (by simp [decHL, hslice?]) (by simp) (by simp)
@@ -616,10 +619,9 @@ theorem nfmW_mfr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
     {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) :
     MFr [] [] m m' := by
   cases n with
-  | zero => simp [nfmW] at h
+  | zero => simp [nfmW.eq_1] at h
   | succ n =>
-  simp only [nfmW] at h
-  unfold nfmK matesK3 at h
+  simp only [nfmW.arm1, nfmW.k_nest_block_of.eq_def, nfmW.k_nest_frame_mates_go.eq_def] at h
   mfr_auto h [nboW_mfr hg hb hp, matesW_mfr _ _ _ _ _ _ _ _ _]
 
 theorem fgW_mfr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),

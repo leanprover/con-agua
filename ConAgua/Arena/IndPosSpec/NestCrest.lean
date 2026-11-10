@@ -300,10 +300,9 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → MFr [] [] m m' := by
     intro m m' ctx r h
     cases k with
-    | zero => simp [rhWf] at h
+    | zero => simp [rhWf.eq_1] at h
     | succ k =>
-    simp only [rhWf] at h
-    unfold rhW rhA rhB at h
+    simp only [rhWf.arm1, rhWf.k_iw_alloc.eq_def, rhWf.k_nest_ctx_root_holes_go.eq_def] at h
     mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _]
   simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   mfr_auto h [rh, appendW_mfr]
@@ -316,7 +315,7 @@ theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e =
 abbrev HbFr (m m' : Mem) : Prop := MFr [HBM] [214, 215] m m'
 
 theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : HbFr m m' := by
-  unfold hbInsW at h
+  rw [hbInsW_eq] at h
   rcases hs : msetG hbSch m e i r with _ | m2 <;> rw [hs] at h; · simp at h
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨-, rfl⟩ := h
@@ -340,7 +339,7 @@ theorem hbFastW_mfr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
 
 theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
     (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : RxFr m m' := by
-  unfold ncnW ncnK1 ncnK2 ncnK3 at h
+  simp only [ncnW.arm1, ncnW.k_rec5.eq_def, ncnW.k_nest_hole_img_ds.eq_def, ncnW.k_replace_fvars.eq_def] at h
   mfr_auto h [posRecW_mfr, rxDsW_mfr, rxW_mfr]
 
 theorem pcrW_mfr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}

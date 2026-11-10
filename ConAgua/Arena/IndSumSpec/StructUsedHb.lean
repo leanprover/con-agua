@@ -146,7 +146,7 @@ theorem hbGoW_keep : ∀ (n : Nat) (m m' : Mem) (f i h r : Word), hbGoW n m f i 
     · rw [h2] at hh; simp [hbK4] at hh
     rw [h2, hbK4_some] at hh
     obtain ⟨hr2, mp2, hM2⟩ := node h2 ⟨mp, hM1⟩
-    simp only [hbInsW] at hh
+    rw [hbInsW_eq] at hh
     cases hm : msetG hbSch m2 h i r2 with
     | none => rw [hm] at hh; simp at hh
     | some m3 =>
@@ -161,7 +161,7 @@ theorem hbFastW_keep {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e 
     (hM : ∃ mp, hbMR m mp) : ∃ mp, hbMR m' mp := by
   obtain ⟨mp, hM⟩ := hM
   by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
-  · simp [hbFastW, h0] at h
+  · rw [hbFastW.abort1 (hc1 := h0)] at h; cases h
   rw [hbFastW_eq n _ i e h0] at h
   exact (hbGoW_keep n _ _ _ _ _ _ h ⟨_, memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0⟩).2
 

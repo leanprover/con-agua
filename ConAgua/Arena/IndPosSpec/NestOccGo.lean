@@ -150,21 +150,27 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → 
 
 end census
 
-theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+/-- `nest_occ_go`'s spec as a triple (for `l_model`). -/
+theorem nestOccGo_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hc : p.lookup "sl_contains" = some slContains)
+    (hf : p.lookup "no_find" = some (memoFindG noSch)) (hput : p.lookup "no_put" = some (memoPutG noSch))
+    (hgo : p.lookup "nest_occ_go" = some nestOccGo)
+    (hnode : p.lookup "nest_occ_node" = some nestOccNode) (n : Nat) (s₀ : St) (no nl lo hi f h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_occ_go" [no, nl, lo, hi, f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ noGoW n s₀.mem no nl lo hi f h = some (r.headD 0, s'.mem); ⊤⦄ :=
+  (noGo_spec p hv hc hf hput hgo hnode n).1 s₀ no nl lo hi f h
+
+/-- **`nest_occ` is its model `noConstW`** (generated, the fuel a parameter). -/
+l_model nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hc : p.lookup "sl_contains" = some slContains)
     (hf : p.lookup "no_find" = some (memoFindG noSch)) (hput : p.lookup "no_put" = some (memoPutG noSch))
     (hgo : p.lookup "nest_occ_go" = some nestOccGo)
     (hnode : p.lookup "nest_occ_node" = some nestOccNode)
     (hcl : p.lookup "no_clear" = some (memoClearG noSch))
-    (hp : p.lookup "nest_occ" = some nestOcc) (n : Nat) (s₀ : St) (no nl lo hi e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_occ" [no, nl, lo, hi, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ noConstW n s₀.mem no nl lo hi e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := (noGo_spec p hv hc hf hput hgo hnode n).1
-  unfold NoGoSpec at ih
-  simp only [invoke_eq _ hp, callFn, nestOcc]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
-    finish
+    (hp : p.lookup "nest_occ" = some nestOcc)
+  fns [hp ↦ noConstW]
+  specs [memoClearG_spec noSch p _ hcl n, nestOccGo_spec p hv hc hf hput hgo hnode n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
 theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
@@ -174,8 +180,8 @@ theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
         .ok (b, a) ∧ (r != 0) = b ∧ noMR m' ∅ ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
         MFr [NOM] [204, 205] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) noSch.cs + 2 = 0
-  · simp [noConstW, h0] at hb
-  rw [noConstW_eq n m no nl lo hi e h0] at hb
+  · rw [noConstW.abort1 (hc1 := h0)] at hb; cases hb
+  rw [noConstW.arm1 (hc1 := h0)] at hb
   have hf0 := mclearG_frame noSch m
   have hM0 := memoRG_clear noSch noSch_wf bmKey (fun w : Word => w != 0) m mp0 hM h0
   have hA0 : ArenaR (mclearG noSch m) a :=
@@ -183,10 +189,10 @@ theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
       (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.check.arena.base
   have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
-  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [noClrK] at hb
+  rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · rw [noConstW.k_nest_occ_go.none] at hb; cases hb
   by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
-  · simp [noClrK, h1] at hb
-  rw [noClrK_some r1 m1 h1] at hb
+  · rw [noConstW.k_nest_occ_go.abort1 (hc1 := h1)] at hb; cases hb
+  rw [noConstW.k_nest_occ_go.arm1 (hc1 := h1)] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   obtain ⟨c, mp1, hrun, hbb, hM1, hfr1⟩ := noGoOK n _ _ a no nl lo hi CWF e r1 ws ∅ hg hA0 hh hws0 hwlt hM0
   rw [CWF_eq] at hrun
