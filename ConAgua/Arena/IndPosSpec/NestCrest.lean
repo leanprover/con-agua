@@ -9,7 +9,6 @@ import all Init.Data.List.Control
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
-import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.NestCrest2
 import ConAgua.Arena.IndPosSpec.NkFields
@@ -251,57 +250,53 @@ theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List 
     mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofAbF, MFr.ofI1F, mkForallW_mfr]
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
-  unfold stripW stripK at h
+  simp only [stripW.eq_1, stripW.k_strip_pis.eq_def] at h
   mfr_auto h [MFr.ofStripF]
 
 theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     MFr [] [] m m' := by
-  unfold entryW entryK1 entryK2 entryK3 at h
+  simp only [entryW.eq_1, entryW.k_nest_ctor_entry_strip.eq_def, entryW.k_get_app_fn_f.eq_def] at h
   mfr_auto h [stripW_mfr, MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW.eq_1] at h
   | k + 1, m, m', vis, C, co, cl, cs, ol, fp, r, h => by
-    unfold ncGoW ncK1 ncK2 ncK3 at h
+    simp only [ncGoW.eq_2, ncGoW.k_nest_ctor_entry.eq_def, ncGoW.k_rec2.eq_def, ncGoW.j2.eq_1, ncGoW.j1.eq_1,
+      ncGoW.k_nest_container_ctors_go.eq_def] at h
     mfr_auto h [ncGoW_mfr k _ _ _ _ _ _ _ _ _ _, entryW_mfr, posRecW_mfr,
       fun h => (MFr.set_iw _ _ _).trans (ncGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem ncWf_mfr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h : ncWf k m vis C co cl = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
-  | zero => simp [ncWf] at h
+  | zero => simp [ncWf.eq_1] at h
   | succ k =>
-  simp only [ncWf] at h
-  unfold ncW ncB at h
+  simp only [ncWf.arm1, ncWf.k_iw_alloc.eq_def, ncWf.k_nest_container_ctors_go.eq_def] at h
   mfr_auto h [allocW_mfr, ncGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
 
 theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf k m vis C = some (r, m')) :
     MFr [] [] m m' := by
   cases k with
-  | zero => simp [ntWf] at h
+  | zero => simp [ntWf.eq_1] at h
   | succ k =>
-  simp only [ntWf, ntW, ntK1] at h
-  split at h
-  · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  split at h
-  · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  unfold ntK2 at h; mfr_auto h [ncWf_mfr]
+  simp only [ntWf.eq_2, ntWf.k_nest_container_ctors.eq_def] at h
+  mfr_auto h [ncWf_mfr]
 
 theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
-    (h : nwsW n m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
-  unfold nwsW nwsK at h
+    (h : nwsWf (n + 1) m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
+  simp only [nwsWf.eq_2, nwsWf.k_nest_ds_closed.eq_def] at h
   mfr_auto h [dcWf_mfr]
 
 theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),
     rhGoW k m no nl lv po pl nP nio nil q j = some m' → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW.eq_1] at h
   | k + 1, m, m', no, nl, lv, po, pl, nP, nio, nil, q, j, h => by
-    unfold rhGoW rhK1 rhK2 at h
+    simp only [rhGoW.eq_2, rhGoW.k_rec4.eq_def, rhGoW.k_rec3.eq_def, rhGoW.k_nest_ctx_root_holes_go_id] at h
     mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
-    (h : haW k m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
+    (h : haWf (k + 1) m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → MFr [] [] m m' := by
     intro m m' ctx r h
     cases k with
@@ -310,11 +305,11 @@ theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     simp only [rhWf] at h
     unfold rhW rhA rhB at h
     mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _]
-  unfold haW haK1 haK2 at h
+  simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   mfr_auto h [rh, appendW_mfr]
 
 theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
-  unfold resHeadW resHeadK at h
+  simp only [resHeadW.eq_1, resHeadW.k_get_app_fn_f.eq_def] at h
   mfr_auto h [MFr.ofStub, MFr.ofI1F, MFr.ofGafF]
 
 /-- The `has_loose_bvar_b` walk's write set among the memos. -/

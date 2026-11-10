@@ -1,6 +1,7 @@
 module
 
-import ConAgua.Arena.IndPosSpec.EntryW
+public import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndPosSpec.RootHoles
 public import ConAgua.Arena.GrindAttr
@@ -15,7 +16,8 @@ import all ConAgua.Arena.IndPos
 /-!
 # NcGoW
 
-`ncGoW_done`, `ncGoW_step`, `ncK1_miss`, `ncK1_hit`, `ncK2_miss`, `ncK2_hit` and the lemmas only they use.
+The models and specs of `nest_container_ctors_go`, `nest_container_ctors` and `nest_container`
+(generated), and their refinement of `nestContainer`.
 -/
 
 noncomputable section
@@ -29,124 +31,17 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (k : Nat) (m m1 m2 m3 : Mem) (vis C co cl cs ol fp nPc q : Word) (r r2 : List Word)
-theorem ncGoW_done (h : cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp = some ([ol, fp], m) := by
-  simp [ncGoW, h]
-theorem ncGoW_step (h : ¬ cl = 0) : ncGoW (k + 1) m vis C co cl cs ol fp =
-    ncK1 k vis C co cl cs ol fp (some (findRes m vis (erRd m co), m)) := by simp [ncGoW, h]
-theorem ncK1_miss (h : r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
-    ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK1, ite_eq_left h]
-theorem ncK1_hit (h : ¬ r.headD 0 = 0) : ncK1 k vis C co cl cs ol fp (some (r, m1)) =
-    ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0)) := by rw [ncK1, ite_eq_right h]
-theorem ncK2_miss (h : r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
-    ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp := by rw [ncK2, ite_eq_left h]
-theorem ncK2_hit (h : ¬ r2.headD 0 = 0) : ncK2 k vis C co cl cs ol fp (some (r2, m2)) =
-    ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
-      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0]) := by rw [ncK2, ite_eq_right h]
-theorem ncK3_first (h : ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
-    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc := by rw [ncK3, ite_eq_left h]
-theorem ncK3_next (h : ¬ ol = 0) : ncK3 k vis C co cl cs ol fp nPc (some (q, m3)) =
-    ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp := by rw [ncK3, ite_eq_right h]
-end arms
-attribute [ind_grind] ncGoW_done ncGoW_step ncK1_miss ncK1_hit ncK2_miss ncK2_hit ncK3_first ncK3_next
+l_model ncGo_spec (p : Prog) (hl : NtLook p)
+  fns [hl.hgo ↦ ncGoW list]
+  specs [envFind_spec p hl.hg hl.hb hl.hf n, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad n,
+    posRec2_specW p hl.ha hl.h2 n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-def ncB (cs : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([cs, r.headD 0, r.tail.headD 0], m2)
-/-- The model of `nest_container_ctors` at exec fuel `k + 1`. -/
-def ncW (k : Nat) (m : Mem) (vis C co cl : Word) : Option (List Word × Mem) :=
-  match allocW m cl with
-  | none => none
-  | some (cs, m1) => ncB cs (ncGoW k m1 vis C co cl cs 0 0)
-def ncWf : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, C, co, cl => ncW k m vis C co cl
-theorem ncB_some (cs : Word) (r : List Word) (m2 : Mem) :
-    ncB cs (some (r, m2)) = some ([cs, r.headD 0, r.tail.headD 0], m2) := rfl
-attribute [ind_grind] ncB_some
+l_model nc_spec (p : Prog) (hl : NtLook p)
+  fns [hl.hcc ↦ ncWf list]
+  specs [iwAlloc_specW p hl.ha n, ncGo_spec p hl n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-def ntK2 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.tail.headD 0 = 0 then some ([1, erRd m2 (q + 5 + 12), r2.headD 0, 0], m2)
-    else some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2)
-def ntK1 (k : Nat) (vis C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0, 0, 0], m1)
-    else if erRd m1 (r.tail.headD 0) ≠ 3 then some ([0, 0, 0, 0], m1)
-    else ntK2 (r.tail.headD 0) (ncWf k m1 vis C (erRd m1 (r.tail.headD 0 + 5 + 13))
-      (erRd m1 (r.tail.headD 0 + 5 + 14)))
-/-- The model of `nest_container(vis, C)` at exec fuel `k + 1`. -/
-def ntW (k : Nat) (m : Mem) (vis C : Word) : Option (List Word × Mem) := ntK1 k vis C (some (findRes m vis C, m))
-
-section arms
-variable (k : Nat) (m1 m2 : Mem) (vis C q : Word) (r r2 : List Word)
-theorem ntK2_empty (h : r2.tail.headD 0 = 0) :
-    ntK2 q (some (r2, m2)) = some ([1, erRd m2 (q + 5 + 12), r2.headD 0, 0], m2) := by
-  rw [ntK2, ite_eq_left h]
-theorem ntK2_cons (h : ¬ r2.tail.headD 0 = 0) :
-    ntK2 q (some (r2, m2)) = some ([1, r2.tail.tail.headD 0, r2.headD 0, r2.tail.headD 0], m2) := by
-  rw [ntK2, ite_eq_right h]
-theorem ntK1_miss (h : r.headD 0 = 0) : ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
-  rw [ntK1, ite_eq_left h]
-theorem ntK1_noind (h : ¬ r.headD 0 = 0) (h3 : erRd m1 (r.tail.headD 0) ≠ 3) :
-    ntK1 k vis C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by rw [ntK1, ite_eq_right h, ite_eq_left h3]
-theorem ntK1_ind (h : ¬ r.headD 0 = 0) (h3 : ¬ erRd m1 (r.tail.headD 0) ≠ 3) :
-    ntK1 k vis C (some (r, m1)) = ntK2 (r.tail.headD 0) (ncWf k m1 vis C
-      (erRd m1 (r.tail.headD 0 + 5 + 13)) (erRd m1 (r.tail.headD 0 + 5 + 14))) := by
-  rw [ntK1, ite_eq_right h, ite_eq_right h3]
-end arms
-attribute [ind_grind] ntK2_empty ntK2_cons ntK1_miss ntK1_noind ntK1_ind
-
-section spec
-variable (p : Prog) (hl : NtLook p)
-
-set_option maxHeartbeats 1000000 in
-include hl in
-theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors_go" [vis, C, co, cl, cs, ol, fp]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      ncGoW k s₀.mem vis C co cl cs ol fp = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ vis C co cl cs ol fp
-    rw [invoke_eq _ hl.hgo]; simp only [callFn, nestContainerCtorsGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ vis C co cl cs ol fp
-    simp only [invoke_eq _ hl.hgo, callFn, nestContainerCtorsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        envFind_spec p hl.hg hl.hb hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
-        posRec2_specW p hl.ha hl.h2 k, ih] <;>
-      finish (gen := 20) [rdW_eq, St.setLocs_mem']
-
-include hl in
-theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container_ctors" [vis, C, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ ncWf k s₀.mem vis C co cl = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hcc, callFn, nestContainerCtors]
-  cases k with
-  | zero => vcgen [exec] <;> grind
-  | succ k =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iwAlloc_specW p hl.ha k, ncGo_spec p hl k] <;>
-      finish (gen := 20) [ncWf, ncW]
-
-set_option maxHeartbeats 1000000 in
-include hl in
-theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
-    ⦃fun r s' => LocEq s' s₀ ∧ ntW k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hl.hnt, callFn, nestContainer]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      envFind_spec p hl.hg hl.hb hl.hf k, nc_spec p hl k] <;>
-    finish (gen := 20) [ntW, rdW_eq]
-
-end spec
 
 theorem decCI_ctor_cv {a : Nat → Option Word} {p : Nat}
     {cv : IConstantVal} {nPc nF : Nat} (h : decCI a p = some (.ctorInfo cv nPc nF)) :
@@ -265,6 +160,18 @@ theorem hslice?_wshift {k : IdxKind} {a : Nat → Option Word} {co : Word} {n : 
     rw [word_add_toNat (by have := ha _ _ hw; simpa using this)]
     simpa using h
 
+/-- The recursive call of `nest_container_ctors_go` passes its two results on. -/
+theorem ncGoW.j1_some {n : Nat} {vis C co cl cs ol fp : Word} {m m' : Mem} {r : List Word}
+    (h : ncGoW.j1 n vis C co cl cs ol fp m = some (r, m')) :
+    ∃ r', ncGoW n m vis C (co + 1) (cl - 1) cs ol fp = some (r', m') ∧ r.headD 0 = r'.headD 0 ∧
+      r.tail.headD 0 = r'.tail.headD 0 := by
+  rw [ncGoW.j1.arm1] at h
+  rcases e : ncGoW n m vis C (co + 1) (cl - 1) cs ol fp with _ | ⟨r', m''⟩ <;> rw [e] at h
+  · cases h
+  rw [ncGoW.k_nest_container_ctors_go.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨r', rfl, rfl, rfl⟩
+
 theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
     (hC : H C) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (co cl ol fp : Word) (ns : List NIdx)
@@ -279,19 +186,18 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       CsAt m' cs.toNat ((acc ++ ys).map ncProj) (OutR cs.toNat N (iwTop m')) ∧
       (r.tail.headD 0).toNat = ((acc ++ ys).head?.map (·.2.1)).getD 0 ∧ ys.length ≤ ns.length := by
   induction k with
-  | zero => intro m m' a co cl ol fp ns acc r h; simp [ncGoW] at h
+  | zero => intro m m' a co cl ol fp ns acc r h; simp [ncGoW.eq_1] at h
   | succ k ih =>
     intro m m' a co cl ol fp ns acc r h hS hns hreg hol hN hacc hfp
     have hsz : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
     by_cases hc0 : cl = 0
-    · rw [ncGoW_done k m vis C co cl cs ol fp hc0] at h
+    · rw [ncGoW.arm1 (hc1 := hc0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc0
       have : ns = [] := by simpa [hslice?] using hns.symm
       subst this
       refine ⟨[], a, rfl, hS, GrowX.of_grow (IWGrow.refl _), by simp [hol], by simpa using hacc,
         by simpa using hfp, by simp⟩
-    rw [ncGoW_step k m vis C co cl cs ol fp hc0] at h
     have hcl : cl.toNat ≠ 0 := fun e => hc0 (UInt64.toNat_inj.mp (by simpa using e))
     have hcl1 : (cl - 1).toNat = cl.toNat - 1 :=
       UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
@@ -304,23 +210,24 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
     have hwE : erRd m co = w := (erRd_of_erecP hw).1
     have hns1 : ∀ {b : Nat → Option Word}, ArrExt (erecP m) b → hslice? b (co + 1).toNat (cl - 1).toNat = some ns' :=
       fun hb => by rw [hcl1, show cl.toNat - 1 = cl' by omega]; exact hb.hslice? (hslice?_wshift hns' fun _ _ e => erecP_lt64 e)
-    rw [hwE] at h
     have hE := hS.check.env
     rw [List.filterMapM_cons]
     by_cases hf0 : (findRes m vis w).headD 0 = 0
     · -- not found
-      rw [ncK1_miss (h := hf0)] at h
+      rw [ncGoW.arm3 (hc1 := hc0) (hc2 := by rw [erRd_foldN, hwE]; exact hf0)] at h
+      obtain ⟨r', h, e1, e2⟩ := ncGoW.j1_some h
       have hfind := findRes_miss hE hwH hf0
-      obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m m' a (co + 1) (cl - 1) ol fp ns' acc r h hS
+      obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m m' a (co + 1) (cl - 1) ol fp ns' acc r' h hS
         (hns1 fun _ _ e => e) hreg hol (by omega) hacc hfp
-      refine ⟨ys, a', ?_, hS', hGX, h1, h2, h3, by simp; omega⟩
+      refine ⟨ys, a', ?_, hS', hGX, e1 ▸ h1, h2, e2 ▸ h3, by simp; omega⟩
       simp only [ncF, hfind, StateT.run_bind]
       exact hrun
-    rw [ncK1_hit (h := hf0)] at h
+    rw [ncGoW.arm2 (hc1 := hc0) (hc2 := by rw [erRd_foldN, hwE]; exact hf0)] at h
+    simp only [erRd_foldN, hwE] at h
     obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hwH hf0
     rw [hci] at hfind
     generalize (findRes m vis w).tail.headD 0 = ciq at h hfind hci
-    rcases hent : entryW m C ciq with _ | ⟨r2, m2⟩ <;> rw [hent] at h; · simp [ncK2] at h
+    rcases hent : entryW m C ciq with _ | ⟨r2, m2⟩ <;> rw [hent] at h; · rw [ncGoW.k_nest_ctor_entry.none] at h; cases h
     obtain ⟨x, a1, hrun1, hS2, hg2, hout⟩ := entryW_ok hC hent hS hci
     have hE2 : ArrExt (erecP m) (erecP m2) := (GrowX.of_grow (q := 0) (n := 0) hg2).erecP
     have hstep : ncF fe (decI C) (decI w) = ConRon.Arena.nestCtorEntry (decI C) ci := by
@@ -331,22 +238,23 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
     | none =>
       have hr2 : r2 = [0, 0, 0, 0] := hout
       subst hr2
-      rw [ncK2_miss (h := rfl)] at h
+      rw [ncGoW.k_nest_ctor_entry.arm2 (hc1 := rfl)] at h
+      obtain ⟨r', h, e1, e2⟩ := ncGoW.j1_some h
       have hacc2 : CsAt m2 cs.toNat (acc.map ncProj) (OutR cs.toNat N (iwTop m)) :=
         hacc.agree ((RdS.of_grow hg2).mono fun _ hi => hi.1) hE2
           (fun i hi => hg2.iwGet _ (by rw [hlen] at hi; omega))
-      obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m2 m' a1 (co + 1) (cl - 1) ol fp ns' acc r h hS2
+      obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih m2 m' a1 (co + 1) (cl - 1) ol fp ns' acc r' h hS2
         (hns1 hE2)
         (by have := hg2.iw; omega) hol (by omega)
         (hacc2.mono fun _ hx => ⟨Nat.lt_of_lt_of_le hx.1 hg2.iw, hx.2⟩) hfp
-      refine ⟨ys, a', ?_, hS', (GrowX.of_grow hg2).trans hGX, h1, h2, h3, by simp; omega⟩
+      refine ⟨ys, a', ?_, hS', (GrowX.of_grow hg2).trans hGX, e1 ▸ h1, h2, e2 ▸ h3, by simp; omega⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]
       exact hrun
     | some c =>
       obtain ⟨cv, nPc, nF⟩ := c
       obtain ⟨hr2, -, hs⟩ := hout
       subst hr2
-      rw [ncK2_hit (h := by simp)] at h
+      rw [ncGoW.k_nest_ctor_entry.arm1 (hc1 := by simp)] at h
       simp only [List.tail_cons, List.headD_cons] at h
       have hci' : ci = .ctorInfo cv nPc nF := by
         cases ci with
@@ -364,7 +272,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
       have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
-      rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · simp [ncK3] at h
+      rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · rw [ncGoW.k_rec2.none] at h; cases h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
       have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := word_add_toNat (by omega)
@@ -412,20 +320,21 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       have hol1 : (ol + 1).toNat = acc.length + 1 := by
         rw [word_add_toNat (show ol.toNat + (1 : Word).toNat < 2 ^ 64 by simp; omega)]; simp [hol]
       have hrest : ∀ fp' : Word, fp'.toNat = ((acc ++ [(cv, nPc, nF)]).head?.map (·.2.1)).getD 0 →
-          ncGoW k (m3.set64 IW (cs + ol) q3) vis C (co + 1) (cl - 1) cs (ol + 1) fp' = some (r, m') →
+          ncGoW.j1 k vis C co cl cs (ol + 1) fp' (m3.set64 IW (cs + ol) q3) = some (r, m') →
           ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 = .ok (ys, a') ∧ StageR vis fe m' a' ∧
             GrowX cs.toNat N m m' ∧ (r.headD 0).toNat = acc.length + ((cv, nPc, nF) :: ys).length ∧
             CsAt m' cs.toNat ((acc ++ (cv, nPc, nF) :: ys).map ncProj) (OutR cs.toNat N (iwTop m')) ∧
             (r.tail.headD 0).toNat = ((acc ++ (cv, nPc, nF) :: ys).head?.map (·.2.1)).getD 0 ∧
             ys.length ≤ ns'.length := by
         intro fp' hfp' h'
+        obtain ⟨r', h', e1, e2⟩ := ncGoW.j1_some h'
         obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ := ih _ m' a1 (co + 1) (cl - 1) (ol + 1) fp' ns'
-          (acc ++ [(cv, nPc, nF)]) r h' hS4
+          (acc ++ [(cv, nPc, nF)]) r' h' hS4
           (hns1 hE4)
           (by rw [ht4]; have := hg23.iw; omega) (by rw [hol1]; simp) (by simp; omega) hacc4 hfp'
-        refine ⟨ys, a', hrun, hS', hGX4.trans hGX, by rw [h1]; simp; omega, ?_, ?_, h4⟩
+        refine ⟨ys, a', hrun, hS', hGX4.trans hGX, by rw [e1, h1]; simp; omega, ?_, ?_, h4⟩
         · simpa using h2
-        · simpa using h3
+        · rw [e2]; simpa using h3
       obtain ⟨ys, a', hrun, hS', hGX, h1, h2, h3, h4⟩ : ∃ ys a', (List.filterMapM (ncF fe (decI C)) ns').run a1 =
           .ok (ys, a') ∧ StageR vis fe m' a' ∧
             GrowX cs.toNat N m m' ∧ (r.headD 0).toNat = acc.length + ((cv, nPc, nF) :: ys).length ∧
@@ -433,11 +342,11 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
             (r.tail.headD 0).toNat = ((acc ++ (cv, nPc, nF) :: ys).head?.map (·.2.1)).getD 0 ∧
             ys.length ≤ ns'.length := by
         by_cases h0 : ol = 0
-        · rw [ncK3_first (h := h0)] at h
+        · rw [ncGoW.k_rec2.arm1 (hc1 := h0), ncGoW.j2.arm1] at h
           have : acc = [] := List.eq_nil_of_length_eq_zero (by rw [← hol, h0]; rfl)
           subst this
           exact hrest _ (by simp [hnPc]) h
-        · rw [ncK3_next (h := h0)] at h
+        · rw [ncGoW.k_rec2.arm2 (hc1 := h0), ncGoW.j2.arm1] at h
           have hne : acc ≠ [] := fun e => h0 (UInt64.toNat_inj.mp (by rw [hol, e]; rfl))
           obtain ⟨c0, acc', rfl⟩ := List.exists_cons_of_ne_nil hne
           exact hrest _ (by simpa using hfp) h
@@ -447,19 +356,19 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
 
 theorem ncW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
     (k : Nat) (m m' : Mem) (a : AState) (co cl : Word) (ns : List NIdx) (r : List Word)
-    (h : ncW k m vis C co cl = some (r, m')) (hS : StageR vis fe m a)
+    (h : ncWf (k + 1) m vis C co cl = some (r, m')) (hS : StageR vis fe m a)
     (hns : hslice? (erecP m) co.toNat cl.toNat = some ns) :
     ∃ ys a', (ns.filterMapM (ncF fe (decI C))).run a = .ok (ys, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.tail.headD 0).toNat = ys.length ∧ (r.headD 0).toNat + ys.length ≤ iwTop m' ∧
       CsAt m' (r.headD 0).toNat (ys.map ncProj) (· < iwTop m') ∧
       (r.tail.tail.headD 0).toNat = (ys.head?.map (·.2.1)).getD 0 := by
-  unfold ncW at h
-  rcases hal : allocW m cl with _ | ⟨cs, m1⟩ <;> rw [hal] at h; · simp at h
-  simp only at h
+  rw [ncWf.arm1] at h
+  rcases hal : allocW m cl with _ | ⟨cs, m1⟩ <;> rw [hal] at h; · rw [ncWf.k_iw_alloc.none] at h; cases h
+  rw [ncWf.k_iw_alloc.arm1] at h
   obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
   have hqt : cs.toNat = iwTop m := by simp only [iwTop, hqd]
-  rcases hgo : ncGoW k m1 vis C co cl cs 0 0 with _ | ⟨r1, m2⟩ <;> rw [hgo] at h; · simp [ncB] at h
-  rw [ncB_some] at h
+  rcases hgo : ncGoW k m1 vis C co cl cs 0 0 with _ | ⟨r1, m2⟩ <;> rw [hgo] at h; · rw [ncWf.k_nest_container_ctors_go.none] at h; cases h
+  rw [ncWf.k_nest_container_ctors_go.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hE1 : ArrExt (erecP m) (erecP m1) := (GrowX.of_grow (q := 0) (n := 0) hg1).erecP
   obtain ⟨ys, a', hrun, hS2, hGX, h1, h2, h3, h4⟩ := ncGoW_ok fe vis C cs cl.toNat hC k m1 m2 a co cl 0 0 ns []
@@ -507,83 +416,6 @@ theorem nestContainer_ind {fe : IFEnv} {C : NIdx} {cv : IConstantVal} {caps : II
 theorem nestContainer_none {fe : IFEnv} {C : NIdx} (h : ∀ cv caps, fe.find? C ≠ some (.indInfo cv caps)) :
     ConRon.Arena.nestContainer fe C = pure none := by
   simp only [ConRon.Arena.nestContainer]
-
-theorem ntW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
-    (k : Nat) (m m' : Mem) (a : AState) (r : List Word)
-    (h : ntW k m vis C = some (r, m')) (hS : StageR vis fe m a) :
-    ∃ x a', (ConRon.Arena.nestContainer fe (decI C)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
-      IWGrow m m' ∧ NcOut m' r x := by
-  have hE := hS.check.env
-  unfold ntW at h
-  by_cases hf0 : (findRes m vis C).headD 0 = 0
-  · rw [ntK1_miss (h := hf0)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hfind := findRes_miss hE hC hf0
-    refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestContainer_none (fun cv caps e => by rw [hfind] at e; cases e)]; rfl
-  obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hC hf0
-  rw [hci] at hfind
-  by_cases h3 : erRd m ((findRes m vis C).tail.headD 0) ≠ 3
-  · rw [ntK1_noind (h := hf0) (h3 := h3)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
-    rw [nestContainer_none (fun cv caps e => by
-      rw [hfind] at e; cases e
-      have hk := decCI_indInfo_kind hci
-      exact h3 (by
-        have := erecP_rdN hk rfl
-        exact UInt64.toNat_inj.mp (by rw [this]; rfl)))]; rfl
-  rw [ntK1_ind (h := hf0) (h3 := h3)] at h
-  generalize (findRes m vis C).tail.headD 0 = ciq at h hfind hci h3
-  have hk3 : nat? (erecP m) ciq.toNat = some 3 := by
-    obtain ⟨w, hw⟩ := decCI_rd hci
-    have e := (erRd_of_erecP hw).1
-    have : erRd m ciq = 3 := by simpa using h3
-    simp only [nat?, hw, Option.map_some]; rw [← e, this]; rfl
-  obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  obtain ⟨hnp, hcts⟩ := decCaps_ctors hcaps
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hcts
-  obtain ⟨o, ho, l, hl, hns⟩ := hcts
-  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by obtain ⟨_, e⟩ := nat?_rd hl; exact erecP_lt64 e
-  have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
-  have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
-  have e12 : (ciq + 5 + 12).toNat = ciq.toNat + 5 + 12 := by
-    rw [word_add_toNat (by simp; omega), word_add_toNat (by simp; omega)]; rfl
-  have ro := erecP_rdN ho e13
-  have rl := erecP_rdN hl e14
-  generalize erRd m (ciq + 5 + 13) = co at h ro
-  generalize erRd m (ciq + 5 + 14) = cl at h rl
-  rw [nestContainer_ind hfind]
-  cases k with
-  | zero => simp [ncWf, ntK2] at h
-  | succ k =>
-  simp only [ncWf] at h
-  rcases hnc : ncW k m vis C co cl with _ | ⟨r2, m2⟩ <;> rw [hnc] at h; · simp [ntK2] at h
-  obtain ⟨ys, a', hrun, hS2, hg2, h1, h2, h3', h4⟩ := ncW_ok fe vis C hC k m m2 a co cl caps.ctors r2 hnc hS
-    (by rw [ro, rl]; exact hns)
-  have hrun' : (do
-      let cs ← List.filterMapM (ncF fe (decI C)) caps.ctors
-      match cs with
-      | [] => pure (some (caps.nparams, []))
-      | c :: _ => pure (some (c.2.1, cs.map fun c => (c.1, c.2.2))) : AM _).run a =
-      .ok ((match ys with
-        | [] => some (caps.nparams, [])
-        | c :: _ => some (c.2.1, ys.map fun c => (c.1, c.2.2))), a') := by
-    simp only [StateT.run_bind, hrun, except_ok_bind]; cases ys <;> rfl
-  cases ys with
-  | nil =>
-    rw [ntK2_empty (h := by apply UInt64.toNat_inj.mp; simpa using h1)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
-    simp only [List.tail_cons, List.headD_cons]
-    exact erecP_rdN ((GrowX.of_grow (q := 0) (n := 0) hg2).erecP.nat? hnp) e12
-  | cons c ys =>
-    rw [ntK2_cons (h := fun e => by rw [e] at h1; simp at h1)] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact ⟨_, a', hrun', hS2, hg2, rfl, by simpa using h4, by simpa using h1, by simpa using h2,
-      by rw [show (fun c : IConstantVal × Nat × Nat => (c.fst, c.snd.snd)) = ncProj from rfl]; simpa using h3'⟩
 
 end L.Ind
 

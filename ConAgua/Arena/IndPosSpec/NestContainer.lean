@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Arena.IndPosSpec.NcGoW
+import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
@@ -59,7 +59,7 @@ theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestContainer fe (decI C)) a₀ ∧
       StageR vis fe s'.mem (AM.st (ConRon.Arena.nestContainer fe (decI C)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ NcOut s'.mem r (AM.res (ConRon.Arena.nestContainer fe (decI C)) a₀); ⊤⦄ := by
-  refine triple_post (nt_spec p hl k s₀ vis C) ?_
+  refine triple_post (nt_spec' p hl (k + 1) s₀ vis C) ?_
   rintro r s' ⟨hlc, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := ntW_ok fe vis C hC k _ _ a₀ r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndPosSpec.PcrW
 public import ConAgua.Arena.IndPosSpec.U4W
+public import ConAgua.Arena.IndPosSpec.EntryW
 
 @[expose] public section
 

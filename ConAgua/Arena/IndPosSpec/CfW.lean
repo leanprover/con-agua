@@ -1,6 +1,8 @@
 module
 
 import ConAgua.Arena.IndPosSpec.NestAcceptGroup
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.NestCrest2
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.P2ctK1
@@ -117,19 +119,11 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (us dO dL gO gL ns2 aO aL kb q : Word) (r : List Word)
-theorem cfK3_some : cfK3 kb (some (q, m3)) = some ([nestedW kb, q], m3) := rfl
-theorem cfK2_some : cfK2 ns2 aO aL kb (some (r, m2)) = cfK3 kb (posRecW m2 [r.headD 0, r.tail.headD 0, aO, aL,
-    rdW (m2.arr64 IW) (ns2 + 4), rdW (m2.arr64 IW) (ns2 + 5)]) := rfl
-theorem cfK1_acc (h : r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
-    cfK2 ns2 aO aL kb (nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1))) := by
-  rw [cfK1, ite_eq_left h]
-theorem cfK1_open (h : ¬ r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
-    cfK2 ns2 aO aL kb (some ([rdW (m1.arr64 IW) ns2, rdW (m1.arr64 IW) (ns2 + 1)], m1)) := by
-  rw [cfK1, ite_eq_right h]
-end arms
-attribute [ind_grind] cfK3_some cfK2_some cfK1_acc cfK1_open
+l_model nestContNewFinish_spec (p : Prog) (hL : NagLook p) (hd : DcLook p) (h6 : p.lookup "rec6" = some rec6)
+    (hp : p.lookup "nest_cont_new_finish" = some nestContNewFinishL)
+  fns [hp ↦ cfW list]
+  specs [dc_spec' p hd.hf hd.hh hd.hg hd.hp n, nestAcceptGroup_spec p hL n, rec6_specW p hL.ha h6 n]
+  grind [arena_grind] fold [tierW, idxW, nestedW] finish [tierW, idxW]
 
 end L.Ind
 
@@ -164,12 +158,12 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
     ∃ x a', (cfT c (decI us) ds grp NS2 act kb.toNat).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ r.headD 0 = nestedW kb ∧ decNFK (r.headD 0) = some x.1 ∧ NSB m' (r.tail.headD 0) x.2 := by
   cases k with
-  | zero => simp [cfW] at h
+  | zero => simp [cfW.eq_1] at h
   | succ k =>
-  simp only [cfW] at h
+  rw [cfW.arm1] at h
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hdsD := hds.get (OMono.decHL _ _)
-  rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · simp [cfK1] at h
+  rcases hdc : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [hdc] at h; · rw [cfW.k_nest_ds_closed.none] at h; cases h
   obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD
     (fun j hj => by omega)
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
@@ -177,26 +171,28 @@ theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k
   obtain ⟨hp6, hk1, -, hn1⟩ := nsb_words hns1 htop1
   have hkb1 := hns1.b0
   -- the keys, cached or not
-  have hkeys : ∃ (rk : List Word) (mk : Mem), cfK1 k us dO dL gO gL ns2 aO aL kb (some (r1, m1)) =
-      cfK2 ns2 aO aL kb (some (rk, mk)) ∧ StageR vis fe mk a1 ∧ IWGrow m1 mk ∧
-      KsB mk (rk.headD 0).toNat (rk.tail.headD 0).toNat
+  have hkeys : ∃ (kO kL : Word) (mk : Mem), cfW.k_nest_ds_closed k us dO dL gO gL ns2 aO aL kb (some (r1, m1)) =
+      cfW.j1 ns2 aO aL kb kO kL mk ∧ StageR vis fe mk a1 ∧ IWGrow m1 mk ∧
+      KsB mk kO.toNat kL.toNat
         (if b then nestAcceptGroup (decI us) ds grp NS2.keys else NS2.keys).toList ∧
-      (rk.headD 0).toNat + (rk.tail.headD 0).toNat ≤ iwTop mk := by
+      kO.toNat + kL.toNat ≤ iwTop mk := by
     cases b with
     | true =>
-      rw [cfK1_acc (h := by rw [hr1]; decide)]
-      rcases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with _ | ⟨rk, mk⟩; · rw [cfK1_acc (h := by rw [hr1]; decide), hag] at h; simp [cfK2] at h
+      rw [cfW.k_nest_ds_closed.arm1 (hc1 := by rw [hr1]; decide)]
+      rcases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with _ | ⟨rk, mk⟩
+      · rw [cfW.k_nest_ds_closed.arm1 (hc1 := by rw [hr1]; decide), hag, cfW.k_nest_accept_group.none] at h
+        cases h
       obtain ⟨h1, h2, h3, h4⟩ := nagW_ok dn vis fe us dO dL ds hus k m1 mk a1 gO gL _ _ grp NS2.keys rk hag hS1
         (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.iw; omega) (hgrp.grow hgb hg1) hk1 hkb1
-      exact ⟨rk, mk, rfl, h1, h2, by simpa using h3, h4⟩
+      exact ⟨rk.headD 0, rk.tail.headD 0, mk, cfW.k_nest_accept_group.arm1 .., h1, h2, by simpa using h3, h4⟩
     | false =>
-      rw [cfK1_open (h := by rw [hr1]; decide)]
-      exact ⟨_, m1, rfl, hS1, IWGrow.refl _, by simpa using hk1, by simpa using hkb1⟩
-  obtain ⟨rk, mk, hk, hSk, hgk, hksk, hkbk⟩ := hkeys
-  rw [hk, cfK2_some] at h
-  rcases hq : posRecW mk [rk.headD 0, rk.tail.headD 0, aO, aL, rdW (mk.arr64 IW) (ns2 + 4),
-      rdW (mk.arr64 IW) (ns2 + 5)] with _ | ⟨q, m3⟩; · rw [hq] at h; simp [cfK3] at h
-  rw [hq, cfK3_some] at h
+      rw [cfW.k_nest_ds_closed.arm2 (hc1 := by rw [hr1]; decide)]
+      exact ⟨_, _, m1, rfl, hS1, IWGrow.refl _, by simpa using hk1, by simpa using hkb1⟩
+  obtain ⟨kO, kL, mk, hk, hSk, hgk, hksk, hkbk⟩ := hkeys
+  rw [hk, cfW.j1.arm1] at h
+  rcases hq : posRecW mk [kO, kL, aO, aL, rdW (mk.arr64 IW) (ns2 + 4),
+      rdW (mk.arr64 IW) (ns2 + 5)] with _ | ⟨q, m3⟩; · rw [hq, cfW.k_rec6.none] at h; cases h
+  rw [hq, cfW.k_rec6.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
   simp only [List.length_cons, List.length_nil] at ht3
