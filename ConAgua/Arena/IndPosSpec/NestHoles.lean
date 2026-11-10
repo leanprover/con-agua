@@ -8,7 +8,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.LdRd
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import all ConAgua.Arena.IndPos2
@@ -35,35 +34,30 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (k : Nat) (m3 : Mem) (ctx mm off l oo ol v : Word)
-theorem nhK3_big (h : 4294967296 ≤ v) : nhK3 k ctx mm off l oo ol (some (v, m3)) = none := by
-  rw [nhK3, ite_eq_left h]
-end arms
-attribute [ind_grind] nhK3_big
-
-theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
-    ∀ (s₀ : St) (ctx mm off l oo ol : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_holes_go" [ctx, mm, off, l, oo, ol]
-    ⦃fun r s' => LocEq s' s₀ ∧ nhGoW k s₀.mem ctx mm off l oo ol =
-      some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ ctx mm off l oo ol
-    rw [invoke_eq _ hl.hgo]; simp only [callFn, nestHolesGoL]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ ctx mm off l oo ol
-    simp only [invoke_eq _ hl.hgo, callFn, nestHolesGoL]
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld64,
-      instPisWith_spec p hl.hv hl.hip hl.hi1 k,
-      internFVar_spec p hl.hff hl.hfp hl.hif k, slSnoc_specW p hl.ha hl.hc hl.hsn k, ih]
-    all_goals subst_vars
-    -- locals resolved by `simp` before `grind` (the `sym … finish` form: 6.5 s)
-    all_goals (try simp only [LocEq] at *)
-    all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
+/-- `nest_holes_go`'s results are three words. -/
+theorem nhGoW_three {k : Nat} {m m' : Mem} {ctx mm off l oo ol : Word} {r : List Word}
+    (h : nhGoW k m ctx mm off l oo ol = some (r, m')) : r = [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] := by
+  cases k with
+  | zero => simp [nhGoW] at h
+  | succ k =>
+  rw [nhGoW.eq_2] at h
+  split at h
+  · cases h; rfl
+  split at h
+  · cases h; rfl
+  obtain ⟨⟨r2, m2⟩, -, h⟩ := of_K h (nhGoW.k_inst_pis_with.none ..)
+  rw [nhGoW.k_inst_pis_with.eq_2] at h
+  split at h
+  · cases h; rfl
+  obtain ⟨⟨v, m3⟩, -, h⟩ := of_K h (nhGoW.k_intern_fvar.none ..)
+  rw [nhGoW.k_intern_fvar.eq_2] at h
+  split at h
+  · cases h
+  obtain ⟨⟨r4, m4⟩, -, h⟩ := of_K h (nhGoW.k_sl_snoc.none ..)
+  rw [nhGoW.k_sl_snoc.arm1] at h
+  obtain ⟨⟨r5, m5⟩, -, h⟩ := of_K h nhGoW.k_nest_holes_go.none
+  rw [nhGoW.k_nest_holes_go.arm1] at h
+  cases h; rfl
 
 theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [ctx]
@@ -72,7 +66,7 @@ theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (ctx : W
   simp only [invoke_eq _ hl.hp, callFn, nestHolesL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nhGo_spec p hl k] <;>
-    finish (gen := 20) [nhW, rdW_eq]
+    finish (gen := 20) [nhW, rdW_eq, nhGoW_three]
 
 /-- The params slice's end, as the words L reads. -/
 theorem ctx_params_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat = some c)
@@ -101,7 +95,7 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     have hsz := hS.iw.iwSize
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
     by_cases hl0 : l = 0
-    · rw [nhGoW_nil (h := hl0)] at h
+    · rw [nhGoW.arm1 (hc1 := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : ns = [] := by simpa [decHL, hslice?] using hns.symm
@@ -126,12 +120,13 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     have r12 : (rdW (m.arr64 IW) (ctx + 12)).toNat = fl := rd_iwN (by simpa using hfl1) (by simp; omega)
     have hflen := decPL_length (m := m) hfos
     by_cases hb12 : rdW (m.arr64 IW) (ctx + 12) ≤ mm
-    · rw [nhGoW_nof (h := hl0) (h12 := hb12)] at h
+    · rw [nhGoW.arm2 (hc1 := hl0) (hc2 := hb12)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : c.formers[mm.toNat]? = none :=
         List.getElem?_eq_none (by rw [hflen, ← r12]; exact UInt64.le_iff_toNat_le.mp hb12)
       exact ⟨none, a, by rw [this]; rfl, hS, IWGrow.refl _, rfl⟩
-    rw [nhGoW_cons (h := hl0) (h12 := hb12)] at h
+    rw [nhGoW.arm3 (hc1 := hl0) (hc2 := hb12)] at h
+    simp only [erRd_foldN] at h
     have hmmf : mm.toNat < fl := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb12); omega
     have hfx := mapM_opt_get _ _ _ hfos mm.toNat (by simpa using hmmf)
@@ -157,7 +152,7 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     -- the former's type at the parameters
     obtain ⟨hnames, hnamesb, hpa, hpab, hnP, -, -, -, -, h11⟩ := ctx_fields hc hin htop
     have hpe := ctx_params_end hc hin hsl htop
-    rcases hinst : instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) w with _ | ⟨r2, m2⟩ <;> rw [hinst] at h; · simp [nhK2] at h
+    rcases hinst : instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) w with _ | ⟨r2, m2⟩ <;> rw [hinst] at h; · simp [nhGoW.k_inst_pis_with.none] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx⟩ := instW_ok k (fun _ => none) fe vis m m2 a _ _ w c.params r2 hinst hS hwH' hpa
       (by omega) hpe
     simp only
@@ -166,12 +161,12 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     cases x with
     | none =>
       have : r2.headD 0 = 0 := hx
-      rw [nhK2_none (h := this)] at h
+      rw [nhGoW.k_inst_pis_with.arm1 (hc1 := this)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       exact ⟨none, a2, by simp only [StateT.run_bind, hrun2, except_ok_bind]; rfl, hS2, hg2, rfl⟩
     | some t =>
     obtain ⟨hx1, htH, htd⟩ := hx
-    rw [nhK2_some (h := by rw [hx1]; decide)] at h
+    rw [nhGoW.k_inst_pis_with.arm2 (hc1 := by rw [hx1]; decide)] at h
     have hnP2 : (rdW (m2.arr64 IW) (ctx + 4)).toNat = c.nP := by
       have : rdW (m2.arr64 IW) (ctx + 4) = rdW (m.arr64 IW) (ctx + 4) := by
         have e : (ctx + 4).toNat = ctx.toNat + 4 := word_add_toNat (by simp; omega)
@@ -179,30 +174,33 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
       rw [this, hnP]
     have hu : (rdW (m2.arr64 IW) (ctx + 4) + mm).toNat = c.nP + mm.toNat := by
       rw [word_add_toNat (by rw [hnP2]; omega), hnP2]
-    rcases hfv : fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0) with _ | ⟨v, m3⟩ <;> rw [hfv] at h; · simp [nhK3] at h
+    rcases hfv : fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0) with _ | ⟨v, m3⟩ <;> rw [hfv] at h; · simp [nhGoW.k_intern_fvar.none] at h
     obtain ⟨a3, hrun3, hS3, hg3⟩ := internFVar_stage hS2 _ _ htH hfv
     by_cases hvb : 4294967296 ≤ v
-    · rw [nhK3_big (h := hvb)] at h; simp at h
-    rw [nhK3_ok (h := hvb)] at h
+    · rw [nhGoW.k_intern_fvar.abort1 (hc1 := hvb)] at h; cases h
+    rw [nhGoW.k_intern_fvar.arm1 (hc1 := hvb)] at h
     have hvlt := lt_of_notbig hvb
     have hg23 := hg2.trans hg3
     have hout3 : decHL m3 oo.toNat ol.toNat = some out := by
       rw [decHL_agree (RdS.of_grow hg23) (fun j hj => by omega)]; exact hout
-    rcases hsn : snocW k m3 oo ol v with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [nhK4] at h
-    rw [nhK4_some] at h
+    rcases hsn : snocW k m3 oo ol v with _ | ⟨r4, m4⟩ <;> rw [hsn] at h; · simp [nhGoW.k_sl_snoc.none] at h
+    rw [nhGoW.k_sl_snoc.arm1] at h
     obtain ⟨hr4, hdec4, hg4, -, hol1, ht4⟩ := snocW_dec hsn hS3.iw.iwSize hS3.iw.ctl
       (by have := hg23.iw; omega) hvlt hout3
     have hS4 := snocW_stage hsn hS3
     subst hr4
     simp only [List.headD_cons, List.tail_cons] at h
     have hg24 := hg23.trans hg4
-    obtain ⟨xr, a', hrun, hS', hg', hout'⟩ := ih m4 m' a3 (mm + 1) (off + 1) (l - 1) _ _ ns' (out ++ [decI v]) r h
+    obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h nhGoW.k_nest_holes_go.none
+    rw [nhGoW.k_nest_holes_go.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨xr, a', hrun, hS', hg', hout'⟩ := ih m4 m5 a3 (mm + 1) (off + 1) (l - 1) _ _ ns' (out ++ [decI v]) r5 h5
       hS4 ((CtxIn.grow hin hg24).1 hc) (CtxIn.grow hin hg24).2 (hsl.grow hin hg24)
       (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg24) (fun j hj => by
             have := hnb (j + 1) (by omega); omega)]; simpa [decHL] using hns')
       (fun j hj => by rw [hoff1, hl1] at *; have := hnb (j + 1) (by omega); have := hg24.iw; omega)
       hdec4 (by omega) (by rw [hmm1, hl1]; omega)
-    refine ⟨xr, a', ?_, hS', hg24.trans hg', hout'⟩
+    refine ⟨xr, a', ?_, hS', hg24.trans hg', by cases xr <;> simpa [NhOut] using hout'⟩
     simp only [StateT.run_bind, hrun2, except_ok_bind]
     simp only [internFVarE]
     rw [← hu, ← htd, ← decE_eq, hrun3]
