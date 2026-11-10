@@ -300,8 +300,10 @@ theorem erAlloc_stageT {m m' : Mem} {a : AState} {k q : Word} (h : erAllocW m k 
       erTopOf m' q = erTopOf m q + k.toNat ∧ q.toNat < 2 ^ 41 := by
   obtain ⟨hg, hf, hoff, htop, -, -, hq41, hW⟩ := erAllocW_spec h hT.stage.iw
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by simp) (by decide)
-  have hgI : IWGrow m m' := ⟨by simp only [iwTop]; rw [hf.ctl 200 (by decide)]; exact Nat.le_refl _, hg.top,
-    fun i _ => by rw [hI], hg.get, hg.top1, hg.get1⟩
+  have hgI : IWGrow m m' :=
+    { iw := by simp only [iwTop]; rw [hf.ctl 200 (by decide)]; exact Nat.le_refl _
+      er := hg.top, iwGet := fun i _ => by rw [hI], erGet := hg.get, er1 := hg.top1
+      er1Get := hg.get1 }
   have hfe : MemFrame [EREC, tier1 EREC] [129, 130] m m' := hf.mono (by simp) (fun _ h => h)
   refine ⟨⟨⟨CheckR.erGrow hT.stage.check hfe hg, hW⟩,
     hT.twin.frame hf (by decide) (by decide) (by decide) (by decide) (by decide) (by decide), ?_⟩,

@@ -276,18 +276,11 @@ theorem StageT.ctl136 {m : Mem} {a : AState} (hT : StageT dn vis fe m a) (b : Wo
   have hfr := MemFrame.setCtl m 136 b
   obtain ⟨M, hC⟩ := hT.core
   have hC' := hC.frame_stk hfr (by simp) (by simp)
-  have hI : (m.set64 CTL 136 b).arr64 IW = m.arr64 IW := hfr.arr _ (by simp) (by decide)
-  have hE' : (m.set64 CTL 136 b).arr64 EREC = m.arr64 EREC := hfr.arr _ (by simp) (by decide)
-  have hE1' : (m.set64 CTL 136 b).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hfr.arr _ (by simp) (by decide)
   have hP' : (m.set64 CTL 136 b).arr64 PINS = m.arr64 PINS := hfr.arr _ (by simp) (by decide)
-  have h129' := hfr.ctl 129 (by decide)
-  have h130' := hfr.ctl 130 (by decide)
-  have h200' := hfr.ctl 200 (by decide)
   obtain ⟨hCR, hTw⟩ := hC'.checkR
-  refine ⟨⟨⟨hCR, IWOK.frame hfr (by simp) (by simp) (by decide) (by decide) hT.stage.iw⟩, hTw,
-    by simp only [pinW, hP']; exact hT.flag⟩, ?_⟩
-  exact ⟨by simp [iwTop, h200'], by simp [erTop, h129'], fun i _ => by rw [hI], fun i _ => by rw [hE'],
-    by simp [erecTop1, h130'], fun i _ => by rw [hE1']⟩
+  exact ⟨⟨⟨hCR, IWOK.frame hfr (by simp) (by simp) (by decide) (by decide) hT.stage.iw⟩, hTw,
+    by simp only [pinW, hP']; exact hT.flag⟩,
+    IWGrow.of_keep hfr ⟨by simp, by simp, by simp⟩ ⟨by decide, by decide, by decide⟩⟩
 
 /-! ## `fire_levels_at` -/
 

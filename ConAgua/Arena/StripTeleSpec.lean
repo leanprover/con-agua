@@ -404,9 +404,9 @@ theorem stripTW_ok (tg : Word) (T : UInt32)
   have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp [EREC, IW]) (by decide)
   have hgrow : iwTop m ≤ iwTop m' → IWGrow m m' := fun h =>
-    ⟨h, by rw [h129]; exact Nat.le_refl _, hlow, fun i _ => by rw [hE],
-      by simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _,
-      fun i _ => by rw [hf.arr _ (by decide) (by decide)]⟩
+    { iw := h, er := by rw [h129]; exact Nat.le_refl _, iwGet := hlow, erGet := fun i _ => by rw [hE]
+      er1 := by simp only [erecTop1]; rw [hf.ctl 130 (by simp)]; exact Nat.le_refl _
+      er1Get := fun i _ => by rw [hf.arr _ (by decide) (by decide)] }
   simp only [UInt64.toNat_zero, Nat.sub_zero] at hrun
   refine ⟨x, a, hrun, hS', ?_⟩
   cases x with

@@ -273,14 +273,8 @@ theorem _root_.L.Ind.StageR.reset {vis : Word} {fe : IFEnv} {m : Mem} {a : AStat
     StageR vis fe (m.set64 CTL 200 0) a := by
   refine ⟨CheckR.frame_hi (A := []) (C := [200]) (by simp) (by simp) (MemFrame.setCtl m 200 0)
     hS.check, ?_⟩
-  have h := (IWOK_iff m).mp hS.iw
-  have hne : ∀ b : TieredArray, b ≠ CTL → (m.set64 CTL 200 0).arr64 b = m.arr64 b :=
-    fun b hb => Mem.arr64_set64_ne _ _ _ _ _ hb
-  rw [IWOK_iff]
-  simp only [iwTop, erTop, erecTop1, rdW_set_ctl m 200 0 129 (by decide),
-    rdW_set_ctl m 200 0 130 (by decide), hne IW (by decide), hne EREC (by decide),
-    hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
-  refine ⟨by rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2⟩
+  exact IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) hS.iw
+    (by simp [iwTop, rdW_set64, hS.iw.ctl])
 
 theorem erecP_reset' (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
   erecP_congr' (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
