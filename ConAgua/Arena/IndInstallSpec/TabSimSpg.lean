@@ -98,7 +98,7 @@ theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
   cases k with
   | zero => simp [spbW] at h
   | succ k =>
-    simp only [spbW, spbK1.eq_def, spbK2.eq_def, spbK3.eq_def] at h
+    simp only [spbW, spbW.k_struct_proj_ps.eq_def, spbW.k_inst_pis_at_lift.eq_def, spbW.k_struct_proj_bodies_go.eq_def] at h
     mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
 
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
