@@ -7,8 +7,6 @@ public import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.BvarB
-public import ConAgua.Arena.IndRealWalk
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndPos2

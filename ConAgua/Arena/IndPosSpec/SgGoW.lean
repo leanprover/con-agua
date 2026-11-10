@@ -11,8 +11,8 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+public import ConAgua.Arena.IndPosSpec.CrLook
 
 @[expose] public section
 

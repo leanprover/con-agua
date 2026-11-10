@@ -1,14 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.RpGoStep
-public import ConAgua.Arena.IndPosSpec.RxMapW
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndPosSpec.CrLook
-public import ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 

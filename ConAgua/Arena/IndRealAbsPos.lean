@@ -7,8 +7,6 @@ public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.IndPosSpec.FgW
-public import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndPosSpec.FgW2
 
@@ -372,30 +370,6 @@ theorem dcWf_afr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : 
   | succ n =>
     simp only [dcWf.eq_2, dcWf.k_nest_ds_closed_go.eq_def] at h
     afr_auto h [dcGoW_afr _ _ _ _ _ _ _]
-
--- from IndPosSpec/NestCrest
-theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [cfW.eq_1] at h
-  | succ k =>
-  rw [cfW.arm1] at h
-  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · rw [cfW.k_nest_ds_closed.none] at h; cases h
-  refine (dcWf_afr h1).trans ?_
-  simp only [cfW.k_nest_ds_closed.eq_def, cfW.k_nest_accept_group.eq_def, cfW.j1.eq_1, cfW.k_rec6.eq_def] at h
-  afr_auto h [nagW_afr _ _ _ _ _ _ _ _ _ _ _, posRecW_afr]
-
--- from IndPosSpec/FgW
-theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : MFr [] [] m m' := by
-  cases k with
-  | zero => simp [cfW.eq_1] at h
-  | succ k =>
-  rw [cfW.arm1] at h
-  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · rw [cfW.k_nest_ds_closed.none] at h; cases h
-  refine (dcWf_mfr h1).trans ?_
-  simp only [cfW.k_nest_ds_closed.eq_def, cfW.k_nest_accept_group.eq_def, cfW.j1.eq_1, cfW.k_rec6.eq_def] at h
-  mfr_auto h [nagW_mfr _ _ _ _ _ _ _ _ _ _ _, posRecW_mfr]
 
 -- from IndPosSpec/NestCrest
 theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}

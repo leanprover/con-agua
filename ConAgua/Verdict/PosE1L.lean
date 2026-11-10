@@ -5,7 +5,6 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.NestCrest
 import all Init.Data.List.Control
 import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.NtyW
 import ConAgua.Arena.RefWalk
 import Std.Tactic.BVDecide.Normalize.BitVec

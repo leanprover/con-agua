@@ -1,12 +1,12 @@
 module
 
 import ConAgua.Arena.IndPosSpec.CrLook
-public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.IndPosSpec.DpGoW
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.BvarBRefine
+public import ConAgua.Arena.IndPosSpec.PiBWStage
 
 @[expose] public section
 

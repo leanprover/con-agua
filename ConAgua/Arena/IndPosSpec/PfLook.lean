@@ -1,11 +1,11 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.IndSumSpec.StructUsedLater
 public import ConAgua.Arena.IndDecStab
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos2
+public import ConAgua.Arena.IndPosSpec.CtxFields
 
 @[expose] public section
 

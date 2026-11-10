@@ -6,7 +6,6 @@ public import ConAgua.Arena.IndPosSpec.RsLook
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndPosSpec.UnW
 public import ConAgua.Arena.IndPosSpec.NbKeyK2
 import all ConAgua.Arena.IndPos2
 

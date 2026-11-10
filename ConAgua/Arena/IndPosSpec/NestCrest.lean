@@ -9,7 +9,6 @@ import all Init.Data.List.Control
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
-import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.NestCrest2
 import ConAgua.Arena.IndPosSpec.NkFields
