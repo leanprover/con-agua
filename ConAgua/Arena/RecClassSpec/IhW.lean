@@ -363,45 +363,18 @@ theorem slotVarW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
 
 /-! ## `class_gen_mot_var` -/
 
-/-- The returned word. -/
-def mvK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-/-- After the motive-slot search. -/
-def mvK (m : Mem) (g : Word) : Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some r => mvK2 (slotVarW m g (if r.headD 0 = 0 then 0 else r.tail.headD 0))
-
-/-- **The model of `class_gen_mot_var`.** -/
-def motVarW (n : Nat) (m : Mem) (g c : Word) : Option (List Word × Mem) :=
-  mvK m g (msW n m (rdW (m.arr64 IW) (g + 7)) (rdW (m.arr64 IW) (g + 8)) c)
-
-section mvarms
-variable (m : Mem) (g : Word) (r : List Word)
-theorem mvK_some : mvK m g (some r) = mvK2 (slotVarW m g (if r.headD 0 = 0 then 0 else r.tail.headD 0)) := rfl
-theorem mvK2_some (m' : Mem) : mvK2 (some (r, m')) = some ([r.headD 0], m') := rfl
-end mvarms
-
-grind_pattern [ind_grind] mvK_some => mvK m g (some r)
-grind_pattern [ind_grind] mvK2_some => mvK2 (some (r, m'))
-
-theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
+/-- **`class_gen_mot_var` is its model `motVarW`** (generated; body fuel `n`). -/
+l_model motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
     (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
     (his : p.lookup "intern_sort" = some internSort)
     (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
     (hif : p.lookup "intern_fvar" = some internFVar)
     (hsv : p.lookup "class_gen_slot_var" = some classGenSlotVar)
     (hms : p.lookup "class_read_motive_slot" = some classReadMotiveSlot)
-    (hp : p.lookup "class_gen_mot_var" = some classGenMotVar) (n : Nat) (s₀ : St) (g c : Word) :
-    ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ motVarW n s₀.mem g c = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]; simp only [callFn, classGenMotVar]
-  vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init, List.getD_cons_zero, List.getD_cons_succ, Cmp.eval,
-    BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, motVarW]
+    (hp : p.lookup "class_gen_mot_var" = some classGenMotVar)
+  fns [hp ↦ motVarW list]
+  specs [classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n]
+  grind [arena_grind, ind_grind] finish [rdW_eq] pfuel
 
 theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls → j ≤ i ∧ i < j + sls.length := by
   intro sls
@@ -457,9 +430,14 @@ theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hi : i ∈ motIdx 0 G.slots := List.mem_of_getElem? ho2
       have := (motIdx_lt G.slots 0 i hi).2
       exact ⟨UInt64.ofNat i, by simp; omega, by simp [msRes]⟩
-  simp only [mvK, hsv2] at h
+  have hk : motVarW.k_class_read_motive_slot g m (some r1) =
+      motVarW.j1 g (if r1.headD 0 = 0 then 0 else r1.tail.headD 0) m := by
+    by_cases h0 : r1.headD 0 = 0
+    · rw [motVarW.k_class_read_motive_slot.arm1 _ _ _ h0, ite_eq_left h0]
+    · rw [motVarW.k_class_read_motive_slot.arm2 _ _ _ h0, ite_eq_right h0]
+  rw [hk, hsv2, motVarW.j1.arm1] at h
   obtain ⟨⟨r2, m2⟩, hsw, h⟩ := of_K h rfl
-  simp only [mvK2, Option.some.injEq, Prod.mk.injEq] at h
+  simp only [motVarW.k_class_gen_slot_var.arm1, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hsvb : G.nP + sv.toNat < 2 ^ 64 := by
     rw [hsv1]

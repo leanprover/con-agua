@@ -50,7 +50,8 @@ theorem rec2MotVarF_afr {n : Nat} {m m' : Mem} {g c : Word} {r : List Word}
     (h : rec2MotVarF n m g c = some (r, m')) : AFr m m' := by
   rcases n with _ | n
   · simp [rec2MotVarF, fuelW] at h
-  simp only [rec2MotVarF, fuelW, motVarW, mvK.eq_def, mvK2.eq_def] at h
+  simp only [rec2MotVarF, fuelW, motVarW, motVarW.k_class_read_motive_slot.eq_def, motVarW.j1,
+    motVarW.k_class_gen_slot_var.eq_def] at h
   afr_auto h [slotVarW_afr]
 
 theorem rec2MotVar_specF (p : Prog) (h : MtProg p) (hff : p.lookup "fvar_find" = some fvarFind)
