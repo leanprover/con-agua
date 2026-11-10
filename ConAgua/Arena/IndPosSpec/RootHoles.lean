@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.IndPosSpec.DpGoW
+import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndInstallSpec.DomsW
@@ -133,19 +134,16 @@ theorem NHIn.grow {m m' : Mem} {w : Nat} (hw : NHIn m w (· < iwTop m)) (h : IWG
   let ⟨e, hw'⟩ := hw.agree (RdS.of_grow h)
   ⟨e, hw'.mono fun _ hi => Nat.lt_of_lt_of_le hi h.iw⟩
 
-section arms
-variable (k : Nat) (m m1 m2 : Mem) (no nl lv po pl nP nio nil q j key h : Word)
-theorem rhGoW_done (hd : nl ≤ j) : rhGoW (k + 1) m no nl lv po pl nP nio nil q j = some m := by
-  simp [rhGoW, hd]
-theorem rhGoW_step (hd : ¬ nl ≤ j) : rhGoW (k + 1) m no nl lv po pl nP nio nil q j =
-    rhK1 k no nl lv po pl nP nio nil q j (posRecW m [rdW (m.arr64 IW) (no + j), lv, po, pl]) := by
-  simp [rhGoW, hd]
-theorem rhK1_some : rhK1 k no nl lv po pl nP nio nil q j (some (key, m1)) =
-    rhK2 k no nl lv po pl nP nio nil q j (posRecW m1 [key, nP, getDW m1 nio nil j 0]) := by rw [rhK1]
-theorem rhK2_some : rhK2 k no nl lv po pl nP nio nil q j (some (h, m2)) =
-    rhGoW k (m2.set64 IW (q + j) h) no nl lv po pl nP nio nil q (j + 1) := by rw [rhK2]
-end arms
-attribute [ind_grind] rhGoW_done rhGoW_step rhK1_some rhK2_some
+l_model rhGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
+    (h4 : p.lookup "rec4" = some rec4) (hsg : p.lookup "sl_getd" = some slGetD)
+    (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
+  fns [hg ↦ rhGoW void]
+  specs [posRec4_specW p ha h4 n, posRec3_specW p ha h3 n, slGetD_specW p hsg n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+/-- The continuation after the recursive call passes its memory on. -/
+theorem rhGoW.k_nest_ctx_root_holes_go_id (x : Option Mem) : rhGoW.k_nest_ctx_root_holes_go x = x := by
+  cases x <;> rfl
 
 def rhA (k : Nat) (ctx no nl lv po pl nP : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -166,22 +164,6 @@ section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
   (h4 : p.lookup "rec4" = some rec4) (hsg : p.lookup "sl_getd" = some slGetD)
   (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
-
-include ha h3 h4 hsg hg in
-theorem rhGo_spec (k : Nat) : ∀ (s₀ : St) (no nl lv po pl nP nio nil q j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctx_root_holes_go" [no, nl, lv, po, pl, nP, nio, nil, q, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ rhGoW k s₀.mem no nl lv po pl nP nio nil q j = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ no nl lv po pl nP nio nil q j
-    rw [invoke_eq _ hg]; simp only [callFn, nestCtxRootHolesGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ no nl lv po pl nP nio nil q j
-    simp only [invoke_eq _ hg, callFn, nestCtxRootHolesGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        posRec4_specW p ha h4 k, posRec3_specW p ha h3 k, slGetD_specW p hsg k, ih] <;>
-      finish (gen := 20) [rdW_eq]
 
 include ha h3 h4 hsg hg in
 theorem rootHoles_spec (hp : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles) (k : Nat)
@@ -323,17 +305,17 @@ theorem rhGoW_ok (fe : IFEnv) (vis : Word) (a : AState)
       HolesAt m' q.toNat nl.toNat (rhList names (decI lv) params nP.toNat nIdxs)
         (OutR q.toNat nl.toNat (iwTop m')) := by
   induction k with
-  | zero => intro m m' j h; simp [rhGoW] at h
+  | zero => intro m m' j h; simp [rhGoW.eq_1] at h
   | succ k ih =>
     intro m m' j h hS hn hp hlv hni hno hpo hnio hq hj hH
     have hsz := hS.iw.iwSize
     have htop := hS.iw.iw
     by_cases hd : nl ≤ j
-    · rw [rhGoW_done k m no nl lv po pl nP nio nil q j hd] at h
+    · rw [rhGoW.arm1 (hc1 := hd)] at h
       cases h
       have : j.toNat = nl.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
       exact ⟨hS, GrowX.of_grow (IWGrow.refl _), this ▸ hH⟩
-    rw [rhGoW_step k m no nl lv po pl nP nio nil q j hd] at h
+    rw [rhGoW.arm2 (hc1 := hd)] at h
     have hjl : j.toNat < nl.toNat := by
       have : ¬ nl.toNat ≤ j.toNat := fun hh => hd (UInt64.le_iff_toNat_le.mpr hh)
       omega
@@ -345,14 +327,14 @@ theorem rhGoW_ok (fe : IFEnv) (vis : Word) (a : AState)
     -- the member's name
     obtain ⟨hwH, hwd⟩ := rd_iwH (decHL_getI hn j.toNat hjl) (by have := hno j.toNat hjl; omega)
     generalize hw : rdW (m.arr64 IW) (no + j) = w at h hwH hwd
-    rcases hr1 : posRecW m [w, lv, po, pl] with _ | ⟨key, m1⟩ <;> rw [hr1] at h; · simp [rhK1] at h
-    rw [rhK1_some] at h
+    rcases hr1 : posRecW m [w, lv, po, pl] with _ | ⟨key, m1⟩ <;> rw [hr1] at h; · rw [rhGoW.k_rec4.none] at h; cases h
+    rw [rhGoW.k_rec4.arm1] at h
     obtain ⟨hS1, hg1, hk1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
     have hgd : (getDW m1 nio nil j 0).toNat = nIdxs.getD j.toNat 0 :=
       getDW_nat (by rw [decNL_agree (RdS.of_grow hg1) (fun i hi => by have := hnio i hi; omega)]; exact hni) hnb
     generalize getDW m1 nio nil j 0 = x at h hgd
-    rcases hr2 : posRecW m1 [key, nP, x] with _ | ⟨hh, m2⟩ <;> rw [hr2] at h; · simp [rhK2] at h
-    rw [rhK2_some] at h
+    rcases hr2 : posRecW m1 [key, nP, x] with _ | ⟨hh, m2⟩ <;> rw [hr2] at h; · rw [rhGoW.k_rec3.none] at h; cases h
+    rw [rhGoW.k_rec3.arm1, rhGoW.k_nest_ctx_root_holes_go_id] at h
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
     have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
@@ -661,26 +643,6 @@ def rhWf : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | k + 1, m, ctx => rhW k m ctx
 
-def haK1 (k : Nat) (po pl idx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => haK2 idx (appendW k m1 (r.headD 0) (r.tail.headD 0) po pl)
-/-- The model of `nest_hole_at(ctx, progOff, progLen, i)` at exec fuel `k + 1`. -/
-def haW (k : Nat) (m : Mem) (ctx po pl i : Word) : Option (List Word × Mem) :=
-  if i < rdW (m.arr64 IW) (ctx + 4) then some ([0, 0], m)
-  else haK1 k po pl (i - rdW (m.arr64 IW) (ctx + 4)) (rhWf k m ctx)
-
-section arms
-variable (k : Nat) (m1 m2 : Mem) (po pl idx : Word) (r r2 : List Word)
-theorem haK2_hit (h : idx < r2.tail.headD 0) :
-    haK2 idx (some (r2, m2)) = some ([1, rdW (m2.arr64 IW) (r2.headD 0 + idx)], m2) := by
-  simp only [haK2]; rw [ite_eq_left h]
-theorem haK2_miss (h : ¬ idx < r2.tail.headD 0) : haK2 idx (some (r2, m2)) = some ([0, 0], m2) := by
-  simp only [haK2]; rw [ite_eq_right h]
-theorem haK1_some : haK1 k po pl idx (some (r, m1)) =
-    haK2 idx (appendW k m1 (r.headD 0) (r.tail.headD 0) po pl) := rfl
-end arms
-attribute [ind_grind] haK2_hit haK2_miss haK1_some
-
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3) (hsg : p.lookup "sl_getd" = some slGetD)
   (h4 : p.lookup "rec4" = some rec4)
@@ -697,60 +659,60 @@ theorem rootHoles_spec' (k : Nat) (s₀ : St) (ctx : Word) :
   | zero => rw [invoke_eq _ hr]; simp only [callFn, nestCtxRootHoles]; vcgen [exec] <;> grind
   | succ k => exact rootHoles_spec p ha h3 h4 hsg hg hr k s₀ ctx
 
-include ha h3 hsg h4 hg hr hc hap hp in
-theorem nestHoleAt_spec (k : Nat) (s₀ : St) (ctx po pl i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ haW k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestHoleAt]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      rootHoles_spec' p ha h3 hsg h4 hg hr k, slAppend_specW p ha hc hap k] <;>
-    finish (gen := 20) [haW, rdW_eq]
-
 end spec
+
+l_model nestHoleAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.lookup "rec3" = some rec3)
+    (hsg : p.lookup "sl_getd" = some slGetD) (h4 : p.lookup "rec4" = some rec4)
+    (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
+    (hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hap : p.lookup "sl_append" = some slAppend)
+    (hp : p.lookup "nest_hole_at" = some nestHoleAt)
+  fns [hp ↦ haWf list]
+  specs [rootHoles_spec' p ha h3 hsg h4 hg hr n, slAppend_specW p ha hc hap n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem rdW_of_get' {a : Array Word} {x : Word} {i : Nat} {w : Word} (hx : x.toNat = i) (h : a[i]? = some w) :
     rdW a x = w := by simp [rdW, hx, h]
 
 theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx po pl i : Word) (r : List Word) (c : NestCtx) (prog : List NestHole)
-    (h : haW k m ctx po pl i = some (r, m')) (hS : StageR vis fe m a)
+    (h : haWf (k + 1) m ctx po pl i = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
     (hpr : HSl m po.toNat pl.toNat prog) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
   have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
-  unfold haW at h
   by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)
-  · rw [ite_eq_left hlt] at h
+  · rw [haWf.arm1 (hc1 := hlt)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨hS, IWGrow.refl _, ?_⟩
     have : ¬ c.nP ≤ i.toNat := by rw [← hnP]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
     simp [ConRon.Arena.nestHoleAt, this, decONH]
-  rw [ite_eq_right hlt] at h
+  rw [haWf.arm2 (hc1 := hlt)] at h
   have hge : c.nP ≤ i.toNat := by
     rw [← hnP]
     have : ¬ (i.toNat < (rdW (m.arr64 IW) (ctx + 4)).toNat) := fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h')
     omega
   have hidx : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega), hnP]
-  generalize i - rdW (m.arr64 IW) (ctx + 4) = idx at h hidx
+  generalize rdW (m.arr64 IW) (ctx + 4) = nP at h hidx
   cases k with
-  | zero => simp [rhWf, haK1] at h
+  | zero => simp [rhWf, haWf.k_nest_ctx_root_holes.none] at h
   | succ k =>
   simp only [rhWf] at h
-  rcases hrh : rhW k m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · simp [haK1] at h
-  rw [haK1_some] at h
+  rcases hrh : rhW k m ctx with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · rw [haWf.k_nest_ctx_root_holes.none] at h; cases h
+  rw [haWf.k_nest_ctx_root_holes.arm1] at h
   obtain ⟨hS1, hg1, hl1, hb1, hH1⟩ := rhW_ok k fe vis a m m1 ctx r1 c hrh hS hc hin
   obtain ⟨hplen, hpb, hpH⟩ := hpr
-  rcases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · simp [haK2] at h
+  rcases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with _ | ⟨r2, m2⟩ <;> rw [hap] at h; · rw [haWf.k_sl_append.none] at h; cases h
   obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
     (by have := hg1.iw; omega)
   rw [hl1] at hr21 hw1 ht2 hw2
   have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
   have hlen := c.rootHoles.length
-  by_cases hh : idx < r2.tail.headD 0
-  · rw [haK2_hit (h := hh)] at h
+  by_cases hh : i - nP < r2.tail.headD 0
+  · rw [haWf.k_sl_append.arm1 (hc1 := hh)] at h
+    generalize i - nP = idx at h hidx hh
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hh' : idx.toNat < c.rootHoles.length + pl.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hh; omega
@@ -777,7 +739,8 @@ theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']
       rw [List.getElem?_eq_getElem hr'] at hd
       exact ⟨by rw [e, hd], hni'⟩
-  · rw [haK2_miss (h := hh)] at h
+  · rw [haWf.k_sl_append.arm2 (hc1 := hh)] at h
+    generalize i - nP = idx at h hidx hh
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     have hh' : ¬ idx.toNat < c.rootHoles.length + pl.toNat := by
@@ -804,7 +767,7 @@ theorem nestHoleAt_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       decONH s'.mem r (ConRon.Arena.nestHoleAt c prog i.toNat); ⊤⦄ := by
-  refine triple_post (nestHoleAt_spec p ha h3 hsg h4 hg hr hc hap hp k s₀ ctx po pl i) ?_
+  refine triple_post (nestHoleAt_spec p ha h3 hsg h4 hg hr hc hap hp (k + 1) s₀ ctx po pl i) ?_
   rintro r s' ⟨hl, hm⟩
   exact ⟨hl, haW_ok k dn fe vis a₀ _ _ ctx po pl i r c prog hm hS hcx hin hpr⟩
 

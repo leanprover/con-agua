@@ -8,7 +8,7 @@ public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 /-!
 # EnvFindWHit
 
-`ncGoW`, `ncK1`, `ncK2`, `ncK3`, `NtLook`, `posRowPW_eq` and the lemmas only they use.
+`NtLook`, `posRowPW_eq` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -21,32 +21,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-! ## `nest_container(_ctors(_go))` refines `nestContainer`: word models -/
-
-mutual
-def ncGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, C, co, cl, cs, ol, fp =>
-    if cl = 0 then some ([ol, fp], m)
-    else ncK1 k vis C co cl cs ol fp (some (findRes m vis (erRd m co), m))
-def ncK1 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then ncGoW k m1 vis C (co + 1) (cl - 1) cs ol fp
-    else ncK2 k vis C co cl cs ol fp (entryW m1 C (r.tail.headD 0))
-def ncK2 (k : Nat) (vis C co cl cs ol fp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then ncGoW k m2 vis C (co + 1) (cl - 1) cs ol fp
-    else ncK3 k vis C co cl cs ol fp (r2.tail.tail.headD 0)
-      (posRecW m2 [r2.tail.headD 0, r2.tail.tail.tail.headD 0])
-def ncK3 (k : Nat) (vis C co cl cs ol fp nPc : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m3) =>
-    if ol = 0 then ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) nPc
-    else ncGoW k (m3.set64 IW (cs + ol) q) vis C (co + 1) (cl - 1) cs (ol + 1) fp
-end
 
 /-- The lookups of `nest_container`. -/
 structure NtLook (p : Prog) : Prop where

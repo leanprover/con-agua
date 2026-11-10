@@ -605,50 +605,6 @@ theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 
 end census
 
-section arms
-variable (k : Nat) (m m1 m2 : Mem) (q n i z s v : Word)
-theorem phsGoW_done (h : n ≤ i) : phsGoW (k + 1) m q n i = some m := by simp [phsGoW, h]
-theorem phsGoW_step (h : ¬ n ≤ i) : phsGoW (k + 1) m q n i = phsK1 k m q n i (pinWordV m 53) := by
-  simp [phsGoW, h]
-theorem phsK1_big (h : 4294967296 ≤ z) : phsK1 k m q n i (some z) = none := by simp [phsK1, h]
-theorem phsK1_ok (h : ¬ 4294967296 ≤ z) : phsK1 k m q n i (some z) = phsK2 k q n i (sointernW m z) := by
-  simp only [phsK1]; rw [ite_eq_right h]
-theorem phsK2_big (h : 4294967296 ≤ s) : phsK2 k q n i (some (s, m1)) = none := by simp [phsK2, h]
-theorem phsK2_ok (h : ¬ 4294967296 ≤ s) : phsK2 k q n i (some (s, m1)) = phsK3 k q n i (fvinternW m1 i s) := by
-  simp only [phsK2]; rw [ite_eq_right h]
-theorem phsK3_big (h : 4294967296 ≤ v) : phsK3 k q n i (some (v, m2)) = none := by simp [phsK3, h]
-theorem phsK3_ok (h : ¬ 4294967296 ≤ v) :
-    phsK3 k q n i (some (v, m2)) = phsGoW k (m2.set64 IW (q + i) v) q n (i + 1) := by
-  simp only [phsK3]; rw [ite_eq_right h]
-end arms
-attribute [ind_grind] phsGoW_done phsGoW_step phsK1_big phsK1_ok phsK2_big phsK2_ok phsK3_big phsK3_ok
-
-section spec
-variable (p : Prog) (hpw : p.lookup "pin_word" = some pinWordL)
-  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
-  (his : p.lookup "intern_sort" = some internSort)
-  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
-  (hif : p.lookup "intern_fvar" = some internFVar)
-  (hp : p.lookup "nest_phs_go" = some nestPhsGo)
-include hpw hsf hsp his hff hfp hif hp
-
-theorem nestPhsGo_spec (k : Nat) : ∀ (s₀ : St) (q n i : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_phs_go" [q, n, i]
-    ⦃fun _ s' => LocEq s' s₀ ∧ phsGoW k s₀.mem q n i = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ q n i
-    rw [invoke_eq _ hp]; simp only [callFn, nestPhsGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ q n i
-    simp only [invoke_eq _ hp, callFn, nestPhsGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        pinWord_specV p hpw k, internSort_spec p hsf hsp his k, internFVar_spec p hff hfp hif k, ih] <;>
-      finish (gen := 20)
-
-end spec
-
 theorem phsB_some (q nn : Word) (m2 : Mem) : phsB q nn (some m2) = some ([q, nn], m2) := rfl
 theorem phsA_some (k : Nat) (nn q : Word) (m1 : Mem) : phsA k nn (some (q, m1)) = phsB q nn (phsGoW k m1 q nn 0) := rfl
 attribute [ind_grind] phsB_some phsA_some
@@ -746,11 +702,11 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
     ∃ phs a', ((List.range' i.toNat (n.toNat - i.toNat)).mapM phF).run a = .ok (phs, a') ∧
       StageR vis fe m' a' ∧ KeepIW q n m m' ∧ decHL m' q.toNat n.toNat = some (ws ++ phs) := by
   induction k with
-  | zero => intro m m' a q n i ws _dn fe vis h; simp [phsGoW] at h
+  | zero => intro m m' a q n i ws _dn fe vis h; simp [phsGoW.eq_1] at h
   | succ k ih =>
     intro m m' a q n i ws _dn fe vis h hS hi hq hsz hdec
     by_cases hd : n ≤ i
-    · rw [phsGoW_done k m q n i hd] at h
+    · rw [phsGoW.arm1 (hc1 := hd)] at h
       simp only [Option.some.injEq] at h
       subst h
       have hin : n.toNat - i.toNat = 0 := by
@@ -760,14 +716,14 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
       refine ⟨[], a, ?_, hS, KeepIW.refl _ _ _, ?_⟩
       · rw [hin]; rfl
       · rw [← hien]; simpa using hdec
-    · rw [phsGoW_step k m q n i hd] at h
+    · rw [phsGoW.arm2 (hc1 := hd)] at h
       have hlt : i.toNat < n.toNat := by
         have : ¬ n.toNat ≤ i.toNat := fun hh => hd (UInt64.le_iff_toNat_le.mpr hh)
         omega
-      rcases hpw : pinWordV m 53 with _ | z <;> rw [hpw] at h; · simp [phsK1] at h
+      rcases hpw : pinWordV m 53 with _ | z <;> rw [hpw] at h; · rw [phsGoW.k_pin_word.none] at h; cases h
       by_cases hzb : 4294967296 ≤ z
-      · rw [phsK1_big _ _ _ _ _ _ hzb] at h; simp at h
-      rw [phsK1_ok _ _ _ _ _ _ hzb] at h
+      · rw [phsGoW.k_pin_word.abort1 (hc1 := hzb)] at h; cases h
+      rw [phsGoW.k_pin_word.arm1 (hc1 := hzb)] at h
       have hzlt := lt_of_notbig hzb
       have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
         intro h0; simp [pinWordV, h0] at hpw
@@ -776,15 +732,15 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
         rw [← hpw]; simp [pinW, rdW]
       have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
       have hfull := hS.check.pins.full hpin0
-      rcases hso : sointernW m z with _ | ⟨s1, m1⟩ <;> rw [hso] at h; · simp [phsK2] at h
+      rcases hso : sointernW m z with _ | ⟨s1, m1⟩ <;> rw [hso] at h; · rw [phsGoW.k_intern_sort.none] at h; cases h
       by_cases hsb : 4294967296 ≤ s1
-      · rw [phsK2_big _ _ _ _ _ _ hsb] at h; simp at h
-      rw [phsK2_ok _ _ _ _ _ _ hsb] at h
+      · rw [phsGoW.k_intern_sort.abort1 (hc1 := hsb)] at h; cases h
+      rw [phsGoW.k_intern_sort.arm1 (hc1 := hsb)] at h
       have hs1lt := lt_of_notbig hsb
-      rcases hfv : fvinternW m1 i s1 with _ | ⟨v, m2⟩ <;> rw [hfv] at h; · simp [phsK3] at h
+      rcases hfv : fvinternW m1 i s1 with _ | ⟨v, m2⟩ <;> rw [hfv] at h; · rw [phsGoW.k_intern_fvar.none] at h; cases h
       by_cases hvb : 4294967296 ≤ v
-      · rw [phsK3_big _ _ _ _ _ _ hvb] at h; simp at h
-      rw [phsK3_ok _ _ _ _ _ _ hvb] at h
+      · rw [phsGoW.k_intern_fvar.abort1 (hc1 := hvb)] at h; cases h
+      rw [phsGoW.k_intern_fvar.arm1 (hc1 := hvb), phsGoW.k_nest_phs_go_id] at h
       have hvlt := lt_of_notbig hvb
       obtain ⟨a1, hr1, hS1, hg1⟩ := internSort_stage hS z hzlt hso
       obtain ⟨a2, hr2, hS2, hg2⟩ := internFVar_stage hS1 i s1 hs1lt hfv
@@ -976,10 +932,11 @@ theorem posmemo_copyW_iw : ∀ (n : Nat) (m m' : Mem) (d s l : Word), copyW n m 
 
 theorem phsGoW_mfr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i = some m' → MFr [] [] m m' := by
   induction k with
-  | zero => intro m m' q n i h; simp [phsGoW] at h
+  | zero => intro m m' q n i h; simp [phsGoW.eq_1] at h
   | succ k ih =>
     intro m m' q n i h
-    simp only [phsGoW, phsK1.eq_def, phsK2.eq_def, phsK3.eq_def] at h
+    simp only [phsGoW.eq_2, phsGoW.k_pin_word.eq_def, phsGoW.k_intern_sort.eq_def, phsGoW.k_intern_fvar.eq_def,
+      phsGoW.k_nest_phs_go_id] at h
     mfr_auto h [fun h => MFr.of_low (sointernW_low h), fun h => MFr.of_low (fvinternW_low h),
       fun h => (MFr.set_iw _ _ _).trans (ih _ _ _ _ _ h)]
 

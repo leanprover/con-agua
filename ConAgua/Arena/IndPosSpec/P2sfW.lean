@@ -63,16 +63,16 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     p2sfW n m dO dL k f = some (r, m') → StageR vis fe m a → IWGrow m0 m → k.toNat ≤ dL.toNat → PosMR m →
     ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a = .ok ((r.headD 0).toNat, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
-  | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW] at h
+  | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW.eq_1] at h
   | n + 1, m, m', a, k, f, r, h, hS, hg0, hk, hP => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hd : dL ≤ k
-    · rw [p2sfW_done (h := hd)] at h
+    · rw [p2sfW.arm1 (hc1 := hd)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : k.toNat = dL.toNat := Nat.le_antisymm hk (UInt64.le_iff_toNat_le.mp hd)
       rw [this, ← hlen, List.drop_length]
       exact ⟨a, rfl, hS, IWGrow.refl _, hP⟩
-    rw [p2sfW_step (h := hd)] at h
+    rw [p2sfW.arm2 (hc1 := hd)] at h
     have hkl : k.toNat < dL.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hd); omega
     obtain ⟨w, hw, hH, hdj⟩ := hel k.toNat hkl
@@ -81,13 +81,26 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
       have e : (dO + k).toNat = dO.toNat + k.toNat := word_add_toNat (by omega)
       simp only [rdW, e]; rw [hg0.iwGet _ (by omega), hw]; rfl
     rw [hrd] at h
-    rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · simp [p2sfK] at h
-    rw [p2sfK_some] at h
+    rcases hwf : wfWf n m w with _ | ⟨rw, m1⟩ <;> rw [hwf] at h; · rw [p2sfW.k_whnf_walk_fuel.none] at h; cases h
+    obtain ⟨r', h, e1⟩ : ∃ r', p2sfW n m1 dO dL (k + 1) (if f < rw.headD 0 then rw.headD 0 else f) = some (r', m') ∧
+        r.headD 0 = r'.headD 0 := by
+      have h2 : p2sfW.j1 n dO dL k (if f < rw.headD 0 then rw.headD 0 else f) m1 = some (r, m') := by
+        by_cases hlt : f < rw.headD 0
+        · rw [p2sfW.k_whnf_walk_fuel.arm1 (hc1 := hlt)] at h; rw [ite_eq_left hlt]; exact h
+        · rw [p2sfW.k_whnf_walk_fuel.arm2 (hc1 := hlt)] at h; rw [ite_eq_right hlt]; exact h
+      rw [p2sfW.j1.arm1] at h2
+      rcases e : p2sfW n m1 dO dL (k + 1) (if f < rw.headD 0 then rw.headD 0 else f) with _ | ⟨r', m''⟩ <;>
+        rw [e] at h2
+      · rw [p2sfW.k_nest_seeds_fuel.none] at h2; cases h2
+      rw [p2sfW.k_nest_seeds_fuel.arm1] at h2
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h2)
+      exact ⟨r', rfl, rfl⟩
+    rw [e1]
     obtain ⟨n', wv, hn, hwW, rfl⟩ := pos2_wfWf_some hwf
     obtain ⟨mp, hmp⟩ := hP.dp
     obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n' dn fe vis m m1 a w wv mp hwW hS hH hmp
     have hk1 : (k + 1).toNat = k.toNat + 1 := word_add_toNat (by simp; omega)
-    obtain ⟨a', hrun, hS', hg', hP'⟩ := p2sfW_ok dn vis fe dO dL ds m0 hlen hel hb n m1 m' a (k + 1) _ r h hS1
+    obtain ⟨a', hrun, hS', hg', hP'⟩ := p2sfW_ok dn vis fe dO dL ds m0 hlen hel hb n m1 m' a (k + 1) _ r' h hS1
       (hg0.trans hg1) (by omega) (hP.setDp hf1 ⟨∅, hM1⟩)
     refine ⟨a', ?_, hS', hg1.trans hg', hP'⟩
     have hdk : ds[k.toNat]'(by omega) = decI w := by

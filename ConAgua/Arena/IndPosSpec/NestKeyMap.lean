@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.L.ModelGen
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
@@ -187,49 +188,11 @@ theorem nestFieldKindFlat_wordSpec (p : Prog)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;> finish [kindFlatW]
 
-/-- The model of `nest_kinds_flat_inner`. -/
-def kindsFlatInnerW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, off, cnt =>
-    if cnt = 0 then some 1
-    else if kindFlatW (rdW (m.arr64 IW) off) = 0 then some 0
-    else kindsFlatInnerW n m (off + 1) (cnt - 1)
-
-section arms
-variable (n : Nat) (m : Mem) (off cnt : Word)
-theorem kindsFlatInnerW_nil (h : cnt = 0) : kindsFlatInnerW (n + 1) m off cnt = some 1 := by
-  simp [kindsFlatInnerW, h]
-theorem kindsFlatInnerW_miss (h : cnt ≠ 0) (hk : kindFlatW (rdW (m.arr64 IW) off) = 0) :
-    kindsFlatInnerW (n + 1) m off cnt = some 0 := by simp [kindsFlatInnerW, h, hk]
-theorem kindsFlatInnerW_next (h : cnt ≠ 0) (hk : kindFlatW (rdW (m.arr64 IW) off) ≠ 0) :
-    kindsFlatInnerW (n + 1) m off cnt = kindsFlatInnerW n m (off + 1) (cnt - 1) := by
-  simp [kindsFlatInnerW, h, hk]
-end arms
-
-grind_pattern [ind_grind] kindsFlatInnerW_nil => kindsFlatInnerW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatInnerW_miss => kindsFlatInnerW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatInnerW_next => kindsFlatInnerW (n + 1) m off cnt
-
-section specs
-variable (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
-include hf
-
-theorem nestKindsFlatInner_spec (hp : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
-    (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_kinds_flat_inner" [off, cnt]
-    ⦃fun r s' => s' = s₀ ∧ kindsFlatInnerW n s₀.mem off cnt = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ off cnt
-    rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatInner]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ off cnt
-    simp only [invoke_eq _ hp, callFn, nestKindsFlatInner]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestFieldKindFlat_wordSpec p hf n, ih] <;> finish (gen := 20)
-
-end specs
+l_model nestKindsFlatInner_spec (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
+    (hp : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
+  fns [hp ↦ kindsFlatInnerW ro]
+  specs [nestFieldKindFlat_wordSpec p hf n]
+  grind [arena_grind] fold [tierW, idxW, kindFlatW] finish [tierW, idxW]
 
 /-- A decoded `List NestFieldKind` slice, head first. -/
 theorem decKL_succ (m : Mem) (o n : Nat) :
@@ -254,11 +217,11 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
     (r : Word), (m.arr64 IW).size < 2 ^ 64 → decKL m off.toNat cnt.toNat = some ks →
     kindsFlatInnerW n m off cnt = some r → r = if ks.all NestFieldKind.flat then 1 else 0 := by
   induction n with
-  | zero => intro m off cnt ks r _ _ h; simp [kindsFlatInnerW] at h
+  | zero => intro m off cnt ks r _ _ h; simp [kindsFlatInnerW.eq_1] at h
   | succ n ih =>
     intro m off cnt ks r hsz hdec h
     by_cases hc : cnt = 0
-    · rw [kindsFlatInnerW_nil n m off cnt hc] at h
+    · rw [kindsFlatInnerW.arm1 (hc1 := hc)] at h
       have : ks = [] := by
         have : cnt.toNat = 0 := by rw [hc]; rfl
         rw [this] at hdec; simpa [decKL] using hdec
@@ -289,7 +252,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
           have := (Array.getElem?_eq_some_iff.mp hw').1
           omega
         by_cases hkf : kindFlatW (rdW (m.arr64 IW) off) = 0
-        · rw [kindsFlatInnerW_miss n m off cnt hc hkf] at h
+        · rw [kindsFlatInnerW.arm2 (hc1 := hc) (hc2 := hkf)] at h
           rw [hwrd] at hkf
           have hcond : ¬ (w &&& 7 ≤ 2) := by
             intro hc'; rw [kindFlatW, ite_eq_left hc'] at hkf; exact absurd hkf (by decide)
@@ -299,7 +262,7 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
             | true => exact absurd ((decNFK_flat hnfk).mpr hb) hcond
           simp only [← hdec, List.all_cons, hfalse]
           simp at h; simp [← h]
-        · rw [kindsFlatInnerW_next n m off cnt hc hkf] at h
+        · rw [kindsFlatInnerW.arm3 (hc1 := hc) (hc2 := hkf)] at h
           rw [hwrd] at hkf
           have hcond : w &&& 7 ≤ 2 := by
             by_cases hc' : w &&& 7 ≤ 2
@@ -346,60 +309,12 @@ theorem toNat_ne_zero' {w : Word} (h : w ≠ 0) : w.toNat ≠ 0 :=
 
 /-! ## `nest_kinds_flat_mid`, `nest_kinds_flat` -/
 
-mutual
-def kindsFlatMidW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, off, cnt =>
-    if cnt = 0 then some 1
-    else kindsFlatMidK n m off cnt
-      (kindsFlatInnerW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1)))
-def kindsFlatMidK (n : Nat) (m : Mem) (off cnt : Word) : Option Word → Option Word
-  | none => none
-  | some ok => if ok = 0 then some 0 else kindsFlatMidW n m (off + 1) (cnt - 1)
-end
-
-section arms
-variable (n : Nat) (m : Mem) (off cnt ok : Word)
-theorem kindsFlatMidW_nil (h : cnt = 0) : kindsFlatMidW (n + 1) m off cnt = some 1 := by
-  simp [kindsFlatMidW, h]
-theorem kindsFlatMidW_cons (h : cnt ≠ 0) : kindsFlatMidW (n + 1) m off cnt = kindsFlatMidK n m off cnt
-      (kindsFlatInnerW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1))) := by
-  simp [kindsFlatMidW, h]
-theorem kindsFlatMidK_miss (h : ok = 0) : kindsFlatMidK n m off cnt (some ok) = some 0 := by
-  simp [kindsFlatMidK, h]
-theorem kindsFlatMidK_next (h : ok ≠ 0) : kindsFlatMidK n m off cnt (some ok) =
-    kindsFlatMidW n m (off + 1) (cnt - 1) := by
-  simp [kindsFlatMidK, h]
-end arms
-
-grind_pattern [ind_grind] kindsFlatMidW_nil => kindsFlatMidW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatMidW_cons => kindsFlatMidW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatMidK_miss => kindsFlatMidK n m off cnt (some ok)
-grind_pattern [ind_grind] kindsFlatMidK_next => kindsFlatMidK n m off cnt (some ok)
-
-section specs
-variable (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
-  (hi : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
-  (hp : p.lookup "nest_kinds_flat_mid" = some nestKindsFlatMid)
-include hf hi hp
-
-theorem nestKindsFlatMid_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_kinds_flat_mid" [off, cnt]
-    ⦃fun r s' => s' = s₀ ∧ kindsFlatMidW n s₀.mem off cnt = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ off cnt
-    rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlatMid]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ off cnt
-    simp only [invoke_eq _ hp, callFn, nestKindsFlatMid]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestKindsFlatInner_spec p hf hi n, ih] <;> finish (gen := 20)
-
-end specs
+l_model nestKindsFlatMid_spec (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
+    (hi : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
+    (hp : p.lookup "nest_kinds_flat_mid" = some nestKindsFlatMid)
+  fns [hp ↦ kindsFlatMidW ro]
+  specs [nestKindsFlatInner_spec p hf hi n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem ofNat_succ' (v : Nat) : UInt64.ofNat v + 1 = UInt64.ofNat (v + 1) := by
   rw [UInt64.ofNat_add]; rfl
@@ -432,32 +347,32 @@ theorem kindsFlatMidW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List 
     (m.arr64 IW).size < 2 ^ 64 → decPL m (decLH m (decKL m)) off.toNat cnt.toNat = some kss →
     kindsFlatMidW n m off cnt = some r → r = if kss.all (·.all NestFieldKind.flat) then 1 else 0 := by
   induction n with
-  | zero => intro m off cnt kss r _ _ h; simp [kindsFlatMidW] at h
+  | zero => intro m off cnt kss r _ _ h; simp [kindsFlatMidW.eq_1] at h
   | succ n ih =>
     intro m off cnt kss r hsz hdec h
     by_cases hc : cnt = 0
-    · rw [kindsFlatMidW_nil n m off cnt hc] at h
+    · rw [kindsFlatMidW.arm1 (hc1 := hc)] at h
       have : kss = [] := by
         have : cnt.toNat = 0 := by rw [hc]; rfl
         rw [this] at hdec; simpa [decPL] using hdec.symm
       simp [this] at h ⊢; simp [← h]
     · obtain ⟨v, ks, kss', hv, hy, hrest, rfl, hrd, hv64⟩ := decPL_step hsz hdec hc
       obtain ⟨o, l, h1, h2, ho, hl, hk⟩ := decLH_rd hsz hy
-      rw [kindsFlatMidW_cons n m off cnt hc, hrd, h1, h2] at h
-      rcases hi : kindsFlatInnerW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · simp [kindsFlatMidK] at h
+      rw [kindsFlatMidW.arm2 (hc1 := hc), hrd, h1, h2] at h
+      rcases hi : kindsFlatInnerW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · rw [kindsFlatMidW.k_nest_kinds_flat_inner.none] at h; cases h
       have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
       have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
       have hk' : decKL m (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by rw [hoo, hll]; exact hk
       have hok := kindsFlatInnerW_ok n m _ _ ks ok hsz hk' hi
       by_cases hz : ok = 0
-      · rw [kindsFlatMidK_miss n m off cnt ok hz] at h
+      · rw [kindsFlatMidW.k_nest_kinds_flat_inner.arm1 (hc1 := hz)] at h
         have hfalse : ks.all NestFieldKind.flat = false := by
           by_cases hb : ks.all NestFieldKind.flat = true
           · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
           · simpa using hb
         simp only [List.all_cons, hfalse]
         simp at h; simp [← h]
-      · rw [kindsFlatMidK_next n m off cnt ok hz] at h
+      · rw [kindsFlatMidW.k_nest_kinds_flat_inner.arm2 (hc1 := hz)] at h
         have htrue : ks.all NestFieldKind.flat = true := by
           by_cases hb : ks.all NestFieldKind.flat = true
           · exact hb
@@ -469,94 +384,46 @@ theorem kindsFlatMidW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List 
 
 /-! ### `nest_kinds_flat` -/
 
-mutual
-def kindsFlatOutW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, off, cnt =>
-    if cnt = 0 then some 1
-    else kindsFlatOutK n m off cnt
-      (kindsFlatMidW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1)))
-def kindsFlatOutK (n : Nat) (m : Mem) (off cnt : Word) : Option Word → Option Word
-  | none => none
-  | some ok => if ok = 0 then some 0 else kindsFlatOutW n m (off + 1) (cnt - 1)
-end
-
-section arms
-variable (n : Nat) (m : Mem) (off cnt ok : Word)
-theorem kindsFlatOutW_nil (h : cnt = 0) : kindsFlatOutW (n + 1) m off cnt = some 1 := by
-  simp [kindsFlatOutW, h]
-theorem kindsFlatOutW_cons (h : cnt ≠ 0) : kindsFlatOutW (n + 1) m off cnt = kindsFlatOutK n m off cnt
-      (kindsFlatMidW n m (rdW (m.arr64 IW) (rdW (m.arr64 IW) off))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 1))) := by
-  simp [kindsFlatOutW, h]
-theorem kindsFlatOutK_miss (h : ok = 0) : kindsFlatOutK n m off cnt (some ok) = some 0 := by
-  simp [kindsFlatOutK, h]
-theorem kindsFlatOutK_next (h : ok ≠ 0) : kindsFlatOutK n m off cnt (some ok) =
-    kindsFlatOutW n m (off + 1) (cnt - 1) := by
-  simp [kindsFlatOutK, h]
-end arms
-
-grind_pattern [ind_grind] kindsFlatOutW_nil => kindsFlatOutW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatOutW_cons => kindsFlatOutW (n + 1) m off cnt
-grind_pattern [ind_grind] kindsFlatOutK_miss => kindsFlatOutK n m off cnt (some ok)
-grind_pattern [ind_grind] kindsFlatOutK_next => kindsFlatOutK n m off cnt (some ok)
-
-section specs
-variable (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
-  (hi : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
-  (hm : p.lookup "nest_kinds_flat_mid" = some nestKindsFlatMid)
-  (hp : p.lookup "nest_kinds_flat" = some nestKindsFlat)
-include hf hi hm hp
-
-theorem nestKindsFlat_spec (n : Nat) : ∀ (s₀ : St) (off cnt : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_kinds_flat" [off, cnt]
-    ⦃fun r s' => s' = s₀ ∧ kindsFlatOutW n s₀.mem off cnt = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ off cnt
-    rw [invoke_eq _ hp]; simp only [callFn, nestKindsFlat]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ off cnt
-    simp only [invoke_eq _ hp, callFn, nestKindsFlat]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestKindsFlatMid_spec p hf hi hm n, ih] <;> finish (gen := 20)
-
-end specs
+l_model nestKindsFlat_spec (p : Prog) (hf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat)
+    (hi : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner)
+    (hm : p.lookup "nest_kinds_flat_mid" = some nestKindsFlatMid)
+    (hp : p.lookup "nest_kinds_flat" = some nestKindsFlat)
+  fns [hp ↦ kindsFlatOutW ro]
+  specs [nestKindsFlatMid_spec p hf hi hm n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem kindsFlatOutW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (kss : List (List (List NestFieldKind))) (r : Word),
     (m.arr64 IW).size < 2 ^ 64 →
     decPL m (decLH m (decPL m (decLH m (decKL m)))) off.toNat cnt.toNat = some kss →
     kindsFlatOutW n m off cnt = some r → r = if ConRon.Arena.nestKindsFlat kss then 1 else 0 := by
   induction n with
-  | zero => intro m off cnt kss r _ _ h; simp [kindsFlatOutW] at h
+  | zero => intro m off cnt kss r _ _ h; simp [kindsFlatOutW.eq_1] at h
   | succ n ih =>
     intro m off cnt kss r hsz hdec h
     by_cases hc : cnt = 0
-    · rw [kindsFlatOutW_nil n m off cnt hc] at h
+    · rw [kindsFlatOutW.arm1 (hc1 := hc)] at h
       have : kss = [] := by
         have : cnt.toNat = 0 := by rw [hc]; rfl
         rw [this] at hdec; simpa [decPL] using hdec.symm
       simp [this, ConRon.Arena.nestKindsFlat] at h ⊢; simp [← h]
     · obtain ⟨v, ks, kss', hv, hy, hrest, rfl, hrd, hv64⟩ := decPL_step hsz hdec hc
       obtain ⟨o, l, h1, h2, ho, hl, hk⟩ := decLH_rd hsz hy
-      rw [kindsFlatOutW_cons n m off cnt hc, hrd, h1, h2] at h
-      rcases hi : kindsFlatMidW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · simp [kindsFlatOutK] at h
+      rw [kindsFlatOutW.arm2 (hc1 := hc), hrd, h1, h2] at h
+      rcases hi : kindsFlatMidW n m (UInt64.ofNat o) (UInt64.ofNat l) with _ | ok <;> rw [hi] at h; · rw [kindsFlatOutW.k_nest_kinds_flat_mid.none] at h; cases h
       have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' ho
       have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' hl
       have hk' : decPL m (decLH m (decKL m)) (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat = some ks := by
         rw [hoo, hll]; exact hk
       have hok := kindsFlatMidW_ok n m _ _ ks ok hsz hk' hi
       by_cases hz : ok = 0
-      · rw [kindsFlatOutK_miss n m off cnt ok hz] at h
+      · rw [kindsFlatOutW.k_nest_kinds_flat_mid.arm1 (hc1 := hz)] at h
         have hfalse : ks.all (·.all NestFieldKind.flat) = false := by
           by_cases hb : ks.all (·.all NestFieldKind.flat) = true
           · rw [hb] at hok; simp at hok; exact absurd hz (by rw [hok]; decide)
           · simpa using hb
         simp only [ConRon.Arena.nestKindsFlat, List.all_cons, hfalse] at h ⊢
         simp at h; simp [← h]
-      · rw [kindsFlatOutK_next n m off cnt ok hz] at h
+      · rw [kindsFlatOutW.k_nest_kinds_flat_mid.arm2 (hc1 := hz)] at h
         have htrue : ks.all (·.all NestFieldKind.flat) = true := by
           by_cases hb : ks.all (·.all NestFieldKind.flat) = true
           · exact hb
@@ -582,8 +449,8 @@ theorem nestKindsFlat_refines (n : Nat) (s₀ : St) (off cnt : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_kinds_flat" [off, cnt]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0 != 0) = ConRon.Arena.nestKindsFlat kss; ⊤⦄ := by
   refine triple_post (nestKindsFlat_spec p hf hi hm hp n s₀ off cnt) ?_
-  rintro r s' ⟨rfl, hm'⟩
-  refine ⟨rfl, ?_⟩
+  rintro r s' ⟨hl, hmm, hm'⟩
+  refine ⟨by cases s'; cases s₀; simp_all [LocEq], ?_⟩
   have := kindsFlatOutW_ok n _ _ _ kss _ hsz hdec hm'
   rw [this]
   by_cases hb : ConRon.Arena.nestKindsFlat kss = true <;> simp [hb]

@@ -5,10 +5,8 @@ import ConAgua.Arena.IndPosSpec.NcnW2
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Arena.IndPosSpec.NbPosW
 public import ConAgua.Arena.IndPosSpec.NbKeyK2
 public import ConAgua.Arena.IndPosSpec.NbLook
-import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.UnW
 import ConAgua.Arena.IndPartsSpec.BlockCounts
 import all ConAgua.Arena.IndIface
@@ -202,39 +200,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem nestContNewFinish_spec (p : Prog) (L : NagLook p) (hd : DcLook p) (h6 : p.lookup "rec6" = some rec6)
-    (hp : p.lookup "nest_cont_new_finish" = some nestContNewFinishL) (n : Nat) (s₀ : St)
-    (ctx us dO dL gO gL ns2 aO aL kb : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new_finish" [ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      cfW n s₀.mem ctx us dO dL gO gL ns2 aO aL kb = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestContNewFinishL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        dc_spec' p hd.hf hd.hh hd.hg hd.hp n, nestAcceptGroup_spec p L n, rec6_specW p L.ha h6 n] <;>
-      finish (gen := 20) (instances := 5000) [cfW, nestedW, rdW_eq]
-
-end L.Ind
-
-namespace L.Ind
-
-open L.Arena
-
-theorem nestPosHoleKind_spec (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
-    (hp : p.lookup "nest_pos_hole_kind" = some nestPosHoleKindL) (n : Nat) (s₀ : St) (ctx kb i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_hole_kind" [ctx, kb, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ hkWf n s₀.mem ctx kb i = some (r.headD 0); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestPosHoleKindL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nestCtxHiAt_specE p hh n] <;>
-      finish (gen := 20) [hkWf, hkW, rdW_eq, LocEq]
-
 end L.Ind
 
 namespace L.Ind
@@ -243,10 +208,8 @@ open L.Arena
 
 theorem nestHoleAt_spec' (p : Prog) (L : PfLook p) (k : Nat) (s₀ : St) (ctx po pl i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_hole_at" [ctx, po, pl, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ haWf k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
-  cases k with
-  | zero => rw [invoke_eq _ L.hha]; simp only [callFn, nestHoleAt]; vcgen [exec] <;> grind
-  | succ k => exact nestHoleAt_spec p L.ha L.h3 L.hsg L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
+    ⦃fun r s' => LocEq s' s₀ ∧ haWf k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ :=
+  nestHoleAt_spec p L.ha L.h3 L.hsg L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
 
 
 end L.Ind
@@ -341,10 +304,8 @@ theorem nestCtorNf_spec' (p : Prog) (L : NbLook p) (k : Nat) (s₀ : St) (ctx po
 
 theorem nestWalkStack_spec' (p : Prog) (L : NbLook p) (n : Nat) (s₀ : St) (ctx off l po pl : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_walk_stack" [ctx, off, l, po, pl]
-    ⦃fun r s' => LocEq s' s₀ ∧ nwsWf n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ := by
-  match n with
-  | 0 => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | n + 1 => exact nestWalkStack_spec p L.dc L.hws n s₀ ctx off l po pl
+    ⦃fun r s' => LocEq s' s₀ ∧ nwsWf n s₀.mem ctx off l po pl = some (r, s'.mem); ⊤⦄ :=
+  nestWalkStack_spec p L.dc L.hws n s₀ ctx off l po pl
 
 end L.Ind
 

@@ -172,41 +172,6 @@ theorem decCI_indInfo_bound {a : Nat → Option Word} {p : Nat}
 
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 
-def stripK (ciq nPc nF : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
-    else some ([1, ciq + 1, nPc, nF, r.tail.tail.tail.headD 0], m1)
-
-def stripW (m : Mem) (ciq : Word) : Option (List Word × Mem) :=
-  if erRd m ciq ≠ 4 then some ([0, 0, 0, 0, 0], m)
-  else if erRd m (ciq + 5) + erRd m (ciq + 6) < erRd m (ciq + 5) then none
-  else stripK ciq (erRd m (ciq + 5)) (erRd m (ciq + 6))
-    (stripF 6 m [erRd m (ciq + 5) + erRd m (ciq + 6),
-      erRd m (ciq + 1 + 3)])
-
-section arms
-variable (m m1 : Mem) (ciq nPc nF : Word) (r : List Word)
-theorem stripW_notctor (h : erRd m ciq ≠ 4) : stripW m ciq = some ([0, 0, 0, 0, 0], m) := by
-  simp [stripW, h]
-theorem stripW_ctor (h : erRd m ciq = 4)
-    (h2 : ¬ erRd m (ciq + 5) + erRd m (ciq + 6) < erRd m (ciq + 5)) :
-    stripW m ciq =
-    stripK ciq (erRd m (ciq + 5)) (erRd m (ciq + 6))
-    (stripF 6 m [erRd m (ciq + 5) + erRd m (ciq + 6),
-      erRd m (ciq + 1 + 3)]) := by
-  unfold stripW; rw [ite_eq_right (by simp [h]), ite_eq_right h2]
-theorem stripK_fail (h : r.headD 0 = 0) : stripK ciq nPc nF (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
-  simp only [stripK]; rw [ite_eq_left h]
-theorem stripK_ok (h : r.headD 0 ≠ 0) :
-    stripK ciq nPc nF (some (r, m1)) = some ([1, ciq + 1, nPc, nF, r.tail.tail.tail.headD 0], m1) := by
-  simp only [stripK]; rw [ite_eq_right h]
-end arms
-grind_pattern [ind_grind] stripW_notctor => stripW m ciq
-grind_pattern [ind_grind] stripW_ctor => stripW m ciq
-grind_pattern [ind_grind] stripK_fail => stripK ciq nPc nF (some (r, m1))
-grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
-
 /-! ### Reading `EREC` records at a word index -/
 
 theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat + c) = some v)
@@ -247,50 +212,6 @@ theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.con
 
 /-! ### `nest_ctor_entry` -/
 
-def entryK3 (C : Word) (r : List Word) (m2 : Mem) (v : List Word) : Option (List Word × Mem) :=
-  if v = [] then none
-  else if v.tail.headD 0 ≠ C then some ([0, 0, 0, 0], m2)
-  else some ([1, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m2)
-
-def entryK2 (C : Word) (r : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if tagW (r2.headD 0) ≠ 3 then some ([0, 0, 0, 0], m2)
-    else entryK3 C r m2 (eViewW m2 (r2.headD 0))
-
-def entryK1 (C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r.headD 0 = 0 then some ([0, 0, 0, 0], m1)
-    else entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0])
-
-def entryW (m : Mem) (C ciq : Word) : Option (List Word × Mem) := entryK1 C (stripW m ciq)
-
-section arms
-variable (C : Word) (r r2 v : List Word) (m1 m2 : Mem)
-theorem entryK3_miss (h : v ≠ []) (h2 : v.tail.headD 0 ≠ C) : entryK3 C r m2 v = some ([0, 0, 0, 0], m2) := by
-  simp only [entryK3]; rw [ite_eq_right h, ite_eq_left h2]
-theorem entryK3_hit (h : v ≠ []) (h2 : ¬ v.tail.headD 0 ≠ C) :
-    entryK3 C r m2 v = some ([1, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m2) := by
-  simp only [entryK3]; rw [ite_eq_right h, ite_eq_right h2]
-theorem entryK2_notconst (h : tagW (r2.headD 0) ≠ 3) : entryK2 C r (some (r2, m2)) = some ([0, 0, 0, 0], m2) := by
-  simp only [entryK2]; rw [ite_eq_left h]
-theorem entryK2_const (h : ¬ tagW (r2.headD 0) ≠ 3) :
-    entryK2 C r (some (r2, m2)) = entryK3 C r m2 (eViewW m2 (r2.headD 0)) := by
-  simp only [entryK2]; rw [ite_eq_right h]
-theorem entryK1_fail (h : r.headD 0 = 0) : entryK1 C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
-  simp only [entryK1]; rw [ite_eq_left h]
-theorem entryK1_ok (h : ¬ r.headD 0 = 0) :
-    entryK1 C (some (r, m1)) = entryK2 C r (gafF m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
-  simp only [entryK1]; rw [ite_eq_right h]
-end arms
-grind_pattern [ind_grind] entryK3_miss => entryK3 C r m2 v
-grind_pattern [ind_grind] entryK3_hit => entryK3 C r m2 v
-grind_pattern [ind_grind] entryK2_notconst => entryK2 C r (some (r2, m2))
-grind_pattern [ind_grind] entryK2_const => entryK2 C r (some (r2, m2))
-grind_pattern [ind_grind] entryK1_fail => entryK1 C (some (r, m1))
-grind_pattern [ind_grind] entryK1_ok => entryK1 C (some (r, m1))
-
 theorem viewConst_run (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
 
@@ -314,13 +235,6 @@ theorem EStore.view_const (st : EStore) (i : EIdx) (ht : i.tag = ETag.const) (v 
     · simp at h
 
 /-! ## `nest_res_head` -/
-
-def resHeadK : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => some ([if tagW (r.headD 0) = 1 then 1 else 0], m1)
-
-def resHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  resHeadK (gafF m [CWF, e])
 
 /-! ## `inst_pis_with` -/
 

@@ -7,7 +7,6 @@ public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndPosSpec.FgW2
 
@@ -77,10 +76,11 @@ theorem posRecW_afr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws =
 -- from IndPosSpec/DepthGo
 theorem phsGoW_afr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i = some m' → AFr m m' := by
   induction k with
-  | zero => intro m m' q n i h; simp [phsGoW] at h
+  | zero => intro m m' q n i h; simp [phsGoW.eq_1] at h
   | succ k ih =>
     intro m m' q n i h
-    simp only [phsGoW, phsK1.eq_def, phsK2.eq_def, phsK3.eq_def] at h
+    simp only [phsGoW.eq_2, phsGoW.k_pin_word.eq_def, phsGoW.k_intern_sort.eq_def, phsGoW.k_intern_fvar.eq_def,
+      phsGoW.k_nest_phs_go_id] at h
     afr_auto h [sointernW_afr, fvinternW_afr, fun h => (set64IW_afr _ _ _).trans (ih _ _ _ _ _ h)]
 
 -- from IndPosSpec/DepthGo
@@ -239,9 +239,10 @@ theorem rxDsW_afr {n : Nat} {m m' : Mem} {f o l a b : Word} (h : rxDsW n m f o l
 -- from IndPosSpec/FgW
 theorem nagW_afr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r : List Word),
     nagW n m us dO dL gO gL kO kL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nagW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nagW.eq_1] at h
   | n + 1, m, m', us, dO, dL, gO, gL, kO, kL, r, h => by
-    unfold nagW nagK1 nagK2 nagK3 at h
+    simp only [nagW.eq_2, nagW.k_rec4.eq_def, nagW.k_nest_keys_contains.eq_def, nagW.k_sl_snoc.eq_def,
+      nagW.k_nest_accept_group.eq_def] at h
     afr_auto h [posRecW_afr, snocW_afr, nagW_afr n _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
@@ -293,9 +294,9 @@ theorem new1W_afr {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some 
 -- from IndPosSpec/FgW
 theorem cpW_afr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
     cpW n m hp dO dL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [cpW] at h
+  | 0, _, _, _, _, _, _, h => by simp [cpW.eq_1] at h
   | n + 1, m, m', hp, dO, dL, r, h => by
-    unfold cpW cpK1 cpK2 at h
+    simp only [cpW.eq_2, cpW.k_bvar_b.eq_def, cpW.k_fvar_b.eq_def, cpW.k_nest_cont_params_closed.eq_def] at h
     afr_auto h [bvbW_afr, fvbF_afr, cpW_afr n _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
@@ -316,21 +317,22 @@ theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Wo
 
 -- from IndPosSpec/NestCrest
 theorem stripW_afr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : AFr m m' := by
-  unfold stripW stripK at h
+  simp only [stripW.eq_1, stripW.k_strip_pis.eq_def] at h
   afr_auto h [stripF_afr]
 
 -- from IndPosSpec/NestCrest
 theorem entryW_afr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     AFr m m' := by
-  unfold entryW entryK1 entryK2 entryK3 at h
+  simp only [entryW.eq_1, entryW.k_nest_ctor_entry_strip.eq_def, entryW.k_get_app_fn_f.eq_def] at h
   afr_auto h [stripW_afr, stub_afr, i1F_afr, gafF_afr]
 
 -- from IndPosSpec/NestCrest
 theorem ncGoW_afr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
     ncGoW k m vis C co cl cs ol fp = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW.eq_1] at h
   | k + 1, m, m', vis, C, co, cl, cs, ol, fp, r, h => by
-    unfold ncGoW ncK1 ncK2 ncK3 at h
+    simp only [ncGoW.eq_2, ncGoW.k_nest_ctor_entry.eq_def, ncGoW.k_rec2.eq_def, ncGoW.j2.eq_1, ncGoW.j1.eq_1,
+      ncGoW.k_nest_container_ctors_go.eq_def] at h
     afr_auto h [ncGoW_afr k _ _ _ _ _ _ _ _ _ _, entryW_afr, posRecW_afr,
       fun h => (set64IW_afr _ _ _).trans (ncGoW_afr k _ _ _ _ _ _ _ _ _ _ h)]
 
@@ -338,71 +340,54 @@ theorem ncGoW_afr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r 
 theorem ncWf_afr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h : ncWf k m vis C co cl = some (r, m')) :
     AFr m m' := by
   cases k with
-  | zero => simp [ncWf] at h
+  | zero => simp [ncWf.eq_1] at h
   | succ k =>
-  simp only [ncWf] at h
-  unfold ncW ncB at h
+  simp only [ncWf.arm1, ncWf.k_iw_alloc.eq_def, ncWf.k_nest_container_ctors_go.eq_def] at h
   afr_auto h [allocW_afr, ncGoW_afr _ _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem ntWf_afr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf k m vis C = some (r, m')) :
     AFr m m' := by
   cases k with
-  | zero => simp [ntWf] at h
+  | zero => simp [ntWf.eq_1] at h
   | succ k =>
-  simp only [ntWf, ntW, ntK1] at h
-  unfold ntK2 at h
+  simp only [ntWf.eq_2, ntWf.k_nest_container_ctors.eq_def] at h
   afr_auto h [ncWf_afr]
 
 -- from IndPosSpec/NestCrest
 theorem dcGoW_afr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
     dcGoW n m hi off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
+  | 0, _, _, _, _, _, _, h => by simp [dcGoW.eq_1] at h
   | n + 1, m, m', hi, off, l, r, h => by
-    unfold dcGoW dcK at h
+    simp only [dcGoW.eq_2, dcGoW.k_fvar_b.eq_def, dcGoW.k_nest_ds_closed_go.eq_def] at h
     afr_auto h [fvbF_afr, dcGoW_afr n _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem dcWf_afr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
     AFr m m' := by
   cases n with
-  | zero => simp [dcWf] at h
-  | succ n => exact dcGoW_afr _ _ _ _ _ _ _ h
-
--- from IndPosSpec/NestCrest
-theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : AFr m m' := by
-  cases k with
-  | zero => simp [cfW] at h
-  | succ k =>
-  simp only [cfW] at h
-  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cfK1] at h
-  refine (dcWf_afr h1).trans ?_
-  simp only [cfK1] at h
-  split at h
-  · unfold cfK2 cfK3 at h
-    afr_auto h [nagW_afr _ _ _ _ _ _ _ _ _ _ _, posRecW_afr]
-  · simp only [cfK2] at h
-    unfold cfK3 at h
-    afr_auto h [posRecW_afr]
+  | zero => simp [dcWf.eq_1] at h
+  | succ n =>
+    simp only [dcWf.eq_2, dcWf.k_nest_ds_closed_go.eq_def] at h
+    afr_auto h [dcGoW_afr _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
 theorem nwsW_afr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
-    (h : nwsW n m ctx off l po pl = some (r, m')) : AFr m m' := by
-  unfold nwsW nwsK at h
+    (h : nwsWf (n + 1) m ctx off l po pl = some (r, m')) : AFr m m' := by
+  simp only [nwsWf.eq_2, nwsWf.k_nest_ds_closed.eq_def] at h
   afr_auto h [dcWf_afr]
 
 -- from IndPosSpec/NestCrest
 theorem rhGoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP nio nil q j : Word),
     rhGoW k m no nl lv po pl nP nio nil q j = some m' → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW.eq_1] at h
   | k + 1, m, m', no, nl, lv, po, pl, nP, nio, nil, q, j, h => by
-    unfold rhGoW rhK1 rhK2 at h
+    simp only [rhGoW.eq_2, rhGoW.k_rec4.eq_def, rhGoW.k_rec3.eq_def, rhGoW.k_nest_ctx_root_holes_go_id] at h
     afr_auto h [posRecW_afr, fun h => (set64IW_afr _ _ _).trans (rhGoW_afr k _ _ _ _ _ _ _ _ _ _ _ _ h)]
 
 -- from IndPosSpec/NestCrest
 theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
-    (h : haW k m ctx po pl i = some (r, m')) : AFr m m' := by
+    (h : haWf (k + 1) m ctx po pl i = some (r, m')) : AFr m m' := by
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → AFr m m' := by
     intro m m' ctx r h
     cases k with
@@ -411,12 +396,12 @@ theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
     simp only [rhWf] at h
     unfold rhW rhA rhB at h
     afr_auto h [allocW_afr, rhGoW_afr _ _ _ _ _ _ _ _ _ _ _ _ _]
-  unfold haW haK1 haK2 at h
+  simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   afr_auto h [rh, appendW_afr]
 
 -- from IndPosSpec/NestCrest
 theorem resHeadW_afr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : AFr m m' := by
-  unfold resHeadW resHeadK at h
+  simp only [resHeadW.eq_1, resHeadW.k_get_app_fn_f.eq_def] at h
   afr_auto h [stub_afr, i1F_afr, gafF_afr]
 
 /-- The `has_loose_bvar_b` walk keeps `AbsOK`: its write set (`hbFastW_frame`) is the `hb` memo's
@@ -507,9 +492,9 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
 
 theorem noaW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi off l : Word) (r : List Word),
     noaW k m no nl lo hi off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [noaW] at h
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [noaW.eq_1] at h
   | k + 1, m, m', no, nl, lo, hi, off, l, r, h => by
-    simp only [noaW, noaK.eq_def] at h
+    simp only [noaW.eq_2, noaW.k_nest_occ.eq_def, noaW.k_nest_occ_any.eq_def] at h
     afr_auto h [noConstWf_afr, noaW_afr k _ _ _ _ _ _ _ _ _]
 
 theorem ustWf_afr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustWf n m cty nP j = some (r, m')) :

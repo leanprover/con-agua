@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.RecCheck
 import ConAgua.Arena.RecSim
+import ConAgua.L.ModelGen
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -36,39 +37,9 @@ open L.Arena
 
 /-! ## `block_nested_bit` -/
 
-/-- **The model of `block_nested_bit_go`.** -/
-def nbGoW : Nat → Mem → Word → Word → Word → Option Word
-  | 0, _, _, _, _ => none
-  | n + 1, m, o, l, k =>
-    if l = 0 then some 0
-    else if k ≤ rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 3) then some 1
-    else nbGoW n m (o + 1) (l - 1) k
-
-section arms
-variable (n : Nat) (m : Mem) (o l k : Word)
-theorem nbGoW_nil (h : l = 0) : nbGoW (n + 1) m o l k = some 0 := by simp [nbGoW, h]
-theorem nbGoW_hit (h : l ≠ 0) (h2 : k ≤ rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 3)) :
-    nbGoW (n + 1) m o l k = some 1 := by simp [nbGoW, h, h2]
-theorem nbGoW_next (h : l ≠ 0) (h2 : ¬ k ≤ rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 3)) :
-    nbGoW (n + 1) m o l k = nbGoW n m (o + 1) (l - 1) k := by simp [nbGoW, h, h2]
-end arms
-
-grind_pattern [ind_grind] nbGoW_nil => nbGoW (n + 1) m o l k
-grind_pattern [ind_grind] nbGoW_hit => nbGoW (n + 1) m o l k
-grind_pattern [ind_grind] nbGoW_next => nbGoW (n + 1) m o l k
-
-theorem blockNestedBitGo_spec (p : Prog) (hp : p.lookup "block_nested_bit_go" = some blockNestedBitGo)
-    (n : Nat) : ∀ (s₀ : St) (o l k : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_nested_bit_go" [o, l, k]
-    ⦃fun r s' => s' = s₀ ∧ nbGoW n s₀.mem o l k = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ o l k; rw [invoke_eq _ hp]; simp only [callFn, blockNestedBitGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l k
-    rw [invoke_eq _ hp]; simp only [callFn, blockNestedBitGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq]
+l_model blockNestedBitGo_spec (p : Prog) (hp : p.lookup "block_nested_bit_go" = some blockNestedBitGo)
+  fns [hp ↦ nbGoW ro]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 theorem decRS_tgt {m : Mem} {p : Nat} {R : RecShape} (h : decRS m p = some R) :
     iwN m (p + 3) = some R.tgt := by
@@ -80,11 +51,11 @@ theorem nbGoW_ok (n : Nat) : ∀ (m : Mem) (o l k r : Word) (recs : List RecShap
     (m.arr64 IW).size < 2 ^ 64 → decPL m (decRS m) o.toNat l.toNat = some recs →
     nbGoW n m o l k = some r → r = if recs.any (fun rc => !(rc.tgt < k.toNat)) then 1 else 0 := by
   induction n with
-  | zero => intro m o l k r recs _ _ h; simp [nbGoW] at h
+  | zero => intro m o l k r recs _ _ h; simp [nbGoW.eq_1] at h
   | succ n ih =>
     intro m o l k r recs hsz hdec h
     by_cases hl : l = 0
-    · rw [nbGoW_nil n m o l k hl] at h
+    · rw [nbGoW.arm1 (hc1 := hl)] at h
       have : recs = [] := by
         have : l.toNat = 0 := by rw [hl]; rfl
         rw [this] at hdec; simpa [decPL] using hdec.symm
@@ -95,12 +66,12 @@ theorem nbGoW_ok (n : Nat) : ∀ (m : Mem) (o l k r : Word) (recs : List RecShap
       (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact ht) hsz
     rw [show UInt64.ofNat 3 = (3 : Word) from rfl] at hrt
     by_cases hk : k ≤ rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 3)
-    · rw [nbGoW_hit n m o l k hl hk] at h
+    · rw [nbGoW.arm2 (hc1 := hl) (hc2 := hk)] at h
       simp only [Option.some.injEq] at h
       rw [hrd, hrt.1, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hrt.2] at hk
       have : (!decide (rc.tgt < k.toNat)) = true := by simp; omega
       simp [List.any_cons, this, ← h]
-    · rw [nbGoW_next n m o l k hl hk] at h
+    · rw [nbGoW.arm3 (hc1 := hl) (hc2 := hk)] at h
       rw [hrd, hrt.1, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hrt.2] at hk
       rw [ih m _ _ k r rest hsz hrest h]
       have : (!decide (rc.tgt < k.toNat)) = false := by simp; omega

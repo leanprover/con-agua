@@ -11,7 +11,6 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 
 @[expose] public section
@@ -84,12 +83,6 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (k : Nat) (m m1 m2 : Mem) (ctx f dO dL q j y z : Word)
-theorem sgK1_big (h : 4294967296 ≤ y) : sgK1 k ctx f dO dL q j (some (y, m1)) = none := by simp [sgK1, h]
-end arms
-attribute [ind_grind] sgK1_big
-
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
@@ -105,20 +98,20 @@ theorem sgGoW_ok (k : Nat) :
       decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G g ∧ G ≤ G') ∧ PosMR m' := by
   induction k with
-  | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h
+  | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW.eq_1] at h
   | succ k ih =>
   intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h hS hg0 hq0 hql hc hin hsl hb hfm hds hdsb hj hacc hR hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hds
   have hal := decHL_length m hacc
   by_cases hd : dL ≤ j
-  · rw [sgGoW_done (h := hd)] at h
+  · rw [sgGoW.arm1 (hc1 := hd)] at h
     cases h
     have hjl : j.toNat = dL.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
     refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, ⟨M, G, hR, GKeep.refl _ _ _,
       UInt64.le_refl _⟩, hP⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
-  rw [sgGoW_step (h := hd)] at h
+  rw [sgGoW.arm2 (hc1 := hd)] at h
   have hjl : j.toNat < dL.toNat := by
     have : ¬ dL.toNat ≤ j.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e)
     omega
@@ -140,21 +133,21 @@ theorem sgGoW_ok (k : Nat) :
     (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hds _ hjl) (by omega)
   generalize rdW (m.arr64 IW) (dO + j) = x at h hxH hxd
   cases k with
-  | zero => simp [posRpW, sgK1] at h
+  | zero => simp [posRpW, sgGoW.k_replace_apps.none] at h
   | succ k' =>
   simp only [posRpW] at h
   rcases hra : rpConstW k' m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 10)) 0
-      (rdW (m.arr64 IW) (ctx + 4)) x with _ | ⟨y, m1⟩; · rw [hra] at h; simp [sgK1] at h
+      (rdW (m.arr64 IW) (ctx + 4)) x with _ | ⟨y, m1⟩; · rw [hra, sgGoW.k_replace_apps.none] at h; cases h
   rw [hra] at h
   obtain ⟨mp0, hM⟩ := hP.rp
   obtain ⟨a1, hr1, hM1, hS1, hg1⟩ := rpConstW_ok k' (fun _ => none) fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
     (by omega) hnsum hnP (by rw [hnP]; omega) (by simp; omega) hM
   have hR1 := hR.frame (rpConstW_fr hra)
   by_cases hyb : 4294967296 ≤ y
-  · rw [sgK1_big (h := hyb)] at h; simp at h
-  rw [sgK1_ok (h := hyb)] at h
-  rcases hrf : rxW (k' + 1) m1 f y with _ | ⟨z, m2⟩ <;> rw [hrf] at h; · simp [sgK2] at h
-  rw [sgK2_some] at h
+  · rw [sgGoW.k_replace_apps.abort1 (hc1 := hyb)] at h; cases h
+  rw [sgGoW.k_replace_apps.arm1 (hc1 := hyb)] at h
+  rcases hrf : rxW (k' + 1) m1 f y with _ | ⟨z, m2⟩ <;> rw [hrf] at h; · rw [sgGoW.k_replace_fvars.none] at h; cases h
+  rw [sgGoW.k_replace_fvars.arm1, sgGoW.k_nest_seed_of_go_id] at h
   have hg01 := hg0.trans hg1
   obtain ⟨a2, hr2, hzH, M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := (rxOK_all fe vis (k' + 1)).2.2.2.2.2.2 m1 m2 a1 f y
     _ z M G g hrf hS1 (hfm.grow hg01) (lt_of_notbig hyb) hR1

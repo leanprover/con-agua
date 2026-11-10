@@ -519,9 +519,10 @@ open L.Arena
 
 theorem nagW_mfr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r : List Word),
     nagW n m us dO dL gO gL kO kL = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nagW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nagW.eq_1] at h
   | n + 1, m, m', us, dO, dL, gO, gL, kO, kL, r, h => by
-    unfold nagW nagK1 nagK2 nagK3 at h
+    simp only [nagW.eq_2, nagW.k_rec4.eq_def, nagW.k_nest_keys_contains.eq_def, nagW.k_sl_snoc.eq_def,
+      nagW.k_nest_accept_group.eq_def] at h
     mfr_auto h [posRecW_mfr, snocW_mfr, nagW_mfr n _ _ _ _ _ _ _ _ _ _]
 
 theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List Word),
@@ -647,45 +648,10 @@ theorem new1W_mfr {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some 
 
 theorem cpW_mfr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
     cpW n m hp dO dL = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, h => by simp [cpW] at h
+  | 0, _, _, _, _, _, _, h => by simp [cpW.eq_1] at h
   | n + 1, m, m', hp, dO, dL, r, h => by
-    unfold cpW cpK1 cpK2 at h
+    simp only [cpW.eq_2, cpW.k_bvar_b.eq_def, cpW.k_fvar_b.eq_def, cpW.k_nest_cont_params_closed.eq_def] at h
     mfr_auto h [bvbW_mfr, MFr.ofFvbF, cpW_mfr n _ _ _ _ _ _]
-
-end L.Ind
-
-end
-
-end
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
-    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : MFr [] [] m m' := by
-  cases k with
-  | zero => simp [cfW] at h
-  | succ k =>
-  simp only [cfW] at h
-  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · simp [cfK1] at h
-  refine (dcWf_mfr h1).trans ?_
-  simp only [cfK1] at h
-  split at h
-  · unfold cfK2 cfK3 at h
-    mfr_auto h [nagW_mfr _ _ _ _ _ _ _ _ _ _ _, posRecW_mfr]
-  · simp only [cfK2] at h
-    unfold cfK3 at h
-    mfr_auto h [posRecW_mfr]
 
 end L.Ind
 

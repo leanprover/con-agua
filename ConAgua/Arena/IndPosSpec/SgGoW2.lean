@@ -1,15 +1,20 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.RpGoStep
-public import ConAgua.Arena.IndPosSpec.RxMapW
 public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.IndPosSpec.CrLook
+import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # SgGoW2
 
-`posRpW`, `sgGoW`, `sgK1`, `sgK2`, `sgGoW_done`, `sgGoW_step` and the lemmas only they use.
+`posRpW`, `posRp_spec`, the model and spec of `nest_seed_of_go` (generated), `sgW` and the lemmas only
+they use.
 -/
 
 noncomputable section
@@ -28,34 +33,21 @@ def posRpW : Nat → Mem → Word → Word → Word → Word → Word → Word �
   | 0, _, _, _, _, _, _, _ => none
   | k + 1, m, no, nl, us, b, nn, e => rpConstW k m no nl us b nn e
 
-mutual
-def sgGoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _ => none
-  | k + 1, m, ctx, f, dO, dL, q, j =>
-    if dL ≤ j then some m
-    else sgK1 k ctx f dO dL q j (posRpW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
-      (rdW (m.arr64 IW) (ctx + 10)) 0 (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 IW) (dO + j)))
-def sgK1 (k : Nat) (ctx f dO dL q j : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (y, m1) => if 4294967296 ≤ y then none else sgK2 k ctx f dO dL q j (rxW k m1 f y)
-def sgK2 (k : Nat) (ctx f dO dL q j : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (z, m2) => sgGoW k (m2.set64 IW (q + j) z) ctx f dO dL q (j + 1)
-end
+theorem posRp_spec (p : Prog) (C : CrLook p) (k : Nat) (s₀ : St) (no nl us b nn e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "replace_apps" [no, nl, us, b, nn, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ posRpW k s₀.mem no nl us b nn e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ C.ra]; simp only [callFn, replaceApps]; vcgen [exec] <;> grind
+  | succ k => exact replaceApps_spec p C.rx.hl C.rx.hk C.raf C.rap C.rgo C.rnd C.rcl C.ra k s₀ no nl us b nn e
 
-section arms
-variable (k : Nat) (m m1 m2 : Mem) (ctx f dO dL q j y z : Word)
-theorem sgGoW_done (h : dL ≤ j) : sgGoW (k + 1) m ctx f dO dL q j = some m := by simp [sgGoW, h]
-theorem sgGoW_step (h : ¬ dL ≤ j) : sgGoW (k + 1) m ctx f dO dL q j =
-    sgK1 k ctx f dO dL q j (posRpW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
-      (rdW (m.arr64 IW) (ctx + 10)) 0 (rdW (m.arr64 IW) (ctx + 4)) (rdW (m.arr64 IW) (dO + j))) := by
-  simp [sgGoW, h]
-theorem sgK1_ok (h : ¬ 4294967296 ≤ y) : sgK1 k ctx f dO dL q j (some (y, m1)) =
-    sgK2 k ctx f dO dL q j (rxW k m1 f y) := by rw [sgK1, ite_eq_right h]
-theorem sgK2_some : sgK2 k ctx f dO dL q j (some (z, m2)) =
-    sgGoW k (m2.set64 IW (q + j) z) ctx f dO dL q (j + 1) := by rw [sgK2]
-end arms
-attribute [ind_grind] sgGoW_done sgGoW_step sgK1_ok sgK2_some
+l_model sgGo_spec (p : Prog) (hC : CrLook p) (hgo : p.lookup "nest_seed_of_go" = some nestSeedOfGoL)
+  fns [hgo ↦ sgGoW void]
+  specs [posRp_spec p hC n, (rxSpec_all p hC.rx n).2.2.2.2.2.2.2]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+/-- The continuation after the recursive call passes its memory on. -/
+theorem sgGoW.k_nest_seed_of_go_id (x : Option Mem) : sgGoW.k_nest_seed_of_go x = x := by
+  cases x <;> rfl
 
 def sgC (nPc : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none

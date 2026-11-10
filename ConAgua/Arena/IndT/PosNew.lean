@@ -15,7 +15,6 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndPosSpec.NbPosW
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.IndPosSpec.CfW
 
@@ -51,6 +50,28 @@ theorem cfT_pstep {c : NestCtx} {us : LsIdx} {ds : List EIdx} {grp : List (NIdx 
   obtain ⟨-, rfl⟩ := ConRon.Bridge.AM.pure_ok h2
   exact p1
 
+theorem cfW_afr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : AFr m m' := by
+  cases k with
+  | zero => simp [cfW.eq_1] at h
+  | succ k =>
+  rw [cfW.arm1] at h
+  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · rw [cfW.k_nest_ds_closed.none] at h; cases h
+  refine (dcWf_afr h1).trans ?_
+  simp only [cfW.k_nest_ds_closed.eq_def, cfW.k_nest_accept_group.eq_def, cfW.j1.eq_1, cfW.k_rec6.eq_def] at h
+  afr_auto h [nagW_afr _ _ _ _ _ _ _ _ _ _ _, posRecW_afr]
+
+theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : MFr [] [] m m' := by
+  cases k with
+  | zero => simp [cfW.eq_1] at h
+  | succ k =>
+  rw [cfW.arm1] at h
+  rcases h1 : dcWf k m ctx dO dL with _ | ⟨r1, m1⟩ <;> rw [h1] at h; · rw [cfW.k_nest_ds_closed.none] at h; cases h
+  refine (dcWf_mfr h1).trans ?_
+  simp only [cfW.k_nest_ds_closed.eq_def, cfW.k_nest_accept_group.eq_def, cfW.j1.eq_1, cfW.k_rec6.eq_def] at h
+  mfr_auto h [nagW_mfr _ _ _ _ _ _ _ _ _ _ _, posRecW_mfr]
+
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {env : ConLeche.Env}
 
@@ -83,9 +104,8 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF 
   rw [hs1] at hws
   rw [nnewE.k_nest_walk_stack.arm1]
   cases n with
-  | zero => simp [nwsWf] at hws
+  | zero => simp [nwsWf.eq_1] at hws
   | succ n' =>
-  simp only [nwsWf] at hws
   obtain ⟨wp, a1, hrun1, hS1, hg1, hwp⟩ := nwsW_ok dn fe vis n' m m1 a ctx dO dL po pl c ds prog rw hws hS
     hW.u.dec hW.u.inn hhi0 hdsD (fun j hj => by omega)
   have hWp : WCtx dn vis fe m1 ctx (rw.headD 0) (rw.tail.headD 0) c wp := by
