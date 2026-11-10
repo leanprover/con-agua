@@ -67,7 +67,7 @@ theorem recTW_afr : ∀ (n : Nat) (m m' : Mem) (no nl mI ty : Word) (r : List Wo
     recTW n m no nl mI ty = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [recTW] at h
   | n + 1, m, m', no, nl, mI, ty, r, h => by
-    simp only [recTW, recTK1.eq_def, recTK2.eq_def, recTK3.eq_def, recTK4.eq_def, recTK5.eq_def] at h
+    simp only [recTW, recTW.k_strip_pis.eq_def, recTW.k_get_app_fn_f.eq_def, recTW.k_sl_find.eq_def] at h
     afr_auto h [stripF_afr, gafF_afr]
 
 theorem bchW_afr : ∀ {n : Nat} {m m' : Mem} {cvT : Word} {r : List Word},
