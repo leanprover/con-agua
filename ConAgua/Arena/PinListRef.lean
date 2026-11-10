@@ -83,7 +83,7 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
     have hb := cvEqB_ok' (erRdOK m) (p := c) (q := d) (k := 1) (kn := 1) rfl hcv hcv'
     simp only [List.headD_cons, hr1, hb, ConRon.Arena.pinAgrees, beq_iff_eq]
     by_cases hcc : cv = cv' <;> simp [hcc]
-  · rw [pinAgreesW.eq_2, ite_eq_right h3] at hW
+  · rw [pinAgreesW.eq_2] at hW; erw [ite_eq_right h3] at hW
     cases h1 : callW p n "ci_eq" [c, d] m with
     | none => rw [h1] at hW; simp [pinAgreesW.k_cv_eq] at hW
     | some x1 =>
@@ -857,7 +857,7 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
   | zero => simp [blockLinkOkAtW] at h
   | succ n =>
   by_cases k4 : erRd m c = 4
-  · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h
+  · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h; simp only [erRd_foldN] at h
     have hk := (kindW_eq hci 4).mp k4
     obtain ⟨cv, np, nf, rfl⟩ : ∃ cv np nf, ci = .ctorInfo cv np nf := by
       cases ci <;> simp [ciKindQ] at hk
