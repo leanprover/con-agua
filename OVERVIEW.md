@@ -827,7 +827,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L271-L276),
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L267-L272),
    against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L136-L153)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
@@ -844,7 +844,7 @@ the condition) and `grind`, not by `finish` on every path.
 
 The relations nest by scope: one per store (`LitR`, `AppR`, …), the arena
 relation over all stores, the pool and the memos
-([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L285-L308)),
+([`ArenaR`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ArenaRel.lean#L286-L309)),
 the core relation with the caches, the stage relation of the declaration
 checks, the loop relation of the fold. A refinement is stated at the smallest
 relation that suffices and lifted.
@@ -852,7 +852,7 @@ relation that suffices and lifted.
 Data structures are abstract. The cons tables are one library, generic in a
 schema, whose relation `ConsR` is `irreducible` outside its file; users see
 lemmas for reading, keeping and interning, never the slots
-([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L11-L31)).
+([`ConsLibRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/ConsLibRel.lean#L12-L32)).
 Likewise the records are read through `tfld`/`tcnt`, and the layout
 (`TRec.ad`) stays folded.
 
@@ -1057,7 +1057,7 @@ other accesses keep their checks.
 The proof is part of the compiler's: every run of `exec p n` keeps the arrays'
 sizes and the locals a statement does not write, and ends a statement normally
 only with the facts after it true
-([`fsound_exec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BcePost.lean#L439-L444));
+([`fsound_exec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BcePost.lean#L436-L441));
 the statement simulation carries the facts of the current statement, the
 expression simulation those of the statement's state on the locals the
 expression reads
