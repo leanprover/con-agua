@@ -7,6 +7,8 @@ import ConRon.Bridge.Grind
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndIface
 import ConAgua.Arena.Pins
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndIface
 
 @[expose] public section
@@ -37,61 +39,27 @@ open L.Ind
 
 /-! ## `reserved_from`, `reserved_contains` -/
 
-/-- The model of `reserved_from(x, j)`. -/
-def resFromW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, x, j =>
+/-- **`reserved_from(x, j)`'s model `resFromW`** (generated). -/
+l_model resFrom_spec (p : Prog) (hp : p.lookup "reserved_from" = some reservedFrom)
+  fns [hp ↦ resFromW ro]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+/-- **`reserved_contains(x)`'s model `resContW`** (generated). -/
+l_model resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFrom)
+    (hp : p.lookup "reserved_contains" = some reservedContains)
+  fns [hp ↦ resContW ro]
+  specs [resFrom_spec p hf n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
+
+/-- `resFromW`'s step as one equation (for the refinements that case on the guards themselves). -/
+theorem resFromW_step (n : Nat) (m : Mem) (x j : Word) : resFromW (n + 1) m x j =
     if 16 ≤ j then some 0
     else if rdW (m.arr64 PINS) (55 + j) = x then some 1
-    else resFromW n m x (j + 1)
+    else resFromW n m x (j + 1) := by rw [resFromW]
 
-section arms
-variable (n : Nat) (m : Mem) (x j : Word)
-theorem resFromW_step : resFromW (n + 1) m x j =
-    if 16 ≤ j then some 0
-    else if rdW (m.arr64 PINS) (55 + j) = x then some 1
-    else resFromW n m x (j + 1) := rfl
-end arms
-
-grind_pattern [ind_grind] resFromW_step => resFromW (n + 1) m x j
-
-/-- The model of `reserved_contains(x)`. -/
-def resContW : Nat → Mem → Word → Option Word
-  | 0, _, _ => none
-  | n + 1, m, x => if pinW m 0 = 0 then none else resFromW n m x 0
-
+/-- `resContW`'s step, the flag as `pinW m 0`. -/
 theorem resContW_step (n : Nat) (m : Mem) (x : Word) :
-    resContW (n + 1) m x = if pinW m 0 = 0 then none else resFromW n m x 0 := rfl
-
-grind_pattern [ind_grind] resContW_step => resContW (n + 1) m x
-
-theorem resFrom_spec (p : Prog) (hp : p.lookup "reserved_from" = some reservedFrom) (n : Nat) :
-    ∀ (s₀ : St) (x j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reserved_from" [x, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ resFromW n s₀.mem x j = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ x j; rw [invoke_eq _ hp]; simp only [callFn, reservedFrom]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ x j
-    rw [invoke_eq _ hp]
-    simp only [callFn, reservedFrom]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem resCont_spec (p : Prog) (hf : p.lookup "reserved_from" = some reservedFrom)
-    (hp : p.lookup "reserved_contains" = some reservedContains) (n : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reserved_contains" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ resContW n s₀.mem x = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reservedContains]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resFrom_spec p hf n] <;>
-      finish (gen := 20) [pinW_eq]
+    resContW (n + 1) m x = if pinW m 0 = 0 then none else resFromW n m x 0 := by rw [resContW]; rfl
 
 /-- A miss of `reserved_from` from `j`: none of the reserved words from `j` on is `x`. -/
 theorem resFromW_miss (n : Nat) : ∀ (m : Mem) (x j : Word), j.toNat ≤ 16 →
