@@ -65,20 +65,18 @@ grind_pattern [ind_grind] chnW_next => chnW (n + 1) m co cl name
 `ptr_names_copy` is `member_names_copy`'s loop (same model `nameCopyW`); `ptr_list_names` is
 `block_shape_member_names` with the slice a parameter. -/
 
-theorem ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrNamesCopy) (n : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_names_copy" [d, s, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ nameCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, ptrNamesCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, ptrNamesCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20) [erRd]
+/-- **`ptr_names_copy` is its model `ptrCopyW`** (generated; the same code as `member_names_copy`). -/
+l_model ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrNamesCopy)
+  fns [hp ↦ ptrCopyW void]
+  grind [arena_grind]
+
+theorem ptrCopyW_eq : ∀ (n : Nat) (m : Mem) (d s l : Word), ptrCopyW n m d s l = nameCopyW n m d s l
+  | 0, _, _, _, _ => rfl
+  | n + 1, m, d, s, l => by
+    by_cases hl : l = 0
+    · rw [ptrCopyW.arm1 n m d s l hl, nameCopyW.arm1 n m d s l hl]
+    · rw [ptrCopyW.arm2 n m d s l hl, nameCopyW.arm2 n m d s l hl, ptrCopyW_eq n]
+      cases nameCopyW n _ _ _ _ <;> rfl
 
 /-- **`ptr_list_names` is its model `ptrNamesW`** (generated). -/
 l_model ptrListNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
@@ -97,6 +95,7 @@ theorem ptrNamesW_some {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   obtain ⟨q, m1, hal, h⟩ := ipK_inv h (ptrNamesW.k_iw_alloc.none ..)
   rw [ptrNamesW.k_iw_alloc.arm1] at h
   obtain ⟨m2, hcp, h⟩ := ipK_inv1 h (ptrNamesW.k_ptr_names_copy.none ..)
+  rw [ptrCopyW_eq] at hcp
   rw [ptrNamesW.k_ptr_names_copy.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact ⟨k, q, m1, rfl, hal, hcp, rfl⟩
@@ -404,7 +403,7 @@ theorem nameCopyW_src0 (n : Nat) (m : Mem) (d s : Word) : nameCopyW n m d s 0 = 
 theorem ptrNamesW_src0 {n : Nat} {m : Mem} {o l : Word} (hl : l = 0) : ptrNamesW n m o l = ptrNamesW n m 0 l := by
   subst hl; rcases n with _ | n
   · rfl
-  simp only [ptrNamesW.arm1, ptrNamesW.k_iw_alloc.eq_def, nameCopyW_src0]
+  simp only [ptrNamesW.arm1, ptrNamesW.k_iw_alloc.eq_def, ptrCopyW_eq, nameCopyW_src0]
 
 theorem ptrNamesW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : ptrNamesW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :

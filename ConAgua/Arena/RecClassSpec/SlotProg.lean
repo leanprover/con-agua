@@ -59,7 +59,7 @@ theorem nameCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m
   | 0, _, _, _, _, _, h => by simp [nameCopyW] at h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
-    · rw [nameCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
+    · rw [nameCopyW.arm1 n m d s l hl] at h; cases h; exact AFr.refl _
     · rw [nameCopyW_step n m d s l hl] at h
       exact (set64IW_afr _ _ _).trans (nameCopyW_afr n _ _ _ _ _ h)
 
