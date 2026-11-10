@@ -105,19 +105,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem bso_spec (p : Prog) (hv : p.lookup "e_view" = some eView) (hpw : p.lookup "pin_word" = some pinWordL)
-    (hg : p.lookup "sl_getd" = some slGetD)
-    (hp : p.lookup "block_shape_result_sort" = some blockShapeResultSort) (hst : StripProg p)
-    (n : Nat) (s₀ : St) (nP io il ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_result_sort" [nP, io, il, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ bsoW s₀.mem nP io il ty = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeResultSort]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slGetD_specW p hg n,
-      stripPis_specF p hst n, eViewSpec4 p hv n, pinWord_specV p hpw n] <;>
-    finish (gen := 20) [bsoW, bsoK1, bsoK2]
-
 section arms
 variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
   (no nl io lo ll s ip mo ml : Word) (q : Word)
@@ -180,7 +167,7 @@ theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
   simp only [callFn, blockShapeTail]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 1), pinWord_specV p hP.pinWord (n + 2),
+      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 2), pinWord_specV p hP.pinWord (n + 2),
       hc (n + 2) "lvl_eq_c", bf_spec p hP n] <;>
     finish (gen := 20) [btW, rdW_eq, erRd, btK1_some, btK2_some, btK3_some, bgoK3_some]
 

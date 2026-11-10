@@ -854,15 +854,15 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have h1 := partsSimW (stripF_pis_ok vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
   unfold bsoTwin
-  refine Sim.bindK rfl (fun _ _ => by rw [bsoK1]) h1 ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bsoW.k_strip_pis]) h1 ?_
   rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
   have hz : ∀ (R : List Word → LIdx → Mem → AState → Prop),
       (∀ z, H z → R [z] (decI z) m1 a1) →
-      Sim (match pinWordV m1 53 with | none => none | some z => some ([z], m1)) zeroLevel a1 R := by
+      Sim (bsoW.k_pin_word m1 (pinWordV m1 53)) zeroLevel a1 R := by
     intro R hR r m' e
     rcases hp : pinWordV m1 53 with _ | z
     · rw [hp] at e; cases e
-    rw [hp] at e; simp only [Option.some.injEq, Prod.mk.injEq] at e; obtain ⟨rfl, rfl⟩ := e
+    rw [hp] at e; simp only [bsoW.k_pin_word, Option.some.injEq, Prod.mk.injEq] at e; obtain ⟨rfl, rfl⟩ := e
     obtain ⟨hrun, hzh⟩ := pinZero_stage hS1 hp
     exact ⟨_, a1, hrun, hR z hzh⟩
   cases x1 with
@@ -876,7 +876,6 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     rw [partsDrop3] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
     intro r m' e
-    unfold bsoK2 at e
     split at e
     · cases e
     rename_i hne
@@ -889,6 +888,9 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
       obtain ⟨u, rfl⟩ := (sort_head_iff m1 _ v hvr).mp h2
       obtain ⟨-, hul, hue⟩ := hvr
+      have hgd : ∀ l : List Word, l.getD 1 0 = l.tail.headD 0 := fun l => by
+        rcases l with _ | ⟨_, _ | _⟩ <;> rfl
+      rw [hgd] at hul hue
       exact ⟨u, a1, rfl, hul, hue, hS1, hg1⟩
     · rename_i h2
       have hns : ∀ u, v ≠ .sort u := fun u hu => h2 ((sort_head_iff m1 _ v hvr).mpr ⟨u, hu⟩)

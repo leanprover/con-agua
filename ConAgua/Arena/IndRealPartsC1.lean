@@ -139,7 +139,7 @@ theorem bpoW_afr {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} 
 
 theorem bsoW_afr {m m' : Mem} {nP io il ty : Word} {r : List Word}
     (h : bsoW m nP io il ty = some (r, m')) : AFr m m' := by
-  simp only [bsoW, bsoK1.eq_def, bsoK2] at h
+  simp only [bsoW, bsoW.k_strip_pis.eq_def, bsoW.k_pin_word.eq_def] at h
   afr_auto h [stripF_afr]
 
 end L.Ind
