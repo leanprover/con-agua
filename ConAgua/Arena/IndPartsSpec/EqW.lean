@@ -126,74 +126,7 @@ theorem eqW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : List 
             exact UInt64.toNat_inj.mp (by rw [← e1, e2])
           simp [hne]
 
-/-! ## `block_rec_lps_ok` -/
-
-/-- The model of `block_rec_lps_one` (its callees run at `n - 1`). -/
-def lpsOneW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, rc, wo, wl =>
-    loK1 n wo wl (erToIwW n m (erRd m (rdW (m.arr64 IW) rc + 1))
-      (erRd m (rdW (m.arr64 IW) rc + 2)))
-where
-  loK1 (n : Nat) (wo wl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (rp, m1) => loK2 m1 (eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl)
-  loK2 (m1 : Mem) : Option Word → Option (List Word × Mem)
-    | none => none
-    | some e => some ([e], m1)
-
-section armsO
-variable (n : Nat) (m m1 : Mem) (rc wo wl : Word) (rp : List Word) (e : Word)
-theorem lpsOneW_step : lpsOneW (n + 1) m rc wo wl = lpsOneW.loK1 n wo wl
-    (erToIwW n m (erRd m (rdW (m.arr64 IW) rc + 1))
-      (erRd m (rdW (m.arr64 IW) rc + 2))) := by simp [lpsOneW]
-theorem loK1_some : lpsOneW.loK1 n wo wl (some (rp, m1)) =
-    lpsOneW.loK2 m1 (eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl) := by simp [lpsOneW.loK1]
-theorem loK2_some : lpsOneW.loK2 m1 (some e) = some ([e], m1) := by simp [lpsOneW.loK2]
-end armsO
-
-grind_pattern [ind_grind] lpsOneW_step => lpsOneW (n + 1) m rc wo wl
-grind_pattern [ind_grind] loK1_some => lpsOneW.loK1 n wo wl (some (rp, m1))
-grind_pattern [ind_grind] loK2_some => lpsOneW.loK2 m1 (some e)
-
-mutual
-/-- **The model of `block_rec_lps_ok_go`.** -/
-def lpsGoW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, ro, rl, wo, wl =>
-    if rl = 0 then some ([1], m)
-    else lgK1 n ro rl wo wl (lpsOneW n m (rdW (m.arr64 IW) ro) wo wl)
-
-/-- After `block_rec_lps_one`. -/
-def lgK1 (n : Nat) (ro rl wo wl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = 0 then some ([0], m1) else lgK3 (lpsGoW n m1 (ro + 1) (rl - 1) wo wl)
-
-/-- After the recursive call. -/
-def lgK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r.headD 0], m2)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (ro rl wo wl : Word) (r1 r : List Word)
-theorem lpsGoW_nil (h : rl = 0) : lpsGoW (n + 1) m ro rl wo wl = some ([1], m) := by simp [lpsGoW, h]
-theorem lpsGoW_cons (h : rl ≠ 0) : lpsGoW (n + 1) m ro rl wo wl = lgK1 n ro rl wo wl
-    (lpsOneW n m (rdW (m.arr64 IW) ro) wo wl) := by simp [lpsGoW, h]
-theorem lgK1_zero (h : r1.headD 0 = 0) : lgK1 n ro rl wo wl (some (r1, m1)) = some ([0], m1) := by
-  simp only [lgK1]; rw [ite_eq_left h]
-theorem lgK1_ne (h : r1.headD 0 ≠ 0) :
-    lgK1 n ro rl wo wl (some (r1, m1)) = lgK3 (lpsGoW n m1 (ro + 1) (rl - 1) wo wl) := by
-  simp only [lgK1]; rw [ite_eq_right h]
-theorem lgK3_some : lgK3 (some (r, m2)) = some ([r.headD 0], m2) := by simp [lgK3]
-end arms
-
-grind_pattern [ind_grind] lpsGoW_nil => lpsGoW (n + 1) m ro rl wo wl
-grind_pattern [ind_grind] lpsGoW_cons => lpsGoW (n + 1) m ro rl wo wl
-grind_pattern [ind_grind] lgK1_zero => lgK1 n ro rl wo wl (some (r1, m1))
-grind_pattern [ind_grind] lgK1_ne => lgK1 n ro rl wo wl (some (r1, m1))
-grind_pattern [ind_grind] lgK3_some => lgK3 (some (r, m2))
+/-! ## `block_shape_lps` with the result's shape -/
 
 theorem lpsW_two {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : lpsW n m p = some (r, m')) : r = [r.headD 0, r.getD 1 0] := by
@@ -214,55 +147,6 @@ theorem blockShapeLps_spec2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
     ⦃fun r s' => LocEq s' s₀ ∧ lpsW n s₀.mem q = some (r, s'.mem) ∧ r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
   triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, lpsW_two h2⟩)
-
-mutual
-/-- **The model of `block_rec_lps_ok`.** -/
-def lokW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, p => lokK1 n p (lpsW n m p)
-
-/-- After `block_shape_lps`. -/
-def lokK1 (n : Nat) (p : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (lr, m1) =>
-    if rdW (m1.arr64 IW) (p + 7) ≠ 0 then
-      lokK2 n p (consW n m1 (rdW (m1.arr64 IW) (p + 5)) (lr.headD 0) (lr.getD 1 0))
-    else lokK3 (lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
-      (lr.headD 0) (lr.getD 1 0))
-
-/-- After `sl_cons`. -/
-def lokK2 (n : Nat) (p : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (cr, m2) => lokK3 (lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
-      (cr.headD 0) (cr.getD 1 0))
-
-/-- After the recursor loop. -/
-def lokK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => some ([r.headD 0], m3)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (p : Word) (lr cr r : List Word)
-theorem lokW_step : lokW (n + 1) m p = lokK1 n p (lpsW n m p) := by simp [lokW]
-theorem lokK1_large (h : rdW (m1.arr64 IW) (p + 7) ≠ 0) : lokK1 n p (some (lr, m1)) =
-    lokK2 n p (consW n m1 (rdW (m1.arr64 IW) (p + 5)) (lr.headD 0) (lr.getD 1 0)) := by
-  simp only [lokK1]; rw [ite_eq_left h]
-theorem lokK1_small (h : rdW (m1.arr64 IW) (p + 7) = 0) : lokK1 n p (some (lr, m1)) =
-    lokK3 (lpsGoW n m1 (rdW (m1.arr64 IW) (p + 2)) (rdW (m1.arr64 IW) (p + 3))
-      (lr.headD 0) (lr.getD 1 0)) := by
-  simp only [lokK1]; rw [ite_eq_right (by simpa using h)]
-theorem lokK2_some : lokK2 n p (some (cr, m2)) =
-    lokK3 (lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3))
-      (cr.headD 0) (cr.getD 1 0)) := by simp [lokK2]
-theorem lokK3_some : lokK3 (some (r, m3)) = some ([r.headD 0], m3) := by simp [lokK3]
-end arms
-
-grind_pattern [ind_grind] lokW_step => lokW (n + 1) m p
-grind_pattern [ind_grind] lokK1_large => lokK1 n p (some (lr, m1))
-grind_pattern [ind_grind] lokK1_small => lokK1 n p (some (lr, m1))
-grind_pattern [ind_grind] lokK2_some => lokK2 n p (some (cr, m2))
-grind_pattern [ind_grind] lokK3_some => lokK3 (some (r, m3))
 
 theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   cases r with

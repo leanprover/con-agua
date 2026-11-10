@@ -12,6 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndParts
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -33,74 +34,38 @@ namespace L.Ind
 
 open L.Arena
 
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-  (hq : p.lookup "sl_eq" = some slEq)
-  (ho : p.lookup "block_rec_lps_one" = some blockRecLpsOne)
-  (hp : p.lookup "block_rec_lps_ok_go" = some blockRecLpsOkGo)
+/-- **`block_rec_lps_one` is its model `lpsOneW`** (generated). -/
+l_model blockRecLpsOne_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hq : p.lookup "sl_eq" = some slEq)
+    (ho : p.lookup "block_rec_lps_one" = some blockRecLpsOne)
+  fns [ho ↦ lpsOneW list]
+  specs [erToIw_specW2 p ha hc he n, slEq_spec p hq n]
+  grind [arena_grind]
 
-include ha hc he hq ho in
-theorem blockRecLpsOne_spec (n : Nat) (s₀ : St) (rc wo wl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_lps_one" [rc, wo, wl]
-    ⦃fun r s' => LocEq s' s₀ ∧ lpsOneW n s₀.mem rc wo wl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ ho]
-  simp only [callFn, blockRecLpsOne]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        erToIw_specW2 p ha hc he n, slEq_spec p hq n] <;>
-      finish (gen := 20) [rdW_eq, erRd, List.getD_cons_zero, List.getD_cons_succ,
-        List.tail_cons]
+/-- **`block_rec_lps_ok_go` is its model `lpsGoW`** (generated). -/
+l_model blockRecLpsOkGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hq : p.lookup "sl_eq" = some slEq)
+    (ho : p.lookup "block_rec_lps_one" = some blockRecLpsOne)
+    (hp : p.lookup "block_rec_lps_ok_go" = some blockRecLpsOkGo)
+  fns [hp ↦ lpsGoW list]
+  specs [blockRecLpsOne_spec p ha hc he hq ho n]
+  grind [arena_grind]
 
-include ha hc he hq ho hp in
-theorem blockRecLpsOkGo_spec (n : Nat) : ∀ (s₀ : St) (ro rl wo wl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_lps_ok_go" [ro, rl, wo, wl]
-    ⦃fun r s' => LocEq s' s₀ ∧ lpsGoW n s₀.mem ro rl wo wl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ro rl wo wl; rw [invoke_eq _ hp]; simp only [callFn, blockRecLpsOkGo]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl wo wl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockRecLpsOkGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        blockRecLpsOne_spec p ha hc he hq ho n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-end spec
-
-section spec2
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-  (hq : p.lookup "sl_eq" = some slEq) (hcp : p.lookup "iw_copy" = some iwCopy)
-  (hsc : p.lookup "sl_cons" = some slCons)
-  (ho : p.lookup "block_rec_lps_one" = some blockRecLpsOne)
-  (hg : p.lookup "block_rec_lps_ok_go" = some blockRecLpsOkGo)
-  (hl : p.lookup "block_shape_lps" = some blockShapeLps)
-  (hp : p.lookup "block_rec_lps_ok" = some blockRecLpsOk)
-
-include ha hc he hq hcp hsc ho hg hl hp in
-theorem blockRecLpsOk_spec (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_lps_ok" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ lokW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockRecLpsOk]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        blockShapeLps_spec2 p ha hc he hl n, slConsSpec2 p ha hcp hsc n,
-        blockRecLpsOkGo_spec p ha hc he hq ho hg n] <;>
-      finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ,
-        List.tail_cons]
-
-end spec2
+/-- **`block_rec_lps_ok` is its model `lokW`** (generated). -/
+l_model blockRecLpsOk_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hq : p.lookup "sl_eq" = some slEq) (hcp : p.lookup "iw_copy" = some iwCopy)
+    (hsc : p.lookup "sl_cons" = some slCons)
+    (ho : p.lookup "block_rec_lps_one" = some blockRecLpsOne)
+    (hg : p.lookup "block_rec_lps_ok_go" = some blockRecLpsOkGo)
+    (hl : p.lookup "block_shape_lps" = some blockShapeLps)
+    (hp : p.lookup "block_rec_lps_ok" = some blockRecLpsOk)
+  fns [hp ↦ lokW list]
+  specs [blockShapeLps_spec2 p ha hc he hl n, slConsSpec2 p ha hcp hsc n,
+    blockRecLpsOkGo_spec p ha hc he hq ho hg n]
+  grind [arena_grind]
 
 /-- **`er_to_iw` of a constant's level parameters**: for the constant at `EREC` pointer `a0`, the
 copy of `(EREC[a0 + 1], EREC[a0 + 2])` decodes as its `levelParams`. -/
@@ -157,16 +122,16 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   cases n with
   | zero => simp [lpsOneW] at h
   | succ n =>
-  rw [lpsOneW_step] at h
+  rw [lpsOneW.arm1, erRd_foldN, erRd_foldN] at h
   obtain ⟨⟨a0, ha0, hcvR⟩, -, -, -, -⟩ := decRS_some hrc
   obtain ⟨hrw, hab⟩ := iwN_rdW ha0 (by have := rc.toNat_lt; omega)
   rw [ofNat_toNat_word] at hrw
   rw [hrw] at h
-  obtain ⟨rp, m1, hh, h⟩ := ipK_inv h (by simp [lpsOneW.loK1])
-  rw [loK1_some] at h
+  obtain ⟨rp, m1, hh, h⟩ := ipK_inv h (lpsOneW.k_er_to_iw.none ..)
+  rw [lpsOneW.k_er_to_iw.arm1, ← getD1] at h
   obtain ⟨hsh, hdec, hg, hf, htp, hroom⟩ := erLpsW_dec hh hsz hc hE hcvR
-  obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [lpsOneW.loK2])
-  rw [loK2_some] at h
+  obtain ⟨e, he, h⟩ := ipK_inv1 h (lpsOneW.k_sl_eq.none _)
+  rw [lpsOneW.k_sl_eq.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf.size IW]; exact hsz
   have hbound1 : (rp.headD 0).toNat + (rp.getD 1 0).toNat < 2 ^ 64 := by
@@ -198,7 +163,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
   | succ n ih =>
     intro m0 m m' ro rl wo wl r recs ns h hg0 hE hsz hc hE64 hdr hdn hwb hb
     by_cases hl : rl = 0
-    · rw [lpsGoW_nil n m ro rl wo wl hl] at h
+    · rw [lpsGoW.arm1 n m ro rl wo wl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hrecs : recs = [] := by
         have := hdr m hg0
@@ -221,8 +186,8 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
       obtain ⟨v, hv, hrcd⟩ := decPL_head hd
       obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
       rw [ofNat_toNat_word] at hv'
-      rw [lpsGoW_cons n m ro rl wo wl hl, hv'] at h
-      obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [lgK1])
+      rw [lpsGoW.arm2 n m ro rl wo wl hl, hv'] at h
+      obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (lpsGoW.k_block_rec_lps_one.none ..)
       have hvv : (UInt64.ofNat v).toNat = v := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)
       have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.iw; omega
       obtain ⟨hr1, hg1, hf1, hw1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
@@ -233,12 +198,12 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
         rw [hf1.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE
       by_cases hbeq : (rc.cvR.levelParams == ns) = true
       · have hone : r1.headD 0 ≠ 0 := by rw [hr1]; simp [hbeq]
-        rw [lgK1_ne n m1 ro rl wo wl r1 hone] at h
+        rw [lpsGoW.k_block_rec_lps_one.arm2 n ro rl wo wl r1 m1 hone] at h
         have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
         have hrl1 : (rl - 1).toNat = k := by
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
-        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h (by simp [lgK3])
-        rw [lgK3_some] at h
+        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h lpsGoW.k_block_rec_lps_ok_go.none
+        rw [lpsGoW.k_block_rec_lps_ok_go.arm1] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨hr2, hg2, hf2, hw2⟩ := ih m0 m1 m2 (ro + 1) (rl - 1) wo wl r2 rest ns hrec
           (hg0.trans hg1) hE1 hsz1 hc1 hE64
@@ -249,7 +214,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
         rw [hr2]
         simp [List.all_cons, hbeq]
       · have hz : r1.headD 0 = 0 := by rw [hr1]; simp [hbeq]
-        rw [lgK1_zero n m1 ro rl wo wl r1 hz] at h
+        rw [lpsGoW.k_block_rec_lps_one.arm1 n ro rl wo wl r1 m1 hz] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         refine ⟨?_, hg1, hf1, hw1⟩
         simp [List.all_cons, hbeq]
@@ -330,11 +295,11 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   cases n with
   | zero => simp [lokW] at h
   | succ n =>
-  rw [lokW_step] at h
+  rw [lokW.arm1] at h
   have hp64 : p.toNat + 9 < 2 ^ 64 := by
     have h64 : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
     omega
-  obtain ⟨lr, m1, h1, h⟩ := ipK_inv h (by simp [lokK1])
+  obtain ⟨lr, m1, h1, h⟩ := ipK_inv h (lokW.k_block_shape_lps.none ..)
   obtain ⟨hlr, hdec1, hg1, hf1, hlt1, hw1⟩ := lpsW_dec h1 hsz hc hE hq hp64
   have hq1 := hstab m1 hg1
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.size IW]; exact hsz
@@ -350,9 +315,9 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   have hlr0 : lr.getD 1 0 = lr.tail.headD 0 := getD1 lr
   by_cases hL : rdW (m1.arr64 IW) (p + 7) ≠ 0
   · -- large
-    rw [lokK1_large n m1 p lr hL] at h
-    obtain ⟨cr, m2, h2, h⟩ := ipK_inv h (by simp [lokK2])
-    rw [lokK2_some] at h
+    rw [lokW.k_block_shape_lps.arm1 n p lr m1 hL, ← hlr0] at h
+    obtain ⟨cr, m2, h2, h⟩ := ipK_inv h (lokW.k_sl_cons.none ..)
+    rw [lokW.k_sl_cons.arm1, lokW.j1.eq_1, ← getD1] at h
     obtain ⟨w5, hw5, hw532, hw5I⟩ := iwH_rdW h4 (by omega)
     rw [e5] at hw5
     have hsrc : (lr.headD 0).toNat + (lr.getD 1 0).toNat ≤ iwTop m1 := by rw [hlr0]; exact hlt1
@@ -366,8 +331,8 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
       rw [hf2.1 EREC (by simp [EREC, IW]) (by decide)]; exact hE1
     have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hf2.size IW]; exact hsz1
     have hc2 : 200 < (m2.arr64 CTL).size := by rw [hf2.size CTL]; exact hc1
-    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [lokK3])
-    rw [lokK3_some] at h
+    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h lokW.k_block_rec_lps_ok_go.none
+    rw [lokW.k_block_rec_lps_ok_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m2 (cr.headD 0).toNat (cr.getD 1 0).toNat = some (bs.elim :: bs.lps) := by
       rw [hcr]
@@ -386,10 +351,10 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     · exact ((hf1.trans hf2).trans hf3)
     · exact (hw1.trans hw2).trans hw3
   · have hz : rdW (m1.arr64 IW) (p + 7) = 0 := by simpa using hL
-    rw [lokK1_small n m1 p lr hz] at h
+    rw [lokW.k_block_shape_lps.arm2 n p lr m1 hz, lokW.j1.eq_1, ← hlr0] at h
     have hlargeF : bs.large = false := by rw [← hlarge, hz]; rfl
-    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h (by simp [lokK3])
-    rw [lokK3_some] at h
+    obtain ⟨r3, m3, h3, h⟩ := ipK_inv h lokW.k_block_rec_lps_ok_go.none
+    rw [lokW.k_block_rec_lps_ok_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hwant : decHL m1 (lr.headD 0).toNat (lr.getD 1 0).toNat = some bs.lps := by
       rw [hlr0]; exact hdec1

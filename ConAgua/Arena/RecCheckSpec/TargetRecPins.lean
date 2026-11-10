@@ -1,7 +1,7 @@
 module
 
 import ConAgua.Arena.RecCheckSpec.TpnB
-import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+public import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
