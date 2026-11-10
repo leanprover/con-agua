@@ -19,6 +19,9 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.RecSim
 public import ConRon.Arena.Inductives.BlockInstall
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.LdRd
+import ConAgua.Arena.ErecVocab
+import ConAgua.L.ModelGen
 import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
@@ -26,7 +29,8 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 /-!
 # IcaW
 
-`capsHead`, `capsHead_spec`, `capsOne`, `capsOne_spec`, `icaK7`, `icaK6` and the lemmas only they use.
+The generated models of `block_caps_head`, `block_caps_one`, `block_caps_fin`, `block_caps_at`, `er_put5`
+and `ind_info_rec`, and their refinements (`blockCapsAt_ok`, `iirW_stage`, `consBlockInds_refines`).
 -/
 
 section
@@ -43,174 +47,27 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## The word models -/
+/-! ## The word models (generated) -/
 
-/-- `block_caps_head`'s results. -/
-def capsHead (m : Mem) (pp mi : Word) : List Word :=
-  if rdW (m.arr64 IW) (pp + 1) ≤ mi then [0, 0, 0, 0, 0]
-  else
-    let ms := rdW (m.arr64 IW) (rdW (m.arr64 IW) pp + mi)
-    if rdW (m.arr64 IW) (ms + 3) = 0 then [0, 0, 0, ms, rdW (m.arr64 IW) (ms + 1)]
-    else [rdW (m.arr64 IW) (ms + 2), rdW (m.arr64 IW) (ms + 3), Cmp.evalW .eq (rdW (m.arr64 IW) (ms + 3)) 1, ms,
-      rdW (m.arr64 IW) (ms + 1)]
+l_model capsHead_spec (p : Prog) (hp : p.lookup "block_caps_head" = some blockCapsHead)
+  fns [hp ↦ capsHead ro list]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-theorem capsHead_spec (p : Prog) (hp : p.lookup "block_caps_head" = some blockCapsHead) (n : Nat)
-    (s₀ : St) (pp mi : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_caps_head" [pp, mi]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r = capsHead s₀.mem pp mi; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCapsHead]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-    finish (gen := 20) [capsHead, rdW_eq]
+l_model capsOne_spec (p : Prog) (hp : p.lookup "block_caps_one" = some blockCapsOne)
+  fns [hp ↦ capsOne ro list]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-/-- `block_caps_one`'s results. -/
-def capsOne (m : Mem) (pp ms isRec : Word) : List Word :=
-  let nIdx := rdW (m.arr64 IW) (ms + 1)
-  let c := rdW (m.arr64 IW) (rdW (m.arr64 IW) (ms + 2))
-  let nF := rdW (m.arr64 IW) (c + 1)
-  [Cmp.evalW .eq nIdx 0 &&& Cmp.evalW .eq isRec 0,
-   erRd m (rdW (m.arr64 IW) c), rdW (m.arr64 IW) (pp + 4), nF,
-   Cmp.evalW .eq nIdx 0 &&& Cmp.evalW .eq nF 0 &&& Cmp.evalW .eq isRec 0]
-
-theorem capsOne_spec (p : Prog) (hp : p.lookup "block_caps_one" = some blockCapsOne) (n : Nat)
-    (s₀ : St) (pp ms isRec : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_caps_one" [pp, ms, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r = capsOne s₀.mem pp ms isRec; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCapsOne]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-    finish (gen := 20) [capsOne, rdW_eq, erRd]
-
-/-- After the first and second `rec5`. -/
-def icaK7 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([q], m)
-def icaK6 (q a0 a1 np c0 c1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => icaK7 q (recW m 5 [a0, a1, np, c0, c1])
-def icaK5b (w2 nIdx a0 a1 np c0 c1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rq, m) => icaK6 (rq.headD 0) a0 a1 np c0 c1 (recW m 5 [w2, nIdx, 0, 0, 0])
-/-- After the second copy: the record, three `rec5`s. -/
-def icaK5 (pp w0 w1 w2 w3 w4 nIdx a0 a1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => icaK5b w2 nIdx a0 a1 (rdW (m5.arr64 IW) (pp + 4)) (r5.headD 0) (r5.tail.headD 0)
-      (recW m5 5 [w0, w1, w2, w3, w4])
-/-- After the ctor names. -/
-def icaK4 (p : Prog) (n : Nat) (pp w0 w1 w2 w3 w4 nIdx a0 a1 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) => icaK5 pp w0 w1 w2 w3 w4 nIdx a0 a1
-      (callW p n "block_caps_at_er_copy" [r4.headD 0, r4.tail.headD 0] m4)
-/-- After the member names' copy. -/
-def icaK3 (p : Prog) (n : Nat) (pp coff clen w0 w1 w2 w3 w4 nIdx : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => icaK4 p n pp w0 w1 w2 w3 w4 nIdx (r3.headD 0) (r3.tail.headD 0)
-      (callW p n "block_caps_ctor_names" [coff, clen] m3)
-/-- After the member names. -/
-def icaK2 (p : Prog) (n : Nat) (pp coff clen w0 w1 w2 w3 w4 nIdx : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => icaK3 p n pp coff clen w0 w1 w2 w3 w4 nIdx
-      (callW p n "block_caps_at_er_copy" [r2.headD 0, r2.tail.headD 0] m2)
-
-/-- **The model of `block_caps_fin`** (body fuel `n`). -/
-def icfW (p : Prog) (n : Nat) (m : Mem) (pp coff clen w0 w1 w2 w3 w4 nIdx : Word) :
-    Option (List Word × Mem) :=
-  icaK2 p n pp coff clen w0 w1 w2 w3 w4 nIdx (callW p n "block_shape_member_names" [pp] m)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp coff clen w0 w1 w2 w3 w4 nIdx a0 a1 np c0 c1 q : Word)
-  (r : List Word)
-theorem icaK2_some : icaK2 p n pp coff clen w0 w1 w2 w3 w4 nIdx (some (r, m)) =
-    icaK3 p n pp coff clen w0 w1 w2 w3 w4 nIdx
-      (callW p n "block_caps_at_er_copy" [r.headD 0, r.tail.headD 0] m) := rfl
-theorem icaK3_some : icaK3 p n pp coff clen w0 w1 w2 w3 w4 nIdx (some (r, m)) =
-    icaK4 p n pp w0 w1 w2 w3 w4 nIdx (r.headD 0) (r.tail.headD 0)
-      (callW p n "block_caps_ctor_names" [coff, clen] m) := rfl
-theorem icaK4_some : icaK4 p n pp w0 w1 w2 w3 w4 nIdx a0 a1 (some (r, m)) =
-    icaK5 pp w0 w1 w2 w3 w4 nIdx a0 a1
-      (callW p n "block_caps_at_er_copy" [r.headD 0, r.tail.headD 0] m) := rfl
-theorem icaK5_some : icaK5 pp w0 w1 w2 w3 w4 nIdx a0 a1 (some (r, m)) =
-    icaK5b w2 nIdx a0 a1 (rdW (m.arr64 IW) (pp + 4)) (r.headD 0) (r.tail.headD 0)
-      (recW m 5 [w0, w1, w2, w3, w4]) := rfl
-theorem icaK5b_some : icaK5b w2 nIdx a0 a1 np c0 c1 (some (r, m)) =
-    icaK6 (r.headD 0) a0 a1 np c0 c1 (recW m 5 [w2, nIdx, 0, 0, 0]) := rfl
-theorem icaK6_some : icaK6 q a0 a1 np c0 c1 (some (r, m)) = icaK7 q (recW m 5 [a0, a1, np, c0, c1]) := rfl
-theorem icaK7_some : icaK7 q (some (r, m)) = some ([q], m) := rfl
-end arms
-attribute [ind_grind] icaK2_some icaK3_some icaK4_some icaK5_some icaK5b_some icaK6_some icaK7_some
-
-theorem icf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hr5 : p.lookup "rec5" = some rec5)
-    (hp : p.lookup "block_caps_fin" = some blockCapsFin) (n : Nat) (s₀ : St)
-    (pp coff clen w0 w1 w2 w3 w4 nIdx : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_caps_fin"
-      [pp, coff, clen, w0, w1, w2, w3, w4, nIdx]
-    ⦃fun r s' => LocEq s' s₀ ∧ icfW p n s₀.mem pp coff clen w0 w1 w2 w3 w4 nIdx = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCapsFin]
-  vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
-    callW_spec p n "block_shape_member_names", callW_spec p n "block_caps_at_er_copy",
+l_model icf_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hr5 : p.lookup "rec5" = some rec5)
+    (hp : p.lookup "block_caps_fin" = some blockCapsFin)
+  fns [hp ↦ icfW list]
+  specs [callW_spec p n "block_shape_member_names", callW_spec p n "block_caps_at_er_copy",
     callW_spec p n "block_caps_ctor_names", rec5_specW p ha n hr5]
-  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
-    Sig.retOr, -UInt64.not_lt, -UInt64.not_le,
-    icfW, icaK2_some, icaK3_some, icaK4_some, icaK5_some, icaK5b_some, icaK6_some, icaK7_some]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-/-- The returned pointer. -/
-def icaKF : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-/-- After the branch words: the record. -/
-def icaKW (p : Prog) (n : Nat) (pp coff clen nIdx : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ws, m) => icaKF (callW p n "block_caps_fin" [pp, coff, clen, ws.headD 0, ws.tail.headD 0,
-      ws.tail.tail.headD 0, ws.tail.tail.tail.headD 0, ws.tail.tail.tail.tail.headD 0, nIdx] m)
-/-- After `block_caps_head`. -/
-def icaKH (p : Prog) (n : Nat) (pp isRec : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (h, m) => icaKW p n pp (h.headD 0) (h.tail.headD 0) (h.tail.tail.tail.tail.headD 0)
-      (if h.tail.tail.headD 0 = 1 then callW p n "block_caps_one" [pp, h.tail.tail.tail.headD 0, isRec] m
-       else some ([0, 0, 0, 0, 0], m))
-
-/-- **The model of `block_caps_at(p, mi, is_rec)`** (body fuel `n`). -/
-def icaW (p : Prog) (n : Nat) (m : Mem) (pp mi isRec : Word) : Option (List Word × Mem) :=
-  icaKH p n pp isRec (callW p n "block_caps_head" [pp, mi] m)
-
-section arms2
-variable (p : Prog) (n : Nat) (m : Mem) (pp coff clen nIdx isRec : Word) (ws r : List Word)
-theorem icaKF_some : icaKF (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem icaKW_some : icaKW p n pp coff clen nIdx (some (ws, m)) =
-    icaKF (callW p n "block_caps_fin" [pp, coff, clen, ws.headD 0, ws.tail.headD 0,
-      ws.tail.tail.headD 0, ws.tail.tail.tail.headD 0, ws.tail.tail.tail.tail.headD 0, nIdx] m) := rfl
-theorem icaKH_one (h : r.tail.tail.headD 0 = 1) : icaKH p n pp isRec (some (r, m)) =
-    icaKW p n pp (r.headD 0) (r.tail.headD 0) (r.tail.tail.tail.tail.headD 0)
-      (callW p n "block_caps_one" [pp, r.tail.tail.tail.headD 0, isRec] m) := by
-  simp only [icaKH, h, ↓reduceIte]
-theorem icaKH_rest (h : ¬ r.tail.tail.headD 0 = 1) : icaKH p n pp isRec (some (r, m)) =
-    icaKW p n pp (r.headD 0) (r.tail.headD 0) (r.tail.tail.tail.tail.headD 0) (some ([0, 0, 0, 0, 0], m)) := by
-  simp only [icaKH, h, ↓reduceIte]
-end arms2
-attribute [ind_grind] icaKF_some icaKW_some icaKH_one icaKH_rest
-
-set_option maxHeartbeats 1600000 in
-theorem ica_spec (p : Prog) (hp : p.lookup "block_caps_at" = some blockCapsAt) (n : Nat)
-    (s₀ : St) (pp mi isRec : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_caps_at" [pp, mi, isRec]
-    ⦃fun r s' => LocEq s' s₀ ∧ icaW p n s₀.mem pp mi isRec = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockCapsAt]
-  vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
-    callW_spec p n "block_caps_head", callW_spec p n "block_caps_one", callW_spec p n "block_caps_fin"]
-  all_goals simp_all [LocEq, Expr.pval, Cmp.eval, St.setLocs_cons,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
-    Sig.retOr, -UInt64.not_lt, -UInt64.not_le,
-    icaW, icaKH, icaKF_some, icaKW_some]
+l_model ica_spec (p : Prog) (hp : p.lookup "block_caps_at" = some blockCapsAt)
+  fns [hp ↦ icaW list]
+  specs [callW_spec p n "block_caps_head", callW_spec p n "block_caps_one", callW_spec p n "block_caps_fin"]
+  grind [arena_grind] simp []
 
 end L.Ind
 
@@ -297,7 +154,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
     {pp coff clen w0 w1 w2 w3 w4 nIdx : Word} {r : List Word} {bs : BlockShape}
     {cs : List (IConstantVal × Nat)}
-    (h : icfW p n m pp coff clen w0 w1 w2 w3 w4 nIdx = some (r, m'))
+    (h : icfW p (n + 1) m pp coff clen w0 w1 w2 w3 w4 nIdx = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcs : PSlR decCN cs coff clen m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ ∃ aq al cq cl : Word,
@@ -318,9 +175,9 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
       have := iwN_rdW hl' (by omega); rw [BlockShape.k, decPL_length _ hg']
       rw [UInt64.toNat_ofNat_of_lt' this.2]
     rw [this]; exact UInt64.toNat_lt _
-  unfold icfW at h
+  rw [icfW.arm1] at h
   -- the member names
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [icaK2_some] at h
+  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl; rw [icfW.k_block_shape_member_names.arm1] at h
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockShapeMemberNames_spec p hP.alloc hP.namesCopy hP.names n _ pp) h1
   simp only at hW1; subst hs1
@@ -331,7 +188,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
   subst hr1
   simp only [List.headD_cons, List.tail_cons] at h
   -- their `EREC` copy
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icaK3_some] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [icfW.k_block_caps_at_er_copy.arm1] at h
   obtain ⟨hS2, hg2, hE2⟩ := installErCopy hP h2 hS1
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; exact hd1)
     (by rw [UInt64.toNat_ofNat_of_lt' hkb]; omega)
@@ -339,7 +196,7 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
   have hcs2 := hcs.grow decCN_mono (hg1.trans hg2)
   have hsz2 := hS2.iw.iwSize
   have hcl2 := hS2.iw.ctl
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [icaK4_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [icfW.k_block_caps_ctor_names.arm1] at h
   obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
     (blockCapsCtorNames_spec p hP.alloc hP.namesCopy hP.ctorNames n _ coff clen) h3
   simp only at hW3; subst hs3
@@ -361,17 +218,17 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
   subst hr3
   simp only [List.headD_cons, List.tail_cons, List.map_map] at h hd3
   -- their `EREC` copy
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [icaK5_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [icfW.k_block_caps_at_er_copy_2.arm1] at h
   obtain ⟨hS4, hg4, hE4⟩ := installErCopy hP h4 hS3 hd3 (by omega)
   have hg04 := ((hg1.trans hg2).trans hg3).trans hg4
   obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords hg04 hq hq9
   rw [hnpw] at h
   -- the three records
-  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [icaK5b_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [icfW.k_rec5.arm1] at h
   obtain ⟨hS5, hg5, hr5, hq5, hw5, ht5⟩ := installRec5 h5 hS4 rfl
-  obtain ⟨⟨r6, m6⟩, h6, h⟩ := of_K h rfl; rw [icaK6_some] at h
+  obtain ⟨⟨r6, m6⟩, h6, h⟩ := of_K h rfl; rw [icfW.k_rec5_2.arm1] at h
   obtain ⟨hS6, hg6, -, -, hw6, ht6⟩ := installRec5 h6 hS5 rfl
-  obtain ⟨⟨r7, m7⟩, h7, h⟩ := of_K h rfl; rw [icaK7_some] at h
+  obtain ⟨⟨r7, m7⟩, h7, h⟩ := of_K h rfl; rw [icfW.k_rec5_3.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS7, hg7, -, -, hw7, ht7⟩ := installRec5 h7 hS6 rfl
   have hg47 := (hg5.trans hg6).trans hg7
@@ -419,16 +276,14 @@ theorem installDecCaps {a : Nat → Option Word} {e : Nat}
 
 /-! ## `block_caps_at`'s relation -/
 
-theorem installEvalW3 (c1 c2 c3 : Cmp) (a1 b1 a2 b2 a3 b3 : Word) :
-    (Cmp.evalW c1 a1 b1 &&& Cmp.evalW c2 a2 b2 &&& Cmp.evalW c3 a3 b3 != 0) =
-      (c1.eval a1 b1 && c2.eval a2 b2 && c3.eval a3 b3) := by
-  unfold Cmp.evalW
-  cases c1.eval a1 b1 <;> cases c2.eval a2 b2 <;> cases c3.eval a3 b3 <;> decide
+theorem installEvalW3 (a b c : Prop) [Decidable a] [Decidable b] [Decidable c] :
+    ((if a then (1 : Word) else 0) &&& (if b then 1 else 0) &&& (if c then 1 else 0) != 0) =
+      (decide a && decide b && decide c) := by
+  by_cases ha : a <;> by_cases hb : b <;> by_cases hc : c <;> simp only [ha, hb, hc] <;> decide
 
-theorem installEvalW2 (c1 c2 : Cmp) (a1 b1 a2 b2 : Word) :
-    (Cmp.evalW c1 a1 b1 &&& Cmp.evalW c2 a2 b2 != 0) = (c1.eval a1 b1 && c2.eval a2 b2) := by
-  unfold Cmp.evalW
-  cases c1.eval a1 b1 <;> cases c2.eval a2 b2 <;> decide
+theorem installEvalW2 (a b : Prop) [Decidable a] [Decidable b] :
+    ((if a then (1 : Word) else 0) &&& (if b then 1 else 0) != 0) = (decide a && decide b) := by
+  by_cases ha : a <;> by_cases hb : b <;> simp only [ha, hb] <;> decide
 
 theorem installOfNatBeq {x c : Nat} (hx : x < 2 ^ 64) (hc : c < 2 ^ 64) :
     (UInt64.ofNat x == UInt64.ofNat c) = (x == c) := by
@@ -441,10 +296,10 @@ theorem installOfNatBeq {x c : Nat} (hx : x < 2 ^ 64) (hc : c < 2 ^ 64) :
 
 /-- A pure callee's run: the memory unchanged, the result its model. -/
 theorem installPureCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m m' : Mem}
-    {R r : List Word}
+    {R : Option (List Word)} {r : List Word}
     (h : ⦃fun st => st = (⟨m, Locals.init []⟩ : St)⦄ invoke p (exec p n) f args
-      ⦃fun r s' => LocEq s' ⟨m, Locals.init []⟩ ∧ s'.mem = m ∧ r = R; ⊤⦄)
-    (hc : callW p n f args m = some (r, m')) : r = R ∧ m' = m := by
+      ⦃fun r s' => LocEq s' ⟨m, Locals.init []⟩ ∧ s'.mem = m ∧ R = some r; ⊤⦄)
+    (hc : callW p n f args m = some (r, m')) : R = some r ∧ m' = m := by
   obtain ⟨s', rfl, -, h1, h2⟩ := triple_of_callW h hc
   exact ⟨h2, h1⟩
 
@@ -461,7 +316,7 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat)
         unitlike := w4 != 0, unitParams := w2.toNat, all := bs.memberNames, nparams := bs.nP,
         nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (icf_spec p hP.alloc hP.rec5 hP.fin n _ pp coff clen w0 w1 w2 w3 w4 nIdx) h2
+    (icf_spec p hP.alloc hP.rec5 hP.fin (n + 1) _ pp coff clen w0 w1 w2 w3 w4 nIdx) h2
   simp only at hW
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
@@ -480,8 +335,9 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     (hb : (isRec != 0) = b) (h : icaW p n m pp mi isRec = some (r, m')) (hS : StageR vis fe m a) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       CapsAt m' (r.headD 0).toNat (ConRon.Arena.blockCapsAt bs mi.toNat b) := by
-  rcases n with _ | n
-  · rw [icaW, callW_zero] at h; cases h
+  rcases n with _ | _ | n
+  · rw [icaW.eq_1] at h; cases h
+  · rw [icaW.arm1, callW_zero, icaW.k_block_caps_head.none] at h; cases h
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, -⟩ := partsShapeFacts hq hsrc
   have hkw := partsShapeK hq' hq9
@@ -495,39 +351,39 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
   obtain ⟨hw0, -, -⟩ := partsIwRd ho (w := pp) rfl
   rw [UInt64.ofNat_toNat] at hw0
   -- the record, shared by the branches
-  have hfin : ∀ (ws : List Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word) (R : IIndCaps),
-      PSlR decCN cs coff clen m → H (ws.tail.headD 0) →
+  have hfin : ∀ (w0 w1 w2 w3 w4 : Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word)
+      (R : IIndCaps), PSlR decCN cs coff clen m → H w1 →
       R =
-        { eta := ws.headD 0 != 0, etaCtor := decI (ws.tail.headD 0),
-          etaParams := (ws.tail.tail.headD 0).toNat, etaFields := (ws.tail.tail.tail.headD 0).toNat,
-          unitlike := ws.tail.tail.tail.tail.headD 0 != 0, unitParams := (ws.tail.tail.headD 0).toNat,
+        { eta := w0 != 0, etaCtor := decI w1, etaParams := w2.toNat, etaFields := w3.toNat,
+          unitlike := w4 != 0, unitParams := w2.toNat,
           all := bs.memberNames, nparams := bs.nP, nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } →
-      icaKW p (n + 1) pp coff clen nIdx (some (ws, m)) = some (r, m') →
+      icaW.j1 p (n + 1) pp coff clen nIdx w0 w1 w2 w3 w4 m = some (r, m') →
       StageR vis fe m' a ∧ IWGrow m m' ∧ CapsAt m' (r.headD 0).toNat R := by
-    intro ws cs coff clen nIdx R hcs hw1 hR hK
-    rw [icaKW_some] at hK
+    intro w0 w1 w2 w3 w4 cs coff clen nIdx R hcs hw1 hR hK
+    rw [icaW.j1.arm1] at hK
     obtain ⟨⟨r2, m2⟩, h2, hK⟩ := of_K hK rfl
-    rw [icaKF_some] at hK
+    rw [icaW.k_block_caps_fin.arm1] at hK
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hK)
     obtain ⟨hS2, hg2, hca⟩ := installCapsTail hP n hS hq hsrc hcs hw1 h2
     subst hR
     exact ⟨hS2, hg2, by simpa using hca⟩
-  unfold icaW at h
+  rw [icaW.arm1] at h
   obtain ⟨⟨r0, m0⟩, h0, h⟩ := of_K h rfl
-  obtain ⟨hr0, hm0⟩ := installPureCall (capsHead_spec p hP.head n _ pp mi) h0
-  subst m0; subst r0
+  obtain ⟨hr0, hm0⟩ := installPureCall (capsHead_spec p hP.head (n + 1) _ pp mi) h0
+  subst m0
   unfold ConRon.Arena.blockCapsAt
   dsimp only
   rcases Nat.lt_or_ge mi.toNat bs.k with hmi | hmi
   case inr =>
     have hnone : bs.members[mi.toNat]? = none :=
         List.getElem?_eq_none (by unfold BlockShape.k at hmi; omega)
-    have hh : capsHead m pp mi = [0, 0, 0, 0, 0] := by
-      unfold capsHead; rw [ite_eq_left]
-      rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega
-    rw [hh, icaKH_rest (h := by decide)] at h
+    rw [capsHead.arm1 (hc1 := by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
+      at hr0
+    cases hr0
+    rw [icaW.k_block_caps_head.arm2 (hc1 := by decide)] at h
+    simp only [List.headD_cons, List.tail_cons] at h
     simp only [hnone]
-    exact hfin [0, 0, 0, 0, 0] [] 0 0 0 _ (PSlR.nil decCN m) (by decide) rfl h
+    exact hfin 0 0 0 0 0 [] 0 0 0 _ (PSlR.nil decCN m) (by decide) rfl h
   -- member `mi`
   have hl0 : l.toNat ≠ 0 := by omega
   have hob' : o.toNat + l.toNat ≤ iwTop m := hob.resolve_left (fun h => hl0 (by rw [h]; rfl))
@@ -548,8 +404,8 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
   have hnI : (UInt64.ofNat msh.nIdx : Word).toNat = msh.nIdx := UInt64.toNat_ofNat_of_lt' hnb
   have hcd' : decPL (truncM m) (decCN (truncM m)) co.toNat cl.toNat = some msh.ctors := hcd
   have hlenc : msh.ctors.length = cl.toNat := decPL_length _ hcd'
-  have hhd : capsHead m pp mi = if cl = 0 then [0, 0, 0, UInt64.ofNat v, UInt64.ofNat msh.nIdx]
-      else [co, cl, Cmp.evalW .eq cl 1, UInt64.ofNat v, UInt64.ofNat msh.nIdx] := by
+  have hhd : capsHead m pp mi = if cl = 0 then some [0, 0, 0, UInt64.ofNat v, UInt64.ofNat msh.nIdx]
+      else some [co, cl, if cl = 1 then 1 else 0, UInt64.ofNat v, UInt64.ofNat msh.nIdx] := by
     unfold capsHead
     rw [ite_eq_right (by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
     simp only [hw0, hwv, hw2, hw3, hw1n]
@@ -557,15 +413,25 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
   · -- no constructor
     have hcl0 : cl = 0 := by
       apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
-    rw [hhd, ite_eq_left hcl0, icaKH_rest (h := by simp)] at h
-    exact hfin [0, 0, 0, 0, 0] [] 0 0 (UInt64.ofNat msh.nIdx) _ (PSlR.nil decCN m) (by decide) (by rw [hnI]; rfl) h
+    rw [hhd, ite_eq_left hcl0] at hr0
+    cases hr0
+    rw [icaW.k_block_caps_head.arm2 (hc1 := by simp)] at h
+    simp only [List.headD_cons, List.tail_cons] at h
+    exact hfin 0 0 0 0 0 [] 0 0 (UInt64.ofNat msh.nIdx) _ (PSlR.nil decCN m) (by decide) (by rw [hnI]; rfl) h
   · -- one constructor
     have hcl1 : cl = 1 := by apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
     subst hcl1
-    rw [hhd, ite_eq_right (by decide), icaKH_one (h := rfl)] at h
+    rw [hhd, ite_eq_right (by decide)] at hr0
+    cases hr0
+    rw [icaW.k_block_caps_head.arm1 (hc1 := by simp)] at h
+    simp only [List.headD_cons, List.tail_cons] at h
     obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-    obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one n _ pp (UInt64.ofNat v) isRec) h1
-    subst m1; subst r1
+    obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one (n + 1) _ pp (UInt64.ofNat v) isRec) h1
+    subst m1
+    rw [capsOne.arm1] at hr1
+    cases hr1
+    rw [icaW.k_block_caps_one.arm1] at h
+    simp only [List.headD_cons, List.tail_cons] at h
     -- the constructor's words
     obtain ⟨cp, hcp, hcd0⟩ := decPL_getH (truncM m) hcd' 0 (by decide)
     simp only [hcs, List.getElem_cons_zero, Nat.add_zero] at hcd0 hcp
@@ -577,26 +443,30 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat cp + 1) (by rw [UInt64.toNat_add, hcp']; simp; omega)
     obtain ⟨hn32, hnm⟩ := partsCVName (IWGrow.refl m) hcv2 hcvb
     have hcb1 : co.toNat + (1 : Word).toNat ≤ iwTop m := hcb.resolve_left (by decide)
-    refine hfin (capsOne m pp (UInt64.ofNat v) isRec) [c] co 1 (UInt64.ofNat msh.nIdx) _
+    refine hfin _ _ _ _ _ [c] co 1 (UInt64.ofNat msh.nIdx) _
       ⟨by rw [← hcs]; exact hcd, hcb1⟩
-      (by simp only [capsOne, List.headD_cons, List.tail_cons, hw2, hwc, hwcv]; exact hn32) ?_ h
-    simp only [capsOne, List.headD_cons, List.tail_cons, hw2, hwc, hwcv, hw1n, hwnF, hnpw,
-      hnm, installEvalW3, installEvalW2]
-    have e1 : (UInt64.ofNat msh.nIdx == (0 : Word)) = (msh.nIdx == 0) := installOfNatBeq (c := 0) hnb (by decide)
-    have e2 : (UInt64.ofNat c.snd == (0 : Word)) = (c.snd == 0) := installOfNatBeq (c := 0) hnFb (by decide)
-    have e4 : (isRec == 0) = !b := by rw [← hb]; simp [bne]
-    simp only [Cmp.eval, e1, e2, e4, UInt64.toNat_ofNat_of_lt' hnpb, hnI,
+      (by simp only [hw2, hwc, hwcv]; exact hn32) ?_ h
+    simp only [hw2, hwc, hwcv, hw1n, hwnF, hnpw, erRd_foldN, hnm, installEvalW3, installEvalW2]
+    have e1 : decide (UInt64.ofNat msh.nIdx = (0 : Word)) = (msh.nIdx == 0) := by
+      rw [← installOfNatBeq (c := 0) hnb (by decide)]; rfl
+    have e2 : decide (UInt64.ofNat c.snd = (0 : Word)) = (c.snd == 0) := by
+      rw [← installOfNatBeq (c := 0) hnFb (by decide)]; rfl
+    have e4 : decide (isRec = 0) = !b := by rw [← hb, bne, Bool.not_not]; rfl
+    simp only [e1, e2, e4, UInt64.toNat_ofNat_of_lt' hnpb, hnI,
       UInt64.toNat_ofNat_of_lt' hnFb, List.map_cons, List.map_nil]
     by_cases h1 : msh.nIdx = 0 <;> by_cases h2 : c.snd = 0 <;> cases b <;> simp [h1, h2, bne]
   · -- two or more
     have hcl2 : 2 ≤ cl.toNat := by rw [← hlenc, hcs]; simp
     have hne0 : cl ≠ 0 := fun e => by rw [e] at hcl2; simp at hcl2
-    have hne1 : Cmp.evalW .eq cl 1 ≠ 1 := by
+    have hne1 : (if cl = 1 then (1 : Word) else 0) ≠ 1 := by
       have : cl ≠ 1 := fun e => by rw [e] at hcl2; simp at hcl2
-      simp [Cmp.evalW, Cmp.eval, this]
-    rw [hhd, ite_eq_right hne0, icaKH_rest (h := by simpa using hne1)] at h
+      simp [this]
+    rw [hhd, ite_eq_right hne0] at hr0
+    cases hr0
+    rw [icaW.k_block_caps_head.arm2 (hc1 := by simpa using hne1)] at h
+    simp only [List.headD_cons, List.tail_cons] at h
     have hbd : co.toNat + cl.toNat ≤ iwTop m := hcb.resolve_left hne0
-    exact hfin [0, 0, 0, 0, 0] (c :: c2 :: cs) co cl (UInt64.ofNat msh.nIdx) _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
+    exact hfin 0 0 0 0 0 (c :: c2 :: cs) co cl (UInt64.ofNat msh.nIdx) _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
       (by rw [hnI]; rfl) h
 
 /-- **`block_caps_at` refines `blockCapsAt`, as a call** (`icaW_ok`). -/
@@ -607,11 +477,9 @@ theorem blockCapsAt_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     (hS : StageR vis fe m a) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       CapsAt m' (r.headD 0).toNat (ConRon.Arena.blockCapsAt bs mi.toNat b) := by
-  rcases n with _ | k
-  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (ica_spec p hP.caps k _ pp mi isRec) h
-  exact icaW_ok hP k hq hsrc hb hW hS
+    (ica_spec p hP.caps n _ pp mi isRec) h
+  exact icaW_ok hP n hq hsrc hb hW hS
 
 end L.Ind
 
@@ -639,19 +507,11 @@ open L.Arena
 def iirWs (m : Mem) (cv caps : Word) : List Word :=
   [3, erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3), rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2), rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4), rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7), rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9), rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12), rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)]
 
-/- `(ematch := 8)`: a depth, not a search. With the locals read in one step (`L/LocNF.lean`),
-each of the five stores' addresses meets `wrER`'s in a later E-matching round than before, past
-the default five rounds. -/
-theorem erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "er_put5" = some erPut5) (n : Nat) (s₀ : St)
-    (d x0 x1 x2 x3 x4 : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "er_put5" [d, x0, x1, x2, x3, x4]
-    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = wrER s₀.mem d [x0, x1, x2, x3, x4]; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, erPut5]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, erecPut_specW p hpu n] <;>
-    finish (ematch := 8) [wrER, UInt64.add_assoc]
+l_model erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_put5" = some erPut5)
+  fns [hp ↦ erPut5W void]
+  specs [erecPut_specW p hpu n]
+  grind [arena_grind] simp []
 
 /-- The model of `ind_info_rec(cv, caps)`. -/
 def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=
@@ -659,54 +519,11 @@ def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=
   | none => none
   | some (q, m1) => some (q, wrER m1 q (iirWs m cv caps))
 
-def iirK4 (p : Prog) (n : Nat) (caps q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m4) => iirK5 q (callW p n "er_put5" [q + 15, rdW (m4.arr64 IW) (caps + 10),
-      rdW (m4.arr64 IW) (caps + 11), rdW (m4.arr64 IW) (caps + 12), rdW (m4.arr64 IW) (caps + 13),
-      rdW (m4.arr64 IW) (caps + 14)] m4)
-def iirK3 (p : Prog) (n : Nat) (caps q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m3) => iirK4 p n caps q (callW p n "er_put5" [q + 10, rdW (m3.arr64 IW) (caps + 5),
-      rdW (m3.arr64 IW) (caps + 6), rdW (m3.arr64 IW) (caps + 7), rdW (m3.arr64 IW) (caps + 8),
-      rdW (m3.arr64 IW) (caps + 9)] m3)
-def iirK2 (p : Prog) (n : Nat) (caps q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) => iirK3 p n caps q (callW p n "er_put5" [q + 5, rdW (m2.arr64 IW) caps,
-      rdW (m2.arr64 IW) (caps + 1), rdW (m2.arr64 IW) (caps + 2), rdW (m2.arr64 IW) (caps + 3),
-      rdW (m2.arr64 IW) (caps + 4)] m2)
-/-- After the allocation: the four writes. -/
-def iirK (p : Prog) (n : Nat) (cv caps : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m1) => iirK2 p n caps q (callW p n "er_put5" [q, 3, erRd m1 cv,
-      erRd m1 (cv + 1), erRd m1 (cv + 2), erRd m1 (cv + 3)] m1)
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (cv caps q : Word) (r : List Word)
-theorem iirK5_some : iirK5 q (some (r, m)) = some ([q], m) := rfl
-theorem iirK4_some : iirK4 p n caps q (some (r, m)) = iirK5 q (callW p n "er_put5" [q + 15,
-    rdW (m.arr64 IW) (caps + 10), rdW (m.arr64 IW) (caps + 11), rdW (m.arr64 IW) (caps + 12),
-    rdW (m.arr64 IW) (caps + 13), rdW (m.arr64 IW) (caps + 14)] m) := rfl
-theorem iirK3_some : iirK3 p n caps q (some (r, m)) = iirK4 p n caps q (callW p n "er_put5" [q + 10,
-    rdW (m.arr64 IW) (caps + 5), rdW (m.arr64 IW) (caps + 6), rdW (m.arr64 IW) (caps + 7),
-    rdW (m.arr64 IW) (caps + 8), rdW (m.arr64 IW) (caps + 9)] m) := rfl
-theorem iirK2_some : iirK2 p n caps q (some (r, m)) = iirK3 p n caps q (callW p n "er_put5" [q + 5,
-    rdW (m.arr64 IW) caps, rdW (m.arr64 IW) (caps + 1), rdW (m.arr64 IW) (caps + 2),
-    rdW (m.arr64 IW) (caps + 3), rdW (m.arr64 IW) (caps + 4)] m) := rfl
-theorem iirK_some : iirK p n cv caps (some (q, m)) = iirK2 p n caps q (callW p n "er_put5" [q, 3,
-    erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3)] m) := rfl
-end arms
-attribute [ind_grind] iirK5_some iirK4_some iirK3_some iirK2_some iirK_some
-
-theorem iir_specK (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-    (hp : p.lookup "ind_info_rec" = some indInfoRec) (n : Nat) (s₀ : St) (cv caps : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ind_info_rec" [cv, caps]
-    ⦃fun r s' => LocEq s' s₀ ∧ iirK p n cv caps (erAllocW s₀.mem 20) = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, indInfoRec]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      erecAlloc_specW p ha n, callW_spec p n "er_put5"] <;>
-    finish (gen := 40) (instances := 20000) [rdW_eq, erRd]
+l_model iir_specK (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hp : p.lookup "ind_info_rec" = some indInfoRec)
+  fns [hp ↦ iirK list]
+  specs [erecAlloc_specW p ha n, callW_spec p n "er_put5"]
+  grind [arena_grind] finish [rdW_eq] gen 40 instances 20000
 
 theorem wrER_IW (m : Mem) (q : Word) (ws : List Word) : (wrER m q ws).arr64 IW = m.arr64 IW :=
   (wrER_frame ws m q).1 IW (by simp [EREC, IW]) (by decide)
@@ -728,36 +545,46 @@ theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1))
   refine ⟨hc _ (by decide), fun x => ?_⟩
   unfold erRd; rw [hc _ (by rw [tierA_EREC]; split <;> decide)]
 
+/-- `er_put5`'s five stores are one `wrER`. -/
+theorem erPut5W_wrER {m m' : Mem} {d a b c e f : Word} (h : erPut5W m d a b c e f = some m') :
+    m' = wrER m d [a, b, c, e, f] := by
+  unfold erPut5W at h
+  iterate 5 (split at h; · cases h)
+  cases h
+  simp only [wrER, UInt64.add_assoc, UInt64.reduceAdd]
+
 /-- `ind_info_rec`'s four writes are the record written at once. -/
 theorem iirK_eq {p : Prog} (hpu : p.lookup "erec_put" = some erecPut)
     (hp : p.lookup "er_put5" = some erPut5) {n : Nat} {m m' : Mem}
-    {cv caps : Word} {r : List Word} (h : iirK p (n + 1) cv caps (erAllocW m 20) = some (r, m')) :
+    {cv caps : Word} {r : List Word} (h : iirK p (n + 2) m cv caps = some (r, m')) :
     ∃ q, r = [q] ∧ iirW m cv caps = some (q, m') := by
   have put : ∀ (mm : Mem) (d x0 x1 x2 x3 x4 : Word) (rr : List Word) (mm' : Mem),
       callW p (n + 1) "er_put5" [d, x0, x1, x2, x3, x4] mm = some (rr, mm') →
       mm' = wrER mm d [x0, x1, x2, x3, x4] := by
     intro mm d x0 x1 x2 x3 x4 rr mm' hc
     obtain ⟨s', rfl, -, h2⟩ := triple_of_callW (s₀ := ⟨mm, Locals.init []⟩)
-      (erPut5_spec p hpu hp n _ d x0 x1 x2 x3 x4) hc
-    exact h2
+      (erPut5_spec p hpu hp (n + 1) _ d x0 x1 x2 x3 x4) hc
+    exact erPut5W_wrER h2
   unfold iirW
+  rw [iirK.arm1] at h
   rcases h1 : erAllocW m 20 with _ | ⟨q, m1⟩
   · rw [h1] at h; cases h
   obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
-  rw [h1, iirK_some] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK2_some] at h
+  rw [h1, iirK.k_erec_alloc.arm1] at h
+  simp only [erRd_foldN] at h
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK.k_er_put5.arm1] at h
   have e2 := put _ _ _ _ _ _ _ _ _ h2
   have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
   rw [i2] at h
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [iirK3_some] at h
+  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [iirK.k_er_put5_2.arm1] at h
   have e3 := put _ _ _ _ _ _ _ _ _ h3
   have i3 : m3.arr64 IW = m.arr64 IW := by rw [e3, wrER_IW, i2]
   rw [i3] at h
-  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [iirK4_some] at h
+  obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl; rw [iirK.k_er_put5_3.arm1] at h
   have e4 := put _ _ _ _ _ _ _ _ _ h4
   have i4 : m4.arr64 IW = m.arr64 IW := by rw [e4, wrER_IW, i3]
   rw [i4] at h
-  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [iirK5_some] at h
+  obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h rfl; rw [iirK.k_er_put5_4.arm1] at h
   have e5 := put _ _ _ _ _ _ _ _ _ h5
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨q, rfl, ?_⟩
@@ -854,15 +681,17 @@ end arms
 theorem installIirRun {p : Prog} (hP : ConsIndsProg p) {n : Nat} {m m' : Mem} {cv caps : Word}
     {r : List Word} (h : callW p n "ind_info_rec" [cv, caps] m = some (r, m')) :
     ∃ q, r = [q] ∧ iirW m cv caps = some (q, m') := by
-  rcases n with _ | k
-  · rw [callW_zero] at h; cases h
   obtain ⟨s', rfl, -, hK⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (iir_specK p hP.erAlloc hP.iir k _ cv caps) h
-  rcases k with _ | j
+    (iir_specK p hP.erAlloc hP.iir n _ cv caps) h
+  rcases n with _ | _ | j
+  · rw [iirK.eq_1] at hK; cases hK
   · exfalso
+    rw [iirK.arm1] at hK
     cases h1 : erAllocW m 20 with
-    | none => simp only [h1] at hK; cases hK
-    | some x => obtain ⟨q, m1⟩ := x; simp only [h1, iirK_some, callW_zero] at hK; cases hK
+    | none => simp only [h1, iirK.k_erec_alloc.none] at hK; cases hK
+    | some x =>
+      obtain ⟨q, m1⟩ := x
+      simp only [h1, iirK.k_erec_alloc.arm1, callW_zero, iirK.k_er_put5.none] at hK; cases hK
   exact iirK_eq hP.recP.put hP.put5 hK
 
 /-- **`cons_block_inds`' model refines `consBlockInds`** (pure in the twin): each member's former
