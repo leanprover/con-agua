@@ -428,3 +428,12 @@ that was 4× slower). The `IndIface` models this helper was given turned out to 
 `TabSimSpg`, `CfaFv`, …): kept. `generated_rules`, `check_sum_tele`, `aux_rule_fire`,
 `class_rules_ok`, `target_major_nfs` were already generated (their remaining hand lemmas are
 refinements).
+
+### Batch 15: helper `mgen3-pos2` (round 3)
+
+11 functions; 25 files, +264 −522 (**−258**), #255. `nest_frame_mates(_go)`, `nest_phs`
+(`pfuel`), `nest_ctx_root_holes` (fuel-indexed; `rhW k` is now `rhWf (k + 1)`), `nest_ctor_nf`
+(`pfuel`), `depth`, `replace_apps`, `nest_occ` (`pfuel`, each with a 2-line triple wrapper for a
+`DpGoSpec`-style definition, which `vcgen` does not unfold), `pi_doms_occ`,
+`has_loose_b_var_b_ins` (bridge `hbInsW_eq` to the `msetG` form), `has_loose_b_var_b_fast`.
+No module more than 1.7× slower (`NcnW` 0.36 → 0.60 s); `MatesW` 13.3 → 8.2 G.
