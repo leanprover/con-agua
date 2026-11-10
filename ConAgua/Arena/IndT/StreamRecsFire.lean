@@ -1,15 +1,15 @@
 module
 
-public import ConAgua.Arena.IndT.StreamRecsChk
 public import ConAgua.Arena.RecCheckSpec.ArfW
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndT.Lift
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.StreamRecs
 import all ConAgua.Arena.IndStream
+public import ConAgua.Arena.IndT.StreamRecsTy
+public import ConRon.Bridge.Inductives.RecCheck
 
 @[expose] public section
 

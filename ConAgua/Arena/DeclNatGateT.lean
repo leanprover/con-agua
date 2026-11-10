@@ -4,8 +4,6 @@ public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq
-import ConAgua.Arena.DeclReducePin
-import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.StageC
 public import ConRon.Bridge.Checker.DeclVal
 public import ConAgua.Arena.DeclNatPushPop
@@ -17,6 +15,7 @@ public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 
 @[expose] public section
 

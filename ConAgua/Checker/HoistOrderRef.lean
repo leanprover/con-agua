@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Checker.HoistOrderRef3
 import ConAgua.Arena.DeclNatBase
-import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 

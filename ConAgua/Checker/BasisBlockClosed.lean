@@ -1,10 +1,7 @@
 module
 
-public import ConAgua.Checker.Prog
 public import ConAgua.Checker.IndDeclConstsClosed
 public import ConAgua.Arena.BasisBlockT
-public import ConAgua.Arena.LevelIntern
-public import ConAgua.Arena.LevelSubstLP
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Checker.IndDeclConstsClosed
 meta import ConAgua.Arena.BasisBlockT

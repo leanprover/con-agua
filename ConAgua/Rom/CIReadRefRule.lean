@@ -2,10 +2,10 @@ module
 
 import ConAgua.Rom.CIReadRefCaps
 import ConAgua.L.WordOff
-import ConAgua.Rom.CIReadRefCV
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadSpec
+import ConAgua.Rom.ReadScr
 
 @[expose] public section
 

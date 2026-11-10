@@ -7,15 +7,10 @@ import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndStream
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndT.RecsTemp
 import ConAgua.Arena.RecGenSpec.FlushStage
-import ConAgua.Arena.CoreRefine
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS
@@ -24,6 +19,7 @@ import ConAgua.Arena.IndInstallSpec.IcvgW
 public import ConAgua.Arena.IndT.IdxSorts
 public import ConAgua.Arena.IndT.GenRec3
 import all ConRon.Bridge.Inductives.BlockTail
+public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 
 @[expose] public section
 

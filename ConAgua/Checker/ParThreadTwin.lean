@@ -6,12 +6,8 @@ import ConAgua.Arena.FreezeFresh
 import ConAgua.Checker.RomProgInit
 public import ConAgua.Final.TwinPooled
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.IndArm
-import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopStage
 import ConAgua.Checker.RomProg0
-import ConAgua.Checker.TwinShapeQuot
-public import ConAgua.Checker.PresizeStage
 
 @[expose] public section
 

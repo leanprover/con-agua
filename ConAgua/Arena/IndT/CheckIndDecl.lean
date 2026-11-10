@@ -22,6 +22,8 @@ import ConRon.Bridge.Inductives.Install
 import ConLeche.Verify.Inductives.BlockShapeInv
 import all ConAgua.Arena.IndParts
 import all Init.Data.List.Control
+import ConAgua.Arena.IndT.ArmMemos
+import ConAgua.Arena.IndT.Lift
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.CapsProg
-public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

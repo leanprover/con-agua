@@ -8,30 +8,20 @@ import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.IndView
-import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.StageInst1
-import ConAgua.Arena.IndPosSpec.NoGoStep
 import ConAgua.Arena.IndSumSpec.StructUsedHb
-import ConAgua.Arena.IndRealAbs
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.ExprOps.Inst1
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.L.WordOff
 import ConLeche.Verify.Inductives.NestContInv
 import ConLeche.Verify.BridgeDecl
 import ConLeche.Verify.InferLemmas
 import all ConAgua.Arena.IndPos2
+import ConAgua.Arena.BasisBlockC
 
 @[expose] public section
 

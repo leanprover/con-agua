@@ -7,13 +7,12 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import all ConAgua.Arena.IndPos2
+import ConAgua.Arena.QuotCiT
 
 @[expose] public section
 

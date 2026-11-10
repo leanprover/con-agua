@@ -2,20 +2,16 @@ module
 
 public import ConAgua.Verdict.PosE2M
 public import ConAgua.Verdict.PosFt
-public import ConAgua.Arena.KnotEntry
-public import ConAgua.Arena.IndT.Sum1
 import ConAgua.Verdict.PosE1N
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndRealIlpL
 public import ConLeche.Verify.Inductives.NestScope
+import ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section
 /-!

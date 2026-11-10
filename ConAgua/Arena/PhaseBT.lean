@@ -1,21 +1,10 @@
 module
 
-import ConAgua.Arena.LoopT
-import ConAgua.Arena.PhaseWorker
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-public import ConAgua.Verdict.DeclValE
-import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.RefWalk
-import ConAgua.Arena.ScratchRefine
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.L.ModelGen
 import ConRon.Bridge.Checker.Fold
 import ConRon.Bridge.Inductives.Decl
 import ConRon.Bridge.Specs
-public import ConAgua.Arena.Checker
-public import ConAgua.Arena.DeclTwin
-public import ConAgua.Arena.LeafFns
 import all ConAgua.Arena.CheckerL
 
 @[expose] public section

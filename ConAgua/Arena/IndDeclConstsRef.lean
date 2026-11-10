@@ -6,12 +6,9 @@ public import ConAgua.Arena.IndDeclConstsTwin
 public import ConAgua.Arena.IndRealPartsC2
 public import ConAgua.Arena.DeclBasisRef
 public import ConAgua.Arena.DeclAndPinIndCopy2
-public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 public import ConAgua.Arena.IndArmBridge2
-public import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 public import ConAgua.Arena.IndDeclConstsSpec
 import ConRon.Bridge.Checker.Basis
@@ -21,6 +18,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 
 @[expose] public section
 

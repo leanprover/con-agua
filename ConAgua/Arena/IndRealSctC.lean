@@ -2,19 +2,12 @@ module
 
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.StructParts
-import ConAgua.Arena.RecCheckSpec.DecHLTruncMBound
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.TblFrame
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-public import ConAgua.Arena.IndSumSpec.Row
-public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.IndPosSpec.MatesW
 public import ConRon.Arena.Inductives.BlockTail
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 public import ConAgua.Arena.IndRealApdT
@@ -22,23 +15,21 @@ import ConRon.Bridge.Inductives.BlockTail
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
-import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndPartsSpec.EqW
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndRealMemoCr
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndInstallSpec.DecCNS
-public import ConAgua.Arena.IndInstallSpec.DecISS
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndSum
+public import ConAgua.Arena.IndInstallSpec.TabsProg
+public import ConAgua.Arena.TwinStep
+public import ConAgua.Arena.IndPartsSpec.MemberNames
+public import ConRon.Bridge.Inductives.Run
 
 @[expose] public section
 

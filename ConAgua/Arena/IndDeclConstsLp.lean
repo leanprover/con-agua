@@ -3,8 +3,6 @@ module
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.IndInstallSpec.LeafKeep
 import ConAgua.Arena.TwinStep
-import ConAgua.Arena.LdRd
-import ConAgua.L.ModelGen
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
@@ -37,6 +35,7 @@ import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
 import ConAgua.Arena.InstLPKeys
+import ConAgua.L.VcFlat
 
 @[expose] public section
 

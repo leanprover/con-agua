@@ -2,20 +2,15 @@ module
 
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IlpRd
-public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
-public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.IndT.Base
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndRealAbs
-public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Verdict.DeclValsE
 import all ConAgua.Arena.RecGen
 

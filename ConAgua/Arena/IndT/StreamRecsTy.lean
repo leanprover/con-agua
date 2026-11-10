@@ -1,25 +1,19 @@
 module
 
 public import ConAgua.Verdict.VCtx
-public import ConAgua.Arena.IndT.Base
 public import ConAgua.Arena.GrindAttr
-public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.IndRealWalk
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Checker.Hyp
 public import ConRon.Bridge.Inductives.Rel
 public import ConLeche.Verify.Shift
-public import ConAgua.Arena.IndRealFvtD
 public import ConAgua.Arena.IndT.StreamRecsOpa
 public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.IndRealMemoCrT
-public import ConAgua.Verdict.UnresolvedE
 import ConAgua.Arena.IndT.WalkC
 import ConAgua.Verdict.DeclValsE
 import ConAgua.Verdict.DeclHdrE
 import ConRon.Bridge.Checker.Names
 import ConAgua.Arena.IndRealWalkT
-import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndInstallSpec.DomsW
@@ -29,6 +23,7 @@ import ConLeche.Verify.Denote.IndFrame
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndStream
+public import ConAgua.Arena.KnotEntry
 
 @[expose] public section
 

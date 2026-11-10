@@ -1,25 +1,11 @@
 module
 
-import ConAgua.Verdict.DeclTopE
-import ConAgua.Verdict.KnotAllE
-import ConAgua.Verdict.CheckBE
-import ConAgua.Verdict.FrontStageE
-public import ConAgua.Final.ThreadsVerdict
 meta import ConAgua.Verdict.DeclTopE
 meta import ConAgua.Verdict.KnotAllE
 meta import ConAgua.Verdict.CheckBE
 meta import ConAgua.Verdict.FrontStageE
 meta import ConAgua.Final.ThreadsVerdict
-import ConAgua.Arena.DeclNatSubAll
-import ConAgua.Arena.StrLitSup
-import ConAgua.Checker.IndArm
-import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.LoopStage
-import ConAgua.Checker.RomProgInit
-import ConAgua.Checker.TwinShapeQuot
-public import ConAgua.Arena.CheckerT
-public import ConAgua.Checker.PipeFinal
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
@@ -166,6 +152,8 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+public import ConAgua.Verdict.UnresolvedE
+public import ConAgua.Checker.Prog
 
 @[expose] public section
 /-!

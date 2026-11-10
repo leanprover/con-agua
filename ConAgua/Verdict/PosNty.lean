@@ -1,8 +1,5 @@
 module
 
-import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.NitW
-public import ConAgua.Arena.IlpRd
 public import ConAgua.Verdict.PosE1M
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndRealIlpL
@@ -11,15 +8,13 @@ import ConRon.Bridge.Inductives.FieldTele
 import ConAgua.Arena.IndPosSpec.FgW
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.PosWalks
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-import ConAgua.Arena.DeclRec
 import ConAgua.Arena.IndPosSpec.InstW
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.WordOff
 public import ConAgua.Arena.IndPosSpec.NkFields
+import ConAgua.Arena.QuotCiT
 
 @[expose] public section
 

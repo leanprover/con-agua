@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.PhaseBT
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 

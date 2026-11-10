@@ -5,10 +5,7 @@ import ConAgua.Checker.CheckARun
 public import ConAgua.Checker.JobsProg
 public import ConAgua.Checker.ArmsT
 import all ConAgua.Checker.Entry
-import ConAgua.L.Blocks
-import ConAgua.Checker.IndArm
 import ConAgua.Checker.LoopProg
-import ConAgua.Checker.LoopStage
 import ConAgua.Checker.TwinShapeQuot
 public import ConAgua.Checker.PresizeStage
 public import ConAgua.Final.Twin

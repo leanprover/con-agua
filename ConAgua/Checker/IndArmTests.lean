@@ -1,8 +1,6 @@
 module
 
-public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Arena.LeafFrame
-public import ConAgua.Layout
 
 @[expose] public section
 

@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PapW
-public import ConAgua.Arena.IndSumSpec.ConsSumCtors
-public import ConAgua.Arena.Frame
 import all ConAgua.Arena.Env
 
 @[expose] public section

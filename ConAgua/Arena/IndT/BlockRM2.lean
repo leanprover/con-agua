@@ -1,25 +1,19 @@
 module
 
 public import ConAgua.Arena.IndT.BlockRM
-public import ConAgua.Verdict.VCtx
 public import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
-import ConAgua.Arena.RecSim
-import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndRealAbsSim
 import ConRon.Bridge.Checker.Base
 import ConAgua.Arena.StageC
 import ConLeche.Verify.BridgeWfImp

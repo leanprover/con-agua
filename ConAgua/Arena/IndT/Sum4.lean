@@ -18,10 +18,8 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import ConLeche.Verify.BridgeWfImp
 import ConRon.Bridge.Inductives.SumInstall
-public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndT.Lift
 import ConLeche.Verify.Denote.IndFrame
 public import ConRon.Bridge.Inductives.Rel
 import all ConAgua.Arena.IndSum

@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Checker.HoistClosureL
 public import ConAgua.Arena.DeclNatDeps
-import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 

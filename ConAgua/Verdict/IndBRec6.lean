@@ -14,8 +14,6 @@ import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.RecGenSpec.Rec3CVX
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.RecGenSpec.CfaFv
 import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndInstallSpec.DomsW

@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Checker.Prog
 public import ConAgua.Arena.LoopFns
 public import ConAgua.Compiler.WriteSetSplit
 public import ConAgua.Arena.LevelIntern

@@ -1,8 +1,7 @@
 module
+public import ConAgua.Arena.SimLib
+import ConLeche.Kernel.Env
 
-public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 @[expose] public section
 

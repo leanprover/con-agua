@@ -5,7 +5,6 @@ public import ConAgua.Checker.HoistOrderRef
 public import ConAgua.Checker.HoistIndexRef
 public import ConAgua.Checker.HoistNatRef
 public import ConAgua.Checker.HoistWalkRef
-import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 

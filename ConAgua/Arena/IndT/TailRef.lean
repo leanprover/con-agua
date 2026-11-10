@@ -7,23 +7,12 @@ import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.RecCheckSpec.BlockNestedBit
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
-import ConAgua.Arena.IndPartsSpec.RecTW
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndDecPLB
-import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.ScratchRefine
-import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.IndT.GenRec1
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.PassCS
-import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
-import ConAgua.Checker.NoVerdictTree
 import all ConRon.Bridge.Inductives.BlockTail
 import all ConAgua.Arena.IndInstall
 

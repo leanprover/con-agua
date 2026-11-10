@@ -8,9 +8,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndT.BlockNames
-import ConAgua.Arena.IndDeclConstsFire
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section

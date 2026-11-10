@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.Arena.Env
 public import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.Layout
 
 @[expose] public section
 

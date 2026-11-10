@@ -1,31 +1,14 @@
 module
 
-import ConAgua.Arena.IndT.IdxSorts
-import ConAgua.Arena.IndT.GenRec3
-public import ConAgua.Arena.IndT.ArmMemos
-import ConAgua.Arena.IndRealSctC
-import ConAgua.Arena.RecCheckSpec.BlockNestedBit
-public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConRon.Bridge.Inductives.BlockTail
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.IcvgW
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.RecCheckSpec.CnfW
-import ConAgua.Arena.RefWalk
-import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndInstallSpec.GpbWSimF
-public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-public import ConAgua.Arena.IndT.GenRec2
 public import ConRon.Bridge.Inductives.BlockTail
 import all ConAgua.Arena.IndInstall
+public import ConAgua.Arena.IndInstallSpec.Icvg
+public import ConAgua.Arena.IndInstallSpec.GrcProg
 
 @[expose] public section
 

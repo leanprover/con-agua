@@ -4,7 +4,6 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Arena.Jobs
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.Jobs
-public import ConAgua.Compiler.WriteSetSplit
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.IndDeclConsts

@@ -9,7 +9,6 @@ import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
-import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.IndSumSpec.SumProg
 public import ConRon.Bridge.Inductives.Rel
 

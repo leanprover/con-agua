@@ -6,7 +6,6 @@ import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassKeyCanon
 public import ConAgua.Verdict.IndBTmf
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.DeclBasisSpec
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndInstallSpec.PartsAt
@@ -15,7 +14,6 @@ import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndSumSpec.DecHLTake
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.RefWalk
 

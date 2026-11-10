@@ -1,10 +1,6 @@
 module
 
 public import ConAgua.Checker.ParEntryA
-import ConAgua.Checker.IndArm
-import ConAgua.Checker.LoopStage
-public import ConAgua.Checker.PipeFinal
-import ConAgua.Checker.TwinShapeQuot
 public import ConAgua.Checker.PresizeStage
 meta import ConAgua.Checker.ParEntryA
 meta import ConAgua.Checker.IndArm
@@ -13,12 +9,9 @@ meta import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.TwinShapeQuot
 meta import ConAgua.Checker.PresizeStage
 import all Init.Data.Repr
-import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.RomProg
 import ConAgua.Checker.RomProgInit
-public import ConAgua.Arena.LoopStart
-public import ConAgua.Arena.Jobs
 public import ConAgua.Checker.BuildStage
 
 @[expose] public section

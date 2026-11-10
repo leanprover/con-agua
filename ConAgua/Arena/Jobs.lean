@@ -2,9 +2,7 @@ module
 
 public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.IndexBuild
-public import ConAgua.Arena.TwinStep
 public import ConAgua.Arena.ScratchRefine
-public import ConAgua.Arena.DeclPins
 public import ConRon.Bridge.Checker.Pooled
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk

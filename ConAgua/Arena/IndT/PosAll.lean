@@ -14,13 +14,10 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndT.PosFields
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.StructUsedHb
-public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE
-public import ConAgua.Verdict.PosFt
 
 @[expose] public section
 

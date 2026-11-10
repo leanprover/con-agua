@@ -1,11 +1,8 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-public import ConAgua.Arena.IndDecPLB
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.AllCtors
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

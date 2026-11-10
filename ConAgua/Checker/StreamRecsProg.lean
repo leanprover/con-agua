@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndT.StreamRecsTop
 public import ConAgua.Arena.IndT.StreamRecsNested
-public import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.Checker.ArmsT
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -151,6 +150,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+public import ConAgua.Checker.Prog
 
 @[expose] public section
 

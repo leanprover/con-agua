@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.IndSumSpec.StructUsedHb
-public import ConAgua.Arena.IndPosSpec.NestOccGo
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 public import ConAgua.Arena.LeafFrame
 import ConAgua.Arena.GrindAttr

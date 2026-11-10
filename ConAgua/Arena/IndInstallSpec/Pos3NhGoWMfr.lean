@@ -2,10 +2,10 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.NestHoles
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
+import ConAgua.Arena.IndPosSpec.RpGoStep
 
 @[expose] public section
 

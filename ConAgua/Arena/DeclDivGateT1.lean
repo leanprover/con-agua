@@ -10,7 +10,6 @@ public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.StageC
-import ConAgua.Arena.DeclNatGateT
 public import ConRon.Bridge.Checker.DivMod
 import all ConRon.Bridge.Checker.DivMod
 import ConAgua.Arena.DeclNatGate

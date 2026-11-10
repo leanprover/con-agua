@@ -1,25 +1,14 @@
 module
 
 public import ConAgua.Arena.BasisBlockT
-public import ConAgua.Arena.DeclBasisRef
-import ConAgua.Arena.QuotRecW
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndTwin
 import ConAgua.Arena.IlpRd
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.DeclCvg
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
-import ConAgua.Arena.DeclCanonLvl
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.TwinStep
 import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.DeclCanonRules
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 
 @[expose] public section
 

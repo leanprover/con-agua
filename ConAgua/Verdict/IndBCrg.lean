@@ -2,7 +2,6 @@ module
 
 import ConRon.Bridge.Checker.Names
 import ConRon.Bridge.Core.Walks.Cached
-public import ConAgua.Arena.RecGenSpec.CruleProg
 public import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Verdict.VCtx
 import ConAgua.Arena.IndT.Lift
@@ -12,16 +11,14 @@ import ConAgua.Arena.RecGenSpec.FlushStage
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 public import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.RecGen
+public import ConAgua.Arena.IndRealCrF
 
 @[expose] public section
 

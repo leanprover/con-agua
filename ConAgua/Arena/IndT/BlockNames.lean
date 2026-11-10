@@ -1,23 +1,16 @@
 module
 
 public import ConAgua.Arena.IndT.BlockC
-public import ConAgua.Arena.IndInstallSpec.CbProg
-public import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndPartsSpec.AllCtors
-import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
-import ConAgua.Arena.IndPartsSpec.MemberNames
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndInstallSpec.IcaW
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndInstall
 

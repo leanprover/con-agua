@@ -3,10 +3,10 @@ module
 public import ConAgua.Arena.CheckerT
 public import ConAgua.Arena.DeclCrpT
 import all ConAgua.Arena.DeclStep
-import ConAgua.Arena.QuotRulesT
-import ConAgua.Checker.QuotFns
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.RefWalk
+public import ConAgua.Arena.DeclDefnT
+public import ConAgua.Arena.LoopT
 
 @[expose] public section
 

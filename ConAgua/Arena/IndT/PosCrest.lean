@@ -3,13 +3,11 @@ module
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.IndPosSpec.OneK
 public import ConAgua.Arena.IndT.PosDefs
-import ConAgua.Arena.IndT.RecGen19
 public import ConAgua.Verdict.PosE3Cm
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
@@ -17,6 +15,7 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 

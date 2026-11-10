@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.FreezeRel
 import ConAgua.L.Blocks
 import all ConAgua.Arena.Freeze
+import ConAgua.Arena.Checker
 
 @[expose] public section
 

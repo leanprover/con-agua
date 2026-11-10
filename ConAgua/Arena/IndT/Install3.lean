@@ -21,6 +21,8 @@ import ConRon.Bridge.Inductives.SumInstall
 public import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
+public import ConAgua.Verdict.DeclValsE
+public import ConRon.Bridge.Checker.Hyp
 
 @[expose] public section
 

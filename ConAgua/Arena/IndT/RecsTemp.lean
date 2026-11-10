@@ -4,18 +4,16 @@ public import ConAgua.Arena.RecGenSpec.ClassFeR
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.Verdict
-import ConAgua.Arena.StoreFields
-public import ConAgua.Arena.IndT.Tail
-import ConAgua.L.ErrSpec
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Checker.NoVerdictFns
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.QuotCiT
+import ConAgua.Arena.RecClassSpec.MjProg
+public import ConAgua.L.ErrSpec
 
 @[expose] public section
 

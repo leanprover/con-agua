@@ -1,14 +1,9 @@
 module
 
 public import ConAgua.Verdict.DivModPinE
-public import ConAgua.Arena.DeclArmDefn
-import ConAgua.Arena.DeclDivGateT1
-import ConAgua.Arena.DeclNatSub
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.DeclNatSubAll
-import ConAgua.Arena.DeclDivModSpec.DmCgW
 public import ConAgua.Arena.DeclNatGateT
-import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
@@ -16,6 +11,7 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Checker.DeclVal
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.IndSumSpec.ConsSumCtors
 
 @[expose] public section
 

@@ -1,29 +1,19 @@
 module
 
-import ConAgua.Arena.RecGenSpec.DecCIIndCv
-import ConAgua.Arena.RecClassSpec.ClassNPcOf
 import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.RecGenSpec.OcW
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPartsSpec.BlockCounts
-import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Verdict.PosNty
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndT.Sum1
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-public import ConAgua.Arena.IndPartsSpec.RecTW
-public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecCheckSpec.ToiW
-public import ConAgua.Arena.TwinStep
 import all ConAgua.Arena.RecCheck
+public import ConAgua.Verdict.PosFt
+import ConAgua.Arena.QuotCiT
+import ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section
 

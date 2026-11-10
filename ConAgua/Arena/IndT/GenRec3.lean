@@ -3,29 +3,22 @@ module
 import ConAgua.Arena.IndT.StreamRecs
 import ConAgua.Verdict.IndBRecPins
 public import ConAgua.Arena.IndT.GenRec2
-import ConAgua.Verdict.IndBRec6
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.IcvgW
 import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.IndInstallSpec.PapW
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.GenRec1
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.BncAfr
 public import ConAgua.Arena.IndPartsSpec.BmoW
 import ConAgua.Arena.IndPartsSpec.Bf
-import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPartsSpec.BrsW
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndRealPartsC1
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecCheckSpec.CnfW
 import ConAgua.Arena.RecGenSpec.CfhW
 import ConAgua.Arena.RecGenSpec.Classes
@@ -33,8 +26,6 @@ import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.DeclBase
-public import ConAgua.Arena.DeclValSpec
 public import ConAgua.Arena.IndInstallSpec.GpbWSimF
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import all ConAgua.Arena.IndInstall

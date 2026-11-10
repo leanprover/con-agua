@@ -2,18 +2,7 @@ module
 
 import ConAgua.Arena.IndT.PosAll
 public import ConAgua.Arena.IndT.PosFkc
-public import ConAgua.Verdict.PosFt
 public import ConAgua.Verdict.PosE
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.KlB
-public import ConAgua.Arena.IndPosSpec.NbLook
-public import ConAgua.Arena.IndPosSpec.OneK
-public import ConAgua.Arena.IndPosSpec.WCtx
-public import ConAgua.Arena.IndPosSpec.WalkOK
-public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.IndT.PosDefs
-public import ConAgua.Arena.KnotEntry
-public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section

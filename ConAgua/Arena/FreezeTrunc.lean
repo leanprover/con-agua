@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.FreezeTruncArena
 import ConAgua.Arena.FreezeTruncKeep
 import ConAgua.Front.ApplyDeclRefine
-public import ConAgua.Arena.FreezeRel
 public import ConAgua.Arena.Jobs
 public import ConAgua.Arena.FreezeTruncBase
 public import ConRon.Bridge.Checker.StreamIndex

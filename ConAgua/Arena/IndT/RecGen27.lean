@@ -14,7 +14,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndRealOpf3
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndT.Lift

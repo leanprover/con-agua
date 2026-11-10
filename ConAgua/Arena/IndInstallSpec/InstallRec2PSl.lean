@@ -4,7 +4,7 @@ public import ConAgua.Arena.IndInstallSpec.DecCNS
 public import ConAgua.Arena.IndInstallSpec.DecISS
 import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-public import ConAgua.Arena.IndInstallSpec.InstallIwB
+public import ConAgua.Arena.IndDecPLB
 
 @[expose] public section
 

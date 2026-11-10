@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.StrLitSup
 
 @[expose] public section
 

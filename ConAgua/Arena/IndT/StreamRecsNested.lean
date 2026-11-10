@@ -1,17 +1,10 @@
 module
 
 public import ConAgua.Arena.IndT.StreamRecsTop
-public import ConAgua.Arena.IndT.SumSteps
-import ConAgua.Arena.DefEqMidPeel
-import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.RecCheckSpec.ArfW
-import ConAgua.Arena.IndSumSpec.TsrW
-import ConAgua.Arena.IndRealMemo
-import ConAgua.Arena.StageInst1
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.StreamRecs
 import all ConAgua.Arena.IndStream

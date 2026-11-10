@@ -11,14 +11,12 @@ import ConAgua.Checker.ProgWf
 import ConAgua.Checker.CheckARun
 public import ConAgua.Checker.ProgI
 public import ConAgua.Checker.ProgTab
-public import ConAgua.Final.Twin
 public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
 import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.BasisBlockProg
 import ConAgua.Checker.ArmsT
-import ConAgua.Arena.DeclBasisRef
 
 @[expose] public section
 

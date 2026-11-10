@@ -4,10 +4,10 @@ public import ConAgua.Checker.ParDriverL
 public import ConAgua.Checker.ParThreadReads
 public import ConAgua.Arena.FreezeBuf
 import ConAgua.Checker.CheckARun
-import ConAgua.Arena.FreezeFresh
-import ConAgua.Checker.RomProg0
 import ConAgua.L.Blocks
 import all ConAgua.Checker.Entry
+import ConAgua.Arena.FreezeFreshBase
+public import ConAgua.Arena.JobStart
 
 @[expose] public section
 

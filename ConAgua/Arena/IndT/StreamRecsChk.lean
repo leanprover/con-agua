@@ -8,7 +8,6 @@ import ConRon.Bridge.Core.Walks.Cached
 import ConAgua.Arena.DeclCanonConst
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
 import ConAgua.Arena.RecClassSpec.MjProg
@@ -17,6 +16,7 @@ import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndStream
+public import ConAgua.Arena.IndDecStab
 
 @[expose] public section
 

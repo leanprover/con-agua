@@ -1,6 +1,10 @@
 module
+public import ConAgua.Arena.ConstsResolveFRefine2
+public import ConAgua.Arena.LoopFns
+public import ConAgua.Arena.Globals
+public import ConAgua.Arena.Freeze
+public import ConAgua.Arena.DeclBase
 
-public import ConAgua.Arena.PhaseBT
 
 @[expose] public section
 

@@ -13,8 +13,6 @@ import all ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndT.RecCheckTpd
-import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.RecCheckSpec.TmFields
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree

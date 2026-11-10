@@ -2,10 +2,8 @@ module
 
 public import ConAgua.Arena.IndRealOpf
 import ConAgua.Arena.IndRealOpf3
-import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.DeclNatCv
 import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.InstListRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic

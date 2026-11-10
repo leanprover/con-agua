@@ -5,21 +5,16 @@ import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.IndPosSpec.NtyW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Verdict.PosNty
-import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Specs
-public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.NkFields
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE1M
 public import ConAgua.Verdict.PosFt
-public import ConAgua.Arena.KnotEntry
-public import ConAgua.Arena.IndT.Lift
 
 @[expose] public section
 /-!

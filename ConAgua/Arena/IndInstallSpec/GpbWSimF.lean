@@ -5,10 +5,8 @@ public import ConAgua.Arena.IndInstallSpec.GrcTwinA
 import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
 public import ConAgua.Arena.RecGenSpec.DecB
-public import ConAgua.Arena.RecGenSpec.DecCNWords
 public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

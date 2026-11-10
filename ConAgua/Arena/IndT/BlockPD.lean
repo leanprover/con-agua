@@ -1,14 +1,9 @@
 module
 
 public import ConAgua.Arena.IndT.BlockC
-public import ConAgua.Arena.IndMaster
-public import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndDeclConsts

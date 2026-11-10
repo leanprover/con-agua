@@ -1,13 +1,9 @@
 module
 
-public import ConAgua.Arena.IndDeclConsts
 public import ConAgua.Arena.DeclAndPinIndDec
-public import ConAgua.Front.StateDR
 public import ConRon.Arena.Install
 public import ConAgua.Arena.LoopT
 public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Arena.IndStubs
-public import ConAgua.Arena.TwinStep
 
 @[expose] public section
 

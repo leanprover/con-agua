@@ -19,11 +19,13 @@ import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Specs
 public import ConAgua.Arena.IndInstallSpec.DecCNS
 public import ConAgua.Arena.IndRealApdT
-public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Inductives.Positivity
+public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
+import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 
 @[expose] public section
 

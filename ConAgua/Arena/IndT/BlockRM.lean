@@ -1,12 +1,7 @@
 module
 
-public import ConAgua.Arena.IndT.BlockC
-public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.IndT.Sum1
 public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
-public import ConAgua.Arena.IndCopy
-public import ConAgua.Arena.IndCopy2
-public import ConAgua.Arena.Pins
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.GrindAttr
@@ -14,14 +9,12 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndPosSpec.CloseTelescope
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
-import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.IndSumSpec.DecCVpGrow
 import all ConAgua.Arena.WhnfIota
+import ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section
 

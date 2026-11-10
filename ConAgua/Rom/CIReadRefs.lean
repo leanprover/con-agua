@@ -2,7 +2,8 @@ module
 
 import ConAgua.Rom.CIReadRefData
 import ConAgua.Rom.CIReadRefNames
-public import ConAgua.Rom.CIReadRefBlock
+import ConAgua.Rom.ReadScr
+public import ConAgua.Rom.CIReadRefCI
 
 @[expose] public section
 

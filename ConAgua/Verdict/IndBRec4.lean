@@ -1,10 +1,8 @@
 module
 
-import ConAgua.Arena.RecGenSpec.CfhW
 public import ConAgua.Verdict.IndBCrg
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConRon.Bridge.Inductives.GenRec
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
@@ -22,7 +20,6 @@ public import ConAgua.Arena.IndInstallSpec.BlockRawRec
 import ConAgua.Arena.IndRealMemoCr
 import all Init.Data.List.Control
 import ConAgua.Arena.IndDeclConstsFrame
-import ConAgua.Arena.IndPosSpec.NestOccGo
 import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndInstallSpec.TabSimSpg

@@ -1,14 +1,11 @@
 module
 
-public import ConAgua.Arena.CrOKFrame
 public import ConAgua.Arena.IndSumSpec.StructUsedLeaf
 import ConAgua.Arena.IndRealCrFKeep
 public import ConAgua.Checker.Prog
-import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.LoopProgTac
-public import ConAgua.Compiler.WriteSetSplit
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.IndDeclConsts

@@ -11,7 +11,6 @@ public import ConAgua.Arena.IndT.PassNsd
 public import ConAgua.Arena.IndT.PassBnc
 public import ConAgua.Arena.IndT.Positivity
 public import ConAgua.Arena.IndT.RecGen21
-public import ConAgua.Arena.IndT.TailStream
 public import ConAgua.Arena.IndT.TailRef
 public import ConAgua.Checker.StreamRecsProg
 import ConAgua.Checker.ArmsT

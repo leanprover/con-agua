@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Checker.Prog
 public import ConAgua.Arena.LeafFns
 public import ConAgua.Arena.LevelIntern
 public import ConAgua.Arena.LevelSubstLP

@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndT.PassCS
 public import ConAgua.Arena.IndT.PosAll
 public import ConAgua.Verdict.PosTopE4
-import ConAgua.Arena.BasisBlockC
 
 @[expose] public section
 

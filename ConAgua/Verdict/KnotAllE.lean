@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Verdict.InferKnotE
-import ConAgua.Verdict.InferLeavesE
 import ConAgua.Arena.InferProj2
 import ConAgua.Verdict.WhnfKnotE
 public import ConAgua.Checker.LoopDeclArm
@@ -17,7 +16,6 @@ meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitSup
-import ConAgua.Arena.WhnfProjRefine2
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.LoopDeclAgree

@@ -3,7 +3,6 @@ module
 public import ConAgua.Compiler.WF
 public import ConAgua.Checker.Prog
 public import ConAgua.Rom.CIReadSpec
-public import ConAgua.Arena.DeclBasisSpec
 public import ConAgua.Rom.PinStream
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Rom.CIReadSpec

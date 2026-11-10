@@ -12,13 +12,9 @@ import ConAgua.Checker.IndMemoClosed
 import ConAgua.Checker.CrLeaves
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.LoopProgTac
-public import ConAgua.Arena.CheckerT
-public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
 public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndT.ArmMemos
 public import ConAgua.Arena.IndT.GenRec2
 public import ConAgua.Checker.IndArmTrees2

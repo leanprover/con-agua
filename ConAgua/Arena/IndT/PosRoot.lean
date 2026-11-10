@@ -3,13 +3,9 @@ module
 import ConAgua.Verdict.PosTopE4
 import ConAgua.Arena.IndT.PosAll
 public import ConAgua.Arena.IndT.PosFkc
-public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndPosSpec.NestSeeds
 public import ConAgua.Arena.IndPosSpec.UCtx
 public import ConAgua.Arena.IndPosSpec.UnW2
-public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.KnotEntry
-public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Positivity
 
 @[expose] public section

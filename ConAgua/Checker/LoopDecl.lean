@@ -8,7 +8,6 @@ meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.DeclArmLoop
 meta import ConAgua.Arena.DeclDivModSpec.RomPinSets
 meta import ConAgua.Arena.DeclNatGateSpec
-public import ConAgua.Compiler.WriteSetSplit
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange

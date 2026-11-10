@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndT.StreamRecsTy
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndT.Lift
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.StreamRecs

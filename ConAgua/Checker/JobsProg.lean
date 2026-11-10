@@ -2,9 +2,7 @@ module
 
 public import ConAgua.Checker.LoopProg
 public import ConAgua.Checker.JobsClosed
-import ConAgua.Checker.IndMemoClosed
 import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.LoopProgInd
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.JobsClosed
 meta import ConAgua.Checker.IndMemoClosed

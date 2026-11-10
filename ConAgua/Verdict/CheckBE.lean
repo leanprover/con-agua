@@ -4,12 +4,9 @@ public import ConAgua.Checker.VerdictTop
 public import ConAgua.Verdict.ThreadsE
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.VerdictEntry1
-import ConAgua.Checker.IndArm
-import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopStage
 import ConAgua.Checker.RomProg0
 import ConAgua.Checker.RomProgInit
-import ConAgua.Checker.TwinShapeQuot
 import ConAgua.L.Blocks
 import all ConAgua.Checker.Entry
 

@@ -1,20 +1,17 @@
 module
 
 import ConAgua.Arena.IndPosSpec.FgW
-public import ConAgua.Arena.IndInstallSpec.InstallIwB
 public import ConAgua.Arena.IndInstallSpec.NfsProg
-import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.KlB
 public import ConAgua.Arena.IndPosSpec.UnW2
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndPosSpec.NoGoStep
+public import ConAgua.Arena.IndDecPLB
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 

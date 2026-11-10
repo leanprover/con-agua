@@ -4,6 +4,7 @@ public import ConAgua.Checker.Pipeline
 public import ConAgua.Arena.FreezeSpec
 public import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
+public import ConAgua.Checker.Entry
 
 @[expose] public section
 

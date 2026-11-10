@@ -1,13 +1,8 @@
 module
 
-public import ConAgua.Arena.IndT.KeepC
 import ConAgua.Verdict.PosTopE2
 import ConAgua.Verdict.PosTopE4
-import ConAgua.Arena.IndT.BncAfr
 import ConAgua.Arena.IndT.Install6
-public import ConAgua.Arena.IndInstallSpec.Pos3Init
-import ConAgua.Arena.IndInstallSpec.Pos3NhGoWMfr
-import ConAgua.Arena.IndPartsSpec.BrsW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
@@ -15,42 +10,25 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
-import ConAgua.Arena.IndInstallSpec.NestCtx
-import ConAgua.Arena.IndInstallSpec.PosFreeMfr
-import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.Grow
-import ConAgua.Arena.IndPosSpec.SnocWStage
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealLvlC
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.CheckStructFieldSortsISucc
-import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.IndT.PosFields
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConLeche.Verify.Cached.BlockRunC
 import ConRon.Bridge.Core.Walks.Cached
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.PosWalks
-public import ConAgua.Arena.IndInstallSpec.CapsProg
-public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-public import ConAgua.Arena.IndInstallSpec.InstallIwB
-public import ConAgua.Arena.IndInstallSpec.NhW
-public import ConAgua.Arena.IndInstallSpec.Pos3MapMProj
-public import ConAgua.Arena.IndPosSpec.RootOutsB
-public import ConAgua.Arena.IndRealApdT
-public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.IndRealOpf
-public import ConAgua.Verdict.PosE
 public import ConAgua.Verdict.PosTopE1
 public import ConAgua.Arena.IndT.PassCS
 public import ConAgua.Arena.IndT.PosMc
-import ConAgua.Arena.IndT.PassNsd
 public import ConAgua.Arena.IndT.PosFkc
-public import ConAgua.Verdict.PosFt
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.IndT.PosAll
 
 @[expose] public section
 

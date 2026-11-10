@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Verdict.PosE
-import ConAgua.Arena.IndT.RecGen19
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Verdict.PosE1L
@@ -14,6 +13,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.IndRealIlpL
+import ConLeche.Verify.Cached.Erase
 
 @[expose] public section
 

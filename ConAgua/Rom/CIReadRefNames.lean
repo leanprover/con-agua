@@ -3,6 +3,7 @@ module
 public import ConAgua.Rom.CIReadRefBase
 import ConAgua.Rom.CIReadRefW
 public import ConAgua.Rom.CIReadSpec
+import ConAgua.Rom.ReadScr
 
 @[expose] public section
 

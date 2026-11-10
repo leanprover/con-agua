@@ -5,11 +5,7 @@ public import ConAgua.Arena.IndT.Install4
 public import ConAgua.Arena.IndT.Install7
 import ConAgua.Verdict.IndBSum4
 import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-import ConAgua.Arena.CrOKFrame
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.RecGenSpec.ClassSeeds
-public import ConAgua.Arena.IndT.ArmMemos
-public import ConAgua.Arena.IndInstallSpec.OfClosed
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.RefWalk
 

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Checker.Prog
-public import ConAgua.Arena.Jobs
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.Jobs
 public import ConAgua.Compiler.WriteSetSplit

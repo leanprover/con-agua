@@ -4,7 +4,6 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Checker.IndArmTrees1
 public import ConAgua.Checker.IndArmTrees2
 meta import ConAgua.Checker.Prog
-public import ConAgua.Arena.LeafFrame
 meta import ConAgua.Arena.LeafFrame
 meta import ConAgua.Checker.IndArmTrees1
 meta import ConAgua.Checker.IndArmTrees2

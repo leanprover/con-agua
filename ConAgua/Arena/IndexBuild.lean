@@ -2,8 +2,6 @@ module
 
 public import ConAgua.Arena.IndexLoops
 public import ConAgua.Arena.IndDeclConstsRef
-public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.DeclNatBase
 public import ConRon.Bridge.Checker.Index
 public import ConAgua.Arena.DeclPins
 import ConRon.Bridge.Checker.Install

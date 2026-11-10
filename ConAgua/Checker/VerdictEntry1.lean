@@ -8,7 +8,6 @@ meta import ConAgua.Checker.CheckARun
 meta import ConAgua.L.GrindAttr
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.NoVerdictClosed
-public import ConAgua.Checker.PipeFinal
 import all ConAgua.Checker.Entry
 
 @[expose] public section

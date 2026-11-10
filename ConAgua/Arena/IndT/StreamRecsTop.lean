@@ -5,15 +5,12 @@ import ConAgua.Arena.IndT.StreamRecsChk
 public import ConAgua.Arena.IndT.TailStream
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConRon.Bridge.Inductives.Records
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecStab
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Inductives.StreamRecs
 import ConRon.Bridge.Core.Walks.Cached
 import all ConAgua.Arena.IndStream
+import ConAgua.Arena.BasisBlockC
+public import ConAgua.Arena.IndT.StreamRecsRules
 
 @[expose] public section
 

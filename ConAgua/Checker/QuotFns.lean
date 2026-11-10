@@ -1,11 +1,8 @@
 module
 
 public import ConAgua.Checker.Prog
-public import ConAgua.Arena.CoreErec
 public import ConAgua.Arena.QuotFns
 public import ConAgua.Compiler.WriteSetSplit
-public import ConAgua.Arena.LevelIntern
-public import ConAgua.Arena.LevelSubstLP
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.CoreErec
 meta import ConAgua.Arena.QuotFns

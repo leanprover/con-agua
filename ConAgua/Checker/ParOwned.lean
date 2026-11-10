@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.Checker.Prog
 meta import ConAgua.Checker.Prog
+public import ConAgua.L.Syntax
 
 @[expose] public section
 

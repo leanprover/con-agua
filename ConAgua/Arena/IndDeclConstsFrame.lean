@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndDeclConstsLp
-public import ConAgua.Arena.IndDeclConstsSpec
 public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
@@ -12,6 +11,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
+public import ConAgua.Arena.LoopT
 
 @[expose] public section
 

@@ -9,6 +9,9 @@ import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Specs
 import ConRon.Bridge.Inductives.BlockShape
 import ConRon.Bridge.Inductives.Rel
+public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+public import ConAgua.Arena.IndPartsSpec.PlW
+public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 
 @[expose] public section
 

@@ -1,9 +1,7 @@
 module
 
 public import ConAgua.Arena.IndT.BlockC
-public import ConAgua.Arena.CoreCaches
 public import ConAgua.Arena.IndPosSpec.UCtx
-public import ConAgua.Arena.IndPosSpec.PfLook
 public import ConAgua.Arena.RecGenSpec.DecNLAt
 public import ConAgua.Arena.IndInstallSpec.IndsOut
 import ConAgua.Arena.GrindAttr
@@ -15,9 +13,6 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndPartsSpec.RecTW
-import ConAgua.Arena.IndInstallSpec.HbFreeMfr
-import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndInstallSpec.PnfW
 import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.ScratchRefine

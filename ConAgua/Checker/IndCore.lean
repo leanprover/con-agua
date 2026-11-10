@@ -4,8 +4,6 @@ public import ConAgua.Checker.Prog
 public import ConAgua.Arena.IndTwin
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.IndTwin
-public import ConAgua.Compiler.WriteSetSplit
-public import ConAgua.Arena.LeafFrame
 meta import ConAgua.Arena.LeafFrame
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore

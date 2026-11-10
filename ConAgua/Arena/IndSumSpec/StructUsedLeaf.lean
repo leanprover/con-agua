@@ -4,10 +4,6 @@ public import ConAgua.Arena.LoopT
 public import ConAgua.Arena.IndSumSpec.StructUsedHb
 import ConAgua.Arena.CrOKFrame
 public import ConAgua.Arena.IndPosSpec.NestCrest
-public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.CallF
-public import ConAgua.Arena.WriteSets
-import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

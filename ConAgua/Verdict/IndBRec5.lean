@@ -17,7 +17,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.IndSumSpec.ColW
-public import ConAgua.Arena.RecClassSpec.ClassGenRule
 public import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecCheckSpec.TcmLook
 import ConAgua.Arena.IndPosSpec.FgW

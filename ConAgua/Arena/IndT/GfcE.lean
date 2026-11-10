@@ -3,32 +3,23 @@ module
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecGenSpec.CftW
-public import ConAgua.Arena.IndInstallSpec.GfcW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecSim
-import ConAgua.Arena.IndPosSpec.DpGoW
-import ConAgua.Arena.IndPosSpec.CtxFields
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecGenSpec.DecB
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.IndPartsSpec.RecTW
-import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.IndRealAbs
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.GenRec
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.QuotCiT
+public import ConAgua.Arena.IndPartsSpec.PartsConsPL
+public import ConRon.Bridge.Inductives.RecCheck
 
 @[expose] public section
 

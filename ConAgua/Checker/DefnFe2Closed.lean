@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Checker.IndCore
 public import ConAgua.Arena.DeclNatPushPop
 meta import ConAgua.Checker.IndCore
 meta import ConAgua.Arena.DeclNatPushPop
@@ -147,6 +146,8 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+public import ConAgua.Checker.Prog
+public import ConAgua.Compiler.WriteSetSplit
 
 @[expose] public section
 

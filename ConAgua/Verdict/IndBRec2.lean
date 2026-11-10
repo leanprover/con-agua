@@ -9,7 +9,6 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 public import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Core.Walks.Cached
 public import ConAgua.Arena.TwinStep

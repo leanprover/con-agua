@@ -1,13 +1,10 @@
 module
 
-public import ConAgua.Arena.DeclNatGateT
 public import ConAgua.Arena.DeclAxQuotT
-public import ConAgua.Arena.DeclArmLoop
 public import ConAgua.Arena.DeclDivGateT
 import ConAgua.Arena.DeclArmT
 import ConAgua.Arena.StageC
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.RecGenSpec.CruleProg
 import ConAgua.Arena.RefWalk
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
@@ -16,8 +13,6 @@ import ConRon.Bridge.Checker.Arms
 import ConRon.Bridge.Checker.Base
 import ConRon.Bridge.Checker.NatOpNames
 public import ConAgua.Arena.DeclNatGateSpec
-public import ConAgua.Arena.DeclNatOpEq
-public import ConAgua.Verdict.DeclValE
 import all ConAgua.Arena.DeclArms
 
 @[expose] public section

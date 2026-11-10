@@ -1,9 +1,6 @@
 module
+public import ConAgua.Arena.InferLeaves
 
-import ConAgua.Arena.InferProj2
-public import ConAgua.Arena.InferBodyDisp
-public import ConAgua.Arena.InferProj
-public import ConAgua.Arena.WhnfProjRefine
 
 @[expose] public section
 

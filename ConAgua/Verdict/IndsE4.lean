@@ -11,7 +11,6 @@ import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndRealOpf
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Verdict.VCtx
 public import ConRon.Bridge.Checker.Hyp

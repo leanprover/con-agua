@@ -3,8 +3,6 @@ module
 public import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclReducePin
 public import ConAgua.Arena.DeclAxQuotT
-public import ConAgua.Verdict.DeclValsE
-import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.DeclStepSpec
@@ -15,11 +13,9 @@ import ConAgua.Arena.QuotAtT
 import ConAgua.Arena.IndPosSpec.CloseTelescope
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.DeclRec
 import ConRon.Bridge.Checker.Arms
 import ConRon.Bridge.Checker.Base
 public import ConRon.Bridge.Checker.DeclVal
-public import ConAgua.Arena.LeafFns
 public import ConRon.Bridge.Core.Knot
 import all ConAgua.Arena.DeclArms
 

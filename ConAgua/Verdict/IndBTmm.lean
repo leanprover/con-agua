@@ -14,7 +14,6 @@ import ConAgua.Arena.RecClassSpec.MkTMWAfr
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndInstallSpec.CapsProg
-public import ConAgua.Arena.IndInstallSpec.DecCNS
 public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.Verdict

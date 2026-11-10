@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.WhnfIotaRecRefine3
 public import ConAgua.Arena.WhnfCoreAppLoop
-import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.WhnfIotaRecRefine2
 
 @[expose] public section

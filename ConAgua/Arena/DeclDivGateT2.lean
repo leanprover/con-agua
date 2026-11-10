@@ -2,12 +2,10 @@ module
 
 import ConAgua.Arena.DeclDivGateT1
 public import ConAgua.Arena.DeclDivModSpec.RomPinSets
-import ConAgua.Arena.DeclCrpT
 import all ConRon.Bridge.Checker.DivMod
 import ConAgua.Arena.DeclDivModSpec.CertDivModEqs
 import ConAgua.Arena.DeclDivModSpec.CertTwoEqs
 import ConAgua.Arena.DeclNatGate
-import ConAgua.Arena.DeclNatGateT
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.CheckerT
+import ConAgua.Arena.DeclTwin
 
 @[expose] public section
 

@@ -12,8 +12,6 @@ public import ConAgua.Checker.IndArm
 public import ConAgua.Checker.LoopProgInd
 public import ConAgua.Checker.CrLeaves
 public import ConAgua.Verdict.KnotAllE
-public import ConAgua.Arena.QuotRulesT
-public import ConAgua.Arena.DeclBasisRef
 public import ConAgua.Arena.PinListRef
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac

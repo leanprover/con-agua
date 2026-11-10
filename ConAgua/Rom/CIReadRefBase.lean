@@ -7,7 +7,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.ErecRd
-public import ConAgua.Rom.ReadScr
 
 @[expose] public section
 

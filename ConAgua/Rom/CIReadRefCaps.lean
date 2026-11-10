@@ -1,11 +1,10 @@
 module
 
-import ConAgua.Rom.CIReadRefCV
-import ConAgua.Arena.LevelInternRef
 import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadRefW
+import ConAgua.Rom.ReadScr
 
 @[expose] public section
 

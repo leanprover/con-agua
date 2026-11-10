@@ -1,15 +1,11 @@
 module
 
 public import ConAgua.Arena.IndT.BlockC
-public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.IndCopy
-import ConAgua.Arena.IndCopy2
-import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Grind

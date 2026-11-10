@@ -19,8 +19,6 @@ import ConAgua.Arena.IndT.Install1
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndInstallSpec.Icvg
-public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-public import ConAgua.Arena.IndMaster
 import all ConAgua.Arena.IndInstall
 
 @[expose] public section

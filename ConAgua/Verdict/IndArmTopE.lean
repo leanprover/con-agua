@@ -1,33 +1,20 @@
 module
 
 public import ConAgua.Verdict.TopE
-import ConAgua.Verdict.PosKnotE
-import ConAgua.Arena.IndArmBridge2
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.StrLitSup
 import ConAgua.Checker.IndArm
-import ConAgua.Arena.IndArm
 import ConAgua.Checker.BasisBlockProg
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.KnotAllE
 import ConAgua.Verdict.DeclTopE
-import ConAgua.Verdict.ThreadsE
 import ConAgua.Verdict.CheckBE
 import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.BlockRefsProg
 import ConAgua.Final.DrvFinal
 import ConAgua.Verdict.FrontStageE
-import ConAgua.Checker.VerdictEntry1
-public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
-public import ConAgua.Arena.IndInstallSpec.OfClosed
-public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
-public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-public import ConAgua.Arena.IndMaster
-public import ConAgua.Arena.IndT.ArmMemos
-public import ConAgua.Arena.IndT.GenRec2
-public import ConAgua.Arena.IndT.Lift
+public import ConAgua.Final.ThreadsVerdict
 
 @[expose] public section
 

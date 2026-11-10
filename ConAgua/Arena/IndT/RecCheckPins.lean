@@ -5,10 +5,7 @@ import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Verdict.IndBPins
-import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.IndT.PosFkc
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndSumSpec.StructUsedHb
 
 @[expose] public section

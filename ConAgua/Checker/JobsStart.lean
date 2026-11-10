@@ -1,10 +1,9 @@
 module
 
 public import ConAgua.Checker.BuildStage
-public import ConAgua.Arena.JobStart
-import ConAgua.Arena.CoreRefine
 import ConRon.Bridge.Stages
 import ConRon.Bridge.Checker.Install
+public import ConAgua.Arena.Jobs
 
 @[expose] public section
 

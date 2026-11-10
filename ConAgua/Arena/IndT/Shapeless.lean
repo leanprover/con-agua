@@ -1,10 +1,7 @@
 module
 
-public import ConAgua.Arena.IndArmLps
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
-import ConAgua.Arena.DeclNatLit
 import ConRon.Bridge.Checker.Base
-import ConAgua.Arena.DeclReduceSpec2
 public import ConAgua.Verdict.DeclValsE
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen

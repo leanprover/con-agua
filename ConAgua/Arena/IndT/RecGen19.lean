@@ -6,11 +6,9 @@ public import ConAgua.Arena.IndT.PosFkc
 public import ConAgua.Verdict.IndBClm
 import ConAgua.Arena.RecGenSpec.CntW
 import ConRon.Bridge.Inductives.GenRec
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RefWalk
 public import ConRon.Bridge.Inductives.ClassRead
 

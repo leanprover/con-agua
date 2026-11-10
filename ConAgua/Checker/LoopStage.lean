@@ -1,13 +1,11 @@
 module
 
-public import ConAgua.Arena.LoopStart
 import ConAgua.Checker.TwinShapeFront
 import ConAgua.Checker.TwinCaches
 import ConAgua.Arena.InitLink
-import ConAgua.Checker.PreLoopWSBase
 import ConAgua.Checker.RomProgInit
-import ConAgua.Final.Twin
 public import ConAgua.Checker.PipeRest
+public import ConAgua.Arena.CheckerT
 
 @[expose] public section
 

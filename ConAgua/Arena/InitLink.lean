@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.Env
 import ConAgua.Arena.DerRel
 public import ConAgua.Arena.Tiers
 public import ConAgua.Arena.IndexRel
