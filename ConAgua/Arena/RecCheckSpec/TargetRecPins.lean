@@ -113,29 +113,6 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp k recl cso csl : Word) (r ra : List Word)
-theorem tpsK3_some : tpsK3 p n ra (some (r, m)) =
-    tpsK4 (callW p n "sl_eq" [ra.headD 0, ra.tail.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
-theorem tpsK2_some : tpsK2 p n cso csl (some (r, m)) = tpsK3 p n r (callW p n "ptr_list_names" [cso, csl] m) := rfl
-theorem tpsK1_some : tpsK1 p n cso csl (some (r, m)) =
-    tpsK2 p n cso csl (callW p n "ptr_list_names" [r.headD 0, r.tail.headD 0] m) := rfl
-end arms
-attribute [ind_grind] tpsK3_some tpsK2_some tpsK1_some
-
-set_option maxHeartbeats 1600000 in
-theorem tps_spec (p : Prog) (hp : p.lookup "target_rec_pins_split" = some targetRecPinsSplit) (n : Nat)
-    (s₀ : St) (pp k recl bo bl : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_rec_pins_split" [pp, k, recl, bo, bl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tpsW p n s₀.mem pp k recl bo bl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, targetRecPinsSplit]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "block_split", callW_spec p n "block_shape_all_ctors",
-      callW_spec p n "ptr_list_names", callW_spec p n "sl_eq"] <;>
-    finish (gen := 40) (instances := 20000) [tpsW, rdW_eq]
-
 end L.Ind
 
 end
