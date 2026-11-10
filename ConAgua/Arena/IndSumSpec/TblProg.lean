@@ -9,6 +9,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndRealWalk
+import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndSum
 
 @[expose] public section
@@ -16,7 +17,7 @@ import all ConAgua.Arena.IndSum
 /-!
 # TblProg
 
-`efgK`, `efgW`, `efgW_nil`, `efgW_cons`, `efgK_some`, `efgW_spec` and the lemmas only they use.
+`erecPut_specM` and `efgW_spec` (`er_from_iw_go`), the lookups `TblProg`, the record memory `tblMem`.
 -/
 
 noncomputable section
@@ -33,69 +34,19 @@ open L.Arena
 
 /-! ## `er_from_iw` -/
 
-/-- After the rest of the copy. -/
-def efgK : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([0], m)
+/-- `erec_put`'s effect without its bound (the models of the record copies are total). -/
+theorem erecPut_specM (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
+    (a v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_put" [a, v]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = erecPutMem s₀.mem a v; ⊤⦄ :=
+  triple_post (erecPut_specW p hp n s₀ a v) fun _ _ h => ⟨h.1, h.2.1⟩
 
 /-- **The model of `er_from_iw_go(q, o, l)`** at exec fuel `n`. -/
-def efgW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, q, o, l =>
-    if l = 0 then some ([0], m)
-    else efgK (efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1))
-
-theorem efgW_nil (n : Nat) (m : Mem) (q o l : Word) (h : l = 0) : efgW (n + 1) m q o l = some ([0], m) := by
-  simp [efgW, h]
-theorem efgW_cons (n : Nat) (m : Mem) (q o l : Word) (h : l ≠ 0) : efgW (n + 1) m q o l =
-    efgK (efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1)) := by simp [efgW, h]
-theorem efgK_some (r : List Word) (m : Mem) : efgK (some (r, m)) = some ([0], m) := rfl
-attribute [ind_grind] efgW_nil efgW_cons efgK_some
-
-theorem efgW_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "er_from_iw_go" = some erFromIwGo) (n : Nat) :
-    ∀ (s₀ : St) (q o l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw_go" [q, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ efgW n s₀.mem q o l = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q o l; rw [invoke_eq _ hp]; simp only [callFn, erFromIwGo]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q o l
-    rw [invoke_eq _ hp]
-    simp only [callFn, erFromIwGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-/-- After the copy. -/
-def efK2 (q l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m) => some ([q, l], m)
-/-- After the allocation. -/
-def efK1 (n : Nat) (o l : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m) => efK2 q l (efgW n m q o l)
-/-- **The model of `er_from_iw(o, l)`** at callee fuel `n`. -/
-def efW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) := efK1 n o l (erAllocW m l)
-
-theorem efK1_some (n : Nat) (o l q : Word) (m : Mem) : efK1 n o l (some (q, m)) = efK2 q l (efgW n m q o l) :=
-  rfl
-theorem efK2_some (q l : Word) (r : List Word) (m : Mem) : efK2 q l (some (r, m)) = some ([q, l], m) := rfl
-attribute [ind_grind] efK1_some efK2_some
-
-theorem efW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-    (hpu : p.lookup "erec_put" = some erecPut) (hg : p.lookup "er_from_iw_go" = some erFromIwGo) (hp : p.lookup "er_from_iw" = some erFromIw)
-    (n : Nat) (s₀ : St) (o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "er_from_iw" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ efW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, erFromIw]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, erecAlloc_specW p ha n,
-      efgW_spec p hpu hg n] <;>
-    finish (gen := 20) [efW]
+l_model efgW_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_from_iw_go" = some erFromIwGo)
+  fns [hp ↦ efgW list]
+  specs [erecPut_specM p hpu n]
+  grind [arena_grind]
 
 /-! ## `check_struct_proj_table`: the word model -/
 

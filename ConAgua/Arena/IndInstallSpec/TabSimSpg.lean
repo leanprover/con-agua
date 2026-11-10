@@ -119,21 +119,6 @@ theorem sctW_mfr {c : CallM}
       sctW.k_check_struct_proj_table_scoped.eq_def] at h
     mfr_auto h [sctW_mfr hc n _ _ _ _ _ _ _ _ _, hc _ _ _ _ _, crfF_mfr, MFr.ofHffF, MFr.ofLbbF]
 
-theorem efgW_mfr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
-    efgW n m q o l = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, h => by simp [efgW] at h
-  | n + 1, m, m', q, o, l, r, h => by
-    simp only [efgW, efgK.eq_def] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-    · refine MFr.trans (MFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o)) (by simp [EREC]) (by simp)) ?_
-      mfr_auto h [efgW_mfr n _ _ _ _ _ _]
-
-theorem efW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
-    MFr [] [] m m' := by
-  simp only [efW, efK1.eq_def, efK2.eq_def] at h
-  mfr_auto h [erAllocW_mfr, efgW_mfr _ _ _ _ _ _ _]
-
 theorem wrER_mfr (ws : List Word) (m : Mem) (q : Word) : MFr [] [] m (wrER m q ws) :=
   MFr.of_frame (wrER_frame ws m q) (by simp [EREC]) (by simp)
 

@@ -273,13 +273,6 @@ structure CbrLook (p : Prog) : Prop where
   rke : p.lookup "rec_k_expected" = some recKExpected
   bri : p.lookup "block_rec_infos_tf" = some blockRecInfosTF
 
-/-- `erec_put`'s effect without its bound (the models of the record copies are total). -/
-theorem erecPut_specM (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
-    (a v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_put" [a, v]
-    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = erecPutMem s₀.mem a v; ⊤⦄ :=
-  triple_post (erecPut_specW p hp n s₀ a v) fun _ _ h => ⟨h.1, h.2.1⟩
-
 theorem rc_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
     (s₀ : St) (b old : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_copy" [b, old]

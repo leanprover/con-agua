@@ -13,6 +13,7 @@ import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.RecCheck
+import all ConAgua.Arena.IndSum
 
 @[expose] public section
 
@@ -50,6 +51,12 @@ theorem SlR.length {m : Mem} : ∀ {o l : Word} {ws : List Word}, SlR m o l ws �
     rw [List.length_cons, h.length, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]
     simp; omega
 
+/-- **The model of `er_from_iw(o, l)`** at exec fuel `n`. -/
+l_model efF_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.ef ↦ efF list]
+  specs [erecAlloc_specW p hL.ea n, efgW_spec p hpu hL.efg n]
+  grind [arena_grind]
+
 /-- The copy loop writes the slice's words. -/
 theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
     efgW n m q o l = some (r, m') → SlR m o l ws → m' = wrER m q ws := by
@@ -59,14 +66,14 @@ theorem efgW_mem (n : Nat) : ∀ (m m' : Mem) (q o l : Word) (r ws : List Word),
   intro m m' q o l r ws h hs
   cases hs with
   | nil =>
-    rw [efgW_nil n m q o 0 rfl] at h
+    rw [efgW.arm1 n m q o 0 rfl] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; rfl
   | cons hl hs' =>
-    rw [efgW_cons n m q o l hl] at h
+    rw [efgW.arm2 n m q o l hl] at h
     rcases h2 : efgW n (erecPutMem m q (rdW (m.arr64 IW) o)) (q + 1) (o + 1) (l - 1) with _ | ⟨r2, m2⟩ <;>
       rw [h2] at h
     · cases h
-    simp only [efgK, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    simp only [efgW.k_er_from_iw_go, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     simp only [wrER]
     exact ih _ _ _ _ _ _ _ h2 (hs'.congr (erecPutMem_iw m q _))
 
@@ -102,17 +109,15 @@ theorem sumHslice_of_get {k : IdxKind} {a : Array Word} : ∀ (ws : List Word) (
 decoded in the record pool. -/
 theorem efW_stage {vis : Word} {fe : IFEnv} {a : AState} (n : Nat)
     {m m' : Mem} {o l : Word} {r : List Word} {kk : IdxKind} {xs : List (Idx kk)}
-    (h : efW n m o l = some (r, m'))
+    (h : efF (n + 1) m o l = some (r, m'))
     (hS : StageR vis fe m a) (hd : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat ≤ iwTop m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = l ∧
       hslice? (erecP m') (r.headD 0).toNat l.toNat = some xs := by
-  simp only [efW] at h
-  rcases ha : erAllocW m l with _ | ⟨q, m1⟩ <;> rw [ha] at h
-  · cases h
-  rw [efK1_some] at h
-  rcases h2 : efgW n m1 q o l with _ | ⟨r2, m2⟩ <;> rw [h2] at h
-  · cases h
-  rw [efK2_some] at h
+  rw [efF.arm1] at h
+  rcases ha : erAllocW m l with _ | ⟨q, m1⟩ <;>
+    simp only [ha, efF.k_erec_alloc.none, efF.k_erec_alloc.arm1, reduceCtorEq] at h
+  rcases h2 : efgW n m1 q o l with _ | ⟨r2, m2⟩ <;>
+    simp only [h2, efF.k_er_from_iw_go.none, efF.k_er_from_iw_go.arm1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨ws, hws, rfl, hw32⟩ := slR_of_decHL m l.toNat o.toNat xs hd
     (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
@@ -133,15 +138,15 @@ theorem efgW_afr : ∀ (n : Nat) (m m' : Mem) (q o l : Word) (r : List Word),
     efgW n m q o l = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, h => by simp [efgW] at h
   | n + 1, m, m', q, o, l, r, h => by
-    simp only [efgW, efgK.eq_def] at h
+    simp only [efgW, efgW.k_er_from_iw_go.eq_def] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
     · refine AFr.trans (AFr.of_frame (erecPutMem_frame m q (rdW (m.arr64 IW) o))) ?_
       afr_auto h [efgW_afr n _ _ _ _ _ _]
 
-theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efW n m o l = some (r, m')) :
+theorem efW_afr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : efF (n + 1) m o l = some (r, m')) :
     AFr m m' := by
-  simp only [efW, efK1.eq_def, efK2.eq_def] at h
+  simp only [efF, efF.k_erec_alloc.eq_def, efF.k_er_from_iw_go.eq_def] at h
   afr_auto h [erAllocW_afr, efgW_afr _ _ _ _ _ _ _]
 
 end L.Ind
@@ -542,10 +547,6 @@ theorem rcPoolSmall {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
-def efF : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, l => efW n m o l
-
 def rulesF : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | n + 1, m, cO, cL, rO, rL => rulesW n m cO cL rO rL
@@ -557,14 +558,6 @@ theorem rulesF_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
   | succ n => exact rulesW_spec p L.ea hpu L.srg L.rc.rx.ha L.sr n s₀ cO cL rO rL
-
-theorem efF_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_from_iw" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ efF n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact efW_spec p L.ea hpu L.efg L.ef n s₀ o l
 
 l_model tsr_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.tsr ↦ tsrW]
