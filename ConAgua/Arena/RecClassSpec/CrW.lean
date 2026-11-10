@@ -1610,24 +1610,13 @@ l_model classReadMotPos_spec (p : Prog) (hP : ReadProg p)
   specs [slCons_specW p hP.a hP.c hP.sc n]
   grind [arena_grind]
 
-def frK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([1, r3.headD 0], m3)
-
-def frK2 (so sl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0], m2)
-    else frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0])
-
-def frK1 (cR : CallM) (N : Nat) (nP so sl ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => frK2 so sl (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl)
-
-/-- **The model of `class_read_finish`.** -/
-def readFinW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | N + 1, m, nP, so, sl, ro, rl => frK1 cR N nP so sl ro rl (motPosW N m so sl 0)
+/-- **`class_read_finish` is its model `readFinW`** (generated). -/
+l_model classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR)
+  fns [hP.rfin ↦ readFinW list]
+  specs [classReadMotPos_spec p hP n,
+    classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR n,
+    rec4_specW p hP.a n hP.r4]
+  grind [arena_grind, ind_grind] finish [rdW_eq]
 
 /-- **The model of `class_read_n_slots`**: `rP - nP`, truncated. -/
 def tsubW (a b : Word) : Word := if b ≤ a then a - b else 0
@@ -1662,14 +1651,6 @@ def readW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
 section arms
 variable (N : Nat) (m m1 m2 m3 : Mem) (so sl j nP ro rl p vis rc0 a b : Word) (r r1 r2 r3 : List Word)
   (cR : CallM)
-theorem readFinW_eq : readFinW cR (N + 1) m nP so sl ro rl = frK1 cR N nP so sl ro rl (motPosW N m so sl 0) := rfl
-theorem frK1_some : frK1 cR N nP so sl ro rl (some (r1, m1)) =
-    frK2 so sl (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl) := rfl
-theorem frK2_fail (h : r2.headD 0 = 0) : frK2 so sl (some (r2, m2)) = some ([0, 0], m2) := by
-  rw [frK2, ite_eq_left h]
-theorem frK2_ok (h : r2.headD 0 ≠ 0) : frK2 so sl (some (r2, m2)) =
-    frK3 (recW m2 4 [so, sl, r2.tail.headD 0, r2.tail.tail.headD 0]) := by rw [frK2, ite_eq_right h]
-theorem frK3_some : frK3 (some (r3, m3)) = some ([1, r3.headD 0], m3) := rfl
 theorem tsubW_le (h : b ≤ a) : tsubW a b = a - b := by simp [tsubW, h]
 theorem tsubW_gt (h : ¬ b ≤ a) : tsubW a b = 0 := by simp [tsubW, h]
 theorem readW_nil (h : rl = 0) : readW cR (N + 1) m p vis nP ro rl = some ([0, 0], m) := by
@@ -1690,11 +1671,6 @@ theorem rdK2_ok (h : r2.headD 0 ≠ 0) : rdK2 cR N nP ro rl (some (r2, m2)) =
 theorem rdK3_some : rdK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
 end arms
 
-grind_pattern [ind_grind] readFinW_eq => readFinW cR (N + 1) m nP so sl ro rl
-grind_pattern [ind_grind] frK1_some => frK1 cR N nP so sl ro rl (some (r1, m1))
-grind_pattern [ind_grind] frK2_fail => frK2 so sl (some (r2, m2))
-grind_pattern [ind_grind] frK2_ok => frK2 so sl (some (r2, m2))
-grind_pattern [ind_grind] frK3_some => frK3 (some (r3, m3))
 grind_pattern [ind_grind] tsubW_le => tsubW a b
 grind_pattern [ind_grind] tsubW_gt => tsubW a b
 grind_pattern [ind_grind] readW_nil => readW cR (N + 1) m p vis nP ro rl
@@ -1706,20 +1682,6 @@ grind_pattern [ind_grind] rdK2_ok => rdK2 cR N nP ro rl (some (r2, m2))
 grind_pattern [ind_grind] rdK3_some => rdK3 (some (r3, m3))
 
 /-! ## Specs -/
-
-theorem classReadFinish_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec p cR) (N : Nat)
-    (s₀ : St) (nP so sl ro rl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_finish" [nP, so, sl, ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ readFinW cR N s₀.mem nP so sl ro rl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.rfin]; simp only [callFn, classReadFinish]
-  rcases N with _ | N
-  · vcgen [exec] <;> grind
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      classReadMotPos_spec p hP N,
-      classReadRecCls_spec p hP.fh hP.v hP.f hP.cm hP.c hP.a hP.sc hP.rcl hP.ad cR hcR N,
-      rec4_specW p hP.a N hP.r4] <;>
-    finish (gen := 20) [rdW_eq]
 
 theorem classReadNSlots_spec (p : Prog) (hP : ReadProg p) (N : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p N) "class_read_n_slots" [a, b]
@@ -1863,33 +1825,33 @@ theorem readFinW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
       (fun b a' x => KP vis fe m decRead b a' x ∧ J b.2) := by
   rcases N with _ | N
   · exact RSim.none
-  rw [readFinW_eq]
-  refine RSim.lstep (K := frK1 cR N nP so sl ro rl) rfl ?_
+  rw [readFinW.arm1]
+  refine RSim.lstep (K := readFinW.k_class_read_mot_pos cR N nP so sl ro rl) rfl ?_
   rintro ⟨r1, m1⟩ h1
   obtain ⟨hS1, hg1, hd1, ht1⟩ := motPosW_ok vis fe a so sl slots N m m1 0 r1 h1 hS hsp (by simp)
   have hJ1 := hO.1 _ _ (motPosW_afr _ _ _ _ _ _ _ h1) hJ
   simp only [UInt64.toNat_zero, Nat.sub_zero] at hd1
   rw [← hsp.length, ← List.range_eq_range'] at hd1
-  rw [frK1_some]
+  rw [readFinW.k_class_read_mot_pos.arm1]
   have hcr : RSim (crW cR N m1 nP (r1.headD 0) (r1.tail.headD 0) ro rl)
       (ConRon.Arena.classReadRecCls nP.toNat ((List.range slots.length).filter (motF slots)) recs) a
       (fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ CrRes b.2 b.1 x ∧ J b.2) := by
     rintro ⟨r, m'⟩ h
     exact crW_ok vis fe cR J hO N m1 m' a nP _ _ ro rl r recs _ h hS1 hJ1 (hrecs.dec hg1)
       (fun m3 hg3 => hrecs.dec (hg1.trans hg3)) hd1 ht1 hrecs.2
-  refine RSim.bind (K := frK2 so sl) rfl hcr ?_
+  refine RSim.bind (K := readFinW.k_class_read_rec_cls cR so sl) rfl hcr ?_
   rintro ⟨r2, m2⟩ x a2 - ⟨hS2, hg2, hc2, hJ2⟩
   dsimp only at hS2 hg2 hc2 hJ2
   have hg12 := hg1.trans hg2
   rcases x with _ | cs
-  · rw [frK2_fail (h := hc2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
+  · rw [readFinW.k_class_read_rec_cls.arm1 (hc1 := hc2)]; exact RSim.pure_some ⟨⟨hS2, hg12, rfl⟩, hJ2⟩
   obtain ⟨h21, hdn2, ht2⟩ := hc2
-  rw [frK2_ok (h := by rw [h21]; decide)]
-  refine RSim.lstep (K := frK3) rfl ?_
+  rw [readFinW.k_class_read_rec_cls.arm2 (hc1 := by rw [h21]; decide)]
+  refine RSim.lstep (K := readFinW.k_rec4 cR) rfl ?_
   rintro ⟨r3, m3⟩ h3
   obtain ⟨hS3, hg3, hr3, hget, htop⟩ := recW_stage h3 hS2 rfl
   have hJ3 := hO.1 _ _ (recW_afr h3) hJ2
-  rw [frK3_some, hr3]
+  rw [readFinW.k_rec4.arm1, hr3]
   have hq : rdW (m2.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 := rfl
   have k0 := rec_iwN_stab hq hget htop 0 (by simp)
   have k1 := rec_iwN_stab hq hget htop 1 (by simp)
