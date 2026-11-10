@@ -8,6 +8,8 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+import ConAgua.L.ModelGen
+import ConAgua.Arena.SimLib
 import all ConAgua.Arena.DeclStep
 import all ConAgua.Arena.Env
 
@@ -53,40 +55,11 @@ structure RecProg (p : Prog) : Prop where
 /-- The low 32 bits (`dlp_copy`'s and `erec_ci`'s mask). -/
 def mask32 (w : Word) : Word := w &&& 4294967295
 
-/-- The model of `dlp_copy(d, s, l)`. -/
-def dlpCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, d, s, l =>
-    if l = 0 then some m
-    else dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1)
-
-section arms
-variable (n : Nat) (m : Mem) (d s l : Word)
-theorem dlpCopyW_nil (hl : l = 0) : dlpCopyW (n + 1) m d s l = some m := by simp [dlpCopyW, hl]
-theorem dlpCopyW_step (hl : l ≠ 0) :
-    dlpCopyW (n + 1) m d s l =
-      dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1) := by
-  simp [dlpCopyW, hl]
-end arms
-
-grind_pattern [ind_grind] dlpCopyW_nil => dlpCopyW (n + 1) m d s l
-grind_pattern [ind_grind] dlpCopyW_step => dlpCopyW (n + 1) m d s l
-
-theorem dlpCopy_specW (p : Prog) (hp : p.lookup "dlp_copy" = some dlpCopy)
-    (hpu : p.lookup "erec_put" = some erecPut) (n : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "dlp_copy" [d, s, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ dlpCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, dlpCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, dlpCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        erecPut_specW p hpu n] <;>
-      finish (gen := 20) [mask32]
+l_model dlpCopy_specW (p : Prog) (hp : p.lookup "dlp_copy" = some dlpCopy)
+    (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hp ↦ dlpCopyW void]
+  specs [erecPut_specW p hpu n]
+  grind [arena_grind, ind_grind] fold [mask32]
 
 /-- The hint word of a front hint kind `hq` (`1` abbrev, `2` opaque, else regular): `decHint`'s
 `1`, `0`, `2`. -/
@@ -105,58 +78,49 @@ def eciMem (m3 : Mem) (p i kind s ll : Word) : Mem :=
     (mask32 (rdW D (5 + 8 * i)))) (p + 5) (mask32 (rdW D (6 + 8 * i)))) (p + 6)
     (hintCode (rdW D (7 + 8 * i)))) (p + 7) (rdW D (8 + 8 * i))
 
-mutual
-/-- **The model of `erec_ci(i, kind)`** (the copy runs at `n`). -/
-def erecCiW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, i, kind =>
-    eciK1 n i kind (rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i))
-      (erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)))
-
-def eciK1 (n : Nat) (i kind lo ll : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (s, m1) => eciK2 i kind s ll (dlpCopyW n m1 s (1 + lo) ll)
-
-def eciK2 (i kind s ll : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m2 => eciK3 i kind s ll (erAllocW m2 8)
-
-def eciK3 (i kind s ll : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (p, m3) => some ([p], eciMem m3 p i kind s ll)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (i kind lo ll s p : Word)
-theorem erecCiW_step : erecCiW (n + 1) m i kind =
-    eciK1 n i kind (rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i))
-      (erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i))) := rfl
-theorem eciK1_some : eciK1 n i kind lo ll (some (s, m1)) =
-    eciK2 i kind s ll (dlpCopyW n m1 s (1 + lo) ll) := rfl
-theorem eciK2_some : eciK2 i kind s ll (some m2) = eciK3 i kind s ll (erAllocW m2 8) := rfl
-theorem eciK3_some : eciK3 i kind s ll (some (p, m3)) = some ([p], eciMem m3 p i kind s ll) := rfl
-end arms
-
-grind_pattern [ind_grind] erecCiW_step => erecCiW (n + 1) m i kind
-grind_pattern [ind_grind] eciK1_some => eciK1 n i kind lo ll (some (s, m1))
-grind_pattern [ind_grind] eciK2_some => eciK2 i kind s ll (some m2)
-grind_pattern [ind_grind] eciK3_some => eciK3 i kind s ll (some (p, m3))
-
 theorem erecPutMem_decl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 DECL = m.arr64 DECL := by
   rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]
 
-theorem erecCi_specW (p : Prog) (h : RecProg p) (n : Nat) (s₀ : St) (i kind : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_ci" [i, kind]
-    ⦃fun r s' => LocEq s' s₀ ∧ erecCiW n s₀.mem i kind = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ h.ci]
-  simp only [callFn, erecCi]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erecAlloc_specW p h.alloc n, dlpCopy_specW p h.dlp h.put n, erecPut_specW p h.put n] <;>
-      finish (gen := 20) [eciMem, hintCode, mask32, erecPutMem_decl]
+l_model erecCi_specW (p : Prog) (h : RecProg p)
+  fns [h.ci ↦ erecCiW list]
+  specs [erecAlloc_specW p h.alloc n, dlpCopy_specW p h.dlp h.put n, erecPut_specW p h.put n]
+  grind [arena_grind, ind_grind] fold [mask32]
+
+/-- `erec_ci`'s run: the slice's allocation and copy, the record's allocation, its eight words. -/
+theorem erecCiW_some {n : Nat} {m m' : Mem} {i kind : Word} {r : List Word}
+    (h : erecCiW (n + 1) m i kind = some (r, m')) :
+    ∃ s m1 m2 p m3, erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) = some (s, m1) ∧
+      dlpCopyW n m1 s (1 + rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)) = some m2 ∧
+      erAllocW m2 8 = some (p, m3) ∧ r = [p] ∧
+      m' = eciMem m3 p i kind s (rdW (m.arr64 DECL) (4 + 8 * i)) := by
+  rw [erecCiW.arm1] at h
+  rcases h1 : erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) with _ | ⟨s, m1⟩ <;> rw [h1] at h
+  · rw [erecCiW.k_erec_alloc.none] at h; cases h
+  rw [erecCiW.k_erec_alloc.arm1] at h
+  rcases h2 : dlpCopyW n m1 s (1 + rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i))
+    with _ | m2 <;> rw [h2] at h
+  · rw [erecCiW.k_dlp_copy.none] at h; cases h
+  rw [erecCiW.k_dlp_copy.arm1] at h
+  rcases h3 : erAllocW m2 8 with _ | ⟨p, m3⟩ <;> rw [h3] at h
+  · rw [erecCiW.k_erec_alloc_2.none] at h; cases h
+  refine ⟨s, m1, m2, p, m3, rfl, h2, h3, ?_⟩
+  simp only [erecCiW.k_erec_alloc_2, erecCiW.j1, erecPutMem_decl] at h
+  repeat replace h := (of_ite_none h).2
+  by_cases e1 : rdW (m3.arr64 DECL) (7 + 8 * i) = 1
+  · rw [ite_eq_left e1] at h
+    repeat replace h := (of_ite_none h).2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    simp [eciMem, hintCode, e1]
+  rw [ite_eq_right e1] at h
+  by_cases e2 : rdW (m3.arr64 DECL) (7 + 8 * i) = 2
+  · rw [ite_eq_left e2] at h
+    repeat replace h := (of_ite_none h).2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    simp [eciMem, hintCode, e2]
+  rw [ite_eq_right e2] at h
+  repeat replace h := (of_ite_none h).2
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  simp [eciMem, hintCode, e1, e2]
 
 end L.Arena
 
@@ -289,13 +253,24 @@ theorem dlpWords_get (P : Array Word) : ∀ (k : Nat) (s : Word) (j : Nat), j < 
     rw [dlpWords_get P k (s + 1) j (by omega) (by rw [hs1]; omega), hs1,
       show s.toNat + 1 + j = s.toNat + (j + 1) by omega]
 
+/-- A non-empty `dlp_copy` step: the rest copies from the next word. -/
+theorem dlpCopyW_succ {n : Nat} {m m' : Mem} {d s l : Word} (h : dlpCopyW (n + 1) m d s l = some m')
+    (hl : l ≠ 0) :
+    dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1) = some m' := by
+  by_cases hg : decide ((d &&& 1099511627775).toNat < (m.arr64 (tierA EREC (d >>> 40))).size) = true
+  · rw [dlpCopyW.arm2 n m d s l hl hg] at h
+    revert h
+    cases dlpCopyW n (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))) (d + 1) (s + 1) (l - 1) <;>
+      simp [dlpCopyW.k_dlp_copy.none, dlpCopyW.k_dlp_copy.arm1]
+  · rw [dlpCopyW.abort1 n m d s l hl hg] at h; cases h
+
 theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d s l = some m' →
     m' = wrER m d (dlpWords (m.arr64 DLP) s l.toNat)
-  | 0, m, m', d, s, l, h => by simp [dlpCopyW] at h
+  | 0, m, m', d, s, l, h => by rw [dlpCopyW.eq_1] at h; cases h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
-    · rw [dlpCopyW_nil n m d s l hl] at h; cases h; subst hl; rfl
-    · rw [dlpCopyW_step n m d s l hl] at h
+    · rw [dlpCopyW.arm1 n m d s l hl] at h; cases h; subst hl; rfl
+    · replace h := dlpCopyW_succ h hl
       have hl1 : l.toNat = (l - 1).toNat + 1 := by
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
@@ -334,29 +309,14 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
         some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) ∧
       erOff (r.headD 0) + 8 ≤ erTopOf m' (r.headD 0) := by
   cases n with
-  | zero => simp [erecCiW] at h
+  | zero => rw [erecCiW.eq_1] at h; cases h
   | succ n =>
   have hdsz := hD.dsize
   have hroom := hD.room
   have hi8 : 8 * i.toNat + 9 < 2 ^ 64 := by omega
-  rw [erecCiW_step, rdW_dw _ (c := 3) (k := 2) hi8 (by decide) (by decide),
-    rdW_dw _ (c := 4) (k := 3) hi8 (by decide) (by decide)] at h
-  cases h1 : erAllocW m (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [h1] at h; cases h
-  | some x =>
-  obtain ⟨s, m1⟩ := x
-  rw [h1, eciK1_some] at h
-  cases h2 : dlpCopyW n m1 s (1 + dw (m.arr64 DECL) i.toNat 2) (dw (m.arr64 DECL) i.toNat 3) with
-  | none => rw [h2] at h; cases h
-  | some m2 =>
-  rw [h2, eciK2_some] at h
-  cases h3 : erAllocW m2 8 with
-  | none => rw [h3] at h; cases h
-  | some x =>
-  obtain ⟨p, m3⟩ := x
-  rw [h3, eciK3_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨s, m1, m2, p, m3, h1, h2, h3, rfl, rfl⟩ := erecCiW_some h
+  rw [rdW_dw _ (c := 4) (k := 3) hi8 (by decide) (by decide)] at h1 h2 ⊢
+  rw [rdW_dw _ (c := 3) (k := 2) hi8 (by decide) (by decide)] at h2
   have e2 := dlpCopyW_eq _ _ _ _ _ _ h2
   subst e2
   have hP1 : m1.arr64 DLP = m.arr64 DLP := by
