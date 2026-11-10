@@ -435,7 +435,7 @@ theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) 
     {cvCaP : ConLeche.ConstantVal} (hcvP : Frontend.denoteCV a₀.store cvCa = some cvCaP) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
       [T, lo, ll, nP, nF, cvCaw, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧
+    ⦃fun _r s' => LocEq s' s₀ ∧
       AM.ok (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a₀ ∧
       StageR vis fe s'.mem (AM.st (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem ∧

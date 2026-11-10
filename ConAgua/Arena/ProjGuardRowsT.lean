@@ -93,7 +93,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Wo
 /-- **`proj_guard_rows_at` refines `projGuardRowsAt` under `CoreS`**: the rows of fields `j, …,
 idx` read off the opened telescope's pool slice `(fo, fvs)`, appended to the rows `out` at `ro`
 on the stack (the top just past them). -/
-theorem pgra_ok (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
+theorem pgra_ok (p : Prog) (_hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
     (hus : UsF p) (hfd : p.lookup "fvar_type_d" = some fvarTypeDL)
     (hev : p.lookup "e_view" = some eView) (cty nP idx fo fn ro : Word) (fvs : List EIdx)
     (hc : H cty) (hB : nP.toNat + idx.toNat + 1 < 2 ^ 64) (hfn : fn.toNat = fvs.length) :
@@ -230,11 +230,11 @@ theorem pgra_ok (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardR
       have e2 : (ro + 2 * rn + 1).toNat < ((m1.set64 SPN (ro + 2 * rn) (nP + j)).arr64 SPN).size := by
         rw [Mem.size_arr64_set64]; omega
       by_cases ha : x = ro + 2 * rn + 1
-      · subst ha; rw [if_pos ⟨rfl, rfl, e2⟩, if_pos rfl]
+      · subst ha; rw [ite_eq_left ⟨rfl, rfl, e2⟩, ite_eq_left rfl]
       · by_cases hb : x = ro + 2 * rn
         · subst hb
-          rw [if_neg (fun h => ha h.2.1.symm), if_pos ⟨rfl, rfl, e1⟩, if_neg ha, if_pos rfl]
-        · rw [if_neg (fun h => ha h.2.1.symm), if_neg (fun h => hb h.2.1.symm), if_neg ha, if_neg hb]
+          rw [ite_eq_right (fun h => ha h.2.1.symm), ite_eq_left ⟨rfl, rfl, e1⟩, ite_eq_right ha, ite_eq_left rfl]
+        · rw [ite_eq_right (fun h => ha h.2.1.symm), ite_eq_right (fun h => hb h.2.1.symm), ite_eq_right ha, ite_eq_right hb]
     have htop3 : spTop m3 = ro + 2 * rn + 2 := by
       rw [← hm3]; simp only [spTop]
       rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by
@@ -259,15 +259,15 @@ theorem pgra_ok (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardR
           have := congrArg UInt64.toNat e; rw [e2, hro3] at this; omega
         have n4 : ro + 2 * i + 1 ≠ ro + 2 * rn := fun e => by
           have := congrArg UInt64.toNat e; rw [e2, hro2] at this; omega
-        rw [hspn3, hspn3, if_neg n1, if_neg n2, if_neg n3, if_neg n4]
+        rw [hspn3, hspn3, ite_eq_right n1, ite_eq_right n2, ite_eq_right n3, ite_eq_right n4]
         simp only [out', Array.getElem_push, hir, ↓reduceDIte]
         exact hb
       · have hie : i = rn := UInt64.toNat_inj.mp (by omega)
         subst hie
         have hidx : i.toNat = out.size := by omega
         simp only [out', Array.getElem_push, hidx, Nat.lt_irrefl, ↓reduceDIte]
-        rw [hspn3, hspn3, if_neg (fun e => by
-            have := congrArg UInt64.toNat e; rw [hro2, hro3] at this; omega), if_pos rfl, if_pos rfl]
+        rw [hspn3, hspn3, ite_eq_right (fun e => by
+                  have := congrArg UInt64.toNat e; rw [hro2, hro3] at this; omega), ite_eq_left rfl, ite_eq_left rfl]
         exact ⟨by simp [hnpj], hlt2, by simp; rfl⟩
     obtain ⟨y, a', M', hrun', hS', hK', hI', hg', hM', hrows', hw', htop', hro', hSt', hst'⟩ :=
       ih m3 m' a1 M (j + 1) (rn + 1) w out' hJ hS3 hI3 hM3 (hsl1.grow hg3) (by omega) hrows3
@@ -279,7 +279,7 @@ theorem pgra_ok (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardR
       (fun x hx => by
         have hx' := UInt64.lt_iff_toNat_lt.mp hx
         rw [htop1] at hx'
-        rw [hspn3, if_neg (fun e => by subst e; omega), if_neg (fun e => by subst e; omega)])
+        rw [hspn3, ite_eq_right (fun e => by subst e; omega), ite_eq_right (fun e => by subst e; omega)])
     refine ⟨y, a', M', ?_, hS', hK', hI', hg1.trans (hg3.trans hg'), hM', hrows', hw', htop', hro',
       hSt1.toGrew.trans (hSt3.trans hSt'), hst'.trans hst1⟩
     rw [hstep, hu]

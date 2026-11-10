@@ -30,6 +30,8 @@ open ConRon.Arena
 open Std.WP
 open scoped Lean.Order
 
+set_option experimental.vcgen true
+
 namespace L.Arena
 
 /-- The model of `str_lit_stored`. -/

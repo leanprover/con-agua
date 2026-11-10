@@ -170,7 +170,7 @@ local notation "V" => ConLeche.CheckMode.verified
 @[refines ConRon.Arena.ofReduceOp]
 theorem ofReduceOp_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "of_reduce_op" = some ofReduceOpL) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis w : Word)
+    (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis w : Word)
     (hS : StageR vis fe s₀.mem a₀) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_op" [w]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ofReduceOp (decI w)) a₀ ∧
@@ -197,8 +197,8 @@ structure BasisProg (p : Prog) : Prop where
 
 /-- **`env_find(w, vis)` as a call**: the memory unchanged, the result the twin's `find?`. -/
 theorem envFind_callB {p : Prog} (hB : BasisProg p) {vis : Word} {fe : IFEnv} {w : Word}
-    (hw : w.toNat < 2 ^ 32) {n : Nat} {m m' : Mem} {r : List Word}
-    (hE : EnvR m vis fe) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
+    (_hw : w.toNat < 2 ^ 32) {n : Nat} {m m' : Mem} {r : List Word}
+    (_hE : EnvR m vis fe) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r = findRes m vis w := by
   obtain ⟨s', rfl, h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_spec p hB.erg hB.brg hB.ef n _ vis w) h
@@ -268,7 +268,7 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
 
 
 /-- The basis list's decoding: an `IW` slice of constant-record pointers. -/
-def basisDec (dn : NIdx → Option ConLeche.Name) (o l : Nat) (m : Mem) :
+def basisDec (_dn : NIdx → Option ConLeche.Name) (o l : Nat) (m : Mem) :
     Option (List IConstantInfo) :=
   decPL m (fun q => decCI (erA m) q) o l
 

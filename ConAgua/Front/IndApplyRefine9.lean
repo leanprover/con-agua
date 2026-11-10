@@ -144,7 +144,7 @@ model's ok value is `validateIndD`'s success (`ValidatePost`), its error (of cla
 twin facts `XV`) `validateIndD`'s record verdict. -/
 @[refines ConRon.Arena.Frontend.validateIndD]
 theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
-    (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
+    (hD : StateDR m st) (_hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
     {to tn co cn ro rn : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} (hF : IndFR b m to tn co cn ro rn tys cts rcs) (hIFR : topN m IFR < 2 ^ 62)
     (p : Prog) (n : Nat) :

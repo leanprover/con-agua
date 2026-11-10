@@ -24,7 +24,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem instW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (ao al e : Word) (args : List EIdx) (r : List Word),
     instW n m ao al e = some (r, m') → StageR vis fe m a → H e →
     decHL m ao.toNat al.toNat = some args → ao.toNat + al.toNat < 2 ^ 64 →
@@ -32,9 +32,9 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x := by
   induction n with
-  | zero => intro dn fe vis m m' a ao al e args r h; simp [instW] at h
+  | zero => intro _dn fe vis m m' a ao al e args r h; simp [instW] at h
   | succ n ih =>
-    intro dn fe vis m m' a ao al e args r h hS he hdec hb hit
+    intro _dn fe vis m m' a ao al e args r h hS he hdec hb hit
     by_cases hal : al = 0
     · rw [instW_nil n m ao al e hal] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -83,7 +83,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           rcases hst : i1F m [CWF, vt.tail.headD 0, wa, 0] with _ | ⟨rb, m1⟩ <;> rw [hst] at h; · simp [instK2] at h
           rw [instK2_some] at h
           obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
-            i1F_ok dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
+            i1F_ok _dn vis fe (vt.tail.headD 0) wa 0 hy2' m m1 a rb hst hS
           rcases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hw] at h; · simp [instK3] at h
           rw [instK3_some] at h
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -92,7 +92,7 @@ theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
           have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
             rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
           obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=
-            ih dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
+            ih _dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
               (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.iw; omega)
           refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
           · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by

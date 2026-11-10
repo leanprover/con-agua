@@ -70,7 +70,7 @@ namespace L.Ind
 open L.Arena
 
 /-- **`nest_accept_group` is `nestAcceptGroup`** over the decoded group and key slice. -/
-theorem nagW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word) (ds : List EIdx)
+theorem nagW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word) (ds : List EIdx)
     (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL kO kL : Word) (grp : List (NIdx × EIdx))
     (keys : Array NestKey) (r : List Word),
     nagW n m us dO dL gO gL kO kL = some (r, m') → StageR vis fe m a →

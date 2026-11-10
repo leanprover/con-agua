@@ -482,7 +482,7 @@ theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (
 
 end spec2
 
-theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem dpConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
     (hb : dpConstW n m e = some (r, m')) (hS : StageR vis fe m a) (he : H e) (hM : dpMR m mp0) :
     ∃ d, (ConRon.Arena.depth (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
@@ -552,7 +552,7 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
 include hv hf hput hgo hnode in
 /-- **`depth_go` (with `depth_node`) refines `depthGo`**, from a memo related to the twin's. -/
 @[refines ConRon.Arena.depthGo]
-theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f h : Word) (mp : Std.HashMap EIdx Nat) (hh : H h)
     (hS : StageR vis fe s₀.mem a₀) (hM : dpMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "depth_go" [f, h]
@@ -701,7 +701,7 @@ theorem KeepIW.of_low {q n : Word} {m m' : Mem} (h : LowFr m m') : KeepIW q n m 
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (fun hh => by have := hA _ hh; simp [IW] at this) (by decide)
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (fun hh => by have := hA _ hh; simp [EREC] at this) (by decide)
   have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
-    hf.arr (tier1 EREC) (fun hh => by have := hA _ hh; simp [tier1, EREC] at this) (by decide)
+    hf.arr (tier1 EREC) (fun hh => by have := hA _ hh; simp [EREC] at this) (by decide)
   have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.ctl 200 (fun hh => by have := hC _ hh; simp at this)
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.ctl 129 (fun hh => by have := hC _ hh; simp at this)
   have h130 : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.ctl 130 (fun hh => by have := hC _ hh; simp at this)
@@ -739,16 +739,16 @@ theorem range'_mapM_succ (i k : Nat) :
   rw [List.range'_succ, List.mapM_cons]
 
 theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws : List EIdx)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word),
+    (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word),
     phsGoW k m q n i = some m' → StageR vis fe m a → i.toNat ≤ n.toNat →
     q.toNat + n.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
     decHL m q.toNat i.toNat = some ws →
     ∃ phs a', ((List.range' i.toNat (n.toNat - i.toNat)).mapM phF).run a = .ok (phs, a') ∧
       StageR vis fe m' a' ∧ KeepIW q n m m' ∧ decHL m' q.toNat n.toNat = some (ws ++ phs) := by
   induction k with
-  | zero => intro m m' a q n i ws dn fe vis h; simp [phsGoW] at h
+  | zero => intro m m' a q n i ws _dn fe vis h; simp [phsGoW] at h
   | succ k ih =>
-    intro m m' a q n i ws dn fe vis h hS hi hq hsz hdec
+    intro m m' a q n i ws _dn fe vis h hS hi hq hsz hdec
     by_cases hd : n ≤ i
     · rw [phsGoW_done k m q n i hd] at h
       simp only [Option.some.injEq] at h
@@ -793,11 +793,11 @@ theorem phsGoW_ok (k : Nat) : ∀ (m m' : Mem) (a : AState) (q n i : Word) (ws :
       have hqi : (q + i).toNat = q.toNat + i.toNat := by
         rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
       have hdec2 : decHL m2 q.toNat i.toNat = some ws := by
-        rw [← hdec]; simp only [decHL, iwA, aread_apply, hI2]
+        rw [← hdec]; simp only [decHL, iwA, hI2]
       have hdec3 := decHL_write m2 q i v ws hvlt (by rw [hI2]; exact hsz) (by rw [hI2]; omega) hdec2
       have hS3 := hS2.set_iw (q + i) v
       have hi1 : (i + 1).toNat = i.toNat + 1 := toNat_add_one' (by omega)
-      obtain ⟨phs, a3, hrun, hS4, hK, hdecF⟩ := ih (m2.set64 IW (q + i) v) m' a2 q n (i + 1) (ws ++ [decI v]) dn fe vis h
+      obtain ⟨phs, a3, hrun, hS4, hK, hdecF⟩ := ih (m2.set64 IW (q + i) v) m' a2 q n (i + 1) (ws ++ [decI v]) _dn fe vis h
         hS3 (by rw [hi1]; omega) (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hq)
         (by rw [(set64IW_frame m2 (q + i) v).size IW, hI2]; exact hsz) (by rw [hi1]; exact hdec3)
       have hn1 : n.toNat - i.toNat = (n.toNat - (i.toNat + 1)) + 1 := by omega

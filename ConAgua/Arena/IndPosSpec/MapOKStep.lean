@@ -379,7 +379,7 @@ theorem rootOK (m m' : Mem) (a : AState) (ctx i : Word) (c : NestCtx) (prog : Li
     simp only [rtK2_some, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     obtain ⟨x, a2, hr2, hS2, hg2, hx1, hx2⟩ := mknF_ok vis fe hd _ _ (lt_of_notbig hdb) c.params m1 m2 a1 rr hst
-      ⟨hS1, by simp only [decHL, iwA, aread_apply, hiw]; exact hpa⟩
+      ⟨hS1, by simp only [decHL, iwA, hiw]; exact hpa⟩
     refine ⟨some x, a2, ?_, ⟨by simp, by rw [← hx2]; rfl⟩,
       hR.post hS2 (hg1.trans hg2) ((RfFr.of_low (ceinternW_low hci)).trans (RfFr.ofMknF hst))⟩
     have hnm' : c.names.getD (i.toNat - c.nP) default = decI nm := by
@@ -586,7 +586,7 @@ theorem frameTail (n : Nat) (hDs : DsOK fe vis n) (mh m' : Mem) (a : AState) (ct
   simp only [frK5_some, Option.some.injEq, Prod.mk.injEq] at hk
   obtain ⟨rfl, rfl, rfl⟩ := hk
   obtain ⟨x, a5, hr5, hS5, hg5, hx1, hx2⟩ := mknF_ok vis fe hd q l3 (lt_of_notbig hdb) ys m4 m5 a4 rr hst
-    ⟨hS4, by simp only [decHL, iwA, aread_apply, hiw4]; exact hdec3⟩
+    ⟨hS4, by simp only [decHL, iwA, hiw4]; exact hdec3⟩
   refine ⟨some x, a5, ?_, ⟨by simp, by rw [← hx2]; rfl⟩, ?_⟩
   · simp only [StateT.run_bind]
     simp only [hrun3, except_ok_bind, ConRon.Arena.internConstE, ← hcnd, ← hlvd, hr4, show (decE hd : EIdx) = decI hd from rfl, hr5]

@@ -589,7 +589,7 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
       ld64_rdT_spec, evalE_tld, tld,
       callW_spec p n "get_app_args", callW_spec p n "ls_node",
       callW_spec p n "reduce_proj_arg"] <;>
-  simp_all [-UInt64.toNat_add, rpFireW, erRdT, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
+  simp_all [-UInt64.toNat_add, rpFireW, erRdT, EREC, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr] <;>
   (intro h1; first | exact absurd h1 (UInt64.not_lt.mpr ‹_›) | exact absurd h1 (UInt64.not_le.mpr ‹_›))
@@ -667,14 +667,14 @@ theorem fire_cond_iff (tbl : IProjTable) (i k w6 np nf an usl l4 : Word) (ln : N
     rw [hlp]; exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
   rw [e1, e2, e3, e4, and_assoc]
 
-theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
+theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
     (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
     (hq : decTbl (erecP s₀.mem) q.toNat = some tbl)
-    (hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields)
-    (hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
+    (_hfe : ∃ c, fe.findTable? c = some tbl) (hlt : i.toNat < tbl.numFields)
+    (_hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
     GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us))
       decOptR s₀ a₀ dn vis fe MM eb ResW := by

@@ -148,21 +148,21 @@ theorem blockNamesEqW_ok : ∀ (n : Nat) (m m' : Mem) (ao al bo bl : Word) (A B 
   have hlB := L.Ind.decPL_length (truncM m) hB.dec
   simp only [blockNamesEqW] at h
   by_cases h1 : al ≠ bl
-  · rw [if_pos h1] at h; cases h
+  · rw [ite_eq_left h1] at h; cases h
     have hne : blockNames A ≠ blockNames B := fun he => h1 (UInt64.toNat_inj.mp (by
       have := congrArg List.length he; simp only [blockNames, List.length_map] at this; omega))
     exact ⟨rfl, rfl, by simpa using hne⟩
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   have h1' : al = bl := by simpa using h1
   subst h1'
   by_cases h2 : al = 0
-  · rw [if_pos h2] at h; cases h
+  · rw [ite_eq_left h2] at h; cases h
     subst h2
     have hA0 : A = [] := List.eq_nil_of_length_eq_zero (by rw [hlA]; rfl)
     have hB0 : B = [] := List.eq_nil_of_length_eq_zero (by rw [hlB]; rfl)
     subst hA0 hB0
     exact ⟨rfl, rfl, by simp⟩
-  rw [if_neg h2] at h
+  rw [ite_eq_right h2] at h
   obtain ⟨x, A', rfl, hx, hA'⟩ := hA.uncons h2 hsz
   obtain ⟨y, B', rfl, hy, hB'⟩ := hB.uncons h2 hsz
   rw [decB_ciF] at hx hy
@@ -171,12 +171,12 @@ theorem blockNamesEqW_ok : ∀ (n : Nat) (m m' : Mem) (ao al bo bl : Word) (A B 
   have ex : erRdT m (rdW (m.arr64 IW) ao + 1) = wx := (erRdOK m).off hwx (by simp)
   have ey : erRdT m (rdW (m.arr64 IW) bo + 1) = wy := (erRdOK m).off hwy (by simp)
   by_cases h3 : wx ≠ wy
-  · rw [if_pos (by simpa only [erRdT, ex, ey] using h3)] at h; cases h
+  · rw [ite_eq_left (by simpa only [erRdT, ex, ey] using h3)] at h; cases h
     refine ⟨rfl, rfl, by
       simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, blockNames, List.map_cons,
         List.cons.injEq, not_and]
       intro he; exact absurd (decI_inj hwx32 hwy32 (hnx ▸ hny ▸ he)) h3⟩
-  rw [if_neg (by simpa only [erRdT, ex, ey] using h3)] at h
+  rw [ite_eq_right (by simpa only [erRdT, ex, ey] using h3)] at h
   have h3' : wx = wy := by simpa using h3
   cases hrec : blockNamesEqW n m (ao + 1) (al - 1) (bo + 1) (al - 1) with
   | none => rw [hrec] at h; simp [blockNamesEqW.k_block_names_eq] at h
@@ -222,11 +222,11 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
   intro k m m' a r hk hT hok hsl h
   simp only [basisNameHitGoW] at h
   by_cases h4 : 4 ≤ k
-  · rw [if_pos h4] at h; cases h
+  · rw [ite_eq_left h4] at h; cases h
     have : k.toNat = 4 := by have := UInt64.le_iff_toNat_le.mp h4; simp at this; omega
     refine ⟨none, a, ?_, hT, IWGrow.refl m, rfl⟩
     rw [this]; rfl
-  rw [if_neg h4] at h
+  rw [ite_eq_right h4] at h
   have hk4 : k.toNat < 4 := by
     have : ¬ (4 : Word).toNat ≤ k.toNat := fun h' => h4 (UInt64.le_iff_toNat_le.mpr h'); simp at this; omega
   cases h1 : callW p n "rom_basis_decls" [k] m with
@@ -253,13 +253,13 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
   obtain ⟨rfl, hr2, hiff⟩ := blockNamesEqW_ok n m1 _ _ _ _ _ blk block r2 hT1.stage.iw.iwSize hP1 hsl1 hW2
   have hks := kindsFrom_succ hk4
   by_cases he : blockNames blk = blockNames block
-  · rw [basisNameHitGoW.k_block_names_eq, if_pos (hiff.mpr he)] at h; cases h
+  · rw [basisNameHitGoW.k_block_names_eq, ite_eq_left (hiff.mpr he)] at h; cases h
     refine ⟨some (basisOfW k.toNat), a1, ?_, hT1, hg1, by simp [decHit, hk4]⟩
     rw [hks]
     simp only [ConRon.Arena.basisNameHitGo, StateT.run_bind]
     rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, exb]
-    dsimp only; rw [if_pos (by simp [he])]; rfl
-  · rw [basisNameHitGoW.k_block_names_eq, if_neg (fun h0 => he (hiff.mp h0))] at h
+    dsimp only; rw [ite_eq_left (by simp [he])]; rfl
+  · rw [basisNameHitGoW.k_block_names_eq, ite_eq_right (fun h0 => he (hiff.mp h0))] at h
     cases h3 : basisNameHitGoW p n s2.mem io il (k + 1) with
     | none => rw [h3] at h; simp [basisNameHitGoW.k_basis_name_hit_go] at h
     | some x3 =>
@@ -275,7 +275,7 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
     simp only [ConRon.Arena.basisNameHitGo, StateT.run_bind]
     rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, exb]
     rw [hk1] at hrun
-    dsimp only; rw [if_neg (by simpa using he)]; exact hrun
+    dsimp only; rw [ite_eq_right (by simpa using he)]; exact hrun
 
 /-! ### `at_block_go` -/
 
@@ -297,7 +297,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
   have hsz := hT.stage.iw.iwSize
   simp only [atBlockGoW] at h
   by_cases h0 : pl = 0 ∨ cl = 0
-  · rw [if_pos h0] at h; cases h
+  · rw [ite_eq_left h0] at h; cases h
     have hnil : ConRon.Arena.atBlockGo pins cs = pure [] := by
       rcases h0 with rfl | rfl
       · have : pins = [] := List.eq_nil_of_length_eq_zero (by
@@ -307,7 +307,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
           rw [L.Ind.decPL_length (truncM m) hC.dec]; rfl)
         subst this; cases pins <;> rfl
     refine ⟨[], a, by rw [hnil]; rfl, hT, IWGrow.refl m, hok, hr, PSlR.nil _ _⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   have hpl : pl ≠ 0 := fun e => h0 (Or.inl e)
   have hcl : cl ≠ 0 := fun e => h0 (Or.inr e)
   obtain ⟨pin, pins', rfl, hpin, hP'⟩ := hP.uncons hpl hsz

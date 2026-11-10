@@ -135,7 +135,7 @@ theorem rec2RecW_decCF_A {m m' : Mem} {k : Word} {ws r : List Word} {y : ClassFi
 `nest_occ`'s memo relation at some map, and the write set outside the other walk memos (lane
 `indproofs4`, helper `cls`: `class_ctor_of` carries `RcMR` across the call); the kinds' slice and
 records lie above the entry's top (`SPLA`, for `class_ctors_of`'s writes into its result slots). -/
-def CfoQ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (b : List Word × Mem)
+def CfoQ (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (b : List Word × Mem)
     (a' : AState) (ks : List ClassField) : Prop :=
   StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
     SPLA (iwTop m) decCF b.2 (b.1.headD 0).toNat (b.1.tail.headD 0).toNat ks ∧

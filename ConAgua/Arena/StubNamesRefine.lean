@@ -95,7 +95,7 @@ theorem prhW_iff (n : Nat) : ∀ (m : Mem) (x k hi r : Word), hi.toNat ≤ 51 �
     obtain ⟨h0, h⟩ := of_ite_none h
     obtain ⟨h5, h⟩ := of_ite_none h
     have hk51 : k ≠ 51 := fun e => by subst e; simp at hk'; omega
-    rw [if_neg hk51] at h
+    rw [ite_eq_right hk51] at h
     by_cases he : pinW m (1 + k.toNat) = x
     · rw [ite_eq_left he] at h; cases Option.some.inj h
       refine ⟨by decide, ?_⟩
@@ -197,7 +197,7 @@ theorem rrb_spec (p : Prog) (hp : p.lookup "reserved_rec_bool" = some reservedRe
     all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.tail_cons, Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
-      beq_iff_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
+      beq_iff_eq, Cond.pval, Expr.pval] at *)
     all_goals grind [lang_grind, arena_grind, rrbW]
 
 /-- After `pin_range_has(x, 21, 29)`. -/
@@ -660,7 +660,7 @@ theorem rrnW_flag {n : Nat} {m : Mem} {x r : Word} (h : rrnW n m x = some r) : p
 /-- **`reserved_rec_name(x)` refines `reservedRecName`** under the stage relation: the memory and
 the twin's state are unchanged, and the word is `1` exactly when the twin answers `true`. -/
 @[refines ConRon.Arena.reservedRecName]
-theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (dn : NIdx → Option ConLeche.Name)
+theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (_dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
     RefAM p "reserved_rec_name" [x] (StageR vis fe) (reservedRecName (decI x))
       (KeepPost vis fe decW0B) := by

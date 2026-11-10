@@ -132,7 +132,7 @@ theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size
   have v14 : wd (capsM m q) DLP (q.toNat + 14) = 0 := by
     unfold capsM; rw [wd_set_eq _ DLP (q + 14) _ (q.toNat + 14) (by rw [widx2 q 14 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v14] at h14
-  simp [decCaps, L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14]
+  simp [decCaps, L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h1, h2, h3, h4, h5, h6, h10, h11, h12, h13, h14]
   rfl
 
 /-- `ind_caps` writes only its fifteen words. -/

@@ -111,7 +111,7 @@ theorem StageR.frame_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     StageR vis fe m' a ∧ IWGrow m m' := by
   have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
     ⟨hA2, fun h => by have := hA _ h; simp [EREC] at this,
-      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+      fun h => by have := hA _ h; simp [EREC] at this⟩
   have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
     ⟨fun h => by have := (hC _ h).1; simp at this, fun h => by have := (hC _ h).1; simp at this, hC2⟩
   exact ⟨⟨CheckR.frame_hi hA hC hf hS.check, IWOK.of_keep hf hA3 hC3 hS.iw⟩, IWGrow.of_keep hf hA3 hC3⟩

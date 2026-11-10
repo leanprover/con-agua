@@ -62,7 +62,7 @@ theorem mp_specW (p : Prog) (hC : CanonProg p) (hp : p.lookup "matches_pin" = so
       finish [mpW]
 
 theorem mpW_ok {m m' : Mem} {a : AState} {q pin : Word} {r : List Word} {cv cv' : IConstantVal}
-    (h : mpW m q pin = some (r, m')) (hsz : (m.arr64 EREC).size < 2 ^ 64)
+    (h : mpW m q pin = some (r, m')) (_hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h1 : decCV (erA m) q.toNat = some cv) (h2 : decCV (erA m) pin.toNat = some cv') :
     m' = m ∧ (cv.matchesPin cv').run a = .ok (decide (cv = cv'), a) ∧
       decW0B m' r (decide (cv = cv')) := by
@@ -75,7 +75,7 @@ theorem mpW_ok {m m' : Mem} {a : AState} {q pin : Word} {r : List Word} {cv cv' 
 /-- **`matches_pin(q, pin)` refines `IConstantVal.matchesPin`**. -/
 @[refines ConRon.Arena.IConstantVal.matchesPin]
 theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
-    (hp : p.lookup "matches_pin" = some matchesPinL) (dn : NIdx → Option ConLeche.Name)
+    (hp : p.lookup "matches_pin" = some matchesPinL) (_dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q pin : Word) (cv cv' : IConstantVal) :
     RefAM p "matches_pin" [q, pin]
       (fun m a => StageR vis fe m a ∧ decCV (erA m) q.toNat = some cv ∧
@@ -400,7 +400,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     refine ⟨decide (ci = na), a4, ?_, hS4, hg4, ?_⟩
     · rw [htwin, hfind, hci]
       by_cases e : ci = na <;> simp [e]
-    · simp only [List.headD_cons, hr5]
+    · simp only [hr5]
       by_cases e : ci = na <;> simp [e, decW0B]
   · -- `reduceBool`: a standard `Bool`
     rw [ite_eq_right he] at hW

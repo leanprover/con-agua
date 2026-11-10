@@ -45,7 +45,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- A constant record below the top decodes in the record pool in use. -/
-theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) (hq : CVExt m q) :
+theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) (_hq : CVExt m q) :
     decCV (erecP m) q = some cv := h
 
 end L.Ind
@@ -623,7 +623,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
       ownRaw_fst_lt m w, fun hc0 => ?_, fun hc0 n' hn' => ?_, ?_⟩
     · have := hE1.fresh cv.name (by rw [hcm1]; exact hc0)
       rw [hcm1] at this; rw [hvis1]; omega
-    · simp only [updC, if_neg hn']
+    · simp only [updC, ite_eq_right hn']
       intro e
       have hn1 : (ownRaw m1 n'.word.toUInt64).1 = ownC m n' := by rw [← hO1]; rfl
       exact hn' (hE1.uniq n' cv.name (by rw [hn1, e]; exact hc0) (by rw [hn1, e, hcm1]))

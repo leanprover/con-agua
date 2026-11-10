@@ -81,7 +81,7 @@ theorem IndexR.grow {m m' : Mem} {I : IStreamIndex} (h : IndexR m I)
       | none => rw [e] at this; simp_all
       | some y =>
         rw [e] at this
-        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
           Prod.mk.injEq] at this
         rw [← this.2, hx.decCI this.2.symm]
   · have := h.btbl n; rw [hbt, this]; split
@@ -90,7 +90,7 @@ theorem IndexR.grow {m m' : Mem} {I : IStreamIndex} (h : IndexR m I)
       | none => rw [e] at this; simp_all
       | some y =>
         rw [e] at this
-        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
           Prod.mk.injEq] at this
         rw [← this.2, hx.decTbl this.2.symm]
 
@@ -108,7 +108,7 @@ empty environment (`DriverOK`'s `mkIFEnv IEnv.empty`). The twin-side invariants 
 
 theorem bEnv_find_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).find? n = none := by
   simp only [bEnv, IFEnv.find?, IFEnv.lookup, IFBase.find?]
-  simp only [Std.HashMap.isEmpty_empty, if_true]
+  simp only [Std.HashMap.isEmpty_empty, ite_true]
   split <;> simp
 
 theorem bEnv_findTable_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).findTable? n = none := by
@@ -282,7 +282,7 @@ theorem _root_.L.Ind.StageR.reset {vis : Word} {fe : IFEnv} {m : Mem} {a : AStat
   simp only [iwTop, erTop, erecTop1, rdW_set_ctl m 200 0 129 (by decide),
     rdW_set_ctl m 200 0 130 (by decide), hne IW (by decide), hne EREC (by decide),
     hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
-  refine ⟨by rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2⟩
+  refine ⟨by rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2⟩
 
 theorem erecP_reset' (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
   erecP_congr' (Mem.arr64_set64_ne _ _ _ _ _ (by decide)) (Mem.arr64_set64_ne _ _ _ _ _ (by decide))
@@ -371,7 +371,7 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   rename_i hF
   have eF : (m.set64 CTL 200 0).arr64 FIRSTS = m.arr64 FIRSTS := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have hF' : k.toNat < (m.arr64 FIRSTS).size := by
-    simp only [Mem.len64, eF, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat] at hF
+    simp only [Mem.len64, eF, UInt64.le_iff_toNat_le] at hF
     have := hR.fsize
     have e : (UInt64.ofNat (m.arr64 FIRSTS).size).toNat = (m.arr64 FIRSTS).size := by simp; omega
     omega

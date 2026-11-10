@@ -275,7 +275,7 @@ theorem envFind_callW {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
       unfold findRes at h0 ⊢
       by_cases a1 : ownHit m vis w <;> by_cases a2 : baseHit m w <;> simp_all
     have e : envFound m 1 ((findRes m vis w).tail.headD 0) = some ci := by
-      unfold envFound; rw [if_neg (show (1 : Word) ≠ 0 by decide)]; exact hci
+      unfold envFound; rw [ite_eq_right (show (1 : Word) ≠ 0 by decide)]; exact hci
     rw [h1, e]; rfl
 
 omit hp in

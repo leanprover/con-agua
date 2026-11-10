@@ -143,22 +143,22 @@ theorem IWGrow.put {m₀ m : Mem} (hg : IWGrow m₀ m) (hok : IWOK m) (i w : Wor
       (¬ i.toNat / 2 ^ 40 % 2 = 0 → erecTop1 m₀ ≤ i.toNat % 2 ^ 40) := by
     unfold erT at hi hi'
     by_cases e2 : rdW (m₀.arr64 CTL) 1 = 0
-    · rw [if_pos e2] at hi; rw [if_pos (hfl.2 e2)] at hi'; constructor <;> intro <;> omega
-    · rw [if_neg e2] at hi; rw [if_neg (fun h' => e2 (hfl.1 h'))] at hi'; constructor <;> intro <;> omega
+    · rw [ite_eq_left e2] at hi; rw [ite_eq_left (hfl.2 e2)] at hi'; constructor <;> intro <;> omega
+    · rw [ite_eq_right e2] at hi; rw [ite_eq_right (fun h' => e2 (hfl.1 h'))] at hi'; constructor <;> intro <;> omega
   refine ⟨by simp only [iwTop, hc]; exact hg.iw, by simp only [erTop, hc]; exact hg.er,
     fun j hj => ?_, fun j hj => ?_, by simp only [erecTop1, hc]; exact hg.er1, fun j hj => ?_⟩
-  · rw [erecPutMem_arr, if_neg (by unfold erTier; split <;> decide)]; exact hg.iwGet j hj
+  · rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]; exact hg.iwGet j hj
   · rw [erecPutMem_arr]; unfold erTier; split
     · rename_i e
       have hj' : j < erecTop m₀ := hj
       have : ¬ (erOff i = j) := by have := hR.1 e; simp only [erOff]; omega
-      simp [Array.getElem?_setIfInBounds, this, hg.erGet j hj]
+      simp [this, hg.erGet j hj]
     · exact hg.erGet j hj
   · rw [erecPutMem_arr]; unfold erTier; split
     · exact hg.er1Get j hj
     · rename_i e
       have : ¬ (erOff i = j) := by have := hR.2 e; simp only [erOff]; omega
-      simp [Array.getElem?_setIfInBounds, this, hg.er1Get j hj]
+      simp [this, hg.er1Get j hj]
 
 /-- **The readers' invariant**, from the entry `m₀`, `a₀`. -/
 structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : Prop where
@@ -204,16 +204,16 @@ variable {m₀ m m' : Mem} {a₀ a a' : AState} {T : Nat}
 
 theorem RInv.erB_eq (h : RInv m₀ a₀ T m a) : erB m = erB m₀ := by
   unfold erB; by_cases e : rdW (m₀.arr64 CTL) 1 = 0
-  · rw [if_pos (h.fl.2 e), if_pos e]
-  · rw [if_neg (fun h' => e (h.fl.1 h')), if_neg e]
+  · rw [ite_eq_left (h.fl.2 e), ite_eq_left e]
+  · rw [ite_eq_right (fun h' => e (h.fl.1 h')), ite_eq_right e]
 
 theorem RInv.erT_mono (h : RInv m₀ a₀ T m a) : erT m₀ ≤ erT m := by
   have k1 : erecTop m₀ ≤ erecTop m := h.grow.er
   have k2 : erecTop1 m₀ ≤ erecTop1 m := h.grow.er1
   unfold erT
   by_cases e : rdW (m₀.arr64 CTL) 1 = 0
-  · rw [if_pos (h.fl.2 e), if_pos e]; omega
-  · rw [if_neg (fun h' => e (h.fl.1 h')), if_neg e]; omega
+  · rw [ite_eq_left (h.fl.2 e), ite_eq_left e]; omega
+  · rw [ite_eq_right (fun h' => e (h.fl.1 h')), ite_eq_right e]; omega
 
 theorem RInv.er_lt (h : RInv m₀ a₀ T m a) : erT m < 2 ^ 41 := (erT_lt h.ok).2
 
@@ -235,8 +235,8 @@ theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hmo : ModeOK m
   have hfl := flag_keep h.arena.base hA.base hsc
   have hT : erT m' = erT m := by
     unfold erT; by_cases e : rdW (m.arr64 CTL) 1 = 0
-    · rw [if_pos (hfl.2 e), if_pos e, h129]
-    · rw [if_neg (fun h' => e (hfl.1 h')), if_neg e, h130]
+    · rw [ite_eq_left (hfl.2 e), ite_eq_left e, h129]
+    · rw [ite_eq_right (fun h' => e (hfl.1 h')), ite_eq_right e, h130]
   refine ⟨⟨hA, hk.trans h.hcp, h.frame.trans (hf.mono (by intro b hb; simp [RciA, hb])
     (by intro x hx; simp [RciC, hx])), ?_, ?_, h200.trans h.top, hmo, hfl.trans h.fl⟩, hE, hE1, hI, hT, h200,
     ?_⟩
@@ -328,17 +328,17 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
   have h64 : i < 2 ^ 64 := by split at hi <;> omega
   simp only [h64, ite_true]
   by_cases e : rdW (m.arr64 CTL) 1 = 0
-  · rw [if_pos e] at hi
+  · rw [ite_eq_left e] at hi
     have t0 : i / 2 ^ 40 % 2 = 0 := by omega
     have i0 : i % 2 ^ 40 = i := by omega
-    simp only [t0, ite_true, i0, if_pos hi, if_pos (Nat.lt_of_lt_of_le hi k1)]
-  · rw [if_neg e] at hi
+    simp only [t0, ite_true, i0, ite_eq_left hi, ite_eq_left (Nat.lt_of_lt_of_le hi k1)]
+  · rw [ite_eq_right e] at hi
     by_cases t : i < 2 ^ 40
     · have t0 : i / 2 ^ 40 % 2 = 0 := by omega
       simp only [t0, ite_true, hO.2 e]
     · have t1 : ¬ i / 2 ^ 40 % 2 = 0 := by omega
       have i1 : i % 2 ^ 40 < erecTop1 m := by omega
-      simp only [t1, ite_false, if_pos i1, if_pos (Nat.lt_of_lt_of_le i1 k2)]
+      simp only [t1, ite_false, ite_eq_left i1, ite_eq_left (Nat.lt_of_lt_of_le i1 k2)]
 
 /-- `iw_alloc(k)`: the pool's top raised by `k`. -/
 theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = some (o, m')) :

@@ -45,8 +45,8 @@ open L.Arena
 
 /-- `env_find` through its call: the memory unchanged, the result `findRes`. -/
 theorem envFind_callB' {p : Prog} (hl : NtyLook p) (hF : FtProg p) {vis : Word} {fe : IFEnv} {w : Word}
-    (hw : w.toNat < 2 ^ 32) {n : Nat} {m m' : Mem} {r : List Word}
-    (hE : EnvR m vis fe) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
+    (_hw : w.toNat < 2 ^ 32) {n : Nat} {m m' : Mem} {r : List Word}
+    (_hE : EnvR m vis fe) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
     m' = m ∧ r = findRes m vis w := by
   obtain ⟨s', rfl, h1, -, h3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_spec p hl.hg hF.brg hl.hf n _ vis w) h

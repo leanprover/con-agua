@@ -67,7 +67,7 @@ theorem since_zeroA {t : TieredArray} (ht : t ∈ buildZeroArrs) :
     m.arr64 t = Array.replicate (sz t) 0 := by
   have hn : t ∉ preLoopA := fun hm => by
     have := List.all_eq_true.mp preLoopA_buildZero t ht
-    simp [List.contains_iff_mem, hm] at this
+    simp [hm] at this
   have hc : t ≠ CTL := by rintro rfl; revert ht; decide
   rw [h.frame.arr t hn hc, loadMem_arr]
 
@@ -80,7 +80,7 @@ theorem since_rdW {t : TieredArray} (ht : t ∈ buildZeroArrs) (k : Word) : rdW 
 theorem since_ctl {x : Word} (hx : x.toNat ∈ buildZeroCtls) : rdW (m.arr64 CTL) x = 0 := by
   have hn : x ∉ preLoopC := fun hm => by
     have := List.all_eq_true.mp preLoopC_buildZero x.toNat (List.mem_map.mpr ⟨x, hm, rfl⟩)
-    simp [List.contains_iff_mem, hx] at this
+    simp [hx] at this
   rw [h.frame.ctl x hn, loadMem_rd]
 
 end since
@@ -135,8 +135,8 @@ theorem since_baseTbl (w : Word) : (baseTbl m w).1 = 0 := by
 
 theorem since_indexR : IndexR m {} := by
   refine ⟨fun n => ?_, fun n => ?_, fun i hi => absurd hi (by simp), by simp, ?_⟩
-  · rw [if_pos (since_baseRow h _)]; simp
-  · rw [if_pos (since_baseTbl h _)]; simp
+  · rw [ite_eq_left (since_baseRow h _)]; simp
+  · rw [ite_eq_left (since_baseTbl h _)]; simp
   · rw [since_ctl h (x := 128) (by decide)]; rfl
 
 theorem since_envR : EnvR m 0 (bEnv ({} : IStreamIndex).base 0 0) :=

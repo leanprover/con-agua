@@ -176,7 +176,7 @@ theorem ftdW_ok (m m' : Mem) (a : AState) (hR : ArenaR m a) (e : Word) (he : H e
 
 /-- **`fvar_type_d`'s model refines `fvarTypeD`** (replaces `IndStubs.fvarTypeD_spec`): memory and
 twin state unchanged. -/
-theorem ftdF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
+theorem ftdF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e) :
     RelW ftdF [e] (StageR vis fe) (fvarTypeD (decI e)) (KeepPost vis fe decW0E) := by
   intro m m' a r h hS
   obtain ⟨rfl, hrun, hlt⟩ := ftdW_ok m m' a hS.check.arena.base e he r (ftdF_eq h)

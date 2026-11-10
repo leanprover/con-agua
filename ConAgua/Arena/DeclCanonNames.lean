@@ -202,7 +202,7 @@ theorem LitInj.of_view {a a' : AState} (h : LitInj a) (hv : a'.store.view = a.st
 
 /-- The post of `canon_names`: the list of numerals as an `IW` slice, the pool still addressable,
 the literal hash-consing kept. -/
-def NamesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+def NamesPost (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (r : List Word) (cs : List NIdx) : Prop :=
   KeepPost vis fe (fun m r (cs : List NIdx) => decRL (fun m => decHL m) 0 m r cs) m m' a r cs ∧
     PoolSmall m' ∧ LitInj a

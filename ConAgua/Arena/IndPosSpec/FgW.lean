@@ -200,7 +200,7 @@ theorem GrpAt.head {m : Mem} {o : Nat} {x : NIdx × EIdx} {grp : List (NIdx × E
 
 /-- **`nest_frame_grp`**: the stack grown by the group's holes (base `hi`, each with its former's
 binder count), the group's names. -/
-theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hi us dO dL : Word)
+theorem fgW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hi us dO dL : Word)
     (ds : List EIdx) (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL pO pL nO nL : Word)
     (grp : List (NIdx × EIdx)) (accP : List NestHole) (accN : List NIdx) (r : List Word),
     fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → StageR vis fe m a →
@@ -322,7 +322,7 @@ theorem pos2_zipIdx_holes (hi : Nat) : ∀ (grp : List (NIdx × EIdx)) (k : Nat)
     simp only [List.zipIdx_cons, List.mapM_cons, pos2FhT, pos2_zipIdx_holes hi g (k + 1), Nat.add_assoc]
 
 /-- **`nest_frame_holes`**: the group's holes from `hi` on, appended to the accumulator. -/
-theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : ∀ (n : Nat) (m m' : Mem)
+theorem fhW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : ∀ (n : Nat) (m m' : Mem)
     (a : AState) (hi gO gL aO aL : Word) (grp : List (NIdx × EIdx)) (acc : List EIdx) (r : List Word),
     fhW n m hi gO gL aO aL = some (r, m') → StageR vis fe m a →
     gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
@@ -399,7 +399,7 @@ namespace L.Ind
 open L.Arena
 
 /-- **`nest_cont_new_active`**: the group's keys at `(us, ds)`, appended to the accumulator. -/
-theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word)
+theorem caW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (us dO dL : Word)
     (ds : List EIdx) (hus : H us) : ∀ (n : Nat) (m m' : Mem) (a : AState) (gO gL aO aL : Word)
     (grp : List (NIdx × EIdx)) (acc : List NestKey) (r : List Word),
     caW n m us dO dL gO gL aO aL = some (r, m') → StageR vis fe m a →
@@ -558,7 +558,7 @@ theorem nboW_mem {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
   split at h <;> cases h <;> rfl
 
 /-- **`nest_frame_mates`, under the stage relation**: the mates as a handle slice below the top. -/
-theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+theorem nfmW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {p : Prog} (L : FmLook p) (hbr : p.lookup "base_row_get" = some baseRowGetL)
     {m m' : Mem} {c : Word} {r : List Word} (h : nfmW p n m vis c = some (r, m')) (hS : StageR vis fe m a)
     (hc : H c) :
@@ -589,14 +589,14 @@ theorem nfmW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     by_cases h0 : rf.headD 0 = 0
     · simp only [h0, ite_true, Option.some.injEq, Prod.mk.injEq] at hbo
       obtain ⟨rfl, -⟩ := hbo
-      simp only [if_pos h0, List.headD_cons, List.tail_cons] at key ⊢; exact key
+      simp only [ite_eq_left h0, List.headD_cons, List.tail_cons] at key ⊢; exact key
     by_cases h3 : erRd mf (rf.tail.headD 0) = 3
     · simp only [h0, h3, ite_false, ne_eq, not_true_eq_false, Option.some.injEq, Prod.mk.injEq] at hbo
       obtain ⟨rfl, -⟩ := hbo
-      simp only [if_neg h0, if_pos h3, List.headD_cons, List.tail_cons] at key ⊢; exact key
+      simp only [ite_eq_right h0, ite_eq_left h3, List.headD_cons, List.tail_cons] at key ⊢; exact key
     · simp only [h0, h3, ite_false, ne_eq, not_false_eq_true, ite_true, Option.some.injEq, Prod.mk.injEq] at hbo
       obtain ⟨rfl, -⟩ := hbo
-      simp only [if_neg h0, if_neg h3, List.headD_cons, List.tail_cons] at key ⊢; exact key
+      simp only [ite_eq_right h0, ite_eq_right h3, List.headD_cons, List.tail_cons] at key ⊢; exact key
   rw [nfmK_some] at h
   rcases hmt : matesW n m1 c (r1.headD 0) (r1.tail.headD 0) 0 0 with _ | ⟨r2, m2⟩ <;> rw [hmt] at h
   · simp [matesK3] at h

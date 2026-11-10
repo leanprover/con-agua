@@ -385,7 +385,7 @@ theorem parCompact_run {p : Prog} (hp : p.lookup "par_compact" = some parCompact
       · by_cases h4 : 128 < (s.mem.arr64 CTL).size
         · simp [h1, h0, h1', h2', h3', h4', h8', h2, h3, h4, getElem_set64_out_ctl,
             getElem_set64_out_decl, st64, evalE, ld64, fzDecl, fzC,
-            StateT.run_bind, hF.size, parCompactMem, pcTail, pcImages, evalArgs, rd64, Locals.init,
+            StateT.run_bind, hF.size, parCompactMem, pcTail, pcImages, evalArgs, rd64,
             Sig.retVal, Sig.retOr]
           rfl
         · simp [h1, h0, h1', h2', h2, h3, h4, getElem_set64_out_decl, st64, evalE, ld64, fzDecl, fzC,

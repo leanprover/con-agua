@@ -33,7 +33,7 @@ def StageMemoFr (m m' : Mem) : Prop :=
 
 /-- **The contract of a reading of `inst_lp_fast`** at every exec fuel, at call points satisfying
 `Pre`. -/
-def IlpRd (cR : CallM) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def IlpRd (cR : CallM) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (Pre : Mem → AState → Prop) : Prop :=
   ∀ (k : Nat) (f o l us e : Word) (ks : List NIdx) (m m' : Mem) (a : AState) (r : List Word), H us → H e →
     Pre m a → StageR vis fe m a → decHL m o.toNat l.toNat = some ks →

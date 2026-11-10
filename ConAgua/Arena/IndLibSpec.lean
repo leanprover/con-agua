@@ -689,7 +689,7 @@ theorem StageR.of_walkM {vis : Word} {fe : IFEnv}
     StageR vis fe m' a' ∧ IWGrow m m' := by
   have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
     ⟨fun h => by have := hA _ h; simp [IW] at this, fun h => by have := hA _ h; simp [EREC] at this,
-      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+      fun h => by have := hA _ h; simp [EREC] at this⟩
   have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
       fun h => by have := hC _ h; simp at this⟩

@@ -39,7 +39,7 @@ include hv hf hput hgo
 /-- **`mentions_const_go` refines `mentionsConstGo`**, from a memo related to the twin's, at the twin
 fuel `f.toNat` of the L fuel word `f`, at every exec depth `n`. -/
 @[refines ConRon.Arena.mentionsConstGo]
-theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f T h : Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
     (hT : H T) (hS : StageR vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "mentions_const_go" [f, T, h]
@@ -94,7 +94,7 @@ include hv hf hput hgo hcl hp
 /-- **`mentions_const` refines `mentionsConst`**: clear the `mc` memo (any well-formed one on entry),
 one memoised walk from `coreWalkFuel`, at every exec depth. -/
 @[refines ConRon.Arena.mentionsConst]
-theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis T e : Word) (mp0 : Std.HashMap EIdx Bool) (hh : H e)
     (hT : H T) (hS : StageR vis fe s₀.mem a₀) (hM : mcMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "mentions_const" [T, e]
@@ -141,7 +141,7 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView)
 include hf hput hins in
 /-- **`has_loose_b_var_b_ins` refines `hasLooseBVarBIns`**: the answer's word is recorded in the memo. -/
 @[refines ConRon.Arena.hasLooseBVarBIns]
-theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis : Word) (a₀ : AState) (e i r : Word) (b : Bool) (mp : Std.HashMap (EIdx × Nat) Bool) (he : H e)
     (hr : r = if b then 1 else 0) (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_ins" [e, i, r]
@@ -160,7 +160,7 @@ include hv hf hput hins hgo hbp in
 `f.toNat` of the L fuel word `f`, at every exec depth `n` (`bvar_b` is lane `exprops4`'s,
 `bvbW_stageW`). -/
 @[refines ConRon.Arena.hasLooseBVarBGo]
-theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis f i h : Word) (mp : Std.HashMap (EIdx × Nat) Bool) (hh : H h)
     (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "has_loose_b_var_b_go" [f, i, h]
@@ -190,7 +190,7 @@ include hv hf hput hins hgo hbp hcl hp
 /-- **`has_loose_b_var_b_fast` refines `hasLooseBVarBFast`**: clear the `hb` memo (any well-formed one
 on entry), one memoised walk from `coreWalkFuel`. -/
 @[refines ConRon.Arena.hasLooseBVarBFast]
-theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis i e : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
     (hh : H e) (hS : StageR vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp0) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "has_loose_b_var_b_fast" [i, e]

@@ -728,7 +728,7 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
     (hl : p.lookup "lf_clear" = some (memoClearG lfSch))
     (hi : p.lookup "if_clear" = some (memoClearG imSch))
     (hf : p.lookup "fm_clear" = some (memoClearG frSch))
-    (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (a₀ : AState) (n : Nat) (s₀ : St) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_enter" []
@@ -753,7 +753,7 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
 @[refines ConRon.Arena.dropScratch]
 theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
     (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
-    (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (a₀ : AState) (n : Nat) (s₀ : St) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []

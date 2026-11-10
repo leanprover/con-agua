@@ -31,8 +31,8 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Constant values read from `EREC` below its top -/
 
-theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (hcq : cq + 4 ≤ erTop m)
-    (hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
+theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (_hcq : cq + 4 ≤ erTop m)
+    (_hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
       lo + ll ≤ erTop m ∨ ll = 0) {cv : IConstantVal} (h : decCVp m cq = some cv) :
     decCVp m' cq = some cv :=
   hg.erecGrow.ext.decCV h

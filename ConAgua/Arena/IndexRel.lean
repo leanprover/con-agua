@@ -43,7 +43,7 @@ structure IndexR (m : Mem) (I : IStreamIndex) : Prop where
 def OwnEmpty (m : Mem) : Prop := ∀ w, (ownRaw m w).1 = 0 ∧ ownTbl m w = 0
 
 /-- **A stamp above every row's empties the own layer.** -/
-theorem OwnEmpty.of_below {m : Mem} (h : OwnBelow m) (hlt : ∀ w, rowTag w ≤ 2 →
+theorem OwnEmpty.of_below {m : Mem} (_h : OwnBelow m) (hlt : ∀ w, rowTag w ≤ 2 →
     ((ownRow m w).1 >>> 32).toNat < (stampW m).toNat ∧
       (rdN (m.arr64 (otxArrT w)) (rowIx w)).toNat < (stampW m).toNat) : OwnEmpty m := by
   intro w
@@ -51,9 +51,9 @@ theorem OwnEmpty.of_below {m : Mem} (h : OwnBelow m) (hlt : ∀ w, rowTag w ≤ 
   · obtain ⟨a, b⟩ := hlt w ht
     refine ⟨?_, ?_⟩
     · simp only [ownRaw, ht, true_and]
-      rw [if_neg (fun e => by rw [e] at a; omega)]
+      rw [ite_eq_right (fun e => by rw [e] at a; omega)]
     · rw [ownTbl_eq]; simp only [ht, true_and]
-      rw [if_neg (fun e => by rw [e] at b; omega)]
+      rw [ite_eq_right (fun e => by rw [e] at b; omega)]
   · exact ⟨by simp [ownRaw, ht], by simp [ownTbl, ht]⟩
 
 /-- **The environment at a job's start**: the stream index at the view of position `k`, an empty
@@ -155,14 +155,14 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     by_cases e : n.word.toUInt64 = w
     · by_cases b0 : (baseRow m w).1 = 0
       · obtain ⟨t1, t2, t3⟩ := hset b0
-        have : m1 = baseSet m w (rdW (m.arr64 CTL) 128 + 1) q := by rw [← hm1, if_pos b0]
+        have : m1 = baseSet m w (rdW (m.arr64 CTL) 128 + 1) q := by rw [← hm1, ite_eq_left b0]
         rw [this, e, baseRow_baseSet_self t1 t2 t3]
         have hne : rdW (m.arr64 CTL) 128 + 1 ≠ 0 := fun z => by rw [z] at hnx1; simp at hnx1
         simp [b0, hne, hnx1, hci]
-      · have : m1 = m := by rw [← hm1, if_neg b0]
+      · have : m1 = m := by rw [← hm1, ite_eq_right b0]
         rw [this, e]; simp only [b0, ne_eq, not_false_eq_true, not_true_eq_false, and_false,
-          decide_true, true_and, ite_false]
-        have := h.base n; rw [e, if_neg b0] at this; exact this
+          decide_true, ite_false]
+        have := h.base n; rw [e, ite_eq_right b0] at this; exact this
     · have hb1 : baseRow m1 n.word.toUInt64 = baseRow m n.word.toUInt64 := by
         rw [← hm1]; split
         · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
@@ -214,14 +214,14 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     by_cases e : n.word.toUInt64 = w
     · by_cases b0 : (baseTbl m w).1 = 0
       · obtain ⟨t1, t2, t3⟩ := hset b0
-        have : m1 = baseTblSet m w (r + 1) q := by rw [← hm1, if_pos b0]
+        have : m1 = baseTblSet m w (r + 1) q := by rw [← hm1, ite_eq_left b0]
         rw [this, e, baseTbl_baseTblSet_self t1 t2 t3]
         have hne : r + 1 ≠ 0 := fun z => by rw [z] at hr1; simp at hr1
         simp [b0, hne, hr1, htb]
-      · have : m1 = m := by rw [← hm1, if_neg b0]
+      · have : m1 = m := by rw [← hm1, ite_eq_right b0]
         rw [this, e]; simp only [b0, ne_eq, not_false_eq_true, not_true_eq_false, and_false,
-          decide_true, true_and, ite_false]
-        have := h.btbl n; rw [e, if_neg b0] at this; exact this
+          decide_true, ite_false]
+        have := h.btbl n; rw [e, ite_eq_right b0] at this; exact this
     · have hb1 : baseTbl m1 n.word.toUInt64 = baseTbl m n.word.toUInt64 := by
         rw [← hm1]; split
         · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
@@ -262,7 +262,7 @@ theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
     by_cases e : I.firsts.size = i
     · subst e; simp only [hk, and_self, ite_true, Array.getElem_push_eq]; exact h.next
     · have hi' : i < I.firsts.size := by omega
-      rw [if_neg (fun c => e c.1), Array.getElem_push_lt hi']
+      rw [ite_eq_right (fun c => e c.1), Array.getElem_push_lt hi']
       exact h.firsts i hi'
   · rw [Mem.size_arr64_set64]; simp; omega
   · rw [hctl]; exact h.next

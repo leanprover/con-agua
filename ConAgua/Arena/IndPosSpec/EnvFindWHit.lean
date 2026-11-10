@@ -72,12 +72,12 @@ theorem findRes_hit {vis : Word} {fe : IFEnv} {m : Mem} {w : Word} (hE : EnvR m 
     fe.find? (decI w) = decCI (erecP m) ((findRes m vis w).tail.headD 0).toNat ∧
       ∃ ci, decCI (erecP m) ((findRes m vis w).tail.headD 0).toNat = some ci := by
   obtain ⟨h1, h2⟩ := hE.find_res hw
-  exact ⟨by rw [h1, envFound, if_neg h0], h2 h0⟩
+  exact ⟨by rw [h1, envFound, ite_eq_right h0], h2 h0⟩
 
 /-- **A miss of `env_find`**: `find?` finds nothing. -/
 theorem findRes_miss {vis : Word} {fe : IFEnv} {m : Mem} {w : Word} (hE : EnvR m vis fe)
     (hw : w.toNat < 2 ^ 32) (h0 : (findRes m vis w).headD 0 = 0) : fe.find? (decI w) = none := by
-  rw [(hE.find_res hw).1, envFound, if_pos h0]
+  rw [(hE.find_res hw).1, envFound, ite_eq_left h0]
 
 /-- A `[cv, nF]` record at `p` denoting `x`, its pool reads in `P`, its constant below `EREC`'s top. -/
 def CNOk (m : Mem) (p : Nat) (x : IConstantVal × Nat) (P : Nat → Prop) : Prop :=

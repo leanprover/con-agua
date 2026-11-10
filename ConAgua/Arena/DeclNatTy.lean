@@ -486,7 +486,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
         have hisE : cv.levelParams.isEmpty = true := hiffc.mp hl
         simp only [natOpStoredOk, hf, hisE, ite_true, hty]
         exact hrun2
-      · simp only [ne_eq, hl, not_false_eq_true, ite_true] at hW
+      · simp only [hl, not_false_eq_true, ite_true] at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨rfl, rfl⟩ := hW
         have hisE : cv.levelParams.isEmpty = false := by

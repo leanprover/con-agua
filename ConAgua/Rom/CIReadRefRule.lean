@@ -169,8 +169,8 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the right-hand side
   unfold ruleW.ruleTailW at hw
-  rw [if_neg (show ¬ ((0 : Word) = 1 ∨ (0 : Word) = 2) by decide), bW_some, List.headD_cons,
-    if_neg (show ¬ ((0 : Word) = 1) by decide), bW_some, List.headD_cons] at hw
+  rw [ite_eq_right (show ¬ ((0 : Word) = 1 ∨ (0 : Word) = 2) by decide), bW_some, List.headD_cons,
+    ite_eq_right (show ¬ ((0 : Word) = 1) by decide), bW_some, List.headD_cons] at hw
   obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   have hq16 : (r1.tail.headD 0 + 16).toNat = (r1.tail.headD 0).toNat + 16 := by
     have := hq1; rw [UInt64.toNat_add]; simp at this ⊢; omega
@@ -284,7 +284,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the level slice
   unfold ruleW.ruleTailW at hw
-  rw [if_pos (show (UInt64.ofNat 2 = 1 ∨ UInt64.ofNat 2 = 2) by decide)] at hw
+  rw [ite_eq_left (show (UInt64.ofNat 2 = 1 ∨ UInt64.ofNat 2 = 2) by decide)] at hw
   unfold ruleLvlW at hw
   replace hw := rdU_ntBW hL hw
   have hq16 : (r1.tail.headD 0 + 16).toNat = (r1.tail.headD 0).toNat + 16 := by
@@ -323,7 +323,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   | none => rw [hl] at hw; simp at hw
   | some tl =>
   obtain ⟨r2, m2⟩ := tl
-  rw [hl, bW_some, bW_some, if_neg (show ¬ (UInt64.ofNat 2 = 1) by decide), bW_some, List.headD_cons] at hw
+  rw [hl, bW_some, bW_some, ite_eq_right (show ¬ (UInt64.ofNat 2 = 1) by decide), bW_some, List.headD_cons] at hw
   have hq24 : (r1.tail.headD 0 + 16 + 8).toNat = (r1.tail.headD 0).toNat + 24 := by
     have := hq1; rw [UInt64.toNat_add, hq16]; simp at this ⊢; omega
   have hdl : rom.drop (r1.tail.headD 0 + 16 + 8).toNat = encLevelList lvls ++ ((encExprM seen rl.rhs).1 ++ rest) := by

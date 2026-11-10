@@ -186,7 +186,7 @@ theorem MsB.copy {m m' : Mem} {p q : Word} (h : MsB m p) (hg : IWGrow m m') (hq 
     obtain ⟨w, hw, rfl⟩ := hv
     obtain ⟨-, hw'⟩ := truncM_iw_get hw
     refine ⟨w, ?_, rfl⟩
-    rw [truncM_iw_get?, if_pos hj]
+    rw [truncM_iw_get?, ite_eq_left hj]
     simp only [iwA, aread_apply] at hw' ⊢
     rw [e, hw']
   exact ⟨o, tr (by omega) e0 ho, l, tr hq e1 hl, hd⟩

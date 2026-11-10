@@ -144,7 +144,7 @@ grind_pattern [ind_grind] eciK2_some => eciK2 i kind s ll (some m2)
 grind_pattern [ind_grind] eciK3_some => eciK3 i kind s ll (some (p, m3))
 
 theorem erecPutMem_decl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 DECL = m.arr64 DECL := by
-  rw [erecPutMem_arr, if_neg (by unfold erTier; split <;> decide)]
+  rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]
 
 theorem erecCi_specW (p : Prog) (h : RecProg p) (n : Nat) (s₀ : St) (i kind : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_ci" [i, kind]
@@ -263,7 +263,7 @@ theorem erecP_getE {m : Mem} {j : Nat} (h : j < erTop m) (h40 : j < 2 ^ 40) :
   have hd : j / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
   have hm : j % 2 ^ 40 = j := Nat.mod_eq_of_lt h40
   simp only [erecP, h64, hd, hm, ite_true]
-  rw [if_pos (by simpa [erecTop, erTop] using h)]
+  rw [ite_eq_left (by simpa [erecTop, erTop] using h)]
 
 /-- A tier-0 address the record pool decodes is below the tier-0 top. -/
 theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) (h40 : j < 2 ^ 40) :
@@ -325,7 +325,7 @@ theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d 
         have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
       have hD : (erecPutMem m d (mask32 (rdW (m.arr64 DLP) s))).arr64 DLP = m.arr64 DLP := by
-        rw [erecPutMem_arr, if_neg (by unfold erTier; split <;> decide)]
+        rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]
       rw [dlpCopyW_eq n _ m' _ _ _ h, hl1, hD]
       rfl
 

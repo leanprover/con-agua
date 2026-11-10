@@ -59,7 +59,7 @@ l_model pbW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 
 /-! ## The relational lemma -/
 
-theorem spaW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
+theorem spaW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
     (T j : Word) (r : List Word) (h : spaW m T j = some (r, m')) (hS : StageR vis fe m a) :
     ∃ a', (structProjArgP (decI T) j.toNat).run a = .ok (decE (r.headD 0), a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' := by

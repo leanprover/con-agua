@@ -431,7 +431,7 @@ theorem IWOK.reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0)
   simp only [iwTop, erTop, erecTop1, rdW_set_ctl m 200 0 129 (by decide),
     rdW_set_ctl m 200 0 130 (by decide), hne IW (by decide), hne EREC (by decide),
     hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
-  refine ⟨by rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1,
+  refine ⟨by rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa using h.2.2.2.2.1⟩]; simp, h.2.1, h.2.2.1,
     h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2⟩
 
 theorem envArrs_ne_ctl : ∀ b ∈ envArrs, b ≠ CTL := by decide
@@ -672,7 +672,7 @@ theorem IWOK.set130 {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 130 0
     rdW_set_ctl m 130 0 200 (by decide), hne IW (by decide), hne EREC (by decide),
     hne (tier1 EREC) (by decide), Mem.size_arr64_set64]
   refine ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, ?_, h.2.2.2.2.2.2⟩
-  rw [rdW_set64, if_pos ⟨rfl, rfl, by have := h.2.2.2.2.1; simp; omega⟩]; simp
+  rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by have := h.2.2.2.2.1; simp; omega⟩]; simp
 
 /-- **The job relation after the bracket's close**: from the relation `check_decl` leaves (at its
 view `v` and environment `x`), the memos, and the stream index and the pool at the job's start
@@ -852,7 +852,7 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
   rw [recordJobE.k_and_pin_ok.arm1 _ _ _ _ _ hz]
   have hbt : b = true := by rw [← hb]; simpa using hz
   subst hbt
-  simp only [if_true, bind_assoc, pure_bind]
+  simp only [ite_true, bind_assoc, pure_bind]
   -- `check_decl`
   have e0 : dsAt ds k = ds[k.toNat] := by simp [dsAt, Array.getD, hk]
   have hpx4 : ConRon.Bridge.PExt a.store a4.store := hx1a.trans (ConRon.Bridge.PExt.of_ext hext4)

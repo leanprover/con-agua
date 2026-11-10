@@ -304,14 +304,14 @@ def wrER (m : Mem) (q : Word) : List Word → Mem
 
 theorem erecPutMem_frame (m : Mem) (a v : Word) : MemFrame [EREC, tier1 EREC] [] m (erecPutMem m a v) := by
   refine ⟨fun b hb _ => ?_, fun x _ => by rw [erecPutMem_ctl], fun b => ?_⟩
-  · rw [erecPutMem_arr, if_neg]
+  · rw [erecPutMem_arr, ite_eq_right]
     unfold erTier; split <;> (intro e; subst e; simp at hb)
   · rw [erecPutMem_arr]; split <;> simp
 
 theorem wrER_frame : ∀ (ws : List Word) (m : Mem) (q : Word),
     MemFrame [EREC, tier1 EREC] [] m (wrER m q ws)
-  | [], m, q => MemFrame.refl _ _ _
-  | x :: ws, m, q => (erecPutMem_frame m q x).trans (wrER_frame ws _ _)
+  | [], _m, _q => MemFrame.refl _ _ _
+  | x :: ws, _m, _q => (erecPutMem_frame _m _q x).trans (wrER_frame ws _ _)
 
 theorem wrER_ctl : ∀ (ws : List Word) (m : Mem) (q : Word), (wrER m q ws).arr64 CTL = m.arr64 CTL
   | [], _, _ => rfl
@@ -343,8 +343,8 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word),
       · subst hi
         by_cases hb : erOff q < (m.arr64 (erTier q)).size
         · simp [hb]
-        · simp [hb, Array.getElem?_eq_none (Nat.le_of_not_lt hb)]
-      · rw [if_neg hi, if_neg (by omega)]
+        · simp [hb]
+      · rw [ite_eq_right hi, ite_eq_right (by omega)]
     · simp [e]
   | x :: y :: ws, m, q, h1, h2, b, i => by
     have hlen : (x :: y :: ws).length = ws.length + 2 := rfl
@@ -363,13 +363,13 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word),
       · subst hi
         by_cases hb : erOff q < (m.arr64 (erTier q)).size
         · simp [hb]; omega
-        · simp [hb, Array.getElem?_eq_none (Nat.le_of_not_lt hb)]
-      · rw [if_neg hi]
+        · simp [hb]
+      · rw [ite_eq_right hi]
         by_cases hr : erOff q + 1 ≤ i ∧ i < erOff q + 1 + (ws.length + 1) ∧ i < (m.arr64 (erTier q)).size
-        · rw [if_pos hr, if_pos ⟨by omega, by omega, hr.2.2⟩]
+        · rw [ite_eq_left hr, ite_eq_left ⟨by omega, by omega, hr.2.2⟩]
           have : i - erOff q = (i - (erOff q + 1)) + 1 := by omega
           rw [this]; simp
-        · rw [if_neg hr, if_neg (by omega)]
+        · rw [ite_eq_right hr, ite_eq_right (by omega)]
     · simp [e]
 
 /-- `IWOK` across a writer of the record pool's arrays (sizes and tops kept). -/
@@ -407,7 +407,7 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hgrow : ErecGrow m (wrER m1 q ws) := by
     refine ⟨?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
     · simp only [erecTop, hcw]; exact hg1.top
-    · rw [hget, if_neg, hm1 _ (by decide)]
+    · rw [hget, ite_eq_right, hm1 _ (by decide)]
       rintro ⟨e, h2, -⟩
       have : erTopOf m q = erecTop m := by
         unfold erTier at e; unfold erTopOf; split at e
@@ -415,7 +415,7 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
         · cases e
       omega
     · simp only [erecTop1, hcw]; exact hg1.top1
-    · rw [hget, if_neg, hm1 _ (by decide)]
+    · rw [hget, ite_eq_right, hm1 _ (by decide)]
       rintro ⟨e, h2, -⟩
       have : erTopOf m q = erecTop1 m := by
         unfold erTier at e; unfold erTopOf; split at e
@@ -441,16 +441,16 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     have hlt : erOff q + j < (m1.arr64 (erTier q)).size := by
       rw [hsz]; have e1 := hsz1; have e2 := htop1; have e3 := hk; omega
     have hgj := hget (erTier q) (erOff q + j)
-    rw [if_pos ⟨rfl, by omega, by omega, hlt⟩, show erOff q + j - erOff q = j by omega] at hgj
+    rw [ite_eq_left ⟨rfl, by omega, by omega, hlt⟩, show erOff q + j - erOff q = j by omega] at hgj
     have htopw : erOff q + j < erTopOf (wrER m1 q ws) q := by
       rw [hT _ hcw, htop1]; have e3 := hk; omega
     unfold erecP
-    rw [if_pos (show q.toNat + j < 2 ^ 64 by omega), htj, hoj]
+    rw [ite_eq_left (show q.toNat + j < 2 ^ 64 by omega), htj, hoj]
     unfold erTopOf at htopw
     unfold erTier at hgj
     by_cases t : q.toNat / 2 ^ 40 % 2 = 0
-    · simp only [t, ite_true] at htopw hgj ⊢; rw [if_pos htopw]; exact hgj
-    · simp only [t, ite_false] at htopw hgj ⊢; rw [if_pos htopw]; exact hgj
+    · simp only [t, ite_true] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+    · simp only [t, ite_false] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
 
 theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
     ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
@@ -538,11 +538,11 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
 
 /-- A word the record pool reads at `cq + j` (as a number) is `EREC⦃cq + j⦄`. -/
 theorem erRd_add {m : Mem} {cq : Word} {j : Nat} {w : Word} (h : erecP m (cq.toNat + j) = some w)
-    (hj : j < 2 ^ 64) : erRd m (cq + UInt64.ofNat j) = w ∧ (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
+    (_hj : j < 2 ^ 64) : erRd m (cq + UInt64.ofNat j) = w ∧ (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
   have hlt : cq.toNat + j < 2 ^ 64 := by
     rcases Nat.lt_or_ge (cq.toNat + j) (2 ^ 64) with h' | h'
     · exact h'
-    · unfold erecP at h; rw [if_neg (by omega)] at h; cases h
+    · unfold erecP at h; rw [ite_eq_right (by omega)] at h; cases h
   have e : (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
     rw [UInt64.toNat_add]; simp; omega
   exact ⟨(erRd_of_erecP (by rw [e]; exact h)).1, e⟩
@@ -608,7 +608,7 @@ theorem erRd_erecPutMem_ne {m : Mem} {a v x : Word} (h : erTier x ≠ erTier a �
       · exact absurd e h
       · exact h
     simp only [rdW, Array.getElem?_setIfInBounds, mask40_toNat]
-    rw [if_neg (fun h' => ho (by unfold erOff at h' ⊢; omega))]
+    rw [ite_eq_right (fun h' => ho (by unfold erOff at h' ⊢; omega))]
   · rfl
 
 /-- **A word of the old pool and a freshly allocated word are at different places.** -/

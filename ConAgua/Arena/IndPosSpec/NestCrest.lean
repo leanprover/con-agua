@@ -499,7 +499,7 @@ theorem decNFK_ordinary {w : Word} {x : NestFieldKind} (h : decNFK w = some x) :
          · cases h)
       | (cases h; done)
 
-theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+theorem u4W_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
     (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word),

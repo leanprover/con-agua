@@ -383,7 +383,7 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
     (hcc : p.lookup "block_shape_ctors_copy" = some blockShapeCtorsCopy)
     (hg : p.lookup "block_shape_all_ctors_go" = some blockShapeAllCtorsGo)
     (hp : p.lookup "block_shape_all_ctors" = some blockShapeAllCtors)
-    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (q : Word) (bs : BlockShape) (hS : StageR vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_all_ctors" [q]

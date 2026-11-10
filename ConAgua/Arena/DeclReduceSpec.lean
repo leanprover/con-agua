@@ -357,7 +357,7 @@ theorem reduceCertVar_eq (c : NIdx) :
 proved). -/
 @[refines ConRon.Arena.reduceCertVar]
 theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
+    (fe : IFEnv) (vis c : Word)
     (hS : StageR vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_cert_var" [c]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceCertVar (decI c)) a₀ ∧

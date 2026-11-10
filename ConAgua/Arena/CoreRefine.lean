@@ -51,7 +51,7 @@ theorem flushCaches_run (a : AState) :
 /-- **`flush_caches()` refines `flushCaches`** under `CheckR`. -/
 @[refines ConRon.Arena.flushCaches]
 theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : Nat) (s₀ : St)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hC : CheckR s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "flush_caches" []

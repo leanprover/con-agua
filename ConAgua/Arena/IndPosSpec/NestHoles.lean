@@ -39,7 +39,7 @@ open L.Arena
 section arms
 variable (k : Nat) (m3 : Mem) (ctx mm off l oo ol v : Word)
 theorem nhK3_big (h : 4294967296 ≤ v) : nhK3 k ctx mm off l oo ol (some (v, m3)) = none := by
-  rw [nhK3, if_pos h]
+  rw [nhK3, ite_eq_left h]
 end arms
 attribute [ind_grind] nhK3_big
 

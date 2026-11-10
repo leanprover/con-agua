@@ -41,7 +41,7 @@ include hp
 
 /-- **`str_cv` under `CoreS`**: the twin's `toConstantVal` at the decoded record, the memory
 unchanged, and the words of the constant value. -/
-theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
+theorem cv_call (_hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) q.toNat = some ci)
     (h : callW p n "str_cv" [q] m = some (r, m')) :
     m' = m ∧

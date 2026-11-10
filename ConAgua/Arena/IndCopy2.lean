@@ -621,7 +621,7 @@ theorem hslice?_some_at {k : IdxKind} {a : Nat → Option Word} : ∀ {o n : Nat
           simp only [hd?] at hx
           cases hw : a o with
           | none => simp [hw] at hx
-          | some w => exact ⟨w, by simpa using hw⟩
+          | some w => exact ⟨w, by simp⟩
         | succ j =>
           obtain ⟨w, hw⟩ := hslice?_some_at hxs (j := j) (by omega)
           exact ⟨w, by rw [show o + (j + 1) = o + 1 + j by omega]; exact hw⟩
@@ -673,7 +673,7 @@ theorem erToIwW_dec {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List 
       have : o.toNat + (l.toNat - 1) < 2 ^ 64 := by
         rcases Nat.lt_or_ge (o.toNat + (l.toNat - 1)) (2 ^ 64) with h' | h'
         · exact h'
-        · unfold erecP at hv; rw [if_neg (by omega)] at hv; cases hv
+        · unfold erecP at hv; rw [ite_eq_right (by omega)] at hv; cases hv
       omega
   simp only [erToIwW] at h
   cases hal : allocW m l with

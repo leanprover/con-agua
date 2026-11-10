@@ -558,7 +558,7 @@ theorem ctl_ne_erTier (a : Word) : (CTL : TieredArray) ≠ erTier a := by
   unfold erTier; split <;> decide
 
 theorem erecPutMem_ctl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 CTL = m.arr64 CTL := by
-  rw [erecPutMem_arr, if_neg (ctl_ne_erTier a)]
+  rw [erecPutMem_arr, ite_eq_right (ctl_ne_erTier a)]
 
 /-- **A write at or above the top of its tier keeps the record pool.** -/
 theorem erecPutMem_grow {m : Mem} {a v : Word} (h : erTopOf m a ≤ erOff a) :
@@ -637,7 +637,7 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have t0 : erecTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := by
       simp only [erecTop, rdW_set64, e129, and_self, ite_true, hok]
     have t1 : erecTop1 (m.set64 CTL 129 (o + k)) = erecTop1 m := by
-      simp only [erecTop1, rdW_set64]; rw [if_neg (by simp)]
+      simp only [erecTop1, rdW_set64]; rw [ite_eq_right (by simp)]
     have hE : (m.set64 CTL 129 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hE1 : (m.set64 CTL 129 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -645,7 +645,7 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have hok' : IWOK (m.set64 CTL 129 (o + k)) := by
       have hI : (m.set64 CTL 129 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
       have h200 : iwTop (m.set64 CTL 129 (o + k)) = iwTop m := by
-        simp only [iwTop, rdW_set64]; rw [if_neg (by simp)]
+        simp only [iwTop, rdW_set64]; rw [ite_eq_right (by simp)]
       have h0 : erTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := t0
       refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; omega, by rw [hI]; exact hW.iwSize,
         by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,
@@ -679,7 +679,7 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have t1 : erecTop1 (m.set64 CTL 130 (o + k)) = o.toNat + k.toNat := by
       simp only [erecTop1, rdW_set64, e130, and_self, ite_true, hok]
     have t0 : erecTop (m.set64 CTL 130 (o + k)) = erecTop m := by
-      simp only [erecTop, rdW_set64]; rw [if_neg (by simp)]
+      simp only [erecTop, rdW_set64]; rw [ite_eq_right (by simp)]
     have hE : (m.set64 CTL 130 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hE1 : (m.set64 CTL 130 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -687,7 +687,7 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have hok' : IWOK (m.set64 CTL 130 (o + k)) := by
       have hI : (m.set64 CTL 130 (o + k)).arr64 IW = m.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
       have h200 : iwTop (m.set64 CTL 130 (o + k)) = iwTop m := by
-        simp only [iwTop, rdW_set64]; rw [if_neg (by simp)]
+        simp only [iwTop, rdW_set64]; rw [ite_eq_right (by simp)]
       have h0 : erTop (m.set64 CTL 130 (o + k)) = erTop m := t0
       refine ⟨by rw [h200, hI]; exact hW.iw, by rw [h0, hE]; exact hW.er, by rw [hI]; exact hW.iwSize,
         by rw [hE]; exact hW.erSize, by rw [Mem.size_arr64_set64]; exact hW.ctl,

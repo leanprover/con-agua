@@ -30,7 +30,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- A constant decoded in a memory whose record lies below the tops (`CVExt`) is decoded below
 the tops. -/
 theorem installCvDecB {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
-    (hx : CVExt m q) : DecB (fun m => decCVp m q) m cv := by
+    (_hx : CVExt m q) : DecB (fun m => decCVp m q) m cv := by
   show decCVp (truncM m) q = some cv
   unfold decCVp; rw [truncM_erA]; exact h
 
@@ -63,7 +63,7 @@ structure CstProg (p : Prog) : Prop where
   ab : AbF p
 
 /-- The post of `check_block_tele`: the checked former below the tops, its result sort a handle. -/
-def TeleOut (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
+def TeleOut (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (r : List Word)
     (x : IConstantVal × LIdx) (m' : Mem) (a' : AState) : Prop :=
   StageR vis fe m' a' ∧ IWGrow m m' ∧ decCVp m' (r.headD 0).toNat = some x.1 ∧
     CVExt m' (r.headD 0).toNat ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2

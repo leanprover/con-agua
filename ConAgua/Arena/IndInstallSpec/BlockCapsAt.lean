@@ -329,7 +329,7 @@ theorem ieCopyW_wrER : ∀ (n : Nat) (m m' : Mem) (d s l : Word), ieCopyW n m d 
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
       rw [ieCopyW_wrER n _ _ _ _ _ h, hl1]
       simp only [ieWords, wrER]
-      rw [erecPutMem_arr, if_neg (fun e => by unfold erTier at e; split at e <;> cases e)]
+      rw [erecPutMem_arr, ite_eq_right (fun e => by unfold erTier at e; split at e <;> cases e)]
 
 /-- **`block_caps_at_er_copy` is its model `capsErCopyW`** (generated). -/
 l_model blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)

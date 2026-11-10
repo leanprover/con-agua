@@ -523,7 +523,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     rw [pmE.arm1 _ _ _ _ _ _ _ _ _ _ _ hkr]
     have hK : (isK != 0) = true := by simpa using hkr
     unfold prepareMajor
-    rw [if_pos hK]
+    rw [ite_eq_left hK]
     refine RefE.bind_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl)
       (hmtc N (hk.mono (Nat.le_succ N)) F (by omega) _ _ dn vis fe MM eb mode d rec isK ro rc major rules
         (by omega) hS hm4 hebm hmaj hr)

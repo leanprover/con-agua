@@ -327,7 +327,7 @@ theorem StoreDen.of_internSort {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   · intro c ci hf; have := h.constLps c ci hf
     simp only [EStore.ns, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
 
 /-- **`StoreDen` across interning `const c us`**, `us` reading back. -/
 theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} {c : NIdx} {us : LsIdx}
@@ -355,6 +355,6 @@ theorem StoreDen.of_internConst {dn : NIdx → Option ConLeche.Name} {m m' : Mem
   · intro c ci hf; have := h.constLps c ci hf
     simp only [EStore.ns, hl] at this ⊢; exact this
   · intro q tbl ht; have := h.proj q tbl ht
-    simp only [EStore.ns, EStore.ls, hl] at this ⊢; exact this
+    simp only [EStore.ns, hl] at this ⊢; exact this
 
 end L.Arena

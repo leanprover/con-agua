@@ -288,29 +288,29 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     obtain ⟨⟨i5, e5⟩, ⟨i6, w6, e6⟩, ⟨i7, e7⟩⟩ := decTbl_wordsT htbl
     simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, i6, i5, i7, not_true_eq_false] at hL
     by_cases c6 : erRdT m₁ (r₁.tail.headD 0 + 6) ≠ ctor
-    · rw [if_pos c6] at hL
+    · rw [ite_eq_left c6] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
       have : (tbl.ctor == decI ctor) = false := by
         rw [e6, decI_beq _ _ w6 hctor]; simpa using c6
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
-    rw [if_neg c6] at hL
+    rw [ite_eq_right c6] at hL
     by_cases c5 : erRdT m₁ (r₁.tail.headD 0 + 5) ≠ nP
-    · rw [if_pos c5] at hL
+    · rw [ite_eq_left c5] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
       have : (tbl.numParams == nP.toNat) = false := by
         rw [← e5]; simpa using fun e => c5 (UInt64.toNat_inj.mp e)
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
-    rw [if_neg c5] at hL
+    rw [ite_eq_right c5] at hL
     by_cases c7 : erRdT m₁ (r₁.tail.headD 0 + 7) ≠ 2
-    · rw [if_pos c7] at hL
+    · rw [ite_eq_left c7] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
       have hne : tbl.numFields ≠ 2 := fun e => c7 (UInt64.toNat_inj.mp (by rw [e7, e]; rfl))
       have : (tbl.numFields == 2) = false := by simpa using hne
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
-    rw [if_neg c7] at hL
+    rw [ite_eq_right c7] at hL
     have hc : (tbl.ctor == decI ctor && tbl.numParams == nP.toNat && tbl.numFields == 2) = true := by
       rw [e6, ← e5, ← e7, Classical.not_not.mp c6, Classical.not_not.mp c5, Classical.not_not.mp c7]
       simp
@@ -324,7 +324,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     show _ = andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat K (j + 1).toNat
     rw [hj1]
     simp only [andRescueSlotsGo, hsome, IProjTable.entry]
-    rw [if_pos hc]
+    rw [ite_eq_left hc]
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj` and its facts as `ProjCallees`). -/
 theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :

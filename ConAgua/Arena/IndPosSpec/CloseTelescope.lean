@@ -84,7 +84,7 @@ include hs hv hp hst had
 /-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `get_app_fn` stub; L aborts where the
 parameter and field counts' sum wraps, a capacity guard). -/
 @[refines ConRon.Arena.nestCtorEntry]
-theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis C ciq : Word) (ci : IConstantInfo) (hC : H C)
     (hS : StageR vis fe s₀.mem a₀) (hci : decCI (erecP s₀.mem) ciq.toNat = some ci) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
@@ -238,7 +238,7 @@ include hc ha hcp hsn hgo hg hf hbr hbo hp
 
 /-- **`nest_frame_mates` refines `nestFrameMates`**. -/
 @[refines ConRon.Arena.nestFrameMates]
-theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestFrameMates_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis c : Word) (hcH : H c) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_frame_mates" [vis, c]
     ⦃fun r s' => LocEq s' s₀ ∧

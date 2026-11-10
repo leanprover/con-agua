@@ -120,7 +120,7 @@ theorem i1lF_frame {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r,
 
 /-- **`instantiate1_lift_fast` refines `instantiate1LiftFast` under the stage relation and the
 walk memos** (replaces `IndStubs.instantiate1LiftFast_spec`); the memos are well formed after. -/
-theorem i1lF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e v d : Word)
+theorem i1lF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e v d : Word)
     (he : H e) (hv : H v) :
     RelW i1lF [f, e, v, d] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat)

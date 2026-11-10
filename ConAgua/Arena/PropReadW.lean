@@ -161,7 +161,7 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
       callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
+  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -176,7 +176,7 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
       callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons, EREC,
+  simp_all [cArmK1, cArmK2, t3W, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -289,7 +289,7 @@ theorem unwrapStep_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
   vcgen [evalE_tld, tld, ld64_rdT_spec, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "env_find", lamProjL_spec p (hp.get "lam_proj") n,
       callW_spec p n "get_app_args", evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
-  simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, EREC,
+  simp_all [uwsW, uwsK1, uwsK2, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     SPN, Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -379,7 +379,7 @@ theorem headProofProj_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
   simp only [callFn, headProofProjL]
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "find_proj", callW_spec p n "type_sort_pw"] <;>
-  simp_all [hppK1, hppK2, hppB, erRdT, EREC, LocEq, BinOp.eval, St.setLocs_cons, TieredArray.t0,
+  simp_all [hppK1, hppK2, hppB, erRdT, EREC, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
   all_goals

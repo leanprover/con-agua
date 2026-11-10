@@ -94,14 +94,14 @@ theorem notbig_of_lt {z : Word} (h : z.toNat < 2 ^ 32) : ¬ 4294967296 ≤ z := 
   have e : (4294967296 : Word).toNat = 4294967296 := by decide
   omega
 
-theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem canonW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl us nn c v : Word) (names : List NIdx) (r : List Word),
     canonW n m no nl us nn c v = some (r, m') → StageR vis fe m a → H c → H us → H v →
     decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
     nn.toNat + names.length < 2 ^ 64 →
     ∃ x a', (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
-  intro dn fe vis m m' a no nl us nn c v names r h hS hc hus hv hdec hb hnn
+  intro _dn fe vis m m' a no nl us nn c v names r h hS hc hus hv hdec hb hnn
   cases n with
   | zero => simp [canonW] at h
   | succ n =>

@@ -282,14 +282,14 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
     have e5 : (decI hd : EIdx) = decE hd := rfl
     have evc : (viewConst (decE hd)) a2 = .ok (a2.store.viewConst (decE hd), a2) := rfl
     rw [hvc] at evc
-    simp only [e5, hctT, ↓reduceIte, StateT.bind, evc, Except.bind]
+    simp only [e5, hctT, ↓reduceIte, StateT.bind, evc]
     rw [CWF_eq, e4, hdwd] at hrun4
     rw [← huwd]
     simp only [bind, Except.bind, StateT.bind]
     rw [hrun3]
-    simp only [bind, Except.bind, StateT.bind]
+    simp only
     rw [hrun4]
-    simp only [bind, Except.bind, StateT.bind]
+    simp only
     rw [hnI] at hrun5; rw [hrun5]
     rfl
   · simp only [List.getD_cons_succ, List.getD_cons_zero]

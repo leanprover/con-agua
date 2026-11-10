@@ -369,7 +369,7 @@ theorem lhcLoop_ok (hN : NameRel N) {m : Mem} {e w : Word} {nm : ConLeche.Name} 
           (by subst he; apply UInt64.toNat_inj.mp; simp only [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (show (1 : Word) ≤ k by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega) h
         refine ⟨rfl, ?_⟩
         have hne : y ≠ nm := fun h' => hr (hN.inj _ _ _ hy (h' ▸ hw))
-        rw [hx]; simp [List.contains_cons, Ne.symm hne]
+        rw [hx]; simp [Ne.symm hne]
 
 theorem lhc_call {p : Prog} (hp : p.lookup "lh_contains" = some lhContains) (hN : NameRel N)
     {n : Nat} {m m' : Mem} {t0 t1 w : Word} {r : List Word} {ps : List ConLeche.Name} {nm : ConLeche.Name}
@@ -516,12 +516,12 @@ theorem lvZwz_core {p : Prog} (hpn : p.lookup "lv_node" = some lvNode)
       (by rw [UInt64.add_comm, UInt64.sub_add_cancel]) (n + 1) _ _ qs sig m₃ hqs (by rw [hd₂]; omega)
       (by rw [UInt64.add_comm, UInt64.sub_add_cancel]) hl with ⟨ha, hsg, hm3⟩ | ⟨ha, hsg, hm3⟩
   · subst hsg
-    rw [hm3, if_pos rfl] at h
+    rw [hm3, ite_eq_left rfl] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨by simp [ha], hfin m₂ (he₁.trans he₂) rfl⟩
   · subst hsg
-    rw [hm3, if_neg (by simp)] at h
+    rw [hm3, ite_eq_right (by simp)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨by simp [ha, Sig.retVal, Sig.retOr], hfin m₂ (he₁.trans he₂) rfl⟩
@@ -585,7 +585,7 @@ theorem cgr_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   rw [cgrE.arm2 _ _ _ _ _ _ _ _ _ hi]
   have hi' : i.toNat < rows.size := by rw [hrn]; exact UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hi)
   obtain ⟨hd, hdw, hdom⟩ := hR i hi'
-  rw [checkGuardRows, dite_cond_eq_true (eq_true hi')]
+  rw [checkGuardRows, dite_eq_left_of_eq_true (eq_true hi')]
   generalize hrow : rows[i.toNat] = row at hd hdom
   obtain ⟨d0, dom0⟩ := row
   simp only at hd hdom ⊢

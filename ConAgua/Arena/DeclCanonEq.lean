@@ -404,13 +404,13 @@ theorem ruleEqButRhsB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : Rd
     have s2 := slAt_ok hR (q := q) (r := r) (i := 6) (j := 7) (kn := 6) rfl rfl rfl hes hes'
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e3, f0, f1, f3,
-      s1, s2, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
+      s1, s2, Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat,
       decI_inj_iff h0 g0, IRecRuleFire.nested.injEq]
     simp [and_assoc]
   · have s1 := slAt_ok hR (q := q) (r := r) (i := 4) (j := 5) (kn := 4) rfl rfl rfl hls hls'
     apply bool_of_iff
     simp only [ruleEqButRhsB, ruleEqAB, ruleEqBB, e0, e1, e3, f0, f1, f3,
-      s1, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IRecRule.mk.injEq, fld_nat,
+      s1, Bool.and_eq_true, beq_iff_eq, IRecRule.mk.injEq, fld_nat,
       decI_inj_iff h0 g0, IRecRuleFire.levels.injEq]
     simp [and_assoc]
 

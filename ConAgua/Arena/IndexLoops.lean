@@ -307,36 +307,36 @@ theorem idxConstsLoop_spec (hg : p.lookup "base_row_get" = some baseRowGetL)
       vcgen [step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
         baseRowGet_spec p hg k', baseRowSet_spec p hs k', st64]
       all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
-        St.setLocs_nil, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq, LoopPost_normal] at *
+        St.setLocs_nil, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, LoopPost_normal] at *
       all_goals subst_vars
       all_goals simp (config := { decide := true }) only [ite_true, ite_false, List.headD_cons, List.tail_cons,
-        decide_eq_true_eq, St.setLoc_loc, St.setLoc_mem, LocEq] at *
+        decide_eq_true_eq, LocEq] at *
       case vc1 =>
         rename_i s2 s1 s _ hinv hm1 hnx hloc1 hc0 hset
         obtain ⟨⟨h0, h1, -, hI⟩, hlt⟩ := hinv
         obtain ⟨hmem, hloc2, ht⟩ := hset
         have e1 := congrFun hloc1; have e2 := congrFun hloc2
         simp only [St.setLoc_loc] at e1 e2
-        simp only [e1, e2, St.setLoc_loc, ite_true, ite_false, hm1] at ht hmem ⊢
+        simp only [e1, e2, ite_true, hm1] at ht hmem ⊢
         rw [h1] at hlt
         subst h0 h1
         refine ⟨by simp, by simp, ?_⟩
         refine icLoop_close hL hl hc hsz hlt hI hnx ?_ (fun _ => ?_)
-        · simp (config := { decide := true }) only [erecRd, e1, e2, St.setLoc_loc, ite_true, ite_false,
+        · simp (config := { decide := true }) only [erecRd, ite_true, ite_false,
             hc0]; exact hmem
-        · simp (config := { decide := true }) only [erecRd, e1, e2, St.setLoc_loc, ite_true,
+        · simp (config := { decide := true }) only [erecRd,
             ite_false]; exact ht
       case vc2 =>
         rename_i s1 s _ hinv hm hnx hloc hc0
         obtain ⟨⟨h0, h1, -, hI⟩, hlt⟩ := hinv
         have e1 := congrFun hloc
         simp only [St.setLoc_loc] at e1
-        simp only [e1, St.setLoc_loc, ite_true, ite_false, hm] at ⊢
+        simp only [e1, ite_true, hm] at ⊢
         rw [h1] at hlt
         subst h0 h1
         refine ⟨by simp, by simp, ?_⟩
         refine icLoop_close hL hl hc hsz hlt hI hnx ?_ (fun h => absurd h ?_)
-        · simp (config := { decide := true }) only [erecRd, e1, St.setLoc_loc, ite_true, ite_false,
+        · simp (config := { decide := true }) only [erecRd, ite_false,
             hc0]
         · simpa (config := { decide := true }) only [erecRd, e1, St.setLoc_loc, ite_true,
             ite_false] using hc0) k
@@ -375,7 +375,7 @@ theorem idxConsts_spec (hp : p.lookup "idx_consts" = some idxConstsL)
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, idxConstsLoop_step_spec p hg hs (I := I) hL hl hc hsz n]
     all_goals simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
-      Sig.retVal, LocEq, ite_true, ite_false] at *
+      Sig.retVal, LocEq, ite_true] at *
     all_goals first
       | decide
       | rfl
@@ -405,34 +405,33 @@ theorem idxTablesLoop_spec (hg : p.lookup "tbl_base_get" = some tblBaseGetL)
       all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
         St.setLocs_nil, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, LoopPost_normal] at *
       all_goals subst_vars
-      all_goals simp (config := { decide := true }) only [ite_true, ite_false, List.headD_cons, List.tail_cons,
-        decide_eq_true_eq, LocEq] at *
+      all_goals simp (config := { decide := true }) only [ite_true, ite_false, List.headD_cons, List.tail_cons, LocEq] at *
       case vc1 =>
         rename_i s2 s1 s hinv hm1 hloc1 hc0 hset
         obtain ⟨⟨h0, h1, h2, -, hI⟩, hlt⟩ := hinv
         obtain ⟨hmem, hloc2, ht⟩ := hset
         have e1 := congrFun hloc1; have e2 := congrFun hloc2
         simp only [St.setLoc_loc] at e1 e2
-        simp only [e1, e2, St.setLoc_loc, ite_true, ite_false, hm1] at ht hmem ⊢
+        simp only [e1, e2, ite_true, hm1] at ht hmem ⊢
         rw [h1] at hlt
         subst h0 h1 h2
         refine ⟨by simp, by simp, by simp, ?_⟩
         refine itLoop_close hL hl hsz hr hlt hI ?_ (fun _ => ?_)
-        · simp (config := { decide := true }) only [erecRd, e1, e2, St.setLoc_loc, ite_true, ite_false,
+        · simp (config := { decide := true }) only [erecRd, ite_true, ite_false,
             hc0]; exact hmem
-        · simp (config := { decide := true }) only [erecRd, e1, e2, St.setLoc_loc, ite_true,
+        · simp (config := { decide := true }) only [erecRd,
             ite_false]; exact ht
       case vc2 =>
         rename_i s1 s hinv hm hloc hc0
         obtain ⟨⟨h0, h1, h2, -, hI⟩, hlt⟩ := hinv
         have e1 := congrFun hloc
         simp only [St.setLoc_loc] at e1
-        simp only [e1, St.setLoc_loc, ite_true, ite_false, hm] at ⊢
+        simp only [e1, hm] at ⊢
         rw [h1] at hlt
         subst h0 h1 h2
         refine ⟨by simp, by simp, by simp, ?_⟩
         refine itLoop_close hL hl hsz hr hlt hI ?_ (fun h => absurd h ?_)
-        · simp (config := { decide := true }) only [erecRd, e1, St.setLoc_loc, ite_true, ite_false,
+        · simp (config := { decide := true }) only [erecRd, ite_false,
             hc0]
         · simpa (config := { decide := true }) only [erecRd, e1, St.setLoc_loc, ite_true,
             ite_false] using hc0) k
@@ -472,7 +471,7 @@ theorem idxTables_spec (hp : p.lookup "idx_tables" = some idxTablesL)
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, idxTablesLoop_step_spec p hg hs (I := I) hL hl hsz hr n]
     all_goals simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
-      Sig.retVal, LocEq, ite_true, ite_false] at *
+      Sig.retVal, LocEq, ite_true] at *
     all_goals first
       | decide
       | rfl

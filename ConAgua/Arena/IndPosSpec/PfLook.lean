@@ -110,7 +110,7 @@ namespace L.Ind
 open L.Arena
 
 /-- The `.fvar` arm of `nestPos`, its result kind to `K` (the twin's text). -/
-def pfK {β : Type} (fe : IFEnv) (ctx : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx)
+def pfK {β : Type} (_fe : IFEnv) (ctx : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx)
     (K : NestFieldKind → AM β) : AM β :=
   match ConRon.Arena.nestHoleAt ctx prog i with
   | none => fail nestNonValid

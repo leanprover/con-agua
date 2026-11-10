@@ -394,7 +394,7 @@ theorem quotPinSim_of {p : Prog} {dn : NIdx → Option ConLeche.Name}
     have hl5 : r1.tail.headD 0 = 5 := UInt64.toNat_inj.mp (by rw [hl]; rfl)
     have hks : (UInt64.ofNat k.slot : Word).toNat = k.slot := by
       rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
-    rw [if_neg (by rw [hl5, UInt64.le_iff_toNat_le, hks]; simp; omega), Option.some.injEq,
+    rw [ite_eq_right (by rw [hl5, UInt64.le_iff_toNat_le, hks]; simp; omega), Option.some.injEq,
       Prod.mk.injEq] at hW
     obtain ⟨rfl, hm⟩ := hW
     rw [← hm]
@@ -487,7 +487,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
     simp only [ConRon.Arena.quotPinHit, StateT.run_bind, hrun1, exb]
   by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m1 (r1.headD 0 + 3)
   case neg =>
-    rw [if_neg hc] at hW
+    rw [ite_eq_right hc] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, e⟩ := hW
     have e2 : s'.mem = s2.mem := by

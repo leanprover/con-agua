@@ -105,7 +105,7 @@ variable {p : Prog} {G : Prop} {dn : NIdx → Option ConLeche.Name} {vis : Word}
 environment, `vis0 = vis`, as `check_block_pass` calls it; twin side: con-ron's
 `checkBlockCtors_specF`'s proof; induction on the fuel): each member's `check_sum_ctors` by its
 contract (`SctsRefS`), the shape's level parameters (outside the verdict closure) lifted. -/
-theorem ict_ref (hP : CtorsProg p) (hR : SctsRefS G p dn) (henv : ConLeche.EnvWF env) (pp : Word) (bs : BlockShape)
+theorem ict_ref (_hP : CtorsProg p) (hR : SctsRefS G p dn) (henv : ConLeche.EnvWF env) (pp : Word) (bs : BlockShape)
     {bsP : ConLeche.BlockShape} (n : Nat) (hn : n ≤ 2 ^ 62) :
     ∀ (m : Mem) (a : AState) (mo ml : Word) (mss : List MemberShape)
       (mssP : List ConLeche.MemberShape),

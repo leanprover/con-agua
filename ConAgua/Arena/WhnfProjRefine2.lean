@@ -79,7 +79,7 @@ theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T 
 flag is set, the record decodes to a table the environment holds at that structure. -/
 theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     {fe : IFEnv} (vis T i : Word) (hE : EnvR s₀.mem vis fe)
-    (hsz : (s₀.mem.arr64 EREC).size < 2 ^ 63) {r : List Word} {s' : St}
+    (_hsz : (s₀.mem.arr64 EREC).size < 2 ^ 63) {r : List Word} {s' : St}
     (hW : findProjK T i (callW p n "find_table" [vis, T] s₀.mem) = some (r.headD 0, r.tail.headD 0, s'.mem)) :
     s'.mem = s₀.mem ∧ r.headD 0 ≤ 1 ∧
       fe.findProj? (decI T) i.toNat = decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat ∧
@@ -106,13 +106,13 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨e0, -, em⟩ := hW
     refine ⟨em.symm, by rw [← e0]; decide, ?_, fun h => absurd e0.symm h⟩
-    rw [IFEnv.findProj?, hft, tblFound, if_pos h0, ← e0]; simp [decEntry]
+    rw [IFEnv.findProj?, hft, tblFound, ite_eq_left h0, ← e0]; simp [decEntry]
   rw [ite_eq_right h0] at hW
   have h1 : (r₁.headD 0 - 1).toNat = (r₁.headD 0).toNat - 1 := by
     have : (r₁.headD 0).toNat ≠ 0 := fun h' => h0 (UInt64.toNat_inj.mp (by simpa using h'))
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_one]; omega))]; simp
   obtain ⟨tbl, htbl⟩ := hfs h0
-  have hfT : fe.findTable? (decI T) = some tbl := by rw [hft, tblFound, if_neg h0, htbl]
+  have hfT : fe.findTable? (decI T) = some tbl := by rw [hft, tblFound, ite_eq_right h0, htbl]
   rw [← h1] at htbl
   obtain ⟨w, hw7, hnf⟩ := decTbl_numFields htbl
   have hrd : erRdT s₀.mem (r₁.headD 0 - 1 + 7) = w := (erRdOK s₀.mem).offN (k := 7) hw7 (by decide)

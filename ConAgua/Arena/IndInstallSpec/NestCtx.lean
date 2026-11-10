@@ -101,7 +101,7 @@ theorem lpsW_ok' {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
 (`hsrc`), the parameters' free variables a handle slice below the top; the context record decoded
 below the tops. -/
 theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
     (fvsP : List EIdx) (hS : StageR vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
     (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
     (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem)

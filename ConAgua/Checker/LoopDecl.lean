@@ -231,7 +231,7 @@ def stepPc (w : Word) : Bool :=
     (decide (w.toNat < 140) || decide (147 < w.toNat))
 
 theorem stepPa_mem (a : TieredArray) (h : stepPa a = true) : a ∈ stepA := by
-  simp only [stepPa, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq, bne_iff_ne, ne_eq,
+  simp only [stepPa, Bool.and_eq_true, bne_iff_ne, ne_eq,
     List.contains_iff_mem] at h
   simp only [stepA, List.mem_filter, decide_eq_true_eq]
   exact ⟨h.1.1, h.1.2, h.2⟩

@@ -119,14 +119,14 @@ theorem IWGrow.put {m₀ m : Mem} {a v : Word} (hg : IWGrow m₀ m) (h : erTopOf
   · rw [erecPutMem_arr]; unfold erTier; split
     · rename_i e; simp only [e, ite_true] at h
       have : ¬ (a.toNat % 2 ^ 40 = i) := by have := hg.er; simp only [erTop, erecTop] at *; omega
-      simp [Array.getElem?_setIfInBounds, erOff, this, hg.erGet i hi]
+      simp [erOff, this, hg.erGet i hi]
     · simp [hg.erGet i hi]
   · simp only [erecTop1, hc]; exact hg.er1
   · rw [erecPutMem_arr]; unfold erTier; split
     · simp [hg.er1Get i hi]
     · rename_i e; simp only [e, ite_false] at h
       have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
-      simp [Array.getElem?_setIfInBounds, erOff, this, hg.er1Get i hi]
+      simp [erOff, this, hg.er1Get i hi]
 
 /-- **A write into the region allocated above a base state's top keeps the stage relation**: the
 base's `EnvR` (`EnvR.growF` over the frame from the base), the rest from the state before the

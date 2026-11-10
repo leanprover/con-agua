@@ -60,7 +60,7 @@ theorem stageR_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     StageR vis fe m' a ∧ IWGrow m m' := by
   have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
     ⟨hA2, fun h => by have := hA _ h; simp [EREC] at this,
-      fun h => by have := hA _ h; simp [EREC, tier1] at this⟩
+      fun h => by have := hA _ h; simp [EREC] at this⟩
   have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
     ⟨fun h => by have := (hC _ h).1; simp at this, fun h => by have := (hC _ h).1; simp at this, hC2⟩
   exact ⟨⟨CheckR.frame_hi hA hC hf hS.check, IWOK.of_keep hf hA3 hC3 hS.iw⟩, IWGrow.of_keep hf hA3 hC3⟩
@@ -186,7 +186,7 @@ theorem word_ofNat_toNat (k : Word) : (k.toNat).toUInt64 = k := by simp [Nat.toU
 
 /-- **The loop of `fvar_type_ds`**: the words `ws` written from `q + k` on, the twin's
 `fvarTypeDs` of the rest of the input, its state unchanged. The input slice lies below `q`. -/
-theorem ftdsGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState)
+theorem ftdsGoW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState)
     (o l q : Word) (m0 : Mem) (xs : List EIdx) (hxs : decHL m0 o.toNat l.toNat = some xs)
     (hsz0 : (m0.arr64 IW).size < 2 ^ 64) (hol : 0 < l.toNat → o.toNat + l.toNat ≤ q.toNat) :
     ∀ (f : Nat) (m : Mem) (k : Word) (r : List Word) (m' : Mem),
@@ -572,7 +572,7 @@ theorem gaaF_frame {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r,
 /-- **`get_app_args_f`'s model refines `getAppArgs`** (replaces `IndStubs.getAppArgs_spec`):
 `get_app_args` (`getAppArgs_refinesR`), the stack slice into a fresh pool slice
 (`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`stageR_hi`). -/
-theorem gaaF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
+theorem gaaF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW gaaF [f, e] (StageR vis fe) (getAppArgs f.toNat (decI e))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
   intro m m' a r h hS

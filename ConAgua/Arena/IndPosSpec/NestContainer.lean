@@ -53,7 +53,7 @@ include hl
 /-- **`nest_container` refines `nestContainer`** (through the `strip_pis`/`get_app_fn` stubs of
 `nest_ctor_entry`; L aborts where a constructor's parameter and field counts' sum wraps). -/
 @[refines ConRon.Arena.nestContainer]
-theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestContainer_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis C : Word) (hC : H C) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_container" [vis, C]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestContainer fe (decI C)) a₀ ∧

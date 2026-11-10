@@ -228,7 +228,7 @@ theorem erecPutMem_lo (m : Mem) (x v : Word) (h : x.toNat < 2 ^ 40) :
     erecPutMem m x v = m.set64 EREC x v := by
   have hb : x.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h]
   have hm : x &&& 0xFFFFFFFFFF = x := UInt64.toNat_inj.mp (by rw [mask40_toNat]; exact Nat.mod_eq_of_lt h)
-  unfold erecPutMem; rw [tierA_EREC, if_pos hb, hm]
+  unfold erecPutMem; rw [tierA_EREC, ite_eq_left hb, hm]
 
 theorem SInv.lo {mem : Mem} {a : AState} (inv : SInv mem a) {x : Word} (h : x.toNat < erecTop mem)
     (m : Mem) (v : Word) : erecPutMem m x v = m.set64 EREC x v :=

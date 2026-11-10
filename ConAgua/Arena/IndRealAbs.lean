@@ -403,7 +403,7 @@ theorem abAdapter_spec (n : Nat) (s₀ : St) (f e d k : Word) :
 /-- **`abstract1_fast` refines `abstract1Fast coreWalkFuel` under the stage relation and a
 well-formed `abstract1` memo** (replaces `IndStubs.abstract1Fast_spec`); the memo is well formed
 after. -/
-theorem abF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e d k : Word)
+theorem abF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e d k : Word)
     (he : H e) :
     RelW abF [CWF, e, d, k] (fun m a => StageR vis fe m a ∧ AbsOK m)
       (abstract1Fast CWF.toNat (decI e) d.toNat k.toNat)

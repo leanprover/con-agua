@@ -398,7 +398,7 @@ theorem pinWordW_some {m : Mem} {u : Word} (h : pinWordW m 53 = some u) : pinW m
     · cases h
   · cases h
 
-theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+theorem slotVarW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (g s : Word) (G : ClassGen) (r : List Word) (hS : StageR vis fe m a)
     (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m) (hns : G.nP + s.toNat < 2 ^ 64)
     (h : slotVarW m g s = some (r, m')) :

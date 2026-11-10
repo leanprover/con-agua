@@ -340,7 +340,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** (through the ROM stubs). -/
 @[refines ConRon.Arena.trustCompilerOk]
-theorem trustCompilerOk_refines (p : Prog) (h : TcoProg p) (dn : NIdx → Option ConLeche.Name)
+theorem trustCompilerOk_refines (p : Prog) (h : TcoProg p) (_dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "trust_compiler_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)

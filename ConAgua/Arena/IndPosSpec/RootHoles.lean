@@ -539,7 +539,7 @@ include ha h3 hsg h4 hg hp
 /-- **`nest_ctx_root_holes` refines `NestCtx.rootHoles`**: the holes as a new `IW` slice of
 `NestHole` pointers, each decoded below the top. -/
 @[refines ConRon.Arena.NestCtx.rootHoles]
-theorem nestCtxRootHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestCtxRootHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (hS : StageR vis fe s₀.mem a₀)
     (hc : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_ctx_root_holes" [ctx]
@@ -706,7 +706,7 @@ end spec
 theorem rdW_of_get' {a : Array Word} {x : Word} {i : Nat} {w : Word} (hx : x.toNat = i) (h : a[i]? = some w) :
     rdW a x = w := by simp [rdW, hx, h]
 
-theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
+theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx po pl i : Word) (r : List Word) (c : NestCtx) (prog : List NestHole)
     (h : haW k m ctx po pl i = some (r, m')) (hS : StageR vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))

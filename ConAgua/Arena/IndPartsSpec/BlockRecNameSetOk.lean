@@ -425,7 +425,7 @@ theorem bgW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
 aborts when `nP + nF` wraps, a capacity). -/
 @[refines ConRon.Arena.ctorMember?]
 theorem ctorMember_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP c : Word)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP c : Word)
     (cv : IConstantVal) (nF : Nat) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hc : DecB (fun m => decCN m c.toNat) s₀.mem (cv, nF))
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
@@ -446,7 +446,7 @@ below the tops, the member names a handle slice below the top; the result a slic
 `[off, len]` (`decGH`). -/
 @[refines ConRon.Arena.blockGroups]
 theorem blockGroups_refines (p : Prog) (hP : IndPartsProg2 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP k co cl : Word)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl lvls nP k co cl : Word)
     (cs : List (IConstantVal × Nat)) (names : List NIdx) (hS : StageR vis fe s₀.mem a₀)
     (hcs : PSlR decCN cs co cl s₀.mem)
     (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
@@ -693,7 +693,7 @@ members and recursors slices of records decoded below the tops (the members' bel
 empty: an empty slice's offset is whatever its record holds). -/
 @[refines ConRon.Arena.blockRecNameSetOk]
 theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mo ml ro rl : Word)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mo ml ro rl : Word)
     (ms : List MemberShape) (recs : List RecShape) (hS : StageR vis fe s₀.mem a₀)
     (hms : DecB (fun m => decPL m (decMS m) mo.toNat ml.toNat) s₀.mem ms ∧
       (ml = 0 ∨ mo.toNat + ml.toNat ≤ iwTop s₀.mem))

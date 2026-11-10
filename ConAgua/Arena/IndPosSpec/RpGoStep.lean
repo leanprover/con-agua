@@ -451,7 +451,7 @@ theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
     | refine LowFr.trans (canonW_low n (by assumption)) ?_
     | split at h)
 
-def RpGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
+def RpGoOK (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (no nl us b nn f h r : Word) (N : Nat) (names : List NIdx)
     (mp : Std.HashMap EIdx EIdx),
     rpGoW n m no nl us b nn f h = some (r, m') → StageR vis fe m a → H h → H us →

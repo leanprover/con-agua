@@ -161,7 +161,7 @@ theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Co
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci4
   have hk := decCI_ind_rd (erRdOK m) hci4
   by_cases k3 : erRdT m (r₄.tail.headD 0) ≠ 3
-  · rw [if_pos k3] at h
+  · rw [ite_eq_left k3] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨rfl, none, ?_, fun _ => rfl, fun h0 => absurd rfl h0⟩
@@ -191,7 +191,7 @@ l_model ic3E_spec (p : Prog) (hf : p.lookup "iota_case3_at" = some iotaCase3AtL)
 theorem decBool_ite0 (r : List Word) :
     decBool [if r.headD 0 = 0 then 1 else 0] = !decBool r := by
   by_cases h : r.headD 0 = 0
-  · rw [if_pos h, decBool_f_m2c h]; rfl
+  · rw [ite_eq_left h, decBool_f_m2c h]; rfl
   · rw [ite_eq_right h, decBool_t_m2c h]; rfl
 
 /-- **`iota_case3_at` refines `iotaCase3At`, both outcomes**: the errors are
@@ -209,7 +209,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   by_cases hK : isK ≠ 0
   · rw [ic3E.arm1 _ _ _ _ _ _ _ _ hK]
     have hK' : (isK != 0) = true := by simpa using hK
-    unfold iotaCase3At; rw [if_pos hK']
+    unfold iotaCase3At; rw [ite_eq_left hK']
     exact RefE.ret rfl (CorePost.ret hS rfl (by unfold ResH HW; decide))
   have hK0 : isK = 0 := Classical.not_not.mp hK
   rw [ic3E.arm2 _ _ _ _ _ _ _ _ hK0]
@@ -260,7 +260,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   rw [ic3E.k_ls_node.arm2 _ _ _ _ _ _ _ _ _ (by simpa using hl)]
   have hb : (cvT.levelParams.length == l.toNat) = true := by
     rw [← hlen', Classical.not_not.mp hl]; simp
-  rw [hb, if_pos rfl]
+  rw [hb, ite_eq_left rfl]
   -- `former_never_zero_at`
   have hks : ∃ ks, cvT.levelParams.mapM (denoteN a.store.ns) = some ks := hS.den.constLps T _ hfT
   have hlsd : ∃ ls, denoteLs a.store.lss (decI us) = some ls :=

@@ -146,7 +146,7 @@ theorem StageR.crf {vis : Word} {fe : IFEnv} {m m' : Mem}
 
 /-- What the walk's call at L fuel `n` says: the twin's walk at the counter's fuel, from the
 related memo, reads only and answers the word, with the memo related after. -/
-def CrfOK (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+def CrfOK (p : Prog) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     Prop :=
   ∀ (m m' : Mem) (a : AState) (memo : Std.HashMap EIdx Bool) (f h : Word) (r : List Word),
     StageR vis fe m a → CrR m memo → h.toNat < 2 ^ 32 →

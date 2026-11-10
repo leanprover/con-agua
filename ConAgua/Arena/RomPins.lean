@@ -375,7 +375,7 @@ theorem internReservedPins_specW (n : Nat) (s₀ : St)
         internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
         internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
         internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n] <;>
-      finish (gen := 20) [Keep.size, Keep.pcap, irpFill, irpW_eq, irp1K_some, irp1bK_some]
+      finish (gen := 20) [Keep.size, Keep.pcap, irpFill]
 
 end irpSpec
 
@@ -640,7 +640,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       have e4 : i ≠ 54 := by omega
       have e3 : i ≠ 53 := by omega
       have e2 : i ≠ 52 := by omega
-      rw [if_neg e0, if_neg e4, if_neg e3, if_neg e2]
+      rw [ite_eq_right e0, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
     have h71 : pinW (irpFill m₆ us z s1) 71 = pinW m₁b 71 := by
       rw [hpw, h26, hk2 71 (.inr (by omega))]; simp
     have hhi : ∀ i, 55 ≤ i → pinW (irpFill m₆ us z s1) i = pinW m₂ i := fun i h1 => by
@@ -649,7 +649,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       have e4 : i ≠ 54 := by omega
       have e3 : i ≠ 53 := by omega
       have e2 : i ≠ 52 := by omega
-      rw [if_neg e0, if_neg e4, if_neg e3, if_neg e2]
+      rw [ite_eq_right e0, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
     have h52 : pinW (irpFill m₆ us z s1) 52 = us := by rw [hpw]; simp
     have h53 : pinW (irpFill m₆ us z s1) 53 = z := by rw [hpw]; simp
     have h54 : pinW (irpFill m₆ us z s1) 54 = s1 := by rw [hpw]; simp
@@ -658,9 +658,9 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
         some (decI (if i < 51 then pinW m₁ (1 + i) else pinW m₁b 71)) := fun i h => by
       rw [resP]
       by_cases hi : i < 51
-      · rw [List.getElem?_append_left (by omega), if_pos hi]
+      · rw [List.getElem?_append_left (by omega), ite_eq_left hi]
         simpa [Nat.add_comm] using (hj1 i hi).1
-      · rw [List.getElem?_append_right (by omega), if_neg hi, hl1, show i - 51 = 0 by omega]
+      · rw [List.getElem?_append_right (by omega), ite_eq_right hi, hl1, show i - 51 = 0 by omega]
         simpa using (hj1b 0 (by omega)).1
     have hlenP : (AM.res (internNameList pinNames) a).length = 52 := by
       rw [resP, List.length_append, hl1, hl1b]
@@ -675,14 +675,14 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
     · intro i hi
       rw [hlo _ (by omega) (by omega)]
       have := hget i (by omega)
-      rw [if_pos hi] at this
+      rw [ite_eq_left hi] at this
       simp only [List.getElem_toArray]
       rw [List.getElem?_eq_getElem (by omega)] at this
       exact Option.some.inj this
     · rw [h71]; simpa using (hj1b 0 (by omega)).2
     · rw [h71]
       have := hget 51 (by omega)
-      rw [if_neg (by omega)] at this
+      rw [ite_eq_right (by omega)] at this
       simp only [List.getElem_toArray]
       rw [List.getElem?_eq_getElem (by omega)] at this
       exact Option.some.inj this

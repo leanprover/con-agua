@@ -319,7 +319,7 @@ theorem erToIwW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
 theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     {xs : List (Idx k)}
     (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
-    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (_hE : (m.arr64 EREC).size < 2 ^ 64)
     (hsl : hslice? (erA m) o.toNat l.toNat = some xs) :
     r = [rdW (m.arr64 CTL) 200, l] ∧
     (decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat : Option (List (Idx k))) =

@@ -500,7 +500,7 @@ theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hi : x.toNat < iwTo
     rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
   simp only [rdW, hg.iwGet _ hi]
 
-theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),
     closeW n m dO dl i body = some (r, m') → StageR vis fe m a → H body →
     decHL m dO.toNat dl.toNat = some ds → dO.toNat + dl.toNat < 2 ^ 64 →
@@ -508,9 +508,9 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
   induction n with
-  | zero => intro dn fe vis m m' a dO dl i body ds r h; simp [closeW] at h
+  | zero => intro _dn fe vis m m' a dO dl i body ds r h; simp [closeW] at h
   | succ n ih =>
-    intro dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib hA
+    intro _dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib hA
     by_cases hdl : dl = 0
     · rw [closeW_nil n m dO dl i body hdl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -530,14 +530,14 @@ theorem closeW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
       rcases hr1 : closeW n m (dO + 1) (dl - 1) (i + 1) body with _ | ⟨r1, m1⟩ <;> rw [hr1] at h; · simp [closeK1] at h
       rw [closeK1_some] at h
       obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=
-        ih dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
+        ih _dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
           (by rw [hdo1, hdl1]; exact hbs) (by rw [hdo1, hdl1]; omega) (by rw [hdo1, hdl1]; omega)
           (by rw [hi1, hdl1]; omega) hA
       rw [hi1] at hrun1
       rcases hr2 : abF m1 [CWF, r1.headD 0, i, 0] with _ | ⟨r2, m2⟩ <;> rw [hr2] at h; · simp [closeK2] at h
       rw [closeK2_some] at h
       obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hlt2, hdec2⟩, hA2⟩ :=
-        abF_ok dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
+        abF_ok _dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
       rw [CWF_eq, hdec1, show (0 : Word).toNat = 0 from rfl] at hrun2
       have hg12 := hg1.trans hg2
       have hd0 : dO.toNat < iwTop m := by omega

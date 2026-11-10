@@ -67,7 +67,7 @@ theorem plgW_spec (k : Nat) : ∀ (s₀ : St) (o l : Word),
 
 end spec
 
-theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat) :
+theorem plgW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word),
     plgW k m o l = some (r, m') → StageR vis fe m a → decHL m o.toNat l.toNat = some lps →
     o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
@@ -159,7 +159,7 @@ open L.Arena
 
 /-! ## `struct_ps_at` under the stage relation -/
 
-theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+theorem psGoW_stage (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r : List Word),
     psGoW n m o nP N k = some (r, m') → StageR vis fe m a →
     o.toNat + nP.toNat < 2 ^ 64 → k.toNat + N.toNat ≤ nP.toNat →

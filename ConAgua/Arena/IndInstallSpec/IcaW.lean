@@ -209,7 +209,7 @@ theorem ica_spec (p : Prog) (hp : p.lookup "block_caps_at" = some blockCapsAt) (
   simp only [callFn, blockCapsAt]
   vcgen [exec, step, L.evalE_spec, evalC, evalArgs, setLoc, setLocs,
     callW_spec p n "block_caps_head", callW_spec p n "block_caps_one", callW_spec p n "block_caps_fin"]
-  all_goals simp_all [LocEq, Expr.pval, L.Arena.rd64_rdWC, BinOp.eval, Cmp.eval, St.setLocs_cons,
+  all_goals simp_all [LocEq, Expr.pval, Cmp.eval, St.setLocs_cons,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, -UInt64.not_lt, -UInt64.not_le,
     icaW, icaKH, icaKF_some, icaKW_some]
@@ -281,7 +281,7 @@ theorem installErCopy {p : Prog} (hP : CapsProg p) {n : Nat}
   rw [ieWords_get _ _ _ _ hj'] at h3
   have hin : o.toNat + j < (m.arr64 IW).size := by omega
   have hoj : (o + UInt64.ofNat j).toNat = o.toNat + j := by
-    have := hS.iw.iwSize; simp [UInt64.toNat_add, UInt64.toNat_ofNat]; omega
+    have := hS.iw.iwSize; simp [UInt64.toNat_add]; omega
   simp only [hd?, erA, h3, iwA, aread_apply, rdW, hoj, Array.getElem?_eq_getElem hin, Option.getD_some]
 
 theorem installRec5
@@ -720,11 +720,11 @@ theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1))
     · split at h; · cases h
       split at h; · cases h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-      simp only [erAllocMem]; rw [if_pos (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
+      simp only [erAllocMem]; rw [ite_eq_left (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
     · split at h; · cases h
       split at h; · cases h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-      simp only [erAllocMem]; rw [if_neg (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
+      simp only [erAllocMem]; rw [ite_eq_right (by assumption)]; exact Mem.arr64_set64_ne _ _ _ _ _ hb
   refine ⟨hc _ (by decide), fun x => ?_⟩
   unfold erRd; rw [hc _ (by rw [tierA_EREC]; split <;> decide)]
 
@@ -933,7 +933,7 @@ theorem consBlockInds_refines (p : Prog) (hP : ConsIndsProg p) (n : Nat) (s₀ :
     ⦃fun r s' => LocEq s' s₀ ∧
       StageR (r.headD 0) (ConRon.Arena.consBlockInds bs b cvs i.toNat fe) s'.mem a ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (icbi_spec p hP.cbi n s₀ p1 isRec o l vis i) fun r s' ⟨hl, hm⟩ =>
+  triple_post (icbi_spec p hP.cbi n s₀ p1 isRec o l vis i) fun r _s' ⟨hl, hm⟩ =>
     ⟨hl, icbiW_ok hP p1 isRec bs b hb a n _ _ vis fe o l i cvs r hS hq hsrc hcvs hil hm⟩
 
 end L.Ind

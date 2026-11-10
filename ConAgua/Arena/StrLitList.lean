@@ -437,7 +437,7 @@ theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTy
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
-      nilCK, nilD, nilDK, EREC, getElem_rdW', erRdT_eqV, Cmp.eval, LocEq,
+      nilCK, nilD, nilDK, getElem_rdW', erRdT_eqV, Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -453,7 +453,7 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
     callW_spec p n "pin_at", callW_spec p n "intern_bvar", callW_spec p n "intern_const",
     callW_spec p n "mk_app", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, consK0, consK1, consK2, consK3, consK4, consK5, consK6, consK7,
-      consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK, EREC,
+      consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK,
       getElem_rdW', erRdT_eqV, Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]

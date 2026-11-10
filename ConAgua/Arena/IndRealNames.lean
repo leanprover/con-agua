@@ -90,7 +90,7 @@ theorem nainternW_lt {m m' : Mem} {a : AState} {w : Word} (hR : NAnonR m a)
 
 /-- **`intern_nanon`'s model refines `internNNode .anonymous`** (replaces
 `IndStubs.internNanonStub_spec`). -/
-theorem naF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+theorem naF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RelW naF [] (StageR vis fe) (internNNode .anonymous) (KeepPost vis fe decW0N) := by
   intro m m' a r hc hS
   have hW := naF_W hc
@@ -391,7 +391,7 @@ theorem recBytes_ok (m : Mem) (hpool : PoolOK m)
   simp (config := { decide := true }) [b0, b1, b2]
 
 /-- **`name_rec`'s model refines `internNNode (.str n "rec")`** (replaces `IndStubs.nameRec_spec`). -/
-theorem nrF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
+theorem nrF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word) (hx : H x) :
     RelW nrF [x] (StageR vis fe) (internNNode (.str (decI x) "rec")) (KeepPost vis fe decW0N) := by
   intro m m' a r hc hS
   obtain ⟨n', hc'⟩ := callF_run hc

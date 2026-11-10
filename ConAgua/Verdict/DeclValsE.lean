@@ -456,7 +456,7 @@ l_model valueGuards_specE (p : Prog) (hp : CcvProg p)
 the two walks, the record's level parameters copied to `IW` (`cv_lps`), the declared universe
 parameters (`apdF_okT`, the names read back at the entry), the constants resolving (`crfF_okT`,
 its memo carried across), the unresolved constants' error by `uce_errClaim_lo`. -/
-theorem vg_ref {p : Prog} (hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
+theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem}
     {q v : Word} {cv : IConstantVal} (hS : StageT dn vis fe m a)
     (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32)

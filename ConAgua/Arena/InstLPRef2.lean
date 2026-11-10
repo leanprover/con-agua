@@ -177,7 +177,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
     (vs : List Level) (hA : ArenaD m a) (hmode : ModeOK m) (hwf : StoreWF a.store) (hnc : ReadNCOK a) (hlc : ReadLCOK a)
     (hlsc : ReadLsCOK a) (hsz : (m.arr64 SPN).size < 2 ^ 63) (hctl : 136 < (m.arr64 CTL).size)
     (hus : us.toNat < 2 ^ 32) (hdus : denoteLs a.store.lss (decI us) = some vs)
-    (hlps : hslice? (erecP m) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
+    (hlps : hslice? (erecP m) po.toNat pc.toNat = some lps) (_hpb : po.toNat + pc.toNat < 2 ^ 64)
     (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
     (hfire : FireR m a fk fvo fvc qo qc rl cvjLps)
     (hW : recFireLevelsW p n m fk fvo fvc po pc us qo qc = some (r, m')) :

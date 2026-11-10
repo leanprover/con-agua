@@ -368,7 +368,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
 include hq hP hF hIlpf henv in
 /-- **`gen_rec_check_former_tys_c` refines `ms.mapM (classFormerTy fe cvTas)`, both outcomes**: a
 fresh slice (`iw_alloc`), the loop (`gfcLoop_ref`). -/
-theorem gfc_ref (hg : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC)
+theorem gfc_ref (_hg : p.lookup "gen_rec_check_former_tys_c" = some genRecCheckFormerTysC)
     (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {co cl mo ml : Word}
     {cvTas : List IConstantVal} {ms : List TargetMajor}
     {cvTasP : List ConLeche.ConstantVal} {MsP : List ConLeche.TargetMajor}

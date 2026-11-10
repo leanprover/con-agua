@@ -75,7 +75,7 @@ theorem nhK2_some (h : ¬ r2.headD 0 = 0) : nhK2 k ctx mm off l oo ol (some (r2,
   rw [nhK2, ite_eq_right h]
 theorem nhK3_ok (h : ¬ 4294967296 ≤ v) : nhK3 k ctx mm off l oo ol (some (v, m3)) =
     nhK4 k ctx mm off l (snocW k m3 oo ol v) := by
-  rw [nhK3, if_neg h]
+  rw [nhK3, ite_eq_right h]
 theorem nhK4_some : nhK4 k ctx mm off l (some (r4, m4)) =
     nhGoW k m4 ctx (mm + 1) (off + 1) (l - 1) (r4.headD 0) (r4.tail.headD 0) := by rw [nhK4]
 end arms

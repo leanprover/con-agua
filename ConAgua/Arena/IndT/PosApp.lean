@@ -35,7 +35,7 @@ theorem pfK_pstep {fe : IFEnv} {env : ConLeche.Env} {c : NestCtx} {prog : List N
     {progP : List ConLeche.NestHole} {argsP : List ConLeche.Expr}
     (h : ∀ {β : Type} (K : NestFieldKind → AM β), (pfK fe c prog kb hi i args K).run a = (K x).run a')
     (hok : ConRon.Bridge.CheckOK false env fe a) (hctx : dCtx a.store env.find? c = some ctxP)
-    (hprog : dProg a.store prog = some progP) (hargs : Frontend.denoteEList a.store args = some argsP) :
+    (_hprog : dProg a.store prog = some progP) (hargs : Frontend.denoteEList a.store args = some argsP) :
     PStep a a' := by
   obtain ⟨hcn, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
   have h2 : (pfK fe c prog kb hi i args (fun k => (pure k : AM NestFieldKind))) a = .ok (x, a') := h _

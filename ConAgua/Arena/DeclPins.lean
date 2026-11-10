@@ -42,11 +42,11 @@ theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP 
     have hd : i / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
     have hm : erecP m i = some (m.arr64 EREC)[i] := by
       unfold erecP
-      rw [if_pos (by omega), if_pos hd, Nat.mod_eq_of_lt h40, if_pos (by exact hi)]
+      rw [ite_eq_left (by omega), ite_eq_left hd, Nat.mod_eq_of_lt h40, ite_eq_left (by exact hi)]
       simp [hsz]
     have hm' := hx _ _ hm
     unfold erecP at hm'
-    rw [if_pos (by omega), if_pos hd, Nat.mod_eq_of_lt h40] at hm'
+    rw [ite_eq_left (by omega), ite_eq_left hd, Nat.mod_eq_of_lt h40] at hm'
     split at hm'
     · exact ⟨by assumption, by rw [hm']; simp [hsz]⟩
     · cases hm'

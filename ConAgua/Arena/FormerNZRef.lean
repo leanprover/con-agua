@@ -342,7 +342,7 @@ theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState)
       split at h
       · cases h
       · rename_i u hu
-        simp only [StateT.run_pure, Prod.mk.injEq, Option.some.injEq] at h
+        simp only [StateT.run_pure] at h
         obtain ⟨rfl, rfl⟩ := h
         exact ⟨w, ConRon.Bridge.view_of_viewSort (by simpa using htg) hu⟩
     · cases h

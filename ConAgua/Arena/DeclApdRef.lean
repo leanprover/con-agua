@@ -662,7 +662,7 @@ at the twin fuel `f.toNat` exactly (the L walk's fuel word is the twin's; the ex
 bounds the depth). -/
 @[refines ConRon.Arena.allLevelParamsDefinedGo]
 theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l f h : Word)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l f h : Word)
     (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name) (hh : H h)
     (hS : StageR vis fe s₀.mem a₀) (env : ApdEnv a₀)
     (hps : NmsR (nameN a₀.store.lss.ls.ns) s₀.mem IW o l ks) (hM : apdMR s₀.mem mp) :
@@ -695,7 +695,7 @@ the twin side must provide `ApdEnv` (the name store well formed, the `sort`/`con
 `StoreDen` read back) and the walk's memo well formed on entry (it is cleared first, so any
 `MemoRV` memo will do). The result is `0`/`1`; the stage relation and the pool's growth are kept. -/
 @[refines ConRon.Arena.allLevelParamsDefined]
-theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx → Option ConLeche.Name)
+theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (_dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (o l e : Word) (he : H e) (lps : List NIdx) :
     RefAM p "all_level_params_defined" [o, l, e]
       (fun m a => StageR vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧

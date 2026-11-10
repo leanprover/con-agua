@@ -47,7 +47,7 @@ theorem mentionsAnyConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec maSch p _ hcl n, ih] <;>
     finish
 
-theorem maConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem maConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
     (hb : maConstW n m no nl e = some (r, m')) (hS : StageR vis fe m a) (hh : H e)
     (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hM : maMR m mp0) :
@@ -127,7 +127,7 @@ include hv hc hf hput hgo hnode
 /-- **`nest_occ_go` (with `nest_occ_node`) refines `nestOccGo`**, from a memo related to
 the twin's. -/
 @[refines ConRon.Arena.nestOccGo]
-theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lo hi f h : Word) (ws : List Word) (mp : Std.HashMap EIdx Bool) (hh : H h)
     (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hM : noMR s₀.mem mp) :
@@ -166,7 +166,7 @@ theorem nestOcc_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec noSch p _ hcl n, ih] <;>
     finish
 
-theorem noConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (ws : List Word) (mp0 : Std.HashMap EIdx Bool)
     (hb : noConstW n m no nl lo hi e = some (r, m')) (hS : StageR vis fe m a) (hh : H e)
     (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hM : noMR m mp0) :
@@ -314,7 +314,7 @@ include hv hf hp
 
 /-- **`member_idx_at` refines `memberIdxAt?`**. -/
 @[refines ConRon.Arena.memberIdxAt?]
-theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl lvls e : Word) (ws : List Word) (he : H e) (hlv : H lvls)
     (hS : StageR vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hlen : ws.length < 2 ^ 64) :
@@ -579,7 +579,7 @@ include hv hp
 
 /-- **`ph_app` refines `phApp?`**: the constant applied to exactly the placeholders. -/
 @[refines ConRon.Arena.phApp?]
-theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+theorem phApp_refines (k : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis b e n : Word) (N : Nat) (hN : n.toNat = N) (he : H e)
     (hb : b.toNat + N < 2 ^ 64) (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "ph_app" [b, e, n]

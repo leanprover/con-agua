@@ -46,7 +46,7 @@ def basisOfW : Nat → ConLeche.BasisKind
 /-! ## Result decoders (below the tops) -/
 
 /-- A constant record at `r[0]`, decoded below the record pool's top. -/
-def decRCI (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) (ci : IConstantInfo) :
+def decRCI (_dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word) (ci : IConstantInfo) :
     Prop :=
   DecB (fun m => decCI (erA m) (r.headD 0).toNat) m ci
 

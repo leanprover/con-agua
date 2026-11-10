@@ -96,7 +96,7 @@ theorem decCI_walk {a : Array Word} {p : Nat} {ci : IConstantInfo}
         (kw ≠ 5 ∧ ∀ v mi rp k rules, ci ≠ .recInfo v mi rp k rules)) := by
   simp only [decCI, nat?, aread_apply] at h
   cases hk : a[p]? with
-  | none => simp [nat?, hk] at h
+  | none => simp [hk] at h
   | some kw =>
   simp only [hk, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   have hne : ∀ n, kw.toNat = n → n ≠ 5 → kw ≠ 5 := by

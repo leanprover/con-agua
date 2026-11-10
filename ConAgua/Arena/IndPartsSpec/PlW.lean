@@ -88,7 +88,7 @@ theorem partsFreshGet {vis : Word} {fe : IFEnv} {a : AState}
 /-- **What the sims need of the `lvl_eq_c` call** (at fuel `n + 2`, through `c`): its `Sim` at every
 twin state `a1` the twin's prefix reaches with the sort `sv` (`T sv a1`) and every memory `m1` the
 model's prefix reaches from `m` (`AFr m m1`). -/
-def LvlHyp (c : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def LvlHyp (c : CallM) (n : Nat) (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (m : Mem) (T : LIdx → AState → Prop) : Prop :=
   ∀ (sv : LIdx) (a1 : AState) (s z : Word) (m1 : Mem), T sv a1 → AFr m m1 → StageR vis fe m1 a1 →
     H s → decI s = sv → pinWordV m1 53 = some z →

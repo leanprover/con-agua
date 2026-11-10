@@ -130,7 +130,7 @@ theorem decPL_head {m : Mem} {α : Type} {f : Nat → Option α} {o k : Nat} {x 
   obtain ⟨v, hv, y, hy, ys, -, rfl, -⟩ := h
   exact ⟨v, hv, hy⟩
 
-theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m0 m m' : Mem) (a : AState) (ro rl : Word) (r : List Word) (recs : List RecShape),
     recUW n m ro rl = some (r, m') → IWGrow m0 m → StageR vis fe m a →
     (∀ m'', IWGrow m0 m'' → decPL m'' (decRS m'') ro.toNat rl.toNat = some recs) →
@@ -138,9 +138,9 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
     ∃ b a', (ConRon.Arena.blockRecNamesUnreserved recs).run a = .ok (b, a') ∧
       r = [if b then 1 else 0] ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   induction n with
-  | zero => intro dn fe vis m0 m m' a ro rl r recs h; simp [recUW] at h
+  | zero => intro _dn fe vis m0 m m' a ro rl r recs h; simp [recUW] at h
   | succ n ih =>
-    intro dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
+    intro _dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
     by_cases hl : rl = 0
     · rw [recUW_nil n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -175,7 +175,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       rw [hrd] at h
       obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (by simp [recUK1])
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
-        rrnF_ok dn vis fe _ hn32 m m1 a r1 hra hS
+        rrnF_ok _dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
       by_cases hhit : r1.headD 0 ≠ 0
       · rw [recUK1_hit n m1 ro rl r1 hhit] at h
@@ -194,7 +194,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         have hro1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
         have hrl1 : (rl - 1).toNat = k := by
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
-        obtain ⟨b, a2, hrun2, hr2, hS2, hg2⟩ := ih dn fe vis m0 m1 m2 a1 (ro + 1) (rl - 1) r2 rest
+        obtain ⟨b, a2, hrun2, hr2, hS2, hg2⟩ := ih _dn fe vis m0 m1 m2 a1 (ro + 1) (rl - 1) r2 rest
           hrec ((IWGrow.trans (hg0) hg1)) hS1
           (fun m'' hg'' => by
             rw [hro1, hrl1]
@@ -231,7 +231,7 @@ theorem blockRecNamesUnreserved_refines (p : Prog)
 /-! ## `check_shapeless_formers` -/
 
 /-- A block: an `EREC` slice of constant-record pointers, decoded. -/
-def decEBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (off cnt : Nat) :
+def decEBlk (_dn : NIdx → Option ConLeche.Name) (m : Mem) (off cnt : Nat) :
     Option (List IConstantInfo) :=
   (List.range cnt).mapM fun j => do decCI (erA m) (← nat? (erA m) (off + j))
 
@@ -461,7 +461,7 @@ theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
   | none => intro hf h; simp only at h; rw [← hf, h]; decide
   | some b => cases b <;> (intro hf h; simp only at h; rw [← hf, h]; decide)
 
-theorem wsC_ok (cR : CallM) (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+theorem wsC_ok (cR : CallM) (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
     (h : wsC cR n m p s = some (r, m')) (hS : StageR vis fe m a) (hs : s.toNat < 2 ^ 32)
     (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m)

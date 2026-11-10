@@ -404,7 +404,7 @@ theorem exprGetD_spec (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
       internBVar_spec p hpf hpp hib n] <;>
     finish [exprGetDW]
 
-theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+theorem exprGetDW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (o l i : Word) (xs : List EIdx) (r : List Word)
     (h : exprGetDW m o l i = some (r, m')) (hS : StageR vis fe m a)
     (hxs : decHL m o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
@@ -565,7 +565,7 @@ theorem fvarHeadW_ok (vis : Word) (fe : IFEnv) (m m' : Mem)
 @[refines ConRon.Arena.fvarHead]
 theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
     (hv : p.lookup "e_view" = some eView) (had : AdF p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
+    (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
     (hS : StageR vis fe s₀.mem a₀) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "fvar_head" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.fvarHead (decI e)) a₀ ∧

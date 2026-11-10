@@ -508,7 +508,7 @@ theorem ownRaw_ownSet_self {m : Mem} {w c p : Word} (ht : rowTag w ≤ 2)
     (ownRaw (ownSet m w c p) w).1 = c ∧ (c ≠ 0 → (ownRaw (ownSet m w c p) w).2 = p) := by
   have hr : ownRow (ownSet m w c p) w = (rowWord m c, p) := by
     rw [ownRow_eq]
-    simp [ownSet, rdN_set64, ixW_toNat, ixW_succ, hb, Nat.lt_of_succ_lt hb, rowIx_mod, Mem.arr64_set64_same, Array.size_set!, rdN, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_setIfInBounds]
+    simp [ownSet, ixW_toNat, hb, Nat.lt_of_succ_lt hb, rowIx_mod, Mem.arr64_set64_same, rdN, Array.set!_eq_setIfInBounds, Array.size_setIfInBounds]
   simp only [ownRaw, stampW_ownSet, hr, ht, true_and]
   by_cases hc : c = 0
   · subst hc; simp only [rowWord_zero]; split <;> simp
@@ -530,8 +530,7 @@ theorem ownRaw_ownSet_other {m : Mem} {w c p w' : Word} (hw : w.toNat < 2 ^ 32)
         have n3 : rowIx w ≠ rowIx w' + 1 := by omega
         have n4 : rowIx w + 1 ≠ rowIx w' + 1 := by omega
         rw [ha]
-        simp [ownSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-          Array.getElem?_setIfInBounds, ixW_toNat, ixW_succ, rowIx_mod, n1, n2, n3, n4]
+        simp [ownSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, ixW_toNat, rowIx_mod, n1, n2, n3]
       · simp [ownSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
     simp only [ownRaw, stampW_ownSet, hr]
   · simp [ownRaw, ht']
@@ -658,8 +657,8 @@ theorem EnvR.find_eq (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) :
   simp only [ownFind, ownHit, baseHit]
   by_cases c1 : (ownRaw m w).1 ≠ 0 ∧ (ownRaw m w).1.toNat - 1 < vis.toNat
   · obtain ⟨ci, hci⟩ := hd c1.1
-    rw [if_pos c1, if_pos ⟨c1.1, (sub1_lt_iff c1.1).mpr c1.2⟩, hci]
-  · rw [if_neg c1, if_neg (fun e => c1 ⟨e.1, (sub1_lt_iff e.1).mp e.2⟩)]
+    rw [ite_eq_left c1, ite_eq_left ⟨c1.1, (sub1_lt_iff c1.1).mpr c1.2⟩, hci]
+  · rw [ite_eq_right c1, ite_eq_right (fun e => c1 ⟨e.1, (sub1_lt_iff e.1).mp e.2⟩)]
     simp only [IFBase.find?, h.below]
     cases e : fe.base.idx[(decI w : NIdx)]? with
     | none =>
@@ -678,8 +677,8 @@ theorem EnvR.find_eq (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) :
         rw [← hci]
         dsimp only
         by_cases l : UInt64.toNat (baseRow m w).fst - 1 < UInt64.toNat (rdW (m.arr64 CTL) 134)
-        · rw [if_pos l, if_pos ⟨b0, (sub1_lt_iff b0).mpr l⟩]
-        · rw [if_neg l, if_neg (fun e => l ((sub1_lt_iff b0).mp e.2))]
+        · rw [ite_eq_left l, ite_eq_left ⟨b0, (sub1_lt_iff b0).mpr l⟩]
+        · rw [ite_eq_right l, ite_eq_right (fun e => l ((sub1_lt_iff b0).mp e.2))]
 
 /-- A hit decodes. -/
 theorem EnvR.hit_dec (h : EnvR m vis fe) {w : Word} (hw : w.toNat < 2 ^ 32) :
@@ -746,8 +745,8 @@ theorem EnvR.rawTable_eq (h : EnvR m vis fe) {t : Word} (ht : t.toNat < 2 ^ 32) 
         rw [← htb]
         dsimp only
         by_cases l : UInt64.toNat (baseTbl m t).fst - 1 < UInt64.toNat (rdW (m.arr64 CTL) 135)
-        · rw [if_pos l, if_pos ⟨b0, (sub1_lt_iff b0).mpr l⟩]
-        · rw [if_neg l, if_neg (fun e => l ((sub1_lt_iff b0).mp e.2))]
+        · rw [ite_eq_left l, ite_eq_left ⟨b0, (sub1_lt_iff b0).mpr l⟩]
+        · rw [ite_eq_right l, ite_eq_right (fun e => l ((sub1_lt_iff b0).mp e.2))]
   · obtain ⟨tb, htb⟩ := hd c1
     simp only [c1, ite_false, ne_eq, not_false_eq_true, ite_true, htb]
 
@@ -832,7 +831,7 @@ theorem OwnBelow.of_ownSet {m : Mem} {w c p : Word} (h : OwnBelow m) (hc32 : c.t
   · rw [ownRow_eq] at h1 ⊢
     have e1 := rowIx_even w; have e2 := rowIx_even x
     simp only [ownSet, rdN_set64, ixW_succ, ixW_toNat]
-    rw [if_neg (fun hh => by omega)]
+    rw [ite_eq_right (fun hh => by omega)]
     split
     · by_cases hc : c = 0
       · subst hc; simp [rowWord_zero]
@@ -935,7 +934,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
       · obtain ⟨ci, hci⟩ := hcd c0
         simp only [IFEnv.popTemp, c0, ite_false, hci, Std.HashMap.getElem?_insert, beq_self_eq_true,
           ite_true, s2 c0, ne_eq, not_false_eq_true, true_and]
-        rw [if_pos (hcv c0)]
+        rw [ite_eq_left (hcv c0)]
     · have hidx : (fe.popTemp (decI w) (if c = 0 then none else decCI (erecP m) q.toNat)).idx[n]? =
           fe.idx[n]? := by
         simp only [IFEnv.popTemp]; split <;> simp [Std.HashMap.getElem?_insert, Std.HashMap.getElem?_erase, hkey, e]
@@ -1002,9 +1001,9 @@ theorem ownTbl_eq (m : Mem) (w : Word) : ownTbl m w =
 theorem ownTbl_tblSet_self {m : Mem} {w v : Word} (ht : rowTag w ≤ 2)
     (hb : rowIx w + 1 < (m.arr64 (otxArrT w)).size) : ownTbl (tblSet m w v) w = v := by
   rw [ownTbl_eq]
-  simp [tblSet, stampW, ht, ixW_toNat, ixW_succ, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
+  simp [tblSet, stampW, ht, ixW_toNat, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
     Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (ctl_ne_otxArrT w), rdN,
-    Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_setIfInBounds]
+    Array.set!_eq_setIfInBounds, Array.size_setIfInBounds]
 
 theorem ownTbl_tblSet_other {m : Mem} {w v x : Word} (hw : w.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32)
     (ht : rowTag w ≤ 2) (hne : x ≠ w) : ownTbl (tblSet m w v) x = ownTbl m x := by
@@ -1021,8 +1020,7 @@ theorem ownTbl_tblSet_other {m : Mem} {w v x : Word} (hw : w.toNat < 2 ^ 32) (hx
       have n3 : rowIx w ≠ rowIx x + 1 := by omega
       have n4 : rowIx w + 1 ≠ rowIx x + 1 := by omega
       rw [ha]
-      simp [tblSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-        Array.getElem?_setIfInBounds, ixW_toNat, ixW_succ, rowIx_mod, n1, n2, n3, n4]
+      simp [tblSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, ixW_toNat, rowIx_mod, n1, n2, n3]
       rfl
     · simp [tblSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
   · simp [ownTbl, ht']
@@ -1039,7 +1037,7 @@ theorem OwnBelow.of_tblSet {m : Mem} {w v : Word} (h : OwnBelow m) : OwnBelow (t
   · have e1 := rowIx_even w; have e2 := rowIx_even x
     show (rdN ((tblSet m w v).arr64 (otxArrT x)) (rowIx x)).toNat ≤ _
     simp only [tblSet, rdN_set64, ixW_succ, ixW_toNat]
-    rw [if_neg (fun hh => by omega)]
+    rw [ite_eq_right (fun hh => by omega)]
     split
     · exact Nat.le_refl _
     · exact h2
@@ -1102,8 +1100,8 @@ theorem tixArr_inj {g g' : Nat} (h : g ≤ 2) (h' : g' ≤ 2) (e : tixArr g = ti
 
 theorem baseRow_baseSet_self {m : Mem} {w c p : Word} (ht : rowTag w ≤ 2) (h0 : rowTier w = 0)
     (hb : rowIx w + 1 < (m.arr64 (eixArr (rowTag w))).size) : baseRow (baseSet m w c p) w = (c, p) := by
-  simp [baseRow, baseSet, ht, h0, rdN, ixW_toNat, ixW_succ, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
-    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
+  simp [baseRow, baseSet, ht, h0, rdN, ixW_toNat, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
+    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
     Array.size_setIfInBounds]
 
 theorem baseRow_baseSet_other {m : Mem} {w c p x : Word} (hw : w.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32)
@@ -1119,16 +1117,15 @@ theorem baseRow_baseSet_other {m : Mem} {w c p x : Word} (hw : w.toNat < 2 ^ 32)
       have n3 : rowIx w ≠ rowIx x + 1 := by omega
       have n4 : rowIx w + 1 ≠ rowIx x + 1 := by omega
       rw [ha]
-      simp [baseSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-        Array.getElem?_setIfInBounds, ixW_toNat, ixW_succ, rowIx_mod, n1, n2, n3, n4]
+      simp [baseSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, ixW_toNat, rowIx_mod, n1, n2, n3]
     · simp [baseSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
   · simp only [baseRow, ht', ite_false]
 
 theorem baseTbl_baseTblSet_self {m : Mem} {w r p : Word} (ht : rowTag w ≤ 2) (h0 : rowTier w = 0)
     (hb : rowIx w + 1 < (m.arr64 (tixArr (rowTag w))).size) :
     baseTbl (baseTblSet m w r p) w = (r, p) := by
-  simp [baseTbl, baseTblSet, ht, h0, rdN, ixW_toNat, ixW_succ, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
-    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
+  simp [baseTbl, baseTblSet, ht, h0, rdN, ixW_toNat, hb, Nat.lt_of_succ_lt hb, rowIx_mod,
+    Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
     Array.size_setIfInBounds]
 
 theorem baseTbl_baseTblSet_other {m : Mem} {w r p x : Word} (hw : w.toNat < 2 ^ 32)
@@ -1145,8 +1142,7 @@ theorem baseTbl_baseTblSet_other {m : Mem} {w r p x : Word} (hw : w.toNat < 2 ^ 
       have n3 : rowIx w ≠ rowIx x + 1 := by omega
       have n4 : rowIx w + 1 ≠ rowIx x + 1 := by omega
       rw [ha]
-      simp [baseTblSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
-        Array.getElem?_setIfInBounds, ixW_toNat, ixW_succ, rowIx_mod, n1, n2, n3, n4]
+      simp [baseTblSet, rdN, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, ixW_toNat, rowIx_mod, n1, n2, n3]
     · simp [baseTblSet, Mem.arr64_set64_ne _ _ _ _ _ ha]
   · simp only [baseTbl, ht', ite_false]
 
@@ -1525,7 +1521,7 @@ theorem envPopTemp_refines (hs : p.lookup "env_row_set" = some envRowSetL)
       EnvR s'.mem (vis - 1) (fe.popTemp (decI w) (if c = 0 then none else decCI (erecP s₀.mem) q.toNat)) ∧
       s'.mem = ownSet s₀.mem w c q; ⊤⦄ :=
   triple_post (envPopTemp_spec p hs hp n s₀ vis w c q) fun r s ⟨h1, h2, h3, h4, h5⟩ => by
-    refine ⟨h2, by rw [h3, if_neg hv], ?_, h1⟩
+    refine ⟨h2, by rw [h3, ite_eq_right hv], ?_, h1⟩
     rw [h1]; exact hE.popTemp hw h4 h5 hv htop hc32 hcv hcd hfree
 
 theorem envPushTable_spec (hs : p.lookup "tbl_own_set" = some tblOwnSetL)

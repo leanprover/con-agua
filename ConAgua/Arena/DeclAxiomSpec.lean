@@ -152,7 +152,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
 /-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** (through the ROM readers' refinements). -/
 @[refines ConRon.Arena.ofReduceAxOk]
 theorem ofReduceAxOk_refines (p : Prog) (h : OraProg p) (dn : NIdx → Option ConLeche.Name)
-    (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
+    (_hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "of_reduce_ax_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (ofReduceAxOk fe cv) (KeepPost vis fe decW0B) := by

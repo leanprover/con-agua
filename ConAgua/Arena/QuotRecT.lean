@@ -110,8 +110,8 @@ theorem quotPredsOkW_ok {p : Prog} (hB : BasisProg p) (hpa : p.lookup "pin_at" =
   have e0 : (pinEq).run a = .ok (decI w1, a) := hp1
   have e47 : (pinQuot).run a = .ok (decI w3, a) := hp3
   have e51 : (pinQuotMk).run a = .ok (decI w5, a) := hp5
-  simp only [ConRon.Arena.quotPredsOk, StateT.run_bind, e0, exb, e47, e51, exm, StateT.run_pure]
-  cases k <;> simp [ConLeche.QuotKind.slot, quotPredsOkW.k_env_find_3, Except.bind, StateT.run_pure,
+  simp only [ConRon.Arena.quotPredsOk, StateT.run_bind, e0, exb, e47, e51, StateT.run_pure]
+  cases k <;> simp [ConLeche.QuotKind.slot, quotPredsOkW.k_env_find_3,
       hf1, hf3, hf5] at h ⊢ <;>
     first
     | (obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩)
@@ -226,7 +226,7 @@ theorem cqr_ref {p : Prog} (hP : QuotRecProg p) (hcl : LeafClosed p) {dn : NIdx 
   have hb : b = true := by simp_all
   subst hb
   rw [checkQuotRecordE.k_quot_pin_hit.arm1 p _ _ _ _ _ _ h0]
-  simp only [ite_true, Bool.not_true]
+  simp only [ite_true]
   refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_preds_ok.none ..)
     (Q := fun r2 m2 => m1 = m2 ∧ (ConRon.Arena.quotPredsOk fe k).run a1 = .ok ((r2.headD 0 != 0), a1))
     (fun r m2 h => let ⟨e, h'⟩ := callW_quotPredsOk hP k hS1.stage h; ⟨e.symm, h'⟩) fun r2 m2 ⟨hm2, hrun2⟩ => ?_
@@ -237,7 +237,7 @@ theorem cqr_ref {p : Prog} (hP : QuotRecProg p) (hcl : LeafClosed p) {dn : NIdx 
     simp only [h2, bne_self_eq_false]
     exact fun _ => ErrClaim.bind_left (ErrClaim.fail_abort _ _ (by decide))
   rw [checkQuotRecordE.k_quot_preds_ok.arm1 p _ _ _ _ _ _ h2]
-  simp only [bne_iff_ne, ne_eq, h2, not_false_eq_true, decide_true, ite_true, pure_bind]
+  simp only [bne_iff_ne, ne_eq, h2, not_false_eq_true, ite_true]
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.ext hq
   refine RefE.onlySim (fun _ => checkQuotRecordE.k_quot_at.none ..)
     (fun r m3 h => hQ.qat n vis fe m1 a1 q cv c k hS1 hst1.ok hst1.read hq1

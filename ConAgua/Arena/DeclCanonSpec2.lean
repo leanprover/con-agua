@@ -45,7 +45,7 @@ end specs
 /-! ## The relational lemma -/
 
 theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
+    (_hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) x.toNat = some ci) :
     decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
   have hcv := ciD_cv hci

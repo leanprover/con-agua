@@ -87,7 +87,7 @@ theorem icbc_spec (p : Prog) (hp : p.lookup "cons_block_ctors" = some consBlockC
 
 /-- **`cons_block_ctors`' model refines `consBlockCtors`.** -/
 theorem icbcW_ok (p : Prog) (hRp : RecProg p) (hci : p.lookup "ctor_info_rec" = some ctorInfoRecL)
-    (hcs : p.lookup "cons_sum_ctors" = some consSumCtorsL) (dn : NIdx → Option ConLeche.Name)
+    (hcs : p.lookup "cons_sum_ctors" = some consSumCtorsL) (_dn : NIdx → Option ConLeche.Name)
     (nP : Word) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (o l : Word)
       (css : List (List (IConstantVal × Nat))) (r : List Word),

@@ -246,7 +246,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have g2' : (to + tn).toNat < (m₁.arr64 SPN).size := by
     have hsz := hS₁.spn
     have e : (UInt64.ofNat (m₁.arr64 SPN).size).toNat = (m₁.arr64 SPN).size := by
-      simp only [UInt64.toNat_ofNat', UInt64.size]; exact Nat.mod_eq_of_lt (by omega)
+      simp only [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
     have : ¬ (UInt64.ofNat (m₁.arr64 SPN).size ≤ to + tn) := g1
     rw [UInt64.le_iff_toNat_le, e] at this
     omega

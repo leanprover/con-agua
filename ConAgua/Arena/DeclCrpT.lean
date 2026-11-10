@@ -133,7 +133,7 @@ theorem rcv_simT (hC : CrpProg p) (hcl : LeafClosed p) (n : Nat) {m : Mem} {a : 
   intro r m' h
   obtain ⟨s', hs', -, hok, hS', hg, hd⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reduceCertVar_refines (p := p) (hp := hC.rcv) (n := n) (s₀ := ⟨m, Locals.init []⟩) (a₀ := a)
-      (dn := dn) (fe := fe) (vis := vis) (c := c) (hS := hS.stage) (hc := hc)) h
+      (fe := fe) (vis := vis) (c := c) (hS := hS.stage) (hc := hc)) h
   subst hs'
   have hrun := AM.run_of_ok _ _ hok
   obtain ⟨hst, hden⟩ := ConRon.Bridge.reduceCertVar_run hck.state hck.pins hnm hrun
@@ -730,7 +730,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
         List NIdx).contains (decI wn) = true := by
       simp only [List.contains_cons, List.contains_nil, Bool.or_false, hb43, hb44]
       simpa using hop
-    rw [if_pos hcont]
+    rw [ite_eq_left hcont]
     -- the reduce-pin gate
     have hok2' := hok2.toStepOK.push hok2.check.state hci2 hsh2 hcw2
     refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_reduce_pin.none ..) id
@@ -746,7 +746,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
         List NIdx).contains (decI wn) = false := by
       simp only [List.contains_cons, List.contains_nil, Bool.or_false, hb43, hb44]
       simpa using hop
-    rw [if_neg (by rw [hcont]; decide)]
+    rw [ite_eq_right (by rw [hcont]; decide)]
     exact RefE.bind_right rfl (push hS4.stage (IWGrow.refl _) hS4.twin.memos)
 
 end L.Arena

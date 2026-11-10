@@ -394,7 +394,7 @@ def CcRes (m' : Mem) (r : List Word) (keys : List ClassKey) : Prop :=
     decPL m' (decCK m') (r.headD 0).toNat (r.tail.headD 0).toNat = some keys ∧
     (∀ k ∈ ptrs, CKExt m' k) ∧ (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
 
-theorem rcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState) (n : Nat) :
+theorem rcW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (a : AState) (n : Nat) :
     ∀ (m m' : Mem) (so sl : Word) (r : List Word) (slots : List ClassSlot),
     rcW n m so sl = some (r, m') → StageR vis fe m a →
     decPL m (decCS m) so.toNat sl.toNat = some slots → SlotsExt m so.toNat sl.toNat →

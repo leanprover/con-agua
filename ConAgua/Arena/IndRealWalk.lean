@@ -84,7 +84,7 @@ theorem lbbF_frame {m m' : Mem} {args r : List Word} (h : lbbF m args = some (r,
 
 /-- **`loose_bvars_bounded_fast`'s model refines `looseBVarsBoundedFast` under the stage relation**
 (replaces `IndStubs.looseBVarsBoundedFast_spec`). -/
-theorem lbbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f k e : Word)
+theorem lbbF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f k e : Word)
     (he : H e) :
     RelW lbbF [f, k, e] (StageR vis fe) (looseBVarsBoundedFast f.toNat k.toNat (decI e))
       (KeepPost vis fe decW0B) := by
@@ -162,7 +162,7 @@ theorem fvarBL_spec (p : Prog) (hp : AbsProg p) (hpf : p.lookup "fvar_b" = some 
 
 /-- **`fvar_b`'s model refines `fvarB` under the stage relation** (replaces
 `IndStubs.fvarB_spec`). -/
-theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
+theorem fvbF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
     RelW fvbF [f, e] (StageR vis fe) (fvarB f.toNat (decI e)) (KeepPost vis fe decW0Nat) := by
   intro m m' a r h hS
@@ -179,7 +179,7 @@ theorem fvbF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
 
 /-- **`has_fvar_fast`'s model refines `hasFvarFast` under the stage relation** (replaces
 `IndStubs.hasFvarFast_spec`). -/
-theorem hffF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
+theorem hffF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word)
     (he : H e) :
     RelW hffF [f, e] (StageR vis fe) (hasFvarFast f.toNat (decI e)) (KeepPost vis fe decW0B) := by
   intro m m' a r h hS

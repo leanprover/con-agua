@@ -361,7 +361,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** (through the ROM readers' refinements). -/
 @[refines ConRon.Arena.stdAxiomOk]
 theorem stdAxiomOk_refines (p : Prog) (h : StdProg2 p) (dn : NIdx → Option ConLeche.Name)
-    (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
+    (_hdn : DnInj dn) (vis : Word) (fe : IFEnv) (q : Word) (cv : IConstantVal) :
     RefAM p "std_axiom_ok" [vis, q]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (stdAxiomOk fe cv) (KeepPost vis fe decW0B) := by

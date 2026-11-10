@@ -61,7 +61,7 @@ theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL
       (fun hc0 n' hn' e => by
         rw [hown n'] at e
         have hne : n' ≠ ci.name := fun h => hn' (by rw [h, hnm, hwn])
-        simp only [updC, if_neg hne] at e
+        simp only [updC, ite_eq_right hne] at e
         exact hne (hE.uniq n' ci.name (by simp only [ownC] at e; rw [e]; exact hc0)
           (by simp only [ownC] at e; rw [e, hcC]; rfl))))
     h3

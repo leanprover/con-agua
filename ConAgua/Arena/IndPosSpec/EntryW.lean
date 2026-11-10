@@ -297,7 +297,7 @@ theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestRe
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         gafF_spec p had n] <;> finish [resHeadW]
 
-theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
+theorem resHeadW_ok (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
     (e : Word) (r : List Word) (he : H e) (h : resHeadW m e = some (r, m')) (hS : StageR vis fe m a) :
     ∃ a', (ConRon.Arena.nestResHead (decI e)).run a = .ok (r.headD 0 != 0, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' := by

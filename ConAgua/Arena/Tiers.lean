@@ -488,12 +488,12 @@ theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP 
     · simp only [hi, ite_true] at hv ⊢
       by_cases ht : i % 2 ^ 40 < erecTop m
       · simp only [ht, ite_true] at hv
-        rw [if_pos (Nat.lt_of_lt_of_le ht h.top), h.get _ ht]; exact hv
+        rw [ite_eq_left (Nat.lt_of_lt_of_le ht h.top), h.get _ ht]; exact hv
       · simp [ht] at hv
     · simp only [hi, ite_false] at hv ⊢
       by_cases ht : i % 2 ^ 40 < erecTop1 m
       · simp only [ht, ite_true] at hv
-        rw [if_pos (Nat.lt_of_lt_of_le ht h.top1), h.get1 _ ht]; exact hv
+        rw [ite_eq_left (Nat.lt_of_lt_of_le ht h.top1), h.get1 _ ht]; exact hv
       · simp [ht] at hv
   · simp [h64] at hv
 
@@ -713,7 +713,7 @@ theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
       | none => rw [e] at this; simp_all
       | some y =>
         rw [e] at this
-        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
           Prod.mk.injEq] at this
         rw [← this.2, hx.decCI this.2.symm]
   · have := h.btbl n; rw [hbt]
@@ -723,7 +723,7 @@ theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
       | none => rw [e] at this; simp_all
       | some y =>
         rw [e] at this
-        simp only [Option.map_some, ite_cond_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
           Prod.mk.injEq] at this
         rw [← this.2, hx.decTbl this.2.symm]
 

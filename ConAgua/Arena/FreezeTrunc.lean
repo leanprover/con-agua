@@ -39,7 +39,7 @@ open ConRon.Arena
 
 theorem PinsR.trunc {m : Mem} {p : Pins} (h : PinsR m p) : PinsR (truncFrozen m) p := by
   have hw : ∀ i, i < 72 → pinW (truncFrozen m) i = pinW m i := fun i hi => by
-    simp only [pinW, truncFrozen_pins, Array.getElem?_extract, Nat.zero_add, Array.size_extract]
+    simp only [pinW, truncFrozen_pins, Array.getElem?_extract, Nat.zero_add]
     by_cases h2 : i < (m.arr64 PINS).size <;> simp [hi, h2, Nat.lt_min]
   refine ⟨fun h0 => ?_⟩
   have hf := h.full (by rwa [← hw 0 (by decide)])
@@ -378,9 +378,9 @@ theorem DeclsF.trunc {m : Mem} {ds : Array IDeclaration}
   have hptop := h.ptop
   have hps := h.psize
   have hr0 : rdW (m.arr64 L.Front.DECL) 0 = ((m.arr64 L.Front.DECL)[0]?.getD 0) := by
-    simp [rdW, Array.getD_eq_getD_getElem?]
+    simp [rdW]
   have hp0 : rdW (m.arr64 L.Front.DLP) 0 = ((m.arr64 L.Front.DLP)[0]?.getD 0) := by
-    simp [rdW, Array.getD_eq_getD_getElem?]
+    simp [rdW]
   apply DeclsF.extract h
   · rw [hr0, UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
   · rw [hp0, UInt64.toNat_add]; simp; omega

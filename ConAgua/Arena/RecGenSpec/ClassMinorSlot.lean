@@ -128,7 +128,7 @@ theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAt
       gafF_spec p had n, eView_spec p hv n] <;>
     finish (gen := 20) [leafAtW, rdW_eq]
 
-theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+theorem leafAtW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (Mp leaf : Word) (bigM : TargetMajor) (r : List Word) (hS : StageR vis fe m a)
     (hl : H leaf) (hM : decTM m Mp.toNat = some bigM) (hMt : Mp.toNat < iwTop m)
     (h : leafAtW m Mp leaf = some (r, m')) :

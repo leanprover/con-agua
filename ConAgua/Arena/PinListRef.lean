@@ -92,9 +92,9 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
     rcases hyk with ⟨k0, -⟩ | ⟨k0, -⟩ | ⟨k0, -⟩ | ⟨-, cv', caps', hcv', -, rfl⟩ | ⟨k0, -⟩ | ⟨k0, -⟩ <;>
       try (simp at k0)
     have hb := cvEqB_ok' (erRdOK m) (p := c) (q := d) (k := 1) (kn := 1) rfl hcv hcv'
-    simp only [List.headD_cons, hr1, hm1, hb, ConRon.Arena.pinAgrees, beq_iff_eq]
+    simp only [List.headD_cons, hr1, hb, ConRon.Arena.pinAgrees, beq_iff_eq]
     by_cases hcc : cv = cv' <;> simp [hcc]
-  · rw [pinAgreesW.eq_2, if_neg h3] at hW
+  · rw [pinAgreesW.eq_2, ite_eq_right h3] at hW
     cases h1 : callW p n "ci_eq" [c, d] m with
     | none => rw [h1] at hW; simp [pinAgreesW.k_cv_eq] at hW
     | some x1 =>
@@ -114,7 +114,7 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
       cases e1; cases e1'
       exact ⟨UInt64.toNat_inj.mp (by rw [k0]; rfl), UInt64.toNat_inj.mp (by rw [k1]; rfl)⟩
     have hb := ciEqB_ok (erRdOK m) hx hy
-    simp only [List.headD_cons, hr1, hm1, hb, pinAgrees_eq_of_not_ind hni]
+    simp only [List.headD_cons, hr1, hb, pinAgrees_eq_of_not_ind hni]
     by_cases hcc : x = y <;> simp [hcc]
 
 
@@ -213,7 +213,7 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
     exact and_congr_right fun _ => ⟨fun e => by rw [e], fun e => UInt64.toNat_inj.mp e⟩
   by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m (pin + 3)
   case neg =>
-    rw [if_neg hc] at hW
+    rw [ite_eq_right hc] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, e⟩ := hW
     have e2 : s'.mem = s2.mem := by
@@ -221,9 +221,9 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
     have hc' := mt hcond.mpr hc
     refine ⟨false, a, ?_, ?_⟩
     · simp only [ConRon.Arena.pinCopyOk]
-      rw [if_neg (by simpa using hc')]; rfl
+      rw [ite_eq_right (by simpa using hc')]; rfl
     · rw [e2]; exact ⟨hT2, hg2, hok, hr, Ext.refl _, by simp⟩
-  rw [if_pos hc] at hW
+  rw [ite_eq_left hc] at hW
   -- `ci_at_lps(pin, EREC⦃c + 2⦄, EREC⦃c + 3⦄)`
   cases h4 : callW p (n0 + 1) "ci_at_lps" [pin, erRdT m (c + 2), erRdT m (c + 3)] s2.mem with
   | none => rw [h4] at hW; simp [pinCopyOkW.k_ci_at_lps] at hW
@@ -247,7 +247,7 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   obtain ⟨rfl, hb⟩ := pinAgreesW_ok hP.canon hP.pa hci4 hx4 h5
   refine ⟨ConRon.Arena.pinAgrees ci x, a4, ?_, ?_⟩
   · simp only [ConRon.Arena.pinCopyOk]
-    rw [if_pos (hcond.mp hc), StateT.run_bind, hrun4, exb]; rfl
+    rw [ite_eq_left (hcond.mp hc), StateT.run_bind, hrun4, exb]; rfl
   · rw [← e]
     exact ⟨hT4, hg2.trans hg4, hst4.ok, hst4.read, hst4.ext, by simpa using hb⟩
 
@@ -290,15 +290,15 @@ theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
   have hlp := slice_len hPs
   rw [pinCopiesOkW.eq_2] at h
   by_cases h1 : cl = 0 ∧ pl = 0
-  · rw [if_pos h1] at h; cases h
+  · rw [ite_eq_left h1] at h; cases h
     obtain ⟨rfl, rfl⟩ := h1
     have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [hlc]; rfl)
     have e2 : ps = [] := List.eq_nil_of_length_eq_zero (by rw [hlp]; rfl)
     subst e1 e2
     exact ⟨true, a, rfl, CmpPost.refl hT hok hr (by simp)⟩
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   by_cases h2 : cl = 0 ∨ pl = 0
-  · rw [if_pos h2] at h; cases h
+  · rw [ite_eq_left h2] at h; cases h
     have hrun : (ConRon.Arena.pinCopiesOk cs ps).run a = .ok (false, a) := by
       rcases h2 with rfl | rfl
       · have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [hlc]; rfl)
@@ -312,7 +312,7 @@ theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
         | nil => exact absurd ⟨UInt64.toNat_inj.mp (by simpa using hlc.symm), rfl⟩ h1
         | cons _ _ => rfl
     exact ⟨false, a, hrun, CmpPost.refl hT hok hr (by simp)⟩
-  rw [if_neg h2] at h
+  rw [ite_eq_right h2] at h
   have hcl : cl ≠ 0 := fun e => h2 (Or.inl e)
   have hpl : pl ≠ 0 := fun e => h2 (Or.inr e)
   obtain ⟨c, cs', rfl, hc, hC'⟩ := (hC.pslr hcl).uncons hcl hsz
@@ -333,11 +333,11 @@ theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
       (if b3 then ConRon.Arena.pinCopiesOk cs' ps' else pure false).run a3 := by
     simp only [ConRon.Arena.pinCopiesOk, StateT.run_bind, hrun3, exb]
   by_cases h0 : r3.headD 0 = 0
-  · rw [if_pos h0] at h; cases h
+  · rw [ite_eq_left h0] at h; cases h
     have : b3 = false := by cases b3 <;> simp_all
     subst this
     exact ⟨false, a3, by rw [hstep]; rfl, hT3, hg3, hok3, hr3, hx3, by simp⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   have : b3 = true := hb3.mp h0
   subst this
   cases h4 : pinCopiesOkW p n m3 (co + 1) (cl - 1) (po + 1) (pl - 1) with
@@ -373,7 +373,7 @@ theorem subst_go_param : ∀ (ks vs : List ConLeche.Name) (n : ConLeche.Name),
     simp only [List.map_cons, ConLeche.Level.subst.go]
     by_cases hk : k = n
     · subst hk; simp [cnmN, List.findIdx?_cons]
-    · rw [if_neg hk, subst_go_param ks vs n]
+    · rw [ite_eq_right hk, subst_go_param ks vs n]
       have hb : (k == n) = false := by simpa using hk
       simp only [cnmN, List.findIdx?_cons, hb]
       cases ks.findIdx? (fun k => k == n) <;> simp
@@ -464,13 +464,13 @@ theorem pinLinkGoW_ok (hP : PinListLProg p) {m : Mem} {ro rl rpo rpl : Word} {R 
   intro co cpo k C Cp r m' hC hCp h
   rw [pinLinkGoW.eq_2] at h
   by_cases hk : k = 0
-  · rw [if_pos hk] at h; cases h
+  · rw [ite_eq_left hk] at h; cases h
     subst hk
     have e1 : C = [] := by simpa [decHL, hslice?] using hC.symm
     have e2 : Cp = [] := by simpa [decHL, hslice?] using hCp.symm
     subst e1 e2
     exact ⟨rfl, by simp⟩
-  rw [if_neg hk] at h
+  rw [ite_eq_right hk] at h
   obtain ⟨w, C', rfl, hw, hwlt, hC'⟩ := decHL_cons hC hk (decHL_bnd m co k hC hsz)
   obtain ⟨v, Cp', rfl, hv, hvlt, hCp'⟩ := decHL_cons hCp hk (decHL_bnd m cpo k hCp hsz)
   cases h1 : callW p n "canon_name_map" [rpo, rpl, ro, rl, rdW (m.arr64 IW) cpo] m with
@@ -488,12 +488,12 @@ theorem pinLinkGoW_ok (hP : PinListLProg p) {m : Mem} {ro rl rpo rpl : Word} {R 
   have hiff : (decI w : NIdx) = ConRon.Arena.canonNameMap Rp R (decI v) ↔ w = r1.headD 0 := by
     rw [← hd1]; exact decI_inj_iff hwlt hlt1
   by_cases hne : w ≠ r1.headD 0
-  · rw [if_pos hne] at h; cases h
+  · rw [ite_eq_left hne] at h; cases h
     refine ⟨rfl, ?_⟩
     simp only [List.headD_cons, ne_eq, not_true_eq_false, List.map_cons, List.cons.injEq, false_iff,
       not_and]
     exact fun e => absurd (hiff.mp e) hne
-  rw [if_neg hne] at h
+  rw [ite_eq_right hne] at h
   cases h2 : pinLinkGoW p n m ro rl rpo rpl (co + 1) (cpo + 1) (k - 1) with
   | none => rw [h2] at h; simp [pinLinkGoW.k_pin_link_go] at h
   | some x2 =>
@@ -587,7 +587,7 @@ theorem constNamedW_ok {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) {nw : Word}
   intro o l cs r m' hC h
   by_cases hl : l = 0
   · subst hl
-    rw [constNamedW.eq_2, if_pos rfl] at h; cases h
+    rw [constNamedW.eq_2, ite_eq_left rfl] at h; cases h
     have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [slice_len hC]; rfl)
     subst e1
     exact ⟨rfl, rfl⟩
@@ -692,13 +692,13 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
   have hsz := hT.stage.iw.iwSize
   rw [rulesLinkOkW.eq_2] at h
   by_cases hq : ql = 0
-  · rw [if_pos hq] at h; cases h
+  · rw [ite_eq_left hq] at h; cases h
     subst hq
     simp only [decRules, show (0 : Word).toNat = 0 from rfl, List.range_zero, List.mapM_nil,
       Option.pure_def, Option.some.injEq] at hrs
     subst hrs
     exact ⟨true, a, rfl, CmpPost.refl hT hok hr (by simp)⟩
-  rw [if_neg hq] at h
+  rw [ite_eq_right hq] at h
   obtain ⟨k, hk⟩ : ∃ k, ql.toNat = k + 1 :=
     ⟨ql.toNat - 1, by have : ql.toNat ≠ 0 := fun e => hq (UInt64.toNat_inj.mp e); omega⟩
   rw [hk, decRules_succ] at hrs
@@ -726,7 +726,7 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
   obtain ⟨e2, hn2⟩ := constNamedW_ok hsz hwqlt n po pl pins r2 _ hPs hW2
   rw [h2, rulesLinkOkW.k_const_named_2.eq_2, e2] at h
   by_cases hz : r1.headD 0 = 0 ∨ r2.headD 0 = 0
-  · rw [if_pos hz] at h; cases h
+  · rw [ite_eq_left hz] at h; cases h
     refine ⟨false, a, ?_, CmpPost.refl hT hok hr (by simp)⟩
     simp only [ConRon.Arena.rulesLinkOk, hctor]
     cases x1 : ConRon.Arena.constNamed? block (decI wq) with
@@ -739,7 +739,7 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
     rcases hz with hz | hz
     · rw [hn1.1] at hz; cases hz
     · rw [hn2.1] at hz; cases hz
-  rw [if_neg hz] at h
+  rw [ite_eq_right hz] at h
   obtain ⟨hz1, hz2⟩ : r1.headD 0 ≠ 0 ∧ r2.headD 0 ≠ 0 := not_or.mp hz
   obtain ⟨C, x1⟩ : ∃ C, ConRon.Arena.constNamed? block (decI wq) = some C := by
     cases x1 : ConRon.Arena.constNamed? block (decI wq) with
@@ -790,13 +790,13 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
     simp only [ConRon.Arena.rulesLinkOk, hctor, x1, x2, StateT.run_bind, hrun5, exb]
   rw [h5, rulesLinkOkW.k_pin_link_ok.eq_2] at h
   by_cases h0 : r5.headD 0 = 0
-  · rw [if_pos h0] at h; cases h
+  · rw [ite_eq_left h0] at h; cases h
     have hf : ¬ C.toConstantVal.levelParams =
         Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R) := fun e => hb5.mpr e h0
     refine ⟨false, a5, by rw [hstep, decide_eq_false hf]; rfl, ?_⟩
     rw [e5]
     exact ⟨hT5, hg34, hok5, hr5, hx5, by simp⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   have ht : C.toConstantVal.levelParams =
       Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R) := hb5.mp h0
   rw [e5] at h
@@ -965,14 +965,14 @@ theorem blockLinksOkGoW_ok (hP : PinListLProg p) {block pins : List IConstantInf
   have hsz := hT.stage.iw.iwSize
   rw [blockLinksOkGoW.eq_2] at h
   by_cases h1 : cl = 0 ∨ ql = 0
-  · rw [if_pos h1] at h; cases h
+  · rw [ite_eq_left h1] at h; cases h
     refine ⟨true, a, ?_, CmpPost.refl hT hok hr (by simp)⟩
     rcases h1 with rfl | rfl
     · have e1 : cs = [] := List.eq_nil_of_length_eq_zero (by rw [slice_len hC]; rfl)
       subst e1; rfl
     · have e2 : ps = [] := List.eq_nil_of_length_eq_zero (by rw [slice_len hQ]; rfl)
       subst e2; cases cs <;> rfl
-  rw [if_neg h1] at h
+  rw [ite_eq_right h1] at h
   have hcl : cl ≠ 0 := fun e => h1 (Or.inl e)
   have hql : ql ≠ 0 := fun e => h1 (Or.inr e)
   obtain ⟨c, cs', rfl, hc, hC'⟩ := (hC.pslr hcl).uncons hcl hsz
@@ -996,11 +996,11 @@ theorem blockLinksOkGoW_ok (hP : PinListLProg p) {block pins : List IConstantInf
       (if b2 then ConRon.Arena.blockLinksOkGo block pins former cs' ps' else pure false).run a2 := by
     simp only [ConRon.Arena.blockLinksOkGo, StateT.run_bind, hrun2, exb]
   by_cases h0 : r2.headD 0 = 0
-  · rw [if_pos h0] at h; cases h
+  · rw [ite_eq_left h0] at h; cases h
     have : b2 = false := by cases b2 <;> simp_all
     subst this
     exact ⟨false, a2, by rw [hstep]; rfl, hT2, hg2, hok2, hr2, hx2, by simp⟩
-  rw [if_neg h0] at h
+  rw [ite_eq_right h0] at h
   have : b2 = true := (hb2.mp (by simpa using h0))
   subst this
   cases h3 : blockLinksOkGoW p n s2.mem bo bl po pl fo fl (co + 1) (cl - 1) (qo + 1) (ql - 1) with
@@ -1043,12 +1043,12 @@ theorem blockLinksOkW_ok (hP : PinListLProg p) {n : Nat} {m m' : Mem} {a : AStat
       some ((block.head?.map (·.toConstantVal.levelParams)).getD []) ∧
       blockLinksOkW.j1 p n bo bl po pl fo fl m = some (r, m') := by
     by_cases hbl : bl ≠ 0
-    · rw [if_pos hbl] at h
+    · rw [ite_eq_left hbl] at h
       obtain ⟨c, cs', rfl, hc, -⟩ := (hB.pslr hbl).uncons hbl hT.stage.iw.iwSize
       rw [decB_ciF] at hc
       obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) (decCI_cvA hc)
       exact ⟨_, _, hsl, h⟩
-    · rw [if_neg hbl] at h
+    · rw [ite_eq_right hbl] at h
       have e1 : block = [] := List.eq_nil_of_length_eq_zero (by
         rw [slice_len hB, Classical.not_not.mp hbl]; rfl)
       subst e1
@@ -1106,11 +1106,11 @@ theorem pinListOkRef_of (hP : PinListLProg p) : PinListOkRef p := by
       (if b1 then ConRon.Arena.blockLinksOk block pins else pure false).run a1 := by
     simp only [ConRon.Arena.pinListOk, StateT.run_bind, hrun1, exb]
   by_cases h0 : r1.headD 0 = 0
-  · rw [if_pos h0] at hW; cases hW
+  · rw [ite_eq_left h0] at hW; cases hW
     have : b1 = false := by cases b1 <;> simp_all
     subst this
     exact ⟨false, a1, by rw [hstep]; rfl, hT1, hg1, by simp⟩
-  rw [if_neg h0] at hW
+  rw [ite_eq_right h0] at hW
   have : b1 = true := hb1.mp (by simpa using h0)
   subst this
   cases h2 : callW p n "block_links_ok" [io, il, po, pl] s1.mem with

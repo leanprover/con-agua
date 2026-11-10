@@ -77,7 +77,7 @@ theorem ruleM_dec (m : Mem) (q n nf e : Word) (hs : q.toNat + 11 ≤ (m.arr64 DL
   have v10 : wd (ruleM m q n nf e) DLP (q.toNat + 10) = 0 := by
     unfold ruleM; rw [wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [widx2 q 10 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
   rw [v10] at h10
-  simp [decRule, bool?, hd?, nat?, hlist?, h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, hn, he]
+  simp [decRule, hd?, nat?, hlist?, h0, h1, h3, h4, h5, h6, h7, h8, hn, he]
 
 /-- `parse_rule_d` writes only its eleven words. -/
 theorem ruleM_out (m : Mem) (q n nf e : Word) (hq : q.toNat + 11 < 2 ^ 64) (j : Nat)

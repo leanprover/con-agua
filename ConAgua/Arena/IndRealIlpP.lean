@@ -243,7 +243,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hfr := i1lF_frame hst
       have hdec' : decHL m1 o.toNat l.toNat = some xs := by
         have hI : m1.arr64 IW = m.arr64 IW := hfr.arr IW i1lA_iw (by decide)
-        simp only [decHL, iwA, aread_apply, hI]; exact hdec
+        simp only [decHL, iwA, hI]; exact hdec
       have hk1 : (k + 1).toNat = k.toNat + 1 := toNat_add_one' (by have := l.toNat_lt; omega)
       obtain ⟨x3, a3, hrun3, ⟨hS3, hg3, hout3⟩, hA3⟩ :=
         ih m1 m' a1 (rb.headD 0) (k + 1) r hW hS1 hA1 hlt1 (by omega) hdec'

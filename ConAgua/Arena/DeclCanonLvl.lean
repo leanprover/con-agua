@@ -357,7 +357,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
 
 /-- The shape of a comparison that leaves memory and twin state alone. -/
 theorem refAM_same {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
-    (pre : Mem → AState → Prop) (op : AM α) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (pre : Mem → AState → Prop) (op : AM α) (_dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (dec : Mem → List Word → α → Prop)
     (hpre : ∀ m a, pre m a → StageR vis fe m a)
     (h : ∀ (n : Nat) (s₀ : St) (a₀ : AState), pre s₀.mem a₀ →
@@ -616,7 +616,7 @@ theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
 
 /-- The post of a comparison that may grow the pool: the usual one, and the pool array stays
 addressable by a word (`PoolSmall`). -/
-def CPost {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+def CPost {α : Type} (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (dec : Mem → List Word → α → Prop) (m m' : Mem) (a : AState) (r : List Word) (x : α) : Prop :=
   KeepPost vis fe dec m m' a r x ∧ PoolSmall m'
 

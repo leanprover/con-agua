@@ -408,7 +408,7 @@ theorem TaIn.grow {m m1 : Mem} {no nl ho hl : Word} {names : List NIdx} {holes :
     by rw [decHL_grow hg h.2.2.2]; exact h.2.2.1, by have := hg.iw; have := h.2.2.2; omega⟩
 
 /-- The post of the `ta` walk from `m`: the result decoded, the stage kept, the memo related. -/
-abbrev TaQ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m : Mem) (r : Word)
+abbrev TaQ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m : Mem) (r : Word)
     (x : EIdx × Std.HashMap EIdx EIdx) (m' : Mem) (a' : AState) : Prop :=
   x.1 = decE r ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ taMR m' x.2
 

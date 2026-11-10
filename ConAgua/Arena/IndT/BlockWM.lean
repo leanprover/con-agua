@@ -52,7 +52,7 @@ def wmWrites (m : Mem) (q p mo ml : Word) : Mem :=
 /-- **`block_shape_with_members`' model.** -/
 def wmW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
-  | n + 1, m, p, mo, ml =>
+  | _n + 1, m, p, mo, ml =>
     match allocW m 9 with
     | none => none
     | some (q, m3) => some ([q], wmWrites m3 q p mo ml)

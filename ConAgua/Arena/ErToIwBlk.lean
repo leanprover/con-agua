@@ -50,7 +50,7 @@ theorem erToIwW_ptrs {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have : o.toNat + (l.toNat - 1) < 2 ^ 64 := by
         rcases Nat.lt_or_ge (o.toNat + (l.toNat - 1)) (2 ^ 64) with h' | h'
         · exact h'
-        · unfold erecP at hv; rw [if_neg (by omega)] at hv; cases hv
+        · unfold erecP at hv; rw [ite_eq_right (by omega)] at hv; cases hv
       omega
   simp only [erToIwW] at h
   cases hal : allocW m l with

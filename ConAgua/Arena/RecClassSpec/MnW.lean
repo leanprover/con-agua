@@ -499,7 +499,7 @@ theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat =
     simp only [ite_eq_right hilt]
     exact ⟨fun _ => (by decide), fun t tele e => (by cases e)⟩
 
-theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
+theorem misW_sim (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
     (hns : G.nP + G.slots.length < 2 ^ 64) (g x d nF wso wsl fvso fvsl : Word) (ws fvs : List EIdx)
     (hnF : nF.toNat = X.nF) (n : Nat) :
     ∀ (m : Mem) (a : AState) (i l : Word), StageR vis fe m a → DecB (fun m => decCG m g.toNat) m G →
