@@ -177,3 +177,51 @@ join points.
 Lines: `CIReadRefW` +99 −241 (−142), users +22 −12; the generator +38 −5 and its test +30. The
 gate build after the change rebuilt every `l_model` module and none changed (the option is off
 by default).
+
+### Batches 3–5: helpers, round 1
+
+Three Opus helpers (brief `_tmp/mgen3/helper-brief.md`), one file group each, from master
+3b4845e9; each branch merged with master, gated and submitted on its own. Module numbers are
+instructions / user s (`measure.sh`, before → after), peak RSS 0.9–1.5 GB throughout.
+
+**Batch 3, `mgen3-install`** (#243): 28 functions; 17 files, +576 −1362 (**−786**).
+`IndInstallSpec/IcaW` (`block_caps_head/one/fin/at`, `er_put5`, `ind_info_rec`: 99.1 G / 21.2 s →
+40.7 G / 7.0 s), `WhnfIotaRefine` (`is_ctor_app`, `const_ty_at`, `rule_rhs_at`, `pi_residual`
+with its loop: 32.9 → 30.9 G), `DeclHeader`, `IndInstallSpec/BlockRawRec` (35.1 → 20.9 G),
+`PartsShapeFacts`, `IndPartsSpec/Bsp` (`block_shape_large`; 17.2 → 28.7 G), `RecGenSpec/ClassFeR`
+(53.3 → 61.6 G), `nest_holes_go` (21.2 → 8.3 G), `IndT/BlockPD` (23.4 → 9.9 G), `IndT/PosMc`,
+`IndT/BlockWM`, `IndDeclConstsDeclared`. Bridges: `erPut5W_wrER`, `cfrRecW_some`,
+`nhGoW_three`, `fieldCopyW_step`, `ctorsCopyW_step` (a generated loop ends in a continuation that
+only passes the memory on), `resFromW_step`/`resContW_step`. Kept: `block_shape_fin/tail`
+(their models feed `bbW` in `IndPartsProg5`, which sits below their callee specs), `rom_names_to`
+(the `PINS` bounds check the refinement uses), `intern_reserved_pins` (a template),
+`mentions_any_const`, `is_str_lit`, `find_rule` (structural `fun_induction` users elsewhere).
+The lead removed `iirK5` (dead once `ind_info_rec` is generated) and the imports the generated
+proofs no longer need (`shake`; `ClassFeR`'s `LdRd` allowlisted: `ld64_rd_spec` is named only
+in the generated proofs).
+
+**Batch 4, `mgen3-decl`** (#244): 24 functions; 15 files, +555 −1226 (**−671**).
+`DeclAndPinIndCopy(2)` (4), `DeclCanonInfo`'s `canon_eq_list` (55.0 → 44.2 G), `DeclCanonConst`
+(14.1 → 19.6 G), `DeclRec`, `WhnfIotaRefine6`, `DeclBasisSpec`, `LevelIntern` (+`lv_sub_int`;
+`fold [lvG, lvA, lvB]`), `DeclReduceSpec`, `StubNamesRefine` (5; 21.2 → 27.5 G, the largest
+relative slowdown of round 1). `erecPut_specW`'s size fact is a guard in the generated models
+(extra `none` leaves), bridged by `dindCopyW_succ`, `ircW_kdc2`, `icgW_krc`, `dlpCopyW_succ`,
+`erecCiW_some`; `pinAtW` moved from `DeclBasisSpec` to `DeclRec` (an import cycle). Kept:
+`lp_lookup`/`lp_substl` (their models are generic over the key reader, shared with the
+template `lvLookupTG`), `LevelEquiv` (walked structurally in `LevelEquivRel`, `LevelArena`,
+`IndRealLvlT`), `ci_canon_*` (retried in round 2: the clash the helper met came from naming the
+program binder `pr`; the generated spec needs `p`).
+
+**Batch 5, `mgen3-consts`** (#245): about 30 functions; 21 files, +633 −1610 (**−977**).
+`ConsBlockRecsTF` (`check_struct_proj_table_scoped` with its `CallM` parameter,
+`rules_to_erec_go`, `rec_info_rec`: 75.4 → 68.2 G), `Front/IndApplySpec2` (the nine that lane
+mgen rejected for 7.4 → 14.5 s, plus `install_ind_d`: now 39.4 → 38.0 G, i.e. no slower: the
+generator's recipes improved since), the `IndDeclConsts*` files (Drop 27.2 → 8.7 G, Table 44.5 →
+24.1 G, Formers 23.8 → 7.7 G, Ctors 16.4 → 7.0 G, Ref 130.2 → 125.2 G, …), `TblProg`,
+`SumRules`, `TsrW`. Kept: `rule_copy`: its generated model copies the memory term after each of
+its 11 `erec_put`s into both places that read it, about 2^11 copies (definition 4.3 s, arm 4.9 s);
+a `let` for the memory in the generator would fix it.
+
+Generator gaps the helpers met (none patched by them): `fold` takes no memory readers (`fold
+[erRd]`: "unsupported term"; bridged by `rfl` lemmas); implicit binders do not become model
+parameters; the memory-term blow-up above.
