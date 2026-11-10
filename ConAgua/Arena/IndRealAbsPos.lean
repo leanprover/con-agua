@@ -453,9 +453,9 @@ theorem noConstWf_afr {n : Nat} {m m' : Mem} {no nl lo hi e r : Word}
 /-- `pi_doms_occ` keeps `AbsOK`. -/
 theorem pdoW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi n e : Word) (r : List Word),
     pdoW k m no nl lo hi n e = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW] at h
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [pdoW.eq_1] at h
   | k + 1, m, m', no, nl, lo, hi, n, e, r, h => by
-    simp only [pdoW, pdoK1.eq_def] at h
+    simp only [pdoW.eq_2, pdoW.k_nest_occ.eq_def, pdoW.k_pi_doms_occ.eq_def] at h
     afr_auto h [noConstWf_afr, pdoW_afr k _ _ _ _ _ _ _ _ _]
 
 /-- **`AbsOK` across `nest_uniform_ok`'s callees** (`nuW_ok`'s last conclusion). -/

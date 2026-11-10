@@ -6,13 +6,15 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.IndPos
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # NoConstWf
 
-`noConstWf`, `nestOcc_spec'`, `noConstWf_ok`, `pdoW`, `pdoK1`.
+`noConstWf`, `nestOcc_spec'`, `noConstWf_ok`, `piDomsOcc_spec` (`pdoW`).
 -/
 
 noncomputable section
@@ -55,19 +57,11 @@ theorem noConstWf_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     simp only [UInt64.ofNat_toNat] at hws
     exact noConstW_ok n dn fe vis m m' a no nl lo hi e r ws mp0 hb hS hh hws hwlt hM
 
-mutual
-def pdoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _ => none
-  | k + 1, m, no, nl, lo, hi, n, e =>
-    if n = 0 then some ([0], m)
-    else if tagW e ≠ 6 then some ([0], m)
-    else if eViewW m e = [] then none
-    else pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0))
-def pdoK1 (k : Nat) (no nl lo hi n : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) =>
-    if r ≠ 0 then some ([1], m1) else pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0)
-end
+/-- **`pi_doms_occ` is its model `pdoW`** (generated). -/
+l_model piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" = some piDomsOccL)
+  fns [hp ↦ pdoW list]
+  specs [eView_spec p hl.hv n, nestOcc_spec' p hl n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 end L.Ind
 

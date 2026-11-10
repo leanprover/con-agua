@@ -255,14 +255,14 @@ theorem nestUniformOk_spec' (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallS
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtxHiAt_specE p hl.hh 1, piDomsOcc_spec p hl.no hl.hpd 1,
-        rootCanon_small p hl.hcv hl.pcc.hp' 1 (by omega)] <;> finish [pdoW, pdoK1, noConstWf]
+        rootCanon_small p hl.hcv hl.pcc.hp' 1 (by omega)] <;> finish [pdoW, pdoW.k_nest_occ, pdoW.k_pi_doms_occ, noConstWf]
   | 3 =>
     rw [invoke_eq _ hl.hp]; simp only [callFn, nestUniformOkL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestCtxHiAt_specE p hl.hh 2, piDomsOcc_spec p hl.no hl.hpd 2,
         rootCanon_small p hl.hcv hl.pcc.hp' 2 (by omega)] <;>
-      finish [pdoW, pdoK1, noConstWf, noConstW, noConstW.k_nest_occ_go, noGoW]
+      finish [pdoW, pdoW.k_nest_occ, pdoW.k_pi_doms_occ, noConstWf, noConstW, noConstW.k_nest_occ_go, noGoW]
   | k + 4 => exact nestUniformOk_spec p hl cR hcR k s₀ ctx cv
 
 theorem nestUniformCs_spec (p : Prog) (hl : NuLook p) (hp : p.lookup "nest_uniform_cs" = some nestUniformCsL)
