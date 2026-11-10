@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -15,7 +14,7 @@ import all ConAgua.Arena.IndParts
 /-!
 # Bf
 
-`bpf_spec`, `bpr_spec`, `bpc_spec`, `bpo_spec`, `bsl_spec`, `bsn_spec` and the lemmas only they use.
+`bsl_spec`, `bsn_spec` and the lemmas only they use.
 -/
 
 section
@@ -41,78 +40,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-section spec
-variable (p : Prog) (hP : IndPartsProg4 p) (hrf : p.lookup "reserved_from" = some reservedFrom)
-  (hrc : p.lookup "reserved_contains" = some reservedContains) (hec : p.lookup "er_copy" = some erCopy)
-  (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
-include hP hrf hrc
-
-include hec het hseq in
-theorem bpf_spec (hp : p.lookup "block_shape_pins_formers" = some blockShapePinsFormers) (n : Nat) :
-    ∀ (s₀ : St) (cto ctl lo ll : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_formers" [cto, ctl, lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ bpfW n s₀.mem cto ctl lo ll = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ cto ctl lo ll; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsFormers]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl lo ll
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsFormers]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
-        erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
-omit hP in
-theorem bpr_spec (hp : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs) (n : Nat) :
-    ∀ (s₀ : St) (ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_recs" [ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bprW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsRecs]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsRecs]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
-include hec het hseq in
-theorem bpc_spec (hp : p.lookup "block_shape_pins_ctors" = some blockShapePinsCtors) (n : Nat) :
-    ∀ (s₀ : St) (nP cso csl lo ll : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_pins_ctors" [nP, cso, csl, lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ bpcW n s₀.mem nP cso csl lo ll = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ nP cso csl lo ll; rw [invoke_eq _ hp]; simp only [callFn, blockShapePinsCtors]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP cso csl lo ll
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapePinsCtors]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resCont_spec p hrf hrc n,
-        erToIw_specW p hP.alloc hec het n, slEq_spec p hseq n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
-end spec
-
-theorem bpo_spec (p : Prog) (hP : IndPartsProg4 p) (hrf : p.lookup "reserved_from" = some reservedFrom)
-    (hrc : p.lookup "reserved_contains" = some reservedContains) (hec : p.lookup "er_copy" = some erCopy)
-    (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
-    (hf : p.lookup "block_shape_pins_formers" = some blockShapePinsFormers)
-    (hr : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs)
-    (hc : p.lookup "block_shape_pins_ctors" = some blockShapePinsCtors)
-    (hp : p.lookup "block_shape_pins_ok" = some blockShapePinsOk) (n : Nat) (s₀ : St)
-    (nP cto ctl lo ll ro rl cso csl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_pins_ok" [nP, cto, ctl, lo, ll, ro, rl, cso, csl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bpoW n s₀.mem nP cto ctl lo ll ro rl cso csl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapePinsOk]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bpf_spec p hP hrf hrc hec het hseq hf n,
-      bpr_spec p hrf hrc hr n, bpc_spec p hP hrf hrc hec het hseq hc n] <;>
-    finish (gen := 20) [bpoW]
 
 end L.Ind
 
@@ -155,39 +82,6 @@ theorem bsn_spec (hp : p.lookup "block_shape_names_of" = some blockShapeNamesOf)
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq, erRd]
 
-theorem bct_spec (hp : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf) (n : Nat) :
-    ∀ (s₀ : St) (cso csl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_ctors_of" [cso, csl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bctW n s₀.mem cso csl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ cso csl; rw [invoke_eq _ hp]; simp only [callFn, blockShapeCtorsOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cso csl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeCtorsOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec2_specW p hP.alloc hP.rec2 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem bmo_spec (h5 : p.lookup "rec5" = some rec5)
-    (hp : p.lookup "block_shape_members_of" = some blockShapeMembersOf) (n : Nat) :
-    ∀ (s₀ : St) (cto ctl io go : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_members_of" [cto, ctl, io, go]
-    ⦃fun r s' => LocEq s' s₀ ∧ bmoW n s₀.mem cto ctl io go = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ cto ctl io go; rw [invoke_eq _ hp]; simp only [callFn, blockShapeMembersOf]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl io go
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeMembersOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec5_specW p hP.alloc h5 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
 end spec
 
 end L.Ind
@@ -209,19 +103,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem bso_spec (p : Prog) (hv : p.lookup "e_view" = some eView) (hpw : p.lookup "pin_word" = some pinWordL)
-    (hg : p.lookup "sl_getd" = some slGetD)
-    (hp : p.lookup "block_shape_result_sort" = some blockShapeResultSort) (hst : StripProg p)
-    (n : Nat) (s₀ : St) (nP io il ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_result_sort" [nP, io, il, ty]
-    ⦃fun r s' => LocEq s' s₀ ∧ bsoW s₀.mem nP io il ty = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeResultSort]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slGetD_specW p hg n,
-      stripPis_specF p hst n, eViewSpec4 p hv n, pinWord_specV p hpw n] <;>
-    finish (gen := 20) [bsoW, bsoK1, bsoK2]
 
 section arms
 variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
@@ -265,10 +146,10 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
   simp only [callFn, blockShapeFin]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bct_spec p hP.toIndPartsProg4 hP.ctorsOf (n + 1),
+      bct_spec p hP.alloc hP.copy hP.cons hP.rec2 hP.ctorsOf (n + 1),
       plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il (n + 1),
       bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
-      bmo_spec p hP.toIndPartsProg4 hP.rec5 hP.membersOf (n + 1),
+      bmo_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.membersOf (n + 1),
       brs_spec p hP.toIndPartsProg4 hP.rec7 hP.recsOf (n + 1),
       bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large (n + 1),
       bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
@@ -285,7 +166,7 @@ theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
   simp only [callFn, blockShapeTail]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 1), pinWord_specV p hP.pinWord (n + 2),
+      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 2), pinWord_specV p hP.pinWord (n + 2),
       hc (n + 2) "lvl_eq_c", bf_spec p hP n] <;>
     finish (gen := 20) [btW, rdW_eq, erRd, btK1_some, btK2_some, btK3_some, bgoK3_some]
 
@@ -299,7 +180,7 @@ theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bsn_spec p hP.toIndPartsProg4 hP.namesOf (n + 3), bmc_spec p hP.toIndPartsProg4 (n + 2),
       erToIw_specW p hP.alloc hP.erCopy hP.erToIw (n + 3),
-      bpo_spec p hP.toIndPartsProg4 hP.resFrom hP.resCont hP.erCopy hP.erToIw hP.slEq hP.pinsF hP.pinsR
+      bpo_spec p hP.alloc hP.resFrom hP.resCont hP.erCopy hP.erToIw hP.slEq hP.pinsF hP.pinsR
         hP.pinsC hP.pinsOk (n + 2), bt_spec p hP c hc n] <;>
     finish (gen := 20) [bbW, rdW_eq, erRd, bbH1_some, bbH2_fail, bbH2_ok, bbH3_some, bbH4_fail, bbH4_ok, bgoK3_some]
 

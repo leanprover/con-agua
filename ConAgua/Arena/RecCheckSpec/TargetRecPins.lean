@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.RecCheckSpec.TpsW
 import ConAgua.Arena.RecCheckSpec.TpnB
 import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 public import ConAgua.Arena.GrindAttr
@@ -10,6 +9,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.IndDecStab
+import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import all ConAgua.Arena.RecCheck
 
 @[expose] public section
@@ -68,73 +69,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (reco recl auxo auxl : Word) (r rw : List Word)
-theorem tpnK4_some : tpnK4 p n (some (r, m)) = tpnK5 (callW p n "sl_nodup" [r.headD 0, r.tail.headD 0] m) := rfl
-theorem tpnK2_some : tpnK2 p n reco recl rw (some (r, m)) = tpnK3 p n reco recl
-    (callW p n "sl_set_eq" [rw.headD 0, rw.tail.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
-theorem tpnK1_some : tpnK1 p n reco recl auxo auxl (some (r, m)) =
-    tpnK2 p n reco recl r (callW p n "ptr_list_names" [auxo, auxl] m) := rfl
-theorem tpnK0_some : tpnK0 p n reco recl auxo auxl (some (r, m)) = tpnB p n reco recl auxo auxl (r.headD 0) m := rfl
-end arms
-attribute [ind_grind] tpnK4_some tpnK2_some tpnK1_some tpnK0_some
-
-set_option maxHeartbeats 1600000 in
-theorem tpn_spec (p : Prog) (hp : p.lookup "target_rec_pins_names" = some targetRecPinsNames) (n : Nat)
-    (s₀ : St) (mo k reco recl auxo auxl : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_rec_pins_names" [mo, k, reco, recl, auxo, auxl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tpnW p n s₀.mem mo k reco recl auxo auxl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, targetRecPinsNames]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "intern_nanon", callW_spec p n "block_rec_want_aux_names",
-      callW_spec p n "ptr_list_names", callW_spec p n "sl_set_eq", callW_spec p n "sl_nodup"] <;>
-    finish (gen := 40) (instances := 20000) [tpnW, tpnB, rdW_eq, erRd]
-
-end L.Ind
-
-end
-
-end
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-section arms
-variable (p : Prog) (n : Nat) (m : Mem) (pp k recl cso csl : Word) (r ra : List Word)
-theorem tpsK3_some : tpsK3 p n ra (some (r, m)) =
-    tpsK4 (callW p n "sl_eq" [ra.headD 0, ra.tail.headD 0, r.headD 0, r.tail.headD 0] m) := rfl
-theorem tpsK2_some : tpsK2 p n cso csl (some (r, m)) = tpsK3 p n r (callW p n "ptr_list_names" [cso, csl] m) := rfl
-theorem tpsK1_some : tpsK1 p n cso csl (some (r, m)) =
-    tpsK2 p n cso csl (callW p n "ptr_list_names" [r.headD 0, r.tail.headD 0] m) := rfl
-end arms
-attribute [ind_grind] tpsK3_some tpsK2_some tpsK1_some
-
-set_option maxHeartbeats 1600000 in
-theorem tps_spec (p : Prog) (hp : p.lookup "target_rec_pins_split" = some targetRecPinsSplit) (n : Nat)
-    (s₀ : St) (pp k recl bo bl : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_rec_pins_split" [pp, k, recl, bo, bl]
-    ⦃fun r s' => LocEq s' s₀ ∧ tpsW p n s₀.mem pp k recl bo bl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, targetRecPinsSplit]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "block_split", callW_spec p n "block_shape_all_ctors",
-      callW_spec p n "ptr_list_names", callW_spec p n "sl_eq"] <;>
-    finish (gen := 40) (instances := 20000) [tpsW, rdW_eq]
 
 end L.Ind
 
