@@ -166,9 +166,11 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
       rw [hlow₅.fr.1 (tier1 EREC) (by decide) (by decide), hfA.arr (tier1 EREC) (by decide) (by decide)]
     have h130 : erecTop1 m₅ = erecTop1 m := by
       simp only [erecTop1]; rw [hlow₅.fr.ctl 130 (by decide), hfA.ctl 130 (by decide)]
-    refine ⟨by have := hlow₅.top; omega, by rw [h129]; exact Nat.le_refl _, fun x hx => ?_,
-      fun x _ => by rw [hER], by rw [h130]; exact Nat.le_refl _, fun x _ => by rw [hER1]⟩
-    rw [hlow₅.low x (by omega), hlow x (by omega)]
+    exact
+      { iw := by have := hlow₅.top; omega, er := by rw [h129]; exact Nat.le_refl _
+        iwGet := fun x hx => by rw [hlow₅.low x (by omega), hlow x (by omega)]
+        erGet := fun x _ => by rw [hER], er1 := by rw [h130]; exact Nat.le_refl _
+        er1Get := fun x _ => by rw [hER1] }
   have hrun0 : (hoistNatOpGround IDeclaration.usedConsts ds).run a =
       ((if T.isEmpty then pure (ds, #[]) else pure (applyHoist ds T) :
         AM (Array IDeclaration × Array NIdx)).run a) := by

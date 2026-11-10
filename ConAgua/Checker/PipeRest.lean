@@ -171,7 +171,8 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
   have hc := CapsOK.keep h5.since.keep h5.since.caps
   have hctl : 256 ≤ (s₀.mem.arr64 CTL).size := hc.2.1
   have hI : L.Ind.IWOK s₀.mem := by
-    refine ⟨?_, ?_, ?_, ?_, by omega, ?_, ?_, hc.erec, hc.erec1⟩
+    refine { iw := ?_, er := ?_, iwSize := ?_, erSize := ?_, ctl := by omega, er1 := ?_, er1Size := ?_
+             erCap := hc.erec, er1Cap := hc.erec1 }
     · simp only [L.Ind.iwTop, h5.hz.c200]; simp
     · simp only [L.Ind.erTop, h5.hz.c129]; simp
     · have := hc.1 L.Ind.IW (by decide); omega
@@ -282,7 +283,8 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
   · rw [hsf.1 DECL (by decide +kernel) (by decide), hsf.1 DLP (by decide +kernel) (by decide)]
     exact h6.decls
   · simp only [pinW, hsf.1 PINS (by decide +kernel) (by decide)]; exact h6.pf.pin0
-  · refine ⟨?_, htop, ?_, ?_, ?_, ?_, ?_, hc'.erec, hc'.erec1⟩
+  · refine { iw := ?_, er := htop, iwSize := ?_, erSize := ?_, ctl := ?_, er1 := ?_, er1Size := ?_
+             erCap := hc'.erec, er1Cap := hc'.erec1 }
     · simp only [L.Ind.iwTop, h200, hIW]; exact h6.iw.iw
     · have := hc'.1 L.Ind.IW (by decide); omega
     · have := hc'.1 EREC (by decide); omega
