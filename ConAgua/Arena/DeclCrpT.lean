@@ -516,7 +516,7 @@ theorem crp_ref (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) (ha
     intro h0
     obtain ⟨ci', hci'⟩ := hE.own_dec (decI c) (by rw [hcw, hrc]; exact h0)
     rw [hcw, hrq] at hci'
-    exact ⟨ci', ArrExt.decCI (IWGrow.erecPExt hg03) hci'⟩
+    exact ⟨ci', ArrExt.decCI (L.Ind.IWGrow.ext hg03) hci'⟩
   have hfree : rc ≠ 0 → ∀ k : NIdx, k.word.toUInt64 ≠ c → (ownRaw m3 k.word.toUInt64).1 ≠ rc := by
     intro h0 k hk e
     have hkc : k ≠ decI c := fun h => hk (by rw [h, hcw])
@@ -541,7 +541,7 @@ theorem crp_ref (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) (ha
     · rename_i h0
       obtain ⟨ci', hci'⟩ := hd (by rw [hrc]; exact h0)
       rw [hrq] at hci'
-      rw [hci', ArrExt.decCI (IWGrow.erecPExt hg03) hci']
+      rw [hci', ArrExt.decCI (L.Ind.IWGrow.ext hg03) hci']
   rw [hprev, ← hcn] at hE4
   have hsv := ConRon.Bridge.IFEnv.sameView_popTemp fe ci
   generalize hfe' : (fe.push ci).popTemp ci.name fe.idx[ci.name]? = fe' at hE4 hsv
@@ -667,7 +667,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   -- the opaque check
   refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_opaque_val.none ..) id
     (checkOpaqueVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage
-      (ArrExt.decCV (IWGrow.erecPExt hg3) hcv1) (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
+      (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1) (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
     fun ⟨r4, m4⟩ ci4 a4 hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   dsimp only at hP4 hr4 hci4
   subst r4 ci4
@@ -683,7 +683,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   have hv2 := ConRon.Bridge.denote_ext hv1x hstep2.ext
   have hg4 := hP4.grow
   have hS4 := hP4.stage
-  have hP14 : ArrExt (erecP m1) (erecP m4) := IWGrow.erecPExt (hg3.trans hg4)
+  have hP14 : ArrExt (erecP m1) (erecP m4) := L.Ind.IWGrow.ext (hg3.trans hg4)
   -- a push of the opaque at the view `u`
   have push : ∀ {u : Word} {fe' : IFEnv} {mx : Mem} {ax : AState}, StageR u fe' mx ax →
       IWGrow m4 mx → CoreMemos mx →
@@ -696,7 +696,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
       fun ry my e => ?_
     rw [checkDeclOpaqueE.k_env_push.arm1]
     obtain ⟨hSy, hgy⟩ := push_call hX.ccv.val.rcp e hSx
-      (ArrExt.decCI (IWGrow.erecPExt hgx) (ArrExt.decCI hP14 hci1))
+      (ArrExt.decCI (L.Ind.IWGrow.ext hgx) (ArrExt.decCI hP14 hci1))
     exact RefE.ret rfl ⟨by simpa using hSy, leaf_memos hcl (leaf_mem _ rfl) e hMx,
       hg1.trans (hg3.trans (hg4.trans (hgx.trans hgy)))⟩
   -- the reduce operations' pins

@@ -129,7 +129,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     have hq1 : (q + 1).toNat = q.toNat + 1 := by
       have := erecP_lt64 hwn; rw [UInt64.toNat_add]; simp; omega
     have hcv2 : decCV (erA m2) (q + 1).toNat = some cv := by
-      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcv
+      rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcv
     rcases h4 : callW p n "matches_pin" [q + 1, r3.headD 0] m2 with _ | ⟨r4, m4⟩
     · rw [h4, fpW.k_matches_pin.none] at hJ; cases hJ
     rw [h4, fpW.k_matches_pin.arm1] at hJ

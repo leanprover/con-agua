@@ -232,10 +232,6 @@ theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (a
   obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
   exact hd?_some hty
 
-/-- A grown pool keeps every record of the old one. -/
-theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') :=
-  h.erecGrow.ext
-
 /-- `iw_reset` keeps `IWOK`. -/
 theorem iwOK_reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) := by
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0

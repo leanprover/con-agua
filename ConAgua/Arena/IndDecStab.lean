@@ -563,16 +563,12 @@ theorem truncM_iw_eq {m : Mem} {i : Nat} (hi : i < iwTop m) :
 
 theorem truncM_er_eq {m : Mem} {i : Nat} : erA (truncM m) i = erA m i := by rw [truncM_erA]
 
-/-- The record pool only grew (both tiers). -/
-theorem IWGrow.erExt {m m' : Mem} (hg : IWGrow m m') : ArrExt (erA m) (erA m') :=
-  hg.erecGrow.ext
-
 /-- Every memory the pools grow into extends the cut pools. -/
 theorem IWGrow.truncExt {m m' : Mem} (hg : IWGrow m m') : PoolExt (truncM m) m' := by
   refine ⟨fun i v h => ?_, fun i v h => ?_⟩
   · obtain ⟨hi, hv⟩ := truncM_iw_get h
     simp only [iwA, aread_apply] at hv ⊢; rw [hg.iwGet i hi]; exact hv
-  · exact hg.erExt i v (truncM_er_get h)
+  · exact hg.ext i v (truncM_er_get h)
 
 /-- **Decoded below the tops**: the decoding succeeds in the cut pools. -/
 def DecB {α : Type} (f : Mem → Option α) (m : Mem) (x : α) : Prop := f (truncM m) = some x
@@ -593,7 +589,7 @@ theorem DecB.grow (hf : OMono f) (hg : IWGrow m m') (h : DecB f m x) : DecB f m'
   · obtain ⟨hi, hv'⟩ := truncM_iw_get hv
     rw [truncM_iw_eq (Nat.lt_of_lt_of_le hi hg.iw)]
     simp only [iwA, aread_apply] at hv' ⊢; rw [hg.iwGet i hi]; exact hv'
-  · rw [truncM_erA] at hv ⊢; exact hg.erExt i v hv
+  · rw [truncM_erA] at hv ⊢; exact hg.ext i v hv
 
 end decB
 

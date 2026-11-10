@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndCopy
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -525,10 +526,6 @@ theorem erCopy_spec (p : Prog) (hp : p.lookup "er_copy" = some erCopy) (n : Nat)
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20) [erRd]
-
-/-- `erRd` does not read `IW`. -/
-theorem erRd_set_iw (m : Mem) (d v a : Word) : erRd (m.set64 IW d v) a = erRd m a := by
-  unfold erRd; rw [Mem.arr64_set64_ne _ _ _ _ _ (by rw [tierA_EREC]; split <;> decide)]
 
 /-- **What an `EREC → IW` copy leaves**: every array but `IW` as it was, `IW` the same size, the
 destination holding the tagged reads of the source, the rest of `IW` unchanged. -/

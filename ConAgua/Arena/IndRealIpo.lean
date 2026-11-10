@@ -194,12 +194,6 @@ theorem decEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat} {
   simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at this
   exact this
 
-theorem erRd_of_nat? {m : Mem} {i q : Nat} {x : Word} (h : nat? (erA m) i = some q) (hx : x.toNat = i) :
-    erRd m x = UInt64.ofNat q ∧ q < 2 ^ 64 := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  exact ⟨by rw [erRd_of_erA (by rw [hx]; exact hw)]; simp, w.toNat_lt⟩
-
 theorem ipo_twin_other (nP : Nat) (ci : IConstantInfo) (rest : List IConstantInfo) (a : AState)
     (h1 : ∀ cv caps, ci ≠ .indInfo cv caps) (h2 : ∀ cv x y, ci ≠ .ctorInfo cv x y) :
     (indParamsOk nP (ci :: rest)).run a = (indParamsOk nP rest).run a := by

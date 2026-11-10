@@ -130,7 +130,7 @@ theorem checkDeclQuot_loopT {p : Prog} (hQ : QuotArmProg p) (hQs : QuotSims p dn
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
   rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  exact hR.of_step hP.stage hf (L.Ind.IWGrow.ext hP.grow)
 
 /-- **`check_decl_axiom` under `StageT`** (`cda_ref`'s ok half): the job relation after it by its
 write set, the core's memos from the arm's post, the inductive arm's by `imFns`' frame. -/
@@ -161,7 +161,7 @@ theorem checkDeclAxiom_loopT {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
   rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  exact hR.of_step hP.stage hf (L.Ind.IWGrow.ext hP.grow)
 
 /-- **`check_decl_thm` under `StageT`** (`cdt_ref`'s ok half), as the axiom arm. -/
 @[refines_part ConRon.Arena.checkDecl "the theorem arm, under StageT"]
@@ -190,7 +190,7 @@ theorem checkDeclThm_loopT {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p)
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
   rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  exact hR.of_step hP.stage hf (L.Ind.IWGrow.ext hP.grow)
 
 /-- **`check_decl_opaque` under `StageT`** (`cdo_ref`'s ok half), as the theorem arm. -/
 @[refines_part ConRon.Arena.checkDecl "the opaque arm, under StageT"]
@@ -221,7 +221,7 @@ theorem checkDeclOpaque_loopT {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
   rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  exact hR.of_step hP.stage hf (L.Ind.IWGrow.ext hP.grow)
 
 /-- **`check_decl_defn` under `StageT`** (`cdf_ref`'s ok half), as the theorem arm; the variant
 records from the job relation (`LoopR.pinsets`). -/
@@ -256,7 +256,7 @@ theorem checkDeclDefn_loopT {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p)
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok', ?_, hP.memos, callW_indMemos hIc hIl (im_mem _ rfl) hW hIM, hP.grow⟩
   rw [hst, hres]
-  exact hR.of_step hP.stage hf (IWGrow.erecPExt hP.grow)
+  exact hR.of_step hP.stage hf (L.Ind.IWGrow.ext hP.grow)
 
 end armsT
 
@@ -459,7 +459,7 @@ theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     obtain ⟨fe', a', hrun, hS2, hcm, hg2, hIM2⟩ := hP.ind pins n hn' m1 m2 a vis fe env block nP
       _ _ _ r2 hl1 hw hdec1 htop1 hFB hT1 hok hFo hden hlpd hPD hIM1 d2
     have hfs2 := (run_memFrame hFcl (hFs _ (by decide)) (run_of_callW d2)).1
-    have hL2 := hR.of_step hS2 (hfs1.trans hfs2) (IWGrow.erecPExt (hg1.trans hg2))
+    have hL2 := hR.of_step hS2 (hfs1.trans hfs2) (L.Ind.IWGrow.ext (hg1.trans hg2))
     exact RefE.ret hrun ⟨by simpa using hL2, hcm, hIM2, hg1.trans hg2⟩
 
 /-- **`check_decl` refines `checkDecl` under `StageT`**, for the front's record kinds: the ok

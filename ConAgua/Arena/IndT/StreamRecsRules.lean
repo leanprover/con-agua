@@ -53,13 +53,6 @@ l_model srkE_spec (p : Prog) (hP : StrProg p)
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- A word the record pool decodes as a number. -/
-theorem erRd_natA {m : Mem} {a : Word} {k : Nat} (h : nat? (erA m) a.toNat = some k) :
-    (erRd m a).toNat = k := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  rw [erRd_of_erA hw]
-
 /-- A word the record pool decodes as a handle. -/
 theorem erRd_hd {k : IdxKind} {m : Mem} {a : Word} {x : Idx k} (h : hd? (erA m) a.toNat = some x) :
     H (erRd m a) ∧ x = decI (erRd m a) := by

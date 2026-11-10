@@ -734,7 +734,7 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => checkThmValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨s4.mem, Locals.init []⟩ vis (c + 1) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS4 (by rw [e1]; exact ArrExt.decCV (IWGrow.erecPExt hg14) hcv)
+    (vg_ref hP hap hcrf n hS4 (by rw [e1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg14) hcv)
       (by rw [e1]; omega) hwvl hlps4 hCr4)
     fun r5 s5 y5 a5 _ _ _ hP5 => ?_
   rw [checkThmValE.k_value_guards.arm1]

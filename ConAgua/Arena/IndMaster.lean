@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -303,12 +304,6 @@ def wrER (m : Mem) (q : Word) : List Word → Mem
   | [] => m
   | x :: xs => wrER (erecPutMem m q x) (q + 1) xs
 
-theorem erecPutMem_frame (m : Mem) (a v : Word) : MemFrame [EREC, tier1 EREC] [] m (erecPutMem m a v) := by
-  refine ⟨fun b hb _ => ?_, fun x _ => by rw [erecPutMem_ctl], fun b => ?_⟩
-  · rw [erecPutMem_arr, ite_eq_right]
-    unfold erTier; split <;> (intro e; subst e; simp at hb)
-  · rw [erecPutMem_arr]; split <;> simp
-
 theorem wrER_frame : ∀ (ws : List Word) (m : Mem) (q : Word),
     MemFrame [EREC, tier1 EREC] [] m (wrER m q ws)
   | [], _m, _q => MemFrame.refl _ _ _
@@ -372,15 +367,6 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word),
           rw [this]; simp
         · rw [ite_eq_right hr, ite_eq_right (by omega)]
     · simp [e]
-
-/-- `IWOK` across a writer of the record pool's arrays (sizes and tops kept). -/
-theorem IWOK.of_er {m m' : Mem} (hf : MemFrame [EREC, tier1 EREC] [] m m') (h : IWOK m) : IWOK m' := by
-  have hI := hf.arr IW (by decide) (by decide)
-  have hc := hf.size CTL
-  have h1 := (IWOK_iff m).1 h
-  simp only [IWOK_iff, iwTop, erTop, erecTop1, hI, hc, hf.size EREC, hf.size (tier1 EREC),
-    hf.ctl 129 (by simp), hf.ctl 130 (by simp), hf.ctl 200 (by simp)] at h1 ⊢
-  exact h1
 
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned address keeps the stage relation and grows the pools; the words read back through
@@ -537,17 +523,6 @@ theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
         erecAlloc_specW p ha n, erecPut_specW p hpu n] <;>
       finish [cvNewW, cvNewMem]
 
-/-- A word the record pool reads at `cq + j` (as a number) is `EREC⦃cq + j⦄`. -/
-theorem erRd_add {m : Mem} {cq : Word} {j : Nat} {w : Word} (h : erecP m (cq.toNat + j) = some w)
-    (_hj : j < 2 ^ 64) : erRd m (cq + UInt64.ofNat j) = w ∧ (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
-  have hlt : cq.toNat + j < 2 ^ 64 := by
-    rcases Nat.lt_or_ge (cq.toNat + j) (2 ^ 64) with h' | h'
-    · exact h'
-    · unfold erecP at h; rw [ite_eq_right (by omega)] at h; cases h
-  have e : (cq + UInt64.ofNat j).toNat = cq.toNat + j := by
-    rw [UInt64.toNat_add]; simp; omega
-  exact ⟨(erRd_of_erecP (by rw [e]; exact h)).1, e⟩
-
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
 theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
@@ -595,22 +570,6 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
   rw [hs]; rfl
 
 /-! ## `erec_put` and the tagged read; `env_push` under the stage relation -/
-
-/-- `EREC⦃x⦄` across an `erec_put` at another place. -/
-theorem erRd_erecPutMem_ne {m : Mem} {a v x : Word} (h : erTier x ≠ erTier a ∨ erOff x ≠ erOff a) :
-    erRd (erecPutMem m a v) x = erRd m x := by
-  have ht : tierA EREC (x >>> 40) = erTier x := by rw [tierA_EREC]; rfl
-  unfold erRd
-  rw [ht, erecPutMem_arr]
-  split
-  · rename_i e
-    have ho : erOff x ≠ erOff a := by
-      rcases h with h | h
-      · exact absurd e h
-      · exact h
-    simp only [rdW, Array.getElem?_setIfInBounds, mask40_toNat]
-    rw [ite_eq_right (fun h' => ho (by unfold erOff at h' ⊢; omega))]
-  · rfl
 
 /-- **A word of the old pool and a freshly allocated word are at different places.** -/
 theorem erFresh {m m1 : Mem} {k q x : Word} (h : erAllocW m k = some (q, m1)) (hW : IWOK m)

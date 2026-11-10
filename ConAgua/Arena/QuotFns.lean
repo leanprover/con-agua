@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.CoreErec
 import ConAgua.Arena.DerRel
@@ -104,28 +105,6 @@ theorem _root_.L.Arena.CheckR.erEnv {m m' : Mem} {a : AState} {vis : Word} {fe :
     h.mode.frame hf (by decide) (by decide)⟩
   · exact ArenaR.frame (fun b hb hm => by have := hlow b hm; have := hA b hb; omega) (fun x hx => not_mem_arenaCtl x (by have := hC x hx; omega)) hf h.arena.base
   · exact DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a h.arena.der
-
-/-- **A write at or above a base state's top of its tier keeps the growth from the base.** -/
-theorem IWGrow.put {m₀ m : Mem} {a v : Word} (hg : IWGrow m₀ m) (h : erTopOf m₀ a ≤ erOff a) :
-    IWGrow m₀ (erecPutMem m a v) := by
-  have hc := erecPutMem_ctl m a v
-  have hI : (erecPutMem m a v).arr64 IW = m.arr64 IW := by
-    rw [erecPutMem_arr, ite_eq_right_iff.mpr (fun e => absurd e ?_)]; unfold erTier; split <;> decide
-  simp only [erTopOf, erOff] at h
-  refine ⟨?_, ?_, fun i hi => by rw [hI]; exact hg.iwGet i hi, fun i hi => ?_, ?_, fun i hi => ?_⟩
-  · simp only [iwTop, hc]; exact hg.iw
-  · simp only [erTop, hc]; exact hg.er
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · rename_i e; simp only [e, ite_true] at h
-      have : ¬ (a.toNat % 2 ^ 40 = i) := by have := hg.er; simp only [erTop, erecTop] at *; omega
-      simp [erOff, this, hg.erGet i hi]
-    · simp [hg.erGet i hi]
-  · simp only [erecTop1, hc]; exact hg.er1
-  · rw [erecPutMem_arr]; unfold erTier; split
-    · simp [hg.er1Get i hi]
-    · rename_i e; simp only [e, ite_false] at h
-      have : ¬ (a.toNat % 2 ^ 40 = i) := by omega
-      simp [erOff, this, hg.er1Get i hi]
 
 /-- **A write into the region allocated above a base state's top keeps the stage relation**: the
 base's `EnvR` (`EnvR.growF` over the frame from the base), the rest from the state before the

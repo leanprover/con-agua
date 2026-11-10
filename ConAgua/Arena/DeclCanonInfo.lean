@@ -166,18 +166,18 @@ theorem cdW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         obtain ⟨rc, m2⟩ := x2
         rw [hx, cdK2_some] at h
         have hcp1 : decCV (erecP m1) (p + 1).toNat = some cv :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [p1]; exact hcp)
+          ArrExt.decCV (L.Ind.IWGrow.ext hg1) (by rw [p1]; exact hcp)
         have hcq1 : decCV (erecP m1) (q + 1).toNat = some cv' :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [q1]; exact hcq)
+          ArrExt.decCV (L.Ind.IWGrow.ext hg1) (by rw [q1]; exact hcq)
         obtain ⟨cs, a2, po, pl, qo, ql, co, cl, hrc, hrun, hS2, hg2, hP2, hL2, hC2⟩ :=
           ctxW_ok k hx hS1 hcp1 hcq1 hP1 hL1
         subst hrc
         simp only [List.headD_cons, List.tail_cons] at h
         have hgg : IWGrow m m2 := hg1.trans hg2
         obtain ⟨wv, ev, hv32, hvd⟩ := hdW_ (erRdOK m2) (q := p) (k := 5) (kn := 5) rfl
-          (ArrExt.hd? (IWGrow.erecPExtR hgg) hvp)
+          (ArrExt.hd? (L.Ind.IWGrow.ext hgg) hvp)
         obtain ⟨wv', ev', hv32', hvd'⟩ := hdW_ (erRdOK m2) (q := q) (k := 5) (kn := 5) rfl
-          (ArrExt.hd? (IWGrow.erecPExtR hgg) hvq)
+          (ArrExt.hd? (L.Ind.IWGrow.ext hgg) hvq)
         rw [ev, ev'] at h
         obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := ceW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wv wv' x
           cv.levelParams cv'.levelParams cs h hS2 hC2 hL2 hP2 hv32 hv32'
@@ -356,26 +356,26 @@ theorem cwW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         obtain ⟨rc, m2⟩ := x2
         rw [hx, cwK2_some] at h
         have hcp1 : decCV (erecP m1) (p + 1).toNat = some cv :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [p1]; exact hcp)
+          ArrExt.decCV (L.Ind.IWGrow.ext hg1) (by rw [p1]; exact hcp)
         have hcq1 : decCV (erecP m1) (q + 1).toNat = some cv' :=
-          ArrExt.decCV (IWGrow.erecPExtR hg1) (by rw [q1]; exact hcq)
+          ArrExt.decCV (L.Ind.IWGrow.ext hg1) (by rw [q1]; exact hcq)
         obtain ⟨cs, a2, po, pl, qo, ql, co, cl, hrc, hrun, hS2, hg2, hP2, hL2, hC2⟩ :=
           ctxW_ok k hx hS1 hcp1 hcq1 hP1 hL1
         subst hrc
         simp only [List.headD_cons, List.tail_cons] at h
         have hgg : IWGrow m m2 := hg1.trans hg2
         obtain ⟨wa, ea, rfl⟩ := natW_ (erRdOK m2) (q := p) (k := 7) (kn := 7) rfl
-          (ArrExt.nat? (IWGrow.erecPExtR hgg) ho1)
+          (ArrExt.nat? (L.Ind.IWGrow.ext hgg) ho1)
         obtain ⟨wb, eb, rfl⟩ := natW_ (erRdOK m2) (q := p) (k := 8) (kn := 8) rfl
-          (ArrExt.nat? (IWGrow.erecPExtR hgg) hl1)
+          (ArrExt.nat? (L.Ind.IWGrow.ext hgg) hl1)
         obtain ⟨wc, ec, rfl⟩ := natW_ (erRdOK m2) (q := q) (k := 7) (kn := 7) rfl
-          (ArrExt.nat? (IWGrow.erecPExtR hgg) ho2)
+          (ArrExt.nat? (L.Ind.IWGrow.ext hgg) ho2)
         obtain ⟨wd, ed, rfl⟩ := natW_ (erRdOK m2) (q := q) (k := 8) (kn := 8) rfl
-          (ArrExt.nat? (IWGrow.erecPExtR hgg) hl2)
+          (ArrExt.nat? (L.Ind.IWGrow.ext hgg) hl2)
         rw [ea, eb, ec, ed] at h
         obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := cnCrW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wa wb wc wd x
           cv.levelParams cv'.levelParams cs rules rules' h hS2 hC2 hL2 hP2
-          (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs) (ArrExt.decRules (IWGrow.erecPExtR hgg) hrs')
+          (ArrExt.decRules (L.Ind.IWGrow.ext hgg) hrs) (ArrExt.decRules (L.Ind.IWGrow.ext hgg) hrs')
         refine ⟨b3, a2, ?_, hr3, hS3, hgg.trans hg3, hP3, hL2⟩
         rw [StateT.run_bind, hrun, exc_ok_bind']
         rw [fuelW] at hb3
@@ -721,9 +721,9 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
       (B := ConRon.Arena.canonEqList xs'' ys'') hb1' hr1'
       (fun hne => by
         rw [ite_eq_right hne] at h
-        have hx2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) xs''.length
+        have hx2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (L.Ind.IWGrow.ext hg1) hq) xs''.length
           (o1.toNat + 1) xs'' (by omega) hxs'
-        have hy2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (IWGrow.erecPExtR hg1) hq) ys''.length
+        have hy2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (L.Ind.IWGrow.ext hg1) hq) ys''.length
           (o2.toNat + 1) ys'' (by omega) hys'
         obtain ⟨b2, a2, hb2, hr2', hq2⟩ := ih m1 m' a1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1) x xs'' ys'' h hS1
           (by rw [o1e, l1p]; exact hx2) (by rw [o2e, l2p]; exact hy2)

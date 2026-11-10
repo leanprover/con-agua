@@ -139,7 +139,6 @@ theorem decCV_rd {R : Nat → Option Word} {rd : Word → Word}
   rw [e2, e3]
   exact hs
 
-
 /-- `decCV_rd` at the record's own address: the name slice. -/
 theorem decCV_rdq {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} (h : decCV R q.toNat = some cv) :
@@ -232,26 +231,5 @@ theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP
     (erRdT m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
     (erRdT m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
   decCI_split (erRdOK m) h
-
-
-open Std.WP in
-open scoped Lean.Order in
-set_option experimental.vcgen true in
-/-- **A read of any tiered array as a value** (`ld64_rdW_spec` at a computed tier, e.g. the
-tagged read `EREC⦃a⦄` = `ld64 (tierA EREC (a >>> 40)) (a &&& 0xFFFFFFFFFF)`). -/
-theorem ld64_rdT_spec (a : TieredArray) (i : Word) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ ld64 a i
-    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  subst hs
-  simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
-  split at hrun
-  · rename_i h
-    simp only [pure] at hrun
-    obtain ⟨rfl, rfl⟩ := hrun
-    exact ⟨rfl, by simp [rdW, h], h⟩
-  · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
-    cases hrun
 
 end L.Arena

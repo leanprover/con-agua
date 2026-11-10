@@ -465,13 +465,6 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
         erToIw_specW2 p ha hc he n] <;>
       finish (gen := 20) [cvLpsW, rdW_eq, erRd]
 
-/-- A number decoded off the record pool is the word `EREC⦃·⦄` reads there. -/
-theorem erRd_nat {m : Mem} {q : Word} {i v : Nat} (h : nat? (erA m) i = some v) (hi : q.toNat = i) :
-    erRd m q = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-  simp only [nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  exact ⟨by rw [erRd_of_erA (by rw [hi]; exact hw), UInt64.ofNat_toNat], w.toNat_lt⟩
-
 theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)

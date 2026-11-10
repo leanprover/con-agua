@@ -305,7 +305,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {vis : Word}
   obtain ⟨wn, hwn, -⟩ := decCV_name hcvR
   have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (erecP_lt64 hwn)
   have hcvR2 : decCV (erA s2.mem) (q + 1).toNat = some cvR := by
-    rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg2) hcvR
+    rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcvR
   rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] s2.mem with _ | ⟨r3, m3⟩
   · rw [h3, rsoW.k_matches_pin.none] at hW; cases hW
   rw [h3, rsoW.k_matches_pin.arm1] at hW
@@ -392,7 +392,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     simp only at hm5
     rw [hm5]
     have hci4 : decCI (erecP m4) ((findRes m vis (pinW m (1 + (1 : Word).toNat))).tail.headD 0).toNat =
-        some ci := ArrExt.decCI (IWGrow.erecExt hg4) hci
+        some ci := ArrExt.decCI (L.Ind.IWGrow.ext hg4) hci
     have hq := ciEqB_ok (erRdOK m4) hci4 (DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hna)
     rw [hq] at hr5
     refine ⟨decide (ci = na), a4, ?_, hS4, hg4, ?_⟩
@@ -452,7 +452,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     obtain ⟨wn, hwn, -⟩ := decCV_name hcvB
     have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (erecP_lt64 hwn)
     have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
-      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg4) hcvB
+      rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg4) hcvB
     rcases h5 : callW p n "matches_pin" [q + 1, r4.headD 0] m4 with _ | ⟨r5, m5⟩
     · rw [h5, reoW.k_ci_eq.none] at hW; cases hW
     rw [h5, reoW.k_ci_eq.arm1] at hW

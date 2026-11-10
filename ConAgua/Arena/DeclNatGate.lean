@@ -80,10 +80,6 @@ theorem decCV_lps_len {rd : Nat → Option Word} {q : Nat} {cv : IConstantVal} (
   unfold hslice? at hsl
   simpa using (mapM_opt_length _ _ _ hsl).symm
 
-/-- `EREC⦃a⦄` as the generated models spell it. -/
-theorem erRd_foldN (m : Mem) (a : Word) :
-    rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 1099511627775) = erRd m a := rfl
-
 theorem defnMono_words {m : Mem} {q : Word} {ci : IConstantInfo}
     (h : decCI (erecP m) q.toNat = some ci) :
     (erRd m q ≠ 1 ∧ defnMono ci = false) ∨

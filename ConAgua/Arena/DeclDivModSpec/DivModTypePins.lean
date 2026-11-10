@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.DeclNatEq
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.GrindAttr
@@ -61,20 +62,6 @@ theorem hslice_words {k : IdxKind} (rd : Nat → Option Word) : ∀ (ws : List W
 theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
     rdW (m'.arr64 EREC) i = rdW (m.arr64 EREC) i := by
   simp only [rdW]; rw [hg.erGet i.toNat hi]
-
-theorem erecTop_lt (m : Mem) : erecTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-
-/-- **`EREC⦃a⦄` below the tier-0 top is the tier-0 word `a`** (the pool is addressable: `IWOK.erCap`),
-so the ROM's relations (`PinSetR`, `TPinsR`, `SliceR`, over `m.arr64 EREC`) read what L reads. -/
-theorem erRd_lo {m : Mem} (h : IWOK m) {a : Word} (ha : a.toNat < erecTop m) :
-    erRd m a = rdW (m.arr64 EREC) a := by
-  have h1 := h.er; have h2 := h.erCap
-  have h40 : a.toNat < 2 ^ 40 := by unfold erTop at h1; unfold erecTop at ha; omega
-  have e1 : a >>> 40 = 0 := UInt64.toNat_inj.mp (by rw [L.Arena.tag_tier_toNat]; simp; omega)
-  have e2 : a &&& 1099511627775 = a :=
-    UInt64.toNat_inj.mp (by rw [L.Arena.tag_idx_toNat]; omega)
-  simp only [erRd, e1, e2]
-  rfl
 
 theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hg : IWGrow m m') : SliceR m' o l hs := by

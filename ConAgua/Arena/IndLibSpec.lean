@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.IWFrame
 public import ConAgua.Arena.IndIface
 import ConAgua.Arena.Env
 import ConAgua.Arena.GrindAttr
@@ -437,57 +438,6 @@ open L.Arena
 
 -- `IWGrow.refl`, `IWGrow.trans`: `IndIface.lean` (with the tier-1 record pool).
 
-/-- `IWOK` across a writer of `IW` and its top alone, the new top within the array. -/
-theorem IWOK.of_iw {m m' : Mem} (hf : MemFrame [IW] [200] m m') (h : IWOK m)
-    (hroom : iwTop m' ≤ (m'.arr64 IW).size) : IWOK m' := by
-  have hE := hf.arr EREC (by decide) (by decide)
-  have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
-  have hc := hf.size CTL
-  have hI := hf.size IW
-  have h1 := (IWOK_iff m).1 h
-  simp only [IWOK_iff, erTop, erecTop1, hE, hE1, hc, hI, hf.ctl 129 (by decide),
-    hf.ctl 130 (by decide)] at h1 ⊢
-  exact ⟨by rw [← hI]; exact hroom, h1.2.1, h1.2.2.1, h1.2.2.2.1, h1.2.2.2.2.1, h1.2.2.2.2.2⟩
-
-/-- `IWOK` from a frame that keeps the pool arrays and the tops (`IW`, `EREC` in both tiers,
-`CTL[129]`, `CTL[130]`, `CTL[200]`). -/
-theorem IWOK.of_keep {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A)
-    (hC : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C) (h : IWOK m) : IWOK m' := by
-  have hI := hf.arr IW hA.1 (by decide)
-  have hE := hf.arr EREC hA.2.1 (by decide)
-  have hE1 := hf.arr (tier1 EREC) hA.2.2 (by decide)
-  have hc := hf.size CTL
-  simp only [IWOK_iff, iwTop, erTop, erecTop1, hI, hE, hE1, hc, hf.ctl _ hC.1, hf.ctl _ hC.2.1,
-    hf.ctl _ hC.2.2]
-  exact (IWOK_iff m).1 h
-
-
-/-- A write to `IW` at or above the top keeps the growth. -/
-theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
-    IWGrow m (m'.set64 IW k v) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
-  · simp only [iwTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.iw
-  · simp only [erTop, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er
-  · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    have : ¬ (k.toNat = i) := by omega
-    simp only [this, ite_false]; exact h.iwGet i hi
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
-  · simp only [erecTop1, rdW_set64]; simp [show (CTL : TieredArray) ≠ IW by decide]; exact h.er1
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
-
-/-- Raising the top keeps the growth. -/
-theorem IWGrow.set_top {m m' : Mem} (h : IWGrow m m') (t : Word) (ht : iwTop m' ≤ t.toNat)
-    (hc : 200 < (m'.arr64 CTL).size) :
-    IWGrow m (m'.set64 CTL 200 t) := by
-  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
-  · simp only [iwTop, rdW_set64]; simp [hc]; have := h.iw; simp only [iwTop] at this ht; omega
-  · simp only [erTop, rdW_set64]; simp; exact h.er
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.iwGet i hi
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.erGet i hi
-  · simp only [erecTop1, rdW_set64]; simp; exact h.er1
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.er1Get i hi
-
 end L.Ind
 
 namespace L.Ind
@@ -705,22 +655,9 @@ theorem StageR.of_walk {vis : Word} {fe : IFEnv}
     StageR vis fe m' a' ∧ IWGrow m m' :=
   StageR.of_walkM hS hD hf hA hC hk (hS.check.mode.frame hf h01.1 h01.2)
 
-
 /-! ## The tagged record read
 
 `EREC⦃a⦄` reads word `a &&& (2^40 - 1)` of tier `a >>> 40` (`ld64t`): `erRd` is that read as the
 models write it, `erRd_of_erecP` what a decoding (`erA`, `erecP`) says about it. -/
-
-/-- L's tagged read `EREC⦃a⦄`, as a model reads it. -/
-def erRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
-
-/-- A word the record pool decodes is the word `EREC⦃a⦄` reads, in bounds. -/
-theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
-    erRd m a = v ∧ (a &&& 0xFFFFFFFFFF).toNat < (m.arr64 (tierA EREC (a >>> 40))).size := by
-  obtain ⟨hlt, hget⟩ := erecP_tagRead h
-  exact ⟨by simp only [erRd, rdW, hget, Option.getD_some], hlt⟩
-
-theorem erRd_of_erA {m : Mem} {a v : Word} (h : erA m a.toNat = some v) : erRd m a = v :=
-  (erRd_of_erecP h).1
 
 end L.Ind

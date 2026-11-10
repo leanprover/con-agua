@@ -255,30 +255,6 @@ theorem rdW_dw (D : Array Word) {i c : Word} {k : Nat} (hi : 8 * i.toNat + 9 < 2
 
 /-! ### The pool below its top -/
 
-/-- Below the tier-0 top (and below `2^40`, the tier bit clear), the record pool is `EREC`. -/
-theorem erecP_getE {m : Mem} {j : Nat} (h : j < erTop m) (h40 : j < 2 ^ 40) :
-    erecP m j = (m.arr64 EREC)[j]? := by
-  have h64 : j < 2 ^ 64 := by omega
-  have hd : j / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
-  have hm : j % 2 ^ 40 = j := Nat.mod_eq_of_lt h40
-  simp only [erecP, h64, hd, hm, ite_true]
-  rw [ite_eq_left (by simpa [erecTop, erTop] using h)]
-
-/-- A tier-0 address the record pool decodes is below the tier-0 top. -/
-theorem erecP_lt {m : Mem} {j : Nat} {v : Word} (h : erecP m j = some v) (h40 : j < 2 ^ 40) :
-    j < erTop m := by
-  have hd : j / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
-  have hm : j % 2 ^ 40 = j := Nat.mod_eq_of_lt h40
-  unfold erecP at h
-  simp only [hd, hm, ite_true] at h
-  split at h
-  · split at h
-    · rename_i hlt; simpa [erecTop, erTop] using hlt
-    · cases h
-  · cases h
-
-theorem IWGrow.erecPExtR {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erecP m') := h.ext
-
 /-! ### Memories -/
 
 theorem erAllocW_mem {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) :

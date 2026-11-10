@@ -25,10 +25,6 @@ open L.Front (DECL DLP DeclsF)
 
 /-! ## The loop's relation across a step's callee -/
 
-/-- A grown pool keeps every record of the old one, inside the new pool's records. -/
-theorem IWGrow.erecPExt {m m' : Mem} (h : L.Ind.IWGrow m m') : ArrExt (erecP m) (erecP m') :=
-  h.ext
-
 /-- The step's write set misses the front's records. -/
 theorem step_keeps : (DECL : TieredArray) ∉ stepA ∧ (DLP : TieredArray) ∉ stepA := by
   decide +kernel
