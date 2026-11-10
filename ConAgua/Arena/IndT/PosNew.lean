@@ -12,7 +12,7 @@ import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.NestAcceptGroup
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.NestCrest
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.IndPosSpec.NbPosW
@@ -268,7 +268,7 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF 
     rw [h70, h71]
     exact pos2_decB_append decNK_mono hka (ha0.grow hg16) hg7 (by omega) hw71 hw72
   have hg17 := hg16.trans hg7
-  rw [pos2_rd_grow hg17 (by omega), pos2_ns_rd hg17 hp6 htop 1 (by decide),
+  rw [rdW_iw_grow hg17 (by omega), pos2_ns_rd hg17 hp6 htop 1 (by decide),
     pos2_ns_rd hg17 hp6 htop 4 (by decide), pos2_ns_rd hg17 hp6 htop 5 (by decide)]
   cases h8 : callE p (n' + 1) "rec6" [rdW (m.arr64 IW) ns, rdW (m.arr64 IW) (ns + 1), rap.headD 0, rap.tail.headD 0,
       rdW (m.arr64 IW) (ns + 4), rdW (m.arr64 IW) (ns + 5)] m7 with

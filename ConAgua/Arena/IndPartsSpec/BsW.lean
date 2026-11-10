@@ -252,15 +252,15 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
     by_cases h5 : ciKind x ≠ 5
-    · rw [bsrW.arm2 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; exact fun e => h5 ((ciKind_w x 5 (by omega)).1 e))] at h
+    · rw [bsrW.arm2 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; exact fun e => h5 ((ciKind_w x 5 (by omega)).1 e))] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨hS, IWGrow.refl _, ?_⟩
       cases x <;> first | exact absurd rfl h5 | simp [RecsR, ConRon.Arena.blockSplitRecs]
     cases x with
     | recInfo cv mI rP isK rules =>
       obtain ⟨hcv, hmI, hrP, hisK, ro, rl, hro, hrl, hrules⟩ := (partsCI_fields hx).2
-      rw [bsrW.arm3 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; rfl)] at h
-      simp only [erRd_fold] at h; rw [hoff] at h
+      rw [bsrW.arm3 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; rfl)] at h
+      simp only [erRd_foldN] at h; rw [hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (bsrW.k_block_split_recs.none n _)
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hrs : ConRon.Arena.blockSplitRecs rest with
@@ -281,7 +281,7 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       have w9 := partsErB hg1 (w := UInt64.ofNat q) (k := 9) (by rw [hqw]; exact hisK)
       have hq1 : (UInt64.ofNat q + 1).toNat = q + 1 := by
         have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
-      simp only [erRd_fold] at h
+      simp only [erRd_foldN] at h
       cases h2 : posRecW m1 [UInt64.ofNat q + 1, erRd m1 (UInt64.ofNat q + 5),
           erRd m1 (UInt64.ofNat q + 6), erRd m1 (UInt64.ofNat q + 7),
           erRd m1 (UInt64.ofNat q + 8), erRd m1 (UInt64.ofNat q + 9)] with
@@ -356,7 +356,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       exact ⟨hS, IWGrow.refl _, rfl, PSlR.nil _ _, PSlR.nil _ _⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
     by_cases h4 : ciKind x ≠ 4
-    · rw [bscW.arm2 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; exact fun e => h4 ((ciKind_w x 4 (by omega)).1 e))] at h
+    · rw [bscW.arm2 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; exact fun e => h4 ((ciKind_w x 4 (by omega)).1 e))] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h bscW.k_block_split_recs.none
       obtain ⟨hS1, hg1, hR1⟩ := bsrW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinCtors_no rest h4]
@@ -374,8 +374,8 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     cases x with
     | ctorInfo cv nP nF =>
       obtain ⟨hcv, hnP, hnF⟩ := (partsCI_fields hx).2
-      rw [bscW.arm3 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; rfl)] at h
-      simp only [erRd_fold] at h; rw [hoff] at h
+      rw [bscW.arm3 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; rfl)] at h
+      simp only [erRd_foldN] at h; rw [hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (bscW.k_block_split_ctors.none n _)
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hcs : ConRon.Arena.blockSplitCtors rest with
@@ -402,7 +402,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         have hcv2 : decCVp (truncM m2) (q + 1) = some cv :=
           (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg02
         have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
-        simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, erRd_fold, hq1, w5, w6]
+        simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, erRd_foldN, hq1, w5, w6]
           at g0 g1 g2
         show decSC (truncM m2) c.toNat = _
         simp only [decSC, g0, g1, g2, hcv2, bind, Option.bind_some, pure]
@@ -472,7 +472,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
         ConRon.Arena.blockSplitRecs]; exact hR⟩
     obtain ⟨q, x, rest, rfl, hoff, hqb, hkw, hx, hrest'⟩ := ipBlkHead hl hblk
     by_cases h3 : ciKind x ≠ 3
-    · rw [bsW.arm2 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; exact fun e => h3 ((ciKind_w x 3 (by omega)).1 e))] at h
+    · rw [bsW.arm2 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; exact fun e => h3 ((ciKind_w x 3 (by omega)).1 e))] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h bsW.k_block_split_ctors.none
       obtain ⟨hS1, hg1, hR1⟩ := bscW_ok n m m1 a off l _ r1 h1 hS hblk
       rw [partsTwinSplit_no rest h3]
@@ -497,8 +497,8 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
     cases x with
     | indInfo cv caps =>
       have hcv := (partsCI_fields hx).2
-      rw [bsW.arm3 n m off l hl (by simp only [erRd_fold]; rw [hoff, hkw]; rfl)] at h
-      simp only [erRd_fold] at h; rw [hoff] at h
+      rw [bsW.arm3 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; rfl)] at h
+      simp only [erRd_foldN] at h; rw [hoff] at h
       obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (bsW.k_block_split.none n _)
       obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (off + 1) (l - 1) rest r1 h1 hS hrest'
       cases hsp : ConRon.Arena.blockSplit rest with
@@ -523,7 +523,7 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       obtain ⟨hS2, hg2, hd2, ht2⟩ := partsConsPL (fun _ => OMono.decCVp _) h2 hS1 hts1.2 hts1.1 hy
       have hlt1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
       have e : ∀ i, i < 6 → rdW (m2.arr64 IW) (q1 + UInt64.ofNat i) = rdW (m1.arr64 IW) (q1 + UInt64.ofNat i) :=
-        fun i hi => partsRdIW_grow hg2 (by rw [partsWadd (by omega)]; omega)
+        fun i hi => rdW_iw_grow hg2 (by rw [partsWadd (by omega)]; omega)
       have e2 : rdW (m2.arr64 IW) (q1 + 2) = rdW (m1.arr64 IW) (q1 + 2) := e 2 (by omega)
       have e3 : rdW (m2.arr64 IW) (q1 + 3) = rdW (m1.arr64 IW) (q1 + 3) := e 3 (by omega)
       have e4 : rdW (m2.arr64 IW) (q1 + 4) = rdW (m1.arr64 IW) (q1 + 4) := e 4 (by omega)

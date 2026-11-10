@@ -56,7 +56,7 @@ theorem hlist_words {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word}
 theorem hd_word {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
     {q : Word} {j : Nat} {x : Idx k} (h : hd? R (q.toNat + j) = some x) :
     HW (rd (q + UInt64.ofNat j)) ∧ x = decI (rd (q + UInt64.ofNat j)) := by
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_eq h
+  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some h
   have hj := hR.lt _ _ hw
   rw [hR.offN hw (by omega)]
   exact ⟨hw32, rfl⟩
@@ -168,7 +168,7 @@ theorem InferProjProg.cpgProg {p : Prog} (hp : InferProjProg p) (hc : InferProjC
 
 /-- The body word `proj_type_at` reads: entry `i` of the bodies' slice, or `0`. -/
 def projBodyW (m : Mem) (q i : Word) : Word :=
-  sliceAt (erRdT m) (erRdT m (q + 9)) (erRdT m (q + 10)) i
+  sliceAt (erRd m) (erRd m (q + 9)) (erRd m (q + 10)) i
 
 /-! ## Refinement helpers -/
 
@@ -218,11 +218,11 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have hbody : (decE (projBodyW s.mem q i) : EIdx) = (tbl.entry i.toNat).body := by
     simp only [IProjTable.entry, array_getD_toList]; exact hbdec
   rw [ptaW.eq_2] at hW
-  have hj : (if i < erRdT s.mem (q + 10) then
-        ptaW.j1 p n q us to tn pe (erRdT s.mem (erRdT s.mem (q + 9) + i)) s.mem
+  have hj : (if i < erRd s.mem (q + 10) then
+        ptaW.j1 p n q us to tn pe (erRd s.mem (erRd s.mem (q + 9) + i)) s.mem
       else ptaW.j1 p n q us to tn pe 0 s.mem) = ptaW.j1 p n q us to tn pe (projBodyW s.mem q i) s.mem := by
     unfold projBodyW sliceAt; split <;> rfl
-  rw [hj, ptaW.j1.eq_1] at hW
+  erw [hj, ptaW.j1.eq_1] at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
   have h₁ := CoreSpec.of_callW (hlp n s a₀ dn vis fe M eb _ _ us (projBodyW s.mem q i) tbl.levelParams
     hS hbw hus hlps) hc1
@@ -395,7 +395,7 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
     (by simp) (by simp)
   have hq₁ : decTbl (erecP m₁) q.toNat = some tbl := by rw [hE₁]; exact hq
   obtain ⟨hlp, hnp, -, -, -⟩ := decTbl_words (erRdOK m₁) hq₁
-  simp only [erRdT] at hlp hnp
+  simp only [erRd] at hlp hnp
   have hlen0 : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simp only [List.size_toArray] at this; exact this
   by_cases g1 : T ≠ sn

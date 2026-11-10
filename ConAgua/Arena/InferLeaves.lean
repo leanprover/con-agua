@@ -747,10 +747,10 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
       simp only [bne_iff_ne, ne_eq]
       intro h; exact hl (UInt64.toNat_inj.mp h))
     (fun hb hl => by
-      rw [hslice?_lenR hsl, show erRdT s₀.mem (r₁.tail.headD 0 + 3) = _ from hl.symm, hlen1, hlen2] at hb
+      rw [hslice?_lenR hsl, show erRd s₀.mem (r₁.tail.headD 0 + 3) = _ from hl.symm, hlen1, hlen2] at hb
       simp at hb) fun _ _ => ?_
-  have hcv' : cv = ⟨decI (erRdT s₀.mem (r₁.tail.headD 0 + 1)), cv.levelParams,
-      decE (erRdT s₀.mem (r₁.tail.headD 0 + 4))⟩ := by
+  have hcv' : cv = ⟨decI (erRd s₀.mem (r₁.tail.headD 0 + 1)), cv.levelParams,
+      decE (erRd s₀.mem (r₁.tail.headD 0 + 4))⟩ := by
     rw [← hname, decE_eq, ← hty]
   rw [hcv', ← bind_pure (constTyAt _ _)]
   refine RefE.bind_callW (fun _ => rfl)

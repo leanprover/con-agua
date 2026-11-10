@@ -44,7 +44,7 @@ theorem matchesPin_eq (cv pin : IConstantVal) : cv.matchesPin pin = pure (decide
 
 /-- **The model of `matches_pin`**: `cv_eq`'s word-level comparison; the memory unchanged. -/
 def mpW (m : Mem) (q pin : Word) : Option (List Word × Mem) :=
-  some ([if cvEqB (erRdT m) q pin then 1 else 0], m)
+  some ([if cvEqB (erRd m) q pin then 1 else 0], m)
 
 theorem mp_specW (p : Prog) (hC : CanonProg p) (hp : p.lookup "matches_pin" = some matchesPinL)
     (n : Nat) (s₀ : St) (q pin : Word) :
@@ -248,7 +248,7 @@ theorem mp_callR {p : Prog} (h : RedProg p) {n : Nat} {m m' : Mem} {q pin : Word
 /-- The kind word of a record at the tagged `EREC` read. -/
 theorem erecKind {m : Mem} {q w : Word} (hw : erecP m q.toNat = some w) :
     rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = w := by
-  rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hw
+  rw [erRd_congr rfl rfl]; exact erRd_of _ _ hw
 
 /-- A pinned constant value read back from `rom_cv`'s result. -/
 theorem decRCV_get {m : Mem} {r : List Word} {cv : IConstantVal} (h : decRCV m r cv) :

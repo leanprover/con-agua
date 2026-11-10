@@ -179,10 +179,10 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
       except_ok_bind, show ∀ x, (viewLsLen x).run a = .ok (a.store.lss.viewLen x, a) from
         fun _ => rfl, hvl]
   have hlen : ids.length = cv.levelParams.length ↔
-      (lsNodeW m₁ us).tail.headD 0 = erRdT m₁ (r₁.tail.headD 0 + 3) := by
+      (lsNodeW m₁ us).tail.headD 0 = erRd m₁ (r₁.tail.headD 0 + 3) := by
     rw [hlen1, hslice?_lenR hsl, ← hlen2]
     exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
-  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ erRdT m₁ (r₁.tail.headD 0 + 3)
+  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ erRd m₁ (r₁.tail.headD 0 + 3)
   · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     have : ¬ ids.length = cv.levelParams.length := fun h => hl (hlen.mp h)
@@ -190,7 +190,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [hl, ↓reduceIte] at hW
   have hlen' : ids.length = cv.levelParams.length := hlen.mpr (by simpa using hl)
   -- the datum of the type
-  rcases hc2 : sub (erRdT m₁ (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
+  rcases hc2 : sub (erRd m₁ (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
     rw [hc2] at hW
   · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := hsub hS hw4 hc2
@@ -212,8 +212,8 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     rcases res₂ with _ | pw
     · exact absurd (hd₂.none_iff.mpr rfl) hk0
     · exact ⟨pw, rfl⟩
-  rcases hc3 : callW p n "subst_pw_at" [erRdT m₂ (r₁.tail.headD 0 + 2),
-      erRdT m₂ (r₁.tail.headD 0 + 3), us, r₂.headD 0, r₂.tail.headD 0,
+  rcases hc3 : callW p n "subst_pw_at" [erRd m₂ (r₁.tail.headD 0 + 2),
+      erRd m₂ (r₁.tail.headD 0 + 3), us, r₂.headD 0, r₂.tail.headD 0,
       r₂.tail.tail.headD 0] m₂ with _ | ⟨r₃, m₃⟩
   · rw [hc3] at hW; cases hW
   rw [hc3] at hW

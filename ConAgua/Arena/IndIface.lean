@@ -472,8 +472,6 @@ def erAllocW (m : Mem) (k : Word) : Option (Word × Mem) :=
     else if m.len64 (tier1 EREC) - o < k then none
     else some (1099511627776 + o, erAllocMem m k)
 
-theorem ctl_t0' : TieredArray.t0 1 = (CTL : TieredArray) := rfl
-
 theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc) (n : Nat) (s₀ : St)
     (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
@@ -488,7 +486,7 @@ theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0', tierA, Locals.init,
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0, tierA, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ]
 
 theorem erecPut_specW (p : Prog) (hp : p.lookup "erec_put" = some erecPut) (n : Nat) (s₀ : St)
@@ -541,8 +539,8 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [hS]; omega)), hS] at h2
     have hok : (o + k).toNat = o.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
     have hmem := MemFrame.setCtl m 129 (o + k)
-    have t0 : erecTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := by
-      simp only [erecTop, rdW_set64, e129, and_self, ite_true, hok]
+    have t0 : erTop (m.set64 CTL 129 (o + k)) = o.toNat + k.toNat := by
+      simp only [erTop, rdW_set64, e129, and_self, ite_true, hok]
     have t1 : erecTop1 (m.set64 CTL 129 (o + k)) = erecTop1 m := by
       simp only [erecTop1, rdW_set64]; rw [ite_eq_right (by simp)]
     have hE : (m.set64 CTL 129 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -559,7 +557,7 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
         by rw [t1, hE1]; exact hW.er1, by rw [hE1]; exact hW.er1Size, by rw [hE]; exact hs0,
         by rw [hE1]; exact hs1⟩
     have hof : erOff o = o.toNat := Nat.mod_eq_of_lt (by omega)
-    have htop : erecTop m = o.toNat := by simp [erecTop, ho]
+    have htop : erTop m = o.toNat := by simp [erTop, ho]
     refine ⟨⟨by omega, fun i _ => by rw [hE], by rw [t1]; exact Nat.le_refl _, fun i _ => by rw [hE1]⟩,
       hmem.mono (by simp) (by simp), ?_, ?_, ?_, ?_, by omega, hok'⟩
     · simp only [hof, erTopOf, hd, ite_true, htop]
@@ -585,8 +583,8 @@ theorem erAllocW_spec {m m' : Mem} {k a : Word} (h : erAllocW m k = some (a, m')
     have hmem := MemFrame.setCtl m 130 (o + k)
     have t1 : erecTop1 (m.set64 CTL 130 (o + k)) = o.toNat + k.toNat := by
       simp only [erecTop1, rdW_set64, e130, and_self, ite_true, hok]
-    have t0 : erecTop (m.set64 CTL 130 (o + k)) = erecTop m := by
-      simp only [erecTop, rdW_set64]; rw [ite_eq_right (by simp)]
+    have t0 : erTop (m.set64 CTL 130 (o + k)) = erTop m := by
+      simp only [erTop, rdW_set64]; rw [ite_eq_right (by simp)]
     have hE : (m.set64 CTL 130 (o + k)).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have hE1 : (m.set64 CTL 130 (o + k)).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
       Mem.arr64_set64_ne _ _ _ _ _ (by decide)

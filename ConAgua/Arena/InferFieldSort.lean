@@ -121,7 +121,7 @@ theorem nmsAR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx
       have hn0 : n ≠ 0 := fun e => by subst e; simp at hn
       have hn1 : (n - 1).toNat = k := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-      have hr : keyT EREC m o = w := erRdT_of o w hw
+      have hr : keyT EREC m o = w := erRd_of o w hw
       have hrest : NmsK (nameN ns) m (keyT EREC) (o + 1) (n - 1) ys := by
         rcases k with _ | k
         · have e0 : n - 1 = 0 := UInt64.toNat_inj.mp (by simpa using hn1)

@@ -36,7 +36,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 open L.Front (DECL DLP trunc decCIs IndDeclAt dw)
-open L.Ind (erTop iwTop StageR IWGrow decW0B erToIwW erToIw iwAlloc erCopy decRBlk decPL iwN iwA truncM erA truncM_iw_get)
+open L.Ind (iwTop StageR IWGrow decW0B erToIwW erToIw iwAlloc erCopy decRBlk decPL iwN iwA truncM erA truncM_iw_get)
 
 /-! ## The model -/
 

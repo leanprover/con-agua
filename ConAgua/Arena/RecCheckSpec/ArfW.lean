@@ -4,7 +4,6 @@ public import ConAgua.Arena.DeclCanonView2
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecGenSpec.Rec3IwSlice
-import ConAgua.Arena.RecStab
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

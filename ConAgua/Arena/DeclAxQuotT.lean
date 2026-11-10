@@ -226,7 +226,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   have hname : cv.name = decI wn := hname0
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   have ex : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hwn)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
   rw [ex]
   -- `Quot.sound`
   refine RefE.bindLift (fun _ => checkDeclAxiomE.k_pin_at.none ..) fun r2 m2 h2 => ?_

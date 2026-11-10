@@ -121,8 +121,8 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨hbw, hbe⟩ := decTbl_body (erRdOK m) htbl i
   simp only [hppB] at hW
   rw [hE] at hW
-  generalize (if i < erRdT m (r₁.tail.headD 0 + 10) then
-    erRdT m (erRdT m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
+  generalize (if i < erRd m (r₁.tail.headD 0 + 10) then
+    erRd m (erRd m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
   rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
   · cases hW

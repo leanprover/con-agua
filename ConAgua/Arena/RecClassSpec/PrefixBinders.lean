@@ -103,13 +103,13 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   obtain ⟨w, ew, hwH, hwd⟩ := rec2CCName hX0m hsz
   by_cases hhit : w = cn
   · subst hhit
-    rw [fcgW.arm2 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew])] at h
+    rw [fcgW.arm2 (hc1 := hl) (hc2 := by simp only [erRd_foldN]; rw [ep, ew])] at h
     cases h
     refine ⟨rfl, ?_⟩
     have : (X0.cv.name == decI w) = true := by rw [← hwd]; simp
     simp only [List.find?_cons, this]
     exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
-  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by simp only [erRd_fold]; rw [ep, ew]; exact hhit)] at h
+  · rw [fcgW.arm3 (hc1 := hl) (hc2 := by simp only [erRd_foldN]; rw [ep, ew]; exact hhit)] at h
     obtain ⟨⟨r', m''⟩, hr, h⟩ := of_K h rfl
     rw [fcgW.k_class_gen_prefix_binders_find_ctor_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

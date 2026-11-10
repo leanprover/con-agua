@@ -157,8 +157,8 @@ variable (m0 : Mem) (c q tn lpe r1 r2 uslen : Word) (r : List Word)
 
 /-- The tests of `struct_eta_cert_go`, all passed. -/
 def sgOK : Prop :=
-  erRdT m0 (q + 5) ≠ 0 ∧ erRdT m0 (q + 6) = c ∧ r1 = 0 ∧ r2 = 0 ∧
-    tn = erRdT m0 (q + 7) ∧ uslen = erRdT m0 (q + 3) ∧ lpe ≠ 0 ∧ r.headD 0 ≠ 0
+  erRd m0 (q + 5) ≠ 0 ∧ erRd m0 (q + 6) = c ∧ r1 = 0 ∧ r2 = 0 ∧
+    tn = erRd m0 (q + 7) ∧ uslen = erRd m0 (q + 3) ∧ lpe ≠ 0 ∧ r.headD 0 ≠ 0
 
 end sgKarms
 
@@ -184,32 +184,32 @@ variable (p : Prog) (n : Nat) (m0 : Mem) (mode vis d b us c T q us2 ao an to tn 
 
 /-- `struct_eta_cert_go`'s tests, all passed: the tail. -/
 theorem secgE_yes (h : sgOK m0 c q tn lpe r1 r2 uslen r) :
-    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRdT m0 (q + 5))
-      (erRdT m0 (q + 6)) (erRdT m0 (q + 7)) (erRdT m0 (q + 8))
-      (erRdT m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) =
+    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + 5))
+      (erRd m0 (q + 6)) (erRd m0 (q + 7)) (erRd m0 (q + 8))
+      (erRd m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) =
     secgE.k_struct_eta_cert_tail p (sectE p n m mode vis d b us T us2 ao an to tn
-      (erRdT m0 (q + 7)) (erRdT m0 (q + 8))) := by
+      (erRd m0 (q + 7)) (erRd m0 (q + 8))) := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ := h
   simp only [secgE.k_tower_slots_all, h1, h2, h3, h4, h5, h6, h7, h8, ne_eq, not_true_eq_false,
     ↓reduceIte]
 
 /-- `struct_eta_cert_go`'s tests, one failed: `false`. -/
 theorem secgE_no (h : ¬ sgOK m0 c q tn lpe r1 r2 uslen r) :
-    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRdT m0 (q + 5))
-      (erRdT m0 (q + 6)) (erRdT m0 (q + 7)) (erRdT m0 (q + 8))
-      (erRdT m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) = .ok ([0], m) := by
+    secgE.k_tower_slots_all p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + 5))
+      (erRd m0 (q + 6)) (erRd m0 (q + 7)) (erRd m0 (q + 8))
+      (erRd m0 (q + 3)) lpe r1 r2 uslen (.ok (r, m)) = .ok ([0], m) := by
   unfold secgE.k_tower_slots_all
-  by_cases h1 : erRdT m0 (q + 5) = 0
+  by_cases h1 : erRd m0 (q + 5) = 0
   · simp only [h1, ↓reduceIte]
-  by_cases h2 : erRdT m0 (q + 6) ≠ c
+  by_cases h2 : erRd m0 (q + 6) ≠ c
   · simp only [h1, h2, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h3 : r1 ≠ 0
   · simp only [h1, h2, h3, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h4 : r2 ≠ 0
   · simp only [h1, h2, h3, h4, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h5 : tn ≠ erRdT m0 (q + 7)
+  by_cases h5 : tn ≠ erRd m0 (q + 7)
   · simp only [h1, h2, h3, h4, h5, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h6 : uslen ≠ erRdT m0 (q + 3)
+  by_cases h6 : uslen ≠ erRd m0 (q + 3)
   · simp only [h1, h2, h3, h4, h5, h6, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h7 : lpe = 0
   · simp only [h1, h2, h3, h4, h5, h6, h7, ↓reduceIte]
@@ -280,14 +280,14 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   -- `tower_slots_all`: the effect
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => CoreSpec.of_callW (hc.towerSlots (n' + 1)
     ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _ hS₃ hT) h) fun r₅ m₅ h₅ => ?_
-  rw [← hIR.etaFields] at h₅
+  simp only [L.Ind.erRd_foldN] at h₅; rw [← hIR.etaFields] at h₅
   obtain ⟨_, _, _, hst₅⟩ := h₅.after
   refine RefE.of_run_eq (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
   refine RefE.bind_growK (w := id) h₅ (fun M₅ hS₅ _ => ?_)
   unfold setGoK
   -- the tests
   have hlenT : targs.toList.length = tn.toNat := by simpa using ht.size
-  have hlpT : cvT.levelParams.length = (erRdT s₀.mem (q + 3)).toNat :=
+  have hlpT : cvT.levelParams.length = (erRd s₀.mem (q + 3)).toNat :=
     hslice?_lenR hIR.lp
   have hiff : (caps.eta = true ∧ caps.etaCtor = decI c ∧
       a₀.pins.reserved.contains (decI T) = false ∧ a₀.pins.reserved.contains (decI c) = false ∧
@@ -297,8 +297,8 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
       sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅ := by
     unfold sgOK
     rw [hIR.eta, hIR.etaCtor, ← hr₂, ← hr₃, hlenT, hIR.etaParams, hlpT]
-    have e2 : decI (erRdT s₀.mem (q + 6)) = (decI c : NIdx) ↔
-        erRdT s₀.mem (q + 6) = c :=
+    have e2 : decI (erRd s₀.mem (q + 6)) = (decI c : NIdx) ↔
+        erRd s₀.mem (q + 6) = c :=
       ⟨fun h => decI_inj hIR.etaCtor_hw hcw h, fun h => by rw [h]⟩
     have e7 : cvc.levelParams = cvT.levelParams ↔ r₁.headD 0 ≠ 0 := by
       have h1 : decBool r₁ = decide (cvc.levelParams = cvT.levelParams) := hr₁
@@ -309,6 +309,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
         exact ⟨fun h => absurd h he, fun h => absurd h1 h⟩
     rw [e2, e7]
     simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq, UInt64.toNat_inj]
+  simp only [L.Ind.erRd_foldN]
   by_cases hok : sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅
   · rw [secgE_yes (h := hok), ite_eq_left_of_eq_true _ _ (eq_true (hiff.mpr hok))]
     have hk₅ := hst₂.trans (hst₃.trans hst₅)

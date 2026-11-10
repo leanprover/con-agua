@@ -128,7 +128,7 @@ theorem faGuard_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : N
 
 theorem lp_one {m : Mem} {c : List Word} {lps : List NIdx}
     (hsl : hslice? (erecP m) (c.headD 0).toNat (c.tail.headD 0).toNat = some lps) (h1 : c.tail.headD 0 = 1) :
-    lps = [decI (erRdT m (c.headD 0))] ∧ HW (erRdT m (c.headD 0)) := by
+    lps = [decI (erRd m (c.headD 0))] ∧ HW (erRd m (c.headD 0)) := by
   rw [h1] at hsl
   simp only [hslice?, hd?, show (1 : Word).toNat = 1 from rfl, List.range_one, List.mapM_cons,
     List.mapM_nil, Nat.add_zero] at hsl
@@ -136,7 +136,7 @@ theorem lp_one {m : Mem} {c : List Word} {lps : List NIdx}
   | none => rw [hw] at hsl; simp at hsl
   | some w =>
   rw [hw] at hsl
-  have hr : erRdT m (c.headD 0) = w := erRdT_of _ _ hw
+  have hr : erRd m (c.headD 0) = w := erRd_of _ _ hw
   rw [hr]
   by_cases hlt : w.toNat < 2 ^ 32
   · simp [hlt] at hsl
@@ -144,14 +144,14 @@ theorem lp_one {m : Mem} {c : List Word} {lps : List NIdx}
   · simp [hlt] at hsl
 
 /-- L's tagged `EREC` read, as `vcgen` leaves it. -/
-theorem erRdT_eqW (m : Mem) (x : Word) :
-    rdW (m.arr64 (L.tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRdT m x :=
-  erRdT_congr rfl rfl x
+theorem erRd_eqW (m : Mem) (x : Word) :
+    rdW (m.arr64 (L.tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m x :=
+  erRd_congr rfl rfl x
 
 /-- The same read with `EREC` and the operators unfolded. -/
-theorem erRdT_eqV (m : Mem) (x : Word) :
-    rdW (m.arr64 (tierA 136 (BinOp.shr.eval x 40))) (BinOp.and.eval x 1099511627775) = erRdT m x :=
-  erRdT_eqW m x
+theorem erRd_eqV (m : Mem) (x : Word) :
+    rdW (m.arr64 (tierA 136 (BinOp.shr.eval x 40))) (BinOp.and.eval x 1099511627775) = erRd m x :=
+  erRd_eqW m x
 
 theorem lp_ne {c : List Word} {lps : List NIdx} (hlen : lps.length = (c.tail.headD 0).toNat)
     (h1 : c.tail.headD 0 ≠ 1) (x : NIdx) : lps ≠ [x] := by
@@ -275,7 +275,7 @@ def listK1 : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (c, m) => if c.tail.headD 0 ≠ 1 then some (0, m)
     else listK2 p n (c.tail.tail.headD 0)
-      (callW p n "str_param_sort" [erRdT m (c.headD 0)] m)
+      (callW p n "str_param_sort" [erRd m (c.headD 0)] m)
 
 /-- **The model of `list_ty_ok`.** -/
 def listK0 (m : Mem) (found q : Word) : Option (Word × Mem) :=
@@ -300,7 +300,7 @@ def nilK2 (ty : Word) : Option (List Word × Mem) → Option (Word × Mem)
 def nilK1 : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (c, m) => if c.tail.headD 0 ≠ 1 then some (0, m)
-    else nilK2 p n (c.tail.tail.headD 0) (callW p n "str_param_sort" [erRdT m (c.headD 0)] m)
+    else nilK2 p n (c.tail.tail.headD 0) (callW p n "str_param_sort" [erRd m (c.headD 0)] m)
 
 /-- **The model of `list_nil_ty_ok`.** -/
 def nilK0 (m : Mem) (found q : Word) : Option (Word × Mem) :=
@@ -356,7 +356,7 @@ def consK1 : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (c, m) => if c.tail.headD 0 ≠ 1 then some (0, m)
     else consK2 p n (c.tail.tail.headD 0)
-      (callW p n "str_param_sort" [erRdT m (c.headD 0)] m)
+      (callW p n "str_param_sort" [erRd m (c.headD 0)] m)
 
 /-- **The model of `list_cons_ty_ok`.** -/
 def consK0 (m : Mem) (found q : Word) : Option (Word × Mem) :=
@@ -379,7 +379,7 @@ theorem listK1_f (h : g.tail.headD 0 ≠ 1) : listK1 p n (some (g, m)) = some (0
   simp only [listK1, h, ne_eq, not_false_eq_true, ↓reduceIte]
 theorem listK1_t (h : g.tail.headD 0 = 1) : listK1 p n (some (g, m)) =
     listK2 p n (g.tail.tail.headD 0)
-      (callW p n "str_param_sort" [erRdT m (g.headD 0)] m) := by
+      (callW p n "str_param_sort" [erRd m (g.headD 0)] m) := by
   simp only [listK1, h, ne_eq, not_true_eq_false, ↓reduceIte]
 theorem listK0_f (h : found = 0) : listK0 p n m found q = some (0, m) := by
   simp only [listK0, h, ↓reduceIte]
@@ -423,7 +423,7 @@ theorem listTy_spec (p : Prog) (hp : p.lookup "list_ty_ok" = some listTyOkL) (n 
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "e_view"] <;>
     finish (gen := 20) [listK0_f, listK0_t, listK1_f, listK1_t, listK2_s, faEqA_f, faEqA_t, faEqK_s,
-      rdW_eq, erRdT_eqW,
+      rdW_eq, erRd_eqW,
       St.setLocs_mem']
 
 set_option maxHeartbeats 1000000 in
@@ -437,7 +437,7 @@ theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTy
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
-      nilCK, nilD, nilDK, getElem_rdW', erRdT_eqV, Cmp.eval, LocEq,
+      nilCK, nilD, nilDK, getElem_rdW', erRd_eqV, Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -454,7 +454,7 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
     callW_spec p n "mk_app", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, consK0, consK1, consK2, consK3, consK4, consK5, consK6, consK7,
       consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK,
-      getElem_rdW', erRdT_eqV, Cmp.eval, LocEq,
+      getElem_rdW', erRd_eqV, Cmp.eval, LocEq,
       St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -706,7 +706,7 @@ def listPreW (p : Prog) (n : Nat) (K2 : Word → Option (List Word × Mem) → O
   match callW p n "str_cv" [q] m with
   | none => none
   | some (c, m₁) => if c.tail.headD 0 ≠ 1 then some (0, m₁)
-    else K2 (c.tail.tail.headD 0) (callW p n "str_param_sort" [erRdT m₁ (c.headD 0)] m₁)
+    else K2 (c.tail.tail.headD 0) (callW p n "str_param_sort" [erRd m₁ (c.headD 0)] m₁)
 
 section calls
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
@@ -812,7 +812,7 @@ theorem listPre_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨hlp, hw⟩ := lp_one hsl hl'
   rw [hlp]
   dsimp only
-  rcases h2 : callW p n "str_param_sort" [erRdT m (c.headD 0)] m with _ | ⟨s, m₂⟩
+  rcases h2 : callW p n "str_param_sort" [erRd m (c.headD 0)] m with _ | ⟨s, m₂⟩
   · rw [h2, hn] at hW; cases hW
   rw [h2] at hW
   refine paramSort_run p hp hS hw (hden _ hlp) h2

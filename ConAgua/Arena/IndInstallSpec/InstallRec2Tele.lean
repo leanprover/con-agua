@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecClassSpec.PiBWRoom
-import ConAgua.Arena.RecStab
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt

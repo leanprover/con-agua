@@ -154,11 +154,11 @@ def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
 theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
     (hf : fe.find? T = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
-    (¬ (f ≠ 0 ∧ erRdT m q = 3 ∧ erRdT m (q + 19) = 1 ∧ erRdT m (q + 17) < tn) →
+    (¬ (f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + 19) = 1 ∧ erRd m (q + 17) < tn) →
       projIndexedStructLike fe T T i tn.toNat = false) ∧
-    ((f ≠ 0 ∧ erRdT m q = 3 ∧ erRdT m (q + 19) = 1 ∧ erRdT m (q + 17) < tn) →
-      HW (erRdT m (erRdT m (q + 18))) ∧
-      projIndexedStructLike fe T T i tn.toNat = ctorFieldsGt fe (decI (erRdT m (erRdT m (q + 18)))) i) := by
+    ((f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + 19) = 1 ∧ erRd m (q + 17) < tn) →
+      HW (erRd m (erRd m (q + 18))) ∧
+      projIndexedStructLike fe T T i tn.toNat = ctorFieldsGt fe (decI (erRd m (erRd m (q + 18)))) i) := by
   by_cases f0 : f = 0
   · have hn : fe.find? T = none := by rw [hf]; simp [envFound, f0]
     refine ⟨fun _ => ?_, fun h => absurd h.1 (by simpa using f0)⟩
@@ -166,14 +166,14 @@ theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
   obtain ⟨ci, hci⟩ := hs f0
   have hfind : fe.find? T = some ci := by rw [hf]; simp only [envFound, f0, ↓reduceIte]; exact hci
   have hK := decCI_indF (erRdOK m) hci
-  by_cases h3 : erRdT m q = 3
+  by_cases h3 : erRd m q = 3
   · obtain ⟨cv, caps, rfl⟩ := hK.1 h3
     obtain ⟨hnp, hlen, hc⟩ := decCI_indNC (erRdOK m) hci
-    by_cases h19 : erRdT m (q + 19) = 1
+    by_cases h19 : erRd m (q + 19) = 1
     · have hl1 : caps.ctors.length = 1 := by rw [hlen, h19]; rfl
       obtain ⟨c, hc1⟩ := List.length_eq_one_iff.mp hl1
       obtain ⟨hcw, hhw⟩ := hc c hc1
-      by_cases h17 : erRdT m (q + 17) < tn
+      by_cases h17 : erRd m (q + 17) < tn
       · refine ⟨fun h => absurd ⟨f0, h3, h19, h17⟩ h, fun _ => ⟨hhw, ?_⟩⟩
         have hlt : caps.nparams < tn.toNat := by rw [hnp]; exact UInt64.lt_iff_toNat_lt.mp h17
         simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind,
@@ -205,14 +205,14 @@ count at `q + 6`. -/
 theorem ctorFieldsGt_eq {fe : IFEnv} {m : Mem} {c : NIdx} {f q iw : Word}
     (hf : fe.find? c = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
-    ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ erRdT m q = 4 ∧ iw < erRdT m (q + 6)) := by
+    ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ erRd m q = 4 ∧ iw < erRd m (q + 6)) := by
   by_cases f0 : f = 0
   · have hn : fe.find? c = none := by rw [hf]; simp [envFound, f0]
     simp [ctorFieldsGt, hn, f0]
   obtain ⟨ci, hci⟩ := hs f0
   have hfind : fe.find? c = some ci := by rw [hf]; simp only [envFound, f0, ↓reduceIte]; exact hci
   have hK := decCI_ctorF (erRdOK m) hci
-  by_cases h4 : erRdT m q = 4
+  by_cases h4 : erRd m q = 4
   · obtain ⟨cv, rfl⟩ := hK.1 h4
     simp only [ctorFieldsGt, hfind, f0, h4, ne_eq, not_false_eq_true, true_and, decide_eq_decide]
     exact UInt64.lt_iff_toNat_lt.symm
@@ -348,7 +348,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
       obtain ⟨rfl, hfind7, hfound7⟩ := envFind_callE hpj.envRowGet hpj.baseRowGet hpj.envFind
         hS₆.env hcTw (callE_of_callW hc7)
       have hP := pisl_first (i := i.toNat) (tn := r₆.tail.headD 0) hfind7 hfound7
-      simp only [erRdT] at hP
+      simp only [erRd] at hP
       by_cases C1 : r₇.headD 0 ≠ 0 ∧
           rdW (m₇.arr64 (tierA EREC (r₇.tail.headD 0 >>> 40))) (r₇.tail.headD 0 &&& 1099511627775) = 3 ∧
           rdW (m₇.arr64 (tierA EREC ((r₇.tail.headD 0 + 19) >>> 40))) (r₇.tail.headD 0 + 19 &&& 1099511627775) = 1 ∧
@@ -361,7 +361,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
         obtain ⟨rfl, hfind8, hfound8⟩ := envFind_callE hpj.envRowGet hpj.baseRowGet hpj.envFind
           hS₆.env hwc (callE_of_callW hc8)
         have hcf := ctorFieldsGt_eq (iw := i) hfind8 hfound8
-        simp only [erRdT] at hcf
+        simp only [erRd] at hcf
         by_cases C2 : r₈.headD 0 ≠ 0 ∧
             rdW (m₈.arr64 (tierA EREC (r₈.tail.headD 0 >>> 40))) (r₈.tail.headD 0 &&& 1099511627775) = 4 ∧
             i < rdW (m₈.arr64 (tierA EREC ((r₈.tail.headD 0 + 6) >>> 40))) (r₈.tail.headD 0 + 6 &&& 1099511627775)

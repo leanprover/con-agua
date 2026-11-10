@@ -37,7 +37,7 @@ theorem isCtorApp_coreFn : "is_ctor_app" ∈ coreFns := List.elem_iff.mp (by dec
 /-- A rule record's `ctor` word. -/
 theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {rl : IRecRule} (h : decRule R q.toNat = some rl) : rl.ctor = decI (rd q) ∧ HW (rd q) := by
-  obtain ⟨w, hw, hl, e⟩ := hd?_eq (L.Ind.decRule_ctor h)
+  obtain ⟨w, hw, hl, e⟩ := hd?_some (L.Ind.decRule_ctor h)
   have e' : rd q = w := hR.rd _ _ hw
   exact ⟨by rw [e', e], by rw [e']; exact hl⟩
 
@@ -137,7 +137,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       rw [m2cArmsE.k_eta_rescue_ok.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g1']
       simp only [show (r1.headD 0 != 0) = false by rw [g1']; rfl, Bool.false_eq_true, ↓reduceIte]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-        (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]) hR
+        (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]; rfl) hR
         (m2cAnd_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
           mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
   · rw [m2cArmsE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g]
@@ -146,7 +146,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     | zero => rw [m2cKE.eq_1, m2cArmsE.k_m2c_k.none]; exact RefE.of_cls0 (by simp)
     | succ N' =>
     exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-      (fun h => h.mono (Nat.le_succ _)) (by simp only [m2cArmsT, hK, ↓reduceIte, hctor, hlp, hnp]) hR
+      (fun h => h.mono (Nat.le_succ _)) (by simp only [m2cArmsT, hK, ↓reduceIte, hctor, hlp, hnp, _root_.L.Ind.erRd_foldN]) hR
       (m2cK_ref p hp hc hpi hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
         mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
 
@@ -216,14 +216,14 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
     rw [hfind]; simp only [envFound, g4, ↓reduceIte]; exact hciE
   obtain ⟨hind, -⟩ := decCI_kind34' (erRdOK m) hciE
-  by_cases g5 : erRdT m (r4.tail.headD 0) ≠ 3
+  by_cases g5 : erRd m (r4.tail.headD 0) ≠ 3
   · rw [m2cCtorE.k_env_find.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4 g5]
     refine RefE.ret ?_ hA0
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
     cases ci with
     | indInfo cv caps => exact absurd (hind.mp ⟨cv, caps, rfl⟩) g5
     | _ => rfl
-  rw [m2cCtorE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ _ _ g4 (by simpa using g5)]
+  rw [m2cCtorE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ _ _ g4 (by simpa [erRd] using g5)]
   obtain ⟨cvT, caps, rfl⟩ := hind.mpr (by simpa using g5)
   cases N with
   | zero => rw [m2cArmsE.eq_1, m2cCtorE.k_m2c_arms.none]; exact RefE.of_cls0 (by simp)
@@ -305,14 +305,14 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hfind' : fe.find? rl.ctor = some ci := by
     rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hciE
   obtain ⟨-, hctr⟩ := decCI_kind34' (erRdOK m1) hciE
-  by_cases g4 : erRdT m1 (r2.tail.headD 0) ≠ 4
+  by_cases g4 : erRd m1 (r2.tail.headD 0) ≠ 4
   · rw [m2cHeadE.k_env_find.arm2 _ _ _ _ _ _ _ _ _ _ g3 g4]
     refine RefE.ret ?_ hA1
     rw [hstep]; simp only [hfind']
     cases ci with
     | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
     | _ => rfl
-  rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa using g4)]
+  rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa [erRd] using g4)]
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
   exact RefE.tail_eq (m2cHeadE.k_m2c_ctor.none p) (fun v => m2cHeadE.k_m2c_ctor.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _)) (by rw [hstep]; simp only [hfind'])

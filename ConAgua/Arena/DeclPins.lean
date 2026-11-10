@@ -35,7 +35,7 @@ theorem IWGrow.recGrow {m m' : Mem} (h : IWGrow m m') : RecGrow m m' := ⟨h.er,
 /-- `ArrExt` of the record pools in use, at an in-bounds top, is a `RecGrow`. -/
 theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP m')) :
     RecGrow m m' := by
-  have key : ∀ i < erTop m, i < erecTop m' ∧ (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := by
+  have key : ∀ i < erTop m, i < erTop m' ∧ (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := by
     intro i hi
     have h40 : i < 2 ^ 40 := by have := hw.er; have := hw.erCap; omega
     have hsz : i < (m.arr64 EREC).size := by have := hw.er; omega
@@ -54,7 +54,7 @@ theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP 
   rcases Nat.eq_zero_or_pos (erTop m) with h0 | hpos
   · omega
   · have := (key (erTop m - 1) (by omega)).1
-    show erTop m ≤ erecTop m'
+    show erTop m ≤ erTop m'
     omega
 
 theorem RecGrow.of_eq {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
@@ -70,12 +70,12 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
     (hg : RecGrow m m') : SliceR m' o l hs := by
   obtain ⟨hb, hl, hw⟩ := h
   obtain ⟨het, hek⟩ := hg
-  have het' : erecTop m ≤ erecTop m' := het
-  have e0 : erTop m = erecTop m := rfl
+  have het' : erTop m ≤ erTop m' := het
+  have e0 : erTop m = erTop m := rfl
   refine ⟨by omega, hl, fun i hi => ?_⟩
-  have hlt : (o + UInt64.ofNat i).toNat < erecTop m := by
+  have hlt : (o + UInt64.ofNat i).toNat < erTop m := by
     have : (rdW (m.arr64 CTL) 129).toNat < 2 ^ 64 := UInt64.toNat_lt_size _
-    have : erecTop m < 2 ^ 64 := this
+    have : erTop m < 2 ^ 64 := this
     rw [toNat_add_small' o i (by omega)]; omega
   rw [rdW_keep hek hlt]; exact hw i hi
 
@@ -88,10 +88,10 @@ theorem PinSetsR.grow {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips
     (hg : RecGrow m m') (h150 : rdW (m'.arr64 CTL) 150 = rdW (m.arr64 CTL) 150)
     (h151 : rdW (m'.arr64 CTL) 151 = rdW (m.arr64 CTL) 151) : PinSetsR m' ips := by
   obtain ⟨hc, hb, hr⟩ := h
-  have het : erecTop m ≤ erecTop m' := hg.1
+  have het : erTop m ≤ erTop m' := hg.1
   have hek := hg.2
-  have e0 : erTop m = erecTop m := rfl
-  have htop : erecTop m < 2 ^ 64 := UInt64.toNat_lt_size _
+  have e0 : erTop m = erTop m := rfl
+  have htop : erTop m < 2 ^ 64 := UInt64.toNat_lt_size _
   refine ⟨by rw [h151]; exact hc, by rw [h150]; omega, fun k hk => ?_⟩
   have ek : (rdW (m.arr64 CTL) 150 + UInt64.ofNat k).toNat = (rdW (m.arr64 CTL) 150).toNat + k :=
     toNat_add_small' _ k (by omega)

@@ -127,10 +127,10 @@ def ecsK3 (top q : Word) (res : Option (List Word × Mem)) : Option (Word × Mem
   | none => none
   | some (r, m) =>
     if (136 : Word).toNat < (m.arr64 CTL).size then
-      if r.tail.headD 0 < erRdT (m.set64 CTL 136 top) (q + 6) then
+      if r.tail.headD 0 < erRd (m.set64 CTL 136 top) (q + 6) then
         some (0, m.set64 CTL 136 top)
-      else some (if r.tail.headD 0 - erRdT (m.set64 CTL 136 top) (q + 6) =
-          erRdT (m.set64 CTL 136 top) (q + 5) then 1 else 0, m.set64 CTL 136 top)
+      else some (if r.tail.headD 0 - erRd (m.set64 CTL 136 top) (q + 6) =
+          erRd (m.set64 CTL 136 top) (q + 5) then 1 else 0, m.set64 CTL 136 top)
     else none
 
 /-- After `env_find`: a constructor record, then the arguments. -/
@@ -139,7 +139,7 @@ def ecsK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, m)
-    else if erRdT m (r.tail.headD 0) ≠ 4 then some (0, m)
+    else if erRd m (r.tail.headD 0) ≠ 4 then some (0, m)
     else ecsK3 (rdW (m.arr64 CTL) 136) (r.tail.headD 0) (callW p n "get_app_args" [a] m)
 
 /-- **The model of `eta_ctor_shape`** past `get_app_fn`'s run. -/
@@ -164,7 +164,7 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, ld64_rdT_spec, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, st64_spec,
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
-  simp_all [ecsK1, ecsK2, ecsK3, erRdT, tierW, idxW, LocEq, BinOp.eval,
+  simp_all [ecsK1, ecsK2, ecsK3, erRd, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ, size_set64, TieredArray.t0]
@@ -270,7 +270,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hctor := decCI_ctorF (erRdOK _) hci
-  rcases (Classical.em (erRdT s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
+  rcases (Classical.em (erRd s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
   · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
       (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) rfl
@@ -285,9 +285,9 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     · simp only [h, ↓reduceIte] at hW; cases hW
   simp only [h136, ↓reduceIte] at hW
   obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
-  have herec : erRdT (m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = erRdT s.mem := by
+  have herec : erRd (m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = erRd s.mem := by
     funext x
-    exact erRdT_congr
+    exact erRd_congr
       (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hf3.1 EREC (by simp [EREC, SPN]) (by decide))
       (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
           exact hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide)) x
@@ -296,9 +296,9 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     hargs
   have hlen : xs.length = (r₃.tail.headD 0).toNat := by
     have := hsp.size; simpa using this
-  have hW' : some ((if r₃.tail.headD 0 < erRdT s.mem (r₂.tail.headD 0 + 6) then (0 : Word)
-      else if r₃.tail.headD 0 - erRdT s.mem (r₂.tail.headD 0 + 6) =
-        erRdT s.mem (r₂.tail.headD 0 + 5) then 1 else 0),
+  have hW' : some ((if r₃.tail.headD 0 < erRd s.mem (r₂.tail.headD 0 + 6) then (0 : Word)
+      else if r₃.tail.headD 0 - erRd s.mem (r₂.tail.headD 0 + 6) =
+        erRd s.mem (r₂.tail.headD 0 + 5) then 1 else 0),
       m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = some (r.headD 0, s'.mem) := by
     rw [← hW]; split <;> rfl
   rw [count_test _ _ _ xs.length hlen] at hW'

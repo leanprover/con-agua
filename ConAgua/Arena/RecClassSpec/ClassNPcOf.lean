@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.RecStab
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecSim
 public import ConAgua.Arena.GrindAttr

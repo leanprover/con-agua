@@ -105,7 +105,7 @@ theorem AgreeA.set_iw {b : Nat} (m : Mem) {i : Word} (v : Word) (hi : i.toNat < 
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have eC : (m.set64 IW i v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨by rw [iwTop_set_iw]; exact Nat.le_refl _, fun j hj _ => ?_,
-    ⟨by simp only [erecTop, eC]; exact Nat.le_refl _, fun j _ => by rw [e0],
+    ⟨by simp only [erTop, eC]; exact Nat.le_refl _, fun j _ => by rw [e0],
       by simp only [erecTop1, eC]; exact Nat.le_refl _, fun j _ => by rw [e1]⟩⟩
   rw [set64IW_get]; rw [ite_eq_right (by omega)]
 

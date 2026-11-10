@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.InstallCvDecB
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.RecStab
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 

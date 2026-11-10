@@ -599,7 +599,7 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decRS_some (show decRS (truncM m) pc = some rs0 from hrs0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)
     have hpclt : pc < iwTop m := partsIwLt hca
-    rw [partsRdIW_grow hg1 (by rw [UInt64.toNat_ofNat_of_lt' hpb]; exact hpclt), hcw] at h
+    rw [rdW_iw_grow hg1 (by rw [UInt64.toNat_ofNat_of_lt' hpb]; exact hpclt), hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName hg1 (show DecB (fun m => decCVp m ca) m rs0.cvR from hcv) hcab
     rcases h2 : consW n m1 (erRd m1 (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h

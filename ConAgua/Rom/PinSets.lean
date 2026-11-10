@@ -51,7 +51,7 @@ theorem tpinsOf_length (ip : INatOpPinSet) : (tpinsOf ip).length = 8 := rfl
 
 /-- **An `EREC` slice holds the handles `hs`**: `l` words at `o`, below the pool's top. -/
 def SliceR (mem : Mem) (o l : Word) (hs : List EIdx) : Prop :=
-  o.toNat + l.toNat ≤ erecTop mem ∧ l.toNat = hs.length ∧
+  o.toNat + l.toNat ≤ erTop mem ∧ l.toNat = hs.length ∧
   ∀ i (hi : i < hs.length), rdW (mem.arr64 EREC) (o + UInt64.ofNat i) = hs[i].word.toUInt64
 
 /-- Certificate list `j` of the record at `r`: the slice whose offset and length are at
@@ -63,7 +63,7 @@ def HdrR (mem : Mem) (r : Word) (j : Nat) (hs : List EIdx) : Prop :=
 /-- **An `EREC` slice holds the type pins `ps`**: `l` pairs at `o` (the name at `o + 2i`, the type
 at `o + 2i + 1`), below the pool's top. -/
 def TPinsR (mem : Mem) (o l : Word) (ps : List (NIdx × EIdx)) : Prop :=
-  o.toNat + 2 * l.toNat ≤ erecTop mem ∧ l.toNat = ps.length ∧
+  o.toNat + 2 * l.toNat ≤ erTop mem ∧ l.toNat = ps.length ∧
   ∀ i (hi : i < ps.length),
     rdW (mem.arr64 EREC) (o + 2 * UInt64.ofNat i) = ps[i].1.word.toUInt64 ∧
     rdW (mem.arr64 EREC) (o + 2 * UInt64.ofNat i + 1) = ps[i].2.word.toUInt64
@@ -78,14 +78,14 @@ def THdrR (mem : Mem) (r : Word) (j : Nat) (ps : List (NIdx × EIdx)) : Prop :=
 slice `(off, len)` at `r + 8 + 2j`, `r + 9 + 2j`; type-pin list `j`'s at `r + 24 + 2j`,
 `r + 25 + 2j`); handle words are `x.word.toUInt64`. Everything is below the pool's top. -/
 def PinSetR (mem : Mem) (r : Word) (ip : INatOpPinSet) : Prop :=
-  r.toNat + 40 ≤ erecTop mem ∧ SliceR mem r 8 (pinsOf ip) ∧
+  r.toNat + 40 ≤ erTop mem ∧ SliceR mem r 8 (pinsOf ip) ∧
   (∀ j (hj : j < 8), HdrR mem r j ((certsOf ip)[j]'(by rw [certsOf_length]; exact hj))) ∧
   ∀ j (hj : j < 8), THdrR mem r j ((tpinsOf ip)[j]'(by rw [tpinsOf_length]; exact hj))
 
 /-- **The interned variant list**: `CTL[151]` records, their pointers at `EREC[CTL[150] ‥]`. -/
 def PinSetsR (mem : Mem) (ips : List INatOpPinSet) : Prop :=
   (rdW (mem.arr64 CTL) 151).toNat = ips.length ∧
-  (rdW (mem.arr64 CTL) 150).toNat + ips.length ≤ erecTop mem ∧ ∀ k (hk : k < ips.length),
+  (rdW (mem.arr64 CTL) 150).toNat + ips.length ≤ erTop mem ∧ ∀ k (hk : k < ips.length),
     PinSetR mem (rdW (mem.arr64 EREC) (rdW (mem.arr64 CTL) 150 + UInt64.ofNat k)) ips[k]
 
 /-- The frame of the stage: the record pool, its top, the variant list's header, and the
@@ -98,8 +98,6 @@ def PinsC : List Word := 129 :: 150 :: 151 :: ExprC
 theorem addN {x y : Word} (h : x.toNat + y.toNat < 2 ^ 64) : (x + y).toNat = x.toNat + y.toNat := by
   rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
 
-theorem top_lt (m : Mem) : erecTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
-
 theorem ofNatN {i : Nat} (h : i < 2 ^ 64) : (UInt64.ofNat i).toNat = i := by
   rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
 
@@ -108,8 +106,8 @@ theorem ofNatN {i : Nat} (h : i < 2 ^ 64) : (UInt64.ofNat i).toNat = i := by
 /-- **`EREC` below `m`'s top changed only in `[lo, hi)`**; the top did not go down; the
 variant list's header `CTL[150]`, `CTL[151]` unchanged. -/
 structure EW (lo hi : Nat) (m m' : Mem) : Prop where
-  top : erecTop m ≤ erecTop m'
-  low : ∀ i, i < erecTop m → (i < lo ∨ hi ≤ i) → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  top : erTop m ≤ erTop m'
+  low : ∀ i, i < erTop m → (i < lo ∨ hi ≤ i) → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
   size : (m'.arr64 EREC).size = (m.arr64 EREC).size
   c150 : rdW (m'.arr64 CTL) 150 = rdW (m.arr64 CTL) 150
   c151 : rdW (m'.arr64 CTL) 151 = rdW (m.arr64 CTL) 151
@@ -119,7 +117,7 @@ theorem EW.refl (lo hi : Nat) (m : Mem) : EW lo hi m m :=
 
 /-- Two steps, the second's window outside the first's frame below the first's top. -/
 theorem EW.trans {lo hi lo₂ hi₂ : Nat} {m₁ m₂ m₃ : Mem} (h₁ : EW lo hi m₁ m₂) (h₂ : EW lo₂ hi₂ m₂ m₃)
-    (hd : ∀ i, i < erecTop m₁ → (i < lo ∨ hi ≤ i) → (i < lo₂ ∨ hi₂ ≤ i)) : EW lo hi m₁ m₃ :=
+    (hd : ∀ i, i < erTop m₁ → (i < lo ∨ hi ≤ i) → (i < lo₂ ∨ hi₂ ≤ i)) : EW lo hi m₁ m₃ :=
   ⟨Nat.le_trans h₁.top h₂.top,
    fun i hi' hw => (h₂.low i (Nat.lt_of_lt_of_le hi' h₁.top) (hd i hi' hw)).trans (h₁.low i hi' hw),
    h₂.size.trans h₁.size, h₂.c150.trans h₁.c150, h₂.c151.trans h₁.c151⟩
@@ -130,12 +128,12 @@ theorem EW.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (lo hi : Na
     EW lo hi m m' := by
   have hE := hf.arr EREC hA (by decide)
   refine ⟨?_, fun i _ _ => by rw [hE], by rw [hE], hf.ctl 150 h2, hf.ctl 151 h3⟩
-  simp only [erecTop]; rw [hf.ctl 129 h1]; exact Nat.le_refl _
+  simp only [erTop]; rw [hf.ctl 129 h1]; exact Nat.le_refl _
 
 /-- One `EREC` write. -/
 theorem EW.set (m : Mem) (x v : Word) : EW x.toNat (x.toNat + 1) m (m.set64 EREC x v) := by
   have hc : (m.set64 EREC x v).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨by simp only [erecTop, hc]; exact Nat.le_refl _, fun i _ hw => ?_, Mem.size_arr64_set64 _ _ _ _,
+  refine ⟨by simp only [erTop, hc]; exact Nat.le_refl _, fun i _ hw => ?_, Mem.size_arr64_set64 _ _ _ _,
     by rw [hc], by rw [hc]⟩
   rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   rw [ite_eq_right (by omega)]
@@ -143,7 +141,7 @@ theorem EW.set (m : Mem) (x v : Word) : EW x.toNat (x.toNat + 1) m (m.set64 EREC
 /-- **`erec_alloc`**: the old top, raised by `k`, inside `EREC`. -/
 theorem erAlloc_ok {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m'))
     (hc : 151 < (m.arr64 CTL).size) (hfl : rdW (m.arr64 CTL) 1 = 0) :
-    o.toNat = erecTop m ∧ erecTop m' = o.toNat + k.toNat ∧ o.toNat + k.toNat ≤ (m.arr64 EREC).size ∧
+    o.toNat = erTop m ∧ erTop m' = o.toNat + k.toNat ∧ o.toNat + k.toNat ≤ (m.arr64 EREC).size ∧
       MemFrame [] [129] m m' ∧ ∀ lo hi, EW lo hi m m' := by
   simp only [erAllocW, hfl, ite_true] at h
   have hmem : erAllocMem m k = m.set64 CTL 129 (rdW (m.arr64 CTL) 129 + k) := by
@@ -165,24 +163,24 @@ theorem erAlloc_ok {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m'))
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
     omega
   have hf : MemFrame [] [129] m (erAllocMem m k) := hmem ▸ MemFrame.setCtl m 129 _
-  have htop : erecTop (erAllocMem m k) = (rdW (m.arr64 CTL) 129).toNat + k.toNat := by
-    simp only [erecTop, hmem, rdW_set64]
+  have htop : erTop (erAllocMem m k) = (rdW (m.arr64 CTL) 129).toNat + k.toNat := by
+    simp only [erTop, hmem, rdW_set64]
     rw [ite_eq_left ⟨trivial, trivial, by simp; omega⟩, addN (by omega)]
   refine ⟨rfl, htop, by omega, hf, fun lo hi => ?_⟩
   have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
-  exact ⟨by rw [htop]; simp only [erecTop]; omega, fun i _ _ => by rw [hE], by rw [hE],
+  exact ⟨by rw [htop]; simp only [erTop]; omega, fun i _ _ => by rw [hE], by rw [hE],
     hf.ctl 150 (by decide), hf.ctl 151 (by decide)⟩
 
 /-! ## Slices -/
 
-theorem SliceR.nil {m : Mem} {o : Word} (h : o.toNat ≤ erecTop m) : SliceR m o 0 [] :=
+theorem SliceR.nil {m : Mem} {o : Word} (h : o.toNat ≤ erTop m) : SliceR m o 0 [] :=
   ⟨by simpa using h, rfl, fun i hi => by simp at hi⟩
 
 theorem SliceR.frame {m m' : Mem} {o l : Word} {hs : List EIdx} {lo hi : Nat} (h : SliceR m o l hs)
     (hw : EW lo hi m m') (hd : o.toNat + l.toNat ≤ lo ∨ hi ≤ o.toNat) : SliceR m' o l hs := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hw.top, hl, fun i hi' => ?_⟩
-  have ht := top_lt m
+  have ht := erTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
     rw [addN] <;> rw [ofNatN (by omega)] <;> omega
   rw [← hv i hi', rdW, rdW, hx, hw.low _ (by omega) (by omega)]
@@ -190,9 +188,9 @@ theorem SliceR.frame {m m' : Mem} {o l : Word} {hs : List EIdx} {lo hi : Nat} (h
 /-- A slice: its first word, then the rest. -/
 theorem SliceR.cons {m : Mem} {o o' l l' : Word} {h : EIdx} {hs : List EIdx}
     (h₁ : rdW (m.arr64 EREC) o = h.word.toUInt64) (h₂ : SliceR m o' l hs) (ho : o' = o + 1)
-    (hl : l'.toNat = l.toNat + 1) (hb : o.toNat + 1 ≤ erecTop m) : SliceR m o l' (h :: hs) := by
+    (hl : l'.toNat = l.toNat + 1) (hb : o.toNat + 1 ≤ erTop m) : SliceR m o l' (h :: hs) := by
   obtain ⟨hb2, hl2, hv⟩ := h₂
-  have ht := top_lt m
+  have ht := erTop_lt m
   have ho' : o'.toNat = o.toNat + 1 := by subst ho; rw [addN (by simp; omega)]; simp
   refine ⟨by omega, by simp; omega, fun i hi => ?_⟩
   cases i with
@@ -214,7 +212,7 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   ok : StateOK a
   stk : (stkTop mem).toNat < 2 ^ 61
   ctl : 151 < (mem.arr64 CTL).size
-  top : erecTop mem ≤ (mem.arr64 EREC).size
+  top : erTop mem ≤ (mem.arr64 EREC).size
   /-- The pool's mode (lane tierpool). -/
   mode : ModeOK mem
   /-- The scratch flag is off (the pin sets are built at startup): `erec_alloc` allocates in
@@ -223,7 +221,7 @@ structure SInv (mem : Mem) (a : AState) : Prop where
   /-- `EREC`'s tier 0 is addressable by a tagged address (`erec_put` at tier 0). -/
   cap : (mem.arr64 EREC).size < 2 ^ 40
 
-theorem SInv.lo {mem : Mem} {a : AState} (inv : SInv mem a) {x : Word} (h : x.toNat < erecTop mem)
+theorem SInv.lo {mem : Mem} {a : AState} (inv : SInv mem a) {x : Word} (h : x.toNat < erTop mem)
     (m : Mem) (v : Word) : erecPutMem m x v = m.set64 EREC x v :=
   erecPutMem_lo m x v (by have := inv.top; have := inv.cap; omega)
 
@@ -241,7 +239,7 @@ theorem DecInv.frameE {mem mem' : Mem} {a : AState} {seen : List ConLeche.Expr} 
    by rw [hf.size CTL]; exact inv.ctl, inv.mode.frame hf (by decide) (by decide)⟩
 
 theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
-    (hf : MemFrame [EREC] [129, 150, 151] mem mem') (ht : erecTop mem' ≤ (mem'.arr64 EREC).size) :
+    (hf : MemFrame [EREC] [129, 150, 151] mem mem') (ht : erTop mem' ≤ (mem'.arr64 EREC).size) :
     SInv mem' a :=
   ⟨ArenaD.frameHi hf hiA hiC inv.arena,
    inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
@@ -269,7 +267,7 @@ theorem SInv.of_dec {mem mem' : Mem} {a a' : AState} {seen : List ConLeche.Expr}
     (inv : SInv mem a) (hd : DecInv mem' a' seen m) (hf : MemFrame PinsA ExprC mem mem')
     (hsc : a'.store.scratchOn = a.store.scratchOn) : SInv mem' a' :=
   ⟨hd.arena, hd.rset, hd.ok, hd.stk, by rw [hf.size CTL]; exact inv.ctl, by
-    simp only [erecTop]; rw [hf.ctl 129 (by decide), hf.size EREC]; exact inv.top, hd.mode,
+    simp only [erTop]; rw [hf.ctl 129 (by decide), hf.size EREC]; exact inv.top, hd.mode,
     flag_of_scratch inv.arena.base hd.arena.base hsc inv.flag, by rw [hf.size EREC]; exact inv.cap⟩
 
 /-- An expression list's interning keeps `scratchOn` (`IStepS.scratch`). -/
@@ -291,8 +289,8 @@ theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK m
 theorem resetMem_EW (lo hi : Nat) (mem : Mem) : EW lo hi mem (resetMem mem) :=
   EW.frame lo hi (resetMem_frame1 mem) (by simp) (by decide) (by decide) (by decide)
 
-theorem resetMem_top (mem : Mem) : erecTop (resetMem mem) = erecTop mem := by
-  simp only [erecTop]; rw [(resetMem_frame1 mem).ctl 129 (by decide)]
+theorem resetMem_top (mem : Mem) : erTop (resetMem mem) = erTop mem := by
+  simp only [erTop]; rw [(resetMem_frame1 mem).ctl 129 (by decide)]
 
 theorem resetMem_size (mem : Mem) : ((resetMem mem).arr64 EREC).size = (mem.arr64 EREC).size :=
   (resetMem_frame1 mem).size EREC
@@ -321,8 +319,8 @@ theorem EW.expr {m m' : Mem} (lo hi : Nat) (hf : MemFrame ExprA ExprC m m') : EW
     (c_notin _ (by decide) (by decide) (by decide) (by decide) (by decide))
     (c_notin _ (by decide) (by decide) (by decide) (by decide) (by decide))
 
-theorem expr_top {m m' : Mem} (hf : MemFrame ExprA ExprC m m') : erecTop m' = erecTop m := by
-  simp only [erecTop]
+theorem expr_top {m m' : Mem} (hf : MemFrame ExprA ExprC m m') : erTop m' = erTop m := by
+  simp only [erTop]
   rw [hf.ctl 129 (c_notin _ (by decide) (by decide) (by decide) (by decide) (by decide))]
 
 /-- An `EREC` write in bounds reads back. -/
@@ -330,7 +328,7 @@ theorem rdW_setE (m : Mem) (x v : Word) (hx : x.toNat < (m.arr64 EREC).size) :
     rdW ((m.set64 EREC x v).arr64 EREC) x = v := by
   rw [rdW_set64]; simp [hx]
 
-theorem EW.get {lo hi : Nat} {m m' : Mem} (hw : EW lo hi m m') (x : Word) (hx : x.toNat < erecTop m)
+theorem EW.get {lo hi : Nat} {m m' : Mem} (hw : EW lo hi m m') (x : Word) (hx : x.toNat < erTop m)
     (hd : x.toNat < lo ∨ hi ≤ x.toNat) : rdW (m'.arr64 EREC) x = rdW (m.arr64 EREC) x := by
   rw [rdW, rdW, hw.low _ hx hd]
 
@@ -354,7 +352,7 @@ theorem thdrIdx {r j : Word} (hr : r.toNat + 40 < 2 ^ 64) (hj : j.toNat < 8) :
 
 /-! ## Type-pin slices -/
 
-theorem TPinsR.nil {m : Mem} {o : Word} (h : o.toNat ≤ erecTop m) : TPinsR m o 0 [] :=
+theorem TPinsR.nil {m : Mem} {o : Word} (h : o.toNat ≤ erTop m) : TPinsR m o 0 [] :=
   ⟨by simpa using h, rfl, fun i hi => by simp at hi⟩
 
 theorem pairIdx {o : Word} {i : Nat} (h : o.toNat + 2 * i + 2 < 2 ^ 64) :
@@ -371,7 +369,7 @@ theorem TPinsR.frame {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} {lo hi
     TPinsR m' o l ps := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hw.top, hl, fun i hi' => ?_⟩
-  have ht := top_lt m
+  have ht := erTop_lt m
   obtain ⟨h0, h1⟩ := pairIdx (o := o) (i := i) (by omega)
   obtain ⟨v0, v1⟩ := hv i hi'
   rw [← v0, ← v1, rdW, rdW, rdW, rdW, h0, h1, hw.low _ (by omega) (by omega),
@@ -382,9 +380,9 @@ theorem TPinsR.frame {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} {lo hi
 theorem TPinsR.cons {m : Mem} {o o' l l' : Word} {x : NIdx × EIdx} {ps : List (NIdx × EIdx)}
     (h₁ : rdW (m.arr64 EREC) o = x.1.word.toUInt64) (h₂ : rdW (m.arr64 EREC) (o + 1) = x.2.word.toUInt64)
     (h₃ : TPinsR m o' l ps) (ho : o' = o + 2) (hl : l'.toNat = l.toNat + 1)
-    (hb : o.toNat + 2 ≤ erecTop m) : TPinsR m o l' (x :: ps) := by
+    (hb : o.toNat + 2 ≤ erTop m) : TPinsR m o l' (x :: ps) := by
   obtain ⟨hb2, hl2, hv⟩ := h₃
-  have ht := top_lt m
+  have ht := erTop_lt m
   have ho' : o'.toNat = o.toNat + 2 := by subst ho; rw [addN (by simp; omega)]; simp
   refine ⟨by omega, by simp; omega, fun i hi => ?_⟩
   cases i with
@@ -402,9 +400,9 @@ theorem TPinsR.cons {m : Mem} {o o' l l' : Word} {x : NIdx × EIdx} {ps : List (
 
 /-- `EREC` below `m`'s top unchanged, the top not lower. -/
 def PinEKeep (m m' : Mem) : Prop :=
-  erecTop m ≤ erecTop m' ∧ ∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
+  erTop m ≤ erTop m' ∧ ∀ i, i < erTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?
 
-theorem PinEKeep.get {m m' : Mem} (h : PinEKeep m m') {x : Word} (hx : x.toNat < erecTop m) :
+theorem PinEKeep.get {m m' : Mem} (h : PinEKeep m m') {x : Word} (hx : x.toNat < erTop m) :
     rdW (m'.arr64 EREC) x = rdW (m.arr64 EREC) x := by
   simp only [rdW, h.2 _ hx]
 
@@ -412,7 +410,7 @@ theorem SliceR.keep {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
     SliceR m' o l hs := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hk.1, hl, fun i hi' => ?_⟩
-  have ht := top_lt m
+  have ht := erTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
     rw [addN] <;> rw [ofNatN (by omega)] <;> omega
   rw [← hv i hi', hk.get (by rw [hx]; omega)]
@@ -421,7 +419,7 @@ theorem TPinsR.keep {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} (h : TP
     (hk : PinEKeep m m') : TPinsR m' o l ps := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hk.1, hl, fun i hi' => ?_⟩
-  have ht := top_lt m
+  have ht := erTop_lt m
   obtain ⟨h0, h1⟩ := pairIdx (o := o) (i := i) (by omega)
   rw [hk.get (by rw [h0]; omega), hk.get (by rw [h1]; omega)]
   exact hv i hi'
@@ -429,7 +427,7 @@ theorem TPinsR.keep {m m' : Mem} {o l : Word} {ps : List (NIdx × EIdx)} (h : TP
 theorem PinSetR.keep {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
     (hk : PinEKeep m m') : PinSetR m' r ip := by
   obtain ⟨hb, hp, hc, htp⟩ := h
-  have ht := top_lt m
+  have ht := erTop_lt m
   refine ⟨Nat.le_trans hb hk.1, hp.keep hk, fun j hj => ?_, fun j hj => ?_⟩
   · have := hdrIdx (r := r) (j := UInt64.ofNat j) (by omega) (by rw [ofNatN (by omega)]; exact hj)
     rw [ofNatN (by omega)] at this
@@ -578,7 +576,7 @@ def LowB (b : Nat) (mem : Mem) (r : Word) : Prop :=
 theorem PinSetR.frame {m m' : Mem} {r : Word} {ip : INatOpPinSet} {b lo hi : Nat} (h : PinSetR m r ip)
     (hl : LowB b m r) (hw : EW lo hi m m') (hb : hi ≤ b) : PinSetR m' r ip ∧ LowB b m' r := by
   obtain ⟨ht, hp, hc, htp⟩ := h
-  have htl := top_lt m
+  have htl := erTop_lt m
   have hix : ∀ j, j < 8 → (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j ∧
       (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
     intro j hj
@@ -622,8 +620,8 @@ include hr
 /-- **`rom_exprs_to` in the decoder direction**: `k` expressions at the current memo, the twin's
 `internExprList` on them, their handles in the slice `(o, k)`. -/
 theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLeche.Expr) (m : EMemo)
-    (q o k q' : Word) (mem' : Mem), DecInv mem a seen m → o.toNat + k.toNat ≤ erecTop mem →
-    erecTop mem ≤ (mem.arr64 EREC).size → (mem.arr64 EREC).size < 2 ^ 40 →
+    (q o k q' : Word) (mem' : Mem), DecInv mem a seen m → o.toNat + k.toNat ≤ erTop mem →
+    erTop mem ≤ (mem.arr64 EREC).size → (mem.arr64 EREC).size < 2 ^ 40 →
     romExprsToW rom n mem q o k = some (q', mem') →
     ∃ (es : List ConLeche.Expr) (hs : List EIdx) (m' : EMemo) (a' : AState) (seen' : List ConLeche.Expr),
       (Frontend.internExprList m es).run a = .ok ((m', hs), a') ∧ es.length = k.toNat ∧
@@ -634,7 +632,7 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ hW; simp [romExprsToW] at hW
   | succ n ih =>
   intro mem a seen m q o k q' mem' inv hb ht hcap hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases hk : k = 0
   · subst hk
     rw [romExprsToW_zero] at hW
@@ -658,8 +656,8 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
   rw [erecPutMem_lo m₁ o h (by omega)] at hW
   have inv₂ := inv₁.frameE (frame_set m₁ o h)
-  have ht₂ : erecTop (m₁.set64 EREC o h) = erecTop m₁ := by
-    simp only [erecTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have ht₂ : erTop (m₁.set64 EREC o h) = erTop m₁ := by
+    simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hs₂ : ((m₁.set64 EREC o h).arr64 EREC).size = (m₁.arr64 EREC).size := Mem.size_arr64_set64 _ _ _ _
   obtain ⟨es, hs, m', a', seen', hrun₂, hlen, inv', hsl, hew, hfr⟩ :=
     ih _ a₁ _ m₂ q₁ (o + 1) (k - 1) q' mem' inv₂ (by omega) (by omega) (by omega) hW
@@ -675,7 +673,7 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
 /-- **`rom_pins_to` in the decoder direction**: pins `k ‥ 7`, each a reset and one expression,
 the twin's `internExpr` on each, their handles at `r + k ‥ r + 7`. -/
 theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (mem' : Mem),
-    SInv mem a → k.toNat ≤ 8 → r.toNat + 8 ≤ erecTop mem →
+    SInv mem a → k.toNat ≤ 8 → r.toNat + 8 ≤ erTop mem →
     romPinsToW rom n mem q r k = some (q', mem') →
     ∃ (es : List ConLeche.Expr) (hs : List EIdx) (a' : AState),
       (es.mapM ConRon.Arena.internExpr).run a = .ok (hs, a') ∧ es.length = 8 - k.toNat ∧
@@ -686,7 +684,7 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   | zero => intro _ _ _ _ _ _ _ _ _ _ hW; simp [romPinsToW] at hW
   | succ n ih =>
   intro mem a q r k q' mem' inv hk hb hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases h8 : k = 8
   · subst h8
     rw [romPinsToW_end] at hW
@@ -722,8 +720,8 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   have hfm : MemFrame PinsA ExprC mem m₁ :=
     ((resetMem_frame mem).mono (fun b hb => by simp [PinsA, hb]) (fun _ h => h)).trans hfr₁
   have inv₁' : SInv m₁ a₁ := inv.of_dec inv₁ hfm (scratch_of_list inv.ok (EMemoOK.empty _) hrun₁)
-  have htop₁ : erecTop m₁ = erecTop mem := by
-    simp only [erecTop]; rw [hfm.ctl 129 (by decide)]
+  have htop₁ : erTop m₁ = erTop mem := by
+    simp only [erTop]; rw [hfm.ctl 129 (by decide)]
   obtain ⟨es, hs, a', hrun₂, hlen, inv', hsl, hew, hfr⟩ :=
     ih m₁ a₁ q₁ r (k + 1) q' mem' inv₁' (by rw [succN hk8]; omega) (by omega) hW
   have h0 : rdW (mem'.arr64 EREC) (r + k) = x.word.toUInt64 := by
@@ -742,20 +740,20 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
 a reset and the list's expressions at one memo (the twin's `internExprList`); list `j + i`'s
 header at `r + 8 + 2 (j + i)`, its slice above the old top. -/
 theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (mem' : Mem),
-    SInv mem a → j.toNat ≤ 8 → r.toNat + 24 ≤ erecTop mem →
+    SInv mem a → j.toNat ≤ 8 → r.toNat + 24 ≤ erTop mem →
     romListsToW rom n mem q r j = some (q', mem') →
     ∃ (ess : List (List ConLeche.Expr)) (hss : List (List EIdx)) (a' : AState),
       (ess.mapM ConRon.Arena.internExprList).run a = .ok (hss, a') ∧ ess.length = 8 - j.toNat ∧
       hss.length = 8 - j.toNat ∧ SInv mem' a' ∧
       (∀ i (hi : i < hss.length), HdrR mem' r (j.toNat + i) hss[i] ∧
-        erecTop mem ≤ (rdW (mem'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat (j.toNat + i))).toNat) ∧
+        erTop mem ≤ (rdW (mem'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat (j.toNat + i))).toNat) ∧
       EW (r.toNat + 8 + 2 * j.toNat) (r.toNat + 24) mem mem' ∧ MemFrame PinsA PinsC mem mem' := by
   intro n
   induction n with
   | zero => intro _ _ _ _ _ _ _ _ _ _ hW; simp [romListsToW] at hW
   | succ n ih =>
   intro mem a q r j q' mem' inv hj hb hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases h8 : j = 8
   · subst h8
     rw [romListsToW_end] at hW
@@ -786,8 +784,8 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have hch : mh.arr64 CTL = mA.arr64 CTL := by rw [← hmh, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
   have hsh : (mh.arr64 EREC).size = (mA.arr64 EREC).size := by rw [← hmh, Mem.size_arr64_set64]
-  have htA : erecTop mA = erecTop m₁ := by simp only [erecTop, hcA]
-  have hth : erecTop mh = erecTop mA := by simp only [erecTop, hch]
+  have htA : erTop mA = erTop m₁ := by simp only [erTop, hcA]
+  have hth : erTop mh = erTop mA := by simp only [erTop, hch]
   have invA : SInv mA a := inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by omega)
   have invh : SInv mh a := invA.frameE (by rw [← hmh]; exact frame_set _ _ _) (by omega)
   have ewA : EW (r.toNat + 8 + 2 * j.toNat) (r.toNat + 8 + 2 * j.toNat + 1) m₁ mA := by
@@ -809,13 +807,13 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have hfm : MemFrame PinsA ExprC mh m₂ :=
     ((resetMem_frame mh).mono (fun b hb => by simp [PinsA, hb]) (fun _ h => h)).trans hfr₂
   have inv₂' : SInv m₂ a₁ := invh.of_dec inv₂ hfm (scratch_of_list invh.ok (EMemoOK.empty _) hrun₁)
-  have ht₂ : erecTop m₂ = erecTop mh := by simp only [erecTop]; rw [hfm.ctl 129 (by decide)]
+  have ht₂ : erTop m₂ = erTop mh := by simp only [erTop]; rw [hfm.ctl 129 (by decide)]
   obtain ⟨ess, hss, a', hrun₂, hl1, hl2, inv', hall, hew', hfr'⟩ :=
     ih m₂ a₁ q₁ r (j + 1) q' mem' inv₂' (by rw [succN hj8]; omega) (by omega) hW
   rw [succN hj8] at hl1 hl2 hew'
   -- the header words, kept to the end
   have hEh : EW 0 0 mh (resetMem mh) := resetMem_EW 0 0 mh
-  have hkeep : ∀ x : Word, x.toNat < erecTop mh → x.toNat < o.toNat →
+  have hkeep : ∀ x : Word, x.toNat < erTop mh → x.toNat < o.toNat →
       x.toNat < r.toNat + 8 + 2 * (j.toNat + 1) → rdW (mem'.arr64 EREC) x = rdW (mh.arr64 EREC) x := by
     intro x hx hxo hxr
     rw [hew'.get _ (by have := hew₂.top; rw [resetMem_top] at this; omega) (by omega),
@@ -853,7 +851,7 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
 reset and one expression (`internExpr`), the twin's `internTypePins` on them, their handles in the
 pair slice `(o, k)`. -/
 theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (mem' : Mem),
-    SInv mem a → o.toNat + 2 * k.toNat ≤ erecTop mem → romTPairsToW rom n mem q o k = some (q', mem') →
+    SInv mem a → o.toNat + 2 * k.toNat ≤ erTop mem → romTPairsToW rom n mem q o k = some (q', mem') →
     ∃ (tps : List (ConLeche.Name × ConLeche.Expr)) (hs : List (NIdx × EIdx)) (a' : AState),
       (internTypePins tps).run a = .ok (hs, a') ∧ tps.length = k.toNat ∧ SInv mem' a' ∧
       TPinsR mem' o k hs ∧ EW o.toNat (o.toNat + 2 * k.toNat) mem mem' ∧
@@ -863,7 +861,7 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   | zero => intro _ _ _ _ _ _ _ _ _ hW; simp [romTPairsToW] at hW
   | succ n ih =>
   intro mem a q o k q' mem' inv hb hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases hk : k = 0
   · subst hk
     rw [romTPairsToW_zero] at hW
@@ -903,8 +901,8 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   rw [inv₁.lo (x := o) (by omega)] at hW hc₀
   generalize hmA : m₁.set64 EREC o h = mA at hW hc₀
   have hc : rclearOK mA := hc₀
-  have htA : erecTop mA = erecTop m₁ := by
-    rw [← hmA]; simp only [erecTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have htA : erTop mA = erTop m₁ := by
+    rw [← hmA]; simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
   have invA : SInv mA (AM.st (ConRon.Arena.internName x) a) :=
     inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by have := inv₁.top; omega)
@@ -928,7 +926,7 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   have hfm : MemFrame PinsA ExprC mA m₂ :=
     ((resetMem_frame mA).mono (fun b hb => by simp [PinsA, hb]) (fun _ h => h)).trans hfr₂
   have inv₂' : SInv m₂ a₁ := invA.of_dec inv₂ hfm (scratch_of_list invA.ok (EMemoOK.empty _) hrun₁)
-  have ht₂ : erecTop m₂ = erecTop mA := by simp only [erecTop]; rw [hfm.ctl 129 (by decide)]
+  have ht₂ : erTop m₂ = erTop mA := by simp only [erTop]; rw [hfm.ctl 129 (by decide)]
   -- the rest
   obtain ⟨tps, hs, a', hrun₃, hlen, inv', htp, hew, hfr⟩ :=
     ih m₂ a₁ q₂ (o + 2) (k - 1) q' mem' inv₂' (by rw [ho2, hkm]; omega) hW
@@ -956,20 +954,20 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
 the twin's `internTypePins`; list `j + i`'s header at `r + 24 + 2 (j + i)`, its slice above the
 old top. -/
 theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (mem' : Mem),
-    SInv mem a → j.toNat ≤ 8 → r.toNat + 40 ≤ erecTop mem →
+    SInv mem a → j.toNat ≤ 8 → r.toNat + 40 ≤ erTop mem →
     romTPinsToW rom n mem q r j = some (q', mem') →
     ∃ (tss : List (List (ConLeche.Name × ConLeche.Expr))) (hts : List (List (NIdx × EIdx))) (a' : AState),
       (tss.mapM internTypePins).run a = .ok (hts, a') ∧ tss.length = 8 - j.toNat ∧
       hts.length = 8 - j.toNat ∧ SInv mem' a' ∧
       (∀ i (hi : i < hts.length), THdrR mem' r (j.toNat + i) hts[i] ∧
-        erecTop mem ≤ (rdW (mem'.arr64 EREC) (r + 24 + 2 * UInt64.ofNat (j.toNat + i))).toNat) ∧
+        erTop mem ≤ (rdW (mem'.arr64 EREC) (r + 24 + 2 * UInt64.ofNat (j.toNat + i))).toNat) ∧
       EW (r.toNat + 24 + 2 * j.toNat) (r.toNat + 40) mem mem' ∧ MemFrame PinsA PinsC mem mem' := by
   intro n
   induction n with
   | zero => intro _ _ _ _ _ _ _ _ _ _ hW; simp [romTPinsToW] at hW
   | succ n ih =>
   intro mem a q r j q' mem' inv hj hb hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases h8 : j = 8
   · subst h8
     rw [romTPinsToW_end] at hW
@@ -1008,8 +1006,8 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have hch : mh.arr64 CTL = mA.arr64 CTL := by rw [← hmh, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsA : (mA.arr64 EREC).size = (m₁.arr64 EREC).size := by rw [← hmA, Mem.size_arr64_set64]
   have hsh : (mh.arr64 EREC).size = (mA.arr64 EREC).size := by rw [← hmh, Mem.size_arr64_set64]
-  have htA : erecTop mA = erecTop m₁ := by simp only [erecTop, hcA]
-  have hth : erecTop mh = erecTop mA := by simp only [erecTop, hch]
+  have htA : erTop mA = erTop m₁ := by simp only [erTop, hcA]
+  have hth : erTop mh = erTop mA := by simp only [erTop, hch]
   have invA : SInv mA a := inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by omega)
   have invh : SInv mh a := invA.frameE (by rw [← hmh]; exact frame_set _ _ _) (by omega)
   have ewA : EW (r.toNat + 24 + 2 * j.toNat) (r.toNat + 24 + 2 * j.toNat + 1) m₁ mA := by
@@ -1027,7 +1025,7 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
     ih m₂ a₁ q₁ r (j + 1) q' mem' inv₂ (by rw [succN hj8]; omega) (by omega) hW
   rw [succN hj8] at hl1 hl2 hew'
   -- the header words, kept to the end
-  have hkeep : ∀ x : Word, x.toNat < erecTop mh → x.toNat < o.toNat →
+  have hkeep : ∀ x : Word, x.toNat < erTop mh → x.toNat < o.toNat →
       x.toNat < r.toNat + 24 + 2 * (j.toNat + 1) → rdW (mem'.arr64 EREC) x = rdW (mh.arr64 EREC) x := by
     intro x hx hxo hxr
     rw [hew'.get _ (by have := hew₂.top; omega) (by omega), hew₂.get _ hx (by omega)]
@@ -1058,18 +1056,18 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
 /-- **`rom_sets_to` in the decoder direction**: `k` variants, the twin's `internPinSets` on them,
 record `i`'s pointer at `o + i`, every record above the old top. -/
 theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (mem' : Mem),
-    SInv mem a → o.toNat + k.toNat ≤ erecTop mem → romSetsToW rom n mem q o k = some (q', mem') →
+    SInv mem a → o.toNat + k.toNat ≤ erTop mem → romSetsToW rom n mem q o k = some (q', mem') →
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internPinSets pins).run a = .ok (ips, a') ∧ ips.length = k.toNat ∧ SInv mem' a' ∧
       (∀ i (hi : i < ips.length), PinSetR mem' (rdW (mem'.arr64 EREC) (o + UInt64.ofNat i)) ips[i] ∧
-        LowB (erecTop mem) mem' (rdW (mem'.arr64 EREC) (o + UInt64.ofNat i))) ∧
+        LowB (erTop mem) mem' (rdW (mem'.arr64 EREC) (o + UInt64.ofNat i))) ∧
       EW o.toNat (o.toNat + k.toNat) mem mem' ∧ MemFrame PinsA PinsC mem mem' := by
   intro n
   induction n with
   | zero => intro _ _ _ _ _ _ _ _ _ hW; simp [romSetsToW] at hW
   | succ n ih =>
   intro mem a q o k q' mem' inv hb hW
-  have htl := top_lt mem
+  have htl := erTop_lt mem
   by_cases hk : k = 0
   · subst hk
     rw [romSetsToW_zero] at hW
@@ -1116,8 +1114,8 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   have htop₂ := ewP.top
   have htop₃₀ := ewL.top
   have htop₃ := ewT.top
-  have hrec : PinSetR m₃ r ip ∧ LowB (erecTop mem) m₃ r := by
-    have htl₁ := top_lt m₁
+  have hrec : PinSetR m₃ r ip ∧ LowB (erTop mem) m₃ r := by
+    have htl₁ := erTop_lt m₁
     have hkL : ∀ j, j < 8 → rdW (m₃.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) =
           rdW (m₃₀.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) ∧
         rdW (m₃.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) = rdW (m₃₀.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := by
@@ -1142,7 +1140,7 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   generalize hm₄ : m₃.set64 EREC o r = m₄ at hW
   have hs₃ : (m₃.arr64 EREC).size = (mem.arr64 EREC).size := by rw [ewT.size, ewL.size, ewP.size, hs₁]
   have hc₄ : m₄.arr64 CTL = m₃.arr64 CTL := by rw [← hm₄, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  have ht₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop, hc₄]
+  have ht₄ : erTop m₄ = erTop m₃ := by simp only [erTop, hc₄]
   have hsz₄ : (m₄.arr64 EREC).size = (m₃.arr64 EREC).size := by rw [← hm₄, Mem.size_arr64_set64]
   have inv₄ : SInv m₄ a₃ := inv₃.frameE (by rw [← hm₄]; exact frame_set _ _ _) (by have := inv₃.top; omega)
   have ew₄ : EW o.toNat (o.toNat + 1) m₃ m₄ := by rw [← hm₄]; exact EW.set _ _ _
@@ -1186,7 +1184,7 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internPinSets pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧ StateOK a' ∧
       RsetR mem' ∧ (stkTop mem').toNat < 2 ^ 61 ∧ ErecGrow mem mem' ∧ MemFrame PinsA PinsC mem mem' ∧
-      erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
+      erTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' := by
   cases n with
   | zero => simp [internPinSetsW] at hW
   | succ n =>
@@ -1214,7 +1212,7 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
     rw [← hm₂]; simp [rdW_set64, h150']
   have h151 : rdW (m₂.arr64 CTL) 151 = c := by
     rw [← hm₂]; simp [rdW_set64, Mem.size_arr64_set64]; intro h; omega
-  have ht₂ : erecTop m₂ = erecTop m₁ := by simp only [erecTop, h129]
+  have ht₂ : erTop m₂ = erTop m₁ := by simp only [erTop, h129]
   have inv₂ : SInv m₂ a := ⟨ArenaD.frameHi hf₂ hiA hiC hA,
     hR.frame hf₂ (by decide) (by decide) (by decide) (by decide), hok,
     by simp only [stkTop]; rw [hf₂.ctl 131 (by decide)]; exact hstk,

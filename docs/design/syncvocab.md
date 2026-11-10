@@ -225,3 +225,78 @@ build, warnings, shake, the five closure checks). Two consequences outside the m
 
 Helpers: two (Opus), branches `syncvocab-a` (Ind*/Rec* files, 33 declarations) and
 `syncvocab-b` (Decl*, Checker, Rom and the rest, 22), both merged; worktrees removed.
+
+## Follow-up: duplicate names
+
+Lane dedup of 2026-11-10 (Opus), from master `4feb3b6f4`. Pure renames and deletions; no L
+change, no statement of a final or refinement theorem changed (the statements that named an old
+name now name the kept one).
+
+**The six pairs of §1/§6**, each checked to be one fact first (the same body or statement up to
+binder names; `IWGrow.of_frame` and `IWGrow.of_keep` order the `C` premises differently, which
+their one caller's `(by decide)` does not see). The left name is gone, its uses renamed:
+
+| deleted | kept | occurrences renamed |
+|---|---|---|
+| `erRdT` (`abbrev`, `ErecRd`) | `erRd` (`def`) | 711 in 52 files (statements, proofs, comments) |
+| `erecTop` (`Tiers`) | `erTop` | 187 in 27 files |
+| `erRdT_of`, `_congr`, `_frame`, `_eqW`, `_eqV`; `erecTop_lt`, `_trunc` | `erRd_of`, … ; `erTop_lt`, `erTop_trunc` | 119, 13 (renamed with their subject; no clash) |
+| `erRd_fold` | `erRd_foldN` | 17 |
+| `erRd_of_nat?` | `erRd_nat` | 3 (one named argument `x :=` → `q :=`) |
+| `IWGrow.of_frame` | `IWGrow.of_keep` | 1 |
+| `iwOK_reset` (`DeclCvg`) | `IWOK.reset`, moved from `Jobs` to `IWFrame` (`L.Ind`, so `h.reset`) | 2 |
+
+**Where the kept definitions live now.** `erTop` and `erRd` are defined in `Tiers.lean`, namespace
+`L.Arena`, beside `erecP` and `erecTop1`: `erecP` itself reads `erTop`, so it cannot sit above
+`Tiers`, and `ErecRd`, which does not import `ErecVocab`, needs `erRd`. They were `L.Ind.erTop`/`L.Ind.erRd`; every
+file that named them opens `L.Arena`, so only five qualified `L.Ind.erTop` and two selective
+`open L.Ind (… erTop …)` lists changed, and `attribute [erec_grind] L.Arena.erRd` names it in full.
+`ErecVocab` keeps all the lemmas.
+
+**`abbrev` → `def`.** 34 files had proofs that read the generated models' `rdW (m.arr64 (tierA
+EREC (a >>> 40))) (a &&& …)` as `erRdT` through its reducibility. Each got the smallest local fix:
+
+* `finish [… , erRd]` (25 lists, mostly `DeclCanon*`, `Whnf*`, `EtaRescueRef`) and `simp_all [… ,
+  erRd]` (3, `PropReadW`). `finish [… , erec_grind]` did not close the same goals (WhnfIotaRefine
+  `isCtorApp_spec`, the `DeclCanonSpec` loops), although `grind [erec_grind]` unfolds `erRd` in a
+  test: inside `finish` use the definition by name.
+* `simp only [erRd_foldN] at h` (or on the goal) before a `rw`/`cases` whose pattern is stated
+  with `erRd` (17).
+* `erw [ite_eq_left h]`/`erw [ite_eq_right h]` (19) where the model's `if` is over the `rdW` form:
+  folding the condition with `simp` does not reach its `Decidable` instance, which still mentions
+  `rdW`, so a plain `rw` fails even after the fold (WhnfDeltaRefine, DefEqStuck*, WhnfIota*,
+  PinListRef). `attribute [local reducible] erRd` is refused for an imported definition.
+* a chained congruence `(erRd_congr … x).trans (hr2 x)` instead of `simp only [hr3, hr2]` (QuotAtT:
+  the second rewrite matched only through the `abbrev`), `simpa [erRd]` or `simpa only [erRd_foldN,
+  …]` for an `arm` premise (6), one `rw […]; rfl`, and `QuotCiT`'s local `show ∀ x, rdW … = erRd m5 x` replaced by `erRd_foldN`.
+
+**Further duplicates** (a scan of all `theorem` statements in `ConAgua/` with binder names
+normalized; checked by hand): folded where one copy is pool vocabulary or sits in the vocabulary
+and definition files:
+
+| deleted | kept | uses |
+|---|---|---|
+| `iw_rd_grow` (DmCgW), `rdWIW_grow` (IndDeclConstsFire), `partsRdIW_grow` (PartsConsPL), `rdW_grow` (NestBlockOfKey, HoistNatRef), `pos2_rd_grow` (its own file `IndPosSpec/Pos2RdGrow.lean`, deleted; its five importers import `IWFrame`) | `rdW_iw_grow` (from EqAt1, moved to `IWFrame`) | 9 + 14 + 45 + 11 + 7 |
+| `posIwN_grow` (MapOKStep) | `iwN_grow` (from RecStab, moved to `IWFrame`) | 15 |
+| `L.Rom.top_lt` (PinSets) | `erTop_lt` | 19 |
+| `erecP_reset'` (IndexBuild) | `erecP_reset` (DeclCvg) | 2 |
+| `ctl_t0'` (IndIface), `ctl_t0` (Env) | `ctl_t0`, moved to `Tiers` (both files see it) | 3 + 6 |
+| `hslice_len` (DeclCanonEq) | `hslice?_lenR` (ErecRd) | 4 |
+| `hd?_eq` (WhnfCoreRefine) | `hd?_some` (Env) | 8 |
+| `erA_truncM_a5` (Shapeless), `truncM_er_get?` (IndDecStab) | — (unused; `erA_truncM`, `truncM_er_eq` stay) | 0 |
+
+Left, listed for a later lane: `erRd_of a v h` (ex-`erRdT_of`, `erecP`, explicit `a v`, used as a
+function in `erRdOK`) and `erRd_of_erA h` (`erA`) state one fact up to unfolding `erA` and binder
+kinds; `nidx_word_lt32` (Env and DeclCanonView2, same name), `dmWord_lt32`, `View.word_lt`;
+`decCI_ctor_cv`/`decCI_ctor_cv'`/`decCI_ctorInfo_cv`; `BlockAt.grow`/`blockAt_grow`;
+`decPL_grow`/`sumDecPL_grow`; `OMono.decRules`/`partsDecRules_mono`. Outside the vocabulary the
+scan finds about 215 groups of same-statement theorems, most of them `UInt64` arithmetic
+(`(a + ofNat k).toNat = a.toNat + k` under 11 names, `w - 1` under 7, `w + 1` under 5).
+
+`shake` then proposed 14 import removals: 12 removed (`RecStab` in eleven files, whose only use was
+`iwN_grow`; `ErecRd` in `PropReadW`; `DeclCanonEq` in `WhnfM2CRefine4`, `hslice_len`'s), 2 are
+re-exports of the readers the build needs (`DeclCanonSpec`, `WhnfCore` → `ErecRd`), now in
+`scripts/shake-allowlist.txt`.
+
+No sync rules file needed a change: `scripts/sync-rules/` names none of the deleted names
+(`vocab_attr.py`'s `IWOK_GRIND` already says `erTop`), and §6's `[names]` candidates are now done.

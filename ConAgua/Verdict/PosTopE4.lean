@@ -8,7 +8,7 @@ import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndPosSpec.P2sfW
 import ConAgua.Arena.IndPosSpec.Pos2DecHLSplit
-import ConAgua.Arena.IndPosSpec.Pos2RdGrow
+import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndRealAbsPos
@@ -337,7 +337,7 @@ theorem nsd_ref : ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (m : Mem) (a : AState) (sO
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
     obtain ⟨xn, xc⟩ := x2
     -- the container instance
-    have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := pos2_rd_grow hg12 (by omega)
+    have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := rdW_iw_grow hg12 (by omega)
     have e1 := pos2_key_rd hg12 htop hk4 (j := 1) (by omega)
     have e2 := pos2_key_rd hg12 htop hk4 (j := 2) (by omega)
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)

@@ -152,14 +152,14 @@ theorem soaW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       have := hrs.2
       have : recl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
       omega
-    have hw1 : rdW (m1.arr64 IW) reco = UInt64.ofNat pc := by rw [partsRdIW_grow hg1 hrlt, hw]
+    have hw1 : rdW (m1.arr64 IW) reco = UInt64.ofNat pc := by rw [rdW_iw_grow hg1 hrlt, hw]
     obtain ⟨-, -, -, htg, -⟩ := decRS_some (show decRS (truncM m) pc = some rs0 from hrs0)
     obtain ⟨htw, htb, htlt⟩ := partsIwRd htg
       (show (UInt64.ofNat pc + 3).toNat = pc + 3 by
         rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hpb]; simp
         have := partsIwLt htg; have := (rdW (m.arr64 CTL) 200).toNat_lt; simp only [iwTop] at *; omega)
     have hw3 : rdW (m1.arr64 IW) (rdW (m1.arr64 IW) reco + 3) = UInt64.ofNat rs0.tgt := by
-      rw [hw1, partsRdIW_grow hg1 (by
+      rw [hw1, rdW_iw_grow hg1 (by
         rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hpb]; simp
         have := (rdW (m.arr64 CTL) 200).toNat_lt; simp only [iwTop] at *; omega), htw]
     have hlt : (UInt64.ofNat rs0.tgt < k) = (rs0.tgt < k.toNat) := by

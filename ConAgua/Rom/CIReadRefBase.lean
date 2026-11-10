@@ -98,10 +98,10 @@ theorem flag_keep {mem mem' : Mem} {a a' : AState} (hA : ArenaR mem a) (hA' : Ar
 def erB (m : Mem) : Nat := if rdW (m.arr64 CTL) 1 = 0 then 0 else 2 ^ 40
 
 /-- The flag's tier top, as a tagged address: where `erec_alloc` allocates next. -/
-def erT (m : Mem) : Nat := if rdW (m.arr64 CTL) 1 = 0 then erecTop m else 2 ^ 40 + erecTop1 m
+def erT (m : Mem) : Nat := if rdW (m.arr64 CTL) 1 = 0 then erTop m else 2 ^ 40 + erecTop1 m
 
 theorem erT_congr {m m' : Mem} (h : m'.arr64 CTL = m.arr64 CTL) : erT m' = erT m ∧ erB m' = erB m := by
-  exact ⟨by simp only [erT, erecTop, erecTop1, h], by simp only [erB, h]⟩
+  exact ⟨by simp only [erT, erTop, erecTop1, h], by simp only [erB, h]⟩
 
 theorem erB_le_erT (m : Mem) : erB m ≤ erT m := by
   unfold erB erT; split <;> omega
@@ -109,17 +109,17 @@ theorem erB_le_erT (m : Mem) : erB m ≤ erT m := by
 /-- The flag's tier is in bounds: its top below the tier's end, and tier 1 below `2^41`. -/
 theorem erT_lt {m : Mem} (h : IWOK m) : erT m < erB m + 2 ^ 40 ∧ erT m < 2 ^ 41 := by
   have := h.er; have := h.erCap; have := h.er1; have := h.er1Cap
-  unfold erT erB; simp only [erTop, erecTop, erecTop1] at *; split <;> omega
+  unfold erT erB; simp only [erTop, erecTop1] at *; split <;> omega
 
 /-- A word of the flag's tier, below its top, read back after a write. -/
 theorem er_put_get {m : Mem} (h : IWOK m) (i w : Word) (hb : erB m ≤ i.toNat) (ht : i.toNat < erT m) :
     erA (erecPutMem m i w) i.toNat = some w := by
   have := h.er; have := h.erCap; have := h.er1; have := h.er1Cap
   simp only [erTop] at *
-  unfold erT erB at *; simp only [erecTop, erecTop1] at *
+  unfold erT erB at *; simp only [erTop, erecTop1] at *
   by_cases e : rdW (m.arr64 CTL) 1 = 0 <;> simp only [e, ite_true, ite_false] at hb ht
   all_goals apply erecP_putMem_self
-  all_goals simp only [erTopOf, erOff, erTier, erecTop, erecTop1]
+  all_goals simp only [erTopOf, erOff, erTier, erTop, erecTop1]
   all_goals split <;> omega
 
 /-- Every other word below `2^41` reads as before a write. -/
@@ -131,13 +131,13 @@ theorem er_put_ne (m : Mem) (i w : Word) (j : Nat) (hj : j ≠ i.toNat) (hj1 : j
 theorem IWGrow.put {m₀ m : Mem} (hg : IWGrow m₀ m) (hok : IWOK m) (i w : Word)
     (hfl : rdW (m.arr64 CTL) 1 = 0 ↔ rdW (m₀.arr64 CTL) 1 = 0) (hi : erT m₀ ≤ i.toNat)
     (hi' : i.toNat < erT m) : IWGrow m₀ (erecPutMem m i w) := by
-  have k1 : erecTop m ≤ (m.arr64 EREC).size := hok.er
+  have k1 : erTop m ≤ (m.arr64 EREC).size := hok.er
   have k2 : (m.arr64 EREC).size < 2 ^ 40 := hok.erCap
   have k3 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size := hok.er1
   have k4 : (m.arr64 (tier1 EREC)).size < 2 ^ 40 := hok.er1Cap
-  have k5 : erecTop m₀ ≤ erecTop m := hg.er
+  have k5 : erTop m₀ ≤ erTop m := hg.er
   have k6 : erecTop1 m₀ ≤ erecTop1 m := hg.er1
-  have hR : (i.toNat / 2 ^ 40 % 2 = 0 → erecTop m₀ ≤ i.toNat % 2 ^ 40) ∧
+  have hR : (i.toNat / 2 ^ 40 % 2 = 0 → erTop m₀ ≤ i.toNat % 2 ^ 40) ∧
       (¬ i.toNat / 2 ^ 40 % 2 = 0 → erecTop1 m₀ ≤ i.toNat % 2 ^ 40) := by
     unfold erT at hi hi'
     by_cases e2 : rdW (m₀.arr64 CTL) 1 = 0
@@ -196,7 +196,7 @@ theorem RInv.erB_eq (h : RInv m₀ a₀ T m a) : erB m = erB m₀ := by
   · rw [ite_eq_right (fun h' => e (h.fl.1 h')), ite_eq_right e]
 
 theorem RInv.erT_mono (h : RInv m₀ a₀ T m a) : erT m₀ ≤ erT m := by
-  have k1 : erecTop m₀ ≤ erecTop m := h.grow.er
+  have k1 : erTop m₀ ≤ erTop m := h.grow.er
   have k2 : erecTop1 m₀ ≤ erecTop1 m := h.grow.er1
   unfold erT
   by_cases e : rdW (m₀.arr64 CTL) 1 = 0
@@ -217,7 +217,7 @@ theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hmo : ModeOK m
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.arr EREC (by decide) (by decide)
   have hE1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr (tier1 EREC) (by decide) (by decide)
   have hI : m'.arr64 IW = m.arr64 IW := hf.arr IW (by decide) (by decide)
-  have h129 : erecTop m' = erecTop m := by simp only [erecTop]; rw [hf.ctl 129 (by decide)]
+  have h129 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by decide)]
   have h130 : erecTop1 m' = erecTop1 m := by simp only [erecTop1]; rw [hf.ctl 130 (by decide)]
   have h200 : iwTop m' = iwTop m := by simp only [iwTop]; rw [hf.ctl 200 (by decide)]
   have hfl := flag_keep h.arena.base hA.base hsc
@@ -255,7 +255,7 @@ theorem RInv.putER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erT m₀ ≤ i.
 /-- `erec_alloc` moves only the top of the flag's tier. -/
 theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m')) :
     (rdW (m.arr64 CTL) 1 = 0 → erecTop1 m' = erecTop1 m) ∧
-      (¬ rdW (m.arr64 CTL) 1 = 0 → erecTop m' = erecTop m) := by
+      (¬ rdW (m.arr64 CTL) 1 = 0 → erTop m' = erTop m) := by
   unfold erAllocW at hw
   split at hw
   · rename_i e
@@ -273,7 +273,7 @@ theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨-, rfl⟩ := hw
     refine ⟨fun h' => absurd h' e, fun _ => ?_⟩
-    simp only [erAllocMem, e, ite_false, erecTop, rdW_set64E]; simp
+    simp only [erAllocMem, e, ite_false, erTop, rdW_set64E]; simp
 
 /-- `erec_alloc(k)`: the flag tier's top raised by `k`, the address its old top. -/
 theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
@@ -301,10 +301,10 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
     h.frame.trans (hf.mono (by simp) (by simp [RciC])), h.grow.trans hgI, hok', h200.trans h.top,
     h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hT.1, hT.2, hE, hE1, hI, h200, hg.ext,
     fun i hi => ?_⟩
-  have k1 : erecTop m ≤ erecTop m' := hg.top
+  have k1 : erTop m ≤ erTop m' := hg.top
   have k2 : erecTop1 m ≤ erecTop1 m' := hg.top1
   have hO := erAllocW_other hw
-  have q1 : erecTop m ≤ (m.arr64 EREC).size := h.ok.er
+  have q1 : erTop m ≤ (m.arr64 EREC).size := h.ok.er
   have q2 : (m.arr64 EREC).size < 2 ^ 40 := h.ok.erCap
   have q3 : erecTop1 m ≤ (m.arr64 (tier1 EREC)).size := h.ok.er1
   have q4 : (m.arr64 (tier1 EREC)).size < 2 ^ 40 := h.ok.er1Cap
@@ -340,7 +340,7 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
     have := h.ok.iwSize
     simp only [iwTop, allocMem_top m k h.ok.ctl, ← hq]
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have h129 : erecTop (allocMem m k) = erecTop m := by simp only [erecTop]; rw [hf.ctl 129 (by simp)]
+  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.ctl 129 (by simp)]
   have h130 : erecTop1 (allocMem m k) = erecTop1 m := by simp only [erecTop1]; rw [hf.ctl 130 (by simp)]
   have h1 : rdW ((allocMem m k).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := hf.ctl 1 (by simp)
   have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]

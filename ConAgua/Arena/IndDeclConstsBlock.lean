@@ -188,9 +188,9 @@ theorem bkW_ok {p : Prog} (hP : BlockProg p) {vis : Word} {fe : IFEnv} {n : Nat}
   obtain ⟨hlW, hl3⟩ := iwRd (o := pp) (w := 3) (by simpa [Nat.add_assoc] using hl)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have e2 : rdW (s3.mem.arr64 IW) (pp + 2) = o := by
-    rw [rdWIW_grow hg03 (by rw [UInt64.toNat_add]; simp at ho2 ⊢; omega)]; exact UInt64.toNat_inj.mp hoW
+    rw [rdW_iw_grow hg03 (by rw [UInt64.toNat_add]; simp at ho2 ⊢; omega)]; exact UInt64.toNat_inj.mp hoW
   have e3 : rdW (s3.mem.arr64 IW) (pp + 3) = l := by
-    rw [rdWIW_grow hg03 (by rw [UInt64.toNat_add]; simp at hl3 ⊢; omega)]; exact UInt64.toNat_inj.mp hlW
+    rw [rdW_iw_grow hg03 (by rw [UInt64.toNat_add]; simp at hl3 ⊢; omega)]; exact UInt64.toNat_inj.mp hlW
   obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [bkK4])
   rw [e2, e3] at h4
   rw [bkK4_some] at h

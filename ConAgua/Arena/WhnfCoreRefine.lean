@@ -33,16 +33,12 @@ namespace L.Arena
 
 /-! ## `env_find`: a found row is a row -/
 
-theorem hd?_eq {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
-    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w :=
-  hd?_some h
-
 theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
     ∃ w, a (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨n, -, ls, -, ty, ht, hc⟩ := h
   cases hc
-  obtain ⟨w, hw, hl, rfl⟩ := hd?_eq ht
+  obtain ⟨w, hw, hl, rfl⟩ := hd?_some ht
   exact ⟨w, hw, hl, rfl⟩
 
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
@@ -68,8 +64,8 @@ def projCertW (p : Prog) (n : Nat) (m : Mem) (vis k _ao an : Word) : Option (Wor
   | none => none
   | some (r₁, m₁) =>
     if r₁.headD 0 = 0 then some (0, m₁)
-    else if erRdT m₁ (r₁.tail.headD 0) ≠ 4 then some (0, m₁)
-    else match callW p n "peel_pis" [an, erRdT m₁ (r₁.tail.headD 0 + 4)] m₁ with
+    else if erRd m₁ (r₁.tail.headD 0) ≠ 4 then some (0, m₁)
+    else match callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + 4)] m₁ with
       | none => none
       | some (r₂, m₂) => some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂)
 
@@ -81,13 +77,13 @@ theorem projCertW_none (h : callW p n "env_find" [k, vis] m = some (r₁, m₁))
   simp only [projCertW, h, h0, ↓reduceIte]
 
 theorem projCertW_kind (h : callW p n "env_find" [k, vis] m = some (r₁, m₁)) (h0 : ¬ r₁.headD 0 = 0)
-    (h4 : erRdT m₁ (r₁.tail.headD 0) ≠ 4) :
+    (h4 : erRd m₁ (r₁.tail.headD 0) ≠ 4) :
     projCertW p n m vis k ao an = some (0, m₁) := by
   simp only [projCertW, h, h0, h4, ↓reduceIte, ne_eq, not_false_eq_true]
 
 theorem projCertW_peel (h : callW p n "env_find" [k, vis] m = some (r₁, m₁)) (h0 : ¬ r₁.headD 0 = 0)
-    (h4 : ¬ erRdT m₁ (r₁.tail.headD 0) ≠ 4)
-    (h2 : callW p n "peel_pis" [an, erRdT m₁ (r₁.tail.headD 0 + 4)] m₁ = some (r₂, m₂)) :
+    (h4 : ¬ erRd m₁ (r₁.tail.headD 0) ≠ 4)
+    (h2 : callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + 4)] m₁ = some (r₂, m₂)) :
     projCertW p n m vis k ao an = some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂) := by
   simp only [projCertW, h, h0, h4, h2, ↓reduceIte]
 
@@ -156,7 +152,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   have hfind' : fe.find? (decI k) = some ci := by
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
   have hctor := decCI_ctor (erRdOK _) hci
-  by_cases h4 : erRdT s.mem (r₁.tail.headD 0) ≠ 4
+  by_cases h4 : erRd s.mem (r₁.tail.headD 0) ≠ 4
   · rw [ite_eq_left h4] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
@@ -169,7 +165,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h4] at hW
   obtain ⟨cv, np, nf, rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
-  rcases hc2 : callW p n "peel_pis" [an, erRdT s.mem (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
+  rcases hc2 : callW p n "peel_pis" [an, erRd s.mem (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
     (peelPis_refines p hp.spine n s a₀ hS.arena.base an _ htw) hc2

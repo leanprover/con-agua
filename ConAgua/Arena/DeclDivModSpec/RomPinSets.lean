@@ -154,12 +154,12 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
   have hmod' : erToIwW k m (rdW (m.arr64 CTL) 150) (rdW (m.arr64 CTL) 151) = some (r, s'.mem) := hmod
   obtain ⟨hlen, hbd, hrec⟩ := hP
   have hI := hS.iw
-  have hEtop : erecTop m ≤ (m.arr64 EREC).size := hI.er
+  have hEtop : erTop m ≤ (m.arr64 EREC).size := hI.er
   have hcap := hI.erCap
-  have hsrc : (rdW (m.arr64 CTL) 150).toNat + (rdW (m.arr64 CTL) 151).toNat ≤ erecTop m := by
+  have hsrc : (rdW (m.arr64 CTL) 150).toNat + (rdW (m.arr64 CTL) 151).toNat ≤ erTop m := by
     omega
   obtain ⟨hr, hS', hg, hfr, htop, hw⟩ :=
-    erToIwW_words hmod' hS (by have := erecTop_lt m; omega)
+    erToIwW_words hmod' hS (by have := erTop_lt m; omega)
   have hP' : PinSetsR s'.mem ips :=
     PinSetsR.grow ⟨hlen, hbd, hrec⟩ (IWGrow.recGrow hg) (hfr.ctl 150 (by simp)) (hfr.ctl 151 (by simp))
   refine ⟨hS', hg, hP', ?_⟩
@@ -170,13 +170,13 @@ theorem romPinSets_ref (hD : DmProg10 p) {vis : Word} {fe : IFEnv} {ips : List I
   have hjl : j < (rdW (m.arr64 CTL) 151).toNat := by omega
   have hoj : (rdW (m.arr64 CTL) 150 + UInt64.ofNat j).toNat = (rdW (m.arr64 CTL) 150).toNat + j := by
     have := (rdW (m.arr64 CTL) 150).toNat_lt
-    have := erecTop_lt m
+    have := erTop_lt m
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
     exact Nat.mod_eq_of_lt (by omega)
   refine ⟨rdW (m.arr64 EREC) (rdW (m.arr64 CTL) 150 + UInt64.ofNat j), ?_, PinSetR.grow (hrec j hj) hg⟩
   have e1 := hw j hjl
   have e2 : UInt64.ofNat ((rdW (m.arr64 CTL) 150).toNat + j) = rdW (m.arr64 CTL) 150 + UInt64.ofNat j :=
-    UInt64.toNat_inj.mp (by rw [hoj]; simp; have := erecTop_lt m; omega)
+    UInt64.toNat_inj.mp (by rw [hoj]; simp; have := erTop_lt m; omega)
   rw [e2, erRd_lo hI (by rw [hoj]; omega)] at e1
   simpa only [iwA, aread_apply] using e1
 

@@ -59,7 +59,7 @@ theorem hslice_words {k : IdxKind} (rd : Nat → Option Word) : ∀ (ws : List W
       (fun j hj => by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hget (j + 1) (by simpa using hj))
     simp [hd?, h0, hw, ih']
 
-theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
+theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erTop m) :
     rdW (m'.arr64 EREC) i = rdW (m.arr64 EREC) i := by
   simp only [rdW]; rw [hg.erGet i.toNat hi]
 
@@ -67,7 +67,7 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
     (hg : IWGrow m m') : SliceR m' o l hs := by
   obtain ⟨hb, hl, hv⟩ := h
   refine ⟨Nat.le_trans hb hg.er, hl, fun i hi' => ?_⟩
-  have ht := erecTop_lt m
+  have ht := erTop_lt m
   have hx : (o + UInt64.ofNat i).toNat = o.toNat + i := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
     exact Nat.mod_eq_of_lt (by omega)
@@ -119,7 +119,7 @@ theorem PinSetR.rd1 {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip
     {x : Word} (hx : x.toNat < 40) :
     rdW (m.arr64 (tierA EREC ((r + x) >>> 40))) ((r + x) &&& 1099511627775) =
       rdW (m.arr64 EREC) (r + x) := by
-  have hb := h.1; have ht := erecTop_lt m
+  have hb := h.1; have ht := erTop_lt m
   exact erRd_lo hI (by rw [UInt64.toNat_add]; omega)
 
 /-- `EREC⦃r + a + b⦄` inside the variant's record is the tier-0 word (`erRd_lo`). -/
@@ -127,7 +127,7 @@ theorem PinSetR.rd2 {m : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip
     {a b : Word} (hab : a.toNat + b.toNat < 40) :
     rdW (m.arr64 (tierA EREC ((r + a + b) >>> 40))) ((r + a + b) &&& 1099511627775) =
       rdW (m.arr64 EREC) (r + a + b) := by
-  have hb := h.1; have ht := erecTop_lt m
+  have hb := h.1; have ht := erTop_lt m
   exact erRd_lo hI (by rw [UInt64.toNat_add, UInt64.toNat_add]; omega)
 
 /-! ## `div_mod_slot` -/
@@ -318,10 +318,10 @@ theorem divModTypePins_refines {vis : Word} {fe : IFEnv}
   (divModTypePins_ref hD ps c ip).refAM
 
 theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
-    (hsz : erecTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :
+    (hsz : erTop m ≤ (m.arr64 EREC).size) (j : Nat) (hj : j < hs.length) :
     (m.arr64 EREC)[o.toNat + j]? = some (hs[j].word.toUInt64) := by
   obtain ⟨hb, hl, hv⟩ := h
-  have ht := erecTop_lt m
+  have ht := erTop_lt m
   have hx : (o + UInt64.ofNat j).toNat = o.toNat + j := by
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
     exact Nat.mod_eq_of_lt (by omega)
@@ -332,14 +332,14 @@ theorem sliceR_get {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
   simpa using this
 
 /-- A tier-0 word below the top is the pool's word (`IWOK.erCap`: the tier-0 offset is the address). -/
-theorem erA_lo {m : Mem} (hI : IWOK m) {i : Nat} (hi : i < erecTop m) :
+theorem erA_lo {m : Mem} (hI : IWOK m) {i : Nat} (hi : i < erTop m) :
     erA m i = (m.arr64 EREC)[i]? := by
   have h1 := hI.er; have h2 := hI.erCap
-  unfold erTop at h1; unfold erecTop at hi
+  unfold erTop at h1; unfold erTop at hi
   have h40 : i < 2 ^ 40 := by omega
   simp only [erA, erecP, show i < 2 ^ 64 by omega, ite_true, Nat.div_eq_of_lt h40, Nat.zero_mod,
     Nat.mod_eq_of_lt h40]
-  simp [erecTop, hi]
+  simp [erTop, hi]
 
 theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
     (hI : IWOK m) :

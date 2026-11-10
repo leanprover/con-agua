@@ -90,7 +90,7 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n erSliceEqLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [1] = [if eqF (erRdT s₀.mem) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
+      r.retOr [1] = [if eqF (erRd s₀.mem) (s₀.loc 0) (s₀.loc 2) (s₀.loc 1) (s₀.loc 4)
         then 1 else 0]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -98,14 +98,14 @@ theorem erSliceEqLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := erSliceEqLoop) rfl]
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, ld64_rdT_spec, ih] <;>
-      finish
+      finish [erRd]
 
 theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL) (n : Nat)
     (s₀ : St) (o1 n1 o2 n2 : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "er_slice_eq" [o1, n1, o2, n2]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      r = [if n1 = n2 ∧ eqF (erRdT s₀.mem) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
+      r = [if n1 = n2 ∧ eqF (erRd s₀.mem) o1 o2 n1 0 = true then 1 else 0]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, erSliceEqL]
   sym only [lang_grind, arena_grind] =>
@@ -164,7 +164,7 @@ theorem erSliceEq_refines (p : Prog) (hp : p.lookup "er_slice_eq" = some erSlice
   rw [ite_bne]
   obtain ⟨hl1, hg1⟩ := hslice?_get h1
   obtain ⟨hl2, hg2⟩ := hslice?_get h2
-  have hR : RdOK (erecP s.mem) (erRdT s.mem) := erRdOK s.mem
+  have hR : RdOK (erecP s.mem) (erRd s.mem) := erRdOK s.mem
   congr 1
   apply propext
   constructor

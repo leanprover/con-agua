@@ -61,9 +61,9 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
   | succ n =>
   obtain ⟨wk, e, hxk⟩ := ciD hx
   obtain ⟨wk', e', hyk⟩ := ciD hy
-  have r1 : erRdT m c = wk := erRdT_of _ _ e
-  have r2 : erRdT m d = wk' := erRdT_of _ _ e'
-  by_cases h3 : erRdT m c = 3 ∧ erRdT m d = 3
+  have r1 : erRd m c = wk := erRd_of _ _ e
+  have r2 : erRd m d = wk' := erRd_of _ _ e'
+  by_cases h3 : erRd m c = 3 ∧ erRd m d = 3
   · rw [pinAgreesW.arm1 p n m c d h3] at hW
     cases h1 : callW p n "cv_eq" [c + 1, d + 1] m with
     | none => rw [h1] at hW; simp [pinAgreesW.k_cv_eq] at hW
@@ -83,7 +83,7 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
     have hb := cvEqB_ok' (erRdOK m) (p := c) (q := d) (k := 1) (kn := 1) rfl hcv hcv'
     simp only [List.headD_cons, hr1, hb, ConRon.Arena.pinAgrees, beq_iff_eq]
     by_cases hcc : cv = cv' <;> simp [hcc]
-  · rw [pinAgreesW.eq_2, ite_eq_right h3] at hW
+  · rw [pinAgreesW.eq_2] at hW; erw [ite_eq_right h3] at hW
     cases h1 : callW p n "ci_eq" [c, d] m with
     | none => rw [h1] at hW; simp [pinAgreesW.k_cv_eq] at hW
     | some x1 =>
@@ -173,12 +173,12 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   | zero => exact absurd hW2 (by simp [L.Arena.cvLpsW])
   | succ n0 =>
   rw [L.Arena.cvLpsW_step] at hW2
-  have hW2' : erToIwW n0 m (erRdT m (c + 2)) (erRdT m (c + 3)) = some (r2, s2.mem) := by
+  have hW2' : erToIwW n0 m (erRd m (c + 2)) (erRd m (c + 3)) = some (r2, s2.mem) := by
     rw [← word_add11, ← word_add12]; exact hW2
   obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2' hT.stage hsl
   have hf2 := erToIwW_iwFr hW2'
   have hT2 : StageT dn vis fe s2.mem a := StageT.of_iw hT hS2 hf2
-  have hrd2 := erRdT_congr (m := m) (m' := s2.mem) (hf2.arr _ (by decide) (by decide))
+  have hrd2 := erRd_congr (m := m) (m' := s2.mem) (hf2.arr _ (by decide) (by decide))
     (hf2.arr _ (by decide) (by decide))
   have he2 : erecP s2.mem = erecP m := erecP_frame hf2 (by decide) (by decide) (by decide) (by decide)
   -- `sl_nodup(io, il)`
@@ -195,12 +195,12 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   simp only [hm3, hrd2] at hW
   rw [← hwsd] at hnd
   have hlen2 : ci.toConstantVal.levelParams.length = (r2.tail.headD 0).toNat := hslice?_lenR hdl2
-  have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m (pin + 3)) ↔
+  have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m (pin + 3)) ↔
       (nameNodup ci.toConstantVal.levelParams &&
         ci.toConstantVal.levelParams.length == pc.toConstantVal.levelParams.length) = true := by
     rw [Bool.and_eq_true, ← hnd, beq_iff_eq, hlen2, hplen, bne_iff_ne, ne_eq]
     exact and_congr_right fun _ => ⟨fun e => by rw [e], fun e => UInt64.toNat_inj.mp e⟩
-  by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRdT m (pin + 3)
+  by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m (pin + 3)
   case neg =>
     rw [ite_eq_right hc] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -214,7 +214,7 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
     · rw [e2]; exact ⟨hT2, hg2, hok, hr, Ext.refl _, by simp⟩
   rw [ite_eq_left hc] at hW
   -- `ci_at_lps(pin, EREC⦃c + 2⦄, EREC⦃c + 3⦄)`
-  cases h4 : callW p (n0 + 1) "ci_at_lps" [pin, erRdT m (c + 2), erRdT m (c + 3)] s2.mem with
+  cases h4 : callW p (n0 + 1) "ci_at_lps" [pin, erRd m (c + 2), erRd m (c + 3)] s2.mem with
   | none => rw [h4] at hW; simp [pinCopyOkW.k_ci_at_lps] at hW
   | some x4 =>
   obtain ⟨r4, m4⟩ := x4
@@ -583,8 +583,8 @@ theorem constNamedW_ok {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) {nw : Word}
   obtain ⟨c, cs', rfl, hc, hC'⟩ := (hC.pslr hl).uncons hl hsz
   rw [decB_ciF] at hc
   obtain ⟨w, hw, hwlt, hname⟩ := decCI_name hc
-  have hrd : erRdT m (rdW (m.arr64 IW) o + 1) = w := (erRdOK m).at 1 rfl hw
-  by_cases he : erRdT m (rdW (m.arr64 IW) o + 1) = nw
+  have hrd : erRd m (rdW (m.arr64 IW) o + 1) = w := (erRdOK m).at 1 rfl hw
+  by_cases he : erRd m (rdW (m.arr64 IW) o + 1) = nw
   · rw [constNamedW.arm2 n m o l nw hl he] at h; cases h
     have hb : (c.name == decI nw) = true := by rw [hname, ← hrd, he]; simp
     refine ⟨rfl, ?_⟩
@@ -632,7 +632,7 @@ variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
 theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c : Word}
     {r2 : List Word} {ci : IConstantInfo} (hT : StageT dn vis fe m a)
     (hci : decCI (erecP m) c.toNat = some ci) (h : callW p n "cv_lps" [c + 1] m = some (r2, m2)) :
-    StageT dn vis fe m2 a ∧ IWGrow m m2 ∧ erecP m2 = erecP m ∧ (∀ x, erRdT m2 x = erRdT m x) ∧
+    StageT dn vis fe m2 a ∧ IWGrow m m2 ∧ erecP m2 = erecP m ∧ (∀ x, erRd m2 x = erRd m x) ∧
       NSl ci.toConstantVal.levelParams (r2.headD 0) (r2.tail.headD 0) m2 := by
   have hQ := hP.basis.rules.toQuotAtProg
   have hccv : decCV (erecP m) (c.toNat + 1) = some ci.toConstantVal := decCI_cvA hci
@@ -643,13 +643,13 @@ theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c :
   | zero => exact absurd hW2 (by simp [L.Arena.cvLpsW])
   | succ n0 =>
   rw [L.Arena.cvLpsW_step] at hW2
-  have hW2' : erToIwW n0 m (erRdT m (c + 2)) (erRdT m (c + 3)) = some (r2, s2.mem) := by
+  have hW2' : erToIwW n0 m (erRd m (c + 2)) (erRd m (c + 3)) = some (r2, s2.mem) := by
     rw [← word_add11, ← word_add12]; exact hW2
   obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2' hT.stage hsl
   have hf2 := erToIwW_iwFr hW2'
   exact ⟨StageT.of_iw hT hS2 hf2, hg2,
     erecP_frame hf2 (by decide) (by decide) (by decide) (by decide),
-    erRdT_congr (hf2.arr _ (by decide) (by decide)) (hf2.arr _ (by decide) (by decide)),
+    erRd_congr (hf2.arr _ (by decide) (by decide)) (hf2.arr _ (by decide) (by decide)),
     hdl2, Nat.le_of_eq htop2⟩
 
 end cvl
@@ -694,7 +694,7 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hrs
   obtain ⟨rl0, hrl, rls, hrls, rfl⟩ := hrs
   obtain ⟨wq, hwq, hwqlt, hctor⟩ := hd?_some (decRule_ctor hrl)
-  have hrd : rdW (m.arr64 (tierA EREC (qo >>> 40))) (qo &&& 1099511627775) = wq := erRdT_of qo wq hwq
+  have hrd : rdW (m.arr64 (tierA EREC (qo >>> 40))) (qo &&& 1099511627775) = wq := erRd_of qo wq hwq
   rw [hrd] at h
   -- `const_named(bo, bl, EREC⦃qo⦄)`
   cases h1 : callW p n "const_named" [bo, bl, wq] m with
@@ -812,12 +812,12 @@ end rules
 /-! ## `block_link_ok_at`, `block_links_ok_go`, `block_links_ok` -/
 
 theorem kindW {m : Mem} {c : Word} {ci : IConstantInfo} (h : decCI (erecP m) c.toNat = some ci) :
-    (erRdT m c).toNat = ciKindQ ci := by
+    (erRd m c).toNat = ciKindQ ci := by
   obtain ⟨wk, e, -⟩ := ciD h
-  rw [erRdT_of c wk e]; exact decCI_kindW h e
+  rw [erRd_of c wk e]; exact decCI_kindW h e
 
 theorem kindW_eq {m : Mem} {c : Word} {ci : IConstantInfo} (h : decCI (erecP m) c.toNat = some ci)
-    (k : Word) : erRdT m c = k ↔ ciKindQ ci = k.toNat := by
+    (k : Word) : erRd m c = k ↔ ciKindQ ci = k.toNat := by
   rw [← kindW h]; exact ⟨fun e => by rw [e], fun e => UInt64.toNat_inj.mp e⟩
 
 /-- A recursor record's rules, at the words its record holds. -/
@@ -856,15 +856,15 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
   cases n with
   | zero => simp [blockLinkOkAtW] at h
   | succ n =>
-  by_cases k4 : erRdT m c = 4
-  · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h
+  by_cases k4 : erRd m c = 4
+  · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h; simp only [erRd_foldN] at h
     have hk := (kindW_eq hci 4).mp k4
     obtain ⟨cv, np, nf, rfl⟩ : ∃ cv np nf, ci = .ctorInfo cv np nf := by
       cases ci <;> simp [ciKindQ] at hk
       exact ⟨_, _, _, rfl⟩
     have hccv : decCV (erecP m) (c.toNat + 1) = some cv := decCI_cvA hci
     obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
-    cases h1 : callW p n "er_sl_eq" [erRdT m (c + 2), erRdT m (c + 3), fo, fl] m with
+    cases h1 : callW p n "er_sl_eq" [erRd m (c + 2), erRd m (c + 3), fo, fl] m with
     | none => rw [h1] at h; simp [blockLinkOkAtW.k_er_sl_eq] at h
     | some x1 =>
     obtain ⟨r1, m1⟩ := x1
@@ -879,7 +879,7 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
     refine CmpPost.refl hT hok hr ?_
     simp only [List.headD_cons, hr1']
     by_cases e : cv.levelParams = former <;> simp [e]
-  by_cases k5 : erRdT m c = 5 ∧ erRdT m q = 5
+  by_cases k5 : erRd m c = 5 ∧ erRd m q = 5
   · rw [blockLinkOkAtW.arm2 p n m bo bl po pl fo fl c q k4 k5] at h
     have hk1 := (kindW_eq hci 5).mp k5.1
     have hk2 := (kindW_eq hpi 5).mp k5.2
@@ -903,13 +903,13 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
     obtain ⟨hT4, hg4, he4, hrd4, hN4⟩ := cvLps_sim hP hT3 (by rw [he3]; exact hpi) h4
     rw [h4, blockLinkOkAtW.k_cv_lps_2.eq_2] at h
     have e7 : rdW (m4.arr64 (tierA EREC ((q + 7) >>> 40))) ((q + 7) &&& 1099511627775) =
-        erRdT m (q + 7) := (hrd4 _).trans (hrd3 _)
+        erRd m (q + 7) := (hrd4 _).trans (hrd3 _)
     have e8 : rdW (m4.arr64 (tierA EREC ((q + 8) >>> 40))) ((q + 8) &&& 1099511627775) =
-        erRdT m (q + 8) := (hrd4 _).trans (hrd3 _)
+        erRd m (q + 8) := (hrd4 _).trans (hrd3 _)
     rw [e7, e8] at h
     have hg34 := hg3.trans hg4
     cases h5 : callW p n "rules_link_ok" [bo, bl, po, pl, r3.headD 0, r3.tail.headD 0, r4.headD 0,
-        r4.tail.headD 0, erRdT m (q + 7), erRdT m (q + 8)] m4 with
+        r4.tail.headD 0, erRd m (q + 7), erRd m (q + 8)] m4 with
     | none => rw [h5] at h; simp [blockLinkOkAtW.k_er_sl_eq] at h
     | some x5 =>
     obtain ⟨r5, m5⟩ := x5

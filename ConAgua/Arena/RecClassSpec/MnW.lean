@@ -744,7 +744,7 @@ theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl 
   simp only [getD_zero, Nat.zero_add, getD_one] at hra hrb
   rw [cW.k_get_app_args_f.arm1]
   obtain ⟨nw, enw, hnwH, hnwd⟩ := rec2CCName (hX.stab (decCC_mono _) m1 hg1) hS1.iw.iwSize
-  simp only [erRd_fold]; rw [enw]
+  simp only [erRd_foldN]; rw [enw]
   subst hlvd
   refine RSim.bind (K := cW.k_intern_const n g c d ds0 dl0 nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
     (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_

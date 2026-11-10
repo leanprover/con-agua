@@ -164,7 +164,7 @@ theorem ict_ref (_hP : CtorsProg p) (hR : SctsRefS G p dn) (henv : ConLeche.EnvW
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name (a := erecP m1) hcvm
   have ex : rdW (m1.arr64 (tierA EREC ((UInt64.ofNat cvp : Word) >>> 40)))
       ((UInt64.ofNat cvp : Word) &&& 1099511627775) = wx := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ hwx
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
   rw [hw0, ex, hw1, hw2, hw3, hnpw]
   -- twin denotations
   obtain ⟨hcvTP, -, hcsP, -⟩ := ConRon.Bridge.Inductives.dMember_inv hxP

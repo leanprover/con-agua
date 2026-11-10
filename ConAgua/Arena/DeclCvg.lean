@@ -232,11 +232,6 @@ theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (a
   obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
   exact hd?_some hty
 
-/-- `iw_reset` keeps `IWOK`. -/
-theorem iwOK_reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) :=
-  L.Ind.IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) h
-    (by simp [L.Ind.iwTop, rdW_set64, h.ctl])
-
 /-- The memory after `iw_reset` is in the stage relation. -/
 theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} (hS : StageR vis fe m a) :
@@ -245,7 +240,7 @@ theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}
   have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
   have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
   have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
-  exact ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.check, iwOK_reset hS.iw⟩, rfl, hE, h129⟩
+  exact ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.check, hS.iw.reset⟩, rfl, hE, h129⟩
 
 theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m :=
   erecP_frame (MemFrame.setCtl m 200 0) (by decide) (by decide) (by decide) (by decide)

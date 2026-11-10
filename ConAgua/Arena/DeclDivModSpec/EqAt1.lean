@@ -413,10 +413,6 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
       getElem_toNat_rdW] at c12 c11 c10 c9 c8 c7 c6 c5 c4 c3 c2 c1 c0 ⊢
     simp only [certCtxW, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0, bW_some, Sig.retVal, Sig.retOr]
 
-theorem rdW_iw_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < iwTop m) :
-    rdW (m'.arr64 IW) i = rdW (m.arr64 IW) i := by
-  simp only [rdW]; rw [hg.iwGet i.toNat hi]
-
 theorem RecPost.rdGrow {m m0 mk : Mem} {r ws : List Word} (h : RecPost m m0 r ws)
     (hg : IWGrow m0 mk) (k : Word) (hk : k.toNat < ws.length) :
     rdW (mk.arr64 IW) (r.headD 0 + k) = ws.getD k.toNat 0 := by

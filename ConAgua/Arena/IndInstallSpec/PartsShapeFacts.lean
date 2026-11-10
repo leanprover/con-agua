@@ -354,12 +354,12 @@ theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockSh
   have h4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
   have h6 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨hw4, hnb, -⟩ := partsIwRd hnp h4
-  rw [partsRdIW_grow hg (by omega)]
+  rw [rdW_iw_grow hg (by omega)]
   refine ⟨hw4, hnb, ?_⟩
   obtain ⟨w, hw, hwl, hwe⟩ := hd?_some (show hd? (iwA (truncM m)) (q.toNat + 6) = some bs.resSort from hsort)
   obtain ⟨-, hw'⟩ := truncM_iw_get hw
   simp only [iwA, aread_apply, aread_apply] at hw'
-  rw [partsRdIW_grow hg (by omega), rdW_of_get? h6.symm hw']
+  rw [rdW_iw_grow hg (by omega), rdW_of_get? h6.symm hw']
   exact ⟨hwl, hwe.symm⟩
 
 end L.Ind

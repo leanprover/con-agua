@@ -145,16 +145,16 @@ theorem callW_erec_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFn
   (run_memFrame hcl hf (run_of_callW h)).1.1 EREC (by simp [coreErecA]) (by decide)
 
 /-- **A call of a core function keeps both record tiers and their tops** (`CTL` 129/130): the
-tagged reads (`erRdT`) and the decoder's view (`erecP`) are the same after it. -/
+tagged reads (`erRd`) and the decoder's view (`erecP`) are the same after it. -/
 theorem callW_erec_closedT {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true)
     {f : FnName} (hf : f ∈ coreFns) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
     (h : callW p n f vs m = some (r, m')) :
     m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) ∧
-      erRdT m' = erRdT m ∧ erecP m' = erecP m := by
+      erRd m' = erRd m ∧ erecP m' = erecP m := by
   have hF := (run_memFrame hcl hf (run_of_callW h)).1
   have hA : (EREC : TieredArray) ∉ coreErecA := by simp [coreErecA]
   have hA1 : tier1 EREC ∉ coreErecA := by simp [coreErecA]
-  exact ⟨hF.arr _ hA (by decide), hF.arr _ hA1 (by decide), erRdT_frame hF hA hA1,
+  exact ⟨hF.arr _ hA (by decide), hF.arr _ hA1 (by decide), erRd_frame hF hA hA1,
     erecP_frame hF hA hA1 (by decide) (by decide)⟩
 
 end L.Arena

@@ -51,7 +51,7 @@ theorem cv_call (_hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strCv_spec p hp.strCv n _ q) h
   simp only [strCvW, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
-  simp only [erRdT_congr rfl rfl, List.headD_cons, List.tail_cons]
+  simp only [erRd_congr rfl rfl, List.headD_cons, List.tail_cons]
   obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erRdOK m) (decCI_cvA hci)
   exact ⟨hm.symm, hsl, hlen, hty, hhw⟩
 

@@ -11,7 +11,7 @@ A record decoder reads a reader `R : Nat → Option Word`; L reads words by addr
 says that the word function `rd` is what L reads wherever `R` decodes a word (and that `R` decodes
 nothing at or above `2^64`, so an address `q + c` does not wrap where `R` decodes at
 `q.toNat + c.toNat`). The record pool's instance is `erRdOK`: `erecP` (both tiers) and L's tagged
-read `EREC⦃a⦄` (`erRdT`); an array's is `RdOK.arr`: `aread b` and `rdW b`.
+read `EREC⦃a⦄` (`erRd`); an array's is `RdOK.arr`: `aread b` and `rdW b`.
 -/
 
 open ConRon.Arena
@@ -49,21 +49,18 @@ theorem RdOK.arr (b : Array Word) (hsz : b.size ≤ 2 ^ 64) : RdOK (aread b) (rd
     simp only [aread_apply] at h
     have := (Array.getElem?_eq_some_iff.mp h).1; omega
 
-/-- **The tagged read `EREC⦃a⦄` L makes**, as a function of the address. -/
-abbrev erRdT (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) (a &&& 0xFFFFFFFFFF)
-
-theorem erRdT_of {m : Mem} (a v : Word) (h : erecP m a.toNat = some v) : erRdT m a = v := by
+theorem erRd_of {m : Mem} (a v : Word) (h : erecP m a.toNat = some v) : erRd m a = v := by
   obtain ⟨-, hget⟩ := erecP_tagRead h
-  simp only [erRdT, rdW, hget, Option.getD_some]
+  simp only [erRd, rdW, hget, Option.getD_some]
 
 /-- The record pool and L's tagged read. -/
-theorem erRdOK (m : Mem) : RdOK (erecP m) (erRdT m) := ⟨erRdT_of, fun _ _ hv => erecP_lt64 hv⟩
+theorem erRdOK (m : Mem) : RdOK (erecP m) (erRd m) := ⟨erRd_of, fun _ _ hv => erecP_lt64 hv⟩
 
 /-- Two memories with the same record arrays (both tiers) read the same records. -/
-theorem erRdT_congr {m m' : Mem} (h0 : m'.arr64 EREC = m.arr64 EREC)
+theorem erRd_congr {m m' : Mem} (h0 : m'.arr64 EREC = m.arr64 EREC)
     (h1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC)) (x : Word) :
-    rdW (m'.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRdT m x := by
-  simp only [erRdT, tierA]; cases ((x >>> 40) &&& 1 != 0)
+    rdW (m'.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRd m x := by
+  simp only [erRd, tierA]; cases ((x >>> 40) &&& 1 != 0)
   · exact congrArg (rdW · _) h0
   · exact congrArg (rdW · _) h1
 
@@ -73,14 +70,14 @@ theorem erecP_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Me
     (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) (hC : (129 : Word) ∉ C)
     (hC1 : (130 : Word) ∉ C) : erecP m' = erecP m := by
   funext i
-  simp only [erecP, erecTop, erecTop1, hf.arr _ hA (by decide), hf.arr _ hA1 (by decide),
+  simp only [erecP, erTop, erecTop1, hf.arr _ hA (by decide), hf.arr _ hA1 (by decide),
     hf.ctl _ hC, hf.ctl _ hC1]
   rfl
 
 /-- The same frame keeps the tagged reads. -/
-theorem erRdT_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) : erRdT m' = erRdT m :=
-  funext (erRdT_congr (hf.arr _ hA (by decide)) (hf.arr _ hA1 (by decide)))
+theorem erRd_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) : erRd m' = erRd m :=
+  funext (erRd_congr (hf.arr _ hA (by decide)) (hf.arr _ hA1 (by decide)))
 
 /-- A decoded slice has the slice's length. -/
 theorem hslice?_lenR {k : IdxKind} {R : Nat → Option Word} {o c : Nat} {l : List (Idx k)}
@@ -223,13 +220,13 @@ theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
 
 /-- `decCI_split` at the record pool and L's tagged read. -/
 theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP m) q.toNat = some ci) :
-    (erRdT m q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV (erecP m) (q.toNat + 1) = some cv ∧
-      v = decI (erRdT m (q + 5)) ∧ (erRdT m (q + 5)).toNat < 2 ^ 32) ∧
-    (erRdT m q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
-    (erRdT m q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRdT m q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (erRdT m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRdT m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
+    (erRd m q = 1 → ∃ cv v hint, ci = .defnInfo cv v hint ∧ decCV (erecP m) (q.toNat + 1) = some cv ∧
+      v = decI (erRd m (q + 5)) ∧ (erRd m (q + 5)).toNat < 2 ^ 32) ∧
+    (erRd m q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
+    (erRd m q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
+    (erRd m q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
+    (erRd m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
+    (erRd m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
   decCI_split (erRdOK m) h
 
 end L.Arena

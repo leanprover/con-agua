@@ -93,7 +93,7 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hw1 : rdW (m1.arr64 IW) o = UInt64.ofNat q := by
     have hb := hms.bound
     have : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
-    rw [rdWIW_grow h1.grow (by omega), hw]
+    rw [rdW_iw_grow h1.grow (by omega), hw]
   rw [hw1]
   -- `reduce_member`
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb

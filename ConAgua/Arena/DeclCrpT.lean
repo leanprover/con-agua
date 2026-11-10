@@ -646,9 +646,9 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv1
   have hq5 : (q + 5).toNat = q.toNat + 5 := toNat_add_small q 5 (erecP_lt64 hwv)
   have exn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hwn)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
   have exv : rdW (m1.arr64 (L.tierA EREC ((q + 5) >>> 40))) (q + 5 &&& 1099511627775) = wv := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq5]; exact hwv)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq5]; exact hwv)
   rw [exn, exv]
   -- the constant check
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by omega) hcvd hCr1 (allow := 0)

@@ -131,7 +131,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   obtain ⟨cw, hcw, hcwv, hcwlt⟩ := rdW_of_iwN_truncM haw
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have l5 : (rc + 5).toNat < iwTop m := by rw [UInt64.toNat_add]; simp at hc5 ⊢; omega
-  rw [rdWIW_grow hg03 l5] at h
+  rw [rdW_iw_grow hg03 l5] at h
   by_cases hbig : 4294967296 ≤ rdW (m.arr64 IW) (rc + 5)
   · rw [ite_eq_left hbig] at h; cases h
   rw [ite_eq_right hbig] at h
@@ -143,7 +143,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   obtain ⟨-, hf4, -⟩ := erAllocW_spec h4 hS3.iw
   have hI4 : m4.arr64 IW = m3.arr64 IW := hf4.arr IW (by simp) (by decide)
   have l4 : (rc + 4).toNat < iwTop m := by rw [UInt64.toNat_add]; simp at ho4 ⊢; omega
-  rw [hI4, rdWIW_grow hg03 l4] at h
+  rw [hI4, rdW_iw_grow hg03 l4] at h
   rcases h5 : rrW n m4 run (rdW (m.arr64 IW) (rc + 4)) (rdW (m.arr64 IW) (rc + 5)) (r1.headD 0) (r2.headD 0)
     (r2.tail.headD 0) (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r5, m5⟩ <;> rw [h5] at h
   · simp [brW.k_rules_refire] at h
@@ -166,7 +166,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
     rw [UInt64.toNat_add]; simp; omega
   have l2 : (rc + 2).toNat < iwTop m := by rw [UInt64.toNat_add]; simp at hm2 ⊢; omega
   have l1 : (rc + 1).toNat < iwTop m := by rw [UInt64.toNat_add]; simp at hr1 ⊢; omega
-  rw [rdWIW_grow hg05 hcwlt, rdWIW_grow hg05 l2, rdWIW_grow hg05 l1, rdWIW_grow hg05 l6, hcw] at h
+  rw [rdW_iw_grow hg05 hcwlt, rdW_iw_grow hg05 l2, rdW_iw_grow hg05 l1, rdW_iw_grow hg05 l6, hcw] at h
   have hcv5 : decCV (erecP m5) cw.toNat = some rs.cvR := by
     rw [hcwv]; exact (IWGrow.ext hg05).decCV (decCVp_truncM hcv)
   obtain ⟨hS6, hg6, hci⟩ := riRec_stage h hS5 hcv5 hdr5

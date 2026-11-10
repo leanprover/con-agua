@@ -389,14 +389,14 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hm1 : ∀ b : TieredArray, b ≠ CTL → m1.arr64 b = m.arr64 b := fun b hb => hf1.arr b (by simp) hb
   have hget := wrER_get ws m1 q (by omega) (by omega)
   have hT : ∀ m' : Mem, m'.arr64 CTL = m1.arr64 CTL → erTopOf m' q = erTopOf m1 q := fun m' e => by
-    simp only [erTopOf, erecTop, erecTop1, e]
+    simp only [erTopOf, erTop, erecTop1, e]
   -- the growth from `m`
   have hgrow : ErecGrow m (wrER m1 q ws) := by
     refine ⟨?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
-    · simp only [erecTop, hcw]; exact hg1.top
+    · simp only [erTop, hcw]; exact hg1.top
     · rw [hget, ite_eq_right, hm1 _ (by decide)]
       rintro ⟨e, h2, -⟩
-      have : erTopOf m q = erecTop m := by
+      have : erTopOf m q = erTop m := by
         unfold erTier at e; unfold erTopOf; split at e
         · rename_i t; simp [t]
         · cases e

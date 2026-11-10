@@ -511,9 +511,9 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
       (rdW (m8.arr64 IW) (r8.headD 0 + 5)) m8 := ⟨hnfsB, hns8.b4⟩
   have g48 := (hg5.trans hg6).trans (hg7.trans hg8)
   have hw7 : rdW (m8.arr64 IW) (r4.headD 0 + 7) = rdW (m4.arr64 IW) (r4.headD 0 + 7) :=
-    partsRdIW_grow g48 (by rw [hc7]; omega)
+    rdW_iw_grow g48 (by rw [hc7]; omega)
   have hw8 : rdW (m8.arr64 IW) (r4.headD 0 + 8) = rdW (m4.arr64 IW) (r4.headD 0 + 8) :=
-    partsRdIW_grow g48 (by rw [hc8]; omega)
+    rdW_iw_grow g48 (by rw [hc8]; omega)
   have g1A := (g14.trans g48).trans hg10
   have g6A := (hg7.trans hg8).trans hg10
   have hT10 : iwTop m10 < 2 ^ 64 := (rdW (m10.arr64 CTL) 200).toNat_lt

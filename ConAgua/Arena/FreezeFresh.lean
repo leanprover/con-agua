@@ -254,7 +254,7 @@ theorem ModeOK.fresh (h : ModeOK (cutT m)) : ModeOK (freshMem m) :=
 
 theorem IWOK.fresh (h : L.Ind.IWOK (cutT m)) : L.Ind.IWOK (freshMem m) := by
   have h0 := (L.Ind.IWOK_iff _).1 h
-  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, L.Ind.erTop, erecTop1, fresh_size, fresh_ctl] at h0 ⊢
+  simp only [L.Ind.IWOK_iff, L.Ind.iwTop, erTop, erecTop1, fresh_size, fresh_ctl] at h0 ⊢
   exact h0
 
 section loop
@@ -412,7 +412,7 @@ theorem JobM.fresh {m : Mem} (h : JobM pins dn ds I (truncFrozen m) a) (hw : Sto
   have he : erecP (freshMem m) = erecP (cutT m) := by
     have h1 : erecTop1 (cutT m) = 0 := by simp only [erecTop1, hC.top1]; rfl
     have h1' : erecTop1 (freshMem m) = 0 := by simp only [erecTop1, fresh_ctl, hC.top1]; rfl
-    have h0 : erecTop (freshMem m) = erecTop (cutT m) := by simp only [erecTop, fresh_ctl]
+    have h0 : erTop (freshMem m) = erTop (cutT m) := by simp only [erTop, fresh_ctl]
     funext i; simp only [erecP, h1, h1', h0, hk EREC (by decide), Nat.not_lt_zero, ↓reduceIte]
   have hA := (ArenaD.fresh hd htop hC.arena).caches_irrel Caches.empty
   refine ⟨⟨⟨hA.1, hA.2⟩, CoreR.fresh hC.core, hC.pinsR.frame (by decide) hf, ModeOK.fresh hC.mode,

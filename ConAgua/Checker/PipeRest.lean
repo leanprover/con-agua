@@ -174,7 +174,7 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
     refine { iw := ?_, er := ?_, iwSize := ?_, erSize := ?_, ctl := by omega, er1 := ?_, er1Size := ?_
              erCap := hc.erec, er1Cap := hc.erec1 }
     · simp only [L.Ind.iwTop, h5.hz.c200]; simp
-    · simp only [L.Ind.erTop, h5.hz.c129]; simp
+    · simp only [erTop, h5.hz.c129]; simp
     · have := hc.1 L.Ind.IW (by decide); omega
     · have := hc.1 EREC (by decide); omega
     · simp only [erecTop1, h5.hz.c130]; simp

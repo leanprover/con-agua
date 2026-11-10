@@ -36,7 +36,7 @@ theorem erSlEq_specR (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if L.Ind.erSlEqB (erRdT s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
+      r.headD 0 = if L.Ind.erSlEqB (erRd s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, L.Ind.erSlEq]
@@ -47,7 +47,7 @@ theorem erSlEq_specR (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (
     simp only [callFn, L.Ind.erSlEq]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ih] <;>
-      finish (gen := 20) [rdW_eq]
+      finish (gen := 20) [rdW_eq, erRd]
 
 /-- **`eta_rescue_ok`'s model**: `er_sl_eq` and `pin_at` lifted. -/
 l_model eroW_spec (p : Prog) (hf : p.lookup "eta_rescue_ok" = some etaRescueOkL)
@@ -83,14 +83,14 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   have hechw := hrec.etaCtor_hw
   have h0 : HW 0 := by unfold HW; decide
   have h1 : HW 1 := by unfold HW; decide
-  by_cases g1 : erRdT m (q + 5) = 0
+  by_cases g1 : erRd m (q + 5) = 0
   · rw [eroW.arm1 _ _ _ _ _ _ g1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨rfl, ?_, h0⟩
     have : caps.eta = false := by rw [heta, g1]; rfl
     simp [etaRescueOk, this]; rfl
-  by_cases g2 : erRdT m (q + 6) ≠ ctor
+  by_cases g2 : erRd m (q + 6) ≠ ctor
   · rw [eroW.arm2 _ _ _ _ _ _ g1 g2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -98,12 +98,13 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     have : (caps.etaCtor == decI ctor) = false := by
       rw [hec]; simpa using fun e => g2 ((decI_inj_iff hechw hctor).mp e)
     simp [etaRescueOk, this]; rfl
-  have g2' : erRdT m (q + 6) = ctor := by simpa using g2
+  have g2' : erRd m (q + 6) = ctor := by simpa using g2
   rw [eroW.arm3 _ _ _ _ _ _ g1 g2'] at h
   have hE : caps.eta = true := by rw [heta]; simpa using g1
   have hC : (caps.etaCtor == decI ctor) = true := by rw [hec, g2']; simp
-  rcases c1 : callW p n "er_sl_eq" [erRdT m (cq + 2), erRdT m (cq + 3), erRdT m (q + 2),
-      erRdT m (q + 3)] m with _ | ⟨r1, m1⟩
+  simp only [L.Ind.erRd_foldN] at h
+  rcases c1 : callW p n "er_sl_eq" [erRd m (cq + 2), erRd m (cq + 3), erRd m (q + 2),
+      erRd m (q + 3)] m with _ | ⟨r1, m1⟩
   · rw [c1, eroW.k_er_sl_eq.none] at h; cases h
   rw [c1] at h
   obtain ⟨s1, hs1, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

@@ -139,7 +139,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv1
   have ewn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRdT_congr rfl rfl]; exact erRdT_of _ _ (by rw [hq1]; exact hwn)
+    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
   rw [ewn]
   -- the constant check, a certified operation's name allowed
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by have := erecP_lt64 hwt; omega)

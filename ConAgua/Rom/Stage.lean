@@ -187,7 +187,7 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     (hW : internAllPinsW rom n mem = some mem') :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
-      StateOK a' ∧ RsetR mem' ∧ erecTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' ∧
+      StateOK a' ∧ RsetR mem' ∧ erTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' ∧
       MemFrame PinsA PinsC mem mem' := by
   obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS, hmo1⟩ :=
     internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hmo hP hst (by omega) hW
@@ -222,7 +222,7 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
     invoke P (exec P n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
       (internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
-      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erecTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem ∧
+      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem ∧
       MemFrame PinsA PinsC s₀.mem s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
   apply M.triple_of_run

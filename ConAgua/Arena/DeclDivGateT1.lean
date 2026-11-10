@@ -410,13 +410,13 @@ theorem tpsgC (hD : DmProg6 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hcrf : L.I
     obtain ⟨v0, v1⟩ := hv 0 (by simp)
     simp only [List.getElem_cons_zero, show (2 : Word) * UInt64.ofNat 0 = 0 from rfl,
       UInt64.add_zero] at v0 v1
-    have htl0 := erecTop_lt m
+    have htl0 := erTop_lt m
     have hl' : l.toNat = tps.length + 1 := by simpa using hlen
     have ho1 : (o + 1).toNat = o.toNat + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     simp only [erRd_foldN] at hw
     rw [erRd_lo hC.stage.iw (by omega), erRd_lo hC.stage.iw (by rw [ho1]; omega), v0, v1] at hw
-    have htl := L.Rom.top_lt m
+    have htl := L.Ind.erTop_lt m
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨x1, a1, hrun1, hC1, c1, hg1, hd1'⟩ :=
       tpgC hD hcl hkp hcrf h1 hC (dmWord_lt32 _) (dmWord_lt32 _) (by rw [decI_word]; exact hd1)

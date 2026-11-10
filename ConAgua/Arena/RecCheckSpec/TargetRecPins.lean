@@ -161,7 +161,7 @@ theorem trpRd {m m' : Mem} (hg : IWGrow m m') {pp : Word} {i v : Nat} (h : iwN (
     (hi : (pp + UInt64.ofNat i).toNat = pp.toNat + i) :
     rdW (m'.arr64 IW) (pp + UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
   obtain ⟨hw, hvb, hlt⟩ := partsIwRd h hi
-  exact ⟨by rw [partsRdIW_grow hg (by rw [hi]; exact hlt), hw], hvb⟩
+  exact ⟨by rw [rdW_iw_grow hg (by rw [hi]; exact hlt), hw], hvb⟩
 
 end L.Ind
 

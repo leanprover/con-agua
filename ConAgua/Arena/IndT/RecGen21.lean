@@ -194,7 +194,7 @@ theorem cbc_ref (hP : CbcProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTo
   have hpp1 : pp.toNat + 1 < 2 ^ 64 := by omega
   have hq1 : (pp + 1 : Word).toNat = pp.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hk1' : rdW (m4.arr64 IW) (pp + 1) = UInt64.ofNat bs.k := by
-    rw [partsRdIW_grow hg04 (by rw [hq1]; omega)]
+    rw [rdW_iw_grow hg04 (by rw [hq1]; omega)]
     have e : (pp + 1 : Word) = UInt64.ofNat (pp.toNat + 1) := by
       apply UInt64.toNat_inj.mp; rw [hq1]; simp; omega
     rw [e]; exact decBS_k (hbsD.get (decBS_mono _)) hpp1

@@ -491,10 +491,6 @@ theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
 
 end spec
 
-theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {x : Word} (hi : x.toNat < iwTop m) :
-    rdW (m'.arr64 IW) x = rdW (m.arr64 IW) x := by
-  simp only [rdW, hg.iwGet _ hi]
-
 theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),
     closeW n m dO dl i body = some (r, m') → StageR vis fe m a → H body →
@@ -538,7 +534,7 @@ theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IF
       have hd0 : dO.toNat < iwTop m := by omega
       obtain ⟨wd, hwd_eq, hwd_lt, hwd_dec⟩ := iwH_rdW hdd (by omega)
       rw [UInt64.ofNat_toNat] at hwd_eq
-      rw [rdW_grow hg12 hd0, hwd_eq] at h
+      rw [rdW_iw_grow hg12 hd0, hwd_eq] at h
       rcases hm : mkForallW m2 wd (r2.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hm] at h; · simp [closeK3] at h
       by_cases hbig : 4294967296 ≤ rr
       · rw [closeK3_big _ _ hbig] at h; simp at h

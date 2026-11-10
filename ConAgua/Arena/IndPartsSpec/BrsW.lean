@@ -512,7 +512,7 @@ theorem bsnW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     rw [bsnK_some] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (cto + 1) (ctl - 1) ts' r1 h1 hS hts'
     have hctolt : cto.toNat < iwTop m := by have := hts.2; have : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega
-    rw [partsRdIW_grow hg1 hctolt, hw] at h
+    rw [rdW_iw_grow hg1 hctolt, hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName hg1 hcv0 hpb
     rcases h2 : consW n m1 (erRd m1 (UInt64.ofNat pc)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
@@ -563,7 +563,7 @@ theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bctW.bctK])
     rw [bctK_some] at h
     obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (cso + 1) (csl - 1) cs' r1 h1 hS hcs'
-    rw [partsRdIW_grow hg1 (by rw [hpw]; exact hclt), hcw, partsRdIW_grow hg1 (by rw [hp2]; exact hflt),
+    rw [rdW_iw_grow hg1 (by rw [hpw]; exact hclt), hcw, rdW_iw_grow hg1 (by rw [hp2]; exact hflt),
       hfw] at h
     rcases h2 : posRecW m1 [UInt64.ofNat cvp, UInt64.ofNat nF] with _ | ⟨e, m2⟩ <;> rw [h2] at h
     · cases h
@@ -648,8 +648,8 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     have l1 : cto.toNat < iwTop m := by have := hts.2; omega
     have l2 : io.toNat < iwTop m := by omega
     have l3 : go.toNat < iwTop m := by have := hgs.2; omega
-    rw [partsRdIW_grow hg1 l1, hw, partsRdIW_grow hg1 l2, hnw, partsRdIW_grow hg1 l3, hgw,
-      partsRdIW_grow hg1 (by rw [hgpw]; exact hgolt), hgow, partsRdIW_grow hg1 (by rw [hgp1]; exact hgllt),
+    rw [rdW_iw_grow hg1 l1, hw, rdW_iw_grow hg1 l2, hnw, rdW_iw_grow hg1 l3, hgw,
+      rdW_iw_grow hg1 (by rw [hgpw]; exact hgolt), hgow, rdW_iw_grow hg1 (by rw [hgp1]; exact hgllt),
       hglw] at h
     rcases h2 : posRecW m1 [UInt64.ofNat pc, UInt64.ofNat n0, UInt64.ofNat goff, UInt64.ofNat glen,
         UInt64.ofNat pc] with _ | ⟨e, m2⟩ <;> rw [h2] at h
@@ -721,7 +721,7 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
       subst hl; rw [partsPSl_nil hrs]
       exact Sim.ret ⟨PSlR.nil _ _, hS, IWGrow.refl _⟩
     rw [brsW.arm2 n m no nl ro rl hl]
-    simp only [erRd_fold]
+    simp only [erRd_foldN]
     obtain ⟨pc, ⟨cv, mI, rP, isK, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
     obtain ⟨ro', rl', hro', hrl', hru, hisK⟩ := decSR_fields2 (show decSR (truncM m) pc = _ from hrs0)
@@ -759,9 +759,9 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     rintro r1 t m1 a1 ⟨rfl, htl, hS1, hg1⟩
     simp only [List.headD_cons]
     intro r m' e
-    rw [partsRdIW_grow hg1 (by rw [hpw]; exact hclt), hcw, partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw,
-      partsRdIW_grow hg1 (by rw [hp1]; exact hmlt), hmw, partsRdIW_grow hg1 (by rw [hp3]; exact holt), how,
-      partsRdIW_grow hg1 (by rw [hp4]; exact hllt), hlw, partsRdIW_grow hg1 (by rw [hp5]; exact hklt)] at e
+    rw [rdW_iw_grow hg1 (by rw [hpw]; exact hclt), hcw, rdW_iw_grow hg1 (by rw [hp2]; exact hrlt), hrw,
+      rdW_iw_grow hg1 (by rw [hp1]; exact hmlt), hmw, rdW_iw_grow hg1 (by rw [hp3]; exact holt), how,
+      rdW_iw_grow hg1 (by rw [hp4]; exact hllt), hlw, rdW_iw_grow hg1 (by rw [hp5]; exact hklt)] at e
     rcases h3 : posRecW m1 [UInt64.ofNat cvp, UInt64.ofNat rP, UInt64.ofNat mI, UInt64.ofNat t,
         UInt64.ofNat ro', UInt64.ofNat rl', rdW (m.arr64 IW) (UInt64.ofNat pc + 5)] with _ | ⟨rc, m3⟩ <;>
       rw [h3] at e
