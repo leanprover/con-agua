@@ -762,4 +762,34 @@ l_model tCutF_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈
   specs [tLen_spec p hq n]
   grind [arena_grind] unified nv [closedNV p fs = true, hmem] cut 2
 
+/-- `pfuel`: a callee read as a function of the fuel (`C n m x`, as `callW p n "f"` is), so the
+model takes the fuel as a parameter, without a `match` on it, and the spec is at `exec p (n + 1)`
+with the model at `n`. -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tPf : FunDecl := lfn (x) locals (y) {
+  y := call t_c(x);
+  if y == 0 { return 1 };
+  return y + x
+}
+
+l_model tPf_spec (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
+      ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
+    (hp : p.lookup "t_pf" = some tPf)
+  fns [hp ↦ tPfW]
+  specs [hc n]
+  grind [arena_grind] pfuel
+
+example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) (x : Word)
+    (h : C n m x = some (0, m)) : tPfW C n m x = some (1, m) := by
+  simp [tPfW, tPfW.k_t_c, h]
+
+example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
+      ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
+    (hp : p.lookup "t_pf" = some tPf) (n : Nat) (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "t_pf" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ tPfW C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ :=
+  tPf_spec p C hc hp n s₀ x
+
 end L.ModelGenTest
