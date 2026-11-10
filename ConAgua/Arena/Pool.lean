@@ -5,7 +5,7 @@ import ConAgua.Arena.GrindAttr
 import Std.Data.DTreeMap.Internal.Operations
 public import ConAgua.Layout
 import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.L.WordOff
+public import ConAgua.L.WordOff
 
 @[expose] public section
 
