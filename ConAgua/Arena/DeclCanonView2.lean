@@ -240,7 +240,7 @@ theorem viewLsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     (hS : StageR vis fe m a) (hu : us.toNat < 2 ^ 32) (hP : PoolSmall m) :
     ∃ ids : List LIdx, (viewLs (decI us)).run a = .ok (ids, a) ∧ StageR vis fe m' a ∧
       IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r ids ∧ PoolSmall m' := by
-  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.iw
+  have hI1 := hS.iw.iw; have hsz := hS.iw.iwSize; have hc := hS.iw.ctl
   have hR := hS.check.arena.base
   unfold viewLsW at h
   have hne : ¬ lsNodeW m us = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h

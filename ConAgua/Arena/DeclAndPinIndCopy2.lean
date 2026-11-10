@@ -173,26 +173,31 @@ theorem iwok (h : ErW W m m') (hW : IWOK m) : IWOK m' := by
   have hs0 := h.size EREC
   have hs1 := h.size (tier1 EREC)
   have hr := h.room
-  have hW' := (IWOK_iff m).1 hW
-  rw [IWOK_iff]
-  simp only [iwTop, erTop, erecTop1, hI, hsC, hs0, hs1, h200] at hW' ⊢
+  have hW1 := hW.er; have hW2 := hW.er1
+  simp only [erTop, erecTop1] at hW1 hW2
   by_cases hf : flg m = 0
   · have eT : fT m = EREC := by simp [fT, hf]
     have eC : fC m = 129 := by simp [fC, hf]
     have e130 := h.ctl 130 (by rw [eC]; decide)
     have ht : fTop m' = (rdW (m'.arr64 CTL) 129).toNat := by simp [fTop, h.fC_eq, eC]
     rw [eT] at hr
-    simp only [e130]
-    refine ⟨hW'.1, by omega, hW'.2.2.1, hW'.2.2.2.1, hW'.2.2.2.2.1, hW'.2.2.2.2.2.1, hW'.2.2.2.2.2.2.1,
-      hW'.2.2.2.2.2.2.2.1, hW'.2.2.2.2.2.2.2.2⟩
+    exact
+      { iw := by simpa only [iwTop, hI, h200] using hW.iw
+        er := by simp only [erTop]; omega
+        iwSize := hI ▸ hW.iwSize, erSize := hs0 ▸ hW.erSize, ctl := hsC ▸ hW.ctl
+        er1 := by simp only [erecTop1, e130, hs1]; exact hW2
+        er1Size := hs1 ▸ hW.er1Size, erCap := hs0 ▸ hW.erCap, er1Cap := hs1 ▸ hW.er1Cap }
   · have eT : fT m = tier1 EREC := by simp [fT, hf]
     have eC : fC m = 130 := by simp [fC, hf]
     have e129 := h.ctl 129 (by rw [eC]; decide)
     have ht : fTop m' = (rdW (m'.arr64 CTL) 130).toNat := by simp [fTop, h.fC_eq, eC]
     rw [eT] at hr
-    simp only [e129]
-    refine ⟨hW'.1, hW'.2.1, hW'.2.2.1, hW'.2.2.2.1, hW'.2.2.2.2.1, by omega, hW'.2.2.2.2.2.2.1,
-      hW'.2.2.2.2.2.2.2.1, hW'.2.2.2.2.2.2.2.2⟩
+    exact
+      { iw := by simpa only [iwTop, hI, h200] using hW.iw
+        er := by simp only [erTop, e129, hs0]; exact hW1
+        iwSize := hI ▸ hW.iwSize, erSize := hs0 ▸ hW.erSize, ctl := hsC ▸ hW.ctl
+        er1 := by simp only [erecTop1]; omega
+        er1Size := hs1 ▸ hW.er1Size, erCap := hs0 ▸ hW.erCap, er1Cap := hs1 ▸ hW.er1Cap }
 
 /-- A writer that changed nothing below the old top grows the pools. -/
 theorem grow (h : ErW W m m') (hn : ∀ i, i < fTop m → ¬ W i) : ErecGrow m m' ∧ IWGrow m m' := by
@@ -221,7 +226,10 @@ theorem grow (h : ErW W m m') (hn : ∀ i, i < fTop m → ¬ W i) : ErecGrow m m
       rw [eT] at hg
       exact ⟨by simp [erecTop, e129], fun i _ => by rw [e0], by omega,
         fun i hi => hg i (by omega) (hn i (by omega))⟩
-  refine ⟨hg', ⟨by simp [iwTop, h200], hg'.top, fun i _ => by rw [hI], hg'.get, hg'.top1, hg'.get1⟩⟩
+  exact ⟨hg',
+    { iw := by simp [iwTop, h200]
+      er := hg'.top, iwGet := fun i _ => by rw [hI], erGet := hg'.get, er1 := hg'.top1
+      er1Get := hg'.get1 }⟩
 
 /-- A word below the old top that the writer kept, through `erecP`. -/
 theorem erecP_keep (h : ErW W m m') (hW : IWOK m) {y : Nat} (hy : y < fTop m) (hn : ¬ W y) :

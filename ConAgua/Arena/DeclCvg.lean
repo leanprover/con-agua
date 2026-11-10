@@ -233,25 +233,9 @@ theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (a
   exact hd?_some hty
 
 /-- `iw_reset` keeps `IWOK`. -/
-theorem iwOK_reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) := by
-  have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
-  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.arr EREC (by simp) (by decide)
-  have hE1 : (m.set64 CTL 200 0).arr64 (tier1 EREC) = m.arr64 (tier1 EREC) :=
-    hf.arr (tier1 EREC) (by simp) (by decide)
-  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.ctl 129 (by simp)]
-  have h130 : erecTop1 (m.set64 CTL 200 0) = erecTop1 m := by simp only [erecTop1, hf.ctl 130 (by simp)]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · simp only [iwTop, rdW_set64]; split
-    · simp
-    · rw [hf.size IW]; exact h.iw
-  · rw [h129, hE]; exact h.er
-  · rw [hf.size IW]; exact h.iwSize
-  · rw [hE]; exact h.erSize
-  · rw [hf.size CTL]; exact h.ctl
-  · rw [h130, hE1]; exact h.er1
-  · rw [hE1]; exact h.er1Size
-  · rw [hE]; exact h.erCap
-  · rw [hE1]; exact h.er1Cap
+theorem iwOK_reset {m : Mem} (h : L.Ind.IWOK m) : L.Ind.IWOK (m.set64 CTL 200 0) :=
+  L.Ind.IWOK.of_iw ((MemFrame.setCtl m 200 0).mono (by simp) (by simp)) h
+    (by simp [L.Ind.iwTop, rdW_set64, h.ctl])
 
 /-- The memory after `iw_reset` is in the stage relation. -/
 theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}
