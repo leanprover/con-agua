@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
 import ConRon.Bridge.Grind
+import ConAgua.Arena.ErecVocab
 
 @[expose] public section
 
@@ -106,7 +107,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   unfold uwsW at hW
   rcases hA : acaW m e f with _ | ⟨cnt, hh⟩ <;> rw [hA] at hW
   · cases hW
-  simp only at hW
+  simp only [uwsW.k_app_count_at] at hW
   obtain ⟨hgaf, -, hhh, -⟩ := acaW_ok hR he hA
   by_cases h3 : tagW hh = 3
   rotate_left
@@ -149,7 +150,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   rcases hc2 : callW p n "env_find" [cn, vis] m with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
   · cases hW
   obtain ⟨rfl, hfind, hfound⟩ := pr_envFind hp hS.env hcw hc2
-  simp only [uwsK1] at hW
+  simp only [uwsW.k_env_find, L.Ind.erRd_foldN] at hW
   by_cases h0 : r₂.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, -, rfl⟩ := hW
@@ -173,7 +174,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   generalize erRd m₂ (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
   rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩ <;> rw [hlp] at hW
   · cases hW
-  simp only at hW
+  simp only [uwsW.k_lam_proj] at hW
   have hcwf : coreWalkFuel < 2 ^ 64 := by simp [coreWalkFuel]
   obtain ⟨hlrun, -, hlb⟩ := lamProjW_ok hR hv5 (by simp; omega) hlp
   simp only [UInt64.toNat_zero] at hlrun
@@ -204,13 +205,8 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   simp only at hao
   have hargs' : (getAppArgs f.toNat (decE e)).run a = .ok (xs, a) := by
     rw [← acaW_args hR he hA coreWalkFuel hf]; exact hargs
-  simp only [uwsK2] at hW
-  have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-    by_cases h : (136 : Word).toNat < (m₃.arr64 CTL).size
-    · exact h
-    · simp only [h, ↓reduceIte] at hW; cases hW
-  simp only [h136, ↓reduceIte] at hW
-  obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
+  simp only [uwsW.k_get_app_args] at hW
+  obtain ⟨hS', hK'⟩ := hS.restoreTop' hf3 hg3
   have hfr : MemFrame [SPN, LH] [136, 192] m₂ (m₃.set64 CTL 136 (rdW (m₂.arr64 CTL) 136)) :=
     (hf3.mono (by simp) (by simp)).trans ((MemFrame.setCtl m₃ 136 _).mono (by simp) (by simp))
   have hRd : RdAfter dn m₂ (m₃.set64 CTL 136 (rdW (m₂.arr64 CTL) 136)) a a vis fe M eb :=
@@ -299,15 +295,15 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   rcases hc1 : callW p n "unwrap_step" [vis, f, e] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
   · cases hW
   obtain ⟨hRd₁, hb₁, hrun₁⟩ := uws_ok hp _hS _hf _he hc1
-  simp only [uidK] at hW
+  simp only [uidW.k_unwrap_step] at hW
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     refine ⟨by rw [hj, hrun₁ j, ite_eq_left h0], hRd₁, _he⟩
   simp only [h0, ↓reduceIte] at hW
   rcases hc2 : callW p n "unwrap_id_defs" [vis, f, k - 1, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [call1W, hc2] at hW; cases hW
-  rw [call1W_some _ _ _ _ _ _ _ hc2] at hW
+  · rw [hc2] at hW; cases hW
+  rw [hc2] at hW; simp only [uidW.k_unwrap_id_defs] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hRd₁.rel _hf (hb₁ h0) hc2
   refine ⟨?_, hRd₁.trans hRd₂, hb₂⟩
@@ -337,14 +333,14 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   generalize r.tail.headD 0 = y at hW ⊢
   -- the step at a `∀` node `u`, from memory `m₁`
   have step : ∀ {m₁ : Mem} (u : Word), RdAfter dn m m₁ a a vis fe M eb → HW u → tagW u = 6 →
-      k ≠ 0 → ppwK2 p n vis f k u m₁ = some (x, y, m') →
+      k ≠ 0 → ppwW.j1 p n vis f k u m₁ = some (x, y, m') →
       (do match ← viewBind (decE u) with
           | none => failDanglingE
           | some (_, b) => ConRon.Arena.peelPisW fe f.toNat (k.toNat - 1) b : AM (Option EIdx)).run a =
         .ok (decOpt x y, a) ∧ RdAfter dn m m' a a vis fe M eb ∧ (x ≠ 0 → HW y) := by
     intro m₁ u hRd hu h6 hk hK
     have hS₁ := hRd.rel
-    unfold ppwK2 at hK
+    unfold ppwW.j1 at hK
     by_cases hv1 : tierW u ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
     · simp [hv1] at hK
     by_cases hv2 : tcnt m₁ FORALL (tierW u) ≤ idxW u
@@ -357,7 +353,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
         tfld m₁ FORALL (tierW u) (idxW u) 1] m₁ with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hK; cases hK
     rw [hc2] at hK
-    simp only [t2W, Option.some.injEq, Prod.mk.injEq] at hK
+    simp only [ppwW.k_peel_pis_w, Option.some.injEq, Prod.mk.injEq] at hK
     obtain ⟨rfl, rfl, rfl⟩ := hK
     obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hS₁ _hf h1 hc2
     refine ⟨?_, hRd.trans hRd₂, hb₂⟩
@@ -369,9 +365,9 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   · subst hk
     simp only [↓reduceIte] at hW
     rcases hc1 : callW p n "unwrap_id_defs" [vis, f, 4, e] m with _ | ⟨r₁, m₁⟩
-    · rw [call1W, hc1] at hW; cases hW
-    rw [call1W_some _ _ _ _ _ _ _ hc1] at hW
-    simp only [ppwK0, Option.some.injEq, Prod.mk.injEq] at hW
+    · rw [hc1] at hW; cases hW
+    rw [hc1] at hW
+    simp only [ppwW.k_unwrap_id_defs, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n _hS _hf _he hc1
     simp only [show (4 : Word).toNat = 4 from rfl] at hrun₁
@@ -394,11 +390,11 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   have ht : ((decE e).tag == ETag.forallE) = false := by
     rw [tag_beq_w e _he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [h6]
   rcases hc1 : callW p n "unwrap_id_defs" [vis, f, 4, e] m with _ | ⟨r₁, m₁⟩
-  · rw [call1W, hc1] at hW; cases hW
-  rw [call1W_some _ _ _ _ _ _ _ hc1] at hW
+  · rw [hc1] at hW; cases hW
+  rw [hc1] at hW
   obtain ⟨hrun₁, hRd₁, hb₁⟩ := uid_ok hp n _hS _hf _he hc1
   simp only [show (4 : Word).toNat = 4 from rfl] at hrun₁
-  simp only [ppwK1] at hW
+  simp only [ppwW.k_unwrap_id_defs_2] at hW
   generalize r₁.headD 0 = u at hW hrun₁ hb₁
   have hpre : (ConRon.Arena.peelPisW fe f.toNat k.toNat (decE e)).run a =
       (if (decE u).tag == ETag.forallE then

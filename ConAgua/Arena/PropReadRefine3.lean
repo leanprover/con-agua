@@ -113,14 +113,15 @@ theorem htr_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (headTypeRes_spec p hp n ⟨m, Locals.init []⟩ vis f k ty) hc
   rw [ht] at hW
+  unfold htrW at hW
   rcases hc1 : callW p n "peel_pis_w" [vis, f, k, ty] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
   · cases hW
   obtain ⟨hrun₁, hRd₁, hb₁⟩ := ppw_ok hp n hS hf hty hc1
-  simp only [htrK] at hW
+  simp only [htrW.k_peel_pis_w] at hW
   rcases hc2 : callW p n "residual_pw" [r₁.headD 0, r₁.tail.headD 0] m₁ with _ | ⟨r₂, m₂⟩ <;>
     rw [hc2] at hW
   · cases hW
-  simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [htrW.k_residual_pw, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h1, h2, h3, rfl⟩ := hW
   obtain ⟨res, hrun₂, hRd₂, hd⟩ := rpw_call hp hden hRd₁.rel hb₁ hc2
   refine ⟨res, ?_, hRd₁.trans hRd₂, ?_⟩
@@ -303,7 +304,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   rcases v with i | ⟨i, ty⟩ | u | ⟨I, us⟩ | ⟨g, x⟩ | ⟨ty, b⟩ | ⟨ty, b⟩ | ⟨ty, vv, b⟩ | l | ⟨sn, i, pe⟩
   -- bvar
   · obtain ⟨hg, hi⟩ := hVR
-    simp only [vG, vX, hg, show (0 : Word) ≠ 3 by decide, show (0 : Word) ≠ 1 by decide,
+    simp only [hg, show (0 : Word) ≠ 3 by decide, show (0 : Word) ≠ 1 by decide,
       ↓reduceIte, true_and] at hW
     rw [pr_getD1] at hi
     by_cases hlt : w.tail.headD 0 < d
@@ -316,7 +317,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       · cases hW
       obtain ⟨hbrun, hbb⟩ := bdW_ok m a hR _ _ _ bf bd (Nat.le_refl _) hroot hb
       rw [hdi] at hbrun
-      simp only [htpK] at hW
+      simp only [htpW.k_binder_dom] at hW
       by_cases hb0 : bf = 0
       · simp only [hb0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
         obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
@@ -326,7 +327,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       simp only [hb0, ↓reduceIte] at hW
       rcases hc2 : callW p n "head_type_res" [vis, f, k, bd] m with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
       · cases hW
-      simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+      simp only [htpW.k_head_type_const, Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
       obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf (hbb hb0) hc2
       refine ⟨res, a, ?_, hRd₂, hd₂⟩
@@ -340,18 +341,18 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   -- fvar
   · obtain ⟨hg, -, hty, hty'⟩ := hVR
     rw [pr_getD2] at hty hty'
-    simp only [vG, vY, hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
+    simp only [hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_type_res" [vis, f, k, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
       rw [hc2] at hW
     · cases hW
-    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [htpW.k_head_type_const, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf hty hc2
     refine ⟨res, a, ?_, hRd₂, hd₂⟩
     rw [hpre, ← hty']; exact hrun₂
   -- sort
   · obtain ⟨hg, -⟩ := hVR
-    simp only [vG, hg, show (2 : Word) ≠ 3 by decide, show (2 : Word) ≠ 1 by decide,
+    simp only [hg, show (2 : Word) ≠ 3 by decide, show (2 : Word) ≠ 1 by decide,
       show (2 : Word) ≠ 0 by decide, false_and, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
@@ -359,12 +360,12 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
     rw [pr_getD1] at hn hn'
     rw [pr_getD2] at husw hus'
-    simp only [vG, vX, vY, hg, ↓reduceIte] at hW
+    simp only [hg, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_type_const" [vis, f, k, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW
     rw [hc2] at hW
-    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [htpW.k_head_type_const, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     cases n with
     | zero => rw [callW_zero] at hc2; cases hc2
@@ -387,7 +388,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       first
       | (rw [hVR.1]; decide)
       | (rw [hVR]; decide)
-    simp only [vG, hg.1, hg.2.1, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
+    simp only [hg.1, hg.2.1, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
       Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
