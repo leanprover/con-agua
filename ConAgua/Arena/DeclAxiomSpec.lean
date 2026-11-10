@@ -4,9 +4,7 @@ public import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclReduceSpec
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclAxiomSpec3
 import all ConAgua.Arena.DeclArmsNat

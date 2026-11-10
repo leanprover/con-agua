@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.LocNF
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DeclNatCv

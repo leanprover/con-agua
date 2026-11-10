@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.NodeV
-import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.BvarBRefine
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView

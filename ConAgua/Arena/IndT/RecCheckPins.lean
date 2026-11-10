@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Verdict.IndBPins
 public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndSumSpec.StructUsedHb

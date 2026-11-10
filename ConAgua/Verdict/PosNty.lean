@@ -8,13 +8,11 @@ import ConRon.Bridge.Inductives.FieldTele
 import ConAgua.Arena.IndPosSpec.FgW
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.PosWalks
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.WordOff
 public import ConAgua.Arena.IndPosSpec.NkFields
-import ConAgua.Arena.QuotCiT
 
 @[expose] public section
 

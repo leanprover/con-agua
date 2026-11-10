@@ -7,7 +7,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Front.StateDR
-import ConAgua.L.LocNF
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section

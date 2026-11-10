@@ -5,7 +5,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.L.LocNF
 import ConLeche.Verify.Cached.Erase
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Front.ApplyExpr

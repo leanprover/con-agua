@@ -9,7 +9,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Arena.Inst1Refine
-import ConAgua.L.Records
 
 @[expose] public section
 

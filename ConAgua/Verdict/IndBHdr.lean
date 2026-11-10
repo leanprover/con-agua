@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.IndRealMemoCrT
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.DeclCvgT
 import ConAgua.Arena.IndT.WalkC
 public import ConAgua.Arena.IndT.Base

@@ -10,7 +10,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 public import ConAgua.Arena.DeclArmsCanon
-import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.Arena.WhnfDeltaRefine2
 
 @[expose] public section

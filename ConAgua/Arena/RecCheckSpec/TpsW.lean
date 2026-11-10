@@ -10,7 +10,6 @@ import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.RecCheck
-import ConAgua.Arena.IndPartsSpec.RecTW
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.L.WordOff

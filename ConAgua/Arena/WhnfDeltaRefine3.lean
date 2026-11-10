@@ -8,7 +8,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
-import ConAgua.L.LocNF
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfDeltaRefine
 import all ConAgua.Arena.Refine

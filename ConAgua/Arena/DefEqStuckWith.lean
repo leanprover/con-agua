@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.WhnfIotaRefine3
-import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.DefEqStuck

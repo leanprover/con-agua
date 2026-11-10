@@ -11,10 +11,10 @@ import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import all ConAgua.Arena.IndInstall
-import ConAgua.Arena.QuotCiT
 import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.L.ErrSpec
 import ConAgua.L.WordOff
+import ConAgua.Arena.Verdict
 
 @[expose] public section
 

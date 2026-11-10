@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
 

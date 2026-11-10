@@ -7,7 +7,6 @@ import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.L.WordOff
-import ConAgua.L.Records
 
 @[expose] public section
 

@@ -10,7 +10,6 @@ public import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.KnotMono
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.DerRel
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

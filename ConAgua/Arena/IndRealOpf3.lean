@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.DeclNatCv
 import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.InstListRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndRealOpf
 import ConAgua.L.WordOff

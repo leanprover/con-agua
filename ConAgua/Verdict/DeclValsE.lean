@@ -3,7 +3,6 @@ module
 public import ConAgua.Verdict.DeclHdrE
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Verdict.FrontValidE
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.DeclCvgT

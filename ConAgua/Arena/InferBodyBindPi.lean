@@ -1,10 +1,8 @@
 module
 
 public import ConAgua.Arena.InferBodyBind
-import ConAgua.Arena.IndSumSpec.DecCVpGrow
 public import ConAgua.Arena.InferBodyBindPiModels
 import ConAgua.Arena.InferBodyIntern
-import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.LevelView
 import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.RefWalk
@@ -13,6 +11,7 @@ import ConAgua.L.WordOff
 import ConAgua.Arena.FormerSortRef
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WhnfIotaRefine2
+import ConAgua.Arena.IndView
 
 @[expose] public section
 

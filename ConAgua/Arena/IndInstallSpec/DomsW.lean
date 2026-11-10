@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 
 @[expose] public section

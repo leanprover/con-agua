@@ -5,7 +5,6 @@ public import ConAgua.Arena.Frame
 import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.L.WordOff
-import ConAgua.L.Records
 
 @[expose] public section
 

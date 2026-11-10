@@ -3,8 +3,8 @@ module
 public import ConAgua.Arena.QuotAtT
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.IlpRd
-import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 

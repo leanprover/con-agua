@@ -7,7 +7,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.DefEq
-import ConAgua.Arena.IndPosSpec.UnW
+import ConAgua.Front.Preserve
 
 @[expose] public section
 

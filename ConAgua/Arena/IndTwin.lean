@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclLvlStage
-import ConAgua.Arena.IndInstallSpec.NhW
 public import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine4
 public import ConAgua.Arena.GrindAttr
@@ -13,6 +12,7 @@ public import ConAgua.Arena.LeafFrame
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndRealOpfLeaf
 public import ConAgua.Arena.IndSumSpec.StructUsedFrame
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

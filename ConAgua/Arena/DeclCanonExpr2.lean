@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclCanonExpr
-import ConAgua.Arena.DeclCvg
 import ConAgua.L.WordOff
 
 @[expose] public section

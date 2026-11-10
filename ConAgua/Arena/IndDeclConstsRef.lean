@@ -23,7 +23,6 @@ import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 import ConAgua.L.ModelGen
-import ConAgua.Arena.BasisBlockC
 import ConAgua.Arena.IndT.BlockCS
 
 @[expose] public section

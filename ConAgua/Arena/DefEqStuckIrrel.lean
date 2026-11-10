@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.DefEqStuckUnit
 public import ConAgua.Arena.DefEqModels
 import ConAgua.Arena.DefEqStuckCert
-import ConAgua.Arena.DefEqStuckEta
 public import ConAgua.Arena.DefEqStuckWith
 
 @[expose] public section

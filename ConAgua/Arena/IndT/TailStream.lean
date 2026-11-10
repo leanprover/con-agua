@@ -12,7 +12,6 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndT.RecsTemp
 import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.ScratchRefine
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndInstallSpec.IcvgW

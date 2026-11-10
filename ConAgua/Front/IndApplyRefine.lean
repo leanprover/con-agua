@@ -3,7 +3,6 @@ module
 public import ConAgua.Front.IndApplySpec
 public import ConRon.Arena.Frontend.ExportC
 public import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.View
 import ConAgua.L.WordOff
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.InstLPKeys

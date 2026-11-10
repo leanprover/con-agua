@@ -14,7 +14,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.IndDeclConstsFire
 import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndPartsSpec.AllCtors
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.RecClassSpec.MjProg
 

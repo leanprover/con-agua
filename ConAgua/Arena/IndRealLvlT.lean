@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndTwin
-import ConAgua.Arena.WhnfIotaRefine4
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.CoreLevels
 import ConAgua.Arena.WhnfIotaRecRefine

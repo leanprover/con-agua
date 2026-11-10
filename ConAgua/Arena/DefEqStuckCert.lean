@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DefEqStuckGo
 import ConAgua.Arena.DefEqStuckShape
-import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine

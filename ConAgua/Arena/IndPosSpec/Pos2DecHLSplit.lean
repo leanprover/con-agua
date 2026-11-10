@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndPosSpec.NkcW
 import ConAgua.Arena.StripTeleSpec
-import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
 import ConAgua.L.WordOff

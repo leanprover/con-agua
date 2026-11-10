@@ -12,7 +12,6 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CloseTelescope
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.IndSumSpec.DecCVpGrow
 import all ConAgua.Arena.WhnfIota
 import ConRon.Bridge.Inductives.Positivity
 

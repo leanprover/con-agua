@@ -6,7 +6,6 @@ public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Rel
 import ConAgua.Checker.NoVerdictTree

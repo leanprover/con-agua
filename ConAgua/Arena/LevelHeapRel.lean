@@ -3,10 +3,8 @@ module
 public import ConAgua.Arena.LevelHeap
 import ConAgua.Census.Attr
 public import ConLeche.Kernel.Expr
-import ConAgua.Arena.Pool
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.StoreRel
-import ConAgua.L.Records
 
 @[expose] public section
 

@@ -6,10 +6,8 @@ import ConAgua.Arena.IndSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndMaster

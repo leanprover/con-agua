@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.WalkScope
 import ConAgua.Arena.LiftRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.DerRel
 import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase

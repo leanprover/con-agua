@@ -10,7 +10,6 @@ import ConAgua.Arena.DerRel
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StoreDenIntern
@@ -20,7 +19,6 @@ import all ConAgua.Arena.NatAdd
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Store
 import ConAgua.Front.NatDecLink
-import ConAgua.L.Records
 
 @[expose] public section
 

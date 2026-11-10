@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndDeclConstsLp
 public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
-import ConAgua.Arena.TwinStep
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

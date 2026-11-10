@@ -9,7 +9,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.L.ModelGen
-import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff

@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecGenSpec.IwNLtSize
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

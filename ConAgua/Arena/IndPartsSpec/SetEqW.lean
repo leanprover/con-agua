@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface

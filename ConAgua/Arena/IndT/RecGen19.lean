@@ -4,7 +4,6 @@ import ConAgua.Arena.IndT.RecGenTmf
 import ConAgua.Arena.IndT.RecCheckPins
 public import ConAgua.Arena.IndT.PosFkc
 public import ConAgua.Verdict.IndBClm
-import ConAgua.Arena.RecGenSpec.CntW
 import ConRon.Bridge.Inductives.GenRec
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons

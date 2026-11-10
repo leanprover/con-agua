@@ -5,7 +5,6 @@ import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
-import ConAgua.Arena.IndPosSpec.RpGoStep
 import ConAgua.Arena.RecCheckSpec.TcmLook
 
 @[expose] public section

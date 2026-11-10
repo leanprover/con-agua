@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import all ConAgua.Arena.IndPos2
-import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.L.WordOff
 

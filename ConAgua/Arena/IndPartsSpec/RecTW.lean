@@ -12,7 +12,6 @@ import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.Inst1Refine
 
 @[expose] public section

@@ -22,7 +22,6 @@ public import ConAgua.Arena.NNumRefine
 public import ConAgua.Arena.MemoLibRel
 public import ConAgua.Census.Attr
 public import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.L.Records
 
 @[expose] public section
 

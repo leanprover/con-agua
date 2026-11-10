@@ -5,7 +5,6 @@ public import ConAgua.Verdict.ThreadsE
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.VerdictEntry1
 import ConAgua.Checker.LoopStage
-import ConAgua.Checker.RomProg0
 import ConAgua.Checker.RomProgInit
 import ConAgua.L.Blocks
 import all ConAgua.Checker.Entry

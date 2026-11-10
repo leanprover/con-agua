@@ -3,12 +3,9 @@ module
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndSumSpec.ColW
-import ConAgua.Arena.RecCheckSpec.TcmLook
 
 @[expose] public section
 

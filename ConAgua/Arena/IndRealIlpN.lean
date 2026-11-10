@@ -18,7 +18,6 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.Store
 import all ConAgua.Arena.StubNames
-import ConAgua.L.Records
 
 @[expose] public section
 

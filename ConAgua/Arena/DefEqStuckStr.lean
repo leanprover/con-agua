@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DefEqStuckIrrel
-import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 

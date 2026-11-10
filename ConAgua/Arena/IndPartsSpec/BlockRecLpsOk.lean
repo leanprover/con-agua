@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.Tactic.BVDecide.Normalize.BitVec

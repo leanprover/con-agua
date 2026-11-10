@@ -9,7 +9,6 @@ import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import all ConRon.Bridge.Inductives.BlockTail

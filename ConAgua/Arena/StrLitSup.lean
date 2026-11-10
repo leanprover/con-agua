@@ -4,7 +4,6 @@ import ConAgua.L.ModelGen
 import all ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.Bool
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

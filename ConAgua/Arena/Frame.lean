@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.StoreLib
 import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.L.WriteSet
-import ConAgua.L.Records
 
 @[expose] public section
 

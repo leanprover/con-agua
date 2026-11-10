@@ -13,7 +13,6 @@ import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.ExprOps.Inst1
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.WhnfCoreProj

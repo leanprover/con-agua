@@ -7,12 +7,12 @@ import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 public import ConAgua.Arena.IndPosSpec.U4W
 public import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPosSpec.DepthGo
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 import ConAgua.Arena.IndPosSpec.SnocWDecK
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.FgW2
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPosSpec.RpGoStep
 
 @[expose] public section
 

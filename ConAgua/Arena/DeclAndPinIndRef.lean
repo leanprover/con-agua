@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclAndPinIndCopy2
 public import ConAgua.Arena.ErToIwBlk
 import ConAgua.Arena.DeclCanonInfo
-import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

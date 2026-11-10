@@ -4,7 +4,6 @@ import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.CoreErec
 public import ConAgua.Arena.WhnfIotaRefine
-import ConAgua.L.Records
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

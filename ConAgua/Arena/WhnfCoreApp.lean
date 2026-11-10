@@ -15,7 +15,6 @@ import all ConAgua.Arena.WhnfCore
 import ConAgua.L.WordOff
 import ConAgua.Arena.Abs1Refine
 import ConAgua.Arena.Inst1Refine
-import ConAgua.L.Records
 
 @[expose] public section
 

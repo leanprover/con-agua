@@ -8,7 +8,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclCvg
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConRon.Arena.Canon

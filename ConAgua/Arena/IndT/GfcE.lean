@@ -13,14 +13,13 @@ import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.CkcW
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.RecGenSpec.DecB
 import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.Inductives.GenRec
 import all ConAgua.Arena.RecGen
-import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.IndPosSpec.EnvFindWHit
 
 @[expose] public section
 

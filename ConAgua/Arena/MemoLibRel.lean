@@ -4,7 +4,6 @@ public import ConAgua.Arena.Frame
 public import ConAgua.Arena.MemoLib
 import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.L.Records
 
 @[expose] public section
 

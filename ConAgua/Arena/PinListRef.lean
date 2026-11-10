@@ -6,7 +6,6 @@ import ConAgua.Arena.IlpRd
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
-import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.L.WordOff

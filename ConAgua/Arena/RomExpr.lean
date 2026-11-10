@@ -7,7 +7,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Front.IdTable
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.MemoLib
 import all ConAgua.Arena.Store

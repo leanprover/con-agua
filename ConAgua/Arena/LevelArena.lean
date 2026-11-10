@@ -8,7 +8,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.ArenaRel
 public import ConRon.Arena.WF
 import ConAgua.Arena.CoreRefine
-import ConAgua.L.Records
 
 @[expose] public section
 

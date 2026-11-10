@@ -9,7 +9,6 @@ meta import ConAgua.Arena.Tiers
 meta import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.StoreGrow
-import ConAgua.L.Records
 
 @[expose] public section
 

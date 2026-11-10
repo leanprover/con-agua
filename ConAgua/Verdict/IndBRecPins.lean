@@ -5,7 +5,6 @@ import ConAgua.Arena.IndSumSpec.SoaW
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
@@ -13,6 +12,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TpsW
 import all ConAgua.Arena.RecCheck
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

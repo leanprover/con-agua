@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndPartsSpec.AllCtors
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
@@ -12,6 +11,7 @@ import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 

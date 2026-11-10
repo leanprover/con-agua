@@ -6,7 +6,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 public import ConAgua.Arena.DeclAxiomSpec2
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec

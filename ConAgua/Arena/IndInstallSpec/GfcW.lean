@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.RecGenSpec.DecB
 public import ConAgua.Arena.RecGenSpec.DecCIIndCv
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.GrindAttr
@@ -16,6 +15,8 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.RecGen
 import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.RecSim
 
 @[expose] public section
 

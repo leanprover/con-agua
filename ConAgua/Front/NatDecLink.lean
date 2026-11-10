@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Front.NatDec
-import ConAgua.Arena.LitRefine
 public import ConAgua.Front.ExprIface
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link

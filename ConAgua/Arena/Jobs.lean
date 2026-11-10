@@ -7,7 +7,6 @@ public import ConRon.Bridge.Checker.Pooled
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.WalkScopeRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

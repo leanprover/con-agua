@@ -13,7 +13,6 @@ public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.WordOff
 import ConAgua.Arena.Inst1Refine
-import ConAgua.L.Records
 
 @[expose] public section
 

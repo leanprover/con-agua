@@ -9,7 +9,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndDeclConsts
-import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section

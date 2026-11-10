@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndPosSpec.NodeV
 import ConAgua.Arena.IndPosSpec.SlRCongr
 import ConAgua.Arena.IndPosSpec.SnocWDecK
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.Env
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.CanonW
 import ConAgua.L.WordOff

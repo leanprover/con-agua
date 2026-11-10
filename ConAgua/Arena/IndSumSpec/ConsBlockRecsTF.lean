@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndInstallSpec.InstallIwB
-import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.RecCheck

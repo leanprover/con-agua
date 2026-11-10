@@ -8,7 +8,6 @@ import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.View
 import ConAgua.L.WordOff
 import ConAgua.Arena.Rom
-import ConAgua.L.Records
 
 @[expose] public section
 

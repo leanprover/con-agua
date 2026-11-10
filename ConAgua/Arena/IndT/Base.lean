@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.KnotEntry
-import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.RecSim
 import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB

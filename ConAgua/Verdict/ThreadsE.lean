@@ -6,7 +6,6 @@ import ConAgua.Checker.CheckARun
 import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.LoopStage
-import ConAgua.Checker.RomProg0
 import ConAgua.L.Blocks
 public import ConAgua.Final.TwinVerdict
 import all ConAgua.Checker.Entry

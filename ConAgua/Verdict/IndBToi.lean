@@ -12,7 +12,6 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecCheckSpec.ToiW
 import all ConAgua.Arena.RecCheck
 public import ConAgua.Verdict.PosFt
-import ConAgua.Arena.QuotCiT
 import ConRon.Bridge.Inductives.Positivity
 import ConAgua.L.WordOff
 

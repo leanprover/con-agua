@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.Env
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecClassSpec.MjProg
 

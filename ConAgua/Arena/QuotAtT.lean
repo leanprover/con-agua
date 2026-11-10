@@ -12,9 +12,9 @@ public import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.IndexLoops
-import ConAgua.Arena.IndInstallSpec.NhW
 import all ConAgua.Arena.BasisL
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 

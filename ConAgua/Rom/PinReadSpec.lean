@@ -10,7 +10,6 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
 import all ConAgua.Rom.PinRead
 import ConAgua.Arena.DeclRec
-import ConAgua.Front.ApplyExpr
 
 @[expose] public section
 

@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas

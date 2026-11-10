@@ -11,7 +11,6 @@ import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.BncAfr
 public import ConAgua.Arena.IndPartsSpec.BmoW
 import ConAgua.Arena.IndPartsSpec.Bf

@@ -15,7 +15,6 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndRealOpf3
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec

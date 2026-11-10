@@ -8,7 +8,6 @@ import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRecRefine
-import ConAgua.Arena.PropReadRefine
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.IndSumSpec.TsrW

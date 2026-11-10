@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.LevelArena
 import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -11,7 +10,6 @@ public import ConAgua.Arena.IndCopy
 public import ConAgua.Arena.LevelEquiv
 import all ConAgua.Arena.IndIface
 import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.View
 
 @[expose] public section
 

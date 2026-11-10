@@ -7,7 +7,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.DeclArms
-import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 
