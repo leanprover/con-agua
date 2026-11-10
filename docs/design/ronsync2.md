@@ -140,6 +140,37 @@ CONFLICT, con-ron 0001 applies.
   job `k`'s failure with class `c` or, weakened, some job below `k` rejected (a failure in another
   thread below `k` leaves no `PrefixOK` at `k`). Before/after texts: §6 (statement changes).
 
+* Stage 3 findings that changed L (2026-11-09): `cap_check` also bounds both `EREC` tiers by 2^40
+  words (the tagged addresses need it; never fires); the pinned `And` block is no longer cached by
+  `rom_fill`: the twin interns `andPinDecls` only at use, in the scratch tier (and only for a
+  block naming `And`), so the cache's records were not the twin's; `rom_and_pin` interns at use
+  as the twin does. Then the whole startup cache went (`ROMC`, `rom_fill`): the readers read the
+  program's constant ROM data (`romDataLit`, which entry 2 has; it is the pin-data buffer's checked
+  content) and intern at use like the twin, instead of a cache whose twin side would need an
+  intern-idempotence development.
+* Also from stage 3: every `check_b` call (the worker's initialisation, the twin's
+  `AState.worker`) flushes the core caches: the index build fills them (`buildIndex` →
+  `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
+* Also from stage 3: `former_never_zero_at` and `proj_guard_sort` abort (class 0) when
+  `nparams + nIdx` wraps 2^64, and `proj_guard_rows` when `np + i + 1` does, as `family_telescope`
+  already did (the twin's sums are `Nat`s); `stream_nested_ok` saturates `mI - rP` as the twin's
+  `Nat` subtraction does, and `stream_nested_pins` aborts (class 0) on a lifted index ≥ 2^32.
+* Process note (regeneration): `Checker/SyncFns.lean` was imported by nothing, so after an L
+  change the program dump missed its bindings and functions silently became stubs; it is in the
+  lakefile's globs now (with `Front/DriverProg`).
+* Stage 3, the rest (2026-11-09/10). The three areas were split further as they shrank (the
+  core tier into the declarations, the core proper and the iota part; the inductive area's workers
+  took the definition arm, `Verdict/*`, the stream-recursor checks and parts of the core). New
+  infrastructure on the way: the record pool's tagged reads as a reader (`RdOK`, `erRdT`), the
+  hb memo as a core memo (`CoreMemos.hb`, the core stage's leaves `struct_used_later`,
+  `open_pis_at_fvars_f`), `StoreDen.zero` as `Level.zero`, and the twin's store monotonicity
+  across the knot (`KnotMono*`: `SMono` of the 331 functions the knot reaches, generated per
+  function). Every chain leaf closed on 2026-11-10 (`#sorry_leaves checkerFile_accepts`: 0).
+* Integration: all branches and master merged into `ronsync2`; the axiom guards restored
+  unchanged; OVERVIEW and the Final module docs at the new design; the unused imports the sync
+  left (1046, `scripts/shake.py`) deleted; the deprecation and unused-argument warnings fixed; empty
+  modules deleted.
+
 ## 6. Statement changes of the final theorems
 
 Approved by the user (via the coordinator, 2026-11-09). Reason: a job is checked at the stream
@@ -188,21 +219,35 @@ The final texts are given in the report when the theorems are proved. Possible f
 done): `main.c` reports the failing group with the smallest index and every lower group has been
 checked and accepted when the threads are joined, so one more harness fact would give the threaded
 verdict its strong form `TwinVerdict [b] c`.
-* Stage 3 findings that changed L (2026-11-09): `cap_check` also bounds both `EREC` tiers by 2^40
-  words (the tagged addresses need it; never fires); the pinned `And` block is no longer cached by
-  `rom_fill`: the twin interns `andPinDecls` only at use, in the scratch tier (and only for a
-  block naming `And`), so the cache's records were not the twin's; `rom_and_pin` interns at use
-  as the twin does. Then the whole startup cache went (`ROMC`, `rom_fill`): the readers read the
-  program's constant ROM data (`romDataLit`, which entry 2 has; it is the pin-data buffer's checked
-  content) and intern at use like the twin, instead of a cache whose twin side would need an
-  intern-idempotence development.
-* Also from stage 3: every `check_b` call (the worker's initialisation, the twin's
-  `AState.worker`) flushes the core caches: the index build fills them (`buildIndex` →
-  `blockShape?` → `lvlEq?`), and the twin's jobs start from the worker with empty caches.
-* Also from stage 3: `former_never_zero_at` and `proj_guard_sort` abort (class 0) when
-  `nparams + nIdx` wraps 2^64, and `proj_guard_rows` when `np + i + 1` does, as `family_telescope`
-  already did (the twin's sums are `Nat`s); `stream_nested_ok` saturates `mI - rP` as the twin's
-  `Nat` subtraction does, and `stream_nested_pins` aborts (class 0) on a lifted index ≥ 2^32.
-* Process note (regeneration): `Checker/SyncFns.lean` is imported by nothing, so after an L change
-  build `ConAgua.Checker.SyncFns` first, then `scripts/checker_prog.py --no-build`; otherwise the
-  dump misses its bindings and functions silently become stubs.
+
+## 7. Results (2026-11-10, `ronsync2` at the landing)
+
+* **Proofs.** Zero `sorry` (per file as on master: the remaining hits are the tools' own text),
+  no stage-2 marker; the axiom guards of every final theorem and of the chain unchanged
+  (`[propext, Classical.choice, Quot.sound]`); census: 1391 of 1406 targets proven, 15 n/a, 0
+  sorry, sorry-free e2e cone 100 %, no bad link.
+* **Gates.** links, vendor (`bump --check`), modules, provenance (`--strict`: all citations exact
+  at con-ron 01ecb31c, con-leche 210a580e), reasons, build, warnings, shake, the function lists
+  (core/loop/leaf/phaseb/nv, preloop-ws), checker-prog, `asm_file.py --check`.
+* **Verdicts.** `diff-e2e --tests` at con-leche 210a580e: 689/689 agree (413 accepted, 276 not),
+  sequential and `--jobs=8`, 0 unsound/incomplete/crash/timeout; with `--refs` 0 REFDIFF.
+  `e2e.py --latest ''` (con-ron 01ecb31c): the three checkers agree on 734 of 736 fixtures (the 2
+  others time out in all three). Skipped, `--olean` only: con-leche's `tests/olean/`,
+  `olean.sh`, `olean-compare.sh` (D44).
+* **Performance** against master 09a78343 (Init = Lean 4.35's `Init` export):
+
+  | | master | ronsync2 | Δ |
+  |---|---:|---:|---:|
+  | `Init`, `instructions:u`, one thread | 223.85 G | 223.73 G | −0.05 % |
+  | `Init`, peak RSS, one thread | 627 MB | 624 MB | ≈ 0 |
+  | `Init`, peak RSS, `--jobs=16` | 792 MB | 776 MB | −2 % |
+  | `Init` wall, one thread (CPU 44, 16 paired rounds) | 17.27 s | −0.4 % (Wilcoxon p = 0.14; mean [−0.7, +0.1]) | |
+  | `Init` wall, `--jobs=16` (CPUs 24–39, 20 paired rounds) | 3.68 s | **−11.5 %** (p < 0.001; mean [−16.8, −6.9]) | |
+  | `complete_c04a_restart_70` (largest e2e fixture), instructions | 16.51 G | 17.10 G | +3.5 % |
+  | `complete_c04a_restart_70`, peak RSS | 258 MB | 258 MB | 0 |
+
+  The jobs replace the install phase; the pool parallelises them, hence the 16-thread gain.
+* **Environment.** Lean executables linked during the `ld.lld` breakage (19:00–23:30 on 11-08,
+  through this lane's temporary `LEAN_CC` wrapper) sit in the shared Lake cache with an
+  `libunwind.so.1` dependency; `e2e-ref`, `e2e-l`, `e2e-diff` and `census` were relinked here with
+  `LAKE_COLD=1`.
