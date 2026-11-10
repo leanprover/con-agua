@@ -11,6 +11,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConAgua.Arena.IndPosSpec.MatesW
 import all ConAgua.Arena.RecCheck
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -79,33 +80,26 @@ theorem ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrN
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
       finish (gen := 20) [erRd]
 
-/-- The model of `ptr_list_names`. -/
-def ptrNamesW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
-  match allocW m l with
-  | none => none
-  | some (q, m1) =>
-    match nameCopyW (n - 1) m1 q o l with
-    | none => none
-    | some m2 => some ([q, l], m2)
-
-theorem ptrListNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`ptr_list_names` is its model `ptrNamesW`** (generated). -/
+l_model ptrListNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "ptr_names_copy" = some ptrNamesCopy)
-    (hp : p.lookup "ptr_list_names" = some ptrListNames) (n : Nat) (s₀ : St) (o l : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_list_names" [o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ptrNamesW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, ptrListNames]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem l = some (a, m1) → nameCopyW n m1 a o l = some m2 →
-        ptrNamesW (n + 1) s₀.mem o l = some ([a, l], m2) := by
-      intro a m1 m2 h1 h2
-      simp [ptrNamesW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, ptrNamesCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "ptr_list_names" = some ptrListNames)
+  fns [hp ↦ ptrNamesW list]
+  specs [iwAlloc_specW p ha n, ptrNamesCopy_spec p hc n]
+  grind [arena_grind]
+theorem ptrNamesW_some {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : ptrNamesW n m o l = some (r, m')) :
+    ∃ k q m1, n = k + 1 ∧ allocW m l = some (q, m1) ∧ nameCopyW k m1 q o l = some m' ∧
+      r = [q, l] := by
+  rcases n with _ | k
+  · simp [ptrNamesW] at h
+  rw [ptrNamesW.arm1] at h
+  obtain ⟨q, m1, hal, h⟩ := ipK_inv h (ptrNamesW.k_iw_alloc.none ..)
+  rw [ptrNamesW.k_iw_alloc.arm1] at h
+  obtain ⟨m2, hcp, h⟩ := ipK_inv1 h (ptrNamesW.k_ptr_names_copy.none ..)
+  rw [ptrNamesW.k_ptr_names_copy.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨k, q, m1, rfl, hal, hcp, rfl⟩
 
 /-- **`ptr_list_names` copies the names**: given the slice's records' constants. -/
 theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs : List IConstantVal)
@@ -119,18 +113,8 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
     (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
   have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
-  simp only [ptrNamesW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-  obtain ⟨q, m1⟩ := qm
+  obtain ⟨k, q, m1, rfl, hal, hcp, rfl⟩ := ptrNamesW_some h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
-  simp only [hal] at h
-  cases hcp : nameCopyW (n - 1) m1 q o l with
-  | none => simp [hcp] at h
-  | some m2 =>
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
   subst hq' hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hIW := allocMem_IW m l
@@ -145,19 +129,19 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
     rw [hIW, hv']
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nameCopyW_get k _ _ _ _ _ hcp
     (by simp only [iwTop, hqq] at hsrc; omega)
     (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
   simp only [hEE] at hG
-  have hfr : MemFrame [IW] [200] m m2 :=
+  have hfr : MemFrame [IW] [200] m m' :=
     (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
-  have htop : rdW (m2.arr64 CTL) 200 = q + l := by
+  have htop : rdW (m'.arr64 CTL) 200 = q + l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + l).toNat = q.toNat + l.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   refine ⟨rfl, ?_, ?_, hfr, ?_⟩
-  · have := decHL_of_get m2 (cvs.map (·.name)) q.toNat (fun j hj => by
+  · have := decHL_of_get m' (cvs.map (·.name)) q.toNat (fun j hj => by
       have hj' : j < cvs.length := by simpa using hj
       obtain ⟨v, a, hv, hvb, hva, hcvj⟩ := hcv j hj'
       have hGj := hG (q.toNat + j)
@@ -418,18 +402,16 @@ theorem nameCopyW_src0 (n : Nat) (m : Mem) (d s : Word) : nameCopyW n m d s 0 = 
   cases n <;> simp [nameCopyW]
 
 theorem ptrNamesW_src0 {n : Nat} {m : Mem} {o l : Word} (hl : l = 0) : ptrNamesW n m o l = ptrNamesW n m 0 l := by
-  subst hl; simp only [ptrNamesW, nameCopyW_src0]
+  subst hl; rcases n with _ | n
+  · rfl
+  simp only [ptrNamesW.arm1, ptrNamesW.k_iw_alloc.eq_def, nameCopyW_src0]
 
 theorem ptrNamesW_room {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : ptrNamesW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     (rdW (m.arr64 CTL) 200).toNat + l.toNat ≤ (m.arr64 IW).size := by
-  simp only [ptrNamesW] at h
-  cases hal : allocW m l with
-  | none => simp [hal] at h
-  | some qm =>
-    obtain ⟨q, m1⟩ := qm
-    obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
-    rw [← hq]; exact hroom
+  obtain ⟨k, q, m1, -, hal, -, -⟩ := ptrNamesW_some h
+  obtain ⟨hq, -, hroom⟩ := allocW_facts hal hsz
+  rw [← hq]; exact hroom
 
 /-- **`ptr_list_names` under the stage relation**: the names of a slice of records decoded below
 the tops whose word `0` is a constant pointer. -/
