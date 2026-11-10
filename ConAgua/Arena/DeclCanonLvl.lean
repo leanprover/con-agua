@@ -7,6 +7,7 @@ import ConAgua.Arena.LevelView
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclCvg
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -167,100 +168,12 @@ theorem canonNameMap_refines (p : Prog) (hf : p.lookup "sl_find" = some slFind)
 
 /-! ## `canon_level_eq` -/
 
-mutual
-/-- **The model of `canon_level_eq`**. -/
-def cnClW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option Word
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, po, pl, qo, ql, co, cl, fuel, u, v =>
-    if fuel = 0 then none
-    else cnClK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)
-
-/-- After the two `lv_node` calls. -/
-def cnClK0 (n : Nat) (m : Mem) (po pl qo ql co cl fuel : Word) (ru rv : List Word) : Option Word :=
-  if ru = [] ∨ rv = [] then none
-  else if ru.headD 0 ≠ rv.headD 0 then some 0
-  else if ru.headD 0 = 0 then some 1
-  else if ru.headD 0 = 1 then
-    cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
-  else if ru.headD 0 = 2 ∨ ru.headD 0 = 3 then
-    cnClK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
-      (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
-  else if ru.headD 0 = 4 then
-    cnClK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
-  else some 0
-
-/-- After the first child of a `max`/`imax`. -/
-def cnClK1 (n : Nat) (m : Mem) (po pl qo ql co cl fuel a2 b2 : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r = 0 then some 0 else cnClW n m po pl qo ql co cl (fuel - 1) a2 b2
-
-/-- After the first `canon_name_map`. -/
-def cnClK2 (n : Nat) (m : Mem) (qo ql co cl b1 : Word) : Option Word → Option Word
-  | none => none
-  | some x => cnClK3 x (nmW n m qo ql co cl b1)
-
-/-- After the second. -/
-def cnClK3 (x : Word) : Option Word → Option Word
-  | none => none
-  | some y => some (if x = y then 1 else 0)
-end
-
-section arms
-variable (n : Nat) (m : Mem) (po pl qo ql co cl fuel u v a2 b2 b1 x y r : Word) (ru rv : List Word)
-theorem clW_succ : cnClW (n + 1) m po pl qo ql co cl fuel u v =
-    (if fuel = 0 then none else cnClK0 n m po pl qo ql co cl fuel (lvNodeW m u) (lvNodeW m v)) := by
-  rw [cnClW]
-theorem cnClK0_def : cnClK0 n m po pl qo ql co cl fuel ru rv =
-    (if ru = [] ∨ rv = [] then none
-  else if ru.headD 0 ≠ rv.headD 0 then some 0
-  else if ru.headD 0 = 0 then some 1
-  else if ru.headD 0 = 1 then
-    cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0)
-  else if ru.headD 0 = 2 ∨ ru.headD 0 = 3 then
-    cnClK1 n m po pl qo ql co cl fuel (ru.tail.tail.headD 0) (rv.tail.tail.headD 0)
-      (cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0))
-  else if ru.headD 0 = 4 then
-    cnClK2 n m qo ql co cl (rv.tail.headD 0) (nmW n m po pl co cl (ru.tail.headD 0))
-  else some 0) := by
-  rw [cnClK0]
-theorem cnClK1_some : cnClK1 n m po pl qo ql co cl fuel a2 b2 (some r) =
-    (if r = 0 then some 0 else cnClW n m po pl qo ql co cl (fuel - 1) a2 b2) := by
-  rw [cnClK1]
-theorem cnClK2_some : cnClK2 n m qo ql co cl b1 (some x) = cnClK3 x (nmW n m qo ql co cl b1) := rfl
-theorem cnClK3_some : cnClK3 x (some y) = some (if x = y then 1 else 0) := rfl
-end arms
-
-grind_pattern [ind_grind] clW_succ => cnClW (n + 1) m po pl qo ql co cl fuel u v
-grind_pattern [ind_grind] cnClK0_def => cnClK0 n m po pl qo ql co cl fuel ru rv
-grind_pattern [ind_grind] cnClK1_some => cnClK1 n m po pl qo ql co cl fuel a2 b2 (some r)
-grind_pattern [ind_grind] cnClK2_some => cnClK2 n m qo ql co cl b1 (some x)
-grind_pattern [ind_grind] cnClK3_some => cnClK3 x (some y)
-
-section specs2
-variable (p : Prog) (hp : CanonProg p)
-include hp
-
-set_option maxHeartbeats 4000000 in
-theorem canonLevelEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel u v : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_level_eq" [po, pl, qo, ql, co, cl, fuel, u, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      cnClW n s₀.mem po pl qo ql co cl fuel u v = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ po pl qo ql co cl fuel u v
-    rw [invoke_eq _ (hp.get "canon_level_eq")]; simp only [callFn, canonLevelEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ po pl qo ql co cl fuel u v
-    rw [invoke_eq _ (hp.get "canon_level_eq")]
-    simp only [callFn, canonLevelEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lvNode_spec p (hp.get "lv_node") n,
-        canonNameMap_spec p (hp.get "sl_find") (hp.get "sl_getd") (hp.get "canon_name_map") n, ih] <;>
-      finish (gen := 20)
-
-end specs2
+/-- **The model of `canon_level_eq`** (`cnClW`). -/
+l_model canonLevelEq_spec (p : Prog) (hp : CanonProg p)
+  fns [hp.get "canon_level_eq" ↦ cnClW ro]
+  specs [lvNode_spec p (hp.get "lv_node") n,
+    canonNameMap_spec p (hp.get "sl_find") (hp.get "sl_getd") (hp.get "canon_name_map") n]
+  grind [arena_grind]
 
 theorem viewL_run' {a : AState} {h : LIdx} {v : LNodeView} (hv : a.store.lss.ls.view h = some v) :
     (viewL h).run a = .ok (v, a) := by
@@ -294,14 +207,15 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
   | zero => intro m a po pl qo ql co cl fuel u v r ps qs cs h; simp [cnClW] at h
   | succ n ih =>
     intro m a po pl qo ql co cl fuel u v r ps qs cs h hR hC hu hv
-    rw [clW_succ] at h
+    rw [cnClW] at h
     have hf : ¬ fuel = 0 := fun hf => by rw [ite_eq_left hf] at h; simp at h
-    rw [ite_eq_right hf, cnClK0_def] at h
-    have hne : ¬ (lvNodeW m u = [] ∨ lvNodeW m v = []) := fun hne => by rw [ite_eq_left hne] at h; simp at h
-    rw [ite_eq_right hne] at h
-    rw [not_or] at hne
-    obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne.1
-    obtain ⟨vv, hrv, hlv⟩ := lvView hR hv hne.2
+    rw [ite_eq_right hf] at h
+    have hne1 : ¬ lvNodeW m u = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h
+    rw [ite_eq_right hne1] at h
+    have hne2 : ¬ lvNodeW m v = [] := fun hne => by rw [ite_eq_left hne] at h; simp at h
+    rw [ite_eq_right hne2] at h
+    obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne1
+    obtain ⟨vv, hrv, hlv⟩ := lvView hR hv hne2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
     rw [hfuel, ConRon.Arena.canonLevelEq.eq_2, StateT.run_bind, hru, exc_ok_bind', StateT.run_bind, hrv,
       exc_ok_bind']
@@ -320,9 +234,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
       | (-- max.max, imax.imax
          generalize hx1 : cnClW n m po pl qo ql co cl (fuel - 1) _ _ = x1 at h
          cases x1 with
-         | none => simp [cnClK1] at h
+         | none => simp [cnClW.k_canon_level_eq] at h
          | some r1 =>
-         rw [cnClK1_some] at h
+         rw [cnClW.k_canon_level_eq.eq_2] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
            (nidx_word_lt32 _) (nidx_word_lt32 _)
          rw [decI_word, decI_word] at hb1
@@ -334,11 +248,11 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
            exact ⟨b2, hb2, hr2⟩
          · rw [ite_eq_left h0] at h; simp at h; simp [← h])
       | (-- param.param
-         unfold cnClK2 at h
+         unfold cnClW.k_canon_name_map at h
          split at h
          · simp at h
          rename_i x hx
-         unfold cnClK3 at h
+         unfold cnClW.k_canon_name_map_2 at h
          split at h
          · simp at h
          rename_i y hy
@@ -394,65 +308,11 @@ theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
 
 /-! ## `canon_level_list_eq` -/
 
-mutual
-/-- **The model of `canon_level_list_eq`**. -/
-def llW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Word → Option Word
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, po, pl, qo, ql, co, cl, fuel, ao, al, bo, bl =>
-    if al = 0 ∧ bl = 0 then some 1
-    else if al = 0 ∨ bl = 0 then some 0
-    else llK1 n m po pl qo ql co cl fuel ao al bo bl
-      (cnClW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))
-
-/-- After the head comparison. -/
-def llK1 (n : Nat) (m : Mem) (po pl qo ql co cl fuel ao al bo bl : Word) : Option Word → Option Word
-  | none => none
-  | some r =>
-    if r = 0 then some 0 else llW n m po pl qo ql co cl fuel (ao + 1) (al - 1) (bo + 1) (bl - 1)
-end
-
-section arms
-variable (n : Nat) (m : Mem) (po pl qo ql co cl fuel ao al bo bl r : Word)
-theorem llW_succ : llW (n + 1) m po pl qo ql co cl fuel ao al bo bl =
-    (if al = 0 ∧ bl = 0 then some 1
-    else if al = 0 ∨ bl = 0 then some 0
-    else llK1 n m po pl qo ql co cl fuel ao al bo bl
-      (cnClW n m po pl qo ql co cl fuel (rdW (m.arr64 IW) ao) (rdW (m.arr64 IW) bo))) := by
-  rw [llW]
-theorem llK1_some : llK1 n m po pl qo ql co cl fuel ao al bo bl (some r) =
-    (if r = 0 then some 0 else llW n m po pl qo ql co cl fuel (ao + 1) (al - 1) (bo + 1) (bl - 1)) := by
-  rw [llK1]
-end arms
-
-grind_pattern [ind_grind] llW_succ => llW (n + 1) m po pl qo ql co cl fuel ao al bo bl
-grind_pattern [ind_grind] llK1_some => llK1 n m po pl qo ql co cl fuel ao al bo bl (some r)
-
-section specs3
-variable (p : Prog) (hp : CanonProg p)
-include hp
-
-set_option maxHeartbeats 4000000 in
-theorem canonLevelListEq_spec (n : Nat) : ∀ (s₀ : St) (po pl qo ql co cl fuel ao al bo bl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_level_list_eq"
-      [po, pl, qo, ql, co, cl, fuel, ao, al, bo, bl]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      llW n s₀.mem po pl qo ql co cl fuel ao al bo bl = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ po pl qo ql co cl fuel ao al bo bl
-    rw [invoke_eq _ (hp.get "canon_level_list_eq")]; simp only [callFn, canonLevelListEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ po pl qo ql co cl fuel ao al bo bl
-    rw [invoke_eq _ (hp.get "canon_level_list_eq")]
-    simp only [callFn, canonLevelListEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        canonLevelEq_spec p hp n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-end specs3
+/-- **The model of `canon_level_list_eq`** (`llW`). -/
+l_model canonLevelListEq_spec (p : Prog) (hp : CanonProg p)
+  fns [hp.get "canon_level_list_eq" ↦ llW ro]
+  specs [canonLevelEq_spec p hp n]
+  grind [arena_grind]
 
 theorem llW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel ao al bo bl r : Word)
     (ws1 ws2 : List Word) (ps qs cs : List NIdx), llW n m po pl qo ql co cl fuel ao al bo bl = some r →
@@ -464,7 +324,7 @@ theorem llW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel ao
   | zero => intro m a po pl qo ql co cl fuel ao al bo bl r ws1 ws2 ps qs cs h; simp [llW] at h
   | succ n ih =>
     intro m a po pl qo ql co cl fuel ao al bo bl r ws1 ws2 ps qs cs h hR hC h1 h2 hw1 hw2
-    rw [llW_succ] at h
+    rw [llW] at h
     cases h1 with
     | nil =>
       cases h2 with
@@ -482,7 +342,7 @@ theorem llW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel ao
         exact ⟨false, by simp [ConRon.Arena.canonLevelListEq]; rfl, by simp [← h]⟩
       | @cons bo' bl' ws2' hl2 h2' =>
         simp only [hl1, hl2, false_and, ↓reduceIte, or_self] at h
-        unfold llK1 at h
+        unfold llW.k_canon_level_eq at h
         split at h
         · simp at h
         rename_i r1 hx1
@@ -522,39 +382,12 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
 
 /-! ## `canon_levels_eq` -/
 
-/-- **The model of `canon_levels_eq`**: two `view_ls`, then the list comparison. -/
-def lsEqW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, po, pl, qo, ql, co, cl, fuel, us, vs =>
-    match viewLsW n m us with
-    | none => none
-    | some (r1, m1) =>
-      match viewLsW n m1 vs with
-      | none => none
-      | some (r2, m2) =>
-        match llW n m2 po pl qo ql co cl fuel (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
-            (r2.tail.headD 0) with
-        | none => none
-        | some r => some (r, m2)
-
-set_option maxHeartbeats 4000000 in
-theorem canonLevelsEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St)
-    (po pl qo ql co cl fuel us vs : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "canon_levels_eq"
-      [po, pl, qo, ql, co, cl, fuel, us, vs]
-    ⦃fun r s' => LocEq s' s₀ ∧ lsEqW n s₀.mem po pl qo ql co cl fuel us vs = some (r.headD 0, s'.mem);
-      ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "canon_levels_eq")]
-  simp only [callFn, canonLevelsEq]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        viewLs_specW p (hp.get "ls_node") (hp.get "iw_alloc") (hp.get "pool_copy") (hp.get "view_ls") n,
-        canonLevelListEq_spec p hp n] <;>
-      finish (gen := 20) [rdW_eq, lsEqW]
+/-- **The model of `canon_levels_eq`** (`lsEqW`): two `view_ls`, then the list comparison. -/
+l_model canonLevelsEq_spec (p : Prog) (hp : CanonProg p)
+  fns [hp.get "canon_levels_eq" ↦ lsEqW]
+  specs [viewLs_specW p (hp.get "ls_node") (hp.get "iw_alloc") (hp.get "pool_copy") (hp.get "view_ls") n,
+    canonLevelListEq_spec p hp n]
+  grind [arena_grind]
 
 theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
 theorem cnGetD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
@@ -580,20 +413,20 @@ theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
   | succ n =>
   rw [lsEqW] at h
   cases h1 : viewLsW n m us with
-  | none => rw [h1] at h; simp at h
+  | none => rw [h1] at h; simp [lsEqW.k_view_ls] at h
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
-  rw [h1] at h; dsimp only at h
+  rw [h1] at h; simp only [lsEqW.k_view_ls] at h
   cases h2 : viewLsW n m1 vs with
-  | none => rw [h2] at h; simp at h
+  | none => rw [h2] at h; simp [lsEqW.k_view_ls_2] at h
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
-  rw [h2] at h; dsimp only at h
+  rw [h2] at h; simp only [lsEqW.k_view_ls_2] at h
   cases hll : llW n m2 po pl qo ql co cl fuel (r1.headD 0) (r1.tail.headD 0) (r2.headD 0)
       (r2.tail.headD 0) with
-  | none => rw [hll] at h; simp at h
+  | none => rw [hll] at h; simp [lsEqW.k_canon_level_list_eq] at h
   | some rr =>
-  rw [hll] at h; dsimp only at h
+  rw [hll] at h; simp only [lsEqW.k_canon_level_list_eq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨ids1, hrun1, hS1, hg1, hd1, hP1⟩ := viewLsW_ok h1 hS hu hP
   obtain ⟨ids2, hrun2, hS2, hg2, hd2, hP2⟩ := viewLsW_ok h2 hS1 hv hP1
