@@ -216,52 +216,6 @@ theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m
 
 /-! ## `class_read_rec_cls` -/
 
-mutual
-/-- **The model of `class_read_rec_cls`.** -/
-def crW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, nP, mo, ml, ro, rl =>
-    if rl = 0 then some ([1, 0, 0], m)
-    else if rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 = 0 then none
-    else crK1 cR n nP mo ml ro rl
-      (cR n "open_pis_at_fvars_f"
-        [rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1,
-         erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
-
-/-- After `open_pis_at_fvars_f`. -/
-def crK1 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 = 0 then some ([0, 0, 0], m1)
-    else crK2 cR n nP mo ml ro rl m1 (fvarHeadW m1 (r1.tail.tail.tail.headD 0))
-
-/-- After `fvar_head`. -/
-def crK2 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (_m1 : Mem) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
-    else crK3 cR n nP mo ml ro rl m2 (cmvW (n - 1) m2 nP mo ml (r2.tail.headD 0))
-
-/-- After `class_of_motive_var`. -/
-def crK3 (cR : CallM) (n : Nat) (nP mo ml ro rl : Word) (m2 : Mem) : Option (List Word) → Option (List Word × Mem)
-  | none => none
-  | some r3 =>
-    if r3.headD 0 = 0 then some ([0, 0, 0], m2)
-    else crK4 n (r3.tail.headD 0) (crW cR n m2 nP mo ml (ro + 1) (rl - 1))
-
-/-- After the recursive call. -/
-def crK4 (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r4, m4) =>
-    if r4.headD 0 = 0 then some ([0, 0, 0], m4)
-    else crK5 (consW n m4 c (r4.tail.headD 0) (r4.tail.tail.headD 0))
-
-/-- After `sl_cons`. -/
-def crK5 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r5, m5) => some ([1, r5.headD 0, r5.tail.headD 0], m5)
-end
-
 theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iwTop m) :
     decNL m' o l = decNL m o l := by
   simp only [decNL]
