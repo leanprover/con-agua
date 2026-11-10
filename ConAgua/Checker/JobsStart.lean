@@ -37,7 +37,9 @@ theorem PhaseA.twin {b : ByteArray} (PA : PhaseA b) :
   exact ⟨hx, hp⟩
 
 /-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
-with its caches emptied. -/
+with its caches emptied (the twin's worker state, `AState.worker`: the scratch tier and memos as
+every job's `enterScratch` leaves them, `Arena/JobStart.lean`). -/
+@[refines ConRon.Arena.AState.worker]
 theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (h : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m) :
     JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } := by

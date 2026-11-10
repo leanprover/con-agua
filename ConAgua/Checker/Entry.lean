@@ -139,7 +139,7 @@ entries would remain; between two calls they are empty already, every job ending
 the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
-@[no_expose] def checkBL : FunDecl := lfn () locals (z, n) {
+@[no_expose, l_impl ConRon.Arena.AState.worker] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
     copy!(CTL.u64, 0, CTLF.u64, 0, n);

@@ -120,32 +120,6 @@ theorem aStateInit_refines (sz : TieredArray → Nat)
   ⟨arenaD_init sz (by omega) hpool hpool1 hsz, cachesEmpty_refines sz hctl,
     (pinsEmpty_refines sz).2, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
-/-- **`mkIFEnv IEnv.empty` is the zeroed environment index** (view word `0`): rows empty, count `0`. -/
-theorem initMem_rdN (sz : TieredArray → Nat) (b : TieredArray) (k : Nat) :
-    rdN ((initMem sz).arr64 b) k = 0 := by
-  simp only [rdN, initMem_arr, Array.getElem?_replicate]; split <;> rfl
-
-@[refines ConRon.Arena.mkIFEnv]
-theorem mkIFEnv_empty_refines (sz : TieredArray → Nat) :
-    EnvR (initMem sz) 0 (mkIFEnv IEnv.empty) := by
-  have hO : OwnEmpty (initMem sz) := fun w => by
-    simp [ownRaw, ownRow, ownTbl, stampW, initMem_rdN, initMem_rd]
-  have hB : OwnBelow (initMem sz) := fun w _ => by
-    simp [ownRow, stampW, initMem_rdN, initMem_rd]
-  have hI : IndexR (initMem sz) {} :=
-    ⟨fun n => by simp [baseRow, initMem_rdN], fun n => by simp [baseTbl, initMem_rdN],
-      fun i hi => absurd hi (by simp), by simp, by simp [initMem_rd]⟩
-  exact EnvR.ofIndex (k := 0) hI hO hB (by simp [stampW, initMem_rd])
-    (by simp [initMem_rd]) (by simp [initMem_rd])
-
-/-- **The index build from the empty list** (`mkIFEnvGo []`): the view word `0` and the empty
-index of zeroed memory. -/
-@[refines ConRon.Arena.mkIFEnvGo]
-theorem mkIFEnvGo_empty_refines (sz : TieredArray → Nat) :
-    EnvR (initMem sz) 0
-      ⟨IEnv.empty, mkIFEnvGo IEnv.empty.consts, {}, mkIFEnvTblsGo IEnv.empty.tables⟩ :=
-  mkIFEnv_empty_refines sz
-
 /-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
 @[refines ConRon.Arena.IConstantInfo.name]
