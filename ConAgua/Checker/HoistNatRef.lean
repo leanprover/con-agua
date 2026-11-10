@@ -48,7 +48,6 @@ theorem allocWr_ok {m : Mem} {ws : List Word} {k : Word} (hI : IWOK m) (hk : k.t
 theorem iwTop_lt' (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _
 
-/-- A read below the old top survives pool growth. -/
 /-- **`slice_has`**: `w` is among the slice's words. -/
 theorem sliceHas_ok (m : Mem) (o w : Word) : ∀ (ws : List Word) (n : Nat) (l j r : Word),
     l.toNat = j.toNat + ws.length →

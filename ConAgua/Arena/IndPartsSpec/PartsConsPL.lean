@@ -80,7 +80,6 @@ def SplitR (x : Option (List IConstantVal × List (IConstantVal × Nat × Nat) �
   | none => r.headD 0 = 0
   | some t => r.headD 0 = 1 ∧ SplitRec t (r.tail.headD 0) m
 
-/-- A word of the pool below the top reads the same after growth. -/
 /-! ## The census theorems -/
 
 /-- **The program bundle of the split** (one field per lookup). -/
