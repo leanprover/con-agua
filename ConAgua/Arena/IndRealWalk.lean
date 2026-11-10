@@ -188,7 +188,7 @@ theorem hffF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · rw [callW_zero] at hc; cases hc
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (hasFvarFastL_spec hfProg hfProg_abs rfl n _ f e) hc
-  rw [hs'] at hI
+  rw [hs', hffW_eq] at hI
   rcases hw : fvbW n m e f with _ | ⟨x, m₁⟩
   · rw [hw] at hI; cases hI
   have hle := hfK_le _ _ _ hI
