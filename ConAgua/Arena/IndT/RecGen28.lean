@@ -119,7 +119,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   -- the class `j`
   obtain ⟨p0, hp0, hsrc⟩ := decPL_getH (truncM mb) hms0 j.toNat hjl
-  obtain ⟨hp0t, hp0m⟩ := rec2IwN_trunc hp0
+  obtain ⟨hp0t, hp0m⟩ := L.Ind.iwN_truncM_some hp0
   have hp0m' : iwN m (mo.toNat + j.toNat) = some p0 := by
     simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hp0m ⊢; rw [hg.iwGet _ hp0t]; exact hp0m
   obtain ⟨hrd, hp0b⟩ := iwN_rdW_at (w := mo) (k := j.toNat) hp0m' hsz
@@ -192,7 +192,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hA3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => AFr s2.mem m'')
     (fun _ _ _ h _ => h.trans (set64IW_afr _ _ _)) (k + 1) _ _ 0 c3 (by simp) (AFr.refl _) hA2
   have ht3 := ncpW_ind nm (UInt64.ofNat p0) (by omega) (fun m'' => iwTop m'' = iwTop s2.mem)
-    (fun _ x _ h _ => by rw [cnsTop_set]; exact h) (k + 1) _ _ 0 c3 (by simp) rfl
+    (fun _ x _ h _ => by rw [L.Ind.iwTop_set_iw]; exact h) (k + 1) _ _ 0 c3 (by simp) rfl
   -- the record's tail and the result slot
   by_cases hb : ¬ ((nm + 9).toNat < (m3.arr64 IW).size ∧ (nm + 10).toNat < (m3.arr64 IW).size ∧
       (nm + 11).toNat < (m3.arr64 IW).size ∧ (nm + 12).toNat < (m3.arr64 IW).size ∧
@@ -218,10 +218,10 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hgm1 : iwTop m ≤ iwTop s1.mem := hg1.iw
   have hqnm : qr.toNat + ml.toNat ≤ nm.toNat := by omega
   -- sizes
-  have szA : (mA.arr64 IW).size = (m3.arr64 IW).size := by rw [← hA, size_set64]
-  have szB : (mB.arr64 IW).size = (m3.arr64 IW).size := by rw [← hB, size_set64, szA]
-  have szC : (mC.arr64 IW).size = (m3.arr64 IW).size := by rw [← hC, size_set64, szB]
-  have szD : (mD.arr64 IW).size = (m3.arr64 IW).size := by rw [← hD, size_set64, szC]
+  have szA : (mA.arr64 IW).size = (m3.arr64 IW).size := by rw [← hA, L.Mem.size64_set64]
+  have szB : (mB.arr64 IW).size = (m3.arr64 IW).size := by rw [← hB, L.Mem.size64_set64, szA]
+  have szC : (mC.arr64 IW).size = (m3.arr64 IW).size := by rw [← hC, L.Mem.size64_set64, szB]
+  have szD : (mD.arr64 IW).size = (m3.arr64 IW).size := by rw [← hD, L.Mem.size64_set64, szC]
   -- the stage relation, growth, tops, memos
   have hS4 : StageR vis fe m4 a1 := by
     rw [← hE, ← hD, ← hC, ← hB, ← hA]
@@ -239,7 +239,7 @@ theorem cns_ref (hq : qr.toNat = iwTop mb) (hms : PSlR decTM ms mo ml mb) (htbl 
   have hFr : FrX (qr.toNat + j.toNat) m m4 := by
     rw [← hE]; exact (FrX.trans_grow (FrX.of_grow hg1) hgD).set _ _ hqj
   have ht4 : iwTop m4 = iwTop s2.mem := by
-    rw [← hE, ← hD, ← hC, ← hB, ← hA]; simp only [cnsTop_set]; exact ht3
+    rw [← hE, ← hD, ← hC, ← hB, ← hA]; simp only [L.Ind.iwTop_set_iw]; exact ht3
   have hP4 : RcMR m4 := by
     rw [← hE, ← hD, ← hC, ← hB, ← hA]
     exact hP2.fr (hP3.trans ((((MFr.set_iw _ _ _).trans (MFr.set_iw _ _ _)).trans (MFr.set_iw _ _ _)).trans

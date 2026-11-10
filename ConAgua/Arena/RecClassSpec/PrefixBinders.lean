@@ -96,7 +96,7 @@ theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (
   obtain ⟨k, hk⟩ : ∃ k, il.toNat = k + 1 := ⟨il.toNat - 1, by omega⟩
   have hxs' : decPL (truncM m) (decCC (truncM m)) io.toNat (k + 1) = some xs := by rw [← hk]; exact hxs
   obtain ⟨p, X0, rest, rfl, hp, hX0, hrest⟩ := decPL_cons hxs'
-  obtain ⟨hpt, hpm⟩ := rec2IwN_trunc hp
+  obtain ⟨hpt, hpm⟩ := L.Ind.iwN_truncM_some hp
   obtain ⟨ep, tp⟩ := rec2RdN (w := io) (k := 0) (by simpa using hpm) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ep
   have hX0m : decCC m (UInt64.ofNat p : Word).toNat = some X0 := by
@@ -137,8 +137,8 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, rfl⟩ := hG'
   obtain ⟨co, cl, hco, hcl, hctd⟩ := decAt_some hcts
-  obtain ⟨hcot, hcom⟩ := rec2IwN_trunc hco
-  obtain ⟨hclt, hclm⟩ := rec2IwN_trunc hcl
+  obtain ⟨hcot, hcom⟩ := L.Ind.iwN_truncM_some hco
+  obtain ⟨hclt, hclm⟩ := L.Ind.iwN_truncM_some hcl
   obtain ⟨e9, t9⟩ := rec2RdN (w := g) (k := 9) hcom hsz
   obtain ⟨e10, t10⟩ := rec2RdN (w := g) (k := 10) (by simpa [Nat.add_assoc] using hclm) hsz
   simp only [show UInt64.ofNat 9 = (9 : Word) from rfl, show UInt64.ofNat 10 = (10 : Word) from rfl] at e9 e10
@@ -155,10 +155,10 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   have hcl' : c.toNat < cl := by
     rw [e10] at hc; have := UInt64.lt_iff_toNat_lt.mp (by simpa using hc); rwa [t10] at this
   obtain ⟨lp, hlp, hlpd⟩ := decPL_getH (truncM m) hctd c.toNat hcl'
-  obtain ⟨-, hlpm⟩ := rec2IwN_trunc hlp
+  obtain ⟨-, hlpm⟩ := L.Ind.iwN_truncM_some hlp
   obtain ⟨xo, xl, hio, hil, hdx⟩ := decAt_some hlpd
-  obtain ⟨-, hiom⟩ := rec2IwN_trunc hio
-  obtain ⟨-, hilm⟩ := rec2IwN_trunc hil
+  obtain ⟨-, hiom⟩ := L.Ind.iwN_truncM_some hio
+  obtain ⟨-, hilm⟩ := L.Ind.iwN_truncM_some hil
   have elp : rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) = UInt64.ofNat lp := by
     rw [e9]; simpa using (rec2RdN (w := UInt64.ofNat co) (k := c.toNat) (by rw [t9]; exact hlpm) hsz).1
   have lplt := (iwN_rdW hlpm (by have := iwN_lt hlpm; omega)).2
@@ -179,16 +179,6 @@ theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : Class
   refine ⟨rfl, ?_⟩
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show c.toNat < cts.length by omega), Option.getD_some]
   exact hres
-
-theorem rec2DecCS_mot {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
-    iwN m p = some 0 := by
-  rw [decCS] at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨t, ht, h⟩ := h
-  match t, h with
-  | 0, _ => exact ht
-  | 1, h => simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at h; obtain ⟨_, _, _, _, _, _, h⟩ := h; cases h
-  | (_ + 2), h => simp at h
 
 theorem rec2DecCS_min {m : Mem} {p c : Nat} {C : NIdx} {ihs : List (Nat × Nat)}
     (h : decCS m p = some (.minor c C ihs)) :
@@ -280,7 +270,7 @@ theorem psW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [hslot] at hcnt
   cases slot with
   | motive key =>
-    have h0 := rec2DecCS_mot hdp
+    have h0 := L.Ind.decCS_motive hdp
     obtain ⟨e00, -⟩ := rec2RdN (w := UInt64.ofNat p) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' plt] using h0) hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e00
     rw [psW.arm2 (hc1 := hend) (hc2 := by rw [ep, e00]), ConRon.Arena.ClassGen.prefixBinders.slotsGo.eq_2]
@@ -368,8 +358,8 @@ theorem gpbW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
   obtain ⟨o1, l1, h1, h2, hpd⟩ := decAt_some hps
-  obtain ⟨-, h1m⟩ := rec2IwN_trunc h1
-  obtain ⟨-, h2m⟩ := rec2IwN_trunc h2
+  obtain ⟨-, h1m⟩ := L.Ind.iwN_truncM_some h1
+  obtain ⟨-, h2m⟩ := L.Ind.iwN_truncM_some h2
   obtain ⟨e1, t1⟩ := rec2RdN (w := g) (k := 1) h1m hsz
   obtain ⟨e2, t2⟩ := rec2RdN (w := g) (k := 2) (by simpa [Nat.add_assoc] using h2m) hsz
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1 e2

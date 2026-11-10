@@ -117,7 +117,7 @@ theorem PSlR.uncons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {
   obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
   have hd' : decPL (truncM m) (f (truncM m)) o.toNat (l' + 1) = some xs := by rw [← hl']; exact hd
   obtain ⟨pp, x, ys, rfl, hp, hx, hys⟩ := decPL_cons hd'
-  obtain ⟨-, hpm⟩ := rec2IwN_trunc hp
+  obtain ⟨-, hpm⟩ := L.Ind.iwN_truncM_some hp
   have hr := (iwN_rdW hpm (by omega)).1
   rw [UInt64.ofNat_toNat] at hr
   refine ⟨x, ys, rfl, ?_, ?_, ?_⟩
@@ -799,8 +799,8 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
   have h' : decBS (truncM m) q.toNat = some bs := hq
   obtain ⟨-, hrecs, -⟩ := decBS_some h'
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hrecs
-  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
-  obtain ⟨hlt3, hlm⟩ := rec2IwN_trunc hl
+  obtain ⟨-, hom⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨hlt3, hlm⟩ := L.Ind.iwN_truncM_some hl
   obtain ⟨e2, t2⟩ := rec2RdN (w := q) (k := 2) hom hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := q) (k := 3) (by simpa using hlm) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
@@ -817,7 +817,7 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hle); rwa [t3] at this
   obtain ⟨v, rc, hv, hrc, hget⟩ := decPL_get l o bs.recs hd r.toNat hrl
   rw [hget]
-  obtain ⟨hvt, hvm⟩ := rec2IwN_trunc hv
+  obtain ⟨hvt, hvm⟩ := L.Ind.iwN_truncM_some hv
   have hor : (UInt64.ofNat o + r).toNat = o + r.toNat := by
     rw [UInt64.toNat_add, t2]; exact Nat.mod_eq_of_lt (by
       have := (rdW (m.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hvt; omega)
@@ -828,8 +828,8 @@ theorem bmjW_rpW_eq {m : Mem} {q r : Word} {bs : BlockShape} (hq : DecB (fun m =
   rw [e] at hrd
   rw [hrd.1]
   obtain ⟨-, hrP, hmI, -, -⟩ := decRS_some hrc
-  obtain ⟨-, hrPm⟩ := rec2IwN_trunc hrP
-  obtain ⟨-, hmIm⟩ := rec2IwN_trunc hmI
+  obtain ⟨-, hrPm⟩ := L.Ind.iwN_truncM_some hrP
+  obtain ⟨-, hmIm⟩ := L.Ind.iwN_truncM_some hmI
   have hvv : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hrd.2
   obtain ⟨e1', t1'⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by rw [hvv]; exact hrPm) hsz
   obtain ⟨e2', t2'⟩ := rec2RdN (w := UInt64.ofNat v) (k := 2) (by rw [hvv]; exact hmIm) hsz
@@ -854,9 +854,9 @@ theorem rkW_ok {m : Mem} {p M : Word} {bs : BlockShape} {TM : TargetMajor}
   have eCs : TM.ctors = cs := by rw [← hTM]
   have eMem : TM.member = decON k8 := by rw [← hTM]
   obtain ⟨co, cl, hco, hcl, hcsd⟩ := decAt_some hcs
-  obtain ⟨-, hcom⟩ := rec2IwN_trunc hco
-  obtain ⟨-, hclm⟩ := rec2IwN_trunc hcl
-  obtain ⟨-, hk8m⟩ := rec2IwN_trunc hk8
+  obtain ⟨-, hcom⟩ := L.Ind.iwN_truncM_some hco
+  obtain ⟨-, hclm⟩ := L.Ind.iwN_truncM_some hcl
+  obtain ⟨-, hk8m⟩ := L.Ind.iwN_truncM_some hk8
   obtain ⟨e6, t6⟩ := rec2RdN (w := M) (k := 6) hcom hsz
   obtain ⟨e7, t7⟩ := rec2RdN (w := M) (k := 7) (by simpa [Nat.add_assoc] using hclm) hsz
   obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
@@ -865,7 +865,7 @@ theorem rkW_ok {m : Mem} {p M : Word} {bs : BlockShape} {TM : TargetMajor}
   have hbs0 : decBS (truncM m) p.toNat = some bs := hbs
   obtain ⟨hmem, -, -, -, -, -, hprop⟩ := decBS_some hbs0
   obtain ⟨mo, ml, -, hml, hmd⟩ := decAt_some hmem
-  obtain ⟨-, hmlm⟩ := rec2IwN_trunc hml
+  obtain ⟨-, hmlm⟩ := L.Ind.iwN_truncM_some hml
   obtain ⟨e1, t1⟩ := rec2RdN (w := p) (k := 1) hmlm hsz
   have ek : bs.k = ml := by
     have := decPL_length _ hmd; simp only [BlockShape.k]; exact this
@@ -884,12 +884,12 @@ theorem rkW_ok {m : Mem} {p M : Word} {bs : BlockShape} {TM : TargetMajor}
     obtain ⟨cp, c, ys, rfl, hcp, hc, hys⟩ := decPL_cons (l := 0) hcsd
     have : ys = [] := by have := decPL_length _ hys; simpa using this
     subst this
-    obtain ⟨-, hcpm⟩ := rec2IwN_trunc (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t6]; simpa using hcp)
+    obtain ⟨-, hcpm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t6]; simpa using hcp)
     obtain ⟨e9, t9⟩ := rec2RdN (w := UInt64.ofNat co) (k := 0) hcpm hsz
     simp only [decCN, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨_, -, cv, -, nF, hnF, hceq⟩ := hc
     subst hceq
-    obtain ⟨-, hnFm⟩ := rec2IwN_trunc (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t9]; exact hnF)
+    obtain ⟨-, hnFm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t9]; exact hnF)
     obtain ⟨e10, t10⟩ := rec2RdN (w := UInt64.ofNat cp) (k := 1) hnFm hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
       UInt64.add_zero] at e9 e10
@@ -951,7 +951,7 @@ theorem decPL_ci_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {cis : List IC
   rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
   · cases hd
   have hps' : decNL m' o l = some ps := by
-    rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
+    rw [← hps]; simp only [decNL]; apply L.Ind.mapM_congr_of; intro j hj
     simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
   rw [hps']
   simp only [Option.bind_some] at hd ⊢
@@ -991,13 +991,13 @@ theorem briW_ok (n : Nat) : ∀ {m m' : Mem} {a : AState} {vis : Word} {fe : IFE
   obtain ⟨cvp, hcvp, cv', hcv', mp, hmp, TM', hTM', rh', hrh', he⟩ := hx'
   simp only [Prod.mk.injEq] at he; obtain ⟨e1', e2', e3'⟩ := he
   rw [e1'] at hcv'; rw [e2'] at hTM'; rw [e3'] at hrh'
-  obtain ⟨-, hcvpm⟩ := rec2IwN_trunc (i := trip.toNat + 0) (by simpa using hcvp)
+  obtain ⟨-, hcvpm⟩ := L.Ind.iwN_truncM_some (i := trip.toNat + 0) (by simpa using hcvp)
   obtain ⟨e0, t0⟩ := rec2RdN (w := trip) (k := 0) hcvpm hsz
-  obtain ⟨-, hmpm⟩ := rec2IwN_trunc hmp
+  obtain ⟨-, hmpm⟩ := L.Ind.iwN_truncM_some hmp
   obtain ⟨e1, t1⟩ := rec2RdN (w := trip) (k := 1) hmpm hsz
   obtain ⟨o, l, ho, hl', hd⟩ := decAt_some hrh'
-  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hlm⟩ := rec2IwN_trunc hl'
+  obtain ⟨-, hom⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hlm⟩ := L.Ind.iwN_truncM_some hl'
   obtain ⟨e2, t2⟩ := rec2RdN (w := trip) (k := 2) hom hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := trip) (k := 3) (by simpa [Nat.add_assoc] using hlm) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,

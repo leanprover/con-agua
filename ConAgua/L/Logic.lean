@@ -34,8 +34,7 @@ attribute [lang_grind cases] Sig
 @[lang_grind =] theorem St.setLoc_loc (s : St) (x y : Var) (v : Word) :
     (s.setLoc x v).loc y = if y = x then v else s.loc y := rfl
 
-@[lang_grind =] theorem St.setLoc_mem (s : St) (x : Var) (v : Word) :
-    (s.setLoc x v).mem = s.mem := rfl
+attribute [lang_grind =] L.St.setLoc_mem
 
 @[lang_grind =] theorem St.setLocs_nil (s : St) (vs : List Word) : s.setLocs [] vs = s := rfl
 
@@ -44,8 +43,7 @@ attribute [lang_grind cases] Sig
 
 attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail_nil List.cons.injEq
 
-@[lang_grind =] theorem Locals.init_nil (x : Var) : Locals.init [] x = 0 := by
-  simp [Locals.init]
+attribute [lang_grind =] L.Locals.init_nil
 
 @[lang_grind =] theorem Locals.init_cons_zero (v : Word) (vs : List Word) :
     Locals.init (v :: vs) 0 = v := rfl
@@ -102,8 +100,7 @@ not touch each other. With these, `vcgen` + `finish` treat globals as they treat
 @[lang_grind =] theorem St.setG_mem (s : St) (g : GVar) (v : Word) :
     (s.setG g v).mem = s.mem.setG g v := rfl
 
-@[lang_grind =] theorem St.setG_loc (s : St) (g : GVar) (v : Word) (x : Var) :
-    (s.setG g v).loc x = s.loc x := rfl
+attribute [lang_grind =] L.St.setG_loc
 
 /-- Byte reads are compared as words (`c != LITS.c8[k]`); the model compares bytes. -/
 theorem UInt8.toUInt64_eq_iff (a b : UInt8) : (a.toUInt64 = b.toUInt64) = (a = b) := by
@@ -209,5 +206,17 @@ theorem seqTake_drop : ∀ (k : Nat) (s : Stmt), seqTake k s (seqDrop k s) = s
     cases s with
     | seq a t => simp only [seqTake, seqDrop, seqTake_drop k t]
     | _ => rfl
+
+/-! ## A raised error
+
+Not `@[simp]` here: the modules that want them as simp lemmas say so (`attribute [simp]`). -/
+
+theorem run_throw {α : Type} (e : Err) (s : St) : StateT.run (throw e : M α) s = .error e := rfl
+
+theorem except_error_bind {α β : Type} (e : Err) (f : α → Except Err β) :
+    (Except.error e >>= f) = .error e := rfl
+
+theorem except_error_map {α β : Type} (e : Err) (f : α → β) :
+    (f <$> (Except.error e : Except Err α)) = .error e := rfl
 
 end L

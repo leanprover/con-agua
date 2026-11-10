@@ -16,6 +16,7 @@ public import ConAgua.Verdict.WhnfModels3E
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.IndView
 
 @[expose] public section
 
@@ -30,15 +31,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-theorem view_sort_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h SORT) (hg : tagW h = 2) :
-    a.store.view (decE h) = some (.sort (decI (tfld m SORT (tierW h) (idxW h) 0))) ∧
-    (tfld m SORT (tierW h) (idxW h) 0).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
-  simp only [SoRecRel] at hu
-  rw [hu, decI_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl, word_lt _⟩
 
 /-! ## `proof_irrel(mode, vis, d, a, b)` -/
 
@@ -224,7 +216,7 @@ theorem pih_ref (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot 
   refine RefE.abort0 (by rfl) fun hv1 => ?_
   refine RefE.abort0 (by rfl) fun hv2 => ?_
   generalize ha3 : AM.st _ _ = a3 at hS3
-  obtain ⟨hvw, hn32⟩ := view_sort_f m3 a3 hS3.arena.base (r3.headD 0) hr3
+  obtain ⟨hvw, hn32⟩ := L.Ind.view_sort_f m3 a3 hS3.arena.base (r3.headD 0) hr3
     ⟨hv1, UInt64.not_le.mp hv2⟩ h2'
   have htag : (decE (r3.headD 0)).tag = ETag.sort := (decE_tag_eq _ hr3 2 (by decide)).mpr h2'
   rw [beq_iff_eq.mpr htag, ite_eq_left rfl]
@@ -466,9 +458,9 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
   dsimp only [pmE.k_is_ctor_app_2]
   have e4 : erecP m4 = erecP m3 := hE.erecP_eq (by simp [iotaKeptFns]) c4
   by_cases hc4 : r4.headD 0 ≠ 0
-  · rw [ite_eq_left hc4, decBool_t_m2c (by simpa using hc4)]
+  · rw [ite_eq_left hc4, L.Arena.decBool_true_of (by simpa using hc4)]
     exact RefE.ret rfl (CorePost.ret hS4 rfl hme)
-  rw [ite_eq_right hc4, decBool_f_m2c (by simpa using hc4)]
+  rw [ite_eq_right hc4, L.Arena.decBool_false_of (by simpa using hc4)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_callE (fun _ => rfl) ((hk (N + 1) (Nat.le_refl _)).whnf F ⟨m4, Locals.init []⟩ _ dn vis fe
       M4 eb mode d me hnF hn62 ⟨hS4, hm4, hebm⟩ hme)
@@ -531,7 +523,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
       fe M2 eb (r2.headD 0) hS2 h2.resOk) fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
     dsimp only [pmE.k_is_ctor_app]
     by_cases hc3 : r3.headD 0 ≠ 0
-    · rw [ite_eq_left hc3, decBool_t_m2c (by simpa using hc3)]
+    · rw [ite_eq_left hc3, L.Arena.decBool_true_of (by simpa using hc3)]
       simp only [↓reduceIte]
       rw [← bind_pure (litMajorToCtor _ _ _ _)]
       refine RefE.bind_callE (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl)
@@ -542,7 +534,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
             (by omega) _ _ dn vis fe M3 eb mode d _ hS3 hm4 hebm h2.resOk)) (fun r4 m4 c4 h4 => ?_)
       obtain ⟨-, hP⟩ := h4.post
       exact RefE.ret rfl ⟨hP.after, rfl, hP.valid⟩
-    · rw [ite_eq_right hc3, decBool_f_m2c (by simpa using hc3)]
+    · rw [ite_eq_right hc3, L.Arena.decBool_false_of (by simpa using hc3)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact RefE.ret rfl (CorePost.ret hS3 rfl h2.resOk)
   · -- the non-K arm
@@ -556,11 +548,11 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     have hrules2 : decRules (erecP m2) ro.toNat rc.toNat = some rules := by
       rw [hE.erecP_eq (by simp [iotaKeptFns]) c2]; exact hr
     by_cases hs2 : r2.headD 0 ≠ 0
-    · rw [ite_eq_left hs2, decBool_t_m2c (by simpa using hs2)]
+    · rw [ite_eq_left hs2, L.Arena.decBool_true_of (by simpa using hs2)]
       simp only [↓reduceIte, pure_bind]
       exact pmTail_ref p hE N hk F hnF hn62 dn vis fe eb mode d rec isK ro rc major
         rules hm4 hK0 hebm hmaj m2 _ M2 hS2 hrules2 hp hc hw hsup hmtc
-    · rw [ite_eq_right hs2, decBool_f_m2c (by simpa using hs2)]
+    · rw [ite_eq_right hs2, L.Arena.decBool_false_of (by simpa using hs2)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       rw [← hKf]
       refine RefE.bind_callE (s₀ := ⟨m2, Locals.init []⟩) (fun _ => rfl)

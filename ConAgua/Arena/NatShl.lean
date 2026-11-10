@@ -297,7 +297,7 @@ theorem natShl_spec (n : Nat) (sâ‚€ : St) (oa la ob lb : Word) (hok : PoolOK sâ‚
       natTrim_spec p hpt n]
     all_goals (try simp only [ShlZeroInv, ShlInv, ShlBase, ShlZeroPost, ShlPost] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, L.Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
       Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     -- One `grind` per goal (no `and_intros`: 218 goals re-preprocess the same context). The

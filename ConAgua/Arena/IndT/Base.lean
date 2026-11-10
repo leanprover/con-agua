@@ -4,6 +4,7 @@ public import ConAgua.Arena.KnotEntry
 import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.RecSim
+import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 
 @[expose] public section
 
@@ -34,13 +35,6 @@ def KPT {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
 theorem KPT.kp {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {dec : Mem → List Word → α → Prop} {b : List Word × Mem} {a' : AState} {x : α}
     (h : KPT dn vis fe m dec b a' x) : KP vis fe m dec b a' x := ⟨h.1.stage, h.2⟩
-
-/-- A `Sim` is a `RSim` of the same model. -/
-theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
-    RSim mo op a (fun b a' x => Q b.1 x b.2 a') := by
-  intro ⟨r, m'⟩ e
-  exact h r m' e
 
 /-- **The walk memos `AbsOK` holds across a core call**: the core keeps `CoreMemos` (in `StageT`
 after), writes neither array 51 nor 155 nor their epochs (`CoreFr`), keeps the sizes and

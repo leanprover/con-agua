@@ -458,7 +458,7 @@ theorem cosLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   have hsz := hS.iw.iwSize
   -- the constructor record
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hcAs0 j.toNat hjl
-  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  obtain ⟨hvt, hv0⟩ := L.Ind.iwN_truncM_some hv
   have hsz0 : (m0.arr64 IW).size < 2 ^ 64 := by omega
   have hrd0 := iwN_rdW_at (w := ao) (k := j.toNat) hv0 hsz0
   have hnj : ao + UInt64.ofNat j.toNat = ao + j := by simp
@@ -678,7 +678,7 @@ theorem ccsLoop_ref (hbs : BSOK m0 q.toNat bs) (hft : decHL m0 fto.toNat ftl.toN
   rw [ccsE.loop1.arm1 p k m vis q fto ftl rd mo ml qo c hc]
   -- the class record and its constructors
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hms0 c.toNat hcl
-  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  obtain ⟨hvt, hv0⟩ := L.Ind.iwN_truncM_some hv
   have hrd0 := iwN_rdW_at (w := mo) (k := c.toNat) hv0 hsz0
   have hnc : mo + UInt64.ofNat c.toNat = mo + c := by simp
   rw [hnc] at hrd0

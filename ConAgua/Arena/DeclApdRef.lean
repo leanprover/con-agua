@@ -11,6 +11,9 @@ import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclApd
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.IndRealFvt
+import ConAgua.Arena.LevelInternRef
 
 @[expose] public section
 
@@ -79,13 +82,6 @@ theorem ApdEnv.of_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
     (hw : NStoreWF a.store.lss.ls.ns) : ApdEnv a := ⟨hw, hd.sort, hd.constLs⟩
 
 /-! ## The parameter slice -/
-
-theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId}
-    (h : m'.arr64 A = m.arr64 A) {o k : Word} {ps : List ConLeche.Name} (hp : NmsR N m A o k ps) :
-    NmsR N m' A o k ps := by
-  induction hp with
-  | nil => exact .nil
-  | cons hk hn _ ih => exact .cons hk (by rw [rdW, h]; exact hn) ih
 
 theorem hd_word {a : Array Word} {i : Nat} {x : NIdx} (h : hd? (aread a) i = some x) :
     ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
@@ -354,7 +350,7 @@ theorem apdBin_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
     have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
     subst hb
     obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m1 o l (f - 1) y r mp₁ ks (apdFrame_arena hf1 hA)
-      (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 hn
+      (L.Arena.NmsR.of_arr (apdFrame_iw hf1) hps) hy hM1 hn
     rw [hF1] at hr2
     exact Or.inr ⟨rfl, b₂, mp₂, hr2, hb2, hM2, hf2⟩
   · rw [ite_eq_right hz] at hn
@@ -388,7 +384,7 @@ theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
     subst hb
     rcases h2 : apdGoW n m₀ o l (f - 1) y with _ | ⟨r2, m₂⟩ <;> simp only [h2, apdL2, apdL2_some, reduceCtorEq] at hn
     obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m₂ o l (f - 1) y r2 mp₁ ks
-      (apdFrame_arena hf1 hA) (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 h2
+      (apdFrame_arena hf1 hA) (L.Arena.NmsR.of_arr (apdFrame_iw hf1) hps) hy hM1 h2
     rw [hF1] at hr2
     refine Or.inr ⟨rfl, b₂, mp₂, m₂, hr2, hM2, hf2, ?_⟩
     by_cases hz2 : r2 ≠ 0
@@ -397,7 +393,7 @@ theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : 
       subst hb
       have hf12 := hf1.trans hf2
       obtain ⟨b₃, mp₃, hr3, hb3, hM3, hf3⟩ := ih m₂ m1 o l (f - 1) w r mp₂ ks
-        (apdFrame_arena hf12 hA) (nmsR_congr (apdFrame_iw hf12) hps) hw hM2 hn
+        (apdFrame_arena hf12 hA) (L.Arena.NmsR.of_arr (apdFrame_iw hf12) hps) hw hM2 hn
       rw [hF1] at hr3
       exact Or.inr ⟨rfl, b₃, mp₃, hr3, hb3, hM3, hf3⟩
     · rw [ite_eq_right hz2] at hn
@@ -621,11 +617,11 @@ theorem apdEntry_ok {vis : Word} {fe : IFEnv} {m m' : Mem}
   have hps0 : NmsR (nameN a.store.lss.ls.ns) m IW o l ks :=
     nmsR_of_slice hsz _ o l lps ks rfl hdec hks
   have hps : NmsR (nameN a.store.lss.ls.ns) (mclearG apdSch m) IW o l ks :=
-    nmsR_congr (hf0.arr IW (by simp) (by decide)) hps0
+    L.Arena.NmsR.of_arr (hf0.arr IW (by simp) (by decide)) hps0
   obtain ⟨b, mp1, hrun, hr, hM1, hfr1⟩ := apdGoOK env n _ _ o l _ e r _ ks hA0 hps he hM0 hb
   have hfall : MemFrame [APDM] [apdSch.cs, apdSch.cs + 1] m m' :=
     (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp))
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp)
   refine ⟨b, ?_, hr, hS', hg, _, hM1⟩
@@ -673,15 +669,11 @@ theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ :
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := apdGoOK env n _ _ o l f h _ mp ks hS.check.arena.base hps hh hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide) (by decide)
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
 /-! ## The census theorem -/
-
-theorem apd_decW0B {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b then 1 else 0) :
-    decW0B m r b := by
-  cases b <;> (simp only [decW0B]; rw [h]; simp)
 
 /-- **`all_level_params_defined(o, l, e)` refines `allLevelParamsDefined lps e`** under the stage
 relation: `(o, l)` an `IW` slice decoding to the handles `lps`, whose names read back, `e` a handle;
@@ -710,6 +702,6 @@ theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (_dn : NIdx �
     change KeepPost vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
       (AM.res (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀)
     rw [hst, hres]
-    exact ⟨hS', hg, apd_decW0B hr⟩
+    exact ⟨hS', hg, L.Ind.decW0B_of hr⟩
 
 end L.Ind

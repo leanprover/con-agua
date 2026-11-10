@@ -8,6 +8,8 @@ meta import ConAgua.Arena.ConsLibRel
 meta import ConAgua.Arena.Store
 meta import ConAgua.Arena.GrindAttr
 meta import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.NatCmpFacts
+import ConAgua.Arena.NatGcd
 
 @[expose] public section
 
@@ -95,42 +97,17 @@ theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
 theorem wt_mono {i j : Nat} (h : i ≤ j) : wt i ≤ wt j :=
   Nat.pow_le_pow_right (by decide) (Nat.mul_le_mul_left _ h)
 
-theorem pv_lt (p : Array Word) (o l : Nat) : pv p o l < wt l := by
-  induction l with
-  | zero => simp [pv, wt]
-  | succ k ih =>
-    have hx := (p[o + k]?.getD 0).toNat_lt
-    have hw : wt (k + 1) = wt k * 2 ^ 64 := wt_succ k _ rfl
-    simp only [pv, hw]
-    have : (p[o + k]?.getD 0).toNat * wt k ≤ (2 ^ 64 - 1) * wt k :=
-      Nat.mul_le_mul_right _ (by omega)
-    have : (2 ^ 64 - 1) * wt k + wt k = wt k * 2 ^ 64 := by
-      rw [Nat.mul_comm (wt k)]; have := wt_pos k; rw [Nat.sub_mul]; omega
-    omega
-
-theorem pv_ge (p : Array Word) (o l : Nat) (hl : 0 < l) (hn : Norm p o l) : wt (l - 1) ≤ pv p o l := by
-  obtain ⟨k, rfl⟩ : ∃ k, l = k + 1 := ⟨l - 1, by omega⟩
-  have h := hn hl
-  simp only [Nat.add_sub_cancel] at h ⊢
-  simp only [pv]
-  have : 1 ≤ (p[o + k]?.getD 0).toNat := by
-    rcases Nat.eq_zero_or_pos (p[o + k]?.getD 0).toNat with h0 | h0
-    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) h
-    · exact h0
-  have := Nat.mul_le_mul_right (wt k) this
-  omega
-
 /-- Two normalised slices with the same value have the same length. -/
 theorem pv_len (p q : Array Word) (a b la lb : Nat) (ha : Norm p a la) (hb : Norm q b lb)
     (h : pv p a la = pv q b lb) : la = lb := by
   rcases Nat.lt_trichotomy la lb with hl | hl | hl
-  · have := pv_ge q b lb (by omega) hb
-    have := pv_lt p a la
+  · have := L.Arena.pv_ge_wt q b lb (by omega) hb
+    have := L.Arena.pv_lt_wt p a la
     have := wt_mono (show la ≤ lb - 1 by omega)
     omega
   · exact hl
-  · have := pv_ge p a la (by omega) ha
-    have := pv_lt q b lb
+  · have := L.Arena.pv_ge_wt p a la (by omega) ha
+    have := L.Arena.pv_lt_wt q b lb
     have := wt_mono (show lb ≤ la - 1 by omega)
     omega
 
@@ -141,8 +118,8 @@ theorem pv_limbs (p q : Array Word) (a b l : Nat) (h : pv p a l = pv q b l) :
   | zero => intro i hi; omega
   | succ k ih =>
     simp only [pv] at h
-    have hA := pv_lt p a k
-    have hB := pv_lt q b k
+    have hA := L.Arena.pv_lt_wt p a k
+    have hB := L.Arena.pv_lt_wt q b k
     have hw := wt_pos k
     have hx : (p[a + k]?.getD 0).toNat = (q[b + k]?.getD 0).toNat := by
       have e1 : (pv p a k + (p[a + k]?.getD 0).toNat * wt k) / wt k = (p[a + k]?.getD 0).toNat := by
@@ -177,10 +154,6 @@ theorem hashN_congr (p q : Array Word) (a b l : Nat)
 theorem Agree.hashN (p q : Array Word) (t o k : Nat) (h : Agree p q t) (hk : o + k ≤ t) :
     L.Arena.hashN p o k = L.Arena.hashN q o k :=
   hashN_congr p q o o k (fun i hi => by rw [h (o + i) (by omega)])
-
-theorem Agree.norm (p q : Array Word) (t o l : Nat) (h : Agree p q t) (hk : o + l ≤ t)
-    (hn : Norm q o l) : Norm p o l := by
-  intro hl; rw [h (o + (l - 1)) (by omega)]; exact hn hl
 
 /-- `eqW` from position `i` in `Nat` terms, where no index wraps. -/
 theorem eqW_iff (p : Array Word) (a b l i : Word) (ha : a.toNat + l.toNat < 2 ^ 64)
@@ -691,7 +664,7 @@ theorem RecRel_grow (hpool : PoolOK m) (t i : Word) (k : LitNode) (h : RecRel m 
   · simp only [RecRel, NatRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
     have hle := hsl.le
-    exact ⟨h0, hsl.grows hg, Agree.norm _ _ _ _ _ hag hle hnm, by rw [Agree.pv _ _ _ _ _ hag hle, hpv],
+    exact ⟨h0, hsl.grows hg, L.Arena.Norm.of_agree _ _ _ _ _ hag hle hnm, by rw [Agree.pv _ _ _ _ _ hag hle, hpv],
       by rw [Agree.hashN _ _ _ _ _ hta hle, hh]⟩
   · simp only [RecRel, StrRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hw, hh⟩ := h

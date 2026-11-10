@@ -5,6 +5,7 @@ import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.Env
+import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -97,7 +98,7 @@ theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     simp only [nat?, Option.map_eq_some_iff] at hv
     obtain ⟨x, hx, rfl⟩ := hv
     subst hw
-    exact ⟨by rw [erRd_of_erA hx, UInt64.ofNat_toNat], x.toNat_lt⟩
+    exact ⟨by rw [L.Arena.erRd_of _ _ hx, UInt64.ofNat_toNat], x.toNat_lt⟩
   have hl64 : q + 2 < 2 ^ 64 := by
     rw [truncM_erA] at hl
     simp only [nat?, Option.map_eq_some_iff] at hl

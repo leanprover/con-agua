@@ -159,7 +159,7 @@ theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p vis fe) (nm r : Word) (hn 
     · simp only [substConst0List, StateT.run_bind, StateT.run_pure]
       have hrun1' : (substConst0 (decI nm) (decE r) coreWalkFuel (decI (rdW (m.arr64 IW) o))).run a =
           .ok (x1, a1) := hrun1
-      simp only [hrun1', exc_ok_bind', hrun2]
+      simp only [hrun1', L.Arena.except_ok_bind, hrun2]
       rfl
     · simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one, List.headD_cons, List.tail_cons]
       rw [← hx1]

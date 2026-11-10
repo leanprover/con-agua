@@ -262,7 +262,7 @@ theorem romLevel_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
         internMax_spec p hL.max_find hL.max_push hL.intern_max n,
         internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,
         internParam_spec p hL.param_find hL.param_push hL.intern_param n, hn', ih'] <;>
-      finish [Keep.size, Keep.pcap]
+      finish [Keep.size, L.Front.Keep.pcap]
 
 end spec
 

@@ -162,7 +162,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
         r₃.headD 0 ≠ 0
     · rw [ite_eq_left hcond]
       obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
-      rw [ite_eq_left ⟨hc₁, hc₂, decBool_true_of hc₃⟩]
+      rw [ite_eq_left ⟨hc₁, hc₂, L.Arena.decBool_true_of hc₃⟩]
       have hv₃ := hc.supKeep fe a₀ (decE lt) _ hl
       refine RefE.bind_callW (fun _ => rfl) (hc.strLitCtor n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb lt st hS₃
         hlt hv₃) fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
@@ -177,7 +177,7 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
         exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.resOk
     · rw [ite_eq_right hcond]
       rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
-              have := h.2.2; rw [decBool_false_of e] at this; cases this⟩)]
+              have := h.2.2; rw [L.Arena.decBool_false_of e] at this; cases this⟩)]
       exact hirr _ m₃ M₃ hS₃
 
 /-- **`stuck_str` refines `stuckStrT`** at the knot (`str_ref`'s ok half). -/

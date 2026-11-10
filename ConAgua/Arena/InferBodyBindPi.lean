@@ -10,6 +10,9 @@ import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.WordOff
+import ConAgua.Arena.FormerSortRef
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 
@@ -287,7 +290,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       rw [hp', inferPis]
       simp only [hlam, Bool.false_eq_true, ↓reduceIte]
       rw [← haddd]
-      refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
+      refine RefE.bind_right (by rw [L.Arena.viewBind_run, hvb]) ?_
       dsimp only
       -- `inst_list`, the slots `infer` and `whnf`
       refine RefE.under (fun _ => rfl) (fun _ => ipsE.k_inst_list.none ..) fun hx => RefE.bind_callW hx
@@ -314,7 +317,7 @@ theorem pisLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs1 => ?_)
       refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by rfl) fun gs2 => ?_)
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.base (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
-      refine RefE.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
+      refine RefE.bind_right (L.Arena.viewSort_run (L.Arena.viewSort_of_view _ _ _
         ((decE_tag_eq _ hrw3 2 (by decide)).mpr g1') hvs)) ?_
       dsimp only
       simp only [internFVarE]
@@ -514,7 +517,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   refine RefE.abort0 (by rfl) fun gs1 => ?_
   refine RefE.abort0 (by rfl) fun gs2 => ?_
   obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 ⟨gs1, UInt64.not_le.mp gs2⟩ g1'
-  refine RefE.bind_right (L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _
+  refine RefE.bind_right (L.Arena.viewSort_run (L.Arena.viewSort_of_view _ _ _
     ((decE_tag_eq _ hrw2 2 (by decide)).mpr g1') hvs)) ?_
   dsimp only
   simp only [internFVarE]
@@ -533,7 +536,7 @@ theorem ifr_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
     have := g2.2.2.2.1; simp at this; omega
   obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₃)
-    (fvs := #[]) (ws := #[]) hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl
+    (fvs := #[]) (ws := #[]) hS₃ hcp (L.Arena.SpineR.nil_at _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl
     g2 hrw3 (x := (tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0))
   have e01 : (0 : Word) + 1 = 1 := rfl
   rw [e01] at hf' htop' hB' hbt'

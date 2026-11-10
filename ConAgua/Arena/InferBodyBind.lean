@@ -10,6 +10,9 @@ public import ConAgua.Arena.InferBodyBindModels
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.InferBodyLet
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.WhnfIotaRefine2
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -80,7 +83,7 @@ theorem BStkR.push {m : Mem} {lo k : Word} {ws : Array Word} (h : BStkR m lo k w
     simp only [UInt64.toNat_add, Nat.toUInt64_eq, UInt64.toNat_ofNat']; omega
   have heqv : lo + (k.toNat.toUInt64 : Word) = lo + k :=
     UInt64.toNat_inj.mp (by rw [hidx k.toNat (by omega), hoc])
-  refine ⟨by rw [Array.size_push, h.size, hcnt1], by rw [size_set64L, hcnt1]; omega, fun i hi => ?_⟩
+  refine ⟨by rw [Array.size_push, h.size, hcnt1], by rw [L.Mem.size64_set64, hcnt1]; omega, fun i hi => ?_⟩
   rw [Array.size_push, h.size] at hi
   rw [rdW_set64]
   rcases Nat.lt_succ_iff_lt_or_eq.mp hi with hi' | hi'
@@ -331,21 +334,21 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
   have h137 : (137 : Word).toNat < (m.arr64 CTL).size := by simpa using h3
   have hfv' := (hf.push hspn (by rw [← hadd]; exact h1) fv hfv)
   rw [← hm₁] at hfv'
-  have hsz1 : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact size_set64 _ _ _ _ _
+  have hsz1 : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact L.Mem.size64_set64 _ _ _ _ _
   have hctl : ∀ {mm : Mem} (c v : Word), ((mm.set64 CTL c v).arr64 SPN) = mm.arr64 SPN := fun c v =>
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨hS₄, ⟨hfv'.size, by rw [eS]; exact hfv'.bound, fun i hi => by simp only [spW, eS]; exact hfv'.lt i hi,
     fun i hi => by simp only [spW, eS]; exact hfv'.get i hi⟩, ?_, ?_, ?_, ?_, by rw [eS, hsz1, hsz],
-    by rw [eB, hm₂, size_set64, e2], ?_, ?_⟩
+    by rw [eB, hm₂, L.Mem.size64_set64, e2], ?_, ?_⟩
   · simp only [spTop]
     rw [htp, rdW_set64, ite_eq_right (fun h => absurd h.2.1 (by decide)), hm₃, rdW_set64, ite_eq_left ⟨rfl, rfl, by
-                 rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
+                 rw [hm₂, hm₁, L.Mem.size64_set64, L.Mem.size64_set64]; exact h136⟩]
   · have hB₁ : BStkR m₁ lo k ws := hB.frame e2
     have hpush := hB₁.push (by rw [e2]; exact hcap) (by rw [e2]; exact h2) x
     rw [← hm₂] at hpush
     exact hpush.frame eB
   · simp only [bTop]
-    rw [htp, rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [hm₃, hm₂, hm₁, size_set64, size_set64, size_set64]; exact h137⟩]
+    rw [htp, rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [hm₃, hm₂, hm₁, L.Mem.size64_set64, L.Mem.size64_set64, L.Mem.size64_set64]; exact h137⟩]
   · intro j hj
     simp only [spW, eS]
     rw [show rdW (m₁.arr64 SPN) j = spW m₁ j from rfl, hm₁, spW_set64_ne _ _ _ _ (fun h => by
@@ -474,7 +477,7 @@ theorem lamsLoop_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       rw [hp', inferLams]
       simp only [hlam, Bool.false_eq_true, ↓reduceIte]
       rw [← haddd]
-      refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
+      refine RefE.bind_right (by rw [L.Arena.viewBind_run, hvb]) ?_
       dsimp only
       -- `inst_list`, the slots `infer` and `whnf`
       refine RefE.under (fun _ => rfl) (fun _ => ilsE.k_inst_list.none ..) fun hx => RefE.bind_callW hx
@@ -677,7 +680,7 @@ theorem tops_restore {dn : NIdx → Option ConLeche.Name} {m₀ m₃ m₄ : Mem}
   · unfold spTop
     rw [rdW_set64, ite_eq_right (fun h => absurd h.2.1 (by decide)), rdW_set64, ite_eq_left ⟨rfl, rfl, h136⟩]
   · unfold bTop
-    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h137⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h137⟩]
 
 /-- **`infer_lam` refines `inferLam`, both outcomes**, at the knot (the `.lam` clause of
 `inferBody`): the domain's type and its `whnf` (the slots' errors), a domain type that is no sort (a
@@ -729,7 +732,7 @@ theorem ilm_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferB
   have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
     have := g2.2.2.2.1; simp at this; omega
   obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₃)
-    (fvs := #[]) (ws := #[]) hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl
+    (fvs := #[]) (ws := #[]) hS₃ hcp (L.Arena.SpineR.nil_at _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl
     g2 hrw3
   have e01 : (0 : Word) + 1 = 1 := rfl
   rw [e01] at hf' htop' hB' hbt'

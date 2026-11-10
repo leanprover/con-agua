@@ -141,7 +141,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   by_cases g0 : tagW e = 0
   · rw [ite_eq_left g0]
     refine RefE.abort0 (by decide) fun hc0 => ?_
-    exact fun _ => ErrClaim.of_run_eqW (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0))
+    exact fun _ => L.Arena.ErrClaim.congr_run (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0))
       (ErrClaim.fail _ _ rfl)
   rw [ite_eq_right g0]
   by_cases g1 : tagW e = 1

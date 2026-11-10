@@ -287,8 +287,8 @@ theorem checkB_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     have hJ := checkJobs_seqT Vt hF hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
-      Locals.init_nil, Cmp.eval,
+    all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
+      L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
@@ -298,7 +298,7 @@ theorem checkB_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     all_goals
       obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
       first
-        | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, fun a ha => hw a ha⟩
-        | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all)
+        | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
+        | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all)
 
 end L.Checker

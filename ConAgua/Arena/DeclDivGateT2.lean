@@ -298,7 +298,7 @@ theorem cm_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hkp
     have c07 := (c05.trans c6).trans c7
     have hG7 : IWGrow m m7 := hG6.trans hg7
     rw [checkDivModCertsE.k_is_def_eq_core.eq_2]
-    refine RefE.retIf (fun z7 => hd7 ▸ decBool_f_m2c z7) (fun hb => by simpa [← hd7, decBool] using hb)
+    refine RefE.retIf (fun z7 => hd7 ▸ L.Arena.decBool_false_of z7) (fun hb => by simpa [← hd7, decBool] using hb)
       (fun _ => ⟨hC7, c07, hG7, by simp [decW0B], hCr7⟩) fun z7 _ => ?_
     have hdr1 : decHL m7 (po + 1).toNat (pl - 1).toNat = some pfs := by
       rw [decHL_grow hG7 (by rw [hpo1, hpl1]; omega)]; exact hdrest
@@ -373,7 +373,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     refine RefE.bindLift (fun _ => checkTypePinsE.k_type_pin_stored.none ..) fun r1 m1 h1 => ?_
     rw [checkTypePinsE.k_type_pin_stored.arm1]
     obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ :=
-      (tps_ref hD6 tp.1.word.toUInt64) k m a r1 m1 ⟨hC.stage, dmWord_lt32 _⟩ h1
+      (tps_ref hD6 tp.1.word.toUInt64) k m a r1 m1 ⟨hC.stage, L.Arena.idx_word_lt32 _⟩ h1
     have hCr1 := hkp.call (im_mem _ rfl) h1 hCr
     rw [decI_word] at hrun1
     obtain ⟨hck1, hxt1, hp1, hden1⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a) rfl hrun1
@@ -397,9 +397,9 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
       isDefEqCore V fe checkFuel 0 (decI (r1.headD 0)) (decI tp.2.word.toUInt64) by rw [decI_word]]
     refine RefE.bindCall (fun _ => checkTypePinsE.k_is_def_eq_core.eq_1 ..)
       (fun hcE _ h2 => hcE.isDefEqCore k hk' hC1.stageT 0 (r1.headD 0) tp.2.word.toUInt64 hl1
-        (dmWord_lt32 _) _ h2)
+        (L.Arena.idx_word_lt32 _) _ h2)
       (fun b h2 => hq.isDefEqCore_sim k hk' hC1.stageT 0 (r1.headD 0) tp.2.word.toUInt64 hl1
-        (dmWord_lt32 _) b.1 b.2 h2)
+        (L.Arena.idx_word_lt32 _) b.1 b.2 h2)
       fun r2 m2 x2 a2 h2 hrun2 ⟨hT2, hg2, hd2'⟩ => ?_
     have hCr2 := hkp.call (im_mem _ rfl) (callW_of_callE h2) hCr1
     have hq1 := hcl' q (by simp)
@@ -410,7 +410,7 @@ theorem ctp_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
     have hC2 := L.Ind.StageC.of_T hT2 hck2
     have hG2 : IWGrow m m2 := hg1.trans hg2
     rw [checkTypePinsE.k_is_def_eq_core.eq_2]
-    refine RefE.retIf (fun z2 => hd2' ▸ decBool_f_m2c z2) (fun hb => by simpa [← hd2', decBool] using hb)
+    refine RefE.retIf (fun z2 => hd2' ▸ L.Arena.decBool_false_of z2) (fun hb => by simpa [← hd2', decBool] using hb)
       (fun _ => ⟨hC2, c1.trans c2, hG2, by simp [decW0B], hCr2⟩) fun z2 _ => ?_
     have hlen' : l.toNat = tps.length + 1 := by simpa using hlen
     have hrest : L.Rom.TPinsR m2 (o + 2) (l - 1) tps := by
@@ -495,7 +495,7 @@ theorem cpv_ref (hD : DmProg8 p) (hq : KnotStageProg p) (hcl : LeafClosed p) (hk
   have c2 : CoreStep env fe a a2 := ⟨hck2, hx2', hp2⟩
   have hC2 := L.Ind.StageC.of_T hT2 hck2
   rw [checkDivModPinValueE.k_is_def_eq_core.eq_2]
-  refine RefE.retIf (fun z2 => hd2 ▸ decBool_f_m2c z2) (fun hb => by simpa [← hd2, decBool] using hb)
+  refine RefE.retIf (fun z2 => hd2 ▸ L.Arena.decBool_false_of z2) (fun hb => by simpa [← hd2, decBool] using hb)
     (fun _ => ⟨hC2, c2, hg1.trans hg2, by simp [decW0B], hCr2⟩) fun z2 _ => ?_
   -- the statements and the proofs
   refine RefE.bindSim (fun _ => rfl) ((divModCertStmts_ref hD5.toDmProg2 c) k m2 a2 · · ⟨hC2.stage, hc⟩ ·)

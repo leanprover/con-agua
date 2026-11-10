@@ -52,7 +52,7 @@ theorem copyW_ctl (n : Nat) : ∀ (m m' : Mem) (d s l : Word), copyW n m d s l =
     · rw [copyW_nil n m d s l hl] at h; cases h; exact ⟨rfl, rfl⟩
     rw [copyW_step n m d s l hl] at h
     obtain ⟨h1, h2⟩ := ih _ _ _ _ _ h
-    exact ⟨h1.trans (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), h2.trans (size_set64 _ _ _ _ _)⟩
+    exact ⟨h1.trans (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), h2.trans (L.Mem.size64_set64 _ _ _ _ _)⟩
 
 theorem consW_ptop {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
     (h : consW n m x o l = some (r, m')) (hP : PTop m) : PTop m' := by
@@ -70,8 +70,8 @@ theorem consW_ptop {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
   obtain ⟨rfl, rfl, hroom⟩ := allocW_facts hal hsz
   obtain ⟨hC, hI⟩ := copyW_ctl _ _ _ _ _ _ hcp
   rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)] at hC
-  rw [size_set64, allocMem_IW] at hI
-  refine ⟨?_, by rw [hI]; exact hsz, by rw [hC]; simp only [allocMem]; rw [size_set64]; exact hc⟩
+  rw [L.Mem.size64_set64, allocMem_IW] at hI
+  refine ⟨?_, by rw [hI]; exact hsz, by rw [hC]; simp only [allocMem]; rw [L.Mem.size64_set64]; exact hc⟩
   simp only [iwTop]
   rw [hC, allocMem_top m _ hc, hI, UInt64.toNat_add]
   have := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -107,7 +107,7 @@ theorem bcW_ptop {n : Nat} {m m' : Mem} {nPd k nC nR cvT rOk rMI rRP : Word} {r 
   rw [bcW.arm1] at h
   obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (bcW.k_block_counts_head.none ..)
   rw [bcW.k_block_counts_head.arm1] at h
-  obtain ⟨r0, -, h⟩ := ipK_inv1 h (bcW.k_block_counts_pure.none _)
+  obtain ⟨r0, -, h⟩ := L.Arena.of_K h (bcW.k_block_counts_pure.none _)
   rw [bcW.k_block_counts_pure.arm1] at h
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   cases n with
@@ -229,7 +229,7 @@ theorem bmfW_sim {vis : Word} {fe : IFEnv} {no nl mm : Word}
     intro m a ro rl rs hS hrs hnm hnb
     by_cases hl : rl = 0
     · rw [bmfW.arm1 n m no nl ro rl mm hl]
-      subst hl; rw [partsPSl_nil hrs]
+      subst hl; rw [_root_.L.Ind.pslR_nil hrs]
       exact Sim.ret ⟨rfl, by simp, hS, IWGrow.refl _⟩
     rw [bmfW.arm2 n m no nl ro rl mm hl]
     obtain ⟨pc, ⟨cv, mI, rP, isK, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
@@ -321,7 +321,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     intro m a cto ctl idx cvTs hS hts hrs hnm hnb hix
     by_cases hl : ctl = 0
     · rw [bmgW.arm1 n m nPd k nC no nl ro rl cto ctl idx hl]
-      subst hl; rw [partsPSl_nil hts]
+      subst hl; rw [L.Ind.pslR_nil hts]
       exact Sim.ret ⟨⟨rfl, by show decNL _ _ _ = _; simp [decNL], by simp⟩, hS, IWGrow.refl _⟩
     rw [bmgW.arm2 n m nPd k nC no nl ro rl cto ctl idx hl]
     obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl

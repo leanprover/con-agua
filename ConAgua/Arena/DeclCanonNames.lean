@@ -99,7 +99,7 @@ theorem gnW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     obtain ⟨-, -, -, hfr, -, -⟩ := consW_dec hcons hS3.iw.iwSize hS3.iw.ctl hd3u.2 hh1 hd3u.1
     refine ⟨decI h1 :: hs3, a3, ?_, hSc, (hg1.trans hg2).trans (hg3.trans hgc), ⟨?_, ?_⟩, ?_⟩
     · rw [hn1]
-      simp only [ConRon.Arena.canonNamesGo, StateT.run_bind, hr1, exc_ok_bind', hr2, StateT.run_pure]
+      simp only [ConRon.Arena.canonNamesGo, StateT.run_bind, hr1, L.Arena.except_ok_bind, hr2, StateT.run_pure]
       rw [hi1] at hrun3
       simp only [StateT.run] at hrun3 ⊢
       rw [hrun3]; rfl

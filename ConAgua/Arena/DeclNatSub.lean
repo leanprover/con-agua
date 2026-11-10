@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
 import ConAgua.L.WordOff
+import ConAgua.Arena.FVarRangeRefine
 
 @[expose] public section
 
@@ -186,14 +187,14 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE r, a2, ?_, hS2, hg1.trans hg2, by simpa using hr, rfl⟩
-        simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
+        simp only [substConst0, StateT.run_bind, hrun1', L.Arena.except_ok_bind, emptyLevels, hrun2, hbeq,
           decide_eq_true hcond, ite_true]
         rfl
       · rw [ite_eq_right hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE h, a2, ?_, hS2, hg1.trans hg2, by simpa using hh, rfl⟩
-        simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
+        simp only [substConst0, StateT.run_bind, hrun1', L.Arena.except_ok_bind, emptyLevels, hrun2, hbeq,
           decide_eq_false hcond, Bool.false_eq_true, ite_false]
         rfl
     · -- an application
@@ -223,13 +224,13 @@ theorem sc0_ref (hN : NatSubProg p) (nm r : Word) :
       obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := mkApp_ref (vis := vis) (fe := fe) hN.toMasterProg
         (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4'
       refine ⟨x4, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), hl4, hx4⟩
-      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind', hrun2, hrun3, ← hx2, ← hx3]
+      simp only [substConst0, StateT.run_bind, hrun1', L.Arena.except_ok_bind, hrun2, hrun3, ← hx2, ← hx3]
       exact hrun4
     · rw [ite_eq_right (fun e => hn3 e), ite_eq_right (fun e => hn4 e)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨decE h, a1, ?_, hS1, hg1, by simpa using hh, rfl⟩
-      simp only [substConst0, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConst0, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       cases vv <;> first | rfl | (exfalso; exact hnc _ _ rfl) | (exfalso; exact hna _ _ rfl)
 
 @[refines ConRon.Arena.substConst0]
@@ -290,11 +291,11 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
       simp only [iwA, aread_apply] at h3; simp only [rdW, hpb]; rw [hg.iwGet _ (by omega)]; simp [h3]
     rw [hpp', hea'] at hw
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
-    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 fuelW ea k m a r1 m1 hS hn hr hea h1
+    obtain ⟨x1, a1, hrun1, hK1⟩ := sc0_ref hN nm r _ 4000000000 L.Arena.coreWalkFuel_toNat ea k m a r1 m1 hS hn hr hea h1
     obtain ⟨hS1, hg1, hl1, hx1⟩ := hK1
     rw [heb' m1 hg1] at hw
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
-    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 fuelW eb k m1 a1 r2 m2 hS1 hn hr heb h2
+    obtain ⟨x2, a2, hrun2, hK2⟩ := sc0_ref hN nm r _ 4000000000 L.Arena.coreWalkFuel_toNat eb k m1 a1 r2 m2 hS1 hn hr heb h2
     obtain ⟨hS2, hg2, hl2, hx2⟩ := hK2
     replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -322,7 +323,7 @@ theorem pairs_ref (hN : NatSubProg p) (nm r : Word) (hn : H nm) (hr : H r) :
     obtain ⟨hS5, hg5, hE5⟩ := eqL_cons hcons' hS4 hE3 rec4 hl1 hl2
     subst hr5 he
     refine ⟨(decE (r1.headD 0), decE (r2.headD 0)) :: x3, a3, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hK4.1.trans hg5))), ?_⟩
-    · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, exc_ok_bind', StateT.run_pure,
+    · simp only [substConst0Pairs, StateT.run_bind, hrun1, hrun2, hrun3, L.Arena.except_ok_bind, StateT.run_pure,
         ← hx1, ← hx2]
       rfl
     · simp only [decEqRL, L.getD_zero, L.getD_one, List.headD_cons, List.tail_cons]

@@ -9,6 +9,7 @@ import ConAgua.Checker.RomProg0
 import ConAgua.Checker.RomProgInit
 import ConAgua.L.Blocks
 import all ConAgua.Checker.Entry
+import ConAgua.Front.FrontRunRef
 
 @[expose] public section
 
@@ -81,7 +82,7 @@ theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     rw [hby, ← Mem.arr8, hF.r7.since.keep.arr8]
     exact loadMem_pb b pb sz
   rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ (s := s₂) hPB] at hrun₂
-  have hc := callE_of_run_err hrun₂
+  have hc := L.Front.callE_of_run_err hrun₂
   -- the twin's side
   let a₀ : AState := { PA.sF with caches := Caches.empty }
   obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
@@ -177,8 +178,8 @@ theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     have hJ := checkJobs_seqE Vt hF hJP hJG n (by omega) hi hhi
     have hFl := flushCaches_specNV n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
-      Locals.init_nil, Cmp.eval,
+    all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
+      L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [hl, Mem.copy64_zero] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
@@ -190,8 +191,8 @@ theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     all_goals first
       | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
          first
-          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, fun a ha => hw a ha⟩
-          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all; done))
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done))
       | (trace_state; fail "CheckBE.checkB_seqE: no closing tactic applies")
 
 /-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_seq`.** -/

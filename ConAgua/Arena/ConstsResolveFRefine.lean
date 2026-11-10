@@ -207,8 +207,8 @@ theorem clp_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis s : Word
   rw [invoke_eq _ hp.lit]
   simp only [callFn, crLitPins]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, callW_spec p k "pin_found"]
-  all_goals simp_all only [Cond.pval, Expr.pval, Cmp.eval, LocEq, St.setLoc_loc, St.setLoc_mem,
-    St.setLocs_cons, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil,
+  all_goals simp_all only [Cond.pval, Expr.pval, Cmp.eval, LocEq, St.setLoc_loc, L.St.setLoc_mem,
+    St.setLocs_cons, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, L.Locals.init_nil,
     Nat.reduceEqDiff, clpW, clpL_cons, clpL_nil, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq,
     bne_iff_ne, ne_eq, Bool.false_or, or_assoc, Classical.not_and_iff_not_or_not, Decidable.not_not,
     Sig.retVal, Sig.retOr, ite_true, ite_false, or_false, or_true]
@@ -232,7 +232,7 @@ theorem crf_spec (p : Prog) (hp : CrfProg p) (k : Nat) (s₀ : St) (vis f h : Wo
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
     callW_spec p k "e_view", callW_spec p k "cr_leaf", callW_spec p k "crm_find",
     callW_spec p k "crm_put", callW_spec p k "crf_go", callW_spec p k "env_find"]
-  all_goals (try simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem,
+  all_goals (try simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, Bool.and_eq_true,
     Bool.or_eq_true] at *)

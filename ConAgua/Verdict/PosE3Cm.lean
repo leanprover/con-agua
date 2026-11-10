@@ -226,7 +226,7 @@ theorem nctE_spec (p : Prog) (hf : p.lookup "nest_ctors" = some nestCtorsL) (n :
             evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callE_spec p n "nest_ctors",
             _root_.L.callE_spec p n "nest_ctors_one", _root_.L.callE_spec p n "rec3", _root_.L.callE_spec p n "sl_snoc"] <;>
           (try
-              simp_all [_root_.L.LocEq, _root_.L.St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.St.setLocs_nil,
+              simp_all [_root_.L.LocEq, _root_.L.St.setLoc_loc, L.St.setLoc_mem, _root_.L.St.setLocs_nil,
                 _root_.L.St.setLocs_cons, _root_.L.Locals.init_cons_zero,
                 _root_.L.Locals.init_cons_succ, _root_.L.Sig.retVal, _root_.L.Sig.retOr, _root_.L.BinOp.eval,
                 _root_.L.Cmp.eval, nctE,

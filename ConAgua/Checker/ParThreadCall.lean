@@ -168,9 +168,6 @@ and `INIT := 1`; on later calls nothing. -/
 def seedMem (w : Mem) : Mem :=
   if w.glob INIT = 0 then (w.copy64 CTL 0 CTLF 0 (w.len64 CTLF).toNat).setG INIT 1 else w
 
-theorem checkerProg_flushProg' : FlushProg checkerProg := by
-  constructor <;> chk_lk
-
 /-- **`check_b` on a thread's memory**: from a memory whose `seedMem` is `ThrAt a`, with the range
 `[j, j + 1)`, a returning call runs record `j`'s job at `a` and leaves a memory `ThrAt` the state
 after it, with `INIT` nonzero. -/
@@ -199,10 +196,10 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
   | zero => vcgen [exec] <;> grind
   | succ n =>
     have hJ := checkJobs_thrT hck hS hds n (by omega) a j hj hF
-    have hFl := flushCaches_spec checkerProg checkerProg_flushProg' n
+    have hFl := flushCaches_spec checkerProg L.Checker.checkerProg_flushProg n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
-      Locals.init_nil, Cmp.eval,
+    all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
+      L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
@@ -211,10 +208,10 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
     all_goals first
       | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
          first
-          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR0 (by simp_all)⟩
-          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR1 (by simp_all)⟩
-          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all; done)
-          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
       | (rw [St.setLocs_mem']; simp_all; done)
 
 /-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr`). -/
@@ -237,7 +234,7 @@ theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some c
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hB · · · ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLocs_cons,
+    all_goals (try simp only [L.St.setLoc_mem, St.setLocs_cons,
       Cmp.eval, beq_iff_eq, St.setLocs_nil] at *)
     all_goals first
       | (simp_all (config := { decide := true }); done)

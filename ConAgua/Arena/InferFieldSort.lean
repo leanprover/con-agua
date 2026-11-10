@@ -9,6 +9,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -76,18 +77,12 @@ theorem CoreRM.readNC {m : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : Cor
 
 /-! ## The handles as heap pointers -/
 
-theorem hslice?_succ {k : IdxKind} (a : Nat → Option Word) (o n : Nat) :
-    (hslice? a o (n + 1) : Option (List (Idx k))) =
-      (do let x ← hd? a o; let xs ← hslice? a (o + 1) n; pure (x :: xs)) := by
-  simp only [hslice?, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero,
-    Function.comp_def, Nat.succ_eq_add_one, ← Nat.add_assoc, Nat.add_right_comm o]
-
 /-- A decoded slice is in bounds. -/
 theorem hslice?_bound_fsz {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List (Idx k)),
     hslice? (aread a) o n = some l → n = 0 ∨ o + n ≤ a.size
   | 0, _, _, _ => Or.inl rfl
   | n + 1, o, l, h => by
-    rw [hslice?_succ] at h
+    rw [L.Ind.hslice?_succ] at h
     simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq] at h
     obtain ⟨x, hx, xs, hxs, -⟩ := h
@@ -106,7 +101,7 @@ theorem nmsAR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx
     subst this
     simp [hslice?] at hs; subst hs; simp at hd; subst hd; exact .nil
   | k + 1, lps, ks, o, n, hn, hs, hd => by
-    rw [hslice?_succ] at hs
+    rw [L.Ind.hslice?_succ] at hs
     simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq] at hs
     obtain ⟨x, hx, xs, hxs, rfl⟩ := hs
@@ -127,7 +122,7 @@ theorem nmsAR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx
         · have e0 : n - 1 = 0 := UInt64.toNat_inj.mp (by simpa using hn1)
           rw [e0]; simp [hslice?] at hxs; subst hxs; simp at hys; subst hys; exact .nil
         · have hlt : o.toNat + 1 < 2 ^ 64 := by
-            rw [hslice?_succ] at hxs
+            rw [L.Ind.hslice?_succ] at hxs
             simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hxs
             obtain ⟨_, hx', -⟩ := hxs
             simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx'

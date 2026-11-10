@@ -97,20 +97,6 @@ section succ
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
   {r : Word}
 
-theorem internSucc_stage (hS : StageR vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
-    (hI : sinternW m u = some (r, m')) :
-    ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR vis fe m' a' ∧
-      IWGrow m m' := by
-  have hR := hS.check.arena.base
-  obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
-  have hfr := sinternW_frame m u _ _ hI
-  exact stage_of_level hS (internLNode_succ_run _ a) hok
-    (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
-      hfr (AM.st_proto succLens _ _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [tier1, SREC, SSLOT, SHP]) (by simp) (fun _ => ⟨DerR.lvl, rfl⟩)
-    (fun _ => ⟨DerR.lvl, rfl⟩)
-    (hS.check.mode.frame hfr (by decide) (by decide))
-
 end succ
 
 end L.Ind

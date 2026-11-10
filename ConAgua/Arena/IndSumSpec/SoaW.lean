@@ -140,7 +140,7 @@ theorem soaW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     by_cases hl : recl = 0
     · rw [soaW.arm1 n m reco recl k hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl; rw [partsPSl_nil hrs]
+      subst hl; rw [L.Ind.pslR_nil hrs]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _, PSlR.nil _ _⟩
     rw [soaW.arm2 n m reco recl k hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl

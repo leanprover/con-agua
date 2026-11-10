@@ -25,11 +25,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem except_ok_bind' {ε α β : Type} (x : α) (f : α → Except ε β) : (Except.ok x >>= f) = f x := rfl
-
-theorem rdW_of_get {a : Array Word} {x : Word} {k : Nat} {w : Word} (hk : x.toNat = k)
-    (h : a[k]? = some w) : rdW a x = w := by simp [rdW, hk, h]
-
 /-- **`tower_slots_all` refines `towerSlotsAll`**, on the real `find_proj`. -/
 @[refines ConRon.Arena.towerSlotsAll]
 theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) (hq : ProjProg p) :

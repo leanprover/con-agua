@@ -79,7 +79,7 @@ theorem builtinPrelude_ref (h64 : System.Platform.numBits = 64) (a : AState) (n 
       (∀ x < (#[] : Array IDeclaration).size,
         L.Checker.RecOK ((m.setIn preIn).arr64 DECL) ((m.setIn preIn).arr64 DLP) x) ∧
       ModeOK (m.setIn preIn) :=
-    ⟨hin, ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA,
+    ⟨hin, L.Arena.ArenaD.frameHi (setIn_frame _ _) (by simp) (by simp) hA,
       by rw [blank_pre_nil]; exact hD.frame (setIn_frame _ _) (by simp) (by simp),
       ht.ok, ht.off, ht.pins, fun x hx => absurd hx (by simp),
       ModeOK.frame hmo (setIn_frame _ _) (by simp) (by simp)⟩
@@ -115,7 +115,7 @@ theorem builtinPrelude_ref (h64 : System.Platform.numBits = 64) (a : AState) (n 
   rw [pre_nil] at hD'
   have hb := builtinPreludeE_of hp
   simp only [St.setIn_mem, hs1] at hA' hD' hM' hR
-  have hA1 := ArenaD.frameHi (setIn_frame' m1 preIn) (by simp) (by simp) hA'
+  have hA1 := L.Arena.ArenaD.frameHi (setIn_frame' m1 preIn) (by simp) (by simp) hA'
   have hD1 := hD'.frame (setIn_frame' m1 preIn) (by simp) (by simp)
   have hM1 := ModeOK.frame hM' (setIn_frame' m1 preIn) (by simp) (by simp)
   have hR1 : RecsOK m1 st.decls := fun x hx => hR x (by simpa using hx)
@@ -136,7 +136,7 @@ theorem builtinPrelude_ref (h64 : System.Platform.numBits = 64) (a : AState) (n 
   have hf3 := resetM_frame m2
   dsimp only at hm3 hok ⊢
   rw [hm3]
-  refine ⟨st, a', hb, ArenaD.frameHi hf3 (by simp) ?_ (ArenaD.frameHi hf (by simp) (by simp) hA1),
+  refine ⟨st, a', hb, L.Arena.ArenaD.frameHi hf3 (by simp) ?_ (L.Arena.ArenaD.frameHi hf (by simp) (by simp) hA1),
     frontReset_stateDR hD2 hok, ht.prelude hb, ?_,
     (hR1.frame hf (by simp) (by simp)).frame hf3 (by simp) (by simp),
     ModeOK.frame (ModeOK.frame hM1 hf (by decide) (by decide)) hf3 (by decide) (by decide)⟩

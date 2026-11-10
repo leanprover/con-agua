@@ -40,7 +40,7 @@ theorem opfP_inst : L.Arena.InstProg opfP :=
 section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-theorem opf_view_run {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view h = some v) :
+theorem view_run_of {a : AState} {h : EIdx} {v : ENodeView} (hv : a.store.view h = some v) :
     (view h).run a = .ok (v, a) := by
   simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
 
@@ -62,7 +62,7 @@ theorem opfV_ok {k : Nat} {m m' : Mem} {a : AState} (hS : StageR vis fe m a) {e 
   refine ⟨rfl, ?_⟩
   cases v <;> simp [ViewR] at hvr
   simp only [List.tail_cons, List.headD_cons]
-  exact ⟨hvr.1, hvr.2.2.1, by rw [opf_view_run hv, hvr.2.1, hvr.2.2.2]⟩
+  exact ⟨hvr.1, hvr.2.2.1, by rw [L.Ind.view_run_of hv, hvr.2.1, hvr.2.2.2]⟩
 
 /-- The writers below array 64 keep the spine stack and its top. -/
 theorem spn_of_lt64 {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
@@ -154,7 +154,7 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : Ab
       ((m.set64 SPN (rdW (m.arr64 CTL) 136) x).set64 CTL 136 (rdW (m.arr64 CTL) 136 + 1)) :=
     ((MemFrame.set64 m SPN (by decide) _ _).mono (fun b hb => hb) (by simp)).trans
       ((MemFrame.setCtl _ 136 _).mono (by simp) (fun c hc => hc))
-  obtain ⟨hS', hg⟩ := stageR_hi hS hfr (by simp [SPN]) (by simp) (by decide) (by decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by simp [SPN]) (by simp) (by decide) (by decide)
   have hsz : (rdW (m.arr64 CTL) 136).toNat < (m.arr64 SPN).size := by
     have : ¬ (((m.arr64 SPN).size : Nat).toUInt64 ≤ rdW (m.arr64 CTL) 136) := hlt
     rw [UInt64.le_iff_toNat_le] at this
@@ -164,11 +164,11 @@ theorem spnPushW_ok {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (hAb : Ab
     omega
   refine ⟨hS', hg, hAb.frameD hfr (by decide) (by decide), hsz, ?_, ?_, hfr.size SPN⟩
   · have hc := hS.iw.ctl
-    rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+    rw [L.Arena.rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
   · intro w
     simp only [spW]
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64E]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), L.Arena.rdW_set64]
     by_cases hw : w = rdW (m.arr64 CTL) 136
     · subst hw; simp [hsz]
     · simp [hw, Ne.symm hw]

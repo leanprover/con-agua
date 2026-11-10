@@ -98,7 +98,7 @@ theorem opa_ok {p : Prog} (hO : OpfF p) (hl : p.lookup "open_pis_at_fvars" = som
   | none =>
     rw [ite_eq_left (show r2.headD 0 = 0 from hO2)] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-    obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
+    obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
       (by decide)
     exact ⟨_, _, hrun2, ⟨hS3, hg2.trans hg3, rfl⟩,
       hAb2.frameD (MemFrame.setCtl m2 136 co) (by decide) (by decide)⟩

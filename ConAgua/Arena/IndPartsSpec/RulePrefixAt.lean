@@ -78,13 +78,6 @@ theorem ipK_inv {β γ : Type} {K : Option (β × Mem) → Option γ} {o : Optio
   · rw [hn] at h; cases h
   · exact ⟨r, m, rfl, h⟩
 
-/-- `ipK_inv` for a callee with one result. -/
-theorem ipK_inv1 {β γ : Type} {K : Option β → Option γ} {o : Option β} {y : γ} (h : K o = some y)
-    (hn : K none = none) : ∃ r, o = some r ∧ K (some r) = some y := by
-  rcases o with _ | r
-  · rw [hn] at h; cases h
-  · exact ⟨r, rfl, h⟩
-
 /-! ## Small Word arithmetic helpers, reused throughout this file -/
 
 /-- `UInt64.ofNat` is additive (both sides are mod `2 ^ 64`, so no overflow side condition). -/

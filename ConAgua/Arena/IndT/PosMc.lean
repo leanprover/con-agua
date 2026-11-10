@@ -11,6 +11,7 @@ import all ConAgua.Arena.IndParts
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -88,8 +89,8 @@ theorem mctorsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Bloc
   obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (show decAt (truncM m) _ p.toNat = some bs.members from hmB)
   have hlen := decPL_length (truncM m) hg
   have hk : bs.k = l := by rw [BlockShape.k, hlen]
-  obtain ⟨hpo, hoN⟩ := acTr ho
-  obtain ⟨hpl, hlN⟩ := acTr hl
+  obtain ⟨hpo, hoN⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨hpl, hlN⟩ := L.Ind.iwN_truncM_some hl
   obtain ⟨ho', hob⟩ := iwN_rdW hoN (by omega)
   obtain ⟨hl', hlb⟩ := iwN_rdW hlN (by omega)
   have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
@@ -151,8 +152,8 @@ theorem mctorsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Bloc
       simpa [List.getElem?_eq_getElem (show j < bs.members.length by omega)] using hget
     have hcn := (decMSB_some hy).2
     obtain ⟨co, cl, -, hcl, -, -⟩ := decCNSB_bound (m := m) (q := v + 2) hcn
-    have hv3 := (acTr hcl).1
-    obtain ⟨-, hvN⟩ := acTr hv
+    have hv3 := (L.Ind.iwN_truncM_some hcl).1
+    obtain ⟨-, hvN⟩ := L.Ind.iwN_truncM_some hv
     obtain ⟨hvrd, -⟩ := iwN_rdW hvN (by omega)
     have hGj := hG (q.toNat + j)
     rw [ite_eq_left (by rw [hll]; omega), show q.toNat + j - q.toNat = j by omega, hoo, hvrd] at hGj

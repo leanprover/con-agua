@@ -45,9 +45,6 @@ def decSR (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat × Bool × Li
 def decSC (m : Mem) (p : Nat) : Option (IConstantVal × Nat × Nat) := do
   pure (← decCVp m (← iwN m p), ← iwN m (p + 1), ← iwN m (p + 2))
 
-theorem partsDecRules_mono (o l : Nat) : OMono (fun m => decRules (erA m) o l) :=
-  ⟨fun _ _ _ he h => he.2.decRules h⟩
-
 theorem decSR_mono (p : Nat) : OMono (fun m => decSR m p) := by
   unfold decSR
   repeat' (first
@@ -55,7 +52,7 @@ theorem decSR_mono (p : Nat) : OMono (fun m => decSR m p) := by
     | apply OMono.iwN
     | apply OMono.iwB
     | apply OMono.decCVp
-    | apply partsDecRules_mono
+    | apply L.Ind.OMono.decRules
     | apply OMono.bind
     | intro _)
 
@@ -74,20 +71,6 @@ theorem partsRec3_eq (m : Mem) (a b c : Word) :
     (match allocW m 3 with | none => none | some (q, _) => some (q, rec3Mem m a b c)) =
       posRecW m [a, b, c] := by
   rw [posRecW_eq m [a, b, c] 3 rfl, rec3Mem_eq]; cases allocW m 3 <;> rfl
-
-theorem partsRec3_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (h3 : p.lookup "rec3" = some rec3) (n : Nat) (s₀ : St) (a b c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [← partsRec3_eq, invoke_eq _ h3]
-  simp only [callFn, rec3]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n] <;>
-      finish [rec3Mem, allocMem, allocW]
 
 /-! ## The word models and their `vcgen` specs (generated) -/
 
@@ -117,7 +100,7 @@ l_model bsc_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hr : p.lookup "block_split_recs" = some blockSplitRecs)
   (hp : p.lookup "block_split_ctors" = some blockSplitCtors)
   fns [hp ↦ bscW list]
-  specs [partsRec3_specW p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h6 hr n]
+  specs [L.Ind.rec3_specW_iw p ha h3 n, slCons_specW p ha hc hs n, bsr_spec p ha hc hs h6 hr n]
   grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-- **`block_split` is its model** `bsW`. -/

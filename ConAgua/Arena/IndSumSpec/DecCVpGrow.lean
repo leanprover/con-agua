@@ -64,16 +64,6 @@ theorem getSort_of_get (t : ETables) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.so
   | none => rw [e] at h; cases h
   | some r => rw [e] at h; simp at h; simp [h]
 
-theorem viewSort_of_view (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
-    (h : st.view i = some (.sort u)) : st.viewSort i = some u := by
-  unfold EStore.view at h; unfold EStore.viewSort EStore.persGetSort
-  split at h
-  · rw [ite_eq_left (by assumption)]; exact getSort_of_get _ _ _ ht h
-  · rw [ite_eq_right (by assumption)]
-    split at h
-    · rw [ite_eq_left (by assumption)]; exact getSort_of_get _ _ _ ht h
-    · cases h
-
 theorem eViewW_head2 (m : Mem) (h : Word) (hg : tagW h = 2) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 2 := by
   revert hne; unfold eViewW
@@ -81,10 +71,6 @@ theorem eViewW_head2 (m : Mem) (h : Word) (hg : tagW h = 2) (hne : eViewW m h �
     ite_false, ite_true]
   repeat' split
   all_goals simp
-
-theorem viewSort_run {a : AState} {h : EIdx} {u : Option LIdx} (hv : a.store.viewSort h = u) :
-    (viewSort h).run a = .ok (u, a) := by
-  simp [viewSort, hv, StateT.run_get]; rfl
 
 end L.Ind
 

@@ -8,6 +8,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DefEq
+import ConAgua.Arena.DefEqMid
 
 @[expose] public section
 
@@ -66,11 +67,6 @@ l_model exE_spec (p : Prog) (hf : p.lookup "ldpr_exit" = some ldprExitL)
   fns [hf ↦ exE list]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-
-theorem decOptR_someS {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
-  simp only [decOptR, decOpt, h, ↓reduceIte]
-theorem decOptR_noneS {r : List Word} (h : r.headD 0 = 0) : decOptR r = none := by
-  simp only [decOptR, decOpt, h, ↓reduceIte]
 
 theorem decDS_zero {r : List Word} (h : r.headD 0 = 0) :
     decDSs r = .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) := by
@@ -144,7 +140,7 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [exE.k_reduce_proj_core]
   by_cases f1 : r₁.headD 0 ≠ 0
-  · rw [ite_eq_left f1, decOptR_someS f1]
+  · rw [ite_eq_left f1, L.Arena.decOptR_some f1]
     have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
     refine RefE.bind_callE (fun _ => rfl) (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega)
         (by omega) _ _ dn vis fe M₁ eb mode d sn i b hs₁ hsn hb)
@@ -153,11 +149,11 @@ theorem ex_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
       fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
     dsimp only [exE.k_reduce_proj_core_2]
     by_cases f2 : r₂.headD 0 ≠ 0
-    · rw [ite_eq_left f2, decOptR_someS f2]
+    · rw [ite_eq_left f2, L.Arena.decOptR_some f2]
       exact hdef _ m₂ M₂ _ _ hS₂ h₁.resOk.2 h₂.resOk.2
-    · rw [ite_eq_right f2, decOptR_noneS (by simpa using f2)]
+    · rw [ite_eq_right f2, L.Arena.decOptR_none (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb
-  · rw [ite_eq_right f1, decOptR_noneS (by simpa using f1)]
+  · rw [ite_eq_right f1, L.Arena.decOptR_none (by simpa using f1)]
     exact hdef _ m₁ M₁ _ _ hS₁ ha hb
 
 /-- **`ldpr_exit` refines `ldprExitT`** on a verdict word `k ≠ 0` (`ex_ref`'s ok half). -/

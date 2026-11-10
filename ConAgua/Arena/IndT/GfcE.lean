@@ -20,6 +20,7 @@ import all ConAgua.Arena.RecGen
 import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConRon.Bridge.Inductives.RecCheck
+import ConAgua.Arena.RecGenSpec.Set64
 
 @[expose] public section
 
@@ -130,7 +131,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
           simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
           obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
           obtain ⟨w, hw, -⟩ := hd?_some hty
-          have := erecP_lt64 hw; omega)
+          have := L.Arena.erecP_lt64 hw; omega)
       refine RefE.ret (y := (cvTas[kk - 1]'(by omega)).type) (a' := a) ?_ ⟨hS, IWGrow.refl m, hA, ⟨hty.1, hty.2⟩⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : kk - 1 < cvTas.length)]
       rfl
@@ -184,9 +185,9 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
     have hfci : fe.find? M.ind = some (.indInfo cv caps) := by rw [← hwiE, hfind, hci]
     rw [hfci]
-    have hcvq : decCV (erecP m) (q.toNat + 1) = some cv := decCI_ind_cv hci
+    have hcvq : decCV (erecP m) (q.toNat + 1) = some cv := L.Arena.decCI_ind_cv hci
     obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
-    have hq64 := erecP_lt64 hv16
+    have hq64 := L.Arena.erecP_lt64 hv16
     have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
     -- the twin's family and its denotation
@@ -210,10 +211,10 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hcv3 : decCV (erecP m3) (q.toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
     have e1' : erRd m3 (q + 2) = w1 :=
-      erRd_of_erA (by rw [show (q + 2).toNat = q.toNat + 1 + 1 by
+      L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 1 + 1 by
         rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
     have e2' : erRd m3 (q + 3) = w2 :=
-      erRd_of_erA (by rw [show (q + 3).toNat = q.toNat + 1 + 2 by
+      L.Arena.erRd_of _ _ (by rw [show (q + 3).toNat = q.toNat + 1 + 2 by
         rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
     change RefE _ (cftE.k_er_to_iw p N mp (r3.headD 0) (liftE (callW p N "er_to_iw" [erRd m3 (q + 2), erRd m3 (q + 3)] m3))) _ _ _
     rw [e1', e2']
@@ -259,17 +260,6 @@ theorem cft_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : W
     obtain ⟨c, -⟩ := ConRon.Bridge.Inductives.classFormerTy_spec fe ConRon.Bridge.CoreSpec.of_core henv
       cvTas cvTasP M MP a a' y hC.check ⟨hcvP, hMP⟩ hrun
     exact ⟨y, a', hrun, ⟨hC.of_check hQ.stage hQ.abs c.ok c.ext, hQ.grow, hQ.abs, hQ.dec, c⟩⟩
-
-theorem gfc_mapM_mem {α β : Type} {f : α → Option β} :
-    ∀ {l : List α} {l' : List β}, l.mapM f = some l' → ∀ x ∈ l, ∃ y, f x = some y
-  | [], _, _, _, hx => absurd hx List.not_mem_nil
-  | a :: l, _, h, x, hx => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, hy, ys, hys, -⟩ := h
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ⟨y, hy⟩
-    · exact gfc_mapM_mem hys x hx
 
 /-- A twin's trailing `pure`-map, against the same model. -/
 theorem RefE.bindPure {α β γ : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
@@ -321,7 +311,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
   -- class `j`
   have hmsm := hms.grow (fun q => decTM_mono q) hg
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hmsm.1 j.toNat hjn
-  obtain ⟨-, hvm⟩ := rec2IwN_trunc hv
+  obtain ⟨-, hvm⟩ := L.Ind.iwN_truncM_some hv
   have hrv : (rdW (m.arr64 IW) (mo + j)).toNat = v := rd_iwN hvm (by have := hmsm.2; omega)
   have hM : DecB (fun m' => decTM m' (rdW (m.arr64 IW) (mo + j)).toNat) m (ms[j.toNat]'(by omega)) := by
     show decTM (truncM m) _ = _; rw [hrv]; exact hdv
@@ -329,7 +319,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
   have hdcv : decPL m (decCVp m) co.toNat cl.toNat = some cvTas :=
     hcvm.1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
   obtain ⟨MP, hMP⟩ : ∃ MP, ConRon.Bridge.Inductives.dMajor a.store (ms[j.toNat]'(by omega)) = some MP := by
-    exact gfc_mapM_mem hmsP _ (List.getElem_mem _)
+    exact L.Arena.mapM_some_mem _ _ hmsP _ (List.getElem_mem _)
   rw [List.drop_eq_getElem_cons (by omega), List.mapM_cons]
   have hR1 := cft_ref hq hP hF hIlpf henv k (by omega) hC hA hM hdcv (by have := hcvm.2; omega) hMP hcvP
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => gfcE.k_class_former_ty.none ..) (cftE_spec p hP k _ vis _ _ _)
@@ -351,7 +341,7 @@ theorem gfcLoop_ref (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal
   have hC2 : StageC dn vis fe env (m1.set64 IW (q + j) (r1.headD 0)) a1 :=
     hC1.of_pstep (hS1.set_iw _ _) hA2 (ConRon.Bridge.Inductives.PStep.refl hC1.check.state)
   have ih' := ih (by omega) _ a1 (j + 1) (acc ++ [x]) hC2 hA2
-    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; have := hg1.iw; omega)) (by rw [cnsTop_set]; have := hg1.iw; omega)
+    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; have := hg1.iw; omega)) (by rw [L.Ind.iwTop_set_iw]; have := hg1.iw; omega)
     (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)) (by rw [hj1, hdec, ← he1]; rfl)
     (ConRon.Bridge.Inductives.dExt_denoteCV.list c1.ext _ _ hcvP)
     (ConRon.Bridge.Inductives.dMajor_ext.list c1.ext _ _ hmsP)

@@ -85,7 +85,7 @@ theorem tblMemo_frame {k : IdxKind} {b : ArrId} (hb : TblIx b) {C : List Word} {
 theorem resetM_szW (m : Mem) (b : ArrId) (hb : TblIx b) (hc : (szC b).toNat < (m.arr64 CTL).size) :
     szW (resetM m) b = 0 := by
   rcases hb with rfl | rfl | rfl <;>
-  simp [resetM, resetM2, resetM1, resetM0, mclearG, szW, szC, spS, rdW_set64, size_set64, NID, LID,
+  simp [resetM, resetM2, resetM1, resetM0, mclearG, szW, szC, spS, rdW_set64, L.Mem.size64_set64, NID, LID,
     EID] at hc ⊢ <;> omega
 
 theorem resetM0_frame' (m : Mem) : MemFrame [] [70, 71, 72] m (resetM0 m) :=

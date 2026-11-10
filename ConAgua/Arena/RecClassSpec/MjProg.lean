@@ -30,14 +30,14 @@ open L.Arena
 
 /-! ## Reading below the tops -/
 
-theorem rec2IwN_trunc {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
+theorem iwN_truncM_some {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
     i < iwTop m ∧ iwN m i = some v := by
   simp only [iwN, nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
   obtain ⟨hi, hw'⟩ := truncM_iw_get hw
   exact ⟨hi, by simp [iwN, nat?, hw']⟩
 
-theorem rec2IwH_trunc {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH (truncM m) i = some x) :
+theorem iwH_truncM_some {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH (truncM m) i = some x) :
     i < iwTop m ∧ iwH m i = some x := by
   obtain ⟨w, hw, hl, hx⟩ := hd?_some h
   obtain ⟨hi, hw'⟩ := truncM_iw_get hw
@@ -61,9 +61,9 @@ theorem rec2CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
   obtain ⟨o3, l3, h3, h4, hc⟩ := decAt_some hcls
   obtain ⟨o5, l5, h5, h6, hf⟩ := decAt_some hft
   obtain ⟨o12, l12, h12, h13, hp⟩ := decAt_some hpre
-  refine ⟨(rec2IwN_trunc hnP).2, (rec2IwN_trunc h13).1, ⟨o3, l3, (rec2IwN_trunc h3).2,
-    (rec2IwN_trunc h4).2, hc⟩, ⟨o5, l5, (rec2IwN_trunc h5).2, (rec2IwN_trunc h6).2, hf⟩,
-    (rec2IwH_trunc hel).2, ⟨o12, l12, (rec2IwN_trunc h12).2, (rec2IwN_trunc h13).2, hp⟩⟩
+  refine ⟨(L.Ind.iwN_truncM_some hnP).2, (L.Ind.iwN_truncM_some h13).1, ⟨o3, l3, (L.Ind.iwN_truncM_some h3).2,
+    (L.Ind.iwN_truncM_some h4).2, hc⟩, ⟨o5, l5, (L.Ind.iwN_truncM_some h5).2, (L.Ind.iwN_truncM_some h6).2, hf⟩,
+    (L.Ind.iwH_truncM_some hel).2, ⟨o12, l12, (L.Ind.iwN_truncM_some h12).2, (L.Ind.iwN_truncM_some h13).2, hp⟩⟩
 
 theorem rec2DecTM_parts {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m p = some M.ind ∧ iwH m (p + 1) = some M.lvls ∧
@@ -111,7 +111,7 @@ structure MjProg (p : Prog) : Prop where
 theorem rec2DecB_PL_top {α : Type} {f : Mem → Nat → Option α} {m : Mem} {o l : Nat} {xs : List α}
     (h : DecB (fun m => decPL m (f m) o l) m xs) (hl : l ≠ 0) : o + l ≤ iwTop m := by
   obtain ⟨v, hv, -⟩ := decPL_getH (truncM m) h (l - 1) (by omega)
-  have := (rec2IwN_trunc hv).1
+  have := (L.Ind.iwN_truncM_some hv).1
   omega
 
 /-- A word read at a decoded record field. -/

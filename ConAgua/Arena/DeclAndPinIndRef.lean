@@ -13,6 +13,7 @@ public import ConAgua.Arena.DeclAndPinInd
 public import ConAgua.Arena.DeclCanonSpec
 public import ConAgua.Rom.CIReadSpec
 import all ConAgua.Arena.DeclAndPin
+import ConAgua.Arena.IndSumSpec.TsrW
 
 @[expose] public section
 
@@ -311,14 +312,14 @@ theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option Con
   rw [hl2] at h4
   obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hd4⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
     (L.Ind.canonEqList_refines p hp.canon dn vis fe _ _ _ _ block pinned n ⟨m3, Locals.init []⟩ a1
-      ⟨hS3, hsl3.canonPL, hp3, hsl3.bound, hpb3, poolSmall_of_stage hS3,
+      ⟨hS3, hsl3.canonPL, hp3, hsl3.bound, hpb3, L.Ind.poolSmall_of_stage hS3,
         fun x y l hx hy => hok1.view_inj hx hy⟩) h4
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
   refine ⟨AM.res (canonEqList block pinned) a1, AM.st (canonEqList block pinned) a1, ?_, hS4,
     hg1.trans (hg2.trans (hg3.trans hg4)), ?_⟩
   · rw [ite_eq_left (by rfl)]
-    simp only [StateT.run_bind, hrun1, exc_ok_bind']
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind]
     exact hrun4
   · exact ⟨hd4.1, hd4.2⟩
 

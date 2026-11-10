@@ -108,7 +108,7 @@ theorem LpBnd.setCtl {m : Mem} {x v : Word} (h : LpBnd S m) (hx : x ≠ S.cs) :
   have he : epG S (m.set64 CTL x v) = epG S m := by
     simp only [epG, rdW_set64]; simp [hx]
   obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨by rw [size_set64]; exact h1, by rw [he]; exact h2, by rw [he, ha]; exact h3,
+  refine ⟨by rw [L.Mem.size64_set64]; exact h1, by rw [he]; exact h2, by rw [he, ha]; exact h3,
     fun j hj => ?_⟩
   rw [slotsG_set64] at hj
   simp only [mstG, ha, he]; exact h4 j hj

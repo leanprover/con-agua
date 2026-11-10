@@ -121,7 +121,7 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   unfold ConRon.Arena.classStreamRecs
   -- `check_constant_val`
   have h1R := ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS (n := n) (by omega) hC.stageT
-    (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3 hcvR hA.crMemo.crOK
+    (by rw [hqt]; exact rec2DecCV_erecP hcv hext) hqb3 hcvR hA.cr.crOK
   rcases h1 : checkConstantValE p n m vis (UInt64.ofNat q) 0 with e1 | ⟨r0, m1⟩
   · rw [csrE.k_check_constant_val.none]; rw [h1] at h1R; exact RefE.bind_left h1R
   rw [csrE.k_check_constant_val.arm1]

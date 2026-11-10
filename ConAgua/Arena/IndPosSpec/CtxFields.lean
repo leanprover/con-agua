@@ -90,7 +90,7 @@ theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (
         iwAlloc_specW p ha n] <;>
       finish [rec2Mem, allocMem, allocW]
 
-theorem posRec3_specW (h3 : p.lookup "rec3" = some rec3) (n : Nat) (s₀ : St) (a b c : Word) :
+theorem rec3_specW_iw (h3 : p.lookup "rec3" = some rec3) (n : Nat) (s₀ : St) (a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c] = some (r.headD 0, s'.mem); ⊤⦄ := by
   simp only [← posRec3_eq, invoke_eq _ h3, callFn, rec3]

@@ -46,12 +46,6 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## `open_pis_at_fvars_f`, the real call (replacing the stub contract) -/
 
-/-- A call of `open_pis_at_fvars_f` in a program with `opfP` is its model `opfF`. -/
-theorem callW_opfF {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m m' : Mem}
-    (h : callW p n "open_pis_at_fvars_f" args m = some (r, m')) : opfF m args = some (r, m') := by
-  obtain ⟨s', hs, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (opfF_spec p hOpf n _ args) h
-  rw [← hs]; exact hW
-
 /-- **`open_pis_at_fvars_f`, the real call, as a `Sim`** (the stub contract's `KeepPost`, the
 twin's run, and `AbsOK` after: `opfF_ok`). -/
 theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {vis : Word}
@@ -62,7 +56,7 @@ theorem opfSimRA {p : Prog} (hOpf : OpfF p) {n : Nat} {vis : Word}
         (openPisAtFvarsF k.toNat (decI e) i.toNat).run a = .ok (x, a')) ∧ AbsOK m') := by
   intro r m' h
   obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hA'⟩ :=
-    opfF_ok vis fe k e i he m m' a r (callW_opfF hOpf h) ⟨hS, hA⟩
+    opfF_ok vis fe k e i he m m' a r (L.Ind.callW_opfF hOpf h) ⟨hS, hA⟩
   exact ⟨x, a', hrun, ⟨⟨hS', hg, hd⟩, hrun⟩, hA'⟩
 
 /-- The same, from the model's run. -/

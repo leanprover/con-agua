@@ -13,6 +13,7 @@ import all ConAgua.Arena.IndPos2
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -355,7 +356,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
             else ConRon.Arena.piDomsOcc names lo.toNat hi.toNat (n.toNat - 1) (decE b)).run a := by
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       have htag : (decE e).tag = ETag.forallE := (decE_tag_forallE e he).mpr hg6
-      simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
+      simp only [htag, beq_self_eq_true, ite_true, StateT.run_bind, L.Arena.viewBind_run _ a, hvb, except_ok_bind]
       rfl
     by_cases hr1 : r1 ≠ 0
     · rw [pdoW.k_nest_occ.arm1 (hc1 := hr1)] at h

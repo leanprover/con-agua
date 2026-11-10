@@ -5,6 +5,8 @@ import ConAgua.Census.Attr
 public import ConLeche.Kernel.Expr
 import ConAgua.Arena.Pool
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.StoreRel
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -103,25 +105,6 @@ theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : 
   | max hv _ _ ih1 ih2 => exact .max (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
   | imax hv _ _ ih1 ih2 => exact .imax (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
   | param hv hn => exact .param (by rw [he.view _ (by simp [hv])]; exact hv) hn
-
-theorem rdW_set64L (m : Mem) (a b : TieredArray) (k v x : Word) :
-    rdW ((m.set64 a k v).arr64 b) x =
-      if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
-  by_cases h : b = a
-  · subst h
-    rw [Mem.arr64_set64_same]
-    simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    by_cases hk : k = x
-    · subst hk; by_cases hs : k.toNat < (m.arr64 b).size <;> simp [hs]
-    · have : k.toNat ≠ x.toNat := fun e => hk (UInt64.toNat_inj.mp e)
-      simp [this, hk]
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
-
-theorem size_set64L (m : Mem) (a b : TieredArray) (k v : Word) :
-    ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
-  by_cases h : b = a
-  · subst h; rw [Mem.arr64_set64_same]; simp
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]
 
 /-- What `lvNodeW` reads stays put: the store's level arrays, the `CTL` words other than the
 heap top, and the heap below the top, which does not move down. -/
@@ -238,7 +221,7 @@ theorem lhMem_arr (A : TieredArray) (h1 : A ≠ CTL) (h2 : A ≠ LH) : (lhMem m 
 include hc in
 theorem lhMem_ctl (k : Word) :
     rdW ((lhMem m o g a b).arr64 CTL) k = if k = 192 then o + 3 else rdW (m.arr64 CTL) k := by
-  simp only [lhMem, rdW_set64L, size_set64L]
+  simp only [lhMem, L.Arena.rdW_set64, L.Mem.size64_set64]
   have h1 : (CTL : TieredArray) ≠ LH := by decide
   by_cases hk : k = 192
   · subst hk; simp [hc]
@@ -254,7 +237,7 @@ theorem lhMem_lh (k : Word) :
   have s2 : (o + 2).toNat < (m.arr64 LH).size := by omega
   have s1 : (o + 1).toNat < (m.arr64 LH).size := by omega
   have s0 : o.toNat < (m.arr64 LH).size := by omega
-  simp only [lhMem, rdW_set64L, size_set64L, h1, false_and, ↓reduceIte, true_and, s2, s1, s0,
+  simp only [lhMem, L.Arena.rdW_set64, L.Mem.size64_set64, h1, false_and, ↓reduceIte, true_and, s2, s1, s0,
     and_true]
   by_cases k2 : k = o + 2
   · subst k2; simp
@@ -294,7 +277,7 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
       simp only [htop]; rw [lhMem_ctl _ _ _ _ _ hctl]; simp
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => lhMem_arr _ _ _ _ _ A h1 h2,
       fun k hk => by rw [lhMem_ctl _ _ _ _ _ hctl, ite_eq_right hk], by rw [htop', e3]; omega,
-      fun k hk => ?_, fun b => by simp only [lhMem, size_set64L]⟩, ?_, by rw [htop', e3]⟩
+      fun k hk => ?_, fun b => by simp only [lhMem, L.Mem.size64_set64]⟩, ?_, by rw [htop', e3]⟩
     · rw [lhMem_lh _ _ _ _ _ hl ht]
       have n2 : k ≠ htop m + 2 := fun e => by rw [e, ek 2 (by decide)] at hk; simp at hk; omega
       have n1 : k ≠ htop m + 1 := fun e => by rw [e, ek 1 (by decide)] at hk; simp at hk; omega

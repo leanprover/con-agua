@@ -31,6 +31,8 @@ public import ConAgua.Arena.TwinStep
 public import ConAgua.Arena.IndPartsSpec.MemberNames
 public import ConRon.Bridge.Inductives.Run
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 
 @[expose] public section
 
@@ -119,7 +121,7 @@ theorem apdF_simR {vis : Word} {fe : IFEnv} {m : Mem}
   obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hS (ApdEnv.of_state hok) o l e _ lps ks hks
     hdec he (apdMR_clear hW) hm
   have hf := apdF_frame h
-  refine ⟨b, a, hrun, hS', hg, apd_decW0B hr, ?_, rfl⟩
+  refine ⟨b, a, hrun, hS', hg, L.Ind.decW0B_of hr, ?_, rfl⟩
   obtain ⟨-, ⟨mf, hfl⟩, ⟨ml, hlsb⟩, hLP⟩ := hW
   refine ⟨hAb.frame hf (by decide) (by decide), hI1.frame hf (by decide) (by decide),
     hCr.frame hf (by decide) (by decide), hIl.frame hf (by decide) (by decide),
@@ -261,7 +263,7 @@ theorem sctW_okR {p : Prog} (hp : ApdF p) {vis : Word}
     have hbL : bL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hb1' : (bO + 1).toNat + (bL - 1).toNat ≤ iwTop m := by
       rw [sumToNat_succ (by omega), L.toNat_sub_one_of_ne hl]; omega
-    refine sumSim_map (K := sctW.k_check_struct_proj_table_scoped (realCall p))
+    refine L.Arena.Sim.post (K := sctW.k_check_struct_proj_table_scoped (realCall p))
       (sctW.k_check_struct_proj_table_scoped.none _) (fun _ _ => rfl)
       (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (stateOK_of_sp hok he14) (names_of_sp he14 hks)
         (by rw [decHL_grow hg14 hlb]; exact hlps)
@@ -545,13 +547,13 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (pp vis : Word) (fe :
   simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hx'
   obtain ⟨cvp, hcvp, cvT, hcvT, dp, -, dcl, -, nI, hnI, cs, hcs, hxe⟩ := hx'
   subst hxe
-  obtain ⟨hlt0, hcvpm⟩ := rec2IwN_trunc (i := msp.toNat + 0) (by simpa using hcvp)
+  obtain ⟨hlt0, hcvpm⟩ := L.Ind.iwN_truncM_some (i := msp.toNat + 0) (by simpa using hcvp)
   obtain ⟨e0, t0⟩ := rec2RdN (w := msp) (k := 0) hcvpm hsz
-  obtain ⟨-, hnIm⟩ := rec2IwN_trunc hnI
+  obtain ⟨-, hnIm⟩ := L.Ind.iwN_truncM_some hnI
   obtain ⟨e1, t1⟩ := rec2RdN (w := msp) (k := 1) hnIm hsz
   obtain ⟨co, cl, hco, hcl, hcsd⟩ := decAt_some hcs
-  obtain ⟨-, hcom⟩ := rec2IwN_trunc hco
-  obtain ⟨-, hclm⟩ := rec2IwN_trunc hcl
+  obtain ⟨-, hcom⟩ := L.Ind.iwN_truncM_some hco
+  obtain ⟨-, hclm⟩ := L.Ind.iwN_truncM_some hcl
   obtain ⟨e2, t2⟩ := rec2RdN (w := msp) (k := 2) hcom hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := msp) (k := 3) (by simpa [Nat.add_assoc] using hclm) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
@@ -566,7 +568,7 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (pp vis : Word) (fe :
     simp only [decCN, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
     obtain ⟨cap, hcap, cA, hcA, nF, hnF, hce⟩ := hc
     subst hce
-    obtain ⟨-, hcpm⟩ := rec2IwN_trunc (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t2]; simpa using hcp)
+    obtain ⟨-, hcpm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t2]; simpa using hcp)
     obtain ⟨e4, t4⟩ := rec2RdN (w := UInt64.ofNat co) (k := 0) hcpm hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e4
     rw [ctbE.arm2 p n m pp vis mo ml hml (by rw [hmsp, e3]; rfl) (by rw [hmsp, e1]; rfl), hmsp, e2, e4]
@@ -585,11 +587,11 @@ theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (pp vis : Word) (fe :
       simpa using this
     have hqt : decBS (truncM m) pp.toNat = some bs := hq
     obtain ⟨-, -, hnPd, -, -, -, -⟩ := decBS_some hqt
-    obtain ⟨hlt4, hnPm⟩ := rec2IwN_trunc hnPd
+    obtain ⟨hlt4, hnPm⟩ := L.Ind.iwN_truncM_some hnPd
     obtain ⟨r4, tnP⟩ := rec2RdN (m := m1) (w := pp) (k := 4) (by rw [iwN1 _ hlt4]; exact hnPm) hsz1
-    obtain ⟨hlt5, hcapm⟩ := rec2IwN_trunc (i := (UInt64.ofNat cp : Word).toNat + 0) (by rw [t4]; simpa using hcap)
+    obtain ⟨hlt5, hcapm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat cp : Word).toNat + 0) (by rw [t4]; simpa using hcap)
     obtain ⟨r6, tcap⟩ := rec2RdN (m := m1) (w := UInt64.ofNat cp) (k := 0) (by rw [iwN1 _ hlt5]; exact hcapm) hsz1
-    obtain ⟨hlt6, hnFm⟩ := rec2IwN_trunc (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t4]; exact hnF)
+    obtain ⟨hlt6, hnFm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t4]; exact hnF)
     obtain ⟨r5, tnF⟩ := rec2RdN (m := m1) (w := UInt64.ofNat cp) (k := 1) (by rw [iwN1 _ hlt6]; exact hnFm) hsz1
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
       show UInt64.ofNat 4 = (4 : Word) from rfl, UInt64.add_zero] at r4 r5 r6

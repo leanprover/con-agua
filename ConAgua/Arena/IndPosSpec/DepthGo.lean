@@ -507,7 +507,7 @@ theorem dpConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
   have hfall : MemFrame [DPM] [dpSch.cs, dpSch.cs + 1] m (mclearG dpSch m1) :=
     ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [dpSch]))).trans
       (hf2.mono (by simp) (by simp))
-  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg'⟩ := L.Ind.StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [dpSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [dpSch])
   refine ⟨d, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [dpSch] using hx))⟩⟩
@@ -564,7 +564,7 @@ theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → Op
   rintro r s' ⟨hl, hm⟩
   obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.check.arena.base hh hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
@@ -854,7 +854,7 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
       nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
       instPisWith_spec p hl.hv hip hl.hi1 (n + 1),
       replaceApps_spec p hl hk hf hput hgo hnode hcl hra n] <;>
-    finish (gen := 20) [pccW, St.setLocs_mem']
+    finish (gen := 20) [pccW, L.St.setLocs_mem]
 
 end spec
 
@@ -895,15 +895,6 @@ theorem RfFr.of_mfr {S : List TieredArray} {T : List Word} {m m' : Mem} (h : MFr
   · exact hT.1 h
   · exact hT.2.1 h
   · exact hT.2.2 h
-
-theorem posmemo_copyW_iw : ∀ (n : Nat) (m m' : Mem) (d s l : Word), copyW n m d s l = some m' →
-    MemFrame [IW] [200] m m'
-  | 0, _, _, _, _, _, h => by simp [copyW] at h
-  | n + 1, m, m', d, s, l, h => by
-    by_cases hl : l = 0
-    · rw [copyW_nil n m d s l hl] at h; cases h; exact MemFrame.refl _ _ _
-    · rw [copyW_step n m d s l hl] at h
-      exact (set64IW_frame _ _ _).trans (posmemo_copyW_iw n _ _ _ _ _ h)
 
 theorem phsGoW_mfr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i = some m' → MFr [] [] m m' := by
   induction k with

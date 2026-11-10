@@ -276,10 +276,10 @@ theorem rpGo_step (n : Nat) (ih : RpNodeSpec p n) : RpGoSpec p (n + 1) := by
     memoPutG_spec raSch p _ hput n, ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, St.setLocs_mem']
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, L.St.setLocs_mem]
 
 include hl hk hnode in
 theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
@@ -295,10 +295,10 @@ theorem rpNode_step (n : Nat) (ih : RpGoSpec p n) : RpNodeSpec p (n + 1) := by
     mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, St.setLocs_mem']
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, L.St.setLocs_mem]
 
 include hl hk hf hput hgo hnode in
 theorem rpGo_spec (n : Nat) : RpGoSpec p n ∧ RpNodeSpec p n := by
@@ -712,7 +712,7 @@ theorem rpGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
       rw [hF1] at hr1
       have hset' := memoRG_set raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
       have hfs : MemFrame [RAM] [raSch.cs + 1] m1 m2 := msetG_frame raSch raSch_wf m1 m2 h 0 rn hset
-      obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
+      obtain ⟨hS2, hg2⟩ := L.Ind.StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
         (by intro x hx; simp [raSch] at hx; subst hx; decide) (by decide) (by simp [raSch])
       refine ⟨a1, mp1.insert (decE h) (decE rn), ?_, hS2, hg1.trans hg2, hset'⟩
       simp only [hmiss, StateT.run_bind, hr1, except_ok_bind]
@@ -822,7 +822,7 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   rw [rpConstW.arm1 (hc1 := h0)] at hb
   have hf0 := mclearG_frame raSch m
   have hM0 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
-  obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
+  obtain ⟨hS0, hg0⟩ := L.Ind.StageR.frame_hi hS hf0 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
     (by simp) (by simp [raSch])
   have hdec0 : decHL (mclearG raSch m) no.toNat nl.toNat = some names := by rw [decHL_grow hg0 hit]; exact hdec
   rcases hg : rpGoW n (mclearG raSch m) no nl us b nn CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · rw [rpConstW.k_replace_apps_go.none] at hb; cases hb
@@ -835,7 +835,7 @@ theorem rpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
   rw [CWF_eq] at hrun
   have hM2 := memoRG_clear raSch raSch_wf bmKey (fun w : Word => decE w) m1 mp1 hM1 h1
   have hf2 := mclearG_frame raSch m1
-  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hf2 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
+  obtain ⟨hS2, hg2⟩ := L.Ind.StageR.frame_hi hS1 hf2 (by intro b hb; simp at hb) (by intro x hx; simp [raSch] at hx; rcases hx with rfl | rfl <;> decide)
     (by simp) (by simp [raSch])
   refine ⟨a1, ?_, hM2, hS2, (hg0.trans hg1).trans hg2⟩
   simp only [ConRon.Arena.replaceApps, StateT.run_bind, hrun]

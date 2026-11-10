@@ -150,12 +150,12 @@ theorem tmFields {m : Mem} {w : Word} {TM : TargetMajor} (h : DecB (fun m => dec
   have hsl := truncSl (w := w) (i := 2) ho (by simpa [Nat.add_assoc] using hl) hd hsz
   obtain ⟨o', l', ho', hl', hd'⟩ := decAt_some hpf
   have hsl' := truncSl (w := w) (i := 11) ho' (by simpa [Nat.add_assoc] using hl') hd' hsz
-  obtain ⟨-, hnm⟩ := rec2IwN_trunc hnP
+  obtain ⟨-, hnm⟩ := L.Ind.iwN_truncM_some hnP
   obtain ⟨e4, t4⟩ := rec2RdN (w := w) (k := 4) hnm hsz
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat (2 + 1) = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl,
     show UInt64.ofNat 11 = (11 : Word) from rfl, show UInt64.ofNat (11 + 1) = (12 : Word) from rfl] at hl1 hl2 hsl hsl' e4
-  exact ⟨hl1, hl2, hsl, by rw [e4, t4], hsl', by have := (rec2IwN_trunc hl').1; omega⟩
+  exact ⟨hl1, hl2, hsl, by rw [e4, t4], hsl', by have := (L.Ind.iwN_truncM_some hl').1; omega⟩
 
 section rel2
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)

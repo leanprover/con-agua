@@ -6,6 +6,7 @@ public import ConAgua.Front.StateDR
 public import ConLeche.Frontend.ExportC
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Scan.LineLink
+import ConAgua.Arena.NatArms
 
 @[expose] public section
 
@@ -113,9 +114,9 @@ theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState)
     · obtain ⟨hI, -, hP', hS⟩ := hRR
       obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.base.lit.1 f.c f.d S
         (hS hc0) l hP
-      have hmo₁ := ModeOK.growsF hmode hg
+      have hmo₁ := L.Arena.ModeOK.grows hmode hg
       obtain ⟨hok', hR', hD', hM'⟩ := applyNStrW_refines m₁ m' a₀ st
-        (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
+        (L.Arena.ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
         f.idx f.a m.top l hq S hk (ModeOK.slice0 hmo₁ hq) h
       rw [hI hidx, hP' ha] at hok' hR' hD'
       obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'

@@ -186,7 +186,7 @@ theorem i2sW_ok : ∀ (k : Nat) (m m' : Mem) (d s l : Word) (r : List Word),
     have hl1 : (l - 1).toNat = l.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]; simp
     have hsz : ((m.set64 SPN d (rdW (m.arr64 IW) s)).arr64 SPN).size = (m.arr64 SPN).size :=
-      size_set64 _ _ _ _ _
+      L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨hfr, hiw, hget, hout⟩ := ih _ _ _ _ _ _ h1 (by rw [hsz, hd1, hl1]; omega)
       (by rw [hd1, hl1]; omega)
     have hiw0 : (m.set64 SPN d (rdW (m.arr64 IW) s)).arr64 IW = m.arr64 IW :=
@@ -284,7 +284,7 @@ theorem mknF_ok (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
   have hfrA : MemFrame [SPN] [136] m (m1.set64 CTL 136 (top + l)) :=
     (hfr1.mono (fun b hb => hb) (fun x hx => by simp at hx)).trans
       ((MemFrame.setCtl m1 136 _).mono (fun b hb => by simp at hb) (fun x hx => hx))
-  obtain ⟨hS1, hg1⟩ := stageR_hi hS hfrA (by simp [SPN]) (by simp) (by decide) (by decide)
+  obtain ⟨hS1, hg1⟩ := L.Ind.StageR.frame_hi hS hfrA (by simp [SPN]) (by simp) (by decide) (by decide)
   have hspn1 : ∀ w, spW (m1.set64 CTL 136 (top + l)) w = spW m1 w := fun w => by
     simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hsz1 : ((m1.set64 CTL 136 (top + l)).arr64 SPN).size = (m.arr64 SPN).size := hfrA.size SPN
@@ -321,7 +321,7 @@ theorem mknF_ok (vis : Word) (fe : IFEnv) (f o l : Word) (hf : H f)
     (fun b hb => by simp only [tier1, List.mem_cons, List.not_mem_nil] at hb; rcases hb with rfl | rfl | rfl | rfl | rfl | rfl | h <;> simp_all [AREC, ASLOT, ADER])
     (fun x hx => by simp only [List.mem_cons, List.not_mem_nil] at hx; rcases hx with rfl | rfl | h <;> simp_all) hcp
   -- the top put back
-  obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 top) (by simp) (by simp) (by decide) (by decide)
+  obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS2 (MemFrame.setCtl m2 136 top) (by simp) (by simp) (by decide) (by decide)
   exact ⟨_, _, hrun, hS3, hg1.trans (hg2.trans hg3), hhw, hres.symm⟩
 
 /-! ## The bundle -/

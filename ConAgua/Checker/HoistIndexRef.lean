@@ -2,6 +2,9 @@ module
 
 public import ConAgua.Checker.HoistRefBase
 public import ConRon.Arena.Frontend.NatOpGround
+import ConAgua.Arena.DeclAndPinInd
+import ConAgua.Arena.InitLink
+import ConAgua.Checker.HoistDecode
 
 @[expose] public section
 
@@ -73,55 +76,12 @@ theorem hIns_ok (m m' : Mem) (w k r : Word) (idx : Std.HashMap NIdx Nat) (hR : N
     rw [hc, ite_eq_left rfl]
     exact ⟨hR, MemFrame.refl _ _ _⟩
 
-theorem hix_hd?_some {k : IdxKind} {a : Array Word} {i : Nat} {x : Idx k} (h : hd? (aread a) i = some x) :
-    ∃ w, a[i]? = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨w, hw, h⟩ := h
-  split at h
-  · cases h; exact ⟨w, hw, by assumption, rfl⟩
-  · cases h
-
 theorem hix_decCV_name {a : Array Word} {q : Nat} {v : IConstantVal} (h : decCV (aread a) q = some v) :
     ∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ v.name = decI w := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨n, hn, l, -, t, -, rfl⟩ := h
-  exact hix_hd?_some hn
-
-theorem hix_decCI_name {a : Array Word} {p : Nat}
-    {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
-    ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
-  simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨t, -, h⟩ := h
-  split at h <;>
-    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
-      reduceCtorEq] at h
-  · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
-  · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hix_decCV_name hv
-
-theorem hix_trunc_get {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
-    (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
-  simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
-    Array.getElem?_extract, Array.size_extract] at h
-  rw [ite_eq_right (by omega)] at h
-  split at h
-  · simp only [Nat.zero_add] at h
-    exact ⟨h, by omega⟩
-  · cases h
-
-theorem hix_decCIs_succ (a : Array Word) (o k : Nat) :
-    decCIs a o (k + 1) = (do
-      let x ← (do let v ← nat? (aread a) o; decCI (aread a) v)
-      let xs ← decCIs a (o + 1) k
-      pure (x :: xs)) := by
-  simp only [decCIs, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
-  congr 1; funext x; congr 1
-  simp only [Function.comp_def]
-  congr 1; funext j; congr 2; omega
+  exact L.Checker.hd?_some hn
 
 theorem hix_rdW {P : Array Word} {x : Word} {i : Nat} {v : Word} (h : P[i]? = some v)
     (hx : x.toNat = i) : rdW P x = v := by
@@ -149,15 +109,15 @@ theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array W
     · rw [hNamesGoW.arm2 n m k o c q hcq] at h
       have hqc : q.toNat < c.toNat := by
         have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hcq); omega
-      rw [show c.toNat - q.toNat = (c.toNat - q.toNat - 1) + 1 by omega, hix_decCIs_succ] at hd
+      rw [show c.toNat - q.toNat = (c.toNat - q.toNat - 1) + 1 by omega, L.Arena.decCIs_succ] at hd
       simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
         Option.some.injEq] at hd
       obtain ⟨ci, ⟨p, hp, hci⟩, cs', hcs', rfl⟩ := hd
       simp only [nat?, Option.map_eq_some_iff] at hp
       obtain ⟨pw, hpw, rfl⟩ := hp
-      obtain ⟨hPq, hqt⟩ := hix_trunc_get hpw (by omega)
-      obtain ⟨w, hw, hw32, hname⟩ := hix_decCI_name hci
-      obtain ⟨hPw, hpt⟩ := hix_trunc_get hw (by omega)
+      obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw (by omega)
+      obtain ⟨w, hw, hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw (by omega)
       have hP0 : (P[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1 : rdW (m.arr64 DIND) (o + q) = pw :=
         hix_rdW (hP ▸ hPq) (by rw [UInt64.toNat_add]; omega)
@@ -178,15 +138,15 @@ theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array W
       exact hR'
 
 /-- Word `j` of `DECL` record `r` (below `2 ^ 59`), read at `1 + 8 r + j`. -/
-theorem hix_rd_dw (D : Array Word) (r j : Word) (hr : r.toNat < 2 ^ 59) (hj : j.toNat < 8) :
+theorem rdW_dw (D : Array Word) (r j : Word) (hr : r.toNat < 2 ^ 59) (hj : j.toNat < 8) :
     rdW D (1 + 8 * r + j) = dw D r.toNat j.toNat := by
   have : (1 + 8 * r + j).toNat = 1 + 8 * r.toNat + j.toNat := by
     simp only [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
   simp [rdW, dw, this]
 
-theorem hix_rd_dw0 (D : Array Word) (r : Word) (hr : r.toNat < 2 ^ 59) :
+theorem rdW_dw0 (D : Array Word) (r : Word) (hr : r.toNat < 2 ^ 59) :
     rdW D (1 + 8 * r) = dw D r.toNat 0 := by
-  have := hix_rd_dw D r 0 hr (by decide)
+  have := L.Checker.rdW_dw D r 0 hr (by decide)
   simpa using this
 
 theorem hix_declAt_names {D P : Array Word} {i : Nat} {d : IDeclaration} (h : DeclAt D P i d) :
@@ -207,10 +167,10 @@ theorem hNames_ok (n : Nat) (m m' : Mem) (k r z : Word) (d : IDeclaration)
   cases n with
   | zero => cases h
   | succ n =>
-  have e0 := hix_rd_dw0 (m.arr64 DECL) r hr
-  have e1 := hix_rd_dw (m.arr64 DECL) r 1 hr (by decide)
-  have e2 := hix_rd_dw (m.arr64 DECL) r 2 hr (by decide)
-  have e3 := hix_rd_dw (m.arr64 DECL) r 3 hr (by decide)
+  have e0 := L.Checker.rdW_dw0 (m.arr64 DECL) r hr
+  have e1 := L.Checker.rdW_dw (m.arr64 DECL) r 1 hr (by decide)
+  have e2 := L.Checker.rdW_dw (m.arr64 DECL) r 2 hr (by decide)
+  have e3 := L.Checker.rdW_dw (m.arr64 DECL) r 3 hr (by decide)
   simp only [UInt64.reduceToNat] at e1 e2 e3
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind

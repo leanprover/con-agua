@@ -11,6 +11,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DerRelBase
 public import ConAgua.Front.Preserve
 public import ConAgua.L.ByteClass
+public import ConAgua.Front.ApplyExpr
 
 @[expose] public section
 
@@ -384,7 +385,7 @@ theorem rputW_size (pt pb i l : Word) (b : TieredArray) :
     have := l.toNat_lt
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     rw [rputW]; simp only [hjn, ↓reduceIte]
-    rw [ih _ _ (by omega), size_set64]
+    rw [ih _ _ (by omega), L.Mem.size64_set64]
 
 @[arena_grind =] theorem rputW_pcap (m : Mem) (pt pb i l j : Word) :
     pcap (rputW rom m pt pb i l j) = pcap m :=
@@ -427,7 +428,7 @@ theorem romPut_specW (hp : p.lookup "rom_put" = some (romPut rom)) (n : Nat) (s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, warr]
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, L.Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
       reduceIte, bne_iff_ne, ne_eq, decide_eq_true_eq, Mem.src8, not_true_eq_false,
       Decidable.not_not] at *)
@@ -496,7 +497,7 @@ theorem rputW_facts (pt pb i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) (ht : p
     rw [rputW]; simp only [hjn, ↓reduceIte]
     have hsz : ((m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))).arr64 (tierA POOL pt)).size =
         (m.arr64 (tierA POOL pt)).size :=
-      size_set64 _ _ _ _ _
+      L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨hf, hx⟩ := ih (m.set64 (tierA POOL pt) (pb + j) (romB rom (i + j))) (j + 1) (by omega)
       (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (by omega)
     refine ⟨PFrame.trans (PFrame.set64 _ _ _ (PFrame.refl _)) hf, fun x => ?_⟩
@@ -693,16 +694,13 @@ theorem top_set64_ne (m : Mem) (c v : Word) (hc : c.toNat ≠ 0) : (m.set64 CTL 
   simp only [Mem.top, e, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   simp [hc]
 
-theorem top_set64_ctl (m : Mem) (c v : Word) (hc : c.toNat ≠ 0) : (m.set64 CTL c v).top = m.top :=
-  top_set64_ne m c v hc
-grind_pattern [arena_grind] top_set64_ctl => (m.set64 CTL c v).top
+grind_pattern [arena_grind] L.Rom.top_set64_ne => (m.set64 CTL c v).top
 
 theorem top_set64_arr (m : Mem) (b : TieredArray) (i v : Word) (hb : b ≠ CTL) : (m.set64 b i v).top = m.top := by
   simp only [Mem.top, Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
 grind_pattern [arena_grind] top_set64_arr => (m.set64 b i v).top
 
-theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.size _) (h.size _)
-grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
+grind_pattern [arena_grind] L.Front.Keep.pcap => Keep m m', pcap m'
 
 /-- `m'` keeps the pool's capacity, a top in a tier stays in a tier, and so does the mode
 (`ModeOK`: outside the scratch tier the top is in tier 0). -/
@@ -906,7 +904,7 @@ theorem romName_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
           hL.intern_nstr n,
         internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n,
         romU64_spec rom p hL.rom_u64 n, romPut_specW rom p hL.rom_put n, ih'] <;>
-      finish [Keep.size, Keep.pcap]
+      finish [Keep.size, L.Front.Keep.pcap]
 
 end nameSpec
 
@@ -1127,7 +1125,7 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hmo hd hW⟩
 
 /-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
-theorem ArenaD.frameHi {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
+theorem _root_.L.Arena.ArenaD.frameHi {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
     ArenaD m' a :=
   ⟨ArenaR.frame_ext A C hA hC m m' hf a h.base,

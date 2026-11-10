@@ -39,7 +39,7 @@ theorem installCtxWord9 {m : Mem} {ctx : Word} {c : NestCtx}
     H (rdW (m.arr64 IW) (ctx + 9)) ∧ decI (rdW (m.arr64 IW) (ctx + 9)) = c.sort := by
   have hcT : decCtx (truncM m) ctx.toNat = some c := hc
   obtain ⟨-, -, -, -, -, h9, -⟩ := decCtx_some hcT
-  obtain ⟨-, h9'⟩ := rec2IwH_trunc h9
+  obtain ⟨-, h9'⟩ := L.Ind.iwH_truncM_some h9
   obtain ⟨v, hv, hv32, hve⟩ := iwH_rdW_at (w := ctx) (k := 9) h9' hsz
   rw [show (UInt64.ofNat 9 : Word) = 9 from rfl] at hv
   rw [hv]; exact ⟨hv32, hve⟩

@@ -12,6 +12,7 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.RefWalk
 public import ConRon.Bridge.Inductives.ClassRead
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndSumSpec.SoaW
 
 @[expose] public section
 
@@ -188,7 +189,7 @@ theorem clm_ref (hP : ClmProg p) (hF : FtProg p) (hFk : FkcProg p) (hWt : WhnfTo
   rw [clmE.k_class_majors.arm1]
   refine RefE.onlySim (fun _ => clmE.k_sl_cons.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
   rw [clmE.k_sl_cons.arm1]
-  obtain ⟨hS6, hg6, hd6, hf6⟩ := clsConsW decTM_mono h6 hR5.stage.stage hR5.dec
+  obtain ⟨hS6, hg6, hd6, hf6⟩ := L.Ind.consW_pslr decTM_mono h6 hR5.stage.stage hR5.dec
     (hR3.dec.grow (decTM_mono _) (hR4.grow.trans hR5.grow))
   have hA6 := consW_afr h6 hR5.abs
   exact RefE.ret rfl ⟨hR5.stage.of_pstep hS6 hA6 (PStep.refl hR5.stage.check.state),

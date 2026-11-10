@@ -69,7 +69,7 @@ theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hct : c.toNat < ms.length := (List.getElem?_eq_some_iff.mp hc).1
   have hlen := decPL_length m hms0
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hms c.toNat (by omega)
-  obtain ⟨hvt, hv'⟩ := rec2IwN_trunc hv
+  obtain ⟨hvt, hv'⟩ := L.Ind.iwN_truncM_some hv
   have hxe : ms[c.toNat] = x := (List.getElem?_eq_some_iff.mp hc).2
   rw [hxe] at hdv
   obtain ⟨-, -, ⟨o', l', ho', hl', hds⟩, -⟩ := rec2DecTM_parts hdv
@@ -89,9 +89,9 @@ theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     · exfalso; apply hcl; apply UInt64.lt_iff_toNat_lt.mpr; omega
   rw [hq] at ho hl
   have e1 : iwN b.2 (v + 2) = some o' := by
-    rw [iwN_grow hg (rec2IwN_trunc ho').1]; exact (rec2IwN_trunc ho').2
+    rw [iwN_grow hg (L.Ind.iwN_truncM_some ho').1]; exact (L.Ind.iwN_truncM_some ho').2
   have e2 : iwN b.2 (v + 3) = some l' := by
-    rw [iwN_grow hg (rec2IwN_trunc hl').1]; exact (rec2IwN_trunc hl').2
+    rw [iwN_grow hg (L.Ind.iwN_truncM_some hl').1]; exact (L.Ind.iwN_truncM_some hl').2
   rw [e1] at ho; rw [e2] at hl
   simp only [Option.some.injEq] at ho hl
   subst ho hl

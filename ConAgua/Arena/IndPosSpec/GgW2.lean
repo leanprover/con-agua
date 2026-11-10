@@ -51,7 +51,7 @@ theorem snocW_iwFr {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} (h : sn
   split at h; · simp at h
   rename_i m2 hc
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact ((allocW_iwFrame hal).trans (posmemo_copyW_iw _ _ _ _ _ _ hc)).trans (set64IW_frame _ _ _)
+  exact ((allocW_iwFrame hal).trans (L.Ind.copyW_iwFrame _ _ _ _ _ _ hc)).trans (set64IW_frame _ _ _)
 
 end L.Ind
 
@@ -109,7 +109,7 @@ theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     simp only [invoke_eq _ hp, callFn, nestFrameGrpL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p ha h4 n, posRec3_specW p ha h3 n, piBinders_spec p ha hc2 hv hs hpb n,
+        posRec4_specW p ha h4 n, L.Ind.rec3_specW_iw p ha h3 n, piBinders_spec p ha hc2 hv hs hpb n,
         slSnoc_specW p ha hc2 hsn n, ih] <;>
       finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero, CWF, List.getD_cons_zero,
         List.getD_cons_succ]

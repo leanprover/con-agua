@@ -7,6 +7,8 @@ import ConRon.Arena.WFProofs
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import ConAgua.Arena.ArenaRel
 public import ConRon.Arena.WF
+import ConAgua.Arena.CoreRefine
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -176,26 +178,26 @@ theorem denoteLAux_lvR {m : Mem} {a : AState} (hR : ArenaR m a) (f : Nat) :
     | succ u =>
       simp only [Option.map_eq_some_iff] at e
       obtain ⟨x, hx, rfl⟩ := e
-      exact .succ (by rw [hn]; rfl) (ih _ _ (word_lt u) (by rw [decI_word]; exact hx))
+      exact .succ (by rw [hn]; rfl) (ih _ _ (L.Arena.idx_word_lt32 u) (by rw [decI_word]; exact hx))
     | max u w =>
       simp only [opt2_eq_some_iff] at e
       obtain ⟨x, y, hx, hy, rfl⟩ := e
-      exact .max (by rw [hn]; rfl) (ih _ _ (word_lt u) (by rw [decI_word]; exact hx))
-        (ih _ _ (word_lt w) (by rw [decI_word]; exact hy))
+      exact .max (by rw [hn]; rfl) (ih _ _ (L.Arena.idx_word_lt32 u) (by rw [decI_word]; exact hx))
+        (ih _ _ (L.Arena.idx_word_lt32 w) (by rw [decI_word]; exact hy))
     | imax u w =>
       simp only [opt2_eq_some_iff] at e
       obtain ⟨x, y, hx, hy, rfl⟩ := e
-      exact .imax (by rw [hn]; rfl) (ih _ _ (word_lt u) (by rw [decI_word]; exact hx))
-        (ih _ _ (word_lt w) (by rw [decI_word]; exact hy))
+      exact .imax (by rw [hn]; rfl) (ih _ _ (L.Arena.idx_word_lt32 u) (by rw [decI_word]; exact hx))
+        (ih _ _ (L.Arena.idx_word_lt32 w) (by rw [decI_word]; exact hy))
     | param nidx =>
       simp only [Option.map_eq_some_iff] at e
       obtain ⟨x, hx, rfl⟩ := e
-      exact .param (by rw [hn]; rfl) ⟨word_lt nidx, by rw [decI_word]; exact hx⟩
+      exact .param (by rw [hn]; rfl) ⟨L.Arena.idx_word_lt32 nidx, by rw [decI_word]; exact hx⟩
 
 theorem denoteL_lvR {m : Mem} {a : AState} (hR : ArenaR m a) (u : LIdx) (l : Level)
     (e : denoteL a.store.lss.ls u = some l) :
     LvR (nameN a.store.lss.ls.ns) m u.word.toUInt64 l :=
-  denoteLAux_lvR hR _ _ _ (word_lt u) (by rw [decI_word]; exact e)
+  denoteLAux_lvR hR _ _ _ (L.Arena.idx_word_lt32 u) (by rw [decI_word]; exact e)
 
 /-! ## The twin's `lvlEq?` -/
 
@@ -246,18 +248,12 @@ theorem lvlEq?_run (a : AState) (u v : LIdx) (lu lv : Level) (hu : denoteL a.sto
 
 /-! ## `lvl_eq` refines `lvlEq?` -/
 
-theorem ArenaR.with_caches {m : Mem} {a : AState} (c : Caches) (hR : ArenaR m a) :
-    ArenaR m { a with caches := c } :=
-  ⟨hR.lit, hR.app, hR.sort, hR.const, hR.letE, hR.bvar, hR.fvar, hR.lam, hR.forallE, hR.proj,
-    hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum, hR.memos,
-    hR.zeroHp, hR.paramHp, hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩
-
 theorem HeapExt.memFrame {m m' : Mem} (h : HeapExt m m') : MemFrame [LH] [192] m m' :=
   ⟨fun b hb hc => h.arr b (by simpa using hb) hc, fun x hx => h.ctl x (by simpa using hx), h.size⟩
 
 theorem reset_frame (m : Mem) : MemFrame [] [192] m (m.set64 CTL 192 0) := by
-  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64L _ _ _ _ _⟩
-  rw [rdW_set64L]; simp only [List.mem_singleton] at hx; simp [Ne.symm hx]
+  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => L.Mem.size64_set64 _ _ _ _ _⟩
+  rw [L.Arena.rdW_set64]; simp only [List.mem_singleton] at hx; simp [Ne.symm hx]
 
 theorem lh_not_arena : ∀ b ∈ ([LH] : List TieredArray), b ∉ arenaArrs := by decide
 theorem c192_not_arena : ∀ x ∈ [(192 : Word)], x ∉ arenaCtl := by
@@ -285,7 +281,7 @@ theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     obtain ⟨hx, hz⟩ := equivW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ hl hr h
     have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
     obtain ⟨c, hrun⟩ := lvlEq?_run a u v lu lv hu hv hc he
-    exact ⟨_, _, hrun, hz, hR'.with_caches c⟩
+    exact ⟨_, _, hrun, hz, hR'.caches_irrel c⟩
 
 /-! ## The run -/
 
@@ -474,8 +470,8 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     simp only [lvlsEqW] at h
     obtain ⟨ids₁, hv₁, hd₁⟩ := denoteLs_view a us lu hu
     obtain ⟨ids₂, hv₂, hd₂⟩ := denoteLs_view a vs lv hv
-    have hw₁ : (us.word.toUInt64 : Word).toNat < 2 ^ 32 := word_lt us
-    have hw₂ : (vs.word.toUInt64 : Word).toNat < 2 ^ 32 := word_lt vs
+    have hw₁ : (us.word.toUInt64 : Word).toNat < 2 ^ 32 := L.Arena.idx_word_lt32 us
+    have hw₂ : (vs.word.toUInt64 : Word).toNat < 2 ^ 32 := L.Arena.idx_word_lt32 vs
     obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hw₁ (by rw [decI_word]; exact hv₁)
     obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hR hw₂ (by rw [decI_word]; exact hv₂)
     rw [e₁, e₂] at h
@@ -493,6 +489,6 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ h
     have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
     obtain ⟨c, hrun⟩ := lvlsEq?_run a us vs lu lv hu hv hc he
-    exact ⟨_, _, hrun, hz, hR'.with_caches c⟩
+    exact ⟨_, _, hrun, hz, hR'.caches_irrel c⟩
 
 end L.Arena

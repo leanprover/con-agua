@@ -314,7 +314,7 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     vis fe M₁ eb mode a b hS₁ hs.mode4 ha hb) fun rf m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_
   dsimp only [itE.k_lazy_fold_ok]
   by_cases hf : rf.headD 0 ≠ 0
-  · rw [ite_eq_left hf, decBool_t hf]
+  · rw [ite_eq_left hf, L.Arena.decBool_true_of hf]
     simp only [↓reduceIte]
     refine RefE.bind_coreE (w := id) (fun _ => rfl)
       (fun hG => ⟨hG.knot.mono (by omega), hG.reduceNat⟩)
@@ -332,7 +332,7 @@ theorem it_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     rw [ite_eq_right (fun h => h h3'), show decNat rn = none by simp only [decNat, h3', ↓reduceIte]]
     exact stepArm _ _ _ hS₃
   have hf' : rf.headD 0 = 0 := by simpa using hf
-  rw [ite_eq_right hf, decBool_f hf']
+  rw [ite_eq_right hf, L.Arena.decBool_false_of hf']
   simp only [Bool.false_eq_true, ↓reduceIte, pure_bind]
   exact stepArm _ _ _ hS₂
 

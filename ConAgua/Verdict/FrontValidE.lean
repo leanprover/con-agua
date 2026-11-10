@@ -59,6 +59,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import ConAgua.Arena.TwinStep
 
 @[expose] public section
 /-!
@@ -107,28 +108,6 @@ theorem namesReadR_of_twin {a : AState} {st : StateD} (hT : L.Front.TwinOK a st)
     rw [hg] at hr; cases hr
     exact names_read_of_twin hT i h hg
 
-/-- Under the names' invariant, a handle with a view denotes (by the rank). -/
-theorem denoteN_of_viewAt {st : NStore} {rk : NIdx → Nat} (h : NWFAt st rk) :
-    ∀ (n : Nat) (i : NIdx), rk i < n → (st.view i).isSome = true →
-      ∃ x, denoteN st i = some x := by
-  intro n
-  induction n with
-  | zero => intro i hn; omega
-  | succ n ih =>
-    intro i hn hv
-    obtain ⟨v, hv'⟩ := Option.isSome_iff_exists.mp hv
-    rw [denoteN_unfold h hv']
-    cases v with
-    | anonymous => exact ⟨_, rfl⟩
-    | str p s =>
-      have hc := h.childOK i _ hv' p (by simp [NNodeView.children])
-      obtain ⟨q, hq⟩ := ih p (by omega) hc.1
-      exact ⟨.str q s, by simp [denoteNView, hq]⟩
-    | num p k =>
-      have hc := h.childOK i _ hv' p (by simp [NNodeView.children])
-      obtain ⟨q, hq⟩ := ih p (by omega) hc.1
-      exact ⟨.num q k, by simp [denoteNView, hq]⟩
-
 theorem viewReadR_of_ok {a : AState} (hok : ConRon.Bridge.StateOK a) : ViewReadR a := by
   intro h T s hv
   have hv' : a.store.ns.view h = some (.str T s) := by
@@ -138,7 +117,7 @@ theorem viewReadR_of_ok {a : AState} (hok : ConRon.Bridge.StateOK a) : ViewReadR
     | some w => simp [StateT.run_bind, StateT.run_get, hw] at hv; cases hv; rfl
   obtain ⟨rk, hrk⟩ := ConRon.Bridge.Frontend.nsWF_of_StateOK hok
   have hc := hrk.childOK h _ hv' T (by simp [NNodeView.children])
-  obtain ⟨x, hx⟩ := denoteN_of_viewAt hrk _ T (Nat.lt_succ_self _) hc.1
+  obtain ⟨x, hx⟩ := L.Arena.denoteN_of_viewW hrk _ T (Nat.lt_succ_self _) hc.1
   exact ⟨x, readName_run a T x hx⟩
 
 theorem xOfTwin : ∀ (D : Array IDeclaration) (a : AState) (st : StateD), L.Front.TwinOK a st →

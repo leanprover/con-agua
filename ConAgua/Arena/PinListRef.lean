@@ -10,6 +10,7 @@ import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.L.WordOff
+import ConAgua.Arena.InferFieldSort
 
 @[expose] public section
 
@@ -237,7 +238,7 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   obtain ⟨rfl, hb⟩ := pinAgreesW_ok hP.canon hP.pa hci4 hx4 h5
   refine ⟨ConRon.Arena.pinAgrees ci x, a4, ?_, ?_⟩
   · simp only [ConRon.Arena.pinCopyOk]
-    rw [ite_eq_left (hcond.mp hc), StateT.run_bind, hrun4, exb]; rfl
+    rw [ite_eq_left (hcond.mp hc), StateT.run_bind, hrun4, L.Arena.except_ok_bind]; rfl
   · rw [← e]
     exact ⟨hT4, hg2.trans hg4, hst4.ok, hst4.read, hst4.ext, by simpa using hb⟩
 
@@ -321,7 +322,7 @@ theorem pinCopiesOkW_ok (hP : PinListLProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
     pinCopyOk_sim hP n hT hok hr hc hq hdc hdq r3 m3 h3
   have hstep : (ConRon.Arena.pinCopiesOk (c :: cs') (q :: ps')).run a =
       (if b3 then ConRon.Arena.pinCopiesOk cs' ps' else pure false).run a3 := by
-    simp only [ConRon.Arena.pinCopiesOk, StateT.run_bind, hrun3, exb]
+    simp only [ConRon.Arena.pinCopiesOk, StateT.run_bind, hrun3, L.Arena.except_ok_bind]
   by_cases h0 : r3.headD 0 = 0
   · rw [ite_eq_left h0] at h; cases h
     have : b3 = false := by cases b3 <;> simp_all
@@ -541,12 +542,12 @@ theorem pinLinkOk_twin {m : Mem} {a : AState} (hT : StageT dn vis fe m a)
     ∃ a', (ConRon.Arena.pinLinkOk R Rp C Cp).run a =
         .ok (decide (C = Cp.map (ConRon.Arena.canonNameMap Rp R)), a') ∧
       StageT dn vis fe m a' ∧ ConRon.Bridge.StateOK a' ∧ ConRon.Bridge.ReadOK a' ∧ Ext a.store a'.store := by
-  obtain ⟨X1, h1, hc1⟩ := pr_readNamesM_run R a RT (denoteNList_mapM hR) hT.twin.den.readN
-  obtain ⟨X2, h2, hc2⟩ := pr_readNamesM_run Rp { a with caches := { a.caches with readNC := X1 } } RpT
+  obtain ⟨X1, h1, hc1⟩ := L.Arena.readNamesM_run' R a RT (denoteNList_mapM hR) hT.twin.den.readN
+  obtain ⟨X2, h2, hc2⟩ := L.Arena.readNamesM_run' Rp { a with caches := { a.caches with readNC := X1 } } RpT
     (denoteNList_mapM hRp) hc1
-  obtain ⟨X3, h3, hc3⟩ := pr_readNamesM_run C { a with caches := { a.caches with readNC := X2 } } CT
+  obtain ⟨X3, h3, hc3⟩ := L.Arena.readNamesM_run' C { a with caches := { a.caches with readNC := X2 } } CT
     (denoteNList_mapM hC) hc2
-  obtain ⟨X4, h4, hc4⟩ := pr_readNamesM_run Cp { a with caches := { a.caches with readNC := X3 } } CpT
+  obtain ⟨X4, h4, hc4⟩ := L.Arena.readNamesM_run' Cp { a with caches := { a.caches with readNC := X3 } } CpT
     (denoteNList_mapM hCp) hc3
   have hrun : (ConRon.Arena.pinLinkOk R Rp C Cp).run a =
       .ok (ConLeche.pinLinkOk RT RpT CT CpT, { a with caches := { a.caches with readNC := X4 } }) := by
@@ -777,7 +778,7 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
       (if decide (C.toConstantVal.levelParams =
           Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R)) then
         ConRon.Arena.rulesLinkOk block pins R Rp rls else pure false).run a5 := by
-    simp only [ConRon.Arena.rulesLinkOk, hctor, x1, x2, StateT.run_bind, hrun5, exb]
+    simp only [ConRon.Arena.rulesLinkOk, hctor, x1, x2, StateT.run_bind, hrun5, L.Arena.except_ok_bind]
   rw [h5, rulesLinkOkW.k_pin_link_ok.eq_2] at h
   by_cases h0 : r5.headD 0 = 0
   · rw [ite_eq_left h0] at h; cases h
@@ -984,7 +985,7 @@ theorem blockLinksOkGoW_ok (hP : PinListLProg p) {block pins : List IConstantInf
   rw [h2, blockLinksOkGoW.k_block_link_ok_at.eq_2] at h
   have hstep : (ConRon.Arena.blockLinksOkGo block pins former (c :: cs') (q :: ps')).run a =
       (if b2 then ConRon.Arena.blockLinksOkGo block pins former cs' ps' else pure false).run a2 := by
-    simp only [ConRon.Arena.blockLinksOkGo, StateT.run_bind, hrun2, exb]
+    simp only [ConRon.Arena.blockLinksOkGo, StateT.run_bind, hrun2, L.Arena.except_ok_bind]
   by_cases h0 : r2.headD 0 = 0
   · rw [ite_eq_left h0] at h; cases h
     have : b2 = false := by cases b2 <;> simp_all
@@ -1094,7 +1095,7 @@ theorem pinListOkRef_of (hP : PinListLProg p) : PinListOkRef p := by
   rw [h1, pinListOkLW.k_pin_copies_ok.eq_2] at hW
   have hstep : (ConRon.Arena.pinListOk block pins).run a =
       (if b1 then ConRon.Arena.blockLinksOk block pins else pure false).run a1 := by
-    simp only [ConRon.Arena.pinListOk, StateT.run_bind, hrun1, exb]
+    simp only [ConRon.Arena.pinListOk, StateT.run_bind, hrun1, L.Arena.except_ok_bind]
   by_cases h0 : r1.headD 0 = 0
   · rw [ite_eq_left h0] at hW; cases hW
     have : b1 = false := by cases b1 <;> simp_all

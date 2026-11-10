@@ -227,7 +227,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     obtain ⟨rfl, hrun3, hd3⟩ := mpW_ok (a := a2) (mp_callR h.red h3) hS2.iw.erSize hcv2
       (decRCV_get hpin)
     refine ⟨_, _, ?_, hS2, hg2, by simpa [decW0B] using hd3⟩
-    simp only [clauseT, hfind, hci, Option.bind_some, hsh, StateT.run_bind, hrun2, exc_ok_bind']
+    simp only [clauseT, hfind, hci, Option.bind_some, hsh, StateT.run_bind, hrun2, L.Arena.except_ok_bind]
     exact hrun3
   by_cases hkw : wk = k
   rotate_left
@@ -290,11 +290,11 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
   rw [trustCompilerOk_eq]
   have ht : trueName.run a = .ok (decI (pinW m (1 + (40 : Word).toNat)), a) := by
     simpa [trueName, pinTrue, show PIN_TRUE = (40 : Word).toNat from rfl] using hrun1
-  simp only [StateT.run_bind, ht, exc_ok_bind']
+  simp only [StateT.run_bind, ht, L.Arena.except_ok_bind]
   rcases h2 : callW p n "find_pinned_cv" [vis, pinW m (1 + (40 : Word).toNat), 3, 2] m
     with _ | ⟨r2, m2⟩ <;> simp only [h2, tcoK2, reduceCtorEq] at hW
   obtain ⟨b2, a2, hrun2, hS2, hg2, hd2⟩ := fpc_call h h2 hS hl1 (.inl rfl) (by decide)
-  simp only [show trueCvA = romCvT (2 : Word).toNat from rfl, hrun2, exc_ok_bind']
+  simp only [show trueCvA = romCvT (2 : Word).toNat from rfl, hrun2, L.Arena.except_ok_bind]
   by_cases h20 : r2.headD 0 = 0
   · rw [ite_eq_left h20] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -311,11 +311,11 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
   simp only [List.headD_cons] at hW
   have hti : trueIntroName.run a2 = .ok (decI (pinW m2 (1 + (41 : Word).toNat)), a2) := by
     simpa [trueIntroName, pinTrueIntro, show PIN_TRUE_INTRO = (41 : Word).toNat from rfl] using hrun3
-  simp only [StateT.run_bind, hti, exc_ok_bind']
+  simp only [StateT.run_bind, hti, L.Arena.except_ok_bind]
   rcases h4 : callW p n "find_pinned_cv" [vis, pinW m2 (1 + (41 : Word).toNat), 4, 3] m2
     with _ | ⟨r4, m4⟩ <;> simp only [h4, tcoK4, reduceCtorEq] at hW
   obtain ⟨b4, a4, hrun4, hS4, hg4, hd4⟩ := fpc_call h h4 hS2 hl3 (.inr rfl) (by decide)
-  simp only [show trueIntroCvA = romCvT (3 : Word).toNat from rfl, hrun4, exc_ok_bind']
+  simp only [show trueIntroCvA = romCvT (3 : Word).toNat from rfl, hrun4, L.Arena.except_ok_bind]
   by_cases h40 : r4.headD 0 = 0
   · rw [ite_eq_left h40] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -333,7 +333,7 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {vis : Word}
   obtain ⟨rfl, hrun6, hd6⟩ := mpW_ok (a := a5) hW hS5.iw.erSize hq5 (decRCV_get hpin)
   refine ⟨_, _, ?_, hS5, hg2.trans (hg4.trans hg5), hd6⟩
   simp only [show trustCompilerA = romCvT (4 : Word).toNat from rfl, StateT.run_bind, hrun5,
-    exc_ok_bind']
+    L.Arena.except_ok_bind]
   exact hrun6
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** (through the ROM stubs). -/

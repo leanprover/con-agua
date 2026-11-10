@@ -114,7 +114,7 @@ theorem decNL_agree (h : SPLA b dec m o l xs) (hA : AgreeA b m m') : decNL m' o 
   rcases h.1 with h0 | hb
   · subst h0; rfl
   simp only [decNL]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   have := List.mem_range.mp hj
   exact hA.iwN (by omega) (by have := h.2.1; omega)

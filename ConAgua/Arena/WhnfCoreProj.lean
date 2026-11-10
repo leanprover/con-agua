@@ -18,6 +18,7 @@ import ConAgua.Arena.WhnfCoreRefine
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfCore
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -199,21 +200,9 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLi
 
 /-! ## The words of a projection table record -/
 
-theorem mapM_option_length {α β : Type} (f : α → Option β) :
-    ∀ (l : List α) (r : List β), l.mapM f = some r → r.length = l.length := by
-  intro l
-  induction l with
-  | nil => intro r h; simp [List.mapM_nil] at h; subst h; rfl
-  | cons x xs ih =>
-    intro r h
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, -, ys, hys, rfl⟩ := h
-    simp [ih ys hys]
-
 theorem hslice?_length {k : IdxKind} {a : Array Word} {off cnt : Nat} {l : List (Idx k)}
     (h : hslice? (aread a) off cnt = some l) : l.length = cnt := by
-  have := mapM_option_length _ _ _ h
+  have := L.Ind.mapM_opt_length _ _ _ h
   simpa using this
 
 theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c < 2 ^ 63) :
@@ -366,7 +355,7 @@ theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT, tier1 
   exact StackKept.of_frame hf
 
 /-- A slice survives a change that leaves the stack array alone. -/
-theorem SpineR.of_spn_core {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
+theorem SpineR.of_spn {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hs : m'.arr64 SPN = m.arr64 SPN) : SpineR m' off cnt xs := by
   obtain ⟨h1, h2, h3, h4⟩ := h
   refine ⟨h1, by rw [hs]; exact h2, fun i hi => ?_, fun i hi => ?_⟩
@@ -436,7 +425,7 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
     have := AM.run_of_ok _ _ hok1
     rw [hres1, ← ha₁] at this; exact this
   have hspn : m₁.arr64 SPN = s.mem.arr64 SPN := hfr1.1 SPN (by simp [tier1, BREC, BSLOT, SPN]) (by decide)
-  have har₁ : SpineR m₁ ao an args := har.of_spn_core hspn
+  have har₁ : SpineR m₁ ao an args := har.of_spn hspn
   have hSt₁ : StackKept s.mem m₁ := StackKept.of_bvar_frame hfr1
   have hMD := decMode_verified mode hs.mode4
   -- the argument word and its decoding
@@ -516,17 +505,6 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
     · rw [hres]; unfold decOptR; rw [← hr0, decOpt_ne _ _ (by decide)]
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hwh⟩
 
-/-- `getAppArgs_refines` (`WhnfSpine.lean`) behind one adapter. -/
-theorem getAppArgs_spec' (p : Prog) (_hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hR : ArenaR s₀.mem a₀) (e : Word) (he : HW e) (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "get_app_args" [e]
-    ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
-      r.headD 0 = spTop s₀.mem ∧ spTop s'.mem = spTop s₀.mem + r.tail.headD 0 ∧
-      ∃ xs, (getAppArgs coreWalkFuel (decE e)).run a₀ = .ok (xs, a₀) ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  getAppArgs_refines p _hp n s₀ a₀ hR e he hspn
-
 /-! ## `reduce_proj_fire` -/
 
 /-- The twin at a constant head `k.{us}`: the arguments, the level count, the entry's fire check,
@@ -548,7 +526,7 @@ l_model rpFire_spec (p : Prog) (hp : WhnfCoreProg p)
   specs [callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "reduce_proj_arg"]
   grind [arena_grind] extra [ld64_rdT_spec, evalE_tld, tld] pfuel
 
-theorem getElem_rdW' (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
+theorem getElem_rdW (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
   simp [rdW, h]
 
 /-! ## Runs that leave their pushed slice on the stack -/
@@ -649,7 +627,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
   rcases hc1 : callW p n "get_app_args" [e1] s.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [hc1, rpFireW.k_get_app_args, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
-    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.base e1 he1 hS.spn) hc1
+    (L.Arena.getAppArgs_refines p hp.spine n s a₀ hS.arena.base e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : erRd m₁ = erRd s.mem := erRd_frame hf₁ (by simp [SPN, EREC]) (by simp [SPN, EREC])

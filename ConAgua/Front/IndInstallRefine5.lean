@@ -8,6 +8,7 @@ import ConAgua.Front.ApplyDeclRefine
 import ConAgua.Front.IndApplyRefine
 public import ConAgua.Front.IndInstallRefine2
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclRec
 
 @[expose] public section
 
@@ -273,7 +274,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     have hTlen : (tys.map fun t => resOf (tyT st t) a).length = tys.length := by simp
     have hClen : (ordered.map fun c => resOf (ctT st c) a).length = cts.length := by simp [hord]
     have hRlen : (rcs.map fun r => resOf (recT st r) a).length = rcs.length := by simp
-    rw [mapM_some_ofI _ (fun j => ((tys.map fun t => resOf (tyT st t) a) ++
+    rw [L.Arena.mapM_some_of _ (fun j => ((tys.map fun t => resOf (tyT st t) a) ++
         (ordered.map fun c => resOf (ctT st c) a) ++ (rcs.map fun r => resOf (recT st r) a))[j]!) _
       (fun j hj => ?_)]
     · congr 1

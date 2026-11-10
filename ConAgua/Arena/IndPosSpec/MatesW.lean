@@ -87,19 +87,6 @@ abbrev maMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
 
 theorem maSch_wf : maSch.WF := ⟨by decide, by decide⟩
 
-/-- **The stage relation across a writer above array 136 and `CTL[129]`** (the per-call memos). -/
-theorem StageR.frame_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
-    {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
-    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
-    StageR vis fe m' a ∧ IWGrow m m' := by
-  have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
-    ⟨hA2, fun h => by have := hA _ h; simp [EREC] at this,
-      fun h => by have := hA _ h; simp [EREC] at this⟩
-  have hC3 : (129 : Word) ∉ C ∧ (130 : Word) ∉ C ∧ (200 : Word) ∉ C :=
-    ⟨fun h => by have := (hC _ h).1; simp at this, fun h => by have := (hC _ h).1; simp at this, hC2⟩
-  exact ⟨⟨CheckR.frame_hi hA hC hf hS.check, IWOK.of_keep hf hA3 hC3 hS.iw⟩, IWGrow.of_keep hf hA3 hC3⟩
-
 end L.Ind
 
 end

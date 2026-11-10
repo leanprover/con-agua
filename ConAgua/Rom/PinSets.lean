@@ -227,7 +227,7 @@ theorem hiC' : ∀ x ∈ ([132, 148, 149] : List Word), 64 ≤ x.toNat := by sim
 /-- The decoder's invariant across the record pool's writes. -/
 theorem DecInv.frameE {mem mem' : Mem} {a : AState} {seen : List ConLeche.Expr} {m : EMemo}
     (inv : DecInv mem a seen m) (hf : MemFrame [EREC] [129, 150, 151] mem mem') : DecInv mem' a seen m :=
-  ⟨ArenaD.frameHi hf hiA hiC inv.arena,
+  ⟨L.Arena.ArenaD.frameHi hf hiA hiC inv.arena,
    inv.memo.of_eq (hf.arr RMEMO (by decide) (by decide)) (hf.ctl 132 (by decide)) (hf.size CTL),
    inv.nodup, inv.comp, inv.fits, inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, inv.emok, by simp only [stkTop]; rw [hf.ctl 131 (by decide)]; exact inv.stk,
@@ -236,7 +236,7 @@ theorem DecInv.frameE {mem mem' : Mem} {a : AState} {seen : List ConLeche.Expr} 
 theorem SInv.frameE {mem mem' : Mem} {a : AState} (inv : SInv mem a)
     (hf : MemFrame [EREC] [129, 150, 151] mem mem') (ht : erTop mem' ≤ (mem'.arr64 EREC).size) :
     SInv mem' a :=
-  ⟨ArenaD.frameHi hf hiA hiC inv.arena,
+  ⟨L.Arena.ArenaD.frameHi hf hiA hiC inv.arena,
    inv.rset.frame hf (by decide) (by decide) (by decide) (by decide),
    inv.ok, by simp only [stkTop]; rw [hf.ctl 131 (by decide)]; exact inv.stk,
    by rw [hf.size CTL]; exact inv.ctl, ht, inv.mode.frame hf (by decide) (by decide),
@@ -275,7 +275,7 @@ theorem scratch_of_list {es : List ConLeche.Expr} {m m' : EMemo} {hs : List EIdx
 /-- A memo reset: the decoder's invariant at the empty memo. -/
 theorem SInv.reset {mem : Mem} {a : AState} (inv : SInv mem a) (hok : rclearOK mem) :
     DecInv (resetMem mem) a [] (∅ : EMemo) :=
-  ⟨ArenaD.frameHi (resetMem_frame1 mem) (by simp) hiC' inv.arena,
+  ⟨L.Arena.ArenaD.frameHi (resetMem_frame1 mem) (by simp) hiC' inv.arena,
    MemoR.fresh mem (by have := inv.ctl; omega), List.nodup_nil, by simp, by simp,
    RsetR.reset inv.rset hok, inv.ok, EMemoOK.empty _, by rw [resetMem_stk]; exact inv.stk,
    by rw [(resetMem_frame1 mem).size CTL]; have := inv.ctl; omega,
@@ -1208,7 +1208,7 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
   have h151 : rdW (m₂.arr64 CTL) 151 = c := by
     rw [← hm₂]; simp [rdW_set64, Mem.size_arr64_set64]; intro h; omega
   have ht₂ : erTop m₂ = erTop m₁ := by simp only [erTop, h129]
-  have inv₂ : SInv m₂ a := ⟨ArenaD.frameHi hf₂ hiA hiC hA,
+  have inv₂ : SInv m₂ a := ⟨L.Arena.ArenaD.frameHi hf₂ hiA hiC hA,
     hR.frame hf₂ (by decide) (by decide) (by decide) (by decide), hok,
     by simp only [stkTop]; rw [hf₂.ctl 131 (by decide)]; exact hstk,
     by rw [hf₂.size CTL]; exact hc, by rw [ht₂, ht₁, hE₂]; exact hroom, hmo.frame hf₂ (by decide) (by decide),

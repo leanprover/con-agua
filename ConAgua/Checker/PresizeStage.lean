@@ -51,7 +51,7 @@ theorem pow2AtLeast_spec (p : Prog) (hp : p.lookup "pow2_at_least" = some pow2At
   | zero => vcgen [exec] <;> grind
   | succ k =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs]
-    all_goals simp only [St.setLoc_mem, LocEq]
+    all_goals simp only [L.St.setLoc_mem, LocEq]
 
 /-- **`presize_tables()`**: a returning call keeps the caller's locals and writes the three
 tables' presizes, at some slot counts. -/
@@ -72,7 +72,7 @@ theorem presizeTables_spec (p : Prog) (hp : p.lookup "presize_tables" = some pre
       (consPresize_spec p appCS "app_presize" ha k · ·),
       (consPresize_spec p lamCS "lam_presize" hl k · ·),
       (consPresize_spec p forallCS "forall_presize" hf k · ·)]
-    all_goals (simp only [St.setLocs_mem', LocEq] at *)
+    all_goals (simp only [L.St.setLocs_mem, LocEq] at *)
     rename_i h4 h3 h2 h1 h0
     rw [h0.2, h1.2, h2.2, h3.2, h4.2]
     exact ⟨_, _, _, by congr 3; exact (‹_ ∧ _ = s₀.mem› : _ ∧ _).2⟩
@@ -153,7 +153,7 @@ theorem arenaR_ps (hc : CapsOK (loadMem b pb sz)) (a l f : Word) :
 theorem arenaD_ps (hc : CapsOK (loadMem b pb sz)) (a l f w : Word) :
     ArenaD (psAllM (loadMemM b pb sz w) a l f) (AState.init EStore.empty) := by
   rw [loadMemM, psAllM_setG]
-  exact ArenaD.frameHi (memFrame_setG _ MODE w) (by simp) (by simp)
+  exact L.Arena.ArenaD.frameHi (memFrame_setG _ MODE w) (by simp) (by simp)
     ⟨arenaR_ps b pb sz hc a l f, derR_init _⟩
 
 end

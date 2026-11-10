@@ -40,9 +40,6 @@ theorem bit_and (P Q : Prop) [Decidable P] [Decidable Q] :
     ((if P then (1 : Word) else 0) &&& if Q then 1 else 0) = if P ∧ Q then 1 else 0 := by
   by_cases hP : P <;> by_cases hQ : Q <;> simp [hP, hQ]
 
-theorem bit_ne (P : Prop) [Decidable P] : ((if P then (1 : Word) else 0) != 0) = decide P := by
-  by_cases hP : P <;> simp [hP]
-
 theorem CRef.of_run {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop} (b : α) (hrun : T.run a₀ = .ok (b, a₀))
@@ -184,7 +181,7 @@ theorem callW_strLitStored (n : Nat) (s₀ : St) (a₀ : AState)
   refine CRef.of_run _ hval (by rw [← hm]; exact hC₀) (by rw [← hm]; exact hfr₀) ?_ ?_
   · show (r.headD 0 != 0) = _
     rw [envFound_isSome hd0, envFound_isSome hd1, envFound_isSome hd2, envFound_isSome hd3, envFound_isSome hd4, envFound_isSome hd5, envFound_isSome hd6, ← hr]
-    simp only [bit_and, bit_ne]
+    simp only [bit_and, L.Arena.ite_bne]
     simp only [Bool.decide_and, ne_eq, decide_not]
     rfl
   · unfold ResH; rw [← hr]; unfold HW

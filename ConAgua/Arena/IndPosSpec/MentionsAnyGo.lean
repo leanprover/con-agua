@@ -88,7 +88,7 @@ theorem matesW_ok (n : Nat) : ∀ (m m' : Mem) (c off l oO oL : Word) (block out
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hblock
       obtain ⟨x, hx, rest, hrest, rfl⟩ := hblock
       obtain ⟨w0, hw0, hw0lt, hw0d⟩ := hd?_some hx
-      have hrd : erRd m off = w0 := erRd_of_erA hw0
+      have hrd : erRd m off = w0 := L.Arena.erRd_of _ _ hw0
       obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ out hout hb
       simp only [UInt64.ofNat_toNat] at hws
       rw [matesW.arm2 (hc1 := hl), erRd_foldN, hrd] at h
@@ -188,7 +188,7 @@ theorem maNodeBin_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl f1 x b1w ws mp h1 hA hx hws hwlt hM
   obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a no nl f1 y b2w ws mp1 h2 (maFrame_arena hf1 hA) hy
-    (slR_congr (maFrame_iw hf1) hws) hwlt hM1
+    (L.Ind.SlR.congr (maFrame_iw hf1) hws) hwlt hM1
   refine ⟨c1 || c2, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
   · simp only [StateT.run_bind]
     simp only [hr1, except_ok_bind, hr2]
@@ -216,9 +216,9 @@ theorem maNodeLet_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl 
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl f1 x b1w ws mp h1 hA hx hws hwlt hM
   obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a no nl f1 y b2w ws mp1 h2 (maFrame_arena hf1 hA) hy
-    (slR_congr (maFrame_iw hf1) hws) hwlt hM1
+    (L.Ind.SlR.congr (maFrame_iw hf1) hws) hwlt hM1
   obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m3 a no nl f1 z b3w ws mp2 h3
-    (maFrame_arena (hf1.trans hf2) hA) hz (slR_congr (maFrame_iw (hf1.trans hf2)) hws) hwlt hM2
+    (maFrame_arena (hf1.trans hf2) hA) hz (L.Ind.SlR.congr (maFrame_iw (hf1.trans hf2)) hws) hwlt hM2
   refine ⟨c1 || c2 || c3, mp3, ?_, ?_, hM3, (hf1.trans hf2).trans hf3⟩
   · simp only [StateT.run_bind]
     simp only [hr1, except_ok_bind, hr2, hr3]
@@ -242,7 +242,7 @@ theorem maNodeProj_ok (n : Nat) (ih : MaGoOK n) (m m' : Mem) (a : AState) (no nl
   rw [maP2_some] at hn
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hn)
   obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a no nl f1 z b1w ws mp h1 hA hz hws hwlt hM
-  have hws1 := slR_congr (maFrame_iw hf1) hws
+  have hws1 := L.Ind.SlR.congr (maFrame_iw hf1) hws
   have hcont := containsW_ok n _ _ _ _ _ _ hws1 h2
   refine ⟨(ws.map (fun w => (decI w : NIdx))).contains (decI x) || c1, mp1, ?_, ?_, hM1, hf1⟩
   · simp only [StateT.run_bind]
@@ -464,7 +464,7 @@ theorem mentionsAnyGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx 
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := maGoOK n _ _ a₀ no nl f h _ ws mp hm hS.check.arena.base hh hws hwlt hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 

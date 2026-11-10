@@ -7,6 +7,7 @@ import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
 import all ConAgua.Scan.Key
+import ConAgua.Front.IndInstallRefine2
 
 @[expose] public section
 
@@ -61,17 +62,11 @@ theorem wd_set64_same (m : Mem) (a : ArrId) (i x : Word) (h : i.toNat < (m.arr64
     wd (m.set64 a i x) a i.toNat = x := by
   rw [wd_set64, ite_eq_left ⟨rfl, rfl, h⟩]
 
-theorem wd_set64_other (m : Mem) (a : ArrId) (i x : Word) (j : Nat) (h : i.toNat ≠ j) :
-    wd (m.set64 a i x) a j = wd m a j := by
-  rw [wd_set64, ite_eq_right (by simp [h])]
-
 theorem size_set64' (m : Mem) (a c : ArrId) (i x : Word) :
     ((m.set64 a i x).arr64 c).size = (m.arr64 c).size := by
   by_cases hc : c = a
   · subst hc; simp [Mem.arr64_set64_same]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hc)]
-
-theorem rdW_wd (m : Mem) (a : ArrId) (i : Word) : rdW (m.arr64 a) i = wd m a i.toNat := rfl
 
 /-! ## Numbers: below `10^18` -/
 
@@ -871,7 +866,7 @@ theorem slot_put (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz : sz ≤
   refine ⟨⟨g.trans g1, g2 ⟨R1, R2, R3, R4⟩, hq1, hqs⟩, ?_, fun j hj => ?_,
     fun c j hc => wd_set64_ne _ _ _ _ _ _ hc, g3⟩
   · rw [← hqs']; exact wd_set64_same _ _ _ _ (by omega)
-  · rw [wd_set64_other _ _ _ _ _ (by omega)]
+  · rw [L.Front.Ind.wd_set_ne _ _ _ _ _ (by omega)]
 
 /-- Growth elsewhere (a nested list) while the record is read. -/
 theorem RecInv.grow {A : ArrId} {sz : Nat} {q : Word} {m₁ m m' : Mem} (hI : RecInv A sz q m₁ m)

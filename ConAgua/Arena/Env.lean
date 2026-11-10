@@ -14,6 +14,7 @@ meta import Std.Tactic.BVDecide.Normalize.BitVec
 meta import Std.Tactic.BVDecide.Normalize.Prop
 meta import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.View
 
 @[expose] public section
 
@@ -321,10 +322,6 @@ theorem row_inj {w w' : Word} (hw : w.toNat < 2 ^ 32) (hw' : w'.toNat < 2 ^ 32)
   simp only [rowTier] at hr
   have e1 := nat_split27 _ hw hn; have e2 := nat_split27 _ hw' hn'
   exact UInt64.toNat_inj.mp (by omega)
-
-/-- A handle's word is below `2^32`. -/
-theorem nidx_word_lt32 {k : IdxKind} (n : Idx k) : n.word.toUInt64.toNat < 2 ^ 32 := by
-  simp; exact UInt32.toNat_lt _
 
 /-- Distinct names have distinct words. -/
 theorem nidx_word_inj {n n' : NIdx} (h : n.word.toUInt64 = n'.word.toUInt64) : n = n' := by
@@ -851,7 +848,7 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
   have s2 := s2 hne
   have oth : ∀ n : NIdx, n.word.toUInt64 ≠ w →
       ownRaw (ownSet m w (vis + 1) q) n.word.toUInt64 = ownRaw m n.word.toUInt64 := fun n hn =>
-    ownRaw_ownSet_other hw32 (nidx_word_lt32 n) ht hn
+    ownRaw_ownSet_other hw32 (L.Arena.idx_word_lt32 n) ht hn
   have hname' : ∀ n : NIdx, (ci.name == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_ownSet m w (vis + 1) q
@@ -902,7 +899,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   obtain ⟨s1, s2⟩ := ownRaw_ownSet_self (m := m) (p := q) ht hb hc32 hs
   have oth : ∀ n : NIdx, n.word.toUInt64 ≠ w →
       ownRaw (ownSet m w c q) n.word.toUInt64 = ownRaw m n.word.toUInt64 := fun n hn =>
-    ownRaw_ownSet_other hw (nidx_word_lt32 n) ht hn
+    ownRaw_ownSet_other hw (L.Arena.idx_word_lt32 n) ht hn
   have hP := erecP_ownSet m w c q
   have hv1 : (vis - 1).toNat = vis.toNat - 1 := by
     have : vis.toNat ≠ 0 := fun e => hv (UInt64.toNat_inj.mp (by simpa using e))
@@ -1051,7 +1048,7 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
   have hne : q + 1 ≠ 0 := fun e => by have := congrArg UInt64.toNat e; simp only [hq1] at this; simp at this
   have s1 := ownTbl_tblSet_self (m := m) (v := q + 1) ht hb
   have oth : ∀ n : NIdx, n.word.toUInt64 ≠ w → ownTbl (tblSet m w (q + 1)) n.word.toUInt64 =
-      ownTbl m n.word.toUInt64 := fun n hn => ownTbl_tblSet_other hw32 (nidx_word_lt32 n) ht hn
+      ownTbl m n.word.toUInt64 := fun n hn => ownTbl_tblSet_other hw32 (L.Arena.idx_word_lt32 n) ht hn
   have hname' : ∀ n : NIdx, (tb.structName == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_tblSet m w (q + 1)
@@ -1164,7 +1161,7 @@ theorem envRowGet_spec (hp : p.lookup "env_row_get" = some envRowGetL) (n : Nat)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownRaw_0, ownRaw_1, ownRaw_2]
@@ -1183,7 +1180,7 @@ theorem envRowSet_spec (hp : p.lookup "env_row_set" = some envRowSetL) (n : Nat)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
       rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownSet, ownArr_0, ownArr_1, ownArr_2, rowWord,
@@ -1201,7 +1198,7 @@ theorem baseRowGet_spec (hp : p.lookup "base_row_get" = some baseRowGetL) (n : N
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
       beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseRow_t1, baseRow_0, baseRow_1, baseRow_2]
@@ -1218,7 +1215,7 @@ theorem tblBaseGet_spec (hp : p.lookup "tbl_base_get" = some tblBaseGetL) (n : N
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
       beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseTbl_t1, baseTbl_0, baseTbl_1, baseTbl_2]
@@ -1235,7 +1232,7 @@ theorem tblOwnGet_spec (hp : p.lookup "tbl_own_get" = some tblOwnGetL) (n : Nat)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Cmp.eval, BinOp.eval, rd64_rdWC,
       beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, ownTbl_0, ownTbl_1, ownTbl_2]
@@ -1254,7 +1251,7 @@ theorem tblOwnSet_spec (hp : p.lookup "tbl_own_set" = some tblOwnSetL) (n : Nat)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
       rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, tblSet, otxArrT_0, otxArrT_1, otxArrT_2,
@@ -1285,7 +1282,7 @@ theorem envFind_spec (hg : p.lookup "env_row_get" = some envRowGetL)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
       envRowGet_spec p hg n, baseRowGet_spec p hb n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1337,7 +1334,7 @@ theorem rawTable_spec (ho : p.lookup "tbl_own_get" = some tblOwnGetL)
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
       tblOwnGet_spec p ho n, tblBaseGet_spec p hb n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1404,7 +1401,7 @@ theorem findTable_spec (hP : FindTableProg p) (n : Nat) (s₀ : St) (vis t : Wor
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
       envFind_spec p hP.rowGet hP.baseGet hP.find n, rawTable_spec p hP.tblOwn hP.tblBase hP.raw n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1455,7 +1452,7 @@ theorem envPush_spec (hs : p.lookup "env_row_set" = some envRowSetL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, envRowSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1494,7 +1491,7 @@ theorem envPopTemp_spec (hs : p.lookup "env_row_set" = some envRowSetL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, envRowSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1534,7 +1531,7 @@ theorem envPushTable_spec (hs : p.lookup "tbl_own_set" = some tblOwnSetL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, tblOwnSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
       bne_iff_ne, ne_eq] at *
@@ -1574,7 +1571,7 @@ theorem baseRowSet_spec (hp : p.lookup "base_row_set" = some baseRowSetL) (n : N
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
       rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseSet, eixArr_0, eixArr_1, eixArr_2,
@@ -1594,7 +1591,7 @@ theorem tblBaseSet_spec (hp : p.lookup "tbl_base_set" = some tblBaseSetL) (n : N
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
     all_goals simp only [Cond.pval, Expr.pval, Expr.pval_tagE, Expr.pval_tierE, Expr.pval_idxE,
-      St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+      St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
       rd64_rdWC, beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, baseTblSet, tixArr_0, tixArr_1, tixArr_2,

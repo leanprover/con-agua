@@ -77,7 +77,7 @@ theorem cfLoop_succ_none (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
     ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
     Nat.reduceEqDiff]
   vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
     Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
     argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
@@ -99,7 +99,7 @@ theorem cfLoop_succ_some (p : Prog) (C : ConsSch) (hM : CMatchOK p C) (n : Nat)
     ↓reduceIte, seqO, hm, List.map, mapS, mapE, mapC, lvF, fvF, L.Notation.blk, Nat.reduceLT,
     Nat.reduceEqDiff]
   vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hM n, ih]
-  all_goals (try simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (try simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
     Nat.reduceEqDiff, rd64_rdWC, zero_ne_add, argsOf_setLoc_add1 1 C.nk 3 (by decide),
     argsOf_setLoc_add 1 C.nk 3 (by decide), argsOf_setLoc_add1 1 C.nk 4 (by decide),
@@ -218,7 +218,7 @@ theorem consFindG_specV (p : Prog) (C : ConsSch) (hM : CMatchOK p C)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, cfLoop_step_spec p C hM hml n]
-    all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+    all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
         Expr.pval, Nat.add_right_cancel_iff,
         Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add1 1 C.nk 2 (by decide),
         argsOf_setLoc_add 1 C.nk 2 (by decide), argsOf_setLoc_add1 1 C.nk 3 (by decide),

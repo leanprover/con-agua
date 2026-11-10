@@ -11,6 +11,8 @@ import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.PropReadRefine
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
+import ConAgua.Arena.IndSumSpec.TsrW
+import ConAgua.Arena.InferFieldSort
 
 @[expose] public section
 
@@ -54,25 +56,6 @@ def fireAt : IRecRuleFire → List LIdx → IRecRuleFire
   | .levels _, hs => .levels hs
   | f, _ => f
 
-theorem decRule_fields' {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
-    hd? R q = some rl.ctor ∧ nat? R (q + 1) = some rl.nfields ∧ hd? R (q + 8) = some rl.rhs := by
-  unfold decRule at h
-  cases h3 : nat? R (q + 3) with
-  | none => simp [h3] at h
-  | some t =>
-    simp only [h3, Option.bind_eq_bind, Option.bind_some] at h
-    match t, h with
-    | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | _ + 3, h => simp at h
-
 /-- **A rule record at new names**: the plain words copied, the right-hand side `x`, a `.levels`
 fire's slice the fresh `(lo, ·)`; every other fire's words copied. -/
 theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} {x lo : Word}
@@ -89,7 +72,7 @@ theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} 
     intro i hi y hy
     simp only [nat?, Option.map_eq_some_iff] at hy ⊢
     obtain ⟨v, hv, rfl⟩ := hy; exact ⟨v, hw i hi v hv, rfl⟩
-  obtain ⟨hc, hn, -⟩ := decRule_fields' h
+  obtain ⟨hc, hn, -⟩ := L.Ind.decRule_fields h
   have hc' : hd? R' q' = some rl.ctor := by
     simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hc ⊢
     obtain ⟨v, hv, e⟩ := hc; exact ⟨v, by simpa using hw 0 (by simp) v (by simpa using hv), e⟩
@@ -241,20 +224,6 @@ theorem sleGo_stageCore : "sle_go" ∈ stageCoreFns :=
 
 /-! ## Small facts -/
 
-theorem erAllocW_mem {m m' : Mem} {k q : Word} (h : erAllocW m k = some (q, m')) : m' = erAllocMem m k := by
-  unfold erAllocW at h
-  by_cases c : rdW (m.arr64 CTL) 1 = 0
-  · simp only [c, ↓reduceIte] at h
-    split at h; · cases h
-    split at h; · cases h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2, erAllocMem, ite_eq_left c]
-  · simp only [c, ↓reduceIte] at h
-    split at h; · cases h
-    split at h; · cases h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2, erAllocMem, ite_eq_right c]
-
 theorem erTopOf_put (m : Mem) (a v x : Word) : erTopOf (erecPutMem m a v) x = erTopOf m x := by
   simp only [erTopOf, erTop, erecTop1, erecPutMem_ctl]
 
@@ -389,7 +358,7 @@ theorem fireStep {p : Prog} (hP : RulesProg p) {n : Nat} {m m' : Mem} {a : AStat
   obtain ⟨hT₄, hg₄, hoff₄, htop₄, hd41⟩ := erAlloc_stageT hA4 hT₃
   have hqf4 := callW_quotFrame hP.quot (by decide) h4
   have hspn4 : m₄.arr64 SPN = m₂.arr64 SPN := by
-    rw [erAllocW_mem hA4]; exact erAllocMem_arr _ _ (by decide)
+    rw [L.Arena.erAllocW_mem hA4]; exact erAllocMem_arr _ _ (by decide)
   -- `spn_to_er(d, c, fl)`
   cases h5 : callW p n "spn_to_er" [r4.headD 0, spTop m₁, fl] m₄ with
   | none => rw [h5] at hW; simp [fireLevelsAtW.k_spn_to_er.none] at hW
@@ -447,7 +416,7 @@ theorem cell_ne {X : Mem} {i c : Nat} (hi : erecP X i ≠ none) (hc : erecP X c 
   have hi64 : i < 2 ^ 64 := by
     cases h : erecP X i with
     | none => exact absurd h hi
-    | some w => exact L.Ind.erecP_lt64 h
+    | some w => exact L.Arena.erecP_lt64 h
   exact hi (by rw [erecP_alias X hi64 hc64 e]; exact hc)
 
 /-- The cells at and above a tier's top are undefined. -/
@@ -668,7 +637,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
       ih n (wrER mf d ws) a2 (o + 11) (rl - 1) (d + 11) rules' xs r' m' hk' hTh hst2.ok hst2.read hfh
         hgh (by rw [et11, eo11]; omega) (by rw [et11, eo11, erTopOf_wrER]; omega) (by rw [ed11]; unfold erOff at hreg; omega)
         (ConRon.Bridge.denoteNListE_ext hst2.ext _ _ hlT1) (ConRon.Bridge.denoteLs_ext huT1 hst2.ext)
-        (decRules_shift hrs' fun _ _ hv => L.Ind.erecP_lt64 hv)
+        (decRules_shift hrs' fun _ _ hv => _root_.L.Arena.erecP_lt64 hv)
         (ConRon.Bridge.denoteRules_ext (hst1.ext.trans hst2.ext) _ _ hxs) hW3
     -- the twin
     have hrh' : rl0.rhs = decE (erRd m (o + 8)) := by rw [decE_eq]; exact hrh
@@ -767,9 +736,9 @@ theorem rulesAtSim_of {p : Prog} (hP : RulesProg p) : RulesAtSim p dn := by
   refine ⟨?_⟩
   intro n vis fe m₁ m₀ m a₀ a ko kc us o rl d lpsH ps rules Rs lpsT psv h₀ hT hok hr hg₁₀ hf hg hd0
     hdt hd41 hl hus hlT hps hus' hrs hRs res m' h
-  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run lpsH a lpsT (denoteNList_mapM hlT) hT.twin.den.readN
+  obtain ⟨X, hX, hcX⟩ := L.Arena.readNamesM_run' lpsH a lpsT (denoteNList_mapM hlT) hT.twin.den.readN
   obtain ⟨hst1, -⟩ := ConRon.Bridge.readNamesM_run hok hr hX
-  obtain ⟨Y, hY, hcY⟩ := pr_readNamesM_run ps { a with caches := { a.caches with readNC := X } } psv
+  obtain ⟨Y, hY, hcY⟩ := L.Arena.readNamesM_run' ps { a with caches := { a.caches with readNC := X } } psv
     (denoteNList_mapM hps) hcX
   obtain ⟨hst2, -⟩ := ConRon.Bridge.readNamesM_run hst1.ok hst1.read hY
   have hT2 := (hT.readNC X hcX).readNC Y hcY

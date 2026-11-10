@@ -218,13 +218,6 @@ theorem decRule_refire {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule}
     unfold decRule
     simp only [hk', Option.bind_eq_bind, Option.bind_some, hc', hn', hr', Option.pure_def]
 
-theorem decRules_getR {R : Nat → Option Word} {off cnt : Nat} {rs : List IRecRule}
-    (h : decRules R off cnt = some rs) :
-    rs.length = cnt ∧ ∀ j, j < cnt → decRule R (off + 11 * j) = rs[j]? := by
-  obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
-  simp at h1
-  exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem_range] using this⟩
-
 /-- **`rules_refire` into a fresh run, under the stage relation**: the run decodes as the source
 rules, each refired. -/
 theorem rrW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m1 m' : Mem}
@@ -240,7 +233,7 @@ theorem rrW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m1 m' : Mem}
   obtain ⟨-, hf1, -⟩ := erAllocW_spec ha hS.iw
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
-  obtain ⟨hlen, hget⟩ := decRules_getR hd
+  obtain ⟨hlen, hget⟩ := L.Arena.decRules_getR _ _ _ hd
   -- the source words read
   have hword : ∀ j < cnt.toNat, ∀ i, (i = 0 ∨ i = 1 ∨ i = 8) → ∃ w,
       erecP m (o.toNat + 11 * j + i) = some w ∧ erRd m (o + UInt64.ofNat (11 * j + i)) = w ∧

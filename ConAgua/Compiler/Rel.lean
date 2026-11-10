@@ -431,12 +431,6 @@ include hG
 theorem Layout.Ok.notStack_of_arr {x : Nat} (h : G.InArr x) : ¬ G.InStack x :=
   fun hs => hG.stack_arr x hs h
 
-theorem Layout.Ok.notStack_of_arr' {x : Nat} (h : G.InStack x) : ¬ G.InArr x :=
-  fun ha => hG.stack_arr x h ha
-
-theorem Layout.Ok.notStack_of_tab {x : Nat} (h : G.InTab x) : ¬ G.InStack x :=
-  hG.tab_stack x h
-
 /-- A table word at offset `off` (within the table) survives a change in the stack. -/
 theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d')
     (hab : ∀ x, a ≤ x → x < b → ¬ G.InDesc x ∧ ¬ G.InArr x)
@@ -568,7 +562,7 @@ theorem MemRel.only_res {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Na
 /-- A change inside the stack keeps the memory relation. -/
 theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
     (hab : ∀ x, a ≤ x → x < b → G.InStack x) : MemRel G m d' :=
-  hm.only' hG h fun x h1 h2 => ⟨fun ht => hG.notStack_of_tab ht (hab x h1 h2),
+  hm.only' hG h fun x h1 h2 => ⟨fun ht => hG.tab_stack _ ht (hab x h1 h2),
     fun ha => hG.notStack_of_arr ha (hab x h1 h2)⟩
 
 /-- A change among the temporaries keeps `Inv`. -/

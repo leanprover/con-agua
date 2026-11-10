@@ -193,7 +193,7 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
   intro st hst m₀
   induction st with
   | «skip» => vcgen [step] <;> grind
-  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st8 a i e => simp [Stmt.okW] at hst
   | st64 a i e =>
     by_cases hc : a = ctl
@@ -220,7 +220,7 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
     have h1 : ∀ m (a : TieredArray) di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
       fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
     vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
-  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st32t a t i e =>
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
     have := tierA_eq_or a
@@ -238,7 +238,7 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
   | «call» xs f args =>
     simp only [Stmt.okW, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, invoke_fr p hp k hk f hst m₀] <;>
-      grind [St.setLocs_mem']
+      grind [L.St.setLocs_mem]
   | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     have := hW.setG
@@ -385,7 +385,7 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
   intro st hst m₀
   induction st with
   | «skip» => vcgen [step] <;> grind
-  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st8 a i e => vcgen [step, L.st8, evalE_same i, evalE_same e] <;> grind [GFrame.set8]
   | st64 a i e => vcgen [step, L.st64, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
   | st64t a t i e =>
@@ -395,7 +395,7 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
       grind [GFrame.copy64]
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [GFrame.copy8w]
-  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st32t a t i e =>
     vcgen [step, L.st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [GFrame.set32]
   | seq s t ihs iht =>
@@ -411,7 +411,7 @@ theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk 
   | «call» xs f args =>
     simp only [Stmt.okG, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, invoke_g p hp k hk f hst m₀] <;>
-      grind [St.setLocs_mem']
+      grind [L.St.setLocs_mem]
   | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     simp only [Stmt.okG, decide_eq_true_eq] at hst

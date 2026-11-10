@@ -39,11 +39,7 @@ def Prog.noSt8 (p : Prog) : Bool := p.all fun f => f.2.body.noSt8
 /-- The byte arrays are the same and every word array has the same size. -/
 def Keep (m m' : Mem) : Prop := m'.bytes = m.bytes ∧ ∀ a, (m'.arr64 a).size = (m.arr64 a).size
 
-@[simp] theorem St.setLocs_mem' (s : St) (xs : List Var) (vs : List Word) :
-    (s.setLocs xs vs).mem = s.mem := by
-  induction xs generalizing s vs with
-  | nil => rfl
-  | cons x xs ih => simp only [St.setLocs]; rw [ih]; rfl
+attribute [simp] L.St.setLocs_mem
 
 theorem Keep.refl (m : Mem) : Keep m m := ⟨rfl, fun _ => rfl⟩
 
@@ -154,7 +150,7 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
   intro st hst m₀
   induction st with
   | skip => vcgen [step] <;> grind
-  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st8 a i e => simp [Stmt.noSt8] at hst
   | st64 a i e =>
     vcgen [step, st64, evalE_same i, evalE_same e] <;> grind [Keep.set64]
@@ -169,7 +165,7 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
   | brk => vcgen [step] <;> grind
   | ret es => vcgen [step, evalArgs_same es] <;> grind
   | call xs f args =>
-    vcgen [step, setLocs, evalArgs_same args, invoke_keep p hp k hk f m₀] <;> grind [St.setLocs_mem']
+    vcgen [step, setLocs, evalArgs_same args, invoke_keep p hp k hk f m₀] <;> grind [L.St.setLocs_mem]
   | abort e => vcgen [step, evalE_same e] <;> grind
   | gset g e => vcgen [step, setG, evalE_same e] <;> grind [Keep.setG, St.setG_mem]
   | st64t a t i e =>
@@ -179,7 +175,7 @@ theorem step_keep (p : Prog) (hp : p.noSt8 = true) (k : Stmt → M Sig) (hk : Ke
       grind [Keep.copy64]
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [Keep.copy8w]
-  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st32t a t i e =>
     vcgen [step, st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [Keep.set32]
 

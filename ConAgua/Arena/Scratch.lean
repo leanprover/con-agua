@@ -200,7 +200,7 @@ theorem vacB_spec (p : Prog) (sa : ArrId) (n : Nat) (s₀ : St) :
   unfold vacB
   simp only [mapS, mapE]
   vcgen [step, evalE_spec, setLoc, vacZ_step p sa n]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
     Expr.pval, rd64_rdWC, ↓reduceIte, Keep2] at *)
   all_goals grind [vacW, knW, koW, SN0]
 

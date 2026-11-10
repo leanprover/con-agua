@@ -14,6 +14,8 @@ public import ConAgua.Arena.WhnfIotaRecRefine
 import all ConAgua.Arena.WhnfIotaRec
 import ConAgua.Arena.IotaCase3Ref
 import ConAgua.L.WordOff
+import ConAgua.Arena.DefEqMid
+import ConAgua.Arena.IndRealOpf2
 
 @[expose] public section
 
@@ -94,7 +96,7 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hSt12 := hSt1.trans hSt2
   dsimp only [irFamE.k_iota_case3_at]
   subst hr3
-  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+  refine RefE.retIf L.Arena.decBool_false_of (fun h => by simpa [decBool] using h)
     (fun _ => ⟨⟨M2, hS2, hK1.trans hK2, hSt12⟩, rfl, by show HW (1 : Word); unfold HW; decide⟩) fun g0 _ => ?_
   have hsa2 := hsa.keep hSt12.size hSt12.below hsat hspn
   have hsat2 : so.toNat + sn.toNat ≤ (spTop s2.mem).toNat := by rw [hSt12.1]; exact hsat
@@ -211,9 +213,6 @@ l_model fire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFir
   grind [arena_grind] fold [rpLen] extra [ld64_rdW_specE, ld64_rdW_specT] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-theorem decOptR_none_rec (r : List Word) (h0 : r.headD 0 = 0) : decOptR r = none := by
-  unfold decOptR decOpt; rw [ite_eq_left h0]
-
 theorem decOptR_some_rec (r : List Word) (h1 : r.headD 0 = 1) : decOptR r = some (decE (r.tail.headD 0)) := by
   unfold decOptR decOpt; rw [ite_eq_right (by rw [h1]; decide)]
 
@@ -280,7 +279,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     by_cases h : margs.toList.length = np + rule.nfields
     · exact .inr h
     · refine .inl (RefE.ret (by rw [iotaRecFire2T, ite_eq_right h]; rfl) ⟨⟨MM, hS, KeptAll.refl _ _,
-        StackKept.refl _⟩, (decOptR_none_rec _ rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
+        StackKept.refl _⟩, (L.Arena.decOptR_none rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
   by_cases l1 : mn < erRd s₀.mem (ctorP + 5)
   · erw [ite_eq_left l1]
     exact hres0.resolve_right fun h => (hlen_iff.mp h).1 l1
@@ -309,8 +308,8 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have k1 := hER.all (by simp [iotaKeptFns]) (callW_of_callE c1)
   dsimp only [fire2E.k_iota_rec_fam]
   subst hr1
-  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
-    (fun _ => ⟨⟨M1, hS1, hK1, hSt1⟩, (decOptR_none_rec _ rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
+  refine RefE.retIf L.Arena.decBool_false_of (fun h => by simpa [decBool] using h)
+    (fun _ => ⟨⟨M1, hS1, hK1, hSt1⟩, (L.Arena.decOptR_none rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
     fun g0 _ => ?_
   simp only [erRd_congr k1.1 k1.2.1]
   -- the right-hand side
@@ -550,16 +549,12 @@ theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHea
       obtain ⟨hv2, hW⟩ := of_ite_none hW
       simp only [Option.some.injEq] at hW
       subst hW
-      obtain ⟨hvw, hn32, hu32⟩ := view_const_f m a hR hh hw ⟨hv1, UInt64.not_le.mp hv2⟩ h3
+      obtain ⟨hvw, hn32, hu32⟩ := L.Ind.view_const_f m a hR hh hw ⟨hv1, UInt64.not_le.mp hv2⟩ h3
       exact ⟨(decE_tag_eq _ hw 3 (by decide)).mpr h3, hvw, hn32, hu32⟩
     · simp only [h3, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
       rw [← hW] at h0; simp at h0
 
 /-! ## `iota_rec_major(mode, vis, d, c, us, recP, so, sn)` -/
-
-theorem view_run_of (a : AState) (h : EIdx) (v : ENodeView) (hv : a.store.view h = some v) :
-    (view h).run a = .ok (v, a) := by
-  simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
 
 theorem findRule_mem : ∀ (rules : List IRecRule) (c : NIdx) (rl : IRecRule),
     findRule rules c = some rl → rl ∈ rules ∧ rl.ctor = c
@@ -726,7 +721,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (fun h => Classical.byContradiction fun v0 => absurd (hyes v0).1 (by simpa using h))
     (fun _ => hpost _ ⟨M2, hS2, hK2, hSt12⟩) fun v0 _ => ?_
   obtain ⟨htag, hview, hcjw, husjw⟩ := hyes v0
-  refine RefE.bind_right (view_run_of _ _ _ hview) ?_
+  refine RefE.bind_right (L.Ind.view_run_of hview) ?_
   -- the constructor
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun re m5 c4 => ?_
   obtain ⟨hm5, hfnone, hfsome⟩ := irEnvFind p hp.toIotaProg' (N + 1) dn m2 vis fe hS2.env _ hcjw re m5 c4

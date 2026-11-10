@@ -61,9 +61,9 @@ theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
   obtain ⟨w1, hw1, rfl⟩ := ho2
   obtain ⟨w2, hw2, rfl⟩ := hl2
   have e1 : erRd m (q + 1) = w1 :=
-    erRd_of_erA (by rw [show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega]; exact hw1)
+    L.Arena.erRd_of _ _ (by rw [show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega]; exact hw1)
   have e2 : erRd m (q + 2) = w2 :=
-    erRd_of_erA (by rw [show (q + 2).toNat = q.toNat + 2 by rw [UInt64.toNat_add]; simp; omega]; exact hw2)
+    L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 2 by rw [UInt64.toNat_add]; simp; omega]; exact hw2)
   rcases n with _ | n
   · simp [L.Arena.cvLpsW] at h
   rw [L.Arena.cvLpsW_step] at h

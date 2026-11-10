@@ -32,7 +32,7 @@ namespace L.Ind
 open L.Arena
 
 /-- A real callee's word-model fact (`RelW`) as a `Sim`. -/
-theorem partsSimW {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
+theorem RelW.simS {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
     {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
     (h : RelW W args pre op post) {m : Mem} {a : AState} (hpre : pre m a) :
     Sim (W m args) op a (fun r x m' a' => post m m' a' r x) :=
@@ -86,7 +86,7 @@ theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM 
   obtain ⟨x, hx, hxl, hxe⟩ := hd?_some (decCV_type h)
   have hx' := truncM_er_get hx
   have hw3 : (w + 3).toNat = q + 3 := by have := erecP_lt64 hx'; rw [UInt64.toNat_add]; simp; omega
-  rw [erRd_of_erA (by rw [hw3]; exact hx')]
+  rw [L.Arena.erRd_of _ _ (by rw [hw3]; exact hx')]
   exact ⟨hxl, hxe.symm⟩
 
 /-- After `sl_cons`: the slice (the shared tail of the hand `IndParts` models). -/

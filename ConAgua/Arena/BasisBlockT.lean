@@ -255,7 +255,7 @@ theorem cbb_ref {p : Prog} (hP : CbbProg p) {dn : NIdx → Option ConLeche.Name}
     (erToIw_specW p hP.ia hP.ec hP.eti n _ bo bl) c2
   simp only at hs2 hW2
   subst hs2
-  have hBA1 := blockAt_grow hBA hg1
+  have hBA1 := _root_.L.Ind.BlockAt.grow hBA hg1
   obtain ⟨hS2, hg2, hl2, hdec2, -⟩ := erToIwW_blk (dn := dn) hW2 hD1.stage hBA1
   have hD2 := hD1.stepB hP cbbF_eti c2 hS2 hD1.chk (Ext.refl _)
   -- `pin_list_ok`
@@ -280,7 +280,7 @@ theorem cbb_ref {p : Prog} (hP : CbbProg p) {dn : NIdx → Option ConLeche.Name}
   refine RefE.onlySim (fun _ => cbbE.k_basis_at_block.none ..) (fun _ _ h => h) fun r4 m4 c4 => ?_
   rw [cbbE.k_basis_at_block.arm1]
   obtain ⟨L, a4, hrun4, ⟨hT4, hg4, hL4⟩, -⟩ := hP.bref.atBlock dn vis fe k bo bl block hk n m3 a3 r4 m4
-    ⟨hD3.stageT, hD3.chk.state, hD3.chk.readOK, blockAt_grow hBA1 (hg2.trans hg3), _,
+    ⟨hD3.stageT, hD3.chk.state, hD3.chk.readOK, _root_.L.Ind.BlockAt.grow hBA1 (hg2.trans hg3), _,
       ConRon.Bridge.denoteCIList_mono hr3.ext _ _ hbP1⟩ c4
   refine RefE.bind_right hrun4 ?_
   exact (ibds_ref hP.basis dn n hT4.stage hL4.1).mono fun _ _ _ hR =>

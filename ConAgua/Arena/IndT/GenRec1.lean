@@ -36,17 +36,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- **`StageC` at another view and environment**: the stage relation there, `CheckOK` there, the
-memory's half from `AbsOK` and the store's extension. -/
-theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
-    {env env' : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK false env' fe' a')
-    (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
-  ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
-      fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
-
 /-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`): the result slice, the stage,
 the growth, the memos, `AbsOK`. -/
 structure CnfsPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (env : ConLeche.Env)

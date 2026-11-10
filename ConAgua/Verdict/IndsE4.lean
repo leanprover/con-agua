@@ -97,7 +97,7 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   rw [hty']
   -- `open_pis_at_fvars_f`
   refine RefE.bindLift (fun _ => rfl) fun ra m1 h1 => ?_
-  obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1, hA1⟩ := opfF_okRA hty.1 (callW_opfF hOpf h1) hStage hA
+  obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1, hA1⟩ := opfF_okRA hty.1 (L.Ind.callW_opfF hOpf h1) hStage hA
   have hdty : denoteE a.store (decI (erRd m (cvTa + 3))) = some tyP := by
     rw [hty.2]; exact htyP
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hdty hrun1

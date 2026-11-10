@@ -363,7 +363,7 @@ theorem decPL_tbl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {ts : List IP
   rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
   · cases hd
   have hps' : decNL m' o l = some ps := by
-    rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
+    rw [← hps]; simp only [decNL]; apply L.Ind.mapM_congr_of; intro j hj
     simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
   rw [hps']
   simp only [Option.bind_some] at hd ⊢

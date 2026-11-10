@@ -5,6 +5,7 @@ import ConAgua.Rom.CIReadRefNames
 import ConAgua.Rom.ReadScr
 public import ConAgua.Rom.CIReadRefCI
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -113,19 +114,19 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   have hw := callW_model (M := fun mq => ciEntryW p n mq id) (ciEntry_specW rom p hL n · id) hc
   unfold ciEntryW at hw
   rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h5 : (5 + id).toNat = 5 + id.toNat := word_add_toNat 5 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (5 + id) (by omega)
   simp only [h5, ciEntries_ci id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI2, hM2, hs2, -, -, -, -, -⟩ := freshCall hL hI0 h2
   cases n with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ n =>
   simp only [List.headD_cons] at hw
-  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m3, h3, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : ciFits (romCiVals[id.toNat]'(by simp [romCiVals]; omega)) = true :=
@@ -152,21 +153,21 @@ theorem romCvRef_of (vis : Word) (fe : IFEnv) : RomCvRef p vis fe := by
   have hw := callW_model (M := fun mq => cvEntryW p n mq id) (cvEntry_specW rom p hL n · id) hc
   unfold cvEntryW at hw
   rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h12 : (12 + id).toNat = 12 + id.toNat := word_add_toNat 12 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (12 + id) (by omega)
   simp only [h12, ciEntries_cv id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI2, ho2, ht2, -, -, -, -, -, -⟩ := hI0.erAlloc (erAllocCall hL h2)
-  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m3, h3, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI3, hM3, hs3, -, -, ht3, -, -⟩ := freshCall hL hI2 h3
   cases n with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ n =>
   simp only [List.headD_cons] at hw
-  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
+  obtain ⟨r4, m4, h4, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : cvFits (romCvVals[id.toNat]'(by simp [romCvVals]; omega)) = true :=
@@ -193,16 +194,16 @@ theorem romExprPinRef_of (vis : Word) (fe : IFEnv) : RomExprPinRef p vis fe := b
   have hw := callW_model (M := fun mq => exprPinW p n mq id) (exprPin_specW rom p hL n · id) hc
   unfold exprPinW at hw
   rw [ite_eq_right (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   have h22 : (22 + id).toNat = 22 + id.toNat := word_add_toNat 22 id (by omega)
   obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (22 + id) (by omega)
   simp only [h22, ciEntries_ex id.toNat hid] at hpos
   have hI0 := RInv.refl hS
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI2, hM2, hs2, -, -, -, -, -⟩ := freshCall hL hI0 h2
   simp only [List.headD_cons] at hw
-  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m3, h3, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : exprFits (romExprVals[id.toNat]'(by simp [romExprVals]; omega)) = true :=
@@ -231,7 +232,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   | succ n =>
   have hw := callW_model (M := fun mq => blockW p n mq s) (block_specW rom p hL n · s) hc
   unfold blockW at hw
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨rfl, rfl⟩ := slotCall hL h1
   simp only [List.headD_cons] at hw
   replace hw := u64_some hL hw
@@ -248,16 +249,16 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   rw [hc0] at hw
   have hcN : (UInt64.ofNat cs.length).toNat = cs.length := L.toNat_ofNat_of_lt (by omega)
   have hI0 := RInv.refl hS
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI2, hM2, hs2, -, -, -, hi2, -⟩ := freshCall hL hI0 h2
-  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m3, h3, hw⟩ := L.Ind.ntBW_some hw
   have hal := iwAllocCall hL h3
   obtain ⟨hI3, ho3, ht3, -, -, -⟩ := hI2.iwAlloc hal
   obtain ⟨-, rfl, -⟩ := allocW_facts hal hI2.ok.iwSize
   have hf3 := allocMem_frame m2 (UInt64.ofNat cs.length)
   have hM3 := hM2.frameG hf3 (by decide) (by decide)
   have hs3 : stkTop (allocMem m2 (UInt64.ofNat cs.length)) = stkTop m2 := hf3.ctl 131 (by decide)
-  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
+  obtain ⟨r4, m4, h4, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hq8 : (ciOff + u64W rom (ciOff + 8 * s) + 8).toNat = (ciOff + u64W rom (ciOff + 8 * s)).toNat + 8 := by

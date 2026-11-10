@@ -69,7 +69,7 @@ theorem erN_rdW {m : Mem} {q : Nat} {k : Nat} (h : nat? (erA m) q = some k) :
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
   have hqq : (UInt64.ofNat q).toNat = q := by have := erecP_lt64 hw; simp; omega
-  rw [erRd_of_erA (by rw [hqq]; exact hw), UInt64.ofNat_toNat]
+  rw [L.Arena.erRd_of _ _ (by rw [hqq]; exact hw), UInt64.ofNat_toNat]
 
 /-- A `nat?`-decoded value is below `2 ^ 64` (it is some word's `toNat`). -/
 theorem nat?_lt {a : Nat → Option Word} {i k : Nat} (h : nat? a i = some k) : k < 2 ^ 64 := by
@@ -209,9 +209,6 @@ theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.con
 
 /-! ### `nest_ctor_entry` -/
 
-theorem viewConst_run (h : EIdx) (a : AState) :
-    (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
-
 theorem ETables.get_const (t : ETables) (i : EIdx) (ht : i.tag = ETag.const) (v : ENodeView)
     (h : t.get i = some v) : ∃ n us, v = .const n us := by
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const] at h
@@ -322,9 +319,6 @@ theorem EStore.viewBind_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.fora
     split at h
     · rename_i hs; rw [ite_eq_left hs]; exact ETables.getBind_of_get _ _ ht ty b h
     · simp at h
-
-theorem viewBind_run (h : EIdx) (a : AState) :
-    (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 /-- `inst_pis_with` keeps the `abstract1` memo. -/
 theorem instW_afr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word), instW n m ao al e = some (r, m') →

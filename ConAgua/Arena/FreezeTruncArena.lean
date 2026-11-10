@@ -189,7 +189,7 @@ theorem RecRel_ptr {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (t
   · simp only [RecRel, NatRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
     have hle := hsl.le
-    exact ⟨h0, hp.rslice hsl, Agree.norm _ _ _ _ _ hp.v hle hnm,
+    exact ⟨h0, hp.rslice hsl, L.Arena.Norm.of_agree _ _ _ _ _ hp.v hle hnm,
       by rw [Agree.pv _ _ _ _ _ hp.v hle, hpv], by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
   · simp only [RecRel, StrRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hw, hh⟩ := h
@@ -265,8 +265,8 @@ theorem ColT2.trunc {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabit
     (hc : (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat = (L.getP a).nodes.size)
     (h : ColT2 L c f m a) : ColT2 L c f (truncFrozen m) a :=
   ⟨colT_mono h.1 (fun i hi => by
-      simp only [tierA_zero]; exact rdcol_trunc m hB (by rw [hc]; exact hi)),
-    colT_mono h.2 (fun _ _ => by simp only [tierA_one', truncFrozen_other m _ h1])⟩
+      simp only [_root_.L.tierA_zero]; exact rdcol_trunc m hB (by rw [hc]; exact hi)),
+    colT_mono h.2 (fun _ _ => by simp only [_root_.L.tierA_one, truncFrozen_other m _ h1])⟩
 
 theorem rdpcol_trunc (m : Mem) {c : ArrId} {ca : Nat} (hB : (c, ca) ∈ fzPCols) {i : Nat}
     (hi : i < (rdW (m.arr64 CTL) (UInt64.ofNat ca)).toNat)
@@ -294,10 +294,10 @@ theorem DerT2.trunc {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α E
   refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
   · have hi := (Array.getElem?_eq_some_iff.mp hx).1
     have := h0 i x hx
-    simp only [cP, tierA_zero] at this ⊢
+    simp only [cP, L.tierA_zero] at this ⊢
     rw [rdpcol_trunc m hB (by rw [hc]; exact hi) (by rw [hc]; omega)]; exact this
   · have := h1' i x hx
-    simp only [cP, tierA_one'] at this ⊢
+    simp only [cP, L.tierA_one] at this ⊢
     rw [truncFrozen_other m _ h1]; exact this
 
 /-! ## The store tier -/

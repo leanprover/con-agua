@@ -108,7 +108,7 @@ theorem IndMemos.ofCall {p : Prog} {f : FnName} (hK : WmKeep p f) {n : Nat} {vs 
     {r : List Word} {m' : Mem} (h : callW p n f vs m = some (r, m')) (hI : IndMemos m) (hP : PosMR m')
     (hA : AbsOK m') : IndMemos m' :=
   ⟨⟨hP, hK.ma _ _ _ _ _ h hI.stage.ma, hK.mc _ _ _ _ _ h hI.stage.mc, hK.ta _ _ _ _ _ h hI.stage.ta⟩,
-    hA.i1, hA.crMemo.crOK⟩
+    hA.i1, hA.cr.crOK⟩
 
 /-- **`class_seeds`' contract** (`SeedsRefS`): `classSeeds_refines` through the call (the twin
 never fails); `AbsOK` by `AbsKeep`, the memos by `IndMemos.ofCall`. -/

@@ -10,6 +10,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DefEqLeaves2
 import ConRon.Bridge.Grind
+import ConAgua.Arena.DefEqStuckCert
 
 @[expose] public section
 
@@ -165,7 +166,7 @@ theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
     simp [projIndexedStructLike, hn]
   obtain ⟨ci, hci⟩ := hs f0
   have hfind : fe.find? T = some ci := by rw [hf]; simp only [envFound, f0, ↓reduceIte]; exact hci
-  have hK := decCI_indF (erRdOK m) hci
+  have hK := L.Arena.decCI_indK (erRdOK m) hci
   by_cases h3 : erRd m q = 3
   · obtain ⟨cv, caps, rfl⟩ := hK.1 h3
     obtain ⟨hnp, hlen, hc⟩ := decCI_indNC (erRdOK m) hci
@@ -211,7 +212,7 @@ theorem ctorFieldsGt_eq {fe : IFEnv} {m : Mem} {c : NIdx} {f q iw : Word}
     simp [ctorFieldsGt, hn, f0]
   obtain ⟨ci, hci⟩ := hs f0
   have hfind : fe.find? c = some ci := by rw [hf]; simp only [envFound, f0, ↓reduceIte]; exact hci
-  have hK := decCI_ctorF (erRdOK m) hci
+  have hK := L.Arena.decCI_ctorR (erRdOK m) hci
   by_cases h4 : erRd m q = 4
   · obtain ⟨cv, rfl⟩ := hK.1 h4
     simp only [ctorFieldsGt, hfind, f0, h4, ne_eq, not_false_eq_true, true_and, decide_eq_decide]

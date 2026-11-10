@@ -2,6 +2,7 @@ module
 
 public import ConRon.Arena.Core
 public import Std.Do.Triple.SpecLemmas
+import ConAgua.Arena.View
 
 @[expose] public section
 
@@ -15,8 +16,6 @@ public import Std.Do.Triple.SpecLemmas
 open ConRon.Arena
 
 namespace L.Arena
-
-theorem pv_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) : (Except.ok x >>= f) = f x := rfl
 
 theorem pv_get_bind {β : Type} (f : AState → AM β) (lst : AState) :
     ((do let s ← get; f s : AM β)).run lst = (f lst).run lst := rfl
@@ -128,9 +127,9 @@ theorem readNamesM_store : ∀ {lps : List NIdx} {a a' : AState} {ks : List ConL
     | ok p =>
       rw [h1] at h
       cases h2 : (readNamesM xs).run p.2 with
-      | error e => simp only [pv_ok_bind, h2] at h; cases h
+      | error e => simp only [L.Arena.except_ok_bind, h2] at h; cases h
       | ok q =>
-        simp only [pv_ok_bind, h2] at h
+        simp only [L.Arena.except_ok_bind, h2] at h
         cases h
         exact (readNamesM_store h2).trans (readNameM_store h1)
 
@@ -160,9 +159,9 @@ theorem lvlEq?_store' {u v : LIdx} {a a' : AState} {o : Option Bool}
     | ok p =>
       rw [h1] at h
       cases h2 : (readLevelM v).run p.2 with
-      | error e => simp only [pv_ok_bind, h2] at h; cases h
+      | error e => simp only [L.Arena.except_ok_bind, h2] at h; cases h
       | ok q =>
-        simp only [pv_ok_bind, h2] at h
+        simp only [L.Arena.except_ok_bind, h2] at h
         have hs := (readLevelM_store h2).trans (readLevelM_store h1)
         split at h
         · simp [set, StateT.set, bind, StateT.bind, Except.bind,

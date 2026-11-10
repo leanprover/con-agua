@@ -267,11 +267,11 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     hT3.stage hf3' hg3' hd0 (by simp only [List.length_cons, List.length_nil]; omega) hd41
   obtain ⟨⟨w0, hw0, hw0l, hname⟩, -, -⟩ := decCV_words hcv
   have e0 : erRd m (c + 1) = w0 := (erRdOK m).off hw0 (by simp)
-  have hrun3 := partsRunOfOk hok3
+  have hrun3 := L.Arena.AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_,
     by simpa using hrd 1 (by simp), by simpa using hrd 2 (by simp), fun x => ?_⟩
-  · simp only [IConstantVal.atLps, StateT.run_bind, hrun1, ← hus, hty, ← decE_eq, exb, hrun3,
+  · simp only [IConstantVal.atLps, StateT.run_bind, hrun1, ← hus, hty, ← decE_eq, L.Arena.except_ok_bind, hrun3,
       StateT.run_pure]
     rfl
   · rw [hname, e0]
@@ -482,7 +482,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
         then (do let x ← ci.toConstantVal.atLps cv.levelParams; pure (cv == x) : AM Bool)
         else pure false).run a1 = .ok (b, a') := by
     intro b a'
-    simp only [ConRon.Arena.quotPinHit, StateT.run_bind, hrun1, exb]
+    simp only [ConRon.Arena.quotPinHit, StateT.run_bind, hrun1, L.Arena.except_ok_bind]
   by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + 3)
   case neg =>
     rw [ite_eq_right hc] at hW
@@ -533,7 +533,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
     ArrExt.decCV hg5.erecGrow.ext (ArrExt.decCV hg2.erecGrow.ext hq1)
   have hb := cvEqB_ok (erRdOK m5) hq5 hdec5
   refine ⟨cv == cv', a2, (hrunP _ _).mpr ?_, ?_, ?_, ?_⟩
-  · simp only [hcond.mp hc, ite_true, StateT.run_bind, hrun2, exb, StateT.run_pure]
+  · simp only [hcond.mp hc, ite_true, StateT.run_bind, hrun2, L.Arena.except_ok_bind, StateT.run_pure]
     rfl
   · rw [e2]; exact hT5
   · rw [e2]; exact hg1.trans (hg2.trans hg5)
@@ -598,7 +598,7 @@ theorem quotAt_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : C
     (ConRon.Bridge.denoteNListE_ext hst1.ext _ _ (ConRon.Bridge.denoteCV_inv hden).2.1) r2 m2 h2
   obtain ⟨rfl, rfl⟩ := hW
   refine ⟨ci', a2, ?_, hT2, hg1.trans hg2, hdec2⟩
-  simp only [ConRon.Arena.quotAt, StateT.run_bind, hrun1, exb, hrun2]
+  simp only [ConRon.Arena.quotAt, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hrun2]
 
 /-- **The simulations `check_quot_record` takes**, from the slot reader's and `ci_at_lps`'s. -/
 theorem quotSims_of {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : CiAtLpsSim p dn) :

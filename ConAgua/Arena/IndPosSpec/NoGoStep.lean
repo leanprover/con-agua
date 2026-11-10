@@ -172,8 +172,8 @@ theorem noGo_step (n : Nat) (ih : NoNodeSpec p n) : NoGoSpec p (n + 1) := by
     memoPutG_spec noSch p _ hput n, ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
@@ -186,8 +186,8 @@ theorem noNode_step (n : Nat) (ih : NoGoSpec p n) : NoNodeSpec p (n + 1) := by
     ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
 
@@ -442,7 +442,7 @@ theorem noNodeBin_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
   · rw [ite_eq_right e1] at hn
     have hc1 : c1 = false := by rw [← hb1]; simpa using e1
     obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m' a no nl lo hi f1 y r ws mp1 hn (noFrame_arena hf1 hA) hy
-      (slR_congr (noFrame_iw hf1) hws) hwlt hM1
+      (L.Ind.SlR.congr (noFrame_iw hf1) hws) hwlt hM1
     refine ⟨c2, mp2, ?_, hb2, hM2, hf1.trans hf2⟩
     simp only [StateT.run_bind, hr1, except_ok_bind, hc1]
     simpa using hr2
@@ -475,7 +475,7 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
     rcases h2 : noGoW n m1 no nl lo hi f1 y with _ | ⟨b2w, m2⟩ <;> rw [h2] at hn; · simp [noL2] at hn
     rw [noL2_some] at hn
     have hA1 := noFrame_arena hf1 hA
-    have hws1 := slR_congr (noFrame_iw hf1) hws
+    have hws1 := L.Ind.SlR.congr (noFrame_iw hf1) hws
     obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a no nl lo hi f1 y b2w ws mp1 h2 hA1 hy hws1 hwlt hM1
     by_cases e2 : b2w ≠ 0
     · rw [ite_eq_left e2] at hn
@@ -487,7 +487,7 @@ theorem noNodeLet_ok (n : Nat) (ih : NoGoOK n) (m m' : Mem) (a : AState) (no nl 
     · rw [ite_eq_right e2] at hn
       have hc2 : c2 = false := by rw [← hb2]; simpa using e2
       obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m' a no nl lo hi f1 z r ws mp2 hn
-        (noFrame_arena (hf1.trans hf2) hA) hz (slR_congr (noFrame_iw (hf1.trans hf2)) hws) hwlt hM2
+        (noFrame_arena (hf1.trans hf2) hA) hz (L.Ind.SlR.congr (noFrame_iw (hf1.trans hf2)) hws) hwlt hM2
       refine ⟨c3, mp3, ?_, hb3, hM3, (hf1.trans hf2).trans hf3⟩
       simp only [StateT.run_bind, hr1, except_ok_bind, hc1, Bool.false_eq_true, ↓reduceIte, hr2, hc2]
       simpa using hr3

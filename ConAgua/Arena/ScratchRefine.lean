@@ -9,6 +9,7 @@ meta import ConAgua.Arena.Tiers
 meta import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.StoreGrow
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -76,7 +77,7 @@ theorem resetMemA_base (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size)
 
 theorem resetMemA_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) :
     rdW ((resetMemA m f).arr64 CTL) 1 = f := by
-  rw [resetMemA_eq, (zeroCtl_frame _ _).ctl 1 (by simp [scratchCnts]), rdW_set64, size_set64]
+  rw [resetMemA_eq, (zeroCtl_frame _ _).ctl 1 (by simp [scratchCnts]), rdW_set64, L.Mem.size64_set64]
   simp [SCB] at h ⊢; omega
 
 theorem resetMemA_top (m : Mem) (f : Word) : (resetMemA m f).top = m.top := by
@@ -111,7 +112,7 @@ theorem resetMem_flag (m : Mem) (f : Word) (h : SCB.toNat < (m.arr64 CTL).size) 
 
 theorem preMem_ctl_size (m : Mem) : ((preMem m).arr64 CTL).size = (m.arr64 CTL).size := by
   unfold preMem; split
-  · rw [size_set64, vacL_ctl]
+  · rw [L.Mem.size64_set64, vacL_ctl]
   · rfl
 
 theorem preMem_top (m : Mem) : (preMem m).top = m.top := by
@@ -141,7 +142,7 @@ theorem vacL_frame : ∀ (l : List ArrId) (m : Mem), MemFrame (l.map (tierA · 1
   | a :: as, m => by
     simp only [vacL]
     have h1 : MemFrame [tierA a 1] [] m (vacW a m) :=
-      GFr.memFrame (kzeroW_fr (tierA a 1) _ _ m) (by rw [tierA_one]; exact tier1_ne_t0 _ _)
+      GFr.memFrame (kzeroW_fr (tierA a 1) _ _ m) (by rw [L.tierA_one]; exact tier1_ne_t0 _ _)
     exact (h1.mono (by simp) (by simp)).trans
       ((vacL_frame as _).mono (fun b hb => List.mem_cons_of_mem _ hb) (by simp))
 
@@ -173,12 +174,12 @@ theorem vacL_rd (sa : ArrId) : ∀ (l : List ArrId) (m : Mem), l.Nodup → sa �
     by_cases ha : a = sa
     · subst ha
       have e : (vacL as (vacW a m)).arr64 (tierA a 1) = (vacW a m).arr64 (tierA a 1) :=
-        vacL_arr as _ _ (fun b hb' => tierA_ne (fun h : a = b => hna (h ▸ hb')) 1 1)
+        vacL_arr as _ _ (fun b hb' => L.tierA_ne_tierA (fun h : a = b => hna (h ▸ hb')) 1 1)
       rw [e]
       exact ⟨(kzeroW_fr _ _ _ m).size _, kzeroW_rd _ _ _ m hb⟩
     · have hin' : sa ∈ as := by simpa [Ne.symm ha] using hin
       have e : (vacW a m).arr64 (tierA sa 1) = m.arr64 (tierA sa 1) :=
-        vacW_arr a m _ (tierA_ne (Ne.symm ha) 1 1)
+        vacW_arr a m _ (L.tierA_ne_tierA (Ne.symm ha) 1 1)
       have ek : koW sa (vacW a m) 1 = koW sa m 1 := by simp only [koW, e]
       have en : knW sa (vacW a m) 1 = knW sa m 1 := by simp only [knW, e]
       have := vacL_rd sa as (vacW a m) hnd' hin' (by rw [ek, en]; exact hb)

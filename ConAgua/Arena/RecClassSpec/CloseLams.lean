@@ -10,6 +10,7 @@ import ConRon.Bridge.Grind
 import all ConAgua.Arena.RecClass
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.Abs1Refine
 
 @[expose] public section
 
@@ -223,7 +224,7 @@ theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i
     ∃ w, erRd m (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
   obtain ⟨w, hw, hl, hx⟩ := hd?_some h
   have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
-  exact ⟨w, erRd_of_erA (by rw [hiw]; exact hw), hl, hx.symm⟩
+  exact ⟨w, L.Arena.erRd_of _ _ (by rw [hiw]; exact hw), hl, hx.symm⟩
 
 /-! ## `class_of_motive_var`, model form (for callers) -/
 
@@ -480,9 +481,6 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
         gafF_spec p had n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
-theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
-
 theorem fvarHeadW_ok (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (e : Word) (he : H e) (r : List Word) (h : fvarHeadW m e = some (r, m'))
     (hS : StageR vis fe m a) :
@@ -514,7 +512,7 @@ theorem fvarHeadW_ok (vis : Word) (fe : IFEnv) (m m' : Mem)
         rw [← hd2, show (decI w : EIdx) = decE w from rfl]
         simp only [htag, beq_self_eq_true, ite_true]
         have e1 : (ConRon.Arena.viewFVarIdx (decE w)).run a1 = .ok (some k, a1) := by
-          rw [viewFVarIdx_run', hk]
+          rw [L.Arena.viewFVarIdx_run, hk]
         simp only [StateT.run] at e1 ⊢
         simp only [StateT.bind, e1, bind, Except.bind]
         rfl

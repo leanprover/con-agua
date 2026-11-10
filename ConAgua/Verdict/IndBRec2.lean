@@ -194,7 +194,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   subst hgd
   have hg12 := hg1.trans hg2
   obtain ⟨q0, hq0, -⟩ := rec2DecRS_parts (show decRS (truncM m) rc.toNat = some RS from hrc)
-  obtain ⟨hrct, hq0m⟩ := rec2IwN_trunc hq0
+  obtain ⟨hrct, hq0m⟩ := L.Ind.iwN_truncM_some hq0
   have hq2 : iwN m2 rc.toNat = some q0 := by rw [iwN_grow hg12 hrct]; exact hq0m
   obtain ⟨q0', hq0', hcv2, -⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m2 hg12)
   rw [hq2] at hq0'; cases hq0'

@@ -56,7 +56,7 @@ theorem MemsOK.grow {m m' : Mem} {o l : Word} {mss : List MemberShape} (h : Mems
   rw [iwN_truncM hoj, hc] at hv
   cases hv
   obtain ⟨⟨c', hc', -⟩, -, -⟩ := decMS_some hx'
-  obtain ⟨hclt, -⟩ := rec2IwN_trunc hc'
+  obtain ⟨hclt, -⟩ := L.Ind.iwN_truncM_some hc'
   rw [iwN_grow hg hclt] at hd
   exact CVExt_grow hg (hx j hj c hc d hd)
 

@@ -10,6 +10,7 @@ import ConAgua.Checker.RomProg0
 import ConAgua.L.Blocks
 public import ConAgua.Final.TwinVerdict
 import all ConAgua.Checker.Entry
+import ConAgua.Front.FrontRunRef
 
 @[expose] public section
 
@@ -62,22 +63,12 @@ theorem invoke_agree_err {p : Prog} {S : TieredArray → Bool} {S8 : ArrId → B
   | ok r => intro h'; exact h'.elim
   | error e' => intro h'; cases h'; rfl
 
-/-- A failing run is a failing `callE`. -/
-theorem callE_of_run_err {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s : St} {e : Err}
-    (h : (invoke p (exec p n) f vs).run s = .error e) : callE p n f vs s.mem = .error e := by
-  rw [invoke_run_loc'] at h
-  simp only [callE]
-  revert h
-  cases (invoke p (exec p n) f vs).run ⟨s.mem, Locals.init []⟩ with
-  | ok q => intro h; simp [Except.map] at h
-  | error e' => intro h; simp only [Except.map, Except.error.injEq] at h; rw [h]
-
 /-- `flush_caches` at the checker, error-precise: it fails only with class `0`. -/
 theorem flushCaches_specNV (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "flush_caches" []
     ⦃fun _ s' => LocEq s' s₀ ∧ FlushOK s₀.mem ∧ s'.mem = flushMem s₀.mem; fun e => e.cls = 0⦄ := by
   have hm : "flush_caches" ∈ nvFns := nv_mem (by decide +kernel)
-  have hS := flushCaches_spec checkerProg checkerProg_flushProg' n s₀
+  have hS := flushCaches_spec checkerProg L.Checker.checkerProg_flushProg n s₀
   have hN := invoke_nv checkerProg checkerProg_nv n "flush_caches" hm []
   apply M.triple_of_run'
   · intro s r s' hp hr
@@ -175,7 +166,7 @@ theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerPro
     rw [flushMem_bytes]; exact hPB
   rw [← L.Rom.invoke_subPB (bs := bs) checkerProg_noSt8PB n _ _ (s := s₂) hPB₂] at hrun₂
   have hJ2 : JobRel pins dn ds I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
-  exact hE n s₂.mem a j hn hj hJ2 hF (callE_of_run_err hrun₂)
+  exact hE n s₂.mem a j hn hj hJ2 hF (L.Front.callE_of_run_err hrun₂)
 
 /-- **`check_b` on a thread's memory, error half of `checkB_thr`.** -/
 theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
@@ -203,8 +194,8 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
     have hJ := checkJobs_thrE hE n (by omega) a j hj hF
     have hFl := flushCaches_specNV n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
-    all_goals (try simp only [St.setLoc_mem, St.setLoc_loc,
-      Locals.init_nil, Cmp.eval,
+    all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
+      L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals (try simp only [St.setG, Mem.setG, St.setLoc] at *)
     all_goals first
@@ -215,10 +206,10 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
     all_goals first
       | (obtain ⟨-, hfx, hm⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
          first
-          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR0 (by simp_all)⟩
-          | exact ⟨_, hfx, by rw [St.setLocs_mem']; exact hm, hR1 (by simp_all)⟩
-          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp_all; done)
-          | (rw [St.setLocs_mem', hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
+          | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
       | (rw [St.setLocs_mem']; simp_all; done)
       | (trace_state; fail "ThreadsE.checkB_thrE: no closing tactic applies")
 

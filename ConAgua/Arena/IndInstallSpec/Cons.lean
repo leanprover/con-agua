@@ -45,7 +45,7 @@ theorem MemsOK.cons {m : Mem} {o l : Word} {mss : List MemberShape} (h : MemsOK 
     have h1 := congrArg UInt64.toNat (hwv.symm.trans hw)
     rw [UInt64.toNat_ofNat_of_lt' (partsIwRd hv rfl).2.1, hq'] at h1; exact h1
   subst hvq
-  obtain ⟨-, hvm⟩ := rec2IwN_trunc hv
+  obtain ⟨-, hvm⟩ := _root_.L.Ind.iwN_truncM_some hv
   have ho1 : (o + 1).toNat = o.toNat + 1 := by
     have := hp.2; rw [UInt64.toNat_add]; simp; omega
   have hl1 : (l - 1).toNat = L := by

@@ -221,7 +221,7 @@ theorem pgra_ok (p : Prog) (_hf : p.lookup "proj_guard_rows_at" = some projGuard
     have hspn3 : ∀ x : Word, spW m3 x = if x = ro + 2 * rn + 1 then r2.headD 0
         else if x = ro + 2 * rn then nP + j else spW m1 x := by
       intro x; rw [← hm3]; simp only [spW]
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64E, rdW_set64E]
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), L.Arena.rdW_set64, L.Arena.rdW_set64]
       have e1 : (ro + 2 * rn).toNat < (m1.arr64 SPN).size := by omega
       have e2 : (ro + 2 * rn + 1).toNat < ((m1.set64 SPN (ro + 2 * rn) (nP + j)).arr64 SPN).size := by
         rw [Mem.size_arr64_set64]; omega
@@ -233,7 +233,7 @@ theorem pgra_ok (p : Prog) (_hf : p.lookup "proj_guard_rows_at" = some projGuard
         · rw [ite_eq_right (fun h => ha h.2.1.symm), ite_eq_right (fun h => hb h.2.1.symm), ite_eq_right ha, ite_eq_right hb]
     have htop3 : spTop m3 = ro + 2 * rn + 2 := by
       rw [← hm3]; simp only [spTop]
-      rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by
+      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by
         rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; simp; omega⟩]
     have hrn1 : (rn + 1).toNat = rn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hsz3 : (m3.arr64 SPN).size = (m1.arr64 SPN).size := hf3.size SPN
@@ -619,7 +619,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     _ | ⟨r3, m3⟩
   · rw [c3, pgrW.k_open_pis_at_fvars_f.none] at hW; cases hW
   rw [c3] at hW
-  have hopf := callW_opfFC hP.opf c3
+  have hopf := L.Ind.callW_opfF hP.opf c3
   obtain ⟨x3, a3, M3, hrun3, hS3, hK3, hSt3, htb, hres3⟩ := opfF_okC _ _ _ hr2 hopf hS2 hI2
   obtain ⟨hI3, hg3⟩ := opfF_grow hopf hI2
   have hM3 := hbMR_keep (opfF_frame hopf) (by decide) (by decide) hM2

@@ -9,6 +9,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -52,7 +53,7 @@ theorem wrIW_arr_ne : ∀ (ws : List Word) (m : Mem) (q : Word) (b : TieredArray
 theorem wrIW_size : ∀ (ws : List Word) (m : Mem) (q : Word),
     ((wrIW m q ws).arr64 IW).size = (m.arr64 IW).size
   | [], m, q => rfl
-  | x :: ws, m, q => by simp only [wrIW]; rw [wrIW_size ws, size_set64]
+  | x :: ws, m, q => by simp only [wrIW]; rw [wrIW_size ws, L.Mem.size64_set64]
 
 /-- **What `wrIW` leaves in `IW`**, when the slice is in bounds. -/
 theorem wrIW_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
@@ -64,7 +65,7 @@ theorem wrIW_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
     simp only [wrIW, List.length_cons] at h ⊢
     have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hqlt : q.toNat < (m.arr64 IW).size := by omega
-    have hsz1 : ((m.set64 IW q x).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
+    have hsz1 : ((m.set64 IW q x).arr64 IW).size = (m.arr64 IW).size := L.Mem.size64_set64 _ _ _ _ _
     rw [wrIW_get ws _ _ i (by rw [hq1, hsz1]; omega) (by rw [hsz1]; exact hsz), hq1]
     have hg : (m.set64 IW q x).arr64 IW = (m.arr64 IW).set! q.toNat x := Mem.arr64_set64_same _ _ _ _
     by_cases h1 : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + ws.length

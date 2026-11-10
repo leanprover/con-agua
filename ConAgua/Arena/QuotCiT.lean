@@ -362,11 +362,6 @@ theorem decCI_kindW {R : Nat → Option Word} {q : Nat} {ci : IConstantInfo} {w 
   split at h <;> simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq,
     reduceCtorEq] at h <;> grind [ciKindQ]
 
-theorem erecP_lt64 {m : Mem} {i : Nat} {w : Word} (h : erecP m i = some w) : i < 2 ^ 64 := by
-  unfold erecP at h; split at h
-  · assumption
-  · cases h
-
 section ci
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
@@ -399,7 +394,7 @@ theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : ASta
     rw [show r.toNat + 5 + j = (r + 5).toNat + j by rw [e5]]
     refine hrd4 j hj w ?_
     have h5 : (5 : Word).toNat = 5 := rfl
-    have := erecP_lt64 hw
+    have := L.Arena.erecP_lt64 hw
     rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat', h5]
     rw [show (c.toNat + 5) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + 5 + j by omega,
       Nat.mod_eq_of_lt this]; exact hw
@@ -508,7 +503,7 @@ theorem ciCopyO {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : ASt
   · intro j hj w hw
     rw [show r.toNat + o.toNat + j = (r + o).toNat + j by rw [eo]]
     refine hrd4 j hj w ?_
-    have := erecP_lt64 hw
+    have := L.Arena.erecP_lt64 hw
     rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat']
     rw [show (c.toNat + o.toNat) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + o.toNat + j by omega,
       Nat.mod_eq_of_lt this]; exact hw
@@ -565,7 +560,7 @@ theorem instStep {p : Prog} (hP : QuotAtProg p) {n : Nat} {m m' : Mem} {a : ASta
   obtain ⟨hT3, hg3⟩ := StageT.of_core hP.core instLp_stageCore h hT hC'
   obtain ⟨hE3, hE13, hrd3, he3⟩ := callW_erec_closedT hP.coreErec instLp_core h
   have hqf3 := callW_quotFrame hP.quot (by decide) h
-  have hrun3 := partsRunOfOk hok3
+  have hrun3 := L.Arena.AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   exact ⟨_, _, hrun3, hT3, hg3, hqf3, he3, hrd3, rfl, hrh3⟩
 
@@ -709,7 +704,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       · exact ⟨wv, hwv, by assumption, Option.some.inj h32⟩
       · cases h32
     have ev : erRd m5 (c + 5) = wv := erRd_of _ _ (by
-      have := erecP_lt64 hwv
+      have := L.Arena.erecP_lt64 hwv
       have h5 : (5 : Word).toNat = 5 := rfl
       rw [UInt64.toNat_add, h5, Nat.mod_eq_of_lt (by omega)]; exact hpre5.grow.ext _ _ hwv)
     simp only [erRd_foldN, ev] at hW
@@ -741,9 +736,9 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.defnInfo cv' e6 hint0, a6, ?_, hpre8.stT, hpre8.grow, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]
-      simp only [exb]
+      simp only [L.Arena.except_ok_bind]
       rw [show (paramLevels ps).run a3 = .ok (us, a5) from hrun5]
-      simp only [exb]
+      simp only [L.Arena.except_ok_bind]
       rw [← hus5, ← decE_eq, hrun6]; rfl
     · have h6 : (6 : Word).toNat = 6 := rfl
       have h5 : (5 : Word).toNat = 5 := rfl
@@ -863,7 +858,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     -- the source words
     have hsrc : ∀ (X : Mem), IWGrow m X → ∀ (j : Nat) (wj : Word), erecP m (c.toNat + j) = some wj →
         erRd X (c + UInt64.ofNat j) = wj := fun X hX j wj hj => by
-      have := erecP_lt64 hj
+      have := L.Arena.erecP_lt64 hj
       exact erRd_of _ _ (by rw [L.toNat_add_ofNat_of_lt _ _ (by omega)]; exact hX.ext _ _ hj)
     have rd : ∀ x : Word, rdW (m5.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m5 x :=
       fun _ => rfl
@@ -887,7 +882,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       fun _ => rfl
     have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
     obtain ⟨hlps6, -⟩ := decCV_rd (R := erecP m5) (rd := erRd m6)
-      ⟨fun a v h => erRd_of _ _ (hg6.ext _ _ h), fun _ _ h => erecP_lt64 h⟩ hcv5
+      ⟨fun a v h => erRd_of _ _ (hg6.ext _ _ h), fun _ _ h => L.Arena.erecP_lt64 h⟩ hcv5
     simp only [rd6, show c + 7 = c + UInt64.ofNat 7 from rfl,
       hsrc m6 (hpre5.grow.trans hg6) 7 w7 hw7] at hW
     -- `rules_at_lps_go`
@@ -1017,9 +1012,9 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
             pure (IConstantInfo.recInfo cv2 w5.toNat w6.toNat (w9 != 0) rs)) := by
         simp only [IConstantInfo.atLps, bind_assoc]
       rw [e, StateT.run_bind, show (cv.atLps ps).run a = .ok (cv', a3) from hrun]
-      simp only [exb]
+      simp only [L.Arena.except_ok_bind]
       rw [StateT.run_bind, show (paramLevels ps).run a3 = .ok (us, a5) from hrun5]
-      simp only [exb]
+      simp only [L.Arena.except_ok_bind]
       rw [StateT.run_bind, hrun7]
       rfl
     · simp only [List.headD_cons, decCI, nat?, hpre12.kw, Option.map_some, Option.bind_eq_bind,

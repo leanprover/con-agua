@@ -19,6 +19,7 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -93,7 +94,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
     rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnFb]
   revert r m'
   show Sim _ _ a _
-  have h1 := partsSimW (stripF_pis_ok vis fe (nP + UInt64.ofNat nF)
+  have h1 := L.Ind.RelW.simS (stripF_pis_ok vis fe (nP + UInt64.ofNat nF)
     (erRd m (UInt64.ofNat cvp + 3)) htyl) hS
   rw [hk, htye] at h1
   refine Sim.bindK (body := fun r m1 => if r.headD 0 = 0 then some ([0, 0], m1)
@@ -110,7 +111,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
     obtain ⟨h1', -, hbl, hbe⟩ := hd1
     rw [L.headD_drop_three] at hbl hbe
     simp only [h1', show (1 : Word) ≠ 0 by decide, ite_false]
-    have h2 := partsSimW (gafF_ok vis fe CWF _ hbl) hS1
+    have h2 := L.Ind.RelW.simS (gafF_ok vis fe CWF _ hbl) hS1
     rw [CWF_eq, hbe] at h2
     show Sim (ctmW.k_get_app_fn_f n no nl lvls _) (getAppFn coreWalkFuel e1 >>= fun hd =>
       ConRon.Arena.memberIdxAt? names (decI lvls) hd) a1 _
@@ -490,7 +491,7 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     by_cases hl : rl = 0
     · rw [brgW.arm1 n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl; rw [partsPSl_nil hrs]
+      subst hl; rw [L.Ind.pslR_nil hrs]
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
     rw [brgW.arm2 n m ro rl hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
@@ -537,7 +538,7 @@ theorem brwW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
     rw [hw, hcw]
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m ca) m ms0.cvT from hcv) hcab
     rw [List.mapM_cons]
-    have h1 := partsSimW (nrF_ok (fun _ => none) vis fe _ hnl) hS
+    have h1 := L.Ind.RelW.simS (nrF_ok (fun _ => none) vis fe _ hnl) hS
     rw [hne] at h1
     refine Sim.bindK (by simp [brwW.k_name_rec]) (fun _ _ => by rw [brwW.k_name_rec]) h1 ?_
     rintro r1 x1 m1 a1 ⟨hS1, hg1, hx1l, hx1⟩
@@ -638,7 +639,7 @@ theorem blockRecNameSetOk_refines (p : Prog) (hP : IndPartsProg3 p) (n : Nat) (s
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     have hT : iwTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 200).toNat_lt
     have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some want := by
-      rw [decHL_grow3 hg2 hb1]; exact hd1
+      rw [L.Ind.decHL_grow hg2 hb1]; exact hd1
     obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL m2 _ _ _ hd2 (by omega)
     obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL m2 _ _ _ hd1' (by have := hg2.iw; omega)
     rw [L.ofNat_toNat, L.ofNat_toNat] at hgs hws

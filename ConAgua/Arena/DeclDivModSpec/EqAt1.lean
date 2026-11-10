@@ -11,6 +11,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.IndIface
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+import ConAgua.Arena.WhnfCoreProj
 
 @[expose] public section
 
@@ -104,7 +106,7 @@ variable {vis : Word} {fe : IFEnv} {p : Prog}
 def DW {κ : IdxKind} (w : Word) (x : Idx κ) : Prop := H w ∧ decI w = x
 
 theorem DW.of {κ : IdxKind} {w : Word} {x : Idx κ} (e : w = x.word.toUInt64) : DW w x :=
-  e ▸ ⟨dmWord_lt32 x, decI_word x⟩
+  e ▸ ⟨L.Arena.idx_word_lt32 x, decI_word x⟩
 
 /-- The post of a `KeepPost` callee, its growth counted from `m0`. -/
 abbrev KG {α : Type} (vis : Word) (fe : IFEnv) (m0 : Mem)
@@ -122,12 +124,6 @@ theorem natAp2_dw (hN : NatEqProg p) {n : Nat} {m m0 : Mem} {a : AState} {c x y 
     (h3 : DW y y') : Sim (callW p n "nat_ap2" [c, x, y] m) (natAp2 c' x' y') a (KG vis fe m0 decW0E) := by
   obtain ⟨h1, rfl⟩ := h1; obtain ⟨h2, rfl⟩ := h2; obtain ⟨h3, rfl⟩ := h3
   exact (natAp2_ref hN c x y).simG ⟨hS, h1, h2, h3⟩ hG
-
-/-- A model function's `RelW` as a `Sim`. -/
-theorem RelW.simS {α : Type} {W : Mem → List Word → Option (List Word × Mem)} {args : List Word}
-    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
-    (h : RelW W args pre op post) {m : Mem} {a : AState} (hp : pre m a) :
-    Sim (W m args) op a (fun r x m' a' => post m m' a' r x) := fun r m' e => h m m' a r e hp
 
 /-! ## `nat_var` -/
 
@@ -361,9 +357,6 @@ def certCtxW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
     rdW (m4.arr64 IW) (r0.headD 0 + 6), r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0, r9.headD 0] mp) fun _ mf =>
   some ([rq.headD 0], mf)
 
-private theorem getElem_toNat_rdW {a : Array Word} {x : Word} (h : x.toNat < a.size) :
-    a[x.toNat] = rdW a x := (rdW_eq a x _ rfl h).symm
-
 /-- Straight-line code: after `vcgen`, each callee's `LocEq` post fixes the next state's locals, so
 the states are taken apart and their locals substituted; `certCtxW` then unfolds call by call.
 (`sym … finish` took ~265 s here, crawling the `setLoc` chains.) -/
@@ -376,7 +369,7 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
       callW_spec p n "nat_op_pins", callW_spec p n "const_e", callW_spec p n "nat_var",
       callW_spec p n "nat_one", callW_spec p n "nat_ap1", callW_spec p n "iw_alloc",
       callW_spec p n "cert_ctx_pins", callW_spec p n "cert_ctx_main"]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, BinOp.eval, Nat.reduceEqDiff,
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, BinOp.eval, Nat.reduceEqDiff,
       reduceIte] at *)
   · rfl
   · rename_i s13 a13 rs11 s12 a12 h6 rs10 s11 rs9 s10 a11 rs8 s9 a10 rs7 s8 a9 h5 h4 rs6 s7 h3 rs5 s6
@@ -410,8 +403,8 @@ theorem certCtx_specW (p : Prog) (hp : p.lookup "cert_ctx" = some certCtxL) (n :
     obtain ⟨m0, L0⟩ := s0'
     simp only [LocEq] at l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
     subst l12 l11 l10 l9 l8 l7 l6 l5 l4 l3 l2 l1 l0
-    simp (config := {decide := true}) only [St.setLoc_loc, Locals.init_nil, reduceIte,
-      getElem_toNat_rdW] at c12 c11 c10 c9 c8 c7 c6 c5 c4 c3 c2 c1 c0 ⊢
+    simp (config := {decide := true}) only [St.setLoc_loc, L.Locals.init_nil, reduceIte,
+      L.Arena.getElem_rdW] at c12 c11 c10 c9 c8 c7 c6 c5 c4 c3 c2 c1 c0 ⊢
     simp only [certCtxW, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0, bW_some, Sig.retVal, Sig.retOr]
 
 theorem RecPost.rdGrow {m m0 mk : Mem} {r ws : List Word} (h : RecPost m m0 r ws)
@@ -661,7 +654,7 @@ theorem certCtx_ref (hD : DmProg2 p) :
     decI (r9.headD 0), decI (pinW m 23), decI (pinW m 22), decI (pinW m 16), decI (pinW m 18),
     decI (pinW m 17), decI (pinW m 24), decI (pinW m 28), decI (pinW m 29), decI (pinW m 25),
     decI (pinW m 26), decI (pinW m 27)⟩, a9, ?_, ?_, ?_, ?_⟩
-  · simp only [certCtx, StateT.run_bind, exc_ok_bind', pn, hrun1, hrun2', hrun3', hrun4, pble, pbool,
+  · simp only [certCtx, StateT.run_bind, L.Arena.except_ok_bind, pn, hrun1, hrun2', hrun3', hrun4, pble, pbool,
       hrun5, ptrue, hrun6, pfalse, hrun7, pzero, hrun8, psucc, hrun9', pmod, pdiv, padd, pmul, psub,
       pgcd, psl, psr, pland, plor, pxor]
     rfl
@@ -737,10 +730,6 @@ theorem CertCtxR.f19 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) 
 
 theorem CertCtxR.f20 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 20) = c.xorN.word.toUInt64 := h.rd 20 (by decide)
-
-theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := decI_word x
-
-theorem decE_eq_decI (w : Word) : (decE w : EIdx) = decI w := rfl
 
 @[refines ConRon.Arena.natVar]
 theorem natVar_refines (hD : DmProg2 p) (i : Word) :
@@ -829,7 +818,7 @@ theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
   refine Sim.ntB (natAp2_dw hD.toNatEqProg hS (.refl m) (.of hC.f4) ⟨ha, rfl⟩ ⟨hb, rfl⟩)
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   exact Sim.ntRet (((eqAt1_ref hD _ _ rv).simG hS1 hG1).congr
-    (by simp only [(hC.grow hG1).f5, decE_eq_decI, decI_word])) fun _ _ _ _ _ h => h
+    (by simp only [(hC.grow hG1).f5, L.Arena.decE_eq, decI_word])) fun _ _ _ _ _ h => h
 
 /-- **`cert_eq` is its model `certEqW`** (generated). -/
 l_model certEq_specW (p : Prog) (hp : p.lookup "cert_eq" = some certEqL)
@@ -846,7 +835,7 @@ theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
   refine Sim.ntB (natAp2_dw hD.toNatEqProg hS (.refl m) ⟨hc, rfl⟩ (.of hC.f1) (.of hC.f2))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   exact Sim.ntRet (((eqAt1_ref hD _ _ rhs).simG hS1 hG1).congr
-    (by simp only [(hC.grow hG1).f0, decE_eq_decI, decI_word])) fun _ _ _ _ _ h => h
+    (by simp only [(hC.grow hG1).f0, L.Arena.decE_eq, decI_word])) fun _ _ _ _ _ h => h
 
 /-- **`cert_halves` is its model `certHalvesW`** (generated). -/
 l_model certHalves_specW (p : Prog) (hp : p.lookup "cert_halves" = some certHalvesL)
@@ -1026,7 +1015,7 @@ theorem Sim.iteW {β α : Type} {N : NIdx} {c w : Word} {e1 e2 : Option (β × M
     (h1 : c = w → Sim e1 o1 a R) (h2 : c ≠ w → Sim e2 o2 a R) :
     Sim (if c = w then e1 else e2) (if decI c == N then o1 else o2) a R := by
   subst hw
-  have hb := decI_beq (k := IdxKind.name) _ _ hc (dmWord_lt32 N)
+  have hb := decI_beq (k := IdxKind.name) _ _ hc (L.Arena.idx_word_lt32 N)
   rw [decI_word] at hb
   by_cases hd : c = N.word.toUInt64
   · rw [ite_eq_left hd, hb, decide_eq_true hd, ite_eq_left rfl]; exact h1 hd
@@ -1339,16 +1328,16 @@ theorem certDivMod_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
   refine Sim.ntB ((certRecRhs_ref hD cx c cc).simG ⟨hS, hC, hc⟩ (.refl m))
     fun r1 _ m1 a1 ⟨hS1, hG1, hl1, rfl⟩ => ?_
   have hC1 := hC.grow hG1
-  have hb := decI_beq (k := IdxKind.name) _ _ hc (dmWord_lt32 cc.divN)
+  have hb := decI_beq (k := IdxKind.name) _ _ hc (L.Arena.idx_word_lt32 cc.divN)
   rw [decI_word] at hb
   rw [hC1.f11, hC1.f8, hC1.f1, hb]
   by_cases hd : c = cc.divN.word.toUInt64
   · rw [ite_eq_left hd, decide_eq_true hd, ite_eq_left rfl]
-    exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, dmWord_lt32 _⟩ hG1).congr
-      (by simp only [decE_eq_decI, decI_word])
+    exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, L.Arena.idx_word_lt32 _⟩ hG1).congr
+      (by simp only [L.Arena.decE_eq, decI_word])
   · rw [ite_eq_right hd, decide_eq_false hd]
-    exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, dmWord_lt32 _⟩ hG1).congr
-      (by simp only [decE_eq_decI, decI_word, Bool.false_eq_true, ite_false])
+    exact ((certDivModGuards_ref hD cx c _ _ cc).simPair ⟨hS1, hC1, hc, hl1, L.Arena.idx_word_lt32 _⟩ hG1).congr
+      (by simp only [L.Arena.decE_eq, decI_word, Bool.false_eq_true, ite_false])
 
 /-! ## `div_mod_cert_stmts_at` -/
 /-- **`div_mod_cert_stmts_at` is its model `divModCertStmtsAtW`** (generated). -/

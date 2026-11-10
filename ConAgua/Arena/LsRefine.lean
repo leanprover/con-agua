@@ -236,7 +236,7 @@ theorem lsCS_wf : lsCS.WF where
     simp only [lsCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
       simp only [lsCS, lshash, Mem.arr64_set64_ne _ _ _ _ _
-        (tierA_ne (show LSREC ≠ LSHP by decide) t u)]⟩
+        (L.tierA_ne_tierA (show LSREC ≠ LSHP by decide) t u)]⟩
   room m t h := (lspushOK_room m t ((lspushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [lsCS, Option.some.injEq] at h; subst h
@@ -262,7 +262,7 @@ theorem lsColFree : ColFree lsCS LsRecRel := by
   have hrs := fun t o l => RSlice_congr (m := m) (m' := m.set64 (tierA LSHP u) k x) t o l
     (by simp only [Mem.top, hc]) (ptop0_congr hpₜ)
   simpa only [LsRecRel_raw, lsO, lsL, top_rdW, hpv, hpq, hrs, hc,
-    Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (show LSREC ≠ LSHP by decide) t u)] using hr
+    Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne_tierA (show LSREC ≠ LSHP by decide) t u)] using hr
 
 /-- **What `intern_ls` changes**: the table's arrays, the column, the counts. -/
 theorem lsinternW_frame (m : Mem) (o l : Word) (w : Word) (m' : Mem) (hI : lsinternW m o l = some (w, m')) :

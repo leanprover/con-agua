@@ -14,6 +14,8 @@ import all ConAgua.Arena.LevelZero
 import ConRon.Bridge.Grind
 import ConAgua.Front.Preserve
 import ConAgua.L.WordOff
+import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.InstLPLevel
 
 @[expose] public section
 
@@ -196,7 +198,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps)) (hus : HW us) :
     RefE (KnotUpToE p n) (pgsE p (n + 1) m mode vis q us) (projGuardSort R cvT caps (decI us)) a
       (PgsPost dn m vis fe M eb) := by
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
+  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
   obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [pgsE.eq_2]
@@ -220,7 +222,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     obtain ⟨l, hdl⟩ := hS.den.sort _ _ hv
     obtain ⟨X, hX, hXok⟩ := readLevelM_run' _ _ l hdl hS.readL
     refine RefE.bind_right hX ?_
-    have hS5 := hS.readLC' X hXok
+    have hS5 := hS.withReadLC X hXok
     have hu : HW (r1.tail.headD 0) := hok1 g1
     rcases c5 : callW p n "lv_always_zero" [r1.tail.headD 0] m1 with _ | ⟨r5, m5⟩
     · rw [liftE_none, pgsE.k_lv_always_zero.none]; exact RefE.of_cls0 (by simp)
@@ -288,7 +290,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   obtain ⟨l, hdl⟩ := hS4.den.sort _ _ hvw
   obtain ⟨X, hX, hXok⟩ := readLevelM_run' _ _ l hdl hS4.readL
   refine RefE.bind_right hX ?_
-  have hS5 := hS4.readLC' X hXok
+  have hS5 := hS4.withReadLC X hXok
   rcases c5 : callW p n "lv_never" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
   · rw [liftE_none, pgsE.k_lv_never.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
@@ -618,13 +620,13 @@ theorem cgr_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   rw [cgrE.k_whnf.arm1 _ _ _ _ _ _ _ _ _ _ g1 g2 g3]
   obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.base (r₂.headD 0) h₂.resOk
     ⟨g2, UInt64.not_le.mp g3⟩ g1
-  have hvs := viewSort_of_view' _ _ _ (by
+  have hvs := L.Arena.viewSort_of_view _ _ _ (by
     have := decE_tag_sort_beq (e := r₂.headD 0) h₂.resOk; rw [g1] at this; simpa using this) hv
-  refine RefE.bind_right (viewSort_run' hvs) ?_
+  refine RefE.bind_right (L.Arena.viewSort_run hvs) ?_
   obtain ⟨l, hdl⟩ := hS₂.den.sort _ _ hv
   obtain ⟨X, hX, hXok⟩ := readLevelM_run' _ _ l hdl hS₂.readL
   refine RefE.bind_right hX ?_
-  have hS₃ := hS₂.readLC' X hXok
+  have hS₃ := hS₂.withReadLC X hXok
   obtain ⟨hgs, L', hdL', hzL'⟩ := hG₂
   rcases c5 : callW p k "lv_zero_where_zero" [gs, tfld m₂ SORT (tierW (r₂.headD 0)) (idxW (r₂.headD 0)) 0] m₂
     with _ | ⟨r5, m5⟩
@@ -829,27 +831,6 @@ theorem decTbl_sn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd
   rw [e]
   exact ⟨hw32, rfl⟩
 
-/-- **An inductive record's kind word** `3`. -/
-theorem decCI_indF {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps) ∧ (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rd q = w := hR.rd _ _ hq
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  constructor
-  · intro hw; subst hw
-    simp only [show UInt64.toNat 3 = 3 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, -, caps, -, hc⟩ := h
-    exact ⟨cv, caps, by simpa using hc.symm⟩
-  · intro hw cv caps hc
-    subst hc
-    have hne : w.toNat ≠ 3 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
-
 /-- `proj_guard_rows`' words against `projGuardRows`' answer, run from `m₀` to `m`: `(0, _, _)`
 none; `(1, ro, rn)` the rows at the old top `ro`, below the new top. -/
 def PgrRes (m₀ m : Mem) (r : List Word) : Option (Array (Nat × EIdx)) → Prop
@@ -924,7 +905,7 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   have hfind' : fe.find? (decI (rdW (m1.arr64 (tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775))) =
       some ci := by rw [hfind]; simp only [envFound, g1, ↓reduceIte]; exact hci
   rw [hfind']
-  have hK := decCI_indF (erRdOK m1) hci
+  have hK := L.Arena.decCI_indK (erRdOK m1) hci
   simp only [erRd] at hK
   by_cases g2n : rdW (m1.arr64 (tierA EREC (r1.tail.headD 0 >>> 40))) (r1.tail.headD 0 &&& 1099511627775) ≠ 3
   · have g2 := g2n

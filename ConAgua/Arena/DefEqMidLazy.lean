@@ -7,6 +7,7 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.DefEq
+import ConAgua.Arena.IndPosSpec.UnW
 
 @[expose] public section
 
@@ -66,21 +67,12 @@ structure LazyProg (p : Prog) : Prop where
 
 theorem LazyProg.mid {p : Prog} (hp : LazyProg p) : DefEqMidProg p := hp.spine.quick.lams.mid
 
-/-- Every spec holds at fuel `0` (nothing returns). -/
-theorem coreSpec_zero {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word) (T : AM α)
-    (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop) :
-    CoreSpec p 0 f args T dec s₀ a₀ dn vis fe M eb ok := by
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  exact (L.M.of_run (P := fun s => s = s₀) hs hrun (invoke_zero_false p f args s₀)).elim
-
 /-- `quick_defeq` at every fuel up to `n + 1`, from the knot up to `n`. -/
 theorem quickUpTo {p : Prog} (hp : LazyProg p) (hc : LazyCallees p) {n : Nat} (hk : KnotUpTo p n) :
     ∀ k, k ≤ n + 1 → QuickDefeqSpec p k := by
   intro k hkn
   cases k with
-  | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _ _; exact coreSpec_zero _ _ _ _ _ _ _ _ _ _ _ _ _
+  | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _ _; exact _root_.L.Arena.CoreSpec.zeroLet _ _ _ _ _ _ _ _ _ _ _ _ _
   | succ k =>
     exact quickDefeq_refines p hp.spine.quick hc.instList hc.inst1 hc.store k (hk.mono (by omega))
 
@@ -350,7 +342,7 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   · rw [ite_eq_left hcnd]
     have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = true := by
       simp only [Bool.and_eq_true, decide_eq_true_eq, hcnd.1, hcnd.2.1, hcnd.2.2.1, true_and,
-        decBool_t hcnd.2.2.2]
+        L.Arena.decBool_true_of hcnd.2.2.2]
     simp only [hsch, ↓reduceIte]
     refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
       (sp_ref p hp.spine k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _
@@ -358,15 +350,15 @@ theorem sm_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
       (fun r₂ m₂ _ _ M₂ hS₂ _ => ?_)
     simp only [smE.k_defeq_spine]
     by_cases h2 : r₂.headD 0 ≠ 0
-    · rw [smE.j1, ite_eq_left h2, decBool_t h2]
+    · rw [smE.j1, ite_eq_left h2, L.Arena.decBool_true_of h2]
       exact RefE.ret rfl (CorePost.ret hS₂ rfl ⟨hw1, hw0, hw0⟩)
     have h2' : r₂.headD 0 = 0 := by simpa using h2
-    rw [h2', decBool_f h2']
+    rw [h2', L.Arena.decBool_false_of h2']
     exact unf _ _ _ hS₂
   · rw [ite_eq_right hcnd]
     have hsch : (decide (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) && decBool r₁) = false := by
       by_cases hz : r₁.headD 0 = 0
-      · rw [decBool_f hz]; simp
+      · rw [L.Arena.decBool_false_of hz]; simp
       · have : ¬ (2 ≤ ka ∧ 2 ≤ kb ∧ ha = hb) := fun h => hcnd ⟨h.1, h.2.1, h.2.2, hz⟩
         simp [this]
     simp only [hsch, Bool.false_eq_true, ↓reduceIte, pure_bind]
@@ -429,7 +421,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   by_cases h1 : rl.headD 0 ≠ 0
   · rw [ite_eq_left h1]
     have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
-        (decHintW (ra.headD 0) (ra.tail.headD 0)) = true := by rw [← hlt₁]; exact decBool_t h1
+        (decHintW (ra.headD 0) (ra.tail.headD 0)) = true := by rw [← hlt₁]; exact L.Arena.decBool_true_of h1
     simp only [hl, ↓reduceIte]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (ll_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
@@ -437,7 +429,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rw [ite_eq_right h1]
   have h1' : rl.headD 0 = 0 := by simpa using h1
   have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
-      (decHintW (ra.headD 0) (ra.tail.headD 0)) = false := by rw [← hlt₁]; exact decBool_f h1'
+      (decHintW (ra.headD 0) (ra.tail.headD 0)) = false := by rw [← hlt₁]; exact L.Arena.decBool_false_of h1'
   simp only [hl, Bool.false_eq_true, ↓reduceIte]
   refine RefE.onlySim (fun _ => rfl) (fun rl₂ m₅ c5 => by
       obtain ⟨t₅, ht₅, hm₅, -, hlt₂, -⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
@@ -448,7 +440,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   by_cases h2 : rl₂.headD 0 ≠ 0
   · rw [ite_eq_left h2]
     have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
-        (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact decBool_t h2
+        (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact L.Arena.decBool_true_of h2
     simp only [hl2, ↓reduceIte]
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₅, Locals.init []⟩ _ dn vis fe
@@ -456,7 +448,7 @@ theorem bo_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   rw [ite_eq_right h2]
   have h2' : rl₂.headD 0 = 0 := by simpa using h2
   have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
-      (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact decBool_f h2'
+      (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact L.Arena.decBool_false_of h2'
   simp only [hl2, Bool.false_eq_true, ↓reduceIte]
   exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (sm_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₅, Locals.init []⟩ _ dn vis fe
@@ -520,12 +512,12 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
   dsimp only [ldsE.k_unfoldable_head_2]
   have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   by_cases h00 : ra.headD 0 = 0 ∧ rb.headD 0 = 0
-  · rw [ite_eq_left h00, decBool_f h00.1, decBool_f h00.2]
+  · rw [ite_eq_left h00, L.Arena.decBool_false_of h00.1, L.Arena.decBool_false_of h00.2]
     exact RefE.ret rfl (CorePost.ret hS₂ rfl ⟨hw3, hw0, hw0⟩)
   rw [ite_eq_right h00]
   by_cases hb0 : rb.headD 0 = 0
   · have ha0 : ra.headD 0 ≠ 0 := fun h => h00 ⟨h, hb0⟩
-    rw [ite_eq_left hb0, decBool_t ha0, decBool_f hb0]
+    rw [ite_eq_left hb0, L.Arena.decBool_true_of ha0, L.Arena.decBool_false_of hb0]
     refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
       (tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d b (by omega)
         (by omega) hs₂ hb)
@@ -541,7 +533,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
         M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd)
   rw [ite_eq_right hb0]
   by_cases ha0 : ra.headD 0 = 0
-  · rw [ite_eq_left ha0, decBool_f ha0, decBool_t hb0]
+  · rw [ite_eq_left ha0, L.Arena.decBool_false_of ha0, L.Arena.decBool_true_of hb0]
     refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
       (tupa_ref p hp.mid k (hk.mono (by omega)) F _ _ dn vis fe M₂ eb mode d a (by omega)
         (by omega) hs₂ ha)
@@ -555,7 +547,7 @@ theorem lds_ref (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
     exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
       (lr_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₃, Locals.init []⟩ _ dn vis fe
         M₃ eb mode d a b ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb hd)
-  rw [ite_eq_right ha0, decBool_t ha0, decBool_t hb0]
+  rw [ite_eq_right ha0, L.Arena.decBool_true_of ha0, L.Arena.decBool_true_of hb0]
   exact RefE.tail_relist3 (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
     (bo_ref p hp hc k (hk.mono (by omega)) F (by omega) (by omega) ⟨m₂, Locals.init []⟩ _ dn vis fe
       M₂ eb mode d a b hs₂ ha hb hd)

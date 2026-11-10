@@ -36,7 +36,7 @@ theorem decCN_nameW {m : Mem} {p : Nat} {x : IConstantVal × Nat} (h : decCN m p
   refine ⟨w, ?_, hw32, hn⟩
   rw [hr.1]
   have : (UInt64.ofNat q).toNat = q := by simp; have := hr.2; omega
-  exact erRd_of_erA (by rw [this]; exact hw)
+  exact L.Arena.erRd_of _ _ (by rw [this]; exact hw)
 
 theorem chnW_ok (n : Nat) : ∀ (m : Mem) (co cl name r : Word) (ctors : List (IConstantVal × Nat)),
     chnW n m co cl name = some r → decPL m (decCN m) co.toNat cl.toNat = some ctors →

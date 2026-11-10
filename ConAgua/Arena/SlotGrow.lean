@@ -101,8 +101,8 @@ theorem tierA_of_le (a : Nat) (t : Word) (ht : t ≤ 1) :
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm)]; rfl
   · rw [UInt64.toNat_inj.mp (h.trans UInt64.toNat_one.symm)]; rfl
 
-@[simp] theorem tierA_zero (a : Nat) : tierA a 0 = a := rfl
-@[simp] theorem tierA_one (a : Nat) : tierA a 1 = tier1 a := rfl
+attribute [simp] L.tierA_zero
+attribute [simp] L.tierA_one
 
 theorem tierA_and_one (a : Nat) (t : Word) : tierA a (t &&& 1) = tierA a t := by
   simp only [tierA, UInt64.and_assoc, UInt64.and_self]
@@ -116,13 +116,9 @@ theorem tierA_inj {a b : Nat} {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) :
     · exact .inr (UInt64.toNat_inj.mp (e.trans UInt64.toNat_one.symm))
   rcases h01 t ht with rfl | rfl <;> rcases h01 u hu with rfl | rfl <;> simp
 
-/-- Arrays in any tiers differ when the source arrays do. -/
-theorem tierA_ne {a b : Nat} (h : a ≠ b) (t u : Word) : tierA a t ≠ tierA b u :=
-  tierA_ne_tierA h t u
-
 /-- A plain array is neither tier of another array. -/
 theorem ne_tierA {a b : Nat} (h : a ≠ b) (t : Word) : (a : TieredArray) ≠ tierA b t := by
-  simpa using tierA_ne h 0 t
+  simpa using L.tierA_ne_tierA h 0 t
 
 /-- The two tiers of one array differ. -/
 theorem tierA_ne_tier (a : Nat) {t u : Word} (ht : t ≤ 1) (hu : u ≤ 1) (h : t ≠ u) :

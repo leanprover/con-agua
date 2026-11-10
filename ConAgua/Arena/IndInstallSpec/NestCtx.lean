@@ -14,6 +14,7 @@ import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndSumSpec.Row
 import all ConAgua.Arena.IndInstall
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -158,7 +159,7 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   have hg03 := hg02.trans hg3
   -- `param_levels`
   obtain ⟨⟨r4, m4⟩, h4, hm⟩ := of_K hm rfl
-  obtain ⟨lv, a4, hrun4, hl4, hle4, hS4, hg4⟩ := plW_sim hS3 (by rw [decHL_grow3 hg3 hb2]; exact hd2)
+  obtain ⟨lv, a4, hrun4, hl4, hle4, hS4, hg4⟩ := plW_sim hS3 (by rw [L.Ind.decHL_grow hg3 hb2]; exact hd2)
     (Nat.le_trans hb2 hg3.iw) r4 m4 h4
   have hg04 := hg03.trans hg4
   -- the formers (`np`, `srt` read before them)

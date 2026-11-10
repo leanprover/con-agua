@@ -134,7 +134,7 @@ theorem utf8Char_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : W
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
     all_goals simp only [Cond.pval, Expr.pval, show ∀ m a k, L.rd8 m a k = byteW (m.arr8 a) k from
-      fun _ _ _ => rfl, hm, Locals.init, St.setLoc_loc, St.setLoc_mem, List.getD_cons_zero,
+      fun _ _ _ => rfl, hm, Locals.init, St.setLoc_loc, L.St.setLoc_mem, List.getD_cons_zero,
       List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true, Bool.or_eq_true] at *
     all_goals clear hp
     all_goals subst_vars

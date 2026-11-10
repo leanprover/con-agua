@@ -120,7 +120,7 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
   intro st m₀
   induction st with
   | «skip» => vcgen [step] <;> grind
-  | «set» x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | «set» x e => vcgen [step, setLoc, evalE_same e] <;> grind [L.St.setLoc_mem]
   | «st8» a i e => vcgen [step, st8, evalE_same i, evalE_same e] <;> grind [KeepW.set8]
   | «st64» a i e => vcgen [step, st64, evalE_same i, evalE_same e] <;> grind [KeepW.set64]
   | «seq» s t ihs iht => vcgen [step, ihs, iht] <;> grind
@@ -129,7 +129,7 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
   | «brk» => vcgen [step] <;> grind
   | «ret» es => vcgen [step, evalArgs_same es] <;> grind
   | «call» xs f args =>
-    vcgen [step, setLocs, evalArgs_same args, invoke_keepW p k hk f m₀] <;> grind [St.setLocs_mem']
+    vcgen [step, setLocs, evalArgs_same args, invoke_keepW p k hk f m₀] <;> grind [L.St.setLocs_mem]
   | «abort» e => vcgen [step, evalE_same e] <;> grind
   | «gset» g e => vcgen [step, setG, evalE_same e] <;> grind [KeepW.setG, St.setG_mem]
   | st64t a t i e =>
@@ -139,7 +139,7 @@ theorem step_keepW (p : Prog) (k : Stmt → M Sig) (hk : KeepWK k) : KeepWK (ste
       grind [KeepW.copy64]
   | copy8w d di s si n =>
     vcgen [step, warr_same d, evalE_same di, evalE_same si, evalE_same n] <;> grind [KeepW.copy8w]
-  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st32t a t i e =>
     vcgen [step, st32, evalE_same t, evalE_same i, evalE_same e] <;> grind [KeepW.set32]
 
@@ -293,7 +293,7 @@ theorem cnfW_ok (hnfs : DecB (fun m => decPL m (decNCN m) nfo.toNat nfl.toNat) m
   have hje1 : j + 1 ≤ nfl := UInt64.le_iff_toNat_le.mpr (by omega)
   -- the entry
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m0) hnfs0 j.toNat hjl
-  obtain ⟨hvt, hv0⟩ := rec2IwN_trunc hv
+  obtain ⟨hvt, hv0⟩ := L.Ind.iwN_truncM_some hv
   have hvm : iwN m (nfo.toNat + j.toNat) = some v := by
     simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hv0 ⊢; rw [hg.iwGet _ hvt]; exact hv0
   have hrd := iwN_rdW_at (w := nfo) (k := j.toNat) hvm hsz

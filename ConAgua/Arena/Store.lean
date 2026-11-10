@@ -136,7 +136,7 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, sliceRes_spec p _ 0 1 4 5 (by decide) (by decide)
       (by decide), hashLoop_step_spec p n]
-    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
+    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, hashN_zero])
 
 end hash
@@ -187,16 +187,14 @@ grind_pattern [arena_grind] eqW_eq => eqW p a b l i, p[ja], p[jb], eqW p a b l i
 total pool view `tpool m` (`Pool.lean`), whose word `x` is the tagged read `prd m x`, so that the spec
 needs no bound on the record's slice. -/
 
-theorem tpool_rd (m : Mem) (x : Word) : (tpool m)[x.toNat]?.getD 0 = prd m x := tpool_getD m x
-
 theorem eqWv_ne (m : Mem) (a b l i : Word) (hi : i < l) (hne : prd m (a + i) ≠ prd m (b + i)) :
     eqW (tpool m) a b l i = false := by
-  rw [eqW]; simp only [hi, ↓reduceIte, tpool_rd, hne]
+  rw [eqW]; simp only [hi, ↓reduceIte, L.Arena.tpool_getD, hne]
 
 theorem eqWv_eq (m : Mem) (a b l i i' : Word) (hi : i < l) (hi' : i' = i + 1)
     (he : prd m (a + i) = prd m (b + i)) : eqW (tpool m) a b l i = eqW (tpool m) a b l i' := by
   subst hi'
-  rw [eqW]; simp only [hi, ↓reduceIte, tpool_rd, he]
+  rw [eqW]; simp only [hi, ↓reduceIte, L.Arena.tpool_getD, he]
 
 grind_pattern [arena_grind] eqWv_ne => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i)
 grind_pattern [arena_grind] eqWv_eq => eqW (tpool m) a b l i, prd m (a + i), prd m (b + i), eqW (tpool m) a b l i'
@@ -257,7 +255,7 @@ theorem limbsEq_spec (n : Nat) (s₀ : St) (a b l : Word) :
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, sliceRes_spec p _ 0 2 4 5 (by decide) (by decide) (by decide),
       sliceRes_spec p _ 1 2 6 7 (by decide) (by decide) (by decide), eqLoop_step_spec p n]
-    all_goals (subst_vars; simp_all [EqRes, St.setLoc_loc, St.setLoc_mem, Locals.init_nil,
+    all_goals (subst_vars; simp_all [EqRes, St.setLoc_loc, L.St.setLoc_mem, L.Locals.init_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr])
     all_goals (rename_i r _ _ _ _; cases r <;> simp_all)
 
@@ -543,7 +541,7 @@ theorem litOK (hph : p.lookup "lit_hash" = some litHash) (hpe : p.lookup "limbs_
     simp only [litCS, litCSk]
     vcgen [step, evalArgs, evalE, setLocs, litMatch_spec p hpe hpm n]
     all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
-      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, L.St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
@@ -568,7 +566,7 @@ theorem litStrOK (hph : p.lookup "lit_hash" = some litHash)
     simp only [litStrCS, litCSk]
     vcgen [step, evalArgs, evalE, setLocs, litMatchStr_spec p hpe hpm n]
     all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
-      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, L.St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _

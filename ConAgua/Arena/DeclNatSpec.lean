@@ -137,7 +137,7 @@ theorem natOpNames_specW (p : Prog) (hp : p.lookup "nat_op_names" = some natOpNa
 
 theorem natOpNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     (natOpNames).run a = .ok ([decI (pinW m 15), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18), decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)], a) := by
-  simp [natOpNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
+  simp [natOpNames, StateT.run_bind, pinAt_run hF, L.Arena.except_ok_bind, StateT.run_map] <;> rfl
 
 theorem natOpNames_ref (hN : NatGateProg p) :
     CallRef p "nat_op_names" [] (StageR vis fe) natOpNames
@@ -200,7 +200,7 @@ theorem natDivModNames_specW (p : Prog) (hp : p.lookup "nat_div_mod_names" = som
 
 theorem natDivModNames_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) :
     (natDivModNames).run a = .ok ([decI (pinW m 22), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25), decI (pinW m 26), decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)], a) := by
-  simp [natDivModNames, StateT.run_bind, pinAt_run hF, exc_ok_bind', StateT.run_map] <;> rfl
+  simp [natDivModNames, StateT.run_bind, pinAt_run hF, L.Arena.except_ok_bind, StateT.run_map] <;> rfl
 
 theorem natDivModNames_ref (hN : NatGateProg p) :
     CallRef p "nat_div_mod_names" [] (StageR vis fe) natDivModNames

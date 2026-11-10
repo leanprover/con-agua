@@ -21,6 +21,8 @@ import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndPos
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.InferBodyDisp
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -69,77 +71,6 @@ l_model pdm_spec (p : Prog) (hM : MaProg p) (hp : p.lookup "pi_doms_mention_any"
     mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n]
   grind [arena_grind]
 
-/-- `e_view`'s first word is the handle's tag (lane `defeq`'s `quick_eViewW_head`). -/
-theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
-    (L.Ind.eViewW m h).headD 0 = tagW h := by
-  unfold L.Ind.eViewW at hne ⊢
-  by_cases c1 : (4294967295 : Word) < h
-  · simp [c1] at hne
-  by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [c1, c2] at hne
-  simp only [c1, c2, ite_false] at hne ⊢
-  by_cases g0 : tagW h = 0
-  · simp only [g0, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g0, ite_false] at hne ⊢
-  by_cases g1 : tagW h = 1
-  · simp only [g1, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g1, ite_false] at hne ⊢
-  by_cases g2 : tagW h = 2
-  · simp only [g2, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g2, ite_false] at hne ⊢
-  by_cases g3 : tagW h = 3
-  · simp only [g3, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g3, ite_false] at hne ⊢
-  by_cases g4 : tagW h = 4
-  · simp only [g4, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g4, ite_false] at hne ⊢
-  by_cases g5 : tagW h = 5
-  · simp only [g5, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g5, ite_false] at hne ⊢
-  by_cases g6 : tagW h = 6
-  · simp only [g6, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g6, ite_false] at hne ⊢
-  by_cases g7 : tagW h = 7
-  · simp only [g7, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g7, ite_false] at hne ⊢
-  by_cases g8 : tagW h = 8
-  · simp only [g8, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g8, ite_false] at hne ⊢
-  by_cases g9 : tagW h = 9
-  · simp only [g9, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g9, ite_false] at hne ⊢
-  exact absurd rfl hne
-
 /-- **`pi_doms_mention_any`'s model refines `piDomsMentionAny`.** -/
 theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (f e : Word) (mp : Std.HashMap EIdx Bool),
@@ -158,7 +89,7 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
       ⟨f.toNat - 1, by have : f.toNat ≠ 0 := fun e => hf (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
     by_cases hv : eViewW m e = []
     · rw [pdmW.abort2 (hc1 := hf) (hc2 := hv)] at h; cases h
-    have hhd := partsEView_head m e hv
+    have hhd := L.Arena.eViewW_head m e hv
     rw [hF]
     by_cases h6 : (eViewW m e).headD 0 ≠ 6
     · rw [pdmW.arm1 (hc1 := hf) (hc2 := hv) (hc3 := h6)] at h
@@ -188,7 +119,7 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     | zero => simp [maConstWk] at hma
     | succ n' =>
     obtain ⟨c, hrun, hbc, hM1, hS1, hg1⟩ := maConstW_ok n' (fun _ => none) fe vis m m1 a no nl _ b ws mp hma hS hty hws hwlt hM
-    simp only [ConRon.Arena.piDomsMentionAny, htag, ite_true, StateT.run_bind, viewBind_run' _ a, hvb]
+    simp only [ConRon.Arena.piDomsMentionAny, htag, ite_true, StateT.run_bind, L.Arena.viewBind_run _ a, hvb]
     rw [hnm']
     simp only [except_ok_bind, StateT.run_bind, hrun]
     by_cases hb0 : b ≠ 0

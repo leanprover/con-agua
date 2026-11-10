@@ -130,7 +130,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     obtain ⟨cv', h1, _, _, h2⟩ := hci
     cases h2; exact h1
   obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
-  have hq64 := erecP_lt64 hv16
+  have hq64 := L.Arena.erecP_lt64 hv16
   have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
   -- the twin's inductive and its denotation
@@ -160,7 +160,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     rw [show q + 1 + 1 = q + 2 by rw [UInt64.add_assoc]; rfl,
       show q + 1 + 2 = q + 3 by rw [UInt64.add_assoc]; rfl]
     exact hlp
-  obtain ⟨hS4, hg4, -, hdec4, -⟩ := pos2_cvLpsW_stage hlp' hS3 hcv3 (by rw [e1]; omega)
+  obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3 (by rw [e1]; omega)
   -- `inst_lp_fast`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨tl, a4, hrun5, ⟨hS5, hg5, htlH, htld⟩, ⟨_, _, hfA, hfC, hf5⟩, hA5⟩ :=

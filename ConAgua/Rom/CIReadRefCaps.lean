@@ -5,6 +5,7 @@ import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadRefW
 import ConAgua.Rom.ReadScr
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -249,7 +250,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the eta constructor
   have hq56 : (q + 56).toNat = q.toNat + 56 := by rw [UInt64.toNat_add]; simp; off_omega
-  obtain ⟨r1, m8, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m8, h1, hw⟩ := L.Ind.ntBW_some hw
   have hdn : rom.drop (q + 56).toNat = encName caps.etaCtor ++ (encNameL caps.all ++
       (encNameL caps.ctors ++ rest)) := by
     rw [hq56, ← List.drop_drop, hd']; simp [u64B]
@@ -259,7 +260,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     (fun x hx => by simp [ExprC, RomC, hx])) hk1 (L.Arena.internName_ks _ _ _ _ hrun1)
   have hM8 := hM1.frameG hf1 (by decide) (by decide)
   have hs8 : stkTop m8 = stkTop (putERs m ws) := hf1.ctl 131 (by decide)
-  obtain ⟨rp, m9, hp, hw⟩ := ntBW_inv hw
+  obtain ⟨rp, m9, hp, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL hp] at hw
   obtain ⟨hI9, hM9, hs9, ht9, hIW9, hg9, hn9⟩ := putER_facts hI8 hM8 (c + 1) (r1.headD 0) (by off_omega)
     (by off_omega)
@@ -267,13 +268,13 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  obtain ⟨r2, m10, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m10, h2, hw⟩ := L.Ind.ntBW_some hw
   have hd2 : rom.drop (r1.tail.headD 0).toNat = encNameL caps.all ++ (encNameL caps.ctors ++ rest) :=
     drop_shift rom _ (encName caps.etaCtor) _ _ (by rw [hdn, List.append_assoc]) _ hq1
   obtain ⟨wsA, a2, hrun2, hltA, hI10, hM10, hs10, hq2, hek10, ht10, hIW10, hH10⟩ :=
     nameSl_rel hL hr seen memo caps.all hfa k _ a1 _ (c + 10) _ _ m10 hI9 hM9 hd2
       (by off_omega) (by off_omega) h2
-  obtain ⟨r3, m11, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m11, h3, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ rest :=

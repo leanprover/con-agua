@@ -4,6 +4,8 @@ public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
 import ConRon.Bridge.Grind
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.WhnfIotaRefine6
 
 @[expose] public section
 
@@ -49,24 +51,6 @@ theorem pr_envFind {p : Prog} (hp : PropReadProg p) {n : Nat}
     (envFind_refines p (hp.get "env_row_get") (hp.get "base_row_get") (hp.get "env_find") n
       ⟨m, Locals.init []⟩ vis k hE hk) hc
   exact ⟨by rw [← ht₂]; exact hm₂, hfind, hdec⟩
-
-/-- The head name of a `const` handle (the store's projection). -/
-theorem pr_viewConstName (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (_hg : tagW h = 3) :
-    a.store.viewConstName (decE h) = some (decI (tfld m CONST (tierW h) (idxW h) 0)) := by
-  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
-  have hfl := ConsR.flag hR.app
-  have e : a.store.viewConstName (decE h) =
-      ((if tierW h = 0 then a.store.pers else a.store.scr).consts.node? (idxW h).toNat).map
-        (fun r => r.n) := by
-    unfold EStore.viewConstName EStore.persGetConstName
-    rw [decE_pers h hh]
-    by_cases ht : tierW h = 0
-    · simp [ht, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
-    · have hon : a.store.scratchOn = true := by
-        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv.1 ⟨ht, h1⟩
-      simp [ht, hon, ETables.getConstName, decE_idx h (narrow_of_cnt m h hR.const rfl hv.2)]
-  rw [e]; simp only [Tbl.node?, hk, Option.map_some]; rw [hn, decI_word]
 
 /-- `getAppArgs` at the counter of a successful `app_count_at` is `getAppArgs` at any larger one. -/
 theorem acaW_args {m : Mem} {a : AState} (hR : ArenaR m a) {e f c h : Word} (he : HW e)
@@ -126,7 +110,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   · simp [hv1, hv2] at hW
   simp only [hv1, hv2, ↓reduceIte] at hW
   have hvo : viewOK m hh CONST := ⟨hv1, UInt64.not_le.mp hv2⟩
-  have hvn := pr_viewConstName m a hR hh hhh hvo h3
+  have hvn := L.Arena.viewConstName_f m a hR hh hhh hvo h3
   have hcw := (L.Ind.view_const_f m a hR hh hhh hvo h3).2.1
   generalize tfld m CONST (tierW hh) (idxW hh) 0 = cn at hvn hcw hW
   have htc : ((decE hh).tag == ETag.const) = true := by
@@ -358,7 +342,7 @@ theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
     obtain ⟨hrun₂, hRd₂, hb₂⟩ := ih hS₁ _hf h1 hc2
     refine ⟨?_, hRd.trans hRd₂, hb₂⟩
     rw [L.toNat_sub_one_of_ne hk] at hrun₂
-    simp only [StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
+    simp only [StateT.run_bind, L.Arena.viewBind_run _ a, hvb, except_ok_bind]
     exact hrun₂
   unfold ppwW at hW
   by_cases hk : k = 0

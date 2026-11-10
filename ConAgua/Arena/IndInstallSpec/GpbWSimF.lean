@@ -118,7 +118,7 @@ theorem decNL_trunc_slice {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL (trun
   right
   have hg := mapM_opt_get (fun j => iwN (truncM m) (o + j)) (List.range l) xs h (l - 1) (by simp; omega)
   simp only [List.getElem_range] at hg
-  have := (rec2IwN_trunc hg).1
+  have := (L.Ind.iwN_truncM_some hg).1
   omega
 
 /-- **A class reading's words**: its slots' and its recursor classes' slices. -/
@@ -136,7 +136,7 @@ theorem crWords {m : Mem} {rd : Word} {R : ConRon.Arena.ClassRead} (h : DecB (fu
   subst hRs
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hsl
   obtain ⟨o2, l2, ho2, hl2, hd2⟩ := decAt_some hrc
-  have t3 := (rec2IwN_trunc hl2).1
+  have t3 := (L.Ind.iwN_truncM_some hl2).1
   have e0 : rd.toNat = rd.toNat := rfl
   have e1 : (rd + 1).toNat = rd.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (rd + 2).toNat = rd.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
@@ -155,7 +155,7 @@ theorem crWords {m : Mem} {rd : Word} {R : ConRon.Arena.ClassRead} (h : DecB (fu
         (l - 1) (by simp; omega)
       simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at hg
       obtain ⟨v, hv, -⟩ := hg
-      have := (rec2IwN_trunc hv).1
+      have := (L.Ind.iwN_truncM_some hv).1
       omega
 
 /-! ## Part A: the capacity guards, the pins, the stream, the guards -/
@@ -245,8 +245,8 @@ theorem gpbW_simF (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
   obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
   obtain ⟨o1, l1, h1, h2, hpd⟩ := decAt_some hps
-  obtain ⟨-, h1m⟩ := rec2IwN_trunc h1
-  obtain ⟨-, h2m⟩ := rec2IwN_trunc h2
+  obtain ⟨-, h1m⟩ := L.Ind.iwN_truncM_some h1
+  obtain ⟨-, h2m⟩ := L.Ind.iwN_truncM_some h2
   obtain ⟨e1, t1⟩ := rec2RdN (w := g) (k := 1) h1m hsz
   obtain ⟨e2, t2⟩ := rec2RdN (w := g) (k := 2) (by simpa [Nat.add_assoc] using h2m) hsz
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1 e2
@@ -313,7 +313,7 @@ theorem grpGs_eq (m1 : Mem) (g pp pO pL m2o m2l fo fl rd co cl el : Word) (hrd :
 theorem decHL_set_out {k : IdxKind} {m : Mem} {x v : Word} {o l : Nat} (h : o + l ≤ x.toNat ∨ x.toNat < o) :
     (decHL (m.set64 IW x v) o l : Option (List (Idx k))) = decHL m o l := by
   simp only [decHL, hslice?]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   have : j < l := List.mem_range.mp hj
   simp only [hd?, iwA, aread_apply, aread_apply]

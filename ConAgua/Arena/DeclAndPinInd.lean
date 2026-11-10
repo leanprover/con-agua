@@ -88,7 +88,7 @@ theorem andBlockNamed_specW (p : Prog) (hp : p.lookup "and_block_named" = some a
 
 /-! ## The cut pool -/
 
-theorem trunc_getAP {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
+theorem trunc_get_some {P : Array Word} {t i : Nat} {v : Word} (h : (trunc P t)[i]? = some v)
     (hi : i ≠ 0) : P[i]? = some v ∧ i ≤ t := by
   simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds,
     Array.getElem?_extract, Array.size_extract] at h
@@ -154,9 +154,9 @@ theorem abnW_eq {m : Mem} {t : Nat}
     obtain ⟨c, ⟨v, hv, hc⟩, cs, hcs, rfl⟩ := h
     obtain ⟨w, hw, rfl⟩ : ∃ w, (trunc (m.arr64 DLP) t)[bo.toNat]? = some w ∧ w.toNat = v := by
       simp only [nat?, Option.map_eq_some_iff] at hv; exact hv
-    obtain ⟨hwP, -⟩ := trunc_getAP hw (by omega)
+    obtain ⟨hwP, -⟩ := L.Arena.trunc_get_some hw (by omega)
     obtain ⟨x, hx, hxl, hname⟩ := decCI_name hc
-    obtain ⟨hxP, -⟩ := trunc_getAP hx (by omega)
+    obtain ⟨hxP, -⟩ := L.Arena.trunc_get_some hx (by omega)
     have hbolt : bo.toNat < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hwP).1
     have hwlt : w.toNat + 1 < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hxP).1
     have e1 : rdW (m.arr64 DLP) bo = w := by simp [rdW, hwP]

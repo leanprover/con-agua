@@ -6,6 +6,7 @@ public import ConAgua.Layout
 meta import ConAgua.L.Logic
 meta import ConAgua.L.Blocks
 meta import ConAgua.Layout
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -250,15 +251,6 @@ theorem evalArgs_subPB (es : List Expr) :
 
 /-! ## Statements -/
 
-theorem arr8_set8_ne (m : Mem) {a b : ArrId} (h : a ≠ b) (i v : Word) :
-    (m.set8 a i v).arr8 b = m.arr8 b := by
-  simp only [Mem.set8, Mem.arr8, Ne.symm h, ite_false]
-
-theorem St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) : (s.setLocs xs vs).mem = s.mem := by
-  induction xs generalizing s vs with
-  | nil => rfl
-  | cons x xs ih => simp only [St.setLocs, ih]; rfl
-
 theorem lookup_subPB (p : Prog) (f : FnName) :
     (Prog.subPB bs p).lookup f = (p.lookup f).map (FunDecl.subPB bs) := by
   induction p with
@@ -310,7 +302,7 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
     exact Agree.bind (evalE_subPB i) fun _ => Agree.bind (evalE_subPB e) fun _ =>
       Agree.bind (Agree.get_bind fun t ht => by
         split
-        · exact Agree.set ((arr8_set8_ne t.mem ha _ _).trans ht)
+        · exact Agree.set ((L.Mem.arr8_set8_ne ha _ _).trans ht)
         · exact Agree.throw _) fun _ => Agree.pure _
   | st64 a i e =>
     exact Agree.bind (evalE_subPB i) fun _ => Agree.bind (evalE_subPB e) fun _ =>
@@ -380,7 +372,7 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
     exact Agree.bind (evalArgs_subPB args) fun vs =>
       Agree.bind (invoke_agree hp hk f vs) fun _ =>
         Agree.bind (Agree.modify fun s h => (congrArg (Mem.arr8 · PB)
-          (St.setLocs_mem s xs _)).trans h) fun _ => Agree.pure _
+          (L.St.setLocs_mem s xs _)).trans h) fun _ => Agree.pure _
   | abort e => exact Agree.bind (evalE_subPB e) fun _ => Agree.throw _
   | gset g e =>
     exact Agree.bind (evalE_subPB e) fun _ =>

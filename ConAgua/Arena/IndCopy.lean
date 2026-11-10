@@ -8,6 +8,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -250,7 +251,7 @@ theorem slCons_dec {k : IdxKind} {m m' : Mem} {x o l : Word} {n : Nat} {xs : Lis
   · intro b
     by_cases hb : b = IW
     · subst hb; rw [hS, hm1sz]
-    · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
+    · rw [hA b hb]; simp only [consPre, allocMem, L.Mem.size64_set64]
 
 end L.Ind
 

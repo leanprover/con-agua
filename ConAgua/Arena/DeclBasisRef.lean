@@ -244,7 +244,7 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
     refine ⟨some (basisOfW k.toNat), a1, ?_, hT1, hg1, by simp [decHit, hk4]⟩
     rw [hks]
     simp only [ConRon.Arena.basisNameHitGo, StateT.run_bind]
-    rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, exb]
+    rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, L.Arena.except_ok_bind]
     dsimp only; rw [ite_eq_left (by simp [he])]; rfl
   · rw [basisNameHitGoW.k_block_names_eq, ite_eq_right (fun h0 => he (hiff.mp h0))] at h
     cases h3 : basisNameHitGoW p n s2.mem io il (k + 1) with
@@ -260,7 +260,7 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
     refine ⟨x, a', ?_, hT', hg1.trans hg', decHit_two hd'⟩
     rw [hks]
     simp only [ConRon.Arena.basisNameHitGo, StateT.run_bind]
-    rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, exb]
+    rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1, L.Arena.except_ok_bind]
     rw [hk1] at hrun
     dsimp only; rw [ite_eq_right (by simpa using he)]; exact hrun
 
@@ -305,7 +305,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
   -- the record's names
   have hcv := decCI_cvA (q := rdW (m.arr64 IW) co) hc
   obtain ⟨w0, hw0⟩ := decCV_def hcv 3 (by omega)
-  have hlt := erecP_lt64 hw0
+  have hlt := L.Arena.erecP_lt64 hw0
   have hq1 : (rdW (m.arr64 IW) co + 1).toNat = (rdW (m.arr64 IW) co).toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
   rw [← hq1] at hcv
@@ -344,7 +344,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
     (decB_ciF.mpr (ArrExt.decCI hg2.ext hx1))
   refine ⟨x :: xs, a2, ?_, StageT.of_iw hT2 hS3 (consW_iwFrame hW3), hg1.trans (hg2.trans hg3),
     hok2, hr2, by simpa using hX3⟩
-  simp only [ConRon.Arena.atBlockGo, StateT.run_bind, hrun1, exb, hrun2]
+  simp only [ConRon.Arena.atBlockGo, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hrun2]
   rfl
 
 end go

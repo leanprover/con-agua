@@ -11,6 +11,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.InstLP
+import ConAgua.Arena.InferBodyIntern
 
 @[expose] public section
 
@@ -298,22 +299,6 @@ def recFireLevelsW (p : Prog) (n : Nat) (m : Mem) (fk fvo fvc po pc us qo qc : W
 
 /-! ## The specs -/
 
-/-- A memory read as `rdW` (as `InferBodyIntern.lean`'s `ld64_rdW_spec`, not imported here). -/
-theorem lp_ld64_spec (a : ArrId) (i : Word) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ ld64 a i
-    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  subst hs
-  simp only [ld64, StateT.run_bind, StateT.run_get, pure_bind] at hrun
-  split at hrun
-  · rename_i h
-    simp only [pure] at hrun
-    obtain ⟨rfl, rfl⟩ := hrun
-    exact ⟨rfl, by simp [rdW, h], h⟩
-  · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
-    cases hrun
-
 /-- What the list functions need of the program. -/
 structure LsProg (p : Prog) : Prop extends LvSubProg p where
   sle_go : p.lookup "sle_go" = some sleGo
@@ -430,11 +415,11 @@ theorem recFireLevels_spec (n : Nat) (s₀ : St) (fk fvo fvc po pc us qo qc : Wo
       recFireLevelsW p n s₀.mem fk fvo fvc po pc us qo qc = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hL.rec_fire_levels]
   simp only [callFn, recFireLevelsL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lp_ld64_spec, st64,
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, L.Arena.ld64_rdW_spec, st64,
       callW_spec p n "ls_node", callW_spec p n "keys_push", callW_spec p n "sle_go",
       callW_spec p n "slp_go", callW_spec p n "spn_ls"] <;>
   simp_all [recFireLevelsW, rflK, spTop, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
-    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+    L.St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 end spec
 

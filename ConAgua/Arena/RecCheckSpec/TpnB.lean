@@ -14,6 +14,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.RecCheck
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -106,7 +107,7 @@ theorem wanW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     obtain ⟨k, hk⟩ : ∃ k, auxl.toNat = k + 1 := ⟨auxl.toNat - 1, by omega⟩
     rw [hk, wantAuxFrom_succ]
-    have h1 := partsSimW (nriF_ok (fun _ => none) vis fe n0 (j + 1) hn0) hS
+    have h1 := L.Ind.RelW.simS (nriF_ok (fun _ => none) vis fe n0 (j + 1) hn0) hS
     rw [hj1] at h1
     refine Sim.bindK (K := wanW.k_name_rec_i n n0 j auxl)
       (body := fun r1 m1 => wanW.k_block_rec_want_aux_names n (r1.headD 0) (wanW n m1 n0 (j + 1) (auxl - 1)))
@@ -196,7 +197,7 @@ theorem tpnB_sim (p : Prog) (L : RpLook p) (n : Nat) {vis : Word}
   simp only [List.headD_cons, List.tail_cons] at hW3 hm3
   rw [hm3]
   have hd1' : decHL s2.mem (rw.headD 0).toNat (rw.tail.headD 0).toNat = some want := by
-    rw [decHL_grow3 hg2 hb1]; exact hd1
+    rw [_root_.L.Ind.decHL_grow hg2 hb1]; exact hd1
   obtain ⟨wws, hws, hwm, hwl⟩ := slR_of_decHL s2.mem _ _ _ hd1' (by have := hg2.iw; have := hT s2.mem; omega)
   obtain ⟨gws, hgs, hgm, hgl⟩ := slR_of_decHL s2.mem _ _ _ hd2 (by rw [ht2]; exact hT _)
   rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hws hgs

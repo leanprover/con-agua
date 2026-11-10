@@ -9,6 +9,8 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
 import all ConAgua.Rom.PinRead
+import ConAgua.Arena.DeclRec
+import ConAgua.Front.ApplyExpr
 
 @[expose] public section
 
@@ -444,19 +446,13 @@ grind_pattern [arena_grind] internAllPinsW_eq => internAllPinsW rom (n + 1) m
 theorem erAllocMem_flag (m : Mem) (k : Word) : (erAllocMem m k).flag = m.flag := by
   unfold erAllocMem; split <;> exact flag_set64_ctl _ _ _ (by decide)
 
-theorem erAllocW_mem {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) : m' = erAllocMem m k := by
-  unfold erAllocW at h
-  split at h <;> (dsimp only at h; split at h; · cases h
-                  split at h; · cases h
-                  simp only [Option.some.injEq, Prod.mk.injEq] at h; exact h.2.symm)
-
 theorem erAllocW_topK {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) : TopK m m' := by
-  rw [erAllocW_mem h]
+  rw [L.Arena.erAllocW_mem h]
   exact TopK.of_eq (erAllocMem_top _ _) (erAllocMem_pcap _ _) (erAllocMem_flag _ _)
 
 theorem erAllocW_eqs {m m' : Mem} {k o : Word} (h : erAllocW m k = some (o, m')) :
     m'.top = m.top ∧ pcap m' = pcap m := by
-  rw [erAllocW_mem h]
+  rw [L.Arena.erAllocW_mem h]
   exact ⟨erAllocMem_top _ _, erAllocMem_pcap _ _⟩
 theorem erAllocW_top' (m m' : Mem) (k o : Word) (h : erAllocW m k = some (o, m')) : m'.top = m.top :=
   (erAllocW_eqs h).1
@@ -709,7 +705,7 @@ theorem romExprsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.m
     simp only [callFn, romExprsTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hu', he', ih'] <;>
-      finish [Keep.size, Keep.pcap]
+      finish [Keep.size, L.Front.Keep.pcap]
 
 theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -728,7 +724,7 @@ theorem romPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r k : Word), pcap s₀.me
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hx', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
+      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -750,7 +746,7 @@ theorem romListsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.m
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hu', hx', ih', ha',
         romU64_spec rom p hL.rom_u64 n,
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch, listHdr, u64OK]
+      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch, listHdr, u64OK]
 
 theorem romTPairsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -772,7 +768,7 @@ theorem romTPairsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hu', hx', hn', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
+      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 theorem romTPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -793,7 +789,7 @@ theorem romTPinsTo_specW (n : Nat) : ∀ (s₀ : St) (q r j : Word), pcap s₀.m
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hu', hx', ih', ha',
         romU64_spec rom p hL.rom_u64 n] <;>
-      finish [Keep.size, Keep.pcap, tpinsHdr, u64OK]
+      finish [Keep.size, L.Front.Keep.pcap, tpinsHdr, u64OK]
 
 theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
     ⦃fun s => s = s₀⦄
@@ -815,7 +811,7 @@ theorem romSetsTo_specW (n : Nat) : ∀ (s₀ : St) (q o k : Word), pcap s₀.me
     simp only [callFn, romSetsTo]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hu', hp', hl', ht', ih', ha'] <;>
-      finish (gen := 30) (instances := 10000) [Keep.size, Keep.pcap, sets2K, sets3K, sets4K, setsK]
+      finish (gen := 30) (instances := 10000) [Keep.size, L.Front.Keep.pcap, sets2K, sets3K, sets4K, setsK]
 
 theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
@@ -831,7 +827,7 @@ theorem internPinSets_specW (n : Nat) (s₀ : St) (q : Word) (hs : pcap s₀.mem
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hs', ha',
         romU64_spec rom p hL.rom_u64 n] <;>
-      finish [Keep.size, Keep.pcap]
+      finish [Keep.size, L.Front.Keep.pcap]
 
 theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄
@@ -847,7 +843,7 @@ theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 63
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hi', hp',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
+      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 end spec
 

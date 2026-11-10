@@ -41,10 +41,6 @@ structure DmProg1 (p : Prog) : Prop extends NatEqProg p where
 
 /-! ## Reading a variant's record -/
 
-theorem dmWord_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
-  have := x.word.toNat_lt
-  simpa using this
-
 theorem hslice_words {k : IdxKind} (rd : Nat → Option Word) : ∀ (ws : List Word) (o : Nat),
     (∀ w ∈ ws, w.toNat < 2 ^ 32) → (∀ j < ws.length, rd (o + j) = ws[j]?) →
     (hslice? rd o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
@@ -194,31 +190,31 @@ theorem dmChoose_run {γ : Type} (xs : List γ) (d : γ) {m : Mem} {a : AState} 
   have p : ∀ i (hi : i < 51), (pinAt i).run a = .ok (decI (pinW m (1 + i)), a) := pinAt_run hF
   have b : ∀ i (hi : i < 51), ((decI c : NIdx) == decI (pinW m (1 + i))) = decide (c = pinW m (1 + i)) :=
     fun i hi => decI_beq _ _ hc (hF.names_lt i hi)
-  simp only [StateT.run_bind, p 21 (by decide), exc_ok_bind', b 21 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 21 (by decide), L.Arena.except_ok_bind, b 21 (by decide), decide_eq_true_eq]
   by_cases e0 : c = pinW m 22
   · rw [ite_eq_left e0, ite_eq_left e0]; rfl
   rw [ite_eq_right e0, ite_eq_right e0]
-  simp only [StateT.run_bind, p 23 (by decide), exc_ok_bind', b 23 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 23 (by decide), L.Arena.except_ok_bind, b 23 (by decide), decide_eq_true_eq]
   by_cases e1 : c = pinW m 24
   · rw [ite_eq_left e1, ite_eq_left e1]; rfl
   rw [ite_eq_right e1, ite_eq_right e1]
-  simp only [StateT.run_bind, p 24 (by decide), exc_ok_bind', b 24 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 24 (by decide), L.Arena.except_ok_bind, b 24 (by decide), decide_eq_true_eq]
   by_cases e2 : c = pinW m 25
   · rw [ite_eq_left e2, ite_eq_left e2]; rfl
   rw [ite_eq_right e2, ite_eq_right e2]
-  simp only [StateT.run_bind, p 25 (by decide), exc_ok_bind', b 25 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 25 (by decide), L.Arena.except_ok_bind, b 25 (by decide), decide_eq_true_eq]
   by_cases e3 : c = pinW m 26
   · rw [ite_eq_left e3, ite_eq_left e3]; rfl
   rw [ite_eq_right e3, ite_eq_right e3]
-  simp only [StateT.run_bind, p 26 (by decide), exc_ok_bind', b 26 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 26 (by decide), L.Arena.except_ok_bind, b 26 (by decide), decide_eq_true_eq]
   by_cases e4 : c = pinW m 27
   · rw [ite_eq_left e4, ite_eq_left e4]; rfl
   rw [ite_eq_right e4, ite_eq_right e4]
-  simp only [StateT.run_bind, p 27 (by decide), exc_ok_bind', b 27 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 27 (by decide), L.Arena.except_ok_bind, b 27 (by decide), decide_eq_true_eq]
   by_cases e5 : c = pinW m 28
   · rw [ite_eq_left e5, ite_eq_left e5]; rfl
   rw [ite_eq_right e5, ite_eq_right e5]
-  simp only [StateT.run_bind, p 28 (by decide), exc_ok_bind', b 28 (by decide), decide_eq_true_eq]
+  simp only [StateT.run_bind, p 28 (by decide), L.Arena.except_ok_bind, b 28 (by decide), decide_eq_true_eq]
   by_cases e6 : c = pinW m 29
   · rw [ite_eq_left e6, ite_eq_left e6]; rfl
   rw [ite_eq_right e6, ite_eq_right e6]
@@ -278,7 +274,7 @@ theorem divModDeclPin_ref {vis : Word} {fe : IFEnv} {p : Prog}
   have := PinSetR.pin hP (j := dmSlotW m c) (slotW_lt m c)
   simp only [List.headD_cons]
   rw [PinSetR.rd1 hP hS.iw (by have := slotW_lt m c; omega), this]
-  exact ⟨dmWord_lt32 _, decI_word _⟩
+  exact ⟨L.Arena.idx_word_lt32 _, decI_word _⟩
 
 /-- **`div_mod_type_pins` is its model `divModTypePinsW`** (generated). -/
 l_model divModTypePins_specW (p : Prog) (hp : p.lookup "div_mod_type_pins" = some divModTypePinsL)
@@ -350,7 +346,7 @@ theorem sliceR_hslice {m : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l 
   have := hslice_words (k := IdxKind.expr) (erA m) (hs.map fun x => x.word.toUInt64) o.toNat
     (fun w hw => by
       obtain ⟨x, -, rfl⟩ := List.mem_map.mp hw
-      exact dmWord_lt32 x)
+      exact L.Arena.idx_word_lt32 x)
     (fun j hj => by
       simp only [List.length_map] at hj
       rw [erA_lo hI (by omega)]

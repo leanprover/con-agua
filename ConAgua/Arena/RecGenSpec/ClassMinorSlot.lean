@@ -380,29 +380,29 @@ theorem cmsGo_decB (n : Nat) {m : Mem} {rd c cc x y z w : Word} {R : ClassRead} 
   obtain ⟨-, -, -, o', l', h3, h4, hd⟩ := decCS_minor hdv
   -- the words
   have hsz64 : (m.arr64 IW).size < 2 ^ 64 := by omega
-  obtain ⟨-, ho'⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hl'⟩ := rec2IwN_trunc hl
-  obtain ⟨-, hv'⟩ := rec2IwN_trunc hv
-  obtain ⟨-, h3'⟩ := rec2IwN_trunc h3
-  obtain ⟨-, h4'⟩ := rec2IwN_trunc h4
+  obtain ⟨-, ho'⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hl'⟩ := L.Ind.iwN_truncM_some hl
+  obtain ⟨-, hv'⟩ := L.Ind.iwN_truncM_some hv
+  obtain ⟨-, h3'⟩ := L.Ind.iwN_truncM_some h3
+  obtain ⟨-, h4'⟩ := L.Ind.iwN_truncM_some h4
   have hrd : rdW (m.arr64 IW) rd = UInt64.ofNat o := by
     have := iwN_rdW_at (w := rd) (k := 0) (by simpa using ho') hsz64; simpa using this.1
   have hy : y = UInt64.ofNat s := e1
   have hos : (UInt64.ofNat o : Word) + UInt64.ofNat s = UInt64.ofNat (o + s) := by
     apply UInt64.toNat_inj.mp
-    have := iwN_lt_size hv'; have := rd.toNat_lt; have := (iwN_rdW ho' (by omega)).2
+    have := L.Ind.iwN_lt hv'; have := rd.toNat_lt; have := (iwN_rdW ho' (by omega)).2
     rw [UInt64.toNat_add]; simp <;> omega
-  have hvw := iwN_rdW hv' (by have := iwN_lt_size hv'; omega)
+  have hvw := iwN_rdW hv' (by have := L.Ind.iwN_lt hv'; omega)
   have hv3 : UInt64.ofNat v + 3 = UInt64.ofNat (v + 3) := by
-    apply UInt64.toNat_inj.mp; have := iwN_lt_size h3'; rw [UInt64.toNat_add]; simp <;> omega
+    apply UInt64.toNat_inj.mp; have := L.Ind.iwN_lt h3'; rw [UInt64.toNat_add]; simp <;> omega
   have hv4 : UInt64.ofNat v + 4 = UInt64.ofNat (v + 4) := by
-    apply UInt64.toNat_inj.mp; have := iwN_lt_size h4'; rw [UInt64.toNat_add]; simp <;> omega
+    apply UInt64.toNat_inj.mp; have := L.Ind.iwN_lt h4'; rw [UInt64.toNat_add]; simp <;> omega
   have hz' : z = UInt64.ofNat o' := by
-    rw [hz, hrd, hy, hos, hvw.1, hv3, (iwN_rdW h3' (by have := iwN_lt_size h3'; omega)).1]
+    rw [hz, hrd, hy, hos, hvw.1, hv3, (iwN_rdW h3' (by have := L.Ind.iwN_lt h3'; omega)).1]
   have hw' : w = UInt64.ofNat l' := by
-    rw [hw, hrd, hy, hos, hvw.1, hv4, (iwN_rdW h4' (by have := iwN_lt_size h4'; omega)).1]
-  rw [hz', hw', UInt64.toNat_ofNat_of_lt' (iwN_rdW h3' (by have := iwN_lt_size h3'; omega)).2,
-    UInt64.toNat_ofNat_of_lt' (iwN_rdW h4' (by have := iwN_lt_size h4'; omega)).2]
+    rw [hw, hrd, hy, hos, hvw.1, hv4, (iwN_rdW h4' (by have := L.Ind.iwN_lt h4'; omega)).1]
+  rw [hz', hw', UInt64.toNat_ofNat_of_lt' (iwN_rdW h3' (by have := L.Ind.iwN_lt h3'; omega)).2,
+    UInt64.toNat_ofNat_of_lt' (iwN_rdW h4' (by have := L.Ind.iwN_lt h4'; omega)).2]
   exact hd
 
 end L.Ind

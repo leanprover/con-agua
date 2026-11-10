@@ -249,8 +249,8 @@ theorem dr_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
       (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
     simp only [drE.k_eta_cert]
     by_cases e0 : r₁.headD 0 ≠ 0
-    · rw [ite_eq_left e0, decBool_true_of e0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl L.Arena.hw1)
-    · rw [ite_eq_right e0, decBool_false_of (by simpa using e0)]
+    · rw [ite_eq_left e0, L.Arena.decBool_true_of e0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl L.Arena.hw1)
+    · rw [ite_eq_right e0, L.Arena.decBool_false_of (by simpa using e0)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       exact hirr _ m₁ M₁ hS₁
   by_cases hl : ga = 5

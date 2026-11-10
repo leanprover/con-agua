@@ -177,7 +177,7 @@ theorem sputW_size (pt pb b k : Word) (a : TieredArray) :
     have := k.toNat_lt
     have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     rw [sputW]; simp only [hjn, ↓reduceIte]
-    rw [ih _ _ (by omega), size_set64]
+    rw [ih _ _ (by omega), L.Mem.size64_set64]
 
 @[arena_grind =] theorem sputW_pcap (m : Mem) (pt pb b k j : Word) :
     pcap (sputW m pt pb b k j) = pcap m :=
@@ -483,7 +483,7 @@ theorem romLevels_specW (n : Nat) (s₀ : St) (pos : Word)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hg, hq,
         romU64_spec rom p hL.rom_u64 n,
         internLs_spec p hL.lit_hash hL.limbs_eq hL.ls_match hL.ls_find hL.ls_push hL.intern_ls n] <;>
-      finish [Keep.size, Keep.pcap, stkTop]
+      finish [Keep.size, L.Front.Keep.pcap, stkTop]
 
 end spec
 
@@ -554,7 +554,7 @@ theorem sputW_facts (pt pb b n : Word) (hv : b.toNat + n.toNat < 2 ^ 64) (ht : p
     have hRS : (m.set64 (tierA POOL pt) (pb + j) (rdW (m.arr64 RSTK) (b + j))).arr64 RSTK = m.arr64 RSTK :=
       arr64_set64_tier_ne _ _ _ _ _ ⟨by decide, by decide⟩
     have hsz : ((m.set64 (tierA POOL pt) (pb + j) (rdW (m.arr64 RSTK) (b + j))).arr64 (tierA POOL pt)).size =
-        (m.arr64 (tierA POOL pt)).size := size_set64 _ _ _ _ _
+        (m.arr64 (tierA POOL pt)).size := L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨hf, hx⟩ := ih (m.set64 (tierA POOL pt) (pb + j) (rdW (m.arr64 RSTK) (b + j))) (j + 1) (by omega)
       (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (by omega)
     refine ⟨PFrame.trans (PFrame.set64 _ _ _ (PFrame.refl _)) hf, fun x => ?_⟩
@@ -662,7 +662,7 @@ theorem romLvlsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true) :
     case isFalse => simp at hW
     rename_i hdlt
     have hR2 : ArenaD (pushMem m₁ h₁) (AM.st (internLevel x) a) :=
-      ArenaD.frameHi (pushMem_frame1 m₁ h₁) (by simp [RSTK]) (by simp) hR1
+      L.Arena.ArenaD.frameHi (pushMem_frame1 m₁ h₁) (by simp [RSTK]) (by simp) hR1
     have ht1 : stkTop m₁ = stkTop m := hf1.ctl 131 (not_mem_storeC _ (by decide))
     have hc1 : 131 < (m₁.arr64 CTL).size := by rw [hf1.size]; exact hc
     have hS1 : m₁.arr64 RSTK = m.arr64 RSTK := hf1.1 RSTK (by decide) (by decide)
@@ -758,7 +758,7 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   generalize hm₂ : (sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (stkTop m) (UInt64.ofNat us.length) 0).set64 CTL 0
     (m₁.top + UInt64.ofNat us.length) = m₂ at hg hsl hk hR2 hW
   have hf3 : MemFrame [] [131] m₂ (m₂.set64 CTL 131 (stkTop m)) := MemFrame.setCtl _ _ _
-  have hR3 := ArenaD.frameHi hf3 (by simp) (by simp) hR2
+  have hR3 := L.Arena.ArenaD.frameHi hf3 (by simp) (by simp) hR2
   have hsl3 : SliceOK (m₂.set64 CTL 131 (stkTop m)) m₁.top (UInt64.ofNat us.length) := by
     have : (m₂.set64 CTL 131 (stkTop m)).top = m₂.top := by
       simp only [Mem.top, Mem.arr64_set64_same]; rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]

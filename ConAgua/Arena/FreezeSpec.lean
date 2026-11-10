@@ -122,13 +122,13 @@ theorem evalE_fz : ∀ (e : Expr), e.fzOk = true → ∀ s : St,
 
 /-! ## Stores and copies -/
 
-attribute [local simp] size_set64 L.St.setLoc_mem L.St.setLoc_loc
+attribute [local simp] L.Mem.size64_set64 L.St.setLoc_mem L.St.setLoc_loc
 
 @[simp] theorem size_copy64 (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) (n : Nat)
     (b : TieredArray) : ((m.copy64 d di s si n).arr64 b).size = (m.arr64 b).size := by
   induction n generalizing m di si with
   | zero => rfl
-  | succ n ih => simp only [Mem.copy64]; rw [ih, size_set64]
+  | succ n ih => simp only [Mem.copy64]; rw [ih, L.Mem.size64_set64]
 
 theorem arr64_copy64_ne (m : Mem) (d : TieredArray) (di : Word) (s : TieredArray) (si : Word) (n : Nat)
     {b : TieredArray} (h : b ≠ d) : (m.copy64 d di s si n).arr64 b = m.arr64 b := by
@@ -212,10 +212,6 @@ def fzCall (i : Nat) : Stmt := .call [1] (fzName i) [.var 1, .var 0]
 
 theorem fzCalls_eq : fzCalls = (List.range frozen.length).map fzCall := by rfl
 
-theorem St.setLoc_setLoc_same (s : St) (x : Var) (a b : Word) :
-    (s.setLoc x a).setLoc x b = s.setLoc x b := by
-  simp only [St.setLoc]; congr 1; funext y; split <;> rfl
-
 @[simp] theorem St.setLoc_loc_same (M : Mem) (s : St) (x : Var) (a b : Word) :
     ({ mem := M, loc := (s.setLoc x a).loc } : St).setLoc x b = ({ mem := M, loc := s.loc } : St).setLoc x b := by
   simp only [St.setLoc]; congr 1; funext y; by_cases h : y = x <;> simp [h]
@@ -265,7 +261,7 @@ theorem OutFrame.trans {m₁ m₂ m₃ : Mem} (h₁ : OutFrame m₁ m₂) (h₂ 
     h₂.bytes.trans h₁.bytes, h₂.glob.trans h₁.glob⟩
 
 theorem OutFrame.set64 (m : Mem) (i v : Word) : OutFrame m (m.set64 OUT i v) :=
-  ⟨fun _ ha => Mem.arr64_set64_ne _ _ _ _ _ ha, fun _ => size_set64 _ _ _ _ _,
+  ⟨fun _ ha => Mem.arr64_set64_ne _ _ _ _ _ ha, fun _ => L.Mem.size64_set64 _ _ _ _ _,
     rfl, rfl⟩
 
 theorem OutFrame.copy64 (m : Mem) (di : Word) (s : ArrId) (si : Word) (n : Nat) :
@@ -291,27 +287,24 @@ theorem OutFrame.pcGo (c : Word) : ∀ (is : List Nat) (m : Mem) (o : Word),
 
 theorem getElem_set64_out (M : Mem) (a : TieredArray) (ha : a ≠ OUT) (i v : Word) (k : Nat)
     (h : k < ((M.set64 OUT i v).arr64 a).size) :
-    ((M.set64 OUT i v).arr64 a)[k]'h = (M.arr64 a)[k]'(by rwa [size_set64] at h) := by
+    ((M.set64 OUT i v).arr64 a)[k]'h = (M.arr64 a)[k]'(by rwa [L.Mem.size64_set64] at h) := by
   simp only [Mem.arr64_set64_ne _ _ _ _ _ ha]
 
 theorem getElem_set64_out_ctl (M : Mem) (i v : Word) (k : Nat)
     (h : k < ((M.set64 OUT i v).arr64 CTL).size) :
-    ((M.set64 OUT i v).arr64 CTL)[k]'h = (M.arr64 CTL)[k]'(by rwa [size_set64] at h) :=
+    ((M.set64 OUT i v).arr64 CTL)[k]'h = (M.arr64 CTL)[k]'(by rwa [L.Mem.size64_set64] at h) :=
   getElem_set64_out M CTL (by decide) i v k h
 
 theorem getElem_set64_out_decl (M : Mem) (i v : Word) (k : Nat)
     (h : k < ((M.set64 OUT i v).arr64 L.Front.DECL).size) :
-    ((M.set64 OUT i v).arr64 L.Front.DECL)[k]'h = (M.arr64 L.Front.DECL)[k]'(by rwa [size_set64] at h) :=
+    ((M.set64 OUT i v).arr64 L.Front.DECL)[k]'h = (M.arr64 L.Front.DECL)[k]'(by rwa [L.Mem.size64_set64] at h) :=
   getElem_set64_out M L.Front.DECL (by decide) i v k h
 
-@[simp] theorem run_throw_M {α : Type} (e : Err) (s : St) :
-    StateT.run (throw e : M α) s = Except.error e := rfl
+attribute [simp] L.run_throw
 
-@[simp] theorem except_bind_error {α β : Type} (e : Err) (f : α → Except Err β) :
-    (Except.error e >>= f) = Except.error e := rfl
+attribute [simp] L.except_error_bind
 
-@[simp] theorem except_map_error {α β : Type} (e : Err) (f : α → β) :
-    (f <$> (Except.error e : Except Err α)) = Except.error e := rfl
+attribute [simp] L.except_error_map
 
 theorem dite_getElem_pure (A : Array Word) (i : Nat) (e : Err) :
     (if h : i < A.size then (pure A[i] : M Word) else throw e) =
@@ -433,7 +426,7 @@ theorem getD_copy64 {d s : ArrId} (hds : d ≠ s) : ∀ (n : Nat) (m : Mem) (di 
       have hd1 : (di + 1).toNat = di.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hs1 : (si + 1).toNat = si.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [getD_copy64 hds (n + 1) _ (di + 1) (si + 1) (by omega) (by omega) k, hd1, hs1,
-        Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hsd), size_set64, getD_set64_same]
+        Mem.arr64_set64_ne _ _ _ _ _ (TieredArray.t0_ne hsd), L.Mem.size64_set64, getD_set64_same]
       by_cases h1 : k = di.toNat
       · subst h1
         have : ¬ (di.toNat + 1 ≤ di.toNat) := by omega
@@ -591,7 +584,7 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
                 · rw [hM1i hc, ite_eq_right]
                   have := (hO hc).1
                   omega
-    all_goals simp only [getD_set64_same, size_set64, hM1s, he.1,
+    all_goals simp only [getD_set64_same, L.Mem.size64_set64, hM1s, he.1,
         toNat_hdr _ (by omega : 10 + 2 * n < 2 ^ 64), toNat_hdr _ (by omega : 11 + 2 * n < 2 ^ 64)]
     · rcases (by omega : j < n ∨ j = n) with hj' | rfl
       · rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega),
@@ -649,7 +642,7 @@ theorem getD_pcTail_lo (M : Mem) (o : Word) (h : 9 < (M.arr64 OUT).size) :
     ((pcTail M o).arr64 OUT).getD 4 0 = UInt64.ofNat frozen.length ∧
     ((pcTail M o).arr64 OUT).getD 8 0 = 0 ∧
     ((pcTail M o).arr64 OUT).getD 9 0 = UInt64.ofNat hdrW := by
-  simp only [pcTail, getD_set64_same, size_set64]
+  simp only [pcTail, getD_set64_same, L.Mem.size64_set64]
   simp (config := { decide := true }) [h, show 0 < (M.arr64 OUT).size by omega,
     show 1 < (M.arr64 OUT).size by omega, show 2 < (M.arr64 OUT).size by omega,
     show 3 < (M.arr64 OUT).size by omega, show 4 < (M.arr64 OUT).size by omega,
@@ -657,7 +650,7 @@ theorem getD_pcTail_lo (M : Mem) (o : Word) (h : 9 < (M.arr64 OUT).size) :
 
 theorem getD_pcTail_hi (M : Mem) (o : Word) (k : Nat) (hk : 10 ≤ k) :
     ((pcTail M o).arr64 OUT).getD k 0 = (M.arr64 OUT).getD k 0 := by
-  simp only [pcTail, getD_set64_same, size_set64]
+  simp only [pcTail, getD_set64_same, L.Mem.size64_set64]
   simp (config := { decide := true }) [show k ≠ 0 by omega, show k ≠ 1 by omega,
     show k ≠ 2 by omega, show k ≠ 3 by omega, show k ≠ 4 by omega, show k ≠ 8 by omega,
     show k ≠ 9 by omega]

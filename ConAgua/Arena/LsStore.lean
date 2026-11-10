@@ -205,7 +205,7 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
     simp only [lsCS]
     vcgen [step, evalArgs, evalE, setLocs, lsMatch_spec p hpe hpm n]
     all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
-      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, L.St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _
@@ -235,7 +235,7 @@ theorem lsOK (hpm : p.lookup "ls_match" = some lsMatch) : ConsOK p lsCS where
       fun s₁ => triple_pre_and fun ⟨hq, hx⟩ => hpLoopLs_step_spec p n s₁ hq hx
     simp only [lsPre, L.Notation.blk]
     vcgen [step, evalE, setLoc, hL]
-    all_goals simp_all [St.setLoc_loc, St.setLoc_mem, KeepLo, argsOf, List.range_succ, lsOrW_zero]
+    all_goals simp_all [St.setLoc_loc, L.St.setLoc_mem, KeepLo, argsOf, List.range_succ, lsOrW_zero]
     all_goals (intro x hx; obtain ⟨e0, e1, e2, e3, e4, -⟩ := ‹_ ∧ _›
                rcases (show x = 0 ∨ x = 1 ∨ x = 2 ∨ x = 3 ∨ x = 4 by omega) with
                  rfl | rfl | rfl | rfl | rfl <;> assumption)

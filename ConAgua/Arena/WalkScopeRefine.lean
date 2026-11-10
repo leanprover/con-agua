@@ -9,6 +9,7 @@ import ConAgua.Arena.View
 public import ConAgua.Arena.DerRelBase
 public import ConRon.Arena.Core
 import ConAgua.L.WordOff
+import ConAgua.Arena.Rom
 
 @[expose] public section
 
@@ -32,21 +33,13 @@ namespace L.Arena
 /-- A memo value word as a `Bool`. -/
 def decBW (w : Word) : Bool := w != 0
 
-/-- `ArenaD` across a writer at or above array/`CTL` word 64. -/
-theorem ArenaD.frame64 {A : List TieredArray} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, InHigh b) (hC : ∀ x ∈ C, 64 ≤ x.toNat)
-    (h : ArenaD m a) : ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.base,
-   DerR.frameM A C m m' hf (fun b hb => by
-     have := (hA b hb).2; omega) a h.der⟩
-
 theorem wsSch_wf : wsSch.WF := ⟨by decide, by decide⟩
 
 /-- The scope walk's frame. -/
 abbrev WsFrame (m m' : Mem) : Prop := MemFrame [WSM] [152, 153] m m'
 
 theorem WsFrame.arenaD {m m' : Mem} {a : AState} (hf : WsFrame m m') (h : ArenaD m a) : ArenaD m' a :=
-  ArenaD.frame64 hf (fun b hb => by simp at hb; subst hb; decide)
+  L.Arena.ArenaD.frameHi hf (fun b hb => by simp at hb; subst hb; decide)
     (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide) h
 
 /-! ## The twin, unfolded -/
@@ -330,7 +323,7 @@ theorem wsFastW_ok (n : Nat) (m m' : Mem) (a : AState) (hD : ArenaD m a) (hM : W
   have hc := mclearG_frame wsSch m
   have hM₀ := memoRG_clear wsSch wsSch_wf lfKey decBW m mp hmp h0
   obtain ⟨memo', ha, hM', hle, hf⟩ :=
-    (wsGoOK n).1 _ _ a ∅ e d 4000000000 r (ArenaD.frame64 hc (by simp)
+    (wsGoOK n).1 _ _ a ∅ e d 4000000000 r (L.Arena.ArenaD.frameHi hc (by simp)
       (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide) hD) hM₀ he hb
   rw [coreWalkFuel_toNat] at ha
   refine ⟨?_, ⟨_, hM'⟩, hle, (hc.mono (by simp) (by simp)).trans hf⟩

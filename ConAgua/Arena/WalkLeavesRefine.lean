@@ -7,6 +7,8 @@ import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.View
 import ConAgua.L.WordOff
+import ConAgua.Arena.Rom
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -89,12 +91,12 @@ theorem LeafR.push {m : Mem} {k : Word} {acc : List (Nat × EIdx)} (h : LeafR m 
   have rd : ∀ i : Word, rdW ((lvsPush m k x y).arr64 LVS) i =
       if k * 2 + 1 = i then y else if k * 2 = i then x else rdW (m.arr64 LVS) i := by
     intro i
-    simp only [lvsPush, rdW_set64, size_set64]
+    simp only [lvsPush, rdW_set64, L.Mem.size64_set64]
     have e1 : (k * 2 + 1).toNat < (m.arr64 LVS).size := by omega
     have e2 : (k * 2).toNat < (m.arr64 LVS).size := by omega
     simp only [e1, e2, and_true, true_and]
   have hsize : ((lvsPush m k x y).arr64 LVS).size = (m.arr64 LVS).size := by
-    simp only [lvsPush, size_set64]
+    simp only [lvsPush, L.Mem.size64_set64]
   have old : ∀ j, j < k.toNat → rdW ((lvsPush m k x y).arr64 LVS) (UInt64.ofNat j * 2) =
       rdW (m.arr64 LVS) (UInt64.ofNat j * 2) ∧ rdW ((lvsPush m k x y).arr64 LVS) (UInt64.ofNat j * 2 + 1) =
       rdW (m.arr64 LVS) (UInt64.ofNat j * 2 + 1) := by
@@ -172,7 +174,7 @@ theorem lsbSch_wf : lsbSch.WF := ⟨by decide, by decide⟩
 abbrev FlFrame (m m' : Mem) : Prop := MemFrame [FLM, LVS] [154, 155] m m'
 
 theorem FlFrame.arenaD {m m' : Mem} {a : AState} (hf : FlFrame m m') (h : ArenaD m a) : ArenaD m' a :=
-  ArenaD.frame64 hf (fun b hb => by simp at hb; rcases hb with rfl | rfl <;> decide)
+  L.Arena.ArenaD.frameHi hf (fun b hb => by simp at hb; rcases hb with rfl | rfl <;> decide)
     (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide) h
 
 /-- The arms of `fvarLeavesGo` on a view, named. -/
@@ -387,7 +389,7 @@ theorem flGoOK (n : Nat) : FlGoOK n ∧ FlNodeOK n := by
 abbrev LsbFrame (m m' : Mem) : Prop := MemFrame [LSM] [156, 157] m m'
 
 theorem LsbFrame.arenaD {m m' : Mem} {a : AState} (hf : LsbFrame m m') (h : ArenaD m a) : ArenaD m' a :=
-  ArenaD.frame64 hf (fun b hb => by simp at hb; subst hb; decide)
+  L.Arena.ArenaD.frameHi hf (fun b hb => by simp at hb; subst hb; decide)
     (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide) h
 
 theorem LsbFrame.lvs {m m' : Mem} (hf : LsbFrame m m') : m'.arr64 LVS = m.arr64 LVS :=

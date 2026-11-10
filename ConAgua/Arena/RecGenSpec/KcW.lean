@@ -103,7 +103,7 @@ theorem tcpP_spec (k : Nat) (s₀ : St) (pfo pfl e : Word) :
   simp only [callFn, targetCanonParams]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      posRec3_specW p L.rx.ha L.h3 k, hrx] <;>
+      _root_.L.Ind.rec3_specW_iw p L.rx.ha L.h3 k, hrx] <;>
     finish (gen := 20) [tcpPW]
 
 theorem tcpP_specF (k : Nat) (s₀ : St) (pfo pfl e : Word) :

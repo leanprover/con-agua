@@ -1,6 +1,7 @@
 module
 
 public import ConRon.Arena.Inductives.RecCheck
+import ConAgua.Arena.WhnfIotaRecRefine
 
 @[expose] public section
 
@@ -45,17 +46,13 @@ def tpStep (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (holes pfvs
   let closed ← tpClosed pfvs a b
   if !closed then pure false else tpRest fe d names lvls holes pfvs a b
 
-theorem ite_bind' {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
-    (f : α → m β) : (if c then x else y) >>= f = if c then x >>= f else y >>= f := by
-  split <;> rfl
-
 theorem tpd_cons (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (holes pfvs : List EIdx)
     (a b : EIdx) (as bs : List EIdx) :
     ConRon.Arena.targetParamsDefEq V fe d names lvls holes pfvs (a :: as) (b :: bs) =
       (do let c ← tpStep fe d names lvls holes pfvs a b
           if c then ConRon.Arena.targetParamsDefEq V fe d names lvls holes pfvs as bs else pure false) := by
   rw [ConRon.Arena.targetParamsDefEq]
-  simp only [tpStep, tpClosed, tpRest, bind_assoc, ite_bind', pure_bind]
+  simp only [tpStep, tpClosed, tpRest, bind_assoc, L.Arena.ite_bind, pure_bind]
   rfl
 
 theorem tpd_nil (fe : IFEnv) (d : Nat) (names : List NIdx) (lvls : LsIdx) (holes pfvs : List EIdx)

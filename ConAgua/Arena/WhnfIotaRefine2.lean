@@ -160,7 +160,7 @@ theorem dl_ref (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn
       fun r₁ m₁ _ h₁ => RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁
         fun M₁ hS₁ hSt₁ => ?_
     rw [dlE.k_defeq.eq_2]
-    refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+    refine RefE.retIf L.Arena.decBool_false_of (fun h => by simpa [decBool] using h)
       (fun _ => CorePost.ret hS₁ rfl (by simp [ResH, HW])) fun _ _ => ?_
     have hsa₁ : SpineN m₁ ao an aas := hsa'.toN.keep hSt₁.size hSt₁.below (hta hna) hS.spn
     have hsb₁ : SpineN m₁ bo bn bs := hsb'.toN.keep hSt₁.size hSt₁.below (htb hnb) hS.spn
@@ -674,7 +674,7 @@ theorem instSpinePins_spec (p : Prog) (hp : p.lookup "inst_spine_pins" = some in
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
     fun s₀ => Triple.step_exec (instSpinePinsLoop_spec p (k + 1) s₀)] <;>
   simp_all [ispTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLoc_loc,
-    St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
+    L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>
   (have h136 : 136 < (s₀.mem.arr64 CTL).size := by assumption
    refine ⟨h136, ?_⟩
@@ -703,10 +703,10 @@ theorem push_step (m : Mem) (q v : Word) (hq : q.toNat < (m.arr64 SPN).size)
     (MemFrame.setCtl (m.set64 SPN q v) 136 (q + 1)).mono (fun b hb => absurd hb (by simp))
       (fun x hx => hx)
   have hsz : (((m.set64 SPN q v).set64 CTL 136 (q + 1)).arr64 SPN).size = (m.arr64 SPN).size := by
-    rw [size_set64, size_set64]
+    rw [L.Mem.size64_set64, L.Mem.size64_set64]
   have htop' : spTop ((m.set64 SPN q v).set64 CTL 136 (q + 1)) = q + 1 := by
     unfold spTop
-    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136⟩]
   have hq1' : (q + 1).toNat = q.toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
   refine ⟨f1.trans f2, htop', ⟨?_, hsz, fun i hi => ?_, BKept.of_frame (f1.trans f2) (by decide) (by decide),

@@ -208,7 +208,7 @@ theorem nstrOK (hpm : p.lookup "nstr_match" = some nsMatch) : ConsOK p nstrCS wh
     simp only [nstrCS]
     vcgen [step, evalArgs, evalE, setLocs, nsMatch_spec p hpe hpm n]
     all_goals simp_all [St.setLocs_cons, St.setLocs_nil, Keep1, Cond.pval, Expr.pval, Cmp.eval,
-      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, St.setLoc_mem]
+      BinOp.eval, argsOf, List.range_succ, St.setLoc_loc, L.St.setLoc_mem]
     all_goals first
       | (intro z hz; simp [St.setLoc_loc, hz])
       | exact ite_bneC _

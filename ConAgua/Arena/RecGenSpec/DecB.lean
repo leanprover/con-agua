@@ -10,6 +10,7 @@ import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecCheckSpec.TcmF
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.RecGenSpec.Set64
 
 @[expose] public section
 
@@ -132,9 +133,6 @@ abbrev PtrsB (mb : Mem) : List Nat → List NestCtorNf → Prop :=
 
 /-! ## Frames: one word changed below the top -/
 
-theorem cnsTop_set (m : Mem) (k v : Word) : iwTop (m.set64 IW k v) = iwTop m := by
-  simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-
 /-- The pool grew, every word below the old top kept but the one at `x`. -/
 def FrX (x : Nat) (m m' : Mem) : Prop :=
   iwTop m ≤ iwTop m' ∧ ∀ i < iwTop m, i ≠ x → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?
@@ -147,7 +145,7 @@ theorem FrX.trans_grow {x : Nat} {m₁ m₂ m₃ : Mem} (h₁ : FrX x m₁ m₂)
 
 theorem FrX.set {x : Nat} {m₁ m₂ : Mem} (h₁ : FrX x m₁ m₂) (k v : Word) (hk : k.toNat = x) :
     FrX x m₁ (m₂.set64 IW k v) := by
-  refine ⟨by rw [cnsTop_set]; exact h₁.1, fun i hi hx => ?_⟩
+  refine ⟨by rw [L.Ind.iwTop_set_iw]; exact h₁.1, fun i hi hx => ?_⟩
   rw [set64IW_get, ite_eq_right (fun e => hx (by omega))]; exact h₁.2 i hi hx
 
 /-! ## The records, as words -/
@@ -167,7 +165,7 @@ def CnsSrc (mb : Mem) (mo ml : Word) (p0 : Nat) : Prop := ∃ c < ml.toNat, iwN 
 theorem decNL_frX {x : Nat} {m m' : Mem} (h : FrX x m m') {o l : Nat} (hb : o + l ≤ iwTop m)
     (hx : l = 0 ∨ x < o ∨ o + l ≤ x) : decNL m' o l = decNL m o l := by
   simp only [decNL]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [iwN, nat?, iwA, aread_apply, aread_apply]
@@ -298,8 +296,8 @@ theorem cnsTM_parts {m : Mem} {w : Word} {src : TargetMajor} (h : DecB (fun m =>
   obtain ⟨hl1, hl2⟩ := truncH (i := 1) hlv hsz
   have hsd := truncSl (w := w) (i := 2) h2 h3 hds hsz
   have hsp := truncSl (w := w) (i := 11) h11 h12 hpf hsz
-  obtain ⟨-, h6m⟩ := rec2IwN_trunc h6
-  obtain ⟨-, h7m⟩ := rec2IwN_trunc h7
+  obtain ⟨-, h6m⟩ := L.Ind.iwN_truncM_some h6
+  obtain ⟨-, h7m⟩ := L.Ind.iwN_truncM_some h7
   obtain ⟨e6, b6⟩ := iwN_rdW_at (w := w) (k := 6) h6m hsz
   obtain ⟨e7, b7⟩ := iwN_rdW_at (w := w) (k := 7) (by simpa [Nat.add_assoc] using h7m) hsz
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
@@ -311,7 +309,7 @@ theorem cnsTM_parts {m : Mem} {w : Word} {src : TargetMajor} (h : DecB (fun m =>
   rcases Nat.eq_zero_or_pos l6 with hz | hpos
   · subst hz; omega
   · obtain ⟨v, hv, -⟩ := decPL_getH (truncM m) hct (l6 - 1) (by omega)
-    obtain ⟨hlt, -⟩ := rec2IwN_trunc hv
+    obtain ⟨hlt, -⟩ := L.Ind.iwN_truncM_some hv
     have := (rdW (m.arr64 CTL) 200).toNat_lt
     simp only [iwTop] at hlt; omega
 

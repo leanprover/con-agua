@@ -191,7 +191,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
   have hC4 : StageC dn visR feR envR m4 a4 := hC.of_check hT4.stage hA4 c13.ok c13.ext
   -- `consts_resolve_ffast`, real
   refine RefE.bindSim (fun _ => rfl)
-    (fun r m' h => crfF_okT dn visR feR gen hgen m4 m' a4 r h ⟨hC4.stageT, hA4.crMemo⟩)
+    (fun r m' h => crfF_okT dn visR feR gen hgen m4 m' a4 r h ⟨hC4.stageT, hA4.cr⟩)
     fun r5 x5 m5 a5 h5 hrun5 ⟨⟨hT5, hg5, hx5, _⟩, hCr5⟩ => ?_
   rw [crgE.k_consts_resolve_ffast.eq_2]
   refine RefE.splitNot (fun hb5 => by rw [← hx5]; simpa using hb5) (fun hb5 => by rw [← hx5] at hb5; simpa using hb5)

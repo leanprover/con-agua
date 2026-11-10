@@ -160,7 +160,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
     obtain ⟨cv', h1, _, _, h2⟩ := hci
     cases h2; exact h1
   obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
-  have hq64 := erecP_lt64 hv16
+  have hq64 := L.Arena.erecP_lt64 hv16
   have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e12 : (q + 1 + 2).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add, e1]; simp; omega
   have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
@@ -238,7 +238,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
     rw [e1]; exact hg34.ext.decCV hcv
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
   dsimp only [ntyE.k_cv_lps]
-  obtain ⟨hS5, hg5, -, hdec5, -⟩ := pos2_cvLpsW_stage hlp hS4 hcv4 (by rw [e1]; omega)
+  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS4 hcv4 (by rw [e1]; omega)
   have hg35 := hg34.trans hg5
   have hlv5 : rdW (m5.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
     simp (disch := omega) only [rdW, off_toNat]; rw [hg35.iwGet _ (by omega)]

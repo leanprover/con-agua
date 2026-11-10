@@ -49,9 +49,9 @@ theorem decTM_slices {m : Mem} {mw : Word} {M : TargetMajor} (h : DecB (fun m =>
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hnfs
   obtain ⟨o2, l2, ho2, hl2, hd2⟩ := decAt_some hds
   obtain ⟨o3, l3, ho3, hl3, -⟩ := decAt_some hpf
-  obtain ⟨h12, -⟩ := rec2IwN_trunc hl3
-  obtain ⟨-, ho'⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hl'⟩ := rec2IwN_trunc hl
+  obtain ⟨h12, -⟩ := L.Ind.iwN_truncM_some hl3
+  obtain ⟨-, ho'⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hl'⟩ := L.Ind.iwN_truncM_some hl
   have r9 := iwN_rdW_at (w := mw) (k := 9) ho' hsz
   have r10 := iwN_rdW_at (w := mw) (k := 10) (by simpa [Nat.add_assoc] using hl') hsz
   refine ⟨⟨o, l, by simpa using r9.1, by simpa using r10.1, r9.2, r10.2, hd⟩, ?_, by
@@ -66,7 +66,7 @@ theorem decB_decPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {
   · exact .inl h0
   right
   obtain ⟨v, hv, -⟩ := decPL_getH (truncM m) (show decPL (truncM m) (f (truncM m)) o l = some xs from h) (l - 1) (by omega)
-  have := (rec2IwN_trunc hv).1
+  have := (L.Ind.iwN_truncM_some hv).1
   omega
 
 /-- `target_ctor_at` writes no walk memo. -/

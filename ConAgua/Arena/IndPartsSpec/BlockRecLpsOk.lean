@@ -14,6 +14,8 @@ import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 
@@ -95,13 +97,13 @@ theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : Li
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
     have : (UInt64.ofNat (a0 + 1)).toNat = a0 + 1 :=
       UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e3]; exact erRd_of_erA (by rw [this]; exact hw1)
+    rw [e3]; exact L.Arena.erRd_of _ _ (by rw [this]; exact hw1)
   have hrd2 : erRd m (UInt64.ofNat a0 + 2) = w2 := by
     have e4 : UInt64.ofNat a0 + 2 = UInt64.ofNat (a0 + 2) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
     have : (UInt64.ofNat (a0 + 2)).toNat = a0 + 2 :=
       UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e4]; exact erRd_of_erA (by rw [this]; exact hw2)
+    rw [e4]; exact L.Arena.erRd_of _ _ (by rw [this]; exact hw2)
   rw [hrd1, hrd2] at h
   obtain ⟨hr, hdec, hgrow, hfr, -, htp, hroom⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
   have hh := erToIwW_two h
@@ -131,7 +133,7 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   obtain ⟨rp, m1, hh, h⟩ := ipK_inv h (lpsOneW.k_er_to_iw.none ..)
   rw [lpsOneW.k_er_to_iw.arm1, ← L.getD_one] at h
   obtain ⟨hsh, hdec, hg, hf, htp, hroom⟩ := erLpsW_dec hh hsz hc hE hcvR
-  obtain ⟨e, he, h⟩ := ipK_inv1 h (lpsOneW.k_sl_eq.none _)
+  obtain ⟨e, he, h⟩ := L.Arena.of_K h (lpsOneW.k_sl_eq.none _)
   rw [lpsOneW.k_sl_eq.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf.size IW]; exact hsz
@@ -140,7 +142,7 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   obtain ⟨ws1, hs1, hn1, hl1⟩ := slR_of_decHL m1 _ _ _ hdec hbound1
   rw [L.ofNat_toNat, L.ofNat_toNat] at hs1
   have hwant1 : decHL m1 wo.toNat wl.toNat = some ns := by
-    rw [decHL_grow3 hg hwb]; exact hwant
+    rw [L.Ind.decHL_grow hg hwb]; exact hwant
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hwant1 (by
     have : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
     omega)
@@ -227,11 +229,6 @@ theorem iwB_rdW {m : Mem} {i : Nat} {b : Bool} (h : iwB m i = some b) (hi : i < 
   have : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hi)
   simp only [rdW, this, hw, Option.getD_some]
 
-theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, -⟩ := h
-  exact (Array.getElem?_eq_some_iff.mp hw).1
-
 theorem iwN_cell {m m' : Mem} {i v : Nat} (hg : IWGrow m m') (hi : i < iwTop m)
     (h : iwN m i = some v) : iwN m' i = some v := by
   simp only [iwN, nat?, iwA, aread_apply, aread_apply] at h ⊢
@@ -269,7 +266,7 @@ theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : 
     by_cases hl0 : l = 0
     · subst hl0; omega
     · obtain ⟨v, y, hv, -, -⟩ := decPL_get l o bs.recs hrecs (l - 1) (by omega)
-      have hlt := iwN_lt_p hv
+      have hlt := L.Ind.iwN_lt hv
       omega
   refine lpsGoW_ok n m2 m2 m' _ _ wo wl r bs.recs ns hgo (IWGrow.refl _) rfl hsz2 hc2
     (by rw [hE2]; exact hE64) ?_ ?_ hwb (by rw [hoo, hll]; exact hrecs_len)
@@ -284,7 +281,7 @@ theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : 
     have el : l' = l := Option.some.inj (hl'.symm.trans h2)
     rw [← eo, ← el]; exact hrecs'
   · intro m'' hg''
-    rw [decHL_grow3 hg'' hwb]; exact hwant
+    rw [L.Ind.decHL_grow hg'' hwb]; exact hwant
 
 theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockShape)
     (h : lokW n m p = some (r, m')) (hq : decBS m p.toNat = some bs)

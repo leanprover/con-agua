@@ -23,7 +23,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem exb {ε α β : Type} (x : α) (f : α → Except ε β) : (Except.ok x >>= f) = f x := rfl
 theorem exm {ε α β : Type} (x : α) (f : α → β) : (f <$> (Except.ok x : Except ε α)) = Except.ok (f x) := rfl
 
 /-- A `pin_at` call through its model. -/
@@ -110,7 +109,7 @@ theorem quotPredsOkW_ok {p : Prog} (hB : BasisProg p) (hpa : p.lookup "pin_at" =
   have e0 : (pinEq).run a = .ok (decI w1, a) := hp1
   have e47 : (pinQuot).run a = .ok (decI w3, a) := hp3
   have e51 : (pinQuotMk).run a = .ok (decI w5, a) := hp5
-  simp only [ConRon.Arena.quotPredsOk, StateT.run_bind, e0, exb, e47, e51, StateT.run_pure]
+  simp only [ConRon.Arena.quotPredsOk, StateT.run_bind, e0, L.Arena.except_ok_bind, e47, e51, StateT.run_pure]
   cases k <;> simp [ConLeche.QuotKind.slot, quotPredsOkW.k_env_find_3,
       hf1, hf3, hf5] at h ⊢ <;>
     first
@@ -136,14 +135,6 @@ structure QuotSims (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
     Sim (callW p n "quot_at" [UInt64.ofNat k.slot, q] m) (ConRon.Arena.quotAt k cv) a
       (fun r ci m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
         decCI (erecP m') (r.headD 0).toNat = some ci)
-
-/-- A weaker post. -/
-theorem RefE.weakenP {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
-    {R R' : α → β → AState → Prop} (h : RefE G x T a R) (hR : ∀ v y a', R v y a' → R' v y a') :
-    RefE G x T a R' := by
-  cases x with
-  | error e => exact h
-  | ok v => obtain ⟨y, a', h1, h2⟩ := h; exact ⟨y, a', h1, hR _ _ _ h2⟩
 
 /-- The lookups `check_quot_record` takes. -/
 structure QuotRecProg (p : Prog) : Prop where

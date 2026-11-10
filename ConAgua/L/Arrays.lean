@@ -38,7 +38,7 @@ theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 
 
 @[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = ↑a := rfl
 
-theorem tierA_one_eq (a : ArrId) : tierA a 1 = tier1 a := rfl
+theorem tierA_one (a : ArrId) : tierA a 1 = tier1 a := rfl
 
 /-- An array that is neither tier of `a` is not `tierA a t`. -/
 theorem tierA_ne {a : ArrId} {b : TieredArray} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b :=

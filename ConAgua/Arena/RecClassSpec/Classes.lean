@@ -98,7 +98,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
     have : decNL m' (q.toNat + 1) l.toNat = some xs := by
       rw [← hxs]
       simp only [decNL]
-      apply mapM_opt_congr
+      apply L.Ind.mapM_congr_of
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
       simp only [iwN, nat?, iwA, aread_apply, hget]
@@ -123,7 +123,7 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   · intro b
     by_cases hb : b = IW
     · subst hb; rw [hS, hm1sz]
-    · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
+    · rw [hA b hb]; simp only [consPre, allocMem, L.Mem.size64_set64]
 
 /-- `consW` is the memory `slCons_dec` speaks about. -/
 theorem consW_decN {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List Nat}
@@ -219,7 +219,7 @@ theorem gafF_afr {m m' : Mem} {args r : List Word} (h : gafF m args = some (r, m
 theorem decNL_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : o + l ≤ iwTop m) :
     decNL m' o l = decNL m o l := by
   simp only [decNL]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [iwN, nat?, iwA, aread_apply, aread_apply]

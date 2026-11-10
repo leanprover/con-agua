@@ -136,9 +136,6 @@ theorem depsArmW_15 {p : Prog} {n : Nat} {m1 : Mem} {pi c : Word} (h0 : c ≠ pw
     depsArmW p n m1 pi c = some ([0, 0], m1) := by
   rw [depsArmW, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2, ite_eq_right h3, ite_eq_right h4, ite_eq_right h5, ite_eq_right h6, ite_eq_right h7, ite_eq_right h8, ite_eq_right h9, ite_eq_right h10, ite_eq_right h11, ite_eq_right h12, ite_eq_right h13, ite_eq_right h14]
 
-theorem nd_getElem (a : Array Word) (x : Word) (h : x.toNat < a.size) : a[x.toNat] = rdW a x := by
-  simp [rdW, h]
-
 /-- `nat_op_deps` after the pin reads: the dispatch. -/
 def depsTailS : Stmt := seqDrop 16 natOpDepsL.body
 
@@ -158,7 +155,7 @@ theorem depsTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DepsLocs s₁) :
   simp only [depsTailS, natOpDepsL, seqDrop]
   vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, callW_spec p n "iw_alloc"]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
     St.setLocs_cons, Cmp.eval, BinOp.eval, reduceIte, Nat.reduceEqDiff, beq_iff_eq] at *)
   all_goals grind -lia -ring -linarith (gen := 20) [lang_grind, arena_grind, ntBW, depsArmW_0, depsArmW_1, depsArmW_2, depsArmW_3, depsArmW_4, depsArmW_5, depsArmW_6, depsArmW_7, depsArmW_8, depsArmW_9, depsArmW_10, depsArmW_11, depsArmW_12, depsArmW_13, depsArmW_14, depsArmW_15]
 
@@ -177,7 +174,7 @@ theorem natOpDeps_specW (p : Prog) (hp : p.lookup "nat_op_deps" = some natOpDeps
     callW_spec p n "nat_op_pins", depsTail_spec p n]
   all_goals (try exact LocEq.restore _ _)
   all_goals subst_vars
-  all_goals (try simp only [DepsLocs, pw, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+  all_goals (try simp only [DepsLocs, pw, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
     St.setLocs_cons, BinOp.eval, reduceIte, Nat.reduceEqDiff] at *)
   all_goals grind -lia -ring -linarith [lang_grind, arena_grind, natOpDepsW_eq, ntBW, pw]
 
@@ -245,7 +242,7 @@ theorem natOpDeps_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
     fun i h1 h2 => decI_inj_iff hc (pin_lt hF i h1 h2)
   simp only [depsW, depsTab]
   simp only [depsL, List.map_cons, List.map_nil]
-  simp [natOpDeps, StateT.run_bind, pinAt_run hF, exc_ok_bind', hd 15 (by decide) (by decide),
+  simp [natOpDeps, StateT.run_bind, pinAt_run hF, L.Arena.except_ok_bind, hd 15 (by decide) (by decide),
     hd 16 (by decide) (by decide), hd 17 (by decide) (by decide), hd 18 (by decide) (by decide),
     hd 19 (by decide) (by decide), hd 20 (by decide) (by decide), hd 21 (by decide) (by decide),
     hd 22 (by decide) (by decide), hd 23 (by decide) (by decide), hd 24 (by decide) (by decide),

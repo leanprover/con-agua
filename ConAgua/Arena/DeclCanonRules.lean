@@ -169,6 +169,6 @@ theorem canonRulesEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL⟩
+  exact ⟨⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩, hL⟩
 
 end L.Ind

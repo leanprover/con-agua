@@ -329,9 +329,9 @@ theorem sect_ref (p : Prog) (hi : IotaProg' p) (hc : StuckCallees p)
     (fun _ _ _ h => ⟨CoreAfterG.compK hK₂ hst₂.toGrew h.after, h.res, h.valid⟩)
   dsimp only [sectE.k_defeq_lst]
   by_cases h20 : r₂.headD 0 = 0
-  · rw [ite_eq_left h20, decBool_false_of h20]
+  · rw [ite_eq_left h20, L.Arena.decBool_false_of h20]
     exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS₂ rfl hw0))
-  rw [ite_eq_right h20, decBool_true_of h20]
+  rw [ite_eq_right h20, L.Arena.decBool_true_of h20]
   simp only [↓reduceIte]
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => etaProjs_callW hi hS₂ hT hb h)
     fun r₃ m₃ ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ => ?_

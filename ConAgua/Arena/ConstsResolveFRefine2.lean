@@ -6,6 +6,7 @@ import ConAgua.Arena.IndPosSpec.MatesW
 import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.WhnfIotaRefine
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndRealFvt
 
 @[expose] public section
 
@@ -134,7 +135,7 @@ theorem crV_stable : VStable crSch CrV := fun _ _ _ _ _ h => h
 theorem StageR.crf {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} (hS : StageR vis fe m a) (hf : CrFrame m m') :
     StageR vis fe m' a ∧ IWGrow m m' :=
-  StageR.frame_hi hS hf (by simp [CRM]) (by simp) (by simp [IW, CRM]) (by simp)
+  L.Ind.StageR.frame_hi hS hf (by simp [CRM]) (by simp) (by simp [IW, CRM]) (by simp)
 
 /-- What the walk's call at L fuel `n` says: the twin's walk at the counter's fuel, from the
 related memo, reads only and answers the word, with the memo related after. -/

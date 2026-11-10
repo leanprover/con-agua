@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Env
 public import ConRon.Arena.StreamIndex
+import ConAgua.Arena.View
 
 @[expose] public section
 
@@ -166,7 +167,7 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     · have hb1 : baseRow m1 n.word.toUInt64 = baseRow m n.word.toUInt64 := by
         rw [← hm1]; split
         · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
-          exact baseRow_baseSet_other hw32 (nidx_word_lt32 n) t1 t2 e
+          exact baseRow_baseSet_other hw32 (L.Arena.idx_word_lt32 n) t1 t2 e
         · rfl
       simp only [e, decide_false, Bool.false_eq_true, false_and, ite_false, hb1]
       exact h.base n
@@ -225,7 +226,7 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     · have hb1 : baseTbl m1 n.word.toUInt64 = baseTbl m n.word.toUInt64 := by
         rw [← hm1]; split
         · rename_i b0; obtain ⟨t1, t2, -⟩ := hset b0
-          exact baseTbl_baseTblSet_other hw32 (nidx_word_lt32 n) t1 t2 e
+          exact baseTbl_baseTblSet_other hw32 (L.Arena.idx_word_lt32 n) t1 t2 e
         · rfl
       simp only [e, decide_false, Bool.false_eq_true, false_and, ite_false, hb1]
       exact h.btbl n

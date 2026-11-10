@@ -69,18 +69,14 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
 
 /-! ## A push onto the level store -/
 
-theorem Tbl.nodes_push' {α ι δ : Type} [BEq α] [Hashable α] (tb : Tbl α ι δ) (a : α) (d : δ)
-    (i : ι) : (tb.push a d i).nodes = tb.nodes.push a := by
-  cases tb; rfl
-
 theorem LTables.count_push (t : LTables) (v : LNodeView) (d : LDer) (tr : UInt32) :
     (t.push v d tr).1.count = t.count + 1 := by
-  cases v <;> simp [LTables.push, LTables.count, Tbl.nodes_push', Tbl.size] <;> omega
+  cases v <;> simp [LTables.push, LTables.count, L.Arena.Tbl.push_nodes, Tbl.size] <;> omega
 
 /-- A view of a tier after a push: an old one or the pushed view. -/
 theorem LTables.push_get_cases (t : LTables) (v : LNodeView) (d : LDer) (tr : UInt32) (u : LIdx)
     (w : LNodeView) (h : (t.push v d tr).1.get u = some w) : t.get u = some w ∨ w = v := by
-  cases v <;> simp only [LTables.push, LTables.get, Tbl.nodes_push', Tbl.node?] at h ⊢ <;>
+  cases v <;> simp only [LTables.push, LTables.get, L.Arena.Tbl.push_nodes, Tbl.node?] at h ⊢ <;>
     repeat' split at h
   all_goals simp only [*, ↓reduceIte, Bool.false_eq_true, true_or]
   all_goals first

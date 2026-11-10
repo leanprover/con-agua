@@ -3,6 +3,7 @@ module
 public import ConAgua.Front.IndInstallRefine2
 import ConAgua.L.WordOff
 import ConAgua.Front.IndApplyRefine
+import ConAgua.Arena.DeclRec
 
 @[expose] public section
 
@@ -38,43 +39,43 @@ theorem ruleM_dec (m : Mem) (q n nf e : Word) (hs : q.toNat + 11 ≤ (m.arr64 DL
   rw [v0] at h0
   have h1 := h 1 (by decide)
   have v1 : wd (ruleM m q n nf e) DLP (q.toNat + 1) = nf := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 3) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 2) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 2 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 1) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 1 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 3) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 2) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 2 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 1) _ (q.toNat + 1) (by rw [L.toNat_add_of_lt q 1 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v1] at h1
   have h2 := h 2 (by decide)
   have v2 : wd (ruleM m q n nf e) DLP (q.toNat + 2) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 3) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 2) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 2 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 3) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 2) _ (q.toNat + 2) (by rw [L.toNat_add_of_lt q 2 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v2] at h2
   have h3 := h 3 (by decide)
   have v3 : wd (ruleM m q n nf e) DLP (q.toNat + 3) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 3) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 4) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 3) _ (q.toNat + 3) (by rw [L.toNat_add_of_lt q 3 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v3] at h3
   have h4 := h 4 (by decide)
   have v4 : wd (ruleM m q n nf e) DLP (q.toNat + 4) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 4) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 5) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 4) _ (q.toNat + 4) (by rw [L.toNat_add_of_lt q 4 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v4] at h4
   have h5 := h 5 (by decide)
   have v5 : wd (ruleM m q n nf e) DLP (q.toNat + 5) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 5) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 5) _ (q.toNat + 5) (by rw [L.toNat_add_of_lt q 5 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v5] at h5
   have h6 := h 6 (by decide)
   have v6 : wd (ruleM m q n nf e) DLP (q.toNat + 6) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 6) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 6) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v6] at h6
   have h7 := h 7 (by decide)
   have v7 : wd (ruleM m q n nf e) DLP (q.toNat + 7) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 7) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 7) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v7] at h7
   have h8 := h 8 (by decide)
   have v8 : wd (ruleM m q n nf e) DLP (q.toNat + 8) = e := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 8) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 8) _ (q.toNat + 8) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v8] at h8
   have h9 := h 9 (by decide)
   have v9 : wd (ruleM m q n nf e) DLP (q.toNat + 9) = 0 := by
-    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 9) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 9) _ (q.toNat + 9) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_ne _ DLP (q + 10) _ (q.toNat + 9) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 9) _ (q.toNat + 9) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v9] at h9
   have h10 := h 10 (by decide)
   have v10 : wd (ruleM m q n nf e) DLP (q.toNat + 10) = 0 := by
-    unfold ruleM; rw [wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; rfl)]; simp only [size_set64]; omega
+    unfold ruleM; rw [wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v10] at h10
   simp [decRule, hd?, nat?, hlist?, h0, h1, h3, h4, h5, h6, h7, h8, hn, he]
 
@@ -236,7 +237,7 @@ theorem rulesW_twin {n : Nat} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR 
   · rw [I2 i (.inl (by omega)), P1.keep i h1 h2]
   · unfold decRules
     rw [hl]
-    rw [mapM_some_ofI _ (fun j => if hj : j < rules.length then resOf (ConRon.Arena.Frontend.parseRuleD st rules[j]) a else default)
+    rw [L.Arena.mapM_some_of _ (fun j => if hj : j < rules.length then resOf (ConRon.Arena.Frontend.parseRuleD st rules[j]) a else default)
       _ (fun j hj => by
         have hj' := List.mem_range.mp hj
         rw [dite_eq_left hj']
@@ -374,19 +375,19 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
       rw [wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega),
-        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
+        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [L.Mem.size64_set64]; omega), hifr4, rdW_wdI _ _ _ _ (by simp; omega),
         rdW_wdI _ _ _ _ (by simp; omega), rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have g7 : P[q1.toNat + 7]? = some lo := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
       rw [wd_set_ne _ _ _ _ _ (by off_omega), wd_set_ne _ _ _ _ _ (by off_omega),
-        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega)]
+        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [L.Mem.size64_set64]; omega)]
     have g8 : P[q1.toNat + 8]? = some (wd m IFR (r.toNat + 10)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
       rw [wd_set_ne _ _ _ _ _ (by off_omega),
-        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega)]
+        wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [L.Mem.size64_set64]; omega)]
     have a3 : (wd m IFR (r.toNat + 8) + wd m IFR (r.toNat + 7) + wd m IFR (r.toNat + 6)).toNat =
         rc.numParams + rc.numMotives + rc.numMinors := by
       rw [UInt64.toNat_add, UInt64.toNat_add, fP.1, fMo.1, fMi.1]
@@ -401,7 +402,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
     have g9 : P[q1.toNat + 9]? = some (wd m IFR (r.toNat + 4)) := by
       rw [hP.get (by omega) (by omega)]
       unfold recTailM
-      rw [wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [size_set64]; omega), hifr4,
+      rw [wd_set_eq _ _ _ _ _ (off_toNat (by omega)) (by simp only [L.Mem.size64_set64]; omega), hifr4,
         rdW_wdI _ _ _ _ (by simp; omega)]
       rfl
     have a9 : (wd m IFR (r.toNat + 4) != 0) = rc.k := by

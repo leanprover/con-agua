@@ -478,10 +478,10 @@ theorem rfEnter {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR
     have hne : (218 : Word) ≠ 218 + 1 := by decide
     refine ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.size]; exact hsz⟩
     · have h218 : (218 : Word).toNat = 218 := rfl
-      simp only [benterG, rdW_set64, size_set64, hB1]
+      simp only [benterG, rdW_set64, L.Mem.size64_set64, hB1]
       simp; omega
     · have h218 : (218 : Word).toNat = 218 := rfl
-      simp only [benterG, rdW_set64, size_set64, hB1]
+      simp only [benterG, rdW_set64, L.Mem.size64_set64, hB1]
       simp; intro; omega
 
 theorem rfLeave {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g' g : Word} (hR : RfInv m M G g')
@@ -715,7 +715,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK fe vis n) : RfOK fe vis (n + 1) := by
   rw [rxW_ok (hb := hb), hB2] at h
   have hG : (G + 1).toNat < 2 ^ 32 := by rw [← hB1]; exact lt_of_notbig hb
   obtain ⟨hR1, hbank, hGl, hgG⟩ := rfEnter hR hG
-  obtain ⟨hS1, hg1⟩ := StageR.frame_hi hS (benterG_frame 218 m) (by simp) (by simp) (by simp) (by simp)
+  obtain ⟨hS1, hg1⟩ := L.Ind.StageR.frame_hi hS (benterG_frame 218 m) (by simp) (by simp) (by simp) (by simp)
   rcases hgo : rxGoW n (benterG 218 m) f CWF e with _ | ⟨r1, m1⟩ <;> rw [hgo] at h; · simp [rxK1] at h
   by_cases hrb : 4294967296 ≤ r1
   · rw [rxK1_big (hb := hrb)] at h; simp at h
@@ -726,7 +726,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK fe vis n) : RfOK fe vis (n + 1) := by
   obtain ⟨mp', a', M1, G1, hrun, hS2, hg2, hR2, -, hkx, hG1⟩ := hGo _ m1 a f CWF e fm ∅ _ M (G + 1) (G + 1) hgo hS1
     (hfm.grow hg1) he hR1 hbank hG0
   have hGG : G ≤ G + 1 := uint_le_succ hGl
-  obtain ⟨hS3, hg3⟩ := StageR.frame_hi hS2 (MemFrame.setCtl m1 219 g) (by simp) (by simp) (by simp) (by simp)
+  obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS2 (MemFrame.setCtl m1 219 g) (by simp) (by simp) (by simp) (by simp)
   have hR3 := rfLeave hR2 (UInt64.le_trans hgG (UInt64.le_trans hGG hG1))
   have htw : (ConRon.Arena.replaceFVars fm (decE e)).run a = .ok (decE r1, a') := by
     rw [ConRon.Arena.replaceFVars.eq_1, StateT.run_bind, ← CWF_eq, hrun]; rfl
@@ -735,7 +735,7 @@ theorem rfOK_step (n : Nat) (hGo : GoOK fe vis n) : RfOK fe vis (n + 1) := by
     · rw [rxK2_wrap (hs := hg0) (hw := hw)] at h; simp at h
     rw [rxK2_clear (hs := hg0) (hw := hw)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨hS4, hg4⟩ := StageR.frame_hi hS3 (mclearG_frame rfSch _) (by simp) (by simp [rfSch]) (by simp)
+    obtain ⟨hS4, hg4⟩ := L.Ind.StageR.frame_hi hS3 (mclearG_frame rfSch _) (by simp) (by simp [rfSch]) (by simp)
       (by simp [rfSch])
     exact ⟨a', htw, lt_of_notbig hrb, ∅, G1, hS4, ((hg1.trans hg2).trans hg3).trans hg4, rfClear hR3 hw,
       fun h0 => absurd hg0 h0, UInt64.le_trans hGG hG1⟩
@@ -934,8 +934,6 @@ theorem rfTwin_node (fm : FvMap) (memo : Std.HashMap EIdx EIdx) (fuel : Nat) (h 
     | exact False.elim hnv
     | (rw [replaceFVarsGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]; try rfl)
 
-theorem genW_zero (g : Word) : genW 0 g = g <<< 32 := by simp [genW]
-
 theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK fe vis k) (m m' : Mem) (a : AState)
     (f fu h r : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G gn : Word)
     (F : Nat) (hF : fu.toNat = F + 1) (hf0 : fu ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
@@ -953,7 +951,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK fe vis k) (m
   obtain ⟨hMR, ⟨hB1, hB2, hgG, hGl, hcsz⟩, hFr⟩ := hR
   have hB2' : rdW (m.arr64 CTL) 219 = gn := hB2
   have hgn : gn.toNat < 2 ^ 32 := by have := UInt64.le_iff_toNat_le.mp hgG; omega
-  rw [hB2', ← genW_zero] at hgo
+  rw [hB2', ← L.Arena.genW_zero] at hgo
   by_cases hfr : mfindG rfSch m h (genW 0 gn) = []
   · rw [rxG3_abort (hr := hfr)] at hgo; simp at hgo
   obtain ⟨hhit, hmiss⟩ := bank_find rfSch bmKey rfK_h2 rfV m M hMR gn hgn mp hb h 0 (show bmKey.ok h 0 from ⟨hh, rfl⟩) hfr
@@ -981,7 +979,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK fe vis k) (m
       hnv m m1 a f (fu - 1) h rn fm mp M G gn hnode hS hfm ⟨hMR, ⟨hB1, hB2, hgG, hGl, hcsz⟩, hFr⟩ hb hg0
     rw [hF1] at hr1
     have hB21 : rdW (m1.arr64 CTL) 219 = gn := hR1.2.1.2.1
-    rw [hB21, ← genW_zero] at hgo
+    rw [hB21, ← L.Arena.genW_zero] at hgo
     rcases hset : msetG rfSch m1 h (genW 0 gn) rn with _ | m2 <;> rw [hset] at hgo; · simp [rxG5] at hgo
     rw [rxG5_some] at hgo
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hgo)
@@ -989,7 +987,7 @@ theorem rxGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → GoOK fe vis k) (m
       ⟨by decide, by decide⟩ m1 M1 hR1.1 G1 gn hR1.2.1 hR1.2.2 mp1 hb1 h 0 rn (show bmKey.ok h 0 from ⟨hh, rfl⟩) (decE rn) rfl _ hset
     rw [hdk] at hR2 hbk2 hF2
     have hfs : MemFrame [RFM] [rfSch.cs + 1] m1 _ := msetG_frame rfSch rfSch_wf m1 _ h _ rn hset
-    obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
+    obtain ⟨hS2, hg2⟩ := L.Ind.StageR.frame_hi hS1 hfs (by intro b hb; simp at hb; subst hb; decide)
       (by intro x hx; simp [rfSch] at hx; subst hx; decide) (by decide) (by simp [rfSch])
     refine ⟨mp1.insert (decE h) (decE rn), a1, ?_, M1.insert (decE h, gn) (decE rn), G1, hS2, hg1.trans hg2,
       ⟨hR2, hBW2, hF2⟩, hbk2, fun k' gen hgen hne => ?_, hG1⟩

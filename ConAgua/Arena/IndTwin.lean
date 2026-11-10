@@ -334,7 +334,7 @@ theorem StageT.sim_core {α : Type} [Inhabited α] {p : Prog} (hcl : CoreStageCl
   obtain ⟨s', rfl, -, hok, ⟨M', hC', -, -⟩, hres, hrh⟩ :=
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
   obtain ⟨hT', hg⟩ := StageT.of_core hcl hf e hS hC'
-  exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
+  exact ⟨_, _, L.Arena.AM.run_of_ok _ _ hok, hT', hg, hres.symm, hrh⟩
 
 /-! ## Keeping `StageT` across the stage's own writers -/
 

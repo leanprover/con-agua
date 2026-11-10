@@ -351,14 +351,6 @@ theorem Mem.set64_comm (m : Mem) (a b : TieredArray) (i j v w : Word) (h : a ≠
   funext s
   by_cases ha : s = a <;> by_cases hb : s = b <;> simp_all
 
-/-- A word array after a store, for any array. -/
-theorem arr64_set64_any (m : Mem) (a a' : TieredArray) (i v : Word) :
-    (m.set64 a i v).arr64 a' = if a = a' then (m.arr64 a).set! i.toNat v else m.arr64 a' := by
-  simp only [Mem.set64, Mem.arr64]
-  by_cases h : a = a'
-  · subst h; simp
-  · simp [h, Ne.symm h]
-
 /-- The variables below `o` are kept. -/
 def KeepLo (o : Nat) (s s' : St) : Prop := ∀ x, x < o → s'.loc x = s.loc x
 

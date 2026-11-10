@@ -77,7 +77,7 @@ theorem decEBlk_head {dn : NIdx → Option ConLeche.Name} {m : Mem} {off cnt : W
   obtain ⟨rfl, rfl⟩ := List.cons.inj heq
   simp only [nat?, Option.map_eq_some_iff, truncM_erA] at hq
   obtain ⟨w, hw, rfl⟩ := hq
-  refine ⟨w, erRd_of_erA hw, ?_, hoff, hcnt, ?_⟩
+  refine ⟨w, L.Arena.erRd_of _ _ hw, ?_, hoff, hcnt, ?_⟩
   · rw [truncM_erA] at hx; exact hx
   · show decEBlk dn (truncM m) (off + 1).toNat (cnt - 1).toNat = some xs
     rw [hoff, hcnt]; exact hxs
@@ -121,15 +121,6 @@ theorem decCI_tag3 {R : Nat → Option Word} {q : Nat} {ci : IConstantInfo} (h :
     have := decCI_indInfo_kind h
     rw [hk] at this
     exact UInt64.toNat_inj.1 (by simpa using this)
-
-/-- An `indInfo` record's constant value decodes at `q + 1`. -/
-theorem decCI_ind_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
-    (h : decCI R q = some (.indInfo cv caps)) : decCV R (q + 1) = some cv := by
-  have hk := decCI_indInfo_kind h
-  simp only [decCI, hk, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-    Option.bind_some, Option.some.injEq] at h
-  obtain ⟨cv', hcv, caps', -, he⟩ := h
-  cases he; exact hcv
 
 theorem denoteCIList_cons_inv {st : ConRon.Arena.EStore} {ci : IConstantInfo}
     {rest : List IConstantInfo} {bP : List ConLeche.ConstantInfo}
@@ -181,7 +172,7 @@ theorem csf_ref (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : Cr
       obtain ⟨⟨ciP, hciP⟩, xs, hxs⟩ := denoteCIList_cons_inv hbP
       -- the tag word of the head
       obtain ⟨wt, hwt, hwtn⟩ := decCI_tag3 hci
-      have hwt' : erRd m w = wt := erRd_of_erA hwt
+      have hwt' : erRd m w = wt := L.Arena.erRd_of _ _ hwt
       -- the rest of the block, from any state after the head
       have tail : ∀ (m1 : Mem) (a1 : AState), StageT dn vis fe m1 a1 →
           ConRon.Bridge.CheckOK false env fe a1 → ConRon.Arena.Ext a.store a1.store → IWGrow m m1 →
@@ -197,7 +188,7 @@ theorem csf_ref (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : Cr
       · obtain ⟨cv, caps, rfl⟩ := h3
         have hwt3 : wt = 3 := hwtn.2 ⟨cv, caps, rfl⟩
         have htag : erRd m (erRd m off) = 3 := by rw [hw, hwt', hwt3]
-        have hcvd : decCV (erA m) (w.toNat + 1) = some cv := decCI_ind_cv hci
+        have hcvd : decCV (erA m) (w.toNat + 1) = some cv := L.Arena.decCI_ind_cv hci
         obtain ⟨c, hc⟩ := denoteCI_ind_cv hciP
         have hlt : w.toNat + 1 + 3 < 2 ^ 64 := by
           obtain ⟨v, hv, -⟩ := (decCV_words hcvd).2.2

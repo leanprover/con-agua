@@ -161,7 +161,7 @@ theorem mPre_spec (k : Stmt → M Sig) (s₀ : St) :
       s'.loc 6 = lvlHPW s₀.mem (s₀.loc 1) ||| lvlHPW s₀.mem (s₀.loc 2); ⊤⦄ := by
   simp only [mPre, L.Notation.blk]
   vcgen [step, evalE_spec, setLoc, hpBlkM1_spec p k, hpBlkM2_spec p k]
-  all_goals simp_all [Expr.pval, BinOp.eval, St.setLoc_loc, St.setLoc_mem]
+  all_goals simp_all [Expr.pval, BinOp.eval, St.setLoc_loc, L.St.setLoc_mem]
 
 /-- **The `max` table's obligations.** -/
 theorem maxOK : ConsOK p maxCS where

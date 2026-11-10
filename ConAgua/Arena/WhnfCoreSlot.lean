@@ -96,10 +96,8 @@ end arms
 
 /-! ## The relation across a mode memo's `find; put` -/
 
-theorem genW_zero' (g : Word) : genW 0 g = g <<< 32 := by simp [genW]
-
 theorem ebKey_eq (mode eb : Word) (h : eb = (mode >>> 1) &&& 1) : ebKey mode = genW 0 eb := by
-  rw [genW_zero', h]; rfl
+  rw [L.Arena.genW_zero, h]; rfl
 
 /-- `whnfCoreC` gains an entry. -/
 theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}

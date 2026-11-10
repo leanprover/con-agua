@@ -170,7 +170,7 @@ theorem rxGo_step (s₀ : St) (f fu h : Word) :
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       eView_spec p L.hl.hv n, hMap, memoFindG_spec rfSch p _ L.rff n,
-      memoPutG_spec rfSch p _ L.rfp n, hNd] <;> finish (gen := 20) [St.setLocs_mem', rdW_eq]
+      memoPutG_spec rfSch p _ L.rfp n, hNd] <;> finish (gen := 20) [_root_.L.St.setLocs_mem, rdW_eq]
 
 theorem rxNode_step (s₀ : St) (f f1 g x y z : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars_node" [f, f1, g, x, y, z]
@@ -184,7 +184,7 @@ theorem rxNode_step (s₀ : St) (f f1 g x y z : Word) :
       mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
       mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
       mkLet_spec p hk.hd hk.ltF hk.ltP hk.ltI hk.ltM n,
-      mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n] <;> finish (gen := 20) [St.setLocs_mem']
+      mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n] <;> finish (gen := 20) [_root_.L.St.setLocs_mem]
 
 theorem rxRf_step (s₀ : St) (f e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars" [f, e]

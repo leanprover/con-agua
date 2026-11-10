@@ -158,7 +158,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     have hl : l.toNat = 0 := by
       rcases hk' : l.toNat with _ | j
       · rfl
-      · rw [hk', lp_hslice_succ] at hs
+      · rw [hk', L.Ind.hslice?_succ] at hs
         simp only [Option.bind_eq_bind] at hs
         cases e : (hd? (aread (m.arr64 LPIW)) s.toNat : Option NIdx) with
         | none => simp [e] at hs
@@ -176,7 +176,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     intro n m m' s d l hs hb hsz hsl hW
     rcases hk' : l.toNat with _ | j
     · rw [hk'] at hs; simp [hslice?] at hs
-    rw [hk', lp_hslice_succ] at hs
+    rw [hk', L.Ind.hslice?_succ] at hs
     simp only [Option.bind_eq_bind] at hs
     cases e : (hd? (aread (m.arr64 LPIW)) s.toNat : Option NIdx) with
     | none => simp [e] at hs
@@ -204,7 +204,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     have hd : rdW (m'.arr64 SPN) d = rdW (m.arr64 LPIW) s := by
       rw [hb' d (by rw [hd1]; omega), rdW_set64]; simp [hdl]
     refine ⟨?_, (MemFrame.set64 _ _ (by decide) _ _).trans hf', ?_⟩
-    · rw [lp_hslice_succ]
+    · rw [L.Ind.hslice?_succ]
       have hsize : d.toNat < (m'.arr64 SPN).size := by rw [hf'.size SPN, hsz₁]; exact hdl
       have hd' : (hd? (aread (m'.arr64 SPN)) d.toNat : Option NIdx) = some x' := by
         rw [← e]; simp only [hd?, aread_apply]

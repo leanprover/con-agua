@@ -13,6 +13,7 @@ import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -109,8 +110,8 @@ theorem cbn_ref (hP : NamesProg p) {N : Nat} {vis : Word} {fe : IFEnv} {env : Co
     (bs.allCtors.map (·.1)) (by simp [hlen]) (fun j hj => by
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get tot.toNat cq.toNat bs.allCtors hcsd j hj
       obtain ⟨⟨a', hva, hcv⟩, -⟩ := decCN_some hy
-      obtain ⟨hvlt, hv'⟩ := rec2IwN_trunc hv
-      obtain ⟨hvlt2, hva'⟩ := rec2IwN_trunc hva
+      obtain ⟨hvlt, hv'⟩ := L.Ind.iwN_truncM_some hv
+      obtain ⟨hvlt2, hva'⟩ := L.Ind.iwN_truncM_some hva
       have hj' : j < bs.allCtors.length := by omega
       have hy' : bs.allCtors[j] = y := by simpa [List.getElem?_eq_getElem hj'] using hget
       refine ⟨v, a', hv', by omega, hva', ?_⟩
@@ -151,7 +152,7 @@ theorem cbn_ref (hP : NamesProg p) {N : Nat} {vis : Word} {fe : IFEnv} {env : Co
   -- the two `sl_nodup`s
   have hcn3 : (decHL s3.mem (rdW (s1.mem.arr64 CTL) 200).toNat tot.toNat : Option (List NIdx)) =
       some (bs.allCtors.map (fun x => x.1.name)) := by
-    rw [decHL_grow3 hg3 (by omega), hd2]; rfl
+    rw [L.Ind.decHL_grow hg3 (by omega), hd2]; rfl
   obtain ⟨wc, hslc, hwc, hwcl⟩ := slR_of_decHL s3.mem _ _ _ hcn3 (by rw [ht2]; exact hT2)
   rw [UInt64.ofNat_toNat, UInt64.ofNat_toNat] at hslc
   obtain ⟨wm, hslm, hwm, hwml⟩ := slR_of_decHL s3.mem _ _ _ hdn3
@@ -230,7 +231,7 @@ theorem namesRefS_of (hP : NamesProg p) (hGnv : G → closedNV p _root_.L.Checke
   intro n vis fe env m a p0 bs bsP hB hq hsl _
   have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (cbnE_spec p hP n _ p0) hGnv
     (cbn_ref (G := G) hP (N := n) hB hq hsl)
-  exact RefE.weakenP h fun ⟨r, m'⟩ y a' h => by
+  exact L.Arena.RefE.mono h fun ⟨r, m'⟩ y a' h => by
     obtain ⟨s', hs', -, hR⟩ := h; simp only at hs'; subst hs'; exact hR
 
 end ref

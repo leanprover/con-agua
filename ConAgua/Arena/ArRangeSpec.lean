@@ -47,8 +47,8 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
         (hp.get "mk_app") n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind [lang_grind, arena_grind, asetK, arAppW, rbAppW, viewOK, tierW, idxW]
 
@@ -67,8 +67,8 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
         (hp.get "mk_lam") n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind [lang_grind, arena_grind, asetK, arLamW, rbLamW, viewOK, tierW, idxW]
 
@@ -87,8 +87,8 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Wo
         (hp.get "intern_forall") (hp.get "mk_forall") n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind [lang_grind, arena_grind, asetK, arForallW, rbForallW, viewOK, tierW, idxW]
 
@@ -107,8 +107,8 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
         (hp.get "intern_letE") (hp.get "mk_let") n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind [lang_grind, arena_grind, asetK, arLetW, rbLetW, viewOK, tierW, idxW]
 
@@ -127,8 +127,8 @@ theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word
         (hp.get "intern_proj") (hp.get "mk_proj") n]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
   all_goals grind [lang_grind, arena_grind, asetK, arProjW, rbProjW, viewOK, tierW, idxW]
 

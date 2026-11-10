@@ -52,9 +52,9 @@ theorem decRR_parts {m : Mem} {p : Nat} {g : IConstantVal × TargetMajor × List
   simp only [decRR, decAt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h'
   obtain ⟨q, hq, cv, hcv, mp, hmp, M, hM, rh, ⟨o, ho, l, hl, hrh⟩, rfl⟩ := h'
-  exact ⟨⟨q, (rec2IwN_trunc hq).2, decCVp_truncM hcv⟩,
-    ⟨mp, (rec2IwN_trunc hmp).1, (rec2IwN_trunc hmp).2, hM⟩,
-    ⟨o, l, (rec2IwN_trunc ho).1, (rec2IwN_trunc hl).1, (rec2IwN_trunc ho).2, (rec2IwN_trunc hl).2,
+  exact ⟨⟨q, (L.Ind.iwN_truncM_some hq).2, decCVp_truncM hcv⟩,
+    ⟨mp, (L.Ind.iwN_truncM_some hmp).1, (L.Ind.iwN_truncM_some hmp).2, hM⟩,
+    ⟨o, l, (L.Ind.iwN_truncM_some ho).1, (L.Ind.iwN_truncM_some hl).1, (L.Ind.iwN_truncM_some ho).2, (L.Ind.iwN_truncM_some hl).2,
       hrh, rec3IwSlice hrh⟩⟩
 
 /-- An `IW` word below the top, read after a growth. -/
@@ -117,9 +117,9 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
   -- the record's and the triple's words, below the top
   obtain ⟨-, -, hwmI, -, ⟨ro, rn, hro, hrn, hrls⟩, -⟩ := decRS_some (show decRS (truncM m) rcw.toNat = some rc from hrc)
   rw [truncM_erA] at hrls
-  obtain ⟨hwmIb, hwmI⟩ := rec2IwN_trunc hwmI
-  obtain ⟨hrob, hro⟩ := rec2IwN_trunc hro
-  obtain ⟨hrnb, hrn⟩ := rec2IwN_trunc hrn
+  obtain ⟨hwmIb, hwmI⟩ := L.Ind.iwN_truncM_some hwmI
+  obtain ⟨hrob, hro⟩ := L.Ind.iwN_truncM_some hro
+  obtain ⟨hrnb, hrn⟩ := L.Ind.iwN_truncM_some hrn
   obtain ⟨-, -, ⟨go, gl, hgob, hglb, hgo, hgl, hgsB, hgb⟩⟩ := decRR_parts hg
   have hW : ∀ m', IWGrow m m' → (m'.arr64 IW).size < 2 ^ 64 →
       rdW (m'.arr64 IW) (rcw + 2) = UInt64.ofNat rc.mI ∧

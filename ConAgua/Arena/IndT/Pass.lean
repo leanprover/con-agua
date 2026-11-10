@@ -24,6 +24,7 @@ import ConRon.Bridge.Inductives.BlockTail
 import ConRon.Bridge.Inductives.PosWalks
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -459,7 +460,7 @@ theorem pass_ref (R : PassRefs G p dn) (hGnv : G → closedNV p _root_.L.Checker
   have g46 := hg5.trans hg6
   have hU6 := hU4.grow g46
   have hho6 : (decHL m6 (r4.tail.headD 0).toNat (r4.tail.tail.headD 0).toNat : Option (List EIdx)) =
-      some holes := by rw [decHL_grow3 g46 hhob4]; exact hho4
+      some holes := by rw [L.Ind.decHL_grow g46 hhob4]; exact hho4
   have hms6 := hms5.grow (fun q => decTM_mono q) hg6
   refine RefE.bindE (fun _ => icpE.k_class_seeds.none ..) id
     (R.seeds n (by omega) _ fe1 env₁ m6 a6 _ _ _ _ _ c holes ms hB6 hU6 hhi4 hho6

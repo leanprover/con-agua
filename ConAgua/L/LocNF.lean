@@ -72,11 +72,11 @@ theorem loc_setLocs_cons (s : St) (x : Var) (xs : List Var) (vs : List Word) (y 
     (s.setLocs (x :: xs) vs).loc y = ((s.setLoc x (vs.headD 0)).setLocs xs vs.tail).loc y :=
   rfl
 
-theorem loc_setG (s : St) (g : GVar) (v : Word) (y : Var) : (s.setG g v).loc y = s.loc y := rfl
+theorem _root_.L.St.setG_loc (s : St) (g : GVar) (v : Word) (y : Var) : (s.setG g v).loc y = s.loc y := rfl
 
 theorem loc_mk (m : Mem) (l : Locals) (y : Var) : (St.mk m l).loc y = l y := rfl
 
-theorem init_nil (y : Var) : Locals.init [] y = 0 := by simp [Locals.init]
+theorem _root_.L.Locals.init_nil (y : Var) : Locals.init [] y = 0 := by simp [Locals.init]
 
 theorem init_cons_zero (v : Word) (vs : List Word) (y : Var) (h : y = 0) :
     Locals.init (v :: vs) y = v := by
@@ -86,12 +86,12 @@ theorem init_cons_succ (v : Word) (vs : List Word) (y z : Var) (h : y = z + 1) :
     Locals.init (v :: vs) y = Locals.init vs z := by
   subst h; rfl
 
-theorem mem_setLoc (s : St) (x : Var) (v : Word) : (s.setLoc x v).mem = s.mem := rfl
+theorem _root_.L.St.setLoc_mem (s : St) (x : Var) (v : Word) : (s.setLoc x v).mem = s.mem := rfl
 
-theorem mem_setLocs (s : St) (xs : List Var) (vs : List Word) : (s.setLocs xs vs).mem = s.mem := by
+theorem _root_.L.St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) : (s.setLocs xs vs).mem = s.mem := by
   induction xs generalizing s vs with
   | nil => rfl
-  | cons x xs ih => exact (ih _ _).trans (mem_setLoc _ _ _)
+  | cons x xs ih => exact (ih _ _).trans (L.St.setLoc_mem _ _ _)
 
 theorem mem_mk (m : Mem) (l : Locals) : (St.mk m l).mem = m := rfl
 
@@ -113,7 +113,7 @@ meta def litVars (xs : Lean.Expr) : MetaM Bool := do
 /-- `Locals.init vs y` for a literal `y` and a literal list `vs`: the entry and a proof. -/
 meta partial def initRead (vs yE : Lean.Expr) (y : Nat) : MetaM (Option (Lean.Expr × Lean.Expr)) := do
   match_expr vs with
-  | List.nil _ => return some (toExpr (0 : Word), mkApp (mkConst ``init_nil) yE)
+  | List.nil _ => return some (toExpr (0 : Word), mkApp (mkConst ``L.Locals.init_nil) yE)
   | List.cons _ v vs' =>
     if y == 0 then
       return some (v, mkApp4 (mkConst ``init_cons_zero) v vs' yE (← mkEqRefl yE))
@@ -160,7 +160,7 @@ meta partial def locRead (s yE : Lean.Expr) (y : Nat) : MetaM (Option (Lean.Expr
         next (mkApp5 (mkConst ``loc_setLocs_cons) s' x xs' vs yE)
           (mkApp3 (mkConst ``St.setLocs) (mkApp3 (mkConst ``St.setLoc) s' x hd) xs' tl)
     | _ => return none
-  | St.setG s' g v => next (mkApp4 (mkConst ``loc_setG) s' g v yE) s'
+  | St.setG s' g v => next (mkApp4 (mkConst ``L.St.setG_loc) s' g v yE) s'
   | St.mk m l =>
     let p := mkApp3 (mkConst ``loc_mk) m l yE
     match_expr l with
@@ -181,9 +181,9 @@ meta partial def memRead (s : Lean.Expr) : MetaM (Option (Lean.Expr × Lean.Expr
     | none => return some (mkApp (mkConst ``St.mem) s', p)
   match_expr s with
   | St.setLoc s' x v =>
-    if (← getNatValue? x).isSome then next (mkApp3 (mkConst ``mem_setLoc) s' x v) s' else return none
+    if (← getNatValue? x).isSome then next (mkApp3 (mkConst ``L.St.setLoc_mem) s' x v) s' else return none
   | St.setLocs s' xs vs =>
-    if ← litVars xs then next (mkApp3 (mkConst ``mem_setLocs) s' xs vs) s' else return none
+    if ← litVars xs then next (mkApp3 (mkConst ``L.St.setLocs_mem) s' xs vs) s' else return none
   | St.mk m l => return some (m, mkApp2 (mkConst ``mem_mk) m l)
   | _ => return none
 

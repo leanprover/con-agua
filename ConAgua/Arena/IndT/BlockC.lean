@@ -16,6 +16,7 @@ import ConAgua.Arena.IndDeclConstsFire
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.AllCtors
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -58,9 +59,6 @@ def cbNamesT (p₀ : BlockShape) : AM Unit :=
       ConRon.Arena.fail (.invalid "direct rec: a family at a `Bool` constructor's name")
     else pure ()
 
-theorem cb_fail_bind {α β : Type} (e : ConRon.Arena.CheckError) (k : α → AM β) :
-    (ConRon.Arena.fail e >>= k) = ConRon.Arena.fail e := rfl
-
 /-- **`checkBlock` at `check_block`'s calls.** -/
 theorem checkBlock_split (mode : ConLeche.CheckMode) (fe : IFEnv) (block : List IConstantInfo)
     (p₀ : BlockShape) :
@@ -77,11 +75,11 @@ theorem checkBlock_split (mode : ConLeche.CheckMode) (fe : IFEnv) (block : List 
   unfold ConRon.Arena.checkBlock cbNamesT
   dsimp only
   split
-  · exact (cb_fail_bind _ _).symm
+  · exact (L.Arena.fail_bindAM _ _).symm
   · simp only [bind_assoc]
     congr 1; funext bt; congr 1; funext bf
     split
-    · exact (cb_fail_bind _ _).symm
+    · exact (L.Arena.fail_bindAM _ _).symm
     · simp only [pure_bind]
 
 /-! ## The model -/
@@ -317,8 +315,8 @@ theorem ShapeSl.grow' {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeSl m 
   obtain ⟨hmem, hrc, -⟩ := decBS_some hqt
   obtain ⟨o, l, ho, hl, -⟩ := partsAt decMS_mono hmem
   obtain ⟨o2, l2, ho2, hl2, -⟩ := partsAt decRS_mono hrc
-  have h1 := (acTr hl).1
-  have h3 := (acTr hl2).1
+  have h1 := (L.Ind.iwN_truncM_some hl).1
+  have h3 := (L.Ind.iwN_truncM_some hl2).1
   obtain ⟨ms, hmsB⟩ := h.2.2
   refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_, ms,
     hmsB.grow (OMono.decAt (fun o l => OMono.decPL decMSB_mono o l) _) hg⟩
@@ -374,7 +372,7 @@ theorem bsAt {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun m => decBS 
   have f2 : rdW (m.arr64 IW) (p0 + 2) = o2 := UInt64.toNat_inj.mp e2
   have f3 : rdW (m.arr64 IW) (p0 + 3) = l2 := UInt64.toNat_inj.mp e3
   rw [f0, f1, f2, f3]
-  exact ⟨hdm, hsl.1 _ _ (acTr ho).2 (acTr hl).2, ⟨hdr, hob2⟩, e4⟩
+  exact ⟨hdm, hsl.1 _ _ (L.Ind.iwN_truncM_some ho).2 (L.Ind.iwN_truncM_some hl).2, ⟨hdr, hob2⟩, e4⟩
 
 /-! ## The composition -/
 
@@ -565,7 +563,7 @@ theorem blockRefS_of (R : CbRefs G p dn) (hGnv : G → closedNV p _root_.L.Check
     hlpd hnPb hIM hA
   have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (icbE_spec p R.look n _ vis bO bL p0) hGnv
     (cb_ref R hC hfold hx hq hsl hblk hbb hbP hdP hd hlpd hnPb hIM hA hn (N := n))
-  exact RefE.weakenP h fun ⟨r, m'⟩ y a' h => by obtain ⟨s', hs', -, hR⟩ := h; simp only at hs'; subst hs'; exact hR
+  exact L.Arena.RefE.mono h fun ⟨r, m'⟩ y a' h => by obtain ⟨s', hs', -, hR⟩ := h; simp only at hs'; subst hs'; exact hR
 
 end comp
 

@@ -8,6 +8,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DeclNatCv
 import all ConAgua.Arena.WhnfDelta
+import ConAgua.Arena.InferLeaves
 
 @[expose] public section
 
@@ -104,33 +105,11 @@ theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo}
   obtain ⟨w, hw, ht⟩ := decCI_tag h
   rw [(erRd_of_erecP hw).1, ht]
 
-/-- A decoded constant record has its `ConstantVal` at `q + 1` (InferLeaves' `decCI_cvA`). -/
-theorem decCI_cvN {R : Nat → Option Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    decCV R (q.toNat + 1) = some ci.toConstantVal := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
-  all_goals first
-    | (simp at h; done)
-    | ((first
-        | obtain ⟨cv, hcv, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
-       exact hcv)
-
 /-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
     (h : decCI (erecP m) q.toNat = some ci)
     (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
-  hcv ▸ decCI_cvN h
+  hcv ▸ L.Arena.decCI_cvA h
 
 structure NatLitProg (p : Prog) : Prop extends NatCvProg p where
   lNatIndOk : p.lookup "nat_ind_ok" = some natIndOkL
@@ -213,7 +192,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl
           have hrun : (natIndOk (some (.indInfo cv caps))).run a =
               .ok (decide (erRd m (q + 4) = pinW m 54), a) := by
-            simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+            simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, L.Arena.except_ok_bind, hisE,
               Bool.true_and, hty, hrd, decI_beq _ _ hlt hp54, StateT.run_pure]
             rfl
           refine ⟨_, a, hrun, hS, IWGrow.refl _, ?_⟩
@@ -228,7 +207,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
             · rfl
             · exact absurd (hiff.mpr h) hl
           refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
-          simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, exc_ok_bind', hisE,
+          simp only [natIndOk, sortOne, StateT.run_bind, pinSortOne_run hF, L.Arena.except_ok_bind, hisE,
             Bool.false_and, StateT.run_pure]
           rfl
       | _ => simp [ciTag] at hci3
@@ -315,7 +294,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             rw [hr1]; exact this
           have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a =
               .ok (decide (wt = r2.headD 0), a2) := by
-            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
               Bool.true_and, hty, decI_beq _ _ hlt hx2l, ← hx2, StateT.run_pure]
             rfl
           refine ⟨_, a2, hrun, hS2, hg2, ?_⟩
@@ -336,7 +315,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have := pinAt_run hF 1 (by decide)
             rw [hr1]; exact this
           have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
-            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+            simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
               Bool.false_and, StateT.run_pure]
             rfl
           exact ⟨false, a2, hrun, hS2, hg2, by simp [decW0B]⟩
@@ -436,12 +415,12 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
                 .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
-              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, ite_false, hty]
               rw [decI_tag_forallE_beq wt hlt]
               simp only [h6, decide_true, ite_true, ← decE_eq]
               simp only [StateT.run_bind, view_run (decE wt) a2 _ hview]
-              simp only [exc_ok_bind', decE_eq, decI_beq _ _ hdlt hx2l, decI_beq _ _ hblt hx2l,
+              simp only [L.Arena.except_ok_bind, decE_eq, decI_beq _ _ hdlt hx2l, decI_beq _ _ hblt hx2l,
                 ← hx2, Bool.decide_and, StateT.run_pure]
               rfl
             refine ⟨_, a2, hrun, hS2, hg2, ?_⟩
@@ -454,7 +433,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
             simp only [Option.some.injEq, Prod.mk.injEq] at hw
             obtain ⟨rfl, rfl⟩ := hw
             have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
-              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hr2, hisE,
+              simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, ite_false, hty]
               rw [decI_tag_forallE_beq wt hlt]
               simp only [h6, decide_false, Bool.false_eq_true, ite_false, StateT.run_pure]
@@ -543,7 +522,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
       simp only [hi] at this
       simpa using this.symm
     refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-    simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun1, hx]
+    simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun1, hx]
     rfl
   · rw [ite_eq_right hi] at hw
     have hx : x1 = true := by
@@ -574,7 +553,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
         simp only [hz] at this
         simpa using this.symm
       refine ⟨false, a2, ?_, hS2, hg1.trans hg2, by simp [decW0B]⟩
-      simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun1, hx,
+      simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun1, hx,
         Bool.not_true, Bool.false_eq_true, ite_false, pinNatZero_eq, e2, hrun2, hx']
       rfl
     · rw [ite_eq_right hz] at hw
@@ -601,7 +580,7 @@ theorem natLitSupported_ref (hN : NatLitProg p) :
         have := pinAt_run hF6 3 (by decide)
         rw [hr7]; exact this
       refine ⟨x3, a3, ?_, hS3, hg1.trans (hg2.trans hg3), ?_⟩
-      · simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun1, hx,
+      · simp only [natLitSupported, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, ite_false, pinNatZero_eq, e2, hrun2, hx', pinNatSucc_eq,
           e3, hrun3]
       · simpa [decW0B] using hx3

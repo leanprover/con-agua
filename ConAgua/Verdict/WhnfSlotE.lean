@@ -27,13 +27,6 @@ theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
   | error e => rw [hn] at h; cases h; rfl
   | ok q => exact absurd h (hk q er)
 
-/-- A call at fuel `0` claims nothing. -/
-theorem ErrClaim.of_callE_zeroW {α : Type} {T : AM α} {a : AState} {p : Prog} {f : FnName}
-    {vs : List Word} {m : Mem} {e : Err} (h : callE p 0 f vs m = .error e) : ErrClaim T a e := by
-  obtain ⟨e', he', h0⟩ := callE_zero p f vs m
-  rw [h] at he'; cases he'
-  exact ErrClaim.of_cls0 h0
-
 /-! ## `whnf_core`: the step's and the slot's claims from their refinements -/
 
 section core

@@ -7,6 +7,7 @@ import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.L.WordOff
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -111,7 +112,7 @@ theorem Schema.WF.ra_ne {S : Schema} (_hS : Schema.WF S) {t t' : Word} (ht : t �
     tierA S.ra t ≠ tierA S.ra t' := tierA_ne_tier _ ht ht' h
 
 theorem Schema.WF.ra_sa' {S : Schema} (hS : Schema.WF S) (t t' : Word) : tierA S.ra t ≠ tierA S.sa t' :=
-  tierA_ne hS.ra_sa t t'
+  _root_.L.tierA_ne_tierA hS.ra_sa t t'
 
 theorem Schema.WF.ra_ctl' {S : Schema} (hS : Schema.WF S) (t : Word) : tierA S.ra t ≠ CTL :=
   (ne_tierA (Ne.symm hS.ra_ctl) t).symm
@@ -234,7 +235,7 @@ theorem wrRec_size (S : Schema) (t c : Word) (b : TieredArray) :
   intro vs
   induction vs with
   | nil => intro m f; rfl
-  | cons v vs ih => intro m f; rw [wrRec, ih, size_set64]
+  | cons v vs ih => intro m f; rw [wrRec, ih, _root_.L.Mem.size64_set64]
 
 theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^ 30)
     (hi : i.toNat < 2 ^ 30) (hf : f < S.w) :
@@ -252,7 +253,7 @@ theorem wrRec_read (S : Schema) (hS : S.WF) (t c i f : Word) (hc : c.toNat < 2 ^
     simp only [List.length_cons] at hl
     have hf₀ : f₀ < S.w := by grind
     have e1 : (f₀ + 1).toNat = f₀.toNat + 1 := by grind
-    rw [wrRec, ih _ (f₀ + 1) (by rw [e1]; omega), e1, rdW_set64, size_set64]
+    rw [wrRec, ih _ (f₀ + 1) (by rw [e1]; omega), e1, rdW_set64, _root_.L.Mem.size64_set64]
     have := S.ad_inj hS c f₀ i f hc hf₀ hi hf
     by_cases hf0 : f.toNat = f₀.toNat
     · have : f = f₀ := UInt64.toNat_inj.mp hf0
@@ -280,14 +281,14 @@ theorem pushG_arr (b : TieredArray) (h1 : b ≠ tierA S.ra t) (h2 : b ≠ tierA 
 
 @[store_grind =] theorem pushG_size (b : TieredArray) :
     ((pushG S m t vs j c q).arr64 b).size = (m.arr64 b).size := by
-  rw [pushG, size_set64, size_set64, wrRec_size]
+  rw [pushG, _root_.L.Mem.size64_set64, _root_.L.Mem.size64_set64, wrRec_size]
 
 include hS in
 @[store_grind =] theorem pushG_ctl (ht : t ≤ 1) (x : Word) :
     rdW ((pushG S m t vs j c q).arr64 CTL) x =
       if x = S.ca + t ∧ (S.ca + t).toNat < (m.arr64 CTL).size then c + 1
       else rdW (m.arr64 CTL) x := by
-  rw [pushG, rdW_set64, rdW_set64, size_set64, wrRec_size,
+  rw [pushG, rdW_set64, rdW_set64, _root_.L.Mem.size64_set64, wrRec_size,
     wrRec_arr_ne _ _ _ _ (hS.ra_ctl' t).symm, and_one_of_le t ht]
   have := hS.sa_ctl' t
   grind
@@ -300,7 +301,7 @@ theorem pushG_sa (x : Word) :
       then pk (baseW m t + c + 1) q
       else rdW (m.arr64 (tierA S.sa t)) x := by
   rw [pushG]
-  simp only [rdW_set64, size_set64, wrRec_size, wrRec_arr_ne _ _ _ _ (hS.ra_sa' t t).symm,
+  simp only [rdW_set64, _root_.L.Mem.size64_set64, wrRec_size, wrRec_arr_ne _ _ _ _ (hS.ra_sa' t t).symm,
     eq_false (hS.sa_ctl' t), false_and, ↓reduceIte, true_and]
 
 include hS in

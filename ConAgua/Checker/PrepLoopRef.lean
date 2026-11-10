@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.PrepLeafRef
 import ConAgua.Checker.HoistClosureL
 import ConAgua.L.WordOff
+import ConAgua.Checker.HoistOrderRef3
 
 @[expose] public section
 
@@ -52,12 +53,6 @@ structure PFr (ord mk nw : Word) (m m' : Mem) : Prop where
 
 
 /-! ## The unmarked positions -/
-
-private theorem ite_t {α : Sort _} {c : Prop} [Decidable c] {a b : α} (h : c) :
-    (if c then a else b) = a := by simp [h]
-
-private theorem ite_f {α : Sort _} {c : Prop} [Decidable c] {a b : α} (h : ¬ c) :
-    (if c then a else b) = b := by simp [h]
 
 
 theorem unm_nil (m : Mem) (mk : Word) (lo hi : Nat) (h : hi ≤ lo) : unm m mk lo hi = [] := by
@@ -285,19 +280,19 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
             apply unm_mark
             · intro y hy1 hy2 hyx
               have hy' := L.toNat_add_ofNat_of_lt mk y (by omega)
-              rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hy']; omega),
-                ite_f (by rw [hmx', hy']; omega)]
-            · rw [rdIW_set64, rdIW_set64, ite_f (by rw [hoa, hmx']; omega),
-                ite_t ⟨rfl, by rw [hmx', hIW1]; omega⟩]
+              rw [rdIW_set64, rdIW_set64, hIW1, L.Checker.iteF (by rw [hoa, hy']; omega),
+                L.Checker.iteF (by rw [hmx', hy']; omega)]
+            · rw [rdIW_set64, rdIW_set64, L.Checker.iteF (by rw [hoa, hmx']; omega),
+                L.Checker.iteT ⟨rfl, by rw [hmx', hIW1]; omega⟩]
               decide
           · exact (MemFrame.set64 _ IW (by decide) _ _).trans (MemFrame.set64 _ IW (by decide) _ _)
           · intro x hx'
-            rw [getIW_set64, getIW_set64, ite_f (by rw [hoa]; omega), ite_f (by rw [hmx']; omega)]
-          · rw [rdIW_set64, ite_t ⟨rfl, by rw [size_set64, hoa, hIW1]; omega⟩]
+            rw [getIW_set64, getIW_set64, L.Checker.iteF (by rw [hoa]; omega), L.Checker.iteF (by rw [hmx']; omega)]
+          · rw [rdIW_set64, L.Checker.iteT ⟨rfl, by rw [L.Mem.size64_set64, hoa, hIW1]; omega⟩]
           · intro k _hk
             have hk' := L.toNat_add_ofNat_of_lt ord k (by omega)
-            rw [rdIW_set64, rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega),
-              ite_f (by rw [hmx', hk']; omega)]
+            rw [rdIW_set64, rdIW_set64, hIW1, L.Checker.iteF (by rw [hoa, hk']; omega),
+              L.Checker.iteF (by rw [hmx', hk']; omega)]
         · rw [pFrontW.k_prep_find.arm2 _ _ _ _ _ _ _ _ (Decidable.of_not_not hfz), pFrontW.j1.arm1] at h
           have hf00 : f = 0 := by simpa using hfz
           refine ⟨_, aw, none, by omega, rfl, ?_, MemFrame.set64 _ IW (by decide) _ _, ?_, ?_, ?_, h⟩
@@ -305,18 +300,18 @@ theorem pFront_ok (dsAll : Array IDeclaration) (np nw ord mk : Word) :
               apply unm_congr
               intro y hy1 hy2
               have hy' := L.toNat_add_ofNat_of_lt mk y (by omega)
-              rw [rdIW_set64, hIW1, ite_f (by rw [hoa, hy']; omega)]
+              rw [rdIW_set64, hIW1, L.Checker.iteF (by rw [hoa, hy']; omega)]
             rw [hU, pick_miss]
             intro y hy
             obtain ⟨h1, h2, h3⟩ := mem_unm.mp hy
             rw [getElem!_pos dsAll _ (by omega)]
             exact hf0 hf00 y (by omega) h1 h3
           · intro x hx'
-            rw [getIW_set64, ite_f (by rw [hoa]; omega)]
-          · rw [rdIW_set64, ite_t ⟨rfl, by rw [hoa, hIW1]; omega⟩]
+            rw [getIW_set64, L.Checker.iteF (by rw [hoa]; omega)]
+          · rw [rdIW_set64, L.Checker.iteT ⟨rfl, by rw [hoa, hIW1]; omega⟩]
           · intro k _hk
             have hk' := L.toNat_add_ofNat_of_lt ord k (by omega)
-            rw [rdIW_set64, hIW1, ite_f (by rw [hoa, hk']; omega)]
+            rw [rdIW_set64, hIW1, L.Checker.iteF (by rw [hoa, hk']; omega)]
       obtain ⟨m2, v, o, hv, hX, hpick, hMF, hreg, hrd, hkeep, h2⟩ := hcase
       have hfr2 : PFr ord mk nw m1 m2 := PFr.of_frame hMF hreg
       have hE2 : PEnv m2 a1 dsAll np nw ord mk :=
@@ -376,7 +371,7 @@ theorem pRest_ok (nw ord mk : Word) :
       by_cases hz : rdW (m.arr64 IW) (mk + j) = 0
       · rw [pRestW.arm2 _ _ _ _ _ _ _ hj hz, pRestW.j1.arm1] at h
         have hc1 : (c + 1).toNat = c.toNat + 1 := @L.toNat_add_one_of_lt c (by omega)
-        have hsz : ((m.set64 IW (ord + c) j).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
+        have hsz : ((m.set64 IW (ord + c) j).arr64 IW).size = (m.arr64 IW).size := L.Mem.size64_set64 _ _ _ _ _
         obtain ⟨hr, hk, hfr, hout⟩ := ih _ m' (c + 1) (j + 1) r h1 (hsz ▸ h2) (hsz ▸ h3)
           (by omega) (by omega) h
         have hoc : (ord + c).toNat = ord.toNat + c.toNat := by

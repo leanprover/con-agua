@@ -658,7 +658,7 @@ theorem readNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v e : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, readNatLoop_step_spec p b n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Locals.init,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, List.getD_nil, Cmp.eval, BinOp.eval, Mem.src8, Mem.len8, hm,
       Bool.and_eq_true, decide_eq_true_eq, Nat.reduceEqDiff, ↓reduceIte] at *
     all_goals subst_vars

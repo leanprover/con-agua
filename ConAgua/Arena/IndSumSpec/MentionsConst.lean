@@ -9,6 +9,7 @@ import ConAgua.Arena.IndPosSpec.MatesW
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndSum
+import ConAgua.Arena.IndRealFvt
 
 @[expose] public section
 
@@ -53,7 +54,7 @@ theorem mentionsConstGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NId
   rintro r s' ⟨hl, hm⟩
   obtain ⟨⟨b, mp'⟩, _, hrun, rfl, hb, hM', hfr⟩ := mcGoOK n _ a₀ f T h mp hS.check.arena.base hh hT hM _ _ hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
@@ -80,7 +81,7 @@ theorem mentionsConst_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   rw [invoke_eq _ hp]
   simp only [callFn, mentionsConstL]
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec mcSch p _ hcl n, ih]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, ind_grind]
 
 section mcCensus2
@@ -117,7 +118,7 @@ theorem mentionsConst_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx 
   obtain ⟨⟨c, mp1⟩, _, hrun, rfl, hbb, hM1, hfr1⟩ := mcGoOK n _ a₀ CWF T e ∅ hA0 hh hT hM0 _ _ hm
   have hfall : MemFrame [MCM] [mcSch.cs, mcSch.cs + 1] s₀.mem s'.mem :=
     (hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [mcSch]))
-  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg'⟩ := L.Ind.StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [mcSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [mcSch])
   have hrun' : (ConRon.Arena.mentionsConst (decI T) (decE e)).run a₀ = .ok (c, a₀) := by
@@ -151,7 +152,7 @@ theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (_dn : NIdx → Option Co
   refine triple_post (hbIns_spec p hf hput hins n s₀ e i r) ?_
   rintro rr s' ⟨hl, hm⟩
   obtain ⟨hr', hM', hfr⟩ := hbIns_ok he hr hM hm
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   exact ⟨hl, hr', hM', hS', hg⟩
 

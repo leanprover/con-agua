@@ -289,7 +289,7 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
       rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
         have := congrArg UInt64.toNat h; rw [hadd] at this; omega)]
       exact hSt₁.below j hj
-    · rw [hSt₂.size]; simp only [spPush, size_set64]; exact hsz₁
+    · rw [hSt₂.size]; simp only [spPush, L.Mem.size64_set64]; exact hsz₁
 
 /-! ## The twin past the table lookup -/
 
@@ -323,9 +323,6 @@ theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat
     view_run _ _ _ hv, h4]
   rfl
 
-theorem ip_viewLsLen_run (a : AState) (h : LsIdx) :
-    (viewLsLen h).run a = .ok (a.store.lss.viewLen h, a) := rfl
-
 /-- **`projAtT` past its checks**: the guard, then the type. -/
 theorem projAtT_run (r : CoreFnsA) (fe : IFEnv) (sn T : NIdx) (us : LsIdx) (entry : IProjEntry)
     (te pe : EIdx) (a : AState) (xs : List EIdx) (l : Nat)
@@ -336,7 +333,7 @@ theorem projAtT_run (r : CoreFnsA) (fe : IFEnv) (sn T : NIdx) (us : LsIdx) (entr
       (checkProjGuard r fe entry us >>= fun _ => entry.typeAt us xs pe).run a := by
   subst hT hl
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, hlen,
-    Bool.false_eq_true, ↓reduceIte, ip_viewLsLen_run, hvl]
+    Bool.false_eq_true, ↓reduceIte, L.Arena.viewLsLen_run, hvl]
 
 theorem projAtT_errT (r : CoreFnsA) (fe : IFEnv) (sn T : NIdx) (us : LsIdx) (entry : IProjEntry)
     (te pe : EIdx) (a : AState)
@@ -363,7 +360,7 @@ theorem projAtT_errLP (r : CoreFnsA) (fe : IFEnv) (sn T : NIdx) (us : LsIdx) (en
       .error (.notImplemented "projection without a native entry") := by
   subst hT
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, Bool.false_eq_true,
-    ↓reduceIte, hlen, ip_viewLsLen_run, hvl, hl]; rfl
+    ↓reduceIte, hlen, L.Arena.viewLsLen_run, hvl, hl]; rfl
 
 /-! ## `infer_proj_at` refines `projAtT` -/
 

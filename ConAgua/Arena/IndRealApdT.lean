@@ -10,6 +10,7 @@ import all ConAgua.Arena.LevelApd
 import all ConAgua.Arena.LevelEquiv
 import all ConAgua.Arena.LevelHeap
 import all ConAgua.Arena.MemoLib
+import ConAgua.Arena.DeclCanonLvl
 
 @[expose] public section
 
@@ -128,7 +129,7 @@ theorem apdF_okT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (ApdEnv.of_den hT.twin.den hT.twin.nwf) o l e _ lps ks hks hdec he
     (apdMR_clear hT.twin.memos.walk) hm
   have hf := apdF_frame h
-  refine ⟨b, a, ?_, ⟨hS', hT.twin.apd hf hM, ?_⟩, hg, apd_decW0B hr⟩
+  refine ⟨b, a, ?_, ⟨hS', hT.twin.apd hf hM, ?_⟩, hg, L.Ind.decW0B_of hr⟩
   · exact hrun
   · rw [pinW_frame hf (by decide)]; exact hT.flag
 

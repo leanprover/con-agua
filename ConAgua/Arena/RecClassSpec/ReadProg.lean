@@ -59,13 +59,6 @@ def decRead (m' : Mem) (r : List Word) : Option ClassRead → Prop
 def RecsDec (m : Mem) (ro rl : Word) (recs : List RecShape) : Prop :=
   DecB (fun m => decPL m (decRS m) ro.toNat rl.toNat) m recs ∧ ro.toNat + rl.toNat < 2 ^ 64
 
-theorem iwN_truncM_get {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
-    i < iwTop m ∧ iwN m i = some v := by
-  simp only [iwN, nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  obtain ⟨hi, hw'⟩ := truncM_iw_get hw
-  exact ⟨hi, by simp [iwN, nat?, hw']⟩
-
 end L.Ind
 
 end

@@ -143,7 +143,7 @@ theorem fsgW_ok (n : Nat) : ∀ (m m' : Mem) (so sl j c cn : Word) (r : List Wor
     generalize slots[j.toNat]'(by omega) = sl0 at hdp
     cases sl0 with
     | motive key =>
-      have h0 := rec2DecCS_mot hdp
+      have h0 := L.Ind.decCS_motive hdp
       obtain ⟨e0, -⟩ := rec2RdN (w := UInt64.ofNat p) (k := 0) (by simpa [hp'] using h0) hsz
       simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e0
       simp [rec2SlotHit, e0]
@@ -248,8 +248,8 @@ theorem pvW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
       obtain ⟨nP, hnP', ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, hGe⟩ := hG'
       obtain ⟨o1, l1, h1, h2, hpd⟩ := decAt_some hps
-      obtain ⟨-, h1m⟩ := rec2IwN_trunc h1
-      obtain ⟨-, h2m⟩ := rec2IwN_trunc h2
+      obtain ⟨-, h1m⟩ := L.Ind.iwN_truncM_some h1
+      obtain ⟨-, h2m⟩ := L.Ind.iwN_truncM_some h2
       obtain ⟨e1, t1⟩ := rec2RdN (w := g) (k := 1) h1m hsz
       obtain ⟨e2, t2⟩ := rec2RdN (w := g) (k := 2) (by simpa [Nat.add_assoc] using h2m) hsz
       simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1 e2

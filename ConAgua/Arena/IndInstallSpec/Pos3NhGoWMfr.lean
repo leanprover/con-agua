@@ -6,6 +6,7 @@ import ConAgua.Arena.IndPosSpec.SnocWMfr
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import ConAgua.Arena.IndPosSpec.RpGoStep
+import ConAgua.Arena.RecCheckSpec.TcmLook
 
 @[expose] public section
 
@@ -63,79 +64,6 @@ theorem pos3_nIdxsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (pos3_nIdxsCopyW_mfr _ _ _ _ _ _ hc)
 
-theorem pos3_lpsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
-    (h : lpsW n m p = some (r, m')) : MFr [] [] m m' := by
-  cases n with
-  | zero => simp [lpsW] at h
-  | succ n =>
-    by_cases h0 : rdW (m.arr64 IW) (p + 1) = 0
-    · rw [lpsW_nil n m p h0] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      rw [← h.2]; exact MFr.refl _ _ _
-    · rw [lpsW_cons n m p h0] at h
-      exact erToIwW_mfr h
-
-theorem pos3_pinternW_mfr {m m' : Mem} {u w : Word} (h : pinternW m u = some (w, m')) : MFr [] [] m m' := by
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h,
-    by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT], by simp [paramCS]⟩
-
-theorem pos3_plgW_mfr : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
-    MFr [] [] m m'
-  | 0, _, _, _, _, _, h => by simp [plgW] at h
-  | k + 1, m, m', o, l, r, h => by
-    by_cases hl : l = 0
-    · rw [plgW_nil k m o l hl] at h
-      cases ha : allocW m 0 with
-      | none => rw [ha] at h; simp [plK0] at h
-      | some x =>
-        obtain ⟨q, m1⟩ := x
-        rw [ha, plK0_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]; exact allocW_mfr ha
-    · rw [plgW_cons k m o l hl] at h
-      cases hp : pinternW m (rdW (m.arr64 IW) o) with
-      | none => rw [hp] at h; simp [plK1] at h
-      | some x =>
-        obtain ⟨u, m1⟩ := x
-        rw [hp] at h
-        by_cases hu : 4294967296 ≤ u
-        · rw [plK1_big k m1 o l u hu] at h; cases h
-        rw [plK1_ok k m1 o l u hu] at h
-        cases hr : plgW k m1 (o + 1) (l - 1) with
-        | none => rw [hr] at h; simp [plK2] at h
-        | some y =>
-          obtain ⟨r2, m2⟩ := y
-          rw [hr] at h
-          simp only [plK2] at h
-          cases hc : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
-          | none => rw [hc] at h; simp [plK3] at h
-          | some z =>
-            obtain ⟨r3, m3⟩ := z
-            rw [hc] at h
-            simp only [plK3, Option.some.injEq, Prod.mk.injEq] at h
-            rw [← h.2]
-            exact ((pos3_pinternW_mfr hp).trans (pos3_plgW_mfr k _ _ _ _ _ hr)).trans (consW_mfr hc)
-
-theorem pos3_plW_mfr {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
-    MFr [] [] m m' := by
-  cases k with
-  | zero => simp [plW] at h
-  | succ k =>
-    rw [plW_succ] at h
-    cases hg : plgW k m o l with
-    | none => rw [hg] at h; simp [plW.plK4] at h
-    | some x =>
-      obtain ⟨r1, m1⟩ := x
-      rw [hg, plK4_some] at h
-      cases hs : ilF m1 [r1.headD 0, r1.tail.headD 0] with
-      | none => rw [hs] at h; simp [plW.plK5] at h
-      | some y =>
-        obtain ⟨r2, m2⟩ := y
-        rw [hs, plK5_some] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]
-        exact (pos3_plgW_mfr k _ _ _ _ _ hg).trans (MFr.of_frame (ilF_frame hs) (by simp [tier1, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp))
-
 theorem pos3_fieldCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW n m d s l k = some m' →
     MFr [] [] m m'
   | 0, _, _, _, _, _, _, h => by simp [fieldCopyW] at h
@@ -166,7 +94,7 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
   rename_i r2 m2 h2
   split at h; · cases h
   rename_i r3 m3 h3
-  have f123 := ((pos3_memberNamesW_mfr h1).trans (pos3_lpsW_mfr h2)).trans (pos3_nIdxsW_mfr h3)
+  have f123 := ((pos3_memberNamesW_mfr h1).trans (L.Ind.lpsW_mfr h2)).trans (pos3_nIdxsW_mfr h3)
   cases h4 : plW n m3 (r2.headD 0) (r2.tail.headD 0) with
   | none => rw [h4] at h; simp [nckRec] at h
   | some x =>
@@ -189,7 +117,7 @@ theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h
         rw [ha] at h hm
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨-, rfl⟩ := h
-        exact ((f123.trans (pos3_plW_mfr h4)).trans (pos3_formersW_mfr h5)).trans (posRecW_mfr hm.symm)
+        exact ((f123.trans (L.Ind.plW_mfr h4)).trans (pos3_formersW_mfr h5)).trans (posRecW_mfr hm.symm)
 
 theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (ctx mm off l oo ol : Word) (r : List Word),
     nhGoW k m ctx mm off l oo ol = some (r, m') → MFr [] [] m m'

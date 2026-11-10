@@ -175,14 +175,4 @@ theorem toNat_rec (r : Word) (hr : r.toNat < 2 ^ 59) : (1 + 8 * r).toNat = 1 + 8
   simp only [*]
   rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
 
-theorem rdW_dw0 (D : Array Word) (r : Word) (hr : r.toNat < 2 ^ 59) :
-    rdW D (1 + 8 * r) = dw D r.toNat 0 := by
-  simp only [rdW, dw, toNat_rec r hr, Nat.add_zero]
-
-theorem rdW_dw (D : Array Word) (r j : Word) (hr : r.toNat < 2 ^ 59) (hj : j.toNat < 8) :
-    rdW D (1 + 8 * r + j) = dw D r.toNat j.toNat := by
-  have : (1 + 8 * r + j).toNat = 1 + 8 * r.toNat + j.toNat := by
-    rw [UInt64.toNat_add, toNat_rec r hr]; exact Nat.mod_eq_of_lt (by omega)
-  simp only [rdW, dw, this]
-
 end L.Checker

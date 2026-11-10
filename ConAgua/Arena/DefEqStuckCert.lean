@@ -306,7 +306,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hctor := decCI_ctorF (erRdOK _) hci
+  have hctor := L.Arena.decCI_ctorR (erRdOK _) hci
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 4
   · erw [ite_eq_left h4]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
@@ -381,9 +381,9 @@ theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [secE.k_eta_ctor_shape]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_false_of h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl hw0)
-  rw [ite_eq_right h0, decBool_true_of h0]
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
   simp only [↓reduceIte]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F _ _ dn vis fe M₁ eb mode d b hF hn hs₁ hb)

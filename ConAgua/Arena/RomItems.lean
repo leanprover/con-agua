@@ -8,6 +8,7 @@ import Std.WP.Tactic
 import ConAgua.L.LocNF
 import ConLeche.Verify.Cached.Erase
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Front.ApplyExpr
 
 @[expose] public section
 
@@ -195,7 +196,7 @@ theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, st64, hn', hl', hls', he', ih',
         memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
+      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
 end spec
 
@@ -332,7 +333,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
-        (ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA)
+        (L.Arena.ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA)
         ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.1.lit.1 hmo) hM.reset hd1
         (by rw [resetMem_stk]; exact hst) (by rw [(resetMem_frame1 mem).size]; exact hc) hW
       refine ⟨m', a', seen', by simp only [runItems, runItem]; rw [run_bind_of _ _ _ _ _ rfl]; exact r,

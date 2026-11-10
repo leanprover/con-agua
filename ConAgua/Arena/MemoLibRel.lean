@@ -4,6 +4,7 @@ public import ConAgua.Arena.Frame
 public import ConAgua.Arena.MemoLib
 import ConAgua.Arena.StoreGrow
 import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -318,7 +319,7 @@ theorem adS_eq (S : MemoSch) (m : Mem) (x y : Word) (hx : x.toNat < slotsG S m)
 
 theorem slotsG_set64 (S : MemoSch) (m : Mem) (a : TieredArray) (k v : Word) :
     slotsG S (m.set64 a k v) = slotsG S m := by
-  simp only [slotsG, len64_eq, size_set64]
+  simp only [slotsG, len64_eq, L.Mem.size64_set64]
 
 /-- Word `f` of slot `j` after a write to word `g` of slot `s`. -/
 theorem rdS_set (S : MemoSch) (m : Mem) (s j f g v : Word) (hs : s.toNat < slotsG S m)
@@ -1170,7 +1171,7 @@ theorem memoRV_grow (hVS : VStable S VR) (m : Mem) (mp : Std.HashMap κ ν)
       else rdW (m'.arr64 S.arr) f := by
     intro f
     rw [harr]
-    simp only [rdW_set64, size_set64, true_and]
+    simp only [rdW_set64, L.Mem.size64_set64, true_and]
     by_cases f2 : f = 2
     · subst f2; simp [hz2]
     by_cases f1 : f = 1
@@ -1291,7 +1292,7 @@ theorem mclearG_stamps (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m 
   have hcs : S.cs + 1 ≠ S.cs := by
     intro h; have := hS.cs; grind
   have he : epG S (mclearG S m) = epG S m + 1 := by
-    simp only [epG, mclearG, rdW_set64, size_set64, hcs]; grind
+    simp only [epG, mclearG, rdW_set64, L.Mem.size64_set64, hcs]; grind
   have he1 : (epG S m + 1).toNat = (epG S m).toNat + 1 := by
     simp only [epG] at *; rw [UInt64.toNat_add]; grind
   refine ⟨by rw [hsz]; exact hctl, by rw [he]; simp only [epG] at *; grind,
@@ -1330,7 +1331,7 @@ theorem rd_hdr (S : MemoSch) (m : Mem) (a b c d x : Word) (hx : x.toNat < 3) :
     · exact Or.inl (UInt64.toNat_inj.mp h)
     · exact Or.inr (Or.inl (UInt64.toNat_inj.mp h))
     · exact Or.inr (Or.inr (UInt64.toNat_inj.mp h))
-  rcases this with rfl | rfl | rfl <;> simp only [rdW_set64, size_set64] <;> split <;>
+  rcases this with rfl | rfl | rfl <;> simp only [rdW_set64, _root_.L.Mem.size64_set64] <;> split <;>
     grind [rdW_oob]
 
 /-- The cap of a re-made region is the array's slot count less the header's. -/
@@ -1410,7 +1411,7 @@ theorem memoRV_clearFit (m : Mem) (mp : Std.HashMap κ ν) (hR : MemoRV S K VR m
       · left
         have hd := dfltN_fits (m'.len64 S.arr)
         have hl : (m'.len64 S.arr).toNat = (m₁.arr64 S.arr).size % 2 ^ 64 := by
-          rw [← hm']; simp only [len64_eq, size_set64, UInt64.toNat_ofNat']
+          rw [← hm']; simp only [len64_eq, L.Mem.size64_set64, UInt64.toNat_ofNat']
         unfold nG; split
         · rw [r2]; split
           · have : slotsG S m₁ = 0 := by omega

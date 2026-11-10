@@ -23,6 +23,8 @@ import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 import ConAgua.L.ModelGen
+import ConAgua.Arena.BasisBlockC
+import ConAgua.Arena.IndT.BlockCS
 
 @[expose] public section
 
@@ -192,7 +194,6 @@ structure DeclConstsProg (p : Prog) : Prop extends TablesProg p where
 theorem dcF_ibe : "ind_block_to_erec" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dcF_bnh : "basis_name_hit" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dcF_bsh : "block_shape" ∈ dcFns := List.elem_iff.mp (by decide)
-theorem dcF_bts : "block_tables" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dcF_bk : "block_constants" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dcF_bab : "basis_at_block" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dcF_eci : "erec_ci" ∈ dcFns := List.elem_iff.mp (by decide)
@@ -336,7 +337,7 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   obtain ⟨hms, -⟩ := ConRon.Bridge.Inductives.dShape_inv hdP
   obtain ⟨hps4, -, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run bs.members pP.members
     h03.chk.state hdP hms hrun4
-  obtain ⟨h04, hX4⟩ := h03.step hP.leaf dcF_bts h4 hS4 (checkOK_of_pstep h03.chk hps4)
+  obtain ⟨h04, hX4⟩ := h03.step hP.leaf L.Ind.dcF_bts h4 hS4 (checkOK_of_pstep h03.chk hps4)
     hps4.ext hA4.i1
   refine ⟨ts, a4, ?_, ⟨hS4, hg1.trans (hg2.trans (hg3.trans hg4)), ?_⟩, h04,
     hX1.trans (hX2.trans (hX3.trans hX4))⟩
@@ -371,11 +372,6 @@ theorem decRCI_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List Word
     (h : decRCI dn m r ci) : decCI (erecP m) (r.headD 0).toNat = some ci := by
   have h' : decCI (erA (truncM m)) (r.headD 0).toNat = some ci := h
   rwa [truncM_erA] at h'
-
-theorem BlockAt.grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : BlockAt o l b m)
-    (hg : IWGrow m m') : BlockAt o l b m' := by
-  have hb := (decB_decEBlk_of_decCIs (dn := fun _ => none) h.1).grow (decEBlk_mono _ _ _) hg
-  exact ⟨hb.get (decEBlk_mono _ _ _), h.2⟩
 
 /-- The quotient slot word of a record's kind word. -/
 theorem qSlot_eq (w : Word) : qSlot w = UInt64.ofNat (L.Front.quotW w).slot := by

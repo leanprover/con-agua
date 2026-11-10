@@ -205,8 +205,8 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     (by simp [hlen]) (fun j hj => by
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get clen.toNat coff.toNat cs hcsd j hj
       obtain ⟨⟨a', hva, hcv⟩, -⟩ := decCN_some hy
-      obtain ⟨hvlt, hv'⟩ := rec2IwN_trunc hv
-      obtain ⟨hvlt2, hva'⟩ := rec2IwN_trunc hva
+      obtain ⟨hvlt, hv'⟩ := L.Ind.iwN_truncM_some hv
+      obtain ⟨hvlt2, hva'⟩ := L.Ind.iwN_truncM_some hva
       have hj' : j < cs.length := by omega
       have hy' : cs[j] = y := by simpa [List.getElem?_eq_getElem hj'] using hget
       refine ⟨v, a', hv', by omega, hva', ?_⟩

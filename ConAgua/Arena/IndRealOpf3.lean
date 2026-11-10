@@ -7,6 +7,8 @@ import ConAgua.Arena.InstListRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndRealOpf
 import ConAgua.L.WordOff
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 
@@ -40,10 +42,6 @@ theorem wadd_toNat {o : Word} {i : Nat} (h : o.toNat + i < 2 ^ 64) :
 theorem wsub1 {n : Word} (hn : n ≠ 0) : (n - 1).toNat + 1 = n.toNat := by
   have : n.toNat ≠ 0 := fun h => hn (UInt64.toNat_inj.mp (by simpa using h))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-
-theorem SpineR.empty' {m : Mem} {t : Word} (h : t.toNat ≤ (m.arr64 SPN).size) :
-    SpineR m t 0 (([] : List EIdx).toArray) :=
-  ⟨rfl, by simpa using h, fun i hi => absurd hi (by simp), fun i hi => absurd hi (by simp)⟩
 
 /-- A push onto the slice's end. -/
 theorem SpineR.push' {m m' : Mem} {o c x : Word} {acc : Array EIdx} (h : SpineR m o c acc)
@@ -203,7 +201,7 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
     obtain ⟨a1, hrun1, hS1, hg1, hAb1, hspn1, htop1, hlt1⟩ := opfIl_ok hS hAb hsl he h1
     subst hn
     refine ⟨_, _, opfGo_run_zero acc (decE e) i.toNat a a1 _ hrun1, hS1, hg1, hAb1, by rw [hspn1], ?_⟩
-    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, SpineR.empty' ?_, fun w _ => by
+    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => by
       simp only [spW, hspn1]⟩
     rw [hspn1, hcc]; exact hsl.bound
   rw [ite_eq_right hn] at c'
@@ -272,7 +270,7 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     subst hn
     refine ⟨_, _, opa_run_zero (decE e) i.toNat a, hS, IWGrow.refl _, hAb, rfl, ?_⟩
-    exact ⟨rfl, he, rfl, by simp, SpineR.empty' htb, fun w _ => rfl⟩
+    exact ⟨rfl, he, rfl, by simp, L.Arena.SpineR.nil_at _ _ htb, fun w _ => rfl⟩
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : tagW e ≠ 6
@@ -367,7 +365,7 @@ theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : 
   have hK := slice_keep (κ := .expr) hS hrec hlt hlen
   rw [hxs] at hK
   obtain ⟨hS3, hg3, hdec⟩ := hK
-  obtain ⟨hS4, hg4⟩ := stageR_hi hS3 (MemFrame.setCtl m4 136 co) (by simp) (by simp) (by decide)
+  obtain ⟨hS4, hg4⟩ := L.Ind.StageR.frame_hi hS3 (MemFrame.setCtl m4 136 co) (by simp) (by simp) (by decide)
     (by decide)
   have hI4 : (m4.set64 CTL 136 co).arr64 IW = m4.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have ht4 : iwTop (m4.set64 CTL 136 co) = iwTop m4 := by
@@ -419,7 +417,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     omega
   obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
   obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok vis fe K m m1 a k e i co 0 #[] r1
-    h1 hS hAb he (by simpa using SpineR.empty' (m := m) hcob) (by rw [hco]; simp) (by simp; omega)
+    h1 hS hAb he (by simpa using L.Arena.SpineR.nil_at m _ hcob) (by rw [hco]; simp) (by simp; omega)
   have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
   simp only [opfK2] at c'
   rw [show co + 0 = co by simp] at hO1
@@ -433,12 +431,12 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     exact ⟨_, _, hrun, ⟨hS', hg1.trans hg', hdec⟩, hAb'⟩
   | none =>
     rw [ite_eq_left (show r1.headD 0 = 0 from hO1)] at c'
-    obtain ⟨hS1', hg1'⟩ := stageR_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
+    obtain ⟨hS1', hg1'⟩ := L.Ind.StageR.frame_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
       (by decide)
     have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
     have hctl1 : 200 < (m1.arr64 CTL).size := hS1.iw.ctl
     have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
-      rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
+      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
     have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
     obtain ⟨r2, m2, h2, c'⟩ := ntBW_some c'
@@ -452,7 +450,7 @@ theorem opfF_ok (k e i : Word) (he : H e) :
     | none =>
       rw [ite_eq_left (show r2.headD 0 = 0 from hO2)] at c'
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-      obtain ⟨hS3, hg3⟩ := stageR_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
+      obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
         (by decide)
       exact ⟨_, _, hrun, ⟨hS3, hg1.trans (hg1'.trans (hg2.trans hg3)), rfl⟩,
         hAb2.frameD (MemFrame.setCtl m2 136 co) (by decide) (by decide)⟩

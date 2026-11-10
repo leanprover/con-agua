@@ -5,6 +5,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.ErecGrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -55,9 +56,6 @@ theorem erRd_of_erecP {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) :
   obtain ⟨hlt, hget⟩ := erecP_tagRead h
   exact ⟨by simp only [erRd, rdW, hget, Option.getD_some], hlt⟩
 
-theorem erRd_of_erA {m : Mem} {a v : Word} (h : erA m a.toNat = some v) : erRd m a = v :=
-  (erRd_of_erecP h).1
-
 
 /-- An in-bounds `EREC⦃a⦄` read, as the model's `erRd`. -/
 theorem erRd_get (m : Mem) (a : Word) (h : (a &&& 1099511627775).toNat < (m.arr64 (tierA EREC (a >>> 40))).size) :
@@ -86,7 +84,7 @@ theorem erRd_natA {m : Mem} {a : Word} {k : Nat} (h : nat? (erA m) a.toNat = som
     (erRd m a).toNat = k := by
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
-  rw [erRd_of_erA hw]
+  rw [L.Arena.erRd_of _ _ hw]
 
 
 theorem erTop_lt (m : Mem) : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
@@ -97,9 +95,6 @@ theorem erTop_lt (m : Mem) : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_l
 /-- The memory after `erec_put(a, v)`. -/
 def erecPutMem (m : Mem) (a v : Word) : Mem :=
   m.set64 (tierA EREC (a >>> 40)) (a &&& 0xFFFFFFFFFF) v
-
-theorem mask40_toNat (a : Word) : (a &&& 0xFFFFFFFFFF).toNat = a.toNat % 2 ^ 40 := by
-  rw [UInt64.toNat_and]; exact Nat.and_two_pow_sub_one_eq_mod _ 40
 
 theorem tierA_EREC (a : Word) : tierA EREC (a >>> 40) =
     if a.toNat / 2 ^ 40 % 2 = 0 then (EREC : TieredArray) else tier1 EREC := by
@@ -131,7 +126,7 @@ theorem erecPutMem_arr (m : Mem) (a v : Word) (b : TieredArray) :
   unfold erecPutMem
   rw [tierA_EREC, ← erTier]
   by_cases e : b = erTier a
-  · subst e; simp [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, mask40_toNat, erOff, nat_and40]
+  · subst e; simp [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, L.Arena.tag_idx_toNat, erOff, nat_and40]
   · simp [Mem.arr64_set64_ne _ _ _ _ _ e, e]
 
 theorem ctl_ne_erTier (a : Word) : (CTL : TieredArray) ≠ erTier a := by
@@ -201,7 +196,7 @@ theorem erRd_erecPutMem_ne {m : Mem} {a v x : Word} (h : erTier x ≠ erTier a �
       rcases h with h | h
       · exact absurd e h
       · exact h
-    simp only [rdW, Array.getElem?_setIfInBounds, mask40_toNat]
+    simp only [rdW, Array.getElem?_setIfInBounds, L.Arena.tag_idx_toNat]
     rw [ite_eq_right (fun h' => ho (by unfold erOff at h' ⊢; omega))]
   · rfl
 
@@ -213,7 +208,7 @@ theorem erRd_nat {m : Mem} {q : Word} {i v : Nat} (h : nat? (erA m) i = some v) 
     erRd m q = UInt64.ofNat v ∧ v < 2 ^ 64 := by
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
-  exact ⟨by rw [erRd_of_erA (by rw [hi]; exact hw), UInt64.ofNat_toNat], w.toNat_lt⟩
+  exact ⟨by rw [L.Arena.erRd_of _ _ (by rw [hi]; exact hw), UInt64.ofNat_toNat], w.toNat_lt⟩
 
 
 namespace L.Arena
@@ -274,7 +269,7 @@ open L.Arena L.Ind
 theorem erecPutMem_lo (m : Mem) (x v : Word) (h : x.toNat < 2 ^ 40) :
     erecPutMem m x v = m.set64 EREC x v := by
   have hb : x.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h]
-  have hm : x &&& 0xFFFFFFFFFF = x := UInt64.toNat_inj.mp (by rw [mask40_toNat]; exact Nat.mod_eq_of_lt h)
+  have hm : x &&& 0xFFFFFFFFFF = x := UInt64.toNat_inj.mp (by rw [L.Arena.tag_idx_toNat]; exact Nat.mod_eq_of_lt h)
   unfold erecPutMem; rw [tierA_EREC, ite_eq_left hb, hm]
 
 

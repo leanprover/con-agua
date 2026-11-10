@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -98,7 +99,7 @@ theorem instW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
           · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
               rw [decI_tag_forallE_beq e he, he6]; decide
             simp only [ConRon.Arena.instPisWith, htag, ite_true, StateT.run_bind]
-            rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
+            rw [show (decI e : EIdx) = decE e from rfl, L.Arena.viewBind_run, except_ok_bind, hbind]
             simp only [StateT.run_bind]
             rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, hwa_dec, CWF_eq,
               show (0 : Word).toNat = 0 from rfl] at hrun1

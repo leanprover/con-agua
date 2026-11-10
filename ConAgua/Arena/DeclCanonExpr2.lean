@@ -28,10 +28,10 @@ theorem andThen_ok' {A B : AM Bool} {a : AState} {r r1 : Word} {b1 : Bool} {Q : 
   cases b1
   · obtain ⟨hr, hQ⟩ := h0 (by simpa using hr1)
     refine ⟨false, ?_, by simp [hr], hQ⟩
-    simp [StateT.run_bind, hA, exc_ok_bind']; rfl
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind]; rfl
   · obtain ⟨b2, hb2, hr, hQ⟩ := hB (by simp [hr1])
     refine ⟨b2, ?_, hr, hQ⟩
-    simp [StateT.run_bind, hA, exc_ok_bind', hb2]
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind, hb2]
 
 /-- Literals are hash-consed: two handles viewing the same literal are the same handle. -/
 def LitInj (a : AState) : Prop :=
@@ -61,8 +61,8 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.check.arena.base x hne1
     obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.check.arena.base y hne2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ hf
-    rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, exc_ok_bind',
-      StateT.run_bind, view_run _ _ _ hvy, exc_ok_bind']
+    rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, L.Arena.except_ok_bind,
+      StateT.run_bind, view_run _ _ _ hvy, L.Arena.except_ok_bind]
     generalize eViewW m x = ru at *
     generalize eViewW m y = rv at *
     cases vx <;> cases vy <;> simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hrx hry
@@ -299,6 +299,6 @@ theorem canonExprEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option 
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL⟩
+  exact ⟨⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩, hL⟩
 
 end L.Ind

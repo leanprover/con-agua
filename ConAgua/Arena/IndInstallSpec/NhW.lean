@@ -80,13 +80,6 @@ theorem bncK1_some (h : ¬ r.headD 0 = 0)
 end arms
 attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_ov bncK1_some
 
-theorem partsRunOfOk {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM.ok x a) :
-    x.run a = .ok (AM.res x a, AM.st x a) := by
-  unfold AM.ok at h; unfold AM.res AM.st
-  cases hx : x.run a with
-  | error e => rw [hx] at h; cases h
-  | ok v => obtain ⟨v1, v2⟩ := v; rfl
-
 end L.Ind
 
 end

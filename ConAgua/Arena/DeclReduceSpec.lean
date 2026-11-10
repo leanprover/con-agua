@@ -98,14 +98,14 @@ theorem selW_ok {α : Type} {vis : Word} {fe : IFEnv}
     obtain ⟨x, a', hrun, hP⟩ := tail i (.inl rfl) h
     rw [e1] at he
     refine ⟨x, a', ?_, hP⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', he, ite_true,
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, he, ite_true,
       beq_self_eq_true]
     exact hrun
   · rw [ite_eq_right he] at h
     obtain ⟨x, a', hrun, hP⟩ := tail j (.inr rfl) h
     rw [e1] at he
     refine ⟨x, a', ?_, hP⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hbeq, he, decide_false, Bool.false_eq_true,
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, hbeq, he, decide_false, Bool.false_eq_true,
       ite_false]
     exact hrun
 
@@ -373,8 +373,8 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
   have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
     rw [reduceCertVar_eq]
-    rw [show (43 : Nat) = (43 : Word).toNat from rfl, StateT.run_bind, hrun1, exc_ok_bind',
-      StateT.run_bind, hrun2, exc_ok_bind', StateT.run_bind, hrun3, exc_ok_bind']
+    rw [show (43 : Nat) = (43 : Word).toNat from rfl, StateT.run_bind, hrun1, L.Arena.except_ok_bind,
+      StateT.run_bind, hrun2, L.Arena.except_ok_bind, StateT.run_bind, hrun3, L.Arena.except_ok_bind]
     exact hrun4
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS4, hg3.trans hg4, by rw [hres]; rfl⟩

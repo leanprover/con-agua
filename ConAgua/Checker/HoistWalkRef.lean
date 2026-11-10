@@ -5,6 +5,7 @@ import ConAgua.Arena.IndView
 public import ConAgua.Checker.HoistRefBase
 public import ConRon.Arena.Frontend.NatOpGround
 import ConAgua.L.WordOff
+import ConAgua.Checker.HoistIndexRef
 
 @[expose] public section
 
@@ -39,12 +40,7 @@ theorem _root_.L.Arena.MemFrame.set64_bothH {A : List TieredArray} {C : List Wor
     · rw [Mem.arr64_set64_ne _ _ _ _ _ e, Mem.arr64_set64_ne _ _ _ _ _ e, h.arr b' hb' hc]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb), Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hb)]
     exact h.ctl x hx
-  · rw [size_set64, size_set64]; exact h.size b'
-
-theorem mfindG_congr (S : MemoSch) {m₁ m₂ : Mem} (ha : m₂.arr64 S.arr = m₁.arr64 S.arr)
-    (hc : rdW (m₂.arr64 CTL) S.cs = rdW (m₁.arr64 CTL) S.cs) (k1 k2 : Word) :
-    mfindG S m₂ k1 k2 = mfindG S m₁ k1 k2 :=
-  mfindG_eq_of S ha hc k1 k2
+  · rw [L.Mem.size64_set64, L.Mem.size64_set64]; exact h.size b'
 
 /-- `hoist_note` writes `IW` only. -/
 theorem hNoteW_iw {m x : Mem} {w i k tg ws sp sp' : Word} (h : hNoteW m w i k tg ws sp = some (sp', x)) :
@@ -79,7 +75,7 @@ theorem hNoteW_frame {m₁ m₂ x₁ : Mem} {w i k tg ws sp sp' : Word}
     (hf : MemFrame [HSEEN] [73, 74] m₁ m₂) (h : hNoteW m₁ w i k tg ws sp = some (sp', x₁)) :
     ∃ x₂, hNoteW m₂ w i k tg ws sp = some (sp', x₂) ∧ MemFrame [HSEEN] [73, 74] x₁ x₂ := by
   have hfd : mfindG hnSch m₂ w 0 = mfindG hnSch m₁ w 0 :=
-    mfindG_congr _ (hf.arr _ (by decide) (by decide)) (hf.ctl _ (by decide)) _ _
+    L.Arena.mfindG_eq_of _ (hf.arr _ (by decide) (by decide)) (hf.ctl _ (by decide)) _ _
   have hnix : m₂.arr64 HNIX = m₁.arr64 HNIX := hf.arr _ (by decide) (by decide)
   have hiw : m₂.arr64 IW = m₁.arr64 IW := hf.arr _ (by decide) (by decide)
   simp only [hNoteW, hIxW, hfd, hnix] at h ⊢
@@ -729,15 +725,15 @@ theorem hoistDepsOf_ok (n : Nat) :
   obtain ⟨hs₀, hf₀⟩ := seenR_clear hs h0
   have hA₀ := frame_ext' hf₀ hA
   have hDe : (mclearG hsSch m).arr64 DECL = m.arr64 DECL := hf₀.1 _ (by decide) (by decide)
-  have e0 := rdW_dw0 (m.arr64 DECL) r hr
+  have e0 := L.Checker.rdW_dw0 (m.arr64 DECL) r hr
   have e2 : rdW (m.arr64 DECL) (1 + 8 * r + 2) = dw (m.arr64 DECL) r.toNat 2 :=
-    rdW_dw (m.arr64 DECL) r 2 hr (by decide)
+    L.Checker.rdW_dw (m.arr64 DECL) r 2 hr (by decide)
   have e3 : rdW (m.arr64 DECL) (1 + 8 * r + 3) = dw (m.arr64 DECL) r.toNat 3 :=
-    rdW_dw (m.arr64 DECL) r 3 hr (by decide)
+    L.Checker.rdW_dw (m.arr64 DECL) r 3 hr (by decide)
   have e4 : rdW (m.arr64 DECL) (1 + 8 * r + 4) = dw (m.arr64 DECL) r.toNat 4 :=
-    rdW_dw (m.arr64 DECL) r 4 hr (by decide)
+    L.Checker.rdW_dw (m.arr64 DECL) r 4 hr (by decide)
   have e5 : rdW (m.arr64 DECL) (1 + 8 * r + 5) = dw (m.arr64 DECL) r.toNat 5 :=
-    rdW_dw (m.arr64 DECL) r 5 hr (by decide)
+    L.Checker.rdW_dw (m.arr64 DECL) r 5 hr (by decide)
   rw [hDepsOfW.eq_def] at hb
   simp only [h0, ite_false, hDe, e0, e2, e3, e4] at hb
   -- the kinds

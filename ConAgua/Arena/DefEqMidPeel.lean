@@ -13,6 +13,8 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.DefEq
 import ConAgua.L.WordOff
+import ConAgua.Arena.InferBodyIntern
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -55,9 +57,6 @@ theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty w : Word) (m'
     (hI : fvinternW m u ty = some (w, m')) : HW w := by
   exact consInternM_lt fvarCS_wf hR hI
 
-theorem peel_keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
-  simp only [internE]; exact keeps_cpl_internNodeE _
-
 /-- **`intern_fvar` as a run under `CoreS`**: the twin's `internE (.fvar u ty)`, the relation at
 the same maps, the stack and `CTL[136]` untouched, a handle word. -/
 theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
@@ -72,7 +71,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
   have hf := fvinternW_frame _ _ _ _ _ hI
   have hrun := AM.run_of_ok _ _ hok
   have hS' : CoreS dn s'.mem _ vis fe M eb :=
-    hS.arena_frame hD (Keeps.run (peel_keeps_cpl_internFVar _ _) hrun) hf
+    hS.arena_frame hD (Keeps.run (L.Arena.keeps_cpl_internFVar _ _) hrun) hf
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
@@ -97,13 +96,6 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
 `WhnfCoreProj.lean`'s `GrowRefP` with its lemmas, restated here (that file and `DefEqLeaves.lean`
 both defined `lsNodeW_viewLen`, so they could not be imported together; DefEqLeaves' copy is now `defeq_lsNodeW_viewLen`). -/
 
-theorem StackGrew.trans' {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
-    StackGrew m₁ m₃ :=
-  h₁.trans h₂
-
-theorem StackKept.toGrew' {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  h.toGrew
-
 /-- `CoreRef` with the stack grown (`StackGrew`) instead of kept. -/
 def GrowRefP {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
@@ -125,7 +117,7 @@ theorem growRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
   have hT : (T₁ >>= f).run a₀ = (f (dec₁ r₁)).run (AM.st T₁ a₀) := by
     rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
-  exact ⟨hok, hst ▸ ⟨M'', hS'', hK.trans hK'', hSt.trans' hSt''⟩, hres.trans hres2, hrw2⟩
+  exact ⟨hok, hst ▸ ⟨M'', hS'', hK.trans hK'', hSt.trans hSt''⟩, hres.trans hres2, hrw2⟩
 
 /-! ## `peel_leaf` -/
 
@@ -256,26 +248,6 @@ theorem pd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
 
 /-! ## `e_view` runs -/
 
-theorem eViewW_lam (m : Mem) (h : Word) (hg : tagW h = 5) (hne : L.Ind.eViewW m h ≠ []) :
-    viewOK m h LAM ∧ L.Ind.eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
-      tfld m LAM (tierW h) (idxW h) 1, 0] := by
-  unfold L.Ind.eViewW at hne ⊢
-  have h1 : ¬ (4294967295 : Word) < h := fun c => by simp [c] at hne
-  simp only [h1, ite_false] at hne ⊢
-  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [hs] at hne
-  simp only [hs, ite_false] at hne ⊢
-  have n0 : ¬ tagW h = 0 := by rw [hg]; decide
-  have n1 : ¬ tagW h = 1 := by rw [hg]; decide
-  have n2 : ¬ tagW h = 2 := by rw [hg]; decide
-  have n3 : ¬ tagW h = 3 := by rw [hg]; decide
-  have n4 : ¬ tagW h = 4 := by rw [hg]; decide
-  simp only [hg, ite_true] at hne ⊢
-  by_cases c : tcnt m LAM (tierW h) ≤ idxW h
-  · simp [c] at hne
-  simp only [c, ite_false]
-  exact ⟨⟨hs, by simpa using c⟩, rfl⟩
-
 /-- **A run of `e_view` at a `∀`**: the memory kept, the binder's two words, the twin's
 `viewBind`. -/
 theorem eView_forall_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
@@ -301,7 +273,7 @@ theorem eView_lam_callW {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {
       a.store.viewBind (decE h) = some (decE (r.tail.headD 0), decE (r.tail.tail.headD 0)) := by
   obtain ⟨s', hm, rfl, hne, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Ind.eView_spec p hp n ⟨m, Locals.init []⟩ h) hc
-  obtain ⟨hv, hw⟩ := eViewW_lam m h hg (hr ▸ hne)
+  obtain ⟨hv, hw⟩ := L.Ind.eViewW_lam m h hg (hr ▸ hne)
   rw [hw] at hr
   subst hr
   obtain ⟨-, h1, h2⟩ := view_lam m a hR h hh hv hg
@@ -373,7 +345,7 @@ theorem ps2_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   have hT : (peelStep2T (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE b) k.toNat fvs).run a₀ =
       (peelDomT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE da) (decE (r₁.tail.headD 0)) k.toNat fvs
         >>= fun x => pure (x.1, x.2, decE (r₁.tail.tail.headD 0))).run a₀ := by
-    simp only [peelStep2T, StateT.run_bind, viewBind_run', hvb, except_ok_bind]
+    simp only [peelStep2T, StateT.run_bind, L.Arena.viewBind_run, hvb, except_ok_bind]
   refine RefE.of_run_eq hT ?_
   have H := pd_ref p hil k' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb
     mode d da _ k fo hs hda hw1 fvs hx hdk
@@ -410,7 +382,7 @@ theorem ps_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
   have hT : (peelStepT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b) k.toNat fvs).run a₀ =
       (peelStep2T (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE (r₁.tail.headD 0)) (decE b) k.toNat fvs
         >>= fun y => pure (y.1, y.2.1, decE (r₁.tail.tail.headD 0), y.2.2)).run a₀ := by
-    simp only [peelStepT, StateT.run_bind, viewBind_run', hva, except_ok_bind]
+    simp only [peelStepT, StateT.run_bind, L.Arena.viewBind_run, hva, except_ok_bind]
   refine RefE.of_run_eq hT ?_
   have H := ps2_ref p hp hil k' (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb
     mode d _ b k fo hs hw1 hb hgb fvs hx hdk
@@ -431,14 +403,6 @@ theorem peelStep_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : 
     (ps_ref p hp hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d a b k fo hs ha hb hga hgb fvs hx hdk)
 
 /-! ## `peel_push` -/
-
-/-- A slice survives a change that leaves the stack array alone. -/
-theorem SpineR.of_spnP {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
-    (hs : m'.arr64 SPN = m.arr64 SPN) : SpineR m' off cnt xs := by
-  obtain ⟨h1, h2, h3, h4⟩ := h
-  refine ⟨h1, by rw [hs]; exact h2, fun i hi => ?_, fun i hi => ?_⟩
-  · simp only [spW, hs] at h3 ⊢; exact h3 i hi
-  · simp only [spW, hs] at h4 ⊢; exact h4 i hi
 
 /-- The model of `peel_push` past `intern_fvar`'s run: the word at `fo + k`, the top at
 `fo + k + 1`. -/
@@ -509,14 +473,14 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       rw [← hm]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
     have htop : spTop s'.mem = fo + k + 1 := by
       rw [← hm]; unfold spTop
-      rw [rdW_set64L, ite_eq_left ⟨rfl, rfl, by rw [size_set64L]; exact hb2⟩]
+      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact hb2⟩]
     have hk1' : (k + 1).toNat = k.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; have := hx.fit; omega
     refine ⟨⟨hok, ⟨M₁, hS₂, hK₁, ?_⟩, by rw [hres, decH, hr]; rfl, by unfold ResH; rw [← hr]; exact hw⟩,
-      ⟨by rw [← hr]; exact hpush.of_spnP hspn', by rw [htop, UInt64.add_assoc], by rw [hk1']; omega⟩⟩
+      ⟨by rw [← hr]; exact hpush.of_spn hspn', by rw [htop, UInt64.add_assoc], by rw [hk1']; omega⟩⟩
     -- the stack grew
     have hsz : (s'.mem.arr64 SPN).size = (m.arr64 SPN).size := by
-      rw [hspn', size_set64L]; exact hst₁.size
+      rw [hspn', L.Mem.size64_set64]; exact hst₁.size
     refine ⟨?_, hsz, fun i hi => ?_, hst₁.bstk.trans (BKept.of_frame hfr (by decide) (by decide)),
       hst₁.pool.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩
     · rw [htop, hx.top, UInt64.le_iff_toNat_le]
@@ -524,7 +488,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
       have := hx.fit; omega
     · have hi' : i ≠ fo + k := fun h => by rw [h, ← hx.top] at hi; exact absurd hi (by simp)
       unfold spW
-      rw [hspn', rdW_set64L, ite_eq_right (fun h => hi' h.2.1.symm)]
+      rw [hspn', L.Arena.rdW_set64, ite_eq_right (fun h => hi' h.2.1.symm)]
       exact hst₁.below i hi
   · cases hW
 
@@ -532,7 +496,7 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
 
 theorem viewBind_bind_run {β : Type} (h : EIdx) (f : Option (EIdx × EIdx) → AM β) (s : AState) :
     (viewBind h >>= f).run s = (f (s.store.viewBind h)).run s := by
-  simp only [StateT.run_bind, viewBind_run', except_ok_bind]
+  simp only [StateT.run_bind, L.Arena.viewBind_run, except_ok_bind]
 
 /-- One level of the twin's `defeqPeel`, verbatim, the recursive call abstracted as `cont` (the
 equation compiler cannot produce `defeqPeel`'s unfolding lemma in its heartbeat budget; con-ron's
@@ -826,9 +790,9 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
       fe M eb mode d ty1 ty2 hF hn hs h1 h2) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
   dsimp only [dbE.k_defeq]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_f h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
-  rw [ite_eq_right h0, decBool_t h0]
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   have hso : rdW (m₁.arr64 CTL) 136 = spTop m₁ := rfl
   rw [hso]

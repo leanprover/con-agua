@@ -143,7 +143,7 @@ theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r :
         subst h
         have hrd : erRd m (rdW (m.arr64 IW) cgo) = wn := by
           rw [hpn'.1]
-          exact erRd_of_erA (by rw [UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hwn1)
+          exact L.Arena.erRd_of _ _ (by rw [UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hwn1)
         rw [hrd, hcrOf, ite_eq_left (hxv.mp hvt)]
         refine ⟨fun e => by simp at e, fun nm hnm => ?_⟩
         simp only [Option.some.injEq] at hnm

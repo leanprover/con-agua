@@ -29,7 +29,7 @@ theorem coreRef_true {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
     CoreRef (pure true : AM Bool) a decBool dn m vis fe M eb r m' := by
   obtain ⟨hr, hm⟩ := some_pair_inj hW
   rw [← hm]
-  exact coreRef_pure hS rfl (decBool_true_of (by rw [← hr]; decide)).symm
+  exact coreRef_pure hS rfl (L.Arena.decBool_true_of (by rw [← hr]; decide)).symm
     (by unfold ResH; rw [← hr]; exact hw1)
 
 /-- **What the stuck side's errors claim from**: the knot's slots, `proof_irrel`'s claim and
@@ -65,8 +65,8 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
   dsimp only [siE.k_struct_eta_cert]
   by_cases g1 : r₁.headD 0 ≠ 0
-  · rw [ite_eq_left g1, decBool_true_of g1]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
-  rw [ite_eq_right g1, decBool_false_of (by simpa using g1)]
+  · rw [ite_eq_left g1, L.Arena.decBool_true_of g1]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
+  rw [ite_eq_right g1, L.Arena.decBool_false_of (by simpa using g1)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.set.mono (by omega))
     (sec_ref p hq hi hc k (hk.mono (by omega)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
@@ -74,8 +74,8 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (fun r₂ m₂ _ _ M₂ hS₂ _ => ?_)
   dsimp only [siE.k_struct_eta_cert_2]
   by_cases g2 : r₂.headD 0 ≠ 0
-  · rw [ite_eq_left g2, decBool_true_of g2]; exact RefE.ret rfl (CorePost.ret hS₂ rfl hw1)
-  rw [ite_eq_right g2, decBool_false_of (by simpa using g2)]
+  · rw [ite_eq_left g2, L.Arena.decBool_true_of g2]; exact RefE.ret rfl (CorePost.ret hS₂ rfl hw1)
+  rw [ite_eq_right g2, L.Arena.decBool_false_of (by simpa using g2)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_coreE (w := id) (fun _ => rfl) (fun hG => hG.knot.mono (by omega))
     (suc_ref p hq hc k (hk.mono (by omega)) F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d
@@ -83,8 +83,8 @@ theorem si_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (fun r₃ m₃ _ _ M₃ hS₃ _ => ?_)
   dsimp only [siE.k_struct_unit_cert]
   by_cases g3 : r₃.headD 0 ≠ 0
-  · rw [ite_eq_left g3, decBool_true_of g3]; exact RefE.ret rfl (CorePost.ret hS₃ rfl hw1)
-  rw [ite_eq_right g3, decBool_false_of (by simpa using g3)]
+  · rw [ite_eq_left g3, L.Arena.decBool_true_of g3]; exact RefE.ret rfl (CorePost.ret hS₃ rfl hw1)
+  rw [ite_eq_right g3, L.Arena.decBool_false_of (by simpa using g3)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [← bind_pure (proofIrrel _ _ _ _ _)]
   exact RefE.bind_callE (fun _ => rfl) (proofIrrel_at p hc (k + 1) hk F hF hn ⟨m₃, Locals.init []⟩ _ dn vis fe

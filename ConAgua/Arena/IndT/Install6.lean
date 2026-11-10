@@ -183,7 +183,7 @@ theorem iac_ref (hP : AbsProg p) (ctx isP : Word) (c : NestCtx) (b : Bool) (hb :
   have hdoT : decKE (truncM m) qo = some (ks, e) := hdo
   simp only [decKE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hdoT
   obtain ⟨-, -, ee, hee, -, rfl⟩ := hdoT
-  obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
+  obtain ⟨heelt, hee'⟩ := L.Ind.iwH_truncM_some hee
   obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat qo) (k := 2) (by rw [hqo']; exact hee')
     hS.iw.iwSize
   rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew

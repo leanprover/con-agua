@@ -7,6 +7,7 @@ import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.DefEqStuckGo
 import all ConAgua.Arena.WhnfM2C
 public import ConAgua.Arena.WhnfM2CRefine2
+import ConAgua.Arena.WhnfDeltaRefine
 
 @[expose] public section
 
@@ -88,12 +89,12 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   · rw [m2cEta2E.k_tower_slots_all.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g3]
     have hn : ¬ (l.contains (decI T) = false ∧ l.contains caps.etaCtor = false ∧
         towerSlotsAll fe (decI T) caps.etaFields = true) := fun e => by
-      have e3 := e.2.2; rw [hef, ht3, decBool_f_m2c g3] at e3; exact Bool.false_ne_true e3
+      have e3 := e.2.2; rw [hef, ht3, L.Arena.decBool_false_of g3] at e3; exact Bool.false_ne_true e3
     exact RefE.ret (by rw [ite_eq_right hn]; rfl) hA3
   rw [m2cEta2E.k_tower_slots_all.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g3]
   have hcond : l.contains (decI T) = false ∧ l.contains caps.etaCtor = false ∧
       towerSlotsAll fe (decI T) caps.etaFields = true :=
-    ⟨by rw [hcT, g1']; rfl, by rw [hecE, hcE, g2']; rfl, by rw [hef, ht3, decBool_t_m2c g3]⟩
+    ⟨by rw [hcT, g1']; rfl, by rw [hecE, hcE, g2']; rfl, by rw [hef, ht3, L.Arena.decBool_true_of g3]⟩
   rw [ite_eq_left hcond]
   -- `former_never_zero_at`
   have hks : ∃ ks, cvT.levelParams.mapM (denoteN a.store.ns) = some ks := by
@@ -113,10 +114,10 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     ⟨CoreAfter.toG ⟨M4, hS4, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
   by_cases g4 : r4.headD 0 = 0
   · rw [m2cEta2E.k_former_never_zero_at.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g4]
-    simp only [decBool_f_m2c g4, Bool.false_eq_true, ↓reduceIte]
+    simp only [L.Arena.decBool_false_of g4, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl hA4
   rw [m2cEta2E.k_former_never_zero_at.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4]
-  simp only [decBool_t_m2c g4, ↓reduceIte]
+  simp only [L.Arena.decBool_true_of g4, ↓reduceIte]
   have hspn := hS.spn
   have hSt34 := hSt3.trans hSt4
   have hsp4 : SpineR m4 to tn targs.toArray :=
@@ -147,10 +148,10 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     hp.internConst' (N' + 1) m5 _ hS5.arena ec ust hec hus r6 m6 c6
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
-  have hS6 := hS5.of_const' hD6 (Keeps.run (keeps_cpl_internConst' _ _) hrun6) hfr6 hrun6 (by
+  have hS6 := hS5.of_const hD6 (Keeps.run (L.Arena.keeps_cpl_internConst _ _) hrun6) hfr6 hrun6 (by
     obtain ⟨x, c, hx⟩ := hvus4
     exact hS5.den.constLs _ _ _ (etaFabArgsE_fwd hrun5 x _ (.inr ⟨_, _, rfl⟩) hx))
-  have hsp6 := hsp5.of_spn_core (const_spn hfr6)
+  have hsp6 := hsp5.of_spn (const_spn hfr6)
   rcases c7 : callW p (N' + 1) "mk_app_n" [r6.headD 0, r5.headD 0, r5.tail.headD 0] m6 with _ | ⟨r7, m7⟩
   · rw [liftE_none, m2cEta2E.k_mk_app_n.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, m2cEta2E.k_mk_app_n.arm1]
@@ -167,15 +168,15 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) ⟨m7, Locals.init []⟩ _ dn vis fe M5 eb d (r7.headD 0)
       major hS7 hh7 hmaj) c8
   have hA8 : CoreAfterG dn m4 m8 _ vis fe M4 eb :=
-    ⟨M8, hS8, hK5.trans hK8, hg5.trans ((StackKept.of_constF hfr6).trans
+    ⟨M8, hS8, hK5.trans hK8, hg5.trans ((L.Arena.StackKept.of_const_frame hfr6).trans
       ((StackKept.of_app_frame hfr7).trans hSt8)).toGrew⟩
   refine RefE.bind_right hrun5 (RefE.bind_right hrun6 (RefE.bind_right hrun7 (RefE.bind_right hrun8 ?_)))
   by_cases g8 : r8.headD 0 = 0
   · rw [m2cEta2E.k_fab_scope_ok.arm1 _ _ _ _ _ g8]
-    simp only [decBool_f_m2c g8, Bool.false_eq_true, ↓reduceIte]
+    simp only [L.Arena.decBool_false_of g8, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl ⟨hA8, rfl, hmaj⟩
   · rw [m2cEta2E.k_fab_scope_ok.arm2 _ _ _ _ _ g8]
-    simp only [decBool_t_m2c g8, ↓reduceIte]
+    simp only [L.Arena.decBool_true_of g8, ↓reduceIte]
     exact RefE.ret rfl ⟨hA8, rfl, hh7⟩
 
 include hE in

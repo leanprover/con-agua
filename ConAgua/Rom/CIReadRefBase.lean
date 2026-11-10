@@ -265,7 +265,7 @@ theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨-, rfl⟩ := hw
     refine ⟨fun _ => ?_, fun h' => absurd e h'⟩
-    simp only [erAllocMem, e, ite_true, erecTop1, rdW_set64E]; simp
+    simp only [erAllocMem, e, ite_true, erecTop1, L.Arena.rdW_set64]; simp
   · rename_i e
     dsimp only at hw
     split at hw; · cases hw
@@ -273,7 +273,7 @@ theorem erAllocW_other {m m' : Mem} {k o : Word} (hw : erAllocW m k = some (o, m
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨-, rfl⟩ := hw
     refine ⟨fun h' => absurd h' e, fun _ => ?_⟩
-    simp only [erAllocMem, e, ite_false, erTop, rdW_set64E]; simp
+    simp only [erAllocMem, e, ite_false, erTop, L.Arena.rdW_set64]; simp
 
 /-- `erec_alloc(k)`: the flag tier's top raised by `k`, the address its old top. -/
 theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
@@ -297,7 +297,7 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k 
     · have := htier.2 e; simp only [this, ite_true, e] at hoff htop ⊢; omega
     · have : ¬ o.toNat / 2 ^ 40 % 2 = 0 := fun h' => e (htier.1 h')
       simp only [this, ite_false, e] at hoff htop ⊢; omega
-  refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
+  refine ⟨⟨L.Arena.ArenaD.frameHi hf (by simp) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp) (by simp [RciC])), h.grow.trans hgI, hok', h200.trans h.top,
     h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hT.1, hT.2, hE, hE1, hI, h200, hg.ext,
     fun i hi => ?_⟩
@@ -344,7 +344,7 @@ theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = 
   have h130 : erecTop1 (allocMem m k) = erecTop1 m := by simp only [erecTop1]; rw [hf.ctl 130 (by simp)]
   have h1 : rdW ((allocMem m k).arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := hf.ctl 1 (by simp)
   have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
-  refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
+  refine ⟨⟨L.Arena.ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top],
     h.mode.frame hf (by decide) (by decide), by rw [h1]; exact h.fl⟩, hqi, htop, hI,
     by simp only [erT, h1, h129, h130], erecP_frame hf (by simp [EREC, IW]) (by simp [EREC, IW]) (by simp) (by simp)⟩
@@ -360,7 +360,7 @@ theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ 
   have hf := MemFrame.set64 m IW (by decide) i w
   have hC : (m.set64 IW i w).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have h200 : iwTop (m.set64 IW i w) = iwTop m := by simp only [iwTop, hC]
-  refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
+  refine ⟨⟨L.Arena.ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
     h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_, h200.trans h.top,
     h.mode.frame hf (by simp) (by simp), by rw [hC]; exact h.fl⟩, (erT_congr hC).1,
     erecP_frame hf (by simp [EREC, IW]) (by simp [EREC, IW]) (by simp) (by simp)⟩

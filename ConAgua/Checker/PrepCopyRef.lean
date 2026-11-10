@@ -63,7 +63,7 @@ theorem pCopyRec_ok (t q i : Word) (n : Nat) : ∀ (m m' : Mem) (k z : Word), k.
       rw [word_le] at h8
       have h8' : (8 : Word).toNat = 8 := rfl
       have hk1 := @L.toNat_add_one_of_lt k (by omega)
-      have hs1 := size_set64 m IW IW (t + 8 * i + k) (rdW (m.arr64 DECL) (q + k))
+      have hs1 := L.Mem.size64_set64 m IW IW (t + 8 * i + k) (rdW (m.arr64 DECL) (q + k))
       obtain ⟨hf, hr⟩ := ih _ _ (k + 1) z (by omega) (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(MemFrame.set64 m IW (by decide) _ _).trans hf, fun x => ?_⟩
       have hD : ((m.set64 IW (t + 8 * i + k) (rdW (m.arr64 DECL) (q + k))).arr64 DECL) = m.arr64 DECL :=
@@ -100,7 +100,7 @@ theorem pBackRec_ok (t i : Word) (n : Nat) : ∀ (m m' : Mem) (k z : Word), k.to
       rw [word_le] at h8
       have h8' : (8 : Word).toNat = 8 := rfl
       have hk1 := @L.toNat_add_one_of_lt k (by omega)
-      have hs1 := size_set64 m DECL DECL (1 + 8 * i + k) (rdW (m.arr64 IW) (t + 8 * i + k))
+      have hs1 := L.Mem.size64_set64 m DECL DECL (1 + 8 * i + k) (rdW (m.arr64 IW) (t + 8 * i + k))
       obtain ⟨hf, hr⟩ := ih _ _ (k + 1) z (by omega) (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(MemFrame.set64 m DECL (by decide) _ _).trans hf, fun x => ?_⟩
       have hD : ((m.set64 DECL (1 + 8 * i + k) (rdW (m.arr64 IW) (t + 8 * i + k))).arr64 IW) = m.arr64 IW :=

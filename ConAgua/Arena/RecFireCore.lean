@@ -12,6 +12,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.InstLPLevel
 public import ConAgua.Arena.WhnfIota
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -64,7 +65,7 @@ theorem stackPut_core {m₀ m₁ : Mem} {a : AState} {b h : Word} (hS : CoreS dn
 theorem hslice_cons {k : IdxKind} {b : Array Word} {o : Word} {j : Nat} {x : Idx k}
     {xs : List (Idx k)} (h : hslice? (aread b) o.toNat (j + 1) = some (x :: xs)) :
     ∃ w : Word, HW w ∧ x = decI w ∧ rdW b o = w ∧ hslice? (aread b) (o.toNat + 1) j = some xs := by
-  rw [lp_hslice_succ] at h
+  rw [L.Ind.hslice?_succ] at h
   simp only [Option.bind_eq_bind] at h
   cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
   | none => simp [e] at h
@@ -88,7 +89,7 @@ theorem hslice_nil {k : IdxKind} {b : Array Word} {o l : Word}
     (h : hslice? (aread b) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
   rcases hk : l.toNat with _ | j
   · exact UInt64.toNat_inj.mp (by simpa using hk)
-  · rw [hk, lp_hslice_succ] at h
+  · rw [hk, L.Ind.hslice?_succ] at h
     simp only [Option.bind_eq_bind] at h
     cases e : (hd? (aread b) o.toNat : Option (Idx k)) with
     | none => simp [e] at h
@@ -102,7 +103,7 @@ theorem hslice_consE {k : IdxKind} {m : Mem} {o : Word} {j : Nat} {x : Idx k}
     {xs : List (Idx k)} (h : hslice? (erecP m) o.toNat (j + 1) = some (x :: xs)) :
     ∃ w : Word, HW w ∧ x = decI w ∧ rdW (m.arr64 (tierA EREC (o >>> 40))) (o &&& 1099511627775) = w ∧
       hslice? (erecP m) (o.toNat + 1) j = some xs := by
-  rw [lp_hslice_succ] at h
+  rw [L.Ind.hslice?_succ] at h
   simp only [Option.bind_eq_bind] at h
   cases e : (hd? (erecP m) o.toNat : Option (Idx k)) with
   | none => simp [e] at h
@@ -126,7 +127,7 @@ theorem hslice_nilE {k : IdxKind} {m : Mem} {o l : Word}
     (h : hslice? (erecP m) o.toNat l.toNat = some ([] : List (Idx k))) : l = 0 := by
   rcases hk : l.toNat with _ | j
   · exact UInt64.toNat_inj.mp (by simpa using hk)
-  · rw [hk, lp_hslice_succ] at h
+  · rw [hk, L.Ind.hslice?_succ] at h
     simp only [Option.bind_eq_bind] at h
     cases e : (hd? (erecP m) o.toNat : Option (Idx k)) with
     | none => simp [e] at h
@@ -400,7 +401,7 @@ theorem rflTail_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
   intro n s₀ a₀ dn vis fe MM eb fk fvo fvc po pc us qo qc rl lps cvjLps hS hus hlps hks hfc
   cases n with
-  | zero => exact CoreSpec.zeroW hL.rec_fire_levels _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hL.rec_fire_levels _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   obtain ⟨ks, hks⟩ := hks
   apply L.M.triple_of_run
@@ -448,7 +449,7 @@ theorem recFireLevelsOK_of (p : Prog) (hL : LsProg p) : RecFireLevelsOK p := by
       simp only [spW]
       exact hbel₁ i (by rw [hb]; exact UInt64.lt_iff_toNat_lt.mp hi))
   -- the twin's two readbacks
-  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run lps a₀ ks hks hS.den.readN
+  obtain ⟨X, hX, hcX⟩ := L.Arena.readNamesM_run' lps a₀ ks hks hS.den.readN
   obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a₀ with caches := { a₀.caches with readNC := X } }
     (decI us) vs hdus (by exact hS.readLs)
   have hS₂ := CoreS.readCaches hS₁ X Y (by exact hcY) hcX

@@ -35,9 +35,6 @@ structure NatTyProg (p : Prog) : Prop extends NatGuardProg p where
   lNatOpStoredOk : p.lookup "nat_op_stored_ok" = some natOpStoredOkL
   lNatOpStoredOkAll : p.lookup "nat_op_stored_ok_all" = some natOpStoredOkAllL
 
-theorem rd64_eq_rdW (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
-  simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
-
 section ty
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -106,7 +103,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg4, by simp [decW0B]⟩
-      simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
+      simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, L.Arena.except_ok_bind,
         hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_true hee]
       rfl
     · rw [ite_eq_right hee] at hw
@@ -126,7 +123,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨false, a4, ?_, hS4, hg4, by simp [decW0B]⟩
-        simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
+        simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, L.Arena.except_ok_bind,
           hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, hf]
         rfl
       | some ci =>
@@ -159,7 +156,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
           have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
           simp only [hrd, hr7']
           refine ⟨decide (wt = pinW m6 54), a4, ?_, hS6, hg4.trans hg6, ?_⟩
-          · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
+          · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, L.Arena.except_ok_bind,
               hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, ite_false, hf,
               sortOne, pinSortOne_run hF6, hisE, hty, decI_beq _ _ hlt hp54]
             rfl
@@ -174,7 +171,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
             · rfl
             · exact absurd (hiff.mpr h) hl
           refine ⟨false, a4, ?_, hS6, hg4.trans hg6, by simp [decW0B]⟩
-          simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
+          simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, L.Arena.except_ok_bind,
             hcond, decide_eq_true hP, ite_true, boolName_eq, e3, hrun4, hne, decide_eq_false hee, Bool.false_eq_true, ite_false, hf,
             sortOne, pinSortOne_run hF6, hisE]
           rfl
@@ -201,7 +198,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
     have hbeq : ((decI e : EIdx) == x4) = decide (e = r4.headD 0) := by
       rw [← hx4]; exact decI_beq _ _ he hx4l
     refine ⟨decide (e = r4.headD 0), a4, ?_, hS4, hg4, ?_⟩
-    · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, exc_ok_bind',
+    · simp only [natOpCod, natBeqName_eq, natBleName_eq, StateT.run_bind, e1, e2, L.Arena.except_ok_bind,
         hcond, decide_eq_false hP, Bool.false_eq_true, ite_false, pinNat_eq, e3, hrun4, hbeq]
       rfl
     · simp only [decW0B, List.headD_cons]
@@ -276,7 +273,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a2, ?_, hS2, hg2, by simp [decW0B]⟩
-    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
       hbeqc, htag, decide_eq_false h6]
     by_cases hcp : c = pr.headD 0
     · simp [hcp]; rfl
@@ -299,12 +296,12 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
-    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
       hbeqc, htag, decide_eq_true h6, ite_true]
     by_cases hcp : c = pr.headD 0
-    · simp only [decide_eq_true hcp, ite_true, StateT.run_bind, hrun4', exc_ok_bind']
+    · simp only [decide_eq_true hcp, ite_true, StateT.run_bind, hrun4', L.Arena.except_ok_bind]
       cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
-    · simp only [decide_eq_false hcp, Bool.false_eq_true, ite_false, StateT.run_bind, hrun4', exc_ok_bind']
+    · simp only [decide_eq_false hcp, Bool.false_eq_true, ite_false, StateT.run_bind, hrun4', L.Arena.except_ok_bind]
       cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
   refine Or.elim (viewR_forall hvr) ?_ hnonf
   rintro ⟨hrv6, dom, body, hvv, hd0, hdom, hb0, hbody⟩
@@ -327,13 +324,13 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
         (rv.tail.tail.headD 0) k m4 a4 rr m5 ⟨hS4, hc, hb0⟩ h5
       refine ⟨x5, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simpa [decW0B] using hx5⟩
       have hrun5 : (natOpCod fe (decI c) body).run a4 = .ok (x5, a5) := by rw [← hbody]; exact hrun5
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_true hdc, ite_true, hrun5]
     · rw [ite_eq_left (by simpa using hdc)] at hw
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_false hdc, Bool.false_eq_true, ite_false]
       rfl
   · rw [ite_eq_right hcp] at hw
@@ -348,7 +345,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
         ite_false, ← hbody, htagb, decide_eq_false hb6]
       rfl
@@ -369,7 +366,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
         ite_false, htagb, decide_eq_true hb6, ← hbody, hrun5]
       cases vv2 <;> first | rfl | (exfalso; exact hnf _ _ rfl)
@@ -392,7 +389,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
         (rv2.tail.tail.headD 0) k m5 a5 rr m6 ⟨hS5, hc, hb02⟩ h6'
       refine ⟨x6, a6, ?_, hS6, hg02.trans (hg4.trans (hg5.trans hg6)), by simpa [decW0B] using hx6⟩
       have hrun6' : (natOpCod fe (decI c) body2).run a5 = .ok (x6, a6) := by rw [← hbody2]; exact hrun6
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
         ite_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2,
         decide_eq_true hdd.1, decide_eq_true hdd.2, Bool.and_self, ite_true, hrun6']
@@ -402,7 +399,7 @@ theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
       simp only [Option.some.injEq, Prod.mk.injEq] at hw
       obtain ⟨rfl, rfl⟩ := hw
       refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
-      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hrun2, natPredName_eq, e3,
         hbeqc, htag, decide_eq_true h6, ite_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
         ite_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2]
       simp only [Bool.and_eq_true, decide_eq_true_eq]
@@ -548,7 +545,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
       obtain ⟨rfl, rfl⟩ := hw
       have hx : x1 = false := by have := hx1.1; rw [hz] at this; simpa using this.symm
       refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.false_eq_true, ite_false]
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, Bool.false_eq_true, ite_false]
       rfl
     · rw [ite_eq_right hz] at hw
       have hx : x1 = true := by
@@ -565,7 +562,7 @@ theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
         have := hg1.iw; rw [ho1]; omega
       obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
       refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩
-      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, ite_true]
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, ite_true]
       exact hrun2
 
 @[refines ConRon.Arena.natOpStoredOkAll]

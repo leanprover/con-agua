@@ -43,7 +43,7 @@ theorem CidPost.pre {dn : NIdx → Option ConLeche.Name} {m m₁ m' : Mem} {w : 
   ⟨h.stage, h.core, hg.trans h.grow, h.ind⟩
 
 /-- A block at an `EREC` slice stays there as the pools grow. -/
-theorem blockAt_grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : BlockAt o l b m)
+theorem BlockAt.grow {o l : Word} {b : List IConstantInfo} {m m' : Mem} (h : BlockAt o l b m)
     (hg : IWGrow m m') : BlockAt o l b m' := by
   have hb := (decB_decEBlk_of_decCIs (dn := fun _ => none) h.1).grow (decEBlk_mono _ _ _) hg
   exact ⟨hb.get (decEBlk_mono _ _ _), h.2⟩

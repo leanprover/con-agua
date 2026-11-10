@@ -38,20 +38,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem SlR.congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) :
-    ∀ {o l : Word} {ws : List Word}, SlR m o l ws → SlR m' o l ws
-  | _, _, _, .nil => .nil
-  | o, _, _, .cons hl h => by
-    have := SlR.cons (m := m') (o := o) hl (h.congr hI)
-    rwa [hI] at this
-
-theorem SlR.length {m : Mem} : ∀ {o l : Word} {ws : List Word}, SlR m o l ws → ws.length = l.toNat
-  | _, _, _, .nil => rfl
-  | _, l, _, .cons hl h => by
-    have hl0 : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
-    rw [List.length_cons, h.length, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]
-    simp; omega
-
 /-- **The model of `er_from_iw(o, l)`** at exec fuel `n`. -/
 l_model efF_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.ef ↦ efF list]
@@ -398,7 +384,7 @@ theorem decPL_rl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {rules : List 
   rcases hps : decNL m o l with _ | ps <;> rw [hps] at hd
   · cases hd
   have hps' : decNL m' o l = some ps := by
-    rw [← hps]; simp only [decNL]; apply mapM_opt_congr; intro j hj
+    rw [← hps]; simp only [decNL]; apply L.Ind.mapM_congr_of; intro j hj
     simp only [iwN, nat?, iwA, aread_apply, aread_apply]; rw [hg.iwGet _ (by simp at hj; omega)]
   rw [hps']
   simp only [Option.bind_some] at hd ⊢
@@ -538,7 +524,7 @@ theorem tsrmW_afr : ∀ (n : Nat) {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r
 
 /-! ## `generated_rules` -/
 
-theorem rcPoolSmall {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+theorem poolSmall_of_stage {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (h : StageR vis fe m a) : PoolSmall m := by
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
@@ -554,8 +540,8 @@ theorem truncPl {α : Type} {f : Mem → Nat → Option α} {m : Mem} {w : Word}
     (hd : decPL (truncM m) (f (truncM m)) o l = some xs) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     DecB (fun m' => decPL m' (f m') (rdW (m.arr64 IW) (w + UInt64.ofNat i)).toNat
       (rdW (m.arr64 IW) (w + UInt64.ofNat (i + 1))).toNat) m xs := by
-  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hlm⟩ := rec2IwN_trunc hl
+  obtain ⟨-, hom⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hlm⟩ := L.Ind.iwN_truncM_some hl
   obtain ⟨eo, to⟩ := rec2RdN (w := w) (k := i) hom hsz
   obtain ⟨el, tl⟩ := rec2RdN (w := w) (k := i + 1) (by simpa [Nat.add_assoc] using hlm) hsz
   show decPL (truncM m) (f (truncM m)) _ _ = some xs
@@ -590,7 +576,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
   obtain ⟨co, cl, hco, hcl, hcsd⟩ := decAt_some hcs
   have hctors := truncPl (f := fun m => decCN m) (w := M) (i := 6) hco (by simpa [Nat.add_assoc] using hcl) hcsd hsz
   simp only [show UInt64.ofNat 6 = (6 : Word) from rfl, show UInt64.ofNat (6 + 1) = (7 : Word) from rfl] at hctors
-  obtain ⟨hM8, hk8m⟩ := rec2IwN_trunc hk8
+  obtain ⟨hM8, hk8m⟩ := L.Ind.iwN_truncM_some hk8
   obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl] at e8
   cases n with
@@ -618,7 +604,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
     rw [e8'] at this; have := congrArg UInt64.toNat this; rwa [t8] at this
   rcases h2 : arfW (k + 1) m1 M rP with _ | ⟨rf, m2⟩ <;> simp only [h2, tsrW.k_aux_rule_fire, reduceCtorEq] at h
   obtain ⟨f, a2, run2, ⟨hS2, hg2, hdf⟩, hA2⟩ := arfW_sim (fun _ => none) vis fe (k + 1) m1 a M rP TM hS1
-    (hM.grow (decTM_mono _) hg1) (rcPoolSmall hS1) hA1 (rf, m2) h2
+    (hM.grow (decTM_mono _) hg1) (L.Ind.poolSmall_of_stage hS1) hA1 (rf, m2) h2
   cases f with
   | plain => exact absurd hdf (by simp [decFire])
   | levels _ => exact absurd hdf (by simp [decFire])

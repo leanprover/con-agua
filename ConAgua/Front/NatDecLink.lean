@@ -7,6 +7,7 @@ import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import ConAgua.Census.Attr
 import all ConAgua.Front.Fields
+import ConAgua.Arena.NatCmpFacts
 
 @[expose] public section
 
@@ -190,7 +191,7 @@ theorem pv_top_zero (p : Array Word) (o n : Nat) (hn : 0 < n) (h : p[o + (n - 1)
     pv p o n < wt (n - 1) := by
   obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
   simp only [pv, Nat.add_sub_cancel] at h ⊢
-  rw [h]; simpa using pv_lt p o k
+  rw [h]; simpa using L.Arena.pv_lt_wt p o k
 
 theorem dec_step (b : Array UInt8) (c d top : Word) (ht : top.toNat < 2 ^ 41)
     (hdig : Digits b c.toNat (d.toNat - c.toNat)) (m : Mem) (n i : Word) (r : Mem × Word)
@@ -308,7 +309,7 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (ht : top.toNat < 2 ^ 41)
     obtain ⟨hf', hag', htn'', hv', hN'⟩ := ih m' n' (by omega) hc1 hc2 (by omega) hv1
       (by
         intro hn0 hz
-        have h1 := pv_ge _ _ _ hn0 hN
+        have h1 := L.Arena.pv_ge_wt _ _ _ hn0 hN
         have h2 := pv_top_zero _ _ _ hn0 (by simpa using hz)
         have : pv (vpool m) top.toNat n.toNat ≤
             pv (vpool m) top.toNat n.toNat * 10 ^ (decK i d).toNat :=

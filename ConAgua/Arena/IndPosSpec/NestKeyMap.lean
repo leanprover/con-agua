@@ -13,6 +13,7 @@ import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 
@@ -282,14 +283,9 @@ theorem kindsFlatInnerW_ok (n : Nat) : ∀ (m : Mem) (off cnt : Word) (ks : List
 
 /-! ## Reading decoded words without side conditions on the index -/
 
-theorem iwN_idx {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, -⟩ := h
-  exact (Array.getElem?_eq_some_iff.mp hw).1
-
 theorem iwN_rd {m : Mem} {i v : Nat} (h : iwN m i = some v) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     rdW (m.arr64 IW) (UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 :=
-  iwN_rdW h (Nat.lt_trans (iwN_idx h) hsz)
+  iwN_rdW h (Nat.lt_trans (L.Ind.iwN_lt h) hsz)
 
 theorem iwN_rdw {m : Mem} {w : Word} {v : Nat} (h : iwN m w.toNat = some v) :
     rdW (m.arr64 IW) w = UInt64.ofNat v ∧ v < 2 ^ 64 := by
@@ -319,7 +315,7 @@ theorem decPL_step {m : Mem} {α : Type} {f : Nat → Option α} {off cnt : Word
   rw [hc1, decPL_succ] at h
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
   obtain ⟨v, hv, y, hy, xs', hxs', rfl⟩ := h
-  have hlt := iwN_idx hv
+  have hlt := L.Ind.iwN_lt hv
   rw [L.toNat_add_one_of_lt (by omega), L.toNat_sub_one_of_ne hc]
   exact ⟨v, y, xs', hv, hy, hxs', rfl, iwN_rdw hv⟩
 

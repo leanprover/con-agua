@@ -7,6 +7,7 @@ public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.BvarBRefine
 public import ConAgua.Arena.IndPosSpec.PiBWStage
+import ConAgua.Arena.IlpRd
 
 @[expose] public section
 
@@ -42,15 +43,6 @@ structure PosMR (m : Mem) : Prop where
   hb : ∃ mp, hbMR m mp
   rf : ∃ M G g, RfInv m M G g
 
-theorem posmemo_erCopyW_iw : ∀ (n : Nat) (m m' : Mem) (d s l : Word), erCopyW n m d s l = some m' →
-    MemFrame [IW] [200] m m'
-  | 0, _, _, _, _, _, h => by simp [erCopyW] at h
-  | n + 1, m, m', d, s, l, h => by
-    by_cases hl : l = 0
-    · rw [erCopyW_nil n m d s l hl] at h; cases h; exact MemFrame.refl _ _ _
-    · rw [erCopyW_step n m d s l hl] at h
-      exact (set64IW_frame _ _ _).trans (posmemo_erCopyW_iw n _ _ _ _ _ h)
-
 theorem erToIwW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erToIwW n m o l = some (r, m')) :
     MFr [] [] m m' := by
   unfold erToIwW at h
@@ -59,7 +51,7 @@ theorem erToIwW_mfr {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : erT
   split at h; · simp at h
   rename_i m2 hc
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact (allocW_mfr hal).trans (MFr.of_iw (posmemo_erCopyW_iw _ _ _ _ _ _ hc))
+  exact (allocW_mfr hal).trans (MFr.of_iw (L.Ind.erCopyW_iwFr _ _ _ _ _ _ hc))
 
 /-! ## Frames of the models, by `mfr_auto` (`IndPosSpec/NoGoStep`) -/
 

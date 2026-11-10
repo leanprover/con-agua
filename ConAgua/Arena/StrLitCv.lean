@@ -26,8 +26,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-theorem strRdW {a : Array Word} {q w : Word} (h : a[q.toNat]? = some w) : rdW a q = w := by simp [rdW, h]
-
 /-- The model of `str_cv`. -/
 l_model strCv_spec (p : Prog) (hp : p.lookup "str_cv" = some strCvL)
   fns [hp ↦ strCvW]

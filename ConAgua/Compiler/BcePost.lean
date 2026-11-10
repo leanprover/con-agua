@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Compiler.RunEq
 public import ConAgua.Compiler.BceSound
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -26,17 +27,13 @@ theorem SameSizes.set8 (σ : St) (a : ArrId) (i v : Word) : SameSizes σ { σ wi
   refine ⟨fun b => ?_, fun _ => rfl⟩
   by_cases h : b = a <;> simp [Mem.arr8, Mem.set8, h]
 
-theorem Mem.size_set64 (m : Mem) (a s : TieredArray) (i v : Word) :
-    ((m.set64 a i v).arr64 s).size = (m.arr64 s).size := by
-  by_cases h : s = a <;> simp [Mem.arr64, Mem.set64, h]
-
 theorem SameSizes.set64 (σ : St) (a : TieredArray) (i v : Word) :
     SameSizes σ { σ with mem := σ.mem.set64 a i v } :=
-  ⟨fun _ => rfl, fun _s => Mem.size_set64 _ _ _ _ _⟩
+  ⟨fun _ => rfl, fun _s => L.Mem.size64_set64 _ _ _ _ _⟩
 
 theorem SameSizes.set32 (σ : St) (a : TieredArray) (i v : Word) :
     SameSizes σ { σ with mem := σ.mem.set32 a i v } :=
-  ⟨fun _ => rfl, fun _s => Mem.size_set64 _ _ _ _ _⟩
+  ⟨fun _ => rfl, fun _s => L.Mem.size64_set64 _ _ _ _ _⟩
 
 theorem SameSizes.setG (σ : St) (g : GVar) (v : Word) : SameSizes σ (σ.setG g v) :=
   ⟨fun _ => rfl, fun _ => rfl⟩
@@ -45,7 +42,7 @@ theorem Mem.size_copy64 (d : TieredArray) (s : TieredArray) :
     ∀ (n : Nat) (m : Mem) (di si : Word) (b : TieredArray), ((m.copy64 d di s si n).arr64 b).size = (m.arr64 b).size
   | 0, _, _, _, _ => rfl
   | n + 1, m, di, si, b => by
-    simp only [Mem.copy64]; rw [Mem.size_copy64 d s n, Mem.size_set64]
+    simp only [Mem.copy64]; rw [Mem.size_copy64 d s n, L.Mem.size64_set64]
 
 theorem Mem.size8_copy64 (d : TieredArray) (s : TieredArray) :
     ∀ (n : Nat) (m : Mem) (di si : Word) (a : ArrId), ((m.copy64 d di s si n).arr8 a).size = (m.arr8 a).size
@@ -56,7 +53,7 @@ theorem Mem.size_copy8w (d : TieredArray) (bs : Array UInt8) :
     ∀ (n : Nat) (m : Mem) (di si : Word) (b : TieredArray), ((m.copy8w d di bs si n).arr64 b).size = (m.arr64 b).size
   | 0, _, _, _, _ => rfl
   | n + 1, m, di, si, b => by
-    simp only [Mem.copy8w]; rw [Mem.size_copy8w d bs n, Mem.size_set64]
+    simp only [Mem.copy8w]; rw [Mem.size_copy8w d bs n, L.Mem.size64_set64]
 
 theorem Mem.size8_copy8w (d : TieredArray) (bs : Array UInt8) :
     ∀ (n : Nat) (m : Mem) (di si : Word) (a : ArrId), ((m.copy8w d di bs si n).arr8 a).size = (m.arr8 a).size

@@ -271,7 +271,7 @@ theorem set64ER_afr (m : Mem) (x v : Word) : AFr m (m.set64 EREC x v) :=
   AFr.of_frame (MemFrame.set64 m EREC (by decide) x v)
 
 theorem mkAppW_afr {m m' : Mem} {f a r : Word} (h : mkAppW m f a = some (r, m')) : AFr m m' :=
-  AFr.of_frame (mkAppW_frameA m m' f a r h)
+  AFr.of_frame (L.Arena.mkAppW_frame m m' f a r h)
 theorem mkLamW_afr {m m' : Mem} {f a r : Word} (h : mkLamW m f a = some (r, m')) : AFr m m' :=
   AFr.of_frame (mkLamW_frameA m m' f a r h)
 theorem mkForallW_afr {m m' : Mem} {f a r : Word} (h : mkForallW m f a = some (r, m')) : AFr m m' :=

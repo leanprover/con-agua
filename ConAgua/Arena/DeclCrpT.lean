@@ -714,7 +714,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
       .ok ([decI (pinW m4 (1 + (43 : Word).toNat)), decI (pinW m4 (1 + (44 : Word).toNat))], a4) := by
     simp only [reduceOpNames, reduceNatName, reduceBoolName, pinReduceNat, pinReduceBool,
       StateT.run_bind, show PIN_REDUCE_NAT = (43 : Word).toNat from rfl,
-      show PIN_REDUCE_BOOL = (44 : Word).toNat from rfl, hrun5, exc_ok_bind', hrun6]
+      show PIN_REDUCE_BOOL = (44 : Word).toNat from rfl, hrun5, L.Arena.except_ok_bind, hrun6]
     rfl
   refine RefE.bind_right hnames ?_
   have hb43 := decI_beq (k := .name) wn (pinW m4 (1 + (43 : Word).toNat)) hwnl hl5

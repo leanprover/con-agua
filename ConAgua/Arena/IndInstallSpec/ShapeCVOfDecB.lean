@@ -48,16 +48,16 @@ theorem shapeCV_of_decB {m : Mem} {q : Word} {bs : BlockShape}
   intro o l ho hl j hj c hc d hd
   obtain ⟨hmem, -⟩ := decBS_some (show decBS (truncM m) q.toNat = some bs from h)
   obtain ⟨o', l', ho', hl', hd'⟩ := decAt_some hmem
-  rw [(rec2IwN_trunc ho').2] at ho
-  rw [(rec2IwN_trunc hl').2] at hl
+  rw [(L.Ind.iwN_truncM_some ho').2] at ho
+  rw [(L.Ind.iwN_truncM_some hl').2] at hl
   obtain rfl := Option.some.inj ho
   obtain rfl := Option.some.inj hl
   obtain ⟨v, ms, hv, hms, -⟩ := decPL_get _ _ _ hd' j hj
-  rw [(rec2IwN_trunc hv).2] at hc
+  rw [(L.Ind.iwN_truncM_some hv).2] at hc
   obtain rfl := Option.some.inj hc
   simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hms
   obtain ⟨d', hd'', cv, hcv, -⟩ := hms
-  rw [(rec2IwN_trunc hd'').2] at hd
+  rw [(L.Ind.iwN_truncM_some hd'').2] at hd
   obtain rfl := Option.some.inj hd
   exact (rec3CVExt_of_trunc hcv).1
 

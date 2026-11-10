@@ -9,6 +9,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.PropRead
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -131,7 +132,7 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       refine ⟨?_, fun _ => h1⟩
       simp only [UInt64.toNat_zero, binderDom, (decE_tag_forallE e he).mpr hc, beq_self_eq_true,
         ↓reduceIte]
-      simp [viewBind_run' _ a, hvb, except_ok_bind, decOpt]
+      simp [L.Arena.viewBind_run _ a, hvb, except_ok_bind, decOpt]
       rfl
     · rw [bdW_miss m 0 e hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -158,7 +159,7 @@ theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       refine ⟨?_, ihb⟩
       rw [hj, binderDom, (decE_tag_forallE e he).mpr hc]
       rw [show j = (k - 1).toNat by rw [hkm1]; omega]
-      simp [viewBind_run' _ a, hvb, except_ok_bind]
+      simp [L.Arena.viewBind_run _ a, hvb, except_ok_bind]
       exact ihr
     · rw [bdW_miss m k e hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -256,7 +257,7 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
         omega
       rw [hj, numArgs, (decE_tag_app e he).mpr hc]
       rw [show j = (f - 1).toNat by rw [hfm1]; omega]
-      simp [viewApp_run' _ a, hva, except_ok_bind, StateT.run_bind, ihr, hsub]
+      simp [L.Arena.viewApp_run _ a, hva, except_ok_bind, StateT.run_bind, ihr, hsub]
       rfl
     · rw [gafLoopW_done m e f hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -323,7 +324,7 @@ theorem gafLoopW_args (m : Mem) (a : AState) (hR : ArenaR m a) :
       have ihr := ih _ (f - 1) e' f' J (by rw [hfm1]; omega) h1 hL hf' (by rw [hfm1]; omega)
       rw [hj, hJ, getAppArgs, getAppArgs, (decE_tag_app e he).mpr hc]
       rw [show j = (f - 1).toNat by rw [hfm1]; omega]
-      simp only [beq_self_eq_true, ↓reduceIte, StateT.run_bind, viewApp_run' _ a, hva,
+      simp only [beq_self_eq_true, ↓reduceIte, StateT.run_bind, L.Arena.viewApp_run _ a, hva,
         except_ok_bind, ihr]
     · obtain ⟨k, hk⟩ : ∃ k, F = k + 1 := by
         rw [gafLoopW_done m e f hc] at hL
@@ -465,7 +466,7 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       have hlam : ((decE e).tag == ETag.lam) = true := by
         rw [tag_beq_w e he 5 (by decide) ETag.lam rfl 5 rfl]; simp [hc]
       rw [hj, lamProj?, hfm1, hj, hk1]
-      simp only [hlam, ↓reduceIte, Nat.succ_sub_one, StateT.run_bind, viewBind_run' _ a, hvb,
+      simp only [hlam, ↓reduceIte, Nat.succ_sub_one, StateT.run_bind, L.Arena.viewBind_run _ a, hvb,
         except_ok_bind]
     · rw [lpLoopW_done m f k e hc] at hL
       simp only [Option.some.injEq, Prod.mk.injEq] at hL
@@ -626,7 +627,7 @@ theorem tsLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) (root :
       have hfa : ((decE r).tag == ETag.forallE) = true := by
         rw [tag_beq_w r he 6 (by decide) ETag.forallE rfl 6 rfl]; simp [hc]
       rw [hj, typeSortPWGo, hfm1, hj, hd1]
-      simp only [hfa, ↓reduceIte, Nat.succ_sub_one, StateT.run_bind, viewBind_run' _ a, hvb,
+      simp only [hfa, ↓reduceIte, Nat.succ_sub_one, StateT.run_bind, L.Arena.viewBind_run _ a, hvb,
         except_ok_bind]
     · rw [tsLoopW_done m f r d hc] at hL
       simp only [Option.some.injEq, Prod.mk.injEq] at hL
@@ -758,7 +759,7 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
         have ht : ((decE e).tag == ETag.lam) = true := by
           rw [tag_beq_w e he 5 (by decide) ETag.lam rfl 5 rfl]; simp [h5]
         rw [hj, proofPW, hjf]
-        simp only [ht, ↓reduceIte, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
+        simp only [ht, ↓reduceIte, StateT.run_bind, L.Arena.viewBind_run _ a, hvb, except_ok_bind]
       · have hv2 : ¬ tcnt m LET (tierW e) ≤ idxW e := by
           intro hv; rw [ppLoopW] at hL
           simp [h7, hf0, hv1, hv, show ¬ ((7 : Word) = 5) by decide] at hL
@@ -796,7 +797,7 @@ theorem ppLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (fe : IFEnv) :
           rw [tag_beq_w e he 4 (by decide) ETag.app rfl 4 rfl]; simp [h4]
         rw [hj, proofPW, hjf]
         simp only [ht, ht7, ht4, Bool.false_eq_true, ↓reduceIte, StateT.run_bind,
-          viewApp_run' _ a, hva, except_ok_bind]
+          L.Arena.viewApp_run _ a, hva, except_ok_bind]
     · simp only [not_or] at hc
       rw [ppLoopW_done m f e hc.1 hc.2.1 hc.2.2] at hL
       simp only [Option.some.injEq, Prod.mk.injEq] at hL

@@ -50,7 +50,7 @@ theorem allInW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : Li
     | nil => rw [allInW.arm1 n m _ 0 o2 l2 rfl] at h; simp at h; simp [h]
     | @cons _ _ ws hl hs =>
       rw [allInW.arm2 n m _ _ o2 l2 hl] at h
-      obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [allInW.k_sl_contains])
+      obtain ⟨b, hb, h⟩ := L.Arena.of_K h (by simp [allInW.k_sl_contains])
       have := containsW_ok n m o2 l2 _ b ws2 h2 hb
       by_cases b0 : b = 0
       · rw [allInW.k_sl_contains.arm1 _ _ _ _ _ _ _ b0] at h; simp at h; subst h
@@ -71,7 +71,7 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
     (h1 : SlR m o1 l1 ws1) (h2 : SlR m o2 l2 ws2) (h : setEqW n m o1 l1 o2 l2 = some r) :
     r = if (ws1.length == ws2.length && ws2.all (fun w => ws1.contains w) &&
       ws1.all (fun w => ws2.contains w)) then 1 else 0 := by
-  have e1 := slR_length h1; have e2 := slR_length h2
+  have e1 := L.Ind.SlR.length h1; have e2 := L.Ind.SlR.length h2
   unfold setEqW at h
   by_cases hl : l1 ≠ l2
   · rw [ite_eq_left hl] at h; simp at h; subst h
@@ -92,7 +92,7 @@ theorem setEqW_ok {n : Nat} {m : Mem} {o1 l1 o2 l2 r : Word} {ws1 ws2 : List Wor
       have hb2 := allInW_ok n m o2 l2 o1 l1 r ws2 ws1 h2 h1 h
       split at hb <;> simp_all
 
-theorem partsPSl_nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o : Word} {m : Mem}
+theorem pslR_nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o : Word} {m : Mem}
     (h : PSlR f xs o 0 m) : xs = [] := by
   have := decPL_length _ h.dec; simpa using this
 

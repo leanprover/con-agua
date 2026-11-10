@@ -10,6 +10,8 @@ public import ConAgua.Arena.InferBodySpineFModels
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.InferLeaves
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 
@@ -194,7 +196,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         rw [inferSpine]
         simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true, hxi,
           spineArg_bind]
-        refine RefE.bind_right (by rw [viewBind_run', hvb]) ?_
+        refine RefE.bind_right (by rw [L.Arena.viewBind_run, hvb]) ?_
         dsimp only
         -- `inst_list` at the domain, `infer_spine_arg`
         refine RefE.under (fun _ => rfl) (fun _ => ispE.k_inst_list_2.none ..) fun hx => RefE.bind_callW hx
@@ -251,7 +253,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, hdom, hbody⟩ := view_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
         have hvb := viewBind_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
-        refine RefE.bind_right (by rw [viewBind_run', show decH r₂ = decE (r₂.headD 0) from rfl, hvb]) ?_
+        refine RefE.bind_right (by rw [L.Arena.viewBind_run, show decH r₂ = decE (r₂.headD 0) from rfl, hvb]) ?_
         dsimp only
         rw [spineArg_bind]
         have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hmode, heb⟩
@@ -266,7 +268,7 @@ theorem spLoop_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         rw [ispE.j1.eq_def]
         have g5 := lt_of_not_len64_le hS₃.spn g4
         have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
-        have hacc0 := SpineR.empty m₃ co (by omega)
+        have hacc0 := L.Arena.SpineR.nil_at m₃ co (by omega)
         obtain ⟨hacc', htop', hb', hsz', -, hbk', hpg'⟩ := spPush_step (cn := 0) hS₃.spn hacc0
           (hkeep hSt13) (hSt13.size.trans hsz) (hbk.trans hSt13.bstk) (hpg.trans hSt13.pool)
           hS₃.ctl136 (by simpa using g5) hvv
@@ -307,7 +309,7 @@ theorem isp_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Spine
   have hcle := len64_not_lt hS.spn hc
   exact spLoop_ref p hp hkp hq he hil n hk F hF hn dn vis fe mode d ao an args eb _ hs.mode4
     hs.eb_mode s₀.mem har rfl hlo (n + 1) (Nat.le_refl _) s₀.mem a₀ M ty 0 0 #[] hS ht
-    (SpineR.empty _ _ hcle) (by simp [spTop]) (fun _ _ => rfl) rfl (BKept.refl _) (PoolGrew.refl _)
+    (L.Arena.SpineR.nil_at _ _ hcle) (by simp [spTop]) (fun _ _ => rfl) rfl (BKept.refl _) (PoolGrew.refl _)
 
 /-- **`infer_spine` refines `inferSpine`** (`isp_ref`'s ok half). -/
 @[refines ConRon.Arena.inferSpine]

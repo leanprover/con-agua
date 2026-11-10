@@ -83,10 +83,6 @@ theorem defeqBody_eq (mode : ConLeche.CheckMode) (eager : Bool) (r : CoreFnsA) (
         let sc ← if x && (eager || !y) then boolTrueShortcut r depth a else pure false
         if sc then pure true else defeqBodyRestT mode eager r fe depth a b) := by rfl
 
-theorem decMode_eager (mode : Word) (h : mode < 4) :
-    decEager mode = decide ((mode >>> 1) &&& 1 ≠ 0) := by
-  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
-
 theorem depth_lt_of_shr (d : Word) (h : d >>> 63 = 0) : d.toNat < 2 ^ 63 := by
   have h' := congrArg UInt64.toNat h
   rw [UInt64.toNat_shiftRight] at h'
@@ -112,7 +108,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ n =>
   have hS := hs.rel
-  rw [defeqBody_eq, decE_beq hx hy]
+  rw [defeqBody_eq, L.Arena.decE_beq_eq _ _ hx hy]
   simp only [bodyE]
   by_cases hxy : x = y
   · rw [ite_eq_left hxy]
@@ -172,9 +168,9 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
           (by omega) (hSP hS₄) hx hy)) fun r₅ m₅ _ h₅ => RefE.after_core (w := id) h₅ fun M₅ hS₅ _ => ?_
     dsimp only [bodyE.k_prop_irrel]
     by_cases hp5 : r₅.headD 0 ≠ 0
-    · rw [ite_eq_left hp5, decBool_true_of hp5]
+    · rw [ite_eq_left hp5, L.Arena.decBool_true_of hp5]
       exact RefE.ret rfl (CorePost.ret hS₅ rfl hw1)
-    rw [ite_eq_right hp5, decBool_false_of (by simpa using hp5)]
+    rw [ite_eq_right hp5, L.Arena.decBool_false_of (by simpa using hp5)]
     simp only [Bool.false_eq_true, ↓reduceIte]
     refine RefE.bind_callE (fun _ => rfl) (hK.whnfCore F ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode 1 d x
       (by omega) (by omega) (hSP hS₅) hx) (fun (hG : BodyG p (k + 1 + 1)) => (hG.knot (k + 1) (by omega)).whnfCore
@@ -243,10 +239,10 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
   by_cases hb : r₁.headD 0 ≠ 0 ∧ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0)
   · rw [ite_eq_left hb.1, ite_eq_left hb.2]
     have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = true := by
-      rw [decMode_eager mode hs.mode4, decBool_true_of hb.1]
+      rw [L.Arena.mode_eager_bit mode hs.mode4, L.Arena.decBool_true_of hb.1]
       rcases hb.2 with h | h
       · simp [h]
-      · simp [decBool_false_of h]
+      · simp [L.Arena.decBool_false_of h]
     rw [hcond]
     simp only [↓reduceIte]
     refine RefE.bind_callE (fun _ => rfl) (boolTrueShortcut_refines p hq.lazy.mid k hk' F ⟨m₂, Locals.init []⟩
@@ -266,12 +262,12 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     · rw [ite_eq_left h1, ite_eq_right (fun h => hb ⟨h1, h⟩)]
   rw [hW2]
   have hcond : (decBool r₁ && (decEager mode || !decBool r₂)) = false := by
-    rw [decMode_eager mode hs.mode4]
+    rw [L.Arena.mode_eager_bit mode hs.mode4]
     by_cases h1 : r₁.headD 0 = 0
-    · simp [decBool_false_of h1]
+    · simp [L.Arena.decBool_false_of h1]
     · have h2 : ¬ ((mode >>> 1) &&& 1 ≠ 0 ∨ r₂.headD 0 = 0) := fun h => hb ⟨h1, h⟩
       simp only [not_or, ne_eq, Decidable.not_not] at h2
-      simp [h2.1, decBool_true_of h2.2]
+      simp [h2.1, L.Arena.decBool_true_of h2.2]
   rw [hcond]
   simp only [Bool.false_eq_true, ↓reduceIte]
   exact RefE.bind_right rfl (rest 0 _ _ _ hS₂)

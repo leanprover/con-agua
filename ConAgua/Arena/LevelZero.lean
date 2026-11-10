@@ -10,6 +10,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.StoreRel
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -174,16 +176,16 @@ theorem lhPushW_ext {m m' : Mem} {w o : Word} (h : lhPushW m w = some (o, m')) :
     have e1 : (htop m + 1).toNat = (htop m).toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hLC : (LH : TieredArray) ≠ CTL := by decide
     have htop' : htop ((m.set64 LH (htop m) w).set64 CTL 192 (htop m + 1)) = htop m + 1 := by
-      simp only [htop, rdW_set64L, size_set64L]; simp [hctl]
+      simp only [htop, L.Arena.rdW_set64, L.Mem.size64_set64]; simp [hctl]
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => ?_, fun k hk => ?_, by rw [htop', e1]; omega,
-      fun k hk => ?_, fun b => by simp only [size_set64L]⟩, rfl, by rw [htop', e1], ?_⟩
+      fun k hk => ?_, fun b => by simp only [L.Mem.size64_set64]⟩, rfl, by rw [htop', e1], ?_⟩
     · rw [Mem.arr64_set64_ne _ _ _ _ _ h1, Mem.arr64_set64_ne _ _ _ _ _ h2]
-    · simp only [rdW_set64L, size_set64L]; simp [Ne.symm hk, Ne.symm hLC]
+    · simp only [L.Arena.rdW_set64, L.Mem.size64_set64]; simp [Ne.symm hk, Ne.symm hLC]
     · rw [Mem.arr64_set64_ne _ _ _ _ _ hLC]
-      simp only [rdW_set64L]
+      simp only [L.Arena.rdW_set64]
       have : htop m ≠ k := fun e => by rw [e] at hk; omega
       simp [this]
-    · rw [Mem.arr64_set64_ne _ _ _ _ _ hLC]; simp only [rdW_set64L]; simp [hl]
+    · rw [Mem.arr64_set64_ne _ _ _ _ _ hLC]; simp only [L.Arena.rdW_set64]; simp [hl]
 
 theorem NmsR.mono_lh {m m' : Mem} (he : HeapExt m m') :
     ∀ {o k : Word} {ps : List Name}, NmsR N m LH o k ps → o.toNat + k.toNat ≤ (htop m).toNat →

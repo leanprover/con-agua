@@ -603,7 +603,7 @@ theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
       byteIn_spec p b hpb n, hexVal_spec p hph n]
     all_goals clear hpb hph hp4
     all_goals subst_vars
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
         St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
         List.getD_cons_succ, Cmp.eval, BinOp.eval, beq_iff_eq] at *
     all_goals grind (splits := 40) [lang_grind, hex4N]
@@ -623,7 +623,7 @@ theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
       byteIn_spec p b hpb n, hexVal_spec p hph n]
     all_goals clear hpb hph hp3
     all_goals subst_vars
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
         St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
         List.getD_cons_succ, Cmp.eval, BinOp.eval, beq_iff_eq] at *
     all_goals grind (splits := 40) [lang_grind, hex3N]
@@ -646,7 +646,7 @@ theorem uNext_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Wo
       byteIn_spec p b hpb n, hex3_spec p b hpb hph hp3 n]
     all_goals clear hpb hph hp3 hpx
     all_goals subst_vars
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
         St.setLocs_cons, List.headD_cons, List.tail_cons, Locals.init, List.getD_cons_zero,
         List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
         bne_iff_ne, ne_eq] at *

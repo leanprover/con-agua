@@ -7,6 +7,7 @@ import ConRon.Bridge.SpecsL
 import ConAgua.Arena.CoreLevels
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -81,7 +82,7 @@ theorem readNameM_run (a : AState) (h : NIdx) (x : Name) (hd : denoteN a.store.n
 
 theorem ArenaD.with_caches {m : Mem} {a : AState} (hA : ArenaD m a) (c : Caches) :
     ArenaD m { a with caches := c } :=
-  ⟨hA.base.with_caches c, DerR.of_store _ _ _ hA.der rfl⟩
+  ⟨hA.base.caches_irrel c, DerR.of_store _ _ _ hA.der rfl⟩
 
 /-- A write at or past the end of a name slice keeps it. -/
 theorem NmsR.set_past {N : Word → Name → Prop} {m : Mem} {A : ArrId} {d v : Word} :
@@ -137,7 +138,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hl : l.toNat = 0 := by
       rcases hk' : l.toNat with _ | j
       · rfl
-      · rw [hk', lp_hslice_succ] at hs
+      · rw [hk', _root_.L.Ind.hslice?_succ] at hs
         simp only [Option.bind_eq_bind] at hs
         cases e : (hd? (erecP m) o.toNat : Option LIdx) with
         | none => simp [e] at hs
@@ -157,7 +158,7 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
     rcases hk' : l.toNat with _ | j
     · rw [hk'] at hs; simp [hslice?] at hs
-    rw [hk', lp_hslice_succ] at hs
+    rw [hk', _root_.L.Ind.hslice?_succ] at hs
     simp only [Option.bind_eq_bind] at hs
     cases e : (hd? (erecP m) o.toNat : Option LIdx) with
     | none => simp [e] at hs
@@ -332,7 +333,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     have hl : l.toNat = 0 := by
       rcases hk' : l.toNat with _ | j
       · rfl
-      · rw [hk', lp_hslice_succ] at hs
+      · rw [hk', L.Ind.hslice?_succ] at hs
         simp only [Option.bind_eq_bind] at hs
         cases e : (hd? (erecP m) o.toNat : Option NIdx) with
         | none => simp [e] at hs
@@ -352,7 +353,7 @@ theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
     intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
     rcases hk' : l.toNat with _ | j
     · rw [hk'] at hs; simp [hslice?] at hs
-    rw [hk', lp_hslice_succ] at hs
+    rw [hk', L.Ind.hslice?_succ] at hs
     simp only [Option.bind_eq_bind] at hs
     cases e : (hd? (erecP m) o.toNat : Option NIdx) with
     | none => simp [e] at hs

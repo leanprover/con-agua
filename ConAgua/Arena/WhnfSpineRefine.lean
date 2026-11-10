@@ -9,6 +9,8 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -130,9 +132,6 @@ theorem getAppFnL_spec (p : Prog) (hp : p.lookup "get_app_fn" = some getAppFnL) 
 
 /-! ## `get_app_fn` refines `getAppFn` -/
 
-theorem viewApp_run' (h : EIdx) (a : AState) :
-    (viewApp h).run a = .ok (a.store.viewApp h, a) := rfl
-
 /-- **The loop's model refines `getAppFn`**: whenever `gafLoopW` from `(e, f)` succeeds with
 `(e', f')` and `f'` is nonzero (the surrounding function's own post-loop check), the twin's
 walk at fuel `f.toNat` from `e` succeeds and lands on `e'`, in the SAME arena state (the walk
@@ -181,7 +180,7 @@ theorem gafLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       refine ⟨?_, ihb⟩
       rw [heq, getAppFn, (decE_tag_app e he).mpr hc]
       rw [show (f.toNat - 1) = (f - 1).toNat from hfm1.symm]
-      simp [viewApp_run' _ a, hva, except_ok_bind]
+      simp [L.Arena.viewApp_run _ a, hva, except_ok_bind]
       rw [ihr]
     · rw [gafLoopW_done m e f hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -320,9 +319,6 @@ theorem piResultL_spec (p : Prog) (hp : p.lookup "pi_result" = some piResultL) (
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResultLoop_step_spec p n] <;>
       finish [priW]
 
-theorem viewBind_run' (h : EIdx) (a : AState) :
-    (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
-
 /-- **The loop's model refines `piResult`** (the twin-fuel correspondence, as `gafLoopW_ok`). -/
 theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     ∀ (N : Nat) (e f e' f' : Word), f.toNat ≤ N → e.toNat < 2 ^ 32 → priLoopW m e f = some (e', f') →
@@ -369,7 +365,7 @@ theorem priLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       refine ⟨?_, ihb⟩
       rw [heq, piResult, (decE_tag_forallE e he).mpr hc]
       rw [show (f.toNat - 1) = (f - 1).toNat from hfm1.symm]
-      simp [viewBind_run' _ a, hvb, except_ok_bind]
+      simp [L.Arena.viewBind_run _ a, hvb, except_ok_bind]
       exact ihr
     · rw [priLoopW_done m e f hc] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -562,7 +558,7 @@ theorem peelPisW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
         refine ⟨?_, ihb, ih0⟩
         rw [hj, peelPis, (decE_tag_forallE e he).mpr hc]
         rw [show j = (k - 1).toNat from by rw [hkm1]; omega]
-        simp [viewBind_run' _ a, hvb, except_ok_bind]
+        simp [L.Arena.viewBind_run _ a, hvb, except_ok_bind]
         exact ihr
       · rw [peelPisW_miss m k e hk0 hc] at hL
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
@@ -715,17 +711,6 @@ theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc,
         mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
 
-/-- **What `mk_app` changes** (the app tables and their derived-range cache): the `Grows`
-conjunct a `mk_*` constructor usually posts is the Nat-limb pool's (`Pool.lean`), which `mk_app`
-never touches; this is what is available instead (`mkAppN_refines`/`mkAppNFrom_refines` post it
-in `Grows`'s place). -/
-theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
-    MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' := by
-  unfold mkAppW at hI; split at hI
-  · cases hI
-  exact (mkK_frame appCS_wf (by decide) hI).mono
-    (by simp [ConsSch.wset, appCS, AREC, ASLOT, ADER]) (by simp [appCS])
-
 /-- A slice of the stack survives a writer that leaves `SPN` alone. -/
 theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)
     {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m') (hA : (SPN : TieredArray) ∉ A) : SpineR m' o n xs where
@@ -805,7 +790,7 @@ theorem mkAppNFromW_ok : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word) (
       have h := hx.get i.toNat hilt
       rwa [show (i.toNat).toUInt64 = UInt64.ofNat i.toNat from rfl, UInt64.ofNat_toNat] at h
     obtain ⟨hok, hArenaD, hres⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
-    have hfr := mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk
+    have hfr := L.Arena.mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk
     have hx' : SpineR m₁ o n xs := hx.frame hfr (by decide)
     have hi1 : (i + 1).toNat = i.toNat + 1 := by
       rw [UInt64.toNat_add]; simp
@@ -848,7 +833,7 @@ theorem mkAppNFromW_frame : ∀ (K : Nat) (m m' : Mem) (f o n i r : Word),
     by_cases hc : i < n
     · simp only [hc, ↓reduceIte] at hL
       rcases hmk : mkAppW m f (spW m (o + i)) with _ | ⟨f₁, m₁⟩ <;> simp only [hmk, reduceCtorEq] at hL
-      exact (mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk).trans (ih m₁ m' f₁ o n (i + 1) r hL)
+      exact (L.Arena.mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk).trans (ih m₁ m' f₁ o n (i + 1) r hL)
     · simp only [hc, ↓reduceIte] at hL
       obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       exact MemFrame.refl _ _ _

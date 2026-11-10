@@ -5,6 +5,7 @@ public import ConAgua.Census.Attr
 public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Front.FieldsDeclLink
+import ConAgua.Front.IndApplyRefine2
 
 @[expose] public section
 
@@ -62,16 +63,6 @@ structure BlkSt where
   ctors : List IndCtorRec
   recs : List IndRecRec
   types : List IndTypeRec
-
-omit h64 hsize in
-theorem tyStab : ∀ t x m m' x0 x1, TyF b m t x → 1 ≤ t → t + 11 ≤ topN m IFR + 1 →
-    IGrow m m' IFR x0 x1 → (t + 11 ≤ x0 ∨ x1 ≤ t) → TyF b m' t x := tyF_stab b
-omit h64 hsize in
-theorem ctStab : ∀ t x m m' x0 x1, CtF b m t x → 1 ≤ t → t + 10 ≤ topN m IFR + 1 →
-    IGrow m m' IFR x0 x1 → (t + 10 ≤ x0 ∨ x1 ≤ t) → CtF b m' t x := ctF_stab b
-omit h64 hsize in
-theorem recStab : ∀ t x m m' x0 x1, RecF b m t x → 1 ≤ t → t + 11 ≤ topN m IFR + 1 →
-    IGrow m m' IFR x0 x1 → (t + 11 ≤ x0 ∨ x1 ≤ t) → RecF b m' t x := recF_stab b
 
 /-- The block record read so far. -/
 def BlkLR (m₁ : Mem) (p : Word) (seen : UInt32) (st : BlkSt) (m : Mem) : Prop :=
@@ -167,13 +158,13 @@ theorem blk_loop (m₁ : Mem) (p : Word) :
     all_goals obtain ⟨hI, h1, h2, h3⟩ := hR
     case kTypes =>
       rw [show UInt64.ofNat Key.kTypes.ctorIdx = (63 : Word) from rfl] at hmem
-      blk_list 63, 0, 1, 0, tys_link, { st with types := xv }, tyStab b
+      blk_list 63, 0, 1, 0, tys_link, { st with types := xv }, _root_.L.Front.Ind.tyF_stab b
     case kCtors =>
       rw [show UInt64.ofNat Key.kCtors.ctorIdx = (11 : Word) from rfl] at hmem
-      blk_list 11, 2, 3, 1, cts_link, { st with ctors := xv }, ctStab b
+      blk_list 11, 2, 3, 1, cts_link, { st with ctors := xv }, _root_.L.Front.Ind.ctF_stab b
     case kRecs =>
       rw [show UInt64.ofNat Key.kRecs.ctorIdx = (50 : Word) from rfl] at hmem
-      blk_list 50, 4, 5, 2, recs_link, { st with recs := xv }, recStab b
+      blk_list 50, 4, 5, 2, recs_link, { st with recs := xv }, _root_.L.Front.Ind.recF_stab b
     case kAll =>
       rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl] at hmem
       ikey_res
@@ -270,7 +261,7 @@ theorem indFields_link (m m' : Mem)
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
     show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl,
     show UInt64.ofNat 5 = (5 : Word) from rfl] at h1 h2 h3 h4 h5
-  simp only [rdW_wd, h1, h2, h3, h4, h5]
+  simp only [L.Front.Ind.wd_eq, h1, h2, h3, h4, h5]
   exact hF tys cts rcs rfl
 
 end blk

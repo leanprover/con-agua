@@ -140,7 +140,7 @@ theorem partsErRd {m m' : Mem} (hg : IWGrow m m') {i v : Nat} (h : nat? (erA (tr
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨x, hx, rfl⟩ := h
   have hx' : erA m' i = some x := hg.ext _ _ (truncM_er_get hx)
-  exact ⟨by rw [erRd_of_erA (by rw [hw]; exact hx'), UInt64.ofNat_toNat], x.toNat_lt⟩
+  exact ⟨by rw [L.Arena.erRd_of _ _ (by rw [hw]; exact hx'), UInt64.ofNat_toNat], x.toNat_lt⟩
 
 /-- A word `IW[i]` read as a number is the same word read as a `Bool`. -/
 theorem iwB_of_iwNW {m : Mem} {i : Nat} {x : Word} (h : iwN m i = some x.toNat) : iwB m i = some (x != 0) := by
@@ -181,7 +181,7 @@ theorem partsErB {m m1 : Mem} (hg : IWGrow m m1) {w k : Word} {b : Bool}
   have hx' := truncM_er_get hx
   have hw : (w + k).toNat = w.toNat + k.toNat := by
     have := erecP_lt64 hx'; rw [UInt64.toNat_add]; omega
-  rw [erRd_of_erA (by rw [hw]; exact hg.ext _ _ hx')]
+  rw [L.Arena.erRd_of _ _ (by rw [hw]; exact hg.ext _ _ hx')]
 
 /-- A constant decoded off the record pool lies at an address below `2 ^ 64`. -/
 theorem partsDecCV_lt {m : Mem} {i : Nat} {cv : IConstantVal} (h : decCV (erA (truncM m)) i = some cv) :
@@ -297,7 +297,7 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
           (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg02
         have hru2 : decRules (erA (truncM m2)) ro rl = some rules :=
           (show DecB (fun m => decRules (erA m) ro rl) m rules from hrules).grow
-            (partsDecRules_mono _ _) hg02
+            (L.Ind.OMono.decRules _ _) hg02
         have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
         have g3 := hget 3 (by simp); have g4 := hget 4 (by simp); have g5 := iwB_of_iwNW (hget 5 (by simp))
         simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, hq1, w5, w6, w7,

@@ -233,7 +233,7 @@ theorem tmm_ref (n : Nat) {m : Mem} {a : AState} {pp pfo pfl fvo fvl ao al I us 
     (hpf.grow (OMono.decHL _ _) hg04)
   rw [hnpe, UInt64.toNat_ofNat_of_lt' hnidb, ht1] at hdec
   exact RefE.ret rfl ⟨by simpa [decON] using hdec, hS4, hg04,
-    ((hPm.fr (lpsW_mfrP hl1)).fr (plW_mfrP hl2)).fr (posRecW_mfr hpr), hafr⟩
+    ((hPm.fr (L.Ind.lpsW_mfr hl1)).fr (L.Ind.plW_mfr hl2)).fr (posRecW_mfr hpr), hafr⟩
 
 end sims
 

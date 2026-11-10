@@ -27,6 +27,7 @@ public import ConAgua.Arena.IndInstallSpec.Icvg
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecClassSpec.ClassNPcOf
 public import ConRon.Bridge.Inductives.GenRec
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -67,17 +68,6 @@ none of the recursor stage's memos (`RcMR`: `RcKeepF`, a program fact). -/
 def grcRcCallees : List FnName :=
   ["class_gen_prefix_binders", "class_rec_tys_ok", "gen_rec_check_former_tys_c", "struct_elim_level",
     "class_fe_r", "flush_caches", "class_recs_rules_ok", "gen_rec_check_pop_all"]
-
-private theorem grc_mapM_mem {α β : Type} {f : α → Option β} :
-    ∀ {l : List α} {l' : List β}, l.mapM f = some l' → ∀ x ∈ l, ∃ y, f x = some y
-  | [], _, _, _, hx => absurd hx List.not_mem_nil
-  | a :: l, _, h, x, hx => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, hy, ys, hys, -⟩ := h
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ⟨y, hy⟩
-    · exact grc_mapM_mem hys x hx
 
 /-- `GrcProg` with the Verdict's restated callees' program facts (`class_rec_tys_ok`'s `RtsProgE`,
 `class_recs_rules_ok`'s `CrrProgE`) and the lookups the new L adds (`block_shape_formers`,
@@ -257,7 +247,7 @@ theorem grpC_ref (P : GrcProgE p) (n : Nat) (hn : n ≤ 2 ^ 62) {dn : NIdx → O
     simp only [grpPMem]
     rw [set64IW_get, set64IW_get]
     by_cases j13 : j = 13
-    · subst j13; rw [ite_eq_left ⟨e13.symm, by rw [size_set64]; omega⟩]; rfl
+    · subst j13; rw [ite_eq_left ⟨e13.symm, by rw [L.Mem.size64_set64]; omega⟩]; rfl
     rw [ite_eq_right (by omega)]
     by_cases j12 : j = 12
     · subst j12; rw [ite_eq_left ⟨e12.symm, by omega⟩]; rfl
@@ -461,13 +451,13 @@ theorem grpB_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p) (n : Nat) (
     refine ErrClaim.bind_right hrun2 (ErrClaim.bind_left ?_)
     exact CoreSpecE.of_callE (classesCtors_claim hkp henv P.ccs hIlpf P.opf dn fe hG.nv hG.core pp (r1.headD 0)
       (r1.tail.headD 0) rd (r2.headD 0) (r2.tail.headD 0) n hn ⟨s2.mem, Locals.init []⟩ a2 bs
-      (bs.formers.map (·.type)) rdv ms2 hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1)
+      (bs.formers.map (·.type)) rdv ms2 hC2 hA2 (hbs.grow hg12) (by rw [L.Ind.decHL_grow hg2 hftb1]; exact hft1)
       (Nat.le_trans hftb1 hg2.iw) (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) hnpk
       (by rw [hsz2]; exact hsz5) hP2 hsh2 hftP2 hrdP2 hms2P hformer hMs2) c3
   rw [grpE.k_classes_ctors.arm1]
   obtain ⟨s3, hs3, -, hok3, hC3, hg3, hsp3, hP3, hA3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (classesCtors_refinesC hkp henv P.ccs hIlpf P.opf n hn _ a2 dn fe vis pp _ _ rd _ _ bs (bs.formers.map (·.type)) rdv ms2
-      hC2 hA2 (hbs.grow hg12) (by rw [decHL_grow3 hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.iw)
+      hC2 hA2 (hbs.grow hg12) (by rw [L.Ind.decHL_grow hg2 hftb1]; exact hft1) (Nat.le_trans hftb1 hg2.iw)
       (hrd.grow (decCR_mono _) hg12) hms2.1 (hS2.lt64 hms2.2) hnpk (by rw [hsz2]; exact hsz5) hP2
       hsh2 hftP2 hrdP2 hms2P hformer hMs2) (callW_of_callE c3)
   simp only at hs3 hC3 hg3 hsp3 hP3 hA3; subst hs3

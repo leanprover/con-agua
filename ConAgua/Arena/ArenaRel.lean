@@ -22,6 +22,7 @@ public import ConAgua.Arena.NNumRefine
 public import ConAgua.Arena.MemoLibRel
 public import ConAgua.Census.Attr
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.L.Records
 
 @[expose] public section
 
@@ -1166,7 +1167,7 @@ theorem grows_frame (m m' : Mem) (hg : Grows m m') : MemFrame [POOL, POOL1] [0] 
     · subst h; rw [hf.size0, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
     · by_cases h1 : b = POOL1
       · subst h1; rw [hf.size1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-      · rw [hf.arr b h h1, size_set64]
+      · rw [hf.arr b h h1, L.Mem.size64_set64]
 
 /-- **Appending to the pool keeps `ArenaR`**: the tables whose records point into the pool by
 their own `grow` lemmas, the others by the frame. -/

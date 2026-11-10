@@ -215,7 +215,7 @@ theorem LfOK.trans {m m₁ : Mem} {o : Option (Word × Mem)} (h1 : LfFrame m m�
     LfOK m o := fun r m' h => h1.trans (ho r m' h)
 
 theorem mkAppW_lf (m : Mem) (x y : Word) : LfOK m (mkAppW m x y) := fun r m' h =>
-  (mkAppW_frameA m m' x y r h).mono (by simp [tier1, liftA, AREC, ASLOT, ADER]) (by simp [liftC])
+  (L.Arena.mkAppW_frame m m' x y r h).mono (by simp [tier1, liftA, AREC, ASLOT, ADER]) (by simp [liftC])
 theorem mkLamW_lf (m : Mem) (x y : Word) : LfOK m (mkLamW m x y) := fun r m' h =>
   (mkLamW_frameA m m' x y r h).mono (by simp [tier1, liftA, LAREC, LASLOT, LADER]) (by simp [liftC])
 theorem mkForallW_lf (m : Mem) (x y : Word) : LfOK m (mkForallW m x y) := fun r m' h =>
@@ -330,7 +330,7 @@ theorem mkApp_okI (m : Mem) (a : AState) (hA : ArenaI m a) (f x r : Word) (m' : 
     ArenaI m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
     AM.res (internE (.app (decE f) (decE x))) a = decE r := by
   obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hA.1 f x r m' hI
-  exact ⟨hok, ⟨hD, hA.2.across (mkAppW_frameA m m' f x r hI) (by decide) (by decide)
+  exact ⟨hok, ⟨hD, hA.2.across (L.Arena.mkAppW_frame m m' f x r hI) (by decide) (by decide)
     (internE_inst1LC _ a hok)⟩, hres⟩
 
 theorem mkLam_okI (m : Mem) (a : AState) (hA : ArenaI m a) (t b r : Word) (m' : Mem)

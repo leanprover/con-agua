@@ -67,13 +67,6 @@ theorem CapsW.capsOK {m : Mem} (h : CapsW m) (hf : WordsFit m) : CapsOK m := by
   · rw [← hsz EREC (by decide)]; exact h.2.2.2.2.2.2.1
   · rw [← hsz (tier1 EREC) (by decide)]; exact h.2.2.2.2.2.2.2
 
-theorem run_throw' {α : Type} (e : Err) (s : St) : StateT.run (throw e : M α) s = .error e := rfl
-
-theorem error_bind' {α β : Type} (e : Err) (f : α → Except Err β) :
-    (Except.error e >>= f) = .error e := rfl
-
-theorem error_map' {α β : Type} (e : Err) (f : α → β) : (f <$> (Except.error e : Except Err α)) = .error e := rfl
-
 /-- A slot's length expression evaluates to its array's length. -/
 theorem evalE_capSlotE (p : ArrId × Bool) :
     evalE (capSlotE p) = (do return (← get).mem.len64 (capSlotA p) : M Word) := by
@@ -95,7 +88,7 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
     by_cases hsl : capSlotA b ∈ slotArrs
     · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE_capSlotE, evalE, Cmp.eval, BinOp.eval] at h
       by_cases hb : capLo ≤ s.mem.len64 (capSlotA b) - capMin
-      · simp [hb, run_throw', error_bind'] at h
+      · simp [hb, L.run_throw, L.except_error_bind] at h
       · simp [hb] at h
         obtain ⟨h1, h2⟩ := ih s r s' h
         refine ⟨fun c hc => ?_, h2⟩
@@ -114,7 +107,7 @@ theorem capFold_run {p : Prog} {k : Stmt → M Sig} (t : Stmt) :
         · exact h1 c hc
     · simp [List.foldr_cons, capStep, capCond, hsl, step, evalC, evalE_capSlotE, evalE, Cmp.eval] at h
       by_cases hb : (4611686018427387904 : Word) ≤ s.mem.len64 (capSlotA b)
-      · simp [hb, run_throw', error_bind'] at h
+      · simp [hb, L.run_throw, L.except_error_bind] at h
       · simp [hb] at h
         obtain ⟨h1, h2⟩ := ih s r s' h
         refine ⟨fun c hc => ?_, h2⟩
@@ -132,19 +125,19 @@ theorem capTail_run {p : Prog} {k : Stmt → M Sig} (s : St) (r : Sig) (s' : St)
       r = .ret [0] ∧ s' = s := by
   simp [capTail, step, evalC, evalE, evalArgs, Cmp.eval] at h
   by_cases hc : s.mem.len64 CTL < UInt64.ofNat ctlMin
-  · simp [hc, run_throw', error_bind'] at h
+  · simp [hc, L.run_throw, L.except_error_bind] at h
   by_cases hd : s.mem.len64 DECL = 0
-  · simp [hc, hd, run_throw', error_bind'] at h
+  · simp [hc, hd, L.run_throw, L.except_error_bind] at h
   by_cases hq : s.mem.len64 DLP = 0
-  · simp [hc, hd, hq, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, L.run_throw, L.except_error_bind] at h
   by_cases hp : (1099511627776 : Word) ≤ s.mem.len64 POOL
-  · simp [hc, hd, hq, hp, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, hp, L.run_throw, L.except_error_bind] at h
   by_cases hp1 : (1099511627776 : Word) ≤ s.mem.len64 POOL1
-  · simp [hc, hd, hq, hp, hp1, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, hp, hp1, L.run_throw, L.except_error_bind] at h
   by_cases he : (1099511627776 : Word) ≤ s.mem.len64 EREC
-  · simp [hc, hd, hq, hp, hp1, he, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, hp, hp1, he, L.run_throw, L.except_error_bind] at h
   by_cases he1 : (1099511627776 : Word) ≤ s.mem.len64 (tier1 EREC)
-  · simp [hc, hd, hq, hp, hp1, he, he1, run_throw', error_bind'] at h
+  · simp [hc, hd, hq, hp, hp1, he, he1, L.run_throw, L.except_error_bind] at h
   · simp [hc, hd, hq, hp, hp1, he, he1] at h
     change Except.ok _ = _ at h
     cases h
@@ -173,7 +166,7 @@ theorem capCheck_specW (p : Prog) (hp : p.lookup "cap_check" = some capCheckL) (
   subst hs
   rw [invoke_eq _ hp] at hrun
   cases n with
-  | zero => simp [callFn, exec, run_throw', error_map'] at hrun
+  | zero => simp [callFn, exec, L.run_throw, L.except_error_map] at hrun
   | succ n =>
     simp only [callFn, exec, StateT.run_bind, StateT.run_get, pure_bind, StateT.run_set] at hrun
     cases hb : (step p (exec p n) capCheckL.body).run { s with loc := Locals.init [] } with

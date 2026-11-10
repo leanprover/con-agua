@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 public import ConAgua.Arena.IndSumSpec.StructUsedFrame
+import ConAgua.Arena.IndRealWalkT
 
 @[expose] public section
 
@@ -214,20 +215,13 @@ theorem ci_structUsedLater (cty : EIdx) (nP j : Nat) : CI (structUsedLater cty n
 
 /-! ## The twin ops keep the store, the caches and the pins -/
 
-theorem keepsSp_bvarB (F : Nat) (e : EIdx) : Keeps sp (bvarB F e) := by
-  unfold bvarB
-  refine Keeps.bind (keeps_derivedE _) fun x => ?_
-  by_cases hc : ((ConLeche.bvarOfData x).toNat == ConLeche.satRange) = true
-  · simp only [hc, ↓reduceIte]; exact keeps_bvarBoundMemo F e
-  · simp only [hc, Bool.false_eq_true, ↓reduceIte]; exact Keeps.pure _
-
 theorem keepsSp_hbGo (F : Nat) : ∀ (memo : Std.HashMap (EIdx × Nat) Bool) (i : Nat) (h : EIdx),
     Keeps sp (hasLooseBVarBGo memo i F h) := by
   induction F with
   | zero => intro memo i h; rw [hasLooseBVarBGo]; exact Keeps.fail _
   | succ F ih =>
     intro memo i h; rw [hasLooseBVarBGo]
-    refine Keeps.bind (keepsSp_bvarB _ _) fun bb => ?_
+    refine Keeps.bind (L.Ind.keeps_bvarB_sp _ _) fun bb => ?_
     keeps_auto [] using (ih _), sp_blind
 
 theorem keepsSp_stripPis : ∀ (k : Nat) (h : EIdx), Keeps sp (stripPis k h) := by

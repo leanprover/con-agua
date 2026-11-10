@@ -11,6 +11,7 @@ public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore
 import all ConAgua.Arena.DefEq
 import ConAgua.L.WordOff
+import ConAgua.Arena.WhnfDeltaRefine
 
 @[expose] public section
 
@@ -93,11 +94,8 @@ theorem defEqList_nil_right (r : CoreFnsA) (fe : IFEnv) (d : Nat) (xs : List EId
 
 theorem exit_eq (L : List EIdx) (an bn : Word) (hL : L.isEmpty = true ↔ an.toNat = bn.toNat) :
     L.isEmpty = decBool [if an = bn then 1 else 0] := by
-  rw [decBool_ite, Bool.eq_iff_iff, hL, decide_eq_true_iff]
+  rw [_root_.L.Arena.decBool_ite, Bool.eq_iff_iff, hL, decide_eq_true_iff]
   exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => h ▸ rfl⟩
-
-theorem resH_ite (c : Prop) [Decidable c] : ResH [if c then (1 : Word) else 0] := by
-  unfold ResH HW; split <;> decide
 
 /-! ## `defeq_lst` -/
 
@@ -139,11 +137,11 @@ theorem lst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
         · exact .inr (UInt64.le_iff_toNat_le.mp h)
       rcases hex' with h | h
       · rw [List.drop_eq_nil_of_le (as := xs) (by omega), defEqList_nil_left]
-        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (resH_ite (an = bn)))
+        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (L.Arena.resH_ite (an = bn)))
         simp only [List.isEmpty_iff, List.drop_eq_nil_iff, hyl]
         omega
       · rw [List.drop_eq_nil_of_le (as := ys) (by omega), defEqList_nil_right]
-        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (resH_ite (an = bn)))
+        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (L.Arena.resH_ite (an = bn)))
         simp only [List.isEmpty_iff, List.drop_eq_nil_iff, hxl]
         omega
     have hia2 : i.toNat < an.toNat := by
@@ -165,9 +163,9 @@ theorem lst_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
         (by omega) ⟨hS, hmode, heb⟩ hwx hwy) fun r m₁ _ h₁ =>
       RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ hst₁ => ?_
     by_cases h0 : r.headD 0 = 0
-    · rw [lstE.k_defeq.arm1 (hc1 := h0), decBool_f h0]
+    · rw [lstE.k_defeq.arm1 (hc1 := h0), L.Arena.decBool_false_of h0]
       exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
-    rw [lstE.k_defeq.arm2 (hc1 := h0), decBool_t h0, ite_eq_left rfl]
+    rw [lstE.k_defeq.arm2 (hc1 := h0), L.Arena.decBool_true_of h0, ite_eq_left rfl]
     have hi1 : (i + 1).toNat = i.toNat + 1 := by
       rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; have := an.toNat_lt; omega
     have := ih (by omega) (i + 1) m₁ _ M₁ eb hS₁ heb (hst.trans hst₁)
@@ -253,12 +251,12 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       rw [h0i, h0j] at hex
       rcases hex with h | h
       · rw [h, List.take_zero, List.reverse_nil, defEqList_nil_left]
-        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (resH_ite (an = bn)))
+        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (L.Arena.resH_ite (an = bn)))
         simp only [List.isEmpty_reverse, List.isEmpty_iff,
           List.eq_nil_iff_length_eq_zero, List.length_take, hyl]
         omega
       · rw [h, List.take_zero, List.reverse_nil, defEqList_nil_right]
-        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (resH_ite (an = bn)))
+        refine RefE.ret rfl (CorePost.ret hS (exit_eq _ an bn ?_) (L.Arena.resH_ite (an = bn)))
         simp only [List.isEmpty_reverse, List.isEmpty_iff,
           List.eq_nil_iff_length_eq_zero, List.length_take, hxl]
         omega
@@ -281,9 +279,9 @@ theorem lrev_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
         (by omega) ⟨hS, hmode, heb⟩ hwx hwy) fun r m₁ _ h₁ =>
       RefE.after_core (w := fun (v : Word × Mem) => ([v.1], v.2)) h₁ fun M₁ hS₁ hst₁ => ?_
     by_cases h0 : r.headD 0 = 0
-    · rw [lrevE.k_defeq.arm1 (hc1 := h0), decBool_f h0]
+    · rw [lrevE.k_defeq.arm1 (hc1 := h0), L.Arena.decBool_false_of h0]
       exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
-    rw [lrevE.k_defeq.arm2 (hc1 := h0), decBool_t h0, ite_eq_left rfl]
+    rw [lrevE.k_defeq.arm2 (hc1 := h0), L.Arena.decBool_true_of h0, ite_eq_left rfl]
     exact ih (by omega) (i - 1) (j - 1) m₁ _ M₁ eb hS₁ heb (hst.trans hst₁) (by omega)
       (by omega) (by omega)
 

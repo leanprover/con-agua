@@ -14,6 +14,7 @@ import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Checker.HoistDecode
 
 @[expose] public section
 
@@ -99,7 +100,7 @@ theorem iwH_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P)
 theorem decHL_agree {k : IdxKind} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
     (hi : ∀ j < l, P (o + j)) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
   simp only [decHL, hslice?]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   simp only [hd?, iwA, aread_apply, h (o + j) (hi j (List.mem_range.mp hj))]
 
@@ -139,7 +140,7 @@ l_model rhGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3 : p.l
     (h4 : p.lookup "rec4" = some rec4) (hsg : p.lookup "sl_getd" = some slGetD)
     (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
   fns [hg ↦ rhGoW void]
-  specs [posRec4_specW p ha h4 n, posRec3_specW p ha h3 n, slGetD_specW p hsg n]
+  specs [posRec4_specW p ha h4 n, L.Ind.rec3_specW_iw p ha h3 n, slGetD_specW p hsg n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
 /-- The continuation after the recursive call passes its memory on. -/
@@ -225,7 +226,7 @@ theorem decAt_agree {α : Type} {g g' : Nat → Nat → Option (List α)} {m m' 
 theorem decNL_agree {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P) {o l : Nat}
     (hi : ∀ j < l, P (o + j)) : decNL m' o l = decNL m o l := by
   simp only [decNL]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   exact iwN_agree h (hi j (List.mem_range.mp hj))
 
@@ -383,7 +384,7 @@ theorem decPL_agreeX {α : Type} {m m' : Mem} {P : Nat → Prop} (h : RdS m m' P
     (hi : ∀ j < l, P (o + j)) {xs : List α} (hx : decPL m f o l = some xs) :
     decPL m' f' o l = some xs := by
   have e : decPL m' f' o l = (List.range l).mapM (fun j => do f' (← iwN m (o + j))) := by
-    simp only [decPL]; apply mapM_opt_congr; intro j hj
+    simp only [decPL]; apply L.Ind.mapM_congr_of; intro j hj
     rw [iwN_agree h (hi j (List.mem_range.mp hj))]
   rw [e]
   exact ArrExt.mapM (fun j x hj => by
@@ -625,9 +626,6 @@ l_model nestHoleAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h3
   specs [rootHoles_spec' p ha h3 hsg h4 hg hr n, slAppend_specW p ha hc hap n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-theorem rdW_of_get' {a : Array Word} {x : Word} {i : Nat} {w : Word} (hx : x.toNat = i) (h : a[i]? = some w) :
-    rdW a x = w := by simp [rdW, hx, h]
-
 theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
     (m m' : Mem) (ctx po pl i : Word) (r : List Word) (c : NestCtx) (prog : List NestHole)
     (h : haWf (k + 1) m ctx po pl i = some (r, m')) (hS : StageR vis fe m a)
@@ -678,7 +676,7 @@ theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
         rw [hw1 _ hr]; exact hw
       obtain ⟨e, hni'⟩ := hni.grow hg2
-      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_left hr, List.getElem?_eq_getElem hr]
+      rw [L.Checker.rdW_of hx hw', ← hidx, List.getElem?_append_left hr, List.getElem?_eq_getElem hr]
       rw [List.getElem?_eq_getElem hr] at hd
       exact ⟨by rw [e, hd], hni'⟩
     · obtain ⟨w, hw, hd, hni⟩ := hpH (idx.toNat - c.rootHoles.length) (by omega)
@@ -689,7 +687,7 @@ theorem haW_ok (k : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
         rw [this, hg1.iwGet _ (by omega)]; exact hw
       obtain ⟨e, hni'⟩ := hni.grow (hg1.trans hg2)
       have hr' : idx.toNat - c.rootHoles.length < prog.length := by omega
-      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']
+      rw [L.Checker.rdW_of hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']
       rw [List.getElem?_eq_getElem hr'] at hd
       exact ⟨by rw [e, hd], hni'⟩
   · rw [haWf.k_sl_append.arm2 (hc1 := hh)] at h

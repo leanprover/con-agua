@@ -22,7 +22,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem slR_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) {o l : Word} {ws : List Word}
+theorem SlR.congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) {o l : Word} {ws : List Word}
     (h : SlR m o l ws) : SlR m' o l ws := by
   induction h with
   | nil => exact SlR.nil

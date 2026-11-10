@@ -80,7 +80,7 @@ theorem slEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
 
 end specs
 
-theorem slR_length {m : Mem} {o l : Word} {ws : List Word} (h : SlR m o l ws) :
+theorem SlR.length {m : Mem} {o l : Word} {ws : List Word} (h : SlR m o l ws) :
     ws.length = l.toNat := by
   induction h with
   | nil => rfl
@@ -119,8 +119,8 @@ theorem eqW_ok (n : Nat) : ∀ (m : Mem) (o1 l1 o2 l2 r : Word) (ws1 ws2 : List 
             simp [hx]
         · rw [eqW_len n m o1 l1 o2 l2 hll] at h
           simp at h; subst h
-          have e1 := slR_length (SlR.cons hl1 hs1)
-          have e2 := slR_length (SlR.cons hl2 hs2)
+          have e1 := L.Ind.SlR.length (SlR.cons hl1 hs1)
+          have e2 := L.Ind.SlR.length (SlR.cons hl2 hs2)
           have hne : ¬ (rdW (m.arr64 IW) o1 :: ws1' = rdW (m.arr64 IW) o2 :: ws2') := by
             intro heq; rw [heq] at e1; apply hll
             exact UInt64.toNat_inj.mp (by rw [← e1, e2])

@@ -48,7 +48,7 @@ theorem RfFr.of_frame {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : 
 theorem appendW_mfr {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
     (h : appendW n m o1 l1 o2 l2 = some (r, m')) : MFr [] [] m m' := by
   unfold appendW at h
-  mfr_auto h [allocW_mfr, fun h => MFr.of_iw (posmemo_copyW_iw _ _ _ _ _ _ h)]
+  mfr_auto h [allocW_mfr, fun h => MFr.of_iw (_root_.L.Ind.copyW_iwFrame _ _ _ _ _ _ h)]
 
 theorem pccW_fr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
     (h : pccW k m no nl us nn cty = some (r, m')) : RfFr m m' :=

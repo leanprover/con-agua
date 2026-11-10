@@ -11,6 +11,7 @@ import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.RecCheckSpec.TargetMajorAt2
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlotHit
+import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 
@@ -109,14 +110,14 @@ theorem decCF_words {m : Mem} {q : Nat} {cf : ClassField} (h : decCF m q = some 
       rdW (m.arr64 IW) (UInt64.ofNat q + 2) = UInt64.ofNat tl ∧ tl < 2 ^ 64) := by
   simp only [decCF, bind, Option.bind_eq_some_iff] at h
   obtain ⟨tg, htg, hcf⟩ := h
-  have hq0 := iwN_lt_size htg
+  have hq0 := L.Ind.iwN_lt htg
   have h0 := iwN_rdW htg (by omega)
   rcases tg with _ | _ | tg
   · left; simp only [pure, Option.some.injEq] at hcf; exact ⟨hcf.symm, by rw [h0.1]; rfl⟩
   · right
     simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at hcf
     obtain ⟨t, ht, tl, htl, rfl⟩ := hcf
-    have hq2 := iwN_lt_size htl
+    have hq2 := L.Ind.iwN_lt htl
     have e1 : UInt64.ofNat q + 1 = UInt64.ofNat (q + 1) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp <;> omega
     have e2 : UInt64.ofNat q + 2 = UInt64.ofNat (q + 2) := by
