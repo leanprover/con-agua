@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.PropReadLoops
 public import ConAgua.Arena.ErecRd
-import ConAgua.Arena.LdRd
 import ConAgua.Arena.InferBodySpine
 public import ConAgua.Arena.LevelSubstL
 import ConAgua.Arena.InferBodyIntern

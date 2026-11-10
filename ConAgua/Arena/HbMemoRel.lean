@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndIface
-public import ConAgua.Arena.MemoLibRel
 
 @[expose] public section
 

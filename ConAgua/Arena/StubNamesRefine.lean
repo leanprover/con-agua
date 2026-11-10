@@ -9,6 +9,8 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.SimLib
 import all ConAgua.Arena.StubNames
+public import ConAgua.Arena.StubNames
+public import ConAgua.Arena.IndStubs
 
 @[expose] public section
 

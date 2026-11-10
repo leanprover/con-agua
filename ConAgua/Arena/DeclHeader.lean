@@ -1,13 +1,13 @@
 module
 
-public import ConAgua.Arena.IndRealWalk
-public import ConAgua.Arena.DeclStep
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndIface
+import ConAgua.Arena.Pins
+public import ConAgua.Arena.IndIface
 
 @[expose] public section
 

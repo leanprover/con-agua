@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.KnotMonoBase
+import ConRon.Bridge.ExprOps.MemoSpecs
 
 @[expose] public section
 

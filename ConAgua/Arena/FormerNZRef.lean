@@ -1,22 +1,16 @@
 module
 
 public import ConAgua.Arena.FormerSortRef
-public import ConAgua.Arena.LevelZero
-public import ConAgua.Arena.LevelSubstL
 public import ConAgua.Arena.PropReadW
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Rel
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.KnotMono
-import ConAgua.Arena.LevelArena
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.IndView
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

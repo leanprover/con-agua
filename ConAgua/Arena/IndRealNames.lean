@@ -18,6 +18,7 @@ import all ConAgua.Arena.LsStore
 import all ConAgua.Arena.NAnonStore
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.Store
+import ConAgua.Arena.IndMaster
 
 @[expose] public section
 

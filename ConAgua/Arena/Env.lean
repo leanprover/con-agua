@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.Tiers
-public import ConAgua.L.Logic
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

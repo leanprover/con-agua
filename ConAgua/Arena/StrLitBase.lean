@@ -12,7 +12,6 @@ import ConAgua.Arena.LvlGrow
 import ConAgua.Arena.StoreDenLvl
 import ConRon.Arena.WFProofs
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndIface
 public import ConAgua.Arena.KnotSlot
 public import ConAgua.Arena.RomExpr
 public import ConAgua.Arena.WhnfDeltaRefine

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Rom.PinRead
-public import ConAgua.Arena.IndMaster
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr

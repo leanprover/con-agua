@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DefEqStuck
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.LdRd
 import ConAgua.Arena.RefWalk
 

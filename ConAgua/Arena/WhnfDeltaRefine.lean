@@ -1,7 +1,5 @@
 module
 
-import ConAgua.Arena.WhnfCoreProj
-public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -10,7 +8,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.PinsNatOp
-import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCoreApp

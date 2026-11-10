@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InstLPLevel2
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.CoreWalks

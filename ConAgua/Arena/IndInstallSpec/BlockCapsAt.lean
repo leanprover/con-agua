@@ -9,7 +9,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.Env
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface

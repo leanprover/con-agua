@@ -11,7 +11,6 @@ public import ConAgua.L.Examples
 import ConAgua.Arena.SimLib
 import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.WhnfM2C
 import all ConAgua.Arena.WhnfIota
 

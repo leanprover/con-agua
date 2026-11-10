@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.WhnfCore
-public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec

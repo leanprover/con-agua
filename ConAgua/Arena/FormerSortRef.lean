@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.InferBodyIntern
-public import ConAgua.Arena.InferLeaves
 public import ConAgua.Arena.WhnfIota
 public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
@@ -9,13 +8,15 @@ public import Std.WP.Tactic
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.RefECore
 import ConRon.Bridge.Rel
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.WhnfIota
+public import ConAgua.Checker.NoVerdictFns
+public import ConAgua.Arena.RefECore
+public import ConAgua.Arena.KnotE
 
 @[expose] public section
 

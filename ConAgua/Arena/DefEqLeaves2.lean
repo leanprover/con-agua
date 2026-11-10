@@ -11,7 +11,6 @@ import ConAgua.Front.Preserve
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.NatArms
-import ConAgua.Arena.ErecRd
 
 @[expose] public section
 

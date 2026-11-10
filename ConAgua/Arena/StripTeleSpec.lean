@@ -11,7 +11,6 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.Env
 import ConAgua.Arena.IndCopy2
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy

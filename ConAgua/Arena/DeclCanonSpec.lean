@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -9,7 +8,11 @@ import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
 import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.StoreFields
+public import ConAgua.Arena.ErecRd
+public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.DeclArmsCanon
+public import ConAgua.Arena.Env
+public import ConAgua.L.ProgHas
 
 @[expose] public section
 

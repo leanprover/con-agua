@@ -1,7 +1,8 @@
 module
 
-public import ConAgua.Arena.StrLitKeep
 public import ConRon.Arena.WFProofs
+public import ConRon.Arena.Core
+public import ConAgua.Arena.Keeps
 
 @[expose] public section
 

@@ -6,9 +6,7 @@ public import ConAgua.Arena.IndPosSpec.PiBWStage
 public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPartsSpec.MemberNames
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.RecClassSpec.CloseLams
 
 @[expose] public section
 

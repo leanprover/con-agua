@@ -16,6 +16,7 @@ public import ConAgua.Arena.IndPartsSpec.MemberNames
 import all ConAgua.Arena.RecClass
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.RecClass
+public import ConAgua.Arena.Env
 
 @[expose] public section
 

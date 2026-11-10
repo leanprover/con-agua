@@ -7,11 +7,8 @@ public import ConAgua.Verdict.WhnfModels6E
 public import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
-public import ConAgua.Arena.CoreErec
-public import ConAgua.Arena.EtaRescueRef
 public import ConAgua.Arena.DeclArmsCanon
 
 @[expose] public section

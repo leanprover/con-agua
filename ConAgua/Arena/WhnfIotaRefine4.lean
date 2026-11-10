@@ -12,10 +12,6 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.RefWalk
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.CoreErec
-public import ConAgua.Arena.KnotE
-public import ConAgua.Arena.RefECore
-public import ConAgua.Arena.WhnfIotaRefine
 public import ConAgua.Verdict.WhnfModels3E
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.Pins

@@ -1,6 +1,9 @@
 module
+import ConAgua.Census.Attr
+import ConAgua.Layout
+import ConAgua.L.Notation
+public import ConAgua.L.Syntax
 
-public import ConAgua.Arena.IndIface
 
 @[expose] public section
 

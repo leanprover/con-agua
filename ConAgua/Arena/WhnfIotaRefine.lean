@@ -11,7 +11,6 @@ public import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.L.Examples
 public import ConAgua.L.For
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.LdRd
 import ConAgua.Arena.SimLib
 import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas

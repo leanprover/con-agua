@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.KnotSlot
-public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.IndView
 import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.Infer
@@ -12,12 +11,10 @@ public import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 public import ConAgua.Arena.WhnfCoreApp
-import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.KnotE
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-import ConAgua.L.WordOff
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.Infer

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclCvg
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

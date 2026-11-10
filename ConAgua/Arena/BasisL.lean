@@ -1,7 +1,10 @@
 module
 
-public import ConAgua.Arena.DeclArmsCanon
 meta import ConAgua.Arena.DeclArmsCanon
+import ConAgua.Census.Attr
+import ConAgua.Layout
+import ConAgua.L.Notation
+public import ConAgua.L.Syntax
 
 @[expose] public section
 

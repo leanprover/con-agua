@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.DeclCanonSpec
-import ConAgua.Arena.SimLib
 import ConRon.Bridge.Grind
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 

@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.ProjView
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.ModelGen

@@ -7,6 +7,7 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
+public import ConAgua.Arena.IndView
 
 @[expose] public section
 

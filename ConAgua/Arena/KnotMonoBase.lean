@@ -1,8 +1,9 @@
 module
 
-public import ConAgua.Arena.StrLitExt
 public import ConAgua.Arena.Keeps
 public meta import Lean
+import ConRon.Arena.WFProofs
+public import ConRon.Arena.Core
 
 @[expose] public section
 

@@ -2,10 +2,8 @@ module
 
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
-public import ConAgua.Arena.ErecRd
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DefEqStuckGo
-import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

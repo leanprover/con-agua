@@ -8,7 +8,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.Env
 import ConAgua.Arena.StripTeleSpec
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPos

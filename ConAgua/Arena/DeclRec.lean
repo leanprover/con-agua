@@ -8,7 +8,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
-public import ConAgua.Arena.Env
 import all ConAgua.Arena.DeclStep
 import all ConAgua.Arena.Env
 

@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Verdict.WhnfModels7E
 public import ConAgua.Arena.CoreLevels
-public import ConAgua.Arena.IndIface
 
 @[expose] public section
 

@@ -13,6 +13,7 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.Env
 
 @[expose] public section
 

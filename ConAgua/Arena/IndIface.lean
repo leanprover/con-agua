@@ -4,7 +4,6 @@ public import ConAgua.Arena.Tiers
 public import ConRon.Arena.Inductives.GenRec
 meta import ConAgua.Arena.Tiers
 meta import ConRon.Arena.Inductives.GenRec
-public import ConAgua.Arena.Env
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
