@@ -9,8 +9,6 @@ import ConAgua.Checker.CheckARun
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.ProgWf
 public import ConAgua.Checker.ProgTab
-public import ConAgua.Final.Abi
-public import ConAgua.Final.BufLayout
 public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
 

@@ -329,147 +329,147 @@
    165    return slurp(fd, path, n);
    166  }
 
-== ConAgua/Final/ThreadsFinal.lean#L146-L181
-   146  /-- **The threads' accepting calls** (trusted; the module doc lists it): for entry 1 at `dm₀`
-   147  returning at `st₀` and the buffer `B`, every call `i < t.n` of each thread `t` of `ths` is made
-   148  with the buffer in place and on the thread's region, returns accept with the buffer kept, and
-   149  claims a job index below `k`; each thread's region is zero at its first call and carries over
-   150  between its calls, and its claims increase. -/
-   151  structure ThreadsAcc [Host] (dm₀ : MachineData) (st₀ : MachineState) (B : Array Word)
-   152      (ths : List ThreadM) : Prop where
-   153    /-- the calls: the buffer in place, each thread on its region -/
-   154    calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
-   155      (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
-   156      (t.dm i).regs.r8.toNat = t.blen
-   157    zero : ∀ t ∈ ths, 0 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
-   158    ret : ∀ t ∈ ths, ∀ i < t.n, FirstReturn (t.dm i) (label abiCheckBL) (t.ra i) (t.st i)
-   159    acc : ∀ t ∈ ths, ∀ i < t.n, (t.st i).data.regs.rdx = 0 ∧ (t.st i).data.regs.rax = ACCEPT
-   160    /-- route A: the buffer's words at each call's return -/
-   161    kept : ∀ t ∈ ths, ∀ i < t.n, ∀ q (h : q < B.size),
-   162      rdW (t.st i).data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
-   163    next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
-   164      (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
-   165    claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
-   166    /-- the claims increase in each thread (the claim counter is monotone) -/
-   167    incr : ∀ t ∈ ths, ∀ i j, i < j → j < t.n → (t.dm i).regs.rdx < (t.dm j).regs.rdx
-   168  
-   169  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
-   170  returning at `st₀`, the buffer `B`, and the threads `ths`, whose calls all accept
-   171  (`ThreadsAcc`) and claim every job index below `k`. -/
-   172  structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-   173      (B : Array Word) (ths : List ThreadM) : Prop extends ThreadsAcc dm₀ st₀ B ths where
-   174    call₀ : AbiCall b pb dm₀ ra₀
-   175    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
-   176    rdx₀ : st₀.data.regs.rdx = 0
-   177    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
-   178    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
-   179    bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
-   180    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
-   181    cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
+== ConAgua/Final/ThreadsFinal.lean#L144-L179
+   144  /-- **The threads' accepting calls** (trusted; the module doc lists it): for entry 1 at `dm₀`
+   145  returning at `st₀` and the buffer `B`, every call `i < t.n` of each thread `t` of `ths` is made
+   146  with the buffer in place and on the thread's region, returns accept with the buffer kept, and
+   147  claims a job index below `k`; each thread's region is zero at its first call and carries over
+   148  between its calls, and its claims increase. -/
+   149  structure ThreadsAcc [Host] (dm₀ : MachineData) (st₀ : MachineState) (B : Array Word)
+   150      (ths : List ThreadM) : Prop where
+   151    /-- the calls: the buffer in place, each thread on its region -/
+   152    calls : ∀ t ∈ ths, ∀ i < t.n, BufCallH B (t.dm i) (t.ra i) ∧
+   153      (t.dm i).regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i).regs.rcx.toNat = t.base ∧
+   154      (t.dm i).regs.r8.toNat = t.blen
+   155    zero : ∀ t ∈ ths, 0 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+   156    ret : ∀ t ∈ ths, ∀ i < t.n, FirstReturn (t.dm i) (label abiCheckBL) (t.ra i) (t.st i)
+   157    acc : ∀ t ∈ ths, ∀ i < t.n, (t.st i).data.regs.rdx = 0 ∧ (t.st i).data.regs.rax = ACCEPT
+   158    /-- route A: the buffer's words at each call's return -/
+   159    kept : ∀ t ∈ ths, ∀ i < t.n, ∀ q (h : q < B.size),
+   160      rdW (t.st i).data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+   161    next : ∀ t ∈ ths, ∀ i, i + 1 < t.n → ∀ x, t.base ≤ x → x < t.base + t.blen →
+   162      (t.dm (i + 1)).dmem.get? (A x) = (t.st i).data.dmem.get? (A x)
+   163    claimed : ∀ t ∈ ths, ∀ i < t.n, (t.dm i).regs.rdx < st₀.data.regs.rax - 9223372036854775808
+   164    /-- the claims increase in each thread (the claim counter is monotone) -/
+   165    incr : ∀ t ∈ ths, ∀ i j, i < j → j < t.n → (t.dm i).regs.rdx < (t.dm j).regs.rdx
+   166  
+   167  /-- **What the threaded harness does** (trusted; the module doc lists it): entry 1 at `dm₀`
+   168  returning at `st₀`, the buffer `B`, and the threads `ths`, whose calls all accept
+   169  (`ThreadsAcc`) and claim every job index below `k`. -/
+   170  structure ThreadsRun [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+   171      (B : Array Word) (ths : List ThreadM) : Prop extends ThreadsAcc dm₀ st₀ B ths where
+   172    call₀ : AbiCall b pb dm₀ ra₀
+   173    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+   174    rdx₀ : st₀.data.regs.rdx = 0
+   175    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+   176    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+   177    bufw : ∀ i (h : i < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * i)) = some B[i]
+   178    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+   179    cover : ∀ j : Word, j < st₀.data.regs.rax - 9223372036854775808 → ∃ t ∈ ths, ∃ i < t.n, (t.dm i).regs.rdx = j
 
-== ConAgua/Final/ThreadsFinal.lean#L32-L55
-    32  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`, whose per-thread
-    33  facts are `ThreadsAcc`, which the threaded verdict reuses for the jobs below a failing one; beyond
-    34  them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
-    35  
-    36  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
-    37    region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
-    38  * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
-    39    in a state that has every property the machine is guaranteed to reach at that address
-    40    (`abiA_outcome`'s and `abiB_outcome`'s posts).
-    41  * **The buffer** is the first `len` words of `OUT`'s slot of entry 1's region at its return, `len`
-    42    `OUT`'s word `1`, and stays in place: every thread's call is passed its address and sees the
-    43    same words, before the call and at its return (**route A**: read-only, `mprotect`).
-    44  * **Each thread's region** is its own (pthreads: the threads' regions are apart from each other,
-    45    from the buffer and from every thread's stack window): zero at the thread's first call, and at
-    46    each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
-    47    (the region mapped and large enough, the buffer apart from it, the return address and the
-    48    32-byte stack window).
-    49  * **The claim counter's coverage**: every claimed job index `j` (in `rdx`) is below `k`
-    50    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
-    51  * **The claims increase** in each thread: a thread's later call claims a larger index (`main.c`
-    52    claims off one monotone counter; con-ron's pool, `PooledAccepts`, has each worker's jobs
-    53    increasing, since a job's start state is reached through the jobs before it).
-    54  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
-    55    `rax = ACCEPT`.
+== ConAgua/Final/ThreadsFinal.lean#L30-L53
+    30  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`, whose per-thread
+    31  facts are `ThreadsAcc`, which the threaded verdict reuses for the jobs below a failing one; beyond
+    32  them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
+    33  
+    34  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says (the input and pin buffers, a zero
+    35    region, the 32 bytes of machine stack around `rsp`; `mmap` gives the stated memory facts).
+    36  * **First return** (`FirstReturn`): the harness regains control, at each call's return address,
+    37    in a state that has every property the machine is guaranteed to reach at that address
+    38    (`abiA_outcome`'s and `abiB_outcome`'s posts).
+    39  * **The buffer** is the first `len` words of `OUT`'s slot of entry 1's region at its return, `len`
+    40    `OUT`'s word `1`, and stays in place: every thread's call is passed its address and sees the
+    41    same words, before the call and at its return (**route A**: read-only, `mprotect`).
+    42  * **Each thread's region** is its own (pthreads: the threads' regions are apart from each other,
+    43    from the buffer and from every thread's stack window): zero at the thread's first call, and at
+    44    each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
+    45    (the region mapped and large enough, the buffer apart from it, the return address and the
+    46    32-byte stack window).
+    47  * **The claim counter's coverage**: every claimed job index `j` (in `rdx`) is below `k`
+    48    (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
+    49  * **The claims increase** in each thread: a thread's later call claims a larger index (`main.c`
+    50    claims off one monotone counter; con-ron's pool, `PooledAccepts`, has each worker's jobs
+    51    increasing, since a job's start state is reached through the jobs before it).
+    52  * The verdicts: entry 1 returns `rdx = 0`, `rax ≥ 2^63`; every call returns `rdx = 0`,
+    53    `rax = ACCEPT`.
 
-== ConAgua/Final/ThreadsVerdict.lean#L77-L125
-    77  /-- **Entry 1 fails** (trusted; the module doc lists it): `ca_start_a` called at `dm₀` returns at
-    78  `st₀` with `rdx = 2`. -/
-    79  structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) :
-    80      Prop where
-    81    call₀ : AbiCall b pb dm₀ ra₀
-    82    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
-    83    rdx₀ : st₀.data.regs.rdx = 2
-    84  
-    85  /-- **A thread's call `i` fails** (trusted; the module doc lists it): entry 1 at `dm₀` returning
-    86  at `st₀`, the buffer `B`, and the thread `t`'s calls `0, …, i` (`ThreadsRun`'s fields for them),
-    87  the calls before `i` accepting and claiming smaller job indices, call `i` returning `rdx = 2`;
-    88  and every job index below call `i`'s claimed by an accepting call of the threads `ths`
-    89  (`ThreadsAcc`). -/
-    90  structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-    91      (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
-    92    call₀ : AbiCall b pb dm₀ ra₀
-    93    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
-    94    rdx₀ : st₀.data.regs.rdx = 0
-    95    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
-    96    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
-    97    bufw : ∀ q (h : q < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
-    98    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
-    99    /-- the calls: the buffer in place, on the thread's region -/
-   100    calls : ∀ i' ≤ i, BufCallH B (t.dm i') (t.ra i') ∧
-   101      (t.dm i').regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i').regs.rcx.toNat = t.base ∧
-   102      (t.dm i').regs.r8.toNat = t.blen
-   103    zero : ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
-   104    ret : ∀ i' ≤ i, FirstReturn (t.dm i') (label abiCheckBL) (t.ra i') (t.st i')
-   105    acc : ∀ i' < i, (t.st i').data.regs.rdx = 0 ∧ (t.st i').data.regs.rax = ACCEPT
-   106    rdx : (t.st i).data.regs.rdx = 2
-   107    /-- route A: the buffer's words at each accepting call's return -/
-   108    kept : ∀ i' < i, ∀ q (h : q < B.size),
-   109      rdW (t.st i').data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
-   110    next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
-   111      (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
-   112    claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
-   113    /-- the thread's earlier calls claimed smaller job indices -/
-   114    before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
-   115    /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
-   116    others : ThreadsAcc dm₀ st₀ B ths
-   117    below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
-   118  
-   119  /-- **The threaded harness reports a failure with the code `k`**: entry 1 failed with
-   120  `rax = k`, or a thread's call `i` failed with `rax = k`. -/
-   121  def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
-   122      (k : Word) : Prop :=
-   123    (Entry1Fail b pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
-   124    ∃ (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat),
-   125      ThreadFail b pb dm₀ ra₀ st₀ B ths t i ∧ k = (t.st i).data.regs.rax
+== ConAgua/Final/ThreadsVerdict.lean#L74-L122
+    74  /-- **Entry 1 fails** (trusted; the module doc lists it): `ca_start_a` called at `dm₀` returns at
+    75  `st₀` with `rdx = 2`. -/
+    76  structure Entry1Fail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) :
+    77      Prop where
+    78    call₀ : AbiCall b pb dm₀ ra₀
+    79    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+    80    rdx₀ : st₀.data.regs.rdx = 2
+    81  
+    82  /-- **A thread's call `i` fails** (trusted; the module doc lists it): entry 1 at `dm₀` returning
+    83  at `st₀`, the buffer `B`, and the thread `t`'s calls `0, …, i` (`ThreadsRun`'s fields for them),
+    84  the calls before `i` accepting and claiming smaller job indices, call `i` returning `rdx = 2`;
+    85  and every job index below call `i`'s claimed by an accepting call of the threads `ths`
+    86  (`ThreadsAcc`). -/
+    87  structure ThreadFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+    88      (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
+    89    call₀ : AbiCall b pb dm₀ ra₀
+    90    ret₀ : FirstReturn dm₀ (label abiStartAL) ra₀ st₀
+    91    rdx₀ : st₀.data.regs.rdx = 0
+    92    rax₀ : 9223372036854775808 ≤ st₀.data.regs.rax.toNat
+    93    /-- the buffer: `OUT`'s first `len` words, `len` its word `1` -/
+    94    bufw : ∀ q (h : q < B.size), rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+    95    buflen : ∃ w, rdW st₀.data.dmem (A (outAddr dm₀.regs.r8.toNat + 8)) = some w ∧ w.toNat = B.size
+    96    /-- the calls: the buffer in place, on the thread's region -/
+    97    calls : ∀ i' ≤ i, BufCallH B (t.dm i') (t.ra i') ∧
+    98      (t.dm i').regs.rdi.toNat = outAddr dm₀.regs.r8.toNat ∧ (t.dm i').regs.rcx.toNat = t.base ∧
+    99      (t.dm i').regs.r8.toNat = t.blen
+   100    zero : ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+   101    ret : ∀ i' ≤ i, FirstReturn (t.dm i') (label abiCheckBL) (t.ra i') (t.st i')
+   102    acc : ∀ i' < i, (t.st i').data.regs.rdx = 0 ∧ (t.st i').data.regs.rax = ACCEPT
+   103    rdx : (t.st i).data.regs.rdx = 2
+   104    /-- route A: the buffer's words at each accepting call's return -/
+   105    kept : ∀ i' < i, ∀ q (h : q < B.size),
+   106      rdW (t.st i').data.dmem (A (outAddr dm₀.regs.r8.toNat + 8 * q)) = some B[q]
+   107    next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
+   108      (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
+   109    claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
+   110    /-- the thread's earlier calls claimed smaller job indices -/
+   111    before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
+   112    /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
+   113    others : ThreadsAcc dm₀ st₀ B ths
+   114    below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
+   115  
+   116  /-- **The threaded harness reports a failure with the code `k`**: entry 1 failed with
+   117  `rax = k`, or a thread's call `i` failed with `rax = k`. -/
+   118  def ThreadsFail [Host] (b pb : ByteArray) (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState)
+   119      (k : Word) : Prop :=
+   120    (Entry1Fail b pb dm₀ ra₀ st₀ ∧ k = st₀.data.regs.rax) ∨
+   121    ∃ (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat),
+   122      ThreadFail b pb dm₀ ra₀ st₀ B ths t i ∧ k = (t.st i).data.regs.rax
 
-== ConAgua/Final/ThreadsVerdict.lean#L42-L66
-    42  **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
-    43  beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
-    44  loader):
-    45  
-    46  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says; **first return** (`FirstReturn`):
-    47    the harness regains control at the return address in a state with every property the machine
-    48    is guaranteed to reach there (`abiA_outcome`'s and `abiB_outcome`'s posts).
-    49  * On a thread's failure (`ThreadFail`), for the thread's calls up to the failing call `i`, what
-    50    `ThreadsRun` trusts: the buffer (`OUT`'s first `len` words at entry 1's return) stays in place
-    51    and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
-    52    zero at the first call, and at each later call holding the bytes the previous call left; each
-    53    call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
-    54    (`k = rax - 2^63` from entry 1, the number of records); the calls before `i` claimed smaller
-    55    indices than call `i` (one monotone claim counter).
-    56  * **The jobs below the failing one** (`ThreadFail`'s `others` and `below`): every job index below
-    57    call `i`'s was claimed by a call of some thread of `ths` that returned accept, and those
-    58    threads' calls are as `ThreadsRun` has them (`ThreadsAcc`: the buffer in place, each thread on
-    59    its own region, zero at its first call and carried over between its calls, each call accepting
-    60    with the buffer kept, every claim below `k`, each thread's claims increasing). `main.c` claims
-    61    the indices `0, 1, 2, …` in order from one counter, each thread finishes the call it holds and
-    62    records only its first failure, and the harness reports, after joining every thread, the
-    63    failure with the smallest index: so every lower index was claimed, run and accepted.
-    64  * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
-    65    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
-    66    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
+== ConAgua/Final/ThreadsVerdict.lean#L39-L63
+    39  **What the theorem trusts of the harness** (the hypotheses of `Entry1Fail` and `ThreadFail`;
+    40  beyond them, what `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and
+    41  loader):
+    42  
+    43  * **Entry 1's call**: `ca_start_a` is called as `AbiCall` says; **first return** (`FirstReturn`):
+    44    the harness regains control at the return address in a state with every property the machine
+    45    is guaranteed to reach there (`abiA_outcome`'s and `abiB_outcome`'s posts).
+    46  * On a thread's failure (`ThreadFail`), for the thread's calls up to the failing call `i`, what
+    47    `ThreadsRun` trusts: the buffer (`OUT`'s first `len` words at entry 1's return) stays in place
+    48    and is passed to each call (route A: read-only, `mprotect`); the thread's region is its own,
+    49    zero at the first call, and at each later call holding the bytes the previous call left; each
+    50    call is made as `BufCallH` says; every claimed job index (in `rdx`) is below `k`
+    51    (`k = rax - 2^63` from entry 1, the number of records); the calls before `i` claimed smaller
+    52    indices than call `i` (one monotone claim counter).
+    53  * **The jobs below the failing one** (`ThreadFail`'s `others` and `below`): every job index below
+    54    call `i`'s was claimed by a call of some thread of `ths` that returned accept, and those
+    55    threads' calls are as `ThreadsRun` has them (`ThreadsAcc`: the buffer in place, each thread on
+    56    its own region, zero at its first call and carried over between its calls, each call accepting
+    57    with the buffer kept, every claim below `k`, each thread's claims increasing). `main.c` claims
+    58    the indices `0, 1, 2, …` in order from one counter, each thread finishes the call it holds and
+    59    records only its first failure, and the harness reports, after joining every thread, the
+    60    failure with the smallest index: so every lower index was claimed, run and accepted.
+    61  * The verdicts: entry 1 returns `rdx = 2` (`Entry1Fail`), or `rdx = 0` and `rax ≥ 2^63`, the
+    62    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
+    63    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 
 == ConAgua/Compiler/Main.lean#L29-L33
     29  /-- What the harness sees after `ca_enter` returns, against L's result. -/

@@ -226,8 +226,8 @@ not accepted
 
 **The threaded mode** (`--jobs=N`, §9.3) has its own theorem, and its harness
 assumptions are the fields of
-[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L146-L181)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L32-L55)):
+[`ThreadsRun`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L144-L179)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L30-L53)):
 
 * entry 1 is called as `AbiCall` says, and the harness regains control at each
   call's return address in a state the machine is guaranteed to reach there
@@ -250,8 +250,8 @@ assumptions are the fields of
 
 The threaded verdict theorem (`checkerFile_threads_verdict`) has its own set,
 the cases of
-[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L77-L125)
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L42-L66)):
+[`ThreadsFail`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L74-L122)
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsVerdict.lean#L39-L63)):
 either entry 1 is called as `AbiCall` says and returns (`FirstReturn`) with
 `rdx = 2`, and the code reported is its `rax`; or, for one thread and one of
 its calls `i`, the facts above hold for that thread's calls up to `i` (entry 1
