@@ -4,6 +4,7 @@ public import ConAgua.Arena.StubInd
 public import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.StageInst1
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
@@ -91,65 +92,21 @@ theorem opfF_frame {m m' : Mem} {args r : List Word} (h : opfF m args = some (r,
 
 /-! ## The bodies over their callees' runs -/
 
-/-- `spn_push(x)`'s model. -/
-def spnPushW (m : Mem) (x : Word) : Option (List Word × Mem) :=
-  if m.len64 SPN ≤ rdW (m.arr64 CTL) 136 then none
-  else some ([0], (m.set64 SPN (rdW (m.arr64 CTL) 136) x).set64 CTL 136 (rdW (m.arr64 CTL) 136 + 1))
+l_model spnPush_spec (p : Prog) (hp : p.lookup "spn_push" = some L.Stubs.spnPush)
+  fns [hp ↦ spnPushW list]
+  grind [arena_grind]
 
-theorem spnPush_spec (p : Prog) (hp : p.lookup "spn_push" = some L.Stubs.spnPush) (n : Nat)
-    (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "spn_push" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ spnPushW s₀.mem x = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.spnPush]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
-      finish [spnPushW]
+l_model opfGoK_spec (p : Prog) (hp : p.lookup "opf_go" = some L.Stubs.opfGo)
+  fns [hp ↦ opfGoK list]
+  specs [callW_spec p n "inst_list", callW_spec p n "e_view", callW_spec p n "intern_fvar",
+    callW_spec p n "spn_push", callW_spec p n "opf_go"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
 
-/-- `opf_go(n, e, i, co, cn)`'s body over its callees' runs. -/
-def opfGoK (p : Prog) (k : Nat) (m : Mem) (n e i co cn : Word) : Option (List Word × Mem) :=
-  if n = 0 then ntBW (callW p k "inst_list" [e, co, cn, 0] m) fun r m1 => some ([1, r.headD 0], m1)
-  else if tagW e ≠ 6 then some ([0, 0], m)
-  else ntBW (callW p k "e_view" [e] m) fun rv m1 =>
-    ntBW (callW p k "inst_list" [rv.tail.headD 0, co, cn, 0] m1) fun rd m2 =>
-    ntBW (callW p k "intern_fvar" [i, rd.headD 0] m2) fun rf m3 =>
-    ntBW (callW p k "spn_push" [rf.headD 0] m3) fun _ m4 =>
-    ntBW (callW p k "opf_go" [n - 1, rv.tail.tail.headD 0, i + 1, co, cn + 1] m4) fun rb m5 =>
-    some ([rb.headD 0, rb.tail.headD 0], m5)
-
-theorem opfGoK_spec (p : Prog) (hp : p.lookup "opf_go" = some L.Stubs.opfGo) (k : Nat) (s₀ : St)
-    (n e i co cn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "opf_go" [n, e, i, co, cn]
-    ⦃fun r s' => LocEq s' s₀ ∧ opfGoK p k s₀.mem n e i co cn = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.opfGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
-    finish (gen := 20) [opfGoK, ntBW]
-
-/-- `opa_go(n, e, i)`'s body over its callees' runs. -/
-def opaGoK (p : Prog) (k : Nat) (m : Mem) (n e i : Word) : Option (List Word × Mem) :=
-  if n = 0 then some ([1, e], m)
-  else if tagW e ≠ 6 then some ([0, 0], m)
-  else ntBW (callW p k "e_view" [e] m) fun rv m1 =>
-    ntBW (callW p k "intern_fvar" [i, rv.tail.headD 0] m1) fun rf m2 =>
-    ntBW (callW p k "inst_entry" [rv.tail.tail.headD 0, rf.headD 0, 0] m2) fun rb m3 =>
-    ntBW (callW p k "spn_push" [rf.headD 0] m3) fun _ m4 =>
-    ntBW (callW p k "opa_go" [n - 1, rb.headD 0, i + 1] m4) fun ro m5 =>
-    some ([ro.headD 0, ro.tail.headD 0], m5)
-
-theorem opaGoK_spec (p : Prog) (hp : p.lookup "opa_go" = some L.Stubs.opaGo) (k : Nat) (s₀ : St)
-    (n e i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "opa_go" [n, e, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ opaGoK p k s₀.mem n e i = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, L.Stubs.opaGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k] <;>
-    finish (gen := 20) [opaGoK, ntBW]
+l_model opaGoK_spec (p : Prog) (hp : p.lookup "opa_go" = some L.Stubs.opaGo)
+  fns [hp ↦ opaGoK list]
+  specs [callW_spec p n "e_view", callW_spec p n "intern_fvar", callW_spec p n "inst_entry",
+    callW_spec p n "spn_push", callW_spec p n "opa_go"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
 
 /-- The common tail: the fresh pool slice, the copy of the stack slice, the stack top put back. -/
 def opfTail (k : Nat) (n co b : Word) : Option (Word × Mem) → Option (List Word × Mem)
