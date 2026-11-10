@@ -15,8 +15,9 @@ names (`h.iw`, `h.erCap`, …), the lemmas here (frames with defaulted side cond
 `IWOK.of_keep`, `IWGrow.of_keep`; writers: `IWOK.of_iw`, `IWGrow.set_iw`, `IWGrow.put`, …), or
 `grind [IWOK_iff, ind_grind]`.
 
-**Attribute set** `ind_grind`: `IWGrow.refl`, `IWGrow.trans` (as a `grind_pattern` on the two
-growth facts) and the frame lemmas whose side conditions `grind` decides on a literal write set.
+**Attribute set** `ind_grind` (the last section): `IWGrow.refl`, `IWGrow.trans` (a `grind_pattern`
+on the two growth facts), and the frame lemmas `IWOK.frameG`, `IWGrow.of_keepG`, `IWOK.of_iw`,
+whose side conditions `grind` decides on a literal write set.
 -/
 
 open ConRon.Arena
@@ -164,6 +165,36 @@ theorem erRd_set_iw (m : Mem) (d v a : Word) : erRd (m.set64 IW d v) a = erRd m 
 theorem erecPutMem_iw (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 IW = m.arr64 IW :=
   (erecPutMem_frame m a v).arr IW (by decide) (by decide)
 
+
+/-! ## The frame lemmas in `grind` shape (the set `ind_grind`)
+
+`IWOK.frame` and `IWGrow.of_keep` take their side conditions by `decide` (defaulted) or as one
+conjunction; `grind` cannot run a tactic, so the forms below take them as separate hypotheses, which
+`grind` decides on a literal write set with `List.mem_cons`/`List.not_mem_nil` (also in the set).
+New forms beside the old ones, same facts. A proof that frames the invariant is then
+`grind [ind_grind]` (or, through the conjunction, `grind [IWOK_iff, ind_grind, iwTop, erTop,
+erecTop1]`), and names no field. -/
+
+/-- `IWOK.frame` in `grind` shape. -/
+theorem IWOK.frameG {m m' : Mem} {A : List TieredArray} {C : List Word} (hf : MemFrame A C m m')
+    (h : IWOK m) (hA : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A)
+    (hE1 : (tier1 EREC : TieredArray) ∉ A) (h129 : (129 : Word) ∉ C) (h130 : (130 : Word) ∉ C)
+    (h200 : (200 : Word) ∉ C) : IWOK m' :=
+  IWOK.of_keep hf ⟨hA, hE, hE1⟩ ⟨h129, h130, h200⟩ h
+
+/-- `IWGrow.of_keep` in `grind` shape. -/
+theorem IWGrow.of_keepG {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (IW : TieredArray) ∉ A) (hE : (EREC : TieredArray) ∉ A) (hE1 : tier1 EREC ∉ A)
+    (h129 : (129 : Word) ∉ C) (h130 : (130 : Word) ∉ C) (h200 : (200 : Word) ∉ C) : IWGrow m m' :=
+  IWGrow.of_keep hf ⟨hA, hE, hE1⟩ ⟨h129, h130, h200⟩
+
+grind_pattern [ind_grind] IWOK.frameG => MemFrame A C m m', IWOK m
+grind_pattern [ind_grind] IWGrow.of_keepG => MemFrame A C m m'
+grind_pattern [ind_grind] IWOK.of_iw => MemFrame [IW] [200] m m', IWOK m
+grind_pattern [ind_grind] IWGrow.refl => IWGrow m m
+grind_pattern [ind_grind] IWGrow.trans => IWGrow m₁ m₂, IWGrow m₂ m₃
+attribute [ind_grind =] List.mem_cons
+attribute [ind_grind .] List.not_mem_nil
 
 end L.Ind
 
