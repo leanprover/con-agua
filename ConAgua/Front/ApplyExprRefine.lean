@@ -317,8 +317,8 @@ theorem node_bvar (k : Nat) (x y z : Word) (hx : ItemR x k) (hI : nodeW b.data m
 theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m 9 x y z = some (w, m₁)) :
     NodeOK st (.sort u) a m₁ w := by
   simp only [nodeW, show (9 : Word) ≠ 8 by decide, ↓reduceIte] at hI
-  split at hI
-  · rename_i hok
+  by_cases hok : tblOK m LID x = true
+  · simp only [hok, not_true_eq_false, ↓reduceIte] at hI
     obtain ⟨hg, hw, hn⟩ := tbl_read hD.levels x hok
     rw [itemR_eq hx hn]
     have hop : exprOp st (.sort x.toNat) = internE (.sort (decI (tblW m LID x))) := by
@@ -327,7 +327,7 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
     unfold NodeOK; rw [hop]
     exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP])),
       MemFrame.modeOK hf (by decide) (by decide) hmode⟩
-  · cases hI
+  · simp [hok] at hI
 
 omit hA hD hmode in
 /-- `node_bin`'s generated join after the constructor call passes its result on. -/
@@ -419,7 +419,7 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
     ↓reduceIte, litW] at hI
   obtain ⟨hcd, -, hdig, hn⟩ := natValR_decN b h64 hsize y z n hv
   cases hN : natDecW b.data m y z with
-  | none => rw [hN, litK_none] at hI; cases hI
+  | none => rw [hN, litW.k_nat_dec.none] at hI; cases hI
   | some q =>
   obtain ⟨r, m₂⟩ := q
   obtain ⟨l, rfl, hg, hsl, hnm, hpv⟩ :=

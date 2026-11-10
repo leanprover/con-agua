@@ -242,7 +242,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
         · cases h
     · cases h
   · unfold litW at h
-    rcases hN : natDecW b m c d with _ | ⟨r, m₂⟩ <;> simp only [hN, litK, reduceCtorEq] at h
+    rcases hN : natDecW b m c d with _ | ⟨r, m₂⟩ <;> simp only [hN, litW.k_nat_dec, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
     exact (natDecW_dk hN).trans (DK.ofFrame (consInternM_frame litCS_wf h))
