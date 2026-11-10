@@ -156,43 +156,19 @@ theorem rgoW.k_erec_alloc_some (n : Nat) (cO cL rO rL o cv nF q : Word) (m1 : Me
 
 /-! ## `sum_rules`: the word model -/
 
-/-- After the rules. -/
-def rulesK2 (o k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (_, m2) => some ([o, k], m2)
-/-- After the allocation: the rules. -/
-def rulesK1 (n : Nat) (cO cL rO rL k : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (o, m1) => rulesK2 o k (rgoW n m1 cO cL rO rL o)
+/-- **The model of `sum_rules(cO, cL, rO, rL)`** at exec fuel `n`. -/
+l_model rulesW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut) (hg : p.lookup "sum_rules_go" = some sumRulesGoL)
+    (hia : p.lookup "iw_alloc" = some iwAlloc) (hp : p.lookup "sum_rules" = some sumRulesL)
+  fns [hp ↦ rulesW list]
+  specs [iwAlloc_specW p hia n, rgoW_spec p ha hpu hg n]
+  grind [arena_grind]
 
-/-- **The model of `sum_rules(cO, cL, rO, rL)`** at callee fuel `n`. -/
-def rulesW (n : Nat) (m : Mem) (cO cL rO rL : Word) : Option (List Word × Mem) :=
-  rulesK1 n cO cL rO rL (if rL < cL then rL else cL) (allocW m (if rL < cL then rL else cL))
-
-theorem rulesK1_some (n : Nat) (cO cL rO rL k o : Word) (m1 : Mem) :
-    rulesK1 n cO cL rO rL k (some (o, m1)) = rulesK2 o k (rgoW n m1 cO cL rO rL o) := rfl
-theorem rulesK2_some (o k : Word) (r : List Word) (m2 : Mem) :
-    rulesK2 o k (some (r, m2)) = some ([o, k], m2) := rfl
-attribute [ind_grind] rulesK1_some rulesK2_some
-
-section spec2
-variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-  (hpu : p.lookup "erec_put" = some erecPut)
-  (hg : p.lookup "sum_rules_go" = some sumRulesGoL) (hia : p.lookup "iw_alloc" = some iwAlloc)
-  (hp : p.lookup "sum_rules" = some sumRulesL)
-include ha hpu hg hia hp
-
-theorem rulesW_spec (n : Nat) (s₀ : St) (cO cL rO rL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [cO, cL, rO, rL]
-    ⦃fun r s' => LocEq s' s₀ ∧ rulesW n s₀.mem cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, sumRulesL]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      iwAlloc_specW p hia n, rgoW_spec p ha hpu hg n] <;>
-    finish (gen := 20) [rulesW]
-
-end spec2
+/-- `rulesW` by its slice length `min rL cL`. -/
+theorem rulesW_succ (n : Nat) (m : Mem) (cO cL rO rL : Word) : rulesW (n + 1) m cO cL rO rL =
+    rulesW.k_iw_alloc n cO cL rO rL (if rL < cL then rL else cL)
+      (allocW m (if rL < cL then rL else cL)) := by
+  rw [rulesW.eq_2]; split <;> rfl
 
 /-! ## The relation to the twin -/
 
@@ -380,7 +356,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
 pointers. -/
 theorem rulesW_ok {vis : Word} {fe : IFEnv} {a : AState}
     (n : Nat) (m : Mem) (cO cL rO rL : Word) (cs : List (IConstantVal × Nat))
-    (rhss : List EIdx) (r : List Word) (m' : Mem) (h : rulesW n m cO cL rO rL = some (r, m'))
+    (rhss : List EIdx) (r : List Word) (m' : Mem) (h : rulesW (n + 1) m cO cL rO rL = some (r, m'))
     (hS : StageR vis fe m a)
     (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs)
     (hrh : DecB (fun m => decHL m rO.toNat rL.toNat) m rhss) :
@@ -388,18 +364,18 @@ theorem rulesW_ok {vis : Word} {fe : IFEnv} {a : AState}
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some (sumRules cs rhss) ∧
       Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  unfold rulesW at h
+  rw [rulesW_succ] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
   have hkm : k.toNat = min cL.toNat rL.toNat := by
     subst hk; split
     · rename_i h; have := UInt64.lt_iff_toNat_lt.mp h; omega
     · rename_i h; have : ¬ rL.toNat < cL.toNat := fun e => h (UInt64.lt_iff_toNat_lt.mpr e); omega
   rcases hal : allocW m k with _ | ⟨o, m1⟩ <;> rw [hal] at h
-  · cases h
-  rw [rulesK1_some] at h
+  · rw [rulesW.k_iw_alloc.none] at h; cases h
+  rw [rulesW.k_iw_alloc.arm1] at h
   rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> rw [h2] at h
-  · cases h
-  simp only [rulesK2, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [rulesW.k_sum_rules_go.none] at h; cases h
+  simp only [rulesW.k_sum_rules_go.arm1, Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   obtain ⟨hS1, hg1, hot, ht1⟩ := allocW_stage hal hS
   obtain ⟨hS', hg', hd', h11', hl', ht'⟩ := rgoW_ok n m1 cO cL rO rL o m o 0 [] cs rhss r2 m2 h2 hS1 hg1
     (by omega) (by simp) (by omega) (by simp [decPL]) (fun j hj => absurd hj (by omega)) hcs hrh
@@ -429,7 +405,7 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState)
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (sumRules cs rhss) ∧
       Rec11 s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
-  refine triple_post (rulesW_spec p ha hpu hg hia hp n s₀ cO cL rO rL) ?_
+  refine triple_post (rulesW_spec p ha hpu hg hia hp (n + 1) s₀ cO cL rO rL) ?_
   rintro r s' ⟨hl, hm⟩
   exact ⟨hl, rulesW_ok n _ cO cL rO rL cs rhss r _ hm hS hcs hrh⟩
 

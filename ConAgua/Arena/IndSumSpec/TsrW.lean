@@ -498,11 +498,11 @@ theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List W
         (((ruleMem_afr _ _ _ _ _).trans (set64IW_afr _ _ _)).trans (rgoW_afr n _ _ _ _ _ _ _ _ h3))
 
 theorem rulesW_afr {n : Nat} {m m' : Mem} {cO cL rO rL : Word} {r : List Word}
-    (h : rulesW n m cO cL rO rL = some (r, m')) : AFr m m' := by
-  simp only [rulesW] at h
+    (h : rulesW (n + 1) m cO cL rO rL = some (r, m')) : AFr m m' := by
+  rw [rulesW_succ] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
-  rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesK1, reduceCtorEq] at h
-  rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesK2, reduceCtorEq] at h
+  rcases h1 : allocW m k with _ | ⟨o, m1⟩ <;> simp only [h1, rulesW.k_iw_alloc.none, rulesW.k_iw_alloc.arm1, reduceCtorEq] at h
+  rcases h2 : rgoW n m1 cO cL rO rL o with _ | ⟨r2, m2⟩ <;> simp only [h2, rulesW.k_sum_rules_go.none, rulesW.k_sum_rules_go.arm1, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (allocW_afr h1).trans (rgoW_afr n _ _ _ _ _ _ _ _ h2)
 
@@ -542,21 +542,9 @@ theorem rcPoolSmall {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have := h.check.arena.base.lit.1.cap
   unfold PoolSmall; omega
 
-def rulesF : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, cO, cL, rO, rL => rulesW n m cO cL rO rL
-
-theorem rulesF_spec (p : Prog) (L : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (cO cL rO rL : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules" [cO, cL, rO, rL]
-    ⦃fun r s' => LocEq s' s₀ ∧ rulesF n s₀.mem cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
-  cases n with
-  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact rulesW_spec p L.ea hpu L.srg L.rc.rx.ha L.sr n s₀ cO cL rO rL
-
 l_model tsr_spec (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.tsr ↦ tsrW]
-  specs [rulesF_spec p hL hpu n, auxRuleFire_spec p hL.arf n, efF_spec p hL hpu n, tsrm_spec p hL hpu n]
+  specs [rulesW_spec p hL.ea hpu hL.srg hL.rc.rx.ha hL.sr n, auxRuleFire_spec p hL.arf n, efF_spec p hL hpu n, tsrm_spec p hL hpu n]
   grind [arena_grind]
 
 /-- A pointer-slice field `(off, len)` of a record decoded in the cut pools, at its word addresses. -/
@@ -605,13 +593,13 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
   obtain ⟨e8, t8⟩ := rec2RdN (w := M) (k := 8) hk8m hsz
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl] at e8
   cases n with
-  | zero => simp [rulesF, tsrW.k_sum_rules] at h
+  | zero => simp [rulesW, tsrW.k_sum_rules] at h
   | succ k =>
-  cases h1 : rulesW k m (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7)) rhso rhsl with
-  | none => simp only [rulesF] at h; rw [h1] at h; simp [tsrW.k_sum_rules] at h
+  cases h1 : rulesW (k + 1) m (rdW (m.arr64 IW) (M + 6)) (rdW (m.arr64 IW) (M + 7)) rhso rhsl with
+  | none => rw [h1] at h; simp [tsrW.k_sum_rules] at h
   | some x =>
   obtain ⟨rs, m1⟩ := x
-  simp only [rulesF] at h; rw [h1] at h
+  rw [h1] at h
   obtain ⟨hS1, hg1, hd1, hR1, hb1⟩ := rulesW_ok k m _ _ rhso rhsl _ rhss rs m1 h1 hS hctors hrh
   have hA1 := rulesW_afr h1 hA
   have e8' : rdW (m1.arr64 IW) (M + 8) = UInt64.ofNat k8 := by
