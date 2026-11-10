@@ -108,48 +108,6 @@ theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   exact partsSliceCopy h hS
     (by rw [UInt64.toNat_ofNat_of_lt' hw1b, UInt64.toNat_ofNat_of_lt' hw2b, hsl, hlvE])
 
-section arms
-variable (n : Nat) (m m1 : Mem) (cto ctl lo ll cv b e : Word) (rp : List Word)
-theorem bpfW_nil (h : ctl = 0) : bpfW (n + 1) m cto ctl lo ll = some ([1], m) := by simp [bpfW, h]
-theorem bpfW_cons (h : ctl ≠ 0) : bpfW (n + 1) m cto ctl lo ll = bpfK1 n cto ctl lo ll (rdW (m.arr64 IW) cto) m
-    (resContW n m (erRd m (rdW (m.arr64 IW) cto))) := by simp [bpfW, h]
-theorem bpfK1_res (h : b ≠ 0) : bpfK1 n cto ctl lo ll cv m (some b) = some ([0], m) := by
-  simp only [bpfK1]; exact ite_eq_left h
-theorem bpfK1_ok (h : ¬ b ≠ 0) : bpfK1 n cto ctl lo ll cv m (some b) =
-    bpfK2 n cto ctl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2))) := by
-  simp only [bpfK1]; exact ite_eq_right h
-theorem bpfK2_some : bpfK2 n cto ctl lo ll (some (rp, m1)) =
-    bpfK3 n cto ctl lo ll m1 (eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll) := by simp [bpfK2]
-theorem bpfK3_ne (h : e = 0) : bpfK3 n cto ctl lo ll m1 (some e) = some ([0], m1) := by
-  simp only [bpfK3]; exact ite_eq_left h
-theorem bpfK3_eq (h : ¬ e = 0) : bpfK3 n cto ctl lo ll m1 (some e) =
-    pinK4 (bpfW n m1 (cto + 1) (ctl - 1) lo ll) := by simp only [bpfK3]; exact ite_eq_right h
-theorem pinK4_some : pinK4 (some (rp, m1)) = some ([rp.headD 0], m1) := rfl
-end arms
-attribute [ind_grind] bpfW_nil bpfW_cons bpfK1_res bpfK1_ok bpfK2_some bpfK3_ne bpfK3_eq pinK4_some
-
-section arms
-variable (n : Nat) (m m1 : Mem) (nP cso csl lo ll cv b e : Word) (rp : List Word)
-theorem bpcW_nil (h : csl = 0) : bpcW (n + 1) m nP cso csl lo ll = some ([1], m) := by simp [bpcW, h]
-theorem bpcW_np (h : csl ≠ 0) (h2 : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP) :
-    bpcW (n + 1) m nP cso csl lo ll = some ([0], m) := by simp [bpcW, h, h2]
-theorem bpcW_cons (h : csl ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP) :
-    bpcW (n + 1) m nP cso csl lo ll = bpcK1 n nP cso csl lo ll (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)) m
-      (resContW n m (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso)))) := by
-  simp only [bpcW]; rw [ite_eq_right h, ite_eq_right h2]
-theorem bpcK1_res (h : b ≠ 0) : bpcK1 n nP cso csl lo ll cv m (some b) = some ([0], m) := by
-  simp only [bpcK1]; exact ite_eq_left h
-theorem bpcK1_ok (h : ¬ b ≠ 0) : bpcK1 n nP cso csl lo ll cv m (some b) =
-    bpcK2 n nP cso csl lo ll (erToIwW n m (erRd m (cv + 1)) (erRd m (cv + 2))) := by
-  simp only [bpcK1]; exact ite_eq_right h
-theorem bpcK2_some : bpcK2 n nP cso csl lo ll (some (rp, m1)) =
-    bpcK3 n nP cso csl lo ll m1 (eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll) := by simp [bpcK2]
-theorem bpcK3_ne (h : e = 0) : bpcK3 n nP cso csl lo ll m1 (some e) = some ([0], m1) := by
-  simp only [bpcK3]; exact ite_eq_left h
-theorem bpcK3_eq (h : ¬ e = 0) : bpcK3 n nP cso csl lo ll m1 (some e) =
-    pinK4 (bpcW n m1 nP (cso + 1) (csl - 1) lo ll) := by simp only [bpcK3]; exact ite_eq_right h
-end arms
-attribute [ind_grind] bpcW_nil bpcW_np bpcW_cons bpcK1_res bpcK1_ok bpcK2_some bpcK3_ne bpcK3_eq
 
 end L.Ind
 

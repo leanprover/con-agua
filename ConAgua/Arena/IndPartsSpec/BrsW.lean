@@ -153,38 +153,39 @@ theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
   | succ n ih =>
     intro m m' cto ctl cvTs r h hS hts hl hlb
     by_cases hc : ctl = 0
-    · rw [bpfW_nil n m cto ctl lo ll hc] at h
+    · rw [bpfW.arm1 n m cto ctl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc; rw [partsPSl_nil hts]
       exact ⟨hS, IWGrow.refl _, rfl⟩
-    rw [bpfW_cons n m cto ctl lo ll hc] at h
+    rw [bpfW.arm2 n m cto ctl lo ll hc] at h; simp only [erRd_foldN] at h
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hc
     rw [hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) hcv hpb
-    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpfK1])
+    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpfW.k_reserved_contains])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
-    · rw [bpfK1_res n m cto ctl lo ll _ b hb0] at h
+    · rw [bpfW.k_reserved_contains.arm1 (hc1 := hb0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
-    rw [bpfK1_ok n m cto ctl lo ll _ b hb0] at h
+    rw [bpfW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
+    simp only [erRd_foldN] at h
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpfK2])
-    rw [bpfK2_some] at h
-    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpfK3])
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpfW.k_er_to_iw])
+    rw [bpfW.k_er_to_iw.arm1] at h
+    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpfW.k_sl_eq])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS hcv hpb hl hlb
     by_cases he0 : e = 0
-    · rw [bpfK3_ne n m1 cto ctl lo ll e he0] at h
+    · rw [bpfW.k_sl_eq.arm1 (hc1 := he0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
       exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpfK3_eq n m1 cto ctl lo ll e he0] at h
+    rw [bpfW.k_sl_eq.arm2 (hc1 := he0)] at h
     have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
     rcases h2 : bpfW n m1 (cto + 1) (ctl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [pinK4_some] at h
+    rw [bpfW.k_block_shape_pins_formers.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cto + 1) (ctl - 1) ts' r2 h2 hS1 (hts'.grow (fun _ => OMono.decCVp _) hg1)
       (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
@@ -202,31 +203,30 @@ theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
   | succ n ih =>
     intro m m' ro rl rs r h hS hrs
     by_cases hc : rl = 0
-    · rw [bprW_nil n m ro rl hc] at h
+    · rw [bprW.arm1 n m ro rl hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc; rw [partsPSl_nil hrs]
       exact ⟨rfl, rfl⟩
-    rw [bprW_cons n m ro rl hc] at h
+    rw [bprW.arm2 n m ro rl hc] at h; simp only [erRd_foldN] at h
     obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hc
     obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
     obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
     rcases hb : resContW n m (erRd m (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
-    · cases h
-    simp only at h
+    · simp [bprW.k_reserved_contains] at h
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
-    · rw [ite_eq_left hb0] at h
+    · rw [bprW.k_reserved_contains.arm1 (hc1 := hb0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨rfl, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
-    rw [ite_eq_right hb0] at h
+    rw [bprW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     rcases h2 : bprW n m (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [pinK4_some] at h
+    rw [bprW.k_block_shape_pins_recs.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨rfl, hr2⟩ := ih m m2 (ro + 1) (rl - 1) rs' r2 h2 hS hrs'
     refine ⟨rfl, ?_⟩
@@ -246,7 +246,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
   | succ n ih =>
     intro m m' cso csl cs r h hS hcs hl hlb
     by_cases hc : csl = 0
-    · rw [bpcW_nil n m nP cso csl lo ll hc] at h
+    · rw [bpcW.arm1 n m nP cso csl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc; rw [partsPSl_nil hcs]
       exact ⟨hS, IWGrow.refl _, rfl⟩
@@ -267,40 +267,42 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
       · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' hnPb]
       · intro e; rw [e, ofNat_toNat_word]
     by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
-    · rw [bpcW_np n m nP cso csl lo ll hc hnp] at h
+    · rw [bpcW.arm2 n m nP cso csl lo ll hc hnp] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       rw [hw, hpw1] at hnp
       have : (nP1 == nP.toNat) = false := Bool.eq_false_iff.mpr (mt hnpeq.mpr hnp)
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.false_and]; rfl⟩
-    rw [bpcW_cons n m nP cso csl lo ll hc hnp] at h
+    rw [bpcW.arm3 n m nP cso csl lo ll hc (Classical.not_not.mp hnp)] at h
+    simp only [erRd_foldN] at h
     have hnpt : (nP1 == nP.toNat) = true := by
       rw [hw, hpw1] at hnp; exact hnpeq.mp (by simpa using hnp)
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpcK1])
+    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpcW.k_reserved_contains])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
-    · rw [bpcK1_res n m nP cso csl lo ll _ b hb0] at h
+    · rw [bpcW.k_reserved_contains.arm1 (hc1 := hb0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
       exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpcK1_ok n m nP cso csl lo ll _ b hb0] at h
+    rw [bpcW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
+    simp only [erRd_foldN] at h
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpcK2])
-    rw [bpcK2_some] at h
-    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpcK3])
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpcW.k_er_to_iw])
+    rw [bpcW.k_er_to_iw.arm1] at h
+    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpcW.k_sl_eq])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb hl hlb
     by_cases he0 : e = 0
-    · rw [bpcK3_ne n m1 nP cso csl lo ll e he0] at h
+    · rw [bpcW.k_sl_eq.arm1 (hc1 := he0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
       exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpcK3_eq n m1 nP cso csl lo ll e he0] at h
+    rw [bpcW.k_sl_eq.arm2 (hc1 := he0)] at h
     have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
     rcases h2 : bpcW n m1 nP (cso + 1) (csl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [pinK4_some] at h
+    rw [bpcW.k_block_shape_pins_ctors.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cso + 1) (csl - 1) cs' r2 h2 hS1 (hcs'.grow decSC_mono hg1)
       (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
@@ -323,7 +325,8 @@ theorem bpoW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
           (rs.all fun r => !R.contains r.1.name) &&
           (cs.all fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name))
         then 1 else 0] := by
-  unfold bpoW at h
+  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
+    bpoW.k_block_shape_pins_ctors.eq_def] at h
   rcases h1 : bpfW n m cto ctl lo ll with _ | ⟨ra, m1⟩ <;> rw [h1] at h
   · cases h
   simp only at h
@@ -1356,15 +1359,16 @@ theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
 /-- A pins pass that returned read the reserved names: the pins are ready. -/
 theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
     (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hc : ctl ≠ 0) : pinW m 0 ≠ 0 := by
-  unfold bpoW at h
+  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
+    bpoW.k_block_shape_pins_ctors.eq_def] at h
   rcases h1 : bpfW n m cto ctl lo ll with _ | x
   · rw [h1] at h; cases h
   cases n with
   | zero => simp [bpfW] at h1
   | succ n =>
-  rw [bpfW_cons n m cto ctl lo ll hc] at h1
+  rw [bpfW.arm2 n m cto ctl lo ll hc] at h1; simp only [erRd_foldN] at h1
   rcases h2 : resContW n m (erRd m (rdW (m.arr64 IW) cto)) with _ | b
-  · rw [h2] at h1; simp [bpfK1] at h1
+  · rw [h2] at h1; simp [bpfW.k_reserved_contains] at h1
   cases n with
   | zero => simp [resContW] at h2
   | succ n =>

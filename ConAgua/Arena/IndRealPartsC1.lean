@@ -109,26 +109,29 @@ theorem bpfW_afr : ∀ (n : Nat) (m m' : Mem) (cto ctl lo ll : Word) (r : List W
     bpfW n m cto ctl lo ll = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [bpfW] at h
   | n + 1, m, m', cto, ctl, lo, ll, r, h => by
-    simp only [bpfW, bpfK1.eq_def, bpfK2.eq_def, bpfK3.eq_def, pinK4.eq_def] at h
+    simp only [bpfW, bpfW.k_reserved_contains.eq_def, bpfW.k_er_to_iw.eq_def, bpfW.k_sl_eq.eq_def,
+      bpfW.k_block_shape_pins_formers.eq_def] at h
     afr_auto h [bpfW_afr n _ _ _ _ _ _ _, erToIwW_afr]
 
 theorem bprW_afr : ∀ (n : Nat) (m m' : Mem) (ro rl : Word) (r : List Word),
     bprW n m ro rl = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, h => by simp [bprW] at h
   | n + 1, m, m', ro, rl, r, h => by
-    simp only [bprW, pinK4.eq_def] at h
+    simp only [bprW, bprW.k_reserved_contains.eq_def, bprW.k_block_shape_pins_recs.eq_def] at h
     afr_auto h [bprW_afr n _ _ _ _ _]
 
 theorem bpcW_afr : ∀ (n : Nat) (m m' : Mem) (nP cso csl lo ll : Word) (r : List Word),
     bpcW n m nP cso csl lo ll = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, h => by simp [bpcW] at h
   | n + 1, m, m', nP, cso, csl, lo, ll, r, h => by
-    simp only [bpcW, bpcK1.eq_def, bpcK2.eq_def, bpcK3.eq_def, pinK4.eq_def] at h
+    simp only [bpcW, bpcW.k_reserved_contains.eq_def, bpcW.k_er_to_iw.eq_def, bpcW.k_sl_eq.eq_def,
+      bpcW.k_block_shape_pins_ctors.eq_def] at h
     afr_auto h [bpcW_afr n _ _ _ _ _ _ _ _, erToIwW_afr]
 
 theorem bpoW_afr {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
     (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) : AFr m m' := by
-  simp only [bpoW] at h
+  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
+    bpoW.k_block_shape_pins_ctors.eq_def] at h
   afr_auto h [bpfW_afr n _ _ _ _ _ _ _, bprW_afr n _ _ _ _ _, bpcW_afr n _ _ _ _ _ _ _ _]
 
 /-! ## `block_shape_result_sort` -/
