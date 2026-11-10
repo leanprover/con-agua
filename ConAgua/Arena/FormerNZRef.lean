@@ -461,7 +461,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
   rw [fnzaE.k_inst_lp.arm1]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
     (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
-  rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
+  simp only [L.Ind.erRd_foldN] at hn' hni hnp; rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
   refine RefE.bind_coreE (w := id) (fun _ => fnzaE.k_former_sort_loop.none ..) id hf
     fun r4 m4 _ h4 M4 hS4 _ => ?_
   by_cases g4 : r4.headD 0 = 0

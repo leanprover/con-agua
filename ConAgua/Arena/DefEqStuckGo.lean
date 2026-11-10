@@ -280,7 +280,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   -- `tower_slots_all`: the effect
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => CoreSpec.of_callW (hc.towerSlots (n' + 1)
     ⟨m₄, Locals.init []⟩ a₀ dn vis fe M₃ eb T _ hS₃ hT) h) fun r₅ m₅ h₅ => ?_
-  rw [← hIR.etaFields] at h₅
+  simp only [L.Ind.erRd_foldN] at h₅; rw [← hIR.etaFields] at h₅
   obtain ⟨_, _, _, hst₅⟩ := h₅.after
   refine RefE.of_run_eq (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
   refine RefE.bind_growK (w := id) h₅ (fun M₅ hS₅ _ => ?_)
@@ -309,6 +309,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
         exact ⟨fun h => absurd h he, fun h => absurd h1 h⟩
     rw [e2, e7]
     simp only [decBool, bne_iff_ne, ne_eq, bne_eq_false_iff_eq, UInt64.toNat_inj]
+  simp only [L.Ind.erRd_foldN]
   by_cases hok : sgOK s₀.mem c q tn (r₁.headD 0) (r₂.headD 0) (r₃.headD 0) (r₄.tail.headD 0) r₅
   · rw [secgE_yes (h := hok), ite_eq_left_of_eq_true _ _ (eq_true (hiff.mpr hok))]
     have hk₅ := hst₂.trans (hst₃.trans hst₅)

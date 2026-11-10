@@ -105,7 +105,7 @@ theorem ciCanonDefn_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (
         evalE_tagE, evalE_idxAE, evalE_idxGE,
         hintEq_spec pr hp n, cvCanonEq_spec pr hp n, canonCtx_spec pr hp n,
         canonExprEq_spec pr hp n] <;>
-      finish (gen := 20) [cdW, rdW_eq]
+      finish (gen := 20) [cdW, rdW_eq, erRd]
 
 theorem ciD_defn {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI a p = some (.defnInfo cv v hi)) :
@@ -258,7 +258,7 @@ theorem ciCanonRec_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
         evalE_tagE, evalE_idxAE, evalE_idxGE,
         bEq_spec pr hp n, cvCanonEq_spec pr hp n, canonCtx_spec pr hp n, canonRulesEq_spec pr hp n] <;>
-      finish (gen := 20) [cwW, rdW_eq]
+      finish (gen := 20) [cwW, rdW_eq, erRd]
 
 theorem ciD_rec {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     {mi rp : Nat} {isK : Bool} {rules : List IRecRule}
@@ -423,7 +423,7 @@ theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p 
         evalE_tagE, evalE_idxAE, evalE_idxGE,
         ciCanonDefn_spec pr hp n, ciCanonRec_spec pr hp n,
         cvCanonEq_spec pr hp n] <;>
-      finish (gen := 20)
+      finish (gen := 20) [erRd]
 
 theorem cieW_ok {vis : Word} {fe : IFEnv}
     {a : AState} (k : Nat) {m m' : Mem} {p q x : Word} {c c' : IConstantInfo}
