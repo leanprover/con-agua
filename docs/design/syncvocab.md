@@ -152,7 +152,9 @@ rule at a time in a scratch copy of the module (`attribute [-arena_grind] …`):
 `rdW` rules then fire); DeclCanonSpec 250.1 → 231.5 G without `erRd_foldN` (its `rdW (… tierA EREC
 …)` pattern matches every tagged read, which DeclCanonSpec has in bulk through `erRdT`); CrW
 needed both out. Narrowed: `erRd`'s unfolding is its own set `erec_grind`, named only by the proofs
-that compare a model's `erRd` with loads (`finish [erec_grind]`, the hook's `sets+` variant), and
+that compare a model's `erRd` with loads (`sym [erec_grind] => …` or `grind [erec_grind]`, the
+hook's `sets+` variant; a `finish` list ignores attribute sets and names `erRd` itself, see
+"Follow-up: duplicate names" below), and
 `erRd_foldN` is in no set (it stays a lemma to name). The `ind_grind` frame patterns cost nothing
 measurable here.
 
@@ -259,7 +261,19 @@ EREC (a >>> 40))) (a &&& …)` as `erRdT` through its reducibility. Each got the
 * `finish [… , erRd]` (25 lists, mostly `DeclCanon*`, `Whnf*`, `EtaRescueRef`) and `simp_all [… ,
   erRd]` (3, `PropReadW`). `finish [… , erec_grind]` did not close the same goals (WhnfIotaRefine
   `isCtorApp_spec`, the `DeclCanonSpec` loops), although `grind [erec_grind]` unfolds `erRd` in a
-  test: inside `finish` use the definition by name.
+  test: inside `finish` use the definition by name. Why (lane dedup2): `finish` runs inside a
+  grind goal that `sym`/`grind`/`vcgen … with` already set up, and elaborates its list
+  incrementally (`Lean.Elab.Tactic.Grind.withParams`, `incremental := true`). That activates the
+  lemmas and definitions named one by one (`assertExtra`), but an attribute set's name only lands
+  in the parameters' extension list, which nothing reads any more: the goal's E-matching theorems
+  were taken from the extensions when the goal was made (`mkGoalCore`). So `finish [S]` for any
+  set `S` (`erec_grind`, `arena_grind`, `lang_grind`) is a silent no-op (checked on a two-line
+  example: `grind [S] => finish` and `grind => finish [lemma]` close it, `grind => finish [S]`
+  does not). A set goes into the list of the entry point (`sym [S] => …`, `grind [S]`); a
+  `finish` list gets declarations. `scripts/sync-rules/vocab_attr.py` now adds the sets only to
+  `grind`/`sym` lists (and a list to a bare `sym =>`), and to `finish` lists (and a bare `finish`)
+  in the `sets+` variant `erRd`, what `erec_grind` holds (`FINISH_PLUS`); before, it added
+  `arena_grind` to every `finish` list and bare `finish`, which had no effect.
 * `simp only [erRd_foldN] at h` (or on the goal) before a `rw`/`cases` whose pattern is stated
   with `erRd` (17).
 * `erw [ite_eq_left h]`/`erw [ite_eq_right h]` (19) where the model's `if` is over the `rdW` form:

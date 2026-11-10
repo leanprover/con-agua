@@ -85,7 +85,7 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   simp only at hrv
   rw [hrv, hv]
   simp only [List.tail_cons, List.headD_cons]
-  have hbj : (base + j).toNat = base.toNat + j.toNat := L.toNat_add_of_not_lt hov
+  have hbj : (base + j).toNat = base.toNat + j.toNat := _root_.L.toNat_add_of_not_lt hov
   obtain ⟨-, hvbS⟩ := ConRon.Bridge.Inductives.viewBind_run hvb
   obtain ⟨dP, bP, rfl, hdP, hbP⟩ := ConRon.Bridge.denote_forallE_inv hC.check.state.wf
     (ConRon.Bridge.view_forallE_of_viewBind (by simp [htag]) hvbS.symm) hcurP
@@ -189,9 +189,9 @@ theorem fieldsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : FieldsRef p dn
   have c3 : ConRon.Bridge.CoreStep env fe a a3 := c1.trans (p23.toCore hC1.check)
   have hx13 := c1.ext.trans p23.ext
   -- the rest of the fields
-  have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [L.toNat_add_one_of_ne _ hov1, hbj]
-  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_of_lt _ _ (by have := (base + j + 1).toNat_lt; simp; omega)
-  have hnF1 : (nF - 1).toNat = nF' := by rw [L.toNat_sub_one_of_ne h0]; omega
+  have hbj1 : (base + j + 1).toNat = base.toNat + j.toNat + 1 := by rw [_root_.L.toNat_add_one_of_ne _ hov1, hbj]
+  have hj1 : (j + 1).toNat = j.toNat + 1 := _root_.L.toNat_add_of_lt _ _ (by have := (base + j + 1).toNat_lt; simp; omega)
+  have hnF1 : (nF - 1).toNat = nF' := by rw [_root_.L.toNat_sub_one_of_ne h0]; omega
   have hb2P' : denoteE a3.store (decI (rb.headD 0)) =
       some (bP.instantiate1 (.fvar (base.toNat + j.toNat) dP) 0) := by
     rw [show (decI (rb.headD 0) : EIdx) = b2 by simpa [decE_eq] using hb2d]; exact hb2P

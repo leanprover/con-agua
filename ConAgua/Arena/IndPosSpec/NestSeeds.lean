@@ -80,7 +80,7 @@ theorem pos2_key_rd {m m' : Mem} (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) {k
     (hk : key.toNat + 4 ≤ iwTop m) {j : Nat} (hj : j < 4) : rdW (m'.arr64 IW) (key + UInt64.ofNat j) = rdW (m.arr64 IW) (key + UInt64.ofNat j) := by
   apply rdW_iw_grow hg
   have : (UInt64.ofNat j).toNat = j := by simp; omega
-  rw [L.toNat_add_of_lt _ _ (by rw [this]; omega), this]; omega
+  rw [_root_.L.toNat_add_of_lt _ _ (by rw [this]; omega), this]; omega
 
 theorem SeedsAt.grow {m m' : Mem} {o : Nat} {seeds : List (NestKey × Nat)} (h : SeedsAt m o seeds)
     (hg : IWGrow m m') (htop : iwTop m < 2 ^ 64) : SeedsAt m' o seeds := fun i hi => by

@@ -267,8 +267,8 @@ theorem ckgW_ok (k : Nat) :
   rw [ckgW.k_target_canon_params.arm1, ckgW.k_class_key_canon_go_id] at h
   obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.iw; omega) hxH hP
-  have hqj : (q + j).toNat = q.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
-  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_of_lt _ _ (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
+  have hqj : (q + j).toNat = q.toNat + j.toNat := _root_.L.toNat_add_of_lt _ _ (by omega)
+  have hj1 : (j + 1).toNat = j.toNat + 1 := _root_.L.toNat_add_of_lt _ _ (show j.toNat + 1 < 2 ^ 64 by have := dL.toNat_lt; omega)
   have hacc2 : decHL m2 q.toNat j.toNat = some acc := by rw [decHL_grow hg2 (by omega)]; exact hacc
   have hdec3 := decHL_write m2 q j z acc hzH hS2.iw.iwSize (by have := hS2.iw.iw; have := hg2.iw; omega) hacc2
   have hS3 := hS2.set_iw (q + j) z
@@ -312,7 +312,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   have e0 : rdW (m2.arr64 IW) key = rdW (m.arr64 IW) key := by
     simp only [rdW]; rw [hg12.iwGet _ (by omega)]
   have e1 : rdW (m2.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
-    have e : (key + 1).toNat = key.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+    have e : (key + 1).toNat = key.toNat + 1 := _root_.L.toNat_add_of_lt _ _ (by simp; omega)
     simp only [rdW]; rw [e, hg12.iwGet _ (by omega)]
   rw [e0, e1] at h
   rcases hr4 : posRecW m2 [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)]
@@ -336,7 +336,7 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
       [rdW (m.arr64 IW) key, rdW (m.arr64 IW) (key + 1), q, rdW (m.arr64 IW) (key + 3)][j]'(by simpa using hj) := by
     have := hget3 j (by simpa using hj)
     have hj' : (UInt64.ofNat j : Word).toNat = j := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
-    have e : (nkw + UInt64.ofNat j).toNat = nkw.toNat + j := by rw [L.toNat_add_of_lt _ _ (by rw [hj']; omega), hj']
+    have e : (nkw + UInt64.ofNat j).toNat = nkw.toNat + j := by rw [_root_.L.toNat_add_of_lt _ _ (by rw [hj']; omega), hj']
     simp only [rdW, e]; rw [this, List.getElem?_eq_getElem]; rfl
   have r2 : rdW (m3.arr64 IW) (nkw + 2) = q := rk 2 (by decide)
   have r3 : rdW (m3.arr64 IW) (nkw + 3) = rdW (m.arr64 IW) (key + 3) := rk 3 (by decide)
