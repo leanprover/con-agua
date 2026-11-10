@@ -51,7 +51,7 @@ l_model viCtor_specE (p : Prog) (hL : IndApplyLookups p)
 
 l_model recIdx_specE (p : Prog) (hL : IndApplyLookups p)
   fns [hL.vi_rec_idx ↦ recIdxE]
-  specs [sortTele_spec p hL n]
+  specs [sortTele_spec p hL.pi_sort_tele_len hL.e_view n]
   grind [arena_grind] extra [L.Arena.ld64_rdW_specE]
   unified nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 

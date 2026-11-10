@@ -297,6 +297,10 @@ theorem sliceL_three (p : Array Word) (o : Nat) :
     sliceL p o 3 = [p[o]?.getD 0, p[o + 1]?.getD 0, p[o + 2]?.getD 0] := by
   simp [sliceL, List.ofFn_succ]
 
+/-- A pool load as the model reads it: `prd`. -/
+theorem prd_rdW (m : Mem) (x : Word) :
+    rdW (m.arr64 (tierA POOL (x >>> 40))) (x &&& 1099511627775) = prd m x := rfl
+
 /-- **`name_rec_pre` refines `viewN`, matched against `.str T "rec"`.** -/
 @[refines_part ConRon.Arena.viewN "matched against `.str T \"rec\"` (name_rec_pre)"]
 theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrpW m w = some (f, T)) :
@@ -353,7 +357,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     (tfld m NSTR (tierW w) (idxW w) 2).toNat
   rw [hsl] at hlen
   have htop := UInt64.toNat_lt m.top
-  unfold nrpStr at h
+  simp only [prd_rdW] at h
   generalize ho : tfld m NSTR (tierW w) (idxW w) 1 = o at hol hsl hlen h
   generalize hlw : tfld m NSTR (tierW w) (idxW w) 2 = lw at hol hsl hlen h
   have h41 := hR.lit.1.top41
@@ -372,8 +376,8 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h
     · cases h; exact absurd rfl hf
     rename_i h3
-    split at h
-    · rename_i hrec
+    by_cases hrec : prd m o = 114 ∧ prd m (o + 1) = 101 ∧ prd m (o + 2) = 99
+    · simp only [hrec, and_self, ↓reduceIte] at h
       cases h
       have hl3 : lw.toNat = 3 := by
         have : lw = 3 := by simpa using h3
@@ -384,7 +388,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       rw [r1, r2, r3, ← strWords_rec] at hsl
       rw [strWords_inj _ _ hsl.symm, hq, decI_word]
       exact ⟨rfl, word_lt _⟩
-    · cases h; exact absurd rfl hf
+    · simp only [hrec, ↓reduceIte] at h; cases h; exact absurd rfl hf
   · intro hf T' heq
     simp only [NNodeView.str.injEq] at heq
     obtain ⟨-, hs'⟩ := heq
@@ -393,9 +397,9 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     split at h
     · rename_i h3
       exact h3 (UInt64.toNat_inj.mp (by simp; omega))
-    split at h
-    · cases h; exact absurd hf (by decide)
-    rename_i h3 hrec
+    rename_i h3
+    by_cases hrec : prd m o = 114 ∧ prd m (o + 1) = 101 ∧ prd m (o + 2) = 99
+    · simp only [hrec, and_self, ↓reduceIte] at h; cases h; exact absurd hf (by decide)
     apply hrec
     rw [← hlen, sliceL_three] at hsl
     simp only [List.cons.injEq] at hsl

@@ -96,49 +96,17 @@ l_model tele_spec (p : Prog) (hL : IndApplyLookups p)
   specs [eView_spec p hL.e_view n]
   grind [arena_grind]
 
-l_model sortTele_spec (p : Prog) (hL : IndApplyLookups p)
-  fns [hL.pi_sort_tele_len ↦ sortTeleW ro tuple]
-  specs [eView_spec p hL.e_view n]
+l_model sortTele_spec (p : Prog) (hps : p.lookup "pi_sort_tele_len" = some piSortTeleLen)
+    (hev : p.lookup "e_view" = some L.Ind.eView)
+  fns [hps ↦ sortTeleW ro tuple]
+  specs [eView_spec p hev n]
   grind [arena_grind]
 
-/-- `name_rec_pre`'s `str` arm, at node `i` of tier `t`: its string is `rec`. -/
-def nrpStr (m : Mem) (t i : Word) : Option (Word × Word) :=
-  if tfld m NSTR t i 2 ≠ 3 then some (0, 0)
-  else if prd m (tfld m NSTR t i 1) = 114 ∧
-      prd m (tfld m NSTR t i 1 + 1) = 101 ∧
-      prd m (tfld m NSTR t i 1 + 2) = 99 then some (1, tfld m NSTR t i 0)
-  else some (0, 0)
-
-/-- **The model of `name_rec_pre(h)`**: `(1, T)` for a `str` node `T.rec`, else `(0, 0)`. -/
-def nrpW (m : Mem) (h : Word) : Option (Word × Word) :=
-  if 4294967295 < h then none
-  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tagW h = 0 then (if tcnt m NANON (tierW h) ≤ idxW h then none else some (0, 0))
-  else if tagW h = 2 then (if tcnt m NNUM (tierW h) ≤ idxW h then none else some (0, 0))
-  else if tagW h ≠ 1 then none
-  else if tcnt m NSTR (tierW h) ≤ idxW h then none
-  else nrpStr m (tierW h) (idxW h)
-
-section
-variable (p : Prog) (hL : IndApplyLookups p)
-include hL
-
-set_option maxHeartbeats 1600000 in
-theorem nrp_spec (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "name_rec_pre" [h]
-    ⦃fun r s' => s' = s₀ ∧ nrpW s₀.mem h = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hL.name_rec_pre]
-  simp only [callFn, nameRecPre]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, evalE_tld, tld, evalE_cnt, tcntM,
-        evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;> finish [nrpW, nrpStr, tierW, idxW]
-
-end
-
-/-! ## `IFL` slices -/
+l_model nrp_spec (p : Prog) (hL : IndApplyLookups p)
+  fns [hL.name_rec_pre ↦ nrpW ro tuple]
+  grind [arena_grind] fold [tierW, idxW, tagW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_tagE]
+  finish [tierW, idxW, tagW]
 
 l_model contains_spec (p : Prog) (hL : IndApplyLookups p)
   fns [hL.ifl_contains ↦ containsW ro]
