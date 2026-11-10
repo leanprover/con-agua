@@ -282,7 +282,7 @@ end L.Rom
 
 namespace L.Ind
 attribute [arena_grind =] erRd_get erecPutMem_ctl
-attribute [erec_grind] erRd
+attribute [erec_grind] L.Arena.erRd
 end L.Ind
 
 attribute [arena_grind =] L.Arena.aread_apply
