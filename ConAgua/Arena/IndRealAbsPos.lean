@@ -78,10 +78,11 @@ theorem posRecW_afr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws =
 -- from IndPosSpec/DepthGo
 theorem phsGoW_afr (k : Nat) : ∀ (m m' : Mem) (q n i : Word), phsGoW k m q n i = some m' → AFr m m' := by
   induction k with
-  | zero => intro m m' q n i h; simp [phsGoW] at h
+  | zero => intro m m' q n i h; simp [phsGoW.eq_1] at h
   | succ k ih =>
     intro m m' q n i h
-    simp only [phsGoW, phsK1.eq_def, phsK2.eq_def, phsK3.eq_def] at h
+    simp only [phsGoW.eq_2, phsGoW.k_pin_word.eq_def, phsGoW.k_intern_sort.eq_def, phsGoW.k_intern_fvar.eq_def,
+      phsGoW.k_nest_phs_go_id] at h
     afr_auto h [sointernW_afr, fvinternW_afr, fun h => (set64IW_afr _ _ _).trans (ih _ _ _ _ _ h)]
 
 -- from IndPosSpec/DepthGo

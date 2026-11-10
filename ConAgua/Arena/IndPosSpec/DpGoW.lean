@@ -2,6 +2,9 @@ module
 
 public import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndView
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndPos
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 
@@ -84,20 +87,19 @@ def dpClrK : Option (Word × Mem) → Option (Word × Mem)
 
 /-! ## `nest_phs` -/
 
-mutual
-def phsGoW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | k + 1, m, q, n, i => if n ≤ i then some m else phsK1 k m q n i (pinWordV m 53)
-def phsK1 (k : Nat) (m : Mem) (q n i : Word) : Option Word → Option Mem
-  | none => none
-  | some z => if 4294967296 ≤ z then none else phsK2 k q n i (sointernW m z)
-def phsK2 (k : Nat) (q n i : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (s, m1) => if 4294967296 ≤ s then none else phsK3 k q n i (fvinternW m1 i s)
-def phsK3 (k : Nat) (q n i : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (v, m2) => if 4294967296 ≤ v then none else phsGoW k (m2.set64 IW (q + i) v) q n (i + 1)
-end
+l_model nestPhsGo_spec (p : Prog) (hpw : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hp : p.lookup "nest_phs_go" = some nestPhsGo)
+  fns [hp ↦ phsGoW void]
+  specs [pinWord_specV p hpw n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+/-- The continuation after the recursive call passes its memory on. -/
+theorem phsGoW.k_nest_phs_go_id (x : Option Mem) : phsGoW.k_nest_phs_go x = x := by
+  cases x <;> rfl
 
 def phsB (q nn : Word) : Option Mem → Option (List Word × Mem)
   | none => none
