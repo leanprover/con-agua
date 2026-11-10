@@ -464,17 +464,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem slSetEq_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
-    (ha : p.lookup "sl_all_in" = some slAllIn) (hp : p.lookup "sl_set_eq" = some slSetEq) (n : Nat)
-    (s₀ : St) (o1 l1 o2 l2 : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sl_set_eq" [o1, l1, o2, l2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ setEqW n s₀.mem o1 l1 o2 l2 = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, slSetEq]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, slAllIn_spec p hc ha n] <;>
-    finish (gen := 20) [setEqW]
-
 /-! ## `block_rec_want`, `block_rec_got` -/
 
 /-- **`block_rec_want` is its model `brwW`** (generated). -/
