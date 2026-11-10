@@ -10,8 +10,10 @@ public import ConAgua.Arena.Verdict
 
 `TwinAccepts` (`Final/Twin.lean`) is the twin's pipeline accepting, stage by stage. `twinRun` is
 the same pipeline as one twin computation that ends in the fold's verdict: the reserved-name pins,
-the built-in prelude, the input's parse, `preparePrelude`, the pins, phase A (`installFold`), and
-phase B (`checkPendingList`) over every pending record on the phase-A state's worker. A stage that
+the built-in prelude, the input's parse, `preparePrelude`, the pins, and the check phase
+(`checkStream`): the stream index (`buildIndex`), then every record's job in order
+(`checkJobList` over the record positions), each at the index's view of its position, on the
+index state's worker. A stage that
 fails either fails in the monad or reports the failure as a value (`.ok (.error (ce, i))`: the
 frontend's line, the fold's position); `TwinFailsV` (`Arena/Verdict.lean`) covers both.
 
@@ -23,13 +25,18 @@ code 2, a decline). The verdict theorems say: when the compiled checker reports 
 `twinRun_of_accepts`: `TwinAccepts` is `twinRun` accepting, so at one pin list the two are
 exclusive (`twinVerdict_not_accepts`).
 
-The constructors `TwinVerdict.prelude`, `.front`, `.fold`, `.phaseB` build it from the stage that
+The constructors `TwinVerdict.prelude`, `.front`, `.index`, `.jobs` build it from the stage that
 failed and the stages before it, which ran ok.
 
-**The pool** (`--jobs`, con-ron's `PooledAccepts`): phase B is shared among workers, each checking
-the records it claimed in order on one state from the phase-A state's worker. `TwinVerdictPooled`
-is `TwinVerdict`, or: the stages and phase A ran ok, and some worker's list of pending records,
-drawn from the pending list, fails with an error of class `c`.
+**The pool** (`--jobs`, con-ron's `PooledAccepts`): the jobs are shared among workers, each
+running the record positions it claimed, in increasing order, on one state from the index
+state's worker. `TwinVerdictPooled` is `TwinVerdict`, or: the stages and the stream index ran ok,
+and either some worker's list of jobs fails with an error of class `c`, or some record below
+every job of that list does not pass on its own (`TwinJobPasses`). The second case is a
+weakening (docs/design/ronsync2.md §6): a job is checked at the stream index's view of its
+position, and con-ron's fold invariant there needs every record below it accepted; when another
+thread's record below fails, a failure reported at a job says only that some record below it
+does not pass, with no class.
 -/
 
 namespace ConAgua.Final
@@ -45,8 +52,8 @@ def thenV {α β : Type} (x : AM (Except (ConRon.Arena.CheckError × Nat) α))
   | .ok (.ok v, s') => f v s'
   | .error e => .error e
 
-/-- **The twin's pipeline as one computation**, the stages `TwinAccepts` lists, phase B on the
-phase-A state's worker. -/
+/-- **The twin's pipeline as one computation**, the stages `TwinAccepts` lists, then the check
+phase (`checkStream`: the stream index, then every record's job on the index state's worker). -/
 def twinRun (pins : List NatOpPinSet) (chunks : List ByteArray) :
     AM (Except (ConRon.Arena.CheckError × Nat) Unit) :=
   internReservedPins >>= fun _ =>

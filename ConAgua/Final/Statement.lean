@@ -25,10 +25,11 @@ region size (`drvNeed`: the setup stub's region plus 16 bytes), keeps its return
 caller's `r15` in those 16 bytes past the setup stub's region (`drvSave`) and holds `base` in
 `r15`. Then it calls entry 1 (`ca_start_a0`: the mode word `3`, then the setup stub `ca_setup`,
 which lays out the table, the L stack and the arrays in the region and enters the trampoline
-`ca_enter`; `check` runs the stages and phase A and writes the frozen buffer's header) and, if
-that returns `rdx = 0` and `rax = 2^63 + k`, entry 2 in place (`ca_check_seq`: the table over
-phase A's own arrays, the mode word `2`, the range `[0, k)`; `check` runs phase B over every
-pending group), and returns entry 2's result; it restores `r15` and returns to the caller. Each
+`ca_enter`; `check` runs the stages and the stream index and writes the frozen buffer's header)
+and, if that returns `rdx = 0` and `rax = 2^63 + k` (`k` records), entry 2 in place
+(`ca_check_seq`: the table over entry 1's own arrays, the mode word `2`, the range `[0, k)`;
+`check` runs every record's job in order, each at the stream index's view of its position), and
+returns entry 2's result; it restores `r15` and returns to the caller. Each
 entry is one L run of `check` (`compile_correct`); the machine-level driver is `drv_outcome`
 (`ConAgua/Final/DrvAbi.lean`), the L-level composition `drv_twinAccepts`
 (`ConAgua/Checker/ParDriverTwin.lean`), and `checkerFile_drv_accepts_regs`

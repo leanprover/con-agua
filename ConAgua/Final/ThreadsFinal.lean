@@ -20,11 +20,14 @@ import all ConAgua.Checker.Entry
 # The threads end to end, for the committed file
 
 `threadsRun_twinAcceptsPooled` (restated as `checkerFile_threads_accept` in
-`Final/EndToEnd.lean`, with the model and no-`False` corollaries): the trusted threaded harness (`main.c`, `run_jobs`) runs
-entry 1 (`ca_start_a`) of `checker.s`, hands the buffer it left to its threads, and each thread
-calls `ca_check_b` once per group index it claims, on its own region (`ThreadsRun`). If every call
-reports accept and the threads claim every group index, the twin's pooled pipeline accepts `[b]`
-(`TwinAcceptsPooled [b]`).
+`Final/EndToEnd.lean`, with the model and no-`False` corollaries): the trusted threaded harness
+(`main.c`, `run_jobs`) runs entry 1 (`ca_start_a`: the stages, the stream index and the frozen
+buffer; it returns `2^63 + k` for `k` records) of `checker.s`, hands the buffer it left to its
+threads, and each thread calls `ca_check_b` once per job index it claims (a record's position: the
+record's job at the stream index's view of it), on its own region (`ThreadsRun`). If every call
+reports accept, the threads claim every job index and each thread's claims increase, the twin's
+pooled pipeline accepts `[b]` (`TwinAcceptsPooled [b]`). Relative to a set theory `V`: con-ron's
+fold invariant at a job's view comes from the model of the accepted prefix.
 
 **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun`; beyond them, what
 `Final/Statement.lean` lists: Kraken's semantics, the assembler, linker and loader):
@@ -42,7 +45,7 @@ reports accept and the threads claim every group index, the twin's pooled pipeli
   each later call holding the bytes the previous call left. Each call is made as `BufCallH` says
   (the region mapped and large enough, the buffer apart from it, the return address and the
   32-byte stack window).
-* **The claim counter's coverage**: every claimed group index `j` (in `rdx`) is below `k`
+* **The claim counter's coverage**: every claimed job index `j` (in `rdx`) is below `k`
   (`k = rax - 2^63` from entry 1), and every index below `k` is claimed by some thread.
 * **The claims increase** in each thread: a thread's later call claims a larger index (`main.c`
   claims off one monotone counter; con-ron's pool, `PooledAccepts`, has each worker's jobs

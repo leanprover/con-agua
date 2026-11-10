@@ -55,7 +55,8 @@ theorem seqMem_arr64 (m : Mem) (lo hi : Word) (s : TieredArray) :
       if s = ↑OUT ∨ s = ↑CTLF then #[] else if s = ↑HDRF then (m.arr64 OUT).extract 0 138 else m.arr64 s :=
   seqMem0_arr64 m OUT HDRF CTLF 138 s
 
-/-- **`check_decl`'s program facts at every phase A** (`CheckerCd`): the definition arm's
+/-- **`check_decl`'s program facts at every run of entry 1's stages** (`CheckerCd`, at every
+`PhaseA`: the stages and the stream index): the definition arm's
 (`checkerProg_defnLoopPB`) and the inductive arm's (`indArmSpec_checker`). -/
 theorem checkerCd_proved : L.Checker.CheckerCd := fun _ pb PA hpb hpre =>
   have hr : L.Rom.RomOK pb.data.toList := by simpa [L.Rom.RomOK] using hpb

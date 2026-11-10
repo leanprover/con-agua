@@ -12,16 +12,20 @@ import ConRon.Bridge.Inductives.Decl
 @[expose] public section
 
 /-!
-# The twin's pipeline with phase B as con-ron's pool (lane parmode)
+# The twin's pipeline with the check phase as con-ron's pool (lane parmode)
 
-The threaded mode checks the pending groups on several workers; what its accept means on the twin
-side is con-ron's `PooledAccepts` (`ConRon/Arena/Pooled.lean`): phase A accepted, and a family of
-group lists covering every pending group, each accepted by `checkPendingList` from the phase-A
-state's worker. `TwinAcceptsPooled` is `TwinAccepts` with that phase B; `TwinAccepts` is the pool
-with one part (`TwinAccepts.pooled`). Its consequences (con-leche's pure fold, the model, no
-theorem of type `False`) are `Twin.lean`'s, through Theorem 1 for the pool
-(`Arena.pooledAccepts_bridge`), which is what `twinAccepts_pure` already uses.
-(Lane parallel's `Twin.lean` changes, as a separate file.)
+The threaded mode shares the jobs among several workers: after the stages, the stream index is
+built once (`buildIndex`), and every record's check is one job (`recordJob`, at the index's view
+of the record's position). What the threaded accept means on the twin side is con-ron's
+`PooledAccepts` (`ConRon/Arena/Pooled.lean`): the index built, and a family of job lists, one per
+worker, together covering every record position, each strictly increasing (a worker's state
+carries across its jobs; `main.c` claims off one monotone counter), each accepted by
+`checkJobList` from the index state's worker. `TwinAcceptsPooled` is `TwinAccepts` with that
+check phase; `TwinAccepts` is the pool with one part, every position in order
+(`TwinAccepts.pooled`). Its consequences (con-leche's pure fold, the model, no theorem of type
+`False`) come through Theorem 1 for the pool (`Arena.pooledAccepts_bridge`), which is what
+`twinAccepts_pure` already uses; like it, they take a set theory `V`, since con-ron's fold
+invariant at a job's view (`view_foldOK`) comes from the model of the accepted prefix.
 -/
 
 namespace ConAgua.Final
