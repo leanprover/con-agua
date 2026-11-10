@@ -551,11 +551,11 @@ theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
   | succ n ih =>
     intro m m' a cso csl cs r h hS hcs
     by_cases hl : csl = 0
-    · rw [bctW_nil n m cso csl hl] at h
+    · rw [bctW.arm1 n m cso csl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rw [partsPSl_nil hcs]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _⟩
-    rw [bctW_cons n m cso csl hl] at h
+    rw [bctW.arm2 n m cso csl hl] at h
     obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
     rw [hw] at h
     have hd0 : decSC (truncM m) pc = some (cv0, nP0, nF0) := hc0
@@ -568,14 +568,14 @@ theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       have := partsIwLt hnF; rw [UInt64.toNat_add, hpw]; simp; omega
     obtain ⟨hcw, hcvb, hclt⟩ := partsIwRd hcvp hpw
     obtain ⟨hfw, hfb, hflt⟩ := partsIwRd hnF hp2
-    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bctW.bctK])
-    rw [bctK_some] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bctW.k_block_shape_ctors_of])
+    rw [bctW.k_block_shape_ctors_of.arm1] at h
     obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (cso + 1) (csl - 1) cs' r1 h1 hS hcs'
     rw [rdW_iw_grow hg1 (by rw [hpw]; exact hclt), hcw, rdW_iw_grow hg1 (by rw [hp2]; exact hflt),
       hfw] at h
     rcases h2 : posRecW m1 [UInt64.ofNat cvp, UInt64.ofNat nF] with _ | ⟨e, m2⟩ <;> rw [h2] at h
-    · cases h
-    simp only at h
+    · simp [bctW.k_rec2] at h
+    rw [bctW.k_rec2.arm1] at h
     obtain ⟨hS2, hg2, hget⟩ := partsFreshN h2 hS1 (by simp)
     have g0 := hget 0 (by simp); have g1 := hget 1 (by simp)
     simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ,
@@ -587,8 +587,8 @@ theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
         (show DecB (fun m => decCVp m cvp) m cv from hcv).grow (OMono.decCVp _) hg02
       simp only [decCN, g0, g1, hcv2, bind, Option.bind_some, pure]
     rcases h3 : consW n m2 e (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
-    · cases h
-    rw [bgoK3_some] at h
+    · simp [bctW.k_sl_cons] at h
+    rw [bctW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hR2 := hR1.grow decCN_mono hg2
     obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decCN_mono h3 hS2 hR2.2 hR2.1 hdec
@@ -626,11 +626,11 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
   | succ n ih =>
     intro m m' a cto ctl io go cvTs ns gss r h hS hts hns hnb hgs
     by_cases hl : ctl = 0
-    · rw [bmoW_nil n m cto ctl io go hl] at h
+    · rw [bmoW.arm1 n m cto ctl io go hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rw [partsPSl_nil hts]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _⟩
-    rw [bmoW_cons n m cto ctl io go hl] at h
+    rw [bmoW.arm2 n m cto ctl io go hl] at h
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hl
     obtain ⟨n0, ns', rfl, hnw, hn0b, hns', hnb'⟩ := partsNL_cons hns hnb hl
     obtain ⟨gp, g, gss', rfl, hgw, hgpb, hg0, hgs'⟩ := partsPSl_cons hgs hl
@@ -649,8 +649,8 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       have := partsIwLt hglen; rw [UInt64.toNat_add, hgpw]; simp; omega
     obtain ⟨hgow, hgob, hgolt⟩ := partsIwRd hgoff hgpw
     obtain ⟨hglw, hglb, hgllt⟩ := partsIwRd hglen hgp1
-    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bmoW.bmoK])
-    rw [bmoK_some] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [bmoW.k_block_shape_members_of])
+    rw [bmoW.k_block_shape_members_of.arm1] at h
     obtain ⟨hS1, hg1, hR1⟩ := ih m m1 a (cto + 1) (ctl - 1) (io + 1) (go + 1) ts' ns' gss' r1 h1 hS hts'
       hns' hnb' hgs'
     have l1 : cto.toNat < iwTop m := by have := hts.2; omega
@@ -661,8 +661,8 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       hglw] at h
     rcases h2 : posRecW m1 [UInt64.ofNat pc, UInt64.ofNat n0, UInt64.ofNat goff, UInt64.ofNat glen,
         UInt64.ofNat pc] with _ | ⟨e, m2⟩ <;> rw [h2] at h
-    · cases h
-    simp only at h
+    · simp [bmoW.k_rec5] at h
+    rw [bmoW.k_rec5.arm1] at h
     obtain ⟨hS2, hg2, hget⟩ := partsFreshN h2 hS1 (by simp)
     have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
     have g3 := hget 3 (by simp); have g4 := hget 4 (by simp)
@@ -680,8 +680,8 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       exact decMSB_of hdec0 g2 g3 (le_iwA_truncM_size
         (Nat.le_trans (Nat.le_trans hgsz (iwA_truncM_size_le m)) hg02.iw) hS2.iw.1)
     rcases h3 : consW n m2 e (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at h
-    · cases h
-    rw [bgoK3_some] at h
+    · simp [bmoW.k_sl_cons] at h
+    rw [bmoW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hR2 := hR1.grow decMSB_mono hg2
     obtain ⟨hS3, hg3, hd3, ht3⟩ := partsConsPL decMSB_mono h3 hS2 hR2.2 hR2.1 hdec

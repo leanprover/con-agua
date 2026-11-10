@@ -83,39 +83,6 @@ theorem bsn_spec (hp : p.lookup "block_shape_names_of" = some blockShapeNamesOf)
         slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
       finish (gen := 20) [rdW_eq, erRd]
 
-theorem bct_spec (hp : p.lookup "block_shape_ctors_of" = some blockShapeCtorsOf) (n : Nat) :
-    ∀ (s₀ : St) (cso csl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_ctors_of" [cso, csl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bctW n s₀.mem cso csl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ cso csl; rw [invoke_eq _ hp]; simp only [callFn, blockShapeCtorsOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cso csl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeCtorsOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec2_specW p hP.alloc hP.rec2 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem bmo_spec (h5 : p.lookup "rec5" = some rec5)
-    (hp : p.lookup "block_shape_members_of" = some blockShapeMembersOf) (n : Nat) :
-    ∀ (s₀ : St) (cto ctl io go : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_members_of" [cto, ctl, io, go]
-    ⦃fun r s' => LocEq s' s₀ ∧ bmoW n s₀.mem cto ctl io go = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ cto ctl io go; rw [invoke_eq _ hp]; simp only [callFn, blockShapeMembersOf]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ cto ctl io go
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockShapeMembersOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec5_specW p hP.alloc h5 n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
 end spec
 
 end L.Ind
@@ -193,10 +160,10 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
   simp only [callFn, blockShapeFin]
   sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bct_spec p hP.toIndPartsProg4 hP.ctorsOf (n + 1),
+      bct_spec p hP.alloc hP.copy hP.cons hP.rec2 hP.ctorsOf (n + 1),
       plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il (n + 1),
       bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
-      bmo_spec p hP.toIndPartsProg4 hP.rec5 hP.membersOf (n + 1),
+      bmo_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.membersOf (n + 1),
       brs_spec p hP.toIndPartsProg4 hP.rec7 hP.recsOf (n + 1),
       bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large (n + 1),
       bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
