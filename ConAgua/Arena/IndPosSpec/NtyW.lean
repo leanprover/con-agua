@@ -38,18 +38,18 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     ∃ b, (xs.anyM (fun x => ConRon.Arena.nestOcc names lo.toNat hi.toNat x)).run a = .ok (b, a) ∧
       StageR vis fe m' a ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   induction k with
-  | zero => intro m m' a off l xs r h; simp [noaW] at h
+  | zero => intro m m' a off l xs r h; simp [noaW.eq_1] at h
   | succ k ih =>
     intro m m' a off l xs r h hS hn hnb hxs hxb hP
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
     by_cases hl0 : l = 0
-    · rw [noaW_nil (h := hl0)] at h
+    · rw [noaW.arm1 (hc1 := hl0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl0
       have : xs = [] := by simpa [decHL, hslice?] using hxs.symm
       subst this
       exact ⟨false, rfl, hS, IWGrow.refl _, rfl, hP⟩
-    rw [noaW_cons (h := hl0)] at h
+    rw [noaW.arm2 (hc1 := hl0)] at h
     have hlz : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
     have hxs2 := hxs
@@ -61,23 +61,27 @@ theorem noaW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     have hl1 : (l - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     obtain ⟨mp0, hM0⟩ := hP.no
-    rcases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with _ | ⟨b1, m1⟩ <;> rw [hno] at h; · simp [noaK] at h
+    rcases hno : noConstWf k m no nl lo hi (rdW (m.arr64 IW) off) with _ | ⟨b1, m1⟩ <;> rw [hno] at h; · rw [noaW.k_nest_occ.none] at h; cases h
     obtain ⟨c1, hrun1, hc1, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi _ b1 names mp0 hno hS hxH
       hn (by omega) hM0
     have hP1 := hP.setNo hf1 ⟨∅, hM1⟩
     rw [decE_eq, hxd] at hrun1
     rw [List.anyM_cons]
     by_cases hb : b1 ≠ 0
-    · rw [noaK_hit (h := hb)] at h
+    · rw [noaW.k_nest_occ.arm1 (hc1 := hb)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : c1 = true := by rw [← hc1]; simpa using hb
       subst this
       refine ⟨true, ?_, hS1, hg1, rfl, hP1⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, ite_true]; rfl
-    · rw [noaK_miss (h := hb)] at h
+    · rw [noaW.k_nest_occ.arm2 (hc1 := by simpa using hb)] at h
+      rcases hgo : noaW k m1 no nl lo hi (off + 1) (l - 1) with _ | ⟨r', m''⟩ <;> rw [hgo] at h
+      · rw [noaW.k_nest_occ_any.none] at h; cases h
+      rw [noaW.k_nest_occ_any.arm1] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : c1 = false := by rw [← hc1]; simpa using hb
       subst this
-      obtain ⟨b, hrun, hS', hg', hr, hP'⟩ := ih m1 m' a (off + 1) (l - 1) xs' r h hS1
+      obtain ⟨b, hrun, hS', hg', hr, hP'⟩ := ih m1 m'' a (off + 1) (l - 1) xs' r' hgo hS1
         (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hn) (by have := hg1.iw; omega)
         (by rw [hoff1, hl1, decHL_agree (RdS.of_grow hg1) (fun j hj => by have := hxb (j + 1) (by omega); omega)]
             simpa [decHL] using hxs')

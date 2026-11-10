@@ -517,9 +517,9 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
 
 theorem noaW_afr : ∀ (k : Nat) (m m' : Mem) (no nl lo hi off l : Word) (r : List Word),
     noaW k m no nl lo hi off l = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, h => by simp [noaW] at h
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [noaW.eq_1] at h
   | k + 1, m, m', no, nl, lo, hi, off, l, r, h => by
-    simp only [noaW, noaK.eq_def] at h
+    simp only [noaW.eq_2, noaW.k_nest_occ.eq_def, noaW.k_nest_occ_any.eq_def] at h
     afr_auto h [noConstWf_afr, noaW_afr k _ _ _ _ _ _ _ _ _]
 
 theorem ustWf_afr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustWf n m cty nP j = some (r, m')) :
