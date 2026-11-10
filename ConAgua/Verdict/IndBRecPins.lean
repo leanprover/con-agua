@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 import ConAgua.Arena.RefWalk
