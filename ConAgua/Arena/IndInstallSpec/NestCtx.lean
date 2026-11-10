@@ -110,7 +110,11 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
       StageR vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
       CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat := by
-  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.iw
+  have hI1 := hS.iw.iw
+  have hE1 := hS.iw.er
+  have hsz := hS.iw.iwSize
+  have hEs := hS.iw.erSize
+  have hcl := hS.iw.ctl
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
   obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
   have hptr0 : ∀ o l j v, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → j < l →
@@ -144,7 +148,11 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   rw [h3] at hm; simp only at hm
   have hqg := hq.grow (decBS_mono _) hg02
   obtain ⟨hq'2, hq92, hptr2⟩ := partsShapeFacts hqg (partsHsrc_grow hg02 hq9 hsrc)
-  obtain ⟨hI2, hE2, hsz2, hEs2, hcl2⟩ := hS2.iw
+  have hI2 := hS2.iw.iw
+  have hE2 := hS2.iw.er
+  have hsz2 := hS2.iw.iwSize
+  have hEs2 := hS2.iw.erSize
+  have hcl2 := hS2.iw.ctl
   obtain ⟨hr3, hd3, hg3, hf3, ht3⟩ := nIdxsW_dec h3 hsz2 hcl2 hq'2 (by have := hg02.iw; omega)
     (partsHsrc_grow hg02 hq9 hsrc) hptr2
   have hkw2 := partsShapeK hq'2 hq92
@@ -163,7 +171,11 @@ theorem nckW_ok (n : Nat) (s₀ s' : St) (a₀ : AState)
   · rw [h5f] at hm; cases hm
   rw [h5f] at hm; simp only at hm
   obtain ⟨hq'4, hq94, hptr4⟩ := partsShapeFacts (hq.grow (decBS_mono _) hg04) (partsHsrc_grow hg04 hq9 hsrc)
-  obtain ⟨hI4, hE4, hsz4, hEs4, hcl4⟩ := hS4.iw
+  have hI4 := hS4.iw.iw
+  have hE4 := hS4.iw.er
+  have hsz4 := hS4.iw.iwSize
+  have hEs4 := hS4.iw.erSize
+  have hcl4 := hS4.iw.ctl
   obtain ⟨hr5, hd5, hg5, hf5, ht5, hroom5⟩ := formersW_dec h5f hsz4 hcl4 hq'4 hq94
     (partsHsrc_grow hg04 hq9 hsrc) (fun o l j v h1 h2 h3 h4 => by have := hptr4 o l j v h1 h2 h3 h4; omega)
   have hS5 : StageR vis fe m5 a4 := stage_frame_iw hS4 hf5 hroom5

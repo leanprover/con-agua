@@ -89,7 +89,8 @@ theorem slCons_decN {m m' : Mem} {x o l : Word} {n : Nat} {xs : List Nat}
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_⟩, htop⟩
+  refine ⟨?_, { iw := ?_, er := ?_, iwGet := ?_, erGet := ?_, er1 := ?_, er1Get := ?_ }, ⟨?_, ?_, ?_⟩,
+    htop⟩
   · rw [hl1, decNL_succ]
     have h0 : iwN m' q.toNat = some x.toNat := by
       simp [iwN, nat?, iwA, aread_apply, hget]

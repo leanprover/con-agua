@@ -810,7 +810,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
     have hao : (r2.headD 0).toNat + (r2.tail.headD 0).toNat < 2 ^ 64 ∨ (r2.tail.headD 0).toNat = 0 := by
       rcases decHL_le hdec2' with h0 | h0
       · right; exact h0
-      · left; obtain ⟨-, -, hsz2, -, -⟩ := hS2.iw; omega
+      · left; have hsz2 := hS2.iw.iwSize; omega
     by_cases hlt : UInt64.ofNat N < r2.tail.headD 0
     · rw [ite_eq_left hlt] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
