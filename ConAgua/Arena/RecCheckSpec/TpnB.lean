@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.RpLook
+public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 import ConAgua.Arena.IndInstallSpec.InstallRec2Tele
 import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 public import ConAgua.Arena.GrindAttr

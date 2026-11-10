@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndRealIlpN
-public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
 public import ConAgua.Arena.IndPartsSpec.SetEqW
 public import ConAgua.Arena.IndReal
 import ConAgua.L.ModelGen

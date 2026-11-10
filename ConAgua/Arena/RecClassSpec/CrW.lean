@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.IndSumSpec.DecHLTake
 public import ConAgua.Arena.RecClassSpec.ClassNPcOf
+public import ConAgua.Arena.IndCallM
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecClassSpec.PiBWRoom
 public import ConAgua.Arena.RecClassSpec.ReadProg

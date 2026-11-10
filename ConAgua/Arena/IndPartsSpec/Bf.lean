@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 import ConAgua.Arena.IndSumSpec.Row
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

@@ -12,7 +12,6 @@ import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Arena.IndSumSpec.StructProjArgP
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.RecGenSpec.CrsProg
