@@ -120,7 +120,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envFind_spec p hl.hg hl.hb hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he hl.hst hl.ad k,
         posRec2_specW p hl.ha hl.h2 k, ih] <;>
-      finish (gen := 20) [rdW_eq, St.setLocs_mem', erRd_get]
+      finish (gen := 20) [rdW_eq, St.setLocs_mem']
 
 include hl in
 theorem nc_spec (k : Nat) (s₀ : St) (vis C co cl : Word) :
@@ -144,7 +144,7 @@ theorem nt_spec (k : Nat) (s₀ : St) (vis C : Word) :
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       envFind_spec p hl.hg hl.hb hl.hf k, nc_spec p hl k] <;>
-    finish (gen := 20) [ntW, rdW_eq, erRd_get]
+    finish (gen := 20) [ntW, rdW_eq]
 
 end spec
 

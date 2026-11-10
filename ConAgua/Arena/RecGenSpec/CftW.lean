@@ -79,7 +79,7 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internBVar_spec p h.bf h.bp h.ib N, envFind_spec p h.rowGet h.baseGet h.find N,
         erToIw_specW p h.alloc h.copy h.eti N, hcR N "family_telescope", hcR N "inst_lp_fast"] <;>
-      finish (gen := 20) [rdW_eq, St.setLocs_mem', erRd_get, cftK2]
+      finish (gen := 20) [rdW_eq, St.setLocs_mem', cftK2]
 
 /-! ## The relation to the twin -/
 

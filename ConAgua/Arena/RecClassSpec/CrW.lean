@@ -148,7 +148,7 @@ theorem classReadRecCls_spec (p : Prog) (hfh : p.lookup "fvar_head" = some fvarH
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         hcR n "open_pis_at_fvars_f", fvarHead_spec p hfh hv had n,
         classOfMotiveVar_spec p hf hcm n, slCons_specW p ha hc hsc n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd_get]
+      finish (gen := 20) [rdW_eq]
 
 theorem findIdx_lt (p : Nat) : ∀ (l : List Nat) (i : Nat), l.findIdx? (· == p) = some i → i < l.length := by
   intro l
@@ -1907,7 +1907,7 @@ theorem classRead_spec (p : Prog) (hP : ReadProg p) (cR : CallM) (hcR : CallSpec
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       hcR N "open_pis_at_fvars_f", classReadNSlots_spec p hP N,
       (classReadSlots_specs p hP.toSlotsProg cR hcR N).1, classReadFinish_spec p hP cR hcR N] <;>
-    finish (gen := 20) [rdW_eq, erRd_get, loc_init4, loc_init5, loc_init6, loc_init7]
+    finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 
 end L.Ind
 

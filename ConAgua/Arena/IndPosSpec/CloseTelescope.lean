@@ -71,7 +71,7 @@ theorem nestBlockOf_refines (n : Nat) (s₀ : St) {fe : IFEnv}
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_refines p hg hb hf n (fe := fe)] <;>
-        finish (gen := 20) [blk_none, blk_nok3, blk_k3, erRd_get]
+        finish (gen := 20) [blk_none, blk_nok3, blk_k3]
 
 end blockof
 

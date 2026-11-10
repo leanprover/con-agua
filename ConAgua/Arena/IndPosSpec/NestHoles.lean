@@ -63,7 +63,7 @@ theorem nhGo_spec (p : Prog) (hl : NhLook p) (k : Nat) :
     all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq, erRd_get]
+    all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, rdW_eq]
 
 theorem nestHoles_spec (p : Prog) (hl : NhLook p) (k : Nat) (s₀ : St) (ctx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_holes" [ctx]

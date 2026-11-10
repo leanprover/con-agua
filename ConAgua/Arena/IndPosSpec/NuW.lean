@@ -49,7 +49,7 @@ theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" 
       cvLps_spec p hl.ha hc he hcv (k + 2), hcR (k + 2) "inst_lp_fast",
       nestCanonCrest_spec p hl.ha hl.hl hl.hk hl.hng hl.hnp hl.hip hl.hf hl.hput hl.hgo hl.hnode hl.hcl
         hl.hra hl.hp k] <;>
-    finish (gen := 20) [nrcW, rdW_eq, erRd_get]
+    finish (gen := 20) [nrcW, rdW_eq]
 
 theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
@@ -114,7 +114,7 @@ theorem nestUniformOk_spec (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSp
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       nestCtxHiAt_specE p hl.hh (k + 3), piDomsOcc_spec p hl.no hl.hpd (k + 3),
       nestRootCanon_spec p hl.pcc hl.hc hl.he hl.hcv cR hcR k, nestOcc_spec' p hl.no (k + 3)] <;>
-    finish (gen := 20) [nuW, rdW_eq, erRd_get]
+    finish (gen := 20) [nuW, rdW_eq]
 
 theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
