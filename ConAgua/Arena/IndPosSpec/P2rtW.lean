@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndPosSpec.Nb
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.RsLook
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -30,48 +31,11 @@ open L.Arena
 
 /-! ## Models -/
 
-mutual
-/-- `nest_seeds_fuel`. -/
-def p2sfW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, dO, dL, k, f =>
-    if dL ≤ k then some ([f], m)
-    else p2sfK n dO dL k f (wfWf n m (rdW (m.arr64 IW) (dO + k)))
-def p2sfK (n : Nat) (dO dL k f : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => p2sfW n m1 dO dL (k + 1) (if f < r.headD 0 then r.headD 0 else f)
-end
+l_model nestSeedsFuel_spec (p : Prog) (hL : RsLook p)
+  fns [hL.pfuel ↦ p2sfW list]
+  specs [whnfWalkFuel_spec' p hL.nb n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-section arms
-variable (cR : CallM) (n : Nat) (m m1 : Mem) (vis ctx hO hL cO cL ns oO oL ns2 q dO dL k f sO sL hi key nPc : Word)
-  (r : List Word)
-theorem p2sfK_some : p2sfK n dO dL k f (some (r, m1)) =
-    p2sfW n m1 dO dL (k + 1) (if f < r.headD 0 then r.headD 0 else f) := by rw [p2sfK]
-theorem p2sfW_done (h : dL ≤ k) : p2sfW (n + 1) m dO dL k f = some ([f], m) := by simp [p2sfW, h]
-theorem p2sfW_step (h : ¬ dL ≤ k) : p2sfW (n + 1) m dO dL k f =
-    p2sfK n dO dL k f (wfWf n m (rdW (m.arr64 IW) (dO + k))) := by simp [p2sfW, h]
-end arms
-attribute [ind_grind] p2sfW_done p2sfW_step p2sfK_some
-
-section spec
-variable {p : Prog} (L : RsLook p)
-include L
-
-theorem nestSeedsFuel_spec (n : Nat) : ∀ (s₀ : St) (dO dL k f : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
-    ⦃fun r s' => LocEq s' s₀ ∧ p2sfW n s₀.mem dO dL k f = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ dO dL k f
-    exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
-  | succ n ih =>
-    intro s₀ dO dL k f
-    simp only [invoke_eq _ L.pfuel, callFn, nestSeedsFuelL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, whnfWalkFuel_spec' p L.nb n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-end spec
 
 end L.Ind
 
