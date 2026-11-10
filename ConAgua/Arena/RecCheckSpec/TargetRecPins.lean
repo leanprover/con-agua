@@ -1,14 +1,13 @@
 module
 
 import ConAgua.Arena.RecCheckSpec.TpnB
-import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
+public import ConAgua.Arena.IndPartsSpec.BlockRecLpsOk
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import all ConAgua.Arena.RecCheck

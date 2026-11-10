@@ -30,7 +30,7 @@ theorem pos3_nameCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopy
   | 0, _, _, _, _, _, h => by simp [nameCopyW] at h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
-    · rw [nameCopyW_nil n m d s l hl] at h; cases h; exact MFr.refl _ _ _
+    · rw [nameCopyW.arm1 n m d s l hl] at h; cases h; exact MFr.refl _ _ _
     · rw [nameCopyW_step n m d s l hl] at h
       exact (MFr.set_iw _ _ _).trans (pos3_nameCopyW_mfr n _ _ _ _ _ h)
 

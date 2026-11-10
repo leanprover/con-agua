@@ -14,6 +14,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
 import ConAgua.Arena.Env
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -37,69 +38,12 @@ open L.Arena
 
 /-! ## `block_rec_names_unreserved` -/
 
-mutual
-/-- **The model of `block_rec_names_unreserved`.** -/
-def recUW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, ro, rl =>
-    if rl = 0 then some ([1], m)
-    else recUK1 n ro rl
-      (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))])
-
-/-- After `reserved_rec_name`. -/
-def recUK1 (n : Nat) (ro rl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) =>
-    if r1.headD 0 ≠ 0 then some ([0], m1) else recUK2 (recUW n m1 (ro + 1) (rl - 1))
-
-/-- After the recursive call. -/
-def recUK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r.headD 0], m2)
-end
-
-section arms
-variable (n : Nat) (m m1 m2 : Mem) (ro rl : Word) (r1 r : List Word)
-theorem recUW_nil (h : rl = 0) : recUW (n + 1) m ro rl = some ([1], m) := by simp [recUW, h]
-theorem recUW_cons (h : rl ≠ 0) : recUW (n + 1) m ro rl = recUK1 n ro rl
-    (rrnF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro))]) := by
-  simp [recUW, h]
-theorem recUK1_hit (h : r1.headD 0 ≠ 0) : recUK1 n ro rl (some (r1, m1)) = some ([0], m1) := by
-  simp only [recUK1]; rw [ite_eq_left h]
-theorem recUK1_miss (h : r1.headD 0 = 0) :
-    recUK1 n ro rl (some (r1, m1)) = recUK2 (recUW n m1 (ro + 1) (rl - 1)) := by
-  simp only [recUK1]; rw [ite_eq_right (by simpa using h)]
-theorem recUK2_some : recUK2 (some (r, m2)) = some ([r.headD 0], m2) := rfl
-end arms
-
-grind_pattern [ind_grind] recUW_nil => recUW (n + 1) m ro rl
-grind_pattern [ind_grind] recUW_cons => recUW (n + 1) m ro rl
-grind_pattern [ind_grind] recUK1_hit => recUK1 n ro rl (some (r1, m1))
-grind_pattern [ind_grind] recUK1_miss => recUK1 n ro rl (some (r1, m1))
-grind_pattern [ind_grind] recUK2_some => recUK2 (some (r, m2))
-
-section spec
-variable (p : Prog) (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved)
-  (hrrn : RrnF p)
-include hp hrrn
-
-theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_names_unreserved" [ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ recUW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockRecNamesUnreserved]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockRecNamesUnreserved]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        rrnF_spec p hrrn n, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
-
-end spec
+/-- **`block_rec_names_unreserved` is its model `recUW`** (generated). -/
+l_model blockRecNamesUnreserved_spec (p : Prog)
+    (hp : p.lookup "block_rec_names_unreserved" = some blockRecNamesUnreserved) (hrrn : RrnF p)
+  fns [hp ↦ recUW list]
+  specs [rrnF_spec p hrrn n]
+  grind [arena_grind]
 
 theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hb : q < 2 ^ 64) :
@@ -143,7 +87,7 @@ theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
   | succ n ih =>
     intro _dn fe vis m0 m m' a ro rl r recs h hg0 hS hdec hb
     by_cases hl : rl = 0
-    · rw [recUW_nil n m ro rl hl] at h
+    · rw [recUW.arm1 n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hrecs : recs = [] := by
         have := hdec m hg0
@@ -166,7 +110,7 @@ theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
       rw [hrecs] at hd hdec
       obtain ⟨v, hv, hrcd⟩ := decPL_head hd
       obtain ⟨⟨a0, hva, hcvR⟩, -, -, -, -⟩ := decRS_some hrcd
-      rw [recUW_cons n m ro rl hl] at h
+      rw [recUW.arm2 n m ro rl hl, erRd_foldN] at h
       obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
       obtain ⟨hn32, hnI⟩ := decCVp_name_p hcvR hab
@@ -174,21 +118,21 @@ theorem recUW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
       have hrd : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           erRd m (UInt64.ofNat a0) := by rw [hv', hva']
       rw [hrd] at h
-      obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (by simp [recUK1])
+      obtain ⟨r1, m1, hra, h⟩ := ipK_inv h (recUW.k_reserved_rec_name.none ..)
       obtain ⟨x1, a1, hrun1, hS1, hg1, hx1, -⟩ :=
         rrnF_ok _dn vis fe _ hn32 m m1 a r1 hra hS
       rw [hnI] at hrun1
       by_cases hhit : r1.headD 0 ≠ 0
-      · rw [recUK1_hit n m1 ro rl r1 hhit] at h
+      · rw [recUW.k_reserved_rec_name.arm1 n ro rl r1 m1 hhit] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hx : x1 = true := by rw [← hx1]; simpa using hhit
         refine ⟨false, a1, ?_, rfl, hS1, hg1⟩
         simp only [ConRon.Arena.blockRecNamesUnreserved, StateT.run_bind, hrun1, except_ok_bind, hx]
         rfl
       · have hmiss : r1.headD 0 = 0 := by simpa using hhit
-        rw [recUK1_miss n m1 ro rl r1 hmiss] at h
-        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h (by simp [recUK2])
-        rw [recUK2_some] at h
+        rw [recUW.k_reserved_rec_name.arm2 n ro rl r1 m1 hmiss] at h
+        obtain ⟨r2, m2, hrec, h⟩ := ipK_inv h recUW.k_block_rec_names_unreserved.none
+        rw [recUW.k_block_rec_names_unreserved.arm1] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         have hx : x1 = false := by
           rw [← hx1, hmiss]; rfl
