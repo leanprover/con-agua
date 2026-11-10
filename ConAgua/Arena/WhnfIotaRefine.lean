@@ -15,6 +15,9 @@ import ConAgua.Arena.SimLib
 import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.LdRd
+import ConAgua.Arena.ErecVocab
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -396,31 +399,13 @@ theorem view_const_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
     word_lt _⟩
 
-/-- Model of `is_ctor_app`, its callees through their runs. -/
-def icaW (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
-  match callW p n "get_app_fn" [e] m with
-  | none => none
-  | some (r₁, m₁) =>
-    if tagW (r₁.headD 0) ≠ 3 then some (0, m₁)
-    else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
-    else if tcnt m₁ CONST (tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
-    else match callW p n "env_find"
-        [tfld m₁ CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0, vis] m₁ with
-      | none => none
-      | some (r₂, m₂) =>
-        if r₂.headD 0 = 0 then some (0, m₂)
-        else some (if erRd m₂ (r₂.tail.headD 0) = 4 then 1 else 0, m₂)
-
-theorem isCtorApp_spec (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (vis e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_ctor_app" [vis, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ icaW p n s₀.mem vis e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.isCtorApp]
-  simp only [callFn, isCtorAppL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
-      evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
-      callW_spec p n "get_app_fn", callW_spec p n "env_find"] <;>
-    finish [icaW, tierW, idxW, erRd]
+/-- **`is_ctor_app`'s model** (generated), its callees through their runs. -/
+l_model isCtorApp_spec (p : Prog) (hp : IotaProg' p)
+  fns [hp.isCtorApp ↦ icaW]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  finish [tierW, idxW]
 
 theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
@@ -473,11 +458,11 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
   intro n s₀ a₀ dn vis fe MM eb e hS he
-  refine triple_post (isCtorApp_spec p hp n s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  refine triple_post (isCtorApp_spec p hp (n + 1) s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
   have hR := hS.arena.base
-  simp only [icaW] at hW
+  rw [icaW.arm1] at hW
   rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, reduceCtorEq] at hW
+    simp only [hc, icaW.k_get_app_fn.none, icaW.k_get_app_fn.eq_2, reduceCtorEq] at hW
   obtain ⟨t₁, ht₁, hm₁, -, hh1, hga⟩ := triple_of_callW
     (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
   rw [ht₁] at hm₁
@@ -498,7 +483,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
   generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
   rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
-    simp only [hc2, reduceCtorEq] at hW
+    simp only [hc2, icaW.k_env_find.none, icaW.k_env_find.eq_2, L.Ind.erRd_foldN, reduceCtorEq] at hW
   obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
     (envFind_refines p hp.envrow hp.baserow hp.envfind n s₀ vis _ hS.env hn32) hc2
   rw [ht₂] at hm₂
@@ -522,11 +507,11 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   rw [hfind'] at hrun1
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) = 4
   · obtain ⟨cv, rfl⟩ := hctor.1 h4
-    rw [ite_eq_left h4] at hr
+    simp only [h4, ↓reduceIte] at hr
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
     · simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  · rw [ite_eq_right h4] at hr
+  · simp only [h4, ↓reduceIte] at hr
     refine CoreRef.of_pure (v := false) hS ?_ hm.symm ?_ ?_
     · rw [hrun1]
       have := hctor.2 h4
