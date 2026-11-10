@@ -13,6 +13,7 @@ public import ConAgua.Arena.SortStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 meta import ConAgua.Front.Apply
@@ -400,14 +401,6 @@ grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
   return h
 }
 
-/-- The model of `node_bin(k, a, c)`. -/
-def binW (m : Mem) (k a c : Word) : Option (Word × Mem) :=
-  if tblOK m EID a = true ∧ tblOK m EID c = true then
-    if k = 10 then mkAppW m (tblW m EID a) (tblW m EID c)
-    else if k = 11 then mkLamW m (tblW m EID a) (tblW m EID c)
-    else mkForallW m (tblW m EID a) (tblW m EID c)
-  else none
-
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[no_expose] def nodeLet : FunDecl := lfn (a, c, d) locals (t, v, x, h) {
   t := call expr_get(a);
@@ -417,12 +410,6 @@ def binW (m : Mem) (k a c : Word) : Option (Word × Mem) :=
   return h
 }
 
-/-- The model of `node_let(a, c, d)`. -/
-def letW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
-  if tblOK m EID a = true ∧ tblOK m EID c = true ∧ tblOK m EID d = true then
-    mkLetW m (tblW m EID a) (tblW m EID c) (tblW m EID d)
-  else none
-
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[no_expose] def nodeProj : FunDecl := lfn (a, c, d) locals (n, e, h) {
   if c == 18446744073709551615 { abort R_LONG_NUMBER };
@@ -431,12 +418,6 @@ def letW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
   h := call mk_proj(n, c, e);
   return h
 }
-
-/-- The model of `node_proj(a, c, d)`. -/
-def projW (m : Mem) (a c d : Word) : Option (Word × Mem) :=
-  if c ≠ NONE ∧ tblOK m NID a = true ∧ tblOK m EID d = true then
-    mkProjW m (tblW m NID a) c (tblW m EID d)
-  else none
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[no_expose] def nodeConst : FunDecl := lfn (a, c) locals (n, o, l, g, h) {
@@ -575,18 +556,6 @@ def litStrW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) :=
   abort
 }
 
-/-- The model of `expr_node(pl, a, c, d)`: the node's handle and the memory after. -/
-def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :=
-  if pl = 8 then (if a = NONE then none else binternW m a)
-  else if pl = 9 then (if tblOK m LID a = true then sointernW m (tblW m LID a) else none)
-  else if pl = 10 ∨ pl = 11 ∨ pl = 12 then binW m pl a c
-  else if pl = 13 then letW m a c d
-  else if pl = 14 then projW m a c d
-  else if pl = 15 then constW b m a c
-  else if pl = 16 then litW b m c d
-  else if pl = 17 then litStrW b m c d
-  else none
-
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[no_expose, l_impl ConRon.Arena.Frontend.parseExprEntryD]
 def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
@@ -596,10 +565,6 @@ def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
   z := call expr_put(idx, h);
   return 0
 }
-
-/-- **The model of `apply_expr(pl, idx, a, c, d)`.** -/
-def applyExprW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
-  if tblFresh m EID idx = true then putK EID idx (nodeW b m pl a c d) else none
 
 /-! ## The program -/
 
@@ -807,50 +772,49 @@ theorem lsPut_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lsLoop_step_spec p hE b hb n] <;> finish [lsPutW, lsPutL, top_rdW]
 
-theorem nodeBin_spec (n : Nat) (s₀ : St) (k a c : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_bin" [k, a, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ binW s₀.mem k a c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_bin]
-  simp only [callFn, nodeBin]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
-        mkApp_spec p hE.der_b hE.app_find hE.app_push hE.intern_app hE.mk_app n,
-        mkLam_spec p hE.der_b hE.lam_find hE.lam_push hE.intern_lam hE.mk_lam n,
-        mkForall_spec p hE.der_b hE.forall_find hE.forall_push hE.intern_forall hE.mk_forall n] <;>
-      finish [binW]
+end specs
 
-theorem nodeLet_spec (n : Nat) (s₀ : St) (a c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_let" [a, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ letW s₀.mem a c d = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_let]
-  simp only [callFn, nodeLet]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
-        mkLet_spec p hE.der_b hE.letE_find hE.letE_push hE.intern_letE hE.mk_let n] <;>
-      finish [letW]
+/-- **`node_bin`, `node_let`, `node_proj`** (generated): `binW`, `letW`, `projW`; each table lookup
+(`expr_get`, `name_get`) is a guard of the model (`guards`). -/
+l_model nodeBin_spec (p : Prog) (hE : ExprLookups p)
+  fns [hE.node_bin ↦ binW]
+  specs [exprGet_spec p hE n,
+    mkApp_spec p hE.der_b hE.app_find hE.app_push hE.intern_app hE.mk_app n,
+    mkLam_spec p hE.der_b hE.lam_find hE.lam_push hE.intern_lam hE.mk_lam n,
+    mkForall_spec p hE.der_b hE.forall_find hE.forall_push hE.intern_forall hE.mk_forall n]
+  grind [arena_grind] guards ["expr_get"]
 
-theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_proj" [a, c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ projW s₀.mem a c d = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_proj]
-  simp only [callFn, nodeProj]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
-        nameGet_spec p hE.front n,
-        mkProj_spec p hE.der_b hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n] <;>
-      finish [projW, NONE]
+l_model nodeLet_spec (p : Prog) (hE : ExprLookups p)
+  fns [hE.node_let ↦ letW]
+  specs [exprGet_spec p hE n,
+    mkLet_spec p hE.der_b hE.letE_find hE.letE_push hE.intern_letE hE.mk_let n]
+  grind [arena_grind] guards ["expr_get"]
+
+l_model nodeProj_spec (p : Prog) (hE : ExprLookups p)
+  fns [hE.node_proj ↦ projW]
+  specs [exprGet_spec p hE n, nameGet_spec p hE.front n,
+    mkProj_spec p hE.der_b hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n]
+  grind [arena_grind] finish [NONE] guards ["expr_get", "name_get"]
+
+/-- The model of `expr_node(pl, a, c, d)`: the node's handle and the memory after. -/
+def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :=
+  if pl = 8 then (if a = NONE then none else binternW m a)
+  else if pl = 9 then (if tblOK m LID a = true then sointernW m (tblW m LID a) else none)
+  else if pl = 10 ∨ pl = 11 ∨ pl = 12 then binW m pl a c
+  else if pl = 13 then letW m a c d
+  else if pl = 14 then projW m a c d
+  else if pl = 15 then constW b m a c
+  else if pl = 16 then litW b m c d
+  else if pl = 17 then litStrW b m c d
+  else none
+
+/-- **The model of `apply_expr(pl, idx, a, c, d)`.** -/
+def applyExprW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
+  if tblFresh m EID idx = true then putK EID idx (nodeW b m pl a c d) else none
+
+section specs2
+variable (p : Prog) (hE : ExprLookups p)
+include hE
 
 theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (c d : Word) :
@@ -969,6 +933,6 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
         exprFresh_spec p hE n, exprPut_spec p hE n, exprNode_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [applyExprW]
 
-end specs
+end specs2
 
 end L.Front
