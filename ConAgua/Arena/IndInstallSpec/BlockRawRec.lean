@@ -19,8 +19,6 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndPos
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.ErecVocab
 import ConAgua.L.ModelGen
 
 @[expose] public section

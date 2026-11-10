@@ -16,7 +16,6 @@ import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.ErecVocab
 import ConAgua.L.ModelGen
 
 @[expose] public section

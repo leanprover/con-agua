@@ -7,8 +7,6 @@ public import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.FVarStore
-import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos2

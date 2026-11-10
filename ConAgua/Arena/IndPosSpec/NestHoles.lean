@@ -8,8 +8,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.LdRd
-import ConAgua.Arena.ErecVocab
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import all ConAgua.Arena.IndPos2

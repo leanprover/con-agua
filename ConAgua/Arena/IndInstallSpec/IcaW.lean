@@ -20,7 +20,6 @@ public import ConAgua.Arena.RecSim
 public import ConRon.Arena.Inductives.BlockInstall
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.LdRd
-import ConAgua.Arena.ErecVocab
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RecClassSpec.CloseLams
 
