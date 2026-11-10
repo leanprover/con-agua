@@ -134,3 +134,46 @@ Left in the file: the continuation combinators `lK`, `lkPushK`, `sliceK`, `alloc
 | total | 163.9 → 187.6 G (+14 %) | | |
 
 Lines: 7 files, +137 −413 (**−276**); `IndApplySpec` 519 → 245.
+
+### Batch 2: generator `pfuel`; `Rom/CIReadRefW` (lead)
+
+**Generator: `pfuel`** (`ModelGen.lean`, test `tPf` in `ModelGenTest.lean`). 61 hand-specified
+functions have models in lane whnf's "a call as a function of the memory" style: every callee
+through `callW p n "f"` (its own recursive call too), so the model is not recursive and takes the
+fuel `n` as a parameter, and the spec is at `exec p (n + 1)` with the model at `n`
+(`Rom/CIReadRefW` 15, `PropReadW` 9, `InstLPWalk` 4, `IcaW`, `IndT/BlockPD`, the `IndDeclConsts*`
+files 1–2 each, …). `l_model` could generate their bodies (`specs [callW_spec p n "f", …]` with
+`bind ntBW`, as `DeclNatGate`'s `depsStoredW` does), but only as a fuel-indexed model (`match n
+with | 0 => none | n + 1 => …`), one off from the hand one, so every refinement would have
+shifted its fuel. With `pfuel` (one function that does not call itself as its model) the model
+is the body at `n`, its arms are stated at `n`, and the spec is `∀ s₀ args, ⦃s = s₀⦄ invoke p
+(exec p (n + 1)) "f" args ⦃… fW … n s₀.mem args = some …⦄`, proved by the one step (no
+induction). On `CIReadRefW` the generated model **is** the hand one: `slotG p n m s = slotW p n m s`
+by `rfl` for 15 of its 17 functions.
+
+**`Rom/CIReadRefW`**: `rci_slot`, `rci_fresh`, `rci_names_to`, `rci_lvls_to`, `rci_name_sl`,
+`rci_cv`, `rci_caps`, `rci_rules_to`, `rci_block_to`, `rci_block`, `rom_basis_decls`,
+`rom_and_pin`, `rom_ci`, `rom_cv`, `rom_expr_pin` generated (15 models and specs, same names, same
+statements). The users needed three kinds of edit: a word read through `rom_u64_c` in a generated
+model is a continuation over the result list (`fun ρ μ => … ρ.headD 0 …`), which the hand `rdU`
+abbreviation's lemma `rdU_some` cannot match (its continuation is not a pattern), so a lemma over
+the `ntBW` chain itself, `u64_some` (`k [u64W rom i] m`), and a `simp only [List.headD_cons]`
+after it; `capsW`'s `where` part `capsTailW` is gone, so `CIReadRefCaps` names the rest of the
+chain by `change ntBW (callW p k "rom_name_c" …) _ = …`; one `simp only [putE]` and one `dsimp`
+had nothing left to do. `rci_rule` and `rci_ci` are not converted yet: their hand models are cut
+into named parts (`ruleTailW`, `ruleLvlW`, `rulePinW`, `ciTailW`, `ciDefnW`, …) that the long
+walks in `CIReadRefRule`/`CIReadRefCI` take apart by name; the generated ones are one body with
+join points.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `L/ModelGenTest` | 83.9 → 84.9 G | 17.6 → 18.0 | 1075 → 1070 |
+| `Rom/CIReadRefW` | 100.3 → 90.3 G | 20.0 → 16.9 | 1178 → 1144 |
+| `Rom/CIReadRefCaps` | 25.1 → 25.3 G | 3.6 → 3.4 | 1034 → 1029 |
+| `Rom/CIReadRefCV` | 7.5 → 7.5 G | 1.1 → 1.0 | 945 → 976 |
+| `Rom/CIReadRefLayout` | 18.8 → 18.8 G | 3.2 → 2.9 | 1465 → 1500 |
+| `Rom/CIReadRefs` | 6.8 → 6.8 G | 1.2 → 1.2 | 946 → 954 |
+
+Lines: `CIReadRefW` +99 −241 (−142), users +22 −12; the generator +38 −5 and its test +30. The
+gate build after the change rebuilt every `l_model` module and none changed (the option is off
+by default).

@@ -123,7 +123,7 @@ theorem slotCall {n : Nat} {m m' : Mem} {s : Word} {r : List Word}
   | succ n =>
   have hw := callW_model (M := fun mq => slotW p n mq s) (slot_specW rom p hL n · s) hc
   unfold slotW at hw
-  replace hw := rdU_some hL hw
+  replace hw := u64_some hL hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   exact ⟨hw.2.symm, hw.1.symm⟩
 
