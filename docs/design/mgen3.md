@@ -88,3 +88,49 @@ the old time rule rejected or nobody tried).
 **Split.** The lead takes the reach families (`Front/IndApplySpec`, `Rom/CIReadRefW`,
 `Arena/IndIface`'s models) and `Front/ApplyExpr`; three helpers take disjoint groups of the
 low-reach families (§2).
+
+## 2. Measuring
+
+`_tmp/mgen3/measure.sh WORKTREE F.lean…`: `perf stat -e instructions:u` and `/usr/bin/time` around
+`scripts/lake env lean F.lean` with `LEAN_NUM_THREADS=1`; instructions (G), user seconds, peak
+RSS. Before and after on the same worktree, the changed modules and the users that changed.
+
+## 3. Batches
+
+### Batch 1: `Front/IndApplySpec` (lead)
+
+No generator change. Generated now: `store_fuel`, `ind_pi_tele_len`, `pi_sort_tele_len`,
+`name_rec_pre`, `ifl_contains`, `ifl_nodup`, `ifl_find_last`, `vi_map_go`, `vi_map`,
+`vi_listed`, `vi_nested` (11). Their hand models, the continuations `sfK`, `teleK`, `stK`,
+`nodupK`, `restK`, `listedK`, `nrpStr`, the hand `mapW`, and their eleven hand specs are gone;
+`exprGetL_spec` moved here from `Verdict/FrontViE` (it is `nameGetL_spec`'s twin, now needed by
+`vi_map_go`'s generated spec), and `IndRealIpo`'s copy of the `pi_sort_tele_len` spec
+(`sortTele_specI`) is gone: the generated `sortTele_spec` takes just the two lookups it needs.
+
+The refinements changed little: renames (`teleK` → `teleW.k_ind_pi_tele_len`, `stK` →
+`sortTeleW.k_pi_sort_tele_len`, `nodupK` → `nodupW.k_ifl_contains`), the continuation chains
+`storeFuelW.k_ctl_sum{,_2,_3}` walked by their arms, a generated recursive call wrapped in its
+identity continuation (`findLastW.k_ifl_find_last`), `vi_map`/`vi_listed` as flat tuples (so
+`validateE`'s proofs lose their `flat3` steps), and two bridges: `mapLk` (the lookup chosen by
+`f`) and `mapGoW_step` (the two generated arms that call `name_get` / `expr_get` share one
+continuation), and `prd_rdW` (the generated `name_rec_pre` reads the pool by `rdW`; the
+refinement states it with `prd`). `split` does not split the generated `if` on a three-way `∧` in
+`nrpW_ok` (the instances differ from the ones `by_cases` builds); `simp only [hrec, ↓reduceIte]`
+does.
+
+Left in the file: the continuation combinators `lK`, `lkPushK`, `sliceK`, `allocK`, `mK`, `wK`,
+`pmK` and `lkW` (used by `IndApplySpec2` and `IndInstallRefine*`, helper mgen3-consts's files).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Front/IndApplySpec` | 34.4 → 52.6 G | 8.6 → 8.8 | 1013 → 1056 |
+| `Front/IndApplyRefine` | 23.4 → 28.9 G | 3.5 → 3.4 | 1074 → 1109 |
+| `Front/IndApplyRefine2` | 10.1 → 10.2 G | 2.1 → 1.6 | 943 → 953 |
+| `Front/IndApplyRefine3` | 9.4 → 9.4 G | 1.7 → 1.3 | 935 → 928 |
+| `Front/IndApplyRefine7` | 15.0 → 15.8 G | 3.5 → 2.9 | 996 → 1015 |
+| `Front/IndApplyRefine9` | 31.8 → 31.9 G | 5.3 → 4.3 | 1141 → 1164 |
+| `Verdict/FrontViE` | 25.2 → 25.5 G | 5.9 → 4.5 | 1048 → 1103 |
+| `Arena/IndRealIpo` | 14.6 → 13.3 G | 3.2 → 2.5 | 1028 → 1017 |
+| total | 163.9 → 187.6 G (+14 %) | | |
+
+Lines: 7 files, +137 −413 (**−276**); `IndApplySpec` 519 → 245.
