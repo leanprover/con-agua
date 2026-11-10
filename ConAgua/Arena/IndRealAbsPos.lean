@@ -391,10 +391,9 @@ theorem haW_afr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
   have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → AFr m m' := by
     intro m m' ctx r h
     cases k with
-    | zero => simp [rhWf] at h
+    | zero => simp [rhWf.eq_1] at h
     | succ k =>
-    simp only [rhWf] at h
-    unfold rhW rhA rhB at h
+    simp only [rhWf.arm1, rhWf.k_iw_alloc.eq_def, rhWf.k_nest_ctx_root_holes_go.eq_def] at h
     afr_auto h [allocW_afr, rhGoW_afr _ _ _ _ _ _ _ _ _ _ _ _ _]
   simp only [haWf.eq_2, haWf.k_nest_ctx_root_holes.eq_def, haWf.k_sl_append.eq_def] at h
   afr_auto h [rh, appendW_afr]
