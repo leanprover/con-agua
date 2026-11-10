@@ -1,10 +1,8 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.CallF
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 public import ConAgua.Arena.WriteSets
-public import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.WalkLiftRefine
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.GrindAttr

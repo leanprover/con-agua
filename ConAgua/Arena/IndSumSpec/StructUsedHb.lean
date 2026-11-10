@@ -1,11 +1,7 @@
 module
 
 public import ConAgua.Arena.IndTwin
-public import ConAgua.Arena.IndSumSpec.StructUsedFrame
 public import ConAgua.Arena.IndPosSpec.NestCrest
-public import ConAgua.Arena.IndSumSpec.StructUsedLater
-public import ConAgua.Arena.CallF
-public import ConAgua.Arena.WriteSets
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

@@ -13,6 +13,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Verdict.DeclValsE
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 
 @[expose] public section
 /-!

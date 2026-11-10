@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.IndPosSpec.EntryW
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.IndPosSpec.RootHoles
-import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

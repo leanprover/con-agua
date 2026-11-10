@@ -5,7 +5,6 @@ import ConAgua.Arena.CoreNatOp
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfDeltaRefine2
-import ConAgua.L.LocNF
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.KnotE
 public import ConAgua.Arena.RefECore

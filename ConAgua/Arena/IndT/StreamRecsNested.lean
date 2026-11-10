@@ -8,6 +8,7 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Inductives.StreamRecs
 import all ConAgua.Arena.IndStream
+import ConAgua.Arena.IndPartsSpec.EqW
 
 @[expose] public section
 

@@ -7,14 +7,11 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.DeclBase
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns

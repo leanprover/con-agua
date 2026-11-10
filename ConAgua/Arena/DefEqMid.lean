@@ -6,7 +6,6 @@ public import ConAgua.Arena.DefEqLeaves
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Verdict.WhnfModels7E
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree

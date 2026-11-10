@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.RomExpr
 public import ConAgua.Rom.PinRead
 
 @[expose] public section

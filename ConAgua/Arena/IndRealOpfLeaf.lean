@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.IndRealOpf
-public import ConAgua.Arena.IndCopy2
-public import ConAgua.Arena.CallF
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.StageInst1
 import ConAgua.Arena.GrindAttr

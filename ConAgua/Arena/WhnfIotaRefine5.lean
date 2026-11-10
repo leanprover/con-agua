@@ -10,7 +10,6 @@ public import Std.WP.Tactic
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.WhnfIotaRefine2
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.WhnfIota
 

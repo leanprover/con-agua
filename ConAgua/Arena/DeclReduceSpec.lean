@@ -9,6 +9,7 @@ import ConAgua.Arena.WhnfDeltaRefine
 public import ConAgua.Arena.IndCallM
 public import ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.DeclArms
+public import ConAgua.Arena.IndRealWalk
 
 @[expose] public section
 

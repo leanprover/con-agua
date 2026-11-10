@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.GrpAt
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndPartsSpec.RecTW
 import ConAgua.Arena.IndGrindAttr

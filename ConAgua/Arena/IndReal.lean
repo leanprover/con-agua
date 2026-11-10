@@ -1,15 +1,9 @@
 module
 
 import ConAgua.Arena.StubNamesRefine
-import ConAgua.Arena.StubIndRefine
-import ConAgua.Arena.StageInst1
 public import ConAgua.Arena.CallF
-public import ConAgua.Arena.DeclArmsCanon
 public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.StubInd
 public import ConAgua.Arena.StubNames
-public import ConAgua.Arena.WhnfEntry
-public import ConAgua.Arena.WhnfIota
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndIface

@@ -1,9 +1,7 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.Bnums
 public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.IndSumSpec.StructProjArgP
-import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

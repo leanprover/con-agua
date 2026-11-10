@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
-import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
 
 @[expose] public section

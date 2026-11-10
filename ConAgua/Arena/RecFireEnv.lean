@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.WhnfIotaRecRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfIota
-public import ConAgua.Arena.ErecRd
 
 @[expose] public section
 

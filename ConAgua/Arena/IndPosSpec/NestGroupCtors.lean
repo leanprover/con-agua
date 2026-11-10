@@ -2,12 +2,10 @@ module
 
 public import ConAgua.Arena.IndPosSpec.NcGoW
 public import ConAgua.Arena.IndPosSpec.NoConstWf
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
-import ConAgua.Arena.DeclRec
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos

@@ -1,10 +1,7 @@
 module
 
 import ConAgua.Arena.WhnfM2CRefine3
-import ConAgua.Arena.WhnfIotaRefine6
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.DefEqStuckGo

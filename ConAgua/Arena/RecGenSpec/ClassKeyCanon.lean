@@ -8,6 +8,7 @@ import all Init.Data.List.Control
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.Arena.IndSumSpec.McGoStep
 
 @[expose] public section
 

@@ -1,12 +1,10 @@
 module
 
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.InstLPWalkRef3
 import ConAgua.Arena.InstLPKeys
 public import ConAgua.Arena.RecFireCore
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.PropReadRefine

@@ -135,3 +135,4 @@ ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDeclArm	# names 
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/IndRealIpo.lean	import ConAgua.Arena.InferBodyIntern	# the build needs it (vcgen [ld64_rdW_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/DeclAxiomSpec4.lean	import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
+ConAgua/Arena/DefEqStuckShape.lean	import ConAgua.Arena.InferBodyIntern	# the build needs it (vcgen [ld64_rdW_spec]: a name the tactic reads; the proof term does not keep it)

@@ -30,6 +30,7 @@ public import ConAgua.Arena.IndT.PosFkc
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndT.PosAll
 import ConAgua.Arena.IndPosSpec.CfW
+import ConAgua.Arena.IndSumSpec.StructUsedHb
 
 @[expose] public section
 

@@ -1,17 +1,13 @@
 module
 
-public import ConAgua.Arena.ProjGuardRowsCI
 public import ConAgua.Arena.IndRealOpf3
 public import ConAgua.Arena.IndRealOpfLeaf
 public import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndRealOpf2
-import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.DeclNatCv
 import ConAgua.Arena.StageInst1
-import ConAgua.Arena.WriteSets
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DerRel
-import ConAgua.Arena.DeclNatBase
 import ConRon.Bridge.Grind
 
 @[expose] public section

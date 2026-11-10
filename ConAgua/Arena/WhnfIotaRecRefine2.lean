@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecFireEnv
-import ConAgua.Arena.WhnfIotaRefine6
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.DerRel
@@ -11,9 +10,9 @@ import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.WhnfIotaRecRefine
 import all ConAgua.Arena.WhnfIotaRec
+import ConAgua.Arena.IotaCase3Ref
 
 @[expose] public section
 

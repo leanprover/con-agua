@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.StrLitBase
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic

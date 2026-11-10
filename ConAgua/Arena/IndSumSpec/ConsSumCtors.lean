@@ -6,12 +6,11 @@ public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
-import ConAgua.L.WordOff
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.WhnfBase
 import all ConAgua.Arena.IndSum
+import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 

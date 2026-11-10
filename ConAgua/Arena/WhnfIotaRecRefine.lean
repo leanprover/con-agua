@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.WhnfIotaRefine5
-public import ConAgua.Arena.ErecRd
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
@@ -9,16 +8,15 @@ import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 public import ConRon.Bridge.Specs
 public import ConAgua.Arena.WhnfIotaRecRefineModels
-public import ConAgua.Arena.IotaCase3Ref
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.L.Records
-public import ConAgua.Arena.WhnfIotaRefine2
 public import ConAgua.Arena.WhnfIotaRefine4
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.WhnfIotaRec
+public import ConAgua.Arena.FormerNZRef
 
 @[expose] public section
 

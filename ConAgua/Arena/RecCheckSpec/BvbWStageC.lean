@@ -2,6 +2,7 @@ module
 
 import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.RecCheckSpec.TaCW
+import ConAgua.Arena.BvarBRefine
 
 @[expose] public section
 

@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclRec
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.DeclCanonSpec
 import all ConAgua.Arena.DeclArmsCanon

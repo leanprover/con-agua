@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.IndMaster
 public import ConAgua.Arena.IndView
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.GrindAttr

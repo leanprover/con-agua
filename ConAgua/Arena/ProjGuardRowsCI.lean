@@ -1,12 +1,8 @@
 module
 
-public import ConAgua.Arena.IndSumSpec.StructUsedHb
-public import ConAgua.Arena.Keeps
-public import ConAgua.Arena.MemoBank
-public import ConAgua.Arena.DeclLvlStage
-import ConAgua.Arena.CoreRefine
 public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.IndSumSpec.StructProjArgP
+public import ConAgua.Arena.IndSumSpec.StructUsedFrame
 
 @[expose] public section
 

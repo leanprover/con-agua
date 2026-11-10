@@ -1,20 +1,16 @@
 module
 
 public import ConAgua.Arena.ProjGuardRowsOpf
-public import ConAgua.Arena.Verdict
 public import ConAgua.Arena.ProjGuardRef
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Checker.NoVerdictTree
-import ConAgua.Arena.IndRealFvtD
-import ConAgua.Arena.CallF
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.ErecRd
-import ConAgua.Arena.InferLeaves
-import ConAgua.Arena.Env
 public import ConAgua.Arena.StrLitExt
 import all ConAgua.Arena.Infer
+import ConAgua.Arena.ProjGuardRowsCI
+import ConAgua.Arena.IndSumSpec.StructUsedHb
+public import ConAgua.Arena.IndTwin
 
 @[expose] public section
 

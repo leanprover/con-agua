@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.InstLP
 import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.TwinStep
-import ConAgua.Arena.SimLib
 import Std.Tactic.BVDecide.Normalize.BitVec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

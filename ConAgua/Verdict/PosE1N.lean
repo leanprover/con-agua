@@ -15,6 +15,7 @@ public import ConAgua.Arena.IndPosSpec.NkFields
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Verdict.PosE1M
 public import ConAgua.Verdict.PosFt
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 /-!

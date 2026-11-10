@@ -3,11 +3,7 @@ module
 public import ConAgua.Arena.FormerNZRef
 public import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.WhnfIotaRefine6
-import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.LevelArena
-import ConAgua.Arena.LevelEquiv
-import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

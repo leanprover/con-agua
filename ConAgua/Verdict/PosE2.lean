@@ -12,6 +12,7 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndRealIlpL
 public import ConLeche.Verify.Inductives.NestScope
 import ConRon.Bridge.Inductives.Positivity
+public import ConAgua.Arena.IndPosSpec.UCtx
 
 @[expose] public section
 /-!

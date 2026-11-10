@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.WhnfM2CRefine2
 public import ConAgua.Arena.RecFireCore
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 public import ConAgua.Arena.Rom
