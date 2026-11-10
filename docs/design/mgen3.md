@@ -370,3 +370,128 @@ and a memory model at once: "ambiguous post"), `ls_put` (fuel-free over `b`), `a
 | `Front/FrontPreOK1` | 15.5 → 15.5 G | 2.6 → 2.3 |
 
 Lines: +48 −87 (**−39**).
+
+### Batch 12: helper `mgen3-misc` (round 2)
+
+36 functions; 30 files, +515 −1547 (**−1032**). `canon_expr_eq` (`DeclCanonExpr` 115.2 → 29.2 G,
+18.4 → 4.4 s), `DeclCanonLvl` (3; 58.9 → 38.6 G), `canon_rules_eq` (31.4 → 15.0 G),
+`DeclCanonNames` (2), `PropReadW`'s nine `callW`-style models (`pfuel`, tuples; 84.5 → 58.9 G),
+`IndRealOpf` (3, `pfuel`, the hand models by `rfl`), `IndRealNames` (4), `IndRealSpine` (4),
+`has_fvar_fast`, `abstract1_fast`'s adapter, `bb_memo`, `fvar_b` (all `pfuel`), `cv_new`,
+`struct_proj_bodies`, `InstLPSpec` (2; 48.2 → 36.1 G), `WhnfCoreProj` (2; 38.1 → 49.9 G),
+`rom_lvls_go` (the first ROM reader: `pre`, `keep`, `defs`/`nodefs`). Bridges: `cvNewW_some`,
+`spnPoolW_cons`, `slpW_cons_some`, `hffW_eq`, `recBytes_eq`. Kept: `sl_getd` (a total word
+model used in 7 other files), `intern_zero`/`intern_ls` (templates), `ls_match` (its post is the
+shape `ConsOK.match_` consumes), `has_loose_b_var_b_*` (unfolded by name in `NestCrest`),
+`bvar_b` (its model's argument order differs from L's, used in 8 files), `head_type_const`/
+`head_proof_const` (one hand model with a callee parameter, `cArmK1`), `type_sort_pw`/`proof_pw`
+(they splice loop blocks whose hand models live in `PropReadLoops`; "not a call: step p …"),
+`stk_push`/`stk_pool`/`rom_levels` (posts that are not model shapes; `rom_u64`'s `u64OK ∧ r =
+[u64W …]`), `Front/Apply`'s lookups (templates) and `apply_*` (their users are elsewhere).
+`PropReadW` keeps two imports the `shake` gate flags (allowlisted: `ld64_rdW_spec` named in the
+`l_model`s' `extra` only; `KnotSlot` re-exported to two importers).
+
+### Batch 13: helper `mgen3-pos` (round 2)
+
+26 functions; 42 files, +685 −1603 (**−918**), #253. 41 modules 1 097 → 580 G instructions,
+the largest single gain of the lane: `IndPosSpec/NcGoW` 389.2 → 24.0 G (37.4 → 3.5 s; the
+hand spec's `sym … finish` over a long memo walk). Generated: `nest_container_ctors(_go)`,
+`nest_container`, `NkcW` (3), `nest_cont_new_finish`, `nest_ds_closed(_go)`,
+`nest_cont_params_closed`, `nest_ctx_root_holes_go`, `NestBlockOfKey` (3), `nest_hole_at`,
+`nest_pos_hole_kind`, `nest_occ_any`, `nest_phs_go`, `nest_walk_stack` (its file `NbPosW`
+emptied and deleted), `nest_seed_of_go`, `nest_seeds_fuel`, `block_nested_bit_go`,
+`class_key_canon_go`, `NestKeyMap` (3). All with the default recipe (`fold`/`finish [tierW,
+idxW]`). The largest increase: `NestGroupCtors` 13.1 → 24.3 G (it now holds `nt_spec'`). Two
+workarounds: `attribute [local irreducible] findRes` around `nest_container`'s `l_model`
+(`grind` unfolded it comparing record reads: a `whnf` timeout), and a binder renamed from `L`
+to `hL` (the generated proof text roots every `L.x` as `_root_.L.x`, so a binder `L` breaks
+it). Left: the RxMapW family (10, about 118 uses in `MapOKStep`), `depth_go` and its family,
+`replace_apps(_go)`, `pi_doms_occ`, the models that live in files other helpers held
+(`nest_occ(_go)`, `mentions_any_go`, `class_key_canon`, `target_canon_params`), the `CallM`
+fuel-offset models (`nest_root_canon`, `nest_uniform_ok`, `nest_crest`), the total word model
+`nest_field_kind_flat`. The lead removed four imports `shake` flagged and allowlisted six
+(re-exports other modules reach names through, and names used only in tactic lists).
+
+### Batch 14: helper `mgen3-parts2` (round 3)
+
+18 functions; 18 files, +661 −1236 (**−575**). `block_counts_pure`/`_head`/`block_counts`
+(`RecTW` 34 → 30 G), `block_rec_names_unreserved`, `block_rec_lps_one`/`_ok_go`/`_ok` (`EqW`
+3.1 → 1.0 s), `class_n_pc_of` (`simp [] locals`; 100 → 76 G, and its hand spec's
+`maxHeartbeats 1000000` gone), `ptr_list_names`, `ptr_names_copy` with `member_names_copy`,
+`nest_out_kinds`, `target_abs_const` (43 → 25 G), `target_abs` (`pfuel`), `target_abs_go` with
+`target_abs_node` (one mutual model). Bridges: `nameCopyW_step`, `ptrCopyW_eq` (the two copy
+functions have the same code), `ptrNamesW_some`, `encONN_three`, `taGoW_leaf`, `taGoW_kNode`,
+`taGoW_some` (what a returning step did; the frame lemmas use it instead of a `repeat' split`
+that was 4× slower). The `IndIface` models this helper was given turned out to live elsewhere
+(`lpsW` in `MemberNames`, `nIdxsW` in `RulePrefixAt`, `tmdW` in `PtrNamesWDec`, `psGoW` in
+`StructElimLevel`) and to be unfolded by name in other files (`NestCtx`, `TcmLook`,
+`TabSimSpg`, `CfaFv`, …): kept. `generated_rules`, `check_sum_tele`, `aux_rule_fire`,
+`class_rules_ok`, `target_major_nfs` were already generated (their remaining hand lemmas are
+refinements).
+
+### Batch 15: helper `mgen3-pos2` (round 3)
+
+11 functions; 25 files, +264 −522 (**−258**), #255. `nest_frame_mates(_go)`, `nest_phs`
+(`pfuel`), `nest_ctx_root_holes` (fuel-indexed; `rhW k` is now `rhWf (k + 1)`), `nest_ctor_nf`
+(`pfuel`), `depth`, `replace_apps`, `nest_occ` (`pfuel`, each with a 2-line triple wrapper for a
+`DpGoSpec`-style definition, which `vcgen` does not unfold), `pi_doms_occ`,
+`has_loose_b_var_b_ins` (bridge `hbInsW_eq` to the `msetG` form), `has_loose_b_var_b_fast`.
+No module more than 1.7× slower (`NcnW` 0.36 → 0.60 s); `MatesW` 13.3 → 8.2 G.
+
+## 4. Totals (master b91d1604 → a0b2b92d)
+
+* **Functions**: hand-specified (§1's count) 591 → 340; named by an `l_model` 765 → 1 002. About
+  250 functions converted: lead 52 (batches 1, 2, 6–9, 11), helpers 199 (round 1: 82, round 2:
+  98, round 3: 29).
+* **Lines** (`git diff --shortstat b91d1604b master -- ConAgua`): 204 files, +5 205 −12 601,
+  **−7 396** net, the generator's two options and their tests included.
+* **Build time**, every module the lane changed, measured alone (`LEAN_NUM_THREADS=1`,
+  `measure.sh`) at both ends: 204 modules, **5 329 → 4 213 G instructions (−21 %)**, 835 →
+  665 user s. The slowest module after is `Verdict/UnresolvedE`, 18 s. Above 3×: only `RecCheckSpec/RpLook` (2.2 → 6.8 G, 0.4 → 1.2 s: the generated spec
+  now lives there; the modules the hand specs left shrank by more). The largest slowdowns in
+  absolute terms: `Front/IndApplySpec` 34 → 53 G, `Rom/CIReadRefCI` 40 → 51 G, `WhnfCoreProj`
+  38 → 50 G, `IndPartsSpec/Bsp` 17 → 29 G, `NestGroupCtors` 13 → 22 G; the largest gains:
+  `IndPosSpec/NcGoW` 389 → 24 G, `DeclCanonExpr` 115 → 29 G, `IndInstallSpec/IcaW` 99 → 41 G,
+  `Rom/CIReadRefW` 100 → 51 G. Peak RSS 0.8–1.6 GB throughout.
+* **Generator**: `pfuel` (batch 2), `guards` (batch 9), both off by default; no existing model
+  changed.
+
+## 5. What stays hand-written, and why
+
+By kind, with the main examples (the per-batch sections name the rest):
+
+* **No model to generate** (≈ 196 of the 340): specs whose post is a value, a relation or a
+  list the callers test (`ls_match`, `lsNodeW`, `class_read_n_slots`, `sl_getd`'s total word
+  model, `nest_field_kind_flat`).
+* **Templates** (`FunDecl`s with parameters: the table lookups, `intern_zero`, `intern_ls`,
+  `intern_reserved_pins`, `pb_check`): generic hand specs; the generator takes no parameters.
+* **Shape**:
+  * memo walks whose hand models fold *find + put* into `msetG` and merge kinds
+    (`replace_fvars` and the RxMapW family, `depth_go`, `mentions_any_go`,
+    `has_loose_b_var_b_go`, `replace_apps_go`; ~800 lines of `MapOKStep` on that shape);
+  * models shared by several functions or with a callee/`CallM` parameter (`stripTW tg` for
+    `strip_lams`/`strip_pis`, `cArmK1`, `selW`, `lookupW`/`substLW` shared with a template,
+    `nameCopyW`-style sharing where users are elsewhere);
+  * fuel offsets: models stated at `k + 2`, `k + 3` with callees at several fuels
+    (`block_shape_fin/tail`, `block_rec_name_set_ok`, `nest_root_canon`, `nest_uniform_ok`,
+    `nest_crest`), and callers of `pfuel` models at the same fuel (`whnf_walk_fuel`,
+    `nest_canon_crest`: a `pfuel` spec is at `exec p (n + 1)`);
+  * callee posts that are no model shape: `str_put_esc` (`r.headD 0 = top ∧ F = some (r.tail
+    …)`), `ls_put` (a list and a memory model at once), `rom_u64` (`u64OK ∧ r = [u64W …]`),
+    `stk_pool`, `rom_put`;
+  * loop blocks whose hand models live elsewhere (`type_sort_pw`, `proof_pw`: "not a call:
+    step p …");
+  * fuel-free models over the input buffer used as total functions (`Front/`: `ls_put`,
+    `nat_dec`, `Unescape`, `Line`; zero ronsync2 churn).
+* **Reach**: models unfolded by name in many files (`lpsW`, `nIdxsW`, `tmdW`, `psGoW`,
+  `bvbW`, `chnW`, `ruK1/2`, the `erase_fvar_tys` family's continuations, `getDW`).
+* **Bounds**: `rom_names_to` (the `PINS` check the refinement uses).
+* **Memory blow-up**: `rule_copy`, whose generated model copies the memory term after each of
+  its 11 `erec_put`s (a total memory callee is inlined, not bound); a continuation per total
+  memory call (opt-in) would fix it.
+
+Generator gaps the lane met and left: `fold` takes no memory readers (bridged by `rfl` lemmas:
+`erRd_foldN`, `prd_rdW`); implicit binders are no model parameters; a binder named `L` breaks
+the generated proof text (every `L.x` is rooted); generated literals and `Decidable` instances
+differ from hand-stated ones, so `rw [ite_eq_left h]`/`split` can fail where `simp only [h,
+↓reduceIte]` works; a pure callee tested in an `if` elaborates at `Nat`.
