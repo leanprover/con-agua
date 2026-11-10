@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.Arena.DefEqStuckShape
 import ConRon.Bridge.Grind
-import ConAgua.Arena.ErecVocab
 
 @[expose] public section
 

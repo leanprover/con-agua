@@ -8,7 +8,6 @@ import Std.WP.Triple.SpecLemmas
 import ConAgua.L.ModelGen
 import ConAgua.L.GrindAttr
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.InferBodySpine
 public import ConAgua.Arena.IndView
 public import ConAgua.Arena.KnotSlot
 public import ConAgua.L.ProgHas
