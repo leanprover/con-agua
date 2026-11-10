@@ -390,3 +390,24 @@ shape `ConsOK.match_` consumes), `has_loose_b_var_b_*` (unfolded by name in `Nes
 [u64W …]`), `Front/Apply`'s lookups (templates) and `apply_*` (their users are elsewhere).
 `PropReadW` keeps two imports the `shake` gate flags (allowlisted: `ld64_rdW_spec` named in the
 `l_model`s' `extra` only; `KnotSlot` re-exported to two importers).
+
+### Batch 13: helper `mgen3-pos` (round 2)
+
+26 functions; 42 files, +685 −1603 (**−918**), #253. 41 modules 1 097 → 580 G instructions,
+the largest single gain of the lane: `IndPosSpec/NcGoW` 389.2 → 24.0 G (37.4 → 3.5 s; the
+hand spec's `sym … finish` over a long memo walk). Generated: `nest_container_ctors(_go)`,
+`nest_container`, `NkcW` (3), `nest_cont_new_finish`, `nest_ds_closed(_go)`,
+`nest_cont_params_closed`, `nest_ctx_root_holes_go`, `NestBlockOfKey` (3), `nest_hole_at`,
+`nest_pos_hole_kind`, `nest_occ_any`, `nest_phs_go`, `nest_walk_stack` (its file `NbPosW`
+emptied and deleted), `nest_seed_of_go`, `nest_seeds_fuel`, `block_nested_bit_go`,
+`class_key_canon_go`, `NestKeyMap` (3). All with the default recipe (`fold`/`finish [tierW,
+idxW]`). The largest increase: `NestGroupCtors` 13.1 → 24.3 G (it now holds `nt_spec'`). Two
+workarounds: `attribute [local irreducible] findRes` around `nest_container`'s `l_model`
+(`grind` unfolded it comparing record reads: a `whnf` timeout), and a binder renamed from `L`
+to `hL` (the generated proof text roots every `L.x` as `_root_.L.x`, so a binder `L` breaks
+it). Left: the RxMapW family (10, about 118 uses in `MapOKStep`), `depth_go` and its family,
+`replace_apps(_go)`, `pi_doms_occ`, the models that live in files other helpers held
+(`nest_occ(_go)`, `mentions_any_go`, `class_key_canon`, `target_canon_params`), the `CallM`
+fuel-offset models (`nest_root_canon`, `nest_uniform_ok`, `nest_crest`), the total word model
+`nest_field_kind_flat`. The lead removed four imports `shake` flagged and allowlisted six
+(re-exports other modules reach names through, and names used only in tactic lists).
