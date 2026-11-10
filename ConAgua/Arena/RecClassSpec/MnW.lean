@@ -427,7 +427,7 @@ theorem misW_sim (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   intro m a i l hS hG hX hws hwb hfvs hfb hli hiX hA
   have hsz := hS.iw.iwSize
   by_cases hend : nF ≤ i
-  · rw [L.Ind.misW.arm1 (h := hend)]
+  · rw [L.Ind.misW.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hend]
     have : X.nF ≤ i.toNat := by rw [← hnF]; exact UInt64.le_iff_toNat_le.mp hend
     rw [rec2Recs_end this, ConRon.Arena.ClassGen.minorTy.ihsGo.eq_1]
     exact RSim.pure_some ⟨hS, IWGrow.refl m, ⟨rfl, by simp [decHL, hslice?], by simp⟩, hA⟩
