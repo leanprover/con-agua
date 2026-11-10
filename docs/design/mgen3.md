@@ -225,3 +225,25 @@ a `let` for the memory in the generator would fix it.
 Generator gaps the helpers met (none patched by them): `fold` takes no memory readers (`fold
 [erRd]`: "unsupported term"; bridged by `rfl` lemmas); implicit binders do not become model
 parameters; the memory-term blow-up above.
+
+### Batch 6: `rci_rule` (lead)
+
+`rci_rule`'s model generated with `pfuel` (the hand `ruleW` with its parts `ruleTailW`,
+`ruleLvlW`, `rulePinW` and the 13-line hand spec at `maxHeartbeats 4000000` gone). The generated
+model is one `ntBW` chain whose two `if`s on the fire word end in join points (`ruleW.j1` after
+the level slice, `ruleW.j2` after the pin slice), where the hand model nested `ntBW (if … then
+ruleLvlW … else some ([q], m)) fun r2 m2 => …`. The two walks in `CIReadRefRule` (`rule_relP`,
+`rule_relL`) re-threaded: the `change` that named the hand tail now names the `if` and the join
+point (`change (if (0 : Word) = 1 ∨ … then _ else ruleW.j1 p k … (putERs m1 [...])) = … at hw`),
+`unfold ruleW.j1`/`ruleW.j2` take the place of `unfold ruleW.ruleTailW`/`ruleLvlW`, the
+`rdU_ntBW`/`putE_ntBW` steps (a read inside a nested `ntBW`) became the flat `u64_some`/
+`putE_some`. `rci_ci` stays hand-written for now: `ciPre` states the rest of the hand chain
+(`ntBW (ciTailW …) …`) as its post for four kind lemmas; the generated `ciW` has that rest inline
+in a join point's body, so `ciPre` needs restating first.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Rom/CIReadRefW` | 90.3 → 70.1 G | 15.6 → 11.6 | 1199 → 1206 |
+| `Rom/CIReadRefRule` | 43.0 → 43.1 G | 5.0 → 5.1 | 1119 → 1152 |
+
+Lines: `CIReadRefW` +5 −51, `CIReadRefRule` +24 −19 (**−41**).

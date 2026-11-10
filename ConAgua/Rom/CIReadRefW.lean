@@ -56,43 +56,6 @@ abbrev putE (m : Mem) (a v : Word) (k : Mem → Option (List Word × Mem)) :
 
 
 
-/-- A rule's level slice (fires `1`, `2`): the position after. -/
-def ruleLvlW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
-  rdU p n m q fun l1 m0 =>
-  ntBW (callW p n "erec_alloc" [l1] m0) fun r1 m1 =>
-  putE p n m1 (r + 4) (r1.headD 0) fun m1a =>
-  putE p n m1a (r + 5) l1 fun m1b =>
-  ntBW (callW p n "rci_lvls_to" [q + 8, r1.headD 0, l1] m1b) fun r2 m2 =>
-  some ([r2.headD 0], m2)
-
-/-- A nested rule's pin slice (fire `1`): the position after. -/
-def rulePinW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
-  rdU p n m q fun l2 m0 =>
-  ntBW (callW p n "erec_alloc" [l2] m0) fun r3 m3 =>
-  putE p n m3 (r + 6) (r3.headD 0) fun m3a =>
-  putE p n m3a (r + 7) l2 fun m3b =>
-  ntBW (callW p n "rom_exprs_to_c" [q + 8, r3.headD 0, l2] m3b) fun r4 m4 =>
-  some ([r4.headD 0], m4)
-
-/-- `rci_rule(q, r)`. -/
-def ruleW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rom_name_c" [q] m) fun r1 m1 =>
-  putE p n m1 r (r1.headD 0) fun m1' =>
-  rdU p n m1' (r1.tail.headD 0) fun x1 m2 => putE p n m2 (r + 1) x1 fun m2' =>
-  rdU p n m2' (r1.tail.headD 0 + 8) fun f m3 => putE p n m3 (r + 3) f fun m3' =>
-  putE p n m3' (r + 4) 0 fun m4 => putE p n m4 (r + 5) 0 fun m5 =>
-  putE p n m5 (r + 6) 0 fun m6 => putE p n m6 (r + 7) 0 fun m7 =>
-  ruleTailW p n m7 (r1.tail.headD 0 + 16) r f
-where
-  /-- The fire's slices, then the right-hand side. -/
-  ruleTailW (p : Prog) (n : Nat) (m : Mem) (q r f : Word) : Option (List Word × Mem) :=
-    ntBW (if f = 1 ∨ f = 2 then ruleLvlW p n m q r else some ([q], m)) fun r2 m2 =>
-    ntBW (if f = 1 then rulePinW p n m2 (r2.headD 0) r else some ([r2.headD 0], m2)) fun r3 m3 =>
-    ntBW (callW p n "rom_expr_c" [r3.headD 0] m3) fun r4 m4 =>
-    putE p n m4 (r + 8) (r4.headD 0) fun m5 =>
-    some ([r4.tail.headD 0], m5)
-
-
 /-- A constant record's size by its kind word. -/
 def ciSize (k : Word) : Option Word :=
   if k = 0 then some 5 else if k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some 20
@@ -189,6 +152,11 @@ l_model caps_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
   specs [callW_spec p n "rom_u64_c", callW_spec p n "erec_put", callW_spec p n "rom_name_c", callW_spec p n "rci_name_sl"]
   grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
 
+l_model rule_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
+  fns [hL.rci_rule ↦ ruleW list]
+  specs [callW_spec p n "rom_u64_c", callW_spec p n "rom_name_c", callW_spec p n "erec_put", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to", callW_spec p n "rom_exprs_to_c", callW_spec p n "rom_expr_c"]
+  grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
+
 l_model rulesTo_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
   fns [hL.rci_rules_to ↦ rulesToW list]
   specs [callW_spec p n "rci_rule", callW_spec p n "rci_rules_to"]
@@ -247,20 +215,6 @@ local macro "rci_pre " fd:term : tactic => `(tactic| (
 
 
 
-
-
-set_option maxHeartbeats 4000000 in
-theorem rule_specW (q rr : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rule" [q, rr]
-    ⦃fun r s' => LocEq s' s₀ ∧ ruleW p n s₀.mem q rr = some (r, s'.mem); ⊤⦄ := by
-  rci_pre hL.rci_rule
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
-    callW_spec p n "rom_u64_c", callW_spec p n "rom_name_c", callW_spec p n "erec_put", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to", callW_spec p n "rom_exprs_to_c", callW_spec p n "rom_expr_c"]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    Locals.init_cons_zero, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq] at *)
-  all_goals grind (gen := 30) (instances := 10000) [lang_grind, arena_grind, ruleW, ruleW.ruleTailW, ruleLvlW, rulePinW, ntBW]
 
 
 set_option maxHeartbeats 4000000 in

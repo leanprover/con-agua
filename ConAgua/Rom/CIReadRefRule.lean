@@ -149,12 +149,13 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have e1 := u64_at hr (r1.tail.headD 0) 0 [] rl.nfields _ (by rw [hd1]; rfl) (by simp) hnf
   simp only [UInt64.add_zero] at e1
   have e2 := u64_at hr (r1.tail.headD 0) 8 (u64B rl.nfields) 0 _ (by rw [hd1]) (by simp [u64B]) (by decide)
-  replace hw := rdU_some hL (putE_some hL hw)
-  replace hw := rdU_some hL (putE_some hL hw)
+  replace hw := u64_some hL (putE_some hL hw)
+  replace hw := u64_some hL (putE_some hL hw)
   rw [e1, e2] at hw
   replace hw := putE_some hL (putE_some hL (putE_some hL (putE_some hL (putE_some hL hw))))
-  change ruleW.ruleTailW p k (putERs m1 [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields), (rr + 3, 0),
-    (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)]) (r1.tail.headD 0 + 16) rr 0 = some (r, m') at hw
+  change (if (0 : Word) = 1 ∨ (0 : Word) = 2 then _ else
+    ruleW.j1 p k (r1.tail.headD 0 + 16) rr 0 (putERs m1 [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields),
+      (rr + 3, 0), (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)])) = some (r, m') at hw
   generalize hws : [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields), ((rr + 3 : Word), (0 : Word)),
     (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)] = ws at hw
   have hwsB : ∀ jw ∈ ws, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT m1 := by
@@ -168,9 +169,10 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     refine putERs_get ws m1 j w hI1 hwsB ?_ hjw
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the right-hand side
-  unfold ruleW.ruleTailW at hw
-  rw [ite_eq_right (show ¬ ((0 : Word) = 1 ∨ (0 : Word) = 2) by decide), bW_some, List.headD_cons,
-    ite_eq_right (show ¬ ((0 : Word) = 1) by decide), bW_some, List.headD_cons] at hw
+  rw [ite_eq_right (show ¬ ((0 : Word) = 1 ∨ (0 : Word) = 2) by decide)] at hw
+  unfold ruleW.j1 at hw
+  rw [ite_eq_right (show ¬ ((0 : Word) = 1) by decide)] at hw
+  unfold ruleW.j2 at hw
   obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
   have hq16 : (r1.tail.headD 0 + 16).toNat = (r1.tail.headD 0).toNat + 16 := by
     have := hq1; rw [UInt64.toNat_add]; simp at this ⊢; omega
@@ -263,13 +265,14 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have e1 := u64_at hr (r1.tail.headD 0) 0 [] rl.nfields _ (by rw [hd1]; rfl) (by simp) hnf
   simp only [UInt64.add_zero] at e1
   have e2 := u64_at hr (r1.tail.headD 0) 8 (u64B rl.nfields) 2 _ (by rw [hd1]) (by simp [u64B]) (by decide)
-  replace hw := rdU_some hL (putE_some hL hw)
-  replace hw := rdU_some hL (putE_some hL hw)
+  replace hw := u64_some hL (putE_some hL hw)
+  replace hw := u64_some hL (putE_some hL hw)
   rw [e1, e2] at hw
   replace hw := putE_some hL (putE_some hL (putE_some hL (putE_some hL (putE_some hL hw))))
-  change ruleW.ruleTailW p k (putERs m1 [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields),
-    (rr + 3, UInt64.ofNat 2), (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)]) (r1.tail.headD 0 + 16) rr
-    (UInt64.ofNat 2) = some (r, m') at hw
+  change (if UInt64.ofNat 2 = 1 ∨ UInt64.ofNat 2 = 2 then
+    ntBW (callW p k "rom_u64_c" [r1.tail.headD 0 + 16] (putERs m1 [(rr, r1.headD 0),
+      (rr + 1, UInt64.ofNat rl.nfields), (rr + 3, UInt64.ofNat 2), (rr + 4, 0), (rr + 5, 0), (rr + 6, 0),
+      (rr + 7, 0)])) _ else _) = some (r, m') at hw
   generalize hws : [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields), ((rr + 3 : Word), UInt64.ofNat 2),
     (rr + 4, (0 : Word)), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)] = ws at hw
   have hwsB : ∀ jw ∈ ws, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT m1 := by
@@ -283,10 +286,9 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     refine putERs_get ws m1 j w hI1 hwsB ?_ hjw
     rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
   -- the level slice
-  unfold ruleW.ruleTailW at hw
   rw [ite_eq_left (show (UInt64.ofNat 2 = 1 ∨ UInt64.ofNat 2 = 2) by decide)] at hw
-  unfold ruleLvlW at hw
-  replace hw := rdU_ntBW hL hw
+  replace hw := u64_some hL hw
+  simp only [List.headD_cons] at hw
   have hq16 : (r1.tail.headD 0 + 16).toNat = (r1.tail.headD 0).toNat + 16 := by
     have := hq1; rw [UInt64.toNat_add]; simp at this ⊢; omega
   have e3 := u64_at hr (r1.tail.headD 0) 16 (u64B rl.nfields ++ u64B 2) lvls.length _
@@ -303,9 +305,9 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have hfa : MemFrame [] [129, 130] (putERs m1 ws) ma := (erAllocW_spec (erAllocCall hL ha) hI2.ok).2.1
   have hMa := hM2.frameG hfa (by simp) (by decide)
   have hsa : stkTop ma = stkTop (putERs m1 ws) := hfa.ctl 131 (by decide)
-  replace hw := putE_ntBW hL (putE_ntBW hL hw)
-  change ntBW (ntBW (callW p k "rci_lvls_to" [r1.tail.headD 0 + 16 + 8, ra.headD 0, UInt64.ofNat lvls.length]
-    (putERs ma [(rr + 4, ra.headD 0), (rr + 5, UInt64.ofNat lvls.length)])) _) _ = _ at hw
+  replace hw := putE_some hL (putE_some hL hw)
+  change ntBW (callW p k "rci_lvls_to" [r1.tail.headD 0 + 16 + 8, ra.headD 0, UInt64.ofNat lvls.length]
+    (putERs ma [(rr + 4, ra.headD 0), (rr + 5, UInt64.ofNat lvls.length)])) _ = _ at hw
   generalize hws2 : [(rr + 4, ra.headD 0), (rr + 5, UInt64.ofNat lvls.length)] = ws2 at hw
   have hwsB2 : ∀ jw ∈ ws2, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT ma := by
     intro jw hjw; rw [← hws2] at hjw
@@ -323,7 +325,10 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   | none => rw [hl] at hw; simp at hw
   | some tl =>
   obtain ⟨r2, m2⟩ := tl
-  rw [hl, bW_some, bW_some, ite_eq_right (show ¬ (UInt64.ofNat 2 = 1) by decide), bW_some, List.headD_cons] at hw
+  rw [hl, bW_some] at hw
+  unfold ruleW.j1 at hw
+  rw [ite_eq_right (show ¬ (UInt64.ofNat 2 = 1) by decide)] at hw
+  unfold ruleW.j2 at hw
   have hq24 : (r1.tail.headD 0 + 16 + 8).toNat = (r1.tail.headD 0).toNat + 24 := by
     have := hq1; rw [UInt64.toNat_add, hq16]; simp at this ⊢; omega
   have hdl : rom.drop (r1.tail.headD 0 + 16 + 8).toNat = encLevelList lvls ++ ((encExprM seen rl.rhs).1 ++ rest) := by
