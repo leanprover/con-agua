@@ -186,11 +186,11 @@ theorem suh_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   have hfind' := find_of_found hfind h0 hci
   have hind := decCI_indK (erRdOK _) hci
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 3
-  · rw [if_pos (by exact h4)]
+  · erw [ite_eq_left h4]
     exact RefE.ret (suHead_other _ fe _ _ _ a₀ _ hgaf _ _ hct hv
       (fun cv caps e => hind.2 h4 cv caps (by rw [hfind'] at e; exact Option.some.inj e)))
       (CorePost.ret hS rfl hw0)
-  rw [if_neg (by exact h4)]
+  erw [ite_eq_right h4]
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
   have hIR := decCI_indCaps (erRdOK _) hci

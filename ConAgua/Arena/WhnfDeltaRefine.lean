@@ -385,7 +385,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   rw [natIndOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk3 : erRd s₀.mem q ≠ 3
-  · rw [if_pos (by exact hk3)] at hW
+  · erw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -394,9 +394,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · unfold ResH HW; rw [← hr]; decide
   obtain ⟨cv, caps, rfl, hcv⟩ := hind (by simpa using hk3)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
-  rw [if_neg (by exact hk3)] at hW
+  erw [ite_eq_right hk3] at hW
   by_cases hk4 : erRd s₀.mem (q + 3) ≠ 0
-  · rw [if_pos (by exact hk4)] at hW
+  · erw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -409,7 +409,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
       rw [this]; rfl
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg (by exact hk4)] at hW
+  erw [ite_eq_right hk4] at hW
   have hk4' : erRd s₀.mem (q + 3) = 0 := by simpa using hk4
   rcases h1 : callW p n "pin_word" [54] s₀.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [h1, natIndOkW.k_pin_word, reduceCtorEq] at hW
@@ -500,14 +500,14 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [natZeroOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk4 : erRd s₀.mem q ≠ 4
-  · rw [if_pos (by exact hk4)] at hW
+  · erw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     refine CRef.pure hC false (natZeroOk_run_other (hnctor hk4) _) ?_ ?_
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg (by exact hk4)] at hW
+  erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
@@ -654,18 +654,18 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [natSuccOkW.eq_2] at hW
   rw [ite_eq_right hf] at hW
   by_cases hk4 : erRd s₀.mem q ≠ 4
-  · rw [if_pos (by exact hk4)] at hW
+  · erw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     refine CRef.pure hC false (natSuccOk_run_other (hnctor hk4) _) ?_ ?_
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg (by exact hk4)] at hW
+  erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
-  · rw [if_pos (by exact hk3)] at hW
+  · erw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
@@ -676,7 +676,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       · rfl
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
-  rw [if_neg (by exact hk3)] at hW
+  erw [ite_eq_right hk3] at hW
   have hk3' : erRd s₀.mem (q + 3) = 0 := by simpa using hk3
   have hl0 : cv.levelParams.isEmpty = true := by
     simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk3']; rfl
