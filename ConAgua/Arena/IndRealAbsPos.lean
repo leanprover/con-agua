@@ -480,8 +480,8 @@ theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m'
   rename_i x heq
   split at heq; · cases heq
   revert heq
-  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩; · simp [dpClrK]
-  simp only [dpClrK]
+  rcases hg : dpGoW n (mclearG dpSch m) CWF e with _ | ⟨r1, m1⟩; · simp [dpConstW.k_depth_go]
+  simp only [dpConstW.k_depth_go]
   intro heq
   split at heq; · cases heq
   simp only [Option.some.injEq, Prod.mk.injEq] at heq; obtain ⟨-, rfl⟩ := heq

@@ -81,10 +81,6 @@ theorem dpSch_wf : dpSch.WF := ⟨by decide, by decide⟩
 abbrev dpMR (m : Mem) (mp : Std.HashMap EIdx Nat) : Prop :=
   MemoRG dpSch bmKey (fun w : Word => w.toNat) m mp
 
-def dpClrK : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m1) => if rdW (m1.arr64 CTL) dpSch.cs + 2 = 0 then none else some (r, mclearG dpSch m1)
-
 /-! ## `nest_phs` -/
 
 l_model nestPhsGo_spec (p : Prog) (hpw : p.lookup "pin_word" = some pinWordL)
