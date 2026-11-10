@@ -437,3 +437,61 @@ refinements).
 `DpGoSpec`-style definition, which `vcgen` does not unfold), `pi_doms_occ`,
 `has_loose_b_var_b_ins` (bridge `hbInsW_eq` to the `msetG` form), `has_loose_b_var_b_fast`.
 No module more than 1.7× slower (`NcnW` 0.36 → 0.60 s); `MatesW` 13.3 → 8.2 G.
+
+## 4. Totals (master b91d1604 → a0b2b92d)
+
+* **Functions**: hand-specified (§1's count) 591 → 340; named by an `l_model` 765 → 1 002. About
+  250 functions converted: lead 52 (batches 1, 2, 6–9, 11), helpers 199 (round 1: 82, round 2:
+  98, round 3: 29).
+* **Lines** (`git diff --shortstat b91d1604b master -- ConAgua`): 204 files, +5 205 −12 601,
+  **−7 396** net, the generator's two options and their tests included.
+* **Build time**, every module the lane changed, measured alone (`LEAN_NUM_THREADS=1`,
+  `measure.sh`) at both ends: 204 modules, **5 329 → 4 213 G instructions (−21 %)**, 835 →
+  665 user s. The slowest module after is `Verdict/UnresolvedE`, 18 s. Above 3×: only `RecCheckSpec/RpLook` (2.2 → 6.8 G, 0.4 → 1.2 s: the generated spec
+  now lives there; the modules the hand specs left shrank by more). The largest slowdowns in
+  absolute terms: `Front/IndApplySpec` 34 → 53 G, `Rom/CIReadRefCI` 40 → 51 G, `WhnfCoreProj`
+  38 → 50 G, `IndPartsSpec/Bsp` 17 → 29 G, `NestGroupCtors` 13 → 22 G; the largest gains:
+  `IndPosSpec/NcGoW` 389 → 24 G, `DeclCanonExpr` 115 → 29 G, `IndInstallSpec/IcaW` 99 → 41 G,
+  `Rom/CIReadRefW` 100 → 51 G. Peak RSS 0.8–1.6 GB throughout.
+* **Generator**: `pfuel` (batch 2), `guards` (batch 9), both off by default; no existing model
+  changed.
+
+## 5. What stays hand-written, and why
+
+By kind, with the main examples (the per-batch sections name the rest):
+
+* **No model to generate** (≈ 196 of the 340): specs whose post is a value, a relation or a
+  list the callers test (`ls_match`, `lsNodeW`, `class_read_n_slots`, `sl_getd`'s total word
+  model, `nest_field_kind_flat`).
+* **Templates** (`FunDecl`s with parameters: the table lookups, `intern_zero`, `intern_ls`,
+  `intern_reserved_pins`, `pb_check`): generic hand specs; the generator takes no parameters.
+* **Shape**:
+  * memo walks whose hand models fold *find + put* into `msetG` and merge kinds
+    (`replace_fvars` and the RxMapW family, `depth_go`, `mentions_any_go`,
+    `has_loose_b_var_b_go`, `replace_apps_go`; ~800 lines of `MapOKStep` on that shape);
+  * models shared by several functions or with a callee/`CallM` parameter (`stripTW tg` for
+    `strip_lams`/`strip_pis`, `cArmK1`, `selW`, `lookupW`/`substLW` shared with a template,
+    `nameCopyW`-style sharing where users are elsewhere);
+  * fuel offsets: models stated at `k + 2`, `k + 3` with callees at several fuels
+    (`block_shape_fin/tail`, `block_rec_name_set_ok`, `nest_root_canon`, `nest_uniform_ok`,
+    `nest_crest`), and callers of `pfuel` models at the same fuel (`whnf_walk_fuel`,
+    `nest_canon_crest`: a `pfuel` spec is at `exec p (n + 1)`);
+  * callee posts that are no model shape: `str_put_esc` (`r.headD 0 = top ∧ F = some (r.tail
+    …)`), `ls_put` (a list and a memory model at once), `rom_u64` (`u64OK ∧ r = [u64W …]`),
+    `stk_pool`, `rom_put`;
+  * loop blocks whose hand models live elsewhere (`type_sort_pw`, `proof_pw`: "not a call:
+    step p …");
+  * fuel-free models over the input buffer used as total functions (`Front/`: `ls_put`,
+    `nat_dec`, `Unescape`, `Line`; zero ronsync2 churn).
+* **Reach**: models unfolded by name in many files (`lpsW`, `nIdxsW`, `tmdW`, `psGoW`,
+  `bvbW`, `chnW`, `ruK1/2`, the `erase_fvar_tys` family's continuations, `getDW`).
+* **Bounds**: `rom_names_to` (the `PINS` check the refinement uses).
+* **Memory blow-up**: `rule_copy`, whose generated model copies the memory term after each of
+  its 11 `erec_put`s (a total memory callee is inlined, not bound); a continuation per total
+  memory call (opt-in) would fix it.
+
+Generator gaps the lane met and left: `fold` takes no memory readers (bridged by `rfl` lemmas:
+`erRd_foldN`, `prd_rdW`); implicit binders are no model parameters; a binder named `L` breaks
+the generated proof text (every `L.x` is rooted); generated literals and `Decidable` instances
+differ from hand-stated ones, so `rw [ite_eq_left h]`/`split` can fail where `simp only [h,
+↓reduceIte]` works; a pure callee tested in an `if` elaborates at `Nat`.
