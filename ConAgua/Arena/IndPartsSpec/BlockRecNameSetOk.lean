@@ -281,14 +281,6 @@ def decGH (m : Mem) (p : Nat) : Option (List (IConstantVal × Nat)) := decAt m (
 theorem decGH_mono (p : Nat) : OMono (fun m => decGH m p) :=
   OMono.decAt (fun o l => decPLB_omono decCN_mono o l) p
 
-/-- A cons onto a slice, then the slice (the shared tail of the hand `IndParts` models). -/
-def bggK3 (n : Nat) (h0 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => bgoK3 (consW n m3 h0 (r3.headD 0) (r3.tail.headD 0))
-
-theorem bggK3_some (n : Nat) (m2 : Mem) (h0 : Word) (r1 : List Word) : bggK3 n h0 (some (r1, m2)) =
-    bgoK3 (consW n m2 h0 (r1.headD 0) (r1.tail.headD 0)) := by simp [bggK3]
-attribute [ind_grind] bggK3_some
 
 /-- **`block_groups_go` is its model `bggW`** (generated). -/
 l_model bgg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some eView)
@@ -364,29 +356,17 @@ theorem bggW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP co cl k : Word}
     obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS3 hgss.bound hgss.dec (hdh.grow (decGH_mono _) hg3)
     exact ⟨gs :: gss, a3, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, (hg02.trans hg3).trans hg4⟩
 
-/-- **The model of `block_groups`.** -/
-def bgW (n : Nat) (m : Mem) (no nl lvls nP k co cl : Word) : Option (List Word × Mem) :=
-  if k = 1 then
-    (match posRecW m [co, cl] with
-     | none => none
-     | some (h0, m1) => bgoK3 (consW n m1 h0 0 0))
-  else bgoK3 (bggW n m no nl lvls nP co cl 0 k)
-
-theorem bg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some eView)
+/-- **`block_groups` is its model `bgW`** (generated; body fuel `n`). -/
+l_model bg_spec (p : Prog) (hP : IndPartsProg p) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "sl_find" = some slFind) (hm : p.lookup "member_idx_at" = some memberIdxAt)
     (hc : p.lookup "ctor_member" = some ctorMember)
     (ho : p.lookup "block_groups_one" = some blockGroupsOne) (h2 : p.lookup "rec2" = some rec2)
     (hg : p.lookup "block_groups_go" = some blockGroupsGo)
-    (hp : p.lookup "block_groups" = some blockGroups) (n : Nat) (s₀ : St) (no nl lvls nP k co cl : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_groups" [no, nl, lvls, nP, k, co, cl]
-    ⦃fun r s' => LocEq s' s₀ ∧ bgW n s₀.mem no nl lvls nP k co cl = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockGroups]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bgg_spec p hP hv hf hm hc ho h2 hg n, posRec2_specW p hP.alloc h2 n,
-      slCons_specW p hP.alloc hP.copy hP.cons n] <;>
-    finish (gen := 20) [bgW]
+    (hp : p.lookup "block_groups" = some blockGroups)
+  fns [hp ↦ bgW list]
+  specs [bgg_spec p hP hv hf hm hc ho h2 hg n, posRec2_specW p hP.alloc h2 n,
+    slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [arena_grind, ind_grind] pfuel
 
 /-- **`block_groups`' model refines `blockGroups`.** -/
 theorem bgW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
@@ -403,11 +383,11 @@ theorem bgW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
     intro r m' e
     rcases h1 : posRecW m [co, cl] with _ | ⟨h0, m1⟩ <;> rw [h1] at e
     · cases e
-    simp only at e
+    rw [bgW.k_rec2.arm1] at e
     obtain ⟨hS1, hg1, hdh⟩ := partsGH h1 hS hcs
     rcases h4 : consW n m1 h0 0 0 with _ | ⟨r4, m4⟩ <;> rw [h4] at e
     · cases e
-    rw [bgoK3_some] at e
+    rw [bgW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := partsConsPL decGH_mono h4 hS1 (by simp) (PSlR.nil _ _).1 hdh
     exact ⟨[cs], a, rfl, ⟨hd4, Nat.le_of_eq ht4⟩, hS4, hg1.trans hg4⟩
@@ -417,7 +397,7 @@ theorem bgW_sim {vis : Word} {fe : IFEnv} {no nl lvls nP k co cl : Word}
     have := bggW_sim (k := k) (mm := 0) hlv n m a hS hcs hnm hnb (nP := nP)
     simp only [UInt64.toNat_zero, Nat.sub_zero] at this
     refine Sim.congr (op := _ >>= pure) ?_ (bind_pure _)
-    refine Sim.bindK rfl (fun _ _ => by rw [bgoK3]) this ?_
+    refine Sim.bindK rfl (fun _ _ => by rw [bgW.k_sl_cons]) this ?_
     rintro r gss m' a' ⟨h1, h2, h3⟩
     exact Sim.ret ⟨by simpa using h1, h2, h3⟩
 
@@ -497,82 +477,17 @@ theorem slSetEq_spec (p : Prog) (hc : p.lookup "sl_contains" = some slContains)
 
 /-! ## `block_rec_want`, `block_rec_got` -/
 
-mutual
-/-- **The model of `block_rec_want`.** -/
-def brwW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, mo, ml =>
-    if ml = 0 then some ([0, 0], m)
-    else brwK1 n mo ml (nrF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))])
-/-- After `name_rec`. -/
-def brwK1 (n : Nat) (mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1))
-end
+/-- **`block_rec_want` is its model `brwW`** (generated). -/
+l_model brw_spec (p : Prog) (hP : IndPartsProg p) (hp : p.lookup "block_rec_want" = some blockRecWant)
+  fns [hp ↦ brwW list]
+  specs [nrF_spec p hP.nr n, slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [arena_grind, ind_grind] finish [rdW_eq, erRd]
 
-/-- **The model of `block_rec_got`.** -/
-def brgW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, ro, rl =>
-    if rl = 0 then some ([0, 0], m)
-    else brgK n (rdW (m.arr64 IW) ro) (brgW n m (ro + 1) (rl - 1))
-where
-  /-- After the recursive call. -/
-  brgK (n : Nat) (rc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-    | none => none
-    | some (r, m1) => bgoK3 (consW n m1 (erRd m1 (rdW (m1.arr64 IW) rc)) (r.headD 0) (r.tail.headD 0))
-
-section arms
-variable (n : Nat) (m m1 : Mem) (mo ml ro rl rc : Word) (r1 : List Word)
-theorem brwW_nil (h : ml = 0) : brwW (n + 1) m mo ml = some ([0, 0], m) := by simp [brwW, h]
-theorem brwW_cons (h : ml ≠ 0) : brwW (n + 1) m mo ml = brwK1 n mo ml
-    (nrF m [erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) mo))]) := by
-  simp [brwW, h]
-theorem brwK1_some : brwK1 n mo ml (some (r1, m1)) = bggK3 n (r1.headD 0) (brwW n m1 (mo + 1) (ml - 1)) := by
-  simp [brwK1]
-theorem brgW_nil (h : rl = 0) : brgW (n + 1) m ro rl = some ([0, 0], m) := by simp [brgW, h]
-theorem brgW_cons (h : rl ≠ 0) : brgW (n + 1) m ro rl =
-    brgW.brgK n (rdW (m.arr64 IW) ro) (brgW n m (ro + 1) (rl - 1)) := by simp [brgW, h]
-theorem brgK_some : brgW.brgK n rc (some (r1, m1)) =
-    bgoK3 (consW n m1 (erRd m1 (rdW (m1.arr64 IW) rc)) (r1.headD 0) (r1.tail.headD 0)) := rfl
-end arms
-attribute [ind_grind] brwW_nil brwW_cons brwK1_some brgW_nil brgW_cons brgK_some
-
-section spec
-variable (p : Prog) (hP : IndPartsProg p)
-include hP
-
-theorem brw_spec (hp : p.lookup "block_rec_want" = some blockRecWant) (n : Nat) :
-    ∀ (s₀ : St) (mo ml : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_want" [mo, ml]
-    ⦃fun r s' => LocEq s' s₀ ∧ brwW n s₀.mem mo ml = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ mo ml; rw [invoke_eq _ hp]; simp only [callFn, blockRecWant]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ mo ml
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockRecWant]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, nrF_spec p hP.nr n,
-        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-theorem brg_spec (hp : p.lookup "block_rec_got" = some blockRecGot) (n : Nat) :
-    ∀ (s₀ : St) (ro rl : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_got" [ro, rl]
-    ⦃fun r s' => LocEq s' s₀ ∧ brgW n s₀.mem ro rl = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ ro rl; rw [invoke_eq _ hp]; simp only [callFn, blockRecGot]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ro rl
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockRecGot]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-end spec
+/-- **`block_rec_got` is its model `brgW`** (generated). -/
+l_model brg_spec (p : Prog) (hP : IndPartsProg p) (hp : p.lookup "block_rec_got" = some blockRecGot)
+  fns [hp ↦ brgW list]
+  specs [slCons_specW p hP.alloc hP.copy hP.cons n]
+  grind [arena_grind, ind_grind] finish [rdW_eq, erRd]
 
 /-- **`block_rec_got`'s model**: the recursors' names. -/
 theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
@@ -586,15 +501,15 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
   | succ n ih =>
     intro m m' a ro rl recs r h hS hrs
     by_cases hl : rl = 0
-    · rw [brgW_nil n m ro rl hl] at h
+    · rw [brgW.arm1 n m ro rl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hl; rw [partsPSl_nil hrs]
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
-    rw [brgW_cons n m ro rl hl] at h
+    rw [brgW.arm2 n m ro rl hl] at h
     obtain ⟨pc, rs0, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     rw [hw] at h
-    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [brgW.brgK])
-    rw [brgK_some] at h
+    obtain ⟨r1, m1, h1, h⟩ := ipK_inv h (by simp [brgW.k_block_rec_got])
+    rw [brgW.k_block_rec_got.arm1] at h; simp only [erRd_foldN] at h
     obtain ⟨hS1, hg1, hd1, hb1⟩ := ih m m1 a (ro + 1) (rl - 1) rs' r1 h1 hS hrs'
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decRS_some (show decRS (truncM m) pc = some rs0 from hrs0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)
@@ -603,7 +518,7 @@ theorem brgW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     obtain ⟨hnl, hne⟩ := partsCVName hg1 (show DecB (fun m => decCVp m ca) m rs0.cvR from hcv) hcab
     rcases h2 : consW n m1 (erRd m1 (UInt64.ofNat ca)) (r1.headD 0) (r1.tail.headD 0) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [bgoK3_some] at h
+    rw [brgW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hd2, ht2⟩ := consW_stage h2 hS1 hb1 hnl hd1
     refine ⟨hS2, hg1.trans hg2, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩
@@ -623,12 +538,12 @@ theorem brwW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
   | succ n ih =>
     intro m a mo ml ms hS hms
     by_cases hl : ml = 0
-    · rw [brwW_nil n m mo ml hl]
+    · rw [brwW.arm1 n m mo ml hl]
       have : ms = [] := by
         have := decPL_length _ (show decPL _ _ _ _ = _ from hms.1); subst hl; simpa using this
       subst this
       exact Sim.ret ⟨by simp [decHL, hslice?], by simp, hS, IWGrow.refl _⟩
-    rw [brwW_cons n m mo ml hl]
+    rw [brwW.arm2 n m mo ml hl]; simp only [erRd_foldN]
     obtain ⟨pc, ms0, ms', rfl, hw, hpb, hms0, hms'⟩ := partsPSl_cons ⟨hms.1, hms.2.resolve_left hl⟩ hl
     obtain ⟨⟨ca, hca, hcv⟩, -⟩ := decMS_some (show decMS (truncM m) pc = some ms0 from hms0)
     obtain ⟨hcw, hcab, -⟩ := partsIwRd hca (UInt64.toNat_ofNat_of_lt' hpb)
@@ -637,14 +552,15 @@ theorem brwW_sim {vis : Word} {fe : IFEnv} (n : Nat) :
     rw [List.mapM_cons]
     have h1 := partsSimW (nrF_ok (fun _ => none) vis fe _ hnl) hS
     rw [hne] at h1
-    refine Sim.bindK (by simp [brwK1]) (fun _ _ => by rw [brwK1]) h1 ?_
+    refine Sim.bindK (by simp [brwW.k_name_rec]) (fun _ _ => by rw [brwW.k_name_rec]) h1 ?_
     rintro r1 x1 m1 a1 ⟨hS1, hg1, hx1l, hx1⟩
-    refine Sim.bindK (by simp [bggK3]) (fun _ _ => by rw [bggK3]) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
+    refine Sim.bindK (by simp [brwW.k_block_rec_want])
+      (fun _ _ => by rw [brwW.k_block_rec_want]) (ih m1 a1 (mo + 1) (ml - 1) ms' hS1 ⟨(hms'.grow decMS_mono hg1).1, Or.inr (hms'.grow decMS_mono hg1).2⟩) ?_
     rintro r2 xs m2 a2 ⟨hd2, hb2, hS2, hg2⟩
     intro r m' e
     rcases h3 : consW n m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
     · cases e
-    rw [bgoK3_some] at e
+    rw [brwW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hx1l hd2
     refine ⟨x1 :: xs, a2, rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega, hS3,
