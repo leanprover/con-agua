@@ -8,6 +8,8 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -32,41 +34,16 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The model of `member_ctors_copy(d, s, l)`: `IW[d + j] := IW[s + j] + 2`. -/
-def ctorsCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, d, s, l =>
-    if l = 0 then some m
-    else ctorsCopyW n (m.set64 IW d (rdW (m.arr64 IW) s + 2)) (d + 1) (s + 1) (l - 1)
+/-- **`member_ctors_copy(d, s, l)`'s model `ctorsCopyW`** (generated): `IW[d + j] := IW[s + j] + 2`. -/
+l_model memberCtorsCopy_spec (p : Prog) (hp : p.lookup "member_ctors_copy" = some memberCtorsCopy)
+  fns [hp ↦ ctorsCopyW void]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
-section arms
-variable (n : Nat) (m : Mem) (d s l : Word)
-theorem ctorsCopyW_nil (hl : l = 0) : ctorsCopyW (n + 1) m d s l = some m := by
-  simp [ctorsCopyW, hl]
-theorem ctorsCopyW_step (hl : l ≠ 0) :
+/-- `ctorsCopyW`'s copy step, the recursive call's memory passed on. -/
+theorem ctorsCopyW_step (n : Nat) (m : Mem) (d s l : Word) (hl : l ≠ 0) :
     ctorsCopyW (n + 1) m d s l =
       ctorsCopyW n (m.set64 IW d (rdW (m.arr64 IW) s + 2)) (d + 1) (s + 1) (l - 1) := by
-  simp [ctorsCopyW, hl]
-end arms
-
-grind_pattern [ind_grind] ctorsCopyW_nil => ctorsCopyW (n + 1) m d s l
-grind_pattern [ind_grind] ctorsCopyW_step => ctorsCopyW (n + 1) m d s l
-
-theorem memberCtorsCopy_spec (p : Prog) (hp : p.lookup "member_ctors_copy" = some memberCtorsCopy)
-    (n : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "member_ctors_copy" [d, s, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ctorsCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, memberCtorsCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, memberCtorsCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  rw [ctorsCopyW.arm2 (hc1 := hl)]; cases ctorsCopyW n _ _ _ _ <;> rfl
 
 /-- **What `member_ctors_copy` leaves**: each member pointer plus `2`, the records below `d`. -/
 theorem ctorsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ctorsCopyW n m d s l = some m' →
@@ -79,7 +56,7 @@ theorem ctorsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ctorsCopyW n
       else (m.arr64 IW)[i]? := fun m m' d s l h hsd hd hsz =>
   ipCopyW_get (fun n m d s l => ctorsCopyW n m d s l) (fun _ x => x + 2)
     (fun _ _ => True)
-    (fun _ _ _ _ => by simp [ctorsCopyW]) (ctorsCopyW_nil · · · · ·) (ctorsCopyW_step · · · · ·)
+    (fun _ _ _ _ => by simp [ctorsCopyW]) (ctorsCopyW.arm1 · · · · ·) (ctorsCopyW_step · · · · ·)
     (fun _ _ _ _ _ => rfl) (fun _ _ h => h) n m m' d s l h hsd hd hsz (fun _ _ => trivial)
 
 /-- The lookups `block_shape_member_ctors` takes. -/
@@ -88,34 +65,13 @@ structure McLook (p : Prog) : Prop where
   hc : p.lookup "member_ctors_copy" = some memberCtorsCopy
   hp : p.lookup "block_shape_member_ctors" = some blockShapeMemberCtors
 
-/-- The model of `block_shape_member_ctors(p)` (its copy at `n - 1`). -/
-def mctorsW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => none
-  | some (q, m1) =>
-    match ctorsCopyW (n - 1) m1 q (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) with
-    | none => none
-    | some m2 => some ([q, rdW (m2.arr64 IW) (p + 1)], m2)
-
-theorem blockShapeMemberCtors_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_shape_member_ctors(p)`'s model `mctorsW`** (generated). -/
+l_model blockShapeMemberCtors_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_ctors_copy" = some memberCtorsCopy)
-    (hp : p.lookup "block_shape_member_ctors" = some blockShapeMemberCtors) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_member_ctors" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ mctorsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeMemberCtors]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
-        ctorsCopyW n m1 a (rdW (m1.arr64 IW) q) (rdW (m1.arr64 IW) (q + 1)) = some m2 →
-        mctorsW (n + 1) s₀.mem q = some ([a, rdW (m2.arr64 IW) (q + 1)], m2) := by
-      intro a m1 m2 h1 h2
-      simp [mctorsW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, memberCtorsCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_shape_member_ctors" = some blockShapeMemberCtors)
+  fns [hp ↦ mctorsW list]
+  specs [iwAlloc_specW p ha n, memberCtorsCopy_spec p hc n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- **`block_shape_member_ctors` is `BlockShape.memberCtors`**: the new `IW` slice holds pointers
 to the members' constructor headers, decoded with their bounds (from the members' `decMSB`). -/
@@ -143,24 +99,25 @@ theorem mctorsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Bloc
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
   have hsrc' : o + l ≤ iwTop m := hsl.1 o l hoN hlN
-  unfold mctorsW at h
-  rw [hl'] at h
+  rcases n with _ | n
+  · simp [mctorsW] at h
+  rw [mctorsW.arm1, hl'] at h
   rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
-  · simp [hal] at h
+  · simp [hal, mctorsW.k_iw_alloc.none] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
-  simp only [hal] at h
+  rw [hal, mctorsW.k_iw_alloc.arm1] at h
   subst hq' hm1
   have hIW := allocMem_IW m (UInt64.ofNat l)
   rw [hIW, ho', hl'] at h
-  rcases hcp : ctorsCopyW (n - 1) (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
+  rcases hcp : ctorsCopyW n (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
       (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
-  · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  · simp [hcp, mctorsW.k_member_ctors_copy.none] at h
+  simp only [hcp, mctorsW.k_member_ctors_copy.arm1, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hqt : iwTop m = q.toNat := by simp only [iwTop, hqq]
-  obtain ⟨hA, hS, hG⟩ := ctorsCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := ctorsCopyW_get n _ _ _ _ _ hcp
     (by rw [hoo, hll]; omega) (by rw [hIW, hll]; omega) (by rw [hIW]; exact hsz)
   rw [hIW] at hS hG
   have hfr : MemFrame [IW] [200] m m2 :=

@@ -261,7 +261,7 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
   · rw [slpOne_miss] at hW
     have hnb : ¬ (4294967296 : Word) ≤ h := fun c => by
       have := UInt64.le_iff_toNat_le.mp c; simp at this; omega
-    have hW' : liNodeK (pinternW m w) = some (h, m₁) := by rw [hW]; simp [liNodeK, hnb]
+    have hW' : lvInternW.k_intern_zero (pinternW m w) = some (h, m₁) := by rw [hW]; simp [lvInternW.k_intern_zero, hnb]
     obtain ⟨a', hrun, ho⟩ := liNode_core (.param (decI w)) (fun m => pinternW m w)
       (fun m a w' m' hA hI => by
         obtain ⟨ok, hR, res, hfr⟩ := L.Front.param_A m a hA w' m' w hn.1 hI

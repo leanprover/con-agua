@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import all ConAgua.Arena.IndParts
+import ConAgua.Arena.LdRd
+import ConAgua.L.ModelGen
 import ConAgua.Arena.ErecRd
 import ConRon.Bridge.Grind
 import ConAgua.Arena.IndGrindAttr
@@ -31,34 +33,13 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The model of `block_shape_declared(p)` (its copy at `n - 1`). -/
-def declW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => none
-  | some (q, m1) =>
-    match fieldCopyW (n - 1) m1 q (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) 4 with
-    | none => none
-    | some m2 => some ([q, rdW (m2.arr64 IW) (p + 1)], m2)
-
-theorem blockShapeDeclared_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_shape_declared(p)`'s model `declW`** (generated). -/
+l_model blockShapeDeclared_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_field_copy" = some memberFieldCopy)
-    (hp : p.lookup "block_shape_declared" = some blockShapeDeclared) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_declared" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ declW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeDeclared]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
-        fieldCopyW n m1 a (rdW (m1.arr64 IW) q) (rdW (m1.arr64 IW) (q + 1)) 4 = some m2 →
-        declW (n + 1) s₀.mem q = some ([a, rdW (m2.arr64 IW) (q + 1)], m2) := by
-      intro a m1 m2 h1 h2
-      simp [declW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, memberFieldCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_shape_declared" = some blockShapeDeclared)
+  fns [hp ↦ declW list]
+  specs [iwAlloc_specW p ha n, memberFieldCopy_spec p hc n]
+  grind [arena_grind] extra [ld64_rd_spec] simp []
 
 /-- **`block_shape_declared` is `p.members.map (·.declared)`**: the new `IW` slice holds the
 members' declared formers (word 4 of each member record). -/
@@ -87,20 +68,21 @@ theorem declW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockS
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
   have hsrc' := hsrc o l ho hl
-  unfold declW at h
-  rw [hl'] at h
+  rcases n with _ | n
+  · simp [declW] at h
+  rw [declW.arm1, hl'] at h
   rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
-  · simp [hal] at h
+  · simp [hal, declW.k_iw_alloc.none] at h
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
-  simp only [hal] at h
+  rw [hal, declW.k_iw_alloc.arm1] at h
   subst hq' hm1
   have hIW := allocMem_IW m (UInt64.ofNat l)
   rw [hIW, ho', hl'] at h
-  rcases hcp : fieldCopyW (n - 1) (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
+  rcases hcp : fieldCopyW n (allocMem m (UInt64.ofNat l)) (rdW (m.arr64 CTL) 200)
       (UInt64.ofNat o) (UInt64.ofNat l) 4 with _ | m2
-  · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  · simp [hcp, declW.k_member_field_copy.none] at h
+  simp only [hcp, declW.k_member_field_copy.arm1, Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hptr' : ∀ j < (UInt64.ofNat l).toNat,
@@ -116,7 +98,7 @@ theorem declW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockS
     have : (UInt64.ofNat v + 4 : Word).toNat = v + 4 := by
       rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; simp; omega
     rw [this]; exact hvb
-  obtain ⟨hA, hS, hG⟩ := fieldCopyW_get (n - 1) 4 _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := fieldCopyW_get n 4 _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG

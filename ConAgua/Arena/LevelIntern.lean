@@ -7,6 +7,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 
 @[expose] public section
@@ -78,63 +79,6 @@ def lvIntern : FunDecl := lfn (p) locals (g, a, b, x, y, h) {
   return h
 }
 
-/-- A node interned: the handle checked. -/
-def liNodeK : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (h, m') => if 4294967296 ≤ h then none else some (h, m')
-
-/-- After the second child. -/
-def liTwoK (g x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) =>
-    if g = 2 then liNodeK (minternW m₂ x y)
-    else if g = 3 then liNodeK (iminternW m₂ x y)
-    else none
-
-mutual
-/-- **The model of `lv_intern`** at L fuel `n`. -/
-def lvInternW : Nat → Mem → Word → Option (Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, p =>
-    if lvG m p = 0 then liNodeK (zinternW m)
-    else if lvG m p = 4 then liNodeK (pinternW m (lvA m p))
-    else liOneK n (lvG m p) (lvB m p) (lvInternW n m (lvA m p))
-
-/-- After the first child. -/
-def liOneK (n : Nat) (g b : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) =>
-    if g = 1 then liNodeK (sinternW m₁ x)
-    else liTwoK g x (lvInternW n m₁ b)
-end
-
-section arms
-variable (n : Nat) (m m₁ : Mem) (p g b x y h : Word)
-theorem liNodeK_some (hh : ¬ 4294967296 ≤ h) : liNodeK (some (h, m)) = some (h, m) := by
-  simp [liNodeK, hh]
-theorem liTwoK_max (hg : g = 2) : liTwoK g x (some (y, m)) = liNodeK (minternW m x y) := by
-  simp [liTwoK, hg]
-theorem liTwoK_imax (hg : g = 3) : liTwoK g x (some (y, m)) = liNodeK (iminternW m x y) := by
-  simp [liTwoK, hg]
-theorem lvInternW_zero (h0 : lvG m p = 0) : lvInternW (n + 1) m p = liNodeK (zinternW m) := by
-  rw [lvInternW]; simp [h0]
-theorem lvInternW_param (_h0 : lvG m p ≠ 0) (h4 : lvG m p = 4) :
-    lvInternW (n + 1) m p = liNodeK (pinternW m (lvA m p)) := by
-  rw [lvInternW]; simp [h4]
-theorem lvInternW_rec (h0 : lvG m p ≠ 0) (h4 : lvG m p ≠ 4) :
-    lvInternW (n + 1) m p = liOneK n (lvG m p) (lvB m p) (lvInternW n m (lvA m p)) := by
-  rw [lvInternW]; simp [h0, h4]
-theorem liOneK_succ (hg : g = 1) : liOneK n g b (some (x, m)) = liNodeK (sinternW m x) := by
-  simp [liOneK, hg]
-theorem liOneK_two (hg : g ≠ 1) : liOneK n g b (some (x, m)) = liTwoK g x (lvInternW n m b) := by
-  simp [liOneK, hg]
-end arms
-
-attribute [arena_grind =] liNodeK_some liTwoK_max liTwoK_imax liOneK_succ liOneK_two
-grind_pattern [arena_grind] lvInternW_zero => lvInternW (n + 1) m p
-grind_pattern [arena_grind] lvInternW_param => lvInternW (n + 1) m p
-grind_pattern [arena_grind] lvInternW_rec => lvInternW (n + 1) m p
-
 /-- The functions `lv_intern` calls. -/
 structure LvInternProg (p : Prog) : Prop where
   lv_intern : p.lookup "lv_intern" = some lvIntern
@@ -155,33 +99,15 @@ structure LvInternProg (p : Prog) : Prop where
   param_push : p.lookup "param_push" = some paramPush
   intern_param : p.lookup "intern_param" = some internParam
 
-section spec
-variable (p : Prog) (hL : LvInternProg p)
-include hL
-
-/-- **`lv_intern` computes its model.** -/
-theorem lvIntern_spec (n : Nat) : ∀ (s₀ : St) (q : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lv_intern" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ lvInternW n s₀.mem q = some (r.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ q
-    rw [invoke_eq _ hL.lv_intern]; simp only [callFn, lvIntern]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ q
-    rw [invoke_eq _ hL.lv_intern]
-    simp only [callFn, lvIntern]
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hL.lv_node n,
-        internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
-        internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
-        internMax_spec p hL.max_find hL.max_push hL.intern_max n,
-        internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,
-        internParam_spec p hL.param_find hL.param_push hL.intern_param n, ih] <;>
-      finish
-
-end spec
+l_model lvIntern_spec (p : Prog) (hL : LvInternProg p)
+  fns [hL.lv_intern ↦ lvInternW]
+  specs [lvNode_spec p hL.lv_node n,
+    internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
+    internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
+    internMax_spec p hL.max_find hL.max_push hL.intern_max n,
+    internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,
+    internParam_spec p hL.param_find hL.param_push hL.intern_param n]
+  grind [arena_grind] fold [lvG, lvA, lvB] noguard ["lv_node"]
 
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
@@ -194,19 +120,6 @@ con-ron: ConRon/Arena/Core.lean:2016-2026 ConRon.Arena.substLevelsAt -/
   return h
 }
 
-/-- After the substitution: intern its result. -/
-def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => lvInternW n m₁ x
-
-@[arena_grind =] theorem subIntK_some (n : Nat) (x : Word) (m₁ : Mem) :
-    subIntK n (some (x, m₁)) = lvInternW n m₁ x := by rfl
-
-/-- **The model of `lv_sub_int`.** -/
-def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _, _ => none
-  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc)
-
 /-! ## `keys_push(src, l)`: a record-pool name slice onto the spine stack -/
 
 /-- con-ron: none — the substitution's keys copied onto the spine stack (`lp_lookup`'s key array) -/
@@ -218,18 +131,13 @@ def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Opt
 }
 
 /-- **The model of `ek_copy`.** -/
-def ekCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, s, d, l =>
-    if l = 0 then some m else ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1)
+l_model ekCopy_spec (p : Prog) (hp : p.lookup "ek_copy" = some ekCopy)
+  fns [hp ↦ ekCopyW void]
+  grind [arena_grind]
 
-theorem ekCopyW_zero (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
-    ekCopyW (n + 1) m s d l = some m := by simp [ekCopyW, h]
-theorem ekCopyW_succ (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    ekCopyW (n + 1) m s d l = ekCopyW n (m.set64 SPN d (rdW (m.arr64 (tierA EREC (s >>> 40))) (s &&& 1099511627775))) (s + 1) (d + 1) (l - 1) := by
-  simp [ekCopyW, h]
-grind_pattern [arena_grind] ekCopyW_zero => ekCopyW (n + 1) m s d l
-grind_pattern [arena_grind] ekCopyW_succ => ekCopyW (n + 1) m s d l
+/-- The copy's rest is its result. -/
+theorem ekCopyW_k {x : Option Mem} {m' : Mem} (h : ekCopyW.k_ek_copy x = some m') : x = some m' := by
+  cases x <;> simp_all [ekCopyW.k_ek_copy.none, ekCopyW.k_ek_copy.arm1]
 
 /-- con-ron: none — the substitution's keys copied onto the spine stack (`lp_lookup`'s key array) -/
 @[no_expose] def keysPush : FunDecl := lfn (po, pc) locals (b, r) {
@@ -257,11 +165,6 @@ def keysPushW : Nat → Mem → Word → Word → Option (Word × Mem)
     else if m.len64 SPN - spTop m < pc then none
     else kpK (spTop m) pc (ekCopyW n m po (spTop m) pc)
 
-theorem lvSubIntW_succ (n : Nat) (m : Mem) (u ko kc vo vc : Word) :
-    lvSubIntW (n + 1) m u ko kc vo vc = subIntK n (substLW (keyA SPN) POOL n (m.set64 CTL 192 0) u ko kc vo vc) := by
-  rw [lvSubIntW]
-attribute [arena_grind =] lvSubIntW_succ
-
 /-- The functions `lv_sub_int` calls. -/
 structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
   lv_sub_int : p.lookup "lv_sub_int" = some lvSubInt
@@ -274,38 +177,16 @@ structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
   lv_zero : p.lookup "lv_zero" = some lvZero
   lh_push : p.lookup "lh_push" = some lhPush
 
+/-- **The model of `lv_sub_int`.** -/
+l_model lvSubInt_spec (p : Prog) (hL : LvSubProg p)
+  fns [hL.lv_sub_int ↦ lvSubIntW]
+  specs [lpSubstL_spec p hL.lp_lookup hL.lv_node hL.lh_mk hL.lp_substl n,
+    lvIntern_spec p hL.toLvInternProg n]
+  grind [arena_grind]
+
 section spec2
 variable (p : Prog) (hL : LvSubProg p)
 include hL
-
-theorem lvSubInt_spec (n : Nat) (s₀ : St) (u ko kc vo vc : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lv_sub_int" [u, ko, kc, vo, vc]
-    ⦃fun r s' => LocEq s' s₀ ∧ lvSubIntW n s₀.mem u ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.lv_sub_int]
-  simp only [callFn, lvSubInt]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        lpSubstL_spec p hL.lp_lookup hL.lv_node hL.lh_mk hL.lp_substl n,
-        lvIntern_spec p hL.toLvInternProg n] <;>
-      finish
-
-theorem ekCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
-    ⦃fun st => st = s₀⦄
-    invoke p (exec p n) "ek_copy" [s, d, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ekCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ s d l; rw [invoke_eq _ hL.ek_copy]; simp only [callFn, ekCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s d l
-    rw [invoke_eq _ hL.ek_copy]
-    simp only [callFn, ekCopy]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish
 
 theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
     ⦃fun s => s = s₀⦄
@@ -318,7 +199,7 @@ theorem keysPush_spec (n : Nat) (s₀ : St) (po pc : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        ekCopy_spec p hL n] <;>
+        ekCopy_spec p hL.ek_copy n] <;>
       finish [keysPushW, spTop]
 
 end spec2

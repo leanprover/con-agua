@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.WhnfIota
@@ -26,22 +27,11 @@ namespace L.Arena
 
 /-! ## The small L functions -/
 
-/-- Model of `const_name_of`. -/
-def cnoW (m : Mem) (hh : Word) : Option Word :=
-  if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-  else if tcnt m CONST (tierW hh) ≤ idxW hh then none
-  else some (tfld m CONST (tierW hh) (idxW hh) 0)
-
-theorem constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constNameOfL) (n : Nat)
-    (s₀ : St) (hh : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "const_name_of" [hh]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ cnoW s₀.mem hh = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, constNameOfL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld, evalE_cnt,
-      tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] <;>
-    finish [cnoW, tierW, idxW]
+l_model constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constNameOfL)
+  fns [hp ↦ cnoW ro]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  finish [tierW, idxW]
 
 /-! ## The record of an inductive -/
 

@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Tactic
+import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
 
@@ -570,54 +571,10 @@ theorem ciCanonEq_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option 
 
 /-! ## `canon_eq_list` -/
 
-mutual
-/-- **The model of `canon_eq_list(o, l, o', l')`**. -/
-def celW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | k + 1, m, o1, l1, o2, l2 =>
-    if l1 = 0 ∧ l2 = 0 then some (1, m)
-    else if l1 = 0 ∨ l2 = 0 then some (0, m)
-    else celK1 k o1 l1 o2 l2 (cieW k m (rdW (m.arr64 IW) o1) (rdW (m.arr64 IW) o2))
-
-/-- After `ci_canon_eq`. -/
-def celK1 (k : Nat) (o1 l1 o2 l2 : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (e, m1) => if e = 0 then some (0, m1) else celW k m1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1)
-end
-
-section arms
-variable (k : Nat) (m m1 : Mem) (o1 l1 o2 l2 e : Word)
-theorem celW_succ : celW (k + 1) m o1 l1 o2 l2 =
-    (if l1 = 0 ∧ l2 = 0 then some (1, m)
-    else if l1 = 0 ∨ l2 = 0 then some (0, m)
-    else celK1 k o1 l1 o2 l2 (cieW k m (rdW (m.arr64 IW) o1) (rdW (m.arr64 IW) o2))) := by rw [celW]
-theorem celK1_some : celK1 k o1 l1 o2 l2 (some (e, m1)) =
-    (if e = 0 then some (0, m1) else celW k m1 (o1 + 1) (l1 - 1) (o2 + 1) (l2 - 1)) := by
-  rw [celK1]
-end arms
-
-grind_pattern [ind_grind] celW_succ => celW (k + 1) m o1 l1 o2 l2
-grind_pattern [ind_grind] celK1_some => celK1 k o1 l1 o2 l2 (some (e, m1))
-
-theorem canonEqListL_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) :
-    ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke pr (exec pr n) "canon_eq_list" [o1, l1, o2, l2]
-    ⦃fun x s' => LocEq s' s₀ ∧ celW n s₀.mem o1 l1 o2 l2 = some (x.headD 0, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "canon_eq_list")]; simp only [callFn, canonEqListL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ (hp.get "canon_eq_list")]
-    simp only [callFn, canonEqListL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld,
-        evalE_tagE, evalE_idxAE, evalE_idxGE,
-        ciCanonEq_spec pr hp n, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
+l_model canonEqListL_spec (p : Prog) (hp : CanonProg p)
+  fns [hp.get "canon_eq_list" ↦ celW]
+  specs [ciCanonEq_spec p hp n]
+  grind [arena_grind, ind_grind]
 
 theorem decPL_zero {α : Type} (m : Mem) (f : Nat → Option α) (o : Nat) : decPL m f o 0 = some [] := by
   simp [decPL]
@@ -650,22 +607,20 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∃ (b : Bool) (a' : AState), (ConRon.Arena.canonEqList xs ys).run a = .ok (b, a') ∧
       x = (if b then 1 else 0) ∧ CQ vis fe m m' a' := by
   induction k with
-  | zero => intro m m' a o1 l1 o2 l2 x xs ys h; simp [celW] at h
+  | zero => intro m m' a o1 l1 o2 l2 x xs ys h; rw [celW.eq_1] at h; cases h
   | succ k ih =>
     intro m m' a o1 l1 o2 l2 x xs ys h hS hxs hys hb1 hb2 hP hL
-    rw [celW_succ] at h
     have lx := decPL_length (m := m) hxs
     have ly := decPL_length (m := m) hys
     by_cases h0 : l1 = 0 ∧ l2 = 0
-    · rw [ite_eq_left h0] at h
+    · rw [celW.arm1 k m o1 l1 o2 l2 h0] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have e1 : xs = [] := List.length_eq_zero_iff.mp (by rw [lx, h0.1]; rfl)
       have e2 : ys = [] := List.length_eq_zero_iff.mp (by rw [ly, h0.2]; rfl)
       subst e1 e2
       exact ⟨true, a, by simp [ConRon.Arena.canonEqList]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩
-    rw [ite_eq_right h0] at h
     by_cases h1 : l1 = 0 ∨ l2 = 0
-    · rw [ite_eq_left h1] at h
+    · rw [celW.arm2 k m o1 l1 o2 l2 h0 h1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
       rcases xs with _ | ⟨x1, xs'⟩ <;> rcases ys with _ | ⟨y1, ys'⟩
@@ -675,7 +630,7 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
       · simp [ConRon.Arena.canonEqList]; rfl
       · exfalso
         rcases h1 with h1 | h1 <;> (subst h1; simp at lx ly)
-    rw [ite_eq_right h1] at h
+    rw [celW.arm3 k m o1 l1 o2 l2 h0 h1] at h
     rw [not_or] at h1
     rcases xs with _ | ⟨x1, xs'⟩
     · exfalso; apply h1.1; exact UInt64.toNat_inj.mp (by simpa using lx.symm)
@@ -700,13 +655,11 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     rw [r1, r2] at h
     have hw1 : (UInt64.ofNat v1).toNat = v1 := by simp; omega
     have hw2 : (UInt64.ofNat v2).toNat = v2 := by simp; omega
-    unfold celK1 at h
     cases hc : cieW k m (UInt64.ofNat v1) (UInt64.ofNat v2) with
-    | none => rw [hc] at h; simp at h
+    | none => rw [hc, celW.k_ci_canon_eq.none] at h; cases h
     | some xx =>
     obtain ⟨e1, m1⟩ := xx
     rw [hc] at h
-    dsimp only at h
     obtain ⟨b1, a1, hb1', hr1', hS1, hg1, hP1, hL1⟩ := cieW_ok k hc hS (by rw [hw1]; exact hx1)
       (by rw [hw2]; exact hy1) hP hL
     have o1e : (o1 + 1).toNat = o1.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -719,7 +672,7 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     obtain ⟨b, a', hb, hr, hq⟩ := andThen_st (Q := CQ vis fe m m') (A := ConRon.Arena.IConstantInfo.canonEq x1' y1')
       (B := ConRon.Arena.canonEqList xs'' ys'') hb1' hr1'
       (fun hne => by
-        rw [ite_eq_right hne] at h
+        rw [celW.k_ci_canon_eq.arm2 k o1 l1 o2 l2 e1 m1 hne] at h
         have hx2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (L.Ind.IWGrow.ext hg1) hq) xs''.length
           (o1.toNat + 1) xs'' (by omega) hxs'
         have hy2 := decPL_grow hg1 (fun q x hq => ArrExt.decCI (L.Ind.IWGrow.ext hg1) hq) ys''.length
@@ -729,7 +682,7 @@ theorem celW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
           (by rw [o1e, l1p]; have := hg1.iw; omega) (by rw [o2e, l2p]; have := hg1.iw; omega) hP1 hL1
         exact ⟨b2, a2, hb2, hr2', hq2.1, hg1.trans hq2.2.1, hq2.2.2.1, hq2.2.2.2⟩)
       (fun h0 => by
-        rw [ite_eq_left h0] at h
+        rw [celW.k_ci_canon_eq.arm1 k o1 l1 o2 l2 e1 m1 h0] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨rfl, hS1, hg1, hP1, hL1⟩)
     exact ⟨b, a', hb, hr, hq⟩

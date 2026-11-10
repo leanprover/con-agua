@@ -19,6 +19,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndPos
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -60,60 +61,12 @@ theorem mentionsAnyConst_specK (p : Prog) (hv : p.lookup "e_view" = some eView)
   | zero => rw [invoke_eq _ hp]; simp only [callFn, mentionsAnyConst]; vcgen [exec] <;> grind
   | succ n => exact mentionsAnyConst_spec p hv hc hf hput hgo hnode hcl hp n s₀ no nl e
 
-/-- After the recursive call. -/
-def pdmK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-mutual
-/-- **The model of `pi_doms_mention_any`.** -/
-def pdmW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, f, e => if f = 0 then none else pdmK n no nl f m (eViewW m e)
-/-- After `e_view`. -/
-def pdmK (n : Nat) (no nl f : Word) (m : Mem) (v : List Word) : Option (List Word × Mem) :=
-  if v = [] then none
-  else if v.headD 0 ≠ 6 then some ([0], m)
-  else pdmK2 n no nl f v (maConstWk n m no nl (v.getD 1 0))
-/-- After `mentions_any_const`. -/
-def pdmK2 (n : Nat) (no nl f : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (b, m1) => if b ≠ 0 then some ([1], m1) else pdmK3 (pdmW n m1 no nl (f - 1) (v.getD 2 0))
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (no nl f e b : Word) (v r : List Word)
-theorem pdmW_f0 (h : f = 0) : pdmW (n + 1) m no nl f e = none := by simp [pdmW, h]
-theorem pdmW_go (h : f ≠ 0) : pdmW (n + 1) m no nl f e = pdmK n no nl f m (eViewW m e) := by
-  simp [pdmW, h]
-theorem pdmK_nil (h : v = []) : pdmK n no nl f m v = none := by simp [pdmK, h]
-theorem pdmK_nf (h : v ≠ []) (h6 : v.headD 0 ≠ 6) : pdmK n no nl f m v = some ([0], m) := by
-  simp only [pdmK]; rw [ite_eq_right h, ite_eq_left h6]
-theorem pdmK_f (h : v ≠ []) (h6 : ¬ v.headD 0 ≠ 6) :
-    pdmK n no nl f m v = pdmK2 n no nl f v (maConstWk n m no nl (v.getD 1 0)) := by
-  simp only [pdmK]; rw [ite_eq_right h, ite_eq_right h6]
-theorem pdmK2_hit (h : b ≠ 0) : pdmK2 n no nl f v (some (b, m1)) = some ([1], m1) := by
-  simp only [pdmK2]; exact ite_eq_left h
-theorem pdmK2_miss (h : ¬ b ≠ 0) : pdmK2 n no nl f v (some (b, m1)) =
-    pdmK3 (pdmW n m1 no nl (f - 1) (v.getD 2 0)) := by simp only [pdmK2]; exact ite_eq_right h
-theorem pdmK3_some : pdmK3 (some (r, m1)) = some ([r.headD 0], m1) := rfl
-end arms
-attribute [ind_grind] pdmW_f0 pdmW_go pdmK_nil pdmK_nf pdmK_f pdmK2_hit pdmK2_miss pdmK3_some
-
-theorem pdm_spec (p : Prog) (hM : MaProg p) (hp : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (n : Nat) : ∀ (s₀ : St) (no nl f e : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_doms_mention_any" [no, nl, f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ pdmW n s₀.mem no nl f e = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ no nl f e; rw [invoke_eq _ hp]; simp only [callFn, piDomsMentionAny]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ no nl f e
-    rw [invoke_eq _ hp]
-    simp only [callFn, piDomsMentionAny]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, eViewSpec4 p hM.view n,
-        mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n, ih] <;>
-      finish (gen := 20)
+/-- **`pi_doms_mention_any`'s model `pdmW`** (generated). -/
+l_model pdm_spec (p : Prog) (hM : MaProg p) (hp : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+  fns [hp ↦ pdmW list]
+  specs [eViewSpec4 p hM.view n,
+    mentionsAnyConst_specK p hM.view hM.cont hM.find hM.put hM.go hM.node hM.clr hM.ma n]
+  grind [arena_grind]
 
 /-- `e_view`'s first word is the handle's tag (lane `defeq`'s `quick_eViewW_head`). -/
 theorem partsEView_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
@@ -199,23 +152,22 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
   | succ n ih =>
     intro m a f e mp hS he hns hnb hM r m' h
     by_cases hf : f = 0
-    · rw [pdmW_f0 n m no nl f e hf] at h; cases h
-    rw [pdmW_go n m no nl f e hf] at h
+    · rw [pdmW.abort1 (hc1 := hf)] at h; cases h
     obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 :=
       ⟨f.toNat - 1, by have : f.toNat ≠ 0 := fun e => hf (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
     by_cases hv : eViewW m e = []
-    · rw [pdmK_nil (h := hv)] at h; cases h
+    · rw [pdmW.abort2 (hc1 := hf) (hc2 := hv)] at h; cases h
     have hhd := partsEView_head m e hv
     rw [hF]
     by_cases h6 : (eViewW m e).headD 0 ≠ 6
-    · rw [pdmK_nf (h := hv) (h6 := h6)] at h
+    · rw [pdmW.arm1 (hc1 := hf) (hc2 := hv) (hc3 := h6)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have htag : ¬ ((decE e).tag == ETag.forallE) = true := by
         simp only [beq_iff_eq]; rw [decE_tag_forallE _ he]; rw [← hhd]; exact h6
       refine ⟨false, a, ?_, rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
       simp only [ConRon.Arena.piDomsMentionAny, htag]; rfl
     have hg6 : tagW e = 6 := by rw [← hhd]; simpa using h6
-    rw [pdmK_f (h := hv) (h6 := h6)] at h
+    rw [pdmW.arm2 (hc1 := hf) (hc2 := hv) (hc3 := by simpa using h6)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hv
     have hR := hS.check.arena.base
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
@@ -223,13 +175,13 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     have htag : ((decE e).tag == ETag.forallE) = true := by
       simp only [beq_iff_eq]; exact (decE_tag_forallE _ he).mpr hg6
     rw [hew] at h
-    simp only [List.getD_cons_succ, List.getD_cons_zero] at h
+    simp only [List.headD_cons, List.tail_cons] at h
     have hns' := hns.get (OMono.decHL _ _)
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     obtain ⟨ws, hws, hnm', hwlt⟩ := slR_of_decHL m _ _ _ hns' (by omega)
     rw [ofNat_toNat_word, ofNat_toNat_word] at hws
     rcases hma : maConstWk n m no nl (tfld m FORALL (tierW e) (idxW e) 0) with _ | ⟨b, m1⟩
-    · rw [hma] at h; simp [pdmK2] at h
+    · rw [hma, pdmW.k_mentions_any_const.none] at h; cases h
     rw [hma] at h
     cases n with
     | zero => simp [maConstWk] at hma
@@ -239,17 +191,16 @@ theorem pdmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     rw [hnm']
     simp only [except_ok_bind, StateT.run_bind, hrun]
     by_cases hb0 : b ≠ 0
-    · rw [pdmK2_hit (h := hb0)] at h
+    · rw [pdmW.k_mentions_any_const.arm1 (hc1 := hb0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hc : c = true := by rw [← hbc]; simpa using hb0
       subst hc
       exact ⟨true, a, rfl, rfl, rfl, ⟨_, hM1⟩, hS1, hg1⟩
-    rw [pdmK2_miss (h := hb0)] at h
-    simp only [List.getD_cons_succ, List.getD_cons_zero] at h
+    rw [pdmW.k_mentions_any_const.arm2 (hc1 := by simpa using hb0)] at h
     have hc : c = false := by rw [← hbc]; simpa using hb0
     subst hc
     simp only [Bool.false_eq_true, ite_false]
-    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pdmK3_some] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [pdmW.k_pi_doms_mention_any.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have hf1 : (f - 1).toNat = F := partsPred_of hF
     obtain ⟨b2, a2, hr2, hR2, ha2, hM2, hS2, hg2⟩ := ih m1 a (f - 1) _ ∅ hS1 hb (hns.grow (OMono.decHL _ _) hg1)
@@ -275,103 +226,50 @@ theorem piDomsMentionAny_refines (p : Prog) (hM : MaProg p)
     let ⟨hok, hr, hst, hM', hS', hg⟩ := Sim.run (pdmW_sim n s₀.mem a₀ f e mp hS he hns hnb hmp) hm
     ⟨hl, hok, hr, hst, hM', by rw [← hst] at hS'; rw [hst] at hS'; exact hS', hg⟩
 
-/-- After the element's test. -/
-def brrK (_n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => if r.headD 0 ≠ 0 then some ([1], m1) else pdmK3 (rest m1)
+/-- **`block_is_rec_member`'s model `brmW`** (generated). -/
+l_model brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+    (hp : p.lookup "block_is_rec_member" = some blockIsRecMember)
+  fns [hp ↦ brmW list]
+  specs [pdm_spec p hM hpd n]
+  grind [arena_grind] finish [rdW_eq]
 
-/-- **The model of `block_is_rec_member`.** -/
-def brmW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, coff, clen =>
-    if clen = 0 then some ([0], m)
-    else brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
-      (pdmW n m no nl CWF (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3)))
-
-/-- **The model of `block_is_rec_go`.** -/
-def brgoW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, no, nl, moff, mlen =>
-    if mlen = 0 then some ([0], m)
-    else brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
-      (brmW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 3)))
-
-section arms
-variable (n : Nat) (m m1 : Mem) (no nl coff clen moff mlen : Word) (r : List Word)
-  (rest : Mem → Option (List Word × Mem))
-theorem brrK_hit (h : r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = some ([1], m1) := by
-  simp only [brrK]; exact ite_eq_left h
-theorem brrK_miss (h : ¬ r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = pdmK3 (rest m1) := by
-  simp only [brrK]; exact ite_eq_right h
-theorem brmW_nil (h : clen = 0) : brmW (n + 1) m no nl coff clen = some ([0], m) := by simp [brmW, h]
-theorem brmW_cons (h : clen ≠ 0) : brmW (n + 1) m no nl coff clen =
-    brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
-      (pdmW n m no nl CWF (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3))) := by
-  simp [brmW, h]
-theorem brgoW_nil (h : mlen = 0) : brgoW (n + 1) m no nl moff mlen = some ([0], m) := by simp [brgoW, h]
-theorem brgoW_cons (h : mlen ≠ 0) : brgoW (n + 1) m no nl moff mlen =
-    brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
-      (brmW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 2))
-        (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 3))) := by simp [brgoW, h]
-end arms
-attribute [ind_grind] brrK_hit brrK_miss brmW_nil brmW_cons brgoW_nil brgoW_cons
-
-theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
-    (hp : p.lookup "block_is_rec_member" = some blockIsRecMember) (n : Nat) :
-    ∀ (s₀ : St) (no nl coff clen : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_is_rec_member" [no, nl, coff, clen]
-    ⦃fun r s' => LocEq s' s₀ ∧ brmW n s₀.mem no nl coff clen = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ no nl coff clen; rw [invoke_eq _ hp]; simp only [callFn, blockIsRecMember]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ no nl coff clen
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockIsRecMember]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
-      finish (gen := 20) [rdW_eq, CWF, erRd]
-
-theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+/-- **`block_is_rec_go`'s model `brgoW`** (generated). -/
+l_model brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
     (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)
-    (hp : p.lookup "block_is_rec_go" = some blockIsRecGo) (n : Nat) :
-    ∀ (s₀ : St) (no nl moff mlen : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_is_rec_go" [no, nl, moff, mlen]
-    ⦃fun r s' => LocEq s' s₀ ∧ brgoW n s₀.mem no nl moff mlen = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ no nl moff mlen; rw [invoke_eq _ hp]; simp only [callFn, blockIsRecGo]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ no nl moff mlen
-    rw [invoke_eq _ hp]
-    simp only [callFn, blockIsRecGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
-      finish (gen := 20) [rdW_eq]
+    (hp : p.lookup "block_is_rec_go" = some blockIsRecGo)
+  fns [hp ↦ brgoW list]
+  specs [brm_spec p hM hpd hm n]
+  grind [arena_grind] finish [rdW_eq]
 
 /-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
 def RawR {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
     List Word → Bool → Mem → AState → Prop :=
   fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR vis fe m' a ∧ IWGrow m m'
 
-/-- **One element of an `anyM`** (`brrK`): the element's test, then, if it fails, the rest. -/
-theorem brrK_sim {vis : Word} {fe : IFEnv} {n : Nat}
+/-- **One element of an `anyM`** (the continuation `K` after the element's test): the test, then,
+if it fails, the rest `rest`, its result through `K3`. -/
+theorem brrK_sim {vis : Word} {fe : IFEnv} {K K3 : Option (List Word × Mem) → Option (List Word × Mem)}
     {rest : Mem → Option (List Word × Mem)} {mo : Option (List Word × Mem)} {hd tl : AM Bool} {m : Mem}
-    {a : AState} (h1 : Sim mo hd a (RawR (vis := vis) (fe := fe) m a))
+    {a : AState} (hn : K none = none) (hhit : ∀ r m1, r.headD 0 ≠ 0 → K (some (r, m1)) = some ([1], m1))
+    (hmiss : ∀ r m1, r.headD 0 = 0 → K (some (r, m1)) = K3 (rest m1)) (h3n : K3 none = none)
+    (h3 : ∀ r m1, K3 (some (r, m1)) = some ([r.headD 0], m1))
+    (h1 : Sim mo hd a (RawR (vis := vis) (fe := fe) m a))
     (h2 : ∀ m1 mp1, StageR vis fe m1 a → IWGrow m m1 → maMR m1 mp1 →
       Sim (rest m1) tl a (RawR (vis := vis) (fe := fe) m1 a)) :
-    Sim (brrK n rest mo) (do let b ← hd; if b then pure true else tl) a
+    Sim (K mo) (do let b ← hd; if b then pure true else tl) a
       (RawR (vis := vis) (fe := fe) m a) := by
-  refine Sim.bindK (K := brrK n rest) (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
-    else pdmK3 (rest m1)) rfl (fun _ _ => rfl) h1 ?_
+  refine Sim.bindK (K := K) (body := fun r1 m1 => K (some (r1, m1))) hn (fun _ _ => rfl) h1 ?_
   rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
   cases b with
   | true =>
-    simp only [ite_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
+    rw [hhit _ _ (by decide)]
+    simp only [ite_true]
     exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
   | false =>
-    simp only [Bool.false_eq_true, ite_false, List.headD_cons, ne_eq, not_true_eq_false]
+    rw [hmiss _ _ (by decide)]
+    simp only [Bool.false_eq_true, ite_false]
     refine Sim.congr (op := tl >>= pure) ?_ (bind_pure _)
-    refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
+    refine Sim.bindK (K := K3) (body := fun r m => some ([r.headD 0], m)) h3n h3
       (h2 m1 mp1 hS1 hg1 hM1) ?_
     rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
     exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
@@ -391,12 +289,13 @@ theorem brmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
   | succ n ih =>
     intro m a coff clen cs mp hS hcs0 hcb hns hnb hM
     by_cases hl : clen = 0
-    · rw [brmW_nil n m no nl coff clen hl]
+    · rw [brmW.arm1 n m no nl coff clen hl]
       subst hl
       have : cs = [] := by have := decPL_length _ hcs0; simpa using this
       subst this
       exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
-    rw [brmW_cons n m no nl coff clen hl]
+    rw [brmW.arm2 n m no nl coff clen hl]
+    simp only [erRd_foldN]
     have hcs : PSlR decCN cs coff clen m := ⟨hcs0, hcb.resolve_left hl⟩
     obtain ⟨pc, ⟨cv, nF⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, -⟩ := decCN_some (show decCN (truncM m) pc = some (cv, nF) from hc0)
@@ -405,7 +304,10 @@ theorem brmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     rw [hw, hcw, partsAnyM_cons]
     have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
     rw [CWF_eq, show decE (erRd m (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
-    exact brrK_sim h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
+    exact brrK_sim (rest := fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
+      (brmW.k_pi_doms_mention_any.none ..) (fun r m1 h => brmW.k_pi_doms_mention_any.arm1 _ _ _ _ _ r m1 h)
+      (fun r m1 h => brmW.k_pi_doms_mention_any.arm2 _ _ _ _ _ r m1 h) brmW.k_block_is_rec_member.none brmW.k_block_is_rec_member.arm1
+      h1 fun m1 mp1 hS1 hg1 hM1 => ih m1 a (coff + 1) (clen - 1) cs' mp1 hS1
       (hcs'.grow decCN_mono hg1).1 (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
       (Nat.le_trans hnb hg1.iw) hM1
 
@@ -424,12 +326,12 @@ theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
   | succ n ih =>
     intro m a moff mlen ms mp hS hms0 hmb hns hnb hM
     by_cases hl : mlen = 0
-    · rw [brgoW_nil n m no nl moff mlen hl]
+    · rw [brgoW.arm1 n m no nl moff mlen hl]
       subst hl
       have : ms = [] := by have := decPL_length _ hms0; simpa using this
       subst this
       exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
-    rw [brgoW_cons n m no nl moff mlen hl]
+    rw [brgoW.arm2 n m no nl moff mlen hl]
     have hms : PSlR decMS ms moff mlen m := ⟨hms0, hmb.resolve_left hl⟩
     obtain ⟨pc, ms0, ms', rfl, hw, hpb, hm0, hms'⟩ := partsPSl_cons hms hl
     have hd0 : decMS (truncM m) pc = some ms0 := hm0
@@ -445,34 +347,24 @@ theorem brgoW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     obtain ⟨how, -, -⟩ := partsIwRd ho hp2
     obtain ⟨hlw, -, -⟩ := partsIwRd hl' (by rw [hp3])
     rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
-    exact brrK_sim (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) fun m1 mp1 hS1 hg1 hM1 =>
+    exact brrK_sim (rest := fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
+      (brgoW.k_block_is_rec_member.none ..) (fun r m1 h => brgoW.k_block_is_rec_member.arm1 _ _ _ _ _ r m1 h)
+      (fun r m1 h => brgoW.k_block_is_rec_member.arm2 _ _ _ _ _ r m1 h) brgoW.k_block_is_rec_go.none brgoW.k_block_is_rec_go.arm1
+      (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) fun m1 mp1 hS1 hg1 hM1 =>
       ih m1 a (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
         (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1) (Nat.le_trans hnb hg1.iw) hM1
 
-/-- **The model of `block_is_rec`** (at exec fuel `n + 1`). -/
-def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match memberNamesW n m p with
-  | none => none
-  | some (r1, m1) =>
-    match brgoW n m1 (r1.headD 0) (r1.tail.headD 0) (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) with
-    | none => none
-    | some (r2, m2) => some ([r2.headD 0], m2)
-
-theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_is_rec`'s model `brrW`** (generated). -/
+l_model brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_names_copy" = some memberNamesCopy)
     (hn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
     (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
     (hm : p.lookup "block_is_rec_member" = some blockIsRecMember)
     (hg : p.lookup "block_is_rec_go" = some blockIsRecGo)
-    (hp : p.lookup "block_is_rec" = some blockIsRec) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_is_rec" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ brrW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockIsRec]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
-    finish (gen := 20) [brrW, rdW_eq]
+    (hp : p.lookup "block_is_rec" = some blockIsRec)
+  fns [hp ↦ brrW list]
+  specs [blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n]
+  grind [arena_grind] finish [rdW_eq]
 
 /-- **`block_is_rec` refines `blockIsRec`** (through `mentions_any_const`'s walk; the members'
 slice of the shape record below the pool's top, `hsrc`; any well-formed `mentions_any` memo on
@@ -495,7 +387,7 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
       AM.st (ConRon.Arena.blockIsRec bs) a₀ = a₀ ∧
       r = [if AM.res (ConRon.Arena.blockIsRec bs) a₀ then 1 else 0] ∧
       (∃ mp', maMR s'.mem mp') ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
+  refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp (n + 1) s₀ q) ?_
   rintro r s' ⟨hl, hm'⟩
   have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
   have hsz := hS.iw.iwSize
@@ -522,11 +414,10 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
     simp only [Option.some.injEq] at hv'; subst hv'
     obtain ⟨⟨c, hc', -⟩, -, -⟩ := decMS_some hms
     exact partsIwLt hc'
-  unfold brrW at hm'
+  rw [brrW.arm1] at hm'
   rcases h1 : memberNamesW n s₀.mem q with _ | ⟨r1, m1⟩
-  · rw [h1] at hm'; cases hm'
-  rw [h1] at hm'
-  simp only at hm'
+  · rw [h1, brrW.k_block_shape_member_names.none] at hm'; cases hm'
+  rw [h1, brrW.k_block_shape_member_names.arm1] at hm'
   obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr
   have hroom := memberNamesW_room h1 hsz
   have hk : bs.k = l.toNat := by rw [BlockShape.k, decPL_length _ hdm']
@@ -548,8 +439,8 @@ theorem blockIsRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" 
     (memoRG_frame maSch maSch_wf bmKey (fun w : Word => w != 0) [IW] [200] (by decide) (by simp [maSch])
       s₀.mem m1 hf1 mp hmp)
   rcases h2 : brgoW n m1 (rdW (s₀.mem.arr64 CTL) 200) (UInt64.ofNat bs.k) o l with _ | ⟨r2, m2⟩
-  · rw [h2] at hm'; cases hm'
-  rw [h2] at hm'
+  · rw [h2, brrW.k_block_is_rec_go.none] at hm'; cases hm'
+  rw [h2, brrW.k_block_is_rec_go.arm1] at hm'
   obtain ⟨rfl, hm2⟩ := Prod.mk.inj (Option.some.inj hm')
   obtain ⟨b, a', hrun, hR⟩ := hsim r2 m2 h2
   obtain ⟨hr2, ha', hM2, hS2, hg2⟩ := hR

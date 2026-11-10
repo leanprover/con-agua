@@ -202,6 +202,17 @@ theorem lkW_congr {m m' : Mem} {B : ArrId} (h : TblSame m m' B) (x : Word) :
     lkW m' B x = lkW m B x := by
   unfold lkW; rw [tblOK_congr h, tblW_congr h]
 
+/-- The lookup of `vi_map_go`: `name_get` (`f = 0`) or `expr_get`. -/
+def mapLk (m : Mem) (f x : Word) : Option Word := if f = 0 then lkW m NID x else lkW m EID x
+
+/-- `vi_map_go`'s step past the bound: both lookups go on in `mapGoW.k_name_get`. -/
+theorem mapGoW_step (n : Nat) (m : Mem) (o l sz s f j : Word) (hlj : ¬ l ≤ j) :
+    mapGoW (n + 1) m o l sz s f j =
+      mapGoW.k_name_get n o l sz s f j m (mapLk m f (rdW (m.arr64 IFR) (o + sz * j + s))) := by
+  by_cases hf : f = 0
+  · rw [mapGoW.arm2 _ _ _ _ _ _ _ _ hlj hf, mapLk, ite_eq_left hf]
+  · rw [mapGoW.arm3 _ _ _ _ _ _ _ _ hlj hf, mapLk, ite_eq_right hf]
+
 theorem mapLk_ext {m m' : Mem} (h : IExt m m') (f x : Word) : mapLk m' f x = mapLk m f x := by
   simp only [mapLk, lkW_congr (h.tbl NID (.inl rfl)),
     lkW_congr (h.tbl EID (.inr (.inr rfl)))]
@@ -222,25 +233,28 @@ theorem mapGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l sz s f j : Word),
   | zero => intro m m' o l sz s f j h; simp [mapGoW] at h
   | succ n ih =>
     intro m m' o l sz s f j h hT hjl
-    simp only [mapGoW] at h
-    split at h
-    · rename_i hlj
+    by_cases hlj : l ≤ j
+    · rw [mapGoW.arm1 _ _ _ _ _ _ _ _ hlj] at h
       cases h
       have : j = l := by
         apply UInt64.toNat_inj.mp
         have := UInt64.le_iff_toNat_le.mp hjl; have := UInt64.le_iff_toNat_le.mp hlj; omega
       subst this
       exact ⟨IExt.refl _, hT, by simp, fun k h1 h2 => by omega⟩
-    rename_i hlj
     have hjl' : j < l := UInt64.not_le.mp hlj
+    rw [mapGoW_step _ _ _ _ _ _ _ _ hlj] at h
     cases hk : mapLk m f (rdW (m.arr64 IFR) (o + sz * j + s)) with
-    | none => rw [hk, lkPushK_none, restK_none] at h; cases h
+    | none => rw [hk, mapGoW.k_name_get.none] at h; cases h
     | some w =>
-    rw [hk, lkPushK_some] at h
-    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> simp only [hp, restK, reduceCtorEq] at h
+    rw [hk] at h
+    simp only [mapGoW.k_name_get, mapGoW.j1] at h
+    rcases hp : pushLW m w with _ | ⟨o1, m₁⟩ <;> simp only [hp, mapGoW.k_ifl_push, reduceCtorEq] at h
+    rcases hr : mapGoW n m₁ o l sz s f (j + 1) with _ | m'' <;>
+      simp only [hr, mapGoW.k_vi_map_go, reduceCtorEq, Option.some.injEq] at h
+    subst h
     obtain ⟨x1, x2, x3, x4⟩ := pushLW_ok hT hp
     have hj1 := wsucc j l hjl'
-    obtain ⟨y1, y2, y3, y4⟩ := ih m₁ m' o l sz s f (j + 1) h x2
+    obtain ⟨y1, y2, y3, y4⟩ := ih m₁ _ o l sz s f (j + 1) hr x2
       (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; exact UInt64.lt_iff_toNat_lt.mp hjl'))
     have hjn := UInt64.lt_iff_toNat_lt.mp hjl'
     refine ⟨x1.trans y1, y2, by rw [y3, x3, hj1]; omega, fun k h1 h2 => ?_⟩
@@ -392,7 +406,7 @@ theorem islice_get {k : IdxKind} (m : Mem) (o l c : Nat) (hc : c < (islice (k :=
 lookup `look` that the model's lookup answers (`hlk`), the twin's `mapM` returns the handles the
 model pushed, the slice `(lo, l)`. -/
 theorem mapW_twin {α : Type} {kd : IdxKind} {n : Nat} {m m' : Mem} {o l sz s f lo l' : Word} (hT : TopOK m)
-    (h : mapW n m o l sz s f = some ((lo, l'), m')) (a : AState) (xs : List α) (ids : α → Nat)
+    (h : mapW n m o l sz s f = some (lo, l', m')) (a : AState) (xs : List α) (ids : α → Nat)
     (look : Nat → AM (Idx kd)) (hlen : l.toNat = xs.length)
     (hid : ∀ k (hk : k < xs.length), (rdW (m.arr64 IFR) (o + sz * UInt64.ofNat k + s)).toNat = ids xs[k])
     (hlk : ∀ x w, mapLk m f x = some w → (look x.toNat).run a = .ok (decI w, a) ∧ w.toNat < 2 ^ 32) :
@@ -402,11 +416,11 @@ theorem mapW_twin {α : Type} {kd : IdxKind} {n : Nat} {m m' : Mem} {o l sz s f 
   cases n with
   | zero => simp [mapW] at h
   | succ n =>
-  simp only [mapW] at h
-  rcases ha : allocW m IFL 0 with _ | ⟨lo', m₁⟩ <;> simp only [ha, allocK, reduceCtorEq] at h
-  rcases hg : mapGoW n m₁ o l sz s f 0 with _ | m₂ <;> simp only [hg, sliceK, reduceCtorEq] at h
+  rw [mapW.arm1] at h
+  rcases ha : allocW m IFL 0 with _ | ⟨lo', m₁⟩ <;> simp only [ha, mapW.k_ifl_alloc, reduceCtorEq] at h
+  rcases hg : mapGoW n m₁ o l sz s f 0 with _ | m₂ <;> simp only [hg, mapW.k_vi_map_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+  obtain ⟨rfl, rfl, rfl⟩ := h
   obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha
   simp only [show (0 : Word).toNat = 0 from rfl, Nat.add_zero] at a4
   obtain ⟨g1, g2, g3, g4⟩ := mapGoW_facts n m₁ _ o l sz s f 0 hg a2 (UInt64.le_iff_toNat_le.mpr (Nat.zero_le _))

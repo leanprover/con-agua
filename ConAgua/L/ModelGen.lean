@@ -122,6 +122,12 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   them (`pcap`, the input buffer `arr8 IN`) holds again after each call, for the next call's
   side goal (the `grind` patterns `Keep.size`, `Keep.arr8`, `Keep.pcap`). The specs' binders
   must all be explicit.
+* `pfuel` (one function that does not call itself as its model): the fuel is a parameter of the
+  model, not matched on: the model is the body at fuel `n`, with its callees through specs over
+  `n` (`callW_spec p n "f"`, lane whnf's "a call as a function of the memory"; its own recursive
+  call too), its equations `fW.armᵢ` are stated at `n`, and its spec is at `exec p (n + 1)` with
+  the model at `n`, proved by one step (no induction). This is the shape of the hand models
+  `fW p n m …` over `callW` (`Rom/CIReadRefW`): the generated one is the same definition.
 * `defs` / `nodefs`: the same command twice, first with `defs` (only the models, the
   continuations and their arms, with the `grind` patterns), then with `nodefs` (only the specs):
   facts about the models proved in between (a recursive reader keeps the pool top in a tier,
@@ -1899,7 +1905,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" nodefs")?
   (&" unified")?
   (&" nv " "[" term "," term "]")?
-  (&" cut " num)? : command
+  (&" cut " num)?
+  (&" pfuel")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1977,6 +1984,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- step theorem (`name.tail`), used by the function's step: the paths through the code before
   -- it are not multiplied by the paths after it
   let cutK? : Option Nat := if stx[26].getNumArgs == 0 then none else stx[26][1].isNatLit?
+  -- `pfuel`: the fuel as a parameter of a single model that does not call itself as a model
+  -- (its callees through their specs, e.g. `callW_spec p n "f"`): the model is the body at fuel
+  -- `n` (no `match` on the fuel), its spec at `exec p (n + 1)`, proved by one step, no induction
+  let pfuel := stx[27].getNumArgs != 0
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2095,8 +2106,15 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let bodies := bodies.map (·.1.rename rn)
   -- a single member that needs no fuel (no recursion, no fuel-dependent callee, no continuation
   -- that needs it) gets a model without the fuel argument
+  if pfuel then
+    unless fis.size == 1 do throwError "l_model: `pfuel` needs a single function"
+    unless st.loops.isEmpty do throwError "l_model: `pfuel` takes no loops"
+    if cutK?.isSome then throwError "l_model: `pfuel` and `cut` do not go together"
+    let b ← liftTermElabM (bodies[0]!.render exc)
+    if (idents b.raw).contains fis[0]!.model then
+      throwError "l_model: `pfuel`: {fis[0]!.model} calls itself as its model; list its spec in `specs`"
   let noFuel : Bool ← do
-    if fis.size != 1 || st.ks.any (·.fuel) then pure false
+    if pfuel || fis.size != 1 || st.ks.any (·.fuel) then pure false
     else
       let b ← liftTermElabM (bodies[0]!.render exc)
       pure !(idents b.raw).contains `n
@@ -2206,6 +2224,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       let mbs := mpBinders ++ #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent memIdent) : L.Mem))] ++ pbs
       if noFuel then
         `(command| def $(mkIdent fi.model):ident $mbs* : $rT := $body)
+      else if pfuel then
+        `(command| def $(mkIdent fi.model):ident $wbs* : $rT := $body)
       else if wf then
         `(command|
           def $(mkIdent fi.model):ident $wbs* : $rT :=
@@ -2357,6 +2377,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if noFuel then
       let lhs ← `($(mkIdent fi.model) $mpArgs* $(mkIdent memIdent) $ps*)
       nEqns := nEqns + (← eqns fi.model (mpBinders ++ mBs) lhs b `eq_1)
+    else if pfuel then
+      let lhs ← `($(mkIdent fi.model) $mpArgs* $nI $(mkIdent memIdent) $ps*)
+      nEqns := nEqns + (← eqns fi.model wbs lhs b `eq_1)
     else
       let lhs ← `($(mkIdent fi.model) $mpArgs* ($nI + 1) $(mkIdent memIdent) $ps*)
       nEqns := nEqns + (← eqns fi.model wbs lhs b)
@@ -2600,11 +2623,11 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     unfoldOf := unfoldOf.push s!"{fi.model}.lfn_eq"
   -- the spec of the group
   let userNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
-  let mkConj (fuel : Term) : CommandElabM (Array Term) := fis.mapM fun fi => do
+  let mkConj (fuel : Term) (mfuel : Term := fuel) : CommandElabM (Array Term) := fis.mapM fun fi => do
     let ps : Array Ident := fi.params.map fun x => mkIdent (if userNames.contains x then x.appendAfter "'" else x)
     let pbs ← ps.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($x : L.Word))
     let W := mkIdent fi.model
-    let Wapp ← if noFuel then `($W $mpArgs* (L.St.mem $s0) $ps*) else `($W $mpArgs* $fuel (L.St.mem $s0) $ps*)
+    let Wapp ← if noFuel then `($W $mpArgs* (L.St.mem $s0) $ps*) else `($W $mpArgs* $mfuel (L.St.mem $s0) $ps*)
     let rI := mkIdent `r
     let rs ← (List.range fi.tup).toArray.mapM fun i => do
       let mut e : Term := rI
@@ -2650,7 +2673,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let vcgOf (called : Array String) (loops : Array Name) : String := String.intercalate ", "
     ((["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs"] ++ loadTxt ++ ["L.st64", "L.setG"] ++
       extraTxt ++ st.vcgX.toList).eraseDups ++ calleeSpecs called ++ (loops.toList.map loopSpecTxt) ++
-      ((List.range k).filter (called.contains fis[·]!.lname)).map fun i =>
+      ((List.range k).filter (fun i => !pfuel && called.contains fis[i]!.lname)).map fun i =>
         keepWrap s!"ih{i+1}" (1 + fis[i]!.params.size + (if preT?.isSome then 1 else 0)))
   let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
   let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
@@ -2708,6 +2731,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
           (fun $(mkIdent `sig) $sP => $body) $epost := by $(⟨tac⟩):tactic)))
     cutPre := some s!"rw [← L.seqTake_drop {k} (L.FunDecl.body {fi.decl}), show L.seqDrop {k} (L.FunDecl.body {fi.decl}) = {tailS.getId} from rfl]; simp only [{unf}, L.seqTake]"
     cutVcg := some s!"{tailThm.getId} {argsTxt} n{if selfRec then " ih" else ""}"
+  if pfuel then
+    let fi := fis[0]!
+    let lk ← pp fi.lookup.raw
+    let tac ← parseTac s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unfoldOf[0]!}]; {stepTac attrsTxt (vcgOf calledBy[0]! loopsBy[0]!) []}"
+    let stmt1 := (← mkConj (← `($nI + 1)) nI)[0]!
+    emit doTrace (← withHB (← `(command|
+      $[$doc?:docComment]? theorem $specName:ident $bs* $nB:bracketedBinder : $stmt1 := by $(⟨tac⟩):tactic)))
+    if doTrace then
+      logInfo m!"l_model: 1 model (pfuel), {st.ks.size} continuation(s), {nEqns} guarded equation(s)"
+    return
   let mut zero := ""
   let mut steps : Array String := #[]
   for fi in fis, i in List.range k, called in calledBy, loops in loopsBy, ci in conjS, unf in unfoldOf do

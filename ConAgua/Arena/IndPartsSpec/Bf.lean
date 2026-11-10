@@ -114,18 +114,6 @@ theorem bpo_spec (p : Prog) (hP : IndPartsProg4 p) (hrf : p.lookup "reserved_fro
       bpr_spec p hrf hrc hr n, bpc_spec p hP hrf hrc hec het hseq hc n] <;>
     finish (gen := 20) [bpoW]
 
-theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = some erCopy)
-    (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
-    (hp : p.lookup "block_shape_large" = some blockShapeLarge) (n : Nat) (s₀ : St) (cvR0 lo ll : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_large" [cvR0, lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ bslW n s₀.mem cvR0 lo ll = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeLarge]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erToIw_specW p hP.alloc hec het n,
-      slEq_spec p hseq n, slContains_spec p hP.contains n] <;>
-    finish (gen := 20) [bslW, rdW_eq, erRd]
-
 end L.Ind
 
 end
@@ -239,7 +227,7 @@ section arms
 variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
   (no nl io lo ll s ip mo ml : Word) (q : Word)
 theorem bbK12_some : bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip mo ml (some (r, m)) =
-    bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll) := rfl
+    bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW (n + 1) m cvR0 lo ll) := rfl
 theorem bbK13'_some (ro2 rl2 : Word) : bbK13' mo ml ro2 rl2 nPd s ip (some (r, m)) =
     bgoK3 (bsealW m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0)) := rfl
 theorem bbK10_some : bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
@@ -282,7 +270,7 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
       bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
       bmo_spec p hP.toIndPartsProg4 hP.rec5 hP.membersOf (n + 1),
       brs_spec p hP.toIndPartsProg4 hP.rec7 hP.recsOf (n + 1),
-      bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large n,
+      bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large (n + 1),
       bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
     finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
       bbK13'_some, bgoK3_some]

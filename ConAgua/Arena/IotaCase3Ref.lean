@@ -120,7 +120,7 @@ theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Co
   | zero => exact absurd c3 (by rw [callW_zero]; simp)
   | succ n =>
   obtain ⟨t₃, ht₃, -, hm₃, hcno⟩ := triple_of_callW
-    (constNameOf_spec p hp.constNameOf n ⟨m, Locals.init []⟩ _) c3
+    (constNameOf_spec p hp.constNameOf (n + 1) ⟨m, Locals.init []⟩ _) c3
   have e3 : m = m₃ := hm₃.symm.trans ht₃
   subst e3
   unfold cnoW at hcno

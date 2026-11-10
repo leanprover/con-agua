@@ -141,19 +141,20 @@ theorem pos3_fieldCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), field
   | 0, _, _, _, _, _, _, h => by simp [fieldCopyW] at h
   | n + 1, m, m', d, s, l, k, h => by
     by_cases hl : l = 0
-    · rw [fieldCopyW_nil n m d s l k hl] at h; cases h; exact MFr.refl _ _ _
+    · rw [fieldCopyW.arm1 n m d s l k hl] at h; cases h; exact MFr.refl _ _ _
     · rw [fieldCopyW_step n m d s l k hl] at h
       exact (MFr.set_iw _ _ _).trans (pos3_fieldCopyW_mfr n _ _ _ _ _ _ h)
 
 theorem pos3_formersW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : formersW n m p = some (r, m')) : MFr [] [] m m' := by
-  unfold formersW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  rcases n with _ | n
+  · simp [formersW] at h
+  rw [formersW.arm1] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h (formersW.k_iw_alloc.none ..)
+  rw [formersW.k_iw_alloc.arm1] at h
+  obtain ⟨m2, hc, h⟩ := of_K h (formersW.k_member_field_copy.none ..)
+  rw [formersW.k_member_field_copy.arm1] at h
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   exact (allocW_mfr hal).trans (pos3_fieldCopyW_mfr _ _ _ _ _ _ _ hc)
 
 theorem pos3_nckW_mfr {n : Nat} {m m' : Mem} {p fo fl : Word} {r : List Word} (h : nckW n m p fo fl = some (r, m')) :
@@ -195,37 +196,32 @@ theorem pos3_nhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (ctx mm off l oo ol : Word) 
   | 0, _, _, _, _, _, _, _, _, _, h => by simp [nhGoW] at h
   | k + 1, m, m', ctx, mm, off, l, oo, ol, r, h => by
     by_cases hl : l = 0
-    · rw [nhGoW_nil k m ctx mm off l oo ol hl] at h
+    · rw [nhGoW.arm1 k m ctx mm off l oo ol hl] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact MFr.refl _ _ _
     by_cases h12 : rdW (m.arr64 IW) (ctx + 12) ≤ mm
-    · rw [nhGoW_nof k m ctx mm off l oo ol hl h12] at h
+    · rw [nhGoW.arm2 k m ctx mm off l oo ol hl h12] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact MFr.refl _ _ _
-    rw [nhGoW_cons k m ctx mm off l oo ol hl h12] at h
-    rcases h2 : instW k m (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8))
-        (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3)) with _ | ⟨r2, m2⟩
-    · rw [h2] at h; simp [nhK2] at h
-    rw [h2] at h
+    rw [nhGoW.arm3 k m ctx mm off l oo ol hl h12] at h
+    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (nhGoW.k_inst_pis_with.none ..)
     have f2 := instW_mfr k _ _ _ _ _ _ h2
     by_cases h20 : r2.headD 0 = 0
-    · rw [nhK2_none k m2 ctx mm off l oo ol r2 h20] at h
+    · rw [nhGoW.k_inst_pis_with.arm1 k ctx mm off l oo ol r2 m2 h20] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       rw [← h.2]; exact f2
-    rw [nhK2_some k m2 ctx mm off l oo ol r2 h20] at h
-    cases h3' : fvinternW m2 (rdW (m2.arr64 IW) (ctx + 4) + mm) (r2.tail.headD 0) with
-    | none => rw [h3'] at h; simp [nhK3] at h
-    | some x3 =>
-    obtain ⟨v, m3⟩ := x3
-    rw [h3'] at h
+    rw [nhGoW.k_inst_pis_with.arm2 k ctx mm off l oo ol r2 m2 h20] at h
+    obtain ⟨⟨v, m3⟩, h3', h⟩ := of_K h (nhGoW.k_intern_fvar.none ..)
     have f3 := f2.trans (fvinternW_mfr h3')
     by_cases hv : 4294967296 ≤ v
-    · simp [nhK3, hv] at h
-    rw [nhK3_ok k m3 ctx mm off l oo ol v hv] at h
-    rcases h4 : snocW k m3 oo ol v with _ | ⟨r4, m4⟩
-    · rw [h4] at h; simp [nhK4] at h
-    rw [h4, nhK4_some] at h
-    exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ h)
+    · rw [nhGoW.k_intern_fvar.abort1 k ctx mm off l oo ol v m3 hv] at h; cases h
+    rw [nhGoW.k_intern_fvar.arm1 k ctx mm off l oo ol v m3 hv] at h
+    obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (nhGoW.k_sl_snoc.none ..)
+    rw [nhGoW.k_sl_snoc.arm1] at h
+    obtain ⟨⟨r5, m5⟩, h5, h⟩ := of_K h nhGoW.k_nest_holes_go.none
+    rw [nhGoW.k_nest_holes_go.arm1] at h
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    exact (f3.trans (snocW_mfr h4)).trans (pos3_nhGoW_mfr k _ _ _ _ _ _ _ _ _ h5)
 
 /-! ## `check_abs_ctor_sorts_all` -/
 
