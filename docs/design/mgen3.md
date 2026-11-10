@@ -298,3 +298,32 @@ would be an `Option`.
 
 Lines: +66 −237 (**−171**). `LevelEquiv` also holds the L code of these functions, so the change
 rebuilt the program modules (`Checker/ProgI*`) once.
+
+### Batch 9: generator `guards`; `node_bin`, `node_let`, `node_proj` (lead)
+
+**Generator: `guards ["f", …]`** (test `tGd`). A table lookup's spec (`name_get`, `expr_get`,
+`level_get`: `tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]`) was read as a list model
+with its other conjunct ignored (the rule for `i < 51`), so a generated caller would lose the
+check the refinements read the table with. For a callee listed in `guards`, those conjuncts are
+guards of the model (as for a total memory model: `¬ g` is `none`), and a list literal gives its
+elements (`tblW m NID i`, not `List.headD [tblW m NID i] 0`). Off by default: no existing model
+changed (the gate build rebuilt every `l_model` module).
+
+`Front/ApplyExpr`'s `node_bin`, `node_let`, `node_proj` generated with it (mgen's batch 4 had
+rejected `ApplyExpr` for time). The generated models check the lookups one at a time where the
+hand ones checked their conjunction (`if tblOK … ∧ tblOK … then … else none`), so the three
+refinements' `split` became a `by_cases` on the conjunction and a `simp` through the generated
+`if`s; `node_bin`'s three constructor calls join in `binW.k_mk_app` (one identity lemma,
+`binW_k`). `nodeW`/`applyExprW` (hand) moved below the generated models they call. The other
+`ApplyExpr` functions stay for now (`ls_put` is a fuel-free model over the input buffer `b`;
+`node_lit`/`node_lit_str`/`node_const`/`expr_node`/`apply_expr` carry the buffer and pool
+preconditions through their callees).
+
+| module | instructions | user s |
+|---|---|---|
+| `L/ModelGenTest` | 85.0 → 86.1 G | 21.4 → 20.7 |
+| `Front/ApplyExpr` | 33.3 → 33.8 G | 7.1 → 7.3 |
+| `Front/ApplyExprRefine` | 11.3 → 11.4 G | 2.4 → 2.6 |
+| `Front/FrontPreOK1` | 14.9 → 15.5 G | 2.7 → 2.6 |
+
+Lines: `ApplyExpr` and users +74 −100; the generator +46 −13, its test +24.

@@ -329,6 +329,13 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
       MemFrame.modeOK hf (by decide) (by decide) hmode⟩
   · cases hI
 
+omit hA hD hmode in
+/-- `node_bin`'s generated join after the constructor call passes its result on. -/
+theorem binW_k (o : Option (Word × Mem)) : binW.k_mk_app o = o := by
+  cases o with
+  | none => rfl
+  | some v => obtain ⟨_, _⟩ := v; rfl
+
 theorem node_bin (k : Word) (hk : k = 10 ∨ k = 11 ∨ k = 12) (x y z : Word) (p q : Nat)
     (hx : ItemR x p) (hy : ItemR y q) (r : ExprRec)
     (hr : r = (if k = 10 then ExprRec.app else if k = 11 then ExprRec.lam else ExprRec.forallE) p q)
@@ -336,40 +343,40 @@ theorem node_bin (k : Word) (hk : k = 10 ∨ k = 11 ∨ k = 12) (x y z : Word) (
   have hk8 : k ≠ 8 := by rcases hk with rfl | rfl | rfl <;> decide
   have hk9 : k ≠ 9 := by rcases hk with rfl | rfl | rfl <;> decide
   simp only [nodeW, hk8, hk9, hk, ↓reduceIte, binW] at hI
-  split at hI
-  · rename_i hok
+  by_cases hok : tblOK m EID x = true ∧ tblOK m EID y = true
+  · simp only [hok.1, hok.2, not_true_eq_false, ↓reduceIte] at hI
     obtain ⟨hgx, hwx, hnx⟩ := tbl_read hD.exprs x hok.1
     obtain ⟨hgy, hwy, hny⟩ := tbl_read hD.exprs y hok.2
     rw [itemR_eq hx hnx, itemR_eq hy hny] at hr
     rcases hk with rfl | rfl | rfl
-    · simp only [↓reduceIte] at hI hr; subst hr
+    · simp only [↓reduceIte, binW_k] at hI hr; subst hr
       have hop : exprOp st (.app x.toNat y.toNat) =
           internE (.app (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkApp_ok m a hA _ _ _ _ hI
       unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkAppW_above hI), mkAppW_mode hI hmode⟩
-    · simp only [show (11 : Word) ≠ 10 by decide, ↓reduceIte] at hI hr; subst hr
+    · simp only [show (11 : Word) ≠ 10 by decide, ↓reduceIte, binW_k] at hI hr; subst hr
       have hop : exprOp st (.lam x.toNat y.toNat) =
           internE (.lam (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkLam_ok m a hA _ _ _ _ hI
       unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLamW_above hI), mkLamW_mode hI hmode⟩
     · simp only [show (12 : Word) ≠ 10 by decide, show (12 : Word) ≠ 11 by decide,
-        ↓reduceIte] at hI hr; subst hr
+        ↓reduceIte, binW_k] at hI hr; subst hr
       have hop : exprOp st (.forallE x.toNat y.toNat) =
           internE (.forallE (decI (tblW m EID x)) (decI (tblW m EID y))) := by
         simp [exprOp, StateD.expr, hgx, hgy]
       obtain ⟨h1, h2, h3⟩ := mkForall_ok m a hA _ _ _ _ hI
       unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkForallW_above hI), mkForallW_mode hI hmode⟩
-  · cases hI
+  · by_cases h1 : tblOK m EID x = true <;> by_cases h2 : tblOK m EID y = true <;> simp [h1, h2] at hok hI
 
 theorem node_let (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) (hz : ItemR z t)
     (hI : nodeW b.data m 13 x y z = some (w, m₁)) : NodeOK st (.letE p q t) a m₁ w := by
   simp only [nodeW, show (13 : Word) ≠ 8 by decide, show (13 : Word) ≠ 9 by decide,
     show (13 : Word) ≠ 10 by decide, show (13 : Word) ≠ 11 by decide,
     show (13 : Word) ≠ 12 by decide, or_false, ↓reduceIte, letW] at hI
-  split at hI
-  · rename_i hok
+  by_cases hok : tblOK m EID x = true ∧ tblOK m EID y = true ∧ tblOK m EID z = true
+  · simp only [hok.1, hok.2.1, hok.2.2, not_true_eq_false, ↓reduceIte] at hI
     obtain ⟨hgx, -, hnx⟩ := tbl_read hD.exprs x hok.1
     obtain ⟨hgy, -, hny⟩ := tbl_read hD.exprs y hok.2.1
     obtain ⟨hgz, -, hnz⟩ := tbl_read hD.exprs z hok.2.2
@@ -379,7 +386,8 @@ theorem node_let (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) 
       simp [exprOp, StateD.expr, hgx, hgy, hgz]
     obtain ⟨h1, h2, h3⟩ := mkLet_ok m a hA _ _ _ _ _ hI
     unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkLetW_above hI), mkLetW_mode hI hmode⟩
-  · cases hI
+  · by_cases h1 : tblOK m EID x = true <;> by_cases h2 : tblOK m EID y = true <;>
+      by_cases h3 : tblOK m EID z = true <;> simp [h1, h2, h3] at hok hI
 
 theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q) (hz : ItemR z t)
     (hI : nodeW b.data m 14 x y z = some (w, m₁)) : NodeOK st (.proj p q t) a m₁ w := by
@@ -387,8 +395,9 @@ theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q)
     show (14 : Word) ≠ 10 by decide, show (14 : Word) ≠ 11 by decide,
     show (14 : Word) ≠ 12 by decide, show (14 : Word) ≠ 13 by decide, or_false,
     ↓reduceIte, projW] at hI
-  split at hI
-  · rename_i hok
+  by_cases hok : y ≠ NONE ∧ tblOK m NID x = true ∧ tblOK m EID z = true
+  · have hy0 : y ≠ 18446744073709551615 := hok.1
+    simp only [hy0, hok.2.1, hok.2.2, not_true_eq_false, ↓reduceIte] at hI
     obtain ⟨hgx, -, hnx⟩ := tbl_read hD.names x hok.2.1
     obtain ⟨hgz, -, hnz⟩ := tbl_read hD.exprs z hok.2.2
     rw [itemR_eq hx hnx, itemR_eq hy hok.1, itemR_eq hz hnz]
@@ -397,7 +406,8 @@ theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q)
       simp [exprOp, StateD.expr, StateD.name, hgx, hgz]
     obtain ⟨h1, h2, h3⟩ := mkProj_ok m a hA _ _ _ _ _ hI
     unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkProjW_above hI), mkProjW_mode hI hmode⟩
-  · cases hI
+  · by_cases h1 : y = 18446744073709551615 <;> by_cases h2 : tblOK m NID x = true <;>
+      by_cases h3 : tblOK m EID z = true <;> simp [h1, h2, h3, NONE] at hok hI
 
 theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
     (n : Nat) (hv : NatValR b y z n) (hI : nodeW b.data m 16 x y z = some (w, m₁)) :
