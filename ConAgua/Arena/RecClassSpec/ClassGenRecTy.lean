@@ -42,7 +42,8 @@ def rec2MotVarF (n : Nat) (m : Mem) (g c : Word) : Option (List Word × Mem) :=
 
 theorem slotVarW_afr {m m' : Mem} {g s : Word} {r : List Word} (h : slotVarW m g s = some (r, m')) :
     AFr m m' := by
-  simp only [slotVarW, svK2.eq_def] at h
+  simp only [slotVarW, slotVarW.k_pin_word.eq_def, slotVarW.k_intern_sort.eq_def,
+    slotVarW.k_intern_fvar.eq_def] at h
   afr_auto h [sointernW_afr, fvinternW_afr]
 
 theorem rec2MotVarF_afr {n : Nat} {m m' : Mem} {g c : Word} {r : List Word}
