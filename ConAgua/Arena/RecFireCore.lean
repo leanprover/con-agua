@@ -242,23 +242,19 @@ theorem slpOne_core {n : Nat} {m m₁ : Mem} {a : AState} {ko kc vo vc w h : Wor
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hE : ILWEnv m a ko kc vo vc ks us vs)
     (hn : nameN a.store.lss.ls.ns w nm) (hh : h.toNat < 2 ^ 32)
-    (hW : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) = some (h, m₁)) :
+    {f v : Word} (e : lookupW (keyA SPN) POOL n m ko kc vo vc w = some (f, v))
+    (hW : (if f ≠ 0 then lvInternW n m v else pinternW m w) = some (h, m₁)) :
     ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧
       LvOut dn vis fe M eb m m₁ a a₁ h := by
   have htop := m.top.toNat_lt
   have h41 := hS.arena.base.lit.1.top41
   have hv := lvsR_of_slice hS.arena.base us vs vo vc hE.vals (by have := hE.vtop; omega) hE.vden
-  cases e : lookupW (keyA SPN) POOL n m ko kc vo vc w with
-  | none => rw [e] at hW; simp [slpOne] at hW
-  | some fv =>
-  obtain ⟨f, v⟩ := fv
-  rw [e] at hW
   rcases lookupW_ok (nameN_rel _ hS.nwf) n _ _ _ _ _ _ _ _ _ _ _ hE.keys.toK hv.toAR hn e with
     ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
-  · rw [slpOne_hit n m w f v hf] at hW
+  · rw [ite_eq_left hf] at hW
     obtain ⟨a₁, hrun, o⟩ := lvInternW_core _ n m a v h m₁ hS hvl hW
     exact ⟨a₁, by simpa [Level.subst] using hrun, o⟩
-  · rw [slpOne_miss] at hW
+  · simp only [ne_eq, not_true_eq_false, ↓reduceIte] at hW
     have hnb : ¬ (4294967296 : Word) ≤ h := fun c => by
       have := UInt64.le_iff_toNat_le.mp c; simp at this; omega
     have hW' : lvInternW.k_intern_zero (pinternW m w) = some (h, m₁) := by rw [hW]; simp [lvInternW.k_intern_zero, hnb]
@@ -298,7 +294,7 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     cases n with
     | zero => simp [slpW] at hW
     | succ n =>
-    rw [slpW_nil n m o 0 b ko kc vo vc rfl] at hW; cases hW
+    rw [slpW.arm1 (hc1 := rfl)] at hW; cases hW
     exact ⟨[], a, rfl, hS, ILWGrow.refl a, StackKept.refl m, by simp [sliceL, lsWords],
       fun _ _ => rfl, by simp⟩
   | cons u ids ih =>
@@ -312,22 +308,15 @@ theorem slpElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     cases n with
     | zero => simp [slpW] at hW
     | succ n =>
-    rw [slpW_cons n m o l b ko kc vo vc hl0, hrd] at hW
-    cases hSb : slpOne n m w (lookupW (keyA SPN) POOL n m ko kc vo vc w) with
-    | none => rw [hSb] at hW; simp [slpK] at hW
-    | some r =>
-    obtain ⟨h, m₁⟩ := r
-    rw [hSb, slpK_some] at hW
-    by_cases hh : 4294967296 ≤ h
-    · simp only [hh, ↓reduceIte] at hW; cases hW
-    simp only [hh, ↓reduceIte] at hW
+    obtain ⟨f, v, h, m₁, hlk, hSb, hh, hW⟩ := slpW_cons_some hl0 hW
+    rw [hrd] at hlk hSb
     have hhw : h.toNat < 2 ^ 32 := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hh)
     -- the twin reads the name back
     obtain ⟨X, hrl, hX⟩ := readNameM_run' a (decI w) nm hnm hS.den.readN
     have hSc := hS.withReadNC X hX
     have hEc : ILWEnv m { a with caches := { a.caches with readNC := X } } ko kc vo vc ks us vs :=
       hE.keep (StackKept.refl m) (ILWGrow.of_lss rfl)
-    obtain ⟨a₁, hrun₁, o₁⟩ := slpOne_core hSc hEc ⟨hw, hnm⟩ hhw hSb
+    obtain ⟨a₁, hrun₁, o₁⟩ := slpOne_core hSc hEc ⟨hw, hnm⟩ hhw hlk hSb
     obtain ⟨hS₂, hk₂⟩ := stackPut_core (h := h) o₁.core o₁.stack hb
     have hg₁ : ILWGrow { a with caches := { a.caches with readNC := X } } a₁ := o₁.step.grow
     have herec₂ : erecP (m₁.set64 SPN b h) = erecP m := by
