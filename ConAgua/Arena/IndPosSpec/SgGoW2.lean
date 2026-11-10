@@ -7,7 +7,6 @@ import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
-public import ConAgua.Arena.IndPosSpec.RxMapW
 
 @[expose] public section
 
