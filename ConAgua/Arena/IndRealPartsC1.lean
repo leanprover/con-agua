@@ -95,12 +95,13 @@ theorem bmgW_afr : ∀ (n : Nat) (m m' : Mem) (nPd k nC no nl ro rl cto ctl idx 
     bmgW n m nPd k nC no nl ro rl cto ctl idx = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [bmgW] at h
   | n + 1, m, m', nPd, k, nC, no, nl, ro, rl, cto, ctl, idx, r, h => by
-    simp only [bmgW, bmgK1.eq_def, bmgK2.eq_def, bmgK3.eq_def, bsK3.eq_def] at h
+    simp only [bmgW, bmgW.k_block_member_counts_find.eq_def, bmgW.k_block_counts.eq_def,
+      bmgW.k_block_member_counts_go.eq_def, bmgW.k_sl_cons.eq_def] at h
     afr_auto h [bmgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _, bmfW_afr n _ _ _ _ _ _ _ _, bcW_afr, consW_afr]
 
 theorem bmcW_afr {n : Nat} {m m' : Mem} {nPd k nC no nl ro rl cto ctl : Word} {r : List Word}
     (h : bmcW n m nPd k nC no nl ro rl cto ctl = some (r, m')) : AFr m m' := by
-  simp only [bmcW, bmfK2.eq_def] at h
+  simp only [bmcW, bmcW.k_block_member_counts_go.eq_def] at h
   afr_auto h [bmgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
 
 /-! ## `block_shape_pins_ok` -/

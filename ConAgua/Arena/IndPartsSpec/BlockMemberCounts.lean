@@ -52,7 +52,7 @@ theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s
     s₀.mem a₀ cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.bound; omega)
   rcases hb : bmgW n s₀.mem nPd k nC no nl ro rl cto ctl 0 with _ | ⟨r1, m1⟩ <;> rw [hb] at hm
   · cases hm
-  rw [bmfK2_some] at hm
+  rw [bmcW.k_block_member_counts_go.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨hok, hR, hS', hg'⟩ := Sim.run hsim hb
   exact ⟨hl, hok, NsR_three hR, hS', hg'⟩

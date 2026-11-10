@@ -1351,7 +1351,7 @@ theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     m a cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.bound; omega)
   rcases hb : bmgW n m nPd k nC no nl ro rl cto ctl 0 with _ | ⟨r1, m1⟩ <;> rw [hb] at hm
   · cases hm
-  rw [bmfK2_some] at hm
+  rw [bmcW.k_block_member_counts_go.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨x, a', h1, hR, hS', hg'⟩ := hsim r1 m1 hb
   exact ⟨x, a', h1, NsR_three hR, hS', hg'⟩
