@@ -157,12 +157,12 @@ theorem blockNamesEqW_ok : ∀ (n : Nat) (m m' : Mem) (ao al bo bl : Word) (A B 
   have ex : erRd m (rdW (m.arr64 IW) ao + 1) = wx := (erRdOK m).off hwx (by simp)
   have ey : erRd m (rdW (m.arr64 IW) bo + 1) = wy := (erRdOK m).off hwy (by simp)
   by_cases h3 : wx ≠ wy
-  · rw [ite_eq_left (by simpa only [erRd, ex, ey] using h3)] at h; cases h
+  · rw [ite_eq_left (by simpa only [L.Ind.erRd_foldN, ex, ey] using h3)] at h; cases h
     refine ⟨rfl, rfl, by
       simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, blockNames, List.map_cons,
         List.cons.injEq, not_and]
       intro he; exact absurd (decI_inj hwx32 hwy32 (hnx ▸ hny ▸ he)) h3⟩
-  rw [ite_eq_right (by simpa only [erRd, ex, ey] using h3)] at h
+  rw [ite_eq_right (by simpa only [L.Ind.erRd_foldN, ex, ey] using h3)] at h
   have h3' : wx = wy := by simpa using h3
   cases hrec : blockNamesEqW n m (ao + 1) (al - 1) (bo + 1) (al - 1) with
   | none => rw [hrec] at h; simp [blockNamesEqW.k_block_names_eq] at h
@@ -311,6 +311,7 @@ theorem atBlockGoW_ok (hB : BasisLProg p) :
   obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hcv
   rw [word_add11, word_add12] at hsl
   have hps := (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).2.1
+  simp only [L.Ind.erRd_foldN] at h
   cases h1 : callW p n "ci_at_lps" [rdW (m.arr64 IW) po, erRd m (rdW (m.arr64 IW) co + 2),
       erRd m (rdW (m.arr64 IW) co + 3)] m with
   | none => rw [h1] at h; simp [atBlockGoW.k_ci_at_lps] at h

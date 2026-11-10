@@ -281,13 +281,13 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     · refine .inl (RefE.ret (by rw [iotaRecFire2T, ite_eq_right h]; rfl) ⟨⟨MM, hS, KeptAll.refl _ _,
         StackKept.refl _⟩, (decOptR_none_rec _ rfl).symm, by show ResW [0, 0]; unfold ResW HW; decide⟩)
   by_cases l1 : mn < erRd s₀.mem (ctorP + 5)
-  · rw [if_pos (by exact l1)]
+  · erw [ite_eq_left l1]
     exact hres0.resolve_right fun h => (hlen_iff.mp h).1 l1
-  rw [if_neg (by exact l1)]
+  erw [ite_eq_right l1]
   by_cases l2 : mn - erRd s₀.mem (ctorP + 5) ≠ erRd s₀.mem (rl + 1)
-  · rw [ite_eq_left l2]
+  · erw [ite_eq_left l2]
     exact hres0.resolve_right fun h => l2 (hlen_iff.mp h).2
-  rw [ite_eq_right l2]
+  erw [ite_eq_right l2]
   have hlen : margs.toList.length = np + rule.nfields :=
     hlen_iff.mpr ⟨l1, Classical.not_not.mp l2⟩
   have hcpm : np ≤ mn.toNat := by omega
@@ -345,8 +345,8 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   refine RefE.bindLift (fun _ => rfl) fun ry m4 c4 => ?_
   obtain ⟨hrun4, hD4, hf4, hw4⟩ := irCallW_mkAppNFrom p hp.spine (N + 1) m3 _ hD3 _ _ _ _ _ hw3 hsm3
-    (by rw [← hcpw]; exact hcpm) ry m4 c4
-  rw [mkAppNFrom_eq_mkAppN' margs.size _ margs _ (by omega) (by rw [hsm.size, ← hcpw]; exact hcpm),
+    (by erw [← hcpw]; exact hcpm) ry m4 c4
+  erw [mkAppNFrom_eq_mkAppN' margs.size _ margs _ (by omega) (by erw [hsm.size, ← hcpw]; exact hcpm),
     ← hcpw] at hrun4 hD4
   have hS4 := hS3.of_app hD4 (cpl_mkAppN _ _ _ _ _ hrun4) hf4
   have hSt4 := StackKept.of_app_frame hf4
