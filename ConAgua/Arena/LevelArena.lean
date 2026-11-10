@@ -475,7 +475,7 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hw₁ (by rw [decI_word]; exact hv₁)
     obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hR hw₂ (by rw [decI_word]; exact hv₂)
     rw [e₁, e₂] at h
-    simp only [List.headD_cons, List.tail_cons, reduceCtorEq, or_self, ↓reduceIte] at h
+    simp only [List.headD_cons, List.tail_cons, reduceCtorEq, ↓reduceIte] at h
     have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
       ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
     have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
