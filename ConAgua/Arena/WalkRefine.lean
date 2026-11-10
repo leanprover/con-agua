@@ -316,11 +316,11 @@ theorem bbMemoW_correctF (n F : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
   simp only [h0, ↓reduceIte] at hb
   have hR₀ := ArenaR.memo_clear m a hR h0
   cases hw : bbW n (mclearG bmSch m) h c with
-  | none => simp [hw, clrK] at hb
+  | none => simp [hw, bbMemoW.k_bb_go] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
-    have h1 : ¬ rdW (m₁.arr64 CTL) 24 + 2 = 0 := fun h1 => by simp [hw, clrK, h1] at hb
-    simp only [hw, clrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
+    have h1 : ¬ rdW (m₁.arr64 CTL) 24 + 2 = 0 := fun h1 => by simp [hw, bbMemoW.k_bb_go, h1] at hb
+    simp only [hw, bbMemoW.k_bb_go, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hR₁⟩ := (goOK n).1 F _ _ _ h c r₁ hF hR₀ hh hw
     exact ⟨_, by rw [bvarBoundMemo_run, ha₁]; rfl, ArenaR.memo_clear m₁ a₁ hR₁ h1⟩

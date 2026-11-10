@@ -14,7 +14,7 @@ import all ConAgua.Arena.Pins
 /-!
 # NestContParamsClosed
 
-`new1W_rec`, `cpW_nil`, `cpW_cons`, `cpK1_b`, `cpK1_ok`, `cpK2_out` and the lemmas only they use.
+`new1W_rec` and the lemmas only it uses.
 -/
 
 noncomputable section
@@ -41,38 +41,6 @@ end L.Ind
 namespace L.Ind
 
 open L.Arena
-
-section arms
-variable (n : Nat) (m m1 : Mem) (hp dO dL bb : Word) (r : List Word)
-theorem cpW_nil (h : dL = 0) : cpW (n + 1) m hp dO dL = some ([1], m) := by simp [cpW, h]
-theorem cpW_cons (h : ¬ dL = 0) : cpW (n + 1) m hp dO dL = cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO) CWF) := by
-  simp [cpW, h]
-theorem cpK1_b (h : bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) = some ([0], m1) := by simp [cpK1, h]
-theorem cpK1_ok (h : ¬ bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) =
-    cpK2 n hp dO dL (fvbF m1 [CWF, rdW (m1.arr64 IW) dO]) := by simp [cpK1, h]
-theorem cpK2_out (h : hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = some ([0], m1) := by
-  rw [cpK2, ite_eq_left h]
-theorem cpK2_in (h : ¬ hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = cpW n m1 hp (dO + 1) (dL - 1) := by
-  rw [cpK2, ite_eq_right h]
-end arms
-attribute [ind_grind] cpW_nil cpW_cons cpK1_b cpK1_ok cpK2_out cpK2_in
-
-theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p) (hf : HfF p)
-    (hp : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL) (n : Nat) :
-    ∀ (s₀ : St) (hpw dO dL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_params_closed" [hpw, dO, dL]
-    ⦃fun r s' => LocEq s' s₀ ∧ cpW n s₀.mem hpw dO dL = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ hpw dO dL
-    rw [invoke_eq _ hp]; simp only [callFn, nestContParamsClosedL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ hpw dO dL
-    simp only [invoke_eq _ hp, callFn, nestContParamsClosedL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        bvarBL_spec p hb n, fvbF_spec p hf n, ih] <;>
-      finish (gen := 20) [rdW_eq]
 
 end L.Ind
 

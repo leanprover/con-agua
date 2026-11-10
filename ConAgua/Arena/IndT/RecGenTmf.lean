@@ -279,14 +279,13 @@ theorem tmo_ref {p : Prog} (hP : TmoOProg p) (hIlpf : IlpfF p) (hK : KnotStagePr
   · rw [callW_zero] at h2; cases h2
   obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (tco_spec p hP.nt hP.tco k _ vis I) h2
   rcases k with _ | k'
-  · simp [ntWf, tcoPK] at hW2
-  rcases hnt : ntW k' m vis I with _ | y
-  · rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt] at hW2; simp [tcoPK] at hW2
+  · simp [ntWf.eq_1, tcoPK] at hW2
+  rcases hnt' : ntWf (k' + 1) m vis I with _ | y
+  · rw [hnt'] at hW2; simp [tcoPK] at hW2
   obtain ⟨r, m'⟩ := y
-  rw [show ntWf (k' + 1) _ vis I = ntW k' _ vis I from rfl, hnt, tcoPK_some] at hW2
+  rw [hnt', tcoPK_some] at hW2
   obtain ⟨rfl, hm'⟩ := Prod.mk.inj (Option.some.inj hW2)
-  obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok fe vis I hI k' m m' a r hnt hS
-  have hnt' : ntWf (k' + 1) m vis I = some (r, m') := hnt
+  obtain ⟨x, a', hrun, hS2, hg2, hout⟩ := ntW_ok fe vis I hI k' m m' a r hnt' hS
   obtain ⟨p2, -⟩ := ConRon.Bridge.Inductives.targetCtorsOf_spec (env := env) fe (decI I) IP a a' x
     hC.check.state ⟨hC.check.ienv.toS, hIP⟩ hrun
   have k2 := TmAt.pstep hC hS2 (ntWf_afr hnt' hA) hg2 (hPm.fr (ntWf_mfr hnt')) p2

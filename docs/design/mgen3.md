@@ -327,3 +327,46 @@ preconditions through their callees).
 | `Front/FrontPreOK1` | 14.9 → 15.5 G | 2.7 → 2.6 |
 
 Lines: `ApplyExpr` and users +74 −100; the generator +46 −13, its test +24.
+
+### Batch 10: helper `mgen3-parts` (round 2)
+
+36 functions; 30 files, +655 −2162 (**−1507**), #250. `DeclCanonInfo`'s `ci_canon_defn/rec/eq`
+(the round-1 skip: the program binder must be `p`); `close_lams`, `class_rec_of`, `expr_get_d`;
+`IhW` (4, one with `pfuel`; 91.6 → 77.7 G); `CrW`/`Classes` (`class_read_slots` with its
+`_next`, `class_read_finish`, `class_read_rec_cls`; 126.3 → 103.4 G); `MnW` (66.3 → 41.3 G);
+`Verdict/IndBRec4` (30.7 → 16.3 G); `BpcW`'s four `block_shape_pins_*` (`pfuel`; `Bf` 97.1 →
+78.2 G); `BmoW`, `RecTW`'s `rec_target_of`, `BmgW` (38.9 → 20.0 G), `BlockRecNameSetOk`,
+`SetEqW`, `BsoK2`, `Icp`, `TpsW`, `RpLook`. The slowest module after is `CrW` at 22 s (before
+23 s); none got worse than 3×. Kept: functions whose models other helpers' files take apart
+(`mentions_any_const`, `ptr_names_copy`, `class_gen_rule`, `erase_fvar_tys` and its family,
+`ctors_have_name`, the `RulePrefixAt` family), `block_shape_fin/tail` and
+`block_rec_name_set_ok` (callees at several fuels), pure specs with nothing to generate
+(`class_read_n_slots`, `class_gen_minor_ci`), `rule_copy`. The lead fixed the imports `shake`
+found (one allowlisted: `NestCtx` names `blockShapeLps_spec2` in a `vcgen` list only).
+
+Generator observations from this round: a pure callee tested in an `if` elaborates its
+`if … then 1 else 0` at `Nat` (arms carry `(1 : Nat)`); a pure post `r = [a, b, c, d]` is
+inlined as `List.headD [a, b, c, d] 0` (batch 9's literal rule applies only under `guards`);
+a continuation sometimes carries a model parameter it does not use; `EREC` loads are
+`rdW (… tierA EREC …)` (`simp only [erRd_foldN]` bridges).
+
+### Batch 11: `node_lit`, `expr_node` (lead)
+
+`node_lit` generated with `pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤
+pcap s₀.mem]` and `keep [hE.no_st8]` (the hand proof's `Triple.keep` around `nat_dec`): the
+generated model is the hand one (`litK` is `litW.k_nat_dec b`). `expr_node` generated over the
+others' specs, with `guards ["level_get"]`: its model is the hand `nodeW` but for the sort
+case's guard, now `¬ tblOK … = true` first. The hand `applyExpr_spec` proof goes through as it
+was over the generated `exprNode_spec` (its precondition a side goal the `finish` closes).
+Not generated: `node_lit_str` (`str_put_esc`'s post `r.headD 0 = s₀.mem.top ∧ strPutEscW … =
+some (r.tail.headD 0, s'.mem)` is not a model shape), `node_const` (`ls_put`'s post is a list
+and a memory model at once: "ambiguous post"), `ls_put` (fuel-free over `b`), `apply_expr`
+(its model's `putK` is `Front/IdTable`'s, shared with the other `apply_*`).
+
+| module | instructions (batch 9 → 11) | user s |
+|---|---|---|
+| `Front/ApplyExpr` | 33.8 → 37.7 G | 7.3 → 7.2 |
+| `Front/ApplyExprRefine` | 11.4 → 11.5 G | 2.6 → 2.1 |
+| `Front/FrontPreOK1` | 15.5 → 15.5 G | 2.6 → 2.3 |
+
+Lines: +48 −87 (**−39**).

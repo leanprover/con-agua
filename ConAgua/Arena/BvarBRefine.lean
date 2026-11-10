@@ -157,10 +157,10 @@ theorem bbMemoW_frame (n : Nat) (m m' : Mem) (h c r : Word) (hb : bbMemoW n m h 
   split at hb
   · cases hb
   cases hw : bbW n (mclearG bmSch m) h c with
-  | none => simp [hw, clrK] at hb
+  | none => simp [hw, bbMemoW.k_bb_go] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
-    simp only [hw, clrK] at hb
+    simp only [hw, bbMemoW.k_bb_go] at hb
     split at hb
     · cases hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb

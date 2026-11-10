@@ -124,25 +124,6 @@ def dsF (hi : Nat) (x : EIdx) : AM Bool := do
   let b ← fvarB coreWalkFuel x
   pure (decide (b ≤ hi))
 
-mutual
-def dcGoW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, hi, off, l =>
-    if l = 0 then some ([1], m)
-    else dcK n hi off l (fvbF m [CWF, rdW (m.arr64 IW) off])
-def dcK (n : Nat) (hi off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => if hi < r.headD 0 then some ([0], m1) else dcGoW n m1 hi (off + 1) (l - 1)
-end
-
-/-- The model of `nest_ds_closed(ctx, off, l)` at exec fuel `n + 1`. -/
-def dcW (n : Nat) (m : Mem) (ctx off l : Word) : Option (List Word × Mem) := dcGoW n m (nhiW m ctx 0) off l
-
-/-- `nest_ds_closed` at any exec fuel. -/
-def dcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, ctx, off, l => dcW n m ctx off l
-
 /-- The lookups of `nest_ds_closed`. -/
 structure DcLook (p : Prog) : Prop where
   hf : HfF p

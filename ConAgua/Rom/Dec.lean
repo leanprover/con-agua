@@ -400,15 +400,15 @@ theorem romLvlsW_dec : ∀ (n : Nat) (m : Mem) (q k r : Word) (m' : Mem),
     intro m q k r m' hW
     by_cases hk : k = 0
     · subst hk
-      rw [romLvlsW_zero] at hW
+      rw [romLvlsW.arm1 (hc1 := rfl)] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hq, -⟩ := hW
       subst hq
       exact ⟨[], rom.drop q.toNat, by simp [encLevelList], rfl, by simp, by simp [encLevelList]⟩
-    rw [romLvlsW_succ rom n m q k hk] at hW
+    rw [romLvlsW.arm2 (hc1 := hk)] at hW
     rcases hN : romLevelW rom n m q with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hN] at hW
-    · simp [lvlsK] at hW
-    simp only [lvlsK] at hW
+    · simp [romLvlsW.k_rom_level] at hW
+    simp only [romLvlsW.k_rom_level, decide_eq_true_eq, ite_not] at hW
     split at hW
     case isFalse => simp at hW
     obtain ⟨u, rest₁, hd1, hf1, hq1⟩ := romLevelW_dec rom hr n m q h₁ q₁ m₁ hN

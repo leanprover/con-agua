@@ -242,7 +242,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
       show ∀ x, (viewSort x).run a = .ok (a.store.viewSort x, a) from fun _ => rfl, hvs,
       except_ok_bind, pr_readLevel_run a _ l hl]
     rfl
-  simp only [pushedK] at hW
+  simp only [rpwW.k_lv_zero] at hW
   rcases hZ with ⟨hx, hpw⟩ | ⟨hx, ps, hpw, hnm⟩
   · simp only [hx, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ↓reduceIte,
       Option.some.injEq, Prod.mk.injEq] at hW
@@ -254,7 +254,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     refine ⟨_, hrun, RdAfter.heap hS he, ?_⟩
     rw [hpw]
     refine ⟨rfl, hnm, ?_⟩
-    have := he.top
+    have := he.top; simp only [L.Arena.htop] at this ⊢
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
     omega
 
@@ -417,7 +417,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
       M eb := (CoreS.readCaches ((RdAfter.heap hS he).1) X Y (by exact hcY) hcX)
   have hRd : RdAfter dn m m₁ a { a with caches := { a.caches with readNC := X, readLsC := Y } }
       vis fe M eb := ⟨hS', (RdAfter.heap hS he).2.1, (RdAfter.heap hS he).2.2.1, rfl⟩
-  simp only [pushedK] at hW
+  simp only [spaW.k_lv_spw] at hW
   rcases hZ with ⟨hx, hpw⟩ | ⟨hx, qs, hpw, hq⟩
   · simp only [hx, ne_eq, show (1 : Word) ≠ 0 by decide, not_false_eq_true, ↓reduceIte,
       Option.some.injEq, Prod.mk.injEq] at hW
@@ -434,7 +434,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     rw [show Level.substPW ks vs (.ifAllZero (x₀ :: ps₀)) =
       PropWhen.bindZ.go (spwF ks vs) (x₀ :: ps₀) from rfl, hpw]
     refine ⟨rfl, hq, ?_⟩
-    have := he.top
+    have := he.top; simp only [L.Arena.htop] at this ⊢
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
     omega
 

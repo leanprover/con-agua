@@ -55,15 +55,17 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
   | zero => intro m m' a po pl qo ql co cl fuel x y r ps qs cs h; simp [ceW] at h
   | succ n ih =>
     intro m m' a po pl qo ql co cl fuel x y r ps qs cs h hS hC hL hP hx hy
-    rw [ceW_succ] at h
+    rw [ceW] at h
     have hf : ¬ fuel = 0 := fun hf => by rw [ite_eq_left hf] at h; simp at h
-    rw [ite_eq_right hf, ceK0_def] at h
-    by_cases hne : eViewW m x = [] ∨ eViewW m y = []
-    · rw [ite_eq_left hne] at h; simp at h
-    rw [ite_eq_right hne] at h
-    rw [not_or] at hne
-    obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.check.arena.base x hne.1
-    obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.check.arena.base y hne.2
+    rw [ite_eq_right hf] at h
+    by_cases hne1 : eViewW m x = []
+    · rw [ite_eq_left hne1] at h; simp at h
+    rw [ite_eq_right hne1] at h
+    by_cases hne2 : eViewW m y = []
+    · rw [ite_eq_left hne2] at h; simp at h
+    rw [ite_eq_right hne2] at h
+    obtain ⟨vx, hvx, hrx⟩ := eViewW_ok m a hS.check.arena.base x hne1
+    obtain ⟨vy, hvy, hry⟩ := eViewW_ok m a hS.check.arena.base y hne2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := toNat_pred hf
     rw [hfuel, ConRon.Arena.canonExprEq.eq_2, StateT.run_bind, view_run _ _ _ hvx, exc_ok_bind',
       StateT.run_bind, view_run _ _ _ hvy, exc_ok_bind']
@@ -122,9 +124,9 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       obtain ⟨e0, hl1, hu1⟩ := hrx
       obtain ⟨f0, hl2, hu2⟩ := hry
       cases hc : cnClW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
-      | none => rw [hc] at h; simp [ceKL] at h
+      | none => rw [hc] at h; simp [ceW.k_canon_level_eq] at h
       | some r1 =>
-      rw [hc, ceKL_some] at h
+      rw [hc] at h; simp only [ceW.k_canon_level_eq] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨b, hb, hrb⟩ := clW_ok n m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
         hS.check.arena.base hC hl1 hl2
@@ -140,10 +142,10 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       · rw [ite_eq_right (fun h => h e)] at h
         cases hc : lsEqW n m po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0)
             (rv.tail.tail.headD 0) with
-        | none => rw [hc] at h; simp [ceKS] at h
+        | none => rw [hc] at h; simp at h
         | some x1 =>
         obtain ⟨r1, m1⟩ := x1
-        rw [hc, ceKS_some] at h
+        rw [hc] at h
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         obtain ⟨b, hb, hrb, hS', hg, hP'⟩ := lsEqW_ok n hc hS hC hl1 hl2 hP
         rw [hus1, hus2] at hb
@@ -165,10 +167,10 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       obtain ⟨f0, hw2, hf2, hw2', hx2⟩ := hry
       simp (config := { decide := true }) only [↓reduceIte] at h
       cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
-      | none => rw [hc] at h; simp [ceK1] at h
+      | none => rw [hc] at h; simp [ceW.k_canon_expr_eq] at h
       | some xx =>
       obtain ⟨r1, m1⟩ := xx
-      rw [hc, ceK1_some] at h
+      rw [hc, ceW.k_canon_expr_eq.eq_2] at h
       obtain ⟨b1, hb1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
         hS hC hL hP hw1 hw2
       rw [hf1, hf2] at hb1
@@ -192,10 +194,10 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
       obtain ⟨f0, hw2, ht2, hw2', hv2, hw2'', hb2⟩ := hry
       simp (config := { decide := true }) only [↓reduceIte] at h
       cases hc : ceW n m po pl qo ql co cl (fuel - 1) (ru.tail.headD 0) (rv.tail.headD 0) with
-      | none => rw [hc] at h; simp [ceK2] at h
+      | none => rw [hc] at h; simp [ceW.k_canon_expr_eq_2] at h
       | some xx =>
       obtain ⟨r1, m1⟩ := xx
-      rw [hc, ceK2_some] at h
+      rw [hc, ceW.k_canon_expr_eq_2.eq_2] at h
       obtain ⟨c1, hc1, hr1, hS1, hg1, hP1⟩ := ih m m1 a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hc
         hS hC hL hP hw1 hw2
       rw [ht1, ht2] at hc1
@@ -205,10 +207,10 @@ theorem ceW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
           rw [ite_eq_right hne] at h
           cases hd : ceW n m1 po pl qo ql co cl (fuel - 1) (ru.tail.tail.headD 0)
               (rv.tail.tail.headD 0) with
-          | none => rw [hd] at h; simp [ceK3] at h
+          | none => rw [hd] at h; simp [ceW.k_canon_expr_eq_3] at h
           | some yy =>
           obtain ⟨r2, m2⟩ := yy
-          rw [hd, ceK3_some] at h
+          rw [hd, ceW.k_canon_expr_eq_3.eq_2] at h
           obtain ⟨c2, hc2, hr2, hS2, hg2, hP2⟩ := ih m1 m2 a po pl qo ql co cl (fuel - 1) _ _ r2 ps qs cs hd
             hS1 (hC.grow hg1) hL hP1 hw1' hw2'
           rw [hv1, hv2] at hc2

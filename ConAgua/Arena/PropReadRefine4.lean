@@ -99,6 +99,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   generalize r.headD 0 = x₀ at hW ⊢
   generalize r.tail.headD 0 = x₁ at hW ⊢
   generalize r.tail.tail.headD 0 = x₂ at hW ⊢
+  unfold hppW at hW
   rcases hc1 : callW p n "find_proj" [vis, sn, i] m with _ | ⟨r₁, m₁⟩ <;> rw [hc1] at hW
   · cases hW
   obtain ⟨hok, hafter, hres, -⟩ := CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -108,7 +109,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   replace hafter : CoreAfter dn m m₁ a vis fe M eb := hafter
   generalize ha₁ : a = a₁ at hafter
   subst ha₁
-  simp only [hppK1] at hW
+  simp only [hppW.k_find_proj] at hW
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
@@ -119,8 +120,12 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨tbl, htbl, -⟩ := hpf n m a dn vis fe M eb sn i r₁ m₁ hS hc1 h0
   obtain ⟨-, -, hE, -⟩ := hek n "find_proj" _ m r₁ m₁ rfl hc1
   obtain ⟨hbw, hbe⟩ := decTbl_body (erRdOK m) htbl i
-  simp only [hppB] at hW
+  simp only [L.Ind.erRd_foldN] at hW
+  replace hW : hppW.j1 p n vis f (if i < erRd m₁ (r₁.tail.headD 0 + 10) then
+      erRd m₁ (erRd m₁ (r₁.tail.headD 0 + 9) + i) else 0) m₁ = some (x₀, x₁, x₂, m') := by
+    rw [← hW]; by_cases hi : i < erRd m₁ (r₁.tail.headD 0 + 10) <;> simp only [hi, ↓reduceIte]
   rw [hE] at hW
+  unfold hppW.j1 at hW
   generalize (if i < erRd m (r₁.tail.headD 0 + 10) then
     erRd m (erRd m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
@@ -141,7 +146,7 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   have hpre := hcalc res₂ hrun₂
   clear hcalc
   have hA : CoreAfter dn m m₂ a₂ vis fe M eb := CoreAfter.comp hK₁ hSt₁ hRd₂.core
-  simp only [hppK2] at hW
+  simp only [hppW.k_type_sort_pw] at hW
   by_cases h1 : r₂.headD 0 = 1
   · simp only [h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
@@ -206,7 +211,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
       ∃ res a', (headProofPW fe f.toNat (decE h)).run a = .ok (res, a') ∧
         CoreAfter dn m m' a' vis fe M eb ∧ PWD (nameN a'.store.lss.ls.ns) m' x₀ x₁ x₂ res := by
     intro c hg h3 h1 h2 h6 h8 h9 hrun
-    simp only [vG, hg, h3, h1, h2, h6, h8, h9, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [hg, h3, h1, h2, h6, h8, h9, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     exact ⟨none, a, hrun, (RdAfter.refl hS).core, rfl⟩
   have hnev : ∀ c : Word, w.headD 0 = c → c ≠ 3 → c ≠ 1 → (c = 2 ∨ c = 6 ∨ c = 8) →
@@ -215,7 +220,7 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
         CoreAfter dn m m' a' vis fe M eb ∧ PWD (nameN a'.store.lss.ls.ns) m' x₀ x₁ x₂ res := by
     intro c hg h3 h1 hc hrun
     have hW' : some (1, 0, 0, m) = some (x₀, x₁, x₂, m') := by
-      rw [← hW]; simp only [vG, hg, h3, h1, ↓reduceIte]
+      rw [← hW]; simp only [hg, h3, h1, ↓reduceIte]
       rcases hc with rfl | rfl | rfl <;> simp
     simp only [Option.some.injEq, Prod.mk.injEq] at hW'
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW'
@@ -226,11 +231,11 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   · -- fvar
     obtain ⟨hg, -, hty, hty'⟩ := hVR
     rw [pr_getD2] at hty hty'
-    simp only [vG, vY, hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
+    simp only [hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
     rcases hc2 : callW p n "type_sort_pw" [vis, f, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩ <;>
       rw [hc2] at hW
     · cases hW
-    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [hpwW.k_head_proof_const, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     obtain ⟨res, a', hrun, hRd, hd⟩ := tsp_call hp hden hlps hS hf hty hc2
     refine ⟨res, a', ?_, hRd.core, by rw [hRd.2.2.2]; exact hd⟩
@@ -240,12 +245,12 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
     rw [pr_getD1] at hn hn'
     rw [pr_getD2] at husw hus'
-    simp only [vG, vX, vY, hg, ↓reduceIte] at hW
+    simp only [hg, ↓reduceIte] at hW
     rcases hc2 : callW p n "head_proof_const" [vis, f, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW
     rw [hc2] at hW
-    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [hpwW.k_head_proof_const, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     cases n with
     | zero => rw [callW_zero] at hc2; cases hc2
@@ -272,14 +277,14 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     obtain ⟨hg, hsw, hsn, hiw, -, -⟩ := hVR
     rw [pr_getD1] at hsw hsn
     rw [pr_getD2] at hiw
-    simp only [vG, vX, vY, hg, show (9 : Word) ≠ 3 by decide, show (9 : Word) ≠ 1 by decide,
+    simp only [hg, show (9 : Word) ≠ 3 by decide, show (9 : Word) ≠ 1 by decide,
       show (9 : Word) ≠ 2 by decide, show (9 : Word) ≠ 6 by decide, show (9 : Word) ≠ 8 by decide,
       ↓reduceIte] at hW
     rcases hc2 : callW p n "head_proof_proj" [vis, f, w.tail.headD 0, w.tail.tail.headD 0] m
       with _ | ⟨r₂, m₂⟩
     · rw [hc2] at hW; cases hW
     rw [hc2] at hW
-    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [hpwW.k_head_proof_const, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     obtain ⟨res, a', hrun, hA, hd⟩ := hpp_call hp hden hlps hfp hek hpf hS hf hsw hc2
     refine ⟨res, a', ?_, hA, hd⟩

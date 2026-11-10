@@ -7,6 +7,7 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.MapOKStep
@@ -21,7 +22,8 @@ import all ConAgua.Arena.RecGen
 /-!
 # KcW
 
-`tcpPW`, `tcpPWf`, `ckgW`, `ckgK`, `ckgW_done`, `ckgW_step` and the lemmas only they use.
+`tcpPW`, `tcpPWf`, the model and spec of `class_key_canon_go` (generated), `kcW` and the lemmas only they
+use.
 -/
 
 noncomputable section
@@ -48,43 +50,6 @@ def tcpPW (k : Nat) (m : Mem) (pfo pfl e : Word) : Option (Word × Mem) :=
 def tcpPWf : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
   | k + 1, m, pfo, pfl, e => tcpPW k m pfo pfl e
-
-mutual
-/-- **The model of `class_key_canon_go(po, pl, dO, dL, q, j)`.** -/
-def ckgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _, _, _ => none
-  | k + 1, m, po, pl, dO, dL, q, j =>
-    if dL ≤ j then some m
-    else ckgK k po pl dO dL q j (tcpPWf k m po pl (rdW (m.arr64 IW) (dO + j)))
-/-- After `target_canon_params`: write, recurse. -/
-def ckgK (k : Nat) (po pl dO dL q j : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (z, m2) => ckgW k (m2.set64 IW (q + j) z) po pl dO dL q (j + 1)
-end
-
-section arms
-variable (k : Nat) (m m2 : Mem) (po pl dO dL q j z : Word)
-theorem ckgW_done (h : dL ≤ j) : ckgW (k + 1) m po pl dO dL q j = some m := by simp [ckgW, h]
-theorem ckgW_step (h : ¬ dL ≤ j) : ckgW (k + 1) m po pl dO dL q j =
-    ckgK k po pl dO dL q j (tcpPWf k m po pl (rdW (m.arr64 IW) (dO + j))) := by simp [ckgW, h]
-theorem ckgK_some : ckgK k po pl dO dL q j (some (z, m2)) =
-    ckgW k (m2.set64 IW (q + j) z) po pl dO dL q (j + 1) := by rw [ckgK]
-end arms
-attribute [ind_grind] ckgW_done ckgW_step ckgK_some
-
-/-- After the loop: the record. -/
-def kcK (key q dL : Word) : Option Mem → Option (List Word × Mem)
-  | none => none
-  | some m2 => match posRecW m2 [rdW (m2.arr64 IW) key, rdW (m2.arr64 IW) (key + 1), q, dL] with
-    | none => none
-    | some (nk, m3) => some ([nk], m3)
-
-/-- **The model of `class_key_canon(po, pl, key)`** at exec fuel `k + 1`. -/
-def kcW (k : Nat) (m : Mem) (po pl key : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (key + 3)) with
-  | none => none
-  | some (q, m1) => kcK key q (rdW (m.arr64 IW) (key + 3))
-      (ckgW k m1 po pl (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) q 0)
 
 mutual
 /-- **The model of `class_key_of_closed`**, with `bvar_b` the master's walk (`bvbW`). -/
@@ -123,11 +88,6 @@ theorem ckc2K2_closed (h : ¬ nP < rf.headD 0) :
 end arms0
 attribute [ind_grind] ckc2W_nil ckc2W_cons ckc2K1_open ckc2K1_closed ckc2K2_open ckc2K2_closed
 
-/-- `class_key_canon` at any exec fuel. -/
-def kcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, po, pl, key => kcW k m po pl key
-
 /-! ## The `vcgen` specs -/
 
 section spec
@@ -152,21 +112,39 @@ theorem tcpP_specF (k : Nat) (s₀ : St) (pfo pfl e : Word) :
   | zero => rw [invoke_eq _ L.tcp]; simp only [callFn, targetCanonParams]; vcgen [exec] <;> grind
   | succ k => exact tcpP_spec L k s₀ pfo pfl e
 
-theorem ckg_spec (k : Nat) : ∀ (s₀ : St) (po pl dO dL q j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_canon_go" [po, pl, dO, dL, q, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ckgW k s₀.mem po pl dO dL q j = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ po pl dO dL q j
-    rw [invoke_eq _ L.go]; simp only [callFn, classKeyCanonGo]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ po pl dO dL q j
-    rw [invoke_eq _ L.go]
-    simp only [callFn, classKeyCanonGo]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        tcpP_specF L k, ih] <;>
-      finish (gen := 20) [rdW_eq]
+end spec
+
+l_model ckg_spec {p : Prog} (hL : KofProg p)
+  fns [hL.go ↦ ckgW void]
+  specs [tcpP_specF hL n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
+
+/-- The continuation after the recursive call passes its memory on. -/
+theorem ckgW.k_class_key_canon_go_id (x : Option Mem) : ckgW.k_class_key_canon_go x = x := by
+  cases x <;> rfl
+
+/-- After the loop: the record. -/
+def kcK (key q dL : Word) : Option Mem → Option (List Word × Mem)
+  | none => none
+  | some m2 => match posRecW m2 [rdW (m2.arr64 IW) key, rdW (m2.arr64 IW) (key + 1), q, dL] with
+    | none => none
+    | some (nk, m3) => some ([nk], m3)
+
+/-- **The model of `class_key_canon(po, pl, key)`** at exec fuel `k + 1`. -/
+def kcW (k : Nat) (m : Mem) (po pl key : Word) : Option (List Word × Mem) :=
+  match allocW m (rdW (m.arr64 IW) (key + 3)) with
+  | none => none
+  | some (q, m1) => kcK key q (rdW (m.arr64 IW) (key + 3))
+      (ckgW k m1 po pl (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) q 0)
+
+/-- `class_key_canon` at any exec fuel. -/
+def kcWf : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | k + 1, m, po, pl, key => kcW k m po pl key
+
+section spec
+variable {p : Prog} (L : KofProg p)
+include L
 
 theorem kc_spec (k : Nat) (s₀ : St) (po pl key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "class_key_canon" [po, pl, key]
@@ -261,18 +239,18 @@ theorem ckgW_ok (k : Nat) :
       decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR vis fe m' a' ∧ IWGrow m0 m' ∧
       iwTop m ≤ iwTop m' ∧ PosMR m' := by
   induction k with
-  | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW] at h
+  | zero => intro m0 m m' a po pl dO dL q j pfvs ds acc h; simp [ckgW.eq_1] at h
   | succ k ih =>
   intro m0 m m' a po pl dO dL q j pfvs ds acc h hS hg0 hq0 hql hpf hpb hds hdsb hj hacc hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   have hxl := decHL_length m0 hds
   by_cases hd : dL ≤ j
-  · rw [ckgW_done (h := hd)] at h
+  · rw [ckgW.arm1 (hc1 := hd)] at h
     cases h
     have hjl : j.toNat = dL.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
     refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, hP⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
-  rw [ckgW_step (h := hd)] at h
+  rw [ckgW.arm2 (hc1 := hd)] at h
   have hjl : j.toNat < dL.toNat := by
     have : ¬ dL.toNat ≤ j.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e)
     omega
@@ -281,11 +259,11 @@ theorem ckgW_ok (k : Nat) :
     (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hds _ hjl) (by have := hg0.iw; omega)
   generalize rdW (m.arr64 IW) (dO + j) = x at h hxH hxd
   cases k with
-  | zero => simp [tcpPWf, ckgK] at h
+  | zero => simp [tcpPWf, ckgW.k_target_canon_params.none] at h
   | succ k' =>
   simp only [tcpPWf] at h
-  obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (by simp only [ckgK])
-  rw [ckgK_some] at h
+  obtain ⟨⟨z, m2⟩, htc, h⟩ := of_K h (ckgW.k_target_canon_params.none ..)
+  rw [ckgW.k_target_canon_params.arm1, ckgW.k_class_key_canon_go_id] at h
   obtain ⟨a1, hr1, hzH, hS2, hg2, hP2⟩ := tcpPW_ok fe vis k' m m2 a po pl x z pfvs htc hS
     (by rw [decHL_grow hg0 hpb]; exact hpf) (by have := hg0.iw; omega) hxH hP
   have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)

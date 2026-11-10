@@ -11,7 +11,6 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
-public import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 public import ConAgua.Arena.IndPosSpec.SgGoW2
 import all ConAgua.Arena.IndPos
@@ -46,32 +45,6 @@ section spec
 variable (p : Prog) (L : SgLook p)
 
 include L in
-theorem posRp_spec (k : Nat) (s₀ : St) (no nl us b nn e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "replace_apps" [no, nl, us, b, nn, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ posRpW k s₀.mem no nl us b nn e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have C := L.cr
-  cases k with
-  | zero => rw [invoke_eq _ C.ra]; simp only [callFn, replaceApps]; vcgen [exec] <;> grind
-  | succ k => exact replaceApps_spec p C.rx.hl C.rx.hk C.raf C.rap C.rgo C.rnd C.rcl C.ra k s₀ no nl us b nn e
-
-include L in
-theorem sgGo_spec (k : Nat) : ∀ (s₀ : St) (ctx f dO dL q j : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_seed_of_go" [ctx, f, dO, dL, q, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ sgGoW k s₀.mem ctx f dO dL q j = some s'.mem; ⊤⦄ := by
-  induction k with
-  | zero =>
-    intro s₀ ctx f dO dL q j
-    rw [invoke_eq _ L.go]; simp only [callFn, nestSeedOfGoL]; vcgen [exec] <;> grind
-  | succ k ih =>
-    intro s₀ ctx f dO dL q j
-    have hrx := (rxSpec_all p L.cr.rx k).2.2.2.2.2.2.2
-    simp only [invoke_eq _ L.go, callFn, nestSeedOfGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        posRp_spec p L k, hrx, ih] <;>
-      finish (gen := 20) [rdW_eq]
-
-include L in
 theorem nestSeedOf_spec (k : Nat) (s₀ : St) (ctx hO hL ind us dO dL nPc : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_seed_of" [ctx, hO, hL, ind, us, dO, dL, nPc]
     ⦃fun r s' => LocEq s' s₀ ∧ sgW k s₀.mem ctx hO hL ind us dO dL nPc = some (r, s'.mem); ⊤⦄ := by
@@ -79,7 +52,7 @@ theorem nestSeedOf_spec (k : Nat) (s₀ : St) (ctx hO hL ind us dO dL nPc : Word
   simp only [invoke_eq _ L.so, callFn, nestSeedOfL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      posRec5_specW p R.ha R.h5 k, posRec4_specW p R.ha R.h4 k, iwAlloc_specW p R.ha k, sgGo_spec p L k] <;>
+      posRec5_specW p R.ha R.h5 k, posRec4_specW p R.ha R.h4 k, iwAlloc_specW p R.ha k, sgGo_spec p L.cr L.go k] <;>
     finish (gen := 20) [sgW, sgA, sgB, sgC, rdW_eq]
 
 end spec
