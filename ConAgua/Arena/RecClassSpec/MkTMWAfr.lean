@@ -36,7 +36,7 @@ theorem mkTMW_afr {m m' : Mem} {a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word
   exact (allocW_afr h1).trans (by simp only [tmWr]; afr_set)
 
 theorem tmdW_afr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : AFr m m' := by
-  simp only [tmdW, tmdK1.eq_def, tmdK2.eq_def, tmdK3.eq_def] at h
+  simp only [tmdW, tmdW.k_intern_nanon.eq_def, tmdW.k_pin_word.eq_def, tmdW.k_mk_target_major.eq_def] at h
   afr_auto h [naF_afr, mkTMW_afr]
 
 theorem tmaW_afr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
