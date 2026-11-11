@@ -193,3 +193,20 @@ Largest change: `Front/Line` 12.8 → 17.1 G; `PinReadSpec` 51.6 → 54.7 G, `Pi
 slowdown: `LevelLeqSpec` 36.7 → 96.5 G (6.8 → 17.3 s, 2.6×; `simp []` recipes do not apply);
 gains in `LevelSubst` 16.0 → 8.3 G, `LevelApd` 14.2 → 7.8 G, `DeclApdSpec` 52.0 → 40.4 G,
 `InstLPWalkArms` 23.9 → 15.2 G.
+
+### Batch 7: helper `mgen4-rx` (#266): the RxMapW memo walk
+
+The largest family mgen3 left ("memo walks whose hand models fold find + put into `msetG` and
+merge kinds"). No generator change was needed: one `l_model rxSpec_all` over the eight functions
+of the block (`fv_map_at`, `nest_hole_img`, `_frame`, `_ds` as tuples, `_ds_go` void,
+`replace_fvars_go`, `replace_fvars_node`, `replace_fvars`) and `rxRoot_spec` for
+`nest_hole_img_root`, default recipe, same names and conjunction order (callers' `.2.2…`
+projections unchanged). The hand shape is kept where users want it by six bridges in `Rx.lean`:
+`rxGoW_kNode` (the `rf_find`/`rf_put` continuation after the node is the `msetG` form, via
+`msetG_eq`), `rxGoW_kMap` (the fvar arm), `rxGoW_leaf`/`rxGoW_fvar` (the merged kind
+disjunction over the generated separate `if`s), `rxMapW_kImg`, `rxDsGoW_kGo` (identity
+continuations). `MapOKStep` walks the generated arms. Kept: `hiW`, `kmW` (total word models).
+Gone: the hand mutual block, about 50 continuations' arms, `RxSpec`, `rxSpec_zero`, 8 step
+proofs. 14 files, +347 −702 (**−355**). `RxMapW` 41.9 → 2.5 G, `Rx` 39.8 → 70.6 G (1.8×),
+`PosmemoRxMfr` 10.2 → 14.4 G (its `split` over the whole generated term was 5.3×; `by_cases`
+through the arms instead), 14 modules 245 → 263 G.
