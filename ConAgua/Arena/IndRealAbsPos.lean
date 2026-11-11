@@ -417,7 +417,7 @@ theorem ncnW_afr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
 -- from IndPosSpec/NestCrest
 theorem pcrW_afr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}
     (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) : AFr m m' := by
-  unfold pcrW pcrK1 pcrK2 pcrK3 at h
+  simp only [pcrW, pcrW.k_nest_canon_crest.eq_def, pcrW.k_rec5.eq_def, pcrW.k_replace_fvars.eq_def] at h
   afr_auto h [pccW_afr, posRecW_afr, rxW_afr]
 
 /-! ## The walks' memos -/

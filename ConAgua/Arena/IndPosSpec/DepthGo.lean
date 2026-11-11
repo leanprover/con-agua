@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -983,15 +982,6 @@ namespace L.Ind
 
 open L.Arena
 
-def pcrK2 (k : Nat) (c : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (f, m2) => pcrK3 (rxW (k + 2) m2 f c)
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (dO dL hO hL c f r : Word) (r1 : List Word)
-theorem pcrK3_some : pcrK3 (some (r, m3)) = some ([1, r], m3) := rfl
-theorem pcrK2_some : pcrK2 k c (some (f, m2)) = pcrK3 (rxW (k + 2) m2 f c) := rfl
-end arms
-attribute [ind_grind] pcrK3_some pcrK2_some
 
 end L.Ind
 
