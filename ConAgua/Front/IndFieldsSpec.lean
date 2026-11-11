@@ -4,6 +4,7 @@ public import ConAgua.Front.IndAlloc
 public import ConAgua.Front.ApplyExpr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -41,14 +42,6 @@ open L.Front (lsCntN)
 namespace L.Front.Ind
 
 /-! ## Models of the leaves -/
-
-/-- **The model of `if_reset`.** -/
-def ifResetW (m : Mem) : Option Mem :=
-  if m.len64 IFR = 0 ∨ m.len64 IFL = 0 then none else some ((m.set64 IFR 0 0).set64 IFL 0 0)
-
-/-- **The model of `fld_alloc(kind, n)`.** -/
-def fldAllocW (m : Mem) (kind n : Word) : Option (Word × Mem) :=
-  if kind = 3 then allocW m IFL n else allocW m IFR n
 
 /-- **The model of `fld_put(kind, p, s, x)`** (a write out of range leaves the memory alone; the
 L code aborts there). -/
@@ -151,36 +144,173 @@ def idsK0 (b : Array UInt8) (v : Word) : Option (Word × Mem) → Option Mem
 `lsCntN b (v + 1) 0`). -/
 def idsM (b : Array UInt8) (m : Mem) (v : Word) : Option Mem := idsK0 b v (allocW m IFL 0)
 
-/-- **The model of `ind_num`**: the end and the memory after. -/
-def numW (b : Array UInt8) (m : Mem) (kind p ks v h s : Word) : Option (Word × Mem) :=
-  if rdNatN b v (slotNatN b ks v) = NONE then none
-  else if h = 6 then
-    some (slotNatN b ks v, fldPutW (fldPutW m kind p s 1) kind p (s + 1) (rdNatN b v (slotNatN b ks v)))
-  else some (slotNatN b ks v, fldPutW m kind p s (rdNatN b v (slotNatN b ks v)))
+/-- What an allocation returns. -/
+theorem allocW_eq (m : Mem) (a : ArrId) (n : Word) : allocW m a n = none ∨
+    allocW m a n = some (rdW (m.arr64 a) 0 + 1, m.set64 a 0 (rdW (m.arr64 a) 0 + 1 - 1 + n)) := by
+  unfold allocW; split
+  · exact .inl rfl
+  split
+  · exact .inl rfl
+  split
+  · exact .inl rfl
+  · exact .inr rfl
 
-/-- **The model of `ind_bool`.** -/
-def boolW (b : Array UInt8) (m : Mem) (kind p v h s : Word) : Option (Word × Mem) :=
-  if (encBool (scanBoolN b v.toNat) v).headD 0 = 0 then none
-  else if h = 2 then
-    some ((encBool (scanBoolN b v.toNat) v).tail.tail.headD 0,
-      fldPutW m kind p s ((encBool (scanBoolN b v.toNat) v).tail.headD 0))
-  else some ((encBool (scanBoolN b v.toNat) v).tail.tail.headD 0, m)
+/-! ## Specs of the leaves -/
 
-/-- After `ifl_ids`: the slice into the record. -/
-def nlK (kind p s o c e : Word) : Option Mem → Option (Word × Mem)
-  | none => none
-  | some m => some (e, fldPutW (fldPutW m kind p s o) kind p (s + 1) c)
+/-- Every function the fields pass calls, at its name in `p`. -/
+structure IndFieldLookups (p : Prog) : Prop where
+  skip_ws : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs
+  skip_digits : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits
+  key_end : p.lookup "key_end" = some L.Scan.Leaves.keyEnd
+  num_end : p.lookup "num_end" = some L.Scan.Leaves.numEnd
+  key_at_g1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1
+  key_at_g2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2
+  key_at_g3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3
+  key_at_g4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4
+  key_at_g5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5
+  key_at_g6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6
+  key_at : p.lookup "key_at" = some L.Scan.Key.keyAt
+  value_at : p.lookup "value_at" = some L.Scan.Key.valueAt
+  next_member : p.lookup "next_member" = some nextMember
+  slot_nat : p.lookup "slot_nat" = some slotNat
+  read_nat : p.lookup "read_nat" = some L.Front.Fields.readNat
+  scan_nat_list : p.lookup "scan_nat_list" = some scanNatList
+  match_lit : p.lookup "match_lit" = some L.Scan.Lit.matchLit
+  scan_bool : p.lookup "scan_bool" = some L.Scan.Lit.scanBool
+  if_reset : p.lookup "if_reset" = some ifReset
+  ifr_alloc : p.lookup "ifr_alloc" = some ifrAlloc
+  ifl_alloc : p.lookup "ifl_alloc" = some iflAlloc
+  ifl_push : p.lookup "ifl_push" = some iflPush
+  fld_alloc : p.lookup "fld_alloc" = some fldAlloc
+  fld_put : p.lookup "fld_put" = some fldPut
+  ind_size : p.lookup "ind_size" = some indSize
+  ind_slot : p.lookup "ind_slot" = some indSlot
+  ifl_ids : p.lookup "ifl_ids" = some iflIds
+  ind_num : p.lookup "ind_num" = some indNum
+  ind_bool : p.lookup "ind_bool" = some indBool
+  ind_nlist : p.lookup "ind_nlist" = some indNList
+  ind_member : p.lookup "ind_member" = some indMember
+  ind_obj : p.lookup "ind_obj" = some indObj
+  ind_list : p.lookup "ind_list" = some indList
+  ind_fields : p.lookup "ind_fields" = some indFields
+  no_st8 : p.noSt8 = true
 
-@[arena_grind =] theorem nlK_none (kind p s o c e : Word) : nlK kind p s o c e none = none := rfl
-@[arena_grind =] theorem nlK_some (kind p s o c e : Word) (m : Mem) :
-    nlK kind p s o c e (some m) = some (e, fldPutW (fldPutW m kind p s o) kind p (s + 1) c) := rfl
+section specs
+variable (p : Prog) (hL : IndFieldLookups p)
+include hL
 
-/-- **The model of `ind_nlist`.** -/
-def nlistW (b : Array UInt8) (m : Mem) (kind p v h s : Word) : Option (Word × Mem) :=
-  if h = 3 then some ((natListEntryN b v).1, fldPutW m kind p s v)
-  else if h = 5 then
-    nlK kind p s (rdW (m.arr64 IFL) 0 + 1) (lsCntN b (v + 1) 0) (natListEntryN b v).1 (idsM b m v)
-  else some ((natListEntryN b v).1, m)
+theorem fldPut_spec (n : Nat) (s₀ : St) (kind q s x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "fld_put" [kind, q, s, x]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = fldPutW s₀.mem kind q s x; ⊤⦄ := by
+  rw [invoke_eq _ hL.fld_put]
+  simp only [callFn, fldPut]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [fldPutW]
+
+theorem indSize_spec (n : Nat) (s₀ : St) (kind : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_size" [kind]
+    ⦃fun r s' => s' = s₀ ∧ r = [indSizeN kind]; ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_size]
+  simp only [callFn, indSize]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs] <;> finish [indSizeN]
+
+theorem indSlot_spec (n : Nat) (s₀ : St) (kind k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_slot" [kind, k]
+    ⦃fun r s' => s' = s₀ ∧
+      r = [(indSlotN kind k).1, (indSlotN kind k).2.1, (indSlotN kind k).2.2]; ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_slot]
+  simp only [callFn, indSlot]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs] <;> finish [indSlotN]
+
+variable (b : Array UInt8) (hb : b.size < 2 ^ 63)
+include hb
+
+theorem idsLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    exec p n iflIdsLoop
+    ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
+      idsLoopM b s₀.mem (s₀.loc 1) = some s'.mem; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := iflIdsLoop) rfl]
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hpush := fun s₁ x => Triple.keep hL.no_st8 (iflPush_spec p hL.ifl_alloc hL.ifl_push n s₁ x)
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
+        L.Scan.Leaves.numEnd_spec p hL.skip_digits hL.num_end b hb64 n,
+        L.Front.Fields.readNat_spec p b hL.read_nat n, hpush] <;> finish [NONE]
+
+theorem idsLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) iflIdsLoop
+    ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
+      idsLoopM b s₀.mem (s₀.loc 1) = some s'.mem; ⊤⦄ :=
+  Triple.step_exec (idsLoop_spec p hL b hb (n + 1) s₀)
+
+theorem iflIds_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_ids" [v]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 IFL) 0 + 1, lsCntN b (v + 1) 0] ∧
+      idsM b s₀.mem v = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hL.ifl_ids]
+  simp only [callFn, iflIds]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        iflAlloc_spec p hL.ifl_alloc n, idsLoop_step_spec p hL b hb n] <;> finish [idsM, allocW_eq]
+
+end specs
+
+/-! ## The leaves' models (generated) -/
+
+/-- **The model of `if_reset`** (generated): `ifResetW`. -/
+l_model ifReset_spec (p : Prog) (hL : IndFieldLookups p)
+  fns [hL.if_reset ↦ ifResetW void]
+  grind [arena_grind]
+
+/-- **The model of `fld_alloc(kind, n)`** (generated): `fldAllocW`. -/
+l_model fldAlloc_spec (p : Prog) (hL : IndFieldLookups p)
+  fns [hL.fld_alloc ↦ fldAllocW]
+  specs [iflAlloc_spec p hL.ifl_alloc n, ifrAlloc_spec p hL.ifr_alloc n]
+  grind [arena_grind]
+
+/-- **The model of `ind_num`** (generated): `numW`, the end and the memory after. -/
+l_model indNum_spec (p : Prog) (hL : IndFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+  fns [hL.ind_num ↦ numW]
+  specs [slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n,
+    L.Front.Fields.readNat_spec p b hL.read_nat n, fldPut_spec p hL n]
+  pre [s₀.mem.arr8 IN = b ∧ v.toNat ≤ b.size]
+  grind [arena_grind] finish [NONE]
+  guards ["slot_nat", "read_nat"]
+
+/-- **The model of `ind_bool`** (generated): `boolW`. -/
+l_model indBool_spec (p : Prog) (hL : IndFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+  fns [hL.ind_bool ↦ boolW]
+  specs [L.Scan.Lit.scanBool_spec p hL.match_lit hL.scan_bool b (by omega) n, fldPut_spec p hL n]
+  pre [s₀.mem.arr8 IN = b ∧ v.toNat ≤ b.size]
+  grind [arena_grind]
+
+/-- **The model of `ind_nlist`** (generated): `nlistW`. -/
+l_model indNList_spec (p : Prog) (hL : IndFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+  fns [hL.ind_nlist ↦ nlistW]
+  specs [scanNatList_spec p b hb hL.skip_digits hL.num_end hL.scan_nat_list n,
+    iflIds_spec p hL b hb n, fldPut_spec p hL n]
+  pre [s₀.mem.arr8 IN = b]
+  grind [arena_grind]
+  guards ["scan_nat_list"]
 
 /-- A constructor record's two flags cleared (`ind_list`, before reading the record). -/
 def flagsW (m : Mem) (sub q : Word) : Mem :=
@@ -394,203 +524,6 @@ grind_pattern [lang_grind] listLoopW_close => listLoopW b m sub sz o cnt i, b[i.
 grind_pattern [lang_grind] listLoopW_open => listLoopW b m sub sz o cnt i, b[i.toNat]
 grind_pattern [lang_grind] listLoopW_other => listLoopW b m sub sz o cnt i, b[i.toNat]
 
-/-- What an allocation returns. -/
-theorem allocW_eq (m : Mem) (a : ArrId) (n : Word) : allocW m a n = none ∨
-    allocW m a n = some (rdW (m.arr64 a) 0 + 1, m.set64 a 0 (rdW (m.arr64 a) 0 + 1 - 1 + n)) := by
-  unfold allocW; split
-  · exact .inl rfl
-  split
-  · exact .inl rfl
-  split
-  · exact .inl rfl
-  · exact .inr rfl
-
-/-! ## Specs of the leaves -/
-
-/-- Every function the fields pass calls, at its name in `p`. -/
-structure IndFieldLookups (p : Prog) : Prop where
-  skip_ws : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs
-  skip_digits : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits
-  key_end : p.lookup "key_end" = some L.Scan.Leaves.keyEnd
-  num_end : p.lookup "num_end" = some L.Scan.Leaves.numEnd
-  key_at_g1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1
-  key_at_g2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2
-  key_at_g3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3
-  key_at_g4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4
-  key_at_g5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5
-  key_at_g6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6
-  key_at : p.lookup "key_at" = some L.Scan.Key.keyAt
-  value_at : p.lookup "value_at" = some L.Scan.Key.valueAt
-  next_member : p.lookup "next_member" = some nextMember
-  slot_nat : p.lookup "slot_nat" = some slotNat
-  read_nat : p.lookup "read_nat" = some L.Front.Fields.readNat
-  scan_nat_list : p.lookup "scan_nat_list" = some scanNatList
-  match_lit : p.lookup "match_lit" = some L.Scan.Lit.matchLit
-  scan_bool : p.lookup "scan_bool" = some L.Scan.Lit.scanBool
-  if_reset : p.lookup "if_reset" = some ifReset
-  ifr_alloc : p.lookup "ifr_alloc" = some ifrAlloc
-  ifl_alloc : p.lookup "ifl_alloc" = some iflAlloc
-  ifl_push : p.lookup "ifl_push" = some iflPush
-  fld_alloc : p.lookup "fld_alloc" = some fldAlloc
-  fld_put : p.lookup "fld_put" = some fldPut
-  ind_size : p.lookup "ind_size" = some indSize
-  ind_slot : p.lookup "ind_slot" = some indSlot
-  ifl_ids : p.lookup "ifl_ids" = some iflIds
-  ind_num : p.lookup "ind_num" = some indNum
-  ind_bool : p.lookup "ind_bool" = some indBool
-  ind_nlist : p.lookup "ind_nlist" = some indNList
-  ind_member : p.lookup "ind_member" = some indMember
-  ind_obj : p.lookup "ind_obj" = some indObj
-  ind_list : p.lookup "ind_list" = some indList
-  ind_fields : p.lookup "ind_fields" = some indFields
-  no_st8 : p.noSt8 = true
-
-section specs
-variable (p : Prog) (hL : IndFieldLookups p)
-include hL
-
-theorem ifReset_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "if_reset" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ifResetW s₀.mem = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hL.if_reset]
-  simp only [callFn, ifReset]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [ifResetW]
-
-theorem fldAlloc_spec (n : Nat) (s₀ : St) (kind k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "fld_alloc" [kind, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ fldAllocW s₀.mem kind k = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.fld_alloc]
-  simp only [callFn, fldAlloc]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iflAlloc_spec p hL.ifl_alloc n, ifrAlloc_spec p hL.ifr_alloc n] <;> finish [fldAllocW]
-
-theorem fldPut_spec (n : Nat) (s₀ : St) (kind q s x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "fld_put" [kind, q, s, x]
-    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = fldPutW s₀.mem kind q s x; ⊤⦄ := by
-  rw [invoke_eq _ hL.fld_put]
-  simp only [callFn, fldPut]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [fldPutW]
-
-theorem indSize_spec (n : Nat) (s₀ : St) (kind : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_size" [kind]
-    ⦃fun r s' => s' = s₀ ∧ r = [indSizeN kind]; ⊤⦄ := by
-  rw [invoke_eq _ hL.ind_size]
-  simp only [callFn, indSize]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs] <;> finish [indSizeN]
-
-theorem indSlot_spec (n : Nat) (s₀ : St) (kind k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_slot" [kind, k]
-    ⦃fun r s' => s' = s₀ ∧
-      r = [(indSlotN kind k).1, (indSlotN kind k).2.1, (indSlotN kind k).2.2]; ⊤⦄ := by
-  rw [invoke_eq _ hL.ind_slot]
-  simp only [callFn, indSlot]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs] <;> finish [indSlotN]
-
-variable (b : Array UInt8) (hb : b.size < 2 ^ 63)
-include hb
-
-theorem idsLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    exec p n iflIdsLoop
-    ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
-      idsLoopM b s₀.mem (s₀.loc 1) = some s'.mem; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := iflIdsLoop) rfl]
-    have hb64 : b.size < 2 ^ 64 := by omega
-    have hpush := fun s₁ x => Triple.keep hL.no_st8 (iflPush_spec p hL.ifl_alloc hL.ifl_push n s₁ x)
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        L.Scan.Leaves.numEnd_spec p hL.skip_digits hL.num_end b hb64 n,
-        L.Front.Fields.readNat_spec p b hL.read_nat n, hpush] <;> finish [NONE]
-
-theorem idsLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
-    step p (exec p n) iflIdsLoop
-    ⦃fun r s' => r ≠ .brk ∧ r.retOr [0, 0] = [s₀.loc 2, lsCntN b (s₀.loc 1) (s₀.loc 3)] ∧
-      idsLoopM b s₀.mem (s₀.loc 1) = some s'.mem; ⊤⦄ :=
-  Triple.step_exec (idsLoop_spec p hL b hb (n + 1) s₀)
-
-theorem iflIds_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ifl_ids" [v]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 IFL) 0 + 1, lsCntN b (v + 1) 0] ∧
-      idsM b s₀.mem v = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hL.ifl_ids]
-  simp only [callFn, iflIds]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iflAlloc_spec p hL.ifl_alloc n, idsLoop_step_spec p hL b hb n] <;> finish [idsM, allocW_eq]
-
-theorem indNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q ks v h s : Word)
-    (hv : v.toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_num" [kind, q, ks, v, h, s]
-    ⦃fun r s' => LocEq s' s₀ ∧ numW b s₀.mem kind q ks v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.ind_num]
-  simp only [callFn, indNum]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n,
-        L.Front.Fields.readNat_spec p b hL.read_nat n, fldPut_spec p hL n] <;>
-      finish [numW, NONE]
-
-theorem indBool_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word)
-    (hv : v.toNat ≤ b.size) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_bool" [kind, q, v, h, s]
-    ⦃fun r s' => LocEq s' s₀ ∧ boolW b s₀.mem kind q v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.ind_bool]
-  simp only [callFn, indBool]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hb64 : b.size < 2 ^ 64 := by omega
-    have hv5 : v.toNat + 5 < 2 ^ 64 := by omega
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Lit.scanBool_spec p hL.match_lit hL.scan_bool b hb64 n, fldPut_spec p hL n] <;>
-      finish [boolW]
-
-theorem indNList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_nlist" [kind, q, v, h, s]
-    ⦃fun r s' => LocEq s' s₀ ∧ nlistW b s₀.mem kind q v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.ind_nlist]
-  simp only [callFn, indNList]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        scanNatList_spec p b hb hL.skip_digits hL.num_end hL.scan_nat_list n,
-        iflIds_spec p hL b hb n, fldPut_spec p hL n] <;>
-      finish [nlistW]
-
-end specs
 
 end L.Front.Ind
 

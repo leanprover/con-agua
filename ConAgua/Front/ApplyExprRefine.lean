@@ -434,13 +434,17 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
   · cases hI
   rename_i hc0
   cases hP : strPutEscW b.data m y z with
-  | none => rw [hP, litStrK_none] at hI; cases hI
+  | none => rw [hP, litStrW.k_str_put_esc.none] at hI; cases hI
   | some q =>
   obtain ⟨l, m₂⟩ := q
   obtain ⟨hg, hsl, hk⟩ :=
     ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
   rw [hP] at hI
-  replace hI := litStrK_intern hI
+  simp only [litStrW.k_str_put_esc] at hI
+  split at hI
+  · cases hI
+  split at hI
+  · cases hI
   have hA' := L.Arena.ArenaD.grow m m₂ hg a hA
   have hmo₂ := L.Arena.ModeOK.grows hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
@@ -478,22 +482,21 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     show (15 : Word) ≠ 14 by decide, or_false, ↓reduceIte, constW] at hI
   have hok : tblOK m NID x = true :=
     Classical.byContradiction fun hok => by simp [hok] at hI
-  simp only [hok, ↓reduceIte] at hI
+  simp only [hok, not_true_eq_false, ↓reduceIte] at hI
   obtain ⟨hgn, hwn, hn⟩ := tbl_read hD.names x hok
   rw [itemR_eq hx hn]
   cases hP : lsPutW b.data m c with
-  | none => simp [hP, constK] at hI
+  | none => simp [hP, constW.k_ls_put] at hI
   | some m₂ =>
-  simp only [hP, constK] at hI
+  simp only [hP, constW.k_ls_put] at hI
   cases hL : lsinternW m₂ m.top (lsPutL b.data c) with
-  | none => simp [hL, constK2] at hI
+  | none => simp [hL, constW.k_intern_ls] at hI
   | some p =>
   obtain ⟨g, m₃⟩ := p
-  simp only [hL, constK2] at hI
-  have hg32 : g < 0x100000000 :=
-    Classical.byContradiction fun h => by simp [h] at hI
-  simp only [hg32, ↓reduceIte] at hI
-  have hg32' : g.toNat < 2 ^ 32 := by simpa [UInt64.lt_iff_toNat_lt] using hg32
+  simp only [hL] at hI
+  have hg32 : ¬ 4294967296 ≤ g := fun h => by simp [constW.k_intern_ls.abort1 _ _ _ _ h] at hI
+  rw [constW.k_intern_ls.arm1 _ _ _ _ hg32] at hI
+  have hg32' : g.toNat < 2 ^ 32 := by simp only [UInt64.le_iff_toNat_le] at hg32; simp at hg32; omega
   -- `ls_put`: the pool grew by the items' level handles
   have hpok := hA.1.lit.1
   have hsm := hpok.small

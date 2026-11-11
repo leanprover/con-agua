@@ -446,18 +446,6 @@ theorem exNodeK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     obtain ⟨hsz, -, he⟩ := mpushW_eq hp
     exact ⟨m₃, rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl, hsz, hp, he⟩
 
-theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
-    (hW : exLeafK q x = some (h, q', mem')) : x = some (h, mem') ∧ h.toNat < 2 ^ 32 ∧ q' = q := by
-  match x, hW with
-  | some (r, m₃), hW =>
-    simp only [exLeafK] at hW
-    split at hW
-    · simp at hW
-    rename_i hlt
-    simp only [Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, rfl, rfl⟩ := hW
-    exact ⟨rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl⟩
-
 theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO, RSET] [132, 149] m (mpushMem m h) := by
   simp only [mpushMem]
   exact (((mpushPut_frame m h).mono (by simp)
@@ -602,7 +590,9 @@ theorem ref_case (e : ConLeche.Expr)
   have hu := u64W_of_drop rom (pos + 1) _ _ hd1 (by omega) hr
   simp only [romRefW, hu] at hW
   split at hW
-  case isFalse => simp at hW
+  · simp at hW
+  split at hW
+  · simp at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl, rfl⟩ := hW
   obtain ⟨hlt, hm⟩ := hM.hit hin
@@ -717,9 +707,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | succ n =>
     have hd1 : rom.drop (pos + 1).toNat = u64B i ++ rest := by
       simpa using (drop_tag (bs := (u64B i)) rom hr (by simpa using hd)).1
-    rw [romLeafW_bvar rom n mem pos 0 rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
+    rw [romLeafW.arm1 rom n mem pos 0 rfl (decide_eq_true (u64OK_of_drop rom _ _ _ hd1 hr))] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
-    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    obtain ⟨hI, hlt, rfl⟩ := romLeafW_kb_inv hW
     obtain ⟨ok, hR, res⟩ := internBVar_D mem a hA _ h mem' hI
     have hiN : (UInt64.ofNat i).toNat = i := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he
     rw [hiN] at ok hR res
@@ -742,16 +732,16 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romLeafW] at hW
     | succ n =>
-    rw [romLeafW_sort rom n mem pos 1 (by simp) rfl] at hW
+    rw [romLeafW.arm2 rom n mem pos 1 (by decide) rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = encLevel u ++ rest := by
       simpa using (drop_tag (bs := (encLevel u)) rom hr (by simpa using hd)).1
     cases hU : romLevelW rom n mem (pos + 1) with
-    | none => rw [hU] at hW; simp [exSortK] at hW
+    | none => rw [hU, romLeafW.k_rom_level.none] at hW; cases hW
     | some r =>
     obtain ⟨hu, q₁, m₁⟩ := r
-    rw [hU, exSortK_some] at hW
+    rw [hU, romLeafW.k_rom_level.arm1] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romLevelW_ok rom hr u he n mem a (pos + 1) rest hu q₁ m₁ hA hmo hd1 hU
-    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    obtain ⟨hI, hlt, rfl⟩ := romLeafW_ks_inv hW
     obtain ⟨ok2, hR2, res2, hf2⟩ := L.Front.internSort_D m₁ _ hR1 h mem' hu hlt1 hI
     rw [← res1] at ok2 hR2 res2
     refine ⟨m, _, iEG_sort m a _ _ (decI h) u _ (AM.run_of_ok _ _ ok1)
@@ -777,27 +767,27 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romLeafW] at hW
     | succ n =>
-    rw [romLeafW_const rom n mem pos 2 (by simp) (by simp) rfl] at hW
+    rw [romLeafW.arm4 rom n mem pos 2 (by decide) (by decide) (by decide) rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = encName nm ++ (encLevels us ++ rest) := by
       simpa using (drop_tag (bs := (encName nm ++ encLevels us)) rom hr (by simpa using hd)).1
     cases hN : romNameW rom n mem (pos + 1) with
-    | none => rw [hN] at hW; simp [exConst2KN] at hW
+    | none => rw [hN, romLeafW.k_rom_name.none] at hW; cases hW
     | some r =>
     obtain ⟨hnm, q₁, m₁⟩ := r
-    rw [hN, exConst2KN_some] at hW
+    rw [hN, romLeafW.k_rom_name.arm1] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm hn n mem a (pos + 1) _ hnm q₁ m₁ hA hmo hd1 hN
     have hd2 : rom.drop q₁.toNat = encLevels us ++ rest :=
       drop_shift rom (pos + 1) (encName nm) (encLevels us) rest (by rw [hd1, List.append_assoc]) q₁ hq1
     have hst1 : stkTop m₁ = stkTop mem := frame_exprA_stk hf1
     cases hL : romLevelsW rom n m₁ q₁ with
-    | none => rw [hL] at hW; simp [exConst2K] at hW
+    | none => rw [hL, romLeafW.k_rom_levels.none] at hW; cases hW
     | some r =>
     obtain ⟨hl, q₂, m₂⟩ := r
-    rw [hL, exConst2K_some] at hW
+    rw [hL, romLeafW.k_rom_levels.arm1] at hW
     obtain ⟨ok2, hR2, res2, hlt2, hq2, hf2, hst2⟩ := romLevelsW_ok rom hr us hus n m₁ _ q₁ rest hl q₂ m₂ hR1
       ((romNameW_topK hN).mode hA.1.lit.1 hmo) hd2
       (by rw [hst1]; omega) (by rw [hf1.size]; exact hc) hL
-    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    obtain ⟨hI, hlt, rfl⟩ := romLeafW_ks_inv hW
     obtain ⟨ok3, hR3, res3, hf3⟩ := L.Front.internConst_D m₂ _ hR2 h mem' hnm hl hlt1 hlt2 hI
     rw [← res1, ← res2] at ok3 hR3 res3
     have hf3' := frame_store hf3 (by simp [tier1, constSch, CREC, CSLOT, CLP]) (by simp [constSch])
@@ -826,9 +816,10 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | succ n =>
     have hd1 : rom.drop (pos + 1).toNat = u64B k ++ rest := by
       simpa using (drop_tag (bs := (u64B k)) rom hr (by simpa using hd)).1
-    rw [romLeafW_lit rom n mem pos 3 (by simp) (by simp) (by simp) rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
+    rw [romLeafW.arm3 rom n mem pos 3 (by decide) (by decide) rfl
+      (decide_eq_true (u64OK_of_drop rom _ _ _ hd1 hr))] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
-    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    obtain ⟨hI, hlt, rfl⟩ := romLeafW_kb_inv hW
     have hkN : (UInt64.ofNat k).toNat = k := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he
     have hpool : PoolOK mem := hA.1.lit.1
     have hq9 : (pos + 9).toNat = pos.toNat + (3 :: u64B k).length := by

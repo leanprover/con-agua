@@ -199,12 +199,6 @@ variable (rom : List UInt8)
   return (h, pos + 9)
 }
 
-/-- The model of `rom_ex_ref`. -/
-def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
-  if u64OK rom (pos + 1) ∧ memoOk m (u64W rom (pos + 1)) then
-    some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m)
-  else none
-
 /-- The memory after the limb `k` went to the pool top. -/
 def litWordMem (m : Mem) (k : Word) : Mem :=
   (m.set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) k).set64 CTL 0 (m.top + 1)
@@ -380,10 +374,78 @@ theorem romLitW_eq (m : Mem) (k : Word) : romLitW m k =
   return (h, q)
 }
 
-/-- A leaf interned: the handle checked. -/
-def exLeafK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h, m') => if 4294967296 ≤ h then none else some (h, q, m')
+/-- The functions `rom_expr` calls. -/
+structure ExprProg (rom : List UInt8) (p : Prog) : Prop extends LevelsProg rom p where
+  rom_expr : p.lookup "rom_expr" = some (romExpr rom)
+  rom_ex_leaf : p.lookup "rom_ex_leaf" = some romExLeaf
+  memo_get : p.lookup "memo_get" = some memoGet
+  rom_ex_ref : p.lookup "rom_ex_ref" = some romExRef
+  rom_ex_one : p.lookup "rom_ex_one" = some romExOne
+  rom_ex_two : p.lookup "rom_ex_two" = some romExTwo
+  memo_push : p.lookup "memo_push" = some memoPush
+  rset_find : p.lookup "rset_find" = some (memoFindG rsetSch)
+  rset_put : p.lookup "rset_put" = some (memoPutG rsetSch)
+  lit_match : p.lookup "lit_match" = some litMatch
+  lit_find : p.lookup "lit_find" = some litFind
+  lit_push : p.lookup "lit_push" = some litPush
+  intern_lit : p.lookup "intern_lit" = some internLit
+  rom_lit : p.lookup "rom_lit" = some romLit
+  bvar_find : p.lookup "bvar_find" = some bvarFind
+  bvar_push : p.lookup "bvar_push" = some bvarPush
+  intern_bvar : p.lookup "intern_bvar" = some internBVar
+  sort_find : p.lookup "sort_find" = some sortFind
+  sort_push : p.lookup "sort_push" = some sortPush
+  intern_sort : p.lookup "intern_sort" = some internSort
+  const_find : p.lookup "const_find" = some constFind
+  const_push : p.lookup "const_push" = some constPush
+  intern_const : p.lookup "intern_const" = some internConst
+  fvar_find : p.lookup "fvar_find" = some fvarFind
+  fvar_push : p.lookup "fvar_push" = some fvarPush
+  intern_fvar : p.lookup "intern_fvar" = some internFVar
+  der_b : p.lookup "der_b" = some derB
+  app_find : p.lookup "app_find" = some appFind
+  app_push : p.lookup "app_push" = some appPush
+  intern_app : p.lookup "intern_app" = some internApp
+  mk_app : p.lookup "mk_app" = some mkApp
+  lam_find : p.lookup "lam_find" = some lamFind
+  lam_push : p.lookup "lam_push" = some lamPush
+  intern_lam : p.lookup "intern_lam" = some internLamL
+  mk_lam : p.lookup "mk_lam" = some mkLam
+  forall_find : p.lookup "forall_find" = some forallFind
+  forall_push : p.lookup "forall_push" = some forallPush
+  intern_forall : p.lookup "intern_forall" = some internForallL
+  mk_forall : p.lookup "mk_forall" = some mkForall
+  letE_find : p.lookup "letE_find" = some letFind
+  letE_push : p.lookup "letE_push" = some letPush
+  intern_letE : p.lookup "intern_letE" = some internLet
+  mk_let : p.lookup "mk_let" = some mkLet
+  proj_find : p.lookup "proj_find" = some projFind
+  proj_push : p.lookup "proj_push" = some projPush
+  intern_proj : p.lookup "intern_proj" = some internProj
+  mk_proj : p.lookup "mk_proj" = some mkProj
+
+/-- **The model of `rom_ex_ref`** (generated): the memo entry the back reference names
+(`rom_u64`, `memo_get`: guards). -/
+l_model romExRef_specW (rom : List UInt8) (p : Prog) (hL : ExprProg rom p)
+  fns [hL.rom_ex_ref ↦ romRefW tuple]
+  specs [romU64_spec rom p hL.rom_u64 n, memoGet_spec p hL.memo_get n]
+  grind [arena_grind] guards ["rom_u64", "memo_get"]
+
+/-- **The model of `rom_ex_leaf`** at L fuel `n` (generated): a `bvar`, `sort`, `const` or literal
+node interned, the handle checked. -/
+l_model romExLeaf_specW (rom : List UInt8) (p : Prog) (hL : ExprProg rom p)
+  fns [hL.rom_ex_leaf ↦ romLeafW tuple]
+  specs [romU64_spec rom p hL.rom_u64 n, romName_specW rom p hL.toNameProg n,
+    romLevel_specW rom p hL.toLevelProg n, romLevels_specW rom p hL.toLevelsProg n,
+    internBVar_spec p hL.bvar_find hL.bvar_push hL.intern_bvar n,
+    internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n,
+    internConst_spec p hL.const_find hL.const_push hL.intern_const n,
+    romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
+      hL.rom_lit n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap]
+  guards ["rom_u64"]
 
 /-- A compound node interned: the handle checked, then recorded in the memo. -/
 def exNodeK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
@@ -394,21 +456,6 @@ def exNodeK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
       | none => none
       | some m'' => some (h, q, m'')
 
-/-- After a sort's level. -/
-def exSortK : Option (Word × Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (a, q, m₁) => exLeafK q (sointernW m₁ a)
-
-/-- After a constant's levels. -/
-def exConst2K (a : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (b, q, m₂) => exLeafK q (ceinternW m₂ a b)
-
-/-- After a constant's name. -/
-def exConst2KN (n : Nat) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (a, q, m₁) => exConst2K a (romLevelsW rom n m₁ q)
-
 /-- After the second operand. -/
 def exTwoK (t a : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
@@ -416,17 +463,6 @@ def exTwoK (t a : Word) : Option (Word × Word × Mem) → Option (Word × Word 
     if t = 5 then exNodeK q (mkAppW m₂ a b)
     else if t = 6 then exNodeK q (mkLamW m₂ a b)
     else if t = 7 then exNodeK q (mkForallW m₂ a b)
-    else none
-
-/-- The model of `rom_ex_leaf`. -/
-def romLeafW : Nat → Mem → Word → Word → Option (Word × Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, pos, t =>
-    if (t = 0 ∨ t = 3) ∧ ¬ u64OK rom (pos + 1) then none
-    else if t = 0 then exLeafK (pos + 9) (binternW m (u64W rom (pos + 1)))
-    else if t = 1 then exSortK (romLevelW rom n m (pos + 1))
-    else if t = 2 then exConst2KN rom n (romNameW rom n m (pos + 1))
-    else if t = 3 then exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1)))
     else none
 
 mutual
@@ -490,34 +526,15 @@ end prog
 section arms
 variable (rom : List UInt8) (n : Nat) (m m₁ m₂ m₃ : Mem) (pos q t a b c k h : Word)
 
-theorem exLeafK_some (hh : ¬ 4294967296 ≤ h) : exLeafK q (some (h, m)) = some (h, q, m) := by
-  simp [exLeafK, hh]
 theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) :
     exNodeK q (some (h, m)) = (mpushW m h).map (fun m' => (h, q, m')) := by
   simp only [exNodeK, hh, ite_false]; cases mpushW m h <;> rfl
-theorem exSortK_some : exSortK (some (a, q, m)) = exLeafK q (sointernW m a) := by rfl
-theorem exConst2K_some : exConst2K a (some (b, q, m)) = exLeafK q (ceinternW m a b) := by rfl
 theorem exTwoK_app (ht : t = 5) : exTwoK t a (some (b, q, m)) = exNodeK q (mkAppW m a b) := by
   simp [exTwoK, ht]
 theorem exTwoK_lam (ht : t = 6) : exTwoK t a (some (b, q, m)) = exNodeK q (mkLamW m a b) := by
   simp [exTwoK, ht]
 theorem exTwoK_forall (ht : t = 7) : exTwoK t a (some (b, q, m)) = exNodeK q (mkForallW m a b) := by
   simp [exTwoK, ht]
-theorem exConst2KN_some : exConst2KN rom n (some (a, q, m)) = exConst2K a (romLevelsW rom n m q) := by
-  simp [exConst2KN]
-theorem romLeafW_bvar (ht : t = 0) (hu : u64OK rom (pos + 1)) :
-    romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (binternW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht, hu]
-theorem romLeafW_sort (_ht0 : t ≠ 0) (ht : t = 1) :
-    romLeafW rom (n + 1) m pos t = exSortK (romLevelW rom n m (pos + 1)) := by simp [romLeafW, ht]
-theorem romLeafW_u64 (ht : t = 0 ∨ t = 3) (hu : ¬ u64OK rom (pos + 1)) :
-    romLeafW rom (n + 1) m pos t = none := by simp [romLeafW, ht, hu]
-theorem romLeafW_const (_ht0 : t ≠ 0) (_ht1 : t ≠ 1) (ht : t = 2) :
-    romLeafW rom (n + 1) m pos t = exConst2KN rom n (romNameW rom n m (pos + 1)) := by
-  simp [romLeafW, ht]
-theorem romLeafW_lit (_ht0 : t ≠ 0) (_ht1 : t ≠ 1) (_ht2 : t ≠ 2) (ht : t = 3) (hu : u64OK rom (pos + 1)) :
-    romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht, hu]
 theorem exFvarK_some : exFvarK rom k (some (a, q, m)) = exNodeK q (fvinternW m k a) := by simp [exFvarK]
 theorem exProjK_some (hu : u64OK rom q) :
     exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
@@ -556,16 +573,12 @@ theorem romTwoW_eq : romTwoW rom (n + 1) m pos t = exOneK rom n t (romExprW rom 
   simp [romTwoW]
 end arms
 
-attribute [arena_grind =] exLeafK_some exSortK_some exConst2K_some exTwoK_app exTwoK_lam exTwoK_forall
-  exConst2KN_some exFvarK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
+attribute [arena_grind =] exTwoK_app exTwoK_lam exTwoK_forall
+  exFvarK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
 grind_pattern [arena_grind] exNodeK_some => exNodeK q (some (h, m))
 grind_pattern [arena_grind] exProjK_some => exProjK rom n (some (a, q, m))
 grind_pattern [arena_grind] romExprW_ref => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romExprW_leaf => romExprW rom (n + 1) m pos
-grind_pattern [arena_grind] romLeafW_bvar => romLeafW rom (n + 1) m pos t
-grind_pattern [arena_grind] romLeafW_sort => romLeafW rom (n + 1) m pos t
-grind_pattern [arena_grind] romLeafW_const => romLeafW rom (n + 1) m pos t
-grind_pattern [arena_grind] romLeafW_lit => romLeafW rom (n + 1) m pos t
 grind_pattern [arena_grind] romExprW_one => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romExprW_two => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romOneW_fvar => romOneW rom (n + 1) m pos t
@@ -633,17 +646,33 @@ theorem romLitW_topK {m m' : Mem} {k r : Word} (h : romLitW m k = some (r, m')) 
         · show (litWordMem m k).top.toNat < _
           rw [litWordMem, e, htop0]; exact h0
 
-theorem exLeafK_eq {q h q' : Word} {r : Option (Word × Mem)} {m' : Mem}
-    (hW : exLeafK q r = some (h, q', m')) : r = some (h, m') := by
-  cases r with
-  | none => simp [exLeafK] at hW
-  | some r =>
-    obtain ⟨w, m₁⟩ := r
-    simp only [exLeafK] at hW
+/-- A leaf's handle checked (`rom_ex_leaf`'s `bvar` and literal tails). -/
+theorem romLeafW_kb_inv {rom : List UInt8} {pos h q' : Word} {m' : Mem} {x : Option (Word × Mem)}
+    (hW : romLeafW.k_intern_bvar rom pos x = some (h, q', m')) :
+    x = some (h, m') ∧ h.toNat < 2 ^ 32 ∧ q' = pos + 9 := by
+  match x, hW with
+  | some (r, m₃), hW =>
+    simp only [romLeafW.k_intern_bvar] at hW
     split at hW
     · simp at hW
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, -, rfl⟩ := hW; rfl
+    rename_i hlt
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    exact ⟨rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl⟩
+
+/-- The same for the `sort` and `const` tails. -/
+theorem romLeafW_ks_inv {rom : List UInt8} {q h q' : Word} {m' : Mem} {x : Option (Word × Mem)}
+    (hW : romLeafW.k_intern_sort rom q x = some (h, q', m')) :
+    x = some (h, m') ∧ h.toNat < 2 ^ 32 ∧ q' = q := by
+  match x, hW with
+  | some (r, m₃), hW =>
+    simp only [romLeafW.k_intern_sort] at hW
+    split at hW
+    · simp at hW
+    rename_i hlt
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    exact ⟨rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl⟩
 
 theorem exNodeK_topK {q h q' : Word} {r : Option (Word × Mem)} {m m' : Mem}
     (hr : ∀ w m₁, r = some (w, m₁) → TopK m m₁) (hW : exNodeK q r = some (h, q', m')) : TopK m m' := by
@@ -666,39 +695,41 @@ theorem romLeafW_topK (rom : List UInt8) (n : Nat) (m : Mem) (pos t h q : Word) 
   cases n with
   | zero => simp [romLeafW] at hW
   | succ n =>
-    by_cases hu : (t = 0 ∨ t = 3) ∧ ¬ u64OK rom (pos + 1)
-    · simp [romLeafW, hu] at hW
     by_cases h0 : t = 0
-    · rw [romLeafW_bvar rom n m pos t h0 (Classical.byContradiction fun hh => hu ⟨Or.inl h0, hh⟩)] at hW
-      exact cons_topK bvarCS_wf (by decide) (by decide) (exLeafK_eq hW)
+    · by_cases hu : u64OK rom (pos + 1)
+      case neg => rw [romLeafW.abort1 (hc1 := h0) (hc2 := by simpa using hu)] at hW; cases hW
+      rw [romLeafW.arm1 (hc1 := h0) (hc2 := decide_eq_true hu)] at hW
+      exact cons_topK bvarCS_wf (by decide) (by decide) (romLeafW_kb_inv hW).1
     by_cases h1 : t = 1
-    · rw [romLeafW_sort rom n m pos t h0 h1] at hW
+    · rw [romLeafW.arm2 (hc1 := h0) (hc2 := h1)] at hW
       cases hP : romLevelW rom n m (pos + 1) with
-      | none => rw [hP] at hW; simp [exSortK] at hW
+      | none => rw [hP, romLeafW.k_rom_level.none] at hW; cases hW
       | some r =>
         obtain ⟨a, q₁, m₁⟩ := r
-        rw [hP, exSortK_some] at hW
+        rw [hP, romLeafW.k_rom_level.arm1] at hW
         exact (romLevelW_topK hP).trans
-          (cons_topK sortCS_wf (by decide) (by decide) (exLeafK_eq hW))
+          (cons_topK sortCS_wf (by decide) (by decide) (romLeafW_ks_inv hW).1)
+    by_cases h3 : t = 3
+    · by_cases hu : u64OK rom (pos + 1)
+      case neg => rw [romLeafW.abort2 (hc1 := h0) (hc2 := h1) (hc3 := h3) (hc4 := by simpa using hu)] at hW; cases hW
+      rw [romLeafW.arm3 (hc1 := h0) (hc2 := h1) (hc3 := h3) (hc4 := decide_eq_true hu)] at hW
+      exact romLitW_topK (romLeafW_kb_inv hW).1
     by_cases h2 : t = 2
-    · rw [romLeafW_const rom n m pos t h0 h1 h2] at hW
+    · rw [romLeafW.arm4 (hc1 := h0) (hc2 := h1) (hc3 := h3) (hc4 := h2)] at hW
       cases hP : romNameW rom n m (pos + 1) with
-      | none => rw [hP] at hW; simp [exConst2KN] at hW
+      | none => rw [hP, romLeafW.k_rom_name.none] at hW; cases hW
       | some r =>
         obtain ⟨a, q₁, m₁⟩ := r
-        rw [hP, exConst2KN_some] at hW
+        rw [hP, romLeafW.k_rom_name.arm1] at hW
         cases hQ : romLevelsW rom n m₁ q₁ with
-        | none => rw [hQ] at hW; simp [exConst2K] at hW
+        | none => rw [hQ, romLeafW.k_rom_levels.none] at hW; cases hW
         | some r =>
           obtain ⟨b, q₂, m₂⟩ := r
-          rw [hQ, exConst2K_some] at hW
+          rw [hQ, romLeafW.k_rom_levels.arm1] at hW
           exact ((romNameW_topK hP).trans
             (romLevelsW_topK hQ)).trans
-            (cons_topK constCS_wf (by decide) (by decide) (exLeafK_eq hW))
-    by_cases h3 : t = 3
-    · rw [romLeafW_lit rom n m pos t h0 h1 h2 h3 (Classical.byContradiction fun hh => hu ⟨Or.inr h3, hh⟩)] at hW
-      exact romLitW_topK (exLeafK_eq hW)
-    simp [romLeafW, h0, h1, h2, h3] at hW
+            (cons_topK constCS_wf (by decide) (by decide) (romLeafW_ks_inv hW).1)
+    rw [romLeafW.abort3 (hc1 := h0) (hc2 := h1) (hc3 := h3) (hc4 := h2)] at hW; cases hW
 
 /-- **`rom_expr`'s models keep the top in a tier.** -/
 theorem romExprW_topK (rom : List UInt8) (n : Nat) :
@@ -716,9 +747,11 @@ theorem romExprW_topK (rom : List UInt8) (n : Nat) :
       · rw [romExprW_ref rom n m pos h9] at hW
         simp only [romRefW] at hW
         split at hW
-        · simp only [Option.some.injEq, Prod.mk.injEq] at hW
-          obtain ⟨-, -, rfl⟩ := hW; exact TopK.refl _
         · simp at hW
+        split at hW
+        · simp at hW
+        simp only [Option.some.injEq, Prod.mk.injEq] at hW
+        obtain ⟨-, -, rfl⟩ := hW; exact TopK.refl _
       by_cases h2 : romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3
       · rw [romExprW_leaf rom n m pos h9 h2] at hW
         exact romLeafW_topK rom n m pos _ h q m' hW
@@ -800,56 +833,6 @@ theorem romExprW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m
     m'.top.toNat < 2 ^ 41 := ((romExprW_topK rom n).1 m pos h q m' hW hc ht).1
 grind_pattern [arena_grind] romExprW_top' => romExprW rom n m pos, some (h, q, m')
 
-/-- The functions `rom_expr` calls. -/
-structure ExprProg (rom : List UInt8) (p : Prog) : Prop extends LevelsProg rom p where
-  rom_expr : p.lookup "rom_expr" = some (romExpr rom)
-  rom_ex_leaf : p.lookup "rom_ex_leaf" = some romExLeaf
-  memo_get : p.lookup "memo_get" = some memoGet
-  rom_ex_ref : p.lookup "rom_ex_ref" = some romExRef
-  rom_ex_one : p.lookup "rom_ex_one" = some romExOne
-  rom_ex_two : p.lookup "rom_ex_two" = some romExTwo
-  memo_push : p.lookup "memo_push" = some memoPush
-  rset_find : p.lookup "rset_find" = some (memoFindG rsetSch)
-  rset_put : p.lookup "rset_put" = some (memoPutG rsetSch)
-  lit_match : p.lookup "lit_match" = some litMatch
-  lit_find : p.lookup "lit_find" = some litFind
-  lit_push : p.lookup "lit_push" = some litPush
-  intern_lit : p.lookup "intern_lit" = some internLit
-  rom_lit : p.lookup "rom_lit" = some romLit
-  bvar_find : p.lookup "bvar_find" = some bvarFind
-  bvar_push : p.lookup "bvar_push" = some bvarPush
-  intern_bvar : p.lookup "intern_bvar" = some internBVar
-  sort_find : p.lookup "sort_find" = some sortFind
-  sort_push : p.lookup "sort_push" = some sortPush
-  intern_sort : p.lookup "intern_sort" = some internSort
-  const_find : p.lookup "const_find" = some constFind
-  const_push : p.lookup "const_push" = some constPush
-  intern_const : p.lookup "intern_const" = some internConst
-  fvar_find : p.lookup "fvar_find" = some fvarFind
-  fvar_push : p.lookup "fvar_push" = some fvarPush
-  intern_fvar : p.lookup "intern_fvar" = some internFVar
-  der_b : p.lookup "der_b" = some derB
-  app_find : p.lookup "app_find" = some appFind
-  app_push : p.lookup "app_push" = some appPush
-  intern_app : p.lookup "intern_app" = some internApp
-  mk_app : p.lookup "mk_app" = some mkApp
-  lam_find : p.lookup "lam_find" = some lamFind
-  lam_push : p.lookup "lam_push" = some lamPush
-  intern_lam : p.lookup "intern_lam" = some internLamL
-  mk_lam : p.lookup "mk_lam" = some mkLam
-  forall_find : p.lookup "forall_find" = some forallFind
-  forall_push : p.lookup "forall_push" = some forallPush
-  intern_forall : p.lookup "intern_forall" = some internForallL
-  mk_forall : p.lookup "mk_forall" = some mkForall
-  letE_find : p.lookup "letE_find" = some letFind
-  letE_push : p.lookup "letE_push" = some letPush
-  intern_letE : p.lookup "intern_letE" = some internLet
-  mk_let : p.lookup "mk_let" = some mkLet
-  proj_find : p.lookup "proj_find" = some projFind
-  proj_push : p.lookup "proj_push" = some projPush
-  intern_proj : p.lookup "intern_proj" = some internProj
-  mk_proj : p.lookup "mk_proj" = some mkProj
-
 section spec
 variable (rom : List UInt8) (p : Prog) (hL : ExprProg rom p)
 include hL
@@ -872,43 +855,6 @@ def SpecT (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
 /-- The three specs at L fuel `n`. -/
 def ExprSpecs (rom : List UInt8) (p : Prog) (n : Nat) : Prop :=
   SpecE rom p n ∧ SpecO rom p n ∧ SpecT rom p n
-
-theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word)
-    (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_ex_leaf" [pos, t]
-    ⦃fun r s' => LocEq s' s₀ ∧ romLeafW rom n s₀.mem pos t = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.rom_ex_leaf]
-  simp only [callFn, romExLeaf]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hn' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (romName_specW rom p hL.toNameProg n s₁ pos₁ h₁)
-    have hl' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (romLevel_specW rom p hL.toLevelProg n s₁ pos₁ h₁)
-    have hls' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8
-      (romLevels_specW rom p hL.toLevelsProg n s₁ pos₁ h₁)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hn', hl', hls',
-        romU64_spec rom p hL.rom_u64 n,
-        internBVar_spec p hL.bvar_find hL.bvar_push hL.intern_bvar n,
-        internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n,
-        internConst_spec p hL.const_find hL.const_push hL.intern_const n,
-        romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
-          hL.rom_lit n] <;>
-      finish [Keep.size, L.Front.Keep.pcap]
-
-attribute [local irreducible] u64W memoOk in
-theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rom_ex_ref" [pos]
-    ⦃fun r s' => LocEq s' s₀ ∧ romRefW rom s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.rom_ex_ref]
-  simp only [callFn, romExRef]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, romU64_spec rom p hL.rom_u64 n,
-        memoGet_spec p hL.memo_get n] <;>
-      finish [romRefW]
 
 theorem romExpr_stepE (n : Nat) (ih : ExprSpecs rom p n) : SpecE rom p (n + 1) := by
   obtain ⟨_, ihO, ihT⟩ := ih

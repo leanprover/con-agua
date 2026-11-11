@@ -104,11 +104,14 @@ theorem lineRecW_refines (m m' : Mem) (_hm : m.arr8 IN = b.data) (a₀ : AState)
     · cases h
     rename_i hc0
     cases hP : L.Front.Unescape.strPutEscW b.data m f.c f.d with
-    | none => rw [hP, strK_none] at h; cases h
+    | none => rw [hP, applyStrW.k_str_put_esc.none] at h; cases h
     | some q =>
     obtain ⟨l, m₁⟩ := q
-    rw [hP] at h
-    replace h := strK_intern h
+    rw [hP, applyStrW.k_str_put_esc, applyStrW_kn] at h
+    split at h
+    · cases h
+    split at h
+    · cases h
     rcases r with ⟨I, (⟨P, S⟩ | ⟨P, N⟩)⟩ | ⟨_, (_ | ⟨_, _⟩ | ⟨_, _⟩ | _)⟩ | _ | _ | _ | _ <;>
       simp only [RecR, PlR, NameR] at hRR
     · obtain ⟨hI, -, hP', hS⟩ := hRR
