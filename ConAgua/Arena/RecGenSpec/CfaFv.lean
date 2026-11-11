@@ -48,14 +48,14 @@ end dv
 /-! ## Write sets -/
 
 theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr [] [] m m' := by
-  rw [tmdW_eq] at h
+  rw [tmdW.arm1] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
-  rw [tmdK1_some] at h
+  rw [tmdW.k_intern_nanon.arm1] at h
   refine (MFr.of_frame (naF_frame h1) (by simp [tier1, NAREC, NASLOT]) (by simp)).trans ?_
   obtain ⟨ls, hp, h⟩ := of_K h rfl
-  rw [tmdK2_some] at h
+  rw [tmdW.k_pin_word.arm1] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
-  rw [tmdK3_some] at h
+  rw [tmdW.k_mk_target_major.arm1] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]
   simp only [mkTMW] at hmk
