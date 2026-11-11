@@ -792,6 +792,19 @@ example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
     ⦃fun r s' => LocEq s' s₀ ∧ tPfW C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ :=
   tPf_spec p C hc hp n s₀ x
 
+/-- A binder named `L` (lookups as fields, `L.pf`): the generated proofs root the library's
+names (`_root_.L.exec`), so the command renames the binder to `L'` from it on. -/
+structure TLk (p : Prog) : Prop where
+  pf : p.lookup "t_pf" = some tPf
+
+l_model tPfL_spec (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
+      ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
+    (L : TLk p)
+  fns [L.pf ↦ tPfLW]
+  specs [hc n]
+  grind [arena_grind] pfuel
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function

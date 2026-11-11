@@ -2021,7 +2021,31 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   if doTrace then logInfo m!"{cmd}"
   elabCommand cmd
 
+/-- The identifiers `L` and `L.x` as `L'`, `L'.x` (`to`). -/
+meta partial def renameL (to : Name) : Syntax → Syntax
+  | s@(.ident info _ n _) =>
+    if n.getRoot == `L then
+      let n' := n.replacePrefix `L to
+      .ident info (toString n').toRawSubstring n' []
+    else s
+  | .node info k args => .node info k (args.map (renameL to))
+  | s => s
+
+/-- A binder named `L` (a structure of lookups, `L.rc`) renamed to `L'` from its binder on: the
+generated proofs root the library's names (`_root_.L.exec`), which would take `L.rc` too. After
+the binder, `L.x` in the command can only mean the binder's field (a local comes first). -/
+meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
+  let bs := stx[3].getArgs
+  let isL (b : Syntax) : Bool := (b[1].getArgs.any fun x => x.isIdent && x.getId == `L)
+  let some i := bs.findIdx? isL | return stx
+  let bs' := bs.mapIdx fun j b => if j < i then b else renameL `L' b
+  let mut args := stx.getArgs.set! 3 (stx[3].setArgs bs')
+  for k in [4:args.size] do
+    args := args.set! k (renameL `L' args[k]!)
+  return stx.setArgs args
+
 @[command_elab lmodel] meta def elabLModel : CommandElab := fun stx => do
+  let stx := renameBinderL stx
   -- `l_model name binders* fns [..] specs? grind? fold? extra? finish? gen? …`
   let doc? : Option (TSyntax `Lean.Parser.Command.docComment) :=
     if stx[0].getNumArgs == 0 then none else some ⟨stx[0][0]⟩
