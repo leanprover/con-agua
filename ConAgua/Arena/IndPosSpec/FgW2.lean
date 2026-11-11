@@ -92,25 +92,25 @@ l_model nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem fgW_kId (n : Nat) (m : Mem) (hi us dO dL gO gL pO pL nO nL : Word) :
     fgW.k_nest_frame_grp (fgW n m hi us dO dL gO gL pO pL nO nL) = fgW n m hi us dO dL gO gL pO pL nO nL := by
   rcases n with _ | n
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp]
   rw [fgW.eq_2]; split
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp]
   generalize posRecW _ _ = x; rcases x with _ | ⟨k, m1⟩
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp, fgW.k_rec4]
   simp only [fgW.k_rec4]
   generalize piBW _ _ _ _ = x; rcases x with _ | ⟨rs, m2⟩
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp, fgW.k_pi_binders]
   simp only [fgW.k_pi_binders]
   generalize posRecW _ _ = x; rcases x with _ | ⟨h, m3⟩
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp, fgW.k_rec3]
   simp only [fgW.k_rec3]
   generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m4⟩
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp, fgW.k_sl_snoc]
   simp only [fgW.k_sl_snoc]
   generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m5⟩
-  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  · simp [fgW.k_nest_frame_grp, fgW.k_sl_snoc_2]
   simp only [fgW.k_sl_snoc_2]
-  generalize fgW _ _ _ _ _ _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m6⟩ <;> simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  generalize fgW _ _ _ _ _ _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m6⟩ <;> simp [fgW.k_nest_frame_grp]
 
 section arms
 variable (n : Nat) (m m1 : Mem) (hi us dO dL gO gL pO pL nO nL c key : Word) (r : List Word)
@@ -172,19 +172,19 @@ l_model nestFrameHoles_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem fhW_kId (n : Nat) (m : Mem) (hi gO gL aO aL : Word) :
     fhW.k_nest_frame_holes (fhW n m hi gO gL aO aL) = fhW n m hi gO gL aO aL := by
   rcases n with _ | n
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.eq_1, fhW.k_nest_frame_holes]
   rw [fhW.eq_2]; split
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.k_nest_frame_holes]
   split
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.k_nest_frame_holes]
   generalize fvinternW _ _ _ = x; rcases x with _ | ⟨v, m1⟩
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.k_nest_frame_holes, fhW.k_intern_fvar]
   simp only [fhW.k_intern_fvar]; split
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.k_nest_frame_holes]
   generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m2⟩
-  · simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  · simp [fhW.k_nest_frame_holes, fhW.k_sl_snoc]
   simp only [fhW.k_sl_snoc]
-  generalize fhW _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m3⟩ <;> simp [fhW.eq_1, fhW.k_nest_frame_holes, fhW.k_intern_fvar, fhW.k_sl_snoc]
+  generalize fhW _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m3⟩ <;> simp [fhW.k_nest_frame_holes]
 
 section arms
 variable (n : Nat) (m m1 : Mem) (hi gO gL aO aL v : Word) (r : List Word)
@@ -235,16 +235,16 @@ l_model nestContNewActive_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAll
 theorem caW_kId (n : Nat) (m : Mem) (us dO dL gO gL aO aL : Word) :
     caW.k_nest_cont_new_active (caW n m us dO dL gO gL aO aL) = caW n m us dO dL gO gL aO aL := by
   rcases n with _ | n
-  · simp [caW.eq_1, caW.k_nest_cont_new_active, caW.k_rec4, caW.k_sl_snoc]
+  · simp [caW.eq_1, caW.k_nest_cont_new_active]
   rw [caW.eq_2]; split
-  · simp [caW.eq_1, caW.k_nest_cont_new_active, caW.k_rec4, caW.k_sl_snoc]
+  · simp [caW.k_nest_cont_new_active]
   generalize posRecW _ _ = x; rcases x with _ | ⟨k, m1⟩
-  · simp [caW.eq_1, caW.k_nest_cont_new_active, caW.k_rec4, caW.k_sl_snoc]
+  · simp [caW.k_nest_cont_new_active, caW.k_rec4]
   simp only [caW.k_rec4]
   generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m2⟩
-  · simp [caW.eq_1, caW.k_nest_cont_new_active, caW.k_rec4, caW.k_sl_snoc]
+  · simp [caW.k_nest_cont_new_active, caW.k_sl_snoc]
   simp only [caW.k_sl_snoc]
-  generalize caW _ _ _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m3⟩ <;> simp [caW.eq_1, caW.k_nest_cont_new_active, caW.k_rec4, caW.k_sl_snoc]
+  generalize caW _ _ _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m3⟩ <;> simp [caW.k_nest_cont_new_active]
 
 section arms
 variable (n : Nat) (m m1 : Mem) (us dO dL gO gL aO aL key : Word) (r : List Word)
