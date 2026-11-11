@@ -323,43 +323,29 @@ theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       r = [r.headD 0, r.tail.headD 0]; ⊤⦄ :=
   triple_post (erToIw_specW p ha hc hp n s₀ o l) (fun _r _s' ⟨h1, h2⟩ => ⟨h1, h2, erToIwW_two h2⟩)
 
-/-- The model of `block_shape_lps` (its callee runs at `n - 1`). -/
-def lpsW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, p =>
-    if rdW (m.arr64 IW) (p + 1) = 0 then some ([0, 0], m)
-    else erToIwW n m
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2))
+/-- **`block_shape_lps(p)`'s model `lpsW`** (generated). -/
+l_model blockShapeLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hp : p.lookup "block_shape_lps" = some blockShapeLps)
+  fns [hp ↦ lpsW list]
+  specs [erToIw_specW p ha hc he n]
+  grind [arena_grind] fold [erRd]
 
 section arms
 variable (n : Nat) (m : Mem) (p : Word)
-theorem lpsW_nil (h : rdW (m.arr64 IW) (p + 1) = 0) : lpsW (n + 1) m p = some ([0, 0], m) := by
-  simp [lpsW, h]
+/-- No member: no level parameters. -/
+theorem lpsW_nil (h : rdW (m.arr64 IW) (p + 1) = 0) : lpsW (n + 1) m p = some ([0, 0], m) :=
+  lpsW.arm1 n m p h
+/-- Member `0`'s level parameters, copied: `er_to_iw`'s two results passed on. -/
 theorem lpsW_cons (h : rdW (m.arr64 IW) (p + 1) ≠ 0) : lpsW (n + 1) m p =
     erToIwW n m
       (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
       (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2)) := by
-  simp [lpsW, h]
+  rw [lpsW.arm2 n m p h]
+  rcases hx : erToIwW n _ _ _ with _ | ⟨r, m1⟩
+  · rfl
+  · rw [lpsW.k_er_to_iw.arm1, ← erToIwW_two hx]
 end arms
-
-grind_pattern [ind_grind] lpsW_nil => lpsW (n + 1) m p
-grind_pattern [ind_grind] lpsW_cons => lpsW (n + 1) m p
-
-theorem blockShapeLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
-    (hp : p.lookup "block_shape_lps" = some blockShapeLps) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ lpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeLps]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        erToIw_specW2 p ha hc he n] <;>
-      finish (gen := 20) [rdW_eq, erRd]
 
 theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
     (h : lpsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)

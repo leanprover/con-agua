@@ -70,3 +70,46 @@ option covers it:
 Threading a `CTL`-size hypothesis through `zeroW_ok` and its six callers to save a ten-line spec
 is no win. The same holds for `lh_mk` (`lhMkW`, the same guard). This is a case for a generator
 option that models a store's bound as a guard (`none` out of bounds), not for a lane.
+
+### The Front install records: `ind_cv`, `parse_rule_d`, `decl_cv`
+
+Hand models `cvW`, `ruleW` (`IndApplySpec2`, written with the continuations `wK`/`mK` over
+`lkW`, the table lookup) and `ApplyDecl`'s `cvW` with its hand spec over `decl_cv`'s results
+(churn: `IndApplySpec2`'s family carries 610 ronsync2 lines, the fifth in the inventory). All three
+are `l_model`s now (default recipe; `guards ["name_get", "expr_get"]` turns the lookups' `tblOK`
+conjuncts into guards, `lp_put` is a `mixed` callee, `pre [s₀.mem.arr8 IN = b]`, `keep`). The users
+keep their shape through one bridge each: `cvW_eq` and `ruleW_eq` restate the generated models in
+the `wK`/`lkW` form (`IndInstallRefine`, `IndInstallRefine3`: `unfold` → `rw`), `dcvW_cv` gives
+`decl_cv`'s four result words and the memory `cvW` (kept as `apply_decl`'s vocabulary; one use in
+`ApplyDLineRef`). Gone: three hand specs (39 lines) and the two hand models. 5 files +54 −58.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Front/IndApplySpec2` | 38.0 → 38.6 G | 6.8 → 6.8 | 1054 → 1051 |
+| `Front/IndInstallRefine` | 10.2 → 10.2 G | 1.4 → 1.5 | 959 → 950 |
+| `Front/IndInstallRefine3` | 40.1 → 40.1 G | 4.8 → 4.7 | 1135 → 1171 |
+| `Front/ApplyDecl` | 16.3 → 16.4 G | 3.2 → 3.2 | 921 → 953 |
+| `Front/ApplyDLineRef` (three lines) | → 20.0 G | → 3.5 | → 1049 |
+
+## 3. The 185 specs without a model in their post
+
+Classified by their posts (script over `_tmp/mgen5/inv.json`), and 22 read by hand (random
+sample, seed 5: `scan_opaque`, `nat_mod_lit`, `class_gen_major`, `class_key_of`, `utf8_char`,
+`key_at_g2`, `caps_eq_a`, `str_code`, `nat_add`, `class_rules_ok`, `ci_eq_rest`,
+`check_block_idx_sorts`, `nest_accept_group`, `class_minor_slot_go`, `hints_val`,
+`class_recs_rules_ok`, `stk_push`, `key_at_g6`, `block_shape_major_idx_at`, `match_lit`,
+`scan_binder_info`, `install_basis_decls`):
+
+| kind | count | example | could a generated spec replace the hand proof? |
+|---|---:|---|---|
+| refinement triples (`AM.ok …`, `@[refines]`) | 61 | `install_basis_decls`, `check_block_idx_sorts` | no: these are the refinement layer itself, 6–7-line proofs that chain the callees' refinements through `vcgen`; a generated model would be a new intermediate plus a simulation lemma, more text than now |
+| a value over the input bytes (`r = [fN b i]`) | 48 | `scan_opaque`, `key_at_g2`, `match_lit` | no: `fN` is the twin-shaped spec over `List UInt8` (`refines_part`), not a word model; a generated `ro` model needs a bridge `fW m i = some (fN (m.arr8 IN) i)` whose proof is the hand proof (8–20 lines) |
+| a total memory effect (`G ∧ s'.mem = F`) | 32 | `stk_push`, `nat_mul`, `tbl_own_set` | no: callers' `l_model`s read this shape as a total callee (inlined, `G` a guard); a generated `Option` model would put a continuation into every caller's model |
+| other value/relation posts | 33 | `nat_add` (`PFrame`, `Agree`, `pv … = pv … + pv …`), `nat_trim`, `skip_digits` | no: the post is the relation the callers need, over `Nat` values of limb slices |
+| a Boolean predicate (`r.headD 0 = if PB … then 1 else 0`) | 10 | `caps_eq_a`, `ci_eq_rest` | no: as for the byte values (the predicate is the spec; 9-line proofs) |
+| a model under `∃` | 1 | `class_minor_slot_go` (`∃ x y z w, classMinorSlotGoW … = some (x, y, z, w)`) | its model checks `(m.arr64 IW).size` (two out-of-bounds arms that its users take): a bounds case |
+
+Yield: none of the 22 sampled, and by the classification at most the one `∃` case of the 185,
+which is a bounds case. These hand proofs are short (median about 10 lines) and their posts are
+the vocabulary the callers' generated models and the refinements use; a generated spec would add
+a bridge per function at least as long as the proof it replaces. Not converted.

@@ -152,8 +152,9 @@ theorem applyDecl_ref {p : Prog} (hE : DeclLookups p) {b : ByteArray} (hb : b.da
   rcases h1 : callW p n "decl_cv" [f.name, f.lps, f.type] m with _ | ⟨r1, m₁⟩
   · rw [liftE_none, applyDeclE.k_decl_cv.none]; exact fun _ hk => absurd (by simp) hk
   rw [liftE_some, applyDeclE.k_decl_cv.arm1]
-  obtain ⟨s1, rfl, -, rfl, hcw⟩ :=
-    triple_of_callW (declCv_spec p hE b.data hb n ⟨m, Locals.init []⟩ hm f.name f.lps f.type) h1
+  obtain ⟨s1, rfl, -, hW⟩ :=
+    triple_of_callW (declCv_spec p hE b.data hb n ⟨m, Locals.init []⟩ f.name f.lps f.type hm) h1
+  obtain ⟨rfl, hcw⟩ := dcvW_cv hW
   have hP := cvW_parse' b m s1.mem st hD f d hR hcw
   -- `decl_kind`
   have hK := declKind_ref p s1.mem b st a f d

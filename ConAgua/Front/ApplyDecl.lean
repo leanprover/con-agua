@@ -16,6 +16,7 @@ meta import Std.Tactic.BVDecide.Normalize.Prop
 meta import Std.WP.Tactic
 import ConAgua.Scan.Common
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -376,22 +377,23 @@ theorem declPush_spec (n : Nat) (s₀ : St) (k nm o l t v q h : Word) :
     sym (gen := 24) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;> finish [pushW, recM]
 
-theorem declCv_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (name lps type : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "decl_cv" [name, lps, type]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [tblW s₀.mem NID name, tblW s₀.mem EID type,
-      rdW (s₀.mem.arr64 DLP) 0, lsCntN b (lps + 1) 0] ∧ cvW b s₀.mem name lps type = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hE.decl_cv]
-  simp only [callFn, declCv]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym (gen := 16) only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nameGet_spec p hE.expr.front n,
-        exprGet_spec p hE.expr n, lpPut_spec p hE b hb n] <;>
-      finish [cvW]
-
 end specs
+
+/-- **The model of `decl_cv(name, lps, type)`** (generated): the four words and `cvW`'s memory
+(`dcvW_cv`). -/
+l_model declCv_spec (p : Prog) (hE : DeclLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+  fns [hE.decl_cv ↦ dcvW list]
+  specs [nameGet_spec p hE.expr.front n, exprGet_spec p hE.expr n, lpPut_spec p hE b hb n]
+  pre [s₀.mem.arr8 IN = b]
+  keep [hE.expr.no_st8]
+  grind [arena_grind] guards ["name_get", "expr_get"]
+
+theorem dcvW_cv {b : Array UInt8} {m m₁ : Mem} {name lps type : Word} {r : List Word}
+    (h : dcvW b m name lps type = some (r, m₁)) :
+    r = [tblW m NID name, tblW m EID type, rdW (m.arr64 DLP) 0, lsCntN b (lps + 1) 0] ∧
+      cvW b m name lps type = some m₁ := by
+  unfold dcvW at h; unfold cvW
+  split at h <;> (try split at h) <;> simp_all
+  cases e : lpPutW b m lps <;> simp_all [dcvW.k_lp_put]
 
 end L.Front

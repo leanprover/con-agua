@@ -122,7 +122,7 @@ theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp
       (∀ P : Array Word, (∀ k, k < 11 → P[q.toNat + k]? = some (wd m' DLP (q.toNat + k))) →
         decRule (aread P) q.toNat = some (resOf (ConRon.Arena.Frontend.parseRuleD st ru) a)) := by
   obtain ⟨n0, f0, e0⟩ := hR
-  unfold ruleW at h
+  rw [ruleW_eq] at h
   have r0 : rdW (m.arr64 IFL) rp = wd m IFL rp.toNat := rfl
   have r1 : rdW (m.arr64 IFL) (rp + 1) = wd m IFL (rp.toNat + 1) := by
     rw [rdW_wdI _ _ _ _ (by simp; omega)]; rfl
