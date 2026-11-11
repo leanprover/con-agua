@@ -677,7 +677,7 @@ theorem tLen_spec (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       simp_all [tLenL, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval, St.setLoc_loc,
-        St.setLoc_mem]
+        L.St.setLoc_mem]
 
 theorem tLen_specT (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_len" [x]
@@ -722,7 +722,7 @@ theorem tLen_specP (p : Prog) (hp : p.lookup "t_len" = some tLen) (n : Nat) (s�
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
       simp_all [tLenP, Sig.retVal, Sig.retOr, Locals.init, LocEq, BinOp.eval, Cmp.eval, St.setLoc_loc,
-        St.setLoc_mem]
+        L.St.setLoc_mem]
 
 l_model tUseLenP_spec (p : Prog) (fs : List FnName) (hmem : ∀ {f : FnName}, f ∈ ["t_len"] → f ∈ fs)
     (hp : p.lookup "t_use_len" = some tUseLen) (hq : p.lookup "t_len" = some tLen)

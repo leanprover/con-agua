@@ -33,14 +33,6 @@ namespace L.Arena
 
 /-! ## `env_find`: a found row is a row -/
 
-theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    ∃ w, a (q + 3) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨n, -, ls, -, ty, ht, hc⟩ := h
-  cases hc
-  obtain ⟨w, hw, hl, rfl⟩ := hd?_some ht
-  exact ⟨w, hw, hl, rfl⟩
-
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
 constructor's type is the handle at `q + 4`. -/
 theorem decCI_ctor {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}

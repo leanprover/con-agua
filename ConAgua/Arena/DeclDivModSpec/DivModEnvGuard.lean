@@ -65,7 +65,7 @@ theorem eqStored_ref (hD : DmProg7 p) :
     hS1.check.env h2
   subst hm2
   refine ⟨(fe.find? (decI (r1.headD 0))).isSome, a1, ?_, hS1, hg1, ?_⟩
-  · simp only [eqStored, StateT.run_bind, hrun1, exc_ok_bind']
+  · simp only [eqStored, StateT.run_bind, hrun1, L.Arena.except_ok_bind]
     rfl
   · cases hf : fe.find? (decI (r1.headD 0)) with
     | none =>
@@ -94,7 +94,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx1 := decW0B_false hd1 z1
     refine ⟨false, a1, ?_, hS1, hg1, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.not_false, eq_self, ite_true]
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, Bool.not_false, eq_self, ite_true]
     rfl
   rw [ite_eq_right z1] at hw
   have hx1 := decW0B_true hd1 z1
@@ -114,7 +114,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_false hd3 z3
     refine ⟨false, a3, ?_, hS3, hG3, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3,
       Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
   rw [ite_eq_right z3] at hw
@@ -129,7 +129,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx4 := decW0B_false hd4 z4
     refine ⟨false, a4, ?_, hS4, hG6, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
       hx4, Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
   rw [ite_eq_right z4] at hw
@@ -146,7 +146,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx8 := decW0B_false hd8 z8
     refine ⟨false, a8, ?_, hS8, hG8, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
       hx4, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, ite_true,
       ite_false, Bool.false_eq_true]
     rfl
@@ -159,7 +159,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x10, a10, ?_, hS10, hG8.trans (hg9.trans hg10), hd10⟩
-  simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, exc_ok_bind', hx1, hrun2, hrun3, hx3, hrun4,
+  simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
     hx4, hrun7, hrun8, hx8, hrun9, Bool.not_true, ite_false, Bool.false_eq_true]
   exact hrun10
 

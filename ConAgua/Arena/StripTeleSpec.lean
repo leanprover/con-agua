@@ -15,6 +15,7 @@ import ConAgua.Arena.IndCopy2
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
 import all ConAgua.Arena.StripTele
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -73,7 +74,7 @@ theorem eViewW_forall (m : Mem) (h : Word) (hg : tagW h = 6) (hne : eViewW m h �
   exact ⟨⟨hs, by simpa using c⟩, rfl⟩
 
 /-- A returning `e_view` of a `lam` handle. -/
-theorem eViewW_lamS (m : Mem) (h : Word) (hg : tagW h = 5) (hne : eViewW m h ≠ []) :
+theorem eViewW_lam (m : Mem) (h : Word) (hg : tagW h = 5) (hne : eViewW m h ≠ []) :
     viewOK m h LAM ∧ eViewW m h = [5, tfld m LAM (tierW h) (idxW h) 0,
       tfld m LAM (tierW h) (idxW h) 1, 0] := by
   unfold eViewW at hne ⊢
@@ -206,9 +207,6 @@ theorem stripLams_specW (p : Prog) (hp : StripProg p) (n : Nat) (s₀ : St) (k e
       finish [stripTW_succ]
 
 /-! ## The relational lemmas -/
-
-theorem viewBind_run_s (h : EIdx) (a : AState) :
-    (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 
 theorem StageR.set_iw {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
@@ -436,7 +434,7 @@ theorem stripTW_pis_ok (n : Nat) (vis : Word) (fe : IFEnv)
       obtain ⟨-, h1, h2⟩ := view_forall m a hR w hw hvok hg
       have hvb := viewBind_forall m a hR w hw hvok hg
       rw [hew]
-      exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
+      exact ⟨by rw [L.Arena.viewBind_run, hvb]; rfl, h1, h2⟩)
     n vis fe k e he
 
 /-- **`strip_lams` refines `stripLams`** (the model). -/
@@ -447,11 +445,11 @@ theorem stripTW_lams_ok (n : Nat) (vis : Word) (fe : IFEnv)
   stripTW_ok 5 ETag.lam stripLams (fun _ => rfl) stripLams_succ
     (fun w hw => tag_beq_iff w hw 5 (by decide))
     (fun m a w hR hw hne hg => by
-      obtain ⟨hvok, hew⟩ := eViewW_lamS m w hg hne
+      obtain ⟨hvok, hew⟩ := L.Ind.eViewW_lam m w hg hne
       obtain ⟨-, h1, h2⟩ := view_lam m a hR w hw hvok hg
       have hvb := viewBind_lam m a hR w hw hvok hg
       rw [hew]
-      exact ⟨by rw [viewBind_run_s, hvb]; rfl, h1, h2⟩)
+      exact ⟨by rw [L.Arena.viewBind_run, hvb]; rfl, h1, h2⟩)
     n vis fe k e he
 
 /-! ## The fuel-free model

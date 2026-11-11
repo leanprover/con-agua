@@ -4,6 +4,8 @@ public import ConAgua.Checker.Prelude
 import ConAgua.Checker.HoistIndexRef
 public import ConRon.Arena.Frontend.Prepare
 public import ConAgua.Checker.HoistRefBase
+import ConAgua.Arena.DeclAndPinInd
+import ConAgua.Arena.InitLink
 
 @[expose] public section
 
@@ -53,15 +55,15 @@ theorem pDeclGo_ok (n : Nat) : ∀ (m : Mem) (o c q w r : Word) (P : Array Word)
       simp
     · have hqc : q.toNat < c.toNat := by
         have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hcq); omega
-      rw [show c.toNat - q.toNat = (c.toNat - q.toNat - 1) + 1 by omega, hix_decCIs_succ] at hd
+      rw [show c.toNat - q.toNat = (c.toNat - q.toNat - 1) + 1 by omega, L.Arena.decCIs_succ] at hd
       simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
         Option.some.injEq] at hd
       obtain ⟨ci, ⟨p, hp, hci⟩, cs', hcs', rfl⟩ := hd
       simp only [nat?, Option.map_eq_some_iff] at hp
       obtain ⟨pw, hpw, rfl⟩ := hp
-      obtain ⟨hPq, hqt⟩ := hix_trunc_get hpw (by omega)
-      obtain ⟨w', hw', hw32, hname⟩ := hix_decCI_name hci
-      obtain ⟨hPw, hpt⟩ := hix_trunc_get hw' (by omega)
+      obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw (by omega)
+      obtain ⟨w', hw', hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw' (by omega)
       have hP0 : (P[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1 : rdW (m.arr64 DIND) (o + q) = pw :=
         hix_rdW (hP ▸ hPq) (by rw [UInt64.toNat_add]; omega)
@@ -95,10 +97,10 @@ theorem pDecl_ok (n : Nat) (m : Mem) (i w r : Word) (d : IDeclaration)
   cases n with
   | zero => cases h
   | succ n =>
-  have e0 := hix_rd_dw0 (m.arr64 DECL) i hi
-  have e1 := hix_rd_dw (m.arr64 DECL) i 1 hi (by decide)
-  have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
-  have e3 := hix_rd_dw (m.arr64 DECL) i 3 hi (by decide)
+  have e0 := L.Checker.rdW_dw0 (m.arr64 DECL) i hi
+  have e1 := L.Checker.rdW_dw (m.arr64 DECL) i 1 hi (by decide)
+  have e2 := L.Checker.rdW_dw (m.arr64 DECL) i 2 hi (by decide)
+  have e3 := L.Checker.rdW_dw (m.arr64 DECL) i 3 hi (by decide)
   simp only [UInt64.reduceToNat] at e1 e2 e3
   by_cases hind : ∃ b nP, d = .indDecl b nP
   · obtain ⟨b, nP, rfl⟩ := hind
@@ -127,10 +129,10 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
     (hi : i.toNat < 2 ^ 59) (hA : ArenaR m a) (h : pKeyW m i = some (r, m')) :
     ∃ a', (preludeKey d).run a = .ok (decI r, a') ∧ r.toNat < 2 ^ 32 ∧ ArenaR m' a' ∧
       HighFr m m' ∧ a'.pins = a.pins ∧ a'.store.pers = a.store.pers ∧ a'.store.scr = a.store.scr := by
-  have e0 := hix_rd_dw0 (m.arr64 DECL) i hi
-  have e1 := hix_rd_dw (m.arr64 DECL) i 1 hi (by decide)
-  have e2 := hix_rd_dw (m.arr64 DECL) i 2 hi (by decide)
-  have e3 := hix_rd_dw (m.arr64 DECL) i 3 hi (by decide)
+  have e0 := L.Checker.rdW_dw0 (m.arr64 DECL) i hi
+  have e1 := L.Checker.rdW_dw (m.arr64 DECL) i 1 hi (by decide)
+  have e2 := L.Checker.rdW_dw (m.arr64 DECL) i 2 hi (by decide)
+  have e3 := L.Checker.rdW_dw (m.arr64 DECL) i 3 hi (by decide)
   simp only [UInt64.reduceToNat] at e1 e2 e3
   have hHF : HighFr m m := ⟨fun _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   by_cases hind : ∃ b nP, d = .indDecl b nP
@@ -162,15 +164,15 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       have ho := (hok.2 h6).1
       rw [show (dw (m.arr64 DECL) i.toNat 3).toNat = ((dw (m.arr64 DECL) i.toNat 3).toNat - 1) + 1 by
         have : (dw (m.arr64 DECL) i.toNat 3).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
-        omega, hix_decCIs_succ] at hb
+        omega, L.Arena.decCIs_succ] at hb
       simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
         Option.some.injEq] at hb
       obtain ⟨ci, ⟨p, hp, hci⟩, cs', -, rfl⟩ := hb
       simp only [nat?, Option.map_eq_some_iff] at hp
       obtain ⟨pw, hpw, rfl⟩ := hp
-      obtain ⟨hPq, hqt⟩ := hix_trunc_get hpw ho
-      obtain ⟨w', hw', hw32, hname⟩ := hix_decCI_name hci
-      obtain ⟨hPw, hpt⟩ := hix_trunc_get hw' (by omega)
+      obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw ho
+      obtain ⟨w', hw', hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw' (by omega)
       have hP0 : ((m.arr64 DLP)[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1' : rdW (m.arr64 DIND) (dw (m.arr64 DECL) i.toNat 2) = pw := hix_rdW hPq rfl
       have e2' : rdW (m.arr64 DIND) (pw + 1) = w' :=

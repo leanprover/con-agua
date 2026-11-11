@@ -6,7 +6,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 public import ConAgua.Arena.DeclAxiomSpec2
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -137,7 +136,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     obtain ⟨rfl, hrun4, hd4⟩ := mpW_ok (a := a2) (mp_callR h.red h4) hS2.iw.erSize hcv2 hpin
     refine ⟨_, _, ?_, hS2, hg2, by simpa [decW0B] using hd4⟩
     simp only [clausePT, hfind, hci, Option.bind_some, hsh, romPinT, StateT.run_bind, hrun2,
-      exc_ok_bind']
+      L.Arena.except_ok_bind]
     exact hrun4
   by_cases hkw : wk = k
   rotate_left
@@ -239,7 +238,7 @@ theorem eqs_call {p : Prog} (h : RedProg p) (hp : p.lookup "eq_stored" = some eq
   refine ⟨rfl, ?_, ?_⟩
   · have hpe : pinEq.run a = .ok (decI (pinW m (1 + (0 : Word).toNat)), a) := by
       simpa [pinEq, show PIN_EQ = (0 : Word).toNat from rfl] using hrun1
-    simp only [eqStored, StateT.run_bind, hpe, exc_ok_bind']
+    simp only [eqStored, StateT.run_bind, hpe, L.Arena.except_ok_bind]
     show Except.ok _ = Except.ok _
     by_cases h0 : (findRes m vis (pinW m (1 + (0 : Word).toNat))).headD 0 = 0
     · rw [findRes_miss hS.check.env hl1 h0, h0]; rfl

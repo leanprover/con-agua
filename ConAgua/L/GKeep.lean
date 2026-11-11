@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.L.Semantics
+import ConAgua.L.LocNF
 
 @[expose] public section
 
@@ -125,7 +126,7 @@ theorem Mem.glob_copy8w (d : TieredArray) (b : Array UInt8) :
 
 theorem St.setLocs_mem' : ∀ (s : St) (xs : List Var) (vs : List Word), (s.setLocs xs vs).mem = s.mem
   | _, [], _ => rfl
-  | s, x :: xs, vs => St.setLocs_mem' (s.setLoc x (vs.headD 0)) xs vs.tail
+  | s, x :: xs, vs => L.St.setLocs_mem (s.setLoc x (vs.headD 0)) xs vs.tail
 
 /-! ## Expressions change no state -/
 
@@ -310,7 +311,7 @@ theorem step_keepsG (hp : globsIn p G fs = true) {k : Stmt → M Sig} (hk : KKee
     intro hr; simp only [Stmt.gsOk, decide_eq_true_eq] at hr; rw [step]
     exact KeepsG.bind (evalArgs_keepsG args) fun vs =>
       KeepsG.bind (invoke_keepsG' hp hk hr vs) fun rs =>
-        KeepsG.bind (KeepsG.modify fun s _ _ => by rw [St.setLocs_mem']) fun _ => KeepsG.pure _
+        KeepsG.bind (KeepsG.modify fun s _ _ => by rw [L.St.setLocs_mem]) fun _ => KeepsG.pure _
   | copy64 d di s si n =>
     intro _; rw [step]
     refine KeepsG.bind (warr_keepsG d) fun da => KeepsG.bind (evalE_keepsG di) fun i =>

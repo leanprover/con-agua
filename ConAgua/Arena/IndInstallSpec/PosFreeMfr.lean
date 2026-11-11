@@ -3,11 +3,11 @@ module
 public import ConAgua.Arena.IndInstallSpec.HbFreeMfr
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.RecClassSpec.ReadProg
 import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.ScratchRefine
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -101,7 +101,7 @@ theorem bpPSl {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fu
   obtain ⟨hwl, -⟩ := bpWord hl hw1
   rw [L.ofNat_toNat] at hwo hwl
   rw [hwo, hwl]
-  exact ⟨hd, hB _ _ (iwN_truncM_get ho).2 (iwN_truncM_get hl).2⟩
+  exact ⟨hd, hB _ _ (L.Ind.iwN_truncM_some ho).2 (L.Ind.iwN_truncM_some hl).2⟩
 
 /-- **A handle slice of a decoded record**, at the words L reads, below the top. -/
 theorem bpHSl {k : IdxKind} {m : Mem} {i : Nat} {xs : List (Idx k)}
@@ -114,7 +114,7 @@ theorem bpHSl {k : IdxKind} {m : Mem} {i : Nat} {xs : List (Idx k)}
   obtain ⟨hwo, hob⟩ := bpWord ho hw
   obtain ⟨hwl, hlb⟩ := bpWord hl hw1
   rw [hwo, hwl, UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]
-  have hb := hB _ _ (iwN_truncM_get ho).2 (iwN_truncM_get hl).2
+  have hb := hB _ _ (L.Ind.iwN_truncM_some ho).2 (L.Ind.iwN_truncM_some hl).2
   exact ⟨by rw [← decHL_truncM hb]; exact hd, hb⟩
 
 end L.Ind

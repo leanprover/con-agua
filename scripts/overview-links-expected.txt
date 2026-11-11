@@ -1592,13 +1592,13 @@
    123    specs [lvEquiv_spec p hp hpe n]
    124    grind [arena_grind, level_grind]
 
-== ConAgua/Arena/LevelArena.lean#L271-L276
-   271  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
-   272      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
-   273      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
-   274      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
-   275      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
-   276      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+== ConAgua/Arena/LevelArena.lean#L266-L271
+   266  theorem lvlEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+   267      (hwf : NStoreWF a.store.lss.ls.ns) (u v : LIdx) (lu lv : Level)
+   268      (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv)
+   269      (hc : ReadLCOK a) (he : LvlEqCOK a u v lu lv) (n : Nat) (z : Word)
+   270      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
+   271      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
 == vendor/con-ron/ConRon/Arena/Core.lean#L136-L153
    136  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
@@ -2161,13 +2161,13 @@
    843  def chkR (ck : Bool) (r : Reg64) (ln : AddrExpr) : Program :=
    844    if ck then [i64 (.cmp (.reg (rr r)) (oM ln)), jccL .nc errorL] else []
 
-== ConAgua/Compiler/BcePost.lean#L439-L444
-   439  /-- **Every run of `exec p n` keeps the facts.** -/
-   440  theorem fsound_exec (p : Prog) : ∀ n, FSound fun s σ => (exec p n s).run σ
-   441    | 0 => fun s σ fa r σ' h _ => by
-   442      simp [exec, throw, throwThe, MonadExceptOf.throw, StateT.lift, StateT.run, bind,
-   443        Except.bind] at h
-   444    | n + 1 => fsound_step p (exec p n) (fsound_exec p n)
+== ConAgua/Compiler/BcePost.lean#L436-L441
+   436  /-- **Every run of `exec p n` keeps the facts.** -/
+   437  theorem fsound_exec (p : Prog) : ∀ n, FSound fun s σ => (exec p n s).run σ
+   438    | 0 => fun s σ fa r σ' h _ => by
+   439      simp [exec, throw, throwThe, MonadExceptOf.throw, StateT.lift, StateT.run, bind,
+   440        Except.bind] at h
+   441    | n + 1 => fsound_step p (exec p n) (fsound_exec p n)
 
 == ConAgua/Compiler/BceSound.lean#L582-L586
    582  /-- **The facts at an expression**: they hold in a state `σ0` with `σ`'s memory that agrees with

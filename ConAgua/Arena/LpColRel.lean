@@ -227,8 +227,8 @@ theorem colT_mono {A : ArrId} {f : δ → Word} {m m' : Mem} {t : Word} {tb : Tb
 theorem ColT2.frame {L : Lens α δ k} {A : ArrId} {f : δ → Word} {m m' : Mem} {a : AState}
     (h : ColT2 L A f m a) (he : m'.arr64 A = m.arr64 A) (he' : m'.arr64 (tier1 A) = m.arr64 (tier1 A)) :
     ColT2 L A f m' a :=
-  ⟨colT_mono h.1 (fun _ _ => by simp only [tierA_zero, he]),
-    colT_mono h.2 (fun _ _ => by simp only [tierA_one_eq, he'])⟩
+  ⟨colT_mono h.1 (fun _ _ => by simp only [_root_.L.tierA_zero, he]),
+    colT_mono h.2 (fun _ _ => by simp only [_root_.L.tierA_one, he'])⟩
 
 /-- `ColT2.frame` across a `MemFrame` that avoids the column (both tiers). -/
 theorem ColT2.frameM {L : Lens α δ k} {A : ArrId} {f : δ → Word} {Ar : List TieredArray} {C : List Word}
@@ -399,7 +399,7 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
       simp only [cntC, he CTL (hW.sch.sa_ctl' t).symm]]
     exact pushRec_cnt C hW m t ht ks hR.ctl t' ht'
   have hAm := pushRec_col C hW hA m t ks
-  rw [← he _ (tierA_ne hAsa t t)] at hAm
+  rw [← he _ (_root_.L.tierA_ne_tierA hAsa t t)] at hAm
   have hq := hW.colRoom A hA m t ht hok
   have hc27 : (cntC C m t).toNat < 2 ^ 30 := by
     simp only [pushOKC, Bool.and_eq_true, decide_eq_true_eq] at hok
@@ -422,11 +422,11 @@ theorem colMkC {C : ConsSch} (hW : C.WF) {A : ArrId} (hA : C.col = some A)
     rw [hAm, rdW_set!, ← hct, ite_eq_left ⟨rfl, hq⟩, hdd]
   have rdo : ∀ t', t' ≤ 1 → t' ≠ t → m'.arr64 (tierA A t') = m.arr64 (tierA A t') := by
     intro t' ht' hne
-    rw [he _ (tierA_ne hAsa t' t), pushRec,
+    rw [he _ (_root_.L.tierA_ne_tierA hAsa t' t), pushRec,
       colW_arr C _ _ _ _ _ (fun A' hA' => by
         rw [hA] at hA'; cases hA'; exact tierA_ne_tier _ ht ht' (Ne.symm hne)),
       Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm (hW.col A hA).2.2.1) t').symm,
-      wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne (hW.col A hA).1 t' t)]
+      wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (_root_.L.tierA_ne_tierA (hW.col A hA).1 t' t)]
   rcases _root_.L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl
   · have e0 := hcm 0 (by decide)
     have e1 := hcm 1 (by decide)

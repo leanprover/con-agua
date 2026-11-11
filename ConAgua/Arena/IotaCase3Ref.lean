@@ -128,7 +128,7 @@ theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Co
   obtain ⟨hv2, hcno⟩ := of_ite_none hcno
   have hvn := viewConstName_f m a hR _ hw2 ⟨hv1, UInt64.not_le.mp hv2⟩ h3'
   rw [Option.some.inj hcno] at hvn
-  obtain ⟨-, hn32, -⟩ := view_const_f m a hR _ hw2 ⟨hv1, UInt64.not_le.mp hv2⟩ h3'
+  obtain ⟨-, hn32, -⟩ := L.Ind.view_const_f m a hR _ hw2 ⟨hv1, UInt64.not_le.mp hv2⟩ h3'
   rw [Option.some.inj hcno] at hn32
   rcases c4 : callW p (n + 1) "env_find" [r₃.headD 0, vis] m with _ | ⟨r₄, m₄⟩ <;>
     simp only [c4, reduceCtorEq] at h
@@ -187,8 +187,8 @@ l_model ic3E_spec (p : Prog) (hf : p.lookup "iota_case3_at" = some iotaCase3AtL)
 theorem decBool_ite0 (r : List Word) :
     decBool [if r.headD 0 = 0 then 1 else 0] = !decBool r := by
   by_cases h : r.headD 0 = 0
-  · rw [ite_eq_left h, decBool_f_m2c h]; rfl
-  · rw [ite_eq_right h, decBool_t_m2c h]; rfl
+  · rw [ite_eq_left h, L.Arena.decBool_false_of h]; rfl
+  · rw [ite_eq_right h, L.Arena.decBool_true_of h]; rfl
 
 /-- **`iota_case3_at` refines `iotaCase3At`, both outcomes**: the errors are
 `former_never_zero_at`'s (the `whnf` slot's, `fnza_ref`). -/
@@ -228,7 +228,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
     exact RefE.ret rfl (CorePost.ret hS rfl (by unfold ResH HW; decide))
   rw [ic3E.k_ctor_family.eq_2, ite_eq_right f0]
   obtain ⟨cvT, caps, rfl, hciT, T, hfT⟩ := hsome f0
-  obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hciT)
+  obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hciT)
   dsimp only
   -- the comparand levels' length
   rcases c2 : callW p (k + 1) "ls_node" [us] m with _ | ⟨r₂, m₂⟩

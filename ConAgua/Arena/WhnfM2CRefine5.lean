@@ -46,7 +46,7 @@ theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
     {cv : IConstantVal} {nP nF : Nat} (h : decCI R q.toNat = some (.ctorInfo cv nP nF)) :
     cv.levelParams.length = (rd (q + 3)).toNat ∧ nP = (rd (q + 5)).toNat ∧
       cv.type = decI (rd (q + 4)) ∧ HW (rd (q + 4)) := by
-  obtain ⟨-, hlen, hty, hty32⟩ := decCV_rd hR (decCI_ctor_cv' h)
+  obtain ⟨-, hlen, hty, hty32⟩ := decCV_rd hR (L.Arena.decCI_ctor_cv h)
   refine ⟨hlen, ?_, hty, hty32⟩
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
@@ -79,13 +79,6 @@ theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK 
   rcases k with _ | _ | _ | _ | _ | _ | _ | k <;>
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
   all_goals grind
-
-theorem decRules_get' (R : Nat → Option Word) (off cnt : Nat) (rs : List IRecRule)
-    (h : decRules R off cnt = some rs) :
-    rs.length = cnt ∧ ∀ j, j < cnt → decRule R (off + 11 * j) = rs[j]? := by
-  obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
-  simp at h1
-  exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem_range] using this⟩
 
 section top
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
@@ -198,7 +191,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   obtain ⟨v1, hcv⟩ := of_ite_none hcv
   obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr3 := (Option.some.inj hcv).symm
-  obtain ⟨hvw, hn32, -⟩ := view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
+  obtain ⟨hvw, hn32, -⟩ := L.Ind.view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
   have hn0 : tfld m CONST (tierW (r2.headD 0)) (idxW (r2.headD 0)) 0 = r3.headD 0 := by
     rw [hr3]; rfl
   rw [hn0] at hvw hn32
@@ -258,9 +251,9 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     ⟨CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩, rfl, hmaj⟩
   by_cases g1 : r1.headD 0 ≠ 0
   · rw [m2cHeadE.k_is_ctor_app.arm1 _ _ _ _ _ _ _ _ _ _ _ g1]
-    rw [decBool_t_m2c (by simpa using g1)] at hrun1
+    rw [L.Arena.decBool_true_of (by simpa using g1)] at hrun1
     exact RefE.ret (by simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte]; rfl) hA1
-  rw [decBool_f_m2c (by simpa using g1)] at hrun1
+  rw [L.Arena.decBool_false_of (by simpa using g1)] at hrun1
   have g1' : r1.headD 0 = 0 := by simpa using g1
   have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rules
       (decE major)).run a = (match rules with
@@ -273,7 +266,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
         | _ => pure (decE major)).run (AM.st (isCtorApp fe (decE major)) a) := by
     simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
     rfl
-  obtain ⟨hlen, hget⟩ := decRules_get' _ _ _ _ hr
+  obtain ⟨hlen, hget⟩ := L.Arena.decRules_getR _ _ _ hr
   by_cases g2 : rc ≠ 1
   · rw [m2cHeadE.k_is_ctor_app.arm2 _ _ _ _ _ _ _ _ _ _ _ g1' g2]
     refine RefE.ret ?_ hA1

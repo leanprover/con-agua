@@ -115,13 +115,10 @@ def setGoT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (c : NIdx) (us :
     setTailT r fe depth b us T us' caps.etaParams caps.etaFields aargs targs
   else pure false
 
-theorem pinsReady_of {m : Mem} {a : AState} (hP : PinsFull m a.pins) : pinsReady a = true := by
-  simp [pinsReady, hP.names_size, pinCount]
-
 theorem reservedBasisNames_run {m : Mem} {a : AState} (hP : PinsFull m a.pins) :
     reservedBasisNames.run a = .ok (a.pins.reserved, a) := by
   simp only [reservedBasisNames, pinReserved, StateT.run_bind, StateT.run_get, pure_bind,
-    pinsReady_of hP, ↓reduceIte]
+    L.Arena.pinsReady_true hP, ↓reduceIte]
   rfl
 
 theorem reservedContainsT_run {m : Mem} {a : AState} (hP : PinsFull m a.pins) (n : NIdx) :

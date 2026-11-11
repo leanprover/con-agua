@@ -101,7 +101,7 @@ theorem rms_ref (nP : Word) (n : Nat) (hn : n ≤ 2 ^ 62) :
     rw [hq']; exact hdx.grow (decMSB_mono _) h1.grow
   have hxb : (UInt64.ofNat q : Word).toNat + 5 ≤ iwTop m1 := by
     obtain ⟨-, ⟨a4, ha4, -⟩, -, -⟩ := decMS_some (m := truncM m) (decMSB_decMS hdx)
-    have h4 := (rec2IwN_trunc ha4).1
+    have h4 := (L.Ind.iwN_truncM_some ha4).1
     have hg := h1.grow.iw
     simp only at hg
     rw [hq']; omega
@@ -143,7 +143,7 @@ theorem rmRefS_of {p : Prog} (hV : CcvProg p) (hq : KnotStageProg p) (hap : ApdF
   intro n hn vis fe env m a nP mo ml mss msP hB henv hd hb hmss
   have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (rmsE_spec p hP n _ vis nP mo ml) (fun hG => hG.nv)
     (rms_ref hV hq hap hkp hcrf hP hWt hl hCS henv nP n hn m a mo ml mss msP hB ⟨hd, hb⟩ hmss)
-  exact RefE.weakenP h fun ⟨r, m'⟩ y a' h => by
+  exact L.Arena.RefE.mono h fun ⟨r, m'⟩ y a' h => by
     obtain ⟨s', hs', -, hR⟩ := h
     simp only at hs'
     subst hs'

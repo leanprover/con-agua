@@ -195,7 +195,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
   obtain ⟨wt, hwtA, hwtlt, hwtd'⟩ := hd?_some htyp
   have hwtd : decI wt = cv.type := hwtd'.symm
   have hc3 : (c + 3).toNat = c.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hwt : erRd m (c + 3) = wt := erRd_of_erA (by rw [hc3]; exact hwtA)
+  have hwt : erRd m (c + 3) = wt := L.Arena.erRd_of _ _ (by rw [hc3]; exact hwtA)
   have e : UInt64.ofNat Mp.toNat = Mp := UInt64.ofNat_toNat
   have h8' := iwN_off (k := 8) h8 (by omega)
   rw [e] at h8'
@@ -220,7 +220,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       try (simp only [tcK1, reduceCtorEq] at h; done)
     obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb
     simp only [tcK1] at h
-    rw [erRd_of_erA (m := m1) (by rw [hc3]; exact hg1.ext _ _ hwtA)] at h
+    rw [L.Arena.erRd_of (m := m1) _ _ (by rw [hc3]; exact hg1.ext _ _ hwtA)] at h
     rcases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hi] at h <;>
       try (simp only [tcK2, reduceCtorEq] at h; done)
     simp only [tcK2, Option.some.injEq, Prod.mk.injEq] at h

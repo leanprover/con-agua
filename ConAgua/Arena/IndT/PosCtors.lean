@@ -105,7 +105,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
   rcases c2 : callE p n "rec3" [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] m1 with e2 | ⟨rr, m2⟩
   · rw [nctE.k_rec3.none]
     exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c2
-  obtain ⟨s2, hs2, -, hr3⟩ := triple_of_callW (posRec3_specW p R.ha L.h3 n ⟨m1, Locals.init []⟩ _ _ _)
+  obtain ⟨s2, hs2, -, hr3⟩ := triple_of_callW (_root_.L.Ind.rec3_specW_iw p R.ha L.h3 n ⟨m1, Locals.init []⟩ _ _ _)
     (callW_of_callE c2)
   simp only at hr3
   rw [hs2] at hr3

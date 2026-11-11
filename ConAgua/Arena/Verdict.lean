@@ -101,7 +101,7 @@ theorem ErrClaim.ite_neg {α : Type} {c : Prop} [Decidable c] {x y : AM α} {a :
   rw [ite_eq_right hc]; exact h
 
 /-- The twin computations agree on the run from `a`. -/
-theorem ErrClaim.of_run_eqW {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
+theorem ErrClaim.congr_run {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
     (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
   obtain ⟨ce, hce, hc⟩ := h' hk
   exact ⟨ce, h ▸ hce, hc⟩
@@ -350,7 +350,7 @@ theorem RefE.of_run_eq {α β : Type} {G : Prop} {x : Except Err α} {T T' : AM 
     RefE G x T a R := by
   cases x with
   | ok v => obtain ⟨y, a₁, hy, hR⟩ := h'; exact ⟨y, a₁, h.trans hy, hR⟩
-  | error e => exact fun hG => ErrClaim.of_run_eqW h (h' hG)
+  | error e => exact fun hG => L.Arena.ErrClaim.congr_run h (h' hG)
 
 /-- A weaker post. -/
 theorem RefE.mono {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}

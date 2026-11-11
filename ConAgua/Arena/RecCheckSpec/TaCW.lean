@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.RecCheck
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndSumSpec.McGoStep
 
 @[expose] public section
 
@@ -302,12 +303,6 @@ def TaGoOK (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : N
     Sim (taGoW n m no nl lvls ho hl f h)
       (ConRon.Arena.targetAbsGo names (decI lvls) holes mp f.toNat (decE h)) a (TaQ dn fe vis m)
 
-/-- A twin run rewritten (an unfolding at the state `a`). -/
-theorem rcSim_ofRun {β α : Type} {mo : Option (β × Mem)} {op op' : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} (e : op.run a = op'.run a) (h : Sim mo op' a Q) :
-    Sim mo op a Q := fun r m' hm => by
-  obtain ⟨x, a', h1, h2⟩ := h r m' hm; exact ⟨x, a', e ▸ h1, h2⟩
-
 /-- Two children and an interning: `app`, `lam`, `forallE` (`K1`, `K2`: the continuations after
 the two walks). -/
 theorem taBin_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (k : Nat)
@@ -454,7 +449,7 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
   have c8 : vl.headD 0 ≠ 8 := by rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
   have c3 : vl.headD 0 ≠ 3 := by rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
   subst hvle
-  refine rcSim_ofRun (taTwin_node _ _ _ _ _ _ a v hv hnv) ?_
+  refine L.Ind.Sim.ofRun (taTwin_node _ _ _ _ _ _ a v hv hnv) ?_
   by_cases hfr : mfindG taSch m h 0 = []
   · rw [taGoW.abort3 j m no nl lvls ho hl f h hf0 hvl c0 c1 c2 c8 c3 hfr]; exact Sim.of_none
   by_cases hhit : (mfindG taSch m h 0).headD 0 ≠ 0
@@ -478,7 +473,7 @@ theorem taGo_nodeCase (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : W
   rintro rn ⟨r1, mp1⟩ m1 a1 ⟨rfl, hS1, hg1, hM1⟩
   rcases hset : msetG taSch m1 h 0 rn with _ | m2 <;> simp only [Option.map_none, Option.map_some]
   · exact Sim.of_none
-  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 (msetG_frame taSch taSch_wf m1 m2 h 0 rn hset)
+  obtain ⟨hS2, hg2⟩ := L.Ind.StageR.frame_hi hS1 (msetG_frame taSch taSch_wf m1 m2 h 0 rn hset)
     (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [taSch] at hx; subst hx; decide) (by decide) (by simp [taSch])
   exact Sim.ret ⟨rfl, hS2, hg1.trans hg2,
@@ -540,7 +535,7 @@ theorem taAW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [taAW.arm1 n m no nl lvls ho hl e h0] at hb
   have hf0 := mclearG_frame taSch m
   have hM0 := memoRG_clear taSch taSch_wf bmKey (fun w : Word => decE w) m mp0 hM h0
-  obtain ⟨hS0, hg0⟩ := StageR.frame_hi hS hf0 (by intro b hb; simp at hb)
+  obtain ⟨hS0, hg0⟩ := L.Ind.StageR.frame_hi hS hf0 (by intro b hb; simp at hb)
     (by intro x hx; simp [taSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [taSch])
   obtain ⟨⟨t, mp1⟩, a1, hrun, rfl, hS1, hg1, hM1⟩ := taGoOK dn fe vis n _ a no nl lvls ho hl CWF e names holes ∅
     hS0 he hlv (TaIn.grow ⟨hdec, hit, hho, hht⟩ hg0) hM0 _ _ hb

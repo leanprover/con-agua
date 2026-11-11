@@ -32,7 +32,7 @@ namespace L.Arena
 
 /-- `er_sl_eq`'s spec at its own lookup (`StubIndRefine.erSlEq_spec'`'s, for callers that cannot
 import that file). -/
-theorem erSlEq_specR (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n : Nat) :
+theorem erSlEq_spec (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n : Nat) :
     ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
@@ -56,7 +56,7 @@ l_model eroW_spec (p : Prog) (hf : p.lookup "eta_rescue_ok" = some etaRescueOkL)
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
 /-- A `ctorInfo` record's constant value decodes at `q + 1`. -/
-theorem decCI_ctor_cv' {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {nP nF : Nat}
+theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {nP nF : Nat}
     (h : decCI R q = some (.ctorInfo cv nP nF)) : decCV R (q + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
@@ -76,7 +76,7 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   rcases n with _ | n
   · simp [eroW] at h
   have hrec := decCI_indCaps (erRdOK m) hci
-  obtain ⟨hlj, -⟩ := decCV_rd (erRdOK m) (decCI_ctor_cv' hcj)
+  obtain ⟨hlj, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ctor_cv hcj)
   have hlT := hrec.lp
   have heta := hrec.eta
   have hec := hrec.etaCtor
@@ -108,7 +108,7 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   · rw [c1, eroW.k_er_sl_eq.none] at h; cases h
   rw [c1] at h
   obtain ⟨s1, hs1, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (erSlEq_specR p hes n ⟨m, Locals.init []⟩ _ _ _ _) c1
+    (L.Arena.erSlEq_spec p hes n ⟨m, Locals.init []⟩ _ _ _ _) c1
   have hm1' : m = m1 := (hs1 ▸ hm1).symm
   subst hm1'
   rw [L.Ind.erSlEqB_ok (erRdOK m) hlj hlT] at hr1

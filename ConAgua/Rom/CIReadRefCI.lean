@@ -5,6 +5,7 @@ import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefCV
 public import ConAgua.Rom.CIReadRefCaps
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -102,20 +103,20 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
   have hlt := hI.er_lt
   have hgo := hI.erT_mono
   have hrom := hr; simp only [RomOK] at hrom
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI1, ho1, ht1, -, -, hIW1, -, -, hk1⟩ := hI.erAlloc (erAllocCall hL h1)
   have hf1 : MemFrame [] [129, 130] m m1 := (erAllocW_spec (erAllocCall hL h1) hI.ok).2.1
   have hM1 := hM.frameG hf1 (by simp) (by decide)
   have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   have hlt1 := hI1.er_lt
-  obtain ⟨ra, ma, ha, hw⟩ := ntBW_inv hw
+  obtain ⟨ra, ma, ha, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL ha] at hw
   obtain ⟨hI2, hM2, hs2, ht2, hIW2, hg2, hn2⟩ :=
     putER_facts hI1 hM1 (r1.headD 0) (UInt64.ofNat kn) (by omega) (by omega)
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
   have hlen := drop_len rom _ (u64B kn) _ hd (by simp [u64B])
   simp only [u64B, List.length_cons, List.length_nil] at hlen
   have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
@@ -281,7 +282,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
   have i1 : (UInt64.ofNat 3 = 1) = False := by decide
   have i3 : (UInt64.ofNat 3 = 3) = True := by decide
   simp only [i1, i3, ite_false, ite_true] at hw
-  obtain ⟨r3, m3, h3, hw⟩ := ntBW_inv hw
+  obtain ⟨r3, m3, h3, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlt := hI2.er_lt
@@ -403,7 +404,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
       intro jw hjw; rw [← hws'] at hjw
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
       rcases hjw with rfl | rfl <;> off_omega) (by omega) hws41', hk5 i (by omega)]
-  obtain ⟨r5, m6, h5, hw⟩ := ntBW_inv hw
+  obtain ⟨r5, m6, h5, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   have hlenR := drop_len rom _ (u64B mI ++ u64B rP ++ u64B (if isK then 1 else 0) ++ u64B rs.length) _

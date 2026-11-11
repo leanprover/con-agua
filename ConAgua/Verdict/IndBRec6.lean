@@ -165,7 +165,7 @@ theorem crr_ref (hP : CrrProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   rw [decNL_succ] at hcs'
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcs'
   obtain ⟨c0, hc0, cs', hcsT, rfl⟩ := hcs'
-  obtain ⟨-, hc0m⟩ := rec2IwN_trunc hc0
+  obtain ⟨-, hc0m⟩ := L.Ind.iwN_truncM_some hc0
   obtain ⟨ep, tp⟩ := rec2RdN (w := vo) (k := 0) (by simpa using hp) hsz
   obtain ⟨ec, tc⟩ := rec2RdN (w := co) (k := 0) (by simpa using hc0m) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ep ec
@@ -240,7 +240,7 @@ theorem crr_ref (hP : CrrProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   have hg03 := hR1.grow.trans (hg2.trans hg3)
   have hvo1 := rec2ToNat_succ (o := vo) (i := vo.toNat) (Nat.le_refl _) (by have := hS.iw.iw; omega)
   have hco1 := rec2ToNat_succ (o := co) (i := co.toNat) (Nat.le_refl _)
-    (by have := hS.iw.iw; have := (rec2IwN_trunc hc0).1; omega)
+    (by have := hS.iw.iw; have := (L.Ind.iwN_truncM_some hc0).1; omega)
   have hvl1 := L.toNat_sub_one_of_ne hvl
   have hcl1 := L.toNat_sub_one_of_ne hcl
   have ih' := ih (by omega) m3 a2 (vo + 1) (vl - 1) (co + 1) (cl - 1) cvs' cs' cvsP' hC3

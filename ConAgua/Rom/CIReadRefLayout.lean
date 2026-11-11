@@ -3,6 +3,7 @@ module
 import ConAgua.Rom.CIReadRefCaps
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadSpec
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -136,7 +137,7 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
   | succ n =>
   have hw := callW_model (M := fun mq => freshW p n mq) (fresh_specW rom p hL n ·) hc
   unfold freshW at hw
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨s', rfl, -, -, hm⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
@@ -147,14 +148,14 @@ theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} 
   have hf : MemFrame [] [131, 132, 148, 149] m (resetMem (m.set64 CTL 131 0)) :=
     ((MemFrame.setCtl m 131 0).mono (by simp) (by simp)).trans ((resetMem_frame1 _).mono (by simp)
       (by simp))
-  obtain ⟨hI1, hE, -, hIW, ht, hi, hEA⟩ := hI.expr (ArenaD.frameHi hf (by simp) (by
+  obtain ⟨hI1, hE, -, hIW, ht, hi, hEA⟩ := hI.expr (L.Arena.ArenaD.frameHi hf (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl <;> decide) hI.arena)
     (hI.mode.frame hf (by decide) (by decide))
     (hf.mono (by simp) (by
       intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl <;> simp [ExprC, RomC])) rfl rfl
-  refine ⟨hI1, MemoR.fresh _ (by rw [size_set64]; omega), ?_, hE, hIW, ht, hi, hEA⟩
+  refine ⟨hI1, MemoR.fresh _ (by rw [L.Mem.size64_set64]; omega), ?_, hE, hIW, ht, hi, hEA⟩
   rw [resetMem_stk]; simp only [stkTop, rdW_set64]; simp; omega
 
 end calls

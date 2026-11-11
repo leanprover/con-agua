@@ -171,7 +171,7 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
     fe pp (r2.tail.headD 0) (r2.tail.tail.headD 0) bs fvs hS2 (hq.grow (decBS_mono _) g12)
     (partsHsrc_grow g12 hq9 hsrc) hfd hfb r3 hc3
   have hA3 : AbsOK m3 := nckW_afr hc3 hA2
-  have hrun3 := partsRunOfOk hok3
+  have hrun3 := L.Arena.AM.run_of_ok _ _ hok3
   generalize hc : AM.res (bs.nestCtx fvs) a2 = c at hrun3 hd3
   generalize ha3 : AM.st (bs.nestCtx fvs) a2 = a3 at hrun3 hS3
   have hnc : c.nP = bs.nP ∧ c.names = bs.memberNames ∧ c.params = fvs := by

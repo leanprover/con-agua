@@ -13,6 +13,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.RecGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndSumSpec.SoaW
 
 @[expose] public section
 
@@ -35,17 +36,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`sl_cons` of a decoded record onto a decoded slice** (its model's run), with its frame. -/
-theorem clsConsW {α : Type} {f : Mem → Nat → Option α}
-    (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
-    {a : AState} {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List α} {y : α}
-    (h : consW n m x o l = some (r, m')) (hS : StageR vis fe m a)
-    (hxs : PSlR f xs o l m) (hy : DecB (fun m => f m x.toNat) m y) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧ PSlR f (y :: xs) (r.headD 0) (r.tail.headD 0) m' ∧
-      MFr [] [] m m' := by
-  obtain ⟨hS', hg, hd, htop⟩ := partsConsPL hf h hS hxs.bound hxs.dec hy
-  exact ⟨hS', hg, ⟨hd, Nat.le_of_eq htop⟩, consW_mfr h⟩
-
 /-- **`sl_cons` of a decoded record onto a decoded slice**, with its frame. -/
 theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
     (hf : ∀ q, OMono (fun m => f m q)) {vis : Word} {fe : IFEnv}
@@ -56,7 +46,7 @@ theorem clsCons {p : Prog} (hP : KeysProg p) {n : Nat} {α : Type} {f : Mem → 
       MFr [] [] m m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (slCons_specW p hP.rx.ha hP.copy hP.cons n _ x o l) h
-  exact clsConsW hf hW hS hxs hy
+  exact L.Ind.consW_pslr hf hW hS hxs hy
 
 /-! ## `check_block_classes_keys`: one model and one refinement for both outcomes -/
 
@@ -128,7 +118,7 @@ theorem ckk_ref {p : Prog} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe
   -- `sl_cons`
   refine RefE.onlySim (fun _ => ckkE.k_sl_cons.none ..) (fun _ _ h => h) fun r3 m3 h3 => ?_
   rw [ckkE.k_sl_cons.arm1]
-  obtain ⟨hS3, hg3, hd3, hf3⟩ := clsConsW decCK_mono h3 hR2.stage hR2.keys
+  obtain ⟨hS3, hg3, hd3, hf3⟩ := L.Ind.consW_pslr decCK_mono h3 hR2.stage hR2.keys
     (hR1.key.grow (decCK_mono _) hR2.grow)
   exact RefE.ret rfl ⟨hS3, (hg1.trans hR2.grow).trans hg3, by simpa using hd3, hR2.pos.fr hf3⟩
 

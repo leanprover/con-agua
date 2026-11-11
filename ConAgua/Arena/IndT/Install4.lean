@@ -178,8 +178,8 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   rw [cbiE.arm1 p n m vis pp isRec (by rw [hkw, hkl]; exact hl0), hkw, hkl, hw0, hnpw]
   -- the members, with their formers' constant records below the tops
   have hob' : o.toNat + l.toNat ≤ iwTop m := hob.resolve_left hl0
-  have hoN : iwN m pp.toNat = some o.toNat := (rec2IwN_trunc ho).2
-  have hlN : iwN m (pp.toNat + 1) = some l.toNat := (rec2IwN_trunc hl).2
+  have hoN : iwN m pp.toNat = some o.toNat := (L.Ind.iwN_truncM_some ho).2
+  have hlN : iwN m (pp.toNat + 1) = some l.toNat := (L.Ind.iwN_truncM_some hl).2
   have hms : MemsOK m o l bs.members :=
     ⟨⟨hdm, hob'⟩, fun j hj c hc d hd => hcx o.toNat l.toNat hoN hlN j hj c hc d hd⟩
   obtain ⟨q0, ms0, rest, hmeq, hw, hqb, hmok, hrest⟩ := hms.cons hl0

@@ -16,6 +16,8 @@ import all ConAgua.Arena.IndParts
 import ConAgua.Arena.Env
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.ErecRd
+import ConAgua.Arena.SimLib
 
 @[expose] public section
 
@@ -56,7 +58,7 @@ theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = 
   have e : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
   rcases hw : erA m q with _ | w
   · simp [hd?, hw] at hnm
-  have hrd : erRd m (UInt64.ofNat q) = w := erRd_of_erA (by rw [e]; exact hw)
+  have hrd : erRd m (UInt64.ofNat q) = w := L.Arena.erRd_of _ _ (by rw [e]; exact hw)
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hnm
     rw [hrd]; exact ⟨hl, by rw [hnm, hnm']⟩
@@ -257,7 +259,7 @@ theorem blockShapeWithSort_specC (cR : CallM) (hcR : CallSpec p cR) (n : Nat) (s
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, st64,
       pinWord_specV p hpw n, hcR n "lvl_eq_c", iwAlloc_specW p ha n]
     all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       BinOp.eval, Nat.reduceEqDiff, reduceIte] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, wsWrites, cpyIW]
 
@@ -424,7 +426,7 @@ theorem wsC_ok (cR : CallM) (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe 
   | zero => simp [wsC] at h
   | succ n =>
   rw [wsC_step] at h
-  obtain ⟨z, hpz, h⟩ := ipK_inv1 h (by simp [wsK1C])
+  obtain ⟨z, hpz, h⟩ := L.Arena.of_K h (by simp [wsK1C])
   rw [wsK1C_some] at h
   have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hpz

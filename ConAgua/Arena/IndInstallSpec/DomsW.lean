@@ -4,7 +4,7 @@ public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndMaster
 
 @[expose] public section
 
@@ -31,17 +31,10 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem mapM_opt_congr {α β : Type} (f g : α → Option β) :
-    ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
-  | [], _ => rfl
-  | x :: xs, h => by
-    simp only [List.mapM_cons]
-    rw [h x (List.mem_cons_self ..), mapM_opt_congr f g xs (fun y hy => h y (List.mem_cons_of_mem _ hy))]
-
 theorem decHL_grow {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
     (h : o + l ≤ iwTop m) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
   simp only [decHL, hslice?]
-  apply mapM_opt_congr
+  apply L.Ind.mapM_congr_of
   intro j hj
   have hj' : j < l := List.mem_range.mp hj
   simp only [hd?, iwA, aread_apply, aread_apply]

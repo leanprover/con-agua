@@ -3,6 +3,7 @@ module
 public import ConAgua.Compiler.Inline
 public import ConAgua.L.DefAssignSim
 import ConAgua.Compiler.WFFast
+import ConAgua.L.LocNF
 
 @[expose] public section
 
@@ -283,17 +284,17 @@ theorem run_bind_st {α β : Type} {x : M α} {f : α → M β} {s : St} {r : Ex
   rw [StateT.run_bind, hx]
   cases r <;> rfl
 
-theorem st8_run' (a : ArrId) (j w : Word) (s : St) : (L.st8 a j w).run s =
+theorem st8_run (a : ArrId) (j w : Word) (s : St) : (L.st8 a j w).run s =
     if j.toNat < (s.mem.arr8 a).size then .ok ((), { s with mem := s.mem.set8 a j w }) else .error .oob := by
   show (if j.toNat < (s.mem.arr8 a).size then (set { s with mem := s.mem.set8 a j w } : M Unit) else throw .oob).run s = _
   split <;> rfl
 
-theorem st64_run' (a : TieredArray) (j w : Word) (s : St) : (L.st64 a j w).run s =
+theorem st64_run (a : TieredArray) (j w : Word) (s : St) : (L.st64 a j w).run s =
     if j.toNat < (s.mem.arr64 a).size then .ok ((), { s with mem := s.mem.set64 a j w }) else .error .oob := by
   show (if j.toNat < (s.mem.arr64 a).size then (set { s with mem := s.mem.set64 a j w } : M Unit) else throw .oob).run s = _
   split <;> rfl
 
-theorem st32_run' (a : TieredArray) (j w : Word) (s : St) : (L.st32 a j w).run s =
+theorem st32_run (a : TieredArray) (j w : Word) (s : St) : (L.st32 a j w).run s =
     if (j / 2).toNat < (s.mem.arr64 a).size then .ok ((), { s with mem := s.mem.set32 a j w }) else .error .oob := by
   show (if (j / 2).toNat < (s.mem.arr64 a).size then (set { s with mem := s.mem.set32 a j w } : M Unit) else throw .oob).run s = _
   split <;> rfl
@@ -307,11 +308,11 @@ theorem step_simple (p : Prog) (k : Stmt → M Sig) (s : St) :
   | .st8 a i e, _ => by
     simp only [step, sstep]; rw [run_bind_st (evalE_run i s)]; cases Expr.ev s i <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run e s)]; cases Expr.ev s e <;> try rfl
-    simp only [Except.bind]; rw [StateT.run_bind, st8_run']; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
+    simp only [Except.bind]; rw [StateT.run_bind, L.Compiler.Inl.st8_run]; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
   | .st64 a i e, _ => by
     simp only [step, sstep]; rw [run_bind_st (evalE_run i s)]; cases Expr.ev s i <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run e s)]; cases Expr.ev s e <;> try rfl
-    simp only [Except.bind]; rw [StateT.run_bind, st64_run']; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
+    simp only [Except.bind]; rw [StateT.run_bind, L.Compiler.Inl.st64_run]; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
   | .abort e, _ => by
     simp only [step, sstep]; rw [run_bind_st (evalE_run e s)]; cases Expr.ev s e <;> rfl
   | .gset g e, _ => by
@@ -320,12 +321,12 @@ theorem step_simple (p : Prog) (k : Stmt → M Sig) (s : St) :
     simp only [step, sstep]; rw [run_bind_st (evalE_run t s)]; cases Expr.ev s t <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run i s)]; cases Expr.ev s i <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run e s)]; cases Expr.ev s e <;> try rfl
-    simp only [Except.bind]; rw [StateT.run_bind, st64_run']; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
+    simp only [Except.bind]; rw [StateT.run_bind, L.Compiler.Inl.st64_run]; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
   | .st32t a t i e, _ => by
     simp only [step, sstep]; rw [run_bind_st (evalE_run t s)]; cases Expr.ev s t <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run i s)]; cases Expr.ev s i <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run e s)]; cases Expr.ev s e <;> try rfl
-    simp only [Except.bind]; rw [StateT.run_bind, st32_run']; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
+    simp only [Except.bind]; rw [StateT.run_bind, L.Compiler.Inl.st32_run]; split <;> rename_i h <;> simp only [bind, Except.bind, h, ite_true, ite_false] <;> rfl
   | .copy64 d di sr si n, _ => by
     simp only [step, sstep]; rw [run_bind_st (warr_run d s)]; cases WArr.ev s d <;> try rfl
     simp only [Except.bind]; rw [run_bind_st (evalE_run di s)]; cases Expr.ev s di <;> try rfl
@@ -788,10 +789,6 @@ theorem Exprs.ev_safe (s : St) : ∀ (es : List Expr), es.all Expr.safe = true �
     obtain ⟨y, hy⟩ := Exprs.ev_safe s es h.2
     exact ⟨_, by simp only [Exprs.ev, hx, hy]; rfl⟩
 
-theorem St.setLocs_mem : ∀ (s : St) (xs : List Var) (vs : List Word), (s.setLocs xs vs).mem = s.mem
-  | _, [], _ => rfl
-  | s, _ :: xs, vs => St.setLocs_mem (s.setLoc _ _) xs vs.tail
-
 theorem St.setLocs_low : ∀ (s : St) (xs : List Var) (vs : List Word) (y : Var), y ∉ xs → (s.setLocs xs vs).loc y = s.loc y
   | _, [], _, _, _ => rfl
   | s, x :: xs, vs, y, hy => by
@@ -1204,7 +1201,7 @@ theorem inl_call {p p' : Prog} {n o : Nat} {fd : FunDecl} {xs : List Var} {g : F
         { v with loc := Locals.init vs } := by
       refine ⟨?_, fun x hx => ?_⟩
       · show (sz.setLocs _ vs).mem = v.mem
-        rw [St.setLocs_mem, hz2, h.mem]
+        rw [L.St.setLocs_mem, hz2, h.mem]
       · show sp.loc (x + o) = Locals.init vs x
         rw [hsp x]
         simp only [Locals.init]
@@ -1230,7 +1227,7 @@ theorem inl_call {p p' : Prog} {n o : Nat} {fd : FunDecl} {xs : List Var} {g : F
     have fin : ∀ (r : Sig) (v1 s1' t2 : St), AR o (Stmt.vb fd.body) sp.loc v1 s1' → v1.mem = t2.mem →
         CR o (({ t2 with loc := v.loc } : St).setLocs xs r.retVal) (s1'.setLocs xs r.retVal) := by
       intro r v1 s1' t2 hA hm
-      refine ⟨by rw [St.setLocs_mem, St.setLocs_mem, ← hm, hA.mem], ?_⟩
+      refine ⟨by rw [L.St.setLocs_mem, L.St.setLocs_mem, ← hm, hA.mem], ?_⟩
       exact St.setLocs_agree _ _ xs r.retVal fun y hy => by
         show v.loc y = s1'.loc y
         rw [hA.low y hy, hlow y hy]
@@ -1276,7 +1273,7 @@ theorem AR.cr {o : Nat} {c : Locals} {v s' : St} (h : AR 0 o c v s') : CR o v s'
 
 theorem CR.setLocs {o : Nat} {v s' : St} (h : CR o v s') (xs : List Var) (vs : List Word) :
     CR o (v.setLocs xs vs) (s'.setLocs xs vs) :=
-  ⟨by rw [St.setLocs_mem, St.setLocs_mem, h.mem], St.setLocs_agree _ _ xs vs h.loc⟩
+  ⟨by rw [L.St.setLocs_mem, L.St.setLocs_mem, h.mem], St.setLocs_agree _ _ xs vs h.loc⟩
 
 theorem inlS_none (o : Nat) : ∀ t : Stmt, inlS (fun _ => none) o t = t
   | .seq a b | .ite _ a b => by simp only [inlS, inlS_none o a, inlS_none o b]

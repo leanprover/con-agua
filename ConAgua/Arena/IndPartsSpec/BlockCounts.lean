@@ -256,7 +256,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   rw [bcW.arm1] at h
   obtain ⟨r1, m1, hh, h⟩ := ipK_inv h (bcW.k_block_counts_head.none ..)
   rw [bcW.k_block_counts_head.arm1] at h
-  obtain ⟨r0, hr0, h⟩ := ipK_inv1 h (bcW.k_block_counts_pure.none _)
+  obtain ⟨r0, hr0, h⟩ := L.Arena.of_K h (bcW.k_block_counts_pure.none _)
   rw [bcW.k_block_counts_pure.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hty32, hty⟩ := decCVp_type hcv hb

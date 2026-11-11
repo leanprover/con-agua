@@ -10,7 +10,6 @@ import ConAgua.Arena.DerRel
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.StoreDenIntern
@@ -19,6 +18,7 @@ import all ConAgua.Arena.ConsLib
 import all ConAgua.Arena.NatAdd
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Store
+import ConAgua.Front.NatDecLink
 
 @[expose] public section
 
@@ -46,9 +46,6 @@ l_model rawNatLit_spec (p : Prog) (hp : WhnfDeltaProg p)
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
 
-
-theorem rdW_ctl_top' (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
-  simp [rdW, Mem.top]
 
 /-- **A `lit` node past the view checks**: the kind word `0` says `natVal`, with the record's
 slice; any other kind says `strVal`. -/
@@ -244,7 +241,7 @@ theorem callW_rawNatLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       · unfold ResH HW; rw [← hf]; decide
       · intro _
         refine ⟨?_, ?_⟩
-        · rw [← ho, ← hcn, rdW_ctl_top']; exact SliceOK.top0 rfl
+        · rw [← ho, ← hcn, L.Front.rdW_ctl_top]; exact SliceOK.top0 rfl
         · intro hpos; rw [← hcn] at hpos; simp at hpos
     · rw [rawNatLitW.k_pin_word.arm2 _ _ _ _ _ _ hcond] at hW
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -555,15 +552,15 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     simp only [show (3 : Word).toNat = 3 from rfl] at hr₁; exact hr₁
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
+    hfr.arr POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₂.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
-    hfr.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
+    hfr.arr POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
   have hPt : m₂.ptop0 = s₀.mem.ptop0 :=
-    ptop0_congr (hfr.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
+    ptop0_congr (hfr.arr PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₂.top = s₀.mem.top := by
-    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.ctl 0 (by simp)
+    rw [← L.Front.rdW_ctl_top, ← L.Front.rdW_ctl_top]; exact hfr.ctl 0 (by simp)
   have hs₂ : SliceOK m₂ o cnt := (SliceOK_congr _ _ hTop hPt).mpr hs
   cases h3 : callW p n "nat_pred_lit" [o, cnt] m₂ with
   | none => rw [h3, natLitToCtorW.k_nat_pred_lit.none] at hW; cases hW
@@ -722,19 +719,19 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
-    hfr1.arr_eq REC (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
+    hfr1.arr REC (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
   have hE' : m₁.arr64 (tier1 REC) = s₀.mem.arr64 (tier1 REC) :=
-    hfr1.arr_eq (tier1 REC) (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
+    hfr1.arr (tier1 REC) (by simp [tier1, CREC, CSLOT, CLP, REC]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr1.arr_eq POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
+    hfr1.arr POOL (by simp [tier1, CREC, CSLOT, CLP, POOL]) (by decide)
   have hPool1 : m₁.arr64 POOL1 = s₀.mem.arr64 POOL1 :=
-    hfr1.arr_eq POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
+    hfr1.arr POOL1 (by simp [tier1, CREC, CSLOT, CLP, POOL1]) (by decide)
   have hPt : m₁.ptop0 = s₀.mem.ptop0 :=
-    ptop0_congr (hfr1.arr_eq PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
+    ptop0_congr (hfr1.arr PT0 (by simp [tier1, CREC, CSLOT, CLP, PT0]) (by decide))
   have hPoolv := vpool_congr hPool hPool1
   have hPoolc := pcap_congr' hPool hPool1
   have hTop : m₁.top = s₀.mem.top := by
-    rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.ctl 0 (by simp)
+    rw [← L.Front.rdW_ctl_top, ← L.Front.rdW_ctl_top]; exact hfr1.ctl 0 (by simp)
   simp only [tfld_arr_eq (R := LIT) hE hE'] at hW
   cases h2 : callW p n "nat_lit_to_ctor" [tfld s₀.mem LIT (tierW h) (idxW h) 1,
       tfld s₀.mem LIT (tierW h) (idxW h) 2] m₁ with
@@ -1149,7 +1146,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     hS₅.frame_stk hfr6 (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
   have h136' : (136 : Word).toNat < (m₅.arr64 CTL).size := by
     have := h136 (by rw [← hr0]; decide)
-    rw [← hm, size_set64] at this; exact this
+    rw [← hm, L.Mem.size64_set64] at this; exact this
   have hStK : StackKept m₃ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) := by
     apply StackKept.restore _ (by rw [hspn5, hgrew.size])
       (hgrew.bstk.trans (BKept.of_frame hfr3 (by decide) (by decide)))

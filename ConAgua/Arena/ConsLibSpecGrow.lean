@@ -82,7 +82,7 @@ theorem kzeroLs_spec (p : Prog) (sa : ArrId) (f : Var → Var) (a xv ev : Var) (
   rw [exec, step_while (w := mapS f (kzeroLs sa)) rfl]
   simp only [mapS, mapE, mapC, h0, h7, h8]
   vcgen [step, evalE_spec, evalC_spec, setLoc, st64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, bne_iff_ne, ne_eq, ↓reduceIte, hax, hae,
     hxe, Ne.symm hxe] at *)
   all_goals grind [lang_grind, arena_grind, Keep2]
@@ -205,7 +205,7 @@ theorem khash_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
   unfold khashB
   simp only [mapS]
   vcgen [step, evalE_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, hH, mapE, Expr.pval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, hH, mapE, Expr.pval,
     BinOp.eval, gmap_lit, Nat.reduceSub, ↓reduceIte] at *)
   all_goals grind [ghC]
 
@@ -281,7 +281,7 @@ theorem kprobeL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero,
     Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
     bne_iff_ne, ne_eq, rd64_rdWC, self_eq_addlit, zero_eq_addlit,
     Bool.and_eq_true, ↓reduceIte] at *)
@@ -318,7 +318,7 @@ theorem kpickB_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ :
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero,
     Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, khash_spec p C hO n]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, beq_iff_eq, rd64_rdWC, zero_eq_addlit, homeW_eq, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, lt_ne_addlit]
 
@@ -335,7 +335,7 @@ theorem kplaceB_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero,
     Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, st64]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_left_cancel_iff, Nat.reduceEqDiff, beq_iff_eq, rd64_rdWC, zero_eq_addlit, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, Keep3, kplaceW, vwd, pk]
 
@@ -416,7 +416,7 @@ theorem krehashL_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (u : Var) (hu :
   simp (disch := decide) only [krehashS, mapS, mapE, mapC, gmap_lit, gmap_zero,
     Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, kinnerL_step_spec p C hO n, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, zero_eq_addlit,
     ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, KeepR, KeepLo, krehashW_done, krehashW_step,
@@ -483,7 +483,7 @@ theorem kupLoop_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero,
     Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ih]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, zero_eq_addlit,
     Bool.and_eq_true, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, Keep2, kupW_stop, kupW_next]
@@ -511,7 +511,7 @@ theorem kupL_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   unfold kupL
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, kupLoop_step_spec p C n]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, zero_eq_addlit, ↓reduceIte] at *)
   all_goals grind [lang_grind, Keep2]
 
@@ -524,7 +524,7 @@ theorem kdefB_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   unfold kdefB
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
     beq_iff_eq, ↓reduceIte] at *)
   all_goals grind [lang_grind, KeepMk, mkOf, kdefR]
@@ -560,7 +560,7 @@ theorem ktopP_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀ : 
   unfold ktopP
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub, Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, khash_spec p C hO n, kupL_spec p C n]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, zero_eq_addlit,
     homeW_eq, ↓reduceIte] at *)
   all_goals grind [lang_grind, arena_grind, lt_ne_addlit, Keep2, ktgW, kxW, kjW, vwd, homeW_lt_of_gt]
@@ -670,7 +670,7 @@ theorem ktopBody_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₀
   unfold ktopBody
   simp (disch := decide) only [mapS, mapE, mapC, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64, ktopB_spec p C hO n]
-  all_goals (try simp (disch := omega) only [St.setLoc_mem, BinOp.eval, Cmp.eval,
+  all_goals (try simp (disch := omega) only [L.St.setLoc_mem, BinOp.eval, Cmp.eval,
     Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, mkOf_setLoc] at *)
   all_goals (try simp (disch := decide) only [St.setLoc_loc, Nat.add_left_cancel_iff, Nat.reduceEqDiff,
     self_eq_addlit, zero_eq_addlit, ↓reduceIte] at *)
@@ -780,7 +780,7 @@ theorem kgrowH1_spec (p : Prog) (C : ConsSch) (n : Nat) (s₀ : St) :
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub,
     Nat.add_zero]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, self_eq_addlit, addlit_eq_self, zero_eq_addlit, zero_eq_gO, ↓reduceIte] at *)
   all_goals grind [lang_grind, KeepLo, knW, koW, lt_ne_addlit]
 
@@ -806,7 +806,7 @@ theorem kgrowH3_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
   unfold kgrowH3
   simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, ↓reduceIte] at *)
   all_goals grind [lang_grind, Keep2]
 
@@ -821,7 +821,7 @@ theorem kgrowH4_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
   unfold kgrowH4
   simp (disch := decide) only [mapS, mapE, gmap_lit, gmap_zero, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc, ld64]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem, BinOp.eval,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, rd64_rdWC, ↓reduceIte] at *)
   all_goals grind [lang_grind, mkOf]
 
@@ -833,7 +833,7 @@ theorem kgrowH5_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
   unfold kgrowH5
   simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, ↓reduceIte] at *)
   all_goals grind [lang_grind, Keep2]
 
@@ -845,7 +845,7 @@ theorem kgrowH6_spec (p : Prog) (C : ConsSch) (n : Nat) (s₂ : St) :
   unfold kgrowH6
   simp (disch := decide) only [mapS, mapE, gmap_lit, Nat.reduceSub]
   vcgen [step, evalE_spec, evalC_spec, setLoc]
-  all_goals (simp (disch := decide) only [St.setLoc_loc, St.setLoc_mem,
+  all_goals (simp (disch := decide) only [St.setLoc_loc, L.St.setLoc_mem,
     Expr.pval, Nat.add_left_cancel_iff, Nat.reduceEqDiff, ↓reduceIte] at *)
   all_goals grind [lang_grind, Keep2]
 

@@ -10,6 +10,8 @@ import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DerRel
 import ConRon.Bridge.Grind
 import ConAgua.L.WordOff
+import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 
@@ -76,7 +78,7 @@ theorem opfV_okC {k : Nat} {m m' : Mem} {a : AState} {M : ModeMaps}
   refine ⟨rfl, ?_⟩
   cases v <;> simp [ViewR] at hvr
   simp only [List.tail_cons, List.headD_cons]
-  exact ⟨hvr.1, hvr.2.2.1, by rw [opf_view_run hv, hvr.2.1, hvr.2.2.2]⟩
+  exact ⟨hvr.1, hvr.2.2.1, by rw [L.Ind.view_run_of hv, hvr.2.1, hvr.2.2.2]⟩
 
 /-- **`inst_list` under `CoreS`** (`instListOK_core`), the stack kept. -/
 theorem opfIl_okC {k : Nat} {m m' : Mem} {a : AState} {M : ModeMaps}
@@ -156,11 +158,11 @@ theorem spnPushW_okC {m m' : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a
     omega
   refine ⟨hS', hsz, ?_, ?_, hfr.size SPN⟩
   · have hc := hS.ctl136
-    rw [rdW_set64E, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
+    rw [L.Arena.rdW_set64, Mem.arr64_set64_ne _ _ _ _ _ (by decide),
       ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
   · intro w
     simp only [spW]
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64E]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), L.Arena.rdW_set64]
     by_cases hw : w = rdW (m.arr64 CTL) 136
     · subst hw; simp [hsz]
     · simp [hw, Ne.symm hw]
@@ -198,7 +200,7 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
     subst hn
     refine ⟨_, _, M1, opfGo_run_zero acc (decE e) i.toNat a a1 _ hrun1, hS1, hK1, by rw [hspn1],
       fun w _ => by simp only [spW, hspn1], ?_⟩
-    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, SpineR.empty' ?_, fun w _ => by
+    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => by
       simp only [spW, hspn1]⟩
     rw [hspn1, hcc]; exact hsl.bound
   rw [ite_eq_right hn] at c'
@@ -271,7 +273,7 @@ theorem opaGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     subst hn
     refine ⟨_, _, M, opa_run_zero (decE e) i.toNat a, hS, KeptAll.refl _ _, rfl, fun _ _ => rfl, ?_⟩
-    exact ⟨rfl, he, rfl, by simp, SpineR.empty' htb, fun w _ => rfl⟩
+    exact ⟨rfl, he, rfl, by simp, L.Arena.SpineR.nil_at _ _ htb, fun w _ => rfl⟩
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : tagW e ≠ 6
@@ -351,7 +353,7 @@ theorem opfTail_okC {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {M : M
     ((allocMem_frame m2 n).trans (wrIW_frame ws _ q)).mono (by simp) (by simp)
   have hiw3 : IWOK (wrIW (allocMem m2 n) q ws) := IWOK.of_iw hf1 hI (by
     simp only [iwTop]; rw [hf1.size IW, wrIW_ctl]; simp only [allocMem]
-    rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by have := hI.ctl; simp; omega⟩, ← hq]
+    rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by have := hI.ctl; simp; omega⟩, ← hq]
     rw [UInt64.toNat_add]; omega)
   have hS3 := hS.frameS_iw hf1 (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
     (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide) (hiw := hiw3)
@@ -363,9 +365,9 @@ theorem opfTail_okC {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {M : M
   have hn : n.toNat = fvs.length := by have := hsl.size; simpa using this.symm
   refine ⟨hS4, ⟨rfl, by simp [hn], ⟨?_, fun j hj => ?_⟩, (show HW b from hb), rfl⟩, ?_, ?_⟩
   · simp only [List.tail_cons, List.headD_cons, iwTop]
-    rw [rdW_set64E, ite_eq_right (by simp), wrIW_ctl]
+    rw [L.Arena.rdW_set64, ite_eq_right (by simp), wrIW_ctl]
     simp only [allocMem]
-    rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩, ← hq, ← hn]
+    rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩, ← hq, ← hn]
     rw [UInt64.toNat_add]; omega
   · simp only [List.tail_cons, List.headD_cons]
     rw [hI4, wrIW_get ws _ q _ (by rw [hiw2, hlen]; exact hroom) (by rw [hiw2]; exact hsz1),
@@ -378,10 +380,10 @@ theorem opfTail_okC {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {M : M
       simp only [List.getElem_toArray] at this
       rw [this]; simp only [spW, hspn2]
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), wrIW_spn, hspn2]
-  · rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
+  · rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
 
 /-- `open_pis_at_fvars_f`'s model from a call in a program with `opfP`. -/
-theorem callW_opfFC {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m m' : Mem}
+theorem callW_opfF {p : Prog} (hOpf : OpfF p) {n : Nat} {args r : List Word} {m m' : Mem}
     (h : callW p n "open_pis_at_fvars_f" args m = some (r, m')) : opfF m args = some (r, m') := by
   obtain ⟨s', hs, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (opfF_spec p hOpf n _ args) h
   rw [← hs]; exact hW
@@ -424,7 +426,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
   obtain ⟨hI1, -⟩ := iwKeep (run_memFrame opgP_closed (f := "opf_go") (by decide) (run_of_callW h1)).1
     opgA_not opgC_not hI
   obtain ⟨x1, a1, M1, hrun1, hS1, hK1, hsz1, hkb1, hO1⟩ := opfGo_okC K m m1 a M k e i co 0 #[] r1
-    h1 hS he (by simpa using SpineR.empty' (m := m) hcob) (by rw [hco]; simp) (by simp; omega)
+    h1 hS he (by simpa using L.Arena.SpineR.nil_at m _ hcob) (by rw [hco]; simp) (by simp; omega)
   have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
   simp only [opfK2] at c'
   rw [show co + 0 = co by simp] at hO1 hkb1
@@ -449,7 +451,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
     have hI1' := (iwKeep_ctl (c := 136) co (by decide) hI1).1
     have hctl1 : 136 < (m1.arr64 CTL).size := hS1.ctl136
     have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
-      rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
+      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
     have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
     have hspn1' : (m1.set64 CTL 136 co).arr64 SPN = m1.arr64 SPN := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
@@ -471,7 +473,7 @@ theorem opfF_okC (k e i : Word) (he : H e) {m m' : Mem} {a : AState} {M : ModeMa
       have hctl2 : 136 < (m2.arr64 CTL).size := hS2.ctl136
       refine ⟨_, _, M2, hrun, hS2.frame_stk (MemFrame.setCtl m2 136 co) (by simp) (by simp),
         hK1.trans hK2, hSK _ (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz2, hsz1'])
-          (by rw [rdW_set64E, ite_eq_left ⟨rfl, rfl, by simp; omega⟩])
+          (by rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩])
           (fun w hw => by
             simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hkb12 w hw) hfrA, hcob', rfl⟩
     | some p =>

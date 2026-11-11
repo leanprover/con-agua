@@ -436,7 +436,7 @@ theorem envPush_ownC {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
     rw [hnm, decI_word_self w hw32]
     exact (ownRaw_ownSet_self ht hb hv1 hE.stamp).1
   · rename_i hne
-    rw [ownRaw_ownSet_other hw32 (L.Arena.nidx_word_lt32 n') ht fun e => hne (by rw [hnm, ← e, decI_word])]
+    rw [ownRaw_ownSet_other hw32 (L.Arena.idx_word_lt32 n') ht fun e => hne (by rw [hnm, ← e, decI_word])]
 
 /-! ## `class_fe_r_go`: the relation to the twin -/
 
@@ -450,10 +450,10 @@ theorem rec3FerMiRp {m : Mem} {ro rl M : Word} {P : BlockShape}
     have hM' : M.toNat < rl.toNat := UInt64.lt_iff_toNat_lt.mp hM
     obtain ⟨v, hv, hRS⟩ := decPL_getH (truncM m) hrecs M.toNat hM'
     obtain ⟨-, -, -, hrP, hmI, -⟩ := rec2DecRS_parts hRS
-    obtain ⟨ev, tv⟩ := rec2RdN (w := ro) (k := M.toNat) (rec2IwN_trunc hv).2 hsz
+    obtain ⟨ev, tv⟩ := rec2RdN (w := ro) (k := M.toNat) (L.Ind.iwN_truncM_some hv).2 hsz
     rw [UInt64.ofNat_toNat] at ev
-    obtain ⟨e2, t2⟩ := rec2RdN (w := UInt64.ofNat v) (k := 2) (by rw [tv]; exact (rec2IwN_trunc hmI).2) hsz
-    obtain ⟨e1, t1⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by rw [tv]; exact (rec2IwN_trunc hrP).2) hsz
+    obtain ⟨e2, t2⟩ := rec2RdN (w := UInt64.ofNat v) (k := 2) (by rw [tv]; exact (L.Ind.iwN_truncM_some hmI).2) hsz
+    obtain ⟨e1, t1⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by rw [tv]; exact (L.Ind.iwN_truncM_some hrP).2) hsz
     simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl] at e1 e2
     rw [ev, e2, e1, t2, t1]
     simp [ConRon.Arena.BlockShape.majorIdxAt, ConRon.Arena.BlockShape.rulePrefixAt,
@@ -503,7 +503,7 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e0
   obtain ⟨hcvp, hcvx⟩ := rec3CVX hcvS
   obtain ⟨w, hw, hwH, hwnm⟩ := decCV_name (show decCV (erA m) p0 = some cv from hcvp)
-  have ew : erRd m (UInt64.ofNat p0) = w := erRd_of_erA (by rw [t0]; exact hw)
+  have ew : erRd m (UInt64.ofNat p0) = w := L.Arena.erRd_of _ _ (by rw [t0]; exact hw)
   have hj : ferW p (k + 1) m cvo cvl rcl ro rl vis M =
       ferW.j1 p k cvo cvl rcl ro rl vis M (rdW (m.arr64 IW) cvo) (erRd m (rdW (m.arr64 IW) cvo))
         (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).1 (ownRaw m (erRd m (rdW (m.arr64 IW) cvo))).2
@@ -633,8 +633,8 @@ theorem classFeR_refines (p : Prog) (hp : CfrProg p) (n : Nat) (s₀ : St) (a₀
   have hrsP : rs = P.recs := by rw [← hPe]
   rw [hrsP] at hrecs
   have hsz := hS.iw.iwSize
-  obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) (rec2IwN_trunc hro).2 hsz
-  obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (rec2IwN_trunc hrl).2) hsz
+  obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) (L.Ind.iwN_truncM_some hro).2 hsz
+  obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa using (L.Ind.iwN_truncM_some hrl).2) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
   rw [e2, e3] at h1
   obtain ⟨hS1, hg1, hsp1, cs, hcs, hPop⟩ := ferW_ok p hp P _ _ n _ _ a₀ vis fe cgo cgl rcl 0 cvGs recCls r1 []

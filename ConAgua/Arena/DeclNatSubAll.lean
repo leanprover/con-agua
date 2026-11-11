@@ -86,7 +86,7 @@ theorem sca_bin {nm r : Word} {f : Nat} (ih : ScaIH p vis fe nm r f) (mk : FnNam
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨x4, a4, hrun4, hS4, hg4, hl4, hx4⟩ := hmk (r1.headD 0) (r2.headD 0) k m3 a3 r3 m4 hS3 h4
   refine ⟨x4, a4, ?_, hS4, hg2.trans (hg3.trans hg4), hl4, hx4⟩
-  simp only [StateT.run_bind, hrun2, hrun3, exc_ok_bind', ← hx2, ← hx3]
+  simp only [StateT.run_bind, hrun2, hrun3, L.Arena.except_ok_bind, ← hx2, ← hx3]
   exact hrun4
 
 /-- The `letE` arm. -/
@@ -132,7 +132,7 @@ theorem sca_let (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p vis fe
   obtain ⟨x5, a5, hrun5, hS5, hg5, hl5, hx5⟩ := mkLet_ref (vis := vis) (fe := fe) hM
     (r1.headD 0) (r2.headD 0) (r3.headD 0) k m4 a4 r5 m5 hS4 h5
   refine ⟨x5, a5, ?_, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hl5, hx5⟩
-  simp only [StateT.run_bind, hrun2, hrun3, hrun4, exc_ok_bind', ← hx2, ← hx3, ← hx4]
+  simp only [StateT.run_bind, hrun2, hrun3, hrun4, L.Arena.except_ok_bind, ← hx2, ← hx3, ← hx4]
   exact hrun5
 
 /-- The `proj` arm. -/
@@ -162,7 +162,7 @@ theorem sca_proj (hM : MasterProg p) {nm r : Word} {f : Nat} (ih : ScaIH p vis f
   obtain ⟨x3, a3, hrun3, hS3, hg3, hl3, hx3⟩ := mkProj_ref (vis := vis) (fe := fe) hM
     x y (r1.headD 0) k m2 a2 r3 m3 hS2 h3
   refine ⟨x3, a3, ?_, hS3, hg2.trans hg3, hl3, hx3⟩
-  simp only [StateT.run_bind, hrun2, exc_ok_bind', ← hx2]
+  simp only [StateT.run_bind, hrun2, L.Arena.except_ok_bind, ← hx2]
   exact hrun3
 
 theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm r f := by
@@ -228,14 +228,14 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE r, a2, ?_, hS2, hg1.trans hg2, by simpa using hr, rfl⟩
-        simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
+        simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind, emptyLevels, hrun2, hbeq,
           decide_eq_true hcond, ite_true]
         rfl
       · rw [ite_eq_right hcond] at hw
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨decE h, a2, ?_, hS2, hg1.trans hg2, by simpa using hh, rfl⟩
-        simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind', emptyLevels, hrun2, hbeq,
+        simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind, emptyLevels, hrun2, hbeq,
           decide_eq_false hcond, Bool.false_eq_true, ite_false]
         rfl
     | app fa aa =>
@@ -246,7 +246,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       obtain ⟨e, a', hrun, hK⟩ := sca_bin ihs "mk_app" (fun t b => internE (.app t b))
         (fun t b => mkApp_ref hN.toMasterProg t b) hfuel1 hS1 hn hr hf0 ha0 hw
       refine ⟨e, a', ?_, hK.1, hg1.trans hK.2.1, hK.2.2⟩
-      simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       exact hrun
     | lam ty b =>
       simp only [ViewR, L.getD_one, L.getD_two] at hvr
@@ -256,7 +256,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       obtain ⟨e, a', hrun, hK⟩ := sca_bin ihs "mk_lam" (fun t b => internE (.lam t b))
         (fun t b => mkLam_ref hN.toMasterProg t b) hfuel1 hS1 hn hr hf0 ha0 hw
       refine ⟨e, a', ?_, hK.1, hg1.trans hK.2.1, hK.2.2⟩
-      simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       exact hrun
     | forallE ty b =>
       simp only [ViewR, L.getD_one, L.getD_two] at hvr
@@ -266,7 +266,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       obtain ⟨e, a', hrun, hK⟩ := sca_bin ihs "mk_forall" (fun t b => internE (.forallE t b))
         (fun t b => mkForall_ref hN.toMasterProg t b) hfuel1 hS1 hn hr hf0 ha0 hw
       refine ⟨e, a', ?_, hK.1, hg1.trans hK.2.1, hK.2.2⟩
-      simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       exact hrun
     | letE t v b =>
       simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
@@ -275,7 +275,7 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       subst htd hvd hbd
       obtain ⟨e, a', hrun, hK⟩ := sca_let hN.toMasterProg ihs hfuel1 hS1 hn hr ht0 hv0 hb0 hw
       refine ⟨e, a', ?_, hK.1, hg1.trans hK.2.1, hK.2.2⟩
-      simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       exact hrun
     | proj s i e0 =>
       simp only [ViewR, L.getD_one, L.getD_two, L.getD_three] at hvr
@@ -284,28 +284,28 @@ theorem sca_ref (hN : NatSubAllProg p) (nm r : Word) : ∀ f, ScaIH p vis fe nm 
       subst hsd hid hed
       obtain ⟨e, a', hrun, hK⟩ := sca_proj hN.toMasterProg ihs hfuel1 hS1 hn hr he0 hw
       refine ⟨e, a', ?_, hK.1, hg1.trans hK.2.1, hK.2.2⟩
-      simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']
+      simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]
       exact hrun
     | bvar i =>
       simp only [ViewR] at hvr
       exact hret (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
         (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
-        (by simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']; rfl)
+        (by simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]; rfl)
     | fvar i ty =>
       simp only [ViewR] at hvr
       exact hret (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
         (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
-        (by simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']; rfl)
+        (by simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]; rfl)
     | sort u =>
       simp only [ViewR] at hvr
       exact hret (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
         (by rw [hvr.1]; decide) (by rw [hvr.1]; decide) (by rw [hvr.1]; decide)
-        (by simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']; rfl)
+        (by simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]; rfl)
     | lit l =>
       simp only [ViewR] at hvr
       exact hret (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide)
         (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide)
-        (by simp only [substConstAll, StateT.run_bind, hrun1', exc_ok_bind']; rfl)
+        (by simp only [substConstAll, StateT.run_bind, hrun1', L.Arena.except_ok_bind]; rfl)
 
 @[refines ConRon.Arena.substConstAll]
 theorem substConstAll_refines (hN : NatSubAllProg p) (nm r fuel h : Word) :

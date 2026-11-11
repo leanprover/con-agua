@@ -13,6 +13,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
+import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -192,7 +193,7 @@ theorem ctorNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
       have hnmE : nm = (cvs[j]).name := by rw [← hcvT]
       obtain ⟨w, hw, hwl', hnm'⟩ := L.Arena.hd?_some hnm
       have hrd : erRd m (UInt64.ofNat a) = w :=
-        erRd_of_erA (by rw [UInt64.toNat_ofNat_of_lt' (erecP_lt64 hw)]; exact hw)
+        L.Arena.erRd_of _ _ (by rw [UInt64.toNat_ofNat_of_lt' (erecP_lt64 hw)]; exact hw)
       rw [hrd] at hGj
       have hnmj : (cvs.map (·.name))[j]'(by simpa [hlen] using hj) = nm := by
         simp [List.getElem_map, hnmE]

@@ -36,18 +36,6 @@ theorem nodupB_nodup : ∀ (l : List Var), nodupB l = true → l.Nodup
     rw [nodupB_cons] at h
     exact List.nodup_cons.mpr ⟨h.1, nodupB_nodup l h.2⟩
 
-theorem St.setLocs_mem' : ∀ (xs : List Var) (σ : St) (r : List Word), (σ.setLocs xs r).mem = σ.mem
-  | [], _, _ => rfl
-  | x :: xs, σ, r => by rw [St.setLocs, St.setLocs_mem' xs]; rfl
-
-theorem St.setLocs_loc_not_mem : ∀ (xs : List Var) (σ : St) (r : List Word) (y : Var), y ∉ xs →
-    (σ.setLocs xs r).loc y = σ.loc y
-  | [], _, _, _, _ => rfl
-  | x :: xs, σ, r, y, h => by
-    rw [St.setLocs, St.setLocs_loc_not_mem xs _ _ y (fun h' => h (List.mem_cons_of_mem _ h'))]
-    have : y ≠ x := fun h' => h (h' ▸ List.mem_cons_self)
-    simp [St.setLoc, this]
-
 theorem St.setLocs_loc_get : ∀ (xs : List Var), xs.Nodup → ∀ (σ : St) (r : List Word) (i : Nat)
     (hi : i < xs.length), (σ.setLocs xs r).loc xs[i] = r.getD i 0
   | [], _, _, _, _, hi => absurd hi (by simp)
@@ -57,7 +45,7 @@ theorem St.setLocs_loc_get : ∀ (xs : List Var), xs.Nodup → ∀ (σ : St) (r 
     cases i with
     | zero =>
       simp only [List.getElem_cons_zero]
-      rw [St.setLocs_loc_not_mem xs _ _ x hx]
+      rw [L.Compiler.setLocs_loc_out xs _ _ x hx]
       cases r <;> simp [St.setLoc]
     | succ i =>
       simp only [List.getElem_cons_succ]
@@ -186,7 +174,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
     · intro r σ' d' hinv hmem hloc hrsp hrbp hr15 hr14' hres hpres
       have hT0 : (({ toBitVec := A (top s1 F) } : UInt64).toNat) = top s1 F := by simp only [top]; addr_omega
       rw [hT0] at hpres hrsp
-      refine hKt _ _ d' ra (hrun vs hvs r σ' hinv) (by rw [St.setLocs_mem']; exact hmem) ?_ ?_ ?_
+      refine hKt _ _ d' ra (hrun vs hvs r σ' hinv) (by rw [L.Compiler.setLocs_mem]; exact hmem) ?_ ?_ ?_
       · refine ⟨by rw [hrsp, htop], ?_, ?_, ?_, ?_⟩
         · rw [hrbp]; exact hR1.rbp
         · rw [hr15]; exact hR1.r15

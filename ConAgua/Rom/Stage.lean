@@ -47,7 +47,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   have hd : rom.drop allPinsOff.toNat = encItems [] (itemsAllPins []) ++ rest := by
     rw [hrom, allPinsOff_toNat, romData_split, romPins,
       List.append_assoc (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData), List.drop_left]
-  have hA' : ArenaD (resetMem mem) a := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
+  have hA' : ArenaD (resetMem mem) a := L.Arena.ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, hq, hf, hs, hz⟩ := romItemsW_ok rom hr _ allPins_fits n (resetMem mem) a
     allPinsOff rest [] ∅ q m₁ hA' ((memFrame_top (resetMem_frame1 mem) (by decide)).mode hA.base.lit.1 hmo)
     (MemoR.fresh mem hc) hd (by rw [resetMem_stk]; exact hst)

@@ -18,6 +18,8 @@ import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndView
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -282,10 +284,10 @@ theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r
 theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
   unfold ResH; rw [← h]; exact hw
 
-theorem decBool_f_m2c {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
+theorem decBool_false_of {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
   unfold decBool; rw [h]; rfl
 
-theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
+theorem decBool_true_of {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
   unfold decBool; exact bne_iff_ne.mpr h
 
 /-! ## `is_str_lit(h)` -/
@@ -388,17 +390,6 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
 
 /-! ## `is_ctor_app(vis, e)` -/
 
-theorem view_const_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : viewOK m h CONST) (hg : tagW h = 3) :
-    a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
-      (decI (tfld m CONST (tierW h) (idxW h) 1))) ∧
-    (tfld m CONST (tierW h) (idxW h) 0).toNat < 2 ^ 32 ∧
-    (tfld m CONST (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
-  obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
-  rw [hn, hu, decI_word, decI_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _⟩
-
 /-- **`is_ctor_app`'s model** (generated), its callees through their runs. -/
 l_model isCtorApp_spec (p : Prog) (hp : IotaProg' p)
   fns [hp.isCtorApp ↦ icaW]
@@ -480,7 +471,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
   obtain ⟨hv1, hW⟩ := of_ite_none hW
   obtain ⟨hv2, hW⟩ := of_ite_none hW
   have h3 := h3'
-  obtain ⟨hvw, hn32, -⟩ := view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
+  obtain ⟨hvw, hn32, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
   generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
   rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
     simp only [hc2, icaW.k_env_find.none, icaW.k_env_find.eq_2, L.Ind.erRd_foldN, reduceCtorEq] at hW
@@ -822,9 +813,6 @@ l_model piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidua
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
-theorem viewBind_run₀ (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
-
 theorem piResidual_nil_run (e : EIdx) (a : AState) :
     (piResidual e []).run a = .ok (some e, a) := by
   simp [piResidual]; rfl
@@ -839,7 +827,7 @@ theorem piResidual_cons_run (h a' b b' : EIdx) (as : List EIdx) (a a₁ a₂ : A
     (hi : (instantiate1Fast coreWalkFuel b a' 0).run a = .ok (b', a₁))
     (hr : (piResidual b' as).run a₁ = .ok (res, a₂)) :
     (piResidual h (a' :: as)).run a = .ok (res, a₂) := by
-  simp only [piResidual, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, viewBind_run₀, hv,
+  simp only [piResidual, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, L.Arena.viewBind_run, hv,
     except_ok_bind, hi, hr]
 
 /-- **The `pi_residual` loop refines `piResidual`**, by induction on the remaining count. -/

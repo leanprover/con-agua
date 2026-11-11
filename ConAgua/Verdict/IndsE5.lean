@@ -99,7 +99,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
   · rw [cbagE.k_open_pis_at_fvars_f.abort1 p n vis nP c0 s0 o l r1 m1 hr0]
     exact RefE.of_cls0 rfl
   rw [cbagE.k_open_pis_at_fvars_f.arm1 p n vis nP c0 s0 o l r1 m1 hr0]
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hd1, hA1⟩ := opfF_okRA hty0 (callW_opfF hOpf h1) hS hA
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hd1, hA1⟩ := opfF_okRA hty0 (L.Ind.callW_opfF hOpf h1) hS hA
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hd0 hrun1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
   rw [← htye0]
@@ -139,7 +139,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
     rw [← hw]; simp only [rdW]; rw [hg1.iwGet _ hol]
   rw [hw1]
   obtain ⟨hwc, hcb, -⟩ := partsIwRd hc (w := UInt64.ofNat q) hq'
-  obtain ⟨-, hsv'⟩ := rec2IwH_trunc hsv
+  obtain ⟨-, hsv'⟩ := L.Ind.iwH_truncM_some hsv
   obtain ⟨v, hv, hv32, hve⟩ := iwH_rdW_at (w := UInt64.ofNat q) (k := 1) (by rw [hq']; exact hsv')
     hS1.iw.iwSize
   rw [show (UInt64.ofNat 1 : Word) = 1 from rfl] at hv

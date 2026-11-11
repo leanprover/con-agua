@@ -4,9 +4,7 @@ public import ConAgua.Arena.DeclReduceSpec2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclReduceSpec
-import ConAgua.L.LocNF
 import ConAgua.L.ModelGen
 import ConAgua.Arena.DeclAxiomSpec3
 import all ConAgua.Arena.DeclArmsNat
@@ -69,14 +67,14 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
   obtain ⟨hm1, hl1, hrun1⟩ := oroW_ok e1 hS.check.pins hwnl
   subst m1
   rw [e1, oraW.k_of_reduce_op.arm1] at hW
-  simp only [StateT.run_bind, hrun1, exc_ok_bind']
+  simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind]
   -- the pinned `Eq`
   rcases e2 : callW p n "eq_stored" [vis] m with _ | ⟨r2, m2⟩
   · rw [e2, oraW.k_eq_stored.none] at hW; cases hW
   obtain ⟨hm2, hrun2, -⟩ := eqs_call h.red h.eqs e2 hS
   subst m2
   rw [e2] at hW
-  simp only [hrun2, exc_ok_bind']
+  simp only [hrun2, L.Arena.except_ok_bind]
   by_cases z2 : r2.headD 0 = 0
   · rw [oraW.k_eq_stored.arm1 p n vis q _ _ r2 m z2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -93,7 +91,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [e3] at hW
-  simp only [StateT.run_bind, hrun3, exc_ok_bind']
+  simp only [StateT.run_bind, hrun3, L.Arena.except_ok_bind]
   generalize AM.res (reduceElemOk fe (decI (r1.headD 0))) a = b3 at hd3
   generalize AM.st (reduceElemOk fe (decI (r1.headD 0))) a = a3 at hS3
   by_cases z3 : r3.headD 0 = 0
@@ -114,7 +112,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [e4] at hW
-  simp only [StateT.run_bind, hrun4, exc_ok_bind']
+  simp only [StateT.run_bind, hrun4, L.Arena.except_ok_bind]
   generalize AM.res (reduceStoredOk fe (decI (r1.headD 0))) a3 = b4 at hd4
   generalize AM.st (reduceStoredOk fe (decI (r1.headD 0))) a3 = a4 at hS4
   by_cases z4 : r4.headD 0 = 0
@@ -144,7 +142,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {vis : Word}
   obtain ⟨rfl, hrun6, hd6⟩ := mpW_ok (a := AM.st (ofReducePinA (decI wn)) a4) (mp_callR h.red e6)
     hS5.iw.erSize (ArrExt.decCV (L.Ind.IWGrow.ext hg05) hq) (decRCV_get hd5)
   refine ⟨_, _, ?_, hS5, hg05, by simpa [decW0B] using hd6⟩
-  simp only [StateT.run_bind, hrun5, exc_ok_bind']
+  simp only [StateT.run_bind, hrun5, L.Arena.except_ok_bind]
   exact hrun6
 
 /-- **`of_reduce_ax_ok(vis, q)` refines `ofReduceAxOk`** (through the ROM readers' refinements). -/

@@ -11,6 +11,8 @@ import ConAgua.Front.Preserve
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.NatArms
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.PinsNatOp
 
 @[expose] public section
 
@@ -111,25 +113,11 @@ theorem erSliceEq_spec (p : Prog) (hp : p.lookup "er_slice_eq" = some erSliceEqL
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, fun s₀ => Triple.step_exec (erSliceEqLoop_spec p (n + 1) s₀)] <;> finish
 
-theorem mapM_get {α β : Type} {f : α → Option β} :
-    ∀ {xs : List α} {l : List β}, xs.mapM f = some l →
-      l.length = xs.length ∧ ∀ k (hk : k < xs.length), f xs[k] = l[k]?
-  | [], l, h => by simp at h; subst h; simp
-  | x :: xs, l, h => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, hy, ys, hys, rfl⟩ := h
-    obtain ⟨hl, hg⟩ := mapM_get hys
-    refine ⟨by simp [hl], fun k hk => ?_⟩
-    cases k with
-    | zero => simpa using hy
-    | succ k => simpa using hg k (by simpa using hk)
-
 /-- A decoded handle slice: its length, and each element a word below `2^32`. -/
 theorem hslice?_get {k : IdxKind} {R : Nat → Option Word} {o n : Nat} {l : List (Idx k)}
     (h : hslice? R o n = some l) :
     l.length = n ∧ ∀ j, j < n → ∃ w, R (o + j) = some w ∧ w.toNat < 2 ^ 32 ∧ l[j]? = some (decI w) := by
-  obtain ⟨hl, hg⟩ := mapM_get h
+  obtain ⟨hl, hg⟩ := L.Arena.mapM_option_get _ _ _ h
   simp only [List.length_range] at hl
   refine ⟨hl, fun j hj => ?_⟩
   have := hg j (by simpa using hj)
@@ -405,10 +393,6 @@ theorem natPred_spec (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (e : 
       callW_spec p n "nat_pred_lit", pinAt_rd p hp.leaf.pinat n, pinWord_rd p hp.leaf.pinword n] <;>
     finish [natPredW, npLitF, Option.bind_some, tierW, idxW]
 
-theorem am_eq_run {α : Type} [Inhabited α] {T T' : AM α} {a : AState} (h : T.run a = T'.run a) :
-    AM.ok T a = AM.ok T' a ∧ AM.st T a = AM.st T' a ∧ AM.res T a = AM.res T' a := by
-  simp only [AM.ok, AM.st, AM.res, h, and_self]
-
 /-- **`nat_pred` refines `natPred?`**, both result words handle words (`ResW`). -/
 @[refines ConRon.Arena.natPred?]
 theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n : Nat) (s₀ : St)
@@ -487,7 +471,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
         obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by omega⟩
         simp only [natPred?, htl, ↓reduceIte, StateT.run_bind, view_run _ _ _ (hview _ rfl),
           except_ok_bind, natPredArm, Nat.add_sub_cancel]
-      obtain ⟨eok, est, eres⟩ := am_eq_run hrun
+      obtain ⟨eok, est, eres⟩ := L.Arena.AM.congr_run hrun
       simp only at hm
       rw [ht, hm] at hK
       refine ⟨eok ▸ hok, ?_, ?_, by unfold ResW; rw [← hr0, ← hr1]; exact ⟨hw1, hhw⟩⟩
@@ -522,7 +506,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
         | _ => pure none
       else pure none : AM (Option EIdx)).run a₀ := by
     simp only [natPred?, htl, decE_tag_app_beq e he, h4, decide_true, Bool.false_eq_true, ↓reduceIte,
-      StateT.run_bind, viewApp_run', viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
+      StateT.run_bind, L.Arena.viewApp_run, viewApp_ok s₀.mem a₀ hR e he hvo, except_ok_bind]
     rfl
   generalize tfld s₀.mem APP (tierW e) (idxA e) 0 = f at hf hW hpre
   generalize tfld s₀.mem APP (tierW e) (idxA e) 1 = x at hx hW hpre

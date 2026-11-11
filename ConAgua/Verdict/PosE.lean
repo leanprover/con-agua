@@ -82,14 +82,14 @@ theorem oneK_split {β : Type} (root : Bool) (hi : Nat) (us : LsIdx) (ds : List 
     oneK mode fe ctx fuel prog root hi us ds names holes cv nF ns K =
       oneT mode fe ctx fuel prog root hi us ds names holes cv nF ns >>= fun x => K x.1 x.2 := by
   unfold oneT oneK roK
-  simp only [bind_assoc, pure_bind, ite_bind', fail_bindAM]
+  simp only [bind_assoc, pure_bind, L.Arena.ite_bind, fail_bindAM]
   split
   · rfl
   · congr 1; funext cty
     congr 1; funext x
     cases x
     · simp only [fail_bindAM]
-    · simp only [bind_assoc, walkK_bind, ite_bind', fail_bindAM, pure_bind]
+    · simp only [bind_assoc, walkK_bind, L.Arena.ite_bind, fail_bindAM, pure_bind]
 
 end twin
 

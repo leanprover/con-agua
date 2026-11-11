@@ -61,11 +61,6 @@ theorem mkApp_core {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option
   have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
-/-- The mode test of `eta_cert_body` is `verifiedChecks`. -/
-theorem decMode_vc (mode : Word) (h : mode < 4) :
-    (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by
-  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
-
 /-! ## The twin, in the L code's pieces -/
 
 /-- `etaCert`'s verified-mode check, copied (`eta_cert_ty`). -/
@@ -132,12 +127,6 @@ theorem ect_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
         hn hs₂ h₁.resOk h₂.resOk)
     fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
 
-theorem decBool_true_of {r : List Word} (h : r.headD 0 ≠ 0) : decBool r = true := by
-  simp only [decBool, bne_iff_ne]; exact h
-
-theorem decBool_false_of {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
-  simp only [decBool, bne_eq_false_iff_eq]; exact h
-
 /-- **`eta_cert_body` refines `etaBodyT`, both outcomes**: the errors are the `defeq` slot's and
 `eta_cert_ty`'s. -/
 @[refines_part ConRon.Arena.etaCert "the bodies at a fresh variable (etaBodyT)"]
@@ -171,9 +160,9 @@ theorem ecb_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
   dsimp only [ecbE.k_defeq]
   by_cases h0 : r₄.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_false_of h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₄ rfl hw0)
-  rw [ite_eq_right h0, decBool_true_of h0, decMode_vc mode hs.mode4]
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0, L.Arena.decMode_verified mode hs.mode4]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   by_cases hm : mode &&& 1 = 0
   · rw [ite_eq_left hm]
@@ -207,9 +196,9 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [ecE.k_io_neutral]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_false_of h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl hw0)
-  rw [ite_eq_right h0, decBool_true_of h0]
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F _ _ dn vis fe M₁ eb mode d b hF hn hs₁ hb)
@@ -243,9 +232,9 @@ theorem ec_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
   dsimp only [ecE.k_defeq]
   by_cases h40 : r₄.headD 0 = 0
-  · rw [ite_eq_left h40, decBool_false_of h40]
+  · rw [ite_eq_left h40, L.Arena.decBool_false_of h40]
     exact RefE.ret rfl (CorePost.ret hS₄ rfl hw0)
-  rw [ite_eq_right h40, decBool_true_of h40]
+  rw [ite_eq_right h40, L.Arena.decBool_true_of h40]
   simp only [↓reduceIte]
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl

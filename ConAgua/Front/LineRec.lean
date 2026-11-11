@@ -926,7 +926,7 @@ theorem lrLoop_spec (n : Nat) (s₀ : St) :
     all_goals clear ih hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hpl hpml hpbo hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hprn hpsb hpsv hpsr hprp hpq hpbr hphn hpho hph hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
     all_goals subst_vars
     all_goals try rfl
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil,
         St.setLocs_cons, List.headD_cons, List.tail_cons, Cmp.eval, BinOp.eval, Bool.and_eq_true,
         Bool.or_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, Nat.reduceEqDiff, reduceIte, LRArmPost,
         lrStepS] at *

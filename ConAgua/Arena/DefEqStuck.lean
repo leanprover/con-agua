@@ -204,12 +204,6 @@ theorem propIrrel_eq (r : CoreFnsA) (fe : IFEnv) (d : Nat) (a b : EIdx) :
         let w ← isProofFast fe coreWalkFuel b
         if z && w then pure true else proofIrrel r fe d a b) := rfl
 
-theorem decBool_eq_true {r : List Word} (h : r.headD 0 ≠ 0) : decBool r = true := by
-  simp only [decBool, bne_iff_ne]; exact h
-
-theorem decBool_eq_false {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
-  simp only [decBool, bne_eq_false_iff_eq]; exact h
-
 /-- **`prop_irrel` refines `propIrrel`, both outcomes**: the errors are `proof_irrel`'s. -/
 theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -230,13 +224,13 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
   by_cases h12 : r₁.headD 0 ≠ 0 ∨ r₂.headD 0 ≠ 0
   · rw [ite_eq_left h12]
     have hx : (decBool r₁ || decBool r₂) = true := by
-      rcases h12 with h | h <;> simp [decBool_eq_true h]
+      rcases h12 with h | h <;> simp [_root_.L.Arena.decBool_true_of h]
     rw [hx]
     exact RefE.ret rfl (CorePost.ret hS₂ rfl hw0)
   rw [ite_eq_right h12]
   simp only [not_or, ne_eq, Decidable.not_not] at h12
   have hx : (decBool r₁ || decBool r₂) = false := by
-    simp [decBool_eq_false h12.1, decBool_eq_false h12.2]
+    simp [_root_.L.Arena.decBool_false_of h12.1, _root_.L.Arena.decBool_false_of h12.2]
   rw [hx]
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_callW (fun _ => rfl) (hc.defeq.isProofFast n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb a
@@ -250,15 +244,15 @@ theorem pi_ref (p : Prog) (hc : StuckCallees p) (n : Nat)
   by_cases h34 : r₃.headD 0 ≠ 0 ∧ r₄.headD 0 ≠ 0
   · rw [ite_eq_left h34]
     have hx : (decBool r₃ && decBool r₄) = true := by
-      simp [decBool_eq_true h34.1, decBool_eq_true h34.2]
+      simp [_root_.L.Arena.decBool_true_of h34.1, _root_.L.Arena.decBool_true_of h34.2]
     rw [hx]
     exact RefE.ret rfl (CorePost.ret hS₄ rfl hw1)
   rw [ite_eq_right h34]
   have hx : (decBool r₃ && decBool r₄) = false := by
     by_cases h3 : r₃.headD 0 = 0
-    · simp [decBool_eq_false h3]
+    · simp [_root_.L.Arena.decBool_false_of h3]
     · have h4 : r₄.headD 0 = 0 := Classical.byContradiction fun h4 => h34 ⟨h3, h4⟩
-      simp [decBool_eq_false h4]
+      simp [_root_.L.Arena.decBool_false_of h4]
   rw [hx]
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [← bind_pure (proofIrrel _ _ _ _ _)]

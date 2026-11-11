@@ -5,6 +5,7 @@ import ConAgua.Rom.CIReadRefW
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadSpec
 import ConAgua.Rom.ReadScr
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -76,7 +77,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   unfold cvW at hw
   have hlt := hI.er_lt
   -- the name
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   have hd0 : rom.drop q.toNat = encName cv.name ++
       (encNameL cv.levelParams ++ ((encExprM seen cv.type).1 ++ rest)) := by
     rw [hd]; simp [encCV, List.append_assoc]
@@ -86,14 +87,14 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hM1 := hM.frameG hf1 (by decide) (by decide)
   have hs1 : stkTop m1 = stkTop m := hf1.ctl 131 (by decide)
   -- the name word
-  obtain ⟨ra, ma, ha, hw⟩ := ntBW_inv hw
+  obtain ⟨ra, ma, ha, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL ha] at hw
   obtain ⟨hI2, hM2, hs2, ht2, hIW2, hg2, hn2⟩ := putER_facts hI1 hM1 pp (r1.headD 0) hp0 (by omega)
   -- the level parameters
   cases k with
   | zero => rw [callW_zero] at hw; simp at hw
   | succ k =>
-  obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m3, h2, hw⟩ := L.Ind.ntBW_some hw
   have hp1 : (pp + 1).toNat = pp.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hp3 : (pp + 3).toNat = pp.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   have hdl : rom.drop (r1.tail.headD 0).toNat =
@@ -103,7 +104,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
     nameSl_rel hL hr seen memo cv.levelParams hfl k _ a1 _ (pp + 1) _ _ m3 hI2 hM2 hdl
       (by omega) (by rw [ht2, ht1]; omega) h2
   -- the type
-  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
+  obtain ⟨r4, m4, h4, hw⟩ := L.Ind.ntBW_some hw
   have hdt : rom.drop (r2.headD 0).toNat = (encExprM seen cv.type).1 ++ rest :=
     drop_shift rom _ (encNameL cv.levelParams) _ _ (by rw [hdl, List.append_assoc]) _ (by rw [hq3, hq1])
   obtain ⟨memo', a4, hrun4, hA4, hk4, hM4, hlt4, hq4, hf4, hs4, hmo4⟩ :=
@@ -111,7 +112,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
       (by have := hI3.ok.ctl; omega) h4
   obtain ⟨hI4, -, -, hIW4, ht4, -, hE4⟩ := hI3.expr hA4 hmo4 hf4 hk4
     (L.Arena.internExprGo_ks _ _ _ _ _ hrun4)
-  obtain ⟨rb, m5, hb, hw⟩ := ntBW_inv hw
+  obtain ⟨rb, m5, hb, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL hb] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw

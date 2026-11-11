@@ -4,6 +4,7 @@ import ConAgua.Front.NatDecLink
 import ConAgua.Front.UnescapeLink
 public import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.NatArms
 
 @[expose] public section
 
@@ -35,20 +36,6 @@ open L.Front.Unescape (strPutEscW)
 namespace L.Front
 
 /-! ## The leaf interns under `ArenaD` -/
-
-theorem bvar_derSort (st : EStore) (u : LIdx) : bvarOfData (st.derOfView (.sort u)) = 0 := by
-  simp only [EStore.derOfView, EStore.derOfSort]
-  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
-
-theorem bvar_derConst (st : EStore) (n : NIdx) (us : LsIdx) :
-    bvarOfData (st.derOfView (.const n us)) = 0 := by
-  simp only [EStore.derOfView, EStore.derOfConst]
-  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
-
-theorem bvar_derLit (st : EStore) (l : ConLeche.Literal) :
-    bvarOfData (st.derOfView (.lit l)) = 0 := by
-  simp only [EStore.derOfView, EStore.derOfLit]
-  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
 
 section leaves
 variable (m : Mem) (a : AState) (hA : ArenaD m a) (r : Word) (m' : Mem)
@@ -96,10 +83,10 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (vpool m) o.toN
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨L.Arena.bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨L.Arena.bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
@@ -121,10 +108,10 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨L.Arena.bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨L.Arena.bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
@@ -427,8 +414,8 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   rw [hN] at hI
   replace hI := litK_intern hI
   simp only [List.headD_cons, List.tail_cons] at hI
-  have hA' := ArenaD.grow m m₂ hg a hA
-  have hmo₂ := ModeOK.growsF hmode hg
+  have hA' := L.Arena.ArenaD.grow m m₂ hg a hA
+  have hmo₂ := L.Arena.ModeOK.grows hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm (ModeOK.slice0 hmo₂ hsl) hI
   rw [hpv, ← hn] at h1 h2 h3
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
@@ -454,8 +441,8 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
     ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
   rw [hP] at hI
   replace hI := litStrK_intern hI
-  have hA' := ArenaD.grow m m₂ hg a hA
-  have hmo₂ := ModeOK.growsF hmode hg
+  have hA' := L.Arena.ArenaD.grow m m₂ hg a hA
+  have hmo₂ := L.Arena.ModeOK.grows hmode hg
   obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk (ModeOK.slice0 hmo₂ hsl) hI
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
     (MemFrame.above hf (by simp [tier1, litSch, REC, SLOT])), MemFrame.modeOK hf (by decide) (by decide) hmo₂⟩
@@ -530,7 +517,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   have hg : Grows m m₂ := Grows.intro m m₂ hpok F9 (fun j hj => F5 j hj) (by rw [F2, htc]; omega)
     (by rw [F2, htc]; omega)
   have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL, POOL1])
-  have hA₂ := ArenaD.grow m m₂ hg a hA
+  have hA₂ := L.Arena.ArenaD.grow m m₂ hg a hA
   -- the twin's universe list
   have hxs : itemsN b.data (c + 1) = listN b.data c := rfl
   rw [hxs] at F1 F6 F7
@@ -545,7 +532,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     simp only [List.getElem_ofFn, List.getElem_map]
     rw [F6 k (by simpa using hk₂)]; rfl
   have hq : SliceOK m₂ m.top (lsPutL b.data c) := SliceOK.fresh hg F2
-  have hmo₂ := ModeOK.growsF hmode hg
+  have hmo₂ := L.Arena.ModeOK.grows hmode hg
   obtain ⟨l1, l2, l3, lf⟩ := internLs_D m₂ a hA₂ g m₃ m.top _ hq _ hk (ModeOK.slice0 hmo₂ hq) hL
   obtain ⟨c1, c2, c3, cf⟩ := internConst_D m₃ _ l2 w m₁ (tblW m NID x) g hwn hg32' hI
   have hop : exprOp st (.const x.toNat us) =

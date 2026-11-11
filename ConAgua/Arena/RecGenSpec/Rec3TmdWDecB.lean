@@ -41,7 +41,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## Shared pieces -/
 
 /-- A `Sim` (lane `indproofs2`'s combinators) as a `RSim`. -/
-theorem rec3Sim_rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+theorem _root_.L.Arena.Sim.rsim {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
     {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
     RSim mo op a (fun b a' x => Q b.1 x b.2 a') := fun b hb => h b.1 b.2 hb
 
@@ -57,8 +57,8 @@ theorem rec3CG_parts {m : Mem} {g : Nat} {G : ClassGen} (h : DecB (fun m => decC
   obtain ⟨o9, l9, h9, h10, hc⟩ := decAt_some hcts
   rw [show g + 7 + 1 = g + 8 by omega] at h8
   rw [show g + 9 + 1 = g + 10 by omega] at h10
-  refine ⟨by rw [(rec2IwN_trunc h8).2, decPL_length _ hs], o9, l9, (rec2IwN_trunc h9).2,
-    (rec2IwN_trunc h10).2, hc⟩
+  refine ⟨by rw [(L.Ind.iwN_truncM_some h8).2, decPL_length _ hs], o9, l9, (L.Ind.iwN_truncM_some h9).2,
+    (L.Ind.iwN_truncM_some h10).2, hc⟩
 
 /-- `CVExt` bounds the record's address. -/
 theorem rec3CVExt_lt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
@@ -181,7 +181,7 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     cases hb'
     have hc' : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hcl
     obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hms c.toNat hc'
-    obtain ⟨-, hv'⟩ := rec2IwN_trunc hv
+    obtain ⟨-, hv'⟩ := L.Ind.iwN_truncM_some hv
     have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
     have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
     rw [hcw] at hrd
@@ -293,13 +293,13 @@ theorem rec3CtorsAt {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     rw [e10] at hc
     have hc' : c.toNat < l9 := by have := UInt64.lt_iff_toNat_lt.mp hc; rw [t10] at this; exact this
     obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hct c.toNat hc'
-    obtain ⟨-, hvm⟩ := rec2IwN_trunc hv
+    obtain ⟨-, hvm⟩ := L.Ind.iwN_truncM_some hv
     obtain ⟨ev, tv⟩ := rec2RdN (w := UInt64.ofNat o9) (k := c.toNat) (by rw [t9]; exact hvm) hsz
     simp only [UInt64.ofNat_toNat] at ev
     simp only [decLH] at hdv
     obtain ⟨xo, xl, hxo, hxl, hxs⟩ := decAt_some hdv
-    obtain ⟨exo, txo⟩ := rec2RdN (w := UInt64.ofNat v) (k := 0) (by rw [tv]; exact (rec2IwN_trunc hxo).2) hsz
-    obtain ⟨exl, txl⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by rw [tv]; exact (rec2IwN_trunc hxl).2) hsz
+    obtain ⟨exo, txo⟩ := rec2RdN (w := UInt64.ofNat v) (k := 0) (by rw [tv]; exact (L.Ind.iwN_truncM_some hxo).2) hsz
+    obtain ⟨exl, txl⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by rw [tv]; exact (L.Ind.iwN_truncM_some hxl).2) hsz
     simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
       show UInt64.ofNat 1 = (1 : Word) from rfl] at exo exl
     simp only [e9, ev, exo, exl, txo, txl]

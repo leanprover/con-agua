@@ -12,7 +12,6 @@ import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CloseTelescope
 import ConAgua.Arena.IndInstallSpec.InstallSimCall
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-import ConAgua.Arena.IndSumSpec.DecCVpGrow
 import all ConAgua.Arena.WhnfIota
 import ConRon.Bridge.Inductives.Positivity
 
@@ -92,7 +91,7 @@ theorem frsW_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL) {n : Na
     rw [hrun', ite_eq_left (by simpa using ht)]
     have hv := pr_viewSort_ok m a hR (r1.headD 0) hw ⟨h1, by have := UInt64.not_le.mp h2; exact this⟩ ht
     simp only [StateT.run_bind]
-    rw [L.Ind.viewSort_run hv]
+    rw [L.Arena.viewSort_run hv]
     rfl
   · rw [ite_eq_left (by simpa using ht)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

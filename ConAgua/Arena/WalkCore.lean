@@ -35,7 +35,7 @@ variable {p : Prog}
 theorem wscoped_core (hp : WsProg p) : WscopedBFastOK p := by
   intro n s₀ a₀ dn vis fe M eb d e hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW hp.wsfast _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hp.wsfast _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   unfold CoreSpec
   apply L.M.triple_of_run
@@ -65,7 +65,7 @@ theorem wscoped_core (hp : WsProg p) : WscopedBFastOK p := by
 theorem leafGuard_core (hp : LgProg p) : LeafGuardOK p := by
   intro n s₀ a₀ dn vis fe M eb fab major hS hF hJ
   cases n with
-  | zero => exact CoreSpec.zeroW hp.lg _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hp.lg _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   unfold CoreSpec
   apply L.M.triple_of_run

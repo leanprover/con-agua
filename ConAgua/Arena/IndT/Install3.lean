@@ -129,7 +129,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   obtain ⟨⟨c, hc, hcv⟩, -, hni, -⟩ := decMS_some (m := truncM m) hmsB
   obtain ⟨hw0, hcb, hmsl⟩ := partsIwRd hc rfl
   obtain ⟨hw1, hnb, -⟩ := partsIwRd hni (w := ms + 1) (by rw [UInt64.toNat_add]; simp; omega)
-  obtain ⟨-, hcN⟩ := rec2IwN_trunc hc
+  obtain ⟨-, hcN⟩ := L.Ind.iwN_truncM_some hc
   have hc' : (UInt64.ofNat c : Word).toNat = c := UInt64.toNat_ofNat_of_lt' hcb
   have hcvx : CVExt m (UInt64.ofNat c : Word).toNat := by rw [hc']; exact hcx c hcN
   have hcvm : decCVp m (UInt64.ofNat c : Word).toNat = some msh.cvT := by
@@ -143,7 +143,7 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
   -- `check_constant_val`
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _ 0)
     (fun hG => hG.nv) id (ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS hn hC.stageT
-      (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) hcvP hA.crMemo.crOK)
+      (rec2DecCV_erecP hcvm hcvx) (rec3CVExt_lt hS hcvx) hcvP hA.cr.crOK)
     fun r1 s1 u1 a1 _ _ hr1 hP1 => ?_
   dsimp only [cbtE.k_check_constant_val]
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core

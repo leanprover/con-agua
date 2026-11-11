@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.DefEqStuckStr
-import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.DefEqStuckShape
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.RefWalk
@@ -160,11 +159,11 @@ theorem ac_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
   obtain ⟨M₅, hS₅, hK₅, hst₅⟩ := h₅.after
   dsimp only [acE.k_defeq]
   by_cases h0 : r₅.headD 0 = 0
-  · rw [ite_eq_right (fun h => h h0), decBool_false_of h0]
+  · rw [ite_eq_right (fun h => h h0), L.Arena.decBool_false_of h0]
     simp only [Bool.false_eq_true, ↓reduceIte]
     exact leaf _ m₅ _ _ false _ M₅ rfl hS₅ hK₅ ((hg1.trans hg2).trans hst₅.toGrew)
-      (decBool_false_of (r := [r₅.headD 0]) h0).symm h₅.resOk
-  rw [ite_eq_left h0, decBool_true_of h0]
+      (L.Arena.decBool_false_of (r := [r₅.headD 0]) h0).symm h₅.resOk
+  rw [ite_eq_left h0, L.Arena.decBool_true_of h0]
   simp only [↓reduceIte]
   -- the spines below the top
   have hb1 := hsp1.bound
@@ -244,8 +243,8 @@ theorem sa_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
   simp only [saE.k_stuck_app_cong]
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
-  rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]
+  · rw [ite_eq_left h0, L.Arena.decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
+  rw [ite_eq_right h0, L.Arena.decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   exact si_tail hq hi hc (fun _ => rfl) (fun _ => rfl) (k + 1) hk F hF hn m₁ _ dn vis fe M₁ eb mode d
     a b hS₁ hs.mode4 hs.eb_mode ha hb

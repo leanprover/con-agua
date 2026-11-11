@@ -13,6 +13,7 @@ public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -67,7 +68,7 @@ def decRF (m : Mem) (r : List Word) : IRecRuleFire → Prop
 theorem iwRd {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.toNat) = some v) :
     (rdW (m.arr64 IW) (o + w)).toNat = v ∧ o.toNat + w.toNat < iwTop m := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨hlt, -⟩ := acTr h
+  obtain ⟨hlt, -⟩ := L.Ind.iwN_truncM_some h
   have e : (o + w).toNat = o.toNat + w.toNat := by rw [UInt64.toNat_add]; omega
   rw [← e] at h
   obtain ⟨x, hx, hxv, -⟩ := rdW_of_iwN_truncM h
@@ -76,7 +77,7 @@ theorem iwRd {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.t
 theorem iwLt {m : Mem} {o w : Word} {v : Nat} (h : iwN (truncM m) (o.toNat + w.toNat) = some v) :
     (o + w).toNat < iwTop m := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨hlt, -⟩ := acTr h
+  obtain ⟨hlt, -⟩ := L.Ind.iwN_truncM_some h
   rw [UInt64.toNat_add]; omega
 
 /-- **`rec_fire` refines `recFire`** (its model, from the stage relation): the fire's kind and
@@ -116,7 +117,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   have h3 : (cw + 3).toNat = aw + 3 := by
     have := erecP_lt64 hw; rw [UInt64.toNat_add, hcwv]; simp; omega
   have hw' : rdW (m.arr64 (tierA EREC ((cw + 3) >>> 40))) (cw + 3 &&& 1099511627775) = w :=
-    erRd_of_erA (by rw [h3]; exact hw)
+    L.Arena.erRd_of _ _ (by rw [h3]; exact hw)
   rw [hw'] at h
   generalize hmIw : rdW (m.arr64 IW) (rc + 2) = mIw at h hmIW
   rcases hs : stripF 6 m [mIw, w] with _ | ⟨r1, m1⟩ <;> rw [hs] at h
@@ -212,7 +213,7 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   generalize huw : (eViewW m2 hd).tail.tail.headD 0 = uw at h huw32 huwd
   rcases hvl : viewLsW n m2 uw with _ | ⟨r3, m3⟩ <;> rw [hvl] at h
   · simp [rfW.k_view_ls] at h
-  obtain ⟨ids, hrun3, hS3, hg3, hd3, -⟩ := viewLsW_ok hvl hS2 huw32 (rcPoolSmall hS2)
+  obtain ⟨ids, hrun3, hS3, hg3, hd3, -⟩ := viewLsW_ok hvl hS2 huw32 (L.Ind.poolSmall_of_stage hS2)
   simp only [rfW.k_view_ls] at h
   rcases hgaa : gaaF m3 [CWF, dw] with _ | ⟨r4, m4⟩ <;> rw [hgaa] at h
   · simp [rfW.k_get_app_args_f] at h

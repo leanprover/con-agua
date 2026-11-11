@@ -94,7 +94,7 @@ theorem ptrNamesW_some {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
   rw [ptrNamesW.arm1] at h
   obtain ⟨q, m1, hal, h⟩ := ipK_inv h (ptrNamesW.k_iw_alloc.none ..)
   rw [ptrNamesW.k_iw_alloc.arm1] at h
-  obtain ⟨m2, hcp, h⟩ := ipK_inv1 h (ptrNamesW.k_ptr_names_copy.none ..)
+  obtain ⟨m2, hcp, h⟩ := L.Arena.of_K h (ptrNamesW.k_ptr_names_copy.none ..)
   rw [ptrCopyW_eq] at hcp
   rw [ptrNamesW.k_ptr_names_copy.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
@@ -154,7 +154,7 @@ theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs :
       obtain ⟨w, hw, hwl', hnm'⟩ := decCV_name (a := erA m) (by simpa [decCVp] using hcvj)
       have hrd : erRd m (UInt64.ofNat a) = w := by
         have : (UInt64.ofNat a).toNat = a := by simp; omega
-        exact erRd_of_erA (by rw [this]; exact hw)
+        exact L.Arena.erRd_of _ _ (by rw [this]; exact hw)
       rw [hrd] at hGj
       simp only [List.getElem_map]
       simp only [iwH, hd?, iwA, aread_apply, hGj]

@@ -113,7 +113,7 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, erRd, LocEq, BinOp.eval, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
@@ -128,7 +128,7 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
       callW_spec p n "subst_pw_at"] <;>
   simp_all [cArmK1, cArmK2, t3W, erRd, LocEq, BinOp.eval, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-- **The model of `head_type_pw`.** -/
@@ -162,7 +162,7 @@ theorem typeSortPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, typeSortPWLoop_step_spec p n,
       appCountAtL_spec p (hp.get "app_count_at") n, callW_spec p n "head_type_pw"] <;>
   simp_all [tspW, t3W, LocEq, BinOp.eval, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-! ## `unwrap_step(vis, f, e)`, `unwrap_id_defs(vis, f, k, e)`, `peel_pis_w(vis, f, k, e)` -/
@@ -221,7 +221,7 @@ theorem proofPW_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, proofPWLoop_step_spec p n,
       callW_spec p n "head_proof_pw"] <;>
   simp_all [prfW, t3W, LocEq, BinOp.eval, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 /-! ## The two arms -/
@@ -247,7 +247,7 @@ theorem notProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
   simp_all [propArmK, npfV, LocEq, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem isProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis a : Word) :
@@ -260,7 +260,7 @@ theorem isProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) 
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
   simp_all [propArmK, ipfV, LocEq, St.setLocs_cons,
-    Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 end L.Arena

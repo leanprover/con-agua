@@ -57,7 +57,7 @@ l_model srkE_spec (p : Prog) (hP : StrProg p)
 theorem erRd_hd {k : IdxKind} {m : Mem} {a : Word} {x : Idx k} (h : hd? (erA m) a.toNat = some x) :
     H (erRd m a) ∧ x = decI (erRd m a) := by
   obtain ⟨w, hw, hl, rfl⟩ := hd?_some h
-  rw [erRd_of_erA hw]; exact ⟨hl, rfl⟩
+  rw [L.Arena.erRd_of _ _ hw]; exact ⟨hl, rfl⟩
 
 theorem erA_lt {m : Mem} {i : Nat} {v : Word} (h : erA m i = some v) : i < 2 ^ 64 :=
   (erRdOK m).lt i v h
@@ -132,7 +132,7 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
     omega)
   obtain ⟨wn, hwn', hwnH, hname⟩ := decCV_name hcv
   have ecv : (UInt64.ofNat cvp : Word).toNat = cvp := UInt64.toNat_ofNat_of_lt' hcvpb
-  have eN : erRd m (UInt64.ofNat cvp) = wn := erRd_of_erA (by rw [ecv]; exact hwn')
+  have eN : erRd m (UInt64.ofNat cvp) = wn := L.Arena.erRd_of _ _ (by rw [ecv]; exact hwn')
   have eq2' : rdW (m.arr64 IW) (UInt64.ofNat q + 1) = UInt64.ofNat nf := by
     rw [show (UInt64.ofNat q + 1 : Word) = UInt64.ofNat (q + 1) by simp [UInt64.ofNat_add]]
     exact eq2

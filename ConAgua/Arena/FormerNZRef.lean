@@ -10,13 +10,13 @@ public import ConAgua.Arena.StoreDenIntern
 import ConAgua.Arena.KnotMono
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.PropReadRefine
-import ConAgua.Arena.DerRel
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.LevelZero
 import ConAgua.L.WordOff
+import ConAgua.Arena.InstLPLevel
 
 @[expose] public section
 
@@ -115,7 +115,7 @@ theorem frsV_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL) {n : Na
     refine ⟨rfl, ?_, fun _ => hu, fun _ => ⟨_, hvw⟩⟩
     rw [hrun', ite_eq_left (by simpa using ht)]
     simp only [StateT.run_bind]
-    rw [viewSort_run' hv]
+    rw [L.Arena.viewSort_run hv]
     simp [decOS]; rfl
   · rw [ite_eq_left (by simpa using ht)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -128,15 +128,6 @@ theorem frsV_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL) {n : Na
 l_model frzW_spec (p : Prog) (hf : p.lookup "former_z" = some formerZL)
   fns [hf ↦ frzW] specs [callW_spec p n "former_res_sort", callW_spec p n "lv_zero"]
   grind [arena_grind] fold [tierW, idxW]
-
-/-- **The relation across a write of the level readback cache** (`readLevelM`). -/
-theorem CoreS.readLC' {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (X : Std.HashMap LIdx Level) (hX : ReadLCOK { a with caches := { a.caches with readLC := X } }) :
-    CoreS dn m { a with caches := { a.caches with readLC := X } } vis fe M eb :=
-  ⟨⟨ArenaR.caches_irrel _ hS.arena.base, DerR.of_store _ _ _ hS.arena.der rfl⟩, hS.core.readLC X,
-    hS.pins, hS.env, hX, fun h l e => hS.readLs h l e, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk,
-    hS.den.caches rfl rfl rfl, hS.mode, hS.iw⟩
 
 /-- **`former_z` refines `formerZ`** (the twin's state kept): the datum `(kd, o, c)` with the names
 on the heap above the top at entry. -/
@@ -186,7 +177,7 @@ theorem frz_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL)
       .ok (Level.zeronessOf l, { a with caches := { a.caches with readLC := X } }) := by
     simp only [ConRon.Arena.formerZ, hcv, StateT.run_bind, hrun1, except_ok_bind, decOS, ite_eq_right h0]
     rw [hX]; rfl
-  have hS₁ := hS.readLC' X hXok
+  have hS₁ := hS.withReadLC X hXok
   obtain ⟨hS₂, hK₂⟩ := hS₁.frame he.memFrame (by simp [LH]) (by simp)
   rcases hZ with ⟨hx, hpw⟩ | ⟨hx, ps, hpw, hnm⟩
   · rw [frzW.k_lv_zero.arm1 _ _ _ _ (by rw [hx]; decide)] at h
@@ -211,7 +202,7 @@ l_model fnzW_spec (p : Prog) (hf : p.lookup "former_never_zero" = some formerNev
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
 /-- An `indInfo` record's constant value decodes at `q + 1`. -/
-theorem decCI_ind_cv' {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
+theorem decCI_ind_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
     (h : decCI R q = some (.indInfo cv caps)) : decCV R (q + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
@@ -235,7 +226,7 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
   rcases n with _ | n
   · simp [fnzW] at h
   rw [fnzW.arm1] at h
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
+  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
   change fnzW.k_former_z p n us (erRd m (q + 2)) (erRd m (q + 3)) (rdW (m.arr64 CTL) 192)
     (callW p n "former_z" [erRd m (q + 4)] m) = some (w, m') at h
   rcases c1 : callW p n "former_z" [erRd m (q + 4)] m with _ | ⟨r1, m1⟩
@@ -264,7 +255,7 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
   -- the twin
   obtain ⟨ks, hk⟩ := hks
   rw [← hst1] at hk
-  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run cvT.levelParams a1 ks hk hS1.den.readN
+  obtain ⟨X, hX, hcX⟩ := L.Arena.readNamesM_run' cvT.levelParams a1 ks hk hS1.den.readN
   obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a1 with caches := { a1.caches with readNC := X } }
     (decI us) vs (by rw [← hst1] at hv; exact hv) (by exact hS1.readLs)
   have hrun : ∀ b, (ConLeche.Level.substPW ks vs pw).isNever = b →
@@ -333,7 +324,7 @@ theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState)
     simp only [except_ok_bind] at h
     split at h
     · rename_i htg
-      rw [StateT.run_bind, viewSort_run' rfl, except_ok_bind] at h
+      rw [StateT.run_bind, L.Arena.viewSort_run rfl, except_ok_bind] at h
       split at h
       · cases h
       · rename_i u hu
@@ -417,7 +408,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     RefE (KnotUpToE p n) (fnzaE p (n + 1) m mode vis q us)
       (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (decCI_ind_cv' hci)
+  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
   obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [fnzaE.eq_2]
@@ -472,7 +463,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
   obtain ⟨l, hdl⟩ := hS4.den.sort _ _ hvw
   obtain ⟨X, hX, hXok⟩ := readLevelM_run' _ _ l hdl hS4.readL
   refine RefE.bind_right hX ?_
-  have hS5 := hS4.readLC' X hXok
+  have hS5 := hS4.withReadLC X hXok
   rcases c5 : callW p n "lv_never" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
   · rw [liftE_none, fnzaE.k_former_never_zero.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some, fnzaE.k_former_never_zero.arm1]

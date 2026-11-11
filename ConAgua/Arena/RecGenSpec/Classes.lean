@@ -42,7 +42,7 @@ theorem rec3RecsOK_of_decB {m : Mem} {ro rl : Nat} {recs : List RecShape}
   obtain ⟨p0, hp0, hRS⟩ := decPL_getH (truncM m) h j hj
   obtain ⟨q, hq, hcv, hrP, -, -⟩ := rec2DecRS_parts hRS
   obtain ⟨hcx, hcvm⟩ := rec3CVExt_of_trunc hcv
-  exact ⟨p0, q, _, (rec2IwN_trunc hp0).2, by have := (rec2IwN_trunc hrP).1; omega, (rec2IwN_trunc hq).2,
+  exact ⟨p0, q, _, (L.Ind.iwN_truncM_some hp0).2, by have := (L.Ind.iwN_truncM_some hrP).1; omega, (L.Ind.iwN_truncM_some hq).2,
     hcvm, hcx, by simp [List.getElem?_eq_getElem (show j < recs.length by omega)]⟩
 
 /-- A class key record decoded below the tops is `CKExt`. -/
@@ -51,10 +51,10 @@ theorem rec3CKExt_of_trunc {m : Mem} {k : Nat} {key : ClassKey} (h : decCK (trun
   simp only [decCK, bind, Option.bind_eq_some_iff, pure] at h
   obtain ⟨_, _, _, _, ds, hds, -⟩ := h
   obtain ⟨o, l, ho, hl, hdl⟩ := decAt_some hds
-  have hlt := (rec2IwN_trunc hl).1
+  have hlt := (L.Ind.iwN_truncM_some hl).1
   refine ⟨by omega, fun o' l' ho' hl' => ?_⟩
-  rw [(rec2IwN_trunc ho).2] at ho'
-  rw [show k + 2 + 1 = k + 3 by omega, (rec2IwN_trunc hl).2] at hl'
+  rw [(L.Ind.iwN_truncM_some ho).2] at ho'
+  rw [show k + 2 + 1 = k + 3 by omega, (L.Ind.iwN_truncM_some hl).2] at hl'
   rw [show k + 2 + 1 = k + 3 by omega] at hl
   cases ho'; cases hl'
   exact rec3IwSlice hdl
@@ -65,21 +65,21 @@ theorem rec3SlotsExt_of_decB {m : Mem} {so sl : Nat} {slots : List ClassSlot}
     SlotsExt m so sl := by
   refine ⟨hb, fun j hj sp hsp => ?_⟩
   obtain ⟨sp', hsp', hcs⟩ := decPL_getH (truncM m) h j (by have := decPL_length _ h; omega)
-  rw [(rec2IwN_trunc hsp').2] at hsp
+  rw [(L.Ind.iwN_truncM_some hsp').2] at hsp
   cases hsp
   have htag := decCS_tag hcs
   generalize hs : slots[j]'_ = s at hcs htag
   cases s with
   | motive key =>
     obtain ⟨kp, hkp, hck⟩ := decCS_motive_key hcs
-    refine ⟨by have := (rec2IwN_trunc hkp).1; omega, fun kp' h0 h1 => ?_⟩
-    rw [(rec2IwN_trunc hkp).2] at h1
+    refine ⟨by have := (L.Ind.iwN_truncM_some hkp).1; omega, fun kp' h0 h1 => ?_⟩
+    rw [(L.Ind.iwN_truncM_some hkp).2] at h1
     cases h1
     exact rec3CKExt_of_trunc hck
   | minor c C ihs =>
     obtain ⟨-, h1, -⟩ := decCS_minor hcs
-    refine ⟨by have := (rec2IwN_trunc h1).1; omega, fun kp' h0 _ => ?_⟩
-    rw [(rec2IwN_trunc htag).2] at h0
+    refine ⟨by have := (L.Ind.iwN_truncM_some h1).1; omega, fun kp' h0 _ => ?_⟩
+    rw [(L.Ind.iwN_truncM_some htag).2] at h0
     simp [ClassSlot.isMinor] at h0
 
 /-! ## The refinements with the hypotheses discharged -/

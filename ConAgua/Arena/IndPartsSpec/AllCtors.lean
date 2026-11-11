@@ -4,8 +4,8 @@ public import ConAgua.Arena.IndPartsSpec.BlockShapeAllCtorsGo
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.Env
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -143,13 +143,6 @@ theorem iwN_eq_agree {m m0 : Mem} {q i : Nat} (hag : ∀ j, j < q → (m.arr64 I
   simp only [iwN, nat?, iwA, aread_apply, aread_apply]
   rw [hag i hi]
 
-/-- A read of the cut pool: below the top, and the pool's own. -/
-theorem acTr {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iwTop m ∧ iwN m i = some v := by
-  have hi : i < iwTop m := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at h
-    obtain ⟨x, hx, -⟩ := h; exact (truncM_iw_get hx).1
-  exact ⟨hi, by rw [← iwN_truncM hi]; exact h⟩
-
 /-- A nonempty pointer slice decoded in the cut pool lies below the top. -/
 theorem acPLb {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
     (h : decPL (truncM m) f o l = some xs) : ∀ j < l, o + j < iwTop m := by
@@ -204,9 +197,9 @@ theorem acGoW_ok (n : Nat) : ∀ (m0 m mf : Mem) (off l q k : Word) (ms : List M
       obtain ⟨v, hvB, hms0B⟩ := decPL_head hdB
       obtain ⟨-, -, -, hctB⟩ := decMS_some hms0B
       obtain ⟨co, cl', hcoB, hclB, hctorsB⟩ := decAt_some hctB
-      obtain ⟨hofft, hv0⟩ := acTr hvB
-      obtain ⟨-, hco0⟩ := acTr hcoB
-      obtain ⟨hcl3t, hcl0⟩ := acTr hclB
+      obtain ⟨hofft, hv0⟩ := L.Ind.iwN_truncM_some hvB
+      obtain ⟨-, hco0⟩ := L.Ind.iwN_truncM_some hcoB
+      obtain ⟨hcl3t, hcl0⟩ := L.Ind.iwN_truncM_some hclB
       have hlenc : ms0.ctors.length = cl' := decPL_length _ hctorsB
       obtain ⟨wsj, hlj, hcjB, hmj⟩ := decPL_words cl' co ms0.ctors hctorsB
       have hcc : ∀ i < cl', co + i < iwTop m0 := acPLb hctorsB
@@ -304,8 +297,8 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   have h64 : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
   obtain ⟨hmem, -⟩ := decBS_some (show decBS (truncM m) p.toNat = some bs from hq)
   obtain ⟨o, l, ho, hl, hg⟩ := decAt_some hmem
-  obtain ⟨hpt, ho⟩ := acTr ho
-  obtain ⟨hp1t, hl⟩ := acTr hl
+  obtain ⟨hpt, ho⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨hp1t, hl⟩ := L.Ind.iwN_truncM_some hl
   have hgB : DecB (fun m => decPL m (decMS m) o l) m bs.members := hg
   have hgm : decPL m (decMS m) o l = some bs.members := hgB.get (OMono.decPL (fun q => decMS_mono q) o l)
   have hlen := decPL_length m hgm

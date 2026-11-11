@@ -2,10 +2,10 @@ module
 
 public import ConAgua.Arena.DefEqStuckProj
 public import ConAgua.Arena.DefEqStuckDisp
-import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.DefEq
+import ConAgua.Arena.DefEqMid
 
 @[expose] public section
 
@@ -46,9 +46,6 @@ theorem headIsProj_at (p : Prog) (hq : StuckProg p) :
   | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | n + 1, s₀, a₀, dn, vis, fe, MM, eb, e, hS, he =>
       headIsProj_refines p hq.leaf n s₀ a₀ dn vis fe MM eb e hS he
-
-theorem decE_beq {x y : Word} (hx : HW x) (hy : HW y) : (decE x == decE y) = decide (x = y) := by
-  rw [decE_eq, decE_eq, decI_beq x y hx hy]
 
 /-! ## The model -/
 
@@ -119,8 +116,8 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
     (fun r₁ m₁ _ _ M₁ hS₁ _ => ?_)
   dsimp only [dtE.k_defeq_proj_pair]
   by_cases h0 : r₁.headD 0 ≠ 0
-  · rw [ite_eq_left h0, decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
-  rw [ite_eq_right h0, decBool_false_of (by simpa using h0)]
+  · rw [ite_eq_left h0, L.Arena.decBool_true_of h0]; exact RefE.ret rfl (CorePost.ret hS₁ rfl hw1)
+  rw [ite_eq_right h0, L.Arena.decBool_false_of (by simpa using h0)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_callW (fun _ => rfl) (headIsProj_at p hq (k + 1) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb a1
     hS₁ ha) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
@@ -156,7 +153,7 @@ theorem dt_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCalle
   dsimp only [dtE.k_whnf_core_2]
   have heq : (decH r₄ == decE a1 && decH r₅ == decE b1) =
       decide (r₄.headD 0 = a1 ∧ r₅.headD 0 = b1) := by
-    simp only [decH, decE_beq h₄.resOk ha, decE_beq h₅.resOk hb, Bool.decide_and]
+    simp only [decH, L.Arena.decE_beq_eq _ _ h₄.resOk ha, L.Arena.decE_beq_eq _ _ h₅.resOk hb, Bool.decide_and]
   rw [heq]
   by_cases hm : r₄.headD 0 = a1 ∧ r₅.headD 0 = b1
   · rw [ite_eq_left hm]

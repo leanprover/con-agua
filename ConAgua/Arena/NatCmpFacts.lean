@@ -32,7 +32,7 @@ grind_pattern [natcmp_grind] cmpW_gt => cmpW a b
 
 /-! ## Prefix values below a weight -/
 
-/-- A prefix of `k` limbs is below `wt k`. (`LitRefine.lean` has the same fact as `pv_lt`; that
+/-- A prefix of `k` limbs is below `wt k`. (`LitRefine.lean` had the same fact as `pv_lt`; that
 file is not a `module`, so it cannot be imported here.) -/
 theorem pv_lt_wt (p : Array Word) (o k : Nat) : pv p o k < wt k := by
   induction k with

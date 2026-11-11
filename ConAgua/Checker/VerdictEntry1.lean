@@ -88,7 +88,7 @@ theorem checkA_err_of_stages {p : Prog} (hp : p.lookup "check_a" = some checkAL)
       (fun s => Triple.and_err (h6 n hn' s) (nv_at hnv hm6 n [] s)),
       (fun s => Triple.and_err (h7 n hn' s) (nv_at hnv hm7 n [] s)),
       (fun v c s => nv_at hnv hm9 n [v] s), (fun v c s => nv_at hnv hm8 n [v] s)]
-    all_goals (try simp only [St.setLoc_mem,
+    all_goals (try simp only [L.St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true,
       UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
     all_goals clear h1 h2 h2p h3 h4 h5 h6 h7 e4 e5 hp

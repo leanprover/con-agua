@@ -5,6 +5,7 @@ public import ConAgua.Arena.Handle
 public import ConAgua.Arena.SlotGrow
 import ConAgua.Arena.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
+public import ConAgua.L.Records
 
 @[expose] public section
 
@@ -37,17 +38,11 @@ theorem rdW_set64 (m : Mem) (a b : TieredArray) (k v x : Word) :
   · subst h; rw [Mem.arr64_set64_same, rdW_set!]; grind
   · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
-theorem size_set64 (m : Mem) (a b : TieredArray) (k v : Word) :
-    ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
-  by_cases h : b = a
-  · subst h; rw [Mem.arr64_set64_same]; simp
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]
-
 theorem top_rdW (m : Mem) : m.top = rdW (m.arr64 CTL) 0 := rfl
 
 theorem len64_eq (m : Mem) (a : TieredArray) : m.len64 a = UInt64.ofNat (m.arr64 a).size := rfl
 
-attribute [store_grind =] rdW_set64 size_set64 top_rdW len64_eq
+attribute [store_grind =] rdW_set64 L.Mem.size64_set64 top_rdW len64_eq
 
 /-! ## The probe run -/
 

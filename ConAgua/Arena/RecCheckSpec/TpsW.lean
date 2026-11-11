@@ -10,10 +10,10 @@ import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.RecCheck
-import ConAgua.Arena.IndPartsSpec.RecTW
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -144,7 +144,7 @@ theorem tpsW_sim (p : Prog) (L : RpLook p) (n : Nat) {dn : NIdx → Option ConLe
   simp only [List.headD_cons, List.tail_cons] at hW5 hm5
   have hd3' : decHL s4.mem (rdW (s2.mem.arr64 CTL) 200).toNat (rac.tail.headD 0).toNat =
       some (bs.allCtors.map fun x => x.1.name) := by
-    rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3
+    rw [_root_.L.Ind.decHL_grow hg4 (Nat.le_of_eq ht3)]; exact hd3
   obtain ⟨ws1, hs1, hm1, hl1⟩ := slR_of_decHL s4.mem _ _ _ hd3' (by have := hg4.iw; have := hT s4.mem; omega)
   obtain ⟨ws2, hs2, hm2, hl2⟩ := slR_of_decHL s4.mem _ _ _ hd4 (by rw [ht4]; exact hT _)
   rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs1 hs2

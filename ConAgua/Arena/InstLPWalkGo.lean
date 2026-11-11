@@ -8,6 +8,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.InstLP
+import ConAgua.Arena.DefEqLeaves
 
 @[expose] public section
 
@@ -25,12 +26,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-private theorem getElem_toNat_rdW {a : Array Word} {x : Word} (h : x.toNat < a.size) :
-    a[x.toNat] = rdW a x := (rdW_eq a x _ rfl h).symm
-
-private theorem rd64_rdW (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
-  simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
-
 section specs
 variable (p : Prog) (hp : ILWProg p)
 include hp
@@ -46,10 +41,10 @@ theorem lpGo_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     callW_spec p n "intern_sort", callW_spec p n "intern_const", callW_spec p n "lp_fvar",
     callW_spec p n "lp_app", callW_spec p n "lp_lam", callW_spec p n "lp_forall",
     callW_spec p n "lp_let", callW_spec p n "lp_proj"]
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff,
     reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Cond.pval, Expr.pval,
-    Bool.and_eq_true, rd64_rdW, Expr.pval_cntE] at *)
+    Bool.and_eq_true, L.Arena.rd64_rdW, Expr.pval_cntE] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ilwGoW, ilwDispW_sc, ilwDispW_bvar, ilwDispW_lit,
     ilwDispW_sort, ilwDispW_const, ilwDispW_fvar, ilwDispW_app, ilwDispW_lam, ilwDispW_forall, ilwDispW_let,
     ilwDispW_proj, ilwDispW_other, tierW, idxW]

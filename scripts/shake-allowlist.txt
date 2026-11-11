@@ -18,7 +18,6 @@ ConAgua/Arena/DefEqMid.lean	public import ConAgua.Arena.InferLeaves	# kept from 
 ConAgua/Arena/DefEqMidSpine.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/DefEqStuckEta.lean	public import ConAgua.Arena.LdRd	# the build needs it: `ld64_rd_spec` in the `l_model`s' `extra`, named only in their generated proofs
 ConAgua/Arena/DefEqStuckShape.lean	import ConAgua.Arena.InferBodyIntern	# the build needs it (vcgen [ld64_rdW_spec]: a name the tactic reads; the proof term does not keep it)
-ConAgua/Arena/DefEqStuckShape.lean	public import ConAgua.Arena.WhnfIotaRefine	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/Freeze.lean	public import ConAgua.Arena.DeclBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/HbMemoRel.lean	public import ConAgua.Arena.IWFrame	# the build needs it: re-exports IWFrame (IWOK.frameC moved there from this file) to the importers that use it (WhnfBase, WhnfDeltaSlot)
 ConAgua/Arena/IndCallM.lean	public import ConAgua.Arena.IndIface	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
@@ -29,7 +28,7 @@ ConAgua/Arena/IndInstallSpec/LvlEqFueledSpecC.lean	public import ConAgua.L.Examp
 ConAgua/Arena/IndInstallSpec/NestCtx.lean	import ConAgua.Arena.IndPartsSpec.BpcW	# the build needs it (vcgen [blockShapeLps_spec2]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Arena/IndInstallSpec/Pos3MapMProj.lean	public import ConAgua.L.Examples	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPartsSpec/BmfK2.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
-ConAgua/Arena/IndPosSpec/BvbWMfr.lean	public import ConAgua.Arena.IndPosSpec.PiBWStage	# the build needs it: its importers (GfcW, IndBToi, BlockNames) take RecTW's names (`decCVp_type`, `piBW`, `decHL_grow3`) through it
+ConAgua/Arena/IndPosSpec/BvbWMfr.lean	public import ConAgua.Arena.IndPosSpec.PiBWStage	# the build needs it: its importers (GfcW, IndBToi, BlockNames) take RecTW's names (`decCVp_type`, `piBW`, `decHL_grow`) through it
 ConAgua/Arena/IndPosSpec/CanonW.lean	public import ConAgua.Arena.IndPosSpec.NestBlockOfKey	# the build needs it: its dependents reach the handle lemmas and this module's other names through it
 ConAgua/Arena/IndPosSpec/EnvFindWHit.lean	public import ConAgua.Arena.IndPosSpec.CtxFields	# the build needs it: the module's proofs name its lemmas in tactic lists only
 ConAgua/Arena/IndPosSpec/EnvFindWHit.lean	public import ConAgua.Arena.IndPosSpec.NestBlockOfKey	# the build needs it: the module's proofs name its lemmas in tactic lists only
@@ -132,7 +131,6 @@ ConAgua/Front/IndApply.lean	public import ConAgua.Front.IndFields	# the build ne
 ConAgua/Front/IndFields.lean	public import ConAgua.Front.Apply	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Front/LineRefine.lean	import ConAgua.Scan.LineLink	# `open ConAgua.Scan.LineLink` needs the namespace
 ConAgua/Front/NatDec.lean	public import ConAgua.Front.Fields	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
-ConAgua/L/Logic.lean	public import ConAgua.L.LocNF	# the build needs it: its simprocs act through their `seval` attribute in the `grind` of every L proof, which records no use
 ConAgua/Rom/CIReadRefBase.lean	public import ConAgua.Arena.IndMaster	# the build needs it: allocW (IndCopy) comes through it
 ConAgua/Rom/CIReadRefW.lean	public import ConAgua.Arena.LdRd	# the build needs it (vcgen [ld64_rd_spec]: a name the tactic reads; the proof term does not keep it)
 ConAgua/Rom/CIReadTest.lean	public import ConAgua.Compiler.WF	# a `#guard` runs `Prog.wfAuto` (leaves no constant)
@@ -151,3 +149,14 @@ ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDecl	# names `pr
 ConAgua/Verdict/KnotAllE.lean	public import ConAgua.Checker.LoopDeclArm	# names `prog_bundle [...]` reads
 ConAgua/Verdict/PosE3Fm.lean	public import ConAgua.Arena.Verdict	# the build needs it (a name the tool does not attribute: a command reads it, or an auxiliary realized in several modules)
 ConAgua/Arena/Pool.lean	public import ConAgua.L.WordOff	# the build needs it: `grind_pattern [arena_grind] L.toNat_add_of_not_lt` puts the lemma in the set, and every module that uses arena_grind must see its declaration
+ConAgua/Arena/DeclArmQuot.lean	public import ConAgua.Arena.DeclCanonView2	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/DefEqMidPeel.lean	public import ConAgua.Arena.IndView	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/IndInstallSpec/TabSimSpg.lean	public import ConAgua.Arena.IndPartsSpec.MemberNames	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/IndPosSpec/Pos2CvLpsWStage.lean	public import ConAgua.Arena.RecCheckSpec.ErToIwWStage	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/IndSumSpec/ParamLevels.lean	public import ConAgua.Arena.IndPosSpec.NoGoStep	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/IndSumSpec/ParamLevels.lean	public import ConAgua.Arena.IndSumSpec.ColW	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/ProjGuardRowsCI.lean	public import ConAgua.Arena.WhnfCoreApp	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Arena/Rom.lean	public import ConAgua.Front.ApplyExpr	# the build needs it: `grind_pattern [arena_grind] L.Front.Keep.pcap` puts the lemma in the set, and the modules that use arena_grind must see its declaration
+ConAgua/Arena/StubIndRefine.lean	public import ConAgua.Arena.DeclCanonSpec	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/L/Logic.lean	public import ConAgua.L.Semantics	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)
+ConAgua/Scan/Common.lean	public import ConAgua.L.Semantics	# a re-export: the module's importers name its declarations through it (its own last direct use was a duplicate that lane dedup2 deleted)

@@ -101,7 +101,7 @@ theorem AbsR.across {A : List TieredArray} {C : List Word} {m m' : Mem} {a a' : 
 
 /-! ## The frames of the stores (L side) -/
 
-theorem mkAppW_frameA (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
+theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
     MemFrame [AREC, ASLOT, ADER, tier1 AREC, tier1 ASLOT, tier1 ADER] [4, 5] m m' := by
   unfold mkAppW at hI; split at hI
   · cases hI
@@ -160,7 +160,7 @@ theorem mkApp_okA (m : Mem) (a : AState) (hA : ArenaA m a) (f x r : Word) (m' : 
     ArenaA m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
     AM.res (internE (.app (decE f) (decE x))) a = decE r := by
   obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hA.1 f x r m' hI
-  exact ⟨hok, ⟨hD, hA.2.across (mkAppW_frameA m m' f x r hI) (by decide) (by decide)
+  exact ⟨hok, ⟨hD, hA.2.across (L.Arena.mkAppW_frame m m' f x r hI) (by decide) (by decide)
     (internE_abs1C _ a hok)⟩, hres⟩
 
 theorem mkLam_okA (m : Mem) (a : AState) (hA : ArenaA m a) (t b r : Word) (m' : Mem)

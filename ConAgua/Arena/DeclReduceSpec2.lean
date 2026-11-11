@@ -313,7 +313,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {vis : Word}
   obtain ⟨rfl, hrun3, hd3⟩ := mpW_ok (a := AM.st (reduceOpCvA (decI c)) a) (mp_callR h h3)
     hS2.iw.erSize hcvR2 hpin
   refine ⟨_, _, ?_, hS2, hg2, by simpa [decW0B] using hd3⟩
-  simp only [reduceStoredOk, hfind, hci, StateT.run_bind, hrun2, exc_ok_bind']
+  simp only [reduceStoredOk, hfind, hci, StateT.run_bind, hrun2, L.Arena.except_ok_bind]
   exact hrun3
 
 /-- **`reduce_stored_ok(vis, c)` refines `reduceStoredOk`** (through `rom_cv`'s refinement). -/
@@ -371,7 +371,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     have htwin : (reduceElemOk fe (decI c)).run a =
         .ok (fe.find? (decI (pinW m (1 + (1 : Word).toNat))) == some na, a4) := by
       simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
-        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', he, ite_true,
+        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, L.Arena.except_ok_bind, he, ite_true,
         pinNat, show PIN_NAT = (1 : Word).toNat from rfl, hrun2, hrun4', beq_self_eq_true]
       rfl
     by_cases hf : (findRes m vis (pinW m (1 + (1 : Word).toNat))).headD 0 = 0
@@ -414,7 +414,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
           | some (.indInfo cvB _) => do cvB.matchesPin (← boolCvA)
           | _ => pure false : AM Bool).run a := by
       simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
-        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', hbeq, he,
+        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, L.Arena.except_ok_bind, hbeq, he,
         decide_false, Bool.false_eq_true, ite_false, boolName, pinBool,
         show PIN_BOOL = (29 : Word).toNat from rfl, hrun2]
       rfl
@@ -461,7 +461,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
       (decRCV_get hpin)
     refine ⟨_, _, ?_, hS4, hg4, by simpa [decW0B] using hd5⟩
     rw [hpre, hfind, hci]
-    simp only [StateT.run_bind, hrun4', exc_ok_bind']
+    simp only [StateT.run_bind, hrun4', L.Arena.except_ok_bind]
     exact hrun5
 
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** (through the ROM readers' refinements). -/

@@ -12,6 +12,7 @@ import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.DefEq
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPosSpec.UnW
 
 @[expose] public section
 
@@ -154,8 +155,8 @@ theorem lvlsEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (
       ⦃fun _ _ => False; ⊤⦄ := by
     rw [invoke_eq _ hp.cs]
     simp only [callFn, lvlsEqCL]
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_zero_false p "lsq_find",
-      invoke_zero_false p "lvls_eq_rec"] <;> grind
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, L.Ind.invoke_exec0 p "lsq_find",
+      L.Ind.invoke_exec0 p "lvls_eq_rec"] <;> grind
   obtain ⟨_, _, hf⟩ := triple_of_callW h hc
   exact hf
 
@@ -311,7 +312,7 @@ theorem sp2_ref (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo p n) (F 
   obtain ⟨y, a', hrun, hP⟩ := H
   obtain ⟨M₃, hS₃, hK₃, hst₃⟩ := hP.after
   exact RefE.ret hrun (GrowPost.restore (m₀ := s₀.mem)
-    ⟨⟨M₃, hS₃, hK₃, hg₁.trans' (hg₂.trans' hst₃.toGrew')⟩, hP.res, hP.valid⟩ [r₃.headD 0]
+    ⟨⟨M₃, hS₃, hK₃, hg₁.trans (hg₂.trans hst₃.toGrew)⟩, hP.res, hP.valid⟩ [r₃.headD 0]
     (by simp only [decBool, List.headD_cons]) hP.valid)
 
 /-! ## `defeq_spine` -/

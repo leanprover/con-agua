@@ -11,6 +11,9 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -62,7 +65,7 @@ theorem maConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     ArenaR.frame (A := []) (C := [maSch.cs, maSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [maSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.check.arena.base
-  have hws0 : SlR (mclearG maSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
+  have hws0 : SlR (mclearG maSch m) no nl ws := L.Ind.SlR.congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : maGoW n (mclearG maSch m) no nl CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · simp [maClrK] at hb
   by_cases h1 : rdW (m1.arr64 CTL) maSch.cs + 2 = 0
   · simp [maClrK, h1] at hb
@@ -75,7 +78,7 @@ theorem maConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
   have hfall : MemFrame [MAM] [maSch.cs, maSch.cs + 1] m (mclearG maSch m1) :=
     ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [maSch]))).trans
       (hf2.mono (by simp) (by simp))
-  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg'⟩ := L.Ind.StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [maSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [maSch])
   refine ⟨c, ?_, hbb, hM2, hS', hg'⟩
@@ -144,7 +147,7 @@ theorem nestOccGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (_dn : NIdx → 
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := noGoOK n _ _ a₀ no nl lo hi f h _ ws mp hm hS.check.arena.base hh hws hwlt hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg⟩ := L.Ind.StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
 
@@ -188,7 +191,7 @@ theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     ArenaR.frame (A := []) (C := [noSch.cs, noSch.cs + 1]) (fun b hb => by simp at hb)
       (fun x hx => by simp [noSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
       hS.check.arena.base
-  have hws0 : SlR (mclearG noSch m) no nl ws := slR_congr (hf0.arr IW (by simp) (by decide)) hws
+  have hws0 : SlR (mclearG noSch m) no nl ws := L.Ind.SlR.congr (hf0.arr IW (by simp) (by decide)) hws
   rcases hg : noGoW n (mclearG noSch m) no nl lo hi CWF e with _ | ⟨r1, m1⟩ <;> rw [hg] at hb; · rw [noConstW.k_nest_occ_go.none] at hb; cases hb
   by_cases h1 : rdW (m1.arr64 CTL) noSch.cs + 2 = 0
   · rw [noConstW.k_nest_occ_go.abort1 (hc1 := h1)] at hb; cases hb
@@ -201,7 +204,7 @@ theorem noConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
   have hfall : MemFrame [NOM] [noSch.cs, noSch.cs + 1] m (mclearG noSch m1) :=
     ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [noSch]))).trans
       (hf2.mono (by simp) (by simp))
-  obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS', hg'⟩ := L.Ind.StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp [noSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
     (by simp [noSch])
   refine ⟨c, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [noSch] using hx))⟩⟩
@@ -296,7 +299,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         have : ¬ (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl
         have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
         simp only [ConRon.Arena.memberIdxAt?, htg, ite_true, StateT.run_bind]
-        rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+        rw [show (decI e : EIdx) = decE e from rfl, L.Ind.viewConst_run, except_ok_bind, hview]
         simp only [this]; rfl
       · rw [memK_find n m no nl lvls _ (by simp) hl] at h
         rcases hfw : findW n m no nl ((g :: vt).tail.headD 0) with _ | fr <;> rw [hfw] at h; · simp at h
@@ -307,7 +310,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
         have hfi := findIdx_map_decI (k := .name) ((g :: vt).tail.headD 0) hx ws hwlt
         refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
         · simp only [ConRon.Arena.memberIdxAt?, htg, ite_true, StateT.run_bind]
-          rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+          rw [show (decI e : EIdx) = decE e from rfl, L.Ind.viewConst_run, except_ok_bind, hview]
           have : (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl'
           simp only [this, ite_true]; rfl
         · rw [← hdx, hfi, hfr]
@@ -392,9 +395,6 @@ theorem EStore.viewApp_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.app) 
     · rename_i hs; rw [ite_eq_left hs]; exact ETables.getApp_of_get _ _ ht f x h
     · simp at h
 
-theorem viewApp_run' (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewApp h).run a = .ok (a.store.viewApp h, a) := rfl
-
 theorem ETables.getFVarIdx_of_get' (t : ETables) (i : EIdx) (ht : i.tag = ETag.fvar) (k : Nat) (ty : EIdx)
     (h : t.get i = some (.fvar k ty)) : t.getFVarIdx i = some k := by
   simp only [ETables.get, ht, ETag.bvar, ETag.fvar] at h
@@ -413,9 +413,6 @@ theorem EStore.viewFVarIdx_of_view' (st : EStore) (i : EIdx) (ht : i.tag = ETag.
     split at h
     · rename_i hs; rw [ite_eq_left hs]; exact ETables.getFVarIdx_of_get' _ _ ht k ty h
     · simp at h
-
-theorem viewFVarIdx_run'' (h : EIdx) (a : AState) :
-    (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
 
 /-- **`ph_app` is its model `phW`** (generated). -/
 l_model phApp_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
@@ -467,7 +464,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
           have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [decI_tag_const_beq e he, he3]; decide
           refine ⟨some (nn, us0), ?_, ?_⟩
           · simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
-            rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+            rw [show (decI e : EIdx) = decE e from rfl, L.Ind.viewConst_run, except_ok_bind, hview]
             rfl
           · exact ⟨_, _, rfl, hx, hdx, hy, hdy⟩
     · obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by have := L.toNat_ne_zero_of_ne _ hn0; omega⟩
@@ -504,7 +501,7 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
               show ¬ ((decI ((g :: vt).tail.tail.headD 0) : EIdx).tag == ETag.fvar) = true
               rw [decI_tag_fvar_beq _ hy]; simpa using hy1
             simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
-            rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
+            rw [show (decI e : EIdx) = decE e from rfl, L.Arena.viewApp_run, except_ok_bind, hview]
             simp only [this]; rfl
           · have hy1' : tagW ((g :: vt).tail.tail.headD 0) = 1 := by simpa using hy1
             cases hvl2 : eViewW m ((g :: vt).tail.tail.headD 0) with
@@ -543,9 +540,9 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                   apply UInt64.toNat_inj.mp
                   rw [hbn, ← this, ← hj]
                 simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
-                rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
+                rw [show (decI e : EIdx) = decE e from rfl, L.Arena.viewApp_run, except_ok_bind, hview]
                 simp only [htfv, ite_true, StateT.run_bind]
-                rw [viewFVarIdx_run'', except_ok_bind, hfi]
+                rw [L.Arena.viewFVarIdx_run, except_ok_bind, hfi]
                 simp only [hjne]; rfl
               · rw [phW.arm6 k m b e n hn0 he4 hne (by rw [hvl]; exact hy1') (by rw [hvl]; exact hne2)
                   (by rw [hvl, hvl2]; exact Decidable.of_not_not hm), hvl] at h
@@ -564,9 +561,9 @@ theorem phW_ok (k : Nat) : ∀ (m : Mem) (a : AState) (b e n : Word) (N : Nat) (
                     rw [decI_tag_fvar_beq _ hy, hy1']; decide
                   refine ⟨o, ?_, ?_⟩
                   · simp only [ConRon.Arena.phApp?, htg, ite_true, StateT.run_bind]
-                    rw [show (decI e : EIdx) = decE e from rfl, viewApp_run', except_ok_bind, hview]
+                    rw [show (decI e : EIdx) = decE e from rfl, L.Arena.viewApp_run, except_ok_bind, hview]
                     simp only [htfv, ite_true, StateT.run_bind]
-                    rw [viewFVarIdx_run'', except_ok_bind, hfi]
+                    rw [L.Arena.viewFVarIdx_run, except_ok_bind, hfi]
                     have : (j == b.toNat + N') = true := by rw [hjeq]; simp
                     simp only [this, ite_true]
                     rw [← hdx]

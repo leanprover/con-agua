@@ -148,6 +148,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import ConAgua.Compiler.Main
 
 @[expose] public section
 
@@ -263,18 +264,6 @@ theorem romConst_eq :
     List.cons.injEq, Prod.mk.injEq, and_true]
   decide
 
-theorem mem_of_lookupC {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = some fd) :
-    (f, fd) ∈ p := by
-  induction p with
-  | nil => simp at h
-  | cons q p ih =>
-    obtain ⟨f', fd'⟩ := q
-    simp only [List.lookup_cons] at h
-    split at h
-    · rename_i heq; cases h; have : f = f' := by simpa using heq
-      subst this; exact List.mem_cons_self
-    · exact List.mem_cons_of_mem _ (ih h)
-
 theorem checkerProg_romCOther (bs : List UInt8) : ProgHas (Prog.subPB bs checkerProg) romCTabO := by
   prog_bundle []
 
@@ -297,7 +286,7 @@ theorem checkerProg_romCRen (bs : List UInt8) :
     cases h : (romCTabR romDataLit).lookup g with
     | some v => rw [h] at hB; exact hB
     | none => rw [h] at hB; simp only [Option.none_or] at hB ⊢; exact hO g B hB
-  · have := List.all_eq_true.mp romCTab_calls _ (mem_of_lookupC hB)
+  · have := List.all_eq_true.mp romCTab_calls _ (L.Compiler.mem_of_lookup hB)
     simpa using this
   · rw [List.lookup_append] at hB
     cases h : (romCTabR romDataLit).lookup g with
@@ -305,11 +294,11 @@ theorem checkerProg_romCRen (bs : List UInt8) :
       rw [h] at hB; simp only [Option.some_or, Option.some.injEq] at hB; subst hB
       have hm : (romC g, v.renameCalls romC) ∈ romConstProg := by
         rw [← romConst_eq]
-        exact List.mem_map.mpr ⟨(g, v), mem_of_lookupC h, rfl⟩
+        exact List.mem_map.mpr ⟨(g, v), L.Compiler.mem_of_lookup h, rfl⟩
       exact hC _ _ (lookup_of_mem romConstProg_nodup hm)
     | none =>
       rw [h] at hB; simp only [Option.none_or] at hB
-      have hx := List.all_eq_true.mp romCTabO_fixed _ (mem_of_lookupC hB)
+      have hx := List.all_eq_true.mp romCTabO_fixed _ (L.Compiler.mem_of_lookup hB)
       simp only [Bool.and_eq_true, beq_iff_eq, List.all_eq_true] at hx
       rw [hx.1, show B.renameCalls romC = B from by
         cases B; simp only [FunDecl.renameCalls, FunDecl.mk.injEq, true_and]

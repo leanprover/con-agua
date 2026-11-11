@@ -241,7 +241,7 @@ theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R)
     all_goals subst_vars
     all_goals (try exact LocEq.restore _ _)
     all_goals (try assumption)
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, Nat.reduceEqDiff, reduceIte,
       beq_iff_eq, rdW_PINS_ofNat, Nat.reduceMod, Nat.reducePow] at *)
     all_goals grind [lang_grind, arena_grind, natOpSel, PinsFull.size, PinsFull.names_lt, PinsFull.lv_lt]

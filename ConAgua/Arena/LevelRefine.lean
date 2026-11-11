@@ -157,7 +157,7 @@ theorem succCS_wf : succCS.WF where
     simp only [succCS, Option.some.injEq] at h; subst h
     exact ⟨by decide, by decide, by decide, fun m u k x t i => by
       simp only [succCS, shash, Mem.arr64_set64_ne _ _ _ _ _
-        (tierA_ne (show SREC ≠ SHP by decide) t u)]⟩
+        (L.tierA_ne_tierA (show SREC ≠ SHP by decide) t u)]⟩
   room m t h := (spushOK_room m t ((spushOK_eqC m t).trans h)).2
   colRoom A h m t ht hp := by
     simp only [succCS, Option.some.injEq] at h; subst h
@@ -170,7 +170,7 @@ theorem succCS_wf : succCS.WF where
 theorem succColFree : ColFree succCS SRecRel := by
   intro A h m u k x t i a hr
   simp only [succCS, Option.some.injEq] at h; subst h
-  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (show SREC ≠ SHP by decide) t u)] using hr
+  simpa only [SRecRel_raw, Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne_tierA (show SREC ≠ SHP by decide) t u)] using hr
 
 /-- **What `intern_succ` changes**: the table's arrays, the column, the counts. -/
 theorem sinternW_frame (m : Mem) (u : Word) (w : Word) (m' : Mem) (hI : sinternW m u = some (w, m')) :

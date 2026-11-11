@@ -106,7 +106,7 @@ theorem natOpNames_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
   simp [natOpNames, natPredName, natAddName, natSubName, natMulName, natPowName, natBeqName,
     natBleName, pinNatPred, pinNatAdd, pinNatSub, pinNatMul, pinNatPow, pinNatBeq, pinNatBle,
     PIN_NAT_PRED, PIN_NAT_ADD, PIN_NAT_SUB, PIN_NAT_MUL, PIN_NAT_POW, PIN_NAT_BEQ, PIN_NAT_BLE,
-    StateT.run_bind, pinAt_run h, exc_ok_bind', List.range']
+    StateT.run_bind, pinAt_run h, L.Arena.except_ok_bind, List.range']
   rfl
 
 theorem natDivModNames_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
@@ -115,13 +115,13 @@ theorem natDivModNames_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
     natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand, pinNatLor,
     pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD, PIN_NAT_GCD,
     PIN_NAT_LAND, PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT,
-    StateT.run_bind, pinAt_run h, exc_ok_bind', List.range']
+    StateT.run_bind, pinAt_run h, L.Arena.except_ok_bind, List.range']
   rfl
 
 theorem reduceOpNames_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
     reduceOpNames.run a = .ok ((List.range' 44 2).map (fun j => decI (pinW m j)), a) := by
   simp [reduceOpNames, reduceNatName, reduceBoolName, pinReduceNat, pinReduceBool,
-    PIN_REDUCE_NAT, PIN_REDUCE_BOOL, StateT.run_bind, pinAt_run h, exc_ok_bind', List.range']
+    PIN_REDUCE_NAT, PIN_REDUCE_BOOL, StateT.run_bind, pinAt_run h, L.Arena.except_ok_bind, List.range']
   rfl
 
 /-- A `pin_in` answer means a filled pin table. -/

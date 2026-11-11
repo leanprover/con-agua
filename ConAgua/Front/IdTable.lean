@@ -494,7 +494,7 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
     have hl2 := shr1_toNat i
     have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hctl' : (szC b).toNat < ((m.set64 b (i >>> 1) v).arr64 CTL).size := by
-      rw [size_set64]; exact hctl
+      rw [L.Mem.size64_set64]; exact hctl
     have hz' : szW ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)) b = i + 1 := by
       simp only [szW, rdW_set64, hctl', and_self, ↓reduceIte]
     have hd : ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)).arr64 b =
@@ -503,8 +503,8 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
     have hfr : MemFrame [b] [szC b] m ((m.set64 b (i >>> 1) v).set64 CTL (szC b) (i + 1)) :=
       ((MemFrame.set64 m b hbC (i >>> 1) v).mono (by simp) (by simp)).trans
         ((MemFrame.setCtl _ _ _).mono (by simp) (by simp))
-    refine ⟨by rw [hd, size_set64]; exact hsize, by rw [size_set64, size_set64]; exact hctl,
-      by rw [hz', hd, size_set64, hi1]; omega, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
+    refine ⟨by rw [hd, L.Mem.size64_set64]; exact hsize, by rw [L.Mem.size64_set64, L.Mem.size64_set64]; exact hctl,
+      by rw [hz', hd, L.Mem.size64_set64, hi1]; omega, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
     · rw [hz', UInt64.lt_iff_toNat_lt, hi1] at hj
       rw [hd, Mem.arr64_set64_same, hv', dnW_set _ _ _ _ hw, ht']
       by_cases hji : j.toNat = i.toNat
@@ -531,8 +531,8 @@ theorem TblR.put {m m' : Mem} {b : ArrId} {t t' : ConLeche.Frontend.IdTable (Idx
       have hz' : szW (m.set64 b (i >>> 1) v) b = szW m b := by
         simp only [szW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hbC)]
       have hfr : MemFrame [b] [] m (m.set64 b (i >>> 1) v) := MemFrame.set64 m b hbC (i >>> 1) v
-      refine ⟨by rw [size_set64]; exact hsize, by rw [size_set64]; exact hctl,
-        by rw [hz', size_set64]; exact hsz, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
+      refine ⟨by rw [L.Mem.size64_set64]; exact hsize, by rw [L.Mem.size64_set64]; exact hctl,
+        by rw [hz', L.Mem.size64_set64]; exact hsz, fun j hj => ?_, ⟨sp, ?_, ?_⟩⟩
       · rw [hz'] at hj
         rw [Mem.arr64_set64_same, hv', dnW_set _ _ _ _ hw, ht']
         by_cases hji : j.toNat = i.toNat

@@ -159,30 +159,30 @@ theorem storeR_fresh (hK : KFrame S hs KP) {m m' : Mem} (hc : m'.arr64 CTL = m.a
     (hR : RTrans S R hs m m') {on : Bool} {tbP tbS : Tbl α (Idx k) δ} (h0 : tbS.nodes.size = 0)
     (h : StoreR S R hs KP m on tbP tbS) : StoreR S R hs KP m' on tbP tbS := by
   obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1, hG⟩ := h
-  have hf0 : ∀ i f, fld S m' 0 i f = fld S m 0 i f := fun i f => by simp only [fld, tierA_zero', hra]
+  have hf0 : ∀ i f, fld S m' 0 i f = fld S m 0 i f := fun i f => by simp only [fld, L.tierA_zero, hra]
   refine ⟨⟨by rw [hc]; exact hctl, by rw [hc]; exact hb⟩, by rw [hc]; exact hfl, ?_, ?_, ?_⟩
-  · exact tierR_mono S R hs KP m m' 0 tbP (by rw [tierA_zero']; exact hra)
-      (by rw [tierA_zero']; exact hsa) (by simp only [cntW, hc]) (by simp only [baseW, hc])
+  · exact tierR_mono S R hs KP m m' 0 tbP (by rw [L.tierA_zero]; exact hra)
+      (by rw [L.tierA_zero]; exact hsa) (by simp only [cntW, hc]) (by simp only [baseW, hc])
       (fun i a h => (hR 0 i (fun f _ => hf0 i f)).1 a h) (fun i => (hR 0 i (fun f _ => hf0 i f)).2)
       (fun i K h => hK m m' 0 i (fun f _ => hf0 i f) (hR 0 i (fun f _ => hf0 i f)).2 K h) hT0
   · obtain ⟨hc', hcap, -, -, -, hback, -, -, -⟩ := hT1
     have hnone : ∀ (i : Word) (a : α), tbS.nodes[i.toNat]? = some a → False := fun i a ha => by
       have := (Array.getElem?_eq_some_iff.mp ha).1; omega
     have hsl : ∀ j, slotW S m' 1 j = 0 := fun j => by
-      simp only [slotW, slotV, slotRd, tierA_one', hsa1]; simp
+      simp only [slotW, slotV, slotRd, L.tierA_one, hsa1]; simp
     refine ⟨by simp only [cntW, hc]; exact hc', hcap, by rw [h0]; simp,
       fun i a ha => (hnone i a ha).elim, fun i a ha => (hnone i a ha).elim, hback,
       fun j _ => by rw [hsl]; simp, fun j _ hne => absurd (hsl j) hne,
       fun i hi => absurd hi (by omega)⟩
   · obtain ⟨h0', ⟨a0, a1, a2, a3, -⟩⟩ := hG
     refine ⟨?_, ?_⟩
-    · simpa only [TierLay, knW, koW, tierA_zero', hsa] using h0'
-    · have hk : knW S.sa m' 1 = 8 := by simp only [knW, tierA_one', hsa1]; rfl
-      have ho : koW S.sa m' 1 = 0 := by simp only [koW, tierA_one', hsa1]
-      rw [tierA_one'] at a0 a3
-      refine ⟨by rw [tierA_one', hsz]; exact a0, by rw [hk]; decide, by rw [hk]; decide, ?_,
+    · simpa only [TierLay, knW, koW, L.tierA_zero, hsa] using h0'
+    · have hk : knW S.sa m' 1 = 8 := by simp only [knW, L.tierA_one, hsa1]; rfl
+      have ho : koW S.sa m' 1 = 0 := by simp only [koW, L.tierA_one, hsa1]
+      rw [L.tierA_one] at a0 a3
+      refine ⟨by rw [L.tierA_one, hsz]; exact a0, by rw [hk]; decide, by rw [hk]; decide, ?_,
         fun h => absurd h (by decide)⟩
-      rw [hk, ho, tierA_one', hsz]
+      rw [hk, ho, L.tierA_one, hsz]
       simp only [UInt64.toNat_zero]
       have : (8 : Word).toNat = 8 := rfl
       rw [this]; omega
@@ -262,7 +262,7 @@ theorem RecRel_ptr0 {m m' : Mem} (hr : ∀ t, m'.arr64 (tierA REC t) = m.arr64 (
   · simp only [RecRel, NatRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
     have hle := hsl.le
-    exact ⟨h0, hp.rslice hsl, Agree.norm _ _ _ _ _ hp.v hle hnm,
+    exact ⟨h0, hp.rslice hsl, L.Arena.Norm.of_agree _ _ _ _ _ hp.v hle hnm,
       by rw [Agree.pv _ _ _ _ _ hp.v hle, hpv], by rw [Agree.hashN _ _ _ _ _ hp.t hle, hh]⟩
   · simp only [RecRel, StrRec_raw, hr] at h ⊢
     obtain ⟨h0, hsl, hw, hh⟩ := h

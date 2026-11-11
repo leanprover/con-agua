@@ -4,6 +4,7 @@ public import ConAgua.Checker.Prelude
 import ConAgua.L.FuelMono
 import ConAgua.L.Blocks
 import ConRon.Bridge.Grind
+import ConAgua.Compiler.InlineCorrect
 
 @[expose] public section
 
@@ -131,10 +132,6 @@ theorem _root_.L.Mem.set8_setIn {m : Mem} {x : Array UInt8} {a : ArrId} (ha : a 
   funext b
   by_cases hb : b = 0 <;> by_cases hb' : b = a <;> simp_all
 
-theorem _root_.L.Mem.arr8_set8_ne {m : Mem} {a b : ArrId} (ha : a ≠ b) (i v : Word) :
-    (m.set8 a i v).arr8 b = m.arr8 b := by
-  simp [Mem.set8, Mem.arr8, Ne.symm ha]
-
 @[simp] theorem _root_.L.Mem.arr64_setIn (m : Mem) (x : Array UInt8) (a : TieredArray) :
     (m.setIn x).arr64 a = m.arr64 a := rfl
 
@@ -152,12 +149,6 @@ theorem _root_.L.Mem.copy8w_setIn (m : Mem) (x : Array UInt8) (d : TieredArray) 
 
 theorem _root_.L.St.setLocs_setIn (s : St) (x : Array UInt8) (xs : List Var) (vs : List Word) :
     (s.setIn x).setLocs xs vs = (s.setLocs xs vs).setIn x := by
-  induction xs generalizing s vs with
-  | nil => rfl
-  | cons y ys ih => exact ih (s.setLoc y (vs.headD 0)) vs.tail
-
-theorem _root_.L.St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) :
-    (s.setLocs xs vs).mem = s.mem := by
   induction xs generalizing s vs with
   | nil => rfl
   | cons y ys ih => exact ih (s.setLoc y (vs.headD 0)) vs.tail
@@ -786,27 +777,6 @@ theorem invoke_sim_shared {p : Prog} {t : NTree} {S : FnName → Bool} (hP : Pre
   obtain ⟨H, hK⟩ := callFn_sim (ih _ _ (sim_noIn _ hn hcl)) vs s r s1 h2
   exact ⟨run_bind_of (lookupFn_run hl _) H, hK⟩
 
-theorem st8_run (a : ArrId) (j v : Word) (s : St) :
-    (st8 a j v).run s = if j.toNat < (s.mem.arr8 a).size
-      then .ok ((), { s with mem := s.mem.set8 a j v }) else .error .oob := by
-  unfold st8
-  simp only [StateT.run_bind, StateT.run_get, pure_bind]
-  split <;> rfl
-
-theorem st64_run (a : TieredArray) (j v : Word) (s : St) :
-    (st64 a j v).run s = if j.toNat < (s.mem.arr64 a).size
-      then .ok ((), { s with mem := s.mem.set64 a j v }) else .error .oob := by
-  unfold st64
-  simp only [StateT.run_bind, StateT.run_get, pure_bind]
-  split <;> rfl
-
-theorem st32_run (a : TieredArray) (j v : Word) (s : St) :
-    (st32 a j v).run s = if (j / 2).toNat < (s.mem.arr64 a).size
-      then .ok ((), { s with mem := s.mem.set32 a j v }) else .error .oob := by
-  unfold st32
-  simp only [StateT.run_bind, StateT.run_get, pure_bind]
-  split <;> rfl
-
 theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p t S)
     (n : Nat) (ihn : KSim p t S n) {c o : Stmt} (hs : Sim t S c o) :
     KRel (step p (exec p n)) c o := by
@@ -855,15 +825,15 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
-    rw [st8_run] at h5
+    rw [L.Compiler.Inl.st8_run] at h5
     split at h5
     · rename_i hlt
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set8 _ j v } : St).setIn preIn) ?_ rfl)),
-        Mem.arr8_set8_ne ha j v⟩
-      rw [st8_run, ite_eq_left (by simpa [Mem.arr8_setIn_ne ha] using hlt)]
+        L.Mem.arr8_set8_ne ha j v⟩
+      rw [L.Compiler.Inl.st8_run, ite_eq_left (by simpa [Mem.arr8_setIn_ne ha] using hlt)]
       simp only [St.setIn, Mem.set8_setIn ha]
     · cases h5
   | st64 a hi he =>
@@ -875,14 +845,14 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨u, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
-    rw [st64_run] at h5
+    rw [L.Compiler.Inl.st64_run] at h5
     split at h5
     · rename_i hlt
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set64 a j v } : St).setIn preIn) ?_ rfl)), rfl⟩
-      rw [st64_run]
+      rw [L.Compiler.Inl.st64_run]
       exact ite_eq_left hlt
     · cases h5
   | st64t a ht hi he =>
@@ -896,14 +866,14 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
-    rw [st64_run] at h5
+    rw [L.Compiler.Inl.st64_run] at h5
     split at h5
     · rename_i hlt
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h0'' (run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set64 (tierA a u) j v } : St).setIn preIn) ?_ rfl))), rfl⟩
-      rw [st64_run]
+      rw [L.Compiler.Inl.st64_run]
       exact ite_eq_left hlt
     · cases h5
   | st32t a ht hi he =>
@@ -917,14 +887,14 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨rfl, h3'⟩ := he s v s3 h3
     obtain ⟨w, s4, h5, h6⟩ := run_bind_ok h4
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
-    rw [st32_run] at h5
+    rw [L.Compiler.Inl.st32_run] at h5
     split at h5
     · rename_i hlt
       simp only [Except.ok.injEq, Prod.mk.injEq] at h5
       obtain ⟨-, rfl⟩ := h5
       refine ⟨run_bind_of h0'' (run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
         (s' := ({ s with mem := s.mem.set32 (tierA a u) j v } : St).setIn preIn) ?_ rfl))), rfl⟩
-      rw [st32_run]
+      rw [L.Compiler.Inl.st32_run]
       exact ite_eq_left hlt
     · cases h5
   | copy64 hd hdi hs hsi hn =>
@@ -1065,7 +1035,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨-, rfl⟩ := h5
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
     refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
-      (s' := (s3.setLocs xs rs).setIn preIn) ?_ rfl)), hK.trans (Keep.of_mem (St.setLocs_mem _ _ _))⟩
+      (s' := (s3.setLocs xs rs).setIn preIn) ?_ rfl)), hK.trans (Keep.of_mem (L.St.setLocs_mem _ _ _))⟩
     simp only [setLocs, StateT.run_modify, St.setLocs_setIn]
     rfl
   | callS xs hg ha =>
@@ -1080,7 +1050,7 @@ theorem step_sim {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p
     obtain ⟨-, rfl⟩ := h5
     obtain ⟨rfl, rfl⟩ := pure_run_ok h6
     refine ⟨run_bind_of h1' (run_bind_of h3' (run_bind_of (a := ())
-      (s' := (s3.setLocs xs rs).setIn preIn) ?_ rfl)), hK.trans (Keep.of_mem (St.setLocs_mem _ _ _))⟩
+      (s' := (s3.setLocs xs rs).setIn preIn) ?_ rfl)), hK.trans (Keep.of_mem (L.St.setLocs_mem _ _ _))⟩
     simp only [setLocs, StateT.run_modify, St.setLocs_setIn]
     rfl
 

@@ -57,8 +57,8 @@ theorem truncSl {k : IdxKind} {m : Mem} {w : Word} {i o l : Nat} {xs : List (Idx
     (ho : iwN (truncM m) (w.toNat + i) = some o) (hl : iwN (truncM m) (w.toNat + i + 1) = some l)
     (hd : decHL (truncM m) o l = some xs) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     HSl0 m (rdW (m.arr64 IW) (w + UInt64.ofNat i)) (rdW (m.arr64 IW) (w + UInt64.ofNat (i + 1))) xs := by
-  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hlm⟩ := rec2IwN_trunc hl
+  obtain ⟨-, hom⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hlm⟩ := L.Ind.iwN_truncM_some hl
   obtain ⟨eo, to⟩ := rec2RdN (w := w) (k := i) hom hsz
   obtain ⟨el, tl⟩ := rec2RdN (w := w) (k := i + 1) (by simpa [Nat.add_assoc] using hlm) hsz
   rw [eo, el]

@@ -5,6 +5,7 @@ import ConAgua.Arena.DefEqLeaves2
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfCore
 import ConAgua.L.WordOff
+import ConAgua.Arena.FVarRangeRefine
 
 @[expose] public section
 
@@ -25,13 +26,6 @@ namespace L.Arena
 set_option experimental.vcgen true
 
 open ConLeche (Name Level PropWhen)
-
-theorem pr_run_of_ok {α : Type} [Inhabited α] {x : AM α} {a : AState} (h : AM.ok x a) :
-    x.run a = .ok (AM.res x a, AM.st x a) := by
-  unfold AM.ok at h; unfold AM.res AM.st
-  split at h
-  · rename_i v hv; rw [hv]
-  · cases h
 
 /-- **A projection table's body at field `i`**: the words `head_proof_proj` reads are the
 handle of `tbl.bodies.getD i default`. -/
@@ -329,9 +323,6 @@ theorem ppLoopW_le (m : Mem) : ∀ (N : Nat) (f e f' e' : Word), f.toNat ≤ N �
         · have := ih _ _ _ _ (by omega) hL; omega
     · cases hL; exact Nat.le_refl _
 
-theorem coreWalkFuel_word : (4000000000 : Word).toNat = coreWalkFuel := by
-  simp [coreWalkFuel]
-
 section prf
 variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
   (hfp : FindProjOK p) (hek : ErecKept p) (hpf : ProjFound p)
@@ -438,8 +429,8 @@ theorem arm_run {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
       PWD (nameN a'.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
   obtain ⟨hS₀, hK₀⟩ := hS.frame (reset_frame m) (by simp) (fun x hx => by simp at hx; subst hx; decide)
   obtain ⟨res, a', hrun, hA, hd⟩ := prf_call hp hden hlps hfp hek hpf hS₀
-    (Nat.le_of_eq coreWalkFuel_word) hx hc
-  rw [coreWalkFuel_word] at hrun
+    (Nat.le_of_eq L.Arena.coreWalkFuel_toNat) hx hc
+  rw [L.Arena.coreWalkFuel_toNat] at hrun
   exact ⟨res, a', hrun, CoreAfter.comp (KeptAll.refl _ _) hK₀ hA, hd⟩
 
 /-- **`not_proof_fast(vis, a)` refines `notProofFast fe coreWalkFuel a`**, from the program, the

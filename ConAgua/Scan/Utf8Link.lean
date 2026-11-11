@@ -408,10 +408,6 @@ theorem utf8CharN_eq (b : Array UInt8) (k n : Word) (B : ByteArray) (i : Nat) (h
     simp [show ¬ B[i].toNat < 128 by omega, show ¬ B[i].toNat < 194 by omega,
       show ¬ B[i].toNat < 224 by omega, show ¬ B[i].toNat < 240 by omega, show ¬ B[i].toNat < 245 by omega]
 
-theorem size_set64 (m : Mem) (a : TieredArray) (c v : Word) :
-    ((m.set64 a c v).arr64 a).size = (m.arr64 a).size := by
-  simp [Mem.set64, Mem.arr64]
-
 theorem arr64_set64_same (m : Mem) (c v : Word) :
     (m.set64 OUT c v).arr64 OUT = (m.arr64 OUT).set! c.toNat v := by
   simp [Mem.set64, Mem.arr64]

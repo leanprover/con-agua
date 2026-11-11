@@ -21,9 +21,6 @@ namespace L.Arena
 
 open ConRon.Arena
 
-theorem tierA_zero' (a : ArrId) : tierA a 0 = a := by simp [tierA]
-theorem tierA_one' (a : ArrId) : tierA a 1 = tier1 a := by simp [tierA]
-
 section store
 variable {α δ : Type} {k : IdxKind} [BEq α] [Hashable α]
 variable (S : Schema) (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word)
@@ -54,7 +51,7 @@ theorem mul_toNat_small {c w : Word} (hc : c.toNat ≤ 2 ^ 30) (hw : w.toNat ≤
 theorem fld_trunc0 (hS : S.WF) {m m' : Mem} (hT : StoreTr S m m') (hc : (cntW S m 0).toNat ≤ 2 ^ 30)
     {i f : Word} (hi : i.toNat < (cntW S m 0).toNat) (hf : f < S.w) :
     fld S m' 0 i f = fld S m 0 i f := by
-  simp only [fld, tierA_zero', hT.ra0]
+  simp only [fld, L.tierA_zero, hT.ra0]
   apply rdW_extract
   have hw := hS.w_le
   rw [S.ad_toNat hS i f (by omega) hf, mul_toNat_small hc hw]
@@ -76,7 +73,7 @@ omit hko in
 theorem knW_trunc0 : knW S.sa m' 0 = knW S.sa m 0 ∧ koW S.sa m' 0 = koW S.sa m 0 := by
   have e : (2 + (rdW (m.arr64 S.sa) 0 + SN0)).toNat = 2 + (knW S.sa m 0).toNat :=
     ext_slot_toNat S hG
-  simp only [knW, koW, tierA_zero', hT.sa0]
+  simp only [knW, koW, L.tierA_zero, hT.sa0]
   constructor
   · rw [rdW_extract]; rw [e]; simp only [UInt64.toNat_zero]; omega
   · rw [rdW_extract]; rw [e]; simp only [UInt64.toNat_one]; omega
@@ -90,7 +87,7 @@ theorem slots_trunc0 (j : Word) (hj : j < nSl S m 0) :
   have k1 := kslot_toNat S m hG 0 (by decide) j hj
   have hjn : j.toNat < (knW S.sa m 0).toNat := hj
   have hbase : baseW m' 0 = baseW m 0 := by simp only [baseW, hT.ctl]
-  simp only [slotW, slotK, slotV, hkr, hbase, tierA_zero', hT.sa0]
+  simp only [slotW, slotK, slotV, hkr, hbase, L.tierA_zero, hT.sa0]
   constructor
   · rw [rdW_extract]; rw [e, k1]; omega
   · rw [rdW_extract]; rw [e, k1]; omega
@@ -118,8 +115,8 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
       have := (lay S m hG 0 (by decide)).1
       exact UInt64.lt_iff_toNat_lt.mpr (by simp; omega)
     refine ⟨by rw [hcnt]; exact hc, hcap, ?_, fun i a ha => ?_, hsome, hback, ?_, ?_, ?_⟩
-    · rw [tierA_zero', hT.ra0, size_extract0, mul_toNat_small hc27 hS.w_le, hc]
-      rw [tierA_zero'] at hrs
+    · rw [L.tierA_zero, hT.ra0, size_extract0, mul_toNat_small hc27 hS.w_le, hc]
+      rw [L.tierA_zero] at hrs
       exact Nat.le_min.mpr ⟨by rw [Nat.mul_comm]; exact Nat.le_refl _, hrs⟩
     · have hi := (Array.getElem?_eq_some_iff.mp ha).1
       exact (hR 0 i (hfl0 i hi)).1 a (hrec i a ha)
@@ -139,8 +136,8 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
       · simp only [homeS, hn, hh] at h1 ⊢; rw [(hsl0 _ (hw d)).1]; exact h1
       · simp only [homeS, hn, hh] at h2 ⊢; rw [(hsl0 _ (hw e)).1]; exact h2 e he
   · -- tier 1
-    have hra : m'.arr64 (tierA S.ra 1) = m.arr64 (tierA S.ra 1) := by rw [tierA_one', hT.ra1]
-    have hsa : m'.arr64 (tierA S.sa 1) = m.arr64 (tierA S.sa 1) := by rw [tierA_one', hT.sa1]
+    have hra : m'.arr64 (tierA S.ra 1) = m.arr64 (tierA S.ra 1) := by rw [L.tierA_one, hT.ra1]
+    have hsa : m'.arr64 (tierA S.sa 1) = m.arr64 (tierA S.sa 1) := by rw [L.tierA_one, hT.sa1]
     have hfl1 : ∀ i f, fld S m' 1 i f = fld S m 1 i f := fun i f => by simp only [fld, hra]
     exact tierR_mono S R hs KP m m' 1 tbS hra hsa (hcnt 1) (by simp only [baseW, hT.ctl])
       (fun i a h => (hR 1 i (fun f _ => hfl1 i f)).1 a h) (fun i => (hR 1 i (fun f _ => hfl1 i f)).2)
@@ -150,11 +147,11 @@ theorem storeR_trunc (hS : S.WF) (hK : KFrame S hs KP) {m m' : Mem} (hT : StoreT
     have e := ext_slot_toNat S hG
     obtain ⟨⟨a0, a1, a2, a3, -⟩, h1⟩ := hG
     refine ⟨⟨?_, by rw [hn]; exact a1, by rw [hn]; exact a2, ?_, fun _ => by rw [ho, hko]⟩, ?_⟩
-    · rw [tierA_zero', hT.sa0, size_extract0]; rw [tierA_zero'] at a0; omega
-    · rw [hn, ho, tierA_zero', hT.sa0, size_extract0, e, hko]; rw [tierA_zero', hko] at a3
+    · rw [L.tierA_zero, hT.sa0, size_extract0]; rw [L.tierA_zero] at a0; omega
+    · rw [hn, ho, L.tierA_zero, hT.sa0, size_extract0, e, hko]; rw [L.tierA_zero, hko] at a3
       simp only [UInt64.toNat_zero, Nat.add_zero] at a3 ⊢
       exact Nat.le_min.mpr ⟨Nat.le_refl _, a3⟩
-    · simpa only [TierLay, knW, koW, tierA_one', hT.sa1] using h1
+    · simpa only [TierLay, knW, koW, L.tierA_one, hT.sa1] using h1
 
 end store
 

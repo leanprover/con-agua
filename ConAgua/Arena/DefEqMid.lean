@@ -110,12 +110,6 @@ theorem coreRef_callLast {α γ : Type} [Inhabited α]
 theorem resH_zero : ResH [0] := hw0
 theorem resH_one : ResH [1] := hw1
 
-theorem decBool_t {r : List Word} (h : r.headD 0 ≠ 0) : decBool r = true := by
-  simp only [decBool, bne_iff_ne]; exact h
-
-theorem decBool_f {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
-  simp only [decBool, h, bne_self_eq_false]
-
 /-! ## The program -/
 
 /-- The lookups of this file. -/
@@ -163,11 +157,11 @@ theorem defeqNoFvars_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p)
   by_cases h0 : r₁.headD 0 ≠ 0
   · rw [noFvW.k_has_fvar.arm1 (hc1 := h0), Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, rfl⟩ := hW
-    rw [decBool_t h0]
+    rw [L.Arena.decBool_true_of h0]
     exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
   have h0' : r₁.headD 0 = 0 := by simpa using h0
   rw [noFvW.k_has_fvar.arm2 (hc1 := h0')] at hW
-  rw [decBool_f h0']
+  rw [L.Arena.decBool_false_of h0']
   simp only [Bool.false_eq_true, ↓reduceIte]
   refine coreRef_callK hW rfl (hf n _ _ dn vis fe M₁ eb b hS₁ hb) fun r₂ m₂ hW _ M₂ hS₂ => ?_
   rw [noFvW.k_has_fvar_2.arm1, Option.some.injEq, Prod.mk.injEq] at hW
@@ -282,9 +276,9 @@ theorem tupa_ref (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
   refine RefE.bind_callW (fun _ => tupaE.k_head_is_proj.none ..) (headIsProj_refines p hp.leaf k s₀ a₀ dn
     vis fe M eb e hs.rel he) fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   by_cases h0 : r₁.headD 0 = 0
-  · rw [tupaE.k_head_is_proj.arm1 _ _ _ _ _ _ _ _ h0, decBool_f h0]
+  · rw [tupaE.k_head_is_proj.arm1 _ _ _ _ _ _ _ _ h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decOptR, decOpt]; rfl) (resW_of _ _ _ hw0 hw0 rfl rfl))
-  rw [tupaE.k_head_is_proj.arm2 _ _ _ _ _ _ _ _ h0, decBool_t h0]
+  rw [tupaE.k_head_is_proj.arm2 _ _ _ _ _ _ _ _ h0, L.Arena.decBool_true_of h0]
   simp only [↓reduceIte]
   refine RefE.bind_callE (fun _ => tupaE.k_whnf_core.none ..) ((hk (k + 1) (Nat.le_refl _)).whnfCore F
     ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode 0 d e hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ he)
@@ -394,11 +388,11 @@ theorem dq_ref (p : Prog) (n : Nat) (hq : QuickDefeqSpec p n)
     exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decDS]; rfl) ⟨hw0, ha, hb⟩)
   by_cases h2 : r₁.tail.headD 0 ≠ 0
   · rw [dqE.k_quick_defeq.arm2 _ _ _ _ _ h0 h2, show decOB r₁ = some true by
-      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact decBool_t (r := r₁.tail) h2]
+      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact L.Arena.decBool_true_of (r := r₁.tail) h2]
     exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decDS]; rfl) ⟨hw1, hw0, hw0⟩)
   · have h2' : r₁.tail.headD 0 = 0 := by simpa using h2
     rw [dqE.k_quick_defeq.arm3 _ _ _ _ _ h0 h2', show decOB r₁ = some false by
-      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact decBool_f (r := r₁.tail) h2']
+      simp only [decOB, h0, ↓reduceIte, Option.some.injEq]; exact L.Arena.decBool_false_of (r := r₁.tail) h2']
     exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decDS]; rfl) ⟨hw2, hw0, hw0⟩)
 
 /-- **`delta_quick` refines `deltaQuick`** at the knot, from `quick_defeq`'s spec (`dq_ref`'s ok
@@ -460,14 +454,14 @@ theorem off_ref (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) (n : Nat)
     eb b hS₁ hb) fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
   dsimp only [offE.k_is_nat_zero_2]
   by_cases hzz : r₁.headD 0 ≠ 0 ∧ r₂.headD 0 ≠ 0
-  · rw [ite_eq_left hzz, decBool_t hzz.1, decBool_t hzz.2]
+  · rw [ite_eq_left hzz, L.Arena.decBool_true_of hzz.1, L.Arena.decBool_true_of hzz.2]
     exact RefE.ret rfl (CorePost.ret hS₂ rfl ⟨hw1, hw1⟩)
   rw [ite_eq_right hzz]
   have hzb : (decBool r₁ && decBool r₂) = false := by
     by_cases h : r₁.headD 0 = 0
-    · rw [decBool_f h]; rfl
+    · rw [L.Arena.decBool_false_of h]; rfl
     · have h' : r₂.headD 0 = 0 := Classical.byContradiction fun h' => hzz ⟨h, h'⟩
-      rw [decBool_f h']; simp
+      rw [L.Arena.decBool_false_of h']; simp
   simp only [hzb, Bool.false_eq_true, ↓reduceIte, decE_tag_lit_beq a ha, decE_tag_lit_beq b hb,
     Bool.and_eq_true, decide_eq_true_eq]
   by_cases hll : tagW a = 8 ∧ tagW b = 8
@@ -518,10 +512,6 @@ l_model liE_spec (p : Prog) (hf : p.lookup "defeq_lams_inner" = some defeqLamsIn
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
-theorem mode_verified (mode : Word) (h : mode < 4) :
-    (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by
-  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
-
 /-- **`defeq_lams_inner` refines `defeqLamsInner`, both outcomes** (the depth `d + 1` does not
 wrap): the errors are the `defeq` and `infer` slots'. -/
 theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
@@ -543,10 +533,10 @@ theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
       hn hs h₁ h₂) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
   dsimp only [liE.k_defeq]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_f h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
-  rw [ite_eq_right h0, decBool_t h0]
-  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, mode_verified mode hs.mode4,
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, L.Arena.decMode_verified mode hs.mode4,
     decide_eq_true_eq]
   by_cases hv : mode &&& 1 = 0
   case neg =>

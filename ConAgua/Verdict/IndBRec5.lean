@@ -125,7 +125,7 @@ theorem crs_ref (hP : CrsProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
     rw [← hjx]; exact hXs
   obtain ⟨px, X, Xs', rfl, hpx, hX, hXsT⟩ := decPL_cons hXs'
   obtain ⟨XP, XsP', rfl, hXP, hXsP'⟩ := mapM_option_cons_inv hXsP
-  obtain ⟨hxot, hpxm⟩ := rec2IwN_trunc hpx
+  obtain ⟨hxot, hpxm⟩ := L.Ind.iwN_truncM_some hpx
   have hxot' : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
   obtain ⟨ex, tx⟩ := rec2RdN (w := xo) (k := 0) (by simpa using hpxm) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ex
@@ -143,7 +143,7 @@ theorem crs_ref (hP : CrsProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   -- `param_levels`
   refine RefE.bindLift (fun _ => crsE.k_param_levels.none ..) fun r2 m2 h2 => ?_
   obtain ⟨rl, a2, hrl2, hC2, ⟨⟨hrlH, hrl, hS2, hg2⟩, hf2⟩, hRl, p1⟩ :=
-    (RSim.liftP hC1 (RSim.withF (rec3Sim_rsim (plW_sim (k := n) hS1 hd1 ht1)) (fun _ hb => plW_afr hb))
+    (RSim.liftP hC1 (RSim.withF (L.Arena.Sim.rsim (plW_sim (k := n) hS1 hd1 ht1)) (fun _ hb => plW_afr hb))
       (fun _ _ _ h => ⟨h.1.2.2.1, h.2 hA1⟩)
       (ConRon.Bridge.Inductives.paramLevels_spec cv.levelParams _) hlps) (r2, m2) h2
   dsimp only at hrlH hrl hS2 hg2 hC2

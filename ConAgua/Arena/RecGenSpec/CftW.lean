@@ -17,6 +17,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndDecStab
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.FormerNZRef
 
 @[expose] public section
 
@@ -79,7 +80,7 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         internBVar_spec p h.bf h.bp h.ib N, envFind_spec p h.rowGet h.baseGet h.find N,
         erToIw_specW p h.alloc h.copy h.eti N, hcR N "family_telescope", hcR N "inst_lp_fast"] <;>
-      finish (gen := 20) [rdW_eq, St.setLocs_mem', cftK2]
+      finish (gen := 20) [rdW_eq, L.St.setLocs_mem, cftK2]
 
 /-! ## The relation to the twin -/
 
@@ -195,15 +196,15 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     rw [cftKF_some] at h
     obtain ⟨x3, a3, hrun3, hS3, hg3, ⟨hx32, hx3⟩, hA3, hP3⟩ := hF N _ cv caps m m3 a rt hP hS hci h3
     -- the levels
-    have hcvP := decCI_ind_cv hci
+    have hcvP := L.Arena.decCI_ind_cv hci
     have hcv3 : decCV (erecP m3) ((r2.tail.headD 0).toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvP
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
     have hq64 := erecP_lt64 hw2
     have e1 : erRd m3 (r2.tail.headD 0 + 2) = w1 :=
-      erRd_of_erA (by rw [show (r2.tail.headD 0 + 2).toNat = (r2.tail.headD 0).toNat + 1 + 1 by
+      L.Arena.erRd_of _ _ (by rw [show (r2.tail.headD 0 + 2).toNat = (r2.tail.headD 0).toNat + 1 + 1 by
         rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
     have e2 : erRd m3 (r2.tail.headD 0 + 3) = w2 :=
-      erRd_of_erA (by rw [show (r2.tail.headD 0 + 3).toNat = (r2.tail.headD 0).toNat + 1 + 2 by
+      L.Arena.erRd_of _ _ (by rw [show (r2.tail.headD 0 + 3).toNat = (r2.tail.headD 0).toNat + 1 + 2 by
         rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
     rw [e1, e2] at h
     obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl

@@ -3,10 +3,10 @@ module
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndPosSpec.NkcW
 import ConAgua.Arena.StripTeleSpec
-import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -37,7 +37,7 @@ theorem pos2_forall_view {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   obtain ⟨hvok, hew⟩ := eViewW_forall m w h6 hne
   obtain ⟨-, hty, hb⟩ := view_forall m a hS.check.arena.base w hw hvok h6
   have hvb := viewBind_forall m a hS.check.arena.base w hw hvok h6
-  exact ⟨_, _, hew, hty, hb, by rw [viewBind_run']; simp only [← decE_eq]; rw [hvb],
+  exact ⟨_, _, hew, hty, hb, by rw [L.Arena.viewBind_run]; simp only [← decE_eq]; rw [hvb],
     (decE_tag_forallE w hw).mpr h6⟩
 
 /-- The words of a `NestState` record, read after the pool grew. -/

@@ -11,6 +11,8 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -190,7 +192,7 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
       · rw [hk, ConRon.Arena.piBinders, (decE_tag_forallE h hh).mpr hg6]
         have hvb := viewBind_forall m a hR h hh hvok hg6
         rw [← hbeq, ← hteq] at hvb
-        simp only [beq_self_eq_true, ite_true, StateT.run_bind, viewBind_run' _ a, hvb,
+        simp only [beq_self_eq_true, ite_true, StateT.run_bind, L.Arena.viewBind_run _ a, hvb,
           except_ok_bind]
         rw [← hfm1]
         rw [hrun1]
@@ -206,26 +208,8 @@ theorem piBW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (fuel h : Word) (rs : 
         simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
         omega
 
-theorem viewConst_run' (h : EIdx) (a : AState) :
+theorem viewConst_run (h : EIdx) (a : AState) :
     (viewConst h).run a = .ok (a.store.viewConst h, a) := rfl
-
-theorem mapM_opt_congr3 {α β : Type} (f g : α → Option β) :
-    ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
-  | [], _ => rfl
-  | x :: xs, h => by
-    simp only [List.mapM_cons]
-    rw [h x (List.mem_cons_self ..),
-      mapM_opt_congr3 f g xs (fun y hy => h y (List.mem_cons_of_mem _ hy))]
-
-/-- A decoded handle slice below the pool's top survives growth. -/
-theorem decHL_grow3 {k : IdxKind} {m m' : Mem} (hg : IWGrow m m') {o l : Nat}
-    (h : o + l ≤ iwTop m) : (decHL m' o l : Option (List (Idx k))) = decHL m o l := by
-  simp only [decHL, hslice?]
-  apply mapM_opt_congr3
-  intro j hj
-  have hj' : j < l := List.mem_range.mp hj
-  simp only [hd?, iwA, aread_apply, aread_apply]
-  rw [hg.iwGet (o + j) (by omega)]
 
 /-- A returning `e_view` of a `const` handle. -/
 theorem eViewW_const (m : Mem) (h : Word) (hg : tagW h = 3) (hne : eViewW m h ≠ []) :
@@ -344,7 +328,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
           rw [← hdI3]; exact fun h' => hc ((decE_tag_const _ hdl3).mp h')
         refine ⟨names.length, a3, ?_, hnlw.symm, hS3, hg1.trans hg3⟩
         · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-            ite_true, viewBind_run' _ a1, hvb']
+            ite_true, L.Arena.viewBind_run _ a1, hvb']
           have hctag : (x3.tag == ETag.const) = false := by
             simpa using htag
           simp only [hrun3', except_ok_bind, hctag]
@@ -361,7 +345,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
         have hxlt : ((eViewW m3 (r3.headD 0)).tail.headD 0).toNat < 2 ^ 32 := by rw [hxw]; exact hn2
         have hvcc := viewConst_ok m3 a3 hR3 _ hdl3 hvok2
         have hnames3 : decHL m3 no.toNat nl.toNat = some names := by
-          rw [decHL_grow3 (hg1.trans hg3) hbt]; exact hnames
+          rw [L.Ind.decHL_grow (hg1.trans hg3) hbt]; exact hnames
         obtain ⟨ws, hws, hnm, hwlt⟩ := slR_of_decHL m3 nl.toNat no.toNat names hnames3 hb
         rw [L.ofNat_toNat, L.ofNat_toNat] at hws
         have hlen : ws.length < 2 ^ 64 := by
@@ -388,7 +372,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
             | some i => rw [h'] at hf0; simp at hf0
           refine ⟨names.length, a3, ?_, hnlw.symm, hS3, hg1.trans hg3⟩
           · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-              ite_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hnone]
+              ite_true, L.Arena.viewBind_run _ a1, hvb', hrun3', hctag, L.Ind.viewConst_run, hvcc', hfi, hnone]
             rfl
         · rw [recTW.k_sl_find.arm2 nl m3 rf hf0] at hrt
           obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrt)
@@ -399,7 +383,7 @@ theorem recTW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFE
             | some i => exact ⟨i, rfl⟩
           refine ⟨i, a3, ?_, ?_, hS3, hg1.trans hg3⟩
           · simp only [ConRon.Arena.recTargetOf, StateT.run_bind, hrun1, except_ok_bind, hftag,
-              ite_true, viewBind_run' _ a1, hvb', hrun3', hctag, viewConst_run', hvcc', hfi, hi]
+              ite_true, L.Arena.viewBind_run _ a1, hvb', hrun3', hctag, L.Ind.viewConst_run, hvcc', hfi, hi]
             rfl
           · rw [hfk, hi]; rfl
 
@@ -423,7 +407,7 @@ theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toN
   have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   rcases hw : erA m (q.toNat + 3) with _ | w
   · simp [hd?, hw] at hty
-  have hrd : erRd m (q + 3) = w := erRd_of_erA (by rw [e]; exact hw)
+  have hrd : erRd m (q + 3) = w := L.Arena.erRd_of _ _ (by rw [e]; exact hw)
   by_cases hl : w.toNat < 2 ^ 32
   · simp [hd?, hw, hl] at hty
     rw [hrd]

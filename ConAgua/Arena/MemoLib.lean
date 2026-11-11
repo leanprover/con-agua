@@ -266,7 +266,7 @@ theorem memoFindG_spec (f : FnName) (hp : p.lookup f = some (memoFindG S)) (n : 
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64_rd_spec, mfindLoopG_step_spec S p n]
     all_goals subst_vars
-    all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
     all_goals grind [lang_grind, arena_grind, mfindG, nG, mbG, hdG, epG, dfltN_alt, mhome, kh, Mem.len64]
 

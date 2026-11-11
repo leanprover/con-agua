@@ -158,6 +158,7 @@ import all ConAgua.Arena.Prelude
 import all ConAgua.Arena.RomCI
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Line
+import ConAgua.Compiler.Main
 
 @[expose] public section
 
@@ -334,11 +335,6 @@ theorem lookup_of_mem {p : Prog} (hnd : (p.map (·.1)).Nodup) {f : FnName} {fd :
 theorem checkerProg_nodup : (checkerProg.map (·.1)).Nodup :=
   (progTree_spec checkerProg_wf.tree_eq).1
 
-theorem mem_of_lookup {p : Prog} {f : FnName} {fd : FunDecl} (h : p.lookup f = some fd) :
-    (f, fd) ∈ p := by
-  obtain ⟨_, _, hp, -⟩ := List.lookup_eq_some_iff.mp h
-  exact hp ▸ List.mem_append_right _ List.mem_cons_self
-
 /-- **The checker program has the simulation's shape**, the shared functions as a name tree. -/
 theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) where
   defined f hf := by
@@ -346,7 +342,7 @@ theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) where
     obtain ⟨fd, hm, -⟩ := copyAt_all f hf
     rw [lookup_of_mem checkerProg_nodup hm]; rfl
   copy f fd hf hl := by
-    have hc := checkerProg_simChk _ (mem_of_lookup hl)
+    have hc := checkerProg_simChk _ (L.Compiler.mem_of_lookup hl)
     simp only [simChk, inT_preCT, hf, Bool.not_true, Bool.false_or, Bool.and_eq_true] at hc
     rw [isCopied_preTree, decide_eq_true_eq] at hf
     obtain ⟨fd', hm, hm'⟩ := copyAt_all f hf
@@ -354,7 +350,7 @@ theorem checkerProg_preSimT : PreSimProg checkerProg preTree (inT preST) where
     cases hl
     exact ⟨lookup_of_mem checkerProg_nodup hm', hc.1.1, hc.1.2⟩
   shared f fd hs hl := by
-    have hc := checkerProg_simChk _ (mem_of_lookup hl)
+    have hc := checkerProg_simChk _ (L.Compiler.mem_of_lookup hl)
     simp only [simChk, hs, Bool.not_true, Bool.false_or, Bool.and_eq_true, Bool.not_eq_true',
       inT_preCT] at hc
     exact ⟨hc.2.1.1, hc.2.1.2, hc.2.2⟩

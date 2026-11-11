@@ -48,7 +48,7 @@ namespace L.Arena
 
 theorem cplW_blind : MemoBlind cpl := fun _ _ => rfl
 
-theorem EStore.lss_internBindW (st : EStore) (tag : UInt32) (ty b : EIdx) :
+theorem EStore.lss_internBind (st : EStore) (tag : UInt32) (ty b : EIdx) :
     (st.internBind tag ty b).1.lss = st.lss := by
   unfold EStore.internBind
   dsimp only
@@ -63,7 +63,7 @@ theorem keepsW_internLamE (ty b : EIdx) : Keeps cpl (internLamE ty b) := by
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
   all_goals first
     | (cases h; rfl)
-    | (cases h; simp only [cpl, EStore.internLam, EStore.lss_internBindW])
+    | (cases h; simp only [cpl, EStore.internLam, L.Arena.EStore.lss_internBind])
     | (simp [throwThe, Functor.map, Except.map] at h)
 
 theorem keepsW_internForallEE (ty b : EIdx) : Keeps cpl (internForallEE ty b) := by
@@ -74,7 +74,7 @@ theorem keepsW_internForallEE (ty b : EIdx) : Keeps cpl (internForallEE ty b) :=
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
   all_goals first
     | (cases h; rfl)
-    | (cases h; simp only [cpl, EStore.internForallE, EStore.lss_internBindW])
+    | (cases h; simp only [cpl, EStore.internForallE, L.Arena.EStore.lss_internBind])
     | (simp [throwThe, Functor.map, Except.map] at h)
 
 theorem keepsW_internE (v : ENodeView) : Keeps cpl (internE v) := by
@@ -238,7 +238,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
   · rw [hl]; exact hS.nwf
 
-theorem CoreSpec.zeroW {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : FunDecl}
+theorem CoreSpec.zero {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : FunDecl}
     (hf : p.lookup f = some fd) (args : List Word) (T : AM α) (dec : List Word → α) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb : Word) (ok : List Word → Prop) :
@@ -297,7 +297,7 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
     InstListOK p := by
   intro n s₀ a₀ dn vis fe M eb e off cnt d xs hS hE hsp htop
   cases n with
-  | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   obtain ⟨mp, hmp⟩ := hS.memos.il
   have hrun : (instantiateListFast coreWalkFuel (decE e) xs d.toNat).run a₀ =
@@ -331,7 +331,7 @@ theorem inst1_core (hp : InstProg p) (he : p.lookup "inst_entry" = some instEntr
         s₀ a₀ dn vis fe M eb := by
   intro n s₀ a₀ dn vis fe M eb e v d hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW hf _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hf _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   unfold CoreSpec
   have hinv : invoke p (exec p (n + 1)) f [e, v, d] = invoke p (exec p (n + 1)) "inst_entry" [e, v, d] := by
@@ -357,7 +357,7 @@ theorem abs1_core (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
         s₀ a₀ dn vis fe M eb := by
   intro n s₀ a₀ dn vis fe M eb e d k hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   obtain ⟨mp, hmp⟩ := hS.memos.ab
   have hrun : (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a₀ =
@@ -388,7 +388,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
         (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) decH s₀ a₀ dn vis fe M eb := by
   intro n s₀ a₀ dn vis fe M eb e d k c hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   obtain ⟨mp, hmp⟩ := hS.memos.ab
   by_cases hk0 : k.toNat = 0
@@ -443,7 +443,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
 theorem lbb_core (hp : BvbProg p) : LooseBVarsBoundedFastOK p := by
   intro n s₀ a₀ dn vis fe M eb c e hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW hp.lbb _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hp.lbb _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   unfold CoreSpec
   apply L.M.triple_of_run
@@ -497,7 +497,7 @@ theorem hasFvar_core (hp : AbsProg p) (hpf : p.lookup "has_fvar" = some hasFvarL
       CoreSpec p n "has_fvar" [e] (hasFvarFast coreWalkFuel (decE e)) decBool s₀ a₀ dn vis fe M eb := by
   intro n s₀ a₀ dn vis fe M eb e hS hE
   cases n with
-  | zero => exact CoreSpec.zeroW hpf _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hpf _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   unfold CoreSpec
   apply L.M.triple_of_run
@@ -559,7 +559,7 @@ theorem inst1_wrap {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry" = so
     Inst1OK p := by
   intro n s₀ a₀ dn vis fe M eb e v d hS he' _
   cases n with
-  | zero => exact CoreSpec.zeroW hi _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hi _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   apply L.M.triple_of_run
   intro s r s' hs hr

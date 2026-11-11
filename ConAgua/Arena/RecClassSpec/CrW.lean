@@ -15,7 +15,6 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.IndRealOpf3
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -26,6 +25,9 @@ import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.RecClass
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndRealAbsPos
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -813,14 +815,6 @@ theorem finW_sim (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
 theorem pirF_afrR {m m' : Mem} {args r : List Word} (h : pirF m args = some (r, m')) : AFr m m' :=
   AFr.of_frame (pirF_frame h)
 
-/-- (`IndRealAbsPos`' `piBW_afr`, here for the `class_read` chain.) -/
-theorem piBW_afrR : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW n m fuel h = some (r, m') →
-    AFr m m'
-  | 0, _, _, _, _, _, hh => by simp [piBW] at hh
-  | n + 1, m, m', fuel, h, r, hh => by
-    simp only [piBW, piBK1, piBK2.eq_def, piBK3.eq_def] at hh
-    afr_auto hh [piBW_afrR n _ _ _ _ _, consW_afr]
-
 theorem ih1W_afr {n : Nat} {m m' : Mem} {nP mo ml d x : Word} {r : List Word}
     (h : ih1W n m nP mo ml d x = some (r, m')) : AFr m m' := by
   rcases n with _ | n
@@ -922,7 +916,7 @@ theorem minorW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
     omega
   rw [minorW.arm1]
   refine RSim.bind (K := minorW.k_pi_binders cR n nP mo ml d dom) rfl
-    (RSim.withJ hO.1 (simPiBinders n hS hH) (fun _ _ hb => piBW_afrR _ _ _ _ _ _ hb) hJ) ?_
+    (RSim.withJ hO.1 (simPiBinders n hS hH) (fun _ _ hb => L.Ind.piBW_afr _ _ _ _ _ _ hb) hJ) ?_
   rintro ⟨r1, m1⟩ ⟨bs, e⟩ a1 - ⟨⟨hS1, hg1, hd1, ht1⟩, hJ1⟩
   dsimp only at hS1 hg1 hd1 ht1 hJ1
   rw [minorW.k_pi_binders.arm1]
@@ -1211,7 +1205,7 @@ theorem slotMotW_afr {n : Nat} {m m' : Mem} {p vis dom : Word} {r : List Word}
   simp only [slotMotW, slotMotW.k_pi_binders.eq_def, slotMotW.k_get_app_fn_f.eq_def,
     slotMotW.k_get_app_args_f.eq_def, slotMotW.k_class_n_pc_of.eq_def, slotMotW.j1, slotMotW.k_rec4.eq_def,
     slotMotW.k_rec2.eq_def] at h
-  afr_auto h [piBW_afrR _ _ _ _ _ _, gafF_afr, gaaF_afr, npcW_afr, recW_afr]
+  afr_auto h [L.Ind.piBW_afr _ _ _ _ _ _, gafF_afr, gaaF_afr, npcW_afr, recW_afr]
 
 theorem slotW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
     (J : Mem → Prop) (hO : OpfJ cR J vis fe) (n : Nat) (m : Mem)
@@ -1347,7 +1341,7 @@ theorem viewBindW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hH : H w)
   have hvb := viewBind_forall m a hR w hH hvok hg
   rw [hew]
   simp only [List.tail_cons, List.headD_cons]
-  exact ⟨by rw [viewBind_run', hvb], h1, h2⟩
+  exact ⟨by rw [L.Arena.viewBind_run, hvb], h1, h2⟩
 
 section sims
 variable {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
@@ -1848,10 +1842,10 @@ theorem readW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
   simp only [DecB] at hdpT
   rw [hk] at hdpT hdp
   obtain ⟨p0, rc0, rest, rfl, hp0T, hrcT, -⟩ := decPL_cons hdpT
-  obtain ⟨hro, hp0⟩ := iwN_truncM_get hp0T
+  obtain ⟨hro, hp0⟩ := L.Ind.iwN_truncM_some hp0T
   obtain ⟨q, hqT, hcvT, hrPT⟩ := decRS_rP hrcT
-  obtain ⟨hp0lt, hq⟩ := iwN_truncM_get hqT
-  obtain ⟨hp1lt, hrP⟩ := iwN_truncM_get hrPT
+  obtain ⟨hp0lt, hq⟩ := L.Ind.iwN_truncM_some hqT
+  obtain ⟨hp1lt, hrP⟩ := L.Ind.iwN_truncM_some hrPT
   have hcv : decCVp m q = some rc0.cvR := (OMono.decCVp q).mono _ _ _ (IWGrow.refl m).truncExt hcvT
   rw [readW_ok (h := hrl)]
   rw [ConRon.Arena.classRead]

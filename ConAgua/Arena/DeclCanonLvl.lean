@@ -8,7 +8,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclCvg
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConRon.Arena.Canon
@@ -194,10 +193,10 @@ theorem andThen_ok {A B : AM Bool} {a : AState} {r r1 : Word} {b1 : Bool}
       r = if b then 1 else 0 := by
   cases b1
   · refine ⟨false, ?_, by simp [h0 (by simpa using hr1)]⟩
-    simp [StateT.run_bind, hA, exc_ok_bind']; rfl
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind]; rfl
   · obtain ⟨b2, hb2, hr⟩ := hB (by simp [hr1])
     refine ⟨b2, ?_, hr⟩
-    simp [StateT.run_bind, hA, exc_ok_bind', hb2]
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind, hb2]
 
 theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u v r : Word)
     (ps qs cs : List NIdx), cnClW n m po pl qo ql co cl fuel u v = some r → ArenaR m a →
@@ -218,8 +217,8 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     obtain ⟨vu, hru, hlu⟩ := lvView hR hu hne1
     obtain ⟨vv, hrv, hlv⟩ := lvView hR hv hne2
     have hfuel : fuel.toNat = (fuel - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ hf
-    rw [hfuel, ConRon.Arena.canonLevelEq.eq_2, StateT.run_bind, hru, exc_ok_bind', StateT.run_bind, hrv,
-      exc_ok_bind']
+    rw [hfuel, ConRon.Arena.canonLevelEq.eq_2, StateT.run_bind, hru, L.Arena.except_ok_bind, StateT.run_bind, hrv,
+      L.Arena.except_ok_bind]
     rw [hlu, hlv] at h
     cases vu <;> cases vv <;> simp only [lvEnc] at h <;> dsimp only <;> simp at h
     all_goals first
@@ -229,7 +228,7 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
     all_goals first
       | (-- succ.succ
          obtain ⟨b, hb, hr⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-           (nidx_word_lt32 _) (nidx_word_lt32 _)
+           (L.Arena.idx_word_lt32 _) (L.Arena.idx_word_lt32 _)
          rw [decI_word, decI_word] at hb
          exact ⟨b, hb, hr⟩)
       | (-- max.max, imax.imax
@@ -239,12 +238,12 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          | some r1 =>
          rw [cnClW.k_canon_level_eq.eq_2] at h
          obtain ⟨b1, hb1, hr1⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r1 ps qs cs hx1 hR hC
-           (nidx_word_lt32 _) (nidx_word_lt32 _)
+           (L.Arena.idx_word_lt32 _) (L.Arena.idx_word_lt32 _)
          rw [decI_word, decI_word] at hb1
          refine andThen_ok hb1 hr1 (fun hne => ?_) (fun h0 => ?_)
          · rw [ite_eq_right hne] at h
            obtain ⟨b2, hb2, hr2⟩ := ih m a po pl qo ql co cl (fuel - 1) _ _ r ps qs cs h hR hC
-             (nidx_word_lt32 _) (nidx_word_lt32 _)
+             (L.Arena.idx_word_lt32 _) (L.Arena.idx_word_lt32 _)
            rw [decI_word, decI_word] at hb2
            exact ⟨b2, hb2, hr2⟩
          · rw [ite_eq_left h0] at h; simp at h; simp [← h])
@@ -259,9 +258,9 @@ theorem clW_ok (n : Nat) : ∀ (m : Mem) (a : AState) (po pl qo ql co cl fuel u 
          rename_i y hy
          simp only [Option.some.injEq] at h
          obtain ⟨hx32, hxd⟩ := nmW_ok hx hC.p hC.c (by have := iwTop_lt m; have := hC.pt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (L.Arena.idx_word_lt32 _)
          obtain ⟨hy32, hyd⟩ := nmW_ok hy hC.q hC.c (by have := iwTop_lt m; have := hC.qt; omega)
-           (by have := iwTop_lt m; have := hC.ct; omega) (nidx_word_lt32 _)
+           (by have := iwTop_lt m; have := hC.ct; omega) (L.Arena.idx_word_lt32 _)
          rw [decI_word] at hxd hyd
          refine ⟨ConRon.Arena.canonNameMap ps cs _ == ConRon.Arena.canonNameMap qs cs _, rfl, ?_⟩
          rw [← hxd, ← hyd, ← h]
@@ -287,7 +286,7 @@ theorem refAM_same {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : Li
   rw [hst, hres, hm]
   exact ⟨hpre _ _ hp, IWGrow.refl _, hd⟩
 
-theorem decW0B_of' {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b then 1 else 0) :
+theorem decW0B_of {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b then 1 else 0) :
     decW0B m r b := by
   cases b <;> (simp only [decW0B]; rw [h]; simp)
 
@@ -305,7 +304,7 @@ theorem canonLevelEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option
   refine triple_post (canonLevelEq_spec p hp n s₀ po pl qo ql co cl fuel u v) ?_
   rintro r s' ⟨hl, hm, hr⟩
   obtain ⟨b, hb, hrb⟩ := clW_ok n _ a₀ _ _ _ _ _ _ fuel u v _ ps qs cs hr hS.check.arena.base hC hu hv
-  exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
+  exact ⟨hl, hm, b, hb, L.Ind.decW0B_of hrb⟩
 
 /-! ## `canon_level_list_eq` -/
 
@@ -379,7 +378,7 @@ theorem canonLevelListEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Op
   simp only [UInt64.ofNat_toNat] at hs1 hs2
   obtain ⟨b, hb, hrb⟩ := llW_ok n _ a₀ _ _ _ _ _ _ fuel ao al bo bl _ ws1 ws2 ps qs cs hr
     hS.check.arena.base hC hs1 hs2 hw1 hw2
-  exact ⟨hl, hm, b, hb, decW0B_of' hrb⟩
+  exact ⟨hl, hm, b, hb, L.Ind.decW0B_of hrb⟩
 
 /-! ## `canon_levels_eq` -/
 
@@ -444,7 +443,7 @@ theorem lsEqW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     hS2.check.arena.base hC2 hs1 hs2 hw1 hw2
   refine ⟨b, ?_, hrb, hS2, hg1.trans hg2, hP2⟩
   unfold ConRon.Arena.canonLevelsEq
-  rw [StateT.run_bind, hrun1, exc_ok_bind', StateT.run_bind, hrun2, exc_ok_bind']
+  rw [StateT.run_bind, hrun1, L.Arena.except_ok_bind, StateT.run_bind, hrun2, L.Arena.except_ok_bind]
   exact hb
 
 /-- The post of a comparison that may grow the pool: the usual one, and the pool array stays
@@ -469,6 +468,6 @@ theorem canonLevelsEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Optio
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩
+  exact ⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩
 
 end L.Ind

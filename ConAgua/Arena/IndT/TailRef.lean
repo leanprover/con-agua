@@ -9,12 +9,12 @@ import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS
 import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import all ConRon.Bridge.Inductives.BlockTail
 import all ConAgua.Arena.IndInstall
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -210,7 +210,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   obtain ⟨hck4, i4, hst4⟩ := ConRon.Bridge.Inductives.ReadOK.flush
     (⟨c1'.ok.state, c1'.ok.pins, hrel₂.ifenv⟩ : ConRon.Bridge.Inductives.ReadOK env₂ _ a1) hrun4
   have x04 : ConRon.Arena.Ext a.store a4.store := by rw [hst4]; exact c1'.ext
-  have hC4 := StageC.of_checkE hC hS4 hA4 hck4 x04
+  have hC4 := L.Ind.StageC.ofView hC hS4 hA4 hck4 x04
   have hR4 := hRk _ (by simp [tailPreCallees]) _ _ _ _ _ c4 hR3
   have hma4 := hMk _ (by simp [tailPreCallees]) _ _ _ _ _ c4 hma3
   have g04 := (g12.trans hg3).trans hg4
@@ -245,7 +245,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   have dd6 := ConRon.Bridge.denoteCIList_mono x04 _ _ hbP
   have hR6 := icr_ref hkp henv₂' hV hApd hCrk hCrf hIlpf P hF hWt hfR hCs hMa hOwn
     (fun f hf => hkeep f (List.mem_append_right _ hf)) hfRc n hn hC4 hBS4 hsl4.2.1
-    (by rw [decHL_grow3 g04 hpb]; exact hpd) (Nat.le_trans hpb g04.iw) (htbl'.grow (fun q => decNCN_mono q) g04)
+    (by rw [L.Ind.decHL_grow g04 hpb]; exact hpd) (Nat.le_trans hpb g04.iw) (htbl'.grow (fun q => decNCN_mono q) g04)
     (hrdD.grow (decCR_mono _) g04) (hcls'.grow (fun q => decTM_mono q) g04)
     (hblk.grow (decEBlk_mono _ _ _) g04) hR4 hA4 hma4 hrel₂.gate dd1 dd2 dd3 dd4 dd5 dd6 hT hMs
     (nested := r5.headD 0)

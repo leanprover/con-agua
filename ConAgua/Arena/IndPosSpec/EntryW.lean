@@ -11,6 +11,7 @@ import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPartsSpec.RecTW
 
 @[expose] public section
 
@@ -239,7 +240,7 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
             rw [← hn2]; exact decI_beq _ _ hn1 hC
           have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
               .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
-            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, ite_true, viewConst_run, hview, hbeq]
+            simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, ite_true, L.Ind.viewConst_run, hview, hbeq]
             by_cases hcn : vt.headD 0 = C
             · simp only [hcn, decide_true, ite_true]; rfl
             · simp only [hcn, decide_false]; rfl

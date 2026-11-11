@@ -12,6 +12,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -231,7 +232,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
             AM.st (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
             #[decE (rdW (m.arr64 SPN) (ao + i))] args (i.toNat + 1)) a) := by
         rw [whnfApp]
-        simp only [hlt', dite_true, hlamtag, ite_true, StateT.run_bind, viewBind_run', hvb,
+        simp only [hlt', dite_true, hlamtag, ite_true, StateT.run_bind, L.Arena.viewBind_run, hvb,
           except_ok_bind]
         have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
         rw [hxi']
@@ -314,7 +315,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       have htop₂ : spTop ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
           (vo + (vn + 1))) = vo + (vn + 1) := by
         unfold spTop
-        rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact hc136⟩]
+        rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact hc136⟩]
       have hvn1 : (vn + 1).toNat = vn.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
       have hadd2 : (vo + (vn + 1)).toNat = vo.toNat + vn.toNat + 1 := by
@@ -333,7 +334,7 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         exact hb j hj
       have hsz₂ : (((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
           (vo + (vn + 1))).arr64 SPN).size = (m₀.arr64 SPN).size := by
-        simp only [size_set64]; exact hSt₁.size.trans hsz
+        simp only [L.Mem.size64_set64]; exact hSt₁.size.trans hsz
       have hbk₂ := hbk.trans (hSt₁.bstk.trans (BKept.of_frame hfr (by decide) (by decide)))
       have hpg₂ := hpg.trans (hSt₁.pool.trans (PoolGrew.of_frame hfr (by decide) (by decide)))
       have hsame : ((if ap = rdW (m.arr64 SPN) (ao + an + i) then (1 : Word) else 0) != 0) =

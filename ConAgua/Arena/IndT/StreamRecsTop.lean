@@ -67,7 +67,7 @@ theorem pslR_cons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o 
   rw [hk, decPL_succ] at hd'
   simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd'
   obtain ⟨v, hv, y, hy, xs', hxs', rfl⟩ := hd'
-  obtain ⟨hvb, hv⟩ := rec2IwN_trunc hv
+  obtain ⟨hvb, hv⟩ := L.Ind.iwN_truncM_some hv
   obtain ⟨e, eN⟩ := iwN_rd0 hv hsz
   have htop : iwTop m < 2 ^ 64 := by simp only [iwTop]; exact UInt64.toNat_lt _
   have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -75,12 +75,6 @@ theorem pslR_cons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o 
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   exact ⟨v, y, xs', rfl, e, hy, ⟨by show decPL (truncM m) _ _ _ = _; rw [ho1, hl1]; exact hxs',
     by rw [ho1, hl1]; omega⟩, eN⟩
-
-/-- A pointer slice of length `0` is empty. -/
-theorem pslR_nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o : Word} {m : Mem}
-    (h : PSlR f xs o 0 m) : xs = [] := by
-  have := decPL_length (truncM m) h.dec
-  exact List.eq_nil_of_length_eq_zero (by simpa using this)
 
 section sims
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -111,16 +105,16 @@ theorem sr1_ref (hP : StrProg p) (hG : GfLook p) (hSno : SnoSim p dn) (hq : Knot
   obtain ⟨⟨qr, hqr, hcvr⟩, hwrP, hwmI, -, ⟨ro, rn, hro, hrn, hrls⟩, -⟩ :=
     decRS_some (show decRS (truncM m) rcw.toNat = some rc from hrc)
   rw [truncM_erA] at hrls
-  obtain ⟨hqrb, hqr⟩ := rec2IwN_trunc hqr
-  obtain ⟨hwrPb, hwrP⟩ := rec2IwN_trunc hwrP
-  obtain ⟨hwmIb, hwmI⟩ := rec2IwN_trunc hwmI
-  obtain ⟨hrob, hro⟩ := rec2IwN_trunc hro
-  obtain ⟨hrnb, hrn⟩ := rec2IwN_trunc hrn
+  obtain ⟨hqrb, hqr⟩ := L.Ind.iwN_truncM_some hqr
+  obtain ⟨hwrPb, hwrP⟩ := L.Ind.iwN_truncM_some hwrP
+  obtain ⟨hwmIb, hwmI⟩ := L.Ind.iwN_truncM_some hwmI
+  obtain ⟨hrob, hro⟩ := L.Ind.iwN_truncM_some hro
+  obtain ⟨hrnb, hrn⟩ := L.Ind.iwN_truncM_some hrn
   -- the generated triple's major and its constructors
   obtain ⟨-, ⟨mp, hmpb, hmp, hTM⟩, -⟩ := decRR_parts hg
   obtain ⟨co, cl, hco, hcl, hcs⟩ := decTM_ctorsT (show decTM (truncM m) mp = some g.2.1 from hTM)
-  obtain ⟨hcob, hco⟩ := rec2IwN_trunc hco
-  obtain ⟨hclb, hcl⟩ := rec2IwN_trunc hcl
+  obtain ⟨hcob, hco⟩ := L.Ind.iwN_truncM_some hco
+  obtain ⟨hclb, hcl⟩ := L.Ind.iwN_truncM_some hcl
   have hcs0 : decPL m (decCN m) co cl = some g.2.1.ctors :=
     (show DecB (fun m => decPL m (decCN m) co cl) m g.2.1.ctors from hcs).get
       (OMono.decPL decCN_mono co cl)
@@ -205,7 +199,7 @@ theorem srsc_ref (hP : StrProg p) (hG : GfLook p) (hSno : SnoSim p dn) (hq : Kno
   · rw [srscE.arm1 _ _ _ _ _ _ _ _ h0]
     obtain ⟨e1, e2⟩ := h0
     subst e1 e2
-    rw [pslR_nil hr, pslR_nil hgs]
+    rw [L.Ind.pslR_nil hr, L.Ind.pslR_nil hgs]
     simp only [ConRon.Arena.streamRecsCheck]
     exact RefE.ret rfl (SrPost.refl hC hA)
   by_cases h1 : rl = 0 ∨ gl = 0

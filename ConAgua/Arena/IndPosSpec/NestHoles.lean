@@ -144,7 +144,7 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
     have e3 : (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3).toNat = q + 3 := by
       rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw; simp; omega), rq]; rfl
     have hrw : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3) = w :=
-      erRd_of_erA (by rw [e3]; exact hw)
+      L.Arena.erRd_of _ _ (by rw [e3]; exact hw)
     rw [hrw] at h
     have hgf : c.formers[mm.toNat]? = some (c.formers[mm.toNat]'(by rw [hflen]; exact hmmf)) :=
       List.getElem?_eq_getElem _

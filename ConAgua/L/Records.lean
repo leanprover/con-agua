@@ -140,4 +140,9 @@ theorem Record.ad_lt (R : Record) (m : Mem) (j : Word) (f : Field) (n : Nat) (hj
   have := Nat.mul_le_mul_right R.stride (show j.toNat + 1 ≤ n by omega)
   rw [Nat.succ_mul] at this; omega
 
+/-- A byte store leaves the other byte arrays alone. -/
+theorem Mem.arr8_set8_ne {m : Mem} {a b : ArrId} (ha : a ≠ b) (i v : Word) :
+    (m.set8 a i v).arr8 b = m.arr8 b := by
+  simp [Mem.set8, Mem.arr8, Ne.symm ha]
+
 end L

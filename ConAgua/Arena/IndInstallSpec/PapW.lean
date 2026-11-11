@@ -13,6 +13,7 @@ import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.RecGen
 import all ConAgua.Arena.Env
+import ConAgua.Arena.RecClassSpec.ReadProg
 
 @[expose] public section
 
@@ -112,13 +113,6 @@ l_model pap_spec (p : Prog) (hp : p.lookup "gen_rec_check_pop_all" = some genRec
   specs [callW_spec p n "env_pop_temp"]
   grind [ind_grind] finish [rdW_eq] gen 40 instances 20000
 
-theorem FA2.getElem {α β : Type} {R : α → β → Prop} :
-    ∀ {as : List α} {bs : List β}, FA2 R as bs → ∀ (i : Nat) (h1 : i < as.length) (h2 : i < bs.length),
-      R as[i] bs[i]
-  | _, _, .nil, i, h1, _ => by simp at h1
-  | _, _, .cons h hs, 0, _, _ => h
-  | _, _, .cons _ hs, i + 1, h1, h2 => FA2.getElem hs i (by simpa using h1) (by simpa using h2)
-
 /-- The prev value `env_pop_temp` puts back is the decoded displaced row. -/
 theorem prevD_eq {m : Mem} {c q : Word} {pv : Option IConstantInfo} (h : prevD m c q = some pv) :
     (if c = 0 then none else decCI (erecP m) q.toNat) = pv ∧
@@ -174,8 +168,8 @@ theorem papW_ok {p : Prog} (hs : p.lookup "env_row_set" = some envRowSetL)
   obtain ⟨w, hw, hwv⟩ := hget i hil
   have hrd1 : rdW (m.arr64 IW) (po + (j - 1)) = w := by
     simp only [rdW, hpoi]; simp only [iwA, aread_apply, aread_apply] at hw; rw [hw]; rfl
-  have hdp : decPrev m psC[i] = some prevs[i] := (FA2.getElem hfa i hil (by omega)).get
-  have hdc : decPrevC m psC[i] = some cs[i] := (FA2.getElem hfaC i hil (by omega)).get
+  have hdp : decPrev m psC[i] = some prevs[i] := (L.Ind.FA2.get hfa i hil (by omega)).get
+  have hdc : decPrevC m psC[i] = some cs[i] := (L.Ind.FA2.get hfaC i hil (by omega)).get
   simp only [decPrev, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdp
   obtain ⟨nm, hnm, c, hc, q, hq, pv, hpv, hxe⟩ := hdp
   simp only [decPrevC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, hnm, hc] at hdc
@@ -227,7 +221,7 @@ theorem papW_ok {p : Prog} (hs : p.lookup "env_row_set" = some envRowSetL)
     split
     · rename_i e; subst e; rw [hwnW]; exact (ownRaw_ownSet_self ht hbd hc32 hE.stamp).1
     · rename_i hne
-      rw [ownRaw_ownSet_other (by simpa using hwn32) (L.Arena.nidx_word_lt32 n') ht
+      rw [ownRaw_ownSet_other (by simpa using hwn32) (L.Arena.idx_word_lt32 n') ht
         fun e => hne (nidx_word_inj (by rw [e, hwnW]))]
   have hdrop : ((prevs.drop j.toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe).popTemp (decI wn) pv =
       (prevs.drop (j - 1).toNat).foldr (fun x acc => acc.popTemp x.1 x.2) fe := by

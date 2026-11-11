@@ -11,7 +11,6 @@ import ConAgua.Arena.IndInstallSpec.InstallIwB
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndSim
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.BncAfr
 public import ConAgua.Arena.IndPartsSpec.BmoW
 import ConAgua.Arena.IndPartsSpec.Bf
@@ -30,6 +29,7 @@ public import ConAgua.Arena.IndInstallSpec.GpbWSimF
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.IndT.Pass
 
 @[expose] public section
 
@@ -326,7 +326,7 @@ theorem grp_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
       exact ⟨G, cvGs, a', fun k => (hrunA _).trans (hrunB k),
         { hR with grow := hg12.trans hR.grow, core := c4.trans hR.core }⟩
     · intro e _ hc _ k
-      exact ErrClaim.of_run_eqW (hrunA _) (hc k)
+      exact L.Arena.ErrClaim.congr_run (hrunA _) (hc k)
   by_cases h7 : rdW (s2.mem.arr64 IW) (pp + 7) = 0
   · rw [grpE.k_class_stream_recs.arm3 p n vis pp nested pO pL tO tL rd mO mL cO cL r2 _ hk0' h7]
     have hl : bs.large = false := by rw [← hL, h7]; rfl
@@ -571,7 +571,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
     ConRon.Bridge.Inductives.ReadOK _ feR a1).flush (flushCaches_run a1)
   have hC4 : StageC dn (r2.headD 0) feR (ConLeche.consBlockRecsBare pP 0
       ((cvGsP.zip rdv.recCls).map fun x => (x.1, x.2)) env) s4.mem { a1 with caches := Caches.empty } :=
-    hC1.of_checkE hS4 hA4 hok11 (ConRon.Arena.Ext.refl _)
+    hC1.ofView hS4 hA4 hok11 (ConRon.Arena.Ext.refl _)
   -- the rules
   have e2' : rdW (s4.mem.arr64 IW) (rd + 2) = rdW (m.arr64 IW) (rd + 2) :=
     rdW_iw_grow hg14 (by rw [UInt64.toNat_add]; simp; omega)
@@ -638,7 +638,7 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
     ⟨hok13.state, hok13.caches, hok13.pins, ConRon.Bridge.Inductives.GR.FEq.ifenv hpop hok13.ienv⟩
   refine RefE.ret (y := (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out))
     (a' := { a5 with caches := Caches.empty }) (by simp only [StateT.run_bind, flushCaches_run]; rfl)
-    ⟨hC.of_checkE (by simpa using hS7) hA7 hok13' hext12, hg14.trans (hg5.trans (hg6.trans hg7)),
+    ⟨hC.ofView (by simpa using hS7) hA7 hok13' hext12, hg14.trans (hg5.trans (hg6.trans hg7)),
     by have := hd5.grow (hg6.trans hg7); simp only [decRRS] at this ⊢; simpa using this, hA7, hP7⟩
 
 include hkp henv hV hApd hCrk hCrf hIlpf in

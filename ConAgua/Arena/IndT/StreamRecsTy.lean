@@ -428,7 +428,7 @@ theorem rtyc_ref (hP : StrTyProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvW
   have hsP2 := denote_ext hsP1 p2.ext
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
     (fun b h9 => crfF_okT dn vis fe s hs m2 b.2 a2 b.1 (crfF_of_callW hCrf h9)
-      ⟨hC2.stageT, hA2.crMemo⟩)
+      ⟨hC2.stageT, hA2.cr⟩)
     fun r3 m3 x3 a3 h3 hrun3 ⟨⟨hT3, hg3, hx3, _⟩, hCr3⟩ => ?_
   obtain ⟨p3, -⟩ := constsResolveFFast_pstep hC2.check.toR hsP2 hrun3
   have hA3 : AbsOK m3 := absOK_crfF' (crfF_of_callW hCrf (callW_of_callE h3)) hA2 hCr3.crOK hT3
@@ -533,7 +533,7 @@ theorem ra_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
   have hsP2 := denote_ext hsP1 p2.ext
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
     (fun b h9 => crfF_okT dn vis fe s hs m2 b.2 a2 b.1 (crfF_of_callW hCrf h9)
-      ⟨hC2.stageT, hA2.crMemo⟩)
+      ⟨hC2.stageT, hA2.cr⟩)
     fun r3 m3 x3 a3 h3 hrun3 ⟨⟨hT3, hg3, hx3, _⟩, hCr3⟩ => ?_
   obtain ⟨p3, -⟩ := constsResolveFFast_pstep hC2.check.toR hsP2 hrun3
   have hA3 : AbsOK m3 := absOK_crfF' (crfF_of_callW hCrf (callW_of_callE h3)) hA2 hCr3.crOK hT3

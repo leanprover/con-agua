@@ -9,6 +9,7 @@ import ConAgua.Front.IndApplyRefine
 public import ConAgua.Front.IndRel
 public import ConAgua.Front.StateDR
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclRec
 
 @[expose] public section
 
@@ -130,12 +131,6 @@ theorem wd_some (m : Mem) (A : ArrId) (i : Nat) (h : i < (m.arr64 A).size) :
     (m.arr64 A)[i]? = some (wd m A i) := by
   simp [wd, Array.getElem?_eq_getElem h]
 
-theorem mapM_some_ofI {α β : Type} (f : α → Option β) (g : α → β) :
-    ∀ l : List α, (∀ x ∈ l, f x = some (g x)) → l.mapM f = some (l.map g)
-  | [], _ => rfl
-  | x :: xs, h => by
-    simp [List.mapM_cons, h x (by simp), mapM_some_ofI f g xs (fun y hy => h y (by simp [hy]))]
-
 theorem range_map_getElem! {α β : Type} [Inhabited α] (l : List α) (g : α → β) :
     (List.range l.length).map (fun j => g l[j]!) = l.map g := by
   apply List.ext_getElem (by simp)
@@ -160,7 +155,7 @@ theorem decCV_ofR {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : N
   have h2' : a (q + 1 + 1) = some ll := h2
   have hsl : (hslice? a s.toNat ll.toNat : Option (List NIdx)) =
       some ((List.range ll.toNat).map fun j => decI (f j)) :=
-    mapM_some_ofI _ _ _ (fun j hj => hd?_ofR (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
+    L.Arena.mapM_some_of _ _ _ (fun j hj => hd?_ofR (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
   simp [decCV, hlist?, nat?, hd?_ofR h0 hn, hd?_ofR h3 ht, h1, h2', hsl]
 
 /-- A constant value from its words (handles below `2^32`). -/
@@ -180,7 +175,7 @@ theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr
   have e1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   have e2 : (q + 2).toNat = q.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
   have e3 : (q + 3).toNat = q.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
-  simp only [cvM, wd_setA, size_set64, e1, e2, e3, true_and]
+  simp only [cvM, wd_setA, L.Mem.size64_set64, e1, e2, e3, true_and]
   by_cases h0 : j = q.toNat
   · subst h0; simp; omega
   by_cases h1 : j = q.toNat + 1
@@ -245,7 +240,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       unfold cvM; exact ((((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
         (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_, ?_⟩
   · rw [htopF, ← hlen]
-  · rw [htopF]; unfold cvM; simp only [size_set64]; rw [hs1]; rw [F1, hrdN] at F3; omega
+  · rw [htopF]; unfold cvM; simp only [L.Mem.size64_set64]; rw [hs1]; rw [F1, hrdN] at F3; omega
   · intro i h1 h2
     rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
     simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,

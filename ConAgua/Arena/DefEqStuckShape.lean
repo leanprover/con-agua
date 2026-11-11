@@ -16,7 +16,7 @@ import all ConAgua.Arena.DefEq
 
 Reads only: `get_app_fn`, the head's `const` record, `env_find`, the constructor record's counts,
 `get_app_args` (its slice dropped: the top put back). Shared helpers for the structure-η side:
-`envFind_callW` (a run of `env_find`), `decCI_ctorF` (a constructor record's counts),
+`envFind_callW` (a run of `env_find`), `decCI_ctorR` (a constructor record's counts, `WhnfIotaRefine.lean`),
 `getAppArgs_callW`, `CoreS.restoreTop` (the relation after the top is put back).
 -/
 
@@ -46,31 +46,6 @@ theorem find_of_found {m : Mem} {fe : IFEnv} {k : Word}
     (h0 : r.headD 0 ≠ 0) {ci : IConstantInfo}
     (hci : decCI (erecP m) (r.tail.headD 0).toNat = some ci) : fe.find? (decI k) = some ci := by
   rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
-
-/-- **A constructor record's counts**: kind word `4`, parameters at `q + 5`, fields at `q + 6`. -/
-theorem decCI_ctorF {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rd q = w := hR.rd _ _ hq
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  constructor
-  · intro hw; subst hw
-    simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, hc⟩ := h
-    cases hc
-    have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
-    have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
-    exact ⟨cv, by rw [h5, h6]⟩
-  · intro hw cv np nf hc
-    subst hc
-    have hne : w.toNat ≠ 4 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
 
 /-- **A run of `get_app_args`** from `CoreS`: the twin's arguments as a slice at the old top. -/
 theorem getAppArgs_callW {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
@@ -166,8 +141,8 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
       callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args"] <;>
   simp_all [ecsK1, ecsK2, ecsK3, erRd, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,
-    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, size_set64, TieredArray.t0]
+    St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
+    Locals.init_cons_succ, L.Mem.size64_set64, TieredArray.t0]
   all_goals (intro h; simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega)
 
 /-! ### The twin's runs, by case -/
@@ -269,7 +244,7 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
       (fun cv np nf e => by rw [hnone] at e; cases e)) rfl
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hctor := decCI_ctorF (erRdOK _) hci
+  have hctor := L.Arena.decCI_ctorR (erRdOK _) hci
   rcases (Classical.em (erRd s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
   · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv

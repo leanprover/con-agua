@@ -5,13 +5,14 @@ public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.Verdict
 
 @[expose] public section
 
 /-!
 # IagW
 
-`installIteBind`, `installAgree_cons` (the twin's `checkBlockAgree` at a member), `AgreeProg`.
+`installAgree_cons` (the twin's `checkBlockAgree` at a member), `AgreeProg`.
 -/
 
 noncomputable section
@@ -28,10 +29,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-theorem installIteBind {α β : Type} (c : Prop) [Decidable c] (x y : AM α) (f : α → AM β) :
-    ((if c then x else y) >>= f) = if c then x >>= f else y >>= f := by
-  split <;> rfl
-
 /-- The twin's `checkBlockAgree` at a member: member 0's telescope, the member's body, the rest. -/
 theorem installAgree_cons (fe : IFEnv) (nP : Nat) (cvTa₀ cvTa : IConstantVal) (s₀ s : LIdx)
     (rest : List (IConstantVal × LIdx)) :
@@ -40,7 +37,7 @@ theorem installAgree_cons (fe : IFEnv) (nP : Nat) (cvTa₀ cvTa : IConstantVal) 
         unwrapOr x (.internal "block: type former telescope") >>= fun tq₀ =>
         agreeBodyAM fe nP tq₀.1 cvTa s s₀ >>= fun _ =>
         ConRon.Arena.checkBlockAgree V fe nP cvTa₀ s₀ rest) := by
-  simp only [ConRon.Arena.checkBlockAgree, agreeBodyAM, bind_assoc, installIteBind, pure_bind]
+  simp only [ConRon.Arena.checkBlockAgree, agreeBodyAM, bind_assoc, L.Arena.ite_bindAM, pure_bind]
 
 /-- The lookups of `check_block_agree`. -/
 structure AgreeProg (p : Prog) : Prop where

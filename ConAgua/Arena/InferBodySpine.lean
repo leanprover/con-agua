@@ -13,6 +13,8 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.Infer
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.WhnfIotaRefine2
 
 @[expose] public section
 
@@ -90,9 +92,6 @@ theorem len64_not_lt {m : Mem} {co : Word} (hspn : (m.arr64 SPN).size < 2 ^ 63)
 
 /-! ## Pushing onto the accumulator -/
 
-theorem SpineR.empty (m : Mem) (co : Word) (h : co.toNat ≤ (m.arr64 SPN).size) : SpineR m co 0 #[] :=
-  ⟨rfl, by simpa using h, fun i hi => by simp at hi, fun i hi => by simp at hi⟩
-
 /-- **A push onto the accumulator at the top**: the slice grows by the word, the top with it, the
 stack below the accumulator is kept. -/
 theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
@@ -111,11 +110,11 @@ theorem spPush_step {m m₀ : Mem} {co cn v : Word} {acc : Array EIdx}
   have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
   have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
   refine ⟨(hacc.push hspn (by rw [← hadd]; exact hbd) v hv).setCtl 136 (co + (cn + 1)), ?_, ?_,
-    by simp only [spPush, size_set64]; exact hsz, by simp only [spPush, size_set64]; exact h136,
+    by simp only [spPush, L.Mem.size64_set64]; exact hsz, by simp only [spPush, L.Mem.size64_set64]; exact h136,
     hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide)),
     hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) v (co + (cn + 1))) (by decide) (by decide))⟩
   · unfold spTop spPush
-    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136⟩]
   · intro j hj
     simp only [spPush]
     rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
@@ -216,7 +215,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         refine RefE.of_run_eq ?_ hih
         rw [inferSpineIO]
         simp only [hlt', dite_true, decE_tag_forallE_beq ty ht, ht6, decide_true, ite_true,
-          StateT.run_bind, viewBind_run', hvb, except_ok_bind, hxi]
+          StateT.run_bind, L.Arena.viewBind_run, hvb, except_ok_bind, hxi]
       · -- the `whnf` re-entry: the accumulator restarts at `#[a]`
         rw [ite_eq_right ht6]
         have hnfa : ((decE ty).tag == ETag.forallE) = false := by
@@ -254,7 +253,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         have hv : viewOK m₂ (r₂.headD 0) FORALL := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
         have hvb := viewBind_forall m₂ _ hS₂.arena.base (r₂.headD 0) hrw2 hv g1'
-        have hacc0 := SpineR.empty m₂ co (by omega)
+        have hacc0 := L.Arena.SpineR.nil_at m₂ co (by omega)
         obtain ⟨hacc', htop', hb', hsz', -, hbk', hpg'⟩ := spPush_step (cn := 0) hS₂.spn hacc0 hb₂
           hsz₂ (hbk.trans hSt12.bstk) (hpg.trans hSt12.pool) hS₂.ctl136 (by simpa using g5) hvv
         have hS' := hS₂.frame_stk (spnCtl_frame m₂ (co + 0) (spW m (ao + i)) (co + (0 + 1)))
@@ -263,7 +262,7 @@ theorem spioLoop_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
         rw [hi1] at hih
         rw [show (m₂.set64 SPN co (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136 (co + 1) =
           spPush m₂ co 0 (spW m (ao + i)) by simp [spPush, spW], tfld_spPush]
-        refine RefE.bind_right (by rw [viewBind_run', show decH r₂ = decE (r₂.headD 0) from rfl, hvb]) ?_
+        refine RefE.bind_right (by rw [L.Arena.viewBind_run, show decH r₂ = decE (r₂.headD 0) from rfl, hvb]) ?_
         rw [hxi]
         exact hih.mono fun _ _ _ h =>
           ⟨let ⟨M', hS', hK', hSt'⟩ := h.after; ⟨M', hS', hK₁.trans (hK₂.trans hK'), hSt'⟩,
@@ -293,7 +292,7 @@ theorem spio_ref (p : Prog) (hil : InstListOK p) (n : Nat)
   refine RefE.abort0 (by rfl) fun hc => ?_
   have hcle := len64_not_lt hS.spn hc
   exact spioLoop_ref p hil n hk F hF hn dn vis fe mode d ao an args eb _ hs.mode4 hs.eb_mode s₀.mem
-    har rfl hlo (n + 1) (Nat.le_refl _) s₀.mem a₀ M ty 0 0 #[] hS ht (SpineR.empty _ _ hcle)
+    har rfl hlo (n + 1) (Nat.le_refl _) s₀.mem a₀ M ty 0 0 #[] hS ht (L.Arena.SpineR.nil_at _ _ hcle)
     (by simp [spTop]) (fun _ _ => rfl) rfl (BKept.refl _) (PoolGrew.refl _)
 
 /-- **`infer_spine_io` refines `inferSpineIO`** (`spio_ref`'s ok half). -/

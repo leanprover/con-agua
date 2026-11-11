@@ -73,12 +73,12 @@ theorem storeTier_of_mem {b : TieredArray} (h : b ∈ lowTierArrs) : InStoreTier
 theorem MemFrame.set64 (m : Mem) (a : TieredArray) (ha : a ≠ CTL) (k v : Word) :
     MemFrame [a] [] m (m.set64 a k v) := by
   refine ⟨fun b hb _ => Mem.arr64_set64_ne _ _ _ _ _ (by simpa using hb), fun x _ => ?_,
-    fun b => size_set64 _ _ _ _ _⟩
+    fun b => L.Mem.size64_set64 _ _ _ _ _⟩
   rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm ha)]
 
 /-- A write to `CTL[c]` is a frame of `[c]`. -/
 theorem MemFrame.setCtl (m : Mem) (c v : Word) : MemFrame [] [c] m (m.set64 CTL c v) := by
-  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => size_set64 _ _ _ _ _⟩
+  refine ⟨fun b _ hc => Mem.arr64_set64_ne _ _ _ _ _ hc, fun x hx => ?_, fun b => L.Mem.size64_set64 _ _ _ _ _⟩
   rw [rdW_set64]
   simp only [List.mem_singleton] at hx
   simp [Ne.symm hx]

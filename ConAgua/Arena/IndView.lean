@@ -120,7 +120,7 @@ theorem view_sort_f (hv : viewOK m h SORT) (hg : tagW h = 2) :
   obtain ⟨k, hk, hu⟩ := node_of m a h sortCS SoRecRel (·.sorts) _ hR.sort hv.2
   simp only [SoRecRel] at hu
   rw [hu, decI_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl, word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_sort _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _⟩
 
 theorem view_const_f (hv : viewOK m h CONST) (hg : tagW h = 3) :
     a.store.view (decE h) = some (.const (decI (tfld m CONST (tierW h) (idxW h) 0))
@@ -129,8 +129,8 @@ theorem view_const_f (hv : viewOK m h CONST) (hg : tagW h = 3) :
     (tfld m CONST (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hn, hu⟩ := node_of m a h constCS CeRecRel (·.consts) _ hR.const hv.2
   rw [hn, hu, decI_word, decI_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _,
+    L.Arena.idx_word_lt32 _⟩
 
 end ok
 

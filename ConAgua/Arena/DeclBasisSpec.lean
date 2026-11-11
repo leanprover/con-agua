@@ -121,7 +121,7 @@ theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceNatName, pinReduceNat,
-      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind', he]
+      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, L.Arena.except_ok_bind, he]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
   · rw [oroW.k_pin_at.arm2 w r1 m1 he, hm1] at h
     obtain ⟨r0, h2, rfl⟩ := oroW_k2 h
@@ -130,7 +130,7 @@ theorem oroW_ok {m m' : Mem} {a : AState} {w : Word} {r : List Word}
     rw [e1] at he
     refine ⟨hm, hl, ?_⟩
     simp only [ofReduceOp, ofReduceNatName, pinOfReduceNat, reduceBoolName, pinReduceBool,
-      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, exc_ok_bind',
+      StateT.run_bind, show PIN_OF_REDUCE_NAT = (45 : Word).toNat from rfl, hrun1, L.Arena.except_ok_bind,
       hbeq, he, decide_false, Bool.false_eq_true, ite_false]
     simpa [PIN_REDUCE_NAT, PIN_REDUCE_BOOL] using hrun
 

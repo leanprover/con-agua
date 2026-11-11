@@ -306,7 +306,7 @@ theorem idxConstsLoop_spec (hg : p.lookup "base_row_get" = some baseRowGetL)
     (fun k' s₁ => by
       vcgen [step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
         baseRowGet_spec p hg k', baseRowSet_spec p hs k', st64]
-      all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
         St.setLocs_nil, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, LoopPost_normal] at *
       all_goals subst_vars
       all_goals simp (config := { decide := true }) only [ite_true, ite_false, List.headD_cons, List.tail_cons,
@@ -374,7 +374,7 @@ theorem idxConsts_spec (hp : p.lookup "idx_consts" = some idxConstsL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, idxConstsLoop_step_spec p hg hs (I := I) hL hl hc hsz n]
-    all_goals simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
+    all_goals simp only [St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Sig.retVal, LocEq, ite_true] at *
     all_goals first
       | decide
@@ -402,7 +402,7 @@ theorem idxTablesLoop_spec (hg : p.lookup "tbl_base_get" = some tblBaseGetL)
     (fun k' s₁ => by
       vcgen [step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
         tblBaseGet_spec p hg k', tblBaseSet_spec p hs k', st64]
-      all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
         St.setLocs_nil, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq, LoopPost_normal] at *
       all_goals subst_vars
       all_goals simp (config := { decide := true }) only [ite_true, ite_false, List.headD_cons, List.tail_cons, LocEq] at *
@@ -470,7 +470,7 @@ theorem idxTables_spec (hp : p.lookup "idx_tables" = some idxTablesL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, idxTablesLoop_step_spec p hg hs (I := I) hL hl hsz hr n]
-    all_goals simp only [St.setLoc_loc, St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
+    all_goals simp only [St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Sig.retVal, LocEq, ite_true] at *
     all_goals first
       | decide

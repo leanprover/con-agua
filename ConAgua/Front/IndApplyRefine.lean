@@ -3,8 +3,9 @@ module
 public import ConAgua.Front.IndApplySpec
 public import ConRon.Arena.Frontend.ExportC
 public import Std.Tactic.BVDecide.Normalize.Prop
-import ConAgua.Arena.View
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndRealNames
+import ConAgua.Arena.InstLPKeys
 
 @[expose] public section
 
@@ -254,21 +255,6 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
 
 /-! ## Names: `name_rec_pre` against `viewN` -/
 
-/-- Under the scratch check, the name store's view reads the tier the handle's bit names. -/
-theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
-    a.store.lss.ls.ns.view (decI h) =
-      (if tierW h = 0 then a.store.lss.ls.ns.pers else a.store.lss.ls.ns.scr).get (decI h) := by
-  have hfl := ConsR.flag hR.nstr
-  unfold NStore.view
-  rw [isPersistent_decI h hh]
-  by_cases ht : tierW h = 0
-  · simp [tierW] at ht; simp [ht, tierW]
-  · have hon : a.store.lss.ls.ns.scratchOn = true := by
-      rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv ⟨ht, h1⟩
-    simp only [tierW] at ht
-    simp [ht, hon, tierW]
-
 theorem viewN_run {a : AState} {h : NIdx} {v : NNodeView} (hv : a.store.ns.view h = some v) :
     (viewN h).run a = .ok (v, a) := by
   simp only [EStore.ns] at hv
@@ -281,8 +267,6 @@ theorem viewN_run {a : AState} {h : NIdx} {v : NNodeView} (hv : a.store.ns.view 
 theorem rdW_add (p : Array Word) (o k : Word) (h : o.toNat + k.toNat < 2 ^ 64) :
     rdW p (o + k) = p[o.toNat + k.toNat]?.getD 0 := by
   simp only [rdW, UInt64.toNat_add]; congr 2; omega
-
-theorem strWords_rec : strWords "rec" = [114, 101, 99] := by decide
 
 theorem sliceL_three (p : Array Word) (o : Nat) :
     sliceL p o 3 = [p[o]?.getD 0, p[o + 1]?.getD 0, p[o + 2]?.getD 0] := by
@@ -303,7 +287,7 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
     have : ¬ (4294967295 : Nat) < w.toNat := hb
     omega
   split at h; cases h; rename_i hs
-  have hv := nview_tier hR w hw hs
+  have hv := L.Arena.nview_tier hR hw hs
   have ht1 : tierW w ≤ 1 := tierW_le w
   split at h
   · -- anonymous
@@ -376,14 +360,14 @@ theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrp
       rw [hl3, sliceL_three] at hsl
       obtain ⟨r1, r2, r3⟩ := hrec
       rw [e0] at r1; rw [e1 hl3] at r2; rw [e2 hl3] at r3
-      rw [r1, r2, r3, ← strWords_rec] at hsl
+      rw [r1, r2, r3, ← L.Ind.strWords_rec] at hsl
       rw [strWords_inj _ _ hsl.symm, hq, decI_word]
-      exact ⟨rfl, word_lt _⟩
+      exact ⟨rfl, L.Arena.idx_word_lt32 _⟩
     · simp only [hrec, ↓reduceIte] at h; cases h; exact absurd rfl hf
   · intro hf T' heq
     simp only [NNodeView.str.injEq] at heq
     obtain ⟨-, hs'⟩ := heq
-    rw [hs', strWords_rec] at hlen hsl
+    rw [hs', L.Ind.strWords_rec] at hlen hsl
     simp only [List.length_cons, List.length_nil] at hlen
     split at h
     · rename_i h3

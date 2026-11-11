@@ -16,6 +16,7 @@ public import ConAgua.Arena.KnotSlot
 public import ConAgua.Arena.RomExpr
 public import ConAgua.Arena.WhnfDeltaRefine
 import all ConAgua.Arena.StrLit
+import ConAgua.Front.UnescapeLink
 
 @[expose] public section
 
@@ -302,10 +303,6 @@ def ls1W (p : Prog) (n : Nat) (m : Mem) (u : Word) : Option (Word × Mem) :=
     | none => none
     | some (r, m') => some (r.headD 0, m')
 
-/-- `x - base(x)` is `x`'s index in its tier. -/
-theorem tag_sub_base' (x : Word) : x - (x >>> 40) <<< 40 = x &&& 1099511627775 := by
-  apply UInt64.toNat_inj.mp; rw [tag_off_toNat, tag_idx_toNat]
-
 /-- **A one-word push at the top** (`POOL⟨⦃top⦄.tier⟩[top - ⦃top⦄.base] := v; CTL[0] := top + 1`,
 inside the top's tier array): the pool grew, and the new word is `v`. -/
 theorem Grows.push1t (m : Mem) (v : Word) (h : PoolOK m)
@@ -318,7 +315,7 @@ theorem Grows.push1t (m : Mem) (v : Word) (h : PoolOK m)
       (m.top + 1)).top = m.top + 1 := by
   have h41 := h.top41
   have hsz := h.small.tier (m.top >>> 40)
-  rw [tag_sub_base'] at hs ⊢
+  rw [ConAgua.Front.UnescapeLink.tag_sub_base] at hs ⊢
   have hlen : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size := by
     simp only [Mem.len64]; exact UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)
   have hlt : (m.top &&& 1099511627775).toNat < (m.arr64 (tierA POOL (m.top >>> 40))).size := by

@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndPosSpec.NodeV
-import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.BvarBRefine
 public import ConAgua.Arena.IndStubs
 public import ConAgua.Arena.IndView
@@ -17,6 +16,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.SimLib
 import all ConAgua.Arena.IndSum
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndRealFvt
 
 @[expose] public section
 
@@ -152,7 +152,7 @@ theorem mcGo_step (n : Nat) (ih : McGoSpec p n) : McGoSpec p (n + 1) := by
     memoPutG_spec mcSch p _ hput n, ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_nil,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, L.Locals.init_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
     beq_iff_eq, bne_iff_ne, ne_eq, Cond.pval, Expr.pval, Bool.or_eq_true] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
@@ -561,7 +561,7 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
     hbIns_spec p hf hput hins n, ih]
   all_goals subst_vars
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
     Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte,
     beq_iff_eq, bne_iff_ne, ne_eq, Cond.pval, Expr.pval, Bool.or_eq_true, decide_eq_true_eq] at *)
   all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind]
@@ -805,7 +805,7 @@ theorem hbGo_nodeCase {vis : Word} {fe : IFEnv} (j : Nat)
     (hbNode_arm j ih vl v hvr hnv m a i (decE h) f mp hi hS hM) ?_
   rintro rn _ m1 a1 ⟨⟨bb, mp1⟩, rfl, hbb, hM1, hS1, hg1⟩ r' m' hb
   obtain ⟨hr', hM2, hfr2⟩ := hbIns_ok hh hbb hM1 (by rw [← hbK4_some]; exact hb)
-  obtain ⟨hS2, hg2⟩ := StageR.frame_hi hS1 hfr2 (by intro b hb; simp at hb; subst hb; decide)
+  obtain ⟨hS2, hg2⟩ := L.Ind.StageR.frame_hi hS1 hfr2 (by intro b hb; simp at hb; subst hb; decide)
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   exact ⟨by rw [hr']; exact hbb, hM2, hS2, hg1.trans hg2⟩
 
@@ -891,10 +891,7 @@ l_model hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   specs [memoClearG_spec hbSch p _ hcl n, hbGo_spec' p hv hf hput hins hgo hbp n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
-theorem hbFastW_eq (n : Nat) (m : Mem) (i e : Word) (h0 : rdW (m.arr64 CTL) hbSch.cs + 2 ≠ 0) :
-    hbFastW n m i e = hbGoW n (mclearG hbSch m) CWF i e := by
-  rw [hbFastW.arm1 (hc1 := h0)]
-attribute [ind_grind] hbFastW_eq
+attribute [ind_grind] L.Ind.hbFastW.arm1
 
 theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
     (m m' : Mem) (a : AState) (i e r : Word) (mp0 : Std.HashMap (EIdx × Nat) Bool)
@@ -904,10 +901,10 @@ theorem hbFastW_ok {vis : Word} {fe : IFEnv} (n : Nat)
       r = (if b then 1 else 0) ∧ (∃ mp1, hbMR m' mp1) ∧ StageR vis fe m' a' ∧ IWGrow m m' := by
   by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
   · rw [hbFastW.abort1 (hc1 := h0)] at hm; cases hm
-  rw [hbFastW_eq n _ i e h0] at hm
+  rw [L.Ind.hbFastW.arm1 n _ i e h0] at hm
   have hf0 := mclearG_frame hbSch m
   have hM0 := memoRV_clear hbSch hbSch_wf lfKey hbVR m mp0 hM h0
-  have key := StageR.frame_hi hS hf0 (by simp) (by
+  have key := L.Ind.StageR.frame_hi hS hf0 (by simp) (by
       intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> decide) (by simp) (by simp [hbSch])
   obtain ⟨⟨b, mp1⟩, a', hrun, hb, hM1, hS1, hg⟩ := hbGoOK n _ a CWF i e ∅ key.1 hh hM0 _ _ hm
   refine ⟨b, a', ?_, hb, ⟨mp1, hM1⟩, hS1, key.2.trans hg⟩

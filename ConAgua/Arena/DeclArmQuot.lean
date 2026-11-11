@@ -27,12 +27,6 @@ namespace L.Arena
 
 open L.Ind
 
-/-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
-theorem poolSmall_of_stage {vis : Word} {fe : IFEnv}
-    {m : Mem} {a : AState} (h : StageR vis fe m a) : PoolSmall m := by
-  have := h.check.arena.base.lit.1.cap
-  unfold PoolSmall; omega
-
 /-! ## The quotient arm `check_decl_quot(i, vis)` -/
 
 open L.Front (DECL DLP DeclsF DeclAt CVAt dw quotW)

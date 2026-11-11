@@ -7,10 +7,10 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Front.IdTable
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.MemoLib
 import all ConAgua.Arena.Store
+import ConAgua.Front.ApplyExpr
 
 @[expose] public section
 
@@ -894,7 +894,7 @@ theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word)
         internConst_spec p hL.const_find hL.const_push hL.intern_const n,
         romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
           hL.rom_lit n] <;>
-      finish [Keep.size, Keep.pcap]
+      finish [Keep.size, L.Front.Keep.pcap]
 
 attribute [local irreducible] u64W memoOk in
 theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :
@@ -922,7 +922,7 @@ theorem romExpr_stepE (n : Nat) (ih : ExprSpecs rom p n) : SpecE rom p (n + 1) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, hLf, hO, hT,
       romExRef_specW rom p hL n] <;>
-    finish [Keep.size, Keep.pcap]
+    finish [Keep.size, L.Front.Keep.pcap]
 
 theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) := by
   obtain ⟨ihE, _, _⟩ := ih
@@ -938,7 +938,7 @@ theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) :
       romU64_spec rom p hL.rom_u64 n,
       internFVar_spec p hL.fvar_find hL.fvar_push hL.intern_fvar n,
       mkProj_spec p hL.der_b hL.proj_find hL.proj_push hL.intern_proj hL.mk_proj n] <;>
-    finish [Keep.size, Keep.pcap, memoCnt, Option.map_some]
+    finish [Keep.size, L.Front.Keep.pcap, memoCnt, Option.map_some]
 
 theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) := by
   obtain ⟨ihE, _, _⟩ := ih
@@ -954,7 +954,7 @@ theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) :
       mkLam_spec p hL.der_b hL.lam_find hL.lam_push hL.intern_lam hL.mk_lam n,
       mkForall_spec p hL.der_b hL.forall_find hL.forall_push hL.intern_forall hL.mk_forall n,
       mkLet_spec p hL.der_b hL.letE_find hL.letE_push hL.intern_letE hL.mk_let n] <;>
-    finish (gen := 16) [Keep.size, Keep.pcap, memoCnt, Option.map_some]
+    finish (gen := 16) [Keep.size, L.Front.Keep.pcap, memoCnt, Option.map_some]
 
 /-- **`rom_expr`, `rom_ex_one`, `rom_ex_two` compute their models.** -/
 theorem romExpr_specsW (n : Nat) : ExprSpecs rom p n := by

@@ -13,6 +13,7 @@ public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
+import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -427,10 +428,10 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
     have hi2 : a + 2 < 2 ^ 64 := erecP_lt64 hw2
     have hrd1 : erRd m (UInt64.ofNat (a + 1)) = w1 := by
       have : (UInt64.ofNat (a + 1)).toNat = a + 1 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      exact erRd_of_erA (by rw [this]; exact hw1)
+      exact L.Arena.erRd_of _ _ (by rw [this]; exact hw1)
     have hrd2 : erRd m (UInt64.ofNat (a + 2)) = w2 := by
       have : (UInt64.ofNat (a + 2)).toNat = a + 2 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      exact erRd_of_erA (by rw [this]; exact hw2)
+      exact L.Arena.erRd_of _ _ (by rw [this]; exact hw2)
     have e3 : UInt64.ofNat a + 1 = UInt64.ofNat (a + 1) := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
     have e4 : UInt64.ofNat a + 2 = UInt64.ofNat (a + 2) := by

@@ -18,6 +18,7 @@ public import ConAgua.Arena.DeclAxiomSpec2
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.InferFieldSort
 import ConAgua.L.WordOff
+import ConAgua.Arena.BasisBlockT
 
 @[expose] public section
 
@@ -143,7 +144,7 @@ theorem cdq_ref {p : Prog} (hQ : QuotArmProg p) {dn : NIdx → Option ConLeche.N
   have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := by
     obtain ⟨w, hw, -⟩ := decCV_name hcv1
     exact L.toNat_add_ofNat_of_lt _ 1 (L.Arena.erecP_lt64 hw)
-  exact RefE.weakenP (cqr_ref hQ.cqr hQ.leaf hQs n k hS1 hok hr (by rw [hq1]; exact hcv1) hden)
+  exact L.Arena.RefE.mono (cqr_ref hQ.cqr hQ.leaf hQs n k hS1 hok hr (by rw [hq1]; exact hcv1) hden)
     fun v fe' a' h => ⟨h.stage, hg1.trans h.grow, h.memos⟩
 
 /-- The lookups of the axiom arm. -/
@@ -177,13 +178,6 @@ structure CdaPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' 
   stage : StageR r fe' m' a'
   memos : CoreMemos m'
   grow : IWGrow m m'
-
-/-- A claim under no assumption holds under any. -/
-theorem RefE.ofTrue {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
-    {R : α → β → AState → Prop} (h : RefE True x T a R) : RefE G x T a R := by
-  cases x with
-  | ok v => exact h
-  | error e => exact fun _ => h trivial
 
 /-- **The axiom arm refines `checkDecl`'s `.axiomDecl` arm, both outcomes**, under `StageT`:
 `Quot.sound` is the quotient package's record (`check_quot_record` at slot `4`, `cqr_ref`), else
@@ -244,7 +238,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
     rw [checkDeclAxiomE.k_pin_at.arm1 p _ _ _ _ _ _ eq2]
     rw [ep2] at eq2
     simp only [eq2, decide_true, ite_true]
-    exact RefE.ofTrue (RefE.weakenP
+    exact L.Ind.RefE.ofTrue (L.Arena.RefE.mono
       (cqr_ref hX.cqr hcl hQs n .sound hT1 hok hFo.check.readOK hcv1' hcvd)
       fun v fe' a' h => ⟨h.stage, h.memos, hg1.trans h.grow⟩)
   ----- the ordinary axioms

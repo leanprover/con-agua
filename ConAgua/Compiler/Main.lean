@@ -382,12 +382,12 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
   have hcellS : ∀ i, i < args.length → G.T + G.tab.args.toNat + 8 * i + 8 ≤ G.lo ∨
       G.hi ≤ G.T + G.tab.args.toNat + 8 * i := by
     intro i hi
-    have h0 := hG.notStack_of_tab (hcell i hi 0 (by omega))
+    have h0 := hG.tab_stack _ (hcell i hi 0 (by omega))
     simp only [Layout.InStack, not_and, Nat.not_lt] at h0
     by_cases hlo : G.T + G.tab.args.toNat + 8 * i < G.lo
     · left
       refine Classical.byContradiction fun hc => ?_
-      exact hG.notStack_of_tab (hcell i hi (G.lo - (G.T + G.tab.args.toNat + 8 * i)) (by omega))
+      exact hG.tab_stack _ (hcell i hi (G.lo - (G.T + G.tab.args.toNat + 8 * i)) (by omega))
         ⟨by omega, by omega⟩
     · right; exact h0 (by omega)
   have hargs8 : ∀ i (hi : i < args.length),
@@ -539,7 +539,7 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
         rcases hc with hc | hc
         · right
           refine Classical.byContradiction fun hc' => ?_
-          exact hG.notStack_of_tab (x := G.lo) ⟨by omega, by omega⟩ ⟨Nat.le_refl _, by omega⟩
+          exact hG.tab_stack G.lo ⟨by omega, by omega⟩ ⟨Nat.le_refl _, by omega⟩
         · left; simp only [A, BitVec.toNat_ofNat]; omega
       · simp only [h8si' hl]; omega
     · simp only [UInt64.toNat_mk', A, BitVec.toNat_ofNat, skOf_skt_entry]; omega

@@ -3,7 +3,6 @@ module
 public import ConAgua.Verdict.DeclHdrE
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Verdict.FrontValidE
-import ConAgua.Arena.IlpRd
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.DeclCvgT
@@ -28,6 +27,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecGenSpec.CftW
 
 @[expose] public section
 
@@ -193,15 +193,6 @@ theorem absOK_crfF' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   ⟨hT.twin.memos.ab, hA.i1.frame hf (by decide) (by decide), hCr, hT.twin.memos.il,
     ⟨hT.twin.memos.walk, hT.twin.erec, hT.twin.spn, hT.twin.bstk, hT.flag⟩, hT.twin.memos.hb⟩
 
-/-- The slice words of a decoded constant value. -/
-theorem decCV_sliceW {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
-    ∃ w1 w2, R (q + 1) = some w1 ∧ R (q + 2) = some w2 ∧
-      hslice? R w1.toNat w2.toNat = some cv.levelParams := by
-  simp only [decCV, hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?,
-    Option.map_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-  obtain ⟨nm, -, ps, ⟨o, ⟨w1, hw1, rfl⟩, l, ⟨w2, hw2, rfl⟩, hs⟩, t, -, rfl⟩ := h
-  exact ⟨w1, w2, hw1, hw2, hs⟩
-
 /-- **The leaves `check_constant_val` takes as hypotheses**: `nat_op_name` (the certified
 operations' pins) and `lit_shape_ok` (the literal types' shape gates) under `StageT`. -/
 structure CcvSims (p : Prog) (dn : NIdx → Option ConLeche.Name) : Prop where
@@ -255,7 +246,7 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceW hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
@@ -464,7 +455,7 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (valueGuardsE p n m vis q v) (valueGuards fe cv (decI v)) a
       (fun w _ a' => CcvPost dn vis fe m w.2 a') := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceW hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   cases n with

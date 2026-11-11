@@ -3,6 +3,7 @@ module
 import ConAgua.Arena.WhnfIotaRecRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.EtaRescueRef
 
 @[expose] public section
 
@@ -18,19 +19,6 @@ readbacks follow from `StoreDen` (`constLps`, `recRules`): `lpsDen_of`, `fireCor
 open ConRon.Arena
 
 namespace L.Arena
-
-/-- A constructor record's `ConstantVal`. -/
-theorem decCI_ctorInfo_cv {R : Nat → Option Word} {q : Nat}
-    {cvj : IConstantVal} {np nf : Nat} (h : decCI R q = some (.ctorInfo cvj np nf)) :
-    decCV R (q + 1) = some cvj := by
-  cases hq : R q with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h; simp [Option.bind_eq_some_iff] at h)
-  obtain ⟨cv, hcv, _, _, _, _, rfl, rfl, rfl⟩ := h
-  exact hcv
 
 /-- **A rule record's fire datum at its words**: kind `0` plain, `1` nested with its levels the
 slice at words 4, 5 (and its pins at 6, 7), `2` levels. -/
@@ -99,7 +87,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
       (erRd m (ctorP + 3)) rule cvj.levelParams := by
   obtain ⟨⟨c, cv, mI, rP, isK, rules, hf, -, hmem⟩, ⟨cj, np', nf', hfj⟩⟩ := hfe
   rcases decRule_fireE (erRdOK m) hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, hk, hsl⟩
-  · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 (erRdOK m) (decCI_ctorInfo_cv hci)
+  · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 (erRdOK m) (L.Arena.decCI_ctor_cv hci)
     exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ hfj⟩
   · refine .inr ⟨h0, lvls, hk, hsl, ?_⟩
     rcases hk with hk | ⟨pins, hn⟩

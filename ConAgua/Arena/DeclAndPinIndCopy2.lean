@@ -416,11 +416,11 @@ theorem dindCopyW_EW {n : Nat} {m m' : Mem} {d s l : Word} {x : Nat} (h : dindCo
 /-- A word the cut pool holds (not its word `0`) is the pool's, read at any word index naming it. -/
 theorem rdW_of_trunc {P : Array Word} {t x : Nat} {w v : Word} (h : (trunc P t)[x]? = some v)
     (hx : x ≠ 0) (hw : w.toNat = x) : rdW P w = v := by
-  obtain ⟨hP, -⟩ := trunc_getAP h hx
+  obtain ⟨hP, -⟩ := L.Arena.trunc_get_some h hx
   simp [rdW, hw, hP]
 
 theorem trunc_lt {P : Array Word} {t x : Nat} {v : Word} (h : (trunc P t)[x]? = some v)
-    (hx : x ≠ 0) : x < P.size := (Array.getElem?_eq_some_iff.mp (trunc_getAP h hx).1).1
+    (hx : x ≠ 0) : x < P.size := (Array.getElem?_eq_some_iff.mp (L.Arena.trunc_get_some h hx).1).1
 
 /-! ## `ind_rec_copy`'s record -/
 

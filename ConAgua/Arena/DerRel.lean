@@ -499,8 +499,8 @@ theorem AM.proto_cases {α : Type} [BEq α] [Hashable α] (L : Lens α UInt64 .e
 theorem cP_other {α : Type} [BEq α] [Hashable α] {a : AState} {g : ETables → Tbl α EIdx UInt64}
     {B : ArrId} {m m' : Mem} (hd : DerT2 a g (cP B m)) (h : m'.arr64 B = m.arr64 B)
     (h' : m'.arr64 (tier1 B) = m.arr64 (tier1 B)) : DerT2 a g (cP B m') :=
-  ⟨derT_cP hd.1 (fun i _ => by simp only [tierA_zero, h]),
-    derT_cP hd.2 (fun i _ => by simp only [tierA_one_eq, h'])⟩
+  ⟨derT_cP hd.1 (fun i _ => by simp only [L.tierA_zero, h]),
+    derT_cP hd.2 (fun i _ => by simp only [L.tierA_one, h'])⟩
 
 /-- **`mk_app` refines `internE (.app _ _)` under `ArenaD`.** -/
 theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : Mem)

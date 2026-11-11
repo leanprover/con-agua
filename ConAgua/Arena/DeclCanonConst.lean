@@ -12,6 +12,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DeclCvg
 import all ConAgua.Arena.DeclArmsCanon
 import ConAgua.L.WordOff
+import ConAgua.Arena.FVarRangeRefine
 
 @[expose] public section
 
@@ -54,7 +55,7 @@ theorem erCopyW_size (n : Nat) : ∀ (m m' : Mem) (d s l : Word), erCopyW n m d 
     · rw [erCopyW_nil n m d s l hl] at h; cases h; rfl
     · rw [erCopyW_step n m d s l hl] at h
       rw [ih _ _ _ _ _ h b]
-      exact size_set64 _ _ _ _ _
+      exact L.Mem.size64_set64 _ _ _ _ _
 
 theorem erToIwW_size {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) : ∀ b, (m'.arr64 b).size = (m.arr64 b).size := by
@@ -221,10 +222,10 @@ theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         rw [← hlen, ← glen]
       simp [this, h2]
     unfold IConstantVal.canonEq
-    rw [ite_eq_left hcond, StateT.run_bind, hrun, exc_ok_bind']
+    rw [ite_eq_left hcond, StateT.run_bind, hrun, L.Arena.except_ok_bind]
     rw [htm1, gtm1]
     have hb' := hb
-    rw [fuelW] at hb'
+    rw [L.Arena.coreWalkFuel_toNat] at hb'
     exact hb'
 
 /-- **`cv_canon_eq` refines `IConstantVal.canonEq`.** -/
@@ -242,6 +243,6 @@ theorem cvCanonEq_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option Co
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+  exact ⟨⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩, hL'⟩
 
 end L.Ind

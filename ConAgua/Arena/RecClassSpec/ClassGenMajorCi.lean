@@ -37,7 +37,7 @@ open L.Arena
 theorem rec2DecB_HL_top {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
     (h : DecB (fun m => (decHL m o l : Option (List (Idx k)))) m xs) (hl : l ≠ 0) : o + l ≤ iwTop m := by
   have := decHL_getI h (l - 1) (by omega)
-  have := (rec2IwH_trunc this).1
+  have := (L.Ind.iwH_truncM_some this).1
   omega
 
 /-! ## `expr_get_d` at every fuel -/

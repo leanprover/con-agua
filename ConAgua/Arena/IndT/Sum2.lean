@@ -83,7 +83,7 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
   have h3 : (cvTa0 + 3).toNat = cvTa0.toNat + 3 := by
     have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
   have hw' : rdW (m.arr64 (tierA EREC ((cvTa0 + 3) >>> 40))) (cvTa0 + 3 &&& 1099511627775) = w :=
-    erRd_of_erA (by rw [h3]; exact hw)
+    L.Arena.erRd_of _ _ (by rw [h3]; exact hw)
   rw [hw']
   have hdw : denoteE a.store (decI w) = some cvTaP.type := by
     rw [← hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP
@@ -123,7 +123,7 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
     cases vv with
     | sort u =>
       obtain ⟨-, hu32, hu⟩ := hVR
-      have hvs := viewSort_of_view _ _ _ htag hview
+      have hvs := L.Arena.viewSort_of_view _ _ _ htag hview
       have hx1 : (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0 =
           (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0 := by
         cases eViewW m1 (r1.tail.tail.tail.headD 0) with
@@ -132,7 +132,7 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
       simp only []
       rw [← hbe, ← decE_eq, htag]
       simp only [beq_self_eq_true, ite_true]
-      refine RefE.bind_right (viewSort_run hvs) (RefE.ret rfl ⟨hC1, hg1, by simpa using hta1,
+      refine RefE.bind_right (L.Arena.viewSort_run hvs) (RefE.ret rfl ⟨hC1, hg1, by simpa using hta1,
         by simpa [hx1] using hu32, by simpa [hx1] using hu, hA1⟩)
     | _ => simp only [ViewR] at hVR <;> (rw [h2] at hVR) <;> simp at hVR
   rw [ctE.k_strip_pis.abort2 _ _ _ _ h0 ht]

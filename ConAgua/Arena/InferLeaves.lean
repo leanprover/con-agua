@@ -20,6 +20,7 @@ import ConAgua.Arena.RefWalk
 import all ConAgua.Arena.Infer
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.CoreWalks
 
 @[expose] public section
 
@@ -330,13 +331,6 @@ theorem defeqArg_anyE (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he :
 
 /-! ## `mk_forall` under `CoreS` -/
 
-theorem EStore.lss_internBind' (st : EStore) (tag : UInt32) (ty b : EIdx) :
-    (st.internBind tag ty b).1.lss = st.lss := by
-  unfold EStore.internBind
-  dsimp only
-  repeat' split
-  all_goals rfl
-
 theorem keeps_cpl_internForall (ty b : EIdx) : Keeps cpl (internE (.forallE ty b)) := by
   simp only [internE]; unfold Keeps; intro a r a' h
   simp only [internForallEE, StateT.run_bind, StateT.run_get, pure_bind] at h
@@ -345,7 +339,7 @@ theorem keeps_cpl_internForall (ty b : EIdx) : Keeps cpl (internE (.forallE ty b
     ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
   all_goals first
     | (cases h; rfl)
-    | (cases h; simp only [cpl, EStore.internForallE, EStore.lss_internBind'])
+    | (cases h; simp only [cpl, EStore.internForallE, L.Arena.EStore.lss_internBind])
     | (simp [throwThe, Functor.map, Except.map] at h)
 
 theorem fainternW_hw (m : Mem) (a : AState) (hR : ForallR m a) (t b : Word) (w : Word) (m' : Mem)
@@ -645,18 +639,9 @@ theorem decCI_cvA {R : Nat → Option Word} {q : Word}
         | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
        exact hcv)
 
-theorem mapM_len {α β : Type} (f : α → Option β) :
-    ∀ (l : List α) (xs : List β), l.mapM f = some xs → xs.length = l.length
-  | [], xs, h => by simp at h; subst h; rfl
-  | a :: l, xs, h => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, -, ys, hys, rfl⟩ := h
-    simp [mapM_len f l ys hys]
-
 theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Idx k)}
     (h : hslice? (aread b) o c = some xs) : xs.length = c := by
-  unfold hslice? at h; simpa using mapM_len _ _ _ h
+  unfold hslice? at h; simpa using L.Ind.mapM_opt_length _ _ _ h
 
 /-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
 theorem infer_decCV_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)

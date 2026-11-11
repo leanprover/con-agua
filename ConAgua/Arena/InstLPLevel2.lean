@@ -92,7 +92,7 @@ theorem slsElemW_core {ko kc vo vc : Word} {ks : List Name} {us : List LIdx} {vs
     rw [hSb, slElemK_some] at hW
     have hh : ¬ 4294967296 ≤ h := fun hh => by simp only [hh, ↓reduceIte] at hW; cases hW
     simp only [hh, ↓reduceIte] at hW
-    obtain ⟨a₁, hrun₁, o₁⟩ := lvSubIntW_core hS hE (word_lt u) (by rw [decI_word]; exact hL) hSb
+    obtain ⟨a₁, hrun₁, o₁⟩ := lvSubIntW_core hS hE (_root_.L.Arena.idx_word_lt32 u) (by rw [decI_word]; exact hL) hSb
     -- the result on the stack
     have hf₂ : MemFrame [SPN] [] m₁ (m₁.set64 SPN b h) := MemFrame.set64 _ _ (by decide) _ _
     have hS₂ := o₁.core.frame_stk hf₂ (by simp) (by simp)

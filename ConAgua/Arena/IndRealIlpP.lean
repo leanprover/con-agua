@@ -24,6 +24,7 @@ import all ConAgua.Arena.TeleLift
 import all ConAgua.Arena.Walk
 import all ConAgua.Arena.WalkLift
 import ConAgua.L.WordOff
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -252,7 +253,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [decI_tag_forallE_beq h hh, he6]; decide
       rw [hdrop, hxk]
       simp only [ConRon.Arena.instPisAtLift, htag, ite_true, StateT.run_bind]
-      rw [show (decI h : EIdx) = decE h from rfl, viewBind_run, except_ok_bind, hbind]
+      rw [show (decI h : EIdx) = decE h from rfl, L.Arena.viewBind_run, except_ok_bind, hbind]
       simp only [StateT.run_bind]
       rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, show (0 : Word).toNat = 0 from rfl] at hrun1
       rw [hrun1]

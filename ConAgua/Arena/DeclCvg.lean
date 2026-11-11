@@ -221,11 +221,6 @@ theorem rdW_of_get? {a : Array Word} {x w : Word} {k : Nat} (hk : k = x.toNat) (
     rdW a x = w := by
   subst hk; simp [rdW, h]
 
-theorem exc_ok_bind' {ε α β : Type} (x : α) (f : α → Except ε β) :
-    (Except.ok x >>= f) = f x := rfl
-
-theorem fuelW : (4000000000 : Word).toNat = coreWalkFuel := rfl
-
 theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
     ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
   simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h

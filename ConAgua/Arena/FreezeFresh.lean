@@ -131,7 +131,7 @@ theorem ArenaR.fresh (htop : (cutT m).top.toNat < 2 ^ 40) (h : ArenaR (cutT m) a
   have col : ∀ {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] {L : Lens α δ k}
       {c : ArrId} {f : δ → Word}, (c : TieredArray) ∉ freshZ → (L.getS a).nodes.size = 0 →
       ColT2 L c f (cutT m) a → ColT2 L c f (freshMem m) a := fun hc0 h0 h =>
-    ⟨colT_mono h.1 (fun i _ => by rw [tierA_zero', hk _ hc0]),
+    ⟨colT_mono h.1 (fun i _ => by rw [_root_.L.tierA_zero, hk _ hc0]),
       colT_mono h.2 (fun i hi => absurd hi (by omega))⟩
   exact
   { lit := ⟨PoolOK.fresh h.lit.1 htop, consR_freshP litCS_wf litFrame (fun _ _ hr hp => ⟨RecRel_ptr0 hr hp,
@@ -196,7 +196,7 @@ theorem DerT2.fresh {α : Type} [BEq α] [Hashable α] {g : ETables → Tbl α E
   obtain ⟨⟨s0, h0'⟩, ⟨s1, -⟩⟩ := h
   refine ⟨⟨s0, fun i x hx => ?_⟩, ⟨s1, fun i x hx => ?_⟩⟩
   · have := h0' i x hx
-    simp only [cP, tierA_zero'] at this ⊢
+    simp only [cP, L.tierA_zero] at this ⊢
     rw [fresh_keep m hc]; exact this
   · have := (Array.getElem?_eq_some_iff.mp hx).1; omega
 

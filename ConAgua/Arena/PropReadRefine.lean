@@ -6,6 +6,7 @@ public import ConAgua.Arena.CoreDen
 import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.CoreLevels
 import ConRon.Bridge.Grind
+import ConAgua.Arena.DeclApdRef
 
 @[expose] public section
 
@@ -74,10 +75,6 @@ theorem RdAfter.heap {m m' : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) (
     (fun x hx => by simp at hx; subst hx; decide)
   exact ⟨hS', hK, he.memFrame.mono (by simp) (by simp), rfl⟩
 
-/-- A reader that does not write. -/
-theorem RdAfter.same {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
-    RdAfter dn m m a a vis fe M eb := RdAfter.refl hS
-
 /-- **After a reader, as a core run**: `CoreAfter` at the same maps. -/
 theorem RdAfter.core {m m' : Mem} {a a' : AState} (h : RdAfter dn m m' a a' vis fe M eb) :
     CoreAfter dn m m' a' vis fe M eb :=
@@ -105,48 +102,6 @@ theorem NmsR.nil_iff {N : Word → Name → Prop} {m : Mem} {A : ArrId} {o c : W
   | cons hk _ _ => simp [hk]
 
 /-! ## The twin's readbacks -/
-
-theorem pr_readLevel_run (a : AState) (u : LIdx) (l : Level) (hd : denoteL a.store.ls u = some l) :
-    (readLevel u).run a = .ok (l, a) := by
-  simp [readLevel, hd, StateT.run_bind, StateT.run_get]; rfl
-
-/-- `readNameM` at a defined handle: its readback, and only `readNC` changes. -/
-theorem pr_readNameM_run (a : AState) (h : NIdx) (x : Name) (hd : denoteN a.store.ns h = some x)
-    (hc : ReadNCOK a) :
-    ∃ X, (readNameM h).run a = .ok (x, { a with caches := { a.caches with readNC := X } }) ∧
-      ReadNCOK { a with caches := { a.caches with readNC := X } } := by
-  simp only [readNameM]
-  cases e : a.caches.readNC[h]? with
-  | some x' =>
-    have := hc _ _ e; rw [hd] at this; cases this
-    exact ⟨a.caches.readNC, by simp [e]; rfl, by simpa using hc⟩
-  | none =>
-    refine ⟨a.caches.readNC.insert h x, ?_, ?_⟩
-    · simp [e, hd]; rfl
-    · intro h' x' e'
-      simp only [Std.HashMap.getElem?_insert] at e'
-      split at e'
-      · rename_i hb; cases e'; rw [← eq_of_beq hb]; exact hd
-      · exact hc _ _ e'
-
-/-- `readNamesM` at names that read back. -/
-theorem pr_readNamesM_run : ∀ (lps : List NIdx) (a : AState) (ks : List Name),
-    lps.mapM (denoteN a.store.ns) = some ks → ReadNCOK a →
-    ∃ X, (readNamesM lps).run a = .ok (ks, { a with caches := { a.caches with readNC := X } }) ∧
-      ReadNCOK { a with caches := { a.caches with readNC := X } }
-  | [], a, ks, h, hc => by
-    simp at h; subst h
-    exact ⟨a.caches.readNC, by simp [readNamesM]; rfl, by simpa using hc⟩
-  | x :: xs, a, ks, h, hc => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, hy, ys, hys, rfl⟩ := h
-    obtain ⟨X₁, h₁, hc₁⟩ := pr_readNameM_run a x y hy hc
-    obtain ⟨X₂, h₂, hc₂⟩ := pr_readNamesM_run xs { a with caches := { a.caches with readNC := X₁ } }
-      ys hys hc₁
-    refine ⟨X₂, ?_, hc₂⟩
-    simp only [readNamesM, StateT.run_bind, h₁, except_ok_bind, h₂]
-    rfl
 
 /-- **The relation across the readback caches' writes.** -/
 theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
@@ -240,7 +195,7 @@ theorem rpw_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
       rw [tag_beq_w h hh 2 (by decide) ETag.sort rfl 2 rfl]; simp [hg]
     simp only [decOpt, hf, ↓reduceIte, residualPW, ht, StateT.run_bind,
       show ∀ x, (viewSort x).run a = .ok (a.store.viewSort x, a) from fun _ => rfl, hvs,
-      except_ok_bind, pr_readLevel_run a _ l hl]
+      except_ok_bind, L.Ind.readLevel_run a _ l hl]
     rfl
   simp only [rpwW.k_lv_zero] at hW
   rcases hZ with ⟨hx, hpw⟩ | ⟨hx, ps, hpw, hnm⟩
@@ -405,7 +360,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   obtain ⟨he, hZ⟩ := spwW_ok_lh hN (keyT_heap (by decide)) (by decide) ks vs n _ _ _ _ _ _ _ _ _ _ hnm hb hkr
     hvs hz
   -- the twin
-  obtain ⟨X, hX, hcX⟩ := pr_readNamesM_run lps a ks hk hSD.readN
+  obtain ⟨X, hX, hcX⟩ := L.Arena.readNamesM_run' lps a ks hk hSD.readN
   obtain ⟨Y, hY, hcY⟩ := readLevelsM_run' { a with caches := { a.caches with readNC := X } }
     (decI us) vs hv (by exact hS.readLs)
   have hrun : (substPWAt lps (decI us) (.ifAllZero (x₀ :: ps₀))).run a =

@@ -95,9 +95,9 @@ theorem lpLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
         (m.set64 DLP (1 + top + cnt) (tblW m NID (rdNatN b i (UInt64.ofNat (numEndN b i.toNat))))).arr64 B =
           m.arr64 B := fun B hB => Mem.arr64_set64_ne _ _ _ _ _ hB
     obtain ⟨i1, i2, i3, i4, i5, i6, i7⟩ := ih m' h
-      (by rw [size_set64, hc1]; omega) (by rw [size_set64]; exact hs)
+      (by rw [L.Mem.size64_set64, hc1]; omega) (by rw [L.Mem.size64_set64]; exact hs)
     rw [lsCntN_digit _ _ _ h1 h2 h3 h4, itemsN_digit _ _ h1 h2 h3 h4]
-    rw [size_set64] at i3
+    rw [L.Mem.size64_set64] at i3
     refine ⟨by rw [i1, hc1]; simp; omega, (MemFrame.set64 _ _ (by decide) _ _).trans i2, i3,
       fun j hj0 hj => ?_, fun k hk => ?_, ?_, i7⟩
     · rw [i4 j hj0 (by rw [hc1]; omega), arr_set64, htc]
@@ -195,10 +195,10 @@ theorem pushW_facts (m m' : Mem) (k n o l t v q h : Word) (c : Word)
   · exact MemFrame.set64' (MemFrame.ofRecM _ _ _ _ _ _ _ _ _ _) DECL (by decide) (by simp) _ _
   · rw [arr_set64, ite_eq_left ⟨by simp, by rw [hsR]; omega⟩]
   · rw [arr_set64]
-    simp only [recM, arr_set64, size_set64, e1, e2, e3, e4, e5, e6, e7, hx]
+    simp only [recM, arr_set64, L.Mem.size64_set64, e1, e2, e3, e4, e5, e6, e7, hx]
     simp only [show (0 : Word).toNat = 0 from rfl]
     repeat (first | rw [ite_eq_left (by omega)] | rw [ite_eq_right (by omega)])
-  · simp only [dw, arr_set64, recM, size_set64, e1, e2, e3, e4, e5, e6, e7, hx,
+  · simp only [dw, arr_set64, recM, L.Mem.size64_set64, e1, e2, e3, e4, e5, e6, e7, hx,
       show (0 : Word).toNat = 0 from rfl, true_and]
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
       (repeat (first | rw [ite_eq_left (by omega)] | rw [ite_eq_right (by omega)])) <;> rfl

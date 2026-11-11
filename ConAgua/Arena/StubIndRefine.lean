@@ -18,7 +18,7 @@ import all ConAgua.Arena.WhnfEntry
 # The fuel adapters and `er_sl_eq`
 
 The models of the fuel adapters `get_app_fn_f`, `pi_result_f` (`gaffW`, `pirfW`), `er_sl_eq`'s
-spec from its lookup alone (`erSlEq_spec'`) and `rdW_of_get`. (`ctor_family` is now the core's,
+spec from its lookup alone (`L.Arena.erSlEq_spec`) and `L.Checker.rdW_of`. (`ctor_family` is now the core's,
 `WhnfIota.lean`; the old model and its twin block, and `rec_rule_k_of`, `rec_rule_eta_of`,
 `rec_rule_bits`, left with the sync.)
 -/
@@ -67,22 +67,5 @@ theorem pirf_spec (p : Prog) (hp : p.lookup "pi_result_f" = some piResultFL) (n 
 
 theorem rdW_of_get {b : Array Word} {q : Word} {w : Word} (h : b[q.toNat]? = some w) : rdW b q = w := by
   simp [rdW, h]
-
-theorem erSlEq_spec' (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n : Nat) :
-    ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      r.headD 0 = if erSlEqB (erRd s₀.mem) o1 l1 o2 l2 then 1 else 0; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o1 l1 o2 l2; rw [invoke_eq _ hp]; simp only [callFn, L.Ind.erSlEq]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o1 l1 o2 l2
-    rw [invoke_eq _ hp]
-    simp only [callFn, L.Ind.erSlEq]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ih] <;>
-      finish (gen := 20) [rdW_eq, erRd]
 
 end L.Stubs

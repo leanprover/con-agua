@@ -85,7 +85,7 @@ theorem gf_sim (hG : GfLook p) {n : Nat} (hC : StageC dn vis fe env m a) (hA : A
     (fun s => generatedFire_spec p hG (K + 1) s M rP) hc
   have hsz : (m.arr64 IW).size < 2 ^ 64 := hC.stage.iw.iwSize
   obtain ⟨k8, hk8, hmem⟩ := decTM_member (show decTM (truncM m) M.toNat = some TM from hM)
-  obtain ⟨-, hk8⟩ := rec2IwN_trunc hk8
+  obtain ⟨-, hk8⟩ := L.Ind.iwN_truncM_some hk8
   obtain ⟨e8, e8N⟩ := rec2RdN (w := M) (k := 8) hk8 hsz
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl] at e8
   -- the twin's run, its step and its fire's denotation
@@ -104,7 +104,7 @@ theorem gf_sim (hG : GfLook p) {n : Nat} (hC : StageC dn vis fe env m a) (hA : A
       simp only [h2, gfW.k_aux_rule_fire, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at c'
     obtain ⟨rfl, rfl⟩ := c'
     obtain ⟨x, a2, hrun, ⟨hS2, hg2, hdec⟩, hA2⟩ :=
-      arfW_sim dn vis fe K m a M rP TM hC.stage hM (rcPoolSmall hC.stage) hA (r2, m2) h2
+      arfW_sim dn vis fe K m a M rP TM hC.stage hM (L.Ind.poolSmall_of_stage hC.stage) hA (r2, m2) h2
     have hr : (ConRon.Arena.generatedFire TM rP.toNat).run a = .ok (x, a2) := by
       simp only [ConRon.Arena.generatedFire, hmem, decON, ↓reduceIte]; exact hrun
     obtain ⟨ps, -⟩ := ConRon.Bridge.Inductives.generatedFire_run hC.check.state hMP hr

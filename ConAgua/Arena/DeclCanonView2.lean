@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.LevelArena
 import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -10,6 +9,7 @@ import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.IndCopy
 public import ConAgua.Arena.LevelEquiv
 import all ConAgua.Arena.IndIface
+import ConAgua.Arena.InferLeaves
 
 @[expose] public section
 
@@ -190,15 +190,8 @@ theorem lsView_of_lsNodeW {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word}
       rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
     simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
 
-theorem viewLs_run' (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
-    (viewLs h).run a = .ok (ids, a) := by
-  simp [viewLs, hv, StateT.run_bind, StateT.run_get]; rfl
-
 
 theorem lsWords_length (ids : List LIdx) : (lsWords ids).length = ids.length := by simp [lsWords]
-
-theorem nidx_word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
-  simp only [UInt32.toNat_toUInt64]; exact x.word.toNat_lt
 
 theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
     (hb : l = 0 ∨ o + l ≤ P.size) (h : sliceL P o l = lsWords ids) :
@@ -220,7 +213,7 @@ theorem hslice_sliceL {P : Array Word} {o l : Nat} {ids : List LIdx}
         rw [← e2]
         simp only [h]
         simp only [lsWords, List.getElem_map]
-        exact nidx_word_lt32 _
+        exact L.Arena.idx_word_lt32 _
       simp only [hd?, aread_apply, e1, Option.getD_some] at hw ⊢
       simp [hw]
     have := mapM_some_of (fun j => (hd? (aread P) (o + j) : Option LIdx)) (fun j => (decI (P[o + j]?.getD 0) : LIdx))
@@ -291,7 +284,7 @@ theorem viewLsW_ok {vis : Word} {fe : IFEnv} {a : AState}
     exact hslice_sliceL (.inr (by rw [vpool_size]; omega)) hsl
   have hroom2 : iwTop m2 ≤ (m2.arr64 IW).size := by rw [htop', hS2]; omega
   have hSt : StageR vis fe m2 a := ⟨CheckR.frame_iw hfr hS.check, IWOK.of_iw hfr hS.iw hroom2⟩
-  refine ⟨ids, viewLs_run' _ _ _ hv, hSt, hgrow, ⟨?_, ?_⟩, ?_⟩
+  refine ⟨ids, L.Arena.viewLs_run _ _ _ hv, hSt, hgrow, ⟨?_, ?_⟩, ?_⟩
   · simpa using hdec
   · show q.toNat + l.toNat ≤ iwTop m2
     omega

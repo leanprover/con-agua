@@ -12,7 +12,6 @@ import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.IndT.RecsTemp
 import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.ScratchRefine
-import ConAgua.Arena.IndT.GenRec1
 import ConAgua.Arena.IndT.PassCS
 import ConAgua.Arena.IndInstallSpec.PapW
 import ConAgua.Arena.IndInstallSpec.IcvgW
@@ -132,7 +131,7 @@ theorem skc_ref {p : Prog} (hL : CbrLook p) {G : Prop} (pp : Word) (bs : BlockSh
   obtain ⟨cvp, -, cv', -, mp, hmp, TM', hTM', rh', -, he⟩ := hgd0
   simp only [Prod.mk.injEq] at he
   obtain ⟨-, rfl, -⟩ := he
-  obtain ⟨-, hmpm⟩ := rec2IwN_trunc hmp
+  obtain ⟨-, hmpm⟩ := L.Ind.iwN_truncM_some hmp
   obtain ⟨e1, t1⟩ := rec2RdN (w := rdW (m.arr64 IW) go) (k := 1) hmpm hsz
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at e1
   have hM : DecB (fun m => decTM m (UInt64.ofNat mp : Word).toNat) m TM' := by
@@ -204,8 +203,8 @@ theorem recsPSl {m : Mem} {pp : Word} {bs : BlockShape} (hbs : DecB (fun m => de
   have hbs0 : decBS (truncM m) pp.toNat = some bs := hbs
   obtain ⟨-, hrecs, -⟩ := decBS_some hbs0
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hrecs
-  obtain ⟨-, hom⟩ := rec2IwN_trunc ho
-  obtain ⟨-, hlm⟩ := rec2IwN_trunc hl
+  obtain ⟨-, hom⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨-, hlm⟩ := L.Ind.iwN_truncM_some hl
   obtain ⟨e2, t2⟩ := rec2RdN (w := pp) (k := 2) hom hsz
   obtain ⟨e3, t3⟩ := rec2RdN (w := pp) (k := 3) (by simpa [Nat.add_assoc] using hlm) hsz
   simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
@@ -327,7 +326,7 @@ theorem ts_ref {p : Prog} {dn : NIdx → Option ConLeche.Name} {G : Prop} (hG : 
     (⟨p2.ok, hC.check.pins.mono p2.ext p2.pins, hienvG⟩ : ConRon.Bridge.Inductives.ReadOK _ _ a2) hrun4
   have hx4 : ConRon.Arena.Ext a.store a4.store := by rw [hst4]; exact p2.ext
   have hg04 := (hg2.trans hg3).trans hg4
-  have hC4 : StageC dn (r3.headD 0) feG _ m4 a4 := StageC.of_checkE hC hS4 hA4 hck4 hx4
+  have hC4 : StageC dn (r3.headD 0) feG _ m4 a4 := L.Ind.StageC.ofView hC hS4 hA4 hck4 hx4
   -- the stream's recursors
   have hbs4 := hbs.grow (decBS_mono _) hg04
   have hrb4 := hrb.grow hg04 hp3
@@ -366,7 +365,7 @@ theorem ts_ref {p : Prog} {dn : NIdx → Option ConLeche.Name} {G : Prop} (hG : 
   obtain ⟨hck7, i7, hst7⟩ := ConRon.Bridge.Inductives.ReadOK.flush
     (⟨hP5.core.ok.state, hP5.core.ok.pins, hrel₃.ifenv⟩ : ConRon.Bridge.Inductives.ReadOK _ _ a5) hrun7
   have hx7 : ConRon.Arena.Ext a.store a7.store := by rw [hst7]; exact hx5
-  refine RefE.ret rfl ⟨StageC.of_checkE hC hS7 hA7 hck7 hx7, by rw [hst7]; exact hrel₃,
+  refine RefE.ret rfl ⟨L.Ind.StageC.ofView hC hS7 hA7 hck7 hx7, by rw [hst7]; exact hrel₃,
     hg04.trans (hg5.trans (hg6.trans hg7)), hA7, hRc _ (by simp) _ _ _ _ _ c7 hR6, ?_⟩
   exact ((p2.toInst.trans i4).trans (hP5.core.toInst)).trans i7
 

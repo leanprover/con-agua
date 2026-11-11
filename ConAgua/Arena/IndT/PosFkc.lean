@@ -13,7 +13,6 @@ import ConRon.Bridge.Inductives.Positivity
 import ConRon.Bridge.ExprOps.Inst1
 import ConAgua.Arena.IlpRdReal
 import ConAgua.Arena.IndPosSpec.FgW
-import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import ConRon.Bridge.Inductives.FieldTele
 import ConRon.Bridge.Inductives.PosWalks
 import ConAgua.Arena.WhnfCoreProj
@@ -270,7 +269,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     obtain ⟨cv', h1, _, _, h2⟩ := hci
     cases h2; exact h1
   obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
-  have hq64 := erecP_lt64 hv16
+  have hq64 := L.Arena.erecP_lt64 hv16
   have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e12 : (q + 3).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
@@ -328,7 +327,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     rw [e1]; exact hg3.ext.decCV hcv
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
   dsimp only [fkcE.k_cv_lps]
-  obtain ⟨hS5, hg5, -, hdec5, -⟩ := pos2_cvLpsW_stage hlp hS3 hcv4 (by rw [e1]; omega)
+  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS3 hcv4 (by rw [e1]; omega)
   have hg35 := hg3.trans hg5
   -- `inst_lp_fast`
   refine RefE.bindLift (fun _ => rfl) fun r6 m6 hil => ?_

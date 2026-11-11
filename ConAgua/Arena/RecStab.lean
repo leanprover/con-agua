@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.IndInstallSpec.DomsW
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndCopy2
 
@@ -177,7 +176,7 @@ theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : L
   · rw [hl1, decNL_snoc]
     have h1 : decNL (m2.set64 IW (q + l) x) q.toNat l.toNat = some xs := by
       rw [← hxs]; simp only [decNL]
-      apply mapM_opt_congr
+      apply L.Ind.mapM_congr_of
       intro j hj
       have hj' : j < l.toNat := List.mem_range.mp hj
       simp only [iwN, nat?, iwA, aread_apply, hget]

@@ -6,6 +6,7 @@ public import ConAgua.Checker.HoistClosureTwin
 import ConRon.Bridge.Grind
 public import ConAgua.Checker.HoistRefBase
 import ConAgua.L.WordOff
+import ConAgua.Checker.HoistOrderRef3
 
 @[expose] public section
 
@@ -161,11 +162,6 @@ theorem set64_addr (m : Mem) (x : Word) (k : Nat) (v : Word) (h : x.toNat + k < 
     (m.set64 IW (x + UInt64.ofNat k) v).arr64 IW = (m.arr64 IW).set! (x.toNat + k) v := by
   rw [Mem.arr64_set64_same, L.toNat_add_ofNat_of_lt x k h]
 
-theorem tgW_ne_zero (t : Nat) (h : t + 1 < 2 ^ 64) : tgW (some t) ≠ 0 := by
-  intro e
-  have := congrArg UInt64.toNat e
-  simp only [tgW, UInt64.toNat_ofNat', Nat.mod_eq_of_lt h] at this; simp at this
-
 /-- A nodup list of positions below `c`, all marked, and one more unmarked position below `c`:
 the list is shorter than `c`. -/
 theorem nodup_len_lt {S : List Nat} {c j : Nat} (hS : S.Nodup) (hlt : ∀ x ∈ S, x < c)
@@ -238,7 +234,7 @@ theorem note_ok {m m' : Mem} {a : AState} {ds : Array IDeclaration} {idx : Std.H
       rw [htgj, hrd]
       cases hTj : T[j]? with
       | none => simp [tgW]
-      | some t => simp only [reduceCtorEq, iff_false]; exact tgW_ne_zero t (by have := hTv j t hTj; omega)
+      | some t => simp only [reduceCtorEq, iff_false]; exact L.Checker.tgW_some_ne t (by have := hTv j t hTj; omega)
     by_cases hcond : i < j ∧ j ≠ k ∧ T[j]? = none
     · obtain ⟨h1, h2, h3⟩ := hcond
       rw [hNoteW.k_hoist_ix.arm1 _ _ _ _ _ _ _ ⟨by
@@ -619,7 +615,7 @@ theorem closure_ok {a : AState} {ds : Array IDeclaration} {idx : Std.HashMap NId
     | none => rfl
     | some t =>
       rw [hrd, e] at hm
-      exact absurd (tgW_ne_zero t (by have := hTv j t e; omega)) hm
+      exact absurd (L.Checker.tgW_some_ne t (by have := hTv j t e; omega)) hm
   -- the first push
   have e1 := set64_addr m tg j (UInt64.ofNat i + 1) (by omega)
   have e2 : ((m.set64 IW (tg + UInt64.ofNat j) (UInt64.ofNat i + 1)).set64 IW ws

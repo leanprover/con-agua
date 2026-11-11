@@ -54,7 +54,7 @@ open L.Arena
 
 /-- The stage relation across a writer above array 136 and `CTL[129]` that leaves the pool alone
 (`IndPosSpec/MatesW`'s `StageR.frame_hi`, which sits above this file). -/
-theorem stageR_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem StageR.frame_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
     (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
@@ -222,7 +222,7 @@ theorem ftdsGoW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
       have hqk : (q + k).toNat = q.toNat + k.toNat := by
         rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
       have hsz2 : ((m.set64 IW (q + k) (r1.headD 0)).arr64 IW).size = (m.arr64 IW).size :=
-        size_set64 _ _ _ _ _
+        L.Mem.size64_set64 _ _ _ _ _
       obtain ⟨rfl, ws, hm', hlen, hws, hrun⟩ := ih _ _ _ _ h (hS.set_iw _ _) (by omega)
         (by rw [hsz2]; exact hroom) (fun j hj1 hj2 => by
           rw [← hin j (by omega) hj2, rdW_set64]
@@ -325,7 +325,7 @@ theorem fillW_okR (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
       omega
     obtain ⟨m₁, hm₁⟩ : ∃ m₁, m₁ = m.set64 SPN (o + j.toUInt64) (argW m e) := ⟨_, rfl⟩
     rw [← hm₁]
-    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact size_set64 _ _ _ _ _
+    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨m', hf, hfr, hget, hout⟩ := ih k' m₁ (fnW m e) (by omega) (by rw [hsz₁]; omega)
       (by omega)
     have hset : spW m₁ (o + j.toUInt64) = argW m e := by
@@ -433,7 +433,7 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hsp : ∀ w : Word, spW s'.mem w = spW m₂ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; exact hfr.size SPN
+    rw [← hm, L.Mem.size64_set64]; exact hfr.size SPN
   have hcN' : (r₁.headD 0).toNat = coreWalkFuel - f'.toNat := hcw
   refine ⟨?_, ?_, _, hrun', ?_, ?_⟩
   · rw [← hm]
@@ -570,7 +570,7 @@ theorem gaaF_frame {m m' : Mem} {args r : List Word} (h : gaaF m args = some (r,
 
 /-- **`get_app_args_f`'s model refines `getAppArgs`** (replaces `IndStubs.getAppArgs_spec`):
 `get_app_args` (`getAppArgs_refinesR`), the stack slice into a fresh pool slice
-(`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`stageR_hi`). -/
+(`s2iW_wr`, `recPost_wr`, `slice_keep`), the stack top put back (`StageR.frame_hi`). -/
 theorem gaaF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e : Word) (he : H e) :
     RelW gaaF [f, e] (StageR vis fe) (getAppArgs f.toNat (decI e))
       (KeepPost vis fe (decRL (fun m => decHL m) 0)) := by
@@ -599,7 +599,7 @@ theorem gaaF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨t1, ht1, -, hfr1, hr0, xs, hrun, hsp, hb64⟩ := triple_of_callW
     (getAppArgs_refinesR gaaProg rfl rfl rfl k ⟨m, Locals.init []⟩ a hS.check.arena.base e he) c1
   rw [ht1] at hfr1 hsp
-  obtain ⟨hS1, hg1⟩ := stageR_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
+  obtain ⟨hS1, hg1⟩ := L.Ind.StageR.frame_hi hS hfr1 (by simp [SPN]) (by simp) (by decide) (by decide)
   -- the fresh slice
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   obtain ⟨hq, rfl, hroom⟩ := allocW_facts ha hsz1
@@ -640,7 +640,7 @@ theorem gaaF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [hxs] at hK
   obtain ⟨hS3, hg3, hdec⟩ := hK
   -- the top put back
-  obtain ⟨hS4, hg4⟩ := stageR_hi hS3 (MemFrame.setCtl m3 136 top) (by simp) (by simp) (by decide)
+  obtain ⟨hS4, hg4⟩ := L.Ind.StageR.frame_hi hS3 (MemFrame.setCtl m3 136 top) (by simp) (by simp) (by decide)
     (by decide)
   have hI4 : (m3.set64 CTL 136 top).arr64 IW = m3.arr64 IW := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   have ht4 : iwTop (m3.set64 CTL 136 top) = iwTop m3 := by

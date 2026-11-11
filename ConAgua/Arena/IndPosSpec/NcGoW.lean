@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPosSpec.DpGoW
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Arena.EtaRescueRef
 
 @[expose] public section
 
@@ -43,24 +44,6 @@ l_model nc_spec (p : Prog) (hl : NtLook p)
   specs [iwAlloc_specW p hl.ha n, ncGo_spec p hl n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-
-theorem decCI_ctor_cv {a : Nat → Option Word} {p : Nat}
-    {cv : IConstantVal} {nPc nF : Nat} (h : decCI a p = some (.ctorInfo cv nPc nF)) :
-    decCV a (p + 1) = some cv := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  match k, h with
-  | 0, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 1, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 2, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 3, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 4, h =>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv', h1, _, _, _, _, h2⟩ := h
-    cases h2; exact h1
-  | 5, h => simp_all [Option.bind_eq_some_iff, Option.some.injEq]
-  | 6, h => simp_all []
-  | (_ + 7), h => simp_all
 
 theorem CNOk.agree {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} {P : Nat → Prop} (h : CNOk m p x P)
     (hR : RdS m m' P) (hE : ArrExt (erecP m) (erecP m')) : CNOk m' p x P := by
@@ -265,7 +248,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
           obtain ⟨rfl, rfl, rfl⟩ := this; rfl
         | _ => exact absurd hrun1 (by simp [ConRon.Arena.nestCtorEntry, StateT.run, StateT.pure, pure, Except.pure])
       subst hci'
-      have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := decCI_ctor_cv hci
+      have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := L.Arena.decCI_ctor_cv hci
       have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
         L.toNat_add_of_lt _ _ (show ciq.toNat + 1 < 2 ^ 64 by
           obtain ⟨_, e⟩ := decCV_rd hcvE; have := erecP_lt64 e; simpa using this)

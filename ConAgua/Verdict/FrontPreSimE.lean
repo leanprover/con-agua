@@ -153,6 +153,8 @@ import all ConAgua.Scan.Values
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndStream
+import ConAgua.Compiler.InlineCorrect
+import ConAgua.Compiler.Main
 
 @[expose] public section
 
@@ -232,13 +234,13 @@ theorem NoAb.ld32 (a : TieredArray) (j : Word) : NoAb (ld32 a j) := by
   intro s e h; rw [ld32_run] at h; split at h <;> cases h; rfl
 
 theorem NoAb.st32 (a : TieredArray) (j v : Word) : NoAb (st32 a j v) := by
-  intro s e h; rw [st32_run] at h; split at h <;> cases h; rfl
+  intro s e h; rw [_root_.L.Compiler.Inl.st32_run] at h; split at h <;> cases h; rfl
 
 theorem NoAb.st8 (a : ArrId) (j v : Word) : NoAb (st8 a j v) := by
-  intro s e h; rw [st8_run] at h; split at h <;> cases h; rfl
+  intro s e h; rw [_root_.L.Compiler.Inl.st8_run] at h; split at h <;> cases h; rfl
 
 theorem NoAb.st64 (a : TieredArray) (j v : Word) : NoAb (st64 a j v) := by
-  intro s e h; rw [st64_run] at h; split at h <;> cases h; rfl
+  intro s e h; rw [_root_.L.Compiler.Inl.st64_run] at h; split at h <;> cases h; rfl
 
 macro "noab" : tactic => `(tactic| repeat (first
   | assumption
@@ -519,7 +521,7 @@ theorem preSimE {p : Prog} {t : NTree} {S : FnName → Bool} (hP : PreSimProg p 
 prog_all checkerProg_abNoInAll : checkerProg (fun x => x.2.body.abNoIn)
 
 theorem checkerProg_abNoIn : AbNoIn checkerProg :=
-  fun _ _ hl => checkerProg_abNoInAll _ (mem_of_lookup hl)
+  fun _ _ hl => checkerProg_abNoInAll _ (L.Compiler.mem_of_lookup hl)
 
 /-- **`pre_front_run` fails as `front_run` on the prelude's bytes** (errors of nonzero class). -/
 theorem preFrontRun_errSim (n : Nat) (s : St) (e : Err)

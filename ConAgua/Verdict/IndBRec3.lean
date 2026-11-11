@@ -125,9 +125,9 @@ theorem rts_ref (g k : Word) (G : ClassGen) (hns : G.nP + G.slots.length < 2 ^ 6
   obtain ⟨c0, hc0, cs', hcsT, rfl⟩ := hcs'
   obtain ⟨rcP, rcsP', rfl, hrcP, hrcsP'⟩ := mapM_option_cons_inv hrcsP
   obtain ⟨cvP, cvsP', rfl, hcvP, hcvsP'⟩ := mapM_option_cons_inv hcvsP
-  obtain ⟨hpt, hpm⟩ := rec2IwN_trunc hpp
-  obtain ⟨hpvt, hpvm⟩ := rec2IwN_trunc hpv
-  obtain ⟨hc0t, hc0m⟩ := rec2IwN_trunc hc0
+  obtain ⟨hpt, hpm⟩ := L.Ind.iwN_truncM_some hpp
+  obtain ⟨hpvt, hpvm⟩ := L.Ind.iwN_truncM_some hpv
+  obtain ⟨hc0t, hc0m⟩ := L.Ind.iwN_truncM_some hc0
   obtain ⟨ep, tp⟩ := rec2RdN (w := ro) (k := 0) (by simpa using hpm) hsz
   obtain ⟨ev, tv⟩ := rec2RdN (w := vo) (k := 0) (by simpa using hpvm) hsz
   obtain ⟨ec, tc⟩ := rec2RdN (w := co) (k := 0) (by simpa using hc0m) hsz

@@ -130,7 +130,7 @@ theorem cert_ref (hq : KnotStageProg p) (o l : Word) (ps : List (EIdx × EIdx)) 
       (fun b h1 => hq.isDefEqCore_sim k hk' hS 2 ea eb hea heb b.1 b.2 h1)
       fun r1 m1 x1 a1 _ _ ⟨hS1, hg1, hx1⟩ => ?_
     rw [certifyNatEqsE.k_is_def_eq_core.eq_2]
-    refine RefE.retIf (fun hz => hx1 ▸ decBool_f_m2c hz) (fun hb => by simpa [← hx1, decBool] using hb)
+    refine RefE.retIf (fun hz => hx1 ▸ L.Arena.decBool_false_of hz) (fun hb => by simpa [← hx1, decBool] using hb)
       (fun _ => ⟨hS1, hg1, by simp [decW0B]⟩) fun _ _ => ?_
     have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hl1 : (l - 1).toNat = l.toNat - 1 := by

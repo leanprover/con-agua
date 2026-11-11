@@ -12,6 +12,7 @@ import ConAgua.Arena.RecClassSpec.CloseLams
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -123,7 +124,7 @@ theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   have hT : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
   rw [L.ofNat_toNat, L.ofNat_toNat] at hs1
-  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
+  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [L.Ind.decHL_grow hg1 hlb]; exact hl
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
   rw [L.ofNat_toNat, L.ofNat_toNat] at hs2
   have hres := eqW_ok n m1 _ _ _ _ e ws1 ws2 hs1 hs2 he
@@ -156,13 +157,13 @@ theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     by_cases hc : ctl = 0
     · rw [bpfW.arm1 n m cto ctl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hc; rw [partsPSl_nil hts]
+      subst hc; rw [L.Ind.pslR_nil hts]
       exact ⟨hS, IWGrow.refl _, rfl⟩
     rw [bpfW.arm2 n m cto ctl lo ll hc] at h; simp only [erRd_foldN] at h
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hc
     rw [hw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) hcv hpb
-    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpfW.k_reserved_contains])
+    obtain ⟨b, hb, h⟩ := L.Arena.of_K h (by simp [bpfW.k_reserved_contains])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
@@ -175,7 +176,7 @@ theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpfW.k_er_to_iw])
     rw [bpfW.k_er_to_iw.arm1] at h
-    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpfW.k_sl_eq])
+    obtain ⟨e, he, h⟩ := L.Arena.of_K h (by simp [bpfW.k_sl_eq])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS hcv hpb hl hlb
     by_cases he0 : e = 0
     · rw [bpfW.k_sl_eq.arm1 (hc1 := he0)] at h
@@ -189,7 +190,7 @@ theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     rw [bpfW.k_block_shape_pins_formers.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cto + 1) (ctl - 1) ts' r2 h2 hS1 (hts'.grow (fun _ => OMono.decCVp _) hg1)
-      (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
+      (by rw [L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     rw [hr2]; simp only [List.all_cons, hcn, heq, Bool.not_false, Bool.true_and]; rfl
 
@@ -206,7 +207,7 @@ theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
     by_cases hc : rl = 0
     · rw [bprW.arm1 n m ro rl hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hc; rw [partsPSl_nil hrs]
+      subst hc; rw [L.Ind.pslR_nil hrs]
       exact ⟨rfl, rfl⟩
     rw [bprW.arm2 n m ro rl hc] at h; simp only [erRd_foldN] at h
     obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hc
@@ -249,7 +250,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
     by_cases hc : csl = 0
     · rw [bpcW.arm1 n m nP cso csl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hc; rw [partsPSl_nil hcs]
+      subst hc; rw [_root_.L.Ind.pslR_nil hcs]
       exact ⟨hS, IWGrow.refl _, rfl⟩
     obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hc
     have hd0 : decSC (truncM m) pc = some (cv0, nP0, nF0) := hc0
@@ -279,7 +280,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
       rw [hw, hpw1] at hnp; exact hnpeq.mp (by simpa using hnp)
     rw [hw, hcw] at h
     obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    obtain ⟨b, hb, h⟩ := ipK_inv1 h (by simp [bpcW.k_reserved_contains])
+    obtain ⟨b, hb, h⟩ := _root_.L.Arena.of_K h (by simp [bpcW.k_reserved_contains])
     obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
     rw [partsResR hR hR', hne] at hbv
     by_cases hb0 : b ≠ 0
@@ -292,7 +293,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
     have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
     obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpcW.k_er_to_iw])
     rw [bpcW.k_er_to_iw.arm1] at h
-    obtain ⟨e, he, h⟩ := ipK_inv1 h (by simp [bpcW.k_sl_eq])
+    obtain ⟨e, he, h⟩ := _root_.L.Arena.of_K h (by simp [bpcW.k_sl_eq])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb hl hlb
     by_cases he0 : e = 0
     · rw [bpcW.k_sl_eq.arm1 (hc1 := he0)] at h
@@ -306,7 +307,7 @@ theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
     rw [bpcW.k_block_shape_pins_ctors.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cso + 1) (csl - 1) cs' r2 h2 hS1 (hcs'.grow decSC_mono hg1)
-      (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
+      (by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     rw [hr2]; simp only [List.all_cons, hcn, heq, hnpt, Bool.not_false, Bool.true_and, Bool.and_true]; rfl
 
@@ -357,7 +358,7 @@ theorem bpoW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   · cases h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨hS3, hg3, hrc⟩ := bpcW_ok hR n m1 m3 cso csl cs rc h3 hS1 (hcs.grow decSC_mono hg1)
-    (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
+    (by rw [L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
   refine ⟨hS3, hg1.trans hg3, ?_⟩
   rw [hat, hbt, hrc]; simp only [Bool.true_and]; rfl
 
@@ -412,7 +413,7 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   obtain ⟨e, he, relps, hrel, rfl⟩ := hsl
   obtain ⟨w, hw, hwl, hwe⟩ := hd?_some he
   have hw' := truncM_er_get hw
-  have hrdw : erRd m (UInt64.ofNat o') = w := erRd_of_erA (by rw [UInt64.toNat_ofNat_of_lt' hw1b]; exact hw')
+  have hrdw : erRd m (UInt64.ofNat o') = w := _root_.L.Arena.erRd_of _ _ (by rw [UInt64.toNat_ofNat_of_lt' hw1b]; exact hw')
   have hrdw' : rdW (m.arr64 (tierA EREC (UInt64.ofNat o' >>> 40))) (UInt64.ofNat o' &&& 1099511627775) = w :=
     hrdw
   rw [hrdw'] at h
@@ -440,7 +441,7 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
   obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
   rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs1
-  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
+  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl
   obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.iw; omega)
   rw [_root_.L.ofNat_toNat, _root_.L.ofNat_toNat] at hs2
   have hres := eqW_ok n m1 _ _ _ _ ev ws1 ws2 hs1 hs2 he1
@@ -513,7 +514,7 @@ theorem bsnW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     by_cases hl : ctl = 0
     · rw [bsnW_nil n m cto ctl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl; rw [partsPSl_nil hts]
+      subst hl; rw [L.Ind.pslR_nil hts]
       exact ⟨hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
     rw [bsnW_cons n m cto ctl hl] at h
     obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl
@@ -554,7 +555,7 @@ theorem bctW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     by_cases hl : csl = 0
     · rw [bctW.arm1 n m cso csl hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl; rw [partsPSl_nil hcs]
+      subst hl; rw [L.Ind.pslR_nil hcs]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _⟩
     rw [bctW.arm2 n m cso csl hl] at h
     obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
@@ -629,7 +630,7 @@ theorem bmoW_ok {vis : Word} {fe : IFEnv} (n : Nat) :
     by_cases hl : ctl = 0
     · rw [bmoW.arm1 n m cto ctl io go hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hl; rw [partsPSl_nil hts]
+      subst hl; rw [L.Ind.pslR_nil hts]
       exact ⟨hS, IWGrow.refl _, PSlR.nil _ _⟩
     rw [bmoW.arm2 n m cto ctl io go hl] at h
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hl
@@ -727,7 +728,7 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     intro m a ro rl rs hS hrs hnm hnb
     by_cases hl : rl = 0
     · rw [brsW.arm1 n m no nl ro rl hl]
-      subst hl; rw [partsPSl_nil hrs]
+      subst hl; rw [L.Ind.pslR_nil hrs]
       exact Sim.ret ⟨PSlR.nil _ _, hS, IWGrow.refl _⟩
     rw [brsW.arm2 n m no nl ro rl hl]
     simp only [erRd_foldN]
@@ -791,7 +792,7 @@ theorem brsW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
       have hcv3 : decCVp (truncM m3) cvp = some cv :=
         (show DecB (fun m => decCVp m cvp) m cv from hcv).grow (OMono.decCVp _) hg03
       have hru3 : decRules (erA (truncM m3)) ro' rl' = some rules :=
-        (show DecB (fun m => decRules (erA m) ro' rl') m rules from hru).grow (partsDecRules_mono _ _) hg03
+        (show DecB (fun m => decRules (erA m) ro' rl') m rules from hru).grow (L.Ind.OMono.decRules _ _) hg03
       simp only [decRS, g0, g1, g2, g3, g4, g5, g6, hcv3, hru3, bind, Option.bind_some, pure]
     revert r m' e
     refine Sim.bindK (brsW.k_block_shape_recs_of.none ..) (fun _ _ => brsW.k_block_shape_recs_of.arm1 ..)
@@ -852,7 +853,7 @@ theorem bsoW_sim {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
   have hk : (nP + getDW m io il 0 0).toNat = nP.toNat + ns.headD 0 := by
     rw [L.toNat_add_of_not_lt hov, getDW_head hns hb]
   revert r m' e
-  have h1 := partsSimW (stripF_pis_ok vis fe (nP + getDW m io il 0 0) ty hty) hS
+  have h1 := L.Ind.RelW.simS (stripF_pis_ok vis fe (nP + getDW m io il 0 0) ty hty) hS
   rw [hk] at h1
   unfold bsoTwin
   refine Sim.bindK rfl (fun _ _ => by rw [bsoW.k_strip_pis]) h1 ?_
@@ -1180,7 +1181,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   have hctl : cvTs.length = ctl.toNat := decPL_length _ hts.dec
   -- `cvR0`, read first
   have hrl : rsl ≠ 0 := by
-    intro e; subst e; exact absurd (partsPSl_nil hrs) (by simp)
+    intro e; subst e; exact absurd (_root_.L.Ind.pslR_nil hrs) (by simp)
   obtain ⟨pc, r0', rs', he, hw, hpb, hr0, -⟩ := partsPSl_cons hrs hrl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
   obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decSR_fields (show decSR (truncM m) pc = some (r0.1, r0.2.1, r0.2.2.1, r0.2.2.2.1, r0.2.2.2.2) from hr0)
@@ -1197,7 +1198,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   unfold finRest
   -- `param_levels`
   refine Sim.bindK rfl (fun _ _ => by rw [bbK9])
-    (plW_sim hS1 (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)) ?_
+    (plW_sim hS1 (by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)) ?_
   rintro r2 lvls m2 a2 ⟨hlh, hlv, hS2, hg2⟩
   have hg02 := hg1.trans hg2
   -- `block_groups`
@@ -1234,7 +1235,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   · cases e
   simp only [bbK13'] at e
   obtain ⟨hS6, hg6, hlg⟩ := bslW_ok h6 hS5 (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact (show DecB (fun m => decCVp m cvp) m r0.1 from hcv).grow (OMono.decCVp _) hg05)
-    (by rw [decHL_grow3 hg05 hlb]; exact hl) (Nat.le_trans hlb hg05.iw)
+    (by rw [_root_.L.Ind.decHL_grow hg05 hlb]; exact hl) (Nat.le_trans hlb hg05.iw)
   have hlg' : LargeR (largeOf lps r0.1) [r6.headD 0, r6.tail.headD 0] := by
     cases hx : largeOf lps r0.1 <;> rw [hx] at hlg <;> exact hlg
   revert r m' e
@@ -1268,7 +1269,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       (tailJP nPd.toNat nIdxs cvT0.type
         (finJP nPd.toNat (cvT0 :: cvTs) nIdxs cvT0.levelParams cs (r0 :: rs) r0.1)) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
-  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
+  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (_root_.L.Ind.pslR_nil hts) (by simp)
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
   obtain ⟨htyl, htye⟩ := partsCVType hcv0 (UInt64.toNat_ofNat_of_lt' hpb)
@@ -1298,7 +1299,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hg02 := hg1.trans hg2
   refine Sim.k3 (bfW_sim n hS2 (hts.grow (fun _ => OMono.decCVp _) hg02) (hcs.grow decSC_mono hg02)
     (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.iw)
-    (hns.grow (OMono.decNL _ _) hg02) (Nat.le_trans hnsb hg02.iw) (by rw [decHL_grow3 hg02 hlb]; exact hl)
+    (hns.grow (OMono.decNL _ _) hg02) (Nat.le_trans hnsb hg02.iw) (by rw [_root_.L.Ind.decHL_grow hg02 hlb]; exact hl)
     (Nat.le_trans hlb hg02.iw) hs hsv (lvlEq_prop rfl hd2)) ?_
   rintro r x m3 a3 ⟨hR, hS3, hg3⟩
   exact ⟨by cases x <;> exact hR, hS3, hg02.trans hg3⟩
@@ -1388,7 +1389,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     (hc : LvlHyp c n dn vis fe m (TbbT nPd.toNat cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a)) :
     Sim (bbW c n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
-  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
+  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (_root_.L.Ind.pslR_nil hts) (by simp)
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
@@ -1457,7 +1458,7 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   refine Sim.k3 (btW_sim c n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
     (hrs.grow decSR_mono hg04) ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4)))
     (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).iw) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
-    (Nat.le_trans hb2 (hg3.trans hg4).iw) (by rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3)
+    (Nat.le_trans hb2 (hg3.trans hg4).iw) (by rw [_root_.L.Ind.decHL_grow hg4 (Nat.le_of_eq ht3)]; exact hd3)
     (Nat.le_trans (Nat.le_of_eq ht3) hg4.iw)
     (hc.mono ((bsnW_afr _ _ _ _ _ _ h1).trans ((bmcW_afr he2).trans ((erToIwW_afr h3).trans (bpoW_afr h4))))
       (fun sv a1 h => ⟨nIdxs, a2, _, a2, hrun2, hRrun, h⟩))) ?_

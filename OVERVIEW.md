@@ -827,7 +827,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
 3. **The refinement**: under the arena relation, a model that returns `z`
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
-   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L271-L276),
+   ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L266-L271),
    against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L136-L153)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
@@ -1057,7 +1057,7 @@ other accesses keep their checks.
 The proof is part of the compiler's: every run of `exec p n` keeps the arrays'
 sizes and the locals a statement does not write, and ends a statement normally
 only with the facts after it true
-([`fsound_exec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BcePost.lean#L439-L444));
+([`fsound_exec`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/BcePost.lean#L436-L441));
 the statement simulation carries the facts of the current statement, the
 expression simulation those of the statement's state on the locals the
 expression reads

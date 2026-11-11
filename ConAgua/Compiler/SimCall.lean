@@ -718,9 +718,9 @@ theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.l
   rdW_congr fun j hj => by
     have := hG.hi_le
     rw [A_add]
-    exact hP.same _ (by omega) (by omega) (hG.notStack_of_arr' ⟨by omega, by omega⟩)
+    exact hP.same _ (by omega) (by omega) (hG.stack_arr _ ⟨by omega, by omega⟩)
       (fun hr => hG.notStack_of_res hr ⟨by omega, by omega⟩)
-      fun hg => hG.notStack_of_tab hg.tab ⟨by omega, by omega⟩
+      fun hg => hG.tab_stack _ hg.tab ⟨by omega, by omega⟩
 
 theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
     SimS p G sk (stepRun p K) P (.ret es) := by

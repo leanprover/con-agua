@@ -91,7 +91,7 @@ theorem hZero_ok (n : Nat) : ∀ (m m' : Mem) (o c k r : Word),
     · rw [hZeroW.arm2 n m o c k hck] at h
       rw [word_le] at hck
       have hk1 := @L.toNat_add_one_of_lt k (by omega)
-      have hs1 : ((m.set64 IW (o + k) 0).arr64 IW).size = (m.arr64 IW).size := size_set64 _ _ _ _ _
+      have hs1 : ((m.set64 IW (o + k) 0).arr64 IW).size = (m.arr64 IW).size := L.Mem.size64_set64 _ _ _ _ _
       obtain ⟨hf, hr⟩ := ih _ _ o c (k + 1) r (by rw [hs1]; omega) (by rw [hs1]; omega) h
       refine ⟨(frame_set m _ _).trans hf, fun i hi => ?_⟩
       rw [hr i hi, hk1, addrW, rd_set _ _ _ _ (by omega) hi]
@@ -147,7 +147,7 @@ theorem rd_set2 (m : Mem) (i1 i2 j : Nat) (v1 v2 : Word) (h1 : i1 < (m.arr64 IW)
     (h2 : i2 < (m.arr64 IW).size) (hs : (m.arr64 IW).size < 2 ^ 64) (hj : j < 2 ^ 64) :
     rd ((m.set64 IW (UInt64.ofNat i1) v1).set64 IW (UInt64.ofNat i2) v2) j =
       if j = i2 then v2 else if j = i1 then v1 else rd m j := by
-  rw [rd_set _ _ _ _ (by omega) hj, size_set64, rd_set _ _ _ _ (by omega) hj]
+  rw [rd_set _ _ _ _ (by omega) hj, L.Mem.size64_set64, rd_set _ _ _ _ (by omega) hj]
   by_cases e2 : j = i2
   · subst e2; simp [h2]
   · by_cases e1 : j = i1
@@ -208,7 +208,7 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
             tgW (posT T t 0 k.toNat).head? := by
           rw [hrd, addr1]; exact hB.hd t (by omega)
         have hsz : ∀ (i v : Word), ((m.set64 IW i v).arr64 IW).size = (m.arr64 IW).size :=
-          fun i v => size_set64 _ _ _ _ _
+          fun i v => L.Mem.size64_set64 _ _ _ _ _
         by_cases h0 : posT T t 0 k.toNat = []
         · rw [h0] at hhd
           rw [hBucketW.arm2 n m tg c hd tl nx k hck hne hhd, hBucketW.j2.arm1,
@@ -236,8 +236,8 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
               rw [nxW_step T j _ (fun t'' h1 _ _ => by
                 rw [hT] at h1; cases h1; rw [h0]; simp)]
               exact hB.nx j hj
-          obtain ⟨hf, hlow, hB2⟩ := ih _ m' (k + 1) r (by simp only [size_set64]; omega)
-            (by simp only [size_set64]; omega) (by omega)
+          obtain ⟨hf, hlow, hB2⟩ := ih _ m' (k + 1) r (by simp only [L.Mem.size64_set64]; omega)
+            (by simp only [L.Mem.size64_set64]; omega) (by omega)
             (fun j hj => by rw [hr2 _ (by omega), iteF (by omega), iteF (by omega)]; exact htg j hj)
             hB' h
           refine ⟨((frame_set _ _ _).trans (frame_set _ _ _)).trans hf, fun i hi => ?_, hB2⟩
@@ -285,8 +285,8 @@ theorem hBucket_ok (T : Std.HashMap Nat Nat) (tg c hd tl nx : Word)
                   rw [nxW_step T j _ (fun t'' h1 _ _ => by
                     rw [hT] at h1; cases h1; rw [hl]; simpa using Ne.symm e)]
                   exact hB.nx j hj
-            obtain ⟨hf, hlow, hB2⟩ := ih _ m' (k + 1) r (by simp only [size_set64]; omega)
-              (by simp only [size_set64]; omega) (by omega)
+            obtain ⟨hf, hlow, hB2⟩ := ih _ m' (k + 1) r (by simp only [L.Mem.size64_set64]; omega)
+              (by simp only [L.Mem.size64_set64]; omega) (by omega)
               (fun j hj => by rw [hr2 _ (by omega), iteF (by omega), iteF (by omega)]; exact htg j hj)
               hB' h
             refine ⟨((frame_set _ _ _).trans (frame_set _ _ _)).trans hf, fun i hi => ?_, hB2⟩
@@ -334,8 +334,8 @@ theorem hChain_ok (T : Std.HashMap Nat Nat) (ord nx out : Word) (C : Nat) (w : N
         show rd _ _ = _
         rw [hr1 _ (by omega), iteF (by omega), hnx x (by omega), nxW_some T x C t hxm.2.2]
       rw [he] at h
-      obtain ⟨hf, hq', hv, hfr⟩ := ih _ m' (q + 1) q' t (x + 1) (by simp only [size_set64]; omega)
-        (by simp only [size_set64]; omega)
+      obtain ⟨hf, hq', hv, hfr⟩ := ih _ m' (q + 1) q' t (x + 1) (by simp only [L.Mem.size64_set64]; omega)
+        (by simp only [L.Mem.size64_set64]; omega)
         (fun j hj => by rw [hr1 _ (by omega), iteF (by omega)]; exact hnx j hj)
         (fun y hy => by rw [hr1 _ (by omega), iteF (by omega)]; exact hord y hy)
         (by omega) h

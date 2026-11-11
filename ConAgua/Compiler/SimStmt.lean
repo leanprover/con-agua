@@ -1331,17 +1331,6 @@ theorem sim_ifAbort (c : Cond) : SimS p G sk (stepRun p K) P (.ite c (.abort (.c
     exact hK.err d1 ⟨e, by rw [step_ite_run, he], by rw [evalCP_error he]; simp⟩
       hE1.2.1.gpost
 
-omit [Host] hG hTab in
-theorem mem_of_lookup_alloc : ∀ {al : List (Var × Reg64)} {x : Var} {r : Reg64},
-    al.lookup x = some r → (x, r) ∈ al
-  | [], _, _, h => by simp at h
-  | (y, q) :: al, x, r, h => by
-    simp only [List.lookup_cons] at h
-    split at h
-    · rename_i heq; cases h; have : x = y := by simpa using heq
-      subst this; exact List.mem_cons_self
-    · exact List.mem_cons_of_mem _ (mem_of_lookup_alloc h)
-
 /-- `if c abort w` (`w ≠ 0`) where no local lives in `rbx`: `rbx := w`, then one conditional jump
 to `ca_abort`. -/
 theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Path)
@@ -1355,7 +1344,7 @@ theorem sim_ifAbortK (c : Cond) (w : Word) (hw : w ≠ 0) (ctx : Ctx) (path : Pa
   have hnb : ∀ x r, ctx.alloc.lookup x = some r → r ≠ .rbx := by
     intro x r hl hr
     subst hr
-    have hm := mem_of_lookup_alloc hl
+    have hm := L.Compiler.lookup_mem hl
     simp only [Ctx.rbxFree, Bool.not_eq_true', List.any_eq_false, beq_iff_eq] at hfr
     exact hfr _ hm rfl
   have hI0 : Inv G ctx F σ { d with regs := d.regs.set64 .rbx w.toBitVec } :=

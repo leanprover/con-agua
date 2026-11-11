@@ -11,6 +11,7 @@ import Std.WP.Tactic
 import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.Arena.FVarRangeRefine
 
 @[expose] public section
 
@@ -38,10 +39,10 @@ theorem andThen_st {A B : AM Bool} {a a1 : AState} {r r1 : Word} {b1 : Bool} {Q 
   cases b1
   · obtain ⟨hr, hQ⟩ := h0 (by simpa using hr1)
     refine ⟨false, a1, ?_, by simp [hr], hQ⟩
-    simp [StateT.run_bind, hA, exc_ok_bind']; rfl
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind]; rfl
   · obtain ⟨b2, a2, hb2, hr, hQ⟩ := hB (by simp [hr1])
     refine ⟨b2, a2, ?_, hr, hQ⟩
-    simp [StateT.run_bind, hA, exc_ok_bind', hb2]
+    simp [StateT.run_bind, hA, L.Arena.except_ok_bind, hb2]
 
 /-- The state-and-pool facts every comparison carries. -/
 def CQ (vis : Word) (fe : IFEnv) (m m' : Mem) (a' : AState) : Prop :=
@@ -129,8 +130,8 @@ theorem cdW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         obtain ⟨b3, hb3, hr3, hS3, hg3, hP3⟩ := ceW_ok k m2 m' a2 po pl qo ql co cl 4000000000 wv wv' x
           cv.levelParams cv'.levelParams cs h hS2 hC2 hL2 hP2 hv32 hv32'
         refine ⟨b3, a2, ?_, hr3, hS3, hgg.trans hg3, hP3, hL2⟩
-        rw [StateT.run_bind, hrun, exc_ok_bind']
-        rw [fuelW] at hb3
+        rw [StateT.run_bind, hrun, L.Arena.except_ok_bind]
+        rw [L.Arena.coreWalkFuel_toNat] at hb3
         rw [hvd, hvd']
         exact hb3)
       (fun h0 => by
@@ -272,8 +273,8 @@ theorem cwW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
           cv.levelParams cv'.levelParams cs rules rules' h hS2 hC2 hL2 hP2
           (ArrExt.decRules (L.Ind.IWGrow.ext hgg) hrs) (ArrExt.decRules (L.Ind.IWGrow.ext hgg) hrs')
         refine ⟨b3, a2, ?_, hr3, hS3, hgg.trans hg3, hP3, hL2⟩
-        rw [StateT.run_bind, hrun, exc_ok_bind']
-        rw [fuelW] at hb3
+        rw [StateT.run_bind, hrun, L.Arena.except_ok_bind]
+        rw [L.Arena.coreWalkFuel_toNat] at hb3
         exact hb3)
       (fun h0 => by
         rw [cwW.k_cv_canon_eq.arm1 _ _ _ _ _ h0] at h
@@ -431,7 +432,7 @@ theorem ciCanonEq_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Option 
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+  exact ⟨⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩, hL'⟩
 
 /-! ## `canon_eq_list` -/
 
@@ -570,6 +571,6 @@ theorem canonEqList_refines (pr : Prog) (hp : CanonProg pr) (dn : NIdx → Optio
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hb
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  exact ⟨⟨⟨hS', hg, decW0B_of' hrb⟩, hP'⟩, hL'⟩
+  exact ⟨⟨⟨hS', hg, L.Ind.decW0B_of hrb⟩, hP'⟩, hL'⟩
 
 end L.Ind

@@ -7,7 +7,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.Arena.LdRd
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.DeclArms
-import ConAgua.Arena.DeclCvg
 
 @[expose] public section
 
@@ -199,9 +198,9 @@ theorem famW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
   rcases f1 : callW p n "find_pinned" [vis, pinW m (1 + s1.toNat), 3, 0, 0, i1] m with _ | ⟨q1, n1⟩
   · rw [f1, famW.k_find_pinned.none] at hW; cases hW
   obtain ⟨b1, a1, hb1, hS1, hg1, hd1⟩ := fp_call h.std f1 hS hl1 (.inl rfl) hi1
-  simp only [StateT.run_bind, hrun1, exc_ok_bind']
+  simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind]
   rw [show (do return (← romCiT i1.toNat).toConstantVal : AM IConstantVal) = romPinT i1.toNat
-    from rfl, hb1, exc_ok_bind']
+    from rfl, hb1, L.Arena.except_ok_bind]
   rw [f1] at hW
   by_cases z1 : q1.headD 0 = 0
   · rw [famW.k_find_pinned.arm1 p n _ _ _ _ _ _ _ _ _ q1 n1 z1] at hW
@@ -224,9 +223,9 @@ theorem famW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
     with _ | ⟨q2, n2⟩
   · rw [f2, famW.k_find_pinned_2.none] at hW; cases hW
   obtain ⟨b2, a2, hb2, hS2, hg2, hd2⟩ := fp_call h.std f2 hS1 hl2 (.inr (.inl rfl)) hi2
-  simp only [StateT.run_bind, hrun2, exc_ok_bind']
+  simp only [StateT.run_bind, hrun2, L.Arena.except_ok_bind]
   rw [show (do return (← romCiT i2.toNat).toConstantVal : AM IConstantVal) = romPinT i2.toNat
-    from rfl, hb2, exc_ok_bind']
+    from rfl, hb2, L.Arena.except_ok_bind]
   rw [f2] at hW
   by_cases z2 : q2.headD 0 = 0
   · rw [famW.k_find_pinned_2.arm1 p n _ _ _ _ _ _ q2 n2 z2] at hW
@@ -249,9 +248,9 @@ theorem famW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
     with _ | ⟨q3, n3⟩
   · rw [f3, famW.k_find_pinned_3.none] at hW; cases hW
   obtain ⟨b3, a3, hb3, hS3, hg3, hd3⟩ := fp_call h.std f3 hS2 hl3 (.inr (.inr rfl)) hi3
-  simp only [StateT.run_bind, hrun3, exc_ok_bind']
+  simp only [StateT.run_bind, hrun3, L.Arena.except_ok_bind]
   rw [show (do return (← romCiT i3.toNat).toConstantVal : AM IConstantVal) = romPinT i3.toNat
-    from rfl, hb3, exc_ok_bind']
+    from rfl, hb3, L.Arena.except_ok_bind]
   rw [f3] at hW
   by_cases z3 : q3.headD 0 = 0
   · rw [famW.k_find_pinned_3.arm1 p n _ _ q3 n3 z3] at hW
@@ -276,7 +275,7 @@ theorem famW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
   obtain ⟨rfl, hrun5, hd5⟩ := mpW_ok (a := a4) e5 hS4.iw.erSize
     (ArrExt.decCV (L.Ind.IWGrow.ext hg04) hq) (decRCV_get hpin)
   refine ⟨_, _, ?_, hS4, hg04, by simpa [decW0B] using hd5⟩
-  simp only [StateT.run_bind, hrun4, exc_ok_bind']
+  simp only [StateT.run_bind, hrun4, L.Arena.except_ok_bind]
   exact hrun5
 
 /-- **`std_axiom_ok(vis, q)` refines `stdAxiomOk`** at the model level. -/
@@ -300,7 +299,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
   rw [e1] at hW
   have hpn : propextName.run a = .ok (decI (pinW m (1 + (32 : Word).toNat)), a) := by
     simpa [propextName, pinPropext, show PIN_PROPEXT = (32 : Word).toNat from rfl] using hrun1
-  simp only [StateT.run_bind, hpn, exc_ok_bind', hname, decI_beq (k := .name) wn _ hwnl hl1]
+  simp only [StateT.run_bind, hpn, L.Arena.except_ok_bind, hname, decI_beq (k := .name) wn _ hwnl hl1]
   by_cases hp : wn = pinW m (1 + (32 : Word).toNat)
   · rw [stdW.k_pin_at.arm1 p n vis q _ m (by rw [ex]; exact hp)] at hW
     simp only [hp, decide_true, ↓reduceIte]
@@ -309,7 +308,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
     obtain ⟨hm2, hrun2, hle2⟩ := eqs_call h.std.red h.eqs e2 hS
     subst m2
     rw [e2] at hW
-    simp only [StateT.run_bind, hrun2, exc_ok_bind']
+    simp only [StateT.run_bind, hrun2, L.Arena.except_ok_bind]
     by_cases z2 : r2.headD 0 = 0
     · rw [stdW.k_eq_stored.arm1 p n vis q r2 m z2] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -337,7 +336,7 @@ theorem stdW_ok {p : Prog} (h : StdProg2 p) {vis : Word}
   rw [e2] at hW
   have hcn : choiceName.run a = .ok (decI (pinW m (1 + (33 : Word).toNat)), a) := by
     simpa [choiceName, pinChoice, show PIN_CHOICE = (33 : Word).toNat from rfl] using hrun2
-  simp only [StateT.run_bind, hcn, exc_ok_bind', decI_beq (k := .name) wn _ hwnl hl2]
+  simp only [StateT.run_bind, hcn, L.Arena.except_ok_bind, decI_beq (k := .name) wn _ hwnl hl2]
   by_cases hc : wn = pinW m (1 + (33 : Word).toNat)
   · rw [stdW.k_pin_at_2.arm1 p n vis q wn _ m (by simpa using hc)] at hW
     simp only [hc, decide_true, ↓reduceIte]

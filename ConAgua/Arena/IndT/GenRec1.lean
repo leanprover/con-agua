@@ -18,7 +18,7 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 # `genRecCheck` under `StageC`, part 1 (lane `indstaget`, helper `grc`)
 
 What the refinements of `gen_rec_check_prep` and `gen_rec_check` (`GenRec2`, `GenRec3`) read:
-`StageC.of_checkE` (`StageC` at another view and environment, from con-ron's `CheckOK` there) and
+`StageC.ofView` (`StageC` at another view and environment, from con-ron's `CheckOK` there) and
 `cnfs_ref` (`classes_nfs` for both outcomes, under `StageC`, with the classes' constructors'
 level-parameter slices as a conditional field, `classesNfs_refinesLp`'s); its ok half
 `classesNfs_refinesC`.
@@ -35,17 +35,6 @@ namespace L.Ind
 open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
-
-/-- **`StageC` at another view and environment**: the stage relation there, `CheckOK` there, the
-memory's half from `AbsOK` and the store's extension. -/
-theorem StageC.of_checkE {dn : NIdx → Option ConLeche.Name} {vis vis' : Word} {fe fe' : IFEnv}
-    {env env' : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis' fe' m' a') (hA : AbsOK m') (hck : ConRon.Bridge.CheckOK false env' fe' a')
-    (hx : ConRon.Arena.Ext a.store a'.store) : StageC dn vis' fe' env' m' a' :=
-  ⟨hS, hck,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
-      fun k x e => hx.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
 
 /-- What `classes_nfs` gives besides the twin's classes `ys` (from `m`): the result slice, the stage,
 the growth, the memos, `AbsOK`. -/

@@ -6,6 +6,7 @@ import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadSpec
 import ConAgua.Rom.ReadScr
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -32,7 +33,7 @@ theorem holds_mapM_range {α : Type} [Inhabited α] {SE SI : Nat → Prop} {g : 
     Holds SE SI (fun m => (List.range xs.length).mapM (g m)) m xs := by
   intro m' h1 h2
   show List.mapM (g m') (List.range xs.length) = some xs
-  rw [rmapM_some_of _ (fun j => xs.getD j default) _ (fun j hj => by
+  rw [L.Arena.mapM_some_of _ (fun j => xs.getD j default) _ (fun j hj => by
     have hj' := List.mem_range.mp hj
     have := h j hj' m' h1 h2
     simp only at this
@@ -135,7 +136,7 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have hw := callW_model (M := fun mq => ruleW p k mq q rr) (rule_specW rom p hL k · q rr) hc
   unfold ruleW at hw
   -- the constructor's name
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr _ hfn hI.arena hI.mode hd h1
   obtain ⟨hI1, -, -, hIW1, ht1, -, hE1⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1 (L.Arena.internName_ks _ _ _ _ hrun1)
@@ -173,7 +174,7 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   unfold ruleW.j1 at hw
   rw [ite_eq_right (show ¬ ((0 : Word) = 1) by decide)] at hw
   unfold ruleW.j2 at hw
-  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
+  obtain ⟨r4, m4, h4, hw⟩ := L.Ind.ntBW_some hw
   have hq16 : (r1.tail.headD 0 + 16).toNat = (r1.tail.headD 0).toNat + 16 := by
     have := hq1; rw [UInt64.toNat_add]; simp at this ⊢; omega
   have hdr : rom.drop (r1.tail.headD 0 + 16).toNat = (encExprM seen rl.rhs).1 ++ rest := by
@@ -183,7 +184,7 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
       (by have := hI2.ok.ctl; omega) h4
   obtain ⟨hI4, -, -, hIW4, ht4, -, hE4⟩ := hI2.expr hA4 hmo4 hf4 hk4
     (L.Arena.internExprGo_ks _ _ _ _ _ hrun4)
-  obtain ⟨rb, m5, hb, hw⟩ := ntBW_inv hw
+  obtain ⟨rb, m5, hb, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL hb] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
@@ -250,7 +251,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have hw := callW_model (M := fun mq => ruleW p k mq q rr) (rule_specW rom p hL k · q rr) hc
   unfold ruleW at hw
   -- the constructor's name
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr _ hfn hI.arena hI.mode hd h1
   obtain ⟨hI1, -, -, hIW1, ht1, -, hE1⟩ := hI.expr hA1 hmo1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1 (L.Arena.internName_ks _ _ _ _ hrun1)
@@ -337,7 +338,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
     lvlsTo_rel hL hr seen memo lvls hlf k _ a1 _ (ra.headD 0) _ _ r2 m2 hIb hMb hdl hlN (by omega)
       (by omega) hl
   -- the right-hand side
-  obtain ⟨r4, m4, h4, hw⟩ := ntBW_inv hw
+  obtain ⟨r4, m4, h4, hw⟩ := L.Ind.ntBW_some hw
   have hdr : rom.drop (r2.headD 0).toNat = (encExprM seen rl.rhs).1 ++ rest :=
     drop_shift rom _ (encLevelList lvls) _ _ (by rw [hdl, List.append_assoc]) _ hq3
   obtain ⟨memo', a4, hrun4, hA4, hk4, hM4, hlt4, hq4, hf4, hs4, hmo4⟩ :=
@@ -345,7 +346,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
       (by have := hI3.ok.ctl; omega) h4
   obtain ⟨hI4, -, -, hIW4, ht4, -, hE4⟩ := hI3.expr hA4 hmo4 hf4 hk4
     (L.Arena.internExprGo_ks _ _ _ _ _ hrun4)
-  obtain ⟨rb, m5, hb, hw⟩ := ntBW_inv hw
+  obtain ⟨rb, m5, hb, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL hb] at hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
@@ -483,7 +484,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     cases k with
     | zero => rw [callW_zero] at hw; simp at hw
     | succ k =>
-    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+    obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
     simp only [List.length_cons] at hot hk
     have hd0 : rom.drop q.toNat = (encRule seen rl).1 ++ ((encRules (encRule seen rl).2 rs).1 ++ rest) := by
       rw [hd]; simp [encRules, List.append_assoc]
@@ -493,7 +494,7 @@ theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     have ho11 : (o + 11).toNat = o.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = rs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    obtain ⟨r2, m2, h2, hw⟩ := ntBW_inv hw
+    obtain ⟨r2, m2, h2, hw⟩ := L.Ind.ntBW_some hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hd1 : rom.drop (r1.headD 0).toNat = (encRules (encRule seen rl).2 rs).1 ++ rest :=

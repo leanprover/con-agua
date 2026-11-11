@@ -424,7 +424,7 @@ theorem tmc_ref {p : Prog} (hP : TmfProg p) (hIlpf : IlpfF p) (hK : KnotStagePro
   obtain ⟨s5, rfl, -, hm5, hW5⟩ := triple_of_callW (s₀ := ⟨s4.mem, Locals.init []⟩)
     (slFind_spec p hP.find n _ _ _ x) h5
   rw [show s5.mem = s4.mem from hm5]
-  have hlen : ws.length < 2 ^ 64 := by rw [slR_length hsl]; exact UInt64.toNat_lt _
+  have hlen : ws.length < 2 ^ 64 := by rw [L.Ind.SlR.length hsl]; exact UInt64.toNat_lt _
   have hr5 := findW_ok n s4.mem _ _ x r5 ws hsl hW5 hlen
   rw [hws, findIdx_map_decI x hx ws hwlt]
   cases hfi : ws.findIdx? (· == x) with

@@ -10,6 +10,7 @@ import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.SimLib
 import ConAgua.L.WordOff
+import ConAgua.Arena.WhnfCoreProj
 
 @[expose] public section
 
@@ -122,7 +123,7 @@ theorem mkApp_okL (m : Mem) (a : AState) (hA : ArenaL m a) (f x r : Word) (m' : 
     ArenaL m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
     AM.res (internE (.app (decE f) (decE x))) a = decE r ∧ m'.arr64 ILSPN = m.arr64 ILSPN := by
   obtain ⟨hok, hD, hres⟩ := mkApp_ok m a hA.1 f x r m' hI
-  have hf := mkAppW_frameA m m' f x r hI
+  have hf := L.Arena.mkAppW_frame m m' f x r hI
   exact ⟨hok, ⟨hD, hA.2.across hf (by decide) (by decide) (internE_instLC _ a hok)⟩, hres,
     spn_of_frame hf (by decide)⟩
 
@@ -178,13 +179,6 @@ theorem internBVar_L (m : Mem) (a : AState) (hA : ArenaL m a) (u r : Word) (m' :
     spn_of_frame hf (by decide)⟩
 
 /-! ## The substitution's slice -/
-
-theorem SpineR.of_spn {m m' : Mem} {o l : Word} {xs : Array EIdx} (hx : SpineR m o l xs)
-    (he : m'.arr64 ILSPN = m.arr64 ILSPN) : SpineR m' o l xs where
-  size := hx.size
-  bound := by rw [show SPN = ILSPN from rfl, he]; exact hx.bound
-  lt := fun i hi => by rw [spW, show SPN = ILSPN from rfl, he]; exact hx.lt i hi
-  get := fun i hi => by rw [hx.get i hi, spW, spW, show SPN = ILSPN from rfl, he]
 
 theorem eidxCopyUpto_toList (xs : Array EIdx) : ∀ (N i : Nat) (out : Array EIdx), xs.size - i ≤ N →
     (eidxCopyUpto xs xs.size i out).toList = out.toList ++ xs.toList.drop i := by

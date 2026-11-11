@@ -12,11 +12,12 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.WhnfIotaRefine3
-import ConAgua.L.Records
 public import ConAgua.Arena.WhnfIotaRefine4
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.WhnfIotaRec
 public import ConAgua.Arena.FormerNZRef
+import ConAgua.Arena.FuelConsts
+import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 
@@ -140,7 +141,7 @@ def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Optio
     else pure none
   | _ => pure none
 
-theorem ite_bind' {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
+theorem ite_bind {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
     (f : α → m β) : (ite c x y >>= f) = ite c (x >>= f) (y >>= f) := by
   split <;> rfl
 
@@ -189,7 +190,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
                   | none => simp only
                   | some rl =>
                     simp only [iotaRecFireT, iotaRecFire2T, iotaRecFamT, iotaRecVckT,
-                      bind_assoc, ite_bind', pure_bind]
+                      bind_assoc, L.Arena.ite_bind, pure_bind]
               · rw [ite_eq_right ht, ite_eq_right ht]
             · rw [ite_eq_right hc, ite_eq_right hc]
   · rfl
@@ -299,7 +300,7 @@ theorem erecPush_spec (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (k
   simp only [callFn, erecPushL]
   vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (erecPushLoop_spec p (k + 1) s₀)] <;>
   simp_all [epTop, Cmp.eval, BinOp.eval, Mem.len64, LocEq, St.setLoc_loc,
-    St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
+    L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr, rdW, CTL] <;>
   (have h136 : 136 < (s₀.mem.arr64 CTL).size := by assumption
    refine ⟨h136, ?_⟩
@@ -460,9 +461,6 @@ theorem irRdW {b : Array Word} {q : Word} {w : Word} (hsz : b.size < 2 ^ 63) (c 
     rw [UInt64.toNat_add, hc, Nat.mod_eq_of_lt (by omega)]
   simp only [rdW, this, hb]; rfl
 
-theorem irRdW0 {b : Array Word} {q : Word} {w : Word} (hb : b[q.toNat]? = some w) : rdW b q = w := by
-  simp only [rdW, hb]; rfl
-
 /-- The words of a `ConstantVal` decoded at `q + 1`. -/
 theorem decCV_rd1 {R : Nat → Option Word} {rd : Word → Word} {q : Word} {cv : IConstantVal} (hR : RdOK R rd)
     (h : decCV R (q.toNat + 1) = some cv) :
@@ -482,7 +480,7 @@ theorem decCV_rd1 {R : Nat → Option Word} {rd : Word → Word} {q : Word} {cv 
   have e3 : rd (q + 3) = w3 := hR.at 3 rfl (by rw [← hw3]; congr 1)
   have e4 : rd (q + 4) = w4 := hR.at 4 rfl (by rw [← hw4]; congr 1)
   rw [e1, e2, e3, e4]
-  exact ⟨hl1, rfl, hs, (by simpa using mapM_option_length _ _ _ hs), hl4, rfl⟩
+  exact ⟨hl1, rfl, hs, (by simpa using L.Ind.mapM_opt_length _ _ _ hs), hl4, rfl⟩
 
 /-- A recursor record by its kind word `5`. -/
 theorem decCI_rec_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
@@ -764,7 +762,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have k3b : m3.arr64 (tier1 EREC) = s₀.mem.arr64 (tier1 EREC) :=
     (fr3.arr _ (by decide) (by decide)).trans k2.2.1
   simp only [erRd_congr k3a k3b]
-  have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
+  have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := L.Arena.SpineR.of_spn hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
   have hsz2 : (m2.arr64 SPN).size = (s₀.mem.arr64 SPN).size := gr2.size.trans gr1.size
@@ -880,10 +878,6 @@ theorem take_drop_min_le (xs : List EIdx) (a b : Nat) :
   · rw [Nat.min_eq_right h, List.drop_eq_nil_of_le (by simp; omega),
       List.drop_eq_nil_of_le (by simp; omega)]
 
-theorem liftFueled_run_some {α : Type} (w : String) (x : α) (a : AState) :
-    (liftFueled w (some x)).run a = .ok (x, a) := by
-  simp [liftFueled]; rfl
-
 /-! ### The record pool across `iota_rec_cmp` -/
 
 theorem epW_frame (o c so : Word) : ∀ (k : Nat) (m : Mem) (j : Word) (m' : Mem),
@@ -996,7 +990,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   refine RefE.pass q0 ?_
   rw [show decO (rq.headD 0) = some (rq.headD 0 != 1) by
     unfold decO; rw [ite_eq_right q0]; split <;> grind]
-  refine RefE.bind_right (liftFueled_run_some _ _ _) ?_
+  refine RefE.bind_right (L.Arena.liftFueled_some _ _ _) ?_
   refine RefE.retIf (by simp) (by simp) (fun _ => ⟨⟨M1, hS1, hK1, hSt1⟩, rfl, by show HW (0 : Word); unfold HW; decide⟩)
     fun q1 _ => ?_
   -- the parameters
@@ -1014,7 +1008,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have k2 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) (callW_of_callE c2)) k1
   have hSt12 := hSt1.trans hSt2
   subst hr2
-  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+  refine RefE.retIf L.Arena.decBool_false_of (fun h => by simpa [decBool] using h)
     (fun _ => ⟨⟨M2, hS2, hK1.trans hK2, hSt12⟩, rfl, by show HW (0 : Word); unfold HW; decide⟩) fun g0 _ => ?_
   -- the constructor's type
   simp only [erRd_congr k2.1 k2.2.1]
@@ -1045,7 +1039,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have k4 := erecKeep_trans (hER.all (by simp [iotaKeptFns]) (callW_of_callE c4)) k3
   have hSt14 := hSt13.trans hSt4
   subst hr4
-  refine RefE.retIf decBool_f_m2c (fun h => by simpa [decBool] using h)
+  refine RefE.retIf L.Arena.decBool_false_of (fun h => by simpa [decBool] using h)
     (fun _ => ⟨⟨M4, hS4, hK1.trans (hK2.trans (hK3.trans hK4)), hSt14⟩, rfl,
       by show HW (0 : Word); unfold HW; decide⟩) fun f0 _ => ?_
   -- the indices

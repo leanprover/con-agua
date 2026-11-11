@@ -72,12 +72,6 @@ theorem ErrClaim.ite {α : Type} {c : Prop} [Decidable c] {x y : AM α} {a : ASt
   · exact ErrClaim.ite_pos hc (h1 hc)
   · exact ErrClaim.ite_neg hc (h2 hc)
 
-/-- The twin computations have the same run (a run lemma of the twin's match, a loop's step). -/
-theorem ErrClaim.congr_run {α : Type} {T T' : AM α} {a a' : AState} {e : Err}
-    (h : T.run a = T'.run a') (h' : ErrClaim T' a' e) : ErrClaim T a e := fun hk => by
-  obtain ⟨ce, hce, hc⟩ := h' hk
-  exact ⟨ce, h.trans hce, hc⟩
-
 /-- **A tail call's continuation**: it passes the callee's error on and maps every ok run to an
 ok result, so a failing result is the callee's own failure. -/
 theorem tailE {β γ : Type} {K : Except Err γ → Except Err β} {x : Except Err γ} {er : Err}

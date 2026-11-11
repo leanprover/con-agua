@@ -97,9 +97,6 @@ l_model classGenMinorTyIhsGo_spec (p : Prog) (h : MnProg p)
 section misArms
 variable (n : Nat) (m : Mem) (g x d nF wso wsl fvso fvsl i l : Word)
 
-theorem misW_end (h : nF ≤ i) : misW (n + 1) m g x d nF wso wsl fvso fvsl i l = some ([1, 0, 0], m) :=
-  misW.arm1 _ _ _ _ _ _ _ _ _ _ _ _ h
-
 /-- An ordinary field: the walk goes on. -/
 theorem misW_ord (h : ¬ nF ≤ i) (ht : ¬ isTag m x i = 1) :
     misW (n + 1) m g x d nF wso wsl fvso fvsl i l =
@@ -430,7 +427,7 @@ theorem misW_sim (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   intro m a i l hS hG hX hws hwb hfvs hfb hli hiX hA
   have hsz := hS.iw.iwSize
   by_cases hend : nF ≤ i
-  · rw [misW_end (h := hend)]
+  · rw [L.Ind.misW.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hend]
     have : X.nF ≤ i.toNat := by rw [← hnF]; exact UInt64.le_iff_toNat_le.mp hend
     rw [rec2Recs_end this, ConRon.Arena.ClassGen.minorTy.ihsGo.eq_1]
     exact RSim.pure_some ⟨hS, IWGrow.refl m, ⟨rfl, by simp [decHL, hslice?], by simp⟩, hA⟩
@@ -629,7 +626,7 @@ theorem rec2CCName {m : Mem} {x : Word} {X : ClassCtor} (hX : decCC m x.toNat = 
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
   obtain ⟨nm, hnm, lps, hlps, ty, hty, rfl⟩ := hcv
   obtain ⟨w, hw, hwl, hwd⟩ := hd?_some hnm
-  exact ⟨w, by rw [eq]; exact erRd_of_erA (by rw [tq]; exact hw), hwl, hwd.symm⟩
+  exact ⟨w, by rw [eq]; exact L.Arena.erRd_of _ _ (by rw [tq]; exact hw), hwl, hwd.symm⟩
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}

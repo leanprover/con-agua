@@ -8,6 +8,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -201,7 +202,7 @@ theorem fillW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
       omega
     obtain ⟨m₁, hm₁⟩ : ∃ m₁, m₁ = m.set64 SPN (o + j.toUInt64) (argW m e) := ⟨_, rfl⟩
     rw [← hm₁]
-    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact size_set64 _ _ _ _ _
+    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨m', hf, hfr, hget, hout⟩ := ih k' m₁ (fnW m e) (by omega) (by rw [hsz₁]; omega)
       (by rw [hsz₁]; exact hsz)
     have hset : spW m₁ (o + j.toUInt64) = argW m e := by
@@ -346,7 +347,7 @@ theorem fillNW_ok (o : Word) : ∀ (j k : Nat) (m : Mem) (e : Word), j < k →
       omega
     obtain ⟨m₁, hm₁⟩ : ∃ m₁, m₁ = m.set64 SPN (o + j.toUInt64) e := ⟨_, rfl⟩
     rw [← hm₁]
-    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact size_set64 _ _ _ _ _
+    have hsz₁ : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hm₁]; exact L.Mem.size64_set64 _ _ _ _ _
     obtain ⟨m', hf, hfr, hget, hout⟩ := ih k' m₁ (fnW m e) (by omega) (by rw [hsz₁]; omega)
       (by rw [hsz₁]; exact hsz)
     have hset : spW m₁ (o + j.toUInt64) = e := by
@@ -437,7 +438,7 @@ theorem gaaTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
       · rw [heq, getAppArgs, (decE_tag_app e he).mpr hc, hc', argsW]
         try simp only [fnW] at ihr
         simp only [fnW]
-        simp [StateT.run_bind, viewApp_run' _ a, hva, except_ok_bind, ihr, argW]
+        simp [StateT.run_bind, L.Arena.viewApp_run _ a, hva, except_ok_bind, ihr, argW]
         rfl
       · rw [hc', argsW]
         intro w hw
@@ -488,7 +489,7 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
       · rw [heq, getAppSpineGo, (decE_tag_app e he).mpr hc, hc', argsW, nodesW]
         try simp only [fnW] at ihr
         simp only [fnW]
-        simp [StateT.run_bind, viewApp_run' _ a, hva, except_ok_bind, ihr, argW]
+        simp [StateT.run_bind, L.Arena.viewApp_run _ a, hva, except_ok_bind, ihr, argW]
         simp [Functor.map, Except.map]
       · rw [hc', nodesW]
         intro w hw
@@ -624,9 +625,9 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hsp : ∀ w : Word, spW s'.mem w = spW m₂ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; exact hfr.size SPN
+    rw [← hm, L.Mem.size64_set64]; exact hfr.size SPN
   have hctl136 : (136 : Word).toNat < (m₂.arr64 CTL).size := by
-    rw [← hm, size_set64] at h136; exact h136
+    rw [← hm, L.Mem.size64_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 := by
     rw [← hm]; simp only [spTop]; rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hctl136⟩]
   have hcN' : (r₁.headD 0).toNat = coreWalkFuel - f'.toNat := hcw
@@ -811,9 +812,9 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   have hsp : ∀ w : Word, spW s'.mem w = spW m₃ w := by
     intro w; rw [← hm]; simp only [spW]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hszs : (s'.mem.arr64 SPN).size = (s.mem.arr64 SPN).size := by
-    rw [← hm, size_set64]; rw [hfr3.size SPN]; exact hsz2
+    rw [← hm, L.Mem.size64_set64]; rw [hfr3.size SPN]; exact hsz2
   have hctl136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-    rw [← hm, size_set64] at h136; exact h136
+    rw [← hm, L.Mem.size64_set64] at h136; exact h136
   have htop' : spTop s'.mem = rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + r₁.headD 0 := by
     rw [← hm]; simp only [spTop]; rw [rdW_set64, ite_eq_left ⟨rfl, rfl, hctl136⟩]
   have hadd2 : (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0 + r₁.headD 0).toNat =

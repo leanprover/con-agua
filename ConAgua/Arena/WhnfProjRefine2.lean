@@ -137,7 +137,7 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
 theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   intro n s₀ a₀ dn vis fe M eb T i hS hT
   cases n with
-  | zero => exact CoreSpec.zeroW hp.findProj _ _ _ _ _ _ _ _ _ _ _
+  | zero => exact L.Arena.CoreSpec.zero hp.findProj _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
   refine CoreSpec.of_pure p (n + 1) "find_proj" [vis, T, i] _ _ s₀ a₀ dn vis fe M eb _ hS
     (by unfold AM.ok; exact trivial) rfl ?_

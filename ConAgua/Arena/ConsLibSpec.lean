@@ -12,6 +12,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.ConsLib
+import ConAgua.L.Records
 
 @[expose] public section
 /-!
@@ -117,7 +118,7 @@ def copyS (o : Nat) : Nat → St → St
 theorem copyS_mem (o k : Nat) (s : St) : (copyS o k s).mem = s.mem := by
   induction k with
   | zero => rfl
-  | succ k ih => simp only [copyS, St.setLoc_mem, ih]
+  | succ k ih => simp only [copyS, L.St.setLoc_mem, ih]
 
 theorem copyS_loc (o k : Nat) (s : St) (x : Nat) :
     (copyS o k s).loc x = if o ≤ x ∧ x < o + k then s.loc (x - o + 1) else s.loc x := by
@@ -186,7 +187,7 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
   by_cases hlt : C.nk < C.np
   · simp only [hlt, ↓reduceIte]
     vcgen [step, evalE_spec, setLoc]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, pval_fragE, Expr.pval] at *)
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, pval_fragE, Expr.pval] at *)
     all_goals (simp only [kwP, ↓reduceIte, hlt, argsOf_getD 1 C.nk C.np hlt] at *)
     all_goals grind [lang_grind, KeepLo]
   · have he : C.np = C.nk := by omega
@@ -194,7 +195,7 @@ theorem cpKey_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ : 
     have hI := hO.ihashG he
     refine copies_spec p n (gO C + 14) C.nk (by simp [gO]; omega) _ s₁ _ ?_
     vcgen [step, evalE_spec, setLoc, hI n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, pval_fragE, Expr.pval, argsOf_copyS _ _
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, pval_fragE, Expr.pval, argsOf_copyS _ _
       (show C.nk + 1 ≤ gO C + 14 by simp [gO]; omega)] at *)
     all_goals (simp only [kwP, he, Nat.lt_irrefl, ↓reduceIte,
       argsOf_take 1 C.nk C.nk (Nat.le_refl _)] at *)
@@ -223,14 +224,14 @@ theorem cpRest_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) (s₁ :
   | none =>
     simp only [cpSlot, cpCnt, cpGrowIf, cpColW, hc, Option.map_none, seqO, mapS, mapE, lvF, Nat.reduceLT, Nat.reduceEqDiff, ↓reduceIte, Nat.reduceSub]
     vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, st64, kgrowBlk_spec p C hO n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, colW, hc] at *)
     all_goals grind [lang_grind, growK, tailM, krW, knW, koW, pk]
   | some A =>
     have hA := hO.colA A hc
     simp only [cpSlot, cpCnt, cpGrowIf, cpColW, hc, Option.map_some, seqO, mapS, mapE, lvF, Nat.reduceLT, Nat.reduceEqDiff, ↓reduceIte, Nat.reduceSub]
     vcgen [step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, st64, kgrowBlk_spec p C hO n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, rd64_rdWC, ↓reduceIte, colW, hc] at *)
     all_goals grind [lang_grind, growK, tailM, krW, knW, koW, pk]
 
@@ -264,7 +265,7 @@ theorem cpWr_spec (p : Prog) (C : ConsSch) (hO : ConsOK p C) (n : Nat) :
       simp only [pkw, argsOf]; exact kwP_mem p hO _ _ _
     have hsa : ∀ (k v : Word), (s₁.mem.set64 (tierA C.ra (s₁.loc 0)) k v).arr64
         (tierA C.sa (s₁.loc 0)) = s₁.mem.arr64 (tierA C.sa (s₁.loc 0)) :=
-      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (tierA_ne hrs _ _))
+      fun k v => Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm (L.tierA_ne_tierA hrs _ _))
     simp only [cpWr]
     by_cases hf0 : f = 0
     · subst hf0
@@ -323,7 +324,7 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     | succ n =>
       vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64,
         cpWr_spec p C hO n C.recW hO.recs.1 0]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+      all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
           Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
           argsOf_setLoc_add 1 C.np 3 (by decide), zero_ne_add 2 C.np (by decide),
@@ -342,7 +343,7 @@ theorem consPushG_specV (p : Prog) (C : ConsSch) (hO : ConsOK p C)
     | succ n =>
       vcgen [exec, step, evalE_spec, evalC_spec, evalArgs, setLoc, ld64, hPO n,
         cpWr_spec p C hO n C.recW hO.recs.1 0]
-      all_goals (simp only [St.setLoc_loc, St.setLoc_mem, BinOp.eval, Cmp.eval,
+      all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval, Cmp.eval,
           Expr.pval, Cond.pval, decide_eq_true_eq, Nat.add_right_cancel_iff,
           Nat.reduceEqDiff, rd64_rdWC, argsOf_setLoc_add 1 C.np 2 (by decide),
           argsOf_setLoc_add 1 C.np 3 (by decide), zero_ne_add 2 C.np (by decide),
@@ -517,7 +518,7 @@ theorem consInternG_sk_x (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   | succ n =>
     vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
       consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
       Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
       List.map_append, map_hOpt] at *)
@@ -559,7 +560,7 @@ theorem consInternG_sk_nx (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   | succ n =>
     vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
       consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
       Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
       List.map_append, map_hOpt] at *)
@@ -601,7 +602,7 @@ theorem consInternG_nsk_x (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   | succ n =>
     vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
       consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
       Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
       List.map_append, map_hOpt] at *)
@@ -642,7 +643,7 @@ theorem consInternG_nsk_nx (p : Prog) (C : ConsSch) (hO : ConsOK p C)
   | succ n =>
     vcgen [exec, step, evalE_spec, evalC_spec, evalArgs_spec, setLoc, setLocs, hO.ihash_spec n,
       consFindG_specV p C hO.match_ hml hpf n, consPushG_specV p C hO hpp n]
-    all_goals (simp only [St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       List.headD_cons, List.tail_cons, BinOp.eval, Cmp.eval,
       Expr.pval, Cond.pval, rd64_rdWC, List.map_cons, map_keyArgs,
       List.map_append, map_hOpt] at *)
@@ -709,18 +710,12 @@ theorem kgrowIf_frame (C : ConsSch) (t : Word) (m₀ m m' : Mem) (c : Word)
   · exact kgrowM_fr _ _ _ _ _ h
   · cases h; exact GFr.refl _ _
 
-theorem arr64_size_set64 (m : Mem) (a b : TieredArray) (i v : Word) :
-    ((m.set64 a i v).arr64 b).size = (m.arr64 b).size := by
-  by_cases e : b = a
-  · subst e; exact Mem.size_arr64_set64 m b i v
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ e]
-
 theorem wrRecK_size (ra : TieredArray) (k : Word) (b : TieredArray) :
     ∀ (vs : List Word) (m : Mem) (f : Word), ((wrRecK ra k m f vs).arr64 b).size = (m.arr64 b).size := by
   intro vs
   induction vs with
   | nil => intro m f; rfl
-  | cons v vs ih => intro m f; rw [wrRecK, ih, arr64_size_set64]
+  | cons v vs ih => intro m f; rw [wrRecK, ih, _root_.L.Mem.size64_set64]
 
 
 /-- The memory after the append of the key's node to tier `t`, outside the slot array: the
@@ -741,7 +736,7 @@ theorem colW_size (C : ConsSch) (t c x : Word) (m : Mem) (b : TieredArray) :
     ((colW C t c x m).arr64 b).size = (m.arr64 b).size := by
   unfold colW; split
   · rfl
-  · exact arr64_size_set64 _ _ _ _ _
+  · exact L.Mem.size64_set64 _ _ _ _ _
 
 theorem arr64_set64_congr {M₁ M₂ : Mem} {a b : TieredArray} (h : M₁.arr64 a = M₂.arr64 a)
     (hb : M₁.arr64 b = M₂.arr64 b) (i v : Word) :
@@ -784,13 +779,13 @@ theorem consInternM_outA {C : ConsSch} {m : Mem} (hsc : C.sa ≠ CTL)
   refine ⟨fun b hb => ?_, fun b => ?_⟩
   · rw [g.arr b hb]
     simp only [pushMX, pushMC, tailM, pushRec]
-    refine OutSa.colW C t (fun A hA => tierA_ne (hcol A hA) t t)
+    refine OutSa.colW C t (fun A hA => L.tierA_ne_tierA (hcol A hA) t t)
       (fun b hb => ?_) _ _ b hb
     refine OutSa.set64 (fun b hb => ?_)
       (ne_tierA (Ne.symm hsc) t) _ _ b hb
     exact OutSa.set64_sa (fun _ _ => rfl) _ _ b hb
   · rw [g.size b]
-    simp only [pushMX, pushMC, tailM, colW_size, arr64_size_set64, wrRecK_size]
+    simp only [pushMX, pushMC, tailM, colW_size, L.Mem.size64_set64, wrRecK_size]
 
 
 

@@ -4,6 +4,7 @@ public import ConAgua.Rom.CIReadRefBase
 import ConAgua.Rom.CIReadRefW
 public import ConAgua.Rom.CIReadSpec
 import ConAgua.Rom.ReadScr
+import ConAgua.Arena.DeclNatCv
 
 @[expose] public section
 
@@ -176,7 +177,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     have hw := callW_model (M := fun mq => namesToW p k mq q o kw) (namesTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
     simp only [namesToW, hk0, ite_false] at hw
-    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+    obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
     have hd0 : rom.drop q.toNat = encName x ++ (encNames xs ++ rest) := by
       rw [hd, encNames, List.append_assoc]
     obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := nameCall hL hr x hfit.1 hI.arena hI.mode hd0 h1
@@ -187,7 +188,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
     have hlen : xs.length + 1 = kw.toNat := by simp [hk]
     have hlt := hI.er_lt
     simp only [List.length_cons] at hot
-    obtain ⟨r1', m2, h1', hw⟩ := ntBW_inv hw
+    obtain ⟨r1', m2, h1', hw⟩ := L.Ind.ntBW_some hw
     rw [putCall hL h1'] at hw
     obtain ⟨hI2, hM2, hs2, ht2, hIW2, hg2, hn2⟩ := putER_facts hI1 hM1 o (r1.headD 0) ho (by omega)
     have hd1 : rom.drop (r1.tail.headD 0).toNat = encNames xs ++ rest :=
@@ -196,7 +197,7 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche
       rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = xs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
+    obtain ⟨r2, m3, h2, hw⟩ := L.Ind.ntBW_some hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨ws, a', hrun2, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
@@ -261,7 +262,7 @@ theorem lvlsTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
     have hw := callW_model (M := fun mq => lvlsToW p k mq q o kw) (lvlsTo_specW rom p hL k · q o kw) hc
     have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
     simp only [lvlsToW, hk0, ite_false] at hw
-    obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+    obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
     have hd0 : rom.drop q.toNat = encLevel x ++ (encLevelList xs ++ rest) := by
       rw [hd, encLevelList, List.append_assoc]
     obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1, hmo1⟩ := levelCall hL hr x hfit.1 hI.arena hI.mode hd0 h1
@@ -272,7 +273,7 @@ theorem lvlsTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
     have hlen : xs.length + 1 = kw.toNat := by simp [hk]
     have hlt := hI.er_lt
     simp only [List.length_cons] at hot
-    obtain ⟨r1', m2, h1', hw⟩ := ntBW_inv hw
+    obtain ⟨r1', m2, h1', hw⟩ := L.Ind.ntBW_some hw
     rw [putCall hL h1'] at hw
     obtain ⟨hI2, hM2, hs2, ht2, hIW2, hg2, hn2⟩ := putER_facts hI1 hM1 o (r1.headD 0) ho (by omega)
     have hd1 : rom.drop (r1.tail.headD 0).toNat = encLevelList xs ++ rest :=
@@ -281,7 +282,7 @@ theorem lvlsTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
       rw [UInt64.toNat_add]; simp; omega
     have hk1' : (kw - 1).toNat = xs.length := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-    obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
+    obtain ⟨r2, m3, h2, hw⟩ := L.Ind.ntBW_some hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     obtain ⟨ws, a', hrun2, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=
@@ -314,18 +315,12 @@ end names
 
 /-! ## Name slices as decodings -/
 
-theorem rmapM_some_of {α β : Type} (f : α → Option β) (g : α → β) :
-    ∀ l : List α, (∀ x ∈ l, f x = some (g x)) → l.mapM f = some (l.map g)
-  | [], _ => rfl
-  | x :: xs, h => by
-    simp [List.mapM_cons, h x (by simp), rmapM_some_of f g xs (fun y hy => h y (by simp [hy]))]
-
 /-- A slice of handle words decodes to their handles. -/
 theorem hslice_of {k : IdxKind} (a : Nat → Option Word) (o : Nat) (ws : List Word)
     (hw : ∀ j (hj : j < ws.length), a (o + j) = some ws[j]) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32) :
     (hslice? a o ws.length : Option (List (Idx k))) = some (ws.map decI) := by
   unfold hslice?
-  rw [rmapM_some_of _ (fun j => (decI (ws.getD j 0) : Idx k)) _ (fun j hj => by
+  rw [L.Arena.mapM_some_of _ (fun j => (decI (ws.getD j 0) : Idx k)) _ (fun j hj => by
     have hj' := List.mem_range.mp hj
     simp only [hd?, hw j hj', Option.bind_eq_bind, Option.bind_some]
     rw [ite_eq_left (hlt _ (List.getElem_mem hj'))]
@@ -377,7 +372,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
         (fun m => (hlist? (erA m) d.toNat : Option (List NIdx))) m' (ws.map decI) := by
   have hw := callW_model (M := fun mq => nameSlW p k mq q d) (nameSl_specW rom p hL k · q d) hc
   simp only [nameSlW] at hw
-  obtain ⟨r0, m0, h0, hw⟩ := ntBW_inv hw
+  obtain ⟨r0, m0, h0, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hm0, hr0⟩ := u64Call hL h0
   rw [hm0, hr0] at hw
   simp only [List.headD_cons] at hw
@@ -393,7 +388,7 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   rw [hc0] at hw
   have hcN : (UInt64.ofNat ns.length).toNat = ns.length := by
     rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
-  obtain ⟨r1, m1, h1, hw⟩ := ntBW_inv hw
+  obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw
   obtain ⟨hI1, ho1, ht1, -, -, hIW1, -, -, hk1⟩ := hI.erAlloc (erAllocCall hL h1)
   rw [hcN] at ht1
   have hf1 : MemFrame [] [129, 130] m m1 := (erAllocW_spec (erAllocCall hL h1) hI.ok).2.1
@@ -403,17 +398,17 @@ theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.
   have hlt1 := hI1.er_lt
   have hgo := hI.erT_mono
   have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨ra, ma, ha, hw⟩ := ntBW_inv hw
+  obtain ⟨ra, ma, ha, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL ha] at hw
   obtain ⟨hIa, hMa, hsa, hta, hIWa, hga, hna⟩ := putER_facts hI1 hM1 d (r1.headD 0) hd0 (by omega)
-  obtain ⟨rb, mb, hb, hw⟩ := ntBW_inv hw
+  obtain ⟨rb, mb, hb, hw⟩ := L.Ind.ntBW_some hw
   rw [putCall hL hb] at hw
   obtain ⟨hI2, hM2, hs2, ht2, hIW2, hgb, hnb⟩ :=
     putER_facts hIa hMa (d + 1) (UInt64.ofNat ns.length) (by omega) (by omega)
   have hq8 : (q + 8).toNat = q.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
   have hdn : rom.drop (q + 8).toNat = encNames ns ++ rest := by
     rw [hq8, ← List.drop_drop, hd']; simp [u64B]
-  obtain ⟨r2, m3, h2, hw⟩ := ntBW_inv hw
+  obtain ⟨r2, m3, h2, hw⟩ := L.Ind.ntBW_some hw
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨ws, a', hrun, hwl, hwlt, hwd, hI3, hM3, hs3, hq3, hek3, ht3, hiw3⟩ :=

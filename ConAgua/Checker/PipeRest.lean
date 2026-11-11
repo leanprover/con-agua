@@ -13,6 +13,7 @@ import ConAgua.Front.ChunkBridge
 import ConAgua.Front.FrontRunRef
 import ConRon.Bridge.Checker.Pins
 public import ConAgua.Checker.PipePrelude
+import ConAgua.Arena.LoopT
 
 @[expose] public section
 
@@ -142,16 +143,6 @@ theorem frontStage_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArra
 
 /-! ## `prepare_prelude` -/
 
-/-- A memo whose stamps are all `0` at epoch word `0` is the empty memo (as loopt2's
-`memoRV_zeroAt`, `Arena/LoopT.lean`). -/
-theorem memoRV_zero0 {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
-    (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (m : Mem)
-    (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (he : rdW (m.arr64 CTL) S.cs = 0)
-    (hz : ∀ j, rdW (m.arr64 S.arr) j = 0) : MemoRV S K VR m (∅ : Std.HashMap κ ν) := by
-  have hep : epG S m = 1 := by simp [epG, he]
-  exact memoRV_fresh S K VR m hctl (by rw [hep]; decide) (by rw [hep, hz]; decide)
-    (fun j _ => by rw [hep]; simp [mstG, hz])
-
 /-- **After `prepare_prelude`**: `DECL` holds the prepared records. -/
 structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState) : Prop where
   since : Since l m pb
@@ -180,9 +171,9 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
     · simp only [erecTop1, h5.hz.c130]; simp
     · have := hc.1 (tier1 EREC) (by decide); omega
   have hseen : ∃ s, L.Checker.SeenR s₀.mem s :=
-    ⟨∅, memoRV_zero0 hsSch bmKey _ s₀.mem (by simp; omega) h5.hz.c73 h5.hz.seen⟩
+    ⟨∅, L.Arena.memoRV_zeroAt hsSch bmKey _ s₀.mem (by simp; omega) h5.hz.c73 h5.hz.seen⟩
   have hnix : ∃ idx, NixR s₀.mem idx :=
-    ⟨∅, memoRV_zero0 hnSch nmKey _ s₀.mem (by simp; omega) h5.hz.c75 h5.hz.nix⟩
+    ⟨∅, L.Arena.memoRV_zeroAt hnSch nmKey _ s₀.mem (by simp; omega) h5.hz.c75 h5.hz.nix⟩
   have hdsz : (s₀.mem.arr64 DECL).size < 2 ^ 64 := by have := hc.1 DECL (by decide); omega
   refine triple_post (triple_and (triple_and (preparePrelude_refines checkerProg checkerProg_prepProg
     checkerProg_prepExt checkerProg_hoistProg checkerProg_hoistExt n s₀ a pre rc.decls

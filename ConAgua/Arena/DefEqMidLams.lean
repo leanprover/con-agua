@@ -157,9 +157,9 @@ theorem lo_ref (p : Prog) (hp : LamsProg p) (hi : Inst1OK p) (n : Nat)
       d ty₁ ty₂ hF hn hs h₁ h₂) fun r₁ m₁ _ e₁ => RefE.after_core (w := id) e₁ fun M₁ hS₁ _ => ?_
   dsimp only [loE.k_defeq]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, decBool_f h0]
+  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ (by simp only [decLO]; rfl) ⟨hw0, hw0, hw0⟩)
-  rw [ite_eq_right h0, decBool_t h0]
+  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   refine RefE.bind_callW (fun _ => rfl) (lamsInst_refines p hp hi n' ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb d
     ty₂ body₁ body₂ hS₁ h₂ hb₁ hb₂) fun r₂ m₂ _ e₂ => RefE.after_core (w := id) e₂ fun M₂ hS₂ _ => ?_

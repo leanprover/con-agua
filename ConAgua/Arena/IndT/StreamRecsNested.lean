@@ -372,7 +372,7 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
   · rw [sndW.k_view_ls.none] at hm; cases hm
   obtain ⟨s3, rfl, -, hm3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (viewLs_specW p h.ln h.sum.ha h.pc h.vl N _ us) h3
-  obtain ⟨ids, hr3, hS3, hg3', hd3, -⟩ := viewLsW_ok hm3 hS1 hus (rcPoolSmall hS1)
+  obtain ⟨ids, hr3, hS3, hg3', hd3, -⟩ := viewLsW_ok hm3 hS1 hus (L.Ind.poolSmall_of_stage hS1)
   have hA3 := hA1.iw (viewLsW_iwFrame hm3)
   simp only [decRL, L.getD_zero, Nat.zero_add, L.getD_one] at hd3
   obtain ⟨hd3, hb3⟩ := hd3
@@ -394,7 +394,7 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
       beq_iff_eq.mpr ((decE_tag_const _ hx1).mpr hg3)
     refine ⟨false, a1, ?_, hS3, hg13, hA3, by simp⟩
     simp only [ConRon.Arena.streamNestedDom, StateT.run_bind, hr1, except_ok_bind, ht, ↓reduceIte,
-      viewConst_run', hvc, hr3, hne']
+      L.Ind.viewConst_run, hvc, hr3, hne']
     rfl
   rw [sndW.k_sl_eq.arm2 _ _ _ _ _ _ _ _ hq] at hm
   have hids : ids = lvls := Classical.byContradiction fun c => hq (he4.mpr c)
@@ -444,7 +444,7 @@ theorem snd_ok (h : SnoProg p) (k : Word) {N : Nat} {m m' : Mem} {a : AState}
   have hq' : (ids == lvls) = true := by simpa using hids
   refine ⟨args == ps ++ bs, a7, ?_, hS8, (hg15.trans hg58), hA8, ?_⟩
   · simp only [ConRon.Arena.streamNestedDom, StateT.run_bind, hr1, except_ok_bind, ht, ↓reduceIte,
-      viewConst_run', hvc, hr3, hq', hr5, hr6, hr7]
+      L.Ind.viewConst_run, hvc, hr3, hq', hr5, hr6, hr7]
     rfl
   · rw [he9]; simp
 
@@ -547,7 +547,7 @@ theorem sno_ok (h : SnoProg p) {N : Nat} {m m' : Mem} {a : AState} {ty mI rP : W
   refine ⟨b, a3, ?_, hS3, hg1.trans hg3, hA3, hb3⟩
   rw [hd] at hr3
   simp only [ConRon.Arena.streamNestedOk, StateT.run_bind, hr1, except_ok_bind, htag, ↓reduceIte,
-    viewBind_run, hvb']
+    L.Arena.viewBind_run, hvb']
   exact hr3
 
 /-- **`stream_nested_ok`'s step** (`SnoSim`, the obligation `sr1_ref` takes): the twin's step

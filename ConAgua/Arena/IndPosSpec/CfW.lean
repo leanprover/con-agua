@@ -15,6 +15,7 @@ import ConAgua.Arena.IndPosSpec.NestKeyMap
 public import ConAgua.Arena.IndPosSpec.GrpAt
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -54,12 +55,12 @@ theorem nsb_words {m : Mem} {p : Word} {NS : NestState} (h : NSB m p NS) (htop :
   simp only [decNS, decAt, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h'
   obtain ⟨ks, ⟨o0, ho0, l0, hl0, hks⟩, act, ⟨o2, ho2, l2, hl2, hact⟩, nfs, ⟨o4, ho4, l4, hl4, hnfs⟩, hNS⟩ := h'
   cases hNS
-  obtain ⟨i0, e0⟩ := pos2_iwN_trunc ho0
-  obtain ⟨i1, e1⟩ := pos2_iwN_trunc hl0
-  obtain ⟨i2, e2⟩ := pos2_iwN_trunc ho2
-  obtain ⟨i3, e3⟩ := pos2_iwN_trunc hl2
-  obtain ⟨i4, e4⟩ := pos2_iwN_trunc ho4
-  obtain ⟨i5, e5⟩ := pos2_iwN_trunc hl4
+  obtain ⟨i0, e0⟩ := L.Ind.iwN_truncM_some ho0
+  obtain ⟨i1, e1⟩ := L.Ind.iwN_truncM_some hl0
+  obtain ⟨i2, e2⟩ := L.Ind.iwN_truncM_some ho2
+  obtain ⟨i3, e3⟩ := L.Ind.iwN_truncM_some hl2
+  obtain ⟨i4, e4⟩ := L.Ind.iwN_truncM_some ho4
+  obtain ⟨i5, e5⟩ := L.Ind.iwN_truncM_some hl4
   have r0 : (rdW (m.arr64 IW) p).toNat = o0 := by
     have := rd_iwN (m := m) (p := p) (i := 0) (by simpa using e0) (by simp; omega); simpa using this
   rw [r0, rd_iwN (i := 1) (by simpa using e1) (by simp; omega), rd_iwN (i := 2) (by simpa using e2) (by simp; omega),

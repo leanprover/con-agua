@@ -574,7 +574,7 @@ theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Wor
     all_goals clear hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hphn hpho
     all_goals subst_vars
     all_goals simp only [Cond.pval, Expr.pval, L.Scan.Key.rd8_byteW, Locals.init, St.setLoc_loc,
-      St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.tail_cons,
+      L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, List.headD_cons, List.tail_cons,
       List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval,
       Bool.not_eq_true', beq_iff_eq, bne_iff_ne, ne_eq] at *
     all_goals grind [lang_grind, hintsN.hintsObjN]

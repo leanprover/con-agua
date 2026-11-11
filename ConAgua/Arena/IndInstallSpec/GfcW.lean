@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.RecGenSpec.DecB
 public import ConAgua.Arena.RecGenSpec.DecCIIndCv
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.GrindAttr
@@ -15,6 +14,9 @@ import ConAgua.Arena.RecClassSpec.MjProg
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 import all ConAgua.Arena.RecGen
+import ConAgua.Arena.RecGenSpec.Set64
+import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.RecSim
 
 @[expose] public section
 
@@ -115,7 +117,7 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
   have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
   refine ih _ m' (j + 1) h (hS.set_iw _ _) (hg.set_iw _ _ (by rw [hqj']; omega))
-    (by rw [cnsTop_set]; exact ht) (hfr.trans (MFr.set_iw _ _ _)) ?_ ?_
+    (by rw [L.Ind.iwTop_set_iw]; exact ht) (hfr.trans (MFr.set_iw _ _ _)) ?_ ?_
   · exact UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)
   · rw [hj1, hdec, List.take_add_one, List.getElem?_map, List.getElem?_eq_getElem (by omega)]
     simpa [decE_eq] using hty
@@ -206,7 +208,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   -- class `j`
   have hmsm := hms.grow (fun q => decTM_mono q) hg
   obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hmsm.1 j.toNat hjn
-  obtain ⟨-, hvm⟩ := rec2IwN_trunc hv
+  obtain ⟨-, hvm⟩ := L.Ind.iwN_truncM_some hv
   have hrv : (rdW (m.arr64 IW) (mo + j)).toNat = v := rd_iwN hvm (by have := hmsm.2; omega)
   have hM : DecB (fun m' => decTM m' (rdW (m.arr64 IW) (mo + j)).toNat) m (ms[j.toNat]'(by omega)) := by
     show decTM (truncM m) _ = _; rw [hrv]; exact hdv
@@ -228,7 +230,7 @@ theorem gfcW_ok (s0 : Mem) (co cl mo ml q : Word) (cvTas : List IConstantVal) (m
   have hqj' : (q + j).toNat = q.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
   obtain ⟨rest, a', hrun, hS', hg', ht', hdec', hJ'⟩ := ih _ m' a1 (j + 1) (acc ++ [x]) h (hS1.set_iw _ _)
     (hJiw _ _ _ hJ1 ((MemFrame.set64 _ IW (by decide) _ _).mono (by simp) (by simp)) (hS1.set_iw _ _))
-    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [cnsTop_set]; have := hg1.iw; omega)
+    ((hg.trans hg1).set_iw _ _ (by rw [hqj']; omega)) (by rw [L.Ind.iwTop_set_iw]; have := hg1.iw; omega)
     (UInt64.le_iff_toNat_le.mpr (by rw [hj1]; omega)) (by rw [hj1, hdec, he1])
   refine ⟨x :: rest, a', ?_, hS', hg', ht', by simpa using hdec', hJ'⟩
   rw [List.drop_eq_getElem_cons (by omega), List.mapM_cons]

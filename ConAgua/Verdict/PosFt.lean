@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.IndInstallSpec.TabSimSpg
 import all ConAgua.Arena.IndPos2
-import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 import ConAgua.L.WordOff
 
@@ -175,8 +174,8 @@ theorem decCaps_counts {m : Mem} {q : Word} {caps : IIndCaps} (h : decCaps (erec
   simp only [nat?, Option.map_eq_some_iff] at hni hnp
   obtain ⟨w1, hw1, rfl⟩ := hnp
   obtain ⟨w2, hw2, rfl⟩ := hni
-  have h1 := erecP_lt64 hw1
-  have h2 := erecP_lt64 hw2
+  have h1 := L.Arena.erecP_lt64 hw1
+  have h2 := L.Arena.erecP_lt64 hw2
   have e1 : (q + 12).toNat = q.toNat + 12 := by rw [UInt64.toNat_add]; simp; omega
   have e2 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
   rw [← e1] at hw1; rw [← e2] at hw2

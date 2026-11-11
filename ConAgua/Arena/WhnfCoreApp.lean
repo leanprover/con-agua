@@ -13,6 +13,8 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfCore
 import all ConAgua.Arena.WhnfCore
 import ConAgua.L.WordOff
+import ConAgua.Arena.Abs1Refine
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -249,7 +251,7 @@ theorem callW_mkApp (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : 
     s₀ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := mkApp_ok s₀.mem a₀ hD f x _ _ hm
-  exact ⟨h1, h2, h3, mkAppW_frame _ _ _ _ _ hm, mkAppW_hw _ a₀ hD f x _ _ hm⟩
+  exact ⟨h1, h2, h3, L.Arena.mkAppW_frame _ _ _ _ _ hm, mkAppW_hw _ a₀ hD f x _ _ hm⟩
 
 /-- **`mk_app_n_from` as a run.** -/
 theorem callW_mkAppNFrom (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -317,11 +319,11 @@ theorem SpineR.keepT {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR
 
 theorem spW_set64_eq (m : Mem) (p v : Word) (hb : p.toNat < (m.arr64 SPN).size) :
     spW (m.set64 SPN p v) p = v := by
-  unfold spW; rw [rdW_set64L, ite_eq_left ⟨rfl, rfl, hb⟩]
+  unfold spW; rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, hb⟩]
 
 theorem spW_set64_ne (m : Mem) (p j v : Word) (hj : p ≠ j) :
     spW (m.set64 SPN p v) j = spW m j := by
-  unfold spW; rw [rdW_set64L, ite_eq_right (fun h => hj h.2.1)]
+  unfold spW; rw [L.Arena.rdW_set64, ite_eq_right (fun h => hj h.2.1)]
 
 /-- **A push onto the spine stack extends `SpineR`**: the write is at the old top of the slice
 (`off + cnt`), so every old entry's position is untouched. -/
@@ -347,7 +349,7 @@ theorem SpineR.push {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m o
     rw [hidx i (by omega), hoc] at this
     omega
   have hbound : off.toNat + (cnt + 1).toNat ≤ ((m.set64 SPN (off + cnt) v).arr64 SPN).size := by
-    rw [size_set64L, hcnt1]; omega
+    rw [L.Mem.size64_set64, hcnt1]; omega
   refine ⟨by rw [Array.size_push, h.size, hcnt1], hbound, fun i hi => ?_, fun i hi => ?_⟩
   · rw [hcnt1] at hi
     by_cases he : i = cnt.toNat
@@ -478,7 +480,7 @@ theorem betaPeel_spec (p : Prog) (hp : p.lookup "beta_peel" = some betaPeelL) (n
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       fun s => Triple.step_exec (betaPeelW_spec p (n + 1) s),
       callW_spec p n "inst_list"] <;>
-    finish [betaPeelFnW, rdW, size_set64, LoopOut.ofSig]
+    finish [betaPeelFnW, rdW, L.Mem.size64_set64, LoopOut.ofSig]
 
 /-! ## `beta_peel` refines `betaPeel` -/
 
@@ -630,7 +632,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         have htop' : spTop ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) =
             co + (cn + 1) := by
           unfold spTop
-          rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136m⟩, UInt64.add_assoc]
+          rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136m⟩, UInt64.add_assoc]
         have hb' : ∀ j : Word, j < co →
             spW ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) j =
               spW m₀ j := by
@@ -646,18 +648,18 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
           omega
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih _ _ (i + 1) (cn + 1)
           (acc.push (decE (spW m (ao + i)))) hS' hbody1 hacc' htop' hb'
-          (by simp only [size_set64]; exact hsz)
+          (by simp only [L.Mem.size64_set64]; exact hsz)
           (hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
             (by decide) (by decide)))
           (hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
             (by decide) (by decide)))
-          (by simp only [size_set64]; exact h136m)
+          (by simp only [L.Mem.size64_set64]; exact h136m)
           st r mF hF h136
         have hlam : ((decE t).tag == ETag.lam) = true := by
           rw [decE_tag_lam_beq t ht]; simp [ht5]
         refine ⟨x, a', ?_, hx, hrw, M', hS'', hK, hSt⟩
         rw [← hrun', betaPeel]
-        simp only [hlt', dite_true, hlam, ite_true, StateT.run_bind, viewBind_run', hvb,
+        simp only [hlt', dite_true, hlam, ite_true, StateT.run_bind, L.Arena.viewBind_run, hvb,
           except_ok_bind, hxi, hi1]
       · rw [peelFull_ret _ _ _ _ _ _ _ _ _ _ hlt ht5] at hF
         cases h1 : callW p k "inst_list" [t, co, cn, 0] m with
@@ -703,7 +705,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
           rw [hres', AM.run_of_ok _ _ hok2, hres2]
           rfl
         have h136' : (136 : Word).toNat < (m₂.arr64 CTL).size := by
-          rwa [size_set64] at h136
+          rwa [L.Mem.size64_set64] at h136
         refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hhw2⟩, M', ?_, hK', ?_⟩
         · simp [decStep]
         · exact hS2.frame_stk (MemFrame.setCtl m₂ 136 co) (by simp) (by simp)
@@ -725,7 +727,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat
         simp only [hnlt, dite_false, StateT.run_bind, AM.run_of_ok _ _ hok, except_ok_bind, hres]
         rfl
       have h136' : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-        rwa [size_set64] at h136
+        rwa [L.Mem.size64_set64] at h136
       refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hrw⟩, M', ?_, hK', ?_⟩
       · simp [decStep]
       · exact hS'.frame_stk (MemFrame.setCtl m₃ 136 co) (by simp) (by simp)
@@ -768,7 +770,7 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) 
   have hS1 := hS.frame_stk (spnCtl_frame s.mem co a (co + 1)) (by simp) (by simp)
   have htop1 : spTop ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) = co + 1 := by
     unfold spTop
-    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [size_set64]; exact h136i⟩]
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136i⟩]
   have hb1 : ∀ j : Word, j < co →
       spW ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) j = spW s.mem j := by
     intro j hj
@@ -777,10 +779,10 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) 
       rw [← h] at this; omega)]
   obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := peelFull_ref p hp.spine hil n ao an args co dn vis
     fe MM eb a₀ s.mem har hco (by rw [hco]; exact hlo) (n + 1) _ t i 1 #[decE a] hS1 ht hacc htop1 hb1
-    (by simp only [size_set64])
+    (by simp only [L.Mem.size64_set64])
     (BKept.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
     (PoolGrew.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
-    (by simp only [size_set64]; exact h136i) _ _ _ hW h136
+    (by simp only [L.Mem.size64_set64]; exact h136i) _ _ _ hW h136
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hok, ?_, ?_, ?_⟩
   · rw [hst]; exact ⟨M', hS', hK, hSt⟩

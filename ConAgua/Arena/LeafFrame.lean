@@ -54,7 +54,7 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
   intro st hst m₀
   induction st with
   | «skip» => vcgen [step] <;> grind
-  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st8 a i e => simp [Stmt.okW] at hst
   | st64 a i e =>
     by_cases hc : a = ctl
@@ -81,7 +81,7 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
     have h1 : ∀ m (a : TieredArray) di b si n, Fr m₀ m → a ≠ ctl ∧ a ∈ A → Fr m₀ (m.copy8w a di b si n) :=
       fun _ _ _ _ _ _ h ha => hW.copy8w h ha _ _ _ _
     vcgen [step, warr_okW d hst, evalE_same di, evalE_same si, evalE_same n] <;> grind
-  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [St.setLoc_mem]
+  | scan8 x s i e c => vcgen [step, setLoc, evalE_same i, evalE_same e] <;> grind [L.St.setLoc_mem]
   | st32t a t i e =>
     simp only [Stmt.okW, Bool.and_eq_true, decide_eq_true_eq] at hst
     have := tierA_eq_or a
@@ -99,7 +99,7 @@ theorem step_frI (p : Prog) (gs : List FnName) (hW : WFrame ctl A C Fr) (k : Stm
   | «call» xs f args =>
     simp only [Stmt.okW, decide_eq_true_eq] at hst
     vcgen [step, setLocs, evalArgs_same args, hinv f hst m₀] <;>
-      grind [St.setLocs_mem']
+      grind [L.St.setLocs_mem]
   | «abort» e => vcgen [step, evalE_same e] <;> grind
   | gset g e =>
     have := hW.setG

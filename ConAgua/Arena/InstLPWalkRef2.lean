@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.InstLPWalkRef
+import ConAgua.Arena.DefEqMid
 
 @[expose] public section
 
@@ -82,7 +83,7 @@ theorem ilw_fvarArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE tw)
     (Y := if xs.headD 0 = tw then some (h, m₁) else ilwChk (callW p n "intern_fvar" [iw, xs.headD 0] m₁))
-    (Yn := callW p n "intern_fvar" [iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx hty]; by_cases e : xs.headD 0 = tw <;> simp) hY
+    (Yn := callW p n "intern_fvar" [iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [L.Arena.decE_beq_eq _ _ hx hty]; by_cases e : xs.headD 0 = tw <;> simp) hY
     (fun _ zs h5 hz => ilw_internFVar p hp n iw (xs.headD 0) zs hS₁ hM₁ hx h5 hz)
 
 /-- **`lp_proj` refines `instLPArmProj`.** -/
@@ -112,7 +113,7 @@ theorem ilw_projArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
   intro a₁ M₁ _ hS₁ hM₁ _ _ hx
   exact ilw_rebuild (c := decE (xs.headD 0) == decE ew)
     (Y := if xs.headD 0 = ew then some (h, m₁) else ilwChk (callW p n "mk_proj" [nw, iw, xs.headD 0] m₁))
-    (Yn := callW p n "mk_proj" [nw, iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [ilw_beq hx he]; by_cases e : xs.headD 0 = ew <;> simp) hY
+    (Yn := callW p n "mk_proj" [nw, iw, xs.headD 0] m₁) hS₁ hM₁ hh (by rw [L.Arena.decE_beq_eq _ _ hx he]; by_cases e : xs.headD 0 = ew <;> simp) hY
     (fun _ zs h5 hz => ilw_mkProj p hp n nw iw (xs.headD 0) zs hS₁ hM₁ h5 hz)
 
 /-- **`lp_let` refines `instLPArmLet`.** The third child and the rebuild are `lp_let_tail`'s, one
@@ -188,7 +189,7 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
     (c := decE (xs.headD 0) == decE fw && decE (ys.headD 0) == decE aw && decE (zs.headD 0) == decE bw)
     (Y := ilwRbLet p (j + 1) m₄ h fw aw bw (xs.headD 0) (ys.headD 0) (zs.headD 0))
     (Yn := callW p j "mk_let" [xs.headD 0, ys.headD 0, zs.headD 0] m₄) hS₃ hM₃ hh
-    (by rw [ilw_beq hx hf, ilw_beq hy ha, ilw_beq hz hb, ilwRbLet_eq]
+    (by rw [L.Arena.decE_beq_eq _ _ hx hf, L.Arena.decE_beq_eq _ _ hy ha, L.Arena.decE_beq_eq _ _ hz hb, ilwRbLet_eq]
         generalize xs.headD 0 = x; generalize ys.headD 0 = y; generalize zs.headD 0 = z
         by_cases e1 : x = fw <;> by_cases e2 : y = aw <;> by_cases e3 : z = bw <;> simp [e1, e2, e3])
     hW5
@@ -244,7 +245,7 @@ theorem ilw_binArm (R : TRec) (mk : FnName) (C : EIdx → EIdx → ENodeView)
   exact ilw_rebuild (c := decE (xs.headD 0) == decE fw && decE (ys.headD 0) == decE aw)
     (Y := ilwRb p n mk m₂ h fw aw (xs.headD 0) (ys.headD 0))
     (Yn := callW p n mk [xs.headD 0, ys.headD 0] m₂) hS₂ hM₂ hh
-    (by rw [ilw_beq hx hf, ilw_beq hy ha, ilwRb]
+    (by rw [L.Arena.decE_beq_eq _ _ hx hf, L.Arena.decE_beq_eq _ _ hy ha, ilwRb]
         by_cases e1 : xs.headD 0 = fw <;> by_cases e2 : ys.headD 0 = aw <;> simp) hY
     (fun _ zs h5 hz => hmk m₂ _ a₂ M₂ _ _ zs hS₂ hM₂ hx hy h5 hz)
 

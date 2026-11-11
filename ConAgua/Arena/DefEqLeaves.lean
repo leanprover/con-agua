@@ -12,6 +12,7 @@ public import ConAgua.Arena.WhnfIotaRefine
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Pins
+import ConAgua.Arena.Inst1Refine
 
 @[expose] public section
 
@@ -96,9 +97,6 @@ theorem coreRef_pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hok, ?_, by rw [hres, hv], hr⟩
   rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
-
-theorem decBool_ite (c : Prop) [Decidable c] : decBool [if c then 1 else 0] = decide c := by
-  unfold decBool; split <;> simp_all
 
 theorem decBool_of {c : Prop} [Decidable c] {r : List Word} (hr : (if c then 1 else 0) = r.headD 0) :
     decBool r = decide c := by
@@ -265,7 +263,7 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
 
 /-! ## `is_eager_reduce` -/
 
-theorem del_rd64 (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
+theorem rd64_rdW (m : Mem) (a : ArrId) (i : Word) : L.rd64 m a i = rdW (m.arr64 a) i := by
   simp [L.rd64, rdW, Array.getD_eq_getD_getElem?]
 
 l_model isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p)
@@ -292,7 +290,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   have hvo : viewOKA m h := ⟨hs, by simpa using hc⟩
   obtain ⟨-, hf, -⟩ := view_app m a hR h hh hvo h4
   simp only [isEagerReduce, decE_tag_app_beq h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
-    viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
+    L.Arena.viewApp_run, viewApp_ok m a hR h hh hvo, except_ok_bind]
   generalize tfld m APP (tierW h) (idxA h) 0 = f at hf hW ⊢
   rcases (Classical.em (tagW f = 4)).symm with f4 | f4
   · simp only [f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
@@ -307,7 +305,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   have fvo : viewOKA m f := ⟨fs, by simpa using fc⟩
   obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
   simp only [decE_tag_app_beq f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
-    viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
+    L.Arena.viewApp_run, viewApp_ok m a hR f hf fvo, except_ok_bind]
   generalize tfld m APP (tierW f) (idxA f) 0 = g at hg hW ⊢
   rcases (Classical.em (tagW g = 3)).symm with g3 | g3
   · simp only [g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
@@ -324,7 +322,7 @@ theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFul
   have her := hP.names_lt 50 (by decide)
   rw [pinW_rdW m (1 + 50) (1 + 50) rfl] at her
   subst hW
-  simp only [decE_tag_const_beq g hg, g3, decide_true, ↓reduceIte, StateT.run_bind, L.Ind.viewConst_run',
+  simp only [decE_tag_const_beq g hg, g3, decide_true, ↓reduceIte, StateT.run_bind, L.Ind.viewConst_run,
     L.Ind.viewConst_ok m a hR g hg gvo, except_ok_bind, eagerReduceName, pinEagerReduce,
     PIN_EAGER_REDUCE, pinAt_run hP 50 (by decide), pinW_rdW m (1 + 50) (1 + 50) rfl,
     StateT.run_pure]
@@ -355,7 +353,7 @@ theorem pv_eq_zero_iff (p : Array Word) (o l : Nat) (hn : Norm p o l) : pv p o l
   · intro h
     rcases Nat.eq_zero_or_pos l with hl | hl
     · exact hl
-    · have := pv_ge p o l hl hn
+    · have := L.Arena.pv_ge_wt p o l hl hn
       have : 0 < wt (l - 1) := Nat.two_pow_pos _
       omega
   · intro h; subst h; rfl
@@ -953,9 +951,9 @@ theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : 
   simp only [callFn, sameConstHeadsL]
   vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64, evalE_tld, tld,
     evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, callW_spec p n "get_app_fn"]
-  all_goals (try simp only [Cond.pval, Expr.pval_tagE, Expr.pval, Expr.pval_cntE, del_rd64, St.setLoc_loc, St.setLoc_mem,
+  all_goals (try simp only [Cond.pval, Expr.pval_tagE, Expr.pval, Expr.pval_cntE, L.Arena.rd64_rdW, St.setLoc_loc, L.St.setLoc_mem,
     St.setLocs_nil, St.setLocs_cons,
-    Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval,
+    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval,
     Nat.reduceEqDiff, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, Bool.and_eq_true] at *)
   all_goals grind -lia -linarith [lang_grind, arena_grind, schW_a, schW_b, schW_go, scB1_tag,
     scB1_go, scB2_tag, scB2_go, tierW, idxW]

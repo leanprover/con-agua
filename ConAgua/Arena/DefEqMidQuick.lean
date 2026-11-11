@@ -12,6 +12,8 @@ public import ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.DefEq
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPosSpec.UnW
+import ConAgua.Arena.InferBodyDisp
 
 @[expose] public section
 
@@ -63,76 +65,6 @@ structure QuickProg (p : Prog) : Prop where
 
 /-! ## `e_view` runs -/
 
-theorem quick_eViewW_head (m : Mem) (h : Word) (hne : L.Ind.eViewW m h ≠ []) :
-    (L.Ind.eViewW m h).headD 0 = tagW h := by
-  unfold L.Ind.eViewW at hne ⊢
-  by_cases c1 : (4294967295 : Word) < h
-  · simp [c1] at hne
-  by_cases c2 : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [c1, c2] at hne
-  simp only [c1, c2, ite_false] at hne ⊢
-  by_cases g0 : tagW h = 0
-  · simp only [g0, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g0, ite_false] at hne ⊢
-  by_cases g1 : tagW h = 1
-  · simp only [g1, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g1, ite_false] at hne ⊢
-  by_cases g2 : tagW h = 2
-  · simp only [g2, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g2, ite_false] at hne ⊢
-  by_cases g3 : tagW h = 3
-  · simp only [g3, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g3, ite_false] at hne ⊢
-  by_cases g4 : tagW h = 4
-  · simp only [g4, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g4, ite_false] at hne ⊢
-  by_cases g5 : tagW h = 5
-  · simp only [g5, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g5, ite_false] at hne ⊢
-  by_cases g6 : tagW h = 6
-  · simp only [g6, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g6, ite_false] at hne ⊢
-  by_cases g7 : tagW h = 7
-  · simp only [g7, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g7, ite_false] at hne ⊢
-  by_cases g8 : tagW h = 8
-  · simp only [g8, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g8, ite_false] at hne ⊢
-  by_cases g9 : tagW h = 9
-  · simp only [g9, ite_true] at hne ⊢
-    split at hne
-    · exact absurd rfl hne
-    · rename_i hh; simp only [hh, ite_false, List.headD_cons]
-  simp only [g9, ite_false] at hne ⊢
-  exact absurd rfl hne
-
 /-- **A run of `e_view`**: the memory kept, the twin's view, the words denoting it, the tag word. -/
 theorem eView_callW_view {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat}
     {m m' : Mem} {a : AState} (hR : ArenaR m a) {h : Word} {r : List Word}
@@ -142,7 +74,7 @@ theorem eView_callW_view {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) 
     (L.Ind.eView_spec p hp n ⟨m, Locals.init []⟩ h) hc
   obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok m a hR h (hr ▸ hne)
   refine ⟨hm.symm, v, hv, hr ▸ hvr, ?_⟩
-  rw [hr]; exact quick_eViewW_head m h (hr ▸ hne)
+  rw [hr]; exact L.Arena.eViewW_head m h (hr ▸ hne)
 
 theorem viewR_sort {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h2 : r.headD 0 = 2) :
     v = .sort (decI (r.tail.headD 0)) ∧ HW (r.tail.headD 0) := by
@@ -228,15 +160,6 @@ theorem quickPairT_lam (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some 
 
 end qp
 
-/-- Nothing returns at fuel `0`. -/
-theorem invoke_zero_false (p : Prog) (f : FnName) (vs : List Word) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p 0) f vs ⦃fun _ _ => False; ⊤⦄ := by
-  apply L.M.triple_of_run
-  intro s r s' hs hrun
-  have := L.M.of_run (P := fun s => s = s₀) hs hrun (callW_spec p 0 f vs s₀)
-  rw [callW_zero] at this
-  cases this.2
-
 /-- `lvl_eq_c` does not return at fuel `1` (its first statement is a call). -/
 theorem lvlEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (r : List Word) :
     callW p 1 "lvl_eq_c" [u, v] m ≠ some (r, m') := by
@@ -245,8 +168,8 @@ theorem lvlEqC_one (p : Prog) (hp : LvlCacheProg p) (u v : Word) (m m' : Mem) (r
       ⦃fun _ _ => False; ⊤⦄ := by
     rw [invoke_eq _ hp.c]
     simp only [callFn, lvlEqCL]
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, invoke_zero_false p "lq_find",
-      invoke_zero_false p "lvl_eq_rec"] <;>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, L.Ind.invoke_exec0 p "lq_find",
+      L.Ind.invoke_exec0 p "lvl_eq_rec"] <;>
       grind
   obtain ⟨_, _, hf⟩ := triple_of_callW h hc
   exact hf

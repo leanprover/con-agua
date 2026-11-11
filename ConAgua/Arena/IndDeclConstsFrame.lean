@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndDeclConstsLp
 public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.CrOKFrame
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
-import ConAgua.Arena.TwinStep
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -12,6 +11,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndIface
 public import ConAgua.Arena.LoopT
+import ConAgua.Arena.IlpRdReal
 
 @[expose] public section
 
@@ -427,7 +427,7 @@ theorem erecAlloc_specV (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, st64]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, St.setLoc_mem, Locals.init,
+    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, Locals.init,
       Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq] at *
     all_goals subst_vars
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erAllocW, erAllocMem, ctl_t0, tierA]
@@ -453,8 +453,6 @@ theorem ilpfA_idx : ∀ b ∈ ilpfA, ¬ DcIdxArr b := by decide +kernel
 theorem i1lA_idx : ∀ b ∈ i1lA, ¬ DcIdxArr b := by decide +kernel
 theorem ilpfA_pins : (PINS : TieredArray) ∉ ilpfA := by decide +kernel
 theorem i1lA_pins : (PINS : TieredArray) ∉ i1lA := by decide +kernel
-theorem dcIlpfA_stage : ∀ b ∈ ilpfA, b.arr < 201 ∨ 208 < b.arr := by decide +kernel
-theorem dcIlpfC_stage : ∀ x ∈ ilpfC, x.toNat < 202 ∨ 219 < x.toNat := by simp [ilpfC]
 theorem i1lA_mem : ∀ b ∈ i1lA, dcMemArrOk b = true := by decide +kernel
 theorem i1lC_mem : ∀ x ∈ i1lC, dcMemCtlOk x.toNat = true := by simp [i1lC, walkC, liftC, dcMemCtlOk]
 
@@ -482,7 +480,7 @@ theorem dcMem_ilp {p : Prog} (hI : IlpfF p) {n : Nat} {vs : List Word} {m m' : M
     (hc : callW p n "inst_lp_core" vs m = some (r, m')) (h : DcMem m) : DcMem m' := by
   have hf := instLPCore_frame hI hc
   obtain ⟨hcore, hst, hcr, ⟨mpa, ha⟩, ⟨mpi, hi⟩, hwk⟩ := h
-  exact ⟨instLPCore_keepCM hI hc hcore, hst.frame hf dcIlpfA_stage dcIlpfC_stage,
+  exact ⟨instLPCore_keepCM hI hc hcore, hst.frame hf L.Ind.ilpfA_stage L.Ind.ilpfC_stage,
     CrOK.frame hcr hf (by decide) (by decide),
     ⟨mpa, memoRG_frame ⟨ABMEMO, 48⟩ ⟨by decide, by decide⟩ lfKey decE _ _ (by decide) (by decide)
       m m' hf mpa ha⟩,

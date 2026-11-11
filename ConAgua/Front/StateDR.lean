@@ -204,20 +204,6 @@ theorem ArenaD.putT (m m' : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId) (hb 
       (by rcases hb with rfl | rfl | rfl <;> simp [szC, spS]) m m' hf a hA.base,
     DerR.frameT hf (by rcases hb with rfl | rfl | rfl <;> simp [spArr, NID, LID, NIDS, LIDS, EIDS]) hA.der⟩
 
-/-- Appending to the pool keeps the mode (the flag stays, a tier-0 top stays in tier 0). -/
-theorem ModeOK.growsF {m m' : Mem} (h : ModeOK m) (hg : Grows m m') : ModeOK m' := by
-  have hf : m'.flag = m.flag := by rw [hg.frame.flag, Mem.flag_set64_top]
-  have ht := hg.tier
-  unfold ModeOK at h ⊢
-  rw [hf]
-  rcases h with h | h
-  · exact .inl h
-  · exact .inr (by omega)
-
-/-- Appending to the pool keeps `ArenaD`. -/
-theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
-  ⟨ArenaR.grow m m' hg a hA.base, DerR.frameT (grows_frame m m' hg) (by simp [POOL, POOL1]) hA.der⟩
-
 /-- Name id `i` bound to `w` after a frame: the name table with `i` bound to `w`. -/
 theorem StateDR.putName {A : List TieredArray} {C : List Word} {m m₁ m₂ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : (NID : TieredArray) ∉ A) (hl : (LID : TieredArray) ∉ A) (i w : Word)

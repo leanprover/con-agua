@@ -3,17 +3,16 @@ module
 public import ConAgua.Arena.StrLitTy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.StrLitCv
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.L.LocNF
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.StrLit
 import ConAgua.L.WordOff
+import ConAgua.Arena.DefEqMidSpine
 
 @[expose] public section
 
@@ -57,16 +56,6 @@ theorem slViewR_bvar {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h0 
     | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
     | (exfalso; revert hr; decide)
     | (obtain ⟨-, h1⟩ := hr; rw [L.getD_one] at h1; rw [h1])
-
-theorem slViewR_const {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h3 : r.headD 0 = 3) :
-    v = .const (decI (r.tail.headD 0)) (decI (r.tail.tail.headD 0)) ∧ HW (r.tail.headD 0) ∧
-      HW (r.tail.tail.headD 0) := by
-  cases v <;> simp only [L.Ind.ViewR, h3] at hr
-  all_goals first
-    | (exfalso; obtain ⟨h0, -⟩ := hr; revert h0; decide)
-    | (exfalso; revert hr; decide)
-    | (obtain ⟨-, h1, h4, h5, h6⟩ := hr; rw [L.getD_one] at h1 h4; rw [L.getD_two] at h5 h6
-       exact ⟨by rw [h4, h6], h1, h5⟩)
 
 /-! ## The `∀`-guard -/
 
@@ -144,15 +133,10 @@ theorem lp_one {m : Mem} {c : List Word} {lps : List NIdx}
     exact ⟨by subst hsl; rfl, hlt⟩
   · simp [hlt] at hsl
 
-/-- L's tagged `EREC` read, as `vcgen` leaves it. -/
-theorem erRd_eqW (m : Mem) (x : Word) :
-    rdW (m.arr64 (L.tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m x :=
-  erRd_congr rfl rfl x
-
 /-- The same read with `EREC` and the operators unfolded. -/
 theorem erRd_eqV (m : Mem) (x : Word) :
     rdW (m.arr64 (tierA 136 (BinOp.shr.eval x 40))) (BinOp.and.eval x 1099511627775) = erRd m x :=
-  erRd_eqW m x
+  L.Ind.erRd_foldN m x
 
 theorem lp_ne {c : List Word} {lps : List NIdx} (hlen : lps.length = (c.tail.headD 0).toNat)
     (h1 : c.tail.headD 0 ≠ 1) (x : NIdx) : lps ≠ [x] := by
@@ -424,8 +408,8 @@ theorem listTy_spec (p : Prog) (hp : p.lookup "list_ty_ok" = some listTyOkL) (n 
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "e_view"] <;>
     finish (gen := 20) [listK0_f, listK0_t, listK1_f, listK1_t, listK2_s, faEqA_f, faEqA_t, faEqK_s,
-      rdW_eq, erRd_eqW,
-      St.setLocs_mem']
+      rdW_eq, L.Ind.erRd_foldN,
+      L.St.setLocs_mem]
 
 set_option maxHeartbeats 1000000 in
 theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTyOkL) (n : Nat)
@@ -438,8 +422,8 @@ theorem listNil_spec (p : Prog) (hp : p.lookup "list_nil_ty_ok" = some listNilTy
     callW_spec p n "str_cv", callW_spec p n "str_param_sort", callW_spec p n "str_ls1",
     callW_spec p n "pin_at", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, nilK0, nilK1, nilK2, nilK3, nilK4, nilA, nilAK, nilB, nilBK, nilC,
-      nilCK, nilD, nilDK, getElem_rdW', erRd_eqV, Cmp.eval, LocEq,
-      St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
+      nilCK, nilD, nilDK, L.Arena.getElem_rdW, erRd_eqV, Cmp.eval, LocEq,
+      St.setLocs_cons, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 set_option maxHeartbeats 1000000 in
@@ -455,8 +439,8 @@ theorem listCons_spec (p : Prog) (hp : p.lookup "list_cons_ty_ok" = some listCon
     callW_spec p n "mk_app", callW_spec p n "e_view"] <;>
   simp_all [-UInt64.toNat_add, consK0, consK1, consK2, consK3, consK4, consK5, consK6, consK7,
       consK8, consK9, consK10, consA, consAK, consB, consBK, faEqA, faEqK,
-      getElem_rdW', erRd_eqV, Cmp.eval, LocEq,
-      St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
+      L.Arena.getElem_rdW, erRd_eqV, Cmp.eval, LocEq,
+      St.setLocs_cons, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero,
       Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 /-! ## The tails' refinements -/
@@ -523,7 +507,7 @@ theorem nilD_ok {x l1 u1 li ps w : Word} (hx : HW x) (hl1 : HW l1) (hu1 : HW u1)
   · rw [ite_eq_right (fun h => h ci)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨?_, rfl, resH_ite01 _⟩
+    refine ⟨?_, rfl, L.Arena.resH_ite _⟩
     have h0 : (g.tail.headD 0).toNat = 0 := by rw [ci]; rfl
     rw [h0] at hv
     simp only [nilDT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
@@ -559,7 +543,7 @@ theorem nilC_ok {f x li ps w : Word} (hf : HW f) (hx : HW x) (hli : HW li) (hps 
   obtain ⟨g, m₁⟩ := q
   rw [hc] at h; simp only [nilCK] at h
   obtain ⟨rfl, v, hv, hvr, hg⟩ := eView_callW_view hp hR hc
-  obtain ⟨rfl, h1, h2⟩ := slViewR_const hvr (by rw [hg, g3'])
+  obtain ⟨rfl, h1, h2⟩ := L.Arena.viewR_const hvr (by rw [hg, g3'])
   have ht : ((decE f).tag == ETag.const) = true := by
     rw [tag_beq_w f hf 3 (by decide) ETag.const rfl _ rfl]; exact decide_eq_true g3'
   obtain ⟨hr, hm, hres⟩ := nilD_ok hp hR hx h1 h2 hli hps h

@@ -89,7 +89,7 @@ theorem bct_ref (hD : DmProg6 p) (nm : Word) :
     · have hb := decI_beq (k := IdxKind.expr) _ _ hwt hl4
       simp only [boolCtorTyped, hf, StateT.run_bind, boolName, hrun3]
       have hrun4' : (constE (decI (r3.headD 0))).run a3 = .ok (decI (r4.headD 0), a4) := hrun4
-      simp only [hrun4', exc_ok_bind', hty]
+      simp only [hrun4', L.Arena.except_ok_bind, hty]
       simp only [hb]
       try rfl
     · simp only [erRd_foldN, hrd4]
@@ -144,7 +144,7 @@ theorem tps_ref (hD : DmProg6 p) (nm : Word) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨_, a3, ?_, hS3, hg2.trans hg3, hl3, rfl⟩
-    simp only [typePinStored, hf, zeroLevel, StateT.run_bind, hrun2, exc_ok_bind']
+    simp only [typePinStored, hf, zeroLevel, StateT.run_bind, hrun2, L.Arena.except_ok_bind]
     exact hrun3
   | some ci =>
     rw [hf] at hfd

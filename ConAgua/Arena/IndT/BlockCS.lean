@@ -62,7 +62,7 @@ theorem flushRefS_of (hF : FlushProg p) (hGnv : G → closedNV p _root_.L.Checke
 
 theorem dcF_brs : "block_recs" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dc0F_brs : "block_recs" ∈ dc0Fns := List.elem_iff.mp (by decide)
-theorem dcF_btsC : "block_tables" ∈ dcFns := List.elem_iff.mp (by decide)
+theorem dcF_bts : "block_tables" ∈ dcFns := List.elem_iff.mp (by decide)
 
 /-- **`block_recs`' contract** (`brsW_ok`). -/
 theorem brRefS_of (hP : RecsProg p) (hL : DcLeafProg p)
@@ -86,7 +86,7 @@ theorem btRefS_of (hP : TablesProg p) (hL : DcLeafProg p)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (bts_spec hP n _ pp mo ml) d
   obtain ⟨ts, a', hrun, hd, hb, hS', hg, hA'⟩ := btsW_ok hP pp bs vis fe (by omega) n m s'.mem a mo ml mss r
     hS hM.abs hq hmss hW
-  obtain ⟨hDM, -⟩ := dc_keep hL dcF_btsC d hM.dc
+  obtain ⟨hDM, -⟩ := dc_keep hL L.Ind.dcF_bts d hM.dc
   exact ⟨ts, a', hrun, hS', BkMem.ofDc hDM hA'.i1, hg, hd, hb⟩
 
 theorem dcF_bir : "block_is_rec" ∈ dcFns := List.elem_iff.mp (by decide)

@@ -61,7 +61,6 @@ structure BracketProg (p : Prog) : Prop where
   im : p.lookup "if_clear" = some (memoClearG imSch)
   fm : p.lookup "fm_clear" = some (memoClearG frSch)
 
-@[simp] theorem exc_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
-    (Except.ok x >>= f) = f x := rfl
+attribute [simp] L.Arena.except_ok_bind
 
 end L.Arena

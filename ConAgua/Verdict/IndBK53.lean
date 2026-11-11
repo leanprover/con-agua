@@ -63,17 +63,6 @@ l_model tkE_spec (p : Prog) (hL : K53Look p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`StageC` across a twin step con-ron calls a `CoreStep`**, the memory's half from `AbsOK`
-after (the inductive area's `StageC.of_cstep`, at the new `CoreStep`). -/
-theorem StageC.of_cstepE {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
-    {env : ConLeche.Env} {m m' : Mem} {a a' : AState} (h : StageC dn vis fe env m a)
-    (hS : StageR vis fe m' a') (hA : AbsOK m') (hs : ConRon.Bridge.CoreStep env fe a a') :
-    StageC dn vis fe env m' a' :=
-  ⟨hS, hs.ok,
-    ⟨hA.wk.2.1, hA.wk.2.2.1, hA.wk.2.2.2.1, hA.coreMemos,
-      fun k x e => hs.ext.lss.ls.ns k x (h.mem.dnN k x e)⟩,
-    hA.wk.2.2.2.2⟩
-
 section sims
 variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
   {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -257,7 +246,7 @@ theorem tk_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q fto ftl M
   obtain ⟨c1, a2, run2, hc1, hS2, hg2, hP2⟩ := tteW_ok fe vis n h2 hS1 (HSl0.of hdl hbl) (htl.grow hg1) hP1
   have hA2 := tteW_afr h2 hA1
   have q2 := tkTele_cstep hC.check htw htlP run2
-  have hC2 := hC1.of_cstepE hS2 hA2 q2
+  have hC2 := hC1.of_cstep hS2 hA2 q2
   have hg12 := hg1.trans hg2
   refine ⟨_, _, run2, ?_⟩
   rw [tkE.k_target_k53_tele.eq_2]

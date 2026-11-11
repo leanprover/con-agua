@@ -5,7 +5,6 @@ import ConAgua.Arena.IndSumSpec.SoaW
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.IndInstallSpec.NhW
 import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
@@ -13,6 +12,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 public import ConAgua.Arena.RecCheckSpec.TpsW
 import all ConAgua.Arena.RecCheck
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 @[expose] public section
 
@@ -136,7 +136,7 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
         · have := hT m; omega)) (callW_of_callE h2)
   subst hs2
   dsimp only at hok2 hr2 hS2 hg2
-  refine RefE.bind_right (partsRunOfOk hok2) ?_
+  refine RefE.bind_right (_root_.L.Arena.AM.run_of_ok _ _ hok2) ?_
   rw [trpE.k_block_rec_names_unreserved.eq_2, rd1 _ (hg1.trans hg2)]
   refine RefE.guard rfl (fun hz => by rw [hr2] at hz; simpa using hz) (fun hc => by rw [hr2, hc]; rfl)
     fun _ _ => ?_
@@ -164,7 +164,7 @@ theorem trp_ref (N : Nat) {m : Mem} {a : AState} {pp bo bl : Word} {bs : BlockSh
       bs.members _ hS3 hms3 hown) (callW_mono (callW_of_callE h4) (by omega))
   subst hs4
   dsimp only at hok4 hr4 hS4 hg4
-  refine RefE.bind_right (partsRunOfOk hok4) ?_
+  refine RefE.bind_right (_root_.L.Arena.AM.run_of_ok _ _ hok4) ?_
   rw [trpE.k_block_rec_name_set_ok.eq_2]
   refine RefE.guard rfl (fun hz => by rw [hr4] at hz; simpa using hz) (fun hc => by rw [hr4, hc]; rfl)
     fun _ _ => ?_

@@ -167,6 +167,7 @@ import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 public import ConAgua.Arena.DeclArmLoop
+import ConAgua.Compiler.Main
 
 @[expose] public section
 
@@ -279,7 +280,7 @@ theorem checkerProg_subPB_lookup (bs : List UInt8) {f : FnName}
   cases e : checkerProg.lookup f with
   | none => rw [lookup_subPB, e]; rfl
   | some fd =>
-    have h := checkerProg_pbFree _ (mem_of_lookup e)
+    have h := checkerProg_pbFree _ (L.Compiler.mem_of_lookup e)
     simp only [hf, Bool.false_or] at h
     exact lookup_subPB_noPB bs e h
 

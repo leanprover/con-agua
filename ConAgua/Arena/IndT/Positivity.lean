@@ -31,6 +31,7 @@ import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.IndT.PosAll
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndSumSpec.StructUsedHb
+import ConAgua.Arena.IndInstallSpec.DomsW
 
 @[expose] public section
 
@@ -60,16 +61,6 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-private theorem pos_mapM_mem {α β : Type} {f : α → Option β} :
-    ∀ {l : List α} {l' : List β}, l.mapM f = some l' → ∀ x ∈ l, ∃ y, f x = some y
-  | [], _, _, _, hx => absurd hx List.not_mem_nil
-  | a :: l, _, h, x, hx => by
-    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-      Option.some.injEq] at h
-    obtain ⟨y, hy, ys, hys, -⟩ := h
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ⟨y, hy⟩
-    · exact pos_mapM_mem hys x hx
 set_option experimental.vcgen true in
 /-- **`check_block_positivity`'s unified model**: the callees outside the verdict closure lifted,
 `nest_uniform` and `nest_root` through their unified models, `check_abs_ctor_sorts_all` through its
@@ -162,8 +153,8 @@ theorem cbp_ref (hP : PosBlkProg p) (hMc : McLook p) (hF : FtProg p) (hFk : FkcP
   have hcss1P := ConRon.Bridge.Inductives.dCtors_ext.list c1.ext _ _ hcssP
   have hPc : ∀ cs ∈ bs.memberCtors, ∀ x ∈ cs, ∃ cvP, Frontend.denoteCV a1.store x.1 = some cvP := by
     intro cs hcs x hx
-    obtain ⟨y, hy⟩ := pos_mapM_mem hcss1P cs hcs
-    obtain ⟨z, hz⟩ := pos_mapM_mem hy x hx
+    obtain ⟨y, hy⟩ := L.Arena.mapM_some_mem _ _ hcss1P cs hcs
+    obtain ⟨z, hz⟩ := L.Arena.mapM_some_mem _ _ hy x hx
     simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hz
     obtain ⟨cvP, hcvP', -⟩ := hz
     exact ⟨cvP, hcvP'⟩
@@ -215,7 +206,7 @@ theorem cbp_ref (hP : PosBlkProg p) (hMc : McLook p) (hF : FtProg p) (hFk : FkcP
   have hnrt := nrt_ref hP.rs dn vis fe henv (nbRef_all hP.rs.nb hq hIlpf hLC hF hFk henv)
     (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0) c holes hctxOk (fun y hy => (hhw y hy).1) hlenP hpar
     n (by omega) m4 a3 caO caL (r4.headD 0) 0 0 bs.memberCtors {} [] bsP.memberCtors {} [] hC4 (hU1.grow hg14) hhi1
-    hpn1 (by rw [decHL_grow3 hg14 hhob1]; exact hho1) (Nat.le_trans hhob1 hg14.iw) hlen
+    hpn1 (by rw [L.Ind.decHL_grow hg14 hhob1]; exact hho1) (Nat.le_trans hhob1 hg14.iw) hlen
     (Nat.le_trans hcb2 hg24.iw) (hcss2'.grow hg24) hns4 (by simp [RootOutsB, DecB, decPL]) (by simp)
     (hP3.fr hf4) hA4 hctx3 hholes3 hcssP3 (by simp [dState]) rfl hcl
   refine RefE.bindE (fun _ => cbpE.k_nest_root.none ..) (fun hG => (⟨hG.nv, hG.core, hWt⟩ : NbG p)) hnrt

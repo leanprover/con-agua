@@ -686,7 +686,7 @@ theorem two_case (C : ConLeche.Expr → ConLeche.Expr → ConLeche.Expr) (CI : E
     · omega
   refine ⟨_, _, hiEG m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-    ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3,
+    L.Arena.ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3,
     (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz, hlt, ?_, ?_, ?_, ?_⟩
   · rw [hq2, hq1, hp1]; simp; omega
   · exact hf1.trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
@@ -946,7 +946,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM4 := (hM3.frame (frame_romA hf4)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_let m mt mv mx a a₁ a₂ a₃ _ (decI ht) (decI hv) (decI hx) (decI h) t v x (hM.miss hin)
       r1 r2 r3 (by rw [show (decI h : EIdx) = _ from res4.symm]; exact AM.run_of_ok _ _ ok4),
-      ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO, RSET]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_, ?_⟩
+      L.Arena.ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO, RSET]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_, ?_⟩
     · rw [hq3, hq2, hq1, (drop_tag rom hr hd).2]; simp; omega
     · exact hf1.trans (hf2.trans (hf3.trans ((frame_storeE hf4).trans (mpushMem_frame m₄ h))))
     · rw [mpushMem_stk, frame_exprA_stk hf4, hs3, hs2, hs1]
@@ -996,7 +996,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM2 := (hM1.frame (frame_romA hf2)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_fvar m mt a a₁ _ (decI ht) (decI h) i ty (hM.miss hin) r1
       (by rw [show (decI h : EIdx) = _ from res2.symm]; exact AM.run_of_ok _ _ ok2),
-      ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO, RSET]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_, ?_⟩
+      L.Arena.ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO, RSET]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_, ?_⟩
     · rw [hq1, hp9]; simp [u64B]; omega
     · exact hf1.trans ((frame_storeE hf2).trans (mpushMem_frame m₂ h))
     · rw [mpushMem_stk, frame_exprA_stk hf2, hs1]
@@ -1059,7 +1059,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     refine ⟨_, _, iEG_proj m ms a _ a₂ _ (decI hs) (decI h) nm i sub (decI hn) (hM.miss hin)
       (by rw [← res1]; exact AM.run_of_ok _ _ ok1) r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
+      L.Arena.ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
     · rw [hq2, hq8, hq1, (drop_tag rom hr hd).2]; simp [u64B]; omega
     · exact (frame_storeE hf1).trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
     · rw [mpushMem_stk, frame_exprA_stk hf3, hs2, frame_exprA_stk hf1]

@@ -156,7 +156,7 @@ theorem predW_toNat (z : Word) : (predW z).toNat = z.toNat - 1 := by
 theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := by
   cases x; simp [decE]
 
-theorem word_lt {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
+theorem idx_word_lt32 {k : IdxKind} (x : Idx k) : x.word.toUInt64.toNat < 2 ^ 32 := by
   simp; exact x.word.toNat_lt
 
 theorem except_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
@@ -188,7 +188,7 @@ theorem view_fvar_idx (hv : viewOK m h FVAR) (hg : tagW h = 1) :
     (tfld m FVAR (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hi, hty⟩ := node_of m a h fvarCS FVRecRel (·.fvars) _ hR.fvar hv.2
   rw [hty, decE_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk, hi]; rfl, word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk, hi]; rfl, L.Arena.idx_word_lt32 _⟩
 
 theorem view_sort (hv : viewOK m h SORT) (hg : tagW h = 2) :
     ∃ u, a.store.view (decE h) = some (.sort u) := by
@@ -222,7 +222,7 @@ theorem view_app (hv : viewOKA m h) (hg : tagW h = 4) :
   obtain ⟨k, hk, hf, ha⟩ := node_ofI m a h appCS ARecRel (·.apps) _ hR.app (idxA h) hv.2
   rw [hf, ha, decE_word, decE_word]
   exact ⟨by rw [view_tier m a hR h hh hv.1, get_app _ h hh hg (app_idx_lt m a hR h hv.2), Tbl.node?, hk]; rfl,
-    word_lt _, word_lt _⟩
+    L.Arena.idx_word_lt32 _, L.Arena.idx_word_lt32 _⟩
 
 theorem view_lam (hv : viewOK m h LAM) (hg : tagW h = 5) :
     a.store.view (decE h) = some (.lam (decE (tfld m LAM (tierW h) (idxW h) 0))
@@ -231,8 +231,8 @@ theorem view_lam (hv : viewOK m h LAM) (hg : tagW h = 5) :
     (tfld m LAM (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamCS LaRecRel (·.lams) _ hR.lam hv.2
   rw [hf, ha, decE_word, decE_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_lam _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_lam _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _,
+    L.Arena.idx_word_lt32 _⟩
 
 theorem view_forall (hv : viewOK m h FORALL) (hg : tagW h = 6) :
     a.store.view (decE h) = some (.forallE (decE (tfld m FORALL (tierW h) (idxW h) 0))
@@ -241,8 +241,8 @@ theorem view_forall (hv : viewOK m h FORALL) (hg : tagW h = 6) :
     (tfld m FORALL (tierW h) (idxW h) 1).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallCS FaRecRel (·.foralls) _ hR.forallE hv.2
   rw [hf, ha, decE_word, decE_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_forall _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_forall _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _,
+    L.Arena.idx_word_lt32 _⟩
 
 theorem view_let (hv : viewOK m h LET) (hg : tagW h = 7) :
     a.store.view (decE h) = some (.letE (decE (tfld m LET (tierW h) (idxW h) 0))
@@ -253,8 +253,8 @@ theorem view_let (hv : viewOK m h LET) (hg : tagW h = 7) :
     (tfld m LET (tierW h) (idxW h) 2).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letCS LeRecRel (·.lets) _ hR.letE hv.2
   rw [hf, ha, hb, decE_word, decE_word, decE_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_let _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _, word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_let _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _,
+    L.Arena.idx_word_lt32 _, L.Arena.idx_word_lt32 _⟩
 
 theorem view_proj (hv : viewOK m h PROJ) (hg : tagW h = 9) :
     a.store.view (decE h) = some (.proj (decI (tfld m PROJ (tierW h) (idxW h) 0))
@@ -264,8 +264,8 @@ theorem view_proj (hv : viewOK m h PROJ) (hg : tagW h = 9) :
     (tfld m PROJ (tierW h) (idxW h) 2).toNat < 2 ^ 32 := by
   obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projCS PJRecRel (·.projs) _ hR.proj hv.2
   rw [hn, hi, he, decE_word, decI_word]
-  exact ⟨by rw [view_tier m a hR h hh hv.1, get_proj _ h hh hg, Tbl.node?, hk]; rfl, word_lt _,
-    word_lt _⟩
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_proj _ h hh hg, Tbl.node?, hk]; rfl, L.Arena.idx_word_lt32 _,
+    L.Arena.idx_word_lt32 _⟩
 
 end viewTags
 

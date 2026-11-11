@@ -3,9 +3,7 @@ module
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.RecCheckSpec.PtrNamesWDec
-import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.NoGoStep
 public import ConAgua.Arena.IndSumSpec.ColW
 
@@ -173,48 +171,6 @@ set_option experimental.vcgen true
 
 /-! ## Frames -/
 
-theorem pinternW_mfrP {m m' : Mem} {u r : Word} (h : pinternW m u = some (r, m')) : MFr [] [] m m' := by
-  exact MFr.of_low ⟨_, _, consInternM_frame paramCS_wf h, by simp [tier1, ConsSch.wset, paramCS, PREC, PSLOT],
-    by simp [paramCS]⟩
-
-theorem plgW_mfrP : ∀ (k : Nat) (m m' : Mem) (o l : Word) (r : List Word), plgW k m o l = some (r, m') →
-    MFr [] [] m m'
-  | 0, _, _, _, _, _, h => by simp [plgW] at h
-  | k + 1, m, m', o, l, r, h => by
-    by_cases hl : l = 0
-    · rw [plgW_nil k m o l hl] at h
-      obtain ⟨⟨q, m1⟩, ha, h⟩ := of_K h rfl
-      rw [plK0_some] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
-      rw [← h.2]; exact allocW_mfr ha
-    rw [plgW_cons k m o l hl] at h
-    obtain ⟨⟨u, m1⟩, h1, h⟩ := of_K h (by simp only [plK1])
-    by_cases hb : 4294967296 ≤ u
-    · rw [plK1_big (h := hb)] at h; cases h
-    rw [plK1_ok (h := hb)] at h
-    refine (pinternW_mfrP h1).trans ?_
-    obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-    rw [plK2_some] at h
-    refine (plgW_mfrP k _ _ _ _ _ h2).trans ?_
-    obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl
-    rw [plK3_some] at h
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    rw [← h.2]; exact consW_mfr h3
-
-theorem plW_mfrP {k : Nat} {m m' : Mem} {o l : Word} {r : List Word} (h : plW k m o l = some (r, m')) :
-    MFr [] [] m m' := by
-  cases k with
-  | zero => simp [plW] at h
-  | succ k =>
-  rw [plW_succ] at h
-  obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-  rw [plK4_some] at h
-  refine (plgW_mfrP k _ _ _ _ _ h1).trans ?_
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl
-  rw [plK5_some] at h
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  rw [← h.2]; exact MFr.of_frame (ilF_frame h2) (by simp [tier1, POOL, POOL1, LSREC, LSSLOT, LSHP]) (by simp)
-
 /-- `mk_target_major`'s model is a record write. -/
 theorem mkTMW_eq (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) :
     mkTMW m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
@@ -246,17 +202,6 @@ theorem take_min_len {α : Type} (xs : List α) (k l : Nat) (h : xs.length = l) 
   by_cases hk : k ≤ l
   · rw [Nat.min_eq_left hk]
   · rw [Nat.min_eq_right (by omega), ← h, List.take_length, List.take_of_length_le (by omega)]
-
-/-- Across `block_shape_lps`. -/
-theorem lpsW_mfrP {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m q = some (r, m')) :
-    MFr [] [] m m' := by
-  cases n with
-  | zero => simp [lpsW] at h
-  | succ n =>
-    simp only [lpsW] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h; exact MFr.refl _ _ _
-    · exact erToIwW_mfr h
 
 end L.Ind
 

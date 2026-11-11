@@ -99,7 +99,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
       have := pinAt_run hF 29 (by decide)
       rw [hr2]; exact this
     have hrun : (boolCtorOk ci).run a = .ok (decide (wt = r3.headD 0), a3) := by
-      simp only [boolCtorOk, hisE, ite_true, StateT.run_bind, exc_ok_bind', boolName_eq, e2, hrun3,
+      simp only [boolCtorOk, hisE, ite_true, StateT.run_bind, L.Arena.except_ok_bind, boolName_eq, e2, hrun3,
         hty, decI_beq _ _ hlt hx3l, ← hx3, StateT.run_pure]
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
@@ -223,7 +223,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
-    simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf]
+    simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', L.Arena.except_ok_bind, hf]
     rfl
   | some ci =>
     rw [hf] at hfd
@@ -246,7 +246,7 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         rw [hok] at this
         simpa using this.symm
       refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-      simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx]
+      simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', L.Arena.except_ok_bind, hf, hrun1, hx]
       rfl
     · rw [ite_eq_right hok] at hw
       have hx : x1 = true := by
@@ -276,14 +276,14 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
         refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-        simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
+        simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', L.Arena.except_ok_bind, hf, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, ite_false, boolFalseName_eq, e4', hf2]
         rfl
       | some ci2 =>
         rw [hf2] at hfd2
         obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := lastStep mo a1 rg m5 ci2 r m' hS1 hfd2 hm5' hw
         refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, hx2⟩
-        simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
+        simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', L.Arena.except_ok_bind, hf, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, ite_false, boolFalseName_eq, e4', hf2, hrun2]
 
 theorem natOpGuard_unfold (fe : IFEnv) (c : NIdx) : natOpGuard fe c = (do
@@ -316,7 +316,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx : x1 = false := by have := hx1.1; rw [hz1] at this; simpa using this.symm
     refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_false, ite_true]
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, Bool.not_false, ite_true]
     rfl
   rw [ite_eq_right hz1] at hw
   have hx : x1 = true := by
@@ -345,7 +345,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx' : x3 = false := by have := hx3.1; rw [hz3] at this; simpa using this.symm
     refine ⟨false, a3, ?_, hS3, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true, ite_false,
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, Bool.not_true, Bool.false_eq_true, ite_false,
       hrun2, hrun3, hx']
     rfl
   rw [ite_eq_right hz3] at hw
@@ -418,7 +418,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ := boolCtors_ref (vis := vis) (fe := fe) hN
       k m7 a7 r8 m8 hS7 h8
     refine ⟨x8, a8, ?_, hS8, hg67.trans hg8, by simpa [decW0B] using hx8⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, Bool.not_true, Bool.false_eq_true,
       ite_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hcond,
       decide_eq_true hP, ite_true]
     exact hrun8
@@ -426,7 +426,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     refine ⟨true, a7, ?_, hS7, hg67, by simp [decW0B]⟩
-    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
+    simp only [StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx, Bool.not_true, Bool.false_eq_true,
       ite_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hcond,
       decide_eq_false hP]
     rfl

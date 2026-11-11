@@ -711,10 +711,6 @@ theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
   refine ⟨hg, SliceOK.fresh hg htop', ?_⟩
   rw [vpool_set64_ne _ _ _ _ (by decide), hsl, strWords]
 
-/-- The pool growing keeps `DerR` (it reads none of the pool). -/
-theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : ConRon.Arena.AState) (hD : DerR m a) : DerR m' a :=
-  DerR.frameM _ _ m m' (grows_frame m m' hg) (by simp [POOL, POOL1]) a hD
-
 /-- **`str_put_esc(c, d)` on a string con-leche reads**: the pool grows by the string's UTF-8
 bytes, one per word, at the old top; `ArenaR` and `DerR` are kept. -/
 theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
@@ -737,7 +733,7 @@ theorem strPutEsc_spec (p : Prog) (hpb : p.lookup "byte_in" = some L.Scan.Str.by
     (strPutEsc_specW p b.data hpb hph hp4 hp3 hps hpo hpu hpe n s₀ hm c d)
   subst hs
   obtain ⟨hg, hsl, hk⟩ := strPutEsc_link h64 b hsize s.mem s'.mem hR.lit.1 c d str hS _ hW
-  exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR, DerR.grow _ _ hg _⟩
+  exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR, L.Arena.DerR.grow _ _ hg _⟩
 
 end ConAgua.Front.UnescapeLink
 

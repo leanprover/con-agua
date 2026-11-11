@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.HoistClosureL
 public import ConAgua.Arena.DeclNatDeps
+import ConAgua.Arena.DeclCanonLvl
 
 @[expose] public section
 
@@ -45,7 +46,6 @@ theorem allocWr_ok {m : Mem} {ws : List Word} {k : Word} (hI : IWOK m) (hk : k.t
   simp only [pw] at this
   rw [this, getElem!_pos ws j hj]
 
-theorem iwTop_lt' (m : Mem) : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
 theorem iwTop_lt_size (m : Mem) : iwTop m < UInt64.size := UInt64.toNat_lt _
 
 /-- **`slice_has`**: `w` is among the slice's words. -/
@@ -157,7 +157,7 @@ theorem NSl.grow {m m' m'' : Mem} {r ws : List Word} (h : NSl m m' r ws) (hg : I
   have hj64 : (UInt64.ofNat j).toNat = j :=
     UInt64.toNat_ofNat_of_lt' (by have := iwTop_lt_size m'; omega)
   have hadd : (r.headD 0 + UInt64.ofNat j).toNat = (r.headD 0).toNat + j := by
-    rw [UInt64.toNat_add, hj64]; have := iwTop_lt' m'; omega
+    rw [UInt64.toNat_add, hj64]; have := L.Ind.iwTop_lt m'; omega
   rw [rdW_iw_grow hg (by rw [hadd]; omega), hrd j hj]
 
 /-- The name-list membership test over a slice. -/

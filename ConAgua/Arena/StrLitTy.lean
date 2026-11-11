@@ -38,9 +38,6 @@ theorem coreAfter_refl {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
     CoreAfter dn m m a vis fe M eb := ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
 
-theorem resH_ite01 (c : Prop) [Decidable c] : ResH [if c then 1 else 0] := by
-  unfold ResH HW; split <;> decide
-
 /-! ## The `∀`-type comparison tail -/
 
 /-- The twins' tail: `ty` is `∀ (_ : X), Y`. -/
@@ -87,7 +84,7 @@ theorem faEqW_ok {p : Prog} (hp : p.lookup "e_view" = some L.Ind.eView) {n : Nat
   obtain ⟨rfl, h1, h2⟩ := viewR_forall hvr (by rw [hg, g6'])
   have ht : ((decI ty : EIdx).tag == ETag.forallE) = true :=
     beq_iff_eq.mpr ((decE_tag_forallE ty hty).mpr g6')
-  refine ⟨?_, rfl, resH_ite01 _⟩
+  refine ⟨?_, rfl, L.Arena.resH_ite _⟩
   rw [decE_eq] at hv
   simp only [faEqT, ht, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   show Except.ok _ = _
@@ -182,7 +179,7 @@ theorem sTy_call (f : FnName) (hf : p.lookup f = some stringTyOkL)
       .ok (cv.levelParams.isEmpty && cv.type == decI (pinW m 54), a) := by
     simp only [stringTyOk, hcv, StateT.run_bind, except_ok_bind, sortOne,
       pinSortOne_run hS.pins]; rfl
-  refine cref_run hrun' (coreAfter_refl hS) ?_ (by unfold ResH; rw [← hr]; exact resH_ite01 _)
+  refine cref_run hrun' (coreAfter_refl hS) ?_ (by unfold ResH; rw [← hr]; exact L.Arena.resH_ite _)
   have hb : decBool r = decide (c.tail.headD 0 = 0 ∧ c.tail.tail.headD 0 = s.headD 0) := by
     unfold decBool; rw [← hr]; split <;> simp_all
   rw [hb, hty, decI_beq _ _ hhw hpw, ← hs']

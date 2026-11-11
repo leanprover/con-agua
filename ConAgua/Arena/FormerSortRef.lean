@@ -6,7 +6,6 @@ public import Std.Tactic.BVDecide.Normalize.Bool
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConRon.Bridge.Rel
 import ConAgua.Checker.NoVerdictTree
@@ -17,6 +16,7 @@ public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.KnotE
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndSumSpec.DecCVpGrow
 
 @[expose] public section
 
@@ -72,29 +72,17 @@ structure FslProg (p : Prog) : Prop where
   fvi : p.lookup "intern_fvar" = some internFVar
   inst : IotaInst1OK p
 
-theorem getSort_of_get' (t : ETables) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
-    (h : t.get i = some (.sort u)) : t.getSort i = some u := by
-  unfold ETables.get at h
-  rw [ht] at h
-  simp only [show (ETag.sort == ETag.bvar) = false by decide,
-    show (ETag.sort == ETag.fvar) = false by decide, show (ETag.sort == ETag.sort) = true by decide,
-    ite_true, ite_false, Bool.false_eq_true] at h
-  unfold ETables.getSort
-  cases e : t.sorts.node? i.idxNat with
-  | none => rw [e] at h; cases h
-  | some r => rw [e] at h; simp at h; simp [h]
-
-theorem viewSort_of_view' (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
+theorem viewSort_of_view (st : EStore) (i : EIdx) (u : LIdx) (ht : i.tag = ETag.sort)
     (h : st.view i = some (.sort u)) : st.viewSort i = some u := by
   unfold EStore.view at h; unfold EStore.viewSort EStore.persGetSort
   split at h
-  · rw [ite_eq_left (by assumption)]; exact getSort_of_get' _ _ _ ht h
+  · rw [ite_eq_left (by assumption)]; exact L.Ind.getSort_of_get _ _ _ ht h
   · rw [ite_eq_right (by assumption)]
     split at h
-    · rw [ite_eq_left (by assumption)]; exact getSort_of_get' _ _ _ ht h
+    · rw [ite_eq_left (by assumption)]; exact L.Ind.getSort_of_get _ _ _ ht h
     · cases h
 
-theorem viewSort_run' {a : AState} {h : EIdx} {u : Option LIdx} (hv : a.store.viewSort h = u) :
+theorem viewSort_run {a : AState} {h : EIdx} {u : Option LIdx} (hv : a.store.viewSort h = u) :
     (viewSort h).run a = .ok (u, a) := by
   simp [viewSort, hv, StateT.run_get]; rfl
 
@@ -145,9 +133,9 @@ theorem fsl_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
       refine RefE.abort0 (by rfl) fun g3 => ?_
       obtain ⟨hv, hu⟩ := L.Ind.view_sort_f m₁ _ hS₁.arena.base (r₁.headD 0) h₁.resOk
         ⟨g2, UInt64.not_le.mp g3⟩ g1
-      have hvs := viewSort_of_view' _ _ _ (by
+      have hvs := L.Arena.viewSort_of_view _ _ _ (by
         have := decE_tag_sort_beq (e := r₁.headD 0) h₁.resOk; rw [g1] at this; simpa using this) hv
-      exact RefE.bind_right (viewSort_run' hvs) (RefE.ret rfl ⟨⟨M₁, hS₁, KeptAll.refl _ _, StackKept.refl _⟩,
+      exact RefE.bind_right (L.Arena.viewSort_run hvs) (RefE.ret rfl ⟨⟨M₁, hS₁, KeptAll.refl _ _, StackKept.refl _⟩,
         by simp [decOS], fun _ => hu⟩)
     · rw [ite_eq_left (show tagW (r₁.headD 0) ≠ 2 from g1)]
       have ht : ¬ ((decH r₁).tag == ETag.sort) = true := by

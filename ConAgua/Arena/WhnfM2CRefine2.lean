@@ -10,6 +10,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfIotaRefine3
 public import ConAgua.Arena.DeclArmsCanon
+import ConAgua.Arena.WhnfDeltaRefine2
 
 @[expose] public section
 
@@ -37,70 +38,12 @@ Copies of `WhnfDeltaRefine*.lean`'s (`LsStore.viewLen_eq_map`, `callW_internCons
 `CoreS.of_const`, …): that module cannot be imported next to `WhnfIotaRefine.lean` (both declare
 `L.Arena.frW`), so they are restated here under primed names. -/
 
-theorem LsStore.viewLen_eq_map' (st : LsStore) (i : LsIdx) :
-    st.viewLen i = (st.view i).map List.length := by
-  simp only [LsStore.viewLen, LsStore.view, LsStore.persGetLen, LsTables.getLen, LsTables.get]
-  split
-  · split <;> simp [Option.map_map, Function.comp_def]
-  · split
-    · split <;> simp [Option.map_map, Function.comp_def]
-    · rfl
-
-theorem viewLs_run' {a : AState} {h : LsIdx} {l : LsNodeView} (hv : a.store.lss.view h = some l) :
-    (viewLs h).run a = .ok (l, a) := by
-  simp [viewLs, StateT.run_bind, StateT.run_get, hv]; rfl
-
 theorem viewLs_of_len {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.viewLen h = some k) :
     ∃ l, (viewLs h).run a = .ok (l, a) ∧ l.length = k := by
-  rw [LsStore.viewLen_eq_map'] at hv
+  rw [L.Arena.LsStore.viewLen_eq_map] at hv
   cases e : a.store.lss.view h with
   | none => rw [e] at hv; cases hv
-  | some l => rw [e] at hv; exact ⟨l, viewLs_run' e, Option.some.inj hv⟩
-
-theorem rdW_off' {b : Array Word} {q c : Word} {i : Nat} {w : Word} (hb : b[i]? = some w)
-    (hi : q.toNat + c.toNat = i) (hsz : b.size < 2 ^ 63) : rdW b (q + c) = w := by
-  have hlt : i < b.size := (Array.getElem?_eq_some_iff.mp hb).1
-  have : (q + c).toNat = i := by
-    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega
-  simp only [rdW, this, hb]; rfl
-
-theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.const n us)) := by
-  simp only [internE]; exact keeps_cpl_internNodeE _
-
-theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m')
-    {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
-    (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
-    CoreS dn m' a' vis fe M eb :=
-  hS.arena_frameD hD hcpl hf (hiw := hS.iwF hf) (hhb := hS.memos.hbF hf)
-    (fun b hb => by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by decide)
-    (fun b hb => by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
-    (fun x hx => by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
-      rcases hx with rfl | rfl <;> decide)
-    (fun x hx => by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
-      rcases hx with rfl | rfl <;> decide)
-    (hS.den.of_internConst hus hrun (hf.arr EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)))
-    (hmode := hS.mode.frame hf (by decide) (by decide))
-
-theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') :
-    StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.arr SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.ctl 136 (by simp)
-  exact StackKept.of_frame hf
-
-theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (_hf : f.toNat < 2 ^ 32)
-    (_hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
-    w.toNat < 2 ^ 32 := by
-  exact consInternM_lt constCS_wf hR hI
+  | some l => rw [e] at hv; exact ⟨l, L.Arena.whnf_viewLs_run e, Option.some.inj hv⟩
 
 section progs
 variable (p : Prog)
@@ -118,7 +61,7 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
     (internConst_spec p hpf hpp hp n _ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := internConst_D m a₀ hD f x _ hf hx _ hm
-  refine ⟨h1, h2, h3, ?_, ceinternW_hw' m a₀ ?_ f x hf hx _ _ hm⟩
+  refine ⟨h1, h2, h3, ?_, L.Arena.ceinternW_hw m a₀ ?_ f x hf hx _ _ hm⟩
   · exact ceinternW_frame (hI := hm)
   · exact hD.base.const
 
@@ -355,7 +298,7 @@ theorem m2cPre_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   obtain ⟨v1, hcv⟩ := of_ite_none hcv
   obtain ⟨v2, hcv⟩ := of_ite_none hcv
   have hr4 := (Option.some.inj hcv).symm
-  obtain ⟨hvw, hn32, hu32⟩ := view_const_f m4 _ hS2.arena.base (r3.headD 0) hh3
+  obtain ⟨hvw, hn32, hu32⟩ := L.Ind.view_const_f m4 _ hS2.arena.base (r3.headD 0) hh3
     ⟨v1, UInt64.not_le.mp v2⟩ g3'
   rcases c5 : callW p N "ls_node" [r4.tail.headD 0] m4 with _ | ⟨r5, m5⟩
   · rw [liftE_none, m2cPreE.k_ls_node.none]; exact fun _ _ => ErrClaim.of_cls0 (by simp)
@@ -422,9 +365,9 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (fabScopeOk_refines' p hp.toIotaProg' hc (N' + 1) _ a dn vis fe M eb d fab major hS hfab hmaj)
     fun r1 m1 _ h1 => RefE.after_core (w := id) h1 fun M1 hS1 _ => ?_
   by_cases g1 : r1.headD 0 = 0
-  · rw [m2cCheckE.k_fab_scope_ok.arm1 _ _ _ _ _ _ _ _ _ _ g1, decBool_f_m2c g1]
+  · rw [m2cCheckE.k_fab_scope_ok.arm1 _ _ _ _ _ _ _ _ _ _ g1, L.Arena.decBool_false_of g1]
     exact RefE.ret rfl (CorePost.ret hS1 rfl hmaj)
-  rw [m2cCheckE.k_fab_scope_ok.arm2 _ _ _ _ _ _ _ _ _ _ g1, decBool_t_m2c g1]
+  rw [m2cCheckE.k_fab_scope_ok.arm2 _ _ _ _ _ _ _ _ _ _ g1, L.Arena.decBool_true_of g1]
   have hs1 : SlotPre ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode := ⟨hS1, hm4, hebm⟩
   refine RefE.bind_callE (s₀ := ⟨m1, Locals.init []⟩) (fun _ => m2cCheckE.k_infer_io.none ..)
     ((hk _ (Nat.le_refl _)).inferIO F _ _ dn vis fe M1 eb mode d fab hnF hn62 hs1 hfab)
@@ -437,9 +380,9 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (fun (hG : M2CCtxE p (N' + 1)) => (hG.knot _ (Nat.le_refl _)).defeq F _ _ dn vis fe M2 eb mode d
       tmaj _ hnF hn62 hs2 htm h2.resOk) fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
   by_cases g3 : r3.headD 0 = 0
-  · rw [m2cCheckE.k_defeq.arm1 _ _ _ _ _ _ _ _ _ g3, decBool_f_m2c g3]
+  · rw [m2cCheckE.k_defeq.arm1 _ _ _ _ _ _ _ _ _ g3, L.Arena.decBool_false_of g3]
     exact RefE.ret rfl (CorePost.ret hS3 rfl hmaj)
-  rw [decBool_t_m2c g3]
+  rw [L.Arena.decBool_true_of g3]
   have hv := decMode_verified mode hm4
   by_cases g4 : mode &&& 1 = 0
   · rw [m2cCheckE.k_defeq.arm2 _ _ _ _ _ _ _ _ _ g3 g4]
@@ -453,9 +396,9 @@ theorem m2cCheck_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       fun r4 m4 _ h4 => RefE.after_core (w := id) h4 fun M4 hS4 _ => ?_
     rw [m2cCheckE.k_proof_irrel.arm1]
     by_cases g5 : r4.headD 0 = 0
-    · rw [m2cCheckE.j1.arm2 _ _ _ _ _ g5, decBool_f_m2c g5]
+    · rw [m2cCheckE.j1.arm2 _ _ _ _ _ g5, L.Arena.decBool_false_of g5]
       exact RefE.ret rfl (CorePost.ret hS4 rfl hmaj)
-    · rw [m2cCheckE.j1.arm1 _ _ _ _ _ g5, decBool_t_m2c g5]
+    · rw [m2cCheckE.j1.arm1 _ _ _ _ _ g5, L.Arena.decBool_true_of g5]
       exact RefE.ret rfl (CorePost.ret hS4 rfl hfab)
   · rw [m2cCheckE.k_defeq.arm3 _ _ _ _ _ _ _ _ _ g3 g4, m2cCheckE.j1.arm1 _ _ _ _ _ (by decide)]
     have hv' : (decMode mode).verifiedChecks = false := by rw [hv]; simpa using g4
@@ -548,9 +491,9 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
   refine RefE.bind_right hrun2 ?_
-  have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2 hrun2 hdus
+  have hS2 := hS1.of_const hD2 (Keeps.run (L.Arena.keeps_cpl_internConst _ _) hrun2) hfr2 hrun2 hdus
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
-    (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
+    (hsp1.take' (by rw [← hlen]; exact hle)).of_spn
       (hfr2.1 SPN (by simp [tier1, CREC, CSLOT, CLP, SPN]) (by decide))
   refine RefE.onlySim (fun _ => m2cK2E.k_mk_app_n.none ..) (fun _ _ h => h) fun r3 m3 c3 => ?_
   rw [m2cK2E.k_mk_app_n.arm1]
@@ -562,7 +505,7 @@ theorem m2cK2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   refine RefE.bind_right hrun3 ?_
   have hS3 := hS2.of_app hD3 (Keeps.run (keeps_cpl_mkAppN' _ _) hrun3) hfr3
   have hSt : StackGrew m m3 :=
-    hg1.trans ((StackKept.of_constF hfr2).trans (StackKept.of_app_frame hfr3)).toGrew
+    hg1.trans ((L.Arena.StackKept.of_const_frame hfr2).trans (StackKept.of_app_frame hfr3)).toGrew
   exact RefE.lastE (m2cK2E.k_m2c_check.none p) (fun v => m2cK2E.k_m2c_check.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _))
     (m2cCheck_ref p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb

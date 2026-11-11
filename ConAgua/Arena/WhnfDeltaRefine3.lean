@@ -8,7 +8,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import ConAgua.Arena.DerRel
-import ConAgua.L.LocNF
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.WhnfDeltaRefine
 import all ConAgua.Arena.Refine
@@ -353,7 +352,7 @@ theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
 
 theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') (k : Nat) :
     pinW m' k = pinW m k := by
-  have : m'.arr64 PINS = m.arr64 PINS := hf.arr_eq PINS (by simp [tier1, CREC, CSLOT, CLP, PINS]) (by decide)
+  have : m'.arr64 PINS = m.arr64 PINS := hf.arr PINS (by simp [tier1, CREC, CSLOT, CLP, PINS]) (by decide)
   simp only [pinW, this]
 
 /-- **A slice below the old top survives a growth of the pool**: the slice, its value and its

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.InstLP
-import ConAgua.Arena.LevelInternRef
 import ConAgua.Arena.TwinStep
 import Std.Tactic.BVDecide.Normalize.BitVec
 import ConAgua.Arena.GrindAttr
@@ -113,7 +112,7 @@ theorem viewN_str (hg : tagW h = 1) (hc : ¬ tcnt m NSTR (tierW h) ≤ idxW h) :
   obtain ⟨x, hx, hr⟩ := ConsR.node hR.nstr (tierW h) (tierW_le h)
     (idxW h) (UInt64.not_le.mp hc)
   obtain ⟨hq, hsl, hk, -⟩ := hr
-  refine ⟨x.s, ?_, hsl.1, hk, by rw [hq]; exact word_lt _⟩
+  refine ⟨x.s, ?_, hsl.1, hk, by rw [hq]; exact L.Arena.idx_word_lt32 _⟩
   apply viewN_run
   rw [nview_tier hR hh hv]
   have hne : ((1 : UInt32) == NTag.anonymous) = false := by decide
@@ -206,7 +205,7 @@ theorem keysOkW_names {m : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a
       · exact absurd (UInt64.toNat_inj.mp (by simpa using h)) hl
       · omega
     obtain ⟨j, hj⟩ : ∃ j, l.toNat = j + 1 := ⟨l.toNat - 1, by omega⟩
-    rw [hj, lp_hslice_succ] at hs
+    rw [hj, L.Ind.hslice?_succ] at hs
     simp only [Option.bind_eq_bind] at hs
     cases ehd : (hd? (aread (m.arr64 SPN)) o.toNat : Option NIdx) with
     | none => simp [ehd] at hs

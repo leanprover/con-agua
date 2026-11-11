@@ -202,16 +202,6 @@ theorem WhnfDeltaProg'.natClosed {p : Prog} (hp : WhnfDeltaProg' p) :
     closedA p natA natC natFns = true :=
   WhnfDeltaProg'.natClosed_of_agree hp.natAgree
 
-theorem CoreSpec.zero {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : FunDecl}
-    (hf : p.lookup f = some fd) (args : List Word) (T : AM α) (dec : List Word → α) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb : Word) (ok : List Word → Prop) :
-    CoreSpec p 0 f args T dec s₀ a₀ dn vis fe MM eb ok := by
-  unfold CoreSpec
-  rw [invoke_eq _ hf]
-  simp only [callFn]
-  vcgen [exec] <;> grind
-
 /-! ## `const_e` -/
 
 /-- The model of `const_e`. -/
@@ -334,10 +324,10 @@ theorem CoreSpec.of_callC {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : F
     CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb ok :=
   CoreSpec.of_call fun r m' hc => (h r m' hc).core
 
-theorem ResH_ite (P : Prop) [Decidable P] : ResH [if P then 1 else 0] := by
+theorem resH_ite (P : Prop) [Decidable P] : ResH [if P then 1 else 0] := by
   unfold ResH HW; by_cases h : P <;> simp [h]
 
-theorem decBool_ite' (P : Prop) [Decidable P] : decBool [if P then 1 else 0] = decide P := by
+theorem decBool_ite (P : Prop) [Decidable P] : decBool [if P then 1 else 0] = decide P := by
   by_cases h : P <;> simp [h, decBool]
 
 theorem natIndOk_run_none (a : AState) : (natIndOk none).run a = .ok (false, a) := rfl
@@ -426,9 +416,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     simp
   refine CRef.pure hC _ (by rw [natIndOk_run_ind hC.pins]) ?_ ?_
   · show decBool [r.headD 0] = _
-    rw [← hr, hb]; exact decBool_ite' _
+    rw [← hr, hb]; exact L.Arena.decBool_ite _
   · show ResH [r.headD 0]
-    rw [← hr]; exact ResH_ite _
+    rw [← hr]; exact L.Arena.resH_ite _
 
 @[refines ConRon.Arena.natIndOk]
 theorem natIndOk_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -466,9 +456,6 @@ theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) 
     (natZeroOk (some (.ctorInfo cv np nf))).run a =
       .ok (cv.levelParams.isEmpty && cv.type == nc, a₁) := by
   simp only [natZeroOk, StateT.run_bind, pinNat_run hP, except_ok_bind, h]; rfl
-
-theorem MemFrame.arr_eq {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (b : TieredArray) (hb : b ∉ A) (hc : b ≠ CTL) : m'.arr64 b = m.arr64 b := hf.arr b hb hc
 
 section refs3
 variable (p : Prog)
@@ -528,8 +515,8 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : ∀ x : Word, rdW (m₂.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRd s₀.mem x := by
-    have h0 := hfr.arr_eq EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
-    have h1 := hfr.arr_eq (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
+    have h0 := hfr.arr EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
+    have h1 := hfr.arr (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
     exact erRd_congr h0 h1
   simp only [hE] at hW
   have hrun := AM.run_of_ok _ _ hok
@@ -565,9 +552,9 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [← hr]
     show (true && (decI (erRd s₀.mem (q + 4)) == decI (r₂.headD 0))) = _
     rw [decI_beq _ _ htyl hhw]
-    simp [decBool_ite']
+    simp [L.Arena.decBool_ite]
   · show ResH [r.headD 0]
-    rw [← hr]; exact ResH_ite _
+    rw [← hr]; exact L.Arena.resH_ite _
 
 @[refines ConRon.Arena.natZeroOk]
 theorem natZeroOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -698,8 +685,8 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : ∀ x : Word, rdW (m₂.arr64 (tierA EREC (x >>> 40))) (x &&& 0xFFFFFFFFFF) = erRd s₀.mem x := by
-    have h0 := hfr.arr_eq EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
-    have h1 := hfr.arr_eq (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
+    have h0 := hfr.arr EREC (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
+    have h1 := hfr.arr (tier1 EREC) (by simp [tier1, CREC, CSLOT, CLP, EREC]) (by decide)
     exact erRd_congr h0 h1
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
@@ -744,9 +731,9 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [← hr]
     simp only [decE_eq]
     rw [decI_beq _ _ hd hhw, decI_beq _ _ hb hhw]
-    rw [decBool_ite', Bool.decide_and]
+    rw [L.Arena.decBool_ite, Bool.decide_and]
   · show ResH [r.headD 0]
-    rw [← hr]; exact ResH_ite _
+    rw [← hr]; exact L.Arena.resH_ite _
 
 @[refines ConRon.Arena.natSuccOk]
 theorem natSuccOk_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)

@@ -7,12 +7,12 @@ import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 import ConAgua.Arena.IndPosSpec.SnocWMfr
 public import ConAgua.Arena.IndPosSpec.U4W
 public import ConAgua.Arena.IndGrindAttr
-import ConAgua.Arena.IndPosSpec.DepthGo
 import ConAgua.Arena.IndPosSpec.MentionsAnyGo
 import ConAgua.Arena.IndPosSpec.SnocWDecK
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.FgW2
 import ConAgua.L.WordOff
+import ConAgua.Arena.IndPosSpec.RpGoStep
 
 @[expose] public section
 
@@ -75,7 +75,7 @@ theorem consW_mfr {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} (h : con
   split at h; · simp at h
   rename_i m2 hc
   obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  exact ((allocW_mfr hal).trans (MFr.set_iw _ _ _)).trans (MFr.of_iw (posmemo_copyW_iw _ _ _ _ _ _ hc))
+  exact ((allocW_mfr hal).trans (MFr.set_iw _ _ _)).trans (MFr.of_iw (L.Ind.copyW_iwFrame _ _ _ _ _ _ hc))
 
 theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), piBW n m fuel h = some (r, m') →
     MFr [] [] m m'

@@ -3,10 +3,10 @@ module
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecGenSpec.CkcW
-import ConAgua.Arena.RecClassSpec.ReadProg
 public import ConAgua.Verdict.IndBPins
 public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndSumSpec.StructUsedHb
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
@@ -134,8 +134,8 @@ theorem tmp_ref (hFk : FkcProg p) (hIlpf : IlpfF p) (hWt : WhnfTopE p) (N : Nat)
   have hmem' : M.member = none := by rw [hmem, hk00]; rfl
   have hw := hds (by rw [← hmemP, hmem'])
   obtain ⟨o, l, hoT, hlT, hdT⟩ := decTM_ds (show decTM (truncM m) Mp.toNat = some M from hM)
-  obtain ⟨hoi, ho⟩ := iwN_truncM_get hoT
-  obtain ⟨hli, hl⟩ := iwN_truncM_get hlT
+  obtain ⟨hoi, ho⟩ := L.Ind.iwN_truncM_some hoT
+  obtain ⟨hli, hl⟩ := L.Ind.iwN_truncM_some hlT
   have hdsm : decHL m o l = some M.ds := (OMono.decHL o l).mono _ _ _ (IWGrow.refl m).truncExt hdT
   have ro := iwN_rdW_at (w := Mp) (k := 2) ho hsz
   have rl := iwN_rdW_at (w := Mp) (k := 3) hl hsz

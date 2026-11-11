@@ -358,7 +358,7 @@ theorem ConsR.setFlag (hW : C.WF) (hfr : RFrame C.sch R C.hsM) (h : ConsR C R m 
     (w : Word) : ConsR C R (m.set64 CTL 1 w) (w != 0) P Q := by
   have hS := hW.sch
   obtain ⟨⟨hsz, hscb⟩, _, hP, hQ, hG⟩ := h
-  have hsz' : ((m.set64 CTL 1 w).arr64 CTL).size = (m.arr64 CTL).size := size_set64 _ _ _ _ _
+  have hsz' : ((m.set64 CTL 1 w).arr64 CTL).size = (m.arr64 CTL).size := L.Mem.size64_set64 _ _ _ _ _
   have h1 : (1 : Word).toNat < (m.arr64 CTL).size := by
     have := hS.ca.1; simp; omega
   have hrd : ∀ x, x ≠ 1 → rdW ((m.set64 CTL 1 w).arr64 CTL) x = rdW (m.arr64 CTL) x := by
@@ -493,9 +493,9 @@ theorem storeR_set64col (hW : C.WF) (hcR : ColFree C R) {A : ArrId} (hA : C.col 
   have ec : (m.set64 (tierA A u) kk x).arr64 CTL = m.arr64 CTL :=
     Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm hctl) u)
   have er : ∀ t, (m.set64 (tierA A u) kk x).arr64 (tierA C.sch.ra t) = m.arr64 (tierA C.sch.ra t) :=
-    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (Ne.symm hra) t u)
+    fun t => Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne_tierA (Ne.symm hra) t u)
   have es : ∀ t, (m.set64 (tierA A u) kk x).arr64 (tierA C.sch.sa t) = m.arr64 (tierA C.sch.sa t) :=
-    fun t => Mem.arr64_set64_ne _ _ _ _ _ (tierA_ne (Ne.symm hsa) t u)
+    fun t => Mem.arr64_set64_ne _ _ _ _ _ (L.tierA_ne_tierA (Ne.symm hsa) t u)
   obtain ⟨⟨h1, h2⟩, hfl, hT0, hT1, hG⟩ := h
   have tier : ∀ t (tb : Tbl α (Idx k) δ), TierR C.sch R C.hsM C.KP m t tb →
       TierR C.sch R C.hsM C.KP (m.set64 (tierA A u) kk x) t tb := fun t tb hT =>
@@ -668,7 +668,7 @@ theorem pushRec_col (C : ConsSch) (hW : C.WF) {A : ArrId} (hA : C.col = some A) 
   obtain ⟨hra, -, hc, -⟩ := hW.col A hA
   simp only [pushRec, colW, hA, Mem.arr64_set64_same]
   rw [Mem.arr64_set64_ne _ _ _ _ _ (ne_tierA (Ne.symm hc) t).symm,
-    wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (tierA_ne hra t t)]
+    wrRecK_eq, wrRec_arr_ne C.sch _ _ _ (L.tierA_ne_tierA hra t t)]
 
 /-- **The counts after the append**: tier `t`'s up by one. -/
 theorem pushRec_cnt (C : ConsSch) (hW : C.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (ks : List Word)

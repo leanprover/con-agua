@@ -1,9 +1,9 @@
 module
 
 public import ConAgua.Arena.IndTwin
-import ConAgua.Arena.WhnfIotaRefine4
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.CoreLevels
+import ConAgua.Arena.WhnfIotaRecRefine
 
 @[expose] public section
 
@@ -136,27 +136,6 @@ theorem lvlsEqCW_enc (hS : CoreS dn m a vis fe M eb) (n : Nat) (us vs : Word) (h
 
 end enc
 
-/-- `lvls_eq_c` does not return below the fuel `2`. -/
-theorem lvlsEqC_small (p : Prog) (hp : p.lookup "lvls_eq_c" = some lvlsEqCL) (n : Nat) (hn : n < 2)
-    (vs : List Word) (m : Mem) : callW p n "lvls_eq_c" vs m = none := by
-  rcases Nat.lt_or_ge n 1 with h0 | h1
-  · have : n = 0 := by omega
-    subst this; exact callW_zero _ _ _ _
-  · have : n = 1 := by omega
-    subst this
-    cases hc : callW p 1 "lvls_eq_c" vs m with
-    | none => rfl
-    | some q =>
-      exfalso
-      obtain ⟨t, -, hF⟩ := triple_of_callW (p := p) (n := 1) (f := "lvls_eq_c") (args := vs)
-        (s₀ := ⟨m, Locals.init []⟩) (Q := fun _ _ => False) (by
-          rw [invoke_eq _ hp]
-          simp only [callFn, lvlsEqCL]
-          vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-            callW_spec p 0 "lsq_find", callW_spec p 0 "lvls_eq_rec"] <;>
-          simp_all [callW_zero]) hc
-      exact hF
-
 section sims
 variable (p : Prog) (hcl : CoreStageClosed p) (hL : LvlCacheProg p)
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -189,7 +168,7 @@ theorem lvlsEqC_simT (n : Nat) {m : Mem} {a : AState} (hS : StageT dn vis fe m a
     Sim (callW p n "lvls_eq_c" [us, vs] m) (lvlsEq? (decI us) (decI vs)) a
       (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x) := by
   rcases Nat.lt_or_ge n 2 with hn | hn
-  · intro r m' h; rw [lvlsEqC_small p hL.cs n hn] at h; cases h
+  · intro r m' h; rw [_root_.L.Arena.lvlsEqC_small p hL.cs n hn] at h; cases h
   obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
   intro r m' e
   obtain ⟨x, a', hrun, hT', hg, hd, -⟩ := StageT.sim_core hcl (by decide) hS

@@ -319,7 +319,7 @@ theorem grows_pset_ti {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {t 
   · rw [htop, pcap_set64]; exact hcap
   · rw [pcap_set64]; exact hpe
   · rw [htop]; exact htr
-  · rw [htop, size_set64]; exact hin
+  · rw [htop, L.Mem.size64_set64]; exact hin
 
 /-- **The digit loop**: from the relative index `j` down to `⦃T⦄.idx + 4` in `T`'s tier, the last
 digits of `x`; nothing else in the pool changes, the growth from `m₀` is kept. -/
@@ -356,12 +356,12 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
       have hg1 := grows_pset_ti hg hok (t := T >>> 40) (i := j - 1) (x := 48 + (x - div10W x * 10)) htier
         (by omega) (by omega)
       obtain ⟨hg', htop, hpc', hsz', hkeep, hsl⟩ := ih _ m' (j - 1) (div10W x) h (by omega)
-        (by rw [size_set64]; omega) hg1
+        (by rw [L.Mem.size64_set64]; omega) hg1
       have htop1 : (m.set64 (tierA POOL (T >>> 40)) (j - 1) (48 + (x - div10W x * 10))).top = m.top :=
         L.Rom.top_set64_arr _ _ _ _ hne
       have haddr : (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat = T.toNat + (j.toNat - 1 - (T &&& 1099511627775).toNat) := by
         omega
-      refine ⟨hg', by rw [htop, htop1], by rw [hpc', pcap_set64], by rw [hsz', size_set64], fun t ht' => ?_, ?_⟩
+      refine ⟨hg', by rw [htop, htop1], by rw [hpc', pcap_set64], by rw [hsz', L.Mem.size64_set64], fun t ht' => ?_, ?_⟩
       · rw [hkeep t (by omega), hv, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
         have : (T >>> 40).toNat * 2 ^ 40 + (j - 1).toNat ≠ t := by omega
         rw [ite_eq_right this]
@@ -408,11 +408,11 @@ theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat
   have g0 := grows_raise m R hpool hroom
   have g1 := grows_pset0 g0 hpool (T := m.top) (x := 114) h41 (Nat.le_refl _) (by rw [hX]; omega)
   have g2 := grows_pset_k g1 hpool (T := m.top) (k := 1) (x := 101) h41 (by rw [e1]; omega)
-    (by rw [size_set64, hX]; simp only [UInt64.reduceToNat]; omega)
+    (by rw [L.Mem.size64_set64, hX]; simp only [UInt64.reduceToNat]; omega)
   have g3 := grows_pset_k g2 hpool (T := m.top) (k := 2) (x := 99) h41 (by rw [e2]; omega)
-    (by rw [size_set64, size_set64, hX]; simp only [UInt64.reduceToNat]; omega)
+    (by rw [L.Mem.size64_set64, L.Mem.size64_set64, hX]; simp only [UInt64.reduceToNat]; omega)
   have g4 := grows_pset_k g3 hpool (T := m.top) (k := 3) (x := 95) h41 (by rw [e3]; omega)
-    (by rw [size_set64, size_set64, size_set64, hX]; simp only [UInt64.reduceToNat]; omega)
+    (by rw [L.Mem.size64_set64, L.Mem.size64_set64, L.Mem.size64_set64, hX]; simp only [UInt64.reduceToNat]; omega)
   have htop : (recIBytes (m.set64 CTL 0 (m.top + R)) m.top).top = m.top + R := by
     simp only [recIBytes]
     rw [L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne, L.Rom.top_set64_arr _ _ _ _ hne,
@@ -420,7 +420,7 @@ theorem recIBytes_ok (m : Mem) (hpool : PoolOK m) (R : Word) (hR : 4 ≤ R.toNat
     exact Mem.top_set64 _ _ hc
   have hsz' : ((recIBytes (m.set64 CTL 0 (m.top + R)) m.top).arr64 (tierA POOL (m.top >>> 40))).size =
       (m.arr64 (tierA POOL (m.top >>> 40))).size := by
-    simp only [recIBytes, size_set64, hX]
+    simp only [recIBytes, L.Mem.size64_set64, hX]
   refine ⟨g4, htop, hsz', ?_⟩
   have hv : vpool (recIBytes (m.set64 CTL 0 (m.top + R)) m.top) =
       ((((vpool m).set! m.top.toNat 114).set! (m.top + 1).toNat 101).set! (m.top + 2).toNat 99).set!

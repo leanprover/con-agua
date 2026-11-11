@@ -6,10 +6,8 @@ import ConAgua.Arena.IndSim
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.IndMaster
@@ -20,6 +18,7 @@ public import ConAgua.Arena.StripTeleSpec
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndSumSpec.TblProg
 import ConAgua.L.WordOff
+import ConAgua.Arena.DeclCanonInfo
 
 @[expose] public section
 
@@ -66,37 +65,6 @@ theorem sumDecPL_write {α : Type} (m : Mem) (f : Nat → Option α) (o j : Nat)
     rw [ite_eq_right (by omega)]
   rw [e1, h]
   simp [iwN, nat?, iwA, aread_apply, set64IW_get, hw, hsz, hx]
-
-/-- **A model step that only reshapes the result words** (`K (some (r, m)) = some (f r, m)`). -/
-theorem sumSim_map {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
-    {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
-    {R : γ → α → Mem → AState → Prop} (hn : K none = none) (hs : ∀ r m, K (some (r, m)) = some (f r, m))
-    (h : Sim mo op a Q) (hq : ∀ r x m a', Q r x m a' → R (f r) x m a') : Sim (K mo) op a R := by
-  intro r m' e
-  rcases hmo : mo with _ | ⟨r1, m1⟩
-  · rw [hmo, hn] at e; cases e
-  rw [hmo, hs] at e
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-  obtain ⟨x, a', h1, h2⟩ := h r1 m1 hmo
-  exact ⟨x, a', h1, hq _ _ _ _ h2⟩
-
-/-- A pointer slice stays decoded when the pool grows (below its top) and the record decoder
-only gains (as lane `decls3`'s `decPL_grow`). -/
-theorem sumDecPL_grow {α : Type} {m m' : Mem} {f f' : Nat → Option α} (hg : IWGrow m m')
-    (hf : ∀ q x, f q = some x → f' q = some x) :
-    ∀ (c o : Nat) (xs : List α), o + c ≤ iwTop m → decPL m f o c = some xs →
-    decPL m' f' o c = some xs := by
-  intro c
-  induction c with
-  | zero => intro o xs _ h; simpa [decPL] using h
-  | succ c ih =>
-    intro o xs hb h
-    rw [decPL_succ] at h ⊢
-    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h ⊢
-    obtain ⟨v, hv, x, hfx, xs', hxs, rfl⟩ := h
-    refine ⟨v, ?_, x, hf v x hfx, xs', ih (o + 1) xs' (by omega) hxs, rfl⟩
-    simp only [iwN, nat?, iwA, aread_apply, aread_apply] at hv ⊢
-    rw [hg.iwGet o (by omega)]; exact hv
 
 /-- A handle at the head of a slice decoded below the top, as the model reads it. -/
 theorem sumRd_of_decHL_truncM {m : Mem} {o l : Word} {x : EIdx} {xs : List EIdx}
@@ -300,7 +268,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hoS : o.toNat < (M.arr64 IW).size := by
     have h1 := hSM.iw.iw; have := hgM.iw; omega
   have haccM : decPL M (rlDec M) q0.toNat j = some acc :=
-    sumDecPL_grow hgM (fun q x h => ArrExt.decRule (IWGrow.ext hgM) h) _ _ _
+    _root_.L.Ind.decPL_grow hgM (fun q x h => ArrExt.decRule (IWGrow.ext hgM) h) _ _ _
       (by omega) hacc
   have hacc' := sumDecPL_write M (rlDec M) q0.toNat j o q acc _ ho (by omega) haccM hrec
   rw [← rlDec_set_iw M o q] at hacc'

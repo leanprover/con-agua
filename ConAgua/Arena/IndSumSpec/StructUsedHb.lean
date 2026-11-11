@@ -162,7 +162,7 @@ theorem hbFastW_keep {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e 
   obtain ⟨mp, hM⟩ := hM
   by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
   · rw [hbFastW.abort1 (hc1 := h0)] at h; cases h
-  rw [hbFastW_eq n _ i e h0] at h
+  rw [L.Ind.hbFastW.arm1 n _ i e h0] at h
   exact (hbGoW_keep n _ _ _ _ _ _ h ⟨_, memoRV_clear hbSch hbSch_wf lfKey hbVR m mp hM h0⟩).2
 
 /-- **`struct_used_later`'s model keeps a well-formed `hb` memo**, at any memory. -/

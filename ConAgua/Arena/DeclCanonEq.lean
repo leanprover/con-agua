@@ -39,8 +39,6 @@ theorem rdW_off {q k w : Word} (hR : RdOK R rd) (h : R (q.toNat + k.toNat) = som
     rd (q + k) = w :=
   hR.off h rfl
 
-theorem rdW_zero' (hR : RdOK R rd) {q w : Word} (h : R q.toNat = some w) : rd q = w := hR.rd _ _ h
-
 /-- A handle word: read at `q + k`. -/
 theorem hdW_ {kk : IdxKind} {q k : Word} {kn : Nat} {x : Idx kk} (hR : RdOK R rd)
     (hk : k.toNat = kn) (h : hd? R (q.toNat + kn) = some x) :
@@ -51,7 +49,7 @@ theorem hdW_ {kk : IdxKind} {q k : Word} {kn : Nat} {x : Idx kk} (hR : RdOK R rd
 theorem hdW0_ (hR : RdOK R rd) {kk : IdxKind} {q : Word} {x : Idx kk} (h : hd? R q.toNat = some x) :
     ∃ w, rd q = w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
   obtain ⟨w, hw, hlt, rfl⟩ := hd?_some h
-  exact ⟨w, rdW_zero' hR hw, hlt, rfl⟩
+  exact ⟨w, L.Arena.RdOK.rd hR _ _ hw, hlt, rfl⟩
 
 theorem natD {i n : Nat} (h : nat? R i = some n) : ∃ w, R i = some w ∧ n = w.toNat := by
   simp only [nat?, Option.map_eq_some_iff] at h
@@ -74,7 +72,7 @@ theorem boolW_ {q k : Word} {kn : Nat} {b : Bool} (hR : RdOK R rd) (hk : k.toNat
 theorem boolW0_ (hR : RdOK R rd) {q : Word} {b : Bool} (h : bool? R q.toNat = some b) :
     ∃ w, rd q = w ∧ b = (w != 0) := by
   obtain ⟨w, hw, rfl⟩ := boolD h
-  exact ⟨w, rdW_zero' hR hw, rfl⟩
+  exact ⟨w, L.Arena.RdOK.rd hR _ _ hw, rfl⟩
 
 end rd
 
@@ -218,8 +216,8 @@ theorem hintEqB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
     hintEqB rd h g = decide (x = y) := by
   obtain ⟨wk, e, hx⟩ := hintD hx
   obtain ⟨wk', e', hy⟩ := hintD hy
-  have r1 := rdW_zero' hR e
-  have r2 := rdW_zero' hR e'
+  have r1 := L.Arena.RdOK.rd hR _ _ e
+  have r2 := L.Arena.RdOK.rd hR _ _ e'
   simp only [hintEqB, r1, r2]
   have hwk : ∀ w : Word, w.toNat = 0 ↔ w = 0 := fun w => ⟨fun h => UInt64.toNat_inj.mp (by simpa using h), fun h => by simp [h]⟩
   have w2 : ∀ w : Word, w.toNat = 2 → w = 2 := fun w h => UInt64.toNat_inj.mp (by simpa using h)
@@ -597,8 +595,8 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     ciEqB rd p q = decide (x = y) := by
   obtain ⟨wk, e, hx⟩ := ciD hx
   obtain ⟨wk', e', hy⟩ := ciD hy
-  have r1 := rdW_zero' hR e
-  have r2 := rdW_zero' hR e'
+  have r1 := L.Arena.RdOK.rd hR _ _ e
+  have r2 := L.Arena.RdOK.rd hR _ _ e'
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
   rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |

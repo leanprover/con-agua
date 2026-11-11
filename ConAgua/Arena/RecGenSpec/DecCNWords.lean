@@ -7,7 +7,6 @@ public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
-import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.RecClassSpec.MjProg
 
@@ -45,8 +44,8 @@ theorem decCN_wordsE {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (
       rdW (m.arr64 IW) (cA + 1) = UInt64.ofNat x.2 ∧ x.2 < 2 ^ 64 ∧ cA.toNat + 1 < iwTop m := by
   have h' : decCN (truncM m) cA.toNat = some x := h
   obtain ⟨⟨a, ha, hcv⟩, hn⟩ := decCN_some h'
-  obtain ⟨-, ha'⟩ := rec2IwN_trunc ha
-  obtain ⟨hnt, hn'⟩ := rec2IwN_trunc hn
+  obtain ⟨-, ha'⟩ := L.Ind.iwN_truncM_some ha
+  obtain ⟨hnt, hn'⟩ := L.Ind.iwN_truncM_some hn
   have ra := iwN_rdW_at (w := cA) (k := 0) (by simpa using ha') hsz
   have rn := iwN_rdW_at (w := cA) (k := 1) hn' hsz
   have hcv' : decCVp m a = some x.1 := (show DecB (fun m => decCVp m a) m x.1 from hcv).get (OMono.decCVp _)
@@ -125,7 +124,7 @@ theorem decNL_write (m : Mem) (o j : Nat) (w v : Word) (ps : List Nat) (hw : w.t
   rw [decNL_snoc]
   have e1 : decNL (m.set64 IW w v) o j = decNL m o j := by
     simp only [decNL]
-    apply mapM_opt_congr
+    apply L.Ind.mapM_congr_of
     intro i hi
     have hi' : i < j := List.mem_range.mp hi
     simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
@@ -150,8 +149,8 @@ theorem decTM_ctors {m : Mem} {v : Nat} {M : TargetMajor} (h : DecB (fun m => de
   obtain ⟨i, hi, lv, hlv, ds, hds, nPc, hnPc, nIdx, hnIdx, ctors, hctors, mem, hmem, nfs, hnfs, pf, hpf, hM⟩ := h'
   cases hM
   obtain ⟨o, l, ho, hl, hd⟩ := decAt_some hctors
-  obtain ⟨-, ho'⟩ := rec2IwN_trunc ho
-  obtain ⟨hlt, hl'⟩ := rec2IwN_trunc hl
+  obtain ⟨-, ho'⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨hlt, hl'⟩ := L.Ind.iwN_truncM_some hl
   exact ⟨o, l, ho', by simpa [Nat.add_assoc] using hl', by simpa [Nat.add_assoc] using hlt, hd⟩
 
 /-- A fresh `[off, len]` header (at or above `b`) of a slice stable above `b`. -/

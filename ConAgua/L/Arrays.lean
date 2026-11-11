@@ -24,7 +24,7 @@ above the syntax that a program's arrays are declared in:
   array of the table, a tiered access (`A⟨t⟩[i]`) a tiered array, and a plain word access a word
   array of the table.
 * **Tiers.** Proofs name tier 1 of `a` as `tier1 a` and both tiers as `tiers a`, and reason with
-  the lemmas below and in `L/Syntax.lean` (`tierA_mem_tiers`, `tierA_ne`, `tier1_ne_t0`, …).
+  the lemmas below and in `L/Syntax.lean` (`tierA_mem_tiers`, `tier1_ne_t0`, …).
 -/
 
 namespace L
@@ -38,7 +38,7 @@ theorem and_one_cases' (t : Word) : (t &&& 1).toNat = 0 ∨ (t &&& 1).toNat = 1 
 
 @[simp] theorem tierA_zero (a : ArrId) : tierA a 0 = ↑a := rfl
 
-theorem tierA_one_eq (a : ArrId) : tierA a 1 = tier1 a := rfl
+theorem tierA_one (a : ArrId) : tierA a 1 = tier1 a := rfl
 
 /-- An array that is neither tier of `a` is not `tierA a t`. -/
 theorem tierA_ne {a : ArrId} {b : TieredArray} (h : b ∉ tiers a) (t : Word) : tierA a t ≠ b :=

@@ -16,7 +16,7 @@ import all ConAgua.Arena.IndPos2
 /-!
 # Pos2CvLpsWStage
 
-`pos2_cvLpsW_stage`, `nest_holes_go`'s generated model `nhGoW` and the lemmas only they use.
+`nest_holes_go`'s generated model `nhGoW` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -29,15 +29,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-theorem pos2_cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
-    (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
-    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
-      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' :=
-  cvLpsW_stage h hS hcv hq
 
 /-- The lookups of `nest_holes`. -/
 structure NhLook (p : Prog) : Prop where

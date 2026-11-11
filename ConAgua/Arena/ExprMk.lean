@@ -17,6 +17,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.L.WordOff
+import ConAgua.Arena.StoreRel
 
 @[expose] public section
 
@@ -189,7 +190,7 @@ theorem derTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
   simp only [derTailS, derB, seqDrop]
   vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
   all_goals (try simp_all [derBW, derFW, exprLPW, BVAR, APP, LAM, FORALL, LET, PROJ, FVAR, FVAR_LP, SORT, SORT_LP, CONST, CONST_LP, Sig.retVal, Sig.retOr])
   all_goals grind [lang_grind, arena_grind, derBW, derFW, exprLPW, tierW, idxW, satSuccW]
@@ -210,7 +211,7 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
     simp only [derB, seqTake]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derTail_spec p n]
     all_goals subst_vars
-    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff,
+    all_goals (try simp only [DerLocs, St.setLoc_loc, L.St.setLoc_mem, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, LocEq]
 
@@ -224,7 +225,7 @@ theorem derBvTail_spec (p : Prog) (n : Nat) (s₁ : St) (hL : DerLocs s₁) :
   simp only [derBvTailS, derBv, seqDrop]
   vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, ld32_pcol_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   all_goals subst_vars
-  all_goals (try simp only [St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+  all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq, bne_iff_ne, ne_eq, h1, h2, h3] at *)
   all_goals grind [lang_grind, arena_grind, derBW, tierW, idxW, satSuccW, Sig.retVal, Sig.retOr]
 
@@ -243,7 +244,7 @@ theorem derBv_spec (p : Prog) (hp : p.lookup "der_bv" = some derBv) (n : Nat) (s
     simp only [derBv, seqTake]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE, derBvTail_spec p n]
     all_goals subst_vars
-    all_goals (try simp only [DerLocs, St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff,
+    all_goals (try simp only [DerLocs, St.setLoc_loc, L.St.setLoc_mem, Nat.reduceEqDiff,
       Locals.init_cons_zero, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, LocEq]
 
@@ -256,14 +257,6 @@ attribute [arena_grind =] mkK_some
 AFTER the append. Before reading, they zero the new node's range slot: then every handle reads
 the same range, fvar range and level-parameter bit as before the append, the new node itself
 included (before: past the count, `0`; after: the zeroed slot, `0`). -/
-
-theorem rdW_set64E (m : Mem) (a b : TieredArray) (k v x : Word) :
-    rdW ((m.set64 a k v).arr64 b) x =
-      if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
-  by_cases h : b = a
-  · subst h; rw [Mem.arr64_set64_same]
-    simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; grind
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
 
 theorem Mem.set64_set64_same (m : Mem) (a : TieredArray) (i v w : Word) :
     (m.set64 a i v).set64 a i w = m.set64 a i w := by
@@ -333,7 +326,7 @@ theorem pushZ_ctl (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
       else rdW (m.arr64 CTL) x := by
   rcases hT with ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ | ⟨rfl, rfl, rfl, rfl⟩ <;>
   rcases L.eq_zero_or_eq_one_of_le_one t ht with rfl | rfl <;>
-  simp [pushZ, Mem.arr64_set64_ne, Mem.arr64_set32_ne, rdW_set64E, CTL, ADER, AREC, LADER, LAREC,
+  simp [pushZ, Mem.arr64_set64_ne, Mem.arr64_set32_ne, L.Arena.rdW_set64, CTL, ADER, AREC, LADER, LAREC,
     FADER, FAREC]
 
 theorem pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (x : Word) :
@@ -351,13 +344,13 @@ theorem tfld_pushZ_other (X : TRec) (hc : X.arr ≠ CTL) (hR : X.arr ≠ R)
     (hD : X.arr ≠ D) (u i g : Word) :
     tfld (pushZ R S D k m t f a) X u i g = tfld m X u i g := by
   simp only [tfld]
-  rw [pushZ_arr m t f a _ (ne_tierA (Ne.symm hc) u).symm (tierA_ne hR u t) (tierA_ne hD u t)]
+  rw [pushZ_arr m t f a _ (ne_tierA (Ne.symm hc) u).symm (L.tierA_ne_tierA hR u t) (L.tierA_ne_tierA hD u t)]
 
 /-- An element of a packed column other than the pushed table's range column is unchanged. -/
 theorem pcol_pushZ_other (A : ArrId) (hc : A ≠ CTL) (hR : A ≠ R) (hD : A ≠ D) (u i : Word) :
     pcol (pushZ R S D k m t f a) A u i = pcol m A u i := by
   simp only [pcol]
-  rw [pushZ_arr m t f a _ (ne_tierA (Ne.symm hc) u).symm (tierA_ne hR u t) (tierA_ne hD u t)]
+  rw [pushZ_arr m t f a _ (ne_tierA (Ne.symm hc) u).symm (L.tierA_ne_tierA hR u t) (L.tierA_ne_tierA hD u t)]
 
 /-- An element of the pushed table's range column: the new node's is `0`, the others as before. -/
 theorem pcol_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (u : Word) (hu : u ≤ 1) (i : Word) :
@@ -374,7 +367,7 @@ theorem pcol_pushZ_der (hT : BinTbl R S D k) (ht : t ≤ 1) (u : Word) (hu : u �
   · have hDc : D ≠ CTL := by
       rcases hT with ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ | ⟨-, -, rfl, -⟩ <;> decide
     have hDc' : tierA D u ≠ CTL := (ne_tierA (Ne.symm hDc) u).symm
-    rw [pushZ_arr m t f a _ hDc' (tierA_ne (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
+    rw [pushZ_arr m t f a _ hDc' (L.tierA_ne_tierA (Ne.symm hRD) u t) (tierA_ne_tier _ hu ht hut)]
     simp [hut]
 
 /-! The three tables, one theorem each (elaborated in parallel). -/
@@ -452,7 +445,7 @@ theorem der_pushZ_A (hT : BinTbl R S D k) (hsel : R = AREC ∧ S = ASLOT ∧ D =
     rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
-        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
+        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, L.tierA_zero, L.tierA_one] at * <;>
       grind (splits := 24)
 
 set_option linter.unusedSimpArgs false in
@@ -528,7 +521,7 @@ theorem der_pushZ_LA (hT : BinTbl R S D k) (hsel : R = LAREC ∧ S = LASLOT ∧ 
     rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
-        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
+        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, L.tierA_zero, L.tierA_one] at * <;>
       grind (splits := 24)
 
 set_option linter.unusedSimpArgs false in
@@ -604,7 +597,7 @@ theorem der_pushZ_FA (hT : BinTbl R S D k) (hsel : R = FAREC ∧ S = FASLOT ∧ 
     rcases L.eq_zero_or_eq_one_of_le_one _ htw with e | e <;> simp only [e] <;>
       simp (config := {decide := true}) only [CTL, ADER, LADER, FADER, APP, LAM, FORALL, BVAR,
         FVAR, LET, PROJ, SORT, CONST, UInt64.add_zero, ite_false, ite_true, true_and, false_and,
-        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, tierA_zero, tierA_one] at * <;>
+        and_false, and_true, tcnt, tfld, pcol, TRec.ad, TRec.wd, TRec.ex, L.tierA_zero, L.tierA_one] at * <;>
       grind (splits := 24)
 
 /-- **The append, with the new slot zeroed, changes none of `der_b`'s three reads**, for every
@@ -640,7 +633,7 @@ theorem der_congr {S : ArrId} (hS : S = ASLOT ∨ S = LASLOT ∨ S = FASLOT) (t 
     derBW m₂ h = derBW m₃ h ∧ derFW m₂ h = derFW m₃ h ∧ exprLPW m₂ h = exprLPW m₃ h := by
   have e : ∀ b : ArrId, b ≠ S → m₂.arr64 b = m₃.arr64 b ∧
       m₂.arr64 (tier1 b) = m₃.arr64 (tier1 b) := fun b hbS =>
-    ⟨hf _ (ne_tierA hbS t), hf _ (by simpa using tierA_ne hbS 1 t)⟩
+    ⟨hf _ (ne_tierA hbS t), hf _ (by simpa using L.tierA_ne_tierA hbS 1 t)⟩
   rcases hS with rfl | rfl | rfl <;>
   simp only [derBW, derFW, exprLPW, (e CTL (by decide)).1,
     tcnt_arr_eq _ (e CTL (by decide)).1,
@@ -694,7 +687,7 @@ theorem ainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : ainternW m f a = so
     simp only [pushRec, colW, appCS, cntC, acnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inl rfl) t
     (fun b hb => (OutSa.set32 (fun b hb => he b hb)
-      (tierA_ne (a := ADER) (b := ASLOT) (by decide) t t) _ _ b hb).trans
+      (L.tierA_ne_tierA (a := ADER) (b := ASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := AREC) (S := ASLOT) (D := ADER) (k := 4) m t f a
     (.inl ⟨rfl, rfl, rfl, rfl⟩) ht hc' x
@@ -735,7 +728,7 @@ theorem lainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : lainternW m f a = 
     simp only [pushRec, colW, lamCS, cntC, lacnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inl rfl)) t
     (fun b hb => (OutSa.set32 (fun b hb => he b hb)
-      (tierA_ne (a := LADER) (b := LASLOT) (by decide) t t) _ _ b hb).trans
+      (L.tierA_ne_tierA (a := LADER) (b := LASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := LAREC) (S := LASLOT) (D := LADER) (k := 28) m t f a
     (.inr (.inl ⟨rfl, rfl, rfl, rfl⟩)) ht (UInt64.lt_of_lt_of_le hc' (by decide)) x
@@ -776,7 +769,7 @@ theorem fainternW_der {m m₁ : Mem} {f a r q u : Word} (hI : fainternW m f a = 
     simp only [pushRec, colW, forallCS, cntC, facnt, pushZ, pushArgs]; rfl
   obtain ⟨e1, e2, e3⟩ := der_congr (.inr (.inr rfl)) t
     (fun b hb => (OutSa.set32 (fun b hb => he b hb)
-      (tierA_ne (a := FADER) (b := FASLOT) (by decide) t t) _ _ b hb).trans
+      (L.tierA_ne_tierA (a := FADER) (b := FASLOT) (by decide) t t) _ _ b hb).trans
       (by rw [ez])) x
   obtain ⟨f1, f2, f3⟩ := der_pushZ (R := FAREC) (S := FASLOT) (D := FADER) (k := 30) m t f a
     (.inr (.inr ⟨rfl, rfl, rfl, rfl⟩)) ht (UInt64.lt_of_lt_of_le hc' (by decide)) x

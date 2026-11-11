@@ -15,13 +15,14 @@ public import ConAgua.Arena.IndPos2
 public import ConAgua.Arena.IndPosSpec.CtxFields
 import all ConAgua.Arena.IndPos2
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 
 /-!
 # NkcW
 
-`pos2_hslice_get`, `pos2_decHL_trunc`, `pos2_iwN_trunc`, `pos2_iwH_trunc`, `pos2_nk_in`, `pos2_nk_fields` and the lemmas only they use.
+`pos2_hslice_get`, `pos2_decHL_trunc`, `pos2_nk_in`, `pos2_nk_fields` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -60,19 +61,6 @@ theorem pos2_decHL_trunc {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
   obtain ⟨w, hw, -⟩ := hg j hj
   exact (truncM_iw_get hw).1
 
-theorem pos2_iwN_trunc {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) :
-    i < iwTop m ∧ iwN m i = some v := by
-  simp only [iwN, nat?, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, rfl⟩ := h
-  obtain ⟨hi, hw'⟩ := truncM_iw_get hw
-  exact ⟨hi, by simp [iwN, nat?, hw']⟩
-
-theorem pos2_iwH_trunc {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : iwH (truncM m) i = some x) :
-    i < iwTop m ∧ iwH m i = some x := by
-  obtain ⟨w, hw, hl, rfl⟩ := hd?_some h
-  obtain ⟨hi, hw'⟩ := truncM_iw_get hw
-  exact ⟨hi, by simp only [iwH, hd?]; rw [hw']; simp [hl]⟩
-
 /-- A key record decoded below the tops: its words and its `ds` slice below the top. -/
 theorem pos2_nk_in {m : Mem} {p : Nat} {kk : NestKey} (h : DecB (fun m => decNK m p) m kk) :
     decNK m p = some kk ∧ NKIn m p (· < iwTop m) := by
@@ -80,10 +68,10 @@ theorem pos2_nk_in {m : Mem} {p : Nat} {kk : NestKey} (h : DecB (fun m => decNK 
   have h' : decNK (truncM m) p = some kk := h
   simp only [decNK, decAt, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h'
   obtain ⟨c, hc, u, hu, ds, ⟨o, ho, l, hl, hds⟩, -⟩ := h'
-  obtain ⟨h0, -⟩ := pos2_iwH_trunc hc
-  obtain ⟨h1, -⟩ := pos2_iwH_trunc hu
-  obtain ⟨h2, ho'⟩ := pos2_iwN_trunc ho
-  obtain ⟨h3, hl'⟩ := pos2_iwN_trunc hl
+  obtain ⟨h0, -⟩ := L.Ind.iwH_truncM_some hc
+  obtain ⟨h1, -⟩ := L.Ind.iwH_truncM_some hu
+  obtain ⟨h2, ho'⟩ := L.Ind.iwN_truncM_some ho
+  obtain ⟨h3, hl'⟩ := L.Ind.iwN_truncM_some hl
   refine ⟨fun j hj => ?_, fun o' l' ho2 hl2 j hj => ?_⟩
   · rcases (show j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 by omega) with rfl | rfl | rfl | rfl <;> simpa using ‹_›
   · rw [ho'] at ho2; rw [hl'] at hl2; cases ho2; cases hl2
@@ -112,7 +100,7 @@ theorem pos2_decPL_trunc {α : Type} {f : Mem → Nat → Option α} {m : Mem} :
     refine ⟨by simp [h1], fun j _hj => ?_⟩
     cases j with
     | zero =>
-      obtain ⟨hi, hv⟩ := pos2_iwN_trunc hv0
+      obtain ⟨hi, hv⟩ := L.Ind.iwN_truncM_some hv0
       exact ⟨v0, by simpa using hi, by simpa using hv, by simp, by simpa using hx⟩
     | succ j =>
       obtain ⟨v, h1', h2', hx', h3'⟩ := h2 j (by omega)
@@ -205,7 +193,7 @@ theorem KsB.cons {m : Mem} {o l : Nat} {ks : List NestKey} (h : KsB m o (l + 1) 
     ∃ v K ks', ks = K :: ks' ∧ o < iwTop m ∧ iwN m o = some v ∧ DecB (fun m => decNK m v) m K ∧
       KsB m (o + 1) l ks' := by
   obtain ⟨v, K, ks', rfl, hv, hK, hks⟩ := decPL_cons (show decPL (truncM m) (decNK (truncM m)) o (l + 1) = some ks from h)
-  obtain ⟨hi, hv'⟩ := pos2_iwN_trunc hv
+  obtain ⟨hi, hv'⟩ := L.Ind.iwN_truncM_some hv
   exact ⟨v, K, ks', rfl, hi, hv', hK, hks⟩
 
 /-- **`nest_keys_contains` is `List.contains`**. -/
