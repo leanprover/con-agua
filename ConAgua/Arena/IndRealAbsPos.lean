@@ -7,6 +7,7 @@ public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
+public import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndPosSpec.FgW2
 
@@ -174,55 +175,63 @@ theorem posmemo_rx_afr (n : Nat) :
   induction n with
   | zero =>
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
-      simp_all [rxMapW, rxImgW, rxFrameW, rxDsW, rxDsGoW, rxW, rxGoW, rxNodeW]
+      simp_all [rxMapW.eq_1, rxImgW.eq_1, rxFrameW.eq_1, rxDsW.eq_1, rxDsGoW.eq_1, rxW.eq_1, rxGoW.eq_1,
+        rxNodeW.eq_1]
   | succ n ih =>
   obtain ⟨iMap, iImg, iFr, iDs, iDsGo, iRx, iGo, iNode⟩ := ih
   have pfr : ∀ (m m' : Mem) (ctx po pl n1 h a b : Word),
-      pfrK1 n ctx po pl n1 (some (h, m)) = some (a, b, m') → AFr m m' := by
+      rxFrameW.j1 n ctx po pl n1 h m = some (a, b, m') → AFr m m' := by
     intro m m' ctx po pl n1 h a b hh
-    simp only [pfrK1, pfrK2.eq_def, pfrK3.eq_def, frK4.eq_def, frK5.eq_def] at hh
+    simp only [rxFrameW.j1.arm1, rxFrameW.k_rec5.eq_def, rxFrameW.k_nest_hole_img_ds.eq_def,
+      rxFrameW.k_intern_const.eq_def, rxFrameW.k_mk_app_n_f.eq_def] at hh
     afr_auto hh [posRecW_afr, iDs _ _ _ _ _ _ _, ceinternW_afr, mknF_afr]
     simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact AFr.refl _
   refine ⟨fun m m' f i a b hh => ?_, fun m m' ctx po pl nn i a b hh => ?_,
     fun m m' ctx po pl n1 i a b hh => ?_, fun m m' f o l a b hh => ?_, fun m m' f o l q j hh => ?_,
     fun m m' f e r hh => ?_, fun m m' f fu h r hh => ?_, fun m m' f f1 g x y z r hh => ?_⟩
-  · simp only [rxMapW, erK1.eq_def, erK2.eq_def, erK3.eq_def] at hh
+  · simp only [rxMapW.eq_2, rxMapW_kImg, rxMapW.k_pin_word.eq_def, rxMapW.k_intern_sort.eq_def,
+      rxMapW.k_intern_fvar.eq_def] at hh
     afr_auto hh [iImg _ _ _ _ _ _ _ _ _, sointernW_afr, fvinternW_afr]
     all_goals simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact AFr.refl _
-  · simp only [rxImgW, rxRootW, rtK1.eq_def, rtK2.eq_def] at hh
+  · simp only [rxImgW.eq_2, rxMapW_kImg, rxRootW, rxRootW.k_intern_const.eq_def,
+      rxRootW.k_mk_app_n_f.eq_def] at hh
     afr_auto hh [iImg _ _ _ _ _ _ _ _ _, iFr _ _ _ _ _ _ _ _ _, ceinternW_afr, mknF_afr]
     all_goals simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact AFr.refl _
-  · simp only [rxFrameW, frK0.eq_def] at hh
+  · simp only [rxFrameW.eq_2, rxFrameW.k_rec4.eq_def] at hh
     split at hh; · exact pfr _ _ _ _ _ _ _ _ _ hh
     split at hh; · cases hh
-    rename_i h1; rcases h2 : posRecW _ [_, 0] with _ | ⟨k, m2⟩ <;> rw [h2] at hh; · simp [pfrK1] at hh
+    rename_i h1; rcases h2 : posRecW _ [_, 0] with _ | ⟨k, m2⟩ <;> rw [h2] at hh
+    · simp [rxFrameW.k_rec2.none] at hh
+    rw [rxFrameW.k_rec2.arm1] at hh
     exact ((posRecW_afr h1).trans (posRecW_afr h2)).trans (pfr _ _ _ _ _ _ _ _ _ hh)
-  · simp only [rxDsW, dsA.eq_def, dsB.eq_def] at hh
+  · simp only [rxDsW.eq_2, rxDsW.k_iw_alloc.eq_def, rxDsW.k_nest_hole_img_ds_go.eq_def] at hh
     afr_auto hh [allocW_afr, iDsGo _ _ _ _ _ _ _]
     simp only [Option.some.injEq, Prod.mk.injEq] at hh; obtain ⟨-, -, rfl⟩ := hh; exact AFr.refl _
-  · simp only [rxDsGoW, dgK.eq_def] at hh
+  · simp only [rxDsGoW.eq_2, rxDsGoW.k_replace_fvars.eq_def, rxDsGoW_kGo] at hh
     afr_auto hh [iRx _ _ _ _ _, fun h => (set64IW_afr _ _ _).trans (iDsGo _ _ _ _ _ _ _ h)]
-  · simp only [rxW, rxK1.eq_def, rxK2] at hh
+  · simp only [rxW.eq_2, rxW.k_replace_fvars_go.eq_def, rxW.j1] at hh
     refine (AFr.of_frame (benterG_frame 218 m)).trans ?_
     afr_auto hh [iGo _ _ _ _ _ _]
-  · simp only [rxGoW] at hh
+  · simp only [rxGoW.eq_2] at hh
     split at hh; · cases hh
-    simp only [rxG1] at hh
     split at hh; · cases hh
-    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    iterate 4 (split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _)
     split at hh
     · rcases hm : rxMapW n m f _ with _ | ⟨ok, r1, m1⟩ <;> rw [hm] at hh; · cases hh
-      rw [rxH_some] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact iMap _ _ _ _ _ _ hm
-    simp only [rxG3] at hh
+      rw [rxGoW_kMap] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact iMap _ _ _ _ _ _ hm
     split at hh; · cases hh
     split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
-    simp only [rxG4.eq_def, rxG5.eq_def] at hh
-    split at hh; · cases hh
-    rename_i hn; split at hh; · cases hh
-    rename_i hs; rw [← (Prod.mk.inj (Option.some.inj hh)).2]
+    rcases hn : rxNodeW n m f _ _ _ _ _ with _ | ⟨r1, m1⟩ <;> rw [hn] at hh; · cases hh
+    rw [rxGoW_kNode] at hh
+    rcases hs : msetG rfSch m1 h _ r1 with _ | m2 <;> rw [hs] at hh; · cases hh
+    rw [← (Prod.mk.inj (Option.some.inj hh)).2]
     exact (iNode _ _ _ _ _ _ _ _ _ hn).trans (msetG_afrS rfSch_wf rfl rfl hs)
-  · simp only [rxNodeW, rxB1.eq_def, rxB2.eq_def, rxL1.eq_def, rxL2.eq_def, rxL3.eq_def, rxP1.eq_def] at hh
-    afr_auto hh [iGo _ _ _ _ _ _, rpMkW_afr]
+  · simp only [rxNodeW.eq_2, rxNodeW.k_replace_fvars_go.eq_def, rxNodeW.k_replace_fvars_go_2.eq_def,
+      rxNodeW.k_replace_fvars_go_3.eq_def, rxNodeW.k_replace_fvars_go_4.eq_def,
+      rxNodeW.k_replace_fvars_go_5.eq_def, rxNodeW.k_replace_fvars_go_6.eq_def,
+      rxNodeW.k_replace_fvars_go_7.eq_def, rxNodeW.k_replace_fvars_go_8.eq_def,
+      rxNodeW.k_replace_fvars_go_9.eq_def, rxNodeW.k_replace_fvars_go_10.eq_def] at hh
+    afr_auto hh [iGo _ _ _ _ _ _, mkAppW_afr, mkLamW_afr, mkForallW_afr, mkLetW_afr, mkProjW_afr]
 
 -- from IndPosSpec/DepthGo
 theorem rxW_afr {n : Nat} {m m' : Mem} {f e r : Word} (h : rxW n m f e = some (r, m')) : AFr m m' :=

@@ -12,7 +12,7 @@ import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.MapOKStep
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.Rx
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 import all ConAgua.Arena.RecCheck
 import all ConAgua.Arena.RecGen

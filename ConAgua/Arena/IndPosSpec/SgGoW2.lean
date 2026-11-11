@@ -3,7 +3,7 @@ module
 public import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
