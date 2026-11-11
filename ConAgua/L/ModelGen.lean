@@ -83,8 +83,15 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   any argument list (`invoke p (exec p n) "f" vs`, `callW_spec p n "f"`) applies to every call.
   A member of the group listed here is called through its spec, not as its model (a recursive
   call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
-  `r = [r.headD 0, …]` (the result's length) is ignored.
-* `fold`: named functions whose bodies are folded back into the model: word arithmetic
+  `r = [r.headD 0, …]` (the result's length) is ignored. Results stated as values beside the
+  call's effect, `r.headD 0 = s₀.mem.top ∧ F = some (r.tail.headD 0, s'.mem)` (`str_put_esc`) or a
+  list literal `r = [s₀.mem.top, Q]` beside `F = some s'.mem` (`ls_put`) or `G ∧ s'.mem = F`
+  (`stk_pool`), are those values, over the memory before the call (`mixed`).
+* A binder named `L` (a structure of lookups: `L.rc`) is renamed `L'` from its binder on (the
+  generated proofs write the library's names as `_root_.L.x`); an implicit binder that a callee's
+  model mentions is an explicit parameter of the models.
+* `fold`: named functions whose bodies are folded back into the model: a memory reader
+  (`cnt m t = rdW (m.arr64 CTL) (2 + t)`, the pool slice word `erRd m x`, `EREC⦃x⦄`), word arithmetic
   (`tierW h = (h >>> 31) &&& 1`, also with comparison words `if a < b then 1 else 0` or
   `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
@@ -492,6 +499,10 @@ meta inductive CKind where
   | roT (t : Term) (k : Nat)
   /-- `F : Option Unit`, memory unchanged: no results, `none` where it fails -/
   | unitOpt (t : Term)
+  /-- some results as values over the memory before the call (`vals[i]`: `r.headD 0 = top`, a
+  list literal `r = [top, F₀]`), the call's effect `inner` (`eff`, `memOpt`, `memTot`), and for
+  `eff` the result its model gives (`F = some (r.tail.headD 0, s'.mem)`: `1`) -/
+  | mixed (vals : Array (Option Term)) (inner : CKind) (j : Nat)
   deriving Inhabited
 
 meta structure Callee where
@@ -602,6 +613,8 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut listF : Option Lean.Expr := none
     let mut pures : Array (Nat × Lean.Expr) := #[]
     let mut eff : Option Lean.Expr := none
+    -- `F = some (r.tail.headD 0, s'.mem)`: the model gives result `j ≠ 0` (`mixed`)
+    let mut effJ : Option (Lean.Expr × Nat) := none
     let mut effL : Option Lean.Expr := none
     let mut memOpt : Option Lean.Expr := none
     let mut memTot : Option Lean.Expr := none
@@ -655,6 +668,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             match v.getAppFnArgs with
             | (``Prod.mk, #[_, _, v1, v2]) =>
               if resIdx r v1 == some 0 && v2 == memS' then eff := some a
+              else if let some j := (if v2 == memS' then resIdx r v1 else none) then effJ := some (a, j)
               else if v1 == r && v2 == memS' then effL := some a
               else if v2 == memS' && (match tupComps v1 with
                   | [x, y] => resIdx r x == some 0 && resIdx r y == some 1
@@ -684,6 +698,42 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if c.containsFVar r.fvarId! then throwError "l_model: unsupported post conjunct {c}"
         -- a fact about the final memory (`Keep s₀.mem s'.mem`, `Inv s'.mem`): not the model
         unless c.containsFVar s'.fvarId! do guards := guards.push c
+    -- `mixed`: results stated as values (`r.headD 0 = top`, `r = [top, F₀]`) beside an effect
+    let litVals : Option (List Lean.Expr) := listF.bind fun l => match l.listLit? with
+      | some (_, es) => if es.all (!·.containsFVar r.fvarId!) then some es else none
+      | none => none
+    let effAt : Option (Lean.Expr × Nat) := match effJ with
+      | some x => some x
+      | none => eff.map (·, 0)
+    let hasEffect := effAt.isSome || memOpt.isSome || memTot.isSome
+    let mixed? : Option (Array (Nat × Lean.Expr)) :=
+      if !hasEffect || pairF.isSome || unitF.isSome || tupF.isSome || roL.isSome || effL.isSome || ro.isSome then none
+      else if let some es := litVals then
+        if pures.isEmpty then some (es.toArray.mapIdx fun i e => (i, e)) else none
+      -- (pure results beside `F = some (r.headD 0, s'.mem)` or a memory model are ignored, as
+      -- they were before `mixed`)
+      else if listF.isNone && effJ.isSome then some pures
+      else none
+    if let some vals := mixed? then
+      unless (if effAt.isSome then 1 else 0) + (if memOpt.isSome then 1 else 0) + (if memTot.isSome then 1 else 0) == 1 do
+        throwError "l_model: callee {fname}: ambiguous post"
+      let n := vals.foldl (fun k (i, _) => max k (i + 1)) ((effAt.map (·.2 + 1)).getD 0)
+      let mut ts : Array (Option Term) := #[]
+      for i in [0:n] do
+        match vals.find? (·.1 == i) with
+        | some (_, e) => ts := ts.push (some (← delabT e))
+        | none => ts := ts.push none
+      let (inner, j) ← match effAt, memOpt, memTot with
+        | some (e, j), _, _ => pure (CKind.eff (← delabT e), j)
+        | _, some e, _ => pure (CKind.memOpt (← delabT e), 0)
+        | _, _, some e =>
+          let gs ← guards.mapM fun g => do
+            let dec ← try pure (← synthInstance? (mkApp (mkConst ``Decidable) g)).isSome
+              catch _ => pure false
+            pure ((← delabT g), !dec)
+          pure (CKind.memTot (← delabT e) gs, 0)
+        | _, _, _ => throwError "l_model: callee {fname}: ambiguous post"
+      return (fname, { kind := .mixed ts inner j, opt := opt || memTot.isSome })
     let kind ← if let some e := pairF then do
         unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone && unitF.isNone do
           throwError "l_model: callee {fname}: ambiguous post"
@@ -1697,6 +1747,29 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     let u ← substT t memT argsT
     let body ← transS E (assign ctx #[]) rest
     return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) (← failMR E) body
+  | .mixed vals inner j =>
+    if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
+    -- the results stated as values, over the memory before the call; the others `0` until the
+    -- effect's model gives one
+    let mut ctx1 := assign ctx #[]
+    for i in [0:min vals.size xk.size] do
+      if let some t := vals[i]! then
+        ctx1 := setEnv ctx1 xk[i]! (.raw (← substT t memT argsT))
+    match inner with
+    | .eff t =>
+      let xj : Array Nat := if h : j < xk.size then #[xk[j]] else #[]
+      mkK E ctx1 0 xj[0]? xj (.raw (← substC t)) rest
+    | .memOpt t => mkK E ctx1 1 none #[] (.raw (← substC t)) rest
+    | .memTot t guards =>
+      let m' ← substT t memT argsT
+      let gs ← guards.mapM fun (g, _) => substT g memT argsT
+      if ← dupMem E ctx (#[m'] ++ gs) then return ← shareJ
+      let mut r ← transS E { ctx1 with mem := .raw m' } rest
+      for (g, classical) in guards.reverse do
+        let g ← substT g memT argsT
+        r := .ite (← negC g classical) (← failMR E) r
+      return r
+    | _ => throwErrorAt f "l_model: unsupported callee {fname}"
 
 /-- Make the continuation of a call: the rest of the code, as a definition over the locals it
 reads. -/
@@ -2192,7 +2265,12 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
     | .list t _ gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)
     | .pure ts gs => (ts ++ gs).foldl (fun acc t => idents t.raw acc) acc
     | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
-    | .unitOpt t => idents t.raw acc) {}
+    | .unitOpt t => idents t.raw acc
+    | .mixed vs inner _ => vs.foldl (fun acc t? => match t? with | some t => idents t.raw acc | none => acc)
+        (match inner with
+          | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
+          | .eff t | .memOpt t => idents t.raw acc
+          | _ => acc)) {}
   -- `unified`: the callees without a spec are called through `callE p n "f"`
   let calleeIds := if exc then calleeIds.insert `p else calleeIds
   let mpBs := allBs.filter (calleeIds.contains ·.1)
@@ -2428,7 +2506,7 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
   let emitD (cmd : Syntax) : CommandElabM Unit := unless noDefs do emit doTrace cmd
   -- a callee guard decided classically (`analyseSpec`): the definitions are `noncomputable`
   let classical := E.callees.any fun (_, c) => match c.kind with
-    | .memTot _ gs => gs.any (·.2)
+    | .memTot _ gs | .mixed _ (.memTot _ gs) _ => gs.any (·.2)
     | _ => false
   if classical then emitD (← `(command| noncomputable section))
   -- emit the components, each after the ones it refers to

@@ -826,6 +826,40 @@ l_model tRd_spec (p : Prog) (hp : p.lookup "t_rd" = some tRd)
 example (m : Mem) (i x : Word) : tRdW m i x = some (twNext m i + tpRd m x + rdW (m.arr64 TW) i) := by
   unfold tRdW; with_reducible rfl
 
+/-- Callee posts with results stated as values beside the call's effect (`mixed`):
+`r.headD 0 = top ∧ F = some (r.tail.headD 0, s'.mem)` (`str_put_esc`), `r = [top, Q] ∧
+F = some s'.mem` (`ls_put`), `G ∧ r = [top] ∧ s'.mem = P` (`stk_pool`). The values are over the
+memory before the call. -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tMx : FunDecl := lfn (a) locals (x, y, u, v, w) {
+  (x, y) := call t_pe(a);
+  (u, v) := call t_lp(x + y);
+  w := call t_sp(u);
+  return x + y + u + v + w
+}
+
+l_model tMx_spec (p : Prog) (F : Mem → Word → Option (Word × Mem)) (F' : Mem → Word → Option Mem)
+    (Q : Word → Word) (P : Mem → Word → Mem) (G : Mem → Word → Bool)
+    (hpe : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_pe" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ r.headD 0 = s₀.mem.top ∧ F s₀.mem a = some (r.tail.headD 0, s'.mem); ⊤⦄)
+    (hlp : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_lp" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ r = [s₀.mem.top, Q a] ∧ F' s₀.mem a = some s'.mem; ⊤⦄)
+    (hsp : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_sp" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ G s₀.mem a = true ∧ r = [s₀.mem.top] ∧ s'.mem = P s₀.mem a; ⊤⦄)
+    (hp : p.lookup "t_mx" = some tMx)
+  fns [hp ↦ tMxW]
+  specs [hpe n, hlp n, hsp n]
+  grind [arena_grind]
+
+example (F' : Mem → Word → Option Mem) (Q : Word → Word) (P : Mem → Word → Mem)
+    (m : Mem) (a y : Word) :
+    tMxW (fun m _ => some (y, m)) F' Q P (fun _ _ => true) m a =
+      match F' m (m.top + y) with
+      | none => none
+      | some m₁ => some (m.top + y + m.top + Q (m.top + y) + m₁.top, P m₁ m.top) := by
+  simp only [tMxW, tMxW.k_t_pe, tMxW.k_t_lp]
+  cases F' m (m.top + y) <;> simp
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function
