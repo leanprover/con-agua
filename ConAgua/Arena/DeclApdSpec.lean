@@ -6,6 +6,7 @@ public import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -17,9 +18,10 @@ import all ConAgua.Arena.DeclApd
 /-!
 # `all_level_params_defined`: the word models and the `vcgen` specs (lane `decls3`)
 
-`DeclApd.lean` has the L code. Here: the word models of `alpd_ls`, `alpd_go` and the entry, written
-as mutual continuations (the template of `IndSumSpec/McGoStep.lean`'s `mentions_const_go`), with the arm
-lemmas as `ind_grind` patterns, and the specs by induction on the exec fuel.
+`DeclApd.lean` has the L code. Here: the word models of `alpd_ls` (generated), `alpd_go` and the
+entry, the last two written as mutual continuations (the template of `IndSumSpec/McGoStep.lean`'s
+`mentions_const_go`), with the arm lemmas as `ind_grind` patterns, and the specs by induction on
+the exec fuel.
 
 The level checks are lane `levels`' `lv_apd` at `A = IW` (`apdW`, `lvApd_spec`); `e_view` and
 `ls_node` read their nodes (`eViewW`, `lsNodeW`). `alpd_go` at exec fuel `n + 1` calls everything
@@ -43,31 +45,14 @@ def apdR1 (m : Mem) : Option Word → Option (Word × Mem)
   | none => none
   | some r => some (r, m)
 
-mutual
-/-- **The model of `alpd_ls`**: every level of `POOL[lo ‥ lo + ll)` has its parameters in the
-slice `(o, l)` of `IW`. -/
-def alpdLsW : Nat → Mem → Word → Word → Word → Word → Option Word
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, o, l, lo, ll =>
-    if ll = 0 then some 1
-    else alpdLsK n m o l lo ll (apdW IW n m (prd m lo) o l)
-/-- After the first level. -/
-def alpdLsK (n : Nat) (m : Mem) (o l lo ll : Word) : Option Word → Option Word
-  | none => none
-  | some r => if r = 0 then some 0 else alpdLsW n m o l (lo + 1) (ll - 1)
-end
-
-section alpdLsArms
-variable (n : Nat) (m : Mem) (o l lo ll r : Word)
-theorem alpdLsW_nil (h : ll = 0) : alpdLsW (n + 1) m o l lo ll = some 1 := by simp [alpdLsW, h]
-theorem alpdLsW_cons (h : ll ≠ 0) : alpdLsW (n + 1) m o l lo ll =
-    alpdLsK n m o l lo ll (apdW IW n m (prd m lo) o l) := by simp [alpdLsW, h]
-theorem alpdLsK_zero : alpdLsK n m o l lo ll (some 0) = some 0 := by simp [alpdLsK]
-theorem alpdLsK_ne (h : r ≠ 0) : alpdLsK n m o l lo ll (some r) = alpdLsW n m o l (lo + 1) (ll - 1) := by
-  simp [alpdLsK, h]
-end alpdLsArms
-
-attribute [ind_grind] alpdLsW_nil alpdLsW_cons alpdLsK_zero alpdLsK_ne
+/-- **`alpd_ls` is its model `alpdLsW`** (generated): every level of `POOL[lo ‥ lo + ll)` has its
+parameters in the slice `(o, l)` of `IW`. -/
+l_model alpdLs_spec (p : Prog) (hlm : p.lookup "lv_mem" = some (lvMemG IW))
+  (hln : p.lookup "lv_node" = some lvNode) (hlv : p.lookup "lv_apd" = some lvApd)
+  (hl : p.lookup "alpd_ls" = some alpdLs)
+  fns [hl ↦ alpdLsW ro]
+  specs [lvApd_spec IW p hlm hln hlv n]
+  grind [arena_grind, ind_grind]
 
 mutual
 /-- **The model of `alpd_go`** (exec fuel `n`, walk fuel word `f`): the result word and the memory
@@ -177,20 +162,6 @@ variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hls : p.lookup "ls_no
   (hlm : p.lookup "lv_mem" = some (lvMemG IW)) (hln : p.lookup "lv_node" = some lvNode)
   (hlv : p.lookup "lv_apd" = some lvApd)
   (hl : p.lookup "alpd_ls" = some alpdLs) (hgo : p.lookup "alpd_go" = some alpdGo)
-
-include hlm hln hlv hl in
-theorem alpdLs_spec (n : Nat) : ∀ (s₀ : St) (o l lo ll : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "alpd_ls" [o, l, lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ alpdLsW n s₀.mem o l lo ll = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ o l lo ll; rw [invoke_eq _ hl]; simp only [callFn, alpdLs]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o l lo ll
-    rw [invoke_eq _ hl]
-    simp only [callFn, alpdLs]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        lvApd_spec IW p hlm hln hlv n, ih] <;> finish (gen := 20)
 
 /-- The spec of `alpd_go` at exec fuel `n`. -/
 def ApdGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (o l f h : Word),

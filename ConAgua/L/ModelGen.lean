@@ -400,7 +400,16 @@ meta def mkFold (c : Name) : MetaM Fold := do
     | _ => (e, k)
   let (body, k) := strip v 0
   -- a memory reader `rdW (m.arr64 A) i`, `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 2^40 - 1)`
-  if let (`L.Arena.rdW, #[a, i]) := body.consumeMData.getAppFnArgs then
+  -- `rdW a i`, or its body `a[i.toNat]?.getD 0` (`prd`)
+  let rdArgs? : Option (Lean.Expr × Lean.Expr) := match body.consumeMData.getAppFnArgs with
+    | (`L.Arena.rdW, #[a, i]) => some (a, i)
+    | (``Option.getD, #[_, o, _]) => match o.consumeMData.getAppFnArgs with
+      | (``GetElem?.getElem?, #[_, _, _, _, _, a, j]) => match j.consumeMData.getAppFnArgs with
+        | (``UInt64.toNat, #[i]) => some (a, i)
+        | _ => none
+      | _ => none
+    | _ => none
+  if let some (a, i) := rdArgs? then
     if let (``L.Mem.arr64, #[.bvar mi, arr]) := a.consumeMData.getAppFnArgs then
       let renum (t : MT) : MT :=
         let rec go : MT → MT

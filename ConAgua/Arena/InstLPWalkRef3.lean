@@ -262,8 +262,8 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨hv, hf, ha⟩ := view_app m₁ a hR h hh hvk g4
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpApp_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
-    rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmApp_eq]) (ilw_binArm (ih k (by omega)) APP "mk_app" ENodeView.app ?_ hS hM hE hh hf ha hW2)
+    rw [hs2, ilwAppW_eq] at hW2
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmApp_eq]) (ilw_binArm (ih k (by omega)) "mk_app" ENodeView.app ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkApp p hp.mkp k x y rs hS hM hc
   by_cases g5 : tagW h = 5
@@ -271,8 +271,8 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨hv, hf, ha⟩ := view_lam m₁ a hR h hh hvk g5
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLam_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
-    rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmLam_eq]) (ilw_binArm (ih k (by omega)) LAM "mk_lam" ENodeView.lam ?_ hS hM hE hh hf ha hW2)
+    rw [hs2, ilwLamW_eq] at hW2
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmLam_eq]) (ilw_binArm (ih k (by omega)) "mk_lam" ENodeView.lam ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkLam p hp.mkp k x y rs hS hM hc hw
   by_cases g6 : tagW h = 6
@@ -280,8 +280,8 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨hv, hf, ha⟩ := view_forall m₁ a hR h hh hvk g6
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpForall_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
-    rw [hs2] at hW2
-    refine hrun _ hv _ (by dsimp only; rw [instLPArmForallE_eq]) (ilw_binArm (ih k (by omega)) FORALL "mk_forall" ENodeView.forallE ?_ hS hM hE hh hf ha hW2)
+    rw [hs2, ilwForallW_eq] at hW2
+    refine hrun _ hv _ (by dsimp only; rw [instLPArmForallE_eq]) (ilw_binArm (ih k (by omega)) "mk_forall" ENodeView.forallE ?_ hS hM hE hh hf ha hW2)
     intro m m' a M x y rs hS hM hx hy hc hw
     exact ilw_mkForall p hp.mkp k x y rs hS hM hc hw
   by_cases g7 : tagW h = 7
@@ -289,7 +289,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨hv, hf, ha, hb⟩ := view_let m₁ a hR h hh hvk g7
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLet_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
-    rw [hs2] at hW2
+    rw [hs2, ilwLetW_eq] at hW2
     exact hrun _ hv _ rfl (ilw_letArm hp.mkp (ih k (by omega)) hp.lev.ilw (fun j _ => ih j (by omega)) hS hM hE hh hf ha hb hW2)
   by_cases g9 : tagW h = 9
   · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 9 PROJ "lp_proj" (idxW h) g9 (ilwDispW_proj p n m₁ h ko kc vo vc fu hs g9)

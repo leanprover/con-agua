@@ -54,7 +54,9 @@ models read `rdW (m.arr64 (tierA EREC (x >>> 40))) (x &&& …)` and users bridge
 (`erRd_foldN`, `prd_rdW`). A fold function whose body is a word read `rdW (m.arr64 A) i` (`i` a
 pattern over its other parameters: `cnt m t = rdW (m.arr64 CTL) (2 + t)`) or a pool slice word
 `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 1099511627775)` (`erRd`, `prd`) is a reader
-(`Fold.reader`): `A.u64[i]` and `A⦃x⦄` become `f m …` where they match. Test `tRd`.
+(`Fold.reader`): `A.u64[i]` and `A⦃x⦄` become `f m …` where they match. Test `tRd`. A reader
+stated as `rdW`'s body, `(m.arr64 A)[i.toNat]?.getD 0` (`prd`; helper mgen4-levels met it), is
+read the same way (round 2).
 
 ### `mixed` callee posts
 

@@ -797,7 +797,9 @@ theorem all_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
     show ¬ ((4 : Word) = 2 ∨ (4 : Word) = 8) by decide, true_or, or_true, ite_true,
     ite_false] at hmem
   unfold nlistW at hmem
-  rw [ite_eq_right (by decide), ite_eq_right (by decide)] at hmem
+  rw [ite_eq_right (by decide)] at hmem
+  unfold nlistW.j1 at hmem
+  rw [ite_eq_right (by decide)] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
@@ -814,10 +816,12 @@ theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Na
   simp only [show ¬ ((5 : Word) = 1 ∨ (5 : Word) = 6) by decide,
     show ¬ ((5 : Word) = 2 ∨ (5 : Word) = 8) by decide, or_true, ite_true, ite_false] at hmem
   unfold nlistW at hmem
-  rw [ite_eq_right (by decide), ite_eq_left rfl] at hmem
+  rw [ite_eq_right (by decide)] at hmem
+  unfold nlistW.j1 at hmem
+  rw [ite_eq_left rfl] at hmem
   have hend := scanNatList_link b h64 hsize v
   rw [hx] at hend
-  rcases hi : idsM b.data m v.toUInt64 with _ | m₁ <;> simp only [hi, nlK, reduceCtorEq] at hmem
+  rcases hi : idsM b.data m v.toUInt64 with _ | m₁ <;> simp only [hi, nlistW.k_ifl_ids, nlistW.j2, reduceCtorEq] at hmem
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hmem)
   exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
 

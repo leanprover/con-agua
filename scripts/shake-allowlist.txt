@@ -56,6 +56,7 @@ ConAgua/Arena/InferLeaves.lean	public import ConAgua.Arena.RefECore	# the build 
 ConAgua/Arena/InstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/InstLPEntry.lean	public import ConAgua.Arena.RecFireCore	# needed: the build fails without it (`CoreS.readCaches`, `hslice?_bound_fsz`; `CoreS.ctl136` through it); the tool names it unused
 ConAgua/Arena/KnotSlot.lean	public import ConAgua.Arena.SimLib	# needed: the build fails without it (`of_ite_none`, which WhnfDeltaSlot.lean reached through WhnfDelta before); the tool names it unused
+ConAgua/Arena/LevelHeap.lean	public import ConAgua.L.Notation	# the build needs it: re-exports the L notation to LevelSubstL and the other level modules (the module's own use now comes through ConAgua.L.ModelGen)
 ConAgua/Arena/LevelInternRef.lean	public import ConAgua.Arena.Rom	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/LevelSubstLP.lean	public import ConAgua.Arena.WhnfBase	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it
 ConAgua/Arena/NatArms.lean	public import ConAgua.Arena.Tiers	# the build needs it: the array names moved to ConAgua.Layout, its other names (L notation, the stores) still come through it

@@ -629,16 +629,15 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   intro mem a seen m q o k q' mem' inv hb ht hcap hW
   have htl := erTop_lt mem
   by_cases hk : k = 0
-  · subst hk
-    rw [romExprsToW_zero] at hW
+  · rw [romExprsToW.arm1 (hc1 := hk)] at hW
+    subst hk
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], m, a, seen, rfl, rfl, inv, SliceR.nil (by simpa using hb), EW.refl _ _ _,
       MemFrame.refl _ _ _⟩
-  rw [romExprsToW_succ rom n mem q o k hk] at hW
+  rw [romExprsToW.arm2 (hc1 := hk)] at hW
   rcases hE : romExprW rom n mem q with _ | ⟨h, q₁, m₁⟩ <;> rw [hE] at hW
-  · simp [exsToK] at hW
-  rw [exsToK_some] at hW
+  · simp [romExprsToW.k_rom_expr] at hW
   obtain ⟨e, rest, m₂, a₁, -, -, hrun, inv₁, -, -, hlt, -, hf₁⟩ :=
     dec_child rom hr (romExprW_dec rom hr n) inv hE
   have hk1 : 1 ≤ k.toNat := by
@@ -649,7 +648,8 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   have ht₁ := expr_top hf₁
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
-  rw [erecPutMem_lo m₁ o h (by omega)] at hW
+  rw [romExprsToW.k_rom_expr.arm1 (hc1 := decide_eq_true (erecGuard_lo m₁ o (by omega) (by omega))),
+    erecPutMem_lo m₁ o h (by omega)] at hW
   have inv₂ := inv₁.frameE (frame_set m₁ o h)
   have ht₂ : erTop (m₁.set64 EREC o h) = erTop m₁ := by
     simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
@@ -681,21 +681,20 @@ theorem pinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r k q' : Word) (m
   intro mem a q r k q' mem' inv hk hb hW
   have htl := erTop_lt mem
   by_cases h8 : k = 8
-  · subst h8
-    rw [romPinsToW_end] at hW
+  · rw [romPinsToW.arm1 (hc1 := h8)] at hW
+    subst h8
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     have : (8 : Word) - 8 = 0 := by decide
     rw [this]
     exact ⟨[], [], a, rfl, by simp, inv, SliceR.nil (by rw [L.toNat_add_of_lt _ _ (by simp; omega)]; simp; omega),
       EW.refl _ _ _, MemFrame.refl _ _ _⟩
-  by_cases hc' : ¬ rclearOK mem
-  · simp [romPinsToW, h8, hc'] at hW
-  have hc : rclearOK mem := Decidable.not_not.mp hc'
-  rw [romPinsToW_step rom n mem q k r h8 hc] at hW
+  by_cases hc : rclearOK mem
+  case neg => rw [romPinsToW_clear (hk := h8) (hc := hc)] at hW; cases hW
+  rw [romPinsToW_step (hk := h8) (hc := hc)] at hW
   rcases hX : romExprsToW rom n (resetMem mem) q (r + k) 1 with _ | ⟨q₁, m₁⟩ <;> rw [hX] at hW
-  · simp [pinsK] at hW
-  rw [pinsK_some] at hW
+  · rw [romPinsToW.k_rom_exprs_to.none] at hW; cases hW
+  rw [romPinsToW.k_rom_exprs_to.arm1] at hW
   have hk8 : k.toNat < 8 := by
     have : k.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
@@ -750,21 +749,20 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   intro mem a q r j q' mem' inv hj hb hW
   have htl := erTop_lt mem
   by_cases h8 : j = 8
-  · subst h8
-    rw [romListsToW_end] at hW
+  · rw [romListsToW.arm1 (hc1 := h8)] at hW
+    subst h8
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], a, rfl, by simp, by simp, inv, fun i hi => by simp at hi, EW.refl _ _ _,
       MemFrame.refl _ _ _⟩
-  by_cases hu : ¬ u64OK rom q
-  · simp [romListsToW, h8, hu] at hW
-  have hu' : u64OK rom q := Decidable.not_not.mp hu
-  rw [romListsToW_step rom n mem q r j h8 hu'] at hW
+  by_cases hu' : u64OK rom q
+  case neg => rw [romListsToW.abort1 (hc1 := h8) (hc2 := by simpa using hu')] at hW; cases hW
+  rw [romListsToW_step (hj := h8) (hb := hu')] at hW
   have hj8 : j.toNat < 8 := by
     have : j.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
   rcases hA : erAllocW mem (u64W rom q) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
-  · simp [listsK] at hW
+  · rw [romListsToW.k_erec_alloc.none] at hW; cases hW
   generalize hl : u64W rom q = l at hA hW
   obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   obtain ⟨hi8, hi9⟩ := hdrIdx (r := r) (j := j) (by omega) hj8
@@ -787,14 +785,18 @@ theorem listsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
     rw [← hmA, ← hi8]; exact EW.set _ _ _
   have ewh : EW (r.toNat + 9 + 2 * j.toNat) (r.toNat + 9 + 2 * j.toNat + 1) mA mh := by
     rw [← hmh, ← hi9]; exact EW.set _ _ _
-  simp only [listsK, hlh] at hW
-  by_cases hc' : ¬ rclearOK mh
-  · simp [hc'] at hW
-  have hc : rclearOK mh := Decidable.not_not.mp hc'
-  simp only [ite_eq_left hc] at hW
+  have hT := inv.top
+  have hC := inv.cap
+  by_cases hc : rclearOK mh
+  case neg =>
+    rw [listsK_clear (h8 := by omega) (h8s := by omega) (h9 := by omega) (h9s := by omega)
+      (hc := by rw [hlh]; exact hc)] at hW
+    cases hW
+  rw [listsK_some (h8 := by omega) (h8s := by omega) (h9 := by omega) (h9s := by omega)
+    (hc := by rw [hlh]; exact hc), hlh] at hW
   rcases hX : romExprsToW rom n (resetMem mh) (q + 8) o l with _ | ⟨q₁, m₂⟩ <;> rw [hX] at hW
-  · simp [lists2K] at hW
-  rw [lists2K_some] at hW
+  · rw [romListsToW.k_rom_exprs_to.none] at hW; cases hW
+  rw [romListsToW.k_rom_exprs_to.arm1] at hW
   obtain ⟨es, hs, mm, a₁, seen₁, hrun₁, hlen₁, inv₂, hsl₂, hew₂, hfr₂⟩ :=
     exprsTo_dec rom hr n _ a [] ∅ (q + 8) o l q₁ m₂ (invh.reset hc)
       (by rw [resetMem_top]; omega) (by rw [resetMem_top, resetMem_size]; exact invh.top)
@@ -858,12 +860,12 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   intro mem a q o k q' mem' inv hb hW
   have htl := erTop_lt mem
   by_cases hk : k = 0
-  · subst hk
-    rw [romTPairsToW_zero] at hW
+  · rw [romTPairsToW.arm1 (hc1 := hk)] at hW
+    subst hk
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], a, rfl, rfl, inv, TPinsR.nil (by simpa using hb), EW.refl _ _ _, MemFrame.refl _ _ _⟩
-  rw [romTPairsToW_succ rom n mem q o k hk] at hW
+  rw [romTPairsToW.arm2 (hc1 := hk)] at hW
   have hk1 : 1 ≤ k.toNat := by
     have : k.toNat ≠ 0 := fun h' => hk (UInt64.toNat_inj.mp (by simpa using h'))
     omega
@@ -873,7 +875,7 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
   have ho2 : (o + 2).toNat = o.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
   -- the name
   rcases hN : romNameW rom n mem q with _ | ⟨h, q₁, m₁⟩ <;> rw [hN] at hW
-  · simp [tpK] at hW
+  · rw [romTPairsToW.k_rom_name.none] at hW; cases hW
   obtain ⟨x, rest, hd, fit, -⟩ := romNameW_dec rom hr n mem q h q₁ m₁ hN
   obtain ⟨ok1, hR1, hres1, hlt1, -, hf1⟩ :=
     romNameW_ok rom hr x fit n mem a q rest h q₁ m₁ inv.arena inv.mode hd hN
@@ -889,10 +891,11 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
       (romNameW_topK hN).mode inv.arena.base.lit.1 inv.mode,
       flag_of_scratch inv.arena.base hR1.base hstN.scratch inv.flag, by rw [hs₁]; exact inv.cap⟩
   -- its handle
-  by_cases hc' : ¬ rclearOK (erecPutMem m₁ o h)
-  · simp [tpK, hc'] at hW
-  have hc₀ : rclearOK (erecPutMem m₁ o h) := Decidable.not_not.mp hc'
-  rw [tpK_some (hc := hc₀)] at hW
+  have hT₁ := inv₁.top
+  have hC₁ := inv₁.cap
+  by_cases hc₀ : rclearOK (erecPutMem m₁ o h)
+  case neg => rw [tpK_clear (ho := by omega) (hs := by omega) (hc := hc₀)] at hW; cases hW
+  rw [tpK_some (ho := by omega) (hs := by omega) (hc := hc₀)] at hW
   rw [inv₁.lo (x := o) (by omega)] at hW hc₀
   generalize hmA : m₁.set64 EREC o h = mA at hW hc₀
   have hc : rclearOK mA := hc₀
@@ -903,8 +906,8 @@ theorem tpairsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) 
     inv₁.frameE (by rw [← hmA]; exact frame_set _ _ _) (by have := inv₁.top; omega)
   -- the type
   rcases hX : romExprsToW rom n (resetMem mA) q₁ (o + 1) 1 with _ | ⟨q₂, m₂⟩ <;> rw [hX] at hW
-  · simp [tp2K] at hW
-  rw [tp2K_some] at hW
+  · rw [romTPairsToW.k_rom_exprs_to.none] at hW; cases hW
+  rw [romTPairsToW.k_rom_exprs_to.arm1] at hW
   obtain ⟨es₁, hs₁', mm, a₁, seen₁, hrun₁, hlen₁, inv₂, hsl₂, hew₂, hfr₂⟩ :=
     exprsTo_dec rom hr n _ _ [] ∅ q₁ (o + 1) 1 q₂ m₂ (invA.reset hc)
       (by rw [resetMem_top]; simp; omega) (by rw [resetMem_top, resetMem_size]; exact invA.top)
@@ -964,18 +967,17 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   intro mem a q r j q' mem' inv hj hb hW
   have htl := erTop_lt mem
   by_cases h8 : j = 8
-  · subst h8
-    rw [romTPinsToW_end] at hW
+  · rw [romTPinsToW.arm1 (hc1 := h8)] at hW
+    subst h8
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], a, rfl, by simp, by simp, inv, fun i hi => by simp at hi, EW.refl _ _ _,
       MemFrame.refl _ _ _⟩
-  by_cases hu : ¬ u64OK rom q
-  · simp [romTPinsToW, h8, hu] at hW
-  have hu' : u64OK rom q := Decidable.not_not.mp hu
+  by_cases hu' : u64OK rom q
+  case neg => rw [romTPinsToW.abort1 (hc1 := h8) (hc2 := by simpa using hu')] at hW; cases hW
   by_cases hbig : 4294967296 ≤ u64W rom q
-  · simp [romTPinsToW, h8, hu', hbig] at hW
-  rw [romTPinsToW_step rom n mem q r j h8 hu' hbig] at hW
+  · rw [romTPinsToW.abort2 (hc1 := h8) (hc2 := decide_eq_true hu') (hc3 := hbig)] at hW; cases hW
+  rw [romTPinsToW_step (hj := h8) (hb := hu') (hl := hbig)] at hW
   have hj8 : j.toNat < 8 := by
     have : j.toNat ≠ 8 := fun h' => h8 (UInt64.toNat_inj.mp (by simpa using h'))
     omega
@@ -986,7 +988,7 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
   have h2l : (2 * l).toNat = 2 * l.toNat := by
     rw [UInt64.toNat_mul]; simp only [UInt64.reduceToNat]; omega
   rcases hA : erAllocW mem (2 * l) with _ | ⟨o, m₁⟩ <;> rw [hA] at hW
-  · simp [tpinsK] at hW
+  · rw [romTPinsToW.k_erec_alloc.none] at hW; cases hW
   obtain ⟨ho, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   rw [h2l] at ht₁ hroom
   obtain ⟨hi8, hi9⟩ := thdrIdx (r := r) (j := j) (by omega) hj8
@@ -1009,10 +1011,12 @@ theorem tpinsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q r j q' : Word) (
     rw [← hmA, ← hi8]; exact EW.set _ _ _
   have ewh : EW (r.toNat + 25 + 2 * j.toNat) (r.toNat + 25 + 2 * j.toNat + 1) mA mh := by
     rw [← hmh, ← hi9]; exact EW.set _ _ _
-  rw [tpinsK_some, hlh] at hW
+  have hT := inv.top
+  have hC := inv.cap
+  rw [tpinsK_some (h8 := by omega) (h8s := by omega) (h9 := by omega) (h9s := by omega), hlh] at hW
   rcases hX : romTPairsToW rom n mh (q + 8) o l with _ | ⟨q₁, m₂⟩ <;> rw [hX] at hW
-  · simp [tpins2K] at hW
-  rw [tpins2K_some] at hW
+  · rw [romTPinsToW.k_rom_tpairs_to.none] at hW; cases hW
+  rw [romTPinsToW.k_rom_tpairs_to.arm1] at hW
   obtain ⟨tps, hs, a₁, hrun₁, hlen₁, inv₂, htp₂, hew₂, hfr₂⟩ :=
     tpairsTo_dec rom hr n mh a (q + 8) o l q₁ m₂ invh (by omega) hX
   have ht₂ := hew₂.top
@@ -1064,12 +1068,12 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
   intro mem a q o k q' mem' inv hb hW
   have htl := erTop_lt mem
   by_cases hk : k = 0
-  · subst hk
-    rw [romSetsToW_zero] at hW
+  · rw [romSetsToW.arm1 (hc1 := hk)] at hW
+    subst hk
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], a, rfl, by simp, inv, fun i hi => by simp at hi, EW.refl _ _ _, MemFrame.refl _ _ _⟩
-  rw [romSetsToW_succ rom n mem q o k hk] at hW
+  rw [romSetsToW.arm2 (hc1 := hk)] at hW
   have hk1 : 1 ≤ k.toNat := by
     have : k.toNat ≠ 0 := fun h' => hk (UInt64.toNat_inj.mp (by simpa using h'))
     omega
@@ -1077,25 +1081,24 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hk1)]; simp
   have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   rcases hA : erAllocW mem 40 with _ | ⟨r, m₁⟩ <;> rw [hA] at hW
-  · simp [setsK] at hW
-  rw [setsK_some] at hW
+  · rw [romSetsToW.k_erec_alloc.none] at hW; cases hW
+  rw [romSetsToW.k_erec_alloc.arm1] at hW
   obtain ⟨hr₀, ht₁, hroom, hf₁, hew₁⟩ := erAlloc_ok hA inv.ctl inv.flag
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
   have h24 : (40 : Word).toNat = 40 := rfl
   have inv₁ : SInv m₁ a := inv.frameE (hf₁.mono (by simp) (by simp)) (by omega)
   rcases hP : romPinsToW rom n m₁ q r 0 with _ | ⟨q₁, m₂⟩ <;> rw [hP] at hW
-  · simp [sets2K] at hW
-  rw [sets2K_some] at hW
+  · rw [romSetsToW.k_rom_pins_to.none] at hW; cases hW
+  rw [romSetsToW.k_rom_pins_to.arm1] at hW
   obtain ⟨es, hs, a₁, hrunP, hlenE, inv₂, hslP, ewP, frP⟩ :=
     pinsTo_dec rom hr n m₁ a q r 0 q₁ m₂ inv₁ (by decide) (by omega) hP
   rcases hL : romListsToW rom n m₂ q₁ r 0 with _ | ⟨q₂, m₃₀⟩ <;> rw [hL] at hW
-  · simp [sets3K] at hW
-  rw [sets3K_some] at hW
+  · rw [romSetsToW.k_rom_lists_to.none] at hW; cases hW
+  rw [romSetsToW.k_rom_lists_to.arm1] at hW
   obtain ⟨ess, hss, a₂, hrunL, hl1, hl2, inv₃₀, hallL, ewL, frL⟩ :=
     listsTo_dec rom hr n m₂ a₁ q₁ r 0 q₂ m₃₀ inv₂ (by decide) (by have := ewP.top; omega) hL
   rcases hT : romTPinsToW rom n m₃₀ q₂ r 0 with _ | ⟨q₃, m₃⟩ <;> rw [hT] at hW
-  · simp [sets4K] at hW
-  rw [sets4K_some] at hW
+  · rw [romSetsToW.k_rom_tpins_to.none] at hW; cases hW
   obtain ⟨tss, hts, a₃, hrunT, ht1, ht2, inv₃, hallT, ewT, frT⟩ :=
     tpinsTo_dec rom hr n m₃₀ a₂ q₂ r 0 q₃ m₃ inv₃₀ (by decide)
       (by have := ewP.top; have := ewL.top; omega) hT
@@ -1131,7 +1134,8 @@ theorem setsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (q o k q' : Word) (m
     · rw [(hkL j hj).1]; have := (hallL j (by omega)).2; omega
     · have := (hallT j (by omega)).2
       omega
-  rw [inv₃.lo (x := o) (by omega)] at hW
+  rw [sets4K_some (ho := by have := inv₃.top; have := inv₃.cap; omega) (hs := by have := inv₃.top; omega),
+    inv₃.lo (x := o) (by omega)] at hW
   generalize hm₄ : m₃.set64 EREC o r = m₄ at hW
   have hs₃ : (m₃.arr64 EREC).size = (mem.arr64 EREC).size := by rw [ewT.size, ewL.size, ewP.size, hs₁]
   have hc₄ : m₄.arr64 CTL = m₃.arr64 CTL := by rw [← hm₄, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
@@ -1183,13 +1187,13 @@ theorem internPinSetsW_dec (rom : List UInt8) (hr : RomOK rom) (n : Nat) (mem : 
   cases n with
   | zero => simp [internPinSetsW] at hW
   | succ n =>
-  by_cases hu : ¬ u64OK rom q
-  · simp [internPinSetsW, hu] at hW
-  rw [internPinSetsW_eq rom n mem q (Decidable.not_not.mp hu)] at hW
+  by_cases hu : u64OK rom q
+  case neg => rw [internPinSetsW.abort1 (hc1 := by simpa using hu)] at hW; cases hW
+  rw [internPinSetsW_eq rom n mem q hu] at hW
   generalize hcw : u64W rom q = c at hW
   rcases hAl : erAllocW mem c with _ | ⟨o, m₁⟩ <;> rw [hAl] at hW
-  · simp [ipsK] at hW
-  rw [ipsK_some] at hW
+  · rw [internPinSetsW.k_erec_alloc.none] at hW; cases hW
+  rw [internPinSetsW.k_erec_alloc.arm1] at hW
   obtain ⟨ho, ht₁, hroom, hf₁, -⟩ := erAlloc_ok hAl hc hfl
   generalize hm₂ : (m₁.set64 CTL 150 o).set64 CTL 151 c = m₂ at hW
   have hf₂ : MemFrame [EREC] [129, 150, 151] mem m₂ := by
