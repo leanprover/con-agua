@@ -35,7 +35,6 @@ ConAgua/Arena/IndPosSpec/EnvFindWHit.lean	public import ConAgua.Arena.IndPosSpec
 ConAgua/Arena/IndPosSpec/FgW.lean	public import ConAgua.Arena.IndPosSpec.U4W	# the build needs it: FgW's proofs reach NkcW's and RootHoles' names (`nagW`, `NHIn.grow`, `decNH_of_words`) through it
 ConAgua/Arena/IndPosSpec/MW9.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/NodeV.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
-ConAgua/Arena/IndPosSpec/PcrK3.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/SgF.lean	public import ConAgua.Arena.Reasons	# a constant the module uses (an auxiliary realized in several modules: the tool names another copy)
 ConAgua/Arena/IndPosSpec/U4W.lean	public import ConAgua.Arena.IndPosSpec.NkcW	# the build needs it: its importers (FgW, NbLook) reach NkcW's names (`nagW`, `NagLook`) through it
 ConAgua/Arena/IndPosSpec/U4W.lean	public import ConAgua.Arena.IndPosSpec.RootHoles	# the build needs it: its importers (FgW) reach RootHoles' names (`NHIn.grow`, `KsB`) through it

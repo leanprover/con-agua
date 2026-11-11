@@ -140,3 +140,26 @@ hand continuations `nrcK1`–`nrcK3`, `nuK1`–`nuK3`, their arm lemmas, and the
 | `Arena/IndPosSpec/NuW` | 19.3 → 11.5 G | 4.4 → 2.6 | 1054 → 1047 |
 
 Lines: +28 −88 (**−60**).
+
+### Batch 4: `nest_canon_crest`, `whnf_walk_fuel` (`pfuel 2`), `nest_crest` (`pfuel 3`)
+
+The rest of mgen3's "fuel offsets" (`pfuel` callers at the same fuel). `nestCanonCrest_spec`
+and `whnfWalkFuel_spec` are `l_model`s in `IndPosSpec/DepthGo.lean` where the hand models were;
+`nestCrest_spec` is one in `IndPosSpec/PcrW.lean` (with `CrLook`'s binder named `L`, now
+allowed). Gone: `pccA`, `pccB`, `pccC` (`DpGoW.lean`) and their arms, the hand `wfW` (a `match`),
+`pcrK1`–`pcrK3` with their files `PcrK1.lean`, `PcrK3.lean`, and `NestCrest2.lean` (only the
+hand spec and `pcrK1`'s arms; its two importers import `PcrW`). The walks (`pccW_ok`, `wfW_ok`,
+`NestCrest`'s `nest_crest` walk) and the frame lemmas (`pccW_mfr`, `pccW_afr`, `wfW_afr`,
+`pcrW_mfr`, `pcrW_afr`) only renamed the continuations (`pccB_ok … hz` →
+`pccW.k_inst_pis_with.arm2 (hc1 := hz)`, `unfold pcrW pcrK1 pcrK2 pcrK3` → `simp only [pcrW,
+pcrW.k_nest_canon_crest.eq_def, …]`).
+
+| module | instructions |
+|---|---|
+| `IndPosSpec/DepthGo` | 30.5 → 29.6 G |
+| `IndPosSpec/DpGoW` | 17.7 → 17.7 G |
+| `IndPosSpec/PcrW` (+ `PcrK1`, `PcrK3`, `NestCrest2`, gone) | 1.8 + 1.8 + 1.0 + 4.5 → 3.3 G |
+| `IndPosSpec/NestCrest` | 32.7 → 32.6 G |
+| `IndRealAbsPos` | 41.3 → 41.3 G |
+
+Lines: +58 −230 (**−172**), three files fewer.
