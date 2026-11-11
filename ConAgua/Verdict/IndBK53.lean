@@ -7,7 +7,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndT.RecCheckK53
-import ConAgua.Arena.RecCheckSpec.Tka
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree

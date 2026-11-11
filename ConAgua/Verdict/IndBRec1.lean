@@ -289,15 +289,12 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- **`class_rec_ty_ok_guards` refines `classRecTyOk`'s guards (`rgT`), both outcomes**: the class's
 major (`target_major_at`, outside the verdict closure), then the member guard and the rule prefix
 and major index guards, each a reject site of the twin's. -/
-theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G : ClassGen}
+theorem rg_ref {p : Prog} {m : Mem} {a : AState} {g k rc c : Word} {G : ClassGen}
     {RS : RecShape} (hS : StageR vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
     (hA : AbsOK m) :
-    RefE (closedNV p _root_.L.Checker.nvFns = true) (classRecTyOkGuardsE p n m g k rc c)
+    RefE (closedNV p _root_.L.Checker.nvFns = true) (classRecTyOkGuardsE p m g k rc c)
       (rgT G RS k.toNat c.toNat) a (fun v tm a' => RgPost dn vis fe m a G c v.2 tm a') := by
-  cases n with
-  | zero => rw [classRecTyOkGuardsE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n =>
   have hsz := hS.iw.iwSize
   have htop := hS.iw.iw
   obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
@@ -311,7 +308,7 @@ theorem rg_ref {p : Prog} (n : Nat) {m : Mem} {a : AState} {g k rc c : Word} {G 
   rw [classRecTyOkGuardsE.arm1, e3, e4]
   unfold rgT
   refine RefE.bindLift (fun _ => rfl) fun r1 m1 h1 => ?_
-  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe n m a (UInt64.ofNat o3) (UInt64.ofNat l3)
+  obtain ⟨tm, a1, hrun1, hS1, hg1, hTM, -⟩ := rec2SimTMA dn vis fe m a (UInt64.ofNat o3) (UInt64.ofNat l3)
     c G.cls hS (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3) (r1, m1) h1
   dsimp only at hS1 hg1 hTM
   have hA1 : AbsOK m1 := tmaW_afr h1 hA

@@ -9,7 +9,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.IndT.Lift
-import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import ConAgua.Arena.RecClassSpec.Classes
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.RecGenSpec.DecCNWords

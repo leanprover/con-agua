@@ -1,5 +1,7 @@
 module
 
+public import ConAgua.Arena.RecCheckSpec.EeK2
+
 import ConRon.Bridge.Inductives.PosWalks
 public import ConAgua.Arena.RecCheckSpec.EqWDec
 import ConAgua.Arena.IndRealAbsPos
@@ -37,9 +39,9 @@ theorem eftF_afr {n : Nat} {m m' : Mem} {e : Word} {r : List Word} (h : eftF n m
     AFr m m' := by
   obtain _ | n := n
   · simp [eftF] at h
-  simp only [eftF, eftW] at h
-  rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftK1, reduceCtorEq] at h
-  rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftK2, reduceCtorEq] at h
+  rw [eftF.arm1] at h
+  rcases ha : allocW m 1 with _ | ⟨f, m1⟩ <;> simp only [ha, eftF.k_iw_alloc, reduceCtorEq] at h
+  rcases hr : rxW n (m1.set64 IW f 2) f e with _ | ⟨z, m2⟩ <;> simp only [hr, eftF.k_replace_fvars, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact ((allocW_afr ha).trans (set64IW_afr _ _ _)).trans (rxW_afr hr)
 
@@ -48,13 +50,13 @@ theorem eeW_afr : ∀ (n : Nat) {m m' : Mem} {o l : Word} {r : List Word}, eeW n
   | 0, _, _, _, _, _, h => by simp [eeW] at h
   | n + 1, m, m', o, l, r, h => by
     by_cases hl : l = 0
-    · rw [eeW_nil (h := hl)] at h
+    · rw [eeW.arm1 (hc1 := hl)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
       exact AFr.refl _
-    rw [eeW_cons (h := hl)] at h
-    rcases h1 : eftF n m (rdW (m.arr64 IW) o) with _ | ⟨rv, m1⟩ <;> simp only [h1, eeK0, reduceCtorEq] at h
-    rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeK1, reduceCtorEq] at h
-    rcases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, eeK2, reduceCtorEq] at h
+    rw [eeW.arm2 (hc1 := hl)] at h
+    rcases h1 : eftF n m (rdW (m.arr64 IW) o) with _ | ⟨rv, m1⟩ <;> simp only [h1, eeW.k_erase_fvar_tys, reduceCtorEq] at h
+    rcases h2 : eeW n m1 (o + 1) (l - 1) with _ | ⟨rr, m2⟩ <;> simp only [h2, eeW.k_erase_each, reduceCtorEq] at h
+    rcases h3 : consW n m2 (rv.headD 0) (rr.headD 0) (rr.tail.headD 0) with _ | ⟨rc, m3⟩ <;> simp only [h3, eeW.k_sl_cons, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact ((eftF_afr h1).trans (eeW_afr n h2)).trans (consW_afr h3)
 
@@ -76,10 +78,10 @@ theorem tteW_afr {n : Nat} {m m' : Mem} {bso bsl teo tel : Word} {r : List Word}
     (h : tteW n m bso bsl teo tel = some (r, m')) : AFr m m' := by
   obtain _ | n := n
   · simp [tteW] at h
-  rw [tteW_succ] at h
-  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
-  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
-  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
+  rw [tteW.arm1] at h
+  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteW.k_erase_each, reduceCtorEq] at h
+  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteW.k_erase_each_2, reduceCtorEq] at h
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteW.k_sl_eq, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (eeW_afr n h1).trans (eeW_afr n h2)
 

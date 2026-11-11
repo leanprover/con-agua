@@ -91,6 +91,33 @@ the `wK`/`lkW` form (`IndInstallRefine`, `IndInstallRefine3`: `unfold` → `rw`)
 | `Front/ApplyDecl` | 16.3 → 16.4 G | 3.2 → 3.2 | 921 → 953 |
 | `Front/ApplyDLineRef` (three lines) | → 20.0 G | → 3.5 | → 1049 |
 
+### The nest frame walks: `nest_frame_grp`, `nest_frame_holes`, `nest_cont_new_active`
+
+Hand mutual blocks `fgW` (with `fgK1`, `fgKb`, `fgK2`–`fgK4`), `fhW` (`fhK1`, `fhK2`), `caW`
+(`caK1`, `caK2`) in `IndPosSpec/FgW2.lean`, their hand specs in `GgW2.lean` (each an induction
+with `finish (gen := 20) (instances := 5000)`). All three are `l_model`s in `FgW2.lean` now (the
+hand recipe: `grind [arena_grind, ind_grind] finish [rdW_eq, Locals.init_cons_zero, …] gen 20
+instances 5000`; `fgW`'s callee `pi_binders` needs `import IndPartsSpec.BlockCounts`). The
+generated models are the hand ones but for one step: the recursive call's result goes through
+`fW.k_<self>` (`some ([r.headD 0, r.tail.headD 0, …], m)`, the `return (r0, r1)`), where the hand
+model passed it on. A bridge per model, `fgW_kId`/`fhW_kId`/`caW_kId` (that step is the identity
+on the model's own results: every leaf is a list literal of that length), lets the hand arm
+lemmas stay under their names as one-line restatements of the generated arms (`fgW_cons`,
+`fgK1_some` … `fgK4_some`, `fhK1_ok`, `caK2_some`, …), so the walks `fgW_ok`, `fhW_ok`, `caW_ok`
+only rename the continuations in their `none` cases; the frame lemmas (`…_mfr`, `…_afr`) unfold
+the generated equations with the bridge. The callers `PosFrame`, `PosNew` take the results list
+directly (the hand post's `[r.headD 0, …]` and its `generalize` blocks are gone). Gone: the three
+mutual blocks, the hand specs. 6 files +167 −198 (−31).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `IndPosSpec/FgW2` | 69.3 → 28.6 G | 10.2 → 4.8 | 1046 → 1085 |
+| `IndPosSpec/GgW2` | 24.7 → 9.1 G | 4.8 → 1.7 | 1120 → 1020 |
+| `IndPosSpec/FgW` | 18.2 → 18.0 G | 3.1 → 3.1 | 1097 → 1095 |
+| `IndRealAbsPos` | 43.0 → 42.9 G | 8.6 → 8.6 | 1230 → 1229 |
+| `IndT/PosFrame` | 9.1 → 8.9 G | 1.3 → 1.2 | 1114 → 1105 |
+| `IndT/PosNew` | 11.9 → 11.8 G | 1.7 → 1.7 | 1125 → 1121 |
+
 ## 3. The 185 specs without a model in their post
 
 Classified by their posts (script over `_tmp/mgen5/inv.json`), and 22 read by hand (random

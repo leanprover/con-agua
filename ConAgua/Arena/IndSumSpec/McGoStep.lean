@@ -397,7 +397,7 @@ variable (vis : Word) (fe : IFEnv)
 refines `bvarB` at every twin fuel `F ≥ f` or `F + 1 ≥ n`; it writes only the `bvarB` memo (array `BMEMO` = 24,
 `CTL[24]`, `CTL[25]`), so the stage relation holds after and the pool did not change. -/
 theorem bvbW_stageW {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n F : Nat) (f : Word)
-    (hF : f.toNat ≤ F ∨ n ≤ F + 1) (h x : Word) (hh : H h) (hb : bvbW n m h f = some (x, m')) :
+    (hF : f.toNat ≤ F ∨ n ≤ F + 1) (h x : Word) (hh : H h) (hb : bvbW n m f h = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       BbFrame m m' := by
   obtain ⟨a', hrun, hD⟩ := bvbW_okF n F m m' a hS.check.arena h f x hh hF hb
@@ -405,10 +405,10 @@ theorem bvbW_stageW {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n F : Na
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm1 n m f h hs] at hb
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm2 n m f h hs] at hb
         simp only [Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨-, rfl⟩ := hb
         exact MemFrame.refl _ _ _
@@ -445,7 +445,7 @@ theorem hbInsW_eq (m : Mem) (e i r : Word) : hbInsW m e i r = (msetG hbSch m e i
 mutual
 def hbGoW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
-  | n + 1, m, f, i, h => if f = 0 then none else hbK1 n f i h (bvbW n m h (f - 1))
+  | n + 1, m, f, i, h => if f = 0 then none else hbK1 n f i h (bvbW n m (f - 1) h)
 def hbK1 (n : Nat) (f i h : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (x, m1) => if x ≤ i then some (0, m1) else hbK2 n f m1 i h (eViewW m1 h)
@@ -482,7 +482,7 @@ end
 section hbArms
 variable (n : Nat) (m m1 m2 : Mem) (f i i2 h g x y z r r1 r2 w : Word) (v fr rs : List Word)
 theorem hbGoW_zeroF (hf : f = 0) : hbGoW (n + 1) m f i h = none := by simp [hbGoW, hf]
-theorem hbGoW_succ (hf : f ≠ 0) : hbGoW (n + 1) m f i h = hbK1 n f i h (bvbW n m h (f - 1)) := by
+theorem hbGoW_succ (hf : f ≠ 0) : hbGoW (n + 1) m f i h = hbK1 n f i h (bvbW n m (f - 1) h) := by
   simp [hbGoW, hf]
 theorem hbK1_some_le (hle : w ≤ i) : hbK1 n f i h (some (w, m1)) = some (0, m1) := by
   simp only [hbK1]; rw [ite_eq_left hle]

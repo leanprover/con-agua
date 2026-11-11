@@ -61,15 +61,15 @@ theorem MFr.ofFvbF {m m' : Mem} {args r : List Word} (h : fvbF m args = some (r,
     (fun b hb => .inl (by simp only [frA, List.mem_cons, List.not_mem_nil, or_false] at hb; subst hb; decide))
     (fun x hx => .inl (by simp only [frC, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
 
-theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : MFr [] [] m m' := by
+theorem bvbW_mfr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m f h = some (x, m')) : MFr [] [] m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm1 n m f h hs] at hb
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm2 n m f h hs] at hb
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   exact MFr.of_frame hfr (by simp [BMEMO]) (fun x hx => by

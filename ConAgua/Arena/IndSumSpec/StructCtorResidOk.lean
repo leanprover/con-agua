@@ -352,7 +352,7 @@ theorem psGoW_afr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word)
     psGoW n m o nP N k = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
   | n + 1, m, m', o, nP, N, k, r, h => by
-    simp only [psGoW, psK0.eq_def, psK1.eq_def, psK2.eq_def, psK3.eq_def] at h
+    simp only [psGoW, psGoW.k_iw_alloc.eq_def, psGoW.k_intern_bvar.eq_def, psGoW.k_struct_ps_at_go.eq_def, psGoW.k_sl_cons.eq_def] at h
     afr_auto h [psGoW_afr n _ _ _ _ _ _ _, binternW_afr, allocW_afr, consW_afr]
 
 theorem psAtW_afr {n : Nat} {m m' : Mem} {o nP : Word} {r : List Word} (h : psAtW n m o nP = some (r, m')) :
@@ -360,7 +360,7 @@ theorem psAtW_afr {n : Nat} {m m' : Mem} {o nP : Word} {r : List Word} (h : psAt
   cases n with
   | zero => simp [psAtW] at h
   | succ n =>
-    simp only [psAtW, psK3.eq_def] at h
+    simp only [psAtW, psAtW.k_struct_ps_at_go.eq_def] at h
     afr_auto h [psGoW_afr _ _ _ _ _ _ _ _]
 
 theorem srW_afr : ∀ (k : Nat) (m m' : Mem) (T lo ll nP o nIdx cbody : Word) (r : List Word),

@@ -170,7 +170,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   unfold ConRon.Arena.classRecTyOk
   rw [rgT_bind]
   refine RefE.bindE (fun _ => rfl) (fun hV => hV.nv)
-    (rg_ref (p := p) (k := k) (c := c) dn fe vis n hC.stage hG hns hrc hA)
+    (rg_ref (p := p) (k := k) (c := c) dn fe vis hC.stage hG hns hrc hA)
     fun ⟨r1, m1⟩ tm a1 _ ⟨hrun1, hS1, hg1, hA1⟩ => ?_
   dsimp only at hrun1 hS1 hg1 hA1
   obtain ⟨-, -, hcls, -, -, -, -, -⟩ := dClassGen_inv hgP

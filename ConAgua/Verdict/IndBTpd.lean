@@ -4,6 +4,7 @@ import ConLeche.Verify.Inductives.RecCheckScope
 import ConAgua.Arena.IndT.RecCheckTpd
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.RecCheckSpec.Tpd
+public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import ConAgua.Arena.RecCheckSpec.TmFields
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.GrindAttr

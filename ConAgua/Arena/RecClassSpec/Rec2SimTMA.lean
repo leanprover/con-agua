@@ -41,15 +41,15 @@ theorem rec2TMD_ds {a a' : AState} {tm : TargetMajor}
       injection h' with e1 e2
       rw [← e1]
 
-theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
+theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
-    RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
+    RSim (tmaW m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
       (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧ TMR b.2 (b.1.headD 0).toNat tm) := by
   have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
     hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
   intro b hb'
-  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe n m a mo ml c ms hS hms0 hb b hb'
+  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe m a mo ml c ms hS hms0 hb b hb'
   refine ⟨tm, a', hrun, hS', hg, hd, fun o l ho hl => ?_⟩
   rcases hc : ms[c.toNat]? with _ | x
   · have hrun' : ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') := by
@@ -77,15 +77,12 @@ theorem rec2SimTMA (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
   have hq : (b.1.headD 0).toNat = v := by
     have := hdv; have hd0 := hd
     by_cases hcl : c < ml
-    · cases n with
-      | zero => simp [tmaW] at hb'
-      | succ n =>
-        rw [tmaW_hit n m mo ml c hcl] at hb'
-        cases hb'
-        have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
-        have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
-        rw [hcw] at hrd
-        simp only [List.headD_cons]; rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2]
+    · rw [tmaW.arm1 m mo ml c hcl] at hb'
+      cases hb'
+      have hrd := iwN_rdW_at (w := mo) (k := c.toNat) hv' hS.iw.iwSize
+      have hcw : mo + UInt64.ofNat c.toNat = mo + c := by simp
+      rw [hcw] at hrd
+      simp only [List.headD_cons]; rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2]
     · exfalso; apply hcl; apply UInt64.lt_iff_toNat_lt.mpr; omega
   rw [hq] at ho hl
   have e1 : iwN b.2 (v + 2) = some o' := by
