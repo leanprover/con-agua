@@ -353,10 +353,13 @@ structure PinsR (m : Mem) (p : Pins) : Prop where
 theorem PinsFull.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
     (h : PinsFull m p) : PinsFull m' p := by
   have hw : ∀ i, pinW m' i = pinW m i := fun i => by simp only [pinW, he]
-  exact ⟨he ▸ h.size, h.names_size, fun i hi => hw _ ▸ h.names_lt i hi,
-    fun i hi => hw _ ▸ h.names i hi, hw _ ▸ h.quotMk_lt, hw _ ▸ h.quotMk, by simpa only [hw] using h.lv_lt,
-    hw _ ▸ h.emptyLevels, hw _ ▸ h.zeroLevel, hw _ ▸ h.sortOne,
-    fun i hi => hw _ ▸ h.reserved_lt i hi, by simpa only [hw] using h.reserved⟩
+  exact { size := he ▸ h.size, names_size := h.names_size,
+            names_lt := fun i hi => hw _ ▸ h.names_lt i hi, names := fun i hi => hw _ ▸ h.names i hi,
+            quotMk_lt := hw _ ▸ h.quotMk_lt, quotMk := hw _ ▸ h.quotMk,
+            lv_lt := by simpa only [hw] using h.lv_lt, emptyLevels := hw _ ▸ h.emptyLevels,
+            zeroLevel := hw _ ▸ h.zeroLevel, sortOne := hw _ ▸ h.sortOne,
+            reserved_lt := fun i hi => hw _ ▸ h.reserved_lt i hi,
+            reserved := by simpa only [hw] using h.reserved }
 
 theorem PinsR.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
     (h : PinsR m p) : PinsR m' p :=
