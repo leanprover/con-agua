@@ -258,17 +258,13 @@ theorem newRef_step (L : NbLook p) (hIlpf : IlpfF p) (hLC : LvlCacheProg p) (hF 
   simp only at hca
   rw [hs6] at hca
   rw [nnewE.k_nest_cont_new_active.arm1]
-  generalize hra : [ra6.headD 0, ra6.tail.headD 0] = ra at hca
-  have u0 : ra6.headD 0 = ra.headD 0 := by rw [← hra]; rfl
-  have u1 : ra6.tail.headD 0 = ra.tail.headD 0 := by rw [← hra]; rfl
-  rw [u0, u1]
-  obtain ⟨hS6, hg6, hka, hkab⟩ := caW_ok dn vis fe us dO dL ds hus (n' + 1) m5 m6 a5 _ _ 0 0 grp [] ra hca hS5
+  obtain ⟨hS6, hg6, hka, hkab⟩ := caW_ok dn vis fe us dO dL ds hus (n' + 1) m5 m6 a5 _ _ 0 0 grp [] ra6 hca hS5
     (hds.grow (OMono.decHL _ _) hg15) (by simpa using hgl5) hgb5 hgrp5 (KsB.nil _ _) (by simp)
   simp only [List.nil_append] at hka
   obtain ⟨hp6, hk0', ha0, hn0⟩ := nsb_words hns htop
   have hg16 := hg15.trans hg6
   rw [pos2_ns_rd hg16 hp6 htop 2 (by decide), pos2_ns_rd hg16 hp6 htop 3 (by decide)]
-  cases h7 : callE p (n' + 1) "sl_append" [ra.headD 0, ra.tail.headD 0, rdW (m.arr64 IW) (ns + 2),
+  cases h7 : callE p (n' + 1) "sl_append" [ra6.headD 0, ra6.tail.headD 0, rdW (m.arr64 IW) (ns + 2),
       rdW (m.arr64 IW) (ns + 3)] m6 with
   | error e7 =>
     rw [nnewE.k_sl_append.none]
