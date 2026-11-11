@@ -7,6 +7,7 @@ public import ConAgua.L.Notation
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.LevelGrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -164,48 +165,6 @@ theorem lvA_eq (m : Mem) (p : Word) : lvA m p = (lvNodeW m p).tail.headD 0 := rf
 theorem lvB_eq (m : Mem) (p : Word) : lvB m p = (lvNodeW m p).tail.tail.headD 0 := rfl
 attribute [level_grind =] lvG_eq lvA_eq lvB_eq
 
-mutual
-/-- **The model of `lv_eq`** at L fuel `n`: `1` if the two levels are equal, else `0`. -/
-def lvEqW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, p, q =>
-    if p = q then some 1
-    else if lvG m p ≠ lvG m q then some 0
-    else if lvG m p = 4 then some (if lvA m p = lvA m q then 1 else 0)
-    else eqK n m (lvB m p) (lvB m q) (lvEqW n m (lvA m p) (lvA m q))
-
-/-- After the first children. -/
-def eqK (n : Nat) (m : Mem) (b d : Word) : Option Word → Option Word
-  | none => none
-  | some x => if x = 0 then some 0 else lvEqW n m b d
-end
-
-section eqArms
-variable (n : Nat) (m : Mem) (p q b d x : Word)
-
-theorem lvEqW_refl : lvEqW (n + 1) m p p = some 1 := by simp [lvEqW]
-theorem lvEqW_tag (hpq : p ≠ q) (hg : lvG m p ≠ lvG m q) : lvEqW (n + 1) m p q = some 0 := by
-  simp [lvEqW, hpq, hg]
-theorem lvEqW_param (hpq : p ≠ q) (hg : lvG m p = lvG m q) (h4 : lvG m p = 4) :
-    lvEqW (n + 1) m p q = some (if lvA m p = lvA m q then 1 else 0) := by
-  have h4' : lvG m q = 4 := hg ▸ h4
-  simp only [lvEqW, hpq, ↓reduceIte, hg, h4', ne_eq, not_true_eq_false]
-theorem lvEqW_rec (hpq : p ≠ q) (hg : lvG m p = lvG m q) (h4 : lvG m p ≠ 4) :
-    lvEqW (n + 1) m p q = eqK n m (lvB m p) (lvB m q) (lvEqW n m (lvA m p) (lvA m q)) := by
-  have h4' : lvG m q ≠ 4 := hg ▸ h4
-  simp only [lvEqW, hpq, ↓reduceIte, hg, h4', ne_eq, not_true_eq_false]
-theorem eqK_zero : eqK n m b d (some 0) = some 0 := by simp [eqK]
-theorem eqK_ne (hx : x ≠ 0) : eqK n m b d (some x) = lvEqW n m b d := by simp [eqK, hx]
-
-end eqArms
-
-grind_pattern [level_grind] lvEqW_refl => lvEqW (n + 1) m p p
-grind_pattern [level_grind] lvEqW_tag => lvEqW (n + 1) m p q
-grind_pattern [level_grind] lvEqW_param => lvEqW (n + 1) m p q
-grind_pattern [level_grind] lvEqW_rec => lvEqW (n + 1) m p q
-grind_pattern [level_grind] eqK_zero => eqK n m b d (some 0)
-grind_pattern [level_grind] eqK_ne => eqK n m b d (some x)
-
 /-- con-leche: ConLeche/Kernel/Expr.lean:75-78 ConLeche.Level.beq -/
 @[no_expose, l_impl ConLeche.Level.beq]
 def lvEq : FunDecl := lfn (p, q) locals (g, a, b, h, c, d, x) {
@@ -220,24 +179,11 @@ def lvEq : FunDecl := lfn (p, q) locals (g, a, b, h, c, d, x) {
   return x
 }
 
-section eq
-variable (p : Prog) (hpn : p.lookup "lv_node" = some lvNode) (hp : p.lookup "lv_eq" = some lvEq)
-
-include hpn hp in
-theorem lvEq_spec (n : Nat) : ∀ (s₀ : St) (a b : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lv_eq" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ lvEqW n s₀.mem a b = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ a b; rw [invoke_eq _ hp]; simp only [callFn, lvEq]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ a b
-    rw [invoke_eq _ hp]
-    simp only [callFn, lvEq]
-    sym only [lang_grind, arena_grind, level_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hpn n, ih] <;>
-      finish (gen := 20)
-
-end eq
+/-- **`lv_eq` is its model `lvEqW`** (generated): `1` if the two levels are equal, else `0`. -/
+l_model lvEq_spec (p : Prog) (hpn : p.lookup "lv_node" = some lvNode)
+  (hp : p.lookup "lv_eq" = some lvEq)
+  fns [hp ↦ lvEqW ro]
+  specs [lvNode_spec p hpn n]
+  grind [level_grind] fold [lvG, lvA, lvB] gen 20 noguard ["lv_node"]
 
 end L.Arena

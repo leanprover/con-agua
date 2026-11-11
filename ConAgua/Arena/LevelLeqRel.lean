@@ -40,50 +40,57 @@ theorem substW_ok (hN : NameRel N) (n : Nat) : ∀ (m m' : Mem) (l k v x : Word)
   | zero => intro m m' l k v x L V K _ _ _ h; simp [substW] at h
   | succ n ih =>
     intro m m' l k v x L V K hl hk hv h
+    have bin : ∀ {g a b : Word}, lvNodeW m l = [g, a, b] → g ≠ 0 → g ≠ 4 →
+        substW.k_lv_subst n k v g b (substW n m a k v) = some (x, m') := by
+      intro g a b hw h0 h4
+      rwa [substW.arm4 n m l k v (by rw [(lv_fields hw).1]; exact h0)
+        (by rw [(lv_fields hw).1]; exact h4), (lv_fields hw).1, (lv_fields hw).2.1,
+        (lv_fields hw).2.2] at h
+    have two : ∀ {g a b : Word}, lvNodeW m l = [g, a, b] → g ≠ 0 → g ≠ 4 → g ≠ 1 →
+        ∃ x₁ m₁ y m₂, substW n m a k v = some (x₁, m₁) ∧ substW n m₁ b k v = some (y, m₂) ∧
+          lhMkW m₂ g x₁ y = some (x, m') := by
+      intro g a b hw h0 h4 h1
+      have h := bin hw h0 h4
+      rcases e₁ : substW n m a k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
+      · rw [substW.k_lv_subst.none] at h; cases h
+      rw [substW.k_lv_subst.arm2 n k v g b x₁ m₁ h1] at h
+      rcases e₂ : substW n m₁ b k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
+      · rw [substW.k_lv_subst_2.none] at h; cases h
+      rw [substW.k_lv_subst_2.arm1] at h
+      exact ⟨x₁, m₁, y, m₂, rfl, e₂, h⟩
     cases hl with
     | zero hw =>
-      rw [substW_zero n m l k v (lv_fields hw).1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      rw [substW.arm1 n m l k v (lv_fields hw).1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       exact ⟨HeapExt.refl _, by simpa [Level.subst] using LvR.zero hw⟩
     | @param _ a b nm hw hn =>
+      have h0 : lvG m l ≠ 0 := by rw [(lv_fields hw).1]; decide
       by_cases e : a = k
       · subst e
-        rw [substW_hit n m l a v (lv_fields hw).1 (lv_fields hw).2.1] at h
+        rw [substW.arm2 n m l a v h0 (lv_fields hw).1 (lv_fields hw).2.1] at h
         simp at h; obtain ⟨rfl, rfl⟩ := h
         rw [hN.fn _ _ _ hk hn]
         exact ⟨HeapExt.refl _, by simpa [Level.subst, Level.subst.go] using hv⟩
-      · rw [substW_miss n m l k v (lv_fields hw).1 (by rw [(lv_fields hw).2.1]; exact e)] at h
+      · rw [substW.arm3 n m l k v h0 (lv_fields hw).1 (by rw [(lv_fields hw).2.1]; exact e)] at h
         simp at h; obtain ⟨rfl, rfl⟩ := h
         have hne : K ≠ nm := fun h' => e (hN.inj _ _ _ hn (h' ▸ hk))
         exact ⟨HeapExt.refl _, by simpa [Level.subst, Level.subst.go, hne] using LvR.param hw hn⟩
     | succ hw ha =>
-      rw [substW_succ n m l k v (lv_fields hw).1, (lv_fields hw).2.1] at h
-      obtain ⟨y, m₁, hy, hm⟩ := succK_inv h
-      obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv hy
-      obtain ⟨he₂, hx⟩ := mk_succ hm hy'
+      have h := bin hw (by decide) (by decide)
+      rcases e₁ : substW n m _ k v with _ | ⟨y, m₁⟩ <;> rw [e₁] at h
+      · rw [substW.k_lv_subst.none] at h; cases h
+      rw [substW.k_lv_subst.arm1 n k v 1 _ y m₁ rfl] at h
+      obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
+      obtain ⟨he₂, hx⟩ := mk_succ h hy'
       exact ⟨he₁.trans he₂, by simpa [Level.subst] using hx⟩
     | max hw ha hb =>
-      rw [substW_bin n m l k v (by simp [lvG, hw]) (by simp [lvG, hw]) (by simp [lvG, hw]),
-        (lv_fields hw).1, (lv_fields hw).2.1, (lv_fields hw).2.2] at h
-      rcases e₁ : substW n m _ k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
-      · simp [subK₁] at h
-      rw [subK₁_some] at h
+      obtain ⟨x₁, m₁, y, m₂, e₁, e₂, h⟩ := two hw (by decide) (by decide) (by decide)
       obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
-      rcases e₂ : substW n m₁ _ k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
-      · simp [subK₂] at h
-      rw [subK₂_some] at h
       obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ _ _ _ _ (hb.mono he₁) hk (hv.mono he₁) e₂
       obtain ⟨he₃, hz⟩ := mk_max h (hx₁.mono he₂) hy
       exact ⟨(he₁.trans he₂).trans he₃, by simpa [Level.subst] using hz⟩
     | imax hw ha hb =>
-      rw [substW_bin n m l k v (by simp [lvG, hw]) (by simp [lvG, hw]) (by simp [lvG, hw]),
-        (lv_fields hw).1, (lv_fields hw).2.1, (lv_fields hw).2.2] at h
-      rcases e₁ : substW n m _ k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
-      · simp [subK₁] at h
-      rw [subK₁_some] at h
+      obtain ⟨x₁, m₁, y, m₂, e₁, e₂, h⟩ := two hw (by decide) (by decide) (by decide)
       obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
-      rcases e₂ : substW n m₁ _ k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
-      · simp [subK₂] at h
-      rw [subK₂_some] at h
       obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ _ _ _ _ (hb.mono he₁) hk (hv.mono he₁) e₂
       obtain ⟨he₃, hz⟩ := mk_imax h (hx₁.mono he₂) hy
       exact ⟨(he₁.trans he₂).trans he₃, by simpa [Level.subst] using hz⟩
@@ -95,8 +102,10 @@ theorem ssW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l k v x : Word) (L V : L
   cases n with
   | zero => simp [ssW] at h
   | succ n =>
-    rw [ssW_succ] at h
-    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> simp only [e, ssK, reduceCtorEq] at h
+    rw [ssW.arm1] at h
+    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> rw [e] at h
+    · rw [ssW.k_lv_subst.none] at h; cases h
+    rw [ssW.k_lv_subst.arm1] at h
     obtain ⟨he₁, hy⟩ := substW_ok hN n _ _ _ _ _ _ _ _ _ hl hk hv e
     obtain ⟨he₂, hx⟩ := simpW_ok n _ _ _ _ _ hy h
     exact ⟨he₁.trans he₂, hx⟩
@@ -105,8 +114,10 @@ theorem ssW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l k v x : Word) (L V : L
 theorem dist1W_ok (m m' : Mem) (a k b x : Word) (A K B : Level) (ha : LvR N m a A)
     (hk : LvR N m k K) (hb : LvR N m b B) (h : dist1W m a k b = some (x, m')) :
     HeapExt m m' ∧ LvR N m' x (.max (.imax A K) B) := by
-  rw [dist1W_eq] at h
-  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> simp only [e, d1K, reduceCtorEq] at h
+  rw [dist1W.arm1] at h
+  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> rw [e] at h
+  · rw [dist1W.k_lh_mk.none] at h; cases h
+  rw [dist1W.k_lh_mk.arm1] at h
   obtain ⟨he₁, hy⟩ := mk_imax e ha hk
   obtain ⟨he₂, hx⟩ := mk_max h hy (hb.mono he₁)
   exact ⟨he₁.trans he₂, hx⟩
@@ -118,16 +129,20 @@ theorem dist2W_ok (n : Nat) (m m' : Mem) (a j k x : Word) (A J K : Level) (ha : 
   cases n with
   | zero => simp [dist2W] at h
   | succ n =>
-    rw [dist2W_succ] at h
-    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> simp only [e₁, d2K₁, reduceCtorEq] at h
+    rw [dist2W.arm1] at h
+    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> rw [e₁] at h
+    · rw [dist2W.k_lh_mk.none] at h; cases h
+    rw [dist2W.k_lh_mk.arm1] at h
     obtain ⟨he₁, hy₁⟩ := mk_imax e₁ ha hj
-    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> simp only [e₂, d2K₁.d2K₂, reduceCtorEq] at h
+    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> rw [e₂] at h
+    · rw [dist2W.k_lh_mk_2.none] at h; cases h
+    rw [dist2W.k_lh_mk_2.arm1] at h
     obtain ⟨he₂, hy₂⟩ := mk_imax e₂ (ha.mono he₁) (hk.mono he₁)
     cases e₃ : lhMkW m₂ 2 y₁ y₂ with
-    | none => rw [e₃] at h; simp [ssK] at h
+    | none => rw [e₃, dist2W.k_lh_mk_3.none] at h; cases h
     | some w₃ =>
       obtain ⟨y₃, m₃⟩ := w₃
-      rw [e₃, ssK_some] at h
+      rw [e₃, dist2W.k_lh_mk_3.arm1] at h
       obtain ⟨he₃, hy₃⟩ := mk_max e₃ (hy₁.mono he₂) hy₂
       obtain ⟨he₄, hx⟩ := simpW_ok n _ _ _ _ _ hy₃ h
       exact ⟨((he₁.trans he₂).trans he₃).trans he₄, hx⟩
