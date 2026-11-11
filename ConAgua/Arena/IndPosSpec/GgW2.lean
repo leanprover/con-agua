@@ -6,7 +6,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndPosSpec.NbLook
 import ConAgua.Arena.IndPosSpec.UnW
-import ConAgua.Arena.IndPartsSpec.BlockCounts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2

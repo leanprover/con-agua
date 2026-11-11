@@ -2,11 +2,11 @@ module
 
 public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.CfW
 public import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosNgc
 import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
-import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealAbsSim
