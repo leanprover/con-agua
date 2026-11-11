@@ -202,7 +202,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
         P i = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
   have hps := hD.psize
   have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
-  unfold cvW at h
+  rw [cvW_eq] at h
   rcases hn : lkW m NID nm with _ | nh <;> simp only [hn, wK, reduceCtorEq] at h
   rcases ht : lkW m EID ty with _ | th <;> simp only [ht, reduceCtorEq] at h
   rcases hl : lpPutW b.data m lps with _ | m₁ <;> simp only [hl, mK, reduceCtorEq] at h
