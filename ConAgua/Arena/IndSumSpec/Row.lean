@@ -173,30 +173,30 @@ theorem psGoW_stage (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
     intro m m' a o nP N k r h hS hon hkN
     by_cases hN : N = 0
     · subst hN
-      rw [psGoW_nil n m o nP 0 k rfl] at h
+      rw [psGoW.arm1 n m o nP 0 k rfl] at h
       obtain ⟨q, m1, h0, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-      rw [psK0_some] at h
+      rw [psGoW.k_iw_alloc.arm1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
       exact ⟨[], a, by simp [structPsAt.go]; rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
-    · rw [psGoW_cons n m o nP N k hN] at h
-      obtain ⟨b, m1, hI, h⟩ := kSome_inv h (by simp [psK1]) (fun _ _ => rfl)
+    · rw [psGoW.arm2 (hc1 := hN)] at h
+      obtain ⟨b, m1, hI, h⟩ := kSome_inv h (psGoW.k_intern_bvar.none ..) (fun _ _ => rfl)
       by_cases hb : 4294967296 ≤ b
-      · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
-      rw [psK1_ok n m1 o nP N k b hb] at h
+      · rw [psGoW.k_intern_bvar.abort1 (hc1 := hb)] at h; simp at h
+      rw [psGoW.k_intern_bvar.arm1 (hc1 := hb)] at h
       have hb32 : b.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ b.toNat := hb; omega
       have hN1 : 1 ≤ N.toNat := by
         have : N.toNat ≠ 0 := fun h0 => hN (UInt64.toNat_inj.mp (by simpa using h0))
         omega
       obtain ⟨a1, hrun1, hS1, hg1⟩ := internBVar_stage hS _ hI
       obtain ⟨r2, m2, hr, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-      rw [psK2_some] at h
+      rw [psGoW.k_struct_ps_at_go.arm1] at h
       have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
       obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2⟩ :=
         ih m1 m2 a1 o nP (N - 1) (k + 1) r2 hr hS1 hon (by rw [hk1, hN1']; omega)
       obtain ⟨r3, m3, hcw, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-      rw [psK3_some] at h
+      rw [psGoW.k_sl_cons.arm1] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcw hS2 (Nat.le_of_eq ht2) hb32 hd2
       refine ⟨decE b :: xs, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3,
@@ -223,9 +223,9 @@ theorem psAtW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
   cases n with
   | zero => cases h
   | succ n =>
-    rw [psAtW_succ] at h
+    rw [psAtW.arm1] at h
     obtain ⟨r0, m0, hg, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-    rw [psK3_some] at h
+    rw [psAtW.k_struct_ps_at_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨xs, a', hrun, hS', hgr, hd, ht⟩ := psGoW_stage dn vis fe n m m0 a o nP nP 0 r0 hg hS hon (by simp)
     exact ⟨xs, a', by simpa [structPsAt] using hrun, hS', hgr, by simpa using hd, by simpa using ht⟩

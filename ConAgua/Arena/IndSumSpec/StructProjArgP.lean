@@ -9,6 +9,7 @@ public import ConAgua.Arena.IndRealFvtD
 import ConAgua.Arena.IndMaster
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndSum
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -289,61 +290,28 @@ open L.Arena
 
 /-! ## `struct_ps_at`, `struct_proj_ps`: the spine wrappers -/
 
-/-- **The model of `struct_ps_at`** (the callee runs at the caller's fuel less one). -/
-def psAtW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, nP => psK3 (psGoW n m o nP nP 0)
+/-- **`struct_ps_at(o, nP)`'s model `psAtW`** (generated). -/
+l_model psAtW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+    (hp : p.lookup "struct_ps_at" = some structPsAtL)
+  fns [hp ↦ psAtW list]
+  specs [structPsAtGo_spec p ha hc hsc hpf hpp hib hg n]
+  grind [arena_grind]
 
-theorem psAtW_succ (n : Nat) (m : Mem) (o nP : Word) :
-    psAtW (n + 1) m o nP = psK3 (psGoW n m o nP nP 0) := rfl
-grind_pattern [ind_grind] psAtW_succ => psAtW (n + 1) m o nP
-
-/-- **The model of `struct_proj_ps`.** -/
-def projPsW : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, nP => psK3 (psAtW n m 1 nP)
-
-theorem projPsW_succ (n : Nat) (m : Mem) (nP : Word) :
-    projPsW (n + 1) m nP = psK3 (psAtW n m 1 nP) := rfl
-grind_pattern [ind_grind] projPsW_succ => projPsW (n + 1) m nP
-
-section
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
-  (hib : p.lookup "intern_bvar" = some internBVar)
-  (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
-  (hp : p.lookup "struct_ps_at" = some structPsAtL)
-include ha hc hsc hpf hpp hib hg hp
-
-theorem psAtW_spec (n : Nat) (s₀ : St) (o nP : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_ps_at" [o, nP]
-    ⦃fun r s' => LocEq s' s₀ ∧ psAtW n s₀.mem o nP = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, structPsAtL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        structPsAtGo_spec p ha hc hsc hpf hpp hib hg n] <;>
-      finish
-
-theorem projPsW_spec (hq : p.lookup "struct_proj_ps" = some structProjPsL) (n : Nat) (s₀ : St)
-    (nP : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_ps" [nP]
-    ⦃fun r s' => LocEq s' s₀ ∧ projPsW n s₀.mem nP = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hq]
-  simp only [callFn, structProjPsL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        psAtW_spec p ha hc hsc hpf hpp hib hg hp n] <;>
-      finish
-
-end
+/-- **`struct_proj_ps(nP)`'s model `projPsW`** (generated). -/
+l_model projPsW_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+    (hp : p.lookup "struct_ps_at" = some structPsAtL)
+    (hq : p.lookup "struct_proj_ps" = some structProjPsL)
+  fns [hq ↦ projPsW list]
+  specs [psAtW_spec p ha hc hsc hpf hpp hib hg hp n]
+  grind [arena_grind]
 
 /-- The model of `struct_ps_at` refines `structPsAt`. -/
 theorem psAtW_ok (n : Nat) (m m' : Mem) (a : AState) (o nP : Word) (r : List Word)
@@ -356,9 +324,9 @@ theorem psAtW_ok (n : Nat) (m m' : Mem) (a : AState) (o nP : Word) (r : List Wor
   cases n with
   | zero => cases h
   | succ n =>
-    rw [psAtW_succ] at h
+    rw [psAtW.arm1] at h
     obtain ⟨r0, m0, hg, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
-    rw [psK3_some] at h
+    rw [psAtW.k_struct_ps_at_go.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨xs, a', hrun, hR', hgr, hs, hd, ht⟩ :=
       psGoW_ok n m m0 a o nP nP 0 r0 hg hR hsz hc hon (by simp)
@@ -406,9 +374,9 @@ theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
   cases n with
   | zero => cases hm
   | succ n =>
-  rw [projPsW_succ] at hm
+  rw [projPsW.arm1] at hm
   obtain ⟨r0, m0, h1, hm⟩ := kSome_inv hm rfl (fun _ _ => rfl)
-  rw [psK3_some] at hm
+  rw [projPsW.k_struct_ps_at.arm1] at hm
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hm)
   obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
   have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
