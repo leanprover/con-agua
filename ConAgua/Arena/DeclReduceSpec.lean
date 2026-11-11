@@ -19,8 +19,9 @@ public import ConAgua.Arena.IndRealWalk
 
 Three twin functions of one shape: read a pin, compare the argument with it, intern one of two
 con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`/`rom_expr_pin` at one
-of two ids. One model (`selW`) and one relational lemma (`selW_ok`) serve all three; through the
-ROM readers' refinements (`RomRefs`).
+of two ids. Their models are generated (`rocaW`, `orpaW`, `rdpW`); each is `selW` at its constants
+(`rocaW_selW`, …), so one relational lemma (`selW_ok`) serves all three, through the ROM readers'
+refinements (`RomRefs`).
 -/
 
 noncomputable section
@@ -53,16 +54,6 @@ def selK (p : Prog) (n : Nat) (f : FnName) (i j c : Word) :
 def selW (p : Prog) : Nat → Mem → Word → Word → FnName → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, c, k, f, i, j => selK p n f i j c (pinAtW m k)
-
-section arms
-variable (p : Prog) (n : Nat) (f : FnName) (i j c : Word) (r1 r2 : List Word) (m1 m2 : Mem)
-theorem selK_some : selK p n f i j c (some (r1, m1)) =
-    if c = r1.headD 0 then selK2 (callW p n f [i] m1) else selK2 (callW p n f [j] m1) := rfl
-theorem selK2_some : selK2 (some (r2, m2)) = some ([r2.headD 0], m2) := rfl
-end arms
-
-grind_pattern [ind_grind] selK_some => selK p n f i j c (some (r1, m1))
-grind_pattern [ind_grind] selK2_some => selK2 (some (r2, m2))
 
 /-! ## The relational lemma -/
 
@@ -117,53 +108,52 @@ theorem decW0E_head (m : Mem) (r : List Word) (x : EIdx) (h : decW0E m r x) :
 
 /-! ## The three functions -/
 
-section specs
-variable (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
-include hpa
+l_model reduceOpCvA_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+    (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL)
+  fns [hp ↦ rocaW list]
+  specs [pinAt_specW p hpa n, callW_spec p n "rom_cv"]
+  grind [arena_grind]
 
-theorem reduceOpCvA_specW (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL) (n : Nat) (s₀ : St)
-    (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_op_cv_a" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ selW p n s₀.mem c 43 "rom_cv" 6 7 = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reduceOpCvAL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
-        callW_spec p n "rom_cv"] <;>
-      finish (gen := 20) [selW]
+l_model ofReducePinA_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+    (hp : p.lookup "of_reduce_pin_a" = some ofReducePinAL)
+  fns [hp ↦ orpaW list]
+  specs [pinAt_specW p hpa n, callW_spec p n "rom_cv"]
+  grind [arena_grind]
 
-theorem ofReducePinA_specW (hp : p.lookup "of_reduce_pin_a" = some ofReducePinAL) (n : Nat)
-    (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "of_reduce_pin_a" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ selW p n s₀.mem c 45 "rom_cv" 8 9 = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, ofReducePinAL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
-        callW_spec p n "rom_cv"] <;>
-      finish (gen := 20) [selW]
+l_model reduceDeclPin_specW (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+    (hp : p.lookup "reduce_decl_pin" = some reduceDeclPinL)
+  fns [hp ↦ rdpW list]
+  specs [pinAt_specW p hpa n, callW_spec p n "rom_expr_pin"]
+  grind [arena_grind]
 
-theorem reduceDeclPin_specW (hp : p.lookup "reduce_decl_pin" = some reduceDeclPinL) (n : Nat)
-    (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_decl_pin" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ selW p n s₀.mem c 43 "rom_expr_pin" 0 1 = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, reduceDeclPinL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
-        callW_spec p n "rom_expr_pin"] <;>
-      finish (gen := 20) [selW]
+/-- The three generated models are `selW` at their constants. -/
+theorem rocaW_selW (p : Prog) (n : Nat) (m : Mem) (c : Word) :
+    rocaW p n m c = selW p n m c 43 "rom_cv" 6 7 := by
+  rcases n with _ | n
+  · rfl
+  · simp only [rocaW.arm1, selW]
+    rcases pinAtW m 43 with _ | ⟨r, m₁⟩
+    · rfl
+    · simp only [rocaW.k_pin_at, selK]; split <;> (cases callW p n "rom_cv" _ m₁ <;> rfl)
 
-end specs
+theorem orpaW_selW (p : Prog) (n : Nat) (m : Mem) (c : Word) :
+    orpaW p n m c = selW p n m c 45 "rom_cv" 8 9 := by
+  rcases n with _ | n
+  · rfl
+  · simp only [orpaW.arm1, selW]
+    rcases pinAtW m 45 with _ | ⟨r, m₁⟩
+    · rfl
+    · simp only [orpaW.k_pin_at, selK]; split <;> (cases callW p n "rom_cv" _ m₁ <;> rfl)
+
+theorem rdpW_selW (p : Prog) (n : Nat) (m : Mem) (c : Word) :
+    rdpW p n m c = selW p n m c 43 "rom_expr_pin" 0 1 := by
+  rcases n with _ | n
+  · rfl
+  · simp only [rdpW.arm1, selW]
+    rcases pinAtW m 43 with _ | ⟨r, m₁⟩
+    · rfl
+    · simp only [rdpW.k_pin_at, selK]; split <;> (cases callW p n "rom_expr_pin" _ m₁ <;> rfl)
+
 
 section refines
 variable (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -180,6 +170,7 @@ theorem reduceOpCvA_refines (hp : p.lookup "reduce_op_cv_a" = some reduceOpCvAL)
         (AM.res (reduceOpCvA (decI c)) a₀); ⊤⦄ := by
   refine triple_post (reduceOpCvA_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
+  rw [rocaW_selW] at hm
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
     (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
   have e : reduceOpCvA (decI c) =
@@ -198,6 +189,7 @@ theorem ofReducePinA_refines (hp : p.lookup "of_reduce_pin_a" = some ofReducePin
         (AM.res (ofReducePinA (decI c)) a₀); ⊤⦄ := by
   refine triple_post (ofReducePinA_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
+  rw [orpaW_selW] at hm
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romCvT)
     (fun w hw => hR.cv vis fe w (by rcases hw with rfl | rfl <;> decide)) decRCV_head hm hS hc (by decide)
   have e : ofReducePinA (decI c) =
@@ -216,6 +208,7 @@ theorem reduceDeclPin_refines (hp : p.lookup "reduce_decl_pin" = some reduceDecl
         (AM.res (reduceDeclPin (decI c)) a₀); ⊤⦄ := by
   refine triple_post (reduceDeclPin_specW p hpa hp n s₀ c) ?_
   rintro r s' ⟨hl, hm⟩
+  rw [rdpW_selW] at hm
   obtain ⟨x, a', hrun, hP⟩ := selW_ok (T := romExprT)
     (fun w hw => hR.expr vis fe w (by rcases hw with rfl | rfl <;> decide)) decW0E_head hm hS
     hc (by decide)
