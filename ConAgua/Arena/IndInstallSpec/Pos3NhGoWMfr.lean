@@ -39,7 +39,7 @@ theorem pos3_nIdxsCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nIdxsCo
   | 0, _, _, _, _, _, h => by simp [nIdxsCopyW] at h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
-    · rw [nIdxsCopyW_nil n m d s l hl] at h; cases h; exact MFr.refl _ _ _
+    · rw [nIdxsCopyW.arm1 n m d s l hl] at h; cases h; exact MFr.refl _ _ _
     · rw [nIdxsCopyW_step n m d s l hl] at h
       exact (MFr.set_iw _ _ _).trans (pos3_nIdxsCopyW_mfr n _ _ _ _ _ h)
 
@@ -55,12 +55,7 @@ theorem pos3_memberNamesW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
 
 theorem pos3_nIdxsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : nIdxsW n m p = some (r, m')) : MFr [] [] m m' := by
-  unfold nIdxsW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨_, _, _, -, hal, hc, -⟩ := nIdxsW_inv h
   exact (allocW_mfr hal).trans (pos3_nIdxsCopyW_mfr _ _ _ _ _ _ hc)
 
 theorem pos3_fieldCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW n m d s l k = some m' →

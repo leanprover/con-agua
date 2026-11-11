@@ -12,6 +12,8 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy
 import all ConAgua.Arena.IndParts
 import ConAgua.L.WordOff
+import ConAgua.L.ModelGen
+import ConAgua.Arena.SimLib
 
 @[expose] public section
 
@@ -267,56 +269,10 @@ theorem blockShapeMajorIdxAt_refines (p : Prog)
 
 /-! ## `numCtorsOf`, `BlockShape.numCtors` -/
 
-/-- The model of `num_ctors_of`. -/
-def numCtorsOfW : Nat → Mem → Word → Word → Option Word
-  | 0, _, _, _ => none
-  | n + 1, m, off, l =>
-    if l = 0 then some 0
-    else numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1))
-where
-  /-- After the recursive call: add this member's own `ctors.len` (`none` when the sum wraps). -/
-  cons (m : Mem) (off : Word) : Option Word → Option Word
-    | none => none
-    | some r => if rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r then none
-      else some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r)
-
-section arms
-variable (n : Nat) (m : Mem) (off l r : Word)
-theorem numCtorsOfW_nil (hl : l = 0) : numCtorsOfW (n + 1) m off l = some 0 := by
-  simp [numCtorsOfW, hl]
-theorem numCtorsOfW_cons (hl : l ≠ 0) :
-    numCtorsOfW (n + 1) m off l = numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1)) := by
-  simp [numCtorsOfW, hl]
-theorem numCtorsOfW_cons_some (h : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r) :
-    numCtorsOfW.cons m off (some r) =
-      some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r) := by simp [numCtorsOfW.cons, h]
-theorem numCtorsOfW_cons_wrap (h : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r) :
-    numCtorsOfW.cons m off (some r) = none := by simp [numCtorsOfW.cons, h]
-end arms
-
-grind_pattern [ind_grind] numCtorsOfW_nil => numCtorsOfW (n + 1) m off l
-grind_pattern [ind_grind] numCtorsOfW_cons => numCtorsOfW (n + 1) m off l
-grind_pattern [ind_grind] numCtorsOfW_cons_some => numCtorsOfW.cons m off (some r)
-grind_pattern [ind_grind] numCtorsOfW_cons_wrap => numCtorsOfW.cons m off (some r)
-
-section specs
-variable (p : Prog)
-
-theorem numCtorsOf_spec (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Nat) :
-    ∀ (s₀ : St) (off l : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
-    ⦃fun r s' => s' = s₀ ∧ numCtorsOfW n s₀.mem off l = some (r.headD 0); ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ off l; rw [invoke_eq _ hp]; simp only [callFn, numCtorsOf]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ off l
-    rw [invoke_eq _ hp]
-    simp only [callFn, numCtorsOf]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish (gen := 20)
-
-end specs
+/-- **`num_ctors_of(off, l)`'s model `numCtorsOfW`** (generated; reads only). -/
+l_model numCtorsOf_spec (p : Prog) (hp : p.lookup "num_ctors_of" = some numCtorsOf)
+  fns [hp ↦ numCtorsOfW ro]
+  grind [arena_grind]
 
 /-- A sum of words that does not wrap (`¬ a + b < b`) is the sum of the naturals. -/
 theorem nctAddNowrap {a b : Word} (h : ¬ a + b < b) : a.toNat + b.toNat < 2 ^ 64 := by
@@ -335,7 +291,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
   | succ n ih =>
     intro m off l r ms hsmall hbnd hd h
     by_cases hl : l = 0
-    · rw [numCtorsOfW_nil n m off l hl] at h
+    · rw [numCtorsOfW.arm1 (hc1 := hl)] at h
       have hl0 : l.toNat = 0 := by
         have := congrArg UInt64.toNat hl; simpa using this
       rw [hl0] at hd
@@ -357,47 +313,41 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
       have hd1 : decPL m (decMS m) (off + 1).toNat (l - 1).toNat = some mrest := by
         rw [hoff1, hl1]; exact hmrest
       have hbnd1 : (off + 1).toNat + (l - 1).toNat < 2 ^ 64 := by rw [hoff1, hl1]; omega
-      cases hcons : numCtorsOfW n m (off + 1) (l - 1) with
-      | none =>
-        exfalso
-        have hcontra : numCtorsOfW (n + 1) m off l = none := by
-          simp [numCtorsOfW, numCtorsOfW.cons, hl, hcons]
-        rw [hcontra] at h; simp at h
-      | some r' =>
-        rw [numCtorsOfW_cons n m off l hl, hcons] at h
-        obtain ⟨hr', hlt'⟩ := ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
-        have hv3 : v + 3 < 2 ^ 64 := by
-          obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2.2
-          have : v + 2 + 1 < (m.arr64 IW).size := by
-            simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
-            obtain ⟨w, hw, -⟩ := hl3
-            exact (Array.getElem?_eq_some_iff.mp hw).1
-          omega
-        have hv' := (iwN_rdW hv (by omega)).1
-        rw [L.ofNat_toNat] at hv'
-        have hdm := decMS_some hms0
-        obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2.2
-        have heq1 : v + 2 + 1 = v + 3 := by omega
-        rw [heq1] at hl2
-        have hl2rd := (iwN_rdW hl2 (by omega)).1
-        have e3 : UInt64.ofNat (v + 3) = UInt64.ofNat v + 3 := by
-          apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-        rw [e3, ← hv'] at hl2rd
-        by_cases hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r' < r'
-        · rw [numCtorsOfW_cons_wrap _ _ _ hw] at h; cases h
-        rw [numCtorsOfW_cons_some _ _ _ hw] at h
-        have hnw := nctAddNowrap hw
-        simp only [Option.some.injEq] at h
-        rw [hl2rd, hr'] at h hnw
-        have hl2b : l2 < 2 ^ 64 := by
-          simp only [iwN, nat?, Option.map_eq_some_iff] at hl2
-          obtain ⟨w, -, rfl⟩ := hl2; exact w.toNat_lt
-        rw [UInt64.toNat_ofNat_of_lt' (show l2 < UInt64.size from hl2b),
-          UInt64.toNat_ofNat_of_lt' (show _ < UInt64.size from hlt')] at hnw
-        rw [← ofNat_add_word] at h
-        rw [← decPL_length m hg2] at h hnw
-        simp only [ConRon.Arena.numCtorsOf]
-        exact ⟨h.symm, hnw⟩
+      rw [numCtorsOfW.arm2 (hc1 := hl)] at h
+      obtain ⟨r', hcons, h⟩ := of_K h (numCtorsOfW.k_num_ctors_of.none ..)
+      obtain ⟨hr', hlt'⟩ := ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
+      have hv3 : v + 3 < 2 ^ 64 := by
+        obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2.2
+        have : v + 2 + 1 < (m.arr64 IW).size := by
+          simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
+          obtain ⟨w, hw, -⟩ := hl3
+          exact (Array.getElem?_eq_some_iff.mp hw).1
+        omega
+      have hv' := (iwN_rdW hv (by omega)).1
+      rw [L.ofNat_toNat] at hv'
+      have hdm := decMS_some hms0
+      obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2.2
+      have heq1 : v + 2 + 1 = v + 3 := by omega
+      rw [heq1] at hl2
+      have hl2rd := (iwN_rdW hl2 (by omega)).1
+      have e3 : UInt64.ofNat (v + 3) = UInt64.ofNat v + 3 := by
+        apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+      rw [e3, ← hv'] at hl2rd
+      by_cases hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r' < r'
+      · rw [numCtorsOfW.k_num_ctors_of.abort1 (hc1 := hw)] at h; cases h
+      rw [numCtorsOfW.k_num_ctors_of.arm1 (hc1 := hw)] at h
+      have hnw := nctAddNowrap hw
+      simp only [Option.some.injEq] at h
+      rw [hl2rd, hr'] at h hnw
+      have hl2b : l2 < 2 ^ 64 := by
+        simp only [iwN, nat?, Option.map_eq_some_iff] at hl2
+        obtain ⟨w, -, rfl⟩ := hl2; exact w.toNat_lt
+      rw [UInt64.toNat_ofNat_of_lt' (show l2 < UInt64.size from hl2b),
+        UInt64.toNat_ofNat_of_lt' (show _ < UInt64.size from hlt')] at hnw
+      rw [← ofNat_add_word] at h
+      rw [← decPL_length m hg2] at h hnw
+      simp only [ConRon.Arena.numCtorsOf]
+      exact ⟨h.symm, hnw⟩
 
 /-- **`num_ctors_of` is `numCtorsOf`.** -/
 @[refines ConRon.Arena.numCtorsOf]
@@ -412,7 +362,9 @@ theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCt
   have h := numCtorsOf_spec p hp n s₀ off l
   refine triple_post h ?_
   intro r s' ⟨h1, h2⟩
-  exact ⟨h1, (numCtorsOfW_ok n s₀.mem off l (r.headD 0) ms hsmall hbnd hd h2)⟩
+  obtain ⟨hm, h2⟩ := h2
+  refine ⟨?_, numCtorsOfW_ok n s₀.mem off l (r.headD 0) ms hsmall hbnd hd h2⟩
+  cases s'; cases s₀; simp only [LocEq] at h1 hm; simp [h1, hm]
 
 /-! ## `BlockShape.numCtors`: the word-model idiom for a caller
 
@@ -494,40 +446,16 @@ is the fresh top, disjoint from both the source slice and the member records it 
 /-- `UInt64.size` is `2 ^ 64`. -/
 theorem UInt64_size_eq : UInt64.size = 2 ^ 64 := rfl
 
-/-- The model of `n_idxs_copy`. -/
-def nIdxsCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, d, s, l =>
-    if l = 0 then some m
-    else nIdxsCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1))) (d + 1) (s + 1) (l - 1)
+/-- **`n_idxs_copy(d, s, l)`'s model `nIdxsCopyW`** (generated). -/
+l_model nIdxsCopy_spec (p : Prog) (hp : p.lookup "n_idxs_copy" = some nIdxsCopy)
+  fns [hp ↦ nIdxsCopyW void]
+  grind [arena_grind]
 
-section arms
-variable (n : Nat) (m : Mem) (d s l : Word)
-theorem nIdxsCopyW_nil (hl : l = 0) : nIdxsCopyW (n + 1) m d s l = some m := by
-  simp [nIdxsCopyW, hl]
-theorem nIdxsCopyW_step (hl : l ≠ 0) :
+/-- `nIdxsCopyW`'s copy step, the recursive call's memory passed on. -/
+theorem nIdxsCopyW_step (n : Nat) (m : Mem) (d s l : Word) (hl : l ≠ 0) :
     nIdxsCopyW (n + 1) m d s l =
       nIdxsCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1))) (d + 1) (s + 1) (l - 1) := by
-  simp [nIdxsCopyW, hl]
-end arms
-
-grind_pattern [ind_grind] nIdxsCopyW_nil => nIdxsCopyW (n + 1) m d s l
-grind_pattern [ind_grind] nIdxsCopyW_step => nIdxsCopyW (n + 1) m d s l
-
-theorem nIdxsCopy_spec (p : Prog) (hp : p.lookup "n_idxs_copy" = some nIdxsCopy) (n : Nat) :
-    ∀ (s₀ : St) (d s l : Word),
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "n_idxs_copy" [d, s, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ nIdxsCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, nIdxsCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ d s l
-    rw [invoke_eq _ hp]
-    simp only [callFn, nIdxsCopy]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish (gen := 20)
+  rw [nIdxsCopyW.arm2 (hc1 := hl)]; cases nIdxsCopyW n _ _ _ _ <;> rfl
 
 /-- A write at a position other than `d` does not change the read at another position. -/
 theorem rdW_set64_IW_ne (m : Mem) (d v x : Word) (h : x.toNat ≠ d.toNat) :
@@ -628,39 +556,34 @@ theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n
       then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + 1))
       else (m.arr64 IW)[i]? :=
   ipCopyW_get nIdxsCopyW (fun m x => rdW (m.arr64 IW) (x + 1)) (fun x d => (x + 1).toNat < d)
-    (fun _ _ _ _ => by simp [nIdxsCopyW]) (nIdxsCopyW_nil · · · · ·) (nIdxsCopyW_step · · · · ·)
+    (fun _ _ _ _ => by simp [nIdxsCopyW]) (nIdxsCopyW.arm1 · · · · ·) (nIdxsCopyW_step · · · · ·)
     (fun m d v x hx => rdW_set64_IW_ne m d v _ (by omega)) (fun _ _ h => by omega) n
 
 /-! ## `BlockShape.nIdxs`: the block-level function -/
 
-/-- The model of `block_shape_n_idxs`. -/
-def nIdxsW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => none
-  | some (q, m1) =>
-    match nIdxsCopyW (n - 1) m1 q (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) with
-    | none => none
-    | some m2 => some ([q, rdW (m.arr64 IW) (p + 1)], m2)
-
-theorem blockShapeNIdxs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_shape_n_idxs(p)`'s model `nIdxsW`** (generated). -/
+l_model blockShapeNIdxs_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "n_idxs_copy" = some nIdxsCopy)
-    (hp : p.lookup "block_shape_n_idxs" = some blockShapeNIdxs) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_n_idxs" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ nIdxsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeNIdxs]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
-        nIdxsCopyW n m1 a (rdW (s₀.mem.arr64 IW) q) (rdW (s₀.mem.arr64 IW) (q + 1)) = some m2 →
-        nIdxsW (n + 1) s₀.mem q = some ([a, rdW (s₀.mem.arr64 IW) (q + 1)], m2) := by
-      intro a m1 m2 h1 h2
-      simp [nIdxsW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, nIdxsCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_shape_n_idxs" = some blockShapeNIdxs)
+  fns [hp ↦ nIdxsW list]
+  specs [iwAlloc_specW p ha n, nIdxsCopy_spec p hc n]
+  grind [arena_grind]
+
+/-- A run of `nIdxsW`: the allocation, then the copy into it. -/
+theorem nIdxsW_inv {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : nIdxsW n m p = some (r, m')) : ∃ k q m1, n = k + 1 ∧
+      allocW m (rdW (m.arr64 IW) (p + 1)) = some (q, m1) ∧
+      nIdxsCopyW k m1 q (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) = some m' ∧
+      r = [q, rdW (m.arr64 IW) (p + 1)] := by
+  rcases n with _ | k
+  · simp [nIdxsW] at h
+  rw [nIdxsW.arm1] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h (nIdxsW.k_iw_alloc.none ..)
+  rw [nIdxsW.k_iw_alloc.arm1] at h
+  obtain ⟨m2, hc, h⟩ := of_K h (nIdxsW.k_n_idxs_copy.none ..)
+  rw [nIdxsW.k_n_idxs_copy.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨k, q, m1, rfl, hal, hc, rfl⟩
 
 theorem decNL_of_get (m : Mem) : ∀ (xs : List Nat) (o : Nat),
     (∀ j (hj : j < xs.length), iwN m (o + j) = some xs[j]) → decNL m o xs.length = some xs
@@ -699,16 +622,10 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
   have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
   have hsrc' := hsrc o l ho hl
-  simp only [nIdxsW, ho', hl'] at h
-  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
-  · simp [hal] at h
+  obtain ⟨k, q, m1, rfl, hal, hcp, rfl⟩ := nIdxsW_inv h
+  simp only [ho', hl'] at hal hcp ⊢
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
-  simp only [hal] at h
-  rcases hcp : nIdxsCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
-  · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
   subst hq' hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hIW := allocMem_IW m (UInt64.ofNat l)
@@ -726,20 +643,20 @@ theorem nIdxsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : Block
     have : (UInt64.ofNat v + 1).toNat = v + 1 := by
       rw [UInt64.toNat_add]; simp; omega
     rw [this]; omega
-  obtain ⟨hA, hS, hG⟩ := nIdxsCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nIdxsCopyW_get k _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
-  have hfr : MemFrame [IW] [200] m m2 :=
+  have hfr : MemFrame [IW] [200] m m' :=
     (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
-  have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
+  have htop : rdW (m'.arr64 CTL) 200 = q + UInt64.ofNat l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
     rw [UInt64.toNat_add]; simp [hll]; omega
   refine ⟨by rw [hk], ?_, ?_, hfr, ?_⟩
   · rw [hk]
     have hxs : bs.nIdxs.length = l := by simp [BlockShape.nIdxs, hlen]
-    have := decNL_of_get m2 bs.nIdxs q.toNat (fun j hj => by
+    have := decNL_of_get m' bs.nIdxs q.toNat (fun j hj => by
       have hj' : j < l := by omega
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
       obtain ⟨-, -, hnI, -⟩ := decMS_some hy
