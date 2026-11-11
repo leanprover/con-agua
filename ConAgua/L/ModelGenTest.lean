@@ -893,6 +893,19 @@ l_model tParm_spec (p : Prog) (D : List UInt8) (hp : p.lookup "t_parm" = some (t
 example (D : List UInt8) (m : Mem) : tParmW D m 0 = some ((D[0]?.getD 0).toUInt64 + 1) := by
   simp [tParmW]
 
+/-- `fold` with a constant byte reader: `D.c8[i]` is `tByte D i`, its own value out of bounds
+(`255`, as `romB`'s), where L aborts. -/
+def tByte (D : List UInt8) (i : Word) : Word := (D[i.toNat]?.getD 255).toUInt64
+
+theorem tByte_eq (D : List UInt8) (i : Word) (h : i.toNat < D.length) : tByte D i = D[i.toNat].toUInt64 := by
+  simp [tByte, h]
+
+l_model tParmB_spec (p : Prog) (D : List UInt8) (hp : p.lookup "t_parm" = some (tParm D))
+  fns [hp ↦ tParmBW ro]
+  grind [arena_grind] fold [tByte] finish [tByte_eq]
+
+example (D : List UInt8) (m : Mem) (i : Word) : tParmBW D m i = some (tByte D i + 1) := rfl
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function
