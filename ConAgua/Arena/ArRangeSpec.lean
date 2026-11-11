@@ -6,6 +6,7 @@ public import ConAgua.Arena.ArRange
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -29,131 +30,80 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-section specs
-variable (p : Prog) (hp : ArProg p)
-
-include hp in
-theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_app" [h, c, d, k, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ arAppW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold ArGoSpec at ih
-  rw [invoke_eq _ (hp.get "ar_app")]
-  simp only [callFn, arApp]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
+/-- **`ar_go`, `ar_node` and the arms are their models.** -/
+l_model arGo_spec (p : Prog) (hp : ArProg p)
+  fns [hp.get "ar_go" ↦ arW, hp.get "ar_node" ↦ arNodeW, hp.get "ar_app" ↦ arAppW,
+    hp.get "ar_lam" ↦ arLamW, hp.get "ar_forall" ↦ arForallW, hp.get "ar_let" ↦ arLetW,
+    hp.get "ar_proj" ↦ arProjW]
+  specs [abFvb_spec p hp.base n,
+    internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n,
     memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
     mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
-        (hp.get "mk_app") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, arAppW, rbAppW, viewOK, tierW, idxW]
-
-include hp in
-theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_lam" [h, c, d, k, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ arLamW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold ArGoSpec at ih
-  rw [invoke_eq _ (hp.get "ar_lam")]
-  simp only [callFn, arLam]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
+      (hp.get "mk_app") n,
     mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
-        (hp.get "mk_lam") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, arLamW, rbLamW, viewOK, tierW, idxW]
-
-include hp in
-theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_forall" [h, c, d, k, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ arForallW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold ArGoSpec at ih
-  rw [invoke_eq _ (hp.get "ar_forall")]
-  simp only [callFn, arForall]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
+      (hp.get "mk_lam") n,
     mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
-        (hp.get "intern_forall") (hp.get "mk_forall") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, arForallW, rbForallW, viewOK, tierW, idxW]
+      (hp.get "intern_forall") (hp.get "mk_forall") n,
+    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE")
+      (hp.get "mk_let") n,
+    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj")
+      (hp.get "mk_proj") n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  finish [tierW, idxW] gen 20
 
-include hp in
-theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_let" [h, c, d, k, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ arLetW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold ArGoSpec at ih
-  rw [invoke_eq _ (hp.get "ar_let")]
-  simp only [callFn, arLet]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
-        (hp.get "intern_letE") (hp.get "mk_let") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, arLetW, rbLetW, viewOK, tierW, idxW]
+/-! ### The memo write of the generated continuations is `asetK` -/
 
-include hp in
-theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_proj" [h, c, d, k, fu]
-    ⦃fun r s' => LocEq s' s₀ ∧ arProjW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  unfold ArGoSpec at ih
-  rw [invoke_eq _ (hp.get "ar_proj")]
-  simp only [callFn, arProj]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rd_spec, evalE_tld, tld, evalE_cnt,
-    tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE,
-    memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
-        ih,
-    mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
-        (hp.get "intern_proj") (hp.get "mk_proj") n]
-  all_goals subst_vars
-  all_goals (try simp only [LocEq] at *)
-  all_goals (try simp only [*, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-    L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval,
-    Nat.reduceEqDiff, reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
-  all_goals grind [lang_grind, arena_grind, asetK, arProjW, rbProjW, viewOK, tierW, idxW]
+theorem arAppW.j1_eq (h c r : Word) (m : Mem) : arAppW.j1 h c r m = asetK h c (some (r, m)) := by
+  by_cases hf : mfindG abSch m h c = []
+  · simp [arAppW.j1, asetK, msetG, hf]
+  · rw [arAppW.j1.arm1 _ _ _ _ hf]
+    simp only [asetK, msetG_eq _ _ _ _ _ hf]
+    cases mputG abSch m h c r _ _ <;> rfl
 
-include hp in
-/-- **`abs_go`, `ab_node` and the arms are their models**, at every fuel. -/
-theorem arGo_spec (n : Nat) : ArGoSpec p n ∧ ArNodeSpec p n ∧ ArArmSpec p n := by
-  induction n with
-  | zero =>
-    refine ⟨fun s₀ h c d k fu => ?_, fun s₀ h c d k fu => ?_,
-      fun s₀ h c d k fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
-    first
-    | (rw [invoke_eq _ (hp.get "ar_go")]; simp only [callFn, arGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_node")]; simp only [callFn, arNode]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_app")]; simp only [callFn, arApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_lam")]; simp only [callFn, arLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_forall")]; simp only [callFn, arForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_let")]; simp only [callFn, arLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "ar_proj")]; simp only [callFn, arProj]; vcgen [exec] <;> grind)
-  | succ n ih =>
-    exact ⟨arGo_step p hp n ih.2.1, arNode_step p hp n ih.2.2, fun s₀ h c d k fu =>
-      ⟨arApp_step p hp n ih.1 s₀ h c d k fu, arLam_step p hp n ih.1 s₀ h c d k fu,
-        arForall_step p hp n ih.1 s₀ h c d k fu, arLet_step p hp n ih.1 s₀ h c d k fu,
-        arProj_step p hp n ih.1 s₀ h c d k fu⟩⟩
+theorem arAppW.k_mk_app_eq (h c : Word) (o : Option (Word × Mem)) :
+    arAppW.k_mk_app h c o = asetK h c o := by
+  cases o with
+  | none => rfl
+  | some q => obtain ⟨r, m⟩ := q; simp [arAppW.k_mk_app, arAppW.j1_eq]
 
-end specs
+theorem arAppW.k_ar_go_2.set (h c f a x y : Word) (m₂ : Mem) :
+    arAppW.k_ar_go_2 h c f a x (some (y, m₂)) = asetK h c (rbAppW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [arAppW.k_ar_go_2.arm1 _ _ _ _ _ _ _ hc, arAppW.j1_eq]; simp [rbAppW, hc]
+  · rw [arAppW.k_ar_go_2.arm2 _ _ _ _ _ _ _ hc, arAppW.k_mk_app_eq]; simp [rbAppW, hc]
+
+theorem arLamW.k_ar_go_2.set (h c f a x y : Word) (m₂ : Mem) :
+    arLamW.k_ar_go_2 h c f a x (some (y, m₂)) = asetK h c (rbLamW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [arLamW.k_ar_go_2.arm1 _ _ _ _ _ _ _ hc, arAppW.j1_eq]; simp [rbLamW, hc]
+  · rw [arLamW.k_ar_go_2.arm2 _ _ _ _ _ _ _ hc, arAppW.k_mk_app_eq]; simp [rbLamW, hc]
+
+theorem arForallW.k_ar_go_2.set (h c f a x y : Word) (m₂ : Mem) :
+    arForallW.k_ar_go_2 h c f a x (some (y, m₂)) = asetK h c (rbForallW m₂ h f a x y) := by
+  by_cases hc : x = f ∧ y = a
+  · rw [arForallW.k_ar_go_2.arm1 _ _ _ _ _ _ _ hc, arAppW.j1_eq]; simp [rbForallW, hc]
+  · rw [arForallW.k_ar_go_2.arm2 _ _ _ _ _ _ _ hc, arAppW.k_mk_app_eq]; simp [rbForallW, hc]
+
+theorem arLetW.k_ar_go_3.set (h c f a b x y z : Word) (m₃ : Mem) :
+    arLetW.k_ar_go_3 h c f a b x y (some (z, m₃)) = asetK h c (rbLetW m₃ h f a b x y z) := by
+  by_cases hc : x = f ∧ y = a ∧ z = b
+  · rw [arLetW.k_ar_go_3.arm1 _ _ _ _ _ _ _ _ _ hc, arAppW.j1_eq]; simp [rbLetW, hc]
+  · rw [arLetW.k_ar_go_3.arm2 _ _ _ _ _ _ _ _ _ hc, arAppW.k_mk_app_eq]; simp [rbLetW, hc]
+
+theorem arProjW.k_ar_go.set (h c nm ix e x : Word) (m₁ : Mem) :
+    arProjW.k_ar_go h c nm ix e (some (x, m₁)) = asetK h c (rbProjW m₁ h nm ix e x) := by
+  by_cases hc : x = e
+  · rw [arProjW.k_ar_go.arm1 _ _ _ _ _ _ _ hc, arAppW.j1_eq]; simp [rbProjW, hc]
+  · rw [arProjW.k_ar_go.arm2 _ _ _ _ _ _ _ hc, arAppW.k_mk_app_eq]; simp [rbProjW, hc]
+
+theorem arW.k_ab_fvb.ite (n : Nat) (h c d k fu x : Word) (m₁ : Mem) :
+    arW.k_ab_fvb n h c d k fu (some (x, m₁)) =
+      if x ≤ d then some (h, m₁) else arNodeW n m₁ h c d k (fu - 1) := by
+  by_cases hc : x ≤ d
+  · rw [arW.k_ab_fvb.arm1 _ _ _ _ _ _ _ _ hc, ite_eq_left hc]
+  · rw [arW.k_ab_fvb.arm2 _ _ _ _ _ _ _ _ hc, ite_eq_right hc]
+
 
 /-! ## `ar_entry(e, d, k, c)`: `abstractRangeFast`
 
@@ -192,7 +142,6 @@ theorem arEntry_spec (p : Prog) (hp : ArProg p) (he : p.lookup "ar_entry" = some
     invoke p (exec p (n + 1)) "ar_entry" [e, d, k, c]
     ⦃fun r s' => LocEq s' s₀ ∧ arEntryW n s₀.mem e d k c = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ih := (arGo_spec p hp n).1
-  unfold ArGoSpec at ih
   rw [invoke_eq _ he]
   simp only [callFn, arEntry]
   sym only [lang_grind, arena_grind] =>
