@@ -210,3 +210,14 @@ Gone: the hand mutual block, about 50 continuations' arms, `RxSpec`, `rxSpec_zer
 proofs. 14 files, +347 −702 (**−355**). `RxMapW` 41.9 → 2.5 G, `Rx` 39.8 → 70.6 G (1.8×),
 `PosmemoRxMfr` 10.2 → 14.4 G (its `split` over the whole generated term was 5.3×; `by_cases`
 through the arms instead), 14 modules 245 → 263 G.
+
+### Round 3 generator changes: functions with parameters, constant bytes
+
+`fns [hL.rom_name ↦ …]` with `rom_name = romName rom` failed: "the function is not a constant"
+(helper mgen4-romfront). A `FunDecl` with parameters is now accepted when its arguments are the
+command's binders of the parameters' names (`(rom : List UInt8)`); they become parameters of
+the models (the L text reads `rom.c8[pos]`). A constant byte read now adds `L.ldc` to the steps'
+`vcgen` lemmas. Test `tParm_spec`. `rom_name` itself is still hand-written: a first try (`pre`,
+`keep`, `guards ["rom_u64"]`, `rom_put` as a `mixed` callee) generates a model of the hand
+shape, but one step goal after `rom_put` does not close with the default recipe, and its model
+`romNameW` is walked in ten files (all ROM readers, no ronsync churn); not pursued.

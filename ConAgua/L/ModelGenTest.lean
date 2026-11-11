@@ -873,6 +873,26 @@ example (F' : Mem → Word → Option Mem) (Q : Word → Word) (P : Mem → Word
   simp only [tMxW, tMxW.k_t_pe, tMxW.k_t_lp]
   cases F' m (m.top + y) <;> simp
 
+section tParam
+variable (D : List UInt8)
+
+/-- A function with a parameter (`romName rom`): the L text reads constant bytes `D.c8`; the
+lookup is `p.lookup "t_parm" = some (tParm D)` with a binder named as the parameter, which becomes
+a parameter of the model. -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tParm : FunDecl := lfn (i) {
+  return D.c8[i] + 1
+}
+
+end tParam
+
+l_model tParm_spec (p : Prog) (D : List UInt8) (hp : p.lookup "t_parm" = some (tParm D))
+  fns [hp ↦ tParmW ro]
+  grind [arena_grind]
+
+example (D : List UInt8) (m : Mem) : tParmW D m 0 = some ((D[0]?.getD 0).toUInt64 + 1) := by
+  simp [tParmW]
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function
