@@ -23,8 +23,10 @@ plain transcriptions of the bodies and each spec is one `vcgen` with `callW_spec
 specs; what the callees do is the refinement's business (`InstLPWalkRef*.lean`). The recursion
 `lp_go` ↔ arms is the L fuel `n`: the model at `n + 1` calls its callees at `n`.
 
-`lp_app`, `lp_lam`, `lp_forall` have one body up to the record array and the node maker; they
-share one model `ilwBinW R mk`.
+`lp_app`, `lp_lam`, `lp_forall` have one body up to the record array and the node maker; their
+generated models (`InstLPWalkArms.lean`) are each the shape `ilwBinS mk` (`ilwAppW_eq`, …),
+`lp_let`'s (`InstLPWalkLet.lean`) the shape `ilwLetS` (`ilwLetW_eq`), which the refinement takes
+apart.
 
 The models of `sl_memo`, `sls_memo`, `lp_fvar`, `lp_proj`, `lp_rb_let`, `lp_let_tail`,
 `inst_lp_core` and `inst_lp` (`ilwSlW`, `ilwSlsW`, `ilwFVarW`, `ilwProjW`, `ilwRbLet`, `ilwLetTW`,
@@ -248,67 +250,26 @@ node maker's result, checked. -/
 def ilwRb (p : Prog) (n : Nat) (mk : FnName) (m₂ : Mem) (h f a x y : Word) : Option (Word × Mem) :=
   if x = f ∧ y = a then some (h, m₂) else ilwChk (callW p n mk [x, y] m₂)
 
-theorem ilwRb_same (p : Prog) (n : Nat) (mk : FnName) (m₂ : Mem) (h f a x y : Word) (hx : x = f) (hy : y = a) :
-    ilwRb p n mk m₂ h f a x y = some (h, m₂) := by simp [ilwRb, hx, hy]
-theorem ilwRb_new (p : Prog) (n : Nat) (mk : FnName) (m₂ : Mem) (h f a x y : Word) (hn : ¬ (x = f ∧ y = a)) :
-    ilwRb p n mk m₂ h f a x y = ilwChk (callW p n mk [x, y] m₂) := by simp only [ilwRb, hn, ↓reduceIte]
-
-grind_pattern [arena_grind] ilwRb_same => ilwRb p n mk m₂ h f a x y
-grind_pattern [arena_grind] ilwRb_new => ilwRb p n mk m₂ h f a x y
-
-/-- A two-child arm after its second child. -/
-def ilwBinK₂ (p : Prog) (n : Nat) (mk : FnName) (h f a x : Word) :
-    Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => ilwSetK h (ilwRb p n mk m₂ h f a x (y.headD 0))
-
-/-- A two-child arm after its first child. -/
-def ilwBinK₁ (p : Prog) (n : Nat) (mk : FnName) (h f a ko kc vo vc fu : Word) :
-    Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => ilwBinK₂ p n mk h f a (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁)
-
-@[arena_grind =] theorem ilwBinK₂_some (p : Prog) (n : Nat) (mk : FnName) (h f a x : Word) (y : List Word)
-    (m₂ : Mem) : ilwBinK₂ p n mk h f a x (some (y, m₂)) = ilwSetK h (ilwRb p n mk m₂ h f a x (y.headD 0)) :=
-  rfl
-@[arena_grind =] theorem ilwBinK₁_some (p : Prog) (n : Nat) (mk : FnName) (h f a ko kc vo vc fu : Word)
-    (x : List Word) (m₁ : Mem) : ilwBinK₁ p n mk h f a ko kc vo vc fu (some (x, m₁)) =
-      ilwBinK₂ p n mk h f a (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁) := rfl
-
-/-- **The model of `lp_app`, `lp_lam`, `lp_forall`** at L fuel `n + 1` (record array `R`, node
-maker `mk`, the node's index `i`: `idxA h` for `app`, `idxW h` otherwise). -/
-def ilwBinW (R : TRec) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h i ko kc vo vc fu : Word) :
+/-- **The shape of `lp_app`, `lp_lam`, `lp_forall`'s models** (generated: `ilwAppW`, `ilwLamW`,
+`ilwForallW`, `InstLPWalkArms.lean`) at L fuel `n` with the children `f`, `a` read: the probe, the
+two children, the rebuild by the node maker `mk`, the memo write. -/
+def ilwBinS (p : Prog) (n : Nat) (mk : FnName) (m : Mem) (h f a ko kc vo vc fu : Word) :
     Option (Word × Mem) :=
-  ilwProbe m h (ilwBinK₁ p n mk h (tfld m R (tierW h) i 0)
-    (tfld m R (tierW h) i 1) ko kc vo vc fu
-    (callW p n "lp_go" [tfld m R (tierW h) i 0, ko, kc, vo, vc, fu] m))
+  ilwProbe m h (ilwSetK h (match callW p n "lp_go" [f, ko, kc, vo, vc, fu] m with
+    | none => none
+    | some (x, m₁) => match callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁ with
+      | none => none
+      | some (y, m₂) => ilwRb p n mk m₂ h f a (x.headD 0) (y.headD 0)))
 
-/-- `lp_let` after its second child: the tail, the memo write. -/
-def ilwLetK₂ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) :
-    Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) =>
-    ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂))
-
-/-- `lp_let` after its first child. -/
-def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
-    Option (List Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁)
-
-@[arena_grind =] theorem ilwLetK₂_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) (y : List Word)
-    (m₂ : Mem) : ilwLetK₂ p n h f a b ko kc vo vc fu x (some (y, m₂)) =
-      ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂)) := rfl
-@[arena_grind =] theorem ilwLetK₁_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) (x : List Word)
-    (m₁ : Mem) : ilwLetK₁ p n h f a b ko kc vo vc fu (some (x, m₁)) =
-      ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁) := rfl
-
-/-- **The model of `lp_let`** at L fuel `n + 1`. -/
-def ilwLetW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
-  ilwProbe m h (ilwLetK₁ p n h (tfld m LET (tierW h) (idxW h) 0)
-    (tfld m LET (tierW h) (idxW h) 1) (tfld m LET (tierW h) (idxW h) 2)
-    ko kc vo vc fu
-    (callW p n "lp_go" [tfld m LET (tierW h) (idxW h) 0, ko, kc, vo, vc, fu] m))
+/-- **The shape of `lp_let`'s model** (generated: `ilwLetW`, `InstLPWalkLet.lean`): the probe, the
+two children, the tail, the memo write. -/
+def ilwLetS (p : Prog) (n : Nat) (m : Mem) (h f a b ko kc vo vc fu : Word) : Option (Word × Mem) :=
+  ilwProbe m h (ilwSetK h (match callW p n "lp_go" [f, ko, kc, vo, vc, fu] m with
+    | none => none
+    | some (x, m₁) => match callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁ with
+      | none => none
+      | some (y, m₂) =>
+        ilwHd (callW p n "lp_let_tail" [h, f, a, b, x.headD 0, y.headD 0, ko, kc, vo, vc, fu] m₂)))
 
 /-! ## The program -/
 
@@ -339,12 +300,6 @@ structure ILWProg (p : Prog) : Prop where
   lsn : p.lookup "ls_node" = some lsNode
 
 /-! ## The specs -/
-
-section specs
-variable (p : Prog) (hp : ILWProg p)
-include hp
-
-end specs
 
 section gen
 variable (p : Prog) (hp : ILWProg p)
