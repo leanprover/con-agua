@@ -84,10 +84,7 @@ theorem memberNamesW_stage {vis : Word} {fe : IFEnv} {a : AState}
     have := decPL_length m hg; simp only [BlockShape.k, this]; exact (iwN_rdW hl (by omega)).2
   obtain ⟨hr, hd, hg, hf, htop⟩ := memberNamesW_dec h hsz hS.iw.ctl hb.dec (by omega) hb.2.1 hb.2.2
   have hroom : iwTop m' ≤ (m'.arr64 IW).size := by
-    simp only [memberNamesW] at h
-    rcases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with _ | qm
-    · rw [hal] at h; cases h
-    obtain ⟨q, m1⟩ := qm
+    obtain ⟨_, q, m1, -, hal, -, -⟩ := memberNamesW_inv h
     obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
     rw [hf.size IW, ← htop]
     have hl := (decBS_some hb.dec).1

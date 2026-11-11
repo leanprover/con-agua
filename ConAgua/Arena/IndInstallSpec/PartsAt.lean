@@ -74,12 +74,9 @@ theorem partsAt {α : Type} {f : Mem → Nat → Option α} (_hf : ∀ q, OMono 
 theorem memberNamesW_room {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : memberNamesW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
     iwTop m + (rdW (m.arr64 IW) (p + 1)).toNat ≤ (m.arr64 IW).size := by
-  unfold memberNamesW at h
-  cases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => rw [hal] at h; cases h
-  | some x =>
-    obtain ⟨hq, -, hr⟩ := allocW_facts hal hsz
-    simp only [iwTop]; rw [hq] at hr; exact hr
+  obtain ⟨_, _, _, -, hal, -, -⟩ := memberNamesW_inv h
+  obtain ⟨hq, -, hr⟩ := allocW_facts hal hsz
+  simp only [iwTop]; rw [hq] at hr; exact hr
 
 end L.Ind
 
