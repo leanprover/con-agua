@@ -5,6 +5,7 @@ import ConAgua.Arena.IndRealAbsT
 public import ConAgua.Arena.StageTLift
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.WhnfCoreRefine
@@ -71,27 +72,15 @@ open L.Arena
 
 /-! ## `ik_copy`, `keys_push_iw`, `inst_lp_fast`: the word models -/
 
-/-- **The model of `ik_copy`.** -/
-def ikCopyW : Nat → Mem → Word → Word → Word → Option Mem
-  | 0, _, _, _, _ => none
-  | n + 1, m, s, d, l =>
-    if l = 0 then some m else ikCopyW n (m.set64 SPN d (rdW (m.arr64 LPIW) s)) (s + 1) (d + 1) (l - 1)
+l_model ikCopy_spec (p : Prog) (hik : p.lookup "ik_copy" = some ikCopy)
+  fns [hik ↦ ikCopyW void]
+  grind [arena_grind]
 
-theorem ikCopyW_zero (n : Nat) (m : Mem) (s d l : Word) (h : l = 0) :
-    ikCopyW (n + 1) m s d l = some m := by simp [ikCopyW, h]
-theorem ikCopyW_succ (n : Nat) (m : Mem) (s d l : Word) (h : l ≠ 0) :
-    ikCopyW (n + 1) m s d l = ikCopyW n (m.set64 SPN d (rdW (m.arr64 LPIW) s)) (s + 1) (d + 1) (l - 1) := by
-  simp [ikCopyW, h]
-grind_pattern [arena_grind] ikCopyW_zero => ikCopyW (n + 1) m s d l
-grind_pattern [arena_grind] ikCopyW_succ => ikCopyW (n + 1) m s d l
-
-/-- **The model of `keys_push_iw`.** -/
-def keysPushIWW : Nat → Mem → Word → Word → Option (Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, lo, ll =>
-    if m.len64 SPN < spTop m then none
-    else if m.len64 SPN - spTop m < ll then none
-    else kpK (spTop m) ll (ikCopyW n m lo (spTop m) ll)
+l_model keysPushIW_spec (p : Prog) (hkp : p.lookup "keys_push_iw" = some keysPushIW)
+    (hik : p.lookup "ik_copy" = some ikCopy)
+  fns [hkp ↦ keysPushIWW]
+  specs [ikCopy_spec p hik n]
+  grind [arena_grind] fold [spTop]
 
 /-- **The model of `inst_lp_fast`** at L fuel `n + 1`. -/
 def ilpfW (p : Prog) (n : Nat) (m : Mem) (f lo ll us e : Word) : Option (Word × Mem) :=
@@ -100,36 +89,6 @@ def ilpfW (p : Prog) (n : Nat) (m : Mem) (f lo ll us e : Word) : Option (Word ×
 section specs
 variable (p : Prog) (hkp : p.lookup "keys_push_iw" = some keysPushIW) (hik : p.lookup "ik_copy" = some ikCopy)
   (hf : p.lookup "inst_lp_fast" = some instLPFastL)
-
-include hik in
-theorem ikCopy_spec (n : Nat) : ∀ (s₀ : St) (s d l : Word),
-    ⦃fun st => st = s₀⦄
-    invoke p (exec p n) "ik_copy" [s, d, l]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ikCopyW n s₀.mem s d l = some s'.mem; ⊤⦄ := by
-  induction n with
-  | zero => intro s₀ s d l; rw [invoke_eq _ hik]; simp only [callFn, ikCopy]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ s d l
-    rw [invoke_eq _ hik]
-    simp only [callFn, ikCopy]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
-      finish
-
-include hkp hik in
-theorem keysPushIW_spec (n : Nat) (s₀ : St) (lo ll : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keys_push_iw" [lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ keysPushIWW n s₀.mem lo ll = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hkp]
-  simp only [callFn, keysPushIW]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        ikCopy_spec p hik n] <;>
-      finish [keysPushIWW, spTop]
 
 include hf in
 theorem instLPFast_specW (n : Nat) (s₀ : St) (f lo ll us e : Word) :
@@ -170,7 +129,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     subst hl0
     rcases n with _ | n
     · simp [ikCopyW] at hW
-    rw [ikCopyW_zero n m s d 0 rfl] at hW; cases hW
+    rw [ikCopyW.arm1 n m s d 0 rfl] at hW; cases hW
     exact ⟨by simp [hslice?], MemFrame.refl _ _ _, fun _ _ => rfl⟩
   | cons x xs ih =>
     intro n m m' s d l hs hb hsz hsl hW
@@ -189,7 +148,7 @@ theorem ikCopyW_slice : ∀ (lps : List NIdx) (n : Nat) (m m' : Mem) (s d l : Wo
     have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
     rcases n with _ | n
     · simp [ikCopyW] at hW
-    rw [ikCopyW_succ n m s d l hl0] at hW
+    rw [ikCopyW.arm2 n m s d l hl0, show ∀ o, ikCopyW.k_ik_copy o = o from fun o => by cases o <;> rfl] at hW
     have hd1 : (d + 1).toNat = d.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hs1 : (s + 1).toNat = s.toNat + 1 := L.toNat_add_one_of_lt (by omega)
     have hlm : (l - 1).toNat = j := by
@@ -268,9 +227,9 @@ theorem instLPFastI_refines (p : Prog) (hp : ILWEntryProg p)
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
   rw [hlen] at t1'
   cases hcp : ikCopyW k m po (spTop m) pl with
-  | none => rw [hcp] at hW1; simp [kpK] at hW1
+  | none => rw [hcp, keysPushIWW.k_ik_copy.none] at hW1; cases hW1
   | some mc =>
-  rw [hcp, kpK_some] at hW1
+  rw [hcp, keysPushIWW.k_ik_copy.arm1] at hW1
   obtain ⟨hb, rfl⟩ := Prod.mk.inj (Option.some.inj hW1)
   have hnw : po.toNat + pl.toNat < 2 ^ 64 := by
     rcases hslice?_bound_fsz _ _ _ _ hlps with h0 | h0

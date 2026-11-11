@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DeclArmsNat
 import all ConAgua.Arena.Pins
@@ -267,22 +268,11 @@ theorem emit_keep {κ : IdxKind} {vis : Word} {fe : IFEnv} {p : Prog}
 section pins
 variable {p : Prog}
 
-def natOpPinsAW (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else some ([0], ((((((((m.set64 IW (q) (pinW m 15)).set64 IW (q + 1) (pinW m 16)).set64 IW (q + 2) (pinW m 17)).set64 IW (q + 3) (pinW m 18)).set64 IW (q + 4) (pinW m 19)).set64 IW (q + 5) (pinW m 20)).set64 IW (q + 6) (pinW m 21)).set64 IW (q + 7) (pinW m 22)))
-
-theorem natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_a" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsAW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpPinsAL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_any p hpin n] <;>
-    finish (gen := 20) [natOpPinsAW]
+l_model natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ natOpPinsAW list]
+  specs [pinAt_any p hpin n]
+  grind [arena_grind] guards ["pin_at"]
 
 theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
@@ -294,30 +284,18 @@ theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
   change natOpPinsAW m q = some (_r, s'.mem) at hw
   unfold natOpPinsAW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [ite_eq_left h0] at hw; cases hw
-  rw [ite_eq_right h0] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  · simp [h0] at hw
+  simp [h0] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩
   rw [← hm]
   simp [wrIW, UInt64.add_assoc]
 
-def natOpPinsBW (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else some ([0], (((((((m.set64 IW (q) (pinW m 23)).set64 IW (q + 1) (pinW m 24)).set64 IW (q + 2) (pinW m 25)).set64 IW (q + 3) (pinW m 26)).set64 IW (q + 4) (pinW m 27)).set64 IW (q + 5) (pinW m 28)).set64 IW (q + 6) (pinW m 29)))
-
-theorem natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_b" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsBW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpPinsBL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_any p hpin n] <;>
-    finish (gen := 20) [natOpPinsBW]
+l_model natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ natOpPinsBW list]
+  specs [pinAt_any p hpin n]
+  grind [arena_grind] guards ["pin_at"]
 
 theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
@@ -329,30 +307,18 @@ theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
   change natOpPinsBW m q = some (_r, s'.mem) at hw
   unfold natOpPinsBW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [ite_eq_left h0] at hw; cases hw
-  rw [ite_eq_right h0] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  · simp [h0] at hw
+  simp [h0] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩
   rw [← hm]
   simp [wrIW, UInt64.add_assoc]
 
-def natOpPinsCW (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  if pinW m 0 = 0 then none else some ([0], ((((((m.set64 IW (q) (pinW m 2)).set64 IW (q + 1) (pinW m 3)).set64 IW (q + 2) (pinW m 4)).set64 IW (q + 3) (pinW m 31)).set64 IW (q + 4) (pinW m 32)).set64 IW (q + 5) (pinW m 30)))
-
-theorem natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
-    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_c" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsCW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpPinsCL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      pinAt_any p hpin n] <;>
-    finish (gen := 20) [natOpPinsCW]
+l_model natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
+    (hpin : p.lookup "pin_at" = some pinAtL)
+  fns [hp ↦ natOpPinsCW list]
+  specs [pinAt_any p hpin n]
+  grind [arena_grind] guards ["pin_at"]
 
 theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
     (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
@@ -364,9 +330,8 @@ theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
   change natOpPinsCW m q = some (_r, s'.mem) at hw
   unfold natOpPinsCW at hw
   by_cases h0 : pinW m 0 = 0
-  · rw [ite_eq_left h0] at hw; cases hw
-  rw [ite_eq_right h0] at hw
-  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  · simp [h0] at hw
+  simp [h0] at hw
   obtain ⟨-, hm⟩ := hw
   refine ⟨h0, ?_⟩
   rw [← hm]
