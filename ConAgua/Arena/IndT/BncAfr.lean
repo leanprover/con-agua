@@ -27,19 +27,13 @@ theorem nIdxsCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nIdxsCopyW n
   | 0, _, _, _, _, _, h => by simp [nIdxsCopyW] at h
   | n + 1, m, m', d, s, l, h => by
     by_cases hl : l = 0
-    · rw [nIdxsCopyW_nil n m d s l hl] at h; cases h; exact AFr.refl _
+    · rw [nIdxsCopyW.arm1 n m d s l hl] at h; cases h; exact AFr.refl _
     · rw [nIdxsCopyW_step n m d s l hl] at h
       exact (AFr.set64 _ IW (by decide) (by decide) _ _).trans (nIdxsCopyW_afr n _ _ _ _ _ h)
 
 theorem nIdxsW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : nIdxsW n m p = some (r, m')) : AFr m m' := by
-  unfold nIdxsW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨-, rfl⟩ := h
+  obtain ⟨_, _, _, -, hal, hc, -⟩ := nIdxsW_inv h
   exact (allocW_afr hal).trans (nIdxsCopyW_afr _ _ _ _ _ _ hc)
 
 theorem fieldCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l k : Word), fieldCopyW n m d s l k = some m' →
