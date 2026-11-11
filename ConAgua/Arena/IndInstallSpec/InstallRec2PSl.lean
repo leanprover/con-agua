@@ -114,8 +114,9 @@ theorem lpsW_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m
   cases n with
   | zero => simp [lpsW] at h
   | succ n =>
-    simp only [lpsW] at h
-    afr_auto h [erToIwW_afr]
+    by_cases hz : rdW (m.arr64 IW) (q + 1) = 0
+    · rw [lpsW_nil n m q hz] at h; obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h); exact AFr.refl _
+    · rw [lpsW_cons n m q hz] at h; exact erToIwW_afr h
 
 end L.Ind
 

@@ -105,10 +105,9 @@ theorem lpsW_mfr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : lpsW n m
   cases n with
   | zero => simp [lpsW] at h
   | succ n =>
-    simp only [lpsW] at h
-    split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h; exact MFr.refl _ _ _
-    · exact erToIwW_mfr h
+    by_cases hz : rdW (m.arr64 IW) (q + 1) = 0
+    · rw [lpsW_nil n m q hz] at h; obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h); exact MFr.refl _ _ _
+    · rw [lpsW_cons n m q hz] at h; exact erToIwW_mfr h
 
 /-- The lookups of `target_class_match`. -/
 structure TcmLook (p : Prog) : Prop where
