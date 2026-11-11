@@ -139,6 +139,13 @@ What the rewrite met besides batch 1's kinds:
   `hG.tab_stack _ h`, the field (`Layout.Ok`, 6 places); named arguments whose binder names
   differ (`erRd_of_erA (m := m1)`, `SpineR.empty' (m := m)`, `misW_end (h := …)`) by hand.
 * A deleted theorem's `include … in` / `omit … in` line goes with it.
+* **Imports.** `shake` then proposed 147 removals (the imports whose only use had been a deleted
+  copy). The 134 plain ones are removed; where one had carried other modules' names to the file
+  through its re-exports, the file imports those directly, as the tool proposes (13 lines:
+  `RulePrefixAt` in IndTwin, PosMc, IndBRecPins; `IndView` in InferBodyBindPi; …). The 13 `public`
+  ones stay, in `scripts/shake-allowlist.txt`: removing them broke importers that take names
+  through them (GfcW, FgW, PosMc, DefEqMidQuick), and Rom's re-export of `Front.ApplyExpr` is
+  needed by its `grind_pattern`.
 
 | module | kept | deleted | refs |
 |---|---|---|---|
