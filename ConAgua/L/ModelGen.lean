@@ -944,6 +944,10 @@ meta structure Env where
   exc : Bool := false
   /-- the members without results (`void`) -/
   voids : Array String := #[]
+  /-- `share`: a statement that writes the memory and mentions a memory term that is not a
+  variable more than once (`erec_put(b, EREC⦃old⦄)` after another store) starts a join point
+  over that memory, so that a run of such statements stays linear in size -/
+  share : Bool := false
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) (clash : Array Name := #[]) : Name :=
@@ -1137,6 +1141,26 @@ meta partial def idents (s : Syntax) (acc : NameSet := {}) : NameSet :=
 
 meta def setEnv (ctx : Ctx) (k : Nat) (v : MT) : Ctx := { ctx with env := ctx.env.set! k v }
 
+/-- The occurrences of `needle` in `hay` (as subtrees, up to source positions). -/
+meta partial def countOcc (needle hay : Syntax) : Nat :=
+  if needle.structEq hay then 1 else
+  match hay with
+  | .node _ _ args => args.foldl (fun a x => a + countOcc needle x) 0
+  | _ => 0
+
+/-- A variable, possibly in parentheses. -/
+meta partial def isVarStx (s : Syntax) : Bool :=
+  s.isIdent || (s.getKind == ``Lean.Parser.Term.paren && isVarStx s[1])
+
+/-- `share`: the memory term of `ctx` is not a variable and the terms `ts` of a statement that
+writes the memory mention it more than once. -/
+meta def dupMem (E : Env) (ctx : Ctx) (ts : Array Term) : MetaM Bool := do
+  unless E.share do return false
+  let mT ← ctx.mem.render
+  -- `((m))`: the rendering of a variable
+  if isVarStx mT.raw then return false
+  return ts.foldl (fun a t => a + countOcc mT.raw t.raw) 0 ≥ 2
+
 /-- The model's leaf for `return (v₀, v₁, …)` (`vs = #[]`: falling off the end). -/
 meta def Ctx.ret (ctx : Ctx) (vs : Array MT) : MR :=
   if ctx.void then (if ctx.ro then .unit else .someW ctx.mem) else
@@ -1314,11 +1338,15 @@ mode an error of class `0`. -/
 meta def failMR (E : Env) : MetaM MR := do
   if E.exc then return .tail (.raw (← `(Except.error L.Err.oob))) else return .none
 
+/-- The application of the join point `j` at the locals and the memory of `ctx`. -/
+meta def joinApp (E : Env) (ctx : Ctx) (j : Join) : MR :=
+  .tail (.app j.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
+    j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[])))
+
 mutual
 meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM MR
   | [] => match ctx.ft with
-    | some j => pure (.tail (.app j.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
-        j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[]))))
+    | some j => pure (joinApp E ctx j)
     | none =>
       match ctx.loop with
       | some L =>
@@ -1327,6 +1355,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           #[ctx.mem] ++ L.params.map (ctx.env[·]!))))
       | none => pure (ctx.ret #[])
   | s :: rest => do
+    -- `share`: this statement, which writes the memory and mentions it twice, starts a join
+    -- point over the memory
+    let shareJ : GenM MR := do return joinApp E ctx (← mkJoin E ctx (s :: rest) (cut := false))
     let assignOp (x : Ident) (o : String) (e : TSyntax `lexpr) : GenM MR := do
       let v ← transE E ctx e
       match ctx.idx x with
@@ -1335,11 +1366,13 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
     let setGlob (x : Ident) (v : MT) : GenM MR := do
       if ctx.ro then throwErrorAt x "l_model: a read-only model cannot write"
       let mem ← `(L.Mem.setG $(← ctx.mem.render) ($x : L.GVar) $(← v.render))
+      if ← dupMem E ctx #[mem] then return ← shareJ
       transS E { ctx with mem := .raw mem } rest
     let store (arr : Term) (i : MT) (e : TSyntax `lexpr) : GenM MR := do
       if ctx.ro then throwError "l_model: a read-only model cannot write"
       let v ← transE E ctx e
       let mem ← `(L.Mem.set64 $(← ctx.mem.render) $arr $(← i.render) $(← v.render))
+      if ← dupMem E ctx #[mem] then return ← shareJ
       transS E { ctx with mem := .raw mem } rest
     let ite (c : TSyntax `lcond) (t e : List (TSyntax `lstmt)) : GenM MR := do
       let c ← transC E ctx c
@@ -1351,9 +1384,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       return .ite c (← transS E ctx (t ++ rest)) (← transS E ctx (e ++ rest))
     match s with
     | `(lstmt| $x:ident := call $f:ident($args,*)) =>
-      transCall E ctx #[x] f args.getElems rest
+      transCall E ctx #[x] f args.getElems rest shareJ
     | `(lstmt| ($x:ident, $xs:ident,* ) := call $f:ident($args,*)) =>
-      transCall E ctx (#[x] ++ xs.getElems) f args.getElems rest
+      transCall E ctx (#[x] ++ xs.getElems) f args.getElems rest shareJ
     | `(lstmt| $x:ident := $e:lexpr) => do
       let v ← transE E ctx e
       match ctx.idx x with
@@ -1378,7 +1411,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let arr ← `(L.tierA $a $(← (← transE E ctx t).render))
       let i ← (← transE E ctx i).render
       let v ← (← transE E ctx e).render
-      transS E { ctx with mem := .raw (← `(L.Mem.set32 $(← ctx.mem.render) $arr $i $v)) } rest
+      let mem ← `(L.Mem.set32 $(← ctx.mem.render) $arr $i $v)
+      if ← dupMem E ctx #[mem] then return ← shareJ
+      transS E { ctx with mem := .raw mem } rest
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
       match k with
@@ -1388,7 +1423,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
         noteVcg #["L.st8"]
         let i ← (← transE E ctx i).render
         let v ← (← transE E ctx e).render
-        transS E { ctx with mem := .raw (← `(L.Mem.set8 $(← ctx.mem.render) $arr $i $v)) } rest
+        let mem ← `(L.Mem.set8 $(← ctx.mem.render) $arr $i $v)
+        if ← dupMem E ctx #[mem] then return ← shareJ
+        transS E { ctx with mem := .raw mem } rest
       | _ => throwErrorAt s "l_model: constant data cannot be written"
     | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
       -- the first `j ∈ [i, e)` whose byte is in the class `c`, else `e` (`scanN`)
@@ -1417,6 +1454,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           `(L.Mem.copy64 $m $dA $di $(← warrT sa st) $si (UInt64.toNat $n))
         else do
           `(L.Mem.copy8w $m $dA $di $(← bsrc ctx src) $si (UInt64.toNat $n))
+      if ← dupMem E ctx #[m'] then return ← shareJ
       transS E { ctx with mem := .raw m' } rest
     | `(lstmt| if $c:lcond $b:lblock) => ite c (← blockStmts b) []
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) => ite c (← blockStmts b) (← blockStmts t)
@@ -1453,7 +1491,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       else throwErrorAt s "l_model: unsupported L statement"
 
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
-    (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) : GenM MR := do
+    (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) (shareJ : GenM MR) : GenM MR := do
   let fname := f.getId.toString
   modify fun st => { st with called := st.called.push fname, callHint := fname }
   let argsT ← args.mapM fun a => do (← transE E ctx a).render
@@ -1585,6 +1623,8 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
   | .memTot t guards =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
     let m' ← substT t memT argsT
+    let gs ← guards.mapM fun (g, _) => substT g memT argsT
+    if ← dupMem E ctx (#[m'] ++ gs) then return ← shareJ
     let body ← transS E { (assign ctx #[]) with mem := .raw m' } rest
     let mut r := body
     for (g, classical) in guards.reverse do
@@ -1678,7 +1718,7 @@ meta partial def bindK (E : Env) (ctx : Ctx) (xk : Array Nat) (callT : MT)
 
 /-- Make a join point: the rest of the code after an `if` both of whose branches fall through,
 as a definition over the locals it reads and the memory; the branches end by applying it. -/
-meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
+meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) (cut : Bool := true) :
     GenM Join := do
   let seq ← modifyGet fun st => (st.seq, { st with seq := st.seq + 1 })
   let env : Array MT := ctx.names.map fun n => .raw (mkIdent n)
@@ -1705,7 +1745,7 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
       modify fun st => { st with ks := st.ks.push kd }
       pure name
   let j : Join := { name, fuel, caps := capIdx, capMem }
-  if ctx.loop.isNone && st.cutRest == some (rest.map (·.raw)) then
+  if cut && ctx.loop.isNone && st.cutRest == some (rest.map (·.raw)) then
     modify fun st => { st with cutJ := some j }
   return j
 
@@ -1937,7 +1977,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" nv " "[" term "," term "]")?
   (&" cut " num)?
   (&" pfuel")?
-  (&" guards " "[" str,* "]")? : command
+  (&" guards " "[" str,* "]")?
+  (&" share")? : command
 
 meta structure FnInfo where
   lname : String
@@ -2020,6 +2061,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- `n` (no `match` on the fuel), its spec at `exec p (n + 1)`, proved by one step, no induction
   let pfuel := stx[27].getNumArgs != 0
   let guardFns : Array String := (optList 28).filterMap (·.isStrLit?)
+  -- `share`: a memory term mentioned twice by a store or a total memory callee is a join point's
+  -- parameter (`Env.share`)
+  let share := stx[29].getNumArgs != 0
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2113,7 +2157,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if fi.tup > 0 then { fi with tup := max fi.tup (spliceArity blocks0 (blocks0.size + 1) fi.body) }
     else fi
   let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, guardFns, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname) }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, guardFns, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname), share }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
