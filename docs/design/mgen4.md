@@ -77,6 +77,10 @@ mgen3 met `rw [ite_eq_left h]` and `split` failing on generated `if`s where `sim
 where the generated form could be changed without changing every model's output, so the
 generator is unchanged here.
 
+Tests: `L/ModelGenTest` 86.1 G (mgen3's last measurement) → 92.8 G, 21.9 user s, with the five
+new tests (`tSh`, `tPfL_spec`, `tRd`, `tMx`). The gate build rebuilt every module importing
+`ModelGen` and all of them elaborated unchanged.
+
 ## 2. Conversions
 
 ### Batch 1: `rule_copy` (`share`)
