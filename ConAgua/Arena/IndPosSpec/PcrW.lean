@@ -1,13 +1,17 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.PcrK1
+public import ConAgua.Arena.IndPosSpec.DepthGo
+public import ConAgua.Arena.IndPosSpec.CrLook
+import ConAgua.Arena.IndPosSpec.Rx
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos
 
 @[expose] public section
 
 /-!
 # PcrW
 
-`pcrW`.
+`pcrW`, `nestCrest_spec`.
 -/
 
 noncomputable section
@@ -21,9 +25,12 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The model of `nest_crest` at exec fuel `k + 3`. -/
-def pcrW (k : Nat) (m : Mem) (no nl us dO dL hO hL cty : Word) : Option (List Word × Mem) :=
-  pcrK1 k dO dL hO hL (pccW k m no nl us dL cty)
+/-- **The model of `nest_crest`** (at exec fuel `n + 3`). -/
+l_model nestCrest_spec (p : Prog) (L : CrLook p)
+  fns [L.cr ↦ pcrW list]
+  specs [nestCanonCrest_spec p L.rx.ha L.rx.hl L.rx.hk L.ng L.np L.ip L.raf L.rap L.rgo L.rnd L.rcl L.ra L.cc n,
+      posRec5_specW p L.rx.ha L.rx.h5 (n + 2), (rxSpec_all p L.rx (n + 2)).2.2.2.2.2.2.2]
+  grind [arena_grind, ind_grind] pfuel 3
 
 end L.Ind
 

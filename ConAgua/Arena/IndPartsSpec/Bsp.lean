@@ -1,18 +1,13 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 public import ConAgua.Arena.IndPartsSpec.BmgW
-public import ConAgua.Arena.IndPartsSpec.BmoW
-public import ConAgua.Arena.IndPartsSpec.BpcW
-public import ConAgua.Arena.IndPartsSpec.BsoK2
-public import ConAgua.Arena.IndSumSpec.ColW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndPartsSpec.EqW
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndCallM
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 
@@ -182,127 +177,6 @@ l_model bseal_spec (p : Prog) (hna : NaF p) (ha : p.lookup "iw_alloc" = some iwA
   specs [naF_spec p hna n, bsp_spec p ha hpk n]
   grind [ind_grind]
 
-/-- After `block_shape_large`. -/
-def bbK13' (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bgoK3 (bsealW m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0))
-
-/-- After `block_shape_recs_of`. -/
-def bbK12 (n : Nat) (nPd _cto _ctl _cso _csl _rso _rsl _cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW (n + 1) m cvR0 lo ll)
-
-/-- After `block_shape_members_of`. -/
-def bbK11 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0) (brsW (n + 1) m no nl rso rsl)
-
-/-- After `block_groups`. -/
-def bbK10 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (bmoW (n + 1) m cto ctl io (r.headD 0))
-
-/-- After `param_levels`. -/
-def bbK9 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip cof cl2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (bgW n m no nl (r.headD 0) nPd ctl cof cl2)
-
-/-- After `block_shape_ctors_of`. -/
-def bbK8 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl io lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0) (plW (n + 1) m lo ll)
-
-section arms
-variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
-  (no nl io lo ll s ip mo ml : Word) (q : Word)
-theorem bbK11_some : bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (some (r, m)) =
-    bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0)
-      (brsW (n + 1) m no nl rso rsl) := rfl
-theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
-    bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0)
-      (plW (n + 1) m lo ll) := rfl
-end arms
-attribute [ind_grind] bbK11_some bbK8_some
-
-/-- **The model of `block_shape_fin`** (at exec fuel `n + 2`). -/
-def bfW (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
-    Option (List Word × Mem) :=
-  bbK8 n nPd cto ctl cso csl rso rsl 0 (rdW (m.arr64 IW) (rdW (m.arr64 IW) rso)) no nl io lo ll s ip
-    (bctW (n + 1) m cso csl)
-
-/-- After `lvl_eq_c`. -/
-def btK3 (_c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0))
-
-/-- After `pin_word(53)`. -/
-def btK2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll s : Word) (m : Mem) :
-    Option Word → Option (List Word × Mem)
-  | none => none
-  | some z => btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m)
-
-/-- After `block_shape_result_sort`. -/
-def btK1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io lo ll : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53)
-
-/-- **The model of `block_shape_tail`** (at exec fuel `n + 3`). -/
-def btW (c : CallM) (n : Nat) (m : Mem) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
-    Option (List Word × Mem) :=
-  btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll
-    (bsoW m nPd io il (erRd m (rdW (m.arr64 IW) cto + 3)))
-
-/-- After `block_shape_pins_ok`. -/
-def bbH4 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0, 0], m)
-    else bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll)
-
-/-- After `er_to_iw`. -/
-def bbH3 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl no nl io il : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
-      (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl)
-
-/-- After `block_member_counts`. -/
-def bbH2 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 no nl : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) =>
-    if r.headD 0 = 0 then some ([0, 0], m)
-    else bbH3 c n nPd cto ctl cso csl rso rsl no nl (r.tail.headD 0) (r.tail.tail.headD 0)
-      (erToIwW (n + 3) m (erRd m (cvT0 + 1)) (erRd m (cvT0 + 2)))
-
-/-- After `block_shape_names_of`. -/
-def bbH1 (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
-      (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl)
-
-section arms
-variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
-  (no nl io il lo ll s z : Word)
-theorem btK2_some : btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll s m (some z) =
-    btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (c (n + 2) "lvl_eq_c" [s, z] m) := rfl
-theorem bbH4_fail (h : r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
-    some ([0, 0], m) := by simp only [bbH4]; exact ite_eq_left h
-theorem bbH4_ok (h : ¬ r.headD 0 = 0) : bbH4 c n nPd cto ctl cso csl rso rsl no nl io il lo ll (some (r, m)) =
-    bgoK3 (btW c n m nPd cto ctl cso csl rso rsl no nl io il lo ll) := by simp only [bbH4]; exact ite_eq_right h
-theorem bbH3_some : bbH3 c n nPd cto ctl cso csl rso rsl no nl io il (some (r, m)) =
-    bbH4 c n nPd cto ctl cso csl rso rsl no nl io il (r.headD 0) (r.tail.headD 0)
-      (bpoW (n + 2) m nPd cto ctl (r.headD 0) (r.tail.headD 0) rso rsl cso csl) := rfl
-theorem bbH1_some : bbH1 c n nPd cto ctl cso csl rso rsl cvT0 (some (r, m)) =
-    bbH2 c n nPd cto ctl cso csl rso rsl cvT0 (r.headD 0) (r.tail.headD 0)
-      (bmcW (n + 2) m nPd ctl csl (r.headD 0) (r.tail.headD 0) rso rsl cto ctl) := rfl
-end arms
-attribute [ind_grind] btK2_some bbH4_fail bbH4_ok bbH3_some bbH1_some
 
 end L.Ind
 

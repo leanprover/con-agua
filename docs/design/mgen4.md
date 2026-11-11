@@ -68,6 +68,14 @@ total `s'.mem = F` with its guards) is handled as before. Only these shapes, whi
 before, are read so; a pure result beside `F = some (r.headD 0, s'.mem)` or a memory model stays
 ignored as it was. Test `tMx`.
 
+### `pfuel k` (round 2)
+
+`pfuel` stated the spec at `exec p (n + 1)` with the model at `n`. Hand models stated at `n + 2`,
+`n + 3` (`block_shape_fin`, `block_shape_tail`: their callees run at `n + 1`, `n + 2`) did not fit.
+`pfuel k` states the spec at `exec p (n + k)`; the callee specs are given at the fuel the body
+runs at (`g_spec p (n + k - 1)`), the model is still the body at `n`. Test `tPf2_spec` (`pfuel 2`
+over `tPf`: its model is `tPfW` at `n + 1` by `rfl`).
+
 ### Not changed: literals and instances in generated `if`s
 
 mgen3 met `rw [ite_eq_left h]` and `split` failing on generated `if`s where `simp only [h,
@@ -94,3 +102,64 @@ cpMem m b old`, one `split` per join point); `cpMem` stays as the users' descrip
 | module | instructions | user s | RSS MB |
 |---|---|---|---|
 | `Arena/IndSumSpec/ConsBlockRecsTF` | 68.2 → 75.5 G | 10.6 → 11.4 | 1230 → 1290 |
+
+### Batch 2: `block_shape_fin`, `block_shape_tail` (`pfuel 2`, `pfuel 3`)
+
+mgen3 kept them: their models feed `bbW` (`block_shape_build`, `IndPartsProg5.lean`), which sat
+below the lookups structure `IndPartsProg5` their specs need, and they are stated at `n + 2` /
+`n + 3`. Now `bf_spec` and `bt_spec` are `l_model`s in `IndPartsProg5.lean` right after the
+structure, with the hand recipe's callee specs (`pfuel 2`; `pfuel 3` with `fold [erRd]`), and
+`bbH1`–`bbH4` and `bbW` moved there after them. Both generated models are the hand ones by `rfl`.
+Gone: `bbK8`–`bbK13'`, `bfW`, `btK1`–`btK3`, `btW` and their arm lemmas (`Bsp.lean`), the hand
+`bf_spec`, `bt_spec` (each at `maxHeartbeats 20000000`). The two walks in `BrsW.lean` (`bfW_sim`,
+`btW_sim`) only renamed (`bbK8_some` → `bfW.k_block_shape_ctors_of.arm1`, `rw [bbK9]` →
+`rw [bfW.k_param_levels]`, …).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Arena/IndPartsSpec/Bsp` | 28.8 → 27.9 G | 4.5 → 4.2 | 1074 → 1066 |
+| `Arena/IndPartsSpec/IndPartsProg5` | 2.1 → 7.9 G | 0.4 → 1.4 | 940 → 1043 |
+| `Arena/IndPartsSpec/Bf` | 78.2 → 41.3 G | 16.2 → 7.5 | 1394 → 1142 |
+| `Arena/IndPartsSpec/BrsW` | 17.1 → 17.1 G | 3.7 → 3.2 | 1098 → 1097 |
+
+Lines: +84 −191 (**−107**).
+
+### Batch 3: `nest_root_canon`, `nest_uniform_ok` (`pfuel 3`, `pfuel 4`)
+
+mgen3 listed them under "fuel offsets" (`CallM` fuel-offset models, stated at `k + 3`, `k + 4`).
+Both are now `l_model`s in `IndPosSpec/NestHoles.lean` where their hand models were
+(`nestRootCanon_spec`: `pfuel 3`, callee specs at `n + 2`; `nestUniformOk_spec`: `pfuel 4`, over
+the former), both with `fold [erRd]`; the generated models are the hand ones by `rfl`. Gone: the
+hand continuations `nrcK1`–`nrcK3`, `nuK1`–`nuK3`, their arm lemmas, and the two hand specs in
+`NuW.lean`. The walks `nrcW_ok`, `nuW_ok` only renamed (`nrcK1_some` → `nrcW.k_cv_lps.arm1`,
+`nuK1_ok (h := …)` → `nuW.k_pi_doms_occ.arm2 (hc1 := …)`, …).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Arena/IndPosSpec/NestHoles` | 10.8 → 16.4 G | 2.0 → 3.3 | 1043 → 1056 |
+| `Arena/IndPosSpec/NuW` | 19.3 → 11.5 G | 4.4 → 2.6 | 1054 → 1047 |
+
+Lines: +28 −88 (**−60**).
+
+### Batch 4: `nest_canon_crest`, `whnf_walk_fuel` (`pfuel 2`), `nest_crest` (`pfuel 3`)
+
+The rest of mgen3's "fuel offsets" (`pfuel` callers at the same fuel). `nestCanonCrest_spec`
+and `whnfWalkFuel_spec` are `l_model`s in `IndPosSpec/DepthGo.lean` where the hand models were;
+`nestCrest_spec` is one in `IndPosSpec/PcrW.lean` (with `CrLook`'s binder named `L`, now
+allowed). Gone: `pccA`, `pccB`, `pccC` (`DpGoW.lean`) and their arms, the hand `wfW` (a `match`),
+`pcrK1`–`pcrK3` with their files `PcrK1.lean`, `PcrK3.lean`, and `NestCrest2.lean` (only the
+hand spec and `pcrK1`'s arms; its two importers import `PcrW`). The walks (`pccW_ok`, `wfW_ok`,
+`NestCrest`'s `nest_crest` walk) and the frame lemmas (`pccW_mfr`, `pccW_afr`, `wfW_afr`,
+`pcrW_mfr`, `pcrW_afr`) only renamed the continuations (`pccB_ok … hz` →
+`pccW.k_inst_pis_with.arm2 (hc1 := hz)`, `unfold pcrW pcrK1 pcrK2 pcrK3` → `simp only [pcrW,
+pcrW.k_nest_canon_crest.eq_def, …]`).
+
+| module | instructions |
+|---|---|
+| `IndPosSpec/DepthGo` | 30.5 → 29.6 G |
+| `IndPosSpec/DpGoW` | 17.7 → 17.7 G |
+| `IndPosSpec/PcrW` (+ `PcrK1`, `PcrK3`, `NestCrest2`, gone) | 1.8 + 1.8 + 1.0 + 4.5 → 3.3 G |
+| `IndPosSpec/NestCrest` | 32.7 → 32.6 G |
+| `IndRealAbsPos` | 41.3 → 41.3 G |
+
+Lines: +58 −230 (**−172**), three files fewer.

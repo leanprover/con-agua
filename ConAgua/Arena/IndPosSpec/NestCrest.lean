@@ -10,7 +10,6 @@ import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.Mfr
-import ConAgua.Arena.IndPosSpec.NestCrest2
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.Rx
@@ -116,23 +115,23 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       decOE m' r x ∧ RxPost fe vis m m' a' M G g ∧ ∃ mp, rpMR m' mp := by
   unfold pcrW at h
   have hdl := decHL_length m hds
-  rcases hpc : pccW k m no nl us dL cty with _ | ⟨r1, m1⟩ <;> rw [hpc] at h; · simp [pcrK1] at h
+  rcases hpc : pccW k m no nl us dL cty with _ | ⟨r1, m1⟩ <;> rw [hpc] at h; · simp [pcrW.k_nest_canon_crest] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hout1, mp1, hM1⟩ := pccW_ok k (fun _ => none) fe vis m m1 a no nl us dL cty names r1 hpc hS hcty
     hus hdec hno hit hnn mp0 hMr
   have hR1 := hR.frame (pccW_fr hpc)
   cases x with
   | none =>
     have hz : r1.headD 0 = 0 := hout1
-    rw [pcrK1_zero (h := hz)] at h
+    rw [pcrW.k_nest_canon_crest.arm1 (hc1 := hz)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a1, ?_, rfl, hR.post hS1 hg1 (pccW_fr hpc), mp1, hM1⟩
     simp only [ConRon.Arena.nestCrest, StateT.run_bind]
     rw [hdl, hrun1]; rfl
   | some c =>
     obtain ⟨h1, hcH, hcd⟩ := hout1
-    rw [pcrK1_ok (h := by rw [h1]; decide)] at h
-    rcases hrec : posRecW m1 [1, dO, dL, hO, hL] with _ | ⟨f, m2⟩ <;> rw [hrec] at h; · simp [pcrK2] at h
-    rw [pcrK2_some] at h
+    rw [pcrW.k_nest_canon_crest.arm2 (hc1 := by rw [h1]; decide)] at h
+    rcases hrec : posRecW m1 [1, dO, dL, hO, hL] with _ | ⟨f, m2⟩ <;> rw [hrec] at h; · simp [pcrW.k_rec5] at h
+    rw [pcrW.k_rec5.arm1] at h
     obtain ⟨hS2, hg2, hf2, ht2, hget2⟩ := posRecW_stage hrec hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hg12 := hg1.trans hg2
@@ -145,8 +144,8 @@ theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : 
       ⟨by simpa using g0, by omega, ⟨dO.toNat, dL.toNat, g1, g2, by rw [decHL_grow hg12 hdsb]; exact hds,
         by have := hg12.iw; omega⟩, ⟨hO.toNat, hL.toNat, g3, g4, by rw [decHL_grow hg12 hhob]; exact hho,
         by have := hg12.iw; omega⟩⟩
-    rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrK3] at h
-    rw [pcrK3_some] at h
+    rcases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hrx] at h; · simp [pcrW.k_replace_fvars] at h
+    rw [pcrW.k_replace_fvars.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm
       hcH (hR1.frame (posRecW_fr hrec))
@@ -345,7 +344,7 @@ theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
 
 theorem pcrW_mfr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}
     (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) : CrFr m m' := by
-  unfold pcrW pcrK1 pcrK2 pcrK3 at h
+  simp only [pcrW, pcrW.k_nest_canon_crest.eq_def, pcrW.k_rec5.eq_def, pcrW.k_replace_fvars.eq_def] at h
   mfr_auto h [pccW_mfr, posRecW_mfr, rxW_mfr]
 
 /-- Across `nest_crest`. -/

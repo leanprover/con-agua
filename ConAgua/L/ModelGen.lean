@@ -145,7 +145,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   model, not matched on: the model is the body at fuel `n`, with its callees through specs over
   `n` (`callW_spec p n "f"`, lane whnf's "a call as a function of the memory"; its own recursive
   call too), its equations `fW.armᵢ` are stated at `n`, and its spec is at `exec p (n + 1)` with
-  the model at `n`, proved by one step (no induction). This is the shape of the hand models
+  the model at `n`, proved by one step (no induction). `pfuel k`: the spec is at `exec p (n + k)`
+  (the callees run at `exec p (n + k - 1)`: their specs in `specs` are given at that fuel, e.g.
+  `g_spec p (n + 1)` for `k = 2`), for hand models stated at `n + 2`, `n + 3` (`block_shape_fin`). This is the shape of the hand models
   `fW p n m …` over `callW` (`Rom/CIReadRefW`): the generated one is the same definition.
 * `defs` / `nodefs`: the same command twice, first with `defs` (only the models, the
   continuations and their arms, with the `grind` patterns), then with `nodefs` (only the specs):
@@ -2102,7 +2104,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" unified")?
   (&" nv " "[" term "," term "]")?
   (&" cut " num)?
-  (&" pfuel")?
+  (&" pfuel" (num)?)?
   (&" guards " "[" str,* "]")?
   (&" share")? : command
 
@@ -2210,6 +2212,9 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
   -- (its callees through their specs, e.g. `callW_spec p n "f"`): the model is the body at fuel
   -- `n` (no `match` on the fuel), its spec at `exec p (n + 1)`, proved by one step, no induction
   let pfuel := stx[27].getNumArgs != 0
+  -- `pfuel k`: the spec at `exec p (n + k)` (the body, and its callees, at fuel `n + k - 1`)
+  let pfuelOff : Nat := if pfuel && stx[27][1].getNumArgs != 0 then (stx[27][1][0].isNatLit?).getD 1 else 1
+  if pfuel && pfuelOff == 0 then throwErrorAt stx[27] "l_model: `pfuel k` needs `k ≥ 1`"
   let guardFns : Array String := (optList 28).filterMap (·.isStrLit?)
   -- `share`: a memory term mentioned twice by a store or a total memory callee is a join point's
   -- parameter (`Env.share`)
@@ -2971,7 +2976,7 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
     let fi := fis[0]!
     let lk ← pp fi.lookup.raw
     let tac ← parseTac s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {unfoldOf[0]!}]; {stepTac attrsTxt (vcgOf calledBy[0]! loopsBy[0]!) []}"
-    let stmt1 := (← mkConj (← `($nI + 1)) nI)[0]!
+    let stmt1 := (← mkConj (← `($nI + $(Syntax.mkNumLit (toString pfuelOff)))) nI)[0]!
     emit doTrace (← withHB (← `(command|
       $[$doc?:docComment]? theorem $specName:ident $bs* $nB:bracketedBinder : $stmt1 := by $(⟨tac⟩):tactic)))
     if doTrace then
