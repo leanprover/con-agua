@@ -95,7 +95,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
 * `fold`: named functions whose bodies are folded back into the model: a memory reader
   (`cnt m t = rdW (m.arr64 CTL) (2 + t)`, the pool slice word `erRd m x`, `EREC⦃x⦄`), word arithmetic
   (`tierW h = (h >>> 31) &&& 1`, also with comparison words `if a < b then 1 else 0` or
-  `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
+  `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`), a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`)
+  or a constant byte reader (`romB D i = (D[i.toNat]?.getD 255).toUInt64`: `D.c8[i]` is `romB D i`,
+  with its own value out of bounds, where L aborts; without it the byte reads as `getD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
   `c (call) fun ρᵢ μᵢ => …` instead of a named one (`bind ntBW`: the hand models of `Decl*`).
 * `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
@@ -347,6 +349,9 @@ meta structure Fold where
   slice word `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& (2^40 - 1))` (`A⦃x⦄`, `true`): the
   array `A`, the kind, the memory's parameter, and for a slice the address's -/
   reader : Option (Name × Bool × Nat × Nat) := none
+  /-- a constant byte reader: `f … D … i = (D[i.toNat]?.getD c).toUInt64` (`romB`), the position
+  of the byte list `D` among the parameters (`pat` the index `i`) -/
+  byteSrc : Option Nat := none
 
 /-- The pattern of a fold function's body (its parameters are holes). -/
 meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
@@ -401,6 +406,16 @@ meta def mkFold (c : Name) : MetaM Fold := do
     | Lean.Expr.lam _ _ b _ => strip b (k + 1)
     | _ => (e, k)
   let (body, k) := strip v 0
+  -- a constant byte reader `(D[i.toNat]?.getD c).toUInt64` (`romB`)
+  if let (``UInt8.toUInt64, #[b]) := body.consumeMData.getAppFnArgs then
+    if let (``Option.getD, #[_, o, _]) := b.consumeMData.getAppFnArgs then
+      if let (``GetElem?.getElem?, #[_, _, _, _, _, .bvar di, j]) := o.consumeMData.getAppFnArgs then
+        if let (``UInt64.toNat, #[i]) := j.consumeMData.getAppFnArgs then
+          let rec goB : MT → MT
+            | .hole j => .hole (k - 1 - j)
+            | .op o a b => .op o (goB a) (goB b)
+            | t => t
+          return { name := c, arity := k, pat := goB (← exprPat i), byteSrc := some (k - 1 - di) }
   -- a memory reader `rdW (m.arr64 A) i`, `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 2^40 - 1)`
   -- `rdW a i`, or its body `a[i.toNat]?.getD 0` (`prd`)
   let rdArgs? : Option (Lean.Expr × Lean.Expr) := match body.consumeMData.getAppFnArgs with
@@ -477,7 +492,7 @@ meta partial def MT.matchPat (pat t : MT) (σ : Array (Option MT)) : Option (Arr
 /-- Fold `t` at its root with the first rule that matches. -/
 meta def foldRoot (rules : Array Fold) (t : MT) : MT := Id.run do
   for r in rules do
-    if r.listProj.isSome || r.reader.isSome then continue
+    if r.listProj.isSome || r.reader.isSome || r.byteSrc.isSome then continue
     if let some σ := MT.matchPat r.pat t (Array.replicate r.arity none) then
       if σ.all (·.isSome) then
         return .app r.name (σ.map (·.get!))
@@ -1161,6 +1176,12 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     | _ =>
       -- a constant byte (`ldc`)
       noteVcg #["L.ldc"]
+      -- a byte reader in `fold` (`romB D i = (D[i.toNat]?.getD c).toUInt64`)
+      for r in E.folds do
+        if let some di := r.byteSrc then
+          let σ := (Array.replicate r.arity (none : Option MT)).set! di (some (.raw arr))
+          if let some σ := MT.matchPat r.pat i σ then
+            if σ.all (·.isSome) then return .app r.name (σ.map (·.get!))
       pure (.raw (← `(((($arr : List UInt8))[($(← i.render)).toNat]?.getD 0).toUInt64)))
   | `(lexpr| len($a:ident)) => do
     let (arr, k) ← splitArr a
