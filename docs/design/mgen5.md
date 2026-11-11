@@ -67,8 +67,9 @@ option covers it:
   (`FormerNZRef`, `ProjGuardRef` three times, `PropReadRefine`, `LevelSubstL`), whose states
   (`CoreS`, `LvR`) carry no `CTL` size (`IWOK.ctl : 200 < (m.arr64 CTL).size` lives in the
   inductive stage relation, not in `CoreS`).
-Threading a `CTL`-size hypothesis through `zeroW_ok` and its six callers to save a ten-line spec
-is no win. The same holds for `lh_mk` (`lhMkW`, the same guard). This is a case for a generator
+`rom_names_to`'s bound (#281) could move into its refinement because its one caller has the
+bound at hand; here no caller has it. Threading a `CTL`-size hypothesis through `zeroW_ok` and its
+six callers to save a ten-line spec is no win. The same holds for `lh_mk` (`lhMkW`, the same guard). This is a case for a generator
 option that models a store's bound as a guard (`none` out of bounds), not for a lane.
 
 ### The Front install records: `ind_cv`, `parse_rule_d`, `decl_cv`
@@ -179,6 +180,14 @@ mutual blocks, the hand specs. 6 files +167 −198 (−31).
   the hand spec, the `nm*_inv` lemmas in `Dec`; `romNameW_ok`, `romNameW_dec` walk the generated
   arms; the other eight ROM files are unchanged (they use only those lemmas). 4 files +174 −258
   (−84). `Rom` 40.1 → 39.4 G, `Dec` 13.1 G, the others within 1 %; `ModelGenTest` 95.9 G.
+
+* **#281** `rom_names_to` (`defs`, `romNamesToW_topK` over the generated arms, `nodefs`) and
+  `intern_reserved_pins` (default recipe; `irpW rom off n m`). The `PINS` bound: the store
+  `PINS[d] := h` is inline, not a callee, so neither `guards` nor `pre` carries it into the model;
+  it moved to the refinement instead, `romNamesToW_ok` takes `d + |ns| ≤ |PINS|`, and its one
+  caller `irpW_ok` has it from the function's own `len(PINS) ≥ 72` test and the frames. Gone: the
+  hand mutual model, `namesToK`, `irp1K`–`irp6K`, their arms, both hand specs. +31 −94 (−63);
+  `RomPins` 21.3 → 19.2 G (3.6 → 3.3 s).
 
 ## 3. The 185 specs without a model in their post
 
