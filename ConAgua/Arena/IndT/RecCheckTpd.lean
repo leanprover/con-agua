@@ -43,7 +43,7 @@ theorem tcpF_afr {n : Nat} {m m' : Mem} {pfo pfl e : Word} {r : List Word}
     (h : tcpF n m pfo pfl e = some (r, m')) : AFr m m' := by
   obtain _ | n := n
   · simp [tcpF] at h
-  simp only [tcpF, tcpW, tcpK1.eq_def, eftK2.eq_def] at h
+  simp only [tcpF_succ, tcpF.j1, tcpF.k_rec3.eq_def, tcpF.k_replace_fvars.eq_def] at h
   afr_auto h [recW_afr, rxW_afr]
 
 theorem taGoW_afr (n : Nat) :

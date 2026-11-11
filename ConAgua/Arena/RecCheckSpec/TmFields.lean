@@ -120,12 +120,12 @@ theorem tteW_ok (n : Nat) {m m' : Mem} {a : AState} {bso bsl teo tel : Word} {r 
       StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   obtain _ | n := n
   · simp [tteW] at h
-  rw [tteW_succ] at h
-  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteK1, reduceCtorEq] at h
+  rw [tteW.arm1] at h
+  rcases h1 : eeW n m bso bsl with _ | ⟨r1, m1⟩ <;> simp only [h1, tteW.k_erase_each, reduceCtorEq] at h
   obtain ⟨ys1, a1, run1, hd1, hb1, hS1, hg1, hP1⟩ := eeW_ok fe vis n h1 hS hbs hP
-  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteK2, reduceCtorEq] at h
+  rcases h2 : eeW n m1 teo tel with _ | ⟨r2, m2⟩ <;> simp only [h2, tteW.k_erase_each_2, reduceCtorEq] at h
   obtain ⟨ys2, a2, run2, hd2, hb2, hS2, hg2, hP2⟩ := eeW_ok fe vis n h2 hS1 (htl.grow hg1) hP1
-  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteK3, reduceCtorEq] at h
+  rcases h3 : eqW n m2 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) with _ | e <;> simp only [h3, tteW.k_sl_eq, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
   have he := eqW_dec h3 (by rw [decHL_grow hg2 hb1]; exact hd1) (hS2.lt64 (by have := hg2.iw; omega))
     hd2 (hS2.lt64 hb2)

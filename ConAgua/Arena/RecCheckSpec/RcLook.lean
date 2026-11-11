@@ -11,7 +11,7 @@ public import ConAgua.Arena.IndPosSpec.Rx
 /-!
 # RcLook
 
-`taMR_mfr`, `RcMR`, `eftK2`, `HSl0`, `HSl0.of`, `HSl0.len` and the lemmas only they use.
+`taMR_mfr`, `RcMR`, `HSl0`, `HSl0.of`, `HSl0.len` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -41,12 +41,6 @@ structure RcMR (m : Mem) : Prop where
   pos : PosMR m
   ta : ∃ mp, taMR m mp
 
-/-! ## `erase_fvar_tys` -/
-
-def eftK2 : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r], m2)
-
 /-! ## Slices decoded below the top unless empty -/
 
 /-- A handle slice decoded at `(o, l)`, below the pool's top unless empty (an empty slice's offset
@@ -59,16 +53,6 @@ theorem HSl0.of {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)} (hd : d
 
 theorem HSl0.len {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)} (h : HSl0 m o l xs) :
     xs.length = l.toNat := decHL_length _ h.1
-
-/-! ## `target_canon_params` -/
-
-def tcpK1 (n : Nat) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => eftK2 (rxW n m1 (r1.headD 0) e)
-
-/-- **The model of `target_canon_params`** (body fuel `n`). -/
-def tcpW (n : Nat) (m : Mem) (pfo pfl e : Word) : Option (List Word × Mem) :=
-  tcpK1 n e (recW m 3 [3, if pfl = 0 then 0 else pfo, pfl])
 
 /-! ## The census theorems -/
 

@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.BvbWStageC
-import ConAgua.Arena.RecCheckSpec.EraseFVarTys
+public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.RecCheckSpec.RcLook
@@ -11,7 +11,7 @@ public import ConAgua.Arena.RecCheckSpec.RcLook
 /-!
 # TaGoWMfr
 
-`taCW_same`, `taGoW_mfr`, `taAW_mfr`, `RcMR.setTa`, `tcpF`, `tcpF_ok` and the lemmas only they use.
+`taCW_same`, `taGoW_mfr`, `taAW_mfr`, `RcMR.setTa` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -110,21 +110,8 @@ theorem RcMR.setTa {m m' : Mem} (h : RcMR m) (hf : MFr [TAM] [212, 213] m m') (h
 
 /-! ## Callees at any exec fuel -/
 
-def tcpF : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, pfo, pfl, e => tcpW n m pfo pfl e
-
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-
-theorem tcpF_ok (n : Nat) {m m' : Mem} {a : AState} {pfo pfl e : Word} {pfvs : List EIdx} {r : List Word}
-    (h : tcpF n m pfo pfl e = some (r, m')) (hS : StageR vis fe m a) (hpf : HSl0 m pfo pfl pfvs)
-    (he : H e) (hP : RcMR m) :
-    ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
-      H (r.headD 0) ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
-  cases n with
-  | zero => cases h
-  | succ n => exact tcpW_ok (fun _ => none) fe vis n h hS hpf he hP
 
 theorem taF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl lvls ho hl e r : Word} {names : List NIdx}
     {holes : List EIdx} (h : taF n m no nl lvls ho hl e = some (r, m')) (hS : StageR vis fe m a)
