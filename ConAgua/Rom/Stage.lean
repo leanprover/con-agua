@@ -33,16 +33,15 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
   cases n with
   | zero => simp [internAllPinsW] at hW
   | succ n =>
-  simp only [internAllPinsW] at hW
-  split at hW
-  case isFalse => cases hW
-  rename_i hcl
+  by_cases hcl : rclearOK mem
+  case neg => rw [internAllPinsW.abort1 _ _ _ (Decidable.not_not.mp hcl)] at hW; cases hW
+  rw [internAllPinsW_eq rom n mem hcl] at hW
   rcases hI : romItemsW rom n (resetMem mem) allPinsOff with _ | ⟨q, m₁⟩ <;> rw [hI] at hW
-  · simp [iapK] at hW
-  simp only [iapK] at hW
+  · rw [internAllPinsW.k_rom_items.none] at hW; cases hW
+  rw [internAllPinsW.k_rom_items.arm1] at hW
   rcases hS : internPinSetsW rom n m₁ q with _ | ⟨q', m₂⟩ <;> rw [hS] at hW
-  · simp [iap2K] at hW
-  simp only [iap2K, Option.some.injEq] at hW
+  · rw [internAllPinsW.k_intern_pin_sets.none] at hW; cases hW
+  simp only [internAllPinsW.k_intern_pin_sets, Option.some.injEq] at hW
   subst hW
   have hd : rom.drop allPinsOff.toNat = encItems [] (itemsAllPins []) ++ rest := by
     rw [hrom, allPinsOff_toNat, romData_split, romPins,

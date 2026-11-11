@@ -444,21 +444,21 @@ theorem romLevelsW_dec (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
   case neg => simp [romLevelsW, hu] at hW
   by_cases hk : 1152921504606846976 ≤ u64W rom pos
   · simp [romLevelsW, hu, hk] at hW
-  rw [romLevelsW_eq rom n m pos hu hk] at hW
+  rw [romLevelsW.arm1 (hc1 := decide_eq_true hu) (hc2 := hk)] at hW
   obtain ⟨hl8, hp8, hd0⟩ := u64_dec rom hr pos hu
   rcases hG : romLvlsW rom n m (pos + 8) (u64W rom pos) with _ | ⟨q₁, m₁⟩ <;> rw [hG] at hW
-  · simp [lvsK] at hW
+  · simp [romLevelsW.k_rom_lvls_go] at hW
   have hq : q = q₁ := by
-    simp only [lvsK] at hW
-    split at hW
-    case isFalse => simp at hW
+    by_cases hok : stkPoolOK m₁ (u64W rom pos)
+    case neg => simp [romLevelsW.k_rom_lvls_go, hok] at hW
+    rw [romLevelsW.k_rom_lvls_go.arm1 (hc1 := decide_eq_true hok)] at hW
     cases hI : lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (stkTop m) (u64W rom pos) 0).set64 CTL 0
         (m₁.top + u64W rom pos)).set64 CTL 131 (stkTop m)) m₁.top (u64W rom pos) with
-    | none => rw [hI] at hW; simp [lsK] at hW
+    | none => rw [hI] at hW; simp [romLevelsW.k_intern_ls] at hW
     | some r =>
       obtain ⟨w, m₂⟩ := r
       rw [hI] at hW
-      simp only [lsK] at hW
+      simp only [romLevelsW.k_intern_ls] at hW
       split at hW
       · simp at hW
       · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm

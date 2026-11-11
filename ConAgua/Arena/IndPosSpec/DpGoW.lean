@@ -148,12 +148,6 @@ theorem StageR.alloc {vis : Word} {fe : IFEnv} {a : AState}
     hroom, htop⟩
   rw [htop, hf.size IW]; exact hroom
 
-/-! ## `nest_canon_crest` -/
-
-def pccC (_r3 : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => if 4294967296 ≤ r then none else some ([1, r], m3)
-
 end L.Ind
 
 end

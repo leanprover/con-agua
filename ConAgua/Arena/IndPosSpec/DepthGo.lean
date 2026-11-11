@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.IndPosSpec.InstW
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.IndPosSpec.PcrK3
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -458,28 +457,15 @@ l_model depth_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
   specs [memoClearG_spec dpSch p _ hcl n, depthGo_spec p hv hf hput hgo hnode n]
   grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] pfuel
 
-def wfW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
-  match dpConstW n m e with
-  | none => none
-  | some (d, m1) => if 4294967296 ≤ d then none else some (d + 1024, m1)
-
-section spec2
-variable (p : Prog) (hv : p.lookup "e_view" = some eView)
-  (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
-  (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
-  (hcl : p.lookup "dp_clear" = some (memoClearG dpSch))
-  (hd : p.lookup "depth" = some depth)
-
-include hv hf hput hgo hnode hcl hd in
-theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (n : Nat) (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "whnf_walk_fuel" [e]
-    ⦃fun r s' => LocEq s' s₀ ∧ wfW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hw, callFn, whnfWalkFuel]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, depth_spec p hv hf hput hgo hnode hcl hd n] <;>
-    finish (gen := 20) [wfW]
-
-end spec2
+/-- **The model of `whnf_walk_fuel`** (at exec fuel `n + 2`). -/
+l_model whnfWalkFuel_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+    (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
+    (hcl : p.lookup "dp_clear" = some (memoClearG dpSch))
+    (hd : p.lookup "depth" = some depth) (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel)
+  fns [hw ↦ wfW]
+  specs [depth_spec p hv hf hput hgo hnode hcl hd n]
+  grind [arena_grind, ind_grind] pfuel 2
 
 theorem dpConstW_ok (n : Nat) (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
@@ -520,6 +506,7 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     ∃ d, (ConRon.Arena.whnfWalkFuel (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
       StageR vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   unfold wfW at hb
+  simp only [wfW.k_depth.eq_def] at hb
   rcases hc : dpConstW n m e with _ | ⟨d, m1⟩ <;> rw [hc] at hb; · simp at hb
   by_cases hbig : 4294967296 ≤ d
   · simp [hbig] at hb
@@ -807,56 +794,22 @@ theorem nestPhs_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
 
 end census
 
-def pccB (k : Nat) (no nl us nn : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0, 0], m2)
-    else pccC 0 (rpConstW k m2 no nl us 0 nn (r2.tail.headD 0))
 
-def pccA (k : Nat) (no nl us nn cty : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => pccB k no nl us nn (instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty)
-
-def pccW (k : Nat) (m : Mem) (no nl us nn cty : Word) : Option (List Word × Mem) :=
-  pccA k no nl us nn cty (phsW k m nn)
-
-theorem pccC_big (r3 : Word) (r : Word) (m3 : Mem) (h : 4294967296 ≤ r) : pccC r3 (some (r, m3)) = none := by
-  simp [pccC, h]
-theorem pccC_some (r3 : Word) (r : Word) (m3 : Mem) (h : ¬ 4294967296 ≤ r) :
-    pccC r3 (some (r, m3)) = some ([1, r], m3) := by simp only [pccC]; rw [ite_eq_right h]
-theorem pccB_zero (k : Nat) (no nl us nn : Word) (r2 : List Word) (m2 : Mem) (h : r2.headD 0 = 0) :
-    pccB k no nl us nn (some (r2, m2)) = some ([0, 0], m2) := by simp only [pccB]; rw [ite_eq_left h]
-theorem pccB_ok (k : Nat) (no nl us nn : Word) (r2 : List Word) (m2 : Mem) (h : ¬ r2.headD 0 = 0) :
-    pccB k no nl us nn (some (r2, m2)) = pccC 0 (rpConstW k m2 no nl us 0 nn (r2.tail.headD 0)) := by
-  simp only [pccB]; rw [ite_eq_right h]
-theorem pccA_some (k : Nat) (no nl us nn cty : Word) (r1 : List Word) (m1 : Mem) :
-    pccA k no nl us nn cty (some (r1, m1)) = pccB k no nl us nn (instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty) := rfl
-attribute [ind_grind] pccC_big pccC_some pccB_zero pccB_ok pccA_some
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hl : AhLook p) (hk : MkLook p)
-  (hng : p.lookup "nest_phs_go" = some nestPhsGo) (hnp : p.lookup "nest_phs" = some nestPhs)
-  (hip : p.lookup "inst_pis_with" = some instPisWith)
-  (hf : p.lookup "ra_find" = some (memoFindG raSch)) (hput : p.lookup "ra_put" = some (memoPutG raSch))
-  (hgo : p.lookup "replace_apps_go" = some replaceAppsGo)
-  (hnode : p.lookup "replace_apps_node" = some replaceAppsNode)
-  (hcl : p.lookup "ra_clear" = some (memoClearG raSch))
-  (hra : p.lookup "replace_apps" = some replaceApps)
-  (hp : p.lookup "nest_canon_crest" = some nestCanonCrest)
-include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
-
-theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "nest_canon_crest" [no, nl, us, nn, cty]
-    ⦃fun r s' => LocEq s' s₀ ∧ pccW n s₀.mem no nl us nn cty = some (r, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCanonCrest]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
+/-- **The model of `nest_canon_crest`** (at exec fuel `n + 2`). -/
+l_model nestCanonCrest_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hl : AhLook p) (hk : MkLook p)
+    (hng : p.lookup "nest_phs_go" = some nestPhsGo) (hnp : p.lookup "nest_phs" = some nestPhs)
+    (hip : p.lookup "inst_pis_with" = some instPisWith)
+    (hf : p.lookup "ra_find" = some (memoFindG raSch)) (hput : p.lookup "ra_put" = some (memoPutG raSch))
+    (hgo : p.lookup "replace_apps_go" = some replaceAppsGo)
+    (hnode : p.lookup "replace_apps_node" = some replaceAppsNode)
+    (hcl : p.lookup "ra_clear" = some (memoClearG raSch))
+    (hra : p.lookup "replace_apps" = some replaceApps)
+    (hp : p.lookup "nest_canon_crest" = some nestCanonCrest)
+  fns [hp ↦ pccW list]
+  specs [nestPhs_spec p ha hl.hpw hl.hsf hl.hsp hl.his hl.hff hl.hfp hl.hif hng hnp n,
       instPisWith_spec p hl.hv hip hl.hi1 (n + 1),
-      replaceApps_spec p hl hk hf hput hgo hnode hcl hra n] <;>
-    finish (gen := 20) [pccW, L.St.setLocs_mem]
-
-end spec
+      replaceApps_spec p hl hk hf hput hgo hnode hcl hra n]
+  grind [arena_grind, ind_grind] pfuel 2
 
 end L.Ind
 
@@ -966,7 +919,7 @@ theorem rpConstW_mfr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
 
 theorem pccW_mfr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
     (h : pccW k m no nl us nn cty = some (r, m')) : MFr [RAM] [210, 211] m m' := by
-  simp only [pccW, pccA.eq_def, pccB.eq_def, pccC.eq_def] at h
+  simp only [pccW, pccW.k_nest_phs.eq_def, pccW.k_inst_pis_with.eq_def, pccW.k_replace_apps.eq_def] at h
   mfr_auto h [phsW_mfr, instW_mfr _ _ _ _ _ _ _, rpConstW_mfr]
 
 theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
@@ -978,19 +931,19 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ x a', (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x ∧ ∃ mp, rpMR m' mp := by
   unfold pccW at h
-  rcases hph : phsW k m nn with _ | ⟨r1, m1⟩ <;> rw [hph] at h; · simp [pccA] at h
-  rw [pccA_some] at h
+  rcases hph : phsW k m nn with _ | ⟨r1, m1⟩ <;> rw [hph] at h; · simp [pccW.k_nest_phs] at h
+  rw [pccW.k_nest_phs.arm1] at h
   obtain ⟨phs, a1, hrun1, hS1, hg1, hdec1, hbd1⟩ := phsW_ok k dn fe vis m m1 a nn r1 hph hS
   have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
     have : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
     omega
-  rcases hin : instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty with _ | ⟨r2, m2⟩ <;> rw [hin] at h; · simp [pccB] at h
+  rcases hin : instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty with _ | ⟨r2, m2⟩ <;> rw [hin] at h; · simp [pccW.k_inst_pis_with] at h
   obtain ⟨x, a2, hrun2, hS2, hg2, hout2⟩ := instW_ok (k + 1) dn fe vis m1 m2 a1 (r1.headD 0) (r1.tail.headD 0)
     cty phs r2 hin hS1 hcty hdec1 hb1 hbd1
   have hM2 : rpMR m2 mp0 :=
     rpMR_mfr ((phsW_mfr hph).trans (instW_mfr _ _ _ _ _ _ _ hin)) (by decide) (by decide) hM
   by_cases hz : r2.headD 0 = 0
-  · rw [pccB_zero k no nl us nn r2 m2 hz] at h
+  · rw [pccW.k_inst_pis_with.arm1 (hc1 := hz)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     cases x with
     | none =>
@@ -998,16 +951,16 @@ theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
       simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind, hrun1, except_ok_bind, hrun2]
       rfl
     | some t => simp only [decOE] at hout2; rw [hz] at hout2; simp at hout2
-  · rw [pccB_ok k no nl us nn r2 m2 hz] at h
+  · rw [pccW.k_inst_pis_with.arm2 (hc1 := hz)] at h
     cases x with
     | none => exact absurd hout2 hz
     | some t =>
       simp only [decOE, decW0E] at hout2
       obtain ⟨-, htlt, htd⟩ := hout2
-      rcases hrc : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hrc] at h; · simp [pccC] at h
+      rcases hrc : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with _ | ⟨r3, m3⟩ <;> rw [hrc] at h; · simp [pccW.k_replace_apps] at h
       by_cases hb3 : 4294967296 ≤ r3
-      · rw [pccC_big _ _ _ hb3] at h; simp at h
-      rw [pccC_some _ _ _ hb3] at h
+      · rw [pccW.k_replace_apps.abort1 (hc1 := hb3)] at h; simp at h
+      rw [pccW.k_replace_apps.arm1 (hc1 := hb3)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have hg12 := hg1.trans hg2
       have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
@@ -1029,15 +982,6 @@ namespace L.Ind
 
 open L.Arena
 
-def pcrK2 (k : Nat) (c : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (f, m2) => pcrK3 (rxW (k + 2) m2 f c)
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (dO dL hO hL c f r : Word) (r1 : List Word)
-theorem pcrK3_some : pcrK3 (some (r, m3)) = some ([1, r], m3) := rfl
-theorem pcrK2_some : pcrK2 k c (some (f, m2)) = pcrK3 (rxW (k + 2) m2 f c) := rfl
-end arms
-attribute [ind_grind] pcrK3_some pcrK2_some
 
 end L.Ind
 
