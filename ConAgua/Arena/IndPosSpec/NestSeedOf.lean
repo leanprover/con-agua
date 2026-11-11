@@ -8,7 +8,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.IndPosSpec.SnocWStage
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
