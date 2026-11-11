@@ -1,0 +1,44 @@
+# Re-proof ladder rules of the sync con-ron 01ecb31c -> 4ca283d1, con-leche 210a580e -> eb2c5939
+# (upstream tasks #149, #150, #151). Written ahead of the sync by lane presync3
+# (docs/design/presync3.md, "The starting kit"); the sync lane extends it as it restates.
+# Format: scripts/reproof-ladder.py, class Rules. Rung (ii) applies [codemod] to the base proof,
+# rung (iii) tries the vocabulary hook (the attribute sets) on top of it.
+#
+# Only renames whose new name is upstream's own are listed. A twin function whose SHAPE changed
+# (Option -> Except, a new argument) has a rule only where the change is a pure argument
+# insertion; the rest is restated by hand in stage 3b (see the journal's stage plan).
+
+vocab_hook vocab_attr.py
+
+[codemod]
+# #494: the reader's helpers lose their `?` (they now answer an `Except`, related to ours as an
+# `Option` through `Except.toOption`, upstream's `readBlock_spec` style). The name rules only;
+# statements over `blockShape?` are restated by hand (readBlock's value is `Except CheckError BlockShape`).
+sub ConRon\.Arena\.blockCounts\? ==> ConRon.Arena.blockCounts
+sub ConRon\.Arena\.blockMemberCounts\? ==> ConRon.Arena.blockMemberCounts
+sub ConRon\.Bridge\.Inductives\.blockMemberCounts\?_spec ==> ConRon.Bridge.Inductives.blockMemberCounts_spec
+sub ConRon\.Bridge\.Inductives\.blockShape\?_installS ==> ConRon.Bridge.Inductives.readBlock_installS
+# #520: one binder loop for both kinds; `lamPair?` is `binderPair?`
+sub ConRon\.Arena\.lamPair\? ==> ConRon.Arena.binderPair?
+# #495: instantiation of several values at once replaces the one-value lifting walk
+sub ConRon\.Arena\.inst1LiftArm(App|Lam|ForallE|Let|Proj)\b ==> ConRon.Arena.instLiftArm\1
+sub ConRon\.Arena\.instantiate1LiftGo(_succ|_zero)?\b ==> ConRon.Arena.instantiateLiftGo\1
+sub ConRon\.Arena\.instantiate1LiftFast\b ==> ConRon.Arena.instantiateLiftFast
+# L6: the opener's fallback is gone; the raw opening is `openPisRawGo`
+sub ConRon\.Arena\.openPisAtFvarsFGo\b ==> ConRon.Arena.openPisRawGo
+# #515: the rescue reads the family's projection table
+sub ConRon\.Arena\.etaRescueOk\b ==> ConRon.Arena.etaRescueTable?
+# #519: `internAllPins` takes the run's maximum `Nat` size. Our statements fix it at the default
+# (the binary's `--max-nat-size` is a stage-3 decision, see the journal); the argument goes after
+# the pin list, as upstream's `internAllPins pins maxNatSize sD`.
+sub \binternAllPins (pins|ps|pins₀)\b(?! maxNatSize) ==> "internAllPins \1 maxNatSizeDefault"
+# #515: IIndCaps (and con-leche's IndCaps) lose etaCtor, etaParams, etaFields, unitlike,
+# unitParams. Since presync3 every construction in our proofs names its fields (CIReadRefCaps,
+# RomCI), so dropping a field is deleting its `f := v,`.
+sub \b(?:etaCtor|etaParams|etaFields|unitlike|unitParams) := [^,}]*,[ \t]*(?:\n[ \t]*)? ==> ""
+# #493: no rule. The arms' refinements become `checkDeclKind`'s and the headline `checkDecl`'s
+# gains the flush and `basisNamesOk`; one regex cannot tell the two `@[refines checkDecl]` apart.
+
+[names]
+# base declarations of ours whose statement survives under a new name (filled in by the sync
+# lane at stage 3b; the ladder looks a renamed declaration up through these lines)
