@@ -180,13 +180,13 @@ theorem bvarB_run (F : Nat) (e : EIdx) (a : AState) :
 `n ≤ F + 1` (the L fuel), under `ArenaD`. -/
 theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     (h f x : Word) (hh : h.toNat < 2 ^ 32) (hF : f.toNat ≤ F ∨ n ≤ F + 1)
-    (hb : bvbW n m h f = some (x, m')) :
+    (hb : bvbW n m f h = some (x, m')) :
     ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ ArenaD m' a' := by
   obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bvbW]⟩
   have hd := derBW_ok m a hA.base hA.der h hh
   rw [bvarB_run, ← hd]
   by_cases hs : derBW m h = 32767
-  · rw [bvbW_sat n m h f hs] at hb
+  · rw [bvbW.arm1 n m f h hs] at hb
     have hs' : ((derBW m h).toNat == satRange) = true := by rw [hs]; rfl
     rw [ite_eq_left hs']
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bbN]⟩
@@ -196,7 +196,7 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     simp only [sp, Prod.mk.injEq] at hk
     have hf := bbMemoW_frame n m m' h f x hb
     exact ⟨a', ha', hR', DerR.of_store m' a a' (DerR.frameM _ _ m m' hf (by decide) a hA.der) hk.1⟩
-  · rw [bvbW_pk n m h f hs] at hb
+  · rw [bvbW.arm2 n m f h hs] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     have hs' : ((derBW m h).toNat == satRange) = false := by
@@ -207,7 +207,7 @@ theorem bvbW_okF (n F : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
 
 /-- **`bvar_b`'s model refines `bvarB`** at the counter's fuel `f.toNat`, under `ArenaD`. -/
 theorem bvbW_ok (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
-    (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : bvbW n m h f = some (x, m')) :
+    (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : bvbW n m f h = some (x, m')) :
     ∃ a', (bvarB f.toNat (decE h)).run a = .ok (x.toNat, a') ∧ ArenaD m' a' :=
   bvbW_okF n _ m m' a hA h f x hh (.inl (Nat.le_refl _)) hb
 
@@ -242,13 +242,14 @@ theorem lbbFast_refines (p : Prog) (hp : BvbProg p) (n : Nat) (s₀ : St)
       r.headD 0 ≤ 1; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (lbbFastL_spec p hp n s₀ f k h)
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (lbbFastL_spec p hp (n + 1) s₀ f k h)
   subst hs
-  cases hw : bvbW n s.mem h f with
+  rw [lbbW.arm1] at hI
+  cases hw : bvbW n s.mem f h with
   | none => rw [hw] at hI; cases hI
   | some q =>
     obtain ⟨x, m₁⟩ := q
-    rw [hw, lbbK_some] at hI
+    rw [hw, lbbW.k_bvar_b.arm1] at hI
     obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hI)
     obtain ⟨a', ha', hA'⟩ := bvbW_ok n _ _ a₀ hA h f x hh hw
     have hrun' : (looseBVarsBoundedFast f.toNat k.toNat (decE h)).run a₀ =

@@ -112,7 +112,7 @@ theorem hbInsW_frame {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x
     obtain ⟨-, rfl⟩ := h
     exact (msetG_frame hbSch hbSch_wf m m2 e i r hm).mono (by simp [hbSch, hbWA]) (by simp [hbSch, hbWC])
 
-theorem bvbW_hbFrame {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) :
+theorem bvbW_hbFrame {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m f h = some (x, m')) :
     MemFrame hbWA hbWC m m' :=
   (bvbW_frame n m m' h f x hb).mono (by simp [hbWA]) (by simp [hbWC])
 

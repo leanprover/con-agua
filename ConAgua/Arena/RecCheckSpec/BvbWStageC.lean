@@ -36,7 +36,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 /-- **`bvar_b` under the stage relation at the twin's `coreWalkFuel`**, at any exec fuel (the L
 fuel word `CWF` is `coreWalkFuel`: `bvbW_okF`'s first alternative). -/
 theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n : Nat)
-    (h x : Word) (hh : H h) (hb : bvbW n m h CWF = some (x, m')) :
+    (h x : Word) (hh : H h) (hb : bvbW n m CWF h = some (x, m')) :
     ∃ a', (bvarB coreWalkFuel (decE h)).run a = .ok (x.toNat, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       MFr [] [] m m' := by
   obtain ⟨a', hrun, hD⟩ := bvbW_okF n coreWalkFuel m m' a hS.check.arena h CWF x hh (.inl (Nat.le_of_eq CWF_eq)) hb
@@ -44,10 +44,10 @@ theorem bvbW_stageC {m m' : Mem} {a : AState} (hS : StageR vis fe m a) (n : Nat)
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+      · rw [bvbW.arm1 n m CWF h hs] at hb
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+      · rw [bvbW.arm2 n m CWF h hs] at hb
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   have hk : sp a' = sp a := by

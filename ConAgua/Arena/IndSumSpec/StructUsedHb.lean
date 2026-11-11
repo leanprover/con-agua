@@ -96,7 +96,7 @@ theorem hbGoW_keep : ∀ (n : Nat) (m m' : Mem) (f i h r : Word), hbGoW n m f i 
     by_cases hf0 : f = 0
     · rw [hbGoW_zeroF n m f i h hf0] at hh; cases hh
     rw [hbGoW_succ n m f i h hf0] at hh
-    rcases h1 : bvbW n m h (f - 1) with _ | ⟨x, m1⟩
+    rcases h1 : bvbW n m (f - 1) h with _ | ⟨x, m1⟩
     · rw [h1] at hh; simp [hbK1] at hh
     rw [h1] at hh
     have hM1 : hbMR m1 mp := hbMR_mfr (bvbW_mfr h1) (by simp) (by simp) hM

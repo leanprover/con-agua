@@ -58,7 +58,7 @@ def ckc2W : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, nP, o, l =>
     if l = 0 then some ([1], m)
-    else ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m (rdW (m.arr64 IW) o) CWF)
+    else ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m CWF (rdW (m.arr64 IW) o))
 /-- After `bvar_b`. -/
 def ckc2K1 (n : Nat) (nP o l e : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -75,7 +75,7 @@ section arms0
 variable (n : Nat) (m m1 m2 : Mem) (nP o l e rb : Word) (rf : List Word)
 theorem ckc2W_nil (hl : l = 0) : ckc2W (n + 1) m nP o l = some ([1], m) := by simp [ckc2W, hl]
 theorem ckc2W_cons (hl : l ≠ 0) : ckc2W (n + 1) m nP o l =
-    ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m (rdW (m.arr64 IW) o) CWF) := by simp [ckc2W, hl]
+    ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m CWF (rdW (m.arr64 IW) o)) := by simp [ckc2W, hl]
 theorem ckc2K1_open (h : rb ≠ 0) : ckc2K1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
   rw [ckc2K1, ite_eq_left h]
 theorem ckc2K1_closed (h : ¬ rb ≠ 0) :
