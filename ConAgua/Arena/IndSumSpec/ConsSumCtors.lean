@@ -6,6 +6,7 @@ public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.WhnfBase
@@ -68,64 +69,12 @@ theorem ciRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
 
 /-! ## `cons_sum_ctors`: the word model -/
 
-/-- The returned view. -/
-def cscK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-
-mutual
-/-- The model of `cons_sum_ctors(nP, o, l, vis)` at exec fuel `n`. -/
-def cscW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, nP, o, l, vis =>
-    if l = 0 then some ([vis], m)
-    else cscK1 p n nP o l vis (ciRecW m (rdW (m.arr64 IW) (rdW (m.arr64 IW) o)) nP
-      (rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1)))
-/-- After `ctor_info_rec`: the push. -/
-def cscK1 (p : Prog) (n : Nat) (nP o l vis : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m1) => cscK2 p n nP o l (callW p n "env_push" [vis, q] m1)
-/-- After `env_push`: the rest. -/
-def cscK2 (p : Prog) (n : Nat) (nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m2) => cscK3 (cscW p n m2 nP (o + 1) (l - 1) (rv.headD 0))
-end
-
-section arms
-variable (p : Prog) (n : Nat) (m m1 m2 : Mem) (nP o l vis q : Word) (rv : List Word)
-theorem cscW_nil (h : l = 0) : cscW p (n + 1) m nP o l vis = some ([vis], m) := by simp [cscW, h]
-theorem cscW_cons (h : l ≠ 0) : cscW p (n + 1) m nP o l vis = cscK1 p n nP o l vis (ciRecW m
-    (rdW (m.arr64 IW) (rdW (m.arr64 IW) o)) nP (rdW (m.arr64 IW) (rdW (m.arr64 IW) o + 1))) := by
-  simp [cscW, h]
-theorem cscK1_some : cscK1 p n nP o l vis (some (q, m1)) =
-    cscK2 p n nP o l (callW p n "env_push" [vis, q] m1) := by simp [cscK1]
-theorem cscK2_some : cscK2 p n nP o l (some (rv, m2)) =
-    cscK3 (cscW p n m2 nP (o + 1) (l - 1) (rv.headD 0)) := by simp [cscK2]
-theorem cscK3_some : cscK3 (some (rv, m2)) = some ([rv.headD 0], m2) := rfl
-end arms
-attribute [ind_grind] cscW_nil cscW_cons cscK1_some cscK2_some cscK3_some
-
-section spec
-variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
-  (hpu : p.lookup "erec_put" = some erecPut) (hci : p.lookup "ctor_info_rec" = some ctorInfoRecL)
-  (hp : p.lookup "cons_sum_ctors" = some consSumCtorsL)
-
-include ha hpu hci hp in
-theorem csc_spec (n : Nat) : ∀ (s₀ : St) (nP o l vis : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_sum_ctors" [nP, o, l, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ cscW p n s₀.mem nP o l vis = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ nP o l vis; rw [invoke_eq _ hp]; simp only [callFn, consSumCtorsL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ nP o l vis
-    rw [invoke_eq _ hp]
-    simp only [callFn, consSumCtorsL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        ciRec_specW p ha hpu hci n, callW_spec p n "env_push", ih] <;> finish (gen := 20) [rdW_eq]
-
-end spec
+l_model csc_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hpu : p.lookup "erec_put" = some erecPut) (hci : p.lookup "ctor_info_rec" = some ctorInfoRecL)
+    (hp : p.lookup "cons_sum_ctors" = some consSumCtorsL)
+  fns [hp ↦ cscW list]
+  specs [ciRec_specW p ha hpu hci n, callW_spec p n "env_push"]
+  grind [arena_grind, ind_grind] finish [rdW_eq] gen 20
 
 /-! ## `ctor_info_rec` under the stage relation -/
 
@@ -277,13 +226,13 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) (k : Nat) :
   | succ k ih =>
     intro m m' a vis fe nP o l cs r h hS hcs
     by_cases hl : l = 0
-    · rw [cscW_nil p k m nP o l vis hl] at h
+    · rw [cscW.arm1 p k m nP o l vis hl] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : cs = [] := by
         have := hcs; simp only [DecB, hl, decPL] at this; simpa using this.symm
       subst this
       exact ⟨hS, IWGrow.refl _⟩
-    rw [cscW_cons p k m nP o l vis hl] at h
+    rw [cscW.arm2 p k m nP o l vis hl] at h
     obtain ⟨L, hL⟩ : ∃ L, l.toNat = L + 1 :=
       ⟨l.toNat - 1, by have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
     have hcs' : decPL (truncM m) (decCN (truncM m)) o.toNat (L + 1) = some cs := by
@@ -304,17 +253,17 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) (k : Nat) :
     obtain ⟨w3, hw3, hw3v, -⟩ := rdW_of_iwN_truncM hnF'
     rw [hw, hw2, hw3] at h
     rcases h1 : ciRecW m w2 nP w3 with _ | ⟨q, m1⟩
-    · rw [h1] at h; simp [cscK1] at h
-    rw [h1, cscK1_some] at h
+    · rw [h1, cscW.k_ctor_info_rec.none] at h; cases h
+    rw [h1, cscW.k_ctor_info_rec.arm1] at h
     have hcvE : decCV (erecP m) w2.toNat = some cv := by rw [hw2v]; exact decCVp_truncM hcv
     obtain ⟨hS1, hg1, hci⟩ := ciRec_stage h1 hS hcvE
     rcases h2 : callW p k "env_push" [vis, q] m1 with _ | ⟨rv, m2⟩
-    · rw [h2] at h; simp [cscK2] at h
-    rw [h2, cscK2_some] at h
+    · rw [h2, cscW.k_env_push.none] at h; cases h
+    rw [h2, cscW.k_env_push.arm1] at h
     obtain ⟨hS2, hg2⟩ := envPush_stage hRp.rs hRp.push h2 hS1 hci
     rcases h3 : cscW p k m2 nP (o + 1) (l - 1) (rv.headD 0) with _ | ⟨rr, m3⟩
-    · rw [h3] at h; simp [cscK3] at h
-    rw [h3, cscK3_some] at h
+    · rw [h3, cscW.k_cons_sum_ctors.none] at h; cases h
+    rw [h3, cscW.k_cons_sum_ctors.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have ho1 : (o + 1).toNat = o.toNat + 1 := by
       have := hS.iw.iwSize; have := hS.iw.iw; rw [UInt64.toNat_add]; simp; omega

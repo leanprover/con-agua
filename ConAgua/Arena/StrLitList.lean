@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.StrLitTy
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.InferBodyLet
 import ConAgua.Arena.StrLitCv
@@ -146,28 +148,10 @@ theorem lp_ne {c : List Word} {lps : List NIdx} (hlen : lps.length = (c.tail.hea
 
 /-! ## `str_param_sort` -/
 
-/-- The model of `str_param_sort`. -/
-def psW (p : Prog) (n : Nat) (m : Mem) (pn : Word) : Option (List Word × Mem) :=
-  match callW p n "intern_param" [pn] m with
-  | none => none
-  | some (x, m₁) =>
-    match callW p n "intern_succ" [x.headD 0] m₁ with
-    | none => none
-    | some (y, m₂) =>
-      match callW p n "intern_sort" [y.headD 0] m₂ with
-      | none => none
-      | some (z, m₃) => some ([x.headD 0, z.headD 0], m₃)
-
-theorem strParamSort_spec (p : Prog) (hp : p.lookup "str_param_sort" = some strParamSortL) (n : Nat)
-    (s₀ : St) (pn : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_param_sort" [pn]
-    ⦃fun r s' => LocEq s' s₀ ∧ psW p n s₀.mem pn = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, strParamSortL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "intern_param", callW_spec p n "intern_succ", callW_spec p n "intern_sort"] <;>
-    finish [psW]
+l_model strParamSort_spec (p : Prog) (hp : p.lookup "str_param_sort" = some strParamSortL)
+  fns [hp ↦ psW list]
+  specs [callW_spec p n "intern_param", callW_spec p n "intern_succ", callW_spec p n "intern_sort"]
+  grind [arena_grind] finish [L.Ind.ntBW] bind L.Ind.ntBW pfuel
 
 /-! ## The models of the three tests
 
@@ -719,11 +703,11 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
     (strParamSort_spec p hp.strParamSort n _ pn) h
   unfold psW at hW
   rcases h1 : callW p n "intern_param" [pn] m with _ | ⟨x, n₁⟩
-    <;> simp only [h1, reduceCtorEq] at hW
+    <;> simp only [h1, reduceCtorEq, L.Ind.bW_none, L.Ind.bW_some] at hW
   rcases h2 : callW p n "intern_succ" [x.headD 0] n₁ with _ | ⟨y, n₂⟩
-    <;> simp only [h2, reduceCtorEq] at hW
+    <;> simp only [h2, reduceCtorEq, L.Ind.bW_none, L.Ind.bW_some] at hW
   rcases h3 : callW p n "intern_sort" [y.headD 0] n₂ with _ | ⟨z, n₃⟩
-    <;> simp only [h3, reduceCtorEq] at hW
+    <;> simp only [h3, reduceCtorEq, L.Ind.bW_none, L.Ind.bW_some] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   rw [hm] at h3

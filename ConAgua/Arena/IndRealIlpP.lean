@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndRealMemo
+import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
@@ -55,26 +56,6 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## The loop as a named block -/
-
-/-- `inst_pis_at_lift`'s loop (named, for its spec; `instPisAtLiftL_eq`). -/
--- con-ron: none — `instPisAtLiftL`'s own loop (`rfl`), a named block for the proof
-def ipalLoop : Stmt := lblk (f, o, l, e, h, k, g, x, y, z) {
-  while k < l {
-    if ⟦h⟧.tag != 6 { return (0, 0) };
-    (g, x, y, z) := call e_view(h);
-    h := call instantiate1_lift_fast(f, y, IW.u64[o + k], 0);
-    k := k + 1
-  }
-}
-
-theorem instPisAtLiftL_eq : instPisAtLiftL = lfn (f, o, l, e) locals (h, k, g, x, y, z) {
-  h := e;
-  k := 0;
-  ⟪ipalLoop⟫;
-  return (1, h)
-} := by rfl
-
 /-! ## The program and the model -/
 
 /-- The function and `e_view`. -/
@@ -93,68 +74,14 @@ abbrev IpalF (p : Prog) : Prop := ProgHas p ipalP
 
 theorem IpalF.i1l {p : Prog} (hp : IpalF p) : I1lF p := ProgHas.right (l₁ := ipalHead) hp
 
-/-- The model of the loop at the loop's fuel, at the current term `h` and index `k`. -/
-noncomputable def ipalGoW (f o l : Word) : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, h, k =>
-    if k < l then
-      if tagW h ≠ 6 then some ([0, 0], m)
-      else if eViewW m h = [] then none
-      else match i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with
-        | none => none
-        | some (r, m1) => ipalGoW f o l n m1 (r.headD 0) (k + 1)
-    else some ([1, h], m)
+noncomputable section
 
-section arms
-variable (f o l : Word) (n : Nat) (m m1 : Mem) (h k : Word) (r : List Word)
-theorem ipalGoW_ge (hk : ¬ k < l) : ipalGoW f o l (n + 1) m h k = some ([1, h], m) := by
-  simp only [ipalGoW, ite_eq_right hk]
-theorem ipalGoW_nopi (hk : k < l) (h6 : tagW h ≠ 6) : ipalGoW f o l (n + 1) m h k = some ([0, 0], m) := by
-  simp only [ipalGoW, ite_eq_left hk, ite_eq_left h6]
-theorem ipalGoW_abort (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : eViewW m h = []) :
-    ipalGoW f o l (n + 1) m h k = none := by
-  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_left hv]
-theorem ipalGoW_none (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : ¬ eViewW m h = [])
-    (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = none) :
-    ipalGoW f o l (n + 1) m h k = none := by
-  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
-theorem ipalGoW_step (hk : k < l) (h6 : ¬ tagW h ≠ 6) (hv : ¬ eViewW m h = [])
-    (hi : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] = some (r, m1)) :
-    ipalGoW f o l (n + 1) m h k = ipalGoW f o l n m1 (r.headD 0) (k + 1) := by
-  simp only [ipalGoW, ite_eq_left hk, ite_eq_right h6, ite_eq_right hv, hi]
-end arms
+l_model ipal_specW (p : Prog) (hp : IpalF p)
+  fns [hp.get "inst_pis_at_lift" ↦ ipalW list]
+  specs [eView_spec p (hp.get "e_view") n, i1lF_spec p (IpalF.i1l hp) n]
+  grind [arena_grind]
 
-theorem ipalLoop_spec (p : Prog) (hp : IpalF p) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p n ipalLoop
-    ⦃fun r s' => r ≠ .brk ∧
-      ipalGoW (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) n s₀.mem (s₀.loc 4) (s₀.loc 5) =
-        some (r.retOr [1, s'.loc 4], s'.mem); ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    rw [exec, step_while (w := ipalLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-        eView_spec p (hp.get "e_view") n, i1lF_spec p (IpalF.i1l hp) n] <;>
-      finish [ipalGoW_ge, ipalGoW_nopi, ipalGoW_abort, ipalGoW_none, ipalGoW_step]
-
-/-- The model of `inst_pis_at_lift(f, o, l, e)` at the call's L fuel. -/
-noncomputable def ipalW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, f, o, l, e => ipalGoW f o l (n + 1) m e 0
-
-theorem ipal_specW (p : Prog) (hp : IpalF p) (n : Nat) (s₀ : St) (f o l e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "inst_pis_at_lift" [f, o, l, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ ipalW n s₀.mem f o l e = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "inst_pis_at_lift"), instPisAtLiftL_eq]
-  simp only [callFn]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        fun s => Triple.step_exec (ipalLoop_spec p hp (n + 1) s)] <;>
-      finish [ipalW]
+end
 
 /-- **The model of `inst_pis_at_lift`** (program- and fuel-free). -/
 noncomputable def ipalF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
@@ -187,14 +114,14 @@ theorem i1lA_iw : (IW : TieredArray) ∉ i1lA := by decide
 /-- **The loop refines `instPisAtLift` on the rest of the slice.** -/
 theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f o l : Word)
     (xs : List EIdx) : ∀ (n : Nat) (m m' : Mem) (a : AState) (h k : Word) (r : List Word),
-    ipalGoW f o l n m h k = some (r, m') → StageR vis fe m a → AbsOK m → H h →
+    ipalW.loop1 n m f o l h k = some (r, m') → StageR vis fe m a → AbsOK m → H h →
     k.toNat ≤ l.toNat → decHL m o.toNat l.toNat = some xs →
     ∃ x a', (instPisAtLift f.toNat (xs.drop k.toNat) (decI h)).run a = .ok (x, a') ∧
       KeepPost vis fe decOE m m' a' r x ∧ AbsOK m' := by
   have hxl : ∀ m, decHL m o.toNat l.toNat = some xs → xs.length = l.toNat := fun m h => decHL_length m h
   intro n
   induction n with
-  | zero => intro m m' a h k r hW; simp [ipalGoW] at hW
+  | zero => intro m m' a h k r hW; simp [ipalW.loop1] at hW
   | succ n ih =>
     intro m m' a h k r hW hS hA hh hkl hdec
     have hlen := hxl m hdec
@@ -207,7 +134,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hxk : xs[k.toNat] = decI w := by
         rw [List.getElem?_eq_getElem (by omega)] at hwx; exact Option.some.inj hwx
       by_cases h6 : tagW h ≠ 6
-      · rw [ipalGoW_nopi f o l n m h k hk h6] at hW
+      · rw [ipalW.loop1.arm1 n m f o l h k hk h6] at hW
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
         refine ⟨none, a, ?_, ⟨hS, IWGrow.refl _, rfl⟩, hA⟩
         have ht : ¬ ((decI h : EIdx).tag == ETag.forallE) = true := by
@@ -215,7 +142,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [hdrop]
         simp only [ConRon.Arena.instPisAtLift, ht, ite_false, Bool.false_eq_true]; rfl
       by_cases hv : eViewW m h = []
-      · rw [ipalGoW_abort f o l n m h k hk h6 hv] at hW; cases hW
+      · rw [ipalW.loop1.abort1 n m f o l h k hk (by simpa using h6) hv] at hW; cases hW
       have he6 : tagW h = 6 := by simpa using h6
       obtain ⟨v, hvw, hvr⟩ := eViewW_ok m a hS.check.arena.base h hv
       have ht : (decE h).tag = ETag.forallE := by
@@ -235,8 +162,8 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       have hbind : a.store.viewBind (decE h) = some (ty, bd) :=
         EStore.viewBind_of_view _ _ ht ty bd hvw
       rcases hst : i1lF m [f, (eViewW m h).tail.tail.headD 0, rdW (m.arr64 IW) (o + k), 0] with _ | ⟨rb, m1⟩
-      · rw [ipalGoW_none f o l n m h k hk h6 hv hst] at hW; cases hW
-      rw [ipalGoW_step f o l n m m1 h k rb hk h6 hv hst] at hW
+      · rw [ipalW.loop1.arm2 n m f o l h k hk he6 hv, hst, ipalW.k_instantiate1_lift_fast.none] at hW; cases hW
+      rw [ipalW.loop1.arm2 n m f o l h k hk he6 hv, hst, ipalW.k_instantiate1_lift_fast.arm1] at hW
       rw [hvl, hw] at hst
       simp only [List.tail_cons] at hst
       obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hlt1, hdec1⟩, hA1⟩ :=
@@ -260,7 +187,7 @@ theorem ipalGoW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
       simp only [except_ok_bind]
       rw [← hdec1, ← hk1]
       exact hrun3
-    · rw [ipalGoW_ge f o l n m h k hk] at hW
+    · rw [ipalW.loop1.arm3 n m f o l h k hk] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
       have hkl' : k.toNat = l.toNat := by
         have := mt UInt64.lt_iff_toNat_lt.mpr hk; omega
@@ -279,7 +206,8 @@ theorem ipalF_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   intro m m' a r h ⟨hS, hA, hdec⟩
   obtain ⟨n, hW⟩ := ipalF_W h
   rcases n with _ | n
-  · cases hW
+  · simp [ipalW] at hW
+  rw [ipalW.arm1] at hW
   have := ipalGoW_ok dn vis fe f o l xs (n + 1) m m' a e 0 r hW hS hA he (by simp) hdec
   simpa using this
 
