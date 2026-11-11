@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.LdRd
+import ConAgua.Arena.Verdict
 public import ConAgua.Arena.P32
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -957,5 +958,111 @@ example (m : Mem) (b old : Word) : tShW (fun m _ _ => m) (fun _ _ => true) m b o
 example (P : Mem → Word → Word → Mem) (m : Mem) (b old : Word) :
     tShW P (fun _ _ => false) m b old = none := by
   simp [tShW]
+
+/-! ## The shapes of the con-ron sync 01ecb31c → 4ca283d1 (lane presync3)
+
+Three new upstream functions' L shapes, checked before the sync that ports them
+(docs/design/presync3.md): `t_pgr` is `proj_guard_rows_go` (a fuel loop over a telescope: a field
+the rest uses is pushed and opened at a fresh variable, an unused one stepped over; `k = 0` ends
+it), in `unified` mode with a read-only, a total and a `unified` callee; `t_lns` is
+`lit_nat_sized`/`pow_guard` (two refusals, one against the run's maximum held in a global, then an
+intern); `t_setmax` is `intern_all_pins`' prelude (the maximum written into a global). A `unified`
+model with a load takes `extra [ld64_rdW_specE]` (`Arena/Verdict.lean`), not `ld64_rd_spec`. -/
+
+abbrev R9 : Word := 9
+/-- A test global (the sync's maximum `Nat` size). -/
+abbrev MAXN : L.GVar := ⟨5⟩
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tHlb : FunDecl := lfn (b) {
+  return TW.u64[b] & 1
+}
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tPush : FunDecl := lfn (acc, v) {
+  TW.u64[acc] := v;
+  return acc + 1
+}
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tOpen : FunDecl := lfn (b, d) {
+  if TW.u64[b + 1] == 0 { abort R7 };
+  return TW.u64[b + 1] + d
+}
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tPgr : FunDecl := lfn (fu, k, body, acc, d) locals (u, b2, a2) {
+  if fu == 0 { abort R8 };
+  if k == 0 {
+    a2 := call t_push(acc, TW.u64[body]);
+    return a2
+  };
+  u := call t_hlb(body);
+  if u != 0 {
+    a2 := call t_push(acc, d);
+    b2 := call t_open(body, d)
+  } else {
+    a2 := acc;
+    b2 := TW.u64[body + 2]
+  };
+  a2 := call t_pgr(fu - 1, k - 1, b2, a2, d + 1);
+  return a2
+}
+
+l_model tHlb_spec (p : Prog) (hp : p.lookup "t_hlb" = some tHlb)
+  fns [hp ↦ tHlbW ro]
+  grind [arena_grind] extra [ld64_rd_spec]
+
+l_model tPush_spec (p : Prog) (hp : p.lookup "t_push" = some tPush)
+  fns [hp ↦ tPushW]
+  grind [arena_grind]
+
+l_model tOpen_spec (p : Prog) (hp : p.lookup "t_open" = some tOpen)
+  fns [hp ↦ tOpenE]
+  grind [arena_grind] extra [ld64_rdW_specE] unified
+
+l_model tPgr_spec (p : Prog) (fs : List FnName)
+    (hmem : ∀ {f : FnName}, f ∈ ["t_hlb", "t_push"] → f ∈ fs)
+    (hp : p.lookup "t_pgr" = some tPgr) (hh : p.lookup "t_hlb" = some tHlb)
+    (hu : p.lookup "t_push" = some tPush) (ho : p.lookup "t_open" = some tOpen)
+  fns [hp ↦ tPgrE]
+  specs [tHlb_spec p hh n, tPush_spec p hu n, tOpen_spec p ho n]
+  grind [arena_grind] extra [ld64_rdW_specE] unified nv [closedNV p fs = true, hmem]
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tIntern : FunDecl := lfn (x) {
+  TW.u64[0] := x;
+  return 1
+}
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tLns : FunDecl := lfn (a, b) locals (sz, r) {
+  if b > 4294967295 { abort R8 };
+  sz := 8 * (TW.u64[a] + 1);
+  if sz > MAXN { abort R9 };
+  r := call t_intern(a);
+  return r
+}
+
+l_model tIntern_spec (p : Prog) (hp : p.lookup "t_intern" = some tIntern)
+  fns [hp ↦ tInternW]
+  grind [arena_grind]
+
+l_model tLns_spec (p : Prog) (fs : List FnName)
+    (hmem : ∀ {f : FnName}, f ∈ ["t_intern"] → f ∈ fs)
+    (hp : p.lookup "t_lns" = some tLns) (hi : p.lookup "t_intern" = some tIntern)
+  fns [hp ↦ tLnsE]
+  specs [tIntern_spec p hi n]
+  grind [arena_grind] extra [ld64_rdW_specE] unified nv [closedNV p fs = true, hmem]
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tSetMax : FunDecl := lfn (v) {
+  MAXN := v;
+  return 0
+}
+
+l_model tSetMax_spec (p : Prog) (hp : p.lookup "t_setmax" = some tSetMax)
+  fns [hp ↦ tSetMaxW]
+  grind [arena_grind]
 
 end L.ModelGenTest
