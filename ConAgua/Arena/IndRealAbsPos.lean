@@ -523,7 +523,7 @@ theorem u4W_afr : ∀ (n : Nat) (m m' : Mem) (ko nF cl i : Word) (r : List Word)
     u4W n m ko nF cl i = some (r, m') → AFr m m'
   | 0, _, _, _, _, _, _, _, h => by simp [u4W] at h
   | n + 1, m, m', ko, nF, cl, i, r, h => by
-    simp only [u4W, u4K.eq_def] at h
+    simp only [u4W, u4W.k_struct_used_later.eq_def, u4W.j1, u4W.k_nest_ctors_u4.eq_def] at h
     afr_auto h [ustWf_afr, u4W_afr n _ _ _ _ _ _ _]
 
 theorem roW_afr {k : Nat} {m m' : Mem} {ctx hi cur : Word} {r : List Word} (h : roW k m ctx hi cur = some (r, m')) :
@@ -531,7 +531,7 @@ theorem roW_afr {k : Nat} {m m' : Mem} {ctx hi cur : Word} {r : List Word} (h : 
   cases k with
   | zero => simp [roW] at h
   | succ k =>
-  simp only [roW, roK0.eq_def, roK1.eq_def, roK2.eq_def] at h
+  simp only [roW, roW.k_nest_res_head.eq_def, roW.k_get_app_args_f.eq_def, roW.k_nest_occ_any.eq_def] at h
   afr_auto h [resHeadW_afr, stub_afr, gaaF_afr, ftdF_afr, ftdsF_afr, noaW_afr _ _ _ _ _ _ _ _ _ _]
 
 theorem pos2PinW_afr {m m' : Mem} {i : Word} {r : List Word} (h : pos2PinW m i = some (r, m')) : AFr m m' := by

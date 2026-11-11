@@ -150,9 +150,6 @@ open L.Arena
 
 /-! ## `nest_ctors_res_ok`: the result headed by a hole, hole-free indices -/
 
-def roK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => some ([if r.headD 0 = 0 then 1 else 0], m3)
 /-- The twin's result check of `nestCtors`, the rest to `K` (the twin's text). -/
 def roK {β : Type} (c : NestCtx) (hi : Nat) (cur : EIdx) (K : Bool → AM β) : AM β := do
   let resOk ← do

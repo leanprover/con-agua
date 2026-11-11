@@ -531,12 +531,12 @@ theorem u4W_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     · rw [u4W_kind (h := hd) (hk := hk)] at h
       have hw0 : (w == 0) = false := by rw [← hrd]; simpa using hk
       cases n with
-      | zero => simp [ustWf, u4K] at h
+      | zero => simp [ustWf, u4W.k_struct_used_later] at h
       | succ n =>
       cases n with
-      | zero => simp [ustWf, u4K] at h
+      | zero => simp [ustWf, u4W.k_struct_used_later] at h
       | succ n =>
-      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
+      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4W.k_struct_used_later] at h
       simp only [ustWf] at h; rw [hu] at h
       obtain ⟨mp, hmp⟩ := hP.hb
       obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp
@@ -582,9 +582,9 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   cases k with
   | zero => simp [roW] at h
   | succ k =>
-  simp only [roW] at h
-  rcases hrh : resHeadW m cur with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · simp [roK0] at h
-  rw [roK0_eq] at h
+  rw [roW.arm1] at h
+  rcases hrh : resHeadW m cur with _ | ⟨r1, m1⟩ <;> rw [hrh] at h; · simp [roW.k_nest_res_head] at h
+  simp only [roW.k_nest_res_head] at h
   obtain ⟨a1, hrun1, hS1, hg1⟩ := resHeadW_ok dn fe vis m m1 a cur r1 hcur hrh hS
   by_cases h0 : r1.headD 0 = 0
   · rw [ite_eq_left h0] at h
@@ -594,8 +594,8 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     rfl
   rw [ite_eq_right h0] at h
   have hne : (r1.headD 0 != 0) = true := by simpa using h0
-  rcases hga : gaaF m1 [CWF, cur] with _ | ⟨r2, m2⟩ <;> rw [hga] at h; · simp [roK1] at h
-  rw [roK1_some] at h
+  rcases hga : gaaF m1 [CWF, cur] with _ | ⟨r2, m2⟩ <;> rw [hga] at h; · simp [roW.k_get_app_args_f] at h
+  rw [roW.k_get_app_args_f.arm1] at h
   obtain ⟨args, a2, hrun2, hS2, hg2, hargs⟩ := gaaF_ok dn vis fe CWF cur hcur m1 m2 a1 r2 hga hS1
   rw [CWF_eq] at hrun2
   have hU2 := (hU.grow hg1).grow hg2
@@ -607,8 +607,8 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   have e1 : r2.getD 1 0 = r2.tail.headD 0 := by rcases r2 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
   rw [e0, e1] at hdA hbA
   rcases hoa : noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
-      (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩; · rw [hoa] at h; simp [roK2] at h
-  rw [hoa, roK2_some] at h
+      (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩; · rw [hoa] at h; simp [roW.k_nest_occ_any] at h
+  rw [hoa, roW.k_nest_occ_any.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a2 _ _ args r3 hoa hS2
     hn2 hne2 hdA (fun j hj => by omega) ((hP.fr (resHeadW_mfr hrh)).fr (MFr.ofGaaF hga))
