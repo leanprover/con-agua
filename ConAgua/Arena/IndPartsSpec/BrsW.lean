@@ -1192,12 +1192,12 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   -- `block_shape_ctors_of` (model only)
   rcases h1 : bctW (n + 1) m cso csl with _ | ⟨r1, m1⟩ <;> rw [h1] at e
   · cases e
-  rw [bbK8_some] at e
+  rw [bfW.k_block_shape_ctors_of.arm1] at e
   obtain ⟨hS1, hg1, hct⟩ := bctW_ok (n + 1) m m1 a cso csl cs r1 h1 hS hcs
   revert r m' e
   unfold finRest
   -- `param_levels`
-  refine Sim.bindK rfl (fun _ _ => by rw [bbK9])
+  refine Sim.bindK rfl (fun _ _ => by rw [bfW.k_param_levels])
     (plW_sim hS1 (by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)) ?_
   rintro r2 lvls m2 a2 ⟨hlh, hlv, hS2, hg2⟩
   have hg02 := hg1.trans hg2
@@ -1205,7 +1205,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   have hgr := bgW_sim (no := no) (nl := nl) (nP := nPd) (k := ctl) hlh n hS2 (hct.grow decCN_mono hg2)
     (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.iw)
   rw [hlv, ← hctl] at hgr
-  refine Sim.bindK rfl (fun _ _ => by rw [bbK10]) hgr.withRun ?_
+  refine Sim.bindK rfl (fun _ _ => by rw [bfW.k_block_groups]) hgr.withRun ?_
   rintro r3 gss m3 a3 ⟨⟨hgs, hS3, hg3⟩, hgrun⟩
   have hg03 := hg02.trans hg3
   have hgl : (r3.tail.headD 0) = ctl := by
@@ -1216,7 +1216,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   intro r m' e
   rcases h4 : bmoW (n + 1) m3 cto ctl io (r3.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
   · cases e
-  rw [bbK11_some] at e
+  rw [bfW.k_block_shape_members_of.arm1] at e
   obtain ⟨hS4, hg4, hms⟩ := bmoW_ok (n + 1) m3 m4 a3 cto ctl io (r3.headD 0) cvTs nIdxs gss r4 h4 hS3
     (hts.grow (fun _ => OMono.decCVp _) hg03) (hns.grow (OMono.decNL _ _) hg03)
     (Nat.le_trans hnsb hg03.iw) hgs
@@ -1224,7 +1224,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   revert r m' e
   show Sim _ _ a3 _
   -- `block_shape_recs_of`
-  refine Sim.bindK rfl (fun _ _ => by rw [bbK12])
+  refine Sim.bindK rfl (fun _ _ => by rw [bfW.k_block_shape_recs_of])
     (brsW_sim (n + 1) m4 a3 rso rsl (r0 :: rs) hS4 (hrs.grow decSR_mono hg04) (hnm.grow (OMono.decHL _ _) hg04)
       (Nat.le_trans hnb hg04.iw)) ?_
   rintro r5 recsL m5 a5 ⟨hrsl, hS5, hg5⟩
@@ -1233,7 +1233,7 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   intro r m' e
   rcases h6 : bslW (n + 1) m5 (UInt64.ofNat cvp) lo ll with _ | ⟨r6, m6⟩ <;> rw [h6] at e
   · cases e
-  simp only [bbK13'] at e
+  simp only [bfW.k_block_shape_large] at e
   obtain ⟨hS6, hg6, hlg⟩ := bslW_ok h6 hS5 (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact (show DecB (fun m => decCVp m cvp) m r0.1 from hcv).grow (OMono.decCVp _) hg05)
     (by rw [_root_.L.Ind.decHL_grow hg05 hlb]; exact hl) (Nat.le_trans hlb hg05.iw)
   have hlg' : LargeR (largeOf lps r0.1) [r6.headD 0, r6.tail.headD 0] := by
@@ -1276,7 +1276,7 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rw [tailJP_eq]
   unfold btW
   rw [hw]
-  refine Sim.bindK rfl (fun _ _ => by rw [btK1])
+  refine Sim.bindK rfl (fun _ _ => by rw [btW.k_block_shape_result_sort])
     (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧ IWGrow m m') ∧
       (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
       bsoW m nPd io ctl (erRd m (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
@@ -1288,11 +1288,11 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   intro r m' e
   rcases hz : pinWordV m1 53 with _ | z <;> rw [hz] at e
   · cases e
-  rw [btK2_some] at e
+  rw [btW.k_pin_word.arm1] at e
   obtain ⟨hzrun, -⟩ := pinZero_stage hS1 hz
   revert r m' e
   refine Sim.bind_twin hzrun ?_
-  refine Sim.bindK rfl (fun _ _ => by rw [btK3])
+  refine Sim.bindK rfl (fun _ _ => by rw [btW.k_lvl_eq_c])
     (Q := fun r x m' a' => KeepPost vis fe decLvlEq m1 m' a' r x) ?_ ?_
   · exact hc sv a1 (r1.headD 0) z m1 hrun1 (bsoW_afr he1) hS1 hs hsv hz
   rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
