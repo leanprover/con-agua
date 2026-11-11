@@ -39,7 +39,7 @@ theorem targetMajorDefault_specF (p : Prog) (ha : p.lookup "iw_alloc" = some iwA
     ⦃fun r s' => LocEq s' s₀ ∧ fuelW n (tmdW s₀.mem) = some (r, s'.mem); ⊤⦄ := by
   cases n with
   | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
-  | succ n => exact targetMajorDefault_spec p ha hpw hm hp hna n s₀
+  | succ n => exact targetMajorDefault_spec p ha hpw hm hp hna (n + 1) s₀
 
 theorem tmdW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
     (a : AState) (hS : StageR vis fe m a) :
