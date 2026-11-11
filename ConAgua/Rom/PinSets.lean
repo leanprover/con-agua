@@ -629,16 +629,15 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   intro mem a seen m q o k q' mem' inv hb ht hcap hW
   have htl := erTop_lt mem
   by_cases hk : k = 0
-  · subst hk
-    rw [romExprsToW_zero] at hW
+  · rw [romExprsToW.arm1 (hc1 := hk)] at hW
+    subst hk
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     exact ⟨[], [], m, a, seen, rfl, rfl, inv, SliceR.nil (by simpa using hb), EW.refl _ _ _,
       MemFrame.refl _ _ _⟩
-  rw [romExprsToW_succ rom n mem q o k hk] at hW
+  rw [romExprsToW.arm2 (hc1 := hk)] at hW
   rcases hE : romExprW rom n mem q with _ | ⟨h, q₁, m₁⟩ <;> rw [hE] at hW
-  · simp [exsToK] at hW
-  rw [exsToK_some] at hW
+  · simp [romExprsToW.k_rom_expr] at hW
   obtain ⟨e, rest, m₂, a₁, -, -, hrun, inv₁, -, -, hlt, -, hf₁⟩ :=
     dec_child rom hr (romExprW_dec rom hr n) inv hE
   have hk1 : 1 ≤ k.toNat := by
@@ -649,7 +648,8 @@ theorem exprsTo_dec : ∀ (n : Nat) (mem : Mem) (a : AState) (seen : List ConLec
   have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
   have ht₁ := expr_top hf₁
   have hs₁ : (m₁.arr64 EREC).size = (mem.arr64 EREC).size := hf₁.size EREC
-  rw [erecPutMem_lo m₁ o h (by omega)] at hW
+  rw [romExprsToW.k_rom_expr.arm1 (hc1 := decide_eq_true (erecGuard_lo m₁ o (by omega) (by omega))),
+    erecPutMem_lo m₁ o h (by omega)] at hW
   have inv₂ := inv₁.frameE (frame_set m₁ o h)
   have ht₂ : erTop (m₁.set64 EREC o h) = erTop m₁ := by
     simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
