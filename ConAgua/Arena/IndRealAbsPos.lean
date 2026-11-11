@@ -39,15 +39,15 @@ theorem cvLpsA_afr {n : Nat} {m m' : Mem} {q : Word} {r : List Word} (h : L.Aren
   | zero => simp [L.Arena.cvLpsW] at h
   | succ n => exact erToIwW_afr h
 
-theorem bvbW_afr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m h f = some (x, m')) : AFr m m' := by
+theorem bvbW_afr {n : Nat} {m m' : Mem} {h f x : Word} (hb : bvbW n m f h = some (x, m')) : AFr m m' := by
   have hfr : BbFrame m m' := by
     match n, hb with
     | n + 1, hb =>
       by_cases hs : derBW m h = 32767
-      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm1 n m f h hs] at hb
         match n, hb with
         | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h f x hb
-      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := f) hs] at hb
+      · rw [bvbW.arm2 n m f h hs] at hb
         obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
         exact MemFrame.refl _ _ _
   exact AFr.of_frame hfr

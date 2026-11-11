@@ -48,7 +48,7 @@ theorem psGoW_mfr : ∀ (n : Nat) (m m' : Mem) (o nP N k : Word) (r : List Word)
     psGoW n m o nP N k = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, h => by simp [psGoW] at h
   | n + 1, m, m', o, nP, N, k, r, h => by
-    simp only [psGoW, psK0.eq_def, psK1.eq_def, psK2.eq_def, psK3.eq_def] at h
+    simp only [psGoW, psGoW.k_iw_alloc.eq_def, psGoW.k_intern_bvar.eq_def, psGoW.k_struct_ps_at_go.eq_def, psGoW.k_sl_cons.eq_def] at h
     mfr_auto h [psGoW_mfr n _ _ _ _ _ _ _, binternW_mfr, allocW_mfr, consW_mfr]
 
 theorem projPsW_mfr {n : Nat} {m m' : Mem} {nP : Word} {r : List Word} (h : projPsW n m nP = some (r, m')) :
@@ -56,16 +56,18 @@ theorem projPsW_mfr {n : Nat} {m m' : Mem} {nP : Word} {r : List Word} (h : proj
   cases n with
   | zero => simp [projPsW] at h
   | succ n =>
+    rw [projPsW.arm1] at h
+    obtain ⟨r0, m0, h1, h⟩ := kSome_inv h rfl (fun _ _ => rfl)
+    rw [projPsW.k_struct_ps_at.arm1] at h
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     cases n with
-    | zero => simp [projPsW, psAtW, psK3] at h
+    | zero => simp [psAtW] at h1
     | succ n =>
-      simp only [projPsW, psAtW, psK3.eq_def] at h
-      cases h1 : psGoW n m 1 nP nP 0 with
-      | none => simp [h1] at h
-      | some x =>
-        obtain ⟨r1, m1⟩ := x
-        simp only [h1, Option.some.injEq, Prod.mk.injEq] at h
-        rw [← h.2]; exact psGoW_mfr _ _ _ _ _ _ _ _ h1
+      rw [psAtW.arm1] at h1
+      obtain ⟨r1, m1, h2, h1⟩ := kSome_inv h1 rfl (fun _ _ => rfl)
+      rw [psAtW.k_struct_ps_at_go.arm1] at h1
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
+      exact psGoW_mfr _ _ _ _ _ _ _ _ h2
 
 theorem spaW_mfr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = some (r, m')) : MFr [] [] m m' := by
   simp only [spaW, spaK.eq_def, spaK2.eq_def] at h

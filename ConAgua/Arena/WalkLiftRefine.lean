@@ -377,21 +377,21 @@ theorem internBVar_I (m : Mem) (a : AState) (hA : ArenaI m a) (u r : Word) (m' :
   exact ⟨hok, ⟨hD, hA.2.across (binternW_frameA m m' u r hI) (by decide) (by decide)
     (internE_inst1LC _ a hok)⟩, hres⟩
 
-theorem bvbW_frame (n : Nat) (m m' : Mem) (h f x : Word) (hb : bvbW n m h f = some (x, m')) :
+theorem bvbW_frame (n : Nat) (m m' : Mem) (h f x : Word) (hb : bvbW n m f h = some (x, m')) :
     BbFrame m m' := by
   obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bvbW]⟩
   by_cases hs : derBW m h = 32767
-  · rw [bvbW_sat n m h f hs] at hb
+  · rw [bvbW.arm1 n m f h hs] at hb
     obtain ⟨n, rfl⟩ : ∃ j, n = j + 1 := ⟨n - 1, by cases n <;> simp_all [bbN]⟩
     rw [bbN_succ] at hb
     exact bbMemoW_frame n m m' h f x hb
-  · rw [bvbW_pk n m h f hs] at hb
+  · rw [bvbW.arm2 n m f h hs] at hb
     obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     exact MemFrame.refl _ _ _
 
 /-- **`bvar_b`'s model under `ArenaI`.** -/
 theorem bvbW_okI (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
-    (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : bvbW n m h f = some (x, m')) :
+    (h f x : Word) (hh : h.toNat < 2 ^ 32) (hb : bvbW n m f h = some (x, m')) :
     ∃ a', (bvarB f.toNat (decE h)).run a = .ok (x.toNat, a') ∧ ArenaI m' a' := by
   obtain ⟨a', ha', hD⟩ := bvbW_ok n m m' a hA.1 h f x hh hb
   exact ⟨a', ha', hD, hA.2.across (bvbW_frame n m m' h f x hb) (by decide) (by decide)
@@ -458,7 +458,7 @@ theorem ligoOK_succ (n : Nat) (ih : LIArmOK n) : LIGoOK (n + 1) := by
   have hfu : ¬ fu = 0 := fun hfu => by rw [i1lW] at hb; simp [hfu] at hb
   rw [i1lW.arm1 n m h d v fu hfu] at hb
   rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiate1LiftGo_succ, StateT.run_bind]
-  cases hx : bvbW n m h (fu - 1) with
+  cases hx : bvbW n m (fu - 1) h with
   | none => rw [hx, i1lW.k_bvar_b] at hb; cases hb
   | some p =>
   obtain ⟨x, m₁⟩ := p
