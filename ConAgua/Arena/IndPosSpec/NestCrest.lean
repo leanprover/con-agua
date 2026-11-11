@@ -531,12 +531,12 @@ theorem u4W_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     · rw [u4W_kind (h := hd) (hk := hk)] at h
       have hw0 : (w == 0) = false := by rw [← hrd]; simpa using hk
       cases n with
-      | zero => simp [ustWf, u4K] at h
+      | zero => simp [ustWf, u4W.k_struct_used_later] at h
       | succ n =>
       cases n with
-      | zero => simp [ustWf, u4K] at h
+      | zero => simp [ustWf, u4W.k_struct_used_later] at h
       | succ n =>
-      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
+      rcases hu : ustW n m cl 0 i with _ | ⟨su, m1⟩; · simp only [ustWf] at h; rw [hu] at h; simp [u4W.k_struct_used_later] at h
       simp only [ustWf] at h; rw [hu] at h
       obtain ⟨mp, hmp⟩ := hP.hb
       obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp

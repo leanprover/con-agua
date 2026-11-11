@@ -1,5 +1,7 @@
 module
 
+
+
 import ConAgua.Arena.IndPosSpec.NestAcceptGroup
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos2
@@ -224,16 +226,19 @@ open L.Arena
 
 section arms
 variable (n : Nat) (m m1 : Mem) (ko nF cl i su : Word)
-theorem u4W_done (h : nF ≤ i) : u4W (n + 1) m ko nF cl i = some ([0], m) := by simp [u4W, h]
+theorem u4W_done (h : nF ≤ i) : u4W (n + 1) m ko nF cl i = some ([0], m) := u4W.arm1 (hc1 := h) ..
 theorem u4W_kind (h : ¬ nF ≤ i) (hk : rdW (m.arr64 IW) (ko + i) ≠ 0) :
-    u4W (n + 1) m ko nF cl i = u4K n ko nF cl i (ustWf n m cl 0 i) := by simp [u4W, h, hk]
+    u4W (n + 1) m ko nF cl i = u4W.k_struct_used_later n ko nF cl i (ustWf n m cl 0 i) :=
+  u4W.arm2 (hc1 := h) (hc2 := hk) ..
 theorem u4W_ord (h : ¬ nF ≤ i) (hk : ¬ rdW (m.arr64 IW) (ko + i) ≠ 0) :
-    u4W (n + 1) m ko nF cl i = u4W n m ko nF cl (i + 1) := by simp only [u4W]; rw [ite_eq_right h, ite_eq_right hk]
-theorem u4K_hit (h : su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = some ([1], m1) := by rw [u4K, ite_eq_left h]
-theorem u4K_miss (h : ¬ su ≠ 0) : u4K n ko nF cl i (some (su, m1)) = u4W n m1 ko nF cl (i + 1) := by
-  rw [u4K, ite_eq_right h]
+    u4W (n + 1) m ko nF cl i = u4W n m ko nF cl (i + 1) := by
+  rw [u4W.arm3 (hc1 := h) (hc2 := Classical.not_not.mp hk), u4W.j1.arm1, u4W_kId]
+theorem u4K_hit (h : su ≠ 0) : u4W.k_struct_used_later n ko nF cl i (some (su, m1)) = some ([1], m1) :=
+  u4W.k_struct_used_later.arm1 (hc1 := h) ..
+theorem u4K_miss (h : ¬ su ≠ 0) :
+    u4W.k_struct_used_later n ko nF cl i (some (su, m1)) = u4W n m1 ko nF cl (i + 1) := by
+  rw [u4W.k_struct_used_later.arm2 (hc1 := Classical.not_not.mp h), u4W.j1.arm1, u4W_kId]
 end arms
-attribute [ind_grind] u4W_done u4W_kind u4W_ord u4K_hit u4K_miss
 
 end L.Ind
 

@@ -1,11 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.CfW
+
+public import ConAgua.Arena.IndPosSpec.NestGroupCtors
+
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Arena.IndPosSpec.NbLook
-import ConAgua.Arena.IndPosSpec.UnW
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
@@ -137,31 +139,6 @@ end L.Ind
 namespace L.Ind
 
 open L.Arena
-
-theorem structUsedLater_spec' (p : Prog) (L : UslLook p) (n : Nat) (s₀ : St) (cty nP j : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later" [cty, nP, j]
-    ⦃fun r s' => LocEq s' s₀ ∧ ustWf n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
-  match n with
-  | 0 => rw [invoke_eq _ L.hp]; simp only [callFn, structUsedLaterL]; vcgen [exec] <;> grind
-  | 1 =>
-    rw [invoke_eq _ L.hp]; simp only [callFn, structUsedLaterL]
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, invoke_exec0 p] <;> grind
-  | n + 2 => exact structUsedLater_spec p L.hv L.hf L.hput L.hins L.hgo L.hbp L.hst L.hcl L.hfast L.hp n s₀ cty nP j
-
-theorem nestCtorsU4_spec (p : Prog) (L : UslLook p) (hp : p.lookup "nest_ctors_u4" = some nestCtorsU4L)
-    (n : Nat) : ∀ (s₀ : St) (ko nF cl i : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_u4" [ko, nF, cl, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ u4W n s₀.mem ko nF cl i = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ ko nF cl i
-    rw [invoke_eq _ hp]; simp only [callFn, nestCtorsU4L]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ ko nF cl i
-    simp only [invoke_eq _ hp, callFn, nestCtorsU4L]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, structUsedLater_spec' p L n, ih] <;>
-      finish (gen := 20) [rdW_eq]
 
 end L.Ind
 
