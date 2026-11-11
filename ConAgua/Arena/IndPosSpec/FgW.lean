@@ -304,8 +304,10 @@ open L.Arena
 
 section arms
 variable (n : Nat) (m m1 : Mem) (hi gO gL aO aL v : Word) (r : List Word)
-theorem fhW_ovf (h : ¬ gL = 0) (h1 : hi + 1 = 0) : fhW (n + 1) m hi gO gL aO aL = none := by simp [fhW, h, h1]
-theorem fhK1_big (h : 4294967296 ≤ v) : fhK1 n hi gO gL aO aL (some (v, m1)) = none := by simp [fhK1, h]
+theorem fhW_ovf (h : ¬ gL = 0) (h1 : hi + 1 = 0) : fhW (n + 1) m hi gO gL aO aL = none :=
+  fhW.abort1 _ _ _ _ _ _ _ h h1
+theorem fhK1_big (h : 4294967296 ≤ v) : fhW.k_intern_fvar n hi gO gL aO aL (some (v, m1)) = none :=
+  fhW.k_intern_fvar.abort1 _ _ _ _ _ _ _ _ h
 end arms
 attribute [ind_grind] fhW_ovf fhK1_big
 
@@ -333,7 +335,7 @@ theorem fhW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   intro n
   induction n with
-  | zero => intro m m' a hi gO gL aO aL grp acc r h; simp [fhW] at h
+  | zero => intro m m' a hi gO gL aO aL grp acc r h; simp [fhW.eq_1] at h
   | succ n ih =>
     intro m m' a hi gO gL aO aL grp acc r h hS hgl hgb hgrp hA hAb
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -355,12 +357,12 @@ theorem fhW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     obtain ⟨w, cw, tw, hrw, hw1, -, -, -, hrt, htH, htd⟩ := hgrp.head (by omega) htop
     rw [UInt64.ofNat_toNat] at hrw
     rw [hrw, hrt] at h
-    rcases hf : fvinternW m hi tw with _ | ⟨v, m1⟩ <;> rw [hf] at h; · simp [fhK1] at h
+    rcases hf : fvinternW m hi tw with _ | ⟨v, m1⟩ <;> rw [hf] at h; · simp [fhW.k_intern_fvar] at h
     by_cases hvb : 4294967296 ≤ v
     · rw [fhK1_big (h := hvb)] at h; cases h
     rw [fhK1_ok (h := hvb)] at h
     obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS hi tw htH hf
-    rcases hs : snocW n m1 aO aL v with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [fhK2] at h
+    rcases hs : snocW n m1 aO aL v with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [fhW.k_sl_snoc] at h
     rw [fhK2_some] at h
     have hvH : H v := by
       have : ¬ (4294967296 : Word).toNat ≤ v.toNat := fun h' => hvb (UInt64.le_iff_toNat_le.mpr h')
@@ -413,7 +415,7 @@ theorem caW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   intro n
   induction n with
-  | zero => intro m m' a gO gL aO aL grp acc r h; simp [caW] at h
+  | zero => intro m m' a gO gL aO aL grp acc r h; simp [caW.eq_1] at h
   | succ n ih =>
     intro m m' a gO gL aO aL grp acc r h hS hds hgl hgb hgrp hA hAb
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
@@ -433,14 +435,14 @@ theorem caW_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     obtain ⟨w, cw, tw, hrw, hw1, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
     rw [UInt64.ofNat_toNat] at hrw
     rw [hrw, hrc] at h
-    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [caK1] at h
+    rcases hk : posRecW m [cw, us, dO, dL] with _ | ⟨key, m1⟩ <;> rw [hk] at h; · simp [caW.k_rec4] at h
     rw [caK1_some] at h
     obtain ⟨hS1, hg1, hkq, ht1, hget1⟩ := posRecW_stage hk hS (by simp)
     simp only [List.length_cons, List.length_nil] at ht1
     have hds1 := DecB.grow (OMono.decHL _ _) hg1 hds
     have hK : DecB (fun m => decNK m key.toNat) m1 ⟨decI cw, decI us, ds⟩ :=
       pos2_key_rec hcH hus (by omega) hget1 hds1
-    rcases hs : snocW n m1 aO aL key with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [caK2] at h
+    rcases hs : snocW n m1 aO aL key with _ | ⟨r2, m2⟩ <;> rw [hs] at h; · simp [caW.k_sl_snoc] at h
     rw [caK2_some] at h
     obtain ⟨hS2, hg2, h20, h21, ht2, hw2, hx2⟩ := snocW_words hs hS1 (by have := hg1.iw; omega)
     have hA2 : KsB m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat (acc ++ [⟨decI cw, decI us, ds⟩]) := by
@@ -634,16 +636,16 @@ theorem fgW_mfr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Wo
 
 theorem fhW_mfr : ∀ (n : Nat) (m m' : Mem) (hi gO gL aO aL : Word) (r : List Word),
     fhW n m hi gO gL aO aL = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [fhW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [fhW.eq_1] at h
   | n + 1, m, m', hi, gO, gL, aO, aL, r, h => by
-    unfold fhW fhK1 fhK2 at h
+    simp only [fhW.eq_2, fhW.k_intern_fvar.eq_def, fhW.k_sl_snoc.eq_def, fhW_kId] at h
     mfr_auto h [fvinternW_mfr, snocW_mfr, fhW_mfr n _ _ _ _ _ _ _ _]
 
 theorem caW_mfr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL aO aL : Word) (r : List Word),
     caW n m us dO dL gO gL aO aL = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [caW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [caW.eq_1] at h
   | n + 1, m, m', us, dO, dL, gO, gL, aO, aL, r, h => by
-    unfold caW caK1 caK2 at h
+    simp only [caW.eq_2, caW.k_rec4.eq_def, caW.k_sl_snoc.eq_def, caW_kId] at h
     mfr_auto h [posRecW_mfr, snocW_mfr, caW_mfr n _ _ _ _ _ _ _ _ _ _]
 
 theorem new1W_mfr {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some (r, m')) : MFr [] [] m m' :=
