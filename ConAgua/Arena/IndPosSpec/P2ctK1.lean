@@ -3,13 +3,15 @@ module
 public import ConAgua.Arena.IndPosSpec.PcrW
 public import ConAgua.Arena.IndPosSpec.U4W
 public import ConAgua.Arena.IndPosSpec.EntryW
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.IndPos2
 
 @[expose] public section
 
 /-!
 # P2ctK1
 
-`roK0`, `roW`, `pcrWf`.
+`nestCtorsResOk_spec` (`roW`), `pcrWf`.
 -/
 
 noncomputable section
@@ -23,13 +25,13 @@ namespace L.Ind
 
 open L.Arena
 
-def roK0 (k : Nat) (ctx hi cur : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (gaaF m1 [CWF, cur])
-/-- The model of `nest_ctors_res_ok(ctx, hi, cur)`. -/
-def roW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | k + 1, m, ctx, hi, cur => roK0 k ctx hi cur (resHeadW m cur)
+/-- **`nest_ctors_res_ok(ctx, hi, cur)` is its model `roW`** (generated). -/
+l_model nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
+    (hrh : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p)
+    (hp : p.lookup "nest_ctors_res_ok" = some nestCtorsResOkL)
+  fns [hp ↦ roW list]
+  specs [nestResHead_spec p hrh had n, gaaF_spec p had n, nestOccAny_spec p hl hoa n]
+  grind [arena_grind]
 
 end L.Ind
 

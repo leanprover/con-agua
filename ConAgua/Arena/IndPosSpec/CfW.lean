@@ -262,15 +262,6 @@ namespace L.Ind
 
 open L.Arena
 
-section arms
-variable (k : Nat) (m1 m2 m3 : Mem) (ctx hi cur : Word) (r : List Word)
-theorem roK2_some : roK2 (some (r, m3)) = some ([if r.headD 0 = 0 then 1 else 0], m3) := rfl
-theorem roK1_some : roK1 k ctx hi (some (r, m2)) = roK2 (noaW k m2 (rdW (m2.arr64 IW) ctx)
-    (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi (r.headD 0) (r.tail.headD 0)) := rfl
-theorem roK0_eq : roK0 k ctx hi cur (some (r, m1)) =
-    if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (gaaF m1 [CWF, cur]) := rfl
-end arms
-attribute [ind_grind] roK2_some roK1_some
 
 end L.Ind
 

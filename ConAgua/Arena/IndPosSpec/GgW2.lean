@@ -169,20 +169,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
-    (hrh : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p)
-    (hp : p.lookup "nest_ctors_res_ok" = some nestCtorsResOkL) (n : Nat) (s₀ : St) (ctx hi cur : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_res_ok" [ctx, hi, cur]
-    ⦃fun r s' => LocEq s' s₀ ∧ roW n s₀.mem ctx hi cur = some ([r.headD 0], s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ hp, callFn, nestCtorsResOkL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestResHead_spec p hrh had n, gaaF_spec p had n, nestOccAny_spec p hl hoa n] <;>
-      finish (gen := 20) [roW, roK0_eq, rdW_eq]
-
 end L.Ind
 
 end
