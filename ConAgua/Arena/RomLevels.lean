@@ -267,47 +267,6 @@ l_model romLvlsGo_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
   keep [hL.no_st8]
   grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap] defs
 
-section lv
-variable (rom : List UInt8)
-
-/-- After the list node. -/
-def lsK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h, m') => if 4294967296 ≤ h then none else some (h, q, m')
-
-/-- After the levels: copy, pop, intern. -/
-def lvsK (b k : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (q, m₁) =>
-    if stkPoolOK m₁ k then
-      lsK q (lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k)
-    else none
-
-/-- **The model of `rom_levels`** at L fuel `n` (the count inside the ROM and below `2^60`). -/
-def romLevelsW : Nat → Mem → Word → Option (Word × Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, pos =>
-    if ¬ u64OK rom pos then none
-    else if 1152921504606846976 ≤ u64W rom pos then none
-    else lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos))
-
-end lv
-
-theorem lsK_some (q h : Word) (m : Mem) (hh : ¬ 4294967296 ≤ h) : lsK q (some (h, m)) = some (h, q, m) := by
-  simp [lsK, hh]
-theorem lvsK_some (b k q : Word) (m₁ : Mem) (hok : stkPoolOK m₁ k) :
-    lvsK b k (some (q, m₁)) =
-      lsK q (lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k) := by
-  simp only [lvsK]; rw [ite_eq_left hok]
-theorem romLevelsW_eq (rom : List UInt8) (n : Nat) (m : Mem) (pos : Word)
-    (hu : u64OK rom pos) (hk : ¬ 1152921504606846976 ≤ u64W rom pos) :
-    romLevelsW rom (n + 1) m pos = lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos)) := by
-  simp only [romLevelsW, hu, hk, ite_false, not_true_eq_false]
-
-attribute [arena_grind =] lsK_some
-grind_pattern [arena_grind] romLevelsW_eq => romLevelsW rom (n + 1) m pos
-grind_pattern [arena_grind] lvsK_some => lvsK b k (some (q, m₁)), stkPoolOK m₁ k
-
 /-! ## The models keep the top in a tier -/
 
 @[arena_grind =] theorem pushMem_mtop (m : Mem) (h : Word) : (pushMem m h).top = m.top := by
@@ -409,6 +368,31 @@ theorem romLvlsW_top' (rom : List UInt8) (n : Nat) (m : Mem) (q k q' : Word) (m'
     m'.top.toNat < 2 ^ 41 := (romLvlsW_top rom n m q k q' m' hW hc ht).1
 grind_pattern [arena_grind] romLvlsW_top' => romLvlsW rom n m q k, some (q', m')
 
+end L.Rom
+
+namespace L.Rom
+
+open L.Arena
+
+l_model romLvlsGo_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
+  fns [hL.rom_lvls_go ↦ romLvlsW]
+  specs [romLevel_specW rom p hL.toLevelProg n, stkPush_spec p hL.stk_push n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap] nodefs
+
+/-- **The model of `rom_levels`** at L fuel `n` (generated): the count inside the ROM
+(`rom_u64`, a guard) and below `2^60`, the levels pushed (`rom_lvls_go`), copied to the pool
+(`stk_pool`), the stack popped, the list node interned. -/
+l_model romLevels_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
+  fns [hL.rom_levels ↦ romLevelsW tuple]
+  specs [romU64_spec rom p hL.rom_u64 n, romLvlsGo_specW rom p hL n, stkPool_specW p hL.stk_pool n,
+    internLs_spec p hL.lit_hash hL.limbs_eq hL.ls_match hL.ls_find hL.ls_push hL.intern_ls n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] fold [stkTop] finish [Keep.size, L.Front.Keep.pcap, stkTop]
+  guards ["rom_u64"]
+
 theorem romLevelsW_top (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
     (hW : romLevelsW rom n m pos = some (h, q, m')) : TopK m m' := by
   cases n with
@@ -418,23 +402,23 @@ theorem romLevelsW_top (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (
     case neg => simp [romLevelsW, hu] at hW
     by_cases hk : 1152921504606846976 ≤ u64W rom pos
     case pos => simp [romLevelsW, hu, hk] at hW
-    rw [romLevelsW_eq rom n m pos hu hk] at hW
+    rw [romLevelsW.arm1 (hc1 := decide_eq_true hu) (hc2 := hk)] at hW
     cases hP : romLvlsW rom n m (pos + 8) (u64W rom pos) with
-    | none => rw [hP] at hW; simp [lvsK] at hW
+    | none => rw [hP] at hW; simp [romLevelsW.k_rom_lvls_go] at hW
     | some r =>
       obtain ⟨q₁, m₁⟩ := r
       rw [hP] at hW
       by_cases hok : stkPoolOK m₁ (u64W rom pos)
-      case neg => simp [lvsK, hok] at hW
-      rw [lvsK_some _ _ _ _ hok] at hW
+      case neg => simp [romLevelsW.k_rom_lvls_go, hok] at hW
+      rw [romLevelsW.k_rom_lvls_go.arm1 (hc1 := decide_eq_true hok)] at hW
       cases hI : lsinternW (((sputW m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (stkTop m)
           (u64W rom pos) 0).set64 CTL 0 (m₁.top + u64W rom pos)).set64 CTL 131 (stkTop m)) m₁.top
           (u64W rom pos) with
-      | none => rw [hI] at hW; simp [lsK] at hW
+      | none => rw [hI] at hW; simp [romLevelsW.k_intern_ls] at hW
       | some r =>
         obtain ⟨w, m₃⟩ := r
         rw [hI] at hW
-        simp only [lsK] at hW
+        simp only [romLevelsW.k_intern_ls] at hW
         split at hW
         · simp at hW
         simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -450,42 +434,6 @@ theorem romLevelsW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) 
     m'.top.toNat < 2 ^ 41 := (romLevelsW_top rom n m pos h q m' hW hc ht).1
 grind_pattern [arena_grind] romLevelsW_top' => romLevelsW rom n m pos, some (h, q, m')
 
-end L.Rom
-
-namespace L.Rom
-
-open L.Arena
-
-l_model romLvlsGo_specW (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
-  fns [hL.rom_lvls_go ↦ romLvlsW]
-  specs [romLevel_specW rom p hL.toLevelProg n, stkPush_spec p hL.stk_push n]
-  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
-  keep [hL.no_st8]
-  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap] nodefs
-
-section spec
-variable (rom : List UInt8) (p : Prog) (hL : LevelsProg rom p)
-include hL
-
-theorem romLevels_specW (n : Nat) (s₀ : St) (pos : Word)
-    (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rom_levels" [pos]
-    ⦃fun r s' => LocEq s' s₀ ∧ romLevelsW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hL.rom_levels]
-  simp only [callFn, romLevels]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hg := fun s₁ q₁ k₁ h₁ => Triple.keep hL.no_st8 (romLvlsGo_specW rom p hL n s₁ q₁ k₁ h₁)
-    have hq := fun s₁ b k => Triple.keep hL.no_st8 (stkPool_specW p hL.stk_pool n s₁ b k)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hg, hq,
-        romU64_spec rom p hL.rom_u64 n,
-        internLs_spec p hL.lit_hash hL.limbs_eq hL.ls_match hL.ls_find hL.ls_push hL.intern_ls n] <;>
-      finish [Keep.size, L.Front.Keep.pcap, stkTop]
-
-end spec
 
 end L.Rom
 
@@ -735,23 +683,22 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
   have hu : u64OK rom pos := u64OK_of_drop rom _ _ _ hd0 hr
   by_cases hk : 1152921504606846976 ≤ u64W rom pos
   · simp [romLevelsW, hu, hk] at hW
-  rw [romLevelsW_eq rom n m pos hu hk] at hW
+  rw [romLevelsW.arm1 (hc1 := decide_eq_true hu) (hc2 := hk)] at hW
   have hd8 : rom.drop (pos + 8).toNat = encLevelList us ++ rest := by
     rw [hp8, ← List.drop_drop, hd0]; simp [u64B]
   have hkN : (UInt64.ofNat us.length).toNat = us.length := by
     rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
   rw [hl] at hW
   cases hG : romLvlsW rom n m (pos + 8) (UInt64.ofNat us.length) with
-  | none => rw [hG] at hW; simp [lvsK] at hW
+  | none => rw [hG] at hW; simp [romLevelsW.k_rom_lvls_go] at hW
   | some t =>
   obtain ⟨q₁, m₁⟩ := t
   rw [hG] at hW
   obtain ⟨ok1, hR1, hq1, hf1, htop1, hws1, -⟩ := romLvlsW_ok rom hr us hus n m a (pos + 8) rest _ q₁ m₁ hA hmo
     hd8 hkN (by omega) hc hG
-  simp only [lvsK] at hW
-  split at hW
-  case isFalse => simp at hW
-  rename_i hok
+  by_cases hok : stkPoolOK m₁ (UInt64.ofNat us.length)
+  case neg => simp [romLevelsW.k_rom_lvls_go, hok] at hW
+  rw [romLevelsW.k_rom_lvls_go.arm1 (hc1 := decide_eq_true hok)] at hW
   have hB : (stkTop m).toNat + (UInt64.ofNat us.length).toNat < 2 ^ 63 := by rw [hkN]; omega
   obtain ⟨hg, hsl, hk⟩ := stkPoolW_facts m₁ (stkTop m) _ hR1.1.lit.1 hok hB
   have hR2 := ArenaD.grow _ _ hg _ hR1
@@ -768,11 +715,11 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
       lsWords (AM.res (internLevelList us) a) := by
     rw [vpool_set64_ne _ _ _ _ (by decide), hk, hws1, hkN]
   cases hI : lsinternW (m₂.set64 CTL 131 (stkTop m)) m₁.top (UInt64.ofNat us.length) with
-  | none => rw [hI] at hW; simp [lsK] at hW
+  | none => rw [hI] at hW; simp [romLevelsW.k_intern_ls] at hW
   | some t =>
   obtain ⟨w, m₄⟩ := t
   rw [hI] at hW
-  simp only [lsK] at hW
+  simp only [romLevelsW.k_intern_ls] at hW
   split at hW
   · simp at hW
   rename_i hlt
