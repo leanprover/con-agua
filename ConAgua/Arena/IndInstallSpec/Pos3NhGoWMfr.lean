@@ -45,12 +45,7 @@ theorem pos3_nIdxsCopyW_mfr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nIdxsCo
 
 theorem pos3_memberNamesW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : memberNamesW n m p = some (r, m')) : MFr [] [] m m' := by
-  unfold memberNamesW at h
-  split at h; · cases h
-  rename_i q m1 hal
-  split at h; · cases h
-  rename_i m2 hc
-  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨_, _, _, -, hal, hc, -⟩ := memberNamesW_inv h
   exact (allocW_mfr hal).trans (pos3_nameCopyW_mfr _ _ _ _ _ _ hc)
 
 theorem pos3_nIdxsW_mfr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}

@@ -12,6 +12,7 @@ public import ConAgua.Arena.IndCopy2
 public import ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
+import ConAgua.Arena.SimLib
 import ConAgua.L.WordOff
 import ConAgua.Arena.ErecRd
 
@@ -79,35 +80,29 @@ theorem nameCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nameCopyW n m
     (fun m d v x hx => by rw [erRd_set_iw, rdW_set64_IW_ne m d v x (by omega)])
     (fun _ _ h => by omega) n
 
-/-- The model of `block_shape_member_names`. -/
-def memberNamesW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
-  match allocW m (rdW (m.arr64 IW) (p + 1)) with
-  | none => none
-  | some (q, m1) =>
-    match nameCopyW (n - 1) m1 q (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) with
-    | none => none
-    | some m2 => some ([q, rdW (m.arr64 IW) (p + 1)], m2)
-
-theorem blockShapeMemberNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`block_shape_member_names(p)`'s model `memberNamesW`** (generated). -/
+l_model blockShapeMemberNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "member_names_copy" = some memberNamesCopy)
-    (hp : p.lookup "block_shape_member_names" = some blockShapeMemberNames) (n : Nat) (s₀ : St)
-    (q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_member_names" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ memberNamesW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, blockShapeMemberNames]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hmod : ∀ a m1 m2, allocW s₀.mem (rdW (s₀.mem.arr64 IW) (q + 1)) = some (a, m1) →
-        nameCopyW n m1 a (rdW (s₀.mem.arr64 IW) q) (rdW (s₀.mem.arr64 IW) (q + 1)) = some m2 →
-        memberNamesW (n + 1) s₀.mem q = some ([a, rdW (s₀.mem.arr64 IW) (q + 1)], m2) := by
-      intro a m1 m2 h1 h2
-      simp [memberNamesW, h1, h2]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        iwAlloc_specW p ha n, memberNamesCopy_spec p hc n] <;>
-      finish (gen := 20)
+    (hp : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
+  fns [hp ↦ memberNamesW list]
+  specs [iwAlloc_specW p ha n, memberNamesCopy_spec p hc n]
+  grind [arena_grind]
+
+/-- A run of `memberNamesW`: the allocation, then the copy into it. -/
+theorem memberNamesW_inv {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : memberNamesW n m p = some (r, m')) : ∃ k q m1, n = k + 1 ∧
+      allocW m (rdW (m.arr64 IW) (p + 1)) = some (q, m1) ∧
+      nameCopyW k m1 q (rdW (m.arr64 IW) p) (rdW (m.arr64 IW) (p + 1)) = some m' ∧
+      r = [q, rdW (m.arr64 IW) (p + 1)] := by
+  rcases n with _ | k
+  · simp [memberNamesW] at h
+  rw [memberNamesW.arm1] at h
+  obtain ⟨⟨q, m1⟩, hal, h⟩ := of_K h (memberNamesW.k_iw_alloc.none ..)
+  rw [memberNamesW.k_iw_alloc.arm1] at h
+  obtain ⟨m2, hc, h⟩ := of_K h (memberNamesW.k_member_names_copy.none ..)
+  rw [memberNamesW.k_member_names_copy.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  exact ⟨k, q, m1, rfl, hal, hc, rfl⟩
 
 theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
     (h : memberNamesW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
@@ -133,16 +128,10 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
   have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
   have hsrc' := hsrc o l ho hl
   have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
-  simp only [memberNamesW, ho', hl'] at h
-  rcases hal : allocW m (UInt64.ofNat l) with _ | ⟨q, m1⟩
-  · simp [hal] at h
+  obtain ⟨k, q, m1, rfl, hal, hcp, rfl⟩ := memberNamesW_inv h
+  simp only [ho', hl'] at hal hcp ⊢
   obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
   rw [hll] at hroom
-  simp only [hal] at h
-  rcases hcp : nameCopyW (n - 1) m1 q (UInt64.ofNat o) (UInt64.ofNat l) with _ | m2
-  · simp [hcp] at h
-  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
   subst hq' hm1
   generalize hqq : rdW (m.arr64 CTL) 200 = q at *
   have hIW := allocMem_IW m (UInt64.ofNat l)
@@ -159,21 +148,21 @@ theorem memberNamesW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs :
     rw [hIW, hoo, hv']
     simp only [iwTop, hqq] at hvb
     rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
-  obtain ⟨hA, hS, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+  obtain ⟨hA, hS, hG⟩ := nameCopyW_get k _ _ _ _ _ hcp
     (by rw [hoo, hll]; simp only [iwTop, hqq] at hsrc'; omega)
     (by rw [hIW, hll]; exact hroom) (by rw [hIW]; exact hsz) hptr'
   rw [hIW] at hS hG
   simp only [hRR] at hG
-  have hfr : MemFrame [IW] [200] m m2 :=
+  have hfr : MemFrame [IW] [200] m m' :=
     (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]))
-  have htop : rdW (m2.arr64 CTL) 200 = q + UInt64.ofNat l := by
+  have htop : rdW (m'.arr64 CTL) 200 = q + UInt64.ofNat l := by
     rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
   have hsum : (q + UInt64.ofNat l).toNat = q.toNat + l := by
     rw [UInt64.toNat_add]; simp [hll]; omega
   refine ⟨by rw [hk], ?_, ?_, hfr, ?_⟩
   · rw [hk]
     have hxs : bs.memberNames.length = l := by simp [BlockShape.memberNames, hlen]
-    have := decHL_of_get m2 bs.memberNames q.toNat (fun j hj => by
+    have := decHL_of_get m' bs.memberNames q.toNat (fun j hj => by
       have hj' : j < l := by omega
       obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg j hj'
       obtain ⟨⟨a, hva, hcv⟩, -, -⟩ := decMS_some hy

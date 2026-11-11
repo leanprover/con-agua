@@ -66,8 +66,8 @@ theorem nameCopyW_afr : ∀ (n : Nat) (m m' : Mem) (d s l : Word), nameCopyW n m
 /-- `memberNamesW` keeps `AbsOK`. -/
 theorem memberNamesW_afr {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
     (h : memberNamesW n m p = some (r, m')) : AFr m m' := by
-  unfold memberNamesW at h
-  afr_auto h [allocW_afr, nameCopyW_afr _ _ _ _ _ _]
+  obtain ⟨_, _, _, -, hal, hc, -⟩ := memberNamesW_inv h
+  exact (allocW_afr hal).trans (nameCopyW_afr _ _ _ _ _ _ hc)
 
 end L.Ind
 
