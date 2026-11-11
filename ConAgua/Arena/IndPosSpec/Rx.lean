@@ -1,11 +1,12 @@
 module
 
-import ConAgua.Arena.IndPosSpec.RpGoStep
 public import ConAgua.Arena.IndPosSpec.RxMapW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndPosSpec.MatesW
 import all ConAgua.Arena.IndPos
 
 @[expose] public section
@@ -13,7 +14,8 @@ import all ConAgua.Arena.IndPos
 /-!
 # Rx
 
-`hiAt_specW`, `keyMap_specW`, `rxRoot_spec`, `RxSpec`, `rxSpec_zero`, `rxMap_step` and the lemmas only they use.
+`hiAt_specW`, `keyMap_specW`, the generated models and specs of `nest_hole_img_root` (`rxRoot_spec`) and
+of the `replaceFVars` block (`rxSpec_all`).
 -/
 
 noncomputable section
@@ -56,154 +58,74 @@ namespace L.Ind
 
 open L.Arena
 
-section spec
-variable (p : Prog) (L : RxLook p)
+l_model rxRoot_spec (p : Prog) (L : RxLook p)
+  fns [L.rt ↦ rxRootW tuple]
+  specs [hiAt_specW p L.hi n, slGetD_specW p L.gd n, internConst_spec p L.cf L.cp L.ci n, mknF_spec p L.ad n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-include L in
-theorem rxRoot_spec (n : Nat) (s₀ : St) (ctx i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_hole_img_root" [ctx, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxRootW s₀.mem ctx i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  simp only [invoke_eq _ L.rt, callFn, nestHoleImgRoot]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        hiAt_specW p L.hi n, slGetD_specW p L.gd n, internConst_spec p L.cf L.cp L.ci n,
-        mknF_spec p L.ad n] <;>
-      finish (gen := 20) [rdW_eq]
+/-- The `replaceFVars` block: `fv_map_at`, `nest_hole_img`, `nest_hole_img_frame`,
+`nest_hole_img_ds`, `nest_hole_img_ds_go`, `replace_fvars_go`, `replace_fvars_node`,
+`replace_fvars`. -/
+l_model rxSpec_all (p : Prog) (L : RxLook p)
+  fns [L.fma ↦ rxMapW tuple, L.img ↦ rxImgW tuple, L.fr ↦ rxFrameW tuple, L.ds ↦ rxDsW tuple,
+    L.dsg ↦ rxDsGoW void, L.go ↦ rxGoW, L.nd ↦ rxNodeW, L.rf ↦ rxW]
+  specs [keyMap_specW p L.km n, pinWord_specV p L.hl.hpw n, internSort_spec p L.hl.hsf L.hl.hsp L.hl.his n,
+    internFVar_spec p L.hl.hff L.hl.hfp L.hl.hif n, rxRoot_spec p L n, hiAt_specW p L.hi n,
+    posRec2_specW p L.ha L.h2 n, posRec4_specW p L.ha L.h4 n, posRec5_specW p L.ha L.h5 n,
+    internConst_spec p L.cf L.cp L.ci n, mknF_spec p L.ad n, iwAlloc_specW p L.ha n,
+    eView_spec p L.hl.hv n, memoFindG_spec rfSch p _ L.rff n, memoPutG_spec rfSch p _ L.rfp n,
+    mkApp_spec p L.hk.hd L.hk.appF L.hk.appP L.hk.appI L.hk.appM n,
+    mkLam_spec p L.hk.hd L.hk.lamF L.hk.lamP L.hk.lamI L.hk.lamM n,
+    mkForall_spec p L.hk.hd L.hk.forF L.hk.forP L.hk.forI L.hk.forM n,
+    mkLet_spec p L.hk.hd L.hk.ltF L.hk.ltP L.hk.ltI L.hk.ltM n,
+    mkProj_spec p L.hk.hd L.hk.prjF L.hk.prjP L.hk.prjI L.hk.prjM n,
+    bankEnterG_spec 218 p _ L.rfe n, bankLeaveG_spec 218 p _ L.rfl' n, memoClearG_spec rfSch p _ L.rfc n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW]
 
-/-- The specs of the block at exec fuel `n`. -/
-def RxSpec (n : Nat) : Prop :=
-  (∀ (s₀ : St) (f i : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "fv_map_at" [f, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxMapW n s₀.mem f i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (ctx po pl nn i : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_hole_img" [ctx, po, pl, nn, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxImgW n s₀.mem ctx po pl nn i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (ctx po pl n1 i : Word), ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nest_hole_img_frame" [ctx, po, pl, n1, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxFrameW n s₀.mem ctx po pl n1 i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (f o l : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_hole_img_ds" [f, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxDsW n s₀.mem f o l = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (f o l q j : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_hole_img_ds_go" [f, o, l, q, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ rxDsGoW n s₀.mem f o l q j = some s'.mem; ⊤⦄) ∧
-  (∀ (s₀ : St) (f fu h : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_fvars_go" [f, fu, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxGoW n s₀.mem f fu h = some (r.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (f f1 g x y z : Word), ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "replace_fvars_node" [f, f1, g, x, y, z]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxNodeW n s₀.mem f f1 g x y z = some (r.headD 0, s'.mem); ⊤⦄) ∧
-  (∀ (s₀ : St) (f e : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "replace_fvars" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxW n s₀.mem f e = some (r.headD 0, s'.mem); ⊤⦄)
+/-! ## Bridges over the generated models -/
 
-include L in
-theorem rxSpec_zero : RxSpec p 0 := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros
-  · rw [invoke_eq _ L.fma]; simp only [callFn, fvMapAt]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.img]; simp only [callFn, nestHoleImg]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.fr]; simp only [callFn, nestHoleImgFrame]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.ds]; simp only [callFn, nestHoleImgDs]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.dsg]; simp only [callFn, nestHoleImgDsGo]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.go]; simp only [callFn, replaceFVarsGo]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.nd]; simp only [callFn, replaceFVarsNode]; vcgen [exec] <;> grind
-  · rw [invoke_eq _ L.rf]; simp only [callFn, replaceFVars]; vcgen [exec] <;> grind
+/-- `fv_map_at` returns `nest_hole_img`'s results as they are. -/
+theorem rxMapW_kImg (x : Option (Word × Word × Mem)) : rxMapW.k_nest_hole_img x = x := by
+  rcases x with _ | ⟨_, _, _⟩ <;> rfl
 
-end spec
+/-- `nest_hole_img_ds_go` returns its recursive call's memory as it is. -/
+theorem rxDsGoW_kGo (x : Option Mem) : rxDsGoW.k_nest_hole_img_ds_go x = x := by
+  cases x <;> rfl
 
-section step
-variable (p : Prog) (L : RxLook p) (n : Nat) (ih : RxSpec p n)
-include L ih
+/-- The `rf_find` and `rf_put` after the node step are one `msetG`. -/
+theorem rxGoW_kNode (h r : Word) (m1 : Mem) : rxGoW.k_replace_fvars_node h (some (r, m1)) =
+    rxGoW.k_rf_put r (msetG rfSch m1 h (rdW (m1.arr64 CTL) 219 <<< 32) r) := by
+  by_cases hf : mfindG rfSch m1 h (rdW (m1.arr64 CTL) 219 <<< 32) = []
+  · rw [rxGoW.k_replace_fvars_node.abort1 _ _ _ hf, msetG, ite_eq_left hf]; rfl
+  · rw [rxGoW.k_replace_fvars_node.arm1 _ _ _ hf, msetG_eq _ _ _ _ _ hf]
 
-theorem rxMap_step (s₀ : St) (f i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "fv_map_at" [f, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxMapW (n + 1) s₀.mem f i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, hImg, -, -, -, -, -, -⟩ := ih
-  simp only [invoke_eq _ L.fma, callFn, fvMapAt]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hImg,
-      keyMap_specW p L.km n, pinWord_specV p L.hl.hpw n, internSort_spec p L.hl.hsf L.hl.hsp L.hl.his n,
-      internFVar_spec p L.hl.hff L.hl.hfp L.hl.hif n] <;>
-    finish (gen := 20) [rdW_eq]
+/-- `fv_map_at`'s result, or the handle itself where the map misses. -/
+theorem rxGoW_kMap (h ok r : Word) (m1 : Mem) :
+    rxGoW.k_fv_map_at h (some (ok, r, m1)) = some ((if ok ≠ 0 then r else h), m1) := by
+  by_cases hok : ok ≠ 0
+  · rw [rxGoW.k_fv_map_at.arm1 _ _ _ _ hok, ite_eq_left hok]
+  · rw [rxGoW.k_fv_map_at.arm2 _ _ _ _ (Classical.not_not.mp hok), ite_eq_right hok]
 
-theorem rxImg_step (s₀ : St) (ctx po pl nn i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img" [ctx, po, pl, nn, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxImgW (n + 1) s₀.mem ctx po pl nn i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, hImg, hFr, -, -, -, -, -⟩ := ih
-  simp only [invoke_eq _ L.img, callFn, nestHoleImg]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hImg, hFr,
-      rxRoot_spec p L n, hiAt_specW p L.hi n] <;>
-    finish (gen := 20) [rdW_eq]
+section
+variable {n : Nat} {m : Mem} {f fu h : Word}
 
-theorem rxFrame_step (s₀ : St) (ctx po pl n1 i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_frame" [ctx, po, pl, n1, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxFrameW (n + 1) s₀.mem ctx po pl n1 i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, -, -, hDs, -, -, -, -⟩ := ih
-  simp only [invoke_eq _ L.fr, callFn, nestHoleImgFrame]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hDs,
-      posRec2_specW p L.ha L.h2 n, posRec4_specW p L.ha L.h4 n, posRec5_specW p L.ha L.h5 n,
-      internConst_spec p L.cf L.cp L.ci n, mknF_spec p L.ad n] <;>
-    finish (gen := 20) [rdW_eq]
+/-- The four leaf kinds (`bvar`, `sort`, `lit`, `const`) return the handle. -/
+theorem rxGoW_leaf (hf : fu ≠ 0) (hv : eViewW m h ≠ [])
+    (hg : (eViewW m h).headD 0 = 0 ∨ (eViewW m h).headD 0 = 2 ∨ (eViewW m h).headD 0 = 8 ∨
+      (eViewW m h).headD 0 = 3) : rxGoW (n + 1) m f fu h = some (h, m) := by
+  rcases hg with hg | hg | hg | hg
+  · exact rxGoW.arm1 _ _ _ _ _ hf hv hg
+  · exact rxGoW.arm2 _ _ _ _ _ hf hv (by rw [hg]; decide) hg
+  · exact rxGoW.arm3 _ _ _ _ _ hf hv (by rw [hg]; decide) (by rw [hg]; decide) hg
+  · exact rxGoW.arm4 _ _ _ _ _ hf hv (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide) hg
 
-theorem rxDs_step (s₀ : St) (f o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_ds" [f, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxDsW (n + 1) s₀.mem f o l = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, -, -, -, hDg, -, -, -⟩ := ih
-  simp only [invoke_eq _ L.ds, callFn, nestHoleImgDs]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hDg, iwAlloc_specW p L.ha n] <;>
-    finish (gen := 20)
+/-- An `fvar` goes through `fv_map_at`. -/
+theorem rxGoW_fvar (hf : fu ≠ 0) (hv : eViewW m h ≠ []) (hg : (eViewW m h).headD 0 = 1) :
+    rxGoW (n + 1) m f fu h = rxGoW.k_fv_map_at h (rxMapW n m f ((eViewW m h).tail.headD 0)) :=
+  rxGoW.arm5 _ _ _ _ _ hf hv (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)
+    (by rw [hg]; decide) hg
 
-theorem rxDsGo_step (s₀ : St) (f o l q j : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_hole_img_ds_go" [f, o, l, q, j]
-    ⦃fun _ s' => LocEq s' s₀ ∧ rxDsGoW (n + 1) s₀.mem f o l q j = some s'.mem; ⊤⦄ := by
-  obtain ⟨-, -, -, -, hDg, -, -, hRf⟩ := ih
-  simp only [invoke_eq _ L.dsg, callFn, nestHoleImgDsGo]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hDg, hRf] <;>
-    finish (gen := 20) [rdW_eq]
-
-theorem rxGo_step (s₀ : St) (f fu h : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars_go" [f, fu, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxGoW (n + 1) s₀.mem f fu h = some (r.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨hMap, -, -, -, -, -, hNd, -⟩ := ih
-  simp only [invoke_eq _ L.go, callFn, replaceFVarsGo]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      eView_spec p L.hl.hv n, hMap, memoFindG_spec rfSch p _ L.rff n,
-      memoPutG_spec rfSch p _ L.rfp n, hNd] <;> finish (gen := 20) [_root_.L.St.setLocs_mem, rdW_eq]
-
-theorem rxNode_step (s₀ : St) (f f1 g x y z : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars_node" [f, f1, g, x, y, z]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxNodeW (n + 1) s₀.mem f f1 g x y z = some (r.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, -, -, -, -, hGo, -, -⟩ := ih
-  have hk := L.hk
-  simp only [invoke_eq _ L.nd, callFn, replaceFVarsNode]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hGo,
-      mkApp_spec p hk.hd hk.appF hk.appP hk.appI hk.appM n,
-      mkLam_spec p hk.hd hk.lamF hk.lamP hk.lamI hk.lamM n,
-      mkForall_spec p hk.hd hk.forF hk.forP hk.forI hk.forM n,
-      mkLet_spec p hk.hd hk.ltF hk.ltP hk.ltI hk.ltM n,
-      mkProj_spec p hk.hd hk.prjF hk.prjP hk.prjI hk.prjM n] <;> finish (gen := 20) [_root_.L.St.setLocs_mem]
-
-theorem rxRf_step (s₀ : St) (f e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "replace_fvars" [f, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ rxW (n + 1) s₀.mem f e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  obtain ⟨-, -, -, -, -, hGo, -, -⟩ := ih
-  simp only [invoke_eq _ L.rf, callFn, replaceFVars]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hGo,
-      bankEnterG_spec 218 p _ L.rfe n, bankLeaveG_spec 218 p _ L.rfl' n,
-      memoClearG_spec rfSch p _ L.rfc n] <;> finish (gen := 20)
-
-end step
-
-theorem rxSpec_all (p : Prog) (L : RxLook p) (n : Nat) : RxSpec p n := by
-  induction n with
-  | zero => exact rxSpec_zero p L
-  | succ n ih =>
-    exact ⟨rxMap_step p L n ih, rxImg_step p L n ih, rxFrame_step p L n ih, rxDs_step p L n ih,
-      rxDsGo_step p L n ih, rxGo_step p L n ih, rxNode_step p L n ih, rxRf_step p L n ih⟩
+end
 
 end L.Ind
 

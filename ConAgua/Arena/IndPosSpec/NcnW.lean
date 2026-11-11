@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.L.ModelGen

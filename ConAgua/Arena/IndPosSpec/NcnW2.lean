@@ -9,7 +9,6 @@ public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.RootHoles
-import ConAgua.Arena.IndPosSpec.Rx
 import all ConAgua.Arena.IndPos2
 
 @[expose] public section
