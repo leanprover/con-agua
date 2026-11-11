@@ -7,7 +7,6 @@ public import ConAgua.Arena.IndPosSpec.P2ctK1
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.NestHoles
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-public import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.RecClassSpec.Classes
 public import ConAgua.Arena.IndPosSpec.FgW2
 

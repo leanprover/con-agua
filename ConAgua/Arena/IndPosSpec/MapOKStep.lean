@@ -8,7 +8,6 @@ import ConAgua.Arena.IndSim
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndInstallSpec.DomsW
 public import ConAgua.Arena.IndPosSpec.RpGoStep
-public import ConAgua.Arena.IndPosSpec.RxMapW
 import ConAgua.L.WordOff
 
 @[expose] public section

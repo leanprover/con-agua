@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.MapOKStep
-import ConAgua.Arena.IndPosSpec.Rx
 
 @[expose] public section
 
