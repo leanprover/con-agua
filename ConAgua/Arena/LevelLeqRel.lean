@@ -40,50 +40,57 @@ theorem substW_ok (hN : NameRel N) (n : Nat) : ∀ (m m' : Mem) (l k v x : Word)
   | zero => intro m m' l k v x L V K _ _ _ h; simp [substW] at h
   | succ n ih =>
     intro m m' l k v x L V K hl hk hv h
+    have bin : ∀ {g a b : Word}, lvNodeW m l = [g, a, b] → g ≠ 0 → g ≠ 4 →
+        substW.k_lv_subst n k v g b (substW n m a k v) = some (x, m') := by
+      intro g a b hw h0 h4
+      rwa [substW.arm4 n m l k v (by rw [(lv_fields hw).1]; exact h0)
+        (by rw [(lv_fields hw).1]; exact h4), (lv_fields hw).1, (lv_fields hw).2.1,
+        (lv_fields hw).2.2] at h
+    have two : ∀ {g a b : Word}, lvNodeW m l = [g, a, b] → g ≠ 0 → g ≠ 4 → g ≠ 1 →
+        ∃ x₁ m₁ y m₂, substW n m a k v = some (x₁, m₁) ∧ substW n m₁ b k v = some (y, m₂) ∧
+          lhMkW m₂ g x₁ y = some (x, m') := by
+      intro g a b hw h0 h4 h1
+      have h := bin hw h0 h4
+      rcases e₁ : substW n m a k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
+      · rw [substW.k_lv_subst.none] at h; cases h
+      rw [substW.k_lv_subst.arm2 n k v g b x₁ m₁ h1] at h
+      rcases e₂ : substW n m₁ b k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
+      · rw [substW.k_lv_subst_2.none] at h; cases h
+      rw [substW.k_lv_subst_2.arm1] at h
+      exact ⟨x₁, m₁, y, m₂, rfl, e₂, h⟩
     cases hl with
     | zero hw =>
-      rw [substW_zero n m l k v (lv_fields hw).1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      rw [substW.arm1 n m l k v (lv_fields hw).1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       exact ⟨HeapExt.refl _, by simpa [Level.subst] using LvR.zero hw⟩
     | @param _ a b nm hw hn =>
+      have h0 : lvG m l ≠ 0 := by rw [(lv_fields hw).1]; decide
       by_cases e : a = k
       · subst e
-        rw [substW_hit n m l a v (lv_fields hw).1 (lv_fields hw).2.1] at h
+        rw [substW.arm2 n m l a v h0 (lv_fields hw).1 (lv_fields hw).2.1] at h
         simp at h; obtain ⟨rfl, rfl⟩ := h
         rw [hN.fn _ _ _ hk hn]
         exact ⟨HeapExt.refl _, by simpa [Level.subst, Level.subst.go] using hv⟩
-      · rw [substW_miss n m l k v (lv_fields hw).1 (by rw [(lv_fields hw).2.1]; exact e)] at h
+      · rw [substW.arm3 n m l k v h0 (lv_fields hw).1 (by rw [(lv_fields hw).2.1]; exact e)] at h
         simp at h; obtain ⟨rfl, rfl⟩ := h
         have hne : K ≠ nm := fun h' => e (hN.inj _ _ _ hn (h' ▸ hk))
         exact ⟨HeapExt.refl _, by simpa [Level.subst, Level.subst.go, hne] using LvR.param hw hn⟩
     | succ hw ha =>
-      rw [substW_succ n m l k v (lv_fields hw).1, (lv_fields hw).2.1] at h
-      obtain ⟨y, m₁, hy, hm⟩ := succK_inv h
-      obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv hy
-      obtain ⟨he₂, hx⟩ := mk_succ hm hy'
+      have h := bin hw (by decide) (by decide)
+      rcases e₁ : substW n m _ k v with _ | ⟨y, m₁⟩ <;> rw [e₁] at h
+      · rw [substW.k_lv_subst.none] at h; cases h
+      rw [substW.k_lv_subst.arm1 n k v 1 _ y m₁ rfl] at h
+      obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
+      obtain ⟨he₂, hx⟩ := mk_succ h hy'
       exact ⟨he₁.trans he₂, by simpa [Level.subst] using hx⟩
     | max hw ha hb =>
-      rw [substW_bin n m l k v (by simp [lvG, hw]) (by simp [lvG, hw]) (by simp [lvG, hw]),
-        (lv_fields hw).1, (lv_fields hw).2.1, (lv_fields hw).2.2] at h
-      rcases e₁ : substW n m _ k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
-      · simp [subK₁] at h
-      rw [subK₁_some] at h
+      obtain ⟨x₁, m₁, y, m₂, e₁, e₂, h⟩ := two hw (by decide) (by decide) (by decide)
       obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
-      rcases e₂ : substW n m₁ _ k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
-      · simp [subK₂] at h
-      rw [subK₂_some] at h
       obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ _ _ _ _ (hb.mono he₁) hk (hv.mono he₁) e₂
       obtain ⟨he₃, hz⟩ := mk_max h (hx₁.mono he₂) hy
       exact ⟨(he₁.trans he₂).trans he₃, by simpa [Level.subst] using hz⟩
     | imax hw ha hb =>
-      rw [substW_bin n m l k v (by simp [lvG, hw]) (by simp [lvG, hw]) (by simp [lvG, hw]),
-        (lv_fields hw).1, (lv_fields hw).2.1, (lv_fields hw).2.2] at h
-      rcases e₁ : substW n m _ k v with _ | ⟨x₁, m₁⟩ <;> rw [e₁] at h
-      · simp [subK₁] at h
-      rw [subK₁_some] at h
+      obtain ⟨x₁, m₁, y, m₂, e₁, e₂, h⟩ := two hw (by decide) (by decide) (by decide)
       obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ _ _ _ _ ha hk hv e₁
-      rcases e₂ : substW n m₁ _ k v with _ | ⟨y, m₂⟩ <;> rw [e₂] at h
-      · simp [subK₂] at h
-      rw [subK₂_some] at h
       obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ _ _ _ _ (hb.mono he₁) hk (hv.mono he₁) e₂
       obtain ⟨he₃, hz⟩ := mk_imax h (hx₁.mono he₂) hy
       exact ⟨(he₁.trans he₂).trans he₃, by simpa [Level.subst] using hz⟩
@@ -95,8 +102,10 @@ theorem ssW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l k v x : Word) (L V : L
   cases n with
   | zero => simp [ssW] at h
   | succ n =>
-    rw [ssW_succ] at h
-    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> simp only [e, ssK, reduceCtorEq] at h
+    rw [ssW.arm1] at h
+    rcases e : substW n m l k v with _ | ⟨y, m₁⟩ <;> rw [e] at h
+    · rw [ssW.k_lv_subst.none] at h; cases h
+    rw [ssW.k_lv_subst.arm1] at h
     obtain ⟨he₁, hy⟩ := substW_ok hN n _ _ _ _ _ _ _ _ _ hl hk hv e
     obtain ⟨he₂, hx⟩ := simpW_ok n _ _ _ _ _ hy h
     exact ⟨he₁.trans he₂, hx⟩
@@ -105,8 +114,10 @@ theorem ssW_ok (hN : NameRel N) (n : Nat) (m m' : Mem) (l k v x : Word) (L V : L
 theorem dist1W_ok (m m' : Mem) (a k b x : Word) (A K B : Level) (ha : LvR N m a A)
     (hk : LvR N m k K) (hb : LvR N m b B) (h : dist1W m a k b = some (x, m')) :
     HeapExt m m' ∧ LvR N m' x (.max (.imax A K) B) := by
-  rw [dist1W_eq] at h
-  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> simp only [e, d1K, reduceCtorEq] at h
+  rw [dist1W.arm1] at h
+  rcases e : lhMkW m 3 a k with _ | ⟨y, m₁⟩ <;> rw [e] at h
+  · rw [dist1W.k_lh_mk.none] at h; cases h
+  rw [dist1W.k_lh_mk.arm1] at h
   obtain ⟨he₁, hy⟩ := mk_imax e ha hk
   obtain ⟨he₂, hx⟩ := mk_max h hy (hb.mono he₁)
   exact ⟨he₁.trans he₂, hx⟩
@@ -118,16 +129,20 @@ theorem dist2W_ok (n : Nat) (m m' : Mem) (a j k x : Word) (A J K : Level) (ha : 
   cases n with
   | zero => simp [dist2W] at h
   | succ n =>
-    rw [dist2W_succ] at h
-    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> simp only [e₁, d2K₁, reduceCtorEq] at h
+    rw [dist2W.arm1] at h
+    rcases e₁ : lhMkW m 3 a j with _ | ⟨y₁, m₁⟩ <;> rw [e₁] at h
+    · rw [dist2W.k_lh_mk.none] at h; cases h
+    rw [dist2W.k_lh_mk.arm1] at h
     obtain ⟨he₁, hy₁⟩ := mk_imax e₁ ha hj
-    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> simp only [e₂, d2K₁.d2K₂, reduceCtorEq] at h
+    rcases e₂ : lhMkW m₁ 3 a k with _ | ⟨y₂, m₂⟩ <;> rw [e₂] at h
+    · rw [dist2W.k_lh_mk_2.none] at h; cases h
+    rw [dist2W.k_lh_mk_2.arm1] at h
     obtain ⟨he₂, hy₂⟩ := mk_imax e₂ (ha.mono he₁) (hk.mono he₁)
     cases e₃ : lhMkW m₂ 2 y₁ y₂ with
-    | none => rw [e₃] at h; simp [ssK] at h
+    | none => rw [e₃, dist2W.k_lh_mk_3.none] at h; cases h
     | some w₃ =>
       obtain ⟨y₃, m₃⟩ := w₃
-      rw [e₃, ssK_some] at h
+      rw [e₃, dist2W.k_lh_mk_3.arm1] at h
       obtain ⟨he₃, hy₃⟩ := mk_max e₃ (hy₁.mono he₂) hy₂
       obtain ⟨he₄, hx⟩ := simpW_ok n _ _ _ _ _ hy₃ h
       exact ⟨((he₁.trans he₂).trans he₃).trans he₄, hx⟩
@@ -322,45 +337,48 @@ theorem tag0_iff {m : Mem} {p : Word} {L : Level} (h : LvR N m p L) : lvG m p = 
 theorem leq_ok (n : Nat) (ih : RestOK N n) : LeqOK N (n + 1) := by
   intro m m' f l r d x L R fuel diff hl hr hf hd hb h
   by_cases hf0 : f = 0
-  · rw [leqW_f0 n m f l r d hf0] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [leqW.arm1 n m f l r d hf0] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     have : fuel = 0 := by rw [← hf, hf0]; rfl
     subst this; exact ⟨HeapExt.refl _, by simp [Level.leqCore, encO]⟩
   obtain ⟨hf', hfuel⟩ := fuel_pred hf hf0
   obtain ⟨k, rfl⟩ : ∃ k, fuel = k + 1 := ⟨fuel - 1, by omega⟩
   by_cases c1 : lvG m l = 0 ∧ 4294967296 ≤ d
-  · rw [leqW_lz n m f l r d hf0 c1.1 c1.2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [leqW.arm2 n m f l r d hf0 c1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     have hL : L = .zero := (tag0_iff hl).mp c1.1
     have hd0 : 0 ≤ diff := hd.ge.mp c1.2
     exact ⟨HeapExt.refl _, by simp [Level.leqCore, hL, hd0, encO]⟩
   have n1 : ¬ (L = .zero ∧ diff ≥ 0) := fun ⟨a, b⟩ => c1 ⟨(tag0_iff hl).mpr a, hd.ge.mpr b⟩
   by_cases c2 : lvG m r = 0 ∧ d < 4294967296
-  · rw [leqW_rz n m f l r d hf0 c1 c2.1 c2.2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [leqW.arm3 n m f l r d hf0 c1 c2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     have hR : R = .zero := (tag0_iff hr).mp c2.1
     have hd0 : diff < 0 := hd.lt.mp c2.2
     exact ⟨HeapExt.refl _, by simp [Level.leqCore, n1, hR, hd0, encO]⟩
   have n2 : ¬ (R = .zero ∧ diff < 0) := fun ⟨a, b⟩ => c2 ⟨(tag0_iff hr).mpr a, hd.lt.mpr b⟩
-  rw [leqW_rest n m f l r d hf0 c1 c2] at h
+  rw [leqW.arm4 n m f l r d hf0 c1 c2] at h
   obtain ⟨he, hx⟩ := ih m m' (f - 1) l r d x L R k diff hl hr (by omega) hd (by omega) h
   exact ⟨he, by rw [hx]; simp only [Level.leqCore, n1, n2, ↓reduceIte]⟩
 
 theorem ca_ok (hN : NameRel N) (n : Nat) (ih : LeqOK N n) : CaOK N (n + 1) := by
   intro m m' f q l r d v x P L R V fuel diff hq hl hr hv hf hd hb h
-  rw [caW_succ] at h
-  rcases e₁ : ssW n m l q v with _ | ⟨x₁, m₁⟩ <;> simp only [e₁, caK₁, caK₁_some, reduceCtorEq] at h
+  rw [caW.arm1] at h
+  rcases e₁ : ssW n m l q v with _ | ⟨x₁, m₁⟩ <;>
+    simp only [e₁, caW.k_lv_subsimp.none, caW.k_lv_subsimp.arm1, reduceCtorEq] at h
   obtain ⟨he₁, hx₁⟩ := ssW_ok hN n _ _ _ _ _ _ _ _ _ hl hq hv e₁
-  rcases e₂ : ssW n m₁ r q v with _ | ⟨y, m₂⟩ <;> simp only [e₂, caK₂, caK₂_some, reduceCtorEq] at h
+  rcases e₂ : ssW n m₁ r q v with _ | ⟨y, m₂⟩ <;>
+    simp only [e₂, caW.k_lv_subsimp_2.none, caW.k_lv_subsimp_2.arm1, reduceCtorEq] at h
   obtain ⟨he₂, hy⟩ := ssW_ok hN n _ _ _ _ _ _ _ _ _ (hr.mono he₁) hq (hv.mono he₁) e₂
   obtain ⟨he₃, hx⟩ := ih _ _ _ _ _ _ _ _ _ fuel diff (hx₁.mono he₂) hy hf hd hb h
   exact ⟨(he₁.trans he₂).trans he₃, hx⟩
 
 theorem cases_ok (n : Nat) (ih : CaOK N n) : CasesOK N (n + 1) := by
   intro m m' f q l r d x P L R fuel diff hq hl hr hf hd hb h
-  rw [casesW_succ] at h
-  rcases e₁ : lhMkW m 0 0 0 with _ | ⟨z, m₁⟩ <;> simp only [e₁, csK₁, csK₁_some, reduceCtorEq] at h
+  rw [casesW.arm1] at h
+  rcases e₁ : lhMkW m 0 0 0 with _ | ⟨z, m₁⟩ <;>
+    simp only [e₁, casesW.k_lh_mk.none, casesW.k_lh_mk.arm1, reduceCtorEq] at h
   obtain ⟨he₁, hz, -⟩ := lhMkW_ext e₁
   have hz' : LvR N m₁ z .zero := .zero hz
   cases e₂ : caW n m₁ f q l r d z with
-  | none => rw [e₂] at h; simp [csK₂] at h
+  | none => rw [e₂, casesW.k_lv_cases_at.none] at h; cases h
   | some w₂ =>
     obtain ⟨y, m₂⟩ := w₂
     rw [e₂] at h
@@ -369,18 +387,18 @@ theorem cases_ok (n : Nat) (ih : CaOK N n) : CasesOK N (n + 1) := by
     rw [LevelEq.byCases_eq]
     by_cases hy2 : y = 2
     · subst hy2
-      rw [csK₂_go] at h
+      rw [casesW.k_lv_cases_at.arm2 (hc1 := rfl)] at h
       cases e₃ : lhMkW m₂ 4 q 0 with
-      | none => rw [e₃] at h; simp [csK₃] at h
+      | none => rw [e₃, casesW.k_lh_mk_2.none] at h; cases h
       | some w₃ =>
         obtain ⟨s₁, m₃⟩ := w₃
-        rw [e₃, csK₃_some] at h
+        rw [e₃, casesW.k_lh_mk_2.arm1] at h
         obtain ⟨he₃, hs₁, -⟩ := lhMkW_ext e₃
         cases e₄ : lhMkW m₃ 1 s₁ 0 with
-        | none => rw [e₄] at h; simp [csK₄] at h
+        | none => rw [e₄, casesW.k_lh_mk_3.none] at h; cases h
         | some w₄ =>
           obtain ⟨s₂, m₄⟩ := w₄
-          rw [e₄, csK₄_some] at h
+          rw [e₄, casesW.k_lh_mk_3.arm1] at h
           obtain ⟨he₄, hs₂⟩ := mk_succ e₄ (LvR.param hs₁ hq)
           have hm := (he₂.trans he₃).trans he₄
           obtain ⟨he₅, hx⟩ := ih _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hq (hl.mono (he₁.trans hm))
@@ -391,7 +409,7 @@ theorem cases_ok (n : Nat) (ih : CaOK N n) : CasesOK N (n + 1) := by
           cases Level.leqCore fuel _ _ diff with
           | none => simp [encO]
           | some b => cases b <;> simp [encO]
-    · rw [csK₂_stop (hx := hy2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+    · rw [casesW.k_lv_cases_at.arm1 (hc1 := hy2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       refine ⟨he₁.trans he₂, ?_⟩
       rw [hy] at hy2 ⊢
       revert hy2
@@ -467,7 +485,12 @@ theorem rest_ok (hN : NameRel N) (n : Nat) (ihL : LeqOK N n) (ihI : ImaxOK N n) 
   have tL := hl.tag
   have tR := hr.tag
   by_cases c1 : lvG m l = 4 ∧ lvG m r = 4
-  · rw [restW_pp n m f l r d c1] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [show restW (n + 1) m f l r d =
+        some (if lvA m l = lvA m r ∧ 4294967296 ≤ d then 2 else 1, m) by
+      by_cases c : lvA m l = lvA m r ∧ 4294967296 ≤ d
+      · rw [restW.arm1 n m f l r d c1 c, ite_eq_left c]
+      · rw [restW.arm2 n m f l r d c1 c, ite_eq_right c]] at h
+    simp at h; obtain ⟨rfl, rfl⟩ := h
     refine ⟨HeapExt.refl _, ?_⟩
     obtain ⟨a, _, A, hv, hA, rfl⟩ := hl.inv4 c1.1
     obtain ⟨b, _, B, hw, hB, rfl⟩ := hr.inv4 c1.2
@@ -478,110 +501,114 @@ theorem rest_ok (hN : NameRel N) (n : Nat) (ihL : LeqOK N n) (ihI : ImaxOK N n) 
     · have : A ≠ B := fun h' => e (hN.inj _ _ _ hA (h' ▸ hB))
       simp [e, this, encO]
   by_cases c2 : lvG m l = 4 ∧ lvG m r = 0
-  · rw [restW_pz n m f l r d c1 c2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [restW.arm3 n m f l r d c1 c2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     refine ⟨HeapExt.refl _, ?_⟩
     obtain ⟨a, _, A, hv, hA, rfl⟩ := hl.inv4 c2.1
     rw [hr.inv0 c2.2, LevelEq.rest_pz]; rfl
   by_cases c3 : lvG m l = 0 ∧ lvG m r = 4
-  · rw [restW_zp n m f l r d c1 c2 c3] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [show restW (n + 1) m f l r d = some (if 4294967296 ≤ d then 2 else 1, m) by
+      by_cases c : 4294967296 ≤ d
+      · rw [restW.arm4 n m f l r d c1 c2 c3 c, ite_eq_left c]
+      · rw [restW.arm5 n m f l r d c1 c2 c3 c, ite_eq_right c]] at h
+    simp at h; obtain ⟨rfl, rfl⟩ := h
     refine ⟨HeapExt.refl _, ?_⟩
     obtain ⟨b, _, B, hw, hB, rfl⟩ := hr.inv4 c3.2
     rw [hl.inv0 c3.1, LevelEq.rest_zp]; by_cases hd0 : 0 ≤ diff <;> simp [hd0, hd.ge, encO]
   by_cases c4 : lvG m l = 1
-  · rw [restW_sl n m f l r d c1 c2 c3 c4] at h
+  · rw [restW.arm6 n m f l r d c1 c2 c3 c4] at h
     obtain ⟨a, A, hv, ha, rfl⟩ := hl.inv1 c4
     rw [(lv_fields hv).2.1] at h
     obtain ⟨he, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel (diff - 1) ha hr hf (hd.pred (by omega))
       (by omega) h
     exact ⟨he, by rw [hx, LevelEq.rest_sl]⟩
   by_cases c5 : lvG m r = 1
-  · rw [restW_sr n m f l r d c1 c2 c3 c4 c5] at h
+  · rw [restW.arm7 n m f l r d c1 c2 c3 c4 c5] at h
     obtain ⟨a, A, hv, ha, rfl⟩ := hr.inv1 c5
     rw [(lv_fields hv).2.1] at h
     obtain ⟨he, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel (diff + 1) hl ha hf (hd.succ (by omega))
       (by omega) h
     exact ⟨he, by rw [hx, LevelEq.rest_sr _ _ _ _ (by rw [← tL]; exact c4)]⟩
   by_cases c6 : lvG m l = 2
-  · rw [restW_ml n m f l r d c1 c2 c3 c4 c5 c6] at h
+  · rw [restW.arm8 n m f l r d c1 c2 c3 c4 c5 c6] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hl.inv2 c6
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [LevelEq.rest_ml _ _ _ _ _ (by rw [← tR]; exact c5)]
     cases e : leqW n m f a r d with
-    | none => rw [e] at h; simp [andK] at h
+    | none => rw [e, restW.k_lv_leq.none] at h; cases h
     | some w =>
       obtain ⟨y, m₁⟩ := w
       rw [e] at h
       obtain ⟨he₁, hy⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff ha hr hf hd (by omega) e
       by_cases hy2 : y = 2
       · subst hy2
-        rw [andK_go] at h
+        rw [restW.k_lv_leq.arm2 (hc1 := rfl)] at h
         obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff (hb'.mono he₁) (hr.mono he₁) hf hd
           (by omega) h
         refine ⟨he₁.trans he₂, ?_⟩
         rw [hx, enc_eq2 hy]; rfl
-      · rw [andK_stop (hx := hy2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      · rw [restW.k_lv_leq.arm1 (hc1 := hy2)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
         refine ⟨he₁, ?_⟩
         rw [hy] at hy2 ⊢; rw [enc_stop_and hy2]
   by_cases c7 : lvG m r = 2 ∧ (lvG m l = 4 ∨ lvG m l = 0)
-  · rw [restW_mr n m f l r d c1 c2 c3 c4 c5 c6 c7] at h
+  · rw [restW.arm9 n m f l r d c1 c2 c3 c4 c5 c6 c7] at h
     have hL : tagOf L = 4 ∨ tagOf L = 0 := by rw [← tL]; exact c7.2
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hr.inv2 c7.1
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [LevelEq.rest_mr _ _ _ _ _ hL]
     cases e : leqW n m f l a d with
-    | none => rw [e] at h; simp [orK] at h
+    | none => rw [e, restW.k_lv_leq_2.none] at h; cases h
     | some w =>
       obtain ⟨y, m₁⟩ := w
       rw [e] at h
       obtain ⟨he₁, hy⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff hl ha hf hd (by omega) e
       by_cases hy1 : y = 1
       · subst hy1
-        rw [orK_go] at h
+        rw [restW.k_lv_leq_2.arm2 (hc1 := rfl)] at h
         obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff (hl.mono he₁) (hb'.mono he₁) hf hd
           (by omega) h
         refine ⟨he₁.trans he₂, ?_⟩
         rw [hx, enc_eq1 hy]; rfl
-      · rw [orK_stop (hx := hy1)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      · rw [restW.k_lv_leq_2.arm1 (hc1 := hy1)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
         refine ⟨he₁, ?_⟩
         rw [hy] at hy1 ⊢; rw [enc_stop_or hy1]
   by_cases c8 : lvG m l = 3 ∧ lvG m r = 3 ∧ 4294967296 ≤ d
-  · rw [restW_ii n m f l r d c1 c2 c3 c4 c5 c6 c7 c8] at h
+  · rw [restW.arm10 n m f l r d c1 c2 c3 c4 c5 c6 c7 c8] at h
     have hd0 : 0 ≤ diff := hd.ge.mp c8.2.2
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hl.inv3 c8.1
     obtain ⟨x', y', X, Y, hw, hx', hy', rfl⟩ := hr.inv3 c8.2.1
     rw [LevelEq.rest_ii]
     rw [(lv_fields hv).2.1, (lv_fields hw).2.1] at h
     cases e₁ : lvEqW n m a x' with
-    | none => rw [e₁] at h; simp [eqK₁] at h
+    | none => rw [e₁, restW.k_lv_eq.none] at h; cases h
     | some z₁ =>
       rw [e₁] at h
       have hz₁ := lvEqW_ok hN n a x' A X z₁ ha hx' e₁
       simp only [Level.beq, decide_eq_true_eq] at hz₁
       by_cases eAX : A = X
       · simp only [eAX, ↓reduceIte] at hz₁; subst hz₁
-        rw [eqK₁_ne (hx := by decide), (lv_fields hv).2.2, (lv_fields hw).2.2] at h
+        rw [restW.k_lv_eq.arm1 (hc1 := by decide), (lv_fields hv).2.2, (lv_fields hw).2.2] at h
         cases e₂ : lvEqW n m b y' with
-        | none => rw [e₂] at h; simp [eqK₂] at h
+        | none => rw [e₂, restW.k_lv_eq_2.none] at h; cases h
         | some z₂ =>
           rw [e₂] at h
           have hz₂ := lvEqW_ok hN n b y' B Y z₂ hb' hy' e₂
           simp only [Level.beq, decide_eq_true_eq] at hz₂
           by_cases eBY : B = Y
           · simp only [eBY, ↓reduceIte] at hz₂; subst hz₂
-            rw [eqK₂_ne (hx := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+            rw [restW.k_lv_eq_2.arm1 (hc1 := by decide)] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
             refine ⟨HeapExt.refl _, ?_⟩
             simp [eAX, eBY, hd0, encO]
           · simp only [eBY, ↓reduceIte] at hz₂; subst hz₂
-            rw [eqK₂_zero] at h
+            rw [restW.k_lv_eq_2.arm2 (hc1 := rfl), restW.j1.arm1] at h
             obtain ⟨he, hx⟩ := ihI _ _ _ _ _ _ _ _ _ fuel diff (.imax hv ha hb')
               (.imax hw hx' hy') hf hd (by omega) h
             exact ⟨he, by rw [hx]; simp [eBY]⟩
       · simp only [eAX, ↓reduceIte] at hz₁; subst hz₁
-        rw [eqK₁_zero] at h
+        rw [restW.k_lv_eq.arm2 (hc1 := rfl), restW.j1.arm1] at h
         obtain ⟨he, hx⟩ := ihI _ _ _ _ _ _ _ _ _ fuel diff (.imax hv ha hb')
           (.imax hw hx' hy') hf hd (by omega) h
         exact ⟨he, by rw [hx]; simp [eAX]⟩
-  rw [restW_im n m f l r d c1 c2 c3 c4 c5 c6 c7 c8] at h
+  rw [restW.arm11 n m f l r d c1 c2 c3 c4 c5 c6 c7 c8, restW.j1.arm1] at h
   obtain ⟨he, hx⟩ := ihI _ _ _ _ _ _ _ _ _ fuel diff hl hr hf hd (by omega) h
   refine ⟨he, ?_⟩
   rw [hx]
@@ -598,7 +625,7 @@ theorem imax_ok (n : Nat) (ihIL : ImaxLOK N n) (ihC : CasesOK N n) : ImaxOK N (n
   have g := fun t => (guard_iff hl t)
   have g' := fun t => (guard_iff hr t)
   by_cases c1 : lvG m l = 3 ∧ lvG m (lvB m l) = 4
-  · rw [imaxRW_cl n m f l r d c1] at h
+  · rw [imaxRW.arm1 n m f l r d c1.1 c1.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hl.inv3 c1.1
     rw [(lv_fields hv).2.2] at c1 h
     obtain ⟨q, _, P, hw, hq, rfl⟩ := hb'.inv4 c1.2
@@ -607,8 +634,12 @@ theorem imax_ok (n : Nat) (ihIL : ImaxLOK N n) (ihC : CasesOK N n) : ImaxOK N (n
       hb h
     exact ⟨he, by rw [hx, LevelEq.im_cl]⟩
   have n1 : ¬ (tagOf L = 3 ∧ rtagOf L = 4) := fun e => c1 ((g 4).mpr e)
+  rw [show imaxRW (n + 1) m f l r d = imaxRW.j1 n f l r d m by
+    by_cases g3 : lvG m l = 3
+    · exact imaxRW.arm2 n m f l r d g3 (fun e => c1 ⟨g3, e⟩)
+    · exact imaxRW.arm3 n m f l r d g3] at h
   by_cases c2 : lvG m r = 3 ∧ lvG m (lvB m r) = 4
-  · rw [imaxRW_cr n m f l r d c1 c2] at h
+  · rw [imaxRW.j1.arm1 n f l r d m c2.1 c2.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hr.inv3 c2.1
     rw [(lv_fields hv).2.2] at c2 h
     obtain ⟨q, _, P, hw, hq, rfl⟩ := hb'.inv4 c2.2
@@ -617,67 +648,81 @@ theorem imax_ok (n : Nat) (ihIL : ImaxLOK N n) (ihC : CasesOK N n) : ImaxOK N (n
       hb h
     exact ⟨he, by rw [hx, LevelEq.im_cr _ _ _ _ _ n1]⟩
   have n2 : ¬ (tagOf R = 3 ∧ rtagOf R = 4) := fun e => c2 ((g' 4).mpr e)
-  rw [imaxRW_l n m f l r d c1 c2] at h
+  rw [show imaxRW.j1 n f l r d m = imaxLW n m f l r d by
+    by_cases g3 : lvG m r = 3
+    · rw [imaxRW.j1.arm2 n f l r d m g3 (fun e => c2 ⟨g3, e⟩), imaxRW.j2.arm1]
+    · rw [imaxRW.j1.arm3 n f l r d m g3, imaxRW.j2.arm1]] at h
   exact ihIL _ _ _ _ _ _ _ _ _ fuel diff hl hr hf hd hb n1 n2 h
 
 theorem imaxL_ok (n : Nat) (ihL : LeqOK N n) (ihIR : ImaxROK N n) : ImaxLOK N (n + 1) := by
   intro m m' f l r d x L R fuel diff hl hr hf hd hb n1 n2 h
   have g := fun t => (guard_iff hl t)
   by_cases c3 : lvG m l = 3 ∧ lvG m (lvB m l) = 3
-  · rw [imaxLW_i n m f l r d c3] at h
+  · rw [imaxLW.arm1 n m f l r d c3.1 c3.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hl.inv3 c3.1
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [(lv_fields hv).2.2] at c3
     obtain ⟨x', y', X, Y, hw, hx', hy', rfl⟩ := hb'.inv3 c3.2
     rw [(lv_fields hw).2.2] at h
-    rcases e : dist1W m a y' b with _ | ⟨z, m₁⟩ <;> simp only [e, leqLK, leqLK_some, reduceCtorEq] at h
+    rcases e : dist1W m a y' b with _ | ⟨z, m₁⟩ <;>
+      simp only [e, imaxLW.k_lv_dist1.none, imaxLW.k_lv_dist1.arm1, reduceCtorEq] at h
     obtain ⟨he₁, hz⟩ := dist1W_ok m m₁ a y' b z A Y _ ha hy' (.imax hw hx' hy') e
     obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff hz (hr.mono he₁) hf hd hb h
     exact ⟨he₁.trans he₂, by rw [hx, LevelEq.im_il _ _ _ _ _ _ n2]⟩
   have n3 : ¬ (tagOf L = 3 ∧ rtagOf L = 3) := fun e => c3 ((g 3).mpr e)
   by_cases c4 : lvG m l = 3 ∧ lvG m (lvB m l) = 2
-  · rw [imaxLW_m n m f l r d c3 c4] at h
+  · rw [imaxLW.arm2 n m f l r d c4.1 (fun e => c3 ⟨c4.1, e⟩) c4.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hl.inv3 c4.1
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [(lv_fields hv).2.2] at c4
     obtain ⟨x', y', X, Y, hw, hx', hy', rfl⟩ := hb'.inv2 c4.2
     rw [(lv_fields hw).2.1, (lv_fields hw).2.2] at h
-    rcases e : dist2W n m a x' y' with _ | ⟨z, m₁⟩ <;> simp only [e, leqLK, leqLK_some, reduceCtorEq] at h
+    rcases e : dist2W n m a x' y' with _ | ⟨z, m₁⟩ <;>
+      simp only [e, imaxLW.k_lv_dist1.none, imaxLW.k_lv_dist1.arm1, reduceCtorEq] at h
     obtain ⟨he₁, hz⟩ := dist2W_ok n m m₁ a x' y' z A X Y ha hx' hy' e
     obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff hz (hr.mono he₁) hf hd hb h
     exact ⟨he₁.trans he₂, by rw [hx, LevelEq.im_ml _ _ _ _ _ _ n2]⟩
   have n4 : ¬ (tagOf L = 3 ∧ rtagOf L = 2) := fun e => c4 ((g 2).mpr e)
-  rw [imaxLW_r n m f l r d c3 c4] at h
+  rw [show imaxLW (n + 1) m f l r d = imaxRrW n m f l r d by
+    by_cases g3 : lvG m l = 3
+    · rw [imaxLW.arm3 n m f l r d g3 (fun e => c3 ⟨g3, e⟩) (fun e => c4 ⟨g3, e⟩), imaxLW.j1.arm1]
+    · rw [imaxLW.arm4 n m f l r d g3, imaxLW.j1.arm1]] at h
   exact ihIR _ _ _ _ _ _ _ _ _ fuel diff hl hr hf hd hb n1 n2 n3 n4 h
 
 theorem imaxR_ok (n : Nat) (ihL : LeqOK N n) : ImaxROK N (n + 1) := by
   intro m m' f l r d x L R fuel diff hl hr hf hd hb n1 n2 n3 n4 h
   have g' := fun t => (guard_iff hr t)
   by_cases c5 : lvG m r = 3 ∧ lvG m (lvB m r) = 3
-  · rw [imaxRrW_i n m f l r d c5] at h
+  · rw [imaxRrW.arm1 n m f l r d c5.1 c5.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hr.inv3 c5.1
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [(lv_fields hv).2.2] at c5
     obtain ⟨x', y', X, Y, hw, hx', hy', rfl⟩ := hb'.inv3 c5.2
     rw [(lv_fields hw).2.2] at h
-    rcases e : dist1W m a y' b with _ | ⟨z, m₁⟩ <;> simp only [e, leqRK, leqRK_some, reduceCtorEq] at h
+    rcases e : dist1W m a y' b with _ | ⟨z, m₁⟩ <;>
+      simp only [e, imaxRrW.k_lv_dist1.none, imaxRrW.k_lv_dist1.arm1, reduceCtorEq] at h
     obtain ⟨he₁, hz⟩ := dist1W_ok m m₁ a y' b z A Y _ ha hy' (.imax hw hx' hy') e
     obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff (hl.mono he₁) hz hf hd hb h
     exact ⟨he₁.trans he₂, by rw [hx, LevelEq.im_ir _ _ _ _ _ _ n1 n3 n4]⟩
   have n5 : ¬ (tagOf R = 3 ∧ rtagOf R = 3) := fun e => c5 ((g' 3).mpr e)
   by_cases c6 : lvG m r = 3 ∧ lvG m (lvB m r) = 2
-  · rw [imaxRrW_m n m f l r d c5 c6] at h
+  · rw [imaxRrW.arm2 n m f l r d c6.1 (fun e => c5 ⟨c6.1, e⟩) c6.2] at h
     obtain ⟨a, b, A, B, hv, ha, hb', rfl⟩ := hr.inv3 c6.1
     rw [(lv_fields hv).2.1, (lv_fields hv).2.2] at h
     rw [(lv_fields hv).2.2] at c6
     obtain ⟨x', y', X, Y, hw, hx', hy', rfl⟩ := hb'.inv2 c6.2
     rw [(lv_fields hw).2.1, (lv_fields hw).2.2] at h
-    rcases e : dist2W n m a x' y' with _ | ⟨z, m₁⟩ <;> simp only [e, leqRK, leqRK_some, reduceCtorEq] at h
+    rcases e : dist2W n m a x' y' with _ | ⟨z, m₁⟩ <;>
+      simp only [e, imaxRrW.k_lv_dist1.none, imaxRrW.k_lv_dist1.arm1, reduceCtorEq] at h
     obtain ⟨he₁, hz⟩ := dist2W_ok n m m₁ a x' y' z A X Y ha hx' hy' e
     obtain ⟨he₂, hx⟩ := ihL _ _ _ _ _ _ _ _ _ fuel diff (hl.mono he₁) hz hf hd hb h
     exact ⟨he₁.trans he₂, by rw [hx, LevelEq.im_mr _ _ _ _ _ _ n1 n3 n4]⟩
   have n6 : ¬ (tagOf R = 3 ∧ rtagOf R = 2) := fun e => c6 ((g' 2).mpr e)
-  rw [imaxRrW_none n m f l r d c5 c6] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  rw [show imaxRrW (n + 1) m f l r d = some (0, m) by
+    by_cases g3 : lvG m r = 3
+    · rw [imaxRrW.arm3 n m f l r d g3 (fun e => c5 ⟨g3, e⟩) (fun e => c6 ⟨g3, e⟩), imaxRrW.j1.arm1]
+    · rw [imaxRrW.arm4 n m f l r d g3, imaxRrW.j1.arm1]] at h
+  simp at h; obtain ⟨rfl, rfl⟩ := h
   exact ⟨HeapExt.refl _, by rw [LevelEq.im_none _ _ _ _ n1 n2 n3 n4 n5 n6]; rfl⟩
 
 /-- **The comparison refines con-leche's**, at every L fuel: the seven functions at once. -/

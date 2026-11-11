@@ -303,7 +303,7 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
 theorem lvEqW_zz (n : Nat) (x : Word) (h : lvEqW n m 0 0 = some x) : x = 1 := by
   cases n with
   | zero => simp [lvEqW] at h
-  | succ n => rw [lvEqW_refl] at h; simp at h; exact h.symm
+  | succ n => rw [lvEqW.arm1 (hc1 := rfl)] at h; simp at h; exact h.symm
 
 /-- The view fields of a related pointer. -/
 theorem lv_fields {p : Word} {g a b : Word} (h : lvNodeW m p = [g, a, b]) :
@@ -321,23 +321,23 @@ theorem lvEqW_ok (hN : NameRel N) (n : Nat) : ∀ (p q : Word) (l r : Level) (x 
     simp only [Level.beq, decide_eq_true_eq]
     by_cases hpq : p = q
     · subst hpq
-      rw [lvEqW_refl] at hx; simp at hx
+      rw [lvEqW.arm1 (hc1 := rfl)] at hx; simp at hx
       rw [hl.fn hN hr] at *; simp [hx]
     · have tagne : ∀ {g h : Word}, g ≠ h → lvG m p = g → lvG m q = h → x = 0 := by
         intro g h gh hg hh
-        rw [lvEqW_tag n m p q hpq (by rw [hg, hh]; exact gh)] at hx; simp at hx; exact hx.symm
+        rw [lvEqW.arm2 n m p q hpq (by rw [hg, hh]; exact gh)] at hx; simp at hx; exact hx.symm
       have hrec : ∀ {g : Word}, lvG m p = g → lvG m q = g → g ≠ 4 →
           ∃ y, lvEqW n m (lvA m p) (lvA m q) = some y ∧
             (y = 0 → x = 0) ∧ (y ≠ 0 → lvEqW n m (lvB m p) (lvB m q) = some x) := by
         intro g hg hh h4
-        rw [lvEqW_rec n m p q hpq (by rw [hg, hh]) (by rw [hg]; exact h4)] at hx
+        rw [lvEqW.arm4 n m p q hpq (by rw [hg, hh]) (by rw [hg]; exact h4)] at hx
         cases e : lvEqW n m (lvA m p) (lvA m q) with
-        | none => rw [e] at hx; simp [eqK] at hx
+        | none => rw [e, lvEqW.k_lv_eq.none] at hx; cases hx
         | some y =>
           rw [e] at hx
           refine ⟨y, rfl, fun hy => ?_, fun hy => ?_⟩
-          · subst hy; rw [eqK_zero] at hx; simp at hx; exact hx.symm
-          · rw [eqK_ne _ _ _ _ _ hy] at hx; exact hx
+          · subst hy; rw [lvEqW.k_lv_eq.arm1 (hc1 := rfl)] at hx; simp at hx; exact hx.symm
+          · rw [lvEqW.k_lv_eq.arm2 (hc1 := hy)] at hx; exact hx
       cases hl with
       | zero hv =>
         obtain ⟨g1, -, -⟩ := lv_fields hv
@@ -388,7 +388,7 @@ theorem lvEqW_ok (hN : NameRel N) (n : Nat) : ∀ (p q : Word) (l r : Level) (x 
         cases hr with
         | @param _ w2 _ n2 hv' hn' =>
           obtain ⟨g2, a2, -⟩ := lv_fields hv'
-          rw [lvEqW_param n m p q hpq (by rw [g1, g2]) g1] at hx
+          rw [lvEqW.arm3 n m p q hpq (by rw [g1, g2]) g1] at hx
           simp only [Option.some.injEq] at hx
           rw [a1, a2] at hx
           by_cases e : w1 = w2

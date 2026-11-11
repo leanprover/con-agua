@@ -122,32 +122,18 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
     {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hf : HW (tfld m LET (tierW h) (idxW h) 0))
-    (ha : HW (tfld m LET (tierW h) (idxW h) 1))
-    (hb : HW (tfld m LET (tierW h) (idxW h) 2))
-    (hW : ilwLetW p n m h ko kc vo vc fu = some (r, m')) :
-    ILWStep (instLPArmLet ks vs fu.toNat (decE h) (decE (tfld m LET (tierW h) (idxW h) 0))
-      (decE (tfld m LET (tierW h) (idxW h) 1))
-      (decE (tfld m LET (tierW h) (idxW h) 2))) a dn m m' vis fe M eb r := by
+    {fw aw bw : Word} (hf : HW fw) (ha : HW aw) (hb : HW bw)
+    (hW : ilwLetS p n m h fw aw bw ko kc vo vc fu = some (r, m')) :
+    ILWStep (instLPArmLet ks vs fu.toNat (decE h) (decE fw) (decE aw) (decE bw)) a dn m m' vis fe M
+      eb r := by
   rw [instLPArmLet_eq]
-  unfold ilwLetW at hW
-  generalize tfld m LET (tierW h) (idxW h) 0 = fw at hf hW ⊢
-  generalize tfld m LET (tierW h) (idxW h) 1 = aw at ha hW ⊢
-  generalize tfld m LET (tierW h) (idxW h) 2 = bw at hb hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => match callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
         | none => none
         | some (y, m₂) =>
           ilwHd (callW p n "lp_let_tail" [h, fw, aw, bw, x.headD 0, y.headD 0, ko, kc, vo, vc, fu] m₂))
-    (by
-      rw [← hW]; congr 1
-      cases callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-      | none => rfl
-      | some q =>
-        obtain ⟨x, m₁⟩ := q
-        simp only [ilwLetK₁_some]
-        cases callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ <;> rfl) ?_
+    hW ?_
   intro r₃ m₃ _ hY
   rcases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
   · simp at hY
@@ -198,38 +184,26 @@ theorem ilw_letArm (hil : ILWProg p) (ih' : ∀ k, n = k + 1 → ILWGoOK p k) {m
 omit hp in
 /-- **A two-child arm** (`lp_app`, `lp_lam`, `lp_forall`: record array `R`, node maker `mk`, node
 constructor `C`) refines the twin's. -/
-theorem ilw_binArm (R : TRec) (mk : FnName) (C : EIdx → EIdx → ENodeView)
+theorem ilw_binArm (mk : FnName) (C : EIdx → EIdx → ENodeView)
     (hmk : ∀ (m m' : Mem) (a : AState) (M : ModeMaps) (x y : Word) (rs : List Word),
       CoreS dn m a vis fe M eb → ILWMemo m a → HW x → HW y → callW p n mk [x, y] m = some (rs, m') →
       HW (rs.headD 0) → ILWStep (internE (C (decE x) (decE y))) a dn m m' vis fe M eb (rs.headD 0))
-    {m m' : Mem} {a : AState} {M : ModeMaps} {h i ko kc vo vc fu r : Word}
+    {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hf : HW (tfld m R (tierW h) i 0))
-    (ha : HW (tfld m R (tierW h) i 1))
-    (hW : ilwBinW R mk p n m h i ko kc vo vc fu = some (r, m')) :
+    {fw aw : Word} (hf : HW fw) (ha : HW aw)
+    (hW : ilwBinS p n mk m h fw aw ko kc vo vc fu = some (r, m')) :
     ILWStep (ilwArmT (decE h) (do
-      let t ← instLPGo ks vs fu.toNat (decE (tfld m R (tierW h) i 0))
-      let b ← instLPGo ks vs fu.toNat (decE (tfld m R (tierW h) i 1))
-      ilwRbT (t == decE (tfld m R (tierW h) i 0) &&
-        b == decE (tfld m R (tierW h) i 1)) (decE h) (internE (C t b))))
+      let t ← instLPGo ks vs fu.toNat (decE fw)
+      let b ← instLPGo ks vs fu.toNat (decE aw)
+      ilwRbT (t == decE fw && b == decE aw) (decE h) (internE (C t b))))
       a dn m m' vis fe M eb r := by
-  unfold ilwBinW at hW
-  generalize tfld m R (tierW h) i 0 = fw at hf hW ⊢
-  generalize tfld m R (tierW h) i 1 = aw at ha hW ⊢
   refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
       | none => none
       | some (x, m₁) => match callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
         | none => none
         | some (y, m₂) => ilwRb p n mk m₂ h fw aw (x.headD 0) (y.headD 0))
-    (by
-      rw [← hW]; congr 1
-      cases callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-      | none => rfl
-      | some q =>
-        obtain ⟨x, m₁⟩ := q
-        simp only [ilwBinK₁_some]
-        cases callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ <;> rfl) ?_
+    hW ?_
   intro r₃ m₃ _ hY
   rcases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with _ | ⟨xs, m₁⟩ <;> rw [h1] at hY
   · simp at hY

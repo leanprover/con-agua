@@ -163,20 +163,21 @@ theorem alpdLsW_ok (hN : NameRel N) (n : Nat) :
   | succ n ih =>
     intro m o l lo ll x Ls ks hLs hks h
     cases hLs with
-    | nil => rw [alpdLsW_nil n m o l lo 0 rfl] at h; simp at h; simp [← h]
+    | nil => rw [alpdLsW.arm1 n m o l lo 0 rfl] at h; simp at h; simp [← h]
     | @cons _ _ L Ls' hne hL hrest =>
-      rw [alpdLsW_cons n m o l lo _ hne] at h
+      rw [alpdLsW.arm2 n m o l lo _ hne, show rdW (m.arr64 (tierA POOL (lo >>> 40)))
+        (lo &&& 1099511627775) = prd m lo from rfl] at h
       cases e : apdW IW n m (prd m lo) o l with
-      | none => rw [e] at h; simp [alpdLsK] at h
+      | none => rw [e, alpdLsW.k_lv_apd.none] at h; cases h
       | some y =>
         rw [e] at h
         have hy := apdW_ok hN n m _ o l y L ks hL hks e
         by_cases hy0 : y = 0
-        · subst hy0; rw [alpdLsK_zero] at h; simp at h
+        · subst hy0; rw [alpdLsW.k_lv_apd.arm1 (hc1 := rfl)] at h; simp at h
           have : ConLeche.Level.allParamsDefined ks L = false := by
             revert hy; cases ConLeche.Level.allParamsDefined ks L <;> simp
           simp [this, ← h]
-        · rw [alpdLsK_ne n m o l lo _ y hy0] at h
+        · rw [alpdLsW.k_lv_apd.arm2 (hc1 := hy0)] at h
           have : ConLeche.Level.allParamsDefined ks L = true := by
             revert hy; cases ConLeche.Level.allParamsDefined ks L <;> simp_all
           rw [ih _ _ _ _ _ _ _ _ hrest hks h]; simp [this]
