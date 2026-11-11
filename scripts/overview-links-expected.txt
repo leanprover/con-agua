@@ -1464,13 +1464,13 @@
    659  (`2 hw + 1 ≤ MN0`) sizes the default region, and the clear leaves the header stale (the epoch bump
    660  alone, as `X_clear`) and the mark `0`. -/
 
-== ConAgua/Arena/InstListSpec.lean#L278-L283
-   278  def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
-   279    if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
-   280    r := call ilg_go(e, d, o, l, 4000000000);
-   281    if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
-   282    return r & 4294967295
-   283  }
+== ConAgua/Arena/InstListSpec.lean#L98-L103
+    98  def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
+    99    if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
+   100    r := call ilg_go(e, d, o, l, 4000000000);
+   101    if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };
+   102    return r & 4294967295
+   103  }
 
 == ConAgua/Arena/Pool.lean#L12-L31
     12  /-!

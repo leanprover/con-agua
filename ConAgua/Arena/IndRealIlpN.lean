@@ -8,7 +8,6 @@ import all Init.Data.Repr
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.Rom
-import ConAgua.Arena.SimLib
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CallF

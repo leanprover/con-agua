@@ -11,7 +11,6 @@ import ConAgua.Arena.StrLitCv
 import ConAgua.Arena.WhnfCoreProj
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
-public import ConAgua.Arena.IndView
 import all ConAgua.Arena.StrLit
 import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqMidSpine

@@ -745,7 +745,7 @@ header slot
 ([`X_clear_fit`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/MemoLib.lean#L649-L660)),
 and the caller makes the common case (no mark, a small call) the epoch bump
 alone
-([`inst_list`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/InstListSpec.lean#L278-L283)).
+([`inst_list`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/InstListSpec.lean#L98-L103)).
 
 ### 6.3 The limb pool
 
