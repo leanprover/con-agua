@@ -1,18 +1,13 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
 public import ConAgua.Arena.IndPartsSpec.BmgW
-public import ConAgua.Arena.IndPartsSpec.BmoW
-public import ConAgua.Arena.IndPartsSpec.BpcW
-public import ConAgua.Arena.IndPartsSpec.BsoK2
-public import ConAgua.Arena.IndSumSpec.ColW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+public import ConAgua.Arena.IndPartsSpec.EqW
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndCallM
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndParts
 

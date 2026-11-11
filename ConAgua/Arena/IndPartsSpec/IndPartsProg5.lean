@@ -1,6 +1,12 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.Bsp
+public import ConAgua.Arena.IndCallM
+public import ConAgua.Arena.IndPartsSpec.BlockRecNameSetOk
+public import ConAgua.Arena.IndPartsSpec.BmoW
+public import ConAgua.Arena.IndPartsSpec.BpcW
+public import ConAgua.Arena.IndPartsSpec.BsoK2
+public import ConAgua.Arena.IndSumSpec.ColW
 import ConAgua.Arena.IndSumSpec.Row
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndParts
