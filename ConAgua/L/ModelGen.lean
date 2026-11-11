@@ -332,6 +332,10 @@ meta structure Fold where
   pat : MT
   /-- `f x₁ … xₖ = (g x₁ … xₖ).tail….headD 0` (`j` tails): a result of a list callee `g` -/
   listProj : Option (Name × Nat) := none
+  /-- a memory reader: `f … m … = rdW (m.arr64 A) i` (`pat` the index `i`, `false`) or the pool
+  slice word `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& (2^40 - 1))` (`A⦃x⦄`, `true`): the
+  array `A`, the kind, the memory's parameter, and for a slice the address's -/
+  reader : Option (Name × Bool × Nat × Nat) := none
 
 /-- The pattern of a fold function's body (its parameters are holes). -/
 meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
@@ -386,6 +390,30 @@ meta def mkFold (c : Name) : MetaM Fold := do
     | Lean.Expr.lam _ _ b _ => strip b (k + 1)
     | _ => (e, k)
   let (body, k) := strip v 0
+  -- a memory reader `rdW (m.arr64 A) i`, `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 2^40 - 1)`
+  if let (`L.Arena.rdW, #[a, i]) := body.consumeMData.getAppFnArgs then
+    if let (``L.Mem.arr64, #[.bvar mi, arr]) := a.consumeMData.getAppFnArgs then
+      let renum (t : MT) : MT :=
+        let rec go : MT → MT
+          | .hole j => .hole (k - 1 - j)
+          | .op o a b => .op o (go a) (go b)
+          | t => t
+        go t
+      -- the array constant, through a coercion (`↑TW`)
+      let constOf (e : Lean.Expr) : Option Name :=
+        let e := e.consumeMData
+        match e.constName? with
+        | some c => some c
+        | none => if e.getAppNumArgs ≥ 1 then e.appArg!.consumeMData.constName? else none
+      if let some ac := constOf arr then
+        return { name := c, arity := k, pat := renum (← exprPat i), reader := some (ac, false, k - 1 - mi, 0) }
+      if let (``L.tierA, #[ta, t]) := arr.consumeMData.getAppFnArgs then
+        if let some ac := constOf ta then
+          if let (``HShiftRight.hShiftRight, #[_, _, _, _, .bvar xi, s40]) := t.consumeMData.getAppFnArgs then
+            if (← exprPat s40) matches .lit 40 then
+              if let (``HAnd.hAnd, #[_, _, _, _, .bvar xi', msk]) := i.consumeMData.getAppFnArgs then
+                if xi' == xi && (← exprPat msk) matches .lit 1099511627775 then
+                  return { name := c, arity := k, pat := .lit 0, reader := some (ac, true, k - 1 - mi, k - 1 - xi) }
   -- `(g x₁ … xₖ).tail….headD 0`
   if let (``List.headD, #[_, l, d]) := body.getAppFnArgs then
     if d.isAppOf ``OfNat.ofNat || d.rawNatLit?.isSome then
@@ -429,7 +457,7 @@ meta partial def MT.matchPat (pat t : MT) (σ : Array (Option MT)) : Option (Arr
 /-- Fold `t` at its root with the first rule that matches. -/
 meta def foldRoot (rules : Array Fold) (t : MT) : MT := Id.run do
   for r in rules do
-    if r.listProj.isSome then continue
+    if r.listProj.isSome || r.reader.isSome then continue
     if let some σ := MT.matchPat r.pat t (Array.replicate r.arity none) then
       if σ.all (·.isSome) then
         return .app r.name (σ.map (·.get!))
@@ -972,6 +1000,11 @@ meta def splitArr (id : Ident) : GenM (Term × String) := do
 meta def noteVcg (xs : Array String) : GenM Unit :=
   modify fun st => { st with vcgX := xs.foldl (fun a x => if a.contains x then a else a.push x) st.vcgX }
 
+/-- `t` (an array as written, `CTL`, `EREC`) names the constant `c`. -/
+meta def sameConst (t : Term) (c : Name) : GenM Bool := do
+  unless t.raw.isIdent do return false
+  try return (← realizeGlobalConstNoOverload t.raw) == c catch _ => return false
+
 /-- A store-record field constant (`APP.a : Word`, an `abbrev` of a numeral) as that numeral, so
 that models and proofs state field offsets as numbers (`tfld m APP t i 1`). -/
 meta def fieldNum (fI : Ident) : GenM Term := do
@@ -1052,7 +1085,15 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     let (arr, k) ← splitArr a
     let i ← transE E ctx i
     match k with
-    | "u64" => pure (.rd ctx.mem arr i)
+    | "u64" =>
+      -- a reader in `fold` (`rdW (m.arr64 A) (pat)`)
+      for r in E.folds do
+        if let some (ac, false, mi, _) := r.reader then
+          if ← sameConst arr ac then
+            let σ := (Array.replicate r.arity (none : Option MT)).set! mi (some ctx.mem)
+            if let some σ := MT.matchPat r.pat i σ then
+              if σ.all (·.isSome) then return .app r.name (σ.map (·.get!))
+      pure (.rd ctx.mem arr i)
     | "u8" => pure (.rd8 ctx.mem arr i)
     | _ => pure (.raw (← `(((($arr : List UInt8))[($(← i.render)).toNat]?.getD 0).toUInt64)))
   | `(lexpr| len($a:ident)) => do
@@ -1064,6 +1105,12 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $a:ident⦃$x:lexpr⦄) => do
     -- a pool slice word: word `x & (2^40 - 1)` of tier `x >> 40` of `a`
     let x ← transE E ctx x
+    -- a slice reader in `fold` (`erRd m x`)
+    for r in E.folds do
+      if let some (ac, true, mi, xi) := r.reader then
+        if r.arity == 2 && mi != xi then
+          if ← sameConst a ac then
+            return .app r.name ((Array.replicate 2 ctx.mem).set! xi x)
     let t ← (foldRoot E.folds (.op ">>>" x (.lit 40))).render
     pure (.rd ctx.mem (← `(L.tierA $a $t)) (foldRoot E.folds (.op "&&&" x (.lit 1099511627775))))
   | `(lexpr| ⦃$x:lexpr⦄.$c:ident) => do

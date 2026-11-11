@@ -809,6 +809,23 @@ l_model tPfL_spec (p : Prog) {C : Nat → Mem → Word → Option (Word × Mem)}
 example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) (x : Word) :
     tPfLW C n m x = tPfW C n m x := rfl
 
+/-- `fold` with memory readers: a word read `TW.u64[i + 1]` as `twNext m i`, a pool slice word
+`TP⦃x⦄` as `tpRd m x`. -/
+def twNext (m : Mem) (i : Word) : Word := rdW (m.arr64 TW) (i + 1)
+def tpRd (m : Mem) (x : Word) : Word := rdW (m.arr64 (tierA TP (x >>> 40))) (x &&& 1099511627775)
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tRd : FunDecl := lfn (i, x) {
+  return TW.u64[i + 1] + TP⦃x⦄ + TW.u64[i]
+}
+
+l_model tRd_spec (p : Prog) (hp : p.lookup "t_rd" = some tRd)
+  fns [hp ↦ tRdW ro]
+  grind [arena_grind] fold [twNext, tpRd]
+
+example (m : Mem) (i x : Word) : tRdW m i x = some (twNext m i + tpRd m x + rdW (m.arr64 TW) i) := by
+  unfold tRdW; with_reducible rfl
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function
