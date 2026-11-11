@@ -49,12 +49,6 @@ structure IndInstallLookups (p : Prog) : Prop where
 def cvM (m : Mem) (q n o l t : Word) : Mem :=
   (((m.set64 DLP q n).set64 DLP (q + 1) (o + 1)).set64 DLP (q + 2) l).set64 DLP (q + 3) t
 
-/-- **The model of `ind_cv(q, nm, lps, ty)`.** -/
-def cvW (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : Option Mem :=
-  wK (fun nh => wK (fun th => mK (fun m₁ =>
-      some (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0) th)) (lpPutW b m lps))
-    (lkW m EID ty)) (lkW m NID nm)
-
 /-- **The model of `ind_caps(q)`**: the fifteen words. -/
 def capsM (m : Mem) (q : Word) : Mem :=
   (((((((((((((((m.set64 DLP q 0).set64 DLP (q + 1) 0).set64 DLP (q + 2) 0).set64 DLP (q + 3) 0)
@@ -67,11 +61,6 @@ def ruleM (m : Mem) (q n nf e : Word) : Mem :=
   ((((((((((((m.set64 DLP q n).set64 DLP (q + 1) nf).set64 DLP (q + 2) 0).set64 DLP (q + 3) 0)
     |>.set64 DLP (q + 4) 0).set64 DLP (q + 5) 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0)
     |>.set64 DLP (q + 8) e).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0))
-
-/-- **The model of `parse_rule_d(q, rp)`.** -/
-def ruleW (m : Mem) (q rp : Word) : Option Mem :=
-  wK (fun nh => wK (fun eh => some (ruleM m q nh (rdW (m.arr64 IFL) (rp + 1)) eh))
-    (lkW m EID (rdW (m.arr64 IFL) (rp + 2)))) (lkW m NID (rdW (m.arr64 IFL) rp))
 
 /-- The last four words of a `recInfo` record at `q`. -/
 def recTailM (m : Mem) (q r lo ln : Word) : Mem :=
@@ -99,36 +88,40 @@ theorem dindAlloc_spec (n : Nat) (s₀ : St) (k : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;> finish [allocW]
 
-include hb in
-theorem cv_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q nm lps ty : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_cv" [q, nm, lps, ty]
-    ⦃fun _ s' => LocEq s' s₀ ∧ cvW b s₀.mem q nm lps ty = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hI.ind_cv]
-  simp only [callFn, indCv]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n,
-        lpPut_spec p hL.decl b hb n] <;> finish [cvW, cvM, lkW]
-
-theorem rule_spec (n : Nat) (s₀ : St) (q rp : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "parse_rule_d" [q, rp]
-    ⦃fun _ s' => LocEq s' s₀ ∧ ruleW s₀.mem q rp = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hI.parse_rule_d]
-  simp only [callFn, parseRuleD]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n] <;>
-        finish [ruleW, ruleM, lkW]
-
 end specs
 
 /-! ## Generated models -/
+
+/-- **The model of `ind_cv(q, nm, lps, ty)`** (`cvM`). -/
+l_model cv_spec (p : Prog) (hL : IndApplyLookups p) (hI : IndInstallLookups p) (b : Array UInt8)
+    (hb : b.size < 2 ^ 63)
+  fns [hI.ind_cv ↦ cvW void]
+  specs [nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n,
+    lpPut_spec p hL.decl b hb n]
+  pre [s₀.mem.arr8 IN = b]
+  keep [hL.decl.expr.no_st8]
+  grind [arena_grind] guards ["name_get", "expr_get"]
+
+/-- **The model of `parse_rule_d(q, rp)`** (`ruleM`). -/
+l_model rule_spec (p : Prog) (hL : IndApplyLookups p) (hI : IndInstallLookups p)
+  fns [hI.parse_rule_d ↦ ruleW void]
+  specs [nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n]
+  grind [arena_grind] guards ["name_get", "expr_get"]
+
+/-- `cvW` in the users' shape: the two lookups, `lp_put`, the four words (`cvM`). -/
+theorem cvW_eq (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : cvW b m q nm lps ty =
+    wK (fun nh => wK (fun th => mK (fun m₁ =>
+      some (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0) th)) (lpPutW b m lps))
+      (lkW m EID ty)) (lkW m NID nm) := by
+  unfold cvW; simp only [lkW]
+  split <;> (try split) <;> simp_all [wK] <;> cases lpPutW b m lps <;> rfl
+
+/-- `ruleW` in the users' shape: the two lookups, the eleven words (`ruleM`). -/
+theorem ruleW_eq (m : Mem) (q rp : Word) : ruleW m q rp =
+    wK (fun nh => wK (fun eh => some (ruleM m q nh (rdW (m.arr64 IFL) (rp + 1)) eh))
+      (lkW m EID (rdW (m.arr64 IFL) (rp + 2)))) (lkW m NID (rdW (m.arr64 IFL) rp)) := by
+  unfold ruleW; simp only [lkW]
+  split <;> (try split) <;> simp_all [wK] <;> rfl
 
 /-- **The model of `ind_caps(q)`**: the fifteen words (`capsM`). -/
 l_model caps_spec (p : Prog) (hI : IndInstallLookups p)
