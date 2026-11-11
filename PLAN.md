@@ -194,6 +194,10 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
      (`DIR`: `git -C _tmp/ref/con-leche archive <rev> tests | tar -x -C _tmp/<lane>/`; the
      reference clone's checkout stays where it is), and the census. Announce it in the lane's journal: what changed upstream,
      the report's numbers, markers before and after.
+  5. **After landing** (the coordinator, once the sync is on master): refresh the shared Lake
+     cache with `CACHE_RESET_ANYWAY=1 _tmp/cache-reset.sh` (builds master, keeps only master's
+     entries; a sync obsoletes most of the old ones), and copy the sync's con-ron build to the
+     scripts' default `_tmp/ref/con-ron-integrate/target/release/con-ron`.
   Never bump the toolchain and the twin in the same step.
 
 ## Process rules
