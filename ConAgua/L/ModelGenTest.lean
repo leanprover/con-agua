@@ -792,6 +792,74 @@ example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
     ⦃fun r s' => LocEq s' s₀ ∧ tPfW C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ :=
   tPf_spec p C hc hp n s₀ x
 
+/-- A binder named `L` (lookups as fields, `L.pf`): the generated proofs root the library's
+names (`_root_.L.exec`), so the command renames the binder to `L'` from it on. An implicit binder
+that the callee's model mentions (`C`) is an explicit parameter of the model. -/
+structure TLk (p : Prog) : Prop where
+  pf : p.lookup "t_pf" = some tPf
+
+l_model tPfL_spec (p : Prog) {C : Nat → Mem → Word → Option (Word × Mem)}
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
+      ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
+    (L : TLk p)
+  fns [L.pf ↦ tPfLW]
+  specs [hc n]
+  grind [arena_grind] pfuel
+
+example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) (x : Word) :
+    tPfLW C n m x = tPfW C n m x := rfl
+
+/-- `fold` with memory readers: a word read `TW.u64[i + 1]` as `twNext m i`, a pool slice word
+`TP⦃x⦄` as `tpRd m x`. -/
+def twNext (m : Mem) (i : Word) : Word := rdW (m.arr64 TW) (i + 1)
+def tpRd (m : Mem) (x : Word) : Word := rdW (m.arr64 (tierA TP (x >>> 40))) (x &&& 1099511627775)
+
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tRd : FunDecl := lfn (i, x) {
+  return TW.u64[i + 1] + TP⦃x⦄ + TW.u64[i]
+}
+
+l_model tRd_spec (p : Prog) (hp : p.lookup "t_rd" = some tRd)
+  fns [hp ↦ tRdW ro]
+  grind [arena_grind] fold [twNext, tpRd]
+
+example (m : Mem) (i x : Word) : tRdW m i x = some (twNext m i + tpRd m x + rdW (m.arr64 TW) i) := by
+  unfold tRdW; with_reducible rfl
+
+/-- Callee posts with results stated as values beside the call's effect (`mixed`):
+`r.headD 0 = top ∧ F = some (r.tail.headD 0, s'.mem)` (`str_put_esc`), `r = [top, Q] ∧
+F = some s'.mem` (`ls_put`), `G ∧ r = [top] ∧ s'.mem = P` (`stk_pool`). The values are over the
+memory before the call. -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tMx : FunDecl := lfn (a) locals (x, y, u, v, w) {
+  (x, y) := call t_pe(a);
+  (u, v) := call t_lp(x + y);
+  w := call t_sp(u);
+  return x + y + u + v + w
+}
+
+l_model tMx_spec (p : Prog) (F : Mem → Word → Option (Word × Mem)) (F' : Mem → Word → Option Mem)
+    (Q : Word → Word) (P : Mem → Word → Mem) (G : Mem → Word → Bool)
+    (hpe : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_pe" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ r.headD 0 = s₀.mem.top ∧ F s₀.mem a = some (r.tail.headD 0, s'.mem); ⊤⦄)
+    (hlp : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_lp" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ r = [s₀.mem.top, Q a] ∧ F' s₀.mem a = some s'.mem; ⊤⦄)
+    (hsp : ∀ n (s₀ : St) (a : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_sp" [a]
+      ⦃fun r s' => LocEq s' s₀ ∧ G s₀.mem a = true ∧ r = [s₀.mem.top] ∧ s'.mem = P s₀.mem a; ⊤⦄)
+    (hp : p.lookup "t_mx" = some tMx)
+  fns [hp ↦ tMxW]
+  specs [hpe n, hlp n, hsp n]
+  grind [arena_grind]
+
+example (F' : Mem → Word → Option Mem) (Q : Word → Word) (P : Mem → Word → Mem)
+    (m : Mem) (a y : Word) :
+    tMxW (fun m _ => some (y, m)) F' Q P (fun _ _ => true) m a =
+      match F' m (m.top + y) with
+      | none => none
+      | some m₁ => some (m.top + y + m.top + Q (m.top + y) + m₁.top, P m₁ m.top) := by
+  simp only [tMxW, tMxW.k_t_pe, tMxW.k_t_lp]
+  cases F' m (m.top + y) <;> simp
+
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
 -- con-ron: none — an `l_model` test function
@@ -815,5 +883,33 @@ example (G : Mem → Word → Bool) (F : Mem → Word → Word) (m : Mem) (x : W
 example (G : Mem → Word → Bool) (F : Mem → Word → Word) (m : Mem) (x : Word)
     (h : G m x = true) : tGdW G F m x = some (F m x + 1) := by
   simp [tGdW, h]
+
+/-- `share`: calls of a total memory callee, each reading the memory the call before it left
+(`rule_copy`'s shape). Inline, the memory after a call would hold three copies of the one before
+it (the callee's memory, the read, the guard): `3 ^ k` memories after `k` calls. With `share` each
+call after the first is a join point over the memory (`tShW.j1`, …). -/
+-- con-ron: none — an `l_model` test function
+@[no_expose] def tSh : FunDecl := lfn (b, old) locals (z) {
+  z := call t_put(b, TW.u64[old]);
+  z := call t_put(b + 1, TW.u64[old + 1]);
+  z := call t_put(b + 2, TW.u64[old + 2]);
+  z := call t_put(b + 3, TW.u64[old + 3]);
+  return 0
+}
+
+l_model tSh_spec (p : Prog) (P : Mem → Word → Word → Mem) (G : Mem → Word → Bool)
+    (hc : ∀ n (s₀ : St) (a v : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_put" [a, v]
+      ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = P s₀.mem a v ∧ G s₀.mem a = true; ⊤⦄)
+    (hp : p.lookup "t_sh" = some tSh)
+  fns [hp ↦ tShW]
+  specs [hc n]
+  grind [arena_grind] share
+
+example (m : Mem) (b old : Word) : tShW (fun m _ _ => m) (fun _ _ => true) m b old = some (0, m) := by
+  simp [tShW, tShW.j1, tShW.j2, tShW.j3]
+
+example (P : Mem → Word → Word → Mem) (m : Mem) (b old : Word) :
+    tShW P (fun _ _ => false) m b old = none := by
+  simp [tShW]
 
 end L.ModelGenTest

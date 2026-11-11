@@ -83,8 +83,15 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   any argument list (`invoke p (exec p n) "f" vs`, `callW_spec p n "f"`) applies to every call.
   A member of the group listed here is called through its spec, not as its model (a recursive
   call stays `callW p n "f" …`; also lets a loop call its own function). A conjunct
-  `r = [r.headD 0, …]` (the result's length) is ignored.
-* `fold`: named functions whose bodies are folded back into the model: word arithmetic
+  `r = [r.headD 0, …]` (the result's length) is ignored. Results stated as values beside the
+  call's effect, `r.headD 0 = s₀.mem.top ∧ F = some (r.tail.headD 0, s'.mem)` (`str_put_esc`) or a
+  list literal `r = [s₀.mem.top, Q]` beside `F = some s'.mem` (`ls_put`) or `G ∧ s'.mem = F`
+  (`stk_pool`), are those values, over the memory before the call (`mixed`).
+* A binder named `L` (a structure of lookups: `L.rc`) is renamed `L'` from its binder on (the
+  generated proofs write the library's names as `_root_.L.x`); an implicit binder that a callee's
+  model mentions is an explicit parameter of the models.
+* `fold`: named functions whose bodies are folded back into the model: a memory reader
+  (`cnt m t = rdW (m.arr64 CTL) (2 + t)`, the pool slice word `erRd m x`, `EREC⦃x⦄`), word arithmetic
   (`tierW h = (h >>> 31) &&& 1`, also with comparison words `if a < b then 1 else 0` or
   `Cmp.ult.evalW a b`, the model of `u64(a < b)`: `maxW`, `rpLen`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
 * `bind c`: the code after a call with several results is an inline continuation
@@ -128,6 +135,12 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `F₀, …` themselves: a table lookup `tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]`
   (`name_get`, `expr_get`) is `if tblOK m NID i = true then … tblW m NID i … else none`.
   Without it such conjuncts are ignored (`i < 51`).
+* `share`: a statement that writes the memory (a store, a total memory callee `G ∧ s'.mem = F`)
+  and mentions the memory term before it more than once, where that term is not a variable,
+  starts a join point `fW.jᵢ` over the memory: the code from it on is a definition, applied to
+  that term. Without it the term is copied into every place that reads it, so a run of such
+  statements (`rule_copy`'s eleven `erec_put(b + i, EREC⦃old + i⦄)`: the callee's memory, the
+  read and the guard) grows as `3 ^ k`; with it, linearly. Off by default.
 * `pfuel` (one function that does not call itself as its model): the fuel is a parameter of the
   model, not matched on: the model is the body at fuel `n`, with its callees through specs over
   `n` (`callW_spec p n "f"`, lane whnf's "a call as a function of the memory"; its own recursive
@@ -326,6 +339,10 @@ meta structure Fold where
   pat : MT
   /-- `f x₁ … xₖ = (g x₁ … xₖ).tail….headD 0` (`j` tails): a result of a list callee `g` -/
   listProj : Option (Name × Nat) := none
+  /-- a memory reader: `f … m … = rdW (m.arr64 A) i` (`pat` the index `i`, `false`) or the pool
+  slice word `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& (2^40 - 1))` (`A⦃x⦄`, `true`): the
+  array `A`, the kind, the memory's parameter, and for a slice the address's -/
+  reader : Option (Name × Bool × Nat × Nat) := none
 
 /-- The pattern of a fold function's body (its parameters are holes). -/
 meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
@@ -380,6 +397,30 @@ meta def mkFold (c : Name) : MetaM Fold := do
     | Lean.Expr.lam _ _ b _ => strip b (k + 1)
     | _ => (e, k)
   let (body, k) := strip v 0
+  -- a memory reader `rdW (m.arr64 A) i`, `rdW (m.arr64 (tierA A (x >>> 40))) (x &&& 2^40 - 1)`
+  if let (`L.Arena.rdW, #[a, i]) := body.consumeMData.getAppFnArgs then
+    if let (``L.Mem.arr64, #[.bvar mi, arr]) := a.consumeMData.getAppFnArgs then
+      let renum (t : MT) : MT :=
+        let rec go : MT → MT
+          | .hole j => .hole (k - 1 - j)
+          | .op o a b => .op o (go a) (go b)
+          | t => t
+        go t
+      -- the array constant, through a coercion (`↑TW`)
+      let constOf (e : Lean.Expr) : Option Name :=
+        let e := e.consumeMData
+        match e.constName? with
+        | some c => some c
+        | none => if e.getAppNumArgs ≥ 1 then e.appArg!.consumeMData.constName? else none
+      if let some ac := constOf arr then
+        return { name := c, arity := k, pat := renum (← exprPat i), reader := some (ac, false, k - 1 - mi, 0) }
+      if let (``L.tierA, #[ta, t]) := arr.consumeMData.getAppFnArgs then
+        if let some ac := constOf ta then
+          if let (``HShiftRight.hShiftRight, #[_, _, _, _, .bvar xi, s40]) := t.consumeMData.getAppFnArgs then
+            if (← exprPat s40) matches .lit 40 then
+              if let (``HAnd.hAnd, #[_, _, _, _, .bvar xi', msk]) := i.consumeMData.getAppFnArgs then
+                if xi' == xi && (← exprPat msk) matches .lit 1099511627775 then
+                  return { name := c, arity := k, pat := .lit 0, reader := some (ac, true, k - 1 - mi, k - 1 - xi) }
   -- `(g x₁ … xₖ).tail….headD 0`
   if let (``List.headD, #[_, l, d]) := body.getAppFnArgs then
     if d.isAppOf ``OfNat.ofNat || d.rawNatLit?.isSome then
@@ -423,7 +464,7 @@ meta partial def MT.matchPat (pat t : MT) (σ : Array (Option MT)) : Option (Arr
 /-- Fold `t` at its root with the first rule that matches. -/
 meta def foldRoot (rules : Array Fold) (t : MT) : MT := Id.run do
   for r in rules do
-    if r.listProj.isSome then continue
+    if r.listProj.isSome || r.reader.isSome then continue
     if let some σ := MT.matchPat r.pat t (Array.replicate r.arity none) then
       if σ.all (·.isSome) then
         return .app r.name (σ.map (·.get!))
@@ -458,6 +499,10 @@ meta inductive CKind where
   | roT (t : Term) (k : Nat)
   /-- `F : Option Unit`, memory unchanged: no results, `none` where it fails -/
   | unitOpt (t : Term)
+  /-- some results as values over the memory before the call (`vals[i]`: `r.headD 0 = top`, a
+  list literal `r = [top, F₀]`), the call's effect `inner` (`eff`, `memOpt`, `memTot`), and for
+  `eff` the result its model gives (`F = some (r.tail.headD 0, s'.mem)`: `1`) -/
+  | mixed (vals : Array (Option Term)) (inner : CKind) (j : Nat)
   deriving Inhabited
 
 meta structure Callee where
@@ -568,6 +613,8 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
     let mut listF : Option Lean.Expr := none
     let mut pures : Array (Nat × Lean.Expr) := #[]
     let mut eff : Option Lean.Expr := none
+    -- `F = some (r.tail.headD 0, s'.mem)`: the model gives result `j ≠ 0` (`mixed`)
+    let mut effJ : Option (Lean.Expr × Nat) := none
     let mut effL : Option Lean.Expr := none
     let mut memOpt : Option Lean.Expr := none
     let mut memTot : Option Lean.Expr := none
@@ -621,6 +668,7 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
             match v.getAppFnArgs with
             | (``Prod.mk, #[_, _, v1, v2]) =>
               if resIdx r v1 == some 0 && v2 == memS' then eff := some a
+              else if let some j := (if v2 == memS' then resIdx r v1 else none) then effJ := some (a, j)
               else if v1 == r && v2 == memS' then effL := some a
               else if v2 == memS' && (match tupComps v1 with
                   | [x, y] => resIdx r x == some 0 && resIdx r y == some 1
@@ -650,6 +698,42 @@ meta def analyseSpec (spec : Lean.Expr) : TermElabM (String × Callee) := do
         if c.containsFVar r.fvarId! then throwError "l_model: unsupported post conjunct {c}"
         -- a fact about the final memory (`Keep s₀.mem s'.mem`, `Inv s'.mem`): not the model
         unless c.containsFVar s'.fvarId! do guards := guards.push c
+    -- `mixed`: results stated as values (`r.headD 0 = top`, `r = [top, F₀]`) beside an effect
+    let litVals : Option (List Lean.Expr) := listF.bind fun l => match l.listLit? with
+      | some (_, es) => if es.all (!·.containsFVar r.fvarId!) then some es else none
+      | none => none
+    let effAt : Option (Lean.Expr × Nat) := match effJ with
+      | some x => some x
+      | none => eff.map (·, 0)
+    let hasEffect := effAt.isSome || memOpt.isSome || memTot.isSome
+    let mixed? : Option (Array (Nat × Lean.Expr)) :=
+      if !hasEffect || pairF.isSome || unitF.isSome || tupF.isSome || roL.isSome || effL.isSome || ro.isSome then none
+      else if let some es := litVals then
+        if pures.isEmpty then some (es.toArray.mapIdx fun i e => (i, e)) else none
+      -- (pure results beside `F = some (r.headD 0, s'.mem)` or a memory model are ignored, as
+      -- they were before `mixed`)
+      else if listF.isNone && effJ.isSome then some pures
+      else none
+    if let some vals := mixed? then
+      unless (if effAt.isSome then 1 else 0) + (if memOpt.isSome then 1 else 0) + (if memTot.isSome then 1 else 0) == 1 do
+        throwError "l_model: callee {fname}: ambiguous post"
+      let n := vals.foldl (fun k (i, _) => max k (i + 1)) ((effAt.map (·.2 + 1)).getD 0)
+      let mut ts : Array (Option Term) := #[]
+      for i in [0:n] do
+        match vals.find? (·.1 == i) with
+        | some (_, e) => ts := ts.push (some (← delabT e))
+        | none => ts := ts.push none
+      let (inner, j) ← match effAt, memOpt, memTot with
+        | some (e, j), _, _ => pure (CKind.eff (← delabT e), j)
+        | _, some e, _ => pure (CKind.memOpt (← delabT e), 0)
+        | _, _, some e =>
+          let gs ← guards.mapM fun g => do
+            let dec ← try pure (← synthInstance? (mkApp (mkConst ``Decidable) g)).isSome
+              catch _ => pure false
+            pure ((← delabT g), !dec)
+          pure (CKind.memTot (← delabT e) gs, 0)
+        | _, _, _ => throwError "l_model: callee {fname}: ambiguous post"
+      return (fname, { kind := .mixed ts inner j, opt := opt || memTot.isSome })
     let kind ← if let some e := pairF then do
         unless eff.isNone && memOpt.isNone && memTot.isNone && ro.isNone && listF.isNone && effL.isNone && roL.isNone && tupF.isNone && unitF.isNone do
           throwError "l_model: callee {fname}: ambiguous post"
@@ -944,6 +1028,10 @@ meta structure Env where
   exc : Bool := false
   /-- the members without results (`void`) -/
   voids : Array String := #[]
+  /-- `share`: a statement that writes the memory and mentions a memory term that is not a
+  variable more than once (`erec_put(b, EREC⦃old⦄)` after another store) starts a join point
+  over that memory, so that a run of such statements stays linear in size -/
+  share : Bool := false
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) (clash : Array Name := #[]) : Name :=
@@ -961,6 +1049,11 @@ meta def splitArr (id : Ident) : GenM (Term × String) := do
 /-- The step proofs need these lemmas in `vcgen` (the block operations' monadic pieces). -/
 meta def noteVcg (xs : Array String) : GenM Unit :=
   modify fun st => { st with vcgX := xs.foldl (fun a x => if a.contains x then a else a.push x) st.vcgX }
+
+/-- `t` (an array as written, `CTL`, `EREC`) names the constant `c`. -/
+meta def sameConst (t : Term) (c : Name) : GenM Bool := do
+  unless t.raw.isIdent do return false
+  try return (← realizeGlobalConstNoOverload t.raw) == c catch _ => return false
 
 /-- A store-record field constant (`APP.a : Word`, an `abbrev` of a numeral) as that numeral, so
 that models and proofs state field offsets as numbers (`tfld m APP t i 1`). -/
@@ -1042,7 +1135,15 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
     let (arr, k) ← splitArr a
     let i ← transE E ctx i
     match k with
-    | "u64" => pure (.rd ctx.mem arr i)
+    | "u64" =>
+      -- a reader in `fold` (`rdW (m.arr64 A) (pat)`)
+      for r in E.folds do
+        if let some (ac, false, mi, _) := r.reader then
+          if ← sameConst arr ac then
+            let σ := (Array.replicate r.arity (none : Option MT)).set! mi (some ctx.mem)
+            if let some σ := MT.matchPat r.pat i σ then
+              if σ.all (·.isSome) then return .app r.name (σ.map (·.get!))
+      pure (.rd ctx.mem arr i)
     | "u8" => pure (.rd8 ctx.mem arr i)
     | _ => pure (.raw (← `(((($arr : List UInt8))[($(← i.render)).toNat]?.getD 0).toUInt64)))
   | `(lexpr| len($a:ident)) => do
@@ -1054,6 +1155,12 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
   | `(lexpr| $a:ident⦃$x:lexpr⦄) => do
     -- a pool slice word: word `x & (2^40 - 1)` of tier `x >> 40` of `a`
     let x ← transE E ctx x
+    -- a slice reader in `fold` (`erRd m x`)
+    for r in E.folds do
+      if let some (ac, true, mi, xi) := r.reader then
+        if r.arity == 2 && mi != xi then
+          if ← sameConst a ac then
+            return .app r.name ((Array.replicate 2 ctx.mem).set! xi x)
     let t ← (foldRoot E.folds (.op ">>>" x (.lit 40))).render
     pure (.rd ctx.mem (← `(L.tierA $a $t)) (foldRoot E.folds (.op "&&&" x (.lit 1099511627775))))
   | `(lexpr| ⦃$x:lexpr⦄.$c:ident) => do
@@ -1136,6 +1243,26 @@ meta partial def idents (s : Syntax) (acc : NameSet := {}) : NameSet :=
   | _ => acc
 
 meta def setEnv (ctx : Ctx) (k : Nat) (v : MT) : Ctx := { ctx with env := ctx.env.set! k v }
+
+/-- The occurrences of `needle` in `hay` (as subtrees, up to source positions). -/
+meta partial def countOcc (needle hay : Syntax) : Nat :=
+  if needle.structEq hay then 1 else
+  match hay with
+  | .node _ _ args => args.foldl (fun a x => a + countOcc needle x) 0
+  | _ => 0
+
+/-- A variable, possibly in parentheses. -/
+meta partial def isVarStx (s : Syntax) : Bool :=
+  s.isIdent || (s.getKind == ``Lean.Parser.Term.paren && isVarStx s[1])
+
+/-- `share`: the memory term of `ctx` is not a variable and the terms `ts` of a statement that
+writes the memory mention it more than once. -/
+meta def dupMem (E : Env) (ctx : Ctx) (ts : Array Term) : MetaM Bool := do
+  unless E.share do return false
+  let mT ← ctx.mem.render
+  -- `((m))`: the rendering of a variable
+  if isVarStx mT.raw then return false
+  return ts.foldl (fun a t => a + countOcc mT.raw t.raw) 0 ≥ 2
 
 /-- The model's leaf for `return (v₀, v₁, …)` (`vs = #[]`: falling off the end). -/
 meta def Ctx.ret (ctx : Ctx) (vs : Array MT) : MR :=
@@ -1314,11 +1441,15 @@ mode an error of class `0`. -/
 meta def failMR (E : Env) : MetaM MR := do
   if E.exc then return .tail (.raw (← `(Except.error L.Err.oob))) else return .none
 
+/-- The application of the join point `j` at the locals and the memory of `ctx`. -/
+meta def joinApp (E : Env) (ctx : Ctx) (j : Join) : MR :=
+  .tail (.app j.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
+    j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[])))
+
 mutual
 meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM MR
   | [] => match ctx.ft with
-    | some j => pure (.tail (.app j.name (E.mps.map (fun x => MT.raw (mkIdent x)) ++ (if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
-        j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[]))))
+    | some j => pure (joinApp E ctx j)
     | none =>
       match ctx.loop with
       | some L =>
@@ -1327,6 +1458,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           #[ctx.mem] ++ L.params.map (ctx.env[·]!))))
       | none => pure (ctx.ret #[])
   | s :: rest => do
+    -- `share`: this statement, which writes the memory and mentions it twice, starts a join
+    -- point over the memory
+    let shareJ : GenM MR := do return joinApp E ctx (← mkJoin E ctx (s :: rest) (cut := false))
     let assignOp (x : Ident) (o : String) (e : TSyntax `lexpr) : GenM MR := do
       let v ← transE E ctx e
       match ctx.idx x with
@@ -1335,11 +1469,13 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
     let setGlob (x : Ident) (v : MT) : GenM MR := do
       if ctx.ro then throwErrorAt x "l_model: a read-only model cannot write"
       let mem ← `(L.Mem.setG $(← ctx.mem.render) ($x : L.GVar) $(← v.render))
+      if ← dupMem E ctx #[mem] then return ← shareJ
       transS E { ctx with mem := .raw mem } rest
     let store (arr : Term) (i : MT) (e : TSyntax `lexpr) : GenM MR := do
       if ctx.ro then throwError "l_model: a read-only model cannot write"
       let v ← transE E ctx e
       let mem ← `(L.Mem.set64 $(← ctx.mem.render) $arr $(← i.render) $(← v.render))
+      if ← dupMem E ctx #[mem] then return ← shareJ
       transS E { ctx with mem := .raw mem } rest
     let ite (c : TSyntax `lcond) (t e : List (TSyntax `lstmt)) : GenM MR := do
       let c ← transC E ctx c
@@ -1351,9 +1487,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       return .ite c (← transS E ctx (t ++ rest)) (← transS E ctx (e ++ rest))
     match s with
     | `(lstmt| $x:ident := call $f:ident($args,*)) =>
-      transCall E ctx #[x] f args.getElems rest
+      transCall E ctx #[x] f args.getElems rest shareJ
     | `(lstmt| ($x:ident, $xs:ident,* ) := call $f:ident($args,*)) =>
-      transCall E ctx (#[x] ++ xs.getElems) f args.getElems rest
+      transCall E ctx (#[x] ++ xs.getElems) f args.getElems rest shareJ
     | `(lstmt| $x:ident := $e:lexpr) => do
       let v ← transE E ctx e
       match ctx.idx x with
@@ -1378,7 +1514,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       let arr ← `(L.tierA $a $(← (← transE E ctx t).render))
       let i ← (← transE E ctx i).render
       let v ← (← transE E ctx e).render
-      transS E { ctx with mem := .raw (← `(L.Mem.set32 $(← ctx.mem.render) $arr $i $v)) } rest
+      let mem ← `(L.Mem.set32 $(← ctx.mem.render) $arr $i $v)
+      if ← dupMem E ctx #[mem] then return ← shareJ
+      transS E { ctx with mem := .raw mem } rest
     | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
       let (arr, k) ← splitArr a
       match k with
@@ -1388,7 +1526,9 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
         noteVcg #["L.st8"]
         let i ← (← transE E ctx i).render
         let v ← (← transE E ctx e).render
-        transS E { ctx with mem := .raw (← `(L.Mem.set8 $(← ctx.mem.render) $arr $i $v)) } rest
+        let mem ← `(L.Mem.set8 $(← ctx.mem.render) $arr $i $v)
+        if ← dupMem E ctx #[mem] then return ← shareJ
+        transS E { ctx with mem := .raw mem } rest
       | _ => throwErrorAt s "l_model: constant data cannot be written"
     | `(lstmt| $x:ident := scan!($a:ident, $i:lexpr, $e:lexpr, $c:ident)) => do
       -- the first `j ∈ [i, e)` whose byte is in the class `c`, else `e` (`scanN`)
@@ -1417,6 +1557,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
           `(L.Mem.copy64 $m $dA $di $(← warrT sa st) $si (UInt64.toNat $n))
         else do
           `(L.Mem.copy8w $m $dA $di $(← bsrc ctx src) $si (UInt64.toNat $n))
+      if ← dupMem E ctx #[m'] then return ← shareJ
       transS E { ctx with mem := .raw m' } rest
     | `(lstmt| if $c:lcond $b:lblock) => ite c (← blockStmts b) []
     | `(lstmt| if $c:lcond $b:lblock else $t:lblock) => ite c (← blockStmts b) (← blockStmts t)
@@ -1453,7 +1594,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
       else throwErrorAt s "l_model: unsupported L statement"
 
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
-    (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) : GenM MR := do
+    (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) (shareJ : GenM MR) : GenM MR := do
   let fname := f.getId.toString
   modify fun st => { st with called := st.called.push fname, callHint := fname }
   let argsT ← args.mapM fun a => do (← transE E ctx a).render
@@ -1585,6 +1726,8 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
   | .memTot t guards =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
     let m' ← substT t memT argsT
+    let gs ← guards.mapM fun (g, _) => substT g memT argsT
+    if ← dupMem E ctx (#[m'] ++ gs) then return ← shareJ
     let body ← transS E { (assign ctx #[]) with mem := .raw m' } rest
     let mut r := body
     for (g, classical) in guards.reverse do
@@ -1604,6 +1747,29 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     let u ← substT t memT argsT
     let body ← transS E (assign ctx #[]) rest
     return .ite (.cmp "=" (.raw u) (.raw (← `(Option.none)))) (← failMR E) body
+  | .mixed vals inner j =>
+    if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
+    -- the results stated as values, over the memory before the call; the others `0` until the
+    -- effect's model gives one
+    let mut ctx1 := assign ctx #[]
+    for i in [0:min vals.size xk.size] do
+      if let some t := vals[i]! then
+        ctx1 := setEnv ctx1 xk[i]! (.raw (← substT t memT argsT))
+    match inner with
+    | .eff t =>
+      let xj : Array Nat := if h : j < xk.size then #[xk[j]] else #[]
+      mkK E ctx1 0 xj[0]? xj (.raw (← substC t)) rest
+    | .memOpt t => mkK E ctx1 1 none #[] (.raw (← substC t)) rest
+    | .memTot t guards =>
+      let m' ← substT t memT argsT
+      let gs ← guards.mapM fun (g, _) => substT g memT argsT
+      if ← dupMem E ctx (#[m'] ++ gs) then return ← shareJ
+      let mut r ← transS E { ctx1 with mem := .raw m' } rest
+      for (g, classical) in guards.reverse do
+        let g ← substT g memT argsT
+        r := .ite (← negC g classical) (← failMR E) r
+      return r
+    | _ => throwErrorAt f "l_model: unsupported callee {fname}"
 
 /-- Make the continuation of a call: the rest of the code, as a definition over the locals it
 reads. -/
@@ -1678,7 +1844,7 @@ meta partial def bindK (E : Env) (ctx : Ctx) (xk : Array Nat) (callT : MT)
 
 /-- Make a join point: the rest of the code after an `if` both of whose branches fall through,
 as a definition over the locals it reads and the memory; the branches end by applying it. -/
-meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
+meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) (cut : Bool := true) :
     GenM Join := do
   let seq ← modifyGet fun st => (st.seq, { st with seq := st.seq + 1 })
   let env : Array MT := ctx.names.map fun n => .raw (mkIdent n)
@@ -1705,7 +1871,7 @@ meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
       modify fun st => { st with ks := st.ks.push kd }
       pure name
   let j : Join := { name, fuel, caps := capIdx, capMem }
-  if ctx.loop.isNone && st.cutRest == some (rest.map (·.raw)) then
+  if cut && ctx.loop.isNone && st.cutRest == some (rest.map (·.raw)) then
     modify fun st => { st with cutJ := some j }
   return j
 
@@ -1937,7 +2103,8 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" nv " "[" term "," term "]")?
   (&" cut " num)?
   (&" pfuel")?
-  (&" guards " "[" str,* "]")? : command
+  (&" guards " "[" str,* "]")?
+  (&" share")? : command
 
 meta structure FnInfo where
   lname : String
@@ -1974,7 +2141,31 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   if doTrace then logInfo m!"{cmd}"
   elabCommand cmd
 
+/-- The identifiers `L` and `L.x` as `L'`, `L'.x` (`to`). -/
+meta partial def renameL (to : Name) : Syntax → Syntax
+  | s@(.ident info _ n _) =>
+    if n.getRoot == `L then
+      let n' := n.replacePrefix `L to
+      .ident info (toString n').toRawSubstring n' []
+    else s
+  | .node info k args => .node info k (args.map (renameL to))
+  | s => s
+
+/-- A binder named `L` (a structure of lookups, `L.rc`) renamed to `L'` from its binder on: the
+generated proofs root the library's names (`_root_.L.exec`), which would take `L.rc` too. After
+the binder, `L.x` in the command can only mean the binder's field (a local comes first). -/
+meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
+  let bs := stx[3].getArgs
+  let isL (b : Syntax) : Bool := (b[1].getArgs.any fun x => x.isIdent && x.getId == `L)
+  let some i := bs.findIdx? isL | return stx
+  let bs' := bs.mapIdx fun j b => if j < i then b else renameL `L' b
+  let mut args := stx.getArgs.set! 3 (stx[3].setArgs bs')
+  for k in [4:args.size] do
+    args := args.set! k (renameL `L' args[k]!)
+  return stx.setArgs args
+
 @[command_elab lmodel] meta def elabLModel : CommandElab := fun stx => do
+  let stx := renameBinderL stx
   -- `l_model name binders* fns [..] specs? grind? fold? extra? finish? gen? …`
   let doc? : Option (TSyntax `Lean.Parser.Command.docComment) :=
     if stx[0].getNumArgs == 0 then none else some ⟨stx[0][0]⟩
@@ -2020,6 +2211,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- `n` (no `match` on the fuel), its spec at `exec p (n + 1)`, proved by one step, no induction
   let pfuel := stx[27].getNumArgs != 0
   let guardFns : Array String := (optList 28).filterMap (·.isStrLit?)
+  -- `share`: a memory term mentioned twice by a store or a total memory callee is a join point's
+  -- parameter (`Env.share`)
+  let share := stx[29].getNumArgs != 0
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
@@ -2060,14 +2254,23 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   -- the models' Lean parameters: explicit binders the callee models mention
   let mut allBs : Array (Name × Term) := #[]
   for b in bs do
-    if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $ty)) := b then
+    -- an implicit binder that a callee's model mentions is an explicit parameter of the models
+    match b with
+    | `(Lean.Parser.Term.bracketedBinderF| ($xs* : $ty)) | `(Lean.Parser.Term.bracketedBinderF| {$xs* : $ty})
+    | `(Lean.Parser.Term.bracketedBinderF| ⦃$xs* : $ty⦄) =>
       for x in xs do allBs := allBs.push (x.raw.getId, ty)
+    | _ => pure ()
   let calleeIds : NameSet := callees.foldl (fun acc (_, c) => match c.kind with
     | .eff t | .effL t | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
     | .list t _ gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)
     | .pure ts gs => (ts ++ gs).foldl (fun acc t => idents t.raw acc) acc
     | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
-    | .unitOpt t => idents t.raw acc) {}
+    | .unitOpt t => idents t.raw acc
+    | .mixed vs inner _ => vs.foldl (fun acc t? => match t? with | some t => idents t.raw acc | none => acc)
+        (match inner with
+          | .memTot t gs => gs.foldl (fun acc t => idents t.1.raw acc) (idents t.raw acc)
+          | .eff t | .memOpt t => idents t.raw acc
+          | _ => acc)) {}
   -- `unified`: the callees without a spec are called through `callE p n "f"`
   let calleeIds := if exc then calleeIds.insert `p else calleeIds
   let mpBs := allBs.filter (calleeIds.contains ·.1)
@@ -2113,7 +2316,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     if fi.tup > 0 then { fi with tup := max fi.tup (spliceArity blocks0 (blocks0.size + 1) fi.body) }
     else fi
   let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro, fi.multi, fi.tup)
-  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, guardFns, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname) }
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard, guardFns, mps, blocks, bind := bindC, exc, voids := (fis.filter (·.void)).map (·.lname), share }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String × Array Name)) := fis.mapM fun fi => do
@@ -2303,7 +2506,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let emitD (cmd : Syntax) : CommandElabM Unit := unless noDefs do emit doTrace cmd
   -- a callee guard decided classically (`analyseSpec`): the definitions are `noncomputable`
   let classical := E.callees.any fun (_, c) => match c.kind with
-    | .memTot _ gs => gs.any (·.2)
+    | .memTot _ gs | .mixed _ (.memTot _ gs) _ => gs.any (·.2)
     | _ => false
   if classical then emitD (← `(command| noncomputable section))
   -- emit the components, each after the ones it refers to
