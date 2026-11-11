@@ -119,7 +119,7 @@ mutual blocks, the hand specs. 6 files +167 −198 (−31).
 | `IndT/PosFrame` | 9.1 → 8.9 G | 1.3 → 1.2 | 1114 → 1105 |
 | `IndT/PosNew` | 11.9 → 11.8 G | 1.7 → 1.7 | 1125 → 1121 |
 
-## 2b. Helper batches
+## 3. Helper batches
 
 ### `mgen5-parts` (#272, #273, #275): `nIdxsW`, `lpsW`, `psGoW`
 
@@ -198,61 +198,7 @@ Kept by this helper: `bbN` (the at-fuel wrapper of `bb_memo`'s spec, a callee sp
   hand mutual model, `namesToK`, `irp1K`–`irp6K`, their arms, both hand specs. +31 −94 (−63);
   `RomPins` 21.3 → 19.2 G (3.6 → 3.3 s).
 
-## 4. Totals (master b7003b70 → this landing)
-
-* **Functions**: 35 converted. Lead 9 (`reduce_op_cv_a`, `of_reduce_pin_a`, `reduce_decl_pin`,
-  `ind_cv`, `parse_rule_d`, `decl_cv`, `nest_frame_grp`, `nest_frame_holes`,
-  `nest_cont_new_active`); `mgen5-parts` 11; `mgen5-rec` 12; `mgen5-rom` 3. The inventory
-  script counts 237 hand-specified functions now (252 at the start; it counts a function as
-  hand-specified while any triple over it is hand-proved, so wrapper specs such as `bbN` keep
-  some converted functions in), 188 of them with no model in their post.
-* **Lines** (`git diff --shortstat b7003b703 -- ConAgua`): 78 files, +1 152 −1 939, **−787**, the
-  generator change (`ModelGen.lean`, `ModelGenTest.lean`: +36 −2) included.
-* **Build time**, the modules each batch changed, measured alone before and after
-  (`LEAN_NUM_THREADS=1`): about −95 G instructions in all. Gains: `FgW2` 69.3 → 28.6 G, `GgW2`
-  24.7 → 3.2 G (two batches), `StripTeleSpec` 31.3 → 17.3 G, `StructElimLevel` 21.3 → 9.1 G,
-  `U4W` 14.1 → 6.0 G, `Tka` 4.9 → 1.9 G. Slowdowns: `P2ctK1` 1.9 → 4.0 G (2.1×, 0.8 s), `BvarB`
-  4.9 → 6.3 G (1.3×), `DeclReduceSpec` 10.9 → 12.1 G (1.1×), `ModelGenTest` 92.8 → 95.9 G (one
-  test more). No module above 3× or 60 s (the slowest touched, `IndRealAbsPos`, 8.6 s). Peak RSS
-  0.9–1.5 GB throughout. No heartbeats raised; none were raised in the hand proofs removed.
-* **Generator**: one change (#278, `--wide`): `fold` of constant byte readers
-  (`(D[i.toNat]?.getD c).toUInt64`, `Fold.byteSrc`), off unless such a fold is given; every
-  `l_model` module rebuilt unchanged.
-
-## 5. What stays hand-written, and whether more model work is worth a lane
-
-The 49 hand specs with a model in their post, by kind:
-
-* **Vocabulary** (models named in more than 40 files, or the decoders): `rdW`, `allocW`
-  (`ifr_alloc`, `ifl_alloc`, `dind_alloc`), `decHL`, `decPL`, `decCVp`, `res`; and the total
-  word models `getDW` (§2), `hiW`, `kmW`, `cntW`, `slotW`. Not models to replace.
-* **Templates** (`consInternG zeroCS`, memo schemas: no `lfn` text): `intern_zero`, `intern_max`,
-  `intern_lit_str`, `fr_memo`.
-* **Fuel-free loop models over the input**, walked by position (mgen4 §4): `lp_put`, `ls_put`,
-  `ifl_ids`, `nat_dec`, `sub_rec`, `scan_bool`.
-* **Bounds of a store** (the L code aborts out of bounds, the generated store does not): `lh_push`,
-  `lh_mk` (§2), `name_put`/`level_put`/`expr_put` (`tblPutW`'s size checks). A generator option
-  that models an inline store's bound as a guard (`none` when the index is past the array's
-  length, as L does) would open all five; `rom_names_to` (#281) shows the alternative, moving the
-  bound into the refinement, which works only where the caller has it.
-* **Small remaining families**, each convertible by the pattern of this lane: `lp_lookup` /
-  `lp_substl` with `lv_lookup`, `lv_substl`, `lv_spw` (`LevelSubstL`: one hand model generic in the
-  key read `KR`, shared by the `lv_` functions over `EREC` and the `lp_` ones over `SPN`; the
-  generated models would be one per function and need a bridge each to the generic one the
-  refinements use; ronsync2 churn 332), `mentions_any_const` (`maConstW`, 156), `class_gen_rule`
-  (`ruW`, 64), and a handful with churn under 30 (`ctors_have_name`, `class_key_of_closed`,
-  `class_key_canon`, `target_abs`, `lvl_eq_rec`, `block_shape_build`, `and_pin_ok`, `nat_cmp`,
-  `proof_pw`, `apply_nnum`, `apply_level`, `ifl_push`).
-* The 188 without a model: §3 (no yield).
-
-**Is more worth a lane?** Not a full one. What is left with a model is mostly vocabulary,
-templates and fuel-free input loops, none of which a generated spec replaces. The convertible
-rest carries about 600 ronsync2 lines of churn (`LevelSubstL` the bulk), against 3 000–11 000
-for the vocabulary models a sync touches anyway. Worth doing: the store-bound guard option in
-the generator (five functions, and future code), and `LevelSubstL` as one small batch, both of
-which fit a short follow-up rather than a lane.
-
-## 3. The 185 specs without a model in their post
+## 4. The 185 specs without a model in their post
 
 Classified by their posts (script over `_tmp/mgen5/inv.json`), and 22 read by hand (random
 sample, seed 5: `scan_opaque`, `nat_mod_lit`, `class_gen_major`, `class_key_of`, `utf8_char`,
@@ -274,3 +220,57 @@ Yield: none of the 22 sampled, and by the classification at most the one `∃` c
 which is a bounds case. These hand proofs are short (median about 10 lines) and their posts are
 the vocabulary the callers' generated models and the refinements use; a generated spec would add
 a bridge per function at least as long as the proof it replaces. Not converted.
+
+## 5. Totals (master b7003b70 → this landing)
+
+* **Functions**: 35 converted. Lead 9 (`reduce_op_cv_a`, `of_reduce_pin_a`, `reduce_decl_pin`,
+  `ind_cv`, `parse_rule_d`, `decl_cv`, `nest_frame_grp`, `nest_frame_holes`,
+  `nest_cont_new_active`); `mgen5-parts` 11; `mgen5-rec` 12; `mgen5-rom` 3. The inventory
+  script counts 237 hand-specified functions now (252 at the start; it counts a function as
+  hand-specified while any triple over it is hand-proved, so wrapper specs such as `bbN` keep
+  some converted functions in), 188 of them with no model in their post.
+* **Lines** (`git diff --shortstat b7003b703 -- ConAgua`): 78 files, +1 152 −1 939, **−787**, the
+  generator change (`ModelGen.lean`, `ModelGenTest.lean`: +36 −2) included.
+* **Build time**, the modules each batch changed, measured alone before and after
+  (`LEAN_NUM_THREADS=1`): about −95 G instructions in all. Gains: `FgW2` 69.3 → 28.6 G, `GgW2`
+  24.7 → 3.2 G (two batches), `StripTeleSpec` 31.3 → 17.3 G, `StructElimLevel` 21.3 → 9.1 G,
+  `U4W` 14.1 → 6.0 G, `Tka` 4.9 → 1.9 G. Slowdowns: `P2ctK1` 1.9 → 4.0 G (2.1×, 0.8 s), `BvarB`
+  4.9 → 6.3 G (1.3×), `DeclReduceSpec` 10.9 → 12.1 G (1.1×), `ModelGenTest` 92.8 → 95.9 G (one
+  test more). No module above 3× or 60 s (the slowest touched, `IndRealAbsPos`, 8.6 s). Peak RSS
+  0.9–1.5 GB throughout. No heartbeats raised.
+* **Generator**: one change (#278, `--wide`): `fold` of constant byte readers
+  (`(D[i.toNat]?.getD c).toUInt64`, `Fold.byteSrc`), off unless such a fold is given; every
+  `l_model` module rebuilt unchanged.
+
+## 6. What stays hand-written, and whether more model work is worth a lane
+
+The 49 hand specs with a model in their post, by kind:
+
+* **Vocabulary** (models named in more than 40 files, or the decoders): `rdW`, `allocW`
+  (`ifr_alloc`, `ifl_alloc`, `dind_alloc`), `decHL`, `decPL`, `decCVp`, `res`; the total word
+  models `getDW` (§2), `hiW`, `kmW`; the shared readers `cntW` (27 files), `slotW` (9). Not models to replace.
+* **Templates** (`consInternG zeroCS`, memo schemas: no `lfn` text): `intern_zero`, `intern_max`,
+  `intern_lit_str`, `fr_memo`.
+* **Fuel-free loop models over the input**, walked by position (mgen4 §4): `lp_put`, `ls_put`,
+  `ifl_ids`, `nat_dec`, `sub_rec`, `scan_bool`.
+* **Bounds of a store** (the L code aborts out of bounds, the generated store does not): `lh_push`,
+  `lh_mk` (§2), `name_put`/`level_put`/`expr_put` (`tblPutW`'s size checks). A generator option
+  that models an inline store's bound as a guard (`none` when the index is past the array's
+  length, as L does) would open all five; `rom_names_to` (#281) shows the alternative, moving the
+  bound into the refinement, which works only where the caller has it.
+* **Small remaining families**, each convertible by the pattern of this lane: `lp_lookup` /
+  `lp_substl` with `lv_lookup`, `lv_substl`, `lv_spw` (`LevelSubstL`: one hand model generic in the
+  key read `KR`, shared by the `lv_` functions over `EREC` and the `lp_` ones over `SPN`; the
+  generated models would be one per function and need a bridge each to the generic one the
+  refinements use; ronsync2 churn 332), `mentions_any_const` (`maConstW`, 156), `class_gen_rule`
+  (`ruW`, 64), and a handful with churn under 30 (`ctors_have_name`, `class_key_of_closed`,
+  `class_key_canon`, `target_abs`, `lvl_eq_rec`, `block_shape_build`, `and_pin_ok`, `nat_cmp`,
+  `proof_pw`, `apply_nnum`, `apply_level`, `ifl_push`).
+* The 188 without a model: §4 (no yield).
+
+**Is more worth a lane?** Not a full one. What is left with a model is mostly vocabulary,
+templates and fuel-free input loops, none of which a generated spec replaces. The convertible
+rest carries about 600 ronsync2 lines of churn (`LevelSubstL` the bulk), against 3 000–11 000
+for the vocabulary models a sync touches anyway. Worth doing: the store-bound guard option in
+the generator (five functions, and future code), and `LevelSubstL` as one small batch, both of
+which fit a short follow-up rather than a lane.
