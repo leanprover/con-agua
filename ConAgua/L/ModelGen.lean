@@ -65,7 +65,9 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
 ```
 
 * `fns`: each entry is a proof of `p.lookup "f" = some F` (`F` a `def F : FunDecl := lfn …`: its
-  text is read back from its module's file for the names of the locals and the leaf terms) and
+  text is read back from its module's file for the names of the locals and the leaf terms; or
+  `F x₁ …` for a `def` with parameters, `romName rom`, whose arguments are the command's binders
+  of the parameters' names: they become parameters of the models) and
   the name of the model; `ro`, `list`, `tuple` after the name (above).
 * `specs`: the callees' specs, as terms over the binders and the fuel `n`. A callee's model is read
   off its post: `F = some (r.headD 0, s'.mem)` (effectful), `r.headD 0 = F₀ ∧ r.tail.headD 0 = F₁ …`
@@ -1156,7 +1158,10 @@ meta partial def transE (E : Env) (ctx : Ctx) : TSyntax `lexpr → GenM MT
               if σ.all (·.isSome) then return .app r.name (σ.map (·.get!))
       pure (.rd ctx.mem arr i)
     | "u8" => pure (.rd8 ctx.mem arr i)
-    | _ => pure (.raw (← `(((($arr : List UInt8))[($(← i.render)).toNat]?.getD 0).toUInt64)))
+    | _ =>
+      -- a constant byte (`ldc`)
+      noteVcg #["L.ldc"]
+      pure (.raw (← `(((($arr : List UInt8))[($(← i.render)).toNat]?.getD 0).toUInt64)))
   | `(lexpr| len($a:ident)) => do
     let (arr, k) ← splitArr a
     match k with
@@ -2231,10 +2236,11 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
   let preT? : Option Term := if stx[8].getNumArgs == 0 then none else some ⟨stx[8][2]⟩
   let keepT? : Option Term := if stx[9].getNumArgs == 0 then none else some ⟨stx[9][2]⟩
   let stx := stx'
-  let (infos, callees, foldRules, specAr) ← runTermElabM fun _ => do
+  let (infos, callees, foldRules, specAr, fnArgs) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
     withLocalDeclD `n (mkConst ``Nat) fun _ => do
       let mut infos : Array (String × Name × Name × Bool × Bool × Bool × Bool × Term) := #[]
+      let mut fnArgs : Array Name := #[]
       for f in fnStx do
         let `(lmodelFn| $lk ↦ $w $[ro%$r]? $[list%$l]? $[tuple%$tu]? $[void%$vd]?) := f | throwUnsupportedSyntax
         let e ← elabTerm lk none
@@ -2243,8 +2249,24 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
         let some (_, lhs, rhs) := ty.eq? | throwErrorAt lk "l_model: expected `p.lookup \"f\" = some F`"
         let some fname := strLit? (lhs.getAppArgs[lhs.getAppNumArgs - 2]!)
           | throwErrorAt lk "l_model: the function name is not a literal"
-        let some c := (rhs.getAppArgs.back!).consumeMData.constName?
+        -- `F`, or `F x₁ …` with `F`'s parameters (`romName rom`: the L text reads `rom.c8`): the
+        -- arguments must be the command's binders of the parameters' names, and become
+        -- parameters of the models
+        let fv := (rhs.getAppArgs.back!).consumeMData
+        let some c := fv.getAppFn.consumeMData.constName?
           | throwErrorAt lk "l_model: the function is not a constant"
+        if fv.getAppNumArgs > 0 then
+          let some val := ((← getEnv).find? c).bind (·.value?)
+            | throwErrorAt lk "l_model: {c} has no body"
+          let mut v := val
+          for a in fv.getAppArgs do
+            let .lam bn _ b _ := v | throwErrorAt lk "l_model: {c} takes fewer parameters"
+            let some fid := a.consumeMData.fvarId? |
+              throwErrorAt lk "l_model: the argument {a} of {c} is not a binder of the command"
+            unless (← fid.getUserName) == bn do
+              throwErrorAt lk "l_model: the argument of {c} for its parameter `{bn}` must be a binder named `{bn}`"
+            fnArgs := fnArgs.push bn
+            v := b
         infos := infos.push (fname, c, w.getId, r.isSome, l.isSome, tu.isSome, vd.isSome, lk)
       let mut callees : Array (String × Callee) := #[]
       let mut specAr : Array Nat := #[]
@@ -2264,7 +2286,7 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
           pure xs.size
         specAr := specAr.push ar
       let foldRules ← foldIds.mapM fun f => do mkFold (← realizeGlobalConstNoOverloadWithInfo f)
-      return (infos, callees, foldRules, specAr)
+      return (infos, callees, foldRules, specAr, fnArgs)
   -- the models' Lean parameters: explicit binders the callee models mention
   let mut allBs : Array (Name × Term) := #[]
   for b in bs do
@@ -2287,6 +2309,7 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
           | _ => acc)) {}
   -- `unified`: the callees without a spec are called through `callE p n "f"`
   let calleeIds := if exc then calleeIds.insert `p else calleeIds
+  let calleeIds := fnArgs.foldl (·.insert ·) calleeIds
   let mpBs := allBs.filter (calleeIds.contains ·.1)
   let mps := mpBs.map (·.1)
   let mpBinders ← mpBs.mapM fun (x, ty) => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : $ty))
