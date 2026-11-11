@@ -6,6 +6,7 @@ public import ConAgua.Front.LineRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 public import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -27,8 +28,8 @@ not scan, `(1, next)` otherwise (`next` after the line's newline, `0` at the end
 `meta` header changes nothing. A number of more than 18 digits aborts
 (`docs/deviations.md`, D2), as does a full pool or table.
 
-The models here are the name and level steps' (`lineRecW`, `applyStrW`, with `apply_rec`'s and
-`apply_str`'s specs); `front_line`'s own model is generated and refined in `LineRef.lean`
+The models here are the name and level steps' (`lineRecW` with `apply_rec`'s spec; `applyStrW`
+with `apply_str`'s, generated); `front_line`'s own model is generated and refined in `LineRef.lean`
 (`frontLine_ref`).
 -/
 
@@ -110,45 +111,6 @@ position `nm`, `IndApply.lean`; a line that does not read aborts). -/
   return 0
 }
 
-/-! ## The model -/
-
-/-- After `str_put_esc`: its result `(l, memory)` (`none`: it aborted), the slice at `o`. -/
-def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (l, m₁) =>
-    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else applyNStrW m₁ idx a o l
-
-@[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := by rfl
-@[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
-    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else applyNStrW m₁ idx a o l := by rfl
-
-theorem strK_intern {idx a o l : Word} {m₁ m' : Mem} (h : strK idx a o (some (l, m₁)) = some m') :
-    applyNStrW m₁ idx a o l = some m' := by
-  rw [strK_some] at h
-  split at h
-  · cases h
-  split at h
-  · cases h
-  exact h
-
-/-- The model of `apply_str`. -/
-def applyStrW (b : Array UInt8) (m : Mem) (idx a c d : Word) : Option Mem :=
-  if c = 0 then none else strK idx a m.top (strPutEscW b m c d)
-
-/-- A name or level line with fields `f`, applied. -/
-def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
-  if pl = 0 then none
-  else if pl = 7 then some m
-  else if idx = NONE ∨ a = NONE then none
-  else if pl = 1 then applyStrW b m idx a c d
-  else if c = NONE ∧ (pl = 2 ∨ pl = 4 ∨ pl = 5) then none
-  else if pl = 2 then applyNNumW m idx a c
-  else applyLevelW m idx (pl - 2) a c
-
 /-! ## The spec -/
 
 /-- The functions of `ScanLookups`. -/
@@ -190,6 +152,33 @@ def scanLookupsFns : Prog :=
 /-- Every function of the validator and of the single pass, at its name in `p`. -/
 abbrev ScanLookups (p : Prog) : Prop := ProgHas p scanLookupsFns
 
+/-- **The model of `apply_str`** (generated): `applyStrW`, the body `[c, d)` unescaped into the
+pool (`str_put_esc`, its slice at the old top) and applied (`apply_nstr`). -/
+l_model applyStr_spec (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
+    (hpn : p.lookup "apply_nstr" = some applyNStr) (hpt : p.lookup "apply_str" = some applyStr)
+    (hE : ExprLookups p) (b : Array UInt8)
+  fns [hpt ↦ applyStrW void]
+  specs [strPutEsc_specW p b (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3")
+      (hS.get "esc_sur") (hS.get "esc_one") (hS.get "utf8_put") (hS.get "str_put_esc") n,
+    applyNStr_spec p hL hpn n]
+  pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]
+  keep [hE.no_st8]
+  grind [arena_grind] finish [Keep.size]
+
+/-- `apply_str`'s tail after `apply_nstr` passes its memory on. -/
+theorem applyStrW_kn (b : Array UInt8) (x : Option Mem) : applyStrW.k_apply_nstr b x = x := by
+  cases x <;> rfl
+
+/-- A name or level line with fields `f`, applied. -/
+def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
+  if pl = 0 then none
+  else if pl = 7 then some m
+  else if idx = NONE ∨ a = NONE then none
+  else if pl = 1 then applyStrW b m idx a c d
+  else if c = NONE ∧ (pl = 2 ∨ pl = 4 ∨ pl = 5) then none
+  else if pl = 2 then applyNNumW m idx a c
+  else applyLevelW m idx (pl - 2) a c
+
 section spec
 variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
@@ -198,29 +187,6 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hE : ExprLookups p)
   (b : Array UInt8)
 include hS hL hpn hpu hpl hpr hpt hE
-
-omit hpu hpl hpr in
-theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
-    (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)
-    (idx a c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "apply_str" [idx, a, c, d]
-    ⦃fun _ s' => LocEq s' s₀ ∧ applyStrW b s₀.mem idx a c d = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hpt]
-  simp only [callFn, applyStr]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hesc : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
-        ⦃fun s => s = s₁⦄ invoke p (exec p n) "str_put_esc" [c, d]
-        ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
-          strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b (hS.get "byte_in") (hS.get "hex_val") (hS.get "hex4") (hS.get "hex3")
-        (hS.get "esc_sur") (hS.get "esc_one") (hS.get "utf8_put") (hS.get "str_put_esc") n s₁ hm₁ c d)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
-        applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : pcap s₀.mem < 2 ^ 63)
     (htop : s₀.mem.top.toNat ≤ pcap s₀.mem)

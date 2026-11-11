@@ -157,7 +157,7 @@ theorem lineRecW_dk (b : Array UInt8) (m m' : Mem) (pl idx a c d : Word)
   split at h
   · unfold applyStrW at h
     split at h; cases h
-    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₁⟩ <;> simp only [hP, strK, reduceCtorEq] at h
+    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₁⟩ <;> simp only [hP, applyStrW.k_str_put_esc, applyStrW_kn, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
     exact (strPutEscW_dk hP).trans (applyNStrW_dk h)
@@ -227,20 +227,20 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
     exact DK.ofAbove (mkProjW_above h)
   · unfold constW at h
     split at h
+    · cases h
     · cases hP : lsPutW b m c with
-      | none => rw [hP, constK_none] at h; cases h
+      | none => rw [hP, constW.k_ls_put.none] at h; cases h
       | some m₂ =>
-        rw [hP, constK_some] at h
+        rw [hP, constW.k_ls_put] at h
         have hk2 : DK m m₂ := by
           unfold lsPutW at hP
           split at hP; cases hP
           · exact lsLoopM_dk b _ _ _ _ _ hP
-        rcases hL : lsinternW m₂ m.top (lsPutL b c) with _ | ⟨g, m₃⟩ <;> simp only [hL, constK2, reduceCtorEq] at h
+        rcases hL : lsinternW m₂ m.top (lsPutL b c) with _ | ⟨g, m₃⟩ <;> simp only [hL, constW.k_intern_ls, reduceCtorEq] at h
         split at h
+        · cases h
         · exact (hk2.trans (DK.ofFrame (lsinternW_frame _ _ _ _ _ hL))).trans
             (DK.ofFrame (ceinternW_frame _ _ _ _ _ h))
-        · cases h
-    · cases h
   · unfold litW at h
     rcases hN : natDecW b m c d with _ | ⟨r, m₂⟩ <;> simp only [hN, litW.k_nat_dec, reduceCtorEq] at h
     split at h; cases h
@@ -248,7 +248,7 @@ theorem nodeW_dk {b : Array UInt8} {m m₁ : Mem} {pl a c d w : Word}
     exact (natDecW_dk hN).trans (DK.ofFrame (consInternM_frame litCS_wf h))
   · unfold litStrW at h
     split at h; cases h
-    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrK, reduceCtorEq] at h
+    rcases hP : L.Front.Unescape.strPutEscW b m c d with _ | ⟨l, m₂⟩ <;> simp only [hP, litStrW.k_str_put_esc, reduceCtorEq] at h
     split at h; cases h
     split at h; cases h
     exact (strPutEscW_dk hP).trans (DK.ofFrame (consInternM_frame litStrCS_wf h : MemFrame [litSch.ra, tier1 litSch.ra, litSch.sa, tier1 litSch.sa] [litSch.ca, litSch.ca + 1] _ _))

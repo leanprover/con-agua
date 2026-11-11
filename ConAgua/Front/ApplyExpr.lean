@@ -347,6 +347,7 @@ theorem lsPut_room (b : Array UInt8) (m m' : Mem) (v : Word) (h : lsPutW b m v =
   refine ⟨by omega, ?_⟩
   simp only [lsPutL]
   omega
+grind_pattern [arena_grind] lsPut_room => lsPutW b m v, some m'
 
 /-- The length checks of `node_lit`/`node_lit_str`/`apply_str` on a slice `(o, l)` at an address
 of a tier: the slice lies below `pcap` (what the stores' `intern_*` need). -/
@@ -429,27 +430,6 @@ grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
   return h
 }
 
-/-- The tail of `node_const` after `intern_ls`. -/
-def constK2 (n : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | some (g, m₂) => if g < 0x100000000 then ceinternW m₂ n g else none
-  | none => none
-
-/-- The tail of `node_const` after `ls_put`. -/
-def constK (n o l : Word) : Option Mem → Option (Word × Mem)
-  | some m₁ => constK2 n (lsinternW m₁ o l)
-  | none => none
-
-@[arena_grind =] theorem constK2_none (n : Word) : constK2 n none = none := by rfl
-@[arena_grind =] theorem constK2_some (n g : Word) (m₂ : Mem) :
-    constK2 n (some (g, m₂)) = if g < 0x100000000 then ceinternW m₂ n g else none := by rfl
-@[arena_grind =] theorem constK_none (n o l : Word) : constK n o l none = none := rfl
-@[arena_grind =] theorem constK_some (n o l : Word) (m₁ : Mem) :
-    constK n o l (some m₁) = constK2 n (lsinternW m₁ o l) := by rfl
-
-/-- The model of `node_const(a, c)`. -/
-def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
-  if tblOK m NID a = true then constK (tblW m NID a) m.top (lsPutL b c) (lsPutW b m c) else none
-
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:195-226 ConRon.Arena.Frontend.parseExprEntryD -/
 @[no_expose] def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
   (o, l) := call nat_dec(c, d);
@@ -474,35 +454,6 @@ of `0` aborts (as `apply_str`'s), the sentinel for "no body". -/
   h := call intern_lit_str(o, l);
   return h
 }
-
-/-- After `str_put_esc`: its length result `l` and memory (`none`: it aborted, at the slice
-`(o, l)`), then `intern_lit_str(o, l)`. -/
-def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (l, m₁) =>
-    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else internWStr m₁ o l
-
-@[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := by rfl
-@[arena_grind =] theorem litStrK_some (o l : Word) (m₁ : Mem) : litStrK o (some (l, m₁)) =
-    if m₁.len64 (tierA POOL (o >>> 40)) < o - (o >>> 40) <<< 40 then none
-    else if m₁.len64 (tierA POOL (o >>> 40)) - (o - (o >>> 40) <<< 40) < l then none
-    else internWStr m₁ o l := by rfl
-
-theorem litStrK_intern {o l : Word} {m₁ m' : Mem} {w : Word}
-    (h : litStrK o (some (l, m₁)) = some (w, m')) : internWStr m₁ o l = some (w, m') := by
-  rw [litStrK_some] at h
-  split at h
-  · cases h
-  split at h
-  · cases h
-  exact h
-
-/-- The model of `node_lit_str(c, d)`: the string body `[c, d)`, unescaped into the pool and
-interned. -/
-def litStrW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) :=
-  if c = 0 then none else litStrK m.top (strPutEscW b m c d)
 
 /-! ## `expr_node`, `apply_expr` -/
 
@@ -790,59 +741,34 @@ theorem litK_intern {b : Array UInt8} {r : List Word} {m₁ m' : Mem} {w : Word}
   · cases h
   exact h
 
-section specs2
-variable (p : Prog) (hE : ExprLookups p)
-include hE
-
-theorem nodeLitStr_spec (b : Array UInt8)
+/-- **`node_lit_str`** (generated): `litStrW`, the string body `[c, d)` unescaped into the pool
+(`str_put_esc`, its slice at the old top) and interned. -/
+l_model nodeLitStr_spec (p : Prog) (hE : ExprLookups p) (b : Array UInt8)
     (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
     (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
     (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
     (hpsu : p.lookup "esc_sur" = some L.Front.Unescape.escSur)
     (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
     (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
-    (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
-    (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_lit_str" [c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ litStrW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_lit_str]
-  simp only [callFn, nodeLitStr]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hesc : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
-        ⦃fun s => s = s₁⦄ invoke p (exec p n) "str_put_esc" [c, d]
-        ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
-          strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
-          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
-      Triple.keep hE.no_st8 (strPutEsc_specW p b hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
-        internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str
-          hE.lit_push_str hE.intern_lit_str n] <;>
-      finish [litStrW, Keep.size]
+    (hpe : p.lookup "str_put_esc" = some strPutEsc)
+  fns [hE.node_lit_str ↦ litStrW]
+  specs [strPutEsc_specW p b hpb hph hp4 hp3 hpsu hpo hpu hpe n,
+    internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str
+      hE.lit_push_str hE.intern_lit_str n]
+  pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]
+  keep [hE.no_st8]
+  grind [arena_grind] finish [Keep.size]
 
-theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
-    (hm : s₀.mem.arr8 IN = b) (hps : pcap s₀.mem < 2 ^ 63) (htop : s₀.mem.top.toNat ≤ pcap s₀.mem) (a c : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_const" [a, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ constW b s₀.mem a c = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hE.node_const]
-  simp only [callFn, nodeConst]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hroom := fun m' h => lsPut_room b s₀.mem m' c h hps htop
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nameGet_spec p hE.front n,
-        lsPut_spec p hE b hb n,
-        internLs_spec p hE.front.lit_hash hE.front.limbs_eq hE.ls_match hE.ls_find hE.ls_push
-          hE.intern_ls n,
-        internConst_spec p hE.const_find hE.const_push hE.intern_const n] <;>
-      finish [constW]
-
-end specs2
+/-- **`node_const`** (generated): `constW`, the name looked up (a guard), the universe list read
+again from the input into the pool (`ls_put`) and interned, then the constant. -/
+l_model nodeConst_spec (p : Prog) (hE : ExprLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+  fns [hE.node_const ↦ constW]
+  specs [nameGet_spec p hE.front n, lsPut_spec p hE b hb n,
+    internLs_spec p hE.front.lit_hash hE.front.limbs_eq hE.ls_match hE.ls_find hE.ls_push
+      hE.intern_ls n,
+    internConst_spec p hE.const_find hE.const_push hE.intern_const n]
+  pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]
+  grind [arena_grind] guards ["name_get"]
 
 /-- **`expr_node`** (generated): `nodeW`, the dispatch on the kind `pl`; the node's handle and
 the memory after. -/
