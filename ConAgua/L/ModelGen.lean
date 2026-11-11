@@ -2134,8 +2134,12 @@ meta def renameBinderL (stx : Syntax) : Syntax := Id.run do
   -- the models' Lean parameters: explicit binders the callee models mention
   let mut allBs : Array (Name × Term) := #[]
   for b in bs do
-    if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $ty)) := b then
+    -- an implicit binder that a callee's model mentions is an explicit parameter of the models
+    match b with
+    | `(Lean.Parser.Term.bracketedBinderF| ($xs* : $ty)) | `(Lean.Parser.Term.bracketedBinderF| {$xs* : $ty})
+    | `(Lean.Parser.Term.bracketedBinderF| ⦃$xs* : $ty⦄) =>
       for x in xs do allBs := allBs.push (x.raw.getId, ty)
+    | _ => pure ()
   let calleeIds : NameSet := callees.foldl (fun acc (_, c) => match c.kind with
     | .eff t | .effL t | .memOpt t | .ro t | .roL t | .effT t _ | .roT t _ => idents t.raw acc
     | .list t _ gs => gs.foldl (fun acc t => idents t.raw acc) (idents t.raw acc)

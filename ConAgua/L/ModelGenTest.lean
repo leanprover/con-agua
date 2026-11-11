@@ -793,17 +793,21 @@ example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
   tPf_spec p C hc hp n s₀ x
 
 /-- A binder named `L` (lookups as fields, `L.pf`): the generated proofs root the library's
-names (`_root_.L.exec`), so the command renames the binder to `L'` from it on. -/
+names (`_root_.L.exec`), so the command renames the binder to `L'` from it on. An implicit binder
+that the callee's model mentions (`C`) is an explicit parameter of the model. -/
 structure TLk (p : Prog) : Prop where
   pf : p.lookup "t_pf" = some tPf
 
-l_model tPfL_spec (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
+l_model tPfL_spec (p : Prog) {C : Nat → Mem → Word → Option (Word × Mem)}
     (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
       ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
     (L : TLk p)
   fns [L.pf ↦ tPfLW]
   specs [hc n]
   grind [arena_grind] pfuel
+
+example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) (x : Word) :
+    tPfLW C n m x = tPfW C n m x := rfl
 
 /-- `guards`: a callee whose post is a table lookup (`G m x = true ∧ r = [F m x]`, as
 `name_get`'s): its guard is the model's, its result the literal's element. -/
