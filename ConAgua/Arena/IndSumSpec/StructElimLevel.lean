@@ -12,6 +12,7 @@ import Std.WP.Tactic
 import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.IndSum
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -78,88 +79,15 @@ The recipe (lane `levels`' shape, made explicit for a recursion that interns and
    gives a twin run (`.run a = .ok (xs, a')`) and the relation after;
 4. the census theorem: 2 and 3 composed by `triple_post`. -/
 
-/-- The two result words. -/
-def psK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
-
-/-- After the recursive call. -/
-def psK2 (n : Nat) (b : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => psK3 (consW n m2 b (r.headD 0) (r.tail.headD 0))
-
-/-- After the empty allocation. -/
-def psK0 : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (q, m') => some ([q, 0], m')
-
-mutual
-/-- The model of `struct_ps_at_go`. -/
-def psGoW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, o, nP, N, k =>
-    if N = 0 then psK0 (allocW m 0)
-    else psK1 n o nP N k (binternW m (o + nP - 1 - k))
-
-/-- After the interning. -/
-def psK1 (n : Nat) (o nP N k : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (b, m1) =>
-    if 4294967296 ≤ b then none else psK2 n b (psGoW n m1 o nP (N - 1) (k + 1))
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (o nP N k b : Word) (x : Option (List Word × Mem))
-theorem psGoW_nil (hN : N = 0) : psGoW (n + 1) m o nP N k = psK0 (allocW m 0) := by
-  simp [psGoW, hN]
-theorem psK0_some (q : Word) : psK0 (some (q, m1)) = some ([q, 0], m1) := rfl
-theorem psK2_some (r : List Word) (m2 : Mem) :
-    psK2 n b (some (r, m2)) = psK3 (consW n m2 b (r.headD 0) (r.tail.headD 0)) := rfl
-theorem psK3_some (r : List Word) (m2 : Mem) :
-    psK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := rfl
-theorem psGoW_cons (hN : N ≠ 0) :
-    psGoW (n + 1) m o nP N k = psK1 n o nP N k (binternW m (o + nP - 1 - k)) := by
-  simp [psGoW, hN]
-theorem psK1_big (hb : 4294967296 ≤ b) : psK1 n o nP N k (some (b, m1)) = none := by
-  simp [psK1, hb]
-theorem psK1_ok (hb : ¬ 4294967296 ≤ b) :
-    psK1 n o nP N k (some (b, m1)) = psK2 n b (psGoW n m1 o nP (N - 1) (k + 1)) := by
-  simp [psK1, hb]
-end arms
-
-grind_pattern [ind_grind] psGoW_nil => psGoW (n + 1) m o nP N k
-grind_pattern [ind_grind] psGoW_cons => psGoW (n + 1) m o nP N k
-grind_pattern [ind_grind] psK0_some => psK0 (some (q, m1))
-grind_pattern [ind_grind] psK2_some => psK2 n b (some (r, m2))
-grind_pattern [ind_grind] psK3_some => psK3 (some (r, m2))
-grind_pattern [ind_grind] psK1_big => psK1 n o nP N k (some (b, m1))
-grind_pattern [ind_grind] psK1_ok => psK1 n o nP N k (some (b, m1))
-
-section spec
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
-  (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
-  (hib : p.lookup "intern_bvar" = some internBVar)
-  (hp : p.lookup "struct_ps_at_go" = some structPsAtGoL)
-include ha hc hsc hpf hpp hib hp
-
-theorem structPsAtGo_spec (n : Nat) : ∀ (s₀ : St) (o nP N k : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_ps_at_go" [o, nP, N, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ psGoW n s₀.mem o nP N k = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ o nP N k; rw [invoke_eq _ hp]; simp only [callFn, structPsAtGoL]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ o nP N k
-    rw [invoke_eq _ hp]
-    simp only [callFn, structPsAtGoL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        iwAlloc_specW p ha n, slCons_specW p ha hc hsc n, internBVar_spec p hpf hpp hib n, ih] <;>
-      finish (gen := 20)
-
-end spec
+/-- **`struct_ps_at_go(o, nP, N, k)`'s model `psGoW`** (generated). -/
+l_model structPsAtGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hp : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+  fns [hp ↦ psGoW list]
+  specs [iwAlloc_specW p ha n, slCons_specW p ha hc hsc n, internBVar_spec p hpf hpp hib n]
+  grind [arena_grind]
 
 end L.Ind
 
@@ -182,13 +110,13 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
     intro m m' a o nP N k r h hR hsz hc hon hkN
     by_cases hN : N = 0
     · subst hN
-      rw [psGoW_nil n m o nP 0 k rfl] at h
+      rw [psGoW.arm1 n m o nP 0 k rfl] at h
       simp only [allocW] at h
       by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
-      · simp [h1, psK0] at h
+      · simp [h1, psGoW.k_iw_alloc] at h
       by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < 0
       · simp at h2
-      simp only [h1, h2, ite_false, psK0, Option.some.injEq, Prod.mk.injEq] at h
+      simp only [h1, h2, ite_false, psGoW.k_iw_alloc, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hf := allocMem_frame m 0
       have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
@@ -200,21 +128,21 @@ theorem psGoW_ok (n : Nat) : ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r 
         (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR,
         allocMem_grow m 0 (by simp; omega) hc, hf.size, by simp [decHL, hslice?], ?_⟩
       simp [iwTop, allocMem, rdW_set64, hc]
-    · rw [psGoW_cons n m o nP N k hN] at h
+    · rw [psGoW.arm2 (hc1 := hN)] at h
       rcases hI : binternW m (o + nP - 1 - k) with _ | ⟨b, m1⟩
-      · rw [hI] at h; simp [psK1] at h
+      · rw [hI] at h; simp [psGoW.k_intern_bvar] at h
       rw [hI] at h
       by_cases hb : 4294967296 ≤ b
-      · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
-      rw [psK1_ok n m1 o nP N k b hb] at h
+      · rw [psGoW.k_intern_bvar.abort1 (hc1 := hb)] at h; simp at h
+      rw [psGoW.k_intern_bvar.arm1 (hc1 := hb)] at h
       rcases hr : psGoW n m1 o nP (N - 1) (k + 1) with _ | ⟨r2, m2⟩
-      · rw [hr] at h; simp [psK2] at h
+      · rw [hr] at h; simp [psGoW.k_struct_ps_at_go] at h
       rw [hr] at h
-      simp only [psK2] at h
+      simp only [psGoW.k_struct_ps_at_go] at h
       rcases hcw : consW n m2 b (r2.headD 0) (r2.tail.headD 0) with _ | ⟨r3, m3⟩
-      · rw [hcw] at h; simp [psK3] at h
+      · rw [hcw] at h; simp [psGoW.k_sl_cons] at h
       rw [hcw] at h
-      simp only [psK3, Option.some.injEq, Prod.mk.injEq] at h
+      simp only [psGoW.k_sl_cons, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       -- the interning
       have hN1 : 1 ≤ N.toNat := by
