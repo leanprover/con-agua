@@ -221,3 +221,67 @@ the models (the L text reads `rom.c8[pos]`). A constant byte read now adds `L.ld
 `keep`, `guards ["rom_u64"]`, `rom_put` as a `mixed` callee) generates a model of the hand
 shape, but one step goal after `rom_put` does not close with the default recipe, and its model
 `romNameW` is walked in ten files (all ROM readers, no ronsync churn); not pursued.
+
+### Batch 8: helper `mgen4-misc` (#267)
+
+39 functions; 22 files, +613 −2486 (**−1873**). `pin_found`, `cr_lit_pins`, `cr_leaf`,
+`crf_go` (`pfuel … bind ntBW`; bridges `pf_bind`, `j1_ite`), `str_ctor_pre`, `str_cons_spine`,
+`str_param_sort`, `consts_resolve_all` (a `CallM` model parameter), `nat_op_pins_a/b/c`
+(`guards ["pin_at"]`), `ik_copy`, `keys_push_iw`, `dec_len` (a loop), `name_rec_i`,
+`inst_pis_at_lift` (in a `noncomputable section`: its callee model is noncomputable),
+`cons_sum_ctors`, `app_count` (bridges to the shared loop `gafLoopW`), the `InstList` walk
+(`il_go` and its six arms, `ilg_go` and its five: about 1000 hand lines; `InstListRefine` uses the
+generated arms directly) and the `ArRange` walk (`ar_go`, `ar_node` and five arms; the bridges
+`Abs1.lean` uses for `abs_*`). Kept: `instantiate1_lift_fast` (its "model" `i1lF` is a closure
+over the program; its word model is already generated in `WalkLift`). Largest growths:
+`ConstsResolveFRefine` 55.8 → 89.5 G (1.6×), `InstListSpec` 86.8 → 130.4 G, `IndRealCrFKeep`
+6.1 → 12.0 G (2×); gains `ArRangeSpec` 149.8 → 95.5 G, `InstList` 28.1 → 14.3 G, `ConsSumCtors`
+28.7 → 14.7 G, `ArRange` 17.3 → 3.7 G. Generator notes from the helper: `pfuel` takes no loops;
+a loop over `⦃h⦄.tag` needed `extra [evalE_tld, …, evalE_tagE]`; a model over a noncomputable
+callee model needs a `noncomputable section` around the `l_model`.
+
+## 3. Totals (master e0b575c9 → this landing)
+
+* **Functions**: 93 converted (lead 8: `rule_copy`, `block_shape_fin`, `block_shape_tail`,
+  `nest_root_canon`, `nest_uniform_ok`, `nest_canon_crest`, `whnf_walk_fuel`, `nest_crest`;
+  helpers 85: romfront 18, levels 19, rx 9, misc 39). mgen3's inventory script
+  (`_tmp/mgen3/inv.py`, rerun as `_tmp/mgen4/inv.py`) counts 339 hand-specified functions at the
+  start and **252** now; 185 of them have no model in their post (nothing to generate).
+* **Lines** (`git diff --shortstat e0b575c94 -- ConAgua`): 80 files, +2 823 −6 098, **−3 275**,
+  the generator's changes and tests included; four files fewer.
+* **Build time**, the modules each batch changed, measured alone before and after
+  (`LEAN_NUM_THREADS=1`): 2 053 → 2 072 G instructions (+1 %). No module above 3× or 60 s; the
+  largest slowdowns `LevelLeqSpec` 2.6× (36.7 → 96.5 G, 17 s), `IndRealCrFKeep` 2×, `Rx` 1.8×,
+  `ConstsResolveFRefine` 1.6×; the largest gains `RxMapW` 41.9 → 2.5 G, `ArRangeSpec` 149.8 →
+  95.5 G, `Bf` 78.2 → 41.3 G. Peak RSS 0.9–1.8 GB throughout. Raised heartbeats removed with the
+  hand specs: `bf_spec`, `bt_spec` (20 000 000 each), the `lv_*` specs (1 000 000 – 4 000 000).
+* **Generator** (`ModelGen.lean`): `share`, `mixed` callee posts, `fold` memory readers (also as
+  `rdW`'s body), a binder `L`, implicit binders, `pfuel k`, `FunDecl`s with parameters, `L.ldc`
+  for constant bytes. Each is off by default or applies only where the generator raised an
+  error before; every gate build rebuilt all `l_model` modules unchanged.
+
+## 4. What stays hand-written, and why
+
+* **No model to generate** (185): posts that are a value, a relation or a list the callers test.
+* **Bounds the refinements use**: `rom_names_to` (`PINS`), `lh_push` (`CTL` size); the generated
+  store carries no bound.
+* **Fuel-free loop models over the input buffer**, walked by position: `ls_put`, `lp_put`,
+  `ifl_ids`, `nat_dec`, `Unescape`, `Line` (no ronsync churn).
+* **Templates** built from schema combinators (`consInternG zeroCS`, `memoFindG S`): no `lfn` text
+  to read. A `FunDecl` with parameters and `lfn` text (`romName rom`) is accepted now; `rom_name`
+  itself stays (one step goal does not close with the default recipe; its model is walked in ten
+  ROM files).
+* **Reach** (models unfolded by name in many files): `lpsW`, `nIdxsW`, `tmdW`, `psGoW`, `bvbW`,
+  `getDW`, `selW`, `stripTW` (shared by `strip_lams`/`strip_pis`), the `erase_fvar_tys` family.
+  Each of these is a family conversion like batch 7 (bridges for the hand shape the users walk);
+  none needs a generator change that I know of.
+* **Total word models** kept as vocabulary: `hiW`, `kmW`, `sl_getd`, `nest_field_kind_flat`.
+* Not changed in the generator: the literal/instance form of generated `if`s (§1).
+
+## 5. `finish [S]` with an attribute set
+
+Lane dedup2 found that `finish [S]` with a grind attribute set `S` is accepted and ignored
+(`docs/design/dedup2.md` §4). A standalone reproduction (Lean core only, the builtin set `lia`):
+`_tmp/mgen4/finish-set-mwe.lean`, its output `_tmp/mgen4/finish-set-mwe.out` (Lean
+4.37.0-nightly-2026-10-20): `grind [lia]`, `grind [lia] => finish` and `grind => finish [f_eq]`
+close `f n = n + 1`; `grind => finish [lia]` fails with "`finish` failed".
