@@ -128,6 +128,12 @@ l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   `F₀, …` themselves: a table lookup `tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]`
   (`name_get`, `expr_get`) is `if tblOK m NID i = true then … tblW m NID i … else none`.
   Without it such conjuncts are ignored (`i < 51`).
+* `share`: a statement that writes the memory (a store, a total memory callee `G ∧ s'.mem = F`)
+  and mentions the memory term before it more than once, where that term is not a variable,
+  starts a join point `fW.jᵢ` over the memory: the code from it on is a definition, applied to
+  that term. Without it the term is copied into every place that reads it, so a run of such
+  statements (`rule_copy`'s eleven `erec_put(b + i, EREC⦃old + i⦄)`: the callee's memory, the
+  read and the guard) grows as `3 ^ k`; with it, linearly. Off by default.
 * `pfuel` (one function that does not call itself as its model): the fuel is a parameter of the
   model, not matched on: the model is the body at fuel `n`, with its callees through specs over
   `n` (`callW_spec p n "f"`, lane whnf's "a call as a function of the memory"; its own recursive

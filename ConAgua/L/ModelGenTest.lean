@@ -816,24 +816,16 @@ example (G : Mem → Word → Bool) (F : Mem → Word → Word) (m : Mem) (x : W
     (h : G m x = true) : tGdW G F m x = some (F m x + 1) := by
   simp [tGdW, h]
 
-/-- `share`: twelve calls of a total memory callee, each reading the memory the last one left
-(`rule_copy`'s shape). Inline, the memory after the `k`-th call would hold three copies of the
-one before it (the store, the read, the guard): `3 ^ 12` memories. With `share` each call after
-the first starts a join point over the memory. -/
+/-- `share`: calls of a total memory callee, each reading the memory the call before it left
+(`rule_copy`'s shape). Inline, the memory after a call would hold three copies of the one before
+it (the callee's memory, the read, the guard): `3 ^ k` memories after `k` calls. With `share` each
+call after the first is a join point over the memory (`tShW.j1`, …). -/
 -- con-ron: none — an `l_model` test function
 @[no_expose] def tSh : FunDecl := lfn (b, old) locals (z) {
   z := call t_put(b, TW.u64[old]);
   z := call t_put(b + 1, TW.u64[old + 1]);
   z := call t_put(b + 2, TW.u64[old + 2]);
   z := call t_put(b + 3, TW.u64[old + 3]);
-  z := call t_put(b + 4, TW.u64[old + 4]);
-  z := call t_put(b + 5, TW.u64[old + 5]);
-  z := call t_put(b + 6, TW.u64[old + 6]);
-  z := call t_put(b + 7, TW.u64[old + 7]);
-  z := call t_put(b + 8, TW.u64[old + 8]);
-  z := call t_put(b + 9, TW.u64[old + 9]);
-  z := call t_put(b + 10, TW.u64[old + 10]);
-  z := call t_put(b + 11, TW.u64[old + 11]);
   return 0
 }
 
@@ -843,10 +835,13 @@ l_model tSh_spec (p : Prog) (P : Mem → Word → Word → Mem) (G : Mem → Wor
     (hp : p.lookup "t_sh" = some tSh)
   fns [hp ↦ tShW]
   specs [hc n]
-  grind [arena_grind] trace share
+  grind [arena_grind] share
 
 example (m : Mem) (b old : Word) : tShW (fun m _ _ => m) (fun _ _ => true) m b old = some (0, m) := by
-  simp [tShW, tShW.j1, tShW.j2, tShW.j3, tShW.j4, tShW.j5, tShW.j6, tShW.j7, tShW.j8, tShW.j9,
-    tShW.j10, tShW.j11]
+  simp [tShW, tShW.j1, tShW.j2, tShW.j3]
+
+example (P : Mem → Word → Word → Mem) (m : Mem) (b old : Word) :
+    tShW P (fun _ _ => false) m b old = none := by
+  simp [tShW]
 
 end L.ModelGenTest

@@ -255,10 +255,6 @@ def cpMem (m : Mem) (b old : Word) : Mem :=
   let m10 := erecPutMem m9 (b + 9) (erRd m9 (old + 9))
   erecPutMem m10 (b + 10) (erRd m10 (old + 10))
 
-/-- **The model of `rule_copy`** (hand-written: the generated one inlines each copy's memory into
-the next copy's read, a term of `2 ^ 11` memories). -/
-def rcpW (m : Mem) (b old : Word) : Option (List Word × Mem) := some ([0], cpMem m b old)
-
 /-- The lookups of `block_rec_infos_tf`. -/
 structure CbrLook (p : Prog) : Prop where
   tsr : TsrLook p
@@ -272,18 +268,29 @@ structure CbrLook (p : Prog) : Prop where
   rke : p.lookup "rec_k_expected" = some recKExpected
   bri : p.lookup "block_rec_infos_tf" = some blockRecInfosTF
 
-theorem rc_spec (p : Prog) (L : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut) (n : Nat)
-    (s₀ : St) (b old : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rule_copy" [b, old]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcpW s₀.mem b old = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ L.rc]
-  simp only [callFn, ruleCopy]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecPut_specW p hpu n] <;>
-      finish [rcpW, cpMem, erRd]
+/-- **The model of `rule_copy`**: each copy after the first is a join point `rcpW.jᵢ` over the
+memory the copy before it left (`share`); `rcpW_some` gives its memory as `cpMem`. -/
+l_model rc_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
+  fns [hL.rc ↦ rcpW list]
+  specs [erecPut_specW p hpu n]
+  grind [arena_grind] share
+
+theorem rcpW_some {m m' : Mem} {b old : Word} {r : List Word} (h : rcpW m b old = some (r, m')) :
+    m' = cpMem m b old := by
+  -- one guard per copy (the `EREC` bound `erec_put` checks), then the next join point
+  simp only [rcpW] at h; split at h; · cases h
+  simp only [rcpW.j1] at h; split at h; · cases h
+  simp only [rcpW.j2] at h; split at h; · cases h
+  simp only [rcpW.j3] at h; split at h; · cases h
+  simp only [rcpW.j4] at h; split at h; · cases h
+  simp only [rcpW.j5] at h; split at h; · cases h
+  simp only [rcpW.j6] at h; split at h; · cases h
+  simp only [rcpW.j7] at h; split at h; · cases h
+  simp only [rcpW.j8] at h; split at h; · cases h
+  simp only [rcpW.j9] at h; split at h; · cases h
+  simp only [rcpW.j10] at h; split at h; · cases h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  rw [← h.2]; rfl
 
 l_model rteGo_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.rteg ↦ rteGoW list]
@@ -414,7 +421,11 @@ theorem rteGoW_mem : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
     · rw [rteGoW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       subst h0; rw [← h.2]; simp [ruleWords, wrER]
-    rw [rteGoW.arm2 (hc1 := h0), rcpW, rteGoW.k_rule_copy.arm1] at h
+    rw [rteGoW.arm2 (hc1 := h0)] at h
+    rcases h1 : rcpW m b (rdW (m.arr64 IW) ro) with _ | ⟨r1, m1⟩ <;>
+      simp only [h1, rteGoW.k_rule_copy.none, reduceCtorEq] at h
+    rw [rteGoW.k_rule_copy.arm1] at h
+    obtain rfl := rcpW_some h1
     have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
     have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
@@ -667,7 +678,11 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
     by_cases h0 : rl = 0
     · rw [rteGoW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact AFr.refl _
-    rw [rteGoW.arm2 (hc1 := h0), rcpW, rteGoW.k_rule_copy.arm1] at h
+    rw [rteGoW.arm2 (hc1 := h0)] at h
+    rcases h1 : rcpW m b (rdW (m.arr64 IW) ro) with _ | ⟨r1, m1⟩ <;>
+      simp only [h1, rteGoW.k_rule_copy.none, reduceCtorEq] at h
+    rw [rteGoW.k_rule_copy.arm1] at h
+    obtain rfl := rcpW_some h1
     rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (AFr.of_frame (cpMem_frame m b (rdW (m.arr64 IW) ro))).trans (rteGoW_afr n _ _ _ _ _ _ h2)
