@@ -208,7 +208,7 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     obtain ⟨s2, rfl, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
       (stripPis_refines p P.strip vis fe (UInt64.ofNat tl) (r1.headD 0) hH1 k _ a0 hS1) c2
     obtain ⟨s2', hs2', -, hw2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-      (stripPis_specW p P.strip k _ (UInt64.ofNat tl) (r1.headD 0)) c2
+      (stripPis_specF p P.strip k _ (UInt64.ofNat tl) (r1.headD 0)) c2
     rw [hs2'] at hw2
     have run2 := AM.run_of_ok _ a0 hok2
     rw [htlT, hD1] at run2 hS2 hd2
@@ -216,8 +216,8 @@ theorem cfaLoop_ref (k : Nat) (hk : k ≤ 2 ^ 62) : ∀ (m : Mem) (a : AState) (
     generalize ha2 : AM.st (stripPis tl fty) a0 = a2 at run2 hS2
     obtain ⟨e2, hbp⟩ := ConRon.Bridge.Inductives.stripPis_pstep k1.stage.check.state hfty run2
     rw [e2] at hS2 run2
-    have k2 := RcAt.pstep k1.stage hS2 (stripF_afr (stripF_of_TW hw2) k1.abs)
-      (k1.rc.fr (MFr.ofStripF (stripF_of_TW hw2))) hg2 (PStep.refl k1.stage.check.state)
+    have k2 := RcAt.pstep k1.stage hS2 (stripF_afr hw2 k1.abs)
+      (k1.rc.fr (MFr.ofStripF hw2)) hg2 (PStep.refl k1.stage.check.state)
     refine ⟨_, _, run2, ?_⟩
     rcases x2 with _ | ⟨teleB, leafE⟩
     · rw [cfaE.k_strip_pis.abort1 (hc1 := hd2)]; exact RefE.of_cls0 rfl

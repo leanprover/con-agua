@@ -218,11 +218,7 @@ theorem stripGoW_iw (tg k o : Word) : ∀ (f : Nat) (m m' : Mem) (n h : Word) (r
 theorem stripF_grow {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m'))
     (hI : IWOK m) : IWOK m' ∧ IWGrow m m' := by
   simp only [stripF] at h
-  generalize (args.headD 0).toNat + 2 = F at h
-  match F, h with
-  | f + 1, h =>
-  simp only [stripTW] at h
-  obtain ⟨hI', hf, hot, hlow⟩ := stripGoW_iw tg _ _ (f + 1) m m' 0 _ r h hI (by simp only [iwTop, UInt64.toNat_zero, Nat.add_zero])
+  obtain ⟨hI', hf, hot, hlow⟩ := stripGoW_iw tg _ _ _ m m' 0 _ r h hI (by simp only [iwTop, UInt64.toNat_zero, Nat.add_zero])
     (UInt64.le_iff_toNat_le.mpr (by simp))
   have hE := hf.arr EREC (by decide) (by decide)
   have hE1 := hf.arr (tier1 EREC) (by decide) (by decide)
