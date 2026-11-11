@@ -275,9 +275,12 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
     rw [romExprW_ref rom k mem pos h9] at hW
     simp only [romRefW] at hW
     split at hW
-    case isFalse => cases hW
-    rename_i hok
-    obtain ⟨hu, hmo⟩ := hok
+    · cases hW
+    rename_i hu
+    split at hW
+    · cases hW
+    rename_i hmo
+    simp only [decide_eq_true_eq, Decidable.not_not] at hu hmo
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 9 (by decide) (by rw [h9]; rfl)
@@ -303,7 +306,7 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
     · -- bvar
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 0 (by decide) (by rw [h0]; rfl)
       by_cases hu : u64OK rom (pos + 1)
-      case neg => rw [h0, romLeafW_u64 rom j mem pos 0 (.inl rfl) hu] at hW; cases hW
+      case neg => rw [h0, romLeafW.abort1 rom j mem pos 0 rfl (by simpa using hu)] at hW; cases hW
       obtain ⟨-, -, hd1⟩ := u64_dec rom hr (pos + 1) hu
       refine ⟨.bvar (u64W rom (pos + 1)).toNat, rom.drop ((pos + 1).toNat + 8), ?_,
         by simp only [exprFits, decide_eq_true_eq]; exact UInt64.toNat_lt _⟩
@@ -311,9 +314,9 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       rw [hdrop, ← hpos1 hpos, hd1]; simp
     · -- sort
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 1 (by decide) (by rw [h0]; rfl)
-      rw [h0, romLeafW_sort rom j mem pos 1 (by decide) rfl] at hW
+      rw [h0, romLeafW.arm2 rom j mem pos 1 (by decide) rfl] at hW
       cases hU : romLevelW rom j mem (pos + 1) with
-      | none => rw [hU] at hW; simp [exSortK] at hW
+      | none => rw [hU, romLeafW.k_rom_level.none] at hW; cases hW
       | some r =>
       obtain ⟨hu, q₁, m₁⟩ := r
       obtain ⟨u, rest, hd1, fit, -⟩ := romLevelW_dec rom hr j mem (pos + 1) hu q₁ m₁ hU
@@ -322,12 +325,12 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
       rw [hdrop, ← hpos1 hpos, hd1]; simp
     · -- const
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 2 (by decide) (by rw [h0]; rfl)
-      rw [h0, romLeafW_const rom j mem pos 2 (by decide) (by decide) rfl] at hW
+      rw [h0, romLeafW.arm4 rom j mem pos 2 (by decide) (by decide) (by decide) rfl] at hW
       rcases hN : romNameW rom j mem (pos + 1) with _ | ⟨hn, q₁, m₁⟩ <;> rw [hN] at hW
-      · simp [exConst2KN] at hW
-      rw [exConst2KN_some] at hW
+      · cases hW
+      rw [romLeafW.k_rom_name.arm1] at hW
       cases hL : romLevelsW rom j m₁ q₁ with
-      | none => rw [hL] at hW; simp [exConst2K] at hW
+      | none => rw [hL, romLeafW.k_rom_levels.none] at hW; cases hW
       | some r =>
       obtain ⟨hl, q₂, m₂⟩ := r
       obtain ⟨nm, restA, hdA, fitN, hq1⟩ := romNameW_dec rom hr j mem (pos + 1) hn q₁ m₁ hN
@@ -340,7 +343,7 @@ theorem romExprW_dec : ∀ n, DecClaim rom n := by
     · -- a natVal literal
       obtain ⟨hpos, hdrop⟩ := romB_tag rom pos 3 (by decide) (by rw [h0]; rfl)
       by_cases hu : u64OK rom (pos + 1)
-      case neg => rw [h0, romLeafW_u64 rom j mem pos 3 (.inr rfl) hu] at hW; cases hW
+      case neg => rw [h0, romLeafW.abort2 rom j mem pos 3 (by decide) (by decide) rfl (by simpa using hu)] at hW; cases hW
       obtain ⟨-, -, hd1⟩ := u64_dec rom hr (pos + 1) hu
       refine ⟨.lit (.natVal (u64W rom (pos + 1)).toNat), rom.drop ((pos + 1).toNat + 8), ?_,
         by simp only [exprFits, decide_eq_true_eq]; exact UInt64.toNat_lt _⟩
