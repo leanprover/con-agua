@@ -165,3 +165,31 @@ pcrW.k_nest_canon_crest.eq_def, …]`).
 | `IndRealAbsPos` | 41.3 → 41.3 G |
 
 Lines: +58 −230 (**−172**), three files fewer.
+
+### Batch 5: helper `mgen4-romfront` (#263)
+
+18 functions; 15 files, +841 −1298 (**−457**). Opened by `mixed` and `guards`: `node_lit_str`
+(`str_put_esc`), `node_const` (`ls_put`; a `grind_pattern` `lsPut_room` for its room fact),
+`apply_str` (`void`; bridge `applyStrW_kn`), `rom_levels` (`tuple`, `guards ["rom_u64"]`,
+`stk_pool` as a `mixed` callee, `fold [stkTop]`), `rom_ex_leaf`, `rom_ex_ref` (inversions
+`romLeafW_kb_inv`, `romLeafW_ks_inv` replace `exLeafK_inv`), `IndFieldsSpec`'s `if_reset`,
+`fld_alloc`, `ind_num`, `ind_bool`, `ind_nlist`, and the eight ROM pin readers of
+`Rom/PinReadSpec` (`pre`/`keep`; `erec_put`'s bound bridged by `erecGuard_lo`/`_put` and short
+step lemmas; about 25 hand continuations and 8 hand specs gone). Kept: `rom_names_to` (the `PINS`
+bound), `rom_name` (`romName rom` is a `FunDecl` with a parameter: "the function is not a
+constant"), `lp_put`, `ifl_ids` (fuel-free loop models over the input, walked by position).
+Largest change: `Front/Line` 12.8 → 17.1 G; `PinReadSpec` 51.6 → 54.7 G, `PinSets` 60.4 →
+64.2 G; the others within ±2 %.
+
+### Batch 6: helper `mgen4-levels` (#265)
+
+19 functions; 15 files, +429 −1060 (**−631**). `lv_eq`; `lv_subst`, `lv_subsimp`, `lv_dist1`,
+`lv_dist2`; the seven-function comparison group `lv_leq`, `lv_rest`, `lv_imax`, `lv_imax_l`,
+`lv_imax_r`, `lv_cases`, `lv_cases_at` (one `l_model leqSpecs`, `defs` in `LevelLeq`, `nodefs` in
+`LevelLeqSpec`; the 7-step hand induction gone); `lv_apd`, `alpd_ls`; `lp_app`, `lp_lam`,
+`lp_forall`, `lp_let` (`pfuel`; the shared hand model `ilwBinW` replaced by the plain shapes
+`ilwBinS`/`ilwLetS` the refinement uses and one bridge each, `ilwAppW_eq` …). Hand specs at
+`maxHeartbeats` 1 000 000 – 4 000 000 gone. Kept: `lh_push` (its `CTL` size bound). Largest
+slowdown: `LevelLeqSpec` 36.7 → 96.5 G (6.8 → 17.3 s, 2.6×; `simp []` recipes do not apply);
+gains in `LevelSubst` 16.0 → 8.3 G, `LevelApd` 14.2 → 7.8 G, `DeclApdSpec` 52.0 → 40.4 G,
+`InstLPWalkArms` 23.9 → 15.2 G.
