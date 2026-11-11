@@ -225,7 +225,7 @@ theorem erecGuard_lo (m : Mem) (x : Word) (h : x.toNat < 2 ^ 40) (hx : x.toNat <
   have hb : x.toNat / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h]
   have hm : x &&& 0xFFFFFFFFFF = x :=
     UInt64.toNat_inj.mp (by rw [L.Arena.tag_idx_toNat]; exact Nat.mod_eq_of_lt h)
-  rw [tierA_EREC, if_pos hb, hm]; exact hx
+  rw [tierA_EREC, ite_eq_left hb, hm]; exact hx
 
 /-- The same over a memory after a put below the boundary. -/
 theorem erecGuard_put (m : Mem) (x y v : Word) (hx : x.toNat < 2 ^ 40) (hy : y.toNat < 2 ^ 40)
@@ -650,54 +650,18 @@ attribute [arena_grind =] romPinSetsW_eq
 
 end models
 
-section models
-variable (rom : List UInt8)
+/-- **The model of `intern_all_pins()`** (ROM version, generated): the memory after. -/
+l_model internAllPinsPB_specW (rom : List UInt8) (p : Prog) (hL : PinProg rom p)
+  fns [(show p.lookup "intern_all_pins" = some internAllPinsPB from
+    internAllPinsPB_subPB rom ▸ hL.intern_all_pins) ↦ internAllPinsW void]
+  specs [memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n, romItems_specW rom p hL.toItemsProg n,
+    internPinSets_specW rom p hL n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
 
-/-- After the variant list. -/
-def iap2K : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (_, m₂) => some m₂
-
-/-- After the startup items. -/
-def iapK (n : Nat) : Option (Word × Mem) → Option Mem
-  | none => none
-  | some (q, m₁) => iap2K (internPinSetsW rom n m₁ q)
-
-/-- **The model of `intern_all_pins()`** (ROM version): the memory after. -/
-def internAllPinsW : Nat → Mem → Option Mem
-  | 0, _ => none
-  | n + 1, m => if rclearOK m then iapK rom n (romItemsW rom n (resetMem m) allPinsOff) else none
-
-end models
-
-theorem iap2K_some (q : Word) (m : Mem) : iap2K (some (q, m)) = some m := rfl
-theorem iapK_some (rom : List UInt8) (n : Nat) (q : Word) (m : Mem) : iapK rom n (some (q, m)) = iap2K (internPinSetsW rom n m q) := rfl
 theorem internAllPinsW_eq (rom : List UInt8) (n : Nat) (m : Mem) (hc : rclearOK m) :
-    internAllPinsW rom (n + 1) m = iapK rom n (romItemsW rom n (resetMem m) allPinsOff) := by
-  simp [internAllPinsW, hc]
-attribute [arena_grind =] iapK_some iap2K_some
-grind_pattern [arena_grind] internAllPinsW_eq => internAllPinsW rom (n + 1) m
-
-section spec
-variable (rom : List UInt8) (p : Prog) (hL : PinProg rom p)
-include hL
-
-theorem internAllPinsPB_specW (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_all_pins" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ internAllPinsW rom n s₀.mem = some s'.mem; ⊤⦄ := by
-  rw [invoke_eq _ hL.intern_all_pins, internAllPinsPB_subPB]
-  simp only [callFn, internAllPinsPB]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    have hi' := fun s₁ q₁ h₁ => Triple.keep hL.no_st8 (romItems_specW rom p hL.toItemsProg n s₁ q₁ h₁)
-    have hp' := fun s₁ q₁ h₁ => Triple.keep hL.no_st8 (internPinSets_specW rom p hL n s₁ q₁ h₁)
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hi', hp',
-        memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
-      finish [Keep.size, L.Front.Keep.pcap, resetMem, rclearOK, mclearG, rsetSch]
-
-end spec
+    internAllPinsW rom (n + 1) m = internAllPinsW.k_rom_items rom n (romItemsW rom n (resetMem m) allPinsOff) :=
+  internAllPinsW.arm1 rom n m hc
 
 end L.Rom
