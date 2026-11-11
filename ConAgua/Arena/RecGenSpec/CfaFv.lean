@@ -71,20 +71,16 @@ theorem tmdW_mfr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : MFr 
     simp [tmWr, wrIW, UInt64.add_assoc]
   rw [e]; exact MFr.of_iw (wrIW_frame _ _ _)
 
-theorem tmaW_mfr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
+theorem tmaW_mfr {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW m mo ml c = some (r, m')) :
     MFr [] [] m m' := by
-  rcases n with _ | n
-  · simp [tmaW] at h
   by_cases hc : c < ml
-  · rw [tmaW_hit n m mo ml c hc] at h
+  · rw [tmaW.arm1 m mo ml c hc] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
-  rw [tmaW_miss n m mo ml c hc] at h
+  rw [tmaW.arm2 m mo ml c hc] at h
   obtain ⟨⟨r0, m0⟩, ho, h⟩ := of_K h rfl
-  rw [tmaK_some] at h
+  rw [tmaW.k_target_major_default.arm1] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]
-  cases n with
-  | zero => cases ho
-  | succ n => simp only [fuelW_succ] at ho; exact tmdW_mfr ho
+  exact tmdW_mfr ho
 
 theorem leafAtW_mfr {m m' : Mem} {mm leaf : Word} {r : List Word} (h : leafAtW m mm leaf = some (r, m')) :
     MFr [] [] m m' := by

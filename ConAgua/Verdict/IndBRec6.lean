@@ -209,7 +209,7 @@ theorem crr_ref (hP : CrrProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by have := hS1.iw.iw; have := (rec2CG_parts hG1).2.1; omega); omega
     · have := rec2DecB_PL_top hcls hl; have := hS1.iw.iw; omega
-  have hM := rec3TMA_sim dn visR feR n m1 a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0)
+  have hM := rec3TMA_sim dn visR feR m1 a1 (UInt64.ofNat o3) (UInt64.ofNat l3) (UInt64.ofNat c0)
     G.cls hS1 (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)
   rw [tc] at hM
   obtain ⟨-, -, hclsP, -, -, -, -, -⟩ := dClassGen_inv hgP

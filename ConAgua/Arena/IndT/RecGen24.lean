@@ -100,7 +100,7 @@ theorem tma_step {p : Prog} (P : CfaProg p) {dn : NIdx → Option ConLeche.Name}
     subst ht
     obtain ⟨s1, rfl, -, hw1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (targetMajorAt_spec p P.ha P.pw P.mtm P.tmd P.tma P.na n _ mo ml c) hc
-    obtain ⟨tm, a1, run1, hS1, hg1, hTM⟩ := rec3TMA_sim dn vis fe n m a mo ml c ms hk.stage.stage hms hmsb _ hw1
+    obtain ⟨tm, a1, run1, hS1, hg1, hTM⟩ := rec3TMA_sim dn vis fe m a mo ml c ms hk.stage.stage hms hmsb _ hw1
     obtain ⟨q1, hmP⟩ := ConRon.Bridge.Inductives.targetMajorAt_spec ms MsP c.toNat a a1 tm hk.stage.check.state
       hk.stage.check.pins hmsP run1
     exact ⟨tm, a1, run1, RcAt.pstep hk.stage hS1 (tmaW_afr hw1 hk.abs) (hk.rc.fr (tmaW_mfr hw1)) hg1 q1,
