@@ -379,20 +379,10 @@ theorem getAppArgs_refinesR (p : Prog) (hg : p.lookup "get_app_args" = some getA
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
-  obtain ⟨t₁, ht₁, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
+  obtain ⟨t₁, ht₁, -, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
   have hm₁ : m₁ = s.mem := by rw [← ht₁, ht₁s]
   subst hm₁
-  try rw [ht₁s] at hcnt
-  simp only [appCntW] at hcnt
-  cases hL : gafLoopW s.mem e 4000000000 with
-  | none => rw [hL] at hcnt; simp at hcnt
-  | some q =>
-  obtain ⟨e', f'⟩ := q
-  rw [hL] at hcnt
-  by_cases hf0 : f' = 0
-  · simp [hf0] at hcnt
-  simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
-  obtain ⟨hcnt, -⟩ := hcnt
+  obtain ⟨e', f', hL, hf0, hcnt, -⟩ := appCntW_gaf hcnt
   obtain ⟨hrun', hlt, hle⟩ := gaaTwin s.mem a₀ hR _ e 4000000000 e' f' (Nat.le_refl _) he hL hf0
   have hfuel : (4000000000 : Word).toNat = coreWalkFuel := by simp [UInt64.toNat_ofNat, coreWalkFuel]
   rw [hfuel] at hrun' hlt hle

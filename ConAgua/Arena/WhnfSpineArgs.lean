@@ -4,6 +4,7 @@ public import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.SimLib
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
@@ -40,25 +41,45 @@ con-ron: ConRon/Arena/ExprOps.lean:1297-1308 ConRon.Arena.getAppArgs -/
   return (4000000000 - f, e)
 }
 
-/-- The model of `app_count`. -/
-def appCntW (m : Mem) (e : Word) : Option (Word × Word) :=
-  match gafLoopW m e 4000000000 with
-  | none => none
-  | some (e', f') => if f' = 0 then none else some (4000000000 - f', e')
+l_model appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL)
+  fns [hp ↦ appCntW ro tuple]
+  grind [arena_grind] extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE,
+    evalE_idxGE, evalE_tagE]
 
-theorem appCount_spec (p : Prog) (hp : p.lookup "app_count" = some appCountL) (n : Nat)
-    (s₀ : St) (e : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "app_count" [e]
-    ⦃fun r s' => s' = s₀ ∧ appCntW s₀.mem e = some (r.headD 0, r.tail.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, appCountL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, getAppFnLoop_step_spec p n] <;>
-      finish [appCntW]
+/-- `app_count`'s loop is `get_app_fn`'s (`gafLoopW`). -/
+theorem appCntW_loop {m : Mem} {r : Word × Word} :
+    ∀ {n : Nat} {e f : Word}, appCntW.loop1 n m e f = some r → gafLoopW m e f = some r := by
+  intro n
+  induction n with
+  | zero => intro e f h; simp [appCntW.loop1] at h
+  | succ n ih =>
+    intro e f h
+    by_cases h4 : tagW e = 4
+    · by_cases h0 : f = 0
+      · rw [appCntW.loop1.abort1 n m e f h4 h0] at h; cases h
+      by_cases h1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+      · rw [appCntW.loop1.abort2 n m e f h4 h0 h1] at h; cases h
+      by_cases h2 : tcnt m APP (tierW e) ≤ idxA e
+      · rw [appCntW.loop1.abort3 n m e f h4 h0 h1 h2] at h; cases h
+      rw [appCntW.loop1.arm1 n m e f h4 h0 h1 h2] at h
+      rw [gafLoopW, ite_eq_left h4, ite_eq_right h0, ite_eq_right h1, ite_eq_right h2]; exact ih h
+    · rw [appCntW.loop1.arm2 n m e f h4] at h
+      rw [gafLoopW, ite_eq_right h4]; exact h
+
+/-- A returning `app_count` model: `get_app_fn`'s loop from fuel `4000000000` stopped at
+`(e', f')`, `f' ≠ 0`, the count `4000000000 - f'`. -/
+theorem appCntW_gaf {n : Nat} {m : Mem} {e c d : Word} (h : appCntW n m e = some (c, d)) :
+    ∃ e' f', gafLoopW m e 4000000000 = some (e', f') ∧ f' ≠ 0 ∧ 4000000000 - f' = c ∧ e' = d := by
+  rcases n with _ | n
+  · simp [appCntW] at h
+  rw [appCntW.arm1] at h
+  rcases hL : appCntW.loop1 (n + 1) m e 4000000000 with _ | ⟨e', f'⟩
+  · rw [hL, appCntW.k_loop1.none] at h; cases h
+  rw [hL] at h
+  by_cases hf0 : f' = 0
+  · rw [appCntW.k_loop1.abort1 _ _ hf0] at h; cases h
+  rw [appCntW.k_loop1.arm1 _ _ hf0, Option.some.injEq, Prod.mk.injEq] at h
+  exact ⟨e', f', appCntW_loop hL, hf0, h⟩
 
 /-! ## `app_fill(e, o, n)`: the arguments into `SPN[o ‥ o + n)`, last first -/
 
@@ -574,17 +595,11 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
-  obtain ⟨t₁, ht₁, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
+  obtain ⟨t₁, ht₁, -, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
   have hm₁ : m₁ = s.mem := by rw [← ht₁, ht₁s]
   subst hm₁
-  try rw [ht₁s] at hcnt
   -- the count
-  simp only [appCntW] at hcnt
-  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
-  by_cases hf0 : f' = 0
-  · simp [hf0] at hcnt
-  simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
-  obtain ⟨hcnt, -⟩ := hcnt
+  obtain ⟨e', f', hL, hf0, hcnt, -⟩ := appCntW_gaf hcnt
   obtain ⟨hrun', hlt, hle⟩ := gaaTwin s.mem a₀ hR _ e 4000000000 e' f' (Nat.le_refl _) he hL hf0
   have hfuel : (4000000000 : Word).toNat = coreWalkFuel := by simp [UInt64.toNat_ofNat, coreWalkFuel]
   rw [hfuel] at hrun' hlt hle
@@ -741,16 +756,10 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
   cases n with
   | zero => rw [callW_zero] at h1; cases h1
   | succ n' =>
-  obtain ⟨t₁, ht₁, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
+  obtain ⟨t₁, ht₁, -, ht₁s, hcnt⟩ := triple_of_callW (appCount_spec p hc (n' + 1) s e) h1
   have hm₁ : m₁ = s.mem := by rw [← ht₁, ht₁s]
   subst hm₁
-  try rw [ht₁s] at hcnt
-  simp only [appCntW] at hcnt
-  rcases hL : gafLoopW s.mem e 4000000000 with _ | ⟨e', f'⟩ <;> simp only [hL, reduceCtorEq] at hcnt
-  by_cases hf0 : f' = 0
-  · simp [hf0] at hcnt
-  simp only [hf0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hcnt
-  obtain ⟨hcnt, hhd⟩ := hcnt
+  obtain ⟨e', f', hL, hf0, hcnt, hhd⟩ := appCntW_gaf hcnt
   obtain ⟨-, hlt, hle⟩ := gaaTwin s.mem a₀ hR _ e 4000000000 e' f' (Nat.le_refl _) he hL hf0
   obtain ⟨hrun', hltn, he'⟩ := gasTwin s.mem a₀ hR _ e 4000000000 e' f' (Nat.le_refl _) he hL hf0
   have hfuel : (4000000000 : Word).toNat = coreWalkFuel := by simp [UInt64.toNat_ofNat, coreWalkFuel]

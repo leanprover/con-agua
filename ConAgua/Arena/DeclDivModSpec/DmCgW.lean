@@ -13,7 +13,7 @@ import all ConAgua.Arena.DeclArmsNat
 /-!
 # DmCgW
 
-`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow`, `craW` and the lemmas only they use.
+`SubstC0`, `applied_specW`, `appliedW`, `rdW_iw_grow` and the lemmas only they use.
 -/
 
 noncomputable section
@@ -48,14 +48,6 @@ l_model applied_specW (p : Prog) (hp : p.lookup "div_mod_cert_applied" = some di
   fns [hp ↦ appliedW list]
   specs [callW_spec p n "nat_var", callW_spec p n "mk_app", callW_spec p n "intern_fvar"]
   grind [arena_grind] finish [ntBW, rdW_eq] gen 30 heartbeats 1600000 bind ntBW instances 10000
-
-/-! ## `consts_resolve_all` -/
-
-def craW (p : Prog) (cl : CallM) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
-  if l = 0 then some ([1], m) else
-  ntBW (cl n "consts_resolve_ffast" [vs, rdW (m.arr64 IW) o] m) fun r1 m1 =>
-  if r1.headD 0 = 0 then some ([0], m1) else
-  ntBW (callW p n "consts_resolve_all" [vs, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
 
 /-! ## `div_mod_cert_guard` -/
 

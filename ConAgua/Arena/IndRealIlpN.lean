@@ -1,5 +1,6 @@
 module
 
+import ConAgua.L.ModelGen
 import ConAgua.Arena.IndRealNames
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -7,7 +8,6 @@ import all Init.Data.Repr
 import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.Rom
-import ConAgua.Arena.SimLib
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.CallF
@@ -100,63 +100,23 @@ theorem strWords_recI (i : Nat) :
 
 /-! ## `dec_len` -/
 
-/-- `dec_len`'s loop (named, for its spec). -/
--- con-ron: none — `decLen`'s own loop (`rfl`), a named block for the proof
-def dlLoop : Stmt := lblk (x, k) {
-  while 9 < x {
-    x := mulhi(x, 14757395258967641293) >> 3;
-    k += 1
-  }
-}
+l_model decLen_specW (p : Prog) (hp : p.lookup "dec_len" = some L.Stubs.decLen)
+  fns [hp ↦ decLenW ro]
+  grind [arena_grind] finish [div10W]
 
-theorem decLen_eq : L.Stubs.decLen = lfn (x) locals (k) {
-  k := 1;
-  ⟪dlLoop⟫;
-  return k
-} := by rfl
+/-- `dec_len`'s and `name_rec_i`'s `mulhi(x, …) >> 3` is `x / 10`. -/
+theorem mulhi10 (x : Word) :
+    UInt64.ofNat (x.toNat * (14757395258967641293 : Word).toNat / 2 ^ 64) >>> (3 : Word) = div10W x := rfl
 
-/-- The model of `dec_len`'s loop at the loop's fuel. -/
-def dlW : Nat → Word → Word → Option Word
-  | 0, _, _ => none
-  | f + 1, x, k => if 9 < x then dlW f (div10W x) (k + 1) else some k
-
-theorem dlW_stop (f : Nat) (x k : Word) (h : ¬ 9 < x) : dlW (f + 1) x k = some k := by
-  simp only [dlW, ite_eq_right h]
-theorem dlW_step (f : Nat) (x k : Word) (h : 9 < x) : dlW (f + 1) x k = dlW f (div10W x) (k + 1) := by
-  simp only [dlW, ite_eq_left h]
-
-theorem dlLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p f dlLoop
-    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧
-      dlW f (s₀.loc 0) (s₀.loc 1) = some (s'.loc 1); ⊤⦄ := by
-  induction f generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ f ih =>
-    rw [exec, step_while (w := dlLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih] <;>
-      finish [dlW_stop, dlW_step, div10W]
-
-theorem decLen_specW (p : Prog) (hp : p.lookup "dec_len" = some L.Stubs.decLen) (n : Nat)
-    (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "dec_len" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ dlW (n + 1) x 1 = some (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp, decLen_eq]
-  simp only [callFn]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      fun s => Triple.step_exec (dlLoop_spec p (n + 1) s)] <;>
-    finish
-
-theorem dlW_ok : ∀ (f : Nat) (x k r : Word), dlW f x k = some r →
+theorem dlW_ok (m : Mem) : ∀ (f : Nat) (x k r : Word), decLenW.loop1 f m x k = some r →
     k.toNat + decLenN x.toNat < 2 ^ 64 → r.toNat = k.toNat + decLenN x.toNat - 1 := by
   intro f
   induction f with
-  | zero => intro x k r h; simp [dlW] at h
+  | zero => intro x k r h; simp [decLenW.loop1] at h
   | succ f ih =>
     intro x k r h hb
     by_cases hx : 9 < x
-    · rw [dlW_step f x k hx] at h
+    · rw [decLenW.loop1.arm1 f m x k hx, mulhi10] at h
       have hx' : 10 ≤ x.toNat := by have := UInt64.lt_iff_toNat_lt.mp hx; simp at this; omega
       have hd : decLenN x.toNat = decLenN (x.toNat / 10) + 1 := by
         conv => lhs; unfold decLenN
@@ -164,101 +124,27 @@ theorem dlW_ok : ∀ (f : Nat) (x k r : Word), dlW f x k = some r →
       have hk : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have := ih _ _ _ h (by rw [hk, div10W_toNat]; omega)
       rw [hk, div10W_toNat] at this; omega
-    · rw [dlW_stop f x k hx] at h; cases h
+    · rw [decLenW.loop1.arm2 f m x k hx] at h; cases h
       have hx' : x.toNat < 10 := by
         have := mt UInt64.lt_iff_toNat_lt.mpr hx; simp at this; omega
       unfold decLenN; rw [ite_eq_left hx']; omega
 
 /-! ## `name_rec_i`'s digit loop and body -/
 
-/-- `name_rec_i`'s digit loop (named, for its spec). -/
--- con-ron: none — `nameRecIL`'s own loop (`rfl`), a named block for the proof
-def digLoop : Stmt := lblk (n, i, k, o, j, x, q, s, pt, pb) {
-  while pb + 4 < j {
-    j -= 1;
-    q := mulhi(x, 14757395258967641293) >> 3;
-    POOL⟨pt⟩[j] := 48 + (x - q * 10);
-    x := q
-  }
-}
-
-theorem nameRecI_eq : L.Stubs.nameRecIL = lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
-  k := call dec_len(i);
-  o := call pool_room(k + 4);
-  pt := ⦃o⦄.tier;
-  pb := ⦃o⦄.idx;
-  POOL⟨pt⟩[pb] := 114;
-  POOL⟨pt⟩[pb + 1] := 101;
-  POOL⟨pt⟩[pb + 2] := 99;
-  POOL⟨pt⟩[pb + 3] := 95;
-  j := pb + 4 + k;
-  x := i;
-  ⟪digLoop⟫;
-  s := call intern_nstr(n, o, k + 4);
-  if s >= 4294967296 { abort };
-  return s
-} := by rfl
-
-/-- The model of the digit loop at the loop's fuel: the words of tier `pt` below the relative
-index `j` down to `pb + 4`. -/
-def digW : Nat → Mem → Word → Word → Word → Word → Option Mem
-  | 0, _, _, _, _, _ => none
-  | f + 1, m, pt, pb, j, x =>
-    if pb + 4 < j then
-      digW f (m.set64 (tierA POOL pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x)
-    else some m
-
-theorem digW_stop (f : Nat) (m : Mem) (pt pb j x : Word) (h : ¬ pb + 4 < j) :
-    digW (f + 1) m pt pb j x = some m := by
-  simp only [digW, ite_eq_right h]
-theorem digW_step (f : Nat) (m : Mem) (pt pb j x : Word) (h : pb + 4 < j) : digW (f + 1) m pt pb j x =
-    digW f (m.set64 (tierA POOL pt) (j - 1) (48 + (x - div10W x * 10))) pt pb (j - 1) (div10W x) := by
-  simp only [digW, ite_eq_left h]
-
-theorem digLoop_spec (p : Prog) (f : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ exec p f digLoop
-    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      digW f s₀.mem (s₀.loc 8) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) = some s'.mem; ⊤⦄ := by
-  induction f generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ f ih =>
-    rw [exec, step_while (w := digLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih] <;>
-      finish [digW_stop, digW_step, div10W]
-
 /-- The four bytes `rec_` at `o`. -/
 def recIBytes (m : Mem) (o : Word) : Mem :=
   (((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 1) 101).set64
     (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 3) 95
 
-/-- `name_rec_i`'s body over its callees' runs. -/
-def nriW (p : Prog) (n : Nat) (m : Mem) (x i : Word) : Option (Word × Mem) :=
-  match callW p n "dec_len" [i] m with
-  | none => none
-  | some (r₁, m₁) =>
-    match callW p n "pool_room" [r₁.headD 0 + 4] m₁ with
-    | none => none
-    | some (r₂, m₂) =>
-      match digW (n + 1) (recIBytes m₂ (r₂.headD 0)) (r₂.headD 0 >>> 40) (r₂.headD 0 &&& 1099511627775)
-          ((r₂.headD 0 &&& 1099511627775) + 4 + r₁.headD 0) i with
-      | none => none
-      | some m₃ =>
-        match callW p n "intern_nstr" [x, r₂.headD 0, r₁.headD 0 + 4] m₃ with
-        | none => none
-        | some (r₄, m₄) => if 4294967296 ≤ r₄.headD 0 then none else some (r₄.headD 0, m₄)
+theorem recIBytes_fold (m : Mem) (o : Word) :
+    (((m.set64 (tierA POOL (o >>> 40)) (o &&& 1099511627775) 114).set64 (tierA POOL (o >>> 40))
+      ((o &&& 1099511627775) + 1) 101).set64 (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 2) 99).set64
+      (tierA POOL (o >>> 40)) ((o &&& 1099511627775) + 3) 95 = recIBytes m o := rfl
 
-theorem nameRecI_specW (p : Prog) (hp : p.lookup "name_rec_i" = some L.Stubs.nameRecIL) (n : Nat)
-    (s₀ : St) (x i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "name_rec_i" [x, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ nriW p n s₀.mem x i = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, nameRecI_eq]
-  simp only [callFn]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      callW_spec p n "dec_len", callW_spec p n "pool_room", callW_spec p n "intern_nstr",
-      fun s => Triple.step_exec (digLoop_spec p (n + 1) s)] <;>
-    finish [nriW, recIBytes]
+l_model nameRecI_specW (p : Prog) (hp : p.lookup "name_rec_i" = some L.Stubs.nameRecIL)
+  fns [hp ↦ nriW]
+  specs [callW_spec p n "dec_len", callW_spec p n "pool_room", callW_spec p n "intern_nstr"]
+  grind [arena_grind] finish [div10W]
 
 /-! ## The program and the model -/
 
@@ -323,9 +209,9 @@ theorem grows_pset_ti {m₀ m : Mem} (hg : Grows m₀ m) (hok : PoolOK m₀) {t 
 
 /-- **The digit loop**: from the relative index `j` down to `⦃T⦄.idx + 4` in `T`'s tier, the last
 digits of `x`; nothing else in the pool changes, the growth from `m₀` is kept. -/
-theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 41)
+theorem digW_ok (p : Prog) (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 41)
     (hT0 : m₀.top.toNat ≤ T.toNat) : ∀ (f : Nat) (m m' : Mem) (j x : Word),
-    digW f m (T >>> 40) (T &&& 1099511627775) j x = some m' →
+    nriW.loop1 p f m j x (T >>> 40) (T &&& 1099511627775) = some m' →
     (T &&& 1099511627775).toNat + 4 ≤ j.toNat → j.toNat ≤ (m.arr64 (tierA POOL (T >>> 40))).size →
     Grows m₀ m →
     Grows m₀ m' ∧ m'.top = m.top ∧ pcap m' = pcap m ∧
@@ -339,7 +225,7 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
   have hne : tierA POOL (T >>> 40) ≠ CTL := Ne.symm (tierA_pool_ne _ _ (by decide) (by decide))
   intro f
   induction f with
-  | zero => intro m m' j x h; simp [digW] at h
+  | zero => intro m m' j x h; simp [nriW.loop1] at h
   | succ f ih =>
     intro m m' j x h hj hjs hg
     have hpc : pcap m < 2 ^ 64 := by rw [hg.pcapEq]; have := hok.cap; omega
@@ -348,7 +234,7 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
       have h4 : (4 : Word).toNat = 4 := rfl
       rw [UInt64.toNat_add, h4]; exact Nat.mod_eq_of_lt (by omega)
     by_cases hc : (T &&& 1099511627775) + 4 < j
-    · rw [digW_step f m _ _ j x hc] at h
+    · rw [nriW.loop1.arm1 p f m j x _ _ hc, mulhi10] at h
       have hc' : (T &&& 1099511627775).toNat + 4 < j.toNat := by rw [← hp4]; exact UInt64.lt_iff_toNat_lt.mp hc
       have hj1 : (j - 1).toNat = j.toNat - 1 := by
         rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
@@ -381,7 +267,7 @@ theorem digW_ok (m₀ : Mem) (hok : PoolOK m₀) (T : Word) (hT : T.toNat < 2 ^ 
         have hs : (x - div10W x * 10).toNat = x.toNat % 10 := by
           rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hm]; omega), hm]; omega
         rw [UInt64.toNat_add, hs]; simp
-    · rw [digW_stop f m _ _ j x hc] at h; cases h
+    · rw [nriW.loop1.arm2 p f m j x _ _ hc] at h; cases h
       have hc' : ¬ (T &&& 1099511627775).toNat + 4 < j.toNat := fun h' => hc (by rw [UInt64.lt_iff_toNat_lt, hp4]; exact h')
       have h0 : j.toNat - ((T &&& 1099511627775).toNat + 4) = 0 := by omega
       exact ⟨hg, rfl, rfl, rfl, fun _ _ => rfl, by rw [h0]; simp [sliceL, digsR]⟩
@@ -450,9 +336,14 @@ theorem callW_dl {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
   | zero => exact (callW_zero_false h).elim
   | succ n =>
     obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (decLen_specW nriProg rfl n _ i) h
+      (decLen_specW nriProg rfl (n + 1) _ i) h
     refine ⟨hs'.symm.trans hm, ?_⟩
-    have := dlW_ok _ _ _ _ hW (by have := decLenN_le i.toNat; have := i.toNat_lt; simp; omega)
+    rw [decLenW.arm1] at hW
+    rcases hl : decLenW.loop1 (n + 1) m i 1 with _ | k
+    · rw [hl, decLenW.k_loop1.none] at hW; cases hW
+    rw [hl, decLenW.k_loop1.arm1, Option.some.injEq] at hW
+    rw [← hW]
+    have := dlW_ok _ _ _ _ _ hl (by have := decLenN_le i.toNat; have := i.toNat_lt; simp; omega)
     rw [show (1 : Word).toNat = 1 from rfl] at this; have := decLenN_pos i.toNat; omega
 
 /-- **`name_rec_i`'s model refines `internNNode (.str n s!"rec_{i}")`** (replaces
@@ -466,20 +357,17 @@ theorem nriF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | zero => exact (callW_zero_false hc').elim
   | succ n =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (nameRecI_specW nriProg rfl n _ x i) hc'
+    (nameRecI_specW nriProg rfl (n + 1) _ x i) hc'
   simp only at hs' hW
-  rw [hs'] at hW
-  unfold nriW at hW
+  rw [hs', nriW.arm1] at hW
   rcases h1 : callW nriProg n "dec_len" [i] m with _ | ⟨r₁, m₁⟩
-  · rw [h1] at hW; cases hW
-  rw [h1] at hW
-  simp only at hW
+  · rw [h1, nriW.k_dec_len.none] at hW; cases hW
+  rw [h1, nriW.k_dec_len.arm1] at hW
   obtain ⟨rfl, hk⟩ := callW_dl h1
   generalize r₁.headD 0 = k at hW hk
   rcases h2 : callW nriProg n "pool_room" [k + 4] m₁ with _ | ⟨r₂, m₂⟩
-  · rw [h2] at hW; cases hW
-  rw [h2] at hW
-  simp only at hW
+  · rw [h2, nriW.k_pool_room.none] at hW; cases hW
+  rw [h2, nriW.k_pool_room.arm1, recIBytes_fold] at hW
   have hpool : PoolOK m₁ := hS.check.arena.base.lit.1
   obtain ⟨ho, hm₂, hno, hroom⟩ := prW_some (callW_pr rfl h2) (by have := hpool.cap; omega)
   rw [ho, hm₂] at hW
@@ -497,12 +385,12 @@ theorem nriF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     have e : ((m₁.top &&& 1099511627775) + 4).toNat = (m₁.top &&& 1099511627775).toNat + 4 := by
       rw [UInt64.toNat_add, h4]; exact Nat.mod_eq_of_lt (by omega)
     rw [UInt64.toNat_add, e]; exact Nat.mod_eq_of_lt (by omega)
-  cases h3 : digW (n + 1) m₃ (m₁.top >>> 40) (m₁.top &&& 1099511627775) ((m₁.top &&& 1099511627775) + 4 + k) i with
-  | none => rw [h3] at hW; cases hW
+  cases h3 : nriW.loop1 nriProg (n + 1) m₃ ((m₁.top &&& 1099511627775) + 4 + k) i (m₁.top >>> 40)
+      (m₁.top &&& 1099511627775) with
+  | none => rw [h3, nriW.k_loop1.none] at hW; cases hW
   | some m₄ =>
-  rw [h3] at hW
-  simp only at hW
-  obtain ⟨hg4, htop4, hpc4, hsz4, hkeep4, hsl4⟩ := digW_ok m₁ hpool m₁.top h41 (Nat.le_refl _) (n + 1) m₃ m₄
+  rw [h3, nriW.k_loop1.arm1] at hW
+  obtain ⟨hg4, htop4, hpc4, hsz4, hkeep4, hsl4⟩ := digW_ok nriProg m₁ hpool m₁.top h41 (Nat.le_refl _) (n + 1) m₃ m₄
     ((m₁.top &&& 1099511627775) + 4 + k) i h3 (by rw [hj]; omega) (by rw [hsz, hj]; omega) hg
   rw [hj, show (m₁.top &&& 1099511627775).toNat + 4 + k.toNat - ((m₁.top &&& 1099511627775).toNat + 4) = k.toNat by omega, hk]
     at hsl4
@@ -512,10 +400,10 @@ theorem nriF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     exact sliceL_congr fun t ht => hkeep4 _ (.inl (by omega))
   have hsl : SliceOK m₄ m₁.top (k + 4) := SliceOK.fresh hg4 (htop4.trans htop)
   rcases h4 : callW nriProg n "intern_nstr" [x, m₁.top, k + 4] m₄ with _ | ⟨r₄, m₅⟩
-  · rw [h4] at hW; cases hW
-  rw [h4] at hW
-  simp only at hW
-  obtain ⟨c, hW⟩ := of_ite_none hW
+  · rw [h4, nriW.k_intern_nstr.none] at hW; cases hW
+  by_cases c : 4294967296 ≤ r₄.headD 0
+  · rw [h4, nriW.k_intern_nstr.abort1 _ _ _ c] at hW; cases hW
+  rw [h4, nriW.k_intern_nstr.arm1 _ _ _ c] at hW
   obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   have hR₄ : ArenaR m₄ a := ArenaR.grow m₁ m₄ hg4 a hS.check.arena.base
   have hmo₄ : ModeOK m₄ := hS.check.mode.grows hg4

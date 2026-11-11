@@ -104,12 +104,11 @@ def RArmOK (n : Nat) : Prop :=
 
 theorem rgoOK_succ (n : Nat) (ih : RNodeOK n) : RGoOK (n + 1) := by
   intro m m' a h c d k fu r hA hh hb
-  have hfu : ¬ fu = 0 := fun hfu => by rw [arW] at hb; simp [hfu] at hb
-  rw [arW_eq n m h c d k fu hfu] at hb
+  have hfu : ¬ fu = 0 := fun hfu => by rw [arW.abort1 n m h c d k fu hfu] at hb; cases hb
+  rw [arW.arm1 n m h c d k fu hfu] at hb
   rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, abstractRangeGo_succ']
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arW.k_ab_fvb.none ..) (fun x m₁ => arW.k_ab_fvb.ite ..)
     (Sim.ofD fun x m₁ e => fvbW_ok n m m₁ a hA h (fu - 1) x hh e) fun x m₁ a₁ hA₁ => ?_) hb
-  rw [rcutK_some]
   by_cases hc : x ≤ d
   · rw [ite_eq_left hc, ite_eq_left (UInt64.le_iff_toNat_le.mp hc)]; exact Sim.ret ⟨rfl, hA₁⟩
   · rw [ite_eq_right hc, ite_eq_right (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
@@ -128,58 +127,58 @@ theorem rnodeOK_succ (n : Nat) (ih : RArmOK n) : RNodeOK (n + 1) := by
   simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.fvar, ETag.letE, ETag.proj,
     beq_iff_eq, Bool.or_eq_true] at *
   by_cases g4 : tagW h = 4
-  · rw [arNodeW_app n m h c d k fu g4] at hb
+  · rw [arNodeW.arm1 n m h c d k fu g4] at hb
     simp only [show (tagW h).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
     exact arm.1 g4 hb
   have g4' : ¬ (tagW h).toUInt32 = 4 := fun e => g4 (t4.mpr e)
   by_cases g5 : tagW h = 5
-  · rw [arNodeW_lam n m h c d k fu g5] at hb
+  · rw [arNodeW.arm2 n m h c d k fu g4 g5] at hb
     simp only [show (tagW h).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
     exact arm.2.1 g5 hb
   have g5' : ¬ (tagW h).toUInt32 = 5 := fun e => g5 (t5.mpr e)
   by_cases g6 : tagW h = 6
-  · rw [arNodeW_forall n m h c d k fu g6] at hb
+  · rw [arNodeW.arm3 n m h c d k fu g4 g5 g6] at hb
     simp only [show (tagW h).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
     exact arm.2.2.1 g6 hb
   have g6' : ¬ (tagW h).toUInt32 = 6 := fun e => g6 (t6.mpr e)
   simp only [g4', g5', g6', or_self, ↓reduceIte]
   by_cases g1 : tagW h = 1
   · simp only [show (tagW h).toUInt32 = 1 from (t1.mp g1), ↓reduceIte]
-    have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [arNodeW] at hb; simp [g1, hs] at hb
+    have hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun hs => by rw [arNodeW.abort1 n m h c d k fu g4 g5 g6 g1 hs] at hb; cases hb
     by_cases hc : tcnt m FVAR (tierW h) ≤ idxW h
-    · rw [arNodeW] at hb; simp [g1, hs, hc] at hb
+    · rw [arNodeW.abort2 n m h c d k fu g4 g5 g6 g1 hs hc] at hb; cases hb
     have hv : viewOK m h FVAR := ⟨hs, UInt64.not_le.mp hc⟩
     by_cases hdk : d + k < d
-    · rw [arNodeW] at hb; simp [g1, hs, hc, hdk] at hb
+    · rw [arNodeW.abort3 n m h c d k fu g4 g5 g6 g1 hs hc hdk] at hb; cases hb
     rw [absRangeArmFVar, StateT.run_bind, viewFVarIdx_run, viewFVarIdx_ok m a hA.1.1 h hh hv]
     simp only [except_ok_bind]
     by_cases hi : d ≤ tfld m FVAR (tierW h) (idxW h) 0 ∧ tfld m FVAR (tierW h) (idxW h) 0 < d + k
     · by_cases ho : c + (d + k - 1 - tfld m FVAR (tierW h) (idxW h) 0) < c
-      · rw [arNodeW] at hb; simp [g1, hs, hc, hdk, hi, ho] at hb
-      rw [arNodeW_fvar_in n m h c d k fu hv g1 hdk hi ho] at hb
+      · rw [arNodeW.abort4 n m h c d k fu g4 g5 g6 g1 hs hc hdk hi ho] at hb; cases hb
+      rw [arNodeW.arm4 n m h c d k fu g4 g5 g6 g1 hs hc hdk hi ho] at hb
       obtain ⟨hok, hA', hres⟩ := internBVar_A m a hA _ r m' hb
       rw [rng_word c d k _ hdk hi ho] at hok hA' hres
       simp only [(rng_iff d k _ hdk).mp hi, ↓reduceIte, internBVarE]
       rw [AM.run_of_ok _ _ hok, hres]; exact ⟨_, rfl, hA'⟩
-    · rw [arNodeW_fvar_out n m h c d k fu hv g1 hdk hi] at hb
+    · rw [arNodeW.arm5 n m h c d k fu g4 g5 g6 g1 hs hc hdk hi] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       have hi' := fun e => hi ((rng_iff d k _ hdk).mpr e)
       simp only [Bool.eq_false_iff.mpr hi', Bool.false_eq_true, ↓reduceIte]; exact ⟨a, rfl, hA⟩
   have g1' : ¬ (tagW h).toUInt32 = 1 := fun e => g1 (t1.mpr e)
   simp only [g1', ↓reduceIte]
   by_cases g7 : tagW h = 7
-  · rw [arNodeW_let n m h c d k fu g7] at hb
+  · rw [arNodeW.arm6 n m h c d k fu g4 g5 g6 g1 g7] at hb
     simp only [show (tagW h).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
     exact arm.2.2.2.1 g7 hb
   have g7' : ¬ (tagW h).toUInt32 = 7 := fun e => g7 (t7.mpr e)
   simp only [g7', ↓reduceIte]
   by_cases g9 : tagW h = 9
-  · rw [arNodeW_proj n m h c d k fu g9] at hb
+  · rw [arNodeW.arm7 n m h c d k fu g4 g5 g6 g1 g7 g9] at hb
     simp only [show (tagW h).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
     exact arm.2.2.2.2 g9 hb
   have g9' : ¬ (tagW h).toUInt32 = 9 := fun e => g9 (t9.mpr e)
   simp only [g9', ↓reduceIte]
-  rw [arNodeW_leaf n m h c d k fu g1 g4 g5 g6 g7 g9] at hb
+  rw [arNodeW.arm8 n m h c d k fu g4 g5 g6 g1 g7 g9] at hb
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
   exact ⟨a, rfl, hA⟩
 
@@ -194,18 +193,19 @@ theorem rappArm_ok (hg : tagW h = 4) :
     RArmRef (n + 1) arAppW (absRangeGoArmApp d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   rw [absRangeGoArmApp]
-  refine aprobe_ok _ _ m m' a hA h c r hh (arAppW_hit n m h c d k fu)
-    (fun hr => by rw [arAppW]; simp [hr]) (fun hr hh0 hb => ?_) hb
+  refine aprobe_ok _ _ m m' a hA h c r hh (fun hr hh0 => arAppW.arm1 n m h c d k fu hr hh0)
+    (arAppW.abort1 n m h c d k fu) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
+  · rw [arAppW.abort2 n m h c d k fu hr hh0 hs] at hb; cases hb
   have hv : viewOKA m h := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [arAppW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
+    rw [arAppW.abort3 n m h c d k fu hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
-  rw [arAppW_miss n m h c d k fu hr hh0 hv] at hb
+  rw [arAppW.arm2 n m h c d k fu hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1.1 h hh hv, except_ok_bind]
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arAppW.k_ar_go.none ..) (fun x m₁ => arAppW.k_ar_go.arm1 ..)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.bindD (K := rappK₁.rappK₂ h c _ _ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := arAppW.k_ar_go_2 h c _ _ x) (arAppW.k_ar_go_2.none ..)
+    (fun y m₂ => arAppW.k_ar_go_2.set ..)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
       (decE x == decE (tfld m APP (tierW h) (idxA h) 0) && decE y == decE (tfld m APP (tierW h) (idxA h) 1)) (decE x) (decE y))
@@ -223,20 +223,21 @@ theorem rappArm_ok (hg : tagW h = 4) :
 theorem rlamArm_ok (hg : tagW h = 5) :
     RArmRef (n + 1) arLamW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
-  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLamW] at hb; simp [hk1] at hb
+  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLamW.abort1 n m h c d k fu hk1] at hb; cases hb
   rw [absRangeGoArmBind]
-  refine aprobe_ok _ _ m m' a hA h c r hh (arLamW_hit n m h c d k fu hk1)
-    (fun hr => by rw [arLamW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
+  refine aprobe_ok _ _ m m' a hA h c r hh (fun hr hh0 => arLamW.arm1 n m h c d k fu hk1 hr hh0)
+    (fun hr => arLamW.abort2 n m h c d k fu hk1 hr) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [arLamW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
+  · rw [arLamW.abort3 n m h c d k fu hk1 hr hh0 hs] at hb; cases hb
   have hv : viewOK m h LAM := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [arLamW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
+    rw [arLamW.abort4 n m h c d k fu hk1 hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1.1 h hh hv hg
-  rw [arLamW_miss n m h c d k fu hk1 hr hh0 hv] at hb
+  rw [arLamW.arm2 n m h c d k fu hk1 hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1.1 h hh hv hg, except_ok_bind]
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arLamW.k_ar_go.none ..) (fun x m₁ => arLamW.k_ar_go.arm1 ..)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.bindD (K := rlamK₁.rlamK₂ h c _ _ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := arLamW.k_ar_go_2 h c _ _ x) (arLamW.k_ar_go_2.none ..)
+    (fun y m₂ => arLamW.k_ar_go_2.set ..)
     (Sim.ofD fun y m₂ e => by
     simpa only [L.toNat_add_one_of_ne c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
@@ -259,20 +260,21 @@ theorem rlamArm_ok (hg : tagW h = 5) :
 theorem rforallArm_ok (hg : tagW h = 6) :
     RArmRef (n + 1) arForallW (absRangeGoArmBind d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
-  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arForallW] at hb; simp [hk1] at hb
+  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arForallW.abort1 n m h c d k fu hk1] at hb; cases hb
   rw [absRangeGoArmBind]
-  refine aprobe_ok _ _ m m' a hA h c r hh (arForallW_hit n m h c d k fu hk1)
-    (fun hr => by rw [arForallW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
+  refine aprobe_ok _ _ m m' a hA h c r hh (fun hr hh0 => arForallW.arm1 n m h c d k fu hk1 hr hh0)
+    (fun hr => arForallW.abort2 n m h c d k fu hk1 hr) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [arForallW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
+  · rw [arForallW.abort3 n m h c d k fu hk1 hr hh0 hs] at hb; cases hb
   have hv : viewOK m h FORALL := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [arForallW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
+    rw [arForallW.abort4 n m h c d k fu hk1 hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1.1 h hh hv hg
-  rw [arForallW_miss n m h c d k fu hk1 hr hh0 hv] at hb
+  rw [arForallW.arm2 n m h c d k fu hk1 hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1.1 h hh hv hg, except_ok_bind]
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arForallW.k_ar_go.none ..) (fun x m₁ => arForallW.k_ar_go.arm1 ..)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.bindD (K := rfaK₁.rfaK₂ h c _ _ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := arForallW.k_ar_go_2 h c _ _ x) (arForallW.k_ar_go_2.none ..)
+    (fun y m₂ => arForallW.k_ar_go_2.set ..)
     (Sim.ofD fun y m₂ e => by
     simpa only [L.toNat_add_one_of_ne c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
         fun y m₂ a₂ hA₂ => ?_
@@ -295,22 +297,24 @@ theorem rforallArm_ok (hg : tagW h = 6) :
 theorem rletArm_ok (hg : tagW h = 7) :
     RArmRef (n + 1) arLetW (absRangeGoArmLet d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
-  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLetW] at hb; simp [hk1] at hb
+  have hk1 : ¬ c + 1 = 0 := fun hk1 => by rw [arLetW.abort1 n m h c d k fu hk1] at hb; cases hb
   rw [absRangeGoArmLet]
-  refine aprobe_ok _ _ m m' a hA h c r hh (arLetW_hit n m h c d k fu hk1)
-    (fun hr => by rw [arLetW]; simp [hk1, hr]) (fun hr hh0 hb => ?_) hb
+  refine aprobe_ok _ _ m m' a hA h c r hh (fun hr hh0 => arLetW.arm1 n m h c d k fu hk1 hr hh0)
+    (fun hr => arLetW.abort2 n m h c d k fu hk1 hr) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [arLetW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
+  · rw [arLetW.abort3 n m h c d k fu hk1 hr hh0 hs] at hb; cases hb
   have hv : viewOK m h LET := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [arLetW] at hb; simp only [ne_eq] at hs; simp only [hk1, hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
+    rw [arLetW.abort4 n m h c d k fu hk1 hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, htw, hvw, hbw⟩ := view_let m a hA.1.1 h hh hv hg
-  rw [arLetW_miss n m h c d k fu hk1 hr hh0 hv] at hb
+  rw [arLetW.arm2 n m h c d k fu hk1 hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1.1 h hh hv, except_ok_bind]
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arLetW.k_ar_go.none ..) (fun x m₁ => arLetW.k_ar_go.arm1 ..)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA htw e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.bindD (K := rleK₁.rleK₂ n h c d k fu _ _ _ x) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := arLetW.k_ar_go_2 n h c d k fu _ _ _ x) (arLetW.k_ar_go_2.none ..)
+    (fun y m₂ => arLetW.k_ar_go_2.arm1 ..)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
-  refine Sim.bindD (K := rleK₁.rleK₃ h c _ _ _ x y) rfl (fun _ _ => rfl)
+  refine Sim.bindD (K := arLetW.k_ar_go_3 h c _ _ _ x y) (arLetW.k_ar_go_3.none ..)
+    (fun y m₂ => arLetW.k_ar_go_3.set ..)
     (Sim.ofD fun z m₃ e => by
     simpa only [L.toNat_add_one_of_ne c hk1] using ih m₂ m₃ a₂ _ (c + 1) d k fu z hA₂ hbw e)
         fun z m₃ a₃ hA₃ => ?_
@@ -335,16 +339,16 @@ theorem rprojArm_ok (hg : tagW h = 9) :
     RArmRef (n + 1) arProjW (absRangeGoArmProj d.toNat k.toNat fu.toNat (decE h) c.toNat) m m' a h c d k fu r := by
   intro hb
   rw [absRangeGoArmProj]
-  refine aprobe_ok _ _ m m' a hA h c r hh (arProjW_hit n m h c d k fu)
-    (fun hr => by rw [arProjW]; simp [hr]) (fun hr hh0 hb => ?_) hb
+  refine aprobe_ok _ _ m m' a hA h c r hh (fun hr hh0 => arProjW.arm1 n m h c d k fu hr hh0)
+    (arProjW.abort1 n m h c d k fu) (fun hr hh0 hb => ?_) hb
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [arProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, not_false_eq_true, and_self, reduceCtorEq] at hb
+  · rw [arProjW.abort2 n m h c d k fu hr hh0 hs] at hb; cases hb
   have hv : viewOK m h PROJ := ⟨hs, UInt64.not_le.mp fun hc => by
-    rw [arProjW] at hb; simp only [ne_eq] at hs; simp only [hr, hh0, ne_eq, not_true_eq_false, ↓reduceIte, hs, hc, reduceCtorEq] at hb⟩
+    rw [arProjW.abort3 n m h c d k fu hr hh0 hs hc] at hb; cases hb⟩
   obtain ⟨-, -, hew⟩ := view_proj m a hA.1.1 h hh hv hg
-  rw [arProjW_miss n m h c d k fu hr hh0 hv] at hb
+  rw [arProjW.arm2 n m h c d k fu hr hh0 hs (UInt64.not_le.mpr hv.2)] at hb
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
-  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+  refine SimD.exists (Sim.bindD (arProjW.k_ar_go.none ..) (fun x m₁ => arProjW.k_ar_go.set ..)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (tfld m PROJ (tierW h) (idxW h) 2))
       (decI (tfld m PROJ (tierW h) (idxW h) 0)) (tfld m PROJ (tierW h) (idxW h) 1).toNat (decE x)) _ a₁ h c r m' hh (fun r₃ m₃ hr₃ => by

@@ -4,6 +4,7 @@ public import ConAgua.Arena.LdRd
 public import ConAgua.Arena.DeclDivModSpec.Sc0List
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
 import all ConAgua.Arena.DeclArmsNat
 
 @[expose] public section
@@ -58,17 +59,11 @@ theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p vis fe) (nm r 
   CallRef.refAM (fun k m a res m' ⟨hS, hd, hb⟩ hc =>
     sc0List_ref hD hs0 nm r hn hr hyps o l k m a res m' hS hd hb hc)
 
-set_option maxHeartbeats 1600000 in
-theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)
-    (cl : CallM) (hcl : CallSpec p cl) (n : Nat) (s₀ : St) (vs o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "consts_resolve_all" [vs, o, l]
-    ⦃fun res s' => LocEq s' s₀ ∧ craW p cl n s₀.mem vs o l = some (res, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, constsResolveAllL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      hcl n "consts_resolve_ffast", callW_spec p n "consts_resolve_all"] <;>
-    finish (gen := 30) (instances := 10000) [craW, ntBW, rdW_eq]
+l_model cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)
+    (cl : CallM) (hcl : CallSpec p cl)
+  fns [hp ↦ craW list]
+  specs [hcl n "consts_resolve_ffast", callW_spec p n "consts_resolve_all"]
+  grind [arena_grind] finish [ntBW, rdW_eq] gen 30 bind ntBW instances 10000 pfuel
 
 set_option maxHeartbeats 3200000 in
 theorem cg_specW (p : Prog) (hb : BvbProg p) (hf : HfF p) (hp : p.lookup "div_mod_cert_guard" = some divModCertGuardL)

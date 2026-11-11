@@ -5,6 +5,8 @@ public import ConAgua.Arena.StrLitUtf8
 public import ConAgua.Arena.StrLitKeep
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.L.ModelGen
+public import ConAgua.Arena.DeclNatBase
 import ConAgua.Arena.InferBodyLet
 import Lean.Elab.Tactic.RCases
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -31,6 +33,11 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
+
+/-- One call of a word model's `ntBW` chain: split on the callee's run. -/
+macro "bstep " hW:ident ", " h:ident " : " e:term " => " r:ident ", " m:ident : tactic =>
+  `(tactic| (rcases $h:ident : $e with _ | ⟨$r, $m⟩ <;> rw [$h:ident] at $hW:ident <;>
+    simp only [L.Ind.bW_none, L.Ind.bW_some, reduceCtorEq] at $hW:ident))
 
 /-- One call of a word model's chain: split on the callee's run. -/
 macro "wstep " hW:ident ", " h:ident " : " e:term " => " r:ident ", " m:ident : tactic =>
@@ -112,56 +119,11 @@ end pins
 
 /-! ## `str_ctor_pre` -/
 
-/-- The model of `str_ctor_pre`. -/
-def preW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
-  match callW p n "pin_word" [53] m with
-  | none => none
-  | some (r₁, m₁) =>
-  match callW p n "str_ls1" [r₁.headD 0] m₁ with
-  | none => none
-  | some (r₂, m₂) =>
-  match callW p n "pin_at" [10] m₂ with
-  | none => none
-  | some (r₃, m₃) =>
-  match callW p n "const_e" [r₃.headD 0] m₃ with
-  | none => none
-  | some (r₄, m₄) =>
-  match callW p n "pin_at" [8] m₄ with
-  | none => none
-  | some (r₅, m₅) =>
-  match callW p n "intern_const" [r₅.headD 0, r₂.headD 0] m₅ with
-  | none => none
-  | some (r₆, m₆) =>
-  match callW p n "mk_app" [r₆.headD 0, r₄.headD 0] m₆ with
-  | none => none
-  | some (r₇, m₇) =>
-  match callW p n "pin_at" [9] m₇ with
-  | none => none
-  | some (r₈, m₈) =>
-  match callW p n "intern_const" [r₈.headD 0, r₂.headD 0] m₈ with
-  | none => none
-  | some (r₉, m₉) =>
-  match callW p n "mk_app" [r₉.headD 0, r₄.headD 0] m₉ with
-  | none => none
-  | some (r₁₀, m₁₀) =>
-  match callW p n "pin_at" [12] m₁₀ with
-  | none => none
-  | some (r₁₁, m₁₁) =>
-  match callW p n "const_e" [r₁₁.headD 0] m₁₁ with
-  | none => none
-  | some (r₁₂, m₁₂) => some ([r₁₀.headD 0, r₁₂.headD 0, r₇.headD 0], m₁₂)
-
-theorem strCtorPre_spec (p : Prog) (hp : p.lookup "str_ctor_pre" = some strCtorPreL) (n : Nat)
-    (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_ctor_pre" []
-    ⦃fun r s' => LocEq s' s₀ ∧ preW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, strCtorPreL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "pin_word", callW_spec p n "str_ls1", callW_spec p n "pin_at",
-      callW_spec p n "const_e", callW_spec p n "intern_const", callW_spec p n "mk_app"] <;>
-    finish (gen := 30) [preW]
+l_model strCtorPre_spec (p : Prog) (hp : p.lookup "str_ctor_pre" = some strCtorPreL)
+  fns [hp ↦ preW list]
+  specs [callW_spec p n "pin_word", callW_spec p n "str_ls1", callW_spec p n "pin_at",
+    callW_spec p n "const_e", callW_spec p n "intern_const", callW_spec p n "mk_app"]
+  grind [arena_grind] finish [L.Ind.ntBW] gen 30 bind L.Ind.ntBW pfuel
 
 section pre
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
@@ -176,18 +138,18 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strCtorPre_spec p hp.strCtorPre n _) h
   unfold preW at hW
-  wstep hW, h1 : callW p n "pin_word" [53] m => r₁, m₁
-  wstep hW, h2 : callW p n "str_ls1" [r₁.headD 0] m₁ => r₂, m₂
-  wstep hW, h3 : callW p n "pin_at" [10] m₂ => r₃, m₃
-  wstep hW, h4 : callW p n "const_e" [r₃.headD 0] m₃ => r₄, m₄
-  wstep hW, h5 : callW p n "pin_at" [8] m₄ => r₅, m₅
-  wstep hW, h6 : callW p n "intern_const" [r₅.headD 0, r₂.headD 0] m₅ => r₆, m₆
-  wstep hW, h7 : callW p n "mk_app" [r₆.headD 0, r₄.headD 0] m₆ => r₇, m₇
-  wstep hW, h8 : callW p n "pin_at" [9] m₇ => r₈, m₈
-  wstep hW, h9 : callW p n "intern_const" [r₈.headD 0, r₂.headD 0] m₈ => r₉, m₉
-  wstep hW, h10 : callW p n "mk_app" [r₉.headD 0, r₄.headD 0] m₉ => r₁₀, m₁₀
-  wstep hW, h11 : callW p n "pin_at" [12] m₁₀ => r₁₁, m₁₁
-  wstep hW, h12 : callW p n "const_e" [r₁₁.headD 0] m₁₁ => r₁₂, m₁₂
+  bstep hW, h1 : callW p n "pin_word" [53] m => r₁, m₁
+  bstep hW, h2 : callW p n "str_ls1" [r₁.headD 0] m₁ => r₂, m₂
+  bstep hW, h3 : callW p n "pin_at" [10] m₂ => r₃, m₃
+  bstep hW, h4 : callW p n "const_e" [r₃.headD 0] m₃ => r₄, m₄
+  bstep hW, h5 : callW p n "pin_at" [8] m₄ => r₅, m₅
+  bstep hW, h6 : callW p n "intern_const" [r₅.headD 0, r₂.headD 0] m₅ => r₆, m₆
+  bstep hW, h7 : callW p n "mk_app" [r₆.headD 0, r₄.headD 0] m₆ => r₇, m₇
+  bstep hW, h8 : callW p n "pin_at" [9] m₇ => r₈, m₈
+  bstep hW, h9 : callW p n "intern_const" [r₈.headD 0, r₂.headD 0] m₈ => r₉, m₉
+  bstep hW, h10 : callW p n "mk_app" [r₉.headD 0, r₄.headD 0] m₉ => r₁₀, m₁₀
+  bstep hW, h11 : callW p n "pin_at" [12] m₁₀ => r₁₁, m₁₁
+  bstep hW, h12 : callW p n "const_e" [r₁₁.headD 0] m₁₁ => r₁₂, m₁₂
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   rw [← hm]
@@ -228,40 +190,11 @@ end pre
 
 /-! ## `str_cons_spine` -/
 
-/-- The model of `str_cons_spine`. -/
-def spineW (p : Prog) (n : Nat) (m : Mem) (cons ofNat nilE k e : Word) : Option (Word × Mem) :=
-  if e ≤ k then some (nilE, m)
-  else match callW p n "str_utf8_char" [k, e] m with
-  | none => none
-  | some (cl, m₁) =>
-  if cl.tail.headD 0 = 0 then none
-  else match callW p n "str_cons_spine" [cons, ofNat, nilE, k + cl.tail.headD 0, e] m₁ with
-  | none => none
-  | some (rr, m₂) =>
-  match callW p n "rom_lit" [cl.headD 0] m₂ with
-  | none => none
-  | some (lt, m₃) =>
-  match callW p n "mk_app" [ofNat, lt.headD 0] m₃ with
-  | none => none
-  | some (ch, m₄) =>
-  match callW p n "mk_app" [cons, ch.headD 0] m₄ with
-  | none => none
-  | some (f, m₅) =>
-  match callW p n "mk_app" [f.headD 0, rr.headD 0] m₅ with
-  | none => none
-  | some (r, m₆) => some (r.headD 0, m₆)
-
-theorem strConsSpine_spec (p : Prog) (hp : p.lookup "str_cons_spine" = some strConsSpineL)
-    (n : Nat) (s₀ : St) (cons ofNat nilE k e : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_cons_spine" [cons, ofNat, nilE, k, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ spineW p n s₀.mem cons ofNat nilE k e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, strConsSpineL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "str_utf8_char", callW_spec p n "str_cons_spine", callW_spec p n "rom_lit",
-      callW_spec p n "mk_app"] <;>
-    finish (gen := 20) [spineW]
+l_model strConsSpine_spec (p : Prog) (hp : p.lookup "str_cons_spine" = some strConsSpineL)
+  fns [hp ↦ spineW]
+  specs [callW_spec p n "str_utf8_char", callW_spec p n "str_cons_spine", callW_spec p n "rom_lit",
+    callW_spec p n "mk_app"]
+  grind [arena_grind] finish [L.Ind.ntBW] gen 20 bind L.Ind.ntBW pfuel
 
 theorem sliceL_drop (q : Array Word) (o a b : Nat) :
     (sliceL q o (a + b)).drop a = sliceL q (o + a) b := by
@@ -322,7 +255,7 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
     have hnle : ¬ e ≤ k := fun h' => by
       have := UInt64.le_iff_toNat_le.mp h'; omega
     simp only [spineW, hnle, ↓reduceIte] at hW
-    wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
+    bstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
     obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs
       (by rw [sliceL_tpool m _ _ (by have := pcap_ge m; have := pcap_eq m (by have := hS.arena.base.lit.1.cap; omega); omega)]; exact hs) hke
       (by rw [tpool_size]; exact Nat.le_of_lt e.toNat_lt) he4 cl m₁ h1
@@ -332,11 +265,11 @@ theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
       have := congrArg UInt64.toNat h0
       simp [UInt64.toNat_ofNat_of_lt' (show c.utf8Size < 2 ^ 64 by omega)] at this; omega
     simp only [hne, ↓reduceIte] at hW
-    wstep hW, h2 : callW p n "str_cons_spine" [cons, ofNat, nilE, k + cl.tail.headD 0, e] m => rr, m₂
-    wstep hW, h3 : callW p n "rom_lit" [cl.headD 0] m₂ => lt, m₃
-    wstep hW, h4 : callW p n "mk_app" [ofNat, lt.headD 0] m₃ => ch, m₄
-    wstep hW, h5 : callW p n "mk_app" [cons, ch.headD 0] m₄ => fw, m₅
-    wstep hW, h6 : callW p n "mk_app" [fw.headD 0, rr.headD 0] m₅ => r₆, m₆
+    bstep hW, h2 : callW p n "str_cons_spine" [cons, ofNat, nilE, k + cl.tail.headD 0, e] m => rr, m₂
+    bstep hW, h3 : callW p n "rom_lit" [cl.headD 0] m₂ => lt, m₃
+    bstep hW, h4 : callW p n "mk_app" [ofNat, lt.headD 0] m₃ => ch, m₄
+    bstep hW, h5 : callW p n "mk_app" [cons, ch.headD 0] m₄ => fw, m₅
+    bstep hW, h6 : callW p n "mk_app" [fw.headD 0, rr.headD 0] m₅ => r₆, m₆
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
