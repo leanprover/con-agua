@@ -132,7 +132,35 @@ Instructions unchanged (Tiers 10.70 → 10.71 G, CIReadRefCaps 25.12 → 25.07 G
 
 ### 3.1 The walk tactic (helper `presync3-walk`)
 
-TACTIC_RESULT
+**Not built.** The footprint has 72 walks, so the brief's threshold (> 40) asked for a measured
+prototype. The coordinator's yardstick: generated model plus the existing kit, not today's hand
+walks. The project already has a lockstep kit: `Arena/RefWalk.lean` (25 rules over `RefE`, rolled
+out by refwalk1–11) for `unified` models, and `SimLib`/`RecSim` (`Sim`/`RSim`) for ok models. A
+generator/registry on top of it was measured and rejected in refgen §3–5.
+
+The helper `presync3-walk` built `Arena/ModelWalk.lean` (225 code lines: 41 of lemmas, 184 of meta
+code; `walk_arm`, `walk_split`, `walk_call`/`walk_sim`/`walk_only`). It works over the `Sim` and
+`RSim` kits, has no registry, and when it is stuck it names the guards no hypothesis closes. It
+rewrote five footprint walks over generated models:
+
+| walk | before | after | |
+|---|---:|---:|---:|
+| `btsW_ok` (`IndDeclConstsTable`) | 41 | 31 | −24 % |
+| `pbW_ok` (`IndSumSpec/StructProjBodies`, already the `Sim` kit) | 63 | 55 | −13 % |
+| `spbW_ok` (same file) | 63 | 42 | −33 % |
+| `closeLamsW_ok` (`RecClassSpec/CloseLams`) | 51 | 36 | −29 % |
+| `cW_sim` (`RecClassSpec/MnW`, already the `RSim` kit) | 50 | 40 | −20 % |
+| **total** (proof lines) | **268** | **204** | **−24 %** |
+
+The same lemmas used by hand, without the tactic, would give about 222 (−17 %): the tactic adds
+about 7 points. Instructions (`LEAN_NUM_THREADS=1`, whole module, interleaved runs) are flat:
+IndDeclConstsTable 24.0 → 24.2 G, StructProjBodies 11.6 → 11.8 G, CloseLams 38.2 → 38.1 G, MnW
+41.2 → 41.9 G; RSS 1.0–1.2 GB; ModelWalk itself 6.3 G once. What stays manual is most of the
+remaining 204 lines: decoded facts and their transports, guard arithmetic, the twin's own
+`if`/`match`, the twin unfolded, fuel cases, the final post. That is the share refgen found for
+`RefE`. The go bar (≥ 40 % fewer lines, no module 2× slower) is not met, and the sync's new code
+gets generated models and `RefE`/`RefWalk` proofs anyway (§2). The prototype stays on branch
+`presync3-walk` (not landed; its five samples belong to functions the sync rewrites).
 
 ## 4. The starting kit
 
