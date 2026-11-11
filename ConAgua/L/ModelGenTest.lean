@@ -792,6 +792,19 @@ example (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
     ⦃fun r s' => LocEq s' s₀ ∧ tPfW C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄ :=
   tPf_spec p C hc hp n s₀ x
 
+/-- `pfuel 2`: the spec at `exec p (n + 2)`, the callee's spec given at `n + 1` (where the body
+runs), the model at `n`. -/
+l_model tPf2_spec (p : Prog) (C : Nat → Mem → Word → Option (Word × Mem))
+    (hc : ∀ n (s₀ : St) (x : Word), ⦃fun s => s = s₀⦄ invoke p (exec p n) "t_c" [x]
+      ⦃fun r s' => LocEq s' s₀ ∧ C n s₀.mem x = some (r.headD 0, s'.mem); ⊤⦄)
+    (hp : p.lookup "t_pf" = some tPf)
+  fns [hp ↦ tPf2W]
+  specs [hc (n + 1)]
+  grind [arena_grind] pfuel 2
+
+example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) (x : Word) :
+    tPf2W C n m x = tPfW C (n + 1) m x := rfl
+
 /-- A binder named `L` (lookups as fields, `L.pf`): the generated proofs root the library's
 names (`_root_.L.exec`), so the command renames the binder to `L'` from it on. An implicit binder
 that the callee's model mentions (`C`) is an explicit parameter of the model. -/
