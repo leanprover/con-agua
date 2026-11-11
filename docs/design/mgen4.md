@@ -123,3 +123,20 @@ Gone: `bbK8`–`bbK13'`, `bfW`, `btK1`–`btK3`, `btW` and their arm lemmas (`Bs
 | `Arena/IndPartsSpec/BrsW` | 17.1 → 17.1 G | 3.7 → 3.2 | 1098 → 1097 |
 
 Lines: +84 −191 (**−107**).
+
+### Batch 3: `nest_root_canon`, `nest_uniform_ok` (`pfuel 3`, `pfuel 4`)
+
+mgen3 listed them under "fuel offsets" (`CallM` fuel-offset models, stated at `k + 3`, `k + 4`).
+Both are now `l_model`s in `IndPosSpec/NestHoles.lean` where their hand models were
+(`nestRootCanon_spec`: `pfuel 3`, callee specs at `n + 2`; `nestUniformOk_spec`: `pfuel 4`, over
+the former), both with `fold [erRd]`; the generated models are the hand ones by `rfl`. Gone: the
+hand continuations `nrcK1`–`nrcK3`, `nuK1`–`nuK3`, their arm lemmas, and the two hand specs in
+`NuW.lean`. The walks `nrcW_ok`, `nuW_ok` only renamed (`nrcK1_some` → `nrcW.k_cv_lps.arm1`,
+`nuK1_ok (h := …)` → `nuW.k_pi_doms_occ.arm2 (hc1 := …)`, …).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Arena/IndPosSpec/NestHoles` | 10.8 → 16.4 G | 2.0 → 3.3 | 1043 → 1056 |
+| `Arena/IndPosSpec/NuW` | 19.3 → 11.5 G | 4.4 → 2.6 | 1054 → 1047 |
+
+Lines: +28 −88 (**−60**).
