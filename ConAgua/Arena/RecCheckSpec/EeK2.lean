@@ -1,14 +1,13 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.NestOccGo
-public import ConAgua.Arena.IndPartsSpec.EqW
 
 @[expose] public section
 
 /-!
 # EeK2
 
-`noF`, `eeK2`, `eeK1`, `tteK3`, `tteK2`.
+`noF`.
 -/
 
 noncomputable section
@@ -39,26 +38,6 @@ open L.Arena
 def noF : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, no, nl, lo, hi, e => noConstW n m no nl lo hi e
-
-/-! ## `erase_each` -/
-
-def eeK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rc, m) => some ([rc.headD 0, rc.tail.headD 0], m)
-
-def eeK1 (n : Nat) (v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rr, m) => eeK2 (consW n m v (rr.headD 0) (rr.tail.headD 0))
-
-/-! ## `target_k53_tele` -/
-
-def tteK3 (m : Mem) : Option Word → Option (List Word × Mem)
-  | none => none
-  | some e => some ([e], m)
-
-def tteK2 (n : Nat) (r1 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m) => tteK3 m (eqW n m (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0))
 
 end L.Ind
 

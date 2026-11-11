@@ -1,15 +1,18 @@
 module
 
-public import ConAgua.Arena.RecCheckSpec.EeK2
+public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 public import ConAgua.Arena.IndGrindAttr
+public import ConAgua.Arena.RecCheckSpec.K53Look
+import ConAgua.L.ModelGen
+import all ConAgua.Arena.RecCheck
 
 @[expose] public section
 
 /-!
 # EeW
 
-`eftF`, `eeW`, `eeK0`, `eeW_nil`, `eeW_cons`, `tteK1` and the lemmas only they use.
+`ee_spec`, `tte_spec`: `erase_each` and `target_k53_tele` generated (`eeW`, `tteW`).
 -/
 
 noncomputable section
@@ -37,43 +40,19 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## Callees at any exec fuel -/
+/-! ## `erase_each`, `target_k53_tele` -/
 
-def eftF : Nat → Mem → Word → Option (List Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, e => eftW n m e
+/-- **`erase_each` is its model `eeW`** (generated). -/
+l_model ee_spec (p : Prog) (L : K53Look p)
+  fns [L.ee ↦ eeW list]
+  specs [eftF_spec p L.tmn.tcm.tp.rc n, slCons_specW p L.tmn.tcm.ha L.tmn.tcm.ic L.tmn.tcm.sc n]
+  grind [arena_grind]
 
-mutual
-def eeW : Nat → Mem → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, o, l =>
-    if l = 0 then some ([0, 0], m) else eeK0 n o l (eftF n m (rdW (m.arr64 IW) o))
-def eeK0 (n : Nat) (o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rv, m) => eeK1 n (rv.headD 0) (eeW n m (o + 1) (l - 1))
-end
-
-section arms
-variable (n : Nat) (m : Mem) (o l v : Word) (rv rr rc : List Word)
-theorem eeW_nil (h : l = 0) : eeW (n + 1) m o l = some ([0, 0], m) := by simp [eeW, h]
-theorem eeW_cons (h : ¬ l = 0) : eeW (n + 1) m o l = eeK0 n o l (eftF n m (rdW (m.arr64 IW) o)) := by
-  simp [eeW, h]
-end arms
-attribute [ind_grind] eeW_nil eeW_cons
-
-def tteK1 (n : Nat) (teo tel : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m) => tteK2 n r1 (eeW n m teo tel)
-
-def tteW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, bso, bsl, teo, tel => tteK1 n teo tel (eeW n m bso bsl)
-
-section arms
-variable (n : Nat) (m : Mem) (bso bsl teo tel e : Word) (r1 r2 : List Word)
-theorem tteW_succ : tteW (n + 1) m bso bsl teo tel = tteK1 n teo tel (eeW n m bso bsl) := rfl
-end arms
-attribute [ind_grind] tteW_succ
+/-- **`target_k53_tele` is its model `tteW`** (generated). -/
+l_model tte_spec (p : Prog) (L : K53Look p)
+  fns [L.tte ↦ tteW list]
+  specs [ee_spec p L n, slEq_spec p L.eq n]
+  grind [arena_grind]
 
 end L.Ind
 
