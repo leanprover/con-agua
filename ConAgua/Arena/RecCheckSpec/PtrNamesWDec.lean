@@ -252,46 +252,13 @@ theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
 
 /-! ## `target_major_default` -/
 
-mutual
-/-- **The model of `target_major_default`.** -/
-def tmdW (m : Mem) : Option (List Word × Mem) := tmdK1 (naF m [])
-/-- After `intern_nanon`. -/
-def tmdK1 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (ra, m1) => tmdK2 m1 (ra.headD 0) (pinWordV m1 52)
-/-- After `pin_word(52)`. -/
-def tmdK2 (m1 : Mem) (anon : Word) : Option Word → Option (List Word × Mem)
-  | none => none
-  | some ls => tmdK3 (mkTMW m1 anon ls 0 0 0 0 0 0 0 0 0 0 0)
-/-- After `mk_target_major`. -/
-def tmdK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m2) => some ([r.headD 0], m2)
-end
-
-theorem tmdW_eq (m : Mem) : tmdW m = tmdK1 (naF m []) := rfl
-theorem tmdK1_some (ra : List Word) (m1 : Mem) :
-    tmdK1 (some (ra, m1)) = tmdK2 m1 (ra.headD 0) (pinWordV m1 52) := rfl
-theorem tmdK2_some (m1 : Mem) (anon ls : Word) :
-    tmdK2 m1 anon (some ls) = tmdK3 (mkTMW m1 anon ls 0 0 0 0 0 0 0 0 0 0 0) := rfl
-theorem tmdK3_some (r : List Word) (m2 : Mem) : tmdK3 (some (r, m2)) = some ([r.headD 0], m2) := rfl
-
-grind_pattern [ind_grind] tmdW_eq => tmdW m
-grind_pattern [ind_grind] tmdK1_some => tmdK1 (some (ra, m1))
-grind_pattern [ind_grind] tmdK2_some => tmdK2 m1 anon (some ls)
-grind_pattern [ind_grind] tmdK3_some => tmdK3 (some (r, m2))
-
-theorem targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+/-- **`target_major_default` is its model `tmdW`** (generated). -/
+l_model targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
-    (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p) (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
-    ⦃fun r s' => LocEq s' s₀ ∧ tmdW s₀.mem = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, targetMajorDefault]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      naF_spec p hna n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
-    finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.tail_cons]
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (hna : NaF p)
+  fns [hp ↦ tmdW list]
+  specs [naF_spec p hna n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n]
+  grind [arena_grind]
 
 /-- **`mkTMW` leaves** (model level): the pointer, the growth, the frame, the new top, and the record
 decoded (given the slices' decodes at the new memory). -/
@@ -341,10 +308,10 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR vis fe m a) :
     ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decTM m' (r.headD 0).toNat = some tm := by
-  rw [tmdW_eq] at h
-  rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdK1, reduceCtorEq] at h
+  rw [tmdW.arm1] at h
+  rcases h1 : naF m [] with _ | ⟨ra, m1⟩ <;> simp only [h1, tmdW.k_intern_nanon, reduceCtorEq] at h
   obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := naF_ok dn vis fe m m1 a ra h1 hS
-  rcases hp : pinWordV m1 52 with _ | ls <;> simp only [hp, tmdK2, reduceCtorEq] at h
+  rcases hp : pinWordV m1 52 with _ | ls <;> simp only [hp, tmdW.k_pin_word, reduceCtorEq] at h
   have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by
     intro h0; simp [pinWordV, h0] at hp
   have hz : ls = pinW m1 52 := by
@@ -353,7 +320,7 @@ theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have hfull := hS1.check.pins.full hpne
   have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
   have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
-  rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdK3, reduceCtorEq] at h
+  rcases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with _ | ⟨r3, m2⟩ <;> simp only [hmk, tmdW.k_mk_target_major, reduceCtorEq] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hIsz := hS1.iw.iwSize
   have hCsz := hS1.iw.ctl

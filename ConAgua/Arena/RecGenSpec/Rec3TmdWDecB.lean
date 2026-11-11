@@ -119,14 +119,14 @@ theorem rec3DecTM_trunc {m : Mem} {q : Nat} (hq : q + 13 ≤ iwTop m) (h3 : iwN 
 theorem rec3TmdW_decB {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {r : List Word} {tm : TargetMajor} (h : tmdW m = some (r, m')) (hS : StageR vis fe m a)
     (hd : decTM m' (r.headD 0).toNat = some tm) : DecB (fun m => decTM m (r.headD 0).toNat) m' tm := by
-  rw [tmdW_eq] at h
+  rw [tmdW.arm1] at h
   obtain ⟨⟨ra, m1⟩, h1, h⟩ := of_K h rfl
-  rw [tmdK1_some] at h
+  rw [tmdW.k_intern_nanon.arm1] at h
   obtain ⟨_x1, _a1, _hr1, hS1, _hg1, _hw1, _hl1⟩ := naF_ok (fun _ => none) vis fe m m1 a ra h1 hS
   obtain ⟨ls, hp, h⟩ := of_K h rfl
-  rw [tmdK2_some] at h
+  rw [tmdW.k_pin_word.arm1] at h
   obtain ⟨⟨r3, m2⟩, hmk, h⟩ := of_K h rfl
-  rw [tmdK3_some] at h
+  rw [tmdW.k_mk_target_major.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hsz := hS1.iw.iwSize
   have hc := hS1.iw.ctl
