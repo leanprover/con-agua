@@ -118,6 +118,68 @@ mutual blocks, the hand specs. 6 files +167 −198 (−31).
 | `IndT/PosFrame` | 9.1 → 8.9 G | 1.3 → 1.2 | 1114 → 1105 |
 | `IndT/PosNew` | 11.9 → 11.8 G | 1.7 → 1.7 | 1125 → 1121 |
 
+## 2b. Helper batches
+
+### `mgen5-parts` (#272, #273, #275): `nIdxsW`, `lpsW`, `psGoW`
+
+* **#272** `block_shape_n_idxs` (`nIdxsW`, list), `n_idxs_copy` (`nIdxsCopyW`, void),
+  `block_shape_num_ctors` (`numCtorsOfW`, ro) and `block_shape_member_names` (`memberNamesW`,
+  `nIdxsW`'s twin: allocate, copy): default recipe. Bridges `nIdxsW_inv`, `memberNamesW_inv`
+  (the allocation, the copy and the result's shape) and `nIdxsCopyW_step`; the walks (`_dec`,
+  `_room`, `_afr`, `_mfr`, `ClassNPcOf`'s room proof) use them. 8 files +125 −244 (−119); every
+  module within 0.1 G (`RulePrefixAt` 30.0, `NestCtx` 14.8 → 14.7, `MemberNames` 14.5 → 14.6).
+* **#273** `block_shape_lps` (`lpsW`, `fold [erRd]`): bridges `lpsW_nil`, `lpsW_cons` keep the
+  hand arms, so `EqW`, `NestCtx` and `lpsW_dec` are unchanged; the two frame lemmas walk the
+  bridges. 3 files +21 −35 (−14); the 11 dependent modules within 0.1 G.
+* **#275** `struct_ps_at_go` (`psGoW`), `struct_ps_at` (`psAtW`), `struct_proj_ps` (`projPsW`; the
+  last two shared `psGoW`'s hand continuation `psK3`): gone `psK0`–`psK3`, arms, three hand specs;
+  `psGoW_ok`, `psGoW_stage`, `psAtW_ok`, `structProjPs_refines` and the frame lemmas walk the
+  generated arms. 6 files +72 −174 (−102). `StructElimLevel` 21.3 → 9.1 G (3.4 → 1.6 s),
+  `StructProjArgP` 33.3 → 33.9 G, the rest unchanged.
+
+### `mgen5-rec` (#269, #271, #276, #279, #280, …): `tmdW`, `stripTW`, `bvbW`, the `erase_fvar_tys` family, `tmaW`
+
+* **#269** `target_major_default` (`tmdW`): the generated model is the hand one up to the
+  continuations' names (`tmdK1`–`tmdK3` → `tmdW.k_intern_nanon`, `k_pin_word`,
+  `k_mk_target_major`); its spec holds at every fuel, so two callers pass `n + 1`. 6 files +21 −54
+  (−33); all modules within 0.2 G.
+* **#271** `strip_pis`, `strip_lams` (`extra [evalE_tagE, evalE_idxAE, evalE_idxGE]`): the two
+  generated loops are bridged (`stripPisW_loop1`, `stripLamsW_loop1`, by induction over the
+  arms) to the tag-parametric loop model `stripGoW` that the relational, fuel and frame lemmas
+  keep walking (two generated loops cannot share one lemma otherwise); `stripF` is `stripGoW` at
+  `k + 2`. Gone: `stripTW`, its arms, two hand loop specs, two hand specs. 3 files +99 −125 (−26).
+  `StripTeleSpec` 31.3 → 17.3 G (4.7 → 3.1 s).
+* **#276** `bvar_b` (`bvbW`), `loose_bvars_bounded_fast` (`lbbW`): the generated `bvbW` takes the
+  L argument order `(f, e)`, so its users state `bvbW n m f h` and use `bvbW.arm1`/`arm2` for the
+  hand `bvbW_sat`/`bvbW_pk`. 11 files +47 −74 (−27). `BvarB` 4.9 → 6.3 G (0.8 → 1.0 s), the rest
+  within 0.1 G.
+* **#279** `erase_fvar_tys` (`eftF`), `erase_each` (`eeW`), `target_k53_tele` (`tteW`),
+  `target_canon_params` (`tcpF`), default recipe: `eftF` and `tcpF` are the generated models at
+  every fuel, so the hand body-fuel models `eftW`, `tcpW`, their continuations and the at-fuel
+  wrappers are gone; one bridge `tcpF_succ`. Gone: 9 hand continuations, 6 hand specs. 15 files
+  +93 −249 (−156). `EeW` 7.6 → 5.3 G, `Tka` 4.9 → 1.9 G, `EraseFVarTys` 6.2 → 6.8 G.
+* **#280** `target_major_at` (`tmaW`): fuel-free now (`tmdW`'s spec holds at every fuel, so the
+  hand `fuelW n (tmdW m)` wrapper goes); the simulations over it (`tmaW_sim`, `rec2SimTMA`,
+  `rec3TMA_sim`) and the unified model of `IndBRec1` lose their fuel argument (and `rg_ref` its
+  zero case). Gone: the hand model, its continuation, arms, `targetMajorAt_spec`,
+  `targetMajorDefault_specF`, `tmdW_sim`. 11 files +69 −142 (−73); all within 0.1 G.
+
+### `mgen5-rom` (#278, …): `rom_name`, `rom_names_to`
+
+* **#278** (`--wide`) **Generator**: a `fold` function whose body is a constant byte read
+  `(D[i.toNat]?.getD c).toUInt64` (`romB rom pos`, `getD 255`: past the ROM's end the hand models
+  read 255, no tag) is folded where the L code reads `rom.c8[pos]` (`Fold.byteSrc`); before, the
+  generated read was `(rom[pos.toNat]?.getD 0).toUInt64`, a position past the end read as tag
+  `0`, and `romNameW_dec` was false for the generated model (`rom = []`, `pos = 0` gave
+  `anonymous`). Without such a fold the output is as before; the gate build rebuilt every
+  `l_model` module unchanged. Test `tParmB_spec`. **Conversion**: `romName_specW` is an `l_model`
+  (`pre`, `keep`, `guards ["rom_u64"]`, `fold [romB]`, `defs`, then `romNameW_top` over the
+  generated arms (the pool top stays in a tier after the recursive call: the step goal mgen4 could
+  not close), then `nodefs`). Gone: the hand model, its five continuations, `romPutW`, their arms,
+  the hand spec, the `nm*_inv` lemmas in `Dec`; `romNameW_ok`, `romNameW_dec` walk the generated
+  arms; the other eight ROM files are unchanged (they use only those lemmas). 4 files +174 −258
+  (−84). `Rom` 40.1 → 39.4 G, `Dec` 13.1 G, the others within 1 %; `ModelGenTest` 95.9 G.
+
 ## 3. The 185 specs without a model in their post
 
 Classified by their posts (script over `_tmp/mgen5/inv.json`), and 22 read by hand (random
