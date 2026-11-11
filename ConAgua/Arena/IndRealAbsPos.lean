@@ -211,15 +211,22 @@ theorem posmemo_rx_afr (n : Nat) :
   · simp only [rxW.eq_2, rxW.k_replace_fvars_go.eq_def, rxW.j1] at hh
     refine (AFr.of_frame (benterG_frame 218 m)).trans ?_
     afr_auto hh [iGo _ _ _ _ _ _]
-  · simp only [rxGoW.eq_2] at hh
-    split at hh; · cases hh
-    split at hh; · cases hh
-    iterate 4 (split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _)
-    split at hh
-    · rcases hm : rxMapW n m f _ with _ | ⟨ok, r1, m1⟩ <;> rw [hm] at hh; · cases hh
+  · by_cases hf : fu = 0; · rw [rxGoW.abort1 (hc1 := hf)] at hh; cases hh
+    by_cases hv : eViewW m h = []; · rw [rxGoW.abort2 (hc1 := hf) (hc2 := hv)] at hh; cases hh
+    by_cases hl : (eViewW m h).headD 0 = 0 ∨ (eViewW m h).headD 0 = 2 ∨ (eViewW m h).headD 0 = 8 ∨
+        (eViewW m h).headD 0 = 3
+    · rw [rxGoW_leaf hf hv hl] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    simp only [not_or] at hl; obtain ⟨h0, h2, h8, h3⟩ := hl
+    by_cases h1 : (eViewW m h).headD 0 = 1
+    · rw [rxGoW_fvar hf hv h1] at hh
+      rcases hm : rxMapW n m f _ with _ | ⟨ok, r1, m1⟩ <;> rw [hm] at hh; · cases hh
       rw [rxGoW_kMap] at hh; rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact iMap _ _ _ _ _ _ hm
-    split at hh; · cases hh
-    split at hh; · rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    by_cases hfd : mfindG rfSch m h (rdW (m.arr64 CTL) 219 <<< 32) = []
+    · rw [rxGoW.abort3 _ _ _ _ _ hf hv h0 h2 h8 h3 h1 hfd] at hh; cases hh
+    by_cases hk : (mfindG rfSch m h (rdW (m.arr64 CTL) 219 <<< 32)).headD 0 ≠ 0
+    · rw [rxGoW.arm6 _ _ _ _ _ hf hv h0 h2 h8 h3 h1 hfd hk] at hh
+      rw [← (Prod.mk.inj (Option.some.inj hh)).2]; exact AFr.refl _
+    rw [rxGoW.arm7 _ _ _ _ _ hf hv h0 h2 h8 h3 h1 hfd (Classical.not_not.mp hk)] at hh
     rcases hn : rxNodeW n m f _ _ _ _ _ with _ | ⟨r1, m1⟩ <;> rw [hn] at hh; · cases hh
     rw [rxGoW_kNode] at hh
     rcases hs : msetG rfSch m1 h _ r1 with _ | m2 <;> rw [hs] at hh; · cases hh
