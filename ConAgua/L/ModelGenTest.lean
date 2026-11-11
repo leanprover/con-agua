@@ -823,9 +823,9 @@ example (C : Nat → Mem → Word → Option (Word × Mem)) (n : Nat) (m : Mem) 
     tPfLW C n m x = tPfW C n m x := rfl
 
 /-- `fold` with memory readers: a word read `TW.u64[i + 1]` as `twNext m i`, a pool slice word
-`TP⦃x⦄` as `tpRd m x`. -/
+`TP⦃x⦄` as `tpRd m x` (stated as `rdW`'s body, as `prd` is). -/
 def twNext (m : Mem) (i : Word) : Word := rdW (m.arr64 TW) (i + 1)
-def tpRd (m : Mem) (x : Word) : Word := rdW (m.arr64 (tierA TP (x >>> 40))) (x &&& 1099511627775)
+def tpRd (m : Mem) (x : Word) : Word := (m.arr64 (tierA TP (x >>> 40)))[(x &&& 1099511627775).toNat]?.getD 0
 
 -- con-ron: none — an `l_model` test function
 @[no_expose] def tRd : FunDecl := lfn (i, x) {
