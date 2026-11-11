@@ -5,7 +5,7 @@ import ConAgua.Arena.IndPosSpec.Snoc
 public import ConAgua.Verdict.PosE
 import ConAgua.Arena.IndT.PosCrest
 import ConAgua.Arena.IndPosSpec.GgW
-import ConAgua.Arena.IndPosSpec.GgW2
+import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.Arena.IndPosSpec.NcnW2
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndPosSpec.SgGoW
@@ -155,7 +155,6 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   have p6 : PStep a5 a6 := u4_pstep _ hC2.check.state (by rw [hcld]; exact hclP) hrun6
   have hr6 : ((List.range nF.toNat).anyM (u4F ks closed)).run a5 = .ok (bu, a6) := by
     rw [List.range_eq_range', ← hcld]; simpa using hrun6
-  simp only [List.headD_cons] at hru
   refine RefE.bind_right hr6 ?_
   cases bu with
   | true =>
@@ -176,7 +175,6 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   simp only at hro
   rw [hs4] at hro
   obtain ⟨bo, a7, hrun7, hS4, hg4, hrr, hP4⟩ := roW_ok dn vis fe hro hS3 hU3 hcurH hP3
-  simp only [List.headD_cons] at hrr
   have hA4 := roW_afr hro hA3
   have hx16 := c2'.ext.trans p6.ext
   obtain ⟨hcn, -, -, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields (dCtx_ext _ (c1'.ext.trans hx16) _ _ hctx)
