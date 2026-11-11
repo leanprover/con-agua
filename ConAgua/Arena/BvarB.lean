@@ -11,6 +11,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
+import ConAgua.L.ModelGen
 import all ConAgua.Arena.Walk
 
 @[expose] public section
@@ -37,29 +38,12 @@ def bbN : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, h, f => bbMemoW n m h f
 
-/-- **The model of `bvar_b`.** -/
-def bvbW : Nat → Mem → Word → Word → Option (Word × Mem)
-  | 0, _, _, _ => none
-  | n + 1, m, h, f => if derBW m h = 32767 then bbN n m h f else some (derBW m h, m)
-
-/-- After `bvar_b`: the bound is at most `k`. -/
-def lbbK (k : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => some (if x ≤ k then 1 else 0, m₁)
-
 section eqs
-variable (n : Nat) (m m₁ : Mem) (h k x f : Word)
+variable (n : Nat) (m : Mem) (h f : Word)
 theorem bbN_succ : bbN (n + 1) m h f = bbMemoW n m h f := rfl
-theorem bvbW_sat (hs : derBW m h = 32767) : bvbW (n + 1) m h f = bbN n m h f := by simp [bvbW, hs]
-theorem bvbW_pk (hs : derBW m h ≠ 32767) : bvbW (n + 1) m h f = some (derBW m h, m) := by
-  simp [bvbW, hs]
-theorem lbbK_some : lbbK k (some (x, m₁)) = some (if x ≤ k then 1 else 0, m₁) := rfl
 end eqs
 
 grind_pattern [arena_grind] bbN_succ => bbN (n + 1) m h f
-grind_pattern [arena_grind] bvbW_sat => bvbW (n + 1) m h f
-grind_pattern [arena_grind] bvbW_pk => bvbW (n + 1) m h f
-attribute [arena_grind =] lbbK_some
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1570-1577 ConRon.Arena.bvarB -/
 @[no_expose, l_impl ConRon.Arena.bvarB]
@@ -101,33 +85,21 @@ theorem bbN_spec (n : Nat) (s₀ : St) (h f : Word) :
     exact bbMemo_spec p (hp.get "bm_find") (hp.get "bm_put") (hp.get "bb_go")
       (hp.get "bb_node") (hp.get "bm_clear") (hp.get "bb_memo") n s₀ h f
 
-include hp in
-theorem bvarBL_spec (n : Nat) (s₀ : St) (f h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "bvar_b" [f, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ bvbW n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "bvar_b")]
-  simp only [callFn, bvarBL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derBv_spec p (hp.get "der_bv") n,
-        bbN_spec p hp n] <;>
-      finish
-
-include hp in
-theorem lbbFastL_spec (n : Nat) (s₀ : St) (f k h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (n + 1)) "loose_bvars_bounded_fast" [f, k, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ lbbK k (bvbW n s₀.mem h f) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ (hp.get "loose_bvars_bounded_fast")]
-  simp only [callFn, lbbFastL]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bvarBL_spec p hp n] <;>
-    finish
-
 end specs
+
+/-- **`bvar_b(f, e)` is its model `bvbW`** (generated): the packed range, or the walk when it is
+saturated. -/
+l_model bvarBL_spec (p : Prog) (hp : BvbProg p)
+  fns [(hp.get "bvar_b") ↦ bvbW]
+  specs [derBv_spec p (hp.get "der_bv") n, bbN_spec p hp n]
+  grind [arena_grind]
+
+/-- **`loose_bvars_bounded_fast(f, k, e)` is its model `lbbW`** (generated). -/
+l_model lbbFastL_spec (p : Prog) (hp : BvbProg p)
+  fns [(hp.get "loose_bvars_bounded_fast") ↦ lbbW]
+  specs [bvarBL_spec p hp n]
+  grind [arena_grind]
+
 
 theorem bvbProg_ok : BvbProg bvbProg := ProgHas.refl _
 
