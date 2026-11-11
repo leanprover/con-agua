@@ -158,7 +158,7 @@ theorem rpConstW_afr {n : Nat} {m m' : Mem} {no nl us b nn e r : Word}
 -- from IndPosSpec/DepthGo
 theorem pccW_afr {k : Nat} {m m' : Mem} {no nl us nn cty : Word} {r : List Word}
     (h : pccW k m no nl us nn cty = some (r, m')) : AFr m m' := by
-  simp only [pccW, pccA.eq_def, pccB.eq_def, pccC.eq_def] at h
+  simp only [pccW, pccW.k_nest_phs.eq_def, pccW.k_inst_pis_with.eq_def, pccW.k_replace_apps.eq_def] at h
   afr_auto h [phsW_afr, instW_afr _ _ _ _ _ _ _, rpConstW_afr]
 
 -- from IndPosSpec/DepthGo
@@ -475,7 +475,7 @@ theorem dpW_afr (n : Nat) :
       afr_auto hh [ih.1 _ _ _ _ _]
 
 theorem wfW_afr {n : Nat} {m m' : Mem} {e r : Word} (h : wfW n m e = some (r, m')) : AFr m m' := by
-  simp only [wfW, dpConstW] at h
+  simp only [wfW, wfW.k_depth.eq_def, dpConstW] at h
   split at h; · cases h
   rename_i x heq
   split at heq; · cases heq
