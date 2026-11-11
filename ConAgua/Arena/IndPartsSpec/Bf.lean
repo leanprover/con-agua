@@ -105,28 +105,7 @@ namespace L.Ind
 open L.Arena
 
 section arms
-variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r : List Word)
-  (no nl io lo ll s ip mo ml : Word) (q : Word)
-theorem bbK12_some : bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip mo ml (some (r, m)) =
-    bbK13' mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW (n + 1) m cvR0 lo ll) := rfl
-theorem bbK13'_some (ro2 rl2 : Word) : bbK13' mo ml ro2 rl2 nPd s ip (some (r, m)) =
-    bgoK3 (bsealW m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0)) := rfl
-theorem bbK10_some : bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (some (r, m)) =
-    bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (bmoW (n + 1) m cto ctl io (r.headD 0)) := rfl
-theorem bbK9_some (cof cl2 : Word) :
-    bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip cof cl2 (some (r, m)) =
-    bbK10 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip
-      (bgW n m no nl (r.headD 0) nPd ctl cof cl2) := rfl
-end arms
-attribute [ind_grind] bbK13'_some bbK12_some bbK10_some bbK9_some
-
-section arms
-variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word)
-  (no nl io il lo ll s z : Word)
-theorem btK3_some : btK3 c n nPd cto ctl cso csl rso rsl no nl io lo ll s (some (r, m)) =
-    bgoK3 (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s (if r.headD 0 = 2 then 1 else 0)) := rfl
-theorem btK1_some : btK1 c n nPd cto ctl cso csl rso rsl no nl io lo ll (some (r, m)) =
-    btK2 c n nPd cto ctl cso csl rso rsl no nl io lo ll (r.headD 0) m (pinWordV m 53) := rfl
+variable (c : CallM) (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 : Word) (m : Mem) (r : List Word) (no nl : Word)
 theorem bbH2_fail (h : r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
     some ([0, 0], m) := by simp only [bbH2]; exact ite_eq_left h
 theorem bbH2_ok (h : ¬ r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cvT0 no nl (some (r, m)) =
@@ -134,41 +113,7 @@ theorem bbH2_ok (h : ¬ r.headD 0 = 0) : bbH2 c n nPd cto ctl cso csl rso rsl cv
       (erToIwW (n + 3) m (erRd m (cvT0 + 1)) (erRd m (cvT0 + 2))) := by
   simp only [bbH2]; exact ite_eq_right h
 end arms
-attribute [ind_grind] btK3_some btK1_some bbH2_fail bbH2_ok
-
-set_option maxHeartbeats 20000000 in
-theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
-    (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_shape_fin"
-      [nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, ip]
-    ⦃fun r s' => LocEq s' s₀ ∧ bfW n s₀.mem nPd cto ctl cso csl rso rsl no nl io lo ll s ip = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.fin]
-  simp only [callFn, blockShapeFin]
-  sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bct_spec p hP.alloc hP.copy hP.cons hP.rec2 hP.ctorsOf (n + 1),
-      plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl hP.il (n + 1),
-      bg_spec p hP.toIndPartsProg hP.view hP.find hP.midx hP.cmem hP.gone hP.rec2 hP.ggo hP.groups n,
-      bmo_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.membersOf (n + 1),
-      brs_spec p hP.toIndPartsProg4 hP.rec7 hP.recsOf (n + 1),
-      bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large (n + 1),
-      bseal_spec p hP.na hP.alloc hP.pack hP.sealF (n + 1)] <;>
-    finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
-      bbK13'_some, bgoK3_some]
-
-set_option maxHeartbeats 20000000 in
-theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St)
-    (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 3)) "block_shape_tail"
-      [nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll]
-    ⦃fun r s' => LocEq s' s₀ ∧ btW c n s₀.mem nPd cto ctl cso csl rso rsl no nl io il lo ll = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hP.tail]
-  simp only [callFn, blockShapeTail]
-  sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort hP.strip (n + 2), pinWord_specV p hP.pinWord (n + 2),
-      hc (n + 2) "lvl_eq_c", bf_spec p hP n] <;>
-    finish (gen := 20) [btW, rdW_eq, erRd, btK1_some, btK2_some, btK3_some, bgoK3_some]
+attribute [ind_grind] bbH2_fail bbH2_ok
 
 set_option maxHeartbeats 20000000 in
 theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c) (n : Nat) (s₀ : St) (nPd cto ctl cso csl rso rsl : Word) :
