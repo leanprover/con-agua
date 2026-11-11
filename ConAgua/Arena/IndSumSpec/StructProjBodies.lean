@@ -236,9 +236,9 @@ theorem spbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   cases k with
   | zero => cases h1
   | succ k' =>
-  rw [projPsW_succ] at h1
+  rw [projPsW.arm1] at h1
   obtain ⟨r0, m0, h0, h1⟩ := kSome_inv h1 rfl (fun _ _ => rfl)
-  rw [psK3_some] at h1
+  rw [projPsW.k_struct_ps_at.arm1] at h1
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h1)
   obtain ⟨ps, a1, hrun1, hS1, hg1, hps, -⟩ := psAtW_stage dn vis fe k' m m0 a 1 nP r0 h0 hS (by simpa using hnP)
   have hA0 : AbsOK m0 := psAtW_afr h0 hA
