@@ -157,10 +157,11 @@ theorem sim_cv (cv : ConLeche.ConstantVal) (m : EMemo) :
 def itemsCaps (c : ConLeche.IndCaps) : List Item := .nm c.etaCtor :: (c.all.map .nm ++ c.ctors.map .nm)
 
 theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (itemsCaps c) (fun _ => m) := by
-  have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun all =>
+  have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun al =>
       Frontend.internNameList c.ctors >>= fun ctors =>
-        pure ⟨c.eta, ct, c.etaParams, c.etaFields, c.unitlike, c.unitParams, all,
-          c.nparams, c.nIdx, ctors⟩ := rfl
+        pure { eta := c.eta, etaCtor := ct, etaParams := c.etaParams, etaFields := c.etaFields,
+               unitlike := c.unitlike, unitParams := c.unitParams, all := al, nparams := c.nparams,
+               nIdx := c.nIdx, ctors := ctors } := rfl
   rw [h]
   exact (Sim.bind (is := [.nm c.etaCtor]) (js := c.all.map .nm ++ (c.ctors.map .nm ++ [])) (sim_name _ m) fun _ =>
     Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
