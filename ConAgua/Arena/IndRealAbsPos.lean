@@ -325,9 +325,10 @@ theorem piBW_afr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
 -- from IndPosSpec/FgW
 theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
     fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW.eq_1] at h
   | n + 1, m, m', hi, us, dO, dL, gO, gL, pO, pL, nO, nL, r, h => by
-    unfold fgW fgK1 fgKb fgK2 fgK3 fgK4 at h
+    simp only [fgW.eq_2, fgW.k_rec4.eq_def, fgW.k_pi_binders.eq_def, fgW.k_rec3.eq_def, fgW.k_sl_snoc.eq_def,
+      fgW.k_sl_snoc_2.eq_def, fgW_kId] at h
     afr_auto h [posRecW_afr, piBW_afr _ _ _ _ _ _, snocW_afr, fgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest

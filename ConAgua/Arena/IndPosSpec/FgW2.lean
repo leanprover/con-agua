@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndPosSpec.CtxFields
 public import ConAgua.Arena.IndPosSpec.GrpAt
 public import ConAgua.Arena.IndPosSpec.MatesW
 public import ConAgua.Arena.IndPartsSpec.RecTW
+import ConAgua.Arena.IndPartsSpec.BlockCounts
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -74,51 +75,64 @@ open L.Arena
 
 /-! ## `nest_frame_grp`: the stack grown by the group's holes, and the group's names -/
 
-mutual
-def fgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
-    Option (List Word × Mem)
-  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, hi, us, dO, dL, gO, gL, pO, pL, nO, nL =>
-    if gL = 0 then some ([pO, pL, nO, nL], m)
-    else fgK1 n hi us dO dL gO gL pO pL nO nL (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO))
-      (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL])
-def fgK1 (n : Nat) (hi us dO dL gO gL pO pL nO nL c : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (key, m1) => fgKb n hi us dO dL gO gL pO pL nO nL c key
-      (piBW n m1 CWF (rdW (m1.arr64 IW) (rdW (m1.arr64 IW) gO + 1)))
-def fgKb (n : Nat) (hi us dO dL gO gL pO pL nO nL c key : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (rs, m1) => fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi, rs.getD 1 0])
-def fgK2 (n : Nat) (hi us dO dL gO gL pO pL nO nL c : Word) : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (hole, m2) => fgK3 n hi us dO dL gO gL nO nL c (snocW n m2 pO pL hole)
-def fgK3 (n : Nat) (hi us dO dL gO gL nO nL c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => fgK4 n hi us dO dL gO gL (r.headD 0) (r.tail.headD 0) (snocW n m3 nO nL c)
-def fgK4 (n : Nat) (hi us dO dL gO gL pO pL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m4) => fgW n m4 hi us dO dL (gO + 1) (gL - 1) pO pL (r.headD 0) (r.tail.headD 0)
-end
+/-- **`nest_frame_grp` is its model `fgW`** (generated). -/
+l_model nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc2 : p.lookup "iw_copy" = some iwCopy) (h3 : p.lookup "rec3" = some rec3)
+    (h4 : p.lookup "rec4" = some rec4) (hsn : p.lookup "sl_snoc" = some slSnoc)
+    (hv : p.lookup "e_view" = some eView) (hs : p.lookup "sl_cons" = some slCons)
+    (hpb : p.lookup "pi_binders" = some piBinders)
+    (hp : p.lookup "nest_frame_grp" = some nestFrameGrpL)
+  fns [hp ↦ fgW list]
+  specs [posRec4_specW p ha h4 n, L.Ind.rec3_specW_iw p ha h3 n, piBinders_spec p ha hc2 hv hs hpb n,
+    slSnoc_specW p ha hc2 hsn n]
+  grind [arena_grind, ind_grind]
+  finish [rdW_eq, Locals.init_cons_zero, CWF, List.getD_cons_zero, List.getD_cons_succ] gen 20 instances 5000
+
+/-- The generated result step `fgW.k_nest_frame_grp` is the identity on `fgW`'s results. -/
+theorem fgW_kId (n : Nat) (m : Mem) (hi us dO dL gO gL pO pL nO nL : Word) :
+    fgW.k_nest_frame_grp (fgW n m hi us dO dL gO gL pO pL nO nL) = fgW n m hi us dO dL gO gL pO pL nO nL := by
+  rcases n with _ | n
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  rw [fgW.eq_2]; split
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  generalize posRecW _ _ = x; rcases x with _ | ⟨k, m1⟩
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  simp only [fgW.k_rec4]
+  generalize piBW _ _ _ _ = x; rcases x with _ | ⟨rs, m2⟩
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  simp only [fgW.k_pi_binders]
+  generalize posRecW _ _ = x; rcases x with _ | ⟨h, m3⟩
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  simp only [fgW.k_rec3]
+  generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m4⟩
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  simp only [fgW.k_sl_snoc]
+  generalize snocW _ _ _ _ _ = y; rcases y with _ | ⟨r, m5⟩
+  · simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
+  simp only [fgW.k_sl_snoc_2]
+  generalize fgW _ _ _ _ _ _ _ _ _ _ _ _ = z; rcases z with _ | ⟨r', m6⟩ <;> simp [fgW.eq_1, fgW.k_nest_frame_grp, fgW.k_rec4, fgW.k_pi_binders, fgW.k_rec3, fgW.k_sl_snoc, fgW.k_sl_snoc_2]
 
 section arms
 variable (n : Nat) (m m1 : Mem) (hi us dO dL gO gL pO pL nO nL c key : Word) (r : List Word)
-theorem fgW_nil (h : gL = 0) : fgW (n + 1) m hi us dO dL gO gL pO pL nO nL = some ([pO, pL, nO, nL], m) := by
-  simp [fgW, h]
+theorem fgW_nil (h : gL = 0) : fgW (n + 1) m hi us dO dL gO gL pO pL nO nL = some ([pO, pL, nO, nL], m) :=
+  fgW.arm1 _ _ _ _ _ _ _ _ _ _ _ _ h
 theorem fgW_cons (h : ¬ gL = 0) : fgW (n + 1) m hi us dO dL gO gL pO pL nO nL =
-    fgK1 n hi us dO dL gO gL pO pL nO nL (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO))
-      (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL]) := by simp [fgW, h]
-theorem fgK1_some : fgK1 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
-    fgKb n hi us dO dL gO gL pO pL nO nL c key
-      (piBW n m1 CWF (rdW (m1.arr64 IW) (rdW (m1.arr64 IW) gO + 1))) := by rw [fgK1]
-theorem fgKb_some : fgKb n hi us dO dL gO gL pO pL nO nL c key (some (r, m1)) =
-    fgK2 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi, r.getD 1 0]) := by rw [fgKb]
-theorem fgK2_some : fgK2 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
-    fgK3 n hi us dO dL gO gL nO nL c (snocW n m1 pO pL key) := by rw [fgK2]
-theorem fgK3_some : fgK3 n hi us dO dL gO gL nO nL c (some (r, m1)) =
-    fgK4 n hi us dO dL gO gL (r.headD 0) (r.tail.headD 0) (snocW n m1 nO nL c) := by rw [fgK3]
-theorem fgK4_some : fgK4 n hi us dO dL gO gL pO pL (some (r, m1)) =
-    fgW n m1 hi us dO dL (gO + 1) (gL - 1) pO pL (r.headD 0) (r.tail.headD 0) := by rw [fgK4]
+    fgW.k_rec4 n hi us dO dL gO gL pO pL nO nL (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO))
+      (posRecW m [rdW (m.arr64 IW) (rdW (m.arr64 IW) gO), us, dO, dL]) := fgW.arm2 _ _ _ _ _ _ _ _ _ _ _ _ h
+theorem fgK1_some : fgW.k_rec4 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
+    fgW.k_pi_binders n hi us dO dL gO gL pO pL nO nL c key
+      (piBW n m1 CWF (rdW (m1.arr64 IW) (rdW (m1.arr64 IW) gO + 1))) := by rw [fgW.k_rec4.arm1]
+theorem fgKb_some : fgW.k_pi_binders n hi us dO dL gO gL pO pL nO nL c key (some (r, m1)) =
+    fgW.k_rec3 n hi us dO dL gO gL pO pL nO nL c (posRecW m1 [key, hi, r.getD 1 0]) := by
+  rw [fgW.k_pi_binders.arm1]; rcases r with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+theorem fgK2_some : fgW.k_rec3 n hi us dO dL gO gL pO pL nO nL c (some (key, m1)) =
+    fgW.k_sl_snoc n hi us dO dL gO gL nO nL c (snocW n m1 pO pL key) := by rw [fgW.k_rec3.arm1]
+theorem fgK3_some : fgW.k_sl_snoc n hi us dO dL gO gL nO nL c (some (r, m1)) =
+    fgW.k_sl_snoc_2 n hi us dO dL gO gL (r.headD 0) (r.tail.headD 0) (snocW n m1 nO nL c) := by
+  rw [fgW.k_sl_snoc.arm1]
+theorem fgK4_some : fgW.k_sl_snoc_2 n hi us dO dL gO gL pO pL (some (r, m1)) =
+    fgW n m1 hi us dO dL (gO + 1) (gL - 1) pO pL (r.headD 0) (r.tail.headD 0) := by
+  rw [fgW.k_sl_snoc_2.arm1, fgW_kId]
 end arms
 attribute [ind_grind] fgW_nil fgW_cons fgK1_some fgKb_some fgK2_some fgK3_some fgK4_some
 

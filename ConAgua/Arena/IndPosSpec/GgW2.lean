@@ -90,30 +90,6 @@ namespace L.Ind
 
 open L.Arena
 
-theorem nestFrameGrp_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
-    (hc2 : p.lookup "iw_copy" = some iwCopy) (h3 : p.lookup "rec3" = some rec3)
-    (h4 : p.lookup "rec4" = some rec4) (hsn : p.lookup "sl_snoc" = some slSnoc)
-    (hv : p.lookup "e_view" = some eView) (hs : p.lookup "sl_cons" = some slCons)
-    (hpb : p.lookup "pi_binders" = some piBinders)
-    (hp : p.lookup "nest_frame_grp" = some nestFrameGrpL) (n : Nat) :
-    ∀ (s₀ : St) (hi us dO dL gO gL pO pL nO nL : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_grp" [hi, us, dO, dL, gO, gL, pO, pL, nO, nL]
-    ⦃fun r s' => LocEq s' s₀ ∧ fgW n s₀.mem hi us dO dL gO gL pO pL nO nL =
-      some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ hi us dO dL gO gL pO pL nO nL
-    rw [invoke_eq _ hp]; simp only [callFn, nestFrameGrpL]; vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ hi us dO dL gO gL pO pL nO nL
-    simp only [invoke_eq _ hp, callFn, nestFrameGrpL]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        posRec4_specW p ha h4 n, L.Ind.rec3_specW_iw p ha h3 n, piBinders_spec p ha hc2 hv hs hpb n,
-        slSnoc_specW p ha hc2 hsn n, ih] <;>
-      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero, CWF, List.getD_cons_zero,
-        List.getD_cons_succ]
-
 end L.Ind
 
 namespace L.Ind
