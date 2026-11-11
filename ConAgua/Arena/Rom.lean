@@ -7,6 +7,7 @@ import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
+import ConAgua.L.ModelGen
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.DerRelBase
 public import ConAgua.Front.Preserve
@@ -575,53 +576,6 @@ end putFacts
 section nameProg
 variable (rom : List UInt8)
 
-/-- `rom_put`'s model: the slice's offset and the memory after. -/
-def romPutW (m : Mem) (i l : Word) : Option (Word × Mem) :=
-  if romPutOK rom m i l then some (m.top, (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) i l 0).set64 CTL 0 (m.top + l))
-  else none
-
-/-- After the `anonymous` node. -/
-def nmAnonK (pos : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h, m') => if 4294967296 ≤ h then none else some (h, pos + 1, m')
-
-/-- After a `str` node's string was interned. -/
-def nmStr2K (q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h', m₃) => if 4294967296 ≤ h' then none else some (h', q + 8 + l, m₃)
-
-/-- After a `str` node's string went to the pool: intern it. -/
-def nmStrK (h q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (o, m₂) => nmStr2K q l (nsinternW m₂ h o l)
-
-/-- After a `num` node's number. -/
-def nmNumK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h', m₂) => if 4294967296 ≤ h' then none else some (h', q + 8, m₂)
-
-/-- After the prefix. -/
-def nmRecK (t : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
-  | none => none
-  | some (h, q, m₁) =>
-    if ¬ u64OK rom q then none
-    else if t = 1 then nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q))
-    else if t = 2 then nmNumK q (nninternW m₁ h (u64W rom q))
-    else none
-
-/-- **The model of `rom_name`** at L fuel `n`: the handle, the position after, the memory after. -/
-def romNameW : Nat → Mem → Word → Option (Word × Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, pos =>
-    if romB rom pos = 0 then nmAnonK pos (nainternW m)
-    else nmRecK rom (romB rom pos) (romNameW n m (pos + 1))
-
-theorem romNameW_anon (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos = 0) :
-    romNameW rom (n + 1) m pos = nmAnonK pos (nainternW m) := by simp [romNameW, h0]
-theorem romNameW_rec (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos ≠ 0) :
-    romNameW rom (n + 1) m pos = nmRecK rom (romB rom pos) (romNameW rom n m (pos + 1)) := by
-  simp [romNameW, h0]
-
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 @[no_expose] def romName : FunDecl := lfn (pos) locals (t, h, q, l, o) {
   t := rom.c8[pos];
@@ -646,30 +600,7 @@ theorem romNameW_rec (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos ≠ 0) 
 
 end nameProg
 
-section nameArms
-variable (rom : List UInt8) (h q l t pos o h' : Word) (m m₁ m₂ m₃ : Mem)
-theorem nmAnonK_some (hh : ¬ 4294967296 ≤ h) : nmAnonK pos (some (h, m)) = some (h, pos + 1, m) := by
-  simp [nmAnonK, hh]
-theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := by rfl
-theorem nmStr2K_some (hh : ¬ 4294967296 ≤ h') : nmStr2K q l (some (h', m₃)) = some (h', q + 8 + l, m₃) := by
-  simp [nmStr2K, hh]
-theorem nmNumK_some (hh : ¬ 4294967296 ≤ h') : nmNumK q (some (h', m₂)) = some (h', q + 8, m₂) := by
-  simp [nmNumK, hh]
-theorem nmRecK_str (ht : t = 1) (hu : u64OK rom q) :
-    nmRecK rom t (some (h, q, m₁)) = nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q)) := by
-  simp [nmRecK, ht, hu]
-theorem nmRecK_num (ht : t = 2) (hu : u64OK rom q) :
-    nmRecK rom t (some (h, q, m₁)) = nmNumK q (nninternW m₁ h (u64W rom q)) := by simp [nmRecK, ht, hu]
-theorem romPutW_ok (hok : romPutOK rom m (q + 8) l) :
-    romPutW rom m (q + 8) l = some (m.top, (rputW rom m (m.top >>> 40) (m.top &&& 1099511627775) (q + 8) l 0).set64 CTL 0 (m.top + l)) := by
-  simp only [romPutW]; rw [ite_eq_left hok]
-end nameArms
-
-attribute [arena_grind =] nmAnonK_some nmNumK_some nmRecK_str nmRecK_num romPutW_ok nmStrK_some
-  nmStr2K_some
 grind_pattern [arena_grind] romPutOK_room => romPutOK rom m i l, (m.arr64 (tierA POOL (m.top >>> 40))).size
-grind_pattern [arena_grind] romNameW_anon => romNameW rom (n + 1) m pos
-grind_pattern [arena_grind] romNameW_rec => romNameW rom (n + 1) m pos
 
 /-! ## The ROM readers keep the top in one of the two tiers -/
 
@@ -785,79 +716,8 @@ theorem romPut_topK (rom : List UInt8) {m : Mem} {i l : Word} (hok : romPutOK ro
       · rw [e, hT]; omega
       · rw [e, htop0]; exact h0
 
-/-- **`rom_name`'s model keeps the top in a tier**, the pool's capacity and the mode. -/
-theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
-    romNameW rom n m pos = some (h, q, m') → TopK m m' := by
-  intro n
-  induction n with
-  | zero => intro m pos h q m' hW; simp [romNameW] at hW
-  | succ n ih =>
-    intro m pos h q m' hW
-    by_cases h0 : romB rom pos = 0
-    · rw [romNameW_anon rom n m pos h0] at hW
-      cases hI : nainternW m with
-      | none => rw [hI] at hW; simp [nmAnonK] at hW
-      | some r =>
-        obtain ⟨w, m₁⟩ := r
-        rw [hI] at hW
-        simp only [nmAnonK] at hW
-        split at hW
-        · simp at hW
-        simp only [Option.some.injEq, Prod.mk.injEq] at hW
-        obtain ⟨-, -, rfl⟩ := hW
-        exact cons_topK nanonCS_wf (by decide) (by decide) hI
-    · rw [romNameW_rec rom n m pos h0] at hW
-      cases hP : romNameW rom n m (pos + 1) with
-      | none => rw [hP] at hW; simp [nmRecK] at hW
-      | some r =>
-        obtain ⟨h₁, q₁, m₁⟩ := r
-        have k1 := ih m (pos + 1) h₁ q₁ m₁ hP
-        rw [hP] at hW
-        simp only [nmRecK] at hW
-        split at hW
-        · simp at hW
-        split at hW
-        · simp only [romPutW] at hW
-          split at hW
-          · rename_i hok
-            simp only [nmStrK] at hW
-            cases hI : nsinternW ((rputW rom m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (q₁ + 8)
-                (u64W rom q₁) 0).set64 CTL 0 (m₁.top + u64W rom q₁)) h₁ m₁.top (u64W rom q₁) with
-            | none => rw [hI] at hW; simp [nmStr2K] at hW
-            | some r =>
-              obtain ⟨w, m₃⟩ := r
-              rw [hI] at hW
-              simp only [nmStr2K] at hW
-              split at hW
-              · simp at hW
-              simp only [Option.some.injEq, Prod.mk.injEq] at hW
-              obtain ⟨-, -, rfl⟩ := hW
-              exact (k1.trans (romPut_topK rom hok)).trans (cons_topK nstrCS_wf (by decide) (by decide) hI)
-          · simp [nmStrK] at hW
-        split at hW
-        · simp only [nmNumK] at hW
-          cases hI : nninternW m₁ h₁ (u64W rom q₁) with
-          | none => rw [hI] at hW; simp at hW
-          | some r =>
-            obtain ⟨w, m₃⟩ := r
-            rw [hI] at hW
-            simp only at hW
-            split at hW
-            · simp at hW
-            simp only [Option.some.injEq, Prod.mk.injEq] at hW
-            obtain ⟨-, -, rfl⟩ := hW
-            exact k1.trans (cons_topK nnumCS_wf (by decide) (by decide) hI)
-        · simp at hW
-
 theorem TopK.mode {m m' : Mem} (h : TopK m m') (hp : PoolOK m) (hmo : ModeOK m) : ModeOK m' :=
   (h (by have := hp.cap; omega) hp.top41).2.2 hmo
-
-theorem romNameW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
-    (hW : romNameW rom n m pos = some (h, q, m')) : TopK m m' := romNameW_top rom n m pos h q m' hW
-theorem romNameW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
-    (hW : romNameW rom n m pos = some (h, q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
-    m'.top.toNat < 2 ^ 41 := (romNameW_top rom n m pos h q m' hW hc ht).1
-grind_pattern [arena_grind] romNameW_top' => romNameW rom n m pos, some (h, q, m')
 
 /-- The functions `rom_name` calls. -/
 structure NameProg (rom : List UInt8) (p : Prog) : Prop where
@@ -878,35 +738,83 @@ structure NameProg (rom : List UInt8) (p : Prog) : Prop where
   intern_nnum : p.lookup "intern_nnum" = some internNNum
   no_st8 : p.noSt8 = true
 
-section nameSpec
-variable (rom : List UInt8) (p : Prog) (hL : NameProg rom p)
-include hL
+/-- **The model of `rom_name`** at L fuel `n` (generated): the handle, the position after, the
+memory after. The tag byte is read as `romB` (`255` past the ROM's end: no tag). -/
+l_model romName_specW (rom : List UInt8) (p : Prog) (hL : NameProg rom p)
+  fns [hL.rom_name ↦ romNameW tuple]
+  specs [internNAnon_spec p hL.nanon_find hL.nanon_push hL.intern_nanon n,
+    internNStr_spec p hL.lit_hash hL.limbs_eq hL.nstr_match hL.nstr_find hL.nstr_push hL.intern_nstr n,
+    internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n,
+    romU64_spec rom p hL.rom_u64 n, romPut_specW rom p hL.rom_put n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] fold [romB] finish [Keep.size, L.Front.Keep.pcap] defs guards ["rom_u64"]
 
-/-- **`rom_name` computes its model** (any memory; the model says where it aborts). -/
-theorem romName_specW (n : Nat) : ∀ (s₀ : St) (pos : Word),
-    pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41 →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rom_name" [pos]
-    ⦃fun r s' => LocEq s' s₀ ∧ romNameW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+
+/-- **`rom_name`'s model keeps the top in a tier**, the pool's capacity and the mode. -/
+theorem romNameW_top (rom : List UInt8) : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
+    romNameW rom n m pos = some (h, q, m') → TopK m m' := by
+  intro n
   induction n with
-  | zero =>
-    intro s₀ pos _
-    rw [invoke_eq _ hL.rom_name]; simp only [callFn, romName]; vcgen [exec] <;> grind
+  | zero => intro m pos h q m' hW; simp [romNameW] at hW
   | succ n ih =>
-    intro s₀ pos hs
-    have ih' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (ih s₁ pos₁ h₁)
-    rw [invoke_eq _ hL.rom_name]
-    simp only [callFn, romName]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc,
-        internNAnon_spec p hL.nanon_find hL.nanon_push hL.intern_nanon n,
-        internNStr_spec p hL.lit_hash hL.limbs_eq hL.nstr_match hL.nstr_find hL.nstr_push
-          hL.intern_nstr n,
-        internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n,
-        romU64_spec rom p hL.rom_u64 n, romPut_specW rom p hL.rom_put n, ih'] <;>
-      finish [Keep.size, L.Front.Keep.pcap]
+    intro m pos h q m' hW
+    by_cases h0 : romB rom pos = 0
+    · rw [romNameW.arm1 rom n m pos h0] at hW
+      rcases hI : nainternW m with _ | ⟨w, m₁⟩ <;> rw [hI] at hW
+      · rw [romNameW.k_intern_nanon.none] at hW; cases hW
+      by_cases hw : 4294967296 ≤ w
+      · rw [romNameW.k_intern_nanon.abort1 _ _ _ _ hw] at hW; cases hW
+      rw [romNameW.k_intern_nanon.arm1 _ _ _ _ hw] at hW
+      cases hW
+      exact cons_topK nanonCS_wf (by decide) (by decide) hI
+    rw [romNameW.arm2 rom n m pos h0] at hW
+    rcases hP : romNameW rom n m (pos + 1) with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hP] at hW
+    · rw [romNameW.k_rom_name.none] at hW; cases hW
+    have k1 := ih m (pos + 1) h₁ q₁ m₁ hP
+    by_cases hu : u64OK rom q₁
+    case neg => rw [romNameW.k_rom_name.abort1 _ _ _ _ _ (by simpa using hu)] at hW; cases hW
+    by_cases h1 : romB rom pos = 1
+    · by_cases hok : romPutOK rom m₁ (q₁ + 8) (u64W rom q₁)
+      case neg =>
+        rw [romNameW.k_rom_name.abort2 _ _ _ _ _ (by simpa using hu) h1 (by simpa using hok)] at hW; cases hW
+      rw [romNameW.k_rom_name.arm1 _ _ _ _ _ (by simpa using hu) h1 (by simpa using hok)] at hW
+      rcases hI : nsinternW ((rputW rom m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (q₁ + 8)
+          (u64W rom q₁) 0).set64 CTL 0 (m₁.top + u64W rom q₁)) h₁ m₁.top (u64W rom q₁) with _ | ⟨w, m₃⟩ <;>
+        rw [hI] at hW
+      · rw [romNameW.k_intern_nstr.none] at hW; cases hW
+      by_cases hw : 4294967296 ≤ w
+      · rw [romNameW.k_intern_nstr.abort1 _ _ _ _ _ hw] at hW; cases hW
+      rw [romNameW.k_intern_nstr.arm1 _ _ _ _ _ hw] at hW
+      cases hW
+      exact (k1.trans (romPut_topK rom hok)).trans (cons_topK nstrCS_wf (by decide) (by decide) hI)
+    by_cases h2 : romB rom pos = 2
+    case neg => rw [romNameW.k_rom_name.abort3 _ _ _ _ _ (by simpa using hu) h1 h2] at hW; cases hW
+    rw [romNameW.k_rom_name.arm2 _ _ _ _ _ (by simpa using hu) h1 h2] at hW
+    rcases hI : nninternW m₁ h₁ (u64W rom q₁) with _ | ⟨w, m₃⟩ <;> rw [hI] at hW
+    · rw [romNameW.k_intern_nnum.none] at hW; cases hW
+    by_cases hw : 4294967296 ≤ w
+    · rw [romNameW.k_intern_nnum.abort1 _ _ _ _ hw] at hW; cases hW
+    rw [romNameW.k_intern_nnum.arm1 _ _ _ _ hw] at hW
+    cases hW
+    exact k1.trans (cons_topK nnumCS_wf (by decide) (by decide) hI)
 
-end nameSpec
+theorem romNameW_topK {rom : List UInt8} {n : Nat} {m : Mem} {pos h q : Word} {m' : Mem}
+    (hW : romNameW rom n m pos = some (h, q, m')) : TopK m m' := romNameW_top rom n m pos h q m' hW
+theorem romNameW_top' (rom : List UInt8) (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem)
+    (hW : romNameW rom n m pos = some (h, q, m')) (hc : pcap m < 2 ^ 64) (ht : m.top.toNat < 2 ^ 41) :
+    m'.top.toNat < 2 ^ 41 := (romNameW_top rom n m pos h q m' hW hc ht).1
+grind_pattern [arena_grind] romNameW_top' => romNameW rom n m pos, some (h, q, m')
+
+l_model romName_specW (rom : List UInt8) (p : Prog) (hL : NameProg rom p)
+  fns [hL.rom_name ↦ romNameW tuple]
+  specs [internNAnon_spec p hL.nanon_find hL.nanon_push hL.intern_nanon n,
+    internNStr_spec p hL.lit_hash hL.limbs_eq hL.nstr_match hL.nstr_find hL.nstr_push hL.intern_nstr n,
+    internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n,
+    romU64_spec rom p hL.rom_u64 n, romPut_specW rom p hL.rom_put n]
+  pre [pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat < 2 ^ 41]
+  keep [hL.no_st8]
+  grind [arena_grind] fold [romB] finish [Keep.size, L.Front.Keep.pcap] nodefs guards ["rom_u64"]
 
 /-! ## `rom_name` refines `internName` -/
 
@@ -960,16 +868,12 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
-    rw [romNameW_anon rom n m pos h0] at hW
-    cases hI : nainternW m with
-    | none => rw [hI] at hW; simp [nmAnonK] at hW
-    | some r =>
-    obtain ⟨w, m₁⟩ := r
-    rw [hI] at hW
-    simp only [nmAnonK] at hW
-    split at hW
-    · simp at hW
-    rename_i hlt
+    rw [romNameW.arm1 rom n m pos h0] at hW
+    rcases hI : nainternW m with _ | ⟨w, m₁⟩ <;> rw [hI] at hW
+    · rw [romNameW.k_intern_nanon.none] at hW; cases hW
+    by_cases hlt : 4294967296 ≤ w
+    · rw [romNameW.k_intern_nanon.abort1 _ _ _ _ hlt] at hW; cases hW
+    rw [romNameW.k_intern_nanon.arm1 _ _ _ _ hlt] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hok, hR, hres, hf⟩ := L.Front.nanon_A m a hA w m₁ hI
@@ -983,16 +887,14 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
-    rw [romNameW_rec rom n m pos (by simp [h0])] at hW
+    rw [romNameW.arm2 rom n m pos (by simp [h0])] at hW
     have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (strB str ++ rest) := by
       have := drop_shift rom pos [1] (encName pre ++ strB str) rest (by simpa [encName] using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
       simpa using this
-    cases hP : romNameW rom n m (pos + 1) with
-    | none => rw [hP] at hW; simp [nmRecK] at hW
-    | some r =>
-    obtain ⟨h₁, q₁, m₁⟩ := r
-    rw [hP, h0] at hW
+    rcases hP : romNameW rom n m (pos + 1) with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hP] at hW
+    · rw [romNameW.k_rom_name.none] at hW; cases hW
+    rw [h0] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hP
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
     simp only [UInt64.ofNat_one] at hp1
@@ -1000,7 +902,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
       have := drop_shift rom (pos + 1) (encName pre) (strB str) rest (by rw [hd1, List.append_assoc])
         q₁ hq1
       rw [this, strB, List.append_assoc]
-    rw [nmRecK_str rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
+    have hu := u64OK_of_drop rom _ _ _ hdq hr
     have hl := u64W_of_drop rom q₁ _ _ hdq (by omega) hr
     have hlen := drop_len rom _ _ _ hd (by simp [encName])
     simp only [encName, strB, List.length_cons, List.length_append] at hlen
@@ -1010,22 +912,19 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
       rw [UInt64.toNat_add]; simp [u64B] at hlen ⊢; omega
     have hlN : (UInt64.ofNat str.toByteArray.size).toNat = str.toByteArray.size := by
       rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
-    rw [hl] at hW
-    simp only [romPutW] at hW
-    by_cases hok : romPutOK rom m₁ (q₁ + 8) (UInt64.ofNat str.toByteArray.size)
-    case neg => rw [ite_eq_right hok] at hW; simp [nmStrK] at hW
-    rw [ite_eq_left hok] at hW
-    simp only [nmStrK] at hW
+    by_cases hok : romPutOK rom m₁ (q₁ + 8) (u64W rom q₁)
+    case neg => rw [romNameW.k_rom_name.abort2 _ _ _ _ _ (by simpa using hu) rfl (by simpa using hok)] at hW; cases hW
+    rw [romNameW.k_rom_name.arm1 _ _ _ _ _ (by simpa using hu) rfl (by simpa using hok), hl] at hW
+    rw [hl] at hok
     cases hI : nsinternW ((rputW rom m₁ (m₁.top >>> 40) (m₁.top &&& 1099511627775) (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
         (m₁.top + UInt64.ofNat str.toByteArray.size)) h₁ m₁.top (UInt64.ofNat str.toByteArray.size) with
-    | none => rw [hI] at hW; simp [nmStr2K] at hW
+    | none => rw [hI, romNameW.k_intern_nstr.none] at hW; cases hW
     | some r =>
     obtain ⟨w, m₃⟩ := r
     rw [hI] at hW
-    simp only [nmStr2K] at hW
-    split at hW
-    · simp at hW
-    rename_i hlt
+    by_cases hlt : 4294967296 ≤ w
+    · rw [romNameW.k_intern_nstr.abort1 _ _ _ _ _ hlt] at hW; cases hW
+    rw [romNameW.k_intern_nstr.arm1 _ _ _ _ _ hlt] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨hg, hsl, hk, -⟩ := romPutW_facts rom m₁ (q₁ + 8) _ hR1.1.lit.1 hok (by simp [RomOK]; omega)
@@ -1055,20 +954,19 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     cases n with
     | zero => simp [romNameW] at hW
     | succ n =>
-    rw [romNameW_rec rom n m pos (by simp [h0])] at hW
+    rw [romNameW.arm2 rom n m pos (by simp [h0])] at hW
     have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (u64B k ++ rest) := by
       have := drop_shift rom pos [2] (encName pre ++ u64B k) rest (by simpa [encName] using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
       simpa using this
-    cases hP : romNameW rom n m (pos + 1) with
-    | none => rw [hP] at hW; simp [nmRecK] at hW
-    | some r =>
-    obtain ⟨h₁, q₁, m₁⟩ := r
-    rw [hP, h0] at hW
+    rcases hP : romNameW rom n m (pos + 1) with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hP] at hW
+    · rw [romNameW.k_rom_name.none] at hW; cases hW
+    rw [h0] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hmo hd1 hP
     have hdq : rom.drop q₁.toNat = u64B k ++ rest :=
       drop_shift rom (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
-    rw [nmRecK_num rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
+    rw [romNameW.k_rom_name.arm2 _ _ _ _ _ (by simpa using u64OK_of_drop rom _ _ _ hdq hr) (by decide)
+      rfl] at hW
     have hl := u64W_of_drop rom q₁ _ _ hdq hx.2 hr
     have hlen := drop_len rom _ _ _ hd (by simp [encName])
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
@@ -1076,16 +974,14 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     simp only [encName, List.length_cons, List.length_append] at hlen
     simp only [RomOK] at hr
     rw [hl] at hW
-    simp only [nmNumK] at hW
     cases hI : nninternW m₁ h₁ (UInt64.ofNat k) with
-    | none => rw [hI] at hW; simp at hW
+    | none => rw [hI, romNameW.k_intern_nnum.none] at hW; cases hW
     | some r =>
     obtain ⟨w, m₃⟩ := r
     rw [hI] at hW
-    simp only at hW
-    split at hW
-    · simp at hW
-    rename_i hlt
+    by_cases hlt : 4294967296 ≤ w
+    · rw [romNameW.k_intern_nnum.abort1 _ _ _ _ hlt] at hW; cases hW
+    rw [romNameW.k_intern_nnum.arm1 _ _ _ _ hlt] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl⟩ := hW
     obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nnum_A _ _ hR1 w m₃ h₁ _ hlt1 hI

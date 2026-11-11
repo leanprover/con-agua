@@ -195,36 +195,6 @@ theorem romPutOK_bytes (m : Mem) (i l : Word) (h : romPutOK rom m i l) :
 
 /-! ## Names -/
 
-theorem nmAnonK_inv {pos h q : Word} {m' : Mem} {x : Option (Word × Mem)}
-    (hW : nmAnonK pos x = some (h, q, m')) : q = pos + 1 := by
-  match x, hW with
-  | some (w, m₁), hW =>
-    simp only [nmAnonK] at hW
-    split at hW
-    · simp at hW
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
-
-theorem nmNumK_inv {q₁ h q : Word} {m' : Mem} {x : Option (Word × Mem)}
-    (hW : nmNumK q₁ x = some (h, q, m')) : q = q₁ + 8 := by
-  match x, hW with
-  | some (w, m₁), hW =>
-    simp only [nmNumK] at hW
-    split at hW
-    · simp at hW
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
-
-theorem nmStrK_inv {h₁ q₁ l h q : Word} {m' : Mem} {x : Option (Word × Mem)}
-    (hW : nmStrK h₁ q₁ l x = some (h, q, m')) : q = q₁ + 8 + l := by
-  match x, hW with
-  | some (o, m₂), hW =>
-    simp only [nmStrK] at hW
-    rcases hI : nsinternW m₂ h₁ o l with _ | ⟨w, m₃⟩ <;> rw [hI] at hW
-    · simp [nmStr2K] at hW
-    simp only [nmStr2K] at hW
-    split at hW
-    · simp at hW
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
-
 include hr in
 /-- **The decoder direction of `rom_name`'s model**: it returned, so the bytes at `pos` are the
 encoding of a fitting name, and `q` is the position after it. -/
@@ -240,30 +210,40 @@ theorem romNameW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
     have hr' := hr
     simp only [RomOK] at hr'
     by_cases h0 : romB rom pos = 0
-    · rw [romNameW_anon rom n m pos h0] at hW
+    · rw [romNameW.arm1 rom n m pos h0] at hW
       obtain ⟨hp, hd⟩ := romB_tag rom pos 0 (by omega) h0
       refine ⟨.anonymous, rom.drop (pos.toNat + 1), by simpa [encName] using hd, rfl, ?_⟩
-      rw [nmAnonK_inv hW, pos_succ rom hr pos hp]; simp [encName]
-    rw [romNameW_rec rom n m pos h0] at hW
+      rcases hI : nainternW m with _ | ⟨w, m₁⟩ <;> rw [hI] at hW
+      · rw [romNameW.k_intern_nanon.none] at hW; cases hW
+      by_cases hw : 4294967296 ≤ w
+      · rw [romNameW.k_intern_nanon.abort1 _ _ _ _ hw] at hW; cases hW
+      rw [romNameW.k_intern_nanon.arm1 _ _ _ _ hw] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      rw [← hW.2.1, pos_succ rom hr pos hp]; simp [encName]
+    rw [romNameW.arm2 rom n m pos h0] at hW
     rcases hP : romNameW rom n m (pos + 1) with _ | ⟨h₁, q₁, m₁⟩ <;> rw [hP] at hW
-    · simp [nmRecK] at hW
+    · rw [romNameW.k_rom_name.none] at hW; cases hW
     obtain ⟨pre, rest₁, hd1, hf1, hq1⟩ := ih m (pos + 1) h₁ q₁ m₁ hP
-    simp only [nmRecK] at hW
     by_cases hu : u64OK rom q₁
-    case neg => simp [hu] at hW
-    simp only [hu, not_true_eq_false, ↓reduceIte] at hW
+    case neg => rw [romNameW.k_rom_name.abort1 _ _ _ _ _ (by simpa using hu)] at hW; cases hW
     obtain ⟨hl8, hq8, hdq⟩ := u64_dec rom hr q₁ hu
     by_cases h1 : romB rom pos = 1
-    · rw [ite_eq_left h1] at hW
-      obtain ⟨hp, hd⟩ := romB_tag rom pos 1 (by omega) h1
+    · obtain ⟨hp, hd⟩ := romB_tag rom pos 1 (by omega) h1
       have hp1 := pos_succ rom hr pos hp
       have hrest1 : rest₁ = rom.drop q₁.toNat := by
         rw [hq1, hp1, ← List.drop_drop, ← hp1, hd1, List.drop_left]
-      simp only [romPutW] at hW
       by_cases hok : romPutOK rom m₁ (q₁ + 8) (u64W rom q₁)
-      case neg => rw [ite_eq_right hok] at hW; simp [nmStrK] at hW
-      rw [ite_eq_left hok] at hW
-      have hq := nmStrK_inv hW
+      case neg =>
+        rw [romNameW.k_rom_name.abort2 _ _ _ _ _ (by simpa using hu) h1 (by simpa using hok)] at hW; cases hW
+      rw [romNameW.k_rom_name.arm1 _ _ _ _ _ (by simpa using hu) h1 (by simpa using hok)] at hW
+      have hq : q = q₁ + 8 + u64W rom q₁ := by
+        revert hW; generalize nsinternW _ _ _ _ = r; intro hW
+        rcases r with _ | ⟨w, m₃⟩
+        · rw [romNameW.k_intern_nstr.none] at hW; cases hW
+        by_cases hw : 4294967296 ≤ w
+        · rw [romNameW.k_intern_nstr.abort1 _ _ _ _ _ hw] at hW; cases hW
+        rw [romNameW.k_intern_nstr.arm1 _ _ _ _ _ hw] at hW
+        simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
       obtain ⟨hin, hasc⟩ := romPutOK_bytes rom hr m₁ _ _ hok
       rw [hq8] at hin hasc
       generalize u64W rom q₁ = l at hW hok hq hin hasc hdq
@@ -282,15 +262,21 @@ theorem romNameW_dec : ∀ (n : Nat) (m : Mem) (pos h q : Word) (m' : Mem),
         simp only [encName, strB, List.length_cons, List.length_append, hsz, hbl, u64B,
           List.length_nil]
         rw [hdat, hbl, hq1, hp1]; simp; omega
-    · rw [ite_eq_right h1] at hW
-      by_cases h2 : romB rom pos = 2
-      case neg => rw [ite_eq_right h2] at hW; simp at hW
-      rw [ite_eq_left h2] at hW
+    · by_cases h2 : romB rom pos = 2
+      case neg => rw [romNameW.k_rom_name.abort3 _ _ _ _ _ (by simpa using hu) h1 h2] at hW; cases hW
+      rw [romNameW.k_rom_name.arm2 _ _ _ _ _ (by simpa using hu) h1 h2] at hW
       obtain ⟨hp, hd⟩ := romB_tag rom pos 2 (by omega) h2
       have hp1 := pos_succ rom hr pos hp
       have hrest1 : rest₁ = rom.drop q₁.toNat := by
         rw [hq1, hp1, ← List.drop_drop, ← hp1, hd1, List.drop_left]
-      have hq := nmNumK_inv hW
+      have hq : q = q₁ + 8 := by
+        revert hW; generalize nninternW _ _ _ = r; intro hW
+        rcases r with _ | ⟨w, m₃⟩
+        · rw [romNameW.k_intern_nnum.none] at hW; cases hW
+        by_cases hw : 4294967296 ≤ w
+        · rw [romNameW.k_intern_nnum.abort1 _ _ _ _ hw] at hW; cases hW
+        rw [romNameW.k_intern_nnum.arm1 _ _ _ _ hw] at hW
+        simp only [Option.some.injEq, Prod.mk.injEq] at hW; exact hW.2.1.symm
       refine ⟨.num pre (u64W rom q₁).toNat, rom.drop (q₁.toNat + 8), ?_, ?_, ?_⟩
       · rw [hd, encName, ← hp1, hd1, hrest1, hdq]; simp
       · simp [nameFits, hf1, (u64W rom q₁).toNat_lt]
