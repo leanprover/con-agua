@@ -68,6 +68,14 @@ total `s'.mem = F` with its guards) is handled as before. Only these shapes, whi
 before, are read so; a pure result beside `F = some (r.headD 0, s'.mem)` or a memory model stays
 ignored as it was. Test `tMx`.
 
+### `pfuel k` (round 2)
+
+`pfuel` stated the spec at `exec p (n + 1)` with the model at `n`. Hand models stated at `n + 2`,
+`n + 3` (`block_shape_fin`, `block_shape_tail`: their callees run at `n + 1`, `n + 2`) did not fit.
+`pfuel k` states the spec at `exec p (n + k)`; the callee specs are given at the fuel the body
+runs at (`g_spec p (n + k - 1)`), the model is still the body at `n`. Test `tPf2_spec` (`pfuel 2`
+over `tPf`: its model is `tPfW` at `n + 1` by `rfl`).
+
 ### Not changed: literals and instances in generated `if`s
 
 mgen3 met `rw [ite_eq_left h]` and `split` failing on generated `if`s where `simp only [h,
@@ -94,3 +102,24 @@ cpMem m b old`, one `split` per join point); `cpMem` stays as the users' descrip
 | module | instructions | user s | RSS MB |
 |---|---|---|---|
 | `Arena/IndSumSpec/ConsBlockRecsTF` | 68.2 → 75.5 G | 10.6 → 11.4 | 1230 → 1290 |
+
+### Batch 2: `block_shape_fin`, `block_shape_tail` (`pfuel 2`, `pfuel 3`)
+
+mgen3 kept them: their models feed `bbW` (`block_shape_build`, `IndPartsProg5.lean`), which sat
+below the lookups structure `IndPartsProg5` their specs need, and they are stated at `n + 2` /
+`n + 3`. Now `bf_spec` and `bt_spec` are `l_model`s in `IndPartsProg5.lean` right after the
+structure, with the hand recipe's callee specs (`pfuel 2`; `pfuel 3` with `fold [erRd]`), and
+`bbH1`–`bbH4` and `bbW` moved there after them. Both generated models are the hand ones by `rfl`.
+Gone: `bbK8`–`bbK13'`, `bfW`, `btK1`–`btK3`, `btW` and their arm lemmas (`Bsp.lean`), the hand
+`bf_spec`, `bt_spec` (each at `maxHeartbeats 20000000`). The two walks in `BrsW.lean` (`bfW_sim`,
+`btW_sim`) only renamed (`bbK8_some` → `bfW.k_block_shape_ctors_of.arm1`, `rw [bbK9]` →
+`rw [bfW.k_param_levels]`, …).
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Arena/IndPartsSpec/Bsp` | 28.8 → 27.9 G | 4.5 → 4.2 | 1074 → 1066 |
+| `Arena/IndPartsSpec/IndPartsProg5` | 2.1 → 7.9 G | 0.4 → 1.4 | 940 → 1043 |
+| `Arena/IndPartsSpec/Bf` | 78.2 → 41.3 G | 16.2 → 7.5 | 1394 → 1142 |
+| `Arena/IndPartsSpec/BrsW` | 17.1 → 17.1 G | 3.7 → 3.2 | 1098 → 1097 |
+
+Lines: +84 −191 (**−107**).
