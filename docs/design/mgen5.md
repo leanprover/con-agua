@@ -71,6 +71,26 @@ Threading a `CTL`-size hypothesis through `zeroW_ok` and its six callers to save
 is no win. The same holds for `lh_mk` (`lhMkW`, the same guard). This is a case for a generator
 option that models a store's bound as a guard (`none` out of bounds), not for a lane.
 
+### The Front install records: `ind_cv`, `parse_rule_d`, `decl_cv`
+
+Hand models `cvW`, `ruleW` (`IndApplySpec2`, written with the continuations `wK`/`mK` over
+`lkW`, the table lookup) and `ApplyDecl`'s `cvW` with its hand spec over `decl_cv`'s results
+(churn: `IndApplySpec2`'s family carries 610 ronsync2 lines, the fifth in the inventory). All three
+are `l_model`s now (default recipe; `guards ["name_get", "expr_get"]` turns the lookups' `tblOK`
+conjuncts into guards, `lp_put` is a `mixed` callee, `pre [s₀.mem.arr8 IN = b]`, `keep`). The users
+keep their shape through one bridge each: `cvW_eq` and `ruleW_eq` restate the generated models in
+the `wK`/`lkW` form (`IndInstallRefine`, `IndInstallRefine3`: `unfold` → `rw`), `dcvW_cv` gives
+`decl_cv`'s four result words and the memory `cvW` (kept as `apply_decl`'s vocabulary; one use in
+`ApplyDLineRef`). Gone: three hand specs (39 lines) and the two hand models. 5 files +54 −58.
+
+| module | instructions | user s | RSS MB |
+|---|---|---|---|
+| `Front/IndApplySpec2` | 38.0 → 38.6 G | 6.8 → 6.8 | 1054 → 1051 |
+| `Front/IndInstallRefine` | 10.2 → 10.2 G | 1.4 → 1.5 | 959 → 950 |
+| `Front/IndInstallRefine3` | 40.1 → 40.1 G | 4.8 → 4.7 | 1135 → 1171 |
+| `Front/ApplyDecl` | 16.3 → 16.4 G | 3.2 → 3.2 | 921 → 953 |
+| `Front/ApplyDLineRef` (three lines) | → 20.0 G | → 3.5 | → 1049 |
+
 ## 3. The 185 specs without a model in their post
 
 Classified by their posts (script over `_tmp/mgen5/inv.json`), and 22 read by hand (random
