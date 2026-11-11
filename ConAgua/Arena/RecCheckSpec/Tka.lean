@@ -1,8 +1,10 @@
 module
 
+import ConAgua.Arena.RecSim
+
+public import ConAgua.Arena.RecCheckSpec.EeK2
 public import ConAgua.Arena.LdRd
 public import ConAgua.Arena.RecCheckSpec.K53Look
-public import ConAgua.Arena.RecCheckSpec.EeW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

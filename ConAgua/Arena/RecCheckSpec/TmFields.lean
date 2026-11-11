@@ -1,5 +1,7 @@
 module
 
+public import ConAgua.Arena.RecCheckSpec.EeK2
+
 public import ConAgua.Arena.RecCheckSpec.EqWDec
 import ConAgua.Arena.RecCheckSpec.TruncSl
 import ConAgua.Arena.RecCheckSpec.EeW2

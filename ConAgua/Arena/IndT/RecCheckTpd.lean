@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import ConRon.Bridge.Inductives.RecCheck
 public import ConAgua.Arena.RecCheckSpec.PdsC
 public import ConAgua.Arena.RecCheckSpec.TaGoWMfr

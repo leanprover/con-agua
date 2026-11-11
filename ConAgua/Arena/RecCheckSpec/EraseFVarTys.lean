@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.RcLook
+public import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.RecSim
 import ConAgua.Arena.IndPosSpec.NestCrest
 import ConAgua.Arena.IndPosSpec.SgGoW
 public import ConAgua.Arena.GrindAttr

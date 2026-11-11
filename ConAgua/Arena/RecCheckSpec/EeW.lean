@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.RecCheckSpec.EeK2
+public import ConAgua.Arena.IndPartsSpec.EqW
 public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.RecCheckSpec.K53Look

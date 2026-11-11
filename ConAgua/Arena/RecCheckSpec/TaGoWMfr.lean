@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.RecCheckSpec.BvbWStageC
-public import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.RecCheckSpec.RcLook
