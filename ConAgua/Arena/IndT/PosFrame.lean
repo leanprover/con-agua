@@ -2,11 +2,11 @@ module
 
 public import ConAgua.Arena.IndT.PosFkc
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.IndPosSpec.CfW
 public import ConAgua.Verdict.PosE
 import ConAgua.Verdict.PosNgc
 import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
-import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndRealAbsSim
@@ -170,14 +170,8 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   simp only at hfg
   rw [hs5] at hfg
   rw [nfrE.k_nest_frame_grp.arm1]
-  generalize hrp : [r5.headD 0, r5.tail.headD 0, r5.tail.tail.headD 0, r5.tail.tail.tail.headD 0] = rp at hfg
-  have e0 : r5.headD 0 = rp.headD 0 := by rw [← hrp]; rfl
-  have e1 : r5.tail.headD 0 = rp.tail.headD 0 := by rw [← hrp]; rfl
-  have e2' : r5.tail.tail.headD 0 = rp.tail.tail.headD 0 := by rw [← hrp]; rfl
-  have e3 : r5.tail.tail.tail.headD 0 = rp.tail.tail.tail.headD 0 := by rw [← hrp]; rfl
-  rw [e0, e1, e2', e3]
   obtain ⟨fr, hrunF, hS5, hg5, hP5, hN5, hNb5⟩ := fgW_ok dn vis fe hi us dO dL ds hus n m2 m5 a2 gO gL po pl 0 0 grp
-    prog [] rp hfg hS2 (hds.grow (OMono.decHL _ _) hg12) hgl (by have := hg12.iw; omega) (hgrp.grow hgb hg12)
+    prog [] r5 hfg hS2 (hds.grow (OMono.decHL _ _) hg12) hgl (by have := hg12.iw; omega) (hgrp.grow hgb hg12)
     (hW.hs.grow hg12) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hN5
   obtain ⟨-, hfrP⟩ := ConRon.Bridge.Inductives.frameEntries_run hi.toNat (fun c ty => rfl) grp grpP a2 a2 fr
@@ -187,10 +181,10 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   have hgrp4 := ConRon.Bridge.Inductives.dGrp_ext hx02 _ _ hgrpP
   -- the group's constructors
   have hsp6 := ngcE_spec p L.nt L.nit.hc2 L.hap L.hgc n ⟨m5, Locals.init []⟩ vis nPc
-    (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0
+    (r5.tail.tail.headD 0) (r5.tail.tail.tail.headD 0) 0 0
   have hR6 := ngc_ref (p := p) dn fe vis nPc n m5 a2 _ _ 0 0 (grp.map (·.1)) [] hS5 hN5 (fun j hj => by omega)
     (by simp) (by simp) (fun i hi => by simp at hi)
-  cases h6 : callE p n "nest_group_ctors" [vis, nPc, rp.tail.tail.headD 0, rp.tail.tail.tail.headD 0, 0, 0] m5 with
+  cases h6 : callE p n "nest_group_ctors" [vis, nPc, r5.tail.tail.headD 0, r5.tail.tail.tail.headD 0, 0, 0] m5 with
   | error e6 =>
     rw [nfrE.k_nest_group_ctors.none]
     exact RefE.bind_left fun hG => RefE.run_err hsp6 hG.nv hG.nv hR6 h6
@@ -216,10 +210,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
     R.hl.hif L.hfh n ⟨m6, Locals.init []⟩ hi gO gL 0 0) (callW_of_callE h7)
   simp only at hfh
   rw [hs7] at hfh
-  generalize hrh : [r7.headD 0, r7.tail.headD 0] = rh at hfh
-  have g0 : r7.headD 0 = rh.headD 0 := by rw [← hrh]; rfl
-  have g1 : r7.tail.headD 0 = rh.tail.headD 0 := by rw [← hrh]; rfl
-  obtain ⟨holes, a7, hrun7, hS7, hg7, hH7, hHb7⟩ := fhW_ok dn vis fe n m6 m7 a6 hi gO gL 0 0 grp [] rh hfh hS6 hgl
+  obtain ⟨holes, a7, hrun7, hS7, hg7, hH7, hHb7⟩ := fhW_ok dn vis fe n m6 m7 a6 hi gO gL 0 0 grp [] r7 hfh hS6 hgl
     (by have := (hg12.trans hg46).iw; omega) (hgrp.grow hgb (hg12.trans hg46)) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hH7
   have hz : (grp.zipIdx.mapM fun ((_, ty), i) => internFVarE (hi.toNat + i) ty) = pos2FhT hi.toNat grp := by
@@ -239,7 +230,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   by_cases hov2 : dL + gL < dL
   · rw [nfrE.k_nest_frame_holes.abort2 p n vis ctx fu hi us dO dL gL ns _ _ _ _ _ _ r7 m7 hov hov2]
     exact RefE.of_cls0 rfl
-  rw [nfrE.k_nest_frame_holes.arm1 p n vis ctx fu hi us dO dL gL ns _ _ _ _ _ _ r7 m7 hov hov2, g0, g1]
+  rw [nfrE.k_nest_frame_holes.arm1 p n vis ctx fu hi us dO dL gL ns _ _ _ _ _ _ r7 m7 hov hov2]
   have hhg : (hi + gL).toNat = hi.toNat + gL.toNat := _root_.L.toNat_add_of_not_lt hov
   have hdg : (dL + gL).toNat = dL.toNat + gL.toNat := _root_.L.toNat_add_of_not_lt hov2
   have hg47 := (hg5.trans hg6).trans hg7
@@ -255,7 +246,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   have hfrl : fr.length = grp.length := by
     have := ConLeche.option_mapM_length hfrP
     simp only [List.length_map] at this; omega
-  have hpl2 : (rp.tail.headD 0).toNat = pl.toNat + gL.toNat := by
+  have hpl2 : (r5.tail.headD 0).toNat = pl.toNat + gL.toNat := by
     rw [← hP7.1, List.length_append, hW.len]; simp [hgl, hfrl]
   obtain ⟨progP2, hprog2⟩ : ∃ q, dProg a7.store (prog ++ fr) = some q :=
     ⟨_, ConRon.Bridge.Inductives.dProg_append (dProg_ext hx07 _ _ hprog)
@@ -268,8 +259,8 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
       by rw [hhg, hgl, hlenG]; exact ConLeche.Cached.frameHoles_wscoped hwg,
       by simp [ConLeche.Cached.frameHoles]⟩
   -- the constructors walked
-  have hR8 := ih.ctors m7 a7 ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL (rp.tail.tail.headD 0)
-    (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0) (rc.tail.headD 0) ns 0 0 c
+  have hR8 := ih.ctors m7 a7 ctx 0 fu (r5.headD 0) (r5.tail.headD 0) (hi + gL) us dO dL (r5.tail.tail.headD 0)
+    (r5.tail.tail.tail.headD 0) (r7.headD 0) (r7.tail.headD 0) (rc.headD 0) (rc.tail.headD 0) ns 0 0 c
     (prog ++ fr) ds (grp.map (·.1)) holes ctors
     NS [] ctxP _ usP dsP (grpP.map (·.1)) (ConLeche.Cached.frameHoles hi.toNat grpP) vc nsP []
     hC7 ⟨hW.u.grow hg17, hP7, by
@@ -286,11 +277,11 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
     hc (dCtx_ext _ hx07 _ _ hctx) hprog2 hpre (ConRon.Bridge.Inductives.dCtors_ext p6.ext _ _ hvc) hvcl
     (dState_ext hx07 _ _ hnsP) rfl
   rw [hhg, hgl] at hR8
-  have hsp8 := nctE_spec p L.pctors n ⟨m7, Locals.init []⟩ vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us
-    dO dL (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0)
+  have hsp8 := nctE_spec p L.pctors n ⟨m7, Locals.init []⟩ vis ctx 0 fu (r5.headD 0) (r5.tail.headD 0) (hi + gL) us
+    dO dL (r5.tail.tail.headD 0) (r5.tail.tail.tail.headD 0) (r7.headD 0) (r7.tail.headD 0) (rc.headD 0)
     (rc.tail.headD 0) ns 0 0
-  cases h8 : callE p n "nest_ctors" [vis, ctx, 0, fu, rp.headD 0, rp.tail.headD 0, hi + gL, us, dO, dL,
-      rp.tail.tail.headD 0, rp.tail.tail.tail.headD 0, rh.headD 0, rh.tail.headD 0, rc.headD 0, rc.tail.headD 0,
+  cases h8 : callE p n "nest_ctors" [vis, ctx, 0, fu, r5.headD 0, r5.tail.headD 0, hi + gL, us, dO, dL,
+      r5.tail.tail.headD 0, r5.tail.tail.tail.headD 0, r7.headD 0, r7.tail.headD 0, rc.headD 0, rc.tail.headD 0,
       ns, 0, 0] m7 with
   | error e8 =>
     rw [nfrE.k_nest_ctors.none]

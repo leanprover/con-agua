@@ -289,17 +289,17 @@ theorem nfmW_afr {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
 -- from IndPosSpec/FgW
 theorem fhW_afr : ∀ (n : Nat) (m m' : Mem) (hi gO gL aO aL : Word) (r : List Word),
     fhW n m hi gO gL aO aL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [fhW] at h
+  | 0, _, _, _, _, _, _, _, _, h => by simp [fhW.eq_1] at h
   | n + 1, m, m', hi, gO, gL, aO, aL, r, h => by
-    unfold fhW fhK1 fhK2 at h
+    simp only [fhW.eq_2, fhW.k_intern_fvar.eq_def, fhW.k_sl_snoc.eq_def, fhW_kId] at h
     afr_auto h [fvinternW_afr, snocW_afr, fhW_afr n _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
 theorem caW_afr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL aO aL : Word) (r : List Word),
     caW n m us dO dL gO gL aO aL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [caW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [caW.eq_1] at h
   | n + 1, m, m', us, dO, dL, gO, gL, aO, aL, r, h => by
-    unfold caW caK1 caK2 at h
+    simp only [caW.eq_2, caW.k_rec4.eq_def, caW.k_sl_snoc.eq_def, caW_kId] at h
     afr_auto h [posRecW_afr, snocW_afr, caW_afr n _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/FgW
@@ -325,9 +325,10 @@ theorem piBW_afr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
 -- from IndPosSpec/FgW
 theorem fgW_afr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
     fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW] at h
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW.eq_1] at h
   | n + 1, m, m', hi, us, dO, dL, gO, gL, pO, pL, nO, nL, r, h => by
-    unfold fgW fgK1 fgKb fgK2 fgK3 fgK4 at h
+    simp only [fgW.eq_2, fgW.k_rec4.eq_def, fgW.k_pi_binders.eq_def, fgW.k_rec3.eq_def, fgW.k_sl_snoc.eq_def,
+      fgW.k_sl_snoc_2.eq_def, fgW_kId] at h
     afr_auto h [posRecW_afr, piBW_afr _ _ _ _ _ _, snocW_afr, fgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
 
 -- from IndPosSpec/NestCrest
