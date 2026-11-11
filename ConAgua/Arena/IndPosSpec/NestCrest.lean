@@ -10,7 +10,6 @@ import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.Mfr
-import ConAgua.Arena.IndPosSpec.PcrW
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
 import ConAgua.Arena.IndPosSpec.Rx
