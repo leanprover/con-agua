@@ -162,22 +162,20 @@ theorem rec3TmdW_decB {vis : Word} {fe : IFEnv} {a : AState}
   exact hd
 
 /-- **`target_major_at`, its record decoded below the tops.** -/
-theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m : Mem)
+theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
     (a : AState) (mo ml c : Word) (ms : List TargetMajor) (hS : StageR vis fe m a)
     (hms : DecB (fun m => decPL m (decTM m) mo.toNat ml.toNat) m ms) (hb : mo.toNat + ml.toNat < 2 ^ 64) :
-    RSim (tmaW n m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
+    RSim (tmaW m mo ml c) (ConRon.Arena.targetMajorAt ms c.toNat) a
       (fun b a' tm => StageR vis fe b.2 a' ∧ IWGrow m b.2 ∧
         DecB (fun m => decTM m (b.1.headD 0).toNat) b.2 tm) := by
   have hms0 : decPL m (decTM m) mo.toNat ml.toNat = some ms :=
     hms.get (OMono.decPL (fun q => decTM_mono q) _ _)
   have hlen := decPL_length m hms0
   intro b hb'
-  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe n m a mo ml c ms hS hms0 hb b hb'
+  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmaW_sim dn vis fe m a mo ml c ms hS hms0 hb b hb'
   refine ⟨tm, a', hrun, hS', hg, ?_⟩
-  rcases n with _ | n
-  · simp [tmaW] at hb'
   by_cases hcl : c < ml
-  · rw [tmaW_hit n m mo ml c hcl] at hb'
+  · rw [tmaW.arm1 m mo ml c hcl] at hb'
     cases hb'
     have hc' : c.toNat < ml.toNat := UInt64.lt_iff_toNat_lt.mp hcl
     obtain ⟨v, hv, hdv⟩ := decPL_getH (truncM m) hms c.toNat hc'
@@ -192,13 +190,10 @@ theorem rec3TMA_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     simp only [List.headD_cons]
     rw [hrd.1, UInt64.toNat_ofNat_of_lt' hrd.2, ← hx]
     exact (show DecB (fun m => decTM m v) m _ from hdv).grow (decTM_mono _) (IWGrow.refl m)
-  · rw [tmaW_miss n m mo ml c hcl] at hb'
+  · rw [tmaW.arm2 m mo ml c hcl] at hb'
     obtain ⟨⟨r0, m0⟩, ho, hb'⟩ := of_K hb' rfl
-    rw [tmaK_some] at hb'
+    rw [tmaW.k_target_major_default.arm1] at hb'
     cases hb'
-    rcases n with _ | n
-    · cases ho
-    simp only [fuelW_succ] at ho
     simp only [List.headD_cons] at hd ⊢
     exact rec3TmdW_decB ho hS hd
 

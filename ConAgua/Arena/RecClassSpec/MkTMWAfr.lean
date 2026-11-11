@@ -39,12 +39,10 @@ theorem tmdW_afr {m m' : Mem} {r : List Word} (h : tmdW m = some (r, m')) : AFr 
   simp only [tmdW, tmdW.k_intern_nanon.eq_def, tmdW.k_pin_word.eq_def, tmdW.k_mk_target_major.eq_def] at h
   afr_auto h [naF_afr, mkTMW_afr]
 
-theorem tmaW_afr {n : Nat} {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW n m mo ml c = some (r, m')) :
+theorem tmaW_afr {m m' : Mem} {mo ml c : Word} {r : List Word} (h : tmaW m mo ml c = some (r, m')) :
     AFr m m' := by
-  rcases n with _ | n
-  · simp [tmaW] at h
-  simp only [tmaW, tmaK.eq_def] at h
-  cases n <;> simp only [fuelW] at h <;> afr_auto h [tmdW_afr]
+  simp only [tmaW, tmaW.k_target_major_default.eq_def] at h
+  afr_auto h [tmdW_afr]
 
 end sims
 
