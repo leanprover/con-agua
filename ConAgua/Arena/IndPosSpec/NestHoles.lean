@@ -13,6 +13,7 @@ public import ConAgua.Arena.IndPosSpec.Pos2CvLpsWStage
 import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.L.WordOff
+import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -269,30 +270,15 @@ theorem nestHolesGo_refines (k : Nat) (s₀ : St) (a₀ : AState)
 
 end census
 
-def nrcK3 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r3, m3) => some ([r3.headD 0, r3.tail.headD 0], m3)
-def nrcK2 (k : Nat) (ctx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => nrcK3 (pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
-      (rdW (m2.arr64 IW) (ctx + 10)) (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0))
-def nrcK1 (cR : CallM) (k : Nat) (ctx cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => nrcK2 k ctx (cR (k + 2) "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0,
-      rdW (m1.arr64 IW) (ctx + 10), erRd m1 (cv + 3)] m1)
 /-- The model of `nest_root_canon(ctx, cv)` at exec fuel `k + 3` (its `inst_lp_fast` read through `cR`). -/
-def nrcW (cR : CallM) (k : Nat) (m : Mem) (ctx cv : Word) : Option (List Word × Mem) :=
-  nrcK1 cR k ctx cv (cvLpsW (k + 2) m cv)
-
-section arms
-variable (cR : CallM) (k : Nat) (m1 m2 m3 : Mem) (ctx cv : Word) (r1 r2 r3 : List Word)
-theorem nrcK3_some : nrcK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
-theorem nrcK2_some : nrcK2 k ctx (some (r2, m2)) = nrcK3 (pccW k m2 (rdW (m2.arr64 IW) ctx)
-    (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10)) (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0)) := rfl
-theorem nrcK1_some : nrcK1 cR k ctx cv (some (r1, m1)) = nrcK2 k ctx (cR (k + 2) "inst_lp_fast" [CWF, r1.headD 0,
-    r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), erRd m1 (cv + 3)] m1) := rfl
-end arms
-attribute [ind_grind] nrcK3_some nrcK2_some nrcK1_some
+l_model nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" = some erCopy)
+    (he : p.lookup "er_to_iw" = some erToIw) (hcv : p.lookup "cv_lps" = some cvLps)
+    (cR : CallM) (hcR : CallSpec p cR)
+  fns [hl.hp' ↦ nrcW list]
+  specs [cvLps_spec p hl.ha hc he hcv (n + 2), hcR (n + 2) "inst_lp_fast",
+      nestCanonCrest_spec p hl.ha hl.hl hl.hk hl.hng hl.hnp hl.hip hl.hf hl.hput hl.hgo hl.hnode hl.hcl
+        hl.hra hl.hp n]
+  grind [arena_grind, ind_grind] fold [erRd] pfuel 3
 
 /-- `nest_canon_crest` keeps `AbsOK` (`IndRealAbsPos.pccW_afr`; a hypothesis here, proved below). -/
 def PccAfr : Prop :=
@@ -301,34 +287,12 @@ def PccAfr : Prop :=
 
 /-! ## `nest_uniform_ok` refines `nestUniformOk` -/
 
-def nuK3 : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (o, m3) => some ([if o = 0 then 1 else 0], m3)
-def nuK2 (k : Nat) (ctx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) =>
-    if r2.headD 0 = 0 then some ([0], m2)
-    else nuK3 (noConstWf (k + 3) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) 0 0 (r2.tail.headD 0))
-def nuK1 (cR : CallM) (k : Nat) (ctx cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => if r1.headD 0 ≠ 0 then some ([0], m1) else nuK2 k ctx (nrcW cR k m1 ctx cv)
 /-- The model of `nest_uniform_ok(ctx, cv)` at exec fuel `k + 4`. -/
-def nuW (cR : CallM) (k : Nat) (m : Mem) (ctx cv : Word) : Option (List Word × Mem) :=
-  nuK1 cR k ctx cv (pdoW (k + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-    (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)))
-
-section arms
-variable (cR : CallM) (k : Nat) (m1 m2 m3 : Mem) (ctx cv o : Word) (r1 r2 : List Word)
-theorem nuK3_some : nuK3 (some (o, m3)) = some ([if o = 0 then 1 else 0], m3) := rfl
-theorem nuK2_none (h : r2.headD 0 = 0) : nuK2 k ctx (some (r2, m2)) = some ([0], m2) := by rw [nuK2, ite_eq_left h]
-theorem nuK2_some (h : ¬ r2.headD 0 = 0) : nuK2 k ctx (some (r2, m2)) =
-    nuK3 (noConstWf (k + 3) m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) 0 0 (r2.tail.headD 0)) := by
-  rw [nuK2, ite_eq_right h]
-theorem nuK1_occ (h : r1.headD 0 ≠ 0) : nuK1 cR k ctx cv (some (r1, m1)) = some ([0], m1) := by rw [nuK1, ite_eq_left h]
-theorem nuK1_ok (h : ¬ r1.headD 0 ≠ 0) : nuK1 cR k ctx cv (some (r1, m1)) = nuK2 k ctx (nrcW cR k m1 ctx cv) := by
-  rw [nuK1, ite_eq_right h]
-end arms
-attribute [ind_grind] nuK3_some nuK2_none nuK2_some nuK1_occ nuK1_ok
+l_model nestUniformOk_spec (p : Prog) (hl : NuLook p) (cR : CallM) (hcR : CallSpec p cR)
+  fns [hl.hp ↦ nuW list]
+  specs [nestCtxHiAt_specE p hl.hh (n + 3), piDomsOcc_spec p hl.no hl.hpd (n + 3),
+      nestRootCanon_spec p hl.pcc hl.hc hl.he hl.hcv cR hcR n, nestOcc_spec' p hl.no (n + 3)]
+  grind [arena_grind, ind_grind] fold [erRd] pfuel 4
 
 /-- What `AbsOK` across `nest_uniform_ok` needs of its callees (`IndRealAbsPos.nuAfr`). -/
 structure NuAfr : Prop where
