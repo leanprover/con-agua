@@ -4,6 +4,7 @@ public import ConAgua.Arena.RecCheckSpec.TaCW
 public import ConAgua.Arena.RecSim
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.Rx
 
 @[expose] public section
 

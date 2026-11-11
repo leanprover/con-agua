@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.Mfr
 import ConAgua.Arena.IndPosSpec.NkFields
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.IndPosSpec.Rx
 public import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 public import ConAgua.Arena.IndPosSpec.P2ctK1

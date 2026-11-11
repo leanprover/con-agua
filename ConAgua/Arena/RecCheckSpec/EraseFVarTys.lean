@@ -11,7 +11,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.MapOKStep
 import ConAgua.Arena.IndPosSpec.PosmemoRxMfr
-import ConAgua.Arena.IndPosSpec.Rx
 public import ConAgua.Arena.IndPosSpec.CrLook
 public import ConAgua.Arena.IndPosSpec.NestGroupCtors
 import all ConAgua.Arena.RecCheck

@@ -15,7 +15,6 @@ import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndPosSpec.DecNHFields
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.Arena.IndPosSpec.SgGoW
 import ConAgua.Arena.IndPosSpec.SnocWStage
 import Std.Tactic.BVDecide.Normalize.BitVec

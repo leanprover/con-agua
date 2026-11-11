@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Arena.IndPosSpec.DepthGo
 public import ConAgua.Arena.IndPosSpec.CrLook
-import ConAgua.Arena.IndPosSpec.Rx
+public import ConAgua.Arena.IndPosSpec.Rx
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndPos
 
