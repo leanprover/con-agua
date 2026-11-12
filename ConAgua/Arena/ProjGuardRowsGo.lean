@@ -554,37 +554,37 @@ theorem pgra_okC {p : Prog} (hP : PgraProg p) (n : Nat) {m m' : Mem} {a : AState
 /-! ## The guard's write set -/
 
 /-- The guard's row functions and what they call. -/
-def pgP : Prog :=
+def pgrP : Prog :=
   [("proj_guard_rows_at", projGuardRowsAtL), ("proj_guard_rows_go", projGuardRowsGoL),
     ("proj_guard_fast", projGuardFastL), ("proj_guard_row", projGuardRowL)] ++ hlP ++ opfP
 
 /-- The functions `opf_go` and `proj_guard_rows_at` reach. -/
-def pgFns : List FnName :=
+def pgrFns : List FnName :=
   ["proj_guard_rows_at", "proj_guard_rows_go", "proj_guard_fast", "proj_guard_row", "opf_go",
     "spn_push", "e_view", "fvar_find", "fvar_push", "intern_fvar", "has_loose_bvar_in",
     "has_loose_bvar_in_go", "has_loose_b_var_b_fast", "hb_clear", "has_loose_b_var_b_go", "hb_find",
     "has_loose_b_var_b_ins", "hb_put"] ++ bvbFns ++ instListFns ++ instFns
 
 /-- What they write: the stack, the `fvar` store, the walks' memos and stores (not the pool). -/
-def pgA : List TieredArray := [(SPN : TieredArray), (FVREC : TieredArray), (FVSLOT : TieredArray),
+def pgrA : List TieredArray := [(SPN : TieredArray), (FVREC : TieredArray), (FVSLOT : TieredArray),
   (FVLP : TieredArray), tier1 FVREC, tier1 FVSLOT, tier1 FVLP, (HBM : TieredArray), (BMEMO : TieredArray)] ++
   instListA ++ instA
 /-- The stack's top, the `fvar` counts, the walks' words. -/
-def pgC : List Word := [136, 26, 27, 214, 215, 24, 25] ++ instListC ++ instC
+def pgrC : List Word := [136, 26, 27, 214, 215, 24, 25] ++ instListC ++ instC
 
-theorem pgP_closed : closedA pgP pgA pgC pgFns = true := by decide +kernel
+theorem pgP_closed : closedA pgrP pgrA pgrC pgrFns = true := by decide +kernel
 
 
-theorem PgraProg.has {p : Prog} (hP : PgraProg p) : ProgHas p pgP :=
+theorem PgraProg.has {p : Prog} (hP : PgraProg p) : ProgHas p pgrP :=
   ProgHas.cons hP.at' (ProgHas.cons hP.go (ProgHas.cons hP.fast (ProgHas.cons hP.row
     (ProgHas.append hP.hl hP.opf))))
 
-/-- **A call of the guard's functions writes only `pgA`, `pgC`**: the pool grows (it is not
+/-- **A call of the guard's functions writes only `pgrA`, `pgrC`**: the pool grows (it is not
 written), the binder stack and the limb pool are kept. -/
-theorem pg_frame {p : Prog} (hP : PgraProg p) {n : Nat} {f : FnName} (hf : f ∈ pgFns := by decide)
+theorem pg_frame {p : Prog} (hP : PgraProg p) {n : Nat} {f : FnName} (hf : f ∈ pgrFns := by decide)
     {args r : List Word} {m m' : Mem} (h : callW p n f args m = some (r, m')) :
-    MemFrame pgA pgC m m' ∧ IWGrow m m' ∧ BKept m m' ∧ PoolGrew m m' := by
-  have hfr := (run_memFrame (closedW_of_agree pgP_closed (hP.has.agree pgFns)) hf (run_of_callW h)).1
+    MemFrame pgrA pgrC m m' ∧ IWGrow m m' ∧ BKept m m' ∧ PoolGrew m m' := by
+  have hfr := (run_memFrame (closedW_of_agree pgP_closed (hP.has.agree pgrFns)) hf (run_of_callW h)).1
   exact ⟨hfr, IWGrow.of_keep hfr ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
     BKept.of_frame hfr (by decide) (by decide), PoolGrew.of_frame hfr (by decide) (by decide)⟩
 
