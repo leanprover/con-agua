@@ -57,3 +57,32 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   **Deviation from presync3 §4's order:** the L code of the rewritten functions is ported by the
   helpers, not before the ladder by the lead: the new L functions do not exist before the port,
   so their statements cannot be restated earlier, and the ladder has nothing to try on them.
+
+## 3. Statement changes of the final theorems
+
+1. **The maximum `Nat` size** (upstream #519: `internAllPins` takes the run's maximum). The
+   definitions `TwinAccepts` (Final/Twin.lean), `TwinAcceptsPooled` (Final/TwinPooled.lean),
+   `twinRun`, `TwinVerdict`'s and `TwinVerdictPooled`'s stage lists (Final/TwinVerdict.lean).
+   Before: `internAllPins pins sD = .ok (ipins, sE)` (and `internAllPins pins >>= …` in
+   `twinRun`). After: `internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE)`. Pending the
+   user's `--max-nat-size` decision (coordinator): if the flag is ported the maximum becomes a
+   parameter of these definitions instead.
+2. **No set theory in the accept and verdict theorems** (upstream #521: con-ron's Theorem 1 for
+   the pool, `Arena.pooledAccepts_bridge`, and `view_foldOK`/`job_spec` became model-free; approved
+   by the coordinator 2026-11-12). Removed `(V : Type w) [ConLeche.SetTheory V]` (`Vt`/`Type u`
+   alike) from: `checkerFile_accepts`, `checkerFile_accepts_regs`, `checkerFile_threads_accept`,
+   `checkerFile_threads_regs`, `checkerFile_threads_verdict` (Final/EndToEnd.lean),
+   `threadsRun_twinAcceptsPooled`, `threadsRun_twinAcceptsPooled_regs` (Final/ThreadsFinal.lean),
+   `checkerFile_threads_verdict_of`, `threadFail_twin` and the claim `ThreadEVerdict`
+   (Final/ThreadsVerdict.lean), `checkerFile_drv_accepts_regs`, `drvAccepts_twin`
+   (Final/DrvFinal.lean), `twinAccepts_pure`, `twinAcceptsPooled_pure`; internal:
+   `seqVerdicts_proved`, `entry2Verdict_of`, `checkJobs_seqE`, `checkB_seqE`, `checkMode2_seqE`,
+   `threads_twinVerdictPooled`, `threads_twinAcceptsPooled`, `checkJobs_seq(T)`, `checkB_seq`,
+   `checkMode2_seq`, `drv_twinAccepts`, `worker_foldOK`, `pool_walk`, `pool_prefix`, `pool_twin`.
+   Before, e.g.: `theorem checkerFile_accepts [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat)
+   (hcode : Code checkerFile k0) (b pb : ByteArray) … : Ev (…) dm (label abiStartL)`. After: the
+   same without `(V : Type w) [ConLeche.SetTheory V]`, the conclusion unchanged. Kept (their
+   proofs build the model): `twinAccepts_model`, `twinAccepts_no_False`, `twinAcceptsPooled_model`,
+   `twinAcceptsPooled_no_False`, `checkerFile_model_exists`, `checkerFile_no_False`,
+   `checkerFile_threads_model`, `checkerFile_threads_no_False`, `twinAccepts_not_trivial`. This
+   undoes ronsync2's statement change 1, 2 and 5 (docs/design/ronsync2.md §6).
