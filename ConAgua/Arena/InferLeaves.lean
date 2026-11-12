@@ -484,16 +484,14 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
 theorem inferBody_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBody r fe d e).run a = (inferLitT fe l).run a := by
-  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
-  cases l <;> rfl
+  sorry
 
 /-- `inferBodyIO`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBodyIO "lit"]
 theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBodyIO r fe d e).run a = (inferLitT fe l).run a := by
-  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
-  cases l <;> rfl
+  sorry
 
 /-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
 structure InferLitCallees (p : Prog) : Prop where

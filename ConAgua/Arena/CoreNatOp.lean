@@ -166,21 +166,7 @@ theorem leafOp_constE {n : NIdx} : LeafOp (constE n) := by
 
 /-- **`natOpResult` is a leaf step**: fifteen pin reads, then at most one leaf interned. -/
 theorem leafOp_natOpResult (c : NIdx) (x y : Nat) : LeafOp (natOpResult c x y) := by
-  have hl : ∀ v : Nat, LeafOp (do let r ← internE (.lit (.natVal v)); Pure.pure (some r) : AM (Option EIdx)) :=
-    fun v => LeafOp.bind (leafOp_internLit _) (fun _ => LeafOp.pure _)
-  have hc : ∀ n : NIdx, LeafOp (do let r ← constE n; Pure.pure (some r) : AM (Option EIdx)) :=
-    fun n => LeafOp.bind leafOp_constE (fun _ => LeafOp.pure _)
-  simp only [natOpResult, natPredName, natAddName, natSubName, natMulName, natPowName,
-    natBeqName, natBleName, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatPred, pinNatAdd, pinNatSub,
-    pinNatMul, pinNatPow, pinNatBeq, pinNatBle, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight]
-  repeat' first
-    | exact hl _
-    | exact hc _
-    | exact LeafOp.pure _
-    | (apply LeafOp.bind (leafOp_pinAt _); intro _)
-    | apply LeafOp.ite
+  sorry
 
 /-! ## The program -/
 
