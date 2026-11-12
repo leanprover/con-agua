@@ -179,7 +179,7 @@ and `stageCoreFns`: the callees of the walks, of the ROM readers and of the `Nat
 certificate checks (computed from `checkerProg`'s call graph; the check below fails if one is
 missing). -/
 def declExtFns : List FnName :=
-  ["apd_clear", "alpd_go", "apd_find", "lv_apd", "lv_mem", "alpd_ls", "apd_put", "rci_slot",
+  ["apd_clear", "has_loose_bvar_in", "has_loose_bvar_in_go", "alpd_go", "apd_find", "lv_apd", "lv_mem", "alpd_ls", "apd_put", "rci_slot",
    "rom_u64", "rci_fresh", "rset_clear", "rci_cv", "rom_name", "rom_put", "rci_name_sl",
    "rci_names_to", "rom_expr", "rom_ex_ref", "memo_get", "rom_ex_leaf", "rom_level", "rom_levels",
    "rom_lvls_go", "stk_push", "stk_pool", "rom_ex_one", "memo_push", "rset_find", "rset_put",

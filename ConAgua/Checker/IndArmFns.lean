@@ -133,7 +133,8 @@ def armPosFns : List FnName :=
 
 /-- `tailCallees`, closed under calls but for the leaf `struct_used_later`. -/
 def armHbFns : List FnName :=
-  ["check_block_rec", "gen_rec_check", "flush_caches", "lsq_clear", "lq_clear", "rr_clear",
+  ["close_lams_go", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv", "close_telescope_go",
+   "check_block_rec", "gen_rec_check", "flush_caches", "lsq_clear", "lq_clear", "rr_clear",
     "cv_clear", "ct_clear", "de_clear", "io_clear", "in_clear", "wh_clear", "wk_clear", "wc_clear",
     "gen_rec_check_pop_all", "env_pop_temp", "env_row_set", "class_recs_rules_ok",
     "class_recs_rules_ok_go", "sl_cons", "iw_copy", "iw_alloc", "rec4", "target_major_at",
@@ -280,7 +281,8 @@ def armHbFns : List FnName :=
 
 /-- `tailRcCallees`, `grcRcCallees`, `block_shape_member_ctors` and `check_block_tail_stream`, closed under calls but for the leaf `struct_used_later`. -/
 def armRcFns : List FnName :=
-  ["check_block_tail_stream", "flush_caches", "lsq_clear", "lq_clear", "rr_clear", "cv_clear",
+  ["close_lams_go", "close_telescope_go", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
+   "check_block_tail_stream", "flush_caches", "lsq_clear", "lq_clear", "rr_clear", "cv_clear",
     "ct_clear", "de_clear", "io_clear", "in_clear", "wh_clear", "wk_clear", "wc_clear",
     "gen_rec_check_pop_all", "env_pop_temp", "env_row_set", "stream_recs_check", "stream_rec_check",
     "stream_rec_compare", "stream_rules_check", "rule_agree", "is_def_eq_core", "defeq", "de_put",
@@ -421,7 +423,9 @@ def armRcFns : List FnName :=
 
 /-- `blockTaCallees`, closed under calls. -/
 def armTaFns : List FnName :=
-  ["check_block_pass", "check_block_pass_rec", "iw_alloc", "nest_out_kinds", "nest_seeds",
+  ["has_loose_bvar_in", "has_loose_bvar_in_go",
+   "close_telescope_go", "proj_guard_fast", "proj_guard_row", "proj_guard_rows_go", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
+   "check_block_pass", "check_block_pass_rec", "iw_alloc", "nest_out_kinds", "nest_seeds",
     "nest_cont_key", "nest_cont_new", "nest_cont_new_finish", "rec6", "nest_accept_group", "sl_snoc",
     "iw_copy", "nest_keys_contains", "nest_key_eq", "sl_eq", "rec4", "nest_ds_closed",
     "nest_ds_closed_go", "fvar_b", "ab_fvb", "fr_memo", "fm_clear", "fr_go", "fm_put", "fm_find",
@@ -570,7 +574,8 @@ def armTaFns : List FnName :=
 
 /-- `cidFrameCallees`, closed under calls. -/
 def armCidFns : List FnName :=
-  ["read_block", "read_block_at", "block_shape_tail", "block_shape_fin", "block_shape_seal",
+  ["formers_lps_ok", "ctors_params_ok", "ctors_lps_ok",
+   "read_block", "read_block_at", "block_shape_tail", "block_shape_fin", "block_shape_seal",
     "block_shape_pack", "iw_alloc", "intern_nanon", "nanon_push", "nanon_find", "block_shape_large",
     "sl_contains", "sl_eq", "er_to_iw", "er_copy", "block_shape_recs_of", "sl_cons", "iw_copy",
     "rec7", "rec_target_of", "sl_find", "e_view", "get_app_fn_f", "get_app_fn", "strip_pis",
@@ -601,7 +606,8 @@ def armCidFns : List FnName :=
 
 /-- `check_block_tables`, closed under calls. -/
 def armRcHbFns : List FnName :=
-  ["check_block_tables", "check_struct_proj_table", "find_table", "raw_table", "tbl_base_get",
+  ["strip_pis", "sl_snoc",
+   "check_block_tables", "check_struct_proj_table", "find_table", "raw_table", "tbl_base_get",
     "tbl_own_get", "env_find", "base_row_get", "env_row_get", "check_struct_proj_table_scoped",
     "loose_bvars_bounded_fast", "bvar_b", "bb_memo", "bm_clear", "bb_go", "bm_put", "bm_find",
     "bb_node", "der_bv", "consts_resolve_ffast", "crf_go", "crm_put", "crm_find", "cr_leaf",
@@ -620,7 +626,9 @@ def armRcHbFns : List FnName :=
 
 /-- `check_block_pass` and `check_block_tail`, closed under calls but for the leaf `mentions_any_const`. -/
 def armMaFns : List FnName :=
-  ["check_block_tail", "check_block_tables", "check_struct_proj_table", "find_table", "raw_table",
+  ["has_loose_bvar_in", "has_loose_bvar_in_go",
+   "proj_guard_fast", "proj_guard_row", "proj_guard_rows_go", "close_lams_go", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv", "close_telescope_go",
+   "check_block_tail", "check_block_tables", "check_struct_proj_table", "find_table", "raw_table",
     "tbl_base_get", "tbl_own_get", "env_find", "base_row_get", "env_row_get",
     "check_struct_proj_table_scoped", "loose_bvars_bounded_fast", "bvar_b", "bb_memo", "bm_clear",
     "bb_go", "bm_put", "bm_find", "bb_node", "der_bv", "consts_resolve_ffast", "crf_go", "crm_put",
@@ -817,7 +825,9 @@ def armMaFns : List FnName :=
 
 /-- `check_block`, closed under calls. -/
 def armMcFns : List FnName :=
-  ["check_block", "ifenv_push_delta", "ifenv_push_tables", "env_push_table", "tbl_own_set",
+  ["has_loose_bvar_in", "has_loose_bvar_in_go",
+   "proj_guard_fast", "proj_guard_row", "proj_guard_rows_go", "close_lams_go", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv", "close_telescope_go",
+   "check_block", "ifenv_push_delta", "ifenv_push_tables", "env_push_table", "tbl_own_set",
     "ifenv_push_all", "env_push", "env_row_set", "block_tables", "sl_cons", "iw_copy", "iw_alloc",
     "block_table", "erec_put", "erec_alloc", "er_from_iw", "er_from_iw_go", "block_shape_lps",
     "er_to_iw", "er_copy", "struct_proj_bodies", "struct_proj_bodies_go", "instantiate_lift_fast",
@@ -1060,7 +1070,9 @@ def armAbsFns : List FnName :=
 /-- `class_recs_rules_ok`, `stream_recs_check` and `flush_caches`, closed under calls (the own rows'
 counters kept: no `OIX*` array, no `CTL[133]`). -/
 def armOwnFns : List FnName :=
-  ["flush_caches", "lsq_clear", "lq_clear", "rr_clear", "cv_clear", "ct_clear", "de_clear",
+  ["has_loose_bvar_in", "has_loose_bvar_in_go",
+   "close_lams_go",
+   "flush_caches", "lsq_clear", "lq_clear", "rr_clear", "cv_clear", "ct_clear", "de_clear",
     "io_clear", "in_clear", "wh_clear", "wk_clear", "wc_clear", "stream_recs_check",
     "stream_rec_check", "stream_rec_compare", "stream_rules_check", "rule_agree", "is_def_eq_core",
     "defeq", "de_put", "de_find", "defeq_body", "defeq_tail", "defeq_stuck", "stuck_rest",

@@ -33,7 +33,7 @@ open L.Ind
 
 /-- The call closure of `lit_shape_ok` in the checker's program. -/
 def litShapeFns : List FnName :=
-  ["app_find", "app_push", "bvar_find", "bvar_push", "char_of_nat_ty_ok", "char_ty_ok", "const_e",
+  ["app_find", "app_push", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv", "bvar_find", "bvar_push", "char_of_nat_ty_ok", "char_ty_ok", "const_e",
   "const_find", "const_push", "der_b", "e_view", "intern_app", "intern_bvar", "intern_const",
   "intern_ls", "intern_param", "intern_sort", "intern_succ", "limbs_eq", "list_cons_ty_ok",
   "list_nil_ty_ok", "list_ty_ok", "lit_hash", "lit_shape_ok", "ls_find", "ls_match", "ls_push",
