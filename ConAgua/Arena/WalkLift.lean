@@ -49,7 +49,7 @@ namespace L.Arena
 
 abbrev i1lSch : MemoSch := ⟨ILFM, 52⟩
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1902-1931 ConRon.Arena.instantiateLiftGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1904-1937 ConRon.Arena.instantiateLiftGo -/
 @[no_expose, l_impl ConRon.Arena.instantiateLiftGo]
 def i1lGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
@@ -79,7 +79,7 @@ def i1lGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, t, i, r) {
   abort
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1933-1945 ConRon.Arena.instLiftArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1939-1951 ConRon.Arena.instLiftArmApp -/
 @[no_expose, l_impl ConRon.Arena.instLiftArmApp]
 def i1lApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
@@ -96,7 +96,7 @@ def i1lApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1947-1959 ConRon.Arena.instLiftArmLam -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1953-1965 ConRon.Arena.instLiftArmLam -/
 @[no_expose, l_impl ConRon.Arena.instLiftArmLam]
 def i1lLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -114,7 +114,7 @@ def i1lLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1961-1973 ConRon.Arena.instLiftArmForallE -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1967-1979 ConRon.Arena.instLiftArmForallE -/
 @[no_expose, l_impl ConRon.Arena.instLiftArmForallE]
 def i1lForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -132,7 +132,7 @@ def i1lForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1975-1988 ConRon.Arena.instLiftArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1981-1994 ConRon.Arena.instLiftArmLet -/
 @[no_expose, l_impl ConRon.Arena.instLiftArmLet]
 def i1lLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -152,7 +152,7 @@ def i1lLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1990-2001 ConRon.Arena.instLiftArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1996-2007 ConRon.Arena.instLiftArmProj -/
 @[no_expose, l_impl ConRon.Arena.instLiftArmProj]
 def i1lProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
@@ -169,7 +169,7 @@ def i1lProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2035-2041 ConRon.Arena.instantiateLiftFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2042-2049 ConRon.Arena.instantiateLiftFast -/
 @[no_expose, l_impl ConRon.Arena.instantiateLiftFast]
 def i1lFast : FunDecl := lfn (f, e, o, l, d) locals (r, u) {
   u := call i1l_clear();

@@ -34,8 +34,8 @@ import all ConAgua.Arena.WhnfEntry
 # `open_pis_at_fvars_f`'s model (lane `indproofs4`, helper `opf`)
 
 The program- and fuel-free model `opfF := callF opfP "open_pis_at_fvars_f"` (the recipe of
-`IndReal.lean`) over the call-closed program `opfP`: the entry, the one-pass walk `opf_go`, the
-fallback `opa_go`, the stack push, the pool copy, `e_view`, `intern_fvar`, and the two walks
+`IndReal.lean`) over the call-closed program `opfP`: the entry, the raw opening `opf_go`, the
+sequential opener `opa_go` (the stream's recursor check, `IndStream.lean`), the stack push, the pool copy, `e_view`, `intern_fvar`, and the two walks
 `inst_list` (`instListProg`) and `inst_entry` (`instProg`). Each L function's body is a word model
 over its callees' runs (`callW`, the recipe of `IndRealFvt.lean`'s `gaaAdW`): `opfGoK`, `opaGoK`,
 `opfTopK`, proved by `vcgen`. The refinement `opfF_ok` is in `IndRealOpf2.lean`.
@@ -122,18 +122,20 @@ def opfK3 (k : Nat) (n co : Word) (r2 : List Word) (m2 : Mem) : Option (List Wor
   if r2.headD 0 = 0 then some ([0, 0, 0, 0], m2.set64 CTL 136 co)
   else opfTail k n co (r2.tail.headD 0) (allocW m2 n)
 
-/-- After `opf_go`. -/
-def opfK2 (p : Prog) (k : Nat) (n e i co : Word) (r1 : List Word) (m1 : Mem) :
+/-- After `opf_go`: the top put back on a failure, else the residual instantiated once by the
+pushed free variables (`inst_list`), then the tail. -/
+def opfK2 (p : Prog) (k : Nat) (n co : Word) (r1 : List Word) (m1 : Mem) :
     Option (List Word × Mem) :=
-  if r1.headD 0 = 0 then ntBW (callW p k "opa_go" [n, e, i] (m1.set64 CTL 136 co)) (opfK3 k n co)
-  else opfTail k n co (r1.tail.headD 0) (allocW m1 n)
+  if r1.headD 0 = 0 then some ([0, 0, 0, 0], m1.set64 CTL 136 co)
+  else ntBW (callW p k "inst_list" [r1.tail.headD 0, co, n, 0] m1)
+    fun rb mb => opfTail k n co (rb.headD 0) (allocW mb n)
 
 /-- `open_pis_at_fvars_f(n, e, i)`'s body over its callees' runs. -/
 def opfTopK (p : Prog) (k : Nat) (m : Mem) (n e i : Word) : Option (List Word × Mem) :=
   if i >>> 63 ≠ 0 then none else
   if m.len64 SPN < rdW (m.arr64 CTL) 136 then none else
   ntBW (callW p k "opf_go" [n, e, i, rdW (m.arr64 CTL) 136, 0] m)
-    (opfK2 p k n e i (rdW (m.arr64 CTL) 136))
+    (opfK2 p k n (rdW (m.arr64 CTL) 136))
 
 theorem opfTopK_spec (p : Prog) (hp : p.lookup "open_pis_at_fvars_f" = some L.Stubs.openPisAtFvarsFL)
     (ha : p.lookup "iw_alloc" = some iwAlloc) (hs : p.lookup "spn_to_iw" = some spnToIwL)
@@ -144,7 +146,7 @@ theorem opfTopK_spec (p : Prog) (hp : p.lookup "open_pis_at_fvars_f" = some L.St
   simp only [callFn, L.Stubs.openPisAtFvarsFL]
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, callW_spec p k "opf_go",
-      callW_spec p k "opa_go",
+      callW_spec p k "inst_list",
       iwAlloc_specW p ha k, s2i_spec p hs k] <;>
     finish (gen := 20) [opfTopK, opfK2, opfK3, opfTail_some, ntBW]
 

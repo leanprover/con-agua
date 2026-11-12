@@ -335,18 +335,25 @@ def classRead : FunDecl := lfn (p, vis, nP, ro, rl) locals
 
 /-! ## `GenRec.lean`, through `classGenRule`: the generator -/
 
-/-- `close_lams(bo, bl, i, body)`: close a telescope of `λ`s opened at `i ‥< i + bl`, innermost
-first. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:87-91 ConRon.Arena.closeLams
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.closeLams`, `ConRon.Arena.closeLamsGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.closeLams` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.closeLams]
-def closeLams : FunDecl := lfn (bo, bl, i, body) locals (inner, closed, e) {
-  if bl == 0 { return body };
-  inner := call close_lams(bo + 1, bl - 1, i + 1, body);
-  closed := call abstract1_fast(⟪CWF⟫, inner, i, 0);
-  e := call mk_lam(IW.u64[bo], closed);
+/-- `close_lams_go(i, k, bo, bl, body)`: `close_telescope_go` with `λ` binders: each domain and
+the body abstracted once over the `k` binders outside it (`ar_entry`). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:76-85 ConRon.Arena.closeLamsGo
+@[no_expose, l_impl ConRon.Arena.closeLamsGo]
+def closeLamsGo : FunDecl := lfn (i, k, bo, bl, body) locals (d, inner, e) {
+  if bl == 0 { e := call ar_entry(body, i, k, 0); return e };
+  d := call ar_entry(IW.u64[bo], i, k, 0);
+  inner := call close_lams_go(i, k + 1, bo + 1, bl - 1, body);
+  e := call mk_lam(d, inner);
   if 4294967296 <= e { abort };
+  return e
+}
+
+/-- `close_lams(bo, bl, i, body)`: close a telescope of `λ`s opened at `i ‥< i + bl`
+(`close_lams_go` from `k = 0`). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:87-91 ConRon.Arena.closeLams
+@[no_expose, l_impl ConRon.Arena.closeLams]
+def closeLams : FunDecl := lfn (bo, bl, i, body) locals (e) {
+  e := call close_lams_go(i, 0, bo, bl, body);
   return e
 }
 
@@ -917,7 +924,7 @@ def recClassFns : Prog :=
    ("class_read_slots_snoc", classReadSlotsSnoc), ("class_read_rec_cls", classReadRecCls),
    ("class_read_mot_pos", classReadMotPos), ("class_read_finish", classReadFinish),
    ("class_read_n_slots", classReadNSlots), ("class_read", classRead),
-   ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
+   ("close_lams_go", closeLamsGo), ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
    ("class_gen_binder", classGenBinder), ("class_gen_slot_var", classGenSlotVar),
    ("class_gen_mot_var", classGenMotVar), ("class_gen_major_tail", classGenMajorTail),
    ("class_gen_major_ci", classGenMajorCi),

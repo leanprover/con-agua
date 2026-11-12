@@ -59,11 +59,8 @@ theorem decCaps_sh {q q' : Nat} {x : IIndCaps} (w : ∀ j < 15, WAt R R' (q + j)
     (he : ArrExt R R') (hx : decCaps R q = some x) : decCaps R' q' = some x := by
   have w0 : WAt R R' q q' := by simpa using w 0 (by omega)
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
-  exact ⟨e1, bool?_sh w0 h1, e2, hd?_sh (w 1 (by omega)) h2,
-    e3, nat?_sh (w 2 (by omega)) h3, e4, nat?_sh (w 3 (by omega)) h4,
-    e5, bool?_sh (w 4 (by omega)) h5, e6, nat?_sh (w 5 (by omega)) h6,
-    e7, nat?_sh (w 6 (by omega)) h7,
+  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
+  exact ⟨e1, bool?_sh w0 h1, e7, nat?_sh (w 6 (by omega)) h7,
     e9, hlist?_sh (w 10 (by omega)) (w 11 (by omega)) he h9,
     e10, nat?_sh (w 12 (by omega)) h10,
     e11, hlist?_sh (w 13 (by omega)) (w 14 (by omega)) he h11, e⟩
