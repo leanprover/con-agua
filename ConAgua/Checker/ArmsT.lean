@@ -13,6 +13,7 @@ public import ConAgua.Checker.LoopProgInd
 public import ConAgua.Checker.CrLeaves
 public import ConAgua.Verdict.KnotAllE
 public import ConAgua.Arena.PinListRef
+public import ConAgua.Checker.KindIn
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LitClosed
@@ -299,6 +300,16 @@ theorem checkerProg_crKeepPB : CrKeep (Prog.subPB bs checkerProg) :=
   ⟨checkerProg_indMemoPB bs, checkerProg_crLeavesPB bs⟩
 theorem checkerProg_ibePB : IbeProg (Prog.subPB bs checkerProg) := by prog_bundle []
 theorem checkerProg_checkDeclPB : CheckDeclProg (Prog.subPB bs checkerProg) := by prog_bundle []
+theorem checkerProg_flushPB : FlushProg (Prog.subPB bs checkerProg) := by prog_bundle []
+
+theorem checkerProg_kindInPB : KindIn (Prog.subPB bs checkerProg) :=
+  ⟨_, kindFns_sub, closedW_subPB bs checkerProg_kindStepClosed⟩
+
+/-- **The reserved names' check's program facts at the checker** (`CdProg.bno`). -/
+theorem checkerProg_bnoPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    L.Ind.BnoProg (Prog.subPB bs checkerProg) := by
+  prog_bundle [basisRefs_of (checkerProg_basisLProgPB bs hr hpre), checkerProg_romRefsPB bs hr hpre,
+    checkerProg_pinListOkRefPB bs hr hpre, checkerProg_leafClosedPB bs]
 
 /-- **`check_decl`'s program facts at the substituted checker program**: the axiom and quotient
 arms here, the value arms' contracts and the inductive arm's as premises; the decoder `dn`
@@ -313,7 +324,11 @@ theorem checkerProg_cdProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop rom
   cd := checkerProg_checkDeclPB bs
   ibe := checkerProg_ibePB bs
   indIn := StepIn.subPB bs checkerProg_indIn
+  kindIn := checkerProg_kindInPB bs
   indMemo := checkerProg_indMemoPB bs
+  indLeaves := checkerProg_indLeavesPB bs
+  fl := checkerProg_flushPB bs
+  bno := checkerProg_bnoPB bs hr hpre
   arms :=
     { axiom_ := checkDeclAxiom_loopT (checkerProg_axArmPB bs hr hpre) (checkerProg_knotStagePB bs)
         (checkerProg_leafClosedPB bs) (checkerProg_apdPB bs) (checkerProg_crKeepPB bs)

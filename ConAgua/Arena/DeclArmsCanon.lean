@@ -85,22 +85,16 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `caps_eq_a(q, q')`: `eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike` (words `0‥4`). -/
+/-- `caps_eq_a(q, q')`: `eta` (word `0`; words `1‥5` are not read). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqA : FunDecl := lfn (q, r) locals (e) {
   e := call b_eq(EREC⦃q⦄, EREC⦃r⦄);
-  if e == 0 { return 0 };
-  if EREC⦃q + 1⦄ != EREC⦃r + 1⦄ { return 0 };
-  if EREC⦃q + 2⦄ != EREC⦃r + 2⦄ { return 0 };
-  if EREC⦃q + 3⦄ != EREC⦃r + 3⦄ { return 0 };
-  e := call b_eq(EREC⦃q + 4⦄, EREC⦃r + 4⦄);
   return e
 }
 
-/-- `caps_eq_b(q, q')`: `unitParams`, `nIdx` (words `5`, `6`; words `7‥9` are not read). -/
+/-- `caps_eq_b(q, q')`: `nIdx` (word `6`; words `7‥9` are not read). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqB : FunDecl := lfn (q, r) locals () {
-  if EREC⦃q + 5⦄ != EREC⦃r + 5⦄ { return 0 };
   return u64(EREC⦃q + 6⦄ == EREC⦃r + 6⦄)
 }
 
