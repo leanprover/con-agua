@@ -55,6 +55,7 @@ theorem StoreDenotes.of_den (h : CoreDen) : StoreDenotes :=
 /-- The lookups of this file. -/
 structure QuickProg (p : Prog) : Prop where
   peel : PeelProg p
+  mid : DefEqMidProg p
   lv : LvlCacheProg p
   qd : p.lookup "quick_defeq" = some quickDefeqL
   qs : p.lookup "quick_sort" = some quickSortL

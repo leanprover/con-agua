@@ -217,8 +217,7 @@ theorem body_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
       with e | ⟨r₁₀, m₁₀⟩
     · exact fun hG => RefE.run_err (dtE_spec p hq.stuck.defeqTail hq.stuck.projPair hq.stuck.ldpr
         hq.stuck.defeqStuck hq.stuck.stuckStr hq.stuck.stuckApp hq.stuck.stuckAppCong hq.stuck.stuckRest
-        hq.stuck.stuckIrrel hq.stuck.setCert hq.stuck.setWith hq.stuck.setWtb hq.stuck.setGo
-        hq.stuck.setTail hq.stuck.sunit hq.stuck.suHead hq.stuck.suTail hq.stuck.etaCert
+        hq.stuck.stuckIrrel hq.stuck.toCertProg hq.stuck.etaCert
         hq.stuck.etaCertBody hq.stuck.etaCertTy (k + 1) ⟨m₉, Locals.init []⟩ mode vis d _ _) hG.nv
         ⟨⟨fun j hj F hF hn s₀ a₀ dn vis fe M eb mode d a b hs ha hb hd =>
             RefE.coreSpecE (ldsE_spec p hq.lazy.step hq.lazy.both hq.lazy.mid.tupa hq.lazy.left

@@ -65,7 +65,7 @@ structure LazyProg (p : Prog) : Prop where
   iter : p.lookup "lazy_iter" = some lazyIterL
   red : p.lookup "lazy_delta_reduction" = some lazyDeltaReductionL
 
-theorem LazyProg.mid {p : Prog} (hp : LazyProg p) : DefEqMidProg p := hp.spine.quick.lams.mid
+theorem LazyProg.mid {p : Prog} (hp : LazyProg p) : DefEqMidProg p := hp.spine.quick.mid
 
 /-- `quick_defeq` at every fuel up to `n + 1`, from the knot up to `n`. -/
 theorem quickUpTo {p : Prog} (hp : LazyProg p) (hc : LazyCallees p) {n : Nat} (hk : KnotUpTo p n) :
@@ -86,7 +86,7 @@ theorem quickWEUpTo {p : Prog} (hp : LazyProg p) (hc : LazyCallees p) {n : Nat} 
   | succ k =>
     intro F s₀ a₀ dn vis fe M eb mode d x y hF hn hs hx hy hd
     have qp := hp.spine.quick
-    exact RefE.coreSpecE (qdE_spec p qp.qd qp.qs qp.qf qp.ql qp.lams.peel.binders qp.lams.lams (k + 1)
+    exact RefE.coreSpecE (qdE_spec p qp.qd qp.qs qp.qb qp.peel (k + 1)
       s₀ mode vis d x y) hG.nv (hG.mono (by omega))
       (qd_ref p qp hc.instList hc.inst1 hc.store k (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d
         x y (by omega) (by omega) hs hx hy hd)
