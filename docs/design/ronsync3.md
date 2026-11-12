@@ -135,3 +135,14 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   `abort (.var k)` splice). The per-function write-set checks found the new guard calling the
   `hb` memo walks directly (they write `CTL[214‥215]`, which the inductive memos' and the core
   stage's frames exclude): ind makes them leaves, with their frame lemmas.
+* 03:10–04:00 the helpers finished (decl, ind 2, core 2: zero sorry in their areas) and stopped;
+  their worktrees removed. Integration by the lead: two more name clashes for the program dump
+  (`pgP`/`pgA`/`pgFns`/`pgC`), the program, lists and `checker.s` regenerated again, the
+  write-set lists closed under the new callees (found per function with `#eval
+  (checkerProg.filter (! CHK ·)).map (·.1)` against each `prog_all`, then the callees outside
+  the tree): `IndArmFns` (the closers' `…_go`, `nat_*_at_cv`, the reader's three tests,
+  `strip_pis`, `sl_snoc`, the guard's functions), `biFns`, `declExtFns`, `litShapeFns`, `cdFns`;
+  the `hb` memo's two queries as leaves of the arms that reach the core (`ArmMemos.hlLeaf_*`,
+  `usLeaves`), the dead `reserved_contains_w` program fields removed, `FreezeTrunc` at the
+  73-word pin table, `ThreadEVerdict` without its universe. **04:00: the whole library builds,
+  zero `sorry`, the axiom guards unchanged; `provenance.py check --strict` clean.**
