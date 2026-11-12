@@ -119,27 +119,35 @@ theorem OGo.step {t n x : Word} {m m4 m5 : Mem} {r : List Word} {y : Option (Lis
 
 /-! ## The twin's steps -/
 
-theorem opfGo_run_zero (acc : Array EIdx) (h : EIdx) (i : Nat) (a a' : AState) (d : EIdx)
-    (hd : (instantiateListFast coreWalkFuel h acc 0).run a = .ok (d, a')) :
-    (openPisAtFvarsFGo acc 0 h i).run a = .ok (some ([], d), a') := by
-  simp [openPisAtFvarsFGo, hd]; rfl
+theorem opfGo_run_zero (acc : Array EIdx) (h : EIdx) (i : Nat) (a : AState) :
+    (openPisRawGo acc 0 h i).run a = .ok (some ([], acc, h), a) := by
+  simp [openPisRawGo]; rfl
 
 theorem opfGo_run_nf (acc : Array EIdx) (n : Nat) (h : EIdx) (i : Nat) (a : AState)
     (htag : (h.tag == ETag.forallE) = false) :
-    (openPisAtFvarsFGo acc (n + 1) h i).run a = .ok (none, a) := by
-  simp [openPisAtFvarsFGo, htag]; rfl
+    (openPisRawGo acc (n + 1) h i).run a = .ok (none, a) := by
+  simp [openPisRawGo, htag]; rfl
 
 theorem opfGo_run_step (acc : Array EIdx) (n : Nat) (h : EIdx) (i : Nat) (a a2 a3 a5 : AState)
-    (dom body d fv : EIdx) (x : Option (List EIdx × EIdx))
+    (dom body d fv : EIdx) (x : Option (List EIdx × Array EIdx × EIdx))
     (htag : (h.tag == ETag.forallE) = true)
     (hv : (view h).run a = .ok (.forallE dom body, a))
     (hd : (instantiateListFast coreWalkFuel dom acc 0).run a = .ok (d, a2))
     (hf : (internE (.fvar i d)).run a2 = .ok (fv, a3))
-    (hrec : (openPisAtFvarsFGo (acc.push fv) n body (i + 1)).run a3 = .ok (x, a5)) :
-    (openPisAtFvarsFGo acc (n + 1) h i).run a = .ok (x.map (fun p => (fv :: p.1, p.2)), a5) := by
+    (hrec : (openPisRawGo (acc.push fv) n body (i + 1)).run a3 = .ok (x, a5)) :
+    (openPisRawGo acc (n + 1) h i).run a = .ok (x.map (fun p => (fv :: p.1, p.2)), a5) := by
   cases x with
-  | none => simp [openPisAtFvarsFGo, htag, StateT.run_bind, hv, except_ok_bind, hd, hf, hrec]; rfl
-  | some p => simp [openPisAtFvarsFGo, htag, StateT.run_bind, hv, except_ok_bind, hd, hf, hrec]; rfl
+  | none => simp [openPisRawGo, htag, StateT.run_bind, hv, except_ok_bind, hd, hf, hrec]; rfl
+  | some p => simp [openPisRawGo, htag, StateT.run_bind, hv, except_ok_bind, hd, hf, hrec]; rfl
+
+/-- The raw opening's result as the old opener's: the free variables and the residual. -/
+def rawFR (x : Option (List EIdx × Array EIdx × EIdx)) : Option (List EIdx × EIdx) :=
+  x.map fun p => (p.1, p.2.2)
+
+/-- The substitution the raw opening returns is the one it started from, extended by the free
+variables it made. -/
+def RawAcc (acc : Array EIdx) (x : Option (List EIdx × Array EIdx × EIdx)) : Prop :=
+  ∀ p, x = some p → p.2.1 = acc ++ p.1.toArray
 
 theorem opa_run_zero (h : EIdx) (i : Nat) (a : AState) :
     (openPisAtFvars 0 h i).run a = .ok (some ([], h), a) := rfl
@@ -172,17 +180,17 @@ theorem push_of_callW {k : Nat} {m m' : Mem} {x : Word} {r : List Word}
 section
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
-/-- **`opf_go` refines `openPisAtFvarsFGo`** under the stage relation and `AbsOK`, the twin's
-`acc` the stack slice `(co, cn)` below the top. -/
+/-- **`opf_go` refines `openPisRawGo`** under the stage relation and `AbsOK`, the twin's `acc`
+the stack slice `(co, cn)` below the top. -/
 @[refines ConRon.Arena.openPisRawGo]
 theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) (acc : Array EIdx)
     (r : List Word), callW opfP k "opf_go" [n, e, i, co, cn] m = some (r, m') →
     StageR vis fe m a → AbsOK m → e.toNat < 2 ^ 32 → SpineR m co cn acc →
     rdW (m.arr64 CTL) 136 = co + cn →
     i.toNat + ((m.arr64 SPN).size - (co.toNat + cn.toNat)) < 2 ^ 64 →
-    ∃ x a', (openPisAtFvarsFGo acc n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
+    ∃ x a', (openPisRawGo acc n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
-      OGo (co + cn) n m m' r x := by
+      OGo (co + cn) n m m' r (rawFR x) ∧ RawAcc acc x := by
   intro k
   induction k with
   | zero => intro m m' a n e i co cn acc r hc; rw [callW_zero] at hc; cases hc
@@ -195,21 +203,19 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
   simp only [opfGoK] at c'
   by_cases hn : n = 0
   · rw [ite_eq_left hn] at c'
-    obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-    obtain ⟨a1, hrun1, hS1, hg1, hAb1, hspn1, htop1, hlt1⟩ := opfIl_ok hS hAb hsl he h1
     subst hn
-    refine ⟨_, _, opfGo_run_zero acc (decE e) i.toNat a a1 _ hrun1, hS1, hg1, hAb1, by rw [hspn1], ?_⟩
-    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => by
-      simp only [spW, hspn1]⟩
-    rw [hspn1, hcc]; exact hsl.bound
+    refine ⟨_, _, opfGo_run_zero acc (decE e) i.toNat a, hS, IWGrow.refl _, hAb, rfl, ?_,
+      fun p hp => by cases hp; simp⟩
+    refine ⟨rfl, he, rfl, by rw [htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => rfl⟩
+    rw [hcc]; exact hsl.bound
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : tagW e ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
-      hS, IWGrow.refl _, hAb, rfl, rfl⟩
+      hS, IWGrow.refl _, hAb, rfl, rfl, fun p hp => by cases hp⟩
   rw [ite_eq_right hg] at c'
   have hg6 : tagW e = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
@@ -231,14 +237,25 @@ theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) 
     SpineR.push' (hsl.of_spn hs3) hlt3 hsz4 (by rw [hs3]; exact hroom) (by rw [hs3]; omega) hsp4
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hcn1 : (cn + 1).toNat = cn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨x5, a5, hrun5, hS5, hg5, hAb5, hsz5, hO⟩ := ih m4 m5 a3 (n - 1) _ (i + 1) co (cn + 1) _ rb h5
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hAb5, hsz5, hO, hacc⟩ := ih m4 m5 a3 (n - 1) _ (i + 1) co (cn + 1) _ rb h5
     hS4 hAb4 hy hsl4 (by rw [htop4]; grind) (by rw [hsz4, hs3, hi1, hcn1]; omega)
   have hrun := opfGo_run_step acc (n - 1).toNat (decE e) i.toNat a a2 a3 a5 _ _ _ _ x5
     (by rw [decE_tag_forallE_beq e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
   rw [hn1] at hrun
   have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
-  refine ⟨_, _, hrun, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hAb5, hsz, ?_⟩
+  refine ⟨_, _, hrun, hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hAb5, hsz, ?_, ?_⟩
+  rotate_left
+  · intro p hp
+    cases x5 with
+    | none => cases hp
+    | some q =>
+      cases hp
+      have := hacc q rfl
+      rw [this]; apply Array.ext'; simp
   rw [show co + (cn + 1) = co + cn + 1 by grind] at hO
+  have hmap : rawFR (x5.map (fun p => (decE (rf.headD 0) :: p.1, p.2))) =
+      (rawFR x5).map (fun p => (decE (rf.headD 0) :: p.1, p.2)) := by cases x5 <;> rfl
+  rw [hmap]
   exact OGo.step hn hO (by rw [hsp4]; simp) hlt3 (by rw [hsz]; omega) (by rw [hsz, hcc]; omega)
     (fun w hw => by
       rw [hsp4, ite_eq_right (fun h => by subst h; omega)]
@@ -312,13 +329,17 @@ theorem opaGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i : Word) (r : L
 
 /-! ## `open_pis_at_fvars_f` -/
 
-theorem opfF_run (n : Nat) (e : EIdx) (i : Nat) (a a1 : AState) (x1 : Option (List EIdx × EIdx))
-    (h1 : (openPisAtFvarsFGo #[] n e i).run a = .ok (x1, a1)) :
+theorem opfF_run (n : Nat) (e : EIdx) (i : Nat) (a a1 : AState) (x1 : Option (List EIdx × Array EIdx × EIdx))
+    (h1 : (openPisRawGo #[] n e i).run a = .ok (x1, a1)) :
     (openPisAtFvarsF n e i).run a =
       match x1 with
-      | some r => .ok (some r, a1)
-      | none => (openPisAtFvars n e i).run a1 := by
-  cases x1 <;> simp [openPisAtFvarsF, StateT.run_bind, h1, except_ok_bind] <;> rfl
+      | some (fvs, acc, r) =>
+        ((instantiateListFast coreWalkFuel r acc 0).run a1).map fun q => (some (fvs, q.1), q.2)
+      | none => .ok (none, a1) := by
+  rcases x1 with _ | ⟨fvs, acc, r⟩
+  · simp [openPisAtFvarsF, StateT.run_bind, h1, except_ok_bind]; rfl
+  · simp only [openPisAtFvarsF, StateT.run_bind, h1, except_ok_bind]
+    cases (instantiateListFast coreWalkFuel r acc 0).run a1 <;> rfl
 
 /-- **The tail**: the stack slice `(co, n)` copied to a fresh pool slice, the top put back. -/
 theorem opfTail_ok {k : Nat} {n co b : Word} {m2 m' : Mem} {a2 : AState} {fvs : List EIdx}
@@ -415,51 +436,32 @@ theorem opfF_ok (k e i : Word) (he : H e) :
       simp [Nat.toUInt64]; omega
     omega
   obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1⟩ := opfGo_ok vis fe K m m1 a k e i co 0 #[] r1
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hAb1, hsz1, hO1, hacc1⟩ := opfGo_ok vis fe K m m1 a k e i co 0 #[] r1
     h1 hS hAb he (by simpa using L.Arena.SpineR.nil_at m _ hcob) (by rw [hco]; simp) (by simp; omega)
   have hrun := opfF_run k.toNat (decE e) i.toNat a a1 x1 hrun1
   simp only [opfK2] at c'
   rw [show co + 0 = co by simp] at hO1
-  cases x1 with
-  | some p =>
-    obtain ⟨fvs, b⟩ := p
-    obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO1
-    rw [ite_eq_right (by rw [h0]; decide)] at c'
-    obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok vis fe hS1 hAb1 hsl hb c'
-    rw [hdb] at hdec
-    exact ⟨_, _, hrun, ⟨hS', hg1.trans hg', hdec⟩, hAb'⟩
-  | none =>
-    rw [ite_eq_left (show r1.headD 0 = 0 from hO1)] at c'
-    obtain ⟨hS1', hg1'⟩ := L.Ind.StageR.frame_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
+  rcases x1 with _ | ⟨fvs, acc, b⟩
+  · rw [ite_eq_left (show r1.headD 0 = 0 from hO1)] at c'
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
+    obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS1 (MemFrame.setCtl m1 136 co) (by simp) (by simp) (by decide)
       (by decide)
-    have hAb1' := hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)
-    have hctl1 : 200 < (m1.arr64 CTL).size := hS1.iw.ctl
-    have htop1 : rdW ((m1.set64 CTL 136 co).arr64 CTL) 136 = co := by
-      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by simp; omega⟩]
-    have hsz1' : ((m1.set64 CTL 136 co).arr64 SPN).size = (m.arr64 SPN).size := by
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz1]
-    obtain ⟨r2, m2, h2, c'⟩ := ntBW_some c'
-    simp only [opfK3] at c'
-    obtain ⟨x2, a2, hrun2, hS2, hg2, hAb2, -, hO2⟩ := opaGo_ok vis fe K _ m2 a1 k e i r2 h2
-      hS1' hAb1' he (by rw [htop1, hsz1']; exact hcob) (by rw [htop1, hsz1']; omega)
-    rw [htop1] at hO2
-    simp only at hrun
-    rw [hrun2] at hrun
-    cases x2 with
-    | none =>
-      rw [ite_eq_left (show r2.headD 0 = 0 from hO2)] at c'
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-      obtain ⟨hS3, hg3⟩ := L.Ind.StageR.frame_hi hS2 (MemFrame.setCtl m2 136 co) (by simp) (by simp) (by decide)
-        (by decide)
-      exact ⟨_, _, hrun, ⟨hS3, hg1.trans (hg1'.trans (hg2.trans hg3)), rfl⟩,
-        hAb2.frameD (MemFrame.setCtl m2 136 co) (by decide) (by decide)⟩
-    | some p =>
-      obtain ⟨fvs, b⟩ := p
-      obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO2
-      rw [ite_eq_right (by rw [h0]; decide)] at c'
-      obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok vis fe hS2 hAb2 hsl hb c'
-      rw [hdb] at hdec
-      exact ⟨_, _, hrun, ⟨hS', hg1.trans (hg1'.trans (hg2.trans hg')), hdec⟩, hAb'⟩
+    exact ⟨_, _, hrun, ⟨hS3, hg1.trans hg3, rfl⟩,
+      hAb1.frameD (MemFrame.setCtl m1 136 co) (by decide) (by decide)⟩
+  obtain ⟨h0, hb, hdb, -, hsl, -⟩ := hO1
+  have hacc : acc = fvs.toArray := by simpa using hacc1 _ rfl
+  subst hacc
+  rw [ite_eq_right (by rw [h0]; decide)] at c'
+  obtain ⟨r2, m2, h2, c'⟩ := ntBW_some c'
+  obtain ⟨a2, hrun2, hS2, hg2, hAb2, hspn2, htop2, hlt2⟩ := opfIl_ok hS1 hAb1 hsl hb h2
+  have hsl2 : SpineR m2 co k fvs.toArray := hsl.of_spn hspn2
+  obtain ⟨⟨hS', hg', hdec⟩, hAb'⟩ := opfTail_ok vis fe hS2 hAb2 hsl2 hlt2 c'
+  have hfin : (openPisAtFvarsF k.toNat (decE e) i.toNat).run a =
+      .ok (some (fvs, decE (r2.headD 0)), a2) := by
+    have hdb' : decE (r1.tail.headD 0) = b := by simpa using hdb
+    rw [show ((0 : Word).toNat) = 0 from rfl, hdb'] at hrun2
+    rw [hrun]; simp only; rw [hrun2]; rfl
+  exact ⟨_, _, hfin, ⟨hS', hg1.trans (hg2.trans hg'), hdec⟩, hAb'⟩
 
 end
 

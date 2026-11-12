@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndRealAr
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
@@ -8,6 +9,25 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
+import ConAgua.L.ModelGen
+import ConAgua.Arena.CallF
+import ConAgua.Arena.IndDecStab
+import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.ArRange
+import all ConAgua.Arena.ArRangeSpec
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.FVarRange
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.Walk
 
 @[expose] public section
 
@@ -332,75 +352,146 @@ theorem instW_afr (n : Nat) : ∀ (m m' : Mem) (ao al e : Word) (r : List Word),
 
 /-! ## `close_telescope` -/
 
-mutual
-def closeW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _ => none
-  | n + 1, m, dO, dl, i, body =>
-    if dl = 0 then some ([body], m)
-    else closeK1 dO i (closeW n m (dO + 1) (dl - 1) (i + 1) body)
-def closeK1 (dO i : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r1, m1) => closeK2 dO (abF m1 [CWF, r1.headD 0, i, 0])
-def closeK2 (dO : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r2, m2) => closeK3 (mkForallW m2 (rdW (m2.arr64 IW) dO) (r2.headD 0))
-def closeK3 : Option (Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m3) => if 4294967296 ≤ r then none else some ([r], m3)
-end
+/-- The two closer functions. -/
+def ctHead : Prog := [("close_telescope", closeTelescope), ("close_telescope_go", closeTelescopeGo)]
 
-section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (dO dl i body r : Word) (r1 r2 : List Word)
-theorem closeW_nil (h : dl = 0) : closeW (n + 1) m dO dl i body = some ([body], m) := by simp [closeW, h]
-theorem closeW_cons (h : dl ≠ 0) : closeW (n + 1) m dO dl i body =
-    closeK1 dO i (closeW n m (dO + 1) (dl - 1) (i + 1) body) := by simp [closeW, h]
-theorem closeK1_some : closeK1 dO i (some (r1, m1)) =
-    closeK2 dO (abF m1 [CWF, r1.headD 0, i, 0]) := by rw [closeK1]
-theorem closeK2_some : closeK2 dO (some (r2, m2)) =
-    closeK3 (mkForallW m2 (rdW (m2.arr64 IW) dO) (r2.headD 0)) := by rw [closeK2]
-theorem closeK3_big (h : 4294967296 ≤ r) : closeK3 (some (r, m3)) = none := by simp [closeK3, h]
-theorem closeK3_ok (h : ¬ 4294967296 ≤ r) : closeK3 (some (r, m3)) = some ([r], m3) := by simp [closeK3, h]
-end arms
-grind_pattern [ind_grind] closeW_nil => closeW (n + 1) m dO dl i body
-grind_pattern [ind_grind] closeW_cons => closeW (n + 1) m dO dl i body
-grind_pattern [ind_grind] closeK1_some => closeK1 dO i (some (r1, m1))
-grind_pattern [ind_grind] closeK2_some => closeK2 dO (some (r2, m2))
-grind_pattern [ind_grind] closeK3_big => closeK3 (some (r, m3))
-grind_pattern [ind_grind] closeK3_ok => closeK3 (some (r, m3))
+/-- The closers and `ar_entry`'s program (the store's `mk_forall` among it). -/
+def ctP : Prog := ctHead ++ arProg
 
-section spec
-variable (p : Prog) (hd : p.lookup "der_b" = some derB)
-  (hpf : p.lookup "forall_find" = some forallFind)
-  (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
-  (hmk : p.lookup "mk_forall" = some mkForall)
-  (hp : p.lookup "close_telescope" = some closeTelescope) (hab : AbF p)
-include hd hpf hpp hpi hmk hp hab
+/-- The functions `close_telescope` reaches. -/
+def ctFns : List FnName := ["close_telescope", "close_telescope_go"] ++ arFns
 
-theorem closeTelescope_spec (n : Nat) : ∀ (s₀ : St) (dO dl i body : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_telescope" [dO, dl, i, body]
-    ⦃fun r s' => LocEq s' s₀ ∧ closeW n s₀.mem dO dl i body = some (r, s'.mem); ⊤⦄ := by
+theorem ctP_closed : closedA ctP absA absC ctFns = true := by decide +kernel
+
+/-- The program bundle. -/
+abbrev CtF (p : Prog) : Prop := ProgHas p ctP
+
+theorem CtF.ar {p : Prog} (hp : CtF p) : ArF p := ProgHas.right (l₁ := ctHead) hp
+
+/-- **`close_telescope_go` is its model `ctgW`** (generated). -/
+l_model ctgW_spec (p : Prog) (hp : CtF p)
+  fns [hp.get "close_telescope_go" ↦ ctgW list]
+  specs [arF_spec p (CtF.ar hp) n,
+    mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+      (hp.get "intern_forall") (hp.get "mk_forall") n]
+  grind [ind_grind] finish [rdW_eq]
+
+/-- **`close_telescope` is its model `closeW`** (generated). -/
+l_model closeW_spec (p : Prog) (hp : CtF p)
+  fns [hp.get "close_telescope" ↦ closeW list]
+  specs [ctgW_spec p hp n]
+  grind [ind_grind]
+
+/-- **The model of `close_telescope`** (program- and fuel-free). -/
+noncomputable def closeF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
+  callF ctP "close_telescope" m args
+
+theorem closeTelescope_spec (p : Prog) (hp : CtF p) (n : Nat) (s₀ : St) (args : List Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_telescope" args
+    ⦃fun r s' => LocEq s' s₀ ∧ closeF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
+  callF_spec ctP_closed (hp.agree ctFns) (by decide) n s₀ args
+
+/-- `close_telescope` writes only `ar_entry`'s `absA`, `absC`. -/
+theorem closeF_frame {m m' : Mem} {args r : List Word} (h : closeF m args = some (r, m')) :
+    MemFrame absA absC m m' := by
+  obtain ⟨n, hc⟩ := callF_run h
+  exact (run_memFrame ctP_closed (by decide) (run_of_callW hc)).1
+
+/-- A model run is `closeW` at some fuel. -/
+theorem closeF_W {m m' : Mem} {dO dl i body : Word} {r : List Word}
+    (h : closeF m [dO, dl, i, body] = some (r, m')) : ∃ n, closeW n m dO dl i body = some (r, m') := by
+  obtain ⟨n, hc⟩ := callF_run h
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (closeW_spec ctP (ProgHas.refl _) n _ dO dl i body) hc
+  rw [hs'] at hW
+  exact ⟨n, hW⟩
+
+theorem decHL_cons_rT {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
+    (h : decHL m o (l + 1) = some xs) :
+    ∃ x ys, xs = x :: ys ∧ decHL m (o + 1) l = some ys ∧ iwH m o = some x := by
+  simp only [decHL, hslice?_succ] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨x, hx, ys, hxs, rfl⟩ := h
+  exact ⟨x, ys, rfl, hxs, hx⟩
+
+theorem ctgW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (i k dO dl body : Word) (ds : List EIdx) (r : List Word),
+    ctgW n m i k dO dl body = some (r, m') → StageR vis fe m a → H body →
+    decHL m dO.toNat dl.toNat = some ds → dO.toNat + dl.toNat < 2 ^ 64 →
+    dO.toNat + dl.toNat ≤ iwTop m → k.toNat + dl.toNat < 2 ^ 64 → AbsOK m →
+    ∃ x a', (ConRon.Arena.closeTelescopeGo i.toNat k.toNat ds (decI body)).run a = .ok (x, a') ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
   induction n with
-  | zero =>
-    intro s₀ dO dl i body
-    rw [invoke_eq _ hp]; simp only [callFn, closeTelescope]; vcgen [exec] <;> grind
+  | zero => intro m m' a i k dO dl body ds r h; simp [ctgW] at h
   | succ n ih =>
-    intro s₀ dO dl i body
-    simp only [invoke_eq _ hp, callFn, closeTelescope]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        abF_spec p hab n, mkForall_spec p hd hpf hpp hpi hmk n, ih] <;>
-      finish (gen := 20)
+    intro m m' a i k dO dl body ds r h hS hb hds hdo hdt hkl hA
+    by_cases hdl : dl = 0
+    · rw [ctgW.arm1 n m i k dO dl body hdl] at h
+      have hl0 : dl.toNat = 0 := by rw [hdl]; rfl
+      rw [hl0] at hds
+      simp [decHL, hslice?] at hds
+      subst hds
+      obtain ⟨⟨ra, m1⟩, ha, h⟩ := of_K h rfl
+      rw [ctgW.k_ar_entry.arm1] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨x, a1, hrun, hpost, hA1⟩ := arF_ok dn vis fe body i k 0 hb m m1 a ra ha ⟨hS, hA⟩
+      exact ⟨x, a1, by simpa [ConRon.Arena.closeTelescopeGo, CWF_eq] using hrun, hpost.1, hpost.2.1,
+        by simpa [decW0E] using hpost.2.2, hA1⟩
+    · rw [ctgW.arm2 n m i k dO dl body hdl] at h
+      obtain ⟨l1, hl1, hdl1⟩ := L.exists_toNat_eq_succ hdl
+      rw [hl1] at hds
+      obtain ⟨dom, rest, rfl, hrest, hdom⟩ := decHL_cons_rT hds
+      have hdO1 : (dO + 1).toNat = dO.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hdom (by omega)
+      rw [UInt64.ofNat_toNat] at hw1
+      rw [hw1] at h
+      obtain ⟨⟨ra, m1⟩, ha, h⟩ := of_K h (ctgW.k_ar_entry_2.none ..)
+      obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd11, hd12⟩, hA1⟩ := arF_ok dn vis fe w i k 0 hw2 m m1 a ra ha ⟨hS, hA⟩
+      rw [ctgW.k_ar_entry_2.arm1] at h
+      obtain ⟨⟨rb, m2⟩, hr, h⟩ := of_K h (ctgW.k_close_telescope_go.none ..)
+      rw [ctgW.k_close_telescope_go.arm1] at h
+      obtain ⟨x2, a2, hrun2, hS2, hg2, ⟨hd21, hd22⟩, hA2⟩ := ih m1 m2 a1 i (k + 1) (dO + 1) (dl - 1) body rest rb hr
+        hS1 hb (by rw [hdO1, hdl1]; exact decHL_grow' hg1 (by omega) hrest) (by omega)
+        (by have := hg1.iw; omega) (by omega) hA1
+      obtain ⟨⟨rc, m3⟩, hm, h⟩ := of_K h (ctgW.k_mk_forall.none ..)
+      by_cases hbig : 4294967296 ≤ rc
+      · rw [ctgW.k_mk_forall.abort1 rc m3 hbig] at h; cases h
+      rw [ctgW.k_mk_forall.arm1 rc m3 hbig] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 (ra.headD 0) (rb.headD 0) hm
+      have hlt : rc.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ rc.toNat := hbig; omega
+      refine ⟨decE rc, a3, ?_, hS3, (hg1.trans hg2).trans hg3, ⟨by simpa using hlt, by simp [decE_eq]⟩,
+        mkForallW_afr hm hA2⟩
+      rw [show (0 : Word).toNat = 0 from rfl] at hrun1
+      rw [hk1] at hrun2
+      simp only [ConRon.Arena.closeTelescopeGo, StateT.run_bind]
+      rw [← hw3, show (decI w : EIdx) = decI w from rfl, hrun1]
+      simp only [bind, Except.bind]
+      rw [hrun2]
+      simp only
+      rw [← hd12, ← hd22]
+      exact hrun3
 
-end spec
-
-theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-    (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word),
-    closeW n m dO dl i body = some (r, m') → StageR vis fe m a → H body →
+theorem closeW_ok (_dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (dO dl i body : Word) (ds : List EIdx) (r : List Word) :
+    closeF m [dO, dl, i, body] = some (r, m') → StageR vis fe m a → H body →
     decHL m dO.toNat dl.toNat = some ds → dO.toNat + dl.toNat < 2 ^ 64 →
     dO.toNat + dl.toNat ≤ iwTop m → i.toNat + dl.toNat < 2 ^ 64 → AbsOK m →
     ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
-  sorry
+  intro h hS hb hds hdo hdt _ hA
+  obtain ⟨n, hW⟩ := closeF_W h
+  cases n with
+  | zero => simp [closeW] at hW
+  | succ n =>
+  rw [closeW.arm1] at hW
+  obtain ⟨⟨rg, m1⟩, hg, hW⟩ := of_K hW rfl
+  rw [closeW.k_close_telescope_go.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨x, a', hrun, hS', hg', hd, hA'⟩ :=
+    ctgW_ok _dn fe vis n m m1 a i 0 dO dl body ds rg hg hS hb hds hdo hdt (by simp; omega) hA
+  exact ⟨x, a', hrun, hS', hg', by simpa [decW0E] using hd, hA'⟩
 
 end L.Ind
 
