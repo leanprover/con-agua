@@ -208,16 +208,9 @@ unified models). -/
 l_model saE_spec (p : Prog) (hf : p.lookup "stuck_app" = some stuckAppL)
     (hac : p.lookup "stuck_app_cong" = some stuckAppCongL)
     (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
-    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
+    (hcp : CertProg p)
   fns [hf ↦ saE list]
-  specs [acE_spec p hac n, siE_spec p hi hc hw hb hg ht hu hh hut n]
+  specs [acE_spec p hac n, siE_spec p hi hcp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -259,8 +252,7 @@ theorem stuckApp_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     CoreSpec p (n + 1) "stuck_app" [mode, vis, d, a, b]
       (stuckAppT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (saE_spec p hq.stuckApp hq.stuckAppCong hq.stuckIrrel hq.setCert hq.setWith hq.setWtb
-    hq.setGo hq.setTail hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
+  RefE.coreSpec (saE_spec p hq.stuckApp hq.stuckAppCong hq.stuckIrrel hq.toCertProg (n + 1) s₀ mode vis d a b)
     (sa_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena

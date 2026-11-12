@@ -102,8 +102,7 @@ theorem stuckIrrel_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
     CoreSpec p (n + 1) "stuck_irrel" [mode, vis, d, a, b]
       (stuckIrrel (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (siE_spec p hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail hq.sunit
-    hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
+  RefE.coreSpec (siE_spec p hq.stuckIrrel hq.toCertProg (n + 1) s₀ mode vis d a b)
     (si_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena
