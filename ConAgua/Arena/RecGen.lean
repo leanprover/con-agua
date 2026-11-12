@@ -352,15 +352,12 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
 /-- `class_const_ok_header(vis, q)`: `classConstOk`'s guards, the syntactic checks of a constant
 (the body of lane `decls2`'s `install_header`, whose model `ihW` is this function's). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:539-562 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC⦃q⦄;
   t := EREC⦃q + 3⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
-  c := call reserved_contains(n);
-  if c != 0 { fail R_RESERVED_BASIS_NAME };
   c := call class_const_ok_lit(q);
   if c == 0 { fail R_A_DECLARATION_AT_A };
   (o, l) := call cv_lps(q);
@@ -380,7 +377,6 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
 /-- `class_const_ok_lit(cv)`: `litShapeOk (.axiomInfo cv)` — a fresh `axiomInfo` record (kind `0`,
 `cv`'s four words inline) handed to the core's `lit_shape_ok`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:539-562 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
   q := call erec_alloc(5);
@@ -395,7 +391,6 @@ def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
 
 /-- `class_const_ok(vis, cv)`: a generated constant, checked (`checkConstantValF`). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:539-562 ConRon.Arena.classConstOk
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.classConstOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
   u := call class_const_ok_header(vis, cv);

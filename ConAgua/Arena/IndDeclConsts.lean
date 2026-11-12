@@ -28,10 +28,9 @@ quotient (its kind word `6`: `1` type, `2` ctor, `3` lift, else ind), `6` induct
 one-constant record's constant is `erec_ci(i, kind)` (the lead's `DeclStep.lean`, the `decCI` kinds
 `0` axiom, `1` defn, `2` thm); a block is `ind_block_to_erec(i)`'s `EREC` slice, its `nP` word `4`.
 
-**Foreign callees** (the lead's pins): `basis_name_hit(bo, bl)` → `(hit, kind)`,
-`basis_at_block(kind, bo, bl)` → `IW` slice, `quot_at(slot, cv)` → constant record (`slot`
+**Foreign callees** (the lead's pins): `quot_at(slot, cv)` → constant record (`slot`
 `QuotKind.slot`: `0` type, `1` ctor, `2` lift, `3` ind, `4` sound; `cv` an `EREC` constant value);
-`pin_at`, `erec_ci`, `ind_block_to_erec`; this lane's `block_shape`, `block_is_rec`,
+`pin_at`, `erec_ci`, `ind_block_to_erec`; this lane's `read_block`, `block_is_rec`,
 `block_caps_at`, `ind_info_rec`, `ctor_info_rec`, `block_shape_declared`, `block_shape_all_ctors`,
 `block_shape_lps`, `struct_proj_bodies`, `rec_info_rec`.
 -/
@@ -304,30 +303,18 @@ def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
   return (o, l)
 }
 
-/-- `decl_constants_ind(bo, bl, nP)`: the `.indDecl` arm: a block with a pinned block's names
-installs the pin at the names the record declares, a block the recogniser reads its constants,
-any other nothing (it declines). -/
--- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declConstants`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declConstants` changed; re-check the L code and its proofs, then delete this line
+/-- `decl_constants_ind(bo, bl, nP)`: the `.indDecl` arm: a block the reader reads installs its
+constants, any other nothing (its check rejects it). -/
 @[no_expose, l_impl ConRon.Arena.declConstants]
-def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (hit, kind, o, l, ok, p) {
-  (hit, kind) := call basis_name_hit(bo, bl);
-  if hit != 0 {
-    (o, l) := call basis_at_block(kind, bo, bl);
-    return (o, l)
-  };
-  (ok, p) := call block_shape(nP, bo, bl);
-  if ok == 0 { return (0, 0) };
+def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (e, p, o, l) {
+  (e, p) := call read_block(nP, bo, bl);
+  if e != 0 { return (0, 0) };
   (o, l) := call block_constants(p);
   return (o, l)
 }
 
 /-- `decl_constants(i)`: the constants `DECL` record `i` installs, in push order (an `IW` slice of
 `EREC` constant records). -/
--- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declConstants`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declConstants` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
   k := DECL.u64[1 + 8 * i];
@@ -356,20 +343,17 @@ def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
   abort
 }
 
-/-- `decl_tables(i)`: the projection tables `DECL` record `i` installs: those of a recognised
-inductive block (a pinned block's names install none); none for any other record. -/
--- con-ron: ConRon/Arena/Install.lean:164-176 ConRon.Arena.declTables
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declTables`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declTables` changed; re-check the L code and its proofs, then delete this line
+/-- `decl_tables(i)`: the projection tables `DECL` record `i` installs: those of an inductive
+block the reader reads (none where a constructor is too short for them, `block_tables`' flag);
+none for any other record. -/
 @[no_expose, l_impl ConRon.Arena.declTables]
-def declTables : FunDecl := lfn (i) locals (bo, bl, hit, kind, ok, p, o, l) {
+def declTables : FunDecl := lfn (i) locals (bo, bl, e, p, ok, o, l) {
   if DECL.u64[1 + 8 * i] != 6 { return (0, 0) };
   (bo, bl) := call ind_block_to_erec(i);
-  (hit, kind) := call basis_name_hit(bo, bl);
-  if hit != 0 { return (0, 0) };
-  (ok, p) := call block_shape(DECL.u64[5 + 8 * i], bo, bl);
+  (e, p) := call read_block(DECL.u64[5 + 8 * i], bo, bl);
+  if e != 0 { return (0, 0) };
+  (ok, o, l) := call block_tables(p, IW.u64[p], IW.u64[p + 1]);
   if ok == 0 { return (0, 0) };
-  (o, l) := call block_tables(p, IW.u64[p], IW.u64[p + 1]);
   return (o, l)
 }
 
@@ -390,8 +374,7 @@ def indDeclConstsForeign : Prog :=
   [("block_caps_at", stub 3), ("ind_info_rec", stub 2), ("ctor_info_rec", stub 3),
    ("block_shape_declared", stub 1), ("block_shape_all_ctors", stub 1), ("block_shape_lps", stub 1),
    ("struct_proj_bodies", stub 4), ("rec_info_rec", stub 6), ("er_from_iw", stub 2),
-   ("block_is_rec", stub 1), ("block_shape", stub 3), ("basis_name_hit", stub 2),
-   ("basis_at_block", stub 3), ("quot_at", stub 2), ("erec_ci", stub 2),
+   ("block_is_rec", stub 1), ("read_block", stub 3), ("quot_at", stub 2), ("erec_ci", stub 2),
    ("ind_block_to_erec", stub 1), ("env_push_table", stub 1)]
 
 -- `ifenv_push_delta` of two empty lists: the view unchanged.

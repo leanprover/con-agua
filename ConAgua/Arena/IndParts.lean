@@ -6,12 +6,12 @@ meta import ConAgua.Arena.IndIface
 @[expose] public section
 
 /-!
-# The block recogniser in L (lane `induct`, module `IndParts`)
+# The block reader in L (lane `induct`, module `IndParts`)
 
 The L translation of `vendor/con-ron/ConRon/Arena/Inductives/FieldTele.lean`'s `piBinders`, all of
 `vendor/con-ron/ConRon/Arena/Inductives/BlockShape.lean`, `BlockRec.lean`'s
-`blockLargeElimAllowed`, and `CheckDecl.lean`'s `checkShapelessFormers`, `checkShapeless` and the
-`.indDecl` arm of `checkDecl` (as `check_ind_decl`). No proofs this round (IndIface, "No proofs
+`blockLargeElimAllowed`, and `CheckDecl.lean`'s `.indDecl` arm of `checkDeclKind` (as
+`check_ind_decl`). No proofs this round (IndIface, "No proofs
 this round"); the point is a faithful translation, one `FunDecl` per twin function, split into
 helpers where a twin function has more than one loop or a long straight-line body.
 
@@ -37,8 +37,6 @@ helpers where a twin function has more than one loop or a long straight-line bod
 * `param_levels(lps.off, lps.len)` → `us`: `ConRon.Arena.paramLevels` (module `IndSum`).
 * `check_block(vis, boff, blen, p)` → `vis'`: `ConRon.Arena.checkBlock` (module `IndInstall`; the
   block as an `IW` slice of constant-record pointers, `p` the `BlockShape` pointer).
-* `basis_name_hit(boff, blen)` → `(hit, kind)`, `check_basis_block(vis, kind, boff, blen)` →
-  `vis'`: `ConRon.Arena.basisNameHit`, `ConRon.Arena.checkBasisBlock` (the lead's pins).
 
 Everything else this file calls is in `libFns`, `stubFns` or `masterFns` (IndIface).
 -/
@@ -389,27 +387,24 @@ def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x
   return idx
 }
 
-/-- `block_counts_pure(nPd, k, nC, nR, bl, g, rOk, rMI, rRP)`: the arithmetic tail of `blockCounts?`
-(from the binder count `bl` and the result's view tag `g`), as `(ok, a, b)`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockCounts]
+/-- `block_counts_pure(nPd, k, nC, nR, bl, g, rOk, rMI, rRP)`: the arithmetic tail of `blockCounts`
+(from the binder count `bl` and the result's view tag `g`), as `(e, a, b)`: `e` the reason of the
+cited `.error` (`0` at `.ok (a, b)`). -/
+@[no_expose, l_impl ConRon.Arena.blockCounts ConRon.Arena.recCountsError]
 def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) locals () {
   if g == 2 {
-    if bl < nPd { return (0, 0, 0) };
-    return (1, nPd, bl - nPd)
+    if bl < nPd { return (R_INDUCTIVE_TYPE_DECLARES, 0, 0) };
+    return (0, nPd, bl - nPd)
   };
-  if rOk == 0 { return (0, 0, 0) };
-  if rRP < nC + k || rMI < rRP { return (0, 0, 0) };
-  if rRP - (nC + k) == nPd { return (1, nPd, rMI - rRP) };
-  if k < nR && nPd + nR + nC <= rRP { return (1, nPd, rMI - rRP) };
-  return (0, 0, 0)
+  if rOk == 0 { return (R_NO_RECURSOR_OF, 0, 0) };
+  if rRP < nC + k || rMI < rRP { return (R_THE_ARGUMENT_COUNTS, 0, 0) };
+  if rRP - (nC + k) == nPd { return (0, nPd, rMI - rRP) };
+  if k < nR && nPd + nR + nC <= rRP { return (0, nPd, rMI - rRP) };
+  return (R_THE_ARGUMENT_COUNTS, 0, 0)
 }
 
 /-- `block_counts_head(cvT)`: the binder count of the former's type and the tag of its result
 (`piBinders`, then `view`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) {
   ty := EREC⦃cvT + 3⦄;
@@ -418,11 +413,10 @@ def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) 
   return (bl, g)
 }
 
-/-- `block_counts(nPd, k, nC, nR, cvT, rOk, rMI, rRP)`: `blockCounts?`. `r : Option (Nat × Nat)`
-(`rOk, rMI, rRP`) is a bare argument, not nested in a list or record, so it is flattened rather
-than boxed (by analogy with the result convention). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
+/-- `block_counts(nPd, k, nC, nR, cvT, rOk, rMI, rRP)`: `blockCounts`, as `(e, a, b)` (`e` the
+error's reason, `0` at `.ok (a, b)`). `r : Option (Nat × Nat)` (`rOk, rMI, rRP`) is a bare argument,
+not nested in a list or record, so it is flattened rather than boxed (by analogy with the result
+convention). -/
 @[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCounts : FunDecl := lfn (nPd, k, nC, nR, cvT, rOk, rMI, rRP) locals (bl, g, a, b, c) {
   (bl, g) := call block_counts_head(cvT);
@@ -577,11 +571,9 @@ def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (rc, cv, nm, b, r) 
   return r
 }
 
-/-- `block_member_counts_find(no, nl, ro, rl, m)`: the `rs.findM?` inside `blockMemberCounts?`,
+/-- `block_member_counts_find(no, nl, ro, rl, m)`: the `rs.findM?` inside `blockMemberCounts`,
 one `rec_target_of` call per candidate, stopping at the first whose target is `m` (recursive,
 lane `indproofs2`: was a loop). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockMemberCounts]
 def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t, a, b, c) {
   if rl == 0 { return (0, 0, 0) };
@@ -593,116 +585,82 @@ def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t,
   return (a, b, c)
 }
 
-/-- `block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)`: `blockMemberCounts?` from
-member `idx` on: one `block_member_counts_find` and one `block_counts` for this former, then the
-rest; a failure stops the walk there (no further calls). The record words past `2^32` are a
-capacity abort (`block_counts`' arithmetic). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
+/-- `block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)`: `blockMemberCounts` from
+member `idx` on, as `(e, o, l)` (`e` the first failing member's reason, `0` at `.ok`): one
+`block_member_counts_find` and one `block_counts` for this former, then the rest; an error stops
+the walk there (no further calls). The record words past `2^32` are a capacity abort
+(`block_counts`' arithmetic). -/
 @[no_expose, l_impl ConRon.Arena.blockMemberCounts]
 def blockMemberCountsGo : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)
-    locals (cv, rok, rmi, rrp, cok, ca, cb, ok, o, l) {
-  if ctl == 0 { return (1, 0, 0) };
+    locals (cv, rok, rmi, rrp, ce, ca, cb, e, o, l) {
+  if ctl == 0 { return (0, 0, 0) };
   cv := IW.u64[cto];
   (rok, rmi, rrp) := call block_member_counts_find(no, nl, ro, rl, idx);
   if 4294967296 <= rmi || 4294967296 <= rrp { abort };
-  (cok, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
-  if cok == 0 { return (0, 0, 0) };
-  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto + 1, ctl - 1, idx + 1);
-  if ok == 0 { return (0, 0, 0) };
+  (ce, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
+  if ce != 0 { return (ce, 0, 0) };
+  (e, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto + 1, ctl - 1, idx + 1);
+  if e != 0 { return (e, 0, 0) };
   (o, l) := call sl_cons(cb, o, l);
-  return (1, o, l)
+  return (0, o, l)
 }
 
-/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts?` from member
+/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts` from member
 `0` (the counts past `2^32` a capacity abort). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockMemberCounts]
-def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (ok, o, l) {
+def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (e, o, l) {
   if 4294967296 <= nPd || 4294967296 <= k || 4294967296 <= nC || 4294967296 <= rl { abort };
-  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, 0);
-  return (ok, o, l)
+  (e, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, 0);
+  return (e, o, l)
 }
 
-/-! ### `blockShape?`: one helper per phase -/
+/-! ### `readBlock`: one helper per stretch -/
 
-/-- `block_shape_names_of(cto, ctl)`: the former `cv` pointers' names (`cvTs.map (·.name)`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
+/-- `former_names(cto, ctl)`: the former `cv` pointers' names (`cvTs.map (·.name)`). -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def formerNames : FunDecl := lfn (cto, ctl) locals (o, l) {
   if ctl == 0 { return (0, 0) };
-  (o, l) := call block_shape_names_of(cto + 1, ctl - 1);
+  (o, l) := call former_names(cto + 1, ctl - 1);
   (o, l) := call sl_cons(EREC⦃IW.u64[cto]⦄, o, l);
   return (o, l)
 }
 
-/-- The formers' pins: unreserved and sharing `lps`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapePinsFormers : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, b, plo, pll, eqv, r) {
+/-- `formers_lps_ok(cto, ctl, lo, ll)`: `cvTs.all fun c => c.levelParams == lps`. -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def formersLpsOk : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, plo, pll, eqv, r) {
   if ctl == 0 { return 1 };
   cv := IW.u64[cto];
-  b := call reserved_contains(EREC⦃cv⦄);
-  if b != 0 { return 0 };
   (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
   eqv := call sl_eq(plo, pll, lo, ll);
   if eqv == 0 { return 0 };
-  r := call block_shape_pins_formers(cto + 1, ctl - 1, lo, ll);
+  r := call formers_lps_ok(cto + 1, ctl - 1, lo, ll);
   return r
 }
 
-/-- The recursors' pins: unreserved. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapePinsRecs : FunDecl := lfn (ro, rl) locals (b, r) {
-  if rl == 0 { return 1 };
-  b := call reserved_contains(EREC⦃IW.u64[IW.u64[ro]]⦄);
-  if b != 0 { return 0 };
-  r := call block_shape_pins_recs(ro + 1, rl - 1);
-  return r
-}
-
-/-- The constructors' pins: `nP` matches, unreserved, sharing `lps`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapePinsCtors : FunDecl := lfn (nP, cso, csl, lo, ll) locals (c, cv, b, plo, pll, eqv, r) {
+/-- `ctors_params_ok(nP, cso, csl)`: `cs.all fun c => c.2.1 == nP`. -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def ctorsParamsOk : FunDecl := lfn (nP, cso, csl) locals (r) {
   if csl == 0 { return 1 };
-  c := IW.u64[cso];
-  cv := IW.u64[c];
-  if IW.u64[c + 1] != nP { return 0 };
-  b := call reserved_contains(EREC⦃cv⦄);
-  if b != 0 { return 0 };
-  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
-  eqv := call sl_eq(plo, pll, lo, ll);
-  if eqv == 0 { return 0 };
-  r := call block_shape_pins_ctors(nP, cso + 1, csl - 1, lo, ll);
+  if IW.u64[IW.u64[cso] + 1] != nP { return 0 };
+  r := call ctors_params_ok(nP, cso + 1, csl - 1);
   return r
 }
 
-/-- The three pin passes, in the twin's own order (formers, then recursors, then constructors;
-module note: "all four are pure", so this order is a choice, not a requirement). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapePinsOk : FunDecl := lfn (nP, cto, ctl, lo, ll, ro, rl, cso, csl) locals (a, b, c) {
-  a := call block_shape_pins_formers(cto, ctl, lo, ll);
-  if a == 0 { return 0 };
-  b := call block_shape_pins_recs(ro, rl);
-  if b == 0 { return 0 };
-  c := call block_shape_pins_ctors(nP, cso, csl, lo, ll);
-  return c
+/-- `ctors_lps_ok(cso, csl, lo, ll)`: `cs.all fun c => c.1.levelParams == lps`. -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def ctorsLpsOk : FunDecl := lfn (cso, csl, lo, ll) locals (cv, plo, pll, eqv, r) {
+  if csl == 0 { return 1 };
+  cv := IW.u64[IW.u64[cso]];
+  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
+  eqv := call sl_eq(plo, pll, lo, ll);
+  if eqv == 0 { return 0 };
+  r := call ctors_lps_ok(cso + 1, csl - 1, lo, ll);
+  return r
 }
 
 /-- The result sort: the sort at the end of `nP + nIdxs[0]` leading `∀`s off `cvT0.type`, else
 `zeroLevel` (the install's whnf loop replaces the placeholder). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeResultSort : FunDecl := lfn (nP, io, il, ty) locals (h0, ok, bo, bl, body, g, x, y, z, s) {
   h0 := call sl_getd(io, il, 0, 0);
   if nP + h0 < nP { abort };
@@ -715,9 +673,7 @@ def blockShapeResultSort : FunDecl := lfn (nP, io, il, ty) locals (h0, ok, bo, b
 }
 
 /-- `cs.map fun c => (c.1, c.2.2)`: the constructors, as `[cv, nF]` (dropping each's own `nP`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeCtorsOf : FunDecl := lfn (cso, csl) locals (c, o, l, e) {
   if csl == 0 { return (0, 0) };
   c := IW.u64[cso];
@@ -730,9 +686,7 @@ def blockShapeCtorsOf : FunDecl := lfn (cso, csl) locals (c, o, l, e) {
 /-- The members: `((cvTs.zip nIdxs).zip groups).map`, each a fresh `[cvT, nIdx, ctors.off,
 ctors.len, declared]` with `declared := cvT` (a group is a pointer to a `[off, len]` header; its
 fields are inlined here). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeMembersOf : FunDecl := lfn (cto, ctl, io, go) locals (o, l, hdr, ms) {
   if ctl == 0 { return (0, 0) };
   (o, l) := call block_shape_members_of(cto + 1, ctl - 1, io + 1, go + 1);
@@ -745,9 +699,7 @@ def blockShapeMembersOf : FunDecl := lfn (cto, ctl, io, go) locals (o, l, hdr, m
 /-- The recursors: `rs.mapM` building a fresh `RecShape` (`[cvR, rP, mI, tgt, rules.off,
 rules.len, isK]`, `decRS`'s order; the rules the record's `EREC` slice, not copied) per element,
 `tgt` by `rec_target_of`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (e, tgt, rc, o, l) {
   if rl == 0 { return (0, 0) };
   e := IW.u64[ro];
@@ -761,9 +713,7 @@ def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (e, tgt, rc, o, l)
 
 /-- `cvR0.levelParams` as `elim :: relps` with `relps == lps` and `elim ∉ lps`: `(1, elim)`;
 anything else (including no level parameters at all): `(0, 0)`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeLarge : FunDecl := lfn (cvR0, lo, ll) locals (off, cnt, elim, rlo, rll, eqv, has) {
   off := EREC⦃cvR0 + 1⦄;
   cnt := EREC⦃cvR0 + 2⦄;
@@ -778,9 +728,7 @@ def blockShapeLarge : FunDecl := lfn (cvR0, lo, ll) locals (off, cnt, elim, rlo,
 }
 
 /-- The final 9-word `BlockShape` record. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapePack : FunDecl := lfn (mo, ml, ro, rl, nP, elim, s, large, isProp) locals (q) {
   q := call iw_alloc(9);
   IW.u64[q] := mo;
@@ -795,10 +743,8 @@ def blockShapePack : FunDecl := lfn (mo, ml, ro, rl, nP, elim, s, large, isProp)
   return q
 }
 
-/-- `block_shape_seal`: which eliminator, then the record (split off `block_shape_build`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+/-- `block_shape_seal`: which eliminator, then the record (split off `read_block_at`). -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeSeal : FunDecl := lfn (mo, ml, ro2, rl2, nPd, s, isProp, largeOk, elim) locals (e, q) {
   if largeOk != 0 {
     q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 1, isProp);
@@ -809,12 +755,10 @@ def blockShapeSeal : FunDecl := lfn (mo, ml, ro2, rl2, nPd, s, isProp, largeOk, 
   return (1, q)
 }
 
-/-- `block_shape_fin`: `blockShape?`'s last stretch — the constructors, the levels, the groups,
+/-- `block_shape_fin`: `readBlock`'s last stretch — the constructors, the levels, the groups,
 the members and recursors, which eliminator, the record (lane `indproofs2`: split off
-`block_shape_build`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+`read_block_at`). -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp)
     locals (cvR0, cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, ok, q) {
   cvR0 := IW.u64[IW.u64[rso]];
@@ -829,10 +773,8 @@ def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, i
 }
 
 /-- `block_shape_tail`: the result sort and `isProp`, then `block_shape_fin` (split off
-`block_shape_build`). -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
+`read_block_at`). -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll)
     locals (s, z, eq, isProp, ok, q) {
   s := call block_shape_result_sort(nPd, io, il, EREC⦃IW.u64[cto] + 3⦄);
@@ -843,41 +785,49 @@ def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, 
   return (ok, q)
 }
 
-/-- `block_shape_build`: `blockShape?` from its split, non-empty components — the names, the
-counts, the level parameters and the pins; then `block_shape_tail`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
-    locals (cvT0, no, nl, mcOk, io, il, lo, ll, pinsOk, ok, q) {
+/-- `read_block_at(nPd, cto, ctl, cso, csl, rso, rsl)`: `readBlock` from its split, non-empty
+components, as `(e, q)` (`e` the reason of the cited `.error`, `0` at `.ok q`): the names, the
+counts, the universe and parameter declarations (the formers' level parameters, the constructors'
+parameter counts, the constructors' level parameters; each cited `all`, its failure's reason),
+then `block_shape_tail` (the Rust's `read_block_at`, from the counts on). -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def readBlockAt : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
+    locals (cvT0, no, nl, e, io, il, lo, ll, b, ok, q) {
   cvT0 := IW.u64[cto];
-  (no, nl) := call block_shape_names_of(cto, ctl);
-  (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
-  if mcOk == 0 { return (0, 0) };
+  (no, nl) := call former_names(cto, ctl);
+  (e, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
+  if e != 0 { return (e, 0) };
   (lo, ll) := call er_to_iw(EREC⦃cvT0 + 1⦄, EREC⦃cvT0 + 2⦄);
-  pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
-  if pinsOk == 0 { return (0, 0) };
+  b := call formers_lps_ok(cto, ctl, lo, ll);
+  if b == 0 { return (R_INDUCTIVE_TYPE_DECLARES_OTHER, 0) };
+  b := call ctors_params_ok(nPd, cso, csl);
+  if b == 0 { return (R_CONSTRUCTOR_DECLARES_ANOTHER, 0) };
+  b := call ctors_lps_ok(cso, csl, lo, ll);
+  if b == 0 {
+    if ctl == 1 { return (R_CONSTRUCTOR_DECLARES_OTHER, 0) };
+    return (R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE, 0)
+  };
   (ok, q) := call block_shape_tail(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll);
-  return (ok, q)
+  return (0, q)
 }
 
-/-- `block_shape(nPd, off, l)`: `blockShape?`: split the block; decline with no formers or no
-recursors (the twin's `cvT0 :: _, (cvR0, _, _, _) :: _` match); else `block_shape_build`. -/
--- con-ron: ConRon/Arena/Inductives/BlockShape.lean:339-396 ConRon.Arena.blockShape?
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockShape?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockShape?]
-def blockShape : FunDecl := lfn (nPd, off, l) locals (ok, q, cto, ctl, cso, csl, rso, rsl, r) {
+/-- `read_block(nPd, off, l)`: `readBlock`, as `(e, q)` (`e` the reason of the cited `.error`, `0`
+at `.ok q`): split the block; its records out of order, no formers, or no recursors (the twin's
+`cvT0 :: _, (cvR0, _, _, _) :: _` match) are the three structural reasons; else `read_block_at`. -/
+@[no_expose, l_impl ConRon.Arena.readBlock]
+def readBlock : FunDecl := lfn (nPd, off, l) locals (ok, q, cto, ctl, cso, csl, rso, rsl, e, r) {
   (ok, q) := call block_split(off, l);
-  if ok == 0 { return (0, 0) };
+  if ok == 0 { return (R_INDUCTIVE_BLOCK_ITS, 0) };
   cto := IW.u64[q];
   ctl := IW.u64[q + 1];
   cso := IW.u64[q + 2];
   csl := IW.u64[q + 3];
   rso := IW.u64[q + 4];
   rsl := IW.u64[q + 5];
-  if ctl == 0 || rsl == 0 { return (0, 0) };
-  (ok, r) := call block_shape_build(nPd, cto, ctl, cso, csl, rso, rsl);
-  return (ok, r)
+  if ctl == 0 { return (R_INDUCTIVE_BLOCK_DECLARES, 0) };
+  if rsl == 0 { return (R_INDUCTIVE_BLOCK_CARRIES, 0) };
+  (e, r) := call read_block_at(nPd, cto, ctl, cso, csl, rso, rsl);
+  return (e, r)
 }
 
 /-! ## `BlockRec.blockLargeElimAllowed` -/
@@ -901,55 +851,19 @@ def blockLargeElimAllowed : FunDecl := lfn (p, nested) locals (nz, n, large, k) 
   return 0
 }
 
-/-! ## `CheckDecl`: the shapeless decline, and the `.indDecl` arm -/
+/-! ## `CheckDecl`: the `.indDecl` arm -/
 
-/-- `check_shapeless_formers(vis, off, cnt)`: `checkShapelessFormers`, every type former
-(`indInfo`, kind `3`) checked as a constant (its `cv`, inline at `+1`), discarded; every other
-member skipped. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:38-51 ConRon.Arena.checkShapelessFormers
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkShapelessFormers` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkShapelessFormers]
-def checkShapelessFormers : FunDecl := lfn (vis, off, cnt) locals (ci, z, r) {
-  if cnt == 0 { return 0 };
-  ci := EREC⦃off⦄;
-  if EREC⦃ci⦄ == 3 { z := call check_constant_val(vis, ci + 1, 0) };
-  r := call check_shapeless_formers(vis, off + 1, cnt - 1);
-  return 0
-}
-
-/-- `check_shapeless(vis, off, cnt)`: `checkShapeless`: check the formers, then always decline
-(`fail (.notImplemented …)`). -/
--- con-ron: ConRon/Arena/CheckDecl.lean:53-64 ConRon.Arena.checkShapeless
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkShapeless` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkShapeless]
-def checkShapeless : FunDecl := lfn (vis, off, cnt) locals (z) {
-  z := call check_shapeless_formers(vis, off, cnt);
-  fail R_INDUCTIVE_BLOCK_SHAPE
-}
-
-/-- `check_ind_decl(vis, boff, blen, nP)`: the `.indDecl block nP` arm of `checkDecl`
-(`@[l_impl ConRon.Arena.checkDecl]`, one arm of it). The pinned basis blocks first
-(`basis_name_hit`, `check_basis_block`); then the declared parameter count (`ind_params_ok`); then
-the one route (`block_shape`, `check_block`), or the shapeless decline. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.checkDecl`, `ConRon.Arena.basisNamesError`, `ConRon.Arena.basisNamesOk`, `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
--- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkDecl` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.checkDecl]
-def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (hitOk, kind, vis2, pOk, pok2, pNew, z) {
-  (hitOk, kind) := call basis_name_hit(boff, blen);
-  if hitOk != 0 {
-    vis2 := call check_basis_block(vis, kind, boff, blen);
-    return vis2
-  };
+/-- `check_ind_decl(vis, boff, blen, nP)`: the `.indDecl block nP` arm of `checkDeclKind`
+(`@[l_impl ConRon.Arena.checkDeclKind]`, one arm of it): the declared parameter count
+(`ind_params_ok`), then the one route (`read_block`, `check_block`), or the reader's reason. -/
+@[no_expose, l_impl ConRon.Arena.checkDeclKind]
+def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vis2) {
   pOk := call ind_params_ok(nP, boff, blen);
   if pOk == 0 { fail R_NUMBER_OF_PARAMETERS };
-  (pok2, pNew) := call block_shape(nP, boff, blen);
-  if pok2 != 0 {
-    vis2 := call check_block(vis, boff, blen, pNew);
-    return vis2
-  };
-  z := call check_shapeless(vis, boff, blen)
+  (e, pNew) := call read_block(nP, boff, blen);
+  if e != 0 { abort e };
+  vis2 := call check_block(vis, boff, blen, pNew);
+  return vis2
 }
 
 /-! ## The module's program -/
@@ -971,21 +885,19 @@ def indPartsFns : Prog :=
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
    ("block_rec_want", blockRecWant), ("block_rec_got", blockRecGot), ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
    ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts_go", blockMemberCountsGo), ("block_member_counts", blockMemberCounts),
-   ("block_shape_names_of", blockShapeNamesOf), ("block_shape_pins_formers", blockShapePinsFormers),
-   ("block_shape_pins_recs", blockShapePinsRecs), ("block_shape_pins_ctors", blockShapePinsCtors),
-   ("block_shape_pins_ok", blockShapePinsOk), ("block_shape_result_sort", blockShapeResultSort),
+   ("former_names", formerNames), ("formers_lps_ok", formersLpsOk),
+   ("ctors_params_ok", ctorsParamsOk), ("ctors_lps_ok", ctorsLpsOk),
+   ("block_shape_result_sort", blockShapeResultSort),
    ("block_shape_ctors_of", blockShapeCtorsOf), ("block_shape_members_of", blockShapeMembersOf),
    ("block_shape_recs_of", blockShapeRecsOf),
    ("block_shape_large", blockShapeLarge), ("block_shape_pack", blockShapePack),
-   ("block_shape_seal", blockShapeSeal), ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("block_shape_build", blockShapeBuild), ("block_shape", blockShape),
+   ("block_shape_seal", blockShapeSeal), ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("read_block_at", readBlockAt), ("read_block", readBlock),
    ("block_large_elim_allowed", blockLargeElimAllowed),
-   ("check_shapeless_formers", checkShapelessFormers), ("check_shapeless", checkShapeless),
    ("check_ind_decl", checkIndDecl)]
 
 /-- Stubs for the functions of OTHER modules this module calls. -/
 def indPartsForeign : Prog :=
-  [("member_idx_at", stub 4), ("param_levels", stub 2), ("check_block", stub 4),
-   ("basis_name_hit", stub 2), ("check_basis_block", stub 4)]
+  [("member_idx_at", stub 4), ("param_levels", stub 2), ("check_block", stub 4)]
 
 /-! ## A few runnable tests (no stub on their path) -/
 
