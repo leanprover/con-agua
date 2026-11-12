@@ -130,15 +130,16 @@ def natAddArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a + b)))
   pure (some x)
 
-/-- `nat_add_lit(oa, la, ob, lb)`: add two literal slices and intern the sum. -/
+/-- `nat_add_lit(oa, la, ob, lb)`: add two literal slices and intern the sum, refused above the
+run's maximum `Nat` size (`lit_nat_sized`, the twin's `litNatSized (a + b)`). -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.litNatSized]
 def natAddLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   o := CTL.u64[0];
   l := call nat_add(oa, la, ob, lb);
-  h := call intern_lit(o, l);
+  h := call lit_nat_sized(o, l);
   return h
 }
 

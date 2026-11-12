@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.NatSized
 public import ConRon.Arena.Core
 public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.NatCmp
@@ -80,6 +81,13 @@ h := call intern_lit(o, l); return h`. -/
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
       (.seq (.call [6] "intern_lit" [.var 4, .var 5]) (.ret [.var 6])))⟩
+
+/-- `topLit` with the size refusal (`lit_nat_sized`) in place of `intern_lit`: the `sub` and `mul`
+arms (`litNatSized (a - b)`, `litNatSized (a * b)`). -/
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.litNatSized] def topLitS (f : FnName) : FunDecl :=
+  ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
+    (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
+      (.seq (.call [6] "lit_nat_sized" [.var 4, .var 5]) (.ret [.var 6])))⟩
 
 /-- The spec of a pool function that appends `F a b` at the top (`natAdd_spec`'s shape), for
 normalised operands. -/
@@ -331,22 +339,40 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
 
 end pred
 
-/-! ## `pow`, with con-leche's exponent bound -/
+/-! ## `pow`, behind the guard -/
 
-/-- `nat_pow_lit(oa, la, ob, lb)`: `(0, 0)` (the arm's `none`) for an exponent above `2^24`,
-else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
-(`b` normalised). -/
--- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
-def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
-  if 1 < lb { return (0, 0) };
+/-- `nat_pow_lit(oa, la, ob, lb)`: the cited `Nat.pow` clause's guard (`powGuard`: an exponent
+above `2^32 - 1` refused whatever the base, the sentinel `natRefusedPowExp`; a result above the
+maximum, `pow_refused`, `natRefusedPowSize`; `NatSized.lean`), then the power (`pow_nat`), interned. An
+exponent of two or more limbs is at least `2^64` (`b` normalised). -/
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.powGuard]
+def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
+  if 1 < lb { return 9223372036854775810 };
   if lb == 1 { e := POOL⦃ob⦄ };
-  if 16777216 < e { return (0, 0) };
-  (o, l) := call nat_pow(oa, la, e);
+  if 4294967295 < e { return 9223372036854775810 };
+  r := call pow_refused(oa, la, e);
+  if r != 0 { return 9223372036854775811 };
+  (o, l) := call pow_nat(oa, la, e);
   h := call intern_lit(o, l);
-  return (1, h)
+  return h
+}
+
+/-- `nat_shl_lit(oa, la, ob, lb)`: the cited `Nat.shiftLeft` clause's guard (`shiftLeftGuard`:
+`0 <<< b` computes; an amount above `2^32 - 1` is refused, the sentinel `natRefusedShlExp`; a
+result above the maximum, `shift_left_refused`, `natRefusedSize`), then the shift. -/
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.shiftLeftGuard]
+def natShlLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
+  if la != 0 {
+    if 1 < lb { return 9223372036854775812 };
+    if lb == 1 { e := POOL⦃ob⦄ };
+    if 4294967295 < e { return 9223372036854775812 };
+    r := call shift_left_refused(la, e);
+    if r != 0 { return 9223372036854775809 }
+  };
+  o := CTL.u64[0];
+  l := call nat_shl(oa, la, ob, lb);
+  h := call intern_lit(o, l);
+  return h
 }
 
 /-- The `Nat.pow` arm (`Arena/Core.lean:1008-1012`), verbatim. -/
@@ -546,7 +572,7 @@ def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[19] { (f, h) := call nat_pow_lit(oa, la, ob, lb); return (f, h) };
+  if c == PINS.u64[19] { h := call nat_pow_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[22] { h := call nat_div_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[23] { h := call nat_mod_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[24] { h := call nat_gcd_lit(oa, la, ob, lb); return (1, h) };
@@ -573,11 +599,13 @@ def natArmProg : Prog := storeProg ++
   [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mac_hi", macHi), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),
-   ("nat_sub_lit", topLit "nat_sub"), ("nat_mul_lit", topLit "nat_mul"),
+   ("nat_sub_lit", topLitS "nat_sub"), ("nat_mul_lit", topLitS "nat_mul"),
    ("nat_land_lit", topLit "nat_land"), ("nat_lor_lit", topLit "nat_lor"),
-   ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", topLit "nat_shl"),
+   ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", natShlLit),
    ("nat_shr_lit", topLit "nat_shr"),
-   ("nat_pow", natPow), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
+   ("nat_pow", natPow), ("pow_nat", powNatL), ("size_bytes", sizeBytesL),
+   ("nat_size_refused", natSizeRefusedL), ("lit_nat_sized", litNatSizedL),
+   ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
    ("div_step", divStep), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
    ("nat_mod_lit", natModLit),

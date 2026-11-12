@@ -338,6 +338,7 @@ split of `reduce_nat`, whnf-delta2.) -/
   (fl1, o1, cnt1) := call raw_nat_lit(wb);
   if fl1 == 0 { return (0, 0) };
   xh := call nat_succ_lit(o1, cnt1);
+  if xh == 9223372036854775809 { fail R_THE_KERNEL_REFUSED };
   return (1, xh)
 }
 
@@ -345,7 +346,8 @@ split of `reduce_nat`, whnf-delta2.) -/
 (`a`, then `b`, head-normalised; the second only if the first is a literal). (A split of
 `reduce_nat`, whnf-delta2.) The result is normalised to a flag word `0`/`1` and a 32-bit handle
 word (`decOpt` reads the same value): `nat_op_result`'s refinement says nothing about its words'
-high bits, and the callers compute with them (lane `whnf2`). -/
+high bits, and the callers compute with them (lane `whnf2`). A refusal arrives as a sentinel
+handle (`NatSized.lean`) and fails here with the twin's message. -/
 -- con-ron: ConRon/Arena/Core.lean:1338-1390 ConRon.Arena.reduceNat
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.reduceNat`, `ConRon.Arena.litNatSized` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
@@ -358,6 +360,10 @@ high bits, and the callers compute with them (lane `whnf2`). -/
   (fl2, o2, cnt2) := call raw_nat_lit(wb);
   if fl2 == 0 { return (0, 0) };
   (rf, rh) := call nat_op_result(c, o1, cnt1, o2, cnt2);
+  if rh == 9223372036854775809 { fail R_THE_KERNEL_REFUSED };
+  if rh == 9223372036854775810 { fail R_THE_KERNEL_REFUSED_TO };
+  if rh == 9223372036854775811 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE };
+  if rh == 9223372036854775812 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT };
   return (u64(rf != 0), rh & 4294967295)
 }
 
