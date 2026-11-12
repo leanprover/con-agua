@@ -151,14 +151,14 @@ theorem installRec5
 the member names and the ctor names as `EREC` slices below the record pool's top. -/
 theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
-    {pp coff clen w0 w1 w2 w3 w4 nIdx : Word} {r : List Word} {bs : BlockShape}
+    {pp coff clen w0 nIdx : Word} {r : List Word} {bs : BlockShape}
     {cs : List (IConstantVal × Nat)}
-    (h : icfW p (n + 1) m pp coff clen w0 w1 w2 w3 w4 nIdx = some (r, m'))
+    (h : icfW p (n + 1) m pp coff clen w0 nIdx = some (r, m'))
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hcs : PSlR decCN cs coff clen m) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ ∃ aq al cq cl : Word,
       CapsWords m' (r.headD 0).toNat
-        [w0, w1, w2, w3, w4, w2, nIdx, 0, 0, 0, aq, al, UInt64.ofNat bs.nP, cq, cl] ∧
+        [w0, 0, 0, 0, 0, 0, nIdx, 0, 0, 0, aq, al, UInt64.ofNat bs.nP, cq, cl] ∧
       ESl m' aq al bs.memberNames ∧ ESl m' cq cl (cs.map (·.1.name)) := by
   have hsz := hS.iw.iwSize
   have hcl := hS.iw.ctl
@@ -252,25 +252,24 @@ theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     rw [show iwTop m4 + i = iwTop m6 + (i - 10) by omega, this]
     rcases i with _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | _ | i <;> first | rfl | omega
 
-/-- **`decCaps` of 15 words** (words `7`‥`9`, the removed `sortZ`, are `0` and unread). -/
+/-- **`decCaps` of 15 words** (words `1`‥`5`, the removed `etaCtor` … `unitParams`, and `7`‥`9`,
+the removed `sortZ`, are `0` and unread). -/
 theorem installDecCaps {a : Nat → Option Word} {e : Nat}
-    {w0 w1 w2 w3 w4 w5 w6 aq al np cq cl : Word} {xs ys : List NIdx}
-    (h : ∀ i < 15, a (e + i) = [w0, w1, w2, w3, w4, w5, w6, 0, 0, 0, aq, al, np, cq, cl][i]?)
-    (hw1 : H w1) (hx : hslice? a aq.toNat al.toNat = some xs) (hy : hslice? a cq.toNat cl.toNat = some ys) :
+    {w0 w6 aq al np cq cl : Word} {xs ys : List NIdx}
+    (h : ∀ i < 15, a (e + i) = [w0, 0, 0, 0, 0, 0, w6, 0, 0, 0, aq, al, np, cq, cl][i]?)
+    (hx : hslice? a aq.toNat al.toNat = some xs) (hy : hslice? a cq.toNat cl.toNat = some ys) :
     decCaps a e = some
       { eta := w0 != 0, all := xs, nparams := np.toNat, nIdx := w6.toNat,
         ctors := ys } := by
-  have e0 := h 0 (by decide); have e1 := h 1 (by decide); have e2 := h 2 (by decide)
-  have e3 := h 3 (by decide); have e4 := h 4 (by decide); have e5 := h 5 (by decide)
+  have e0 := h 0 (by decide)
   have e6 := h 6 (by decide); have e10 := h 10 (by decide); have e11 := h 11 (by decide)
   have e12 := h 12 (by decide); have e13 := h 13 (by decide); have e14 := h 14 (by decide)
-  simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e1 e2 e3 e4 e5 e6
+  simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e6
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at e10 e11 e12 e13 e14
-  have hw1' : w1.toNat < 2 ^ 32 := hw1
   unfold decCaps
-  simp only [bool?, hd?, nat?, hlist?, e0, e1, e2, e3, e4, e5, e6, e10, e12, e13,
+  simp only [bool?, hd?, nat?, hlist?, e0, e6, e10, e12, e13,
     show e + 10 + 1 = e + 11 by omega, show e + 13 + 1 = e + 14 by omega, e11, e14, Option.map_some,
-    hw1', ite_true, hx, hy, bind, Option.bind_some, pure]
+    hx, hy, bind, Option.bind_some, pure]
 
 /-! ## `block_caps_at`'s relation -/
 
@@ -304,24 +303,24 @@ theorem installPureCall {p : Prog} {n : Nat} {f : FnName} {args : List Word} {m 
 /-- **`block_caps_fin`'s run: the record.** A capability record with the branch words, the index
 count, the member names and the ctor names. -/
 theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat)
-    {vis : Word} {fe : IFEnv} {m m2 : Mem} {a : AState} {pp coff clen w0 w1 w2 w3 w4 nIdx : Word}
+    {vis : Word} {fe : IFEnv} {m m2 : Mem} {a : AState} {pp coff clen w0 nIdx : Word}
     {r2 : List Word} {bs : BlockShape} {cs : List (IConstantVal × Nat)}
     (hS : StageR vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
-    (hcs : PSlR decCN cs coff clen m) (hw1 : H w1)
-    (h2 : callW p (n + 1) "block_caps_fin" [pp, coff, clen, w0, w1, w2, w3, w4, nIdx] m = some (r2, m2)) :
+    (hcs : PSlR decCN cs coff clen m)
+    (h2 : callW p (n + 1) "block_caps_fin" [pp, coff, clen, w0, nIdx] m = some (r2, m2)) :
     StageR vis fe m2 a ∧ IWGrow m m2 ∧ CapsAt m2 (r2.headD 0).toNat
       { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP,
         nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (icf_spec p hP.alloc hP.rec5 hP.fin (n + 1) _ pp coff clen w0 w1 w2 w3 w4 nIdx) h2
+    (icf_spec p hP.alloc hP.rec5 hP.fin (n + 1) _ pp coff clen w0 nIdx) h2
   simp only at hW
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   obtain ⟨-, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
   obtain ⟨hS2, hg2, aq, al, cq, cl, hcw, hEa, hEc⟩ := icfW_ok hP hW hS hq hsrc hcs
   refine ⟨hS2, hg2, by have := hcw.1; simpa using this, fun a e ha he => ?_⟩
-  have hd := installDecCaps (a := a) (e := e) (w0 := w0) (w1 := w1) (w2 := w2) (w3 := w3) (w4 := w4)
-    (w5 := w2) (w6 := nIdx) (aq := aq) (al := al) (np := UInt64.ofNat bs.nP) (cq := cq) (cl := cl)
-    (fun i hi => (ha i hi).trans (hcw.2 i (by simpa using hi))) hw1 (he.hslice? hEa) (he.hslice? hEc)
+  have hd := installDecCaps (a := a) (e := e) (w0 := w0)
+    (w6 := nIdx) (aq := aq) (al := al) (np := UInt64.ofNat bs.nP) (cq := cq) (cl := cl)
+    (fun i hi => (ha i hi).trans (hcw.2 i (by simpa using hi))) (he.hslice? hEa) (he.hslice? hEc)
   rw [hd, UInt64.toNat_ofNat_of_lt' hnpb]
 
 /-- **`block_caps_at`'s model refines `blockCapsAt`** (pure in the twin): the stage relation kept,
@@ -348,18 +347,18 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
   obtain ⟨hw0, -, -⟩ := partsIwRd ho (w := pp) rfl
   rw [UInt64.ofNat_toNat] at hw0
   -- the record, shared by the branches
-  have hfin : ∀ (w0 w1 w2 w3 w4 : Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word)
-      (R : IIndCaps), PSlR decCN cs coff clen m → H w1 →
+  have hfin : ∀ (w0 : Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word)
+      (R : IIndCaps), PSlR decCN cs coff clen m →
       R =
         { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP, nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } →
-      icaW.j1 p (n + 1) pp coff clen nIdx w0 w1 w2 w3 w4 m = some (r, m') →
+      icaW.j1 p (n + 1) pp coff clen nIdx w0 m = some (r, m') →
       StageR vis fe m' a ∧ IWGrow m m' ∧ CapsAt m' (r.headD 0).toNat R := by
-    intro w0 w1 w2 w3 w4 cs coff clen nIdx R hcs hw1 hR hK
+    intro w0 cs coff clen nIdx R hcs hR hK
     rw [icaW.j1.arm1] at hK
     obtain ⟨⟨r2, m2⟩, h2, hK⟩ := of_K hK rfl
     rw [icaW.k_block_caps_fin.arm1] at hK
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hK)
-    obtain ⟨hS2, hg2, hca⟩ := installCapsTail hP n hS hq hsrc hcs hw1 h2
+    obtain ⟨hS2, hg2, hca⟩ := installCapsTail hP n hS hq hsrc hcs h2
     subst hR
     exact ⟨hS2, hg2, by simpa using hca⟩
   rw [icaW.arm1] at h
@@ -378,7 +377,7 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     rw [icaW.k_block_caps_head.arm2 (hc1 := by decide)] at h
     simp only [List.headD_cons, List.tail_cons] at h
     simp only [hnone]
-    exact hfin 0 0 0 0 0 [] 0 0 0 _ (PSlR.nil decCN m) (by decide) rfl h
+    exact hfin 0 [] 0 0 0 _ (PSlR.nil decCN m) rfl h
   -- member `mi`
   have hl0 : l.toNat ≠ 0 := by omega
   have hob' : o.toNat + l.toNat ≤ iwTop m := hob.resolve_left (fun h => hl0 (by rw [h]; rfl))
@@ -412,7 +411,7 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     cases hr0
     rw [icaW.k_block_caps_head.arm2 (hc1 := by simp)] at h
     simp only [List.headD_cons, List.tail_cons] at h
-    exact hfin 0 0 0 0 0 [] 0 0 (UInt64.ofNat msh.nIdx) _ (PSlR.nil decCN m) (by decide) (by rw [hnI]; rfl) h
+    exact hfin 0 [] 0 0 (UInt64.ofNat msh.nIdx) _ (PSlR.nil decCN m) (by rw [hnI]; rfl) h
   · -- one constructor
     have hcl1 : cl = 1 := by apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
     subst hcl1
@@ -421,35 +420,21 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     rw [icaW.k_block_caps_head.arm1 (hc1 := by simp)] at h
     simp only [List.headD_cons, List.tail_cons] at h
     obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-    obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one (n + 1) _ pp (UInt64.ofNat v) isRec) h1
+    obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one (n + 1) _ (UInt64.ofNat v) isRec) h1
     subst m1
     rw [capsOne.arm1] at hr1
     cases hr1
     rw [icaW.k_block_caps_one.arm1] at h
     simp only [List.headD_cons, List.tail_cons] at h
-    -- the constructor's words
-    obtain ⟨cp, hcp, hcd0⟩ := decPL_getH (truncM m) hcd' 0 (by decide)
-    simp only [hcs, List.getElem_cons_zero, Nat.add_zero] at hcd0 hcp
-    obtain ⟨⟨cvp2, hcvp2, hcv2⟩, hnF⟩ := decCN_some hcd0
-    obtain ⟨hwc, hcpb, -⟩ := partsIwRd hcp (w := co) rfl
-    have hcp' : (UInt64.ofNat cp : Word).toNat = cp := UInt64.toNat_ofNat_of_lt' hcpb
-    obtain ⟨hwcv, hcvb, -⟩ := partsIwRd hcvp2 (w := UInt64.ofNat cp) hcp'
-    have hcpN : cp + 1 < iwTop m := partsIwLt hnF
-    obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat cp + 1) (by rw [UInt64.toNat_add, hcp']; simp; omega)
-    obtain ⟨hn32, hnm⟩ := partsCVName (IWGrow.refl m) hcv2 hcvb
     have hcb1 : co.toNat + (1 : Word).toNat ≤ iwTop m := hcb.resolve_left (by decide)
-    refine hfin _ _ _ _ _ [c] co 1 (UInt64.ofNat msh.nIdx) _
-      ⟨by rw [← hcs]; exact hcd, hcb1⟩
-      (by simp only [hw2, hwc, hwcv]; exact hn32) ?_ h
-    simp only [hw2, hwc, hwcv, hw1n, hwnF, hnpw, erRd_foldN, hnm, installEvalW3, installEvalW2]
+    refine hfin _ [c] co 1 (UInt64.ofNat msh.nIdx) _
+      ⟨by rw [← hcs]; exact hcd, hcb1⟩ ?_ h
+    simp only [hw1n, installEvalW2]
     have e1 : decide (UInt64.ofNat msh.nIdx = (0 : Word)) = (msh.nIdx == 0) := by
       rw [← installOfNatBeq (c := 0) hnb (by decide)]; rfl
-    have e2 : decide (UInt64.ofNat c.snd = (0 : Word)) = (c.snd == 0) := by
-      rw [← installOfNatBeq (c := 0) hnFb (by decide)]; rfl
     have e4 : decide (isRec = 0) = !b := by rw [← hb, bne, Bool.not_not]; rfl
-    simp only [e1, e2, e4, UInt64.toNat_ofNat_of_lt' hnpb, hnI,
-      UInt64.toNat_ofNat_of_lt' hnFb, List.map_cons, List.map_nil]
-    by_cases h1 : msh.nIdx = 0 <;> by_cases h2 : c.snd = 0 <;> cases b <;> simp [h1, h2, bne]
+    simp only [e1, e4, hnI, List.map_cons, List.map_nil]
+    by_cases h1 : msh.nIdx = 0 <;> cases b <;> simp [h1, bne]
   · -- two or more
     have hcl2 : 2 ≤ cl.toNat := by rw [← hlenc, hcs]; simp
     have hne0 : cl ≠ 0 := fun e => by rw [e] at hcl2; simp at hcl2
@@ -461,7 +446,7 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     rw [icaW.k_block_caps_head.arm2 (hc1 := by simpa using hne1)] at h
     simp only [List.headD_cons, List.tail_cons] at h
     have hbd : co.toNat + cl.toNat ≤ iwTop m := hcb.resolve_left hne0
-    exact hfin 0 0 0 0 0 (c :: c2 :: cs) co cl (UInt64.ofNat msh.nIdx) _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
+    exact hfin 0 (c :: c2 :: cs) co cl (UInt64.ofNat msh.nIdx) _ ⟨by rw [← hcs]; exact hcd, hbd⟩
       (by rw [hnI]; rfl) h
 
 /-- **`block_caps_at` refines `blockCapsAt`, as a call** (`icaW_ok`). -/
