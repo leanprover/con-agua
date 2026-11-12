@@ -33,7 +33,7 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
 * 00:16 stage 3b, first part: the rules file's renames applied to the whole tree (statements
   and proofs, citation lines left alone; 33 files), incl. `internAllPins pins
   maxNatSizeDefault` in the final definitions (see §3).
-* 00:20–01:30 stage 3b/3c on the partial tree, three build rounds. The pipeline at the default
+* 00:17–00:40 stage 3b/3c on the partial tree, three build rounds. The pipeline at the default
   maximum: `PinsReadyP` also says `a.pins.maxNatSize = maxNatSizeDefault`
   (`internReservedPins_maxNatSize`), so the twin's first write in `internAllPins` is a no-op on
   every state we run it from (`SimZ.getSet`; `internAllPins_steps`/`_pins`/`_tail`/`_u` take it as
@@ -51,7 +51,7 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   goes with the fan-out (below), since each helper owns the L code and the proofs of its area.
   Blocked still: 18 modules behind `WhnfM2CRefine` (the old η models) and `KnotMono1` (the store
   monotonicity list: removed twin functions).
-* 01:35 fan-out: helpers ronsync3-decl (#493, #494), ronsync3-ind (#495, closers, opener, the
+* 00:43 fan-out: helpers ronsync3-decl (#493, #494), ronsync3-ind (#495, closers, opener, the
   projection guard), ronsync3-core (#515, #519, #520, KnotMono), on presync3 §4's file sets,
   brief `_tmp/ronsync3/brief-common.md`, 3 build threads each (lead 3).
   **Deviation from presync3 §4's order:** the L code of the rewritten functions is ported by the
