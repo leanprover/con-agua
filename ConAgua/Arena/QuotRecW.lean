@@ -112,7 +112,7 @@ l_model checkQuotRecord_specE (p : Prog) (hp : p.lookup "check_quot_record" = so
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-! ## The pinned basis blocks' entry points (`basis_name_hit`, `basis_at_block`) -/
+/-! ## The pinned basis blocks' name test (`basis_name_hit`) -/
 
 /-- **The model of `block_names_eq(ao, al, bo, bl)`**: the two `IW` slices' records' names. -/
 l_model blockNamesEq_specW (p : Prog) (hp : p.lookup "block_names_eq" = some blockNamesEq)
@@ -133,19 +133,36 @@ l_model basisNameHit_specW (p : Prog) (hp : p.lookup "basis_name_hit" = some bas
   specs [callW_spec p n "er_to_iw", callW_spec p n "basis_name_hit_go"]
   grind [arena_grind]
 
-/-- **The model of `at_block_go(po, pl, co, cl)`**. -/
-l_model atBlockGo_specW (p : Prog) (hp : p.lookup "at_block_go" = some atBlockGo)
-  fns [hp ↦ atBlockGoW list]
-  specs [callW_spec p n "ci_at_lps", callW_spec p n "sl_cons"]
+/-! ## The reserved names (`basis_names_ok`, `basis_names_error`) -/
+
+/-- **The model of `basis_name_unreserved(n)`**. -/
+l_model basisNameUnreserved_specW (p : Prog)
+    (hp : p.lookup "basis_name_unreserved" = some basisNameUnreserved)
+  fns [hp ↦ basisNameUnreservedW list]
+  specs [callW_spec p n "reserved_contains"]
+  grind [arena_grind]
+
+/-- **The model of `block_names_unreserved(bo, bl)`**. -/
+l_model blockNamesUnreserved_specW (p : Prog)
+    (hp : p.lookup "block_names_unreserved" = some blockNamesUnreserved)
+  fns [hp ↦ blockNamesUnreservedW list]
+  specs [callW_spec p n "reserved_contains"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
-/-- **The model of `basis_at_block(kind, bo, bl)`**. -/
-l_model basisAtBlock_specW (p : Prog) (hp : p.lookup "basis_at_block" = some basisAtBlock)
-  fns [hp ↦ basisAtBlockW list]
-  specs [callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw", callW_spec p n "at_block_go"]
+/-- **The model of `basis_names_ok(k, n, bo, bl)`**. -/
+l_model basisNamesOk_specW (p : Prog) (hp : p.lookup "basis_names_ok" = some basisNamesOk)
+  fns [hp ↦ basisNamesOkW list]
+  specs [callW_spec p n "basis_name_hit", callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw",
+    callW_spec p n "pin_list_ok", callW_spec p n "block_names_unreserved", callW_spec p n "pin_at",
+    callW_spec p n "basis_name_unreserved"]
   grind [arena_grind]
 
+/-- **The model of `basis_names_error(k, bo, bl)`**. -/
+l_model basisNamesError_specW (p : Prog) (hp : p.lookup "basis_names_error" = some basisNamesError)
+  fns [hp ↦ basisNamesErrorW list]
+  specs [callW_spec p n "basis_name_hit"]
+  grind [arena_grind]
 
 /-! ## The block's comparison with its pin (`pin_list_ok`) -/
 

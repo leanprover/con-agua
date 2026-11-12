@@ -33,7 +33,7 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- The callees of `check_ind_decl` that cross the walk memos by their write set. -/
-def cidFrameCallees : List FnName := ["basis_name_hit", "block_shape"]
+def cidFrameCallees : List FnName := ["read_block"]
 
 theorem CidMemos.call {p : Prog} {fs : List FnName} (hcl : closedA p cidFreeA cidFreeC fs = true)
     {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word} {m' : Mem}
@@ -66,12 +66,6 @@ theorem shapeCV_of_decB {m : Mem} {q : Word} {bs : BlockShape}
 /-- The lookups of the inductive arm. -/
 structure CidProg (p : Prog) : Prop where
   cid : p.lookup "check_ind_decl" = some checkIndDecl
-  csf : p.lookup "check_shapeless_formers" = some checkShapelessFormers
-  csl : p.lookup "check_shapeless" = some checkShapeless
-  basis : BasisProg p
-  canon : CanonProg p
-  rom : L.Rom.RomRefs p
-  pa : p.lookup "pin_at" = some pinAtL
   ps : p.lookup "pi_sort_tele_len" = some L.Front.Ind.piSortTeleLen
   ev : p.lookup "e_view" = some eView
   ipo : p.lookup "ind_params_ok" = some L.Checker.indParamsOkL
