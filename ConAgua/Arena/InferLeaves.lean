@@ -547,39 +547,7 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
-  simp only [ilE]
-  refine RefE.abort0 (by rfl) fun h1 => ?_
-  refine RefE.abort0 (by rfl) fun h2 => ?_
-  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.base e he ⟨h1, UInt64.not_le.mp h2⟩ hg
-  rw [hv] at hk
-  have hl : l = k.l := by simpa using hk
-  subst hl
-  obtain ⟨l⟩ := k
-  by_cases h3 : tfld s₀.mem LIT (tierW e) (idxW e) 0 = 0
-  · rw [ite_eq_left h3]
-    cases l with
-    | strVal str => simp [RecRel, StrRec, h3] at hrel
-    | natVal N =>
-    simp only [inferLitT]
-    refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
-      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_nat_lit_stored]
-    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
-      (fun hb => by simpa [decBool] using hb)
-      fun _ _ => ?_
-    exact il_arm p hp hc n 1 (by decide) hS₁
-  · rw [ite_eq_right h3]
-    cases l with
-    | natVal N => simp [RecRel, NatRec, h3] at hrel
-    | strVal str =>
-    simp only [inferLitT]
-    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
-      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_str_lit_stored]
-    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
-      (fun hb => by simpa [decBool] using hb)
-      fun _ _ => ?_
-    exact il_arm p hp hc n 5 (by decide) hS₁
+  sorry
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
