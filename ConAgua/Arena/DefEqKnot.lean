@@ -94,7 +94,6 @@ structure KnotAllProg (p : Prog) : Prop where
   /-- The phase-4 walks at their names (`CoreWalks.lean`): `inst1`, `inst_list`, `abs_entry`,
   `ar_entry`, `has_fvar` under `CoreS` at exactly `coreWalkFuel`. -/
   walks : CoreWalkProg p
-  rc : p.lookup "reserved_contains_w" = some reservedContainsL
   natPred : NatPredProg p
   lvc : LvlCacheProg p
   prop : PropReadProg p
@@ -126,18 +125,6 @@ theorem reservedContainsT_run {m : Mem} {a : AState} (hP : PinsFull m a.pins) (n
     (reservedContainsT n).run a = .ok (a.pins.reserved.contains n, a) := by
   simp only [reservedContainsT, StateT.run_bind, reservedBasisNames_run hP, except_ok_bind]
   rfl
-
-/-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
-`callW_reservedContains`: memory unchanged, the pins' reserved list). -/
-theorem reservedContainsOK_of (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL) :
-    ReservedContainsOK p := by
-  intro n s₀ a₀ dn vis fe M eb x hS hx
-  apply CoreSpec.of_call
-  intro r m' hc
-  obtain ⟨rfl, l, hl, hcont, hres⟩ := callW_reservedContains p hp n s₀.mem a₀ hS.pins x hx r m' hc
-  rw [reservedBasisNames_run hS.pins] at hl
-  obtain ⟨rfl, -⟩ := Prod.mk.inj (Except.ok.inj hl)
-  exact coreRef_pure hS (reservedContainsT_run hS.pins _) (by rw [hcont]; rfl) hres
 
 /-- `LvlsEqCH` from lane `whnf`'s `lvlsEqC_refines` (fuel below two: no run). -/
 theorem lvlsEqCH_of (p : Prog) (hp : LvlCacheProg p) : LvlsEqCH p := by
@@ -251,7 +238,6 @@ theorem KnotAllProg.lazy : LazyCallees p :=
 include hq in
 theorem KnotAllProg.stuck : StuckCallees p :=
   ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
-    reservedContainsOK_of p hq.rc,
     lvlsEqCH_of p hq.lvc, coreDen_of, strLitStored_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq,
     hq.instLP, hq.walks.instListOK, hq.lvc⟩

@@ -197,7 +197,7 @@ def apFns : List FnName :=
 
 /-- `check_decl`'s call closure in the checker's program. -/
 def cdFns : List FnName :=
-  ["check_decl", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved", "block_names_unreserved", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
+  ["check_decl", "close_lams_go", "close_telescope_go", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved", "block_names_unreserved", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
     "ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
     "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
     "abstract_prefix_list", "add_carry", "all_level_params_defined", "alpd_go", "alpd_ls",

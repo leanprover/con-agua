@@ -756,7 +756,6 @@ structure IotaProg (p : Prog) : Prop where
   isCtorApp : p.lookup "is_ctor_app" = some isCtorAppL
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
-  reservedContains : p.lookup "reserved_contains_w" = some reservedContainsL
   constNameOf : p.lookup "const_name_of" = some constNameOfL
   formerResSort : p.lookup "former_res_sort" = some formerResSortL
   formerDefHeaded : p.lookup "former_def_headed" = some formerDefHeadedL

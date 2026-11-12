@@ -72,13 +72,6 @@ def reservedContainsT (n : NIdx) : AM Bool := do
   let rs ← reservedBasisNames
   pure (rs.contains n)
 
-/-- `reserved_contains(x)` (lane `whnf`'s `WhnfIota.lean`, no spec yet) refines
-`reservedContainsT`. -/
-def ReservedContainsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb x : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW x →
-    CoreSpec p n "reserved_contains_w" [x] (reservedContainsT (decI x)) decBool s₀ a₀ dn vis fe M eb
-
 /-- `lvls_eq_c(us, vs)` refines `lvlsEq?` at two level lists that read back (lane `whnf`'s
 `lvlsEqC_refines`; `lvlsEqCH_of`, `DefEqKnot.lean`). The callers' lists are stored constants'
 (`StoreDen.constLs`). -/
@@ -156,7 +149,6 @@ structure StuckCallees (p : Prog) : Prop where
   proofIrrel : ProofIrrelOK p
   inst1 : Inst1OK p
   defeqLst : DefeqLstOK p
-  reservedContains : ReservedContainsOK p
   lvlsEqC : LvlsEqCH p
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : CoreDen
