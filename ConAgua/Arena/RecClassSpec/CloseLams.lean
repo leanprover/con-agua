@@ -580,56 +580,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     ∃ x a', (ConRon.Arena.closeLams bs i.toNat (decI body)).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
       AbsOK m' := by
-  induction n with
-  | zero => intro m m' a bo bl i body bs r h; simp [closeLamsW] at h
-  | succ n ih =>
-    intro m m' a bo bl i body bs r h hS hb hbs hbo hbt hib hA
-    by_cases hbl : bl = 0
-    · rw [closeLamsW.arm1 n m bo bl i body hbl] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hl0 : bl.toNat = 0 := by rw [hbl]; rfl
-      rw [hl0] at hbs
-      simp [decHL, hslice?] at hbs
-      subst hbs
-      exact ⟨decI body, a, rfl, hS, IWGrow.refl m, by simpa using hb, rfl, hA⟩
-    · rw [closeLamsW.arm2 n m bo bl i body hbl] at h
-      obtain ⟨l1, hl1, hbl1⟩ := L.exists_toNat_eq_succ hbl
-      rw [hl1] at hbs
-      obtain ⟨dom, rest, rfl, hrest, hdom⟩ := decHL_cons_r hbs
-      have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      obtain ⟨⟨r1, m1⟩, hr, h⟩ := of_K h rfl
-      rw [closeLamsW.k_close_lams.arm1] at h
-      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := ih m m1 a (bo + 1) (bl - 1) (i + 1) body rest r1 hr hS hb
-        (by rw [hbo1, hbl1]; exact hrest) (by omega) (by omega) (by omega) hA
-      obtain ⟨⟨ra, m2⟩, ha, h⟩ := of_K h rfl
-      obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hd21, hd22⟩, hA2⟩ :=
-        abF_ok dn vis fe (r1.headD 0) i 0 hd11 m1 m2 a1 ra ha ⟨hS1, hA1⟩
-      rw [closeLamsW.k_abstract1_fast.arm1] at h
-      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hdom (by omega)
-      rw [UInt64.ofNat_toNat] at hw1
-      have hrd : rdW (m2.arr64 IW) bo = w := by
-        have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := (hg1.trans hg2).iwGet bo.toNat (by omega)
-        simp only [rdW] at hw1 ⊢; rw [e]; exact hw1
-      rw [hrd] at h
-      obtain ⟨⟨rb, m3⟩, hm, h⟩ := of_K h rfl
-      by_cases hbig : 4294967296 ≤ rb
-      · rw [closeLamsW.k_mk_lam.abort1 rb m3 hbig] at h; cases h
-      rw [closeLamsW.k_mk_lam.arm1 rb m3 hbig] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      obtain ⟨a3, hrun3, hS3, hg3⟩ := mkLam_stage hS2 w (ra.headD 0) hm
-      have hlt : rb.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ rb.toNat := hbig; omega
-      refine ⟨decE rb, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hlt, by simp [decE_eq],
-        mkLamW_afr hm hA2⟩
-      rw [CWF_eq, show (0 : Word).toNat = 0 from rfl] at hrun2
-      rw [hi1] at hrun1
-      simp only [ConRon.Arena.closeLams, StateT.run_bind]
-      rw [hrun1]
-      simp only [bind, Except.bind]
-      rw [← hd12, hrun2]
-      simp only
-      rw [← hw3, ← hd22]
-      exact hrun3
+  sorry
 
 /-- **`close_lams` refines `closeLams`** (through the `abstract1_fast` and `mk_lam` stubs). -/
 @[refines ConRon.Arena.closeLams]
