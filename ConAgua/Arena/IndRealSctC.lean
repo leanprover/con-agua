@@ -508,21 +508,6 @@ theorem tblRef_any {vis : Word} {fe : IFEnv} (p : Prog) (hP : TblProg p) (hp : A
   | 0 => rw [tblE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | k + 1 => exact tbl_ref p hP hp k m a t tb hS ht hnP hA hok hks
 
-/-- The level parameters' names of a shape that denotes. -/
-theorem lps_names_of_dShape {st : EStore} {bs : BlockShape} {pP : ConLeche.BlockShape}
-    (h : ConRon.Bridge.Inductives.dShape st bs = some pP) :
-    ∃ ks, bs.lps.mapM (denoteN st.lss.ls.ns) = some ks := by
-  simp only [ConRon.Bridge.Inductives.dShape, bind, Option.bind_eq_some_iff] at h
-  obtain ⟨ms, hms, -⟩ := h
-  unfold BlockShape.lps
-  match hm : bs.members, hms with
-  | [], _ => exact ⟨[], rfl⟩
-  | m0 :: _, hms =>
-    obtain ⟨y, -, -, hy, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hms
-    simp only [ConRon.Bridge.Inductives.dMember, bind, Option.bind_eq_some_iff] at hy
-    obtain ⟨c, hc, -⟩ := hy
-    exact denoteCV_lps hc
-
 /-- A structure-like member's readings: the former's name and the constructor's type denote. -/
 theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : IConstantVal} {nF : Nat}
     {y : ConLeche.MemberShape}

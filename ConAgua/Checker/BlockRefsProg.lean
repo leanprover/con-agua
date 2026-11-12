@@ -376,7 +376,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
     brRefS_of H.toTablesProg.toBlockProg.toRecsProg H.leaf hnv
-  have hbt : BtRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
+  have hbt : BtRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     btRefS_of H.toTablesProg H.leaf hnv
   have hwl : BswmLook (Prog.subPB bs checkerProg) := by prog_bundle []
   have hwm : BswmRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
