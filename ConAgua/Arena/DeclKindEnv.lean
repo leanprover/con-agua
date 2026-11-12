@@ -39,10 +39,10 @@ structure EnvGrowDen (st : EStore) (fe fe' : IFEnv) : Prop where
 `checkDeclKind` on an inductive block, from the twin's fold invariant and the block's
 denotation, returns an environment that grows `fe` by `EnvGrowDen` in the final store. -/
 def IndKindEnv : Prop :=
-  ∀ {env : ConLeche.Env} {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {fe fe' : IFEnv}
+  ∀ {env : ConLeche.Env} {pins : List INatOpPinSet} {fe fe' : IFEnv}
     {block : List IConstantInfo} {nP : Nat} {s s' : AState} {b : List ConLeche.ConstantInfo},
     ConRon.Bridge.FoldOK env fe s → Frontend.denoteCIList s.store block = some b →
-    checkDeclKind mode pins fe (.indDecl block nP) s = .ok (fe', s') →
+    checkDeclKind .verified pins fe (.indDecl block nP) s = .ok (fe', s') →
     EnvGrowDen s'.store fe fe'
 
 end L.Arena
