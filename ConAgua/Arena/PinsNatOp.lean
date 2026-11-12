@@ -100,7 +100,7 @@ theorem NatOpRes.ofNatRes {R : Mem → AState → Prop} {arm : AM (Option EIdx)}
   rcases Nat.lt_or_ge h.toNat (2 ^ 63) with hl | hl
   · have h0 : h >>> 63 = 0 := by
       apply UInt64.toNat_inj.mp; rw [UInt64.toNat_shiftRight]; simp; omega
-    obtain ⟨hok, hR, hres⟩ := hr.1 hl
+    obtain ⟨hok, hR, hres, -⟩ := hr.1 hl
     rw [h0]
     exact ⟨fun _ => ⟨hok, hR, by rw [hres]; rfl⟩, fun e => absurd e (by decide)⟩
   · have h1 : h >>> 63 = 1 := by

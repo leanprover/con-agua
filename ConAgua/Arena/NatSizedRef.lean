@@ -49,10 +49,12 @@ def natRefusal (r : Word) : ConRon.Arena.CheckError :=
     .invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size"
 
 /-- **The outcome of an arm that may refuse**: a handle word (`< 2^63`) is the twin's `some`, a
-sentinel (`≥ 2^63`) the twin's failure with the matching message. -/
+sentinel (`≥ 2^63`) the twin's failure with the matching message. A handle word is below
+`2^32`. -/
 def NatRes (R : Mem → AState → Prop) (arm : AM (Option EIdx)) (a₀ : AState) (r : Word) (m' : Mem) :
     Prop :=
-  (r.toNat < 2 ^ 63 → AM.ok arm a₀ ∧ R m' (AM.st arm a₀) ∧ AM.res arm a₀ = some (decE r)) ∧
+  (r.toNat < 2 ^ 63 → AM.ok arm a₀ ∧ R m' (AM.st arm a₀) ∧ AM.res arm a₀ = some (decE r) ∧
+    r.toNat < 2 ^ 32) ∧
   (2 ^ 63 ≤ r.toNat → arm.run a₀ = .error (natRefusal r))
 
 /-- `litNatSized` at the run's maximum: the refusal, or the intern. -/
@@ -90,13 +92,14 @@ theorem NatRes.ofIntern {R : Mem → AState → Prop} {arm : AM (Option EIdx)} {
     (hres : AM.res (internE (.lit (.natVal n))) a₀ = decE h) :
     NatRes R arm a₀ r m' := by
   subst hr
-  have hlt : (h &&& 4294967295).toNat < 2 ^ 63 := by
+  have hlt32 : (h &&& 4294967295).toNat < 2 ^ 32 := by
     rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+  have hlt : (h &&& 4294967295).toNat < 2 ^ 63 := by omega
   have hrun' : arm.run a₀ = .ok (some (decE h), AM.st (internE (.lit (.natVal n))) a₀) := by
     rw [hrun, StateT.run_bind, AM.run_of_ok _ _ hok, hres]; rfl
   refine ⟨fun _ => ?_, fun h' => absurd h' (by omega)⟩
   simp only [AM.ok, AM.st, AM.res, hrun', decE_mask32]
-  exact ⟨trivial, hR, trivial⟩
+  exact ⟨trivial, hR, trivial, hlt32⟩
 
 /-- **`size_bytes`**: `8 · max(l, 1)` for a limb count below `2^61`. -/
 theorem sizeBytes_spec (p : Prog) (hp : p.lookup "size_bytes" = some sizeBytesL) (n : Nat) (s₀ : St)
@@ -304,7 +307,7 @@ theorem rdW_prd (m : Mem) (x : Word) :
     rdW (m.arr64 (tierA POOL (x >>> 40))) (x &&& 1099511627775) = prd m x := rfl
 
 /-- An in-bounds read is `rdW`. -/
-theorem getElem_rdW (a : Array Word) (i : Word) (h : i.toNat < a.size) : a[i.toNat] = rdW a i := by
+private theorem getElem_rdW (a : Array Word) (i : Word) (h : i.toNat < a.size) : a[i.toNat] = rdW a i := by
   simp [rdW, h]
 
 theorem powW_big {m la x e s : Word} (hla : la ≠ 0) (hx : ¬ (la = 1 ∧ x = 1)) (he : e ≠ 0)
