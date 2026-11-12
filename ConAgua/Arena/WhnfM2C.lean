@@ -20,7 +20,7 @@ projections, on the spine stack; the twin has no stack).
 | `m2c_head(mode, vis, d, isK, ro, rc, major)` | the constructor test, the single rule, its `ctorInfo` |
 | `m2c_ctor(mode, vis, d, isK, ro, cvjP, major)` | the family `T` (head of the constructor type's Π-result), its `indInfo` |
 | `m2c_const_view(hh)` | the `view` of a `const` head |
-| `m2c_arms(mode, vis, d, isK, ro, cvjP, T, indP, major)` | the dispatch on the recursor's `isK`, then `eta_rescue_ok` |
+| `m2c_arms(mode, vis, d, isK, ro, cvjP, T, indP, major)` | the dispatch on the recursor's `isK`, then `eta_rescue_table` |
 | `m2c_pre(mode, vis, d, major)` | the major's type `tmaj` in whnf, its head `T'.{ust}`, `ust`'s length (all three arms) |
 | `m2c_k(…)`, `m2c_k2(…)` | the K arm |
 | `m2c_eta(…)`, `m2c_eta2(…)` | the η arm |
@@ -76,20 +76,22 @@ con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
   return (CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
 }
 
-/-- The recursor's `isK` and the η rescue's standing condition (`eta_rescue_ok`) pick the arm;
+/-- The recursor's `isK` and the η rescue's standing condition (`eta_rescue_table`, on the
+family's projection table) pick the arm;
 the K and `And` arms get the rule's constructor, the constructor's level-parameter count and
 parameter count.
 con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueTable?` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def m2cArmsL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, T, indP, major) locals (er, r) {
+@[no_expose] def m2cArmsL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, T, indP, major) locals (tq, er, r) {
   if isK != 0 {
     r := call m2c_k(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
     return r
   };
-  er := call eta_rescue_ok(EREC⦃ro⦄, cvjP, indP);
+  tq := call find_table(vis, T);
+  er := call eta_rescue_table(tq, EREC⦃ro⦄, cvjP, indP);
   if er != 0 {
-    r := call m2c_eta(mode, vis, d, T, indP, major);
+    r := call m2c_eta(mode, vis, d, T, indP, er, major);
     return r
   };
   r := call m2c_and(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
@@ -154,16 +156,17 @@ con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
   return r
 }
 
-/-- The η arm (`indP` the family's record): the type's head, argument count and level count.
+/-- The η arm (`indP` the family's record, `tq` its projection table plus one): the type's head,
+argument count (the table's parameter count) and level count.
 con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueTable?` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, major)
+@[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, tq, major)
     locals (pc, ec, ep, ef, f, tmaj, T2, ust, ustl, to, tn, r) {
   pc := EREC⦃indP + 3⦄;
-  ec := EREC⦃indP + 6⦄;
-  ep := EREC⦃indP + 7⦄;
-  ef := EREC⦃indP + 8⦄;
+  ec := EREC⦃tq + 5⦄;
+  ep := EREC⦃tq + 4⦄;
+  ef := EREC⦃tq + 6⦄;
   (f, tmaj, T2, ust, ustl) := call m2c_pre(mode, vis, d, major);
   if f == 0 { return major };
   (to, tn) := call get_app_args(tmaj);
@@ -174,19 +177,13 @@ con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
   return r
 }
 
-/-- The η arm's fabrication: the η law's keys (the reserved names, the projection slots), then
-the instantiated non-`Prop` test at the use (`former_never_zero_at`), the η spine.
+/-- The η arm's fabrication: the instantiated non-`Prop` test at the use
+(`former_never_zero_at`), the η spine at the table's constructor `ec` and field count `ef`.
 con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor -/
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueTable?` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cEta2L : FunDecl := lfn (mode, vis, d, T, indP, ec, ef, to, tn, ust, major)
-    locals (res, ok, nz, fo, fn, hd, fab) {
-  res := call reserved_contains_w(T);
-  if res != 0 { return major };
-  res := call reserved_contains_w(ec);
-  if res != 0 { return major };
-  ok := call tower_slots_all(vis, T, ef);
-  if ok == 0 { return major };
+    locals (ok, nz, fo, fn, hd, fab) {
   nz := call former_never_zero_at(mode, vis, indP, ust);
   if nz == 0 { return major };
   (fo, fn) := call eta_fab_args(T, to, tn, major, ef);
