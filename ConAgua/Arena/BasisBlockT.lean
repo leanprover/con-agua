@@ -1,7 +1,8 @@
 module
 
 public import ConAgua.Arena.BasisBlockC
-public import ConAgua.Arena.IndDeclConstsRef
+public import ConAgua.Arena.DeclBasisSpec
+public import ConAgua.Arena.StageTLift
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

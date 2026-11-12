@@ -158,8 +158,10 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v, z, ok, e) {
   ok := call basis_names_ok(k, DECL.u64[2 + 8 * i] & 4294967295, bo, bl);
   if ok == 0 {
     e := call basis_names_error(k, bo, bl);
-    -- `abort e` (local `8`)
-    ⟪.abort (.var 8)⟫
+    -- the twin's `fail e`: the reject at the reason `e` (one of `basis_names_error`'s)
+    if e == ⟪R_RESERVED_BASIS_NAME_THE⟫ { fail R_RESERVED_BASIS_NAME_THE };
+    if e == ⟪R_RESERVED_BASIS_NAME_IN⟫ { fail R_RESERVED_BASIS_NAME_IN };
+    fail R_RESERVED_BASIS_NAME
   };
   return v
 }
