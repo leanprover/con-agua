@@ -372,12 +372,12 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     have hg02 := hg1.trans hg2
     rcases x2 with ce | ⟨c1, c2⟩
     · obtain ⟨hr2, hc2, s2, rfl⟩ := hr2
-      rw [ite_eq_left hc2.1, hr2]
-      exact Sim.ret ⟨hc2, s2, rfl⟩
+      rw [ite_eq_left hc2.1]
+      exact Sim.ret ⟨⟨hc2, s2, rfl⟩, hS2, hg02⟩
     have hr2' : r2 = _ := hr2
     subst hr2'
     have hc2 := hq2 c1 c2 rfl
-    rw [ite_eq_right (show ¬ ((0 : Word) ≠ 0) by decide)]
+    rw [if_neg (by simp)]
     have hcl1 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hcto1 : (cto + 1).toNat = cto.toNat + 1 := by
       have := hts.2; rw [UInt64.toNat_add]; simp; omega
@@ -396,7 +396,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     | error ce =>
       obtain ⟨hc3, s3, rfl⟩ := hR3
       rw [ite_eq_left hc3.1]
-      exact Sim.ret ⟨hc3, s3, rfl⟩
+      exact Sim.ret ⟨⟨hc3, s3, rfl⟩, hS3, hg02.trans hg3⟩
     | ok ns =>
     obtain ⟨h1', hd3, hb3'⟩ := hR3
     rw [ite_eq_right (by rw [h1']; decide)]
