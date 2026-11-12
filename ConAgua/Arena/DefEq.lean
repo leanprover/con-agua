@@ -307,6 +307,7 @@ def lazyFoldOkL : FunDecl := lfn (mode, a, b) locals (r) {
 /-- One level's domains in `defeq_binders`: the same RAW domain handle is `1`; otherwise the left
 domain, opened over the variables so far (the stack slice `(fo, k)`, push order) in one
 `inst_list`, against the opened right one `dom2`. -/
+-- con-ron: ConRon/Arena/Core.lean:3622-3632 ConRon.Arena.defeqDomain
 @[no_expose, l_impl ConRon.Arena.defeqDomain]
 def defeqDomainL : FunDecl := lfn (mode, vis, d, fo, k, ty1, ty2, dom2) locals (dom1, r) {
   if ty1 == ty2 { return 1 };
@@ -317,6 +318,7 @@ def defeqDomainL : FunDecl := lfn (mode, vis, d, fo, k, ty1, ty2, dom2) locals (
 
 /-- The innermost level of `defeq_binders`: the opened bodies, and for two λ-telescopes (`lam`)
 at the verified mode their FULL-grade types. -/
+-- con-ron: ConRon/Arena/Core.lean:3609-3620 ConRon.Arena.defeqBindersInner
 @[no_expose, l_impl ConRon.Arena.defeqBindersInner]
 def defeqBindersInnerL : FunDecl := lfn (mode, vis, lam, d, b1, b2) locals (ok, t1, t2, r) {
   ok := call defeq(mode, vis, d + 1, b1, b2);
@@ -332,6 +334,7 @@ def defeqBindersInnerL : FunDecl := lfn (mode, vis, lam, d, b1, b2) locals (ok, 
 
 /-- `binderPair?`: `(1, ty1, body1, ty2, body2)` when both handles are λs (`lam ≠ 0`) or both ∀s
 (`lam = 0`), else `(0, 0, 0, 0, 0)`. -/
+-- con-ron: ConRon/Arena/ExprOps.lean:1271-1284 ConRon.Arena.binderPair?
 @[no_expose, l_impl ConRon.Arena.binderPair?]
 def binderPairL : FunDecl := lfn (lam, a, b) locals (t, g, x1, y1, x2, y2, z) {
   if lam != 0 { t := 5 } else { t := 6 };
@@ -348,6 +351,7 @@ the variables of the levels above are the stack slice `(fo, k)` in push order (t
 opened (`dom2`), the domains compared (`defeq_domain`), the variable `fvar d dom2` pushed; at the
 innermost level both bodies are opened and compared (`defeq_binders_inner`). The depth capacity:
 the word `d + 1` must not wrap where the twin's `Nat` does not. -/
+-- con-ron: ConRon/Arena/Core.lean:3634-3664 ConRon.Arena.defeqBinders
 @[no_expose, l_impl ConRon.Arena.defeqBinders]
 def defeqBindersL : FunDecl := lfn (mode, vis, lam, fuel, d, fo, k, ty1, body1, ty2, body2)
     locals (dom2, ok, fv, f, x1, y1, x2, y2, b1, b2, r) {
@@ -390,6 +394,7 @@ def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
 /-- `quickDefEq`'s `∀` (`lam = 0`) and `λ` (`lam = 1`) pairs: binder-telescope congruence
 (`defeq_binders` at `bindersFuel`, `2^62`, from an empty variable slice at the stack top; the top
 put back). -/
+-- con-ron: ConRon/Arena/Core.lean:3666-3692 ConRon.Arena.quickDefEq
 @[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickBindersL : FunDecl := lfn (mode, vis, lam, d, a, b) locals (g, x1, y1, x2, y2, z, so, r) {
   (g, x1, y1, z) := call e_view(a);
@@ -843,6 +848,7 @@ def structEtaCertTailL : FunDecl :=
 `(ao, an)`, `(to, tn)` on the stack): the table's constructor and parameter count, the level
 list's length, the level parameters. Every record word is read before the first call, and the
 twin's pure tests (`er_slice_eq`, the level list's length) run before the tests. -/
+-- con-ron: ConRon/Arena/Core.lean:1602-1651 ConRon.Arena.structEtaCertWith
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, tq, us2, ao, an, to, tn)
@@ -869,6 +875,7 @@ def structEtaCertGoL : FunDecl :=
 /-- `structEtaCertWith` past the constructor's spine: the type's head, its family's projection
 table (none: `false`) and spine, then the keys (split off for the proofs). Leaves its slices on
 the stack. -/
+-- con-ron: ConRon/Arena/Core.lean:1602-1651 ConRon.Arena.structEtaCertWith
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, tq, to, tn, r) {
@@ -914,6 +921,7 @@ def structEtaCertWithL : FunDecl :=
 /-- The family half of `etaCtorPartial`: the family `ty` (the constructor's type) ends in is a
 stored η family whose projection table's constructor is `c`. The `eta` word is read before
 `find_table`. -/
+-- con-ron: ConRon/Arena/Core.lean:1670-1686 ConRon.Arena.etaCtorPartialFam
 @[no_expose, l_impl ConRon.Arena.etaCtorPartialFam]
 def etaCtorPartialFamL : FunDecl := lfn (vis, c, ty) locals (pr, hh, t, i, T, f, q, eta, tq) {
   pr := call pi_result(ty);
@@ -935,6 +943,7 @@ def etaCtorPartialFamL : FunDecl := lfn (vis, c, ty) locals (pr, hh, t, i, T, f,
 lacks, or `(0, 0)`. The record words are read before the first call after `env_find`; the stack
 top is put back after the spine is counted. The sum of the constructor's counts must fit a word
 (a capacity). -/
+-- con-ron: ConRon/Arena/Core.lean:1688-1709 ConRon.Arena.etaCtorPartial
 @[no_expose, l_impl ConRon.Arena.etaCtorPartial]
 def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf, ty, top, ao, an, ok) {
   hh := call get_app_fn(a);
@@ -959,6 +968,7 @@ def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf,
 
 /-- The body of structure η at a fully applied constructor, past the shape gate: `b`'s io-inferred
 type, head-normalised, and the certificate against it. -/
+-- con-ron: ConRon/Arena/Core.lean:1711-1720 ConRon.Arena.structEtaFullAt
 @[no_expose, l_impl ConRon.Arena.structEtaFullAt]
 def structEtaFullAtL : FunDecl := lfn (mode, vis, d, a, b) locals (tb, wtb, r) {
   tb := call infer_io(mode, vis, d, b);
@@ -968,6 +978,7 @@ def structEtaFullAtL : FunDecl := lfn (mode, vis, d, a, b) locals (tb, wtb, r) {
 }
 
 /-- Structure η at a fully applied constructor: the shape gate first. -/
+-- con-ron: ConRon/Arena/Core.lean:1722-1729 ConRon.Arena.structEtaFull
 @[no_expose, l_impl ConRon.Arena.structEtaFull]
 def structEtaFullL : FunDecl := lfn (mode, vis, d, a, b) locals (s, r) {
   s := call eta_ctor_shape(vis, a);
@@ -979,6 +990,7 @@ def structEtaFullL : FunDecl := lfn (mode, vis, d, a, b) locals (s, r) {
 /-- **The η-expansion of a partially applied constructor**: both sides applied to a fresh variable
 per missing argument along `ta` (read syntactically), then `struct_eta_full`. The depth capacity:
 the word `d + 1` must not wrap where the twin's `Nat` does not. -/
+-- con-ron: ConRon/Arena/Core.lean:1731-1749 ConRon.Arena.structEtaExpand
 @[no_expose, l_impl ConRon.Arena.structEtaExpand]
 def structEtaExpandL : FunDecl := lfn (mode, vis, k, d, a, b, ta)
     locals (t, i, dom, body, fv, a2, b2, body2, r) {
@@ -1001,6 +1013,7 @@ def structEtaExpandL : FunDecl := lfn (mode, vis, k, d, a, b, ta)
 
 /-- The partial-constructor arm of `structEtaCert`, at `k` missing arguments: `b` neutral, the two
 io-inferred types compared, then both sides η-expanded. -/
+-- con-ron: ConRon/Arena/Core.lean:1751-1763 ConRon.Arena.structEtaCertPartial
 @[no_expose, l_impl ConRon.Arena.structEtaCertPartial]
 def structEtaCertPartialL : FunDecl := lfn (mode, vis, d, k, a, b) locals (nt, ta, tb, ok, r) {
   nt := call io_neutral(b);
@@ -1015,6 +1028,7 @@ def structEtaCertPartialL : FunDecl := lfn (mode, vis, d, k, a, b) locals (nt, t
 
 /-- Structural η: `a` a fully applied constructor of an η family (the shape gate read once) or a
 partially applied one (`eta_ctor_partial`). -/
+-- con-ron: ConRon/Arena/Core.lean:1765-1776 ConRon.Arena.structEtaCert
 @[no_expose, l_impl ConRon.Arena.structEtaCert]
 def structEtaCertL : FunDecl := lfn (mode, vis, d, a, b) locals (s, f, k, r) {
   s := call eta_ctor_shape(vis, a);
@@ -1030,6 +1044,7 @@ def structEtaCertL : FunDecl := lfn (mode, vis, d, a, b) locals (s, f, k, r) {
 
 /-- **Is a proposition**: `T`'s io-inferred type head-normalises to a sort equivalent to `Prop`
 (the zero level is pin word 53; `lvl_eq_c`'s `0` is the twin's fuel failure). -/
+-- con-ron: ConRon/Arena/Core.lean:1778-1791 ConRon.Arena.isPropType
 @[no_expose, l_impl ConRon.Arena.isPropType]
 def isPropTypeL : FunDecl := lfn (mode, vis, d, T) locals (tt, w, g, u, x, y, z, e) {
   tt := call infer_io(mode, vis, d, T);
@@ -1045,6 +1060,7 @@ def isPropTypeL : FunDecl := lfn (mode, vis, d, T) locals (tt, w, g, u, x, y, z,
 /-- **The field loop of `is_unit_like`**: each of the `n` field binders of `tele` has a
 proposition or a unit-like type (`unit_like_loop` at the budget `ulf`, the twin's `ul`), the field
 opened at a fresh variable before the next. -/
+-- con-ron: ConRon/Arena/Core.lean:1793-1816 ConRon.Arena.unitLikeFields
 @[no_expose, l_impl ConRon.Arena.unitLikeFields]
 def unitLikeFieldsL : FunDecl := lfn (mode, vis, ulf, n, d, tele)
     locals (t, i, dom, body, pr, u, fv, body2, r) {
@@ -1068,6 +1084,7 @@ def unitLikeFieldsL : FunDecl := lfn (mode, vis, ulf, n, d, tele)
 /-- The field telescope of an instance at its family's table: the table's constructor `tctor`,
 stored, its type at the levels `us`, its `nP` parameter binders dropped and instantiated with the
 slice `(to, tn)`: `(1, tele, nF)`, or `(0, 0, 0)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1823-1839 ConRon.Arena.unitLikeShapeAt
 @[no_expose, l_impl ConRon.Arena.unitLikeShapeAt]
 def unitLikeShapeAtL : FunDecl := lfn (vis, us, to, tn, tctor, nP, nF) locals (f, p, cty, ok, body, tele) {
   (f, p) := call env_find(tctor, vis);
@@ -1083,6 +1100,7 @@ def unitLikeShapeAtL : FunDecl := lfn (vis, us, to, tn, tctor, nP, nF) locals (f
 /-- **The shape of an instance in `is_unit_like`**: `w` an instance of a stored η family at the
 family's level count and its table's parameter count: `(1, tele, n)` its constructor's field
 telescope and field count, or `(0, 0, 0)`. The stack top is put back. -/
+-- con-ron: ConRon/Arena/Core.lean:1841-1868 ConRon.Arena.unitLikeShape
 @[no_expose, l_impl ConRon.Arena.unitLikeShape]
 def unitLikeShapeL : FunDecl := lfn (vis, w)
     locals (hh, t, i, S, us, f, q, eta, lpn, lo, usl, tq, np, tc, nf, top, to, tn, g, tele, n) {
@@ -1117,6 +1135,7 @@ def unitLikeShapeL : FunDecl := lfn (vis, w)
 
 /-- **The structure arm of `is_unit_like`**: `w` an instance of an η family every field of whose
 constructor is a proposition or unit-like (`unit_like_loop` at `ulf`). -/
+-- con-ron: ConRon/Arena/Core.lean:1870-1879 ConRon.Arena.unitLikeStruct
 @[no_expose, l_impl ConRon.Arena.unitLikeStruct]
 def unitLikeStructL : FunDecl := lfn (mode, vis, ulf, d, w) locals (f, tele, n, r) {
   (f, tele, n) := call unit_like_shape(vis, w);
@@ -1128,6 +1147,7 @@ def unitLikeStructL : FunDecl := lfn (mode, vis, ulf, d, w) locals (f, tele, n, 
 /-- **Is a type unit-like** (`is_unit_like`), at the budget `fuel` (`unitLikeFuel`, `2^62`):
 its head normal form a ∀ whose codomain, opened at a fresh variable, is unit-like, or an instance
 of an η family (`unit_like_struct`). -/
+-- con-ron: ConRon/Arena/Core.lean:1881-1898 ConRon.Arena.unitLikeLoop
 @[no_expose, l_impl ConRon.Arena.unitLikeLoop]
 def unitLikeLoopL : FunDecl := lfn (mode, vis, fuel, d, T) locals (w, t, i, dom, body, fv, body2, r) {
   if fuel == 0 { return 0 };
@@ -1148,6 +1168,7 @@ def unitLikeLoopL : FunDecl := lfn (mode, vis, fuel, d, T) locals (w, t, i, dom,
 
 /-- `structUnitCert` once `a`'s type `wta` is unit-like: `b`'s type against it (a side whose type
 is a ∀ must be neutral; split off for the proofs). -/
+-- con-ron: ConRon/Arena/Core.lean:1900-1918 ConRon.Arena.structUnitCert
 @[no_expose, l_impl ConRon.Arena.structUnitCert]
 def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, gb, r) {
   tb := call infer_io(mode, vis, d, b);
@@ -1162,6 +1183,7 @@ def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, gb,
 
 /-- **Unit-likeness** (`is_def_eq_unit_like`): `a`'s type, head-normalised, unit-like at
 `unitLikeFuel` (`2^62`), and `b`'s type definitionally equal to it. -/
+-- con-ron: ConRon/Arena/Core.lean:1900-1918 ConRon.Arena.structUnitCert
 @[no_expose, l_impl ConRon.Arena.structUnitCert]
 def structUnitCertL : FunDecl := lfn (mode, vis, d, a, b) locals (ta, wta, ga, u, r) {
   ta := call infer_io(mode, vis, d, a);

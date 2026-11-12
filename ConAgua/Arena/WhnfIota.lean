@@ -256,6 +256,7 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, us
 the table's constructor (word `tq + 5`) of the η family `p` (`eta`) and carrying the family's level
 parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s rescue.
 The table (`tq`) or `0`. -/
+-- con-ron: ConRon/Arena/Core.lean:2054-2069 ConRon.Arena.etaRescueTable?
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
@@ -380,8 +381,6 @@ pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.etaRescueTable?` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.majorToCtor]
 def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];

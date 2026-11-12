@@ -86,6 +86,8 @@ h := call intern_lit(o, l); return h`. -/
 
 /-- `topLit` with the size refusal (`lit_nat_sized`) in place of `intern_lit`: the `sub` and `mul`
 arms (`litNatSized (a - b)`, `litNatSized (a * b)`). -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1063-1073 ConRon.Arena.litNatSized
 @[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.litNatSized] def topLitS (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
@@ -363,6 +365,8 @@ end pred
 above `2^32 - 1` refused whatever the base, the sentinel `natRefusedPowExp`; a result above the
 maximum, `pow_refused`, `natRefusedPowSize`; `NatSized.lean`), then the power (`pow_nat`), interned. An
 exponent of two or more limbs is at least `2^64` (`b` normalised). -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1084-1094 ConRon.Arena.powGuard
 @[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.powGuard]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
   if 1 < lb { return 9223372036854775810 };
@@ -378,6 +382,8 @@ def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
 /-- `nat_shl_lit(oa, la, ob, lb)`: the cited `Nat.shiftLeft` clause's guard (`shiftLeftGuard`:
 `0 <<< b` computes; an amount above `2^32 - 1` is refused, the sentinel `natRefusedShlExp`; a
 result above the maximum, `shift_left_refused`, `natRefusedSize`), then the shift. -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1102-1112 ConRon.Arena.shiftLeftGuard
 @[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.shiftLeftGuard]
 def natShlLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
   if la != 0 {
