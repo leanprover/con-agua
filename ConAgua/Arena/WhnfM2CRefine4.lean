@@ -130,6 +130,7 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     simp only [L.Arena.decBool_true_of g8, ↓reduceIte]
     exact RefE.ret rfl ⟨hA8, rfl, hh7⟩
 
+omit hcc in
 include hE in
 /-- **`m2c_eta` refines `m2cEtaT`, both outcomes** (`indP` the family's record; the errors are
 `m2c_pre`'s and `m2c_eta2`'s). -/
@@ -214,7 +215,7 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   exact RefE.tail_eq (m2cEtaE.k_m2c_eta2.none p) (fun v => m2cEtaE.k_m2c_eta2.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _)) (by rw [hstep, ite_eq_left hcond])
     (GrowPost.of_tail hK1 (hSt1.toGrew.trans hg2))
-    (m2cEta2_ref p hp hc hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
+    (m2cEta2_ref p hp hc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
       mode d T indP _ _ _ _ _ major hm4 hebm hT htw.2.2.1 hus hmaj cvT caps tbl xs m2 a1 M1 hS2
       (by rw [he2]; exact hci) hfe htw.2.2.2.1 htw.2.2.2.2 hsp2 (by rw [htop2]; exact htop2'.symm) ⟨hh0, c0, hv0⟩)
 

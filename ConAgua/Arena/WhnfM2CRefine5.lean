@@ -134,7 +134,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       simp only [htb]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
         (fun h => h.mono (Nat.le_succ _)) rfl hR
-        (m2cEta_ref p hp hc hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
+        (m2cEta_ref p hp hc hE hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
           mode d T indP _ major hm4 hebm hT hmaj cvT caps tb m0 a M hS hci hfe htb)
     · have g1' : r1.headD 0 = 0 := by simpa using g1
       rw [m2cArmsE.k_eta_rescue_table.arm2 (hc1 := g1')]
