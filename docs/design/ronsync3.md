@@ -33,3 +33,27 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
 * 00:16 stage 3b, first part: the rules file's renames applied to the whole tree (statements
   and proofs, citation lines left alone; 33 files), incl. `internAllPins pins
   maxNatSizeDefault` in the final definitions (see §3).
+* 00:17–00:40 stage 3b/3c on the partial tree, three build rounds. The pipeline at the default
+  maximum: `PinsReadyP` also says `a.pins.maxNatSize = maxNatSizeDefault`
+  (`internReservedPins_maxNatSize`), so the twin's first write in `internAllPins` is a no-op on
+  every state we run it from (`SimZ.getSet`; `internAllPins_steps`/`_pins`/`_tail`/`_u` take it as
+  `hmax`, `prefix4_facts` exports it) and `intern_all_pins` writes nothing (`PINS[72]` holds the
+  default since `intern_reserved_pins`). Theorem 1's lemmas lost the set theory (#521):
+  `view_foldOK`, `job_spec`, `pooledAccepts_bridge` are called without it. The theorems about
+  removed twin functions deleted: the `instantiate1Lift` walk's (`WalkLiftRefine`), the
+  `towerSlotsAll` ones (`WhnfProjRefine3` whole, `WhnfIotaRefine2`, the knot's `StuckCallees`
+  field). Ladder: 2 rounds, 28 failing theorems, **0 closed** at rungs (i)–(iii), 28 tickets
+  (`_tmp/ronsync3/tickets-r1.tsv`). Why so few: of 4 388 modules all but 8 elaborate after the
+  bump with the old L code — the old proofs still hold of the old L code against the twin's
+  unchanged callees; what breaks is where a proof unfolds a changed twin definition (8 modules) —
+  and the ladder's rungs only help a theorem whose statement we restated (none of these). The
+  real work is the L port of the changed functions, which then breaks their refinements: that
+  goes with the fan-out (below), since each helper owns the L code and the proofs of its area.
+  Blocked still: 18 modules behind `WhnfM2CRefine` (the old η models) and `KnotMono1` (the store
+  monotonicity list: removed twin functions).
+* 00:43 fan-out: helpers ronsync3-decl (#493, #494), ronsync3-ind (#495, closers, opener, the
+  projection guard), ronsync3-core (#515, #519, #520, KnotMono), on presync3 §4's file sets,
+  brief `_tmp/ronsync3/brief-common.md`, 3 build threads each (lead 3).
+  **Deviation from presync3 §4's order:** the L code of the rewritten functions is ported by the
+  helpers, not before the ladder by the lead: the new L functions do not exist before the port,
+  so their statements cannot be restated earlier, and the ladder has nothing to try on them.

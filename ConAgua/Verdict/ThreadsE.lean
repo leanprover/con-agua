@@ -284,7 +284,7 @@ on record `j < k`, failed with an error `e` of class other than `0` (`ThreadFail
 below `k`, each thread's claims increasing) whose calls ran every record below `j`. Then the twin's
 pool fails with that class (`TwinVerdictPooled`), given `check_decl`'s program facts (`CheckerCd`)
 and the jobs' error claims (`JobG`) at every phase A. -/
-theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
+theorem threads_twinVerdictPooled (hCd : CheckerCd)
     (hJG : ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
       JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
     (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
@@ -380,7 +380,7 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     have := hinc t₀ ht₀
     rw [List.pairwise_map] at this ⊢
     exact this.imp fun h => UInt64.lt_iff_toNat_lt.mp h
-  have hpre := pool_prefix Vt H hst ths'
+  have hpre := pool_prefix H hst ths'
     (fun t ht => by
       obtain ⟨t₀, ht₀, rfl⟩ := List.mem_map.mp ht
       exact hstart t₀.1 (hth t₀ ht₀).1 (hth t₀ ht₀).2.1)
@@ -395,7 +395,7 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
       ∃ env, FoldOK env (PA.I.view x) (AM.st enterScratch a) := fun x a hx hxj hw => by
     obtain ⟨hP, hnd⟩ := hpre x hxj
     obtain ⟨hx', -⟩ := H.hden x hx
-    exact worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI hx' hP hnd hw
+    exact worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI hx' hP hnd hw
   -- the thread's walk
   have walk : ∀ (cs : List (Word × Nat × Mem)) (r : Mem) (a : AState), Rel r a → WorkerOK PA.sF a →
       ThreadFails B j n e r cs →

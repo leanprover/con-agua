@@ -109,13 +109,12 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
 /-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
 at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/
 theorem threadEVerdict_proved : ThreadEVerdict.{u} :=
-  fun Vt _ => threads_twinVerdictPooled Vt checkerCd_proved jobG_checker
+  threads_twinVerdictPooled checkerCd_proved jobG_checker
 
-/-- **The sequential driver's verdict claims**, relative to set theory (as the accept theorems):
-entry 1's from its stages' error specs, entry 2's from the jobs' (`entry2Verdict_of`). -/
-theorem seqVerdicts_proved (V : Type u) [ConLeche.SetTheory V] : SeqVerdicts checkerProg where
+/-- **The sequential driver's verdict claims**: entry 1's from its stages' error specs, entry 2's from the jobs' (`entry2Verdict_of`). -/
+theorem seqVerdicts_proved : SeqVerdicts checkerProg where
   entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
-  entry2 := entry2Verdict_of V checkerCd_proved jobG_checker
+  entry2 := entry2Verdict_of checkerCd_proved jobG_checker
 
 /-- **The threaded harness's verdict claims**, without hypotheses. -/
 theorem threadVerdicts_proved : ThreadVerdicts.{u} where
