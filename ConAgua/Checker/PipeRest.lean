@@ -250,7 +250,7 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
     (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
     RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb sz) m pb ds a) fun _ m =>
-      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧
+      ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧
         R7 (loadMem b pb sz) m pb ds ipins a' := by
   intro n _hn s₀ h6
   have hc := CapsOK.keep h6.since.keep h6.since.caps

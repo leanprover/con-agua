@@ -159,8 +159,7 @@ def itemsCaps (c : ConLeche.IndCaps) : List Item := .nm c.etaCtor :: (c.all.map 
 theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (itemsCaps c) (fun _ => m) := by
   have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun al =>
       Frontend.internNameList c.ctors >>= fun ctors =>
-        pure { eta := c.eta, etaCtor := ct, etaParams := c.etaParams, etaFields := c.etaFields,
-               unitlike := c.unitlike, unitParams := c.unitParams, all := al, nparams := c.nparams,
+        pure { eta := c.eta, all := al, nparams := c.nparams,
                nIdx := c.nIdx, ctors := ctors } := rfl
   rw [h]
   exact (Sim.bind (is := [.nm c.etaCtor]) (js := c.all.map .nm ++ (c.ctors.map .nm ++ [])) (sim_name _ m) fun _ =>
@@ -592,7 +591,7 @@ def itemsAllPins (pins : List ConLeche.NatOpPinSet) : List Item :=
 
 /-- **The startup walk has the store effect of its items** (at a filled pin table). -/
 theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
-    SimZ (internAllPins pins) (itemsAllPins pins) PinsReadyP := by
+    SimZ (internAllPins pins maxNatSizeDefault) (itemsAllPins pins) PinsReadyP := by
   unfold internAllPins itemsAllPins
   simp only [seqZ]
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
@@ -668,7 +667,7 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
     (hst : (stkTop s₀.mem).toNat < 2 ^ 61) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_all_pins_rom" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ v a', (internAllPins pins).run a₀ = .ok (v, a') ∧ ArenaD s'.mem a' ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ v a', (internAllPins pins maxNatSizeDefault).run a₀ = .ok (v, a') ∧ ArenaD s'.mem a' ∧
       MemFrame ExprA ExprC s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun

@@ -133,7 +133,7 @@ def twinFront (b : ByteArray) (pins : List ConLeche.NatOpPinSet) :
   match ← Frontend.parseBytes b with
   | .error (e, n) => return .error (Frontend.atLine e n)
   | .ok _ =>
-    let _ ← internAllPins pins
+    let _ ← internAllPins pins maxNatSizeDefault
     return .ok ()
 
 def main (args : List String) : IO UInt32 := do

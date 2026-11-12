@@ -75,7 +75,7 @@ def main (args : List String) : IO UInt32 := do
   let pins := ConLeche.natOpPinSets.take k
   let some (ipins, a) := (do
       let ((), sA) ← (internReservedPins.run (AState.init EStore.empty)).toOption
-      (internAllPins pins).run sA |>.toOption) | IO.eprintln "twin failed"; return 1
+      (internAllPins pins maxNatSizeDefault).run sA |>.toOption) | IO.eprintln "twin failed"; return 1
   let rd (i : Word) : Word := rdW (m3.arr64 EREC) i
   let off := rdW (m3.arr64 CTL) 150
   let cnt := rdW (m3.arr64 CTL) 151

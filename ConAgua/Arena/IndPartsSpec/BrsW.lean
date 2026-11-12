@@ -1314,12 +1314,12 @@ theorem partsBindOk {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState
 
 theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} :
     ∀ (cvTs : List IConstantVal) (mm : Nat) (a a' : AState) (ns : List Nat),
-    (ConRon.Arena.blockMemberCounts? nPd k nC names rs mm cvTs).run a = .ok (some ns, a') →
+    (ConRon.Arena.blockMemberCounts nPd k nC names rs mm cvTs).run a = .ok (some ns, a') →
     ns.length = cvTs.length
   | [], mm, a, a', ns, h => by
-    simp [ConRon.Arena.blockMemberCounts?, StateT.run, pure, StateT.pure, Except.pure] at h; simp [← h]
+    simp [ConRon.Arena.blockMemberCounts, StateT.run, pure, StateT.pure, Except.pure] at h; simp [← h]
   | c :: cs, mm, a, a', ns, h => by
-    simp only [ConRon.Arena.blockMemberCounts?] at h
+    simp only [ConRon.Arena.blockMemberCounts] at h
     obtain ⟨q, a1, -, h⟩ := partsBindOk h
     obtain ⟨x, a2, -, h⟩ := partsBindOk h
     cases x with
@@ -1341,7 +1341,7 @@ theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
     (hrs : PSlR decSR rs ro rl m) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names)
     (hnb : no.toNat + nl.toNat ≤ iwTop m) :
     Sim (bmcW n m nPd k nC no nl ro rl cto ctl)
-      (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a
+      (ConRon.Arena.blockMemberCounts nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a
       (fun r x m' a' => NsR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' hm
   unfold bmcW at hm

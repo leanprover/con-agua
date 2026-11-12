@@ -45,9 +45,9 @@ namespace L.Arena
 
 abbrev i1lSch : MemoSch := ⟨ILFM, 52⟩
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1902-1931 ConRon.Arena.instantiate1LiftGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1902-1931 ConRon.Arena.instantiateLiftGo -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.instantiate1LiftGo` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.instantiate1LiftGo]
+@[no_expose, l_impl ConRon.Arena.instantiateLiftGo]
 def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   if fu == 0 { abort };
   x := call bvar_b(fu - 1, h);
@@ -75,9 +75,9 @@ def i1lGo : FunDecl := lfn (h, d, v, fu) locals (x, g, t, i, r) {
   abort
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1933-1945 ConRon.Arena.inst1LiftArmApp -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1933-1945 ConRon.Arena.instLiftArmApp -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inst1LiftArmApp` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.inst1LiftArmApp]
+@[no_expose, l_impl ConRon.Arena.instLiftArmApp]
 def i1lApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
@@ -93,9 +93,9 @@ def i1lApp : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1947-1959 ConRon.Arena.inst1LiftArmLam -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1947-1959 ConRon.Arena.instLiftArmLam -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inst1LiftArmLam` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.inst1LiftArmLam]
+@[no_expose, l_impl ConRon.Arena.instLiftArmLam]
 def i1lLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
@@ -112,9 +112,9 @@ def i1lLam : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1961-1973 ConRon.Arena.inst1LiftArmForallE -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1961-1973 ConRon.Arena.instLiftArmForallE -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inst1LiftArmForallE` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.inst1LiftArmForallE]
+@[no_expose, l_impl ConRon.Arena.instLiftArmForallE]
 def i1lForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
@@ -131,9 +131,9 @@ def i1lForall : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1975-1988 ConRon.Arena.inst1LiftArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1975-1988 ConRon.Arena.instLiftArmLet -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inst1LiftArmLet` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.inst1LiftArmLet]
+@[no_expose, l_impl ConRon.Arena.instLiftArmLet]
 def i1lLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call i1l_find(h, d);
@@ -152,9 +152,9 @@ def i1lLet : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, f, a, b, x, y
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1990-2001 ConRon.Arena.inst1LiftArmProj -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1990-2001 ConRon.Arena.instLiftArmProj -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inst1LiftArmProj` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.inst1LiftArmProj]
+@[no_expose, l_impl ConRon.Arena.instLiftArmProj]
 def i1lProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call i1l_find(h, d);
   if fd != 0 { return ILFM.u64[j * 4 + 3] };
@@ -170,9 +170,9 @@ def i1lProj : FunDecl := lfn (h, d, v, fu) locals (fd, j, e0, t, i, nm, ix, e, x
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2035-2041 ConRon.Arena.instantiate1LiftFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2035-2041 ConRon.Arena.instantiateLiftFast -/
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.instantiate1LiftFast` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.instantiate1LiftFast]
+@[no_expose, l_impl ConRon.Arena.instantiateLiftFast]
 def i1lFast : FunDecl := lfn (f, e, v, d) locals (r, u) {
   u := call i1l_clear();
   r := call i1l_go(e, d, v, f);

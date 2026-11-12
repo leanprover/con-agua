@@ -58,7 +58,7 @@ theorem L.Arena.KM.ConRon.Arena.defeqPeel (r : CoreFnsA) (d peel : Nat) (a b : E
   | succ p ih => rw [defeqPeel_succ_eq']; simp only [peelStep]; smono_auto
 smono_derive ConRon.Arena.defeqBinders
 smono_derive ConRon.Arena.defeqLamsInner
-smono_derive ConRon.Arena.lamPair?
+smono_derive ConRon.Arena.binderPair?
 
 /-- One level of `defeqLams`, the recursive call abstracted as `cont` (the equation compiler cannot
 produce `defeqLams`' unfolding lemma in its budget; `defeqPeel`'s `peelStep`). -/

@@ -145,9 +145,9 @@ theorem piBinders_len : ∀ (fuel : Nat) {h : EIdx} {s s' : AState} {r : List EI
 
 theorem blockCounts?_nP {nPd k nC nR : Nat} {cvT : IConstantVal} {r : Option (Nat × Nat)}
     {s s' : AState} {c : Nat × Nat} (hk : 0 < k)
-    (h : ConRon.Arena.blockCounts? nPd k nC nR cvT r s = .ok (some c, s')) :
+    (h : ConRon.Arena.blockCounts nPd k nC nR cvT r s = .ok (some c, s')) :
     nPd ≤ coreWalkFuel ∨ ∃ mI rP, r = some (mI, rP) ∧ nPd < rP := by
-  unfold ConRon.Arena.blockCounts? at h
+  unfold ConRon.Arena.blockCounts at h
   obtain ⟨⟨bs, res⟩, s1, h1, h⟩ := AM.bind_ok h
   have hl := piBinders_len _ h1
   obtain ⟨v, s2, -, h⟩ := AM.bind_ok h
@@ -182,9 +182,9 @@ theorem findM?_mem {α : Type} {f : α → AM Bool} : ∀ {l : List α} {s s' : 
 theorem blockMemberCounts?_nP {nPd k nC : Nat} {names : List NIdx}
     {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} {m : Nat} {cvT : IConstantVal}
     {ts : List IConstantVal} {s s' : AState} {ns : List Nat} (hk : 0 < k)
-    (h : ConRon.Arena.blockMemberCounts? nPd k nC names rs m (cvT :: ts) s = .ok (some ns, s')) :
+    (h : ConRon.Arena.blockMemberCounts nPd k nC names rs m (cvT :: ts) s = .ok (some ns, s')) :
     nPd ≤ coreWalkFuel ∨ ∃ q ∈ rs, nPd < q.2.2.1 := by
-  simp only [ConRon.Arena.blockMemberCounts?] at h
+  simp only [ConRon.Arena.blockMemberCounts] at h
   obtain ⟨q, s1, h1, h⟩ := AM.bind_ok h
   obtain ⟨c, s2, h2, h⟩ := AM.bind_ok h
   rcases c with _ | c
@@ -447,7 +447,7 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} (hGU : G → VerdictCtxU p)
   refine ⟨_, _, hrun4, ?_⟩
   generalize AM.res (ConRon.Arena.blockShape? w.toNat block) a1 = x4 at hrun4 hR4 ⊢
   generalize AM.st (ConRon.Arena.blockShape? w.toNat block) a1 = a4 at hrun4 hS4 ⊢
-  obtain ⟨hps4, -, hq4⟩ := ConRon.Bridge.Inductives.blockShape?_installS hchk1 hbP1 hrun4
+  obtain ⟨hps4, -, hq4⟩ := ConRon.Bridge.Inductives.readBlock_installS hchk1 hbP1 hrun4
   have hchk4 : ConRon.Bridge.CheckOK false env fe a4 :=
     ⟨hps4.ok, hchk1.caches.monoF hps4.ext hps4.cframe, hchk1.pins.mono hps4.ext hps4.pins,
       hchk1.ienv.mono hps4.ext⟩

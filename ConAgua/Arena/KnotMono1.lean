@@ -77,7 +77,7 @@ smono_derive ConRon.Arena.liftFueled
 smono_derive ConRon.Arena.proofIrrel
 smono_derive ConRon.Arena.pinAt
 smono_derive ConRon.Arena.pinAndIntro
-smono_derive ConRon.Arena.etaRescueOk
+smono_derive ConRon.Arena.etaRescueTable?
 smono_derive ConRon.Arena.pinReserved
 smono_derive ConRon.Arena.reservedBasisNames
 smono_derive ConRon.Arena.viewSort
@@ -260,7 +260,7 @@ smono_derive ConRon.Arena.defeqArg
 smono_derive ConRon.Arena.inferSpine
 smono_derive ConRon.Arena.inferApp
 smono_derive ConRon.Arena.projGuardSort
-smono_derive ConRon.Arena.openPisAtFvarsFGo
+smono_derive ConRon.Arena.openPisRawGo
 smono_derive ConRon.Arena.openPisAtFvars
 smono_derive ConRon.Arena.openPisAtFvarsF
 smono_derive ConRon.Arena.viewFVarTy

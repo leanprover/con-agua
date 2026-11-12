@@ -38,7 +38,7 @@ def pipeline (b : ByteArray) (withPrelude : Bool) (pins : List NatOpPinSet) :
   | .ok r =>
     let records := r.decls.size
     let ds ← if withPrelude then Frontend.preparePrelude pre r.decls else pure r.decls
-    let ipins ← internAllPins pins
+    let ipins ← internAllPins pins maxNatSizeDefault
     match ← checkStream .verified ipins ds with
     | .error (e, n) => pure (.error (atDecl e n))
     | .ok _ => pure (.ok records)

@@ -257,7 +257,7 @@ level parameters; `And.intro` (pin 48, read only when the chain reaches it) is l
 rescue. -/
 -- con-ron: ConRon/Arena/Core.lean:1794-1805 ConRon.Arena.etaRescueOk
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.etaRescueOk` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.etaRescueOk]
+@[no_expose, l_impl ConRon.Arena.etaRescueTable?]
 def etaRescueOkL : FunDecl := lfn (ctor, cq, p) locals (r, ai) {
   if EREC⦃p + 5⦄ == 0 { return 0 };
   if EREC⦃p + 6⦄ != ctor { return 0 };

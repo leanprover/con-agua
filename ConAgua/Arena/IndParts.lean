@@ -393,7 +393,7 @@ def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x
 (from the binder count `bl` and the result's view tag `g`), as `(ok, a, b)`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockCounts?]
+@[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) locals () {
   if g == 2 {
     if bl < nPd { return (0, 0, 0) };
@@ -410,7 +410,7 @@ def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) loca
 (`piBinders`, then `view`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockCounts?]
+@[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) {
   ty := EREC⦃cvT + 3⦄;
   (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
@@ -423,7 +423,7 @@ def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) 
 than boxed (by analogy with the result convention). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:241-260 ConRon.Arena.blockCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockCounts?]
+@[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCounts : FunDecl := lfn (nPd, k, nC, nR, cvT, rOk, rMI, rRP) locals (bl, g, a, b, c) {
   (bl, g) := call block_counts_head(cvT);
   (a, b, c) := call block_counts_pure(nPd, k, nC, nR, bl, g, rOk, rMI, rRP);
@@ -582,7 +582,7 @@ one `rec_target_of` call per candidate, stopping at the first whose target is `m
 lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockMemberCounts?]
+@[no_expose, l_impl ConRon.Arena.blockMemberCounts]
 def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t, a, b, c) {
   if rl == 0 { return (0, 0, 0) };
   e := IW.u64[ro];
@@ -599,7 +599,7 @@ rest; a failure stops the walk there (no further calls). The record words past `
 capacity abort (`block_counts`' arithmetic). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockMemberCounts?]
+@[no_expose, l_impl ConRon.Arena.blockMemberCounts]
 def blockMemberCountsGo : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)
     locals (cv, rok, rmi, rrp, cok, ca, cb, ok, o, l) {
   if ctl == 0 { return (1, 0, 0) };
@@ -618,7 +618,7 @@ def blockMemberCountsGo : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl, 
 `0` (the counts past `2^32` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:319-337 ConRon.Arena.blockMemberCounts?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockMemberCounts?` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.blockMemberCounts?]
+@[no_expose, l_impl ConRon.Arena.blockMemberCounts]
 def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (ok, o, l) {
   if 4294967296 <= nPd || 4294967296 <= k || 4294967296 <= nC || 4294967296 <= rl { abort };
   (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, 0);

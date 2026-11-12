@@ -30,7 +30,7 @@ basis and the pinned names one more, ending in the pin sets, which extend the st
 pin table. -/
 theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) :
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ u0 u : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
       Frontend.IStepS s u0 ∧ Frontend.IStepS u0 u ∧ Ext u.store s'.store ∧ s'.pins = u.pins := by
   simp only [ConRon.Arena.internAllPins] at hrun
@@ -106,7 +106,7 @@ that lemma does not export: `internAllPins` leaves the pin table (it builds the 
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) : s'.pins = s.pins := by
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) : s'.pins = s.pins := by
   obtain ⟨u0, u, -, h0, h1, -, hp⟩ := internAllPins_steps hok hpins hoff hrun
   rw [hp, h1.pins, h0.pins]
 

@@ -313,7 +313,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     idx.toNat + ctl.toNat ≤ iwTop m →
     Sim (bmgW n m nPd k nC no nl ro rl cto ctl idx)
-      (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs idx.toNat cvTs) a
+      (ConRon.Arena.blockMemberCounts nPd.toNat k.toNat nC.toNat names rs idx.toNat cvTs) a
       (fun r x m' a' => NsR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   induction n with
   | zero => intro m a cto ctl idx cvTs _ _ _ _ _ _ r m' e; simp [bmgW] at e
@@ -326,7 +326,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     rw [bmgW.arm2 n m nPd k nC no nl ro rl cto ctl idx hl]
     obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl
     rw [hw]
-    simp only [ConRon.Arena.blockMemberCounts?]
+    simp only [ConRon.Arena.blockMemberCounts]
     have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
     have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
     have hrl : rs.length = rl.toNat := (decPL_length _ hrs.1)

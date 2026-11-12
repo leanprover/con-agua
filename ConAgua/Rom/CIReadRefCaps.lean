@@ -306,9 +306,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     exact hg9
   simp (disch := omega) only [off_toNat] at hH10 hH11
   have hA' := hH10.ekeep hek11 (fun i hi => ⟨by off_omega, by off_omega⟩) hIW11
-  refine ⟨{ eta := caps.eta, etaCtor := decI (r1.headD 0), etaParams := caps.etaParams,
-              etaFields := caps.etaFields, unitlike := caps.unitlike, unitParams := caps.unitParams,
-              all := wsA.map decI, nparams := caps.nparams, nIdx := caps.nIdx, ctors := wsC.map decI }, a3, ?_, hI11, hM11,
+  refine ⟨{ eta := caps.eta, all := wsA.map decI, nparams := caps.nparams, nIdx := caps.nIdx, ctors := wsC.map decI }, a3, ?_, hI11, hM11,
     by rw [hs11, hs10, hs9, hs8, hs1, hst], ?_, ⟨by off_omega, fun i hi hR => ?_⟩, by off_omega,
     by rw [hIW11, hIW10, hIW9, hIW8, hIW1], ?_⟩
   · simp only [Frontend.internCaps]
@@ -322,9 +320,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
         rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> off_omega) (by omega) hws41]
   · have hH := holds_decCaps (c := c.toNat)
-      { eta := caps.eta, etaCtor := decI (r1.headD 0), etaParams := caps.etaParams,
-        etaFields := caps.etaFields, unitlike := caps.unitlike, unitParams := caps.unitParams,
-        all := wsA.map decI, nparams := caps.nparams, nIdx := caps.nIdx, ctors := wsC.map decI }
+      { eta := caps.eta, all := wsA.map decI, nparams := caps.nparams, nIdx := caps.nIdx, ctors := wsC.map decI }
       v0 (r1.headD 0) _ _ v3 _ _ _ hW0 hW1 hW2 hW3 hW4 hW5 hW6 hW12 hlt1
       (by rw [← hv0]; exact (bw_ne _).symm) rfl (L.toNat_ofNat_of_lt hep).symm (L.toNat_ofNat_of_lt hef).symm
       (by rw [← hv3]; exact (bw_ne _).symm) (L.toNat_ofNat_of_lt hup).symm

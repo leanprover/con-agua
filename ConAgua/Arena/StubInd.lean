@@ -71,7 +71,7 @@ parameter names at `EREC[off ‥ off + len)`. -/
 `(1, body)` or `(0, 0)`; the free variables made are pushed. -/
 -- con-ron: ConRon/Arena/Core.lean:2598-2615 ConRon.Arena.openPisAtFvarsFGo
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsFGo` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.openPisAtFvarsFGo]
+@[no_expose, l_impl ConRon.Arena.openPisRawGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
   if n == 0 { b := call inst_list(e, co, cn, 0); return (1, b) };
   if ⟦e⟧.tag != 6 { return (0, 0) };

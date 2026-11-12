@@ -258,8 +258,7 @@ theorem installDecCaps {a : Nat → Option Word} {e : Nat}
     (h : ∀ i < 15, a (e + i) = [w0, w1, w2, w3, w4, w5, w6, 0, 0, 0, aq, al, np, cq, cl][i]?)
     (hw1 : H w1) (hx : hslice? a aq.toNat al.toNat = some xs) (hy : hslice? a cq.toNat cl.toNat = some ys) :
     decCaps a e = some
-      { eta := w0 != 0, etaCtor := decI w1, etaParams := w2.toNat, etaFields := w3.toNat,
-        unitlike := w4 != 0, unitParams := w5.toNat, all := xs, nparams := np.toNat, nIdx := w6.toNat,
+      { eta := w0 != 0, all := xs, nparams := np.toNat, nIdx := w6.toNat,
         ctors := ys } := by
   have e0 := h 0 (by decide); have e1 := h 1 (by decide); have e2 := h 2 (by decide)
   have e3 := h 3 (by decide); have e4 := h 4 (by decide); have e5 := h 5 (by decide)
@@ -311,8 +310,7 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat)
     (hcs : PSlR decCN cs coff clen m) (hw1 : H w1)
     (h2 : callW p (n + 1) "block_caps_fin" [pp, coff, clen, w0, w1, w2, w3, w4, nIdx] m = some (r2, m2)) :
     StageR vis fe m2 a ∧ IWGrow m m2 ∧ CapsAt m2 (r2.headD 0).toNat
-      { eta := w0 != 0, etaCtor := decI w1, etaParams := w2.toNat, etaFields := w3.toNat,
-        unitlike := w4 != 0, unitParams := w2.toNat, all := bs.memberNames, nparams := bs.nP,
+      { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP,
         nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (icf_spec p hP.alloc hP.rec5 hP.fin (n + 1) _ pp coff clen w0 w1 w2 w3 w4 nIdx) h2
@@ -353,9 +351,7 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
   have hfin : ∀ (w0 w1 w2 w3 w4 : Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word)
       (R : IIndCaps), PSlR decCN cs coff clen m → H w1 →
       R =
-        { eta := w0 != 0, etaCtor := decI w1, etaParams := w2.toNat, etaFields := w3.toNat,
-          unitlike := w4 != 0, unitParams := w2.toNat,
-          all := bs.memberNames, nparams := bs.nP, nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } →
+        { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP, nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } →
       icaW.j1 p (n + 1) pp coff clen nIdx w0 w1 w2 w3 w4 m = some (r, m') →
       StageR vis fe m' a ∧ IWGrow m m' ∧ CapsAt m' (r.headD 0).toNat R := by
     intro w0 w1 w2 w3 w4 cs coff clen nIdx R hcs hw1 hR hK

@@ -187,7 +187,7 @@ def Res5 (r : List Word) : Prop :=
     HW (r.tail.tail.tail.tail.headD 0)
 
 /-- **`lam_pair` refines `lamPair?`.** -/
-@[refines ConRon.Arena.lamPair?]
+@[refines ConRon.Arena.binderPair?]
 theorem lamPair_refines (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb a b : Word)
     (hS : CoreS dn s₀.mem a₀ vis fe M eb) (ha : HW a) (hb : HW b) :

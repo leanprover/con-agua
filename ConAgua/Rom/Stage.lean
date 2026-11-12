@@ -13,7 +13,7 @@ open scoped Lean.Order
 namespace L.Rom
 
 theorem internAllPins_split (pins : List ConLeche.NatOpPinSet) :
-    internAllPins pins = internAllPins [] >>= fun _ => internPinSets pins := by
+    internAllPins pins maxNatSizeDefault = internAllPins [] >>= fun _ => internPinSets pins := by
   simp only [internAllPins, internPinSets, bind_assoc, pure_bind]
 
 open L.Arena
@@ -185,7 +185,7 @@ theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt
     (hc : 151 < (mem.arr64 CTL).size) (hcap : (mem.arr64 EREC).size < 2 ^ 40)
     (hW : internAllPinsW rom n mem = some mem') :
     ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
-      (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
+      (internAllPins pins maxNatSizeDefault).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
       StateOK a' ∧ RsetR mem' ∧ erTop mem' ≤ (mem'.arr64 EREC).size ∧ ModeOK mem' ∧
       MemFrame PinsA PinsC mem mem' := by
   obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS, hmo1⟩ :=
@@ -220,7 +220,7 @@ theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UIn
     ⦃fun s => s = s₀⦄
     invoke P (exec P n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
-      (internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
+      (internAllPins pins maxNatSizeDefault).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
       ConRon.Bridge.StateOK a' ∧ RsetR s'.mem ∧ erTop s'.mem ≤ (s'.mem.arr64 EREC).size ∧ ModeOK s'.mem ∧
       MemFrame PinsA PinsC s₀.mem s'.mem; ⊤⦄ := by
   refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_

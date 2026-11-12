@@ -82,7 +82,7 @@ def TwinAccepts (chunks : List ByteArray) : Prop :=
     builtinPreludeE sA = .ok (.ok pre, sB) ∧
     parseChunks chunks sB = .ok (.ok r, sC) ∧
     preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    internAllPins pins sD = .ok (ipins, sE) ∧
+    internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     SeqAccepts .verified ipins ds sE I sF
 
 /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and

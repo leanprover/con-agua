@@ -78,7 +78,7 @@ theorem lvlHyp_real (n : Nat) {m : Mem} {a : AState} {nP : Nat} {blk : List ICon
   rw [hsp] at hsp'
   obtain ⟨⟨cvTsP, csP, rsP⟩, -, hTs, -, hrs⟩ := hsp'
   dsimp only at hTs hrs
-  have hsp1 := ConRon.Bridge.Inductives.blockMemberCounts?_spec nP (cvT0 :: cvTs).length cs.length
+  have hsp1 := ConRon.Bridge.Inductives.blockMemberCounts_spec nP (cvT0 :: cvTs).length cs.length
     ((cvT0 :: cvTs).map (·.name)) (cvTsP.map (·.name)) (r0 :: rs) rsP 0 (cvT0 :: cvTs) cvTsP
   have hpre : Frontend.denoteNList a.store.ns ((cvT0 :: cvTs).map (·.name)) = some (cvTsP.map (·.name)) ∧
       (r0 :: rs).mapM (ConRon.Bridge.Inductives.dRecT a.store) = some rsP ∧

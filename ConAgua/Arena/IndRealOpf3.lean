@@ -174,7 +174,7 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
 /-- **`opf_go` refines `openPisAtFvarsFGo`** under the stage relation and `AbsOK`, the twin's
 `acc` the stack slice `(co, cn)` below the top. -/
-@[refines ConRon.Arena.openPisAtFvarsFGo]
+@[refines ConRon.Arena.openPisRawGo]
 theorem opfGo_ok : ∀ (k : Nat) (m m' : Mem) (a : AState) (n e i co cn : Word) (acc : Array EIdx)
     (r : List Word), callW opfP k "opf_go" [n, e, i, co, cn] m = some (r, m') →
     StageR vis fe m a → AbsOK m → e.toNat < 2 ^ 32 → SpineR m co cn acc →

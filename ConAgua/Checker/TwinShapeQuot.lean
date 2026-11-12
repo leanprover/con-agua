@@ -104,7 +104,7 @@ theorem eqBlock_u {s s' : AState} {r : List IConstantInfo} (hok : StateOK s)
 links two to thirty-four, from the state after the first block), then the pin variants. -/
 theorem internAllPins_tail {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) :
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ u0 : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
       IStepS s u0 ∧ Ext u0.store s'.store := by
   obtain ⟨u0, u, hq, h0, h1, hx, -⟩ := TwinCaches.internAllPins_steps hok hpins hoff hrun
@@ -113,7 +113,7 @@ theorem internAllPins_tail {ps : List NatOpPinSet} {r : List INatOpPinSet}
 /-- **The walk interns `u`**: a persistent handle denoting `u` at the end of `internAllPins`. -/
 theorem internAllPins_u {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) :
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ k, k.isPersistent = true ∧ denoteN s'.store.ns k = some (.str .anonymous "u") := by
   obtain ⟨u0, ⟨r0, q0⟩, a1, hx⟩ := internAllPins_tail hok hpins hoff hrun
   obtain ⟨-, k, hk⟩ := eqBlock_u hok q0

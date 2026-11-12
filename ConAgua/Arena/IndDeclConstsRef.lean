@@ -294,7 +294,7 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   rw [hnP] at hrun3 hR3 hS3
   generalize AM.res (ConRon.Arena.blockShape? nP b) a2 = x3 at hrun3 hR3
   generalize AM.st (ConRon.Arena.blockShape? nP b) a2 = a3 at hrun3 hS3
-  obtain ⟨hps3, -, hq3⟩ := ConRon.Bridge.Inductives.blockShape?_installS h02.chk hbP2 hrun3
+  obtain ⟨hps3, -, hq3⟩ := ConRon.Bridge.Inductives.readBlock_installS h02.chk hbP2 hrun3
   obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_bsh dc0F_bsh h3 hS3
     (checkOK_of_pstep h02.chk hps3) hps3.ext
   cases x3 with
@@ -438,7 +438,7 @@ theorem diW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   rw [hw] at hrun3 hR3 hS3
   generalize AM.res (ConRon.Arena.blockShape? nP b) a2 = x3 at hrun3 hR3
   generalize AM.st (ConRon.Arena.blockShape? nP b) a2 = a3 at hrun3 hS3
-  obtain ⟨hps3, -, hq3⟩ := ConRon.Bridge.Inductives.blockShape?_installS h02.chk hbP2 hrun3
+  obtain ⟨hps3, -, hq3⟩ := ConRon.Bridge.Inductives.readBlock_installS h02.chk hbP2 hrun3
   obtain ⟨h03, hX3⟩ := h02.step0 hP.leaf dcF_bsh dc0F_bsh h3 hS3
     (checkOK_of_pstep h02.chk hps3) hps3.ext
   cases x3 with

@@ -814,7 +814,7 @@ theorem i1lFastW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaI m a)
 under `ArenaI` (`ArenaD` and the walk's memo), at the counter's fuel `f.toNat` and every L fuel:
 if the L walk returns, the twin's walk succeeds with the same handle, in a related state; the
 handle (masked to 32 bits, as `abs_entry`'s and `inst_entry`'s) is below `2^32`. -/
-@[refines ConRon.Arena.instantiate1LiftFast]
+@[refines ConRon.Arena.instantiateLiftFast]
 theorem i1lFast_refines (p : Prog) (hp : I1lProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (hA : ArenaI s₀.mem a₀) (f e v d : Word) (he : e.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄

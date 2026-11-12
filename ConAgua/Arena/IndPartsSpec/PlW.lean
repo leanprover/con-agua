@@ -104,7 +104,7 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
 def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List (IConstantVal × Nat × Nat))
     (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
   ∃ nIdxs a2 R a3,
-    (ConRon.Arena.blockMemberCounts? nP cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs).run a =
+    (ConRon.Arena.blockMemberCounts nP cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs).run a =
       .ok (some nIdxs, a2) ∧
     (reservedBasisNames : AM (List NIdx)).run a2 = .ok (R, a3) ∧
     (bsoTwin nP nIdxs cvT0.type).run a3 = .ok (sv, a1)

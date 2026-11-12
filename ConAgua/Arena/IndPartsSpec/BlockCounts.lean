@@ -247,7 +247,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
-    ∃ x, (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
+    ∃ x, (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
       r = encONN x ∧ (∀ p q, x = some (p, q) → q < 2 ^ 64) ∧ IWGrow m m' ∧
       MemFrame [IW] [200] m m' := by
   cases n with
@@ -271,7 +271,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     · have hlt : ¬ nPd.toNat ≤ bs.length := by
         have := UInt64.lt_iff_toNat_lt.mp hl; omega
       refine ⟨none, ?_, ?_, by simp, hg, hf⟩
-      · unfold ConRon.Arena.blockCounts?
+      · unfold ConRon.Arena.blockCounts
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_right hlt]; rfl
@@ -280,7 +280,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
         have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
       refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, fun p q e => by
         simp only [Option.some.injEq, Prod.mk.injEq] at e; have := (r1.headD 0).toNat_lt; omega, hg, hf⟩
-      · unfold ConRon.Arena.blockCounts?
+      · unfold ConRon.Arena.blockCounts
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_left hge]; rfl
@@ -301,7 +301,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       · cases e
       · refine bcTail_snd e fun x y hxy => ?_
         simp only [Option.some.injEq, Prod.mk.injEq] at hxy; omega
-    · unfold ConRon.Arena.blockCounts?
+    · unfold ConRon.Arena.blockCounts
       rw [← hty]
       simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
       cases v with
@@ -354,7 +354,7 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
   exact ⟨hl, hok, by rw [hres]; exact hr, by rw [hst]; exact hS', hg⟩
 
 /-- **`block_counts` refines `blockCounts?`** (the recursor datum `r` as `(rOk, rMI, rRP)`). -/
-@[refines ConRon.Arena.blockCounts?]
+@[refines ConRon.Arena.blockCounts]
 theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
     (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
@@ -369,9 +369,9 @@ theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts" [nPd, k, nC, nR, cvT, rOk, rMI, rRP]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ ∧
-      AM.st (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ = a₀ ∧
-      r = encONN (AM.res (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀) ∧
+      AM.ok (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ ∧
+      AM.st (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ = a₀ ∧
+      r = encONN (AM.res (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockCounts_spec p ha hc hv hs hpb hh hpp hp n s₀ nPd k nC nR cvT rOk rMI rRP) ?_
   rintro r s' ⟨hl, hm⟩
