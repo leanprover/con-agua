@@ -10,11 +10,11 @@ import ConAgua.Arena.RecClassSpec.Classes
 @[expose] public section
 
 /-!
-# `blockShape?` under `StageC`, part 1: the walk memos across `block_shape`'s first callees
+# `readBlock` under `StageC`, part 1: the walk memos across `read_block`'s first callees
 (lane `indproofs4`, helper `bpc`)
 
 `AbsOK` across the models of the callees `block_shape` runs before `lvl_eq_c` (`block_split`,
-`block_shape_names_of`, `block_member_counts`, `er_to_iw`, `block_shape_pins_ok`,
+`block_shape_names_of`, `block_member_counts`, `er_to_iw`, the three tests,
 `block_shape_result_sort`): they write the record pool and `EREC` only (`afr_auto`). `lvl_eq_c`'s
 real refinement (`lvlEqC_simC`) needs `StageC` at the call, whose memory half is `AbsOK`'s.
 -/
@@ -104,36 +104,28 @@ theorem bmcW_afr {n : Nat} {m m' : Mem} {nPd k nC no nl ro rl cto ctl : Word} {r
   simp only [bmcW, bmcW.k_block_member_counts_go.eq_def] at h
   afr_auto h [bmgW_afr n _ _ _ _ _ _ _ _ _ _ _ _ _]
 
-/-! ## `block_shape_pins_ok` -/
+/-! ## `readBlock`'s three tests -/
 
-theorem bpfW_afr : ∀ (n : Nat) (m m' : Mem) (cto ctl lo ll : Word) (r : List Word),
-    bpfW n m cto ctl lo ll = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, h => by simp [bpfW] at h
+theorem floW_afr : ∀ (n : Nat) (m m' : Mem) (cto ctl lo ll : Word) (r : List Word),
+    floW n m cto ctl lo ll = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, h => by simp [floW] at h
   | n + 1, m, m', cto, ctl, lo, ll, r, h => by
-    simp only [bpfW, bpfW.k_reserved_contains.eq_def, bpfW.k_er_to_iw.eq_def, bpfW.k_sl_eq.eq_def,
-      bpfW.k_block_shape_pins_formers.eq_def] at h
-    afr_auto h [bpfW_afr n _ _ _ _ _ _ _, erToIwW_afr]
+    simp only [floW, floW.k_er_to_iw.eq_def, floW.k_sl_eq.eq_def, floW.k_formers_lps_ok.eq_def] at h
+    afr_auto h [floW_afr n _ _ _ _ _ _ _, erToIwW_afr]
 
-theorem bprW_afr : ∀ (n : Nat) (m m' : Mem) (ro rl : Word) (r : List Word),
-    bprW n m ro rl = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, h => by simp [bprW] at h
-  | n + 1, m, m', ro, rl, r, h => by
-    simp only [bprW, bprW.k_reserved_contains.eq_def, bprW.k_block_shape_pins_recs.eq_def] at h
-    afr_auto h [bprW_afr n _ _ _ _ _]
+theorem cpoW_afr : ∀ (n : Nat) (m m' : Mem) (nP cso csl : Word) (r : List Word),
+    cpoW n m nP cso csl = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, h => by simp [cpoW] at h
+  | n + 1, m, m', nP, cso, csl, r, h => by
+    simp only [cpoW, cpoW.k_ctors_params_ok.eq_def] at h
+    afr_auto h [cpoW_afr n _ _ _ _ _ _]
 
-theorem bpcW_afr : ∀ (n : Nat) (m m' : Mem) (nP cso csl lo ll : Word) (r : List Word),
-    bpcW n m nP cso csl lo ll = some (r, m') → AFr m m'
-  | 0, _, _, _, _, _, _, _, _, h => by simp [bpcW] at h
-  | n + 1, m, m', nP, cso, csl, lo, ll, r, h => by
-    simp only [bpcW, bpcW.k_reserved_contains.eq_def, bpcW.k_er_to_iw.eq_def, bpcW.k_sl_eq.eq_def,
-      bpcW.k_block_shape_pins_ctors.eq_def] at h
-    afr_auto h [bpcW_afr n _ _ _ _ _ _ _ _, erToIwW_afr]
-
-theorem bpoW_afr {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
-    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) : AFr m m' := by
-  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
-    bpoW.k_block_shape_pins_ctors.eq_def] at h
-  afr_auto h [bpfW_afr n _ _ _ _ _ _ _, bprW_afr n _ _ _ _ _, bpcW_afr n _ _ _ _ _ _ _ _]
+theorem cloW_afr : ∀ (n : Nat) (m m' : Mem) (cso csl lo ll : Word) (r : List Word),
+    cloW n m cso csl lo ll = some (r, m') → AFr m m'
+  | 0, _, _, _, _, _, _, _, h => by simp [cloW] at h
+  | n + 1, m, m', cso, csl, lo, ll, r, h => by
+    simp only [cloW, cloW.k_er_to_iw.eq_def, cloW.k_sl_eq.eq_def, cloW.k_ctors_lps_ok.eq_def] at h
+    afr_auto h [cloW_afr n _ _ _ _ _ _ _, erToIwW_afr]
 
 /-! ## `block_shape_result_sort` -/
 

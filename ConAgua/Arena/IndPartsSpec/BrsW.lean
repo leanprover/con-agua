@@ -132,235 +132,147 @@ theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   rw [hn1, hn2, map_decI_beq ws1 ws2 hl1 hl2, hres]
   by_cases hw : ws1 = ws2 <;> simp [hw]
 
-theorem partsResR {a : AState} {R R' : List NIdx} (h : reservedBasisNames.run a = .ok (R, a))
-    (h' : reservedBasisNames.run a = .ok (R', a)) : R' = R := by
-  rw [h] at h'; simp only [Except.ok.injEq, Prod.mk.injEq] at h'; exact h'.1.symm
-
 theorem ipIte01_ne {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b ≠ 0 ↔ c = true := by
   subst h; cases c <;> simp
 
 theorem ipIte01_eq {c : Bool} {b : Word} (h : b = if c then 1 else 0) : b = 0 ↔ c = false := by
   subst h; cases c <;> simp
 
-/-- **`block_shape_pins_formers`**: no former's name reserved, every former at `lps`. -/
-theorem bpfW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
-    {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
+/-- **`formers_lps_ok`**: every former at `lps`. -/
+theorem floW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
+    {lps : List NIdx} (n : Nat) :
     ∀ (m m' : Mem) (cto ctl : Word) (cvTs : List IConstantVal) (r : List Word),
-    bpfW n m cto ctl lo ll = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
+    floW n m cto ctl lo ll = some (r, m') → StageR vis fe m a → PSlR decCVp cvTs cto ctl m →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
-      r = [if cvTs.all (fun c => !R.contains c.name && c.levelParams == lps) then 1 else 0] := by
+      r = [if cvTs.all (fun c => c.levelParams == lps) then 1 else 0] := by
   induction n with
-  | zero => intro m m' cto ctl cvTs r h; simp [bpfW] at h
+  | zero => intro m m' cto ctl cvTs r h; simp [floW] at h
   | succ n ih =>
     intro m m' cto ctl cvTs r h hS hts hl hlb
     by_cases hc : ctl = 0
-    · rw [bpfW.arm1 n m cto ctl lo ll hc] at h
+    · rw [floW.arm1 n m cto ctl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc; rw [L.Ind.pslR_nil hts]
       exact ⟨hS, IWGrow.refl _, rfl⟩
-    rw [bpfW.arm2 n m cto ctl lo ll hc] at h; simp only [erRd_foldN] at h
+    rw [floW.arm2 n m cto ctl lo ll hc] at h; simp only [erRd_foldN] at h
     obtain ⟨pc, cv, ts', rfl, hw, hpb, hcv, hts'⟩ := partsPSl_cons hts hc
     rw [hw] at h
-    obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) hcv hpb
-    obtain ⟨b, hb, h⟩ := L.Arena.of_K h (by simp [bpfW.k_reserved_contains])
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
-    rw [partsResR hR hR', hne] at hbv
-    by_cases hb0 : b ≠ 0
-    · rw [bpfW.k_reserved_contains.arm1 (hc1 := hb0)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
-      exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
-    rw [bpfW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
-    simp only [erRd_foldN] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpfW.k_er_to_iw])
-    rw [bpfW.k_er_to_iw.arm1] at h
-    obtain ⟨e, he, h⟩ := L.Arena.of_K h (by simp [bpfW.k_sl_eq])
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [floW.k_er_to_iw])
+    rw [floW.k_er_to_iw.arm1] at h
+    obtain ⟨e, he, h⟩ := L.Arena.of_K h (by simp [floW.k_sl_eq])
     obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS hcv hpb hl hlb
     by_cases he0 : e = 0
-    · rw [bpfW.k_sl_eq.arm1 (hc1 := he0)] at h
+    · rw [floW.k_sl_eq.arm1 (hc1 := he0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
-      exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpfW.k_sl_eq.arm2 (hc1 := he0)] at h
+      exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.false_and]; rfl⟩
+    rw [floW.k_sl_eq.arm2 (hc1 := he0)] at h
     have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
-    rcases h2 : bpfW n m1 (cto + 1) (ctl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    rcases h2 : floW n m1 (cto + 1) (ctl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [bpfW.k_block_shape_pins_formers.arm1] at h
+    rw [floW.k_formers_lps_ok.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cto + 1) (ctl - 1) ts' r2 h2 hS1 (hts'.grow (fun _ => OMono.decCVp _) hg1)
       (by rw [L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
-    rw [hr2]; simp only [List.all_cons, hcn, heq, Bool.not_false, Bool.true_and]; rfl
+    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]
 
-/-- **`block_shape_pins_recs`**: no recursor's name reserved. -/
-theorem bprW_ok {vis : Word} {fe : IFEnv} {a : AState}
-    {R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
-    ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (r : List Word),
-    bprW n m ro rl = some (r, m') → StageR vis fe m a → PSlR decSR rs ro rl m →
-    m' = m ∧ r = [if rs.all (fun r => !R.contains r.1.name) then 1 else 0] := by
-  induction n with
-  | zero => intro m m' ro rl rs r h; simp [bprW] at h
-  | succ n ih =>
-    intro m m' ro rl rs r h hS hrs
-    by_cases hc : rl = 0
-    · rw [bprW.arm1 n m ro rl hc] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      subst hc; rw [L.Ind.pslR_nil hrs]
-      exact ⟨rfl, rfl⟩
-    rw [bprW.arm2 n m ro rl hc] at h; simp only [erRd_foldN] at h
-    obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hc
-    obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
-    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
-    rw [hw, hcw] at h
-    obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    rcases hb : resContW n m (erRd m (UInt64.ofNat cvp)) with _ | b <;> rw [hb] at h
-    · simp [bprW.k_reserved_contains] at h
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
-    rw [partsResR hR hR', hne] at hbv
-    by_cases hb0 : b ≠ 0
-    · rw [bprW.k_reserved_contains.arm1 (hc1 := hb0)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
-      exact ⟨rfl, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
-    rw [bprW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    rcases h2 : bprW n m (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
-    · cases h
-    rw [bprW.k_block_shape_pins_recs.arm1] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨rfl, hr2⟩ := ih m m2 (ro + 1) (rl - 1) rs' r2 h2 hS hrs'
-    refine ⟨rfl, ?_⟩
-    rw [hr2]; simp only [List.all_cons, hcn, Bool.not_false, Bool.true_and]; rfl
+/-- A constructor record's parameter-count word, against the twin's. -/
+theorem partsCtorNP {m : Mem} {cso : Word} {pc : Nat} {cv0 : IConstantVal} {nP0 nF0 : Nat}
+    (hw : rdW (m.arr64 IW) cso = UInt64.ofNat pc) (hpb : pc < 2 ^ 64)
+    (hc0 : decSC (truncM m) pc = some (cv0, nP0, nF0)) (nP : Word) :
+    (rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP ↔ (nP0 == nP.toNat) = false) ∧
+      ∃ cvp, iwN (truncM m) pc = some cvp ∧ DecB (fun m => decCVp m cvp) m cv0 := by
+  have hd0 := hc0
+  simp only [decSC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hd0
+  obtain ⟨cvp, hcvp, cv, hcv, nP1, hnP, nF, hnF, e1, e2, e3⟩ := hd0
+  subst e1 e2 e3
+  have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+  have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
+    have := partsIwLt hnP; rw [UInt64.toNat_add, hpw]; simp; omega
+  obtain ⟨hpw1, hnPb, -⟩ := partsIwRd hnP hp1
+  refine ⟨?_, cvp, hcvp, hcv⟩
+  rw [hw, hpw1]
+  simp only [ne_eq, beq_eq_false_iff_ne]
+  constructor
+  · intro e e'; exact e (by rw [e', _root_.L.ofNat_toNat])
+  · intro e e'; exact e (by rw [← e', UInt64.toNat_ofNat_of_lt' hnPb])
 
-/-- **`block_shape_pins_ctors`**: every constructor at `nP` and `lps`, no name reserved. -/
-theorem bpcW_ok {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
-    {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
+/-- **`ctors_params_ok`**: every constructor at `nP`. -/
+theorem cpoW_ok {nP : Word} (n : Nat) :
     ∀ (m m' : Mem) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
-    bpcW n m nP cso csl lo ll = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
+    cpoW n m nP cso csl = some (r, m') → PSlR decSC cs cso csl m →
+    m' = m ∧ r = [if cs.all (fun c => c.2.1 == nP.toNat) then 1 else 0] := by
+  induction n with
+  | zero => intro m m' cso csl cs r h; simp [cpoW] at h
+  | succ n ih =>
+    intro m m' cso csl cs r h hcs
+    by_cases hc : csl = 0
+    · rw [cpoW.arm1 n m nP cso csl hc] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      subst hc; rw [_root_.L.Ind.pslR_nil hcs]
+      exact ⟨rfl, rfl⟩
+    obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hc
+    obtain ⟨hnpeq, -⟩ := partsCtorNP hw hpb hc0 nP
+    by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
+    · rw [cpoW.arm2 n m nP cso csl hc hnp] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      exact ⟨rfl, by simp only [List.all_cons, hnpeq.mp hnp, Bool.false_and]; rfl⟩
+    have hnpt : (nP0 == nP.toNat) = true := by
+      simpa using mt hnpeq.mpr hnp
+    rw [cpoW.arm3 n m nP cso csl hc (Classical.not_not.mp hnp)] at h
+    rcases h2 : cpoW n m nP (cso + 1) (csl - 1) with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    · cases h
+    rw [cpoW.k_ctors_params_ok.arm1] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    obtain ⟨rfl, hr2⟩ := ih m m2 (cso + 1) (csl - 1) cs' r2 h2 hcs'
+    exact ⟨rfl, by rw [hr2]; simp only [List.all_cons, hnpt, Bool.true_and]⟩
+
+/-- **`ctors_lps_ok`**: every constructor at `lps`. -/
+theorem cloW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
+    {lps : List NIdx} (n : Nat) :
+    ∀ (m m' : Mem) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
+    cloW n m cso csl lo ll = some (r, m') → StageR vis fe m a → PSlR decSC cs cso csl m →
     decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     StageR vis fe m' a ∧ IWGrow m m' ∧
-      r = [if cs.all (fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name)
-        then 1 else 0] := by
+      r = [if cs.all (fun c => c.1.levelParams == lps) then 1 else 0] := by
   induction n with
-  | zero => intro m m' cso csl cs r h; simp [bpcW] at h
+  | zero => intro m m' cso csl cs r h; simp [cloW] at h
   | succ n ih =>
     intro m m' cso csl cs r h hS hcs hl hlb
     by_cases hc : csl = 0
-    · rw [bpcW.arm1 n m nP cso csl lo ll hc] at h
+    · rw [cloW.arm1 n m cso csl lo ll hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       subst hc; rw [_root_.L.Ind.pslR_nil hcs]
       exact ⟨hS, IWGrow.refl _, rfl⟩
-    obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hc
-    have hd0 : decSC (truncM m) pc = some (cv0, nP0, nF0) := hc0
-    simp only [decSC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hd0
-    obtain ⟨cvp, hcvp, cv, hcv, nP1, hnP, nF, hnF, e1, e2, e3⟩ := hd0
-    subst e1 e2 e3
-    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
-    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-    have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
-      have := partsIwLt hnP; rw [UInt64.toNat_add, hpw]; simp; omega
-    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp hpw
-    obtain ⟨hpw1, hnPb, -⟩ := partsIwRd hnP hp1
-    have hnpeq : (UInt64.ofNat nP1 = nP) ↔ (nP1 == nP.toNat) = true := by
-      simp only [beq_iff_eq]
-      constructor
-      · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' hnPb]
-      · intro e; rw [e, _root_.L.ofNat_toNat]
-    by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
-    · rw [bpcW.arm2 n m nP cso csl lo ll hc hnp] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      rw [hw, hpw1] at hnp
-      have : (nP1 == nP.toNat) = false := Bool.eq_false_iff.mpr (mt hnpeq.mpr hnp)
-      exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.false_and]; rfl⟩
-    rw [bpcW.arm3 n m nP cso csl lo ll hc (Classical.not_not.mp hnp)] at h
-    simp only [erRd_foldN] at h
-    have hnpt : (nP1 == nP.toNat) = true := by
-      rw [hw, hpw1] at hnp; exact hnpeq.mp (by simpa using hnp)
+    rw [cloW.arm2 n m cso csl lo ll hc] at h; simp only [erRd_foldN] at h
+    obtain ⟨pc, ⟨cv, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hc
+    obtain ⟨-, cvp, hcvp, hcv⟩ := partsCtorNP hw hpb hc0 0
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
     rw [hw, hcw] at h
-    obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
-    obtain ⟨b, hb, h⟩ := _root_.L.Arena.of_K h (by simp [bpcW.k_reserved_contains])
-    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.check.pins
-    rw [partsResR hR hR', hne] at hbv
-    by_cases hb0 : b ≠ 0
-    · rw [bpcW.k_reserved_contains.arm1 (hc1 := hb0)] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : R.contains cv.name = true := (ipIte01_ne hbv).mp hb0
-      exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpcW.k_reserved_contains.arm2 (hc1 := Classical.not_not.mp hb0)] at h
-    simp only [erRd_foldN] at h
-    have hcn : R.contains cv.name = false := Bool.eq_false_iff.mpr (mt (ipIte01_ne hbv).mpr hb0)
-    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [bpcW.k_er_to_iw])
-    rw [bpcW.k_er_to_iw.arm1] at h
-    obtain ⟨e, he, h⟩ := _root_.L.Arena.of_K h (by simp [bpcW.k_sl_eq])
-    obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb hl hlb
+    obtain ⟨rp, m1, h1, h⟩ := ipK_inv h (by simp [cloW.k_er_to_iw])
+    rw [cloW.k_er_to_iw.arm1] at h
+    obtain ⟨e, he, h⟩ := _root_.L.Arena.of_K h (by simp [cloW.k_sl_eq])
+    obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS hcv hcvb hl hlb
     by_cases he0 : e = 0
-    · rw [bpcW.k_sl_eq.arm1 (hc1 := he0)] at h
+    · rw [cloW.k_sl_eq.arm1 (hc1 := he0)] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
       have : (cv.levelParams == lps) = false := (ipIte01_eq hev).mp he0
-      exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
-    rw [bpcW.k_sl_eq.arm2 (hc1 := he0)] at h
+      exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.false_and]; rfl⟩
+    rw [cloW.k_sl_eq.arm2 (hc1 := he0)] at h
     have heq : (cv.levelParams == lps) = true := by simpa using mt (ipIte01_eq hev).mpr he0
-    rcases h2 : bpcW n m1 nP (cso + 1) (csl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
+    rcases h2 : cloW n m1 (cso + 1) (csl - 1) lo ll with _ | ⟨r2, m2⟩ <;> rw [h2] at h
     · cases h
-    rw [bpcW.k_block_shape_pins_ctors.arm1] at h
+    rw [cloW.k_ctors_lps_ok.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cso + 1) (csl - 1) cs' r2 h2 hS1 (hcs'.grow decSC_mono hg1)
       (by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
-    rw [hr2]; simp only [List.all_cons, hcn, heq, hnpt, Bool.not_false, Bool.true_and, Bool.and_true]; rfl
+    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]
 
 theorem partsW01 {r : List Word} {b : Bool} (h : r = [if b then 1 else 0]) : (r.headD 0 = 0) ↔ b = false := by
   subst h; cases b <;> simp
-
-/-- **`block_shape_pins_ok`**: the three pins, the twin's conjunction. -/
-theorem bpoW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
-    {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word} {cvTs : List IConstantVal}
-    {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
-    {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a))
-    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hS : StageR vis fe m a)
-    (hts : PSlR decCVp cvTs cto ctl m) (hrs : PSlR decSR rs ro rl m) (hcs : PSlR decSC cs cso csl m)
-    (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧
-      r = [if ((cvTs.all fun c => !R.contains c.name && c.levelParams == lps) &&
-          (rs.all fun r => !R.contains r.1.name) &&
-          (cs.all fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name))
-        then 1 else 0] := by
-  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
-    bpoW.k_block_shape_pins_ctors.eq_def] at h
-  rcases h1 : bpfW n m cto ctl lo ll with _ | ⟨ra, m1⟩ <;> rw [h1] at h
-  · cases h
-  simp only at h
-  obtain ⟨hS1, hg1, hra⟩ := bpfW_ok hR n m m1 cto ctl cvTs ra h1 hS hts hl hlb
-  by_cases ha : ra.headD 0 = 0
-  · rw [ite_eq_left ha] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    rw [(partsW01 hra).mp ha]
-    exact ⟨hS1, hg1, rfl⟩
-  rw [ite_eq_right ha] at h
-  have hat : (cvTs.all fun c => !R.contains c.name && c.levelParams == lps) = true := by
-    simpa using mt (partsW01 hra).mpr ha
-  rcases h2 : bprW n m1 ro rl with _ | ⟨rb, m2⟩ <;> rw [h2] at h
-  · cases h
-  simp only at h
-  obtain ⟨hm2, hrb⟩ := bprW_ok hR n m1 m2 ro rl rs rb h2 hS1 (hrs.grow decSR_mono hg1)
-  rw [hm2] at h
-  by_cases hb : rb.headD 0 = 0
-  · rw [ite_eq_left hb] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    rw [hat, (partsW01 hrb).mp hb]
-    exact ⟨hS1, hg1, rfl⟩
-  rw [ite_eq_right hb] at h
-  have hbt : (rs.all fun r => !R.contains r.1.name) = true := by
-    simpa only [Bool.not_eq_false] using mt (partsW01 hrb).mpr hb
-  rcases h3 : bpcW n m1 nP cso csl lo ll with _ | ⟨rc, m3⟩ <;> rw [h3] at h
-  · cases h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS3, hg3, hrc⟩ := bpcW_ok hR n m1 m3 cso csl cs rc h3 hS1 (hcs.grow decSC_mono hg1)
-    (by rw [L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
-  refine ⟨hS3, hg1.trans hg3, ?_⟩
-  rw [hat, hbt, hrc]; simp only [Bool.true_and]; rfl
 
 /-! ## `block_shape_large` -/
 
@@ -926,7 +838,7 @@ open L.Arena
 
 def finJP (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
     (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
-    (cvR0 : IConstantVal) (s : LIdx) : AM (Option BlockShape) := do
+    (cvR0 : IConstantVal) (s : LIdx) : AM (Except CheckError BlockShape) := do
   let z ← zeroLevel
   let eq ← lvlEq? s z
   let isProp : Bool := match eq with
@@ -944,10 +856,10 @@ def finJP (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List N
     | [] => none
     | elim :: relps => if relps == lps && !lps.contains elim then some elim else none
   match large? with
-  | some elim => pure (some ⟨members, recsL, nP, elim, s, true, isProp⟩)
+  | some elim => pure (.ok ⟨members, recsL, nP, elim, s, true, isProp⟩)
   | none => do
     let anon ← internNNode .anonymous
-    pure (some ⟨members, recsL, nP, anon, s, false, isProp⟩)
+    pure (.ok ⟨members, recsL, nP, anon, s, false, isProp⟩)
 
 def tailJP {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LIdx → AM X) : AM X := do
   let x ← stripPis (nP + nIdxs.headD 0) ty
@@ -965,31 +877,38 @@ def tailJP {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LIdx → A
     let s ← zeroLevel
     jp s
 
-def pinsOf (nP : Nat) (R : List NIdx) (lps : List NIdx) (cvTs : List IConstantVal)
-    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) : Bool :=
-  (cvTs.all fun c => !R.contains c.name && c.levelParams == lps) &&
-    (rs.all fun r => !R.contains r.1.name) &&
-    (cs.all fun c => c.2.1 == nP && c.1.levelParams == lps && !R.contains c.1.name)
-
-def buildTwin (nPd : Nat) (cvTs : List IConstantVal) (cvT0 : IConstantVal)
+/-- **`read_block_at`'s twin**: `readBlock` from its split, non-empty components (the counts, the
+three tests, then the tail). -/
+def readAtTwin (nPd : Nat) (cvTs : List IConstantVal) (cvT0 : IConstantVal)
     (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
-    (cvR0 : IConstantVal) : AM (Option BlockShape) := do
-  match ← blockMemberCounts? nPd cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs with
-  | none => pure none
-  | some nIdxs =>
-    let reserved ← reservedBasisNames
-    if pinsOf nPd reserved cvT0.levelParams cvTs cs rs then
-      tailJP nPd nIdxs cvT0.type (finJP nPd cvTs nIdxs cvT0.levelParams cs rs cvR0)
-    else pure none
+    (cvR0 : IConstantVal) : AM (Except CheckError BlockShape) := do
+  match ← ConRon.Arena.blockMemberCounts nPd cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs with
+  | .error e => pure (.error e)
+  | .ok nIdxs =>
+    if !(cvTs.all fun c => c.levelParams == cvT0.levelParams) then
+      pure (.error (.invalid
+        "inductive type declares other universe parameters than the block's first type"))
+    else if !(cs.all fun c => c.2.1 == nPd) then
+      pure (.error (.invalid "constructor declares another parameter count than the block"))
+    else if !(cs.all fun c => c.1.levelParams == cvT0.levelParams) then
+      if cvTs.length == 1 then
+        pure (.error (.invalid "constructor declares other universe parameters than its type"))
+      else
+        pure (.error (.invalid
+          "constructor declares other universe parameters than the block's inductive types"))
+    else tailJP nPd nIdxs cvT0.type (finJP nPd cvTs nIdxs cvT0.levelParams cs rs cvR0)
 
-theorem blockShape_eq (nPd : Nat) (block : List IConstantInfo) :
-    ConRon.Arena.blockShape? nPd block = (match ConRon.Arena.blockSplit block with
-      | none => pure none
+theorem readBlock_eq' (nPd : Nat) (block : List IConstantInfo) :
+    ConRon.Arena.readBlock nPd block = (match ConRon.Arena.blockSplit block with
+      | none => pure (.error (.invalid
+          "inductive block: its records are not the inductive types, then the constructors, then the recursors"))
       | some (cvTs, cs, rs) =>
         match cvTs, rs with
-        | cvT0 :: _, (cvR0, _, _, _, _) :: _ => buildTwin nPd cvTs cvT0 cs rs cvR0
-        | _, _ => pure none) := by
-  unfold ConRon.Arena.blockShape?
+        | cvT0 :: _, (cvR0, _, _, _, _) :: _ => readAtTwin nPd cvTs cvT0 cs rs cvR0
+        | [], _ => pure (.error (.invalid "inductive block declares no inductive type"))
+        | _ :: _, [] => pure (.error (.invalid
+            "inductive block carries no recursor records; the input must carry the recursors of every inductive block"))) := by
+  unfold ConRon.Arena.readBlock
   rfl
 
 theorem tailJP_eq {X : Type} (nP : Nat) (nIdxs : List Nat) (ty : EIdx) (jp : LIdx → AM X) :
@@ -1057,10 +976,10 @@ theorem bsealW_sim {vis : Word} {fe : IFEnv} {m : Mem}
     (hip : (ip != 0) = isProp) (hlg : LargeR lg [lgw, elimw]) :
     Sim (bsealW m mo ml ro2 rl2 nPd s ip lgw elimw)
       (match lg with
-        | some elim => pure (some ⟨ms, recs, nPd.toNat, elim, sv, true, isProp⟩)
+        | some elim => pure (.ok ⟨ms, recs, nPd.toNat, elim, sv, true, isProp⟩)
         | none => do
           let anon ← internNNode .anonymous
-          pure (some ⟨ms, recs, nPd.toNat, anon, sv, false, isProp⟩)) a
+          pure (.ok ⟨ms, recs, nPd.toNat, anon, sv, false, isProp⟩)) a
       (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   intro r m' e
   unfold bsealW at e
@@ -1089,7 +1008,7 @@ theorem bsealW_sim {vis : Word} {fe : IFEnv} {m : Mem}
     rw [bsealW.k_block_shape_pack.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS2, hg2, hd2, hsl2⟩ := partsPack h2 hS3 (hms.grow decMSB_mono hg3) (hrs.grow decRS_mono hg3) hal hs
-    refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
+    refine ⟨.ok ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
       by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_, hsl2⟩, hS2, hg3.trans hg2⟩
     rw [← hae, ← hsv, ← hip]; exact hd2
 
@@ -1116,7 +1035,7 @@ theorem _root_.L.Arena.Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op 
 /-- `finJP` after `isProp`. -/
 def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
     (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
-    (cvR0 : IConstantVal) (s : LIdx) (isProp : Bool) : AM (Option BlockShape) := do
+    (cvR0 : IConstantVal) (s : LIdx) (isProp : Bool) : AM (Except CheckError BlockShape) := do
   let ctors : List (IConstantVal × Nat) := cs.map fun c => (c.1, c.2.2)
   let lvls ← paramLevels lps
   let groups ← ConRon.Arena.blockGroups (cvTs.map (·.name)) lvls nP cvTs.length ctors
@@ -1128,10 +1047,10 @@ def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List
     | [] => none
     | elim :: relps => if relps == lps && !lps.contains elim then some elim else none
   match large? with
-  | some elim => pure (some ⟨members, recsL, nP, elim, s, true, isProp⟩)
+  | some elim => pure (.ok ⟨members, recsL, nP, elim, s, true, isProp⟩)
   | none => do
     let anon ← internNNode .anonymous
-    pure (some ⟨members, recsL, nP, anon, s, false, isProp⟩)
+    pure (.ok ⟨members, recsL, nP, anon, s, false, isProp⟩)
 
 theorem finJP_eq (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
     (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
@@ -1244,8 +1163,8 @@ theorem bfW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   rintro r7 x m7 a7 ⟨hR7, hS7, hg7⟩
   refine ⟨?_, hS7, hg05.trans (hg6.trans hg7)⟩
   cases x with
-  | none => exact hR7
-  | some bs => exact hR7
+  | error _ => exact hR7
+  | ok bs => exact hR7
 
 /-- A `Sim` also records the model's run. -/
 theorem _root_.L.Arena.Sim.withEq {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
@@ -1314,7 +1233,7 @@ theorem partsBindOk {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState
 
 theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)} :
     ∀ (cvTs : List IConstantVal) (mm : Nat) (a a' : AState) (ns : List Nat),
-    (ConRon.Arena.blockMemberCounts nPd k nC names rs mm cvTs).run a = .ok (some ns, a') →
+    (ConRon.Arena.blockMemberCounts nPd k nC names rs mm cvTs).run a = .ok (.ok ns, a') →
     ns.length = cvTs.length
   | [], mm, a, a', ns, h => by
     simp [ConRon.Arena.blockMemberCounts, StateT.run, pure, StateT.pure, Except.pure] at h; simp [← h]
@@ -1323,13 +1242,13 @@ theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal
     obtain ⟨q, a1, -, h⟩ := partsBindOk h
     obtain ⟨x, a2, -, h⟩ := partsBindOk h
     cases x with
-    | none => simp [StateT.run, pure, StateT.pure, Except.pure] at h
-    | some c2 =>
+    | error e => simp [StateT.run, pure, StateT.pure, Except.pure] at h
+    | ok c2 =>
       simp only at h
       obtain ⟨y, a3, hy, h⟩ := partsBindOk h
       cases y with
-      | none => simp [StateT.run, pure, StateT.pure, Except.pure] at h
-      | some ns' =>
+      | error e => simp [StateT.run, pure, StateT.pure, Except.pure] at h
+      | ok ns' =>
         simp [StateT.run, pure, StateT.pure, Except.pure] at h
         rw [← h.1]; simp [bmc_length cs (mm + 1) a2 a3 ns' hy]
 
@@ -1360,110 +1279,146 @@ theorem bmcW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
   obtain ⟨x, a', h1, hR, hS', hg'⟩ := hsim r1 m1 hb
   exact ⟨x, a', h1, NsR_three hR, hS', hg'⟩
 
-/-- A pins pass that returned read the reserved names: the pins are ready. -/
-theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
-    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hc : ctl ≠ 0) : pinW m 0 ≠ 0 := by
-  simp only [bpoW, bpoW.k_block_shape_pins_formers.eq_def, bpoW.k_block_shape_pins_recs.eq_def,
-    bpoW.k_block_shape_pins_ctors.eq_def] at h
-  rcases h1 : bpfW n m cto ctl lo ll with _ | x
-  · rw [h1] at h; cases h
-  cases n with
-  | zero => simp [bpfW] at h1
-  | succ n =>
-  rw [bpfW.arm2 n m cto ctl lo ll hc] at h1; simp only [erRd_foldN] at h1
-  rcases h2 : resContW n m (erRd m (rdW (m.arr64 IW) cto)) with _ | b
-  · rw [h2] at h1; simp [bpfW.k_reserved_contains] at h1
-  cases n with
-  | zero => simp [resContW] at h2
-  | succ n =>
-  rw [resContW_step] at h2
-  intro h0; rw [ite_eq_left h0] at h2; cases h2
+/-- An error answer of the reader: its reason, the twin's message invalid. -/
+theorem rbR_err {r : List Word} {m : Mem} {w : Word} {s : String} (hr : r.headD 0 = w) (hw : RCode w) :
+    RbR (.error (.invalid s)) r m := ⟨by rw [hr]; exact hw, s, rfl⟩
 
-/-- **`block_shape_build`'s model refines `buildTwin`.** -/
-theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
+/-- **`read_block_at`'s model refines `readAtTwin`.** -/
+theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem} {a : AState}
     {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
     {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × Bool × List IRecRule}
     {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (hS : StageR vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
     (hrs : PSlR decSR (r0 :: rs) rso rsl m)
     (hc : LvlHyp c n dn vis fe m (TbbT nPd.toNat cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a)) :
-    Sim (bbW c n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
+    Sim (rbaW c n m nPd cto ctl cso csl rso rsl)
+      (readAtTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
+      (fun r x m' a' => RbR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
+  have rc := rcode_reader
   have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (_root_.L.Ind.pslR_nil hts) (by simp)
-  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
   simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
   have hlen : (cvT0 :: cvTs).length = ctl.toNat := decPL_length _ hts.dec
   have hclen : cs.length = csl.toNat := decPL_length _ hcs.dec
   intro r m' e
-  unfold bbW at e
+  unfold rbaW at e
   rw [hw] at e
   -- names (model only)
   rcases h1 : bsnW (n + 3) m cto ctl with _ | ⟨r1, m1⟩ <;> rw [h1] at e
   · cases e
-  rw [bbH1_some] at e
+  simp only [rbaW.k_block_shape_names_of] at e
   obtain ⟨hS1, hg1, hd1, hb1⟩ := bsnW_ok (n + 3) m m1 a cto ctl (cvT0 :: cvTs) r1 h1 hS hts
   revert r m' e
-  unfold buildTwin
+  unfold readAtTwin
   -- member counts
   have hmc := bmcW_sim (n + 2) (nPd := nPd) (k := ctl) (nC := csl) hS1 (hts.grow (fun _ => OMono.decCVp _) hg1)
     (hrs.grow decSR_mono hg1) (decHL_decB hd1 hb1) hb1
   rw [← hlen, ← hclen] at hmc
-  refine Sim.bindK rfl (fun _ _ => by rw [bbH2]) hmc.withRun.withEq ?_
+  refine Sim.bindK rfl (fun _ _ => rfl) hmc.withRun.withEq ?_
   rintro r2 x2 m2 a2 ⟨⟨⟨hR2, hS2, hg2⟩, hrun2⟩, he2⟩
   have hg02 := hg1.trans hg2
   cases x2 with
-  | none =>
-    have h0 : r2.headD 0 = 0 := hR2
-    simp only [h0, ite_true]
-    exact Sim.ret ⟨rfl, hS2, hg02⟩
-  | some nIdxs =>
+  | error ce =>
+    obtain ⟨hc2, s2, rfl⟩ := hR2
+    simp only [ite_eq_left hc2.1]
+    exact Sim.ret ⟨⟨hc2, s2, rfl⟩, hS2, hg02⟩
+  | ok nIdxs =>
   obtain ⟨h21, hd2, hb2⟩ := hR2
-  simp only [h21, show (1 : Word) ≠ 0 by decide, ite_false]
+  simp only [h21, ne_eq, not_true_eq_false, ite_false]
   -- level parameters (model only)
   intro r m' e
   rcases h3 : erToIwW (n + 3) m2 (erRd m2 (UInt64.ofNat p0 + 1)) (erRd m2 (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
   · cases e
-  rw [bbH3_some] at e
+  simp only [rbaW.k_er_to_iw] at e
   obtain ⟨hS3, hg3, hd3, ht3⟩ := partsLpsCopy h3 hS2 (hcv0.grow (OMono.decCVp _) hg02) hpb
   have hg03 := hg02.trans hg3
-  -- the pins
-  rcases h4 : bpoW (n + 2) m3 nPd cto ctl (r3.headD 0) (r3.tail.headD 0) rso rsl cso csl with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+  -- the formers' universe parameters
+  rcases h4 : floW (n + 3) m3 cto ctl (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
   · cases e
-  have h0 := bpoW_ready h4 hctl
-  have hRrun := pinReserved_run (hS3.check.pins.full h0)
-  obtain ⟨hS4, hg4, hr4⟩ := bpoW_ok hRrun h4 hS3 (hts.grow (fun _ => OMono.decCVp _) hg03)
-    (hrs.grow decSR_mono hg03) (hcs.grow decSC_mono hg03) hd3 (Nat.le_of_eq ht3)
+  obtain ⟨hS4, hg4, hr4⟩ := floW_ok (n + 3) m3 m4 cto ctl (cvT0 :: cvTs) r4 h4 hS3
+    (hts.grow (fun _ => OMono.decCVp _) hg03) hd3 (Nat.le_of_eq ht3)
   have hg04 := hg03.trans hg4
-  have hr4' : r4 = [if pinsOf nPd.toNat ((List.range 16).map fun i => decI (pinW m3 (55 + i)))
-      cvT0.levelParams (cvT0 :: cvTs) cs (r0 :: rs) then 1 else 0] := hr4
+  simp only [rbaW.k_formers_lps_ok] at e
   revert r m' e
-  refine Sim.bind_twin hRrun ?_
-  cases hpb : pinsOf nPd.toNat ((List.range 16).map fun i => decI (pinW m3 (55 + i)))
-      cvT0.levelParams (cvT0 :: cvTs) cs (r0 :: rs) with
+  cases hf : (cvT0 :: cvTs).all fun c => c.levelParams == cvT0.levelParams with
   | false =>
-    rw [hpb] at hr4'
-    rw [bbH4_fail (h := by rw [hr4']; rfl)]
-    exact Sim.ret ⟨rfl, hS4, hg04⟩
+    rw [hf] at hr4; subst hr4
+    simp only [Bool.false_eq_true, ite_false, List.headD_cons, ite_true, Bool.not_false]
+    exact Sim.ret ⟨rbR_err rfl rc.2.2.2.1, hS4, hg04⟩
   | true =>
-  rw [hpb] at hr4'
-  rw [bbH4_ok (h := by rw [hr4']; decide)]
-  simp only [ite_true]
+  rw [hf] at hr4; subst hr4
+  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
+  -- the constructors' parameter counts
+  intro r m' e
+  rcases h5 : cpoW (n + 3) m4 nPd cso csl with _ | ⟨r5, m5⟩ <;> rw [h5] at e
+  · cases e
+  obtain ⟨rfl, hr5⟩ := cpoW_ok (n + 3) m4 m5 cso csl cs r5 h5 (hcs.grow decSC_mono hg04)
+  simp only [rbaW.k_ctors_params_ok] at e
+  revert r m' e
+  cases hp : cs.all fun c => c.2.1 == nPd.toNat with
+  | false =>
+    rw [hp] at hr5; subst hr5
+    simp only [Bool.false_eq_true, ite_false, List.headD_cons, ite_true, Bool.not_false]
+    exact Sim.ret ⟨rbR_err rfl rc.2.2.2.2.1, hS4, hg04⟩
+  | true =>
+  rw [hp] at hr5; subst hr5
+  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
+  -- the constructors' universe parameters
+  intro r m' e
+  rcases h6 : cloW (n + 3) m5 cso csl (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r6, m6⟩ <;> rw [h6] at e
+  · cases e
+  obtain ⟨hS6, hg6, hr6⟩ := cloW_ok (n + 3) m5 m6 cso csl cs r6 h6 hS4 (hcs.grow decSC_mono hg04)
+    (by rw [_root_.L.Ind.decHL_grow hg4 (Nat.le_of_eq ht3)]; exact hd3) (Nat.le_trans (Nat.le_of_eq ht3) hg4.iw)
+  have hg06 := hg04.trans hg6
+  simp only [rbaW.k_ctors_lps_ok] at e
+  revert r m' e
+  cases hq : cs.all fun c => c.1.levelParams == cvT0.levelParams with
+  | false =>
+    rw [hq] at hr6; subst hr6
+    simp only [Bool.false_eq_true, ite_false, List.headD_cons, ite_true, Bool.not_false]
+    have hk : ((cvT0 :: cvTs).length == 1) = decide (ctl = 1) := by
+      rw [hlen]; by_cases h1 : ctl = 1
+      · subst h1; simp
+      · have : ctl.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp [h1, this]
+    rw [hk]
+    by_cases hk1 : ctl = 1
+    · simp only [hk1, decide_true, ite_true]
+      exact Sim.ret ⟨rbR_err rfl rc.2.2.2.2.2.1, hS6, hg06⟩
+    · simp only [hk1, decide_false, ite_false, Bool.false_eq_true]
+      exact Sim.ret ⟨rbR_err rfl rc.2.2.2.2.2.2.1, hS6, hg06⟩
+  | true =>
+  rw [hq] at hr6; subst hr6
+  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
   have hil : r2.tail.tail.headD 0 = ctl := by
     apply UInt64.toNat_inj.mp
     have e1 := mapM_opt_length _ _ _ (show decNL (truncM m2) _ _ = some nIdxs from hd2)
     simp only [List.length_range] at e1
     rw [← e1, bmc_length _ _ _ _ _ hrun2, hlen]
-  rw [hil] at hd2 hb2 ⊢
-  refine Sim.k3 (btW_sim c n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
-    (hrs.grow decSR_mono hg04) ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4)))
-    (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).iw) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
-    (Nat.le_trans hb2 (hg3.trans hg4).iw) (by rw [_root_.L.Ind.decHL_grow hg4 (Nat.le_of_eq ht3)]; exact hd3)
-    (Nat.le_trans (Nat.le_of_eq ht3) hg4.iw)
-    (hc.mono ((bsnW_afr _ _ _ _ _ _ h1).trans ((bmcW_afr he2).trans ((erToIwW_afr h3).trans (bpoW_afr h4))))
-      (fun sv a1 h => ⟨nIdxs, a2, _, a2, hrun2, hRrun, h⟩))) ?_
-  rintro r x m5 a5 ⟨hR, hS5, hg5⟩
-  exact ⟨by cases x <;> exact hR, hS5, hg04.trans hg5⟩
+  rw [hil] at hd2 hb2
+  intro r m' e
+  rw [hil] at e
+  rcases h7 : btW c n m6 nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
+      ctl (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r7, m7⟩ <;> rw [h7] at e
+  · cases e
+  simp only [rbaW.k_block_shape_tail] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+  have hg36 := hg4.trans hg6
+  obtain ⟨x, a7, hrun7, hR7, hS7, hg7⟩ := btW_sim c n hS6 (hts.grow (fun _ => OMono.decCVp _) hg06)
+    (hcs.grow decSC_mono hg06) (hrs.grow decSR_mono hg06)
+    ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg36)))
+    (Nat.le_trans hb1 (hg2.trans (hg3.trans hg36)).iw) (hd2.grow (OMono.decNL _ _) (hg3.trans hg36))
+    (Nat.le_trans hb2 (hg3.trans hg36).iw)
+    (by rw [_root_.L.Ind.decHL_grow hg36 (Nat.le_of_eq ht3)]; exact hd3)
+    (Nat.le_trans (Nat.le_of_eq ht3) hg36.iw)
+    (hc.mono ((bsnW_afr _ _ _ _ _ _ h1).trans ((bmcW_afr he2).trans ((erToIwW_afr h3).trans
+      ((floW_afr _ _ _ _ _ _ _ _ h4).trans ((cpoW_afr _ _ _ _ _ _ _ h5).trans
+        (cloW_afr _ _ _ _ _ _ _ _ h6))))))
+      (fun sv a1 h => ⟨nIdxs, a2, hrun2, h⟩)) r7 m7 h7
+  refine ⟨x, a7, hrun7, ?_, hS7, hg06.trans hg7⟩
+  cases x with
+  | error _ => exact hR7.elim
+  | ok bs => obtain ⟨-, hd, hsl⟩ := hR7; exact ⟨rfl, hd, hsl⟩
 
 theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
     (h : PSlR f xs o l m) : (l = 0) ↔ xs = [] := by
@@ -1472,19 +1427,20 @@ theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l 
   · intro e; subst e; simpa using this
   · intro e; subst e; exact UInt64.toNat_inj.mp (by simpa using this.symm)
 
-/-- **`block_shape`'s model refines `blockShape?`.** -/
-theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
+/-- **`read_block`'s model refines `readBlock`.** -/
+theorem rbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (c : CallM) (n : Nat) {m : Mem}
     {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR vis fe m a)
     (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
     (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
-    Sim (bshW c n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
-      (fun r x m' a' => ShapeR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
-  rw [blockShape_eq]
+    Sim (rbW c n m nPd off l) (ConRon.Arena.readBlock nPd.toNat blk) a
+      (fun r x m' a' => RbR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
+  have rc := rcode_reader
+  rw [readBlock_eq']
   intro r m' e
-  unfold bshW at e
+  unfold rbW at e
   rcases h1 : bsW (n + 4) m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at e
   · cases e
-  simp only at e
+  simp only [rbW.k_block_split] at e
   obtain ⟨hS1, hg1, hR1⟩ := bsW_ok (n + 4) m m1 a off l blk r1 h1 hS hblk
   revert r m' e
   cases hsp : ConRon.Arena.blockSplit blk with
@@ -1494,7 +1450,7 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     intro r m' e
     rw [ite_eq_left h0] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-    exact ⟨none, a, rfl, rfl, hS1, hg1⟩
+    exact ⟨_, a, rfl, rbR_err rfl rc.2.2.2.2.2.2.2.1, hS1, hg1⟩
   | some t =>
   obtain ⟨cvTs, cs, rs⟩ := t
   rw [hsp] at hR1
@@ -1503,32 +1459,41 @@ theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   rw [ite_eq_right (by rw [h01]; decide)] at e
   dsimp only
   generalize hq : r1.tail.headD 0 = q at e hq6 hts hcs hrs
-  by_cases hz : rdW (m1.arr64 IW) (q + 1) = 0 ∨ rdW (m1.arr64 IW) (q + 5) = 0
-  · rw [ite_eq_left hz] at e
+  by_cases hz1 : rdW (m1.arr64 IW) (q + 1) = 0
+  · rw [ite_eq_left hz1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
-    have : cvTs = [] ∨ rs = [] := by
-      rcases hz with hz | hz
-      · exact Or.inl ((partsW0 hts).mp hz)
-      · exact Or.inr ((partsW0 hrs).mp hz)
-    refine ⟨none, a, ?_, rfl, hS1, hg1⟩
-    rcases this with rfl | rfl
-    · rfl
-    · cases cvTs <;> rfl
-  rw [ite_eq_right hz] at e
+    obtain rfl := (partsW0 hts).mp hz1
+    exact ⟨_, a, rfl, rbR_err rfl rc.2.2.2.2.2.2.2.2.1, hS1, hg1⟩
+  rw [ite_eq_right hz1] at e
   obtain ⟨cvT0, cvTs', rfl⟩ : ∃ c cs', cvTs = c :: cs' := by
     cases cvTs with
-    | nil => exact absurd (Or.inl ((partsW0 hts).mpr rfl)) hz
+    | nil => exact absurd ((partsW0 hts).mpr rfl) hz1
     | cons c cs' => exact ⟨c, cs', rfl⟩
+  by_cases hz5 : rdW (m1.arr64 IW) (q + 5) = 0
+  · rw [ite_eq_left hz5] at e
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+    obtain rfl := (partsW0 hrs).mp hz5
+    exact ⟨_, a, rfl, rbR_err rfl rc.2.2.2.2.2.2.2.2.2, hS1, hg1⟩
+  rw [ite_eq_right hz5] at e
   obtain ⟨r0, rs', rfl⟩ : ∃ c cs', rs = c :: cs' := by
     cases rs with
-    | nil => exact absurd (Or.inr ((partsW0 hrs).mpr rfl)) hz
+    | nil => exact absurd ((partsW0 hrs).mpr rfl) hz5
     | cons c cs' => exact ⟨c, cs', rfl⟩
   revert r m' e
-  show Sim _ (buildTwin nPd.toNat (cvT0 :: cvTs') cvT0 cs (r0 :: rs') r0.1) a _
-  refine Sim.k3 (bbW_sim c n hS1 hts hcs hrs
-    (hc.mono (bsW_afr _ _ _ _ _ _ h1) (fun sv a1 h => ⟨cvT0, cvTs', cs, r0, rs', hsp, h⟩))) ?_
-  rintro r x m2 a2 ⟨hR, hS2, hg2⟩
-  exact ⟨by cases x <;> exact hR, hS2, hg1.trans hg2⟩
+  show Sim _ (readAtTwin nPd.toNat (cvT0 :: cvTs') cvT0 cs (r0 :: rs') r0.1) a _
+  intro r m' e
+  rcases h2 : rbaW c n m1 nPd (rdW (m1.arr64 IW) q) (rdW (m1.arr64 IW) (q + 1))
+      (rdW (m1.arr64 IW) (q + 2)) (rdW (m1.arr64 IW) (q + 3)) (rdW (m1.arr64 IW) (q + 4))
+      (rdW (m1.arr64 IW) (q + 5)) with _ | ⟨r2, m2⟩ <;> rw [h2] at e
+  · cases e
+  simp only [rbW.k_read_block_at] at e
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
+  obtain ⟨x, a2, hrun2, hR2, hS2, hg2⟩ := rbaW_sim c n hS1 hts hcs hrs
+    (hc.mono (bsW_afr _ _ _ _ _ _ h1) (fun sv a1 h => ⟨cvT0, cvTs', cs, r0, rs', hsp, h⟩)) r2 m2 h2
+  refine ⟨x, a2, hrun2, ?_, hS2, hg1.trans hg2⟩
+  cases x with
+  | error _ => exact hR2
+  | ok _ => exact hR2
 
 end L.Ind
 
