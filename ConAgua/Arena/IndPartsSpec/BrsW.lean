@@ -1372,15 +1372,15 @@ theorem rbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     {a : AState} {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR vis fe m a)
     (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk)
     (hc : LvlHyp c n dn vis fe m (TshT nPd.toNat blk a)) :
-    Sim (rbW c n m nPd off l) (ConRon.Arena.readBlock nPd.toNat blk) a
+    Sim (readBlockW c n m nPd off l) (ConRon.Arena.readBlock nPd.toNat blk) a
       (fun r x m' a' => RbR x r m' ∧ StageR vis fe m' a' ∧ IWGrow m m') := by
   have rc := rcode_reader
   rw [readBlock_eq']
   intro r m' e
-  unfold rbW at e
+  unfold readBlockW at e
   rcases h1 : bsW (n + 4) m off l with _ | ⟨r1, m1⟩ <;> rw [h1] at e
   · cases e
-  simp only [rbW.k_block_split] at e
+  simp only [readBlockW.k_block_split] at e
   obtain ⟨hS1, hg1, hR1⟩ := bsW_ok (n + 4) m m1 a off l blk r1 h1 hS hblk
   revert r m' e
   cases hsp : ConRon.Arena.blockSplit blk with
@@ -1426,7 +1426,7 @@ theorem rbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       (rdW (m1.arr64 IW) (q + 2)) (rdW (m1.arr64 IW) (q + 3)) (rdW (m1.arr64 IW) (q + 4))
       (rdW (m1.arr64 IW) (q + 5)) with _ | ⟨r2, m2⟩ <;> rw [h2] at e
   · cases e
-  simp only [rbW.k_read_block_at] at e
+  simp only [readBlockW.k_read_block_at] at e
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
   obtain ⟨x, a2, hrun2, hR2, hS2, hg2⟩ := rbaW_sim c n hS1 hts hcs hrs
     (hc.mono (bsW_afr _ _ _ _ _ _ h1) (fun sv a1 h => ⟨cvT0, cvTs', cs, r0, rs', hsp, h⟩)) r2 m2 h2

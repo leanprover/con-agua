@@ -14,7 +14,7 @@ import ConAgua.L.ModelGen
 /-!
 # Bf
 
-`bsn_spec`, the models `rbaW` (`read_block_at`) and `rbW` (`read_block`).
+`bsn_spec`, the models `rbaW` (`read_block_at`) and `readBlockW` (`read_block`).
 -/
 
 section
@@ -110,7 +110,7 @@ l_model rba_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p 
 
 /-- **The model of `read_block`** (at exec fuel `n + 5`). -/
 l_model rb_spec (p : Prog) (hP : IndPartsProg5 p) (c : CallM) (hc : CallSpec p c)
-  fns [hP.read ↦ rbW list]
+  fns [hP.read ↦ readBlockW list]
   specs [bs_spec p hP.alloc hP.copy hP.cons hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
       rba_spec p hP c hc n]
   grind [arena_grind, ind_grind] finish [rdW_eq] pfuel 5

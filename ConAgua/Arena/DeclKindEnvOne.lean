@@ -168,7 +168,7 @@ theorem checkOpaqueVal_ret {mode : ConLeche.CheckMode} {fe : IFEnv} {cv : IConst
 
 /-! ## The quotient records -/
 
-theorem denoteLList_mem {st : LStore} :
+theorem denoteLList_mem_lvl {st : LStore} :
     ∀ {us : List LIdx} {ls : List ConLeche.Level}, denoteLList st us = some ls →
       ∀ u ∈ us, ∃ L, denoteL st u = some L
   | [], _, _, u, hu => absurd hu (List.not_mem_nil)
@@ -182,9 +182,9 @@ theorem denoteLList_mem {st : LStore} :
       | some xs =>
         rcases List.mem_cons.1 hu with rfl | hu
         · exact ⟨x, h1⟩
-        · exact denoteLList_mem h2 u hu
+        · exact denoteLList_mem_lvl h2 u hu
 
-theorem denoteRules_mem {st : EStore} :
+theorem denoteRules_mem_lvl {st : EStore} :
     ∀ {rs : List IRecRule} {xs : List ConLeche.RecRule}, Frontend.denoteRules st rs = some xs →
       ∀ r ∈ rs, ∃ f, Frontend.denoteFire st r.fire = some f
   | [], _, _, r, hr => absurd hr (List.not_mem_nil)
@@ -201,7 +201,7 @@ theorem denoteRules_mem {st : EStore} :
           split at h1
           · rename_i c f e hc hf he; exact ⟨f, hf⟩
           · cases h1
-        · exact denoteRules_mem h2 r hr
+        · exact denoteRules_mem_lvl h2 r hr
 
 /-- **A constant that denotes has `CiLvlDen`**: its level parameters, and a recursor's rules'
 fired levels (`denoteFire` reads them back). -/
@@ -213,14 +213,14 @@ theorem ciLvlDen_of_denote {st : EStore} {ci : IConstantInfo} {x : ConLeche.Cons
   simp only [Frontend.denoteCI] at h
   split at h
   · rename_i c rs hc hrs
-    obtain ⟨f, hf⟩ := denoteRules_mem hrs r hr
+    obtain ⟨f, hf⟩ := denoteRules_mem_lvl hrs r hr
     refine ⟨fun lvls pins e u hu => ?_, fun lvls e u hu => ?_⟩
     · rw [e] at hf; simp only [Frontend.denoteFire] at hf
       split at hf
-      · rename_i ls ps hls hps; exact denoteLList_mem hls u hu
+      · rename_i ls ps hls hps; exact denoteLList_mem_lvl hls u hu
       · cases hf
     · rw [e] at hf; simp only [Frontend.denoteFire, Option.map_eq_some_iff] at hf
-      obtain ⟨ls, hls, -⟩ := hf; exact denoteLList_mem hls u hu
+      obtain ⟨ls, hls, -⟩ := hf; exact denoteLList_mem_lvl hls u hu
   · cases h
 
 theorem checkQuotRecord_env {env : ConLeche.Env} {fe fe' : IFEnv} {k : ConLeche.QuotKind}
