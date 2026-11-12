@@ -23,7 +23,7 @@ def nvFns : List L.FnName :=
    "app_push", "apply_expr", "apply_level", "apply_nnum", "apply_nstr", "apply_rec", "apply_str",
    "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node", "ar_proj",
    "at_block_go", "aux_rule_fire", "b_eq", "base_row_get", "base_row_set", "basis_at_block",
-   "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo", "bb_node", "beta_peel", "binder_dom",
+   "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo", "bb_node", "beta_peel", "binder_dom", "binder_pair",
    "block_caps_at", "block_caps_at_er_copy", "block_caps_at_er_copy_go", "block_caps_ctor_names",
    "block_caps_fin", "block_caps_head", "block_caps_one", "block_constants", "block_counts",
    "block_counts_head", "block_counts_pure", "block_ctors", "block_ctors_go", "block_formers",
