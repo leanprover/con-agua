@@ -527,7 +527,8 @@ def projGuardRowsAtL : FunDecl := lfn (i, co, np, r, ro) locals (f, dom, d, n1, 
 show: `(1, ro, rn)` the rows at `ro` on the stack (left above the top), or `(0, 0, 0)` where the
 stored constructor does not bind what the entry says. The constructor's type at the use's levels
 (`const_ty_at`), its parameters opened with the residual left raw (`opf_go`, the substitution left
-on the stack under the rows), then `proj_guard_rows_at`. -/
+on the stack under the rows), then `proj_guard_rows_at`. Aborts where the stack's top is past its
+capacity. -/
 -- con-ron: ConRon/Arena/Core.lean:3079-3102 ConRon.Arena.projGuardRows
 @[no_expose, l_impl ConRon.Arena.projGuardRows]
 def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, ok, r, ro, rn) {
@@ -536,6 +537,7 @@ def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, o
   if f == 0 { return (0, 0, 0) };
   cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
   co := CTL.u64[136];
+  if len(SPN.u64) < co { abort };
   (ok, r) := call opf_go(np, cty, 0, co, 0);
   if ok == 0 { CTL.u64[136] := co; return (0, 0, 0) };
   ro := CTL.u64[136];
