@@ -295,8 +295,6 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   have el : rdW (s3.mem.arr64 IW) (pp + 1) = l := UInt64.toNat_inj.mp hlW
   rw [eo, el] at h
   obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [dtW.k_block_tables.none])
-  rw [dtW.k_block_tables.arm1] at h
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (bts_spec hP.toTablesProg n _ pp o l) h4
   -- the parameter count
@@ -305,17 +303,31 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   have hbnP : bs.nP = nP := ((ConRon.Bridge.Inductives.dShape_inv hdP).2.2.1).trans
     (ConLeche.readBlock_inv (except_toOption_eq_some.mp hpP)).1
   have hnPb : 1 + bs.nP < 2 ^ 64 := by rw [hbnP]; have := hpre.nPb b nP rfl; omega
-  obtain ⟨ts, a4, hrun4, hd4, hb4, hS4, hg4, hA4⟩ := btsW_ok hP.toTablesProg pp bs vis fe hnPb n
+  obtain ⟨ts, a4, hrun4, hB4, hS4, hg4, hA4⟩ := btsW_ok hP.toTablesProg pp bs vis fe hnPb n
     s3.mem s4.mem a3 o l bs.members r4 hS3 h03.abs hq ⟨hdm, hob⟩ hW4
   obtain ⟨hms, -⟩ := ConRon.Bridge.Inductives.dShape_inv hdP
   obtain ⟨hps4, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run bs.members pP.members
     h03.chk.state hdP hms hrun4
   obtain ⟨h04, hX4⟩ := h03.step hP.leaf L.Ind.dcF_bts h4 hS4 (checkOK_of_pstep h03.chk hps4)
     hps4.ext hA4.i1
-  refine ⟨ts, a4, ?_, ⟨hS4, hg1.trans (hg3.trans hg4), ?_⟩, h04,
-    hX1.trans (hX3.trans hX4)⟩
-  · simp only [ConRon.Arena.declTables, StateT.run_bind, hrun3, except_ok_bind, hrun4]
-  · exact ⟨by simpa using hd4, by simpa using hb4⟩
+  cases ts with
+  | none =>
+    have hz : r4.headD 0 = 0 := hB4
+    rw [dtW.k_block_tables.arm1 p r4 _ hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨[], a4, ?_, ⟨hS4, hg1.trans (hg3.trans hg4), decTblL_nil _⟩, h04,
+      hX1.trans (hX3.trans hX4)⟩
+    simp only [ConRon.Arena.declTables, StateT.run_bind, hrun3, except_ok_bind, hrun4]
+    rfl
+  | some ts =>
+    obtain ⟨h1', hd4, hb4⟩ := hB4
+    rw [dtW.k_block_tables.arm2 p r4 _ (by rw [h1']; decide)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨ts, a4, ?_, ⟨hS4, hg1.trans (hg3.trans hg4), ?_⟩, h04,
+      hX1.trans (hX3.trans hX4)⟩
+    · simp only [ConRon.Arena.declTables, StateT.run_bind, hrun3, except_ok_bind, hrun4]
+      rfl
+    · exact ⟨by simpa using hd4, by simpa using hb4⟩
 
 /-! ## The constant-slice helpers -/
 
