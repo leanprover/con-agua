@@ -84,10 +84,10 @@ theorem btRefS_of (hP : TablesProg p) (hL : DcLeafProg p)
   · exact fun hG => ErrClaim.of_callE_nv (hGnv hG) (_root_.L.Checker.nv_mem (by decide +kernel)) c
   have d := callW_of_callE c
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (bts_spec hP n _ pp mo ml) d
-  obtain ⟨ts, a', hrun, hd, hb, hS', hg, hA'⟩ := btsW_ok hP pp bs vis fe (by omega) n m s'.mem a mo ml mss r
+  obtain ⟨ts, a', hrun, hd, hS', hg, hA'⟩ := btsW_ok hP pp bs vis fe (by omega) n m s'.mem a mo ml mss r
     hS hM.abs hq hmss hW
   obtain ⟨hDM, -⟩ := dc_keep hL L.Ind.dcF_bts d hM.dc
-  exact ⟨ts, a', hrun, hS', BkMem.ofDc hDM hA'.i1, hg, hd, hb⟩
+  exact ⟨ts, a', hrun, hS', BkMem.ofDc hDM hA'.i1, hg, hd⟩
 
 theorem dcF_bir : "block_is_rec" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dc0F_bir : "block_is_rec" ∈ dc0Fns := List.elem_iff.mp (by decide)
