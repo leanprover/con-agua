@@ -32,6 +32,7 @@ sub ConRon\.Arena\.etaRescueOk\b ==> ConRon.Arena.etaRescueTable?
 # (the binary's `--max-nat-size` is a stage-3 decision, see the journal); the argument goes after
 # the pin list, as upstream's `internAllPins pins maxNatSize sD`.
 sub \binternAllPins (pins|ps|pins₀)\b(?! maxNatSize) ==> "internAllPins \1 maxNatSizeDefault"
+sub \binternAllPins \[\](?! maxNatSize) ==> "internAllPins [] maxNatSizeDefault"
 # #515: IIndCaps (and con-leche's IndCaps) lose etaCtor, etaParams, etaFields, unitlike,
 # unitParams. Since presync3 every construction in our proofs names its fields (CIReadRefCaps,
 # RomCI), so dropping a field is deleting its `f := v,`.

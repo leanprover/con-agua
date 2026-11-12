@@ -154,16 +154,15 @@ theorem sim_cv (cv : ConLeche.ConstantVal) (m : EMemo) :
   exact Sim.pure _ _ _ rfl
 
 /-- An inductive's capabilities' items. -/
-def itemsCaps (c : ConLeche.IndCaps) : List Item := .nm c.etaCtor :: (c.all.map .nm ++ c.ctors.map .nm)
+def itemsCaps (c : ConLeche.IndCaps) : List Item := c.all.map .nm ++ c.ctors.map .nm
 
 theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (itemsCaps c) (fun _ => m) := by
-  have h : internCaps c = internName c.etaCtor >>= fun ct => Frontend.internNameList c.all >>= fun al =>
+  have h : internCaps c = Frontend.internNameList c.all >>= fun al =>
       Frontend.internNameList c.ctors >>= fun ctors =>
         pure { eta := c.eta, all := al, nparams := c.nparams,
                nIdx := c.nIdx, ctors := ctors } := rfl
   rw [h]
-  exact (Sim.bind (is := [.nm c.etaCtor]) (js := c.all.map .nm ++ (c.ctors.map .nm ++ [])) (sim_name _ m) fun _ =>
-    Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
+  exact (Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
     Sim.bind (is := c.ctors.map .nm) (js := []) (sim_nameList _ m) fun _ => Sim.pure _ _ _ rfl).congr
     (by simp [itemsCaps])
 
@@ -428,6 +427,17 @@ theorem SimZ.bind {α β : Type} {x : AM α} {f : α → AM β} {is js : List It
   obtain ⟨w, hw⟩ := hf v m' a' m'' a'' hPa' h2
   exact ⟨w, by rw [run_bind_of _ _ _ _ _ hv]; exact hw⟩
 
+/-- A `set` that leaves every state with `P` as it is (`internAllPins`' write of the maximum `Nat`
+size, at the maximum already there). -/
+theorem SimZ.getSet {β : Type} {g : AState → AState} {f : PUnit → AM β} {is : List Item}
+    {P : AState → Prop} (hg : ∀ a, P a → g a = a) (hf : SimZ (f ⟨⟩) is P) :
+    SimZ (get >>= fun s => set (g s) >>= f) is P := by
+  intro m a m' a' hPa hr
+  obtain ⟨w, hw⟩ := hf m a m' a' hPa hr
+  refine ⟨w, ?_⟩
+  have h1 : (get >>= fun s => set (g s) >>= f : AM β).run a = (f ⟨⟩).run (g a) := rfl
+  rw [h1, hg a hPa]; exact hw
+
 theorem SimZ.bindN {α β : Type} {x : AM α} {f : α → AM β} {is : List Item} {P : AState → Prop}
     (hx : SimN x P) (hf : ∀ v, SimZ (f v) is P) : SimZ (x >>= f) is P := by
   intro m a m' a' hPa hr
@@ -456,7 +466,17 @@ theorem simZ_exprList (es : List ConLeche.Expr) (P : AState → Prop) :
 /-! ## The pin reads -/
 
 /-- The pin table is filled (what every pin read needs). -/
-def PinsReadyP (a : AState) : Prop := a.pins.names.size = 52
+def PinsReadyP (a : AState) : Prop := a.pins.names.size = 52 ∧ a.pins.maxNatSize = maxNatSizeDefault
+
+/-- `internReservedPins` leaves the default maximum `Nat` size in the pins. -/
+theorem internReservedPins_maxNatSize {a a' : AState} {u : Unit}
+    (h : internReservedPins.run a = .ok (u, a')) : a'.pins.maxNatSize = maxNatSizeDefault := by
+  unfold internReservedPins at h
+  simp only [StateT.run, bind, StateT.bind, Except.bind] at h
+  repeat (split at h; · exact absurd h (by simp))
+  simp only [set, MonadStateOf.set, StateT.set, pure, Except.pure, Except.ok.injEq,
+    Prod.mk.injEq] at h
+  rw [← h.2]
 
 theorem pinsReady_cp : CpPred PinsReadyP := fun a a' h hP => by
   have : a'.pins = a.pins := congrArg Prod.snd h
@@ -474,13 +494,13 @@ theorem SimN.pure {α : Type} (v : α) (P : AState → Prop) : SimN (Pure.pure v
 
 theorem simN_pinAt (i : Nat) (hi : i < 52) : SimN (pinAt i) PinsReadyP := by
   intro a hP
-  have : i < a.pins.names.size := by simp only [PinsReadyP] at hP; omega
+  have : i < a.pins.names.size := by have := hP.1; omega
   exact ⟨a.pins.names[i], by simp [pinAt, StateT.run, bind, StateT.bind, get, getThe, MonadStateOf.get,
     StateT.get, Except.bind, pure, StateT.pure, Except.pure, this]⟩
 
 theorem simN_pinReserved : SimN pinReserved PinsReadyP := by
   intro a hP
-  have : pinsReady a = true := by simp [pinsReady, pinCount, show a.pins.names.size = 52 from hP]
+  have : pinsReady a = true := by simp [pinsReady, pinCount, show a.pins.names.size = 52 from hP.1]
   exact ⟨a.pins.reserved, by simp [pinReserved, StateT.run, bind, StateT.bind, get, getThe,
     MonadStateOf.get, StateT.get, Except.bind, pure, StateT.pure, Except.pure, this]⟩
 
@@ -594,6 +614,11 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) :
     SimZ (internAllPins pins maxNatSizeDefault) (itemsAllPins pins) PinsReadyP := by
   unfold internAllPins itemsAllPins
   simp only [seqZ]
+  refine SimZ.getSet (fun a hP => ?_) ?_
+  · obtain ⟨st, cs, ms, ps⟩ := a
+    obtain ⟨n, r, e, z, s1, mx⟩ := ps
+    simp only [PinsReadyP] at hP
+    simp only [hP.2]
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_
   refine SimZ.bind pinsReady_cp (simZ_ciList _ _) fun _ => ?_

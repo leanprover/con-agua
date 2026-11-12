@@ -103,7 +103,7 @@ theorem twinAccepts_pure (V : Type w) [SetTheory V] {chunks : List ByteArray}
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hrc, hden⟩ :=
     ConRon.Bridge.stages_frame hA hB hC hD hE
   obtain ⟨F, hpure⟩ :=
-    ConRon.Bridge.Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden
+    ConRon.Bridge.Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden
       (pooledAccepts_of_seq hF)
   exact ⟨pins, preC, rc, F, hrc, hpure⟩
 

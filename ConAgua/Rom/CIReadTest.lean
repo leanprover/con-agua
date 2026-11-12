@@ -18,7 +18,7 @@ A test, not a proof: the L interpreter runs `pb_check`, `intern_reserved_pins` a
 `intern_all_pins` of the checker's program on a memory whose byte array `PB` holds
 `pinBuffer []`, then every ROM constant reader (`rom_basis_decls(k)` for `k < 5`, `rom_ci(id)` for
 `id < 7`, `rom_cv(id)` for `id < 10`, `rom_expr_pin(id)` for `id < 2`, `rom_and_pin()`), each from
-the memory after the startup; the twin runs `internReservedPins`, `internAllPins []` and the same
+the memory after the startup; the twin runs `internReservedPins`, `internAllPins [] maxNatSizeDefault` and the same
 interns. The records must decode (`decCI`, `decCV`, `basisDec`) to the twin's values, handle for
 handle; the program the readers reach passes the compiler's static check.
 -/
@@ -75,7 +75,7 @@ def startMem : Except String Mem := do
 /-- The twin's state after the startup. -/
 def startA : Option AState := do
   let ((), sA) ← (internReservedPins.run (AState.init EStore.empty)).toOption
-  let (_, a) ← ((internAllPins []).run sA).toOption
+  let (_, a) ← ((internAllPins [] maxNatSizeDefault).run sA).toOption
   pure a
 
 /-- One L call from the startup memory: its results and the memory after. -/

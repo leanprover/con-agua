@@ -417,7 +417,7 @@ theorem threads_twinVerdictPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
       have hR' : Rel r' a' := fun j => ⟨X, hJ, hPB, fun t ht => (thr_next B j hI' hkept t ht).trans (hX t ht)⟩
       obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
-      obtain ⟨hw', -⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
+      obtain ⟨hw', -⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
         H.hpI hw hj' hx' hdk hP hnd hrj
       exact ErrClaimV.cons_ok hj' hrj
         (ih r' a' hR' hw' hrest fun c hc' => hc c (List.mem_cons_of_mem _ hc'))

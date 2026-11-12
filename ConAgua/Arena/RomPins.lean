@@ -313,7 +313,8 @@ theorem internReservedPins_run (a : AState)
                   (AM.st (internNameList pinNames) a)),
                 zeroLevel := AM.res (internLNode .zero) a₃,
                 sortOne := AM.res (internSortE (AM.res (internLNode (.succ (AM.res (internLNode .zero) a₃)))
-                  (AM.st (internLNode .zero) a₃))) a₅ } }) := by
+                  (AM.st (internLNode .zero) a₃))) a₅,
+                maxNatSize := maxNatSizeDefault } }) := by
   subst ha₃ ha₅
   unfold internReservedPins
   rw [run_bind_ok _ _ _ ok1]; try dsimp only
@@ -328,25 +329,30 @@ theorem pinW_frame {C : List Word} {m m' : Mem} (h : MemFrame StoreA C m m') (i 
     pinW m' i = pinW m i := by
   simp only [pinW, h.arr PINS (by decide) (by decide)]
 
-theorem pinW_fill (m : Mem) (us z s1 : Word) (i : Nat) (hs : 55 ≤ (m.arr64 PINS).size) :
+theorem pinW_fill (m : Mem) (us z s1 : Word) (i : Nat) (hs : 73 ≤ (m.arr64 PINS).size) :
     pinW (irpFill m us z s1) i =
-      if i = 0 then 1 else if i = 54 then s1 else if i = 53 then z else if i = 52 then us
-      else pinW m i := by
+      if i = 0 then 1 else if i = 72 then 134217728 else if i = 54 then s1 else if i = 53 then z
+      else if i = 52 then us else pinW m i := by
   have s1' : ((m.set64 PINS 52 us).arr64 PINS).size = (m.arr64 PINS).size := L.Mem.size64_set64 _ _ _ _ _
   have s2' : (((m.set64 PINS 52 us).set64 PINS 53 z).arr64 PINS).size = (m.arr64 PINS).size := by
     rw [L.Mem.size64_set64, s1']
   have s3' : ((((m.set64 PINS 52 us).set64 PINS 53 z).set64 PINS 54 s1).arr64 PINS).size =
       (m.arr64 PINS).size := by rw [L.Mem.size64_set64, s2']
+  have s4' : (((((m.set64 PINS 52 us).set64 PINS 53 z).set64 PINS 54 s1).set64 PINS 72
+      134217728).arr64 PINS).size = (m.arr64 PINS).size := by rw [L.Mem.size64_set64, s3']
   simp only [irpFill]
-  rw [pinW_set _ _ _ _ (by rw [s3']; simp; omega), pinW_set _ _ _ _ (by rw [s2']; simp; omega),
+  rw [pinW_set _ _ _ _ (by rw [s4']; simp; omega), pinW_set _ _ _ _ (by rw [s3']; simp; omega),
+    pinW_set _ _ _ _ (by rw [s2']; simp; omega),
     pinW_set _ _ _ _ (by rw [s1']; simp; omega), pinW_set _ _ _ _ (by simp; omega)]
-  by_cases h0 : i = 0 <;> simp [h0] <;> by_cases h4 : i = 54 <;> simp [h4] <;>
+  by_cases h0 : i = 0 <;> simp [h0] <;> by_cases h7 : i = 72 <;> simp [h7] <;>
+    by_cases h4 : i = 54 <;> simp [h4] <;>
     by_cases h3 : i = 53 <;> simp [h3] <;> by_cases h2 : i = 52 <;> simp [h2]
 
 theorem irpFill_frame (m : Mem) (us z s1 : Word) : MemFrame [PINS] [] m (irpFill m us z s1) := by
   simp only [irpFill]
-  exact (((MemFrame.set64 _ PINS (by decide) _ _).trans (MemFrame.set64 _ PINS (by decide) _ _)).trans
-    (MemFrame.set64 _ PINS (by decide) _ _)).trans (MemFrame.set64 _ PINS (by decide) _ _)
+  exact ((((MemFrame.set64 _ PINS (by decide) _ _).trans (MemFrame.set64 _ PINS (by decide) _ _)).trans
+    (MemFrame.set64 _ PINS (by decide) _ _)).trans (MemFrame.set64 _ PINS (by decide) _ _)).trans
+    (MemFrame.set64 _ PINS (by decide) _ _)
 
 theorem ArenaD.with_pins {m : Mem} {a : AState} (P : Pins) (h : ArenaD m a) :
     ArenaD m { a with pins := P } := by
@@ -418,7 +424,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   split at hW
   case isTrue => simp at hW
   rename_i hlen
-  have hP : 72 ≤ (m.arr64 PINS).size := Nat.le_of_not_lt fun hc => hlen (by
+  have hP : 73 ≤ (m.arr64 PINS).size := Nat.le_of_not_lt fun hc => hlen (by
     simp only [Mem.len64]; rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' (Nat.lt_of_lt_of_le hc (by decide))]; simp; omega)
   have hsplit : pinNames = pinNames.take 51 ++ pinNames.drop 51 := (List.take_append_drop 51 pinNames).symm
   have hlA : (pinNames.take 51).length = 51 := by simp [pinNames_length]
@@ -527,9 +533,9 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       (frame_store hf6 (by simp [tier1, sortSch, SOREC, SOSLOT, SOLP]) (by simp [sortSch])))
   have hsz : (m₆.arr64 PINS).size = (m.arr64 PINS).size := by
     rw [hfS.size, hf2'.size, hf1b'.size, hf1'.size]
-  have hsz72 : 72 ≤ (m.arr64 PINS).size := by
-    have : ¬ (UInt64.ofNat (m.arr64 PINS).size) < 72 := by simpa [Mem.len64] using hlen
-    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', show (72 : UInt64).toNat = 72 from rfl] at this
+  have hsz72 : 73 ≤ (m.arr64 PINS).size := by
+    have : ¬ (UInt64.ofNat (m.arr64 PINS).size) < 73 := by simpa [Mem.len64] using hlen
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', show (73 : UInt64).toNat = 73 from rfl] at this
     have := Nat.mod_le (m.arr64 PINS).size (2 ^ 64)
     omega
   have hpw := fun i => pinW_fill m₆ us z s1 i (by omega)
@@ -544,19 +550,21 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
     have hlo : ∀ i, 1 ≤ i → i < 52 → pinW (irpFill m₆ us z s1) i = pinW m₁ i := fun i h1 h2 => by
       rw [hpw, h26, hk2 i (.inl (by omega)), hk1b i (.inl (by omega))]
       have e0 : i ≠ 0 := by omega
+      have e7 : i ≠ 72 := by omega
       have e4 : i ≠ 54 := by omega
       have e3 : i ≠ 53 := by omega
       have e2 : i ≠ 52 := by omega
-      rw [ite_eq_right e0, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
+      rw [ite_eq_right e0, ite_eq_right e7, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
     have h71 : pinW (irpFill m₆ us z s1) 71 = pinW m₁b 71 := by
       rw [hpw, h26, hk2 71 (.inr (by omega))]; simp
-    have hhi : ∀ i, 55 ≤ i → pinW (irpFill m₆ us z s1) i = pinW m₂ i := fun i h1 => by
+    have hhi : ∀ i, 55 ≤ i → i ≠ 72 → pinW (irpFill m₆ us z s1) i = pinW m₂ i := fun i h1 h7 => by
       rw [hpw, h26]
       have e0 : i ≠ 0 := by omega
       have e4 : i ≠ 54 := by omega
       have e3 : i ≠ 53 := by omega
       have e2 : i ≠ 52 := by omega
-      rw [ite_eq_right e0, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
+      rw [ite_eq_right e0, ite_eq_right h7, ite_eq_right e4, ite_eq_right e3, ite_eq_right e2]
+    have h72 : pinW (irpFill m₆ us z s1) 72 = 134217728 := by rw [hpw]; simp
     have h52 : pinW (irpFill m₆ us z s1) 52 = us := by rw [hpw]; simp
     have h53 : pinW (irpFill m₆ us z s1) 53 = z := by rw [hpw]; simp
     have h54 : pinW (irpFill m₆ us z s1) 54 = s1 := by rw [hpw]; simp
@@ -573,7 +581,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
       rw [resP, List.length_append, hl1, hl1b]
     refine { size := ?_, names_size := ?_, names_lt := ?_, names := ?_, quotMk_lt := ?_, quotMk := ?_,
              lv_lt := ?_, emptyLevels := ?_, zeroLevel := ?_, sortOne := ?_, reserved_lt := ?_,
-             reserved := ?_ }
+             reserved := ?_, maxNatSize := by rw [h72]; rfl }
     · rw [(irpFill_frame m₆ us z s1).size, hsz]; exact hsz72
     · simp [hlenP]
     · intro i hi
@@ -600,14 +608,14 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
     · rw [h53]; exact res4.symm ▸ rfl
     · rw [h54]; exact res6
     · intro i hi
-      rw [hhi _ (by omega)]
+      rw [hhi _ (by omega) (by omega)]
       exact (hj2 i hi).2
     · dsimp only
       apply List.ext_getElem
       · simp [hl2]
       · intro i h1 h2
         simp only [List.getElem_map, List.getElem_range]
-        rw [hhi _ (by omega)]
+        rw [hhi _ (by omega) (by omega)]
         have := (hj2 i (by omega)).1
         rw [List.getElem?_eq_getElem h1] at this
         exact Option.some.inj this

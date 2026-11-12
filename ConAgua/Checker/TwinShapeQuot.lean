@@ -6,6 +6,7 @@ public import ConRon.Bridge.Frontend.Chunks
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Checker.Pipeline
 import ConAgua.Checker.TwinPins
+import ConAgua.Arena.RomCI
 import ConRon.Bridge.Checker.Pins
 public import ConRon.Bridge.Frontend.Prepare
 import all ConRon.Bridge.Frontend.Prepare
@@ -104,18 +105,20 @@ theorem eqBlock_u {s s' : AState} {r : List IConstantInfo} (hok : StateOK s)
 links two to thirty-four, from the state after the first block), then the pin variants. -/
 theorem internAllPins_tail {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
+    (hmax : s.pins.maxNatSize = maxNatSizeDefault)
     (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ u0 : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
       IStepS s u0 ∧ Ext u0.store s'.store := by
-  obtain ⟨u0, u, hq, h0, h1, hx, -⟩ := TwinCaches.internAllPins_steps hok hpins hoff hrun
+  obtain ⟨u0, u, hq, h0, h1, hx, -⟩ := TwinCaches.internAllPins_steps hok hpins hoff hmax hrun
   exact ⟨u0, hq, h0, h1.ext.trans hx⟩
 
 /-- **The walk interns `u`**: a persistent handle denoting `u` at the end of `internAllPins`. -/
 theorem internAllPins_u {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
+    (hmax : s.pins.maxNatSize = maxNatSizeDefault)
     (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ k, k.isPersistent = true ∧ denoteN s'.store.ns k = some (.str .anonymous "u") := by
-  obtain ⟨u0, ⟨r0, q0⟩, a1, hx⟩ := internAllPins_tail hok hpins hoff hrun
+  obtain ⟨u0, ⟨r0, q0⟩, a1, hx⟩ := internAllPins_tail hok hpins hoff hmax hrun
   obtain ⟨-, k, hk⟩ := eqBlock_u hok q0
   exact ⟨k, PersN_of_denote a1.ok.wf (by rw [a1.scratch]; exact hoff) hk, denoteN_ext hk hx⟩
 
@@ -144,6 +147,7 @@ theorem prefix_quotU {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AStat
     rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA
   exact internAllPins_u hstep3.ok
     (hpinsA.mono ((hstep1.ext.trans hstep2.ext).trans hstep3.ext)
-      (by rw [hstep3.pins, hstep2.pins, hstep1.pins])) hoff3 hE
+      (by rw [hstep3.pins, hstep2.pins, hstep1.pins])) hoff3
+    (by rw [hstep3.pins, hstep2.pins, hstep1.pins]; exact L.Rom.internReservedPins_maxNatSize hA) hE
 
 end L.Checker

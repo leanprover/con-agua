@@ -13,13 +13,13 @@ open scoped Lean.Order
 namespace L.Rom
 
 theorem internAllPins_split (pins : List ConLeche.NatOpPinSet) :
-    internAllPins pins maxNatSizeDefault = internAllPins [] >>= fun _ => internPinSets pins := by
+    internAllPins pins maxNatSizeDefault = internAllPins [] maxNatSizeDefault >>= fun _ => internPinSets pins := by
   simp only [internAllPins, internPinSets, bind_assoc, pure_bind]
 
 open L.Arena
 
 /-- **`intern_all_pins` over a buffer that starts with `romData`, up to the variant list**: the
-startup items are the twin's `internAllPins []`, and the variant list starts right after
+startup items are the twin's `internAllPins [] maxNatSizeDefault`, and the variant list starts right after
 `romData`. -/
 theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
     (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
@@ -27,7 +27,7 @@ theorem internAllPinsW_fixed (rom : List UInt8) (hr : RomOK rom) (rest : List UI
     (hP : PinsReadyP a) (hst : (stkTop mem).toNat < 2 ^ 61) (hc : 132 < (mem.arr64 CTL).size)
     (hW : internAllPinsW rom n mem = some mem') :
     ∃ (n' : Nat) (m₁ : Mem) (a₁ : AState) (v : List INatOpPinSet) (q' : Word),
-      (internAllPins []).run a = .ok (v, a₁) ∧ ArenaD m₁ a₁ ∧ (RsetR mem → RsetR m₁) ∧
+      (internAllPins [] maxNatSizeDefault).run a = .ok (v, a₁) ∧ ArenaD m₁ a₁ ∧ (RsetR mem → RsetR m₁) ∧
       stkTop m₁ = stkTop mem ∧ MemFrame ExprA ExprC mem m₁ ∧
       internPinSetsW rom n' m₁ (UInt64.ofNat romData.length) = some (q', mem') ∧ ModeOK m₁ := by
   cases n with
@@ -205,7 +205,7 @@ buffer decodes to (any buffer that starts with `romData`, `pb_check`); the varia
 
 A full refinement in the decoder direction: the pin list is the twin's input, the buffer is L's,
 and `TwinAccepts` takes the pin list existentially, so every L run that returns is a twin run at
-the decoded list. The startup half (`internAllPins []`) is the ROM's fixed data. What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
+the decoded list. The startup half (`internAllPins [] maxNatSizeDefault`) is the ROM's fixed data. What the buffer cannot spell (string literals, `natVal ≥ 2^64`: D6) is a
 completeness gap of the format, as `read_nat`'s 18 digits are for `parseChunks` (D2). Through it
 the ROM interns it alone reaches (`internPinSet(s)`, `internExpr`, `internExprList`, and below
 `BasisKind.decls`/`declsA` the `Frontend.internCI` family) count as covered. -/

@@ -369,9 +369,9 @@ theorem prefix_caches {b sA pre sB rc sC ds sD pins ipins sE}
   obtain ⟨hcB, hpB⟩ := keeps_builtinPreludeE.run hB
   obtain ⟨hcC, hpC⟩ := (keeps_parseChunks [b]).run hC
   obtain ⟨hcD, hpD⟩ := (keeps_preparePrelude pre rc.decls).run hD
-  obtain ⟨hok, hoff, hpins, hpp⟩ := prefix4_facts ⟨hA, hB, hC, hD⟩
+  obtain ⟨hok, hoff, hpins, hpp, hmax⟩ := prefix4_facts ⟨hA, hB, hC, hD⟩
   obtain ⟨-, -, -, -, -, -, -, hcE, -⟩ := ConRon.Bridge.internAllPins_run hok hpins hpp hoff hE
   exact ⟨by rw [hcE, hcD, hcC, hcB, hcA],
-    by rw [internAllPins_pins hok hpins hoff hE, hpD, hpC, hpB]⟩
+    by rw [internAllPins_pins hok hpins hoff hmax hE, hpD, hpC, hpB]⟩
 
 end L.Checker

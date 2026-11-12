@@ -129,7 +129,7 @@ theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
         cases u
         rw [checkJobList_cons_ok htk hrj] at hl
         obtain ⟨htk', hdk⟩ := H.hden t htk
-        obtain ⟨hw₁, env', F, hd⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
+        obtain ⟨hw₁, env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
           H.hI H.hpI hw htk htk' hdk hPt hndt hrj
         have := ih (t + 1) a₁ a' hw₁ (PrefixOK.step H.hpush htk' hPt hd hndt) (by omega) hl
         rwa [show t + 1 + c = t + (c + 1) by omega] at this

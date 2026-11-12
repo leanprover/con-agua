@@ -68,7 +68,7 @@ theorem twinAcceptsPooled_pure (V : Type w) [SetTheory V] {chunks : List ByteArr
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hrc, hden⟩ :=
     ConRon.Bridge.stages_frame hA hB hC hD hE
   obtain ⟨F, hpure⟩ :=
-    ConRon.Bridge.Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden hF
+    ConRon.Bridge.Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden hF
   exact ⟨pins, preC, rc, F, hrc, hpure⟩
 
 /-- **The model** of what the pool accepts. -/
