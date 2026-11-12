@@ -236,7 +236,7 @@ def TailRefS : Prop :=
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) → qP.params.length = qP.p.nP →
     q.p.nP + 1 < 2 ^ 64 →
     ∀ (tO tL : Word) (Q : List IProjTable), decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q →
-    tO.toNat + tL.toNat ≤ iwTop m →
+    tO.toNat + tL.toNat ≤ iwTop m → TblsOK a.store Q →
     RefE G (callE p n "check_block_tail" [bO, bL, w, tO, tL] m) (ConRon.Arena.checkBlockTail V block q Q) a
       (fun rm fe' a' => TailOut m a (rm.1.headD 0) fe' rm.2 a')
 
@@ -440,6 +440,7 @@ theorem checkBlockPass_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockSh
 
 section comp
 variable {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche.Name}
+
 
 /-- **`check_block`'s model refines `checkBlock`, both outcomes**, from its callees' contracts:
 the twin split at the calls (`checkBlock_split`), its facts between them as con-ron's

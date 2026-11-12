@@ -535,11 +535,6 @@ theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : ICo
   obtain ⟨c', hc', -⟩ := hy1
   exact ⟨⟨_, ConRon.Bridge.denoteCV_name hc⟩, ⟨_, ConRon.Bridge.denoteCV_type hc'⟩⟩
 
-/-- What the tables' checks need of each table: its level parameters' names read back and its
-parameter count bounded. -/
-def TblsOK (st : EStore) (Q : List IProjTable) : Prop :=
-  ∀ t ∈ Q, (∃ ks, t.levelParams.mapM (denoteN st.lss.ls.ns) = some ks) ∧ t.numParams + 1 < 2 ^ 64
-
 /-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each table by `tbl_ref`),
 over the `IW` slice of table records; the stage kept, the twin's run a `PStep`. -/
 theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (vis : Word) (fe : IFEnv) (n : Nat) :
