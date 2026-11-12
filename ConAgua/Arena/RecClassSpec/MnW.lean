@@ -278,14 +278,14 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hmtd
   rw [itW.k_class_gen_mot_var.arm1]
   have hg25 := hg24.trans hg5
-  refine RSim.lstep (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_sl_snoc n _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
+  refine RSim.lstep (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_sl_snoc _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
   obtain ⟨hr6, hd6, hg6, -, -, ht6⟩ := snocW_dec h6 hS5.iw.iwSize hS5.iw.ctl (Nat.le_trans hidb hg25.iw) hfxH
     (by rw [decHL_grow hg25 hidb]; exact hidx)
   have hS6 := snocW_stage h6 hS5
   have hA6 := snocW_afr h6 (hf5 (hf4 (hf3 hA2)))
   rw [itW.k_sl_snoc.arm1, hr6]
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 n _ _ e o))) hK
+  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 _ _ e o))) hK
     (RSim.withF ((mknF_ok vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨⟨hS7, hg7, hbH, hbd⟩, hf7⟩
@@ -295,11 +295,8 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   have hg27 := hg25.trans (hg6.trans hg7)
   rw [rec2MapM_genBinder]
   -- `class_gen_minor_ty_ih1_close`
-  rcases n with _ | n
-  · rw [show (iclW 0 _ _ _ _ _) = none from rfl]
-    exact (by rw [show itW.k_class_gen_minor_ty_ih1_close none = none from rfl, show i1W.k_class_gen_minor_ty_ih1_tail none = none from rfl, hK]; exact RSim.none)
-  rw [iclW.arm1]
-  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_fvar_type_ds n e (r7.headD 0) o)))) hK
+  rw [iclW]
+  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_fvar_type_ds e (r7.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ xs).sim
       ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg27.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨⟨hS8, hg8, hbs, hbb⟩, hf8⟩
@@ -595,7 +592,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hfbs hfbb
   rw [mcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
-  refine RSim.lstep (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_sl_append n d (r3.headD 0) o)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_sl_append d (r3.headD 0) o)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hS5, hg5, hd5, hb5⟩ := rec2AppendW_dec h5 hS4 (decHL_decB hfbs hfbb)
     (by rw [decHL_grow hg14 hib]; exact hihs) (Nat.le_trans hib hg14.iw)
   by_cases hov : d + r5.tail.headD 0 < d

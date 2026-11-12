@@ -247,7 +247,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   · exact RSim.none
   rw [motW.arm1]
   unfold ConRon.Arena.ClassGen.motiveTy
-  refine RSim.bind (K := motW.k_class_gen_major n g d) rfl
+  refine RSim.bind (K := motW.k_class_gen_major g d) rfl
     (mjW_sim dn vis fe n m a g c d G hS hG hA) ?_
   rintro ⟨r1, m1⟩ o1 a1 - ⟨⟨hS1, hg1, ho1⟩, hA1⟩
   dsimp only at hS1 hg1 ho1
@@ -262,7 +262,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.iw.iwSize
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
-  refine RSim.bind (K := motW.k_intern_sort n d _ _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
+  refine RSim.bind (K := motW.k_intern_sort d _ _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
     IWGrow m1 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨srt, m2⟩ h2
     obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS1 ve hve h2
@@ -272,7 +272,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   by_cases hbig : 4294967296 ≤ srt
   · rw [motW.k_intern_sort.abort1 (hc1 := hbig)]; exact RSim.none
   rw [motW.k_intern_sort.arm1 (hc1 := hbig)]
-  refine RSim.bind (K := motW.k_mk_forall n d _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
+  refine RSim.bind (K := motW.k_mk_forall d _ _) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧
     IWGrow m2 b.2 ∧ x = decE b.1 ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨b, m3⟩ h3
     obtain ⟨a', hrun, hS', hg⟩ := mkForall_stage hS2 _ srt h3
@@ -286,7 +286,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     simp at this; exact this
   have hg13 := hg1.trans (hg2.trans hg3)
   rw [rec2MapM_classBinder]
-  refine RSim.bind (K := motW.k_fvar_type_ds n d b) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ ifs).sim
+  refine RSim.bind (K := motW.k_fvar_type_ds d b) rfl (RSim.withF ((ftdsF_ok dn vis fe _ _ ifs).sim
       ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs, fun _ => Nat.le_trans hfb (hg2.trans hg3).iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨⟨hS4, hg4, hbs, hbb⟩, hf4⟩
   dsimp only at hS4 hg4 hbs hbb

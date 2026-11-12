@@ -156,7 +156,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   subst hmvd
   rw [grtW.k_class_gen_mot_var.arm1]
   have hg14 := hg13.trans hg4
-  refine RSim.lstep (K := grtW.k_sl_snoc_2 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := grtW.k_sl_snoc_2 (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.iw) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
@@ -164,7 +164,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [grtW.k_sl_snoc_2.arm1]
   rw [hr5] at ⊢
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := grtW.k_mk_app_n_f n (r3.headD 0) (r3.tail.headD 0)) rfl
+  refine RSim.bind (K := grtW.k_mk_app_n_f (r3.headD 0) (r3.tail.headD 0)) rfl
     (RSim.withF ((mknF_ok vis fe _ _ _ hmvH (ifs ++ [decI t])).sim ⟨hS5, hd5⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r6, m6⟩ body a6 - ⟨⟨hS6, hg6, hbH, hbd⟩, hf6⟩
   dsimp only at hS6 hg6 hbH hbd
