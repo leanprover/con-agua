@@ -220,8 +220,6 @@ end namesToRef
 /-- `intern_reserved_pins()` for the ROM offset `off` of `encNames pinNames ++ encNames
 reservedBasisNameValues`. -/
 -- con-ron: ConRon/Arena/Pins.lean:235-249 ConRon.Arena.internReservedPins
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.internReservedPins`, `ConRon.Arena.maxNatSizeDefault` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.internReservedPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
   if len(PINS.u64) < 73 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
@@ -245,8 +243,6 @@ reservedBasisNameValues`. -/
 
 /-- `intern_reserved_pins()` as the program has it: the ROM starts with the two name lists. -/
 -- con-ron: ConRon/Arena/Pins.lean:235-249 ConRon.Arena.internReservedPins
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.internReservedPins`, `ConRon.Arena.maxNatSizeDefault` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.internReservedPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.internReservedPins]
 def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
