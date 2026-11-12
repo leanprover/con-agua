@@ -323,14 +323,6 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
       xo xn) (io_ref p hp hi1 n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d mI rP cnP tyCtor mo mn xo xn
       margs idx hS hm4 hebm hty hsm hsx htm htx)
 
-/-! ## `tower_slots_all(vis, T, nF)` -/
-
-/-- **`tower_slots_all` is its model `tsW`** (generated; the loop is `tsW.loop1`). -/
-l_model towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
-  fns [hp ↦ tsW list]
-  specs [callW_spec p n "find_proj"]
-  grind [arena_grind]
-
 /-! ## `inst_spine(ao, an, t, e)` -/
 
 /-- **`inst_spine` is its model `isW`** (generated; the loop is `isW.loop1`). -/

@@ -3,7 +3,8 @@ module
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DefEqStuckGo
+import ConAgua.Arena.IndRecRead
+import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -16,9 +17,9 @@ import all ConAgua.Arena.WhnfIota
 @[expose] public section
 
 /-!
-# `eta_rescue_ok`: the structure-η rescue's standing condition (`etaRescueOk`)
+# `eta_rescue_table`: the structure-η rescue's standing condition (`etaRescueTable?`)
 
-The constructor's and the family's level parameters compared as `EREC` slices (`er_sl_eq`), the
+The table's constructor tested, the constructor's and the family's level parameters compared as `EREC` slices (`er_sl_eq`), the
 `And.intro` pin read last.
 -/
 
@@ -49,9 +50,9 @@ theorem erSlEq_spec (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, ih] <;>
       finish (gen := 20) [rdW_eq, erRd]
 
-/-- **`eta_rescue_ok`'s model**: `er_sl_eq` and `pin_at` lifted. -/
-l_model eroW_spec (p : Prog) (hf : p.lookup "eta_rescue_ok" = some etaRescueOkL)
-  fns [hf ↦ eroW] specs [callW_spec p n "er_sl_eq", callW_spec p n "pin_at"]
+/-- **`eta_rescue_table`'s model**: `er_sl_eq` and `pin_at` lifted. -/
+l_model ertW_spec (p : Prog) (hf : p.lookup "eta_rescue_table" = some etaRescueTableL)
+  fns [hf ↦ ertW] specs [callW_spec p n "er_sl_eq", callW_spec p n "pin_at"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
@@ -65,47 +66,81 @@ theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {n
   obtain ⟨cv', hcv, _, -, _, -, he⟩ := h
   cases he; exact hcv
 
-/-- **`eta_rescue_ok` refines `etaRescueOk`** (memory and twin state kept). -/
-theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
+/-- **The words of a found table** (`find_table`'s answer `tq ≠ 0`, the record at `tq - 1`): the
+parameter count at `tq + 4`, the constructor at `tq + 5`, the field count at `tq + 6`. -/
+theorem tblFound_words {m : Mem} {tq : Word} {tb : IProjTable} (h : tblFound m tq = some tb) :
+    tq ≠ 0 ∧ tb.numParams = (erRd m (tq + 4)).toNat ∧ HW (erRd m (tq + 5)) ∧
+      tb.ctor = decI (erRd m (tq + 5)) ∧ tb.numFields = (erRd m (tq + 6)).toNat := by
+  have h0 : tq ≠ 0 := by rintro rfl; simp [tblFound] at h
+  simp only [tblFound, h0, ↓reduceIte] at h
+  have hq : (tq - 1).toNat = tq.toNat - 1 := by
+    have : (1 : Word) ≤ tq := by
+      have : tq.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simp [e]))
+      rw [UInt64.le_iff_toNat_le]; simp; omega
+    rw [UInt64.toNat_sub_of_le _ _ this]; rfl
+  have h' : decTbl (erecP m) (tq - 1).toNat = some tb := by rw [hq]; exact h
+  obtain ⟨-, hp, hw, hc, hf⟩ := decTbl_words (erRdOK m) h'
+  have e5 : tq - 1 + 5 = tq + 4 := by
+    rw [show (5 : Word) = 1 + 4 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
+  have e6 : tq - 1 + 6 = tq + 5 := by
+    rw [show (6 : Word) = 1 + 5 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
+  have e7 : tq - 1 + 7 = tq + 6 := by
+    rw [show (7 : Word) = 1 + 6 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
+  rw [e5] at hp; rw [e6] at hw hc; rw [e7] at hf
+  exact ⟨h0, hp, hw, hc, hf⟩
+
+/-- **`eta_rescue_table` refines `etaRescueTable?`** (memory and twin state kept): the answer is
+`find_table`'s `tq` or `0`, decoded as the twin's `Option IProjTable`. -/
+@[refines ConRon.Arena.etaRescueTable?]
+theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     (hpa : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem} {a : AState} (hP : PinsR m a.pins)
-    {ctor cq q : Word} (hctor : HW ctor) {cvj : IConstantVal} {nP nF : Nat} {cvT : IConstantVal}
+    {tq ctor cq q : Word} (hctor : HW ctor) {cvj : IConstantVal} {nP nF : Nat} {cvT : IConstantVal}
     {caps : IIndCaps} (hcj : decCI (erecP m) cq.toNat = some (.ctorInfo cvj nP nF))
-    (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps)) {w : Word}
-    (h : eroW p n m ctor cq q = some (w, m')) :
-    m' = m ∧ (etaRescueOk (decI ctor) cvj cvT caps).run a = .ok (w != 0, a) ∧ HW w := by
+    (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps))
+    (htq : tq ≠ 0 → ∃ tb, decTbl (erecP m) (tq.toNat - 1) = some tb) {w : Word}
+    (h : ertW p n m tq ctor cq q = some (w, m')) :
+    m' = m ∧ (etaRescueTable? (tblFound m tq) (decI ctor) cvj cvT caps).run a =
+      .ok (tblFound m w, a) := by
   rcases n with _ | n
-  · simp [eroW] at h
+  · simp [ertW] at h
+  by_cases g0 : tq = 0
+  · rw [ertW.arm1 _ _ _ _ _ _ _ g0] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    subst g0
+    exact ⟨rfl, rfl⟩
+  obtain ⟨tb, htb⟩ := htq g0
+  have hT : tblFound m tq = some tb := by simp [tblFound, g0, htb]
+  obtain ⟨-, -, hcw, hcd, -⟩ := tblFound_words hT
   have hrec := decCI_indCaps (erRdOK m) hci
   obtain ⟨hlj, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ctor_cv hcj)
   have hlT := hrec.lp
   have heta := hrec.eta
-  have hec := hrec.etaCtor
-  have hechw := hrec.etaCtor_hw
-  have h0 : HW 0 := by unfold HW; decide
-  have h1 : HW 1 := by unfold HW; decide
+  have hz : tblFound m 0 = none := by simp [tblFound]
+  rw [hT]
   by_cases g1 : erRd m (q + 5) = 0
-  · rw [eroW.arm1 _ _ _ _ _ _ g1] at h
+  · rw [ertW.arm2 _ _ _ _ _ _ _ g0 g1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_, h0⟩
+    refine ⟨rfl, ?_⟩
     have : caps.eta = false := by rw [heta, g1]; rfl
-    simp [etaRescueOk, this]; rfl
-  by_cases g2 : erRd m (q + 6) ≠ ctor
-  · rw [eroW.arm2 _ _ _ _ _ _ g1 g2] at h
+    simp [etaRescueTable?, this, hz]; rfl
+  by_cases g2 : erRd m (tq + 5) ≠ ctor
+  · rw [ertW.arm3 _ _ _ _ _ _ _ g0 g1 g2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_, h0⟩
-    have : (caps.etaCtor == decI ctor) = false := by
-      rw [hec]; simpa using fun e => g2 ((decI_inj_iff hechw hctor).mp e)
-    simp [etaRescueOk, this]; rfl
-  have g2' : erRd m (q + 6) = ctor := by simpa using g2
-  rw [eroW.arm3 _ _ _ _ _ _ g1 g2'] at h
+    refine ⟨rfl, ?_⟩
+    have : (tb.ctor == decI ctor) = false := by
+      rw [hcd]; simpa using fun e => g2 ((decI_inj_iff hcw hctor).mp e)
+    simp [etaRescueTable?, this, hz]; rfl
+  have g2' : erRd m (tq + 5) = ctor := by simpa using g2
+  rw [ertW.arm4 _ _ _ _ _ _ _ g0 g1 g2'] at h
   have hE : caps.eta = true := by rw [heta]; simpa using g1
-  have hC : (caps.etaCtor == decI ctor) = true := by rw [hec, g2']; simp
+  have hC : (tb.ctor == decI ctor) = true := by rw [hcd, g2']; simp
   simp only [L.Ind.erRd_foldN] at h
   rcases c1 : callW p n "er_sl_eq" [erRd m (cq + 2), erRd m (cq + 3), erRd m (q + 2),
       erRd m (q + 3)] m with _ | ⟨r1, m1⟩
-  · rw [c1, eroW.k_er_sl_eq.none] at h; cases h
+  · rw [c1, ertW.k_er_sl_eq.none] at h; cases h
   rw [c1] at h
   obtain ⟨s1, hs1, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (L.Arena.erSlEq_spec p hes n ⟨m, Locals.init []⟩ _ _ _ _) c1
@@ -113,30 +148,40 @@ theorem ero_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   subst hm1'
   rw [L.Ind.erSlEqB_ok (erRdOK m) hlj hlT] at hr1
   by_cases g3 : cvj.levelParams = cvT.levelParams
-  · rw [eroW.k_er_sl_eq.arm2 _ _ _ _ _ (by rw [hr1]; simp [g3])] at h
+  · rw [ertW.k_er_sl_eq.arm2 _ _ _ _ _ _ (by rw [hr1]; simp [g3])] at h
     rcases c2 : callW p n "pin_at" [48] m with _ | ⟨r2, m2⟩
-    · rw [c2, eroW.k_pin_at.none] at h; cases h
-    rw [c2, eroW.k_pin_at.arm1] at h
+    · rw [c2, ertW.k_pin_at.none] at h; cases h
     obtain ⟨s2, hs2, hm2, -, hr2, hpin⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
       (pinAt_refines p hpa n ⟨m, Locals.init []⟩ a hP 48) c2
-    simp only [Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl⟩ := h
     have hm2' : m2 = m := hs2 ▸ hm2
-    refine ⟨hm2', ?_, by split <;> assumption⟩
     have hpin' : pinAndIntro.run a = .ok (decI (r2.headD 0), a) := hpin
     have hiff : ((decI ctor : NIdx) != decI (r2.headD 0)) = (ctor != r2.headD 0) := by
       unfold bne; congr 1
       exact Bool.eq_iff_iff.mpr (by simp only [beq_iff_eq]; exact decI_inj_iff hctor hr2)
-    simp only [etaRescueOk]
+    rw [c2] at h
+    simp only [etaRescueTable?]
     rw [ite_eq_left (by simp [hE, hC, g3]), StateT.run_bind, hpin']
-    show Except.ok ((decI ctor : NIdx) != decI (r2.headD 0), a) = _
-    rw [hiff]
-    generalize r2.headD 0 = x
-    by_cases e : ctor = x <;> simp [e]
-  · rw [eroW.k_er_sl_eq.arm1 _ _ _ _ _ (by rw [hr1]; simp [g3])] at h
+    by_cases e : ctor = r2.headD 0
+    · rw [ertW.k_pin_at.arm1 _ _ _ _ _ e] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hb : ((decI ctor : NIdx) != decI (r2.headD 0)) = false := by rw [hiff]; simp [e]
+      refine ⟨hm2', ?_⟩
+      change StateT.run (if ((decI ctor : NIdx) != decI (r2.headD 0)) = true then
+        (pure (some tb) : AM _) else pure none) a = _
+      rw [hb, hz]; rfl
+    · rw [ertW.k_pin_at.arm2 _ _ _ _ _ e] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hb : ((decI ctor : NIdx) != decI (r2.headD 0)) = true := by rw [hiff]; exact bne_iff_ne.mpr e
+      refine ⟨hm2', ?_⟩
+      change StateT.run (if ((decI ctor : NIdx) != decI (r2.headD 0)) = true then
+        (pure (some tb) : AM _) else pure none) a = _
+      rw [hb, hT]; rfl
+  · rw [ertW.k_er_sl_eq.arm1 _ _ _ _ _ _ (by rw [hr1]; simp [g3])] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_, h0⟩
-    simp [etaRescueOk, hE, hC, g3]; rfl
+    refine ⟨rfl, ?_⟩
+    simp [etaRescueTable?, hE, hC, g3, hz]; rfl
 
 end L.Arena
