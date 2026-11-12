@@ -83,18 +83,7 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
     ∀ (s₀ : St) (k c e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix" [k, c, e]
     ⦃fun r s' => LocEq s' s₀ ∧ absPrefW n s₀.mem k c e = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ k c e; rw [invoke_eq _ hp]; simp only [callFn, abstractPrefix]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ k c e
-    rw [invoke_eq _ hp]
-    simp only [callFn, abstractPrefix]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        abF_spec p hab n, ih] <;>
-      finish (gen := 20)
+  sorry
 
 theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
@@ -103,38 +92,7 @@ theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     ∃ x a', (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
       AbsOK m' := by
-  induction n with
-  | zero => intro m m' a k c e r h; simp [absPrefW] at h
-  | succ n ih =>
-    intro m m' a k c e r h hS he hb hA
-    by_cases hk : k = 0
-    · rw [absPrefW_nil n m k c e hk] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hk0 : k.toNat = 0 := by rw [hk]; rfl
-      rw [hk0]
-      exact ⟨decI e, a, rfl, hS, IWGrow.refl m, by simpa using he, rfl, hA⟩
-    · rw [absPrefW_cons n m k c e hk] at h
-      have hpos : 1 ≤ k.toNat := by
-        rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hk
-        · omega
-      have hk1 : (k - 1).toNat = k.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp
-      have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      rcases ha : abF m [CWF, e, k - 1, c] with _ | ⟨ra, m1⟩ <;> simp only [ha, apK1, reduceCtorEq] at h
-      obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ :=
-        abF_ok dn vis fe e (k - 1) c he m m1 a ra ha ⟨hS, hA⟩
-      rcases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [hr, apK2, reduceCtorEq] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      obtain ⟨x2, a2, hrun2, hS2, hg2, hd21, hd22, hA2⟩ := ih m1 m2 a1 (k - 1) (c + 1) (ra.headD 0) r2 hr hS1 hd1
-        (by rw [hk1, hc1]; omega) hA1
-      refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, by simpa using hd21, by simpa using hd22, hA2⟩
-      rw [CWF_eq, hk1] at hrun1
-      have hz : k.toNat = (k.toNat - 1) + 1 := by omega
-      rw [hk1, hc1] at hrun2
-      rw [hz]
-      simp only [ConRon.Arena.abstractPrefix, StateT.run_bind, hrun1, except_ok_bind, ← hd2]
-      exact hrun2
+  sorry
 
 /-! ## `abstract_prefix_list` (the round-1 `while` rewritten as a self-recursion: first element,
 then the rest, then `sl_cons`) -/

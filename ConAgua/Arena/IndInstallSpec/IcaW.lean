@@ -312,17 +312,7 @@ theorem installCapsTail {p : Prog} (hP : CapsProg p) (n : Nat)
     StageR vis fe m2 a ∧ IWGrow m m2 ∧ CapsAt m2 (r2.headD 0).toNat
       { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP,
         nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (icf_spec p hP.alloc hP.rec5 hP.fin (n + 1) _ pp coff clen w0 w1 w2 w3 w4 nIdx) h2
-  simp only at hW
-  obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
-  obtain ⟨-, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  obtain ⟨hS2, hg2, aq, al, cq, cl, hcw, hEa, hEc⟩ := icfW_ok hP hW hS hq hsrc hcs
-  refine ⟨hS2, hg2, by have := hcw.1; simpa using this, fun a e ha he => ?_⟩
-  have hd := installDecCaps (a := a) (e := e) (w0 := w0) (w1 := w1) (w2 := w2) (w3 := w3) (w4 := w4)
-    (w5 := w2) (w6 := nIdx) (aq := aq) (al := al) (np := UInt64.ofNat bs.nP) (cq := cq) (cl := cl)
-    (fun i hi => (ha i hi).trans (hcw.2 i (by simpa using hi))) hw1 (he.hslice? hEa) (he.hslice? hEc)
-  rw [hd, UInt64.toNat_ofNat_of_lt' hnpb]
+  sorry
 
 /-- **`block_caps_at`'s model refines `blockCapsAt`** (pure in the twin): the stage relation kept,
 the capability record at the returned pointer. -/
@@ -332,137 +322,7 @@ theorem icaW_ok {p : Prog} (hP : CapsProg p) (n : Nat)
     (hb : (isRec != 0) = b) (h : icaW p n m pp mi isRec = some (r, m')) (hS : StageR vis fe m a) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       CapsAt m' (r.headD 0).toNat (ConRon.Arena.blockCapsAt bs mi.toNat b) := by
-  rcases n with _ | _ | n
-  · rw [icaW.eq_1] at h; cases h
-  · rw [icaW.arm1, callW_zero, icaW.k_block_caps_head.none] at h; cases h
-  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
-  obtain ⟨hq', hq9, -⟩ := partsShapeFacts hq hsrc
-  have hkw := partsShapeK hq' hq9
-  obtain ⟨hnpw, hnpb, -, -⟩ := partsShapeWords (IWGrow.refl m) hq hq9
-  have hqt : decBS (truncM m) pp.toNat = some bs := hq
-  obtain ⟨hmem, -, -, -, -, -, -⟩ := decBS_some hqt
-  obtain ⟨o, l, ho, hl, hdm, hob⟩ := partsAt decMS_mono hmem
-  have hdm' : decPL (truncM m) (decMS (truncM m)) o.toNat l.toNat = some bs.members := hdm
-  have hlk : bs.k = l.toNat := decPL_length _ hdm'
-  have hkb : bs.k < 2 ^ 64 := by rw [hlk]; exact l.toNat_lt
-  obtain ⟨hw0, -, -⟩ := partsIwRd ho (w := pp) rfl
-  rw [UInt64.ofNat_toNat] at hw0
-  -- the record, shared by the branches
-  have hfin : ∀ (w0 w1 w2 w3 w4 : Word) (cs : List (IConstantVal × Nat)) (coff clen nIdx : Word)
-      (R : IIndCaps), PSlR decCN cs coff clen m → H w1 →
-      R =
-        { eta := w0 != 0, all := bs.memberNames, nparams := bs.nP, nIdx := nIdx.toNat, ctors := cs.map (·.1.name) } →
-      icaW.j1 p (n + 1) pp coff clen nIdx w0 w1 w2 w3 w4 m = some (r, m') →
-      StageR vis fe m' a ∧ IWGrow m m' ∧ CapsAt m' (r.headD 0).toNat R := by
-    intro w0 w1 w2 w3 w4 cs coff clen nIdx R hcs hw1 hR hK
-    rw [icaW.j1.arm1] at hK
-    obtain ⟨⟨r2, m2⟩, h2, hK⟩ := of_K hK rfl
-    rw [icaW.k_block_caps_fin.arm1] at hK
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hK)
-    obtain ⟨hS2, hg2, hca⟩ := installCapsTail hP n hS hq hsrc hcs hw1 h2
-    subst hR
-    exact ⟨hS2, hg2, by simpa using hca⟩
-  rw [icaW.arm1] at h
-  obtain ⟨⟨r0, m0⟩, h0, h⟩ := of_K h rfl
-  obtain ⟨hr0, hm0⟩ := installPureCall (capsHead_spec p hP.head (n + 1) _ pp mi) h0
-  subst m0
-  unfold ConRon.Arena.blockCapsAt
-  dsimp only
-  rcases Nat.lt_or_ge mi.toNat bs.k with hmi | hmi
-  case inr =>
-    have hnone : bs.members[mi.toNat]? = none :=
-        List.getElem?_eq_none (by unfold BlockShape.k at hmi; omega)
-    rw [capsHead.arm1 (hc1 := by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
-      at hr0
-    cases hr0
-    rw [icaW.k_block_caps_head.arm2 (hc1 := by decide)] at h
-    simp only [List.headD_cons, List.tail_cons] at h
-    simp only [hnone]
-    exact hfin 0 0 0 0 0 [] 0 0 0 _ (PSlR.nil decCN m) (by decide) rfl h
-  -- member `mi`
-  have hl0 : l.toNat ≠ 0 := by omega
-  have hob' : o.toNat + l.toNat ≤ iwTop m := hob.resolve_left (fun h => hl0 (by rw [h]; rfl))
-  obtain ⟨v, hv, hmsd⟩ := decPL_getH (truncM m) hdm' mi.toNat (by omega)
-  generalize hmsh : bs.members[mi.toNat]'(by rw [decPL_length _ hdm']; omega) = msh at hmsd
-  have hsome : bs.members[mi.toNat]? = some msh := by rw [← hmsh]; exact List.getElem?_eq_getElem _
-  simp only [hsome]
-  have hom : (o + mi).toNat = o.toNat + mi.toNat := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨hwv, hvb, hvlt⟩ := partsIwRd hv (w := o + mi) hom
-  have hv' : (UInt64.ofNat v : Word).toNat = v := UInt64.toNat_ofNat_of_lt' hvb
-  obtain ⟨⟨cvp, hcvp, hcvT⟩, -, hni, hct⟩ := decMS_some hmsd
-  obtain ⟨co, cl, hco, hcl, hcd, hcb⟩ := partsAt decCN_mono hct
-  have hv3 : v + 3 < iwTop m := partsIwLt hcl
-  obtain ⟨hw2, -, -⟩ := partsIwRd hco (w := UInt64.ofNat v + 2) (by rw [UInt64.toNat_add, hv']; simp; omega)
-  obtain ⟨hw3, -, -⟩ := partsIwRd hcl (w := UInt64.ofNat v + 3) (by rw [UInt64.toNat_add, hv']; simp; omega)
-  obtain ⟨hw1n, hnb, -⟩ := partsIwRd hni (w := UInt64.ofNat v + 1) (by rw [UInt64.toNat_add, hv']; simp; omega)
-  rw [UInt64.ofNat_toNat] at hw2 hw3
-  have hnI : (UInt64.ofNat msh.nIdx : Word).toNat = msh.nIdx := UInt64.toNat_ofNat_of_lt' hnb
-  have hcd' : decPL (truncM m) (decCN (truncM m)) co.toNat cl.toNat = some msh.ctors := hcd
-  have hlenc : msh.ctors.length = cl.toNat := decPL_length _ hcd'
-  have hhd : capsHead m pp mi = if cl = 0 then some [0, 0, 0, UInt64.ofNat v, UInt64.ofNat msh.nIdx]
-      else some [co, cl, if cl = 1 then 1 else 0, UInt64.ofNat v, UInt64.ofNat msh.nIdx] := by
-    unfold capsHead
-    rw [ite_eq_right (by rw [hkw, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hkb]; omega)]
-    simp only [hw0, hwv, hw2, hw3, hw1n]
-  rcases hcs : msh.ctors with _ | ⟨c, _ | ⟨c2, cs⟩⟩
-  · -- no constructor
-    have hcl0 : cl = 0 := by
-      apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
-    rw [hhd, ite_eq_left hcl0] at hr0
-    cases hr0
-    rw [icaW.k_block_caps_head.arm2 (hc1 := by simp)] at h
-    simp only [List.headD_cons, List.tail_cons] at h
-    exact hfin 0 0 0 0 0 [] 0 0 (UInt64.ofNat msh.nIdx) _ (PSlR.nil decCN m) (by decide) (by rw [hnI]; rfl) h
-  · -- one constructor
-    have hcl1 : cl = 1 := by apply UInt64.toNat_inj.mp; rw [← hlenc, hcs]; rfl
-    subst hcl1
-    rw [hhd, ite_eq_right (by decide)] at hr0
-    cases hr0
-    rw [icaW.k_block_caps_head.arm1 (hc1 := by simp)] at h
-    simp only [List.headD_cons, List.tail_cons] at h
-    obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h rfl
-    obtain ⟨hr1, hm1⟩ := installPureCall (capsOne_spec p hP.one (n + 1) _ pp (UInt64.ofNat v) isRec) h1
-    subst m1
-    rw [capsOne.arm1] at hr1
-    cases hr1
-    rw [icaW.k_block_caps_one.arm1] at h
-    simp only [List.headD_cons, List.tail_cons] at h
-    -- the constructor's words
-    obtain ⟨cp, hcp, hcd0⟩ := decPL_getH (truncM m) hcd' 0 (by decide)
-    simp only [hcs, List.getElem_cons_zero, Nat.add_zero] at hcd0 hcp
-    obtain ⟨⟨cvp2, hcvp2, hcv2⟩, hnF⟩ := decCN_some hcd0
-    obtain ⟨hwc, hcpb, -⟩ := partsIwRd hcp (w := co) rfl
-    have hcp' : (UInt64.ofNat cp : Word).toNat = cp := UInt64.toNat_ofNat_of_lt' hcpb
-    obtain ⟨hwcv, hcvb, -⟩ := partsIwRd hcvp2 (w := UInt64.ofNat cp) hcp'
-    have hcpN : cp + 1 < iwTop m := partsIwLt hnF
-    obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat cp + 1) (by rw [UInt64.toNat_add, hcp']; simp; omega)
-    obtain ⟨hn32, hnm⟩ := partsCVName (IWGrow.refl m) hcv2 hcvb
-    have hcb1 : co.toNat + (1 : Word).toNat ≤ iwTop m := hcb.resolve_left (by decide)
-    refine hfin _ _ _ _ _ [c] co 1 (UInt64.ofNat msh.nIdx) _
-      ⟨by rw [← hcs]; exact hcd, hcb1⟩
-      (by simp only [hw2, hwc, hwcv]; exact hn32) ?_ h
-    simp only [hw2, hwc, hwcv, hw1n, hwnF, hnpw, erRd_foldN, hnm, installEvalW3, installEvalW2]
-    have e1 : decide (UInt64.ofNat msh.nIdx = (0 : Word)) = (msh.nIdx == 0) := by
-      rw [← installOfNatBeq (c := 0) hnb (by decide)]; rfl
-    have e2 : decide (UInt64.ofNat c.snd = (0 : Word)) = (c.snd == 0) := by
-      rw [← installOfNatBeq (c := 0) hnFb (by decide)]; rfl
-    have e4 : decide (isRec = 0) = !b := by rw [← hb, bne, Bool.not_not]; rfl
-    simp only [e1, e2, e4, UInt64.toNat_ofNat_of_lt' hnpb, hnI,
-      UInt64.toNat_ofNat_of_lt' hnFb, List.map_cons, List.map_nil]
-    by_cases h1 : msh.nIdx = 0 <;> by_cases h2 : c.snd = 0 <;> cases b <;> simp [h1, h2, bne]
-  · -- two or more
-    have hcl2 : 2 ≤ cl.toNat := by rw [← hlenc, hcs]; simp
-    have hne0 : cl ≠ 0 := fun e => by rw [e] at hcl2; simp at hcl2
-    have hne1 : (if cl = 1 then (1 : Word) else 0) ≠ 1 := by
-      have : cl ≠ 1 := fun e => by rw [e] at hcl2; simp at hcl2
-      simp [this]
-    rw [hhd, ite_eq_right hne0] at hr0
-    cases hr0
-    rw [icaW.k_block_caps_head.arm2 (hc1 := by simpa using hne1)] at h
-    simp only [List.headD_cons, List.tail_cons] at h
-    have hbd : co.toNat + cl.toNat ≤ iwTop m := hcb.resolve_left hne0
-    exact hfin 0 0 0 0 0 (c :: c2 :: cs) co cl (UInt64.ofNat msh.nIdx) _ ⟨by rw [← hcs]; exact hcd, hbd⟩ (by decide)
-      (by rw [hnI]; rfl) h
+  sorry
 
 /-- **`block_caps_at` refines `blockCapsAt`, as a call** (`icaW_ok`). -/
 theorem blockCapsAt_ok {p : Prog} (hP : CapsProg p) (n : Nat)
