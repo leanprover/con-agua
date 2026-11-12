@@ -45,6 +45,13 @@ l_model pgFastW_spec (p : Prog) (hf : p.lookup "proj_guard_fast" = some projGuar
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
+l_model pgraW_spec (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
+  fns [hf ↦ pgraW list]
+  specs [callW_spec p n "proj_guard_fast", callW_spec p n "inst_list", callW_spec p n "proj_guard_row",
+    callW_spec p n "proj_guard_rows_go"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+
 end L.Arena
 
 namespace L.Ind
@@ -193,7 +200,7 @@ structure PgGoProg (p : Prog) : Prop where
   opf : OpfF p
 
 /-- The rows' words against the twin's answer, at `ro` on the stack. -/
-def GoRes (ro : Word) (m : Mem) (r : List Word) : Option (Array (Nat × EIdx)) → Prop
+def PgGoRes (ro : Word) (m : Mem) (r : List Word) : Option (Array (Nat × EIdx)) → Prop
   | none => r.headD 0 = 0
   | some rows => r.headD 0 = 1 ∧ rows.size = (r.tail.headD 0).toNat ∧ RowsAt m ro rows ∧
       ro.toNat + 2 * rows.size ≤ (spTop m).toNat
@@ -213,7 +220,7 @@ theorem pgGo_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
     ∃ y a' M', (projGuardRowsGo k.toNat d.toNat (decE h) out).run a = .ok (y, a') ∧
       CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
       (spTop m).toNat ≤ (spTop m').toNat ∧
-      (∀ w : Word, w.toNat < (spTop m).toNat → spW m' w = spW m w) ∧ GoRes ro m' r y := by
+      (∀ w : Word, w.toNat < (spTop m).toNat → spW m' w = spW m w) ∧ PgGoRes ro m' r y := by
   intro n
   induction n with
   | zero => intro m m' a M k d h ro rn out r hc; rw [callW_zero] at hc; cases hc
@@ -332,7 +339,7 @@ theorem pgGo_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a : 
     · rw [hb6 w (by omega), hk5 w (by omega), hsp4 w, hK2.below w (by rw [UInt64.lt_iff_toNat_lt]; omega)]
 
 /-- The fast case's words against the twin's answer. -/
-def FastRes (r : List Word) : Option EIdx → Prop
+def PgFastRes (r : List Word) : Option EIdx → Prop
   | none => r.headD 0 = 0
   | some dom => r.headD 0 = 1 ∧ HW (r.tail.headD 0) ∧ decE (r.tail.headD 0) = dom
 
@@ -341,7 +348,7 @@ theorem pgFast_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a 
     (k j h : Word) (r : List Word), callW p n "proj_guard_fast" [k, j, h] m = some (r, m') →
     CoreS dn m a vis fe M eb → HW h → j.toNat + k.toNat < 2 ^ 64 →
     ∃ y a', (projGuardFast k.toNat j.toNat (decE h)).run a = .ok (y, a') ∧
-      CoreS dn m' a' vis fe M eb ∧ StackKept m m' ∧ FastRes r y := by
+      CoreS dn m' a' vis fe M eb ∧ StackKept m m' ∧ PgFastRes r y := by
   intro n
   induction n with
   | zero => intro m m' a M k j h r hc; rw [callW_zero] at hc; cases hc
@@ -411,7 +418,116 @@ theorem pgFast_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a 
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨z, a3, hrun3, hS3, hK3, hres⟩ := ih m2 _ a1 M (k - 1) (j + 1) y _ c3 hS2 hy (by omega)
     refine ⟨z, a3, by rw [← hj1]; exact hrun3, hS3, hK2.trans hK3, ?_⟩
-    cases z <;> simpa [FastRes] using hres
+    cases z <;> simpa [PgFastRes] using hres
+
+/-- What `proj_guard_rows_at`'s refinement needs of a program. -/
+structure PgraProg (p : Prog) : Prop extends PgGoProg p where
+  at' : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL
+
+theorem RowsAt.empty (m : Mem) (ro : Word) : RowsAt m ro #[] := fun _ h => absurd h (by simp)
+
+/-- **`proj_guard_rows_at` refines `projGuardRowsAt` under `CoreS`**: the substitution `acc` the
+stack slice `(co, np)` below the top `ro`; the rows at `ro`. -/
+theorem pgra_okC {p : Prog} (hP : PgraProg p) (n : Nat) {m m' : Mem} {a : AState} {M : ModeMaps}
+    {i co np r ro : Word} {acc : Array EIdx} {rr : List Word} (e : IProjEntry) (he : e.idx = i.toNat)
+    (hnp : e.numParams = np.toNat)
+    (hc : callW p n "proj_guard_rows_at" [i, co, np, r, ro] m = some (rr, m'))
+    (hS : CoreS dn m a vis fe M eb) (hr : HW r) (hsl : SpineR m co np acc)
+    (hco : co.toNat + np.toNat ≤ (spTop m).toNat) (hro : spTop m = ro)
+    (htb : (spTop m).toNat ≤ (m.arr64 SPN).size) :
+    ∃ y a' M', (projGuardRowsAt e acc (decE r)).run a = .ok (y, a') ∧
+      CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+      (spTop m).toNat ≤ (spTop m').toNat ∧
+      (∀ w : Word, w.toNat < (spTop m).toNat → spW m' w = spW m w) ∧ PgGoRes ro m' rr y := by
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pgraW_spec p hP.at' n _ i co np r ro) hc
+  rw [hs'] at hW
+  clear hc hs'
+  rcases n with _ | n
+  · cases hW
+  have hsp := hS.spn
+  simp only [pgraW] at hW
+  by_cases gw : np + i < np
+  · rw [ite_eq_left gw] at hW; cases hW
+  rw [ite_eq_right gw] at hW
+  have hni : np.toNat + i.toNat < 2 ^ 64 := by
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at gw
+    have := np.toNat_lt; have := i.toNat_lt
+    rcases Nat.lt_or_ge (np.toNat + i.toNat) (2 ^ 64) with hh | hh
+    · exact hh
+    · exfalso
+      rw [Nat.mod_eq_sub_mod hh, Nat.mod_eq_of_lt (by omega)] at gw
+      omega
+  have hni' : (np + i).toNat = np.toNat + i.toNat := by rw [UInt64.toNat_add]; omega
+  rcases c1 : callW p n "proj_guard_fast" [i, 0, r] m with _ | ⟨r1, m1⟩
+  · rw [c1] at hW; cases hW
+  rw [c1] at hW
+  simp only [pgraW.k_proj_guard_fast] at hW
+  obtain ⟨y1, a1, hrun1, hS1, hK1, hres1⟩ := pgFast_okC hP.toPgGoProg n m m1 a M i 0 r r1 c1 hS hr
+    (by simp; omega)
+  have hsl1 : SpineR m1 co np acc := hsl.keep hK1.size hK1.below hco hsp
+  have ht1 : spTop m1 = spTop m := hK1.top
+  cases y1 with
+  | some dom =>
+    obtain ⟨g1, hdw, hdom⟩ := hres1
+    rw [ite_eq_left (by rw [g1]; decide)] at hW
+    rcases c2 : callW p n "inst_list" [r1.tail.headD 0, co, np, i] m1 with _ | ⟨r2, m2⟩
+    · rw [c2] at hW; cases hW
+    rw [c2] at hW
+    simp only [pgraW.k_inst_list] at hW
+    rw [callW_opfP hP.opf] at c2
+    obtain ⟨a2, M2, hrun2, hS2, hK2, hspn2, htop2, hd2⟩ := opfIl_okC hS1 hsl1 (by rw [ht1]; exact hco) hdw c2
+    rcases c3 : callW p n "proj_guard_row" [ro, 0, np + i, r2.headD 0] m2 with _ | ⟨r3, m3⟩
+    · rw [c3] at hW; cases hW
+    rw [c3] at hW
+    simp only [pgraW.k_proj_guard_row] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+      (pgRowW_spec p hP.row n _ ro 0 (np + i) (r2.headD 0)) c3
+    rw [hs3] at hW3
+    have ht2 : spTop m2 = ro := by simp only [spTop] at ht1 hro ⊢; rw [htop2, ht1, hro]
+    have hsz2 : (m2.arr64 SPN).size = (m.arr64 SPN).size := by rw [hspn2, hK1.size]
+    have hsp2 : ∀ w, spW m2 w = spW m1 w := fun w => by simp only [spW, hspn2]
+    obtain ⟨hS3, rfl, -, htop3, hsz3, hb3, h1, h2, hk3⟩ := pgRow_okC hS2 (by simp; rw [← hro] at *; omega) hW3
+    have hrows := RowsAt.push (RowsAt.empty m2 ro) (rn := 0) rfl (by simp; rw [← hro]; omega) h1 h2 hd2 hk3
+    refine ⟨some ((#[] : Array (Nat × EIdx)).push (e.numParams + e.idx, decE (r2.headD 0))), _, M2, ?_, hS3,
+      hK2, by rw [hsz3, hsz2], by rw [htop3]; rw [← hro]; omega,
+      fun w hw => by rw [hk3 w (by simp; rw [← hro]; exact hw), hsp2, hK1.below w (by rw [UInt64.lt_iff_toNat_lt]; exact hw)],
+      rfl, by simp, ?_, by simp [htop3]⟩
+    · simp only [UInt64.toNat_zero, ← he] at hrun1
+      rw [hdom, ← he] at hrun2
+      simp only [projGuardRowsAt, StateT.run_bind, hrun1, except_ok_bind, hrun2]
+      rfl
+    · rw [hni', ← hnp, ← he] at hrows; exact hrows
+  | none =>
+    have g1 : r1.headD 0 = 0 := hres1
+    rw [ite_eq_right (by rw [g1]; decide)] at hW
+    rcases c2 : callW p n "inst_list" [r, co, np, 0] m1 with _ | ⟨r2, m2⟩
+    · rw [c2] at hW; cases hW
+    rw [c2] at hW
+    simp only [pgraW.k_inst_list_2] at hW
+    rw [callW_opfP hP.opf] at c2
+    obtain ⟨a2, M2, hrun2, hS2, hK2, hspn2, htop2, hd2⟩ := opfIl_okC hS1 hsl1 (by rw [ht1]; exact hco) hr c2
+    rcases c3 : callW p n "proj_guard_rows_go" [i, np, r2.headD 0, ro, 0] m2 with _ | ⟨r3, m3⟩
+    · rw [c3] at hW; cases hW
+    rw [c3] at hW
+    simp only [pgraW.k_proj_guard_rows_go] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have ht2 : spTop m2 = ro := by simp only [spTop] at ht1 hro ⊢; rw [htop2, ht1, hro]
+    have hsz2 : (m2.arr64 SPN).size = (m.arr64 SPN).size := by rw [hspn2, hK1.size]
+    have hsp2 : ∀ w, spW m2 w = spW m1 w := fun w => by simp only [spW, hspn2]
+    obtain ⟨z, a3, M3, hrun3, hS3, hK3, hsz3, ht3, hb3, hres3⟩ := pgGo_okC hP.toPgGoProg n m2 m3 a2 M2
+      i np _ ro 0 #[] r3 c3 hS2 hd2 (RowsAt.empty m2 ro) rfl (by rw [ht2]; simp)
+      (by rw [ht2, hsz2, ← hro]; exact htb) (by omega)
+    refine ⟨z, a3, M3, ?_, hS3, hK2.trans hK3, by rw [hsz3, hsz2], by rw [hro, ← ht2]; exact ht3,
+      fun w hw => by rw [hb3 w (by rw [ht2, ← hro]; exact hw), hsp2, hK1.below w (by rw [UInt64.lt_iff_toNat_lt]; exact hw)],
+      by cases z <;> simpa [PgGoRes] using hres3⟩
+    simp only [UInt64.toNat_zero, ← he] at hrun1
+    rw [← he, ← hnp] at hrun3
+    simp only [projGuardRowsAt, StateT.run_bind, hrun1, except_ok_bind, UInt64.toNat_zero] at hrun2 ⊢
+    rw [hrun2]
+    simp only [except_ok_bind]
+    exact hrun3
 
 end
 

@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.ProjGuardRowsOpf
+public import ConAgua.Arena.ProjGuardRowsGo
 public import ConAgua.Arena.ProjGuardRef
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -27,14 +27,6 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 open L.Ind (IW)
-
-/-- **`proj_guard_rows_at`'s word model** (`struct_used_later`, `fvar_type_d` lifted). -/
-l_model pgraW_spec (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
-  fns [hf ↦ pgraW list]
-  specs [callW_spec p n "proj_guard_fast", callW_spec p n "inst_list", callW_spec p n "proj_guard_row",
-    callW_spec p n "proj_guard_rows_go"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
 /-- **`proj_guard_rows`' word model** (its callees lifted). -/
 l_model pgrW_spec (p : Prog) (hf : p.lookup "proj_guard_rows" = some projGuardRowsL)
