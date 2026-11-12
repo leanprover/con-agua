@@ -507,14 +507,14 @@ def projGuardFastL : FunDecl := lfn (k, j, h) locals (g, x, y, z, b, ok, r) {
 substitution `SPN[co ‥ co + np)`, the raw residual `r`), at `ro` on the stack: the fast case
 (`proj_guard_fast`), its one domain substituted (`inst_list` at depth `i`), the row
 `(np + i, ·)`; else the substituted residual stepped (`proj_guard_rows_go`). `(1, rn)` or
-`(0, 0)`. -/
+`(0, 0)`. Aborts where `np + i` wraps (the rows' depths run up to it). -/
 -- con-ron: ConRon/Arena/Core.lean:3066-3077 ConRon.Arena.projGuardRowsAt
 @[no_expose, l_impl ConRon.Arena.projGuardRowsAt]
 def projGuardRowsAtL : FunDecl := lfn (i, co, np, r, ro) locals (f, dom, d, n1, r2, ok, rn) {
+  if np + i < np { abort };
   (f, dom) := call proj_guard_fast(i, 0, r);
   if f != 0 {
     d := call inst_list(dom, co, np, i);
-    if np + i < np { abort };
     n1 := call proj_guard_row(ro, 0, np + i, d);
     return (1, n1)
   };
