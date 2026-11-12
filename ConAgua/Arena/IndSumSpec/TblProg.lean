@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndRealCrF
-public import ConAgua.Arena.IndRealIlpP
+public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -90,7 +90,10 @@ structure TblProg (p : Prog) : Prop where
   htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
   hrec : RecProg p
   hi1 : I1lF p
-  hipal : IpalF p
+  hsn : p.lookup "sl_snoc" = some slSnoc
+  hst : StripProg p
+  hecp : p.lookup "er_copy" = some erCopy
+  heti : p.lookup "er_to_iw" = some erToIw
   hcr : CrfF p
   hft : FindTableProg p
 

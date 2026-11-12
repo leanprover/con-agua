@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.RecTW
+public import ConAgua.Arena.IndPartsSpec.ReadCode
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -127,17 +128,22 @@ def encONN : Option (Nat × Nat) → List Word
   | none => [0, 0, 0]
   | some (p, q) => [1, UInt64.ofNat p, UInt64.ofNat q]
 
-/-- The Nat-level tail of `blockCounts?` past the sort test. -/
-def bcTail (nPd k nC nR : Nat) : Option (Nat × Nat) → Option (Nat × Nat)
-  | none => none
+/-- `blockCounts`' answer as `block_counts`' words `(e, a, b)`. -/
+def ExcNN : Except CheckError (Nat × Nat) → List Word → Prop
+  | .ok (p, q), r => r = [0, UInt64.ofNat p, UInt64.ofNat q]
+  | .error ce, r => r = [r.headD 0, 0, 0] ∧ RCode (r.headD 0) ∧ ∃ s, ce = .invalid s
+
+/-- The Nat-level tail of `blockCounts` past the sort test. -/
+def bcTail (nPd k nC nR : Nat) : Option (Nat × Nat) → Except CheckError (Nat × Nat)
+  | none => .error (.invalid "no recursor of the block eliminates the inductive type")
   | some (mI, rP) =>
-    if rP < nC + k || mI < rP then none
-    else if rP - (nC + k) == nPd then some (nPd, mI - rP)
-    else if k < nR && nPd + nR + nC ≤ rP then some (nPd, mI - rP)
-    else none
+    if rP < nC + k || mI < rP then .error recCountsError
+    else if rP - (nC + k) == nPd then .ok (nPd, mI - rP)
+    else if k < nR && nPd + nR + nC ≤ rP then .ok (nPd, mI - rP)
+    else .error recCountsError
 
 theorem bcTail_snd {nPd k nC nR p q : Nat} {rr : Option (Nat × Nat)}
-    (e : bcTail nPd k nC nR rr = some (p, q)) (hb : ∀ x y, rr = some (x, y) → x < 2 ^ 64) :
+    (e : bcTail nPd k nC nR rr = .ok (p, q)) (hb : ∀ x y, rr = some (x, y) → x < 2 ^ 64) :
     q < 2 ^ 64 := by
   cases rr with
   | none => cases e
@@ -146,17 +152,18 @@ theorem bcTail_snd {nPd k nC nR p q : Nat} {rr : Option (Nat × Nat)}
     have := hb x y rfl
     simp only [bcTail] at e
     repeat' (split at e)
-    all_goals (try simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at e)
+    all_goals (try simp only [Except.ok.injEq, Prod.mk.injEq, reduceCtorEq] at e)
     all_goals omega
 
 theorem bcTail_run (nPd k nC nR : Nat) (rr : Option (Nat × Nat)) (a : AState) :
     (match rr with
-      | none => (pure none : AM (Option (Nat × Nat)))
+      | none => (pure (.error (.invalid "no recursor of the block eliminates the inductive type")) :
+          AM (Except CheckError (Nat × Nat)))
       | some (mI, rP) =>
-        if rP < nC + k || mI < rP then pure none
-        else if rP - (nC + k) == nPd then pure (some (nPd, mI - rP))
-        else if k < nR && nPd + nR + nC ≤ rP then pure (some (nPd, mI - rP))
-        else pure none).run a = .ok (bcTail nPd k nC nR rr, a) := by
+        if rP < nC + k || mI < rP then pure (.error recCountsError)
+        else if rP - (nC + k) == nPd then pure (.ok (nPd, mI - rP))
+        else if k < nR && nPd + nR + nC ≤ rP then pure (.ok (nPd, mI - rP))
+        else pure (.error recCountsError)).run a = .ok (bcTail nPd k nC nR rr, a) := by
   cases rr with
   | none => rfl
   | some q =>
@@ -165,13 +172,28 @@ theorem bcTail_run (nPd k nC nR : Nat) (rr : Option (Nat × Nat)) (a : AState) :
     repeat' split
     all_goals rfl
 
+theorem excNN_err {r : List Word} {s : String} (hr : r = [r.headD 0, 0, 0]) (hc : RCode (r.headD 0)) :
+    ExcNN (.error (.invalid s)) r :=
+  ⟨hr, hc, s, rfl⟩
+
+theorem excNN_ok {p q : Nat} : ExcNN (.ok (p, q)) [0, UInt64.ofNat p, UInt64.ofNat q] := rfl
+
+theorem excNN_three {x : Except CheckError (Nat × Nat)} {r : List Word} (h : ExcNN x r) :
+    ExcNN x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] := by
+  rcases x with ce | ⟨p, q⟩
+  · obtain ⟨hr, hc⟩ := h; rw [hr]; exact ⟨rfl, hc⟩
+  · have hr : r = _ := h; subst hr; rfl
+
 theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
-    (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32) :
-    bcPure m nPd k nC nR bl g rOk rMI rRP = some (encONN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
-      (if rOk = 0 then none else some (rMI.toNat, rRP.toNat)))) := by
+    (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32) {r : List Word}
+    (h : bcPure m nPd k nC nR bl g rOk rMI rRP = some r) :
+    ExcNN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
+      (if rOk = 0 then none else some (rMI.toNat, rRP.toNat))) r := by
+  have rc := rcode_reader
   by_cases h0 : rOk = 0
-  · rw [bcPure.arm3 m _ _ _ _ _ _ _ _ _ hg h0, ite_eq_left h0]; rfl
+  · rw [bcPure.arm3 m _ _ _ _ _ _ _ _ _ hg h0] at h; obtain rfl := Option.some.inj h
+    rw [ite_eq_left h0]; exact excNN_err rfl rc.2.1
   rw [ite_eq_right h0]
   simp only [bcTail]
   have e1 : (nC + k).toNat = nC.toNat + k.toNat := by
@@ -179,12 +201,12 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
   have e2 : (nPd + nR + nC).toNat = nPd.toNat + nR.toNat + nC.toNat := by
     rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
   by_cases c1 : rRP < nC + k ∨ rMI < rRP
-  · rw [bcPure.arm4 m _ _ _ _ _ _ _ _ _ hg h0 c1]
+  · rw [bcPure.arm4 m _ _ _ _ _ _ _ _ _ hg h0 c1] at h; obtain rfl := Option.some.inj h
     have : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = true := by
       rcases c1 with c | c
       · have := UInt64.lt_iff_toNat_lt.mp c; rw [e1] at this; simp [this]
       · have := UInt64.lt_iff_toNat_lt.mp c; simp [this]
-    rw [ite_eq_left this]; rfl
+    rw [ite_eq_left this]; exact excNN_err rfl rc.2.2.1
   · have c1' : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = false := by
       have a1 : ¬ rRP < nC + k := fun h => c1 (Or.inl h)
       have a2 : ¬ rMI < rRP := fun h => c1 (Or.inr h)
@@ -206,25 +228,27 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
       apply UInt64.toNat_inj.mp
       rw [UInt64.toNat_sub_of_le _ _ hrm, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
     by_cases c2 : rRP - (nC + k) = nPd
-    · rw [bcPure.arm5 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2]
+    · rw [bcPure.arm5 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2] at h; obtain rfl := Option.some.inj h
       have : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = true := by
         rw [← hsub, c2]; simp
       rw [ite_eq_left this]
-      simp only [encONN, hsub2, L.ofNat_toNat]
+      have := excNN_ok (p := nPd.toNat) (q := rMI.toNat - rRP.toNat)
+      rwa [hsub2, L.ofNat_toNat] at this
     · have c2' : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = false := by
         rw [← hsub]; simp only [beq_eq_false_iff_ne, ne_eq]
         exact fun h => c2 (UInt64.toNat_inj.mp h)
       rw [ite_eq_right (by simp [c2'])]
       by_cases c3 : k < nR ∧ nPd + nR + nC ≤ rRP
-      · rw [bcPure.arm6 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+      · rw [bcPure.arm6 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3] at h; obtain rfl := Option.some.inj h
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = true := by
           have a := UInt64.lt_iff_toNat_lt.mp c3.1
           have b := UInt64.le_iff_toNat_le.mp c3.2
           rw [e2] at b
           simp [a, b]
         rw [ite_eq_left this]
-        simp only [encONN, hsub2, L.ofNat_toNat]
-      · rw [bcPure.arm7 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+        have := excNN_ok (p := nPd.toNat) (q := rMI.toNat - rRP.toNat)
+        rwa [hsub2, L.ofNat_toNat] at this
+      · rw [bcPure.arm7 m _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3] at h; obtain rfl := Option.some.inj h
         have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = false := by
           by_cases a : k < nR
           · have b : ¬ nPd + nR + nC ≤ rRP := fun h => c3 ⟨a, h⟩
@@ -233,11 +257,7 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
             simp [b']
           · have a' := (not_congr UInt64.lt_iff_toNat_lt).mp a
             simp [a']
-        rw [ite_eq_right (by simp [this])]; rfl
-
-theorem encONN_three (x : Option (Nat × Nat)) :
-    [(encONN x).headD 0, (encONN x).tail.headD 0, (encONN x).tail.tail.headD 0] = encONN x := by
-  rcases x with _ | ⟨_, _⟩ <;> rfl
+        rw [ite_eq_right (by simp [this])]; exact excNN_err rfl rc.2.2.1
 
 theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP : Word)
     (r : List Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
@@ -247,9 +267,10 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
-    ∃ x, (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
-      r = encONN x ∧ (∀ p q, x = some (p, q) → q < 2 ^ 64) ∧ IWGrow m m' ∧
+    ∃ x, (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
+      ExcNN x r ∧ (∀ p q, x = .ok (p, q) → q < 2 ^ 64) ∧ IWGrow m m' ∧
       MemFrame [IW] [200] m m' := by
+  have rc := rcode_reader
   cases n with
   | zero => simp [bcW] at h
   | succ n =>
@@ -270,29 +291,31 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     by_cases hl : r1.headD 0 < nPd
     · have hlt : ¬ nPd.toNat ≤ bs.length := by
         have := UInt64.lt_iff_toNat_lt.mp hl; omega
-      refine ⟨none, ?_, ?_, by simp, hg, hf⟩
-      · unfold ConRon.Arena.blockCounts?
+      refine ⟨.error (.invalid "inductive type declares more parameters than its type has binders"),
+        ?_, ?_, by simp, hg, hf⟩
+      · unfold ConRon.Arena.blockCounts
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_right hlt]; rfl
-      · rw [bcPure.arm1 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0; rfl
+      · rw [bcPure.arm1 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0
+        exact excNN_err rfl rc.1
     · have hge : nPd.toNat ≤ bs.length := by
         have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
-      refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, fun p q e => by
-        simp only [Option.some.injEq, Prod.mk.injEq] at e; have := (r1.headD 0).toNat_lt; omega, hg, hf⟩
-      · unfold ConRon.Arena.blockCounts?
+      refine ⟨.ok (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, fun p q e => by
+        simp only [Except.ok.injEq, Prod.mk.injEq] at e; have := (r1.headD 0).toNat_lt; omega, hg, hf⟩
+      · unfold ConRon.Arena.blockCounts
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
         rw [ite_eq_left hge]; rfl
       · rw [bcPure.arm2 _ _ _ _ _ _ _ _ _ _ hs hl] at hr0; obtain rfl := Option.some.inj hr0
-        simp only [encONN, List.headD_cons, List.tail_cons]
         have e1 : UInt64.ofNat nPd.toNat = nPd := L.ofNat_toNat nPd
         have e2 : UInt64.ofNat (bs.length - nPd.toNat) = r1.headD 0 - nPd := by
           apply UInt64.toNat_inj.mp
           rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
           have := (r1.headD 0).toNat_lt
           rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; omega
-        rw [e1, e2]
+        have := excNN_ok (p := nPd.toNat) (q := bs.length - nPd.toNat)
+        rwa [e1, e2] at this
   · have hns : ∀ u, v ≠ ENodeView.sort u := fun u hu => hs (hiff.mpr ⟨u, hu⟩)
     refine ⟨bcTail nPd.toNat k.toNat nC.toNat nR.toNat rr, ?_, ?_, fun p q e => ?_, hg, hf⟩
     rotate_left 2
@@ -301,14 +324,13 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       · cases e
       · refine bcTail_snd e fun x y hxy => ?_
         simp only [Option.some.injEq, Prod.mk.injEq] at hxy; omega
-    · unfold ConRon.Arena.blockCounts?
+    · unfold ConRon.Arena.blockCounts
       rw [← hty]
       simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
       cases v with
       | sort u => exact absurd rfl (hns u)
       | _ => exact bcTail_run _ _ _ _ rr a
-    · rw [bcPure_nonsort _ _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6, ← hrr] at hr0
-      obtain rfl := Option.some.inj hr0; exact encONN_three _
+    · rw [hrr]; exact excNN_three (bcPure_nonsort _ _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6 hr0)
 
 /-- **`pi_binders` is `piBinders`**: under `ArenaR`, a returning run is a successful twin run
 (no state change) whose binders are the new `IW` slice and whose body is the third result. -/
@@ -353,8 +375,9 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hr, by rw [hst]; exact hS', hg⟩
 
-/-- **`block_counts` refines `blockCounts?`** (the recursor datum `r` as `(rOk, rMI, rRP)`). -/
-@[refines ConRon.Arena.blockCounts?]
+/-- **`block_counts` refines `blockCounts`** (the recursor datum `r` as `(rOk, rMI, rRP)`; the
+answer's reason first, `ExcNN`). -/
+@[refines ConRon.Arena.blockCounts]
 theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
     (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
@@ -369,9 +392,9 @@ theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts" [nPd, k, nC, nR, cvT, rOk, rMI, rRP]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ ∧
-      AM.st (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ = a₀ ∧
-      r = encONN (AM.res (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀) ∧
+      AM.ok (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ ∧
+      AM.st (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ = a₀ ∧
+      ExcNN (AM.res (ConRon.Arena.blockCounts nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀) r ∧
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockCounts_spec p ha hc hv hs hpb hh hpp hp n s₀ nPd k nC nR cvT rOk rMI rRP) ?_
   rintro r s' ⟨hl, hm⟩

@@ -89,59 +89,115 @@ l_model sectE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_tail" = some struc
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model secgE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-  fns [hf ↦ secgE list]
-  specs [callW_spec p n "er_slice_eq", callW_spec p n "reserved_contains_w", callW_spec p n "ls_node", callW_spec p n "tower_slots_all", sectE_spec p ht n]
+l_model secgE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.setGo ↦ secgE list]
+  specs [callW_spec p n "er_slice_eq", callW_spec p n "ls_node", sectE_spec p hp.setTail n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model secwtbE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-  fns [hf ↦ secwtbE list]
-  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", secgE_spec p hg ht n]
+l_model secwtbE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.setWtb ↦ secwtbE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "find_table", callW_spec p n "get_app_args", secgE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model secwE_spec (p : Prog) (hf : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-  fns [hf ↦ secwE list]
-  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", secwtbE_spec p hb hg ht n]
+l_model secwE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.setWith ↦ secwE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", secwtbE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model secE_spec (p : Prog) (hf : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL) (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL) (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-  fns [hf ↦ secE list]
-  specs [callW_spec p n "eta_ctor_shape", secwE_spec p hw hb hg ht n]
+l_model ecpfE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ecpFam ↦ ecpfE list]
+  specs [callW_spec p n "pi_result", callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "find_table"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model sutE_spec (p : Prog) (hf : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ sutE list]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-l_model suhE_spec (p : Prog) (hf : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (ht : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ suhE list]
-  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", callW_spec p n "ls_node", callW_spec p n "reserved_contains_w", sutE_spec p ht n]
+l_model ecpE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ecp ↦ ecpE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "get_app_args", ecpfE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model sucE_spec (p : Prog) (hf : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (ht : p.lookup "struct_unit_tail" = some structUnitTailL)
-  fns [hf ↦ sucE list]
-  specs [suhE_spec p hh ht n]
+l_model sefaE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.sefAt ↦ sefaE list]
+  specs [secwE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model sefE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.sef ↦ sefE list]
+  specs [callW_spec p n "eta_ctor_shape", sefaE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model seeE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.see ↦ seeE list]
+  specs [sefE_spec p hp n, callW_spec p n "intern_fvar", callW_spec p n "mk_app", callW_spec p n "inst1"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model secpE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.secp ↦ secpE list]
+  specs [callW_spec p n "io_neutral", seeE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model secE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.setCert ↦ secE list]
+  specs [callW_spec p n "eta_ctor_shape", sefaE_spec p hp n, ecpE_spec p hp n, secpE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model iptE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ipt ↦ iptE list]
+  specs [callW_spec p n "e_view", callW_spec p n "pin_word", callW_spec p n "lvl_eq_c"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model ulsaE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ulShapeAt ↦ ulsaE list]
+  specs [callW_spec p n "env_find", callW_spec p n "inst_lp", callW_spec p n "peel_pis", callW_spec p n "inst_list"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model ulsE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ulShape ↦ ulsE list]
+  specs [callW_spec p n "get_app_fn", callW_spec p n "env_find", callW_spec p n "ls_node", callW_spec p n "find_table", callW_spec p n "get_app_args", ulsaE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- The unit-like recursion, one group: `unit_like_loop`, `unit_like_struct`, `unit_like_fields`. -/
+l_model ulE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.ulLoop ↦ ullE list, hp.ulStruct ↦ ulstE list, hp.ulFields ↦ ulfE list]
+  specs [iptE_spec p hp n, ulsE_spec p hp n, callW_spec p n "intern_fvar", callW_spec p n "inst1"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model sutE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.suTail ↦ sutE list]
+  specs [callW_spec p n "io_neutral"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model sucE_spec (p : Prog) (hp : CertProg p)
+  fns [hp.sunit ↦ sucE list]
+  specs [callW_spec p n "io_neutral", (ulE_spec p hp n).1, sutE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

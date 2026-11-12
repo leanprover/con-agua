@@ -79,7 +79,7 @@ def qaxArmFns : List FnName :=
    "cv_new", "cv_canon_eq", "canon_ctx", "canon_names", "canon_names_go", "intern_nanon",
    "nanon_find", "nanon_push", "intern_nnum", "nnum_find", "nnum_push", "sl_cons", "iw_copy",
    "canon_expr_eq", "e_view", "canon_level_eq", "canon_name_map", "sl_find", "sl_getd",
-   "canon_levels_eq", "view_ls", "ls_node", "pool_copy", "canon_level_list_eq", "install_basis_decls", "install_basis_decl", "check_decl_axiom",
+   "canon_levels_eq", "view_ls", "ls_node", "pool_copy", "canon_level_list_eq", "install_basis_decl", "check_decl_axiom",
    "ci_canon_eq", "ci_canon_defn", "ci_canon_rec", "canon_rules_eq", "std_axiom_ok",
    "std_ax_family", "find_pinned", "trust_compiler_ok", "find_pinned_cv", "of_reduce_ax_ok",
    "of_reduce_op", "of_reduce_pin_a"]

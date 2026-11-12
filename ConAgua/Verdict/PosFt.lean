@@ -158,11 +158,11 @@ theorem rfE_pos {p : Prog} (hcl : CoreStageClosed p) (hP : RfProg p) {k : Nat} {
   split at h
   · cases h
   rename_i r3 m3 h3
-  obtain ⟨s3, hs3, -, hc3⟩ := triple_of_callW (closeTelescope_spec p hP.derB hP.forallFind hP.forallPush
-    hP.internForall hP.mkForall hP.closeTele hP.ab k ⟨m2, Locals.init []⟩ _ _ _ _) (liftE_ok h3)
+  obtain ⟨s3, hs3, -, hc3⟩ := triple_of_callW (closeTelescope_spec p hP.closeF k ⟨m2, Locals.init []⟩ [_, _, _, _])
+    (liftE_ok h3)
   simp only at hc3
   rw [hs3] at hc3
-  have hP3 := hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hc3)
+  have hP3 := hP2.fr (closeF_mfr hc3)
   obtain ⟨q, m4⟩ := (r, m')
   exact hP3.fr (cvNewW_mfr (liftE_ok h))
 
@@ -170,7 +170,7 @@ theorem rfE_pos {p : Prog} (hcl : CoreStageClosed p) (hP : RfProg p) {k : Nat} {
 theorem decCaps_counts {m : Mem} {q : Word} {caps : IIndCaps} (h : decCaps (erecP m) q.toNat = some caps) :
     (erRd m (q + 12)).toNat = caps.nparams ∧ (erRd m (q + 6)).toNat = caps.nIdx := by
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, ni, hni, _, _, np, hnp, _, _, rfl⟩ := h
+  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, rfl⟩ := h
   simp only [nat?, Option.map_eq_some_iff] at hni hnp
   obtain ⟨w1, hw1, rfl⟩ := hnp
   obtain ⟨w2, hw2, rfl⟩ := hni

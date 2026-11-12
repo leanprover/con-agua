@@ -82,7 +82,7 @@ def TwinPrefix (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc
     (ipins : List INatOpPinSet) (sE : AState) : Prop :=
   internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
     builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
-    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE)
+    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE)
 
 /-- The twin's stages before `internAllPins` ran, from `AState.init EStore.empty`. -/
 def TwinPrefix4 (b : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD)
@@ -127,7 +127,7 @@ to). -/
 def PinsStage : Prop := ∀ b pb sz sA pre sB rc sC ds a, InputsOK b pb sz →
   TwinPrefix4 b sA pre sB rc sC ds a →
   RelSpec p "intern_all_pins" ((ρ b pb sz).R6 · ds a) fun _ m =>
-    ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
+    ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
 
 end stages
 
@@ -159,7 +159,7 @@ def Q6 (m : Mem) : Prop :=
 def Q7 (m : Mem) : Prop :=
   ∃ sA pre sB rc sC ds sD pins ipins sE, internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
     builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [b] sB = .ok (.ok rc, sC) ∧
-    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE) ∧
+    preparePrelude pre rc.decls sC = .ok (ds, sD) ∧ internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     ρ.R7 m ds ipins sE
 
 end twinPrefix
@@ -214,7 +214,7 @@ theorem stageSpecs_of_rels {p : Prog} (ρ : ∀ b pb sz, PipeRels b pb sz)
           Array IDeclaration × AState =>
           fun m => TwinPrefix4 b x.1 x.2.1 x.2.2.1 x.2.2.2.1 x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2 ∧
             r.R6 m x.2.2.2.2.2.1 x.2.2.2.2.2.2)
-      (fun x _ m => ∃ pins ipins a', internAllPins pins x.2.2.2.2.2.2 = .ok (ipins, a') ∧
+      (fun x _ m => ∃ pins ipins a', internAllPins pins maxNatSizeDefault x.2.2.2.2.2.2 = .ok (ipins, a') ∧
         r.R7 m x.2.2.2.2.2.1 ipins a')
       (fun x n hn s₀ hP => h7 b pb sz _ _ _ _ _ _ _ hin hP.1 n hn s₀ hP.2)
       fun m ⟨sA, pre, sB, rc, sC, ds, sD, hA, hB, hC, hD, hR⟩ => ⟨(sA, pre, sB, rc, sC, ds, sD),

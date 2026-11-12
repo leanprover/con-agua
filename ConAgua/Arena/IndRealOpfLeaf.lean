@@ -97,9 +97,9 @@ theorem opfTopK_specV (p : Prog) (hp : p.lookup "open_pis_at_fvars_f" = some L.S
   simp only [callFn, L.Stubs.openPisAtFvarsFL]
   sym only [lang_grind, arena_grind] =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, callW_spec p k "opf_go",
-      callW_spec p k "opa_go",
+      callW_spec p k "inst_list",
       iwAlloc_specW p ha k, s2i_spec p hs k] <;>
-    finish (gen := 20) [opfTopK, opfK2, opfK3, opfTail_some, ntBW, Locals.init]
+    finish (gen := 20) [opfTopK, opfK2, opfTail_some, ntBW, Locals.init]
 
 /-! ## The pool only grows -/
 
@@ -140,22 +140,15 @@ theorem opfTopK_grow {p : Prog} (hcl : closedA p opgA opgC opgFns = true) {k : N
   unfold opfK2 at h
   by_cases hz : r1.headD 0 = 0
   · rw [ite_eq_left hz] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hI2, hg2⟩ := iwKeep_ctl (c := 136) (rdW (m.arr64 CTL) 136) (by decide) hI1
+    exact ⟨hI2, hg1.trans hg2⟩
+  · rw [ite_eq_right hz] at h
     obtain ⟨r2, m2, h2, h⟩ := kSome_inv (K := (ntBW · _)) h rfl (fun _ _ => rfl)
     simp only [bW_some] at h
-    obtain ⟨hI3, hg3⟩ := iwKeep (run_memFrame hcl (f := "opa_go") (by decide) (run_of_callW h2)).1 opgA_not opgC_not hI2
-    unfold opfK3 at h
-    by_cases hz2 : r2.headD 0 = 0
-    · rw [ite_eq_left hz2] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      obtain ⟨hI4, hg4⟩ := iwKeep_ctl (c := 136) (rdW (m.arr64 CTL) 136) (by decide) hI3
-      exact ⟨hI4, ((hg1.trans hg2).trans hg3).trans hg4⟩
-    · rw [ite_eq_right hz2] at h
-      obtain ⟨hI4, hg4⟩ := opfTail_grow h hI3
-      exact ⟨hI4, ((hg1.trans hg2).trans hg3).trans hg4⟩
-  · rw [ite_eq_right hz] at h
-    obtain ⟨hI2, hg2⟩ := opfTail_grow h hI1
-    exact ⟨hI2, hg1.trans hg2⟩
+    obtain ⟨hI3, hg3⟩ := iwKeep (run_memFrame hcl (f := "inst_list") (by decide) (run_of_callW h2)).1 opgA_not opgC_not hI1
+    obtain ⟨hI4, hg4⟩ := opfTail_grow h hI3
+    exact ⟨hI4, (hg1.trans hg3).trans hg4⟩
 
 /-- **`open_pis_at_fvars_f`'s model keeps `IWOK` and only grows the pools**, at any arguments. -/
 theorem opfF_grow {m m' : Mem} {args r : List Word} (h : opfF m args = some (r, m')) (hI : IWOK m) :

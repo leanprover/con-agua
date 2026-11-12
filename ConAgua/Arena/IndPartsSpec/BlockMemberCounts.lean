@@ -22,11 +22,11 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`block_member_counts` refines `blockMemberCounts?`** from member `0` (through
+/-- **`block_member_counts` refines `blockMemberCounts`** from member `0` (through
 `rec_target_of`'s and `block_counts`' stubs; the counts and the recursor records' words past
 `2^32` a capacity abort): the formers a slice of constants, the recursors the split's records,
-both decoded below the tops; the result a number slice decoded below the tops (`NsR`). -/
-@[refines ConRon.Arena.blockMemberCounts?]
+both decoded below the tops; the result a number slice decoded below the tops, or the reason (`NsR`). -/
+@[refines ConRon.Arena.blockMemberCounts]
 theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
     (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule))
@@ -35,9 +35,9 @@ theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s
     (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_member_counts" [nPd, k, nC, no, nl, ro, rl, cto, ctl]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀ ∧
-      NsR (AM.res (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) r s'.mem ∧
-      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) ∧
+      AM.ok (ConRon.Arena.blockMemberCounts nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀ ∧
+      NsR (AM.res (ConRon.Arena.blockMemberCounts nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) r s'.mem ∧
+      StageR vis fe s'.mem (AM.st (ConRon.Arena.blockMemberCounts nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (bmc_spec p hP n s₀ nPd k nC no nl ro rl cto ctl) ?_
   rintro r s' ⟨hl, hm⟩

@@ -192,3 +192,19 @@ R_USE_OF_THE_SORRYAX_IN_REC_TYPE	decline	use of the sorryAx axiom in the type of
 R_USE_OF_THE_SORRYAX_IN_REC_RULE	decline	use of the sorryAx axiom in the recursor's rule
 R_UNKNOWN_CONSTANT_IN_REC_TYPE	reject	unknown constant in the type of the recursor
 R_UNKNOWN_CONSTANT_IN_REC_RULE	reject	unknown constant in the recursor's rule
+R_CONSTRUCTOR_DECLARES_ANOTHER	reject	constructor declares another parameter count than the block
+R_CONSTRUCTOR_DECLARES_OTHER	reject	constructor declares other universe parameters than its type
+R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE	reject	constructor declares other universe parameters than the block's inductive types
+R_INDUCTIVE_BLOCK_CARRIES	reject	inductive block carries no recursor records; the input must carry the recursors of every inductive block
+R_INDUCTIVE_BLOCK_DECLARES	reject	inductive block declares no inductive type
+R_INDUCTIVE_BLOCK_ITS	reject	inductive block: its records are not the inductive types, then the constructors, then the recursors
+R_INDUCTIVE_TYPE_DECLARES	reject	inductive type declares more parameters than its type has binders
+R_INDUCTIVE_TYPE_DECLARES_OTHER	reject	inductive type declares other universe parameters than the block's first type
+R_NO_RECURSOR_OF	reject	no recursor of the block eliminates the inductive type
+R_RESERVED_BASIS_NAME_IN	reject	reserved basis name in the block of
+R_TARGET_REC_A_RECURSOR	reject	target rec: a recursor is named for a literal guard's slot or a certified Nat operation
+R_THE_ARGUMENT_COUNTS	reject	the argument counts of a recursor do not fit the block
+R_THE_KERNEL_REFUSED	reject	the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size
+R_THE_KERNEL_REFUSED_TO	reject	the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer
+R_THE_KERNEL_REFUSED_TO_EVALUATE	reject	the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size
+R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT	reject	the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer

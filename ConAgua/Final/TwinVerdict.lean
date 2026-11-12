@@ -55,7 +55,7 @@ def twinRun (pins : List NatOpPinSet) (chunks : List ByteArray) :
   thenV builtinPreludeE fun pre =>
   thenV (parseChunks chunks) fun r =>
   preparePrelude pre r.decls >>= fun ds =>
-  internAllPins pins >>= fun ipins =>
+  internAllPins pins maxNatSizeDefault >>= fun ipins =>
   checkStream .verified ipins ds
 
 /-- **The twin rejects (`c = 1`) or declines (`c = 2`) `chunks`**: at some pin list, its pipeline
@@ -79,7 +79,7 @@ theorem twinRun_of_accepts {chunks : List ByteArray} (h : TwinAccepts chunks) :
   simp only [twinRun, StateT.run_bind, show (internReservedPins).run _ = _ from hA, except_ok_bind]
   rw [thenV_run_ok (x := builtinPreludeE) hB, thenV_run_ok (x := parseChunks chunks) hC]
   simp only [StateT.run_bind, show (preparePrelude pre r.decls).run sC = _ from hD, except_ok_bind,
-    show (internAllPins pins).run sD = _ from hE]
+    show (internAllPins pins maxNatSizeDefault).run sD = _ from hE]
   show checkStream .verified ipins ds sE = _
   simp only [checkStream, hI, hP]
 
@@ -158,7 +158,7 @@ theorem TwinVerdict.index {pins : List NatOpPinSet} {sA sB sC sD sE : AState} {p
     (hB : builtinPreludeE sA = .ok (.ok pre, sB))
     (hC : parseChunks chunks sB = .ok (.ok r, sC))
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
     (h : TwinFailsV (buildIndex ds) sE c) :
     TwinVerdict chunks c :=
   ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
@@ -174,7 +174,7 @@ theorem TwinVerdict.jobs {pins : List NatOpPinSet} {sA sB sC sD sE sF : AState}
     (hB : builtinPreludeE sA = .ok (.ok pre, sB))
     (hC : parseChunks chunks sB = .ok (.ok r, sC))
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
     (hF : buildIndex ds sE = .ok (.ok I, sF))
     (h : TwinFailsV (checkJobList .verified ipins I ds (List.range ds.size)) sF.worker c) :
     TwinVerdict chunks c :=
@@ -197,7 +197,7 @@ def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
     builtinPreludeE sA = .ok (.ok pre, sB) ∧
     parseChunks chunks sB = .ok (.ok r, sC) ∧
     preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    internAllPins pins sD = .ok (ipins, sE) ∧
+    internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     buildIndex ds sE = .ok (.ok I, sF) ∧
     (∀ t ∈ w, t < ds.size) ∧
     TwinFailsV (checkJobList .verified ipins I ds w) sF.worker c

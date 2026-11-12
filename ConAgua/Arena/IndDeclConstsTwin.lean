@@ -2,6 +2,8 @@ module
 
 public import ConRon.Bridge.Checker.Install
 import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Checker.Basis
+import ConRon.Bridge.Inductives.Install
 
 @[expose] public section
 
@@ -67,29 +69,18 @@ theorem declConstants_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclar
     simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
     obtain ⟨b, hb, rfl⟩ := hd
     simp only [ConRon.Arena.declConstants] at hrun
-    obtain ⟨r, s1, g1, k1⟩ := AM.bind_ok hrun
-    obtain ⟨hst1, hx1, hp1, hc1, -, -, rfl⟩ := basisNameHit_run hok.state hb g1
-    have hok1 := hok.mono hst1 hx1 hc1 hp1
-    have hb1 := denoteCIList_mono hx1 _ _ hb
-    cases hk : ConLeche.basisNameHit b with
-    | some kind =>
-      rw [hk] at k1
-      obtain ⟨hr, -⟩ := BasisKind.atBlock_run hok1.state hok1.readOK hb1 k1
-      exact ⟨hr.checkOK hok1, hx1.trans hr.ext⟩
-    | none =>
-      rw [hk] at k1
-      obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok k1
-      obtain ⟨hp2, -, hq⟩ := blockShape?_installS hok1 hb1 g2
-      have hok2 := checkOK_of_pstep hok1 hp2
-      cases q with
-      | none =>
-        obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
-        exact ⟨hok2, hx1.trans hp2.ext⟩
-      | some p =>
-        simp only [ROp] at hq
-        obtain ⟨pP, -, hdp⟩ := hq
-        obtain ⟨hp3, -, -⟩ := blockConstants_run hok2.state hok2.pins hdp k2
-        exact ⟨checkOK_of_pstep hok2 hp3, (hx1.trans hp2.ext).trans hp3.ext⟩
+    obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok hrun
+    obtain ⟨hp2, -, hq⟩ := readBlock_installS hok hb g2
+    have hok2 := checkOK_of_pstep hok hp2
+    cases q with
+    | error e =>
+      obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+      exact ⟨hok2, hp2.ext⟩
+    | ok p =>
+      simp only [ROp, Except.toOption] at hq
+      obtain ⟨pP, -, hdp⟩ := hq
+      obtain ⟨hp3, -, -⟩ := blockConstants_run hok2.state hok2.pins hdp k2
+      exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
 
 /-- **The twin's `declTables` keeps `CheckOK`** and grows the store. -/
 theorem declTables_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclaration}
@@ -103,30 +94,26 @@ theorem declTables_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclarati
     simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
     obtain ⟨b, hb, rfl⟩ := hd
     simp only [ConRon.Arena.declTables] at hrun
-    obtain ⟨r, s1, g1, k1⟩ := AM.bind_ok hrun
-    obtain ⟨hst1, hx1, hp1, hc1, -, -, rfl⟩ := basisNameHit_run hok.state hb g1
-    have hok1 := hok.mono hst1 hx1 hc1 hp1
-    have hb1 := denoteCIList_mono hx1 _ _ hb
-    cases hk : ConLeche.basisNameHit b with
-    | some kind =>
-      rw [hk] at k1
-      obtain ⟨rfl, rfl⟩ := AM.pure_ok k1
-      exact ⟨hok1, hx1⟩
-    | none =>
-      rw [hk] at k1
-      obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok k1
-      obtain ⟨hp2, -, hq⟩ := blockShape?_installS hok1 hb1 g2
-      have hok2 := checkOK_of_pstep hok1 hp2
-      cases q with
+    obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok hrun
+    obtain ⟨hp2, -, hq⟩ := readBlock_installS hok hb g2
+    have hok2 := checkOK_of_pstep hok hp2
+    cases q with
+    | error e =>
+      obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+      exact ⟨hok2, hp2.ext⟩
+    | ok p =>
+      simp only [ROp, Except.toOption] at hq
+      obtain ⟨pP, -, hdp⟩ := hq
+      obtain ⟨hms, -⟩ := dShape_inv hdp
+      obtain ⟨o, s3, k3, k4⟩ := AM.bind_ok k2
+      obtain ⟨hp3, -, -⟩ := blockTables_run p.members pP.members hok2.state hdp hms k3
+      cases o with
       | none =>
-        obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
-        exact ⟨hok2, hx1.trans hp2.ext⟩
-      | some p =>
-        simp only [ROp] at hq
-        obtain ⟨pP, -, hdp⟩ := hq
-        obtain ⟨hms, -⟩ := dShape_inv hdp
-        obtain ⟨hp3, -, -, -⟩ := blockTables_run p.members pP.members hok2.state hdp hms k2
-        exact ⟨checkOK_of_pstep hok2 hp3, (hx1.trans hp2.ext).trans hp3.ext⟩
+        obtain ⟨rfl, rfl⟩ := AM.pure_ok k4
+        exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
+      | some q =>
+        obtain ⟨rfl, rfl⟩ := AM.pure_ok k4
+        exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
   | _ =>
     simp only [ConRon.Arena.declTables] at hrun
     obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun; exact ⟨hok, Ext.refl _⟩

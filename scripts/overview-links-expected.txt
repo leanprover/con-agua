@@ -8,8 +8,8 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	01ecb31c025e2fd067ec62990db2b16eadf5eea0	https://github.com/leanprover/con-ron.git
-     4  con-leche	210a580ed81f730d36dfb2616aac1c83749f02ae	https://github.com/leanprover/con-leche.git
+     3  con-ron	4ca283d1487ced70289a6f1577eaa9e70acdce4d	https://github.com/leanprover/con-ron.git
+     4  con-leche	eb2c5939b1a73382ad0c8a937021658b0fde247e	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L43
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
@@ -86,7 +86,7 @@
     99  def ACCEPT : Word := 0x4143_4345_5054
 
 == ConAgua/Final/EndToEnd.lean#L95-L103
-    95  theorem checkerFile_accepts [Host] (V : Type w) [ConLeche.SetTheory V]
+    95  theorem checkerFile_accepts [Host]
     96      (k0 : Nat) (hcode : Code checkerFile k0)
     97      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     98      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -104,6 +104,11 @@
     29  /-- The code `c` sits at index `k` of the host program. -/
     30  abbrev Code (c : Program) (k : Nat) : Prop := c.IsInfixAt Host.prog k
 
+== vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L265-L267
+   265  theorem foldlM_checkDecl_envWF {F : Nat} :
+   266      ∀ (ds : List Declaration) {env env' : Env}, EnvWF env →
+   267        ds.foldlM (checkDecl .verified (fueledOps .verified F) pins) env = .ok env' → EnvWF env'
+
 == ConAgua/Final/Twin.lean#L76-L86
     76  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
     77  `AState.init EStore.empty`, at some pin list, the check phase on one worker. -/
@@ -114,8 +119,13 @@
     82      builtinPreludeE sA = .ok (.ok pre, sB) ∧
     83      parseChunks chunks sB = .ok (.ok r, sC) ∧
     84      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    85      internAllPins pins sD = .ok (ipins, sE) ∧
+    85      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     86      SeqAccepts .verified ipins ds sE I sF
+
+== vendor/con-ron/ConRon/Arena/CoreState.lean#L147-L149
+   147  /-- con-leche: ConLeche/Cached/StateC.lean:156-157 maxNatSizeDefault — the
+   148  official kernel's default maximum `Nat` size, 128 MiB. -/
+   149  def maxNatSizeDefault : Nat := 134217728
 
 == ConAgua/Final/Twin.lean#L58-L63
     58  /-- **The x64 checker's check phase**: the stream index built (`buildIndex`, ending in `s'`), then
@@ -136,7 +146,7 @@
     55    thenV builtinPreludeE fun pre =>
     56    thenV (parseChunks chunks) fun r =>
     57    preparePrelude pre r.decls >>= fun ds =>
-    58    internAllPins pins >>= fun ipins =>
+    58    internAllPins pins maxNatSizeDefault >>= fun ipins =>
     59    checkStream .verified ipins ds
 
 == ConAgua/Final/EndToEnd.lean#L115-L127
@@ -169,7 +179,7 @@
     89  con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
     90  list. con-ron's `stages_frame`, then Theorem 1 at the check phase (`Arena.pooledAccepts_bridge`,
     91  with its two tier specs discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
-    92  theorem twinAccepts_pure (V : Type w) [SetTheory V] {chunks : List ByteArray}
+    92  theorem twinAccepts_pure {chunks : List ByteArray}
     93      (h : TwinAccepts chunks) :
     94      ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
     95        (rc : ConLeche.Frontend.ParseResultD) (F : Nat),
@@ -183,12 +193,12 @@
    103    obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hrc, hden⟩ :=
    104      ConRon.Bridge.stages_frame hA hB hC hD hE
    105    obtain ⟨F, hpure⟩ :=
-   106      ConRon.Bridge.Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden
+   106      ConRon.Bridge.Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden
    107        (pooledAccepts_of_seq hF)
    108    exact ⟨pins, preC, rc, F, hrc, hpure⟩
 
 == ConAgua/Final/EndToEnd.lean#L76-L84
-    76  theorem checkerFile_accepts_regs [Host] (V : Type w) [ConLeche.SetTheory V]
+    76  theorem checkerFile_accepts_regs [Host]
     77      (k0 : Nat) (hcode : Code checkerFile k0)
     78      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     79      (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -582,7 +592,7 @@
    127  def PinsStage : Prop := ∀ b pb sz sA pre sB rc sC ds a, InputsOK b pb sz →
    128    TwinPrefix4 b sA pre sB rc sC ds a →
    129    RelSpec p "intern_all_pins" ((ρ b pb sz).R6 · ds a) fun _ m =>
-   130      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
+   130      ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧ (ρ b pb sz).R7 m ds ipins a'
 
 == ConAgua/Checker/CheckARun.lean#L163-L169
    163  theorem checkA_run (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz) (w : Word)
@@ -594,7 +604,7 @@
    169        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.ds.size := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) (b pb : ByteArray)
+   101  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
    102      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
    103      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
    104      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
@@ -617,9 +627,9 @@
    248    | .ok v => ∃ y a', T.run a = .ok (y, a') ∧ R v y a'
    249    | .error e => G → ErrClaim T a e
 
-== ConAgua/Checker/NoVerdictClosed.lean#L228-L229
-   228  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-   229    closedNV_of_all nvTree.eq checkerProg_nvChk
+== ConAgua/Checker/NoVerdictClosed.lean#L229-L230
+   229  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+   230    closedNV_of_all nvTree.eq checkerProg_nvChk
 
 == ConAgua/Final/DrvAbi.lean#L181-L191
    181  theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
@@ -634,14 +644,14 @@
    190          (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
    191        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L106-L112
-   106  theorem checkerFile_drv_accepts_regs [Host] (Vt : Type w) [ConLeche.SetTheory Vt]
-   107      (k0 : Nat) (hcode : Code checkerFile k0)
-   108      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   109      (hc : AbiCall b pb dm ra) :
-   110      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   111          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   112        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L103-L109
+   103  theorem checkerFile_drv_accepts_regs [Host]
+   104      (k0 : Nat) (hcode : Code checkerFile k0)
+   105      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+   106      (hc : AbiCall b pb dm ra) :
+   107      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   108          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   109        dm (label abiStartL) :=
 
 == ConAgua/Checker/Entry.lean#L155-L162
    155  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
@@ -699,7 +709,7 @@
    181  which is what DESIGN §8.6 P2d means by "at startup": every pinned datum is in
    182  the persistent cons table before any declaration's check can intern one into
    183  a tier that is about to vanish; so does the index build (`checkStream`). -/
-   184  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet)
+   184  def runPipelineTail (mode : CheckMode) (pins : List NatOpPinSet) (maxNatSize : Nat)
    185      (pre : Frontend.PreludeIx) (r : Frontend.ParseResultD) :
    186      AM (Except CheckError Nat) := do
    187    -- The verdict number is read HERE, before the fold, so that `r` dies at
@@ -708,13 +718,13 @@
    190    -- the expensive step).
    191    let records := r.decls.size
    192    let ds ← Frontend.preparePrelude pre r.decls
-   193    let ipins ← internAllPins pins
+   193    let ipins ← internAllPins pins maxNatSize
    194    match ← checkStream mode ipins ds with
    195    | .error (e, n) => pure (.error (atDecl e n))
    196    | .ok _ => pure (.ok records)
 
 == vendor/con-ron/ConRon/Arena/Checker.lean#L97-L106
-    97  /-- con-leche: ConLeche/Driver/Run.lean:85-101 checkDeclsIO — **the check of a
+    97  /-- con-leche: ConLeche/Driver/Run.lean:74-97 checkDeclsIO — **the check of a
     98  stream, as one worker runs it**: the index of the records, then every record's job in
     99  fold order, from the worker's state.  The `× Nat` of the error is the failure's
    100  POSITION in the fold. -/
@@ -734,8 +744,8 @@
    141  }
 
 == vendor/con-ron/ConRon/Arena/Monad.lean#L494-L500
-   494  /-- con-leche: ConLeche/Kernel/Expr.lean:256-375 Expr — decode a
-   495  universe-argument list handle (the `const` node's second field, line 347). -/
+   494  /-- con-leche: ConLeche/Kernel/Expr.lean:341-460 Expr — decode a
+   495  universe-argument list handle (the `const` node's second field, line 404). -/
    496  @[inline] def viewLs (h : LsIdx) : AM LsNodeView := do
    497    let s ← get
    498    match s.store.lss.view h with
@@ -2298,7 +2308,7 @@
    191        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) (b pb : ByteArray)
+   101  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
    102      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
    103      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
    104      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
@@ -2332,32 +2342,31 @@
    186     has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
 
 == ConAgua/Final/EndToEnd.lean#L156-L159
-   156  theorem checkerFile_threads_accept [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
+   156  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
    157      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
    158      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
    159      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
 
-== ConAgua/Final/TwinPooled.lean#L38-L47
-    38  /-- **The twin accepts `chunks` with the check phase as con-ron's pool.** -/
-    39  def TwinAcceptsPooled (chunks : List ByteArray) : Prop :=
-    40    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
-    41      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (I : IStreamIndex),
-    42      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
-    43      builtinPreludeE sA = .ok (.ok pre, sB) ∧
-    44      parseChunks chunks sB = .ok (.ok r, sC) ∧
-    45      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    46      internAllPins pins sD = .ok (ipins, sE) ∧
-    47      ConRon.Arena.PooledAccepts .verified ipins ds sE I sF
+== ConAgua/Final/TwinPooled.lean#L38-L46
+    38  def TwinAcceptsPooled (chunks : List ByteArray) : Prop :=
+    39    ∃ (pins : List NatOpPinSet) (sA sB sC sD sE sF : AState) (pre : PreludeIx) (r : ParseResultD)
+    40      (ds : Array IDeclaration) (ipins : List INatOpPinSet) (I : IStreamIndex),
+    41      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    42      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    43      parseChunks chunks sB = .ok (.ok r, sC) ∧
+    44      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
+    45      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
+    46      ConRon.Arena.PooledAccepts .verified ipins ds sE I sF
 
 == ConAgua/Final/EndToEnd.lean#L164-L168
-   164  theorem checkerFile_threads_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
+   164  theorem checkerFile_threads_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
    165      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
    166      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
    167      (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) :
    168      RegsRestored dm₀.regs st₀.data.regs ∧ ∀ t ∈ ths, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs :=
 
 == ConAgua/Final/EndToEnd.lean#L177-L180
-   177  theorem checkerFile_threads_verdict [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
+   177  theorem checkerFile_threads_verdict [Host] (k0 : Nat) (hcode : Code checkerFile k0)
    178      (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
    179      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
    180      (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) : TwinVerdictPooled [b] (k &&& 3) :=
@@ -2374,7 +2383,7 @@
    197      builtinPreludeE sA = .ok (.ok pre, sB) ∧
    198      parseChunks chunks sB = .ok (.ok r, sC) ∧
    199      preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-   200      internAllPins pins sD = .ok (ipins, sE) ∧
+   200      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
    201      buildIndex ds sE = .ok (.ok I, sF) ∧
    202      (∀ t ∈ w, t < ds.size) ∧
    203      TwinFailsV (checkJobList .verified ipins I ds w) sF.worker c
@@ -2396,7 +2405,7 @@
     37  | D28b | `Arena/StubNames.lean` `name_rec`, `name_rec_i`, `intern_ls_iw` | `internNNode (.str n "rec")`, `.str n s!"rec_{i}"`, `internLsNode us` take the key as a value | the string (3, or 4 + digits words) / the level list is written at the pool top (`pool_room`) and stays there even when the node exists | performance (memory: a few pool words per block member / recursor / level list built) | stubs | as D24: pop the top on a hit |
     38  | D37 | `Arena/Scratch.lean` `scratch_reset`, `Arena/MemoLib.lean` `memoClearG` | `ron/hashmap2.rs` `clear_fit`: at each per-declaration / per-call reset the table is re-made at twice a decaying high-water mark of its entries | the scratch cons tables keep their largest size (the epoch bump empties them); the memos cleared by `memoClearG` return to their default region (`MN0` slots), regions grown within a stamp stay resident. `inst_list`'s memo (`ilSch`) clears with `memoClearFitG`, the twin's policy with the default region as its floor (the twin's floor is 32 slots) | performance (a round past 3/4 of the default region grows it in place; outside `ilSch` a handful of such rounds per run on the perf fixtures and `Init`, docs/design/d37.md; memory stays resident) | unassigned | the scratch tables: a decaying high-water mark per table, shrinking the slot count at reset; the other memos: `memoClearFitG` (with the fast-path test in the caller) where a measurement shows growth |
 
-== docs/deviations.md#L40-L63
+== docs/deviations.md#L40-L67
     40  ## Deliberate
     41  
     42  | id | where (L) | twin | L | effect | owner | proposed fix |
@@ -2420,39 +2429,43 @@
     60  | D42 | `Checker/Presize.lean` `presize_tables` (called by `check_a` before the first intern), `pow2_at_least`; `Arena/ConsPresize.lean` `consPresizeG` (`app_presize`, `lam_presize`, `forall_presize`) | con-ron's `HashMap2` tables start empty (`HashMap2::new`, 32 slots at the first insert) and double as they fill; `HashMap2::with_capacity` exists, but no store calls it | the persistent tiers of the `app`, `lam` and `forallE` tables start at the least power of two `≥ len(input) / 64`, `/ 512`, `/ 1024` slots (8 M, 1 M, 512 K on `Init`), so the parse never doubles them in place (D38); the memory is all zero there, so nothing is zeroed or touched up front | performance only, verdict-neutral (the cons maps are the same; `consR_initM`). Measured 2026-10-29 (Init, 40 paired rounds, load 4–12): parse phase −6.4 % wall (p < 0.001), −7.1 % instructions; `Init` at 16 threads −1.9 % (p < 0.001); one thread −0.1 % (not resolved); peak RSS unchanged on `Init` (743 MB sequential, 1001 MB at 16 threads) and on the 634 fixtures (±3 MB); a large input with few nodes reserves more: `long_line_5mib` (5 MB) +1.2 MB, +1.8 MB at 16 threads (the frozen image copies the whole table), at most about a quarter of the input length | presize | stays: the in-place doubling was 12 % of the parse phase's cycles on `Init` (5 % of its instructions; docs/design/internspeed.md §2.2). Keeping the twins equal instead: con-ron sizes its persistent `app`, `lam`, `forallE` tables the same way (`HashMap2::with_capacity`) |
     61  | D43 | `Arena/ConsLib.lean` the slot word (`kfHead`, `kfLoad`, `cpSlot`, `kgrowB`), `Arena/Scratch.lean` `scratch_reset` (`SCBLIM`) | con-ron task #148, `arena/cons_map.rs` `ConsMap`: a slot is `CSlot { g: u16, f: u16, h }`, `g` the table's epoch (live iff equal, at least 1), `f = frag_of(hash)` the top 16 bits of `hash · golden`; each table's `clear` bumps its own epoch and at `EPOCH_MAX = 65 535` vacates its slots (`O(capacity)`) and restarts at 1 | one 64-bit word per slot: the fragment in bits 63–48, the value `B t + i + 1` below it (a value at or below the tier's base `B t` is free), so the stamp is `B / 2^32` in bits 46–32, **15 bits**: bit 47 is the mark of the in-place growth (D38); one base `CTL[62]` for all 19 scratch tables, which `scratch_reset` raises by `2^32` and at `B ≥ 2^47 - 2^33` vacates all 19 scratch tables and restarts at `0`, i.e. every 32 766 resets (two per declaration) where con-ron wraps each table every 65 535 clears (also two per declaration); the fragment is bits 31–16 of `hash · golden`, the bits our home (`mulhi`, D36) uses least, where con-ron takes the top 16 (the bits its masked home uses least) | performance only: the wrap's `O(capacity)` zeroing comes twice as often per table; lookups and verdicts are the same (a fragment only filters which slots read their record) | ronsync2 | stays while the growth is in place (D38): the mark needs a bit above every live value, and without the growth's mark the stamp could take all 16 bits |
     62  | D44 | the whole checker (`Checker/Entry.lean`, `Final/Twin.lean`): no `--olean` mode | con-ron (con-leche) reads `.olean` files as a second input format (`--olean`, `ConRon/Arena/Frontend/Olean/*`, `Arena/OleanJobs.lean`): the module closure, the merge, the lazy values read inside each job | reads the export stream only; where the twin's top-level functions branch on the mode, L follows the stream's path (`prepareD` at `IDeclaration.usedConsts`, `recordJob`, not `oleanJob`), and the final statements are about the stream pipeline (`TwinAccepts`) | none on a stream input; an `.olean` input is not accepted by L | ronsync2 | by design: reading `.olean` files needs more IO (opening and positional reads of many files), which would have to live in the trusted C driver, and the driver is kept small |
-    63  
+    63  | D45 | `Arena/NatSized.lean` (`lit_nat_sized`), `Arena/NatArms.lean` `nat_pow_lit`, `nat_shl_lit`, `nat_op_result`; `Arena/WhnfDelta.lean` `reduce_nat_op`, `reduce_nat_succ` | `natOpResult`'s `litNatSized`, `powGuard`, `shiftLeftGuard` fail inside the arm (`fail (.invalid …)`) | the arms are outside the verdict closure (`nvFns`: class-`0` aborts only), so a refusal returns a sentinel word `2^63 + k` (no handle: every handle is masked to 32 bits) through `nat_op_result` (flag `2`) / `nat_succ_lit`, and `reduce_nat_op` / `reduce_nat_succ` fail with the twin's message at once | none (nothing runs between the twin's `fail` and L's; the same message) | ronsync3-core | stays: moving the arms into the verdict closure would give every limb primitive an error model for one message |
+    64  | D47 | `Arena/StrLit.lean` `lit_shape_ok`, `nat_ind_at_cv`, `nat_zero_at_cv`, `nat_succ_at_cv` | `litShapeOk`'s three `Nat` arms build `.indInfo c.toConstantVal {}`, `.ctorInfo c.toConstantVal 0 0`, `.ctorInfo … 0 1` and call `natIndOk`/`natZeroOk`/`natSuccOk` on them | the three tests run on the record's constant value directly (`nat_*_at_cv(p + 1)`: `natIndOk`'s etc. body after its kind test, which the built record passes); no record is built | none (the same answer: the built record's kind test holds) | ronsync3 | by design: `lit_shape_ok` runs in the core's write set, which allocates no `EREC` record |
+    65  | D48 | `Arena/DeclStep.lean` `check_decl`, `Arena/IndParts.lean` `check_ind_decl` | `fail (← basisNamesError d)`, `match ← readBlock … with \| .error e => fail e`: a failure at an error value computed at run time | L aborts with constant codes only: the computed reason word is matched against the reasons its producer returns (`basis_names_error`'s three, `read_block`'s ten), each branch `fail R_k`; an unmatched word aborts with code `0` (unreachable) | none (the same message at every reachable branch) | ronsync3 | by design: `abort` takes a constant code (the model generator reads the code from the statement) |
+    66  | D46 | `Arena/Infer.lean` `proj_guard_rows_at` | `projGuardRowsAt`'s rows carry `Nat` depths up to `numParams + idx` | aborts when the word sum `np + i` (parameter count plus field index) wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both are word-sized counts) | ronsync3-ind | by design: the rows' depths and the opened `fvar` indices are the twin's `Nat`s |
+    67  | D49 | `main.c`; `Rom/PinRead.lean` `intern_all_pins`; the final statements (`TwinAccepts`, `TwinVerdict`: `internAllPins pins maxNatSizeDefault`) | con-ron's binary takes `--max-nat-size=N` (con-leche's flag) and runs `internAllPins pins N`; con-leche's tests run seven `nat_size_limit_*` fixtures at `--max-nat-size=16` (`E2E_FLAGS`) | no such flag: every run is at the default maximum, 134 217 728 bytes (`PINS[72]`, written by `intern_reserved_pins`) | at the default, every verdict is con-ron's; the seven fixtures are not comparable with their pinned verdicts (`diff-e2e.py` skips them) | ronsync3 | by design, as `--olean` (D44): the checker need not take every option of the twin, and the driver stays simple (`main.c` passes no run parameter); porting the flag would make the maximum a parameter of the final theorems and add a trusted fact about `main.c` |
 
-== docs/deviations.md#L64-L93
-    64  ## Fixed
-    65  
-    66  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
-    67  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
-    68  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
-    69  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
-    70  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
-    71  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
-    72  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
-    73  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
-    74  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
-    75  - **F3** (fixed by lane strlit): `strVal` lines.
-    76  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
-    77  - **F5** (fixed by lane front2): expression and declaration lines.
-    78  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
-    79  - **F7** (fixed by lane romload): pin data as an input.
-    80  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
-    81  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
-    82  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
-    83  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
-    84  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
-    85  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
-    86  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
-    87  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
-    88  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
-    89  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
-    90  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
-    91  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
-    92  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost).
-    93  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
+== docs/deviations.md#L69-L98
+    69  ## Fixed
+    70  
+    71  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
+    72  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
+    73  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
+    74  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
+    75  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
+    76  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
+    77  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
+    78  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
+    79  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
+    80  - **F3** (fixed by lane strlit): `strVal` lines.
+    81  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
+    82  - **F5** (fixed by lane front2): expression and declaration lines.
+    83  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
+    84  - **F7** (fixed by lane romload): pin data as an input.
+    85  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
+    86  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
+    87  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
+    88  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
+    89  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
+    90  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
+    91  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
+    92  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
+    93  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
+    94  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
+    95  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
+    96  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
+    97  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost).
+    98  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
 
 == scripts/e2e.py#L2-L25
      2  """End-to-end differential testing of the L checker (lane `e2e`, DESIGN.md "End-to-end runs").

@@ -331,7 +331,7 @@ def pinW (m : Mem) (i : Nat) : Word := (m.arr64 PINS)[i]?.getD 0
 
 /-- The filled table: what the flag promises. -/
 structure PinsFull (m : Mem) (p : Pins) : Prop where
-  size : 72 ≤ (m.arr64 PINS).size
+  size : 73 ≤ (m.arr64 PINS).size
   names_size : p.names.size = 52
   names_lt : ∀ i, i < 51 → (pinW m (1 + i)).toNat < 2 ^ 32
   names : ∀ i (h : i < 51), p.names[i]'(by omega) = decI (pinW m (1 + i))
@@ -344,6 +344,8 @@ structure PinsFull (m : Mem) (p : Pins) : Prop where
   sortOne : p.sortOne = decI (pinW m 54)
   reserved_lt : ∀ i, i < 16 → (pinW m (55 + i)).toNat < 2 ^ 32
   reserved : p.reserved = (List.range 16).map fun i => decI (pinW m (55 + i))
+  /-- The run's maximum `Nat` size in bytes (`Pins.maxNatSize`) is word `72`. -/
+  maxNatSize : p.maxNatSize = (pinW m 72).toNat
 
 /-- **The pins** (global, filled once by `internReservedPins`), over `a.pins`: when the flag is
 set, the table is the twin's. -/
@@ -359,7 +361,7 @@ theorem PinsFull.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PIN
             lv_lt := by simpa only [hw] using h.lv_lt, emptyLevels := hw _ ▸ h.emptyLevels,
             zeroLevel := hw _ ▸ h.zeroLevel, sortOne := hw _ ▸ h.sortOne,
             reserved_lt := fun i hi => hw _ ▸ h.reserved_lt i hi,
-            reserved := by simpa only [hw] using h.reserved }
+            reserved := by simpa only [hw] using h.reserved, maxNatSize := hw _ ▸ h.maxNatSize }
 
 theorem PinsR.congr {m m' : Mem} {p : Pins} (he : m'.arr64 PINS = m.arr64 PINS)
     (h : PinsR m p) : PinsR m' p :=

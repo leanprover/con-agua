@@ -2,6 +2,7 @@ module
 
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.StructParts
+public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
@@ -303,8 +304,7 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 closure) lifted, `check_struct_proj_table_scoped` reading the real `all_level_params_defined`. -/
 l_model tblE_spec (p : Prog) (hP : TblProg p)
   fns [hP.htbl ↦ tblE]
-  specs [spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal n,
+  specs [erToIw_specW p hP.ha hP.hecp hP.heti n,
     sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (realCall p) (realCall_spec p) n,
     callW_spec p n "env_find", callW_spec p n "find_table"]
   grind [arena_grind] fold [tierW, idxW]
@@ -322,187 +322,191 @@ structure TblPost (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (m' : Mem) (a
   abs : AbsOK m'
   step : ConRon.Bridge.Inductives.PStep a a'
 
-/-- **`check_struct_proj_table` refines `checkStructProjTable`, both outcomes** (the scoping
-through the real walks). -/
+/-- A decoded handle list at words `q + j`, `q + j + 1` (`InferProj.lean`'s `hlist_words`). -/
+private theorem sct_hlist_words {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
+    {q : Word} {j : Nat} {l : List (Idx k)}
+    (h : hlist? R (q.toNat + j) = some l) :
+    hslice? R (rd (q + UInt64.ofNat j)).toNat (rd (q + UInt64.ofNat (j + 1))).toNat = some l := by
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
+  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := h
+  have hj := hR.lt _ _ hwc
+  have r1 : rd (q + UInt64.ofNat j) = wo := hR.offN hwo (by omega)
+  have r2 : rd (q + UInt64.ofNat (j + 1)) = wc :=
+    hR.offN (by simpa [Nat.add_assoc] using hwc) (by omega)
+  rw [r1, r2]; exact hs
+
+/-- **The words of a decoded table record** `check_struct_proj_table` reads. -/
+theorem sct_decTbl {m : Mem} {t : Word} {tb : IProjTable} (h : decTbl (erecP m) t.toNat = some tb) :
+    HW (erRd m (t + 2)) ∧ tb.structName = decI (erRd m (t + 2)) ∧
+    hslice? (erecP m) (erRd m (t + 3)).toNat (erRd m (t + 4)).toNat = some tb.levelParams ∧
+    tb.numParams = (erRd m (t + 5)).toNat ∧ tb.numFields = (erRd m (t + 7)).toNat ∧
+    hslice? (erecP m) (erRd m (t + 9)).toNat (erRd m (t + 10)).toNat = some tb.bodies.toList := by
+  have hR := erRdOK m
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at h
+  obtain ⟨sn, hsn, lps, hlps, np, hnp, ct, -, nf, hnf, bd, hbd, rfl⟩ := h
+  obtain ⟨w2, hw2, hw2l, hw2d⟩ := hd?_some hsn
+  have r2 : erRd m (t + 2) = w2 := hR.offN (k := 2) hw2 (by decide)
+  simp only [nat?, Option.map_eq_some_iff] at hnp hnf
+  obtain ⟨wnp, hwnp, rfl⟩ := hnp
+  obtain ⟨wnf, hwnf, rfl⟩ := hnf
+  have r5 : erRd m (t + 5) = wnp := hR.offN (k := 5) hwnp (by decide)
+  have r7 : erRd m (t + 7) = wnf := hR.offN (k := 7) hwnf (by decide)
+  refine ⟨by rw [r2]; exact hw2l, by rw [r2, hw2d], sct_hlist_words hR (j := 3) hlps, by rw [r5],
+    by rw [r7], by simpa using sct_hlist_words hR (j := 9) hbd⟩
+
+/-- **`check_struct_proj_table` refines `checkStructProjTable`, both outcomes**, at the table record
+`t` (`decTbl`): the two lists copied to `IW` (`er_to_iw`), the scoping through the real walks. -/
 theorem tbl_ref {vis : Word} {fe : IFEnv} (p : Prog) (hP : TblProg p) (hp : ApdF p)
-    (n : Nat) (m : Mem) (a : AState) (T lo ll nP nF cvCaw : Word) (lps : List NIdx)
-    (cvCa : IConstantVal) (hS : StageR vis fe m a) (hT : H T) (hnP : nP.toNat + 1 < 2 ^ 64)
-    (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m)
-    (hok : ConRon.Bridge.StateOK a) (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
-    {TP : ConLeche.Name} (hTP : denoteN a.store.ns (decI T) = some TP)
-    {ctyP : ConLeche.Expr} (hcty : denoteE a.store cvCa.type = some ctyP) :
-    RefE True (tblE p (n + 2) m T lo ll nP nF cvCaw vis)
-      (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a
+    (n : Nat) (m : Mem) (a : AState) (t : Word) (tb : IProjTable)
+    (hS : StageR vis fe m a) (ht : decTbl (erecP m) t.toNat = some tb) (hnP : tb.numParams + 1 < 2 ^ 64)
+    (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a)
+    (hks : ∃ ks, tb.levelParams.mapM (denoteN a.store.lss.ls.ns) = some ks) :
+    RefE True (tblE p (n + 1) m t vis) (checkStructProjTable tb fe) a
       (fun v _ a' => TblPost vis fe m a v.2 a') := by
-  obtain ⟨w, hw, hwl, hwd⟩ := sumTypeWord (DecB.get (OMono.decCVp _) hcv)
-  rw [tblE.arm1, show rdW (m.arr64 (tierA EREC ((cvCaw + 3) >>> 40))) (cvCaw + 3 &&& 1099511627775) = w
-    from hw]
-  rw [← hwd] at hcty
+  obtain ⟨hT, hTn, hlps, hnp, hnf, hbds⟩ := sct_decTbl ht
+  rw [tblE.arm1]
+  simp only [erRd_foldN]
   unfold checkStructProjTable
-  rw [← hwd]
-  -- `struct_proj_bodies`
-  refine RefE.onlySim (fun _ => tblE.k_struct_proj_bodies.none ..) (fun _ _ h => h) fun rb m1 h1 => ?_
-  obtain ⟨x, a1, h1', hS1, hg1, hdec1, hA1⟩ := spbW_ok (fun _ => none) vis fe (n + 1) m m1 a T nP nF w rb h1
-    hS hwl (by omega) nF.toNat_lt hA
-  obtain ⟨ps1, -⟩ := ConRon.Bridge.Inductives.structProjBodies_spec (decI T) TP nP.toNat nF.toNat
-    (decI w) ctyP a a1 x hok ⟨hTP, hcty⟩ h1'
-  have hf1 := spbW_mfr h1
-  refine RefE.bind_right h1' ?_
-  by_cases h10 : rb.headD 0 = 0
-  · rw [tblE.k_struct_proj_bodies.abort1 p (n + 1) T lo ll nP nF vis rb _ h10]
-    exact RefE.of_cls0 rfl
-  rw [tblE.k_struct_proj_bodies.arm1 p (n + 1) T lo ll nP nF vis rb _ h10]
-  cases x with
-  | none => exact absurd hdec1 h10
-  | some bodies =>
-  obtain ⟨-, hbd, hbb⟩ := hdec1
-  simp only [unwrapOr, pure_bind]
-  have hlps1 : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg1 hlb]; exact hlps
-  have hlb1 : lo.toNat + ll.toNat ≤ iwTop m1 := by have := hg1.iw; omega
+  -- the level parameters' copy
+  refine RefE.onlySim (fun _ => tblE.k_er_to_iw.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
+  obtain ⟨hS1, hg1, hd1, ht1, hE1⟩ := erToIwW_stage h1 hS hlps
+  obtain ⟨-, -, -, hf1, -, -⟩ := erToIwW_dec h1 hS.iw.iwSize hS.iw.ctl hlps
+  have hA1 : AbsOK m1 := erToIwW_afr h1 hA
+  have hE1' : m1.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf1.arr _ (by decide) (by decide)
+  rw [tblE.k_er_to_iw.arm1]
+  simp only [erRd_congr hE1 hE1']
+  -- the bodies' copy
+  refine RefE.onlySim (fun _ => tblE.k_er_to_iw_2.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
+  have hbds1 : hslice? (erA m1) (erRd m (t + 9)).toNat (erRd m (t + 10)).toNat = some tb.bodies.toList :=
+    (IWGrow.ext hg1).hslice? hbds
+  obtain ⟨hS2, hg2, hd2, ht2, hE2⟩ := erToIwW_stage h2 hS1 hbds1
+  obtain ⟨-, -, -, hf2, -, -⟩ := erToIwW_dec h2 hS1.iw.iwSize hS1.iw.ctl hbds1
+  have hA2 : AbsOK m2 := erToIwW_afr h2 hA1
+  have hE2' : m2.arr64 (tier1 EREC) = m1.arr64 (tier1 EREC) := hf2.arr _ (by decide) (by decide)
+  rw [tblE.k_er_to_iw_2.arm1]
+  have hEE : m2.arr64 EREC = m.arr64 EREC := hE2.trans hE1
+  have hEE' : m2.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hE2'.trans hE1'
+  simp only [erRd_congr hEE hEE']
+  have hd1' : decHL m2 (r1.headD 0).toNat (r1.tail.headD 0).toNat = some tb.levelParams :=
+    decHL_grow' hg2 (by omega) hd1
   -- the scoping
   refine RefE.onlySim (fun _ => tblE.k_check_struct_proj_table_scoped.none ..) (fun _ _ h => h)
-    fun rs' m2 h2 => ?_
-  obtain ⟨b, a2, hrun2, hS2, hg2, hsok, hsl, hA2, he2⟩ := sctW_okR hp nP lo ll lps hnP (n + 1) m1 a1 _ _
-    bodies.toList hS1 ps1.ok (names_ext ps1.ext hks) hlps1 hlb1 hbd hbb hA1 rs' m2 h2
-  have hf2 := sctW_mfr_real hp _ _ _ _ _ _ _ _ _ _ h2
-  have ps2 : ConRon.Bridge.Inductives.PStep a a2 := by
-    have e' := he2
+    fun rs m3 h3 => ?_
+  have hnPw : (erRd m (t + 5)).toNat + 1 < 2 ^ 64 := by rw [← hnp]; exact hnP
+  obtain ⟨b, a3, hrun3, hS3, hg3, hsok, hsl, hA3, he3⟩ := sctW_okR hp (erRd m (t + 5)) _ _ tb.levelParams
+    hnPw n m2 a _ _ tb.bodies.toList hS2 hok hks hd1' (by have := hg2.iw; omega) hd2 (by omega) hA2
+    rs m3 h3
+  have hf3 := sctW_mfr_real hp _ _ _ _ _ _ _ _ _ _ h3
+  have ps3 : ConRon.Bridge.Inductives.PStep a a3 := by
+    have e' := he3
     simp only [sp, Prod.mk.injEq] at e'
-    exact ps1.trans (ConRon.Bridge.Inductives.PStep.of_caches (stateOK_of_sp ps1.ok he2)
-      (by rw [e'.1]; exact ConRon.Arena.Ext.refl _) e'.2.1 e'.2.2)
-  by_cases hlen0 : rb.tail.tail.headD 0 ≠ nF
-  · rw [tblE.k_check_struct_proj_table_scoped.abort1 p (n + 1) T nF vis _ rs' _ hlen0]
+    exact ConRon.Bridge.Inductives.PStep.of_caches (stateOK_of_sp hok he3)
+      (by rw [e'.1]; exact ConRon.Arena.Ext.refl _) e'.2.1 e'.2.2
+  have hlen : tb.bodies.size = (r2.tail.headD 0).toNat := by
+    rw [← Array.length_toList, decHL_length m2 hd2]
+  have hg03 : IWGrow m m3 := (hg1.trans hg2).trans hg3
+  obtain ⟨hT3, hTn3, -, -, hnf3, -⟩ := sct_decTbl ((IWGrow.ext hg03).decTbl ht)
+  by_cases hbl : r2.tail.headD 0 ≠ erRd m3 (t + 7)
+  · rw [tblE.k_check_struct_proj_table_scoped.abort1 (hc1 := hbl)]
     exact RefE.of_cls0 rfl
-  have hlen : rb.tail.tail.headD 0 = nF := Decidable.of_not_not hlen0
-  by_cases h10' : rs'.headD 0 ≠ 1
-  · rw [tblE.k_check_struct_proj_table_scoped.abort2 p (n + 1) T nF vis _ rs' _ hlen h10']
+  have hbl' : r2.tail.headD 0 = erRd m3 (t + 7) := Decidable.of_not_not hbl
+  by_cases h10 : rs.headD 0 ≠ 1
+  · rw [tblE.k_check_struct_proj_table_scoped.abort2 (hc1 := hbl') (hc2 := h10)]
     exact RefE.of_cls0 rfl
-  have h1r : rs'.headD 0 = 1 := Decidable.of_not_not h10'
-  rw [tblE.k_check_struct_proj_table_scoped.arm1 p (n + 1) T nF vis _ rs' _ hlen h1r]
-  refine RefE.bind_right hrun2 ?_
-  have hsz : bodies.size = nF.toNat := by
-    rw [← Array.length_toList, decHL_length m1 hbd, hlen]
+  have h1r : rs.headD 0 = 1 := Decidable.of_not_not h10
+  rw [tblE.k_check_struct_proj_table_scoped.arm1 (hc1 := hbl') (hc2 := h1r)]
+  simp only [erRd_foldN]
+  rw [← hnp] at hrun3
+  refine RefE.bind_right hrun3 ?_
+  have hsz : tb.bodies.size = tb.numFields := by rw [hlen, hbl', hnf3]
   have hsok' : b = true := (sumB01 hsok hsl).1.mp h1r
   subst hsok'
   simp only [hsz, and_self, ite_true]
   -- `env_find`: the structure is stored
-  refine RefE.onlySim (fun _ => tblE.k_env_find.none ..) (fun _ _ h => h) fun rf m3 hf => ?_
+  refine RefE.onlySim (fun _ => tblE.k_env_find.none ..) (fun _ _ h => h) fun rf m4 hf => ?_
   by_cases hf0 : rf.headD 0 = 0
-  · rw [tblE.k_env_find.abort1 p (n + 1) T vis rf m3 hf0]
+  · rw [tblE.k_env_find.abort1 (hc1 := hf0)]
     exact RefE.of_cls0 rfl
-  rw [tblE.k_env_find.arm1 p (n + 1) T vis rf m3 hf0]
-  obtain ⟨s3, hs3, hm3, -, hrf⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (envFind_spec p hP.hft.rowGet hP.hft.baseGet hP.hft.find (n + 1) _ vis T) hf
-  obtain rfl : m3 = m2 := hs3.symm.trans hm3
+  rw [tblE.k_env_find.arm1 (hc1 := hf0)]
+  simp only [erRd_foldN]
+  obtain ⟨s4, hs4, hm4, -, hrf⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (envFind_spec p hP.hft.rowGet hP.hft.baseGet hP.hft.find n _ vis _) hf
+  obtain rfl : m4 = m3 := hs4.symm.trans hm4
   subst hrf
-  obtain ⟨hfind0, ci0, hci0⟩ := findRes_hit hS2.check.env hT hf0
-  have hhit : (fe.find? (decI T)).isSome := by rw [hfind0, hci0]; rfl
+  obtain ⟨hfind0, ci0, hci0⟩ := findRes_hit hS3.check.env hT3 hf0
+  have hhit : (fe.find? tb.structName).isSome := by rw [hTn3, hfind0, hci0]; rfl
   simp only [hhit, ite_true]
   -- `find_table`: the table is not taken
-  refine RefE.onlySim (fun _ => tblE.k_find_table.none ..) (fun _ _ h => h) fun rt m4 hft => ?_
-  obtain ⟨s4, hs4, hm4, -, hfind, hsome4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (findTable_refines p hP.hft (n + 1) _ vis T hS2.check.env hT) hft
-  obtain rfl : m4 = m3 := hs4.symm.trans hm4
+  refine RefE.onlySim (fun _ => tblE.k_find_table.none ..) (fun _ _ h => h) fun rt m5 hft => ?_
+  obtain ⟨s5, hs5, hm5, -, hfind, hsome5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (findTable_refines p hP.hft n _ vis _ hS3.check.env hT3) hft
+  obtain rfl : m5 = m4 := hs5.symm.trans hm5
   by_cases ht0 : rt.headD 0 ≠ 0
-  · rw [tblE.k_find_table.abort1 p rt m4 ht0]
-    have hsome : ¬ (fe.findTable? (decI T)).isNone = true := by
-      rw [hfind]
-      obtain ⟨tb, htb⟩ := hsome4 ht0
+  · rw [tblE.k_find_table.abort1 (hc1 := ht0)]
+    have hsome : ¬ (fe.findTable? tb.structName).isNone = true := by
+      rw [hTn3, hfind]
+      obtain ⟨tbb, htb⟩ := hsome5 ht0
       dsimp only at htb
       simp only [tblFound, ht0, ↓reduceIte, htb, Option.isNone_some]
       decide
     exact fun _ => ErrClaim.ite_neg hsome (ErrClaim.fail _ _ (by decide))
   have ht0' : rt.headD 0 = 0 := Decidable.of_not_not ht0
-  rw [tblE.k_find_table.arm1 p rt m4 ht0']
-  have hnone : fe.findTable? (decI T) = none := by rw [hfind, ht0']; simp [tblFound]
+  rw [tblE.k_find_table.arm1 (hc1 := ht0')]
+  have hnone : fe.findTable? tb.structName = none := by rw [hTn3, hfind, ht0']; simp [tblFound]
   simp only [hnone, Option.isNone_none, ite_true]
-  exact RefE.ret rfl ⟨hS2, hg1.trans hg2, hf1.trans hf2, hA2, ps2⟩
+  exact RefE.ret rfl ⟨hS3, hg03, ((erToIwW_mfr h1).trans (erToIwW_mfr h2)).trans hf3, hA3, ps3⟩
+
 
 /-- **`check_struct_proj_table` refines `checkStructProjTable` under `StageC`** (`tbl_ref`'s ok
-half): from `StageC` at `vis` of `fe`, the decodings and the walk memos, and the twin's readings of
-the structure's name, the level parameters and the constructor, a returning run keeps the stage
-and the twin's run is a `PStep`. -/
+half): from `StageC` at `vis` of `fe`, the table record decoded and its level parameters' names read
+back, a returning run keeps the stage and the twin's run is a `PStep`. -/
 @[refines ConRon.Arena.checkStructProjTable]
 theorem checkStructProjTable_refinesC (p : Prog) (hP : TblProg p) (hp : ApdF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) {env : ConLeche.Env}
-    (T lo ll nP nF cvCaw vis : Word)
-    (lps : List NIdx) (cvCa : IConstantVal) (hC : StageC dn vis fe env s₀.mem a₀)
-    (hT : H T) (hnP : nP.toNat + 1 < 2 ^ 64)
-    (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) s₀.mem cvCa) (hA : AbsOK s₀.mem)
-    {TP : ConLeche.Name} (hTP : denoteN a₀.store.ns (decI T) = some TP)
-    {lpsP : List ConLeche.Name} (hlpsP : Frontend.denoteNList a₀.store.ns lps = some lpsP)
-    {cvCaP : ConLeche.ConstantVal} (hcvP : Frontend.denoteCV a₀.store cvCa = some cvCaP) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
-      [T, lo, ll, nP, nF, cvCaw, vis]
+    (t vis : Word) (tb : IProjTable) (hC : StageC dn vis fe env s₀.mem a₀)
+    (ht : decTbl (erecP s₀.mem) t.toNat = some tb) (hnP : tb.numParams + 1 < 2 ^ 64)
+    (hA : AbsOK s₀.mem)
+    {lpsP : List ConLeche.Name} (hlpsP : Frontend.denoteNList a₀.store.ns tb.levelParams = some lpsP) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_proj_table" [t, vis]
     ⦃fun _r s' => LocEq s' s₀ ∧
-      AM.ok (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a₀ ∧
-      StageR vis fe s'.mem (AM.st (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a₀) ∧
+      AM.ok (checkStructProjTable tb fe) a₀ ∧
+      StageR vis fe s'.mem (AM.st (checkStructProjTable tb fe) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem ∧
-      ConRon.Bridge.Inductives.PStep a₀ (AM.st (checkStructProjTable (decI T) lps nP.toNat nF.toNat
-        cvCa fe) a₀); ⊤⦄ :=
-  triple_post (RefE.triple (tblE_spec p hP (n + 2) s₀ T lo ll nP nF cvCaw vis)
-      (tbl_ref p hP hp n _ a₀ T lo ll nP nF cvCaw lps cvCa hC.stage hT hnP hlps hlb hcv hA
-        hC.check.state ⟨lpsP, denoteNList_mapM hlpsP⟩ hTP
-        (ConRon.Bridge.denoteCV_type hcvP))) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
+      ConRon.Bridge.Inductives.PStep a₀ (AM.st (checkStructProjTable tb fe) a₀); ⊤⦄ :=
+  triple_post (RefE.triple (tblE_spec p hP (n + 1) s₀ t vis)
+      (tbl_ref p hP hp n _ a₀ t tb hC.stage ht hnP hA hC.check.state
+        ⟨lpsP, denoteNList_mapM hlpsP⟩)) fun _ _ ⟨hl, _, _, hrun, hR⟩ => by
     obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
     exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow, hR.abs, by rw [hst]; exact hR.step⟩
 
-/-! ## `check_block_tables`, one model and one refinement each -/
+/-! ## `check_block_tables`, one model and one refinement -/
 
-
-
-/-- **The model of `check_block_tables`, both outcomes**: `block_shape_lps` lifted, each
-structure-like member's table by `check_struct_proj_table`'s unified model. -/
+/-- **The model of `check_block_tables`, both outcomes**: each table by
+`check_struct_proj_table`'s unified model. -/
 l_model ctbE_spec (p : Prog) (hP : TabsProg p)
   fns [hP.tabs ↦ ctbE]
-  specs [blockShapeLps_spec p hP.tbl.ha hP.erCopy hP.erToIw hP.lps n, tblE_spec p hP.tbl n]
+  specs [tblE_spec p hP.tbl n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-
-
 theorem TblPost.trans {vis : Word} {fe : IFEnv} {m m1 m2 : Mem} {a a1 a2 : AState}
     (h1 : TblPost vis fe m a m1 a1) (h2 : TblPost vis fe m1 a1 m2 a2) : TblPost vis fe m a m2 a2 :=
   ⟨h2.stage, h1.grow.trans h2.grow, h1.frame.trans h2.frame, h2.abs, h1.step.trans h2.step⟩
 
-/-- `tbl_ref` at every fuel (below `2` the model is an error of class `0`). -/
+/-- `tbl_ref` at every fuel (at `0` the model is an error of class `0`). -/
 theorem tblRef_any {vis : Word} {fe : IFEnv} (p : Prog) (hP : TblProg p) (hp : ApdF p)
-    (n : Nat) (m : Mem) (a : AState) (T lo ll nP nF cvCaw : Word) (lps : List NIdx)
-    (cvCa : IConstantVal) (hS : StageR vis fe m a) (hT : H T) (hnP : nP.toNat + 1 < 2 ^ 64)
-    (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
-    (hcv : DecB (fun m => decCVp m cvCaw.toNat) m cvCa) (hA : AbsOK m)
-    (hok : ConRon.Bridge.StateOK a) (hks : ∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
-    {TP : ConLeche.Name} (hTP : denoteN a.store.ns (decI T) = some TP)
-    {ctyP : ConLeche.Expr} (hcty : denoteE a.store cvCa.type = some ctyP) :
-    RefE True (tblE p n m T lo ll nP nF cvCaw vis)
-      (checkStructProjTable (decI T) lps nP.toNat nF.toNat cvCa fe) a
+    (n : Nat) (m : Mem) (a : AState) (t : Word) (tb : IProjTable)
+    (hS : StageR vis fe m a) (ht : decTbl (erecP m) t.toNat = some tb) (hnP : tb.numParams + 1 < 2 ^ 64)
+    (hA : AbsOK m) (hok : ConRon.Bridge.StateOK a)
+    (hks : ∃ ks, tb.levelParams.mapM (denoteN a.store.lss.ls.ns) = some ks) :
+    RefE True (tblE p n m t vis) (checkStructProjTable tb fe) a
       (fun v _ a' => TblPost vis fe m a v.2 a') := by
   match n with
   | 0 => rw [tblE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
-  | 1 =>
-    rw [tblE.arm1]
-    exact RefE.onlySim (fun _ => tblE.k_struct_proj_bodies.none ..) (Q := fun _ _ => False)
-      (fun _ _ h => by cases h) fun _ _ h => h.elim
-  | k + 2 => exact tbl_ref p hP hp k m a T lo ll nP nF cvCaw lps cvCa hS hT hnP hlps hlb hcv hA hok hks hTP hcty
-
-/-- The level parameters' names of a shape that denotes. -/
-theorem lps_names_of_dShape {st : EStore} {bs : BlockShape} {pP : ConLeche.BlockShape}
-    (h : ConRon.Bridge.Inductives.dShape st bs = some pP) :
-    ∃ ks, bs.lps.mapM (denoteN st.lss.ls.ns) = some ks := by
-  simp only [ConRon.Bridge.Inductives.dShape, bind, Option.bind_eq_some_iff] at h
-  obtain ⟨ms, hms, -⟩ := h
-  unfold BlockShape.lps
-  match hm : bs.members, hms with
-  | [], _ => exact ⟨[], rfl⟩
-  | m0 :: _, hms =>
-    obtain ⟨y, -, -, hy, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hms
-    simp only [ConRon.Bridge.Inductives.dMember, bind, Option.bind_eq_some_iff] at hy
-    obtain ⟨c, hc, -⟩ := hy
-    exact denoteCV_lps hc
+  | k + 1 => exact tbl_ref p hP hp k m a t tb hS ht hnP hA hok hks
 
 /-- A structure-like member's readings: the former's name and the constructor's type denote. -/
 theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : IConstantVal} {nF : Nat}
@@ -516,133 +520,51 @@ theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : ICo
   obtain ⟨c', hc', -⟩ := hy1
   exact ⟨⟨_, ConRon.Bridge.denoteCV_name hc⟩, ⟨_, ConRon.Bridge.denoteCV_type hc'⟩⟩
 
-/-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each structure-like member's
-table by `tbl_ref`), from the twin's `StateOK`, the shape's level parameters' names and the members'
-readings (each table's check a `PStep`, so they hold at the next); the stage kept, the twin's run a
-`PStep`. -/
-theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (pp vis : Word) (fe : IFEnv) (bs : BlockShape)
-    (hnP : bs.nP + 1 < 2 ^ 64) (n : Nat) :
-    ∀ (m : Mem) (a : AState) (mo ml : Word) (mss : List MemberShape),
-    StageR vis fe m a → DecB (fun m => decBS m pp.toNat) m bs → PSlR decMS mss mo ml m → AbsOK m →
-    ConRon.Bridge.StateOK a → (∃ ks, bs.lps.mapM (denoteN a.store.lss.ls.ns) = some ks) →
-    (∃ msP, mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some msP) →
-    RefE True (ctbE p n m pp vis mo ml) (ConRon.Arena.checkBlockTables bs fe mss) a
+/-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each table by `tbl_ref`),
+over the `IW` slice of table records; the stage kept, the twin's run a `PStep`. -/
+theorem ctb_ref {p : Prog} (hP : TabsProg p) (hp : ApdF p) (vis : Word) (fe : IFEnv) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (tO tL : Word) (Q : List IProjTable),
+    StageR vis fe m a → decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q →
+    tO.toNat + tL.toNat ≤ iwTop m → AbsOK m → ConRon.Bridge.StateOK a → TblsOK a.store Q →
+    RefE True (ctbE p n m vis tO tL) (ConRon.Arena.checkBlockTables fe Q) a
       (fun v _ a' => TblPost vis fe m a v.2 a') := by
   induction n with
   | zero => intros; rw [ctbE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | succ n ih =>
-  intro m a mo ml mss hS hq hmss hA hok hks ⟨msP, hmsP⟩
-  by_cases hml : ml = 0
-  · rw [ctbE.arm1 p n m pp vis mo ml hml]
-    have : mss = [] := by
-      subst hml
-      have := decPL_length _ (hmss.1.get (OMono.decPL (fun q => decMS_mono q) _ _)); simpa using this
+  intro m a tO tL Q hS hQ hb hA hok hT
+  by_cases hl : tL = 0
+  · rw [ctbE.arm1 (hc1 := hl)]
+    have : Q = [] := by
+      have h := decPL_length _ hQ; subst hl; exact List.eq_nil_of_length_eq_zero (by simpa using h)
     subst this
     exact RefE.ret rfl ⟨hS, IWGrow.refl m, MFr.refl _ _ m, hA, ConRon.Bridge.Inductives.PStep.refl hok⟩
-  have hsz := hS.iw.iwSize
-  obtain ⟨x, ys, rfl, hx, hys⟩ := hmss.uncons hml hsz
-  obtain ⟨y0, ys0, -, hy0, hys0⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hmsP
-  generalize hmsp : rdW (m.arr64 IW) mo = msp at hx
-  have hx' : decMS (truncM m) msp.toNat = some x := hx
-  simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hx'
-  obtain ⟨cvp, hcvp, cvT, hcvT, dp, -, dcl, -, nI, hnI, cs, hcs, hxe⟩ := hx'
-  subst hxe
-  obtain ⟨hlt0, hcvpm⟩ := L.Ind.iwN_truncM_some (i := msp.toNat + 0) (by simpa using hcvp)
-  obtain ⟨e0, t0⟩ := rec2RdN (w := msp) (k := 0) hcvpm hsz
-  obtain ⟨-, hnIm⟩ := L.Ind.iwN_truncM_some hnI
-  obtain ⟨e1, t1⟩ := rec2RdN (w := msp) (k := 1) hnIm hsz
-  obtain ⟨co, cl, hco, hcl, hcsd⟩ := decAt_some hcs
-  obtain ⟨-, hcom⟩ := L.Ind.iwN_truncM_some hco
-  obtain ⟨-, hclm⟩ := L.Ind.iwN_truncM_some hcl
-  obtain ⟨e2, t2⟩ := rec2RdN (w := msp) (k := 2) hcom hsz
-  obtain ⟨e3, t3⟩ := rec2RdN (w := msp) (k := 3) (by simpa [Nat.add_assoc] using hclm) hsz
-  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
-    show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl,
-    UInt64.add_zero] at e0 e1 e2 e3
-  have hlen : cs.length = cl := decPL_length _ hcsd
-  have hmn : (mo + 1).toNat + (ml - 1).toNat ≤ iwTop m := hys.2
-  by_cases hsc : cl = 1 ∧ nI = 0
-  · obtain ⟨rfl, rfl⟩ := hsc
-    obtain ⟨cp, c, cs', rfl, hcp, hc, hcs'⟩ := decPL_cons (l := 0) hcsd
-    obtain rfl : cs' = [] := by have := decPL_length _ hcs'; simpa using this
-    simp only [decCN, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cap, hcap, cA, hcA, nF, hnF, hce⟩ := hc
-    subst hce
-    obtain ⟨-, hcpm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat co : Word).toNat + 0) (by rw [t2]; simpa using hcp)
-    obtain ⟨e4, t4⟩ := rec2RdN (w := UInt64.ofNat co) (k := 0) hcpm hsz
-    simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e4
-    rw [ctbE.arm2 p n m pp vis mo ml hml (by rw [hmsp, e3]; rfl) (by rw [hmsp, e1]; rfl), hmsp, e2, e4]
-    obtain ⟨hTP, hcty⟩ := member_facts hy0
-    simp only [ConRon.Arena.checkBlockTables, MemberShape.structCtor?, beq_self_eq_true, ↓reduceIte]
-    refine RefE.onlySim (fun _ => ctbE.k_block_shape_lps.none ..) (Q := fun r m1 => lpsW n m pp = some (r, m1))
-      (fun _ _ h => h) fun r m1 h1 => ?_
-    rw [ctbE.k_block_shape_lps.arm1]
-    obtain ⟨hS1, hg1, hl1, hlb1⟩ := lpsW_ok' h1 hS hq
-    have hsz1 := hS1.iw.iwSize
-    have iwN1 : ∀ i, i < iwTop m → iwN m1 i = iwN m i := fun i hi => by
-      simp only [iwN, nat?, iwA, aread_apply]; rw [hg1.iwGet _ hi]
-    -- the reads at `m1`
-    have r0 : rdW (m1.arr64 IW) msp = UInt64.ofNat cvp := by
-      have := (rec2RdN (m := m1) (w := msp) (k := 0) (by rw [iwN1 _ hlt0]; exact hcvpm) hsz1).1
-      simpa using this
-    have hqt : decBS (truncM m) pp.toNat = some bs := hq
-    obtain ⟨-, -, hnPd, -, -, -, -⟩ := decBS_some hqt
-    obtain ⟨hlt4, hnPm⟩ := L.Ind.iwN_truncM_some hnPd
-    obtain ⟨r4, tnP⟩ := rec2RdN (m := m1) (w := pp) (k := 4) (by rw [iwN1 _ hlt4]; exact hnPm) hsz1
-    obtain ⟨hlt5, hcapm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat cp : Word).toNat + 0) (by rw [t4]; simpa using hcap)
-    obtain ⟨r6, tcap⟩ := rec2RdN (m := m1) (w := UInt64.ofNat cp) (k := 0) (by rw [iwN1 _ hlt5]; exact hcapm) hsz1
-    obtain ⟨hlt6, hnFm⟩ := L.Ind.iwN_truncM_some (i := (UInt64.ofNat cp : Word).toNat + 1) (by rw [t4]; exact hnF)
-    obtain ⟨r5, tnF⟩ := rec2RdN (m := m1) (w := UInt64.ofNat cp) (k := 1) (by rw [iwN1 _ hlt6]; exact hnFm) hsz1
-    simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
-      show UInt64.ofNat 4 = (4 : Word) from rfl, UInt64.add_zero] at r4 r5 r6
-    rw [r0, r4, r5, r6]
-    -- the former's name word
-    have hcv1 : decCV (erecP m1) (UInt64.ofNat cvp : Word).toNat = some cvT := by
-      rw [t0]; exact (IWGrow.ext hg1).decCV (decCVp_truncM hcvT)
-    have hnm := hcv1
-    simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hnm
-    obtain ⟨nm, hnmd, _, -, _, -, hcve⟩ := hnm
-    obtain ⟨wN, hwN, hwNH, hwNd⟩ := hd?_some hnmd
-    have hwN' : erRd m1 (UInt64.ofNat cvp) = wN := (erRd_of_erecP hwN).1
-    rw [show rdW (m1.arr64 (tierA EREC (UInt64.ofNat cvp >>> 40))) (UInt64.ofNat cvp &&& 1099511627775) = wN
-      from hwN']
-    have hnmE : decI wN = cvT.name := by rw [← hwNd, ← hcve]
-    have hcvA : DecB (fun m => decCVp m (UInt64.ofNat cap : Word).toNat) m1 cA := by
-      have : DecB (fun m => decCVp m (UInt64.ofNat cap : Word).toNat) m cA := by
-        show decCVp (truncM m) _ = some cA; rw [tcap]; exact hcA
-      exact this.grow (OMono.decCVp _) hg1
-    have hR := tblRef_any (fe := fe) p hP.tbl hp n m1 a wN (r.headD 0) (r.tail.headD 0) (UInt64.ofNat bs.nP)
-      (UInt64.ofNat nF) (UInt64.ofNat cap) bs.lps cA hS1 hwNH (by rw [tnP]; exact hnP) hl1 hlb1 hcvA
-      (lpsW_afr h1 hA) hok hks (by rw [hnmE]; exact hTP.choose_spec) hcty.choose_spec
-    rw [tnP, tnF, hnmE] at hR
-    refine RefE.bindE (fun _ => ctbE.k_check_struct_proj_table.none ..) id hR fun v y a1 _ hQ => ?_
-    obtain ⟨u, m2⟩ := v
-    rw [ctbE.k_check_struct_proj_table.arm1, ctbE.j1.arm1]
-    have hP1 : TblPost vis fe m a m1 a :=
-      ⟨hS1, hg1, lpsW_mfr h1, lpsW_afr h1 hA, ConRon.Bridge.Inductives.PStep.refl hok⟩
-    have hP2 := hP1.trans hQ
-    exact RefE.tail_eq (f := fun v => (0, v.2)) (fun e => ctbE.k_check_block_tables.none p e)
-      (fun v => ctbE.k_check_block_tables.arm1 p v.1 v.2) id rfl (fun v y a' hR => hP2.trans hR)
-      (ih m2 a1 (mo + 1) (ml - 1) ys hQ.stage (hq.grow (decBS_mono _) hP2.grow)
-        (hys.grow (fun q => decMS_mono q) hP2.grow) hQ.abs hQ.step.ok (names_ext hQ.step.ext hks)
-        ⟨_, ConRon.Bridge.Inductives.DExt.list ConRon.Bridge.Inductives.dMember_ext hQ.step.ext _ _ hys0⟩)
-  · have hnone : MemberShape.structCtor? ⟨cvT, dcl, nI, cs⟩ = none := by
-      unfold MemberShape.structCtor?
-      match cs, hlen with
-      | [], _ => rfl
-      | [_], h =>
-        have : nI ≠ 0 := fun e => hsc ⟨h.symm, e⟩
-        simp [this]
-      | _ :: _ :: _, _ => rfl
-    have hj : ctbE p (n + 1) m pp vis mo ml = ctbE.j1 p n pp vis mo ml m := by
-      by_cases h3 : cl = 1
-      · exact ctbE.arm3 p n m pp vis mo ml hml (by rw [hmsp, e3, h3]; rfl)
-          (by rw [hmsp, e1]; intro e; apply hsc ⟨h3, by rw [← t1, e]; rfl⟩)
-      · exact ctbE.arm4 p n m pp vis mo ml hml (by rw [hmsp, e3]; intro e; apply h3; rw [← t3, e]; rfl)
-    rw [hj, ctbE.j1.arm1]
-    simp only [ConRon.Arena.checkBlockTables, hnone]
-    exact RefE.tail_eq (f := fun v => (0, v.2)) (fun e => ctbE.k_check_block_tables.none p e)
-      (fun v => ctbE.k_check_block_tables.arm1 p v.1 v.2) id rfl (fun v y a' hR => hR)
-      (ih m a (mo + 1) (ml - 1) ys hS hq hys hA hok hks ⟨_, hys0⟩)
+  obtain ⟨l1, hl1, hll⟩ := L.exists_toNat_eq_succ hl
+  have hQ' := hQ
+  rw [hl1, decPL_succ_do] at hQ'
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hQ'
+  obtain ⟨t0, ⟨q, hq, ht0⟩, ts, hts, rfl⟩ := hQ'
+  have hT64 : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨hrq, -⟩ := iwN_rdW hq (by omega)
+  rw [UInt64.ofNat_toNat] at hrq
+  rw [ctbE.arm2 (hc1 := hl), hrq]
+  have hqn : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' (by
+    have := iwN_lt hq; have := hS.iw.iwSize
+    simp only [iwN, nat?, iwA, aread_apply, Option.map_eq_some_iff] at hq
+    obtain ⟨w, hw, rfl⟩ := hq; exact w.toNat_lt)
+  obtain ⟨hk0, hn0⟩ := hT t0 (List.mem_cons_self ..)
+  have hR := tblRef_any (fe := fe) p hP.tbl hp n m a (UInt64.ofNat q) t0 hS (by rw [hqn]; exact ht0) hn0 hA hok hk0
+  simp only [ConRon.Arena.checkBlockTables]
+  refine RefE.bindE (fun _ => ctbE.k_check_struct_proj_table.none ..) id hR fun v y a1 _ hQ1 => ?_
+  obtain ⟨u, m2⟩ := v
+  rw [ctbE.k_check_struct_proj_table.arm1]
+  have hto1 : (tO + 1).toNat = tO.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hts' : decPL m2 (decTbl (erecP m2)) (tO + 1).toNat (tL - 1).toNat = some ts := by
+    rw [hto1, hll]; exact decPL_tbl_grow hQ1.grow (by omega) hts
+  exact RefE.tail_eq (f := fun v => (0, v.2)) (fun e => ctbE.k_check_block_tables.none p e)
+    (fun v => ctbE.k_check_block_tables.arm1 p v.1 v.2) id rfl (fun v y a' hR => hQ1.trans hR)
+    (ih m2 a1 (tO + 1) (tL - 1) ts hQ1.stage hts' (by rw [hto1, hll]; have h1 := hQ1.grow.iw; have h2 := hb; rw [hl1] at h2; simp only at h1; omega) hQ1.abs hQ1.step.ok
+      (fun t ht => ⟨names_ext hQ1.step.ext (hT t (List.mem_cons_of_mem _ ht)).1,
+        (hT t (List.mem_cons_of_mem _ ht)).2⟩))
+
 
 end L.Ind

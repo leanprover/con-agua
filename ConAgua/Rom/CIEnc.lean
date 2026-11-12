@@ -32,8 +32,7 @@ parameters, type), then the kind's parts. A constant: its kind (`decCI`'s number
 projection table has no encoding: none of these constants is one), the constant value, then
 
 * defn: the value, the hint kind (`0` opaque, `1` abbrev, `2` regular) and its height;
-* ind: `eta`, `etaParams`, `etaFields`, `unitlike`, `unitParams`, `nIdx`, `nparams`, then the
-  names `etaCtor`, `all` (count, names), `ctors` (count, names);
+* ind: `eta`, `nIdx`, `nparams`, then the names `all` (count, names), `ctors` (count, names);
 * ctor: `numParams`, `numFields`;
 * rec: `majorIdx`, `numParams`, `isK`, the rule count, per rule: `ctor`, `nfields`, the fire tag
   (`0` plain; `1` nested: the level count, the levels, the pin count, the pins at the block's
@@ -67,8 +66,7 @@ def bw (b : Bool) : List UInt8 := u64B (if b then 1 else 0)
 
 /-- An inductive's capabilities (no expression). -/
 def encCaps (c : ConLeche.IndCaps) : List UInt8 :=
-  bw c.eta ++ u64B c.etaParams ++ u64B c.etaFields ++ bw c.unitlike ++ u64B c.unitParams ++
-    u64B c.nIdx ++ u64B c.nparams ++ encName c.etaCtor ++ encNameL c.all ++ encNameL c.ctors
+  bw c.eta ++ u64B c.nIdx ++ u64B c.nparams ++ encNameL c.all ++ encNameL c.ctors
 
 /-- A recursor rule at the memo `seen`. -/
 def encRule (seen : List ConLeche.Expr) (rl : ConLeche.RecRule) : List UInt8 × List ConLeche.Expr :=

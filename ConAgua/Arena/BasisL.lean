@@ -5,6 +5,7 @@ import ConAgua.Census.Attr
 import ConAgua.Layout
 import ConAgua.L.Notation
 public import ConAgua.L.Syntax
+public import ConAgua.Arena.Reasons
 
 @[expose] public section
 
@@ -14,15 +15,14 @@ public import ConAgua.L.Syntax
 The twin's `Basis.lean` (`vendor/con-ron/ConRon/Arena/Basis.lean`) but for `andPinOk`
 (`DeclAndPin.lean`) and `BasisKind.decls`/`natA` (the ROM's `rom_basis_decls`, `rom_ci`): a pin at
 a stream's level-parameter names (`IConstantInfo.atLps`), the block's comparison with its pin
-(`pinListOk`), the name test that says a record is a pinned block's (`basisNameHit`), what such a
-block and a quotient record store (`BasisKind.atBlock`, `quotAt`), the quotient record's tests
-(`quotPinHit`, `quotPredsOk`). On lane `induct`'s conventions (`IndIface.lean`):
+(`pinListOk`), the name test that says a record is a pinned block's (`basisNameHit`), the reserved
+names' check (`basisNamesOk`, `basisNamesError`), what a quotient record stores (`quotAt`), the
+quotient record's tests (`quotPinHit`, `quotPredsOk`). On lane `induct`'s conventions (`IndIface.lean`):
 
 * A constant record is an `EREC` pointer (`decCI`, `EnvRec.lean`); a list of them an `IW` slice
   of pointers (the ROM's blocks, `rom_basis_decls(kind)`). The block of a stream record arrives
-  as an `EREC` slice of pointers (`ind_block_to_erec`): the three entry points that take it
-  (`basis_name_hit`, `basis_at_block`, `check_basis_block`, `DeclArms.lean`) copy it into `IW`
-  (`er_to_iw`) first.
+  as an `EREC` slice of pointers (`ind_block_to_erec`): the entry points that compare it
+  (`basis_name_hit`, `basis_names_ok`) copy it into `IW` (`er_to_iw`) first.
 * A list of level-parameter names `ps` is an `EREC` slice (a record's own, `(p + 2, p + 3)`);
   `atLps` shares it with the record it builds. The read-back names and levels of the twin
   (`readNamesM`, `Level.subst`) are the name handles themselves (`denoteN` injective):
@@ -350,35 +350,78 @@ def basisNameHit : FunDecl := lfn (bo, bl) locals (io, il, f, k) {
   return (f, k)
 }
 
-/-- `at_block_go(po, pl, co, cl)`: each pin at the names its record declares (the shorter list
-ends it), a fresh `IW` slice of records. -/
--- con-ron: ConRon/Arena/Basis.lean:208-215 ConRon.Arena.atBlockGo
-@[no_expose, l_impl ConRon.Arena.atBlockGo]
-def atBlockGo : FunDecl := lfn (po, pl, co, cl) locals (c, x, ro, rl, q, m) {
-  if pl == 0 || cl == 0 { return (0, 0) };
-  c := IW.u64[co];
-  x := call ci_at_lps(IW.u64[po], EREC⦃c + 2⦄, EREC⦃c + 3⦄);
-  (ro, rl) := call at_block_go(po + 1, pl - 1, co + 1, cl - 1);
-  (q, m) := call sl_cons(x, ro, rl);
-  return (q, m)
+/-! ## The reserved names -/
+
+/-- `basis_name_unreserved(n)`: `!reservedBasisNames.contains n` (the one-constant arms' test). -/
+-- con-ron: ConRon/Arena/Basis.lean:210-214 ConRon.Arena.basisNameUnreserved
+@[no_expose, l_impl ConRon.Arena.basisNameUnreserved]
+def basisNameUnreserved : FunDecl := lfn (n) locals (c) {
+  c := call reserved_contains(n);
+  return u64(c == 0)
 }
 
-/-- `basis_at_block(kind, bo, bl)`: `BasisKind.atBlock kind block` (the block an `EREC` slice of
-record pointers) → an `IW` slice of the records a pinned block's check installs. -/
--- con-ron: ConRon/Arena/Basis.lean:217-221 ConRon.Arena.BasisKind.atBlock
-@[no_expose, l_impl ConRon.Arena.BasisKind.atBlock]
-def basisAtBlock : FunDecl := lfn (kind, bo, bl) locals (po, pl, io, il, ro, rl) {
-  (po, pl) := call rom_basis_decls(kind);
-  (io, il) := call er_to_iw(bo, bl);
-  (ro, rl) := call at_block_go(po, pl, io, il);
-  return (ro, rl)
+/-- `block_names_unreserved(bo, bl)`: `block.all fun c => !rs.contains c.name` (the block an `EREC`
+slice of record pointers). -/
+-- con-ron: ConRon/Arena/Basis.lean:216-235 ConRon.Arena.basisNamesOk
+@[no_expose, l_impl ConRon.Arena.basisNamesOk]
+def blockNamesUnreserved : FunDecl := lfn (bo, bl) locals (c, r) {
+  if bl == 0 { return 1 };
+  c := call reserved_contains(EREC⦃EREC⦃bo⦄ + 1⦄);
+  if c != 0 { return 0 };
+  r := call block_names_unreserved(bo + 1, bl - 1);
+  return r
+}
+
+/-- `basis_names_ok(k, n, bo, bl)`: `basisNamesOk d` for a declaration of the front's kind `k`
+(`1` axiom, `2` definition, `3` theorem, `4` opaque, `5` quotient, `6` inductive block), `n` a
+one-constant declaration's name, `(bo, bl)` an inductive block (an `EREC` slice of record
+pointers, as `ind_block_to_erec` makes it): a block under a pinned block's names must be that
+block (`pin_list_ok`), no other block may hold a reserved name, `Quot.sound` (pin slot `4`) and the
+quotient records pass, every other declaration's name must be unreserved. -/
+-- con-ron: ConRon/Arena/Basis.lean:216-235 ConRon.Arena.basisNamesOk
+@[no_expose, l_impl ConRon.Arena.basisNamesOk]
+def basisNamesOk : FunDecl := lfn (k, n, bo, bl) locals (f, kind, po, pl, io, il, e, s) {
+  if k == 6 {
+    (f, kind) := call basis_name_hit(bo, bl);
+    if f != 0 {
+      (po, pl) := call rom_basis_decls(kind);
+      (io, il) := call er_to_iw(bo, bl);
+      e := call pin_list_ok(io, il, po, pl);
+      return e
+    };
+    e := call block_names_unreserved(bo, bl);
+    return e
+  };
+  if k == 1 {
+    s := call pin_at(4);
+    if n == s { return 1 };
+    e := call basis_name_unreserved(n);
+    return e
+  };
+  if k == 5 { return 1 };
+  e := call basis_name_unreserved(n);
+  return e
+}
+
+/-- `basis_names_error(k, bo, bl)`: `basisNamesError d`, the reason (all three invalid input): a
+block under a pinned block's names that is not the pin, a reserved name in another block, a
+one-constant declaration at a reserved name. -/
+-- con-ron: ConRon/Arena/Basis.lean:237-247 ConRon.Arena.basisNamesError
+@[no_expose, l_impl ConRon.Arena.basisNamesError]
+def basisNamesError : FunDecl := lfn (k, bo, bl) locals (f, kind) {
+  if k == 6 {
+    (f, kind) := call basis_name_hit(bo, bl);
+    if f != 0 { return ⟪R_RESERVED_BASIS_NAME_THE⟫ };
+    return ⟪R_RESERVED_BASIS_NAME_IN⟫
+  };
+  return ⟪R_RESERVED_BASIS_NAME⟫
 }
 
 /-! ## The quotient records -/
 
 /-- `quot_pin(k)`: `quotPin k`, the pinned quotient package's record at slot `k`. The ROM's block
 has the five slots; a slot past it (the twin's `getD … default`, unreachable) aborts. -/
--- con-ron: ConRon/Arena/Basis.lean:223-227 ConRon.Arena.quotPin
+-- con-ron: ConRon/Arena/Basis.lean:249-253 ConRon.Arena.quotPin
 @[no_expose, l_impl ConRon.Arena.quotPin]
 def quotPin : FunDecl := lfn (k) locals (o, l) {
   (o, l) := call rom_basis_decls(4);
@@ -387,7 +430,7 @@ def quotPin : FunDecl := lfn (k) locals (o, l) {
 }
 
 /-- `quot_at(k, q)`: `quotAt k cv` (`q` a constant value): the slot's pin at `cv`'s names. -/
--- con-ron: ConRon/Arena/Basis.lean:229-232 ConRon.Arena.quotAt
+-- con-ron: ConRon/Arena/Basis.lean:255-258 ConRon.Arena.quotAt
 @[no_expose, l_impl ConRon.Arena.quotAt]
 def quotAt : FunDecl := lfn (k, q) locals (c, r) {
   c := call quot_pin(k);
@@ -397,7 +440,7 @@ def quotAt : FunDecl := lfn (k, q) locals (c, r) {
 
 /-- `quot_pin_hit(k, q)`: `quotPinHit k cv`: `cv`'s names distinct and as many as the pin's, and
 `cv` the pin's constant value at them. -/
--- con-ron: ConRon/Arena/Basis.lean:234-242 ConRon.Arena.quotPinHit
+-- con-ron: ConRon/Arena/Basis.lean:260-268 ConRon.Arena.quotPinHit
 @[no_expose, l_impl ConRon.Arena.quotPinHit]
 def quotPinHitL : FunDecl := lfn (k, q) locals (c, io, il, d, a, z, e) {
   c := call quot_pin(k);
@@ -414,7 +457,7 @@ def quotPinHitL : FunDecl := lfn (k, q) locals (c, io, il, d, a, z, e) {
 
 /-- `quot_preds_ok(vis, k)`: `quotPredsOk fe k`: the constants slot `k`'s type mentions stored
 (`Eq`, `Quot`, `Quot.mk`: pin slots `0`, `47`, `51`), all three read first. -/
--- con-ron: ConRon/Arena/Basis.lean:244-256 ConRon.Arena.quotPredsOk
+-- con-ron: ConRon/Arena/Basis.lean:270-282 ConRon.Arena.quotPredsOk
 @[no_expose, l_impl ConRon.Arena.quotPredsOk]
 def quotPredsOk : FunDecl := lfn (vis, k) locals (n, he, hq, hm, r) {
   n := call pin_at(0);
@@ -444,8 +487,9 @@ def basisFns : Prog :=
    ("block_link_ok_at", blockLinkOkAt), ("block_links_ok_go", blockLinksOkGo),
    ("block_links_ok", blockLinksOk), ("pin_copies_ok", pinCopiesOk), ("pin_list_ok", pinListOk),
    ("block_names_eq", blockNamesEq), ("basis_name_hit_go", basisNameHitGo),
-   ("basis_name_hit", basisNameHit), ("at_block_go", atBlockGo),
-   ("basis_at_block", basisAtBlock), ("quot_pin", quotPin), ("quot_at", quotAt),
+   ("basis_name_hit", basisNameHit), ("basis_name_unreserved", basisNameUnreserved),
+   ("block_names_unreserved", blockNamesUnreserved), ("basis_names_ok", basisNamesOk),
+   ("basis_names_error", basisNamesError), ("quot_pin", quotPin), ("quot_at", quotAt),
    ("quot_pin_hit", quotPinHitL), ("quot_preds_ok", quotPredsOk)]
 
 end L.Ind

@@ -19,7 +19,7 @@ environment.
 * **`Env.pushDelta` and `FEnv.pushDelta` are one function** over the one
   environment type, `IFEnv` (task #97c's deviation 1).
 * **Every reader is an `AM` function**: a term is read through `view`, and the
-  pins' renamings (`quotAt`, `BasisKind.atBlock`) and `Expr.dropVars`'s
+  pins' renaming (`quotAt`) and `Expr.dropVars`'s
   instantiation intern.
 -/
 module
@@ -33,20 +33,20 @@ namespace ConRon.Arena
 
 open ConLeche
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:122-125 FEnv.pushAll
+/-- con-leche: ConLeche/Kernel/FEnv.lean:150-153 FEnv.pushAll
 Push a list of records, head first. -/
 def IFEnv.pushAll : List IConstantInfo → IFEnv → IFEnv
   | [], fe => fe
   | ci :: rest, fe => IFEnv.pushAll rest (fe.push ci)
 
-/-- con-leche: ConLeche/Kernel/Install.lean:22-24 Env.pushDelta
+/-- con-leche: ConLeche/Kernel/FEnv.lean:143-148 FEnv.pushTables
 The tables, pushed in order. -/
 def IFEnv.pushTables : List IProjTable → IFEnv → IFEnv
   | [], fe => fe
   | t :: rest, fe => IFEnv.pushTables rest (fe.pushTable t)
 
 /-- con-leche: ConLeche/Kernel/Install.lean:22-24 Env.pushDelta
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:127-132 FEnv.pushDelta
+con-leche: ConLeche/Kernel/FEnv.lean:155-160 FEnv.pushDelta
 **The environment with a declaration's constants and tables pushed**, each list
 oldest first: the constants, then the tables. -/
 def IFEnv.pushDelta (fe : IFEnv) (L : List IConstantInfo) (Q : List IProjTable) : IFEnv :=
@@ -111,29 +111,33 @@ def blockRecs (p : BlockShape) : List RecShape → AM (List IConstantInfo)
       .recInfo rc.cvR rc.mI rc.rP rc.isK (rc.rules.map ({ · with fire := f }))
     pure (r :: (← blockRecs p rest))
 
-/-- con-leche: ConLeche/Kernel/Install.lean:63-73 blockTables
-**The projection tables**, in block order: one per structure-like member whose
-constructor reads as one. -/
-def blockTables (p : BlockShape) : List MemberShape → AM (List IProjTable)
-  | [] => pure []
+/-- con-leche: ConLeche/Kernel/Install.lean:63-74 blockTables
+con-leche: ConLeche/Cached/CheckerC.lean:43-55 blockTablesC
+**The projection tables**, in block order: one per structure-like member, its
+bodies read off its constructor's type (`structProjBodies`).  `none` where a
+structure-like member's constructor type is too short to read them
+(`checkBlock` rejects it). -/
+def blockTables (p : BlockShape) : List MemberShape → AM (Option (List IProjTable))
+  | [] => pure (some [])
   | ms :: rest => do
     match ms.structCtor? with
     | some c =>
       match ← structProjBodies ms.declared.name p.nP c.2 c.1.type with
       | some bodies =>
         let t : IProjTable := ⟨ms.declared.name, p.lps, p.nP, c.1.name, c.2, bodies⟩
-        pure (t :: (← blockTables p rest))
-      | none => blockTables p rest
+        pure ((← blockTables p rest).map (t :: ·))
+      | none => pure none
     | none => blockTables p rest
 
-/-- con-leche: ConLeche/Kernel/Install.lean:75-78 blockConstants
+/-- con-leche: ConLeche/Kernel/Install.lean:76-79 blockConstants
+con-leche: ConLeche/Cached/CheckerC.lean:99-102 blockConstantsC
 **The block's constants**, in push order: the formers (at official's `is_rec`,
 `blockIsRec`), the constructors, the recursors. -/
 def blockConstants (p : BlockShape) : AM (List IConstantInfo) := do
   let isRec ← blockIsRec p
   pure (blockFormers p isRec ++ blockCtors p ++ (← blockRecs p p.recs))
 
-/-- con-leche: ConLeche/Kernel/Install.lean:80-98 declConstants
+/-- con-leche: ConLeche/Kernel/Install.lean:81-95 declConstants
 The `.axiomDecl` arm: `Quot.sound` installs its pin at the record's names,
 `sorryAx` nothing, any other axiom itself. -/
 def declConstantsAxiom (cv : IConstantVal) : AM (List IConstantInfo) := do
@@ -141,11 +145,11 @@ def declConstantsAxiom (cv : IConstantVal) : AM (List IConstantInfo) := do
   else if cv.name == (← pinSorryAx) then pure []
   else pure [.axiomInfo cv]
 
-/-- con-leche: ConLeche/Kernel/Install.lean:80-98 declConstants
-**The constants a declaration installs**, in push order.  A block with a pinned
-block's names installs the pin at the names the record declares, a block the
-recogniser does not read nothing (it declines), and `sorryAx` nothing (any use
-of it declines). -/
+/-- con-leche: ConLeche/Kernel/Install.lean:81-95 declConstants
+con-leche: ConLeche/Cached/CheckerC.lean:104-118 declConstantsC
+**The constants a declaration installs**, in push order.  A block `readBlock`
+cannot read installs nothing (its check rejects it), and `sorryAx` nothing
+(any use of it declines). -/
 def declConstants : IDeclaration → AM (List IConstantInfo)
   | .defnDecl cv value hint => pure [.defnInfo cv value hint]
   | .thmDecl cv _ => pure [.thmInfo cv]
@@ -153,24 +157,22 @@ def declConstants : IDeclaration → AM (List IConstantInfo)
   | .axiomDecl cv => declConstantsAxiom cv
   | .quotDecl k cv => do pure [← quotAt k cv]
   | .indDecl block nP => do
-    match ← basisNameHit block with
-    | some kind => ConRon.Arena.BasisKind.atBlock kind block
-    | none =>
-      match ← blockShape? nP block with
-      | some p => blockConstants p
-      | none => pure []
+    match ← readBlock nP block with
+    | .ok p => blockConstants p
+    | .error _ => pure []
 
-/-- con-leche: ConLeche/Kernel/Install.lean:100-109 declTables
-**The projection tables a declaration installs**: those of a recognised
-inductive block (a pinned block's names install none). -/
+/-- con-leche: ConLeche/Kernel/Install.lean:97-103 declTables
+con-leche: ConLeche/Cached/CheckerC.lean:57-63 declTablesC
+**The projection tables a declaration installs**: those of an inductive block
+`readBlock` reads (none where a constructor is too short for them). -/
 def declTables : IDeclaration → AM (List IProjTable)
   | .indDecl block nP => do
-    match ← basisNameHit block with
-    | some _ => pure []
-    | none =>
-      match ← blockShape? nP block with
-      | some p => blockTables p p.members
+    match ← readBlock nP block with
+    | .ok p => do
+      match ← blockTables p p.members with
+      | some q => pure q
       | none => pure []
+    | .error _ => pure []
   | _ => pure []
 
 end ConRon.Arena

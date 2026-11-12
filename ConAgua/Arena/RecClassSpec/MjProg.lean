@@ -2,11 +2,11 @@ module
 
 public import ConAgua.Arena.IndRealNames
 public import ConAgua.Arena.IndRealOpf
-import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.RecClassSpec.CloseLams
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.RecSim
 import ConRon.Bridge.Grind
-public import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 
@@ -138,6 +138,7 @@ structure MtProg (p : Prog) : Prop extends MjProg p where
   mkf : p.lookup "mk_forall" = some mkForall
   ct : p.lookup "close_telescope" = some closeTelescope
   ab : AbF p
+  ctf : CtF p
   mot : p.lookup "class_gen_motive_ty" = some classGenMotiveTy
 
 end L.Ind

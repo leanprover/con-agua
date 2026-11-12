@@ -94,7 +94,7 @@ def checkJobList (mode : CheckMode) (pins : List INatOpPinSet) (I : IStreamIndex
     | .ok (.error e, s') => .ok (.error e, s')
     | .error e => .error e
 
-/-- con-leche: ConLeche/Driver/Run.lean:85-101 checkDeclsIO — **the check of a
+/-- con-leche: ConLeche/Driver/Run.lean:74-97 checkDeclsIO — **the check of a
 stream, as one worker runs it**: the index of the records, then every record's job in
 fold order, from the worker's state.  The `× Nat` of the error is the failure's
 POSITION in the fold. -/
@@ -105,7 +105,7 @@ def checkStream (mode : CheckMode) (pins : List INatOpPinSet)
   | .ok (.error e, s₁) => .ok (.error e, s₁)
   | .error e => .error e
 
-/-- con-leche: ConLeche/Cached/Decls.lean:77-86 checkDecls — the fold's
+/-- con-leche: ConLeche/Cached/Decls.lean:83-92 checkDecls — the fold's
 failure, with its POSITION rendered into the message.  con-leche's driver
 reports the declaration by indexing the record array it already holds
 (`ConLeche/Driver/Run.lean`'s `checkMain`); the seam of (B) has no position channel
@@ -122,7 +122,7 @@ def atDecl : CheckError → Nat → CheckError
 /-! ## The startup walk -/
 
 /-- con-leche: ConLeche/Kernel/NatOpPins.lean:75-78 _
-con-leche: ConLeche/Kernel/Basis.lean:38-44 BasisKind.decls
+con-leche: ConLeche/Kernel/Basis.lean:39-45 BasisKind.decls
 **The one-time tree walk of DESIGN §8.6 P2d**: every datum the checker
 compares a stream record against, interned into the tier that is live at the
 call — which, at the driver's call, is the persistent one.
@@ -133,8 +133,17 @@ compare by handle, and the `Nat`-operation pin variants, whose interned form
 is the checker's pin-list parameter (con-leche's task #304).
 
 The standard-axiom and `ofReduce*` pins are con-leche's (`iffA` … `choiceA`,
-`ofReduceNatA`/`ofReduceBoolA`), compared by `matchesPin`'s plain equality. -/
-def internAllPins (pins : List NatOpPinSet) : AM (List INatOpPinSet) := do
+`ofReduceNatA`/`ofReduceBoolA`), compared by `matchesPin`'s plain equality.
+
+First, the run's maximum `Nat` size goes into the pin record
+(`Pins.maxNatSize`): con-leche threads it beside the pin list
+(`checkDecls mode pins maxNatSize`) into every declaration's fresh state
+(`{ maxNatSize := maxNatSize }`, `Cached.declStep`, `Cached.recordJob`); here
+every worker inherits it with the pins (`AState.worker`) and no job writes it. -/
+def internAllPins (pins : List NatOpPinSet) (maxNatSize : Nat) :
+    AM (List INatOpPinSet) := do
+  let s ← get
+  set { s with pins := { s.pins with maxNatSize := maxNatSize } }
   let _ ← BasisKind.decls .eqK
   let _ ← BasisKind.decls .natK
   let _ ← BasisKind.decls .emptyK

@@ -33,7 +33,7 @@ namespace L.Arena
 
 /-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
 `p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
--- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:163-167 ConRon.Arena.IConstantInfo.toConstantVal
 @[no_expose] def strCvL : FunDecl := lfn (p) locals () {
   return (EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄)
 }
@@ -216,19 +216,58 @@ def strLitStoredL : FunDecl :=
     u64(f6 != 0) & u64(f7 != 0)
 }
 
+/-- `nat_ind_at_cv(q)`: `natIndOk (some (.indInfo cv {}))` at the constant value `q` (no level
+parameters, type `Sort 1`): `nat_ind_ok` at a record of the kind `litShapeOk` builds. -/
+-- con-ron: ConRon/Arena/Core.lean:490-496 ConRon.Arena.natIndOk
+@[no_expose, l_impl ConRon.Arena.natIndOk]
+def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
+  if EREC⦃q + 2⦄ != 0 { return 0 };
+  s1 := call pin_word(54);
+  return u64(EREC⦃q + 3⦄ == s1)
+}
+
+/-- `nat_zero_at_cv(q)`: `natZeroOk (some (.ctorInfo cv 0 0))` at the constant value `q` (no level
+parameters, type `Nat`; `Nat` interned first, as the twin does). -/
+-- con-ron: ConRon/Arena/Core.lean:498-505 ConRon.Arena.natZeroOk
+@[no_expose, l_impl ConRon.Arena.natZeroOk]
+def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
+  nt := call pin_at(1);
+  nc := call const_e(nt);
+  if EREC⦃q + 2⦄ != 0 { return 0 };
+  return u64(EREC⦃q + 3⦄ == nc)
+}
+
+/-- `nat_succ_at_cv(q)`: `natSuccOk (some (.ctorInfo cv 0 1))` at the constant value `q` (no level
+parameters, type `Nat → Nat`). -/
+-- con-ron: ConRon/Arena/Core.lean:507-519 ConRon.Arena.natSuccOk
+@[no_expose, l_impl ConRon.Arena.natSuccOk]
+def natSuccAtCvL : FunDecl := lfn (q) locals (nt, nc, ty, t, i, dom, body) {
+  if EREC⦃q + 2⦄ != 0 { return 0 };
+  nt := call pin_at(1);
+  nc := call const_e(nt);
+  ty := EREC⦃q + 3⦄;
+  if ⟦ty⟧.tag != 6 { return 0 };
+  (t, i) := node FORALL⟦ty⟧;
+  dom := FORALL⟨t, i⟩.ty;
+  body := FORALL⟨t, i⟩.b;
+  if dom == nc && body == nc { return 1 };
+  return 0
+}
+
 /-- `lit_shape_ok(p)`: the shape a declaration (the record at `p`, its name at `p + 1`) at a
-literal's name must have; any other name passes. The cited `if`-chain, each name pinned only when
-the chain reaches it. -/
--- con-ron: ConRon/Arena/Core.lean:822-838 ConRon.Arena.litShapeOk
+literal's name must have; any other name passes. The three `Nat` names are read at the kinds their
+guards ask for (`nat_ind_at_cv`, `nat_zero_at_cv`, `nat_succ_at_cv` at the record's constant value
+`p + 1`). The cited `if`-chain, each name pinned only when the chain reaches it. -/
+-- con-ron: ConRon/Arena/Core.lean:822-839 ConRon.Arena.litShapeOk
 @[no_expose, l_impl ConRon.Arena.litShapeOk]
 def litShapeOkL : FunDecl := lfn (p) locals (n, x, r) {
   n := EREC⦃p + 1⦄;
   x := call pin_at(1);
-  if n == x { r := call nat_ind_ok(1, p); return r };
+  if n == x { r := call nat_ind_at_cv(p + 1); return r };
   x := call pin_at(2);
-  if n == x { r := call nat_zero_ok(1, p); return r };
+  if n == x { r := call nat_zero_at_cv(p + 1); return r };
   x := call pin_at(3);
-  if n == x { r := call nat_succ_ok(1, p); return r };
+  if n == x { r := call nat_succ_at_cv(p + 1); return r };
   x := call pin_at(5);
   if n == x { r := call string_ty_ok(1, p); return r };
   x := call pin_at(6);

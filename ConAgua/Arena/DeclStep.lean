@@ -14,11 +14,12 @@ the environment).
 
 * `check_decl(i, vis)` → `vis'`: record `i` of `DECL`. An inductive block (kind `6`, the front's
   records in `DIND`) is copied into `EREC` (`ind_block_to_erec`: every record, its universe
-  parameters and its recursor rules relocated) and checked by lane `induct`'s `check_ind_decl(vis,
-  boff, blen, nP)` (the pinned blocks first, `basis_name_hit`/`check_basis_block`, then the one
-  route or the shapeless decline); every one-constant record goes to its arm (`DeclArms.lean`:
+  parameters and its recursor rules relocated). `check_decl_kind(i, vis, bo, bl)` is the twin's
+  dispatch: the block goes to lane `induct`'s `check_ind_decl(vis, boff, blen, nP)` (the declared
+  parameter count, then the one route), every one-constant record to its arm (`DeclArms.lean`:
   `check_decl_axiom`, `check_decl_defn`, `check_decl_thm`, `check_decl_opaque`, `check_decl_quot`,
-  each `(i, vis)`).
+  each `(i, vis)`). Then the caches are flushed and the reserved names checked (`basis_names_ok`,
+  `BasisL.lean`, at the record's kind and name and the block).
 * `erec_ci(i, kind)`: the record's constant as an `EREC` record of the kind the arm's value check
   returns.
 -/
@@ -121,15 +122,15 @@ constructor, 7; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its 
   return (o, bl)
 }
 
-/-! ## `check_decl` -/
+/-! ## `check_decl_kind`, `check_decl` -/
 
-/-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:102-184 ConRon.Arena.checkDecl
-@[no_expose, l_impl ConRon.Arena.checkDecl]
-def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
+/-- `check_decl_kind(i, vis, bo, bl)`: `checkDeclKind` on record `i` (an inductive block's records
+already copied into `EREC`: the slice `(bo, bl)`, `check_decl`'s). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+@[no_expose, l_impl ConRon.Arena.checkDeclKind]
+def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
   k := DECL.u64[1 + 8 * i];
   if k == 6 {
-    (bo, bl) := call ind_block_to_erec(i);
     np := DECL.u64[5 + 8 * i];
     v := call check_ind_decl(vis, bo, bl, np);
     return v
@@ -142,13 +143,37 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
   abort
 }
 
+/-- `check_decl(i, vis)`: `checkDecl` on record `i`: an inductive block's records copied into
+`EREC` (`ind_block_to_erec`), the declaration's own checks (`check_decl_kind`), the caches flushed,
+then the reserved names' check (`basis_names_ok`; its failure `basis_names_error`'s reason). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
+@[no_expose, l_impl ConRon.Arena.checkDecl]
+def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v, z, ok, e) {
+  k := DECL.u64[1 + 8 * i];
+  bo := 0;
+  bl := 0;
+  if k == 6 { (bo, bl) := call ind_block_to_erec(i) };
+  v := call check_decl_kind(i, vis, bo, bl);
+  z := call flush_caches();
+  ok := call basis_names_ok(k, DECL.u64[2 + 8 * i] & 4294967295, bo, bl);
+  if ok == 0 {
+    e := call basis_names_error(k, bo, bl);
+    -- the twin's `fail e`: the reject at the reason `e` (one of `basis_names_error`'s)
+    if e == ⟪R_RESERVED_BASIS_NAME_THE⟫ { fail R_RESERVED_BASIS_NAME_THE };
+    if e == ⟪R_RESERVED_BASIS_NAME_IN⟫ { fail R_RESERVED_BASIS_NAME_IN };
+    fail R_RESERVED_BASIS_NAME
+  };
+  return v
+}
+
 /-! ## The program -/
 
 /-- This module's functions. -/
 def declStepFns : Prog :=
   [("dlp_copy", dlpCopy), ("erec_ci", erecCi),
    ("dind_copy", dindCopy), ("ind_rec_copy", indRecCopy), ("ind_copy_go", indCopyGo),
-   ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL)]
+   ("ind_block_to_erec", indBlockToErec), ("check_decl_kind", checkDeclKindL),
+   ("check_decl", checkDeclL)]
 
 /-- The step's program: this module, the arms (`DeclArms*.lean`, with their ROM stubs and the
 master functions lane `induct`'s program lacks), lane `induct`'s stage (with its stubs, but for

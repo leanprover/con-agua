@@ -150,6 +150,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.NatSized
 public import ConAgua.Checker.Prog
 
 @[expose] public section

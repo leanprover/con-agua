@@ -146,11 +146,50 @@ theorem structEtaCertWith_mono (h : FnsRefines r₁ r₂) (d : Nat) (a b wtb : E
   have := (structEtaCertWith (pairFns r₁ r₂ h) env d a b wtb).property
   rwa [structEtaCertWith_fst_proj, structEtaCertWith_snd_proj] at this
 
+/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the η-expansion
+of a partially applied constructor. -/
+theorem structEtaExpand_mono (h : FnsRefines r₁ r₂) (k d : Nat) (a b t : Expr) :
+    MRefines (structEtaExpand r₁ env k d a b t) (structEtaExpand r₂ env k d a b t) := by
+  have := (structEtaExpand (pairFns r₁ r₂ h) env k d a b t).property
+  rwa [structEtaExpand_fst_proj, structEtaExpand_snd_proj] at this
+
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — structure η. -/
 theorem structEtaCert_mono (h : FnsRefines r₁ r₂) (d : Nat) (a b : Expr) :
     MRefines (structEtaCert r₁ env d a b) (structEtaCert r₂ env d a b) := by
   have := (structEtaCert (pairFns r₁ r₂ h) env d a b).property
   rwa [structEtaCert_fst_proj, structEtaCert_snd_proj] at this
+
+/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — is a
+proposition. -/
+theorem isPropType_mono (h : FnsRefines r₁ r₂) (d : Nat) (T : Expr) :
+    MRefines (isPropType r₁ d T) (isPropType r₂ d T) := by
+  have := (isPropType (pairFns r₁ r₂ h) d T).property
+  rwa [isPropType_fst_proj, isPropType_snd_proj] at this
+
+/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — is a type
+unit-like. -/
+theorem unitLikeLoop_mono (h : FnsRefines r₁ r₂) (n d : Nat) (T : Expr) :
+    MRefines (unitLikeLoop r₁ env n d T) (unitLikeLoop r₂ env n d T) := by
+  have := (unitLikeLoop (pairFns r₁ r₂ h) env n d T).property
+  rwa [unitLikeLoop_fst_proj, unitLikeLoop_snd_proj] at this
+
+/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the field loop
+at the unit-like loop's budget `m`. -/
+theorem unitLikeFields_mono (h : FnsRefines r₁ r₂) (m n d : Nat) (t : Expr) :
+    MRefines (unitLikeFields r₁ (unitLikeLoop r₁ env m) n d t)
+      (unitLikeFields r₂ (unitLikeLoop r₂ env m) n d t) := by
+  have := (unitLikeFields (pairFns r₁ r₂ h) (unitLikeLoop (pairFns r₁ r₂ h) env m) n d t).property
+  rwa [unitLikeFields_fst_proj (fun d e => unitLikeLoop_fst_proj m d e),
+    unitLikeFields_snd_proj (fun d e => unitLikeLoop_snd_proj m d e)] at this
+
+/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the structure
+arm at the unit-like loop's budget `m`. -/
+theorem unitLikeStruct_mono (h : FnsRefines r₁ r₂) (m d : Nat) (w : Expr) :
+    MRefines (unitLikeStruct r₁ (unitLikeLoop r₁ env m) env d w)
+      (unitLikeStruct r₂ (unitLikeLoop r₂ env m) env d w) := by
+  have := (unitLikeStruct (pairFns r₁ r₂ h) (unitLikeLoop (pairFns r₁ r₂ h) env m) env d w).property
+  rwa [unitLikeStruct_fst_proj (fun d e => unitLikeLoop_fst_proj m d e),
+    unitLikeStruct_snd_proj (fun d e => unitLikeLoop_snd_proj m d e)] at this
 
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the unit
 certificate. -/
@@ -211,18 +250,20 @@ theorem defeqSpine_mono (h : FnsRefines r₁ r₂) (d : Nat) (a b : Expr) :
   rwa [defeqSpine_fst, defeqSpine_snd] at this
 
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the
-innermost level of the λ-telescope comparison. -/
-theorem defeqLamsInner_mono (h : FnsRefines r₁ r₂) (d : Nat) (b₁ b₂ : Expr) :
-    MRefines (defeqLamsInner mode r₁ d b₁ b₂) (defeqLamsInner mode r₂ d b₁ b₂) := by
-  have := (defeqLamsInner mode (pairFns r₁ r₂ h) d b₁ b₂).property
-  rwa [defeqLamsInner_fst, defeqLamsInner_snd] at this
+innermost level of the binder-telescope comparison. -/
+theorem defeqBindersInner_mono (h : FnsRefines r₁ r₂) (lam : Bool) (d : Nat) (b₁ b₂ : Expr) :
+    MRefines (defeqBindersInner mode r₁ lam d b₁ b₂) (defeqBindersInner mode r₂ lam d b₁ b₂) := by
+  have := (defeqBindersInner mode (pairFns r₁ r₂ h) lam d b₁ b₂).property
+  rwa [defeqBindersInner_fst, defeqBindersInner_snd] at this
 
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — **the
-λ-telescope comparison** at an arbitrary descent budget. -/
-theorem defeqLams_mono (h : FnsRefines r₁ r₂) (n d : Nat) (ty₁ body₁ ty₂ body₂ : Expr) :
-    MRefines (defeqLams mode r₁ n d ty₁ body₁ ty₂ body₂) (defeqLams mode r₂ n d ty₁ body₁ ty₂ body₂) := by
-  have := (defeqLams mode (pairFns r₁ r₂ h) n d ty₁ body₁ ty₂ body₂).property
-  rwa [defeqLams_fst, defeqLams_snd] at this
+binder-telescope comparison** at an arbitrary descent budget. -/
+theorem defeqBinders_mono (h : FnsRefines r₁ r₂) (lam : Bool) (n d : Nat) (fvs : List Expr)
+    (ty₁ body₁ ty₂ body₂ : Expr) :
+    MRefines (defeqBinders mode r₁ lam n d fvs ty₁ body₁ ty₂ body₂)
+      (defeqBinders mode r₂ lam n d fvs ty₁ body₁ ty₂ body₂) := by
+  have := (defeqBinders mode (pairFns r₁ r₂ h) lam n d fvs ty₁ body₁ ty₂ body₂).property
+  rwa [defeqBinders_fst, defeqBinders_snd] at this
 
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — **the
 reduction loop at an ARBITRARY step budget**, which is what `whnfBody_spec`'s
@@ -303,6 +344,47 @@ theorem structEtaCertWithFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {a 
   structEtaCertWith_mono (pureFns_mono env hle) d a b wtb r hr
 
 /-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
+`structEtaExpand`. -/
+theorem structEtaExpandFueled_mono {f f' : Nat} (hle : f ≤ f') {k d : Nat} {a b t : Expr}
+    {r : Bool} (hr : structEtaExpandFueled mode eager env f k d a b t = .ok r) :
+    structEtaExpandFueled mode eager env f' k d a b t = .ok r :=
+  structEtaExpand_mono (pureFns_mono env hle) k d a b t r hr
+
+/-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
+`isPropType`. -/
+theorem isPropTypeFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {T : Expr} {r : Bool}
+    (hr : isPropTypeFueled mode eager env f d T = .ok r) :
+    isPropTypeFueled mode eager env f' d T = .ok r :=
+  isPropType_mono (pureFns_mono env hle) d T r hr
+
+/-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
+`unitLikeLoop`. -/
+theorem unitLikeLoopFueled_mono {f f' : Nat} (hle : f ≤ f') {n d : Nat} {T : Expr} {r : Bool}
+    (hr : unitLikeLoopFueled mode eager env f n d T = .ok r) :
+    unitLikeLoopFueled mode eager env f' n d T = .ok r :=
+  unitLikeLoop_mono (pureFns_mono env hle) n d T r hr
+
+/-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
+`unitLikeFields`, the loop at budget `m` for its `ul`. -/
+theorem unitLikeFieldsFueled_mono {f f' : Nat} (hle : f ≤ f') {m n d : Nat} {t : Expr}
+    {r : Bool}
+    (hr : unitLikeFields (pureFns mode eager env f) (unitLikeLoopFueled mode eager env f m) n d t
+      = .ok r) :
+    unitLikeFields (pureFns mode eager env f') (unitLikeLoopFueled mode eager env f' m) n d t
+      = .ok r :=
+  unitLikeFields_mono (pureFns_mono env hle) m n d t r hr
+
+/-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
+`unitLikeStruct`, the loop at budget `m` for its `ul`. -/
+theorem unitLikeStructFueled_mono {f f' : Nat} (hle : f ≤ f') {m d : Nat} {w : Expr}
+    {r : Bool}
+    (hr : unitLikeStruct (pureFns mode eager env f) (unitLikeLoopFueled mode eager env f m) env d w
+      = .ok r) :
+    unitLikeStruct (pureFns mode eager env f') (unitLikeLoopFueled mode eager env f' m) env d w
+      = .ok r :=
+  unitLikeStruct_mono (pureFns_mono env hle) m d w r hr
+
+/-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
 `structEtaCert`. -/
 theorem structEtaCertFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {a b : Expr} {r : Bool}
     (hr : structEtaCertFueled mode eager env f d a b = .ok r) :
@@ -368,18 +450,20 @@ theorem defeqSpineFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {a b : Exp
   defeqSpine_mono (pureFns_mono env hle) d a b r hr
 
 /-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
-`defeqLamsInner`. -/
-theorem defeqLamsInnerFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {b₁ b₂ : Expr} {r : Bool}
-    (hr : defeqLamsInnerFueled mode eager env f d b₁ b₂ = .ok r) :
-    defeqLamsInnerFueled mode eager env f' d b₁ b₂ = .ok r :=
-  defeqLamsInner_mono (pureFns_mono env hle) d b₁ b₂ r hr
+`defeqBindersInner`. -/
+theorem defeqBindersInnerFueled_mono {f f' : Nat} (hle : f ≤ f') {lam : Bool} {d : Nat}
+    {b₁ b₂ : Expr} {r : Bool}
+    (hr : defeqBindersInnerFueled mode eager env f lam d b₁ b₂ = .ok r) :
+    defeqBindersInnerFueled mode eager env f' lam d b₁ b₂ = .ok r :=
+  defeqBindersInner_mono (pureFns_mono env hle) lam d b₁ b₂ r hr
 
 /-- con-leche: ConLeche/Verify/Mono.lean:135 isDefEqCore_mono — the merge at
-`defeqLams`. -/
-theorem defeqLamsFueled_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {n : Nat} {ty₁ body₁ ty₂ body₂ : Expr} {r : Bool}
-    (hr : defeqLamsFueled mode eager env f n d ty₁ body₁ ty₂ body₂ = .ok r) :
-    defeqLamsFueled mode eager env f' n d ty₁ body₁ ty₂ body₂ = .ok r :=
-  defeqLams_mono (pureFns_mono env hle) n d ty₁ body₁ ty₂ body₂ r hr
+`defeqBinders`. -/
+theorem defeqBindersFueled_mono {f f' : Nat} (hle : f ≤ f') {lam : Bool} {n d : Nat}
+    {fvs : List Expr} {ty₁ body₁ ty₂ body₂ : Expr} {r : Bool}
+    (hr : defeqBindersFueled mode eager env f lam n d fvs ty₁ body₁ ty₂ body₂ = .ok r) :
+    defeqBindersFueled mode eager env f' lam n d fvs ty₁ body₁ ty₂ body₂ = .ok r :=
+  defeqBinders_mono (pureFns_mono env hle) lam n d fvs ty₁ body₁ ty₂ body₂ r hr
 
 /-- con-leche: ConLeche/Verify/Mono.lean:125 whnf_mono — **the merge
 `whnfBody_spec` needs**, at an arbitrary step budget: the `whnf` loop's own

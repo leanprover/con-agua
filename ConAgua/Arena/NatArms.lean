@@ -6,6 +6,8 @@ public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
 public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatPowNat
+public import ConAgua.Arena.NatSizedRef
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatShl
 import ConAgua.Arena.GrindAttr
@@ -49,7 +51,7 @@ runs one arm per operation; an arm with a literal result is
   a one-limb `1` written at the top first.
 * **The arms whose pool function returns a slice**: `pow` (with con-leche's exponent bound,
   `none` above `2^24`), `/` and `%` (`nat_divmod`'s two slices).
-* Under `ArenaR`, as `natAddLit_refinesA`.
+* Under `ArenaR`, as `natAddLit_arms` (`PinsNatOp.lean`).
 
 The arms are stated over their arguments; the pin reads before them are not modelled (lane `nat2`
 in DESIGN.md: one toolchain's pin set). The operands are normalised slices (as every `lit`
@@ -73,11 +75,20 @@ def litArm (F : Nat → Nat → Nat) (a b : Nat) : AM (Option EIdx) := do
 
 /-- `natAddLit` with `f` for `nat_add`: `o := CTL[0]; l := call f(oa, la, ob, lb);
 h := call intern_lit(o, l); return h`. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose] def topLit (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
       (.seq (.call [6] "intern_lit" [.var 4, .var 5]) (.ret [.var 6])))⟩
+
+/-- `topLit` with the size refusal (`lit_nat_sized`) in place of `intern_lit`: the `sub` and `mul`
+arms (`litNatSized (a - b)`, `litNatSized (a * b)`). -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1063-1073 ConRon.Arena.litNatSized
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.litNatSized] def topLitS (f : FnName) : FunDecl :=
+  ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
+    (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
+      (.seq (.call [6] "lit_nat_sized" [.var 4, .var 5]) (.ret [.var 6])))⟩
 
 /-- The spec of a pool function that appends `F a b` at the top (`natAdd_spec`'s shape), for
 normalised operands. -/
@@ -169,12 +180,42 @@ theorem topLit_refines (g f : FnName) (F : Nat → Nat → Nat) (hg : p.lookup g
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n, hI a₀ n] <;>
       finish [litArm]
 
+variable (hz : p.lookup "size_bytes" = some sizeBytesL)
+  (hsr : p.lookup "nat_size_refused" = some natSizeRefusedL)
+  (hls : p.lookup "lit_nat_sized" = some litNatSizedL)
+
+include hpool hgrow hI hz hsr hls in
+/-- **`topLitS f` refines `litNatSized (F a b)`** whenever `f` appends `F a b` at the top: the
+handle, or the size refusal's sentinel (`NatRes`). -/
+theorem topLitS_refines (g f : FnName) (F : Nat → Nat → Nat) (hg : p.lookup g = some (topLitS f))
+    (hF : TopSpec p f F) (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem a₀)
+    (hmx : (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize)
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) g [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      NatRes R (ConRon.Arena.litNatSized (F (pv (vpool s₀.mem) oa.toNat la.toNat)
+        (pv (vpool s₀.mem) ob.toNat lb.toNat))) a₀ (r.headD 0) s'.mem; ⊤⦄ := by
+  have hok := hpool _ _ hR
+  rw [invoke_eq _ hg]
+  simp only [callFn, topLitS]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs, ld64, hF n,
+      litNatSized_refines p R hpool hI hz hsr hls n (a₀ := a₀)]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *)
+    all_goals grind [lang_grind, arena_grind, LocEq]
+
 end generic
 
 /-! ## The arms with a slice result: `/`, `%` -/
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
@@ -183,7 +224,7 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 }
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
@@ -256,7 +297,7 @@ end divmod
 /-! ## `pred`: `-` with a one-limb `1` -/
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
   o := CTL.u64[0];
@@ -273,20 +314,6 @@ def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
 /-- The `Nat.pred` arm (`Arena/Core.lean:1004`), verbatim. -/
 def natPredArm (a : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a - 1))); pure (some x)
-
-/-- Pushing one limb at the top is growing the pool. -/
-theorem Grows.push1 (m : Mem) (t v : Word) (ht : t = m.top) (h : PoolOK m)
-    (hs : (t &&& 1099511627775).toNat < (m.arr64 (tierA POOL (t >>> 40))).size) :
-    Grows m ((m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)) := by
-  subst ht
-  have h41 := h.top41
-  have hsz := h.small.tier (m.top >>> 40)
-  apply Grows.write m _ 1 h (PFrame.set64 _ _ _ (PFrame.refl m))
-  · rw [vpool_stidx0 m m.top v h41 hs (by omega)]
-    exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _)
-  · simp only [show (1 : Word).toNat = 1 from rfl]; omega
-grind_pattern [arena_grind] Grows.push1 =>
-  (m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)
 
 section pred
 variable (p : Prog) (R : Mem → AState → Prop)
@@ -323,26 +350,50 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
 
 end pred
 
-/-! ## `pow`, with con-leche's exponent bound -/
+/-! ## `pow`, behind the guard -/
 
-/-- `nat_pow_lit(oa, la, ob, lb)`: `(0, 0)` (the arm's `none`) for an exponent above `2^24`,
-else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
-(`b` normalised). -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
-@[no_expose, l_impl ConRon.Arena.natOpResult]
-def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
-  if 1 < lb { return (0, 0) };
+/-- `nat_pow_lit(oa, la, ob, lb)`: the cited `Nat.pow` clause's guard (`powGuard`: an exponent
+above `2^32 - 1` refused whatever the base, the sentinel `natRefusedPowExp`; a result above the
+maximum, `pow_refused`, `natRefusedPowSize`; `NatSized.lean`), then the power (`pow_nat`), interned. An
+exponent of two or more limbs is at least `2^64` (`b` normalised). -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1084-1094 ConRon.Arena.powGuard
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.powGuard]
+def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
+  if 1 < lb { return 9223372036854775810 };
   if lb == 1 { e := POOL⦃ob⦄ };
-  if 16777216 < e { return (0, 0) };
-  (o, l) := call nat_pow(oa, la, e);
+  if 4294967295 < e { return 9223372036854775810 };
+  r := call pow_refused(oa, la, e);
+  if r != 0 { return 9223372036854775811 };
+  (o, l) := call pow_nat(oa, la, e);
   h := call intern_lit(o, l);
-  return (1, h)
+  return h & 4294967295
+}
+
+/-- `nat_shl_lit(oa, la, ob, lb)`: the cited `Nat.shiftLeft` clause's guard (`shiftLeftGuard`:
+`0 <<< b` computes; an amount above `2^32 - 1` is refused, the sentinel `natRefusedShlExp`; a
+result above the maximum, `shift_left_refused`, `natRefusedSize`), then the shift. -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1102-1112 ConRon.Arena.shiftLeftGuard
+@[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.shiftLeftGuard]
+def natShlLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
+  if la != 0 {
+    if 1 < lb { return 9223372036854775812 };
+    if lb == 1 { e := POOL⦃ob⦄ };
+    if 4294967295 < e { return 9223372036854775812 };
+    r := call shift_left_refused(la, e);
+    if r != 0 { return 9223372036854775809 }
+  };
+  o := CTL.u64[0];
+  l := call nat_shl(oa, la, ob, lb);
+  h := call intern_lit(o, l);
+  return h & 4294967295
 }
 
 /-- The `Nat.pow` arm (`Arena/Core.lean:1008-1012`), verbatim. -/
-def natPowArm (a b : Nat) : AM (Option EIdx) :=
-  if b > 16777216 then pure none
-  else do let x ← internE (.lit (.natVal (a ^ b))); pure (some x)
+def natPowArm (a b : Nat) : AM (Option EIdx) := do
+  ConRon.Arena.powGuard a b
+  let x ← internE (.lit (.natVal (a ^ b))); pure (some x)
 
 /-- An optional handle as two words: a flag and the handle. -/
 def decOpt (f h : Word) : Option EIdx := if f = 0 then none else some (decE h)
@@ -375,42 +426,196 @@ theorem pv_of_lt_one (v : Array Word) (o l : Nat) (h : l < 1) : pv v o l = 0 := 
   obtain rfl : l = 0 := by omega
   rfl
 
-include hpool hgrow hI hph hpt hpm hpn in
+variable (hz : p.lookup "size_bytes" = some sizeBytesL)
+  (hpr : p.lookup "pow_refused" = some powRefusedL) (hpw : p.lookup "pow_nat" = some powNatL)
+  (hps : p.lookup "nat_shl" = some natShl) (hlp : p.lookup "limb_push" = some limbPushL)
+
+/-- A refused arm: a sentinel (`≥ 2^63`), the twin's failure with its message. -/
+theorem NatRes.refused {R : Mem → AState → Prop} {arm : AM (Option EIdx)} {a₀ : AState}
+    {m' : Mem} {r : Word} (hr : 2 ^ 63 ≤ r.toNat) (h : arm.run a₀ = .error (natRefusal r)) :
+    NatRes R arm a₀ r m' :=
+  ⟨fun h' => absurd h' (by omega), fun _ => h⟩
+
+/-- `natPowArm` at the run's maximum: the two refusals of `powGuard`, or the power interned. -/
+theorem natPowArm_run (a b : Nat) (st : AState) :
+    (natPowArm a b).run st =
+      if 4294967295 < b then .error (natRefusal natRefusedPowExp)
+      else if powRefusedN st.pins.maxNatSize a b then .error (natRefusal natRefusedPowSize)
+      else (do let x ← internE (.lit (.natVal (a ^ b))); pure (some x) : AM (Option EIdx)).run st := by
+  simp only [natPowArm, StateT.run_bind, powGuard_run]
+  by_cases h1 : 4294967295 < b
+  · simp only [h1, ↓reduceIte]; rfl
+  · by_cases h2 : powRefusedN st.pins.maxNatSize a b
+    · simp only [h1, h2, ↓reduceIte]; rfl
+    · simp only [h1, h2, ↓reduceIte]; rfl
+
+/-- The one-limb slice at a pool address is that limb. -/
+theorem pv_one_prd (m : Mem) (o : Word) (h : o.toNat < 2 ^ 41) :
+    pv (vpool m) o.toNat 1 = (prd m o).toNat := by
+  simp [pv, wt, vpool_getD m o h]
+
+/-- `pow_refused`'s word condition is the twin's `powRefused` (a normalised base). -/
+theorem powRefusedW_iff (m : Mem) (mx oa la e : Word) (hn : Norm (vpool m) oa.toNat la.toNat)
+    (hoa : oa.toNat < 2 ^ 41) :
+    powRefusedW mx la (prd m oa) e ↔
+      powRefusedN mx.toNat (pv (vpool m) oa.toNat la.toNat) e.toNat := by
+  have hsz := sizeBytes_pv (vpool m) oa.toNat la.toNat hn
+  unfold powRefusedW powRefusedN
+  rw [hsz]
+  have ha1 : pv (vpool m) oa.toNat la.toNat ≤ 1 ↔ la = 0 ∨ (la = 1 ∧ prd m oa = 1) := by
+    by_cases h0 : la = 0
+    · subst h0; simp [pv]
+    by_cases h1 : la = 1
+    · subst h1
+      rw [show (1 : Word).toNat = 1 from rfl] at hn ⊢
+      rw [pv_one_prd m oa hoa]
+      have hnz : prd m oa ≠ 0 := by
+        have := hn (by decide); simpa [vpool_getD m oa hoa] using this
+      constructor
+      · intro h; right; refine ⟨rfl, ?_⟩
+        apply UInt64.toNat_inj.mp
+        have : (prd m oa).toNat ≠ 0 := fun e => hnz (UInt64.toNat_inj.mp (by simpa using e))
+        simp; omega
+      · rintro (h | ⟨-, h⟩)
+        · exact absurd h (by decide)
+        · rw [h]; decide
+    · have h2 : 2 ≤ la.toNat := by
+        have : la.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
+        have : la.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by simpa using e))
+        omega
+      have := pv_two_limbs _ _ _ hn h2
+      constructor
+      · intro h; omega
+      · rintro (h | ⟨h, -⟩) <;> simp_all
+  have he0 : e ≠ 0 ↔ e.toNat ≠ 0 := by
+    constructor
+    · intro h e'; exact h (UInt64.toNat_inj.mp (by simpa using e'))
+    · intro h e'; exact h (by simp [e'])
+  constructor
+  · rintro ⟨h0, h1, h2, h3⟩
+    refine ⟨fun h => ?_, he0.mp h2, ?_⟩
+    · rcases ha1.mp h with h | h
+      · exact h0 h
+      · exact h1 h
+    · rw [Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero (he0.mp h2))]; exact h3
+  · rintro ⟨h0, h2, h3⟩
+    refine ⟨fun h => h0 (ha1.mpr (Or.inl h)), fun h => h0 (ha1.mpr (Or.inr h)), he0.mpr h2, ?_⟩
+    rwa [Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero h2)] at h3
+
+include hpool hgrow hI hph hpt hpm hpn hz hpr hpw hps hlp in
+/-- **`nat_pow_lit` refines the `Nat.pow` arm** (`powGuard`, then the power): the handle, or the
+guard's sentinel (`NatRes`). -/
 theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Nat) (s₀ : St)
-    (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
-    (hb : SliceOK s₀.mem ob lb)
+    (a₀ : AState) (hR : R s₀.mem a₀) (hmx : (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize)
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
     (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_pow_lit" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
-      R s'.mem (AM.st (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄ := by
+      NatRes R (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat))
+        a₀ (r.headD 0) s'.mem; ⊤⦄ := by
   have hok := hpool _ _ hR
   have hbig := pv_two_limbs (vpool s₀.mem) ob.toNat lb.toNat hnb
-  have hb1 := hb.1
   have h41 := hok.top41
+  have hoa : oa.toNat < 2 ^ 41 := by simp only [SliceOK] at ha; omega
+  have hob : 0 < lb.toNat → ob.toNat < 2 ^ 41 := fun _ => by simp only [SliceOK] at hb; omega
+  have hrun := natPowArm_run (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat) a₀
+  rw [← hmx] at hrun
   rw [invoke_eq _ hg]
   simp only [callFn, natPowLit]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind, natop_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        natPow_spec p hph hpt hpm hpn n, hI a₀ n] <;>
-      finish (gen := 20) [natPowArm, pv_of_lt_one, pow_of_eq_zero]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      powRefused_spec p hz hpr n, powNat_spec p hph hpt hpm hpn hps hpw hlp n, hI a₀ n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
+      bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals try simp only [
+      List.headD_cons, Locals.init_nil, reduceIte,
+      Nat.reduceEqDiff, LocEq, Sig.retVal, Sig.retOr] at *
+    case vc2 _ _ h =>
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left]
+      have := hbig (by simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h; exact h); omega
+    case vc4 _ _ _ hbd hl1 hX =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      rw [prd_ld _ _ hbd] at hX
+      subst hl1
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left]
+      rw [show (1 : Word).toNat = 1 from rfl, pv_one_prd _ _ (hob (by decide))]
+      exact UInt64.lt_iff_toNat_lt.mp hX
+    case vc6 _ _ _ hbd s hl1 hX hr hA =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨-, -, hrs⟩ := hA
+      simp only [prd_ld _ _ hbd] at hX hrs
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : powRefusedW (rdW (s₀.mem.arr64 PINS) 72) la (prd s₀.mem oa) (prd s₀.mem ob) := by
+        refine Classical.byContradiction fun hc => ?_
+        rw [ite_eq_right hc] at hrs; exact hr hrs
+      rw [powRefusedW_iff _ _ _ _ _ hna hoa, ← hb1] at hW
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (by rw [hb1]; exact fun h => hX (UInt64.lt_iff_toNat_lt.mpr h)), ite_eq_left hW]
+    case vc8 _ _ _ hbd _ _ _ s₁ _ hl1 hX hr hP hA hI =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨hl2, hm2, hrs⟩ := hA
+      obtain ⟨hl1', -, -, -, -, hpv⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      simp only [prd_ld _ _ hbd] at hX hrs hl2
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : ¬ powRefusedW (rdW (s₀.mem.arr64 PINS) 72) la (prd s₀.mem oa) (prd s₀.mem ob) := by
+        intro hc; rw [ite_eq_left hc] at hrs; exact hr (by rw [hrs]; decide)
+      rw [powRefusedW_iff _ _ _ _ _ hna hoa, ← hb1] at hW
+      rw [hl2, hm2] at hpv
+      simp (config := { decide := true }) only [St.setLoc_loc, Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at hpv
+      rw [hpv, ← hb1] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (by rw [hb1]; exact fun h => hX (UInt64.lt_iff_toNat_lt.mpr h)), ite_eq_right hW]
+    case vc14 _ _ _ _ s _ _ _ hA =>
+      obtain ⟨hloc, hmem, -⟩ := hA
+      rw [hmem, show s.loc 0 = oa by rw [hloc]; rfl, show s.loc 1 = la by rw [hloc]; rfl]; exact ha
+    case vc15 _ _ _ hbd s _ hX _ hA =>
+      obtain ⟨hloc, -, -⟩ := hA
+      rw [show s.loc 4 = _ by rw [hloc]; try rfl]
+      have := UInt64.not_lt.mp hX
+      exact Nat.lt_of_le_of_lt (UInt64.le_iff_toNat_le.mp this) (by decide)
+    case vc21 _ _ _ _ _ hr _ hA =>
+      obtain ⟨-, -, hrs⟩ := hA
+      exact (hr (by simpa [powRefusedW] using hrs)).elim
+    case vc23 _ _ h1 _ _ _ _ _ hl1 _ _ hA hP hI =>
+      have hl0 : lb.toNat = 0 := by
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨hl1', -, -, -, -, hpv⟩ := hP
+      obtain ⟨hl2, hm2, -⟩ := hA
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      rw [hl2, hm2] at hpv
+      simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil, UInt64.toNat_zero] at hpv
+      rw [hpv] at hok' hR' hres'
+      rw [hb0] at hrun ⊢
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (by decide), ite_eq_right (by simp [powRefusedN])]
+    all_goals first
+      | (simp_all [Locals.init]; done)
+      | (grind [arena_grind, lang_grind]; done)
 
 end pow
+
 
 /-! ## `beq`, `ble`: a `Bool` constant -/
 
 /-- `nat_beq_lit(oa, la, ob, lb, t, f, us)`: intern the constant `t` (`Bool.true`'s name) if the
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -420,7 +625,7 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 }
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -444,7 +649,7 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 /-! ## `gcd` -/
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
--- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
@@ -496,10 +701,8 @@ end gcd
 
 /-! ## The arms, verbatim (`Arena/Core.lean:1004-1026`) -/
 
-def natSubArm (a b : Nat) : AM (Option EIdx) := do
-  let x ← internE (.lit (.natVal (a - b))); pure (some x)
-def natMulArm (a b : Nat) : AM (Option EIdx) := do
-  let x ← internE (.lit (.natVal (a * b))); pure (some x)
+def natSubArm (a b : Nat) : AM (Option EIdx) := ConRon.Arena.litNatSized (a - b)
+def natMulArm (a b : Nat) : AM (Option EIdx) := ConRon.Arena.litNatSized (a * b)
 def natLandArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (Nat.land a b))); pure (some x)
 def natLorArm (a b : Nat) : AM (Option EIdx) := do
@@ -507,9 +710,185 @@ def natLorArm (a b : Nat) : AM (Option EIdx) := do
 def natXorArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (Nat.xor a b))); pure (some x)
 def natShlArm (a b : Nat) : AM (Option EIdx) := do
+  ConRon.Arena.shiftLeftGuard a b
   let x ← internE (.lit (.natVal (Nat.shiftLeft a b))); pure (some x)
 def natShrArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (Nat.shiftRight a b))); pure (some x)
+
+section shl
+variable (p : Prog) (R : Mem → AState → Prop)
+  (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
+  (hI : InternSpec p R)
+  (hpt : p.lookup "nat_trim" = some natTrim) (hps : p.lookup "nat_shl" = some natShl)
+  (hz : p.lookup "size_bytes" = some sizeBytesL)
+  (hsl : p.lookup "shift_left_refused" = some shiftLeftRefusedL)
+
+/-- `natShlArm` at the run's maximum: `0 <<< b` computes, else the two refusals of
+`shiftLeftGuard`, or the shift interned. -/
+theorem natShlArm_run (a b : Nat) (st : AState) :
+    (natShlArm a b).run st =
+      if a ≠ 0 ∧ 4294967295 < b then .error (natRefusal natRefusedShlExp)
+      else if a ≠ 0 ∧ shlRefusedN st.pins.maxNatSize a b then .error (natRefusal natRefusedSize)
+      else (do let x ← internE (.lit (.natVal (Nat.shiftLeft a b))); pure (some x) :
+        AM (Option EIdx)).run st := by
+  simp only [natShlArm, StateT.run_bind, shiftLeftGuard_run]
+  by_cases h0 : a = 0
+  · simp only [h0, ↓reduceIte, ne_eq, not_true_eq_false, false_and]; rfl
+  by_cases h1 : 4294967295 < b
+  · simp only [h0, h1, ↓reduceIte, ne_eq, not_false_eq_true, and_self]; rfl
+  · by_cases h2 : shlRefusedN st.pins.maxNatSize a b
+    · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_self, and_false]; rfl
+    · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_false]; rfl
+
+include hpool hgrow hI hpt hps hz hsl in
+/-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm** (`shiftLeftGuard`, then the shift): the
+handle, or the guard's sentinel (`NatRes`). -/
+theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Nat) (s₀ : St)
+    (a₀ : AState) (hR : R s₀.mem a₀) (hmx : (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize)
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nat_shl_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      NatRes R (natShlArm (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat))
+        a₀ (r.headD 0) s'.mem; ⊤⦄ := by
+  have hok := hpool _ _ hR
+  have hbig := pv_two_limbs (vpool s₀.mem) ob.toNat lb.toNat hnb
+  have h41 := hok.top41
+  have hla : la.toNat < 2 ^ 41 := by simp only [SliceOK] at ha; omega
+  have hob : 0 < lb.toNat → ob.toNat < 2 ^ 41 := fun _ => by simp only [SliceOK] at hb; omega
+  have ha0 : pv (vpool s₀.mem) oa.toNat la.toNat = 0 ↔ la = 0 := by
+    constructor
+    · intro h; apply Classical.byContradiction; intro hl
+      have hl' : 0 < la.toNat := Nat.pos_of_ne_zero fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+      have := pv_ge_wt _ _ _ hl' hna; have : 0 < wt (la.toNat - 1) := Nat.pow_pos (by decide) 
+      omega
+    · intro h; subst h; rfl
+  have hsz := sizeBytes_pv (vpool s₀.mem) oa.toNat la.toNat hna
+  have hrun := natShlArm_run (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat) a₀
+  rw [← hmx] at hrun
+  rw [invoke_eq _ hg]
+  simp only [callFn, natShlLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      shiftLeftRefused_spec p hz hsl n, natShl_spec p hpt hps n, hI a₀ n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
+      bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem,
+      List.headD_cons, Locals.init_nil, reduceIte,
+      Nat.reduceEqDiff, Sig.retVal, Sig.retOr] at *
+    case vc2 _ _ h hla =>
+      have hb : 4294967295 < pv (vpool s₀.mem) ob.toNat lb.toNat := by
+        have := hbig (by simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h; exact h); omega
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hb⟩]
+    case vc4 _ _ _ hbd hla hl1 hX =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      rw [prd_ld _ _ hbd] at hX
+      subst hl1
+      have hb : 4294967295 < pv (vpool s₀.mem) ob.toNat (1 : Word).toNat := by
+        rw [show (1 : Word).toNat = 1 from rfl, pv_one_prd _ _ (hob (by decide))]
+        exact UInt64.lt_iff_toNat_lt.mp hX
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hb⟩]
+    case vc6 _ _ _ hbd _ hla hl1 hX hr hA =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨-, -, hrs⟩ := hA
+      simp only [prd_ld _ _ hbd] at hX hrs
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat (1 : Word).toNat) := by
+        refine Classical.byContradiction fun hc => hr ?_
+        rw [hrs, ite_eq_right]; unfold shlRefusedN at hc; rw [hsz, hb1] at hc; exact hc
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (fun h => hX (UInt64.lt_iff_toNat_lt.mpr (hb1 ▸ h.2))),
+        ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hW⟩]
+    case vc8 _ _ _ hbd _ s₂ hc _ s₁ _ hla hl1 hX hr hP hA hI =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨hl₂, hm₂, hrs⟩ := hA
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      simp only [prd_ld _ _ hbd] at hX hrs hl₂
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : ¬ shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat (1 : Word).toNat) := by
+        intro hc; apply hr; rw [hrs, ite_eq_left]
+        · decide
+        · unfold shlRefusedN at hc; rw [hsz, hb1] at hc; exact hc
+      simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem] at hc
+      have h6 : s₁.loc 6 = s₂.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      have h0 : s₂.loc 0 = oa := by rw [hl₂.loc 0]; rfl
+      have h1 : s₂.loc 1 = la := by rw [hl₂.loc 1]; rfl
+      have h2 : s₂.loc 2 = ob := by rw [hl₂.loc 2]; rfl
+      have h3 : s₂.loc 3 = 1 := by rw [hl₂.loc 3]; rfl
+      rw [h0, h1, h2, h3, hm₂] at hpv
+      rw [h6, hm₂, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => hX (UInt64.lt_iff_toNat_lt.mpr (hb1 ▸ h.2))),
+        ite_eq_right (fun h => hW h.2)]
+    case vc20 _ _ h1 _ hla hl1 hr _ hA =>
+      have hl0 : lb.toNat = 0 := by
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1; simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨-, -, hrs⟩ := hA
+      try simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil] at hrs
+      have hW : shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat lb.toNat) := by
+        refine Classical.byContradiction fun hc => hr ?_
+        rw [hrs, ite_eq_right]; unfold shlRefusedN at hc; rw [hsz, hb0] at hc; simpa using hc
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (fun h => by rw [hb0] at h; exact absurd h.2 (by decide)),
+        ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hW⟩]
+    case vc22 _ _ h1 _ s₂ hc _ s₁ _ hla hl1 hr _ hA hP hI =>
+      have hl0 : lb.toNat = 0 := by
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1; simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨hl₂, hm₂, hrs⟩ := hA
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      try simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil] at hrs
+      have hW : ¬ shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat lb.toNat) := by
+        intro hc; apply hr; rw [hrs, ite_eq_left]
+        · decide
+        · unfold shlRefusedN at hc; rw [hsz, hb0] at hc; simpa using hc
+      simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem] at hc
+      have h6 : s₁.loc 6 = s₂.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      have h0 : s₂.loc 0 = oa := by rw [hl₂.loc 0]; rfl
+      have h1' : s₂.loc 1 = la := by rw [hl₂.loc 1]; rfl
+      have h2 : s₂.loc 2 = ob := by rw [hl₂.loc 2]; rfl
+      have h3 : s₂.loc 3 = lb := by rw [hl₂.loc 3]; rfl
+      rw [h0, h1', h2, h3, hm₂] at hpv
+      rw [h6, hm₂, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => by rw [hb0] at h; exact absurd h.2 (by decide)),
+        ite_eq_right (fun h => hW h.2)]
+    case vc32 _ _ hc _ s₁ _ hla hP hI =>
+      have ha00 : pv (vpool s₀.mem) oa.toNat la.toNat = 0 := ha0.mpr (Classical.not_not.mp hla)
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      have h6 : s₁.loc 6 = s₀.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      rw [h6, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => h.1 ha00), ite_eq_right (fun h => h.1 ha00)]
+    all_goals first
+      | (simp_all []; done)
+      | (grind [arena_grind, lang_grind]; done)
+
+end shl
 def natDivArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a / b))); pure (some x)
 def natModArm (a b : Nat) : AM (Option EIdx) := do
@@ -519,23 +898,25 @@ def natModArm (a b : Nat) : AM (Option EIdx) := do
 
 `nat_op_result(c, oa, la, ob, lb)`: `natOpResult` (`Arena/Core.lean:998`) with the fifteen pin
 reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
-Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
-/-- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult -/
+Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`), and `(2, s)` for a refusal (the
+sentinel `s` of `NatSized.lean`, from the `add`, `sub`, `mul`, `pow`, `shiftLeft` arms). Refined in
+`PinsNatOp.lean`. -/
+/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };
   if c == PINS.u64[15] { h := call nat_pred_lit(oa, la); return (1, h) };
-  if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[19] { (f, h) := call nat_pow_lit(oa, la, ob, lb); return (f, h) };
+  if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[19] { h := call nat_pow_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
   if c == PINS.u64[22] { h := call nat_div_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[23] { h := call nat_mod_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[24] { h := call nat_gcd_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[25] { h := call nat_land_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[26] { h := call nat_lor_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[27] { h := call nat_xor_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[28] { h := call nat_shl_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[28] { h := call nat_shl_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
   if c == PINS.u64[29] { h := call nat_shr_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[20] {
     h := call nat_beq_lit(oa, la, ob, lb, PINS.u64[31], PINS.u64[32], PINS.u64[52]);
@@ -555,11 +936,11 @@ def natArmProg : Prog := storeProg ++
   [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mac_hi", macHi), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),
-   ("nat_sub_lit", topLit "nat_sub"), ("nat_mul_lit", topLit "nat_mul"),
+   ("nat_sub_lit", topLitS "nat_sub"), ("nat_mul_lit", topLitS "nat_mul"),
    ("nat_land_lit", topLit "nat_land"), ("nat_lor_lit", topLit "nat_lor"),
-   ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", topLit "nat_shl"),
+   ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", natShlLit),
    ("nat_shr_lit", topLit "nat_shr"),
-   ("nat_pow", natPow), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
+   ("nat_pow", natPow), ("pow_nat", powNatL), ("limb_push", limbPushL), ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
    ("div_step", divStep), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
    ("nat_mod_lit", natModLit),
@@ -572,7 +953,8 @@ def natArmProg : Prog := storeProg ++
 the quotient finds `7`'s node again. -/
 #guard
   let m : Mem := Mem.ofWords [(POOL, #[5, 7, 6, 8] ++ Array.replicate 60 0), (CTL, #[4] ++ Array.replicate 63 0),
-    (REC, Array.replicate 64 0), (SLOT, Array.replicate consTestWords 0)]
+    (REC, Array.replicate 64 0), (SLOT, Array.replicate consTestWords 0),
+    (PINS, Array.replicate 72 0 ++ #[134217728])]
   let go (m : Mem) (f : FnName) (args : List Word) : Option (Word × Mem) :=
     match run natArmProg 100000 f args m with
     | .ok (r, m') => some (r.headD 0, m')
@@ -650,14 +1032,35 @@ theorem topLit_refinesA (g f : FnName) (F : Nat → Nat → Nat)
       (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms g f F hg hF n s₀ a₀ hR
       oa la ob lb ha hb hna hnb hmode
 
+/-- The refinement of an arm that may refuse (`NatRes`), at the run's maximum `PINS[72]`. -/
+abbrev ArmRefinesS (g : FnName) (arm : Nat → Nat → AM (Option EIdx)) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState), ArenaR s₀.mem a₀ →
+    (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize → ∀ (oa la ob lb : Word),
+    SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
+    Norm (vpool s₀.mem) oa.toNat la.toNat → Norm (vpool s₀.mem) ob.toNat lb.toNat →
+    ModeOK s₀.mem →
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) g [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      NatRes ArenaR (arm (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat))
+        a₀ (r.headD 0) s'.mem; ⊤⦄
+
+theorem topLitS_refinesA (g f : FnName) (F : Nat → Nat → Nat)
+    (hg : natArmProg.lookup g = some (topLitS f)) (hF : TopSpec natArmProg f F) :
+    ArmRefinesS g (fun a b => ConRon.Arena.litNatSized (F a b)) :=
+  fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
+    topLitS_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl g f F hg hF n s₀ a₀ hR
+      hmx oa la ob lb ha hb hna hnb hmode
+
 /-- **`nat_sub_lit` refines `natOpResult`'s `Nat.sub` arm under `ArenaR`.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.sub"]
-theorem natSubLit_refinesA : ArmRefinesA "nat_sub_lit" natSubArm :=
-  topLit_refinesA "nat_sub_lit" "nat_sub" _ rfl natSub_top
+theorem natSubLit_refinesA : ArmRefinesS "nat_sub_lit" natSubArm :=
+  topLitS_refinesA "nat_sub_lit" "nat_sub" _ rfl natSub_top
 /-- **`nat_mul_lit` refines the `Nat.mul` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.mul"]
-theorem natMulLit_refinesA : ArmRefinesA "nat_mul_lit" natMulArm :=
-  topLit_refinesA "nat_mul_lit" "nat_mul" _ rfl natMul_top
+theorem natMulLit_refinesA : ArmRefinesS "nat_mul_lit" natMulArm :=
+  topLitS_refinesA "nat_mul_lit" "nat_mul" _ rfl natMul_top
 /-- **`nat_land_lit` refines the `Nat.land` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.land"]
 theorem natLandLit_refinesA : ArmRefinesA "nat_land_lit" natLandArm :=
@@ -672,8 +1075,11 @@ theorem natXorLit_refinesA : ArmRefinesA "nat_xor_lit" natXorArm :=
   topLit_refinesA "nat_xor_lit" "nat_xor" _ rfl natXor_top
 /-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.shiftLeft"]
-theorem natShlLit_refinesA : ArmRefinesA "nat_shl_lit" natShlArm :=
-  topLit_refinesA "nat_shl_lit" "nat_shl" _ rfl natShl_top
+theorem natShlLit_refinesA : ArmRefinesS "nat_shl_lit" natShlArm :=
+  fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
+    natShlLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
+      hmx oa la ob lb ha hb hna hnb hmode
 /-- **`nat_shr_lit` refines the `Nat.shiftRight` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.shiftRight"]
 theorem natShrLit_refinesA : ArmRefinesA "nat_shr_lit" natShrArm :=
@@ -710,23 +1116,13 @@ theorem natPredLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s
     (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
     oa la ha hmode
 
-/-- **`nat_pow_lit` refines the `Nat.pow` arm**, including its `none` above `2^24`. -/
+/-- **`nat_pow_lit` refines the `Nat.pow` arm**, its guard included. -/
 @[refines_part ConRon.Arena.natOpResult "Nat.pow"]
-theorem natPowLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
-    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke natArmProg (exec natArmProg n) "nat_pow_lit" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
-      ArenaR s'.mem (AM.st (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄ :=
-  natPowLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-    (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
-    oa la ob lb ha hb hnb hmode
+theorem natPowLit_refinesA : ArmRefinesS "nat_pow_lit" natPowArm :=
+  fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
+    natPowLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl rfl rfl
+      rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
 
 /-- **`nat_beq_lit` refines the `Nat.beq` arm under `ArenaR`**, given what the three pin reads
 return in the arena state (they read it and do not change it). -/

@@ -218,7 +218,7 @@ theorem irpStage_ps (hpb : pb.size < 2 ^ 63) :
   have hfr' : MemFrame PinA StoreC (loadMem b pb sz) s'.mem :=
     (hf0.mono (by decide) (by simp)).trans ⟨hfr.arr, hfr.ctl, hfr.size⟩
   refine ⟨⟨hk', hc, by simpa [PbPre] using hpre, hpf'⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
+    ⟨hokA, hoffA, hpinsA, hppA, ⟨hfull.names_size, internReservedPins_maxNatSize hrun'⟩⟩, hcachesA, ?_, hmo⟩
   · exact (stateDR_loadMem b pb sz hc).frame hfr' (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl

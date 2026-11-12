@@ -43,9 +43,10 @@ A recursor rule (11 words at `q`): `ctor` `q`, `nfields` `q+1`, the fire's kind 
 install-computed `ctorParams`, `k`, `eta`, which con-leche's task #480 removed; the offsets of
 the rest are kept).
 
-`IIndCaps` (15 words at `q`): `eta` `q`, `etaCtor` `q+1`, `etaParams` `q+2`, `etaFields` `q+3`,
-`unitlike` `q+4`, `unitParams` `q+5`, `nIdx` `q+6`, `all` `q+10`, `q+11`, `nparams` `q+12`,
-`ctors` `q+13`, `q+14`; words `q+7`‥`q+9` are not read (the removed `sortZ`).
+`IIndCaps` (15 words at `q`): `eta` `q`, `nIdx` `q+6`, `all` `q+10`, `q+11`, `nparams` `q+12`,
+`ctors` `q+13`, `q+14`; words `q+1`‥`q+5` are not read (the removed `etaCtor`, `etaParams`,
+`etaFields`, `unitlike`, `unitParams`, con-leche's task #515), nor `q+7`‥`q+9` (the removed
+`sortZ`); the offsets of the rest are kept.
 
 `IProjTable` (13 words, at `p`; not a constant: the environment's table component): word `p` is
 `6` and word `p+1` is `0` (the kind and name words of the constant records' layout, kept so that
@@ -109,12 +110,10 @@ def decRule (q : Nat) : Option IRecRule := do
 def decRules (off cnt : Nat) : Option (List IRecRule) :=
   (List.range cnt).mapM fun j => decRule a (off + 11 * j)
 
-/-- `IIndCaps`: 15 words at `q` (`eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike`,
-`unitParams`, `nIdx`, three unread words, `all` (2), `nparams`, `ctors` (2)). -/
+/-- `IIndCaps`: 15 words at `q` (`eta`, five unread words, `nIdx`, three unread words, `all` (2),
+`nparams`, `ctors` (2)). -/
 def decCaps (q : Nat) : Option IIndCaps := do
-  pure { eta := ← bool? a q, etaCtor := ← hd? a (q + 1), etaParams := ← nat? a (q + 2),
-         etaFields := ← nat? a (q + 3), unitlike := ← bool? a (q + 4),
-         unitParams := ← nat? a (q + 5), nIdx := ← nat? a (q + 6),
+  pure { eta := ← bool? a q, nIdx := ← nat? a (q + 6),
          all := ← hlist? a (q + 10), nparams := ← nat? a (q + 12), ctors := ← hlist? a (q + 13) }
 
 /-- `IProjTable` at `p` (a table record). -/
@@ -260,9 +259,8 @@ theorem ArrExt.decRules {o c : Nat} {xs : List IRecRule} (hx : decRules a o c = 
 
 theorem ArrExt.decCaps {q : Nat} {x : IIndCaps} (hx : decCaps a q = some x) : decCaps b q = some x := by
   simp only [L.Arena.decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
-  exact ⟨e1, h.bool? h1, e2, h.hd? h2, e3, h.nat? h3, e4, h.nat? h4, e5, h.bool? h5, e6, h.nat? h6,
-    e7, h.nat? h7, e9, h.hlist? h9, e10, h.nat? h10, e11, h.hlist? h11, e⟩
+  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
+  exact ⟨e1, h.bool? h1, e7, h.nat? h7, e9, h.hlist? h9, e10, h.nat? h10, e11, h.hlist? h11, e⟩
 
 theorem ArrExt.decTbl {p : Nat} {x : IProjTable} (hx : decTbl a p = some x) : decTbl b p = some x := by
   simp only [L.Arena.decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢

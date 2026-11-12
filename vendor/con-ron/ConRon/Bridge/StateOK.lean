@@ -283,9 +283,10 @@ abbrev LiftMemoA (amount : Nat) (s : AState) : Prop :=
 abbrev Abs1MemoA (d : Nat) (s : AState) : Prop :=
   MemoOK (fun k e => Expr.abstract1 e d k) s.memos.abs1C s.store
 
-/-- con-leche: ConLeche/Kernel/ExprOps.lean:2205-2207 Inst1LMemoInv. -/
-abbrev Inst1LMemoA (ve : Expr) (s : AState) : Prop :=
-  MemoOK (fun d e => Expr.instantiate1Lift e ve d) s.memos.inst1LC s.store
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:383-414 instantiateLiftXP (its
+memo, `MemoXP (instantiateLiftP vs)`). -/
+abbrev InstLiftMemoA (ws : List Expr) (s : AState) : Prop :=
+  MemoOK (fun d e => Expr.instantiateLift e ws d) s.memos.inst1LC s.store
 
 /-- con-leche: ConLeche/Kernel/ExprOps.lean:2546-2550 InstLPMemoInv, at
 cursor `0`. -/
@@ -473,15 +474,6 @@ structure PinsOK (s : AState) : Prop where
   zeroLevel : denoteL s.store.ls s.pins.zeroLevel = some .zero
   sortOne : denoteE s.store s.pins.sortOne = some (.sort (.succ .zero))
   /-- **the ZERO name handle decodes, and it decodes to `.anonymous`**.
-
-  `Arena/Env.lean`'s `IIndCaps.etaCtor` defaults to `(default : NIdx)` — the
-  zero word — where `ConLeche.IndCaps.etaCtor` defaults to `.anonymous`, and
-  `Frontend.denoteCaps` reads the field UNCONDITIONALLY.  So every capability
-  record built at a block that earns nothing — which is every multi-constructor
-  block the inductive route installs — denotes only if the zero handle
-  decodes to `.anonymous`; without this clause `Frontend.denoteCI` of the
-  pushed `.indInfo` row is `none`, and with it `denoteFEnv`, `InstRel.denote`
-  and `FoldOK.denote`.
 
   The clause is EXACT rather than a weakening.  `.anonymous` is nullary, so
   the persistent name store's `anons` table holds at most one element, at slot

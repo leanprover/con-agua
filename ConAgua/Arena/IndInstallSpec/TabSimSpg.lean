@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 public import ConAgua.Arena.IndSumSpec.StructProjBodies
 import ConAgua.Arena.IndPosSpec.NestCrest
+import ConAgua.Arena.IndPosSpec.SnocWMfr
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.WhnfCoreProj
@@ -76,24 +77,21 @@ theorem spaW_mfr {m m' : Mem} {T j : Word} {r : List Word} (h : spaW m T j = som
 theorem i1lF_mfr {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low ⟨_, _, i1lF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
 
-theorem ipalF_mfr {m m' : Mem} {args r : List Word} (h : ipalF m args = some (r, m')) : MFr [] [] m m' :=
-  MFr.of_low ⟨_, _, ipalF_frame h, lt64A_of_all rfl, lt64_of_all rfl⟩
-
-theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T k i h : Word) (r : List Word),
-    pbW n m T k i h = some (r, m') → MFr [] [] m m'
-  | 0, _, _, _, _, _, _, _, hh => by rw [pbW.eq_1] at hh; cases hh
-  | n + 1, m, m', T, k, i, h, r, hh => by
-    simp only [pbW.eq_2, pbW.k_struct_proj_arg_p.eq_def, pbW.k_instantiate1_lift_fast.eq_def,
-      pbW.k_struct_proj_bodies_go.eq_def, pbW.k_sl_cons.eq_def] at hh
-    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, i1lF_mfr, consW_mfr]
+theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T vo vl k i h : Word) (r : List Word),
+    pbW n m T vo vl k i h = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, hh => by rw [pbW.eq_1] at hh; cases hh
+  | n + 1, m, m', T, vo, vl, k, i, h, r, hh => by
+    simp only [pbW.eq_2, pbW.k_struct_proj_arg_p.eq_def, pbW.k_instantiate_lift_fast.eq_def,
+      pbW.k_sl_snoc.eq_def, pbW.k_struct_proj_bodies_go.eq_def, pbW.k_sl_cons.eq_def] at hh
+    mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _ _ _, spaW_mfr, i1lF_mfr, snocW_mfr, consW_mfr]
 
 theorem spbW_mfr {k : Nat} {m m' : Mem} {T nP nF cty : Word} {r : List Word}
     (h : spbW k m T nP nF cty = some (r, m')) : MFr [] [] m m' := by
   cases k with
   | zero => simp [spbW] at h
   | succ k =>
-    simp only [spbW, spbW.k_struct_proj_ps.eq_def, spbW.k_inst_pis_at_lift.eq_def, spbW.k_struct_proj_bodies_go.eq_def] at h
-    mfr_auto h [projPsW_mfr, ipalF_mfr, pbW_mfr _ _ _ _ _ _ _ _]
+    simp only [spbW, spbW.k_strip_pis.eq_def, spbW.k_struct_proj_ps.eq_def, spbW.k_struct_proj_bodies_go.eq_def] at h
+    mfr_auto h [projPsW_mfr, MFr.ofStripF, pbW_mfr _ _ _ _ _ _ _ _ _ _]
 
 theorem crfF_mfr {m m' : Mem} {args r : List Word} (h : crfF m args = some (r, m')) : MFr [] [] m m' :=
   MFr.of_frame (crfF_frame h)

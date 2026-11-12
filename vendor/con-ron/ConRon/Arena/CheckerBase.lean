@@ -57,7 +57,7 @@ own functions on transient values, and DESIGN §8.3's lesson 4 says a level
 algorithm runs on trees. -/
 
 /-- con-leche: ConLeche/Kernel/Level.lean:249-265 Expr.allLevelParamsDefined
-con-leche: ConLeche/Kernel/Level.lean:296-329 Expr.allLevelParamsDefinedGo
+con-leche: ConLeche/Cached/ExprOpsC.lean:2238-2308 allLevelParamsDefinedXP
 The memoized walk.  `params` are transient names (see the section note); the
 memo is keyed on the node, which is what makes a shared subterm cost one
 probe. -/
@@ -93,7 +93,7 @@ def allLevelParamsDefinedGo (params : List ConLeche.Name)
         | .proj _ _ e => allLevelParamsDefinedGo params memo fuel e
       pure (p.1, p.2.insert h p.1)
 
-/-- con-leche: ConLeche/Kernel/Level.lean:402-404 Expr.allLevelParamsDefinedFast
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2310-2314 allLevelParamsDefinedC
 The executed `allLevelParamsDefined`: one memoized DAG walk, at the parameter
 list read back once. -/
 def allLevelParamsDefined (lps : List NIdx) (e : EIdx) : AM Bool := do
@@ -112,7 +112,7 @@ only callers; the memo is threaded explicitly — the census's own twin column
 — because the answer depends on `fe` and `Memos` is the per-CALL record. -/
 
 /-- con-leche: ConLeche/Kernel/DeclCheck.lean:30-51 Expr.constsResolveF
-con-leche: ConLeche/Kernel/DeclCheck.lean:82-117 Expr.constsResolveFGo
+con-leche: ConLeche/Cached/StateC.lean:555-612 constsResolveFXP
 The memoized walk.  The leaf clauses are `Arena/Core.lean`'s `constsResolve`
 at one node, exactly as con-leche's `…Go` calls the pure walk at its four
 non-recursive constructors.  The node is viewed ONCE and the miss arm
@@ -151,7 +151,7 @@ def constsResolveFGo (fe : IFEnv) (memo : Std.HashMap EIdx Bool) :
           | _ => pure (← constsResolve fe coreWalkFuel h, memo)
         pure (p.1, p.2.insert h p.1)
 
-/-- con-leche: ConLeche/Kernel/DeclCheck.lean:190-192 Expr.constsResolveFFast
+/-- con-leche: ConLeche/Cached/StateC.lean:614-616 constsResolveFC
 The executed `constsResolve` (one memoized DAG walk), which is what every
 front door below calls. -/
 def constsResolveFFast (fe : IFEnv) (e : EIdx) : AM Bool := do
@@ -170,13 +170,11 @@ def fvarTypeDs : List EIdx → AM (List EIdx)
 /-! ## The front door's verdict at an unresolved constant
 
 `mentionsConst` — the memoized DAG walk `unresolvedConstsError` runs on a
-term `constsResolve` has just walked — is `Arena/Inductives/StructParts.lean`'s
-(P2d-2's half of this phase), which twins con-leche's own
-`Expr.mentionsConstGo`/`Fast` because the direct install asks the same
-question of a block's field types.  That module imports `Arena/FEnv.lean` and
-nothing above it, so it sits below this one and there is ONE walk. -/
+term `constsResolve` has just walked, con-leche's `mentionsAnyConst
+[sorryAxName]` — is `Arena/Inductives/StructParts.lean`'s, at one name.
+That module sits below this one, so there is ONE walk. -/
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:46-66 unresolvedConstsError —
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:46-65 unresolvedConstsError —
 **the verdict at a term whose constants do not all resolve.**  A term that
 mentions `sorryAx` DECLINES (the axiom is tolerated as a declaration and
 installs nothing, so a use of it is a positively detected unsupported
@@ -188,7 +186,7 @@ def unresolvedConstsError (where_ : String) (e : EIdx) : AM CheckError := do
     pure (.notImplemented s!"use of the sorryAx axiom in {where_}")
   else pure (.invalid s!"unknown constant in {where_}")
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:68-90 Expr.hasStrLitGo — does
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:67-89 Expr.hasStrLitGo — does
 the term contain a string literal?  (Error path only.)  A memoized DAG walk:
 con-leche's visited set is the memo's key set (the Rust's `HashMap<EIdx,
 bool>`, every entry `false`), threaded as con-leche threads its
@@ -223,7 +221,8 @@ def hasStrLitGo (memo : Std.HashMap EIdx Bool) :
         | .proj _ _ x => hasStrLitGo memo fuel x
         | _ => pure (false, memo)
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:92-98 unresolvedConstsErrorL —
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:91-97 unresolvedConstsErrorL
+con-leche: ConLeche/Cached/IndPass.lean:23-30 unresolvedConstsErrorLC —
 `unresolvedConstsError` with a string-literal guard ahead of it: a string
 literal is declined here, before resolution, when the String support
 declarations are not yet present (con-leche's task #342: the guard the retired
@@ -239,10 +238,10 @@ def unresolvedConstsErrorL (strOk : Bool) (where_ : String) (e : EIdx) :
 
 /-! ## The per-declaration constant check -/
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:102-126 checkConstantVal
-con-leche: ConLeche/Kernel/DeclCheck.lean:361-383 checkConstantValF
-con-leche: ConLeche/Cached/ParsedC.lean:42-66 checkConstantValC
-Checks common to all declarations: fresh name, no reserved name, a certified
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:101-123 checkConstantVal
+con-leche: ConLeche/Kernel/DeclCheck.lean:218-238 checkConstantValF
+con-leche: ConLeche/Cached/IndPass.lean:36-58 checkConstantValC
+Checks common to all declarations: fresh name, a certified
 operation's name only at a definition (`allowOp`, the cited default `false`,
 spelled at every call as the Rust must), a literal's name only at its shape,
 well-formed universe parameters, and a type that is a type and mentions only
@@ -254,8 +253,6 @@ def checkConstantVal (mode : CheckMode) (fe : IFEnv) (cv : IConstantVal)
     (allowOp : Bool) : AM Unit := do
   if (fe.find? cv.name).isSome then
     fail (.invalid "duplicate declaration")
-  if (← reservedBasisNames).contains cv.name then
-    fail (.invalid "reserved basis name")
   if (← natOpName cv.name) && !allowOp then
     fail (.invalid s!"a certified Nat operation's name, not a definition: {← readName cv.name}")
   unless ← litShapeOk (.axiomInfo cv) do
@@ -276,7 +273,7 @@ def checkConstantVal (mode : CheckMode) (fe : IFEnv) (cv : IConstantVal)
 
 /-! ## The strategy-independent helpers -/
 
-/-- con-leche: ConLeche/Kernel/CheckerBase.lean:171-177 unwrapOr — unwrap an
+/-- con-leche: ConLeche/Kernel/CheckerBase.lean:125-131 unwrapOr — unwrap an
 optional value or fail with the given error. -/
 def unwrapOr {α : Type} (o : Option α) (err : CheckError) : AM α :=
   match o with
@@ -288,7 +285,7 @@ def unwrapOr {α : Type} (o : Option α) (err : CheckError) : AM α :=
 A `ConLeche/Kernel/Env.lean` declaration, placed at its only reader — the
 `.indDecl` arm — exactly as the `Level.lean` declarations above are. -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:390-424 indParamsOk — **the stream's
+/-- con-leche: ConLeche/Kernel/Env.lean:379-413 indParamsOk — **the stream's
 declared parameter count, checked as official checks it** (con-leche's task
 #228).  Both halves are one-sided on purpose: `false` means official rejects. -/
 def indParamsOk (nP : Nat) : List IConstantInfo → AM Bool

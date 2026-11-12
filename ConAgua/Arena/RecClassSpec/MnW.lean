@@ -62,7 +62,7 @@ theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some 
 
 l_model classGenMinorTyIh1Close_spec (p : Prog) (h : MnProg p)
   fns [h.icl ↦ iclW list]
-  specs [ftdsF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+  specs [ftdsF_spec p h.ad n, closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenMinorTyIh1Tail_spec (p : Prog) (h : MnProg p)
@@ -137,7 +137,7 @@ end misArms
 l_model classGenMinorTyClose_spec (p : Prog) (h : MnProg p)
   fns [h.mcl ↦ mcW list]
   specs [ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
-    closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+    closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenMinorTyConcl2_spec (p : Prog) (h : MnProg p)
@@ -278,14 +278,14 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   subst hmtd
   rw [itW.k_class_gen_mot_var.arm1]
   have hg25 := hg24.trans hg5
-  refine RSim.lstep (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_sl_snoc n _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
+  refine RSim.lstep (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_sl_snoc _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
   obtain ⟨hr6, hd6, hg6, -, -, ht6⟩ := snocW_dec h6 hS5.iw.iwSize hS5.iw.ctl (Nat.le_trans hidb hg25.iw) hfxH
     (by rw [decHL_grow hg25 hidb]; exact hidx)
   have hS6 := snocW_stage h6 hS5
   have hA6 := snocW_afr h6 (hf5 (hf4 (hf3 hA2)))
   rw [itW.k_sl_snoc.arm1, hr6]
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 n _ _ e o))) hK
+  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_mk_app_n_f_2 _ _ e o))) hK
     (RSim.withF ((mknF_ok vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩)
       (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨⟨hS7, hg7, hbH, hbd⟩, hf7⟩
@@ -295,11 +295,8 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   have hg27 := hg25.trans (hg6.trans hg7)
   rw [rec2MapM_genBinder]
   -- `class_gen_minor_ty_ih1_close`
-  rcases n with _ | n
-  · rw [show (iclW 0 _ _ _ _ _) = none from rfl]
-    exact (by rw [show itW.k_class_gen_minor_ty_ih1_close none = none from rfl, show i1W.k_class_gen_minor_ty_ih1_tail none = none from rfl, hK]; exact RSim.none)
-  rw [iclW.arm1]
-  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_fvar_type_ds n e (r7.headD 0) o)))) hK
+  rw [iclW]
+  refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_fvar_type_ds e (r7.headD 0) o)))) hK
     (RSim.withF ((ftdsF_ok (fun _ => none) vis fe _ _ xs).sim
       ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs, fun _ => Nat.le_trans hxb hg27.iw⟩) (fun _ hb => ftdsF_afr hb)) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨⟨hS8, hg8, hbs, hbb⟩, hf8⟩
@@ -314,7 +311,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_close_telescope o)))) hK (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r9, m9⟩ h9
-    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok n (fun _ => none) fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
+    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok (fun _ => none) fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
       (hS8.lt64 hbb) hbb hel (hf8 (hf7 hA6))
     exact ⟨x, a', hrun, hS', hg, hx, hA9⟩
   rintro ⟨r9, m9⟩ ih a9 - ⟨hS9, hg9, ⟨hih, hihd⟩, hA9⟩
@@ -595,7 +592,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   simp only [L.getD_zero, Nat.zero_add, L.getD_one] at hfbs hfbb
   rw [mcW.k_fvar_type_ds.arm1]
   have hg14 := hg13.trans hg4
-  refine RSim.lstep (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_sl_append n d (r3.headD 0) o)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_sl_append d (r3.headD 0) o)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hS5, hg5, hd5, hb5⟩ := rec2AppendW_dec h5 hS4 (decHL_decB hfbs hfbb)
     (by rw [decHL_grow hg14 hib]; exact hihs) (Nat.le_trans hib hg14.iw)
   by_cases hov : d + r5.tail.headD 0 < d
@@ -606,7 +603,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   refine RSim.bind (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_close_telescope o)) rfl (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
-    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok n (fun _ => none) fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
+    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok (fun _ => none) fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
       (hS5.lt64 hb5) hb5 hdl (appendW_afr h5 (hf4 (hf3 hA2)))
     exact ⟨x, a', hrun, hS', hg, hx, hA6⟩
   rintro ⟨r6, m6⟩ x a6 - ⟨hS6, hg6, hx, hA6⟩

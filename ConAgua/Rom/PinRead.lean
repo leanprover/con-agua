@@ -149,7 +149,7 @@ theorem romItems_subPB (bs : List UInt8) : (romItems []).toPB.subPB bs = romItem
 /-- `rom_exprs_to(q, o, k)`: `k` expressions at the current memo, their handles to `EREC[o ‥]`;
 the position after. -/
 -- con-ron: ConRon/Arena/Intern.lean:54-56 ConRon.Arena.internExprList
--- con-ron: ConRon/Arena/Frontend/Readback.lean:263-269 ConRon.Arena.Frontend.internExprList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:260-266 ConRon.Arena.Frontend.internExprList
 @[no_expose, l_impl ConRon.Arena.Frontend.internExprList ConRon.Arena.internExprList]
 def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r, ez) {
   if k == 0 { return q };
@@ -161,7 +161,7 @@ def romExprsTo : FunDecl := lfn (q, o, k) locals (h, r, ez) {
 
 /-- `rom_pins_to(q, r, k)`: the variant's pins `k ‥ 7`, each at a fresh memo, to `EREC[r + k ‥]`. -/
 -- con-ron: ConRon/Arena/Intern.lean:51-52 ConRon.Arena.internExpr
--- con-ron: ConRon/Arena/Frontend/Readback.lean:259-261 ConRon.Arena.Frontend.internExpr
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:256-258 ConRon.Arena.Frontend.internExpr
 -- con-ron: ConRon/Arena/NatOpPinSet.lean:97-118 ConRon.Arena.internPinSet
 @[no_expose, l_impl ConRon.Arena.internPinSet ConRon.Arena.internExpr ConRon.Arena.Frontend.internExpr]
 def romPinsTo : FunDecl := lfn (q, r, k) locals (z) {
@@ -258,8 +258,10 @@ def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
 }
 
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
-`allPinsOff`, then the variant list right after them. -/
--- con-ron: ConRon/Arena/Checker.lean:124-153 ConRon.Arena.internAllPins
+`allPinsOff`, then the variant list right after them. The twin first writes the run's maximum
+`Nat` size into the pins; the run's maximum is the default, which `intern_reserved_pins` wrote to
+`PINS[72]` already, so there is nothing to write. -/
+-- con-ron: ConRon/Arena/Checker.lean:124-162 ConRon.Arena.internAllPins
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;

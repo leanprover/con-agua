@@ -23,17 +23,27 @@ open ConRon.Arena ConRon.Arena.Frontend
 section pins
 open ConLeche ConRon.Bridge
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — **the same walk**,
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-752 ConRon.Bridge.internAllPins_run — **the same walk**,
 split after its first block (`Eq`'s): the first block one scratch-agnostic step, the rest of the
 basis and the pinned names one more, ending in the pin sets, which extend the store and leave the
 pin table. -/
 theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) :
+    (hmax : s.pins.maxNatSize = maxNatSizeDefault)
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) :
     ∃ u0 u : AState, (∃ r0, ConRon.Arena.BasisKind.decls .eqK s = .ok (r0, u0)) ∧
       Frontend.IStepS s u0 ∧ Frontend.IStepS u0 u ∧ Ext u.store s'.store ∧ s'.pins = u.pins := by
   simp only [ConRon.Arena.internAllPins] at hrun
-  obtain ⟨_, u0, q0, w0⟩ := AM.bind_ok hrun
+  -- the maximum's write: the default is there already
+  have hs : ({ s with pins := { s.pins with maxNatSize := maxNatSizeDefault } } : AState) = s := by
+    obtain ⟨st, cs, ms, ⟨n, rs, e, z, s1, mx⟩⟩ := s
+    simp only at hmax ⊢; rw [hmax]
+  obtain ⟨_, ug, qg, wg⟩ := AM.bind_ok hrun
+  obtain ⟨rfl, rfl⟩ := AM.pure_ok qg
+  obtain ⟨_, us, qs, ws⟩ := AM.bind_ok wg
+  obtain ⟨-, rfl⟩ := AM.pure_ok qs
+  rw [hs] at ws
+  obtain ⟨_, u0, q0, w0⟩ := AM.bind_ok ws
   have b1 := BasisKind.decls_sstep hok q0
   have a1 : Frontend.IStepS u0 u0 := Frontend.IStepS.refl b1.ok
   have hp0 : PinsOK u0 := hpins.mono b1.ext b1.pins
@@ -99,13 +109,14 @@ theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
     internPinSets_run a29.ok (by rw [a29.scratch, b1.scratch]; exact hoff) w33
   exact ⟨u0, _, ⟨_, q0⟩, b1, a29, hx', hpe⟩
 
-/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — the conjunct
+/-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-752 ConRon.Bridge.internAllPins_run — the conjunct
 that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}
     {s s' : AState} (hok : StateOK s) (hpins : PinsOK s) (hoff : s.store.scratchOn = false)
-    (hrun : internAllPins ps s = .ok (r, s')) : s'.pins = s.pins := by
-  obtain ⟨u0, u, -, h0, h1, -, hp⟩ := internAllPins_steps hok hpins hoff hrun
+    (hmax : s.pins.maxNatSize = maxNatSizeDefault)
+    (hrun : internAllPins ps maxNatSizeDefault s = .ok (r, s')) : s'.pins = s.pins := by
+  obtain ⟨u0, u, -, h0, h1, -, hp⟩ := internAllPins_steps hok hpins hoff hmax hrun
   rw [hp, h1.pins, h0.pins]
 
 end pins

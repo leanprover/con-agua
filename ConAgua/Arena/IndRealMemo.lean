@@ -1,12 +1,10 @@
 module
 
 import ConAgua.Arena.IndRealAbs
-import ConAgua.Arena.WalkLiftRefine
+public import ConAgua.Arena.WalkLiftRefine
 import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.WalkLift
-public import ConAgua.Arena.WriteSets
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.BVarStore
 import all ConAgua.Arena.BvarB
@@ -24,20 +22,21 @@ import all ConAgua.Arena.WalkLift
 @[expose] public section
 
 /-!
-# `instantiate1_lift_fast` under the stage relation and the walk memos (lane `indproofs4`, helper `memo`)
+# `instantiate_lift_fast` under the stage relation and the walk memos (lane `indproofs4`, helper `memo`)
 
-`instantiate1_lift_fast(fuel, e, v, d)` is lane `tails`' walk (`WalkLift.lean`), which refines
-`instantiate1LiftFast` under `ArenaI = ArenaD ∧ I1R` (`i1lFast_refines`): its memo (`ILFM` = 51,
+`instantiate_lift_fast(fuel, e, o, l, d)` is lane `tails`' walk (`WalkLift.lean`), which refines
+`instantiateLiftFast` under `ArenaI = ArenaD ∧ I1R` (`i1lFast_refines`): its memo (`ILFM` = 51,
 epoch word `CTL[52]`) lives outside the arena's memos, so `StageR` says nothing about it. The twin
 clears `inst1LC` at entry (`i1lFast_run`), so its run from `a` is the run from `a` with any other
 `inst1LC`; the walk needs only *some* well-formed memo in the memory at hand, `AbsOK`'s part
 `I1Memo` (`IndStubs.lean`), and leaves one. The recipe of `IndReal.lean` and helper `abs`'s
 `abF_ok` (`IndRealAbs.lean`).
 
-* **The model** `i1lF := callF i1lP "instantiate1_lift_fast"` over the walk's program `i1lP`
+* **The model** `i1lF := callF i1lP "instantiate_lift_fast"` over the walk's program `i1lP`
   (its functions, `bvar_b`'s and `lift_entry`'s), write set `i1lA`/`i1lC` (below 64).
 * **The twin keeps `cp`** (`keeps_i1lFast`): the walk interns nodes and touches walk memos only.
-* **`i1lF_ok`**: `RelW i1lF [f, e, v, d] (StageR ∧ AbsOK) (instantiate1LiftFast …) (KeepPost … ∧ AbsOK)`.
+* **`i1lF_ok`**: `RelW i1lF [f, e, o, l, d] (StageR ∧ AbsOK ∧ decHL) (instantiateLiftFast …)
+  (KeepPost … ∧ AbsOK)`, the values the decoded `IW` slice `(o, l)` (`ilSlR_of_decHL`).
 -/
 
 set_option experimental.vcgen true
@@ -60,21 +59,22 @@ theorem keeps_inst1LSet {β : Type} {π : AState → β} (hπ : MemoBlind π) (k
 theorem keeps_inst1LClear {β : Type} {π : AState → β} (hπ : MemoBlind π) : Keeps π inst1LClear := by
   unfold Keeps; intro a r a' h; cases h; first | exact hπ _ _ | exact (hπ _ _).trans (hπ _ _)
 
-/-- **`instantiate1LiftGo` keeps `(caches, pins)`.** -/
-theorem keeps_i1lGo (v : EIdx) (F : Nat) : ∀ h d, Keeps cp (instantiate1LiftGo v F h d) := by
+/-- **`instantiateLiftGo` keeps `(caches, pins)`.** -/
+theorem keeps_i1lGo (vs : Array EIdx) (F : Nat) : ∀ h d, Keeps cp (instantiateLiftGo vs F h d) := by
   induction F with
-  | zero => intro h d; rw [instantiate1LiftGo_zero]; exact Keeps.fail _
+  | zero => intro h d; rw [instantiateLiftGo_zero]; exact Keeps.fail _
   | succ F ih =>
-    intro h d; rw [instantiate1LiftGo_succ]
+    intro h d; rw [instantiateLiftGo_succ]
     repeat' (first
       | exact keeps_inst1LGet _ | exact keeps_inst1LSet cp_blind _ _
       | exact (keepsW_bvarB _ _).cp_of_cpl | exact keeps_liftFast _ _ _ _
-      | keeps_auto [inst1LiftArmApp, inst1LiftArmLam, inst1LiftArmForallE, inst1LiftArmLet,
-          inst1LiftArmProj] using ih, cp_blind)
+      | keeps_auto [instLiftArmApp, instLiftArmLam, instLiftArmForallE, instLiftArmLet,
+          instLiftArmProj] using ih, cp_blind)
 
-theorem keeps_i1lFast (F : Nat) (e v : EIdx) (d : Nat) : Keeps cp (instantiate1LiftFast F e v d) := by
-  unfold instantiate1LiftFast
-  exact Keeps.bind (keeps_inst1LClear cp_blind) fun _ => Keeps.bind (keeps_i1lGo v F e d) fun _ =>
+theorem keeps_i1lFast (F : Nat) (e : EIdx) (vs : Array EIdx) (d : Nat) :
+    Keeps cp (instantiateLiftFast F e vs d) := by
+  unfold instantiateLiftFast
+  exact Keeps.bind (keeps_inst1LClear cp_blind) fun _ => Keeps.bind (keeps_i1lGo vs F e d) fun _ =>
     Keeps.bind (keeps_inst1LClear cp_blind) fun _ => Keeps.pure _
 
 /-! ## The program and the model -/
@@ -82,10 +82,10 @@ theorem keeps_i1lFast (F : Nat) (e v : EIdx) (d : Nat) : Keeps cp (instantiate1L
 /-- The walk, `bvar_b`'s program and `lift_entry`'s. -/
 def i1lP : Prog := i1lFns ++ bvbProg ++ liftProg
 
-/-- The functions `instantiate1_lift_fast` reaches. -/
+/-- The functions `instantiate_lift_fast` reaches. -/
 def i1lPFns : List FnName :=
   ["i1l_find", "i1l_put", "i1l_clear", "i1l_go", "i1l_app", "i1l_lam", "i1l_forall", "i1l_let",
-    "i1l_proj", "instantiate1_lift_fast"] ++ bvbFns ++ liftFns
+    "i1l_proj", "instantiate_lift_fast"] ++ bvbFns ++ liftFns
 
 /-- What it writes: its memo (51), `bvar_b`'s (`walkA`) and `lift_entry`'s with the store's (`liftA`). -/
 def i1lA : List TieredArray := ↑ILFM :: walkA ++ liftA
@@ -103,41 +103,64 @@ theorem i1lP_prog : I1lProg i1lP := by
 /-- The program bundle. -/
 abbrev I1lF (p : Prog) : Prop := ProgHas p i1lP
 
-/-- **The model of `instantiate1_lift_fast`** (program- and fuel-free). -/
+/-- **The model of `instantiate_lift_fast`** (program- and fuel-free). -/
 noncomputable def i1lF (m : Mem) (args : List Word) : Option (List Word × Mem) :=
-  callF i1lP "instantiate1_lift_fast" m args
+  callF i1lP "instantiate_lift_fast" m args
 
 theorem i1lF_spec (p : Prog) (hp : I1lF p) (n : Nat) (s₀ : St) (args : List Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "instantiate1_lift_fast" args
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "instantiate_lift_fast" args
     ⦃fun r s' => LocEq s' s₀ ∧ i1lF s₀.mem args = some (r, s'.mem); ⊤⦄ :=
   callF_spec i1lP_closed (hp.agree i1lPFns) (by decide) n s₀ args
 
-/-- `instantiate1_lift_fast` writes only `i1lA`, `i1lC`. -/
+/-- `instantiate_lift_fast` writes only `i1lA`, `i1lC`. -/
 theorem i1lF_frame {m m' : Mem} {args r : List Word} (h : i1lF m args = some (r, m')) :
     MemFrame i1lA i1lC m m' := by
   obtain ⟨n, hc⟩ := callF_run h
   exact (run_memFrame i1lP_closed (by decide) (run_of_callW hc)).1
 
-/-- **`instantiate1_lift_fast` refines `instantiate1LiftFast` under the stage relation and the
-walk memos** (replaces `IndStubs.instantiate1LiftFast_spec`); the memos are well formed after. -/
-theorem i1lF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e v d : Word)
-    (he : H e) (hv : H v) :
-    RelW i1lF [f, e, v, d] (fun m a => StageR vis fe m a ∧ AbsOK m)
-      (instantiate1LiftFast f.toNat (decI e) (decI v) d.toNat)
+/-- **A decoded `IW` handle slice is the values' slice `SlR`.** -/
+theorem ilSlR_of_decHL {m : Mem} {o l : Word} {xs : List EIdx} (h : decHL m o.toNat l.toNat = some xs)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) : L.Arena.SlR m o l xs.toArray := by
+  have hl : xs.length = l.toNat := decHL_length m h
+  refine ⟨by simpa using hl, fun q hq => ?_⟩
+  have hi : q.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hq
+  have hg := mapM_opt_get (fun j => hd? (iwA m) (o.toNat + j)) (List.range l.toNat) xs h q.toNat
+    (by simpa using hi)
+  have hiw : iwH m (o.toNat + q.toNat) = some (xs[q.toNat]'(by omega)) := by simpa [iwH] using hg
+  have hlt : o.toNat + q.toNat < (m.arr64 IW).size := by
+    simp only [iwH, hd?, iwA] at hiw
+    cases hw : (m.arr64 IW)[o.toNat + q.toNat]? with
+    | none => simp [hw] at hiw
+    | some _ => exact (Array.getElem?_eq_some_iff.mp hw).1
+  obtain ⟨w, h1, h2, h3⟩ := iwH_rdW hiw (by omega)
+  have ho : UInt64.ofNat (o.toNat + q.toNat) = o + q := by
+    apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]
+  rw [ho] at h1
+  refine ⟨by rw [show LPIW = IW from rfl, h1]; exact h2, ?_⟩
+  rw [show LPIW = IW from rfl, h1, List.getElem?_toArray, List.getElem?_eq_getElem (by omega), ← h3]; rfl
+
+/-- **`instantiate_lift_fast` refines `instantiateLiftFast` under the stage relation and the walk
+memos**, the values the decoded `IW` slice `(o, l)`; the memos are well formed after. -/
+theorem i1lF_ok (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (f e o l d : Word)
+    (he : H e) (xs : List EIdx) :
+    RelW i1lF [f, e, o, l, d]
+      (fun m a => StageR vis fe m a ∧ AbsOK m ∧ decHL m o.toNat l.toNat = some xs)
+      (instantiateLiftFast f.toNat (decI e) xs.toArray d.toNat)
       (fun m m' a r x => KeepPost vis fe decW0E m m' a r x ∧ AbsOK m') := by
-  intro m m' a r h ⟨hS, hAb, ⟨mp, hmp⟩, hCr, hIl, hWk, hHb⟩
+  intro m m' a r h ⟨hS, ⟨hAb, ⟨mp, hmp⟩, hCr, hIl, hWk, hHb⟩, hdec⟩
   have hfr := i1lF_frame h
   obtain ⟨n, hc⟩ := callF_run h
   rcases n with _ | n
   · rw [callW_zero] at hc; cases hc
   have hA : ArenaI m (withI1C a mp) := ⟨hS.check.arena.withI1C mp, hmp⟩
-  obtain ⟨s', hs', -, hok, hA', hres, hlt⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (i1lFast_refines i1lP i1lP_prog n _ _ hA f e v d he hv) hc
+  obtain ⟨s', hs', -, hok, hA', hres, hlt, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (i1lFast_refines i1lP i1lP_prog n _ _ hA f e o l d xs.toArray he
+      (ilSlR_of_decHL hdec hS.iw.iwSize)) hc
   rw [hs'] at hA'
   have hrun := AM.run_of_ok _ _ hok
-  have hrun' : (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat).run a =
-      .ok (AM.res (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) (withI1C a mp),
-        AM.st (instantiate1LiftFast f.toNat (decE e) (decE v) d.toNat) (withI1C a mp)) := by
+  have hrun' : (instantiateLiftFast f.toNat (decE e) xs.toArray d.toNat).run a =
+      .ok (AM.res (instantiateLiftFast f.toNat (decE e) xs.toArray d.toNat) (withI1C a mp),
+        AM.st (instantiateLiftFast f.toNat (decE e) xs.toArray d.toNat) (withI1C a mp)) := by
     rw [← hrun, i1lFast_run, i1lFast_run]; rfl
   obtain ⟨hS', hg⟩ := StageR.of_walk hS hA'.1 hfr (lt64A_of_all rfl) (lt64_of_all rfl)
     ((keeps_i1lFast _ _ _ _).run hrun')

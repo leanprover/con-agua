@@ -47,9 +47,9 @@ elab "force_eqns" ids:ident+ : command => do
       let _ ← Lean.Meta.getEqnsFor? n
       let _ ← Lean.Meta.getUnfoldEqnFor? n
 
-/-! ## The block — `arena::core`'s `whnf` / `infer` / `defeq` block, 104 functions
+/-! ## The block — `arena::core`'s `whnf` / `infer` / `defeq` block, 110 functions
 
-`ConRon/Generated/Funs.lean:25433-31349`: `arena.core.reduce_nat` …
+`ConRon/Generated/Funs.lean:27354-33688`: `arena.core.reduce_nat` …
 `arena.core.knot_defeq_e`.  (The `annotate` block of 9 went with the annotate
 pass, task #119.) -/
 
@@ -70,7 +70,16 @@ force_eqns
   arena.core.struct_eta_cert_tail
   arena.core.struct_eta_cert_at
   arena.core.struct_eta_cert_with
+  arena.core.struct_eta_full_at
+  arena.core.struct_eta_full
+  arena.core.struct_eta_expand
+  arena.core.struct_eta_cert_partial
   arena.core.struct_eta_cert
+  arena.core.is_prop_type
+  arena.core.unit_like_fields_next
+  arena.core.unit_like_fields
+  arena.core.unit_like_struct
+  arena.core.unit_like_loop
   arena.core.struct_unit_cert_tail
   arena.core.struct_unit_cert
   arena.core.eta_cert
@@ -79,6 +88,7 @@ force_eqns
   arena.core.major_to_ctor_certs
   arena.core.major_to_ctor_k
   arena.core.major_to_ctor_eta
+  arena.core.major_to_ctor_eta_sort
   arena.core.major_to_ctor_and
   arena.core.major_to_ctor_and_build
   arena.core.major_to_ctor_at
@@ -126,11 +136,9 @@ force_eqns
   arena.core.infer_spine_io
   arena.core.bool_true_shortcut
   arena.core.defeq_spine
+  arena.core.defeq_binders_inner
+  arena.core.defeq_domain
   arena.core.defeq_binders
-  arena.core.defeq_peel
-  arena.core.defeq_peel_leaf
-  arena.core.defeq_lams_inner
-  arena.core.defeq_lams
   arena.core.quick_defeq
   arena.core.defeq_offset
   arena.core.try_unfold_proj_app

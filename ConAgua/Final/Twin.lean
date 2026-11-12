@@ -39,8 +39,8 @@ worker:
   `ConAgua/Checker/ParDriverTwin.lean`).
 * `twinAccepts_pure`: then con-leche's own parser reads the chunks, and con-leche's pure fold
   accepts the parsed records prepared with some prelude, at the same pin list. As con-ron's
-  Theorem 1 at the check phase (`Arena.pooledAccepts_bridge`), it takes a set theory: each
-  prefix's environment is well formed by con-leche's model. `twinAccepts_model`,
+  Theorem 1 at the check phase (`Arena.pooledAccepts_bridge`): each prefix's environment is well
+  formed by con-leche's model-free `foldlM_checkDecl_envWF`. `twinAccepts_model`,
   `twinAccepts_no_False`: the model, and no theorem of type `False`.
 
 The prelude is free: `builtinPreludeE_run` gives *some* con-leche prelude `preC` the twin's prelude
@@ -82,14 +82,14 @@ def TwinAccepts (chunks : List ByteArray) : Prop :=
     builtinPreludeE sA = .ok (.ok pre, sB) ∧
     parseChunks chunks sB = .ok (.ok r, sC) ∧
     preparePrelude pre r.decls sC = .ok (ds, sD) ∧
-    internAllPins pins sD = .ok (ipins, sE) ∧
+    internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     SeqAccepts .verified ipins ds sE I sF
 
 /-- **What the twin's accept means, in con-leche's terms**: con-leche's parser reads the chunks, and
 con-leche's pure fold accepts the parsed records prepared with some prelude, at the twin's pin
 list. con-ron's `stages_frame`, then Theorem 1 at the check phase (`Arena.pooledAccepts_bridge`,
 with its two tier specs discharged by `CoreSpec.of_core` and `indSpec_of_bridge`). -/
-theorem twinAccepts_pure (V : Type w) [SetTheory V] {chunks : List ByteArray}
+theorem twinAccepts_pure {chunks : List ByteArray}
     (h : TwinAccepts chunks) :
     ∃ (pins : List NatOpPinSet) (preC : ConLeche.Frontend.PreludeIx)
       (rc : ConLeche.Frontend.ParseResultD) (F : Nat),
@@ -103,7 +103,7 @@ theorem twinAccepts_pure (V : Type w) [SetTheory V] {chunks : List ByteArray}
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hrc, hden⟩ :=
     ConRon.Bridge.stages_frame hA hB hC hD hE
   obtain ⟨F, hpure⟩ :=
-    ConRon.Bridge.Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden
+    ConRon.Bridge.Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden
       (pooledAccepts_of_seq hF)
   exact ⟨pins, preC, rc, F, hrc, hpure⟩
 
@@ -117,7 +117,7 @@ theorem twinAccepts_model (V : Type w) [SetTheory V] {chunks : List ByteArray}
       checkDeclsPure .verified (fueledOps .verified F) pins
         (ConLeche.Frontend.preparePrelude preC rc.decls).toList = .ok env ∧
       Nonempty (Model V env) := by
-  obtain ⟨pins, preC, rc, F, hrc, hpure⟩ := twinAccepts_pure V h
+  obtain ⟨pins, preC, rc, F, hrc, hpure⟩ := twinAccepts_pure h
   obtain ⟨m⟩ := ConLeche.Model.checkDeclsPure_sound_of (V := V) (pins := pins) hpure
   exact ⟨pins, preC, rc, F, _, hrc, hpure, ⟨ConLeche.Model.Model.ofEnvModelM m⟩⟩
 
@@ -128,7 +128,7 @@ con-leche's parse of such chunks holds a theorem record of type `False`
 fold never accepts it (`no_False_theorem_accepted_pure`). -/
 theorem twinAccepts_no_False (V : Type w) [SetTheory V] {chunks : List ByteArray}
     (hfalse : jsonWithTheoremFalse chunks) (h : TwinAccepts chunks) : False := by
-  obtain ⟨pins, preC, rc, F, hrc, hpure⟩ := twinAccepts_pure V h
+  obtain ⟨pins, preC, rc, F, hrc, hpure⟩ := twinAccepts_pure h
   obtain ⟨cv, vl, hty, hmem⟩ := ConLeche.Frontend.parseChunks_jsonWithTheoremFalse hfalse hrc
   exact no_False_theorem_accepted_pure V
     (by simpa using ConLeche.Frontend.mem_preparePrelude (pre := preC) hmem) hty hpure

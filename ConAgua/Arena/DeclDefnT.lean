@@ -91,7 +91,7 @@ theorem StageT.of_leaf {p : Prog} (hcl : LeafClosed p) {f : FnName} (hf : f ∈ 
   exact ⟨hS, hT.twin.frame hfr leafA_memo leafC_memo leafA_walk leafC_walk leafA_lp leafC_lp leafA_hb leafC_hb,
     by simp only [pinW, hfr.arr PINS leafA_pins (by decide)]; exact hT.flag⟩
 
-/-- **The definition arm refines `checkDecl`, both outcomes**, under `StageT` (con-ron's
+/-- **The definition arm refines `checkDeclKind`, both outcomes**, under `StageT` (con-ron's
 `checkDecl_bridge_defn`'s decomposition): the record into `EREC` (`erec_ci(i, 1)`), the constant
 check with a certified operation's name allowed (`ccv_ref`, `allow = 1`), the definition check
 (`checkDefnVal_ref`), then at the pre-insertion index under `StageC` the structural-`Nat` gate
@@ -108,7 +108,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     (hd : ds[i.toNat] = .defnDecl cv v hh) (hfold : FoldOK env fe a)
     (hcvd : Frontend.denoteCV a.store cv = some c) (hvd : denoteE a.store v = some x)
     (hPD : PinsDenote a.store pins pinsP) (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkDeclDefnE p n m i vis) (checkDecl V pins fe (.defnDecl cv v hh)) a
+    RefE (VerdictCtxU p) (checkDeclDefnE p n m i vis) (checkDeclKind V pins fe (.defnDecl cv v hh)) a
       (fun w fe' a' => CdaPost dn m w.1 w.2 fe' a') := by
   have hfr : ∀ {k : Nat} {f : FnName} {args : List Word} {mx my : Mem} {rx : List Word},
       f ∈ defnCallFns → callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
@@ -122,7 +122,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDeclDefnE.eq_2]
-  unfold checkDecl
+  unfold checkDeclKind
   simp only []
   -- `erec_ci(i, 1)`
   refine RefE.onlySim (fun _ => checkDeclDefnE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_

@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndT.BlockC
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.LdRd

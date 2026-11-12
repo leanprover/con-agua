@@ -169,7 +169,7 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 `Inst1Spec.lean`), which take none (their walks count their own). -/
 
 /-- `abstract1_fast(fuel, e, d, k)`: `abs_entry(e, d, k)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:1724-1730 ConRon.Arena.abstract1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:1726-1732 ConRon.Arena.abstract1Fast
 @[no_expose] def abstract1FastA : FunDecl := lfn (f, e, d, k) locals (r) {
   r := call abs_entry(e, d, k);
   return r
@@ -195,7 +195,7 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:291-304 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:288-301 ConRon.Arena.indParamsOk
 @[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

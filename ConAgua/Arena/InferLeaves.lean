@@ -59,6 +59,8 @@ structure InferLeafProg (p : Prog) : Prop where
   fai : p.lookup "intern_forall" = some internForallL
   mkfa : p.lookup "mk_forall" = some mkForall
   inferLit : p.lookup "infer_lit" = some inferLitL
+  sizeBytes : p.lookup "size_bytes" = some sizeBytesL
+  natSizeRefused : p.lookup "nat_size_refused" = some natSizeRefusedL
   pinAt : p.lookup "pin_at" = some pinAtL
   inferConst : p.lookup "infer_const" = some inferConstL
   envrow : p.lookup "env_row_get" = some envRowGetL
@@ -467,10 +469,13 @@ end lr
 `infer_lit` refines. -/
 def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
   match l with
-  | .natVal _ => do
+  | .natVal n => do
       if ← natLitStored fe then do
-        let nn ← pinNat
-        constE nn
+        if ← natSizeRefused n then
+          fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+        else do
+          let nn ← pinNat
+          constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
   | .strVal _ => do
       if ← strLitStored fe then do
@@ -478,6 +483,10 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
         constE sn
       else fail (.notImplemented
         "string literals before the String support declarations")
+
+/-- The twin's `natSizeRefused` at the run's maximum. -/
+theorem natSizeRefused_run (n : Nat) (a : AState) :
+    (natSizeRefused n).run a = .ok (decide (natSizeBytes n > a.pins.maxNatSize), a) := rfl
 
 /-- `inferBody`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBody "lit"]
@@ -510,7 +519,7 @@ closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   fns [hf ↦ ilE list]
   specs [callW_spec p n "nat_lit_stored", callW_spec p n "str_lit_stored",
-    callW_spec p n "pin_at", callW_spec p n "const_e"]
+    callW_spec p n "nat_size_refused", callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -569,7 +578,24 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
       (fun hb => by simpa [decBool] using hb)
       fun _ _ => ?_
-    exact il_arm p hp hc n 1 (by decide) hS₁
+    obtain ⟨-, hsl, hnorm, hpv, -⟩ := (RecRel_natVal _ _ _ _ ▸ hrel : NatRec _ _ _ N)
+    have hl : (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat < 2 ^ 61 := by
+      have := hS.arena.base.lit.1.top41; have := hsl.le; omega
+    refine RefE.bindLift (fun _ => rfl) fun r₂ m₂ c2 => ?_
+    obtain ⟨s₂, hs₂, -, hm₂, hres⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+      (natSizeRefused_spec p hp.sizeBytes hp.natSizeRefused n _ _ hl) c2
+    have hm : m₂ = m₁ := hs₂.symm.trans hm₂
+    subst hm
+    refine ⟨_, _, natSizeRefused_run _ _, ?_⟩
+    dsimp only [ilE.k_nat_size_refused]
+    have hsz : natSizeBytes N = 8 * max (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat 1 := by
+      rw [← hpv]; exact sizeBytes_pv _ _ _ hnorm
+    have hmx := hS₁.pins.maxNatSize
+    have hpw : (rdW (m₂.arr64 PINS) 72) = pinW m₂ 72 := rfl
+    simp only [hpw] at hres
+    refine RefE.guardThen (by rfl) (fun h => ?_) (fun h => ?_) fun _ _ => il_arm p hp hc n 1 (by decide) hS₁
+    · rw [hres] at h; split at h <;> simp_all <;> omega
+    · rw [hres]; simp only [decide_eq_true_eq] at h; rw [hsz, hmx] at h; simp [h]
   · rw [ite_eq_right h3]
     cases l with
     | natVal N => simp [RecRel, NatRec, h3] at hrel

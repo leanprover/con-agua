@@ -39,7 +39,7 @@ open L L.Arena L.Rom
 universe w
 
 /-- **Entry 2 in place, `check` with the mode word `2`**: `check_b` (as `checkB_seq`). -/
-theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkMode2_seq {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -55,7 +55,7 @@ theorem checkMode2_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hB := checkB_seq Vt hF hJP n (by omega) hi hhi
+    have hB := checkB_seq hF hJP n (by omega) hi hhi
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
@@ -98,7 +98,7 @@ theorem jobProg_of_cd (hCd : CheckerCd) {b pb : ByteArray} (PA : PhaseA b) (hpb 
 
 /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
 (`CheckerCd`). -/
-theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) (b pb : ByteArray)
+theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
     (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
@@ -132,7 +132,7 @@ theorem drv_twinAccepts (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd) 
       simp only [Except.map, Except.ok.injEq, Prod.mk.injEq] at h₂
       obtain ⟨rfl, -⟩ := h₂
       exact M.of_run (P := fun x => x = ⟨w, Locals.init []⟩) rfl e
-        (checkMode2_seq Vt hF (jobProg_of_cd hCd PA hin.2.2.1 hF.r7.since.pbpre) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
+        (checkMode2_seq hF (jobProg_of_cd hCd PA hin.2.2.1 hF.r7.since.pbpre) N₂ hN₂ _ hk ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf) hacc
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
     hA, hBp, hC, hD, hE, s'', PA.idx, hB⟩

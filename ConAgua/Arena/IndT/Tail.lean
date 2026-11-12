@@ -64,15 +64,16 @@ def tailStreamT (mode : ConLeche.CheckMode) (p : BlockShape) (fe₂b : IFEnv)
   pure fe₃
 
 /-- **`checkBlockTail` at `check_block_tail`'s calls.** -/
-theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstantInfo) (q : BlockPass) :
-    ConRon.Arena.checkBlockTail mode block q = (do
+theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstantInfo) (q : BlockPass)
+    (Q : List IProjTable) :
+    ConRon.Arena.checkBlockTail mode block q Q = (do
       ConRon.Arena.checkBlockIdxSorts mode q.env1 q.p q.p.members
       let fe₂ := ConRon.Arena.consBlockCtors q.p.nP q.p.memberCtors q.env1
       ConRon.Arena.flushCaches
       let nested := ConRon.Arena.blockNestedBit q.p q.kinds
       let (fe₂b, out) ← ConRon.Arena.checkBlockRec mode fe₂ q.p nested q.params q.tbl q.rd q.cls block
       let fe₃ ← tailStreamT mode q.p fe₂b out
-      ConRon.Arena.checkBlockTables q.p fe₃ q.p.members
+      ConRon.Arena.checkBlockTables fe₃ Q
       pure fe₃) := by
   simp only [ConRon.Arena.checkBlockTail, tailStreamT, bind_assoc, pure_bind]
 

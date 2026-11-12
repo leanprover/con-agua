@@ -99,7 +99,7 @@ status word or unset register reads as accept
 [`checkerFile_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L95-L103):
 
 ```lean
-theorem checkerFile_accepts [Host] (V : Type w) [ConLeche.SetTheory V]
+theorem checkerFile_accepts [Host]
     (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
@@ -123,15 +123,20 @@ accepts `b`; and if it returns `rdx = 2` with a code whose class `rax &&& 3` is
 that class. Every other outcome (`rdx = 1`, class `0`, `ok R`) claims nothing. `Ev` is Kraken's "every run from here reaches the postcondition"
 ([`Ev`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Step.lean#L25-L30)):
 an inductive, so the run also terminates in Kraken's semantics, whatever the
-input. The theorem holds in every set-theory model `V` (`[ConLeche.SetTheory
-V]`, which appears only in the hypotheses): a record's job is checked at the
+input. The theorem takes no set-theory model: a record's job is checked at the
 stream index's view of its position, and con-ron's Theorem 1 obtains the fold
-invariant there from the model of the accepted prefix (**Axioms**, below).
+invariant there from con-leche's model-free fact that the pure fold keeps the
+environment well formed
+([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L265-L267)).
 
 [`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L76-L86)
 is the stages con-ron's binary runs, from the twin's start state: intern the
 reserved names, parse the built-in prelude, parse the input, prepare the
-records, intern the pins, then the check phase, at some pin list. The check
+records, intern the pins, then the check phase, at some pin list. The pins
+are interned with the run's maximum `Nat` size, which here is always the
+default, 134 217 728 bytes
+([`maxNatSizeDefault`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/CoreState.lean#L147-L149));
+the checker has no `--max-nat-size` flag, which con-ron's binary has. The check
 phase is
 [`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L58-L63):
 the stream index (`buildIndex`, which reads every record off once, with no
@@ -167,13 +172,12 @@ only, pinned by `#guard_msgs`
 ([here](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L205-L222)),
 and so do the links of the chain
 ([`ConAgua/Audit/Final.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Audit/Final.lean#L20-L37)).
-No `sorry`, no `native_decide`, no axiom of our own. Every final theorem is
-relative to set theory as con-leche's model theorem is: it takes
-`[ConLeche.SetTheory V]` (a model of ZF⁻ with an ω-chain of Grothendieck
-universes), which cannot be instantiated inside Lean, so it gives its
-conclusion only given such a model. For the accept and verdict theorems this
-is inherited from con-ron's Theorem 1 for the check phase, which takes the
-model too.
+No `sorry`, no `native_decide`, no axiom of our own. The model and
+no-`False` corollaries (and their threaded forms) are relative to set theory
+as con-leche's model theorem is: they take `[ConLeche.SetTheory V]` (a model
+of ZF⁻ with an ω-chain of Grothendieck universes), which cannot be
+instantiated inside Lean, so they give their conclusion only given such a
+model. The accept and verdict theorems take no such model.
 
 `TwinAccepts` is not trivially true: given a set-theory model, some input is
 not accepted
@@ -456,8 +460,8 @@ it is proved from a word model that keeps the errors (`l_model … unified`:
 `Except` instead of `Option`) by one case chain, where a callee's failure passes
 through the twin's `bind` and at a reject or decline site the L guard is the
 twin's failure condition. Functions whose call closure aborts only with class
-`0` (1462 of 1776) claim nothing, by a check of the program text
-([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L228-L229)).
+`0` (1479 of 1790) claim nothing, by a check of the program text
+([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L229-L230)).
 
 ### 4.5 The composition
 
@@ -468,7 +472,7 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L106-L112)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L103-L109)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
@@ -1128,7 +1132,7 @@ covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every job
 index, each thread in increasing order, then the twin's pipeline accepts `b`
 with the check phase as con-ron's pool
-([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L38-L47)),
+([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L38-L46)),
 and the model and no-`False` corollaries follow as in §2.1. Its pieces: entry
 1's run with the frozen buffer it leaves, a fresh worker's start state over the
 buffer and a zero region, and one job per call of entry 2, each a sequential
@@ -1152,8 +1156,11 @@ takes one worker's failing list to the sequential run's verdict (a job's
 result from a worker's state equal to its result from the sequential run's
 state).
 
-`ca_start` and `--jobs=8` agree with con-leche's pinned verdicts on all 689
-fixtures of `scripts/diff-e2e.py` (§10.3; 2026-11-09).
+On 2026-11-12 (con-leche `eb2c5939`, con-ron `4ca283d1`), `ca_start` agreed
+with con-leche's pinned verdicts on 725 of the 730 fixtures of
+`scripts/diff-e2e.py` (§10.3), sequentially; the other five are
+`nat_size_limit_*` fixtures pinned at a smaller maximum `Nat` size, which the
+checker accepts at the default maximum, as con-ron does.
 
 ## 10. Keeping the port honest
 
@@ -1185,9 +1192,9 @@ something else than the twin, beyond fuel and fixed capacities, in three
 sections:
 [Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L38)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L63)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L67)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L64-L93).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L69-L98).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
@@ -1196,13 +1203,18 @@ it is.
 ### 10.3 Differential testing
 
 `scripts/e2e.py` assembles the checker, runs it on con-leche's e2e fixtures and
-the arena tests (736 inputs), and compares each verdict with two references:
+the arena tests (777 inputs), and compares each verdict with two references:
 the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 ([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L25)).
-`scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 689 of
+`scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 730 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
 not-accept with it, sequentially and with `--jobs=4`
 ([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L44)).
+Seven of them, the `nat_size_limit_*` fixtures, are pinned at a maximum
+`Nat` size of 16 bytes (con-leche's test table runs them with
+`--max-nat-size=16`); the checker runs every input at the default maximum
+(§2.1), so their verdicts are not comparable with the pinned ones, and
+`scripts/diff-e2e.py` skips them.
 `scripts/diff-e2e.py --refs` also compares the verdicts with con-ron's and
 e2e-ref's (and a reject or decline with con-ron's). These cover what the theorem does not: the harness
 and completeness.

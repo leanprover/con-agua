@@ -172,7 +172,7 @@ theorem irpStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb
   refine ⟨_, hrun', ?_⟩
   rw [hm] at hk hpf hfr
   refine ⟨⟨hk, hc, by simpa [PbPre] using hpre, hpf⟩, hA, ?_, ?_, ?_, hfull, hp0,
-    ⟨hokA, hoffA, hpinsA, hppA, hfull.names_size⟩, hcachesA, ?_, hmo⟩
+    ⟨hokA, hoffA, hpinsA, hppA, ⟨hfull.names_size, internReservedPins_maxNatSize hrun'⟩⟩, hcachesA, ?_, hmo⟩
   · exact (stateDR_loadMem b pb sz hc).frame hfr (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide))
       (pinA_not (by decide) (by decide)) (pinA_not (by decide) (by decide)) pinA_idArrs storeC_idCtl

@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.DefEqMidLams
+public import ConAgua.Arena.DefEqMidPeel
 public import ConAgua.Arena.CoreDen
 public import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.GrindAttr
@@ -54,12 +54,12 @@ theorem StoreDenotes.of_den (h : CoreDen) : StoreDenotes :=
 
 /-- The lookups of this file. -/
 structure QuickProg (p : Prog) : Prop where
-  lams : LamsProg p
+  peel : PeelProg p
+  mid : DefEqMidProg p
   lv : LvlCacheProg p
   qd : p.lookup "quick_defeq" = some quickDefeqL
   qs : p.lookup "quick_sort" = some quickSortL
-  qf : p.lookup "quick_forall" = some quickForallL
-  ql : p.lookup "quick_lam" = some quickLamL
+  qb : p.lookup "quick_binders" = some quickBindersL
   le : p.lookup "lit_eq" = some litEqL
   lq : p.lookup "limbs_eq" = some limbsEq
 
@@ -113,10 +113,10 @@ def quickPairT (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : E
     pure (some ok)
   | .lit l₁, .lit l₂ => pure (some (l₁ == l₂))
   | .forallE ty₁ body₁, .forallE ty₂ body₂ => do
-    let ok ← defeqBinders r depth ty₁ body₁ ty₂ body₂
+    let ok ← defeqBinders mode r false bindersFuel depth #[] ty₁ body₁ ty₂ body₂
     pure (some ok)
   | .lam ty₁ body₁, .lam ty₂ body₂ => do
-    let ok ← defeqLams mode r lamsFuel depth ty₁ body₁ ty₂ body₂
+    let ok ← defeqBinders mode r true bindersFuel depth #[] ty₁ body₁ ty₂ body₂
     pure (some ok)
   | _, _ => pure none
 
@@ -147,14 +147,14 @@ theorem quickPairT_lit (l₁ l₂ : ConLeche.Literal) (ha : s.store.view a = som
 theorem quickPairT_forall (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.forallE t₁ c₁))
     (hb : s.store.view b = some (.forallE t₂ c₂)) :
     (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqBinders r depth t₁ c₁ t₂ c₂
+      let ok ← defeqBinders mode r false bindersFuel depth #[] t₁ c₁ t₂ c₂
       pure (some ok) : AM (Option Bool)).run s := by
   simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
 
 theorem quickPairT_lam (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.lam t₁ c₁))
     (hb : s.store.view b = some (.lam t₂ c₂)) :
     (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqLams mode r lamsFuel depth t₁ c₁ t₂ c₂
+      let ok ← defeqBinders mode r true bindersFuel depth #[] t₁ c₁ t₂ c₂
       pure (some ok) : AM (Option Bool)).run s := by
   simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
 
@@ -202,11 +202,11 @@ theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s�
     RefE True (qsE p (n + 1) s₀.mem a b) (quickPairT mode r depth (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   simp only [qsE]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.peel.eview
     hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
   subst e₁; dsimp only [qsE.k_e_view]
   obtain ⟨rfl, hwa⟩ := viewR_sort hvra (hta.trans h2a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.peel.eview
     hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
   subst e₂; dsimp only [qsE.k_e_view_2]
   obtain ⟨rfl, hwb⟩ := viewR_sort hvrb (htb.trans h2b)
@@ -240,98 +240,87 @@ theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s�
     omega
   exact RefE.ret rfl (CorePost.ret hS₃ rfl hres)
 
-/-! ## `quick_forall`, `quick_lam` -/
+/-! ## `quick_binders` -/
 
-theorem peelFuel_lt : peelFuel < 2 ^ 62 := by unfold peelFuel; decide
-
-/-- **`quick_forall`'s model, both outcomes** (generated; `e_view` lifted, `defeq_binders` by its
+/-- **`quick_binders`' model, both outcomes** (generated; `e_view` lifted, `defeq_binders` by its
 unified model). -/
-l_model qfE_spec (p : Prog) (hf : p.lookup "quick_forall" = some quickForallL)
-    (hb : p.lookup "defeq_binders" = some defeqBindersL)
-  fns [hf ↦ qfE list]
-  specs [callW_spec p n "e_view", dbE_spec p hb n]
+l_model qbE_spec (p : Prog) (hf : p.lookup "quick_binders" = some quickBindersL) (hp : PeelProg p)
+  fns [hf ↦ qbE list]
+  specs [callW_spec p n "e_view", dbE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`quick_forall` refines `quickDefEq`'s `∀` arm, both outcomes**: the errors are
-`defeq_binders`'. -/
-theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
+/-- **`quick_binders` refines `quickDefEq`'s `∀` (`lam = 0`) and `λ` (`lam = 1`) arms, both
+outcomes**: the errors are `defeq_binders`'. -/
+theorem qb_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h6a : tagW a = 6) (h6b : tagW b = 6) (hd : d.toNat < 2 ^ 63) :
-    RefE (KnotNvG p n) (qfE p (n + 1) s₀.mem mode vis d a b)
+    (eb mode lam d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
+    (hlam : (lam = 0 ∧ tagW a = 6 ∧ tagW b = 6) ∨ (lam = 1 ∧ tagW a = 5 ∧ tagW b = 5))
+    (hd : d.toNat < 2 ^ 63) :
+    RefE (KnotNvG p n) (qbE p (n + 1) s₀.mem mode vis lam d a b)
       (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
-  simp only [qfE]
-  cases n with
-  | zero => rw [callW_zero, liftE_none, qfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  | succ k =>
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
+  simp only [qbE]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.peel.eview
     hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
-  subst e₁; dsimp only [qfE.k_e_view]
-  obtain ⟨rfl, hwa1, hwa2⟩ := viewR_forall hvra (hta.trans h6a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
+  subst e₁; dsimp only [qbE.k_e_view]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.peel.eview
     hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
-  subst e₂; dsimp only [qfE.k_e_view_2]
-  obtain ⟨rfl, hwb1, hwb2⟩ := viewR_forall hvrb (htb.trans h6b)
-  refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
-  have hpf := peelFuel_lt
-  have H := db_ref p hp.lams.peel hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
-    vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 (by omega)
-  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
-    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res]; rfl, hP.valid⟩) H
-
-/-- **`quick_lam`'s model, both outcomes** (generated; `e_view` lifted, `defeq_lams` by its unified
-model). -/
-l_model qlE_spec (p : Prog) (hf : p.lookup "quick_lam" = some quickLamL)
-    (hl : p.lookup "defeq_lams" = some defeqLamsL)
-  fns [hf ↦ qlE list]
-  specs [callW_spec p n "e_view", defeqLams_specE p hl n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-/-- **`quick_lam` refines `quickDefEq`'s `λ` arm, both outcomes**: the errors are `defeq_lams`'. -/
-theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
-    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h5a : tagW a = 5) (h5b : tagW b = 5) (hd : d.toNat < 2 ^ 63) :
-    RefE (KnotNvG p n) (qlE p (n + 1) s₀.mem mode vis d a b)
-      (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
-      (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
-  have hS := hs.rel
-  simp only [qlE]
+  subst e₂; dsimp only [qbE.k_e_view_2]
+  refine RefE.abort0 (by rfl) fun hle => ?_
+  have hspn := hS.spn
+  have hle' : (rdW (s₀.mem.arr64 CTL) 136).toNat ≤ (s₀.mem.arr64 SPN).size := by
+    simp only [Mem.len64, UInt64.not_lt, UInt64.le_iff_toNat_le] at hle
+    rw [UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)] at hle; exact hle
+  have hx : FvsR s₀.mem (rdW (s₀.mem.arr64 CTL) 136) 0 #[] :=
+    ⟨⟨rfl, by simp only [UInt64.toNat_zero, Nat.add_zero]; exact hle', fun i hi => by simp at hi,
+      fun i hi => by simp at hi⟩, by simp [spTop], by simp only [UInt64.toNat_zero]; omega⟩
   cases n with
-  | zero => rw [callW_zero, liftE_none, qlE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  | succ k =>
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
-  subst e₁; dsimp only [qlE.k_e_view]
-  obtain ⟨rfl, hwa1, hwa2⟩ := viewR_lam hvra (hta.trans h5a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
-  subst e₂; dsimp only [qlE.k_e_view_2]
-  obtain ⟨rfl, hwb1, hwb2⟩ := viewR_lam hvrb (htb.trans h5b)
-  refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
-  have H := defeqLams_ref p hp.lams hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
-    vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 hd
-  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
-    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res], hP.valid⟩) H
+  | zero => rw [dbE.eq_1]; exact RefE.of_cls0 (by rfl)
+  | succ n =>
+  have hbf : bindersFuel = (4611686018427387904 : Word).toNat := rfl
+  have hfin : ∀ (lam' : Word) (t₁ c₁ t₂ c₂ : Word), HW t₁ → HW c₁ → HW t₂ → HW c₂ →
+      (decide (lam' ≠ 0) : Bool) = (lam' != 0) →
+      RefE (KnotNvG p (n + 1))
+        (qbE.k_defeq_binders p (rdW (s₀.mem.arr64 CTL) 136)
+          (dbE p (n + 1) s₀.mem mode vis lam' 4611686018427387904 d (rdW (s₀.mem.arr64 CTL) 136) 0 t₁ c₁ t₂ c₂))
+        (do
+          let ok ← defeqBinders (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam' != 0)
+            bindersFuel d.toNat #[] (decE t₁) (decE c₁) (decE t₂) (decE c₂)
+          pure (some ok)) a₀
+        (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
+    intro lam' t₁ c₁ t₂ c₂ q1 q2 q3 q4 _
+    rw [hbf]
+    refine RefE.bindE (fun _ => rfl) (fun hG => hG.mono (by omega))
+      (db_ref p hp.peel hil n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode lam'
+        4611686018427387904 d _ 0 t₁ c₁ t₂ c₂ #[] hs hx q1 q2 q3 q4
+        (by rw [show (4611686018427387904 : Word).toNat = 4611686018427387904 from rfl]; omega))
+      fun v y a₁ _ hQ => ?_
+    obtain ⟨r, m⟩ := v
+    have hR := GrowPost.restore hQ [r.headD 0] rfl hQ.valid
+    exact RefE.ret rfl ⟨hR.after, by rw [hR.res], hR.valid⟩
+  rcases hlam with ⟨rfl, ha6, hb6⟩ | ⟨rfl, ha5, hb5⟩
+  · obtain ⟨rfl, w1, w2⟩ := viewR_forall hvra (hta.trans ha6)
+    obtain ⟨rfl, w3, w4⟩ := viewR_forall hvrb (htb.trans hb6)
+    refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
+    exact hfin 0 _ _ _ _ w1 w2 w3 w4 rfl
+  · obtain ⟨rfl, w1, w2⟩ := viewR_lam hvra (hta.trans ha5)
+    obtain ⟨rfl, w3, w4⟩ := viewR_lam hvrb (htb.trans hb5)
+    refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
+    exact hfin 1 _ _ _ _ w1 w2 w3 w4 rfl
 
 /-! ## `quick_defeq`: the dispatch -/
 
 /-- **`quick_defeq`'s model, both outcomes** (generated; `lit_eq` lifted, the other arms by their
 unified models). -/
 l_model qdE_spec (p : Prog) (hf : p.lookup "quick_defeq" = some quickDefeqL)
-    (hs : p.lookup "quick_sort" = some quickSortL) (hfa : p.lookup "quick_forall" = some quickForallL)
-    (hla : p.lookup "quick_lam" = some quickLamL)
-    (hb : p.lookup "defeq_binders" = some defeqBindersL) (hl : p.lookup "defeq_lams" = some defeqLamsL)
+    (hs : p.lookup "quick_sort" = some quickSortL) (hqb : p.lookup "quick_binders" = some quickBindersL)
+    (hpp : PeelProg p)
   fns [hf ↦ qdE list]
-  specs [callW_spec p n "lit_eq", qsE_spec p hs n, qfE_spec p hfa hb n, qlE_spec p hla hl n]
+  specs [callW_spec p n "lit_eq", qsE_spec p hs n, qbE_spec p hqb hpp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -383,7 +372,7 @@ theorem qd_arm {p : Prog} {n : Nat} {G : Prop} {x : Except Err (List Word × Mem
   exact RefE.ret hrun ⟨hP.after, by rw [hP.res]; rfl, ⟨hw1, hP.valid⟩⟩
 
 /-- **`quick_defeq` refines `quickDefEq`, both outcomes**: the errors are the arms'. -/
-theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK p)
+theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (_hi : Inst1OK p)
     (hsd : StoreDenotes) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : HW x) (hy : HW y)
@@ -446,8 +435,8 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ k =>
     exact qd_arm (fun g => g.mono (by omega))
-      (qf_ref p hp hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
-        eb mode d x y hs h6 (hg' ▸ h6) hd)
+      (qb_ref p hp hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
+        eb mode 0 d x y hs (.inl ⟨rfl, h6, hg' ▸ h6⟩) hd)
   rw [ite_eq_right h6]
   by_cases h5 : tagW x = 5
   · rw [ite_eq_left h5]
@@ -456,8 +445,8 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
     | succ k =>
     exact qd_arm (fun g => g.mono (by omega))
-      (ql_ref p hp hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
-        eb mode d x y hs h5 (hg' ▸ h5) hd)
+      (qb_ref p hp hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
+        eb mode 1 d x y hs (.inr ⟨rfl, h5, hg' ▸ h5⟩) hd)
   rw [ite_eq_right h5]
   simp only [h2, h8, h6, h5, or_self, ↓reduceIte]
   exact RefE.ret rfl (CorePost.ret hS rfl ⟨hw0, hw0⟩)
@@ -468,7 +457,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
 theorem quickDefeq_refines (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK p)
     (hsd : StoreDenotes) (n : Nat) (hk : KnotUpTo p n) : QuickDefeqSpec p (n + 1) :=
   fun F s₀ a₀ dn vis fe M eb mode d x y hF hn hs hx hy hd =>
-    RefE.coreSpec (qdE_spec p hp.qd hp.qs hp.qf hp.ql hp.lams.peel.binders hp.lams.lams (n + 1) s₀ mode
+    RefE.coreSpec (qdE_spec p hp.qd hp.qs hp.qb hp.peel (n + 1) s₀ mode
       vis d x y)
       (qd_ref p hp hil hi hsd n hk F s₀ a₀ dn vis fe M eb mode d x y (by omega) (by omega) hs hx hy hd)
 

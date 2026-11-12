@@ -40,12 +40,12 @@ def allPinsOff : Word :=
   UInt64.ofNat (encNames pinNames ++ encNames reservedBasisNameValues ++ romCIData).length
 
 /-- `intern_all_pins_rom()`: the ROM-only pin stage (superseded by `L.Rom.internAllPinsPB`, the program's `intern_all_pins`; renamed by lane integrate so that one name has one body). -/
--- con-ron: ConRon/Arena/Checker.lean:124-153 ConRon.Arena.internAllPins
+-- con-ron: ConRon/Arena/Checker.lean:124-162 ConRon.Arena.internAllPins
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsL : FunDecl := internAllPinsAt allPinsOff
 
 /-- `rom_expr(pos)` as the program has it (the expression ROM reader at the program's ROM). -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:195-257 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:192-254 ConRon.Arena.Frontend.internExprGo
 @[no_expose, l_impl ConRon.Arena.Frontend.internExprGo]
 def romExprL : FunDecl := romExpr romData
 

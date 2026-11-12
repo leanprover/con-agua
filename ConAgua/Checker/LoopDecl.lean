@@ -78,6 +78,7 @@ import all ConAgua.Arena.NatCmp
 import all ConAgua.Arena.NatDiv
 import all ConAgua.Arena.NatGcd
 import all ConAgua.Arena.NatMul
+import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.NatPow
 import all ConAgua.Arena.NatShl
 import all ConAgua.Arena.NatShr
@@ -178,7 +179,7 @@ and `stageCoreFns`: the callees of the walks, of the ROM readers and of the `Nat
 certificate checks (computed from `checkerProg`'s call graph; the check below fails if one is
 missing). -/
 def declExtFns : List FnName :=
-  ["apd_clear", "alpd_go", "apd_find", "lv_apd", "lv_mem", "alpd_ls", "apd_put", "rci_slot",
+  ["apd_clear", "has_loose_bvar_in", "has_loose_bvar_in_go", "alpd_go", "apd_find", "lv_apd", "lv_mem", "alpd_ls", "apd_put", "rci_slot",
    "rom_u64", "rci_fresh", "rset_clear", "rci_cv", "rom_name", "rom_put", "rci_name_sl",
    "rci_names_to", "rom_expr", "rom_ex_ref", "memo_get", "rom_ex_leaf", "rom_level", "rom_levels",
    "rom_lvls_go", "stk_push", "stk_pool", "rom_ex_one", "memo_push", "rset_find", "rset_put",
@@ -205,7 +206,8 @@ def declExtFns : List FnName :=
    "check_structural_nat_pin_at_fe2", "ci_at_lps", "cv_at_lps", "env_pop_temp", "eq_stored",
    "er_copy_er", "fire_levels_at", "has_loose_b_var_b_fast", "has_loose_b_var_b_go",
    "has_loose_b_var_b_ins", "hb_clear", "hb_find", "hb_put", "list_cons_ty_ok", "list_nil_ty_ok",
-   "list_ty_ok", "lit_shape_ok", "nat_ind_ok", "nat_op_name", "nat_succ_ok", "nat_zero_ok",
+   "list_ty_ok", "lit_shape_ok", "nat_ind_at_cv", "nat_ind_ok", "nat_op_name", "nat_succ_at_cv",
+   "nat_succ_ok", "nat_zero_at_cv", "nat_zero_ok",
    "open_pis_at_fvars_f", "param_levels", "param_levels_go", "pin_range_has", "quot_at",
    "quot_pin", "quot_preds_ok", "rom_ex_leaf_c", "rom_ex_one_c", "rom_ex_ref_c", "rom_ex_two_c",
    "rom_expr_c", "rom_exprs_to_c", "rom_level_c", "rom_levels_c", "rom_lvls_go_c", "rom_name_c",

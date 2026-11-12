@@ -8,7 +8,6 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.RecClassSpec.CloseLams
 public import ConAgua.Arena.RecClassSpec.MjProg
 import all ConAgua.Arena.RecClass
@@ -130,7 +129,7 @@ l_model classGenMotiveTy_spec (p : Prog) (h : MtProg p)
   fns [h.mot ↦ motW list]
   specs [classGenMajor_spec p h.toMjProg n, internSort_spec p h.sf h.sp h.isort n,
     mkForall_spec p h.db h.ff h.fp h.ifa h.mkf n, ftdsF_spec p h.ad n,
-    closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+    closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 end L.Ind

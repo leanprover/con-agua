@@ -65,15 +65,6 @@ theorem unwrap_or_lsr {T β : Type} {A : T → β} {pers st lst} {o : Option T}
       (unwrapOr (o.map absEIdx) (.internal s)) :=
   unwrap_or_lsr hrel hinv rfl
 
-@[lockstep] theorem unwrap_or_eidx_vec_int {pers st lst}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    {o : Option (alloc.vec.Vec arena.handle.EIdx)} {m : alloc.vec.Vec Std.U32} {s : String} :
-    LSR pers (fun a b => b = (absEIdxL a).toArray)
-      (arena.checker_base.unwrap_or o (kernel.core_types.CheckError.Internal m)) st lst
-      (unwrapOr ((o.map absEIdxL).map List.toArray) (.internal s)) := by
-  rw [Option.map_map]
-  exact unwrap_or_lsr hrel hinv rfl
-
 /-- `kernel::level::leq` against `Level.leq` (the pure comparison; the
 `liftFueled` around it is the checker tier's `lift_fueled_ls`). -/
 @[lockstep] theorem level_leq_ls (l r : kernel.level.Level) (hl : ConRon.Refine.LevelWF l)
@@ -164,23 +155,20 @@ cursor on. -/
 
 open Lockstep in
 /-- `check_struct_proj_table` ⊑ `checkStructProjTable` — stage 5, the projection
-table's checks: the bodies, their scoping, the structure stored and its table
-free.  Nothing is pushed (the table is the block's install). -/
+table's checks at the table the block installs: its bodies' scoping, the
+structure stored and its table free.  Nothing is pushed. -/
 @[lockstep] theorem check_struct_proj_table_ls
     {pers st lst}
-    {t : arena.handle.NIdx}
-    {lps : alloc.vec.Vec arena.handle.NIdx}
-    {n_p n_f : Std.U64}
-    {cv_ca : arena.env.IConstantVal}
+    {t : arena.env.IProjTable}
     {rf lf}
     (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st)
     (hfe : IFEnvRelI pers rf lf) :
-    LS pers (fun _ _ => True) (arena.inductives.struct_install.check_struct_proj_table pers st t lps n_p n_f cv_ca rf) lst
-      (checkStructProjTable (absNIdx t) (absNIdxL lps) (absU n_p) (absU n_f)
-        (absIConstantVal cv_ca) lf) := by
+    LS pers (fun _ _ => True) (arena.inductives.struct_install.check_struct_proj_table pers st t rf) lst
+      (checkStructProjTable (absIProjTable t) lf) := by
   rw [arena.inductives.struct_install.check_struct_proj_table,
     checkStructProjTable_unfold, checkStructProjTableTailSpec]
+  simp only [absIProjTable]
   lockstep
 
 end ConRon.Refine2

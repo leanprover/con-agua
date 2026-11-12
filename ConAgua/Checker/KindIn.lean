@@ -1,17 +1,20 @@
 module
 
-public import ConAgua.Checker.IndDeclConstsProg
-public import ConAgua.Checker.BasisBlockClosed
-public import ConAgua.Checker.ArmsT
-meta import ConAgua.Checker.LoopProg
-meta import ConAgua.Checker.IndArm
-meta import ConAgua.Arena.BasisBlockT
+public import ConAgua.Checker.LoopDecl
+public import ConAgua.Arena.DeclCheckT
+meta import ConAgua.Checker.LoopDecl
+meta import ConAgua.Arena.CheckerT
+meta import ConAgua.Arena.DeclCheckT
 import all ConAgua.Arena.Abs1
+import all ConAgua.Arena.NatSized
+import all ConAgua.Arena.BasisL
+import all ConAgua.Arena.IndDeclConsts
+import all ConAgua.Arena.IndStream
+import all ConAgua.Rom.CIConst
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.ArRange
 import all ConAgua.Arena.ArRangeSpec
 import all ConAgua.Arena.BVarStore
-import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.CheckerL
 import all ConAgua.Arena.ConsLib
@@ -36,13 +39,11 @@ import all ConAgua.Arena.ForallStore
 import all ConAgua.Arena.Freeze
 import all ConAgua.Arena.HasFvar
 import all ConAgua.Arena.ImaxStore
-import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
-import all ConAgua.Arena.IndStream
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Infer
 import all ConAgua.Arena.InferFieldSort
@@ -141,7 +142,6 @@ import all ConAgua.Front.NatDec
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
 import all ConAgua.Rom.CIRead
-import all ConAgua.Rom.CIConst
 import all ConAgua.Rom.PinRead
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Key
@@ -157,30 +157,44 @@ import all ConAgua.Scan.Values
 @[expose] public section
 
 /-!
-# `check_basis_block`'s contract at the checker's program (lane `ronsync2`)
+# `check_decl`'s callees after the block's copy have a step's write set but the pin table
 
-`CbbProg` at `checkerProg.subPB bs` by one `prog_bundle` (the basis entry points' `BasisRefs`, the
-ROM readers' `RomRefs`, the stream index's leaves `DcLeafProg`, the write set
-`checkerProg_cbbClosed`), so `cbbRef_of` gives `CbbRef`, what `indArmSpec_checker` takes.
+`KindIn checkerProg` (`Arena/DeclCheckT.lean`): the call closure of `kindFns` (the arms, the
+inductive arm, the flush, the reserved names' check) writes only `kindA` (a step's arrays but
+`PINS`) and `stepC`. The call-closed superset is `loopFns`; decided by per-function kernel checks as
+`LoopProgInd.lean`.
 -/
 
 namespace L.Checker
 
-open L L.Rom L.Arena L.Ind L.Compiler ConRon.Arena
+open L.Arena L.Compiler
 
-/-- **`CbbProg` at the substituted checker program.** -/
-theorem checkerProg_cbbProgPB (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) : CbbProg (Prog.subPB bs checkerProg) := by
-  have hrom := checkerProg_romRefsPB bs hr hpre
-  have hbasis : BasisRefs (Prog.subPB bs checkerProg) := basisRefs_of (checkerProg_basisLProgPB bs hr hpre)
-  have hleaf : DcLeafProg (Prog.subPB bs checkerProg) := (declConstsProg_checker bs hr hpre).leaf
-  have hcl : CbbClosed (Prog.subPB bs checkerProg) := closedWL_subPB bs checkerProg_cbbClosed
-  prog_bundle [hrom, hbasis, hleaf, hcl, checkerProg_pinListOkRefPB (bs := bs) hr hpre]
+/-- The arrays of `kindA`, as a test. -/
+def kindPa (a : TieredArray) : Bool := stepPa a && a != PINS
 
-/-- **`check_basis_block`'s contract at the substituted checker program.** -/
-theorem cbbRef_checker (bs : List UInt8) (hr : RomOK bs)
-    (hpre : bs = romData ++ bs.drop romData.length) (dn : NIdx → Option ConLeche.Name) :
-    CbbRef (Prog.subPB bs checkerProg) dn :=
-  cbbRef_of (checkerProg_cbbProgPB bs hr hpre) dn
+theorem kindPa_mem (a : TieredArray) (h : kindPa a = true) : a ∈ kindA := by
+  simp only [kindPa, Bool.and_eq_true, bne_iff_ne, ne_eq] at h
+  exact List.mem_filter.mpr ⟨stepPa_mem a h.1, by simpa using h.2⟩
+
+/-- `loopFns` as a tree of name codes. -/
+names_tree kindStepTree : loopFns
+
+/-- Every function of the checker passes the per-function check of `kindA`/`stepC` on `loopFns`. -/
+prog_all checkerProg_kindStepChk : checkerProg (wsChk CTL kindPa stepPc kindStepTree)
+
+theorem checkerProg_kindStepClosed : closedA checkerProg kindA stepC loopFns = true :=
+  closedW_of_all kindStepTree.eq kindPa_mem stepPc_mem checkerProg_kindStepChk
+
+theorem kindFns_sub : ∀ f ∈ kindFns, f ∈ loopFns := by
+  have h : kindFns.all (fun f => (kindStepTree.find (nameCode f)).isSome) = true := by
+    decide +kernel
+  intro f hf
+  have := List.all_eq_true.mp h f hf
+  rw [namesTree_spec kindStepTree.eq] at this
+  exact of_decide_eq_true this
+
+/-- **`check_decl`'s callees after the block's copy write a step's write set but the pins.** -/
+theorem checkerProg_kindIn : KindIn checkerProg :=
+  ⟨_, kindFns_sub, checkerProg_kindStepClosed⟩
 
 end L.Checker

@@ -78,30 +78,27 @@ def m2cKT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
     if T' = T ∧ lpl = ustl.length then m2cK2T mode r fe depth ctor cnP tmaj ust major
     else pure major
 
-/-- The η arm's fabrication: the η law's keys, the instantiated non-`Prop` test at the use
-(`formerNeverZeroAt`), the η spine. -/
-def m2cEta2T (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
-    (caps : IIndCaps) (targs : List EIdx) (ust : LsIdx) (major : EIdx) : AM EIdx := do
-  let reserved ← reservedBasisNames
-  if reserved.contains T = false ∧ reserved.contains caps.etaCtor = false ∧
-      towerSlotsAll fe T caps.etaFields = true then do
-    if ← formerNeverZeroAt r cvT caps ust then do
-      let fabArgs ← etaFabArgsE T targs major caps.etaFields
-      let hd ← internE (.const caps.etaCtor ust)
-      let fab ← mkAppN hd fabArgs
-      if ← fabScopeOk depth fab major then pure fab
-      else pure major
+/-- The η arm's fabrication: the instantiated non-`Prop` test at the use (`formerNeverZeroAt`),
+the η spine at the table's constructor and field count. -/
+def m2cEta2T (r : CoreFnsA) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
+    (caps : IIndCaps) (tbl : IProjTable) (targs : List EIdx) (ust : LsIdx) (major : EIdx) :
+    AM EIdx := do
+  if ← formerNeverZeroAt r cvT caps ust then do
+    let fabArgs ← etaFabArgsE T targs major tbl.numFields
+    let hd ← internE (.const tbl.ctor ust)
+    let fab ← mkAppN hd fabArgs
+    if ← fabScopeOk depth fab major then pure fab
     else pure major
   else pure major
 
 /-- The η arm. -/
-def m2cEtaT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
-    (caps : IIndCaps) (major : EIdx) : AM EIdx :=
+def m2cEtaT (r : CoreFnsA) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
+    (caps : IIndCaps) (tbl : IProjTable) (major : EIdx) : AM EIdx :=
   m2cPreT r depth major fun tmaj T' ust => do
     let ustl ← viewLs ust
     let targs ← getAppArgs coreWalkFuel tmaj
-    if T' = T ∧ targs.length = caps.etaParams ∧ ustl.length = cvT.levelParams.length then
-      m2cEta2T r fe depth T cvT caps targs ust major
+    if T' = T ∧ targs.length = tbl.numParams ∧ ustl.length = cvT.levelParams.length then
+      m2cEta2T r depth T cvT caps tbl targs ust major
     else pure major
 
 /-- The `And` arm's fabrication. -/
@@ -130,13 +127,14 @@ def m2cAndT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat
       else pure major
   else pure major
 
-/-- The dispatch on the recursor's `isK`, then `etaRescueOk`. -/
+/-- The dispatch on the recursor's `isK`, then `etaRescueTable?`. -/
 def m2cArmsT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)
     (rl : IRecRule) (cvj : IConstantVal) (cnP : Nat) (T : NIdx) (cvT : IConstantVal)
     (caps : IIndCaps) (major : EIdx) : AM EIdx := do
   if isK = true then m2cKT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
-  else if ← etaRescueOk rl.ctor cvj cvT caps then m2cEtaT r fe depth T cvT caps major
-  else m2cAndT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
+  else match ← etaRescueTable? (fe.findTable? T) rl.ctor cvj cvT caps with
+  | some tbl => m2cEtaT r depth T cvT caps tbl major
+  | none => m2cAndT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
 
 /-- The family of the constructor. -/
 def m2cCtorT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)

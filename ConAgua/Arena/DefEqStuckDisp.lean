@@ -139,18 +139,11 @@ theorem tagV_lam {v : ENodeView} (h : tagV v = 5) : ∃ t bd, v = .lam t bd := b
 `stuck_irrel` by their unified models). -/
 l_model drE_spec (p : Prog) (hf : p.lookup "stuck_rest" = some stuckRestL)
     (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
-    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
+    (hcp : CertProg p)
     (he : p.lookup "eta_cert" = some etaCertL)
     (heb : p.lookup "eta_cert_body" = some etaCertBodyL) (het : p.lookup "eta_cert_ty" = some etaCertTyL)
   fns [hf ↦ drE list]
-  specs [callW_spec p n "lvls_eq_c", ecE_spec p he heb het n, siE_spec p hi hc hw hb hg ht hu hh hut n]
+  specs [callW_spec p n "lvls_eq_c", ecE_spec p he heb het n, siE_spec p hi hcp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -283,19 +276,12 @@ l_model dsE_spec (p : Prog) (hf : p.lookup "defeq_stuck" = some defeqStuckL)
     (hstr : p.lookup "stuck_str" = some stuckStrL) (hsa : p.lookup "stuck_app" = some stuckAppL)
     (hac : p.lookup "stuck_app_cong" = some stuckAppCongL) (hdr : p.lookup "stuck_rest" = some stuckRestL)
     (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
-    (hc : p.lookup "struct_eta_cert" = some structEtaCertL)
-    (hw : p.lookup "struct_eta_cert_with" = some structEtaCertWithL)
-    (hb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL)
-    (hg : p.lookup "struct_eta_cert_go" = some structEtaCertGoL)
-    (ht : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL)
-    (hu : p.lookup "struct_unit_cert" = some structUnitCertL)
-    (hh : p.lookup "struct_unit_head" = some structUnitHeadL)
-    (hut : p.lookup "struct_unit_tail" = some structUnitTailL)
+    (hcp : CertProg p)
     (he : p.lookup "eta_cert" = some etaCertL)
     (heb : p.lookup "eta_cert_body" = some etaCertBodyL) (het : p.lookup "eta_cert_ty" = some etaCertTyL)
   fns [hf ↦ dsE list]
-  specs [callW_spec p n "e_view", strE_spec p hstr hi hc hw hb hg ht hu hh hut n,
-    saE_spec p hsa hac hi hc hw hb hg ht hu hh hut n, drE_spec p hdr hi hc hw hb hg ht hu hh hut he heb het n]
+  specs [callW_spec p n "e_view", strE_spec p hstr hi hcp n,
+    saE_spec p hsa hac hi hcp n, drE_spec p hdr hi hcp he heb het n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -389,7 +375,7 @@ theorem defeqStuck_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
       (defeqStuck (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb :=
   RefE.coreSpec (dsE_spec p hq.defeqStuck hq.stuckStr hq.stuckApp hq.stuckAppCong hq.stuckRest
-    hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail hq.sunit hq.suHead hq.suTail
+    hq.stuckIrrel hq.toCertProg
     hq.etaCert hq.etaCertBody hq.etaCertTy (n + 1) s₀ mode vis d a b)
     (ds_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 

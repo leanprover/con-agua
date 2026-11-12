@@ -51,9 +51,7 @@ def redSuccS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (b : EIdx) :
   let ns ← pinNatSucc
   if c == ns && (← natLitStored fe) then do
     match ← rawNatLit? (← r.whnf depth b) with
-    | some n => do
-      let x ← internE (.lit (.natVal (n + 1)))
-      pure (some x)
+    | some n => litNatSized (n + 1)
     | none => pure none
   else pure none
 
@@ -99,6 +97,27 @@ def redHeadS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (f b : EIdx) : AM (Option
   | .const c us => redConstS r fe depth c us b
   | .app g a => redAppS r depth g a b
   | _ => pure none
+
+/-- A refused `Nat` computation fails with the invalid class. -/
+theorem natRefusal_cls1 (r : Word) : twinCls (natRefusal r) = 1 := by
+  unfold natRefusal; repeat' split
+  all_goals rfl
+
+theorem natRefusal_cls (r : Word) : twinCls (natRefusal r) = (Err.abort R_THE_KERNEL_REFUSED).cls := by
+  rw [natRefusal_cls1]; rfl
+
+/-- An L refusal (an invalid-class code) against the twin's refusal. -/
+theorem RefE.natRefused {α β : Type} {G : Prop} {T : AM β} {a : AState} {R : α → β → AState → Prop}
+    {k x : Word} (hk : (Err.abort k).cls = 1) (h : T.run a = .error (natRefusal x)) :
+    RefE G (.error (.abort k) : Except Err α) T a R :=
+  fun _ _ => ⟨_, h, by rw [natRefusal_cls1, hk]⟩
+
+theorem natRef_shr_ne {r : Word} (h : 2 ^ 63 ≤ r.toNat) : r >>> 63 ≠ 0 := by
+  intro e; have := congrArg UInt64.toNat e
+  rw [UInt64.toNat_shiftRight] at this; simp at this; omega
+
+theorem natRef_shr_eq {r : Word} (h : r.toNat < 2 ^ 63) : r >>> 63 = 0 := by
+  apply UInt64.toNat_inj.mp; rw [UInt64.toNat_shiftRight]; simp; omega
 
 section refs
 variable (p : Prog) (hp : WhnfDeltaProg' p)
@@ -157,11 +176,16 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   rw [reduceNatSuccE.k_raw_nat_lit.arm2 _ _ _ _ hf, show rawDec m₄ r₄ = some (pv (vpool m₄)
     (r₄.tail.headD 0).toNat (r₄.tail.tail.headD 0).toNat) by unfold rawDec; rw [ite_eq_right hf]]
   refine RefE.onlySim (fun _ => reduceNatSuccE.k_nat_succ_lit.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
-  rw [reduceNatSuccE.k_nat_succ_lit.arm1]
-  obtain ⟨hok5, hS5, hres5, hfr5, hhw5, hP5⟩ := callW_natSuccLit p hp n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb _ _
+  obtain ⟨hok5, href5, hfr5⟩ := callW_natSuccLit p hp n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb _ _
     hS₃ (hslice4 hf).1 r₅ m₅ h5
-  refine RefE.bind_right (natAddArm_run_internE (v := 1) (by rw [AM.run_of_ok _ _ hok5, hres5])) ?_
-  exact RefE.ret rfl ⟨⟨M₃, hS5, KeptAll.refl _ _, StackKept.of_nat_frame hfr5 hP5⟩,
+  dsimp only
+  by_cases hr5 : 2 ^ 63 ≤ (r₅.headD 0).toNat
+  · rw [show reduceNatSuccE.k_nat_succ_lit p (.ok (r₅, m₅)) = .error (.abort R_THE_KERNEL_REFUSED) by
+      simp only [reduceNatSuccE.k_nat_succ_lit, ne_eq, natRef_shr_ne hr5, not_false_eq_true, ↓reduceIte]]
+    exact RefE.natRefused (by decide) (href5 hr5)
+  obtain ⟨hok5', hS5, hres5, hhw5, hP5⟩ := hok5 (by omega)
+  rw [reduceNatSuccE.k_nat_succ_lit.arm1 _ _ _ (natRef_shr_eq (by omega))]
+  exact RefE.ret (by have h := AM.run_of_ok _ _ hok5'; rw [hres5] at h; exact h) ⟨⟨M₃, hS5, KeptAll.refl _ _, StackKept.of_nat_frame hfr5 hP5⟩,
     by simp [decOptR, decOpt], ⟨by unfold HW; simp, hhw5⟩⟩
 
 include hp in
@@ -212,10 +236,19 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
   obtain ⟨hsl2', hpv2, hnorm2'⟩ := hSt₃.pool.slice (hslice2 hf2).1 (hslice2 hf2).2
   rw [← hpv2]
   refine RefE.onlySim (fun _ => reduceNatOpE.k_nat_op_result.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
-  rw [reduceNatOpE.k_nat_op_result.arm1]
-  obtain ⟨hrun5, hP5⟩ := (CoreSpec.of_callW (hno n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb c _ _ _ _ hS₃ hc
-    hsl2' (hslice4 hf4).1 hnorm2' (hslice4 hf4).2) h5).post
-  exact RefE.ret hrun5 ⟨hP5.after, (by rw [hP5.res]; simp only [decOptR, id, List.headD_cons,
+  obtain ⟨s₅, hs₅, -, hok5, href5⟩ := triple_of_callW (hno n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb c _ _ _ _ hS₃ hc
+    hsl2' (hslice4 hf4).1 hnorm2' (hslice4 hf4).2) h5
+  by_cases h2 : r₅.headD 0 = 2
+  · have he := href5 h2
+    simp only [reduceNatOpE.k_nat_op_result, h2, ↓reduceIte]
+    repeat' split
+    all_goals exact RefE.natRefused (by decide) he
+  rw [reduceNatOpE.k_nat_op_result.arm1 _ _ _ h2]
+  have hP5 := hok5 h2
+  rw [hs₅] at hP5
+  have hrun5 := AM.run_of_ok _ _ hP5.run
+  rw [hP5.res] at hrun5
+  exact RefE.ret hrun5 ⟨hP5.after, (by simp only [decOptR, id, List.headD_cons,
     List.tail_cons, decOpt_norm]), resW_norm _ _⟩
 
 include hp in

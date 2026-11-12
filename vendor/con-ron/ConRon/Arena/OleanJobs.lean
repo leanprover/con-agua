@@ -75,7 +75,7 @@ def checkOleanJobList (fs : OleanFs) (pk : OleanPins) (sp : List System.FilePath
     | .ok ((_, .error e), s') => .ok (.error e, s')
     | .error e => .error e
 
-/-- con-leche: ConLeche/Driver/CheckMain.lean:152-170 checkOleansG
+/-- con-leche: ConLeche/Driver/CheckMain.lean:152-169 checkOleansG
 **The check phase of an `--olean` run, as one worker runs it**: the index of the
 records, then every record's job in fold order, from the worker's state and the
 empty cache. -/

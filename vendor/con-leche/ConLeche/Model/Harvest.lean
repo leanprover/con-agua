@@ -3,7 +3,6 @@ module
 import ConLeche.Model.Capstone
 import ConLeche.Model.NatEqs
 import ConLeche.Model.DivModCert
-import ConLeche.Model.Caps
 import ConLeche.Model.RecRulesCons
 public import ConLeche.Model.ReduceOps
 public import ConLeche.Model.Cover
@@ -142,10 +141,13 @@ theorem harvestDefn
     (mp : EnvModelM V env)
     {cv : ConstantVal} {value : Expr} {hint : ReducibilityHint}
     {env₂ : Env}
-    (hR : DeclDefnRun F env cv value hint env₂) :
+    (hR : DeclDefnRun F env cv value hint env₂)
+    -- the reserved names' check (`basisNamesOk`)
+    (hwf₂ : EnvWF env₂)
+    (hnres : ConLeche.reservedBasisNames.contains cv.name = false) :
     CoverStep mp env₂ := by
   obtain ⟨type', value', hcv, hvfr, rfl, hnatc, hdmc⟩ := hR
-  obtain ⟨hfind, hnres, hnd, hlbt, hitf, hann, htp, htr,
+  obtain ⟨hfind, hnd, hlbt, hitf, hann, htp, htr,
     hrunT, hcvShape⟩ := hcv
   obtain ⟨hvlb, hvhf, hannv, hvp, hvr, ⟨vtype, hvrun, hvde⟩⟩ := hvfr
   obtain ⟨htf', hbt'⟩ := stored_syntax hann hitf hlbt
@@ -300,17 +302,12 @@ theorem harvestDefn
     (c₀ := .defnInfo ⟨cv.name, cv.levelParams, type'⟩ value' hint)
     (A := A) hfresh (fun _ => ⟨_, _, _, rfl⟩)
     (ConsHead.ofFresh
-      (EnvWF.cons (hcvShape _ (by rw [hann]; rfl)) mp.base2.wf ⟨htf', htp,
-        Expr.constsResolve_mono htr, hbt',
-        (fun _ _ _ heq => by
-          obtain ⟨rfl, rfl, rfl⟩ := ConstantInfo.defnInfo.inj heq
-          exact ⟨hvf', hvp, Expr.constsResolve_mono hvr, hbv'⟩),
-        (fun _ _ _ _ _ heq => nomatch heq)⟩)
+      (hwf₂)
       (fun ψ => denote_closed mp.base2.cval_closed hvf' hbv'
         (hA ψ))
       hnres
       (fun _ _ _ _ _ heq => nomatch heq))
-    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
+    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
   · -- `htyReads`
     intro ψ
     show ∃ ta, denote (acvalWith mp.base2.acval cv.name A)
@@ -471,14 +468,6 @@ theorem harvestDefn
     exact eqLaw_cons_valueKind mp.eq_law
       (c₀ := .defnInfo ⟨cv.name, cv.levelParams, type'⟩ value' hint)
       (A := A) (fun _ _ h => ConstantInfo.noConfusion h) _ rfl
-  · -- `caps_ok` at the extension: a value-kind cons is neither a
-    -- former nor a capability constructor, so no stored family can be
-    -- completed here
-    exact capsOk_cons_fresh mp mp.caps_ok
-      (c₀ := .defnInfo ⟨cv.name, cv.levelParams, type'⟩ value' hint)
-      (A := A) hfresh
-      (fun _ _ h => ConstantInfo.noConfusion h)
-      (fun _ _ _ h => ConstantInfo.noConfusion h) _ rfl
   · -- `rec_rules` at the extension: a value-kind cons is neither a
     -- recursor nor a constructor, so no stored rule moves
     exact fun φ => recRules_cons_fresh mp
@@ -518,10 +507,13 @@ stores no is-a-proposition field); they are destructured away with `-`. -/
 theorem harvestThm
     (mp : EnvModelM V env)
     {cv : ConstantVal} {value : Expr} {env₂ : Env}
-    (hR : DeclThmRun F env cv value env₂) :
+    (hR : DeclThmRun F env cv value env₂)
+    -- the reserved names' check (`basisNamesOk`)
+    (hwf₂ : EnvWF env₂)
+    (hnres : ConLeche.reservedBasisNames.contains cv.name = false) :
     CoverStep mp env₂ := by
   obtain ⟨hopn, type', value', hcv, -, hvfr, rfl⟩ := hR
-  obtain ⟨hfind, hnres, hnd, hlbt, hitf, hann, htp, htr,
+  obtain ⟨hfind, hnd, hlbt, hitf, hann, htp, htr,
     hrunT, hcvShape⟩ := hcv
   obtain ⟨hvlb, hvhf, hannv, hvp, hvr, ⟨vtype, hvrun, hvde⟩⟩ := hvfr
   obtain ⟨htf', hbt'⟩ := stored_syntax hann hitf hlbt
@@ -670,15 +662,12 @@ theorem harvestThm
     (c₀ := .thmInfo ⟨cv.name, cv.levelParams, type'⟩)
     (A := A) hfresh (fun hn => Bool.noConfusion ((show natOpName cv.name = true from hn).symm.trans hopn))
     (ConsHead.ofFresh
-      (EnvWF.cons (hcvShape _ (by rw [hann]; rfl)) mp.base2.wf ⟨htf', htp,
-        Expr.constsResolve_mono htr, hbt',
-        (fun _ _ _ heq => nomatch heq),
-        (fun _ _ _ _ _ heq => nomatch heq)⟩)
+      (hwf₂)
       (fun ψ => denote_closed mp.base2.cval_closed hvf' hbv'
         (hA ψ))
       hnres
       (fun _ _ _ _ _ heq => nomatch heq))
-    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
+    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
   · -- `htyReads`
     intro ψ
     show ∃ ta, denote (acvalWith mp.base2.acval cv.name A)
@@ -729,14 +718,6 @@ theorem harvestThm
   · exact eqLaw_cons_valueKind mp.eq_law
       (c₀ := .thmInfo ⟨cv.name, cv.levelParams, type'⟩)
       (A := A) (fun _ _ h => ConstantInfo.noConfusion h) _ rfl
-  · -- `caps_ok` at the extension: a value-kind cons is neither a
-    -- former nor a capability constructor, so no stored family can be
-    -- completed here
-    exact capsOk_cons_fresh mp mp.caps_ok
-      (c₀ := .thmInfo ⟨cv.name, cv.levelParams, type'⟩)
-      (A := A) hfresh
-      (fun _ _ h => ConstantInfo.noConfusion h)
-      (fun _ _ _ h => ConstantInfo.noConfusion h) _ rfl
   · -- `rec_rules` at the extension: a value-kind cons is neither a
     -- recursor nor a constructor, so no stored rule moves
     exact fun φ => recRules_cons_fresh mp
@@ -777,6 +758,9 @@ theorem harvestAxiom
     {cv : ConstantVal} {type' : Expr} {A : (Name → Nat) → Term}
     (hopn : natOpName cv.name = false)
     (hcv : ConstantValRun F env cv type')
+    (hwf₂ : EnvWF ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩)
+    -- the reserved names' check (`basisNamesOk`)
+    (hnres : ConLeche.reservedBasisNames.contains cv.name = false)
     (hAvclosed : ∀ ψ : Name → Nat, Term.Closed (A ψ))
     (hAparams : ∀ ψ₁ ψ₂ : Name → Nat,
       (∀ p ∈ cv.levelParams, ψ₁ p = ψ₂ p) → A ψ₁ = A ψ₂)
@@ -792,7 +776,7 @@ theorem harvestAxiom
     (hnotreduce : cv.name ∉ ConLeche.reduceOpNames) :
     CoverStep mp
       ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩ := by
-  obtain ⟨hfind, hnres, hnd, hlbt, hitf, hann, htp, htr,
+  obtain ⟨hfind, hnd, hlbt, hitf, hann, htp, htr,
     hrunT, hcvShape⟩ := hcv
   obtain ⟨htf', hbt'⟩ := stored_syntax hann hitf hlbt
   have hfresh : env.find? cv.name = none :=
@@ -855,13 +839,10 @@ theorem harvestAxiom
     (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
     (A := A) hfresh (fun hn => Bool.noConfusion ((show natOpName cv.name = true from hn).symm.trans hopn))
     (ConsHead.ofFresh
-      (EnvWF.cons (hcvShape _ (by rw [hann]; rfl)) mp.base2.wf ⟨htf', htp,
-        Expr.constsResolve_mono htr, hbt',
-        (fun _ _ _ heq => nomatch heq),
-        (fun _ _ _ _ _ heq => nomatch heq)⟩)
+      (hwf₂)
       hAvclosed hnres
       (fun _ _ _ _ _ heq => nomatch heq))
-    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
+    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
   · -- `htyReads`
     intro ψ
     show ∃ ta, denote (acvalWith mp.base2.acval cv.name A)
@@ -913,14 +894,6 @@ theorem harvestAxiom
   · exact eqLaw_cons_valueKind mp.eq_law
       (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
       (A := A) (fun _ _ h => ConstantInfo.noConfusion h) _ rfl
-  · -- `caps_ok` at the extension: a value-kind cons is neither a
-    -- former nor a capability constructor, so no stored family can be
-    -- completed here
-    exact capsOk_cons_fresh mp mp.caps_ok
-      (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
-      (A := A) hfresh
-      (fun _ _ h => ConstantInfo.noConfusion h)
-      (fun _ _ _ h => ConstantInfo.noConfusion h) _ rfl
   · -- `rec_rules` at the extension: a value-kind cons is neither a
     -- recursor nor a constructor, so no stored rule moves
     exact fun φ => recRules_cons_fresh mp
@@ -948,10 +921,13 @@ leaf equation (no `defn_eq` detour). -/
 theorem harvestOpaque
     (mp : EnvModelM V env)
     {cv : ConstantVal} {value : Expr} {env₂ : Env}
-    (hR : DeclOpaqueRun F env cv value env₂) :
+    (hR : DeclOpaqueRun F env cv value env₂)
+    -- the reserved names' check (`basisNamesOk`)
+    (hwf₂ : EnvWF env₂)
+    (hnres : ConLeche.reservedBasisNames.contains cv.name = false) :
     CoverStep mp env₂ := by
   obtain ⟨hopn, type', value', hcv, hvfr, rfl, hred⟩ := hR
-  obtain ⟨hfind, hnres, hnd, hlbt, hitf, hann, htp, htr,
+  obtain ⟨hfind, hnd, hlbt, hitf, hann, htp, htr,
     hrunT, hcvShape⟩ := hcv
   obtain ⟨hvlb, hvhf, hannv, hvp, hvr, ⟨vtype, hvrun, hvde⟩⟩ := hvfr
   obtain ⟨htf', hbt'⟩ := stored_syntax hann hitf hlbt
@@ -1104,15 +1080,12 @@ theorem harvestOpaque
     (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
     (A := A) hfresh (fun hn => Bool.noConfusion ((show natOpName cv.name = true from hn).symm.trans hopn))
     (ConsHead.ofFresh
-      (EnvWF.cons (hcvShape _ (by rw [hann]; rfl)) mp.base2.wf ⟨htf', htp,
-        Expr.constsResolve_mono htr, hbt',
-        (fun _ _ _ heq => nomatch heq),
-        (fun _ _ _ _ _ heq => nomatch heq)⟩)
+      (hwf₂)
       (fun ψ => denote_closed mp.base2.cval_closed hvf' hbv'
         (hA ψ))
       hnres
       (fun _ _ _ _ _ heq => nomatch heq))
-    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
+    hAparams hAok ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_)
   · -- `htyReads`
     intro ψ
     show ∃ ta, denote (acvalWith mp.base2.acval cv.name A)
@@ -1162,14 +1135,6 @@ theorem harvestOpaque
   · exact eqLaw_cons_valueKind mp.eq_law
       (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
       (A := A) (fun _ _ h => ConstantInfo.noConfusion h) _ rfl
-  · -- `caps_ok` at the extension: a value-kind cons is neither a
-    -- former nor a capability constructor, so no stored family can be
-    -- completed here
-    exact capsOk_cons_fresh mp mp.caps_ok
-      (c₀ := .axiomInfo ⟨cv.name, cv.levelParams, type'⟩)
-      (A := A) hfresh
-      (fun _ _ h => ConstantInfo.noConfusion h)
-      (fun _ _ _ h => ConstantInfo.noConfusion h) _ rfl
   · -- `rec_rules` at the extension: a value-kind cons is neither a
     -- recursor nor a constructor, so no stored rule moves
     exact fun φ => recRules_cons_fresh mp

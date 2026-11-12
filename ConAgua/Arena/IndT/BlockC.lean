@@ -3,19 +3,17 @@ module
 public import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndArmLps
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConRon.Bridge.Inductives.BlockTail
 public import ConRon.Bridge.Checker.Inv
+public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndDeclConstsFire
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 
 @[expose] public section
 
@@ -67,10 +65,11 @@ theorem checkBlock_split (mode : ConLeche.CheckMode) (fe : IFEnv) (block : List 
       ConRon.Arena.flushCaches
       let isRec ← ConRon.Arena.blockIsRec p₀
       let q ← ConRon.Arena.checkBlockPass mode fe { p₀ with members := ms } isRec
-      let fe₂ ← ConRon.Arena.checkBlockTail mode block q
+      let Q ← ConRon.Arena.unwrapOr (← ConRon.Arena.blockTables p₀ p₀.members)
+        (.internal "direct structure: projection bodies")
+      let fe₂ ← ConRon.Arena.checkBlockTail mode block q Q
       let recs ← ConRon.Arena.blockRecs p₀ p₀.recs
-      let tables ← ConRon.Arena.blockTables p₀ p₀.members
-      pure (fe₂.pushDelta recs tables)) := by
+      pure (fe₂.pushDelta recs Q)) := by
   unfold ConRon.Arena.checkBlock cbNamesT
   dsimp only
   split
@@ -233,7 +232,9 @@ def TailRefS : Prop :=
     ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) →
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) → qP.params.length = qP.p.nP →
     q.p.nP + 1 < 2 ^ 64 →
-    RefE G (callE p n "check_block_tail" [bO, bL, w] m) (ConRon.Arena.checkBlockTail V block q) a
+    ∀ (tO tL : Word) (Q : List IProjTable), decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q →
+    tO.toNat + tL.toNat ≤ iwTop m → TblsOK a.store Q →
+    RefE G (callE p n "check_block_tail" [bO, bL, w, tO, tL] m) (ConRon.Arena.checkBlockTail V block q Q) a
       (fun rm fe' a' => TailOut m a (rm.1.headD 0) fe' rm.2 a')
 
 /-- **`block_recs(p, rs.off, rs.len)`'s contract**: `blockRecs`, its records an `IW` slice. -/
@@ -247,15 +248,17 @@ def BrRefS : Prop :=
         (rm.1.headD 0).toNat + (rm.1.tail.headD 0).toNat ≤ iwTop rm.2)
 
 /-- **`block_tables(p, ms.off, ms.len)`'s contract**: `blockTables`, its tables an `IW` slice
-(the parameter count bounded, as `struct_proj_bodies` needs). -/
+(the parameter count bounded, as `struct_proj_bodies` needs). It runs between the pass and the
+tail, so it carries `BkSt` (con-ron's `blockTables_run`: a `PStep`). -/
 def BtRefS : Prop :=
-  ∀ (n : Nat) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) (pp mo ml : Word) (bs : BlockShape)
-    (mss : List MemberShape), StageR vis fe m a → BkMem m → bs.nP + 1 < 2 ^ 64 →
+  ∀ (n : Nat) (vis : Word) (fe : IFEnv) (env : ConLeche.Env) (m : Mem) (a : AState) (pp mo ml : Word)
+    (bs : BlockShape) (bsP : ConLeche.BlockShape) (mss : List MemberShape)
+    (msP : List ConLeche.MemberShape), BkSt dn vis fe env m a → bs.nP + 1 < 2 ^ 64 →
     DecB (fun m => decBS m pp.toNat) m bs → PSlR0 decMS mss mo ml m →
+    ConRon.Bridge.Inductives.dShape a.store bs = some bsP →
+    mss.mapM (ConRon.Bridge.Inductives.dMember a.store) = some msP →
     RefE G (callE p n "block_tables" [pp, mo, ml] m) (ConRon.Arena.blockTables bs mss) a
-      (fun rm ts a' => StageR vis fe rm.2 a' ∧ BkMem rm.2 ∧ IWGrow m rm.2 ∧
-        decPL rm.2 (decTbl (erecP rm.2)) (rm.1.headD 0).toNat (rm.1.tail.headD 0).toNat = some ts ∧
-        (rm.1.headD 0).toNat + (rm.1.tail.headD 0).toNat ≤ iwTop rm.2)
+      (fun rm ts a' => BkGo dn vis fe env m a rm.2 a' ∧ BtsR rm.2 rm.1 ts)
 
 /-- **`ifenv_push_delta(vis, L.off, L.len, Q.off, Q.len)`'s contract**: the view of
 `fe.pushDelta L Q` (the twin has no step). -/
@@ -281,7 +284,7 @@ structure CbRefs (G : Prop) (p : Prog) (dn : NIdx → Option ConLeche.Name) : Pr
   pass : PassRefS G p dn
   tail : TailRefS G p dn
   br : BrRefS G p
-  bt : BtRefS G p
+  bt : BtRefS G p dn
   pd : PdRefS G p
 
 /-- **`check_block`'s contract** (what `cid_ref` takes): on the shape `block_shape` read
@@ -323,6 +326,64 @@ theorem ShapeSl.grow' {m m' : Mem} {p0 : Word} {bs : BlockShape} (h : ShapeSl m 
     exact Nat.le_trans (h.1 o l ho hl) hg.iw
   · rw [iwN_grow hg (by omega)] at ho; rw [iwN_grow hg (by omega)] at hl
     exact Nat.le_trans (h.2.1 o l ho hl) hg.iw
+
+theorem decBPass_mono (fe : IFEnv) (q : Nat) : OMono (fun m => decBPass fe m q) := by
+  unfold decBPass decLH
+  repeat' (first
+    | exact OMono.const _
+    | apply decBS_mono
+    | apply decKL_mono
+    | apply decCR_mono
+    | apply decTM_mono
+    | apply decNCN_mono
+    | apply OMono.iwN
+    | apply OMono.decHL
+    | apply OMono.decAt
+    | apply OMono.decPL
+    | apply OMono.bind
+    | intro _
+    )
+
+/-- **The pass's record grows with the pools**, and the shape it points at. -/
+theorem BPassR.grow {vis : Word} {fe : IFEnv} {m m' : Mem} {q : Word} {bp : BlockPass}
+    (h : BPassR vis fe m q bp) (hs : ShapeSl m (rdW (m.arr64 IW) (q + 1))) (hg : IWGrow m m') :
+    BPassR vis fe m' q bp ∧ ShapeSl m' (rdW (m'.arr64 IW) (q + 1)) := by
+  obtain ⟨hd, hb, hv, hsrc⟩ := h
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hb1 := hb.1
+  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+  have hd' : decBPass fe (truncM m) q.toNat = some bp := hd
+  simp only [decBPass, bind, Option.bind_eq_some_iff] at hd'
+  obtain ⟨v, hv1, bs', hbs, -⟩ := hd'
+  obtain ⟨hw, -⟩ := bpWord hv1 (w := q + 1) e1
+  obtain ⟨-, -, hnP, -⟩ := decBS_some hbs
+  have hv4 := (L.Ind.iwN_truncM_some hnP).1
+  have hvl : v < 2 ^ 64 := by omega
+  have ew : (rdW (m.arr64 IW) (q + 1)).toNat = v := by rw [hw]; exact UInt64.toNat_ofNat_of_lt' hvl
+  have er1 : rdW (m'.arr64 IW) (q + 1) = rdW (m.arr64 IW) (q + 1) := rdW_iw_grow hg (by omega)
+  refine ⟨⟨hd.grow (decBPass_mono fe _) hg, BPassB.grow hg hb, by rw [rdW_iw_grow hg (by omega)]; exact hv,
+    ?_⟩, ?_⟩
+  · intro o l h1 h2
+    rw [er1, iwN_grow hg (by omega)] at h1
+    rw [er1, iwN_grow hg (by omega)] at h2
+    exact Nat.le_trans (hsrc o l h1 h2) hg.iw
+  · rw [er1]
+    exact hs.grow' (show decBS (truncM m) (rdW (m.arr64 IW) (q + 1)).toNat = some bs' by rw [ew]; exact hbs) hg
+
+/-- The level parameters' names of a shape that denotes. -/
+theorem lps_names_of_dShape {st : EStore} {bs : BlockShape} {pP : ConLeche.BlockShape}
+    (h : ConRon.Bridge.Inductives.dShape st bs = some pP) :
+    ∃ ks, bs.lps.mapM (denoteN st.lss.ls.ns) = some ks := by
+  simp only [ConRon.Bridge.Inductives.dShape, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨ms, hms, -⟩ := h
+  unfold BlockShape.lps
+  match hm : bs.members, hms with
+  | [], _ => exact ⟨[], rfl⟩
+  | m0 :: _, hms =>
+    obtain ⟨y, -, -, hy, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hms
+    simp only [ConRon.Bridge.Inductives.dMember, bind, Option.bind_eq_some_iff] at hy
+    obtain ⟨c, hc, -⟩ := hy
+    exact denoteCV_lps hc
 
 /-- **The shape's members, decoded with their constructor slices' bounds.** -/
 theorem ShapeSl.membersB {m : Mem} {p0 : Word} {bs : BlockShape} (hq : DecB (fun m => decBS m p0.toNat) m bs)
@@ -439,6 +500,7 @@ theorem checkBlockPass_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockSh
 section comp
 variable {G : Prop} {p : Prog} {dn : NIdx → Option ConLeche.Name}
 
+
 /-- **`check_block`'s model refines `checkBlock`, both outcomes**, from its callees' contracts:
 the twin split at the calls (`checkBlock_split`), its facts between them as con-ron's
 `checkBlock_bridge` derives them (`reduceMembers_spec`, `reduceMembers_inv`, `dShape_members`). -/
@@ -520,38 +582,54 @@ theorem cb_ref (R : CbRefs G p dn) {N : Nat} {vis bO bL p0 : Word} {fe : IFEnv} 
         (ConRon.Bridge.Inductives.dMember_ext.list x25.ext _ _ hms'))
       (fun m hm => (hAt m hm).declaredWF) hb4) fun ⟨r6, m6⟩ q a6 hrun6 h6 => ?_
   rw [icbE.k_check_block_pass.arm1]
-  -- the checks after it
+  -- the projection tables, read off the block once
   obtain ⟨env₁, qP, hB6, hrel6, henv₁, hq6, hT6, henv₂, hMs, hpl⟩ := h6.twin
   have g16 := (g14.trans h5.grow).trans h6.grow
   have x06 := x05.trans h6.inst
+  have hq6' := hq.grow (decBS_mono _) g16
+  obtain ⟨hdm6, hbm6, -, -⟩ := bsAt hq6' (hsl.grow' hq g16)
+  refine RefE.bindE (fun _ => icbE.k_block_tables.none ..) id
+    (R.bt n _ q.env1 env₁ m6 a6 p0 _ _ bs bsP bs.members bsP.members hB6 hnPb hq6' ⟨hdm6, .inr hbm6⟩
+      (ConRon.Bridge.Inductives.dShape_ext x06.ext _ _ hdP)
+      (ConRon.Bridge.Inductives.dMember_ext.list x06.ext _ _ hms₀))
+    fun ⟨r7, m7⟩ oQ a7 hrun7 h7 => ?_
+  obtain ⟨h7, hts7⟩ := h7
+  cases oQ with
+  | none => rw [icbE.k_block_tables.abort1 _ _ _ _ _ _ _ _ hts7]; exact RefE.of_cls0 rfl
+  | some Q =>
+  obtain ⟨ht1, hdQ, hbQ⟩ := hts7
+  rw [icbE.k_block_tables.arm1 _ _ _ _ _ _ _ _ (by rw [ht1]; decide)]
+  simp only [ConRon.Arena.unwrapOr, pure_bind]
+  -- the checks after it
+  have g17 := g16.trans h7.grow
+  have x07 := x06.trans h7.inst
+  obtain ⟨hBP7, hSl7⟩ := h6.record.grow h6.shape h7.grow
+  have hTb : TblsOK a7.store Q := by
+    obtain ⟨ks, hks⟩ := lps_names_of_dShape (ConRon.Bridge.Inductives.dShape_ext x07.ext _ _ hdP)
+    intro t ht
+    obtain ⟨e1, e2⟩ := blockTables_tbls bs bs.members a6 a7 Q hrun7 t ht
+    exact ⟨⟨ks, by rw [e1]; exact hks⟩, by rw [e2]; exact hnPb⟩
   refine RefE.bindE (fun _ => icbE.k_check_block_tail.none ..) id
-    (R.tail n (by omega) _ env₁ m6 a6 bO bL _ block blockP q qP hB6 h6.record h6.shape
-      (hblk.grow (decEBlk_mono _ _ _) g16) hbb
-      (ConRon.Bridge.denoteCIList_mono x06.ext _ _ hbP) hlpd hrel6 henv₁ hq6 hT6 henv₂ hMs hpl
-      (by rw [checkBlockPass_nP hrun6]; exact hnPb))
-    fun ⟨r7, m7⟩ fe₂ a7 _ h7 => ?_
+    (R.tail n (by omega) _ env₁ m7 a7 bO bL _ block blockP q qP h7.st hBP7 hSl7
+      (hblk.grow (decEBlk_mono _ _ _) g17) hbb
+      (ConRon.Bridge.denoteCIList_mono x07.ext _ _ hbP) hlpd (hrel6.mono h7.inst.ext) henv₁
+      (ConRon.Bridge.Inductives.dPass_ext h7.inst.ext hq6) hT6 henv₂ hMs hpl
+      (by rw [checkBlockPass_nP hrun6]; exact hnPb) _ _ Q hdQ hbQ hTb)
+    fun ⟨r8, m8⟩ fe₂ a8 _ h8 => ?_
   rw [icbE.k_check_block_tail.arm1]
   -- the block's recursors
-  have g17 := g16.trans h7.grow
-  have hq7 := hq.grow (decBS_mono _) g17
-  obtain ⟨-, -, hrs7, -⟩ := bsAt hq7 (hsl.grow' hq g17)
-  refine RefE.bindE (fun _ => icbE.k_block_recs.none ..) id
-    (R.br n _ fe₂ m7 a7 p0 _ _ bs bs.recs h7.stage h7.mem hq7 hrs7) fun ⟨r8, m8⟩ recs a8 _ h8 => ?_
-  obtain ⟨hS8, hM8, hg8, hd8, hb8⟩ := h8
-  rw [icbE.k_block_recs.arm1]
-  -- the block's tables
-  have g18 := g17.trans hg8
+  have g18 := g17.trans h8.grow
   have hq8 := hq.grow (decBS_mono _) g18
-  obtain ⟨hdm8, hbm8, -, -⟩ := bsAt hq8 (hsl.grow' hq g18)
-  refine RefE.bindE (fun _ => icbE.k_block_tables.none ..) id
-    (R.bt n _ fe₂ m8 a8 p0 _ _ bs bs.members hS8 hM8 hnPb hq8 ⟨hdm8, .inr hbm8⟩)
-    fun ⟨r9, m9⟩ tables a9 _ h9 => ?_
+  obtain ⟨-, -, hrs8, -⟩ := bsAt hq8 (hsl.grow' hq g18)
+  refine RefE.bindE (fun _ => icbE.k_block_recs.none ..) id
+    (R.br n _ fe₂ m8 a8 p0 _ _ bs bs.recs h8.stage h8.mem hq8 hrs8) fun ⟨r9, m9⟩ recs a9 _ h9 => ?_
   obtain ⟨hS9, hM9, hg9, hd9, hb9⟩ := h9
-  rw [icbE.k_block_tables.arm1]
+  rw [icbE.k_block_recs.arm1]
   -- the install
+  have g79 := h8.grow.trans hg9
   refine RefE.lastNone (fun _ => icbE.k_ifenv_push_delta.none ..) (fun _ => icbE.k_ifenv_push_delta.arm1 ..) id
-    (R.pd n _ fe₂ m9 a9 _ _ _ _ recs tables hS9 hM9 (decPL_ci_grow hg9 hb8 hd8) (Nat.le_trans hb8 hg9.iw)
-      hd9 hb9) fun ⟨r10, m10⟩ h10 => ?_
+    (R.pd n _ fe₂ m9 a9 _ _ _ _ recs Q hS9 hM9 hd9 hb9 (decPL_tbl_grow g79 hbQ hdQ)
+      (Nat.le_trans hbQ g79.iw)) fun ⟨r10, m10⟩ h10 => ?_
   obtain ⟨-, hS10, hM10, hg10⟩ := h10
   exact ⟨hS10, hM10.core, ((g18.trans hg9).trans hg10), hM10.ind⟩
 

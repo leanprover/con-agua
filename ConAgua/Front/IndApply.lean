@@ -106,7 +106,7 @@ def indPiTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, r) {
 }
 
 /-- `pi_sort_tele_len(f, e)`: `piSortTeleLen? f e` as `(ok, n)`. -/
--- con-ron: ConRon/Arena/Env.lean:321-331 ConRon.Arena.piSortTeleLen?
+-- con-ron: ConRon/Arena/Env.lean:316-326 ConRon.Arena.piSortTeleLen?
 @[no_expose, l_impl ConRon.Arena.piSortTeleLen?]
 def piSortTeleLen : FunDecl := lfn (f, h) locals (g, x, y, z, ok, r) {
   if f == 0 { abort };
@@ -442,12 +442,12 @@ def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
   return 0
 }
 
-/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) as the 15 words at `DIND[q]` (`decCaps`). -/
+/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) in the 15-word record at `DIND[q]` (`decCaps`; words
+`q + 1‥q + 5` are unused). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:354-379 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indCaps : FunDecl := lfn (q) {
-  DIND.u64[q] := 0; DIND.u64[q + 1] := 0; DIND.u64[q + 2] := 0; DIND.u64[q + 3] := 0;
-  DIND.u64[q + 4] := 0; DIND.u64[q + 5] := 0; DIND.u64[q + 6] := 0; DIND.u64[q + 7] := 0;
+  DIND.u64[q] := 0; DIND.u64[q + 6] := 0; DIND.u64[q + 7] := 0;
   DIND.u64[q + 8] := 0; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0; DIND.u64[q + 11] := 0;
   DIND.u64[q + 12] := 0; DIND.u64[q + 13] := 0; DIND.u64[q + 14] := 0;
   return 0

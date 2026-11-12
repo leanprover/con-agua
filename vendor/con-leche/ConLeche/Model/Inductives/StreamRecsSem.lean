@@ -221,7 +221,7 @@ is a graded type, and it agrees with the generated type's reading as an
 `n`-binder tower at every valuation. -/
 theorem storedTy_sem {env : Env} (mp : EnvModelM V env) {F : Nat}
     {rec : Name} {lps : List Name} {n : Nat} {S G : Expr}
-    (hck : ConLeche.recTyCheck (ConLeche.fueledOps .verified F) .plain (ConLeche.mkFEnv env) rec lps n
+    (hck : ConLeche.recTyCheck (ConLeche.fueledOps .verified F) (ConLeche.mkFEnv env) rec lps n
       S G = .ok ())
     (hGb : G.looseBVarsBounded 0 = true)
     (hGr : ∀ φ : Name → Nat, ∃ TG, denote mp.base2.acval env φ 0 G = some TG)
@@ -299,7 +299,7 @@ theorem storedFormer_sem {env : Env} (mp : EnvModelM V env) {F : Nat} {a b : Con
       c.type.fvarLeaves = [] ∧ ∃ T, denote mp.base2.acval env φ 0 c.type = some T ∧
         ∀ ρ : Nat → V, WellDenotedTy V ρ T := by
     intro c hc
-    obtain ⟨-, -, -, hb, hf, st, u, -, -, hinf, hens⟩ := ConLeche.checkConstantVal_inv hc
+    obtain ⟨-, -, hb, hf, st, u, -, -, hinf, hens⟩ := ConLeche.checkConstantVal_inv hc
     have hw : Expr.WScoped 0 c.type := Expr.WScoped.of_not_hasFvar hf
     have hnl : c.type.fvarLeaves = [] := Expr.fvarLeaves_eq_nil_of_not_hasFvar hf
     have hL : Expr.LeavesBounded c.type := fun l hl => by
@@ -322,7 +322,7 @@ reads, the stored side reads, is graded, and reads as the generated
 one. -/
 theorem storedRhs_sem {env : Env} (mp : EnvModelM V env) {F : Nat}
     {rec ctor : Name} {lps : List Name} {s g : Expr}
-    (hck : ConLeche.ruleAgree (ConLeche.fueledOps .verified F) .plain (ConLeche.mkFEnv env) rec ctor lps
+    (hck : ConLeche.ruleAgree (ConLeche.fueledOps .verified F) (ConLeche.mkFEnv env) rec ctor lps
       s g = .ok ())
     (hgb : g.looseBVarsBounded 0 = true) (φ : Name → Nat) {Rg : Term}
     (hRg : denote mp.base2.acval env φ 0 g = some Rg) :

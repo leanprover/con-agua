@@ -209,7 +209,7 @@ structure MemosInv (rm : arena.monad.Memos) : Prop where
   instLPLC : Inv arena.handle.LIdx.Insts.Con_ron_coreRonHashmapHashable rm.inst_lp_l_c
   instLPLsC :
     Inv arena.handle.LsIdx.Insts.Con_ron_coreRonHashmapHashable rm.inst_lp_ls_c
-  /-- The two parked guard-walk memos (task #97-PERF-WALKMEMO): an `Inv`
+  /-- The three parked walk memos (task #97-PERF-WALKMEMO): an `Inv`
   clause and NO `MemosRel` clause.  The twin threads these memos as an
   argument from `∅` and has no field for them; the port keeps the table for
   its allocation only and empties it at every entry
@@ -217,6 +217,7 @@ structure MemosInv (rm : arena.monad.Memos) : Prop where
   nobody's business — and its `Inv` is what the entry's reset needs. -/
   lpDefC : Inv arena.handle.EIdx.Insts.Con_ron_coreRonHashmapHashable rm.lp_def_c
   crfC : Inv arena.handle.EIdx.Insts.Con_ron_coreRonHashmapHashable rm.crf_c
+  hlbiC : Inv arena.monad.EIdxNat.Insts.Con_ron_coreRonHashmapHashable rm.hlbi_c
 
 /-! ## The per-declaration caches
 
@@ -309,6 +310,12 @@ structure PinsRel (rp : arena.pins.Pins) (lp : Pins) : Prop where
   emptyLevels : lp.emptyLevels = absLsIdx rp.empty_levels
   zeroLevel : lp.zeroLevel = absLIdx rp.zero_level
   sortOne : lp.sortOne = absEIdx rp.sort_one
+  /-- The run's maximum `Nat` size, a bignum on the Rust side: its value, and
+  the representation fact every comparison against it reads (`NatWF`: no
+  leading zero limb), which `checker::intern_all_pins` establishes by
+  normalising whatever it is handed. -/
+  maxNatSize : lp.maxNatSize = ConRon.Refine.Nat.toNat rp.max_nat_size
+  maxNatSizeWF : ConRon.Refine.Nat.NatWF rp.max_nat_size
 
 /-! ## The whole state -/
 
@@ -402,9 +409,7 @@ def absIRecRule (r : arena.env.IRecRule) : IRecRule :=
   ⟨absNIdx r.ctor, absU r.nfields, absIRecRuleFire r.fire, absEIdx r.rhs⟩
 
 def absIIndCaps (c : arena.env.IIndCaps) : IIndCaps :=
-  ⟨c.eta, absNIdx c.eta_ctor, absU c.eta_params, absU c.eta_fields, c.unitlike,
-    absU c.unit_params, c.all.val.map absNIdx, absU c.nparams, absU c.n_idx,
-    c.ctors.val.map absNIdx⟩
+  ⟨c.eta, c.all.val.map absNIdx, absU c.nparams, absU c.n_idx, c.ctors.val.map absNIdx⟩
 
 def absIProjTable (t : arena.env.IProjTable) : IProjTable :=
   ⟨absNIdx t.struct_name, t.level_params.val.map absNIdx,

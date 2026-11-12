@@ -1,4 +1,4 @@
 # The upstream revisions vendored here (written by scripts/bump-con-ron.sh; vendor/README.md).
 # repo	rev	url
-con-ron	01ecb31c025e2fd067ec62990db2b16eadf5eea0	https://github.com/leanprover/con-ron.git
-con-leche	210a580ed81f730d36dfb2616aac1c83749f02ae	https://github.com/leanprover/con-leche.git
+con-ron	4ca283d1487ced70289a6f1577eaa9e70acdce4d	https://github.com/leanprover/con-ron.git
+con-leche	eb2c5939b1a73382ad0c8a937021658b0fde247e	https://github.com/leanprover/con-leche.git

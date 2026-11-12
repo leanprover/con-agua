@@ -31,6 +31,7 @@ structure RuProg (p : Prog) : Prop extends PbProg p where
   il : p.lookup "intern_lam" = some internLamL
   mkl : p.lookup "mk_lam" = some mkLam
   cl : p.lookup "close_lams" = some closeLams
+  clf : ClF p
   cro : p.lookup "class_rec_of" = some classRecOf
   fsg : p.lookup "class_gen_rule_find_slot_go" = some classGenRuleFindSlotGo
   fs : p.lookup "class_gen_rule_find_slot" = some classGenRuleFindSlot

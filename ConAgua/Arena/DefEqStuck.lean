@@ -34,7 +34,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-- What the stuck side's specs need of a program. -/
-structure StuckProg (p : Prog) : Prop where
+structure StuckProg (p : Prog) : Prop extends CertProg p where
   leaf : DefEqLeafProg p
   body : InferBodyProg p
   propIrrel : p.lookup "prop_irrel" = some propIrrelL
@@ -43,14 +43,6 @@ structure StuckProg (p : Prog) : Prop where
   etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
   etaCtorShape : p.lookup "eta_ctor_shape" = some etaCtorShapeL
   ers : p.lookup "er_slice_eq" = some erSliceEqL
-  setTail : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL
-  setGo : p.lookup "struct_eta_cert_go" = some structEtaCertGoL
-  setWtb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL
-  setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
-  setCert : p.lookup "struct_eta_cert" = some structEtaCertL
-  suTail : p.lookup "struct_unit_tail" = some structUnitTailL
-  suHead : p.lookup "struct_unit_head" = some structUnitHeadL
-  sunit : p.lookup "struct_unit_cert" = some structUnitCertL
   stuckIrrel : p.lookup "stuck_irrel" = some stuckIrrelL
   stuckStr : p.lookup "stuck_str" = some stuckStrL
   stuckAppCong : p.lookup "stuck_app_cong" = some stuckAppCongL
@@ -79,13 +71,6 @@ def DefeqLstOK (p : Prog) : Prop :=
 def reservedContainsT (n : NIdx) : AM Bool := do
   let rs ← reservedBasisNames
   pure (rs.contains n)
-
-/-- `reserved_contains(x)` (lane `whnf`'s `WhnfIota.lean`, no spec yet) refines
-`reservedContainsT`. -/
-def ReservedContainsOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb x : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW x →
-    CoreSpec p n "reserved_contains_w" [x] (reservedContainsT (decI x)) decBool s₀ a₀ dn vis fe M eb
 
 /-- `lvls_eq_c(us, vs)` refines `lvlsEq?` at two level lists that read back (lane `whnf`'s
 `lvlsEqC_refines`; `lvlsEqCH_of`, `DefEqKnot.lean`). The callers' lists are stored constants'
@@ -164,8 +149,6 @@ structure StuckCallees (p : Prog) : Prop where
   proofIrrel : ProofIrrelOK p
   inst1 : Inst1OK p
   defeqLst : DefeqLstOK p
-  reservedContains : ReservedContainsOK p
-  towerSlots : TowerSlotsAllOK p
   lvlsEqC : LvlsEqCH p
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : CoreDen
@@ -175,6 +158,10 @@ structure StuckCallees (p : Prog) : Prop where
   supKeep : ∀ fe, SupKeep fe
   lazyDeltaStep : LazyDeltaStepH p
   reduceProjCore : ReduceProjCoreH p
+  /-- The unit-like certificate's walks and level test (`unit_like_shape_at`, `is_prop_type`). -/
+  instLP : InstLPOK p
+  instList : InstListOK p
+  lvc : LvlCacheProg p
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :

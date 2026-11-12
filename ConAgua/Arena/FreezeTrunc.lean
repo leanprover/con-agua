@@ -37,7 +37,7 @@ open ConRon.Arena
 /-! ## The pins -/
 
 theorem PinsR.trunc {m : Mem} {p : Pins} (h : PinsR m p) : PinsR (truncFrozen m) p := by
-  have hw : ∀ i, i < 72 → pinW (truncFrozen m) i = pinW m i := fun i hi => by
+  have hw : ∀ i, i < 73 → pinW (truncFrozen m) i = pinW m i := fun i hi => by
     simp only [pinW, truncFrozen_pins, Array.getElem?_extract, Nat.zero_add]
     by_cases h2 : i < (m.arr64 PINS).size <;> simp [hi, h2, Nat.lt_min]
   refine ⟨fun h0 => ?_⟩
@@ -49,7 +49,8 @@ theorem PinsR.trunc {m : Mem} {p : Pins} (h : PinsR m p) : PinsR (truncFrozen m)
     by rw [hw _ (by decide), hw _ (by decide), hw _ (by decide)]; exact hf.lv_lt,
     by rw [hw _ (by decide)]; exact hf.emptyLevels, by rw [hw _ (by decide)]; exact hf.zeroLevel,
     by rw [hw _ (by decide)]; exact hf.sortOne,
-    fun i hi => by rw [hw _ (by omega)]; exact hf.reserved_lt i hi, ?_⟩
+    fun i hi => by rw [hw _ (by omega)]; exact hf.reserved_lt i hi, ?_,
+    by rw [hw _ (by decide)]; exact hf.maxNatSize⟩
   rw [hf.reserved]
   apply List.map_congr_left
   intro i hi
@@ -390,7 +391,7 @@ theorem ModeOK.trunc {m : Mem} (h : ModeOK m) : ModeOK (truncFrozen m) := by
   unfold ModeOK at *; simp only [Mem.flag, Mem.top, truncFrozen_ctl]; exact h
 
 theorem pinW_trunc (m : Mem) : pinW (truncFrozen m) 0 = pinW m 0 := by
-  simp only [pinW, truncFrozen_pins, getD_extract _ (show 0 < 72 by decide)]
+  simp only [pinW, truncFrozen_pins, getD_extract _ (show 0 < 73 by decide)]
 
 theorem TwinMem.trunc {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
     (h : TwinMem dn m a) : TwinMem dn (truncFrozen m) a := by

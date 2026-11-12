@@ -268,6 +268,8 @@ theorem blockRecStaged_runR {envC : Env}
     {rs : List (ConstantVal × List Expr × Nat × List (ConstantVal × Nat))} {F : Nat}
     {s : (Name → Nat) → Nat} {eqs : (Name → Nat) → List Term}
     (h : ConLeche.RecStageG .verified F envC p rs)
+    -- the reserved names' check (`basisNamesOk`), at the block's recursors
+    (hresR : ∀ rc ∈ p.recs, ConLeche.reservedBasisNames.contains rc.cvR.name = false)
     (hnd : (rs.map (·.1.name)).Nodup)
     {R : Nat → ConstantVal × List Expr × Nat × List (ConstantVal × Nat) → Bool × List ConLeche.RecRule}
     {fireOf : Nat → ConstantVal × List Expr × Nat × List (ConstantVal × Nat) →
@@ -284,12 +286,19 @@ theorem blockRecStaged_runR {envC : Env}
       mpC := by
   have hfacts := ConLeche.recStage_facts h
   have hcv := recStage_cvFacts h
+  have hres : ∀ r ∈ rs, ConLeche.reservedBasisNames.contains r.1.name = false := fun r hr => by
+    obtain ⟨rc, hrc, hn⟩ := ConLeche.recStage_names h r hr
+    rw [hn]; exact hresR rc hrc
   have hag : ∀ n : Name, (∀ r ∈ rs, n ≠ r.1.name) →
       blockRecAcv mpC.base2.acval envC rs s eqs n = mpC.base2.acval n :=
     fun _ => blockRecAcv_of_notin
   have hL := fun r (hr : r ∈ rs) => hleaf.stored hnd hr
+  have hwf₃ := ConLeche.recStage_envWF_consR mpC.base2.wf h hshape
+    (fun j r hr lvls pins hf => by
+      obtain ⟨n1, n2, n3, pre, dom, body, D, e1, e2, e3⟩ := hnest j r hr lvls pins hf
+      exact ⟨n1, n2, n3, pre, dom, body, D, e1, e2, e3, rfl⟩)
   exact blockRecStaged_of mpC hnd
-    (fun r hr => (hcv r hr).1) (fun r hr => (hcv r hr).2)
+    (fun r hr => hcv r hr) hres
     (fun r hr => ConLeche.recStage_opName h r hr)
     (fun r hr => ⟨(hfacts r hr).1, (hfacts r hr).2.1, (hfacts r hr).2.2.1,
       (hfacts r hr).2.2.2.1, ConLeche.litShapeAt_of_reservedRec (ConLeche.recStage_reserved h r hr)⟩)
@@ -298,9 +307,9 @@ theorem blockRecStaged_runR {envC : Env}
     (hrd_of_pre mpC h rfl
       (fun i r hr ψ => by obtain ⟨-, -, -, hread, -⟩ := recStage_tyPis mpC h hr ψ; exact hread)
       (fun i r hr ψ => blockRecAcv_at hnd hr ψ) hleaf.pre)
-    (fun r hr rhs hrhs => (hfacts r hr).2.2.2.2 rhs hrhs)
-    hctorsIn hshape hnest
-    (hrecP_ofR mpC hshape (fun r hr => (hcv r hr).1) hag hnew)
+    (fun r hr m' _ henv hres => ConLeche.recStage_bareCons_envWF h hr m' henv hres) hwf₃
+    hctorsIn hshape
+    (hrecP_ofR mpC hshape (fun r hr => hcv r hr) hag hnew)
     (ConLeche.recStage_reserved h)
 
 

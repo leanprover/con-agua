@@ -209,7 +209,7 @@ theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : ASta
     {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
     (h : TwinPrefix4 b sA pre sB rc sC ds sD) :
     ConRon.Bridge.StateOK sD ∧ sD.store.scratchOn = false ∧ ConRon.Bridge.PinsOK sD ∧
-      ConRon.Bridge.PersPins sD := by
+      ConRon.Bridge.PersPins sD ∧ sD.pins.maxNatSize = maxNatSizeDefault := by
   obtain ⟨hA, hB, hC, hD⟩ := h
   have hok0 : ConRon.Bridge.StateOK (AState.init EStore.empty) := ⟨EStore.empty_wf⟩
   obtain ⟨hokA, -, hpinsA, hppA, hoffA, -, -⟩ := ConRon.Bridge.internReservedPins_run hok0 rfl hA
@@ -227,7 +227,8 @@ theorem prefix4_facts {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : ASta
   refine ⟨hstep3.ok, by rw [hstep3.scratch, hstep2.scratch, hstep1.scratch]; exact hoffA,
     hpinsA.mono ((hstep1.ext.trans hstep2.ext).trans hstep3.ext)
       (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),
-    hppA.mono (by rw [hstep3.pins, hstep2.pins, hstep1.pins])⟩
+    hppA.mono (by rw [hstep3.pins, hstep2.pins, hstep1.pins]),
+    by rw [hstep3.pins, hstep2.pins, hstep1.pins]; exact internReservedPins_maxNatSize hA⟩
 
 /-- **After `intern_all_pins`**: what the declaration loop starts from (with the twin's prefix:
 `foldStage_checker`, `CheckARun.lean`). Everything else is still the loaded memory's: `since.frame` (`MemFrame preLoopA
@@ -250,20 +251,20 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
     (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
     (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
     RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb sz) m pb ds a) fun _ m =>
-      ∃ pins ipins a', internAllPins pins a = .ok (ipins, a') ∧
+      ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧
         R7 (loadMem b pb sz) m pb ds ipins a' := by
   intro n _hn s₀ h6
   have hc := CapsOK.keep h6.since.keep h6.since.caps
-  obtain ⟨hok, hoff, hpins, hpp⟩ := prefix4_facts hpx
+  obtain ⟨hok, hoff, hpins, hpp, hmax⟩ := prefix4_facts hpx
   have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by
     rw [h6.since.keep.arr8]; exact loadMem_pb b pb sz
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
-    (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode h6.pf.full.names_size hok hpins hpp
+    (by simpa [RomOK] using hpb) h6.since.pbpre n s₀ a hbs h6.arena h6.mode ⟨h6.pf.full.names_size, hmax⟩ hok hpins hpp
     hoff h6.pf.rset (by rw [h6.pf.stk]; decide) hc.ctl hc.erec)
     (stage_since n (preLoop_mem "intern_all_pins" (by decide +kernel)) s₀))
     (stageFrame_intern_all_pins n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
   obtain ⟨pins, ips, a', hrun, hA, hPS, -, hR, htop, hM, hpfr⟩ := hpost
-  have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hrun
+  have hpins' : a'.pins = a.pins := TwinCaches.internAllPins_pins hok hpins hoff hmax hrun
   have hPINS : s'.mem.arr64 PINS = s₀.mem.arr64 PINS := hsf.1 PINS (by decide +kernel) (by decide)
   have h200 : rdW (s'.mem.arr64 CTL) 200 = rdW (s₀.mem.arr64 CTL) 200 :=
     hsf.ctl 200 (not_mem_of_toNat (Z := [200]) (by decide +kernel) _ (by decide))

@@ -2,8 +2,8 @@
 # `ConRon.Arena.Inductives.BlockInstall` — the uniform inductive check, at k members
 (DESIGN.md §8, task #105)
 
-`ConLeche/Kernel/Inductives/BlockInstall.lean` over handles, with its index
-twins `ConLeche/Kernel/Inductives/BlockInstallF.lean` collapsed into it: the
+`ConLeche/Kernel/Inductives/BlockInstall.lean` over handles, run at the index
+as con-leche's cached twins `ConLeche/Cached/IndBlock.lean` run it: the
 capability record per member, official's `is_rec`, the formers' stage
 (telescopes, the two agreements, the cons), the constructors' stage, the
 positivity check on the stored constructors, the index sorts and the
@@ -13,10 +13,11 @@ off it (`Arena/Install.lean`).  The Rust twin is
 
 **The deviations** (the Rust's, item for item):
 
-* **The `…F` twins collapse into these** (task #97c's deviation 1): the arena
-  has one environment representation, `IFEnv`, so `checkBlockTeleF`,
-  `checkBlockIndsF`, … ARE these functions, cited beside their pure twins.
-  The executed recursor stage conses the records of `blockRecInfosTF`
+* **One function per stage, at the index**: the arena has one environment
+  representation, `IFEnv`, so each function is both the `Env`-level
+  specification (`checkBlockTele`, `checkBlockInds`, …) and its cached twin
+  over the index (`checkBlockTeleC`, `checkBlockIndsC`, …), cited side by
+  side.  The executed recursor stage conses the records of `blockRecInfosTF`
   (`Arena/Inductives/RecCheck.lean`), so `consBlockRecs` and
   `consBlockRecsBare` are not ported.
 * **`blockCapsAt`'s record is built by branches**, not `&&`/`!` (AENEAS_FINDINGS
@@ -43,10 +44,10 @@ open ConLeche
 
 /-! ## The capability record, per member -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:49-81 blockCapsAt
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:49-78 blockCapsAt
 **The capability record of member `mi`**: at a member with ONE constructor, η
-(index-free, the block not recursive: official's `is_non_rec_structure`) and
-unit-likeness (and no field); at every member the block's members, its
+(index-free, the block not recursive: official's `is_non_rec_structure`; no
+separate unit-like bit, as official has none); at every member the block's members, its
 parameter count, the member's index count and its constructors.
 (`p.members.getD mi default`: the default member has no constructor and no
 index.) -/
@@ -61,17 +62,7 @@ def blockCapsAt (p : BlockShape) (mi : Nat) (isRec : Bool) : IIndCaps :=
         if nIdx != 0 then false
         else if isRec then false
         else true
-      let unitlike : Bool :=
-        if nIdx != 0 then false
-        else if c.2 != 0 then false
-        else if isRec then false
-        else true
       { eta := eta
-        etaCtor := c.1.name
-        etaParams := p.nP
-        etaFields := c.2
-        unitlike := unitlike
-        unitParams := p.nP
         all := names
         nparams := p.nP
         nIdx := nIdx
@@ -79,7 +70,8 @@ def blockCapsAt (p : BlockShape) (mi : Nat) (isRec : Bool) : IIndCaps :=
     | cs => { all := names, nparams := p.nP, nIdx := ms.nIdx, ctors := cs.map (·.1.name) }
   | none => { all := names, nparams := p.nP, nIdx := 0, ctors := [] }
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:83-88 Expr.piDomsMentionAny
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:80-85 Expr.piDomsMentionAny
+con-leche: ConLeche/Cached/ExprOpsC.lean:2147-2151 piDomsMentionAnyC
 Does some binder domain of the SYNTACTIC `∀`-telescope of `e` mention one of
 `names`?  No reduction; the `||` short-circuits.  Fueled (the module note). -/
 def piDomsMentionAny (names : List NIdx) : Nat → EIdx → AM Bool
@@ -93,7 +85,7 @@ def piDomsMentionAny (names : List NIdx) : Nat → EIdx → AM Bool
         else piDomsMentionAny names fuel b
     else pure false
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:90-102 blockIsRec
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:87-99 blockIsRec
 **Official's `is_rec`**: does SOME member of the block occur in SOME binder
 domain of the syntactic telescope of SOME DECLARED constructor type? -/
 def blockIsRec (p : BlockShape) : AM Bool := do
@@ -103,8 +95,8 @@ def blockIsRec (p : BlockShape) : AM Bool := do
 
 /-! ## Stage 1: the formers -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:106-117 checkBlockTele
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:27-36 checkBlockTeleF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:103-114 checkBlockTele
+con-leche: ConLeche/Cached/IndBlock.lean:56-65 checkBlockTeleC
 One member's type former: the constant check, official's telescope loop and
 the result sort, without the environment cons. -/
 def checkBlockTele (mode : CheckMode) (fe : IFEnv) (nP : Nat) (ms : MemberShape) :
@@ -118,8 +110,8 @@ def checkBlockTele (mode : CheckMode) (fe : IFEnv) (nP : Nat) (ms : MemberShape)
     if q.2 == srt then pure (cvTa, s)
     else fail (.internal "direct sum: type former result sort")
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:119-126 checkBlockTeles
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:38-45 checkBlockTelesF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:116-123 checkBlockTeles
+con-leche: ConLeche/Cached/IndBlock.lean:67-74 checkBlockTelesC
 The members' type formers, in block order. -/
 def checkBlockTeles (mode : CheckMode) (fe : IFEnv) (nP : Nat) :
     List MemberShape → AM (List (IConstantVal × LIdx))
@@ -129,8 +121,8 @@ def checkBlockTeles (mode : CheckMode) (fe : IFEnv) (nP : Nat) :
     let rs ← checkBlockTeles mode fe nP rest
     pure (r :: rs)
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:128-142 checkBlockDomsAt
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:47-56 checkBlockDomsAtF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:125-139 checkBlockDomsAt
+con-leche: ConLeche/Cached/IndBlock.lean:76-84 checkBlockDomsAtC
 **The parameter-domain agreement's comparison**: binder `j - 1`'s domain
 against member 0's, defeq at depth `off + j - 1`, from the last binder to the
 first; a mismatch is official's REJECT. -/
@@ -145,8 +137,8 @@ def checkBlockDomsAt (mode : CheckMode) (fe : IFEnv) (off : Nat)
       fail (.invalid "parameters of all inductive datatypes must match")
     checkBlockDomsAt mode fe off fvs doms j
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:144-164 checkBlockAgree
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:58-73 checkBlockAgreeF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:141-161 checkBlockAgree
+con-leche: ConLeche/Cached/IndBlock.lean:86-101 checkBlockAgreeC
 **Official's two agreements between the members**: every member's parameter
 domains are DEFINITIONALLY member 0's, and every member's result sort is
 equivalent to member 0's.  Both REJECT. -/
@@ -166,8 +158,8 @@ def checkBlockAgree (mode : CheckMode) (fe : IFEnv) (nP : Nat)
       fail (.invalid "mutually inductive types must live in the same universe")
     checkBlockAgree mode fe nP cvTa₀ s₀ rest
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:166-172 consBlockInds
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:75-80 consBlockIndsF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:163-169 consBlockInds
+con-leche: ConLeche/Cached/IndBlock.lean:42-47 consBlockIndsF
 The members' formers consed, in block order (member 0 deepest), each with ITS
 capability record at the block's `is_rec` verdict. -/
 def consBlockInds (p₁ : BlockShape) (isRec : Bool) :
@@ -176,8 +168,8 @@ def consBlockInds (p₁ : BlockShape) (isRec : Bool) :
   | cvTa :: rest, i, fe =>
     consBlockInds p₁ isRec rest (i + 1) (fe.push (.indInfo cvTa (blockCapsAt p₁ i isRec)))
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:174-186 checkBlockInds
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:82-92 checkBlockIndsF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:171-183 checkBlockInds
+con-leche: ConLeche/Cached/IndBlock.lean:103-113 checkBlockIndsC
 **Stage 1**: the k type formers, checked, agreed and consed — official's
 `declare_inductive_types`, which puts every former in the environment before
 any constructor is looked at; the formers are consed as declared. -/
@@ -195,7 +187,7 @@ def checkBlockInds (mode : CheckMode) (fe : IFEnv) (p : BlockShape) (isRec : Boo
 
 /-! ## Stage 1b: the constructors, and the positivity check -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:190-196 BlockShape.nestCtx
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:187-193 BlockShape.nestCtx
 **The block's positivity context** at the canonical parameter variables
 `fvsP`, with the members' formers at their telescopes; its lookup is the
 environment every reader takes beside it (the positivity module's note);
@@ -206,8 +198,8 @@ def BlockShape.nestCtx (p : BlockShape) (fvsP : List EIdx) : AM NestCtx := do
   pure { names := p.memberNames, lps := lps, nP := p.nP, nIdxs := p.nIdxs,
          params := fvsP, sort := p.resSort, formers := p.formers, lvls := lvls }
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:198-207 checkBlockCtors
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:96-103 checkBlockCtorsF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:195-204 checkBlockCtors
+con-leche: ConLeche/Cached/IndBlock.lean:181-187 checkBlockCtorsC
 The constructors of every member (against the member's former at its
 telescope), at the environment holding ALL the formers. -/
 def checkBlockCtors (mode : CheckMode) (fe₀ fe : IFEnv) (p : BlockShape) :
@@ -218,7 +210,8 @@ def checkBlockCtors (mode : CheckMode) (fe₀ fe : IFEnv) (p : BlockShape) :
       p.isProp p.large ms.cvT ms.ctors
     checkBlockCtors mode fe₀ fe p rest
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:225-247 checkAbsCtorSorts
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:222-244 checkAbsCtorSorts
+con-leche: ConLeche/Cached/IndPositivity.lean:515-528 checkAbsCtorSortsC
 **The fields' universes at the holes**: each constructor's positivity normal
 form within the block's level parameters (internal), its fields opened above
 the holes and their sorts bounded by the block's (the root's line of
@@ -239,7 +232,8 @@ def checkAbsCtorSorts (mode : CheckMode) (fe : IFEnv) (ctx : NestCtx) (isProp : 
     checkAbsCtorSorts mode fe ctx isProp cs os
   | _, _ => pure ()
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:249-255 checkAbsCtorSortsAll
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:246-252 checkAbsCtorSortsAll
+con-leche: ConLeche/Cached/IndPositivity.lean:530-536 checkAbsCtorSortsAllC
 `checkAbsCtorSorts` on every member's constructors; the block's
 `isEquiv sort 0 == some true` read once. -/
 def checkAbsCtorSortsAll (mode : CheckMode) (fe : IFEnv) (ctx : NestCtx) (isProp : Bool) :
@@ -249,7 +243,8 @@ def checkAbsCtorSortsAll (mode : CheckMode) (fe : IFEnv) (ctx : NestCtx) (isProp
     checkAbsCtorSortsAll mode fe ctx isProp css oss
   | _, _ => pure ()
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:257-270 blockNestCtx
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:254-267 blockNestCtx
+con-leche: ConLeche/Cached/IndPositivity.lean:538-547 blockNestCtxC
 **The walk's context** of a block: the canonical parameter variables are the
 first former's opened telescope, with the members' holes. -/
 def blockNestCtx (p : BlockShape) : AM (NestCtx × List EIdx) := do
@@ -263,13 +258,14 @@ def blockNestCtx (p : BlockShape) : AM (NestCtx × List EIdx) := do
       (.internal "direct rec: a member is not a stored former")
     pure (ctx, holes)
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:272-274 nestOutKinds
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:269-271 nestOutKinds
 The field kinds of the root frame's outputs. -/
 def nestOutKinds (outs : List (List (List NestFieldKind × EIdx))) :
     List (List (List NestFieldKind)) :=
   outs.map (·.map (·.1))
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:276-291 checkBlockPositivity
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:273-288 checkBlockPositivity
+con-leche: ConLeche/Cached/IndPositivity.lean:555-563 checkBlockPositivityC
 **The block's positivity, on its stored constructors**, at the walk's context:
 official's uniform-occurrence check, the root frame from the empty state, the
 fields' universes at the holes.  Returns the root frame's outputs (each
@@ -288,8 +284,8 @@ def checkBlockPositivity (mode : CheckMode) (fe : IFEnv) (p : BlockShape) :
 
 /-! ## Stage 2: the tail -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:295-305 checkBlockIdxSorts
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:107-115 checkBlockIdxSortsF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:292-302 checkBlockIdxSorts
+con-leche: ConLeche/Cached/IndBlock.lean:189-197 checkBlockIdxSortsC
 Every member's INDEX binders have sorts: the member's telescope opened at
 variables, each index domain's sort inferred (no bound is checked). -/
 def checkBlockIdxSorts (mode : CheckMode) (fe : IFEnv) (p : BlockShape) :
@@ -301,8 +297,8 @@ def checkBlockIdxSorts (mode : CheckMode) (fe : IFEnv) (p : BlockShape) :
     checkStructFieldSortsI mode fe true false p.resSort p.nP (tq.1.drop p.nP) [] ms.nIdx
     checkBlockIdxSorts mode fe p rest
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:307-311 consBlockCtors
-con-leche: ConLeche/Kernel/Inductives/BlockInstallF.lean:117-120 consBlockCtorsF
+/-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:304-308 consBlockCtors
+con-leche: ConLeche/Cached/IndBlock.lean:49-52 consBlockCtorsF
 The members' constructors consed, member by member, in block order.  Pure: the
 index push touches no term. -/
 def consBlockCtors (nP : Nat) : List (List (IConstantVal × Nat)) → IFEnv → IFEnv

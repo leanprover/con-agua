@@ -4,27 +4,23 @@ public import ConAgua.Arena.StageTLift
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Arena.QuotRulesT
 public import ConAgua.Arena.ErToIwBlk
-import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.DeclAndPinIndRef
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface
-import ConAgua.L.WordOff
 
 @[expose] public section
 
 /-!
 # The pinned basis blocks' refinements: the statements (lane `ronsync2`, stage 3)
 
-The entry points of `BasisL.lean` that the stream index's `decl_constants` (`IndDeclConsts.lean`)
-and the declaration arms call, in the ROM readers' style (`L.Rom.RomRef`: from `StageR` and the
+The entry points of `BasisL.lean` that the reserved names' check (`basis_names_ok`) and the
+quotient arm call, in the ROM readers' style (`L.Rom.RomRef`: from `StageR` and the
 arguments' decodings, the twin's run, `KeepPost` after it):
 
 * `basis_name_hit(o, l)` refines `basisNameHit block` (`BasisNameHitRef`; the result `(hit,
   kind)` as `decHit`);
-* `basis_at_block(k, o, l)` refines `BasisKind.atBlock (basisOfW k) block` (`BasisAtBlockRef`; an
-  `IW` slice of constant records, `decRBlk`);
 * `quot_at(k.slot, q)` refines `quotAt k cv` (`QuotAtRef`; a constant record, `decRCI`).
 
 The block is an `EREC` slice of record pointers (`ind_block_to_erec`'s post: `BlockAt`). The
@@ -59,17 +55,6 @@ def BasisNameHitRef : Prop := ∀ (o l : Word) (block : List IConstantInfo),
       BlockAt o l block m ∧ ∃ bs, Frontend.denoteCIList a.store block = some bs)
     (ConRon.Arena.basisNameHit block) (KeepPostT dn vis fe decHit)
 
-/-- **`basis_at_block(k, o, l)` refines `BasisKind.atBlock (basisOfW k) block`**, for the four
-block kinds `basis_name_hit` returns; the result slice lies below the pool's top (`at_block_go`
-returns `(0, 0)` or an `sl_cons` slice), also when it is empty. -/
-def BasisAtBlockRef : Prop := ∀ (k o l : Word) (block : List IConstantInfo), k.toNat < 4 →
-  RomRef p "basis_at_block" [k, o, l]
-    (fun m a => StageT dn vis fe m a ∧ ConRon.Bridge.StateOK a ∧ ConRon.Bridge.ReadOK a ∧
-      BlockAt o l block m ∧ ∃ bs, Frontend.denoteCIList a.store block = some bs)
-    (ConRon.Arena.BasisKind.atBlock (basisOfW k.toNat) block)
-    (fun m m' a r x => KeepPostT dn vis fe (decRBlk dn) m m' a r x ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m')
-
 /-- **`quot_at(k.slot, q)` refines `quotAt k cv`** (`q` an `EREC` constant value), from a
 well-formed twin state that names `Quot`'s `sortZ` names through `dn`. -/
 def QuotAtRef : Prop := ∀ (k : ConLeche.QuotKind) (q : Word) (cv : IConstantVal),
@@ -79,10 +64,9 @@ def QuotAtRef : Prop := ∀ (k : ConLeche.QuotKind) (q : Word) (cv : IConstantVa
       ∃ c, Frontend.denoteCV a.store cv = some c)
     (ConRon.Arena.quotAt k cv) (KeepPostT dn vis fe (decRCI dn))
 
-/-- The three, at every stage. -/
+/-- The two, at every stage. -/
 structure BasisRefs : Prop where
   nameHit : ∀ dn vis fe, BasisNameHitRef p dn vis fe
-  atBlock : ∀ dn vis fe, BasisAtBlockRef p dn vis fe
   quotAt : ∀ dn vis fe, QuotAtRef p dn vis fe
 
 end specs
@@ -100,8 +84,6 @@ structure BasisLProg (p : Prog) : Prop where
   nh : p.lookup "basis_name_hit" = some basisNameHit
   nhg : p.lookup "basis_name_hit_go" = some basisNameHitGo
   bne : p.lookup "block_names_eq" = some blockNamesEq
-  abg : p.lookup "at_block_go" = some atBlockGo
-  bab : p.lookup "basis_at_block" = some basisAtBlock
 
 /-! ## The proofs -/
 
@@ -264,94 +246,11 @@ theorem basisNameHitGoW_ok (hB : BasisLProg p) (block : List IConstantInfo) (io 
     rw [hk1] at hrun
     dsimp only; rw [ite_eq_right (by simpa using he)]; exact hrun
 
-/-! ### `at_block_go` -/
-
-theorem atBlockGoW_ok (hB : BasisLProg p) :
-    ∀ (n : Nat) (m m' : Mem) (a : AState) (po pl co cl : Word) (pins cs : List IConstantInfo)
-    (r : List Word), StageT dn vis fe m a → ConRon.Bridge.StateOK a → ConRon.Bridge.ReadOK a →
-    PSlR ciF pins po pl m → PSlR ciF cs co cl m →
-    (∃ bs, Frontend.denoteCIList a.store pins = some bs) →
-    (∃ bs, Frontend.denoteCIList a.store cs = some bs) →
-    atBlockGoW p n m po pl co cl = some (r, m') →
-    ∃ xs a', (ConRon.Arena.atBlockGo pins cs).run a = .ok (xs, a') ∧ StageT dn vis fe m' a' ∧
-      IWGrow m m' ∧ ConRon.Bridge.StateOK a' ∧ ConRon.Bridge.ReadOK a' ∧
-      PSlR ciF xs (r.headD 0) (r.tail.headD 0) m' := by
-  intro n
-  induction n with
-  | zero => intro m m' a po pl co cl pins cs r _ _ _ _ _ _ _ h; simp [atBlockGoW] at h
-  | succ n ih =>
-  intro m m' a po pl co cl pins cs r hT hok hr hP hC hdP hdC h
-  have hsz := hT.stage.iw.iwSize
-  simp only [atBlockGoW] at h
-  by_cases h0 : pl = 0 ∨ cl = 0
-  · rw [ite_eq_left h0] at h; cases h
-    have hnil : ConRon.Arena.atBlockGo pins cs = pure [] := by
-      rcases h0 with rfl | rfl
-      · have : pins = [] := List.eq_nil_of_length_eq_zero (by
-          rw [L.Ind.decPL_length (truncM m) hP.dec]; rfl)
-        subst this; rfl
-      · have : cs = [] := List.eq_nil_of_length_eq_zero (by
-          rw [L.Ind.decPL_length (truncM m) hC.dec]; rfl)
-        subst this; cases pins <;> rfl
-    refine ⟨[], a, by rw [hnil]; rfl, hT, IWGrow.refl m, hok, hr, PSlR.nil _ _⟩
-  rw [ite_eq_right h0] at h
-  have hpl : pl ≠ 0 := fun e => h0 (Or.inl e)
-  have hcl : cl ≠ 0 := fun e => h0 (Or.inr e)
-  obtain ⟨pin, pins', rfl, hpin, hP'⟩ := hP.uncons hpl hsz
-  obtain ⟨c, cs', rfl, hc, hC'⟩ := hC.uncons hcl hsz
-  rw [decB_ciF] at hpin hc
-  obtain ⟨dp, dps, hdp, hdps, -⟩ := ConRon.Bridge.denoteCIList_cons hdP.choose_spec
-  obtain ⟨dc, dcs, hdc, hdcs, -⟩ := ConRon.Bridge.denoteCIList_cons hdC.choose_spec
-  -- the record's names
-  have hcv := decCI_cvA (q := rdW (m.arr64 IW) co) hc
-  obtain ⟨w0, hw0⟩ := decCV_def hcv 3 (by omega)
-  have hlt := L.Arena.erecP_lt64 hw0
-  have hq1 : (rdW (m.arr64 IW) co + 1).toNat = (rdW (m.arr64 IW) co).toNat + 1 := by
-    rw [UInt64.toNat_add]; simp; omega
-  rw [← hq1] at hcv
-  obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hcv
-  rw [L.add_one_add_one, word_add12] at hsl
-  have hps := (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).2.1
-  simp only [L.Ind.erRd_foldN] at h
-  cases h1 : callW p n "ci_at_lps" [rdW (m.arr64 IW) po, erRd m (rdW (m.arr64 IW) co + 2),
-      erRd m (rdW (m.arr64 IW) co + 3)] m with
-  | none => rw [h1] at h; simp [atBlockGoW.k_ci_at_lps] at h
-  | some x1 =>
-  obtain ⟨r1, m1⟩ := x1
-  rw [h1] at h; simp only [atBlockGoW.k_ci_at_lps] at h
-  obtain ⟨x, a1, hrun1, hT1, hg1, hx1⟩ :=
-    (ciAtLpsSim_of hB.rules.toCiProg (rulesAtSim_of hB.rules)).ci n vis fe m a _ _ _ pin
-      c.toConstantVal.levelParams _ dp hT hok hr hpin hdp hsl hps r1 m1 h1
-  obtain ⟨hst1, -⟩ := ConRon.Bridge.IConstantInfo.atLps_run hok hr hdp hps hrun1
-  cases h2 : atBlockGoW p n m1 (po + 1) (pl - 1) (co + 1) (cl - 1) with
-  | none => rw [h2] at h; simp [atBlockGoW.k_at_block_go] at h
-  | some x2 =>
-  obtain ⟨r2, m2⟩ := x2
-  rw [h2] at h; simp only [atBlockGoW.k_at_block_go] at h
-  obtain ⟨xs, a2, hrun2, hT2, hg2, hok2, hr2, hX2⟩ :=
-    ih m1 m2 a1 _ _ _ _ pins' cs' r2 hT1 hst1.ok hst1.read (hP'.grow ciF_mono hg1)
-      (hC'.grow ciF_mono hg1) ⟨_, ConRon.Bridge.denoteCIList_mono hst1.ext _ _ hdps⟩
-      ⟨_, ConRon.Bridge.denoteCIList_mono hst1.ext _ _ hdcs⟩ h2
-  cases h3 : callW p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
-  | none => rw [h3] at h; simp [atBlockGoW.k_sl_cons] at h
-  | some x3 =>
-  obtain ⟨r3, m3⟩ := x3
-  rw [h3] at h; simp only [atBlockGoW.k_sl_cons, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (slCons_specW p hB.rules.iwAlloc hB.rules.iwCopy hB.rules.slCons n _ _ _ _) h3
-  obtain ⟨hS3, hg3, hX3, -⟩ := consW_pslr ciF_mono hW3 hT2.stage hX2
-    (decB_ciF.mpr (ArrExt.decCI hg2.ext hx1))
-  refine ⟨x :: xs, a2, ?_, StageT.of_iw hT2 hS3 (consW_iwFrame hW3), hg1.trans (hg2.trans hg3),
-    hok2, hr2, by simpa using hX3⟩
-  simp only [ConRon.Arena.atBlockGo, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hrun2]
-  rfl
-
 end go
 
 /-- **The basis entry points refine the twin.** -/
 theorem basisRefs_of {p : Prog} (hB : BasisLProg p) : BasisRefs p := by
-  refine ⟨fun dn vis fe => ?_, fun dn vis fe => ?_, fun dn vis fe => ?_⟩
+  refine ⟨fun dn vis fe => ?_, fun dn vis fe => ?_⟩
   · -- `basis_name_hit`
     rintro o l block n m a r m' ⟨hT, hok, -, hblk, -⟩ h
     obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -383,54 +282,6 @@ theorem basisRefs_of {p : Prog} (hB : BasisLProg p) : BasisRefs p := by
     obtain ⟨x, a', hrun, hT', hg', hd'⟩ :=
       basisNameHitGoW_ok hB block _ l n 0 _ _ a r2 (by decide) hT1 hok hsl hW2
     exact ⟨x, a', hrun, hT', hg1.trans hg', decHit_two hd'⟩
-  · -- `basis_at_block`
-    rintro k o l block hk n m a r m' ⟨hT, hok, hr, hblk, hden⟩ h
-    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (basisAtBlock_specW p hB.bab n _ k o l) h
-    cases n with
-    | zero => simp [basisAtBlockW] at hW
-    | succ n =>
-    simp only [basisAtBlockW] at hW
-    cases h1 : callW p n "rom_basis_decls" [k] m with
-    | none => rw [h1] at hW; simp [basisAtBlockW.k_rom_basis_decls] at hW
-    | some x1 =>
-    obtain ⟨r1, m1⟩ := x1
-    rw [h1] at hW; simp only [basisAtBlockW.k_rom_basis_decls] at hW
-    obtain ⟨blk, a1, hrun1, hS1, hg1, hD1⟩ := hB.rom.basis dn vis fe k hk n m a r1 m1 hT.stage h1
-    obtain ⟨hs1, hden1⟩ := ConRon.Bridge.BasisKind.decls_run hok hrun1
-    have hf1 : MemFrame leafA leafC m m1 :=
-      (run_memFrame hB.leaf (leaf_mem _ rfl) (run_of_callW h1)).1
-    have hT1 := hT.of_leafI hS1 hs1 hf1
-    have hP1 := romBlk_pslr hD1 (by rw [denoteCIList_length _ _ hden1]; exact basisDecls_len hk)
-    have hr1 := (ConRon.Bridge.RStep.of_istep hs1 hr)
-    cases h2 : callW p n "er_to_iw" [o, l] m1 with
-    | none => rw [h2] at hW; simp [basisAtBlockW.k_er_to_iw] at hW
-    | some x2 =>
-    obtain ⟨r2, m2⟩ := x2
-    rw [h2] at hW; simp only [basisAtBlockW.k_er_to_iw] at hW
-    obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-      (erToIw_specW p hB.rules.iwAlloc hB.rules.erCopy hB.rules.erToIw n _ o l) h2
-    obtain ⟨hS2, hg2, hf2, hr2, hsl⟩ := erToIwW_blkR hW2 hT1.stage (decCIsR_ext hg1.ext hblk.1)
-    have hT2 := StageT.of_iw hT1 hS2 hf2
-    cases h3 : callW p n "at_block_go" [r1.headD 0, r1.tail.headD 0, r2.headD 0, r2.tail.headD 0]
-        s2.mem with
-    | none => rw [h3] at hW; simp [basisAtBlockW.k_at_block_go] at hW
-    | some x3 =>
-    obtain ⟨r3, m3⟩ := x3
-    obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-      (atBlockGo_specW p hB.abg n _ _ _ _ _) h3
-    rw [h3] at hW; simp only [basisAtBlockW.k_at_block_go, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨rfl, hm⟩ := hW
-    rw [← hm]
-    rw [hr2] at hW3
-    obtain ⟨bs, hbs⟩ := hden
-    obtain ⟨xs, a', hrun, hT', hg', -, -, hX⟩ :=
-      atBlockGoW_ok hB n _ _ a1 _ _ _ _ blk block r3 hT2 hr1.ok hr1.read (hP1.grow ciF_mono hg2) hsl
-        ⟨_, hden1⟩ ⟨_, ConRon.Bridge.denoteCIList_mono hr1.ext _ _ hbs⟩ hW3
-    refine ⟨xs, a', ?_, ⟨hT', hg1.trans (hg2.trans hg'), ⟨hX.dec, rfl⟩⟩, hX.bound⟩
-    simp only [ConRon.Arena.BasisKind.atBlock, StateT.run_bind]
-    rw [show StateT.run (BasisKind.decls (basisOfW k.toNat)) a = .ok (blk, a1) from hrun1]
-    exact hrun
   · -- `quot_at`
     rintro k q cv n m a r m' ⟨hT, hok, hr, hnd, hq, c, hc⟩ h
     have hqd : QuotDn dn := by

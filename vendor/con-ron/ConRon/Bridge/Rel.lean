@@ -694,11 +694,7 @@ theorem denoteCaps_ext {st st' : EStore} {c : IIndCaps} {d : IndCaps}
     (h : Frontend.denoteCaps st c = some d) (hx : Ext st st') :
     Frontend.denoteCaps st' c = some d := by
   simp only [Frontend.denoteCaps] at h ⊢
-  cases hc : denoteN st.ns c.etaCtor with
-  | none => rw [hc] at h; simp at h
-  | some ct =>
-    rw [hc] at h; rw [denoteN_ext hc hx]
-    cases ha : Frontend.denoteNList st.ns c.all with
+  · cases ha : Frontend.denoteNList st.ns c.all with
     | none => rw [ha] at h; simp at h
     | some all =>
       cases hk : Frontend.denoteNList st.ns c.ctors with
@@ -933,6 +929,29 @@ theorem denoteProjTable_fields {st : EStore} {t : IProjTable} {p : ProjTable}
           obtain rfl := Option.some.inj h
           exact ⟨rfl, rfl⟩
 
+/-- con-leche: none — a denoting projection table's constructor handle denotes
+the table's constructor. -/
+theorem denoteProjTable_ctor {st : EStore} {t : IProjTable} {p : ProjTable}
+    (h : Frontend.denoteProjTable st t = some p) :
+    denoteN st.ns t.ctor = some p.ctor := by
+  simp only [Frontend.denoteProjTable] at h
+  cases hs : denoteN st.ns t.structName with
+  | none => rw [hs] at h; simp at h
+  | some sn =>
+    cases hl : Frontend.denoteNList st.ns t.levelParams with
+    | none => rw [hs, hl] at h; simp at h
+    | some lps =>
+      cases hc : denoteN st.ns t.ctor with
+      | none => rw [hs, hl, hc] at h; simp at h
+      | some ct =>
+        rw [hs, hl, hc] at h
+        cases hb : Frontend.denoteEArray st t.bodies with
+        | none => rw [hb] at h; simp at h
+        | some bs =>
+          rw [hb] at h
+          obtain rfl := Option.some.inj h
+          rfl
+
 theorem denoteCI_ext {st st' : EStore} {ci : IConstantInfo} {c : ConstantInfo}
     (h : Frontend.denoteCI st ci = some c) (hx : Ext st st') :
     Frontend.denoteCI st' ci = some c := by
@@ -994,7 +1013,7 @@ Four shapes cover the whole `ExprOps` tier:
 * `RelV f st c x` — a handle in, a REPRESENTATION-FREE value out (`Bool`,
   `Nat`: `wscopedB`, `sizeB`, `bvarBound`).  No target store,
   because the answer names none;
-* `RelEO f st c st' r` — an `Option` handle out (`instPisAtLift`);
+* `RelEO f st c st' r` — an `Option` handle out (`peelPis`);
 * `RelEL f st c st' rs` — a LIST of handles out (`getAppArgs`, `bvarRange`).
 
 The level and name shapes (`RelL`, `RelLs`) are the same at `denoteL` /

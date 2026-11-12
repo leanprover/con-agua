@@ -12,8 +12,9 @@ on success, returns the extended environment.  `checkDeclsPure` folds it
 over a list of declarations, starting from the empty environment.  The
 stages it dispatches to live in `ConLeche/Kernel/Checker.lean` (values,
 basis, `Nat` operations), `ConLeche/Kernel/Inductives/BlockTail.lean`
-(the inductive installer, which takes every inductive block the
-recogniser reads; any other block declines, `checkShapeless`).  Its own
+(the inductive installer, which takes every inductive block
+`readBlock` reads; any other block is rejected with the reason
+`readBlock` gives).  Its own
 module because the installer's recursor check is written over the
 index (`FEnv`).
 -/
@@ -23,24 +24,9 @@ namespace ConLeche
 variable {m : Type -> Type} [Monad m] [MonadExceptOf CheckError m]
 variable (mode : CheckMode)
 
-/-- **An inductive block the recogniser does not read** (`blockShape? =
-none`): its type formers are checked as constants — a reserved name, a
-duplicate, a malformed type are official's rejects and stay rejects —
-and what survives that is a POSITIVE decline, since the installer
-takes every block it recognises and there is no other route.  It never
-returns an environment. -/
-def checkShapeless (ops : CheckerOps m) (env : Env) (block : List ConstantInfo) :
-    m Env := do
-  block.foldlM (fun (_ : Unit) ci => match ci with
-    | .indInfo cv _ => discard <| checkConstantVal ops env cv
-    | _ => pure ()) ()
-  throw (.notImplemented s!"inductive block \
-    {(block.head?.map (·.name)).getD .anonymous}: shape not recognised")
-
-/-- Check a single declaration, extending the environment on success.
-The mode is part of the signature although no arm reads it; every
-caller and every statement passes it. -/
-def checkDecl (_mode : CheckMode) (ops : CheckerOps m) (pins : List NatOpPinSet) (env : Env)
+/-- **A declaration's own checks**, by its kind, extending the environment on success.  A block
+under a pinned basis block's names takes the same route as every other block. -/
+def checkDeclKind (ops : CheckerOps m) (pins : List NatOpPinSet) (env : Env)
     (d : Declaration) : m Env := do
   match d with
   | .defnDecl cv value hint => do
@@ -156,12 +142,6 @@ def checkDecl (_mode : CheckMode) (ops : CheckerOps m) (pins : List NatOpPinSet)
       else
         throw (.notImplemented (nonStdAxiomMsg cv.name))
   | .indDecl block nP =>
-    -- **THE PINNED BASIS BLOCKS**: a stream's `Nat` block arrives as an
-    -- ordinary `indDecl` (the decoder emits the file's records and nothing
-    -- else); its members' names say it is the pinned block's record.
-    match basisNameHit block with
-    | some kind => checkBasisBlock env kind block
-    | none =>
     -- TASK #228 — THE DECLARED PARAMETER COUNT, first.  Official reads
     -- `nparams` off the declaration and checks
     -- the block against it (`check_inductive_types`' telescope loop,
@@ -169,20 +149,29 @@ def checkDecl (_mode : CheckMode) (ops : CheckerOps m) (pins : List NatOpPinSet)
     -- record with the generated one); `indParamsOk` is that check,
     -- one-sided, so a `false` is official's own reject.  It runs
     -- BEFORE the dispatch because it is a property of the DECLARATION:
-    -- a block with no constructor and no recursor record — a shape the
-    -- recogniser does not read — is rejected rather than declined
-    -- (arena 047).
+    -- a block with no constructor and no recursor record is rejected
+    -- here, before `readBlock` reads it (arena 047).
     if indParamsOk nP block then
       -- ONE ROUTE (task #210): the installer takes every block it
       -- RECOGNISES, at any number of members, nested ones included; the
       -- dispatch is the RECOGNISER alone
-      -- (task #219).  A block it does not read declines, once its
-      -- formers have been checked as constants (`checkShapeless`).
-      match blockShape? nP block with
-      | some p => checkBlock ops env block p
-      | none => checkShapeless ops env block
+      -- (task #219).  A block it cannot read is rejected with the
+      -- reason `readBlock` gives.
+      match readBlock nP block with
+      | .ok p => checkBlock ops env block p
+      | .error e => throw e
     else throw (.invalid "number of parameters mismatch")
   | .quotDecl k cv => checkQuotRecord env k cv
+
+/-- **Check a single declaration**: its own checks, then the reserved names' (`basisNamesOk`),
+which justify the model's fixed meanings of the basis names.  The mode is part of the signature
+although nothing reads it; every caller and every statement passes it. -/
+def checkDecl (_mode : CheckMode) (ops : CheckerOps m) (pins : List NatOpPinSet) (env : Env)
+    (d : Declaration) : m Env := do
+  let env₂ ← checkDeclKind ops pins env d
+  unless basisNamesOk d do
+    throw (basisNamesError d)
+  pure env₂
 
 /-- Check a list of declarations in order, starting from the empty
 environment. -/

@@ -82,12 +82,15 @@ def coreStageA : List TieredArray := checkerWordArrays.filter fun b => b ≠ ERE
 def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x ≠ 200 ∧ x ≠ 52 ∧
   x ≠ 158 ∧ (x < 202 ∨ 219 < x) ∧ x ≠ 130).map Nat.toUInt64
 
-/-- **The core's leaves**: reached by the core (`infer_proj`), they write the pool; each has its
-own lemma (`ustW_grow`, `opfF_grow`) instead of the write-set check. -/
-def coreLeaves : List FnName := ["struct_used_later", "open_pis_at_fvars_f"]
+/-- **The core's leaves**: reached by the core (`infer_proj`), they write the pool or the `hb`
+memo; each has its own lemma (`ustW_grow`, `opfF_grow`, the `hb` walk's frame `hbLeafP_closed`)
+instead of the write-set check. -/
+def coreLeaves : List FnName :=
+  ["struct_used_later", "open_pis_at_fvars_f", "has_loose_b_var_b_fast", "has_loose_bvar_in"]
 
 /-- What only the leaves reach (and the leaves): left out of the checked set. -/
 def coreLeafOnly : List FnName := ["struct_used_later", "has_loose_b_var_b_fast",
+  "has_loose_bvar_in", "has_loose_bvar_in_go",
   "has_loose_b_var_b_go", "has_loose_b_var_b_ins", "hb_find", "hb_clear", "hb_put", "strip_pis",
   "open_pis_at_fvars_f", "iw_alloc", "spn_to_iw"]
 
@@ -116,6 +119,7 @@ structure CoreStageClosed (p : Prog) : Prop where
   closed : closedAL p coreStageA coreStageC stageCoreFns coreLeaves = true
   us : UsF p
   opf : OpfF p
+  hl : ProgHas p hbLeafP
   lvl : closedA p coreStageA coreStageC lvlCoreFns = true
 
 theorem coreStageA_iw : (IW : TieredArray) ∉ coreStageA := by simp [coreStageA]
@@ -224,13 +228,29 @@ theorem coreFr_opf {p : Prog} (hp : OpfF p) (n : Nat) (m₀ : Mem) (vs : List Wo
   obtain ⟨hI', hg'⟩ := opfF_grow hc hI
   exact ⟨hI', hg.trans hg'⟩
 
+/-- **The `hb` walk's leaves keep the core frame**, at any arguments and fuel (they write only the
+`hb` memo and the bound walk's). -/
+theorem coreFr_hl {p : Prog} (hp : ProgHas p hbLeafP) {g : FnName} (hg : g ∈ hbLeafFns) (n : Nat)
+    (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => CoreFr m₀ s.mem⦄ invoke p (exec p n) g vs ⦃fun _ s => CoreFr m₀ s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (callW_spec p n g vs s)
+  have hfr := (run_memFrame (closedW_of_agree hbLeafP_closed (hp.agree hbLeafFns)) hg (run_of_callW hc)).1
+  refine ⟨hs.1.trans (hfr.mono (fun b hb => by simp [hbWA] at hb; rcases hb with rfl | rfl <;> simp [coreFrA, usA])
+    (fun x hx => by simp [hbWC] at hx; rcases hx with rfl | rfl | rfl | rfl <;> simp [coreFrC, usC])), fun h0 => ?_⟩
+  obtain ⟨hI, hg⟩ := hs.2 h0
+  obtain ⟨hI', hg'⟩ := iwKeep hfr (by decide) (by decide) hI
+  exact ⟨hI', hg.trans hg'⟩
+
 theorem coreLeaves_keep {p : Prog} (hcl : CoreStageClosed p) : ∀ g ∈ coreLeaves, ∀ n m₀ vs,
     ⦃fun s => CoreFr m₀ s.mem⦄ invoke p (exec p n) g vs ⦃fun _ s => CoreFr m₀ s.mem; ⊤⦄ := by
   intro g hg n m₀ vs
   simp only [coreLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg
-  rcases hg with rfl | rfl
+  rcases hg with rfl | rfl | rfl | rfl
   · exact coreFr_us hcl.us n m₀ vs
   · exact coreFr_opf hcl.opf n m₀ vs
+  all_goals exact coreFr_hl hcl.hl (by decide) n m₀ vs
 
 /-- **A core call's frame**, as a triple. -/
 theorem invoke_coreFrame {p : Prog} (hcl : CoreStageClosed p) (n : Nat) {f : FnName}

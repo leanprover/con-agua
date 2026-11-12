@@ -3,10 +3,10 @@ each _hit lemma: vcgen splits a conjunction post into one VC per conjunct since 
 (vendor/README.md, "Toolchain switch" 3).
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
-index 882c97a1f80703035b2f6c81ccd8e32b6d0aacfd..ad0b407d4044ef874a08b187c1af73c7ea20a963 100644
+index 3098fe76ac90b36bd436e1d054fec3f9d7c17cc1..6e29c9c910c8cd178b6734c7553ce477cf669eed 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
-@@ -66,6 +66,14 @@ theorem CSOK.whnfCore_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
+@@ -76,6 +76,14 @@ theorem CSOK.whnfCore_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
    exact ⟨⟨F, hrun⟩, whnfCore_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.whnfCore_hit =>
    CSOK mode eager env s, s.whnfCoreC[i]?, Runs ((fueledFns mode eager env).whnfCore false d i) r
@@ -21,7 +21,7 @@ index 882c97a1f80703035b2f6c81ccd8e32b6d0aacfd..ad0b407d4044ef874a08b187c1af73c7
  
  /-- A cheap whnfCore memo hit answers the fueled cheap whnfCore. -/
  theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-@@ -76,6 +84,14 @@ theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r :
+@@ -86,6 +94,14 @@ theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r :
    exact ⟨⟨F, hrun⟩, whnfCore_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.whnfCoreCheap_hit =>
    CSOK mode eager env s, s.whnfCoreCheapC[i]?, Runs ((fueledFns mode eager env).whnfCore true d i) r
@@ -36,7 +36,7 @@ index 882c97a1f80703035b2f6c81ccd8e32b6d0aacfd..ad0b407d4044ef874a08b187c1af73c7
  
  /-- A body answer is a whnfCore answer one fuel up. -/
  theorem Runs.whnfCore_of_body {c : Bool} {d : Nat} {i r : Expr}
-@@ -144,6 +160,14 @@ theorem CSOK.whnf_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
+@@ -168,6 +184,14 @@ theorem CSOK.whnf_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
    exact ⟨⟨F, hrun⟩, whnf_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.whnf_hit =>
    CSOK mode eager env s, s.whnfC[i]?, Runs ((fueledFns mode eager env).whnf d i) r
@@ -51,7 +51,7 @@ index 882c97a1f80703035b2f6c81ccd8e32b6d0aacfd..ad0b407d4044ef874a08b187c1af73c7
  
  /-- A body answer is a whnf answer one fuel up. -/
  theorem Runs.whnf_of_body {d : Nat} {i r : Expr}
-@@ -197,6 +221,14 @@ theorem CSOK.infer_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
+@@ -221,6 +245,14 @@ theorem CSOK.infer_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
    exact ⟨⟨F, hrun⟩, inferTypeCore_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.infer_hit =>
    CSOK mode eager env s, s.inferC[i]?, Runs ((fueledFns mode eager env).infer d i) r
@@ -66,7 +66,7 @@ index 882c97a1f80703035b2f6c81ccd8e32b6d0aacfd..ad0b407d4044ef874a08b187c1af73c7
  
  /-- A body answer is an infer answer one fuel up. -/
  theorem Runs.infer_of_body {d : Nat} {i r : Expr}
-@@ -254,6 +286,14 @@ theorem CSOK.inferIO_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
+@@ -278,6 +310,14 @@ theorem CSOK.inferIO_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
    exact ⟨⟨F, hrun⟩, inferTypeIO_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.inferIO_hit =>
    CSOK mode eager env s, s.inferIOC[i]?, Runs ((fueledFns mode eager env).inferIO d i) r

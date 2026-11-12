@@ -1,15 +1,12 @@
 module
 
-public import ConAgua.Arena.ProjGuardRowsOpf
-public import ConAgua.Arena.ProjGuardRef
+public import ConAgua.Arena.ProjGuardRowsGo
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.StrLitExt
 import all ConAgua.Arena.Infer
-import ConAgua.Arena.ProjGuardRowsCI
-import ConAgua.Arena.IndSumSpec.StructUsedHb
 public import ConAgua.Arena.IndTwin
 
 @[expose] public section
@@ -28,18 +25,11 @@ namespace L.Arena
 
 open L.Ind (IW)
 
-/-- **`proj_guard_rows_at`'s word model** (`struct_used_later`, `fvar_type_d` lifted). -/
-l_model pgraW_spec (p : Prog) (hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
-  fns [hf ↦ pgraW]
-  specs [callW_spec p n "struct_used_later", callW_spec p n "fvar_type_d"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-
 /-- **`proj_guard_rows`' word model** (its callees lifted). -/
 l_model pgrW_spec (p : Prog) (hf : p.lookup "proj_guard_rows" = some projGuardRowsL)
   fns [hf ↦ pgrW list]
   specs [callW_spec p n "env_find", callW_spec p n "const_ty_at",
-    callW_spec p n "open_pis_at_fvars_f", callW_spec p n "proj_guard_rows_at"]
+    callW_spec p n "opf_go", callW_spec p n "proj_guard_rows_at"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
@@ -56,284 +46,7 @@ def GRows (m : Mem) (ro : Word) (rows : Array (Nat × EIdx)) : Prop :=
   ∀ (i : Word) (h : i.toNat < rows.size), (spW m (ro + 2 * i)).toNat = (rows[i.toNat]'h).1 ∧
     HW (spW m (ro + 2 * i + 1)) ∧ decE (spW m (ro + 2 * i + 1)) = (rows[i.toNat]'h).2
 
-/-! ## The twin's steps -/
-
-theorem pgraT_done (cty : EIdx) (nP idx : Nat) (fvs : List EIdx) (j : Nat) (out : Array (Nat × EIdx))
-    (a : AState) (h : idx < j) : (projGuardRowsAt cty nP idx fvs j out).run a = .ok (out, a) := by
-  rw [projGuardRowsAt]; simp [h]; rfl
-
-theorem pgraT_step (cty : EIdx) (nP idx : Nat) (fvs : List EIdx) (j : Nat) (out : Array (Nat × EIdx))
-    (a a1 : AState) (u : Bool) (h : ¬ idx < j)
-    (hu : ((if j == idx then pure true else structUsedLater cty nP j : AM Bool)).run a = .ok (u, a1)) :
-    (projGuardRowsAt cty nP idx fvs j out).run a =
-      (if !u then projGuardRowsAt cty nP idx fvs (j + 1) out
-       else match fvs[nP + j]? with
-         | some x => do
-           let ty ← fvarTypeD x
-           projGuardRowsAt cty nP idx fvs (j + 1) (out.push (nP + j, ty))
-         | none => projGuardRowsAt cty nP idx fvs (j + 1) out).run a1 := by
-  rw [projGuardRowsAt]
-  by_cases hji : j = idx
-  · subst hji
-    simp only [beq_self_eq_true, ↓reduceIte] at hu
-    cases hu
-    simp [h]; rfl
-  · have hne : (j == idx) = false := by simpa using hji
-    simp only [hne, Bool.false_eq_true, ↓reduceIte] at hu
-    simp only [gt_iff_lt, h, ↓reduceIte, hne, Bool.false_eq_true, StateT.run_bind, hu]
-    rfl
-
-section
-variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
-
-/-- **`proj_guard_rows_at` refines `projGuardRowsAt` under `CoreS`**: the rows of fields `j, …,
-idx` read off the opened telescope's pool slice `(fo, fvs)`, appended to the rows `out` at `ro`
-on the stack (the top just past them). -/
-theorem pgra_ok (p : Prog) (_hf : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL)
-    (hus : UsF p) (hfd : p.lookup "fvar_type_d" = some fvarTypeDL)
-    (hev : p.lookup "e_view" = some eView) (cty nP idx fo fn ro : Word) (fvs : List EIdx)
-    (hc : H cty) (hB : nP.toNat + idx.toNat + 1 < 2 ^ 64) (hfn : fn.toNat = fvs.length) :
-    ∀ (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (j rn w : Word) (out : Array (Nat × EIdx)),
-      pgraW p n m cty nP idx fo fn j ro rn = some (w, m') →
-      CoreS dn m a vis fe M eb → IWOK m → (∃ mp, hbMR m mp) → IWSl m fo fvs →
-      j.toNat ≤ idx.toNat + 1 → GRows m ro out → rn.toNat = out.size →
-      (spTop m).toNat = ro.toNat + 2 * rn.toNat → ro.toNat + 2 * rn.toNat ≤ (m.arr64 SPN).size →
-      ∃ y a' M', (projGuardRowsAt (decI cty) nP.toNat idx.toNat fvs j.toNat out).run a = .ok (y, a') ∧
-        CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ IWOK m' ∧ IWGrow m m' ∧
-        (∃ mp, hbMR m' mp) ∧ GRows m' ro y ∧ w.toNat = y.size ∧
-        (spTop m').toNat = ro.toNat + 2 * w.toNat ∧ ro.toNat + 2 * w.toNat ≤ (m'.arr64 SPN).size ∧
-        StackGrew m m' ∧ a'.store = a.store := by
-  intro n
-  induction n with
-  | zero => intro m m' a M j rn w out h; rw [pgraW.eq_1] at h; cases h
-  | succ n ih =>
-  intro m m' a M j rn w out h hS hI hM hsl hj hrows hrn htop hro
-  have hspn := hS.spn
-  by_cases hlt : idx < j
-  · rw [pgraW.arm1 _ _ _ _ _ _ _ _ _ _ _ hlt] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨out, a, M, pgraT_done _ _ _ _ _ _ _ (UInt64.lt_iff_toNat_lt.mp hlt), hS, KeptAll.refl _ _,
-      hI, IWGrow.refl _, hM, hrows, hrn, htop, hro, StackGrew.refl _, rfl⟩
-  have hjle : j.toNat ≤ idx.toNat := by
-    exact Nat.le_of_not_lt (fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h'))
-  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hnpj : (nP + j).toNat = nP.toNat + j.toNat := by rw [UInt64.toNat_add]; omega
-  -- the `used` flag: a word `u` (the twin's `Bool`), the state after
-  obtain ⟨u, uw, m1, a1, hJ, hrunU, huw, hS1, hI1, hg1, hM1, hSt1, hst1⟩ :
-      ∃ (u : Bool) (uw : Word) (m1 : Mem) (a1 : AState),
-        pgraW.j1 p n cty nP idx fo fn j ro rn uw m1 = some (w, m') ∧
-        ((if j.toNat == idx.toNat then pure true else
-            structUsedLater (decI cty) nP.toNat j.toNat : AM Bool)).run a = .ok (u, a1) ∧
-        (uw ≠ 0 ↔ u = true) ∧ CoreS dn m1 a1 vis fe M eb ∧ IWOK m1 ∧ IWGrow m m1 ∧
-        (∃ mp, hbMR m1 mp) ∧ StackKept m m1 ∧ a1.store = a.store := by
-    by_cases hji : j = idx
-    · rw [pgraW.arm2 _ _ _ _ _ _ _ _ _ _ _ hlt hji] at h
-      refine ⟨true, 1, m, a, h, by simp [hji]; rfl, by simp, hS, hI, IWGrow.refl _, hM,
-        StackKept.refl _, rfl⟩
-    · rw [pgraW.arm3 _ _ _ _ _ _ _ _ _ _ _ hlt hji] at h
-      rcases hcu : callW p n "struct_used_later" [cty, nP, j] m with _ | ⟨r1, m1⟩
-      · rw [hcu, pgraW.k_struct_used_later.none] at h; cases h
-      rw [hcu, pgraW.k_struct_used_later.arm1] at h
-      obtain ⟨s'', hm, -, hu⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-        (structUsedLater_specV hus n _ [cty, nP, j]) (callW_mono hcu (Nat.le_add_right n 2))
-      rw [hm] at hu
-      obtain ⟨b, a1, hrun, hb, hM1, hS1, hSt1, hI1, hg1, hst1⟩ :=
-        ustW_okC (cty := cty) (nP := nP) (j := j) n (by have := hB; have := hjle; omega) hc hS hI hM hu
-      have hne : (j.toNat == idx.toNat) = false := by
-        simp only [beq_eq_false_iff_ne, ne_eq]; intro e; exact hji (UInt64.toNat_inj.mp e)
-      refine ⟨b, r1.headD 0, m1, a1, h, by simp only [hne, Bool.false_eq_true, ↓reduceIte]; exact hrun,
-        by rw [hb]; cases b <;> simp, hS1, hI1, hg1, hM1, hSt1, hst1⟩
-  have hsl1 := hsl.grow hg1
-  have hrows1 : GRows m1 ro out := fun i hi => by
-    have hb := hrows i hi
-    have e1 : (ro + 2 * i).toNat = ro.toNat + 2 * i.toNat := by
-      simp only [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-    have e2 : (ro + 2 * i + 1).toNat = ro.toNat + 2 * i.toNat + 1 := by
-      simp only [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-    rw [hSt1.below _ (UInt64.lt_iff_toNat_lt.mpr (by omega)),
-      hSt1.below _ (UInt64.lt_iff_toNat_lt.mpr (by omega))]
-    exact hb
-  have htop1 : (spTop m1).toNat = ro.toNat + 2 * rn.toNat := by rw [hSt1.top]; exact htop
-  have hro1 : ro.toNat + 2 * rn.toNat ≤ (m1.arr64 SPN).size := by rw [hSt1.size]; exact hro
-  have hstep := pgraT_step (decI cty) nP.toNat idx.toNat fvs j.toNat out a a1 u
-    (by omega) hrunU
-  -- the recursion without a new row
-  have hskip : ∀ (m2 : Mem), pgraW p n m1 cty nP idx fo fn (j + 1) ro rn = some (w, m2) → m2 = m' →
-      ∀ (T : AM (Array (Nat × EIdx))), T.run a1 =
-        (projGuardRowsAt (decI cty) nP.toNat idx.toNat fvs (j.toNat + 1) out).run a1 →
-      (projGuardRowsAt (decI cty) nP.toNat idx.toNat fvs j.toNat out).run a = T.run a1 →
-      ∃ y a' M', (projGuardRowsAt (decI cty) nP.toNat idx.toNat fvs j.toNat out).run a = .ok (y, a') ∧
-        CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ IWOK m' ∧ IWGrow m m' ∧
-        (∃ mp, hbMR m' mp) ∧ GRows m' ro y ∧ w.toNat = y.size ∧
-        (spTop m').toNat = ro.toNat + 2 * w.toNat ∧ ro.toNat + 2 * w.toNat ≤ (m'.arr64 SPN).size ∧
-        StackGrew m m' ∧ a'.store = a.store := by
-    intro m2 h2 hm2 T hT hrT
-    subst hm2
-    obtain ⟨y, a', M', hrun', hS', hK', hI', hg', hM', hrows', hw', htop', hro', hSt', hst'⟩ :=
-      ih m1 m2 a1 M (j + 1) rn w out h2 hS1 hI1 hM1 hsl1 (by omega) hrows1 hrn htop1 hro1
-    rw [hj1] at hrun'
-    exact ⟨y, a', M', by rw [hrT, hT, hrun'], hS', hK', hI', hg1.trans hg', hM', hrows', hw', htop', hro',
-      hSt1.toGrew.trans hSt', hst'.trans hst1⟩
-  by_cases hfv : uw ≠ 0 ∧ nP + j < fn
-  · rw [pgraW.j1.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hfv] at hJ
-    have hu : u = true := huw.mp hfv.1
-    have hlen : nP.toNat + j.toNat < fvs.length := by
-      have := UInt64.lt_iff_toNat_lt.mp hfv.2; omega
-    obtain ⟨w0, hw0, hH0, hd0⟩ := hsl1.2 _ hlen
-    have hrd : rdW (m1.arr64 IW) (fo + nP + j) = w0 := by
-      have hfo : (fo + nP + j).toNat = fo.toNat + (nP.toNat + j.toNat) := by
-        have := hsl1.1; have := hI1.iw; have := hI1.iwSize
-        rw [UInt64.toNat_add, UInt64.toNat_add]; omega
-      simp [rdW, hfo, hw0]
-    rw [hrd] at hJ
-    rcases hcf : callW p n "fvar_type_d" [w0] m1 with _ | ⟨r2, m2⟩
-    · rw [hcf, pgraW.k_fvar_type_d.none] at hJ; cases hJ
-    rw [hcf] at hJ
-    obtain ⟨s'', hm, -, hft⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-      (ftdAd_spec p hfd hev n _ w0) hcf
-    rw [hm] at hft
-    obtain ⟨hm21, hrunF, hlt2⟩ := ftdW_ok m1 m2 a1 hS1.arena.base w0 hH0 r2 hft
-    rw [hm21] at hJ
-    by_cases hab : Mem.len64 m1 (SPN : TieredArray) ≤ ro + 2 * rn + 1
-    · rw [pgraW.k_fvar_type_d.abort1 _ _ _ _ _ _ _ _ _ _ _ _ hab] at hJ; cases hJ
-    rw [pgraW.k_fvar_type_d.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hab] at hJ
-    have hsz1 := hS1.spn
-    have hro2 : (ro + 2 * rn).toNat = ro.toNat + 2 * rn.toNat := by
-      simp only [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-    have hro3 : (ro + 2 * rn + 1).toNat = ro.toNat + 2 * rn.toNat + 1 := by
-      rw [UInt64.toNat_add, hro2]; simp; omega
-    have hroom : ro.toNat + 2 * rn.toNat + 1 < (m1.arr64 SPN).size := by
-      have h1 := hab
-      simp only [Mem.len64, UInt64.le_iff_toNat_le, hro3] at h1
-      have : (UInt64.ofNat (m1.arr64 SPN).size).toNat = (m1.arr64 SPN).size := by
-        simp; omega
-      omega
-    generalize hm3 : ((m1.set64 SPN (ro + 2 * rn) (nP + j)).set64 SPN (ro + 2 * rn + 1)
-      (r2.headD 0)).set64 CTL 136 (ro + 2 * rn + 2) = m3 at hJ
-    have hf3 : MemFrame [SPN] [136] m1 m3 := by
-      rw [← hm3]
-      exact (((MemFrame.set64 m1 SPN (by decide) _ _).trans (MemFrame.set64 _ SPN (by decide) _ _)).mono
-        (by simp) (by simp)).trans ((MemFrame.setCtl _ 136 _).mono (by simp) (by simp))
-    have hS3 := hS1.frame_stk hf3 (by simp) (by simp)
-    obtain ⟨hI3, hg3⟩ := iwKeep hf3 (by decide) (by decide) hI1
-    have hM3 := hbMR_keep hf3 (by decide) (by decide) hM1
-    have hctl := hS1.ctl136
-    have hspn3 : ∀ x : Word, spW m3 x = if x = ro + 2 * rn + 1 then r2.headD 0
-        else if x = ro + 2 * rn then nP + j else spW m1 x := by
-      intro x; rw [← hm3]; simp only [spW]
-      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), L.Arena.rdW_set64, L.Arena.rdW_set64]
-      have e1 : (ro + 2 * rn).toNat < (m1.arr64 SPN).size := by omega
-      have e2 : (ro + 2 * rn + 1).toNat < ((m1.set64 SPN (ro + 2 * rn) (nP + j)).arr64 SPN).size := by
-        rw [Mem.size_arr64_set64]; omega
-      by_cases ha : x = ro + 2 * rn + 1
-      · subst ha; rw [ite_eq_left ⟨rfl, rfl, e2⟩, ite_eq_left rfl]
-      · by_cases hb : x = ro + 2 * rn
-        · subst hb
-          rw [ite_eq_right (fun h => ha h.2.1.symm), ite_eq_left ⟨rfl, rfl, e1⟩, ite_eq_right ha, ite_eq_left rfl]
-        · rw [ite_eq_right (fun h => ha h.2.1.symm), ite_eq_right (fun h => hb h.2.1.symm), ite_eq_right ha, ite_eq_right hb]
-    have htop3 : spTop m3 = ro + 2 * rn + 2 := by
-      rw [← hm3]; simp only [spTop]
-      rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by
-        rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; simp; omega⟩]
-    have hrn1 : (rn + 1).toNat = rn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hsz3 : (m3.arr64 SPN).size = (m1.arr64 SPN).size := hf3.size SPN
-    let out' := out.push (nP.toNat + j.toNat, decI (r2.headD 0))
-    have hrows3 : GRows m3 ro out' := by
-      intro i hi
-      simp only [out', Array.size_push] at hi
-      have e1 : (ro + 2 * i).toNat = ro.toNat + 2 * i.toNat := by
-        simp only [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
-      have e2 : (ro + 2 * i + 1).toNat = ro.toNat + 2 * i.toNat + 1 := by
-        rw [UInt64.toNat_add, e1]; simp; omega
-      by_cases hir : i.toNat < out.size
-      · have hb := hrows1 i hir
-        have n1 : ro + 2 * i ≠ ro + 2 * rn + 1 := fun e => by
-          have := congrArg UInt64.toNat e; rw [e1, hro3] at this; omega
-        have n2 : ro + 2 * i ≠ ro + 2 * rn := fun e => by
-          have := congrArg UInt64.toNat e; rw [e1, hro2] at this; omega
-        have n3 : ro + 2 * i + 1 ≠ ro + 2 * rn + 1 := fun e => by
-          have := congrArg UInt64.toNat e; rw [e2, hro3] at this; omega
-        have n4 : ro + 2 * i + 1 ≠ ro + 2 * rn := fun e => by
-          have := congrArg UInt64.toNat e; rw [e2, hro2] at this; omega
-        rw [hspn3, hspn3, ite_eq_right n1, ite_eq_right n2, ite_eq_right n3, ite_eq_right n4]
-        simp only [out', Array.getElem_push, hir, ↓reduceDIte]
-        exact hb
-      · have hie : i = rn := UInt64.toNat_inj.mp (by omega)
-        subst hie
-        have hidx : i.toNat = out.size := by omega
-        simp only [out', Array.getElem_push, hidx, Nat.lt_irrefl, ↓reduceDIte]
-        rw [hspn3, hspn3, ite_eq_right (fun e => by
-                  have := congrArg UInt64.toNat e; rw [hro2, hro3] at this; omega), ite_eq_left rfl, ite_eq_left rfl]
-        exact ⟨by simp [hnpj], hlt2, by simp; rfl⟩
-    obtain ⟨y, a', M', hrun', hS', hK', hI', hg', hM', hrows', hw', htop', hro', hSt', hst'⟩ :=
-      ih m3 m' a1 M (j + 1) (rn + 1) w out' hJ hS3 hI3 hM3 (hsl1.grow hg3) (by omega) hrows3
-        (by rw [hrn1, hrn]; simp [out'])
-        (by rw [htop3, hrn1]; rw [UInt64.toNat_add, hro2]; simp; omega)
-        (by rw [hrn1, hsz3]; omega)
-    have hSt3 : StackGrew m1 m3 := StackGrew.of_spnFrame hf3
-      (by rw [htop3, UInt64.le_iff_toNat_le, UInt64.toNat_add, hro2, htop1]; simp; omega)
-      (fun x hx => by
-        have hx' := UInt64.lt_iff_toNat_lt.mp hx
-        rw [htop1] at hx'
-        rw [hspn3, ite_eq_right (fun e => by subst e; omega), ite_eq_right (fun e => by subst e; omega)])
-    refine ⟨y, a', M', ?_, hS', hK', hI', hg1.trans (hg3.trans hg'), hM', hrows', hw', htop', hro',
-      hSt1.toGrew.trans (hSt3.trans hSt'), hst'.trans hst1⟩
-    rw [hstep, hu]
-    simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-    rw [List.getElem?_eq_getElem hlen, ← hd0]
-    simp only [StateT.run_bind]
-    rw [show (decE w0 : EIdx) = decI w0 from rfl, hrunF]
-    rw [hj1] at hrun'
-    exact hrun'
-  · rw [pgraW.j1.arm2 _ _ _ _ _ _ _ _ _ _ _ _ hfv] at hJ
-    refine hskip m' hJ rfl _ rfl ?_
-    rw [hstep]
-    by_cases hu : u = true
-    · subst hu
-      have hge : ¬ nP.toNat + j.toNat < fvs.length := by
-        intro hl; apply hfv; refine ⟨huw.mpr rfl, UInt64.lt_iff_toNat_lt.mpr ?_⟩; omega
-      simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
-      rw [List.getElem?_eq_none (by omega)]
-    · simp only [Bool.not_eq_true] at hu; subst hu; simp
-
-end
-
 /-! ## `proj_guard_rows` -/
-
-/-- `openPisAtFvarsF` keeps the caches, the pins and the level store. -/
-theorem keepsW_opfGo : ∀ (n : Nat) (acc : Array EIdx) (h : EIdx) (i : Nat),
-    Keeps cpl (openPisAtFvarsFGo acc n h i) := by
-  intro n
-  induction n with
-  | zero => intro acc h i; rw [openPisAtFvarsFGo]
-            exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => Keeps.pure _
-  | succ n ih =>
-    intro acc h i; rw [openPisAtFvarsFGo]
-    split
-    · refine Keeps.bind (keeps_view _) fun v => ?_
-      split
-      · exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => Keeps.bind (keepsW_internE _) fun _ =>
-          Keeps.bind (ih _ _ _) fun x => by split <;> exact Keeps.pure _
-      · exact Keeps.pure _
-    · exact Keeps.pure _
-
-theorem keepsW_opa : ∀ (n : Nat) (h : EIdx) (i : Nat), Keeps cpl (openPisAtFvars n h i) := by
-  intro n
-  induction n with
-  | zero => intro h i; rw [openPisAtFvars]; exact Keeps.pure _
-  | succ n ih =>
-    intro h i; rw [openPisAtFvars]
-    split
-    · refine Keeps.bind (keeps_view _) fun v => ?_
-      split
-      · exact Keeps.bind (keepsW_internE _) fun _ => Keeps.bind (keepsW_inst1Fast _ _ _ _) fun _ =>
-          Keeps.bind (ih _ _) fun x => by split <;> exact Keeps.pure _
-      · exact Keeps.pure _
-    · exact Keeps.pure _
-
-theorem keepsW_opfF (n : Nat) (e : EIdx) (i : Nat) : Keeps cpl (openPisAtFvarsF n e i) := by
-  unfold openPisAtFvarsF
-  exact Keeps.bind (keepsW_opfGo _ _ _ _) fun x => by split <;> first | exact Keeps.pure _ | exact keepsW_opa _ _ _
 
 /-- A table record's parameter count (word `q + 5`) and constructor (word `q + 6`). -/
 theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
@@ -364,16 +77,11 @@ theorem decCV_nameRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R
 theorem cv_eta (cv : IConstantVal) : cv = ⟨cv.name, cv.levelParams, cv.type⟩ := rfl
 
 /-- What `proj_guard_rows`' refinement needs of a program. -/
-structure PgrProg (p : Prog) : Prop where
+structure PgrProg (p : Prog) : Prop extends PgraProg p where
   pgr : p.lookup "proj_guard_rows" = some projGuardRowsL
-  pgra : p.lookup "proj_guard_rows_at" = some projGuardRowsAtL
   envFind : p.lookup "env_find" = some envFindL
   envRowGet : p.lookup "env_row_get" = some envRowGetL
   baseRowGet : p.lookup "base_row_get" = some baseRowGetL
-  ftd : p.lookup "fvar_type_d" = some fvarTypeDL
-  eView : p.lookup "e_view" = some eView
-  us : UsF p
-  opf : OpfF p
   cl : CoreStageClosed p
 
 
@@ -524,26 +232,13 @@ theorem pgrT_none (fe : IFEnv) (entry : IProjEntry) (us : LsIdx) (a : AState)
     (h : fe.find? entry.ctor = none) : (projGuardRows fe entry us).run a = .ok (none, a) := by
   simp [projGuardRows, h]; rfl
 
-theorem pgrT_some (fe : IFEnv) (entry : IProjEntry) (us : LsIdx) (a a2 a3 : AState) (ci : IConstantInfo)
-    (cty : EIdx) (x : Option (List EIdx × EIdx)) (h : fe.find? entry.ctor = some ci)
-    (h2 : (constTyAt ci.toConstantVal us).run a = .ok (cty, a2))
-    (h3 : (openPisAtFvarsF (entry.numParams + entry.idx + 1) cty 0).run a2 = .ok (x, a3)) :
-    (projGuardRows fe entry us).run a =
-      (match x with
-       | some (fvs, _) => do
-         let rows ← projGuardRowsAt ci.toConstantVal.type entry.numParams entry.idx fvs 0 #[]
-         pure (some rows)
-       | none => pure none : AM (Option (Array (Nat × EIdx)))).run a3 := by
-  simp only [projGuardRows, h, StateT.run_bind, h2, except_ok_bind, h3]
-  rcases x with _ | ⟨fvs, b⟩ <;> rfl
-
 section
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
 
 /-- **`proj_guard_rows` refines `projGuardRows` under `CoreS`** (the pool's `IWOK` and the `hb` memo
-at entry; the L code aborts where the parameter count plus field index wraps; `constTyAt_lkept` for the level
-readbacks): `env_find`, `const_ty_at` (`ConstTyAtOK`), `open_pis_at_fvars_f` (`opfF_okC`),
-`proj_guard_rows_at` (`pgra_ok`). -/
+at entry; `constTyAt_lkept` and the guard's `Keeps cpl` for the level readbacks): `env_find`,
+`const_ty_at` (`ConstTyAtOK`), `opf_go` (`opfGo_okC`: the substitution on the stack at the old top,
+the twin's `acc`), `proj_guard_rows_at` (`pgra_okC`: the rows above it). -/
 theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (q i us : Word) (tbl : IProjTable)
     (r : List Word) (hS : CoreS dn m a vis fe M eb) (hI : IWOK m) (hM : ∃ mp, hbMR m mp)
@@ -589,16 +284,9 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   -- `const_ty_at`
   rcases c2 : callW p n "const_ty_at" [erRd m1 (c + 1), erRd m1 (c + 2), erRd m1 (c + 3),
       erRd m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
-  · rw [c2, pgrW.k_const_ty_at.none] at hW; cases hW
-  by_cases gk : erRd m1 (q + 5) + i + 1 ≤ erRd m1 (q + 5)
-  · rw [c2, pgrW.k_const_ty_at.abort1 (hc1 := gk)] at hW; cases hW
-  rw [c2, pgrW.k_const_ty_at.arm1 (hc1 := gk)] at hW
-  have hB : tbl.numParams + i.toNat + 1 < 2 ^ 64 := by
-    have hnp' : tbl.numParams = (erRd m1 (q + 5)).toNat := hnp
-    rw [hnp']
-    simp only [UInt64.le_iff_toNat_le, UInt64.toNat_add] at gk
-    have := (erRd m1 (q + 5)).toNat_lt; have := i.toNat_lt
-    simp at gk; omega
+  · rw [c2] at hW; cases hW
+  rw [c2] at hW
+  simp only [pgrW.k_const_ty_at] at hW
   have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (hCT n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
   have hcvE : ci.toConstantVal = ⟨decI (erRd m1 (c + 1)), ci.toConstantVal.levelParams,
@@ -611,79 +299,111 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   rw [← hcvE] at hS2
   have hr2 : HW (r2.headD 0) := h2.resOk
   have hfr2 := callW_coreFrame hP.cl (mem_stageCoreFns (List.mem_append_right _ (coreFn_of (by decide))) (by simp [coreLeafOnly])) c2
-  obtain ⟨hI2, hg2⟩ := hfr2.2 hI
-  have hM2 := callW_coreHb hP.cl (mem_stageCoreFns (List.mem_append_right _ (coreFn_of (by decide))) (by simp [coreLeafOnly])) c2 hM
+  obtain ⟨-, hg2⟩ := hfr2.2 hI
   generalize ha2 : AM.st (constTyAt ci.toConstantVal (decI us)) a = a2 at hrun2 hS2
-  -- `open_pis_at_fvars_f`
-  rcases c3 : callW p n "open_pis_at_fvars_f" [erRd m1 (q + 5) + i + 1, r2.headD 0, 0] m2 with
-    _ | ⟨r3, m3⟩
-  · rw [c3, pgrW.k_open_pis_at_fvars_f.none] at hW; cases hW
-  rw [c3] at hW
-  have hopf := L.Ind.callW_opfF hP.opf c3
-  obtain ⟨x3, a3, M3, hrun3, hS3, hK3, hSt3, htb, hres3⟩ := opfF_okC _ _ _ hr2 hopf hS2 hI2
-  obtain ⟨hI3, hg3⟩ := opfF_grow hopf hI2
-  have hM3 := hbMR_keep (opfF_frame hopf) (by decide) (by decide) hM2
-  have hkp := (keepsW_opfF _ _ _).run hrun3
-  have hk3 : (erRd m1 (q + 5) + i + 1).toNat = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).idx + 1 := by
-    show _ = tbl.numParams + i.toNat + 1
-    rw [hnp] at hB ⊢
-    rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
-  rw [hk3] at hrun3
-  have hrunT := pgrT_some fe (tbl.entry i.toNat) (decI us) a a2 a3 ci _ x3 hfind' hrun2 hrun3
   have hlk2 : ∀ h l, denoteL a.store.ls h = some l → denoteL a2.store.ls h = some l :=
     fun h l hd => constTyAt_lkept _ _ a _ a2 hrun2 h l hd
+  -- the stack top's capacity
+  generalize hco : rdW (m2.arr64 CTL) 136 = co at hW
+  by_cases gl : m2.len64 SPN < co
+  · rw [ite_eq_left gl] at hW; cases hW
+  rw [ite_eq_right gl] at hW
+  have hsp2 := hS2.spn
+  have hcob : co.toNat ≤ (m2.arr64 SPN).size := by
+    have h' := UInt64.not_lt.mp gl
+    rw [UInt64.le_iff_toNat_le, Mem.len64, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h'
+    exact h'
+  have htop2 : spTop m2 = co := hco
+  have ht12 : spTop m2 = spTop m1 := hSt2.top
+  -- `opf_go`: the parameters opened, the substitution on the stack at `co`
+  rcases c3 : callW p n "opf_go" [erRd m1 (q + 5), r2.headD 0, 0, co, 0] m2 with _ | ⟨r3, m3⟩
+  · rw [c3] at hW; cases hW
+  rw [c3] at hW
+  simp only [pgrW.k_opf_go] at hW
+  obtain ⟨hfr3, hg3, hbk3, hpl3⟩ := pg_frame hP.toPgraProg (f := "opf_go") (h := c3)
+  rw [callW_opfP hP.opf] at c3
+  obtain ⟨x3, a3, M3, hrun3, hS3, hK3, hsz3, hkb3, hO, hacc⟩ := opfGo_okC n m2 m3 a2 M2 _ _ 0 co 0 #[] r3 c3
+    hS2 hr2 (by simpa using L.Arena.SpineR.nil_at m2 _ hcob) (by rw [hco]; simp) (by simp; omega)
   have hlk3 : a3.store.lss = a2.store.lss := by
-    simp only [cpl, Prod.mk.injEq] at hkp; exact hkp.2.2
+    have := (keepsW_opfRawGo _ _ _ _).run hrun3; simp only [cpl, Prod.mk.injEq] at this; exact this.2.2
+  have hnpE : (tbl.entry i.toNat).numParams = (erRd m1 (q + 5)).toNat := hnp
+  have hrunT : ∀ (y : Option (Array (Nat × EIdx))) (a4 : AState),
+      (match x3 with
+        | some (_, acc, rr) => projGuardRowsAt (tbl.entry i.toNat) acc rr
+        | none => pure none).run a3 = .ok (y, a4) →
+      (projGuardRows fe (tbl.entry i.toNat) (decI us)).run a = .ok (y, a4) := by
+    intro y a4 h4
+    simp only [projGuardRows, hfind', StateT.run_bind, hrun2, except_ok_bind]
+    rw [hnpE]; simp only [UInt64.toNat_zero] at hrun3; rw [hrun3]; simp only [except_ok_bind]
+    cases x3 with
+    | none => exact h4
+    | some t => obtain ⟨_, _, _⟩ := t; exact h4
   cases x3 with
   | none =>
-    have g3 : r3.headD 0 = 0 := hres3
-    rw [pgrW.k_open_pis_at_fvars_f.arm1 _ _ _ _ _ _ _ g3] at hW
+    have g3 : r3.headD 0 = 0 := hO
+    rw [ite_eq_left g3] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    refine ⟨none, a3, by rw [hrunT]; rfl, ⟨M3, hS3, hK2.trans hK3, (hSt2.trans hSt3).toGrew⟩,
+    have hfc := MemFrame.setCtl m3 136 co
+    have hS4 := hS3.frame_stk hfc (by simp) (by simp)
+    have htop4 : spTop (m3.set64 CTL 136 co) = co := by
+      simp only [spTop]; rw [L.Arena.rdW_set64, ite_eq_left ⟨rfl, rfl, by have := hS3.ctl136; simpa using this⟩]
+    have hspn4 : (m3.set64 CTL 136 co).arr64 SPN = m3.arr64 SPN := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    refine ⟨none, a3, hrunT none a3 rfl, ⟨M3, hS4, hK2.trans hK3, ?_⟩,
       fun h l hd => by have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hlk3]; exact this,
-      rfl, hI3, hg2.trans hg3, hM3⟩
-  | some fb =>
-    obtain ⟨fvs, b⟩ := fb
-    obtain ⟨g3, hfn, hsl, -, -⟩ := hres3
-    rw [pgrW.k_open_pis_at_fvars_f.arm2 _ _ _ _ _ _ _ (by rw [g3]; decide)] at hW
-    -- the records are kept across `const_ty_at` and `open_pis_at_fvars_f`
-    have hE0 : m3.arr64 EREC = m1.arr64 EREC :=
-      ((opfF_frame hopf).arr EREC (by decide) (by decide)).trans (hfr2.1.arr EREC coreFrA_erec (by decide))
-    have hE1 : m3.arr64 (tier1 EREC) = m1.arr64 (tier1 EREC) :=
-      ((opfF_frame hopf).arr (tier1 EREC) (by decide) (by decide)).trans
-        (hfr2.1.arr (tier1 EREC) coreFrA_erec1 (by decide))
-    rw [erRd_congr hE0 hE1] at hW
+      rfl, hS4.iw, hg2.trans (hg3.trans (IWGrow.of_keep hfc ⟨by decide, by decide, by decide⟩
+        ⟨by decide, by decide, by decide⟩)), hS4.memos.hb⟩
+    refine hSt2.toGrew.trans ⟨by rw [htop4, ← htop2]; exact UInt64.le_refl _, by rw [hspn4, hsz3],
+      fun w hw => ?_, hbk3.trans (BKept.of_frame hfc (by decide) (by decide)),
+      hpl3.trans (PoolGrew.of_frame hfc (by decide) (by decide))⟩
+    simp only [spW, hspn4]
+    exact hkb3 w (by rw [htop2] at hw; simpa [UInt64.lt_iff_toNat_lt] using hw)
+  | some t =>
+    obtain ⟨fvs, acc, rr⟩ := t
+    obtain ⟨g3, hrr, hdrr, htop3, hsl3, hbel3⟩ := hO
+    have hacc' : acc = fvs.toArray := by simpa using hacc (fvs, acc, rr) rfl
+    subst hacc'
+    rw [ite_eq_right (by rw [g3]; decide)] at hW
+    simp only [UInt64.add_zero] at htop3 hsl3 hbel3
     generalize hro : rdW (m3.arr64 CTL) 136 = ro at hW
-    rcases c4 : callW p n "proj_guard_rows_at" [erRd m1 (c + 4), erRd m1 (q + 5), i, r3.tail.headD 0,
-        r3.tail.tail.headD 0, 0, ro, 0] m3 with _ | ⟨r4, m4⟩
-    · rw [c4, pgrW.k_proj_guard_rows_at.none] at hW; cases hW
-    rw [c4, pgrW.k_proj_guard_rows_at.arm1] at hW
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (pgraW_spec p hP.pgra n _ _ _ _ _ _ _ _ _) c4
-    rw [hs4] at hW4
-    have htop3 : spTop m3 = spTop m1 := hSt3.top.trans hSt2.top
-    have hro' : ro = spTop m1 := by rw [← hro, ← htop3]; rfl
-    have hsz31 : (m3.arr64 SPN).size = (m1.arr64 SPN).size := hSt3.size.trans hSt2.size
-    have htb' : (spTop m1).toNat ≤ (m1.arr64 SPN).size := by
-      rw [← hSt2.top, ← hSt2.size]; exact htb
-    obtain ⟨y, a4, M4, hrun4, hS4, hK4, hI4, hg4, hM4, hrows4, hw4, htop4, -, hSt4, hst4⟩ :=
-      pgra_ok p hP.pgra hP.us hP.ftd hP.eView _ _ _ _ _ ro fvs hty32
-        (by rw [← hnp]; exact hB) hfn n m3 m4 a3 M3 0 0 (r4.headD 0) #[] hW4 hS3 hI3 hM3 hsl
-        (by simp) (fun i hi => absurd hi (by simp)) rfl
-        (by rw [hro', htop3]; simp) (by rw [hro', hsz31]; simpa using htb')
-    have hty' : ci.toConstantVal.type = decI (erRd m1 (c + 4)) := hty
-    refine ⟨some y, a4, ?_, ⟨M4, hS4, hK2.trans (hK3.trans hK4), (hSt2.trans hSt3).toGrew.trans hSt4⟩,
-      fun h l hd => by
-        have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hst4, hlk3]; exact this,
-      ⟨by simp, by simp [hro'], hw4.symm, by rw [← hro']; exact hrows4,
-        by rw [htop4, ← hro', hw4]; simp⟩, hI4, hg2.trans (hg3.trans hg4), hM4⟩
-    rw [hrunT]
-    simp only [StateT.run_bind, hty']
-    rw [show (tbl.entry i.toNat).numParams = (erRd m1 (q + 5)).toNat from hnp,
-      show (tbl.entry i.toNat).idx = i.toNat from rfl]
-    rw [show (0 : Nat) = (0 : Word).toNat from rfl, hrun4]
-    rfl
+    rcases c4 : callW p n "proj_guard_rows_at" [i, co, erRd m1 (q + 5), r3.tail.headD 0, ro] m3 with
+      _ | ⟨r4, m4⟩
+    · rw [c4] at hW; cases hW
+    rw [c4] at hW
+    simp only [pgrW.k_proj_guard_rows_at] at hW
+    obtain ⟨-, hg4, hbk4, hpl4⟩ := pg_frame hP.toPgraProg (f := "proj_guard_rows_at") (h := c4)
+    have hb3 := hsl3.bound
+    have hsz32 : (m3.arr64 SPN).size = (m2.arr64 SPN).size := hsz3
+    have hro' : ro.toNat = co.toNat + (erRd m1 (q + 5)).toNat := by
+      rw [← hro, htop3, UInt64.toNat_add]; omega
+    obtain ⟨y, a4, M4, hrun4, hS4, hK4, hsz4, ht4, hkb4, hres4⟩ := pgra_okC hP.toPgraProg n
+      (tbl.entry i.toNat) rfl hnpE c4 hS3 hrr hsl3 (by simp only [spTop]; rw [hro]; omega) hro
+      (by simp only [spTop]; rw [hro]; omega)
+    have hlk4 : a4.store.lss = a3.store.lss := by
+      have := (keepsW_pgra _ _ _).run hrun4; simp only [cpl, Prod.mk.injEq] at this; exact this.2.2
+    have hgrew : StackGrew m1 m4 := by
+      refine hSt2.toGrew.trans ⟨?_, by rw [hsz4, hsz32], fun w hw => ?_, hbk3.trans hbk4, hpl3.trans hpl4⟩
+      · rw [UInt64.le_iff_toNat_le, htop2]; simp only [spTop] at ht4 ⊢; rw [hro] at ht4; omega
+      · rw [htop2, UInt64.lt_iff_toNat_lt] at hw
+        rw [hkb4 w (by simp only [spTop]; rw [hro]; omega), hbel3 w hw]
+    have hlk : ∀ h l, denoteL a.store.ls h = some l → denoteL a4.store.ls h = some l :=
+      fun h l hd => by have := hlk2 h l hd; simp only [EStore.ls] at this ⊢; rw [hlk4, hlk3]; exact this
+    have hIW : IWGrow m1 m4 := hg2.trans (hg3.trans hg4)
+    cases y with
+    | none =>
+      have g4 : r4.headD 0 = 0 := hres4
+      rw [ite_eq_left g4] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨none, a4, hrunT none a4 (by rw [hdrr] at hrun4; exact hrun4), ⟨M4, hS4, hK2.trans (hK3.trans hK4), hgrew⟩, hlk, rfl,
+        hS4.iw, hIW, hS4.memos.hb⟩
+    | some rows =>
+      obtain ⟨g4, hsz, hrows, hbr⟩ := hres4
+      rw [ite_eq_right (by rw [g4]; decide)] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨some rows, a4, hrunT _ a4 (by rw [hdrr] at hrun4; exact hrun4), ⟨M4, hS4, hK2.trans (hK3.trans hK4), hgrew⟩, hlk,
+        ⟨by simp, ?_, by simpa using hsz, by simpa using hrows, by simpa using hbr⟩,
+        hS4.iw, hIW, hS4.memos.hb⟩
+      simp only [List.tail_cons, List.headD_cons]
+      rw [← ht12, htop2, hro']; omega
 
 end
 

@@ -13,7 +13,6 @@ import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndT.BncAfr
 public import ConAgua.Arena.IndPartsSpec.BmoW
-import ConAgua.Arena.IndPartsSpec.Bf
 import ConAgua.Arena.IndPartsSpec.BrsW
 import ConAgua.Arena.IndRealPartsC1
 import ConAgua.Arena.IndInstallSpec.DomsW

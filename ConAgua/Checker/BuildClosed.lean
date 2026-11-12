@@ -151,6 +151,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.NatSized
 
 @[expose] public section
 
@@ -169,20 +170,18 @@ open L.Arena L.Compiler
 
 /-- `build_index`'s call closure in the checker's program. -/
 def biFns : List FnName :=
-  ["build_index", "intern_letE", "letE_find", "letE_push", "app_count", "app_fill", "app_find", "app_push", "at_block_go", "base_row_get",
-   "base_row_set", "basis_at_block", "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo",
+  ["build_index", "sl_snoc", "intern_letE", "letE_find", "letE_push", "app_count", "app_fill", "app_find", "app_push", "base_row_get",
+   "base_row_set", "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo",
    "bb_node", "block_caps_at", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
    "block_caps_ctor_names", "block_caps_fin", "block_caps_head", "block_caps_one",
    "block_constants", "block_counts", "block_counts_head", "block_counts_pure", "block_ctors",
    "block_ctors_go", "block_formers", "block_formers_go", "block_groups", "block_groups_go",
    "block_groups_one", "block_is_rec", "block_is_rec_go", "block_is_rec_member",
    "block_member_counts", "block_member_counts_find", "block_member_counts_go", "block_names_eq",
-   "block_rec", "block_recs", "block_shape", "block_shape_all_ctors", "block_shape_all_ctors_go",
-   "block_shape_build", "block_shape_ctors_copy", "block_shape_ctors_of", "block_shape_declared",
+   "block_rec", "block_recs", "read_block", "block_shape_all_ctors", "block_shape_all_ctors_go",
+   "read_block_at", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "block_shape_ctors_copy", "block_shape_ctors_of", "block_shape_declared",
    "block_shape_fin", "block_shape_large", "block_shape_lps", "block_shape_member_names",
-   "block_shape_members_of", "block_shape_names_of", "block_shape_pack", "block_shape_pins_ctors",
-   "block_shape_pins_formers", "block_shape_pins_ok", "block_shape_pins_recs",
-   "block_shape_recs_of", "block_shape_result_sort", "block_shape_seal", "block_shape_tail",
+   "block_shape_members_of", "block_shape_names_of", "block_shape_pack", "block_shape_recs_of", "block_shape_result_sort", "block_shape_seal", "block_shape_tail",
    "block_split", "block_split_ctors", "block_split_recs", "block_table", "block_tables",
    "bm_clear", "bm_find", "bm_put", "bvar_b", "bvar_find", "bvar_push", "ci_at_lps", "const_find",
    "const_push", "ctor_info_rec", "ctor_member", "cv_at_lps", "decl_constants",
@@ -196,7 +195,7 @@ def biFns : List FnName :=
    "ilpl_clear", "ilpl_find", "ilpl_put", "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find",
    "imax_push", "ind_block_to_erec", "ind_copy_go", "ind_info_rec", "ind_rec_copy", "inst_app",
    "inst_entry", "inst_forall", "inst_go", "inst_lam", "inst_let", "inst_lp", "inst_lp_core",
-   "inst_pis_at_lift", "inst_proj", "instantiate1_fast", "instantiate1_lift_fast", "intern_app",
+   "inst_proj", "instantiate1_fast", "instantiate_lift_fast", "intern_app",
    "intern_bvar", "intern_const", "intern_forall", "intern_fvar", "intern_imax", "intern_lam",
    "intern_lit", "intern_ls", "intern_ls_iw", "intern_max", "intern_nanon", "intern_nnum",
    "intern_nstr", "intern_param", "intern_proj", "intern_sort", "intern_succ", "intern_zero",

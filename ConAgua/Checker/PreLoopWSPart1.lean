@@ -76,6 +76,7 @@ import all ConAgua.Arena.NatMul
 import all ConAgua.Arena.NatPow
 import all ConAgua.Arena.NatShl
 import all ConAgua.Arena.NatShr
+import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins

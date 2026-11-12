@@ -116,7 +116,7 @@ theorem frozen_drop1 : frozen.drop 1 =
       [(ra, ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩), (sa, ⟨sa, fzSlotExt sa⟩)]) ++
     fzPCols.map (fun (c, ca) => (c, ⟨c, fzPExt ca⟩)) ++
     fzCols.map (fun (c, ca) => (c, ⟨c, fzCtl ca⟩)) ++
-    [(PINS, ⟨PINS, fzC 72⟩),
+    [(PINS, ⟨PINS, fzC 73⟩),
      (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
      (EIXS, ⟨EIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
      (EIXN, ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),
@@ -197,8 +197,8 @@ theorem truncFrozen_pcol (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzPCo
     exact .inl (.inl (.inr ⟨_, h, rfl⟩)))
   rw [this, fzExt_pext]
 
-theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 72 := by
-  have := truncFrozen_mem m (x := PINS) (z := ⟨PINS, fzC 72⟩) (by rw [frozen_drop1]; simp)
+theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 73 := by
+  have := truncFrozen_mem m (x := PINS) (z := ⟨PINS, fzC 73⟩) (by rw [frozen_drop1]; simp)
   rw [this]; rfl
 
 theorem truncFrozen_eixa (m : Mem) : (truncFrozen m).arr64 EIXA =

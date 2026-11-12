@@ -2,13 +2,13 @@ module
 
 public import ConAgua.Arena.IndT.BlockC
 public import ConAgua.Arena.IndDeclConstsFrame
-public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndInstallSpec.BlockRawRec
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.RecGenSpec.FlushStage
 import ConAgua.Arena.ScratchRefine
 import ConAgua.Checker.NoVerdictTree
+import ConRon.Bridge.Inductives.Install
 
 @[expose] public section
 
@@ -76,18 +76,21 @@ theorem brRefS_of (hP : RecsProg p) (hL : DcLeafProg p)
   obtain ⟨hDM, -⟩ := dc_keep hL dcF_brs d hM.dc
   exact ⟨cis, a', hrun, hS', BkMem.ofDc hDM (dc0_keepI1 hL dc0F_brs d hM.ind.i1), hg, hd, hb⟩
 
-/-- **`block_tables`' contract** (`btsW_ok`). -/
+/-- **`block_tables`' contract** (`btsW_ok`; the twin's step by con-ron's `blockTables_run`). -/
 theorem btRefS_of (hP : TablesProg p) (hL : DcLeafProg p)
-    (hGnv : G → closedNV p _root_.L.Checker.nvFns = true) : BtRefS G p := by
-  intro n vis fe m a pp mo ml bs mss hS hM hnP hq hmss
+    (hGnv : G → closedNV p _root_.L.Checker.nvFns = true) : BtRefS G p dn := by
+  intro n vis fe env m a pp mo ml bs bsP mss msP hB hnP hq hmss hdP hms
   rcases c : callE p n "block_tables" [pp, mo, ml] m with e | ⟨r, m'⟩
   · exact fun hG => ErrClaim.of_callE_nv (hGnv hG) (_root_.L.Checker.nv_mem (by decide +kernel)) c
   have d := callW_of_callE c
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (bts_spec hP n _ pp mo ml) d
-  obtain ⟨ts, a', hrun, hd, hb, hS', hg, hA'⟩ := btsW_ok hP pp bs vis fe (by omega) n m s'.mem a mo ml mss r
-    hS hM.abs hq hmss hW
-  obtain ⟨hDM, -⟩ := dc_keep hL L.Ind.dcF_bts d hM.dc
-  exact ⟨ts, a', hrun, hS', BkMem.ofDc hDM hA'.i1, hg, hd, hb⟩
+  obtain ⟨ts, a', hrun, hd, hS', hg, hA'⟩ := btsW_ok hP pp bs vis fe (by omega) n m s'.mem a mo ml mss r
+    hB.c.stage hB.abs hq hmss hW
+  obtain ⟨hDM, -⟩ := dc_keep hL L.Ind.dcF_bts d hB.mem.dc
+  have hM' := BkMem.ofDc hDM hA'.i1
+  obtain ⟨ps, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run mss msP hB.c.check.state hdP hms hrun
+  exact ⟨ts, a', hrun, ⟨⟨StageC.of_check hB.c hS' hM'.abs (ps.toCore hB.c.check).ok ps.ext, hM'.ind, hM'.abs⟩,
+    hg, ps.toInst⟩, hd⟩
 
 theorem dcF_bir : "block_is_rec" ∈ dcFns := List.elem_iff.mp (by decide)
 theorem dc0F_bir : "block_is_rec" ∈ dc0Fns := List.elem_iff.mp (by decide)

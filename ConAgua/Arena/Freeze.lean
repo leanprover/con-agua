@@ -44,7 +44,7 @@ there), its derived or hash column `C[0‥count₀)`; the stream index's rows `E
 table rows `TIX*[0‥2 count₀)` (`Env.lean`; a job's own layer is the worker's own); the pool's
 tier 0 `POOL[0‥CTL[0])` (lane tierpool: after the index build the scratch flag is off and `CTL[0]`
 is tier 0's top; a job allocates in `POOL⟨1⟩`, the worker's own, and saves the tier-0 top in
-`PT0`, also the worker's); `PINS[0‥72)`, `EREC[0‥CTL[129])` (tier 0; a job's records are tier 1,
+`PT0`, also the worker's); `PINS[0‥73)`, `EREC[0‥CTL[129])` (tier 0; a job's records are tier 1,
 the worker's), `FIRSTS[0‥DECL[0])`, the front's records `DECL[0‥1 + 8 DECL[0])` and their pool
 `DLP[0‥1 + DLP[0])` (every job reads its record); and one **seed**, which entry 2 copies into its
 own array before the first job: `CTLF` (`CTL[0‥256)`).
@@ -104,7 +104,7 @@ def frozen : List (ArrId × Fz) :=
     [(ra, ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩), (sa, ⟨sa, fzSlotExt sa⟩)]) ++
   fzPCols.map (fun (c, ca) => (c, ⟨c, fzPExt ca⟩)) ++
   fzCols.map (fun (c, ca) => (c, ⟨c, fzCtl ca⟩)) ++
-  [(PINS, ⟨PINS, fzC 72⟩),
+  [(PINS, ⟨PINS, fzC 73⟩),
    (EIXA, ⟨EIXA, .bin .mul (fzC 2) (fzCtl nanonCS.ca.toNat)⟩),
    (EIXS, ⟨EIXS, .bin .mul (fzC 2) (fzCtl nstrCS.ca.toNat)⟩),
    (EIXN, ⟨EIXN, .bin .mul (fzC 2) (fzCtl nnumCS.ca.toNat)⟩),

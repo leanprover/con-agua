@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.LoopT
+import ConAgua.Arena.IndSumSpec.StructUsedHb
+import ConAgua.Arena.IndTwin
 public import ConAgua.Arena.IndInstallSpec.Frame
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPosSpec.Mfr
@@ -164,26 +166,62 @@ theorem usLeaf_rc {p : Prog} (hus : UsF p) :
     let ⟨t, ht⟩ := hR.ta
     ⟨usLeaf_pos hus n vs m r m' h hR.pos, t, taMR_mfr (usLeaf_coreFr hus h).mfr (by decide) (by decide) ht⟩
 
-/-- The leaf of the arms that reach the core. -/
-def usLeaves : List FnName := ["struct_used_later"]
+/-- The `hb` memo's two queries, as leaves (the projection guard calls them directly): a core
+frame (`coreFr_hl`). -/
+theorem hlLeaf_coreFr {p : Prog} (hl : ProgHas p hbLeafP) {g : FnName} (hg : g ∈ hbLeafFns) {n : Nat}
+    {vs : List Word} {m m' : Mem} {r : List Word} (h : callW p n g vs m = some (r, m')) : CoreFr m m' :=
+  callW_of_triple (Q := CoreFr m) (R := CoreFr m) (coreFr_hl hl hg n m vs) h (coreFr_wframe.refl m)
+
+theorem hlLeaf_hb {p : Prog} (hl : ProgHas p hbLeafP) {g : FnName}
+    (hg : g = "has_loose_b_var_b_fast" ∨ g = "has_loose_bvar_in") :
+    ∀ n vs m r m', callW p n g vs m = some (r, m') → HbMemo m → HbMemo m' :=
+  fun _ _ _ _ _ h hM => ((hlLeaf_run hl hg h).2 hM).2
+
+theorem hlLeaf_pos {p : Prog} (hl : ProgHas p hbLeafP) {g : FnName}
+    (hg : g = "has_loose_b_var_b_fast" ∨ g = "has_loose_bvar_in") :
+    ∀ n vs m r m', callW p n g vs m = some (r, m') → PosMR m → PosMR m' :=
+  fun n vs m r m' h hP => hP.setHb (hlLeaf_coreFr hl (by rcases hg with rfl | rfl <;> decide) h).mfr
+    (hlLeaf_hb hl hg n vs m r m' h hP.hb)
+
+theorem hlLeaf_rc {p : Prog} (hl : ProgHas p hbLeafP) {g : FnName}
+    (hg : g = "has_loose_b_var_b_fast" ∨ g = "has_loose_bvar_in") :
+    ∀ n vs m r m', callW p n g vs m = some (r, m') → RcMR m → RcMR m' :=
+  fun n vs m r m' h hR =>
+    let ⟨t, ht⟩ := hR.ta
+    ⟨hlLeaf_pos hl hg n vs m r m' h hR.pos, t,
+      taMR_mfr (hlLeaf_coreFr hl (by rcases hg with rfl | rfl <;> decide) h).mfr (by decide) (by decide) ht⟩
+
+/-- The leaves of the arms that reach the core: `struct_used_later` and the `hb` memo's two
+queries. -/
+def usLeaves : List FnName := ["struct_used_later", "has_loose_bvar_in", "has_loose_b_var_b_fast"]
 
 /-- The leaf of the `mentions_any` arm. -/
 def maLeaves : List FnName := ["mentions_any_const"]
 
-theorem HbMemo.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p hbFreeA hbFreeC fs usLeaves = true)
+theorem HbMemo.ofClosedL {p : Prog} {fs : List FnName} (hl : ProgHas p hbLeafP) (hcl : closedAL p hbFreeA hbFreeC fs usLeaves = true)
     (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
     {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : HbMemo m) : HbMemo m' :=
   callW_keepL hcl (P := HbMemo) (fun _ _ hf ⟨mp, hmp⟩ => ⟨mp, hbMR_mfr (hbFree_mfr hf) (by decide) (by decide) hmp⟩)
-    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_hb hus) hf h hM
+    (fun g hg => by
+      simp only [usLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg
+      rcases hg with rfl | rfl | rfl
+      · exact usLeaf_hb hus
+      · exact hlLeaf_hb hl (.inr rfl)
+      · exact hlLeaf_hb hl (.inl rfl)) hf h hM
 
-theorem PosMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p posFreeA posFreeC fs usLeaves = true)
+theorem PosMR.ofClosedL {p : Prog} {fs : List FnName} (hl : ProgHas p hbLeafP) (hcl : closedAL p posFreeA posFreeC fs usLeaves = true)
     (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
     {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : PosMR m) : PosMR m' :=
   callW_keepL hcl (P := PosMR)
     (fun _ _ hf hP => hP.mfr (posFree_mfr hf) (by simp [PosAv, MAM, NOM, DPM, RAM, HBM, RFM, TAM, MCM]))
-    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_pos hus) hf h hM
+    (fun g hg => by
+      simp only [usLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg
+      rcases hg with rfl | rfl | rfl
+      · exact usLeaf_pos hus
+      · exact hlLeaf_pos hl (.inr rfl)
+      · exact hlLeaf_pos hl (.inl rfl)) hf h hM
 
-theorem RcMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p rcFreeA rcFreeC fs usLeaves = true)
+theorem RcMR.ofClosedL {p : Prog} {fs : List FnName} (hl : ProgHas p hbLeafP) (hcl : closedAL p rcFreeA rcFreeC fs usLeaves = true)
     (hus : UsF p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}
     {m' : Mem} (h : callW p n f vs m = some (r, m')) (hM : RcMR m) : RcMR m' :=
   callW_keepL hcl (P := RcMR) (fun _ _ hf hR => by
@@ -191,7 +229,12 @@ theorem RcMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p rcFreeA r
       obtain ⟨t, ht⟩ := hR.ta
       exact ⟨hR.pos.mfr hfr (by simp [PosAv, NOM, DPM, RAM, HBM, RFM, MAM, MCM]), t,
         taMR_mfr hfr (by decide) (by decide) ht⟩)
-    (fun g hg => by simp only [usLeaves, List.mem_singleton] at hg; subst hg; exact usLeaf_rc hus) hf h hM
+    (fun g hg => by
+      simp only [usLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg
+      rcases hg with rfl | rfl | rfl
+      · exact usLeaf_rc hus
+      · exact hlLeaf_rc hl (.inr rfl)
+      · exact hlLeaf_rc hl (.inl rfl)) hf h hM
 
 theorem maMR.ofClosedL {p : Prog} {fs : List FnName} (hcl : closedAL p maFreeA maFreeC fs maLeaves = true)
     (hma : MaProg p) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem} {r : List Word}

@@ -145,15 +145,11 @@ theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
 end census
 
 section census
-variable (p : Prog) (hd : p.lookup "der_b" = some derB)
-  (hpf : p.lookup "forall_find" = some forallFind)
-  (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
-  (hmk : p.lookup "mk_forall" = some mkForall)
-  (hp : p.lookup "close_telescope" = some closeTelescope) (hab : AbF p)
-include hd hpf hpp hpi hmk hp hab
+variable (p : Prog) (hct : CtF p)
+include hct
 
-/-- **`close_telescope` refines `closeTelescope`** (through the `abstract1_fast` stub and master's
-`mk_forall`). -/
+/-- **`close_telescope` refines `closeTelescope`** (the one-pass closer: `close_telescope_go`
+through `ar_entry` and the store's `mk_forall`). -/
 @[refines ConRon.Arena.closeTelescope]
 theorem closeTelescope_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis dO dl i body : Word) (ds : List EIdx) (hbody : H body)
@@ -166,10 +162,10 @@ theorem closeTelescope_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
       IWGrow s₀.mem s'.mem ∧
       decW0E s'.mem r (AM.res (ConRon.Arena.closeTelescope ds i.toNat (decI body)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
-  refine triple_post (closeTelescope_spec p hd hpf hpp hpi hmk hp hab n s₀ dO dl i body) ?_
+  refine triple_post (closeTelescope_spec p hct n s₀ [dO, dl, i, body]) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout, hA'⟩ :=
-    closeW_ok n dn fe vis _ _ a₀ dO dl i body ds r hm hS hbody hdec hb hit hib hA
+    closeW_ok dn fe vis _ _ a₀ dO dl i body ds r hm hS hbody hdec hb hit hib hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout, hA'⟩
 

@@ -164,6 +164,7 @@ import all ConAgua.Scan.Records
 import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
+import all ConAgua.Arena.NatSized
 
 @[expose] public section
 
@@ -224,7 +225,7 @@ theorem posRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData +
     (fun f hf => indArmKeep_checker bs f (by
       simp only [posKeepCalleesC, List.mem_cons, List.not_mem_nil, or_false] at hf
       subst hf; simp [passKeepCalleesC, posKeepCalleesC]))
-    (fun h hM => PosMR.ofClosedL (closedWL_subPB bs checkerProg_armPos) hus hmem h hM)
+    (fun h hM => PosMR.ofClosedL (by prog_bundle [] : ProgHas (Prog.subPB bs checkerProg) L.Ind.hbLeafP) (closedWL_subPB bs checkerProg_armPos) hus hmem h hM)
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
 
@@ -246,8 +247,8 @@ theorem clsRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData +
   exact clsRefS_of hAP.kp hAP.ilpf hAP.lc hP hF hFk hWt hAP.opf
     (indArmKeep_checker bs _ (by simp [passKeepCalleesC]))
     (indArmKeep_checker bs _ (by simp [passKeepCalleesC]))
-    (fun h hM => PosMR.ofClosedL (closedWL_subPB bs checkerProg_armPos) hus hm1 h hM)
-    (fun h hM => PosMR.ofClosedL (closedWL_subPB bs checkerProg_armPos) hus hm2 h hM)
+    (fun h hM => PosMR.ofClosedL (by prog_bundle [] : ProgHas (Prog.subPB bs checkerProg) L.Ind.hbLeafP) (closedWL_subPB bs checkerProg_armPos) hus hm1 h hM)
+    (fun h hM => PosMR.ofClosedL (by prog_bundle [] : ProgHas (Prog.subPB bs checkerProg) L.Ind.hbLeafP) (closedWL_subPB bs checkerProg_armPos) hus hm2 h hM)
     (wmKeep_checker bs (mem_of_tree armMaTree.eq (by decide +kernel))
       (mem_of_tree armMcTree.eq (by decide +kernel)) (mem_of_tree armTaTree.eq (by decide +kernel)))
 
@@ -285,7 +286,7 @@ theorem ownKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armOwnFns) :
 theorem rcKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armRcFns) :
     RcKeepF (Prog.subPB bs checkerProg) f := by
   have hus : UsF (Prog.subPB bs checkerProg) := by prog_bundle []
-  exact fun _ _ _ _ _ h hM => RcMR.ofClosedL (closedWL_subPB bs checkerProg_armRc) hus hf h hM
+  exact fun _ _ _ _ _ h hM => RcMR.ofClosedL (by prog_bundle [] : ProgHas (Prog.subPB bs checkerProg) L.Ind.hbLeafP) (closedWL_subPB bs checkerProg_armRc) hus hf h hM
 
 /-- **A well-formed `MAM` memo kept** by a function of `armMaFns` (`checkerProg_armMa`). -/
 theorem maKeep_checker (bs : List UInt8) {f : FnName} (hf : f ∈ armMaFns) :
@@ -376,7 +377,7 @@ theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)
     flushRefS_of (dn := dn) hF hnv
   have hbr : BrRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
     brRefS_of H.toTablesProg.toBlockProg.toRecsProg H.leaf hnv
-  have hbt : BtRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) :=
+  have hbt : BtRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=
     btRefS_of H.toTablesProg H.leaf hnv
   have hwl : BswmLook (Prog.subPB bs checkerProg) := by prog_bundle []
   have hwm : BswmRefS (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn :=

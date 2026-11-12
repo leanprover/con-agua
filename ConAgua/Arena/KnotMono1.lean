@@ -6,7 +6,7 @@ import ConRon.Bridge.ExprOps.MemoSpecs
 @[expose] public section
 
 /-!
-# The twin's store only grows (1): the walks, the readers, and the bodies up to the `defeq` peel
+# The twin's store only grows (1): the walks, the readers, and the bodies up to the binder congruence
 
 `L.Arena.KM.f` for the twin's monadic functions in dependency order, callees first (`smono_derive`,
 `KnotMonoBase.lean`). The list is `coreKnot`'s reachable `AM` functions, post-order.
@@ -77,9 +77,7 @@ smono_derive ConRon.Arena.liftFueled
 smono_derive ConRon.Arena.proofIrrel
 smono_derive ConRon.Arena.pinAt
 smono_derive ConRon.Arena.pinAndIntro
-smono_derive ConRon.Arena.etaRescueOk
-smono_derive ConRon.Arena.pinReserved
-smono_derive ConRon.Arena.reservedBasisNames
+smono_derive ConRon.Arena.etaRescueTable?
 smono_derive ConRon.Arena.viewSort
 smono_derive ConRon.Arena.formerResSort
 smono_derive ConRon.Arena.formerZ
@@ -219,6 +217,13 @@ smono_derive ConRon.Arena.pinBoolTrue
 smono_derive ConRon.Arena.boolTrueName
 smono_derive ConRon.Arena.pinBoolFalse
 smono_derive ConRon.Arena.boolFalseName
+smono_derive ConRon.Arena.maxNatSizeM
+smono_derive ConRon.Arena.natSizeRefused
+smono_derive ConRon.Arena.litNatSized
+smono_derive ConRon.Arena.powRefused
+smono_derive ConRon.Arena.powGuard
+smono_derive ConRon.Arena.shiftLeftRefused
+smono_derive ConRon.Arena.shiftLeftGuard
 smono_derive ConRon.Arena.natOpResult
 smono_derive ConRon.Arena.natOpWfNames
 smono_derive ConRon.Arena.reduceNat
@@ -260,7 +265,7 @@ smono_derive ConRon.Arena.defeqArg
 smono_derive ConRon.Arena.inferSpine
 smono_derive ConRon.Arena.inferApp
 smono_derive ConRon.Arena.projGuardSort
-smono_derive ConRon.Arena.openPisAtFvarsFGo
+smono_derive ConRon.Arena.openPisRawGo
 smono_derive ConRon.Arena.openPisAtFvars
 smono_derive ConRon.Arena.openPisAtFvarsF
 smono_derive ConRon.Arena.viewFVarTy
@@ -269,6 +274,10 @@ smono_derive ConRon.Arena.stripPis
 smono_derive ConRon.Arena.hasLooseBVarBGo
 smono_derive ConRon.Arena.hasLooseBVarBFast
 smono_derive ConRon.Arena.structUsedLater
+smono_derive ConRon.Arena.hasLooseBVarInGo
+smono_derive ConRon.Arena.hasLooseBVarIn
+smono_derive ConRon.Arena.projGuardRowsGo
+smono_derive ConRon.Arena.projGuardFast
 smono_derive ConRon.Arena.projGuardRowsAt
 smono_derive ConRon.Arena.projGuardRows
 smono_derive ConRon.Arena.checkGuardRows
@@ -279,4 +288,3 @@ smono_derive ConRon.Arena.inferBody
 smono_derive ConRon.Arena.inferSet
 smono_derive ConRon.Arena.isBoolTrue
 smono_derive ConRon.Arena.hasFvarFast
-smono_derive ConRon.Arena.defeqPeelLeaf

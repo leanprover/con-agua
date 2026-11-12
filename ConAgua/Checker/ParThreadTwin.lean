@@ -88,7 +88,7 @@ array zero at its size in entry 1's memory) with its calls (`ThreadRuns`:
 each call's run of `check` on `bufMem B r j` returns, and the buffer is unchanged after it), every
 claimed index below `k`, every index below `k` claimed by some thread, and each thread's claims
 increasing; given `check_decl`'s program facts (`CheckerCd`). -/
-theorem threads_twinAcceptsPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
+theorem threads_twinAcceptsPooled (hCd : CheckerCd)
     (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
     (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
     (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 1) = .ok (rs₁, m₁))
@@ -190,7 +190,7 @@ theorem threads_twinAcceptsPooled (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : C
     have hk64 : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨t, ht, c, hc, hcj⟩ := hcov (UInt64.ofNat k) (by rw [UInt64.lt_iff_toNat_lt, hk, hk64]; exact hk')
     exact ⟨_, List.mem_map_of_mem ht, List.mem_map.mpr ⟨c, hc, by rw [hcj, hk64]⟩⟩
-  obtain ⟨-, hacc⟩ := pool_twin Vt H hst ths' hstart hchain hinc' hrange hcov'
+  obtain ⟨-, hacc⟩ := pool_twin H hst ths' hstart hchain hinc' hrange hcov'
   exact ⟨PA.pins, PA.sA, PA.sB, PA.sC, PA.sD, PA.sE, PA.sF, PA.pre, PA.rc, PA.ds, PA.ipins, PA.I,
     hA, hBp, hC, hD, hE, ths'.map (·.2), PA.idx,
     fun k hk' => by obtain ⟨t, ht, hkt⟩ := hcov' k hk'; exact ⟨t.2, List.mem_map_of_mem ht, hkt⟩,

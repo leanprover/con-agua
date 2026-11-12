@@ -6,6 +6,7 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclHeader
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.DeclArms
 
@@ -112,7 +113,7 @@ l_model checkQuotRecord_specE (p : Prog) (hp : p.lookup "check_quot_record" = so
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-! ## The pinned basis blocks' entry points (`basis_name_hit`, `basis_at_block`) -/
+/-! ## The pinned basis blocks' name test (`basis_name_hit`) -/
 
 /-- **The model of `block_names_eq(ao, al, bo, bl)`**: the two `IW` slices' records' names. -/
 l_model blockNamesEq_specW (p : Prog) (hp : p.lookup "block_names_eq" = some blockNamesEq)
@@ -133,19 +134,24 @@ l_model basisNameHit_specW (p : Prog) (hp : p.lookup "basis_name_hit" = some bas
   specs [callW_spec p n "er_to_iw", callW_spec p n "basis_name_hit_go"]
   grind [arena_grind]
 
-/-- **The model of `at_block_go(po, pl, co, cl)`**. -/
-l_model atBlockGo_specW (p : Prog) (hp : p.lookup "at_block_go" = some atBlockGo)
-  fns [hp ↦ atBlockGoW list]
-  specs [callW_spec p n "ci_at_lps", callW_spec p n "sl_cons"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
+/-! ## The reserved names (`basis_names_ok`, `basis_names_error`) -/
 
-/-- **The model of `basis_at_block(kind, bo, bl)`**. -/
-l_model basisAtBlock_specW (p : Prog) (hp : p.lookup "basis_at_block" = some basisAtBlock)
-  fns [hp ↦ basisAtBlockW list]
-  specs [callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw", callW_spec p n "at_block_go"]
+/-- **The model of `basis_name_unreserved(n)`**. -/
+l_model basisNameUnreserved_specW (p : Prog) (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
+    (hp : p.lookup "basis_name_unreserved" = some basisNameUnreserved)
+  fns [hp ↦ basisNameUnreservedW list]
+  specs [resCont_spec p hrf hrc n]
   grind [arena_grind]
 
+/-- **The model of `block_names_unreserved(bo, bl)`**. -/
+l_model blockNamesUnreserved_specW (p : Prog) (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
+    (hp : p.lookup "block_names_unreserved" = some blockNamesUnreserved)
+  fns [hp ↦ blockNamesUnreservedW list]
+  specs [resCont_spec p hrf hrc n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
 /-! ## The block's comparison with its pin (`pin_list_ok`) -/
 

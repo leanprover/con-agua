@@ -21,7 +21,7 @@ index build on what the jobs name (`invoke_agree`, the same error), the ROM subs
 (`invoke_subPB`), the loop's error claim (`checkJobs_ref` under `JobG`, con-ron's fold invariant
 at each job's view from the jobs before it, `seq_prefix`) and the worker (`twinFailsV_of_sameEnter`).
 Hence `entry2Verdict_of`: entry 2's verdict claim, given `check_decl`'s program facts and the
-jobs' error claims at every phase A, relative to set theory.
+jobs' error claims at every phase A.
 -/
 
 set_option experimental.vcgen true
@@ -41,7 +41,7 @@ universe w
 /-- **`check_jobs(0, k)` after the flush, error half of `checkJobs_seqT`**: from a memory that is
 the flush of one agreeing with `m` on every array the jobs name, a failing run claims the twin's
 jobs over every record failing from the index state's worker. -/
-theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkJobs_seqE {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -129,7 +129,7 @@ theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
         cases u
         rw [checkJobList_cons_ok htk hrj] at hl
         obtain ⟨htk', hdk⟩ := H.hden t htk
-        obtain ⟨hw₁, env', F, hd⟩ := job_spec Vt H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
+        obtain ⟨hw₁, env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
           H.hI H.hpI hw htk htk' hdk hPt hndt hrj
         have := ih (t + 1) a₁ a' hw₁ (PrefixOK.step H.hpush htk' hPt hd hndt) (by omega) hl
         rwa [show t + 1 + c = t + (c + 1) by omega] at this
@@ -148,14 +148,14 @@ theorem checkJobs_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       obtain ⟨hw', hP, hnd⟩ := hseq t 0 a₀ a' hw0 h0 (by omega) h3
       rw [Nat.zero_add] at hP hnd
       obtain ⟨htk', -⟩ := H.hden t (by omega)
-      exact worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI htk' hP hnd hw')
+      exact worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI htk' hP hnd hw')
   have h' := RefC.run_err (checkJobs_specE p hJP.check_jobs n ⟨s₂.mem, Locals.init []⟩ 0 hi)
     (fun e h0 => ErrClaimV.of_cls0 h0) trivial hJG h hc
   simp only [UInt64.toNat_zero, Nat.sub_zero, hhi, ← List.range_eq_range'] at h'
   exact fun hk => twinFailsV_of_sameEnter sameEnter_worker.symm (h' hk)
 
 /-- **Entry 2 in place, `check_b`, error half of `checkB_seq`.** -/
-theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkB_seqE {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -174,7 +174,7 @@ theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
   | succ n =>
-    have hJ := checkJobs_seqE Vt hF hJP hJG n (by omega) hi hhi
+    have hJ := checkJobs_seqE hF hJP hJG n (by omega) hi hhi
     have hFl := flushCaches_specNV n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
@@ -195,7 +195,7 @@ theorem checkB_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       | (trace_state; fail "CheckBE.checkB_seqE: no closing tactic applies")
 
 /-- **Entry 2 in place, `check` with the mode word `2`, error half of `checkMode2_seq`.** -/
-theorem checkMode2_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkMode2_seqE {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -217,7 +217,7 @@ theorem checkMode2_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
       apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
       intro s₁ e hs hrun
       exact M.of_run_err (P := fun x => x = s₁) rfl hrun
-        (checkB_seqE Vt hF hJP hJG n (by omega) hi hhi s₁ (hs ▸ hw) (hs ▸ hlo) (hs ▸ hhi')
+        (checkB_seqE hF hJP hJG n (by omega) hi hhi s₁ (hs ▸ hw) (hs ▸ hlo) (hs ▸ hhi')
           (hs ▸ hctlf))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
@@ -231,9 +231,9 @@ theorem checkMode2_seqE (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
 
 open ConAgua.Final in
 /-- **Entry 2's verdict claim** (`Entry2Verdict`), given `check_decl`'s program facts
-(`CheckerCd`) and the jobs' error claims (`JobG`) at every phase A, relative to set theory: the
+(`CheckerCd`) and the jobs' error claims (`JobG`) at every phase A: the
 failing run of `check_b` over every record is the twin's jobs failing (`TwinVerdict.jobs`). -/
-theorem entry2Verdict_of (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
+theorem entry2Verdict_of (hCd : CheckerCd)
     (hJG : ∀ (b pb : ByteArray) (PA : PhaseA b), pb.size < 2 ^ 63 → PbPre pb →
       JobG PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)) :
     Entry2Verdict checkerProg := by
@@ -254,7 +254,7 @@ theorem entry2Verdict_of (Vt : Type w) [ConLeche.SetTheory Vt] (hCd : CheckerCd)
   have hJG' := hJG b pb PA hin.2.2.1 hF.r7.since.pbpre
   have hr' := run_err hrun
   have hc := M.of_run_err (P := fun x => x = ⟨w, Locals.init []⟩) rfl hr'
-    (checkMode2_seqE Vt hF hJP hJG' N₂ hN₂ _ hk' ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf)
+    (checkMode2_seqE hF hJP hJG' N₂ hN₂ _ hk' ⟨w, Locals.init []⟩ hw' hmode hlo hhi hctlf)
   obtain ⟨hA, hBp, hC, hD, hE⟩ := PA.pfx
   exact TwinVerdict.jobs hA hBp hC hD hE PA.idx (hc hk)
 

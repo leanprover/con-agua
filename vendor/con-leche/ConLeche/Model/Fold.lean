@@ -3,6 +3,8 @@ module
 import ConLeche.Model.AxiomReduce
 import ConLeche.Model.Inductives.StructEntryKit
 public import ConLeche.Semantics.Bridge.Sound
+import ConLeche.Verify.BasisBlock
+import ConLeche.Verify.Inductives.BlockShapeInv
 import ConLeche.Model.Cover
 public import ConLeche.Model.Inductives.BlockRunFacts
 import ConLeche.Kernel.Checker
@@ -15,8 +17,7 @@ import ConLeche.Model.BasisAtBlock
 import ConLeche.Model.Swap
 import ConLeche.Semantics.DeclRun
 import ConLeche.Semantics.EnvFacts
-import ConLeche.Semantics.DeclEta
-import ConLeche.Semantics.Inductives.DeclBlockEta
+import ConLeche.Semantics.DeclWF
 import ConLeche.Verify.Abstract
 import ConLeche.Verify.Denote.EnvExt
 import ConLeche.Verify.Denote
@@ -29,13 +30,11 @@ public section
 /-!
 # The P declaration fold, and the capstone (task #161, P4)
 
-`foldPM` carries `EnvModelOk` — the P invariant plus the η-family
-closure — through an accepted stream, and `no_proof_of_Empty_pure` is
-the capstone, with input-level hypotheses only.
+`foldPM` carries `EnvModelOk` — the P invariant — through an accepted
+stream, and `no_proof_of_Empty_pure` is the capstone, with input-level
+hypotheses only.
 
-The η half of the fold invariant is `declEtaStepRun`
-(`Semantics/DeclEta.lean`), model-free at every kind: no install
-obligation is consulted for it.  Every tier step is discharged
+Every tier step is discharged
 (`axiomStepPB_of`, `declBasisPB_at`, `declQuotPB_at`, `declBlock`); the fold carries no
 hypothesis about the mode: the model tier is at `.verified`.
 -/
@@ -60,8 +59,8 @@ def AxiomStepPB (V : Type w) [SetTheory V] : Prop :=
   -- names no valuation; the carrier is the invariant the branches consume
   ∀ {F : Nat} {env : Env} (mp : EnvModelM V env)
     {cv : ConstantVal} {env₂ : Env},
-    DeclAxiomRun F env cv env₂ →
-    CoverStep mp env₂
+    DeclAxiomRun F env cv env₂ → ConLeche.basisNamesOk (.axiomDecl cv) = true →
+    ConLeche.EnvWF env₂ → CoverStep mp env₂
 
 /-- **`AxiomStepPB`, discharged.**  All four `DeclAxiomRun` branches:
 the two standard axioms (`axiomStd`), `Lean.trustCompiler`
@@ -69,16 +68,16 @@ the two standard axioms (`axiomStd`), `Lean.trustCompiler`
 on the `ReduceOps` field), and the tolerated skip (`axiomSkip`, which
 stores nothing). -/
 theorem axiomStepPB_of : AxiomStepPB V := by
-  intro _F _env mp _cv _env₂ hR
+  intro _F _env mp _cv _env₂ hR hb hwf
   -- the `Quot.sound` arm is a quotient record
-  rcases hR with ⟨-, hq⟩ | hR
-  · exact declQuotPB_at mp hq
+  rcases hR with ⟨-, hq⟩ | ⟨hqs, hR⟩
+  · exact declQuotPB_at mp hq hwf
   obtain ⟨type', hopn, hcv, hbranch⟩ := hR
   rcases hbranch with ⟨hok, rfl⟩ | ⟨hname, hok, rfl⟩ |
     ⟨hor, hok, rfl⟩ | ⟨-, -, -, -, -, -, -, rfl⟩
-  · exact axiomStd mp hopn hcv hok
-  · exact axiomTrustCompiler mp hopn hcv hname hok
-  · exact axiomOfReduce mp hopn hcv hor hok
+  · exact axiomStd mp hopn hcv hwf hok
+  · exact axiomTrustCompiler mp hopn hcv hwf hname hok
+  · exact axiomOfReduce mp hopn hcv hwf hor hok
   · exact axiomSkip mp
 
 /-! ## Coverage through the fold
@@ -86,8 +85,8 @@ theorem axiomStepPB_of : AxiomStepPB V := by
 Every step concludes `CoverStep` (`Model/Cover.lean`): a carrier at its
 result to which coverage (`LfpCover mp []`) carries.  The inductive
 step is the uniform install (`declBlock`, every recognised block, nested
-ones included); a block the recogniser does not read never
-installs (`checkShapeless` declines), so there is no other inductive
+ones included); a block `readBlock` cannot read never installs
+(its error is the check's), so there is no other inductive
 step and coverage is unconditional. -/
 
 /-- A step's carrier, covered, from a covered input. -/
@@ -97,11 +96,10 @@ theorem CoverTo.covered {env env' : Env} {mp : EnvModelM V env}
     ∃ mp' : EnvModelM V env', LfpCover mp' [] ∧ FamilyRan mp' :=
   h.elim fun mp' h' => ⟨mp', h'.2 hcov, hS.step h'.1 htb⟩
 
-/-- **The P fold invariant**: a covered P carrier plus the η-family
-closure. -/
+/-- **The P fold invariant**: a covered P carrier, and the `Nat` facts. -/
 @[expose] def EnvModelOk (V : Type w) [SetTheory V] (env : Env) :
     Prop :=
-  (∃ mp : EnvModelM V env, LfpCover mp [] ∧ FamilyRan mp) ∧ EtaFamiliesClosed env ∧ NatFacts env
+  (∃ mp : EnvModelM V env, LfpCover mp [] ∧ FamilyRan mp) ∧ NatFacts env
 
 /-- The invariant's carrier. -/
 theorem EnvModelOk.nonempty {env : Env} (h : EnvModelOk V env) :
@@ -110,7 +108,7 @@ theorem EnvModelOk.nonempty {env : Env} (h : EnvModelOk V env) :
 
 /-- The invariant at the empty environment. -/
 theorem EnvModelOk.empty : EnvModelOk V Env.empty :=
-  ⟨⟨EnvModelM.empty V, lfpCover_empty, fun _ hD => nomatch hD⟩, EtaFamiliesClosed.empty,
+  ⟨⟨EnvModelM.empty V, lfpCover_empty, fun _ hD => nomatch hD⟩,
     ⟨fun h => by rcases h with h | h | h <;> exact nomatch h⟩⟩
 
 /-- A step that adds constants, none of `Nat`'s block's, and no table. -/
@@ -143,15 +141,35 @@ theorem plainStep_quot {env env₂ : Env} {k : ConLeche.QuotKind} {cv : Constant
 
 /-- An axiom record is a plain step. -/
 theorem plainStep_axiom {F : Nat} {env env₂ : Env} {cv : ConstantVal}
-    (h : DeclAxiomRun F env cv env₂) : PlainStep env env₂ := by
-  rcases h with ⟨-, hq⟩ | ⟨type', -, hcv, hbranch⟩
+    (h : DeclAxiomRun F env cv env₂) (hb : ConLeche.basisNamesOk (.axiomDecl cv) = true) :
+    PlainStep env env₂ := by
+  rcases h with ⟨-, hq⟩ | ⟨hqs, type', -, hcv, hbranch⟩
   · exact plainStep_quot hq
-  · have hres := hcv.2.1
+  · -- off `Quot.sound`, the reserved names' check leaves an unreserved name
+    have hres : ConLeche.reservedBasisNames.contains cv.name = false := by
+      simpa [ConLeche.basisNamesOk, hqs] using hb
     rcases hbranch with ⟨-, rfl⟩ | ⟨-, -, rfl⟩ | ⟨-, -, rfl⟩ | ⟨-, -, -, -, -, -, -, rfl⟩
     · exact PlainStep.cons hres
     · exact PlainStep.cons hres
     · exact PlainStep.cons hres
     · exact ⟨[], rfl, rfl, fun _ hc => nomatch hc⟩
+
+/-- **Constants pushed under distinct fresh names** are pushed one by one, each fresh. -/
+theorem basisInstallRun_of_push :
+    ∀ {L : List ConstantInfo} {env : Env}, (L.map (·.name)).Nodup →
+      (∀ n ∈ L.map (·.name), env.find? n = none) →
+      BasisInstallRun env L (env.pushDelta L [])
+  | [], env, _, _ => by simp [BasisInstallRun, ConLeche.Env.pushDelta]
+  | ci :: rest, env, hnd, hfr => by
+    simp only [List.map_cons, List.nodup_cons, List.mem_map, not_exists, not_and] at hnd
+    refine ⟨Option.isNone_iff_eq_none.mpr (hfr _ List.mem_cons_self), ?_⟩
+    have h := basisInstallRun_of_push (env := ⟨ci :: env.consts, env.tables⟩) hnd.2
+      fun n hn => by
+        rw [ConLeche.Env.find?_cons, ite_eq_right fun he => ?_]
+        · exact hfr n (List.mem_cons_of_mem _ hn)
+        · obtain ⟨c, hc, rfl⟩ := List.mem_map.mp hn
+          exact hnd.1 c hc he.symm
+    simpa [ConLeche.Env.pushDelta] using h
 
 /-- What a pinned block stores, as a prefix of the constants. -/
 theorem basisInstallRun_consts :
@@ -167,39 +185,44 @@ theorem basisInstallRun_consts :
     simp
 
 /-- A pinned block's stored names are the pin's. -/
-theorem atBlock_names :
-    ∀ (pins block : List ConstantInfo), pins.map (·.name) = block.map (·.name) →
+theorem storedAt_names :
+    ∀ (pins block : List ConstantInfo), pins.length = block.length →
       (List.zipWith (fun pin c => pin.atLps c.toConstantVal.levelParams) pins block).map (·.name)
         = pins.map (·.name)
   | [], _, _ => rfl
   | _ :: _, [], h => nomatch h
   | p :: ps, b :: bs, h => by
-    simp only [List.map_cons, List.cons.injEq] at h
+    simp only [List.length_cons, Nat.add_right_cancel_iff] at h
     simp only [List.zipWith_cons_cons, List.map_cons, atLps_name]
-    rw [atBlock_names ps bs h.2]
+    rw [storedAt_names ps bs h]
 
 /-- **A pinned block keeps `Nat`'s block whole.** -/
-theorem natFacts_basis {env env₂ : Env} {kind : ConLeche.BasisKind} {block : List ConstantInfo}
+private theorem natFacts_basis {env env₂ : Env} {kind : ConLeche.BasisKind} {block : List ConstantInfo}
     (hN : NatFacts env) (hk : ConLeche.basisNameHit block = some kind)
-    (h : BasisInstallRun env (kind.atBlock block) env₂) : NatFacts env₂ := by
+    (h : BasisInstallRun env (kind.storedAt block) env₂) : NatFacts env₂ := by
   obtain ⟨hc, -⟩ := basisInstallRun_consts h
   have hn : kind.decls.map (·.name) = block.map (·.name) := by
     have := List.find?_some hk
     simpa using this
-  have hnames := atBlock_names kind.decls block hn
-  have hnames' : (kind.atBlock block).map (·.name) = kind.decls.map (·.name) := hnames
-  have hmem : ∀ c ∈ (kind.atBlock block).reverse, c.name ∈ kind.decls.map (·.name) := by
+  have hlen : kind.installed.length = block.length := by
+    have := congrArg List.length hn
+    simp only [List.length_map] at this
+    rw [← this]
+    cases kind <;> rfl
+  have hnames' : (kind.storedAt block).map (·.name) = kind.installed.map (·.name) :=
+    storedAt_names kind.installed block hlen
+  have hmem : ∀ c ∈ (kind.storedAt block).reverse, c.name ∈ kind.installed.map (·.name) := by
     intro c hc'
     rw [← hnames']
     exact List.mem_map.mpr ⟨c, List.mem_reverse.mp hc', rfl⟩
-  have hfound : ∀ n, n ∈ kind.decls.map (·.name) → (env₂.find? n).isSome = true := by
+  have hfound : ∀ n, n ∈ kind.installed.map (·.name) → (env₂.find? n).isSome = true := by
     intro n hn'
     rw [← hnames'] at hn'
     obtain ⟨c, hcm, rfl⟩ := List.mem_map.mp hn'
     show (env₂.consts.find? (·.name == c.name)).isSome = true
     rw [List.find?_isSome]
     exact ⟨c, by rw [hc]; exact List.mem_append_left _ (List.mem_reverse.mpr hcm), by simp⟩
-  have hnew : ∀ c ∈ (kind.atBlock block).reverse, kind ≠ .natK →
+  have hnew : ∀ c ∈ (kind.storedAt block).reverse, kind ≠ .natK →
       c.name ≠ ConLeche.natName ∧ c.name ≠ ConLeche.natZeroName ∧ c.name ≠ ConLeche.natSuccName := by
     intro c hc' hne
     have hm := hmem c hc'
@@ -215,6 +238,46 @@ theorem natFacts_basis {env env₂ : Env} {kind : ConLeche.BasisKind} {block : L
     exact ⟨fun _ => ⟨hfound _ (by decide), hfound _ (by decide), hfound _ (by decide)⟩⟩
   · exact hN.append hc fun c hc' => hnew c hc' hnat
 
+/-- **A pinned block's install, as the model reads it**: the installed pins at the record's names,
+each under a fresh name, and no table (`blockInstall_pinned`). -/
+private theorem basisInstallRun_of_block {F : Nat} {env env₂ : Env} {block : List ConstantInfo}
+    {nP : Nat} {kind : ConLeche.BasisKind} {p : ConLeche.BlockShape}
+    (hk : ConLeche.basisNameHit block = some kind)
+    (hok : ConLeche.pinListOk block kind.decls = true)
+    (hdf : ConLeche.readBlock nP block = .ok p) (hrun : BlockRun F env block p env₂) :
+    BasisInstallRun env (kind.storedAt block) env₂ := by
+  have hd := ConLeche.readBlock_declared hdf
+  obtain ⟨hC, hT⟩ := ConLeche.blockInstall_pinned hk hok hdf
+  have henv := blockRun_env hd hrun
+  have hfr := blockRun_fresh hd hrun
+  rw [hC, hT] at henv
+  rw [hC] at hfr
+  subst henv
+  have hn : kind.decls.map (·.name) = block.map (·.name) := by
+    have := List.find?_some hk
+    simpa using this
+  have hlen : kind.installed.length = block.length := by
+    have := congrArg List.length hn
+    simp only [List.length_map] at this
+    rw [← this]
+    cases kind <;> rfl
+  refine basisInstallRun_of_push ?_ hfr
+  rw [show (kind.storedAt block).map (·.name) = kind.installed.map (·.name) from
+    storedAt_names kind.installed block hlen]
+  have hq : kind ≠ .quotK := by
+    rintro rfl
+    have hm := List.mem_of_find?_eq_some hk
+    simp at hm
+  cases kind <;> first | exact absurd rfl hq | decide
+
+/-- **The reserved names' check at a block no pinned one's**: its records' names are unreserved. -/
+theorem unreserved_of_basisNamesOk {block : List ConstantInfo} {nP : Nat}
+    (hb : ConLeche.basisNamesOk (.indDecl block nP) = true)
+    (hk : ConLeche.basisNameHit block = none) :
+    ∀ c ∈ block, ConLeche.reservedBasisNames.contains c.name = false := by
+  simp only [ConLeche.basisNamesOk, hk, List.all_eq_true, Bool.not_eq_eq_eq_not,
+    Bool.not_true] at hb
+  exact hb
 
 /-- **The per-declaration P step, by dispatch.**  The premise is the
 RUN record (`DeclRun`, valuation-free; the `ind` kind arrives through
@@ -222,62 +285,66 @@ its `Ind` parameter), so this step consumes exactly what it reads. -/
 theorem declStep_preserves
     {F : Nat} {env env₂ : Env} {d : Declaration}
     (mp : EnvModelM V env) (hcov : LfpCover mp []) (hS : FamilyRan mp)
-    (hE : EtaFamiliesClosed env) (hN : NatFacts env)
+    (hN : NatFacts env)
     (hrun : DeclRun F (ConLeche.Semantics.DeclIndRunDispatchK F env)
       env d env₂) :
     EnvModelOk V env₂ := by
-  -- the η half: `declEtaStepRun`, model-free at every kind; at `.indDecl`
-  -- through the dispatch's own case split
-  have hEta : EtaFamiliesClosed env₂ := ConLeche.Semantics.declEtaStepRun (fun h' => by
-    unfold ConLeche.Semantics.DeclIndRunDispatchK at h'
-    split at h'
-    · exact ConLeche.Semantics.blockRun_etaClosed hE h'
-    · exact h'.elim) hE hrun
-  suffices h : (∃ mp' : EnvModelM V env₂, LfpCover mp' [] ∧ FamilyRan mp') ∧ NatFacts env₂ from
-    ⟨h.1, hEta, h.2⟩
+  -- the post-step environment is well formed: the model-free step (`declRun_envWF`), handed
+  -- down to every arm
+  have hwf₂ : ConLeche.EnvWF env₂ := ConLeche.Semantics.declRun_envWF mp.base2.wf hrun
+  obtain ⟨hnames, hrun⟩ := hrun
   cases d with
   | defnDecl cv value hint =>
+    have hnres : ConLeche.reservedBasisNames.contains cv.name = false := by
+      simpa [ConLeche.basisNamesOk] using hnames
     have hsh := hrun
     obtain ⟨type', value', hcv, -, henv2, -, -⟩ := hsh
     subst henv2
-    exact PlainStep.close (PlainStep.cons (by exact hcv.2.1)) (harvestDefn mp hrun) hcov hS hN
+    exact PlainStep.close (PlainStep.cons hnres) (harvestDefn mp hrun hwf₂ hnres) hcov hS hN
   | thmDecl cv value =>
+    have hnres : ConLeche.reservedBasisNames.contains cv.name = false := by
+      simpa [ConLeche.basisNamesOk] using hnames
     have hsh := hrun
     -- the run record has no is-a-proposition derivation row
     obtain ⟨-, type', value', hcv, -, -, henv2⟩ := hsh
     subst henv2
-    exact PlainStep.close (PlainStep.cons (by exact hcv.2.1)) (harvestThm mp hrun) hcov hS hN
+    exact PlainStep.close (PlainStep.cons hnres) (harvestThm mp hrun hwf₂ hnres) hcov hS hN
   | opaqueDecl cv value =>
+    have hnres : ConLeche.reservedBasisNames.contains cv.name = false := by
+      simpa [ConLeche.basisNamesOk] using hnames
     have hsh := hrun
     obtain ⟨-, type', value', hcv, -, henv2, -⟩ := hsh
     subst henv2
-    exact PlainStep.close (PlainStep.cons (by exact hcv.2.1)) (harvestOpaque mp hrun) hcov hS hN
-  | axiomDecl cv => exact (plainStep_axiom hrun).close (axiomStepPB_of mp hrun) hcov hS hN
-  | quotDecl k cv => exact (plainStep_quot hrun).close (declQuotPB_at mp hrun) hcov hS hN
+    exact PlainStep.close (PlainStep.cons hnres) (harvestOpaque mp hrun hwf₂ hnres) hcov hS hN
+  | axiomDecl cv =>
+    exact (plainStep_axiom hrun hnames).close (axiomStepPB_of mp hrun hnames hwf₂) hcov hS hN
+  | quotDecl k cv => exact (plainStep_quot hrun).close (declQuotPB_at mp hrun hwf₂) hcov hS hN
   | indDecl block nP =>
-    -- a block with a pinned block's names installs the pin at the record's
-    -- names; everything else takes the `.indDecl` dispatch
-    simp only [ConLeche.Semantics.DeclRun] at hrun
-    split at hrun
-    · next kind hk =>
-      have hnq : kind ≠ .quotK := by
-        rintro rfl
-        have hm := List.mem_of_find?_eq_some hk
-        simp at hm
-      obtain ⟨hc, htb⟩ := basisInstallRun_consts hrun.2
-      exact ⟨(declBasisPB_at mp hnq hrun).covered hcov hS (findTable_of_added hc htb),
-        natFacts_basis hN hk hrun.2⟩
-    · have hrun' : ConLeche.Semantics.DeclIndRunDispatchK F env block nP env₂ := hrun
-      unfold ConLeche.Semantics.DeclIndRunDispatchK at hrun'
-      cases hdf : ConLeche.blockShape? nP block with
-      | some p =>
-        rw [hdf] at hrun'
-        -- the uniform install, at any number of members, nested blocks included
-        exact declBlock mp hE hdf hrun' hcov hS hN
+    have hrun' : ConLeche.Semantics.DeclIndRunDispatchK F env block nP env₂ := hrun
+    unfold ConLeche.Semantics.DeclIndRunDispatchK at hrun'
+    cases hdf : ConLeche.readBlock nP block with
+    | error _ =>
+      -- a block `readBlock` cannot read never installs
+      rw [hdf] at hrun'
+      exact hrun'.elim
+    | ok p =>
+      rw [hdf] at hrun'
+      cases hk : ConLeche.basisNameHit block with
+      | some kind =>
+        -- a pinned block: its install is the installed pins at the record's names
+        have hok : ConLeche.pinListOk block kind.decls = true := by
+          simpa [ConLeche.basisNamesOk, hk] using hnames
+        have hnq : kind ≠ .quotK := by
+          rintro rfl
+          have hm := List.mem_of_find?_eq_some hk
+          simp at hm
+        have hinst := basisInstallRun_of_block hk hok hdf hrun'
+        obtain ⟨hc, htb⟩ := basisInstallRun_consts hinst
+        exact ⟨(declBasisPB_at mp hnq hok hinst hwf₂).covered hcov hS (findTable_of_added hc htb),
+          natFacts_basis hN hk hinst⟩
       | none =>
-        -- a block the recogniser does not read never installs
-        rw [hdf] at hrun'
-        exact hrun'.elim
+        -- the uniform install, at any number of members, nested blocks included
+        exact declBlock mp hdf (unreserved_of_basisNamesOk hnames hk) hrun' hcov hS hN
 
 /-- **The P fold**: the declaration fold's recursion at the P invariant. -/
 theorem foldPM {F : Nat} :
@@ -294,9 +361,9 @@ theorem foldPM {F : Nat} :
     | error e => rw [hd] at h; exact nomatch h
     | ok env1 =>
       rw [hd] at h
-      obtain ⟨⟨mp, hcov, hS⟩, hE, hN⟩ := hm
+      obtain ⟨⟨mp, hcov, hS⟩, hN⟩ := hm
       exact foldPM ds env1
-        (declStep_preserves mp hcov hS hE hN
+        (declStep_preserves mp hcov hS hN
           -- **the RUN bridge, from the P carrier's own `EnvFacts`**
           -- (`checkDeclRun_ofEnvFactsK`; the `ind` kind through
           -- `DeclIndRunDispatchK`)

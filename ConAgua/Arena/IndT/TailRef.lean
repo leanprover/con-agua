@@ -26,7 +26,8 @@ both outcomes, from `check_block_pass`'s out (con-ron's `checkBlockTail_of` for 
 the index sorts (`iis_ref` through the call), the members' constructors (`mctorsW_dec`) consed
 (`consBlockCtors_refines`; con-ron's `consBlockCtors_spec`), the flush (`ReadOK.flush`), the
 nested bit, the recursor stage (`icr_ref` through the call; con-ron's `genRecCheck_spec` on the
-twin's run), the stream half (`TsRefS`), the tables (`ctb_ref` through the call).
+twin's run), the stream half (`TsRefS`), the tables `Q` (built before the tail, `block_tables`) checked
+(`ctb_ref` through the call).
 `tailRefS_of`: the contract `TailRefS` through the call, the walk memos outside the recursor
 stage's (`maMR`, `mcMR`) kept across the whole call.
 -/
@@ -44,14 +45,15 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`checkBlockTail` at `check_block_tail`'s calls, the `let`s inlined.** -/
-theorem checkBlockTail_split' (mode : ConLeche.CheckMode) (block : List IConstantInfo) (q : BlockPass) :
-    ConRon.Arena.checkBlockTail mode block q =
+theorem checkBlockTail_split' (mode : ConLeche.CheckMode) (block : List IConstantInfo) (q : BlockPass)
+    (Q : List IProjTable) :
+    ConRon.Arena.checkBlockTail mode block q Q =
       (ConRon.Arena.checkBlockIdxSorts mode q.env1 q.p q.p.members >>= fun _ =>
         ConRon.Arena.flushCaches >>= fun _ =>
         ConRon.Arena.checkBlockRec mode (ConRon.Arena.consBlockCtors q.p.nP q.p.memberCtors q.env1) q.p
             (ConRon.Arena.blockNestedBit q.p q.kinds) q.params q.tbl q.rd q.cls block >>= fun x =>
         tailStreamT mode q.p x.1 x.2 >>= fun fe₃ =>
-        ConRon.Arena.checkBlockTables q.p fe₃ q.p.members >>= fun _ => pure fe₃) := by
+        ConRon.Arena.checkBlockTables fe₃ Q >>= fun _ => pure fe₃) := by
   rw [checkBlockTail_split]
 
 /-- What `check_block_tail`'s model gives (from `m`, `a`): the stage at the returned view, the
@@ -67,6 +69,21 @@ structure TailPostM (m : Mem) (a : AState) (w : Word) (fe' : IFEnv) (m' : Mem) (
 memos and the `MAM` memo. -/
 def tailPreCallees : List FnName :=
   ["check_block_idx_sorts", "block_shape_member_ctors", "cons_block_ctors", "flush_caches"]
+
+theorem mapM_some_mono {α β : Type} {f g : α → Option β} (hfg : ∀ k x, f k = some x → g k = some x) :
+    ∀ (l : List α) (ks : List β), l.mapM f = some ks → l.mapM g = some ks
+  | [], ks, h => h
+  | k :: l, ks, h => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h ⊢
+    obtain ⟨x, hx, xs, hxs, rfl⟩ := h
+    exact ⟨x, hfg _ _ hx, xs, mapM_some_mono hfg l xs hxs, rfl⟩
+
+/-- `TblsOK` across a store extension. -/
+theorem TblsOK.mono {st st' : EStore} {Q : List IProjTable} (hx : ConRon.Arena.Ext st st')
+    (h : TblsOK st Q) : TblsOK st' Q := fun t ht => by
+  obtain ⟨⟨ks, hks⟩, hb⟩ := h t ht
+  exact ⟨⟨ks, mapM_some_mono (fun k x e => hx.lss.ls.ns k x e) _ ks hks⟩, hb⟩
 
 section sims
 variable {p : Prog} (hkp : KnotStageProg p) (hV : CcvProg p) (hApd : ApdF p) (hCrk : CrKeep p)
@@ -94,8 +111,10 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
     (hT : ∀ cv ∈ qP.p.formers, ConLeche.Expr.WScoped 0 cv.type)
     (henv₂ : ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁))
     (hMs : ∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) (hpl : qP.params.length = qP.p.nP)
-    (hnPb : q.p.nP + 1 < 2 ^ 64) :
-    RefE (VerdictCtxU p) (ictlE p N m bO bL w) (ConRon.Arena.checkBlockTail V block q) a
+    (hnPb : q.p.nP + 1 < 2 ^ 64) {tO tL : Word} {Q : List IProjTable}
+    (hQ : decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q) (hbQ : tO.toNat + tL.toNat ≤ iwTop m)
+    (hTb : TblsOK a.store Q) :
+    RefE (VerdictCtxU p) (ictlE p N m bO bL w tO tL) (ConRon.Arena.checkBlockTail V block q Q) a
       (fun v x a' => TailPostM m a v.1 x v.2 a') := by
   obtain ⟨fe, bs, kinds, params, rd, cls, tbl⟩ := q
   obtain ⟨hdq, hBB, hw0, hsrc⟩ := hq
@@ -277,15 +296,11 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   dsimp only at hT7 ⊢
   -- `check_block_tables`
   have g07 := g06.trans hT7.grow
-  have hbs7 := hbsD.grow (decBS_mono _) g07
-  obtain ⟨hmd7, hmb7, -, -⟩ := bsAt hbs7 (hsl.grow' hbsD g07)
   have x07 : ConRon.Arena.Ext a.store a7.store := x06.trans hT7.inst.ext
   refine RefE.bindRun (s₀ := ⟨m7, Locals.init []⟩) (fun _ => ictlE.k_check_block_tables.none ..)
-    (ctbE_spec p hP.tabs n _ pp (r7.headD 0) _ _) (fun hG => hG.nv) (fun _ => trivial)
-    (ctb_ref hP.tabs hApd pp (r7.headD 0) fe₃ bs hnPb n m7 a7 _ _ bs.members hT7.stage.stage hbs7
-      ⟨hmd7, hmb7⟩ hT7.abs hT7.stage.check.state
-      ⟨_, denoteNList_mapM (ConRon.Bridge.Inductives.BlockShape.lps_spec (ConRon.Bridge.Inductives.dShape_ext x07 _ _ hpP))⟩
-      ⟨_, ConRon.Bridge.Inductives.dMember_ext.list x07 _ _ hmsP⟩)
+    (ctbE_spec p hP.tabs n _ (r7.headD 0) tO tL) (fun hG => hG.nv) (fun _ => trivial)
+    (ctb_ref hP.tabs hApd (r7.headD 0) fe₃ n m7 a7 tO tL Q hT7.stage.stage (decPL_tbl_grow g07 hbQ hQ)
+      (Nat.le_trans hbQ g07.iw) hT7.abs hT7.stage.check.state (hTb.mono x07))
     fun r8 s8 _ a8 _ _ _ hTb => ?_
   rw [ictlE.k_check_block_tables.arm1]
   exact RefE.ret rfl ⟨hTb.stage, g07.trans hTb.grow, hTb.abs, hT7.rc.fr hTb.frame,
@@ -306,10 +321,11 @@ theorem tailRefS_of (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : Ft
       callW p n "check_block_tail" vs m = some (r, m') → (∃ mp, mcMR m mp) → ∃ mp, mcMR m' mp) :
     TailRefS (VerdictCtxU p) p dn := by
   intro n hn vis env₁ m a bO bL w block blockP q qP hB hq hsl hblk _ hbP _ hrel henv₁ hqP hT henv₂ hMs hpl hnPb
-  have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (G := VerdictCtxU p) (ictlE_spec p hP n _ bO bL w)
+    tO tL Q hQ hbQ hTb
+  have h := RefE.ofCallE (s₀ := ⟨m, Locals.init []⟩) (G := VerdictCtxU p) (ictlE_spec p hP n _ bO bL w tO tL)
     (fun (hG : VerdictCtxU p) => hG.nv)
     (tail_ref hkp hV hApd hCrk hCrf hIlpf hOpf hLC hLT hP hMc P hF hWt hCs hfR hfRc hMa hOwn hkeep hRk hMk hts n
-      (by omega) hB hq hsl hblk hbP hrel henv₁ hqP hT henv₂ hMs hpl hnPb)
+      (by omega) hB hq hsl hblk hbP hrel henv₁ hqP hT henv₂ hMs hpl hnPb hQ hbQ hTb)
   refine RefE.callOk h fun ⟨r, m'⟩ x a' hc hR => ?_
   obtain ⟨s', hs', -, hR⟩ := hR
   simp only at hs'; subst hs'

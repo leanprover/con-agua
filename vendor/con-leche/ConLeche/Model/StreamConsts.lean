@@ -133,40 +133,40 @@ theorem checkDecl_declares {env env₂ : Env} {F : Nat}
     ∃ c ∈ env₂.consts, c.name = cv.name ∧
       c.toConstantVal.levelParams = cv.levelParams ∧
       c.toConstantVal.type = cv.type := by
-  have hrun := ConLeche.Semantics.checkDeclRun_ofEnvFactsK h
+  obtain ⟨-, hrun⟩ := ConLeche.Semantics.checkDeclRun_ofEnvFactsK h
   cases pd with
   | defnDecl cv₀ value hint =>
     obtain rfl : cv = cv₀ := hcv
-    simp only [ConLeche.Semantics.DeclRun, ConLeche.Semantics.DeclDefnRun] at hrun
+    simp only [ConLeche.Semantics.DeclKindRun, ConLeche.Semantics.DeclDefnRun] at hrun
     obtain ⟨type', value', hcvr, -, henv₂, -, -⟩ := hrun
-    obtain ⟨-, -, -, -, -, hann, -, -, -⟩ := hcvr
+    obtain ⟨-, -, -, -, hann, -, -, -⟩ := hcvr
     refine ⟨.defnInfo ⟨cv.name, cv.levelParams, type'⟩ value' hint, ?_, rfl, rfl, ?_⟩
     · rw [henv₂]; exact List.mem_cons_self
     · exact hann
   | thmDecl cv₀ value =>
     obtain rfl : cv = cv₀ := hcv
-    simp only [ConLeche.Semantics.DeclRun, ConLeche.Semantics.DeclThmRun] at hrun
+    simp only [ConLeche.Semantics.DeclKindRun, ConLeche.Semantics.DeclThmRun] at hrun
     obtain ⟨-, type', value', hcvr, -, -, henv₂⟩ := hrun
-    obtain ⟨-, -, -, -, -, hann, -, -, -⟩ := hcvr
+    obtain ⟨-, -, -, -, hann, -, -, -⟩ := hcvr
     refine ⟨.thmInfo ⟨cv.name, cv.levelParams, type'⟩, ?_, rfl, rfl, ?_⟩
     · rw [henv₂]; exact List.mem_cons_self
     · exact hann
   | opaqueDecl cv₀ value =>
     obtain rfl : cv = cv₀ := hcv
-    simp only [ConLeche.Semantics.DeclRun, ConLeche.Semantics.DeclOpaqueRun] at hrun
+    simp only [ConLeche.Semantics.DeclKindRun, ConLeche.Semantics.DeclOpaqueRun] at hrun
     obtain ⟨-, type', value', hcvr, -, henv₂, -⟩ := hrun
-    obtain ⟨-, -, -, -, -, hann, -, -, -⟩ := hcvr
+    obtain ⟨-, -, -, -, hann, -, -, -⟩ := hcvr
     refine ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩, ?_, rfl, rfl, ?_⟩
     · rw [henv₂]; exact List.mem_cons_self
     · exact hann
   | axiomDecl cv₀ =>
     obtain ⟨rfl, htol, hqs⟩ := hcv
-    simp only [ConLeche.Semantics.DeclRun, ConLeche.Semantics.DeclAxiomRun] at hrun
+    simp only [ConLeche.Semantics.DeclKindRun, ConLeche.Semantics.DeclAxiomRun] at hrun
     -- the `Quot.sound` arm (task #293) is excluded by `Declares`
     rcases hrun with ⟨hq, -⟩ | hrun
     · exact absurd hq hqs
-    obtain ⟨type', -, hcvr, hdisj⟩ := hrun
-    obtain ⟨-, -, -, -, -, hann, -, -, -⟩ := hcvr
+    obtain ⟨-, type', -, hcvr, hdisj⟩ := hrun
+    obtain ⟨-, -, -, -, hann, -, -, -⟩ := hcvr
     have henv₂ : env₂ = ⟨.axiomInfo ⟨cv.name, cv.levelParams, type'⟩ :: env.consts, env.tables⟩ := by
       rcases hdisj with ⟨-, he⟩ | ⟨-, -, he⟩ | ⟨-, -, he⟩ |
         ⟨-, -, -, -, -, -, htol', -⟩
@@ -191,7 +191,7 @@ carries the model, every record's declared constant is stored — with its
 name, its level parameters and its type — and is still there at the
 end.  The hypotheses are `declsRun_model`'s. -/
 theorem declsRun_declares {ds : List Declaration} {p q : Nat × FEnv}
-    (hrun : DeclsRun .verified pins ds p q) :
+    (hrun : DeclsRun .verified pins maxNatSize ds p q) :
     p.2 = mkFEnv p.2.env → EnvModelOk V p.2.env →
     ∀ pd ∈ ds, ∀ cv : ConstantVal, Declaration.Declares pd cv →
       ∃ c ∈ q.2.env.consts, c.name = cv.name ∧
@@ -202,7 +202,7 @@ theorem declsRun_declares {ds : List Declaration} {p q : Nat × FEnv}
   | @cons pd ds p p₁ q hstep rest ih =>
     intro hfe hm pd' hmem cv hcv
     obtain ⟨fe₁, s₁, rfl, hstepC⟩ := declStep_ok hstep
-    obtain ⟨hm₁, hfe₁, -, F, hF⟩ := checkDeclStepC_model hfe hm CSOKF.empty hstepC
+    obtain ⟨hm₁, hfe₁, -, F, hF⟩ := checkDeclStepC_model hfe hm (CSOKF.fresh _) hstepC
     rcases List.mem_cons.mp hmem with rfl | hmem'
     · obtain ⟨c, hc, h1, h2, h3⟩ := checkDecl_declares hF hcv
       obtain ⟨new, hnew, -⟩ := (declsRun_chain .verified rest (PushChain.self hfe₁)).2.1
@@ -218,7 +218,7 @@ environment a constant of that very name, with the record's own level
 parameters and the record's own type.  An `indDecl`
 block's members are outside the claim (see the module docstring). -/
 theorem checkDecls_consts (V : Type w) [SetTheory V]
-    {ds : Array Declaration} {env : Env} (accepted : checkDecls .verified pins ds = .ok env)
+    {ds : Array Declaration} {env : Env} (accepted : checkDecls .verified pins maxNatSize ds = .ok env)
     {pd : Declaration} (hmem : pd ∈ ds) {cv : ConstantVal} (hcv : Declaration.Declares pd cv) :
     ∃ c, env.find? cv.name = some c ∧
       c.toConstantVal.levelParams = cv.levelParams ∧

@@ -77,7 +77,7 @@ def flushClears (m : Mem) : Mem :=
 /-- The memory after `flush_caches()`. -/
 def flushMem (m : Mem) : Mem := flushClears m
 
-/-- con-ron: ConRon/Arena/Core.lean:3971-3977 ConRon.Arena.flushCaches -/
+/-- con-ron: ConRon/Arena/Core.lean:4276-4282 ConRon.Arena.flushCaches -/
 @[no_expose, l_impl ConRon.Arena.flushCaches]
 def flushCachesL : FunDecl := lfn () locals (r) {
   r := call wc_clear();

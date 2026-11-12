@@ -20,8 +20,8 @@ The basis tier's fourth block, and the only one that
   crosses that gap with **`EqLaw`** — the `EnvModelM` field whose
   *supplier* is the `Eq` block, and whose grading half is exactly what
   the reading's `htyOk` row needs.  The field is
-  available at the `Quot` cons because `DeclBasisRun`'s first conjunct
-  puts `Eq` in the prefix.
+  available at the `Quot` cons because `DeclQuotRun`'s slot guard
+  (`quotPredsOk`) puts `Eq` in the prefix.
 
 Everything else is the `BasisBlocks.lean` recipe: five pinned
 towers, five type readings, two `.plain` `RecRuleLaw` rows.  Both
@@ -55,7 +55,7 @@ attribute [local simp] ConLeche.BasisDSL.bv ConLeche.BasisDSL.srt ConLeche.Basis
   ConLeche.quotRel ConLeche.quotLiftF ConLeche.quotLiftH ConLeche.quotIndMotive ConLeche.quotIndMk
 
 open ConLeche (quotA quotMkA quotLiftA quotIndA quotSoundA quotName
-  quotMkName quotLiftName quotIndName quotSoundName eqA eqName)
+  quotMkName quotLiftName quotIndName quotSoundName eqI eqName)
 
 variable {m : EnvModel V env} {A : (Name → Nat) → Term}
 
@@ -223,7 +223,7 @@ theorem extendQuot (mp : EnvModelM V env)
     (fun _ _ _ h => nomatch h)
     (by decide) (by decide) (by decide) (by decide)
     (fun _ _ _ _ _ h => nomatch h)
-    (Or.inl (by decide)) (Or.inl (fun _ h => nomatch h))
+    (Or.inl (fun _ h => nomatch h))
     (ConsHead.ofBasis hwf (fun _ => trivial) rfl
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT quotA.name ψ
@@ -261,7 +261,7 @@ theorem extendQuotMk (mp : EnvModelM V env)
     (fun _ _ _ h => nomatch h)
     (by decide) (by decide) (by decide) (by decide)
     (fun _ _ _ _ _ h => nomatch h)
-    (Or.inl (by decide)) (Or.inl (fun _ h => nomatch h))
+    (Or.inl (fun _ h => nomatch h))
     (ConsHead.ofBasis hwf (fun _ => trivial) rfl
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT quotMkA.name ψ
@@ -1135,7 +1135,7 @@ theorem extendQuotInd (mp : EnvModelM V env)
     (A := fun ψ => Term.const .quotInd [ψ uN]) hfresh (by decide)
     (fun _ _ _ h => nomatch h)
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (Or.inl (fun _ h => nomatch h))
+    (Or.inl (fun _ h => nomatch h))
     (ConsHead.ofBasis hwf (fun _ => trivial) rfl
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT quotIndA.name ψ
@@ -1527,7 +1527,7 @@ theorem extendQuotSound (mp : EnvModelM V env)
     (fun _ _ _ h => nomatch h)
     (by decide) (by decide) (by decide) (by decide)
     (fun _ _ _ _ _ h => nomatch h)
-    (Or.inl (by decide)) (Or.inr (by decide))
+    (Or.inr (by decide))
     (ConsHead.ofBasis hwf (fun _ => trivial) rfl
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT quotSoundA.name ψ
@@ -2515,7 +2515,7 @@ theorem extendQuotLift (mp : EnvModelM V env)
     (A := fun ψ => Term.const .quotLift [ψ uN, ψ vN]) hfresh (by decide)
     (fun _ _ _ h => nomatch h)
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (Or.inl (fun _ h => nomatch h))
+    (Or.inl (fun _ h => nomatch h))
     (ConsHead.ofBasis hwf (fun _ => trivial) rfl
       (fun ψ t hp => by
         rw [show ConLeche.Verify.pinnedStructT quotLiftA.name ψ

@@ -8,86 +8,22 @@ public import ConAgua.Arena.KnotMono1
 # The twin's store only grows (2): the `defeq` family, the delta steps, the bodies
 
 `L.Arena.KM.f` for the rest of `coreKnot`'s reachable functions (`KnotMono1.lean`'s list,
-continued). `defeqPeel` and `defeqLams` are structural recursions whose unfolding lemmas the equation
-compiler cannot produce in its budget: one level is stated with the recursive call abstracted
-(`peelStep`, as con-ron's `Bridge/Core/Arms/DefeqPeel.lean`, and `lamsStep`) and proved by `delta`.
+continued).
 -/
 
 open ConRon.Arena L.Arena
 
-/-- One level of `defeqPeel`, the recursive call abstracted as `cont` (con-ron's `peelStep`). -/
-def peelStep (r : CoreFnsA) (d : Nat) (peel : Nat)
-    (cont : EIdx → EIdx → Nat → Array EIdx → AM Bool)
-    (a b : EIdx) (k : Nat) (fvs : Array EIdx) : AM Bool := do
-  if a == b then pure true
-  else if peel = 0 || a.tag != ETag.forallE || b.tag != ETag.forallE then
-    defeqPeelLeaf r d a b k fvs
-  else
-    match ← viewBind a with
-    | none => failDanglingE
-    | some (da, ba) =>
-      match ← viewBind b with
-      | none => failDanglingE
-      | some (db, bb) => do
-        let sameDom := da == db
-        let t1 ← instantiateListFast coreWalkFuel da fvs 0
-        let t2 ← if sameDom then pure t1
-                 else instantiateListFast coreWalkFuel db fvs 0
-        let dq ← if sameDom then pure true else r.defeq (d + k) t1 t2
-        if !dq then pure false
-        else do
-          let fv ← internFVarE (d + k) t2
-          cont ba bb (k + 1) (fvs.push fv)
-
-theorem defeqPeel_succ_eq' (r : CoreFnsA) (d p : Nat) (a b : EIdx) (k : Nat) (fvs : Array EIdx) :
-    defeqPeel r d (p + 1) a b k fvs = peelStep r d (p + 1) (defeqPeel r d p) a b k fvs := by
-  delta defeqPeel peelStep
-  exact rfl
-
-theorem defeqPeel_zero_eq' (r : CoreFnsA) (d : Nat) (a b : EIdx) (k : Nat) (fvs : Array EIdx) :
-    defeqPeel r d 0 a b k fvs = peelStep r d 0 (defeqPeelLeaf r d) a b k fvs := by
-  delta defeqPeel peelStep
-  exact rfl
-
-/-- `defeqPeel` by induction on the peel budget, over the unfoldings `defeqPeel_succ_eq'`,
-`defeqPeel_zero_eq'` (its own unfolding lemma is out of the equation compiler's budget). -/
-theorem L.Arena.KM.ConRon.Arena.defeqPeel (r : CoreFnsA) (d peel : Nat) (a b : EIdx) (k : Nat)
-    (fvs : Array EIdx) (hR : RecSMono r) : SMono (defeqPeel r d peel a b k fvs) := by
-  induction peel generalizing a b k fvs with
-  | zero => rw [defeqPeel_zero_eq']; simp only [peelStep]; smono_auto
-  | succ p ih => rw [defeqPeel_succ_eq']; simp only [peelStep]; smono_auto
-smono_derive ConRon.Arena.defeqBinders
-smono_derive ConRon.Arena.defeqLamsInner
-smono_derive ConRon.Arena.lamPair?
-
-/-- One level of `defeqLams`, the recursive call abstracted as `cont` (the equation compiler cannot
-produce `defeqLams`' unfolding lemma in its budget; `defeqPeel`'s `peelStep`). -/
-def lamsStep (mode : ConLeche.CheckMode) (r : CoreFnsA) (fuel : Nat)
-    (cont : Nat → Nat → EIdx → EIdx → EIdx → EIdx → AM Bool) (depth : Nat) (ty₁ body₁ ty₂ body₂ : EIdx) :
-    AM Bool := do
-  if !(← r.defeq depth ty₁ ty₂) then pure false
-  else do
-  let fv ← internFVarE depth ty₂
-  let b₁ ← instantiate1Fast coreWalkFuel body₁ fv 0
-  let b₂ ← instantiate1Fast coreWalkFuel body₂ fv 0
-  match fuel with
-  | 0 => defeqLamsInner mode r depth b₁ b₂
-  | fuel + 1 =>
-    match ← lamPair? b₁ b₂ with
-    | some (ty₁', body₁', ty₂', body₂') =>
-      if b₁ == b₂ then pure true
-      else cont fuel (depth + 1) ty₁' body₁' ty₂' body₂'
-    | none => defeqLamsInner mode r depth b₁ b₂
-
-theorem defeqLams_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fuel depth : Nat) (a b c e : EIdx) :
-    defeqLams mode r fuel depth a b c e = lamsStep mode r fuel (defeqLams mode r) depth a b c e := by
-  cases fuel <;> (delta defeqLams lamsStep; exact rfl)
-
-theorem L.Arena.KM.ConRon.Arena.defeqLams (mode : ConLeche.CheckMode) (r : CoreFnsA) (fuel depth : Nat)
-    (a b c e : EIdx) (hR : RecSMono r) : SMono (defeqLams mode r fuel depth a b c e) := by
-  induction fuel generalizing depth a b c e with
-  | zero => rw [defeqLams_eq]; simp only [lamsStep]; smono_auto
-  | succ p ih => rw [defeqLams_eq]; simp only [lamsStep]; smono_auto
+smono_derive ConRon.Arena.defeqBindersInner
+smono_derive ConRon.Arena.defeqDomain
+smono_derive ConRon.Arena.binderPair?
+/-- `defeqBinders` by induction on its budget (its `match` on the budget sits under binds; the
+split leaves the budget's equation beside the goal). -/
+theorem L.Arena.KM.ConRon.Arena.defeqBinders (mode : ConLeche.CheckMode) (r : CoreFnsA) (lam : Bool)
+    (fuel depth : Nat) (fvs : Array EIdx) (ty₁ body₁ ty₂ body₂ : EIdx) (hR : RecSMono r) :
+    SMono (defeqBinders mode r lam fuel depth fvs ty₁ body₁ ty₂ body₂) := by
+  induction fuel generalizing depth fvs ty₁ body₁ ty₂ body₂ with
+  | zero => rw [_root_.ConRon.Arena.defeqBinders]; smono_auto <;> first | omega | simp_all
+  | succ _ ih => rw [_root_.ConRon.Arena.defeqBinders]; smono_auto <;> first | omega | simp_all
 smono_derive ConRon.Arena.quickDefEq
 smono_derive ConRon.Arena.numArgs
 smono_derive ConRon.Arena.lamProj?
@@ -123,10 +59,22 @@ smono_derive ConRon.Arena.lazyDeltaProjReduction
 smono_derive ConRon.Arena.defeqProjPair
 smono_derive ConRon.Arena.etaCtorShape
 smono_derive ConRon.Arena.structEtaCertWith
+smono_derive ConRon.Arena.etaCtorPartialFam
+smono_derive ConRon.Arena.etaCtorPartial
+smono_derive ConRon.Arena.structEtaFullAt
+smono_derive ConRon.Arena.structEtaFull
+smono_derive ConRon.Arena.structEtaExpand
+smono_derive ConRon.Arena.ioNeutral
+smono_derive ConRon.Arena.structEtaCertPartial
 smono_derive ConRon.Arena.structEtaCert
+smono_derive ConRon.Arena.isPropType
+smono_derive ConRon.Arena.unitLikeFields
+smono_derive ConRon.Arena.unitLikeShapeAt
+smono_derive ConRon.Arena.unitLikeShape
+smono_derive ConRon.Arena.unitLikeStruct
+smono_derive ConRon.Arena.unitLikeLoop
 smono_derive ConRon.Arena.structUnitCert
 smono_derive ConRon.Arena.stuckIrrel
-smono_derive ConRon.Arena.ioNeutral
 smono_derive ConRon.Arena.etaCert
 smono_derive ConRon.Arena.defeqStuck
 smono_derive ConRon.Arena.boolTrueShortcut
