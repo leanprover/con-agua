@@ -75,7 +75,7 @@ def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
 /-- `app_count_at(e, f)`: `getAppFn f e` and `numArgs f e` in one walk at the counter `f`:
 `(count, head)`. -/
 -- con-ron: ConRon/Arena/PropRead.lean:80-93 ConRon.Arena.numArgs
--- con-ron: ConRon/Arena/ExprOps.lean:1286-1295 ConRon.Arena.getAppFn
+-- con-ron: ConRon/Arena/ExprOps.lean:1288-1297 ConRon.Arena.getAppFn
 @[no_expose, l_impl ConRon.Arena.numArgs ConRon.Arena.getAppFn]
 def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
   f0 := f;

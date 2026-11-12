@@ -611,11 +611,6 @@ def absRecRule (r : env.RecRule) : ConLeche.RecRule where
 /-- `ConLeche/Kernel/Env.lean:362` — `IndCaps`. -/
 def absIndCaps (c : env.IndCaps) : ConLeche.IndCaps where
   eta := c.eta
-  etaCtor := absName c.eta_ctor
-  etaParams := c.eta_params.val
-  etaFields := c.eta_fields.val
-  unitlike := c.unitlike
-  unitParams := c.unit_params.val
   all := absNames c.all
   nparams := c.nparams.val
   nIdx := c.n_idx.val
@@ -694,10 +689,9 @@ def RecRuleWF (r : env.RecRule) : Prop :=
 /-- A `Vec<RecRule>` all of whose entries are well formed. -/
 def RecRulesWF (rs : alloc.vec.Vec env.RecRule) : Prop := ∀ r ∈ rs.val, RecRuleWF r
 
-/-- `IndCaps`: the η constructor's name, and the block's member and constructor
-names. -/
+/-- `IndCaps`: the block's member and constructor names. -/
 def IndCapsWF (c : env.IndCaps) : Prop :=
-  NameWF c.eta_ctor ∧ NamesWF c.all ∧ NamesWF c.ctors
+  NamesWF c.all ∧ NamesWF c.ctors
 
 /-- `ConstantInfo`: the hereditary invariant of a stored constant, one clause
 per constructor in the cited field order. -/

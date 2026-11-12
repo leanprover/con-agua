@@ -111,7 +111,9 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   o := CTL.u64[0];

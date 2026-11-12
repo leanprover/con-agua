@@ -70,6 +70,7 @@ parameter names at `EREC[off ‥ off + len)`. -/
 /-- `opf_go(n, e, i, co, cn)`: `openPisAtFvarsFGo acc n e i` with `acc = SPN[co ‥ co + cn)`:
 `(1, body)` or `(0, 0)`; the free variables made are pushed. -/
 -- con-ron: ConRon/Arena/Core.lean:2598-2615 ConRon.Arena.openPisAtFvarsFGo
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsFGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsFGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
   if n == 0 { b := call inst_list(e, co, cn, 0); return (1, b) };
@@ -84,7 +85,7 @@ def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b
 
 /-- `opa_go(n, e, i)`: `openPisAtFvars n e i`: `(1, body)` or `(0, 0)`; the free variables made
 are pushed. -/
--- con-ron: ConRon/Arena/Core.lean:2580-2596 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:2846-2862 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
   if n == 0 { return (1, e) };
@@ -100,7 +101,9 @@ def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
 /-- `open_pis_at_fvars_f(n, e, i)`: `(1, off, n, body)` (the free variables an `IW` slice, in
 binder order) or `(0, 0, 0, 0)`. A first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation
 D33: the indices `i, i + 1, …` must not wrap). -/
--- con-ron: ConRon/Arena/Core.lean:2617-2624 ConRon.Arena.openPisAtFvarsF
+-- con-ron: ConRon/Arena/Core.lean:2885-2895 ConRon.Arena.openPisAtFvarsF
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.openPisAtFvarsF`, `ConRon.Arena.openPisRawGo` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsF` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsF]
 def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   if i >> 63 != 0 { abort };

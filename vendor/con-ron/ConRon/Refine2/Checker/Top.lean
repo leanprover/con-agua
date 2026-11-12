@@ -3,7 +3,8 @@
 
 **Task #97-P5-Checker**, deliverables 2 and 3 (DESIGN.md §8.2).
 `crates/con-ron-core/src/arena/{check_decl,checker}.rs` against
-`proof/ConRon/Arena/{CheckDecl,Checker}.lean`: `check_decl`'s six arms, the
+`proof/ConRon/Arena/{CheckDecl,Checker}.lean`: `check_decl_kind`'s six arms and
+`check_decl` (those, the flush, the reserved names' check), the
 fold's `And` pin (`and_pin_ok`), and the startup walk `intern_all_pins`.  A
 record's job (`stream_index::record_check`, `checker::run_job`) is
 `Refine2/Checker/Jobs.lean`'s.
@@ -11,14 +12,15 @@ record's job (`stream_index::record_check`, `checker::run_job`) is
 Every kind is checked in its arm.  A value arm checks the value returning the
 record unpushed (`Refine2/Checker/DeclCheck.lean`), runs its pinned gates, which
 read the environment with the record pushed and hand it back popped
-(`gate_push_refines`, `SimEnv`), and pushes last.  A pinned block and a quotient
-record are compared with their pins and installed at the names they declare.
+(`gate_push_refines`, `SimEnv`), and pushes last.  A quotient record is compared
+with its pin and installed at the names it declares.
 
 ## Finding 14 — `check_ind_decl` is the Inductives tier's
 
-`arena::check_decl::check_ind_decl` is the pinned-basis test, the declared
-parameter count, the recogniser and ONE route: the uniform install
-`check_block` or the decline `check_shapeless`.  The route's stages are
+`arena::check_decl::check_ind_decl` is the declared parameter count, the
+reader and ONE route: the uniform install `check_block` at every block
+`read_block` reads (the pinned basis blocks included), the reader's reject at
+any other.  The route's stages are
 `arena::inductives::*`, not this tier's, and `Refine2/Inductives/Top.lean`
 exports them as `@[lockstep]` lemmas over this tier's base
 (`Checker/Base.lean`); `check_ind_decl_refines` is one `lockstep` call over
@@ -28,6 +30,7 @@ The statements take `AStateRel₀` and `AStateInv` and nothing else: lockstep,
 with no precondition on the twin.
 -/
 import ConRon.Refine2.Checker.DeclCheck
+import ConRon.Refine2.Inductives.Abs
 import ConRon.Refine2.Checker.Basis
 import ConRon.Refine2.Inductives.Top
 
@@ -338,37 +341,19 @@ open Lockstep in
       (checkQuotRecord lf (ConRon.Refine.absQuotKind k) (absIConstantVal cv)) :=
   LS.ofSimRel₀ fun _ h => check_quot_record_refines hrel hinv hfe.rel hfe.inv h
 
-/-- **`check_basis_block` ⊑ `checkBasisBlock`**: a pinned block's records compared
-with the pin, and each pin installed at the names its record declares. -/
-theorem check_basis_block_refines {pers st lst} {rf lf}
-    {kind : kernel.env.BasisKind} {block : alloc.vec.Vec arena.env.IConstantInfo} {o}
-    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hfe : IFEnvRel pers rf lf) (hfinv : IFEnvInv rf)
-    (hrun : arena.decl_check.check_basis_block pers st rf kind block = ok o) :
-    SimRel₀ (IFEnvRelI pers) pers lst o
-      (checkBasisBlock lf (ConRon.Refine.absBasisKind kind) (absICIL block)) := by
-  have hfeI : IFEnvRelI pers rf lf := ⟨hfe, hfinv⟩
-  refine Lockstep.LS.toSimRel₀ ?_ hrun
-  rw [arena.decl_check.check_basis_block]
-  unfold checkBasisBlock
-  lockstep
-
 open Lockstep in
-@[lockstep] theorem check_basis_block_ls {pers st lst}
-    {rf lf}
-    {kind : kernel.env.BasisKind} {block : alloc.vec.Vec arena.env.IConstantInfo}
-    (hrel : AStateRel₀ pers st lst)
-    (hinv : AStateInv pers st)
-    (hfe : IFEnvRelI pers rf lf) :
-    LS pers (IFEnvRelI pers)
-      (arena.decl_check.check_basis_block pers st rf kind block) lst
-      (checkBasisBlock lf (ConRon.Refine.absBasisKind kind) (absICIL block)) :=
-  LS.ofSimRel₀ fun _ h => check_basis_block_refines hrel hinv hfe.rel hfe.inv h
+/-- A Rust error value thrown (`fail(e)`) against the twin's throw of its abstraction:
+the same kind. -/
+theorem LS_fail_absACheckError {α β : Type} {pers : arena.store.PersTier} {R : α → β → Prop}
+    {st : arena.monad.AState} {lst : AState} (e : kernel.core_types.CheckError) :
+    LS pers R (ok (.Err e, st)) lst (Arena.fail (absACheckError e)) := by
+  intro o st' h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Result.ok_injective h)
+  exact AErrSim.mk rfl (by simp)
 
-/-- `check_ind_decl` ⊑ `checkDecl`'s `.indDecl` arm — the pinned basis blocks
-recognised first (a stream's `Nat` block arrives as an ordinary `indDecl`),
-then the declared parameter count, the recogniser and the one uniform route
-(finding 14). -/
+/-- `check_ind_decl` ⊑ `checkDeclKind`'s `.indDecl` arm — the declared
+parameter count, the reader and the one uniform route, the pinned basis blocks
+included (finding 14). -/
 theorem check_ind_decl_refines {pers st lst} {rf lf}
     {mode : kernel.env.CheckMode}
     {block : alloc.vec.Vec arena.env.IConstantInfo} {n_p : Std.U64} {o}
@@ -382,6 +367,7 @@ theorem check_ind_decl_refines {pers st lst} {rf lf}
   refine Lockstep.LS.toSimRel₀ ?_ hrun
   rw [arena.check_decl.check_ind_decl, checkIndDeclArmSpec]
   lockstep
+  all_goals exact LS_fail_absACheckError _
 
 /-- **`check_axiom_decl` ⊑ `checkDecl`'s `.axiomDecl` arm**. -/
 theorem check_axiom_decl_refines {pers st lst} {rf lf}
@@ -743,9 +729,51 @@ theorem check_defn_decl_refines {pers st lst} {rf lf}
 
 /-! ## One declaration -/
 
-/-- **`check_decl` ⊑ `checkDecl`** — check a single declaration, extending the
-environment on success.  Arm for arm; the `.indDecl` arm's route is the
-Inductives seam (finding 14). -/
+/-- **`check_decl_kind` ⊑ `checkDeclKind`** — a declaration's own checks,
+extending the environment on success.  Arm for arm; the `.indDecl` arm's route
+is the Inductives seam (finding 14). -/
+theorem check_decl_kind_refines {pers st lst} {rf lf}
+    {mode : kernel.env.CheckMode}
+    {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
+    {d : arena.env.IDeclaration} {o}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hfe : IFEnvRel pers rf lf) (hfinv : IFEnvInv rf)
+    (hrun : arena.check_decl.check_decl_kind pers st mode pins rf d = ok o) :
+    SimRel₀ (IFEnvRelI pers) pers lst o
+      (checkDeclKind (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) lf
+        (absIDeclaration d)) := by
+  cases d with
+  | AxiomDecl cv =>
+    rw [absIDeclaration, checkDeclKind_axiomDecl]
+    exact check_axiom_decl_refines hrel hinv hfe hfinv hrun
+  | DefnDecl cv value hint =>
+    rw [absIDeclaration, checkDeclKind_defnDecl]
+    exact check_defn_decl_refines hrel hinv hfe hfinv hrun
+  | ThmDecl cv value =>
+    rw [absIDeclaration, checkDeclKind_thmDecl]
+    exact check_thm_decl_refines hrel hinv hfe hfinv hrun
+  | OpaqueDecl cv value =>
+    rw [absIDeclaration, checkDeclKind_opaqueDecl]
+    exact check_opaque_decl_refines hrel hinv hfe hfinv hrun
+  | IndDecl block n_p =>
+    rw [absIDeclaration, checkDeclKind_indDecl]
+    exact check_ind_decl_refines hrel hinv hfe hfinv hrun
+  | QuotDecl k cv =>
+    rw [absIDeclaration, checkDeclKind_quotDecl]
+    exact check_quot_record_refines hrel hinv hfe hfinv hrun
+
+open Lockstep in
+@[lockstep] theorem check_decl_kind_ls {pers st lst} {rf lf}
+    {mode : kernel.env.CheckMode}
+    {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet} {d : arena.env.IDeclaration}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) (hfe : IFEnvRelI pers rf lf) :
+    LS pers (IFEnvRelI pers) (arena.check_decl.check_decl_kind pers st mode pins rf d) lst
+      (checkDeclKind (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) lf
+        (absIDeclaration d)) :=
+  LS.ofSimRel₀ fun _ h => check_decl_kind_refines hrel hinv hfe.rel hfe.inv h
+
+/-- **`check_decl` ⊑ `checkDecl`** — check a single declaration: its own checks,
+the flush, then the reserved names' check. -/
 theorem check_decl_refines {pers st lst} {rf lf}
     {mode : kernel.env.CheckMode}
     {pins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
@@ -756,25 +784,11 @@ theorem check_decl_refines {pers st lst} {rf lf}
     SimRel₀ (IFEnvRelI pers) pers lst o
       (checkDecl (ConRon.Refine.absMode mode) (absINatOpPinSetL pins) lf
         (absIDeclaration d)) := by
-  cases d with
-  | AxiomDecl cv =>
-    rw [absIDeclaration, checkDecl_axiomDecl]
-    exact check_axiom_decl_refines hrel hinv hfe hfinv hrun
-  | DefnDecl cv value hint =>
-    rw [absIDeclaration, checkDecl_defnDecl]
-    exact check_defn_decl_refines hrel hinv hfe hfinv hrun
-  | ThmDecl cv value =>
-    rw [absIDeclaration, checkDecl_thmDecl]
-    exact check_thm_decl_refines hrel hinv hfe hfinv hrun
-  | OpaqueDecl cv value =>
-    rw [absIDeclaration, checkDecl_opaqueDecl]
-    exact check_opaque_decl_refines hrel hinv hfe hfinv hrun
-  | IndDecl block n_p =>
-    rw [absIDeclaration, checkDecl_indDecl]
-    exact check_ind_decl_refines hrel hinv hfe hfinv hrun
-  | QuotDecl k cv =>
-    rw [absIDeclaration, checkDecl_quotDecl]
-    exact check_quot_record_refines hrel hinv hfe hfinv hrun
+  have hfeI : IFEnvRelI pers rf lf := ⟨hfe, hfinv⟩
+  refine Lockstep.LS.toSimRel₀ ?_ hrun
+  rw [arena.check_decl.check_decl, checkDecl]
+  lockstep
+  all_goals exact LS_fail_absACheckError _
 
 /-! ## The error tag and the startup walk -/
 
@@ -1201,18 +1215,34 @@ Since round 2's ruling (a) the twin interns the raw pins too, so
 `internAllPinsPortSpec` is `internAllPins` (`internAllPinsPortSpec_eq`) and
 this is the proof route of `intern_all_pins_refines` below. -/
 theorem intern_all_pins_port_refines {pers st lst}
-    {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet} {o}
+    {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet} {m : ron.nat.Nat} {o}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hwf : ∀ p ∈ pins.val, NatOpPinSetWF p)
-    (hrun : arena.checker.intern_all_pins pers st pins = ok o) :
+    (hrun : arena.checker.intern_all_pins pers st pins m = ok o) :
     Sim₀ absINatOpPinSetL pers lst o
-      (internAllPinsPortSpec (ConRon.Refine.absPins pins)) := by
+      (internAllPinsPortSpec (ConRon.Refine.absPins pins) (ConRon.Refine.Nat.toNat m)) := by
   rw [arena.checker.intern_all_pins] at hrun
   unfold Sim₀
   rw [internAllPinsPortSpec]
+  -- 0. the maximum `Nat` size into the pin record, normalised
+  obtain ⟨n, hn, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
+  obtain ⟨n1, hn1, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
+  have hcl := ConRon.Refine.Nat.clone_refines hn
+  obtain ⟨hn1v, hn1wf⟩ := ConRon.Refine.Nat.norm_refines hn1
+  have hrel0 : AStateRel₀ pers { st with pins := { st.pins with max_nat_size := n1 } }
+      { lst with pins := { lst.pins with maxNatSize := ConRon.Refine.Nat.toNat m } } :=
+    ⟨hrel.store, hrel.memos, hrel.caches,
+      ⟨hrel.pins.names, hrel.pins.reserved, hrel.pins.emptyLevels, hrel.pins.zeroLevel,
+        hrel.pins.sortOne, by
+          show ConRon.Refine.Nat.toNat m = ConRon.Refine.Nat.toNat n1
+          rw [hn1v, ← hcl.2]; rfl, hn1wf⟩⟩
+  have hinv0 : AStateInv pers { st with pins := { st.pins with max_nat_size := n1 } } :=
+    ⟨hinv.store, hinv.memos, hinv.caches⟩
+  rw [run_bind_ok (x := (get : AM AState)) rfl,
+    run_bind_ok (x := (set _ : AM PUnit)) rfl]
   obtain ⟨q1, hq1, hrun⟩ := ConRon.Refine.bind_eq_ok_iff.mp hrun
   obtain ⟨r1, st1⟩ := q1
-  have hS1 := intern_all_basis_refines (i := 0#usize) hrel hinv hq1
+  have hS1 := intern_all_basis_refines (i := 0#usize) hrel0 hinv0 hq1
   simp only [List.drop_zero, show (0#usize : Std.Usize).val = 0 from rfl] at hS1
   cases r1 with
   | Err e =>
@@ -1260,8 +1290,8 @@ theorem intern_all_pins_port_refines {pers st lst}
 four Rust functions' transcriptions in sequence — is `internAllPins`, the flat
 `do` block, re-bracketed by the monad laws.  Both intern con-leche's plain
 pins (task #119: the raw/annotated pair is gone). -/
-theorem internAllPinsPortSpec_eq (ps : List ConLeche.NatOpPinSet) :
-    internAllPinsPortSpec ps = internAllPins ps := by
+theorem internAllPinsPortSpec_eq (ps : List ConLeche.NatOpPinSet) (m : Nat) :
+    internAllPinsPortSpec ps m = internAllPins ps m := by
   simp only [internAllPinsPortSpec, internAllBasisSpec, internAllAxiomPinsSpec,
     internAllAxiomPinsRestSpec, internAllTrustPinsSpec, internAllReducePinsSpec,
     internAllNamesSpec, internAllPins, bind_assoc, pure_bind]
@@ -1270,12 +1300,12 @@ theorem internAllPinsPortSpec_eq (ps : List ConLeche.NatOpPinSet) :
 
 It is `intern_all_pins_port_refines` through `internAllPinsPortSpec_eq`. -/
 theorem intern_all_pins_refines {pers st lst}
-    {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet} {o}
+    {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet} {m : ron.nat.Nat} {o}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hwf : ∀ p ∈ pins.val, NatOpPinSetWF p)
-    (hrun : arena.checker.intern_all_pins pers st pins = ok o) :
+    (hrun : arena.checker.intern_all_pins pers st pins m = ok o) :
     Sim₀ absINatOpPinSetL pers lst o
-      (internAllPins (ConRon.Refine.absPins pins)) := by
+      (internAllPins (ConRon.Refine.absPins pins) (ConRon.Refine.Nat.toNat m)) := by
   rw [← internAllPinsPortSpec_eq]
   exact intern_all_pins_port_refines hrel hinv hwf hrun
 

@@ -24,8 +24,8 @@ function argument and a closure is what DESIGN §3.4 forbids.
    makes `find?` the only read of the environment.  Consequently every
    `…Of`/`…F` PAIR of con-leche declarations — `natLitSupported` /
    `natLitSupportedF`, `natLitStored` / `natLitStoredF`, `natOpGuard` /
-   `natOpGuardF`, `towerSlotsAll` / `towerSlotsAllF`,
-   `andRescueSlotsOf` / `andRescueSlots` / `andRescueSlotsF`,
+   `natOpGuardF`, `andRescueSlotsOf` / `andRescueSlots` /
+   `andRescueSlotsF`,
    `strLitStored` / `strLitStoredF` — collapses into
    ONE twin, which carries a `con-leche:` line per collapsed declaration.
    That is P2b's own rule for the `…Go`/`…Fast` triples, applied to the
@@ -229,7 +229,7 @@ def ruleRhsAt (recName ctor : NIdx) (lps : List NIdx) (rhs : EIdx)
 
 /-! ## The error -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:51-69 unknownConstError — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:50-68 unknownConstError — **the
 verdict at a constant the environment does not know**: `sorryAx` is a
 positively detected unsupported feature and DECLINES, every other
 unresolved name is a malformed stream and REJECTS.
@@ -247,7 +247,7 @@ def unknownConstError (n : NIdx) : AM CheckError := do
 
 /-! ## The record of mutually recursive entry points -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:113-137 CoreFns — the record of
+/-- con-leche: ConLeche/Kernel/Core.lean:112-136 CoreFns — the record of
 mutually recursive core entry points, over handles.  con-leche is
 polymorphic in the monad; the arena is at `AM` and nothing else (DESIGN
 §8.4), so the `m` parameter is gone and the name carries an `A`. -/
@@ -267,7 +267,7 @@ structure CoreFnsA where
   the entry every *internal* inference call site uses. -/
   inferIO : Nat → EIdx → AM EIdx
 
-/-- con-leche: ConLeche/Kernel/Core.lean:139-145 CoreFns.ioView — the
+/-- con-leche: ConLeche/Kernel/Core.lean:138-144 CoreFns.ioView — the
 **io-grade view** of a core record: the record whose full-grade `infer`
 slot is the io slot, so a body written against `r.infer` recurses at the io
 grade when handed `r.ioView`. -/
@@ -276,7 +276,7 @@ def CoreFnsA.ioView (r : CoreFnsA) : CoreFnsA :=
 
 /-! ## The bodies' small helpers -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:71-96 projIndexedStructLike — **could
+/-- con-leche: ConLeche/Kernel/Core.lean:70-95 projIndexedStructLike — **could
 official's `infer_proj` type `.proj sn i _` at a subject of type `T a⃗` where
 we store no projection table for `T`?**  Only at a single-constructor
 inductive `T` named by the node, applied to MORE arguments than its
@@ -297,7 +297,7 @@ def projIndexedStructLike (fe : IFEnv) (T sn : NIdx) (i nArgs : Nat) : Bool :=
       | _ => false
     | _ => false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:98-111 projMissError — **the verdict
+/-- con-leche: ConLeche/Kernel/Core.lean:97-110 projMissError — **the verdict
 at a `.proj sn i _` whose subject type is headed by `T` (applied to `nArgs`
 arguments) with no table entry at field `i`**: an out-of-range index at a
 table; a positively detected indexed structure-like type DECLINES
@@ -310,14 +310,14 @@ def projMissError (fe : IFEnv) (hasTable : Bool) (T sn : NIdx) (i nArgs : Nat) :
     .notImplemented "projection on an indexed structure-like type"
   else .invalid "invalid projection: not a structure-like type, or no such field"
 
-/-- con-leche: ConLeche/Kernel/Core.lean:156-167 liftFueled — lift a
+/-- con-leche: ConLeche/Kernel/Core.lean:155-166 liftFueled — lift a
 fuel-style partial result; `none` is OUR resource limit running out, so a
 DECLINE (con-leche's charter item 9), never a verdict. -/
 def liftFueled {α : Type} (what : String) : Option α → AM α
   | some a => pure a
   | none => fail (.notImplemented s!"resource limit: fuel exhausted: {what}")
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:39-47 Expr.ioNeutral — **is the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:37-45 Expr.ioNeutral — **is the
 spine's head neither a λ nor a `let` (nor a loose bound variable)?**  The η
 check's guard (`etaCert`): the head's TAG, off the handle word. -/
 def ioNeutral (e : EIdx) : AM Bool := do
@@ -328,7 +328,7 @@ def ioNeutral (e : EIdx) : AM Bool := do
   else if t == ETag.bvar then pure false
   else pure true
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:50-57 isCtorApp — is the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:48-55 isCtorApp — is the
 expression headed by a stored constructor? -/
 def isCtorApp (fe : IFEnv) (e : EIdx) : AM Bool := do
   let h ← getAppFn coreWalkFuel e
@@ -341,7 +341,7 @@ def isCtorApp (fe : IFEnv) (e : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:59-65 formerResSort — **a stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:57-63 formerResSort — **a stored
 inductive's result sort, read where it is needed**: the sort its stored type
 ends in, `none` where the type does not end in one. -/
 def formerResSort (ty : EIdx) : AM (Option LIdx) := do
@@ -352,14 +352,14 @@ def formerResSort (ty : EIdx) : AM (Option LIdx) := do
     | some s => pure (some s)
   else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:67-69 formerDefHeaded — a stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:65-67 formerDefHeaded — a stored
 former that does not show its telescope. -/
 def formerDefHeaded (cv : IConstantVal) : AM Bool := do
   match ← formerResSort cv.type with
   | some _ => pure false
   | none => pure true
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:71-77 formerZ — **the family's
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:69-75 formerZ — **the family's
 result-sort zero-ness datum**, read off its type (the level read back,
 deviation 4); where the sort is not read, `ifAllZero []`. -/
 def formerZ (cvT : IConstantVal) : AM PropWhen := do
@@ -369,7 +369,7 @@ def formerZ (cvT : IConstantVal) : AM PropWhen := do
     pure (Level.zeronessOf l)
   | none => pure (.ifAllZero [])
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:79-87 formerNeverZero — is a
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:77-85 formerNeverZero — is a
 stored inductive's result sort, at the level instantiation `us`, provably
 nonzero (official `is_never_zero`)?  The instantiated zero-ness datum is
 unsatisfiable exactly where the instantiated sort is never zero. -/
@@ -379,7 +379,7 @@ def formerNeverZero (cvT : IConstantVal) (us : LsIdx) : AM Bool := do
   let vs ← readLevelsM us
   pure (Level.substPW ks vs z).isNever
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:89-98 ctorFamily — **the family a
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:87-96 ctorFamily — **the family a
 constructor's type concludes in**: its former and its capabilities, `none`
 where its type concludes in no stored inductive. -/
 def ctorFamily (fe : IFEnv) (cvj : IConstantVal) :
@@ -394,7 +394,7 @@ def ctorFamily (fe : IFEnv) (cvj : IConstantVal) :
       | _ => pure none
   else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:100-119 unfoldDefinition — unfold
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:98-117 unfoldDefinition — unfold
 the (application of a) definition at the head, one step.  The stored value
 is instantiated through `constValAt`, so a constant unfolded twice at the
 same levels pays the substitution once. -/
@@ -416,7 +416,7 @@ def unfoldDefinition (fe : IFEnv) (e : EIdx) : AM (Option EIdx) := do
     | _ => pure none
   else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:121-134 unfoldableHead — may the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:119-132 unfoldableHead — may the
 delta step unfold `e`'s head (the official kernel's `is_delta`)?  The
 DECISION, taken before the unfolding is materialized. -/
 def unfoldableHead (fe : IFEnv) (e : EIdx) : AM Bool := do
@@ -434,7 +434,7 @@ def unfoldableHead (fe : IFEnv) (e : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:136-145 headHint — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:134-143 headHint — the
 reducibility hint of the constant at the head of `e`. -/
 def headHint (fe : IFEnv) (e : EIdx) : AM ReducibilityHint := do
   let hh ← getAppFn coreWalkFuel e
@@ -447,7 +447,7 @@ def headHint (fe : IFEnv) (e : EIdx) : AM ReducibilityHint := do
     | _ => pure .opaque
   else pure .opaque
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:147-156 sameConstHeads — are `a`
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:145-154 sameConstHeads — are `a`
 and `b` applications of the *same* constant (the lazy delta same-head
 short-circuit)?  Both sides must actually be applications. -/
 def sameConstHeads (a b : EIdx) : AM Bool := do
@@ -474,7 +474,7 @@ def sameConstHeads (a b : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:158-164 natLitToConstructor — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:156-162 natLitToConstructor — the
 constructor form of a `Nat` literal, one layer. -/
 def natLitToConstructor (n : Nat) : AM EIdx := do
   match n with
@@ -487,7 +487,7 @@ def natLitToConstructor (n : Nat) : AM EIdx := do
     let l ← internE (.lit (.natVal k))
     internE (.app sc l)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:166-170 natIndOk — the stored `Nat`
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:164-168 natIndOk — the stored `Nat`
 declaration has the expected shape. -/
 def natIndOk : Option IConstantInfo → AM Bool
   | some (.indInfo cv _) => do
@@ -495,7 +495,7 @@ def natIndOk : Option IConstantInfo → AM Bool
     pure (cv.levelParams.isEmpty && cv.type == s1)
   | _ => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:172-176 natZeroOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:170-174 natZeroOk — the stored
 `Nat.zero` declaration has the expected shape. -/
 def natZeroOk : Option IConstantInfo → AM Bool
   | some (.ctorInfo cv _ _) => do
@@ -504,7 +504,7 @@ def natZeroOk : Option IConstantInfo → AM Bool
     pure (cv.levelParams.isEmpty && cv.type == nc)
   | _ => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:178-186 natSuccOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:176-184 natSuccOk — the stored
 `Nat.succ` declaration has the expected (annotated) shape. -/
 def natSuccOk : Option IConstantInfo → AM Bool
   | some (.ctorInfo cv _ _) => do
@@ -518,8 +518,8 @@ def natSuccOk : Option IConstantInfo → AM Bool
       else pure false
   | _ => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:188-193 natLitSupported
-con-leche: ConLeche/Kernel/FEnv.lean:187-190 natLitSupportedF
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:186-191 natLitSupported
+con-leche: ConLeche/Kernel/FEnv.lean:195-198 natLitSupportedF
 Whether the environment supports `Nat` literals.  One twin for con-leche's
 two spellings (deviation 1). -/
 def natLitSupported (fe : IFEnv) : AM Bool := do
@@ -530,8 +530,8 @@ def natLitSupported (fe : IFEnv) : AM Bool := do
       let ns ← pinNatSucc
       natSuccOk (fe.find? ns)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:195-198 natLitStored
-con-leche: ConLeche/Kernel/FEnv.lean:192-194 natLitStoredF
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:193-196 natLitStored
+con-leche: ConLeche/Kernel/FEnv.lean:200-202 natLitStoredF
 Whether a `Nat` literal's constants are stored (presence only: what they are
 is the declarations' own check, `litShapeOk`).  One twin for con-leche's two
 spellings (deviation 1); the three names are pinned before the conjunction,
@@ -542,7 +542,7 @@ def natLitStored (fe : IFEnv) : AM Bool := do
   let ns ← pinNatSucc
   pure ((fe.find? nt).isSome && (fe.find? nz).isSome && (fe.find? ns).isSome)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:200-225 Expr.constsResolve — do all
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:198-223 Expr.constsResolve — do all
 constants referenced in `e` (including inside `fvar` type annotations)
 resolve in `fe`?  A full walk over the term, hence fuel; unlike the
 checker's hot walks it is run once per declaration and carries no memo, as
@@ -590,7 +590,7 @@ def constsResolve (fe : IFEnv) : Nat → EIdx → AM Bool
     | .proj s _ sub => do
       if (fe.find? s).isSome then constsResolve fe fuel sub else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:227-232 litToCtorIfNat — convert a
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:225-230 litToCtorIfNat — convert a
 `Nat`-literal major premise to constructor form, one layer. -/
 def litToCtorIfNat (fe : IFEnv) (h : EIdx) : AM EIdx := do
   if h.tag == ETag.lit then
@@ -600,7 +600,7 @@ def litToCtorIfNat (fe : IFEnv) (h : EIdx) : AM EIdx := do
     | _ => pure h
   else pure h
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:234-239 rawNatLit? — a `Nat`
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:232-237 rawNatLit? — a `Nat`
 literal reading of a whnf'd expression (the official kernel's
 `rawNatLitExt?`). -/
 def rawNatLit? (h : EIdx) : AM (Option Nat) := do
@@ -614,7 +614,7 @@ def rawNatLit? (h : EIdx) : AM (Option Nat) := do
 
 /-! ## String literals -/
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:254-265 strLitToConstructor — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:252-263 strLitToConstructor — the
 `List.cons` spine of a string literal's constructor form.  con-leche writes
 `s.toList.foldr (init := nil) fun c e => …`; DESIGN §3.4 turns the closure
 into this explicit recursion over the character list (P2b's closure audit,
@@ -628,7 +628,7 @@ def strLitConsSpine (cons ofNat nilE : EIdx) : List Char → AM EIdx
     let f ← internE (.app cons ch)
     internE (.app f rest)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:254-265 strLitToConstructor — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:252-263 strLitToConstructor — the
 constructor form of a `String` literal: `String.ofList (List.cons.{0} Char
 (Char.ofNat (lit c₁)) (… (List.nil.{0} Char)))`. -/
 def strLitToConstructor (s : String) : AM EIdx := do
@@ -649,7 +649,7 @@ def strLitToConstructor (s : String) : AM EIdx := do
   let sl ← constE slN
   internE (.app sl spine)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:267-273 stringTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:265-271 stringTyOk — the stored
 `String` declaration has the expected shape. -/
 def stringTyOk : Option IConstantInfo → AM Bool
   | some ci => do
@@ -658,7 +658,7 @@ def stringTyOk : Option IConstantInfo → AM Bool
     pure (cv.levelParams.isEmpty && cv.type == s1)
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:275-281 charTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:273-279 charTyOk — the stored
 `Char` declaration has the expected shape. -/
 def charTyOk : Option IConstantInfo → AM Bool
   | some ci => do
@@ -667,7 +667,7 @@ def charTyOk : Option IConstantInfo → AM Bool
     pure (cv.levelParams.isEmpty && cv.type == s1)
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:283-294 listTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:281-292 listTyOk — the stored
 `List` declaration has the expected (annotated) shape `List.{p} : Type p →
 Type p`. -/
 def listTyOk : Option IConstantInfo → AM Bool
@@ -686,7 +686,7 @@ def listTyOk : Option IConstantInfo → AM Bool
     | _ => pure false
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:296-307 listNilTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:294-305 listNilTyOk — the stored
 `List.nil` declaration has the expected (annotated) shape. -/
 def listNilTyOk : Option IConstantInfo → AM Bool
   | some ci => do
@@ -722,7 +722,7 @@ def listNilTyOk : Option IConstantInfo → AM Bool
     | _ => pure false
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:309-325 listConsTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:307-323 listConsTyOk — the stored
 `List.cons` declaration has the expected (annotated) shape. -/
 def listConsTyOk : Option IConstantInfo → AM Bool
   | some ci => do
@@ -760,7 +760,7 @@ def listConsTyOk : Option IConstantInfo → AM Bool
     | _ => pure false
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:327-336 charOfNatTyOk — the stored
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:325-334 charOfNatTyOk — the stored
 `Char.ofNat` declaration has the expected (annotated) shape `Nat → Char`. -/
 def charOfNatTyOk : Option IConstantInfo → AM Bool
   | some ci => do
@@ -777,7 +777,7 @@ def charOfNatTyOk : Option IConstantInfo → AM Bool
       else pure false
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:338-348 stringOfListTyOk — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:336-346 stringOfListTyOk — the
 stored `String.ofList` declaration has the expected (annotated) shape
 `List.{0} Char → String`. -/
 def stringOfListTyOk : Option IConstantInfo → AM Bool
@@ -800,8 +800,8 @@ def stringOfListTyOk : Option IConstantInfo → AM Bool
       else pure false
   | none => pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:366-371 strLitStored
-con-leche: ConLeche/Kernel/FEnv.lean:196-201 strLitStoredF
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:364-369 strLitStored
+con-leche: ConLeche/Kernel/FEnv.lean:204-209 strLitStoredF
 Whether a `String` literal's constants are stored: `natLitStored` and the
 seven string-support names, by presence only (deviation 1).  The seven are
 pinned before their conjunction, as `constsResolve`'s `.strVal` arm pins
@@ -819,15 +819,16 @@ def strLitStored (fe : IFEnv) : AM Bool := do
       (fe.find? ln).isSome && (fe.find? lc).isSome && (fe.find? ch).isSome &&
       (fe.find? co).isSome)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:373-386 litShapeOk — **the shape a
-declaration at a literal's name must have**, checked at the declaration; any
-other name passes.  The cited `if`-chain, each name pinned only when the
-chain reaches it. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:371-387 litShapeOk — **the shape a
+declaration at a literal's name must have**, its level parameters and type,
+checked at the declaration; any other name passes.  A declaration check cannot
+show a kind, so the three `Nat` names are read at the kinds their guards ask
+for.  The cited `if`-chain, each name pinned only when the chain reaches it. -/
 def litShapeOk (c : IConstantInfo) : AM Bool := do
   let n := c.name
-  if n == (← pinNat) then natIndOk (some c)
-  else if n == (← pinNatZero) then natZeroOk (some c)
-  else if n == (← pinNatSucc) then natSuccOk (some c)
+  if n == (← pinNat) then natIndOk (some (.indInfo c.toConstantVal {}))
+  else if n == (← pinNatZero) then natZeroOk (some (.ctorInfo c.toConstantVal 0 0))
+  else if n == (← pinNatSucc) then natSuccOk (some (.ctorInfo c.toConstantVal 0 1))
   else if n == (← pinString) then stringTyOk (some c)
   else if n == (← pinStringOfList) then stringOfListTyOk (some c)
   else if n == (← pinList) then listTyOk (some c)
@@ -845,46 +846,46 @@ definitional equality — checked once, at its check, so *presence in the store
 is the certificate*.  The sixteen reserved names are interned here exactly
 as the literal guards' are. -/
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:416 natPredName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:417 natPredName -/
 def natPredName : AM NIdx := pinNatPred
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:417 natAddName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:418 natAddName -/
 def natAddName : AM NIdx := pinNatAdd
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:418 natSubName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:419 natSubName -/
 def natSubName : AM NIdx := pinNatSub
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:419 natMulName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:420 natMulName -/
 def natMulName : AM NIdx := pinNatMul
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:420 natPowName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:421 natPowName -/
 def natPowName : AM NIdx := pinNatPow
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:421 natBeqName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:422 natBeqName -/
 def natBeqName : AM NIdx := pinNatBeq
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:422 natBleName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:423 natBleName -/
 def natBleName : AM NIdx := pinNatBle
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:423 natDivName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:424 natDivName -/
 def natDivName : AM NIdx := pinNatDiv
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:424 natModName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:425 natModName -/
 def natModName : AM NIdx := pinNatMod
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:425 natGcdName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:426 natGcdName -/
 def natGcdName : AM NIdx := pinNatGcd
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:426 natLandName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:427 natLandName -/
 def natLandName : AM NIdx := pinNatLand
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:427 natLorName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:428 natLorName -/
 def natLorName : AM NIdx := pinNatLor
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:428 natXorName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:429 natXorName -/
 def natXorName : AM NIdx := pinNatXor
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:429 natShiftLeftName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:430 natShiftLeftName -/
 def natShiftLeftName : AM NIdx := pinNatShiftLeft
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:430 natShiftRightName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:431 natShiftRightName -/
 def natShiftRightName : AM NIdx := pinNatShiftRight
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:431 boolName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:432 boolName -/
 def boolName : AM NIdx := pinBool
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:443 boolTrueName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:444 boolTrueName -/
 def boolTrueName : AM NIdx := pinBoolTrue
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:444 boolFalseName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:445 boolFalseName -/
 def boolFalseName : AM NIdx := pinBoolFalse
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:433-435 eagerReduceName -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:434-436 eagerReduceName -/
 def eagerReduceName : AM NIdx := pinEagerReduce
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:446-451 Expr.isBoolTrue — is `e` the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:447-452 Expr.isBoolTrue — is `e` the
 constant `Bool.true` (the official kernel's `is_constant(e, Bool.true)`):
 the name, no universe levels. -/
 def isBoolTrue (h : EIdx) : AM Bool := do
@@ -898,7 +899,7 @@ def isBoolTrue (h : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:437-442 Expr.isEagerReduce — is
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:438-443 Expr.isEagerReduce — is
 `e` of the form `eagerReduce _ _` (official `is_eager_reduce`): the head
 constant `eagerReduce`, exactly two arguments, any universe levels. -/
 def isEagerReduce (h : EIdx) : AM Bool := do
@@ -920,7 +921,7 @@ def isEagerReduce (h : EIdx) : AM Bool := do
       else pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:453-461 natOpNames — the certified
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:454-462 natOpNames — the certified
 structural-`Nat` operations. -/
 def natOpNames : AM (List NIdx) := do
   let a ← natPredName; let b ← natAddName; let c ← natSubName
@@ -928,7 +929,7 @@ def natOpNames : AM (List NIdx) := do
   let g ← natBleName
   pure [a, b, c, d, e, f, g]
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:463-476 natDivModNames — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:464-477 natDivModNames — the
 WF-recursive operations with a *pinned-declaration* certified fast path. -/
 def natDivModNames : AM (List NIdx) := do
   let a ← natDivName; let b ← natModName; let c ← natGcdName
@@ -936,7 +937,7 @@ def natDivModNames : AM (List NIdx) := do
   let g ← natShiftLeftName; let h ← natShiftRightName
   pure [a, b, c, d, e, f, g, h]
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:478-482 natOpName — **the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:479-483 natOpName — **the
 certified operations' names**: the fast path fires on them by name, so only a
 definition may take one (`checkConstantVal`, `reservedRecName`). -/
 def natOpName (n : NIdx) : AM Bool := do
@@ -945,7 +946,7 @@ def natOpName (n : NIdx) : AM Bool := do
     let dms ← natDivModNames
     pure (dms.contains n)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:523-546 natOpDeps — the operations
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:524-547 natOpDeps — the operations
 (transitively) involved in `c`'s recurrences. -/
 def natOpDeps (c : NIdx) : AM (List NIdx) := do
   let pr ← natPredName; let ad ← natAddName; let su ← natSubName
@@ -970,19 +971,19 @@ def natOpDeps (c : NIdx) : AM (List NIdx) := do
   else if c == sr then pure [su, bl, di, sr]
   else pure []
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:548-577 natOpEquations — `ap1 n a`,
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:549-578 natOpEquations — `ap1 n a`,
 one of the equation builder's three local lambdas.  DESIGN §3.4 forbids the
 closure, so each is a named `def`. -/
 def natAp1 (n : NIdx) (a : EIdx) : AM EIdx := do
   let f ← constE n
   internE (.app f a)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:548-577 natOpEquations — `ap2 n a b`. -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:549-578 natOpEquations — `ap2 n a b`. -/
 def natAp2 (n : NIdx) (a b : EIdx) : AM EIdx := do
   let f ← natAp1 n a
   internE (.app f b)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:548-577 natOpEquations — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:549-578 natOpEquations — the
 defining recurrence equations of a structural-`Nat` operation, over
 constructor forms with free variables `d`, `d + 1` (binder-free, so the
 equation sides carry no annotations). -/
@@ -1047,10 +1048,79 @@ def natOpEquations (d : Nat) (c : NIdx) : AM (List (EIdx × EIdx)) := do
     pure [(l1, bT), (l2, bF), (l3, r3)]
   else pure []
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:579-605 natOpResult — the reduct of
-op `c` on literal arguments (`pred` ignores the second slot).  `ron::Nat` is
-con-leche's `Nat` here, and a literal is a `Literal` value in a `lit`
-node. -/
+/-- con-leche: ConLeche/Cached/StateC.lean:159-162 natSizeBytes — the official
+kernel's size of a numeral in bytes (`lean_nat_size_in_bytes`): 8 bytes per
+started 64 bits, and at least 8. -/
+def natSizeBytes (n : Nat) : Nat := 8 * (n.log2 / 64 + 1)
+
+/-- con-leche: ConLeche/Cached/StateC.lean:159-162 natSizeBytes
+con-leche: ConLeche/Cached/StateC.lean:267-271 maxNatSizeM — whether the numeral
+`n` is above the run's maximum `Nat` size, `natSizeBytes n > maxNatSize`. -/
+def natSizeRefused (n : Nat) : AM Bool := do
+  let m ← maxNatSizeM
+  pure (decide (natSizeBytes n > m))
+
+/-- con-leche: ConLeche/Cached/StateC.lean:197-204 natResultRefused
+con-leche: ConLeche/Cached/StateC.lean:168-171 natNumeralTooBig
+con-leche: ConLeche/Cached/CoreC.lean:87-156 reduceNatI — a computed numeral,
+refused above the run's maximum `Nat` size (the cited `natNumeralTooBig`),
+otherwise interned. -/
+def litNatSized (n : Nat) : AM (Option EIdx) := do
+  if ← natSizeRefused n then
+    fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+  else do
+    let x ← internE (.lit (.natVal n))
+    pure (some x)
+
+/-- con-leche: ConLeche/Cached/StateC.lean:178-195 natOpRefusal — `a ^ b` has
+at most `natSizeBytes a * b` bytes, and a base `≤ 1` gives `0` or `1`. -/
+def powRefused (a b : Nat) : AM Bool := do
+  if a ≤ 1 then pure false
+  else if b = 0 then pure false
+  else do
+    let m ← maxNatSizeM
+    pure (decide (natSizeBytes a > m / b))
+
+/-- con-leche: ConLeche/Cached/StateC.lean:178-195 natOpRefusal
+con-leche: ConLeche/Cached/StateC.lean:164-166 natCountMax
+con-leche: ConLeche/Cached/StateC.lean:173-176 natCountTooBig — the cited
+`Nat.pow` clause: an exponent above `natCountMax` is refused whatever the base,
+and so is a result above the maximum size (`powRefused`). -/
+def powGuard (a b : Nat) : AM Unit := do
+  if b > 4294967295 then
+    fail (.invalid "the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer")
+  else if ← powRefused a b then
+    fail (.invalid "the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size")
+  else pure ()
+
+/-- con-leche: ConLeche/Cached/StateC.lean:178-195 natOpRefusal —
+`natSizeBytes a + b / 8 + 1 > maxNatSize`, the `/ 8` a shift. -/
+def shiftLeftRefused (a b : Nat) : AM Bool := do
+  let m ← maxNatSizeM
+  pure (decide (m < natSizeBytes a + Nat.shiftRight b 3 + 1))
+
+/-- con-leche: ConLeche/Cached/StateC.lean:178-195 natOpRefusal — the cited
+`Nat.shiftLeft` clause: `0 <<< b = 0` computes; otherwise an amount above
+`natCountMax` is refused, and so is a result above the maximum size
+(`shiftLeftRefused`). -/
+def shiftLeftGuard (a b : Nat) : AM Unit := do
+  if a = 0 then pure ()
+  else if b > 4294967295 then
+    fail (.invalid "the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer")
+  else if ← shiftLeftRefused a b then
+    fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+  else pure ()
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:580-605 natOpResult
+con-leche: ConLeche/Cached/StateC.lean:178-195 natOpRefusal
+con-leche: ConLeche/Cached/StateC.lean:197-204 natResultRefused
+con-leche: ConLeche/Cached/CoreC.lean:87-156 reduceNatI — the reduct of op `c`
+on literal arguments (`pred` ignores the second slot).  `ron::Nat` is
+con-leche's `Nat` here, and a literal is a `Literal` value in a `lit` node.
+The computation is the cited one at any size; the run's maximum `Nat` size
+(con-leche's cached `reduceNatI`) refuses `pow` and `shiftLeft` before
+computing (`powGuard`, `shiftLeftGuard`: the cited `natOpRefusal`) and an
+`add`, `sub` or `mul` result after it (`litNatSized`: `natResultRefused`). -/
 def natOpResult (c : NIdx) (a b : Nat) : AM (Option EIdx) := do
   let pr ← natPredName; let ad ← natAddName; let su ← natSubName
   let mu ← natMulName; let po ← natPowName; let be ← natBeqName
@@ -1058,14 +1128,12 @@ def natOpResult (c : NIdx) (a b : Nat) : AM (Option EIdx) := do
   let gc ← natGcdName; let la ← natLandName; let lo ← natLorName
   let xo ← natXorName; let sl ← natShiftLeftName; let sr ← natShiftRightName
   if c == pr then do let x ← internE (.lit (.natVal (a - 1))); pure (some x)
-  else if c == ad then do let x ← internE (.lit (.natVal (a + b))); pure (some x)
-  else if c == su then do let x ← internE (.lit (.natVal (a - b))); pure (some x)
-  else if c == mu then do let x ← internE (.lit (.natVal (a * b))); pure (some x)
-  else if c == po then
-    -- the divergence audit's S2: official `reduce_pow` refuses exponents
-    -- above `ReducePowMaxExp = 1 << 24` and lets `Nat.pow` unfold instead
-    if b > 16777216 then pure none
-    else do let x ← internE (.lit (.natVal (a ^ b))); pure (some x)
+  else if c == ad then litNatSized (a + b)
+  else if c == su then litNatSized (a - b)
+  else if c == mu then litNatSized (a * b)
+  else if c == po then do
+    powGuard a b
+    let x ← internE (.lit (.natVal (a ^ b))); pure (some x)
   else if c == di then do let x ← internE (.lit (.natVal (a / b))); pure (some x)
   else if c == mo then do let x ← internE (.lit (.natVal (a % b))); pure (some x)
   else if c == gc then do
@@ -1077,6 +1145,7 @@ def natOpResult (c : NIdx) (a b : Nat) : AM (Option EIdx) := do
   else if c == xo then do
     let x ← internE (.lit (.natVal (Nat.xor a b))); pure (some x)
   else if c == sl then do
+    shiftLeftGuard a b
     let x ← internE (.lit (.natVal (Nat.shiftLeft a b))); pure (some x)
   else if c == sr then do
     let x ← internE (.lit (.natVal (Nat.shiftRight a b))); pure (some x)
@@ -1114,7 +1183,7 @@ def boolCtorOk (ci : IConstantInfo) : AM Bool := do
   else pure false
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:607-628 natOpGuard
-con-leche: ConLeche/Kernel/FEnv.lean:203-218 natOpGuardF
+con-leche: ConLeche/Kernel/FEnv.lean:211-226 natOpGuardF
 Stored-constant guards for op `c`: the `Nat` basis, every dependency stored
 as a definition, and (for the `Bool`-valued ops and the `ble`-guarded
 `div`/`mod`) the `Bool` constructors stored, level-free, at the type `Bool`
@@ -1252,7 +1321,7 @@ def natOpStoredOk (fe : IFEnv) (n : NIdx) : AM Bool := do
     if cv.levelParams.isEmpty then natOpTyPinned fe n cv.type else pure false
   | _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:169-218 reduceNat — the binary
+/-- con-leche: ConLeche/Kernel/Core.lean:168-217 reduceNat — the binary
 literal acceleration's name test.  con-leche writes a fourteen-way disjunction
 inline; over handles the comparands have to be interned first, so the
 chain is its own `def` and the caller reads one `Bool`. -/
@@ -1266,7 +1335,7 @@ def natBinOpName (c : NIdx) : AM Bool := do
     c == di || c == mo || c == gc || c == la || c == lo || c == xo ||
     c == sl || c == sr)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:169-218 reduceNat — literal
+/-- con-leche: ConLeche/Kernel/Core.lean:168-217 reduceNat — literal
 acceleration (the official kernel's `reduceNat`, run in the `whnf` loop
 *before* delta-unfolding).  The divergence audit's D15 is preserved: the
 FIRST argument is head-normalised and, unless it is a literal, the step
@@ -1284,9 +1353,7 @@ def reduceNat (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) :
           let ns ← pinNatSucc
           if c == ns && (← natLitStored fe) then do
             match ← rawNatLit? (← r.whnf depth b) with
-            | some n => do
-              let x ← internE (.lit (.natVal (n + 1)))
-              pure (some x)
+            | some n => litNatSized (n + 1)
             | none => pure none
           else pure none
       | .app g a => do
@@ -1328,7 +1395,7 @@ con-leche's `Core.lean`:865-1310.  Every one of these recurses structurally
 on a LIST (an argument spine, a slot index list), so none of them takes
 fuel; what they call into the store does. -/
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:148-175 iotaCertsFullIAux — certify a
+/-- con-leche: ConLeche/Cached/CoreC.lean:158-185 iotaCertsFullIAux — certify a
 spine against a constructor telescope at ι's case 3 (con-leche's task #342
 L10): each argument's FULL-grade inferred type is defeq to the corresponding
 (instantiated) domain.  Every slot is certified.
@@ -1362,8 +1429,8 @@ def iotaCertsFullAux (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   else pure true
 termination_by (args.size - i, acc.size)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:221-236 iotaCertsFull
-con-leche: ConLeche/Cached/CoreC.lean:177-180 iotaCertsFullI — the
+/-- con-leche: ConLeche/Kernel/Core.lean:220-235 iotaCertsFull
+con-leche: ConLeche/Cached/CoreC.lean:187-190 iotaCertsFullI — the
 empty-accumulator entry of `iotaCertsFullAux`. -/
 def iotaCertsFull (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (h : EIdx) (args : List EIdx) : AM Bool :=
@@ -1382,7 +1449,7 @@ def piResidual : EIdx → List EIdx → AM (Option EIdx)
         piResidual b' as
     else pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:238-247 defEqList — pairwise
+/-- con-leche: ConLeche/Kernel/Core.lean:237-246 defEqList — pairwise
 definitional equality of two spines. -/
 def defEqList (r : CoreFnsA) (fe : IFEnv) (depth : Nat) :
     List EIdx → List EIdx → AM Bool
@@ -1391,7 +1458,7 @@ def defEqList (r : CoreFnsA) (fe : IFEnv) (depth : Nat) :
     if ← r.defeq depth a b then defEqList r fe depth as bs else pure false
   | _, _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:249-263 iotaIndexOk — the
+/-- con-leche: ConLeche/Kernel/Core.lean:248-262 iotaIndexOk — the
 canonical-index comparison of a firing ι redex. -/
 def iotaIndexOk (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (mI rP cnP : Nat)
     (tyCtor : EIdx) (margs idx : List EIdx) : AM Bool :=
@@ -1403,7 +1470,7 @@ def iotaIndexOk (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (mI rP cnP : Nat)
       defEqList r fe depth (args.drop cnP) idx
     | none => pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:265-287 proofIrrel — proof
+/-- con-leche: ConLeche/Kernel/Core.lean:264-286 proofIrrel — proof
 irrelevance certification: both sides' types' *sorts* are `Prop` (the
 unit-like branch went with con-leche's PUNIT). -/
 def proofIrrel (r : CoreFnsA) (_fe : IFEnv) (depth : Nat) (a b : EIdx) :
@@ -1430,7 +1497,7 @@ def proofIrrel (r : CoreFnsA) (_fe : IFEnv) (depth : Nat) (a b : EIdx) :
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:289-331 propIrrel — **the hoisted
+/-- con-leche: ConLeche/Kernel/Core.lean:288-330 propIrrel — **the hoisted
 proof-irrelevance test** (con-leche's task #168, Option U): the `Prop`
 branch of `proofIrrel` alone, with the head-symbol readers deciding both
 fast arms before any inference. -/
@@ -1463,23 +1530,7 @@ def propIrrel (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
       | _ => pure false
     else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:712-717 towerSlotsAll — the slot
-walk.  con-leche writes `(List.range nF).all fun j => …`; DESIGN §3.4's rule
-turns the closure into a counted recursion. -/
-def towerSlotsAllGo (fe : IFEnv) (T : NIdx) : Nat → Nat → Bool
-  | 0, _ => true
-  | n + 1, j =>
-    match fe.findProj? T j with
-    | some _ => towerSlotsAllGo fe T n (j + 1)
-    | none => false
-
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:712-717 towerSlotsAll
-con-leche: ConLeche/Kernel/FEnv.lean:175-177 FEnv.towerSlotsAllF
-Are all `nF` projection slots of `T` table entries? -/
-def towerSlotsAll (fe : IFEnv) (T : NIdx) (nF : Nat) : Bool :=
-  towerSlotsAllGo fe T nF 0
-
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:719-724 etaProjs — the `.proj`
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:712-716 etaProjs — the `.proj`
 spine, as a counted recursion (con-leche's `(List.range nF).map`). -/
 def projNodesGo (T : NIdx) (b : EIdx) : Nat → Nat → AM (List EIdx)
   | 0, _ => pure []
@@ -1488,10 +1539,10 @@ def projNodesGo (T : NIdx) (b : EIdx) : Nat → Nat → AM (List EIdx)
     let rest ← projNodesGo T b n (j + 1)
     pure (p :: rest)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:719-724 etaProjs
-con-leche: ConLeche/Cached/CoreC.lean:307-314 projNodesI — the fabricated
-projections of a structure-eta spine: the `.proj T j b` nodes (every slot of
-an η family the checker uses has a table entry, `towerSlotsAll`). -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:712-716 etaProjs
+con-leche: ConLeche/Cached/CoreC.lean:317-324 projNodesI — the fabricated
+projections of a structure-eta spine: the `.proj T j b` nodes, one per field
+of the family's projection table. -/
 def etaProjs (T : NIdx) (b : EIdx) (nF : Nat) : AM (List EIdx) :=
   projNodesGo T b nF 0
 
@@ -1501,7 +1552,7 @@ then handle equality, as everywhere else in this module. -/
 def reservedBasisNames : AM (List NIdx) :=
   pinReserved
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:500-505 litGuardNames — the ten
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:501-506 litGuardNames — the ten
 names the two literal guards look up: the `Nat` guard's three and the
 `String` guard's seven, off the pin table (every one is pinned).  Placed after
 `reservedBasisNames` (its one reader's other list) rather than beside
@@ -1519,7 +1570,7 @@ def litGuardNames : AM (List NIdx) := do
   let k ← pinCharOfNat
   pure [a, b, c, d, f, g, h, i, j, k]
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:507-521 reservedRecName — the last
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:508-522 reservedRecName — the last
 three disjuncts: `n == boolName || n == boolTrueName || n == boolFalseName`. -/
 def reservedRecBool (n : NIdx) : AM Bool := do
   let b ← pinBool
@@ -1531,31 +1582,32 @@ def reservedRecBool (n : NIdx) : AM Bool := do
       let f ← pinBoolFalse
       pure (n == f)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:507-521 reservedRecName — **a
-name no block RECURSOR may take**: one the pinned basis blocks reserve, one a
-literal guard looks up, one of the certified `Nat` operations, or `Bool` and its
-two constructors, whose stored entries the certified operations' guards read.
-The cited `||` chain, each list read off the pin table (handle equality). -/
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:508-522 reservedRecName — **a
+name no block RECURSOR may take**: one a literal guard looks up, one of the
+certified `Nat` operations, or `Bool` and its two constructors, whose stored
+entries the certified operations' guards read.  The basis names are
+`basisNamesOk`'s (a pinned block's own recursor carries one).  The cited `||`
+chain, each list read off the pin table (handle equality). -/
 def reservedRecName (n : NIdx) : AM Bool := do
-  let rs ← reservedBasisNames
-  if rs.contains n then pure true
+  let ls ← litGuardNames
+  if ls.contains n then pure true
   else do
-    let ls ← litGuardNames
-    if ls.contains n then pure true
+    let os ← natOpNames
+    if os.contains n then pure true
     else do
-      let os ← natOpNames
-      if os.contains n then pure true
-      else do
-        let ds ← natDivModNames
-        if ds.contains n then pure true
-        else reservedRecBool n
+      let ds ← natDivModNames
+      if ds.contains n then pure true
+      else reservedRecBool n
 
-/-- con-leche: ConLeche/Kernel/Core.lean:333-372 structEtaCertWith
-con-leche: ConLeche/Cached/CoreC.lean:316-353 structEtaCertWithI — the
+/-- con-leche: ConLeche/Kernel/Core.lean:332-372 structEtaCertWith
+con-leche: ConLeche/Cached/CoreC.lean:326-363 structEtaCertWithI — the
 structure-eta certificate against a *given* weak-head-normal type of the stuck
-side: the η law's keys, the level comparison, then the parameters and the
+side: the type's head is a stored η family whose projection table's
+constructor is the candidate's, at the table's parameter count and the
+former's level parameters; the level comparison, then the parameters and the
 fields against the fabricated projections (no type-application certificate,
-con-leche's task #342 L11b). -/
+con-leche's task #342 L11b).  The constructor and the counts are the table's,
+at every field count. -/
 def structEtaCertWith (r : CoreFnsA) (fe : IFEnv)
     (depth : Nat) (a b wtb : EIdx) : AM Bool := do
   let hh ← getAppFn coreWalkFuel a
@@ -1571,25 +1623,25 @@ def structEtaCertWith (r : CoreFnsA) (fe : IFEnv)
             match ← view hh with
             | .const T us' =>
               match fe.find? T with
-              | some (.indInfo cvT caps) => do
-                let targs ← getAppArgs coreWalkFuel wtb
-                let reserved ← reservedBasisNames
-                match ← viewLsLen us' with
-                | none => failDanglingLs
-                | some uslen =>
-                let slots := towerSlotsAll fe T caps.etaFields
-                if caps.eta = true ∧ caps.etaCtor = c ∧
-                    reserved.contains T = false ∧ reserved.contains c = false ∧
-                    targs.length = caps.etaParams ∧
-                    uslen = cvT.levelParams.length ∧
-                    cvc.levelParams = cvT.levelParams ∧ slots = true then do
-                  if ← liftFueled "level comparison" (← lvlsEq? us us') then do
-                    if ← defEqList r fe depth (aargs.take caps.etaParams) targs then do
-                      let projs ← etaProjs T b caps.etaFields
-                      defEqList r fe depth (aargs.drop caps.etaParams) projs
+              | some (.indInfo cvT caps) =>
+                match fe.findTable? T with
+                | none => pure false
+                | some tbl => do
+                  let targs ← getAppArgs coreWalkFuel wtb
+                  match ← viewLsLen us' with
+                  | none => failDanglingLs
+                  | some uslen =>
+                  if caps.eta = true ∧ tbl.ctor = c ∧
+                      targs.length = tbl.numParams ∧
+                      uslen = cvT.levelParams.length ∧
+                      cvc.levelParams = cvT.levelParams then do
+                    if ← liftFueled "level comparison" (← lvlsEq? us us') then do
+                      if ← defEqList r fe depth (aargs.take tbl.numParams) targs then do
+                        let projs ← etaProjs T b tbl.numFields
+                        defEqList r fe depth (aargs.drop tbl.numParams) projs
+                      else pure false
                     else pure false
                   else pure false
-                else pure false
               | _ => pure false
             | _ => pure false
           else pure false
@@ -1598,7 +1650,7 @@ def structEtaCertWith (r : CoreFnsA) (fe : IFEnv)
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:726-737 etaCtorShape — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:718-729 etaCtorShape — the
 constructor shape official's `try_eta_struct_core` tests before inferring
 anything: the candidate's head is a stored constructor applied to exactly
 its parameters and fields. -/
@@ -1615,49 +1667,257 @@ def etaCtorShape (fe : IFEnv) (a : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:374-395 structEtaCert —
-structural eta certification for a stored eta-capable structure.  The
-constructor-shape test comes FIRST (the divergence audit's D13). -/
-def structEtaCert (r : CoreFnsA) (fe : IFEnv)
-    (depth : Nat) (a b : EIdx) : AM Bool := do
-  if ← etaCtorShape fe a then do
-    let tb ← r.inferIO depth b
-    let wtb ← r.whnf depth tb
-    structEtaCertWith r fe depth a b wtb
-  else pure false
-
-/-- con-leche: ConLeche/Kernel/Core.lean:397-423 structUnitCert —
-unit-likeness certification: `a` and `b` inhabit the same stored unit-like
-family (no type-application certificate, as official's `is_def_eq_unit_like`;
-no ∀, con-leche's task #342 L18). -/
-def structUnitCert (r : CoreFnsA) (fe : IFEnv)
-    (depth : Nat) (a b : EIdx) : AM Bool := do
-  let ta ← r.inferIO depth a
-  let wta ← r.whnf depth ta
-  let hh ← getAppFn coreWalkFuel wta
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:731-757 etaCtorPartial
+con-leche: ConLeche/Cached/StateC.lean:97-118 etaCtorPartialC — the family
+half of `etaCtorPartial`: the family the constructor's type `ty` ends in is a
+stored η family whose projection table's constructor is `c`. -/
+def etaCtorPartialFam (fe : IFEnv) (c : NIdx) (ty : EIdx) : AM Bool := do
+  let hh ← getAppFn coreWalkFuel (← piResult coreWalkFuel ty)
   if hh.tag == ETag.const then
     match ← view hh with
-    | .const T us' =>
+    | .const T _ =>
       match fe.find? T with
-      | some (.indInfo cvT caps) => do
-        let targs ← getAppArgs coreWalkFuel wta
-        let reserved ← reservedBasisNames
-        match ← viewLsLen us' with
-        | none => failDanglingLs
-        | some uslen =>
-        if caps.unitlike = true ∧ reserved.contains T = false ∧
-            targs.length = caps.unitParams ∧
-            uslen = cvT.levelParams.length then do
-          let tb ← r.inferIO depth b
-          let wtb ← r.whnf depth tb
-          if isForallE wtb then pure false
-          else r.defeq depth wta wtb
-        else pure false
+      | some (.indInfo _ caps) =>
+        match fe.findTable? T with
+        | some tbl => if caps.eta then pure (tbl.ctor == c) else pure false
+        | none => pure false
       | _ => pure false
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:425-451 etaCert — eta
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:731-757 etaCtorPartial
+con-leche: ConLeche/Cached/StateC.lean:97-118 etaCtorPartialC — **a
+partially applied η constructor** (official's `try_eta_struct_core` since
+lean4#15373): the candidate's head is a stored constructor applied to fewer
+than its parameters and fields, of a stored η family whose projection table's
+constructor it is.  `some k`, `k > 0` the arguments it lacks.  Read off the
+stored records alone, before any inference. -/
+def etaCtorPartial (fe : IFEnv) (a : EIdx) : AM (Option Nat) := do
+  let hh ← getAppFn coreWalkFuel a
+  if hh.tag == ETag.const then
+    match ← view hh with
+    | .const c _ =>
+      match fe.find? c with
+      | some (.ctorInfo cvc cnP cnF) => do
+        let args ← getAppArgs coreWalkFuel a
+        if args.length < cnP + cnF then do
+          if ← etaCtorPartialFam fe c cvc.type then pure (some (cnP + cnF - args.length))
+          else pure none
+        else pure none
+      | _ => pure none
+    | _ => pure none
+  else pure none
+
+/-- con-leche: ConLeche/Kernel/Core.lean:374-395 structEtaFull
+con-leche: ConLeche/Cached/CoreC.lean:365-374 structEtaFullI — the body of
+**structure η at a fully applied constructor**, past the constructor-shape
+gate: `b`'s io-inferred type, head-normalised, and the certificate against
+it. -/
+def structEtaFullAt (r : CoreFnsA) (fe : IFEnv)
+    (depth : Nat) (a b : EIdx) : AM Bool := do
+  let tb ← r.inferIO depth b
+  let wtb ← r.whnf depth tb
+  structEtaCertWith r fe depth a b wtb
+
+/-- con-leche: ConLeche/Kernel/Core.lean:374-395 structEtaFull
+con-leche: ConLeche/Cached/CoreC.lean:365-374 structEtaFullI — **structure η
+at a fully applied constructor**.  The constructor-shape test comes FIRST (the
+divergence audit's D13). -/
+def structEtaFull (r : CoreFnsA) (fe : IFEnv)
+    (depth : Nat) (a b : EIdx) : AM Bool := do
+  if ← etaCtorShape fe a then structEtaFullAt r fe depth a b
+  else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:397-409 structEtaExpand
+con-leche: ConLeche/Cached/CoreC.lean:376-384 structEtaExpandI — **the
+η-expansion of a partially applied constructor**: both sides applied to fresh
+variables along the constructor side's type `ta`, one binder per missing
+argument, read syntactically; at the full application, `structEtaFull`. -/
+def structEtaExpand (r : CoreFnsA) (fe : IFEnv) :
+    Nat → Nat → EIdx → EIdx → EIdx → AM Bool
+  | 0, depth, a, b, _ => structEtaFull r fe depth a b
+  | k + 1, depth, a, b, ta => do
+    if ta.tag == ETag.forallE then
+      match ← viewBind ta with
+      | none => failDanglingE
+      | some (dom, body) => do
+        let fv ← internE (.fvar depth dom)
+        let a2 ← internE (.app a fv)
+        let b2 ← internE (.app b fv)
+        let body2 ← instantiate1Fast coreWalkFuel body fv 0
+        structEtaExpand r fe k (depth + 1) a2 b2 body2
+    else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:411-429 structEtaCert
+con-leche: ConLeche/Cached/CoreC.lean:386-398 structEtaCertI — the
+partial-constructor arm of `structEtaCert`, at `k` missing arguments: the
+other side neutral, the two io-inferred types compared (official's
+`is_def_eq(t_type, s_type)`), then both sides η-expanded. -/
+def structEtaCertPartial (r : CoreFnsA) (fe : IFEnv)
+    (depth k : Nat) (a b : EIdx) : AM Bool := do
+  if !(← ioNeutral b) then pure false
+  else do
+    let ta ← r.inferIO depth a
+    let tb ← r.inferIO depth b
+    if ← r.defeq depth tb ta then structEtaExpand r fe k depth a b ta
+    else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:411-429 structEtaCert
+con-leche: ConLeche/Cached/CoreC.lean:386-398 structEtaCertI — structural eta
+certification (official's `try_eta_struct_core`): `a` is a constructor
+application of a stored η family, fully applied (`structEtaFull`'s body: the
+shape gate is read once) or partially (`etaCtorPartial`). -/
+def structEtaCert (r : CoreFnsA) (fe : IFEnv)
+    (depth : Nat) (a b : EIdx) : AM Bool := do
+  if ← etaCtorShape fe a then structEtaFullAt r fe depth a b
+  else
+    match ← etaCtorPartial fe a with
+    | some k => structEtaCertPartial r fe depth k a b
+    | none => pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:431-436 isPropType
+con-leche: ConLeche/Cached/CoreC.lean:400-408 isPropTypeI — **is a
+proposition** (official's `is_prop`): `T`'s io-inferred type head-normalises
+to a sort equivalent to `Prop`. -/
+def isPropType (r : CoreFnsA) (depth : Nat) (T : EIdx) : AM Bool := do
+  let tt ← r.inferIO depth T
+  let w ← r.whnf depth tt
+  if w.tag == ETag.sort then
+    match ← viewSort w with
+    | none => failDanglingE
+    | some u => do
+      let z ← zeroLevel
+      liftFueled "level comparison" (← lvlEq? u z)
+  else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:438-453 unitLikeFields
+con-leche: ConLeche/Cached/CoreC.lean:410-422 unitLikeFieldsI — **the field
+loop of official's `is_unit_like`**: each of the `n` field binders of an η
+family's instance telescope has a proposition or a unit-like type (`ul`,
+official's recursive `is_unit_like`), the field opened at a fresh variable
+before the next.  The binders are syntactic. -/
+def unitLikeFields (r : CoreFnsA) (ul : Nat → EIdx → AM Bool) :
+    Nat → Nat → EIdx → AM Bool
+  | 0, _, _ => pure true
+  | n + 1, depth, tele => do
+    if tele.tag == ETag.forallE then
+      match ← viewBind tele with
+      | none => failDanglingE
+      | some (dom, body) => do
+        if ← isPropType r depth dom then do
+          let fv ← internE (.fvar depth dom)
+          let body2 ← instantiate1Fast coreWalkFuel body fv 0
+          unitLikeFields r ul n (depth + 1) body2
+        else if ← ul depth dom then do
+          let fv ← internE (.fvar depth dom)
+          let body2 ← instantiate1Fast coreWalkFuel body fv 0
+          unitLikeFields r ul n (depth + 1) body2
+        else pure false
+    else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:455-458 unitLikeFuel — recursion
+budget of the unit-like test (`unitLikeLoop`).  Exhaustion is "not
+unit-like", which is always sound. -/
+@[noinline] def unitLikeFuel : Nat := 4611686018427387904  -- 2^62
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:767-794 unitLikeShape
+con-leche: ConLeche/Kernel/CoreDefs.lean:759-765 unitFieldTele
+con-leche: ConLeche/Cached/CoreC.lean:424-445 unitLikeShapeF — the field
+telescope of an instance at its family's table: the table's constructor,
+stored, its type at the instance's levels `us`, the table's `nP` parameter
+binders dropped and instantiated with the instance's arguments in one pass. -/
+def unitLikeShapeAt (fe : IFEnv) (us : LsIdx) (targs : List EIdx) (tctor : NIdx)
+    (nP nF : Nat) : AM (Option (EIdx × Nat)) := do
+  match fe.find? tctor with
+  | some (.ctorInfo cvc _ _) => do
+    let cty ← instLPFast coreWalkFuel cvc.levelParams us cvc.type
+    match ← peelPis nP cty with
+    | none => pure none
+    | some body => do
+      let tele ← instantiateListFast coreWalkFuel body targs.toArray 0
+      pure (some (tele, nF))
+  | _ => pure none
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:767-794 unitLikeShape
+con-leche: ConLeche/Cached/CoreC.lean:424-445 unitLikeShapeF — **the shape of
+an instance in official's `is_unit_like`**, read off the stored records: `w`
+is an instance of a stored η family at its parameters (the table's count),
+whose constructor's field telescope at the instance's parameters is `tele`
+with `n` fields to check (`some (tele, n)`), or not (`none`). -/
+def unitLikeShape (fe : IFEnv) (w : EIdx) : AM (Option (EIdx × Nat)) := do
+  let hh ← getAppFn coreWalkFuel w
+  if hh.tag == ETag.const then
+    match ← view hh with
+    | .const S us =>
+      match fe.find? S with
+      | some (.indInfo cvS caps) => do
+        match ← viewLsLen us with
+        | none => failDanglingLs
+        | some usl =>
+        if caps.eta = true ∧ usl = cvS.levelParams.length then
+          match fe.findTable? S with
+          | none => pure none
+          | some tbl => do
+            let targs ← getAppArgs coreWalkFuel w
+            if targs.length = tbl.numParams then
+              unitLikeShapeAt fe us targs tbl.ctor tbl.numParams tbl.numFields
+            else pure none
+        else pure none
+      | _ => pure none
+    | _ => pure none
+  else pure none
+
+/-- con-leche: ConLeche/Kernel/Core.lean:460-470 unitLikeStruct
+con-leche: ConLeche/Cached/CoreC.lean:447-452 unitLikeStructI — **the
+structure arm of official's `is_unit_like`**: `w`, a head normal form that is
+no ∀, is an instance of a stored η family every field of whose constructor,
+at the instance's parameters, has a proposition or a unit-like type (`ul`). -/
+def unitLikeStruct (r : CoreFnsA) (ul : Nat → EIdx → AM Bool) (fe : IFEnv)
+    (depth : Nat) (w : EIdx) : AM Bool := do
+  match ← unitLikeShape fe w with
+  | some (tele, n) => unitLikeFields r ul n depth tele
+  | none => pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:472-484 unitLikeLoop
+con-leche: ConLeche/Cached/CoreC.lean:454-463 unitLikeLoopI — **is a type
+unit-like** (official's `is_unit_like`, lean4#15372): its head normal form is
+a ∀ whose codomain, opened at a fresh variable, is unit-like, or an instance
+of a stored η family every field of whose constructor is a proposition or
+unit-like (`unitLikeStruct`). -/
+def unitLikeLoop (r : CoreFnsA) (fe : IFEnv) : Nat → Nat → EIdx → AM Bool
+  | 0, _, _ => pure false
+  | fuel + 1, depth, T => do
+    let w ← r.whnf depth T
+    if w.tag == ETag.forallE then
+      match ← viewBind w with
+      | none => failDanglingE
+      | some (dom, body) => do
+        let fv ← internE (.fvar depth dom)
+        let body2 ← instantiate1Fast coreWalkFuel body fv 0
+        unitLikeLoop r fe fuel (depth + 1) body2
+    else unitLikeStruct r (unitLikeLoop r fe fuel) fe depth w
+
+/-- con-leche: ConLeche/Kernel/Core.lean:486-503 structUnitCert
+con-leche: ConLeche/Cached/CoreC.lean:465-476 structUnitCertI —
+**unit-likeness** (official's `is_def_eq_unit_like`): `a`'s io-inferred type,
+head-normalised, is unit-like (`unitLikeLoop`), and `b`'s type is
+definitionally equal to it (no type-application certificate).  A side whose
+type is a ∀ must be neutral (`ioNeutral`, con-leche's task #342 L18). -/
+def structUnitCert (r : CoreFnsA) (fe : IFEnv)
+    (depth : Nat) (a b : EIdx) : AM Bool := do
+  let ta ← r.inferIO depth a
+  let wta ← r.whnf depth ta
+  let ga ← if isForallE wta then ioNeutral a else pure true
+  if !ga then pure false
+  else if ← unitLikeLoop r fe unitLikeFuel depth wta then do
+    let tb ← r.inferIO depth b
+    let wtb ← r.whnf depth tb
+    let gb ← if isForallE wtb then ioNeutral b else pure true
+    if !gb then pure false
+    else r.defeq depth wta wtb
+  else pure false
+
+/-- con-leche: ConLeche/Kernel/Core.lean:505-531 etaCert — eta
 certification for a one-sided λ against a stuck term `b`: `b`'s head must be
 neutral (`ioNeutral`), its type a ∀ whose domain is the λ's; the bodies are
 compared at a fresh variable, and at the verified mode the λ body's FULL-grade
@@ -1685,7 +1945,7 @@ def etaCert (mode : CheckMode) (r : CoreFnsA) (_fe : IFEnv) (depth : Nat)
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:453-460 stuckIrrel — the fallback
+/-- con-leche: ConLeche/Kernel/Core.lean:533-540 stuckIrrel — the fallback
 for structurally distinct stuck terms: structural eta in either direction,
 unit-likeness, else proof irrelevance. -/
 def stuckIrrel (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
@@ -1695,8 +1955,8 @@ def stuckIrrel (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   else if ← structUnitCert r fe depth a b then pure true
   else proofIrrel r fe depth a b
 
-/-- con-leche: ConLeche/Kernel/Core.lean:462-473 formerSortLoop
-con-leche: ConLeche/Cached/CoreC.lean:424-437 formerSortLoopI
+/-- con-leche: ConLeche/Kernel/Core.lean:542-553 formerSortLoop
+con-leche: ConLeche/Cached/CoreC.lean:511-524 formerSortLoopI
 **Official's walk to a family's sort** (the loop of `check_inductive_types` at
 the use): `n` binders down, each reached by head normalization (`r.whnf`),
 then a sort; `none` where the type does not get there.  Structural on `n`;
@@ -1721,8 +1981,8 @@ def formerSortLoop (r : CoreFnsA) : Nat → Nat → EIdx → AM (Option LIdx)
         formerSortLoop r (d + 1) n b2
     else pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:475-488 formerNeverZeroAt
-con-leche: ConLeche/Cached/CoreC.lean:439-449 formerNeverZeroI
+/-- con-leche: ConLeche/Kernel/Core.lean:555-568 formerNeverZeroAt
+con-leche: ConLeche/Cached/CoreC.lean:526-536 formerNeverZeroI
 **Is a family's sort never zero at the levels `us`** (official
 `is_never_zero`), computed where it is asked.  A stored type that ends in a
 sort is read off directly (`formerNeverZero`); any other is walked by
@@ -1740,8 +2000,8 @@ def formerNeverZeroAt (r : CoreFnsA) (cvT : IConstantVal) (caps : IIndCaps)
       pure (Level.zeronessOf l).isNever
     | none => pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:490-511 iotaCase3At
-con-leche: ConLeche/Cached/CoreC.lean:451-461 iotaCase3I
+/-- con-leche: ConLeche/Kernel/Core.lean:570-591 iotaCase3At
+con-leche: ConLeche/Cached/CoreC.lean:538-548 iotaCase3I
 **Case 3 of the ι case split** (con-leche task #342 L10, S5c): a rule that is
 not K (the record's `isK`) whose constructor's family may be `Prop` at the
 comparand levels `us`.  The family is not read at a K recursor. -/
@@ -1760,7 +2020,7 @@ def iotaCase3At (r : CoreFnsA) (fe : IFEnv) (isK : Bool) (cvj : IConstantVal)
         else pure true
     | none => pure true
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:739-743 etaFabArgsE — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:796-800 etaFabArgsE — the
 eta-rescue fabrication's argument spine: the major's type's arguments, then
 the major's projections (`etaProjs`). -/
 def etaFabArgsE (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) :
@@ -1768,7 +2028,7 @@ def etaFabArgsE (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) :
   let ps ← etaProjs T major nF
   pure (targs ++ ps)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1105-1115 andRescueSlotsOf — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:908-918 andRescueSlotsOf — the
 two-slot walk, as a counted recursion (con-leche's `(List.range 2).all`):
 each slot stored, naming the rule's constructor at the major's parameter
 count, with two fields.  Pure, as con-leche's is. -/
@@ -1782,34 +2042,38 @@ def andRescueSlotsGo (fe : IFEnv) (an ctor : NIdx) (nP : Nat) : Nat → Nat → 
       else false
     | none => false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1105-1115 andRescueSlotsOf
-con-leche: ConLeche/Kernel/CoreDefs.lean:1117-1119 andRescueSlots
-con-leche: ConLeche/Kernel/FEnv.lean:179-181 FEnv.andRescueSlotsF
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:908-918 andRescueSlotsOf
+con-leche: ConLeche/Kernel/CoreDefs.lean:920-922 andRescueSlots
+con-leche: ConLeche/Kernel/FEnv.lean:187-189 FEnv.andRescueSlotsF
 **The pinned `And`'s projection slots, ready to fire.**  One twin for
 con-leche's three spellings (deviation 1). -/
 def andRescueSlots (fe : IFEnv) (ctor : NIdx) (nP : Nat) : AM Bool := do
   let an ← pinAnd
   pure (andRescueSlotsGo fe an ctor nP 2 0)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1121-1131 etaRescueOk — **the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:924-941 etaRescueTable? — **the
 structure-η rescue's standing condition, at use**: the single rule's
-constructor `ctor` (stored as `cvj`) is the η constructor of its
-structure-like family `cvT` and carries the family's level parameters;
-`And.intro` is left to `And`'s own rescue.  The cited `&&` chain, left to
-right (the `And.intro` pin is read only when the chain reaches it). -/
-def etaRescueOk (ctor : NIdx) (cvj cvT : IConstantVal) (caps : IIndCaps) :
-    AM Bool := do
-  if caps.eta && caps.etaCtor == ctor && cvj.levelParams == cvT.levelParams then do
-    let ai ← pinAndIntro
-    pure (ctor != ai)
-  else pure false
+constructor `ctor` (stored as `cvj`) is the constructor of its family's
+projection table `tbl?` (the family `cvT` structure-like, `IIndCaps.eta`), and
+carries the family's level parameters; the table, for the fabrication's
+counts.  `And.intro` is left to `And`'s own rescue.  The cited `&&` chain,
+left to right (the `And.intro` pin is read only when the chain reaches it). -/
+def etaRescueTable? (tbl? : Option IProjTable) (ctor : NIdx) (cvj cvT : IConstantVal)
+    (caps : IIndCaps) : AM (Option IProjTable) := do
+  match tbl? with
+  | none => pure none
+  | some t =>
+    if caps.eta && t.ctor == ctor && cvj.levelParams == cvT.levelParams then do
+      let ai ← pinAndIntro
+      if ctor != ai then pure (some t) else pure none
+    else pure none
 
 /-! ## The stuck-major rescue and the ι step
 
 con-leche's `Core.lean`:1311-1832. -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:513-675 majorToCtor
-con-leche: ConLeche/Cached/CoreC.lean:463-566 majorToCtorI — the scope guard
+/-- con-leche: ConLeche/Kernel/Core.lean:593-752 majorToCtor
+con-leche: ConLeche/Cached/CoreC.lean:550-651 majorToCtorI — the scope guard
 the three rescue branches share (cf. `annotateProjElim`): the fabricated major
 is well-scoped, closed under loose bvars, and mentions no free variable the
 stuck major does not.
@@ -1827,11 +2091,11 @@ def fabScopeOk (depth : Nat) (fab major : EIdx) : AM Bool := do
   else if !(← looseBVarsBoundedFast coreWalkFuel 0 fab) then pure false
   else leafGuard coreWalkFuel fab major
 
-/-- con-leche: ConLeche/Kernel/Core.lean:513-675 majorToCtor
-con-leche: ConLeche/Cached/CoreC.lean:463-566 majorToCtorI — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:593-752 majorToCtor
+con-leche: ConLeche/Cached/CoreC.lean:550-651 majorToCtorI — **the
 stuck-major rescue** (`to_cnstr_when_K` and `to_cnstr_when_structure`): a
 recursor's major premise that is not a constructor application may still be
-*replaced* by one — K-flagged (the record's `isK`), η-capable (`etaRescueOk`),
+*replaced* by one — K-flagged (the record's `isK`), η-capable (`etaRescueTable?`),
 or the pinned `And`.  No certificate
 on a fabricated spine (con-leche's task #342 L-DEAD, L11b); the K and `And`
 fabrications keep official's type check, and their proof-irrelevance run is a
@@ -1879,7 +2143,8 @@ def majorToCtor (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
                   else pure major
                 | _ => pure major
               else pure major
-            else if ← etaRescueOk rl.ctor cvj cvT caps then do
+            else match ← etaRescueTable? (fe.findTable? T) rl.ctor cvj cvT caps with
+            | some tbl => do
               let tmaj ← r.whnf depth (← r.inferIO depth major)
               let hh ← getAppFn coreWalkFuel tmaj
               if hh.tag == ETag.const then
@@ -1887,27 +2152,23 @@ def majorToCtor (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
                 | .const T' ust => do
                   let ustl ← viewLs ust
                   let targs ← getAppArgs coreWalkFuel tmaj
-                  if T' = T ∧ targs.length = caps.etaParams ∧
+                  if T' = T ∧ targs.length = tbl.numParams ∧
                       ustl.length = cvT.levelParams.length then do
-                    -- the η law's keys, then the *instantiated* non-Prop
-                    -- test at the use (`formerNeverZeroAt`)
-                    let reserved ← reservedBasisNames
-                    if reserved.contains T = false ∧
-                        reserved.contains caps.etaCtor = false ∧
-                        towerSlotsAll fe T caps.etaFields = true then do
-                      if ← formerNeverZeroAt r cvT caps ust then do
-                        let fabArgs ← etaFabArgsE T targs major caps.etaFields
-                        let hd ← internE (.const caps.etaCtor ust)
-                        let fab ← mkAppN hd fabArgs
-                        -- no certificate on the fabricated spine (task #342 L11b)
-                        if ← fabScopeOk depth fab major then pure fab
-                        else pure major
+                    -- the *instantiated* non-Prop test at the use
+                    -- (`formerNeverZeroAt`); the constructor and the counts
+                    -- are the table's
+                    if ← formerNeverZeroAt r cvT caps ust then do
+                      let fabArgs ← etaFabArgsE T targs major tbl.numFields
+                      let hd ← internE (.const tbl.ctor ust)
+                      let fab ← mkAppN hd fabArgs
+                      -- no certificate on the fabricated spine (task #342 L11b)
+                      if ← fabScopeOk depth fab major then pure fab
                       else pure major
                     else pure major
                   else pure major
                 | _ => pure major
               else pure major
-            else do
+            | none => do
               let an ← pinAnd
               if T = an then do
                 -- THE `And`-ONLY η RESCUE (user ruling: `And` and nothing else)
@@ -1946,7 +2207,7 @@ def majorToCtor (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     | _ => pure major
   | _ => pure major
 
-/-- con-leche: ConLeche/Kernel/Core.lean:677-689 litMajorToCtor — convert a
+/-- con-leche: ConLeche/Kernel/Core.lean:754-766 litMajorToCtor — convert a
 literal major premise to constructor form: a `Nat` literal one layer, a
 `String` literal to its *reduced* constructor form. -/
 def litMajorToCtor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : EIdx) :
@@ -1961,7 +2222,7 @@ def litMajorToCtor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : EIdx) :
     | _ => litToCtorIfNat fe h
   else litToCtorIfNat fe h
 
-/-- con-leche: ConLeche/Kernel/Core.lean:691-705 projLitToCtor — convert a
+/-- con-leche: ConLeche/Kernel/Core.lean:768-782 projLitToCtor — convert a
 string-literal projection scrutinee to its *reduced* constructor form. -/
 def projLitToCtor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : EIdx) :
     AM EIdx := do
@@ -1975,7 +2236,7 @@ def projLitToCtor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : EIdx) :
     | _ => pure h
   else pure h
 
-/-- con-leche: ConLeche/Kernel/Core.lean:707-711 Expr.isStrLit — is the
+/-- con-leche: ConLeche/Kernel/Core.lean:784-788 Expr.isStrLit — is the
 expression a `String` literal?  The tag, then the literal. -/
 def isStrLit (h : EIdx) : AM Bool := do
   if h.tag == ETag.lit then
@@ -1985,8 +2246,8 @@ def isStrLit (h : EIdx) : AM Bool := do
     | some _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:713-787 prepareMajor
-con-leche: ConLeche/Cached/CoreC.lean:590-612 prepareMajorI — the major
+/-- con-leche: ConLeche/Kernel/Core.lean:790-864 prepareMajor
+con-leche: ConLeche/Cached/CoreC.lean:675-697 prepareMajorI — the major
 premise's preparation before a rule fires: at a K-flagged recursor (the
 record's `isK`) the K
 rescue runs on the **raw** major and, if it did not produce a constructor
@@ -2013,7 +2274,7 @@ def prepareMajor (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
       let major₁ ← litMajorToCtor r fe depth major₀
       majorToCtor mode r fe depth recName isK rules major₁
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1140-1162 recFireComparands — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:959-981 recFireComparands — the
 nested rule's stored level comparands, substituted and re-interned
 (`lvls.map (Level.subst lps us)` as a named recursion). -/
 def substLevelsAt (ks : List ConLeche.Name) (vs : List Level) :
@@ -2025,7 +2286,7 @@ def substLevelsAt (ks : List ConLeche.Name) (vs : List Level) :
     let rest ← substLevelsAt ks vs us
     pure (h :: rest)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1140-1162 recFireComparands — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:959-981 recFireComparands — the
 canonical rule's level comparands, `cvjLps.map fun p => Level.subst lps us
 (.param p)`, as a named recursion. -/
 def substParamLevels (ks : List ConLeche.Name) (vs : List Level) :
@@ -2037,7 +2298,7 @@ def substParamLevels (ks : List ConLeche.Name) (vs : List Level) :
     let rest ← substParamLevels ks vs ps
     pure (h :: rest)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1140-1162 recFireComparands — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:959-981 recFireComparands — the
 nested rule's stored parameter pins, level-instantiated and instantiated at
 the recursor's leading-argument spine, as a named recursion. -/
 def instSpinePins (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat) :
@@ -2049,7 +2310,7 @@ def instSpinePins (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat) :
     let rest ← instSpinePins lps us args rP ps
     pure (s :: rest)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1140-1162 recFireComparands — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:959-981 recFireComparands — the
 LEVEL comparands of a firing rule (`(recFireComparands …).1`), interned: a
 `.nested` or `.levels` rule's stored levels at the recursor's instantiation,
 a `.plain` rule's constructor level parameters linked to the recursor's.  The
@@ -2074,7 +2335,7 @@ def recFireLevels (rl : IRecRule) (lps : List NIdx) (us : LsIdx)
     let ls ← substLevelsAt ks vs lvls
     internLsNode ls
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1140-1162 recFireComparands — the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:959-981 recFireComparands — the
 constructor-PARAMETER comparands of a firing rule (`(recFireComparands …).2`):
 a `.nested` rule's stored pins at the recursor's levels and leading-argument
 spine, a `.plain` or `.levels` rule's the recursor's leading `cnP` arguments
@@ -2086,14 +2347,14 @@ def recFireArgs (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us : LsIdx)
   | .plain => pure (args.take cnP)
   | .levels _ => pure (args.take cnP)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:789-888 iotaRec — the rule lookup
+/-- con-leche: ConLeche/Kernel/Core.lean:866-965 iotaRec — the rule lookup
 `rules.find? (fun r' => r'.ctor == cj)`, as a named recursion (DESIGN
 §3.4). -/
 def findRule : List IRecRule → NIdx → Option IRecRule
   | [], _ => none
   | rl :: rs, c => if rl.ctor == c then some rl else findRule rs c
 
-/-- con-leche: ConLeche/Kernel/Core.lean:789-888 iotaRec — **one iota step at
+/-- con-leche: ConLeche/Kernel/Core.lean:866-965 iotaRec — **one iota step at
 a spine the caller already holds** (task #97-P6-9's hoist).  `iotaRec`'s own
 first two steps are `getAppFn` and `getAppArgs`, and the batched β asks for an
 iota step at every reduction step of a spine it is already walking: this entry
@@ -2192,8 +2453,8 @@ whose head did not move is the node the spine already has. -/
 @[inline] def internAppRebuilt (h : EIdx) (same : Bool) (f a : EIdx) : AM EIdx :=
   if same then pure h else internE (.app f a)
 
-/-- con-leche: ConLeche/Kernel/ExprOps.lean:793-796 getAppFn
-con-leche: ConLeche/Kernel/ExprOps.lean:798-801 getAppArgs
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:847-850 getAppFn
+con-leche: ConLeche/Kernel/ExprOps.lean:852-855 getAppArgs
 The head, the argument vector AND the spine's own `.app` NODES, in ONE walk —
 the third result is the arena's own and is what carries `internAppRebuilt`'s
 `same` (the node the reduction may hand back unchanged). -/
@@ -2208,12 +2469,12 @@ def getAppSpineGo : Nat → EIdx → AM (EIdx × Array EIdx × Array EIdx)
         pure (t.1, t.2.1.push a, t.2.2.push h)
     else pure (h, #[], #[])
 
-/-- con-leche: ConLeche/Kernel/ExprOps.lean:793-801 getAppFn — the spine walk's
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:847-855 getAppFn — the spine walk's
 entry. -/
 def getAppSpine (fuel : Nat) (h : EIdx) : AM (EIdx × Array EIdx × Array EIdx) :=
   getAppSpineGo fuel h
 
-/-- con-leche: ConLeche/Kernel/ExprOps.lean:793-801 getAppFn — the head and the
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:847-855 getAppFn — the head and the
 argument vector of a reduct, which is what `whnfApp` re-enters on.  A
 non-application is its own head with no arguments. -/
 def headAndArgs (v : EIdx) : AM (EIdx × Array EIdx) := do
@@ -2223,12 +2484,14 @@ def headAndArgs (v : EIdx) : AM (EIdx × Array EIdx) := do
     pure (hd, va.toArray)
   else pure (v, #[])
 
-/-- con-leche: ConLeche/Kernel/Core.lean:943-992 whnfCoreBody — **the head
-kinds `whnfCoreBody` returns unchanged, off the handle's TAG** (task
-#97-P6-7's lever 2): `sort`, `fvar`, `forallE`, `lam`, `const` and `lit` are
-the body's own first six clauses, and a handle carries the tag of its own view
-on a well-formed store, so the memo probe and the node read are both skipped.
-The obligation is `whnfCoreBody e = pure e` for the six tags. -/
+/-- con-leche: ConLeche/Kernel/Core.lean:1020-1069 whnfCoreBody
+con-leche: ConLeche/Cached/CoreC.lean:1627-1635 whnfCoreEasy — **the head
+kinds `whnfCoreBody` returns unchanged, off the handle's TAG**: `sort`, `fvar`,
+`forallE`, `lam`, `const` and `lit` are the body's own first six clauses and
+exactly `whnfCoreEasy`'s kinds, and a handle carries the tag of its own view
+on a well-formed store, so the memo probe and the node read are both skipped,
+in both modes, as the cited knot does.  The obligation is `whnfCoreBody e =
+pure e` for the six tags. -/
 @[inline] def whnfCoreStuckTag (e : EIdx) : Bool :=
   let t := e.tag
   if t == ETag.app then false
@@ -2237,9 +2500,12 @@ The obligation is `whnfCoreBody e = pure e` for the six tags. -/
   else if t == ETag.bvar then false
   else true
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1060-1062 whnfBody — **the head kinds
-`whnfBody` returns unchanged**, the same lever one rung up: `sort`, `fvar`,
-`lam`, `forallE` and `lit`.  The obligation adds `reduceNat e = none` (its
+/-- con-leche: ConLeche/Kernel/Core.lean:1137-1139 whnfBody
+con-leche: ConLeche/Cached/CoreC.lean:1637-1643 whnfEasy — **the head kinds
+`whnfBody` returns unchanged**, the same test one rung up: `sort`, `fvar`,
+`lam`, `forallE` and `lit`.  Deviation: `whnfEasy` leaves `lam` to the memo
+(official `whnf` does); a `lam` is its own head normal form, so the memo could
+only answer it with itself, and the test returns that answer before the probe.  The obligation adds `reduceNat e = none` (its
 `match` is on `.app`) and `unfoldDefinition e = none` (`getAppFn` of a
 non-`app` is the node itself and the `match` is on `.const`). -/
 @[inline] def whnfStuckTag (e : EIdx) : Bool :=
@@ -2253,7 +2519,7 @@ non-`app` is the node itself and the `match` is on `.const`). -/
 
 /-! ### The step a reduction loop iterates (con-leche's task #342 R2) -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1012-1021 WhnfStep — the outcome of one
+/-- con-leche: ConLeche/Kernel/Core.lean:1089-1098 WhnfStep — the outcome of one
 step of a head-normalization loop: the head normal form, or the term the loop
 continues with.  A step RETURNS its continuation instead of calling it, so
 every reduction step is the loop's own iteration and a chain of any length —
@@ -2263,7 +2529,7 @@ inductive WhnfStep where
   | cont (e : EIdx)
   deriving Inhabited
 
-/-- con-leche: ConLeche/Kernel/Core.lean:994-1010 whnfCoreLoopFuel — step budget
+/-- con-leche: ConLeche/Kernel/Core.lean:1071-1087 whnfCoreLoopFuel — step budget
 of the head-normalization loop: `2^62`, con-leche's value (task #330);
 exhaustion is an internal error, never a verdict.  `@[noinline]` for
 con-leche's reason: a literal at or above `2^32` is parsed from its decimal
@@ -2284,7 +2550,7 @@ The accumulator is an `Array` in PUSH order (task #97-P6-15's clause change),
 which `instantiateList` reads from the end — the same list con-leche's `::`
 chain builds, the other way round. -/
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:760-777 betaPeelI — peel a
+/-- con-leche: ConLeche/Cached/CoreC.lean:845-862 betaPeelI — peel a
 consecutive run of λ binders, collecting their arguments, and substitute the
 whole run in ONE `instantiateList`; the reduct, applied to the arguments left
 over, is the term the loop continues with.  β is uniform (con-leche's task
@@ -2305,7 +2571,7 @@ def betaPeel (t : EIdx) (acc : Array EIdx) (args : Array EIdx) (i : Nat) :
     pure (.cont e2)
 termination_by args.size - i
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:779-806 whnfAppI — walk the spine's
+/-- con-leche: ConLeche/Cached/CoreC.lean:864-891 whnfAppI — walk the spine's
 arguments, applying each to the head's reduct: a λ head opens a peel group
 (`betaPeel`), a stuck head applies the argument and tries one ι step at the
 spine the walk already holds; a fired ι hands the loop its reduct applied to
@@ -2342,7 +2608,7 @@ termination_by args.size - i
 
 con-leche's `Core.lean`:1834-2074. -/
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1164-1173 ProjEntry.typeAt — **the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:983-992 ProjEntry.typeAt — **the
 type of a `.proj` node at a tower-backed entry**: the stored body,
 level-instantiated at the subject type's levels, with the subject type's
 arguments and the subject substituted for its `numParams + 1` loose
@@ -2355,15 +2621,15 @@ def IProjEntry.typeAt (entry : IProjEntry) (us : LsIdx) (targs : List EIdx)
   -- ruling makes every substituting site look like.
   instantiateListFast coreWalkFuel b (targs.toArray.push pe) 0
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:745-753 teleArityOk — **the
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:802-810 teleArityOk — **the
 telescope check of a spine** (con-leche's task #342 L18): the telescope's
 syntactic arity, nothing else. -/
 def teleArityOk (ty : EIdx) (args : List EIdx) : AM Bool := do
   let p ← peelPis args.length ty
   pure p.isSome
 
-/-- con-leche: ConLeche/Kernel/Core.lean:890-902 projCert
-con-leche: ConLeche/Cached/CoreC.lean:725-729 projCertF — **the structural
+/-- con-leche: ConLeche/Kernel/Core.lean:967-979 projCert
+con-leche: ConLeche/Cached/CoreC.lean:810-814 projCertF — **the structural
 projection's certificate**: the redex `proj_i (C p⃗ x⃗)`'s spine has the arity
 of `C`'s stored (uninstantiated) type (`teleArityOk`). -/
 def projCert (fe : IFEnv) (c : NIdx) (args : List EIdx) : AM Bool := do
@@ -2371,16 +2637,16 @@ def projCert (fe : IFEnv) (c : NIdx) (args : List EIdx) : AM Bool := do
   | some (.ctorInfo cvC _ _) => teleArityOk cvC.type args
   | _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:904-911 projCertAt
-con-leche: ConLeche/Cached/CoreC.lean:731-734 projCertAtF — **the fire
+/-- con-leche: ConLeche/Kernel/Core.lean:981-988 projCertAt
+con-leche: ConLeche/Cached/CoreC.lean:816-819 projCertAtF — **the fire
 certificate as the mode runs it**: the verified core checks the arity; the
 trusted core is the official kernel's, which checks nothing. -/
 def projCertAt (fe : IFEnv) (verified : Bool) (c : NIdx) (args : List EIdx) :
     AM Bool :=
   if verified then projCert fe c args else pure true
 
-/-- con-leche: ConLeche/Kernel/Core.lean:913-941 reduceProjCore
-con-leche: ConLeche/Cached/CoreC.lean:736-758 reduceProjCoreI — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:990-1018 reduceProjCore
+con-leche: ConLeche/Cached/CoreC.lean:821-843 reduceProjCoreI — **the
 projection rule on a reduced scrutinee** (the official kernel's
 `reduce_proj_core`): `proj_i (ctor p⃗ x⃗) ↦ x_i`, driven by the projection
 table; the rule fires unguarded.  A string-literal scrutinee first expands to
@@ -2414,8 +2680,8 @@ def reduceProjCore (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     else pure none
   | none => pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:943-992 whnfCoreBody
-con-leche: ConLeche/Cached/CoreC.lean:808-842 whnfCoreStepI — the `.proj`
+/-- con-leche: ConLeche/Kernel/Core.lean:1020-1069 whnfCoreBody
+con-leche: ConLeche/Cached/CoreC.lean:893-927 whnfCoreStepI — the `.proj`
 clause of the step: the scrutinee by `whnf`, or — in the CHEAP mode (official
 `cheap_proj`) — by the cheap `whnfCore`, then the projection rule: a fired
 field is the term the loop continues with, a stuck projection is its own
@@ -2427,8 +2693,8 @@ def whnfCoreStepProj (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Boo
   | some m' => pure (.cont m')
   | none => pure (.done e)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:943-992 whnfCoreBody
-con-leche: ConLeche/Cached/CoreC.lean:808-842 whnfCoreStepI — **one
+/-- con-leche: ConLeche/Kernel/Core.lean:1020-1069 whnfCoreBody
+con-leche: ConLeche/Cached/CoreC.lean:893-927 whnfCoreStepI — **one
 head-normalization step** (β, ι, projection, ζ — **no δ**), returning the head
 normal form or the term to continue with.  Only the spine head's
 normalization stays a knot call (genuine nesting, bounded by the term's
@@ -2456,7 +2722,7 @@ def whnfCoreStep (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool)
   | .bvar _ =>
     fail (.notImplemented "whnf beyond the supported fragment")
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:844-855 whnfCoreLoopI — iterate
+/-- con-leche: ConLeche/Cached/CoreC.lean:929-940 whnfCoreLoopI — iterate
 `whnfCoreStep` on its own step budget: the continuation is the loop's own tail
 call (con-leche's task #342 R2), so a reduction chain of any length runs in
 constant native stack, and a non-terminating one runs until the external
@@ -2469,8 +2735,8 @@ def whnfCoreLoop (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool)
     | .done v => pure v
     | .cont e' => whnfCoreLoop mode r fe cheap depth n e'
 
-/-- con-leche: ConLeche/Kernel/Core.lean:943-992 whnfCoreBody
-con-leche: ConLeche/Cached/CoreC.lean:857-860 whnfCoreBodyI — the
+/-- con-leche: ConLeche/Kernel/Core.lean:1020-1069 whnfCoreBody
+con-leche: ConLeche/Cached/CoreC.lean:942-945 whnfCoreBodyI — the
 head-normalization body: the loop at its own step budget.  `cheap` is the
 official kernel's `cheap_proj`: a projection's scrutinee is reduced by
 `whnfCore` itself instead of `whnf`, and the flag propagates to every
@@ -2479,7 +2745,7 @@ def whnfCoreBody (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) :
     Bool → Nat → EIdx → AM EIdx :=
   fun cheap depth e => whnfCoreLoop mode r fe cheap depth whnfCoreLoopFuel e
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1023-1034 whnfLoopFuel — step budget
+/-- con-leche: ConLeche/Kernel/Core.lean:1100-1111 whnfLoopFuel — step budget
 of the `whnf` reduction loop.  Literal-acceleration and delta steps are
 *iteration*, not recursion.  Effectively unbounded since con-leche task #330:
 `2^62`, con-leche's value (exhaustion is an internal error, never an accept).
@@ -2487,8 +2753,8 @@ of the `whnf` reduction loop.  Literal-acceleration and delta steps are
 from its decimal string at every use otherwise. -/
 @[noinline] def whnfLoopFuel : Nat := 4611686018427387904  -- 2^62
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1036-1051 whnfStep
-con-leche: ConLeche/Cached/CoreC.lean:919-933 whnfStepI — one iteration of
+/-- con-leche: ConLeche/Kernel/Core.lean:1113-1128 whnfStep
+con-leche: ConLeche/Cached/CoreC.lean:1004-1018 whnfStepI — one iteration of
 the reduction loop: head-normalize, try literal acceleration, unfold one
 definition.  **The continuation is returned, not called**: con-leche's `k e'`
 is `.cont e'` (con-leche inlines the step so that its continuation call is
@@ -2504,8 +2770,8 @@ def whnfStep (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (e : EIdx) :
     | some e₂ => pure (.cont e₂)
     | none => pure (.done e₁)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1053-1058 whnfLoop
-con-leche: ConLeche/Cached/CoreC.lean:935-939 whnfLoopI — the reduction loop:
+/-- con-leche: ConLeche/Kernel/Core.lean:1130-1135 whnfLoop
+con-leche: ConLeche/Cached/CoreC.lean:1020-1024 whnfLoopI — the reduction loop:
 iterate `whnfStep` on its own step budget, so the whole chain costs one knot
 level however many steps it takes, in constant native stack. -/
 def whnfLoop (r : CoreFnsA) (fe : IFEnv) (depth : Nat) : Nat → EIdx → AM EIdx
@@ -2515,12 +2781,12 @@ def whnfLoop (r : CoreFnsA) (fe : IFEnv) (depth : Nat) : Nat → EIdx → AM EId
     | .done v => pure v
     | .cont e' => whnfLoop r fe depth n e'
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1060-1062 whnfBody — the reduction
+/-- con-leche: ConLeche/Kernel/Core.lean:1137-1139 whnfBody — the reduction
 loop's body: run `whnfLoop` at its own step budget. -/
 def whnfBody (r : CoreFnsA) (fe : IFEnv) : Nat → EIdx → AM EIdx :=
   fun depth e => whnfLoop r fe depth whnfLoopFuel e
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1064-1070 ensureSort — ensure `e`
+/-- con-leche: ConLeche/Kernel/Core.lean:1141-1147 ensureSort — ensure `e`
 (the type of some expression) is a sort, returning its level. -/
 def ensureSort (r : CoreFnsA) (_fe : IFEnv) (depth : Nat) (e : EIdx) :
     AM LIdx := do
@@ -2531,8 +2797,8 @@ def ensureSort (r : CoreFnsA) (_fe : IFEnv) (depth : Nat) (e : EIdx) :
     | _ => fail (.invalid "expected a sort")
   else fail (.invalid "expected a sort")
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1072-1086 checkGuardRows
-con-leche: ConLeche/Cached/CoreC.lean:952-964 checkGuardRowsI
+/-- con-leche: ConLeche/Kernel/Core.lean:1149-1163 checkGuardRows
+con-leche: ConLeche/Cached/CoreC.lean:1037-1049 checkGuardRowsI
 **The rows of a projection's guard** (official `infer_proj`'s `is_prop`
 tests): each row's term, inferred at the io grade at its own depth and
 head-normalized, has a sort that is zero wherever `guardSort` is
@@ -2555,8 +2821,8 @@ def checkGuardRows (r : CoreFnsA) (guardSort : Level) (rows : Array (Nat × EIdx
   else pure ()
 termination_by rows.size - i
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1088-1104 projGuardSort
-con-leche: ConLeche/Cached/CoreC.lean:966-976 projGuardSortI
+/-- con-leche: ConLeche/Kernel/Core.lean:1165-1181 projGuardSort
+con-leche: ConLeche/Cached/CoreC.lean:1051-1061 projGuardSortI
 **The sort a projection's rows answer to**, at this use: `none` where the
 guard has nothing to ask.  A stored type that ends in a sort answers at once
 (`Prop` asks for propositions, any other sort nothing); otherwise the sort is
@@ -2577,7 +2843,7 @@ def projGuardSort (r : CoreFnsA) (cvT : IConstantVal) (caps : IIndCaps)
       pure (if (Level.zeronessOf sl).isNever then none else some sl)
     | none => fail (.invalid "projection from a structure whose type reaches no sort")
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:755-765 openPisAtFvars — open
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:812-822 openPisAtFvars — open
 the first `n` `∀`-binders at fresh free variables `0..n-1` (each fvar's type
 is the binder domain, instantiated with the earlier fvars).  Structural on
 `n`, so no fuel of its own. -/
@@ -2595,47 +2861,52 @@ def openPisAtFvars : Nat → EIdx → Nat → AM (Option (List EIdx × EIdx))
       | _ => pure none
     else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:767-781 openPisAtFvarsFGo —
-core of `openPisAtFvarsF`: `acc` holds the already-created fvars, innermost
-binder first.  One `instantiateList` pass per domain instead of one
-whole-telescope `instantiate1` pass per binder. -/
-def openPisAtFvarsFGo (acc : Array EIdx) :
-    Nat → EIdx → Nat → AM (Option (List EIdx × EIdx))
-  | 0, e, _ => do pure (some ([], ← instantiateListFast coreWalkFuel e acc 0))
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2068-2083 openPisRawGoC — the
+one-pass opening loop, the residual left raw: `acc` holds the already-created
+fvars, innermost binder LAST (the push order `instantiateListFast` reads), and
+each domain is instantiated by them in one `instantiateList` pass, where
+`openPisAtFvars` re-instantiates the whole remaining body at every binder.
+Returns the fvars, the substitution they make and the raw residual. -/
+def openPisRawGo (acc : Array EIdx) :
+    Nat → EIdx → Nat → AM (Option (List EIdx × Array EIdx × EIdx))
+  | 0, e, _ => pure (some ([], acc, e))
   | n + 1, h, i => do
     if h.tag == ETag.forallE then
       match ← view h with
       | .forallE dom body => do
         let d ← instantiateListFast coreWalkFuel dom acc 0
         let fv ← internE (.fvar i d)
-        match ← openPisAtFvarsFGo (acc.push fv) n body (i + 1) with
-        | some (fvs, e) => pure (some (fv :: fvs, e))
+        match ← openPisRawGo (acc.push fv) n body (i + 1) with
+        | some (fvs, acc', e) => pure (some (fv :: fvs, acc', e))
         | none => pure none
       | _ => pure none
     else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:783-790 openPisAtFvarsF —
-one-pass `openPisAtFvars` (the fallback covers telescopes whose binders only
-appear after substitution). -/
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2085-2092 openPisAtFvarsGoC
+con-leche: ConLeche/Cached/ExprOpsC.lean:2094-2102 openPisAtFvarsC
+The one-pass `openPisAtFvars`: the raw opening, then the residual in one
+`instantiateList` pass.  No fallback: instantiating at free variables never
+makes a binder appear, so where the one pass finds no `∀` the sequential
+opening finds none either. -/
 def openPisAtFvarsF (n : Nat) (e : EIdx) (i : Nat) :
     AM (Option (List EIdx × EIdx)) := do
-  match ← openPisAtFvarsFGo #[] n e i with
-  | some r => pure (some r)
-  | none => openPisAtFvars n e i
+  match ← openPisRawGo #[] n e i with
+  | some (fvs, acc, r) => pure (some (fvs, ← instantiateListFast coreWalkFuel r acc 0))
+  | none => pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:870-875 Expr.hasLooseBVarBIns
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1419-1486 hasLooseBVarBXP
 Record one answer for `(e, i)` in the memo the walk hands back. -/
 @[inline] def hasLooseBVarBIns (e : EIdx) (i : Nat)
     (r : Bool × Std.HashMap (EIdx × Nat) Bool) :
     Bool × Std.HashMap (EIdx × Nat) Bool :=
   (r.1, r.2.insert (e, i) r.1)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:792-805 Expr.hasLooseBVar
-con-leche: ConLeche/Kernel/CoreDefs.lean:807-825 Expr.hasLooseBVarB
-con-leche: ConLeche/Kernel/CoreDefs.lean:877-913 Expr.hasLooseBVarBGo
-Does `bvar i` occur loose in `e`?  con-leche's packed-bound cutoff
-(`bvarB ≤ i`) and con-leche's per-call memo, both kept: the cutoff stops the
-walk where the variable CANNOT occur, the memo shares a shared node's answer
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:824-837 Expr.hasLooseBVar
+con-leche: ConLeche/Kernel/CoreDefs.lean:839-857 Expr.hasLooseBVarB
+con-leche: ConLeche/Cached/ExprOpsC.lean:1419-1486 hasLooseBVarBXP
+Does `bvar i` occur loose in `e`?  The packed-bound cutoff (`bvarB ≤ i`) and a
+per-call memo, as the cached walk has them: the cutoff stops the walk where
+the variable CANNOT occur, the memo shares a shared node's answer
 across the paths that reach it.  The memo is keyed by the node and the index,
 because the index shifts under binders. -/
 def hasLooseBVarBGo (memo : Std.HashMap (EIdx × Nat) Bool) (i : Nat) :
@@ -2678,12 +2949,65 @@ def hasLooseBVarBGo (memo : Std.HashMap (EIdx × Nat) Bool) (i : Nat) :
           | _ => pure (false, memo)
         pure (hasLooseBVarBIns h i r)
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1059-1061 Expr.hasLooseBVarBFast
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1488-1492 hasLooseBVarBC
 The executed `hasLooseBVarB` (one memoized DAG walk). -/
 def hasLooseBVarBFast (i : Nat) (e : EIdx) : AM Bool := do
   pure (← hasLooseBVarBGo ∅ i coreWalkFuel e).1
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1068-1076 structUsedLater
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1503-1516 hasLooseBVarInP
+con-leche: ConLeche/Cached/ExprOpsC.lean:1532-1585 hasLooseBVarInXP
+Does a loose bound variable of index `d ..< d + w` occur in `e`?  Read only:
+no node is built.  The packed-bound cutoff (`bvarB ≤ d`: no loose variable at
+or above `d`) at every node; under a binder the window moves up by one.  The
+memo is `hasLooseBVarBGo`'s, keyed by the node and the window's base (`w` is
+fixed for the walk). -/
+def hasLooseBVarInGo (memo : Std.HashMap (EIdx × Nat) Bool) (w d : Nat) :
+    Nat → EIdx → AM (Bool × Std.HashMap (EIdx × Nat) Bool)
+  | 0, _ => fail (.internal "fuel exhausted: hasLooseBVarIn")
+  | fuel + 1, h => do
+    let bb ← bvarB fuel h
+    if bb ≤ d then pure (false, memo) else
+    match ← view h with
+    | .bvar j => pure (decide (d ≤ j) && decide (j - d < w), memo)
+    | .fvar _ _ => pure (false, memo)
+    | .sort _ => pure (false, memo)
+    | .const _ _ => pure (false, memo)
+    | .lit _ => pure (false, memo)
+    | v =>
+      match memo[(h, d)]? with
+      | some r => pure (r, memo)
+      | none => do
+        let r ← match v with
+          | .app f a => do
+            match ← hasLooseBVarInGo memo w d fuel f with
+            | (true, memo) => pure (true, memo)
+            | (false, memo) => hasLooseBVarInGo memo w d fuel a
+          | .lam ty b => do
+            match ← hasLooseBVarInGo memo w d fuel ty with
+            | (true, memo) => pure (true, memo)
+            | (false, memo) => hasLooseBVarInGo memo w (d + 1) fuel b
+          | .forallE ty b => do
+            match ← hasLooseBVarInGo memo w d fuel ty with
+            | (true, memo) => pure (true, memo)
+            | (false, memo) => hasLooseBVarInGo memo w (d + 1) fuel b
+          | .letE t v b => do
+            match ← hasLooseBVarInGo memo w d fuel t with
+            | (true, memo) => pure (true, memo)
+            | (false, memo) => do
+              match ← hasLooseBVarInGo memo w d fuel v with
+              | (true, memo) => pure (true, memo)
+              | (false, memo) => hasLooseBVarInGo memo w (d + 1) fuel b
+          | .proj _ _ sub => hasLooseBVarInGo memo w d fuel sub
+          | _ => pure (false, memo)
+        pure (hasLooseBVarBIns h d r)
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1587-1591 hasLooseBVarInC
+The window query (one memoized DAG walk); an empty window asks nothing. -/
+def hasLooseBVarIn (d w : Nat) (e : EIdx) : AM Bool := do
+  if w == 0 then pure false
+  else pure (← hasLooseBVarInGo ∅ w d coreWalkFuel e).1
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:859-866 structUsedLater
 **Field `j` is used by a later field** — the official `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`. -/
 def structUsedLater (cty : EIdx) (nP j : Nat) : AM Bool := do
@@ -2692,49 +3016,94 @@ def structUsedLater (cty : EIdx) (nP j : Nat) : AM Bool := do
   | none => pure false
 
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1078-1084 projGuardRowsAt — the
-rows read off an opened constructor telescope `fvs`: field `idx`, and every
-earlier field a later one uses (`structUsedLater`), each as the depth
-`nP + j` and that variable's type.  The cited `(List.range (idx + 1)).filterMap`
-is a recursion on `j` with an accumulator in push order. -/
-def projGuardRowsAt (cty : EIdx) (nP idx : Nat) (fvs : List EIdx) (j : Nat)
-    (out : Array (Nat × EIdx)) : AM (Array (Nat × EIdx)) := do
-  if j > idx then pure out
-  else do
-    let used ← if j == idx then pure true else structUsedLater cty nP j
-    if !used then projGuardRowsAt cty nP idx fvs (j + 1) out
-    else
-      match fvs[nP + j]? with
-      | some x => do
-        let ty ← fvarTypeD x
-        projGuardRowsAt cty nP idx fvs (j + 1) (out.push (nP + j, ty))
-      | none => projGuardRowsAt cty nP idx fvs (j + 1) out
-termination_by idx + 1 - j
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:868-886 projGuardRowsGo
+con-leche: ConLeche/Cached/ExprOpsC.lean:2153-2164 projGuardRowsGoC — **the
+rows of a projection's guard: the field loop of the official `infer_proj`.**
+`h` is the constructor telescope with its parameters and every field before the
+current one opened, the current field's variable at depth `d`; `k` fields
+remain before the projected one.  A field the rest of the telescope uses is a
+row (its domain at depth `d`) and is opened at its variable; one it does not
+use is stepped over.  The projected field's domain is the last row.  `none`
+where the telescope binds too few fields.  The cited list is built front to
+back, here as an accumulator in push order. -/
+def projGuardRowsGo : Nat → Nat → EIdx → Array (Nat × EIdx) → AM (Option (Array (Nat × EIdx)))
+  | k, d, h, out => do
+    if h.tag == ETag.forallE then
+      match ← view h with
+      | .forallE dom body =>
+        match k with
+        | 0 => pure (some (out.push (d, dom)))
+        | k + 1 =>
+          if ← hasLooseBVarBFast 0 body then do
+            let fv ← internE (.fvar d dom)
+            let b2 ← instantiate1Fast coreWalkFuel body fv 0
+            projGuardRowsGo k (d + 1) b2 (out.push (d, dom))
+          else projGuardRowsGo k (d + 1) body out
+      | _ => pure none
+    else pure none
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:1086-1103 projGuardRows
-con-leche: ConLeche/Cached/CoreC.lean:978-991 checkProjRowsI
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2166-2178 projGuardFastC —
+**the projection guard's fast case**, on the RAW field telescope (the
+parameters not substituted): `some` the projected field's raw domain where no
+field's type up to the projected one, and nothing after it, mentions a field
+before it — then no earlier field is used and the projected field's domain is
+the one row.  `none` otherwise, and where the telescope binds too few fields.
+`j` counts the fields passed; every query is the read-only window query
+`hasLooseBVarIn` over the fields, the parameters above it. -/
+def projGuardFast : Nat → Nat → EIdx → AM (Option EIdx)
+  | k, j, h => do
+    if h.tag == ETag.forallE then
+      match ← view h with
+      | .forallE dom body =>
+        match k with
+        | 0 => if ← hasLooseBVarIn 0 j h then pure none else pure (some dom)
+        | k + 1 =>
+          if ← hasLooseBVarIn 0 j dom then pure none
+          else projGuardFast k (j + 1) body
+      | _ => pure none
+    else pure none
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2180-2195 projGuardRowsC — the
+rows past the parameters' raw opening: the fast case, its one domain
+substituted, else the substituted residual stepped. -/
+def projGuardRowsAt (entry : IProjEntry) (acc : Array EIdx) (r : EIdx) :
+    AM (Option (Array (Nat × EIdx))) := do
+  match ← projGuardFast entry.idx 0 r with
+  | some dom => do
+    let d ← instantiateListFast coreWalkFuel dom acc entry.idx
+    pure (some (#[] |>.push (entry.numParams + entry.idx, d)))
+  | none => do
+    let r2 ← instantiateListFast coreWalkFuel r acc 0
+    projGuardRowsGo entry.idx entry.numParams r2 #[]
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:888-906 projGuardRows
+con-leche: ConLeche/Cached/ExprOpsC.lean:2180-2195 projGuardRowsC
+con-leche: ConLeche/Cached/CoreC.lean:1063-1074 checkProjRowsI
 **What a `.proj` use on a structure that may be a proposition must show**:
 the domains, at the use's level instantiation and at the constructor
 telescope's own variables, that must be propositions.  `none` where the
 stored constructor does not bind what the entry says.  The executed shape is
 the cached twin's: the constructor's type at the use's levels through the
-per-declaration memo (`constTyAt`), opened in one pass (`openPisAtFvarsF`). -/
+per-declaration memo (`constTyAt`), its parameters opened with the residual
+left raw (`openPisRawGo`).  Where no field before the projected one is
+mentioned after it (`projGuardFast`), the one row is the projected field's
+domain, its parameters substituted — the rest of the telescope is read, not
+rebuilt.  Otherwise the residual is substituted and its fields stepped
+(`projGuardRowsGo`). -/
 def projGuardRows (fe : IFEnv) (entry : IProjEntry) (us : LsIdx) :
     AM (Option (Array (Nat × EIdx))) := do
   match fe.find? entry.ctor with
   | some ci => do
     let cv := ci.toConstantVal
     let cty ← constTyAt cv us
-    match ← openPisAtFvarsF (entry.numParams + entry.idx + 1) cty 0 with
-    | some (fvs, _) => do
-      let rows ← projGuardRowsAt cv.type entry.numParams entry.idx fvs 0 #[]
-      pure (some rows)
+    match ← openPisRawGo #[] entry.numParams cty 0 with
+    | some (_, acc, r) => projGuardRowsAt entry acc r
     | none => pure none
   | none => pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1106-1119 checkProjGuard
-con-leche: ConLeche/Cached/CoreC.lean:993-1004 checkProjGuardI
-con-leche: ConLeche/Cached/CoreC.lean:978-991 checkProjRowsI
+/-- con-leche: ConLeche/Kernel/Core.lean:1183-1196 checkProjGuard
+con-leche: ConLeche/Cached/CoreC.lean:1076-1088 checkProjGuardI
+con-leche: ConLeche/Cached/CoreC.lean:1063-1074 checkProjRowsI
 **The official `infer_proj` restriction** at this use (con-leche task #480),
 computed here from the stored structure and constructor types; nothing about
 it is stored.  The rows are inferred at the io grade in every body, as
@@ -2751,7 +3120,7 @@ def checkProjGuard (r : CoreFnsA) (fe : IFEnv) (entry : IProjEntry) (us : LsIdx)
       | none => fail (.invalid "projection from a propositional structure must be a proposition")
   | _ => fail (.invalid "projection from a propositional structure must be a proposition")
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1129-1229 inferBody — the λ clause's
+/-- con-leche: ConLeche/Kernel/Core.lean:1206-1306 inferBody — the λ clause's
 result, `.forallE ty (bt.abstract1 depth)`.  con-leche writes it once at
 the end of a clause with three exits; the arena names it, so the three exits
 share one spelling and no arm is duplicated (DESIGN §8.4's Rust shape). -/
@@ -2777,13 +3146,13 @@ its head: the same entries in the same order, and `stk[j]`'s index IS
 con-leche's `j`.  `fvs` is a push-order `Array` read by `instantiateList` from
 the end, which is the same convention the batched β already uses. -/
 
-/-- con-leche: ConLeche/Cached/StateC.lean:161-165 peelFuel — the telescope
+/-- con-leche: ConLeche/Cached/StateC.lean:259-263 peelFuel — the telescope
 loops' own step budget.  con-leche's note says the peel fuel is semantically
 transparent: on exhaustion the leaf phase hands the residual chain back to the
 knot, which is the chained spec's next step. -/
 def peelFuel : Nat := 16777216
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1023-1034 inferLamsOutI — the λ
+/-- con-leche: ConLeche/Cached/CoreC.lean:1107-1118 inferLamsOutI — the λ
 loop's OUTWARD rebuild: `abstractRange` closes each stored domain over the `j`
 free variables below it and the ∀ node is rebuilt, innermost binder first. -/
 def inferLamsOut (d : Nat) (stk : Array EIdx) (n : Nat) (cur : EIdx) :
@@ -2796,7 +3165,7 @@ def inferLamsOut (d : Nat) (stk : Array EIdx) (n : Nat) (cur : EIdx) :
     inferLamsOut d stk j nd
 termination_by n
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1036-1049 inferLamsLeafI — the λ
+/-- con-leche: ConLeche/Cached/CoreC.lean:1120-1133 inferLamsLeafI — the λ
 loop's LEAF: open the residual body against every free variable at once,
 infer it, and hand the outward rebuild its starting point. -/
 def inferLamsLeaf (r : CoreFnsA) (d : Nat) (t : EIdx) (k : Nat)
@@ -2806,7 +3175,7 @@ def inferLamsLeaf (r : CoreFnsA) (d : Nat) (t : EIdx) (k : Nat)
   let cur ← abstractRangeFast coreWalkFuel bt d k 0
   inferLamsOut d stk stk.size cur
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1051-1071 inferLamsI — the
+/-- con-leche: ConLeche/Cached/CoreC.lean:1135-1155 inferLamsI — the
 λ-telescope inference loop: peel a consecutive run of λ binders, opening each
 domain against the free variables introduced so far and checking that it is a
 type, then hand the residual to the leaf. -/
@@ -2832,7 +3201,7 @@ def inferLams (r : CoreFnsA) (d : Nat) :
           inferLams r d peel body (k + 1) (fvs.push fv) (stk.push tyo)
         else fail (.invalid "expected a sort")
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1073-1084 inferPisOutI — the ∀
+/-- con-leche: ConLeche/Cached/CoreC.lean:1157-1168 inferPisOutI — the ∀
 loop's outward `imax` fold, innermost binder first (con-leche's task #272:
 the fold reads no per-node datum). -/
 def inferPisOut (stk : Array LIdx) (n : Nat) (v : LIdx) : AM LIdx := do
@@ -2843,7 +3212,7 @@ def inferPisOut (stk : Array LIdx) (n : Nat) (v : LIdx) : AM LIdx := do
     inferPisOut stk j v2
 termination_by n
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1086-1097 inferPisLeafI — the ∀
+/-- con-leche: ConLeche/Cached/CoreC.lean:1170-1181 inferPisLeafI — the ∀
 loop's LEAF: open the residual codomain against every free variable at once,
 infer its sort and fold `imax` outward. -/
 def inferPisLeaf (r : CoreFnsA) (fe : IFEnv) (d : Nat)
@@ -2855,7 +3224,7 @@ def inferPisLeaf (r : CoreFnsA) (fe : IFEnv) (d : Nat)
   let iv ← inferPisOut stk stk.size v
   internSortE iv
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1099-1120 inferPisI — the
+/-- con-leche: ConLeche/Cached/CoreC.lean:1183-1204 inferPisI — the
 ∀-telescope inference loop, `inferLams`' twin: peel the chain, open each
 domain in bulk, and stack the binder's SORT (for the `imax` fold). -/
 def inferPis (r : CoreFnsA) (fe : IFEnv) (d : Nat) :
@@ -2878,7 +3247,7 @@ def inferPis (r : CoreFnsA) (fe : IFEnv) (d : Nat) :
             inferPis r fe d peel body (k + 1) (fvs.push fv) (stk.push u)
         else fail (.invalid "expected a sort")
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1122-1223 inferBodyI — the `.lam`
+/-- con-leche: ConLeche/Cached/CoreC.lean:1206-1311 inferBodyI — the `.lam`
 clause: the binder's own domain is checked to be a type here (which is why the
 loop starts at `k = 1` with one free variable and a one-entry stack), and the
 rest of the λ-chain is peeled by `inferLams`. -/
@@ -2890,7 +3259,7 @@ def inferLam (r : CoreFnsA) (depth : Nat) (ty body : EIdx) : AM EIdx := do
     inferLams r depth peelFuel body 1 #[fv] #[ty]
   else fail (.invalid "expected a sort")
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1122-1223 inferBodyI — the
+/-- con-leche: ConLeche/Cached/CoreC.lean:1206-1311 inferBodyI — the
 `.forallE` clause, `inferLam`'s twin. -/
 def inferForall (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (ty body : EIdx) : AM EIdx := do
@@ -2918,15 +3287,15 @@ The `whnf` re-entry at a non-∀ head is where the chained clause's own `whnf`
 sits, and it RESETS the accumulator, because the reduct is already the opened
 type. -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1121-1127 defeqArg
-con-leche: ConLeche/Cached/CoreC.lean:862-865 defeqArgI — **the argument check
+/-- con-leche: ConLeche/Kernel/Core.lean:1198-1204 defeqArg
+con-leche: ConLeche/Cached/CoreC.lean:947-950 defeqArgI — **the argument check
 of a full-grade application** (official `infer_app`): the type of an
 `eagerReduce _ _` argument is compared with the domain in the eager tower
 (`CoreFnsA.defeqE`), every other argument's in the knot's own. -/
 def defeqArg (r : CoreFnsA) (depth : Nat) (a ta ty : EIdx) : AM Bool := do
   if ← isEagerReduce a then r.defeqE depth ta ty else r.defeq depth ta ty
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:867-896 inferSpineI — walk the
+/-- con-leche: ConLeche/Cached/CoreC.lean:952-981 inferSpineI — walk the
 head's type down the argument vector at the FULL grade. -/
 def inferSpine (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (ty : EIdx) (acc : Array EIdx) (args : Array EIdx) (i : Nat) : AM EIdx := do
@@ -2956,7 +3325,7 @@ def inferSpine (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   else instantiateListFast coreWalkFuel ty acc 0
 termination_by args.size - i
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1122-1223 inferBodyI — the `.app`
+/-- con-leche: ConLeche/Cached/CoreC.lean:1206-1311 inferBodyI — the `.app`
 clause: the head is inferred ONCE and the whole argument vector is run through
 `inferSpine`. -/
 def inferApp (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
@@ -2965,7 +3334,7 @@ def inferApp (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   let tf ← r.infer depth hv.1
   inferSpine r fe depth tf #[] hv.2 0
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:898-917 inferSpineIOI — the io
+/-- con-leche: ConLeche/Cached/CoreC.lean:983-1002 inferSpineIOI — the io
 lane's spine walk, official's `infer_only`: the head's type is walked through
 the arguments with no argument inference and no domain comparison
 (con-leche's tasks #342, #346). -/
@@ -2988,7 +3357,7 @@ def inferSpineIO (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   else instantiateListFast coreWalkFuel ty acc 0
 termination_by args.size - i
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1225-1273 inferBodyIOI — the io
+/-- con-leche: ConLeche/Cached/CoreC.lean:1313-1361 inferBodyIOI — the io
 lane's `.app` clause. -/
 def inferAppIOAt (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (e : EIdx) : AM EIdx := do
@@ -2996,7 +3365,7 @@ def inferAppIOAt (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   let tf ← r.infer depth hv.1
   inferSpineIO r fe depth tf #[] hv.2 0
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1122-1223 inferBodyI — the `.proj`
+/-- con-leche: ConLeche/Cached/CoreC.lean:1206-1311 inferBodyI — the `.proj`
 clause, shared by `inferBody` and `inferBodyIO` (con-leche's `inferBodyIOI`
 dispatches its `.proj` to `inferBodyI`'s): the subject type's head must be the
 node's structure at the table's arity (official `infer_proj`; these guards are
@@ -3032,7 +3401,7 @@ def inferProj (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (sn : NIdx) (i : Nat)
     | _ => failDanglingE
   else fail (.invalid "invalid projection: not a structure-like type, or no such field")
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1129-1229 inferBody — the inference
+/-- con-leche: ConLeche/Kernel/Core.lean:1206-1306 inferBody — the inference
 body.  The `.const` clause reads the stored type through `constTyAt`, so a
 constant inferred twice at the same levels pays the level substitution
 once. -/
@@ -3058,10 +3427,15 @@ def inferBody (r : CoreFnsA) (fe : IFEnv) :
         if usl.length != cv.levelParams.length then do
           fail (.invalid "incorrect number of universe levels")
         else constTyAt cv us
-    | .lit (.natVal _) => do
+    | .lit (.natVal n) => do
       if ← natLitStored fe then do
-        let nn ← pinNat
-        constE nn
+        -- a numeral entering the checker is bounded by the run's maximum
+        -- `Nat` size (con-leche's cached `inferBodyI`, official `infer_lit`)
+        if ← natSizeRefused n then
+          fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+        else do
+          let nn ← pinNat
+          constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
     | .lit (.strVal _) => do
       if ← strLitStored fe then do
@@ -3092,7 +3466,7 @@ def inferBody (r : CoreFnsA) (fe : IFEnv) :
     | .bvar _ =>
       fail (.notImplemented "inferType beyond the supported fragment")
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1231-1317 inferBodyIO — **the io
+/-- con-leche: ConLeche/Kernel/Core.lean:1308-1394 inferBodyIO — **the io
 inference body**, official's `infer_only`: `inferBody` with the application,
 ∀, λ and `let` clauses changed — no argument check (`inferSpineIO`), the
 binder clauses chained, no domain-sort run at the λ, and a `let` infers its
@@ -3120,10 +3494,15 @@ def inferBodyIO (r : CoreFnsA) (fe : IFEnv) :
         if usl != cv.levelParams.length then do
           fail (.invalid "incorrect number of universe levels")
         else constTyAt cv us
-    | .lit (.natVal _) => do
+    | .lit (.natVal n) => do
       if ← natLitStored fe then do
-        let nn ← pinNat
-        constE nn
+        -- a numeral entering the checker is bounded by the run's maximum
+        -- `Nat` size (con-leche's cached `inferBodyI`, official `infer_lit`)
+        if ← natSizeRefused n then
+          fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+        else do
+          let nn ← pinNat
+          constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
     | .lit (.strVal _) => do
       if ← strLitStored fe then do
@@ -3166,14 +3545,14 @@ def inferBodyIO (r : CoreFnsA) (fe : IFEnv) :
 
 con-leche's `Core.lean`:2373-2697. -/
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1319-1332 boolTrueShortcut — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:1396-1409 boolTrueShortcut — **the
 eq-true shortcut** (the divergence audit's E2): the left side is fully
 head-normalised and the verdict is `true` iff the reduct is `Bool.true`. -/
 def boolTrueShortcut (r : CoreFnsA) (depth : Nat) (a : EIdx) : AM Bool := do
   let w ← r.whnf depth a
   isBoolTrue w
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1334-1363 defeqSpine —
+/-- con-leche: ConLeche/Kernel/Core.lean:1411-1440 defeqSpine —
 levels-and-spine congruence for two applications of the *same* stored
 constant (the lazy delta same-head short-circuit, official's
 `try_eq_const_app`).  The arguments are compared **last to first**, as
@@ -3201,7 +3580,7 @@ def defeqSpine (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1570-1605 lazyDeltaReduction — the
+/-- con-leche: ConLeche/Kernel/Core.lean:1653-1688 lazyDeltaReduction — the
 literal-acceleration guard: *both* sides free of free variables, mirroring
 the official kernel's `lazy_delta_reduction`.  The arena reads the `O(1)`
 eager per-node fvar range where the specification walks. -/
@@ -3211,7 +3590,7 @@ def defeqNoFvars (a b : EIdx) : AM Bool := do
     let y ← hasFvarFast coreWalkFuel b
     pure !y
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1570-1605 lazyDeltaReduction — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:1653-1688 lazyDeltaReduction — **the
 literal fold's guard**: the eager flag (official
 `m_eager_reduce`) or both sides free of free variables — official's
 `(!has_fvar(t_n) && !has_fvar(s_n)) || m_eager_reduce`.  Under the flag the
@@ -3219,150 +3598,76 @@ sides are not walked. -/
 def lazyFoldOk (eager : Bool) (a b : EIdx) : AM Bool := do
   if eager then pure true else defeqNoFvars a b
 
-/-! ### The batched defeq binder descent
+/-! ### The binder-telescope congruence -/
 
-DESIGN §8.6 item 14, and **the one lever of the P6 campaign that is the
-PORT's own algorithm** rather than a clause copied from con-leche's cached
-tier: `Cached/CoreC.lean:1456-1623 defeqStepI` keeps its `.forallE`/`.lam`
-arms chained, so there is nothing upstream to mirror and the bridge owes its
-own identification lemma.  Licensed by the maintainer's ruling before
-DESIGN §8.7 ("do it here — with its own identification lemma against the pure
-tier's chained arms owed by the bridge (P3)"). -/
+/-- con-leche: ConLeche/Kernel/Core.lean:1442-1445 bindersFuel — the
+binder-telescope descent's own budget (`2^62`; `@[noinline]` for con-leche's
+reason: a literal at or above `2^32` is parsed from its decimal string at
+every use otherwise). -/
+@[noinline] def bindersFuel : Nat := 4611686018427387904  -- 2^62
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1400-1426 quickDefEq — the batched
-descent's LEAF: open both residuals ONCE against the whole `fvs` and hand the
-pair back to the knot, which is the chain's own next step. -/
-def defeqPeelLeaf (r : CoreFnsA) (d : Nat) (a b : EIdx) (k : Nat)
-    (fvs : Array EIdx) : AM Bool := do
-  let o1 ← instantiateListFast coreWalkFuel a fvs 0
-  let o2 ← instantiateListFast coreWalkFuel b fvs 0
-  r.defeq (d + k) o1 o2
-
-/-- con-leche: ConLeche/Kernel/Core.lean:1400-1426 quickDefEq — **the batched
-∀ binder descent**.
-
-`a` and `b` are the two RAW bodies of the ∀ binders peeled so far — never
-opened — `fvs` holds the `k` free variables the peel has introduced, innermost
-first, and `d + k` is the depth the next binder sits at.  While both handles
-are ∀s the loop peels one more level: each domain is opened against the
-accumulated `fvs` in ONE `instantiateList`, the two opened domains are compared
-with the knot exactly where the chain compares them, the fresh
-`fvar (d + k) ty₂'` is pushed, and the two raw bodies go round again.
-
-**The identification the bridge owes** — *batched descent = the pure chain*,
-on every input, by `Expr.instantiateList_cons` (`Verify/InstList.lean`) and the
-per-binder domain check:
-
-1. *The opens agree.*  The chain's `k`-fold `instantiate1` of a domain at
-   cursors `k-1, …, 0` is one `instantiateList` against the same free
-   variables at cursor 0.
-2. *The chain really reaches this arm at every peeled level.*  At level `j`
-   the chain runs a WHOLE `defeqBody` on the opened pair, so the peel is sound
-   only because every earlier step is a no-op on a pair of ∀ nodes:
-   `isBoolTrue` is `false` off any non-`.const`, `propIrrel`'s readers answer
-   "not a proof" at a ∀ (`headProofPW`'s `.forallE` arm), and `whnfCore` is
-   the identity on a `.forallE` — so `quickDefEq` is reached on the pair
-   itself, and its ∀ arm is the one this loop continues.  Stopping EARLIER is
-   always safe: the leaf hands the pair to the knot.
-3. *A failure lands at the same binder.*  The domain comparison at level `j`
-   runs before the descent past `j`, in the chain's order.
-4. *The caches see less, and that is all.*  The batch neither probes nor
-   writes the `defeq` memo at the `k` intermediate opened pairs, and spends one
-   unit of knot fuel where the chain spends `k`; the bridge's statement is
-   existential in the fuel (`∃ F`).
-
-The λ pair is NOT peeled here: con-leche's λ arm is `defeqLams`, whose
-innermost level compares the bodies' types (task #342), so it has its own
-descent below.
-
-Two equality short-circuits ride with it, both `quickDefEq`'s own first test
-one level up: the peel returns `true` at `a == b`, and the domain's knot call
-is skipped when the two RAW domains are the same handle. -/
-def defeqPeel (r : CoreFnsA) (d : Nat) :
-    Nat → EIdx → EIdx → Nat → Array EIdx → AM Bool
-  | peel, a, b, k, fvs => do
-    -- The peel's test is a tag read off the two handle words (the ruling
-    -- before §8.7) and the binder PROJECTION (task #97-P6-10).
-    if a == b then pure true
-    else if peel = 0 || a.tag != ETag.forallE || b.tag != ETag.forallE then
-      defeqPeelLeaf r d a b k fvs
-    else
-      match ← viewBind a with
-      | none => failDanglingE
-      | some (da, ba) =>
-        match ← viewBind b with
-        | none => failDanglingE
-        | some (db, bb) => do
-          let sameDom := da == db
-          let t1 ← instantiateListFast coreWalkFuel da fvs 0
-          let t2 ← if sameDom then pure t1
-                   else instantiateListFast coreWalkFuel db fvs 0
-          let dq ← if sameDom then pure true else r.defeq (d + k) t1 t2
-          if !dq then pure false
-          else do
-            let fv ← internFVarE (d + k) t2
-            match peel with
-            | 0 => defeqPeelLeaf r d ba bb (k + 1) (fvs.push fv)
-            | p + 1 => defeqPeel r d p ba bb (k + 1) (fvs.push fv)
-
-/-- con-leche: ConLeche/Kernel/Core.lean:1400-1426 quickDefEq — `quickDefEq`'s
-`.forallE` binder-congruence arm: con-leche's clause for the FIRST binder (the
-domains are compared and the fresh free variable is made), then the batched
-descent for the rest of the two telescopes. -/
-def defeqBinders (r : CoreFnsA) (depth : Nat) (ty1 body1 ty2 body2 : EIdx) :
-    AM Bool := do
-  if !(← r.defeq depth ty1 ty2) then pure false
-  else do
-    let fv ← internFVarE depth ty2
-    defeqPeel r depth peelFuel body1 body2 1 #[fv]
-
-/-- con-leche: ConLeche/Kernel/Core.lean:1365-1368 lamsFuel — the λ-telescope
-descent's own budget (`2^62`; `@[noinline]` for con-leche's reason: a literal
-at or above `2^32` is parsed from its decimal string at every use
-otherwise). -/
-@[noinline] def lamsFuel : Nat := 4611686018427387904  -- 2^62
-
-/-- con-leche: ConLeche/Kernel/Core.lean:1370-1377 defeqLamsInner
-con-leche: ConLeche/Cached/CoreC.lean:1280-1287 defeqLamsInnerI — the innermost
-level of `defeqLams`: the opened bodies, and at the verified mode their
-FULL-grade types (con-leche's task #342, T1). -/
-def defeqLamsInner (mode : CheckMode) (r : CoreFnsA) (depth : Nat) (b₁ b₂ : EIdx) :
-    AM Bool := do
+/-- con-leche: ConLeche/Kernel/Core.lean:1447-1454 defeqBindersInner
+con-leche: ConLeche/Cached/CoreC.lean:1368-1376 defeqBindersInnerI — the
+innermost level of `defeqBinders`: the opened bodies, and for two
+λ-telescopes at the verified mode their FULL-grade types (the λ check). -/
+def defeqBindersInner (mode : CheckMode) (r : CoreFnsA) (lam : Bool) (depth : Nat)
+    (b₁ b₂ : EIdx) : AM Bool := do
   if !(← r.defeq (depth + 1) b₁ b₂) then pure false
-  else if mode.verifiedChecks then do
+  else if lam && mode.verifiedChecks then do
     let t₁ ← r.infer (depth + 1) b₁
     let t₂ ← r.infer (depth + 1) b₂
     r.defeq (depth + 1) t₁ t₂
   else pure true
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1379-1398 defeqLams
-con-leche: ConLeche/Cached/CoreC.lean:1289-1301 defeqLamsI — **λ-telescope
-congruence**: two λs compare their domains; while both opened bodies are λs
-(`lamPair?`) the descent continues structurally (an equal pair of bodies is
-`true` outright), and at the innermost level `defeqLamsInner` compares the
-bodies and, at the verified mode, their types. -/
-def defeqLams (mode : CheckMode) (r : CoreFnsA) :
-    Nat → Nat → EIdx → EIdx → EIdx → EIdx → AM Bool
-  | fuel, depth, ty₁, body₁, ty₂, body₂ => do
-    if !(← r.defeq depth ty₁ ty₂) then pure false
-    else do
-    let fv ← internFVarE depth ty₂
-    let b₁ ← instantiate1Fast coreWalkFuel body₁ fv 0
-    let b₂ ← instantiate1Fast coreWalkFuel body₂ fv 0
-    match fuel with
-    | 0 => defeqLamsInner mode r depth b₁ b₂
-    | fuel + 1 =>
-      match ← lamPair? b₁ b₂ with
-      | some (ty₁', body₁', ty₂', body₂') =>
-        if b₁ == b₂ then pure true
-        else defeqLams mode r fuel (depth + 1) ty₁' body₁' ty₂' body₂'
-      | none => defeqLamsInner mode r depth b₁ b₂
+/-- con-leche: ConLeche/Kernel/Core.lean:1456-1460 defeqDomain
+con-leche: ConLeche/Cached/CoreC.lean:1378-1383 defeqDomainI — one level's
+domains in `defeqBinders`: the same RAW domain handle is `true`; otherwise the
+left domain, opened over the variables so far (`fvs`, push order) in one
+`instantiateList`, against the opened right one `dom₂`. -/
+def defeqDomain (r : CoreFnsA) (depth : Nat) (fvs : Array EIdx) (ty₁ ty₂ dom₂ : EIdx) :
+    AM Bool := do
+  if ty₁ == ty₂ then pure true
+  else do
+    let dom₁ ← instantiateListFast coreWalkFuel ty₁ fvs 0
+    r.defeq depth dom₁ dom₂
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1400-1426 quickDefEq
-con-leche: ConLeche/Cached/CoreC.lean:1303-1322 quickDefEqI — **the easy
+/-- con-leche: ConLeche/Kernel/Core.lean:1462-1485 defeqBinders
+con-leche: ConLeche/Cached/CoreC.lean:1385-1400 defeqBindersI —
+**binder-telescope congruence** (the official kernel's `is_def_eq_binding`):
+two ∀-telescopes (`lam = false`) or two λ-telescopes (`lam = true`) are peeled
+together while both bodies are binders of that kind (`binderPair?`).  The
+bodies stay RAW: `fvs` holds the variables of the levels above in push order
+(outermost first, the specification's list reversed), and every opening is
+one `instantiateList` over it.  Per level the right domain is opened (`dom₂`),
+the domains are compared by `defeqDomain`, and the variable
+`fvar depth dom₂` is pushed; at the innermost level both bodies are opened
+once and compared by `defeqBindersInner`. -/
+def defeqBinders (mode : CheckMode) (r : CoreFnsA) (lam : Bool) :
+    Nat → Nat → Array EIdx → EIdx → EIdx → EIdx → EIdx → AM Bool
+  | fuel, depth, fvs, ty₁, body₁, ty₂, body₂ => do
+    let dom₂ ← instantiateListFast coreWalkFuel ty₂ fvs 0
+    if !(← defeqDomain r depth fvs ty₁ ty₂ dom₂) then pure false
+    else do
+    let fv ← internFVarE depth dom₂
+    match fuel with
+    | 0 => do
+      let b₁ ← instantiateListFast coreWalkFuel body₁ (fvs.push fv) 0
+      let b₂ ← instantiateListFast coreWalkFuel body₂ (fvs.push fv) 0
+      defeqBindersInner mode r lam depth b₁ b₂
+    | fuel + 1 =>
+      match ← binderPair? lam body₁ body₂ with
+      | some (ty₁', body₁', ty₂', body₂') =>
+        defeqBinders mode r lam fuel (depth + 1) (fvs.push fv) ty₁' body₁' ty₂' body₂'
+      | none => do
+        let b₁ ← instantiateListFast coreWalkFuel body₁ (fvs.push fv) 0
+        let b₂ ← instantiateListFast coreWalkFuel body₂ (fvs.push fv) 0
+        defeqBindersInner mode r lam depth b₁ b₂
+
+/-- con-leche: ConLeche/Kernel/Core.lean:1487-1509 quickDefEq
+con-leche: ConLeche/Cached/CoreC.lean:1402-1417 quickDefEqI — **the easy
 cases** (the official kernel's `quick_is_def_eq`): the syntactic fast path,
-and the pairs decided on the spot — two sorts, two literals, two `∀`s (binder
-congruence, batched: `defeqBinders`) and two `λ`s (`defeqLams`).  `none` is
+and the pairs decided on the spot — two sorts, two literals, two `∀`s and two
+`λ`s (binder-telescope congruence, `defeqBinders`).  `none` is
 "not an easy case".  The pair match is on the two handles' TAGS first: only a
 pair of equal tags among the four kinds is viewed. -/
 def quickDefEq (mode : CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
@@ -3378,15 +3683,15 @@ def quickDefEq (mode : CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
       pure (some ok)
     | .lit l₁, .lit l₂ => pure (some (l₁ == l₂))
     | .forallE ty₁ body₁, .forallE ty₂ body₂ => do
-      let ok ← defeqBinders r depth ty₁ body₁ ty₂ body₂
+      let ok ← defeqBinders mode r false bindersFuel depth #[] ty₁ body₁ ty₂ body₂
       pure (some ok)
     | .lam ty₁ body₁, .lam ty₂ body₂ => do
-      let ok ← defeqLams mode r lamsFuel depth ty₁ body₁ ty₂ body₂
+      let ok ← defeqBinders mode r true bindersFuel depth #[] ty₁ body₁ ty₂ body₂
       pure (some ok)
     | _, _ => pure none
   else pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1428-1432 Expr.isNatZero — `Nat.zero`
+/-- con-leche: ConLeche/Kernel/Core.lean:1511-1515 Expr.isNatZero — `Nat.zero`
 or the literal `0` (official `is_nat_zero`). -/
 def isNatZero (e : EIdx) : AM Bool := do
   if e.tag == ETag.lit then
@@ -3402,7 +3707,7 @@ def isNatZero (e : EIdx) : AM Bool := do
     | _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1439-1444 Expr.natPred? — the
+/-- con-leche: ConLeche/Kernel/Core.lean:1522-1527 Expr.natPred? — the
 predecessor of a successor form (official `is_nat_succ`): a nonzero literal
 (its predecessor literal interned), or `Nat.succ x`. -/
 def natPred? (e : EIdx) : AM (Option EIdx) := do
@@ -3426,8 +3731,8 @@ def natPred? (e : EIdx) : AM (Option EIdx) := do
       else pure none
   else pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1446-1458 defeqOffset
-con-leche: ConLeche/Cached/CoreC.lean:1324-1333 defeqOffsetI — **offsets**
+/-- con-leche: ConLeche/Kernel/Core.lean:1529-1541 defeqOffset
+con-leche: ConLeche/Cached/CoreC.lean:1419-1428 defeqOffsetI — **offsets**
 (the official kernel's `is_def_eq_offset`): two zeros are equal, two
 successor forms compare their predecessors; two literals are left to
 `quickDefEq`.  (`Expr.isLit` is the tag test.)  The second side's
@@ -3446,14 +3751,14 @@ def defeqOffset (r : CoreFnsA) (depth : Nat) (a b : EIdx) : AM (Option Bool) := 
         let ok ← r.defeq depth x y
         pure (some ok)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1460-1464 Expr.headIsProj — is the
+/-- con-leche: ConLeche/Kernel/Core.lean:1543-1547 Expr.headIsProj — is the
 head of the application spine a projection? -/
 def headIsProj (e : EIdx) : AM Bool := do
   let h ← getAppFn coreWalkFuel e
   pure (h.tag == ETag.proj)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1466-1474 tryUnfoldProjApp
-con-leche: ConLeche/Cached/CoreC.lean:1335-1341 tryUnfoldProjAppI — official
+/-- con-leche: ConLeche/Kernel/Core.lean:1549-1557 tryUnfoldProjApp
+con-leche: ConLeche/Cached/CoreC.lean:1430-1436 tryUnfoldProjAppI — official
 `try_unfold_proj_app`: a projection-headed term through the FULL `whnfCore`;
 `some` whenever that changed it. -/
 def tryUnfoldProjApp (r : CoreFnsA) (depth : Nat) (e : EIdx) :
@@ -3463,7 +3768,7 @@ def tryUnfoldProjApp (r : CoreFnsA) (depth : Nat) (e : EIdx) :
     if e' == e then pure none else pure (some e')
   else pure none
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1476-1483 DeltaStep — the outcome of
+/-- con-leche: ConLeche/Kernel/Core.lean:1559-1566 DeltaStep — the outcome of
 one lazy-delta step (official `reduction_status`), over handles. -/
 inductive DeltaStepA where
   | cont (a b : EIdx)
@@ -3471,8 +3776,8 @@ inductive DeltaStepA where
   | diff
   | unknown
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1485-1490 deltaQuick
-con-leche: ConLeche/Cached/CoreC.lean:1343-1348 deltaQuickI — the end of a
+/-- con-leche: ConLeche/Kernel/Core.lean:1568-1573 deltaQuick
+con-leche: ConLeche/Cached/CoreC.lean:1438-1443 deltaQuickI — the end of a
 lazy-delta step: `quickDefEq` on the new pair. -/
 def deltaQuick (mode : CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
     AM DeltaStepA := do
@@ -3481,8 +3786,8 @@ def deltaQuick (mode : CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
   | some false => pure .diff
   | none => pure (.cont a b)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1492-1553 lazyDeltaStep
-con-leche: ConLeche/Cached/CoreC.lean:1350-1397 lazyDeltaStepI — **one
+/-- con-leche: ConLeche/Kernel/Core.lean:1575-1636 lazyDeltaStep
+con-leche: ConLeche/Cached/CoreC.lean:1445-1492 lazyDeltaStepI — **one
 lazy-delta step** (the official kernel's `lazy_delta_reduction_step`): unfold
 the side with the greater height (both at equal hints, after the same-head
 spine shortcut at equal *regular* hints), put the unfolded side through the
@@ -3540,19 +3845,19 @@ def lazyDeltaStep (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
           deltaQuick mode r depth a₃ b₃
         | _, _ => pure .unknown
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1555-1560 LazyRes — the outcome of the
+/-- con-leche: ConLeche/Kernel/Core.lean:1638-1643 LazyRes — the outcome of the
 lazy-delta loop, over handles: a verdict, or the pair it got stuck on. -/
 inductive LazyResA where
   | verdict (v : Bool)
   | unknown (a b : EIdx)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1562-1568 defeqLoopFuel — step
+/-- con-leche: ConLeche/Kernel/Core.lean:1645-1651 defeqLoopFuel — step
 budget of the two lazy-delta loops.  Exhaustion is an internal error, never a
 verdict.  Effectively unbounded since con-leche task #330: `2^62`. -/
 @[noinline] def defeqLoopFuel : Nat := 4611686018427387904  -- 2^62
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1570-1605 lazyDeltaReduction
-con-leche: ConLeche/Cached/CoreC.lean:1399-1423 lazyDeltaReductionI — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:1653-1688 lazyDeltaReduction
+con-leche: ConLeche/Cached/CoreC.lean:1494-1518 lazyDeltaReductionI — **the
 lazy-delta loop** (the official kernel's `lazy_delta_reduction`): per
 iteration the offset check, the fvar-guarded literal acceleration — whose
 reduct restarts the comparison (`defeq`) — then one `lazyDeltaStep`, each
@@ -3581,8 +3886,8 @@ def lazyDeltaReduction (mode : CheckMode) (eager : Bool) (r : CoreFnsA) (fe : IF
     | .diff => pure (.verdict false)
     | .unknown => pure (.unknown a b)
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1607-1625 lazyDeltaProjReduction
-con-leche: ConLeche/Cached/CoreC.lean:1425-1439 lazyDeltaProjReductionI —
+/-- con-leche: ConLeche/Kernel/Core.lean:1690-1708 lazyDeltaProjReduction
+con-leche: ConLeche/Cached/CoreC.lean:1520-1534 lazyDeltaProjReductionI —
 **`a.i =?= b.i` by its scrutinees** (the official kernel's
 `lazy_delta_proj_reduction`): lazy-delta steps on the two scrutinees; when
 neither unfolds any more (or the step found them different), the projection
@@ -3603,8 +3908,8 @@ def lazyDeltaProjReduction (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv)
         | none => r.defeq depth a b
       | none => r.defeq depth a b
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1627-1636 defeqProjPair
-con-leche: ConLeche/Cached/CoreC.lean:1441-1449 defeqProjPairI — the
+/-- con-leche: ConLeche/Kernel/Core.lean:1710-1719 defeqProjPair
+con-leche: ConLeche/Cached/CoreC.lean:1536-1544 defeqProjPairI — the
 proj/proj check of `is_def_eq_core`: two projections at the same slot go
 through `lazyDeltaProjReduction` on their scrutinees. -/
 def defeqProjPair (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
@@ -3618,8 +3923,8 @@ def defeqProjPair (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     | _, _ => pure false
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1638-1705 defeqStuck
-con-leche: ConLeche/Cached/CoreC.lean:1451-1498 defeqStuckI — **the stuck
+/-- con-leche: ConLeche/Kernel/Core.lean:1721-1788 defeqStuck
+con-leche: ConLeche/Cached/CoreC.lean:1546-1593 defeqStuckI — **the stuck
 comparison** (the tail of the official kernel's `is_def_eq_core`): a string
 literal against `String.ofList`, the same free variable, the same constant at
 equivalent levels, the application spine, η on a one-sided λ; every failing
@@ -3689,7 +3994,7 @@ def defeqStuck (mode : CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
   -- distinct whnf-stuck head symbols
   | _, _ => stuckIrrel r fe depth a b
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1707-1765 defeqBody — **the
+/-- con-leche: ConLeche/Kernel/Core.lean:1790-1848 defeqBody — **the
 definitional-equality body** (the official kernel's `is_def_eq_core`, clause
 for clause except con-leche task #333's reordering): the syntactic fast path;
 the `Bool.true` shortcut; `quickDefEq` and proof irrelevance on the UNREDUCED
@@ -3737,7 +4042,7 @@ con-leche's `Core.lean`:2897-2936 with the memo probes of
 slot is what DESIGN §3.4 rules out.  The bodies above are pure of memo
 logic, which is the property that matters. -/
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1538-1551 memoEI — record a
+/-- con-leche: ConLeche/Cached/CoreC.lean:1651-1664 memoEI — record a
 `whnfCore` answer (detach before update, DESIGN §8.4 lesson 14).  A plain
 insert, as con-leche's: the table's cap was removed by task #115. -/
 @[noinline] def whnfCoreSet (e r : EIdx) : AM Unit := do
@@ -3746,7 +4051,7 @@ insert, as con-leche's: the table's cap was removed by task #115. -/
   let s := { s with caches := { s.caches with whnfCoreC := ∅ } }
   set { s with caches := { s.caches with whnfCoreC := mp.insert e r } }
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1532-1550 memoEI — record a
+/-- con-leche: ConLeche/Cached/CoreC.lean:1645-1663 memoEI — record a
 CHEAP-mode `whnfCore` answer, in the cheap mode's OWN table (con-leche's
 `whnfCoreCheapC`: the two modes differ on a stuck projection). -/
 @[noinline] def whnfCoreCheapSet (e r : EIdx) : AM Unit := do
@@ -3755,7 +4060,7 @@ CHEAP-mode `whnfCore` answer, in the cheap mode's OWN table (con-leche's
   let s := { s with caches := { s.caches with whnfCoreCheapC := ∅ } }
   set { s with caches := { s.caches with whnfCoreCheapC := mp.insert e r } }
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1538-1551 memoEI — record a `whnf`
+/-- con-leche: ConLeche/Cached/CoreC.lean:1651-1664 memoEI — record a `whnf`
 answer. -/
 @[noinline] def whnfSet (e r : EIdx) : AM Unit := do
   let s ← get
@@ -3763,7 +4068,7 @@ answer. -/
   let s := { s with caches := { s.caches with whnfC := ∅ } }
   set { s with caches := { s.caches with whnfC := mp.insert e r } }
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1538-1551 memoEI — record a
+/-- con-leche: ConLeche/Cached/CoreC.lean:1651-1664 memoEI — record a
 full-grade `infer` answer. -/
 @[noinline] def inferSet (e r : EIdx) : AM Unit := do
   let s ← get
@@ -3771,7 +4076,7 @@ full-grade `infer` answer. -/
   let s := { s with caches := { s.caches with inferC := ∅ } }
   set { s with caches := { s.caches with inferC := mp.insert e r } }
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1538-1551 memoEI — record an
+/-- con-leche: ConLeche/Cached/CoreC.lean:1651-1664 memoEI — record an
 io-grade `infer` answer, in the io grade's OWN table (con-leche's task #170
 memo ruling). -/
 @[noinline] def inferIOSet (e r : EIdx) : AM Unit := do
@@ -3780,7 +4085,7 @@ memo ruling). -/
   let s := { s with caches := { s.caches with inferIOC := ∅ } }
   set { s with caches := { s.caches with inferIOC := mp.insert e r } }
 
-/-- con-leche: ConLeche/Cached/CoreC.lean:1552-1565 memoBI — record a `defeq`
+/-- con-leche: ConLeche/Cached/CoreC.lean:1665-1678 memoBI — record a `defeq`
 verdict at the ORDERED pair, both signs (con-leche's `defeqC` stores the
 `Bool` result `r`, which is what makes a negative memo sound). -/
 @[noinline] def defeqSet (a b : EIdx) (r : Bool) : AM Unit := do
@@ -3789,7 +4094,7 @@ verdict at the ORDERED pair, both signs (con-leche's `defeqC` stores the
   let s := { s with caches := { s.caches with defeqC := ∅ } }
   set { s with caches := { s.caches with defeqC := mp.insert (a, b) r } }
 
-/-- con-leche: ConLeche/Cached/StateC.lean:351-363 CState.enterEager — enter
+/-- con-leche: ConLeche/Cached/StateC.lean:455-467 CState.enterEager — enter
 the eager tower.  From a plain mode (`eager = false`): the plain memos move out
 (returned), the stored eager ones move into the six fields, and the eager slot
 is left empty.  From an eager mode the six fields already hold the eager set:
@@ -3806,7 +4111,7 @@ nothing moves. -/
                defeqC := em.defeqC, eagerMemos := ModeMemos.empty } }
     pure (some c.modeMemos)
 
-/-- con-leche: ConLeche/Cached/StateC.lean:365-375 CState.leaveEager — leave
+/-- con-leche: ConLeche/Cached/StateC.lean:469-479 CState.leaveEager — leave
 the eager tower: the six fields (now the eager tower's, with what the run
 added) are stored back as the eager set, and the plain memos `saved` return to
 the six fields; nothing moves when `enterEager` moved nothing. -/
@@ -3822,8 +4127,8 @@ the six fields; nothing moves when `enterEager` moved nothing. -/
                whnfC := mm.whnfC, inferC := mm.inferC, inferIOC := mm.inferIOC,
                defeqC := mm.defeqC } }
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1769-1804 coreKnot
-con-leche: ConLeche/Cached/CoreC.lean:1647-1668 coreKnotI
+/-- con-leche: ConLeche/Kernel/Core.lean:1852-1887 coreKnot
+con-leche: ConLeche/Cached/CoreC.lean:1767-1788 coreKnotI
 Tie the bodies together: the record whose entry points are the bodies applied
 to the record one fuel level down, each under its own memo.  Fuel is *only*
 here — exhaustion is an internal error, never a verdict — and the next level
@@ -3914,7 +4219,7 @@ def coreKnot (mode : CheckMode) (eager : Bool) (fe : IFEnv) (wrap : CoreFnsA →
             inferIOSet e x
             pure x }
 
-/-- con-leche: ConLeche/Kernel/Core.lean:1806-1825 checkFuel — the shared
+/-- con-leche: ConLeche/Kernel/Core.lean:1889-1908 checkFuel — the shared
 fuel for the checker core, counted in knot levels.  **Effectively
 unbounded** (`2^62`, as `whnfCoreLoopFuel`): the fuel exists so that the knot
 is a structural recursion the proofs can induct over, and running out of it

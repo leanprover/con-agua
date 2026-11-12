@@ -124,7 +124,9 @@ constructor, 7; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its 
 /-! ## `check_decl` -/
 
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:102-184 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.checkDecl`, `ConRon.Arena.basisNamesError`, `ConRon.Arena.basisNamesOk`, `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkDecl` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
   k := DECL.u64[1 + 8 * i];

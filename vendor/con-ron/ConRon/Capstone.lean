@@ -123,7 +123,8 @@ theorem rust_stages
     (hreads : ReadsAs sinst src chunks.val)
     (h3 : frontend.export_c.parse_source sinst pers st2 src = ok (.Ok r, st3, src'))
     (h4 : frontend.prepare.prepare_prelude pers st3 pre r.decls = ok (.Ok ds, st4))
-    (h5 : arena.checker.intern_all_pins pers st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins pers st4 pins maxNatSize = ok (.Ok ipins, st5))
     (h6 : PoolAccepts pers st5 .Verified ipins ds ix st6) :
     ∃ (sA sB sC sD sE sF : ConRon.Arena.AState)
       (rv : ConRon.Arena.Frontend.ParseResultD) (I : ConRon.Arena.IStreamIndex),
@@ -133,7 +134,8 @@ theorem rust_stages
       ConRon.Arena.Frontend.parseChunks (absChunks chunks) sB = .ok (.ok rv, sC) ∧
       ConRon.Arena.Frontend.preparePrelude (absPreludeIx pre) rv.decls sC
           = .ok ((absIDeclL ds).toArray, sD) ∧
-      ConRon.Arena.internAllPins (ConRon.Refine.absPins pins) sD
+      ConRon.Arena.internAllPins (ConRon.Refine.absPins pins)
+          (ConRon.Refine.Nat.toNat maxNatSize) sD
           = .ok (absINatOpPinSetL ipins, sE) ∧
       ConRon.Arena.PooledAccepts .verified (absINatOpPinSetL ipins)
           (absIDeclL ds).toArray sE I sF ∧
@@ -273,7 +275,8 @@ theorem rust_stages_oleans (hT2 : ReadOleansRefines)
       = ok (.Ok rd, store3))
     (h4 : frontend.prepare.prepare_d frontend.olean.records.OleanRead.Insts.Con_ron_coreFrontendNat_op_groundUsedConsts pers { stR with store := store3 } pre rd.decls rd
       = ok (.Ok prepared, st4))
-    (h5 : arena.checker.intern_all_pins pers st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins pers st4 pins maxNatSize = ok (.Ok ipins, st5))
     (h6 : OleanPoolAccepts finst fsv pers st5 .Verified ipins prepared.decls rd.pins rd.values dirs ix st6) :
     ∃ (sA sB sB' sC sD sE sF : ConRon.Arena.AState) (rd' : ConRon.Arena.Frontend.Olean.OleanRead)
       (I : ConRon.Arena.IStreamIndex),
@@ -286,7 +289,8 @@ theorem rust_stages_oleans (hT2 : ReadOleansRefines)
           (absSearchPath dirs) (roots.val.map absNIdx).toArray none sB' = .ok (.ok rd', sC) ∧
       ConRon.Arena.Frontend.prepareD (absPreludeIx pre) rd'.decls rd'.usedOf sC
           = .ok (absPrepared prepared, sD) ∧
-      ConRon.Arena.internAllPins (ConRon.Refine.absPins pins) sD
+      ConRon.Arena.internAllPins (ConRon.Refine.absPins pins)
+          (ConRon.Refine.Nat.toNat maxNatSize) sD
           = .ok (absINatOpPinSetL ipins, sE) ∧
       ConRon.Arena.PooledOleanAccepts (ConRon.Bridge.Frontend.Olean.modelFs F) rd'.pins
           (absSearchPath dirs) rd'.values .verified (absINatOpPinSetL ipins)
@@ -396,7 +400,8 @@ def startState : arena.monad.AState :=
         abs1_c := emptyMap _ _,
         inst1_l_c := emptyMap _ _, inst_lp_c := emptyMap _ _,
         bvar_b_c := emptyMap _ _, fvar_b_c := emptyMap _ _, inst_lp_l_c := emptyMap _ _,
-        inst_lp_ls_c := emptyMap _ _, lp_def_c := emptyMap _ _, crf_c := emptyMap _ _ },
+        inst_lp_ls_c := emptyMap _ _, lp_def_c := emptyMap _ _, crf_c := emptyMap _ _,
+        hlbi_c := emptyMap _ _ },
     caches :=
       { whnf_core_c := emptyMap _ _, whnf_core_cheap_c := emptyMap _ _,
         whnf_c := emptyMap _ _, infer_c := emptyMap _ _,
@@ -411,7 +416,21 @@ def startState : arena.monad.AState :=
     pins :=
       { names := alloc.vec.Vec.new _, reserved := alloc.vec.Vec.new _,
         empty_levels := { word := 0#u32 }, zero_level := { word := 0#u32 },
-        sort_one := { word := 0#u32 } } }
+        sort_one := { word := 0#u32 },
+        max_nat_size := { limbs := .from [134217728#u64] (by scalar_tac) } } }
+
+/-- `max_nat_size_default` is the one-limb `2^27` of `startState`'s pins. -/
+theorem max_nat_size_default_eq :
+    arena.pins.max_nat_size_default = ok { limbs := .from [134217728#u64] (by scalar_tac) } := by
+  rw [arena.pins.max_nat_size_default, ron.nat.from_u64, ite_eq_right (by decide),
+    alloc.vec.Vec.push.eq_def]
+  dsimp only
+  split
+  · simp
+  · exfalso
+    obtain ⟨w, hw, -⟩ := ConRon.Refine.vec_singleton (134217728#u64)
+    rw [alloc.vec.Vec.push.eq_def] at hw
+    simp_all
 
 theorem startState_eq : arena.monad.AState.empty = ok startState := by
   simp only [arena.monad.AState.empty, arena.store.Tbl.empty, arena.store.ETables.empty,
@@ -420,7 +439,7 @@ theorem startState_eq : arena.monad.AState.empty = ok startState := by
     arena.store.EStore.empty, ron.hashmap2.HashMap2.new, arena.cons_map.ConsMap.new,
     arena.monad.AState.init, arena.monad.Memos.empty, arena.core_state.Caches.empty,
     arena.core_state.ModeMemos.empty, arena.pins.Pins.empty, arena.handle.LsIdx.of_word, arena.handle.LIdx.of_word,
-    arena.handle.EIdx.of_word, bind_ok]
+    arena.handle.EIdx.of_word, max_nat_size_default_eq, bind_ok]
   rfl
 
 /-- `startState` is `AState::init(EStore::empty())`, the form `rust_stages`
@@ -492,7 +511,7 @@ one premise.
 | `hreads`, `h3` | `bin/con-ron.rs:396` `driver::parse_export_stream_d`, which is `driver.rs:961`'s `export_c::parse_source` over the file's handle |
 | `h4` | `bin/con-ron.rs:445` `prepare::prepare_d` at `DeclUsedConsts` |
 | `hpins` | `bin/con-ron.rs:467` `driver::pins_for_run`, whose default is `driver.rs:311` `pins_decode::decode_embedded()`, which is `decode` of the embedded `PINS_TEXT` (the `_embedded` corollaries below name it) |
-| `h5` | `bin/con-ron.rs:484` `checker::intern_all_pins` |
+| `h5` | `bin/con-ron.rs:504` `checker::intern_all_pins` at `--max-nat-size`'s value (`driver::max_nat_size_arg`, default `pins::max_nat_size_default()`); the theorems hold at every `maxNatSize` |
 | `h6` | `bin/con-ron.rs:516`/`:518` `driver::check_decls_driver` at `CheckMode::Verified` (`:325`), the index: `driver.rs:540` `stream_index::build_index(…, stream_index_empty(), ds, 0)` |
 | `h7` | the same, the boundary: `driver.rs:548` `checker::freeze_tier` |
 | `h8` | the same, the check phase: `driver.rs:554` `pool::parallel_all` with `init` `checker::worker_state` and `step` `checker::run_job` (`thaw_tier` at `:569` restores the store) |
@@ -538,11 +557,11 @@ section Headline
 
 open ConRon.Refine2 ConRon.Refine2.Frontend ConRon.Refine2.Frontend.Olean
 
-/-- con-leche: ConLeche/MainTheorem.lean:98 model_exists —
+/-- con-leche: ConLeche/MainTheorem.lean:102 model_exists —
 **THE MAIN THEOREM FOR THE RUST CHECKER** (DESIGN.md §1, §8.2): the environment of every stream
 the Rust checker accepts has a model, in every set theory.
 
-con-leche's reads `(accepted : checkDecls .verified pins ds = .ok env) : Nonempty (Model V env)`;
+con-leche's reads `(accepted : checkDecls .verified pins maxNatSize ds = .ok env) : Nonempty (Model V env)`;
 here the accepting run is the binary's calls, one premise each (§4's table), and the environment
 is the one the Rust's records denote (`RustDenotes`).
 
@@ -562,7 +581,8 @@ theorem model_exists (V : Type w) [ConLeche.SetTheory V]
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -585,11 +605,11 @@ theorem model_exists (V : Type w) [ConLeche.SetTheory V]
   exact ⟨_, ⟨sF, dsP, hrelF.of₀ hwfF, by simpa using hden, rfl⟩,
     ⟨ConLeche.Model.Model.ofEnvModelM hmod⟩⟩
 
-/-- con-leche: ConLeche/MainTheorem.lean:112 no_False_declaration — **A FILE THAT DECLARES A
+/-- con-leche: ConLeche/MainTheorem.lean:116 no_False_declaration — **A FILE THAT DECLARES A
 THEOREM OF TYPE `False` IS REJECTED BY THE RUST CHECKER**: the binary's calls (§4's table)
 cannot all succeed on it.
 
-con-leche's concludes `∃ e, (do …; checkDecls .verified pins ds) = .error e` about its own
+con-leche's concludes `∃ e, (do …; checkDecls .verified pins maxNatSize ds) = .error e` about its own
 pipeline; the binary's is not one function (the pool is a contract, `h8`), so the letter here has
 the same premises as `model_exists` and concludes `False`.
 
@@ -610,7 +630,8 @@ theorem no_False_declaration (V : Type w) [ConLeche.SetTheory V]
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -649,7 +670,8 @@ theorem model_exists_embedded (V : Type w) [ConLeche.SetTheory V]
     {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode_embedded = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -681,7 +703,8 @@ theorem no_False_declaration_embedded (V : Type w) [ConLeche.SetTheory V]
     {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode_embedded = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -694,7 +717,7 @@ theorem no_False_declaration_embedded (V : Type w) [ConLeche.SetTheory V]
   have ⟨_, hdec⟩ := decode_of_decode_embedded hpins
   no_False_declaration V hfalse h1 h2 hreads h3 h4 hdec h5 h6 h7 h8
 
-/-- con-leche: ConLeche/MainTheorem.lean:161 main_oleans_no_False — **A CLOSURE THAT HOLDS A
+/-- con-leche: ConLeche/MainTheorem.lean:166 main_oleans_no_False — **A CLOSURE THAT HOLDS A
 THEOREM OF TYPE `False` IS REJECTED BY THE RUST CHECKER'S `--olean`**: on a snapshot `F` of the
 files (`hsnap`), where the private view of a module of the closure of the roots, by con-leche's
 specification (`InClosure`, `ViewOf`: nothing about the fast parser), holds a theorem of type
@@ -730,7 +753,8 @@ theorem no_False_oleans_of (hT2 : ReadOleansRefines)
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -776,7 +800,8 @@ theorem model_exists_oleans_of (hT2 : ReadOleansRefines)
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -800,7 +825,7 @@ theorem model_exists_oleans_of (hT2 : ReadOleansRefines)
   exact ⟨_, ⟨sF, dsP, val, hrelF.of₀ hwfF, by simpa using hden, rfl⟩,
     ⟨ConLeche.Model.Model.ofEnvModelM hmod⟩⟩
 
-/-- con-leche: ConLeche/MainTheorem.lean:161 main_oleans_no_False — **A CLOSURE THE RUST
+/-- con-leche: ConLeche/MainTheorem.lean:166 main_oleans_no_False — **A CLOSURE THE RUST
 CHECKER'S `--olean` ACCEPTS HOLDS NO PROOF OF `False`**: if a module of the import closure of
 the roots, read by the specification (`InClosure`, `ViewOf`), holds a theorem whose type is
 `False`, the binary's calls cannot all succeed.  The files are a premise: `hsnap`, the instance
@@ -834,7 +859,8 @@ theorem no_False_oleans (V : Type w) [ConLeche.SetTheory V] {F : ConLeche.FS}
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty
@@ -871,7 +897,8 @@ theorem model_exists_oleans (V : Type w) [ConLeche.SetTheory V] {F : ConLeche.FS
     {pinText : Slice Std.U8} {pins : alloc.vec.Vec kernel.nat_op_pins.NatOpPinSet}
     (hpins : kernel.pins_decode.decode pinText = ok (.Ok pins))
     {ipins : alloc.vec.Vec arena.nat_op_pin_set.INatOpPinSet}
-    (h5 : arena.checker.intern_all_pins emptyTier st4 pins = ok (.Ok ipins, st5))
+    {maxNatSize : ron.nat.Nat}
+    (h5 : arena.checker.intern_all_pins emptyTier st4 pins maxNatSize = ok (.Ok ipins, st5))
     {ix : arena.stream_index.IStreamIndex}
     (h6 : (do
         let e ← arena.stream_index.stream_index_empty

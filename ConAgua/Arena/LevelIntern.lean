@@ -111,8 +111,8 @@ l_model lvIntern_spec (p : Prog) (hL : LvInternProg p)
 
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2076-2091 ConRon.Arena.substLMemoAt
-con-ron: ConRon/Arena/Core.lean:2016-2026 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2070-2085 ConRon.Arena.substLMemoAt
+con-ron: ConRon/Arena/Core.lean:2277-2287 ConRon.Arena.substLevelsAt -/
 @[no_expose] def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lp_substl(u, ko, kc, vo, vc);

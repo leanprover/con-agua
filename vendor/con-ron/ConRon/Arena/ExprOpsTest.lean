@@ -387,13 +387,17 @@ private def leafSpec (fab base : EIdx) : AM Bool := do
 #guard isForallE fx.piT == Expr.isForallE (E fx.piT)
 #guard isForallE fx.big == Expr.isForallE (E fx.big)
 #guard
-  match (lamPair? fx.lamT2 fx.lamT).run S0, Expr.lamPair? (E fx.lamT2) (E fx.lamT) with
+  match (binderPair? true fx.lamT2 fx.lamT).run S0, Expr.binderPair? true (E fx.lamT2) (E fx.lamT) with
   | .ok (some (a, b, c, d), s'), some (a', b', c', d') =>
     denoteE s'.store a == some a' && denoteE s'.store b == some b' &&
       denoteE s'.store c == some c' && denoteE s'.store d == some d'
   | _, _ => false
 #guard
-  match (lamPair? fx.lamT2 fx.piT).run S0, Expr.lamPair? (E fx.lamT2) (E fx.piT) with
+  match (binderPair? true fx.lamT2 fx.piT).run S0, Expr.binderPair? true (E fx.lamT2) (E fx.piT) with
+  | .ok (none, _), none => true
+  | _, _ => false
+#guard
+  match (binderPair? false fx.piT fx.lamT).run S0, Expr.binderPair? false (E fx.piT) (E fx.lamT) with
   | .ok (none, _), none => true
   | _, _ => false
 #guard chkB (hasFvarFast F fx.big) (Expr.hasFvar (E fx.big))
@@ -462,18 +466,20 @@ private def leafSpec (fab base : EIdx) : AM Bool := do
 #guard chkE (abstract1Fast F fx.fv0 0 0) (Expr.abstract1 (E fx.fv0) 0 0)
 #guard chkE (abstract1Go 1 F fx.big 0) (Expr.abstract1 (E fx.big) 1 0)
 
-/-! ## `instantiate1Lift` — `ExprOps.lean:718-739`, `:2222-2261`, `:2356-2358` -/
+/-! ## `instantiateLift` — `ExprOps.lean:921-952`, `Cached/ExprOpsC.lean:339-420`
 
-#guard chkE (instantiate1LiftFast F fx.big fx.cf 0) ((E fx.big).instantiate1Lift (E fx.cf) 0)
-#guard chkE (instantiate1LiftFast F fx.big fx.b1 0) ((E fx.big).instantiate1Lift (E fx.b1) 0)
-#guard chkE (instantiate1LiftFast F fx.big fx.letT 1) ((E fx.big).instantiate1Lift (E fx.letT) 1)
-#guard chkE (instantiate1LiftFast F fx.letT fx.b0 0) ((E fx.letT).instantiate1Lift (E fx.b0) 0)
-#guard chkE (instantiate1LiftGo fx.cf F fx.big 0) ((E fx.big).instantiate1Lift (E fx.cf) 0)
+The values in push order: con-leche's `[cf, b1]` is the twin's `#[b1, cf]`. -/
 
-#guard chkOE (instPisAtLift F [fx.cf, fx.b0] fx.piT)
-  (Expr.instPisAtLift [E fx.cf, E fx.b0] (E fx.piT))
-#guard chkOE (instPisAtLift F [] fx.piT) (Expr.instPisAtLift [] (E fx.piT))
-#guard chkOE (instPisAtLift F [fx.cf] fx.lamT2) (Expr.instPisAtLift [E fx.cf] (E fx.lamT2))
+#guard chkE (instantiateLiftFast F fx.big #[fx.cf] 0) ((E fx.big).instantiateLift [E fx.cf] 0)
+#guard chkE (instantiateLiftFast F fx.big #[fx.b1] 0) ((E fx.big).instantiateLift [E fx.b1] 0)
+#guard chkE (instantiateLiftFast F fx.big #[fx.letT] 1) ((E fx.big).instantiateLift [E fx.letT] 1)
+#guard chkE (instantiateLiftFast F fx.letT #[fx.b0] 0) ((E fx.letT).instantiateLift [E fx.b0] 0)
+#guard chkE (instantiateLiftFast F fx.big #[fx.b1, fx.cf] 0)
+  ((E fx.big).instantiateLift [E fx.cf, E fx.b1] 0)
+#guard chkE (instantiateLiftFast F fx.piT #[fx.b0, fx.cf] 1)
+  ((E fx.piT).instantiateLift [E fx.cf, E fx.b0] 1)
+#guard chkE (instantiateLiftFast F fx.big #[] 0) ((E fx.big).instantiateLift [] 0)
+#guard chkE (instantiateLiftGo #[fx.cf] F fx.big 0) ((E fx.big).instantiateLift [E fx.cf] 0)
 
 /-! ## Equality -/
 

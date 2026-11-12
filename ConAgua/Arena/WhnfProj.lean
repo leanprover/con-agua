@@ -27,7 +27,7 @@ namespace L.Arena
 
 /-- `find_proj(vis, t, i)`: the projection table of structure `t` below the view `vis`
 (`find_table`), if it has a field `i`: `(1, q)` the table record `q`, else `(0, 0)`. -/
--- con-ron: ConRon/Arena/Env.lean:312-317 ConRon.Arena.IFEnv.findProj?
+-- con-ron: ConRon/Arena/Env.lean:307-312 ConRon.Arena.IFEnv.findProj?
 @[no_expose, l_impl ConRon.Arena.IFEnv.findProj?]
 def findProjL : FunDecl := lfn (vis, t, i) locals (r, q) {
   if 4294967295 < t { abort };

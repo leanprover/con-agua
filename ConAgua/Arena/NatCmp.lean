@@ -50,7 +50,9 @@ def cmpLoop : Stmt := lblk (oa, la, ob, lb, k, x, y) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1050-1091 ConRon.Arena.natOpResult -/
+/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natCmp : FunDecl := lfn (oa, la, ob, lb) locals (k, x, y) {
   if la < lb { return 0 };

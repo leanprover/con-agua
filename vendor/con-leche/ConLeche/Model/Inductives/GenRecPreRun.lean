@@ -555,7 +555,7 @@ theorem genRun_storedTy
   have hr : (tgtRs out)[c]? = some (cvG, rhss, (R.Ms.getD cls default).nIdx,
       (R.Ms.getD cls default).ctors) := by
     simp [tgtRs, List.getElem?_map, ho]
-  obtain ⟨-, -, -, -, -, -, -, S, -, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
+  obtain ⟨-, -, -, -, -, -, S, -, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
   have htype : cvG.type = T.gty := T.type_eq
   rw [T.hcvG] at hinf
   dsimp only at hinf
@@ -692,7 +692,7 @@ theorem genRun_lic (mpC : EnvModelM V envC)
     {ppsOf : Nat → (Name → Nat) → List Term}
     (hN : BlockNamesOk (V := V) (blockDataOf V p pk uOfD ppsOf) p.formers)
     (hS : BlockCtorsStage (V := V) F (blockDataOf V p pk uOfD ppsOf)
-      p.lps p.formers p isRec A envI p.ctorNamesAt)
+      p.lps p.formers p isRec A envI)
     (hcore : BlockCtorsCore mpC.base2 (blockDataOf V p pk uOfD ppsOf)
       p.lps p.formers p isRec A (blockDataOf V p pk uOfD ppsOf).k)
     (hnames : p.memberCtors.map (·.map (fun ctor => (ctor.1.name, ctor.2)))
@@ -879,7 +879,7 @@ theorem genPreHyps_of_run
     (hd : d = blockDataOf V pp pk uOfD ppsOf) (hlfp : d.toLfp ∈ mpC.lfpBlocks)
     {isRec : Bool} {A : Nat → (Name → Nat) → Term} {envI' : Env}
     (hN : BlockNamesOk (V := V) d pp.formers)
-    (hS : BlockCtorsStage (V := V) F d pp.lps pp.formers pp isRec A envI' pp.ctorNamesAt)
+    (hS : BlockCtorsStage (V := V) F d pp.lps pp.formers pp isRec A envI')
     (hcore : BlockCtorsCore mpC.base2 d pp.lps pp.formers pp isRec A d.k)
     (hnames : pp.memberCtors.map (·.map (fun ctor => (ctor.1.name, ctor.2)))
       = pp.members.map (fun ms => ms.ctors.map (fun c => (c.1.name, c.2))))
@@ -931,7 +931,7 @@ theorem genRecPre_run
     (hd : d = blockDataOf V pp pk uOfD ppsOf) (hlfp : d.toLfp ∈ mpC.lfpBlocks)
     {isRec : Bool} {A : Nat → (Name → Nat) → Term} {envI' : Env}
     (hN : BlockNamesOk (V := V) d pp.formers)
-    (hS : BlockCtorsStage (V := V) F d pp.lps pp.formers pp isRec A envI' pp.ctorNamesAt)
+    (hS : BlockCtorsStage (V := V) F d pp.lps pp.formers pp isRec A envI')
     (hcore : BlockCtorsCore mpC.base2 d pp.lps pp.formers pp isRec A d.k)
     (hnames : pp.memberCtors.map (·.map (fun ctor => (ctor.1.name, ctor.2)))
       = pp.members.map (fun ms => ms.ctors.map (fun c => (c.1.name, c.2))))

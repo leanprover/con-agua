@@ -847,7 +847,7 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1498-1502 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1549-1553 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -855,7 +855,7 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1498-1502 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1549-1553 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };

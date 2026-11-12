@@ -1264,28 +1264,13 @@ major is computed from the major since task #119 (`auxRuleFire`, con-leche's
 task #342 S5C): the class's levels and its parameters closed over the rule
 prefix (`abstract_prefix`, `abstract_prefix_list`). -/
 
-theorem abstract_prefix_aux (n : Nat) :
-    ∀ {pers st lst} (k c : Std.U64) (e : arena.handle.EIdx),
-      k.val = n → AStateRel₀ pers st lst → AStateInv pers st →
-      LS pers (fun a b => b = absEIdx a)
-        (arena.inductives.rec_check.abstract_prefix pers st k c e) lst
-        (abstractPrefix n (absU c) (absEIdx e)) := by
-  induction n with
-  | zero =>
-    intro pers st lst k c e hk hrel hinv
-    rw [arena.inductives.rec_check.abstract_prefix, ite_eq_left (by scalar_tac), abstractPrefix]
-    lockstep
-  | succ n ih =>
-    intro pers st lst k c e hk hrel hinv
-    rw [arena.inductives.rec_check.abstract_prefix, ite_eq_right (by scalar_tac), abstractPrefix]
-    lockstep
-
 @[lockstep] theorem abstract_prefix_ls {pers st lst} (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st) (k c : Std.U64) (e : arena.handle.EIdx) :
     LS pers (fun a b => b = absEIdx a)
       (arena.inductives.rec_check.abstract_prefix pers st k c e) lst
-      (abstractPrefix (absU k) (absU c) (absEIdx e)) :=
-  abstract_prefix_aux _ k c e rfl hrel hinv
+      (abstractPrefix (absU k) (absU c) (absEIdx e)) := by
+  rw [arena.inductives.rec_check.abstract_prefix, abstractPrefix]
+  lockstep
 
 theorem abstract_prefix_list_acc {pers} (r_p : Std.U64) (xs : alloc.vec.Vec arena.handle.EIdx) :
     ∀ (i : Std.Usize) st lst (out : alloc.vec.Vec arena.handle.EIdx),
@@ -1537,8 +1522,8 @@ theorem targetRecPins_split (p : BlockShape) (block : List IConstantInfo) :
       unless blockRecLpsOk p do
         fail (.invalid "target rec: the recursor's level parameters are not the generated ones")
       unless ← blockRecNamesUnreserved p.recs do
-        fail (.invalid "target rec: a recursor is named for a pinned basis constant, a literal \
-          guard's slot or a certified Nat operation")
+        fail (.invalid "target rec: a recursor is named for a literal guard's slot or a certified \
+          Nat operation")
       let own := p.recs.filter fun rc => rc.tgt < p.k
       unless ← blockRecNameSetOk p.members own do
         fail (.invalid "target rec: the block's recursor names are not the generated ones \

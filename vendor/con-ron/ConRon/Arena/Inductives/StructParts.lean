@@ -94,54 +94,63 @@ def structCtorResidOk (T : NIdx) (lps : List NIdx) (nP o nIdx : Nat)
 
 /-! ## The projection bodies -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:75-81 structProjPs
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:75-79 structProjPs
 The parameter spine of the generated projection types, spelled at the frame of
 the final `∀ p⃗ (t : T p⃗), _` telescope: `p_k = bvar (nP - k)`. -/
 def structProjPs (nP : Nat) : AM (List EIdx) := structPsAt 1 nP
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:83-89 structProjArgP
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:81-87 structProjArgP
 The `j`-th earlier-field substitute in a tower entry's generated type: the
 first-class node `t.j` (`.proj T j` of the subject). -/
 def structProjArgP (T : NIdx) (j : Nat) : AM EIdx := do
   let b ← internE (.bvar 0)
   internE (.proj T j b)
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:99-117 structProjBodiesGo
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:89-110 structProjBodiesGo
+con-leche: ConLeche/Cached/CheckerC.lean:28-34 structProjBodiesGoC
 **The projection bodies of a recognised block**, one walk of the constructor
-telescope: field `i`'s domain is body `i`, and the field is replaced by the
-subject's projection `.proj T i (bvar 0)` before the walk continues. -/
-def structProjBodiesGo (T : NIdx) : Nat → Nat → EIdx → AM (Option (List EIdx))
+telescope: field `i`'s raw domain is substituted once (`instantiateLiftFast`)
+at the values of the binders before it, and the field's own value, the
+subject's projection `.proj T i (bvar 0)`, is pushed onto the values before the
+walk continues; the rest of the telescope is never rewritten.  `vs` is in PUSH
+order: con-leche's list, innermost first, is its reverse. -/
+def structProjBodiesGo (T : NIdx) (vs : Array EIdx) : Nat → Nat → EIdx → AM (Option (List EIdx))
   | 0, _, _ => pure (some [])
   | k + 1, i, h => do
     if h.tag == ETag.forallE then
       match ← view h with
       | .forallE fdom body => do
+        let b ← instantiateLiftFast coreWalkFuel fdom vs 0
         let a ← structProjArgP T i
-        let b ← instantiate1LiftFast coreWalkFuel body a 0
-        match ← structProjBodiesGo T k (i + 1) b with
-        | some r => pure (some (fdom :: r))
+        match ← structProjBodiesGo T (vs.push a) k (i + 1) body with
+        | some r => pure (some (b :: r))
         | none => pure none
       | _ => pure none
     else pure none
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:119-122 structProjBodies
-The block's projection bodies, as the table stores them. -/
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:112-115 structProjBodies
+con-leche: ConLeche/Cached/CheckerC.lean:36-41 structProjBodiesC
+The block's projection bodies, as the table stores them: the parameter binders
+skipped, then the fields' walk at the parameters' values (`structProjPs`,
+which in push order is con-leche's reversed list itself). -/
 def structProjBodies (T : NIdx) (nP nF : Nat) (cty : EIdx) :
     AM (Option (Array EIdx)) := do
-  match ← instPisAtLift coreWalkFuel (← structProjPs nP) cty with
-  | some r => do
-    match ← structProjBodiesGo T nF 0 r with
+  match ← stripPis nP cty with
+  | some p => do
+    let ps ← structProjPs nP
+    match ← structProjBodiesGo T ps.toArray nF 0 p.2 with
     | some l => pure (some l.toArray)
     | none => pure none
   | none => pure none
 
-/-! ## `mentionsConst` — one twin for the pure walk and the memo -/
+/-! ## `mentionsConst` — `mentionsAnyConst` at one name -/
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:124-133 Expr.mentionsConst
-con-leche: ConLeche/Kernel/Inductives/StructParts.lean:165-200 Expr.mentionsConstGo
-Does the constant `T` occur in `e`?  A syntactic walk (`fvar` annotations
-included; a `.proj` node names its structure), with con-leche's per-call memo
-keyed by the node — `T` is fixed for the whole walk. -/
+/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:119-133 Expr.mentionsAnyConst
+con-leche: ConLeche/Cached/ExprOpsC.lean:1696-1740 mentionsAnyConstXP
+Does the constant `T` occur in `e`?  `mentionsAnyConst [T]`, the one name
+the `sorryAx` test asks: a syntactic walk (`fvar` annotations included; a
+`.proj` node names its structure) with a per-call memo keyed by the node, as
+the cached walk has — `T` is fixed for the whole walk. -/
 def mentionsConstGo (T : NIdx) (memo : Std.HashMap EIdx Bool) :
     Nat → EIdx → AM (Bool × Std.HashMap EIdx Bool)
   | 0, _ => fail (.internal "fuel exhausted: mentionsConst")
@@ -180,8 +189,8 @@ def mentionsConstGo (T : NIdx) (memo : Std.HashMap EIdx Bool) :
           | _ => pure (false, memo)
         pure (r, memo.insert h r)
 
-/-- con-leche: ConLeche/Kernel/Inductives/StructParts.lean:273-275 Expr.mentionsConstFast
-The executed `mentionsConst` (one memoized DAG walk). -/
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1742-1744 mentionsAnyConstC
+The executed `mentionsAnyConst [T]` (one memoized DAG walk). -/
 def mentionsConst (T : NIdx) (e : EIdx) : AM Bool := do
   pure (← mentionsConstGo T ∅ coreWalkFuel e).1
 

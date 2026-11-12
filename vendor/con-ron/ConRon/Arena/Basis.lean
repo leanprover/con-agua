@@ -5,8 +5,9 @@ The twin of `ConLeche/Kernel/Basis.lean` and the Rust twin of `arena::basis`:
 the constants of the five pinned blocks (`Eq`, `Nat`, `Empty`, `False`,
 `Quot`), a pin at a stream's level-parameter names (`IConstantInfo.atLps`),
 the block's comparison with its pin (`pinListOk`), the name test that says a
-record is a pinned block's (`basisNameHit`), what such a block and a quotient
-record store (`BasisKind.atBlock`, `quotAt`), and the fold's `And` pin
+record is a pinned block's (`basisNameHit`), the reserved names' check run
+after a declaration's own checks (`basisNamesOk`, `basisNamesError`), what a
+quotient record stores (`quotAt`), and the fold's `And` pin
 (`andPinOk`): a record that declares `And`, `And.intro` or `And.rec` and is
 not the toolchain's block is rejected.
 
@@ -34,21 +35,20 @@ namespace ConRon.Arena
 
 open ConLeche
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:38-44 BasisKind.decls — the
+/-- con-leche: ConLeche/Kernel/Basis.lean:39-45 BasisKind.decls — the
 constants of one basis block, in install order, interned. -/
 def BasisKind.decls (k : BasisKind) : AM (List IConstantInfo) :=
   internCIList (ConLeche.BasisKind.decls k)
 
-/-- con-leche: ConLeche/Kernel/Basis/Nat.lean:24-27 natA — the pinned `Nat`
-type former, interned: the comparand of `reduceElemOk`'s exact
-`find? natName = some natA`.  `Nat` has no level parameter, so the environment
-holds the pin itself. -/
+/-- con-leche: ConLeche/Kernel/Basis/Nat.lean:24-26 natA — the pinned `Nat`
+type former, interned: its `ConstantVal` is the comparand of `reduceElemOk`'s
+`ConstantVal.matchesPin`. -/
 def natA : AM IConstantInfo :=
   internCI ConLeche.natA
 
 /-! ## A pin at a stream's level-parameter names -/
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:53-55 ConstantVal.atLps — a
+/-- con-leche: ConLeche/Kernel/Basis.lean:54-56 ConstantVal.atLps — a
 constant's common data at other level-parameter names: the type with the old
 names replaced positionally. -/
 def IConstantVal.atLps (cv : IConstantVal) (ps : List NIdx) : AM IConstantVal := do
@@ -56,7 +56,7 @@ def IConstantVal.atLps (cv : IConstantVal) (ps : List NIdx) : AM IConstantVal :=
   let ty ← instLPFast coreWalkFuel cv.levelParams us cv.type
   pure ⟨cv.name, ps, ty⟩
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:57-60 RecRuleFire.atLps — a firing
+/-- con-leche: ConLeche/Kernel/Basis.lean:58-61 RecRuleFire.atLps — a firing
 mode at other level-parameter names: the `.levels` comparands substituted,
 every other mode as it is. -/
 def IRecRuleFire.atLps (lps : List ConLeche.Name) (us : List Level) :
@@ -64,7 +64,7 @@ def IRecRuleFire.atLps (lps : List ConLeche.Name) (us : List Level) :
   | .levels lvls => do pure (.levels (← substLevelsAt lps us lvls))
   | f => pure f
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:62-78 ConstantInfo.atLps — the
+/-- con-leche: ConLeche/Kernel/Basis.lean:63-79 ConstantInfo.atLps — the
 `.recInfo` arm's `rules.map`: each rule's right-hand side and firing mode at
 the new names (`lpsH`/`us` as handles for `instantiateLevelParams`,
 `lpsT`/`usT` read back for `Level.subst`). -/
@@ -77,7 +77,7 @@ def rulesAtLps (lpsH : List NIdx) (us : LsIdx) (lpsT : List ConLeche.Name)
     let rest ← rulesAtLps lpsH us lpsT usT rs
     pure ({ ctor := r.ctor, nfields := r.nfields, fire, rhs } :: rest)
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:62-78 ConstantInfo.atLps — **a stored
+/-- con-leche: ConLeche/Kernel/Basis.lean:63-79 ConstantInfo.atLps — **a stored
 constant at other level-parameter names**: its type, a definition's value, its
 rules' right-hand sides and firing modes renamed; nothing else. -/
 def IConstantInfo.atLps (ci : IConstantInfo) (ps : List NIdx) : AM IConstantInfo := do
@@ -99,14 +99,14 @@ def IConstantInfo.atLps (ci : IConstantInfo) (ps : List NIdx) : AM IConstantInfo
     let rules2 ← rulesAtLps cv.levelParams us lpsT (psT.map Level.param) rules
     pure (.recInfo cv2 mI rP isK rules2)
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:80-84 pinAgrees — a record against
+/-- con-leche: ConLeche/Kernel/Basis.lean:81-85 pinAgrees — a record against
 the pin at the record's own names: what the record writes.  An inductive
 record has no capabilities to compare. -/
 def pinAgrees : IConstantInfo → IConstantInfo → Bool
   | .indInfo v _, .indInfo v' _ => v == v'
   | c, c' => c == c'
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:86-91 pinCopyOk — **is the record the
+/-- con-leche: ConLeche/Kernel/Basis.lean:87-92 pinCopyOk — **is the record the
 pin, up to its level-parameter names?**  Distinct names, as many as the pin's;
 the renaming is computed only when both hold. -/
 def pinCopyOk (ci pin : IConstantInfo) : AM Bool := do
@@ -115,7 +115,7 @@ def pinCopyOk (ci pin : IConstantInfo) : AM Bool := do
     pure (pinAgrees ci (← pin.atLps ps))
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:93-98 pinLinkOk — **what a recursor's
+/-- con-leche: ConLeche/Kernel/Basis.lean:94-99 pinLinkOk — **what a recursor's
 rule reads off its constructor's parameters**, by name: the constructor's
 parameters at the recursor's names, compared on read-back levels. -/
 def pinLinkOk (R Rp C Cp : List NIdx) : AM Bool := do
@@ -126,12 +126,12 @@ def pinLinkOk (R Rp C Cp : List NIdx) : AM Bool := do
   pure (cT.map Level.param ==
     cpT.map fun p => Level.subst rpT (rT.map Level.param) (.param p))
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:100-102 constNamed? — the constant of
+/-- con-leche: ConLeche/Kernel/Basis.lean:101-103 constNamed? — the constant of
 a list by name. -/
 def constNamed? (cs : List IConstantInfo) (n : NIdx) : Option IConstantInfo :=
   cs.find? fun c => c.name == n
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:104-118 blockLinksOk — the cited
+/-- con-leche: ConLeche/Kernel/Basis.lean:105-119 blockLinksOk — the cited
 `rules.all`: each of the pin's rules' constructors, found in both lists,
 linked as the pin links it. -/
 def rulesLinkOk (block pins : List IConstantInfo) (R Rp : List NIdx) :
@@ -145,7 +145,7 @@ def rulesLinkOk (block pins : List IConstantInfo) (R Rp : List NIdx) :
       else pure false
     | _, _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:104-118 blockLinksOk — the cited
+/-- con-leche: ConLeche/Kernel/Basis.lean:105-119 blockLinksOk — the cited
 `match c, p with`, one pair. -/
 def blockLinkOkAt (block pins : List IConstantInfo) (former : List NIdx) :
     IConstantInfo → IConstantInfo → AM Bool
@@ -154,7 +154,7 @@ def blockLinkOkAt (block pins : List IConstantInfo) (former : List NIdx) :
     rulesLinkOk block pins cv.levelParams cvp.levelParams rules
   | _, _ => pure true
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:104-118 blockLinksOk — the cited
+/-- con-leche: ConLeche/Kernel/Basis.lean:105-119 blockLinksOk — the cited
 `(List.zip block pins).all`, as a recursion over the pairs. -/
 def blockLinksOkGo (block pins : List IConstantInfo) (former : List NIdx) :
     List IConstantInfo → List IConstantInfo → AM Bool
@@ -163,7 +163,7 @@ def blockLinksOkGo (block pins : List IConstantInfo) (former : List NIdx) :
     else pure false
   | _, _ => pure true
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:104-118 blockLinksOk — the stream's
+/-- con-leche: ConLeche/Kernel/Basis.lean:105-119 blockLinksOk — the stream's
 recursor links its rules' constructors as the pin's does (`pinLinkOk`), and a
 constructor carries its former's names. -/
 def blockLinksOk (block pins : List IConstantInfo) : AM Bool :=
@@ -171,7 +171,7 @@ def blockLinksOk (block pins : List IConstantInfo) : AM Bool :=
   blockLinksOkGo block pins former block pins
 
 /-- con-leche: ConLeche/Kernel/Canon.lean:291-295 listBeqBy
-con-leche: ConLeche/Kernel/Basis.lean:120-122 pinListOk — the cited
+con-leche: ConLeche/Kernel/Basis.lean:121-123 pinListOk — the cited
 `listBeqBy pinCopyOk block pins`, at the one function it is applied to. -/
 def pinCopiesOk : List IConstantInfo → List IConstantInfo → AM Bool
   | [], [] => pure true
@@ -179,7 +179,7 @@ def pinCopiesOk : List IConstantInfo → List IConstantInfo → AM Bool
     if ← pinCopyOk c p then pinCopiesOk cs ps else pure false
   | _, _ => pure false
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:120-122 pinListOk — **the block's
+/-- con-leche: ConLeche/Kernel/Basis.lean:121-123 pinListOk — **the block's
 comparison with its pin** (the check phase's). -/
 def pinListOk (block pins : List IConstantInfo) : AM Bool := do
   if ← pinCopiesOk block pins then blockLinksOk block pins else pure false
@@ -205,33 +205,59 @@ kinds tried (a quotient arrives as five one-constant records). -/
 def basisNameHit (block : List IConstantInfo) : AM (Option BasisKind) :=
   basisNameHitGo block [BasisKind.eqK, .natK, .emptyK, .falseK]
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:138-141 BasisKind.atBlock — the cited
-`List.zipWith`. -/
-def atBlockGo : List IConstantInfo → List IConstantInfo → AM (List IConstantInfo)
-  | pin :: pins, c :: cs => do
-    let x ← pin.atLps c.toConstantVal.levelParams
-    let rest ← atBlockGo pins cs
-    pure (x :: rest)
-  | _, _ => pure []
+/-! ## The reserved names -/
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:138-141 BasisKind.atBlock — **what a
-pinned block's check installs**: each pin at the names its record declares. -/
-def BasisKind.atBlock (kind : BasisKind) (block : List IConstantInfo) :
-    AM (List IConstantInfo) := do
-  atBlockGo (← ConRon.Arena.BasisKind.decls kind) block
+/-- con-leche: ConLeche/Kernel/Basis.lean:138-151 basisNamesOk — the
+one-constant arms' test, `!reservedBasisNames.contains cv.name`. -/
+def basisNameUnreserved (n : NIdx) : AM Bool := do
+  let rs ← reservedBasisNames
+  pure !(rs.contains n)
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:143-145 quotPin — the pinned quotient
+/-- con-leche: ConLeche/Kernel/Basis.lean:138-151 basisNamesOk — **the reserved
+names' check**, the one place the checker sets the basis names apart.  It runs
+after a declaration's own checks, which treat a basis block as any other
+block: a block under one of the pinned blocks' names must be that block, up to
+its level-parameter names (`pinListOk`), and no other declaration may take a
+reserved name.  `Quot.sound` and the quotient records are compared with their
+own pins, so they pass here. -/
+def basisNamesOk : IDeclaration → AM Bool
+  | .indDecl block _ => do
+    match ← basisNameHit block with
+    | some kind => pinListOk block (← ConRon.Arena.BasisKind.decls kind)
+    | none => do
+      let rs ← reservedBasisNames
+      pure (block.all fun c => !rs.contains c.name)
+  | .axiomDecl cv => do
+    if cv.name == (← pinQuotSound) then pure true else basisNameUnreserved cv.name
+  | .quotDecl _ _ => pure true
+  | .defnDecl cv _ _ => basisNameUnreserved cv.name
+  | .thmDecl cv _ => basisNameUnreserved cv.name
+  | .opaqueDecl cv _ => basisNameUnreserved cv.name
+
+/-- con-leche: ConLeche/Kernel/Basis.lean:153-161 basisNamesError — **what a
+failed `basisNamesOk` reports**: a block under a pinned block's names that is
+not the pin, a reserved name in another block, or a one-constant declaration at
+a reserved name; all invalid input.  The messages drop con-leche's interpolated
+names (§3.1). -/
+def basisNamesError : IDeclaration → AM CheckError
+  | .indDecl block _ => do
+    match ← basisNameHit block with
+    | some _ => pure (.invalid "reserved basis name: the block is not the pinned one")
+    | none => pure (.invalid "reserved basis name in the block of")
+  | _ => pure (.invalid "reserved basis name")
+
+/-- con-leche: ConLeche/Kernel/Basis.lean:163-165 quotPin — the pinned quotient
 package's constant at a slot. -/
 def quotPin (k : QuotKind) : AM IConstantInfo := do
   let blk ← ConRon.Arena.BasisKind.decls .quotK
   pure (blk.getD k.slot default)
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:147-150 quotAt — **what a quotient
+/-- con-leche: ConLeche/Kernel/Basis.lean:167-170 quotAt — **what a quotient
 record stores**: its slot's pin at the names it declares. -/
 def quotAt (k : QuotKind) (cv : IConstantVal) : AM IConstantInfo := do
   (← quotPin k).atLps cv.levelParams
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:152-158 quotPinHit — **the
+/-- con-leche: ConLeche/Kernel/Basis.lean:172-178 quotPinHit — **the
 quotient-pin match**: the record is the pinned package's constant at the slot
 it declares itself at, up to its level-parameter names: distinct, as many as
 the pin's. -/
@@ -241,7 +267,7 @@ def quotPinHit (k : QuotKind) (cv : IConstantVal) : AM Bool := do
     pure (cv == (← pcv.atLps cv.levelParams))
   else pure false
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:160-172 quotPredsOk — **what a
+/-- con-leche: ConLeche/Kernel/Basis.lean:180-192 quotPredsOk — **what a
 quotient record's slot needs stored before it**: the constants its type
 mentions.  The cited `find?` argument is the index `fe`. -/
 def quotPredsOk (fe : IFEnv) (k : QuotKind) : AM Bool := do
@@ -272,21 +298,21 @@ def andPinNameHs : AM (List NIdx) := do
   let r ← pinAndRec
   pure [a, i, r]
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:186-194 andPinOk — the `.indDecl`
+/-- con-leche: ConLeche/Kernel/Basis.lean:206-214 andPinOk — the `.indDecl`
 arm's `block.any fun c => andPinNames.contains c.name`, over handles (a name
 comparison is a handle comparison, `denoteN` being injective). -/
 def blockAndNamed (hs : List NIdx) : List IConstantInfo → Bool
   | [] => false
   | c :: cs => hs.contains c.name || blockAndNamed hs cs
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:186-194 andPinOk — the arm of every
+/-- con-leche: ConLeche/Kernel/Basis.lean:206-214 andPinOk — the arm of every
 one-constant record: it may not declare one of the pinned `And` block's
 names. -/
 def andPinNameFree (n : NIdx) : AM Bool := do
   let hs ← andPinNameHs
   pure !(hs.contains n)
 
-/-- con-leche: ConLeche/Kernel/Basis.lean:186-194 andPinOk — **the `And` pin's
+/-- con-leche: ConLeche/Kernel/Basis.lean:206-214 andPinOk — **the `And` pin's
 test**: the record declares none of the pinned `And` block's names, or it IS
 that block — two parameters, and equal to `andPin` up to `ConstantInfo.canon`
 (`canonEqList`).  Only a block that declares one of the three names gets that

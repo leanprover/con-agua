@@ -209,7 +209,7 @@ theorem isDefEqCore_self {envK : Env} {F d : Nat} (a : Expr) :
 open ConLeche (BlockShape BlockShape RecShape GenRecRun ClassRecTyRun FEnv mkFEnv NestState
   ConstantInfo TargetMajor RecStageG RecStage RecPrefixSame tgtRs
   structElimLevel consBlockRecsBare consBlockRecsBareF classFeR classRecOf
-  classRulesOk classRuleOk StructWalkers)
+  classRulesOk classRuleOk)
 
 section Stage
 
@@ -233,7 +233,7 @@ theorem genRecRun_at
     ∃ c cvG rhss, R.rd.recCls[i]? = some c ∧ R.cvGs[i]? = some cvG ∧
       Nonempty (ClassRecTyRun .verified F (mkFEnv envC) R.g p.k rc c cvG) ∧
       out[i]? = some (cvG, R.Ms.getD c default, rhss) ∧
-      classRulesOk (fueledOps .verified F) .plain (mkFEnv envC)
+      classRulesOk (fueledOps .verified F) (mkFEnv envC)
         (classFeR p R.Ms R.cvGs R.rd.recCls (mkFEnv envC)) R.g
         (classRecOf R.rd.recCls R.cvGs) cvG
         c (R.ctors.getD c []) = .ok rhss ∧
@@ -296,7 +296,7 @@ theorem genRecTy_run
     Nonempty (RecTyGen .verified F envC p false i rc cvG (R.Ms.getD c default).nIdx
       (structElimLevel p.elim p.large)) := by
   have hcv := ConLeche.classConstOk_checked T.hcv
-  obtain ⟨-, -, -, -, hfv0, -, -, stype, u0, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
+  obtain ⟨-, -, -, hfv0, -, -, stype, u0, hinf, -⟩ := ConLeche.classConstOk_inv T.hcv
   have htype : cvG.type = T.gty := T.type_eq
   rw [T.hcvG] at hfv0 hinf
   dsimp only at hfv0 hinf
@@ -372,7 +372,7 @@ theorem recStage_of_gen
       R.rd.recCls[i]? = some c ∧ R.cvGs[i]? = some cvG ∧
       Nonempty (ClassRecTyRun .verified F (mkFEnv envC) R.g p.k rc c cvG) ∧
       out[i]? = some (cvG, R.Ms.getD c default, rhss) ∧
-      classRulesOk (fueledOps .verified F) .plain (mkFEnv envC)
+      classRulesOk (fueledOps .verified F) (mkFEnv envC)
         (classFeR p R.Ms R.cvGs R.rd.recCls (mkFEnv envC)) R.g
         (classRecOf R.rd.recCls R.cvGs) cvG
         c (R.ctors.getD c []) = .ok rhss ∧
@@ -513,7 +513,7 @@ theorem recStage_of_gen
         (classFeR p R.Ms R.cvGs R.rd.recCls (mkFEnv envC)).env 0 rhs' = .ok t :=
       ⟨_, Q.htyR⟩
     rw [hfeR] at hres
-    simp only [StructWalkers.plain, ConLeche.constsResolveF_eq] at hres
+    simp only [ConLeche.constsResolveF_eq] at hres
     rw [hfeR, ConLeche.mkFEnv_env, ConLeche.fueledOps_inferType] at htyR
     exact ⟨rc, hrc, ⟨Q.hbv, Q.hfv, by rw [← E.lps_eq]; exact Q.hlp, hres, ⟨_, htyR⟩⟩⟩
 

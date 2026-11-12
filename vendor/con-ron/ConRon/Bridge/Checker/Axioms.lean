@@ -130,7 +130,6 @@ namespace ConRon.Bridge
 
 -- the pin readers and the nineteen reserved names
 #print axioms pinAt_run
-#print axioms reservedBasisNames_run
 
 -- the sibling pin-table walks, in
 -- `reservedBasisNames_run`'s no-accumulator shape
@@ -203,7 +202,6 @@ namespace ConRon.Bridge
 #print axioms denoteCIList_get
 #print axioms denoteEList_cons
 #print axioms natOpName_run
-#print axioms natIndOk_optRun
 #print axioms natZeroOk_optRun
 #print axioms natSuccOk_optRun
 #print axioms litShapeOk_run
@@ -331,20 +329,17 @@ namespace ConRon.Bridge
 #print axioms pinCopiesOk_run
 #print axioms pinListOk_run
 
--- what a pinned block and a quotient record store, and the checks
-#print axioms BasisKind.atBlock_run
+-- what a quotient record stores, and the checks
 #print axioms quotPin_run
 #print axioms quotAt_run
 #print axioms quotPinHit_run
 #print axioms quotPredsOk_run
-#print axioms installBasisDecls_bridge
-#print axioms checkBasisBlock_bridge
 #print axioms checkQuotRecord_bridge
-#print axioms checkDecl_bridge_quot
+#print axioms checkDeclKind_bridge_quot
+#print axioms basisNamesOk_run
 
 -- the pin checks, the reduce-pin gate and the install/check seam's pieces
 #print axioms matchesPin_run
-#print axioms IFEnvOK.find_beq_ind
 #print axioms eqStored_run
 #print axioms reduceElemOk_run
 #print axioms reduceStoredOk_run
@@ -376,12 +371,13 @@ hypotheses of the statement. -/
 #print axioms CoreSpec.of_knot
 
 
-#print axioms checkDecl_bridge_defn
-#print axioms checkDecl_bridge_thm
-#print axioms checkDecl_bridge_opaque
-#print axioms checkDecl_bridge_axiom
-#print axioms checkDecl_bridge_ind
-#print axioms checkDecl_bridge_quot
+#print axioms checkDeclKind_bridge_defn
+#print axioms checkDeclKind_bridge_thm
+#print axioms checkDeclKind_bridge_opaque
+#print axioms checkDeclKind_bridge_axiom
+#print axioms checkDeclKind_bridge_ind
+#print axioms checkDeclKind_bridge_quot
+#print axioms Arena.checkDeclKind_bridge
 #print axioms Arena.checkDecl_bridge
 
 -- the fold's skeleton and the startup walk
@@ -389,7 +385,6 @@ hypotheses of the statement. -/
 #print axioms internAllPins_run
 
 -- the fold's children (each prints the three standard axioms)
-#print axioms checkShapeless_ne_ok
 #print axioms checkDecl_pushes
 #print axioms checkDecl_fresh
 #print axioms denoteN_default_of_pinNames

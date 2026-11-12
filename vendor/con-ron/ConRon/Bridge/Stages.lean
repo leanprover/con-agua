@@ -68,14 +68,14 @@ theorem DriverOK.start {s : AState} (hok : StateOK s) (hpins : PinsOK s)
 /-- con-leche: ConLeche/Driver/CheckPool.lean:236-269 checkPool — **the stages' frame, up to the
 check phase**: after the first five stages from the driver's start state, the scratch tier is
 closed, the check phase's start invariant holds, and the pins and the prepared stream denote. -/
-theorem stages_frame {chunks : List ByteArray} {pins : List NatOpPinSet}
+theorem stages_frame {chunks : List ByteArray} {pins : List NatOpPinSet} {maxNatSize : Nat}
     {sA sB sC sD sE : AState} {pre : PreludeIx} {r : ParseResultD}
     {ds : Array IDeclaration} {ipins : List INatOpPinSet}
     (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
     (hB : builtinPreludeE sA = .ok (.ok pre, sB))
     (hC : parseChunks chunks sB = .ok (.ok r, sC))
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE)) :
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE)) :
     sE.store.scratchOn = false ∧ DriverOK sE ∧ PersPins sE ∧
       PinsDenote sE.store ipins pins ∧ PersPinSets ipins ∧
       (∀ x ∈ ds.toList, PersDecl x) ∧
@@ -119,21 +119,21 @@ formed, and the environment the stream denotes (`streamEnv`) has a model.
 `stages_frame`, then `Arena.pooledAccepts_bridge`, then con-leche. -/
 theorem stages_model (V : Type w) [ConLeche.SetTheory V]
     (hk : CoreSpec Arena.checkFuel) (hind : IndSpec)
-    {chunks : List ByteArray} {pins : List NatOpPinSet}
+    {chunks : List ByteArray} {pins : List NatOpPinSet} {maxNatSize : Nat}
     {sA sB sC sD sE sF : AState} {pre : PreludeIx} {r : ParseResultD}
     {ds : Array IDeclaration} {ipins : List INatOpPinSet} {I : IStreamIndex}
     (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
     (hB : builtinPreludeE sA = .ok (.ok pre, sB))
     (hC : parseChunks chunks sB = .ok (.ok r, sC))
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE))
     (hF : Arena.PooledAccepts .verified ipins ds sE I sF) :
     StoreWF sF.store ∧ ∃ dsP, denoteDecls sF.store ds.toList = some dsP ∧
       Nonempty (ConLeche.Model.EnvModelM V (ConLeche.Cached.streamEnv dsP)) := by
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hclR, hden⟩ :=
     stages_frame hA hB hC hD hE
   obtain ⟨F', hpure⟩ :=
-    Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden hF
+    Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden hF
   obtain ⟨parts, hidx, -⟩ := hF
   obtain ⟨hst', hx, -⟩ := buildIndex_run constsSpec tablesSpec hst hoff hpd hden hidx
   exact ⟨hst'.state.wf, _, denoteDecls_ext hx _ _ hden,
@@ -145,7 +145,7 @@ stream (`parseChunks_jsonWithTheoremFalse`, `mem_preparePrelude`), `Arena.pooled
 makes the stream an accept of the pure fold, and `no_False_theorem_accepted_pure` refutes it. -/
 theorem stages_no_False (V : Type w) [ConLeche.SetTheory V]
     (hk : CoreSpec Arena.checkFuel) (hind : IndSpec)
-    {chunks : List ByteArray} {pins : List NatOpPinSet}
+    {chunks : List ByteArray} {pins : List NatOpPinSet} {maxNatSize : Nat}
     (hfalse : ConLeche.jsonWithTheoremFalse chunks)
     {sA sB sC sD sE sF : AState} {pre : PreludeIx} {r : ParseResultD}
     {ds : Array IDeclaration} {ipins : List INatOpPinSet} {I : IStreamIndex}
@@ -153,13 +153,13 @@ theorem stages_no_False (V : Type w) [ConLeche.SetTheory V]
     (hB : builtinPreludeE sA = .ok (.ok pre, sB))
     (hC : parseChunks chunks sB = .ok (.ok r, sC))
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE))
     (hF : Arena.PooledAccepts .verified ipins ds sE I sF) :
     False := by
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, hclR, hden⟩ :=
     stages_frame hA hB hC hD hE
   obtain ⟨F', hpure⟩ :=
-    Arena.pooledAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd hden hF
+    Arena.pooledAccepts_bridge hk hind hst hoff hpp hpps hipins hpd hden hF
   obtain ⟨cv, vl, hty, hmem⟩ := ConLeche.Frontend.parseChunks_jsonWithTheoremFalse hfalse hclR
   exact no_False_theorem_accepted_pure V
     (by simpa using ConLeche.Frontend.mem_preparePrelude (pre := preC) hmem) hty hpure
@@ -196,7 +196,7 @@ check phase's jobs read a value with: the reader's module references and pins, r
 read's end state, which the check phase's start persistently extends; and the closure's
 theorems, each a record holding a reference. -/
 theorem stagesO_frame {F : FS} {sp : ConLeche.Frontend.Olean.SearchPath}
-    {names : List ConLeche.Name} {pins : List NatOpPinSet} {roots : List NIdx}
+    {names : List ConLeche.Name} {pins : List NatOpPinSet} {maxNatSize : Nat} {roots : List NIdx}
     {sA sB sB' sC sD sE : AState} {pre : PreludeIx}
     {rd : ConRon.Arena.Frontend.Olean.OleanRead} {prep : Prepared} {ipins : List INatOpPinSet}
     (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
@@ -205,7 +205,7 @@ theorem stagesO_frame {F : FS} {sp : ConLeche.Frontend.Olean.SearchPath}
     (hC : ConRon.Arena.Frontend.Olean.readOleans (Olean.modelFs F) sp roots.toArray none sB' =
       .ok (.ok rd, sC))
     (hD : prepareD pre rd.decls rd.usedOf sC = .ok (prep, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE)) :
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE)) :
     sE.store.scratchOn = false ∧ DriverOK sE ∧ PersPins sE ∧
       PinsDenote sE.store ipins pins ∧ PersPinSets ipins ∧
       (∀ x ∈ prep.decls.toList, PersDecl x) ∧
@@ -266,7 +266,7 @@ theorem stagesO_no_False (V : Type w) [ConLeche.SetTheory V]
     (hcl : ConLeche.Frontend.Olean.InClosure sp F names.toArray m)
     (hv : ConLeche.Frontend.Olean.ViewOf sp F m d) (hmem : c ∈ d.constants)
     (hkind : c.kind = .thm v all) (hty : c.type = .const ConLeche.falseName [])
-    {pins : List NatOpPinSet} {roots : List NIdx}
+    {pins : List NatOpPinSet} {maxNatSize : Nat} {roots : List NIdx}
     {sA sB sB' sC sD sE sF : AState} {pre : PreludeIx}
     {rd : ConRon.Arena.Frontend.Olean.OleanRead} {prep : Prepared} {ipins : List INatOpPinSet}
     {I : IStreamIndex}
@@ -276,13 +276,13 @@ theorem stagesO_no_False (V : Type w) [ConLeche.SetTheory V]
     (hC : ConRon.Arena.Frontend.Olean.readOleans (Olean.modelFs F) sp roots.toArray none sB' =
       .ok (.ok rd, sC))
     (hD : prepareD pre rd.decls rd.usedOf sC = .ok (prep, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE))
     (hF : Arena.PooledOleanAccepts (Olean.modelFs F) rd.pins sp rd.values .verified ipins
       prep.decls sE I sF) :
     False := by
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, hwfC, hoffC, hxC, hnu, valuesP, dsR, preC, usedC,
     hvals, hden, hthm⟩ := stagesO_frame hA hB hR hC hD hE
-  obtain ⟨Fu, hpure⟩ := Arena.pooledOleanAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd
+  obtain ⟨Fu, hpure⟩ := Arena.pooledOleanAccepts_bridge hk hind hst hoff hpp hpps hipins hpd
     hden hwfC hoffC hxC hvals hnu hF
   obtain ⟨code, hd⟩ := hthm hcl hv hmem hkind
   have hm := List.mem_map_of_mem (f := ConLeche.Cached.fillDecl (fillRef (valueOf sp F valuesP)))
@@ -297,7 +297,7 @@ theorem for `--olean`, only `main_oleans_no_False`. -/
 theorem stagesO_model (V : Type w) [ConLeche.SetTheory V]
     (hk : CoreSpec Arena.checkFuel) (hind : IndSpec)
     {F : FS} {sp : ConLeche.Frontend.Olean.SearchPath} {names : List ConLeche.Name}
-    {pins : List NatOpPinSet} {roots : List NIdx}
+    {pins : List NatOpPinSet} {maxNatSize : Nat} {roots : List NIdx}
     {sA sB sB' sC sD sE sF : AState} {pre : PreludeIx}
     {rd : ConRon.Arena.Frontend.Olean.OleanRead} {prep : Prepared} {ipins : List INatOpPinSet}
     {I : IStreamIndex}
@@ -307,7 +307,7 @@ theorem stagesO_model (V : Type w) [ConLeche.SetTheory V]
     (hC : ConRon.Arena.Frontend.Olean.readOleans (Olean.modelFs F) sp roots.toArray none sB' =
       .ok (.ok rd, sC))
     (hD : prepareD pre rd.decls rd.usedOf sC = .ok (prep, sD))
-    (hE : internAllPins pins sD = .ok (ipins, sE))
+    (hE : internAllPins pins maxNatSize sD = .ok (ipins, sE))
     (hF : Arena.PooledOleanAccepts (Olean.modelFs F) rd.pins sp rd.values .verified ipins
       prep.decls sE I sF) :
     StoreWF sF.store ∧ ∃ (dsP : List Declaration) (val : Nat → Expr), denoteDecls sF.store prep.decls.toList = some dsP ∧
@@ -315,7 +315,7 @@ theorem stagesO_model (V : Type w) [ConLeche.SetTheory V]
         (ConLeche.Cached.streamEnv (dsP.map (ConLeche.Cached.fillDecl (fillRef val))))) := by
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, hwfC, hoffC, hxC, hnu, valuesP, dsR, preC, usedC,
     hvals, hden, -⟩ := stagesO_frame hA hB hR hC hD hE
-  obtain ⟨Fu, hpure⟩ := Arena.pooledOleanAccepts_bridge V hk hind hst hoff hpp hpps hipins hpd
+  obtain ⟨Fu, hpure⟩ := Arena.pooledOleanAccepts_bridge hk hind hst hoff hpp hpps hipins hpd
     hden hwfC hoffC hxC hvals hnu hF
   obtain ⟨parts, hidx, -⟩ := hF
   obtain ⟨hst', hx, -⟩ := buildIndex_run constsSpec tablesSpec hst hoff hpd hden hidx

@@ -6,12 +6,12 @@ formers with their capability records (`blockCapsAt`, `blockFormers`), the
 constructors (`blockCtors`), the recursors with their rules' firing mode
 (`Expr.dropVars`, `recFire`, `blockRecs`), the projection tables
 (`blockTables`), the block's constants (`blockConstants`, at official's
-`is_rec`, `blockIsRec`), and the recogniser at this frame (`blockShape?`).
+`is_rec`, `blockIsRec`), and the reader at this frame (`readBlock`).
 
 **Pure grade throughout but the recogniser.**  Nothing here reads the
 environment: the twins read the record, intern and walk handles, so every
 statement is a run form at `PStep` (state invariant, append, cache frame,
-untouched pins).  `blockShape?` is the exception: its `isProp` is `lvlEq?`'s
+untouched pins).  `readBlock` is the exception: its `isProp` is `lvlEq?`'s
 cached verdict, the denotation only under `CheckOK`'s cache clauses
 (`Bridge/Inductives/BlockShape.lean`'s module note).
 
@@ -50,10 +50,8 @@ open scoped Lean.Order
 
 /-- con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:67-81 blockCapsAt
 **The capability record of member `mi`**, exactly: pure on both sides, read
-off the record.  The default member's `etaCtor` is the zero handle,
-`.anonymous` under `PinsOK.anon`. -/
+off the record. -/
 theorem blockCapsAt_denote {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.BlockShape}
-    (hanon : denoteN st.ns (default : NIdx) = some ConLeche.Name.anonymous)
     (hp : dShape st p = some pP) (mi : Nat) (isRec : Bool) :
     Frontend.denoteCaps st (Arena.blockCapsAt p mi isRec)
       = some (ConLeche.blockCapsAt pP mi isRec) := by
@@ -68,7 +66,7 @@ theorem blockCapsAt_denote {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.B
     simp only [Option.bind_none] at hg
     rw [hg]
     simp only [Option.getD_none]
-    simp only [Frontend.denoteCaps, hanon, hnames, hnP, Frontend.denoteNList]
+    simp only [Frontend.denoteCaps, hnames, hnP, Frontend.denoteNList]
     rfl
   | some m =>
     rw [hmi] at hg
@@ -94,7 +92,7 @@ theorem blockCapsAt_denote {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.B
       rw [hc] at hcs
       simp only [dCtors, List.mapM_nil, Option.pure_def, Option.some.injEq] at hcs
       subst hcs
-      simp only [Frontend.denoteCaps, hanon, hnames, hnP, List.map_nil, Frontend.denoteNList]
+      simp only [Frontend.denoteCaps, hnames, hnP, List.map_nil, Frontend.denoteNList]
     | cons c rest =>
       rw [hc] at hcs
       obtain ⟨cP, restP, rfl, hcP, hrestP⟩ := mapM_option_cons_inv hcs
@@ -107,7 +105,7 @@ theorem blockCapsAt_denote {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.B
       | cons c' rest' =>
         obtain ⟨cP', restP', rfl, hcP', hrestP'⟩ := mapM_option_cons_inv hrestP
         have hall := dCtors_names hcs
-        simp only [Frontend.denoteCaps, hanon, hnames, hnP, hall]
+        simp only [Frontend.denoteCaps, hnames, hnP, hall]
       | nil =>
         simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at hrestP
         subst hrestP
@@ -384,12 +382,11 @@ theorem declared_denote {st : EStore} :
 **The formers**, in block order, as declared, with their capability records:
 pure on both sides. -/
 theorem blockFormers_denote {st : EStore} {p : Arena.BlockShape} {pP : ConLeche.BlockShape}
-    (hanon : denoteN st.ns (default : NIdx) = some ConLeche.Name.anonymous)
     (hp : dShape st p = some pP) (isRec : Bool) :
     Frontend.denoteCIList st (Arena.blockFormers p isRec)
       = some (ConLeche.blockFormers pP isRec) := by
   obtain ⟨hms, -, -, -, -, -, -⟩ := dShape_inv hp
-  exact blockFormers_go isRec (blockCapsAt_denote hanon hp · isRec) _ _ 0
+  exact blockFormers_go isRec (blockCapsAt_denote hp · isRec) _ _ 0
     (declared_denote hms)
 
 /-- con-leche: none — `dCtors`'s constructor list, read as constructor
@@ -658,22 +655,27 @@ theorem structCtor?_denote {st : EStore} {m : Arena.MemberShape} {mP : ConLeche.
       · simp only [h0, ite_true]; exact ⟨cP, rfl, hcP⟩
       · simp only [h0, Bool.false_eq_true, ite_false]; rfl
 
-/-- con-leche: ConLeche/Kernel/Install.lean:63-73 blockTables
-**The projection tables**, in block order: one per structure-like member whose
-constructor reads as one, each well shaped (one body per field). -/
+/-- con-leche: none — **the answer relation of the projection tables**: the
+handles denote the tables and each is well shaped. -/
+@[expose] def RTables (q : List ProjTable) (st : EStore) (Q : List IProjTable) : Prop :=
+  Frontend.denoteProjTableList st Q = some q ∧ ∀ t ∈ Q, IProjTableOK t
+
+/-- con-leche: ConLeche/Kernel/Install.lean:67-74 blockTables
+**The projection tables**, in block order: one per structure-like member, each
+well shaped (one body per field); `none` where a structure-like member's
+constructor type is too short to read them. -/
 theorem blockTables_run {p : Arena.BlockShape} {pP : ConLeche.BlockShape} :
     ∀ (ms : List Arena.MemberShape) (msP : List ConLeche.MemberShape) {s s' : AState}
-      {Q : List IProjTable}, StateOK s → dShape s.store p = some pP →
+      {Q : Option (List IProjTable)}, StateOK s → dShape s.store p = some pP →
       ms.mapM (dMember s.store) = some msP → Arena.blockTables p ms s = .ok (Q, s') →
       PStep s s' ∧ s'.store.scratchOn = s.store.scratchOn ∧
-        Frontend.denoteProjTableList s'.store Q = some (ConLeche.blockTables pP msP) ∧
-        ∀ t ∈ Q, IProjTableOK t
+        ROp RTables (ConLeche.blockTables pP msP) s'.store Q
   | [], msP, s, s', Q, hok, _, hms, hrun => by
     simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at hms
     subst hms
     simp only [Arena.blockTables] at hrun
     obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun
-    exact ⟨PStep.refl hok, rfl, rfl, fun _ h => nomatch h⟩
+    exact ⟨PStep.refl hok, rfl, [], rfl, rfl, fun _ h => nomatch h⟩
   | m :: ms, msP, s, s', Q, hok, hp, hms, hrun => by
     obtain ⟨mP, msP', rfl, hm, hms'⟩ := mapM_option_cons_inv hms
     have hsc := structCtor?_denote hm
@@ -703,40 +705,48 @@ theorem blockTables_run {p : Arena.BlockShape} {pP : ConLeche.BlockShape} :
       | none =>
         simp only [ROp] at ho
         rw [ho]
-        exact (fun ⟨a, e, b, c⟩ => ⟨p1.trans a, by rw [e, e1], b, c⟩)
-          (blockTables_run ms msP' p1.ok (dShape_ext p1.ext _ _ hp)
-            (dMember_ext.list p1.ext _ _ hms') z1)
+        obtain ⟨rfl, rfl⟩ := AM.pure_ok z1
+        exact ⟨p1, e1, rfl⟩
       | some bodies =>
         obtain ⟨bodiesP, hbP, hbodies⟩ := ho
         rw [hbP]
         obtain ⟨Q', s₂, k2, z2⟩ := AM.bind_ok z1
-        obtain ⟨p2, e2, hQ', hok'⟩ := blockTables_run ms msP' p1.ok (dShape_ext p1.ext _ _ hp)
+        obtain ⟨p2, e2, hQ'⟩ := blockTables_run ms msP' p1.ok (dShape_ext p1.ext _ _ hp)
           (dMember_ext.list p1.ext _ _ hms') k2
-        obtain ⟨rfl, rfl⟩ := AM.pure_ok z2
-        refine ⟨p1.trans p2, by rw [e2, e1], ?_, ?_⟩
-        · have x := p1.ext.trans p2.ext
-          have hb2 : Frontend.denoteEArray s'.store bodies = some bodiesP :=
-            denoteEArray_ext hbodies p2.ext
-          simp only [Frontend.denoteProjTableList, Frontend.denoteProjTable,
-            denoteN_ext (denoteCV_name hdecl) x, denoteNListE_ext x _ _ (BlockShape.lps_spec hp),
-            denoteN_ext (denoteCV_name hcv) x, hb2, hQ', hnP]
-        · intro t ht
-          rcases List.mem_cons.1 ht with rfl | ht
-          · refine ⟨?_⟩
-            have hsz := (ConLeche.structProjBodies_spec hbP).1
-            have hl : Frontend.denoteEList s₁.store bodies.toList = some bodiesP.toList := by
-              have h' : Frontend.denoteEArray s₁.store bodies = some bodiesP := hbodies
-              simp only [Frontend.denoteEArray] at h'
-              split at h'
-              · rename_i xs hxs
-                obtain rfl := (Option.some.inj h').symm
-                simpa using hxs
-              · exact nomatch h'
-            have := ExprOps.denoteEList_length _ _ hl
-            simp only [Array.length_toList] at this
-            show bodies.size = c.2
-            omega
-          · exact hok' t ht
+        have hsz : bodies.size = c.2 := by
+          have hsz := (ConLeche.structProjBodies_spec hbP).1
+          have hl : Frontend.denoteEList s₁.store bodies.toList = some bodiesP.toList := by
+            have h' : Frontend.denoteEArray s₁.store bodies = some bodiesP := hbodies
+            simp only [Frontend.denoteEArray] at h'
+            split at h'
+            · rename_i xs hxs
+              obtain rfl := (Option.some.inj h').symm
+              simpa using hxs
+            · exact nomatch h'
+          have := ExprOps.denoteEList_length _ _ hl
+          simp only [Array.length_toList] at this
+          omega
+        cases Q' with
+        | none =>
+          obtain ⟨rfl, rfl⟩ := AM.pure_ok z2
+          simp only [ROp] at hQ'
+          refine ⟨p1.trans p2, by rw [e2, e1], ?_⟩
+          show Option.map _ (ConLeche.blockTables _ msP') = none
+          rw [hQ']; rfl
+        | some q =>
+          obtain ⟨qP, hqP, hq, hokq⟩ := hQ'
+          obtain ⟨rfl, rfl⟩ := AM.pure_ok z2
+          refine ⟨p1.trans p2, by rw [e2, e1], _, by rw [hqP]; rfl, ?_, ?_⟩
+          · have x := p1.ext.trans p2.ext
+            have hb2 : Frontend.denoteEArray s'.store bodies = some bodiesP :=
+              denoteEArray_ext hbodies p2.ext
+            simp only [Frontend.denoteProjTableList, Frontend.denoteProjTable,
+              denoteN_ext (denoteCV_name hdecl) x, denoteNListE_ext x _ _ (BlockShape.lps_spec hp),
+              denoteN_ext (denoteCV_name hcv) x, hb2, hq, hnP]
+          · intro t ht
+            rcases List.mem_cons.1 ht with rfl | ht
+            · exact ⟨hsz⟩
+            · exact hokq t ht
 
 /-! ## The block's constants -/
 
@@ -780,14 +790,13 @@ theorem blockConstants_run {s s' : AState} {p : Arena.BlockShape} {pP : ConLeche
   obtain ⟨rfl, rfl⟩ := AM.pure_ok z2
   refine ⟨p1.trans p2, by rw [e2, e1], ?_⟩
   have hp2 := dShape_ext p2.ext _ _ hp1
-  have hanon := (hpins.mono (p1.trans p2).ext (p1.trans p2).pins).anon
-  rw [denoteCIList_append (denoteCIList_append (blockFormers_denote hanon hp2 _)
+  rw [denoteCIList_append (denoteCIList_append (blockFormers_denote hp2 _)
     (blockCtors_denote hp2)) hR]
   rfl
 
 /-! ## The recogniser keeps the scratch flag
 
-`blockShape?` reads the store, interns names and levels (which live beside the
+`readBlock` reads the store, interns names and levels (which live beside the
 expression store's own flag) and asks `lvlEq?` (which leaves the store alone).
 `XFree` is "the expression store's scratch flag is unchanged"; it composes
 through every bind, and each recursive reader is one fuel induction of the
@@ -836,9 +845,6 @@ theorem XFree.viewConst (h : EIdx) : XFree (Arena.viewConst h) := by
   unfold Arena.viewConst; xfree_auto
 theorem XFree.zeroLevel : XFree Arena.zeroLevel := by
   unfold Arena.zeroLevel Arena.pinZeroLevel; xfree_auto
-theorem XFree.reservedBasisNames : XFree Arena.reservedBasisNames := by
-  unfold Arena.reservedBasisNames Arena.pinReserved; xfree_auto
-
 theorem XFree.lvlEq? (u v : LIdx) : XFree (Arena.lvlEq? u v) := by
   intro s s' r h; rw [(Core.lvlEq?_frame h).1]
 
@@ -989,11 +995,11 @@ theorem XFree.recTargetOf (names : List NIdx) (mI : Nat) (ty : EIdx) :
   have h4 := XFree.viewConst
   unfold Arena.recTargetOf; xfree_auto
 
-theorem XFree.blockCounts? (nPd k nC nR : Nat) (cvT : IConstantVal) (r : Option (Nat × Nat)) :
-    XFree (Arena.blockCounts? nPd k nC nR cvT r) := by
+theorem XFree.blockCounts (nPd k nC nR : Nat) (cvT : IConstantVal) (r : Option (Nat × Nat)) :
+    XFree (Arena.blockCounts nPd k nC nR cvT r) := by
   have h1 := XFree.piBinders
   have h2 := XFree.view'
-  unfold Arena.blockCounts?
+  unfold Arena.blockCounts
   repeat (first
     | exact XFree.pure _
     | (solve_by_elim (maxDepth := 2))
@@ -1012,24 +1018,23 @@ theorem XFree.paramLevels (lps : List NIdx) : XFree (Arena.paramLevels lps) := b
   unfold Arena.paramLevels
   exact XFree.bind (hgo _) (fun _ => XFree.internLsNode _)
 
-theorem XFree.blockMemberCounts? (nPd k nC : Nat) (names : List NIdx)
+theorem XFree.blockMemberCounts (nPd k nC : Nat) (names : List NIdx)
     (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) :
     ∀ (m : Nat) (cvTs : List IConstantVal),
-      XFree (Arena.blockMemberCounts? nPd k nC names rs m cvTs)
-  | _, [] => by unfold Arena.blockMemberCounts?; exact XFree.pure _
+      XFree (Arena.blockMemberCounts nPd k nC names rs m cvTs)
+  | _, [] => by unfold Arena.blockMemberCounts; exact XFree.pure _
   | m, cvT :: ts => by
-    have ih := XFree.blockMemberCounts? nPd k nC names rs (m + 1) ts
-    have h1 := XFree.blockCounts? nPd k nC
+    have ih := XFree.blockMemberCounts nPd k nC names rs (m + 1) ts
+    have h1 := XFree.blockCounts nPd k nC
     have h2 := XFree.recTargetOf names
     have h3 : XFree (rs.findM? fun q => do Pure.pure ((← Arena.recTargetOf names q.2.1 q.1.type) == m)) :=
       XFree.findM? (fun q => XFree.bind (h2 _ _) (fun _ => by
         intro s s' r h; obtain ⟨-, rfl⟩ := AM.pure_ok h; rfl)) rs
-    unfold Arena.blockMemberCounts?; xfree_auto
+    unfold Arena.blockMemberCounts; xfree_auto
 
-theorem XFree.blockShape? (nPd : Nat) (block : List IConstantInfo) :
-    XFree (Arena.blockShape? nPd block) := by
-  have h1 := XFree.blockMemberCounts? nPd
-  have h2 := XFree.reservedBasisNames
+theorem XFree.readBlock (nPd : Nat) (block : List IConstantInfo) :
+    XFree (Arena.readBlock nPd block) := by
+  have h1 := XFree.blockMemberCounts nPd
   have h3 := XFree.stripPis
   have h4 := XFree.view'
   have h5 := XFree.zeroLevel
@@ -1038,7 +1043,7 @@ theorem XFree.blockShape? (nPd : Nat) (block : List IConstantInfo) :
   have h8 := XFree.blockGroups
   have h9 := XFree.recTargetOf
   have h10 := XFree.internNNode
-  unfold Arena.blockShape?
+  unfold Arena.readBlock
   repeat (first
     | exact XFree.pure _
     | exact XFree.fail _
@@ -1054,18 +1059,20 @@ theorem XFree.blockShape? (nPd : Nat) (block : List IConstantInfo) :
     | exact h9 _ _ _
     | exact h10 _
     | (refine XFree.bind ?_ (fun _ => ?_))
+    | (dsimp only)
     | split)
 
-/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:375-432 blockShape?
-`blockShape?_install` with the scratch flag framed. -/
-theorem blockShape?_installS {env : Env} {fe : IFEnv} {nP : Nat}
+/-- con-leche: ConLeche/Kernel/Inductives/BlockShape.lean:385-458 readBlock
+`readBlock_run` with the scratch flag framed. -/
+theorem readBlock_installS {env : Env} {fe : IFEnv} {nP : Nat}
     {block : List IConstantInfo} {b : List ConstantInfo} {s s' : AState}
-    {r : Option Arena.BlockShape} (hc : CheckOK false env fe s)
+    {r : Except Arena.CheckError Arena.BlockShape} (hc : CheckOK false env fe s)
     (hb : Frontend.denoteCIList s.store block = some b)
-    (hrun : Arena.blockShape? nP block s = .ok (r, s')) :
+    (hrun : Arena.readBlock nP block s = .ok (r, s')) :
     PStep s s' ∧ s'.store.scratchOn = s.store.scratchOn ∧
-      ROp (fun q st p => dShape st p = some q) (ConLeche.blockShape? nP b) s'.store r :=
-  ⟨(blockShape?_run nP block b s s' r hc hb hrun).1, XFree.blockShape? nP block s s' r hrun,
-    (blockShape?_run nP block b s s' r hc hb hrun).2⟩
+      ROp (fun q st p => dShape st p = some q) (ConLeche.readBlock nP b).toOption s'.store
+        r.toOption :=
+  ⟨(readBlock_run nP block b s s' r hc hb hrun).1, XFree.readBlock nP block s s' r hrun,
+    (readBlock_run nP block b s s' r hc hb hrun).2⟩
 
 end ConRon.Bridge.Inductives

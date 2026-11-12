@@ -218,7 +218,7 @@ values agree. -/
 
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
 `p + 1` (every constant record has it there). -/
--- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:163-167 ConRon.Arena.IConstantInfo.toConstantVal
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.toConstantVal]
 def ciToCv : FunDecl := lfn (p) locals () {
   return p + 1

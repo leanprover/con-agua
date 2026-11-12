@@ -9,7 +9,7 @@ so that the three can build in parallel:
 | group | contents |
 |---|---|
 | fuel | `Ev` ("from some fuel on") and its rules; `DqPost`, the frame-and-verdict postcondition |
-| stage rules | `triple_pure_post`, `triple_ite_bind`, `CheckOK.of_store_eq` |
+| stage rules | `triple_ite_bind`, `CheckOK.of_store_eq` (`triple_pure_post` is `Memo.lean`'s) |
 | guarded calls | `boolTrueShortcutIf_spec`, `defeqNoFvars_spec`, `reduceNatIf_spec` |
 | denotations | `VD` / `VD.of_view`, `ls_eq_iff_nil`, `n_eq_iff_pin` |
 | exits | `dq_pure_exit`, `dq_defeq_exit`, `dq_stuck_exit` |
@@ -97,13 +97,6 @@ untouched since `s₀`, and the pure goal `G` at some fuel. -/
     (G : Nat → Bool → Prop) (r : Bool) (s' : AState) : Prop :=
   CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧ s'.pins = s₀.pins ∧
     ∃ F, G F r
-
-/-- con-leche: none — **a `pure` exit** at a pinned state. -/
-theorem triple_pure_post {α : Type} {s₀ : AState} {v : α}
-    {Q : α → AState → Prop} (h : Q v s₀) :
-    ⦃fun s => s = s₀⦄ (pure v : AM α) ⦃fun r s => Q r s; ⊤⦄ := by
-  vcgen
-  subst_vars; exact h
 
 /-- con-leche: none — **a join point**: the do-compiler's
 `if c then x >>= jp else y >>= jp` is the bind of the `if`. -/
@@ -385,14 +378,6 @@ section MonoDefeq
 
 variable {r₁ r₂ : CoreFns CheckM}
 
-/-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the easy
-cases refine at a refined record. -/
-theorem quickDefEq_monoR (h : FnsRefines r₁ r₂) (d : Nat) (a b : Expr) :
-    MRefines (ConLeche.quickDefEq mode r₁ d a b)
-      (ConLeche.quickDefEq mode r₂ d a b) := by
-  have := (ConLeche.quickDefEq mode (pairFns r₁ r₂ h) d a b).property
-  rwa [quickDefEq_fst_proj, quickDefEq_snd_proj] at this
-
 /-- con-leche: ConLeche/Verify/Mono.lean:52 whnfCoreBody_mono — the proj/proj
 check. -/
 theorem defeqProjPair_monoR (h : FnsRefines r₁ r₂) (d : Nat) (a b : Expr) :
@@ -402,14 +387,6 @@ theorem defeqProjPair_monoR (h : FnsRefines r₁ r₂) (d : Nat) (a b : Expr) :
   rwa [defeqProjPair_fst_proj, defeqProjPair_snd_proj] at this
 
 end MonoDefeq
-
-/-- con-leche: ConLeche/Verify/Mono.lean:158 isDefEqCore_mono — the merge at
-`quickDefEq`. -/
-theorem quickDefEqF_mono {f f' : Nat} (hle : f ≤ f') {d : Nat} {a b : Expr}
-    {r : Option Bool}
-    (hr : ConLeche.quickDefEq mode (pureFns mode eager env f) d a b = .ok r) :
-    ConLeche.quickDefEq mode (pureFns mode eager env f') d a b = .ok r :=
-  quickDefEq_monoR (pureFns_mono env hle) d a b r hr
 
 /-- con-leche: ConLeche/Verify/Mono.lean:158 isDefEqCore_mono — the merge at
 `defeqProjPair`. -/

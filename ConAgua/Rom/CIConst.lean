@@ -71,7 +71,7 @@ def romC (f : FnName) : FnName := if f ∈ romCNames then f ++ "_c" else f
 @[no_expose] def romExOneC : FunDecl := romExOne.renameCalls romC
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
 @[no_expose] def romExTwoC : FunDecl := romExTwo.renameCalls romC
--- con-ron: ConRon/Arena/Frontend/Readback.lean:263-269 ConRon.Arena.Frontend.internExprList
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:260-266 ConRon.Arena.Frontend.internExprList
 @[no_expose] def romExprsToC : FunDecl := romExprsTo.renameCalls romC
 
 /-- **The ROM readers over the constant data**, by their copies' names. -/

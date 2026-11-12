@@ -130,7 +130,7 @@ the twin's `.internal`; the children at `f - 1`), the node viewed first and the 
 the view (a literal of kind `≠ 0` is a string), short-circuiting. The twin's visited set is
 dropped: a node it has visited and finished answered `false` (a `true` ends the walk), which is
 what a second walk of it answers too. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:191-224 ConRon.Arena.hasStrLitGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:189-222 ConRon.Arena.hasStrLitGo
 @[no_expose, l_impl ConRon.Arena.hasStrLitGo]
 def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, r) {
   if f == 0 { abort };
@@ -162,7 +162,7 @@ def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, r) {
 
 /-- `ue_mentions_go(f, T, h)`: `mentions_const_go` (the twin's `mentionsConstGo`, the same walk)
 without its memo. -/
--- con-ron: ConRon/Arena/Inductives/StructParts.lean:140-181 ConRon.Arena.mentionsConstGo
+-- con-ron: ConRon/Arena/Inductives/StructParts.lean:148-190 ConRon.Arena.mentionsConstGo
 @[no_expose, l_impl ConRon.Arena.mentionsConstGo]
 def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) {
   if f == 0 { abort };
@@ -194,8 +194,8 @@ always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type
 `w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
 declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
 declines, anything else rejects. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:179-189 ConRon.Arena.unresolvedConstsError
--- con-ron: ConRon/Arena/CheckerBase.lean:226-238 ConRon.Arena.unresolvedConstsErrorL
+-- con-ron: ConRon/Arena/CheckerBase.lean:177-187 ConRon.Arena.unresolvedConstsError
+-- con-ron: ConRon/Arena/CheckerBase.lean:224-237 ConRon.Arena.unresolvedConstsErrorL
 @[no_expose, l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
 def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
   if w <= 1 {

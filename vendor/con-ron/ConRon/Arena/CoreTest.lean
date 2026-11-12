@@ -118,13 +118,10 @@ private def internCV (cv : ConstantVal) : AM IConstantVal := do
   let ty ← internExprT cv.type
   pure ⟨n, lps, ty⟩
 
-/-- con-leche: none — intern an `IndCaps`: its scalars and its η constructor
-(the fixture's member and constructor lists are empty). -/
+/-- con-leche: none — intern an `IndCaps`: its scalars (the fixture's member
+and constructor lists are empty). -/
 private def internCaps (c : IndCaps) : AM IIndCaps := do
-  let ec ← internName c.etaCtor
-  pure { eta := c.eta, etaCtor := ec, etaParams := c.etaParams,
-         etaFields := c.etaFields, unitlike := c.unitlike,
-         unitParams := c.unitParams, nparams := c.nparams, nIdx := c.nIdx }
+  pure { eta := c.eta, nparams := c.nparams, nIdx := c.nIdx }
 
 /-- con-leche: none — intern a `RecRuleFire`. -/
 private def internFire : RecRuleFire → AM IRecRuleFire
@@ -594,8 +591,7 @@ against `ConLeche`'s chained body on the denotation. -/
   (ConLeche.inferTypeCore MU false envCL F 0 tBeta2)
 #guard chkE ((pureFnsA MU false FX.fe F).inferIO 0 FX.beta2)
   (ConLeche.inferTypeIO MU false envCL F 0 tBeta2)
--- `defeqBinders` / `defeqPeel` (∀) and `defeqLams` (λ): two telescopes
--- descended together
+-- `defeqBinders` (∀ and λ): two telescopes descended together
 #guard chkB (isDefEqCore MU FX.fe F 0 FX.pi3 FX.pi3)
   (ConLeche.isDefEqCore MU false envCL F 0 tPi3 tPi3)
 #guard chkB (isDefEqCore MU FX.fe F 0 FX.pi3 FX.piPi)

@@ -23,6 +23,7 @@ namespace L.Ind
 open L.Arena
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2043-2055 ConRon.Arena.instPisAtLift -/
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.instPisAtLift` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instPisAtLift]
 def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
   h := e;
@@ -36,7 +37,7 @@ def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
   return (1, h)
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1374-1382 ConRon.Arena.fvarTypeD -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1376-1384 ConRon.Arena.fvarTypeD -/
 @[no_expose, l_impl ConRon.Arena.fvarTypeD]
 def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
   if ⟦e⟧.tag != 1 { return e };

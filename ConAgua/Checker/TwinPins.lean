@@ -24,6 +24,7 @@ section pins
 open ConLeche ConRon.Bridge
 
 /-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — **the same walk**,
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Bridge.internAllPins_run` is gone upstream; re-check the L code and its proofs, then delete this line
 split after its first block (`Eq`'s): the first block one scratch-agnostic step, the rest of the
 basis and the pinned names one more, ending in the pin sets, which extend the store and leave the
 pin table. -/
@@ -100,6 +101,7 @@ theorem internAllPins_steps {ps : List NatOpPinSet} {r : List INatOpPinSet}
   exact ⟨u0, _, ⟨_, q0⟩, b1, a29, hx', hpe⟩
 
 /-- con-ron: ConRon/Bridge/Checker/Pins.lean:614-724 ConRon.Bridge.internAllPins_run — the conjunct
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Bridge.internAllPins_run` is gone upstream; re-check the L code and its proofs, then delete this line
 that lemma does not export: `internAllPins` leaves the pin table (it builds the pin SETS, its
 result). -/
 theorem internAllPins_pins {ps : List NatOpPinSet} {r : List INatOpPinSet}

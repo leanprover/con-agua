@@ -33,7 +33,7 @@ namespace L.Arena
 
 /-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
 `p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
--- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
+-- con-ron: ConRon/Arena/Env.lean:163-167 ConRon.Arena.IConstantInfo.toConstantVal
 @[no_expose] def strCvL : FunDecl := lfn (p) locals () {
   return (EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄)
 }
@@ -219,7 +219,8 @@ def strLitStoredL : FunDecl :=
 /-- `lit_shape_ok(p)`: the shape a declaration (the record at `p`, its name at `p + 1`) at a
 literal's name must have; any other name passes. The cited `if`-chain, each name pinned only when
 the chain reaches it. -/
--- con-ron: ConRon/Arena/Core.lean:822-838 ConRon.Arena.litShapeOk
+-- con-ron: ConRon/Arena/Core.lean:822-839 ConRon.Arena.litShapeOk
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.litShapeOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.litShapeOk]
 def litShapeOkL : FunDecl := lfn (p) locals (n, x, r) {
   n := EREC⦃p + 1⦄;

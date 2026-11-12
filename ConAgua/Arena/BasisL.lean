@@ -353,6 +353,7 @@ def basisNameHit : FunDecl := lfn (bo, bl) locals (io, il, f, k) {
 /-- `at_block_go(po, pl, co, cl)`: each pin at the names its record declares (the shorter list
 ends it), a fresh `IW` slice of records. -/
 -- con-ron: ConRon/Arena/Basis.lean:208-215 ConRon.Arena.atBlockGo
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.atBlockGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.atBlockGo]
 def atBlockGo : FunDecl := lfn (po, pl, co, cl) locals (c, x, ro, rl, q, m) {
   if pl == 0 || cl == 0 { return (0, 0) };
@@ -366,6 +367,7 @@ def atBlockGo : FunDecl := lfn (po, pl, co, cl) locals (c, x, ro, rl, q, m) {
 /-- `basis_at_block(kind, bo, bl)`: `BasisKind.atBlock kind block` (the block an `EREC` slice of
 record pointers) → an `IW` slice of the records a pinned block's check installs. -/
 -- con-ron: ConRon/Arena/Basis.lean:217-221 ConRon.Arena.BasisKind.atBlock
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.BasisKind.atBlock` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.BasisKind.atBlock]
 def basisAtBlock : FunDecl := lfn (kind, bo, bl) locals (po, pl, io, il, ro, rl) {
   (po, pl) := call rom_basis_decls(kind);
@@ -378,7 +380,7 @@ def basisAtBlock : FunDecl := lfn (kind, bo, bl) locals (po, pl, io, il, ro, rl)
 
 /-- `quot_pin(k)`: `quotPin k`, the pinned quotient package's record at slot `k`. The ROM's block
 has the five slots; a slot past it (the twin's `getD … default`, unreachable) aborts. -/
--- con-ron: ConRon/Arena/Basis.lean:223-227 ConRon.Arena.quotPin
+-- con-ron: ConRon/Arena/Basis.lean:249-253 ConRon.Arena.quotPin
 @[no_expose, l_impl ConRon.Arena.quotPin]
 def quotPin : FunDecl := lfn (k) locals (o, l) {
   (o, l) := call rom_basis_decls(4);
@@ -387,7 +389,7 @@ def quotPin : FunDecl := lfn (k) locals (o, l) {
 }
 
 /-- `quot_at(k, q)`: `quotAt k cv` (`q` a constant value): the slot's pin at `cv`'s names. -/
--- con-ron: ConRon/Arena/Basis.lean:229-232 ConRon.Arena.quotAt
+-- con-ron: ConRon/Arena/Basis.lean:255-258 ConRon.Arena.quotAt
 @[no_expose, l_impl ConRon.Arena.quotAt]
 def quotAt : FunDecl := lfn (k, q) locals (c, r) {
   c := call quot_pin(k);
@@ -397,7 +399,7 @@ def quotAt : FunDecl := lfn (k, q) locals (c, r) {
 
 /-- `quot_pin_hit(k, q)`: `quotPinHit k cv`: `cv`'s names distinct and as many as the pin's, and
 `cv` the pin's constant value at them. -/
--- con-ron: ConRon/Arena/Basis.lean:234-242 ConRon.Arena.quotPinHit
+-- con-ron: ConRon/Arena/Basis.lean:260-268 ConRon.Arena.quotPinHit
 @[no_expose, l_impl ConRon.Arena.quotPinHit]
 def quotPinHitL : FunDecl := lfn (k, q) locals (c, io, il, d, a, z, e) {
   c := call quot_pin(k);
@@ -414,7 +416,7 @@ def quotPinHitL : FunDecl := lfn (k, q) locals (c, io, il, d, a, z, e) {
 
 /-- `quot_preds_ok(vis, k)`: `quotPredsOk fe k`: the constants slot `k`'s type mentions stored
 (`Eq`, `Quot`, `Quot.mk`: pin slots `0`, `47`, `51`), all three read first. -/
--- con-ron: ConRon/Arena/Basis.lean:244-256 ConRon.Arena.quotPredsOk
+-- con-ron: ConRon/Arena/Basis.lean:270-282 ConRon.Arena.quotPredsOk
 @[no_expose, l_impl ConRon.Arena.quotPredsOk]
 def quotPredsOk : FunDecl := lfn (vis, k) locals (n, he, hq, hm, r) {
   n := call pin_at(0);

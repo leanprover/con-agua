@@ -270,13 +270,53 @@ theorem recStageG_recNames (h : RecStageG mode F env p rs) :
   obtain ⟨rc, u, hrc, -, ⟨E⟩⟩ := R.tyGenAt hr
   exact ⟨rc, _, hrc, hr, E.name_eq, ⟨E.cv0, E.hcv0.1, E.hcv0.2, E.hcv⟩, E.nP_le, _, E.mI_eq⟩
 
-/-- **The stored recursors' name facts**, from the per-recursor check
-(`ConstChecked`): freshness at the constructors' environment and the
-two name guards. -/
+/-- **The stage's recursors are the block's**, by name. -/
+theorem recStage_names (h : RecStageG mode F env p rs) :
+    ∀ r ∈ rs, ∃ rc ∈ p.recs, r.1.name = rc.cvR.name := by
+  obtain ⟨-, hlenR, hall⟩ := recStageG_recNames h
+  intro r hr
+  obtain ⟨i, hi⟩ := List.getElem?_of_mem hr
+  have hil : i < p.recs.length := by
+    have := (List.getElem?_eq_some_iff.mp hi).1
+    omega
+  obtain ⟨rc, r', hrc, hr', hname, -⟩ := hall i hil
+  obtain rfl := Option.some.inj (hi.symm.trans hr')
+  exact ⟨rc, List.mem_of_getElem? hrc, hname⟩
+
+/-- **One rule-less recursor's cons, at the recursor stage**: a recursor the stage checked keeps any
+well-formed environment its type resolves at well formed (the bare chain's step). -/
+theorem recStage_bareCons_envWF (h : RecStageG mode F env p rs) {r} (hr : r ∈ rs) (m : Nat)
+    {env' : Env} (henv : EnvWF env') (hres : r.1.type.constsResolve env' = true) :
+    EnvWF ⟨.recInfo r.1 (p.majorIdxAt m) (p.rulePrefixAt m) false [] :: env'.consts,
+      env'.tables⟩ := by
+  obtain ⟨h1, h2, -, h4, -⟩ := recStage_facts h r hr
+  exact EnvWF.cons (litShapeAt_of_reservedRec (recStage_reserved h r hr) _ rfl) henv
+    (structConstWF h1 h2 (Expr.constsResolve_mono hres) h4 (fun _ _ _ heq => nomatch heq)
+      (fun _ _ _ _ _ heq _ hr' => by
+        injection heq with _ _ _ _ e4
+        subst e4
+        exact nomatch hr'))
+
+/-- **The recursors consed with their rules, at the recursor stage**: at any rules function whose
+stored rules have the stage's shape, with the `.nested` firings' pins read off the recursor types. -/
+theorem recStage_envWF_consR (henv : EnvWF env) (h : RecStageG mode F env p rs)
+    {R : Nat → ConstantVal × List Expr × Nat × List (ConstantVal × Nat) → Bool × List RecRule}
+    {fireOf : Nat → ConstantVal × List Expr × Nat × List (ConstantVal × Nat) → RecRuleFire}
+    (hshape : RecRulesShape R rs fireOf)
+    (hnest : ∀ (j : Nat) (r : ConstantVal × List Expr × Nat × List (ConstantVal × Nat)),
+      rs[j]? = some r → ∀ lvls pins, fireOf j r = .nested lvls pins →
+        NestedRead (·.constsResolve env) r.1.levelParams r.1.type (p.majorIdxAt j)
+          (p.rulePrefixAt j) pins.length lvls pins) :
+    EnvWF (consBlockRecsR R p 0 rs env) := by
+  refine envWF_consBlockRecsR henv (recStage_facts h) (fun j r hr rl hrl => ?_)
+    (fun r hr => litShapeAt_of_reservedRec (recStage_reserved h r hr))
+  obtain ⟨i, ctor, rhs, -, hrhs', rfl⟩ := hshape j r hr rl hrl
+  exact ⟨List.mem_of_getElem? hrhs', fun lvls pins hf => hnest j r hr lvls pins hf⟩
+
+/-- **The stored recursors are fresh** at the constructors' environment, from the per-recursor
+check (`ConstChecked`). -/
 theorem recStage_cvFacts (h : RecStageG mode F env p rs) :
-    ∀ r ∈ rs,
-      env.find? r.1.name = none ∧
-      reservedBasisNames.contains r.1.name = false := by
+    ∀ r ∈ rs, env.find? r.1.name = none := by
   obtain ⟨-, hlenR, hall⟩ := recStageG_recNames h
   intro r hr
   obtain ⟨i, hi⟩ := List.getElem?_of_mem hr
@@ -286,7 +326,7 @@ theorem recStage_cvFacts (h : RecStageG mode F env p rs) :
   obtain ⟨rc, r', hrc, hr', hname, ⟨cv0, hn0, -, hcv⟩, -, -⟩ := hall i hil
   obtain rfl := Option.some.inj (hi.symm.trans hr')
   have hname' : r.1.name = cv0.name := by rw [hname, hn0]
-  refine ⟨by rw [hname']; exact hcv.fresh, by rw [hname']; exact hcv.unreserved⟩
+  rw [hname']; exact hcv.fresh
 
 /-- A recursor takes no certified operation's name. -/
 theorem recStage_opName (h : RecStageG mode F env p rs) :

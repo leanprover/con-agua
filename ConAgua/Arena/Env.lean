@@ -114,7 +114,7 @@ no row). -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` is in the view: the own layer's row below
 `vis`, else the stream index's row below `CTL[134]`; `(0, 0)` otherwise. -/
--- con-ron: ConRon/Arena/Env.lean:272-275 ConRon.Arena.IFEnv.find?
+-- con-ron: ConRon/Arena/Env.lean:267-270 ConRon.Arena.IFEnv.find?
 @[no_expose, l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   if vis != 0 {
@@ -129,7 +129,7 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
 
 /-- `env_push(vis, q)`: push the record at `q` (its name is word `q + 1`) into the own layer at
 counter `vis`; returns the new view `vis + 1`. -/
--- con-ron: ConRon/Arena/Env.lean:277-280 ConRon.Arena.IFEnv.push
+-- con-ron: ConRon/Arena/Env.lean:272-275 ConRon.Arena.IFEnv.push
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
   if 4294967294 <= vis { abort };
@@ -140,7 +140,7 @@ def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its own row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the view lowered. -/
--- con-ron: ConRon/Arena/Env.lean:288-298 ConRon.Arena.IFEnv.popTemp
+-- con-ron: ConRon/Arena/Env.lean:283-293 ConRon.Arena.IFEnv.popTemp
 @[no_expose, l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (z) {
   z := call env_row_set(w, c, q);
@@ -203,7 +203,7 @@ record)`, or `(0, 0)`; a scratch name has none. -/
 /-- `raw_table(t)`: the table of structure `t`, ungated (`IFEnv.rawTable?`): the own layer's
 row, else the stream index's row of a record below `CTL[135]`; the record's address plus one,
 `0` for none. -/
--- con-ron: ConRon/Arena/Env.lean:300-305 ConRon.Arena.IFEnv.rawTable?
+-- con-ron: ConRon/Arena/Env.lean:295-300 ConRon.Arena.IFEnv.rawTable?
 @[no_expose, l_impl ConRon.Arena.IFEnv.rawTable?]
 def rawTableL : FunDecl := lfn (t) locals (r, q) {
   r := call tbl_own_get(t);
@@ -216,7 +216,7 @@ def rawTableL : FunDecl := lfn (t) locals (r, q) {
 
 /-- `find_table(vis, t)`: the table of structure `t` if `t` is in the view, else `0`
 (`IFEnv.findTable?`). -/
--- con-ron: ConRon/Arena/Env.lean:307-310 ConRon.Arena.IFEnv.findTable?
+-- con-ron: ConRon/Arena/Env.lean:302-305 ConRon.Arena.IFEnv.findTable?
 @[no_expose, l_impl ConRon.Arena.IFEnv.findTable?]
 def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
   (f, q) := call env_find(t, vis);
@@ -227,7 +227,7 @@ def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
 
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`)
 in the own layer (`IFEnv.pushTable`). -/
--- con-ron: ConRon/Arena/Env.lean:282-286 ConRon.Arena.IFEnv.pushTable
+-- con-ron: ConRon/Arena/Env.lean:277-281 ConRon.Arena.IFEnv.pushTable
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, z) {
   w := EREC⦃q + 2⦄;

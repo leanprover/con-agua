@@ -55,7 +55,7 @@ open ConLeche
 
 /-! ## The record -/
 
-/-- con-leche: ConLeche/Cached/StateC.lean:99-111 ModeMemos — **the
+/-- con-leche: ConLeche/Cached/StateC.lean:122-134 ModeMemos — **the
 mode-dependent memos**: the six entry-point tables, whose entries are results
 of the knot at ONE mode.  The level verdicts, the stored-constant caches and
 the readback memos are functions of their keys alone and are not among them.
@@ -70,11 +70,11 @@ structure ModeMemos where
   inferIOC : Std.HashMap EIdx EIdx
   defeqC : Std.HashMap (EIdx × EIdx) Bool
 
-/-- con-leche: ConLeche/Cached/StateC.lean:99-111 ModeMemos — the empty set
+/-- con-leche: ConLeche/Cached/StateC.lean:122-134 ModeMemos — the empty set
 (each of con-leche's six fields defaults to `{}`). -/
 def ModeMemos.empty : ModeMemos := ⟨∅, ∅, ∅, ∅, ∅, ∅⟩
 
-/-- con-leche: ConLeche/Cached/StateC.lean:113-150 CState — the
+/-- con-leche: ConLeche/Cached/StateC.lean:206-243 CState — the
 per-declaration caches of the arena checker, in one record beside
 `Monad.lean`'s per-call `Memos`.  Keeping the two apart is deliberate: the
 per-call clear (`inst1Clear` and its ten siblings) and the per-declaration
@@ -131,18 +131,22 @@ structure Caches where
   way round. -/
   eagerMemos : ModeMemos
 
-/-- con-leche: ConLeche/Cached/StateC.lean:113-150 CState — the empty
+/-- con-leche: ConLeche/Cached/StateC.lean:206-243 CState — the empty
 cache set: what a fresh run and every declaration start from. -/
 def Caches.empty : Caches := ⟨∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ModeMemos.empty⟩
 
 instance : Inhabited Caches := ⟨Caches.empty⟩
 
-/-- con-leche: ConLeche/Cached/StateC.lean:347-349 CState.modeMemos — the
+/-- con-leche: ConLeche/Cached/StateC.lean:451-453 CState.modeMemos — the
 plain tower's mode memos, read out of the record. -/
 def Caches.modeMemos (c : Caches) : ModeMemos :=
   ⟨c.whnfCoreC, c.whnfCoreCheapC, c.whnfC, c.inferC, c.inferIOC, c.defeqC⟩
 
 /-! ## The pin table (task #97-P6-4a) -/
+
+/-- con-leche: ConLeche/Cached/StateC.lean:156-157 maxNatSizeDefault — the
+official kernel's default maximum `Nat` size, 128 MiB. -/
+def maxNatSizeDefault : Nat := 134217728
 
 /-- con-leche: none — the arena's own PIN TABLE (DESIGN §8.3, task #97c): the
 reserved constant names and the three interned values the checker compares
@@ -167,10 +171,17 @@ structure Pins where
   zeroLevel : LIdx
   /-- `Arena/Core.lean`'s `sortOne`: the expression `Sort 1`. -/
   sortOne : EIdx
+  /-- **The maximum `Nat` size** in bytes (con-leche's `CState.maxNatSize`,
+  `--max-nat-size`): the largest `Nat` numeral the core takes in or computes
+  (`Arena/Core.lean`'s `natSizeRefused`, `powGuard`, `shiftLeftGuard`).  Not a
+  pin but the run's other constant: `maxNatSizeDefault` until
+  `Arena/Checker.lean`'s `internAllPins` sets the run's value, and carried into
+  every worker with the pins. -/
+  maxNatSize : Nat
 
 /-- con-leche: none — the UNFILLED table: the initial state's value, and the
 one `pinAt` refuses. -/
-def Pins.empty : Pins := ⟨#[], [], ⟨0⟩, ⟨0⟩, ⟨0⟩⟩
+def Pins.empty : Pins := ⟨#[], [], ⟨0⟩, ⟨0⟩, ⟨0⟩, maxNatSizeDefault⟩
 
 instance : Inhabited Pins := ⟨Pins.empty⟩
 

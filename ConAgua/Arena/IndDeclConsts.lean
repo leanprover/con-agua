@@ -225,7 +225,8 @@ def blockRecs : FunDecl := lfn (p, ro, rl) locals (q, to, tl, o, l) {
 `structName`, lps, `numParams`, `ctor`, `numFields`, `0`, bodies, `0`, `0`; its lists copied into
 `EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like or whose constructor does not
 read as one. -/
--- con-ron: ConRon/Arena/Install.lean:114-127 ConRon.Arena.blockTables
+-- con-ron: ConRon/Arena/Install.lean:114-130 ConRon.Arena.blockTables
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockTables]
 def blockTable : FunDecl := lfn (p, ms) locals
     (c, cv, T, ok, bo, bl, lo, ll, elo, ell, ebo, ebl, q, ez) {
@@ -258,7 +259,8 @@ def blockTable : FunDecl := lfn (p, ms) locals
 
 /-- `block_tables(p, ms.off, ms.len)`: the projection tables, in block order: one per
 structure-like member whose constructor reads as one. -/
--- con-ron: ConRon/Arena/Install.lean:114-127 ConRon.Arena.blockTables
+-- con-ron: ConRon/Arena/Install.lean:114-130 ConRon.Arena.blockTables
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockTables]
 def blockTables : FunDecl := lfn (p, mo, ml) locals (ok, q, to, tl, o, l) {
   if ml == 0 { return (0, 0) };
@@ -271,7 +273,7 @@ def blockTables : FunDecl := lfn (p, mo, ml) locals (ok, q, to, tl, o, l) {
 
 /-- `block_constants(p)`: the block's constants, in push order: the formers (at official's
 `is_rec`, `block_is_rec`), the constructors, the recursors. -/
--- con-ron: ConRon/Arena/Install.lean:129-134 ConRon.Arena.blockConstants
+-- con-ron: ConRon/Arena/Install.lean:132-138 ConRon.Arena.blockConstants
 @[no_expose, l_impl ConRon.Arena.blockConstants]
 def blockConstants : FunDecl := lfn (p) locals (isRec, fo, fl, co, cl, ro, rl, ao, al, bo, bl) {
   isRec := call block_is_rec(p);
@@ -287,7 +289,7 @@ def blockConstants : FunDecl := lfn (p) locals (isRec, fo, fl, co, cl, ro, rl, a
 
 /-- `decl_constants_axiom(q)`: the `.axiomDecl` arm (`q` the record's `axiomInfo`): `Quot.sound`
 installs its pin at the record's names, `sorryAx` nothing, any other axiom itself. -/
--- con-ron: ConRon/Arena/Install.lean:136-142 ConRon.Arena.declConstantsAxiom
+-- con-ron: ConRon/Arena/Install.lean:140-146 ConRon.Arena.declConstantsAxiom
 @[no_expose, l_impl ConRon.Arena.declConstantsAxiom]
 def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
   qs := call pin_at(4);
@@ -305,7 +307,9 @@ def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
 /-- `decl_constants_ind(bo, bl, nP)`: the `.indDecl` arm: a block with a pinned block's names
 installs the pin at the names the record declares, a block the recogniser reads its constants,
 any other nothing (it declines). -/
--- con-ron: ConRon/Arena/Install.lean:144-161 ConRon.Arena.declConstants
+-- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declConstants`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declConstants` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (hit, kind, o, l, ok, p) {
   (hit, kind) := call basis_name_hit(bo, bl);
@@ -321,7 +325,9 @@ def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (hit, kind, o, l, ok, 
 
 /-- `decl_constants(i)`: the constants `DECL` record `i` installs, in push order (an `IW` slice of
 `EREC` constant records). -/
--- con-ron: ConRon/Arena/Install.lean:144-161 ConRon.Arena.declConstants
+-- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declConstants`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declConstants` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
   k := DECL.u64[1 + 8 * i];
@@ -352,7 +358,9 @@ def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
 
 /-- `decl_tables(i)`: the projection tables `DECL` record `i` installs: those of a recognised
 inductive block (a pinned block's names install none); none for any other record. -/
--- con-ron: ConRon/Arena/Install.lean:163-174 ConRon.Arena.declTables
+-- con-ron: ConRon/Arena/Install.lean:164-176 ConRon.Arena.declTables
+-- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.declTables`, `ConRon.Arena.readBlock` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.declTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.declTables]
 def declTables : FunDecl := lfn (i) locals (bo, bl, hit, kind, ok, p, o, l) {
   if DECL.u64[1 + 8 * i] != 6 { return (0, 0) };

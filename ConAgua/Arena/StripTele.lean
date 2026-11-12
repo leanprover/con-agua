@@ -33,7 +33,7 @@ def stripPisLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
   }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1347-1360 ConRon.Arena.stripPis -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1349-1362 ConRon.Arena.stripPis -/
 @[no_expose, l_impl ConRon.Arena.stripPis]
 def stripPisL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
   o := CTL.u64[200];
@@ -55,7 +55,7 @@ def stripLamsLoop : Stmt := lblk (k, e, o, n, h, g, x, y, z, q) {
   }
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1332-1345 ConRon.Arena.stripLams -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1334-1347 ConRon.Arena.stripLams -/
 @[no_expose, l_impl ConRon.Arena.stripLams]
 def stripLamsL : FunDecl := lfn (k, e) locals (o, n, h, g, x, y, z, q) {
   o := CTL.u64[200];

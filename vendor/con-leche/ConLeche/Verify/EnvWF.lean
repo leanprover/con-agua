@@ -192,24 +192,26 @@ theorem EnvWF.table {env : Env} (henv : EnvWF env) {T : Name} {tbl : ProjTable}
 
 
 
+/-- **The three `Nat` names hold an inductive and two constructors**, where stored: what a
+declaration's check cannot show (`litShapeOk` reads a type), and the pinned `Nat` block's
+(`basisNamesOk`) does. -/
+@[expose] def NatKinds (env : Env) : Prop :=
+  (∀ c, env.find? natName = some c → ∃ cv caps, c = .indInfo cv caps) ∧
+  (∀ c, env.find? natZeroName = some c → ∃ cv nP nF, c = .ctorInfo cv nP nF) ∧
+  (∀ c, env.find? natSuccName = some c → ∃ cv nP nF, c = .ctorInfo cv nP nF)
+
 /-- **A constant value's shape at a literal's name**, whatever kind of constant carries it. -/
 @[expose] def LitShapeAt (cv : ConstantVal) : Prop :=
   ∀ c : ConstantInfo, c.toConstantVal = cv → litShapeOk c = true
 
-/-- Off the reserved names, a constant's shape reads only its name, level parameters and type. -/
-theorem litShapeAt_of_check {cv : ConstantVal} (hres : reservedBasisNames.contains cv.name = false)
+/-- A constant's shape reads only its name, level parameters and type. -/
+theorem litShapeAt_of_check {cv : ConstantVal}
     (h : litShapeOk (.axiomInfo cv) = true) : LitShapeAt cv := by
   intro c hc
   subst hc
   have hn : (ConstantInfo.axiomInfo c.toConstantVal).name = c.name := rfl
-  have hn' : c.toConstantVal.name = c.name := rfl
-  rw [hn'] at hres
-  have h₁ : c.name ≠ natName := fun e => by rw [e] at hres; exact absurd hres (by decide)
-  have h₂ : c.name ≠ natZeroName := fun e => by rw [e] at hres; exact absurd hres (by decide)
-  have h₃ : c.name ≠ natSuccName := fun e => by rw [e] at hres; exact absurd hres (by decide)
   unfold litShapeOk at h ⊢
   rw [hn] at h
-  simp only [h₁, h₂, h₃, ↓reduceIte] at h ⊢
   cases c <;> exact h
 
 /-- A name off the ten has no shape to keep. -/
@@ -228,7 +230,7 @@ theorem litShapeAt_of_reservedRec {cv : ConstantVal} (h : reservedRecName cv.nam
   subst hc
   refine litShapeOk_of_not_lit ?_
   simp only [reservedRecName, Bool.or_eq_false_iff] at h
-  exact h.1.1.1.1.1.2
+  exact h.1.1.1.1.1
 
 /-- `find?` on a cons. -/
 theorem Env.find?_cons {c : ConstantInfo} {cs : List ConstantInfo} {ts : List ProjTable}
@@ -528,6 +530,16 @@ theorem EnvWF.pushTable {env : Env} {t : ProjTable} (henv : EnvWF env)
     rcases List.mem_cons.mp ht' with rfl | hmem
     · exact ht.of_find (Env.find?_pushTable env _)
     · exact (henv.tables t' hmem).of_find (Env.find?_pushTable env t)⟩
+
+/-- **Tables pushed onto a well-formed environment, each well formed there, keep it well
+formed**: a table install changes no lookup. -/
+theorem EnvWF.pushTables {env : Env} (henv : EnvWF env) {Q : List ProjTable}
+    (hQ : ∀ t ∈ Q, TableWF env t) : EnvWF ⟨env.consts, Q ++ env.tables⟩ := by
+  have hf : Env.find? ⟨env.consts, Q ++ env.tables⟩ = env.find? := rfl
+  refine ⟨fun c hc => (henv.consts c hc).of_find hf, henv.shapes, fun t ht => ?_⟩
+  rcases List.mem_append.mp ht with ht | ht
+  · exact (hQ t ht).of_find hf
+  · exact (henv.tables t ht).of_find hf
 
 /-- The kernel's name-list distinctness check is `List.Nodup`'s. -/
 theorem nodup_of_nameNodup : ∀ {ns : List Name}, ConLeche.Name.nodup ns = true → ns.Nodup
