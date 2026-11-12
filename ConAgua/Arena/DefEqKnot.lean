@@ -253,7 +253,8 @@ theorem KnotAllProg.stuck : StuckCallees p :=
   ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc,
     lvlsEqCH_of p hq.lvc, coreDen_of, strLitStored_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
-    lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq⟩
+    lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq,
+    hq.instLP, hq.walks.instListOK, hq.lvc⟩
 
 include hq in
 /-- The literal callees: `nat_lit_stored`, `const_e` (lane `whnf`'s proofs), `str_lit_stored`. -/
