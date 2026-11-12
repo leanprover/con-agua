@@ -6,14 +6,11 @@ import ConAgua.Census.Attr
 @[expose] public section
 
 /-!
-# `instPisAtLift`, `fvarTypeD`, `fvarTypeDs` in L (lane `whnf3`)
+# `fvarTypeD`, `fvarTypeDs` in L (lane `whnf3`)
 
 Lane `induct`'s conventions (`IndStubs.lean`): lists are `IW` slices `(off, len)`, an `Option` result
 `(ok, value)`, the walk fuel a word.
 
-* `inst_pis_at_lift(f, off, len, e)`: con-ron's `instPisAtLift fuel xs e`: for each argument, the
-  tag test, then the binder view (a dangling handle aborts, as `viewBind` fails),
-  `instantiate1_lift_fast(f, body, a, 0)`; `(0, 0)` at a non-`∀` node.
 * `fvar_type_d(e)`: `fvarTypeD`: an `fvar`'s annotation (the tag test, then the view), else `e`.
 * `fvar_type_ds(off, len)`: `fvarTypeDs`, into a fresh `IW` slice.
 -/
@@ -21,21 +18,6 @@ Lane `induct`'s conventions (`IndStubs.lean`): lists are `IW` slices `(off, len)
 namespace L.Ind
 
 open L.Arena
-
-/-- con-ron: ConRon/Arena/ExprOps.lean:2043-2055 ConRon.Arena.instPisAtLift -/
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.instPisAtLift` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.instPisAtLift]
-def instPisAtLiftL : FunDecl := lfn (f, o, l, e) locals (h, k, g, x, y, z) {
-  h := e;
-  k := 0;
-  while k < l {
-    if ⟦h⟧.tag != 6 { return (0, 0) };
-    (g, x, y, z) := call e_view(h);
-    h := call instantiate1_lift_fast(f, y, IW.u64[o + k], 0);
-    k := k + 1
-  };
-  return (1, h)
-}
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1376-1384 ConRon.Arena.fvarTypeD -/
 @[no_expose, l_impl ConRon.Arena.fvarTypeD]

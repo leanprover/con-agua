@@ -42,7 +42,7 @@ def AbMemo (m : Mem) : Prop :=
   ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨ABMEMO, 48⟩ : MemoSch) lfKey decE m mp
 
 /-- **The `instantiate1Lift` walk's memo is well formed** (helper `indproofs4-memo`): array 51
-(`ILFM`) with epoch word `CTL[52]` (`WalkLift.lean`'s `i1lSch`), what `instantiate1_lift_fast`
+(`ILFM`) with epoch word `CTL[52]` (`WalkLift.lean`'s `i1lSch`), what `instantiate_lift_fast`
 needs (`IndRealMemo.lean`). -/
 def I1Memo (m : Mem) : Prop :=
   ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG (⟨ILFM, 52⟩ : MemoSch) lfKey decE m mp
