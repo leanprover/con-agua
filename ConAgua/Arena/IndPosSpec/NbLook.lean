@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndPosSpec.FgW2
 public import ConAgua.Arena.IndPosSpec.NtyLook
 public import ConAgua.Arena.IndPosSpec.U4W
@@ -61,6 +62,7 @@ structure NbLook (p : Prog) : Prop where
   hu4 : p.lookup "nest_ctors_u4" = some nestCtorsU4L
   hnf : p.lookup "nest_ctor_nf" = some nestCtorNfL
   hcl : p.lookup "close_telescope" = some closeTelescope
+  hctf : CtF p
   hdf : p.lookup "dp_find" = some (memoFindG dpSch)
   hdp : p.lookup "dp_put" = some (memoPutG dpSch)
   hdg : p.lookup "depth_go" = some depthGo

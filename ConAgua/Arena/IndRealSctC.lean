@@ -311,14 +311,6 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-#check @tblE.arm1
-#check @tblE.k_er_to_iw.arm1
-#check @tblE.k_er_to_iw_2.arm1
-#check @tblE.k_check_struct_proj_table_scoped.arm1
-#check @tblE.k_check_struct_proj_table_scoped.abort1
-#check @tblE.k_check_struct_proj_table_scoped.abort2
-#check @tblE.k_env_find.arm1
-#check @tblE.k_find_table.arm1
 
 /-- What `check_struct_proj_table` gives (from `m`, `a`): the stage at `vis` of `fe` (nothing is
 pushed), the growth, the frame (no memo touched), `AbsOK`, the twin's run a `PStep`. -/

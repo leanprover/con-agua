@@ -158,11 +158,11 @@ theorem rfE_pos {p : Prog} (hcl : CoreStageClosed p) (hP : RfProg p) {k : Nat} {
   split at h
   · cases h
   rename_i r3 m3 h3
-  obtain ⟨s3, hs3, -, hc3⟩ := triple_of_callW (closeTelescope_spec p hP.derB hP.forallFind hP.forallPush
-    hP.internForall hP.mkForall hP.closeTele hP.ab k ⟨m2, Locals.init []⟩ _ _ _ _) (liftE_ok h3)
+  obtain ⟨s3, hs3, -, hc3⟩ := triple_of_callW (closeTelescope_spec p hP.closeF k ⟨m2, Locals.init []⟩ [_, _, _, _])
+    (liftE_ok h3)
   simp only at hc3
   rw [hs3] at hc3
-  have hP3 := hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hc3)
+  have hP3 := hP2.fr (closeF_mfr hc3)
   obtain ⟨q, m4⟩ := (r, m')
   exact hP3.fr (cvNewW_mfr (liftE_ok h))
 

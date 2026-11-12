@@ -207,8 +207,7 @@ theorem rf_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq n : Wor
   -- `close_telescope`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨s5, hs5, -, hok5, hS5, hg5, hd5, hA5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
-    (closeTelescope_refines p hP.derB hP.forallFind hP.forallPush hP.internForall hP.mkForall
-      hP.closeTele hP.ab k _ a4 dn fe vis (r1.headD 0) (r1.tail.headD 0) 0 (r4.headD 0) bs1 hH4 hS4
+    (closeTelescope_refines p hP.closeF k _ a4 dn fe vis (r1.headD 0) (r1.tail.headD 0) 0 (r4.headD 0) bs1 hH4 hS4
       (decHL_grow' hg4 htop1 hdoms1) (by omega) (Nat.le_trans htop1 hg4.iw)
       (by rw [show UInt64.toNat (0 : Word) = 0 from rfl, Nat.zero_add]; exact UInt64.toNat_lt _) hA4) h5
   simp only [show UInt64.toNat (0 : Word) = 0 from rfl] at hs5 hok5 hS5 hg5 hd5 hA5

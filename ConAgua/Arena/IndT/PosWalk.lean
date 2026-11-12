@@ -83,8 +83,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     · rw [nwE.k_close_telescope.none]
       exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) c2'
     rw [nwE.k_close_telescope.arm1]
-    obtain ⟨s3, hs3, -, hcl⟩ := triple_of_callW (closeTelescope_spec p R.hk.hd R.hk.forF R.hk.forP R.hk.forI
-      R.hk.forM L.hcl L.ab n ⟨m2, Locals.init []⟩ _ _ _ _) (callW_of_callE c2')
+    obtain ⟨s3, hs3, -, hcl⟩ := triple_of_callW (closeTelescope_spec p L.hctf n ⟨m2, Locals.init []⟩ [_, _, _, _]) (callW_of_callE c2')
     simp only at hcl
     rw [hs3] at hcl
     have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.iw.iw hS2.iw.iwSize
@@ -95,7 +94,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
       rcases hov with h0 | h0
       · rw [h0]; simpa using hi.toNat_lt
       · omega
-    obtain ⟨cl, a3, hrun3, hS3, hg3, ⟨hclH, hcld⟩, hA3⟩ := closeW_ok n dn fe vis m2 m3 a2 _ _ hi _ nds rc hcl hS2
+    obtain ⟨cl, a3, hrun3, hS3, hg3, ⟨hclH, hcld⟩, hA3⟩ := closeW_ok dn fe vis m2 m3 a2 _ _ hi _ nds rc hcl hS2
       hcH hD (by omega) hDb hib hA2
     rw [hcd] at hrun3
     obtain ⟨p3, hclP⟩ := ConRon.Bridge.Inductives.closeTelescope_spec nds vf.2.1 hi.toNat cur vf.2.2.1
@@ -103,7 +102,7 @@ theorem walkRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : WalkRef p dn vis
     refine RefE.bind_right hrun3 (RefE.ret rfl ⟨hC2.of_pstep hS3 hA3 p3, hg1.trans (hg2.trans hg3), hK.grow hg3,
       by simp only [List.headD_cons, List.tail_cons]; have := hg3.iw; omega, by simpa using hl1, hcH, hcd, hclH,
       hcld, hns2.grow hg3 htop2,
-      hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl), hA3, (c1.trans c2).trans (p3.toCore hC2.check),
+      hP2.fr (closeF_mfr hcl), hA3, (c1.trans c2).trans (p3.toCore hC2.check),
       vf.2.1, vf.2.2.1, vf.2.2.2, ConRon.Bridge.denoteEList_ext p3.ext _ _ hnds,
       ConRon.Bridge.denote_ext hcur p3.ext, dState_ext p3.ext _ _ hnsP2, hclP,
       fun i nd hi' => by simpa using hwnds i nd hi', by simpa using hwcur⟩)
