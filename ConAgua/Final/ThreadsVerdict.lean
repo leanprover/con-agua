@@ -149,7 +149,7 @@ def ThreadEVerdict : Prop :=
 (`Entry1Verdict`, as in `SeqVerdicts`) and a thread's failing call (`ThreadEVerdict`). -/
 structure ThreadVerdicts : Prop where
   entry1 : Entry1Verdict checkerProg
-  thr : ThreadEVerdict.{u}
+  thr : ThreadEVerdict
 
 /-! ## Pieces -/
 
@@ -212,7 +212,7 @@ set_option linter.constructorNameAsVariable false in
 theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-    (t : ThreadM) (i : Nat) (hV : ThreadEVerdict.{u}) (hR : ThreadFail b pb dm₀ ra₀ st₀ B ths t i)
+    (t : ThreadM) (i : Nat) (hV : ThreadEVerdict) (hR : ThreadFail b pb dm₀ ra₀ st₀ B ths t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinVerdictPooled [b] ((t.st i).data.regs.rax &&& 3) := by
   have hc := code_of_checkerFile_par hcode
@@ -329,7 +329,7 @@ theorem threadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     rw [abiLayout_s64 _ _ _ _ _ _ (by
       have := checkerTab.pos64_lt hl; have := (abiTabOk_spec checkerTab_abiOk).1; omega), checkerTab.wAt_pos64 hl]
     simp [zeroMem, Mem.arr64, zeros]
-  refine hV V b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab) hzero rfl _ _ abiFuel e
+  refine hV b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq (zeroMem checkerTab) hzero rfl _ _ abiFuel e
     hruns (fun c hc => ?_) (by rw [← hrax₁]; exact hR.claimed i (Nat.le_refl _)) hk
     (ths.map fun t' => (zeroMem checkerTab, f t')) (fun t' ht' => ?_) (fun t' ht' => ?_)
     (fun j hj => ?_)
@@ -354,7 +354,7 @@ a thread's call returned `rdx = 2` after its earlier calls accepted) and the cla
 theorem checkerFile_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (k : Word)
-    (hV : ThreadVerdicts.{u}) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
+    (hV : ThreadVerdicts) (hF : ThreadsFail b pb dm₀ ra₀ st₀ k) (hk : k &&& 3 ≠ 0) :
     TwinVerdictPooled [b] (k &&& 3) := by
   rcases hF with ⟨hE, rfl⟩ | ⟨B, ths, t, i, hT, rfl⟩
   · exact (entry1Fail_twin k0 hcode b pb h64 dm₀ ra₀ st₀ hV.entry1 hE hk).pooled

@@ -99,7 +99,7 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
 
 /-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
 at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/
-theorem threadEVerdict_proved : ThreadEVerdict.{u} :=
+theorem threadEVerdict_proved : ThreadEVerdict :=
   threads_twinVerdictPooled checkerCd_proved jobG_checker
 
 /-- **The sequential driver's verdict claims**: entry 1's from its stages' error specs, entry 2's from the jobs' (`entry2Verdict_of`). -/
@@ -108,7 +108,7 @@ theorem seqVerdicts_proved : SeqVerdicts checkerProg where
   entry2 := entry2Verdict_of checkerCd_proved jobG_checker
 
 /-- **The threaded harness's verdict claims**, without hypotheses. -/
-theorem threadVerdicts_proved : ThreadVerdicts.{u} where
+theorem threadVerdicts_proved : ThreadVerdicts where
   entry1 := entry1Verdict_of ⟨checker_preludeStageE, checker_frontStageE⟩
   thr := threadEVerdict_proved
 
