@@ -210,3 +210,7 @@ Against master `b4ce0391e`, both binaries `make` from the committed `checker.s`,
   `@[no_expose]` functions fails only with a kernel "application type mismatch". Both cost an
   hour of diagnosis; `#eval (checkerProg.filter (! CHK ·)).map (·.1)` against the failing
   `prog_all` names the function at once.
+* 04:35–05:10 gates: the warnings (fix-lean-warnings.py; deprecated `if_pos`/`if_neg`; unused
+  section variables of the `m2c_eta` refinements), the imports the sync left unused (shake: 54
+  deleted, 19 the build needs allowlisted), the link anchors (relink). Every gate green but
+  `e2e`: the 5 `nat_size_limit_*` fixtures (§5), waiting for the `--max-nat-size` decision.
