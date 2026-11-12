@@ -45,7 +45,7 @@ structure ArfLook (p : Prog) : Prop where
   cons : p.lookup "sl_cons" = some slCons
   apl : p.lookup "abstract_prefix_list" = some abstractPrefixList
   arf : p.lookup "aux_rule_fire" = some auxRuleFire
-  ab : AbF p
+  ab : ArF p
 
 l_model auxRuleFire_spec (p : Prog) (h : ArfLook p)
   fns [h.arf ↦ arfW]

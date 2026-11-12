@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndDecPLB
 public import ConAgua.Arena.IndPartsSpec.BsoK2
+public import ConAgua.Arena.IndPartsSpec.ReadCode
 import ConAgua.Arena.IndPosSpec.RootHoles
 public import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndSumSpec.Row
@@ -65,11 +66,16 @@ def ShapeSl (m : Mem) (q : Word) : Prop :=
   (∀ o l, iwN m (q.toNat + 2) = some o → iwN m (q.toNat + 3) = some l → o + l ≤ iwTop m) ∧
   MsB m q
 
-/-- `block_shape`'s result `(ok, q)` against the twin's `Option BlockShape`. -/
-def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
+/-- `block_shape_tail`'s result `(1, q)` against the twin's tail, which always reads a shape. -/
+def ShapeR (x : Except CheckError BlockShape) (r : List Word) (m : Mem) : Prop :=
   match x with
-  | none => r.headD 0 = 0
-  | some bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs ∧ ShapeSl m (r.tail.headD 0)
+  | .error _ => False
+  | .ok bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs ∧ ShapeSl m (r.tail.headD 0)
+
+/-- **`read_block`'s result `(e, q)` against the twin's `readBlock`**: the reason, or `0` and the
+shape record. -/
+def RbR (x : Except CheckError BlockShape) (r : List Word) (m : Mem) : Prop :=
+  ExcR (fun bs r' m => DecB (fun m => decBS m (r'.headD 0).toNat) m bs ∧ ShapeSl m (r'.headD 0)) x r m
 
 /-- A fresh record's words, in the cut pool. -/
 theorem partsFreshGet {vis : Word} {fe : IFEnv} {a : AState}
@@ -99,17 +105,16 @@ theorem LvlHyp.mono {c : CallM} {n : Nat} {dn : NIdx → Option ConLeche.Name} {
     (hT : ∀ sv a1, T' sv a1 → T sv a1) : LvlHyp c n dn vis fe m' T' :=
   fun sv a1 s z m1 hT' hf1 hS hs hsv hz => h sv a1 s z m1 (hT _ _ hT') (hf.trans hf1) hS hs hsv hz
 
-/-- The twin's prefix of `buildTwin` up to `lvlEq?`: the counts, the reserved names, the result sort
-`sv` (`LvlHyp`'s `T`). -/
+/-- The twin's prefix of `readAtTwin` up to `lvlEq?`: the counts, the result sort `sv` (`LvlHyp`'s
+`T`; the three tests between them are pure). -/
 def TbbT (nP : Nat) (cvT0 : IConstantVal) (cvTs : List IConstantVal) (cs : List (IConstantVal × Nat × Nat))
     (rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
-  ∃ nIdxs a2 R a3,
+  ∃ nIdxs a2,
     (ConRon.Arena.blockMemberCounts nP cvTs.length cs.length (cvTs.map (·.name)) rs 0 cvTs).run a =
-      .ok (some nIdxs, a2) ∧
-    (reservedBasisNames : AM (List NIdx)).run a2 = .ok (R, a3) ∧
-    (bsoTwin nP nIdxs cvT0.type).run a3 = .ok (sv, a1)
+      .ok (.ok nIdxs, a2) ∧
+    (bsoTwin nP nIdxs cvT0.type).run a2 = .ok (sv, a1)
 
-/-- The twin's prefix of `blockShape?` up to `lvlEq?`: the split, then `TbbT`. -/
+/-- The twin's prefix of `readBlock` up to `lvlEq?`: the split, then `TbbT`. -/
 def TshT (nP : Nat) (blk : List IConstantInfo) (a : AState) (sv : LIdx) (a1 : AState) : Prop :=
   ∃ cvT0 cvTs cs r0 rs, ConRon.Arena.blockSplit blk = some (cvT0 :: cvTs, cs, r0 :: rs) ∧
     TbbT nP cvT0 (cvT0 :: cvTs) cs (r0 :: rs) a sv a1

@@ -347,7 +347,6 @@ body, all four checks run (`&&` on already-fetched values), and the scan stops a
 that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
 `indproofs2`: rewritten from a `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
   lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r, ez) {
@@ -364,25 +363,23 @@ def checkStructProjTableScopedL : FunDecl :=
   return 0
 }
 
-/-- `check_struct_proj_table(T, lpsOff, lpsLen, nP, nF, cvCa, vis)`: stage 5, the projection
-table's checks: the bodies (read off the stored constructor type by substitution alone) validated
-once (`check_struct_proj_table_scoped`), the structure stored (else an internal error, an `abort`)
-and its table not yet taken. Nothing is pushed: the table is the block's install
-(`block_tables`, `IndDeclConsts.lean`). -/
+/-- `check_struct_proj_table(t, vis)`: stage 5, the projection table's checks at the table record
+`t` the block installs (`block_tables`, `IndDeclConsts.lean`; `EREC`, the layout of `decTbl`):
+its bodies' scoping at its own level parameters and parameter count, validated once
+(`check_struct_proj_table_scoped`, over `IW` copies of the two lists), the structure stored (else
+an internal error, an `abort`) and its table not yet taken. Nothing is pushed. -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
-  lfn (T, lpsOff, lpsLen, nP, nF, cvCa, vis)
-  locals (bOk, bOff, bLen, scopedOk, found, q, r) {
-  (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC⦃cvCa + 3⦄);
-  if bOk == 0 { abort };
-  scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
-  if bLen != nF { abort };
+  lfn (t, vis) locals (lo, ll, bo, bl, scopedOk, found, q, r) {
+  (lo, ll) := call er_to_iw(EREC⦃t + 3⦄, EREC⦃t + 4⦄);
+  (bo, bl) := call er_to_iw(EREC⦃t + 9⦄, EREC⦃t + 10⦄);
+  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + 5⦄, lo, ll, bo, bl);
+  if bl != EREC⦃t + 7⦄ { abort };
   if scopedOk != 1 { abort };
-  (found, q) := call env_find(T, vis);
+  (found, q) := call env_find(EREC⦃t + 2⦄, vis);
   if found == 0 { abort };
-  r := call find_table(vis, T);
+  r := call find_table(vis, EREC⦃t + 2⦄);
   if r != 0 { fail R_PROJECTION_TABLE_TAKEN };
   return 0
 }
@@ -546,6 +543,55 @@ def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   return r
 }
 
+/-- `has_loose_bvar_in_go(f, w, d, h)`: does a loose bound variable of index `d ‥< d + w` occur in
+`h`? Read only: no node is built. The twin's fuel `f` (abort at `0`, the children and `bvar_b` at
+`f - 1`), the packed-bound cutoff (`bvarB ≤ d`), then the tag: `bvar`/`fvar`/`sort`/`const`/`lit`
+direct answers, the rest through the `hb` memo keyed by the node and the window's base (`w` is
+fixed for the walk), short-circuiting at the first `true` child. The twin's per-call `memo` is the
+`hb` array (`IndIface`'s per-call-memo convention; `hasLooseBVarBGo`'s and this walk's top calls
+each clear it, and neither runs inside the other). -/
+-- con-ron: ConRon/Arena/Core.lean:2957-3002 ConRon.Arena.hasLooseBVarInGo
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarInGo]
+def hasLooseBVarInGoL : FunDecl :=
+  lfn (f, w, d, h) locals (bb, g, x, y, z, fd, j, dd, r1, r) {
+  if f == 0 { abort };
+  bb := call bvar_b(f - 1, h);
+  if bb <= d { return 0 };
+  (g, x, y, z) := call e_view(h);
+  if g == 0 { return u64(d <= x) & u64(x - d < w) };
+  if g == 1 || g == 2 || g == 3 || g == 8 { return 0 };
+  if d >= 4294967296 { abort };
+  (fd, j, dd) := call hb_find(h, d);
+  if fd != 0 { return HBM.u64[j * 4 + 3] };
+  if g == 4 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d, y) }
+  } else if g == 5 || g == 6 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d + 1, y) }
+  } else if g == 7 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 }
+    else {
+      r1 := call has_loose_bvar_in_go(f - 1, w, d, y);
+      if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d + 1, z) }
+    }
+  } else { r := call has_loose_bvar_in_go(f - 1, w, d, z) };
+  r := call has_loose_b_var_b_ins(h, d, r);
+  return r
+}
+
+/-- `has_loose_bvar_in(d, w, e)`: the window query (one memoized DAG walk, the `hb` memo cleared);
+an empty window asks nothing. -/
+-- con-ron: ConRon/Arena/Core.lean:3004-3008 ConRon.Arena.hasLooseBVarIn
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarIn]
+def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
+  if w == 0 { return 0 };
+  u := call hb_clear();
+  r := call has_loose_bvar_in_go(⟪CWF⟫, w, d, e);
+  return r
+}
+
 /-- `struct_used_later(cty, nP, j)`: field `j` is used by a later field (official's `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`). Its own top call (clears `hb`). -/
 -- con-ron: ConRon/Arena/Core.lean:3010-3016 ConRon.Arena.structUsedLater
@@ -557,38 +603,41 @@ def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) 
   return r
 }
 
-/-- `struct_proj_bodies_go(T, k, i, h)`: the projection bodies of a recognised block, one walk of
-the constructor telescope: field `i`'s domain is body `i`, the field replaced by the subject's
-projection before the walk continues. Returns `(ok, off, len)` (`Option (List EIdx)`). -/
+/-- `struct_proj_bodies_go(T, vo, vl, k, i, h)`: the projection bodies of a recognised block, one
+walk of the constructor telescope: field `i`'s raw domain substituted once at the values of the
+binders before it (`instantiate_lift_fast` over the `IW` slice `(vo, vl)`, push order), then the
+field's own value, the subject's projection `.proj T i (bvar 0)`, pushed onto the values
+(`sl_snoc`) before the walk continues on the raw body. Returns `(ok, off, len)`
+(`Option (List EIdx)`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:109-129 ConRon.Arena.structProjBodiesGo
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structProjBodiesGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.structProjBodiesGo`, `ConRon.Arena.instantiateLiftFast` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structProjBodiesGo]
 def structProjBodiesGoL : FunDecl :=
-  lfn (T, k, i, h) locals (g, x, y, z, a, b, ok2, ro, rl, no, nl) {
+  lfn (T, vo, vl, k, i, h) locals (g, x, y, z, a, b, no, nl, ok2, ro, rl, qo, ql) {
   if k == 0 { return (1, 0, 0) };
   if ⟦h⟧.tag != 6 { return (0, 0, 0) };
   (g, x, y, z) := call e_view(h);
+  b := call instantiate_lift_fast(⟪CWF⟫, x, vo, vl, 0);
   a := call struct_proj_arg_p(T, i);
   if 4294967296 <= a { abort };
-  b := call instantiate1_lift_fast(⟪CWF⟫, y, a, 0);
-  (ok2, ro, rl) := call struct_proj_bodies_go(T, k - 1, i + 1, b);
+  (no, nl) := call sl_snoc(vo, vl, a);
+  (ok2, ro, rl) := call struct_proj_bodies_go(T, no, nl, k - 1, i + 1, y);
   if ok2 == 0 { return (0, 0, 0) };
-  (no, nl) := call sl_cons(x, ro, rl);
-  return (1, no, nl)
+  (qo, ql) := call sl_cons(b, ro, rl);
+  return (1, qo, ql)
 }
 
 /-- `struct_proj_bodies(T, nP, nF, cty)`: the block's projection bodies, as the table stores
-them. Returns `(ok, off, len)` (`Option (Array EIdx)`, an `IW` slice either way). -/
+them: the parameter binders skipped (`strip_pis`), then the fields' walk at the parameters' values
+(`struct_proj_ps`, which in push order is con-leche's reversed list itself). Returns
+`(ok, off, len)` (`Option (Array EIdx)`, an `IW` slice either way). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:131-144 ConRon.Arena.structProjBodies
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structProjBodies` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structProjBodies]
 def structProjBodiesL : FunDecl :=
-  lfn (T, nP, nF, cty) locals (psOff, psLen, ok1, e1, ok2, bo, bl) {
-  (psOff, psLen) := call struct_proj_ps(nP);
-  (ok1, e1) := call inst_pis_at_lift(⟪CWF⟫, psOff, psLen, cty);
+  lfn (T, nP, nF, cty) locals (ok1, so, sl, e1, psOff, psLen, ok2, bo, bl) {
+  (ok1, so, sl, e1) := call strip_pis(nP, cty);
   if ok1 == 0 { return (0, 0, 0) };
-  (ok2, bo, bl) := call struct_proj_bodies_go(T, nF, 0, e1);
+  (psOff, psLen) := call struct_proj_ps(nP);
+  (ok2, bo, bl) := call struct_proj_bodies_go(T, psOff, psLen, nF, 0, e1);
   if ok2 == 0 { return (0, 0, 0) };
   return (1, bo, bl)
 }
@@ -660,6 +709,7 @@ def indSumFns : Prog :=
    ("struct_proj_ps", structProjPsL), ("struct_proj_arg_p", structProjArgPL),
    ("has_loose_b_var_b_ins", hasLooseBVarBInsL), ("has_loose_b_var_b_go", hasLooseBVarBGoL),
    ("has_loose_b_var_b_fast", hasLooseBVarBFastL),
+   ("has_loose_bvar_in_go", hasLooseBVarInGoL), ("has_loose_bvar_in", hasLooseBVarInL),
    ("struct_used_later", structUsedLaterL),
    ("struct_proj_bodies_go", structProjBodiesGoL), ("struct_proj_bodies", structProjBodiesL),
    ("mentions_const_go", mentionsConstGoL), ("mentions_const", mentionsConstL)]

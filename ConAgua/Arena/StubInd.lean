@@ -18,11 +18,12 @@ L code for callees of the inductive stage that were `abortStub`s in `checkerProg
   parameters on the level heap `LH`, they are copied to fresh `EREC` words, and the heap top is
   restored.
 * `open_pis_at_fvars_f(n, e, i)`: `openPisAtFvarsF`: `(1, off, len, body)` with the `n` fresh
-  free variables an `IW` slice, or `(0, 0, 0, 0)`. The one-pass walk (`opf_go`) keeps the free
-  variables made so far on the spine stack `SPN` above `CTL[136]` (the twin's `acc`, oldest
-  first, so `inst_list`'s slice convention is the twin's `instantiateListFast … acc`); when it
-  fails, the twin's fallback `openPisAtFvars` (`opa_go`, one `instantiate1` per binder) runs, as
-  the twin's does, for its effect on the store.
+  free variables an `IW` slice, or `(0, 0, 0, 0)`. The raw opening (`opf_go`, the twin's
+  `openPisRawGo`) keeps the free variables made so far on the spine stack `SPN` above `CTL[136]`
+  (the twin's `acc`, oldest first, so `inst_list`'s slice convention is the twin's
+  `instantiateListFast … acc`), then the residual is instantiated once; no fallback.
+* `opa_go(n, e, i)`: the sequential `openPisAtFvars` (one `instantiate1` per binder), for the
+  stream's recursor check (`IndStream.lean`).
 -/
 
 namespace L.Stubs
@@ -67,13 +68,14 @@ parameter names at `EREC[off ‥ off + len)`. -/
   return 0
 }
 
-/-- `opf_go(n, e, i, co, cn)`: `openPisAtFvarsFGo acc n e i` with `acc = SPN[co ‥ co + cn)`:
-`(1, body)` or `(0, 0)`; the free variables made are pushed. -/
--- con-ron: ConRon/Arena/Core.lean:2598-2615 ConRon.Arena.openPisAtFvarsFGo
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsFGo` is gone upstream; re-check the L code and its proofs, then delete this line
+/-- `opf_go(n, e, i, co, cn)`: `openPisRawGo acc n e i` with `acc = SPN[co ‥ co + cn)` (the push
+order `inst_list` reads): each domain instantiated by the free variables made so far in one
+`inst_list` pass, the residual left raw: `(1, residual)` or `(0, 0)`; the free variables made are
+pushed (so the substitution the twin returns is `SPN[co ‥ co + cn + n)`). -/
+-- con-ron: ConRon/Arena/Core.lean:2864-2883 ConRon.Arena.openPisRawGo
 @[no_expose, l_impl ConRon.Arena.openPisRawGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
-  if n == 0 { b := call inst_list(e, co, cn, 0); return (1, b) };
+  if n == 0 { return (1, e) };
   if ⟦e⟧.tag != 6 { return (0, 0) };
   (g, x, y, w) := call e_view(e);
   d := call inst_list(x, co, cn, 0);
@@ -99,22 +101,19 @@ def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
 }
 
 /-- `open_pis_at_fvars_f(n, e, i)`: `(1, off, n, body)` (the free variables an `IW` slice, in
-binder order) or `(0, 0, 0, 0)`. A first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation
-D33: the indices `i, i + 1, …` must not wrap). -/
+binder order) or `(0, 0, 0, 0)`: the raw opening (`opf_go`), then the residual in one `inst_list`
+pass. No fallback, as the twin: instantiating at free variables never makes a binder appear. A
+first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation D33: the indices `i, i + 1, …`
+must not wrap). -/
 -- con-ron: ConRon/Arena/Core.lean:2885-2895 ConRon.Arena.openPisAtFvarsF
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.openPisAtFvarsF`, `ConRon.Arena.openPisRawGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsF` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsF]
-def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
+def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, r, b, q, u) {
   if i >> 63 != 0 { abort };
   co := CTL.u64[136];
   if len(SPN.u64) < co { abort };
-  (ok, b) := call opf_go(n, e, i, co, 0);
-  if ok == 0 {
-    CTL.u64[136] := co;
-    (ok, b) := call opa_go(n, e, i);
-    if ok == 0 { CTL.u64[136] := co; return (0, 0, 0, 0) }
-  };
+  (ok, r) := call opf_go(n, e, i, co, 0);
+  if ok == 0 { CTL.u64[136] := co; return (0, 0, 0, 0) };
+  b := call inst_list(r, co, n, 0);
   q := call iw_alloc(n);
   u := call spn_to_iw(q, co, n);
   CTL.u64[136] := co;

@@ -167,7 +167,7 @@ def imFns : List FnName :=
    "pin_range_has", "pin_word", "pl_arm", "pl_at", "pl_clear", "pl_find", "pl_put", "pls_arm",
    "pls_clear", "pls_find", "pls_put", "pn_arm", "pn_at", "pn_clear", "pn_find", "pn_put",
    "pool_alloc0", "pool_copy", "pool_copy0", "pool_room", "prepare_major", "proj_a", "proj_b",
-   "proj_cert", "proj_find", "proj_guard_rows", "proj_guard_rows_at", "proj_guard_sort",
+   "proj_cert", "proj_find", "proj_guard_fast", "proj_guard_row", "proj_guard_rows", "proj_guard_rows_at", "proj_guard_rows_go", "proj_guard_sort",
    "proj_lit_to_ctor", "proj_push", "proj_type_at", "proj_wr", "proof_irrel", "proof_irrel_half",
    "proof_pw", "prop_irrel", "ps_at", "pw_eq", "quick_defeq", "quick_sort", "quot_at", "quot_pin", "quot_pin_hit", "quot_preds_ok", "raw_nat_lit", "raw_table",
    "rci_block", "rci_block_to", "rci_caps", "rci_ci", "rci_cv", "rci_fresh", "rci_lvls_to",

@@ -370,7 +370,7 @@ theorem decCaps_ctors {a : Nat → Option Word} {q : Nat} {caps : IIndCaps}
     (h : decCaps a q = some caps) :
     nat? a (q + 12) = some caps.nparams ∧ hlist? a (q + 13) = some caps.ctors := by
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, cts, hcts, heq⟩ := h
+  obtain ⟨_, _, _, _, _, _, np, hnp, cts, hcts, heq⟩ := h
   cases Option.some.inj heq
   exact ⟨hnp, hcts⟩
 

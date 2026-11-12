@@ -605,7 +605,7 @@ l_model checkDeclOpaque_specE (p : Prog) (hX : OpqArmProg p)
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **The opaque arm `check_decl_opaque` refines `checkDecl` on an opaque under `StageT`, both
+/-- **The opaque arm `check_decl_opaque` refines `checkDeclKind` on an opaque under `StageT`, both
 outcomes** (con-ron's `checkDecl_bridge_opaque`): the record into `EREC` (`erec_ci(i, 0)`), the
 constant check (`ccv_ref`, `allow = 0`), the opaque check (`checkOpaqueVal_ref`), for
 `Lean.reduceNat`/`Lean.reduceBool` the reduce-pin gate (`crp_ref`, con-ron's invariants after the
@@ -619,7 +619,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
     {x : ConLeche.Expr} (hcvd : Frontend.denoteCV a.store cv = some c)
     (hvd : denoteE a.store v = some x)
     (hF : ∃ env, ConRon.Bridge.FoldOK env fe a) (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkDeclOpaqueE p n m i vis) (checkDecl V pins fe (.opaqueDecl cv v)) a
+    RefE (VerdictCtxU p) (checkDeclOpaqueE p n m i vis) (checkDeclKind V pins fe (.opaqueDecl cv v)) a
       (fun w fe' a' => CdaPost dn m w.1 w.2 fe' a') := by
   obtain ⟨env, hFo⟩ := hF
   cases n with
@@ -627,7 +627,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDeclOpaqueE.eq_2]
-  unfold checkDecl
+  unfold checkDeclKind
   simp only []
   -- `erec_ci(i, 0)`
   refine RefE.onlySim (fun _ => checkDeclOpaqueE.k_erec_ci.none ..) (fun _ _ h => h)

@@ -92,7 +92,6 @@ def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
 /-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:309-313 ConRon.Arena.Frontend.internCaps
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.Frontend.internCaps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   x := call rom_u64_c(q);

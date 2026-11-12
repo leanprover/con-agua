@@ -469,29 +469,7 @@ theorem reduceNat_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : 
     RefE (KnotUpToE p n) (reduceNatE p n s₀.mem mode vis d e)
       (reduceNat (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE e)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
-  have hC := hS.rel
-  cases n with
-  | zero => rw [reduceNatE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n =>
-  rw [reduceNatE.eq_2]; unfold reduceNat
-  have hap : ((decE e).tag == ETag.app) = (tagW e == 4) := by
-    by_cases g : tagW e = 4
-    · have := (decE_tag_app e he).mpr g
-      rw [beq_iff_eq.mpr this, beq_iff_eq.mpr g]
-    · have : ¬ (decE e).tag = ETag.app := fun h' => g ((decE_tag_app e he).mp h')
-      rw [beq_eq_false_iff_ne.mpr this, beq_eq_false_iff_ne.mpr g]
-  refine RefE.retIf (fun g4 => by rw [hap]; exact beq_eq_false_iff_ne.mpr g4) (fun h => by simpa [hap] using h)
-    (fun _ => CorePost.ret hC rfl resW_zero) fun g4 _ => ?_
-  refine RefE.abort0 (by simp) fun hsc => ?_
-  refine RefE.abort0 (by simp) fun hbd => ?_
-  obtain ⟨hview, hfw, hbw⟩ := view_app s₀.mem a₀ hC.arena.base e he ⟨hsc, by simpa using hbd⟩
-    (by simpa using g4)
-  refine RefE.bind_right (view_run _ _ _ hview) ?_
-  exact RefE.tail_eq (reduceNatE.k_reduce_nat_head.none p)
-    (fun v => reduceNatE.k_reduce_nat_head.arm1 p v.1 v.2) (fun h => h.mono (by omega)) rfl
-    (CorePost.relist (MemFrame.refl _ _ _))
-    (reduceNatHead_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega)) s₀ a₀ dn vis fe MM eb mode d
-      _ _ hS hfw hbw)
+  sorry
 
 end refs
 

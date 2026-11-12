@@ -980,9 +980,9 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort (.const 0)⟩
 * `fvar_type_d(e)` → `t`; `fvar_type_ds(off, len)` → `(off, len)`.
 * `pi_result_f(fuel, e)` → `r`.
 * `inst_lp_fast(fuel, ks.off, ks.len, us, e)` → `e'`.
-* `inst_pis_at_lift(fuel, off, len, e)` → `(ok, e')`.
-* `instantiate1_fast(fuel, e, v, d)` → `e'`; `instantiate1_lift_fast(fuel, e, v, d)` → `e'`;
-  `abstract1_fast(fuel, e, d, k)` → `e'`.
+* `instantiate1_fast(fuel, e, v, d)` → `e'`; `instantiate_lift_fast(fuel, e, vs.off, vs.len, d)`
+  → `e'`;
+  `abstract1_fast(fuel, e, d, k)` → `e'`; `ar_entry(e, d, k, c)` → `e'` (`abstractRangeFast`).
 * `bvar_b(fuel, e)`, `fvar_b(fuel, e)` → a number; `has_fvar_fast(fuel, e)` → `0`/`1`;
   `loose_bvars_bounded_fast(fuel, k, e)` → `0`/`1`.
 * `all_level_params_defined(lps.off, lps.len, e)` → `0`/`1`.
@@ -1000,8 +1000,8 @@ def stubFns : Prog :=
    ("strip_pis", stub 2), ("strip_lams", stub 2), ("open_pis_at_fvars_f", stub 3),
    ("get_app_fn_f", stub 2), ("get_app_args_f", stub 2), ("mk_app_n_f", stub 3),
    ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result_f", stub 2),
-   ("inst_lp_fast", stub 5), ("inst_pis_at_lift", stub 4), ("instantiate1_fast", stub 4),
-   ("instantiate1_lift_fast", stub 4), ("abstract1_fast", stub 4),
+   ("inst_lp_fast", stub 5), ("instantiate1_fast", stub 4),
+   ("instantiate_lift_fast", stub 5), ("abstract1_fast", stub 4), ("ar_entry", stub 4),
    ("fvar_b", stub 2), ("has_fvar_fast", stub 2), ("loose_bvars_bounded_fast", stub 3),
    ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),

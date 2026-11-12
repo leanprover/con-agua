@@ -58,8 +58,6 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The lookups `check_constant_val`'s refinement takes. -/
 structure CcvProg (p : Prog) : Prop where
   val : ValProg p
-  resF : p.lookup "reserved_from" = some reservedFrom
-  resC : p.lookup "reserved_contains" = some reservedContains
   cont : p.lookup "sl_contains" = some slContains
   nodup : p.lookup "sl_nodup" = some slNodup
   basis : BasisProg p
@@ -70,7 +68,7 @@ with `Option` models through those models, the gates `all_level_params_defined`,
 `consts_resolve_ffast` and the core through `callE`. -/
 l_model checkConstantVal_specE (p : Prog) (hp : CcvProg p)
   fns [hp.val.ccv ↦ checkConstantValE]
-  specs [callW_spec p n "env_find", resCont_spec p hp.resF hp.resC n, callW_spec p n "nat_op_name",
+  specs [callW_spec p n "env_find", callW_spec p n "nat_op_name",
     callW_spec p n "erec_alloc", callW_spec p n "erec_put",
     callW_spec p n "lit_shape_ok",
     cvLps_specW p hp.val.cvg.alloc hp.val.cvg.copy hp.val.cvg.eti hp.val.cvg.lps n,
@@ -233,7 +231,7 @@ theorem ccvSims_of {p : Prog} (hp : StrLitProg p) (hcl : LitShapeClosed p)
     rw [R.res]; unfold decBool; simp
 
 /-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
-the duplicate and reserved-name guards, the certified-operation name, the literal shape of a fresh
+the duplicate guard, the certified-operation name, the literal shape of a fresh
 `axiomInfo cv` record (`ccv_rec`, `CcvSims.lit`), the universe parameters, the closedness walks,
 the consts-resolve site (`uce_errClaim_lo`), then the type's sort by the core. -/
 theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
@@ -271,21 +269,6 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     (fun hb => Classical.byContradiction fun hb1 => by
       rw [hname, findRes_miss hS.stage.check.env hwxl (by simpa using hb1)] at hb; cases hb)
     fun hb1 _ => ?_
-  -- `reserved_contains(x)`
-  rcases h2 : resContW n m wx with _ | c2
-  · rw [liftE_none, checkConstantValE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  by_cases hb2 : c2 ≠ 0
-  · rw [checkConstantValE.k_reserved_contains.abort1 p _ _ _ _ _ _ _ _ hb2]
-    obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.check.pins
-    refine RefE.bind_right hrunR (RefE.ite_pos ?_ (fun _ => ErrClaim.fail_abort _ _ rfl))
-    rw [hname]; exact hcl
-  have hc0 : c2 = 0 := by simpa using hb2
-  subst hc0
-  rw [checkConstantValE.k_reserved_contains.arm1 p _ _ _ _ _ _ _ _ rfl]
-  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
-  refine RefE.bind_right hrunR (RefE.ite_neg ?_ ?_)
-  · rw [hname, hcl]; decide
   -- `nat_op_name(x)`
   refine RefE.bindSim (fun _ => checkConstantValE.k_nat_op_name.none ..)
     (hname ▸ hC.natOp n vis fe m a wx hS.stage hwxl) fun r3 x3 m3 a3 h3 hrun3 ⟨hm3, ha3, hx3⟩ => ?_
