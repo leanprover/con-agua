@@ -394,5 +394,37 @@ abbrev R_USE_OF_THE_SORRYAX_IN_REC_RULE : L.Word := 754
 abbrev R_UNKNOWN_CONSTANT_IN_REC_TYPE : L.Word := 757
 /-- reject: unknown constant in the recursor's rule -/
 abbrev R_UNKNOWN_CONSTANT_IN_REC_RULE : L.Word := 761
+/-- reject: constructor declares another parameter count than the block -/
+abbrev R_CONSTRUCTOR_DECLARES_ANOTHER : L.Word := 765
+/-- reject: constructor declares other universe parameters than its type -/
+abbrev R_CONSTRUCTOR_DECLARES_OTHER : L.Word := 769
+/-- reject: constructor declares other universe parameters than the block's inductive types -/
+abbrev R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE : L.Word := 773
+/-- reject: inductive block carries no recursor records; the input must carry the recursors of every inductive block -/
+abbrev R_INDUCTIVE_BLOCK_CARRIES : L.Word := 777
+/-- reject: inductive block declares no inductive type -/
+abbrev R_INDUCTIVE_BLOCK_DECLARES : L.Word := 781
+/-- reject: inductive block: its records are not the inductive types, then the constructors, then the recursors -/
+abbrev R_INDUCTIVE_BLOCK_ITS : L.Word := 785
+/-- reject: inductive type declares more parameters than its type has binders -/
+abbrev R_INDUCTIVE_TYPE_DECLARES : L.Word := 789
+/-- reject: inductive type declares other universe parameters than the block's first type -/
+abbrev R_INDUCTIVE_TYPE_DECLARES_OTHER : L.Word := 793
+/-- reject: no recursor of the block eliminates the inductive type -/
+abbrev R_NO_RECURSOR_OF : L.Word := 797
+/-- reject: reserved basis name in the block of -/
+abbrev R_RESERVED_BASIS_NAME_IN : L.Word := 801
+/-- reject: target rec: a recursor is named for a literal guard's slot or a certified Nat operation -/
+abbrev R_TARGET_REC_A_RECURSOR : L.Word := 805
+/-- reject: the argument counts of a recursor do not fit the block -/
+abbrev R_THE_ARGUMENT_COUNTS : L.Word := 809
+/-- reject: the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size -/
+abbrev R_THE_KERNEL_REFUSED : L.Word := 813
+/-- reject: the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer -/
+abbrev R_THE_KERNEL_REFUSED_TO : L.Word := 817
+/-- reject: the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size -/
+abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE : L.Word := 821
+/-- reject: the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer -/
+abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT : L.Word := 825
 
 end L.Arena
