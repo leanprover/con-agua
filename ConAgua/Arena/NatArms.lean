@@ -211,7 +211,7 @@ theorem topLitS_refines (g f : FnName) (F : Nat → Nat → Nat) (hg : p.lookup 
       litNatSized_refines p R hpool hI hz hsr hls n (a₀ := a₀)]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *)
-    all_goals (first | grind [lang_grind, arena_grind, LocEq] | sorry)
+    all_goals grind [lang_grind, arena_grind, LocEq]
 
 end generic
 

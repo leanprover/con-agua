@@ -97,7 +97,7 @@ theorem limbPush_spec (p : Prog) (hp : p.lookup "limb_push" = some limbPushL) (n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals (first | grind (gen := 20) [lang_grind, arena_grind, natop_grind, Grows.push1, PoolOK.grows] | (trace_state; sorry))
+    all_goals grind (gen := 20) [lang_grind, arena_grind, natop_grind, Grows.push1, PoolOK.grows]
 
 section powNat
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
@@ -131,7 +131,7 @@ theorem powNat_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
         limbPush_spec p hlp n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq, PtPost] at *)
-    all_goals (first | grind (gen := 20) (splits := 20) [lang_grind, arena_grind, natop_grind, pow_two_shift] | (trace_state; sorry))
+    all_goals grind (gen := 20) (splits := 20) [lang_grind, arena_grind, natop_grind, pow_two_shift]
 
 end powNat
 
