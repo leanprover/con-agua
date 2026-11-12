@@ -83,7 +83,7 @@ theorem pbW_mfr : ∀ (n : Nat) (m m' : Mem) (T k i h : Word) (r : List Word),
     pbW n m T k i h = some (r, m') → MFr [] [] m m'
   | 0, _, _, _, _, _, _, _, hh => by rw [pbW.eq_1] at hh; cases hh
   | n + 1, m, m', T, k, i, h, r, hh => by
-    simp only [pbW.eq_2, pbW.k_struct_proj_arg_p.eq_def, pbW.k_instantiate1_lift_fast.eq_def,
+    simp only [pbW.eq_2, pbW.k_struct_proj_arg_p.eq_def, pbW.k_instantiate_lift_fast.eq_def,
       pbW.k_struct_proj_bodies_go.eq_def, pbW.k_sl_cons.eq_def] at hh
     mfr_auto hh [pbW_mfr n _ _ _ _ _ _ _, spaW_mfr, i1lF_mfr, consW_mfr]
 

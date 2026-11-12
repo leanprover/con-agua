@@ -557,38 +557,41 @@ def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) 
   return r
 }
 
-/-- `struct_proj_bodies_go(T, k, i, h)`: the projection bodies of a recognised block, one walk of
-the constructor telescope: field `i`'s domain is body `i`, the field replaced by the subject's
-projection before the walk continues. Returns `(ok, off, len)` (`Option (List EIdx)`). -/
+/-- `struct_proj_bodies_go(T, vo, vl, k, i, h)`: the projection bodies of a recognised block, one
+walk of the constructor telescope: field `i`'s raw domain substituted once at the values of the
+binders before it (`instantiate_lift_fast` over the `IW` slice `(vo, vl)`, push order), then the
+field's own value, the subject's projection `.proj T i (bvar 0)`, pushed onto the values
+(`sl_snoc`) before the walk continues on the raw body. Returns `(ok, off, len)`
+(`Option (List EIdx)`). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:109-129 ConRon.Arena.structProjBodiesGo
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structProjBodiesGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.structProjBodiesGo`, `ConRon.Arena.instantiateLiftFast` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structProjBodiesGo]
 def structProjBodiesGoL : FunDecl :=
-  lfn (T, k, i, h) locals (g, x, y, z, a, b, ok2, ro, rl, no, nl) {
+  lfn (T, vo, vl, k, i, h) locals (g, x, y, z, a, b, no, nl, ok2, ro, rl, qo, ql) {
   if k == 0 { return (1, 0, 0) };
   if ⟦h⟧.tag != 6 { return (0, 0, 0) };
   (g, x, y, z) := call e_view(h);
+  b := call instantiate_lift_fast(⟪CWF⟫, x, vo, vl, 0);
   a := call struct_proj_arg_p(T, i);
   if 4294967296 <= a { abort };
-  b := call instantiate1_lift_fast(⟪CWF⟫, y, a, 0);
-  (ok2, ro, rl) := call struct_proj_bodies_go(T, k - 1, i + 1, b);
+  (no, nl) := call sl_snoc(vo, vl, a);
+  (ok2, ro, rl) := call struct_proj_bodies_go(T, no, nl, k - 1, i + 1, y);
   if ok2 == 0 { return (0, 0, 0) };
-  (no, nl) := call sl_cons(x, ro, rl);
-  return (1, no, nl)
+  (qo, ql) := call sl_cons(b, ro, rl);
+  return (1, qo, ql)
 }
 
 /-- `struct_proj_bodies(T, nP, nF, cty)`: the block's projection bodies, as the table stores
-them. Returns `(ok, off, len)` (`Option (Array EIdx)`, an `IW` slice either way). -/
+them: the parameter binders skipped (`strip_pis`), then the fields' walk at the parameters' values
+(`struct_proj_ps`, which in push order is con-leche's reversed list itself). Returns
+`(ok, off, len)` (`Option (Array EIdx)`, an `IW` slice either way). -/
 -- con-ron: ConRon/Arena/Inductives/StructParts.lean:131-144 ConRon.Arena.structProjBodies
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structProjBodies` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structProjBodies]
 def structProjBodiesL : FunDecl :=
-  lfn (T, nP, nF, cty) locals (psOff, psLen, ok1, e1, ok2, bo, bl) {
-  (psOff, psLen) := call struct_proj_ps(nP);
-  (ok1, e1) := call inst_pis_at_lift(⟪CWF⟫, psOff, psLen, cty);
+  lfn (T, nP, nF, cty) locals (ok1, so, sl, e1, psOff, psLen, ok2, bo, bl) {
+  (ok1, so, sl, e1) := call strip_pis(nP, cty);
   if ok1 == 0 { return (0, 0, 0) };
-  (ok2, bo, bl) := call struct_proj_bodies_go(T, nF, 0, e1);
+  (psOff, psLen) := call struct_proj_ps(nP);
+  (ok2, bo, bl) := call struct_proj_bodies_go(T, psOff, psLen, nF, 0, e1);
   if ok2 == 0 { return (0, 0, 0) };
   return (1, bo, bl)
 }
