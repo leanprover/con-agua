@@ -540,23 +540,29 @@ meta def scripts (f : Name) (ty : Lean.Expr) : TermElabM (List (TSyntax `tactic)
   let m ← forallTelescope ty fun xs _ => pure xs.size
   let names := (List.range m).map fun j => mkIdent (Name.mkSimple s!"a{j}")
   let introT ← `(tactic| intro $(names.toArray)*)
-  let mk (fi : Nat) (useRw : Bool) : TermElabM (TSyntax `tactic) := do
+  let mk (fi : Nat) (useRw : Bool) (close : Bool := false) : TermElabM (TSyntax `tactic) := do
     let fuelId := names[fi]!
     let gen := (names.eraseIdx fi).toArray
     let unf ← if useRw then `(tactic| rw [$fid:ident]) else `(tactic| simp only [$fid:ident])
+    -- `close`: a `match` on the counted argument under a bind is split generically, leaving the
+    -- count's equation (`0 = k + 1`, `n + 1 = k + 1`) beside the goal: `omega` or `simp_all` (IH)
+    let fin ← if close then `(tactic| (smono_auto <;> first | omega | simp_all))
+      else `(tactic| smono_auto)
     if gen.isEmpty then
       `(tactic| ($introT:tactic; induction $fuelId:ident with
-          | zero => $unf:tactic; smono_auto; done
-          | succ _ ih => $unf:tactic; smono_auto; done))
+          | zero => $unf:tactic; $fin:tactic; done
+          | succ _ ih => $unf:tactic; $fin:tactic; done))
     else
       `(tactic| ($introT:tactic; induction $fuelId:ident generalizing $gen* with
-          | zero => $unf:tactic; smono_auto; done
-          | succ _ ih => $unf:tactic; smono_auto; done))
+          | zero => $unf:tactic; $fin:tactic; done
+          | succ _ ih => $unf:tactic; $fin:tactic; done))
   if let some fi := fi? then
-    out := out ++ [← mk fi false]
+    out := out ++ [← mk fi false, ← mk fi true (close := true)]
   if rec_ then
     for i in nats do
       if some i != fi? then out := out ++ [← mk i true]
+    for i in nats do
+      if some i != fi? then out := out ++ [← mk i true (close := true)]
   if rec_ then
     out := out ++ [← `(tactic| (intros; fun_induction $fid:ident <;> (smono_auto; done)))]
   else
