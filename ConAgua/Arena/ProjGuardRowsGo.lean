@@ -184,6 +184,235 @@ theorem pgRow_okC {m m' : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a vi
     rw [hspW, ite_eq_right (fun h => by have := congrArg UInt64.toNat h; omega),
       ite_eq_right (fun h => by have := congrArg UInt64.toNat h; omega)]
 
+/-- What the guard's row functions need of a program. -/
+structure PgGoProg (p : Prog) : Prop where
+  go : p.lookup "proj_guard_rows_go" = some projGuardRowsGoL
+  row : p.lookup "proj_guard_row" = some projGuardRowL
+  fast : p.lookup "proj_guard_fast" = some projGuardFastL
+  hl : HlF p
+  opf : OpfF p
+
+/-- The rows' words against the twin's answer, at `ro` on the stack. -/
+def GoRes (ro : Word) (m : Mem) (r : List Word) : Option (Array (Nat × EIdx)) → Prop
+  | none => r.headD 0 = 0
+  | some rows => r.headD 0 = 1 ∧ rows.size = (r.tail.headD 0).toNat ∧ RowsAt m ro rows ∧
+      ro.toNat + 2 * rows.size ≤ (spTop m).toNat
+
+theorem callW_opfP {p : Prog} (hO : OpfF p) {n : Nat} {f : FnName} (hf : f ∈ opfPFns := by decide)
+    {vs : List Word} {m : Mem} : callW p n f vs m = callW opfP n f vs m :=
+  callW_agree opfP_closed (hO.agree opfPFns) n hf vs m
+
+/-- **`proj_guard_rows_go` refines `projGuardRowsGo` under `CoreS`**: the rows `out` at `ro` on
+the stack, the top just past them; the rows after at `ro`, the stack below the old top kept. -/
+theorem pgGo_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps)
+    (k d h ro rn : Word) (out : Array (Nat × EIdx)) (r : List Word),
+    callW p n "proj_guard_rows_go" [k, d, h, ro, rn] m = some (r, m') →
+    CoreS dn m a vis fe M eb → HW h → RowsAt m ro out → out.size = rn.toNat →
+    (spTop m).toNat = ro.toNat + 2 * rn.toNat → (spTop m).toNat ≤ (m.arr64 SPN).size →
+    d.toNat + k.toNat < 2 ^ 64 →
+    ∃ y a' M', (projGuardRowsGo k.toNat d.toNat (decE h) out).run a = .ok (y, a') ∧
+      CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+      (spTop m).toNat ≤ (spTop m').toNat ∧
+      (∀ w : Word, w.toNat < (spTop m).toNat → spW m' w = spW m w) ∧ GoRes ro m' r y := by
+  intro n
+  induction n with
+  | zero => intro m m' a M k d h ro rn out r hc; rw [callW_zero] at hc; cases hc
+  | succ n ih =>
+  intro m m' a M k d h ro rn out r hc hS hh hrows hsz htop htb hdk
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pgGoW_spec p hP.go (n + 1) _ k d h ro rn) hc
+  rw [hs'] at hW
+  clear hc hs'
+  have hsp := hS.spn
+  simp only [pgGoW] at hW
+  by_cases hg : tagW h ≠ 6
+  · rw [ite_eq_left hg] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨none, a, M, pgGo_run_nf _ _ _ _ a (by rw [decE_tag_forallE_beq h hh]; simpa using hg),
+      hS, KeptAll.refl _ _, rfl, Nat.le_refl _, fun _ _ => rfl, rfl⟩
+  rw [ite_eq_right hg] at hW
+  have hg6 : tagW h = 6 := Decidable.not_not.mp hg
+  have htag : ((decE h).tag == ETag.forallE) = true := by rw [decE_tag_forallE_beq h hh]; simpa using hg6
+  rcases c1 : callW p n "e_view" [h] m with _ | ⟨r1, m1⟩
+  · rw [c1] at hW; cases hW
+  rw [c1] at hW
+  simp only [pgGoW.k_e_view] at hW
+  rw [callW_opfP hP.opf] at c1
+  obtain ⟨rfl, hx, hy, hview⟩ := opfV_okC hS hg6 c1
+  generalize r1.tail.headD 0 = x at hW hx hview
+  generalize r1.tail.tail.headD 0 = y at hW hy hview
+  by_cases hk : k = 0
+  · -- the projected field: its domain the last row
+    subst hk
+    rw [ite_eq_left rfl] at hW
+    rcases c2 : callW p n "proj_guard_row" [ro, rn, d, x] m1 with _ | ⟨r2, m2⟩
+    · rw [c2] at hW; cases hW
+    rw [c2] at hW
+    simp only [pgGoW.k_proj_guard_row] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (pgRowW_spec p hP.row n _ ro rn d x) c2
+    rw [hs2] at hW2
+    obtain ⟨hS2, rfl, -, htop2, hsz2, hb2, h1, h2, hk2⟩ := pgRow_okC hS (by omega) hW2
+    have hrn : (rn + 1).toNat = rn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    refine ⟨_, _, M, pgGo_run_zero _ _ _ _ _ a htag hview, hS2, KeptAll.refl _ _, hsz2,
+      by omega, fun w hw => hk2 w (by omega), rfl, ?_, ?_, ?_⟩
+    · simp [hrn, hsz]
+    · exact RowsAt.push hrows hsz (by omega) h1 h2 hx hk2
+    · simp only [Array.size_push]; omega
+  rw [ite_eq_right hk] at hW
+  have hk1 := wsub1 hk
+  have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rcases c2 : callW p n "has_loose_b_var_b_fast" [0, y] m1 with _ | ⟨r2, m2⟩
+  · rw [c2] at hW; cases hW
+  rw [c2] at hW
+  simp only [pgGoW.k_has_loose_b_var_b_fast] at hW
+  obtain ⟨b, a1, hrun1, hb, -, hS2, hK2, -, -, -⟩ := hbFast_okC hP.hl n hy hS hS.iw hS.memos.hb c2
+  have hrows2 : RowsAt m2 ro out :=
+    RowsAt.keepB hrows (by omega) fun w hw => hK2.below w (by rw [UInt64.lt_iff_toNat_lt]; omega)
+  have htop2 : spTop m2 = spTop m1 := hK2.top
+  cases b with
+  | false =>
+    rw [ite_eq_right (by rw [hb]; simp)] at hW
+    simp only [pgGoW.k_proj_guard_rows_go] at hW
+    rcases c3 : callW p n "proj_guard_rows_go" [k - 1, d + 1, y, ro, rn] m2 with _ | ⟨r3, m3⟩
+    · rw [c3] at hW; cases hW
+    rw [c3] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨z, a3, M3, hrun3, hS3, hK3, hsz3, ht3, hb3, hres3⟩ := ih m2 _ a1 M (k - 1) (d + 1) y ro rn out _
+      c3 hS2 hy hrows2 hsz (by rw [htop2]; omega) (by rw [htop2, hK2.size]; omega) (by omega)
+    refine ⟨z, a3, M3, ?_, hS3, hK3, by rw [hsz3, hK2.size], by rw [← htop2]; exact ht3,
+      fun w hw => by rw [hb3 w (by rw [htop2]; exact hw), hK2.below w (by rw [UInt64.lt_iff_toNat_lt]; omega)],
+      by cases z <;> exact hres3⟩
+    rw [← hk1]
+    exact pgGo_run_unused _ _ _ _ _ _ a a1 a3 z htag hview hrun1 (by rw [← hd1]; exact hrun3)
+  | true =>
+    rw [ite_eq_left (by rw [hb]; simp)] at hW
+    rcases c3 : callW p n "intern_fvar" [d, x] m2 with _ | ⟨r3, m3⟩
+    · rw [c3] at hW; cases hW
+    rw [c3] at hW
+    simp only [pgGoW.k_intern_fvar] at hW
+    rw [callW_opfP hP.opf] at c3
+    obtain ⟨a2, hrun2, hS3, hspn3, htop3, hfv⟩ := opfFv_okC hS2 hx c3
+    rw [ite_eq_right (show ¬ (4294967296 : Word) ≤ r3.headD 0 from fun h => by
+      rw [UInt64.le_iff_toNat_le] at h; have : (4294967296 : Word).toNat = 4294967296 := rfl; omega)] at hW
+    rcases c4 : callW p n "inst_entry" [y, r3.headD 0, 0] m3 with _ | ⟨r4, m4⟩
+    · rw [c4] at hW; cases hW
+    rw [c4] at hW
+    simp only [pgGoW.k_inst_entry] at hW
+    rw [callW_opfP hP.opf] at c4
+    obtain ⟨a3, M3, hrun3, hS4, hK4, hspn4, htop4, hb2⟩ := opfI1_okC hS3 hy c4
+    have hsp4 : ∀ w, spW m4 w = spW m2 w := fun w => by simp only [spW, hspn4, hspn3]
+    have ht4 : spTop m4 = spTop m1 := by simp only [spTop, htop4, htop3]; exact htop2
+    rcases c5 : callW p n "proj_guard_row" [ro, rn, d, x] m4 with _ | ⟨r5, m5⟩
+    · rw [c5] at hW; cases hW
+    rw [c5] at hW
+    simp only [pgGoW.k_proj_guard_row_2] at hW
+    obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+      (pgRowW_spec p hP.row n _ ro rn d x) c5
+    rw [hs5] at hW5
+    have hsz4 : (m4.arr64 SPN).size = (m1.arr64 SPN).size := by rw [hspn4, hspn3, hK2.size]
+    obtain ⟨hS5, rfl, -, htop5, hsz5, hb5, h1, h2, hk5⟩ := pgRow_okC hS4 (by omega) hW5
+    simp only [List.headD_cons] at hW
+    rcases c6 : callW p n "proj_guard_rows_go" [k - 1, d + 1, r4.headD 0, ro, rn + 1] m5 with _ | ⟨r6, m6⟩
+    · rw [c6] at hW; cases hW
+    rw [c6] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hrows4 : RowsAt m4 ro out := RowsAt.keepB hrows2 (by omega) fun w _ => hsp4 w
+    have hrn : (rn + 1).toNat = rn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hrows5 := RowsAt.push hrows4 hsz (by omega) h1 h2 hx hk5
+    obtain ⟨z, a6, M6, hrun6, hS6, hK6, hsz6, ht6, hb6, hres6⟩ := ih m5 _ a3 M3 (k - 1) (d + 1) _ ro (rn + 1)
+      _ _ c6 hS5 hb2 hrows5 (by simp [hsz, hrn]) (by rw [htop5, hrn]; omega) (by rw [htop5, hsz5]; omega)
+      (by omega)
+    refine ⟨z, a6, M6, ?_, hS6, hK4.trans hK6, by rw [hsz6, hsz5, hsz4], by omega, fun w hw => ?_,
+      by cases z <;> exact hres6⟩
+    · rw [← hk1]
+      exact pgGo_run_used _ _ _ _ _ _ _ _ a a1 a2 a3 a6 z htag hview hrun1 hrun2 hrun3
+        (by rw [← hd1]; exact hrun6)
+    · rw [hb6 w (by omega), hk5 w (by omega), hsp4 w, hK2.below w (by rw [UInt64.lt_iff_toNat_lt]; omega)]
+
+/-- The fast case's words against the twin's answer. -/
+def FastRes (r : List Word) : Option EIdx → Prop
+  | none => r.headD 0 = 0
+  | some dom => r.headD 0 = 1 ∧ HW (r.tail.headD 0) ∧ decE (r.tail.headD 0) = dom
+
+/-- **`proj_guard_fast` refines `projGuardFast` under `CoreS`** (the window queries read only). -/
+theorem pgFast_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps)
+    (k j h : Word) (r : List Word), callW p n "proj_guard_fast" [k, j, h] m = some (r, m') →
+    CoreS dn m a vis fe M eb → HW h → j.toNat + k.toNat < 2 ^ 64 →
+    ∃ y a', (projGuardFast k.toNat j.toNat (decE h)).run a = .ok (y, a') ∧
+      CoreS dn m' a' vis fe M eb ∧ StackKept m m' ∧ FastRes r y := by
+  intro n
+  induction n with
+  | zero => intro m m' a M k j h r hc; rw [callW_zero] at hc; cases hc
+  | succ n ih =>
+  intro m m' a M k j h r hc hS hh hjk
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pgFastW_spec p hP.fast (n + 1) _ k j h) hc
+  rw [hs'] at hW
+  clear hc hs'
+  simp only [pgFastW] at hW
+  by_cases hg : tagW h ≠ 6
+  · rw [ite_eq_left hg] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨none, a, pgFast_run_nf _ _ _ a (by rw [decE_tag_forallE_beq h hh]; simpa using hg),
+      hS, StackKept.refl _, rfl⟩
+  rw [ite_eq_right hg] at hW
+  have hg6 : tagW h = 6 := Decidable.not_not.mp hg
+  have htag : ((decE h).tag == ETag.forallE) = true := by rw [decE_tag_forallE_beq h hh]; simpa using hg6
+  rcases c1 : callW p n "e_view" [h] m with _ | ⟨r1, m1⟩
+  · rw [c1] at hW; cases hW
+  rw [c1] at hW
+  simp only [pgFastW.k_e_view] at hW
+  rw [callW_opfP hP.opf] at c1
+  obtain ⟨rfl, hx, hy, hview⟩ := opfV_okC hS hg6 c1
+  generalize r1.tail.headD 0 = x at hW hx hview
+  generalize r1.tail.tail.headD 0 = y at hW hy hview
+  by_cases hk : k = 0
+  · subst hk
+    rw [ite_eq_left rfl] at hW
+    rcases c2 : callW p n "has_loose_bvar_in" [0, j, h] m1 with _ | ⟨r2, m2⟩
+    · rw [c2] at hW; cases hW
+    rw [c2] at hW
+    simp only [pgFastW.k_has_loose_bvar_in] at hW
+    obtain ⟨b, a1, hrun1, hb, -, hS2, hK2, -, -, -⟩ := hlbi_okC hP.hl n hh hS hS.iw hS.memos.hb c2
+    have hrun := pgFast_run_zero _ _ _ _ a a1 b htag hview hrun1
+    cases b with
+    | true =>
+      rw [ite_eq_left (by rw [hb]; simp)] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨none, a1, hrun, hS2, hK2, rfl⟩
+    | false =>
+      rw [ite_eq_right (by rw [hb]; simp)] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨some _, a1, hrun, hS2, hK2, rfl, hx, rfl⟩
+  rw [ite_eq_right hk] at hW
+  have hk1 := wsub1 hk
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  rcases c2 : callW p n "has_loose_bvar_in" [0, j, x] m1 with _ | ⟨r2, m2⟩
+  · rw [c2] at hW; cases hW
+  rw [c2] at hW
+  simp only [pgFastW.k_has_loose_bvar_in_2] at hW
+  obtain ⟨b, a1, hrun1, hb, -, hS2, hK2, -, -, -⟩ := hlbi_okC hP.hl n hx hS hS.iw hS.memos.hb c2
+  have hrun := pgFast_run_succ (k - 1).toNat _ _ _ _ a a1 b htag hview hrun1
+  rw [hk1] at hrun
+  cases b with
+  | true =>
+    rw [ite_eq_left (by rw [hb]; simp)] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨none, a1, hrun, hS2, hK2, rfl⟩
+  | false =>
+    rw [ite_eq_right (by rw [hb]; simp)] at hW
+    rw [hrun, if_neg (by decide)]
+    rcases c3 : callW p n "proj_guard_fast" [k - 1, j + 1, y] m2 with _ | ⟨r3, m3⟩
+    · rw [c3] at hW; cases hW
+    rw [c3] at hW
+    simp only [pgFastW.k_proj_guard_fast] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨z, a3, hrun3, hS3, hK3, hres⟩ := ih m2 _ a1 M (k - 1) (j + 1) y _ c3 hS2 hy (by omega)
+    refine ⟨z, a3, by rw [← hj1]; exact hrun3, hS3, hK2.trans hK3, ?_⟩
+    cases z <;> simpa [FastRes] using hres
+
 end
 
 end L.Ind
