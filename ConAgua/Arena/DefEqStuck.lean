@@ -166,6 +166,10 @@ structure StuckCallees (p : Prog) : Prop where
   supKeep : ∀ fe, SupKeep fe
   lazyDeltaStep : LazyDeltaStepH p
   reduceProjCore : ReduceProjCoreH p
+  /-- The unit-like certificate's walks and level test (`unit_like_shape_at`, `is_prop_type`). -/
+  instLP : InstLPOK p
+  instList : InstListOK p
+  lvc : LvlCacheProg p
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :
