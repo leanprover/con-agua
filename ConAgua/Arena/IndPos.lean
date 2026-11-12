@@ -98,18 +98,27 @@ def memberIdxAt : FunDecl := lfn (namesOff, namesLen, lvls, e) locals (g, n, us,
 
 /-! ## Closing a telescope -/
 
-/-- `close_telescope(dsOff, dsLen, i, body)`: `closeTelescope`, the innermost binder (the LAST of
-`ds`) abstracted and bound first (the twin recurses to the end of the list before building). -/
--- con-ron: ConRon/Arena/Inductives/Positivity.lean:176-181 ConRon.Arena.closeTelescope
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.closeTelescope` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.closeTelescope`, `ConRon.Arena.closeTelescopeGo` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.closeTelescope]
-def closeTelescope : FunDecl := lfn (dsOff, dsLen, i, body) locals (inner, closed, r) {
-  if dsLen == 0 { return body };
-  inner := call close_telescope(dsOff + 1, dsLen - 1, i + 1, body);
-  closed := call abstract1_fast(⟪CWF⟫, inner, i, 0);
-  r := call mk_forall(IW.u64[dsOff], closed);
+/-- `close_telescope_go(i, k, dsOff, dsLen, body)`: close the telescope `ds`, opened at the free
+variables `i + k ‥< i + k + dsLen`, after `k` binders: each domain and the body abstracted ONCE
+over the free variables `i ‥< i + k` of the binders outside it (`ar_entry`, `abstractRangeFast`),
+the domain before the rest is closed. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:162-176 ConRon.Arena.closeTelescopeGo
+@[no_expose, l_impl ConRon.Arena.closeTelescopeGo]
+def closeTelescopeGo : FunDecl := lfn (i, k, dsOff, dsLen, body) locals (d, inner, r) {
+  if dsLen == 0 { r := call ar_entry(body, i, k, 0); return r };
+  d := call ar_entry(IW.u64[dsOff], i, k, 0);
+  inner := call close_telescope_go(i, k + 1, dsOff + 1, dsLen - 1, body);
+  r := call mk_forall(d, inner);
   if 4294967296 <= r { abort };
+  return r
+}
+
+/-- `close_telescope(dsOff, dsLen, i, body)`: `closeTelescope`, the telescope opened at
+`i ‥< i + dsLen` closed by `close_telescope_go` from `k = 0`. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:176-181 ConRon.Arena.closeTelescope
+@[no_expose, l_impl ConRon.Arena.closeTelescope]
+def closeTelescope : FunDecl := lfn (dsOff, dsLen, i, body) locals (r) {
+  r := call close_telescope_go(i, 0, dsOff, dsLen, body);
   return r
 }
 
@@ -781,7 +790,7 @@ def nestCrest : FunDecl :=
 def indPosFns : Prog :=
   [("mentions_any_node", mentionsAnyNode), ("mentions_any_go", mentionsAnyGo),
    ("mentions_any_const", mentionsAnyConst), ("member_idx_at", memberIdxAt),
-   ("close_telescope", closeTelescope),
+   ("close_telescope_go", closeTelescopeGo), ("close_telescope", closeTelescope),
    ("nest_occ_node", nestOccNode), ("nest_occ_go", nestOccGo), ("nest_occ", nestOcc),
    ("inst_pis_with", instPisWith),
    ("depth_node", depthNode), ("depth_go", depthGo), ("depth", depth),
@@ -829,12 +838,6 @@ def indPosFns : Prog :=
 #guard
   match run (indPosFns ++ libFns ++ stubFns ++ masterFns) 100 "nest_ctx_hi_at" [0, 5] testMem with
   | .ok ([5], _) => true | _ => false
-
--- `close_telescope`: an empty telescope returns the body unchanged.
-#guard
-  match run (indPosFns ++ libFns ++ stubFns ++ masterFns) 100 "close_telescope" [0, 0, 3, 7] testMem
-  with
-  | .ok ([7], _) => true | _ => false
 
 -- `inst_pis_with`: no arguments, the type unchanged.
 #guard
