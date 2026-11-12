@@ -86,3 +86,18 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
    `twinAcceptsPooled_no_False`, `checkerFile_model_exists`, `checkerFile_no_False`,
    `checkerFile_threads_model`, `checkerFile_threads_no_False`, `twinAccepts_not_trivial`. This
    undoes ronsync2's statement change 1, 2 and 5 (docs/design/ronsync2.md §6).
+* 00:45–02:10 the helpers port their areas; the lead merges their building milestones into
+  `ronsync3` and runs compile passes (build, then the ladder `--write` on every failing file, so a
+  failing theorem becomes a ticket for its owner and the modules behind it unblock; positional
+  `decCaps` destructurings fixed in 9 files; `rci_caps`' refinement (`CIReadRefCaps`) at the
+  five-field caps by the lead). A lesson for the ladder: run it only after a build of the merged
+  tree — at stale imports it elaborates against old `.olean`s, finds the merged proofs failing
+  and writes `sorry` over them (round 4 did, reverted).
+  Decisions: the Nat refusals travel from the `nvFns` arms as masked sentinel handles to
+  `reduce_nat_op`/`reduce_nat_succ`, which fail with the twin's message (core, D45);
+  `check_decl`'s reserved-names half: mirrors the twin's order (`check_decl_kind`, the flush,
+  `basis_names_ok`), the twin-side facts after `checkDeclKind` come from upstream's
+  `checkDeclKind_bridge` (`DeclKindSpec`), the L-side relation at the end state is rebuilt at
+  `cd_ref` with the environment clauses of `StoreDen` from a twin-level lemma per arm
+  (`DeclKindEnv`; the `.indDecl` arm's, `IndKindEnv`, by the lead). Reason rows for the 16 new
+  twin messages (`reasons.py --add`).
