@@ -154,6 +154,7 @@ import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.Env
+import all ConAgua.Arena.NatSized
 
 @[expose] public section
 
