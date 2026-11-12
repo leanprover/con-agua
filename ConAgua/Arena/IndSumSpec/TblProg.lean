@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.IndRealCrF
-public import ConAgua.Arena.IndRealIlpP
+public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr

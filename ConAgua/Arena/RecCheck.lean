@@ -567,7 +567,7 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
   ok := call block_rec_lps_ok(p);
   if ok == 0 { fail R_TARGET_REC_THE_RECURSOR_S };
   ok := call block_rec_names_unreserved(reco, recl);
-  if ok == 0 { fail R_TARGET_REC_A };
+  if ok == 0 { fail R_TARGET_REC_A_RECURSOR };
   k := IW.u64[p + 1];
   (owno, ownl, auxo, auxl) := call block_rec_split_own_aux(reco, recl, k);
   mo := IW.u64[p];

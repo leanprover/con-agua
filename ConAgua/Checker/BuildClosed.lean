@@ -196,7 +196,7 @@ def biFns : List FnName :=
    "ilpl_clear", "ilpl_find", "ilpl_put", "ilpls_clear", "ilpls_find", "ilpls_put", "imax_find",
    "imax_push", "ind_block_to_erec", "ind_copy_go", "ind_info_rec", "ind_rec_copy", "inst_app",
    "inst_entry", "inst_forall", "inst_go", "inst_lam", "inst_let", "inst_lp", "inst_lp_core",
-   "inst_pis_at_lift", "inst_proj", "instantiate1_fast", "instantiate1_lift_fast", "intern_app",
+   "inst_proj", "instantiate1_fast", "instantiate_lift_fast", "intern_app",
    "intern_bvar", "intern_const", "intern_forall", "intern_fvar", "intern_imax", "intern_lam",
    "intern_lit", "intern_ls", "intern_ls_iw", "intern_max", "intern_nanon", "intern_nnum",
    "intern_nstr", "intern_param", "intern_proj", "intern_sort", "intern_succ", "intern_zero",

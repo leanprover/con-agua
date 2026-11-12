@@ -222,10 +222,9 @@ def blockRecs : FunDecl := lfn (p, ro, rl) locals (q, to, tl, o, l) {
 
 /-- `block_table(p, ms)`: a structure-like member's table record (13 words: kind `6`, `0`,
 `structName`, lps, `numParams`, `ctor`, `numFields`, `0`, bodies, `0`, `0`; its lists copied into
-`EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like or whose constructor does not
-read as one. -/
+`EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like; `(2, 0)` where its
+constructor's type is too short for the bodies (the twin's `none`). -/
 -- con-ron: ConRon/Arena/Install.lean:114-130 ConRon.Arena.blockTables
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockTables]
 def blockTable : FunDecl := lfn (p, ms) locals
     (c, cv, T, ok, bo, bl, lo, ll, elo, ell, ebo, ebl, q, ez) {
@@ -235,7 +234,7 @@ def blockTable : FunDecl := lfn (p, ms) locals
   cv := IW.u64[c];
   T := EREC⦃IW.u64[ms + 4]⦄;
   (ok, bo, bl) := call struct_proj_bodies(T, IW.u64[p + 4], IW.u64[c + 1], EREC⦃cv + 3⦄);
-  if ok == 0 { return (0, 0) };
+  if ok == 0 { return (2, 0) };
   (lo, ll) := call block_shape_lps(p);
   (elo, ell) := call er_from_iw(lo, ll);
   (ebo, ebl) := call er_from_iw(bo, bl);
@@ -256,18 +255,20 @@ def blockTable : FunDecl := lfn (p, ms) locals
   return (1, q)
 }
 
-/-- `block_tables(p, ms.off, ms.len)`: the projection tables, in block order: one per
-structure-like member whose constructor reads as one. -/
+/-- `block_tables(p, ms.off, ms.len)`: the projection tables, in block order, one per
+structure-like member: `(1, off, len)`, or `(0, 0, 0)` where a structure-like member's constructor
+type is too short to read its bodies (the twin's `none`; the rest is not read). -/
 -- con-ron: ConRon/Arena/Install.lean:114-130 ConRon.Arena.blockTables
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.blockTables` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockTables]
-def blockTables : FunDecl := lfn (p, mo, ml) locals (ok, q, to, tl, o, l) {
-  if ml == 0 { return (0, 0) };
-  (ok, q) := call block_table(p, IW.u64[mo]);
-  (to, tl) := call block_tables(p, mo + 1, ml - 1);
-  if ok == 0 { return (to, tl) };
+def blockTables : FunDecl := lfn (p, mo, ml) locals (st, q, ok, to, tl, o, l) {
+  if ml == 0 { return (1, 0, 0) };
+  (st, q) := call block_table(p, IW.u64[mo]);
+  if st == 2 { return (0, 0, 0) };
+  (ok, to, tl) := call block_tables(p, mo + 1, ml - 1);
+  if st == 0 { return (ok, to, tl) };
+  if ok == 0 { return (0, 0, 0) };
   (o, l) := call sl_cons(q, to, tl);
-  return (o, l)
+  return (1, o, l)
 }
 
 /-- `block_constants(p)`: the block's constants, in push order: the formers (at official's

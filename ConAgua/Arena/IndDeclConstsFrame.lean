@@ -21,14 +21,14 @@ import ConAgua.Arena.IlpRdReal
 The two refinements' frame facts (`IndDeclConstsSpec.lean`: `IndMemos`, `IdxKeep`, the memory's
 half of `DeclTwin`) from one write set: `dcFns`, the call closure of `decl_constants` and
 `decl_tables` in the checker's program with four **leaves** (`dcLeaves`: `mentions_any_const`,
-`inst_lp_core`, `erec_alloc`, `instantiate1_lift_fast`), stores only into `dcA`/`dcC` (`DcClosed`,
+`inst_lp_core`, `erec_alloc`, `instantiate_lift_fast`), stores only into `dcA`/`dcC` (`DcClosed`,
 decided for the checker's program in `Checker/IndDeclConstsClosed.lean`). `dcA` leaves out the
 front's records, the pins, the stream index's rows, the core's walk memos and the inductive
 memos; `dcC` their control words and the scratch flag. Each leaf keeps the memory invariant
 `DcMem` and the builder's words (`DcIdx`) at any memory: its own write set and, for the memos it
 writes, its keep fact (`maLeaf_keep`, `instLPCore_keepCM`/`_keepWk`; `erec_alloc` writes `CTL[130]`
 only with the scratch flag on). `dc0Fns` (the closure without the projection tables: no
-`instantiate1_lift_fast`) keeps the `instantiate1Lift` memo too.
+`instantiate_lift_fast`) keeps the `instantiate1Lift` memo too.
 -/
 
 set_option experimental.vcgen true
@@ -76,7 +76,7 @@ theorem dcC_not {x : Word} (h : dcCtlOk x.toNat = false) : x ∉ dcC := fun h' =
 
 /-- The leaves. -/
 def dcLeaves : List FnName :=
-  ["mentions_any_const", "inst_lp_core", "erec_alloc", "instantiate1_lift_fast"]
+  ["mentions_any_const", "inst_lp_core", "erec_alloc", "instantiate_lift_fast"]
 
 /-- The leaves of the closure without the projection tables. -/
 def dc0Leaves : List FnName := ["mentions_any_const", "inst_lp_core", "erec_alloc"]
@@ -87,7 +87,7 @@ def dcFns : List FnName :=
   ["decl_tables", "block_tables", "sl_cons", "iw_copy", "iw_alloc", "block_table", "erec_put",
    "er_from_iw", "er_from_iw_go", "block_shape_lps", "er_to_iw", "er_copy", "struct_proj_bodies",
    "struct_proj_bodies_go", "struct_proj_arg_p", "mk_proj", "intern_proj", "proj_push",
-   "proj_find", "der_b", "intern_bvar", "bvar_push", "bvar_find", "e_view", "inst_pis_at_lift",
+   "proj_find", "der_b", "intern_bvar", "bvar_push", "bvar_find", "e_view",
    "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "block_shape", "block_shape_build",
    "block_shape_tail", "block_shape_fin", "block_shape_seal", "block_shape_pack", "intern_nanon",
    "nanon_push", "nanon_find", "block_shape_large", "sl_contains", "sl_eq", "block_shape_recs_of",
@@ -503,13 +503,13 @@ theorem dcMem_alloc {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {n 
   · exact h.frame hf (by simp) (by simp [dcMemCtlOk])
 
 theorem i1lF_call {p : Prog} (hI : I1lF p) {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
-    (hc : callW p n "instantiate1_lift_fast" vs m = some (r, m')) : MemFrame i1lA i1lC m m' := by
+    (hc : callW p n "instantiate_lift_fast" vs m = some (r, m')) : MemFrame i1lA i1lC m m' := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (i1lF_spec p hI n _ vs) hc
   rw [hs'] at hW
   exact i1lF_frame hW
 
 theorem dcMem_i1 {p : Prog} (hI : I1lF p) {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word}
-    (hc : callW p n "instantiate1_lift_fast" vs m = some (r, m')) (h : DcMem m) : DcMem m' :=
+    (hc : callW p n "instantiate_lift_fast" vs m = some (r, m')) (h : DcMem m) : DcMem m' :=
   h.frame (i1lF_call hI hc) i1lA_mem i1lC_mem
 
 theorem dcIdx_alloc {p : Prog} (hp : p.lookup "erec_alloc" = some erecAlloc) {n : Nat}
