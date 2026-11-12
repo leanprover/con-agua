@@ -4,7 +4,6 @@ public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.IndRealFvt
-public import ConAgua.Arena.IndSumSpec.StructUsedFrame
 
 @[expose] public section
 
@@ -381,24 +380,5 @@ theorem hasLooseBVarIn_refines (n : Nat) (s₀ : St) (a₀ : AState)
   exact ⟨hl, hok, by rw [hres]; exact hb, hM1, by rw [hst]; exact hS1, hg⟩
 
 end census
-
-/-! ## The write set: the `hb` memo and the bound walk's -/
-
-theorem hlbiW_frame : ∀ (n : Nat) (m m' : Mem) (f w d h r : Word), hlbiW n m f w d h = some (r, m') →
-    MemFrame hbWA hbWC m m'
-  | 0, _, _, _, _, _, _, _, hh => by simp [hlbiW] at hh
-  | n + 1, m, m', f, w, d, h, r, hh => by
-    sorry
-
-theorem hlbiFW_frame {n : Nat} {m m' : Mem} {d w e r : Word} (h : hlbiFW n m d w e = some (r, m')) :
-    MemFrame hbWA hbWC m m' := by
-  by_cases hw0 : w = 0
-  · rw [hlbiFW.arm1 (hc1 := hw0)] at h
-    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact MemFrame.refl _ _ _
-  by_cases h0 : rdW (m.arr64 CTL) hbSch.cs + 2 = 0
-  · rw [hlbiFW.abort1 (hc1 := hw0) (hc2 := h0)] at h; cases h
-  rw [hlbiFW.arm2 (hc1 := hw0) (hc2 := h0)] at h
-  exact ((mclearG_frame hbSch m).mono (by simp) (by simp [hbSch, hbWC])).trans (hlbiW_frame _ _ _ _ _ _ _ _ h)
 
 end L.Ind
