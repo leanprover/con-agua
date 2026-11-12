@@ -290,20 +290,19 @@ l_model bmg_spec (p : Prog) (hP : IndPartsProg4 p)
     hP.counts n, slCons_specW p hP.alloc hP.copy hP.cons n]
   grind [arena_grind, ind_grind] finish [rdW_eq]
 
-/-- `block_member_counts`' result `(ok, off, len)` against the twin's `Option (List Nat)`. -/
-def NsR (x : Option (List Nat)) (r : List Word) (m : Mem) : Prop :=
-  match x with
-  | none => r.headD 0 = 0
-  | some ns => r.headD 0 = 1 ∧ DecB (fun m => decNL m (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat) m ns ∧
-      (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m
+/-- `block_member_counts`' result `(e, off, len)` against the twin's `Except CheckError (List Nat)`:
+the reason, or `0` and a number slice decoded below the tops. -/
+def NsR (x : Except CheckError (List Nat)) (r : List Word) (m : Mem) : Prop :=
+  ExcR (fun ns r' m => DecB (fun m => decNL m (r'.headD 0).toNat (r'.tail.headD 0).toNat) m ns ∧
+    (r'.headD 0).toNat + (r'.tail.headD 0).toNat ≤ iwTop m) x r m
 
-theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r m) :
+theorem NsR_three {x : Except CheckError (List Nat)} {r : List Word} {m : Mem} (h : NsR x r m) :
     NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
 
 theorem stageR_ptop {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
     (hS : StageR vis fe m a) : PTop m := ⟨hS.iw.iw, hS.iw.iwSize, hS.iw.ctl⟩
 
-/-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
+/-- **`block_member_counts_go`'s model refines `blockMemberCounts` from member `idx`.** -/
 theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × Bool × List IRecRule)}
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32) (h4 : rl.toNat < 2 ^ 32)
@@ -350,7 +349,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
       exact erecP_lt64 (truncM_er_get hw3)
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
     refine Sim.bindK (by simp [bmgW.k_block_counts]) (fun _ _ => by rw [bmgW.k_block_counts])
-      (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
+      (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ ExcNN x2 r2 ∧ (∀ p q, x2 = .ok (p, q) → q < 2 ^ 64) ∧
         StageR vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
     · revert hE
       cases x with
@@ -369,16 +368,16 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
           h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
         have hP2 := bcW_ptop e (stageR_ptop hS1)
         exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.size IW]; exact hP2.1), hg2⟩
-    rintro r2 x2 m2 a2 ⟨rfl, rfl, hq2, hS2, hg2⟩
+    rintro r2 x2 m2 a2 ⟨rfl, hr2, hq2, hS2, hg2⟩
     have hg02 := hg1.trans hg2
-    cases x2 with
-    | none =>
-      simp only [encONN, List.headD_cons, ite_true]
-      exact Sim.ret ⟨rfl, hS2, hg02⟩
-    | some c =>
-    obtain ⟨c1, c2⟩ := c
+    rcases x2 with ce | ⟨c1, c2⟩
+    · obtain ⟨hr2, hc2, s2, rfl⟩ := hr2
+      rw [ite_eq_left hc2.1, hr2]
+      exact Sim.ret ⟨hc2, s2, rfl⟩
+    have hr2' : r2 = _ := hr2
+    subst hr2'
     have hc2 := hq2 c1 c2 rfl
-    rw [ite_eq_right (show (encONN (some (c1, c2))).headD 0 ≠ 0 by simp [encONN])]
+    rw [ite_eq_right (show ¬ ((0 : Word) ≠ 0) by decide)]
     have hcl1 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hcto1 : (cto + 1).toNat = cto.toNat + 1 := by
       have := hts.2; rw [UInt64.toNat_add]; simp; omega
@@ -394,23 +393,23 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
       (fun _ _ => by rw [bmgW.k_block_member_counts_go]) hrec ?_
     rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩
     cases x3 with
-    | none =>
-      have h0 : r3.headD 0 = 0 := hR3
-      rw [ite_eq_left h0]
-      exact Sim.ret ⟨rfl, hS3, hg02.trans hg3⟩
-    | some ns =>
+    | error ce =>
+      obtain ⟨hc3, s3, rfl⟩ := hR3
+      rw [ite_eq_left hc3.1]
+      exact Sim.ret ⟨hc3, s3, rfl⟩
+    | ok ns =>
     obtain ⟨h1', hd3, hb3'⟩ := hR3
     rw [ite_eq_right (by rw [h1']; decide)]
     intro r m' e
-    rcases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
+    rcases h4 : consW n m3 (([0, UInt64.ofNat c1, UInt64.ofNat c2] : List Word).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with _ | ⟨r4, m4⟩ <;> rw [h4] at e
     · cases e
     rw [bmgW.k_sl_cons.arm1] at e
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj e)
     obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stageN h4 hS3 hb3' (hd3.get (OMono.decNL _ _))
-    refine ⟨some (c2 :: ns), a3, rfl, ⟨rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS4,
+    refine ⟨.ok (c2 :: ns), a3, rfl, ⟨rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS4,
       (hg02.trans hg3).trans hg4⟩
-    have hc2' : ((encONN (some (c1, c2))).tail.tail.headD 0).toNat = c2 := by
-      simp [encONN, UInt64.toNat_ofNat_of_lt' hc2]
+    have hc2' : (([0, UInt64.ofNat c1, UInt64.ofNat c2] : List Word).tail.tail.headD 0).toNat = c2 := by
+      simp [UInt64.toNat_ofNat_of_lt' hc2]
     rw [hc2'] at hd4
     exact decNL_decB hd4 (Nat.le_of_eq ht4)
 

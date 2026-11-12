@@ -623,12 +623,12 @@ def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) lo
 
 /-! ### `readBlock`: one helper per stretch -/
 
-/-- `former_names(cto, ctl)`: the former `cv` pointers' names (`cvTs.map (·.name)`). -/
+/-- `block_shape_names_of(cto, ctl)`: the former `cv` pointers' names (`cvTs.map (·.name)`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:352-422 ConRon.Arena.readBlock
 @[no_expose, l_impl ConRon.Arena.readBlock]
-def formerNames : FunDecl := lfn (cto, ctl) locals (o, l) {
+def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
   if ctl == 0 { return (0, 0) };
-  (o, l) := call former_names(cto + 1, ctl - 1);
+  (o, l) := call block_shape_names_of(cto + 1, ctl - 1);
   (o, l) := call sl_cons(EREC⦃IW.u64[cto]⦄, o, l);
   return (o, l)
 }
@@ -815,7 +815,7 @@ then `block_shape_tail` (the Rust's `read_block_at`, from the counts on). -/
 def readBlockAt : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
     locals (cvT0, no, nl, e, io, il, lo, ll, b, ok, q) {
   cvT0 := IW.u64[cto];
-  (no, nl) := call former_names(cto, ctl);
+  (no, nl) := call block_shape_names_of(cto, ctl);
   (e, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
   if e != 0 { return (e, 0) };
   (lo, ll) := call er_to_iw(EREC⦃cvT0 + 1⦄, EREC⦃cvT0 + 2⦄);
@@ -910,7 +910,7 @@ def indPartsFns : Prog :=
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
    ("block_rec_want", blockRecWant), ("block_rec_got", blockRecGot), ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
    ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts_go", blockMemberCountsGo), ("block_member_counts", blockMemberCounts),
-   ("former_names", formerNames), ("formers_lps_ok", formersLpsOk),
+   ("block_shape_names_of", blockShapeNamesOf), ("formers_lps_ok", formersLpsOk),
    ("ctors_params_ok", ctorsParamsOk), ("ctors_lps_ok", ctorsLpsOk),
    ("block_shape_result_sort", blockShapeResultSort),
    ("block_shape_ctors_of", blockShapeCtorsOf), ("block_shape_members_of", blockShapeMembersOf),

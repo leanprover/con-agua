@@ -22,10 +22,10 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **`block_member_counts` refines `blockMemberCounts?`** from member `0` (through
+/-- **`block_member_counts` refines `blockMemberCounts`** from member `0` (through
 `rec_target_of`'s and `block_counts`' stubs; the counts and the recursor records' words past
 `2^32` a capacity abort): the formers a slice of constants, the recursors the split's records,
-both decoded below the tops; the result a number slice decoded below the tops (`NsR`). -/
+both decoded below the tops; the result a number slice decoded below the tops, or the reason (`NsR`). -/
 @[refines ConRon.Arena.blockMemberCounts]
 theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
     (_dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
