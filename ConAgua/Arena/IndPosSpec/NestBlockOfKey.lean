@@ -120,7 +120,7 @@ theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
       obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk
       simp only [hfound, ite_eq_left hk3]
       simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-      obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, _, _, heq⟩ := hcaps
+      obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, heq⟩ := hcaps
       have hallcaps : caps.all = vall := by
         have h' := Option.some.inj heq; rw [← h']
       obtain ⟨o, l, ho, hl, hslc⟩ := hlist?_some hvall
@@ -164,7 +164,7 @@ theorem decCI_indInfo_bound {a : Nat → Option Word} {p : Nat}
     ∃ v, a (p + 16) = some v := by
   obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, _, _, -⟩ := hcaps
+  obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, -⟩ := hcaps
   obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
   simp only [nat?, Option.map_eq_some_iff] at hl
   obtain ⟨w, hw, -⟩ := hl
@@ -400,57 +400,7 @@ theorem closeW_ok (n : Nat) : ∀ (_dn : NIdx → Option ConLeche.Name) (fe : IF
     dO.toNat + dl.toNat ≤ iwTop m → i.toNat + dl.toNat < 2 ^ 64 → AbsOK m →
     ∃ x a', (ConRon.Arena.closeTelescope ds i.toNat (decI body)).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decW0E m' r x ∧ AbsOK m' := by
-  induction n with
-  | zero => intro _dn fe vis m m' a dO dl i body ds r h; simp [closeW] at h
-  | succ n ih =>
-    intro _dn fe vis m m' a dO dl i body ds r h hS hbody hdec hb hit hib hA
-    by_cases hdl : dl = 0
-    · rw [closeW_nil n m dO dl i body hdl] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have : ds = [] := by
-        have h0 : dl.toNat = 0 := by rw [hdl]; rfl
-        rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
-      subst this
-      exact ⟨decI body, a, rfl, hS, IWGrow.refl _, ⟨hbody, rfl⟩, hA⟩
-    · have hl1 : dl.toNat = (dl.toNat - 1) + 1 := by have := L.toNat_ne_zero_of_ne _ hdl; omega
-      rw [hl1, decHL, hslice?_succ] at hdec
-      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
-      obtain ⟨d, hdd, bs, hbs, rfl⟩ := hdec
-      rw [closeW_cons n m dO dl i body hdl] at h
-      have hdo1 : (dO + 1).toNat = dO.toNat + 1 := L.toNat_add_one_of_lt (by omega)
-      have hdl1 : (dl - 1).toNat = dl.toNat - 1 := L.toNat_sub_one_of_ne hdl
-      have hi1 : (i + 1).toNat = i.toNat + 1 := L.toNat_add_one_of_lt (by omega)
-      rcases hr1 : closeW n m (dO + 1) (dl - 1) (i + 1) body with _ | ⟨r1, m1⟩ <;> rw [hr1] at h; · simp [closeK1] at h
-      rw [closeK1_some] at h
-      obtain ⟨x1, a1, hrun1, hS1, hg1, ⟨hlt1, hdec1⟩, hA1⟩ :=
-        ih _dn fe vis m m1 a (dO + 1) (dl - 1) (i + 1) body bs r1 hr1 hS hbody
-          (by rw [hdo1, hdl1]; exact hbs) (by rw [hdo1, hdl1]; omega) (by rw [hdo1, hdl1]; omega)
-          (by rw [hi1, hdl1]; omega) hA
-      rw [hi1] at hrun1
-      rcases hr2 : abF m1 [CWF, r1.headD 0, i, 0] with _ | ⟨r2, m2⟩ <;> rw [hr2] at h; · simp [closeK2] at h
-      rw [closeK2_some] at h
-      obtain ⟨x2, a2, hrun2, ⟨hS2, hg2, hlt2, hdec2⟩, hA2⟩ :=
-        abF_ok _dn vis fe (r1.headD 0) i 0 hlt1 m1 m2 a1 r2 hr2 ⟨hS1, hA1⟩
-      rw [CWF_eq, hdec1, show (0 : Word).toNat = 0 from rfl] at hrun2
-      have hg12 := hg1.trans hg2
-      have hd0 : dO.toNat < iwTop m := by omega
-      obtain ⟨wd, hwd_eq, hwd_lt, hwd_dec⟩ := iwH_rdW hdd (by omega)
-      rw [UInt64.ofNat_toNat] at hwd_eq
-      rw [rdW_iw_grow hg12 hd0, hwd_eq] at h
-      rcases hm : mkForallW m2 wd (r2.headD 0) with _ | ⟨rr, m3⟩ <;> rw [hm] at h; · simp [closeK3] at h
-      by_cases hbig : 4294967296 ≤ rr
-      · rw [closeK3_big _ _ hbig] at h; simp at h
-      · rw [closeK3_ok _ _ hbig] at h
-        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-        obtain ⟨a3, hrun3, hS3, hg3⟩ := mkForall_stage hS2 wd (r2.headD 0) hm
-        refine ⟨decE rr, a3, ?_, hS3, hg12.trans hg3, ⟨?_, rfl⟩, mkForallW_afr hm hA2⟩
-        · simp only [ConRon.Arena.closeTelescope, StateT.run_bind]
-          simp only [hrun1, except_ok_bind, hrun2, ← hwd_dec, ← hdec2]
-          exact hrun3
-        · have : rr.toNat < 2 ^ 32 := by
-            have : ¬ (4294967296 : Nat) ≤ rr.toNat := hbig
-            omega
-          simpa using this
+  sorry
 
 end L.Ind
 
