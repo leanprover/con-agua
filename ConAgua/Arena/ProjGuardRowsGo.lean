@@ -7,6 +7,28 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.Infer
+import all ConAgua.Arena.StubInd
+import all ConAgua.Arena.AppStore
+import all ConAgua.Arena.BVarStore
+import all ConAgua.Arena.BvarB
+import all ConAgua.Arena.ConsLib
+import all ConAgua.Arena.ExprMk
+import all ConAgua.Arena.FVarStore
+import all ConAgua.Arena.ForallStore
+import all ConAgua.Arena.IndIface
+import all ConAgua.Arena.IndSum
+import all ConAgua.Arena.Inst1
+import all ConAgua.Arena.Inst1Spec
+import all ConAgua.Arena.InstList
+import all ConAgua.Arena.InstListSpec
+import all ConAgua.Arena.LamStore
+import all ConAgua.Arena.LetStore
+import all ConAgua.Arena.LiftL
+import all ConAgua.Arena.MemoLib
+import all ConAgua.Arena.ProjStore
+import all ConAgua.Arena.StripTele
+import all ConAgua.Arena.Walk
+import all ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.WhnfCoreRefine
 
 @[expose] public section
@@ -529,6 +551,82 @@ theorem pgra_okC {p : Prog} (hP : PgraProg p) (n : Nat) {m m' : Mem} {a : AState
     simp only [except_ok_bind]
     exact hrun3
 
+/-! ## The guard's write set -/
+
+/-- The guard's row functions and what they call. -/
+def pgP : Prog :=
+  [("proj_guard_rows_at", projGuardRowsAtL), ("proj_guard_rows_go", projGuardRowsGoL),
+    ("proj_guard_fast", projGuardFastL), ("proj_guard_row", projGuardRowL)] ++ hlP ++ opfP
+
+/-- The functions `opf_go` and `proj_guard_rows_at` reach. -/
+def pgFns : List FnName :=
+  ["proj_guard_rows_at", "proj_guard_rows_go", "proj_guard_fast", "proj_guard_row", "opf_go",
+    "spn_push", "e_view", "fvar_find", "fvar_push", "intern_fvar", "has_loose_bvar_in",
+    "has_loose_bvar_in_go", "has_loose_b_var_b_fast", "hb_clear", "has_loose_b_var_b_go", "hb_find",
+    "has_loose_b_var_b_ins", "hb_put"] ++ bvbFns ++ instListFns ++ instFns
+
+/-- What they write: the stack, the `fvar` store, the walks' memos and stores (not the pool). -/
+def pgA : List TieredArray := [(SPN : TieredArray), (FVREC : TieredArray), (FVSLOT : TieredArray),
+  (FVLP : TieredArray), tier1 FVREC, tier1 FVSLOT, tier1 FVLP, (HBM : TieredArray), (BMEMO : TieredArray)] ++
+  instListA ++ instA
+/-- The stack's top, the `fvar` counts, the walks' words. -/
+def pgC : List Word := [136, 26, 27, 214, 215, 24, 25] ++ instListC ++ instC
+
+theorem pgP_closed : closedA pgP pgA pgC pgFns = true := by decide +kernel
+
+
+theorem PgraProg.has {p : Prog} (hP : PgraProg p) : ProgHas p pgP :=
+  ProgHas.cons hP.at' (ProgHas.cons hP.go (ProgHas.cons hP.fast (ProgHas.cons hP.row
+    (ProgHas.append hP.hl hP.opf))))
+
+/-- **A call of the guard's functions writes only `pgA`, `pgC`**: the pool grows (it is not
+written), the binder stack and the limb pool are kept. -/
+theorem pg_frame {p : Prog} (hP : PgraProg p) {n : Nat} {f : FnName} (hf : f ∈ pgFns := by decide)
+    {args r : List Word} {m m' : Mem} (h : callW p n f args m = some (r, m')) :
+    MemFrame pgA pgC m m' ∧ IWGrow m m' ∧ BKept m m' ∧ PoolGrew m m' := by
+  have hfr := (run_memFrame (closedW_of_agree pgP_closed (hP.has.agree pgFns)) hf (run_of_callW h)).1
+  exact ⟨hfr, IWGrow.of_keep hfr ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
+    BKept.of_frame hfr (by decide) (by decide), PoolGrew.of_frame hfr (by decide) (by decide)⟩
+
+/-! ## The twin's guard keeps the level readbacks -/
+
+macro "keeps_pg" " using " ih:term : tactic => `(tactic| (
+  repeat' (first
+    | exact Keeps.pure _ | exact Keeps.fail _ | exact keeps_view _ | exact keepsW_internE _
+    | exact keepsW_instListFast _ _ _ _ | exact keepsW_inst1Fast _ _ _ _
+    | exact (keepsSp_hbFast _ _).cplW_of_sp | exact (keepsSp_hlbi _ _ _).cplW_of_sp
+    | exact $ih _ _ _ _ | exact $ih _ _ _ | exact $ih _ _
+    | apply Keeps.bind | intro _ | split)))
+
+theorem keepsW_opfRawGo : ∀ (n : Nat) (acc : Array EIdx) (h : EIdx) (i : Nat),
+    Keeps cpl (openPisRawGo acc n h i) := by
+  intro n
+  induction n with
+  | zero => intro acc h i; rw [openPisRawGo]; exact Keeps.pure _
+  | succ n ih => intro acc h i; rw [openPisRawGo]; keeps_pg using ih
+
+theorem keepsW_pgGo : ∀ (k d : Nat) (h : EIdx) (out : Array (Nat × EIdx)),
+    Keeps cpl (projGuardRowsGo k d h out) := by
+  intro k
+  induction k with
+  | zero => intro d h out; rw [projGuardRowsGo]; keeps_pg using Keeps.pure
+  | succ k ih => intro d h out; rw [projGuardRowsGo]; keeps_pg using ih
+
+theorem keepsW_pgFast : ∀ (k j : Nat) (h : EIdx), Keeps cpl (projGuardFast k j h) := by
+  intro k
+  induction k with
+  | zero => intro j h; rw [projGuardFast]; keeps_pg using Keeps.pure
+  | succ k ih => intro j h; rw [projGuardFast]; keeps_pg using ih
+
+theorem keepsW_pgra (e : IProjEntry) (acc : Array EIdx) (r : EIdx) :
+    Keeps cpl (projGuardRowsAt e acc r) := by
+  unfold projGuardRowsAt
+  refine Keeps.bind (keepsW_pgFast _ _ _) fun o => ?_
+  split
+  · exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => Keeps.pure _
+  · exact Keeps.bind (keepsW_instListFast _ _ _ _) fun _ => keepsW_pgGo _ _ _ _
+
 end
 
 end L.Ind
+
