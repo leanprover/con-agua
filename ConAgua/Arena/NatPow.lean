@@ -127,11 +127,25 @@ def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   return (o, l)
 }
 
-/-- The exponent of a one-limb power of two `x ≠ 0` (a named block, for the proofs). -/
+/-- The exponent `k` of a one-limb base `x = 2^k` (`k = 64`: `x` is no power of two; a named
+block, for the proofs). -/
 def powTwoLoop : Stmt := lblk (oa, la, e, x, k) {
-  while (x >> k) & 1 == 0 {
+  while k < 64 && 1 << k != x {
     k += 1
   }
+}
+
+/-- `limb_push(v)`: push the one limb `v` at the pool top; its offset (`pow_nat`'s two shift
+operands). -/
+@[no_expose, l_impl ConRon.Arena.natOpResult]
+def limbPushL : FunDecl := lfn (v) locals (o, t, pb) {
+  o := CTL.u64[0];
+  t := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  if len(POOL⟨t⟩) <= pb { abort };
+  POOL⟨t⟩[pb] := v;
+  CTL.u64[0] := o + 1;
+  return o
 }
 
 /-- `pow_nat(oa, la, e)`: `a ^ e` for an exponent `e < 2^32` (behind `nat_pow_lit`'s guard). A
@@ -139,26 +153,16 @@ one-limb base `2^k` is the shift `1 <<< k·e` (`nat_shl` of a pushed one-limb `1
 one-limb `k·e`; `k·e < 2^38`), any other base square-and-multiply (`nat_pow`). Returns the
 result's slice `(o, l)`. -/
 @[no_expose, l_impl ConRon.Arena.natOpResult]
-def powNatL : FunDecl := lfn (oa, la, e) locals (x, k, s, o, t, pb, o2, t2, pb2, o3, l) {
+def powNatL : FunDecl := lfn (oa, la, e) locals (x, k, s, o, o2, o3, l) {
   if la == 1 {
     x := POOL⦃oa⦄;
-    if x != 0 && x & (x - 1) == 0 {
-      k := 0;
-      ⟪powTwoLoop⟫;
+    k := 0;
+    ⟪powTwoLoop⟫;
+    if k < 64 {
       s := k * e;
-      o := CTL.u64[0];
-      t := ⦃o⦄.tier;
-      pb := ⦃o⦄.idx;
-      if len(POOL⟨t⟩) <= pb { abort };
-      POOL⟨t⟩[pb] := 1;
-      CTL.u64[0] := o + 1;
+      o := call limb_push(1);
       if s == 0 { return (o, 1) };
-      o2 := CTL.u64[0];
-      t2 := ⦃o2⦄.tier;
-      pb2 := ⦃o2⦄.idx;
-      if len(POOL⟨t2⟩) <= pb2 { abort };
-      POOL⟨t2⟩[pb2] := s;
-      CTL.u64[0] := o2 + 1;
+      o2 := call limb_push(s);
       o3 := CTL.u64[0];
       l := call nat_shl(o, 1, o2, 1);
       return (o3, l)

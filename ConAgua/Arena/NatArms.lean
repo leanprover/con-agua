@@ -7,6 +7,7 @@ public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
 public import ConAgua.Arena.NatPow
+public import ConAgua.Arena.NatPowNat
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatShl
 import ConAgua.Arena.GrindAttr
@@ -50,7 +51,7 @@ runs one arm per operation; an arm with a literal result is
   a one-limb `1` written at the top first.
 * **The arms whose pool function returns a slice**: `pow` (with con-leche's exponent bound,
   `none` above `2^24`), `/` and `%` (`nat_divmod`'s two slices).
-* Under `ArenaR`, as `natAddLit_refinesA`.
+* Under `ArenaR`, as `natAddLit_arms` (`PinsNatOp.lean`).
 
 The arms are stated over their arguments; the pin reads before them are not modelled (lane `nat2`
 in DESIGN.md: one toolchain's pin set). The operands are normalised slices (as every `lit`
@@ -289,20 +290,6 @@ def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
 /-- The `Nat.pred` arm (`Arena/Core.lean:1004`), verbatim. -/
 def natPredArm (a : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a - 1))); pure (some x)
-
-/-- Pushing one limb at the top is growing the pool. -/
-theorem Grows.push1 (m : Mem) (t v : Word) (ht : t = m.top) (h : PoolOK m)
-    (hs : (t &&& 1099511627775).toNat < (m.arr64 (tierA POOL (t >>> 40))).size) :
-    Grows m ((m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)) := by
-  subst ht
-  have h41 := h.top41
-  have hsz := h.small.tier (m.top >>> 40)
-  apply Grows.write m _ 1 h (PFrame.set64 _ _ _ (PFrame.refl m))
-  · rw [vpool_stidx0 m m.top v h41 hs (by omega)]
-    exact Agree.set _ _ _ _ _ (Agree.refl _ _) (Nat.le_refl _)
-  · simp only [show (1 : Word).toNat = 1 from rfl]; omega
-grind_pattern [arena_grind] Grows.push1 =>
-  (m.set64 (tierA POOL (t >>> 40)) (t &&& 1099511627775) v).set64 CTL 0 (t + 1)
 
 section pred
 variable (p : Prog) (R : Mem → AState → Prop)
@@ -605,9 +592,7 @@ def natArmProg : Prog := storeProg ++
    ("nat_land_lit", topLit "nat_land"), ("nat_lor_lit", topLit "nat_lor"),
    ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", natShlLit),
    ("nat_shr_lit", topLit "nat_shr"),
-   ("nat_pow", natPow), ("pow_nat", powNatL), ("size_bytes", sizeBytesL),
-   ("nat_size_refused", natSizeRefusedL), ("lit_nat_sized", litNatSizedL),
-   ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
+   ("nat_pow", natPow), ("pow_nat", powNatL), ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
    ("div_step", divStep), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
    ("nat_mod_lit", natModLit),

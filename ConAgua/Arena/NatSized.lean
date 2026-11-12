@@ -1,8 +1,10 @@
 module
 
-public import ConAgua.Arena.Tiers
+public import ConAgua.Layout
 public import ConAgua.Arena.Reasons
-public import ConRon.Arena.Core
+public import ConAgua.L.Notation
+import ConRon.Arena.Core
+import ConAgua.Census.Attr
 
 @[expose] public section
 
