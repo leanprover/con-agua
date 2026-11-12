@@ -208,7 +208,7 @@ def imFns : List FnName :=
    "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top", "wk_clear",
    "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast",
    "zero_find", "zero_push",
-   "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved",
+   "basis_names_ok", "basis_names_error", "basis_name_unreserved",
    "block_names_unreserved", "basis_name_hit", "basis_name_hit_go", "block_names_eq",
    "pin_list_ok", "block_links_ok", "block_links_ok_go", "block_link_ok_at", "rules_link_ok",
    "pin_link_ok", "pin_link_go", "const_named", "pin_copies_ok", "pin_copy_ok", "pin_agrees"]
