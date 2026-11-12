@@ -299,7 +299,7 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   refine RSim.bind (K := motW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r5, m5⟩ h5
-    obtain ⟨x, a', hrun, hS', hg, hx, hA5⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
+    obtain ⟨x, a', hrun, hS', hg, hx, hA5⟩ := closeW_ok dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
       (hS4.lt64 hbb) hbb hdl (hf4 hA3)
     exact ⟨x, a', hrun, hS', hg, hx, hA5⟩
   rintro ⟨r5, m5⟩ x a5 - ⟨hS5, hg5, hx, hA5⟩

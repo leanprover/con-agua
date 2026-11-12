@@ -429,7 +429,7 @@ theorem c1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState)
     StageR vis fe b.2 a' ∧ IWGrow m10 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r11, m11⟩ h11
-    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩ := closeLamsW_ok (fun _ => none) vis fe n m10 m11 a10 _ _ e _ bs r11 h11 hS10
+    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩ := closeLamsW_ok (fun _ => none) vis fe m10 m11 a10 _ _ e _ bs r11 h11 hS10
       happH hbs (hS10.lt64 hbb) hbb hel (hf10 (hf9 hA8))
     exact ⟨x, a', hrun, hS', hg, hx1, hx2, hA11⟩
   rintro ⟨r11, m11⟩ cll a11 - ⟨hS11, hg11, hcH, hcd, hA11⟩
@@ -583,7 +583,7 @@ theorem grcW_sim (n : Nat) (m : Mem) (a : AState) (g s fo fl ihso ihsl : Word) (
     StageR vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ (b.1.headD 0).toNat < 2 ^ 32 ∧ decI (b.1.headD 0) = x ∧
       AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
-    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩ := closeLamsW_ok (fun _ => none) vis fe n m5 m6 a4 _ _ 0 _ _ r6 h6 hS5 hbH hd5
+    obtain ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩ := closeLamsW_ok (fun _ => none) vis fe m5 m6 a4 _ _ 0 _ _ r6 h6 hS5 hbH hd5
       (hS5.lt64 hb5) hb5 (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact hS5.lt64 (by omega))
       (appendW_afr h5 (hf4 (hf3 (appendW_afr h2 hA1))))
     exact ⟨x, a', hrun, hS', hg, hx1, hx2, hA6⟩

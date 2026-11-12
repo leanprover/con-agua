@@ -86,7 +86,7 @@ l_model classGenRecTyTail_spec (p : Prog) (h : GtProg p)
   specs [ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
     slSnoc_specW p h.alloc h.copy h.snoc n,
     rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-    mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+    mknF_spec p h.ad n, closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenRecTy_spec (p : Prog) (h : GtProg p)
@@ -176,7 +176,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   refine RSim.bind (K := grtW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
-    obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok n (fun _ => none) fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
+    obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok (fun _ => none) fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
       (hS6.lt64 (Nat.le_trans hb3 hg36.iw)) (Nat.le_trans hb3 hg36.iw) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
       (hf6 hA5)
     refine ⟨x, a', ?_, hS', hg, hx, hA7⟩

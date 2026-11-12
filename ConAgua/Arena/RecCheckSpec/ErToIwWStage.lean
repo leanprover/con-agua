@@ -13,6 +13,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndRealAr
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.RecCheck
 
@@ -40,101 +41,28 @@ open L.Arena
 
 /-! ## `target_ctor_at`'s MEMBER arm -/
 
-/-! ## `abstract_prefix` (the round-1 `while` rewritten as a self-recursion) -/
+/-! ## `abstract_prefix`: one `ar_entry` pass -/
 
-mutual
-/-- **The model of `abstract_prefix`.** -/
-def absPrefW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, k, c, e =>
-    if k = 0 then some ([e], m)
-    else apK1 n k c (abF m [CWF, e, k - 1, c])
+/-- **`abstract_prefix` is its model `absPrefW`** (generated). -/
+l_model abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some abstractPrefix) (har : ArF p)
+  fns [hp ↦ absPrefW list]
+  specs [arF_spec p har n]
+  grind [ind_grind]
 
-/-- After `abstract1_fast`. -/
-def apK1 (n : Nat) (k c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m1) => apK2 (absPrefW n m1 (k - 1) (c + 1) (r.headD 0))
-
-/-- After the recursive call. -/
-def apK2 : Option (List Word × Mem) → Option (List Word × Mem)
-  | none => none
-  | some (r, m) => some ([r.headD 0], m)
-end
-
-section arms
-variable (n : Nat) (m m1 : Mem) (k c e : Word) (r : List Word)
-theorem absPrefW_nil (h : k = 0) : absPrefW (n + 1) m k c e = some ([e], m) := by simp [absPrefW, h]
-theorem absPrefW_cons (h : k ≠ 0) :
-    absPrefW (n + 1) m k c e = apK1 n k c (abF m [CWF, e, k - 1, c]) := by
-  simp [absPrefW, h]
-theorem apK1_some : apK1 n k c (some (r, m1)) = apK2 (absPrefW n m1 (k - 1) (c + 1) (r.headD 0)) := by
-  rw [apK1]
-theorem apK2_some : apK2 (some (r, m)) = some ([r.headD 0], m) := by
-  rw [apK2]
-end arms
-
-grind_pattern [ind_grind] absPrefW_nil => absPrefW (n + 1) m k c e
-grind_pattern [ind_grind] absPrefW_cons => absPrefW (n + 1) m k c e
-grind_pattern [ind_grind] apK1_some => apK1 n k c (some (r, m1))
-grind_pattern [ind_grind] apK2_some => apK2 (some (r, m))
-
-theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some abstractPrefix) (hab : AbF p)
-    (n : Nat) :
-    ∀ (s₀ : St) (k c e : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix" [k, c, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ absPrefW n s₀.mem k c e = some (r, s'.mem); ⊤⦄ := by
-  induction n with
-  | zero =>
-    intro s₀ k c e; rw [invoke_eq _ hp]; simp only [callFn, abstractPrefix]
-    vcgen [exec] <;> grind
-  | succ n ih =>
-    intro s₀ k c e
-    rw [invoke_eq _ hp]
-    simp only [callFn, abstractPrefix]
-    sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        abF_spec p hab n, ih] <;>
-      finish (gen := 20)
-
-theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
-    ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
-    absPrefW n m k c e = some (r, m') → StageR vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
-    AbsOK m →
+theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (m m' : Mem) (a : AState) (k c e : Word) (r : List Word)
+    (h : absPrefW m k c e = some (r, m')) (hS : StageR vis fe m a) (he : H e)
+    (_hb : c.toNat + k.toNat < 2 ^ 64) (hA : AbsOK m) :
     ∃ x a', (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)).run a = .ok (x, a') ∧
       StageR vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧
       AbsOK m' := by
-  induction n with
-  | zero => intro m m' a k c e r h; simp [absPrefW] at h
-  | succ n ih =>
-    intro m m' a k c e r h hS he hb hA
-    by_cases hk : k = 0
-    · rw [absPrefW_nil n m k c e hk] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hk0 : k.toNat = 0 := by rw [hk]; rfl
-      rw [hk0]
-      exact ⟨decI e, a, rfl, hS, IWGrow.refl m, by simpa using he, rfl, hA⟩
-    · rw [absPrefW_cons n m k c e hk] at h
-      have hpos : 1 ≤ k.toNat := by
-        rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
-        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hk
-        · omega
-      have hk1 : (k - 1).toNat = k.toNat - 1 := by
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp
-      have hc1 : (c + 1).toNat = c.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      rcases ha : abF m [CWF, e, k - 1, c] with _ | ⟨ra, m1⟩ <;> simp only [ha, apK1, reduceCtorEq] at h
-      obtain ⟨x1, a1, hrun1, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ :=
-        abF_ok dn vis fe e (k - 1) c he m m1 a ra ha ⟨hS, hA⟩
-      rcases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with _ | ⟨r2, m2⟩ <;> simp only [hr, apK2, reduceCtorEq] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      obtain ⟨x2, a2, hrun2, hS2, hg2, hd21, hd22, hA2⟩ := ih m1 m2 a1 (k - 1) (c + 1) (ra.headD 0) r2 hr hS1 hd1
-        (by rw [hk1, hc1]; omega) hA1
-      refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, by simpa using hd21, by simpa using hd22, hA2⟩
-      rw [CWF_eq, hk1] at hrun1
-      have hz : k.toNat = (k.toNat - 1) + 1 := by omega
-      rw [hk1, hc1] at hrun2
-      rw [hz]
-      simp only [ConRon.Arena.abstractPrefix, StateT.run_bind, hrun1, except_ok_bind, ← hd2]
-      exact hrun2
+  rw [absPrefW] at h
+  obtain ⟨⟨ra, m1⟩, ha, h⟩ := of_K h (absPrefW.k_ar_entry.none ..)
+  rw [absPrefW.k_ar_entry.arm1] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨x, a1, hrun, ⟨hS1, hg1, hd1, hd2⟩, hA1⟩ := arF_ok dn vis fe e 0 k c he m m1 a ra ha ⟨hS, hA⟩
+  exact ⟨x, a1, by simpa [ConRon.Arena.abstractPrefix] using hrun, hS1, hg1, by simpa using hd1,
+    by simpa using hd2, hA1⟩
 
 /-! ## `abstract_prefix_list` (the round-1 `while` rewritten as a self-recursion: first element,
 then the rest, then `sl_cons`) -/
@@ -142,9 +70,9 @@ then the rest, then `sl_cons`) -/
 l_model abstractPrefixList_spec (p : Prog) (hap : p.lookup "abstract_prefix" = some abstractPrefix)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p)
+    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (har : ArF p)
   fns [hp ↦ aplW]
-  specs [abstractPrefix_spec p hap hab n, slCons_specW p ha hc hsc n]
+  specs [abstractPrefix_spec p hap har n, slCons_specW p ha hc hsc n]
   grind [arena_grind] extra [ld64_rd_spec]
 
 /-- **One step of a handle slice** `(o, l)`, `l ≠ 0`: the head read at `o`, the rest at
@@ -189,8 +117,8 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     · rw [aplW.arm2 n m rP dso dsl hdsl] at h
       obtain ⟨d, ds', w, rfl, hds', hw1, hw2, hw3, hdso1, hdsl1⟩ := rcSl_step hds hdsl hb
       rw [hw1] at h
-      rcases ha : absPrefW n m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplW.k_abstract_prefix, reduceCtorEq] at h
-      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
+      rcases ha : absPrefW m rP 0 w with _ | ⟨ra, m1⟩ <;> simp only [ha, aplW.k_abstract_prefix, reduceCtorEq] at h
+      obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12, hA1⟩ := absPrefW_ok dn vis fe m m1 a rP 0 w ra ha hS hw2
         (by simpa using hrP) hA
       simp only [UInt64.toNat_zero] at hrun1
       rcases hr : aplW n m1 rP (dso + 1) (dsl - 1) with _ | ⟨r2, m2⟩ <;> simp only [hr, aplW.k_abstract_prefix_list, reduceCtorEq] at h

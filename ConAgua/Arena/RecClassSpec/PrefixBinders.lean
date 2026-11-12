@@ -453,7 +453,7 @@ l_model pvarsGo_spec (p : Prog) (h : RuProg p)
 
 l_model call1Close_spec (p : Prog) (h : RuProg p)
   fns [h.c1c ↦ c1cW list]
-  specs [ftdsF_spec p h.ad n, closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
+  specs [ftdsF_spec p h.ad n, closeLams_spec p h.clf n]
   grind [arena_grind]
 
 l_model call1Tail_spec (p : Prog) (h : RuProg p)
@@ -513,7 +513,7 @@ l_model ruleClose_spec (p : Prog) (h : RuProg p)
   fns [h.rc ↦ grcW list]
   specs [slotVar_spec p h.pw h.sf h.sp h.isort h.fvf h.fvp h.ifv h.sv n,
     slAppend_specW p h.alloc h.copy h.app n, mknF_spec p h.ad n, ftdsF_spec p h.ad n,
-    closeLams_spec p h.db h.lf h.lp h.il h.mkl h.cl h.ab n]
+    closeLams_spec p h.clf n]
   grind [arena_grind]
 
 l_model ruleBody_spec (p : Prog) (h : RuProg p)

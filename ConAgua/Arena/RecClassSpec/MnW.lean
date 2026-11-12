@@ -62,7 +62,7 @@ theorem rec2IhParts_specF (p : Prog) (hp : p.lookup "class_gen_ih_parts" = some 
 
 l_model classGenMinorTyIh1Close_spec (p : Prog) (h : MnProg p)
   fns [h.icl ↦ iclW list]
-  specs [ftdsF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+  specs [ftdsF_spec p h.ad n, closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenMinorTyIh1Tail_spec (p : Prog) (h : MnProg p)
@@ -137,7 +137,7 @@ end misArms
 l_model classGenMinorTyClose_spec (p : Prog) (h : MnProg p)
   fns [h.mcl ↦ mcW list]
   specs [ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
-    closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+    closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenMinorTyConcl2_spec (p : Prog) (h : MnProg p)
@@ -314,7 +314,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   refine RSim.bind (K := fun o => K (i1W.k_class_gen_minor_ty_ih1_tail (itW.k_class_gen_minor_ty_ih1_close (iclW.k_close_telescope o)))) hK (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r9, m9⟩ h9
-    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok n (fun _ => none) fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
+    obtain ⟨x, a', hrun, hS', hg, hx, hA9⟩ := closeW_ok (fun _ => none) fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
       (hS8.lt64 hbb) hbb hel (hf8 (hf7 hA6))
     exact ⟨x, a', hrun, hS', hg, hx, hA9⟩
   rintro ⟨r9, m9⟩ ih a9 - ⟨hS9, hg9, ⟨hih, hihd⟩, hA9⟩
@@ -606,7 +606,7 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
   refine RSim.bind (K := fun o => c2W.k_class_gen_minor_ty_close (mcW.k_close_telescope o)) rfl (Q1 := fun b a' x =>
     StageR vis fe b.2 a' ∧ IWGrow m5 b.2 ∧ decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r6, m6⟩ h6
-    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok n (fun _ => none) fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
+    obtain ⟨x, a', hrun, hS', hg, hx, hA6⟩ := closeW_ok (fun _ => none) fe vis m5 m6 a4 _ _ d _ _ r6 h6 hS5 hbH hd5
       (hS5.lt64 hb5) hb5 hdl (appendW_afr h5 (hf4 (hf3 hA2)))
     exact ⟨x, a', hrun, hS', hg, hx, hA6⟩
   rintro ⟨r6, m6⟩ x a6 - ⟨hS6, hg6, hx, hA6⟩
