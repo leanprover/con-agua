@@ -197,7 +197,7 @@ l_model sutE_spec (p : Prog) (hp : CertProg p)
 
 l_model sucE_spec (p : Prog) (hp : CertProg p)
   fns [hp.sunit ↦ sucE list]
-  specs [callW_spec p n "io_neutral", ulE_spec p hp n, sutE_spec p hp n]
+  specs [callW_spec p n "io_neutral", (ulE_spec p hp n).1, sutE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

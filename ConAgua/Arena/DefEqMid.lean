@@ -121,7 +121,7 @@ structure DefEqMidProg (p : Prog) : Prop where
   tupa : p.lookup "try_unfold_proj_app" = some tryUnfoldProjAppL
   dq : p.lookup "delta_quick" = some deltaQuickL
   off : p.lookup "defeq_offset" = some defeqOffsetL
-  lamsInner : p.lookup "defeq_lams_inner" = some defeqLamsInnerL
+  bindersInner : p.lookup "defeq_binders_inner" = some defeqBindersInnerL
 
 /-- A run that succeeded had fuel. -/
 theorem callW_succ {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m m' : Mem} {r : List Word}
@@ -503,29 +503,30 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
   RefE.coreSpec (offE_spec p hp.off (n + 1) s₀ mode vis d a b)
     (off_ref p hp hnp n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
-/-! ## `defeq_lams_inner` -/
+/-! ## `defeq_binders_inner` -/
 
-/-- **`defeq_lams_inner`'s model, both outcomes** (generated; the `defeq` and `infer` slots through
-their runs). -/
-l_model liE_spec (p : Prog) (hf : p.lookup "defeq_lams_inner" = some defeqLamsInnerL)
+/-- **`defeq_binders_inner`'s model, both outcomes** (generated; the `defeq` and `infer` slots
+through their runs). -/
+l_model liE_spec (p : Prog) (hf : p.lookup "defeq_binders_inner" = some defeqBindersInnerL)
   fns [hf ↦ liE list]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
 
-/-- **`defeq_lams_inner` refines `defeqLamsInner`, both outcomes** (the depth `d + 1` does not
-wrap): the errors are the `defeq` and `infer` slots'. -/
+/-- **`defeq_binders_inner` refines `defeqBindersInner`, both outcomes** (the depth `d + 1` does
+not wrap): the errors are the `defeq` and `infer` slots'. -/
 theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
     (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (M : ModeMaps) (eb mode lam d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : d.toNat + 1 < 2 ^ 64) (h₁ : HW b₁) (h₂ : HW b₂) :
-    RefE (KnotUpToE p n) (liE p (n + 1) s₀.mem mode vis d b₁ b₂)
-      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b₁) (decE b₂))
+    RefE (KnotUpToE p n) (liE p (n + 1) s₀.mem mode vis lam d b₁ b₂)
+      (defeqBindersInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam != 0) d.toNat
+        (decE b₁) (decE b₂))
       a₀ (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
   have hd1 : (d + 1).toNat = d.toNat + 1 := by
     rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
   have K := hk n (Nat.le_refl _)
   have hS := hs.rel
-  unfold defeqLamsInner
+  unfold defeqBindersInner
   simp only [liE]
   rw [← hd1]
   refine RefE.bind_callE (fun _ => rfl) (K.defeq F s₀ a₀ dn vis fe M eb mode (d + 1) b₁ b₂ hF hn hs h₁ h₂)
@@ -538,13 +539,17 @@ theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
   rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
   simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, L.Arena.decMode_verified mode hs.mode4,
     decide_eq_true_eq]
-  by_cases hv : mode &&& 1 = 0
+  by_cases hv : lam ≠ 0 ∧ mode &&& 1 = 0
   case neg =>
     rw [ite_eq_right hv]
-    simp only [hv, ↓reduceIte]
+    have hb : (lam != 0 && decide (mode &&& 1 = 0)) = false := by
+      simpa [bne_iff_ne, Bool.and_eq_true, decide_eq_true_eq] using hv
+    simp only [hb, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_one)
   rw [ite_eq_left hv]
-  simp only [hv, ↓reduceIte]
+  have hb : (lam != 0 && decide (mode &&& 1 = 0)) = true := by
+    simpa [bne_iff_ne, Bool.and_eq_true, decide_eq_true_eq] using hv
+  simp only [hb, ↓reduceIte]
   have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
   refine RefE.bind_callE (fun _ => rfl) (K.infer F _ _ dn vis fe M₁ eb mode (d + 1) b₁ hF hn hs₁ h₁)
     (fun (hG : KnotUpToE p n) => (hG n (Nat.le_refl _)).infer F _ _ dn vis fe M₁ eb mode (d + 1) b₁ hF hn
@@ -562,16 +567,17 @@ theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
       _ _ hF hn hs₃ e₂.resOk e₃.resOk) fun _ _ _ e₄ => ?_
   exact RefE.ret rfl ⟨e₄.after, rfl, e₄.resOk⟩
 
-/-- **`defeq_lams_inner` refines `defeqLamsInner`** at the knot (`li_ref`'s ok half). -/
-@[refines ConRon.Arena.defeqLamsInner]
-theorem defeqLamsInner_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
+/-- **`defeq_binders_inner` refines `defeqBindersInner`** at the knot (`li_ref`'s ok half). -/
+@[refines ConRon.Arena.defeqBindersInner]
+theorem defeqBindersInner_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
     (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (M : ModeMaps) (eb mode lam d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : d.toNat + 1 < 2 ^ 64) (h₁ : HW b₁) (h₂ : HW b₂) :
-    CoreSpec p (n + 1) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
-      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b₁) (decE b₂))
+    CoreSpec p (n + 1) "defeq_binders_inner" [mode, vis, lam, d, b₁, b₂]
+      (defeqBindersInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam != 0) d.toNat
+        (decE b₁) (decE b₂))
       decBool s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (liE_spec p hp.lamsInner (n + 1) s₀ mode vis d b₁ b₂)
-    (li_ref p n hk F s₀ a₀ dn vis fe M eb mode d b₁ b₂ hF hn hs hd h₁ h₂)
+  RefE.coreSpec (liE_spec p hp.bindersInner (n + 1) s₀ mode vis lam d b₁ b₂)
+    (li_ref p n hk F s₀ a₀ dn vis fe M eb mode lam d b₁ b₂ hF hn hs hd h₁ h₂)
 
 end L.Arena
