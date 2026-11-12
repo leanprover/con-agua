@@ -56,7 +56,7 @@ theorem checkerProg_armOwn9 : ∀ f ∈ armOwn9, checkerProg.lookup f = armText.
 /-- `armFns` but `openFns`, part 10. -/
 def armOwn10 : List FnName :=
   ["ls_node", "pool_copy", "canon_level_list_eq",
-   "install_basis_decls", "install_basis_decl", "check_decl_axiom", "ci_canon_eq", "ci_canon_defn",
+   "install_basis_decl", "check_decl_axiom", "ci_canon_eq", "ci_canon_defn",
    "ci_canon_rec", "canon_rules_eq"]
 
 set_option maxRecDepth 100000 in

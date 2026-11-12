@@ -20,19 +20,19 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 /-!
 # BrsW
 
-`resFromW_hit`, `resFromW_01`, `partsResCont`, `partsLpsEq`, `partsResR`, `ipIte01_ne` and the lemmas only they use.
+`readBlock`'s sims: the three universe and parameter tests (`floW_ok`, `cpoW_ok`, `cloW_ok`), the
+eliminator, the tail, `read_block_at` and `read_block` (`rbaW_sim`, `rbW_sim`).
 -/
 
 section
 
 
 /-!
-# Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `blockShape?`'s pins
+# Refinements of `IndParts`, part 13 (lane `indproofs2`, helper `parts`): `readBlock`'s tests
 
-The reserved-name and level-parameter pins (`block_shape_pins_formers`/`_recs`/`_ctors`/`_ok`,
-pure in the twin: one `Bool`), and the eliminator (`block_shape_large`). Shared pieces: a constant's
-level parameters copied by `er_to_iw` (`partsLpsCopy`), `reserved_contains` against the twin's
-`reservedBasisNames` (`partsResCont`).
+The universe and parameter tests (pure in the twin: one `Bool` each), and the eliminator
+(`block_shape_large`). Shared piece: a constant's level parameters copied by `er_to_iw`
+(`partsLpsCopy`).
 -/
 
 noncomputable section
@@ -46,69 +46,6 @@ open scoped Lean.Order
 namespace L.Ind
 
 open L.Arena
-
-/-! ## `reserved_contains` -/
-
-theorem resFromW_hit (n : Nat) : ∀ (m : Mem) (x j : Word) (b : Word), j.toNat ≤ 16 →
-    resFromW n m x j = some b → b ≠ 0 → ∃ i, j.toNat ≤ i ∧ i < 16 ∧ pinW m (55 + i) = x := by
-  induction n with
-  | zero => intro m x j b _ h; simp [resFromW] at h
-  | succ n ih =>
-    intro m x j b hj h hb
-    rw [resFromW_step] at h
-    by_cases h16 : 16 ≤ j
-    · rw [ite_eq_left h16] at h; simp at h; exact absurd h.symm hb
-    rw [ite_eq_right h16] at h
-    have hj16 : j.toNat < 16 := by rw [UInt64.le_iff_toNat_le] at h16; simp at h16; omega
-    by_cases he : rdW (m.arr64 PINS) (55 + j) = x
-    · refine ⟨j.toNat, Nat.le_refl _, hj16, ?_⟩
-      have : (55 + j).toNat = 55 + j.toNat := by rw [UInt64.toNat_add]; simp; omega
-      simpa [rdW, pinW, this] using he
-    rw [ite_eq_right he] at h
-    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    obtain ⟨i, hi1, hi2, hi3⟩ := ih m x (j + 1) b (by omega) h hb
-    exact ⟨i, by omega, hi2, hi3⟩
-
-theorem resFromW_01 (n : Nat) : ∀ (m : Mem) (x j : Word) (b : Word), resFromW n m x j = some b →
-    b = 0 ∨ b = 1 := by
-  induction n with
-  | zero => intro m x j b h; simp [resFromW] at h
-  | succ n ih =>
-    intro m x j b h
-    rw [resFromW_step] at h
-    split at h
-    · simp at h; exact Or.inl h.symm
-    split at h
-    · simp at h; exact Or.inr h.symm
-    exact ih _ _ _ _ h
-
-/-- **`reserved_contains` is the twin's `reservedBasisNames.contains`.** -/
-theorem partsResCont {m : Mem} {a : AState} {n : Nat} {x b : Word} (hx : x.toNat < 2 ^ 32)
-    (h : resContW n m x = some b) (hP : PinsR m a.pins) :
-    ∃ R, reservedBasisNames.run a = .ok (R, a) ∧ b = if R.contains (decI x) then 1 else 0 := by
-  cases n with
-  | zero => simp [resContW] at h
-  | succ n =>
-  rw [resContW_step] at h
-  by_cases h0 : pinW m 0 = 0
-  · rw [ite_eq_left h0] at h; simp at h
-  rw [ite_eq_right h0] at h
-  have hF := hP.full h0
-  refine ⟨_, pinReserved_run hF, ?_⟩
-  rcases resFromW_01 n m x 0 b h with rfl | rfl
-  · have hm := resFromW_miss n m x 0 (by simp) h
-    have : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = false := by
-      rw [Bool.eq_false_iff]
-      intro hc
-      simp only [List.contains_iff_mem, List.mem_map, List.mem_range] at hc
-      obtain ⟨i, hi, e⟩ := hc
-      exact hm i (Nat.zero_le _) hi ((decI_eq_iff _ (hF.reserved_lt i hi) _).mp e ▸ decI_word_self x hx)
-    rw [this]; rfl
-  · obtain ⟨i, -, hi, he⟩ := resFromW_hit n m x 0 1 (by simp) h (by decide)
-    have : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = true := by
-      simp only [List.contains_iff_mem, List.mem_map, List.mem_range]
-      exact ⟨i, hi, by rw [he]⟩
-    rw [this]; rfl
 
 /-! ## The pins: relations -/
 
