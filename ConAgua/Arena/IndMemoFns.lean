@@ -77,7 +77,7 @@ def imFns : List FnName :=
    "check_structural_nat_pin", "check_structural_nat_pin_at_fe2", "check_sum_ctor",
    "check_sum_ctor_tail", "check_sum_ctors", "check_sum_tele", "check_thm_val", "check_type_pins",
    "ci_at_lps", "ci_canon_defn", "ci_canon_eq", "ci_canon_rec", "ci_eq", "ci_eq_rest", "ci_to_cv",
-   "close_telescope", "cons_block_inds", "const_e", "const_find", "const_name_of", "const_push",
+   "close_telescope", "close_telescope_go", "cons_block_inds", "const_e", "const_find", "const_name_of", "const_push",
    "const_ty_at", "const_val_at", "consts_resolve_all", "ct_clear", "ct_find", "ct_put", "ctl_get",
    "ctor_family", "cv_at_lps", "cv_canon_eq", "cv_clear", "cv_eq", "cv_find", "cv_lps", "cv_new",
    "cv_put", "cv_rd", "cv_wr", "de_clear", "de_find", "de_put", "declined_at_definition", "defeq",

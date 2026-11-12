@@ -77,8 +77,6 @@ def litArm (F : Nat → Nat → Nat) (a b : Nat) : AM (Option EIdx) := do
 /-- `natAddLit` with `f` for `nat_add`: `o := CTL[0]; l := call f(oa, la, ob, lb);
 h := call intern_lit(o, l); return h`. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def topLit (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
@@ -219,8 +217,6 @@ end generic
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
@@ -230,8 +226,6 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
@@ -305,8 +299,6 @@ end divmod
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h, pt, pb) {
   o := CTL.u64[0];
@@ -439,6 +431,78 @@ variable (hz : p.lookup "size_bytes" = some sizeBytesL)
   (hpr : p.lookup "pow_refused" = some powRefusedL) (hpw : p.lookup "pow_nat" = some powNatL)
   (hps : p.lookup "nat_shl" = some natShl) (hlp : p.lookup "limb_push" = some limbPushL)
 
+/-- A refused arm: a sentinel (`≥ 2^63`), the twin's failure with its message. -/
+theorem NatRes.refused {R : Mem → AState → Prop} {arm : AM (Option EIdx)} {a₀ : AState}
+    {m' : Mem} {r : Word} (hr : 2 ^ 63 ≤ r.toNat) (h : arm.run a₀ = .error (natRefusal r)) :
+    NatRes R arm a₀ r m' :=
+  ⟨fun h' => absurd h' (by omega), fun _ => h⟩
+
+/-- `natPowArm` at the run's maximum: the two refusals of `powGuard`, or the power interned. -/
+theorem natPowArm_run (a b : Nat) (st : AState) :
+    (natPowArm a b).run st =
+      if 4294967295 < b then .error (natRefusal natRefusedPowExp)
+      else if powRefusedN st.pins.maxNatSize a b then .error (natRefusal natRefusedPowSize)
+      else (do let x ← internE (.lit (.natVal (a ^ b))); pure (some x) : AM (Option EIdx)).run st := by
+  simp only [natPowArm, StateT.run_bind, powGuard_run]
+  by_cases h1 : 4294967295 < b
+  · simp only [h1, ↓reduceIte]; rfl
+  · by_cases h2 : powRefusedN st.pins.maxNatSize a b
+    · simp only [h1, h2, ↓reduceIte]; rfl
+    · simp only [h1, h2, ↓reduceIte]; rfl
+
+/-- The one-limb slice at a pool address is that limb. -/
+theorem pv_one_prd (m : Mem) (o : Word) (h : o.toNat < 2 ^ 41) :
+    pv (vpool m) o.toNat 1 = (prd m o).toNat := by
+  simp [pv, wt, vpool_getD m o h]
+
+/-- `pow_refused`'s word condition is the twin's `powRefused` (a normalised base). -/
+theorem powRefusedW_iff (m : Mem) (mx oa la e : Word) (hn : Norm (vpool m) oa.toNat la.toNat)
+    (hoa : oa.toNat < 2 ^ 41) :
+    powRefusedW mx la (prd m oa) e ↔
+      powRefusedN mx.toNat (pv (vpool m) oa.toNat la.toNat) e.toNat := by
+  have hsz := sizeBytes_pv (vpool m) oa.toNat la.toNat hn
+  unfold powRefusedW powRefusedN
+  rw [hsz]
+  have ha1 : pv (vpool m) oa.toNat la.toNat ≤ 1 ↔ la = 0 ∨ (la = 1 ∧ prd m oa = 1) := by
+    by_cases h0 : la = 0
+    · subst h0; simp [pv]
+    by_cases h1 : la = 1
+    · subst h1
+      rw [show (1 : Word).toNat = 1 from rfl] at hn ⊢
+      rw [pv_one_prd m oa hoa]
+      have hnz : prd m oa ≠ 0 := by
+        have := hn (by decide); simpa [vpool_getD m oa hoa] using this
+      constructor
+      · intro h; right; refine ⟨rfl, ?_⟩
+        apply UInt64.toNat_inj.mp
+        have : (prd m oa).toNat ≠ 0 := fun e => hnz (UInt64.toNat_inj.mp (by simpa using e))
+        simp; omega
+      · rintro (h | ⟨-, h⟩)
+        · exact absurd h (by decide)
+        · rw [h]; decide
+    · have h2 : 2 ≤ la.toNat := by
+        have : la.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
+        have : la.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by simpa using e))
+        omega
+      have := pv_two_limbs _ _ _ hn h2
+      constructor
+      · intro h; omega
+      · rintro (h | ⟨h, -⟩) <;> simp_all
+  have he0 : e ≠ 0 ↔ e.toNat ≠ 0 := by
+    constructor
+    · intro h e'; exact h (UInt64.toNat_inj.mp (by simpa using e'))
+    · intro h e'; exact h (by simp [e'])
+  constructor
+  · rintro ⟨h0, h1, h2, h3⟩
+    refine ⟨fun h => ?_, he0.mp h2, ?_⟩
+    · rcases ha1.mp h with h | h
+      · exact h0 h
+      · exact h1 h
+    · rw [Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero (he0.mp h2))]; exact h3
+  · rintro ⟨h0, h2, h3⟩
+    refine ⟨fun h => h0 (ha1.mpr (Or.inl h)), fun h => h0 (ha1.mpr (Or.inr h)), he0.mpr h2, ?_⟩
+    rwa [Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero h2)] at h3
+
 include hpool hgrow hI hph hpt hpm hpn hz hpr hpw hps hlp in
 /-- **`nat_pow_lit` refines the `Nat.pow` arm** (`powGuard`, then the power): the handle, or the
 guard's sentinel (`NatRes`). -/
@@ -452,9 +516,101 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
     ⦃fun r s' => LocEq s' s₀ ∧
       NatRes R (natPowArm (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat))
         a₀ (r.headD 0) s'.mem; ⊤⦄ := by
-  sorry
+  have hok := hpool _ _ hR
+  have hbig := pv_two_limbs (vpool s₀.mem) ob.toNat lb.toNat hnb
+  have h41 := hok.top41
+  have hoa : oa.toNat < 2 ^ 41 := by simp only [SliceOK] at ha; omega
+  have hob : 0 < lb.toNat → ob.toNat < 2 ^ 41 := fun _ => by simp only [SliceOK] at hb; omega
+  have hrun := natPowArm_run (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat) a₀
+  rw [← hmx] at hrun
+  rw [invoke_eq _ hg]
+  simp only [callFn, natPowLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      powRefused_spec p hz hpr n, powNat_spec p hph hpt hpm hpn hps hpw hlp n, hI a₀ n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
+      bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      Nat.reduceEqDiff, LocEq, Sig.retVal, Sig.retOr] at *
+    case vc2 _ _ h =>
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left]
+      have := hbig (by simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h; exact h); omega
+    case vc4 _ _ _ hbd hl1 hX =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      rw [prd_ld _ _ hbd] at hX
+      subst hl1
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left]
+      rw [show (1 : Word).toNat = 1 from rfl, pv_one_prd _ _ (hob (by decide))]
+      exact UInt64.lt_iff_toNat_lt.mp hX
+    case vc6 _ _ _ hbd s hl1 hX hr hA =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨-, -, hrs⟩ := hA
+      simp only [prd_ld _ _ hbd] at hX hrs
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : powRefusedW (rdW (s₀.mem.arr64 PINS) 72) la (prd s₀.mem oa) (prd s₀.mem ob) := by
+        refine Classical.byContradiction fun hc => ?_
+        rw [ite_eq_right hc] at hrs; exact hr hrs
+      rw [powRefusedW_iff _ _ _ _ _ hna hoa, ← hb1] at hW
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (by rw [hb1]; exact fun h => hX (UInt64.lt_iff_toNat_lt.mpr h)), ite_eq_left hW]
+    case vc8 _ _ _ hbd _ _ _ s₁ _ hl1 hX hr hP hA hI =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨hl2, hm2, hrs⟩ := hA
+      obtain ⟨hl1', -, -, -, -, hpv⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      simp only [prd_ld _ _ hbd] at hX hrs hl2
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : ¬ powRefusedW (rdW (s₀.mem.arr64 PINS) 72) la (prd s₀.mem oa) (prd s₀.mem ob) := by
+        intro hc; rw [ite_eq_left hc] at hrs; exact hr (by rw [hrs]; decide)
+      rw [powRefusedW_iff _ _ _ _ _ hna hoa, ← hb1] at hW
+      rw [hl2, hm2] at hpv
+      simp (config := { decide := true }) only [St.setLoc_loc, Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at hpv
+      rw [hpv, ← hb1] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (by rw [hb1]; exact fun h => hX (UInt64.lt_iff_toNat_lt.mpr h)), ite_eq_right hW]
+    case vc14 _ _ _ _ s _ _ _ hA =>
+      obtain ⟨hloc, hmem, -⟩ := hA
+      rw [hmem, show s.loc 0 = oa by rw [hloc]; rfl, show s.loc 1 = la by rw [hloc]; rfl]; exact ha
+    case vc15 _ _ _ hbd s _ hX _ hA =>
+      obtain ⟨hloc, -, -⟩ := hA
+      rw [show s.loc 4 = _ by rw [hloc]; try rfl]
+      have := UInt64.not_lt.mp hX
+      exact Nat.lt_of_le_of_lt (UInt64.le_iff_toNat_le.mp this) (by decide)
+    case vc21 _ _ _ _ _ hr _ hA =>
+      obtain ⟨-, -, hrs⟩ := hA
+      exact (hr (by simpa [powRefusedW] using hrs)).elim
+    case vc23 _ _ h1 _ _ _ _ _ hl1 _ _ hA hP hI =>
+      have hl0 : lb.toNat = 0 := by
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨hl1', -, -, -, -, hpv⟩ := hP
+      obtain ⟨hl2, hm2, -⟩ := hA
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      rw [hl2, hm2] at hpv
+      simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil, UInt64.toNat_zero] at hpv
+      rw [hpv] at hok' hR' hres'
+      rw [hb0] at hrun ⊢
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (by decide), ite_eq_right (by simp [powRefusedN])]
+    all_goals first
+      | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
+      | (grind [arena_grind, lang_grind]; done)
 
 end pow
+
 
 /-! ## `beq`, `ble`: a `Bool` constant -/
 
@@ -462,8 +618,6 @@ end pow
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -474,8 +628,6 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -500,8 +652,6 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
@@ -566,6 +716,183 @@ def natShlArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (Nat.shiftLeft a b))); pure (some x)
 def natShrArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (Nat.shiftRight a b))); pure (some x)
+
+section shl
+variable (p : Prog) (R : Mem → AState → Prop)
+  (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
+  (hI : InternSpec p R)
+  (hpt : p.lookup "nat_trim" = some natTrim) (hps : p.lookup "nat_shl" = some natShl)
+  (hz : p.lookup "size_bytes" = some sizeBytesL)
+  (hsl : p.lookup "shift_left_refused" = some shiftLeftRefusedL)
+
+/-- `natShlArm` at the run's maximum: `0 <<< b` computes, else the two refusals of
+`shiftLeftGuard`, or the shift interned. -/
+theorem natShlArm_run (a b : Nat) (st : AState) :
+    (natShlArm a b).run st =
+      if a ≠ 0 ∧ 4294967295 < b then .error (natRefusal natRefusedShlExp)
+      else if a ≠ 0 ∧ shlRefusedN st.pins.maxNatSize a b then .error (natRefusal natRefusedSize)
+      else (do let x ← internE (.lit (.natVal (Nat.shiftLeft a b))); pure (some x) :
+        AM (Option EIdx)).run st := by
+  simp only [natShlArm, StateT.run_bind, shiftLeftGuard_run]
+  by_cases h0 : a = 0
+  · simp only [h0, ↓reduceIte, ne_eq, not_true_eq_false, false_and]; rfl
+  by_cases h1 : 4294967295 < b
+  · simp only [h0, h1, ↓reduceIte, ne_eq, not_false_eq_true, and_self]; rfl
+  · by_cases h2 : shlRefusedN st.pins.maxNatSize a b
+    · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_self, and_false]; rfl
+    · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_false]; rfl
+
+include hpool hgrow hI hpt hps hz hsl in
+/-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm** (`shiftLeftGuard`, then the shift): the
+handle, or the guard's sentinel (`NatRes`). -/
+theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Nat) (s₀ : St)
+    (a₀ : AState) (hR : R s₀.mem a₀) (hmx : (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize)
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (hmode : ModeOK s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nat_shl_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      NatRes R (natShlArm (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat))
+        a₀ (r.headD 0) s'.mem; ⊤⦄ := by
+  have hok := hpool _ _ hR
+  have hbig := pv_two_limbs (vpool s₀.mem) ob.toNat lb.toNat hnb
+  have h41 := hok.top41
+  have hla : la.toNat < 2 ^ 41 := by simp only [SliceOK] at ha; omega
+  have hob : 0 < lb.toNat → ob.toNat < 2 ^ 41 := fun _ => by simp only [SliceOK] at hb; omega
+  have ha0 : pv (vpool s₀.mem) oa.toNat la.toNat = 0 ↔ la = 0 := by
+    constructor
+    · intro h; apply Classical.byContradiction; intro hl
+      have hl' : 0 < la.toNat := Nat.pos_of_ne_zero fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+      have := pv_ge_wt _ _ _ hl' hna; have : 0 < wt (la.toNat - 1) := Nat.pow_pos (by decide) 
+      omega
+    · intro h; subst h; rfl
+  have hsz := sizeBytes_pv (vpool s₀.mem) oa.toNat la.toNat hna
+  have hrun := natShlArm_run (pv (vpool s₀.mem) oa.toNat la.toNat) (pv (vpool s₀.mem) ob.toNat lb.toNat) a₀
+  rw [← hmx] at hrun
+  rw [invoke_eq _ hg]
+  simp only [callFn, natShlLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      shiftLeftRefused_spec p hz hsl n, natShl_spec p hpt hps n, hI a₀ n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
+      bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem,
+      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+      Nat.reduceEqDiff, Sig.retVal, Sig.retOr] at *
+    case vc2 _ _ h hla =>
+      have hb : 4294967295 < pv (vpool s₀.mem) ob.toNat lb.toNat := by
+        have := hbig (by simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h; exact h); omega
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hb⟩]
+    case vc4 _ _ _ hbd hla hl1 hX =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      rw [prd_ld _ _ hbd] at hX
+      subst hl1
+      have hb : 4294967295 < pv (vpool s₀.mem) ob.toNat (1 : Word).toNat := by
+        rw [show (1 : Word).toNat = 1 from rfl, pv_one_prd _ _ (hob (by decide))]
+        exact UInt64.lt_iff_toNat_lt.mp hX
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hb⟩]
+    case vc6 _ _ _ hbd _ hla hl1 hX hr hA =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨-, -, hrs⟩ := hA
+      simp only [prd_ld _ _ hbd] at hX hrs
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat (1 : Word).toNat) := by
+        refine Classical.byContradiction fun hc => hr ?_
+        rw [hrs, ite_eq_right]; unfold shlRefusedN at hc; rw [hsz, hb1] at hc; exact hc
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (fun h => hX (UInt64.lt_iff_toNat_lt.mpr (hb1 ▸ h.2))),
+        ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hW⟩]
+    case vc8 _ _ _ hbd _ s₂ hc _ s₁ _ hla hl1 hX hr hP hA hI =>
+      simp only [BinOp.eval, Locals.init_cons_zero, Locals.init_cons_succ] at hbd
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨hl₂, hm₂, hrs⟩ := hA
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      simp only [prd_ld _ _ hbd] at hX hrs hl₂
+      subst hl1
+      have hb1 : pv (vpool s₀.mem) ob.toNat (1 : Word).toNat = (prd s₀.mem ob).toNat :=
+        pv_one_prd s₀.mem ob (hob (by decide))
+      have hW : ¬ shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat (1 : Word).toNat) := by
+        intro hc; apply hr; rw [hrs, ite_eq_left]
+        · decide
+        · unfold shlRefusedN at hc; rw [hsz, hb1] at hc; exact hc
+      simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem] at hc
+      have h6 : s₁.loc 6 = s₂.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      have h0 : s₂.loc 0 = oa := by rw [hl₂.loc 0]; rfl
+      have h1 : s₂.loc 1 = la := by rw [hl₂.loc 1]; rfl
+      have h2 : s₂.loc 2 = ob := by rw [hl₂.loc 2]; rfl
+      have h3 : s₂.loc 3 = 1 := by rw [hl₂.loc 3]; rfl
+      rw [h0, h1, h2, h3, hm₂] at hpv
+      rw [h6, hm₂, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => hX (UInt64.lt_iff_toNat_lt.mpr (hb1 ▸ h.2))),
+        ite_eq_right (fun h => hW h.2)]
+    case vc20 _ _ h1 _ hla hl1 hr _ hA =>
+      have hl0 : lb.toNat = 0 := by
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1; simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨-, -, hrs⟩ := hA
+      try simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil] at hrs
+      have hW : shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat lb.toNat) := by
+        refine Classical.byContradiction fun hc => hr ?_
+        rw [hrs, ite_eq_right]; unfold shlRefusedN at hc; rw [hsz, hb0] at hc; simpa using hc
+      apply NatRes.refused (by decide)
+      rw [hrun, ite_eq_right (fun h => by rw [hb0] at h; exact absurd h.2 (by decide)),
+        ite_eq_left ⟨fun h0 => hla (ha0.mp h0), hW⟩]
+    case vc22 _ _ h1 _ s₂ hc _ s₁ _ hla hl1 hr _ hA hP hI =>
+      have hl0 : lb.toNat = 0 := by
+        have : lb.toNat ≠ 1 := fun e => hl1 (UInt64.toNat_inj.mp (by simpa using e))
+        simp only [decide_eq_true_eq, UInt64.lt_iff_toNat_lt] at h1; simp at h1; omega
+      have hb0 : pv (vpool s₀.mem) ob.toNat lb.toNat = 0 := by rw [hl0]; rfl
+      obtain ⟨hl₂, hm₂, hrs⟩ := hA
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      try simp only [Locals.init_cons_zero, Locals.init_cons_succ, Locals.init_nil] at hrs
+      have hW : ¬ shlRefusedN (rdW (s₀.mem.arr64 PINS) 72).toNat (pv (vpool s₀.mem) oa.toNat la.toNat)
+          (pv (vpool s₀.mem) ob.toNat lb.toNat) := by
+        intro hc; apply hr; rw [hrs, ite_eq_left]
+        · decide
+        · unfold shlRefusedN at hc; rw [hsz, hb0] at hc; simpa using hc
+      simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem] at hc
+      have h6 : s₁.loc 6 = s₂.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      have h0 : s₂.loc 0 = oa := by rw [hl₂.loc 0]; rfl
+      have h1' : s₂.loc 1 = la := by rw [hl₂.loc 1]; rfl
+      have h2 : s₂.loc 2 = ob := by rw [hl₂.loc 2]; rfl
+      have h3 : s₂.loc 3 = lb := by rw [hl₂.loc 3]; rfl
+      rw [h0, h1', h2, h3, hm₂] at hpv
+      rw [h6, hm₂, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => by rw [hb0] at h; exact absurd h.2 (by decide)),
+        ite_eq_right (fun h => hW h.2)]
+    case vc32 _ _ hc _ s₁ _ hla hP hI =>
+      have ha00 : pv (vpool s₀.mem) oa.toNat la.toNat = 0 := ha0.mpr (Classical.not_not.mp hla)
+      obtain ⟨hl₁, -, -, -, -, hpv, -, -⟩ := hP
+      obtain ⟨-, hok', hR', hres'⟩ := hI
+      have h6 : s₁.loc 6 = s₀.mem.top := by
+        rw [hl₁.loc 6, St.setLoc_loc]; exact (Mem.top_eq _ hc).symm
+      rw [h6, hpv, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_eq'] at hok' hR' hres'
+      refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
+      rw [hrun, ite_eq_right (fun h => h.1 ha00), ite_eq_right (fun h => h.1 ha00)]
+    all_goals first
+      | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
+      | (grind [arena_grind, lang_grind]; done)
+      | (trace_state; sorry)
+
+end shl
 def natDivArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a / b))); pure (some x)
 def natModArm (a b : Nat) : AM (Option EIdx) := do
@@ -579,8 +906,6 @@ Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`), and `(2, s)` for 
 sentinel `s` of `NatSized.lean`, from the `add`, `sub`, `mul`, `pow`, `shiftLeft` arms). Refined in
 `PinsNatOp.lean`. -/
 /-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };
@@ -755,7 +1080,10 @@ theorem natXorLit_refinesA : ArmRefinesA "nat_xor_lit" natXorArm :=
 /-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.shiftLeft"]
 theorem natShlLit_refinesA : ArmRefinesS "nat_shl_lit" natShlArm :=
-  sorry
+  fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
+    natShlLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
+      hmx oa la ob lb ha hb hna hnb hmode
 /-- **`nat_shr_lit` refines the `Nat.shiftRight` arm.** -/
 @[refines_part ConRon.Arena.natOpResult "Nat.shiftRight"]
 theorem natShrLit_refinesA : ArmRefinesA "nat_shr_lit" natShrArm :=
