@@ -92,6 +92,8 @@ structure TblProg (p : Prog) : Prop where
   hi1 : I1lF p
   hsn : p.lookup "sl_snoc" = some slSnoc
   hst : StripProg p
+  hecp : p.lookup "er_copy" = some erCopy
+  heti : p.lookup "er_to_iw" = some erToIw
   hcr : CrfF p
   hft : FindTableProg p
 
