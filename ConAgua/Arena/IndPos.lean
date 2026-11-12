@@ -102,7 +102,7 @@ def memberIdxAt : FunDecl := lfn (namesOff, namesLen, lvls, e) locals (g, n, us,
 variables `i + k ‥< i + k + dsLen`, after `k` binders: each domain and the body abstracted ONCE
 over the free variables `i ‥< i + k` of the binders outside it (`ar_entry`, `abstractRangeFast`),
 the domain before the rest is closed. -/
--- con-ron: ConRon/Arena/Inductives/Positivity.lean:162-176 ConRon.Arena.closeTelescopeGo
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:163-174 ConRon.Arena.closeTelescopeGo
 @[no_expose, l_impl ConRon.Arena.closeTelescopeGo]
 def closeTelescopeGo : FunDecl := lfn (i, k, dsOff, dsLen, body) locals (d, inner, r) {
   if dsLen == 0 { r := call ar_entry(body, i, k, 0); return r };

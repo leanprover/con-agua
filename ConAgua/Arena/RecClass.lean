@@ -337,7 +337,7 @@ def classRead : FunDecl := lfn (p, vis, nP, ro, rl) locals
 
 /-- `close_lams_go(i, k, bo, bl, body)`: `close_telescope_go` with `λ` binders: each domain and
 the body abstracted once over the `k` binders outside it (`ar_entry`). -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:76-84 ConRon.Arena.closeLamsGo
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:76-85 ConRon.Arena.closeLamsGo
 @[no_expose, l_impl ConRon.Arena.closeLamsGo]
 def closeLamsGo : FunDecl := lfn (i, k, bo, bl, body) locals (d, inner, e) {
   if bl == 0 { e := call ar_entry(body, i, k, 0); return e };
