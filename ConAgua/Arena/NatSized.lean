@@ -48,13 +48,14 @@ def natSizeRefusedL : FunDecl := lfn (l) locals (s) {
 }
 
 /-- `lit_nat_sized(o, l)`: a computed numeral, the slice `(o, l)`, refused above the run's maximum
-(the sentinel `natRefusedSize`), otherwise interned. -/
+(the sentinel `natRefusedSize`), otherwise interned (the handle word masked to its 32 bits, so a
+handle is never a sentinel). -/
 @[no_expose, l_impl ConRon.Arena.litNatSized]
 def litNatSizedL : FunDecl := lfn (o, l) locals (r, h) {
   r := call nat_size_refused(l);
   if r != 0 { return 9223372036854775809 };
   h := call intern_lit(o, l);
-  return h
+  return h & 4294967295
 }
 
 /-- `pow_refused(oa, la, e)`: `a ^ e` would be above the maximum (`natSizeBytes a > m / e`, as

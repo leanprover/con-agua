@@ -354,7 +354,7 @@ def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
   if r != 0 { return 9223372036854775811 };
   (o, l) := call pow_nat(oa, la, e);
   h := call intern_lit(o, l);
-  return h
+  return h & 4294967295
 }
 
 /-- `nat_shl_lit(oa, la, ob, lb)`: the cited `Nat.shiftLeft` clause's guard (`shiftLeftGuard`:
@@ -372,7 +372,7 @@ def natShlLit : FunDecl := lfn (oa, la, ob, lb) locals (e, r, o, l, h) {
   o := CTL.u64[0];
   l := call nat_shl(oa, la, ob, lb);
   h := call intern_lit(o, l);
-  return h
+  return h & 4294967295
 }
 
 /-- The `Nat.pow` arm (`Arena/Core.lean:1008-1012`), verbatim. -/
@@ -561,7 +561,9 @@ def natModArm (a b : Nat) : AM (Option EIdx) := do
 
 `nat_op_result(c, oa, la, ob, lb)`: `natOpResult` (`Arena/Core.lean:998`) with the fifteen pin
 reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
-Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
+Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`), and `(2, s)` for a refusal (the
+sentinel `s` of `NatSized.lean`, from the `add`, `sub`, `mul`, `pow`, `shiftLeft` arms). Refined in
+`PinsNatOp.lean`. -/
 /-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
@@ -569,17 +571,17 @@ Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsN
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };
   if c == PINS.u64[15] { h := call nat_pred_lit(oa, la); return (1, h) };
-  if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[19] { h := call nat_pow_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
+  if c == PINS.u64[19] { h := call nat_pow_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
   if c == PINS.u64[22] { h := call nat_div_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[23] { h := call nat_mod_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[24] { h := call nat_gcd_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[25] { h := call nat_land_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[26] { h := call nat_lor_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[27] { h := call nat_xor_lit(oa, la, ob, lb); return (1, h) };
-  if c == PINS.u64[28] { h := call nat_shl_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[28] { h := call nat_shl_lit(oa, la, ob, lb); return (1 + (h >> 63), h) };
   if c == PINS.u64[29] { h := call nat_shr_lit(oa, la, ob, lb); return (1, h) };
   if c == PINS.u64[20] {
     h := call nat_beq_lit(oa, la, ob, lb, PINS.u64[31], PINS.u64[32], PINS.u64[52]);

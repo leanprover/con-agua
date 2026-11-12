@@ -338,7 +338,7 @@ split of `reduce_nat`, whnf-delta2.) -/
   (fl1, o1, cnt1) := call raw_nat_lit(wb);
   if fl1 == 0 { return (0, 0) };
   xh := call nat_succ_lit(o1, cnt1);
-  if xh == 9223372036854775809 { fail R_THE_KERNEL_REFUSED };
+  if xh >> 63 != 0 { fail R_THE_KERNEL_REFUSED };
   return (1, xh)
 }
 
@@ -360,10 +360,12 @@ handle (`NatSized.lean`) and fails here with the twin's message. -/
   (fl2, o2, cnt2) := call raw_nat_lit(wb);
   if fl2 == 0 { return (0, 0) };
   (rf, rh) := call nat_op_result(c, o1, cnt1, o2, cnt2);
-  if rh == 9223372036854775809 { fail R_THE_KERNEL_REFUSED };
-  if rh == 9223372036854775810 { fail R_THE_KERNEL_REFUSED_TO };
-  if rh == 9223372036854775811 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE };
-  if rh == 9223372036854775812 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT };
+  if rf == 2 {
+    if rh == 9223372036854775810 { fail R_THE_KERNEL_REFUSED_TO };
+    if rh == 9223372036854775811 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE };
+    if rh == 9223372036854775812 { fail R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT };
+    fail R_THE_KERNEL_REFUSED
+  };
   return (u64(rf != 0), rh & 4294967295)
 }
 
