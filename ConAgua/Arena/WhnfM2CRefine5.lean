@@ -115,7 +115,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     refine RefE.onlySim (fun _ => m2cArmsE.k_find_table.none ..) (fun _ _ h =>
         triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
           (findTable_refines p hp.findTable (N' + 1) _ vis T hS.env hTw) h)
-      fun r0 m0 ⟨t0, ht0, hm0, -, hft, hfs⟩ => ?_
+      fun r0 m0 ⟨t0, ht0, hm0, _, hft, hfs⟩ => ?_
     have hm0' : m0 = m := ht0.symm.trans hm0
     subst hm0'
     rw [m2cArmsE.k_find_table.arm1]
@@ -129,7 +129,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     subst m1
     refine ⟨_, _, by rw [hctor, hft]; simp only [ht0]; exact hrun1, ?_⟩
     by_cases g1 : r1.headD 0 ≠ 0
-    · rw [m2cArmsE.k_eta_rescue_table.arm1 _ _ _ _ _ _ _ _ _ _ _ g1]
+    · rw [m2cArmsE.k_eta_rescue_table.arm1 (hc1 := g1)]
       obtain ⟨tb, htb⟩ := hsome1 g1
       simp only [htb]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
@@ -137,8 +137,8 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
         (m2cEta_ref p hp hc hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
           mode d T indP _ major hm4 hebm hT hmaj cvT caps tb m0 a M hS hci hfe htb)
     · have g1' : r1.headD 0 = 0 := by simpa using g1
-      rw [m2cArmsE.k_eta_rescue_table.arm2 _ _ _ _ _ _ _ _ _ _ _ g1']
-      have hz : tblFound m0 (r1.headD 0) = none := by simp [tblFound, g1']
+      rw [m2cArmsE.k_eta_rescue_table.arm2 (hc1 := g1')]
+      have hz : tblFound m0 (r1.headD 0) = none := by rw [tblFound, if_pos g1']
       simp only [hz]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
         (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]; rfl) hR

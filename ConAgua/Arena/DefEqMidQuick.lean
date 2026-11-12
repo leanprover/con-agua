@@ -112,10 +112,10 @@ def quickPairT (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : E
     pure (some ok)
   | .lit l₁, .lit l₂ => pure (some (l₁ == l₂))
   | .forallE ty₁ body₁, .forallE ty₂ body₂ => do
-    let ok ← defeqBinders r depth ty₁ body₁ ty₂ body₂
+    let ok ← defeqBinders mode r false bindersFuel depth #[] ty₁ body₁ ty₂ body₂
     pure (some ok)
   | .lam ty₁ body₁, .lam ty₂ body₂ => do
-    let ok ← defeqLams mode r lamsFuel depth ty₁ body₁ ty₂ body₂
+    let ok ← defeqBinders mode r true bindersFuel depth #[] ty₁ body₁ ty₂ body₂
     pure (some ok)
   | _, _ => pure none
 
@@ -146,14 +146,14 @@ theorem quickPairT_lit (l₁ l₂ : ConLeche.Literal) (ha : s.store.view a = som
 theorem quickPairT_forall (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.forallE t₁ c₁))
     (hb : s.store.view b = some (.forallE t₂ c₂)) :
     (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqBinders r depth t₁ c₁ t₂ c₂
+      let ok ← defeqBinders mode r false bindersFuel depth #[] t₁ c₁ t₂ c₂
       pure (some ok) : AM (Option Bool)).run s := by
   simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
 
 theorem quickPairT_lam (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.lam t₁ c₁))
     (hb : s.store.view b = some (.lam t₂ c₂)) :
     (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqLams mode r lamsFuel depth t₁ c₁ t₂ c₂
+      let ok ← defeqBinders mode r true bindersFuel depth #[] t₁ c₁ t₂ c₂
       pure (some ok) : AM (Option Bool)).run s := by
   simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
 
