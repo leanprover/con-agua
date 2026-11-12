@@ -1232,22 +1232,4 @@ theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHa
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (consInternM_frame litStrCS_wf hI)
     (AM.st_proto litLens _ _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 
-/-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaR`**: the store's
-`natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/
-@[refines_part ConRon.Arena.natOpResult "Nat.add"]
-theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
-    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) (hmode : ModeOK s₀.mem) :
-    ⦃fun s => s = s₀⦄
-    invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ ∧
-      ArenaR s'.mem (AM.st (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀) ∧
-      AM.res (natAddArm (pv (vpool s₀.mem) oa.toNat la.toNat)
-        (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
-  natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
-    (fun m m' a hR hg => ArenaR.grow m m' hg a hR)
-    (internLit_refinesA storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hR oa la ob lb ha hb hmode
-
 end L.Arena

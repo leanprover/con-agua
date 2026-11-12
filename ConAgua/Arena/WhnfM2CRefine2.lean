@@ -139,8 +139,6 @@ set_option maxRecDepth 8192 in
 theorem inferIO_coreFn : "infer_io" ∈ coreFns := List.elem_iff.mp (by decide)
 set_option maxRecDepth 8192 in
 theorem whnf_coreFn : "whnf" ∈ coreFns := List.elem_iff.mp (by decide)
-set_option maxRecDepth 8192 in
-theorem towerSlotsAll_coreFn : "tower_slots_all" ∈ coreFns := List.elem_iff.mp (by decide)
 
 /-! ## Results -/
 

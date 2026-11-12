@@ -28,6 +28,7 @@ import all ConAgua.Arena.NatShl
 import all ConAgua.Arena.NatShr
 import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.Refine
+import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.Store
 
 @[expose] public section

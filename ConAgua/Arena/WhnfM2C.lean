@@ -250,5 +250,6 @@ structure M2CProg (p : Prog) : Prop where
   and2 : p.lookup "m2c_and2" = some m2cAnd2L
   fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
   fsl : p.lookup "former_sort_loop" = some formerSortLoopL
+  findTable : FindTableProg p
 
 end L.Arena

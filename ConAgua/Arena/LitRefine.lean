@@ -1,5 +1,7 @@
 module
 
+public import ConAgua.Arena.NatSized
+meta import ConAgua.Arena.NatSized
 public import ConAgua.Arena.ConsLibRel
 public import ConAgua.Arena.Store
 import ConAgua.Arena.GrindAttr
@@ -34,7 +36,7 @@ an instance of the store library (`StoreLib.lean`):
   library's `ConsR` holds for the `lit` tables.
 * **`intern_correct`/`internStr_correct`**: `internW`/`internWStr` refine `internE (.lit (.natVal
   _))`/`internE (.lit (.strVal _))`, by `consIntern_correct`.
-* **`LitR.grow`**, `natAddLit_refines_store`, `natAddLit_run_store`.
+* **`LitR.grow`**, `natAddLit_refines_store`.
 
 The pool facts (normalised slices are unique) are by hand; the `strVal` arm's slices-as-keys
 facts (`sliceL`, `slice_key`, `strWords`) live here too (below `eqW_iff`/`hashN_congr`, which they
@@ -715,11 +717,13 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn hq0 _ _ hI⟩
 
 /-- The arena functions and the store functions, as one program. -/
-def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
+def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit), ("size_bytes", sizeBytesL),
+  ("nat_size_refused", natSizeRefusedL), ("lit_nat_sized", litNatSizedL)] ++ litProg
 
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
-  let m : Mem := Mem.ofWords <| [((CTL : TieredArray), #[2] ++ Array.replicate 63 0)] ++
+  let m : Mem := Mem.ofWords <| [((CTL : TieredArray), #[2] ++ Array.replicate 63 0),
+    ((PINS : TieredArray), Array.replicate 72 0 ++ #[134217728])] ++
     withTiers [(POOL, #[5, 7, 0, 0, 0, 0, 0, 0, 0, 0]), (REC, Array.replicate 64 0),
       (SLOT, Array.replicate consTestWords 0)]
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=
@@ -735,15 +739,5 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
       | none => false
     | none => false
   | none => false
-
-/-- From an L run of `nat_add_lit` to the arena run of the `Nat.add` arm, under `LitR`. -/
-theorem natAddLit_run_store (fuel : Nat) (m : Mem) (a₀ : AState) (hR : LitR m a₀)
-    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hmode : ModeOK m)
-    (r : List Word) (m' : Mem)
-    (h : run storeProg fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
-    ∃ a', (natAddArm (pv (vpool m) oa.toNat la.toNat) (pv (vpool m) ob.toNat lb.toNat)).run
-      a₀ = .ok (some (decE (r.headD 0)), a') ∧ LitR m' a' :=
-  natAddLit_run storeProg rfl rfl rfl rfl rfl LitR (fun _ _ h => h.1) (fun m m' a hR hg => LitR.grow m m' hg a hR)
-    (internLit_refines storeProg rfl rfl rfl rfl rfl rfl) fuel m a₀ hR oa la ob lb ha hb hmode r m' h
 
 end L.Arena

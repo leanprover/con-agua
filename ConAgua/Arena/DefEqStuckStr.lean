@@ -190,8 +190,7 @@ theorem stuckStr_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : 
     CoreSpec p (n + 1) "stuck_str" [mode, vis, d, a, b, side, lt, fo]
       (stuckStrT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
         (decE fo)) decBool s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (strE_spec p hq.stuckStr hq.stuckIrrel hq.setCert hq.setWith hq.setWtb hq.setGo
-    hq.setTail hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b side lt fo)
+  RefE.coreSpec (strE_spec p hq.stuckStr hq.stuckIrrel hq.toCertProg (n + 1) s₀ mode vis d a b side lt fo)
     (str_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b side lt fo l hF hn hs ha hb hlt hfo hg hl)
 
 end L.Arena
