@@ -23,6 +23,7 @@ import all ConAgua.Arena.IndParts
 import all Init.Data.List.Control
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndT.Lift
+import ConAgua.Arena.ExceptOpt
 
 @[expose] public section
 
@@ -392,8 +393,39 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} {dn : NIdx → Option ConLeche.Name}
   cases x4 with
   | error ce =>
     obtain ⟨hc4, s, rfl⟩ := hR4
-    rw [cidE.k_read_block.abort1 _ _ _ _ _ _ _ hc4.1]
-    exact fun _ => ErrClaim.fail_abort _ _ hc4.2
+    -- the reader's reason: one abort per code, each of class `1`
+    by_cases e1 : r4.headD 0 = R_INDUCTIVE_TYPE_DECLARES
+    · rw [cidE.k_read_block.abort1 _ _ _ _ _ _ _ hc4.1 e1]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e2 : r4.headD 0 = R_NO_RECURSOR_OF
+    · rw [cidE.k_read_block.abort2 _ _ _ _ _ _ _ hc4.1 e1 e2]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e3 : r4.headD 0 = R_THE_ARGUMENT_COUNTS
+    · rw [cidE.k_read_block.abort3 _ _ _ _ _ _ _ hc4.1 e1 e2 e3]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e4 : r4.headD 0 = R_INDUCTIVE_TYPE_DECLARES_OTHER
+    · rw [cidE.k_read_block.abort4 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e5 : r4.headD 0 = R_CONSTRUCTOR_DECLARES_ANOTHER
+    · rw [cidE.k_read_block.abort5 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e6 : r4.headD 0 = R_CONSTRUCTOR_DECLARES_OTHER
+    · rw [cidE.k_read_block.abort6 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e7 : r4.headD 0 = R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE
+    · rw [cidE.k_read_block.abort7 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6 e7]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e8 : r4.headD 0 = R_INDUCTIVE_BLOCK_ITS
+    · rw [cidE.k_read_block.abort8 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6 e7 e8]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e9 : r4.headD 0 = R_INDUCTIVE_BLOCK_DECLARES
+    · rw [cidE.k_read_block.abort9 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6 e7 e8 e9]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    by_cases e10 : r4.headD 0 = R_INDUCTIVE_BLOCK_CARRIES
+    · rw [cidE.k_read_block.abort10 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10]
+      exact fun _ => ErrClaim.fail_abort _ _ (by rw [twinCls_invalid]; decide)
+    rw [cidE.k_read_block.abort11 _ _ _ _ _ _ _ hc4.1 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10]
+    exact fun _ => ErrClaim.of_cls0 (by decide)
   | ok bs =>
   obtain ⟨hr41, hq4', hsl4⟩ := hR4
   simp only [ConRon.Bridge.Inductives.ROp] at hq4
