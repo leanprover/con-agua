@@ -88,7 +88,7 @@ def dcFns : List FnName :=
    "er_from_iw", "er_from_iw_go", "block_shape_lps", "er_to_iw", "er_copy", "struct_proj_bodies",
    "struct_proj_bodies_go", "struct_proj_arg_p", "mk_proj", "intern_proj", "proj_push",
    "proj_find", "der_b", "intern_bvar", "bvar_push", "bvar_find", "e_view",
-   "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "block_shape", "block_shape_build",
+   "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "read_block", "read_block_at",
    "block_shape_tail", "block_shape_fin", "block_shape_seal", "block_shape_pack", "intern_nanon",
    "nanon_push", "nanon_find", "block_shape_large", "sl_contains", "sl_eq", "block_shape_recs_of",
    "rec7", "rec_target_of", "sl_find", "get_app_fn_f", "get_app_fn", "strip_pis",
@@ -99,8 +99,8 @@ def dcFns : List FnName :=
    "lvl_eq_rec", "lq_put", "lq_find", "lvl_eq", "lv_equiv", "lv_leq", "lv_rest", "lv_imax",
    "lv_imax_l", "lv_imax_r", "lv_dist2", "lv_simp", "lh_mk", "lv_comb", "lv_node", "lv_dist1",
    "lv_cases", "lv_cases_at", "lv_subsimp", "lv_subst", "lv_eq", "pin_word",
-   "block_shape_result_sort", "sl_getd", "block_shape_pins_ok", "block_shape_pins_ctors",
-   "reserved_contains", "reserved_from", "block_shape_pins_recs", "block_shape_pins_formers",
+   "block_shape_result_sort", "sl_getd", "formers_lps_ok", "ctors_params_ok",
+   "ctors_lps_ok",
    "block_member_counts", "block_member_counts_go", "block_counts", "block_counts_pure",
    "block_counts_head", "pi_binders", "block_member_counts_find", "block_shape_names_of",
    "block_split", "rec6", "block_split_ctors", "rec3", "block_split_recs", "basis_name_hit",
@@ -128,15 +128,14 @@ def dcFns : List FnName :=
    "block_caps_at_er_copy", "block_caps_at_er_copy_go", "block_caps_ctor_names",
    "member_names_copy", "block_shape_member_names", "block_caps_one", "block_caps_head",
    "block_shape_declared", "member_field_copy", "block_is_rec", "block_is_rec_go",
-   "block_is_rec_member", "pi_doms_mention_any", "basis_at_block", "at_block_go", "ci_at_lps",
+   "block_is_rec_member", "pi_doms_mention_any", "ci_at_lps",
    "rules_at_lps_go", "fire_levels_at", "spn_to_er", "sle_go", "lv_sub_int", "lv_intern",
    "lp_substl", "lp_lookup", "keys_push", "ek_copy", "inst_lp", "er_copy_er", "cv_at_lps",
    "sl_new1", "quot_at", "quot_pin", "erec_ci", "dlp_copy", "decl_constants_axiom", "pin_at"]
 
-/-- **The call closure of `decl_constants`, `ind_block_to_erec`, `basis_name_hit` and
-`block_shape`** (what `decl_tables` calls before `block_tables`), without the leaves. -/
+/-- **The call closure of `decl_constants`, `ind_block_to_erec` and `read_block`** (what `decl_tables` calls before `block_tables`), without the leaves. -/
 def dc0Fns : List FnName :=
-  ["block_shape", "block_shape_build", "block_shape_tail", "block_shape_fin", "block_shape_seal",
+  ["read_block", "read_block_at", "block_shape_tail", "block_shape_fin", "block_shape_seal",
    "block_shape_pack", "iw_alloc", "intern_nanon", "nanon_push", "nanon_find", "block_shape_large",
    "sl_contains", "sl_eq", "er_to_iw", "er_copy", "block_shape_recs_of", "sl_cons", "iw_copy",
    "rec7", "rec_target_of", "sl_find", "e_view", "get_app_fn_f", "get_app_fn", "strip_pis",
@@ -147,8 +146,8 @@ def dc0Fns : List FnName :=
    "lvl_eq_rec", "lq_put", "lq_find", "lvl_eq", "lv_equiv", "lv_leq", "lv_rest", "lv_imax",
    "lv_imax_l", "lv_imax_r", "lv_dist2", "lv_simp", "lh_mk", "lv_comb", "lv_node", "lv_dist1",
    "lv_cases", "lv_cases_at", "lv_subsimp", "lv_subst", "lv_eq", "pin_word",
-   "block_shape_result_sort", "sl_getd", "block_shape_pins_ok", "block_shape_pins_ctors",
-   "reserved_contains", "reserved_from", "block_shape_pins_recs", "block_shape_pins_formers",
+   "block_shape_result_sort", "sl_getd", "formers_lps_ok", "ctors_params_ok",
+   "ctors_lps_ok",
    "block_member_counts", "block_member_counts_go", "block_counts", "block_counts_pure",
    "block_counts_head", "pi_binders", "block_member_counts_find", "block_shape_names_of",
    "block_split", "rec6", "block_split_ctors", "rec3", "block_split_recs", "basis_name_hit",
@@ -178,7 +177,7 @@ def dc0Fns : List FnName :=
    "block_caps_at_er_copy_go", "block_caps_ctor_names", "member_names_copy",
    "block_shape_member_names", "block_caps_one", "block_caps_head", "block_shape_declared",
    "member_field_copy", "block_is_rec", "block_is_rec_go", "block_is_rec_member",
-   "pi_doms_mention_any", "basis_at_block", "at_block_go", "ci_at_lps", "rules_at_lps_go",
+   "pi_doms_mention_any", "ci_at_lps", "rules_at_lps_go",
    "fire_levels_at", "spn_to_er", "sle_go", "lv_sub_int", "lv_intern", "lp_substl", "lp_lookup",
    "keys_push", "ek_copy", "inst_lp", "er_copy_er", "cv_at_lps", "sl_new1", "quot_at", "quot_pin",
    "erec_ci", "dlp_copy", "decl_constants_axiom", "pin_at"]
