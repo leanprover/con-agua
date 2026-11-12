@@ -63,9 +63,12 @@ def setWtbT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b : EIdx) (c : NIdx) (us 
     view hh >>= fun v => match v with
       | .const T us' =>
         match fe.find? T with
-        | some (.indInfo cvT caps) => do
-          let targs ← getAppArgs coreWalkFuel wtb
-          setGoT r fe depth b c us cvc T us' cvT caps aargs targs
+        | some (.indInfo cvT caps) =>
+          match fe.findTable? T with
+          | none => pure false
+          | some tbl => do
+            let targs ← getAppArgs coreWalkFuel wtb
+            setGoT r fe depth b c us cvc T us' cvT caps tbl aargs targs
         | _ => pure false
       | _ => pure false
   else pure false
@@ -90,14 +93,23 @@ theorem setWtbT_other (T : NIdx) (us' : LsIdx) (ht : (hh.tag == ETag.const) = tr
   rcases hc : fe.find? T with _ | ⟨_ | _ | _ | ⟨cv, caps⟩ | _ | _ | _⟩ <;> try rfl
   all_goals exact absurd hc (hf cv caps)
 
+theorem setWtbT_notbl (T : NIdx) (us' : LsIdx) (ht : (hh.tag == ETag.const) = true)
+    (hv : a.store.view hh = some (.const T us')) (cvT : IConstantVal) (caps : IIndCaps)
+    (hf : fe.find? T = some (.indInfo cvT caps)) (htb : fe.findTable? T = none) :
+    (setWtbT r fe depth b c us cvc aargs wtb).run a = .ok (false, a) := by
+  simp only [setWtbT, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv, hf,
+    htb]
+  rfl
+
 theorem setWtbT_ind (T : NIdx) (us' : LsIdx) (ht : (hh.tag == ETag.const) = true)
     (hv : a.store.view hh = some (.const T us')) (cvT : IConstantVal) (caps : IIndCaps)
-    (hf : fe.find? T = some (.indInfo cvT caps)) (targs : List EIdx)
+    (hf : fe.find? T = some (.indInfo cvT caps)) (tbl : IProjTable)
+    (htb : fe.findTable? T = some tbl) (targs : List EIdx)
     (hargs : (getAppArgs coreWalkFuel wtb).run a = .ok (targs, a)) :
     (setWtbT r fe depth b c us cvc aargs wtb).run a =
-      (setGoT r fe depth b c us cvc T us' cvT caps aargs targs).run a := by
+      (setGoT r fe depth b c us cvc T us' cvT caps tbl aargs targs).run a := by
   simp only [setWtbT, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv, hf,
-    hargs]
+    htb, hargs]
 
 end wtbRuns
 
@@ -168,6 +180,19 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   erw [ite_eq_right h4]
   obtain ⟨cvT, caps, hci_eq⟩ := hind.1 (by simpa using h4)
   rw [hci_eq] at hci
+  -- the family's projection table
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (findTable_refines p hq.findTable _ _ vis k hS.env hnw) h)
+    fun r₀ m₀ ⟨t₀, ht₀, hm₀, _, hft, hfs⟩ => ?_
+  obtain rfl : m₀ = s₀.mem := ht₀.symm.trans hm₀
+  dsimp only [secwtbE.k_find_table]
+  by_cases hz : r₀.headD 0 = 0
+  · rw [ite_eq_left hz]
+    exact RefE.of_run_eq (setWtbT_notbl _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
+      (by rw [hfind', hci_eq]) (by rw [hft, tblFound, if_pos hz])) hl
+  rw [ite_eq_right hz]
+  obtain ⟨tbl, htbl'⟩ := hfs hz
+  have htbl : tblFound s₀.mem (r₀.headD 0) = some tbl := by rw [tblFound, if_neg hz, htbl']
   -- the type's spine
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwtb h)
     fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ => ?_
@@ -176,7 +201,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     (by simp)
   simp only [secwtbE.k_get_app_args]
   refine RefE.of_run_eq (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
-    (by rw [hfind', hci_eq]) targs hargs) ?_
+    (by rw [hfind', hci_eq]) tbl (by rw [hft, htbl]) targs hargs) ?_
   have hspn := hS.spn
   have hb3 := hsp.bound
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
@@ -189,9 +214,10 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
     (fun _ _ _ h => ⟨CoreAfterG.compK (KeptAll.refl _ _) hg3 h.after, h.res, h.valid⟩)
     (secg_ref p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
-      b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
-      cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
-      hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
+      b us c pc k (r₂.tail.headD 0) (r₀.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs
+      targs.toArray cvc np nf cvT caps tbl (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw
+      hnw huw hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci)
+      (by simp only [tblFound] at htbl ⊢; rw [hep]; exact htbl) (ha.grew hg3 hat hspn) hsp
       (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt)
 
 /-! ## `struct_eta_cert_with` -/
@@ -361,10 +387,41 @@ theorem etaCtorShape_at (p : Prog) (hq : StuckProg p) :
   | n + 1, s₀, a₀, dn, vis, fe, MM, eb, e, hS, he =>
       etaCtorShape_refines p hq n s₀ a₀ dn vis fe MM eb e hS he
 
-/-! ## `struct_eta_cert` -/
+/-! ## `struct_eta_full_at`, `struct_eta_cert` -/
 
-/-- **`struct_eta_cert` refines `structEtaCert`, both outcomes**: the errors are the `infer_io`,
-`whnf` slots' and `struct_eta_cert_with`'s. -/
+/-- **`struct_eta_full_at` refines `structEtaFullAt`, both outcomes**: the errors are the
+`infer_io`, `whnf` slots' and `struct_eta_cert_with`'s. -/
+theorem sefa_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    RefE (SetG p n) (sefaE p (n + 1) s₀.mem mode vis d a b)
+      (structEtaFullAt (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
+      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
+  have hK := hk n (Nat.le_refl _)
+  simp only [sefaE]
+  unfold structEtaFullAt
+  refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F _ _ dn vis fe M eb mode d b hF hn hs hb)
+    (fun (hG : SetG p n) => (hG.knot n (Nat.le_refl _)).inferIO F _ _ dn vis fe M eb mode d b hF hn hs hb)
+    fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  dsimp only [sefaE.k_infer_io]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl) (hK.whnf F _ _ dn vis fe M₂ eb mode d _ hF hn hs₂ h₂.resOk)
+    (fun (hG : SetG p n) => (hG.knot n (Nat.le_refl _)).whnf F _ _ dn vis fe M₂ eb mode d _ hF hn hs₂
+      h₂.resOk)
+    fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+  dsimp only [sefaE.k_whnf]
+  cases n with
+  | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
+  | succ N =>
+  exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N)) rfl
+    (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
+    (secw_ref p hq hi hc N (hk.mono (Nat.le_succ N)) F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d
+      a b (r₃.headD 0) (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.resOk)
+
+/-- **`struct_eta_cert` refines `structEtaCert`, both outcomes**: the shape gate, then
+`struct_eta_full_at`, or the partial constructor's arm. -/
 theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
@@ -373,35 +430,24 @@ theorem sec_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     RefE (SetG p n) (secE p (n + 1) s₀.mem mode vis d a b)
       (structEtaCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  have hK := hk n (Nat.le_refl _)
   simp only [secE]
   unfold structEtaCert
   refine RefE.bind_callW (fun _ => rfl) (etaCtorShape_at p hq n s₀ a₀ dn vis fe M eb a hs.rel ha)
     fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
   dsimp only [secE.k_eta_ctor_shape]
   by_cases h0 : r₁.headD 0 = 0
-  · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
-    exact RefE.ret rfl (CorePost.ret hS₁ rfl hw0)
-  rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
+  · rw [ite_eq_right (by simpa using h0), L.Arena.decBool_false_of h0]
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    sorry
+  rw [ite_eq_left (by simpa using h0), L.Arena.decBool_true_of h0]
   simp only [↓reduceIte]
-  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
-  refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F _ _ dn vis fe M₁ eb mode d b hF hn hs₁ hb)
-    (fun (hG : SetG p n) => (hG.knot n (Nat.le_refl _)).inferIO F _ _ dn vis fe M₁ eb mode d b hF hn hs₁ hb)
-    fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
-  dsimp only [secE.k_infer_io]
-  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
-  refine RefE.bind_callE (fun _ => rfl) (hK.whnf F _ _ dn vis fe M₂ eb mode d _ hF hn hs₂ h₂.resOk)
-    (fun (hG : SetG p n) => (hG.knot n (Nat.le_refl _)).whnf F _ _ dn vis fe M₂ eb mode d _ hF hn hs₂
-      h₂.resOk)
-    fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
-  dsimp only [secE.k_whnf]
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ N =>
   exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ N)) rfl
     (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
-    (secw_ref p hq hi hc N (hk.mono (Nat.le_succ N)) F ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode d
-      a b (r₃.headD 0) (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ ha hb h₃.resOk)
+    (sefa_ref p hq hi hc N (hk.mono (Nat.le_succ N)) F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
+      a b (by omega) (by omega) ⟨hS₁, hs.mode4, hs.eb_mode⟩ ha hb)
 
 /-- **`struct_eta_cert` refines `structEtaCert`** at the knot (`sec_ref`'s ok half). -/
 @[refines ConRon.Arena.structEtaCert]
@@ -413,7 +459,7 @@ theorem setCert_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     CoreSpec p (n + 1) "struct_eta_cert" [mode, vis, d, a, b]
       (structEtaCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (secE_spec p hq.setCert hq.setWith hq.setWtb hq.setGo hq.setTail (n + 1) s₀ mode vis
-    d a b) (sec_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
+  RefE.coreSpec (secE_spec p hq.toCertProg (n + 1) s₀ mode vis d a b)
+    (sec_ref p hq hi hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena

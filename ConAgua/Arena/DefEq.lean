@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.Env
 
 @[expose] public section
 
@@ -1386,5 +1387,6 @@ structure CertProg (p : Prog) : Prop where
   ulLoop : p.lookup "unit_like_loop" = some unitLikeLoopL
   suTail : p.lookup "struct_unit_tail" = some structUnitTailL
   sunit : p.lookup "struct_unit_cert" = some structUnitCertL
+  findTable : FindTableProg p
 
 end L.Arena
