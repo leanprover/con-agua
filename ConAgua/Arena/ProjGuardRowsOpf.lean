@@ -169,17 +169,17 @@ theorem spnPushW_okC {m m' : Mem} {a : AState} {M : ModeMaps} (hS : CoreS dn m a
 
 /-! ## The walks -/
 
-/-- **`opf_go` refines `openPisAtFvarsFGo` under `CoreS`**, the twin's `acc` the stack slice
+/-- **`opf_go` refines `openPisRawGo` under `CoreS`**, the twin's `acc` the stack slice
 `(co, cn)` below the top. -/
 theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e i co cn : Word)
     (acc : Array EIdx) (r : List Word), callW opfP k "opf_go" [n, e, i, co, cn] m = some (r, m') →
     CoreS dn m a vis fe M eb → e.toNat < 2 ^ 32 → SpineR m co cn acc →
     rdW (m.arr64 CTL) 136 = co + cn →
     i.toNat + ((m.arr64 SPN).size - (co.toNat + cn.toNat)) < 2 ^ 64 →
-    ∃ x a' M', (openPisAtFvarsFGo acc n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
+    ∃ x a' M', (openPisRawGo acc n.toNat (decE e) i.toNat).run a = .ok (x, a') ∧
       CoreS dn m' a' vis fe M' eb ∧ KeptAll M M' eb ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
       (∀ w : Word, w.toNat < (co + cn).toNat → spW m' w = spW m w) ∧
-      OGo (co + cn) n m m' r x := by
+      OGo (co + cn) n m m' r (rawFR x) ∧ RawAcc acc x := by
   intro k
   induction k with
   | zero => intro m m' a M n e i co cn acc r hc; rw [callW_zero] at hc; cases hc
@@ -194,22 +194,19 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
   simp only [opfGoK] at c'
   by_cases hn : n = 0
   · rw [ite_eq_left hn] at c'
-    obtain ⟨r1, m1, h1, c'⟩ := ntBW_some c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
-    obtain ⟨a1, M1, hrun1, hS1, hK1, hspn1, htop1, hlt1⟩ := opfIl_okC hS hsl hst he h1
     subst hn
-    refine ⟨_, _, M1, opfGo_run_zero acc (decE e) i.toNat a a1 _ hrun1, hS1, hK1, by rw [hspn1],
-      fun w _ => by simp only [spW, hspn1], ?_⟩
-    refine ⟨rfl, hlt1, rfl, by rw [htop1, htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => by
-      simp only [spW, hspn1]⟩
-    rw [hspn1, hcc]; exact hsl.bound
+    refine ⟨_, _, M, opfGo_run_zero acc (decE e) i.toNat a, hS, KeptAll.refl _ _, rfl,
+      fun w _ => rfl, ?_, fun p hp => by cases hp; simp⟩
+    refine ⟨rfl, he, rfl, by rw [htop]; simp, L.Arena.SpineR.nil_at _ _ ?_, fun w _ => rfl⟩
+    rw [hcc]; exact hsl.bound
   rw [ite_eq_right hn] at c'
   have hn1 := wsub1 hn
   by_cases hg : tagW e ≠ 6
   · rw [ite_eq_left hg] at c'
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj c')
     refine ⟨none, a, M, by rw [← hn1]; exact opfGo_run_nf acc _ _ _ a (by rw [decE_tag_forallE_beq e he]; simpa using hg),
-      hS, KeptAll.refl _ _, rfl, fun _ _ => rfl, rfl⟩
+      hS, KeptAll.refl _ _, rfl, fun _ _ => rfl, rfl, fun p hp => by cases hp⟩
   rw [ite_eq_right hg] at c'
   have hg6 : tagW e = 6 := Decidable.not_not.mp hg
   obtain ⟨rv, m1, h1, c'⟩ := ntBW_some c'
@@ -231,7 +228,7 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
     SpineR.push' (hsl.of_spn hs3) hlt3 hsz4 (by rw [hs3]; exact hroom) (by rw [hs3]; omega) hsp4
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hcn1 : (cn + 1).toNat = cn.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨x5, a5, M5, hrun5, hS5, hK5, hsz5, hkb5, hO⟩ := ih m4 m5 a3 M2 (n - 1) _ (i + 1) co (cn + 1) _ rb h5
+  obtain ⟨x5, a5, M5, hrun5, hS5, hK5, hsz5, hkb5, hO, hacc⟩ := ih m4 m5 a3 M2 (n - 1) _ (i + 1) co (cn + 1) _ rb h5
     hS4 hy hsl4 (by rw [htop4]; grind) (by rw [hsz4, hs3, hi1, hcn1]; omega)
   have hrun := opfGo_run_step acc (n - 1).toNat (decE e) i.toNat a a2 a3 a5 _ _ _ _ x5
     (by rw [decE_tag_forallE_beq e he]; simpa using hg6) hview hrun2 hrun3 (by rw [← hi1]; exact hrun5)
@@ -239,11 +236,22 @@ theorem opfGo_okC : ∀ (k : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (n e 
   have hsz : (m5.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz5, hsz4, hs3]
   have hcc1 : (co + (cn + 1)).toNat = co.toNat + cn.toNat + 1 := by
     rw [L.toNat_add_of_lt _ _ (by rw [hcn1]; omega), hcn1]; omega
-  refine ⟨_, _, M5, hrun, hS5, hK2.trans hK5, hsz, fun w hw => ?_, ?_⟩
+  refine ⟨_, _, M5, hrun, hS5, hK2.trans hK5, hsz, fun w hw => ?_, ?_, ?_⟩
   · rw [hcc] at hw
     rw [hkb5 w (by rw [hcc1]; omega), hsp4, ite_eq_right (fun h => by subst h; omega)]
     simp only [spW, hs3]
+  rotate_left
+  · intro p hp
+    cases x5 with
+    | none => cases hp
+    | some q =>
+      cases hp
+      have := hacc q rfl
+      rw [this]; apply Array.ext'; simp
   rw [show co + (cn + 1) = co + cn + 1 by grind] at hO
+  have hmap : rawFR (x5.map (fun p => (decE (rf.headD 0) :: p.1, p.2))) =
+      (rawFR x5).map (fun p => (decE (rf.headD 0) :: p.1, p.2)) := by cases x5 <;> rfl
+  rw [hmap]
   exact OGo.step hn hO (by rw [hsp4]; simp) hlt3 (by rw [hsz]; omega) (by rw [hsz, hcc]; omega)
     (fun w hw => by
       rw [hsp4, ite_eq_right (fun h => by subst h; omega)]

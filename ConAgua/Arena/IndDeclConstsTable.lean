@@ -57,7 +57,8 @@ structure TablesProg (p : Prog) : Prop extends BlockProg p where
   sProjPs : p.lookup "struct_proj_ps" = some structProjPsL
   spb : p.lookup "struct_proj_bodies" = some structProjBodiesL
   i1l : I1lF p
-  ipal : IpalF p
+  sn : p.lookup "sl_snoc" = some slSnoc
+  st : StripProg p
   bt : p.lookup "block_table" = some blockTable
   bts : p.lookup "block_tables" = some blockTables
 
@@ -98,8 +99,8 @@ def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
 l_model dbt_spec {p : Prog} (hP : TablesProg p)
   fns [hP.bt ↦ dbtW list]
   specs [spbW_spec p hP.alloc hP.iwCopy hP.slCons hP.sView hP.sDerB hP.sBvarFind hP.sBvarPush hP.sInternBVar
-      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
-      hP.spb hP.i1l hP.ipal n,
+      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sn hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
+      hP.spb hP.i1l hP.st n,
     blockShapeLps_spec p hP.alloc hP.tErCopy hP.tErToIw hP.lps n, efF_spec p hP.cbr.tsr hP.erPut n,
     erecAlloc_specW p hP.erAlloc n, erecPut_specM p hP.erPut n]
   grind [arena_grind]

@@ -90,7 +90,8 @@ structure TblProg (p : Prog) : Prop where
   htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
   hrec : RecProg p
   hi1 : I1lF p
-  hipal : IpalF p
+  hsn : p.lookup "sl_snoc" = some slSnoc
+  hst : StripProg p
   hcr : CrfF p
   hft : FindTableProg p
 

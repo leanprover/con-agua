@@ -304,7 +304,7 @@ closure) lifted, `check_struct_proj_table_scoped` reading the real `all_level_pa
 l_model tblE_spec (p : Prog) (hP : TblProg p)
   fns [hP.htbl ↦ tblE]
   specs [spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal n,
+      hP.hsn hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hst n,
     sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (realCall p) (realCall_spec p) n,
     callW_spec p n "env_find", callW_spec p n "find_table"]
   grind [arena_grind] fold [tierW, idxW]
