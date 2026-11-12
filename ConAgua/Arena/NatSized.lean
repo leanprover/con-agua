@@ -36,6 +36,7 @@ abbrev natRefusedPowSize : Word := 9223372036854775811
 abbrev natRefusedShlExp : Word := 9223372036854775812
 
 /-- `size_bytes(l)`: the size in bytes of a normalised literal of `l` limbs, `8 · max(l, 1)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1051-1054 ConRon.Arena.natSizeBytes
 @[no_expose, l_impl ConRon.Arena.natSizeBytes]
 def sizeBytesL : FunDecl := lfn (l) locals () {
   if l == 0 { return 8 };
@@ -43,6 +44,7 @@ def sizeBytesL : FunDecl := lfn (l) locals () {
 }
 
 /-- `nat_size_refused(l)`: the literal of `l` limbs is above the run's maximum (`PINS[72]`). -/
+-- con-ron: ConRon/Arena/Core.lean:1056-1061 ConRon.Arena.natSizeRefused
 @[no_expose, l_impl ConRon.Arena.natSizeRefused]
 def natSizeRefusedL : FunDecl := lfn (l) locals (s) {
   s := call size_bytes(l);
@@ -52,6 +54,7 @@ def natSizeRefusedL : FunDecl := lfn (l) locals (s) {
 /-- `lit_nat_sized(o, l)`: a computed numeral, the slice `(o, l)`, refused above the run's maximum
 (the sentinel `natRefusedSize`), otherwise interned (the handle word masked to its 32 bits, so a
 handle is never a sentinel). -/
+-- con-ron: ConRon/Arena/Core.lean:1063-1073 ConRon.Arena.litNatSized
 @[no_expose, l_impl ConRon.Arena.litNatSized]
 def litNatSizedL : FunDecl := lfn (o, l) locals (r, h) {
   r := call nat_size_refused(l);
@@ -63,6 +66,7 @@ def litNatSizedL : FunDecl := lfn (o, l) locals (r, h) {
 /-- `pow_refused(oa, la, e)`: `a ^ e` would be above the maximum (`natSizeBytes a > m / e`, as
 `m < s · e` with the 128-bit product: L has no division); a base `≤ 1` (the empty slice, or the
 one limb `1`) and the exponent `0` are never refused. -/
+-- con-ron: ConRon/Arena/Core.lean:1075-1082 ConRon.Arena.powRefused
 @[no_expose, l_impl ConRon.Arena.powRefused]
 def powRefusedL : FunDecl := lfn (oa, la, e) locals (s) {
   if la == 0 { return 0 };
@@ -75,6 +79,7 @@ def powRefusedL : FunDecl := lfn (oa, la, e) locals (s) {
 
 /-- `shift_left_refused(la, e)`: `a <<< e` would be above the maximum,
 `natSizeBytes a + e / 8 + 1 > m`. -/
+-- con-ron: ConRon/Arena/Core.lean:1096-1100 ConRon.Arena.shiftLeftRefused
 @[no_expose, l_impl ConRon.Arena.shiftLeftRefused]
 def shiftLeftRefusedL : FunDecl := lfn (la, e) locals (s) {
   s := call size_bytes(la);
