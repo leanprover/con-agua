@@ -31,7 +31,7 @@ through `pin_at`'s model `pinAtW`.
 
 * `pin_range_has(x, k, hi)`: its model `prhW`, and what a returned word says: `1` iff `x` is one of the pins `k ‥ hi - 1` (`prhW_iff`).
 * `lit_guard_has(x)`: the ten literal-guard pins read, then the `||` chain (`lghW`).
-* `reserved_rec_name(x)`: `reserved_contains`, `lit_guard_has`, `pin_range_has(x, 14, 21)`
+* `reserved_rec_name(x)`: `lit_guard_has`, `pin_range_has(x, 14, 21)`
   (`natOpNames`), `pin_range_has(x, 21, 29)` (`natDivModNames`), in the twin's order.
 -/
 
@@ -88,14 +88,12 @@ l_model rrb_spec (p : Prog) (hp : p.lookup "reserved_rec_bool" = some reservedRe
 
 /-- The model of `reserved_rec_name(x)`. -/
 l_model rrn_spec (p : Prog) (hp : p.lookup "reserved_rec_name" = some reservedRecNameL)
-    (hrc : p.lookup "reserved_contains" = some reservedContains)
-    (hrf : p.lookup "reserved_from" = some reservedFrom)
     (hlg : p.lookup "lit_guard_has" = some litGuardHas)
     (hpr : p.lookup "pin_range_has" = some pinRangeHas)
     (hrb : p.lookup "reserved_rec_bool" = some reservedRecBoolL)
     (hpin : p.lookup "pin_at" = some pinAtL)
   fns [hp ↦ rrnW]
-  specs [resCont_spec p hrf hrc n, lgh_spec p hlg hpin n, prh_spec p hpr hpin n,
+  specs [lgh_spec p hlg hpin n, prh_spec p hpr hpin n,
     rrb_spec p hrb hpin n]
   grind [arena_grind, ind_grind]
 
@@ -214,7 +212,6 @@ theorem lghW_iff {m m' : Mem} {x r : Word} (h : lghW m x = some (r, m')) :
 
 /-- The four lists' words, as the twin reads them. -/
 def rrnIn (m : Mem) (x : Word) : Prop :=
-  (∃ i, i < 16 ∧ pinW m (55 + i) = x) ∨
   x ∈ [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8, pinW m 9, pinW m 10, pinW m 11,
     pinW m 13] ∨
   (∃ i, 14 ≤ i ∧ i < 21 ∧ pinW m (1 + i) = x) ∨
@@ -239,16 +236,6 @@ theorem rrnW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, 
   | zero => rw [rrnW.eq_1] at h; cases h
   | succ n =>
   rw [rrnW.arm1] at h
-  cases h1 : resContW n m x with
-  | none => rw [h1, rrnW.k_reserved_contains.none] at h; cases h
-  | some r1 =>
-  rw [h1] at h
-  obtain ⟨-, i1⟩ := resContW_iff h1
-  by_cases c1 : r1 ≠ 0
-  · rw [rrnW.k_reserved_contains.arm1 _ _ _ _ c1] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact ⟨rfl, by decide, ⟨fun _ => .inl (i1.mp c1), fun _ => by decide⟩⟩
-  rw [rrnW.k_reserved_contains.arm2 _ _ _ _ (by simpa using c1)] at h
   rcases h2 : lghW m x with _ | ⟨r2, m2⟩
   · rw [h2, rrnW.k_lit_guard_has.none] at h; cases h
   rw [h2] at h
@@ -256,7 +243,7 @@ theorem rrnW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, 
   by_cases c2 : r2 ≠ 0
   · rw [rrnW.k_lit_guard_has.arm1 _ _ _ _ c2] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact ⟨rfl, by decide, ⟨fun _ => .inr (.inl (i2.mp c2)), fun _ => by decide⟩⟩
+    exact ⟨rfl, by decide, ⟨fun _ => .inl (i2.mp c2), fun _ => by decide⟩⟩
   rw [rrnW.k_lit_guard_has.arm2 _ _ _ _ (by simpa using c2)] at h
   rcases h3 : prhW n m x 14 21 with _ | ⟨r3, m3⟩
   · rw [h3, rrnW.k_pin_range_has.none] at h; cases h
@@ -265,7 +252,7 @@ theorem rrnW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, 
   by_cases c3 : r3 ≠ 0
   · rw [rrnW.k_pin_range_has.arm1 _ _ _ _ c3] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact ⟨rfl, by decide, ⟨fun _ => .inr (.inr (.inl (by simpa using i3.mp c3))), fun _ => by decide⟩⟩
+    exact ⟨rfl, by decide, ⟨fun _ => .inr (.inl (by simpa using i3.mp c3)), fun _ => by decide⟩⟩
   rw [rrnW.k_pin_range_has.arm2 _ _ _ _ (by simpa using c3)] at h
   rcases h4 : prhW n m x 21 29 with _ | ⟨r4, m4⟩
   · rw [h4, rrnW.k_pin_range_has_2.none] at h; cases h
@@ -275,20 +262,18 @@ theorem rrnW_iff {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r, 
   · rw [rrnW.k_pin_range_has_2.arm1 _ _ _ c4] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     exact ⟨rfl, by decide,
-      ⟨fun _ => .inr (.inr (.inr (.inl (by simpa using i4.mp c4)))), fun _ => by decide⟩⟩
+      ⟨fun _ => .inr (.inr (.inl (by simpa using i4.mp c4))), fun _ => by decide⟩⟩
   rw [rrnW.k_pin_range_has_2.arm2 _ _ _ (by simpa using c4)] at h
   obtain ⟨hm, hr, i5⟩ := rrbW_iff h
   refine ⟨hm, hr, i5.trans ?_⟩
   simp only [rrnIn]
-  have n1 := mt i1.mpr c1
   have n2 := mt i2.mpr c2
   have n3 := mt i3.mpr c3
   have n4 := mt i4.mpr c4
   simp only [UInt64.reduceToNat] at n3 n4 ⊢
   constructor
-  · intro e; exact .inr (.inr (.inr (.inr e)))
-  · rintro (e | e | e | e | e)
-    · exact absurd e n1
+  · intro e; exact .inr (.inr (.inr e))
+  · rintro (e | e | e | e)
     · exact absurd e n2
     · exact absurd e n3
     · exact absurd e n4
@@ -465,15 +450,6 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     (hx : x.toNat < 2 ^ 32) :
     ∃ b, (reservedRecName (decI x)).run a = .ok (b, a) ∧ (b = true ↔ rrnIn m x) := by
   have lt : ∀ i, i < 51 → (pinW m (1 + i)).toNat < 2 ^ 32 := hF.names_lt
-  have c1 : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = true ↔
-      ∃ i, i < 16 ∧ pinW m (55 + i) = x := by
-    rw [show ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)) =
-      ((List.range 16).map fun i => pinW m (55 + i)).map (fun w => (decI w : NIdx)) by
-        simp [List.map_map]]
-    rw [contains_map_decI_iff (by
-      intro w hw; simp only [List.mem_map, List.mem_range] at hw
-      obtain ⟨i, hi, rfl⟩ := hw; exact hF.reserved_lt i hi) hx]
-    simp [List.mem_map, List.mem_range]
   have c2 := contains_map_decI_iff (k := .name) (ws := [pinW m 2, pinW m 3, pinW m 4, pinW m 6, pinW m 7, pinW m 8,
       pinW m 9, pinW m 10, pinW m 11, pinW m 13]) (by
     intro w hw
@@ -499,30 +475,24 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
     · exact lt 30 (by decide)
     · exact lt 31 (by decide)) hx
   simp only [List.map_cons, List.map_nil] at c2 c5
-  simp only [reservedRecName, reservedBasisNames, StateT.run_bind, pinReserved_run hF,
-    except_ok_bind]
-  by_cases b1 : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) = true
-  · simp only [b1, ↓reduceIte]
-    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inl (c1.mp b1)⟩
-  simp only [b1, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, litGuardNames_run hF,
-    except_ok_bind]
+  simp only [reservedRecName, StateT.run_bind, litGuardNames_run hF, except_ok_bind]
   by_cases b2 : [(decI (pinW m 2) : NIdx), decI (pinW m 3), decI (pinW m 4), decI (pinW m 6),
       decI (pinW m 7), decI (pinW m 8), decI (pinW m 9), decI (pinW m 10), decI (pinW m 11),
       decI (pinW m 13)].contains (decI x) = true
   · simp only [b2, ↓reduceIte]
-    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inl (c2.mp b2))⟩
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inl (c2.mp b2)⟩
   simp only [b2, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, L.Ind.natOpNames_run hF,
     except_ok_bind]
   by_cases b3 : [(decI (pinW m 15) : NIdx), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18),
       decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)].contains (decI x) = true
   · simp only [b3, ↓reduceIte]
-    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inr (.inl (c3.mp b3)))⟩
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inl (c3.mp b3))⟩
   simp only [b3, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, L.Ind.natDivModNames_run hF,
     except_ok_bind]
   by_cases b4 : [(decI (pinW m 22) : NIdx), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25),
       decI (pinW m 26), decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)].contains (decI x) = true
   · simp only [b4, ↓reduceIte]
-    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inr (.inr (.inl (c4.mp b4))))⟩
+    exact ⟨true, rfl, by simp only [rrnIn, true_iff]; exact .inr (.inr (.inl (c4.mp b4)))⟩
   simp only [b4, Bool.false_eq_true, ↓reduceIte]
   have e5 : (reservedRecBool (decI x)).run a = .ok ([(decI (pinW m 30) : NIdx), decI (pinW m 31),
       decI (pinW m 32)].contains (decI x), a) := by
@@ -541,9 +511,8 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
   refine ⟨_, e5, c5.trans ?_⟩
   simp only [rrnIn]
   constructor
-  · intro e; exact .inr (.inr (.inr (.inr e)))
-  · rintro (e | e | e | e | e)
-    · exact absurd (c1.mpr e) b1
+  · intro e; exact .inr (.inr (.inr e))
+  · rintro (e | e | e | e)
     · exact absurd (c2.mpr e) b2
     · exact absurd (c3.mpr e) b3
     · exact absurd (c4.mpr e) b4
@@ -554,8 +523,6 @@ theorem reservedRecName_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (x :
 /-- What `reserved_rec_name`'s spec needs of the program. -/
 structure RrnProg (p : Prog) : Prop where
   rrn : p.lookup "reserved_rec_name" = some reservedRecNameL
-  rc : p.lookup "reserved_contains" = some reservedContains
-  rf : p.lookup "reserved_from" = some reservedFrom
   lg : p.lookup "lit_guard_has" = some litGuardHas
   pr : p.lookup "pin_range_has" = some pinRangeHas
   rb : p.lookup "reserved_rec_bool" = some reservedRecBoolL
@@ -568,9 +535,7 @@ theorem rrnW_flag {n : Nat} {m m' : Mem} {x r : Word} (h : rrnW n m x = some (r,
   | zero => rw [rrnW.eq_1] at h; cases h
   | succ n =>
   rw [rrnW.arm1] at h
-  cases n with
-  | zero => simp [resContW, rrnW.k_reserved_contains.none] at h
-  | succ n => rw [resContW_step, ite_eq_left h0, rrnW.k_reserved_contains.none] at h; cases h
+  rw [lghW.arm1, pinAtW_none h0, lghW.k_pin_at.none, rrnW.k_lit_guard_has.none] at h; cases h
 
 /-- **`reserved_rec_name(x)` refines `reservedRecName`** under the stage relation: the memory and
 the twin's state are unchanged, and the word is `1` exactly when the twin answers `true`. -/
@@ -581,7 +546,7 @@ theorem reservedRecName_refines {p : Prog} (hP : RrnProg p) (_dn : NIdx → Opti
       (KeepPost vis fe decW0B) := by
   refine CallRef.refAM (CallRef.of_succ fun k m a r m' hS hc => ?_)
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (rrn_spec p hP.rrn hP.rc hP.rf hP.lg hP.pr hP.rb hP.pin (k + 1) _ x) hc
+    (rrn_spec p hP.rrn hP.lg hP.pr hP.rb hP.pin (k + 1) _ x) hc
   simp only at hW
   obtain ⟨hm, hr, hiff⟩ := rrnW_iff hW
   have hF := hS.check.pins.full (rrnW_flag hW)

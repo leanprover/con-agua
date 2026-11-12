@@ -21,13 +21,12 @@ import ConAgua.L.WordOff
 @[expose] public section
 
 /-!
-# Pin reads, `of_reduce_op`, `install_basis_decl(s)` (lane `decls3`)
+# Pin reads, `of_reduce_op`, `install_basis_decl` (lane `decls3`)
 
 * `pin_at(i)`'s twin read (`pinAtW_ok`; the model `pinAtW` is `DeclRec.lean`'s).
 * `of_reduce_op(n)` refines `ofReduceOp` (pin reads only).
-* `install_basis_decl(vis, c)` refines `installBasisDecl` (the duplicate check, the push) and
-  `install_basis_decls(vis, o, l)` refines `installBasisDecls` (an `IW` slice of constant-record
-  pointers).
+* `install_basis_decl(vis, c)` refines `installBasisDecl` (the duplicate check, the push).
+* `basisDec`: a list of constant records as an `IW` slice of record pointers.
 -/
 
 open ConRon.Arena
@@ -154,12 +153,11 @@ theorem ofReduceOp_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
   · rw [hst, hmem]; exact hS
   · rw [hmem]; exact IWGrow.refl _
 
-/-! ## `install_basis_decl(vis, c)` and `install_basis_decls(vis, o, l)` -/
+/-! ## `install_basis_decl(vis, c)` -/
 
 /-- The lookups the basis install needs. -/
 structure BasisProg (p : Prog) : Prop where
   ibd : p.lookup "install_basis_decl" = some installBasisDeclL
-  ibds : p.lookup "install_basis_decls" = some installBasisDeclsL
   rcp : RecProg p
   erg : p.lookup "env_row_get" = some envRowGetL
   brg : p.lookup "base_row_get" = some baseRowGetL
@@ -246,70 +244,6 @@ theorem basisDec_mono (dn : NIdx → Option ConLeche.Name) (o l : Nat) :
     OMono (basisDec dn o l) :=
   OMono.decPL (f := fun m q => decCI (erA m) q) (fun _ => ⟨fun _ _ _ he h => he.2.decCI h⟩) o l
 
-/-- **The model of `install_basis_decls(vis, o, l)`, both outcomes** (the recursion is the
-model's own; `install_basis_decl` by its unified model). -/
-l_model installBasisDecls_specE (p : Prog) (hB : BasisProg p)
-  fns [hB.ibds ↦ installBasisDeclsE]
-  specs [installBasisDecl_specE p hB n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-  heartbeats 400000 unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-/-- **`install_basis_decls` refines `installBasisDecls`, both outcomes**, by induction on the
-fuel (the recursion is the model's): the head by `ibd_ref`, the rest by the induction
-hypothesis. -/
-theorem ibds_ref {p : Prog} (hB : BasisProg p) (dn : NIdx → Option ConLeche.Name) :
-    ∀ (n : Nat) {m : Mem} {vis : Word} {fe : IFEnv} {a : AState} {o l : Word}
-      {cis : List IConstantInfo}, StageR vis fe m a → DecB (basisDec dn o.toNat l.toNat) m cis →
-      RefE True (installBasisDeclsE p n m vis o l) (installBasisDecls fe cis) a
-        (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
-  intro n
-  induction n with
-  | zero => intros; rw [installBasisDeclsE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n ih =>
-  intro m vis fe a o l cis hS hD
-  by_cases hl : l = 0
-  · rw [installBasisDeclsE.arm1 p n m vis o l hl]
-    subst hl
-    have : cis = [] := by
-      simpa [DecB, basisDec, decPL] using hD.symm
-    subst this
-    exact RefE.ret rfl ⟨hS, IWGrow.refl _⟩
-  rw [installBasisDeclsE.arm2 p n m vis o l hl]
-  obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := ⟨l.toNat - 1, by
-    have : l.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  have hD' : basisDec dn o.toNat (k + 1) (truncM m) = some cis := by rw [← hk]; exact hD
-  cases cis with
-  | nil => have := decPL_length (truncM m) hD'; simp at this
-  | cons ci cs =>
-  obtain ⟨v, hv, hci⟩ := decPL_head hD'
-  have hext := (IWGrow.refl m).truncExt
-  have hvm : iwN m o.toNat = some v := hext.1.nat? hv
-  have hci' : decCI (erecP m) v = some ci := ArrExt.decCI (truncM_erecP m) hci
-  obtain ⟨w0, hw0, rfl⟩ : ∃ w0, iwA m o.toNat = some w0 ∧ w0.toNat = v := by
-    simp only [iwN, nat?, Option.map_eq_some_iff] at hvm; exact hvm
-  have ew : rdW (m.arr64 IW) o = w0 := by simp [rdW, iwA, aread_apply] at hw0 ⊢; simp [hw0]
-  rw [ew]
-  have h1 := ibd_ref (dn := dn) hB n hS hci'
-  simp only [installBasisDecls]
-  rcases e1 : installBasisDeclE p n m vis w0 with e1 | ⟨r1, m1⟩ <;> rw [e1] at h1
-  · rw [installBasisDeclsE.k_install_basis_decl.none]; exact RefE.bind_left h1
-  obtain ⟨fe1, a1, hrun1, hR1⟩ := h1
-  rw [installBasisDeclsE.k_install_basis_decl.arm1]
-  refine RefE.bind_right hrun1 ?_
-  have hob : o.toNat + 1 < 2 ^ 64 := by
-    have := (Array.getElem?_eq_some_iff.mp hw0).1
-    have := hS.iw.iwSize; simp only [iwA] at *; omega
-  have ho1 : (o + 1).toNat = o.toNat + 1 := L.toNat_add_ofNat_of_lt o 1 hob
-  have hl1 : (l - 1).toNat = k := by
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-  have hDt : DecB (basisDec dn (o + 1).toNat (l - 1).toNat) m cs := by
-    rw [ho1, hl1]; exact decPL_tail hD'
-  exact (ih hR1.stage (DecB.grow (basisDec_mono dn _ _) hR1.grow hDt)).mono
-    fun _ _ _ hR => ⟨hR.stage, hR1.grow.trans hR.grow⟩
-
-
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`install_basis_decl(vis, c)` refines `installBasisDecl`**. -/
@@ -322,23 +256,6 @@ theorem installBasisDecl_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ :
       StageR (r.headD 0) (AM.res (installBasisDecl fe ci) a₀) s'.mem
         (AM.st (installBasisDecl fe ci) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (installBasisDecl_specE p hp n s₀ vis c) (ibd_ref (dn := dn) hp n hS hci)) ?_
-  rintro r s' ⟨hl, fe', a', hrun, hR⟩
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow⟩
-
-
-/-- **`install_basis_decls(vis, o, l)` refines `installBasisDecls`** (an `IW` slice of
-constant-record pointers decoded below the tops). -/
-@[refines ConRon.Arena.installBasisDecls]
-theorem installBasisDecls_refines (p : Prog) (hp : BasisProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis o l : Word) (cis : List IConstantInfo)
-    (hS : StageR vis fe s₀.mem a₀) (hD : DecB (basisDec dn o.toNat l.toNat) s₀.mem cis) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_basis_decls" [vis, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installBasisDecls fe cis) a₀ ∧
-      StageR (r.headD 0) (AM.res (installBasisDecls fe cis) a₀) s'.mem
-        (AM.st (installBasisDecls fe cis) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (RefE.triple (installBasisDecls_specE p hp n s₀ vis o l)
-    (ibds_ref hp dn n hS hD)) ?_
   rintro r s' ⟨hl, fe', a', hrun, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hR.stage, hR.grow⟩

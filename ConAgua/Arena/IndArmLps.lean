@@ -9,7 +9,7 @@ public import ConRon.Arena.Env
 
 What the inductive arm takes of the stage's name decoder `dn` beyond `DnInj`: every
 level-parameter handle of the block's type formers has a `dn` name (`BlockLpsDn`), what the
-shapeless path (`IndT/Shapeless.lean`) reads the formers' levels with. The loop discharges it where `dn` is the start store's persistent
+block's check (`BlockRefS`) reads the formers' levels with. The loop discharges it where `dn` is the start store's persistent
 `denoteN` (the record's denotation names every handle; the front's handles are persistent).
 -/
 

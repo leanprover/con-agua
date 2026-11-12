@@ -58,7 +58,7 @@ l_model m2cKE_spec (p : Prog) (hp : M2CProg p)
 
 l_model m2cEta2E_spec (p : Prog) (hp : M2CProg p)
   fns [hp.eta2 ↦ m2cEta2E list]
-  specs [callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all", fnzaE_spec p hp.fnza hp.fsl n,
+  specs [fnzaE_spec p hp.fnza hp.fsl n,
     callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "fab_scope_ok"]
   grind [arena_grind] fold [tierW, idxW]
@@ -88,7 +88,7 @@ l_model m2cAndE_spec (p : Prog) (hp : M2CProg p)
 
 l_model m2cArmsE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.arms ↦ m2cArmsE list]
-  specs [m2cKE_spec p hp n, callW_spec p n "eta_rescue_ok", m2cEtaE_spec p hp n, m2cAndE_spec p hp n]
+  specs [m2cKE_spec p hp n, callW_spec p n "find_table", callW_spec p n "eta_rescue_table", m2cEtaE_spec p hp n, m2cAndE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

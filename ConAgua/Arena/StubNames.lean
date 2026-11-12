@@ -13,9 +13,9 @@ L code for callees of the inductive stage that were `abortStub`s in `checkerProg
 
 * `fvar_b(f, e)`: the twin's `fvarB fuel e`, which `ab_fvb(e, f)` (`Abs1.lean`) already is; an
   adapter for the argument order of the inductive stage's calls.
-* `reserved_rec_name(n)`: `reservedRecName`: the reserved basis names (`reserved_contains`),
-  the ten literal-guard pins, the seven `Nat` operations, the eight `Nat` div/mod operations,
-  each read off the pin table and compared as handles, in the twin's order.
+* `reserved_rec_name(n)`: `reservedRecName`: the ten literal-guard pins, the seven `Nat` operations, the eight `Nat` div/mod operations,
+  `Bool` and its constructors, each read off the pin table and compared as handles, in the twin's
+  order.
 * `name_rec(n)`, `name_rec_i(n, i)`: `internNNode (.str n "rec")`, `internNNode (.str n
   s!"rec_{i}")`: the string written at the pool top, one character per word (as
   `proj_table_name`), then `intern_nstr`.
@@ -86,11 +86,8 @@ def reservedRecBoolL : FunDecl := lfn (n) locals (b) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1585-1600 ConRon.Arena.reservedRecName -/
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.reservedRecName` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
-  r := call reserved_contains(n);
-  if r != 0 { return 1 };
   r := call lit_guard_has(n);
   if r != 0 { return 1 };
   r := call pin_range_has(n, 14, 21);
@@ -141,7 +138,6 @@ def reservedRecNameL : FunDecl := lfn (n) locals (r) {
 
 /-- `name_rec_i(n, i)`: the name `n.rec_i` (`i` in decimal). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def nameRecIL : FunDecl := lfn (n, i) locals (k, o, j, x, q, s, pt, pb) {
   k := call dec_len(i);
   o := call pool_room(k + 4);

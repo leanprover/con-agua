@@ -363,7 +363,7 @@ theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   obtain ⟨cv', -, caps', hcaps, he⟩ := h
   cases he
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, ni, hni, _, _, np, hnp, _, _, hc⟩ := hcaps
+  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, hc⟩ := hcaps
   simp only [Option.some.injEq] at hc
   subst hc
   simp only [nat?, Option.map_eq_some_iff] at hni hnp
