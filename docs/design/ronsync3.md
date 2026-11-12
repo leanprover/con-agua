@@ -146,3 +146,67 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   `usLeaves`), the dead `reserved_contains_w` program fields removed, `FreezeTrunc` at the
   73-word pin table, `ThreadEVerdict` without its universe. **04:00: the whole library builds,
   zero `sorry`, the axiom guards unchanged; `provenance.py check --strict` clean.**
+* 04:05–04:35 OVERVIEW for the sync (helper ronsync3-docs: the set theory, the default maximum,
+  the counts, the verdict paragraph; link gate green), perf and verdicts (below).
+
+## 2. The ladder's yield against presync3's estimate
+
+presync3 §4 expected, of ~325 surviving footprint theorems, 200–240 to close at rungs (i)–(ii)
+and 80–120 tickets. Measured: the ladder found only **28 + 26 failing theorems** on the bumped
+tree in its first rounds, and closed **0** of them at any rung. The estimate counted theorems
+that *mention* changed twin code; but with the L code not yet ported, nearly all of them still
+elaborated (4 380 of 4 388 modules built after the bump): a refinement of an unchanged L function
+against a twin function whose change it never unfolds keeps its proof. What failed were proofs
+that unfold a changed twin definition, and none of their statements had been restated, so rung
+(i) retried exactly the failing text. The ladder's real use this time was as the compile-pass
+tool: `--write` turned every failing theorem into a `sorry` ticket so the modules behind it could
+elaborate (with one trap: run it only after building the merged tree, see §1). The sync's work
+was the L port of the changed functions and the re-proofs it forced, done by the helpers in
+their areas.
+
+## 4. Performance
+
+Against master `b4ce0391e`, both binaries `make` from the committed `checker.s`, `Init` (Lean
+4.35's export, `_tmp/fixtures/init/init435.ndjson`):
+
+| | master | ronsync3 | Δ |
+|---|---:|---:|---:|
+| `Init`, `instructions:u`, one thread | 223 729 M | 223 406 M | −0.14 % |
+| `Init`, peak RSS, one thread | 627 MB | 624 MB | −0.5 % |
+| `Init`, peak RSS, `--jobs=16` | 771 MB | 763 MB | −1.0 % |
+| `Init` wall, one thread (CPU 44, 12 interleaved rounds, load ≈ 1) | 17.21 s | −0.6 % (Wilcoxon p = 0.02; mean [−1.1, −0.2]) | |
+| `Init` wall, `--jobs=16` (CPUs 24–39, 16 paired rounds, load ≈ 1) | 3.16 s | −3.4 % (p = 0.13; mean [−7.5, +0.6]) | |
+
+(`scripts/bench.py --set init --reps 12 --cpus 44`; the 16-thread rounds by
+`_tmp/ronsync3/perf/j16.py`, `os.wait4`'s `ru_maxrss`.) No regression.
+
+## 5. Results
+
+* **Proofs.** Zero `sorry`; the axiom guards of every final theorem and of the chain unchanged
+  (`[propext, Classical.choice, Quot.sound]`); the whole library builds.
+* **Provenance.** `provenance.py check --strict`: every citation exact at con-ron 4ca283d1,
+  con-leche eb2c5939; no marker left (173 L items re-checked).
+* **Verdicts.** `diff-e2e --tests` at con-leche eb2c5939: 725/730 agree, sequential and
+  `--jobs=8`; the other 5 are the `nat_size_limit_*` fixtures con-leche runs at
+  `--max-nat-size=16`, which con-ron 4ca283d1 also accepts at the default maximum. With `--refs`
+  (con-ron 4ca283d1, e2e-ref): REFDIFF 0. `e2e.py --latest ''`: the three checkers agree on
+  775 of 777 (the 2 others time out in all three).
+* **Deviations.** New rows: D45 (Nat refusals as sentinel handles), D46 (`proj_guard_rows_at`
+  aborts where `np + i` wraps), D47 (`lit_shape_ok`'s `Nat` arms read the record's constant
+  value), D48 (`check_decl`'s computed abort as one `fail` per reason code).
+
+### What went wrong
+
+* Both the core and the ind helper ran out of context mid-area; their written hand-overs let
+  second sessions finish in ~1.5 h each. An area of this size (core: 24 new functions, 16
+  removed, ~40 refinements) is more than one helper session.
+* The fan-out started with the L code unported, so for an hour the helpers blocked each other
+  through failing modules in the others' areas; the lead's compile passes (sorry the failing
+  theorems, delete the theorems about removed twin functions) unblocked them, but cost merges
+  and twice produced wrong `sorry`s (the ladder run at stale imports).
+* The program dump (`checker_prog.py`) imports every module together, so a name defined in two
+  modules (`rbW`, `denoteRules_mem`, `denoteLList_mem`, `pgC`) blocks the regeneration until one
+  is renamed; and a closure check whose `import all` list lacks a new module with
+  `@[no_expose]` functions fails only with a kernel "application type mismatch". Both cost an
+  hour of diagnosis; `#eval (checkerProg.filter (! CHK ·)).map (·.1)` against the failing
+  `prog_all` names the function at once.
