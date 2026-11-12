@@ -255,6 +255,7 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, us
 record `cq`) is the η constructor of its family `p` (`eta`, `etaCtor`) and carries the family's
 level parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s
 rescue. -/
+-- con-ron: ConRon/Arena/Core.lean:2054-2069 ConRon.Arena.etaRescueTable?
 -- con-ron: ConRon/Arena/Core.lean:1794-1805 ConRon.Arena.etaRescueOk
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.etaRescueOk` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]

@@ -5,6 +5,7 @@ import ConAgua.Census.Attr
 import ConAgua.Layout
 import ConAgua.L.Notation
 public import ConAgua.L.Syntax
+public import ConAgua.Arena.Reasons
 
 @[expose] public section
 
@@ -352,6 +353,7 @@ def basisNameHit : FunDecl := lfn (bo, bl) locals (io, il, f, k) {
 /-! ## The reserved names -/
 
 /-- `basis_name_unreserved(n)`: `!reservedBasisNames.contains n` (the one-constant arms' test). -/
+-- con-ron: ConRon/Arena/Basis.lean:210-214 ConRon.Arena.basisNameUnreserved
 @[no_expose, l_impl ConRon.Arena.basisNameUnreserved]
 def basisNameUnreserved : FunDecl := lfn (n) locals (c) {
   c := call reserved_contains(n);
@@ -360,6 +362,7 @@ def basisNameUnreserved : FunDecl := lfn (n) locals (c) {
 
 /-- `block_names_unreserved(bo, bl)`: `block.all fun c => !rs.contains c.name` (the block an `EREC`
 slice of record pointers). -/
+-- con-ron: ConRon/Arena/Basis.lean:216-235 ConRon.Arena.basisNamesOk
 @[no_expose, l_impl ConRon.Arena.basisNamesOk]
 def blockNamesUnreserved : FunDecl := lfn (bo, bl) locals (c, r) {
   if bl == 0 { return 1 };
@@ -375,6 +378,7 @@ one-constant declaration's name, `(bo, bl)` an inductive block (an `EREC` slice 
 pointers, as `ind_block_to_erec` makes it): a block under a pinned block's names must be that
 block (`pin_list_ok`), no other block may hold a reserved name, `Quot.sound` (pin slot `4`) and the
 quotient records pass, every other declaration's name must be unreserved. -/
+-- con-ron: ConRon/Arena/Basis.lean:216-235 ConRon.Arena.basisNamesOk
 @[no_expose, l_impl ConRon.Arena.basisNamesOk]
 def basisNamesOk : FunDecl := lfn (k, n, bo, bl) locals (f, kind, po, pl, io, il, e, s) {
   if k == 6 {
@@ -402,14 +406,15 @@ def basisNamesOk : FunDecl := lfn (k, n, bo, bl) locals (f, kind, po, pl, io, il
 /-- `basis_names_error(k, bo, bl)`: `basisNamesError d`, the reason (all three invalid input): a
 block under a pinned block's names that is not the pin, a reserved name in another block, a
 one-constant declaration at a reserved name. -/
+-- con-ron: ConRon/Arena/Basis.lean:237-247 ConRon.Arena.basisNamesError
 @[no_expose, l_impl ConRon.Arena.basisNamesError]
 def basisNamesError : FunDecl := lfn (k, bo, bl) locals (f, kind) {
   if k == 6 {
     (f, kind) := call basis_name_hit(bo, bl);
-    if f != 0 { return R_RESERVED_BASIS_NAME_THE };
-    return R_RESERVED_BASIS_NAME_IN
+    if f != 0 { return ⟪R_RESERVED_BASIS_NAME_THE⟫ };
+    return ⟪R_RESERVED_BASIS_NAME_IN⟫
   };
-  return R_RESERVED_BASIS_NAME
+  return ⟪R_RESERVED_BASIS_NAME⟫
 }
 
 /-! ## The quotient records -/

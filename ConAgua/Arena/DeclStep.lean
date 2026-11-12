@@ -126,6 +126,7 @@ constructor, 7; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its 
 
 /-- `check_decl_kind(i, vis, bo, bl)`: `checkDeclKind` on record `i` (an inductive block's records
 already copied into `EREC`: the slice `(bo, bl)`, `check_decl`'s). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
   k := DECL.u64[1 + 8 * i];
@@ -145,6 +146,7 @@ def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`: an inductive block's records copied into
 `EREC` (`ind_block_to_erec`), the declaration's own checks (`check_decl_kind`), the caches flushed,
 then the reserved names' check (`basis_names_ok`; its failure `basis_names_error`'s reason). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v, z, ok, e) {
   k := DECL.u64[1 + 8 * i];
@@ -156,7 +158,8 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v, z, ok, e) {
   ok := call basis_names_ok(k, DECL.u64[2 + 8 * i] & 4294967295, bo, bl);
   if ok == 0 {
     e := call basis_names_error(k, bo, bl);
-    abort e
+    -- `abort e` (local `8`)
+    ⟪.abort (.var 8)⟫
   };
   return v
 }

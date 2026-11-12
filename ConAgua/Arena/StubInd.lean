@@ -69,6 +69,7 @@ parameter names at `EREC[off ‥ off + len)`. -/
 
 /-- `opf_go(n, e, i, co, cn)`: `openPisAtFvarsFGo acc n e i` with `acc = SPN[co ‥ co + cn)`:
 `(1, body)` or `(0, 0)`; the free variables made are pushed. -/
+-- con-ron: ConRon/Arena/Core.lean:2864-2883 ConRon.Arena.openPisRawGo
 -- con-ron: ConRon/Arena/Core.lean:2598-2615 ConRon.Arena.openPisAtFvarsFGo
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.openPisAtFvarsFGo` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.openPisRawGo]

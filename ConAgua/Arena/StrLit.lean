@@ -218,6 +218,7 @@ def strLitStoredL : FunDecl :=
 
 /-- `nat_ind_at_cv(q)`: `natIndOk (some (.indInfo cv {}))` at the constant value `q` (no level
 parameters, type `Sort 1`): `nat_ind_ok` at a record of the kind `litShapeOk` builds. -/
+-- con-ron: ConRon/Arena/Core.lean:490-496 ConRon.Arena.natIndOk
 @[no_expose, l_impl ConRon.Arena.natIndOk]
 def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
   if EREC⦃q + 2⦄ != 0 { return 0 };
@@ -227,6 +228,7 @@ def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
 
 /-- `nat_zero_at_cv(q)`: `natZeroOk (some (.ctorInfo cv 0 0))` at the constant value `q` (no level
 parameters, type `Nat`; `Nat` interned first, as the twin does). -/
+-- con-ron: ConRon/Arena/Core.lean:498-505 ConRon.Arena.natZeroOk
 @[no_expose, l_impl ConRon.Arena.natZeroOk]
 def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
   nt := call pin_at(1);
@@ -237,6 +239,7 @@ def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
 
 /-- `nat_succ_at_cv(q)`: `natSuccOk (some (.ctorInfo cv 0 1))` at the constant value `q` (no level
 parameters, type `Nat → Nat`). -/
+-- con-ron: ConRon/Arena/Core.lean:507-519 ConRon.Arena.natSuccOk
 @[no_expose, l_impl ConRon.Arena.natSuccOk]
 def natSuccAtCvL : FunDecl := lfn (q) locals (nt, nc, ty, t, i, dom, body) {
   if EREC⦃q + 2⦄ != 0 { return 0 };

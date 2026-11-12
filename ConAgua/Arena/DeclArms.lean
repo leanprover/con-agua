@@ -281,6 +281,7 @@ def reduceStoredOkL : FunDecl := lfn (vis, c) locals (f, r, p, e) {
 
 /-- `reduce_elem_ok(vis, c)`: a stored `Nat` inductive at the pin's constant value (for
 `reduceNat`), or a standard `Bool`. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:125-139 ConRon.Arena.reduceElemOk
 @[no_expose, l_impl ConRon.Arena.reduceElemOk]
 def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) {
   rn := call pin_at(43);
@@ -454,6 +455,7 @@ def checkQuotRecordL : FunDecl := lfn (vis, k, q) locals (e, r, w) {
 quotient package's record (`check_quot_record`, slot `4`); else the constant check and the five
 recognised axioms: the standard two, `Lean.trustCompiler`, the `ofReduce*` pair; `propext`/`choice`
 of another shape and every other axiom decline; `sorryAx` is skipped. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
   p := call erec_ci(i, 0);
@@ -527,6 +529,7 @@ def checkStructuralNatPinL : FunDecl :=
 name allowed), the definition check, then for a `natOpNames` member the structural-`Nat` gate,
 for a `natDivModNames` member the pin gate over the ROM's variants (`rom_pin_sets()`), and the
 push. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, pl, w) {
   p := call erec_ci(i, 1);
@@ -548,6 +551,7 @@ def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, p
 }
 
 /-- `check_decl_thm(i, vis)`: the `.thmDecl` arm. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
@@ -560,6 +564,7 @@ def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
 /-- `check_decl_opaque(i, vis)`: the `.opaqueDecl` arm: the opaque check, then for
 `Lean.reduceNat`/`Lean.reduceBool` (`reduceOpNames`, pin slots `43`, `44`) the pin gate, and the
 push. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
   p := call erec_ci(i, 0);
@@ -579,6 +584,7 @@ def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
 
 /-- `check_decl_quot(i, vis)`: the `.quotDecl` arm: `check_quot_record` at the record's slot
 (`DECL` word 7: `1` type, `2` ctor, `3` lift, else ind). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, w) {
   kw := DECL.u64[7 + 8 * i];

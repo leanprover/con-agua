@@ -441,6 +441,7 @@ def lamsInstL : FunDecl := lfn (d, ty2, body1, body2) locals (fv, b1, b2) {
 }
 
 /-- `lamPair?`: `(1, ty1, body1, ty2, body2)` when both handles are λs, else `(0, 0, 0, 0, 0)`. -/
+-- con-ron: ConRon/Arena/ExprOps.lean:1271-1284 ConRon.Arena.binderPair?
 -- con-ron: ConRon/Arena/ExprOps.lean:1271-1282 ConRon.Arena.lamPair?
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.lamPair?` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.binderPair?]

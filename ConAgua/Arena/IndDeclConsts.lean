@@ -305,6 +305,7 @@ def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
 
 /-- `decl_constants_ind(bo, bl, nP)`: the `.indDecl` arm: a block the reader reads installs its
 constants, any other nothing (its check rejects it). -/
+-- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (e, p, o, l) {
   (e, p) := call read_block(nP, bo, bl);
@@ -315,6 +316,7 @@ def declConstantsInd : FunDecl := lfn (bo, bl, nP) locals (e, p, o, l) {
 
 /-- `decl_constants(i)`: the constants `DECL` record `i` installs, in push order (an `IW` slice of
 `EREC` constant records). -/
+-- con-ron: ConRon/Arena/Install.lean:148-162 ConRon.Arena.declConstants
 @[no_expose, l_impl ConRon.Arena.declConstants]
 def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
   k := DECL.u64[1 + 8 * i];
@@ -346,6 +348,7 @@ def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
 /-- `decl_tables(i)`: the projection tables `DECL` record `i` installs: those of an inductive
 block the reader reads (none where a constructor is too short for them, `block_tables`' flag);
 none for any other record. -/
+-- con-ron: ConRon/Arena/Install.lean:164-176 ConRon.Arena.declTables
 @[no_expose, l_impl ConRon.Arena.declTables]
 def declTables : FunDecl := lfn (i) locals (bo, bl, e, p, ok, o, l) {
   if DECL.u64[1 + 8 * i] != 6 { return (0, 0) };
