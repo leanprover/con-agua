@@ -377,7 +377,7 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     have hr2' : r2 = _ := hr2
     subst hr2'
     have hc2 := hq2 c1 c2 rfl
-    rw [if_neg (by simp)]
+    rw [ite_eq_right (by simp)]
     have hcl1 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
     have hcto1 : (cto + 1).toNat = cto.toNat + 1 := by
       have := hts.2; rw [UInt64.toNat_add]; simp; omega

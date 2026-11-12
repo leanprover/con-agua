@@ -372,7 +372,7 @@ theorem qd_arm {p : Prog} {n : Nat} {G : Prop} {x : Except Err (List Word × Mem
   exact RefE.ret hrun ⟨hP.after, by rw [hP.res]; rfl, ⟨hw1, hP.valid⟩⟩
 
 /-- **`quick_defeq` refines `quickDefEq`, both outcomes**: the errors are the arms'. -/
-theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK p)
+theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (_hi : Inst1OK p)
     (hsd : StoreDenotes) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d x y : Word)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : HW x) (hy : HW y)

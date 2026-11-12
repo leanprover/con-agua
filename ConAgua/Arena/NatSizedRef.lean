@@ -112,10 +112,9 @@ theorem sizeBytes_spec (p : Prog) (hp : p.lookup "size_bytes" = some sizeBytesL)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ]
+    all_goals (try simp only [Cmp.eval, BinOp.eval,
+      beq_iff_eq] at *)
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init]
     all_goals grind
 
 /-- **`nat_size_refused`**: the maximum `PINS[72]` is below `8 · max(l, 1)`. -/
@@ -131,10 +130,8 @@ theorem natSizeRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBy
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, rdW, Cmp.evalW, Cmp.eval, UInt64.lt_iff_toNat_lt, L.St.setLocs_mem,
+    all_goals (try simp only at *)
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, rdW, Cmp.evalW, Cmp.eval, UInt64.lt_iff_toNat_lt, L.St.setLocs_mem,
       List.headD_eq_head?_getD]
     all_goals grind
 
@@ -185,16 +182,14 @@ theorem litNatSized_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.m
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, natSizeRefused_spec p hz hsr n,
       hI a₀ n]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [Cmp.eval, BinOp.eval, bne_iff_ne, ne_eq] at *)
     all_goals simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq] at *
+      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *
     all_goals simp only [LocEq, Sig.retVal, Sig.retOr, List.headD_cons] at *
     all_goals first
-      | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
+      | (simp_all [Locals.init]; done)
       | (apply NatRes.refusedSize; rw [hrun, ite_eq_left]; apply Classical.byContradiction; intro hc; simp_all)
-      | (refine NatRes.ofIntern (pv (vpool s₀.mem) o.toNat l.toNat) _ rfl ?_ ?_ ?_ ?_ <;> (try rw [hrun, ite_eq_right]) <;> simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ])
+      | (refine NatRes.ofIntern (pv (vpool s₀.mem) o.toNat l.toNat) _ rfl ?_ ?_ ?_ ?_ <;> (try rw [hrun, ite_eq_right]) <;> simp_all [Locals.init])
 
 include hpl hpc hpt hpa hpn hz hsr hls hpool hgrow hI in
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm** (`litNatSized (a + b)`): a handle word
@@ -222,7 +217,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
     vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpl hpc hpt hpa n,
       litNatSized_refines p R hpool hI hz hsr hls n (a₀ := a₀)]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, reduceIte] at *)
+      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *)
     all_goals grind [lang_grind, arena_grind, natAddArm, LocEq]
 
 end refine
@@ -376,8 +371,8 @@ theorem powRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, LocEq, Sig.retVal, Sig.retOr] at *)
+    all_goals (try simp only [Cmp.eval, BinOp.eval,
+      beq_iff_eq, bne_iff_ne, ne_eq, LocEq, Sig.retVal, Sig.retOr] at *)
     all_goals (try simp only [Locals.init_cons_zero, Locals.init_cons_succ, St.setLocs_cons,
       St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem, List.headD_cons, Cmp.evalW] at *)
     all_goals subst_vars
@@ -406,8 +401,7 @@ theorem shiftLeftRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some size
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
-      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals (try simp only [BinOp.eval] at *)
     case vc3 _ _ s₂ hA hb =>
       obtain ⟨hloc, hmem, hs⟩ := hA
       have hl1 : (s₂.setLocs [2] rs).loc 1 = e := by
@@ -422,9 +416,8 @@ theorem shiftLeftRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some size
       rw [getElem_rdW _ _ hb]
       simp only [decide_eq_true_eq]
       exact shlW_cmp _ _ _ _ hs hl
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, rdW, Cmp.evalW, Cmp.eval, UInt64.lt_iff_toNat_lt, L.St.setLocs_mem,
-      List.headD_eq_head?_getD, UInt64.toNat_add, UInt64.toNat_shiftRight]
+    all_goals simp_all [LocEq, Locals.init, L.St.setLocs_mem,
+      List.headD_eq_head?_getD]
     all_goals omega
 
 end L.Arena

@@ -29,7 +29,7 @@ variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hE : ErecPKept p)
   (hcc : ProjCallees p) (hpr : PropReadProg p) (hilp : InstLPOK p)
 include hp hc hcc hpr hilp
 
-include hE in
+omit hcc in
 /-- **`m2c_eta2` refines `m2cEta2T`, both outcomes** (the slice `(to, tn)` ends at the stack top;
 the errors are `former_never_zero_at`'s). -/
 theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)

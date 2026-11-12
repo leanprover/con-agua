@@ -41,7 +41,7 @@ theorem powTwoLoop_spec (p : Prog) (n : Nat) (s₀ : St) :
   | succ n ih =>
     rw [exec, step_while (w := powTwoLoop) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih]
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       decide_eq_true_eq, PtPost] at *)
     all_goals grind [PtPost]
 

@@ -432,7 +432,7 @@ theorem pgFast_okC {p : Prog} (hP : PgGoProg p) : ∀ (n : Nat) (m m' : Mem) (a 
     exact ⟨none, a1, hrun, hS2, hK2, rfl⟩
   | false =>
     rw [ite_eq_right (by rw [hb]; simp)] at hW
-    rw [hrun, if_neg (by decide)]
+    rw [hrun, ite_eq_right (by decide)]
     rcases c3 : callW p n "proj_guard_fast" [k - 1, j + 1, y] m2 with _ | ⟨r3, m3⟩
     · rw [c3] at hW; cases hW
     rw [c3] at hW

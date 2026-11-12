@@ -124,10 +124,10 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (ertW_spec p hp.etaRescueTable (N' + 1) ⟨m0, Locals.init []⟩ _ _ _ _) c1
     rw [hs1] at hW1
     obtain ⟨hm1, hrun1, hsome1⟩ := ert_ok hp.erSlEq' hp.pinat ⟨fun _ => hS.pins⟩ hctorHW hcj hci
-      (fun h0 => by simp only [ht0] at hfs; exact hfs h0) hW1
+      (fun h0 => by simp only at hfs; exact hfs h0) hW1
     clear hs1
     subst m1
-    refine ⟨_, _, by rw [hctor, hft]; simp only [ht0]; exact hrun1, ?_⟩
+    refine ⟨_, _, by rw [hctor, hft]; simp only; exact hrun1, ?_⟩
     by_cases g1 : r1.headD 0 ≠ 0
     · rw [m2cArmsE.k_eta_rescue_table.arm1 (hc1 := g1)]
       obtain ⟨tb, htb⟩ := hsome1 g1
@@ -138,7 +138,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
           mode d T indP _ major hm4 hebm hT hmaj cvT caps tb m0 a M hS hci hfe htb)
     · have g1' : r1.headD 0 = 0 := by simpa using g1
       rw [m2cArmsE.k_eta_rescue_table.arm2 (hc1 := g1')]
-      have hz : tblFound m0 (r1.headD 0) = none := by rw [tblFound, if_pos g1']
+      have hz : tblFound m0 (r1.headD 0) = none := by rw [tblFound, ite_eq_left g1']
       simp only [hz]
       exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
         (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]; rfl) hR

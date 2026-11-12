@@ -183,7 +183,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     simp only [bne_iff_ne, ne_eq, UInt64.toNat_inj]
   simp only [L.Ind.erRd_foldN]
   by_cases hok : sgOK s₀.mem c q tq tn (r₁.headD 0) (r₄.tail.headD 0)
-  · rw [secgE_yes (h := hok), if_pos (hiff.mpr hok)]
+  · rw [secgE_yes (h := hok), ite_eq_left (hiff.mpr hok)]
     rw [hTp, hTf]
     exact RefE.tail_eq (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (Nat.le_succ n')) rfl
       (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
@@ -195,7 +195,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
         (by obtain ⟨x, c', hx⟩ := hvus2
             exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hx)
         ha ht hat htt)
-  · rw [secgE_no (h := hok), if_neg (fun h => hok (hiff.mp h))]
+  · rw [secgE_no (h := hok), ite_eq_right (fun h => hok (hiff.mp h))]
     exact RefE.ret rfl (GrowPost.of_core (CorePost.ret hS rfl hw0))
 
 end L.Arena

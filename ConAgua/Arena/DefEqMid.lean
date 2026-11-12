@@ -537,8 +537,7 @@ theorem li_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n)
   · rw [ite_eq_left h0, L.Arena.decBool_false_of h0]
     exact RefE.ret rfl (CorePost.ret hS₁ rfl resH_zero)
   rw [ite_eq_right h0, L.Arena.decBool_true_of h0]
-  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, L.Arena.decMode_verified mode hs.mode4,
-    decide_eq_true_eq]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, L.Arena.decMode_verified mode hs.mode4]
   by_cases hv : lam ≠ 0 ∧ mode &&& 1 = 0
   case neg =>
     rw [ite_eq_right hv]

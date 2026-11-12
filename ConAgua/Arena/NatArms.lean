@@ -533,9 +533,8 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
       bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    all_goals try simp only [
+      List.headD_cons, Locals.init_nil, reduceIte,
       Nat.reduceEqDiff, LocEq, Sig.retVal, Sig.retOr] at *
     case vc2 _ _ h =>
       apply NatRes.refused (by decide)
@@ -606,7 +605,7 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
       refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
       rw [hrun, ite_eq_right (by decide), ite_eq_right (by simp [powRefusedN])]
     all_goals first
-      | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
+      | (simp_all [Locals.init]; done)
       | (grind [arena_grind, lang_grind]; done)
 
 end pow
@@ -780,9 +779,8 @@ theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Na
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
       bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
-    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem,
-      List.headD_cons, List.headD_nil, List.tail_cons, List.tail_nil, Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, reduceIte, beq_iff_eq, bne_iff_ne, ne_eq,
+    all_goals try simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem,
+      List.headD_cons, Locals.init_nil, reduceIte,
       Nat.reduceEqDiff, Sig.retVal, Sig.retOr] at *
     case vc2 _ _ h hla =>
       have hb : 4294967295 < pv (vpool s₀.mem) ob.toNat lb.toNat := by
@@ -888,7 +886,7 @@ theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Na
       refine NatRes.ofIntern _ _ rfl ?_ hok' hR' hres'
       rw [hrun, ite_eq_right (fun h => h.1 ha00), ite_eq_right (fun h => h.1 ha00)]
     all_goals first
-      | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
+      | (simp_all []; done)
       | (grind [arena_grind, lang_grind]; done)
 
 end shl

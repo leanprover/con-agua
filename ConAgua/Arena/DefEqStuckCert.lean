@@ -194,10 +194,10 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
   by_cases hz : r₀.headD 0 = 0
   · rw [ite_eq_left hz]
     exact RefE.of_run_eq (setWtbT_notbl _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
-      (by rw [hfind', hci_eq]) (by rw [hft, tblFound, if_pos hz])) hl
+      (by rw [hfind', hci_eq]) (by rw [hft, tblFound, ite_eq_left hz])) hl
   rw [ite_eq_right hz]
   obtain ⟨tbl, htbl'⟩ := hfs hz
-  have htbl : tblFound s₀.mem (r₀.headD 0) = some tbl := by rw [tblFound, if_neg hz, htbl']
+  have htbl : tblFound s₀.mem (r₀.headD 0) = some tbl := by rw [tblFound, ite_eq_right hz, htbl']
   -- the type's spine
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS hwtb h)
     fun r₃ m₃ ⟨hf3, hg3, hr30, htop3, targs, hargs, hsp⟩ => ?_
@@ -683,7 +683,7 @@ theorem RefE.monoG {α β : Type} {G G' : Prop} {x : Except Err α} {T : AM β} 
 theorem see_step (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (F : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode k d a b ta : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (ha : HW a) (hb : HW b) (hta : HW ta) (hk0 : k ≠ 0)
+    (_ha : HW a) (_hb : HW b) (hta : HW ta) (hk0 : k ≠ 0)
     (hrec : ∀ (s₁ : St) (a₁ : AState) (M₁ : ModeMaps) (a2 b2 t2 : Word),
       SlotPre s₁ a₁ dn vis fe M₁ eb mode → HW a2 → HW b2 → HW t2 → d + 1 ≠ 0 →
       RefE (SetG p n) (seeE p n s₁.mem mode vis (k - 1) (d + 1) a2 b2 t2)
@@ -696,7 +696,7 @@ theorem see_step (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
   have hkk : k.toNat = (k - 1).toNat + 1 := by
     have : k.toNat ≠ 0 := fun e => hk0 (UInt64.toNat_inj.mp (by simpa using e))
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-  rw [seeE.eq_2, if_neg hk0, hkk]
+  rw [seeE.eq_2, ite_eq_right hk0, hkk]
   simp only [structEtaExpand]
   rw [decE_tag_forallE_beq _ hta]
   by_cases h6 : tagW ta ≠ 6
