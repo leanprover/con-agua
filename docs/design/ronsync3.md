@@ -117,3 +117,12 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   with written hand-overs (`_tmp/ronsync3/{core,ind}-handoff.md`). The generated program
   (`Checker/Prog*.lean`) waits for core's `DefEqBaseE`/`DefEqKnot` to build (`checker_prog.py`
   needs every module).
+* 02:35–02:50 program regenerated (`checker_prog.py`: 1790 functions, 0 stubs; two name clashes
+  between modules had to go first, the dump imports every module together), the generated
+  function lists (nv/core/loop/leaf/phaseb, preloop-ws), `import all ConAgua.Arena.NatSized` in
+  the six closure checks that unfold the program (a missing `import all` of a module with
+  `@[no_expose]` functions shows only as a kernel "application type mismatch" in `prog_all`),
+  `checker.s`/`pins.bin`. **First verdicts** (`diff-e2e --tests` at con-leche eb2c5939,
+  sequential): 725 of 730 agree; the 5 others are the `nat_size_limit_*` fixtures that con-leche's
+  `E2E_FLAGS` run at `--max-nat-size=16` — at the default maximum con-ron 4ca283d1 accepts them
+  too, so every verdict is the twin's at the default.
