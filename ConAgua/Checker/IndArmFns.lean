@@ -124,7 +124,7 @@ def armPosFns : List FnName :=
     "ue_mentions_go", "has_str_lit_go", "has_fvar_fast", "sl_nodup", "cv_lps", "lit_shape_ok",
     "char_of_nat_ty_ok", "str_cv", "char_ty_ok", "list_cons_ty_ok", "str_param_sort",
     "list_nil_ty_ok", "list_ty_ok", "string_of_list_ty_ok", "string_ty_ok", "nat_succ_ok",
-    "nat_zero_ok", "nat_ind_ok", "erec_put", "erec_alloc", "nat_op_name", "pin_range_has",
+    "nat_zero_ok", "nat_ind_ok", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv", "erec_put", "erec_alloc", "nat_op_name", "pin_range_has",
     "reserved_contains", "reserved_from", "check_block_inds", "cons_block_inds", "env_push",
     "env_row_set", "ind_info_rec", "er_put5", "block_caps_at", "block_caps_fin",
     "block_caps_at_er_copy", "block_caps_at_er_copy_go", "block_caps_ctor_names", "block_caps_one",
@@ -574,7 +574,7 @@ def armTaFns : List FnName :=
 
 /-- `cidFrameCallees`, closed under calls. -/
 def armCidFns : List FnName :=
-  ["block_shape", "block_shape_build", "block_shape_tail", "block_shape_fin", "block_shape_seal",
+  ["read_block", "read_block_at", "block_shape_tail", "block_shape_fin", "block_shape_seal",
     "block_shape_pack", "iw_alloc", "intern_nanon", "nanon_push", "nanon_find", "block_shape_large",
     "sl_contains", "sl_eq", "er_to_iw", "er_copy", "block_shape_recs_of", "sl_cons", "iw_copy",
     "rec7", "rec_target_of", "sl_find", "e_view", "get_app_fn_f", "get_app_fn", "strip_pis",
@@ -585,9 +585,7 @@ def armCidFns : List FnName :=
     "lvl_eq_rec", "lq_put", "lq_find", "lvl_eq", "lv_equiv", "lv_leq", "lv_rest", "lv_imax",
     "lv_imax_l", "lv_imax_r", "lv_dist2", "lv_simp", "lh_mk", "lv_comb", "lv_node", "lv_dist1",
     "lv_cases", "lv_cases_at", "lv_subsimp", "lv_subst", "lv_eq", "pin_word",
-    "block_shape_result_sort", "sl_getd", "block_shape_pins_ok", "block_shape_pins_ctors",
-    "reserved_contains", "reserved_from", "block_shape_pins_recs", "block_shape_pins_formers",
-    "block_member_counts", "block_member_counts_go", "block_counts", "block_counts_pure",
+    "block_shape_result_sort", "sl_getd", "reserved_contains", "reserved_from", "block_member_counts", "block_member_counts_go", "block_counts", "block_counts_pure",
     "block_counts_head", "pi_binders", "block_member_counts_find", "block_shape_names_of",
     "block_split", "rec6", "block_split_ctors", "rec3", "block_split_recs", "basis_name_hit",
     "basis_name_hit_go", "block_names_eq", "rom_basis_decls", "rci_block", "rci_block_to", "rci_ci",
