@@ -436,13 +436,13 @@ theorem bno_sim (hP : BnoProg p) {n : Nat} {m : Mem} {a : AState} {d : IDeclarat
       exact hrun4
 
 /-- **`basis_names_error(k, bo, bl)` refines `basisNamesError d`**: an inductive block's name test
-again (`basis_name_hit`), the reason's code of the twin's error's class. -/
+again (`basis_name_hit`); the twin's error a reject (`invalid`). -/
 theorem bne_sim (hP : BnoProg p) {n : Nat} {m : Mem} {a : AState} {d : IDeclaration}
     {k nw bo bl : Word} (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a)
     (hr : ConRon.Bridge.ReadOK a) (hA : BnoArgs d k nw bo bl m)
     (hden : ∃ x, Frontend.denoteDecl a.store d = some x) :
     Sim (callW p n "basis_names_error" [k, bo, bl] m) (ConRon.Arena.basisNamesError d) a
-      (fun r ce m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 &&& 3 = twinCls ce) := by
+      (fun _ ce m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ twinCls ce = 1) := by
   intro r m' h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (basisNamesError_specW p hP.bne n _ k bo bl) h
@@ -453,11 +453,11 @@ theorem bne_sim (hP : BnoProg p) {n : Nat} {m : Mem} {a : AState} {d : IDeclarat
   have one : k ≠ 6 → ∀ ce : CheckError, ce = .invalid "reserved basis name" →
       (ConRon.Arena.basisNamesError d).run a = .ok (ce, a) →
       ∃ x a', (ConRon.Arena.basisNamesError d).run a = .ok (x, a') ∧ StageT dn vis fe m' a' ∧
-        IWGrow m m' ∧ r.headD 0 &&& 3 = twinCls x := by
+        IWGrow m m' ∧ twinCls x = 1 := by
     intro h6 ce hce hrun
     rw [basisNamesErrorW.arm2 p n m k bo bl h6] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    exact ⟨ce, a, hrun, hT, IWGrow.refl _, by rw [hce]; decide⟩
+    exact ⟨ce, a, hrun, hT, IWGrow.refl _, by rw [hce]; rfl⟩
   cases d with
   | defnDecl cv v hh =>
     obtain ⟨rfl, -⟩ := hA; exact one (by decide) (.invalid "reserved basis name") rfl rfl
@@ -485,13 +485,13 @@ theorem bne_sim (hP : BnoProg p) {n : Nat} {m : Mem} {a : AState} {d : IDeclarat
       have h0 : r1.headD 0 = 0 := hd1
       rw [basisNamesErrorW.k_basis_name_hit.arm2 p r1 m1 h0] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      refine ⟨.invalid "reserved basis name in the block of", a1, ?_, hT1, hg1, by decide⟩
+      refine ⟨.invalid "reserved basis name in the block of", a1, ?_, hT1, hg1, rfl⟩
       simp only [ConRon.Arena.basisNamesError, StateT.run_bind, hrun1, except_ok_bind]; rfl
     | some kind =>
       obtain ⟨h1, -, -⟩ := hd1
       rw [basisNamesErrorW.k_basis_name_hit.arm1 p r1 m1 (by rw [h1]; decide)] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-      refine ⟨.invalid "reserved basis name: the block is not the pinned one", a1, ?_, hT1, hg1, by decide⟩
+      refine ⟨.invalid "reserved basis name: the block is not the pinned one", a1, ?_, hT1, hg1, rfl⟩
       simp only [ConRon.Arena.basisNamesError, StateT.run_bind, hrun1, except_ok_bind]; rfl
 
 end bno

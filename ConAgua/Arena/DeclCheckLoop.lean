@@ -37,5 +37,6 @@ structure CheckDeclProg (p : Prog) : Prop where
   th : p.lookup "check_decl_thm" = some checkDeclThm
   op : p.lookup "check_decl_opaque" = some checkDeclOpaque
   qu : p.lookup "check_decl_quot" = some checkDeclQuot
+  ckd : p.lookup "check_decl_kind" = some checkDeclKindL
 
 end L.Arena

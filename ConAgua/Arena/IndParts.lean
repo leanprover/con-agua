@@ -885,8 +885,20 @@ def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vi
   pOk := call ind_params_ok(nP, boff, blen);
   if pOk == 0 { fail R_NUMBER_OF_PARAMETERS };
   (e, pNew) := call read_block(nP, boff, blen);
-  -- `abort e` (local `5`)
-  if e != 0 { ⟪.abort (.var 5)⟫ };
+  -- the twin's `fail e`: the reject at the reader's reason `e`
+  if e != 0 {
+    if e == ⟪R_INDUCTIVE_TYPE_DECLARES⟫ { fail R_INDUCTIVE_TYPE_DECLARES };
+    if e == ⟪R_NO_RECURSOR_OF⟫ { fail R_NO_RECURSOR_OF };
+    if e == ⟪R_THE_ARGUMENT_COUNTS⟫ { fail R_THE_ARGUMENT_COUNTS };
+    if e == ⟪R_INDUCTIVE_TYPE_DECLARES_OTHER⟫ { fail R_INDUCTIVE_TYPE_DECLARES_OTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_ANOTHER⟫ { fail R_CONSTRUCTOR_DECLARES_ANOTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_OTHER⟫ { fail R_CONSTRUCTOR_DECLARES_OTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE⟫ { fail R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE };
+    if e == ⟪R_INDUCTIVE_BLOCK_ITS⟫ { fail R_INDUCTIVE_BLOCK_ITS };
+    if e == ⟪R_INDUCTIVE_BLOCK_DECLARES⟫ { fail R_INDUCTIVE_BLOCK_DECLARES };
+    if e == ⟪R_INDUCTIVE_BLOCK_CARRIES⟫ { fail R_INDUCTIVE_BLOCK_CARRIES };
+    abort
+  };
   vis2 := call check_block(vis, boff, blen, pNew);
   return vis2
 }
