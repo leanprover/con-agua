@@ -264,7 +264,7 @@ structure IndArmProgs (p : Prog) : Prop where
 /-- **The core's write set with its two leaves at the substituted checker program**
 (`checkerProg_coreStageW`; the leaves' bundles by lookups). -/
 theorem checkerProg_coreStagePB (bs : List UInt8) : L.Ind.CoreStageClosed (Prog.subPB bs checkerProg) :=
-  ⟨closedWL_subPB bs checkerProg_coreStageW, by prog_bundle [], by prog_bundle [],
+  ⟨closedWL_subPB bs checkerProg_coreStageW, by prog_bundle [], by prog_bundle [], by prog_bundle [],
     closedW_subPB bs checkerProg_lvlCoreW⟩
 
 /-- **The inductive arm's program facts at the substituted checker program** (one `prog_bundle`:

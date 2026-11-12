@@ -66,6 +66,35 @@ theorem indMemos_usLeaf {p : Prog} (hp : UsF p) (n : Nat) (m₀ : Mem) (vs : Lis
   rw [hm] at hu
   exact fun h0 => indMemos_ustW hu hfr (hs h0)
 
+/-- **`IndMemos` across a run with `struct_used_later`'s write set** that keeps the `hb` memo well
+formed. -/
+theorem indMemos_usFrame {m m' : Mem} (hf : MemFrame usA usC m m')
+    (hk : (∃ mp, hbMR m mp) → ∃ mp, hbMR m' mp) (hI : IndMemos m) : IndMemos m' := by
+  obtain ⟨⟨hp, ⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩⟩, hi1, hcr⟩ := hI
+  have hmf : MFr [HBM] [214, 215] m m' := ⟨usA, usC, hf, fun b hb => by
+      simp only [usA, List.mem_cons, List.not_mem_nil, or_false] at hb
+      rcases hb with rfl | rfl | rfl <;> simp [IW, HBM, BMEMO], fun x hx => by
+      simp only [usC, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl | rfl <;> simp⟩
+  exact ⟨⟨hp.setHb hmf (hk hp.hb),
+    ⟨a, memoRG_frame _ maSch_wf _ _ usA usC (by decide) (by decide) m m' hf a ha⟩,
+    ⟨b, memoRG_frame _ mcSch_wf _ _ usA usC (by decide) (by decide) m m' hf b hb⟩,
+    ⟨c, memoRG_frame _ taSch_wf _ _ usA usC (by decide) (by decide) m m' hf c hc⟩⟩,
+    I1Memo.frame hi1 hf (by decide) (by decide), L.Arena.CrOK.frame hcr hf (by decide) (by decide)⟩
+
+/-- **The projection guard's two queries keep `IndMemos`** (the leaf lemmas `IndLeaves` asks of
+them). -/
+theorem indMemos_hlLeaf {p : Prog} (hp : ProgHas p hbLeafP) {g : FnName}
+    (hg : g = "has_loose_b_var_b_fast" ∨ g = "has_loose_bvar_in") (n : Nat) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => IndMemos m₀ → IndMemos s.mem⦄ invoke p (exec p n) g vs
+    ⦃fun _ s => IndMemos m₀ → IndMemos s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨-, hc⟩ := M.of_run (P := fun t => t = s) rfl hrun (callW_spec p n g vs s)
+  obtain ⟨hfr, hk⟩ := hlLeaf_run hp hg hc
+  exact fun h0 => indMemos_usFrame (hfr.mono (by simp [hbWA, usA]) (by simp [hbWC, usC]))
+    (fun hM => (hk hM).2) (hs h0)
+
 end L.Ind
 
 end

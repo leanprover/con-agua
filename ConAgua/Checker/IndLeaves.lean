@@ -194,15 +194,19 @@ theorem indMemos_crf {p : Prog} (hp : L.Ind.CrfF p) (n : Nat) (m₀ : Mem) (vs :
 
 /-- **The leaves keep `IndMemos`** at a program with `consts_resolve_ffast`'s and
 `struct_used_later`'s texts. -/
-theorem indLeaves_of {p : Prog} (hc : L.Ind.CrfF p) (hu : L.Ind.UsF p) : IndLeaves p := by
+theorem indLeaves_of {p : Prog} (hc : L.Ind.CrfF p) (hu : L.Ind.UsF p) (hl : ProgHas p L.Ind.hbLeafP) :
+    IndLeaves p := by
   intro g hg n m₀ vs
   simp only [imLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg
-  rcases hg with rfl | rfl
+  rcases hg with rfl | rfl | rfl | rfl
   · exact indMemos_crf hc n m₀ vs
   · exact L.Ind.indMemos_usLeaf hu n m₀ vs
+  · exact L.Ind.indMemos_hlLeaf hl (.inl rfl) n m₀ vs
+  · exact L.Ind.indMemos_hlLeaf hl (.inr rfl) n m₀ vs
 
 theorem checkerProg_indLeavesPB (bs : List UInt8) : IndLeaves (Prog.subPB bs checkerProg) :=
   indLeaves_of (by prog_bundle [] : L.Ind.CrfF (Prog.subPB bs checkerProg))
     (by prog_bundle [] : L.Ind.UsF (Prog.subPB bs checkerProg))
+    (by prog_bundle [] : ProgHas (Prog.subPB bs checkerProg) L.Ind.hbLeafP)
 
 end L.Checker

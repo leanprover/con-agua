@@ -172,7 +172,7 @@ open L L.Arena L.Compiler
 
 /-- `struct_used_later`'s call closure in the checker's program. -/
 def sulFns : List FnName :=
-  ["struct_used_later", "strip_pis", "has_loose_b_var_b_fast", "e_view", "iw_alloc", "hb_clear",
+  ["struct_used_later", "has_loose_bvar_in", "has_loose_bvar_in_go", "strip_pis", "has_loose_b_var_b_fast", "e_view", "iw_alloc", "hb_clear",
     "has_loose_b_var_b_go", "bvar_b", "hb_find", "has_loose_b_var_b_ins", "der_bv", "bb_memo",
     "hb_put", "bm_clear", "bb_go", "bm_find", "bb_node", "bm_put"]
 

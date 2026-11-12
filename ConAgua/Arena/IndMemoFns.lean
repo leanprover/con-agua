@@ -39,7 +39,8 @@ theorem imC_spec : ∀ x ∈ imC, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNa
 
 /-- The leaves of `imFns`: `consts_resolve_ffast` and `struct_used_later` (infer_proj's field check,
 which clears and walks the stage's `hb` memo), each writing its own memo. -/
-def imLeaves : List FnName := ["consts_resolve_ffast", "struct_used_later"]
+def imLeaves : List FnName :=
+  ["consts_resolve_ffast", "struct_used_later", "has_loose_b_var_b_fast", "has_loose_bvar_in"]
 
 /-- **The loop's callees outside the inductive arm**: the call closure in the checker's program
 of the declaration arms but the inductive one, `install_value`, `and_pin_ok`, `is_none`,
