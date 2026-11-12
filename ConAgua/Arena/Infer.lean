@@ -71,20 +71,17 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
 
 /-- The two `.lit` clauses of both bodies: `Nat` (`pinNat`) or `String` (`pinString`), each
 behind its basis guard; a `Nat` numeral above the run's maximum size (`nat_size_refused` of its
-limb count) rejects. -/
+limb count, read with the view, before the basis guard) rejects. -/
 -- con-ron: ConRon/Arena/Core.lean:3404-3467 ConRon.Arena.inferBody
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.inferBodyIO`, `ConRon.Arena.natSizeRefused` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.inferBody`, `ConRon.Arena.natSizeRefused` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inferBody` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Core.lean:3469-3542 ConRon.Arena.inferBodyIO
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.inferBodyIO` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.inferBody ConRon.Arena.inferBodyIO]
 def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   (t, i) := node LIT⟦e⟧;
   if LIT⟨t, i⟩.kind == 0 {
+    c := LIT⟨t, i⟩.l;
     s := call nat_lit_stored(vis);
     if s == 0 { fail R_NAT_LITERAL_WITHOUT };
-    s := call nat_size_refused(LIT⟨t, i⟩.l);
+    s := call nat_size_refused(c);
     if s != 0 { fail R_THE_KERNEL_REFUSED };
     c := call pin_at(1);
     r := call const_e(c);

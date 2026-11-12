@@ -103,6 +103,7 @@ def coreFns : List FnName := [
   "nat_gcd_lit", "nat_land", "nat_land_lit", "nat_limb", "nat_lit_stored", "nat_lit_to_ctor",
   "nat_lor", "nat_lor_lit", "nat_mod_lit", "nat_mul", "nat_mul_lit", "nat_op_is_wf",
   "nat_op_result", "nat_pow", "nat_pow_lit", "nat_pred", "nat_pred_lit", "nat_shl", "nat_shl_lit",
+  "limb_push", "lit_nat_sized", "nat_size_refused", "pow_nat", "pow_refused", "shift_left_refused", "size_bytes",
   "nat_shr", "nat_shr_lit", "nat_sub", "nat_sub_lit", "nat_succ_lit", "nat_trim", "nat_xor",
   "nat_xor_lit", "not_proof_fast", "opa_go", "open_pis_at_fvars_f", "opf_go", "param_find",
   "param_push", "peel_pis", "peel_pis_w", "pi_residual", "pi_result", "pin_at", "pin_word", "prepare_major", "proj_cert",
