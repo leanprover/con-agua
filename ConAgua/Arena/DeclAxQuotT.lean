@@ -107,7 +107,7 @@ structure QuotArmProg (p : Prog) : Prop where
   cqr : QuotRecProg p
   leaf : LeafClosed p
 
-/-- **`check_decl_quot(i, vis)` refines the quotient arm of `checkDecl`, both outcomes**, under
+/-- **`check_decl_quot(i, vis)` refines the quotient arm of `checkDeclKind`, both outcomes**, under
 `StageT`: the record's constant into `EREC` (`erec_ci(i, 0)`), then `check_quot_record` at the
 record's slot (`cqr_ref`). -/
 theorem cdq_ref {p : Prog} (hQ : QuotArmProg p) {dn : NIdx → Option ConLeche.Name}
@@ -118,7 +118,7 @@ theorem cdq_ref {p : Prog} (hQ : QuotArmProg p) {dn : NIdx → Option ConLeche.N
     (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a)
     (hr : ConRon.Bridge.ReadOK a) {c : ConLeche.ConstantVal}
     (hden : Frontend.denoteCV a.store cv = some c) :
-    RefE True (checkDeclQuotE p n m i vis) (checkDecl V pins fe (.quotDecl k cv)) a
+    RefE True (checkDeclQuotE p n m i vis) (checkDeclKind V pins fe (.quotDecl k cv)) a
       (fun v fe' a' => CqrPost m v.1 v.2 fe' a') := by
   have hdecl := hD.recs i.toNat hi
   rw [hd] at hdecl
@@ -179,7 +179,7 @@ structure CdaPost (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : Word) (m' 
   memos : CoreMemos m'
   grow : IWGrow m m'
 
-/-- **The axiom arm refines `checkDecl`'s `.axiomDecl` arm, both outcomes**, under `StageT`:
+/-- **The axiom arm refines `checkDeclKind`'s `.axiomDecl` arm, both outcomes**, under `StageT`:
 `Quot.sound` is the quotient package's record (`check_quot_record` at slot `4`, `cqr_ref`), else
 the constant check (`ccv_ref`, `allow = 0`) and the five recognised axioms (the leaves
 `std_axiom_ok`, `trust_compiler_ok`, `of_reduce_ax_ok`, then `env_push`); `propext`/`choice` of
@@ -194,7 +194,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
     (hi : i.toNat < ds.size) (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a)
     {c : ConLeche.ConstantVal} (hcvd : Frontend.denoteCV a.store cv = some c)
     (hF : ∃ env, ConRon.Bridge.FoldOK env fe a) (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkDeclAxiomE p n m i vis) (checkDecl V pins fe (.axiomDecl cv)) a
+    RefE (VerdictCtxU p) (checkDeclAxiomE p n m i vis) (checkDeclKind V pins fe (.axiomDecl cv)) a
       (fun v fe' a' => CdaPost dn m v.1 v.2 fe' a') := by
   have hdecl := hD.recs i.toNat hi
   rw [hd] at hdecl
@@ -205,7 +205,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDeclAxiomE.eq_2]
-  unfold checkDecl
+  unfold checkDeclKind
   simp only []
   -- `erec_ci`
   refine RefE.onlySim (fun _ => checkDeclAxiomE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
@@ -407,7 +407,7 @@ l_model checkDeclThm_specE (p : Prog) (hX : ThmArmProg p)
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **The theorem arm `check_decl_thm` refines `checkDecl` on a theorem under `StageT`, both
+/-- **The theorem arm `check_decl_thm` refines `checkDeclKind` on a theorem under `StageT`, both
 outcomes**: the record into `EREC` (`erec_ci(i, 2)`), the constant check (`ccv_ref`, `allow = 0`),
 the theorem check (`checkThmVal_ref`, its prefix's premises from the fold invariant after the
 constant check), the push. -/
@@ -419,7 +419,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
     (hi : i.toNat < ds.size) (hd : ds[i.toNat] = .thmDecl cv v) {c : ConLeche.ConstantVal}
     (hcvd : Frontend.denoteCV a.store cv = some c)
     (hF : ∃ env, ConRon.Bridge.FoldOK env fe a) (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkDeclThmE p n m i vis) (checkDecl V pins fe (.thmDecl cv v)) a
+    RefE (VerdictCtxU p) (checkDeclThmE p n m i vis) (checkDeclKind V pins fe (.thmDecl cv v)) a
       (fun v fe' a' => CdaPost dn m v.1 v.2 fe' a') := by
   obtain ⟨env, hFo⟩ := hF
   cases n with
@@ -427,7 +427,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   | succ n =>
   have hn' : n ≤ 2 ^ 62 := by omega
   rw [checkDeclThmE.eq_2]
-  unfold checkDecl
+  unfold checkDeclKind
   simp only []
   -- `erec_ci(i, 2)`
   refine RefE.onlySim (fun _ => checkDeclThmE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_

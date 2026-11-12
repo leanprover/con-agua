@@ -4,7 +4,9 @@ public import ConAgua.Verdict.TopE
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.StrLitSup
 import ConAgua.Checker.IndArm
-import ConAgua.Checker.BasisBlockProg
+import ConAgua.Checker.IndDeclConstsProg
+import ConAgua.Checker.IndDeclConstsClosed
+import ConAgua.Checker.ArmsT
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
 import ConAgua.Verdict.KnotAllE
@@ -38,22 +40,18 @@ namespace L.Ind
 open L.Arena
 
 section
-variable {p : Prog} (hV : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
-  (hcrf : CrfF p)
+variable {p : Prog}
 
-include hV hq hap hkp hcrf in
 /-- **`check_ind_decl`'s claim from program facts** (`IndArmSpecE`): `cid_ref`'s error half,
 under the premises of the ok side's `indArmSpec_of` and the verdict context. -/
-theorem indArmSpecE_of (P : CidProg2 p) (hCS : ∀ dn, CcvSims p dn)
-    (hcb : ∀ dn, DnInj dn → CbbRef p dn) (hbr : ∀ dn, DnInj dn → BlockRefS (VerdictCtxU p) p dn)
+theorem indArmSpecE_of (P : CidProg2 p) (hbr : ∀ dn, DnInj dn → BlockRefS (VerdictCtxU p) p dn)
     {fsC : List FnName} (hclC : closedA p cidFreeA cidFreeC fsC = true)
     (hfC : ∀ f ∈ cidFrameCallees, f ∈ fsC) (hG : VerdictCtxU p) :
     ∀ dn, DnInj dn → IndArmSpecE p dn := by
   intro dn hdn pins n hn m a vis fe env block nP o l w _ hw hdec hb _ hT _ hfold hden hlpd _ hM e hc
   subst hw
-  exact RefE.run_err (cidE_spec p hV P.toCidProg n ⟨m, Locals.init []⟩ vis o l w) hG.nv hG
-    (cid_ref hV hq hap hkp hcrf P id (hCS dn) (hcb dn hdn) (hbr dn hdn) hclC hfC (N := n) (by omega)
-      hT hfold hdec hb hden hM hlpd) hc
+  exact RefE.run_err (cidE_spec p P.toCidProg n ⟨m, Locals.init []⟩ vis o l w) hG.nv hG
+    (cid_ref P (hbr dn hdn) hclC hfC (N := n) (by omega) hT hfold hdec hb hden hM hlpd) hc
 
 end
 
@@ -69,18 +67,13 @@ open L L.Arena L.Front L.Rom L.Compiler L.Ind ConAgua.Final
 error half, from the same contracts). -/
 theorem indArmSpecE_checker (bs : List UInt8) (hr : RomOK bs)
     (hpre : bs = romData ++ bs.drop romData.length)
-    (hCS : ∀ dn, CcvSims (Prog.subPB bs checkerProg) dn)
-    (hB : BasisRefs (Prog.subPB bs checkerProg))
-    (hcb : ∀ dn, DnInj dn → CbbRef (Prog.subPB bs checkerProg) dn)
     (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpecE (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
-  have hV : CcvProg (Prog.subPB bs checkerProg) := (checkerProg_thmArmPB bs hr hpre).ccv
-  have hcrf : CrfF (Prog.subPB bs checkerProg) := checkerProg_crfPB bs
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ H.kp.knot.str⟩
-  exact indArmSpecE_of hV H.kp H.apd H.crk hcrf ⟨H.cid, hB, checkerProg_coreStagePB bs, H.lc⟩ hCS hcb
+  exact indArmSpecE_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc⟩
     (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
     ⟨⟨hnv, checkerProg_coreStubsEPB bs⟩, hU⟩
 
@@ -102,9 +95,7 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
       (checkerProg_knotStagePB _) (checkerProg_leafClosedPB _) (checkerProg_apdPB _)
       (checkerProg_crKeepPB _) (checkerProg_crfPB _) (checkerProg_ccvSimsPB _ _)
       (checkerProg_quotSimsPB _ hr hpre PA.quotDn) PA.dnInj hG)
-    (indArmSpecE_checker _ hr hpre (checkerProg_ccvSimsPB _)
-      (basisRefs_of (checkerProg_basisLProgPB _ hr hpre)) (fun dn _ => cbbRef_checker _ hr hpre dn)
-      (cbRefs_checker _ hr hpre (snoSim_checker _)) _ PA.dnInj) hnv
+    (indArmSpecE_checker _ hr hpre (cbRefs_checker _ hr hpre (snoSim_checker _)) _ PA.dnInj) hnv
 
 /-- **A thread's failing call is the pool's failure** (`ThreadEVerdict`): `threads_twinVerdictPooled`
 at `check_decl`'s program facts (`checkerCd_proved`) and the jobs' error claims (`jobG_checker`). -/

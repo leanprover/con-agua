@@ -22,7 +22,7 @@ import ConAgua.Arena.RecGenSpec.CftW
 
 `class_const_ok_header` is `classConstOk`'s guards (the twin prefix `cchT`, `cchT_bind`): its
 `l_model … unified` model lifts the callees outside the verdict closure, and `cch_ref` refines
-`cchT` under `StageT` (`reserved_contains`' hit as in `DeclHdrE.lean`, copied under `ib` names);
+`cchT` under `StageT`;
 the consts-resolve site calls `unresolved_consts_error` (`uce_errClaim_hi`, so `G` is
 `VerdictCtxU`); the literal-shape guard calls `class_const_ok_lit` (its model `cclLitW`, the fresh
 `axiomInfo` record `ccl_rec`, `ccl_sim` through `CcvSims.lit`). `class_const_ok` (`cco_ref`) is the guards through `cch_ref`, then the knot's
@@ -47,8 +47,6 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The lookups `class_const_ok`'s refinement takes (`class_const_ok_header`'s callees, the
 literal's record, `class_const_ok` itself). -/
 structure CchProg (p : Prog) : Prop where
-  resF : p.lookup "reserved_from" = some reservedFrom
-  resC : p.lookup "reserved_contains" = some reservedContains
   cont : p.lookup "sl_contains" = some slContains
   nodup : p.lookup "sl_nodup" = some slNodup
   cvg : CvgProg p
@@ -223,8 +221,7 @@ closure through their `Option` models, the gates `all_level_params_defined`,
 `consts_resolve_ffast` through `callE`. -/
 l_model classConstOkHeaderE_spec (p : Prog) (hP : CchProg p)
   fns [hP.hdr ↦ classConstOkHeaderE]
-  specs [callW_spec p n "env_find", resCont_spec p hP.resF hP.resC n,
-    callW_spec p n "class_const_ok_lit",
+  specs [callW_spec p n "env_find", callW_spec p n "class_const_ok_lit",
     cvLps_specW p hP.cvg.alloc hP.cvg.copy hP.cvg.eti hP.cvg.lps n,
     slNodup_spec p hP.cont hP.nodup n, lbbF_spec p hP.cvg.bvb n, hffF_spec p hP.cvg.hf n]
   grind [arena_grind] fold [tierW, idxW]
@@ -238,8 +235,6 @@ syntactic checks of the constant, in `classConstOk`'s order and with its message
 def cchT (fe : IFEnv) (cv : IConstantVal) : AM Unit := do
   if (fe.find? cv.name).isSome then
     fail (.invalid "duplicate declaration")
-  if (← reservedBasisNames).contains cv.name then
-    fail (.invalid "reserved basis name")
   unless ← litShapeOk (.axiomInfo cv) do
     fail (.notImplemented "a declaration at a literal's name with another shape ()")
   unless nameNodup cv.levelParams do
@@ -269,7 +264,7 @@ structure CchPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   afr : AFr m m'
 
 /-- **`class_const_ok_header` refines `classConstOk`'s guards (`cchT`), both outcomes**: the
-name's guards (`env_find`, `reserved_contains`), the literal's shape (`class_const_ok_lit`,
+name's guard (`env_find`), the literal's shape (`class_const_ok_lit`,
 `ccl_sim`), the level parameters' copy and their duplicates (`cv_lps`, `sl_nodup`), the four walks
 under `StageT` (`lbbF_okT`, `hffF_okT`, `apdF_okT`, `crfF_okT`), each a reject site of the twin's;
 the consts-resolve site calls `unresolved_consts_error` (`uce_errClaim_hi`). -/
@@ -305,20 +300,6 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
     (fun hb => Classical.byContradiction fun hb1 => by
       rw [hname, findRes_miss hS.stage.check.env hwxl (by simpa using hb1)] at hb; cases hb)
     fun hb1 _ => ?_
-  -- `reserved_contains(x)`
-  rcases h2 : resContW n m wx with _ | c2
-  · rw [liftE_none, classConstOkHeaderE.k_reserved_contains.none]; exact RefE.of_cls0 (by simp)
-  rw [liftE_some]
-  dsimp only [classConstOkHeaderE.k_reserved_contains]
-  by_cases hb2 : c2 ≠ 0
-  · obtain ⟨l, hrunR, hcl⟩ := resContW_hit hb2 h2 hS.stage.check.pins
-    exact RefE.bind_right hrunR
-      (RefE.guardThen rfl (fun _ => hname ▸ hcl) (fun _ => hb2) fun h _ => absurd hb2 h)
-  simp only [ne_eq, Decidable.not_not] at hb2
-  subst hb2
-  obtain ⟨l, hrunR, hcl⟩ := resContW_miss hwxl h2 hS.stage.check.pins
-  refine RefE.bind_right hrunR (RefE.guardThen rfl (fun h => absurd rfl h)
-    (fun h => by rw [hname, hcl] at h; cases h) fun _ _ => ?_)
   -- `class_const_ok_lit(q)`
   refine RefE.bindSim (fun _ => classConstOkHeaderE.k_class_const_ok_lit.none ..)
     (ccl_sim hP.rcp hP.lit hC hS hqd hqb (denoteCV_lps hden))
