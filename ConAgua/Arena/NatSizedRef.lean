@@ -323,6 +323,41 @@ theorem powW_small {m la x e s : Word} (hla : la ≠ 0) (hx : ¬ (la = 1 ∧ x =
   rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul, Nat.mod_eq_of_lt hlt, hs]
   exact ⟨fun h => ⟨hla, hx, he, h⟩, fun h => h.2.2.2⟩
 
+/-- `pow_refused`'s refusal by the high word of `s · e`. -/
+theorem powW_one {m la x e s : Word} (hla : ¬ la = 0) (hx : ¬ (la = 1 ∧ x = 1)) (he : ¬ e = 0)
+    (hs : s.toNat = 8 * max la.toNat 1) (hmh : ¬ UInt64.ofNat (s.toNat * e.toNat / 2 ^ 64) = 0) :
+    (1 : Word) = if powRefusedW m la x e then 1 else 0 := by
+  rw [ite_eq_left (powW_big hla hx he hs ((mulhi_ne_zero s e).mp hmh))]
+
+/-- `pow_refused`'s comparison when `s · e` fits in a word. -/
+theorem powW_lt {m la x e s : Word} (hla : ¬ la = 0) (hx : ¬ (la = 1 ∧ x = 1)) (he : ¬ e = 0)
+    (hs : s.toNat = 8 * max la.toNat 1) (hmh : ¬ ¬ UInt64.ofNat (s.toNat * e.toNat / 2 ^ 64) = 0) :
+    (if m < s * e then (1 : Word) else 0) = if powRefusedW m la x e then 1 else 0 := by
+  have hlt : s.toNat * e.toNat < 2 ^ 64 := by
+    have : ¬ 2 ^ 64 ≤ s.toNat * e.toNat := fun h => hmh ((mulhi_ne_zero s e).mpr h)
+    omega
+  have hq := powW_small (m := m) hla hx he hs hlt
+  by_cases h : m < s * e
+  · have h' : powRefusedW m la x e := hq ▸ h
+    simp [h, h']
+  · have h' : ¬ powRefusedW m la x e := hq ▸ h
+    simp [h, h']
+
+/-- `shift_left_refused`'s comparison: no word wraps (`la < 2^41`, a pool slice). -/
+theorem shlW_cmp (m s e la : Word) (hs : s.toNat = 8 * max la.toNat 1) (hl : la.toNat < 2 ^ 41) :
+    (if m < s + (e >>> 3) + 1 then (1 : Word) else 0) =
+      if m.toNat < 8 * max la.toNat 1 + e.toNat / 8 + 1 then 1 else 0 := by
+  have he : (e >>> 3).toNat = e.toNat / 8 := by
+    rw [UInt64.toNat_shiftRight]; simp [Nat.shiftRight_eq_div_pow]
+  have h3 : e.toNat / 8 < 2 ^ 61 := by have := e.toNat_lt; omega
+  have hmx : max la.toNat 1 < 2 ^ 41 := Nat.max_lt.mpr ⟨hl, by decide⟩
+  have hsum : (s + (e >>> 3) + 1).toNat = 8 * max la.toNat 1 + e.toNat / 8 + 1 := by
+    rw [UInt64.toNat_add, UInt64.toNat_add, he, hs]; simp only [UInt64.toNat_one]
+    rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+  by_cases h : m.toNat < 8 * max la.toNat 1 + e.toNat / 8 + 1
+  · rw [ite_eq_left h, ite_eq_left (by rw [UInt64.lt_iff_toNat_lt, hsum]; exact h)]
+  · rw [ite_eq_right h, ite_eq_right (by rw [UInt64.lt_iff_toNat_lt, hsum]; exact h)]
+
 /-- **`pow_refused`**: its condition `powRefusedW` at the maximum `PINS[72]` and the base's limb
 `x` (where `la = 1`). -/
 theorem powRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL)
@@ -350,13 +385,17 @@ theorem powRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL
       Nat.reduceEqDiff, decide_eq_true_eq, rdW_prd] at *)
     all_goals first
       | grind [arena_grind, vpool_ld, powRefusedW, Sig.retVal, mulhi_ne_zero, Locals.init, List.getD_cons_zero, List.getD_cons_succ]
-      | sorry
+      | (obtain ⟨hloc, hmem, hs⟩ : _ ∧ _ ∧ (_ : Word).toNat = 8 * max _ 1 := by assumption
+         simp only [hloc, hmem, Locals.init_cons_zero, Locals.init_cons_succ] at *
+         first
+          | (refine powW_one ?_ ?_ ?_ hs ?_ <;> first | assumption | (intro h; simp_all))
+          | (refine powW_lt ?_ ?_ ?_ hs ?_ <;> first | assumption | (intro h; simp_all)))
 
 /-- **`shift_left_refused`**: the twin's `shiftLeftRefused` at the maximum `PINS[72]`, for a
 normalised base. -/
 theorem shiftLeftRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL)
     (hp : p.lookup "shift_left_refused" = some shiftLeftRefusedL) (n : Nat) (s₀ : St) (la e : Word)
-    (hl : la.toNat < 2 ^ 61) :
+    (hl : la.toNat < 2 ^ 41) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "shift_left_refused" [la, e]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       (r.headD 0 = if (rdW (s₀.mem.arr64 PINS) 72).toNat < 8 * max la.toNat 1 + e.toNat / 8 + 1
@@ -369,9 +408,23 @@ theorem shiftLeftRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some size
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
       beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    case vc3 _ _ s₂ hA hb =>
+      obtain ⟨hloc, hmem, hs⟩ := hA
+      have hl1 : (s₂.setLocs [2] rs).loc 1 = e := by
+        simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, LocEq] at hloc ⊢
+        rw [hloc]; rfl
+      have hl2 : (s₂.setLocs [2] rs).loc 2 = rs.headD 0 := by
+        simp only [St.setLocs_cons, St.setLocs_nil, St.setLoc_loc]; rfl
+      have hm : (s₂.setLocs [2] rs).mem = s₀.mem := by
+        simp only [St.setLocs_cons, St.setLocs_nil, L.St.setLoc_mem]; exact hmem
+      simp only [Locals.init_cons_zero] at hs
+      simp only [hl1, hl2, hm, Sig.retVal, Sig.retOr, List.headD_cons, Cmp.evalW, Cmp.eval] at hb ⊢
+      rw [getElem_rdW _ _ hb]
+      simp only [decide_eq_true_eq]
+      exact shlW_cmp _ _ _ _ hs hl
     all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, List.getD_cons_zero,
       List.getD_cons_succ, rdW, Cmp.evalW, Cmp.eval, UInt64.lt_iff_toNat_lt, L.St.setLocs_mem,
       List.headD_eq_head?_getD, UInt64.toNat_add, UInt64.toNat_shiftRight]
-    all_goals (first | omega | grind | sorry)
+    all_goals omega
 
 end L.Arena
