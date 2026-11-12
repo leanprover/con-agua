@@ -464,7 +464,6 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, u) {
 /-- Split the block's recursors into its own (`tgt < k`) and the auxiliary ones: the twin's two
 `filter`s, a self-recursion consing each recursor onto its side's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (oo, ol, ao, al, rc, qo, ql) {
   if recl == 0 { return (0, 0, 0, 0) };
@@ -481,7 +480,6 @@ def blockRecSplitOwnAux : FunDecl := lfn (reco, recl, k) locals (oo, ol, ao, al,
 /-- The wanted auxiliary names `n₀.rec_{j+1} … n₀.rec_{j+auxl}`, interned in order (the twin's
 `mapM` over `List.range`), a self-recursion consing each name (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def blockRecWantAuxNames : FunDecl := lfn (n0, j, auxl) locals (nm, ro, rl, qo, ql) {
   if auxl == 0 { return (0, 0) };
@@ -494,7 +492,6 @@ def blockRecWantAuxNames : FunDecl := lfn (n0, j, auxl) locals (nm, ro, rl, qo, 
 /-- `ptr_names_copy(d, s, l)`: `IW[d + j] := EREC[IW[IW[s + j]]]` for `j < l`, recursively (the
 constants' names of a slice of pointers whose word `0` is a constant pointer). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
   if l == 0 { return 0 };
@@ -508,7 +505,6 @@ def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
 /-- The constants' names of a slice of pointers whose word `0` is a constant pointer (a
 `RecShape`'s `cvR`, or a `(cv, nF)` constructor entry). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
   go := call iw_alloc(l);
@@ -518,7 +514,6 @@ def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
 
 /-- The name pins: `n₀`, the auxiliary names as a set, no two recursors sharing a name. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
     locals (n0, ms0, cvt0, wo, wl, go, gl, ok, nodupo, nodupl) {
@@ -536,7 +531,6 @@ def targetRecPinsNames : FunDecl := lfn (mo, k, reco, recl, auxo, auxl)
 /-- The constructor grouping pin: the block splits, with `k` formers, as many rules as
 recursors, and the same constructors in the same order. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPinsSplit : FunDecl := lfn (p, k, recl, blocko, blockl)
     locals (ok, q, cvtsl, rsl, cso, csl, aco, acl, an_o, an_l, cn_o, cn_l) {
@@ -558,7 +552,6 @@ def targetRecPinsSplit : FunDecl := lfn (p, k, recl, blocko, blockl)
 /-- **`target_rec_pins`**: level parameters, reserved names, the member/auxiliary recursor name
 pins, no shared names, and the constructor grouping against the stream. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:367-402 ConRon.Arena.targetRecPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.targetRecPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.targetRecPins]
 def targetRecPins : FunDecl := lfn (p, blocko, blockl)
     locals (ok, reco, recl, k, owno, ownl, auxo, auxl, mo) {

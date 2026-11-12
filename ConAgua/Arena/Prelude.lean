@@ -41,7 +41,6 @@ def allPinsOff : Word :=
 
 /-- `intern_all_pins_rom()`: the ROM-only pin stage (superseded by `L.Rom.internAllPinsPB`, the program's `intern_all_pins`; renamed by lane integrate so that one name has one body). -/
 -- con-ron: ConRon/Arena/Checker.lean:124-162 ConRon.Arena.internAllPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.internAllPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsL : FunDecl := internAllPinsAt allPinsOff
 

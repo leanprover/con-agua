@@ -262,7 +262,6 @@ def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
 `Nat` size into the pins; the run's maximum is the default, which `intern_reserved_pins` wrote to
 `PINS[72]` already, so there is nothing to write. -/
 -- con-ron: ConRon/Arena/Checker.lean:124-162 ConRon.Arena.internAllPins
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.internAllPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
