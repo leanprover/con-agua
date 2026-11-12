@@ -101,3 +101,13 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   `cd_ref` with the environment clauses of `StoreDen` from a twin-level lemma per arm
   (`DeclKindEnv`; the `.indDecl` arm's, `IndKindEnv`, by the lead). Reason rows for the 16 new
   twin messages (`reasons.py --add`).
+* 01:45–02:15 compile passes on `ronsync3` (the ladder's sorries plus crude deletions of the
+  theorems about removed twin functions in core's files, which `ronsync3-core` then replaced by
+  its own versions at merge), and `IndKindEnv` proved by the lead
+  (`Arena/IndKindEnvProof.lean`, 470 lines: the growth algebra over `EnvGrowDen`, the stages'
+  returned environments by peeling their runs (`checkBlockPass_env`, `genRecCheck_env`,
+  `checkBlockTail_env`: the generated recursors' temporary pushes popped, upstream's
+  `classFeR_pop`/`consBlockRecsTemp_pop`), then con-ron's `checkBlock_bridge` steps repeated with
+  the environment kept (`checkBlock_grow`)). Helper milestones merged: ind 2 (all L code of its
+  area mirrors the twin), core 748d0feab (all L ports; ~25 sorries left), decl (the reader, the
+  basis names' models, the one-constant arms at `checkDeclKind`).

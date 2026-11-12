@@ -6,6 +6,7 @@ import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
+public import ConAgua.Arena.DeclHeader
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.DeclArms
 
@@ -136,33 +137,21 @@ l_model basisNameHit_specW (p : Prog) (hp : p.lookup "basis_name_hit" = some bas
 /-! ## The reserved names (`basis_names_ok`, `basis_names_error`) -/
 
 /-- **The model of `basis_name_unreserved(n)`**. -/
-l_model basisNameUnreserved_specW (p : Prog)
+l_model basisNameUnreserved_specW (p : Prog) (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
     (hp : p.lookup "basis_name_unreserved" = some basisNameUnreserved)
   fns [hp ↦ basisNameUnreservedW list]
-  specs [callW_spec p n "reserved_contains"]
+  specs [resCont_spec p hrf hrc n]
   grind [arena_grind]
 
 /-- **The model of `block_names_unreserved(bo, bl)`**. -/
-l_model blockNamesUnreserved_specW (p : Prog)
+l_model blockNamesUnreserved_specW (p : Prog) (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hrc : p.lookup "reserved_contains" = some reservedContains)
     (hp : p.lookup "block_names_unreserved" = some blockNamesUnreserved)
   fns [hp ↦ blockNamesUnreservedW list]
-  specs [callW_spec p n "reserved_contains"]
+  specs [resCont_spec p hrf hrc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
-
-/-- **The model of `basis_names_ok(k, n, bo, bl)`**. -/
-l_model basisNamesOk_specW (p : Prog) (hp : p.lookup "basis_names_ok" = some basisNamesOk)
-  fns [hp ↦ basisNamesOkW list]
-  specs [callW_spec p n "basis_name_hit", callW_spec p n "rom_basis_decls", callW_spec p n "er_to_iw",
-    callW_spec p n "pin_list_ok", callW_spec p n "block_names_unreserved", callW_spec p n "pin_at",
-    callW_spec p n "basis_name_unreserved"]
-  grind [arena_grind]
-
-/-- **The model of `basis_names_error(k, bo, bl)`**. -/
-l_model basisNamesError_specW (p : Prog) (hp : p.lookup "basis_names_error" = some basisNamesError)
-  fns [hp ↦ basisNamesErrorW list]
-  specs [callW_spec p n "basis_name_hit"]
-  grind [arena_grind]
 
 /-! ## The block's comparison with its pin (`pin_list_ok`) -/
 

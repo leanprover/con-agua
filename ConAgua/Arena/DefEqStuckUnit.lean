@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.DefEqStuckShape
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
@@ -13,8 +14,7 @@ public import ConAgua.Arena.DefEqStuck
 /-!
 # `struct_unit_cert` refines `structUnitCert` (lane `defeq`, helper `defeq-top`)
 
-In L's pieces: `struct_unit_cert` (`a`'s type), `struct_unit_head` (its head, family and spine;
-the record words read before any call after `env_find`, the twin's pure readers first),
+In L's pieces: `struct_unit_cert` (`a`'s type, its unit-likeness by `unit_like_loop`) and
 `struct_unit_tail` (`b`'s type against it). One refinement per piece for both outcomes (`RefE`
 over its unified model, `Verdict/WhnfModels7E.lean`): the errors are the knot's slots'.
 -/
@@ -29,27 +29,18 @@ namespace L.Arena
 
 /-! ## The twin in L's pieces -/
 
-/-- `structUnitCert` once the family is certified, copied. -/
+/-- `structUnitCert` once `a`'s type `wta` is unit-like, copied. -/
 def suTailT (r : CoreFnsA) (depth : Nat) (b wta : EIdx) : AM Bool := do
   let tb ← r.inferIO depth b
   let wtb ← r.whnf depth tb
-  if isForallE wtb then pure false
+  let gb ← if isForallE wtb then ioNeutral b else pure true
+  if !gb then pure false
   else r.defeq depth wta wtb
-
-section headRuns
-variable (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (b wta : EIdx) (st : AState) (hh : EIdx)
-  (hgaf : (getAppFn coreWalkFuel wta).run st = .ok (hh, st))
-
-include hgaf
-
-end headRuns
-
-/-! ## `struct_unit_tail` -/
 
 /-- **`struct_unit_tail` refines `suTailT`, both outcomes**: the errors are the `infer_io`, `whnf`
 and `defeq` slots'. -/
 @[refines_part ConRon.Arena.structUnitCert "b's type against a's (suTailT)"]
-theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+theorem sut_ref (p : Prog) (hq : StuckProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
@@ -69,23 +60,31 @@ theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
       h₁.resOk)
     fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
   have hh2 : HW (r₂.headD 0) := h₂.resOk
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   simp only [sutE.k_whnf, isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]
   by_cases h6 : tagW (r₂.headD 0) = 6
   · simp only [h6, decide_true, ↓reduceIte]
-    exact RefE.ret rfl (CorePost.ret hS₂ rfl hw0)
+    refine RefE.bind_callW (fun _ => rfl) (ioNeutral_at p hq.leaf n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb b hS₂ hb)
+      fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+    dsimp only [sutE.k_io_neutral]
+    by_cases g0 : r₃.headD 0 = 0
+    · rw [ite_eq_left g0, L.Arena.decBool_false_of g0]
+      exact RefE.ret rfl (CorePost.ret hS₃ rfl hw0)
+    rw [ite_eq_right g0, L.Arena.decBool_true_of g0]
+    simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+    have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+    rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
+    exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₃ eb mode d wta _ hF hn hs₃ hwta hh2)
+      (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₃ eb mode d wta _ hF hn
+        hs₃ hwta hh2)
+      fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
   simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
-  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
   rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
   exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn hs₂ hwta hh2)
     (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn
       hs₂ hwta hh2)
     fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
 
-/-! ## `struct_unit_head` -/
-
-/-- The tests of `struct_unit_head`, all passed. -/
-def uhOK (ul up lpn tn uslen : Word) (r : List Word) : Prop :=
-  ul ≠ 0 ∧ r.headD 0 = 0 ∧ tn = up ∧ uslen = lpn
 
 /-! ## `struct_unit_cert` -/
 
@@ -109,7 +108,7 @@ theorem suCert_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : 
     CoreSpec p (n + 1) "struct_unit_cert" [mode, vis, d, a, b]
       (structUnitCert (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
       s₀ a₀ dn vis fe M eb :=
-  RefE.coreSpec (sucE_spec p hq.sunit hq.suHead hq.suTail (n + 1) s₀ mode vis d a b)
+  RefE.coreSpec (sucE_spec p hq.toCertProg (n + 1) s₀ mode vis d a b)
     (suc_ref p hq hc n hk F s₀ a₀ dn vis fe M eb mode d a b hF hn hs ha hb)
 
 end L.Arena

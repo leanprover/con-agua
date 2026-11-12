@@ -34,7 +34,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-- What the stuck side's specs need of a program. -/
-structure StuckProg (p : Prog) : Prop where
+structure StuckProg (p : Prog) : Prop extends CertProg p where
   leaf : DefEqLeafProg p
   body : InferBodyProg p
   propIrrel : p.lookup "prop_irrel" = some propIrrelL
@@ -43,14 +43,6 @@ structure StuckProg (p : Prog) : Prop where
   etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
   etaCtorShape : p.lookup "eta_ctor_shape" = some etaCtorShapeL
   ers : p.lookup "er_slice_eq" = some erSliceEqL
-  setTail : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL
-  setGo : p.lookup "struct_eta_cert_go" = some structEtaCertGoL
-  setWtb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL
-  setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
-  setCert : p.lookup "struct_eta_cert" = some structEtaCertL
-  suTail : p.lookup "struct_unit_tail" = some structUnitTailL
-  suHead : p.lookup "struct_unit_head" = some structUnitHeadL
-  sunit : p.lookup "struct_unit_cert" = some structUnitCertL
   stuckIrrel : p.lookup "stuck_irrel" = some stuckIrrelL
   stuckStr : p.lookup "stuck_str" = some stuckStrL
   stuckAppCong : p.lookup "stuck_app_cong" = some stuckAppCongL

@@ -18,10 +18,9 @@ import ConAgua.Front.Preserve
 /-!
 # `Nat.pow` on the limb pool: `nat_pow`
 
-`nat_pow(oa, la, e)` is `a ^ e` for a word exponent `e < 2^25` (con-ron's `pow`,
-`ron/nat.rs:547-561`; the caller enforces con-leche's `ReducePowMaxExp`, `e ≤ 2^24`, as
-`natOpResult` does). Square-and-multiply from the top bit down: start from a one-limb `1`, then
-for `j = 24, …, 0` square, and multiply by `a` if bit `j` of `e` is set; each product is a call of
+`nat_pow(oa, la, e)` is `a ^ e` for a word exponent `e < 2^32` (con-ron's `pow_nat`'s general
+case; the caller's guard, `powGuard`, refuses a larger exponent). Square-and-multiply from the top
+bit down: start from a one-limb `1`, then for `j = 31, …, 0` square, and multiply by `a` if bit `j` of `e` is set; each product is a call of
 `nat_mul`, which appends it to the pool. The result is the last product, so `nat_pow` returns
 its offset and its length, `(o, l)`. The intermediate products stay in the pool below the top
 (garbage, as con-ron's dropped `Vec`s are, but never freed here).
@@ -87,13 +86,13 @@ theorem shr_of_zero (e j : Word) (h : ¬ 0 < j) : e >>> j = e := by
   subst this; apply UInt64.toNat_inj.mp; simp
 grind_pattern [arena_grind] shr_of_zero => e >>> j, (0 : Word) < j
 
-theorem shr25 (e : Word) (h : e.toNat < 2 ^ 25) : (e >>> 25).toNat = 0 := by
+theorem shr32 (e : Word) (h : e.toNat < 2 ^ 32) : (e >>> 32).toNat = 0 := by
   rw [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
   exact Nat.div_eq_of_lt (by simpa using h)
 
-theorem pow_shr25 (A : Nat) (e : Word) (h : e.toNat < 2 ^ 25) : A ^ (e >>> 25).toNat = 1 := by
-  rw [shr25 e h, Nat.pow_zero]
-grind_pattern [arena_grind] pow_shr25 => A ^ (e >>> 25).toNat
+theorem pow_shr32 (A : Nat) (e : Word) (h : e.toNat < 2 ^ 32) : A ^ (e >>> 32).toNat = 1 := by
+  rw [shr32 e h, Nat.pow_zero]
+grind_pattern [arena_grind] pow_shr32 => A ^ (e >>> 32).toNat
 
 /-! ## `nat_pow(oa, la, e)` -/
 
@@ -112,8 +111,6 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.natOpResult` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.natOpResult`, `ConRon.Arena.litNatSized`, `ConRon.Arena.powGuard`, `ConRon.Arena.shiftLeftGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   o := CTL.u64[0];
@@ -123,8 +120,55 @@ def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   POOL⟨t⟩[pb] := 1;
   CTL.u64[0] := o + 1;
   l := 1;
-  j := 25;
+  j := 32;
   ⟪powLoop⟫;
+  return (o, l)
+}
+
+/-- The exponent `k` of a one-limb base `x = 2^k` (`k = 64`: `x` is no power of two; a named
+block, for the proofs). -/
+def powTwoLoop : Stmt := lblk (oa, la, e, x, k) {
+  while k < 64 && 1 << k != x {
+    k += 1
+  }
+}
+
+/-- `limb_push(v)`: push the one limb `v` at the pool top; its offset (`pow_nat`'s two shift
+operands). -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+@[no_expose, l_impl ConRon.Arena.natOpResult]
+def limbPushL : FunDecl := lfn (v) locals (o, t, pb) {
+  o := CTL.u64[0];
+  t := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  if len(POOL⟨t⟩) <= pb { abort };
+  POOL⟨t⟩[pb] := v;
+  CTL.u64[0] := o + 1;
+  return o
+}
+
+/-- `pow_nat(oa, la, e)`: `a ^ e` for an exponent `e < 2^32` (behind `nat_pow_lit`'s guard). A
+one-limb base `2^k` is the shift `1 <<< k·e` (`nat_shl` of a pushed one-limb `1` by a pushed
+one-limb `k·e`; `k·e < 2^38`), any other base square-and-multiply (`nat_pow`). Returns the
+result's slice `(o, l)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+@[no_expose, l_impl ConRon.Arena.natOpResult]
+def powNatL : FunDecl := lfn (oa, la, e) locals (x, k, s, o, o2, o3, l) {
+  if la == 1 {
+    x := POOL⦃oa⦄;
+    k := 0;
+    ⟪powTwoLoop⟫;
+    if k < 64 {
+      s := k * e;
+      o := call limb_push(1);
+      if s == 0 { return (o, 1) };
+      o2 := call limb_push(s);
+      o3 := CTL.u64[0];
+      l := call nat_shl(o, 1, o2, 1);
+      return (o3, l)
+    }
+  };
+  (o, l) := call nat_pow(oa, la, e);
   return (o, l)
 }
 
@@ -134,14 +178,14 @@ def natPowProg : Prog := natMulProg ++ [("nat_pow", natPow)]
 /- `3 ^ 5 = 243`; `(2^64 - 1) ^ 2 = [1, 2^64 - 2]`; `a ^ 0 = 1`. -/
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 5]
   (Mem.ofWords [(POOL, (List.replicate 200 (3 : Word)).toArray), (CTL, #[1])])).toOption.map
-  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!)) == some ([28, 1], 243)
+  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!)) == some ([35, 1], 243)
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 2]
   (Mem.ofWords [(POOL, (List.replicate 200 (0xFFFFFFFFFFFFFFFF : Word)).toArray), (CTL, #[1])])).toOption.map
   (fun (r, m) => (r[1]!, (m.arr64 POOL)[r[0]!.toNat]!, (m.arr64 POOL)[r[0]!.toNat + 1]!)) ==
   some (2, 1, 0xFFFFFFFFFFFFFFFE)
 #guard (run natPowProg 10000 "nat_pow" [0, 1, 0]
   (Mem.ofWords [(POOL, (List.replicate 200 (7 : Word)).toArray), (CTL, #[1])])).toOption.map
-  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!, m.arr64 CTL)) == some ([26, 1], 1, #[27])
+  (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!, m.arr64 CTL)) == some ([33, 1], 1, #[34])
 
 section pow
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
@@ -155,7 +199,7 @@ def PowInv (A : Nat) (m₀ : Mem) (s : St) : Prop :=
   SliceOK s.mem (s.loc 0) (s.loc 1) ∧
   pv (vpool s.mem) (s.loc 0).toNat (s.loc 1).toNat = A ∧
   SliceOK s.mem (s.loc 3) (s.loc 4) ∧
-  Norm (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ 25 ∧
+  Norm (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ 32 ∧
   pv (vpool s.mem) (s.loc 3).toNat (s.loc 4).toNat = A ^ (s.loc 2 >>> s.loc 5).toNat
 
 def PowPost (A : Nat) (m₀ : Mem) (s₀ : St) (r : Sig) (s' : St) : Prop :=
@@ -193,7 +237,7 @@ variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
 include hph hpt hpm hpn in
 /-- `nat_pow` returns a normalised slice `(o, l)` in use that denotes `a ^ e`; the memory grew. -/
 theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.mem)
-    (ha : SliceOK s₀.mem oa la) (he : e.toNat < 2 ^ 25) :
+    (ha : SliceOK s₀.mem oa la) (he : e.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_pow" [oa, la, e]
     ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧

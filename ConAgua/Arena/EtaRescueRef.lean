@@ -100,7 +100,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     (htq : tq ≠ 0 → ∃ tb, decTbl (erecP m) (tq.toNat - 1) = some tb) {w : Word}
     (h : ertW p n m tq ctor cq q = some (w, m')) :
     m' = m ∧ (etaRescueTable? (tblFound m tq) (decI ctor) cvj cvT caps).run a =
-      .ok (tblFound m w, a) := by
+      .ok (tblFound m w, a) ∧ (w ≠ 0 → ∃ tb, tblFound m w = some tb) := by
   rcases n with _ | n
   · simp [ertW] at h
   by_cases g0 : tq = 0
@@ -108,7 +108,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     subst g0
-    exact ⟨rfl, rfl⟩
+    exact ⟨rfl, rfl, fun h => absurd rfl h⟩
   obtain ⟨tb, htb⟩ := htq g0
   have hT : tblFound m tq = some tb := by simp [tblFound, g0, htb]
   obtain ⟨-, -, hcw, hcd, -⟩ := tblFound_words hT
@@ -122,14 +122,14 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   · rw [ertW.arm2 _ _ _ _ _ _ _ g0 g1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_⟩
+    refine ⟨rfl, ?_, fun h => absurd rfl h⟩
     have : caps.eta = false := by rw [heta, g1]; rfl
     simp [etaRescueTable?, this, hz]; rfl
   by_cases g2 : erRd m (tq + 5) ≠ ctor
   · rw [ertW.arm3 _ _ _ _ _ _ _ g0 g1 g2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_⟩
+    refine ⟨rfl, ?_, fun h => absurd rfl h⟩
     have : (tb.ctor == decI ctor) = false := by
       rw [hcd]; simpa using fun e => g2 ((decI_inj_iff hcw hctor).mp e)
     simp [etaRescueTable?, this, hz]; rfl
@@ -166,7 +166,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hb : ((decI ctor : NIdx) != decI (r2.headD 0)) = false := by rw [hiff]; simp [e]
-      refine ⟨hm2', ?_⟩
+      refine ⟨hm2', ?_, fun h => absurd rfl h⟩
       change StateT.run (if ((decI ctor : NIdx) != decI (r2.headD 0)) = true then
         (pure (some tb) : AM _) else pure none) a = _
       rw [hb, hz]; rfl
@@ -174,14 +174,14 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hb : ((decI ctor : NIdx) != decI (r2.headD 0)) = true := by rw [hiff]; exact bne_iff_ne.mpr e
-      refine ⟨hm2', ?_⟩
+      refine ⟨hm2', ?_, fun _ => ⟨tb, hT⟩⟩
       change StateT.run (if ((decI ctor : NIdx) != decI (r2.headD 0)) = true then
         (pure (some tb) : AM _) else pure none) a = _
       rw [hb, hT]; rfl
   · rw [ertW.k_er_sl_eq.arm1 _ _ _ _ _ _ (by rw [hr1]; simp [g3])] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨rfl, ?_⟩
+    refine ⟨rfl, ?_, fun h => absurd rfl h⟩
     simp [etaRescueTable?, hE, hC, g3, hz]; rfl
 
 end L.Arena

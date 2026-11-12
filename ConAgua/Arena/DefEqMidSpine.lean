@@ -44,9 +44,9 @@ structure SpineDProg (p : Prog) : Prop where
   rev : p.lookup "defeq_list_rev" = some defeqListRevL
 
 theorem SpineDProg.spine {p : Prog} (hp : SpineDProg p) : SpineProg p :=
-  hp.quick.lams.mid.leaf.core.spine
+  hp.quick.mid.leaf.core.spine
 
-theorem SpineDProg.leaf {p : Prog} (hp : SpineDProg p) : DefEqLeafProg p := hp.quick.lams.mid.leaf
+theorem SpineDProg.leaf {p : Prog} (hp : SpineDProg p) : DefEqLeafProg p := hp.quick.mid.leaf
 
 /-! ## `spine_head` -/
 
@@ -118,7 +118,7 @@ theorem spineHead_run {p : Prog} (hp : SpineDProg p) {n : Nat} {m m' : Mem} {a�
   obtain ⟨rv, m₂⟩ := q
   rw [hc2, shW.k_e_view.arm1, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
   obtain ⟨g1, g2, g3, hm⟩ := hW
-  obtain ⟨hm2, v, hv, hvr, ht⟩ := eView_callW_view (a := a₀) hp.quick.lams.peel.eview hR hc2
+  obtain ⟨hm2, v, hv, hvr, ht⟩ := eView_callW_view (a := a₀) hp.quick.peel.eview hR hc2
   rw [hm2] at hm
   obtain ⟨rfl, hw1', hw2'⟩ := viewR_const hvr (ht.trans h3')
   simp only [h3', decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv,
