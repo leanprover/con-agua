@@ -116,6 +116,17 @@ structure KnotAllProg (p : Prog) : Prop where
   /-- The `instLP` walk and its entries (`InstLPEntry.lean`, helper `whnf4-ilp`). -/
   ilw : ILWEntryProg p
 
+theorem reservedBasisNames_run {m : Mem} {a : AState} (hP : PinsFull m a.pins) :
+    reservedBasisNames.run a = .ok (a.pins.reserved, a) := by
+  simp only [reservedBasisNames, pinReserved, StateT.run_bind, StateT.run_get, pure_bind,
+    L.Arena.pinsReady_true hP, ↓reduceIte]
+  rfl
+
+theorem reservedContainsT_run {m : Mem} {a : AState} (hP : PinsFull m a.pins) (n : NIdx) :
+    (reservedContainsT n).run a = .ok (a.pins.reserved.contains n, a) := by
+  simp only [reservedContainsT, StateT.run_bind, reservedBasisNames_run hP, except_ok_bind]
+  rfl
+
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
 theorem reservedContainsOK_of (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL) :

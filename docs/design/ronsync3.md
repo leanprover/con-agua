@@ -111,3 +111,9 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   the environment kept (`checkBlock_grow`)). Helper milestones merged: ind 2 (all L code of its
   area mirrors the twin), core 748d0feab (all L ports; ~25 sorries left), decl (the reader, the
   basis names' models, the one-constant arms at `checkDeclKind`).
+* 02:20–02:35 the first core and ind helpers ran out of context (core: all L ported, 19 sorries
+  and the new certificates' refinements left; ind: all L ported, `cb_ref`, the projection guard's
+  `pgr_okH`, `IndT/TailRef` left). Second sessions started on the same branches and worktrees
+  with written hand-overs (`_tmp/ronsync3/{core,ind}-handoff.md`). The generated program
+  (`Checker/Prog*.lean`) waits for core's `DefEqBaseE`/`DefEqKnot` to build (`checker_prog.py`
+  needs every module).
