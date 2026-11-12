@@ -262,7 +262,55 @@ theorem qb_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
     RefE (KnotNvG p n) (qbE p (n + 1) s₀.mem mode vis lam d a b)
       (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
       (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hS := hs.rel
+  simp only [qbE]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.peel.eview
+    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
+  subst e₁; dsimp only [qbE.k_e_view]
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.peel.eview
+    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
+  subst e₂; dsimp only [qbE.k_e_view_2]
+  refine RefE.abort0 (by rfl) fun hle => ?_
+  have hspn := hS.spn
+  have hle' : (rdW (s₀.mem.arr64 CTL) 136).toNat ≤ (s₀.mem.arr64 SPN).size := by
+    simp only [Mem.len64, UInt64.not_lt, UInt64.le_iff_toNat_le] at hle
+    rw [UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)] at hle; exact hle
+  have hx : FvsR s₀.mem (rdW (s₀.mem.arr64 CTL) 136) 0 #[] :=
+    ⟨⟨rfl, by simp only [UInt64.toNat_zero, Nat.add_zero]; exact hle', fun i hi => by simp at hi,
+      fun i hi => by simp at hi⟩, by simp [spTop], by simp only [UInt64.toNat_zero]; omega⟩
+  cases n with
+  | zero => rw [dbE.eq_1]; exact RefE.of_cls0 (by rfl)
+  | succ n =>
+  have hbf : bindersFuel = (4611686018427387904 : Word).toNat := rfl
+  have hfin : ∀ (lam' : Word) (t₁ c₁ t₂ c₂ : Word), HW t₁ → HW c₁ → HW t₂ → HW c₂ →
+      (decide (lam' ≠ 0) : Bool) = (lam' != 0) →
+      RefE (KnotNvG p (n + 1))
+        (qbE.k_defeq_binders p (rdW (s₀.mem.arr64 CTL) 136)
+          (dbE p (n + 1) s₀.mem mode vis lam' 4611686018427387904 d (rdW (s₀.mem.arr64 CTL) 136) 0 t₁ c₁ t₂ c₂))
+        (do
+          let ok ← defeqBinders (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam' != 0)
+            bindersFuel d.toNat #[] (decE t₁) (decE c₁) (decE t₂) (decE c₂)
+          pure (some ok)) a₀
+        (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
+    intro lam' t₁ c₁ t₂ c₂ q1 q2 q3 q4 _
+    rw [hbf]
+    refine RefE.bindE (fun _ => rfl) (fun hG => hG.mono (by omega))
+      (db_ref p hp.peel hil n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode lam'
+        4611686018427387904 d _ 0 t₁ c₁ t₂ c₂ #[] hs hx q1 q2 q3 q4
+        (by rw [show (4611686018427387904 : Word).toNat = 4611686018427387904 from rfl]; omega))
+      fun v y a₁ _ hQ => ?_
+    obtain ⟨r, m⟩ := v
+    have hR := GrowPost.restore hQ [r.headD 0] rfl hQ.valid
+    exact RefE.ret rfl ⟨hR.after, by rw [hR.res], hR.valid⟩
+  rcases hlam with ⟨rfl, ha6, hb6⟩ | ⟨rfl, ha5, hb5⟩
+  · obtain ⟨rfl, w1, w2⟩ := viewR_forall hvra (hta.trans ha6)
+    obtain ⟨rfl, w3, w4⟩ := viewR_forall hvrb (htb.trans hb6)
+    refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
+    exact hfin 0 _ _ _ _ w1 w2 w3 w4 rfl
+  · obtain ⟨rfl, w1, w2⟩ := viewR_lam hvra (hta.trans ha5)
+    obtain ⟨rfl, w3, w4⟩ := viewR_lam hvrb (htb.trans hb5)
+    refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
+    exact hfin 1 _ _ _ _ w1 w2 w3 w4 rfl
 
 /-! ## `quick_defeq`: the dispatch -/
 

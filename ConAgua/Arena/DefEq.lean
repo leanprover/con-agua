@@ -84,8 +84,6 @@ def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
 views): the same kind, the same length, the same limbs/bytes (`limbs_eq` on the pool slices;
 `Nat` literals are trimmed, so equal values have equal slices). -/
 -- con-ron: ConRon/Arena/Core.lean:3666-3692 ConRon.Arena.quickDefEq
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.quickDefEq` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.quickDefEq`, `ConRon.Arena.bindersFuel` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.quickDefEq]
 def litEqL : FunDecl := lfn (a, b) locals (ta, xa, tb, xb, la, lb, r) {
   (ta, xa) := node LIT⟦a⟧;
@@ -171,7 +169,6 @@ def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
 `cvc.levelParams = cvT.levelParams`). -/
 -- con-ron: ConRon/Arena/Core.lean:1602-1651 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def erSliceEqL : FunDecl := lfn (o1, n1, o2, n2) locals (i) {
   if n1 != n2 { return 0 };
@@ -380,8 +377,6 @@ def defeqBindersL : FunDecl := lfn (mode, vis, lam, fuel, d, fo, k, ty1, body1, 
 
 /-- `quickDefEq`'s sort pair: the two levels compared (`lvl_eq_c`; `none` aborts). -/
 -- con-ron: ConRon/Arena/Core.lean:3666-3692 ConRon.Arena.quickDefEq
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.quickDefEq` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.quickDefEq`, `ConRon.Arena.bindersFuel` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
   (g, u, x, y) := call e_view(a);
@@ -393,21 +388,20 @@ def quickSortL : FunDecl := lfn (a, b) locals (g, u, v, x, y, z) {
 
 /-- `quickDefEq`'s `∀` (`lam = 0`) and `λ` (`lam = 1`) pairs: binder-telescope congruence
 (`defeq_binders` at `bindersFuel`, `2^62`, from an empty variable slice at the stack top; the top
-put back). -/
+put back; a top beyond the stack array aborts, a defensive check). -/
 -- con-ron: ConRon/Arena/Core.lean:3666-3692 ConRon.Arena.quickDefEq
 @[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickBindersL : FunDecl := lfn (mode, vis, lam, d, a, b) locals (g, x1, y1, x2, y2, z, so, r) {
   (g, x1, y1, z) := call e_view(a);
   (g, x2, y2, z) := call e_view(b);
   so := CTL.u64[136];
+  if len(SPN.u64) < so { abort };
   r := call defeq_binders(mode, vis, lam, 4611686018427387904, d, so, 0, x1, y1, x2, y2);
   CTL.u64[136] := so;
   return r
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3666-3692 ConRon.Arena.quickDefEq -/
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.quickDefEq` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.quickDefEq`, `ConRon.Arena.bindersFuel` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.quickDefEq]
 def quickDefeqL : FunDecl := lfn (mode, vis, d, a, b) locals (g, r) {
   if a == b { return (1, 1) };
@@ -827,7 +821,6 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
 /-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
 the fields; split off for the proofs). Leaves the projections' slice on the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1602-1651 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertTailL : FunDecl :=
     lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {

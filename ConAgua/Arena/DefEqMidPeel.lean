@@ -336,6 +336,20 @@ theorem dd_ref (p : Prog) (hil : InstListOK p) (n : Nat)
       hs₁ h₁.resOk hd2) fun _ _ _ e => ?_
   exact RefE.ret rfl ⟨e.after, rfl, e.resOk⟩
 
+/-- **`defeq_domain` refines `defeqDomain`** at the knot (`dd_ref`'s ok half). -/
+@[refines ConRon.Arena.defeqDomain]
+theorem defeqDomain_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d fo k ty1 ty2 dom2 : Word) (fvs : Array EIdx)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : FvsR s₀.mem fo k fvs)
+    (h1 : HW ty1) (h2 : HW ty2) (hd2 : HW dom2) :
+    CoreSpec p (n + 1) "defeq_domain" [mode, vis, d, fo, k, ty1, ty2, dom2]
+      (defeqDomain (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat fvs (decE ty1) (decE ty2)
+        (decE dom2)) decBool s₀ a₀ dn vis fe M eb :=
+  RefE.coreSpec (ddE_spec p hp.domain (n + 1) s₀ mode vis d fo k ty1 ty2 dom2)
+    (dd_ref p hil n hk F hF hn s₀ a₀ dn vis fe M eb mode d fo k ty1 ty2 dom2 fvs hs hx h1 h2 hd2)
+
 /-- **`defeq_binders`' model, both outcomes** (generated; recursive; `inst_list`, `intern_fvar`,
 `binder_pair` lifted, `defeq_domain` and `defeq_binders_inner` by their models). -/
 l_model dbE_spec (p : Prog) (hp : PeelProg p)
@@ -346,8 +360,136 @@ l_model dbE_spec (p : Prog) (hp : PeelProg p)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+/-- **The variable pushed at the stack top** (`defeq_binders`' write): the relation kept, the
+stack grown, the slice one longer. -/
+theorem fvPush_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {fo k fv : Word}
+    {fvs : Array EIdx} (hx : FvsR m fo k fvs) (hfv : HW fv) (hb : ¬ m.len64 SPN ≤ fo + k) :
+    CoreS dn ((m.set64 SPN (fo + k) fv).set64 CTL 136 (fo + k + 1)) a vis fe M eb ∧
+      StackGrew m ((m.set64 SPN (fo + k) fv).set64 CTL 136 (fo + k + 1)) ∧
+      FvsR ((m.set64 SPN (fo + k) fv).set64 CTL 136 (fo + k + 1)) fo (k + 1) (fvs.push (decE fv)) := by
+  have hspn := hS.spn
+  have hc := hS.ctl136
+  have hfit := hx.fit
+  simp only [Mem.len64, UInt64.not_le] at hb
+  have e1 : (UInt64.ofNat (m.arr64 SPN).size).toNat = (m.arr64 SPN).size :=
+    UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)
+  have hb' := UInt64.lt_iff_toNat_lt.mp hb
+  rw [e1] at hb'
+  have ht : (fo + k).toNat = fo.toNat + k.toNat := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  rw [ht] at hb'
+  have h1 : (k + 1).toNat = k.toNat + 1 := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by simp; omega)]; rfl
+  have h3 : (fo + k + 1).toNat = fo.toNat + k.toNat + 1 := by
+    rw [UInt64.toNat_add, ht, Nat.mod_eq_of_lt (by simp; omega)]; rfl
+  have sp1 := hx.spine.push hspn hb' fv hfv
+  have sp2 := sp1.setCtl 136 (fo + k + 1)
+  have hf : MemFrame [SPN] [136] m ((m.set64 SPN (fo + k) fv).set64 CTL 136 (fo + k + 1)) :=
+    ((MemFrame.set64 m SPN (by decide) _ _).mono (by simp) (by simp)).trans
+      ((MemFrame.setCtl _ 136 _).mono (by simp) (by simp))
+  have e : spTop ((m.set64 SPN (fo + k) fv).set64 CTL 136 (fo + k + 1)) = fo + k + 1 := by
+    unfold spTop; rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by simpa [L.Mem.size64_set64] using hc⟩]
+  refine ⟨hS.frame_stk hf (by simp) (by simp), ⟨?_, ?_, fun i hi => ?_,
+    BKept.of_frame hf (by decide) (by decide), PoolGrew.of_frame hf (by decide) (by decide)⟩,
+    ⟨sp2, by rw [e, UInt64.add_assoc], by rw [h1]; omega⟩⟩
+  · rw [e, hx.top, UInt64.le_iff_toNat_le, h3, ht]; omega
+  · rw [L.Mem.size64_set64, L.Mem.size64_set64]
+  · rw [hx.top, UInt64.lt_iff_toNat_lt, ht] at hi
+    rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun e => by rw [← e, ht] at hi; omega)]
+
+/-- A kept-stack callee's ok run (`callW`), then a growing rest, both outcomes. -/
+theorem RefE.bind_callWG {α β γ : Type} [Inhabited γ] {G : Prop} {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {s₀ : St} {x : Except Err (List Word × Mem) → Except Err α}
+    (hx : ∀ e, x (.error e) = .error e) {T : AM γ} {k : γ → AM β} {a : AState}
+    {dec : List Word → γ} {dec' : List Word → β} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok ok' : List Word → Prop} {w : α → List Word × Mem}
+    (hok : CoreSpec p n f args T dec s₀ a dn vis fe M eb ok)
+    (h : ∀ r m', callW p n f args s₀.mem = some (r, m') → CoreRef T a dec dn s₀.mem vis fe M eb r m' ok →
+      ∀ M', CoreS dn m' (AM.st T a) vis fe M' eb → StackKept s₀.mem m' →
+      RefE G (x (.ok (r, m'))) (k (dec r)) (AM.st T a)
+        (fun v y a' => GrowPost dec' dn m' vis fe M' eb ok' (w v) y a')) :
+    RefE G (x (liftE (callW p n f args s₀.mem))) (T >>= k) a
+      (fun v y a' => GrowPost dec' dn s₀.mem vis fe M eb ok' (w v) y a') := by
+  rcases c : callW p n f args s₀.mem with _ | ⟨r, m'⟩
+  · rw [liftE_none, hx]; exact RefE.of_cls0 (by simp)
+  have h1 := CoreSpec.of_callW hok c
+  rw [liftE_some]
+  exact RefE.bind_growK h1 (fun M' hS hSt => h r m' c h1 M' hS hSt)
+
+/-- A unified callee with `CorePost` (the stack kept), then a growing rest, both outcomes. -/
+theorem RefE.bind_coreEG {α β γ : Type} [Inhabited γ] {G G' : Prop}
+    {x : Except Err (List Word × Mem)} {K : Except Err (List Word × Mem) → Except Err α}
+    (hK : ∀ e, K (.error e) = .error e) {T₁ : AM γ} {f : γ → AM β} {a₀ : AState}
+    {dec₁ : List Word → γ} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {m₀ : Mem}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {ok₁ ok : List Word → Prop}
+    {w : α → List Word × Mem} (hG : G → G')
+    (h₁ : RefE G' x T₁ a₀ (CorePost dec₁ dn m₀ vis fe M eb ok₁))
+    (h₂ : ∀ r₁ m₁, x = .ok (r₁, m₁) → CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁ →
+      ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb → StackKept m₀ m₁ →
+      RefE G (K (.ok (r₁, m₁))) (f (dec₁ r₁)) (AM.st T₁ a₀)
+        (fun v y a' => GrowPost dec dn m₁ vis fe M' eb ok (w v) y a')) :
+    RefE G (K x) (T₁ >>= f) a₀ (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') := by
+  rcases hx : x with e | ⟨r₁, m₁⟩
+  · rw [hK]; rw [hx] at h₁; exact RefE.bind_left fun hg => h₁ (hG hg)
+  rw [hx] at h₁
+  obtain ⟨y, a', hrun, hP⟩ := h₁
+  have hc := hP.coreRef hrun
+  exact RefE.bind_growK hc (fun M' hS hSt => h₂ r₁ m₁ hx hc M' hS hSt)
+
+/-- A stronger context (`G → G'`) for an error claim under `G'`. -/
+theorem RefE.weakG {α β : Type} {G G' : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {R : α → β → AState → Prop} (hG : G → G') (h : RefE G' x T a R) : RefE G x T a R := by
+  cases x with
+  | ok v => exact h
+  | error e => exact fun g => h (hG g)
+
+/-- An L-only step that grew the stack (`m₀` to `m₁`): the post moves back to `m₀`. -/
+theorem RefE.after_grow {α β : Type} {G : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {dec : List Word → β} {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {ok : List Word → Prop} {w : α → List Word × Mem}
+    (hg : StackGrew m₀ m₁)
+    (h : RefE G x T a (fun v y a' => GrowPost dec dn m₁ vis fe M eb ok (w v) y a')) :
+    RefE G x T a (fun v y a' => GrowPost dec dn m₀ vis fe M eb ok (w v) y a') :=
+  h.mono fun _ _ _ h => ⟨CoreAfterG.compK (KeptAll.refl _ _) hg h.after, h.res, h.valid⟩
+
+/-- **`defeq_binders`' innermost level** (its join point `j1`): both bodies opened over the slice
+`(fo, k + 1)`, then `defeq_binders_inner`; the errors are `inst_list`'s and the slots'. -/
+theorem dbJ1_ref (p : Prog) (hil : InstListOK p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode lam d fo k body1 body2 : Word) (fvs : Array EIdx)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hx : FvsR s₀.mem fo (k + 1) fvs)
+    (hb1 : HW body1) (hb2 : HW body2) (hd : d.toNat + 1 < 2 ^ 64) :
+    RefE (KnotNvG p n) (dbE.j1 p (n + 1) mode vis lam d fo k body1 body2 s₀.mem)
+      (do
+        let b₁ ← instantiateListFast coreWalkFuel (decE body1) fvs
+        let b₂ ← instantiateListFast coreWalkFuel (decE body2) fvs
+        defeqBindersInner (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam != 0)
+          d.toNat b₁ b₂) a₀
+      (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
+  have hS := hs.rel
+  have hspn := hS.spn
+  simp only [dbE.j1]
+  have hil1 := hil (n + 1) s₀ a₀ dn vis fe M eb body1 fo (k + 1) 0 fvs hS hb1 hx.spine hx.le_top
+  rw [toNat_zero_w] at hil1
+  refine RefE.bind_callWG (w := id) (fun _ => rfl) hil1 fun r₁ m₁ _ h₁ M₁ hS₁ hK₁ => ?_
+  simp only [dbE.k_inst_list_2]
+  have hx₁ := hx.kept hK₁ hspn
+  have hil2 := hil (n + 1) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb body2 fo (k + 1) 0 fvs hS₁ hb2 hx₁.spine
+    hx₁.le_top
+  rw [toNat_zero_w] at hil2
+  refine RefE.bind_callWG (w := id) (fun _ => rfl) hil2 fun r₂ m₂ _ h₂ M₂ hS₂ hK₂ => ?_
+  simp only [dbE.k_inst_list_3]
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  exact RefE.lastE (K := dbE.k_defeq_binders_inner p) (f := fun v => ([v.1.headD 0], v.2))
+    (fun _ => rfl) (fun _ => rfl) (fun hG => KnotNvG.knot hG)
+    (li_ref p n hk F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode lam d _ _ hF hn hs₂ hd h₁.resOk h₂.resOk)
+    fun v y a₁ _ hQ => ⟨CoreAfterG.compK (KeptAll.refl _ _) (StackGrew.refl _) hQ.after.toG, hQ.res, hQ.valid⟩
+
 /-- **`defeq_binders` refines `defeqBinders`, both outcomes** (the variable slice `fvs` at the stack
 top; the depth leaves room for the budget): the errors are the slots' and `inst_list`'s. -/
+@[refines ConRon.Arena.defeqBinders]
 theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
@@ -359,5 +501,74 @@ theorem db_ref (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : Nat)
       (defeqBinders (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) (lam != 0)
         fuel.toNat d.toNat fvs (decE ty1) (decE body1) (decE ty2) (decE body2)) a₀
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  induction n generalizing s₀ a₀ M fuel d k ty1 body1 ty2 body2 fvs with
+  | zero => rw [dbE.arm1, callW_zero, liftE_none, dbE.k_inst_list.none]; exact RefE.of_cls0 (by simp)
+  | succ n ih =>
+  have hS := hs.rel
+  have hspn := hS.spn
+  rw [dbE.arm1]
+  unfold defeqBinders
+  have hil0 := hil (n + 1) s₀ a₀ dn vis fe M eb ty2 fo k 0 fvs hS h2 hx.spine hx.le_top
+  rw [toNat_zero_w] at hil0
+  refine RefE.bind_callWG (w := id) (fun _ => dbE.k_inst_list.none ..) hil0 fun r₁ m₁ _ h₁ M₁ hS₁ hK₁ => ?_
+  rw [dbE.k_inst_list.arm1]
+  have hx₁ := hx.kept hK₁ hspn
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_coreEG (w := id) (fun _ => dbE.k_defeq_domain.none ..) (fun hG => hG.mono (by omega))
+    (dd_ref p hil n (hk.mono (by omega)) F (by omega) (by omega) ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d
+      fo k ty1 ty2 (r₁.headD 0) fvs hs₁ hx₁ h1 h2 h₁.resOk) fun r₂ m₂ _ h₂ M₂ hS₂ hK₂ => ?_
+  by_cases h0 : r₂.headD 0 = 0
+  · rw [dbE.k_defeq_domain.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ h0, L.Arena.decBool_false_of h0]
+    simp only [Bool.not_false, ↓reduceIte]
+    exact RefE.ret rfl ⟨⟨M₂, hS₂, KeptAll.refl _ _, StackGrew.refl _⟩, rfl, resH_zero⟩
+  rw [dbE.k_defeq_domain.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ h0, L.Arena.decBool_true_of h0]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+  refine RefE.onlySim (fun _ => dbE.k_intern_fvar.none ..) (fun _ _ h => h) fun r₃ m₃ c₃ => ?_
+  obtain ⟨h₃, -⟩ := peel_internFVar_core hp hS₂ d (r₁.headD 0) h₁.resOk r₃ c₃
+  refine RefE.bind_growK (w := id) h₃ fun M₃ hS₃ hK₃ => ?_
+  by_cases hb : m₃.len64 SPN ≤ fo + k
+  · rw [dbE.k_intern_fvar.abort1 _ _ _ _ _ _ _ _ _ _ _ _ _ hb]; exact RefE.of_cls0 (by simp)
+  have hx₃ := (hx₁.kept hK₂ hS₁.spn).kept hK₃ hS₂.spn
+  obtain ⟨hSp, hgp, hxp⟩ := fvPush_ok hS₃ hx₃ h₃.resOk hb
+  refine RefE.after_grow hgp ?_
+  by_cases hf0 : fuel = 0
+  · rw [dbE.k_intern_fvar.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ hb hf0]
+    rw [show fuel.toNat = 0 by rw [hf0]; rfl]
+    have hsp : SlotPre ⟨_, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hSp, hs.mode4, hs.eb_mode⟩
+    exact (dbJ1_ref p hil n (hk.mono (by omega)) F (by omega) (by omega) ⟨_, Locals.init []⟩ _ dn vis fe M₃
+      eb mode lam d fo k body1 body2 _ hsp hxp hb1 hb2 (by omega)).weakG (fun hG => hG.mono (by omega))
+  rw [dbE.k_intern_fvar.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ hb hf0]
+  have hfn : fuel.toNat = (fuel - 1).toNat + 1 := by
+    have : fuel.toNat ≠ 0 := fun e => hf0 (UInt64.toNat_inj.mp (by simpa using e))
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_one]; omega)),
+      UInt64.toNat_one]; omega
+  rw [hfn]
+  dsimp only
+  refine RefE.bind_callWG (w := id) (fun _ => dbE.k_binder_pair.none ..)
+    (binderPair_refines p hp n ⟨_, Locals.init []⟩ _ dn vis fe M₃ eb lam body1 body2 hSp hb1 hb2)
+    fun r₄ m₄ _ h₄ M₄ hS₄ hK₄ => ?_
+  have hx₄ := hxp.kept hK₄ hSp.spn
+  have hs₄ : SlotPre ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb mode := ⟨hS₄, hs.mode4, hs.eb_mode⟩
+  by_cases hbp : r₄.headD 0 = 0
+  · rw [dbE.k_binder_pair.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ hbp,
+      show decBP r₄ = none by simp only [decBP, hbp, ↓reduceIte]]
+    dsimp only
+    exact (dbJ1_ref p hil n (hk.mono (by omega)) F (by omega) (by omega) ⟨m₄, Locals.init []⟩ _ dn vis fe M₄
+      eb mode lam d fo k body1 body2 _ hs₄ hx₄ hb1 hb2 (by omega)).weakG (fun hG => hG.mono (by omega))
+  have hd1 : d + 1 ≠ 0 := by
+    intro e; have := congrArg UInt64.toNat e; rw [UInt64.toNat_add] at this; simp at this; omega
+  rw [dbE.k_binder_pair.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ hbp hd1,
+    show decBP r₄ = some (decE (r₄.tail.headD 0), decE (r₄.tail.tail.headD 0),
+      decE (r₄.tail.tail.tail.headD 0), decE (r₄.tail.tail.tail.tail.headD 0)) by
+      simp only [decBP, hbp, ↓reduceIte]]
+  dsimp only
+  have hdd : (d + 1).toNat = d.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+  rw [← hdd]
+  obtain ⟨-, q1, q2, q3, q4⟩ := h₄.resOk
+  exact RefE.lastE (K := dbE.k_defeq_binders_inner p) (f := fun v => ([v.1.headD 0], v.2))
+    (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
+    (ih (hk.mono (by omega)) (by omega) (by omega) ⟨m₄, Locals.init []⟩ _ M₄ (fuel - 1) (d + 1) (k + 1)
+      _ _ _ _ _ hs₄ hx₄ q1 q2 q3 q4 (by rw [hdd]; omega))
+    fun v y a₁ _ hQ => ⟨hQ.after, hQ.res, hQ.valid⟩
 
