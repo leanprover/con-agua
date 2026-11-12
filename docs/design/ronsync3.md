@@ -86,7 +86,7 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
    `twinAcceptsPooled_no_False`, `checkerFile_model_exists`, `checkerFile_no_False`,
    `checkerFile_threads_model`, `checkerFile_threads_no_False`, `twinAccepts_not_trivial`. This
    undoes ronsync2's statement change 1, 2 and 5 (docs/design/ronsync2.md §6).
-* 00:45–02:10 the helpers port their areas; the lead merges their building milestones into
+* 00:45–01:45 the helpers port their areas; the lead merges their building milestones into
   `ronsync3` and runs compile passes (build, then the ladder `--write` on every failing file, so a
   failing theorem becomes a ticket for its owner and the modules behind it unblock; positional
   `decCaps` destructurings fixed in 9 files; `rci_caps`' refinement (`CIReadRefCaps`) at the
