@@ -11,6 +11,9 @@ public import ConAgua.Arena.DeclBasisNames
 public import ConAgua.Arena.DeclKindTwin
 import ConAgua.Arena.DeclKindEnvOne
 import ConAgua.Arena.IndKindEnvProof
+import ConRon.Bridge.Checker.Fold
+import ConRon.Bridge.Checker.Hyp
+import ConRon.Bridge.Inductives.Decl
 import ConAgua.Arena.RecGenSpec.FlushStage
 public import ConAgua.Arena.ScratchRefine
 
@@ -314,6 +317,15 @@ def DeclKindSpec : Prop :=
     checkDeclKind V pins fe pd s = .ok (fe', s') →
     ConRon.Bridge.StateOK s' ∧ Ext s.store s'.store ∧ s'.pins = s.pins
 
+/-- **`DeclKindSpec` holds**: con-ron's `Arena.checkDeclKind_bridge` at the core's and the
+inductive stage's specs (`CoreSpec.of_core`, `indSpec_of_bridge`). -/
+theorem declKindSpec : DeclKindSpec := by
+  intro pins env fe fe' s s' pd d hok hPD hd hrun
+  obtain ⟨pinsP, hP⟩ := hPD
+  have o := ConRon.Bridge.Arena.checkDeclKind_bridge (pinsP := pinsP) ConRon.Bridge.CoreSpec.of_core
+    ConRon.Bridge.Inductives.indSpec_of_bridge hok hP hd hrun
+  exact ⟨o.state, o.ext, o.pins⟩
+
 /-! ## `check_decl` -/
 
 /-- The arrays `check_decl`'s callees after the block's copy write: a step's (`stepA`) but the
@@ -536,7 +548,7 @@ reason (`bne_sim`). -/
 @[refines_part ConRon.Arena.checkDecl "check_decl(i, vis): the front's records (kinds 1-6), under StageT, both outcomes"]
 theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {p : Prog} (hP : CdProg pins dn ds p) (hFD : FrontDecls ds)
-    (hLD : DeclsLpsDn dn ds) (hDK : DeclKindSpec)
+    (hLD : DeclsLpsDn dn ds)
     {N : Nat} (hN : N ≤ 2 ^ 62 + 1) {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     {i : Word} (hi : i.toNat < ds.size) (hok : ConRon.Bridge.StateOK a)
     (hR : LoopR pins m a vis fe ds) (hS : StageT dn vis fe m a)
@@ -615,7 +627,7 @@ theorem cd_ref {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     fun v fe2 a2 hrun2 hQ => ?_
   obtain ⟨vis2, m2⟩ := v
   rw [checkDeclE.k_check_decl_kind.arm1]
-  obtain ⟨hok2, hx2, hp2⟩ := hDK hFo hPD hdd hrun2
+  obtain ⟨hok2, hx2, hp2⟩ := declKindSpec hFo hPD hdd hrun2
   have hf12 := hQ.frame
   have hS2 : StageR vis2 fe2 m2 a2 := ⟨hQ.loop.check, hQ.loop.iw⟩
   -- the environment's growth
@@ -737,11 +749,11 @@ half of `cd_ref`. -/
 @[refines_part ConRon.Arena.checkDecl "check_decl(i, vis): the front's records (kinds 1-6), under StageT"]
 theorem checkDecl_loopT {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {p : Prog} (hP : CdProg pins dn ds p) (hFD : FrontDecls ds)
-    (hLD : DeclsLpsDn dn ds) (hDK : DeclKindSpec) :
+    (hLD : DeclsLpsDn dn ds) :
     CheckDeclSpecT V pins dn ds p := by
   intro n hn s₀ a₀ vis fe i hi hok hR hS hF hden hPD hIM
   refine triple_post (RefE.triple (checkDecl_specE p hP.cd.cd hP.cd.ckd n s₀ i vis)
-    (cd_ref hP hFD hLD hDK (by omega) hi hok hR hS hF hden hPD hIM)) ?_
+    (cd_ref hP hFD hLD (by omega) hi hok hR hS hF hden hPD hIM)) ?_
   rintro r s' ⟨hl, x, a', run, hR'⟩
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok', by rw [hst, hres]; exact hR'.loop, hR'.core, hR'.ind, hR'.grow⟩
