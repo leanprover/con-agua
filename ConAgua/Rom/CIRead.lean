@@ -94,24 +94,14 @@ after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:309-313 ConRon.Arena.Frontend.internCaps
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.Frontend.internCaps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
-def rciCaps : FunDecl := lfn (q, c) locals (x, h, ez) {
+def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   x := call rom_u64_c(q);
   ez := call erec_put(c, x);
   x := call rom_u64_c(q + 8);
-  ez := call erec_put(c + 2, x);
-  x := call rom_u64_c(q + 16);
-  ez := call erec_put(c + 3, x);
-  x := call rom_u64_c(q + 24);
-  ez := call erec_put(c + 4, x);
-  x := call rom_u64_c(q + 32);
-  ez := call erec_put(c + 5, x);
-  x := call rom_u64_c(q + 40);
   ez := call erec_put(c + 6, x);
-  x := call rom_u64_c(q + 48);
+  x := call rom_u64_c(q + 16);
   ez := call erec_put(c + 12, x);
-  (h, q) := call rom_name_c(q + 56);
-  ez := call erec_put(c + 1, h);
-  q := call rci_name_sl(q, c + 10);
+  q := call rci_name_sl(q + 24, c + 10);
   q := call rci_name_sl(q, c + 13);
   return q
 }

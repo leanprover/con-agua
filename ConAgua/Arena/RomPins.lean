@@ -27,8 +27,8 @@ other at the offset `off` the program is built with) and the table is the word a
 * `rom_names_to(q, k, d)`: intern `k` names from ROM position `q`, the `j`-th handle to
   `PINS[d + j]`; returns the position after them (the twin's `internNameList`).
 * `intern_reserved_pins()`: the two lists to `PINS[1‥51]` and `PINS[55‥70]`, then `intern_ls(0,
-  0)`, `intern_zero`, `intern_succ`, `intern_sort` to `PINS[52‥54]`, and the flag `PINS[0] := 1`
-  last. It refines `internReservedPins` from any state whose pin flag is `0`: afterwards
+  0)`, `intern_zero`, `intern_succ`, `intern_sort` to `PINS[52‥54]`, the default maximum `Nat`
+  size (`maxNatSizeDefault`, 134 217 728 bytes) to `PINS[72]`, and the flag `PINS[0] := 1` last. It refines `internReservedPins` from any state whose pin flag is `0`: afterwards
   `PinsR` holds with the flag set (`PinsFull`), so every pin reader works.
 -/
 
@@ -223,7 +223,7 @@ reservedBasisNameValues`. -/
 -- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.internReservedPins`, `ConRon.Arena.maxNatSizeDefault` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.internReservedPins` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
-  if len(PINS.u64) < 72 { abort };
+  if len(PINS.u64) < 73 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
   q := call rom_names_to(q, 1, 71);
   q := call rom_names_to(q, 16, 55);
@@ -238,6 +238,7 @@ reservedBasisNameValues`. -/
   PINS.u64[52] := us;
   PINS.u64[53] := z;
   PINS.u64[54] := s1;
+  PINS.u64[72] := 134217728;
   PINS.u64[0] := 1;
   return 0
 }
@@ -251,7 +252,7 @@ def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
 /-- The table's last writes. -/
 def irpFill (m : Mem) (us z s1 : Word) : Mem :=
-  ((((m.set64 PINS 52 us).set64 PINS 53 z).set64 PINS 54 s1).set64 PINS 0 1)
+  (((((m.set64 PINS 52 us).set64 PINS 53 z).set64 PINS 54 s1).set64 PINS 72 134217728).set64 PINS 0 1)
 
 /-- The functions `intern_reserved_pins` calls. -/
 structure IrpProg (rom : List UInt8) (off : Word) (p : Prog) : Prop extends NameProg rom p where

@@ -102,4 +102,23 @@ theorem pv_ge_wt (p : Array Word) (o l : Nat) (hl : 0 < l) (hn : Norm p o l) :
   have := Nat.mul_le_mul_right (wt j) this
   omega
 
+/-! ## The size of a normalised slice in bytes -/
+
+/-- **The size in bytes of a normalised slice's number** (con-ron's `natSizeBytes n = 8 * (n.log2 /
+64 + 1)`, the official kernel's `lean_nat_size_in_bytes`) is read off its limb count: `8 · max(l,
+1)`. con-ron's `nat::size_bytes` computes it so; upstream proves the same equation with `log2`. -/
+theorem sizeBytes_pv (p : Array Word) (o l : Nat) (hn : Norm p o l) :
+    8 * ((pv p o l).log2 / 64 + 1) = 8 * max l 1 := by
+  rcases Nat.eq_zero_or_pos l with rfl | hl
+  · simp [pv]
+  · have hlo := pv_ge_wt p o l hl hn
+    have hhi := pv_lt_wt p o l
+    have hpos : pv p o l ≠ 0 := by
+      have : 0 < wt (l - 1) := Nat.two_pow_pos _
+      omega
+    have h1 : 64 * (l - 1) ≤ (pv p o l).log2 := (Nat.le_log2 hpos).mpr hlo
+    have h2 : (pv p o l).log2 < 64 * l := (Nat.log2_lt hpos).mpr hhi
+    have : (pv p o l).log2 / 64 = l - 1 := by omega
+    rw [this]; omega
+
 end L.Arena
