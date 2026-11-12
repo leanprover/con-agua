@@ -84,8 +84,8 @@ def dc0Leaves : List FnName := ["mentions_any_const", "inst_lp_core", "erec_allo
 /-- **The call closure of `decl_constants` and `decl_tables`** in the checker's program, without
 the leaves and what only they reach. -/
 def dcFns : List FnName :=
-  ["decl_tables", "block_tables", "sl_cons", "iw_copy", "iw_alloc", "block_table", "erec_put",
-   "er_from_iw", "er_from_iw_go", "block_shape_lps", "er_to_iw", "er_copy", "struct_proj_bodies", "sl_snoc",
+  ["decl_tables", "block_tables", "sl_cons", "sl_snoc", "iw_copy", "iw_alloc", "block_table", "erec_put",
+   "er_from_iw", "er_from_iw_go", "block_shape_lps", "er_to_iw", "er_copy", "struct_proj_bodies",
    "struct_proj_bodies_go", "struct_proj_arg_p", "mk_proj", "intern_proj", "proj_push",
    "proj_find", "der_b", "intern_bvar", "bvar_push", "bvar_find", "e_view",
    "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "read_block", "read_block_at",

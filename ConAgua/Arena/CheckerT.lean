@@ -108,10 +108,22 @@ theorem triple_and {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s₀ : St
 
 /-! ## `check_decl`'s model (its refinement: `DeclCheckT.lean`) -/
 
-/-- **`check_decl`'s unified model**: the inductive branch's block copy (outside the verdict
-closure) lifted; the arms and `check_ind_decl` through their runs (their contracts read them). -/
+/-- **`check_decl_kind`'s unified model**: the arms and `check_ind_decl` through their runs (their
+contracts read them). -/
+l_model checkDeclKind_specE (p : Prog) (hf : p.lookup "check_decl_kind" = some checkDeclKindL)
+  fns [hf ↦ checkDeclKindE]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  heartbeats 400000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **`check_decl`'s unified model**: the inductive branch's block copy, the flush and the reserved
+names' check (outside the verdict closure) lifted; `check_decl_kind` by its model. -/
 l_model checkDecl_specE (p : Prog) (hf : p.lookup "check_decl" = some checkDeclL)
-  fns [hf ↦ checkDeclE] specs [callW_spec p n "ind_block_to_erec"]
+    (hk : p.lookup "check_decl_kind" = some checkDeclKindL)
+  fns [hf ↦ checkDeclE]
+  specs [callW_spec p n "ind_block_to_erec", checkDeclKind_specE p hk n, callW_spec p n "flush_caches",
+    callW_spec p n "basis_names_ok", callW_spec p n "basis_names_error"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
