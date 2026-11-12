@@ -347,7 +347,6 @@ body, all four checks run (`&&` on already-fetched values), and the scan stops a
 that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
 `indproofs2`: rewritten from a `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
   lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r, ez) {
@@ -364,25 +363,23 @@ def checkStructProjTableScopedL : FunDecl :=
   return 0
 }
 
-/-- `check_struct_proj_table(T, lpsOff, lpsLen, nP, nF, cvCa, vis)`: stage 5, the projection
-table's checks: the bodies (read off the stored constructor type by substitution alone) validated
-once (`check_struct_proj_table_scoped`), the structure stored (else an internal error, an `abort`)
-and its table not yet taken. Nothing is pushed: the table is the block's install
-(`block_tables`, `IndDeclConsts.lean`). -/
+/-- `check_struct_proj_table(t, vis)`: stage 5, the projection table's checks at the table record
+`t` the block installs (`block_tables`, `IndDeclConsts.lean`; `EREC`, the layout of `decTbl`):
+its bodies' scoping at its own level parameters and parameter count, validated once
+(`check_struct_proj_table_scoped`, over `IW` copies of the two lists), the structure stored (else
+an internal error, an `abort`) and its table not yet taken. Nothing is pushed. -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:43-65 ConRon.Arena.checkStructProjTable
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkStructProjTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
-  lfn (T, lpsOff, lpsLen, nP, nF, cvCa, vis)
-  locals (bOk, bOff, bLen, scopedOk, found, q, r) {
-  (bOk, bOff, bLen) := call struct_proj_bodies(T, nP, nF, EREC⦃cvCa + 3⦄);
-  if bOk == 0 { abort };
-  scopedOk := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bOff, bLen);
-  if bLen != nF { abort };
+  lfn (t, vis) locals (lo, ll, bo, bl, scopedOk, found, q, r) {
+  (lo, ll) := call er_to_iw(EREC⦃t + 3⦄, EREC⦃t + 4⦄);
+  (bo, bl) := call er_to_iw(EREC⦃t + 9⦄, EREC⦃t + 10⦄);
+  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + 5⦄, lo, ll, bo, bl);
+  if bl != EREC⦃t + 7⦄ { abort };
   if scopedOk != 1 { abort };
-  (found, q) := call env_find(T, vis);
+  (found, q) := call env_find(EREC⦃t + 2⦄, vis);
   if found == 0 { abort };
-  r := call find_table(vis, T);
+  r := call find_table(vis, EREC⦃t + 2⦄);
   if r != 0 { fail R_PROJECTION_TABLE_TAKEN };
   return 0
 }
