@@ -103,7 +103,7 @@ theorem decCI_indNC {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   cases hc
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
     Option.some.injEq] at hcaps
-  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, np, hnp, cs, hcs, hc⟩ := hcaps
+  obtain ⟨_, _, _, _, _, _, np, hnp, cs, hcs, hc⟩ := hcaps
   subst hc
   simp only [nat?, Option.map_eq_some_iff] at hnp
   obtain ⟨wnp, hwnp, rfl⟩ := hnp
