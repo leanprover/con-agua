@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.RecClassSpec.Classes
+public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 
 @[expose] public section
 
@@ -55,6 +56,7 @@ structure CstProg (p : Prog) : Prop where
   internForall : p.lookup "intern_forall" = some internForallL
   mkForall : p.lookup "mk_forall" = some mkForall
   closeTele : p.lookup "close_telescope" = some closeTelescope
+  closeF : CtF p
   erAlloc : p.lookup "erec_alloc" = some erecAlloc
   cvNew : p.lookup "cv_new" = some cvNew
   tele : p.lookup "check_sum_tele" = some checkSumTeleL
