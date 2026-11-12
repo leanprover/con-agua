@@ -303,8 +303,7 @@ theorem names_ext {st st' : EStore} (hx : ConRon.Arena.Ext st st') {lps : List N
 closure) lifted, `check_struct_proj_table_scoped` reading the real `all_level_params_defined`. -/
 l_model tblE_spec (p : Prog) (hP : TblProg p)
   fns [hP.htbl ↦ tblE]
-  specs [spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
-      hP.hpg hP.hgo hP.hps hP.hpj hP.hspb hP.hi1 hP.hipal n,
+  specs [erToIw_specW p hP.ha hP.hecp hP.heti n,
     sctW_spec p hP.hbb hP.hhf hP.hcr hP.hsct (realCall p) (realCall_spec p) n,
     callW_spec p n "env_find", callW_spec p n "find_table"]
   grind [arena_grind] fold [tierW, idxW]
@@ -312,6 +311,14 @@ l_model tblE_spec (p : Prog) (hP : TblProg p)
   heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+#check @tblE.arm1
+#check @tblE.k_er_to_iw.arm1
+#check @tblE.k_er_to_iw_2.arm1
+#check @tblE.k_check_struct_proj_table_scoped.arm1
+#check @tblE.k_check_struct_proj_table_scoped.abort1
+#check @tblE.k_check_struct_proj_table_scoped.abort2
+#check @tblE.k_env_find.arm1
+#check @tblE.k_find_table.arm1
 
 /-- What `check_struct_proj_table` gives (from `m`, `a`): the stage at `vis` of `fe` (nothing is
 pushed), the growth, the frame (no memo touched), `AbsOK`, the twin's run a `PStep`. -/

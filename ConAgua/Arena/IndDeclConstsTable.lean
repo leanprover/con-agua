@@ -57,30 +57,39 @@ structure TablesProg (p : Prog) : Prop extends BlockProg p where
   sProjPs : p.lookup "struct_proj_ps" = some structProjPsL
   spb : p.lookup "struct_proj_bodies" = some structProjBodiesL
   i1l : I1lF p
-  ipal : IpalF p
+  sn : p.lookup "sl_snoc" = some slSnoc
+  st : StripProg p
   bt : p.lookup "block_table" = some blockTable
   bts : p.lookup "block_tables" = some blockTables
 
 /-! ## The twin, one member at a time -/
 
-/-- One member's table, if any (`blockTables`' step). -/
-def tblOne (bs : BlockShape) (ms : MemberShape) : AM (Option IProjTable) :=
+/-- One member's table (`blockTables`' step): `some none` at a member that is not structure-like,
+`some (some t)` its table, `none` where its constructor's type is too short for the bodies. -/
+def tblOne (bs : BlockShape) (ms : MemberShape) : AM (Option (Option IProjTable)) :=
   match ms.structCtor? with
   | some c => do
     match ← structProjBodies ms.declared.name bs.nP c.2 c.1.type with
-    | some bodies => pure (some ⟨ms.declared.name, bs.lps, bs.nP, c.1.name, c.2, bodies⟩)
+    | some bodies => pure (some (some ⟨ms.declared.name, bs.lps, bs.nP, c.1.name, c.2, bodies⟩))
     | none => pure none
+  | none => pure (some none)
+
+/-- The rest of `blockTables` after one member's step. -/
+def tblRest (bs : BlockShape) (rest : List MemberShape) : Option (Option IProjTable) →
+    AM (Option (List IProjTable))
   | none => pure none
+  | some o => do
+    let ts ← ConRon.Arena.blockTables bs rest
+    pure (ts.map (o.toList ++ ·))
 
 theorem blockTables_cons (bs : BlockShape) (ms : MemberShape) (rest : List MemberShape) :
-    ConRon.Arena.blockTables bs (ms :: rest) =
-      (do let o ← tblOne bs ms; let ts ← ConRon.Arena.blockTables bs rest; pure (o.toList ++ ts)) := by
+    ConRon.Arena.blockTables bs (ms :: rest) = (tblOne bs ms >>= tblRest bs rest) := by
   cases h : ms.structCtor? with
-  | none => simp [ConRon.Arena.blockTables, tblOne, h]
+  | none => simp [ConRon.Arena.blockTables, tblOne, tblRest, h]
   | some c =>
     simp only [ConRon.Arena.blockTables, tblOne, h, bind_assoc]
     congr 1; funext x
-    cases x <;> simp
+    cases x <;> simp [tblRest]
 
 /-! ## `block_table`: the model -/
 
@@ -98,8 +107,8 @@ def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
 l_model dbt_spec {p : Prog} (hP : TablesProg p)
   fns [hP.bt ↦ dbtW list]
   specs [spbW_spec p hP.alloc hP.iwCopy hP.slCons hP.sView hP.sDerB hP.sBvarFind hP.sBvarPush hP.sInternBVar
-      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
-      hP.spb hP.i1l hP.ipal n,
+      hP.sProjFind hP.sProjPush hP.sInternProj hP.sMkProj hP.sArgP hP.sn hP.sGo hP.sPsAtGo hP.sPsAt hP.sProjPs
+      hP.spb hP.i1l hP.st n,
     blockShapeLps_spec p hP.alloc hP.tErCopy hP.tErToIw hP.lps n, efF_spec p hP.cbr.tsr hP.erPut n,
     erecAlloc_specW p hP.erAlloc n, erecPut_specM p hP.erPut n]
   grind [arena_grind]
@@ -130,10 +139,12 @@ theorem btMem_eq {m1 : Mem} {q pp c cv T elo ell ebo ebl : Word} (hfr : ErApart 
   rw [erRd_erecPutMem_ne f5, erRd_erecPutMem_ne f4, erRd_erecPutMem_ne f3, erRd_erecPutMem_ne f2,
     erRd_erecPutMem_ne f1, erRd_erecPutMem_ne f0]
 
-/-- One member's table result: `(0, _)` none, `(1, q)` the table record at `q`. -/
-def DcTblR (m : Mem) (r : List Word) : Option IProjTable → Prop
-  | none => r.headD 0 = 0
-  | some t => r.headD 0 = 1 ∧ decTbl (erecP m) (r.tail.headD 0).toNat = some t
+/-- One member's table result: `(0, _)` no table, `(1, q)` the table record at `q`, `(2, _)` the
+twin's `none`. -/
+def DcTblR (m : Mem) (r : List Word) : Option (Option IProjTable) → Prop
+  | none => r.headD 0 = 2
+  | some none => r.headD 0 = 0
+  | some (some t) => r.headD 0 = 1 ∧ decTbl (erecP m) (r.tail.headD 0).toNat = some t
 
 theorem structCtor?_none {ms : MemberShape} (h : ms.ctors.length ≠ 1 ∨ ms.nIdx ≠ 0) :
     ms.structCtor? = none := by
@@ -173,13 +184,13 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : mS.structCtor? = none := structCtor?_none (.inl (by
       rw [hlen, ← hclW]; intro e; exact h3 (UInt64.toNat_inj.mp (by simpa using e))))
-    exact ⟨none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
+    exact ⟨some none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
   by_cases h1 : rdW (m.arr64 IW) (ms + 1) ≠ 0
   · rw [dbtW.arm2 (hc1 := Decidable.of_not_not h3) (hc2 := h1)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     have : mS.structCtor? = none := structCtor?_none (.inr (by
       rw [← hnIW]; intro e; exact h1 (UInt64.toNat_inj.mp (by simpa using e))))
-    exact ⟨none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
+    exact ⟨some none, a, by simp [tblOne, this]; rfl, hS, IWGrow.refl m, hA, rfl⟩
   rw [dbtW.arm3 (hc1 := Decidable.of_not_not h3) (hc2 := Decidable.of_not_not h1)] at h
   simp only [erRd_foldN] at h
   have hcl1 : cl = 1 := by rw [← hclW]; simp at h3; rw [h3]; rfl
@@ -300,7 +311,7 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
   have hA6 : AbsOK (wrER m5 q [6, 0, w0, r3.headD 0, r3.tail.headD 0,
       rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0]) :=
     (show AFr _ _ from AFr.of_frame (wrER_frame _ _ _)) (erAllocW_afr hW5 hA4)
-  refine ⟨some ⟨mS.declared.name, bs.lps, bs.nP, cv0.name, nF, bodies⟩, a1, ?_, hS6, hg04.trans hg6, hA6,
+  refine ⟨some (some ⟨mS.declared.name, bs.lps, bs.nP, cv0.name, nF, bodies⟩), a1, ?_, hS6, hg04.trans hg6, hA6,
     rfl, ?_⟩
   · simp only [tblOne, hsc, StateT.run_bind, hrun1, except_ok_bind]
     rfl
@@ -368,17 +379,23 @@ theorem decPL_tbl_grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} {ts : List IP
   simp only [Option.bind_some] at hd ⊢
   exact ArrExt.mapM (fun _ _ hy => (IWGrow.ext hg).decTbl hy) _ _ hd
 
-/-- **`block_tables` refines `blockTables`**: an `IW` slice of `EREC` table records below the
-pool's top. -/
+/-- What `block_tables` returns: `(0, _, _)` the twin's `none`, `(1, off, len)` an `IW` slice of
+`EREC` table records below the pool's top. -/
+def BtsR (m : Mem) (r : List Word) : Option (List IProjTable) → Prop
+  | none => r.headD 0 = 0
+  | some ts => r.headD 0 = 1 ∧
+      decPL m (decTbl (erecP m)) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some ts ∧
+      (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m
+
+/-- **`block_tables` refines `blockTables`**: `(1, off, len)` an `IW` slice of `EREC` table
+records below the pool's top, `(0, _, _)` the twin's `none`. -/
 theorem btsW_ok {p : Prog} (_hP : TablesProg p) (pp : Word) (bs : BlockShape) (vis : Word) (fe : IFEnv)
     (hnP : 1 + bs.nP < 2 ^ 64) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (mo ml : Word) (mss : List MemberShape) (r : List Word),
     StageR vis fe m a → AbsOK m → DecB (fun m => decBS m pp.toNat) m bs → PSlR0 decMS mss mo ml m →
     btsW n m pp mo ml = some (r, m') →
-    ∃ ts a', (ConRon.Arena.blockTables bs mss).run a = .ok (ts, a') ∧
-      decPL m' (decTbl (erecP m')) (r.headD 0).toNat (r.tail.headD 0).toNat = some ts ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
-      AbsOK m' := by
+    ∃ ts a', (ConRon.Arena.blockTables bs mss).run a = .ok (ts, a') ∧ BtsR m' r ts ∧
+      StageR vis fe m' a' ∧ IWGrow m m' ∧ AbsOK m' := by
   induction n with
   | zero => intro m m' a mo ml mss r _ _ _ _ h; simp [btsW] at h
   | succ n ih =>
@@ -390,35 +407,44 @@ theorem btsW_ok {p : Prog} (_hP : TablesProg p) (pp : Word) (bs : BlockShape) (v
       have h := hmss.1; simp only [DecB, hl] at h
       simpa [decPL] using h.symm
     subst this
-    exact ⟨[], a, rfl, by simp [decPL], by simp, hS, IWGrow.refl m, hA⟩
+    exact ⟨some [], a, rfl, ⟨rfl, by simp [decPL], by simp⟩, hS, IWGrow.refl m, hA⟩
   obtain ⟨q, ms, rest, rfl, hw, hqb, hdms, hrest⟩ := partsPSl_cons ⟨hmss.1, hmss.2.resolve_left hl⟩ hl
   rw [btsW.arm2 n m pp mo ml hl, hw] at h
   have hq' : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [btsW.k_block_table.none])
-  rw [btsW.k_block_table.arm1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hA1, hx⟩ := btW_ok hS hA hq (by rw [hq']; exact hdms) hnP h1
-  obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [btsW.k_block_tables.none])
-  obtain ⟨ts, a3, hrun3, hd3, hb3, hS3, hg3, hA3⟩ := ih m1 m3 a1 (mo + 1) (ml - 1) rest r3 hS1 hA1
-    (hq.grow (decBS_mono _) hg1) (PSlR0.grow decMS_mono ⟨hrest.dec, Or.inr hrest.bound⟩ hg1) h3
-  cases x with
-  | none =>
-    have h0 : r1.headD 0 = 0 := hx
+  rcases x with _ | _ | t
+  · have h2 : r1.headD 0 = 2 := hx
+    rw [btsW.k_block_table.arm1 (hc1 := h2)] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    refine ⟨none, a1, ?_, rfl, hS1, hg1, hA1⟩
+    simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind]; rfl
+  all_goals rw [btsW.k_block_table.arm2 (hc1 := by rw [show r1.headD 0 = _ from by first | exact hx | exact hx.1]; decide)] at h
+  all_goals obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [btsW.k_block_tables.none])
+  all_goals obtain ⟨ts, a3, hrun3, hd3, hS3, hg3, hA3⟩ := ih m1 m3 a1 (mo + 1) (ml - 1) rest r3 hS1 hA1 (hq.grow (decBS_mono _) hg1) (PSlR0.grow decMS_mono ⟨hrest.dec, Or.inr hrest.bound⟩ hg1) h3
+  · have h0 : r1.headD 0 = 0 := hx
     rw [btsW.k_block_tables.arm1 (hc1 := h0)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨ts, a3, ?_, by simpa using hd3, by simpa using hb3, hS3, hg1.trans hg3, hA3⟩
-    simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, hrun3]
-    rfl
-  | some t =>
-    obtain ⟨h01, hdt⟩ := hx
-    rw [btsW.k_block_tables.arm2 (hc1 := by rw [h01]; decide)] at h
+    refine ⟨ts, a3, ?_, by cases ts <;> simpa [BtsR] using hd3, hS3, hg1.trans hg3, hA3⟩
+    simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, tblRest, hrun3]
+    cases ts <;> rfl
+  · obtain ⟨h01, hdt⟩ := hx
+    rcases ts with _ | ts
+    · have hz : r3.headD 0 = 0 := hd3
+      rw [btsW.k_block_tables.arm2 (hc1 := by rw [h01]; decide) (hc2 := hz)] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      refine ⟨none, a3, ?_, rfl, hS3, hg1.trans hg3, hA3⟩
+      simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, tblRest, hrun3]; rfl
+    obtain ⟨h31, hd3, hb3⟩ := hd3
+    rw [btsW.k_block_tables.arm3 (hc1 := by rw [h01]; decide) (hc2 := by rw [h31]; decide)] at h
     obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h (by simp [btsW.k_sl_cons.none])
     rw [btsW.k_sl_cons.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨hd5, hb5, hS5, hg5⟩ := consW_tbl h4 hS3 hb3 hd3
       (hg3.ext.decTbl hdt)
-    refine ⟨t :: ts, a3, ?_, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega, hS5,
+    refine ⟨some (t :: ts), a3, ?_, ⟨rfl, by simpa using hd5, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS5,
       hg1.trans (hg3.trans hg5), hA3.consW h4⟩
-    simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, hrun3]
+    simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, tblRest, hrun3]
     rfl
 
 end L.Ind

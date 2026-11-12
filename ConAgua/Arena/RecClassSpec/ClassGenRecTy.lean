@@ -86,7 +86,7 @@ l_model classGenRecTyTail_spec (p : Prog) (h : GtProg p)
   specs [ftdsF_spec p h.ad n, slAppend_specW p h.alloc h.copy h.app n,
     slSnoc_specW p h.alloc h.copy h.snoc n,
     rec2MotVar_specF p h.toMtProg h.fvf h.fvp h.ifv h.sv h.ms h.mv n,
-    mknF_spec p h.ad n, closeTelescope_spec p h.db h.ff h.fp h.ifa h.mkf h.ct h.ab n]
+    mknF_spec p h.ad n, closeTelescope_spec p h.ctf n]
   grind [arena_grind]
 
 l_model classGenRecTy_spec (p : Prog) (h : GtProg p)
@@ -156,7 +156,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   subst hmvd
   rw [grtW.k_class_gen_mot_var.arm1]
   have hg14 := hg13.trans hg4
-  refine RSim.lstep (K := grtW.k_sl_snoc_2 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := grtW.k_sl_snoc_2 (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.iw.iwSize hS4.iw.ctl (Nat.le_trans hfb hg14.iw) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
@@ -164,7 +164,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   rw [grtW.k_sl_snoc_2.arm1]
   rw [hr5] at ⊢
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := grtW.k_mk_app_n_f n (r3.headD 0) (r3.tail.headD 0)) rfl
+  refine RSim.bind (K := grtW.k_mk_app_n_f (r3.headD 0) (r3.tail.headD 0)) rfl
     (RSim.withF ((mknF_ok vis fe _ _ _ hmvH (ifs ++ [decI t])).sim ⟨hS5, hd5⟩) (fun _ hb => mknF_afr hb)) ?_
   rintro ⟨r6, m6⟩ body a6 - ⟨⟨hS6, hg6, hbH, hbd⟩, hf6⟩
   dsimp only at hS6 hg6 hbH hbd
@@ -176,7 +176,7 @@ theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G
   refine RSim.bind (K := grtW.k_close_telescope) rfl (Q1 := fun b a' x => StageR vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
     decW0E b.2 b.1 x ∧ AbsOK b.2) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
-    obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok n (fun _ => none) fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
+    obtain ⟨x, a', hrun, hS', hg, hx, hA7⟩ := closeW_ok (fun _ => none) fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
       (hS6.lt64 (Nat.le_trans hb3 hg36.iw)) (Nat.le_trans hb3 hg36.iw) (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)
       (hf6 hA5)
     refine ⟨x, a', ?_, hS', hg, hx, hA7⟩

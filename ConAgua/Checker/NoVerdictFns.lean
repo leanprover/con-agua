@@ -92,7 +92,7 @@ def nvFns : List L.FnName :=
    "eq_stored", "er_copy", "er_copy_er", "er_from_iw", "er_from_iw_go", "er_put5", "er_sl_at",
    "er_sl_eq", "er_slice_eq", "er_to_iw", "erase_each", "erase_fvar_tys", "erec_alloc", "erec_ci",
    "erec_push", "erec_put", "esc_one", "esc_sur", "esp_find", "esp_put", "eta_ctor_shape",
-   "eta_fab_args", "eta_projs", "eta_rescue_ok", "expr_drop_vars", "expr_drop_vars_list",
+   "eta_fab_args", "eta_projs", "eta_rescue_table", "expr_drop_vars", "expr_drop_vars_list",
    "expr_fresh", "expr_get", "expr_get_d", "expr_node", "expr_put", "expr_view_ok", "fab_scope_ok",
    "field_doms_resolve", "find_pinned", "find_pinned_cv", "find_proj", "find_rule", "find_table",
    "fire_levels_at", "fl_clear", "fl_find", "fl_go", "fl_node", "fl_put", "fld_alloc", "fld_put",

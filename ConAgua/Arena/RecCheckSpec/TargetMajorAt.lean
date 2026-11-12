@@ -77,10 +77,10 @@ theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = 
         trivialTriple (invoke p (exec p n) "target_major_default" []) (fun s => s = s₀)] <;>
       finish [KeepPost, IWGrow.refl]
 
-/-- **`abstract_prefix` refines `abstractPrefix`** (through the `abstract1_fast` stub). -/
+/-- **`abstract_prefix` refines `abstractPrefix`** (one `ar_entry` pass). -/
 @[refines ConRon.Arena.abstractPrefix]
 theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = some abstractPrefix)
-    (hab : AbF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (hab : ArF p) (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (k c e : Word) (hS : StageR vis fe s₀.mem a₀) (he : H e)
     (hb : c.toNat + k.toNat < 2 ^ 64) (hA : AbsOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix" [k, c, e]
@@ -91,16 +91,16 @@ theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = som
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (abstractPrefix_spec p hp hab n s₀ k c e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2, hA'⟩ := absPrefW_ok dn vis fe n _ _ a₀ k c e r hm hS he hb hA
+  obtain ⟨x, a', hrun, hS', hg, h1, h2, hA'⟩ := absPrefW_ok dn vis fe _ _ a₀ k c e r hm hS he hb hA
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2, hA'⟩
 
-/-- **`abstract_prefix_list` refines `abstractPrefixList`** (through the `abstract1_fast` stub). -/
+/-- **`abstract_prefix_list` refines `abstractPrefixList`** (one `ar_entry` pass per element). -/
 @[refines ConRon.Arena.abstractPrefixList]
 theorem abstractPrefixList_refines (p : Prog) (hap : p.lookup "abstract_prefix" = some abstractPrefix)
     (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hsc : p.lookup "sl_cons" = some slCons)
-    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : AbF p) (n : Nat) (s₀ : St)
+    (hp : p.lookup "abstract_prefix_list" = some abstractPrefixList) (hab : ArF p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (rP dso dsl : Word)
     (ds : List EIdx) (hS : StageR vis fe s₀.mem a₀) (hds : decHL s₀.mem dso.toNat dsl.toNat = some ds)
     (hb : dso.toNat + dsl.toNat < 2 ^ 64) (hbt : dso.toNat + dsl.toNat ≤ iwTop s₀.mem)

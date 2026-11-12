@@ -104,59 +104,8 @@ theorem viewR_lam {r : List Word} {v : ENodeView} (hr : L.Ind.ViewR r v) (h5 : r
     | (obtain ⟨-, h1, h3, h4, h6⟩ := hr; rw [L.getD_one] at h1 h3; rw [L.getD_two] at h4 h6
        exact ⟨by rw [h3, h6], h1, h4⟩)
 
-/-- The twin's arm match of `quickDefEq` (after the tag tests). -/
-def quickPairT (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
-    AM (Option Bool) := do
-  match ← view a, ← view b with
-  | .sort u, .sort v => do
-    let ok ← liftFueled "level comparison" (← lvlEq? u v)
-    pure (some ok)
-  | .lit l₁, .lit l₂ => pure (some (l₁ == l₂))
-  | .forallE ty₁ body₁, .forallE ty₂ body₂ => do
-    let ok ← defeqBinders r depth ty₁ body₁ ty₂ body₂
-    pure (some ok)
-  | .lam ty₁ body₁, .lam ty₂ body₂ => do
-    let ok ← defeqLams mode r lamsFuel depth ty₁ body₁ ty₂ body₂
-    pure (some ok)
-  | _, _ => pure none
-
-theorem quickDefEq_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) :
-    quickDefEq mode r depth a b =
-      if a == b then pure (some true)
-      else if a.tag != b.tag then pure none
-      else if a.tag == ETag.sort || a.tag == ETag.lit || a.tag == ETag.forallE ||
-          a.tag == ETag.lam then quickPairT mode r depth a b
-      else pure none := by rfl
-
 section qp
 variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : EIdx) (s : AState)
-
-theorem quickPairT_sort (u v : LIdx) (ha : s.store.view a = some (.sort u))
-    (hb : s.store.view b = some (.sort v)) :
-    (quickPairT mode r depth a b).run s = (do
-      let o ← lvlEq? u v
-      let ok ← liftFueled "level comparison" o
-      pure (some ok) : AM (Option Bool)).run s := by
-  simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
-
-theorem quickPairT_lit (l₁ l₂ : ConLeche.Literal) (ha : s.store.view a = some (.lit l₁))
-    (hb : s.store.view b = some (.lit l₂)) :
-    (quickPairT mode r depth a b).run s = .ok (some (l₁ == l₂), s) := by
-  simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]; rfl
-
-theorem quickPairT_forall (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.forallE t₁ c₁))
-    (hb : s.store.view b = some (.forallE t₂ c₂)) :
-    (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqBinders r depth t₁ c₁ t₂ c₂
-      pure (some ok) : AM (Option Bool)).run s := by
-  simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
-
-theorem quickPairT_lam (t₁ c₁ t₂ c₂ : EIdx) (ha : s.store.view a = some (.lam t₁ c₁))
-    (hb : s.store.view b = some (.lam t₂ c₂)) :
-    (quickPairT mode r depth a b).run s = (do
-      let ok ← defeqLams mode r lamsFuel depth t₁ c₁ t₂ c₂
-      pure (some ok) : AM (Option Bool)).run s := by
-  simp only [quickPairT, StateT.run_bind, view_run _ _ _ ha, view_run _ _ _ hb, except_ok_bind]
 
 end qp
 
@@ -193,53 +142,6 @@ theorem decO_ne_zero {w : Word} (h : w ≠ 0) : decO w = some ((w - 1) != 0) := 
       have := congrArg (· + 1) h'; simpa using this)
     simp [this]
 
-/-- **`quick_sort` refines `quickDefEq`'s sort arm, both outcomes**: its one error is its own
-decline, `lvl_eq_c`'s `0` (out of level fuel), as the twin's `liftFueled "level comparison"`. -/
-theorem qs_ref (p : Prog) (hp : QuickProg p) (hsd : StoreDenotes) (n : Nat) (s₀ : St)
-    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb : Word) (mode : ConLeche.CheckMode) (r : CoreFnsA) (depth : Nat) (a b : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (h2a : tagW a = 2) (h2b : tagW b = 2) :
-    RefE True (qsE p (n + 1) s₀.mem a b) (quickPairT mode r depth (decE a) (decE b)) a₀
-      (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
-  simp only [qsE]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
-  subst e₁; dsimp only [qsE.k_e_view]
-  obtain ⟨rfl, hwa⟩ := viewR_sort hvra (hta.trans h2a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
-  subst e₂; dsimp only [qsE.k_e_view_2]
-  obtain ⟨rfl, hwb⟩ := viewR_sort hvrb (htb.trans h2b)
-  refine RefE.of_run_eq (quickPairT_sort mode r depth _ _ a₀ _ _ hva hvb) ?_
-  obtain ⟨lu, hdu⟩ := hsd.sort dn s₀.mem a₀ vis fe M eb hS _ _ hva
-  obtain ⟨lv, hdv⟩ := hsd.sort dn s₀.mem a₀ vis fe M eb hS _ _ hvb
-  cases n with
-  | zero => rw [callW_zero, liftE_none, qsE.k_lvl_eq_c.none]; exact RefE.of_cls0 (by simp)
-  | succ n₁ =>
-  cases n₁ with
-  | zero =>
-    exact RefE.onlySim (Q := fun _ _ => False) (fun _ => qsE.k_lvl_eq_c.none ..)
-      (fun _ _ c3 => lvlEqC_one p hp.lv _ _ _ _ _ c3) fun _ _ h => h.elim
-  | succ n₂ =>
-  refine RefE.bind_callW (fun _ => rfl) (lvlEqC_refines p hp.lv n₂ s₀ a₀ dn vis fe M eb hS _ _ hwa hwb lu lv
-    hdu hdv) fun rz m₃ _ e₃ => RefE.after_core (w := id) e₃ fun M₃ hS₃ _ => ?_
-  dsimp only [qsE.k_lvl_eq_c]
-  by_cases hz : rz.headD 0 = 0
-  · -- the decline: `lvl_eq_c` ran out of fuel, the twin's `liftFueled` fails
-    rw [ite_eq_left hz, show decO (rz.headD 0) = none by unfold decO; rw [ite_eq_left hz]]
-    exact fun _ => ErrClaim.bind_left (ErrClaim.fail _ _ rfl)
-  rw [ite_eq_right hz, decO_ne_zero hz]
-  have h3 := e₃.resOk
-  unfold ResH HW at h3
-  have hres : HW (rz.headD 0 - 1) := by
-    unfold HW
-    generalize rz.headD 0 = z at h3 hz ⊢
-    have hz' : z.toNat ≠ 0 := fun h' => hz (UInt64.toNat_inj.mp (by simpa using h'))
-    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_one]; omega)),
-      UInt64.toNat_one]
-    omega
-  exact RefE.ret rfl (CorePost.ret hS₃ rfl hres)
-
 /-! ## `quick_forall`, `quick_lam` -/
 
 theorem peelFuel_lt : peelFuel < 2 ^ 62 := by unfold peelFuel; decide
@@ -254,36 +156,6 @@ l_model qfE_spec (p : Prog) (hf : p.lookup "quick_forall" = some quickForallL)
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`quick_forall` refines `quickDefEq`'s `∀` arm, both outcomes**: the errors are
-`defeq_binders`'. -/
-theorem qf_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (n : Nat)
-    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h6a : tagW a = 6) (h6b : tagW b = 6) (hd : d.toNat < 2 ^ 63) :
-    RefE (KnotNvG p n) (qfE p (n + 1) s₀.mem mode vis d a b)
-      (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
-      (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
-  have hS := hs.rel
-  simp only [qfE]
-  cases n with
-  | zero => rw [callW_zero, liftE_none, qfE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  | succ k =>
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
-  subst e₁; dsimp only [qfE.k_e_view]
-  obtain ⟨rfl, hwa1, hwa2⟩ := viewR_forall hvra (hta.trans h6a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
-  subst e₂; dsimp only [qfE.k_e_view_2]
-  obtain ⟨rfl, hwb1, hwb2⟩ := viewR_forall hvrb (htb.trans h6b)
-  refine RefE.of_run_eq (quickPairT_forall _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
-  have hpf := peelFuel_lt
-  have H := db_ref p hp.lams.peel hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
-    vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 (by omega)
-  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
-    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res]; rfl, hP.valid⟩) H
-
 /-- **`quick_lam`'s model, both outcomes** (generated; `e_view` lifted, `defeq_lams` by its unified
 model). -/
 l_model qlE_spec (p : Prog) (hf : p.lookup "quick_lam" = some quickLamL)
@@ -293,34 +165,6 @@ l_model qlE_spec (p : Prog) (hf : p.lookup "quick_lam" = some quickLamL)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-/-- **`quick_lam` refines `quickDefEq`'s `λ` arm, both outcomes**: the errors are `defeq_lams`'. -/
-theorem ql_ref (p : Prog) (hp : QuickProg p) (hi : Inst1OK p) (n : Nat)
-    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode)
-    (h5a : tagW a = 5) (h5b : tagW b = 5) (hd : d.toNat < 2 ^ 63) :
-    RefE (KnotNvG p n) (qlE p (n + 1) s₀.mem mode vis d a b)
-      (quickPairT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a) (decE b)) a₀
-      (CorePost (fun r => some (decBool r)) dn s₀.mem vis fe M eb ResH) := by
-  have hS := hs.rel
-  simp only [qlE]
-  cases n with
-  | zero => rw [callW_zero, liftE_none, qlE.k_e_view.none]; exact RefE.of_cls0 (by simp)
-  | succ k =>
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c1 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c1) fun ra m₁ ⟨e₁, va, hva, hvra, hta⟩ => ?_
-  subst e₁; dsimp only [qlE.k_e_view]
-  obtain ⟨rfl, hwa1, hwa2⟩ := viewR_lam hvra (hta.trans h5a)
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ c2 => eView_callW_view (a := a₀) hp.lams.peel.eview
-    hS.arena.base c2) fun rb m₂ ⟨e₂, vb, hvb, hvrb, htb⟩ => ?_
-  subst e₂; dsimp only [qlE.k_e_view_2]
-  obtain ⟨rfl, hwb1, hwb2⟩ := viewR_lam hvrb (htb.trans h5b)
-  refine RefE.of_run_eq (quickPairT_lam _ _ _ _ _ a₀ _ _ _ _ hva hvb) ?_
-  have H := defeqLams_ref p hp.lams hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn
-    vis fe M eb mode d _ _ _ _ hs hwa1 hwa2 hwb1 hwb2 hd
-  exact RefE.tailMap_pure (fun _ => rfl) (fun _ => rfl) (fun hG => hG.mono (by omega))
-    (fun _ _ _ hP => ⟨hP.after, by rw [hP.res], hP.valid⟩) H
 
 /-! ## `quick_defeq`: the dispatch -/
 
@@ -391,76 +235,7 @@ theorem qd_ref (p : Prog) (hp : QuickProg p) (hil : InstListOK p) (hi : Inst1OK 
     RefE (KnotNvG p n) (qdE p (n + 1) s₀.mem mode vis d x y)
       (quickDefEq (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE x) (decE y)) a₀
       (CorePost decOB dn s₀.mem vis fe M eb ResW) := by
-  have hS := hs.rel
-  rw [quickDefEq_eq]
-  simp only [qdE]
-  by_cases he : x = y
-  · have hb : (decE x == decE y) = true := by rw [decE_beq_eq _ _ hx hy]; simp [he]
-    rw [ite_eq_left he]
-    simp only [hb, ↓reduceIte]
-    exact RefE.ret rfl (CorePost.ret hS rfl ⟨hw1, hw1⟩)
-  rw [ite_eq_right he]
-  have hb : (decE x == decE y) = false := by rw [decE_beq_eq _ _ hx hy]; simp [he]
-  simp only [hb, Bool.false_eq_true, ↓reduceIte, tag_bne x y hx hy, decide_eq_true_eq]
-  by_cases hg : tagW x ≠ tagW y
-  · rw [ite_eq_left hg, ite_eq_left hg]
-    exact RefE.ret rfl (CorePost.ret hS rfl ⟨hw0, hw0⟩)
-  have hg' : tagW x = tagW y := Classical.byContradiction hg
-  rw [ite_eq_right hg, ite_eq_right hg]
-  simp only [tag_beq_w x hx 2 (by decide) ETag.sort rfl 2 rfl,
-    tag_beq_w x hx 8 (by decide) ETag.lit rfl 8 rfl, tag_beq_w x hx 6 (by decide) ETag.forallE rfl 6 rfl,
-    tag_beq_w x hx 5 (by decide) ETag.lam rfl 5 rfl, Bool.or_eq_true, decide_eq_true_eq]
-  by_cases h2 : tagW x = 2
-  · rw [ite_eq_left h2]
-    simp only [h2, true_or, ↓reduceIte]
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
-    exact qd_arm (fun _ => trivial)
-      (qs_ref p hp hsd k s₀ a₀ dn vis fe M eb _ _ _ x y hS h2 (hg' ▸ h2))
-  rw [ite_eq_right h2]
-  by_cases h8 : tagW x = 8
-  · rw [ite_eq_left h8]
-    simp only [h8, true_or, or_true, ↓reduceIte]
-    rcases c : callW p n "lit_eq" [x, y] s₀.mem with _ | ⟨r, m₁⟩
-    · rw [liftE_none]; exact RefE.of_cls0 (by simp)
-    rw [liftE_some]
-    obtain ⟨k, rfl⟩ := callW_succ c
-    obtain ⟨t, ht, htm, -, hlw⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-      (litEq_spec p hp.le hp.lq k ⟨s₀.mem, Locals.init []⟩ x y) c
-    obtain ⟨vx, vy⟩ := litEqW_views hlw
-    obtain ⟨l₁, hl₁⟩ := view_lit s₀.mem a₀ hS.arena.base x hx vx h8
-    obtain ⟨l₂, hl₂⟩ := view_lit s₀.mem a₀ hS.arena.base y hy vy (hg' ▸ h8)
-    obtain ⟨t', ht', -, -, hdec, hrh⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
-      (litEq_refines p hp.le hp.lq k ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base x y hx hy h8 (hg' ▸ h8)
-        l₁ l₂ hl₁ hl₂) c
-    have hm₁ : m₁ = s₀.mem := by rw [← ht, htm]
-    rw [hm₁]
-    exact RefE.ret (quickPairT_lit _ _ _ _ _ a₀ _ _ hl₁ hl₂)
-      (CorePost.ret hS (by rw [decOB, ite_eq_right (show ([1, r.headD 0] : List Word).headD 0 ≠ 0 by simp)]; simp only [List.tail_cons, List.headD_cons]; rw [← hdec]; rfl) ⟨hw1, hrh⟩)
-  rw [ite_eq_right h8]
-  by_cases h6 : tagW x = 6
-  · rw [ite_eq_left h6]
-    simp only [h6, true_or, or_true, ↓reduceIte]
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
-    exact qd_arm (fun g => g.mono (by omega))
-      (qf_ref p hp hil k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
-        eb mode d x y hs h6 (hg' ▸ h6) hd)
-  rw [ite_eq_right h6]
-  by_cases h5 : tagW x = 5
-  · rw [ite_eq_left h5]
-    simp only [h5, or_true, ↓reduceIte]
-    cases n with
-    | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
-    | succ k =>
-    exact qd_arm (fun g => g.mono (by omega))
-      (ql_ref p hp hi k (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
-        eb mode d x y hs h5 (hg' ▸ h5) hd)
-  rw [ite_eq_right h5]
-  simp only [h2, h8, h6, h5, or_self, ↓reduceIte]
-  exact RefE.ret rfl (CorePost.ret hS rfl ⟨hw0, hw0⟩)
+  sorry
 
 /-- **`quick_defeq` refines `quickDefEq`** at the knot: closes `QuickDefeqSpec` one level up
 (`qd_ref`'s ok half). -/

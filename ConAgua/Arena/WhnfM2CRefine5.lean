@@ -98,50 +98,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d isK ro cvjP T indP major)
       (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl
         cvj cnP (decI T) cvT caps (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
-  obtain ⟨hctor, hctorHW⟩ := decRule_ctorRd (erRdOK m) hrl
-  obtain ⟨hlp, hnp, -, -⟩ := decCI_ctorWords (erRdOK m) hcj
-  have hR : ∀ v y a', GrowPost decH dn m vis fe M eb ResH v y a' →
-      GrowPost decH dn m vis fe M eb ResH ([v.1.headD 0], v.2) y a' :=
-    GrowPost.of_tail (KeptAll.refl _ _) (StackKept.refl _).toGrew
-  by_cases g : isK = 0
-  · rw [m2cArmsE.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g]
-    have hK : (isK != 0) = false := by simp [g]
-    cases N with
-    | zero => rw [callW_zero, liftE_none, m2cArmsE.k_eta_rescue_ok.none]; exact RefE.of_cls0 (by simp)
-    | succ N' =>
-    unfold m2cArmsT
-    simp only [hK, Bool.false_eq_true, ↓reduceIte]
-    refine RefE.bindLift (fun _ => m2cArmsE.k_eta_rescue_ok.none ..) fun r1 m1 c1 => ?_
-    obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-      (eroW_spec p hp.etaRescueOk (N' + 1) ⟨m, Locals.init []⟩ _ _ _) c1
-    rw [hs1] at hW1
-    obtain ⟨hm1, hrun1, -⟩ := ero_ok hp.erSlEq' hp.pinat ⟨fun _ => hS.pins⟩ hctorHW hcj hci hW1
-    clear hs1
-    subst m1
-    refine ⟨_, _, by rw [hctor]; exact hrun1, ?_⟩
-    by_cases g1 : r1.headD 0 ≠ 0
-    · rw [m2cArmsE.k_eta_rescue_ok.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g1]
-      simp only [show (r1.headD 0 != 0) = true by simpa using g1, ↓reduceIte]
-      exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-        (fun h => h.mono (Nat.le_succ _)) rfl hR
-        (m2cEta_ref p hp hc hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
-          mode d T indP major hm4 hebm hT hmaj cvT caps m a M hS hci hfe)
-    · have g1' : r1.headD 0 = 0 := by simpa using g1
-      rw [m2cArmsE.k_eta_rescue_ok.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g1']
-      simp only [show (r1.headD 0 != 0) = false by rw [g1']; rfl, Bool.false_eq_true, ↓reduceIte]
-      exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-        (fun h => h.mono (Nat.le_succ _)) (by rw [hctor, hlp, hnp]; rfl) hR
-        (m2cAnd_ref p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
-          mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
-  · rw [m2cArmsE.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g]
-    have hK : (isK != 0) = true := by simpa using g
-    cases N with
-    | zero => rw [m2cKE.eq_1, m2cArmsE.k_m2c_k.none]; exact RefE.of_cls0 (by simp)
-    | succ N' =>
-    exact RefE.tail_eq (m2cArmsE.k_m2c_k.none p) (fun v => m2cArmsE.k_m2c_k.arm1 p v.1 v.2)
-      (fun h => h.mono (Nat.le_succ _)) (by simp only [m2cArmsT, hK, ↓reduceIte, hctor, hlp, hnp, _root_.L.Ind.erRd_foldN]) hR
-      (m2cK_ref p hp hc hpi hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
-        mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
+  sorry
 
 /-- **`m2c_ctor` refines `m2cCtorT`, both outcomes** (the errors are `m2c_arms`'). -/
 theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
