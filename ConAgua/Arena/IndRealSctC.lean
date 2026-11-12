@@ -2,7 +2,7 @@ module
 
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.StructParts
-import ConAgua.Arena.IndDeclConstsTable
+public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
