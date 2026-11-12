@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
+public import ConAgua.Arena.IndPartsSpec.Bf
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 public import ConAgua.Arena.IndPartsSpec.PlW
 import ConAgua.Arena.IndRealPartsC1
@@ -176,7 +177,7 @@ theorem floW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cto + 1) (ctl - 1) ts' r2 h2 hS1 (hts'.grow (fun _ => OMono.decCVp _) hg1)
       (by rw [L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
-    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]
+    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]; rfl
 
 /-- A constructor record's parameter-count word, against the twin's. -/
 theorem partsCtorNP {m : Mem} {cso : Word} {pc : Nat} {cv0 : IConstantVal} {nP0 nF0 : Nat}
@@ -189,6 +190,7 @@ theorem partsCtorNP {m : Mem} {cso : Word} {pc : Nat} {cv0 : IConstantVal} {nP0 
   obtain ⟨cvp, hcvp, cv, hcv, nP1, hnP, nF, hnF, e1, e2, e3⟩ := hd0
   subst e1 e2 e3
   have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
     have := partsIwLt hnP; rw [UInt64.toNat_add, hpw]; simp; omega
   obtain ⟨hpw1, hnPb, -⟩ := partsIwRd hnP hp1
@@ -227,7 +229,7 @@ theorem cpoW_ok {nP : Word} (n : Nat) :
     rw [cpoW.k_ctors_params_ok.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     obtain ⟨rfl, hr2⟩ := ih m m2 (cso + 1) (csl - 1) cs' r2 h2 hcs'
-    exact ⟨rfl, by rw [hr2]; simp only [List.all_cons, hnpt, Bool.true_and]⟩
+    exact ⟨rfl, by rw [hr2]; simp only [List.all_cons, hnpt, Bool.true_and]; rfl⟩
 
 /-- **`ctors_lps_ok`**: every constructor at `lps`. -/
 theorem cloW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
@@ -269,7 +271,7 @@ theorem cloW_ok {vis : Word} {fe : IFEnv} {a : AState} {lo ll : Word}
     obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cso + 1) (csl - 1) cs' r2 h2 hS1 (hcs'.grow decSC_mono hg1)
       (by rw [_root_.L.Ind.decHL_grow hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.iw)
     refine ⟨hS2, hg1.trans hg2, ?_⟩
-    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]
+    rw [hr2]; simp only [List.all_cons, heq, Bool.true_and]; rfl
 
 theorem partsW01 {r : List Word} {b : Bool} (h : r = [if b then 1 else 0]) : (r.headD 0 = 0) ↔ b = false := by
   subst h; cases b <;> simp
@@ -1317,6 +1319,7 @@ theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine Sim.bindK rfl (fun _ _ => rfl) hmc.withRun.withEq ?_
   rintro r2 x2 m2 a2 ⟨⟨⟨hR2, hS2, hg2⟩, hrun2⟩, he2⟩
   have hg02 := hg1.trans hg2
+  simp only [rbaW.k_block_member_counts]
   cases x2 with
   | error ce =>
     obtain ⟨hc2, s2, rfl⟩ := hR2
@@ -1347,7 +1350,7 @@ theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     exact Sim.ret ⟨rbR_err rfl rc.2.2.2.1, hS4, hg04⟩
   | true =>
   rw [hf] at hr4; subst hr4
-  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
+  simp only [ite_true, List.headD_cons, show (1 : Word) ≠ 0 by decide, ite_false, Bool.not_true, Bool.false_eq_true]
   -- the constructors' parameter counts
   intro r m' e
   rcases h5 : cpoW (n + 3) m4 nPd cso csl with _ | ⟨r5, m5⟩ <;> rw [h5] at e
@@ -1362,7 +1365,7 @@ theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     exact Sim.ret ⟨rbR_err rfl rc.2.2.2.2.1, hS4, hg04⟩
   | true =>
   rw [hp] at hr5; subst hr5
-  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
+  simp only [ite_true, List.headD_cons, show (1 : Word) ≠ 0 by decide, ite_false, Bool.not_true, Bool.false_eq_true]
   -- the constructors' universe parameters
   intro r m' e
   rcases h6 : cloW (n + 3) m5 cso csl (r3.headD 0) (r3.tail.headD 0) with _ | ⟨r6, m6⟩ <;> rw [h6] at e
@@ -1389,7 +1392,7 @@ theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       exact Sim.ret ⟨rbR_err rfl rc.2.2.2.2.2.2.1, hS6, hg06⟩
   | true =>
   rw [hq] at hr6; subst hr6
-  simp only [ite_true, List.headD_cons, one_ne_zero, ite_false, Bool.not_true, Bool.false_eq_true]
+  simp only [ite_true, List.headD_cons, show (1 : Word) ≠ 0 by decide, ite_false, Bool.not_true, Bool.false_eq_true]
   have hil : r2.tail.tail.headD 0 = ctl := by
     apply UInt64.toNat_inj.mp
     have e1 := mapM_opt_length _ _ _ (show decNL (truncM m2) _ _ = some nIdxs from hd2)
