@@ -2,7 +2,7 @@ module
 
 import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.StructParts
-import ConAgua.Arena.IndDeclConstsTable
+public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
 import ConAgua.Arena.IndSumSpec.CheckSumCtor
@@ -508,21 +508,6 @@ theorem tblRef_any {vis : Word} {fe : IFEnv} (p : Prog) (hP : TblProg p) (hp : A
   | 0 => rw [tblE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
   | k + 1 => exact tbl_ref p hP hp k m a t tb hS ht hnP hA hok hks
 
-/-- The level parameters' names of a shape that denotes. -/
-theorem lps_names_of_dShape {st : EStore} {bs : BlockShape} {pP : ConLeche.BlockShape}
-    (h : ConRon.Bridge.Inductives.dShape st bs = some pP) :
-    ∃ ks, bs.lps.mapM (denoteN st.lss.ls.ns) = some ks := by
-  simp only [ConRon.Bridge.Inductives.dShape, bind, Option.bind_eq_some_iff] at h
-  obtain ⟨ms, hms, -⟩ := h
-  unfold BlockShape.lps
-  match hm : bs.members, hms with
-  | [], _ => exact ⟨[], rfl⟩
-  | m0 :: _, hms =>
-    obtain ⟨y, -, -, hy, -⟩ := ConRon.Bridge.Inductives.mapM_option_cons_inv hms
-    simp only [ConRon.Bridge.Inductives.dMember, bind, Option.bind_eq_some_iff] at hy
-    obtain ⟨c, hc, -⟩ := hy
-    exact denoteCV_lps hc
-
 /-- A structure-like member's readings: the former's name and the constructor's type denote. -/
 theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : IConstantVal} {nF : Nat}
     {y : ConLeche.MemberShape}
@@ -534,11 +519,6 @@ theorem member_facts {st : EStore} {cvT dcl : IConstantVal} {nI : Nat} {cA : ICo
   simp only [ConRon.Bridge.Inductives.dCtor, Option.map_eq_some_iff] at hy1
   obtain ⟨c', hc', -⟩ := hy1
   exact ⟨⟨_, ConRon.Bridge.denoteCV_name hc⟩, ⟨_, ConRon.Bridge.denoteCV_type hc'⟩⟩
-
-/-- What the tables' checks need of each table: its level parameters' names read back and its
-parameter count bounded. -/
-def TblsOK (st : EStore) (Q : List IProjTable) : Prop :=
-  ∀ t ∈ Q, (∃ ks, t.levelParams.mapM (denoteN st.lss.ls.ns) = some ks) ∧ t.numParams + 1 < 2 ^ 64
 
 /-- **`check_block_tables` refines `checkBlockTables`, both outcomes** (each table by `tbl_ref`),
 over the `IW` slice of table records; the stage kept, the twin's run a `PStep`. -/

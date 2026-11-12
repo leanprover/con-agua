@@ -447,6 +447,52 @@ theorem btsW_ok {p : Prog} (_hP : TablesProg p) (pp : Word) (bs : BlockShape) (v
     simp only [blockTables_cons, StateT.run_bind, hrun1, except_ok_bind, tblRest, hrun3]
     rfl
 
+/-- What the tables' checks need of each table: its level parameters' names read back and its
+parameter count bounded. -/
+def TblsOK (st : EStore) (Q : List IProjTable) : Prop :=
+  ∀ t ∈ Q, (∃ ks, t.levelParams.mapM (denoteN st.lss.ls.ns) = some ks) ∧ t.numParams + 1 < 2 ^ 64
+
+/-- **The tables `blockTables` builds** carry the block's level parameters and parameter count. -/
+theorem blockTables_tbls (bs : BlockShape) : ∀ (mss : List MemberShape) (a a' : AState)
+    (ts : List IProjTable), (ConRon.Arena.blockTables bs mss).run a = .ok (some ts, a') →
+    ∀ t ∈ ts, t.levelParams = bs.lps ∧ t.numParams = bs.nP
+  | [], a, a', ts, h => by
+    simp only [ConRon.Arena.blockTables] at h
+    cases h; intro t ht; cases ht
+  | ms :: rest, a, a', ts, h => by
+    rw [blockTables_cons, StateT.run_bind] at h
+    rcases h1 : (tblOne bs ms).run a with e | ⟨o, a1⟩
+    · rw [h1] at h; cases h
+    rw [h1, except_ok_bind] at h
+    rcases o with _ | o
+    · cases h
+    simp only [tblRest, StateT.run_bind] at h
+    rcases h2 : (ConRon.Arena.blockTables bs rest).run a1 with e | ⟨r, a2⟩
+    · rw [h2] at h; cases h
+    rw [h2, except_ok_bind] at h
+    rcases r with _ | ts'
+    · cases h
+    have hts : ts = o.toList ++ ts' := by cases h; rfl
+    subst hts
+    have ih := blockTables_tbls bs rest a1 a2 ts' h2
+    intro t ht
+    rcases List.mem_append.mp ht with ht | ht
+    · rcases o with _ | t0
+      · cases ht
+      have ht0 : t = t0 := by simpa using ht
+      subst ht0
+      unfold tblOne at h1
+      split at h1
+      · simp only [StateT.run_bind] at h1
+        rcases h3 : (structProjBodies _ _ _ _).run a with e | ⟨x, a3⟩
+        · rw [h3] at h1; cases h1
+        rw [h3, except_ok_bind] at h1
+        rcases x with _ | bodies
+        · cases h1
+        cases h1; exact ⟨rfl, rfl⟩
+      · cases h1
+    · exact ih t ht
+
 end L.Ind
 
 end
