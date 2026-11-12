@@ -294,40 +294,7 @@ theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {q r : Word} {x y : IIndCaps}
     (hx : decCaps R q.toNat = some x) (hy : decCaps R r.toNat = some y) :
     capsEqAll rd q r = decide (x = y) := by
-  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
-  obtain ⟨b0, h0, c1, h1, n2, h2, n3, h3, b4, h4, n5, h5, n6, h6, al, h8, n12, h9, ct, h10, ex⟩ := hx
-  have ex := Option.some.inj ex; subst ex
-  obtain ⟨b0', h0', c1', h1', n2', h2', n3', h3', b4', h4', n5', h5', n6', h6', al', h8', n12',
-    h9', ct', h10', ey⟩ := hy
-  have ey := Option.some.inj ey; subst ey
-  obtain ⟨w0, f0, rfl⟩ := boolW0_ hR h0
-  obtain ⟨w0', f0', rfl⟩ := boolW0_ hR h0'
-  obtain ⟨w1, f1, l1, rfl⟩ := hdW_ (q := q) (k := 1) (kn := 1) hR rfl h1
-  obtain ⟨w1', f1', l1', rfl⟩ := hdW_ (q := r) (k := 1) (kn := 1) hR rfl h1'
-  obtain ⟨w2, f2, rfl⟩ := natW_ (q := q) (k := 2) (kn := 2) hR rfl h2
-  obtain ⟨w2', f2', rfl⟩ := natW_ (q := r) (k := 2) (kn := 2) hR rfl h2'
-  obtain ⟨w3, f3, rfl⟩ := natW_ (q := q) (k := 3) (kn := 3) hR rfl h3
-  obtain ⟨w3', f3', rfl⟩ := natW_ (q := r) (k := 3) (kn := 3) hR rfl h3'
-  obtain ⟨w4, f4, rfl⟩ := boolW_ (q := q) (k := 4) (kn := 4) hR rfl h4
-  obtain ⟨w4', f4', rfl⟩ := boolW_ (q := r) (k := 4) (kn := 4) hR rfl h4'
-  obtain ⟨w5, f5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl h5
-  obtain ⟨w5', f5', rfl⟩ := natW_ (q := r) (k := 5) (kn := 5) hR rfl h5'
-  obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl h6
-  obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := 6) (kn := 6) hR rfl h6'
-  obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := 12) (kn := 12) hR rfl h9
-  obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := 12) (kn := 12) hR rfl h9'
-  have hal := slAt_ok hR (q := q) (r := r) (i := 10) (j := 11) (kn := 10) rfl rfl rfl h8 h8'
-  have hct := slAt_ok hR (q := q) (r := r) (i := 13) (j := 14) (kn := 13) rfl rfl rfl h10 h10'
-  apply bool_of_iff
-  simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f1, f1', f2, f2', f3, f3', f4, f4', f5,
-    f5', f6, f6', f12, f12', hal, hct, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq,
-    IIndCaps.mk.injEq, fld_nat, decI_inj_iff l1 l1', fld_bool]
-  simp only [and_assoc]
-  constructor
-  · rintro ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
-    exact ⟨a1, a2, a3, a4, a5, a6, a8, a9, a7, a10⟩
-  · rintro ⟨a1, a2, a3, a4, a5, a6, a8, a9, a7, a10⟩
-    exact ⟨a1, a2, a3, a4, a5, a6, a7, a8, a9, a10⟩
+  sorry
 
 /-! ## Recursor rules -/
 

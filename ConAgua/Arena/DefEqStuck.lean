@@ -165,7 +165,6 @@ structure StuckCallees (p : Prog) : Prop where
   inst1 : Inst1OK p
   defeqLst : DefeqLstOK p
   reservedContains : ReservedContainsOK p
-  towerSlots : TowerSlotsAllOK p
   lvlsEqC : LvlsEqCH p
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : CoreDen

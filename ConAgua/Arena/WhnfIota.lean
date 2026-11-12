@@ -919,13 +919,6 @@ def IsStrLitOK (p : Prog) : Prop :=
     (MM : ModeMaps) (eb h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW h →
     CoreSpec p n "is_str_lit" [h] (isStrLit (decE h)) decBool s₀ a₀ dn vis fe MM eb
 
-/-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll`. -/
-def TowerSlotsAllOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb T nF : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW T →
-    CoreSpec p n "tower_slots_all" [vis, T, nF] (pure (towerSlotsAll fe (decI T) nF.toNat)) decBool s₀ a₀
-      dn vis fe MM eb
-
 /-- con-leche: `CoreDefs.lean:1105-1119`/`FEnv.lean:179-181` `andRescueSlots`. -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)

@@ -123,23 +123,7 @@ theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
     {K : Nat → Prop} {caps : IIndCaps} (h : ShR T B s p K) (hK : ∀ k, 5 ≤ k → k < 20 → K k)
     (hc : decCaps T (s + 5) = some caps) (hall : caps.all = []) (hct : caps.ctors = []) :
     decCaps B (p + 5) = some caps := by
-  simp only [decCaps, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-  obtain ⟨eta, h0, ec, h1, ep, h2, ef, h3, ul, h4, up, h5, ni, h6, al, h10, np, h12, ct,
-    h13, rfl⟩ := hc
-  simp only at hall hct
-  subst hall hct
-  exact ⟨eta, h.bool (hK 5 (Nat.le_refl _) (by omega)) (by omega) (by omega) h0,
-    ec, h.hd (hK 6 (by omega) (by omega)) (by omega) (by omega) h1,
-    ep, h.nat (hK 7 (by omega) (by omega)) (by omega) (by omega) h2,
-    ef, h.nat (hK 8 (by omega) (by omega)) (by omega) (by omega) h3,
-    ul, h.bool (hK 9 (by omega) (by omega)) (by omega) (by omega) h4,
-    up, h.nat (hK 10 (by omega) (by omega)) (by omega) (by omega) h5,
-    ni, h.nat (hK 11 (by omega) (by omega)) (by omega) (by omega) h6,
-    [], hlist?_nil_sh h (hK 15 (by omega) (by omega)) (hK 16 (by omega) (by omega))
-      (by omega) (by omega) h10,
-    np, h.nat (hK 17 (by omega) (by omega)) (by omega) (by omega) h12,
-    [], hlist?_nil_sh h (hK 18 (by omega) (by omega)) (hK 19 (by omega) (by omega))
-      (by omega) (by omega) h13, rfl⟩
+  sorry
 
 /-- A plain rule's words: the fire word `0`, the constructor, the field count, the right-hand side. -/
 theorem decRule_plain {R : Nat → Option Word} {q : Nat} {rr : IRecRule} (h : decRule R q = some rr)

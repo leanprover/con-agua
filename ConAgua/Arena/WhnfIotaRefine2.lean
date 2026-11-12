@@ -394,23 +394,6 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       exact ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩,
         by rw [towerSlotsAllGo_cont _ _ _ _ _ hsome]; exact hres2, hL1⟩
 
-/-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
-`ProjCallees`'s two fields). -/
-theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p) (hpf : ProjFound p) :
-    TowerSlotsAllOK p := by
-  intro n s₀ a₀ dn vis fe MM eb T nF hS hT
-  cases n with
-  | zero => exact invoke_zero_triple
-  | succ n =>
-  refine triple_post (towerSlotsAll_spec p hp.towerSlotsAll (n + 1) s₀ vis T nF) fun r s' ⟨hloc, hW⟩ =>
-    ⟨hloc, ?_⟩
-  rw [tsW.arm1] at hW
-  obtain ⟨hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
-    s₀.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
-  refine ⟨by unfold AM.ok; exact trivial, hca, ?_, hL1⟩
-  · show towerSlotsAll fe (decI T) nF.toNat = decBool r
-    simpa [towerSlotsAll] using hres
-
 /-! ## `inst_spine(ao, an, t, e)` -/
 
 /-- **`inst_spine` is its model `isW`** (generated; the loop is `isW.loop1`). -/

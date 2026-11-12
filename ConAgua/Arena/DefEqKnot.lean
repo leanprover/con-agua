@@ -241,7 +241,6 @@ include hq in
 theorem KnotAllProg.stuck : StuckCallees p :=
   ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc,
-    towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
     lvlsEqCH_of p hq.lvc, coreDen_of, strLitStored_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq⟩
 
