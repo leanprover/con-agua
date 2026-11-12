@@ -543,6 +543,55 @@ def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   return r
 }
 
+/-- `has_loose_bvar_in_go(f, w, d, h)`: does a loose bound variable of index `d ‥< d + w` occur in
+`h`? Read only: no node is built. The twin's fuel `f` (abort at `0`, the children and `bvar_b` at
+`f - 1`), the packed-bound cutoff (`bvarB ≤ d`), then the tag: `bvar`/`fvar`/`sort`/`const`/`lit`
+direct answers, the rest through the `hb` memo keyed by the node and the window's base (`w` is
+fixed for the walk), short-circuiting at the first `true` child. The twin's per-call `memo` is the
+`hb` array (`IndIface`'s per-call-memo convention; `hasLooseBVarBGo`'s and this walk's top calls
+each clear it, and neither runs inside the other). -/
+-- con-ron: ConRon/Arena/Core.lean:2957-3002 ConRon.Arena.hasLooseBVarInGo
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarInGo]
+def hasLooseBVarInGoL : FunDecl :=
+  lfn (f, w, d, h) locals (bb, g, x, y, z, fd, j, dd, r1, r) {
+  if f == 0 { abort };
+  bb := call bvar_b(f - 1, h);
+  if bb <= d { return 0 };
+  (g, x, y, z) := call e_view(h);
+  if g == 0 { return u64(d <= x) & u64(x - d < w) };
+  if g == 1 || g == 2 || g == 3 || g == 8 { return 0 };
+  if d >= 4294967296 { abort };
+  (fd, j, dd) := call hb_find(h, d);
+  if fd != 0 { return HBM.u64[j * 4 + 3] };
+  if g == 4 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d, y) }
+  } else if g == 5 || g == 6 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d + 1, y) }
+  } else if g == 7 {
+    r1 := call has_loose_bvar_in_go(f - 1, w, d, x);
+    if r1 == 1 { r := 1 }
+    else {
+      r1 := call has_loose_bvar_in_go(f - 1, w, d, y);
+      if r1 == 1 { r := 1 } else { r := call has_loose_bvar_in_go(f - 1, w, d + 1, z) }
+    }
+  } else { r := call has_loose_bvar_in_go(f - 1, w, d, z) };
+  r := call has_loose_b_var_b_ins(h, d, r);
+  return r
+}
+
+/-- `has_loose_bvar_in(d, w, e)`: the window query (one memoized DAG walk, the `hb` memo cleared);
+an empty window asks nothing. -/
+-- con-ron: ConRon/Arena/Core.lean:3004-3008 ConRon.Arena.hasLooseBVarIn
+@[no_expose, l_impl ConRon.Arena.hasLooseBVarIn]
+def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
+  if w == 0 { return 0 };
+  u := call hb_clear();
+  r := call has_loose_bvar_in_go(⟪CWF⟫, w, d, e);
+  return r
+}
+
 /-- `struct_used_later(cty, nP, j)`: field `j` is used by a later field (official's `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`). Its own top call (clears `hb`). -/
 -- con-ron: ConRon/Arena/Core.lean:3010-3016 ConRon.Arena.structUsedLater
@@ -660,6 +709,7 @@ def indSumFns : Prog :=
    ("struct_proj_ps", structProjPsL), ("struct_proj_arg_p", structProjArgPL),
    ("has_loose_b_var_b_ins", hasLooseBVarBInsL), ("has_loose_b_var_b_go", hasLooseBVarBGoL),
    ("has_loose_b_var_b_fast", hasLooseBVarBFastL),
+   ("has_loose_bvar_in_go", hasLooseBVarInGoL), ("has_loose_bvar_in", hasLooseBVarInL),
    ("struct_used_later", structUsedLaterL),
    ("struct_proj_bodies_go", structProjBodiesGoL), ("struct_proj_bodies", structProjBodiesL),
    ("mentions_const_go", mentionsConstGoL), ("mentions_const", mentionsConstL)]

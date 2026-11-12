@@ -442,49 +442,102 @@ def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f,
   return (1, u)
 }
 
-/-- `proj_guard_rows_at(cty, nP, idx, fo, fn, j, ro, rn)`: the rows of fields `j, …, idx` read off
-the opened telescope's free variables (the `IW` slice `(fo, fn)`): field `idx`, and every earlier
-field a later one uses (`struct_used_later`), as `(nP + j, its variable's type)`, appended at row
-`rn` of the slice at `ro` (the top raised past each); the row count after. -/
--- con-ron: ConRon/Arena/Core.lean:3066-3077 ConRon.Arena.projGuardRowsAt
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.projGuardRowsAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.projGuardRowsAt`, `ConRon.Arena.projGuardFast`, `ConRon.Arena.projGuardRowsGo` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.projGuardRowsAt]
-def projGuardRowsAtL : FunDecl := lfn (cty, nP, idx, fo, fn, j, ro, rn) locals (used, ty, r) {
-  if idx < j { return rn };
-  if j == idx { used := 1 } else { used := call struct_used_later(cty, nP, j) };
-  if used != 0 && nP + j < fn {
-    ty := call fvar_type_d(IW.u64[fo + nP + j]);
-    if len(SPN.u64) <= ro + 2 * rn + 1 { abort };
-    SPN.u64[ro + 2 * rn] := nP + j;
-    SPN.u64[ro + 2 * rn + 1] := ty;
-    CTL.u64[136] := ro + 2 * rn + 2;
-    r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn + 1);
-    return r
+/-- `proj_guard_row(ro, rn, d, e)`: row `rn` of the slice at `ro` is `(d, e)`, the stack top raised
+past it; the row count after. -/
+-- con-ron: none — L scratch-array plumbing (the twin's rows are an `Array` value)
+@[no_expose] def projGuardRowL : FunDecl := lfn (ro, rn, d, e) locals () {
+  if len(SPN.u64) <= ro + 2 * rn + 1 { abort };
+  SPN.u64[ro + 2 * rn] := d;
+  SPN.u64[ro + 2 * rn + 1] := e;
+  CTL.u64[136] := ro + 2 * rn + 2;
+  return rn + 1
+}
+
+/-- `proj_guard_rows_go(k, d, h, ro, rn)`: the field loop of the official `infer_proj`: `h` the
+constructor telescope with its parameters and every field before the current one opened, the
+current field's variable at depth `d`, `k` fields left before the projected one. At `k = 0` the
+projected field's domain is the last row; otherwise a field the rest of the telescope uses
+(`has_loose_b_var_b_fast(0, body)`) is a row and is opened at a fresh `fvar d dom`
+(`inst_entry`), one it does not use is stepped over. `(1, rn')` the row count after, or
+`(0, 0)` where the telescope binds too few fields. Rows at `ro` on the stack (`proj_guard_row`). -/
+-- con-ron: ConRon/Arena/Core.lean:3019-3043 ConRon.Arena.projGuardRowsGo
+@[no_expose, l_impl ConRon.Arena.projGuardRowsGo]
+def projGuardRowsGoL : FunDecl := lfn (k, d, h, ro, rn) locals (g, x, y, z, u, fv, b2, n2, ok, r) {
+  if ⟦h⟧.tag != 6 { return (0, 0) };
+  (g, x, y, z) := call e_view(h);
+  if k == 0 { n2 := call proj_guard_row(ro, rn, d, x); return (1, n2) };
+  u := call has_loose_b_var_b_fast(0, y);
+  if u != 0 {
+    fv := call intern_fvar(d, x);
+    if 4294967296 <= fv { abort };
+    b2 := call inst_entry(y, fv, 0);
+    n2 := call proj_guard_row(ro, rn, d, x);
+    (ok, r) := call proj_guard_rows_go(k - 1, d + 1, b2, ro, n2);
+    return (ok, r)
   };
-  r := call proj_guard_rows_at(cty, nP, idx, fo, fn, j + 1, ro, rn);
-  return r
+  (ok, r) := call proj_guard_rows_go(k - 1, d + 1, y, ro, rn);
+  return (ok, r)
+}
+
+/-- `proj_guard_fast(k, j, h)`: the projection guard's fast case, on the RAW field telescope (the
+parameters not substituted): `(1, dom)` the projected field's raw domain where no field's type up
+to the projected one, and nothing after it, mentions a field before it (the read-only window
+query `has_loose_bvar_in(0, j, ·)` over the `j` fields passed); `(0, 0)` otherwise, and where the
+telescope binds too few fields. -/
+-- con-ron: ConRon/Arena/Core.lean:3045-3064 ConRon.Arena.projGuardFast
+@[no_expose, l_impl ConRon.Arena.projGuardFast]
+def projGuardFastL : FunDecl := lfn (k, j, h) locals (g, x, y, z, b, ok, r) {
+  if ⟦h⟧.tag != 6 { return (0, 0) };
+  (g, x, y, z) := call e_view(h);
+  if k == 0 {
+    b := call has_loose_bvar_in(0, j, h);
+    if b != 0 { return (0, 0) };
+    return (1, x)
+  };
+  b := call has_loose_bvar_in(0, j, x);
+  if b != 0 { return (0, 0) };
+  (ok, r) := call proj_guard_fast(k - 1, j + 1, y);
+  return (ok, r)
+}
+
+/-- `proj_guard_rows_at(q, i, co, np, r, ro)`: the rows past the parameters' raw opening (the
+substitution `SPN[co ‥ co + np)`, the raw residual `r`), at `ro` on the stack: the fast case
+(`proj_guard_fast`), its one domain substituted (`inst_list` at depth `i`), the row
+`(np + i, ·)`; else the substituted residual stepped (`proj_guard_rows_go`). `(1, rn)` or
+`(0, 0)`. -/
+-- con-ron: ConRon/Arena/Core.lean:3066-3077 ConRon.Arena.projGuardRowsAt
+@[no_expose, l_impl ConRon.Arena.projGuardRowsAt]
+def projGuardRowsAtL : FunDecl := lfn (i, co, np, r, ro) locals (f, dom, d, n1, r2, ok, rn) {
+  (f, dom) := call proj_guard_fast(i, 0, r);
+  if f != 0 {
+    d := call inst_list(dom, co, np, i);
+    if np + i < np { abort };
+    n1 := call proj_guard_row(ro, 0, np + i, d);
+    return (1, n1)
+  };
+  r2 := call inst_list(r, co, np, 0);
+  (ok, rn) := call proj_guard_rows_go(i, np, r2, ro, 0);
+  return (ok, rn)
 }
 
 /-- `proj_guard_rows(vis, q, i, us)`: what a `.proj` use of field `i` of the table record `q` must
 show: `(1, ro, rn)` the rows at `ro` on the stack (left above the top), or `(0, 0, 0)` where the
 stored constructor does not bind what the entry says. The constructor's type at the use's levels
-(`const_ty_at`), opened in one pass (`open_pis_at_fvars_f`). -/
+(`const_ty_at`), its parameters opened with the residual left raw (`opf_go`, the substitution left
+on the stack under the rows), then `proj_guard_rows_at`. -/
 -- con-ron: ConRon/Arena/Core.lean:3079-3102 ConRon.Arena.projGuardRows
--- con-ron: CHANGED since 01ecb31c — below `ConRon.Arena.projGuardRows`, `ConRon.Arena.openPisRawGo` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.projGuardRows` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.projGuardRows]
-def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, ok, fo, fn, b, ro, rn, k) {
+def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, ok, r, ro, rn) {
   np := EREC⦃q + 5⦄;
   (f, c) := call env_find(EREC⦃q + 6⦄, vis);
   if f == 0 { return (0, 0, 0) };
   cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
-  k := np + i + 1;
-  if k <= np { abort };
-  (ok, fo, fn, b) := call open_pis_at_fvars_f(k, cty, 0);
-  if ok == 0 { return (0, 0, 0) };
+  co := CTL.u64[136];
+  (ok, r) := call opf_go(np, cty, 0, co, 0);
+  if ok == 0 { CTL.u64[136] := co; return (0, 0, 0) };
   ro := CTL.u64[136];
-  rn := call proj_guard_rows_at(EREC⦃c + 4⦄, np, i, fo, fn, 0, ro, 0);
+  (ok, rn) := call proj_guard_rows_at(i, co, np, r, ro);
+  if ok == 0 { return (0, 0, 0) };
   return (1, ro, rn)
 }
 

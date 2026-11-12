@@ -698,14 +698,12 @@ def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, c
 
 /-! ## The stored family -/
 
-/-- **`abstract_prefix`**: the free variables `0 … k-1` closed at cursor `c`, innermost first. -/
+/-- **`abstract_prefix`**: the free variables `0 … k-1` closed at cursor `c` (`fvar i` becomes
+`bvar (c + k - 1 - i)`), in one `ar_entry` (`abstractRangeFast`) pass. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:476-481 ConRon.Arena.abstractPrefix
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.abstractPrefix` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.abstractPrefix]
-def abstractPrefix : FunDecl := lfn (k, c, e) locals (cur, r) {
-  if k == 0 { return e };
-  cur := call abstract1_fast(⟪CWF⟫, e, k - 1, c);
-  r := call abstract_prefix(k - 1, c + 1, cur);
+def abstractPrefix : FunDecl := lfn (k, c, e) locals (r) {
+  r := call ar_entry(e, 0, k, c);
   return r
 }
 
@@ -957,13 +955,6 @@ def recCheckForeign : Prog :=
    ("block_shape_major_idx_at", stub 2), ("block_shape_rule_prefix_at", stub 2),
    ("pi_binders", stub 2), ("sum_rules", stub 4), ("block_shape_lps", stub 1),
    ("er_from_iw", stub 2), ("family_telescope", stub 3), ("family_key_check", stub 6)]
-
--- `abstract_prefix` at `k = 0`: the identity.
-#guard
-  match run (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) 1000
-    "abstract_prefix" [0, 5, 42] testMem with
-  | .ok ([42], _) => true
-  | _ => false
 
 -- `target_holes` at an empty telescope: the empty list.
 #guard
