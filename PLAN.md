@@ -206,6 +206,10 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
         added to `grind`/`sym`/`finish` lists, the scoped spec sets opened before `vcgen`, a
         positional `IWOK` destructuring replaced by `grind`); a new encoding's set goes there and
         into its vocabulary file (`Arena/ErecVocab.lean`, `Arena/IWFrame.lean`).
+        Estimate the ladder's yield by the kind of sync: it pays when a sync changes statements
+        (renames, argument changes); when a sync changes L code (ported or rewritten functions),
+        the old proofs mostly still build after the bump and the work is the ported functions'
+        re-proofs, which the ladder cannot do (lane ronsync3: 0 of 54 failing theorems closed).
      d. **Fan out the tickets** by file (at most ~3 helpers). The brief names the files each
         helper owns, the shared rules, and the reply address: the lead's agent id. Helpers
         message only the lead, never the coordinator. A rename of a shared name is the

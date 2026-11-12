@@ -219,3 +219,7 @@ Against master `b4ce0391e`, both binaries `make` from the committed `checker.s`,
   maximum; `diff-e2e.py` skips the fixtures con-leche runs with `E2E_FLAGS`): every gate green
   (723/723 compared, 7 skipped). Option (b) (the flag ported) on `ronsync3-mns`, by helper
   ronsync3-mns (§6).
+* 07:05 the user picked option (a) ("just like we omit --olean the con-agua checker does not need
+  full fidelity, and simplicity of the driver is a concern"): `ronsync3-def` lands; D49's reason
+  says so; `ronsync3-mns` (option (b), gated) deleted. PLAN.md "Bumping the twin" gained the
+  ladder-yield-by-sync-kind line.
