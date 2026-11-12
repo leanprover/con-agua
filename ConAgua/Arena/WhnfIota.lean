@@ -108,7 +108,7 @@ the house style allows for small dispatchers); `major_to_ctor`'s eta branch is i
   return 0
 }
 
-/-! ## The family's sort at the use: `former_res_sort`, …, `iota_case3_at`, `eta_rescue_ok`
+/-! ## The family's sort at the use: `former_res_sort`, …, `iota_case3_at`, `eta_rescue_table`
 
 con-leche task #480 removed the install-time data (the rule's `k`/`eta` bits, the capabilities'
 `sortZ`): the family's sort zero-ness is computed where it is asked. A stored inductive's record
@@ -251,43 +251,24 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, us
   return u64(nz == 0)
 }
 
-/-- `eta_rescue_ok(ctor, cq, p)`: the structure-η rescue's standing condition at use: `ctor` (its
-record `cq`) is the η constructor of its family `p` (`eta`, `etaCtor`) and carries the family's
-level parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s
-rescue. -/
--- con-ron: ConRon/Arena/Core.lean:2054-2069 ConRon.Arena.etaRescueTable?
--- con-ron: ConRon/Arena/Core.lean:1794-1805 ConRon.Arena.etaRescueOk
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.etaRescueOk` is gone upstream; re-check the L code and its proofs, then delete this line
+/-- `eta_rescue_table(tq, ctor, cq, p)`: the structure-η rescue's standing condition at use:
+`tq` the family's projection table (`find_table`'s answer, `0` for none), `ctor` (its record `cq`)
+the table's constructor (word `tq + 5`) of the η family `p` (`eta`) and carrying the family's level
+parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s rescue.
+The table (`tq`) or `0`. -/
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]
-def etaRescueOkL : FunDecl := lfn (ctor, cq, p) locals (r, ai) {
+def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
+  if tq == 0 { return 0 };
   if EREC⦃p + 5⦄ == 0 { return 0 };
-  if EREC⦃p + 6⦄ != ctor { return 0 };
+  if EREC⦃tq + 5⦄ != ctor { return 0 };
   r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
   if r == 0 { return 0 };
   ai := call pin_at(48);
-  return u64(ctor != ai)
+  if ctor == ai { return 0 };
+  return tq
 }
 
-/-! ## `tower_slots_all(vis, T, nF)`, `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
-
-/-- The slot walk of `tower_slots_all` (a named block, for the proofs). -/
-def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
-  for j < nF {
-    (flag, q) := call find_proj(vis, T, j);
-    if flag == 0 { return 0 }
-  }
-}
-
-/-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll` — are all `nF`
-projection slots of `T` table entries? -/
--- con-ron: ConRon/Arena/Core.lean:1476-1480 ConRon.Arena.towerSlotsAll
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.towerSlotsAll` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.towerSlotsAll]
-def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
-  j := 0;
-  ⟪towerSlotsAllLoop⟫;
-  return 1
-}
+/-! ## `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
 
 /-- The projection walk of `eta_projs` (a named block, for the proofs). -/
 def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
@@ -394,7 +375,7 @@ K and `And` arms leave slices on the spine stack; the twin has no stack, so rest
 faithful). -/
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`/`majorToCtorI` — the
-stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_ok`), or the
+stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_table`), or the
 pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
@@ -786,8 +767,7 @@ structure IotaProg (p : Prog) : Prop where
   formerSortLoop : p.lookup "former_sort_loop" = some formerSortLoopL
   formerNeverZeroAt : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
   iotaCase3At : p.lookup "iota_case3_at" = some iotaCase3AtL
-  etaRescueOk : p.lookup "eta_rescue_ok" = some etaRescueOkL
-  towerSlotsAll : p.lookup "tower_slots_all" = some towerSlotsAllL
+  etaRescueTable : p.lookup "eta_rescue_table" = some etaRescueTableL
   etaProjs : p.lookup "eta_projs" = some etaProjsL
   etaFabArgs : p.lookup "eta_fab_args" = some etaFabArgsL
   andRescueSlots : p.lookup "and_rescue_slots" = some andRescueSlotsL
