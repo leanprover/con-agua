@@ -224,4 +224,151 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
 
 end refine
 
+/-! ## The `pow` and `shiftLeft` guards -/
+
+/-- The twin's `powRefused` condition, at a maximum `m`. -/
+def powRefusedN (m a b : Nat) : Prop := ¬ a ≤ 1 ∧ b ≠ 0 ∧ m / b < 8 * (a.log2 / 64 + 1)
+
+instance (m a b : Nat) : Decidable (powRefusedN m a b) := by unfold powRefusedN; infer_instance
+
+/-- `powGuard` at the run's maximum: the exponent refusal, the size refusal, or nothing. -/
+theorem powGuard_run (a b : Nat) (st : AState) :
+    (ConRon.Arena.powGuard a b).run st =
+      if 4294967295 < b then
+        .error (.invalid "the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer")
+      else if powRefusedN st.pins.maxNatSize a b then
+        .error (.invalid "the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size")
+      else .ok ((), st) := by
+  simp only [ConRon.Arena.powGuard, ConRon.Arena.powRefused, ConRon.Arena.natSizeBytes,
+    ConRon.Arena.maxNatSizeM, powRefusedN]
+  by_cases h1 : 4294967295 < b
+  · simp [h1, StateT.run, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.lift]; rfl
+  by_cases h2 : a ≤ 1 <;> by_cases h3 : b = 0 <;>
+    by_cases h4 : st.pins.maxNatSize / b < 8 * (a.log2 / 64 + 1) <;>
+    simp [h1, h2, h3, h4, StateT.run, StateT.get, StateT.pure, StateT.bind, StateT.lift,
+      ConRon.Arena.fail, throwThe, MonadExceptOf.throw, get, getThe, MonadStateOf.get, pure, bind,
+      Except.bind, Except.pure] <;> rfl
+
+/-- The twin's `shiftLeftRefused` condition, at a maximum `m`. -/
+def shlRefusedN (m a b : Nat) : Prop := m < 8 * (a.log2 / 64 + 1) + b / 8 + 1
+
+instance (m a b : Nat) : Decidable (shlRefusedN m a b) := by unfold shlRefusedN; infer_instance
+
+/-- `shiftLeftGuard` at the run's maximum. -/
+theorem shiftLeftGuard_run (a b : Nat) (st : AState) :
+    (ConRon.Arena.shiftLeftGuard a b).run st =
+      if a = 0 then .ok ((), st)
+      else if 4294967295 < b then
+        .error (.invalid "the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer")
+      else if shlRefusedN st.pins.maxNatSize a b then
+        .error (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+      else .ok ((), st) := by
+  simp only [ConRon.Arena.shiftLeftGuard, ConRon.Arena.shiftLeftRefused, ConRon.Arena.natSizeBytes,
+    ConRon.Arena.maxNatSizeM, shlRefusedN]
+  by_cases h0 : a = 0
+  · simp [h0, StateT.run, StateT.pure, pure]; rfl
+  by_cases h1 : 4294967295 < b
+  · simp [h0, h1, StateT.run, ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.lift]; rfl
+  by_cases h4 : st.pins.maxNatSize < 8 * (a.log2 / 64 + 1) + b / 2 ^ 3 + 1 <;>
+    simp [h0, h1, h4, Nat.shiftRight_eq_div_pow, StateT.run, StateT.get, StateT.pure, StateT.bind, StateT.lift,
+      ConRon.Arena.fail, throwThe, MonadExceptOf.throw, get, getThe, MonadStateOf.get, pure, bind,
+      Except.bind, Except.pure] <;> rfl
+
+/-- `pow_refused`'s condition on the words it reads: a base that is not `0` or the one limb `1`,
+a nonzero exponent, and the maximum below `8 · max(la, 1) · e`. -/
+def powRefusedW (m : Word) (la x e : Word) : Prop :=
+  la ≠ 0 ∧ ¬ (la = 1 ∧ x = 1) ∧ e ≠ 0 ∧ m.toNat < 8 * max la.toNat 1 * e.toNat
+
+instance (m la x e : Word) : Decidable (powRefusedW m la x e) := by unfold powRefusedW; infer_instance
+
+/-- The high word of a product is nonzero exactly when the product reaches `2^64`. -/
+theorem mulhi_ne_zero (a b : Word) :
+    UInt64.ofNat (a.toNat * b.toNat / 2 ^ 64) ≠ 0 ↔ 2 ^ 64 ≤ a.toNat * b.toNat := by
+  have ha := a.toNat_lt; have hb := b.toNat_lt
+  have hq : a.toNat * b.toNat / 2 ^ 64 < 2 ^ 64 := by
+    rw [Nat.div_lt_iff_lt_mul (by decide)]
+    exact Nat.mul_lt_mul_of_lt_of_lt ha hb
+  constructor
+  · intro h
+    apply Classical.byContradiction; intro hc
+    apply h; rw [Nat.div_eq_of_lt (by omega)]; rfl
+  · intro h e
+    have h1 : 1 ≤ a.toNat * b.toNat / 2 ^ 64 :=
+      (Nat.le_div_iff_mul_le (by decide)).mpr (by rw [Nat.one_mul]; exact h)
+    have h2 : (UInt64.ofNat (a.toNat * b.toNat / 2 ^ 64)).toNat = a.toNat * b.toNat / 2 ^ 64 :=
+      UInt64.toNat_ofNat_of_lt' hq
+    rw [e, UInt64.toNat_zero] at h2
+    omega
+
+theorem rdW_prd (m : Mem) (x : Word) :
+    rdW (m.arr64 (tierA POOL (x >>> 40))) (x &&& 1099511627775) = prd m x := rfl
+
+/-- An in-bounds read is `rdW`. -/
+theorem getElem_rdW (a : Array Word) (i : Word) (h : i.toNat < a.size) : a[i.toNat] = rdW a i := by
+  simp [rdW, h]
+
+theorem powW_big {m la x e s : Word} (hla : la ≠ 0) (hx : ¬ (la = 1 ∧ x = 1)) (he : e ≠ 0)
+    (hs : s.toNat = 8 * max la.toNat 1) (hmh : 2 ^ 64 ≤ s.toNat * e.toNat) :
+    powRefusedW m la x e := by
+  refine ⟨hla, hx, he, ?_⟩
+  have := m.toNat_lt; rw [hs] at hmh; omega
+
+theorem powW_small {m la x e s : Word} (hla : la ≠ 0) (hx : ¬ (la = 1 ∧ x = 1)) (he : e ≠ 0)
+    (hs : s.toNat = 8 * max la.toNat 1) (hlt : s.toNat * e.toNat < 2 ^ 64) :
+    (m < s * e) = powRefusedW m la x e := by
+  apply propext
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_mul, Nat.mod_eq_of_lt hlt, hs]
+  exact ⟨fun h => ⟨hla, hx, he, h⟩, fun h => h.2.2.2⟩
+
+/-- **`pow_refused`**: its condition `powRefusedW` at the maximum `PINS[72]` and the base's limb
+`x` (where `la = 1`). -/
+theorem powRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL)
+    (hp : p.lookup "pow_refused" = some powRefusedL) (n : Nat) (s₀ : St) (oa la e : Word)
+    (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pow_refused" [oa, la, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      (r.headD 0 = if powRefusedW (rdW (s₀.mem.arr64 PINS) 72) la (prd s₀.mem oa) e then 1 else 0);
+      ⊤⦄ := by
+  have hl : la.toNat < 2 ^ 61 := by have := hok.top41; simp only [SliceOK] at ha; omega
+  have h41 := hok.top41
+  have hoa : oa.toNat < 2 ^ 41 := by simp only [SliceOK] at ha; omega
+  rw [invoke_eq _ hp]
+  simp only [callFn, powRefusedL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
+      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq, LocEq, Sig.retVal, Sig.retOr] at *)
+    all_goals (try simp only [Locals.init_cons_zero, Locals.init_cons_succ, St.setLocs_cons,
+      St.setLocs_nil, St.setLoc_loc, L.St.setLoc_mem, List.headD_cons, Cmp.evalW] at *)
+    all_goals subst_vars
+    all_goals (try simp (disch := assumption) only [getElem_rdW, Cmp.eval, ite_true, reduceIte,
+      Nat.reduceEqDiff, decide_eq_true_eq, rdW_prd] at *)
+    all_goals first
+      | grind [arena_grind, vpool_ld, powRefusedW, Sig.retVal, mulhi_ne_zero, Locals.init, List.getD_cons_zero, List.getD_cons_succ]
+      | sorry
+
+/-- **`shift_left_refused`**: the twin's `shiftLeftRefused` at the maximum `PINS[72]`, for a
+normalised base. -/
+theorem shiftLeftRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBytesL)
+    (hp : p.lookup "shift_left_refused" = some shiftLeftRefusedL) (n : Nat) (s₀ : St) (la e : Word)
+    (hl : la.toNat < 2 ^ 61) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "shift_left_refused" [la, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      (r.headD 0 = if (rdW (s₀.mem.arr64 PINS) 72).toNat < 8 * max la.toNat 1 + e.toNat / 8 + 1
+        then 1 else 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, shiftLeftRefusedL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, sizeBytes_spec p hz n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, reduceIte,
+      beq_iff_eq, bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, Locals.init, List.getD_cons_zero,
+      List.getD_cons_succ, rdW, Cmp.evalW, Cmp.eval, UInt64.lt_iff_toNat_lt, L.St.setLocs_mem,
+      List.headD_eq_head?_getD, UInt64.toNat_add, UInt64.toNat_shiftRight]
+    all_goals (first | omega | grind | sorry)
+
 end L.Arena
