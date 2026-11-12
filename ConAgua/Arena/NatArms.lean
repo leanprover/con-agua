@@ -890,7 +890,6 @@ theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Na
     all_goals first
       | (simp_all [Locals.init, List.getD_cons_zero, List.getD_cons_succ]; done)
       | (grind [arena_grind, lang_grind]; done)
-      | (trace_state; sorry)
 
 end shl
 def natDivArm (a b : Nat) : AM (Option EIdx) := do
