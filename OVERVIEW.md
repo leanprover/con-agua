@@ -1192,9 +1192,9 @@ something else than the twin, beyond fuel and fixed capacities, in three
 sections:
 [Temporary](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L24-L38)
 (to be fixed, or intent unclear),
-[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L66)
+[Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L67)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L68-L97).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L69-L98).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
@@ -1213,7 +1213,8 @@ not-accept with it, sequentially and with `--jobs=4`
 Seven of them, the `nat_size_limit_*` fixtures, are pinned at a maximum
 `Nat` size of 16 bytes (con-leche's test table runs them with
 `--max-nat-size=16`); the checker runs every input at the default maximum
-(§2.1), so their verdicts are not comparable with the pinned ones.
+(§2.1), so their verdicts are not comparable with the pinned ones, and
+`scripts/diff-e2e.py` skips them.
 `scripts/diff-e2e.py --refs` also compares the verdicts with con-ron's and
 e2e-ref's (and a reject or decline with con-ron's). These cover what the theorem does not: the harness
 and completeness.

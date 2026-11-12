@@ -2405,7 +2405,7 @@
     37  | D28b | `Arena/StubNames.lean` `name_rec`, `name_rec_i`, `intern_ls_iw` | `internNNode (.str n "rec")`, `.str n s!"rec_{i}"`, `internLsNode us` take the key as a value | the string (3, or 4 + digits words) / the level list is written at the pool top (`pool_room`) and stays there even when the node exists | performance (memory: a few pool words per block member / recursor / level list built) | stubs | as D24: pop the top on a hit |
     38  | D37 | `Arena/Scratch.lean` `scratch_reset`, `Arena/MemoLib.lean` `memoClearG` | `ron/hashmap2.rs` `clear_fit`: at each per-declaration / per-call reset the table is re-made at twice a decaying high-water mark of its entries | the scratch cons tables keep their largest size (the epoch bump empties them); the memos cleared by `memoClearG` return to their default region (`MN0` slots), regions grown within a stamp stay resident. `inst_list`'s memo (`ilSch`) clears with `memoClearFitG`, the twin's policy with the default region as its floor (the twin's floor is 32 slots) | performance (a round past 3/4 of the default region grows it in place; outside `ilSch` a handful of such rounds per run on the perf fixtures and `Init`, docs/design/d37.md; memory stays resident) | unassigned | the scratch tables: a decaying high-water mark per table, shrinking the slot count at reset; the other memos: `memoClearFitG` (with the fast-path test in the caller) where a measurement shows growth |
 
-== docs/deviations.md#L40-L66
+== docs/deviations.md#L40-L67
     40  ## Deliberate
     41  
     42  | id | where (L) | twin | L | effect | owner | proposed fix |
@@ -2433,38 +2433,39 @@
     64  | D47 | `Arena/StrLit.lean` `lit_shape_ok`, `nat_ind_at_cv`, `nat_zero_at_cv`, `nat_succ_at_cv` | `litShapeOk`'s three `Nat` arms build `.indInfo c.toConstantVal {}`, `.ctorInfo c.toConstantVal 0 0`, `.ctorInfo … 0 1` and call `natIndOk`/`natZeroOk`/`natSuccOk` on them | the three tests run on the record's constant value directly (`nat_*_at_cv(p + 1)`: `natIndOk`'s etc. body after its kind test, which the built record passes); no record is built | none (the same answer: the built record's kind test holds) | ronsync3 | by design: `lit_shape_ok` runs in the core's write set, which allocates no `EREC` record |
     65  | D48 | `Arena/DeclStep.lean` `check_decl`, `Arena/IndParts.lean` `check_ind_decl` | `fail (← basisNamesError d)`, `match ← readBlock … with \| .error e => fail e`: a failure at an error value computed at run time | L aborts with constant codes only: the computed reason word is matched against the reasons its producer returns (`basis_names_error`'s three, `read_block`'s ten), each branch `fail R_k`; an unmatched word aborts with code `0` (unreachable) | none (the same message at every reachable branch) | ronsync3 | by design: `abort` takes a constant code (the model generator reads the code from the statement) |
     66  | D46 | `Arena/Infer.lean` `proj_guard_rows_at` | `projGuardRowsAt`'s rows carry `Nat` depths up to `numParams + idx` | aborts when the word sum `np + i` (parameter count plus field index) wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both are word-sized counts) | ronsync3-ind | by design: the rows' depths and the opened `fvar` indices are the twin's `Nat`s |
+    67  | D49 | `main.c`; `Rom/PinRead.lean` `intern_all_pins`; the final statements (`TwinAccepts`, `TwinVerdict`: `internAllPins pins maxNatSizeDefault`) | con-ron's binary takes `--max-nat-size=N` (con-leche's flag) and runs `internAllPins pins N`; con-leche's tests run seven `nat_size_limit_*` fixtures at `--max-nat-size=16` (`E2E_FLAGS`) | no such flag: every run is at the default maximum, 134 217 728 bytes (`PINS[72]`, written by `intern_reserved_pins`) | at the default, every verdict is con-ron's; the seven fixtures are not comparable with their pinned verdicts (`diff-e2e.py` skips them) | ronsync3 | by design (the maximum is fixed at the official kernel's default); porting the flag would make the maximum a parameter of the final theorems |
 
-== docs/deviations.md#L68-L97
-    68  ## Fixed
-    69  
-    70  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
-    71  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
-    72  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
-    73  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
-    74  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
-    75  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
-    76  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
-    77  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
-    78  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
-    79  - **F3** (fixed by lane strlit): `strVal` lines.
-    80  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
-    81  - **F5** (fixed by lane front2): expression and declaration lines.
-    82  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
-    83  - **F7** (fixed by lane romload): pin data as an input.
-    84  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
-    85  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
-    86  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
-    87  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
-    88  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
-    89  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
-    90  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
-    91  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
-    92  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
-    93  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
-    94  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
-    95  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
-    96  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost).
-    97  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
+== docs/deviations.md#L69-L98
+    69  ## Fixed
+    70  
+    71  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
+    72  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
+    73  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
+    74  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
+    75  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
+    76  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
+    77  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
+    78  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
+    79  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
+    80  - **F3** (fixed by lane strlit): `strVal` lines.
+    81  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
+    82  - **F5** (fixed by lane front2): expression and declaration lines.
+    83  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
+    84  - **F7** (fixed by lane romload): pin data as an input.
+    85  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
+    86  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
+    87  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
+    88  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
+    89  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
+    90  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
+    91  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
+    92  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
+    93  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
+    94  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
+    95  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
+    96  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
+    97  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost).
+    98  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
 
 == scripts/e2e.py#L2-L25
      2  """End-to-end differential testing of the L checker (lane `e2e`, DESIGN.md "End-to-end runs").

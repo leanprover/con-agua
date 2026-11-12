@@ -82,6 +82,21 @@ def expectations(path):
     return out
 
 
+def flagged(tests):
+    """The e2e fixtures con-leche runs with command-line flags (`E2E_FLAGS` in its
+    `tests/arena.sh`): {name: flags}. The checker takes no such flag (it always runs at the
+    default maximum `Nat` size, docs/deviations.md), so their pinned verdicts are not comparable."""
+    out = {}
+    try:
+        txt = open(os.path.join(tests, "arena.sh")).read()
+    except OSError:
+        return out
+    m = re.search(r"declare -A E2E_FLAGS=\((.*?)\n\)", txt, re.S)
+    for name, flags in re.findall(r"\[([^\]]+)\]=(\S+)", m.group(1) if m else ""):
+        out[name] = flags
+    return out
+
+
 def fixtures(tests, work):
     """[(id, path, expected exit code)] for every fixture with an expectation."""
     out, missing = [], []
@@ -251,6 +266,11 @@ def main():
             for fid, _, _ in missing:
                 print(f"MISSING {fid}")
             return 2
+        fl = flagged(a.tests)
+        skipped = [f for f in fx if f[0].startswith("e2e/") and f[0][4:] in fl]
+        fx = [f for f in fx if f not in skipped]
+        for fid, _, _ in sorted(skipped):
+            print(f"SKIPPED    {fid}: con-leche runs it with {fl[fid[4:]]}, which the checker does not take")
         if a.only:
             fx = [f for f in fx if re.search(a.only, f[0])]
         # largest first, so the long runs do not form the tail
