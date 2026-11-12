@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.IndRealAbs
-public import ConAgua.Arena.ArRangeSpec
-import ConAgua.Arena.ArRangeRefine
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.CallF
 import Std.WP.Triple.SpecLemmas

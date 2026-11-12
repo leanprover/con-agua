@@ -15,7 +15,6 @@ public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
 import ConAgua.Checker.DefnArmT
 import ConAgua.Checker.IndArm
-import ConAgua.Checker.ArmsT
 import ConAgua.L.WordOff
 
 @[expose] public section

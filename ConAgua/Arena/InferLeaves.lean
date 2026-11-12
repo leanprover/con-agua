@@ -21,8 +21,6 @@ import all ConAgua.Arena.Infer
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.CoreWalks
-import ConAgua.Arena.NatSizedRef
-import ConAgua.Arena.NatCmpFacts
 
 @[expose] public section
 

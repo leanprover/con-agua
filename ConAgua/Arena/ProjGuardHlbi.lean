@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.ProjGuardRowsCI
 public import ConAgua.Arena.IndSumSpec.HlbiWalk
-import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.IndRealWalkT
 import all ConAgua.Arena.IndSum
 import all ConAgua.Arena.StripTele
@@ -11,8 +10,6 @@ import all ConAgua.Arena.BvarB
 import all ConAgua.Arena.ExprMk
 import all ConAgua.Arena.Walk
 import all ConAgua.Arena.MemoLib
-import ConAgua.Arena.WalkLiftRefine
-import ConAgua.Arena.DeclBase
 
 @[expose] public section
 

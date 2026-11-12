@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.DeclHeader
 public import ConAgua.Arena.IndPartsSpec.EqW
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.ModelGen

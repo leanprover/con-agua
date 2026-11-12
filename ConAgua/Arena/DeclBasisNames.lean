@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.QuotRecW
 public import ConAgua.Arena.DeclBasisRef
 public import ConAgua.Arena.BasisBlockT
 import ConAgua.Arena.GrindAttr
@@ -8,8 +7,6 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
 import ConAgua.Arena.DeclAndPinIndCopy2
-import ConAgua.Arena.StageC
-import ConAgua.Arena.ErToIwBlk
 import ConRon.Bridge.Checker.Basis
 import all ConAgua.Arena.BasisL
 

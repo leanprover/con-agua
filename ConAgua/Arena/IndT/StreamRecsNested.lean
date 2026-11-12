@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndT.StreamRecsTop
 import ConAgua.Arena.IndPosSpec.RootHoles
-import ConAgua.Arena.LiftRefine
 import ConAgua.Arena.IndSim
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.L.ModelGen

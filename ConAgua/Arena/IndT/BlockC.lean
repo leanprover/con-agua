@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndArmLps
 public import ConAgua.Arena.IndInstallSpec.BpRecBpassR
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 public import ConAgua.Arena.IndPartsSpec.PlW
 public import ConRon.Bridge.Inductives.BlockTail
 public import ConRon.Bridge.Checker.Inv
@@ -12,9 +11,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.IndDeclConstsFire
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import all ConAgua.Arena.IndInstall
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr

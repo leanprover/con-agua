@@ -4,13 +4,11 @@ public import ConAgua.Arena.StageTLift
 public import ConRon.Bridge.Checker.Basis
 public import ConAgua.Arena.QuotRulesT
 public import ConAgua.Arena.ErToIwBlk
-import ConAgua.Arena.IndSumSpec.SoaW
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.DeclAndPinIndRef
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface
-import ConAgua.L.WordOff
 
 @[expose] public section
 

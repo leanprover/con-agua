@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndRealOpf3
-public import ConAgua.Arena.IndRealOpfLeaf
 public import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.DeclNatCv

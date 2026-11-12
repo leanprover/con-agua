@@ -4,7 +4,6 @@ import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadRefW
-import ConAgua.Rom.ReadScr
 import ConAgua.Arena.DeclNatCv
 
 @[expose] public section

@@ -10,7 +10,6 @@ import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.IndRecRead
-import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.Inst1Refine
 
 @[expose] public section

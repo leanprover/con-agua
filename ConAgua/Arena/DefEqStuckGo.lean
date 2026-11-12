@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndRecRead
 import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.DefEqLeaves2
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
 
 @[expose] public section

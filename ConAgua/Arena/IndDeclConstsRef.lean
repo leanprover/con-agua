@@ -9,7 +9,6 @@ public import ConAgua.Arena.DeclAndPinIndCopy2
 public import ConAgua.Arena.IndPosSpec.GgW2
 import ConAgua.Arena.IndPosSpec.NestContParamsClosed
 public import ConAgua.Arena.IndArmBridge2
-import ConAgua.Arena.IndPartsSpec.BlockSplitRecs
 public import ConAgua.Arena.IndDeclConstsSpec
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Inductives.Install

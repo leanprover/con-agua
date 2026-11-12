@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndT.BlockC
 public import ConAgua.Arena.IndDeclConstsFrame
-public import ConAgua.Arena.IndDeclConstsTable
 import ConAgua.Arena.IndInstallSpec.BlockRawRec
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndRealMemoCrT

@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Layout
-public import ConAgua.Arena.Reasons
 public import ConAgua.L.Notation
 import ConRon.Arena.Core
 import ConAgua.Census.Attr

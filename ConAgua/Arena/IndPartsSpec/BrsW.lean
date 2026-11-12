@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
 public import ConAgua.Arena.IndPartsSpec.Bf
 import ConAgua.Arena.IndPartsSpec.PartsSliceCopy
 public import ConAgua.Arena.IndPartsSpec.PlW

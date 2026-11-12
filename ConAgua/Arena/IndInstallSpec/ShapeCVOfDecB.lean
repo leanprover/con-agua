@@ -3,8 +3,6 @@ module
 public import ConAgua.Arena.IndInstallSpec.CbProg
 public import ConAgua.Arena.IndInstallSpec.Frame
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg5
-public import ConAgua.Arena.DeclCanonSpec
-public import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.RecGenSpec.Classes
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

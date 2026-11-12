@@ -8,7 +8,6 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.IndPartsSpec.AllCtors
 import ConAgua.Arena.IndInstallSpec.IcaW
-import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Checker.NoVerdictTree

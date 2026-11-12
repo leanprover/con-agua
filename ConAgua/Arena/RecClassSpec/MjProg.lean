@@ -7,7 +7,6 @@ public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.RecSim
 import ConRon.Bridge.Grind
-public import ConAgua.Arena.IndRealAbs
 
 @[expose] public section
 

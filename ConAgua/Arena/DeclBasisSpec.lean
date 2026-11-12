@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 public import ConAgua.Arena.DeclRec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -16,7 +15,6 @@ public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.Pins
-import ConAgua.L.WordOff
 
 @[expose] public section
 

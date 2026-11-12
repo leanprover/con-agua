@@ -12,7 +12,6 @@ public import ConAgua.Arena.InstLPEntry
 import ConAgua.Arena.WhnfM2CRefine5
 import ConAgua.Arena.WhnfSlotRefine
 import ConAgua.Arena.CoreNatOp
-import ConAgua.Arena.DefEqStuckGo
 import ConAgua.Arena.WhnfDeltaRefine2
 import ConAgua.Arena.WhnfProjRefine2
 public import ConAgua.Arena.InferBodyDisp

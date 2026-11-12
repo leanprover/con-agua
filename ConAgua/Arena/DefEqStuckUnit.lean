@@ -3,13 +3,11 @@ module
 import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.DefEqStuckShape
-import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.FormerSortRef
-import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.IndRecRead
 import ConAgua.Arena.Inst1Refine

@@ -5,8 +5,6 @@ public import ConAgua.Arena.WalkLiftRefine
 import ConAgua.Arena.CoreWalks
 public import ConAgua.Arena.CallF
 public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.WalkLift
-public import ConAgua.Arena.WriteSets
 import all ConAgua.Arena.AppStore
 import all ConAgua.Arena.BVarStore
 import all ConAgua.Arena.BvarB

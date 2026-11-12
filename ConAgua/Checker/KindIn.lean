@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Checker.LoopDecl
-public import ConAgua.Arena.CheckerT
 public import ConAgua.Arena.DeclCheckT
 meta import ConAgua.Checker.LoopDecl
 meta import ConAgua.Arena.CheckerT

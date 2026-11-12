@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
-public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.IndPosSpec.FgW2
 public import ConAgua.Arena.IndPosSpec.NtyLook
 public import ConAgua.Arena.IndPosSpec.U4W

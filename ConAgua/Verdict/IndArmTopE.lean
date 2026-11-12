@@ -4,8 +4,6 @@ public import ConAgua.Verdict.TopE
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Arena.StrLitSup
 import ConAgua.Checker.IndArm
-import ConAgua.Checker.IndDeclConstsProg
-import ConAgua.Checker.IndDeclConstsClosed
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg

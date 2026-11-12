@@ -8,7 +8,6 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndInstallSpec.DomsW
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-public import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 public import ConAgua.Arena.RecClassSpec.CloseLams
 public import ConAgua.Arena.RecClassSpec.MjProg
 import all ConAgua.Arena.RecClass

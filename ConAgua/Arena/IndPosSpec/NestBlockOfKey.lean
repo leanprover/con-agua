@@ -10,7 +10,6 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
 import ConAgua.L.ModelGen
-import ConAgua.Arena.CallF
 import ConAgua.Arena.IndDecStab
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore

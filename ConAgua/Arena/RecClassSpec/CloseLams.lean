@@ -12,7 +12,6 @@ import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
 import ConAgua.Arena.Abs1Refine
 public import ConAgua.Arena.IndRealAr
-import ConAgua.Arena.CallF
 import ConAgua.Arena.IndDecStab
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore

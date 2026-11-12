@@ -12,7 +12,6 @@ import ConAgua.Front.Preserve
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.IndView
 import all ConAgua.Arena.DefEq
-import ConAgua.L.WordOff
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.Inst1Refine
 
