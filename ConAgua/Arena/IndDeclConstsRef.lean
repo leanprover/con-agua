@@ -24,6 +24,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndT.BlockCS
+import ConAgua.Arena.ExceptOpt
 
 @[expose] public section
 
@@ -307,7 +308,7 @@ theorem dtW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   obtain ⟨ts, a4, hrun4, hd4, hb4, hS4, hg4, hA4⟩ := btsW_ok hP.toTablesProg pp bs vis fe hnPb n
     s3.mem s4.mem a3 o l bs.members r4 hS3 h03.abs hq ⟨hdm, hob⟩ hW4
   obtain ⟨hms, -⟩ := ConRon.Bridge.Inductives.dShape_inv hdP
-  obtain ⟨hps4, -, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run bs.members pP.members
+  obtain ⟨hps4, -, -⟩ := ConRon.Bridge.Inductives.blockTables_run bs.members pP.members
     h03.chk.state hdP hms hrun4
   obtain ⟨h04, hX4⟩ := h03.step hP.leaf L.Ind.dcF_bts h4 hS4 (checkOK_of_pstep h03.chk hps4)
     hps4.ext hA4.i1
