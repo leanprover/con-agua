@@ -154,6 +154,7 @@ def imFns : List FnName :=
    "nat_op_guard", "nat_op_is_wf", "nat_op_name", "nat_op_names", "nat_op_pins", "nat_op_pins_a",
    "nat_op_pins_b", "nat_op_pins_c", "nat_op_result", "nat_op_stored", "nat_op_stored_ok",
    "nat_op_stored_ok_all", "nat_op_ty_pinned", "nat_pow", "nat_pow_lit", "nat_pred", "nat_pred_lit",
+   "limb_push", "lit_nat_sized", "nat_size_refused", "pow_nat", "pow_refused", "shift_left_refused", "size_bytes",
    "nat_shl", "nat_shl_lit", "nat_shr", "nat_shr_lit", "nat_sub", "nat_sub_lit", "nat_succ_lit",
    "nat_succ_ok", "nat_trim", "nat_var", "nat_xor", "nat_xor_lit", "nat_zero_ok", "nest_holes",
    "nest_holes_go", "nnum_find", "nnum_push", "not_proof_fast", "nstr_find", "nstr_match",

@@ -21,6 +21,8 @@ import all ConAgua.Arena.Infer
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.NatSizedRef
+import ConAgua.Arena.NatCmpFacts
 
 @[expose] public section
 
@@ -59,6 +61,8 @@ structure InferLeafProg (p : Prog) : Prop where
   fai : p.lookup "intern_forall" = some internForallL
   mkfa : p.lookup "mk_forall" = some mkForall
   inferLit : p.lookup "infer_lit" = some inferLitL
+  sizeBytes : p.lookup "size_bytes" = some sizeBytesL
+  natSizeRefused : p.lookup "nat_size_refused" = some natSizeRefusedL
   pinAt : p.lookup "pin_at" = some pinAtL
   inferConst : p.lookup "infer_const" = some inferConstL
   envrow : p.lookup "env_row_get" = some envRowGetL
@@ -467,10 +471,13 @@ end lr
 `infer_lit` refines. -/
 def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
   match l with
-  | .natVal _ => do
+  | .natVal n => do
       if ← natLitStored fe then do
-        let nn ← pinNat
-        constE nn
+        if ← natSizeRefused n then
+          fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
+        else do
+          let nn ← pinNat
+          constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
   | .strVal _ => do
       if ← strLitStored fe then do
@@ -479,19 +486,25 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
       else fail (.notImplemented
         "string literals before the String support declarations")
 
+/-- The twin's `natSizeRefused` at the run's maximum. -/
+theorem natSizeRefused_run (n : Nat) (a : AState) :
+    (natSizeRefused n).run a = .ok (decide (natSizeBytes n > a.pins.maxNatSize), a) := rfl
+
 /-- `inferBody`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBody "lit"]
 theorem inferBody_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBody r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- `inferBodyIO`'s `.lit` arm is `inferLitT`. -/
 @[refines_part ConRon.Arena.inferBodyIO "lit"]
 theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
     (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
     (inferBodyIO r fe d e).run a = (inferLitT fe l).run a := by
-  sorry
+  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
 
 /-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
 structure InferLitCallees (p : Prog) : Prop where
@@ -508,7 +521,7 @@ closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   fns [hf ↦ ilE list]
   specs [callW_spec p n "nat_lit_stored", callW_spec p n "str_lit_stored",
-    callW_spec p n "pin_at", callW_spec p n "const_e"]
+    callW_spec p n "nat_size_refused", callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -547,7 +560,56 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     (he : HW e) (hg : tagW e = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
     RefE (closedNV p L.Checker.nvFns = true) (ilE p (n + 1) s₀.mem vis e) (inferLitT fe l) a₀
       (CorePost decH dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  simp only [ilE]
+  refine RefE.abort0 (by rfl) fun h1 => ?_
+  refine RefE.abort0 (by rfl) fun h2 => ?_
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s₀.mem a₀ hS.arena.base e he ⟨h1, UInt64.not_le.mp h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  by_cases h3 : tfld s₀.mem LIT (tierW e) (idxW e) 0 = 0
+  · rw [ite_eq_left h3]
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_nat_lit_stored]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    obtain ⟨-, hsl, hnorm, hpv, -⟩ := (RecRel_natVal _ _ _ _ ▸ hrel : NatRec _ _ _ N)
+    have hl : (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat < 2 ^ 61 := by
+      have := hS.arena.base.lit.1.top41; have := hsl.le; omega
+    refine RefE.bindLift (fun _ => rfl) fun r₂ m₂ c2 => ?_
+    obtain ⟨s₂, hs₂, -, hm₂, hres⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+      (natSizeRefused_spec p hp.sizeBytes hp.natSizeRefused n _ _ hl) c2
+    have hm : m₂ = m₁ := hs₂.symm.trans hm₂
+    subst hm
+    refine ⟨_, _, natSizeRefused_run _ _, ?_⟩
+    dsimp only [ilE.k_nat_size_refused]
+    have hsz : natSizeBytes N = 8 * max (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat 1 := by
+      rw [← hpv]; exact sizeBytes_pv _ _ _ hnorm
+    have hmx := hS₁.pins.maxNatSize
+    have hpw : (rdW (m₂.arr64 PINS) 72) = pinW m₂ 72 := rfl
+    simp only [hpw] at hres
+    refine RefE.guardThen (by rfl) (fun h => ?_) (fun h => ?_) fun _ _ => il_arm p hp hc n 1 (by decide) hS₁
+    · rw [hres] at h; split at h <;> simp_all <;> omega
+    · rw [hres]; simp only [decide_eq_true_eq] at h; rw [hsz, hmx] at h; simp [h]
+  · rw [ite_eq_right h3]
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    simp only [inferLitT]
+    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
+      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+    dsimp only [ilE.k_str_lit_stored]
+    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
+      (fun hb => by simpa [decBool] using hb)
+      fun _ _ => ?_
+    exact il_arm p hp hc n 5 (by decide) hS₁
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
