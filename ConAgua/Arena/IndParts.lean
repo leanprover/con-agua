@@ -241,7 +241,6 @@ def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
 /-- `block_shape_with_members(p, ms.off, ms.len)`: `{ p with members := ms }`, a fresh 9-word
 record (`checkBlock`'s record update after `reduceMembers`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:186-216 ConRon.Arena.checkBlock
--- con-ron: CHANGED since 01ecb31c — `ConRon.Arena.checkBlock` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlock]
 def blockShapeWithMembers : FunDecl := lfn (p, mo, ml) locals (q) {
   q := call iw_alloc(9);
@@ -885,8 +884,20 @@ def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vi
   pOk := call ind_params_ok(nP, boff, blen);
   if pOk == 0 { fail R_NUMBER_OF_PARAMETERS };
   (e, pNew) := call read_block(nP, boff, blen);
-  -- `abort e` (local `5`)
-  if e != 0 { ⟪.abort (.var 5)⟫ };
+  -- the twin's `fail e`: the reject at the reader's reason `e`
+  if e != 0 {
+    if e == ⟪R_INDUCTIVE_TYPE_DECLARES⟫ { fail R_INDUCTIVE_TYPE_DECLARES };
+    if e == ⟪R_NO_RECURSOR_OF⟫ { fail R_NO_RECURSOR_OF };
+    if e == ⟪R_THE_ARGUMENT_COUNTS⟫ { fail R_THE_ARGUMENT_COUNTS };
+    if e == ⟪R_INDUCTIVE_TYPE_DECLARES_OTHER⟫ { fail R_INDUCTIVE_TYPE_DECLARES_OTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_ANOTHER⟫ { fail R_CONSTRUCTOR_DECLARES_ANOTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_OTHER⟫ { fail R_CONSTRUCTOR_DECLARES_OTHER };
+    if e == ⟪R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE⟫ { fail R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE };
+    if e == ⟪R_INDUCTIVE_BLOCK_ITS⟫ { fail R_INDUCTIVE_BLOCK_ITS };
+    if e == ⟪R_INDUCTIVE_BLOCK_DECLARES⟫ { fail R_INDUCTIVE_BLOCK_DECLARES };
+    if e == ⟪R_INDUCTIVE_BLOCK_CARRIES⟫ { fail R_INDUCTIVE_BLOCK_CARRIES };
+    abort
+  };
   vis2 := call check_block(vis, boff, blen, pNew);
   return vis2
 }

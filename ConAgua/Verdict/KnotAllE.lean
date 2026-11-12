@@ -169,6 +169,7 @@ import all ConAgua.Arena.RomCI
 import all ConAgua.Arena.WhnfCoreApp
 import all ConAgua.Rom.PinReadSpec
 import all ConAgua.Scan.Line
+import all ConAgua.Arena.NatSized
 
 @[expose] public section
 

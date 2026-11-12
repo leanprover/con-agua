@@ -724,7 +724,7 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     ⟨pinsP, ConRon.Bridge.PinsDenote.pmono hpx4 pins pinsP hpp hPD⟩ hS4.memos
   rw [e0] at h1
   refine RefE.bindRun (K := recordJobE.k_check_decl p n) (fun _ => rfl)
-    (checkDecl_specE p hP.cd.cd.cd n ⟨m4, Locals.init []⟩ k 0) (fun hG => hG.nv) (fun hG => hG.cd) h1 ?_
+    (checkDecl_specE p hP.cd.cd.cd hP.cd.cd.ckd n ⟨m4, Locals.init []⟩ k 0) (fun hG => hG.nv) (fun hG => hG.cd) h1 ?_
   intro r5 s5 y a5 c5 _ hrun5 hP5
   obtain ⟨F, hF0, hcl⟩ := hP.cdW
   obtain ⟨s5', hs5', hfr5, -⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)

@@ -139,13 +139,10 @@ def erSlAtB (a : Word → Word) (p q i : Word) : Bool :=
   erSlEqB a (a (p + i)) (a (p + i + 1)) (a (q + i)) (a (q + i + 1))
 
 /-- **`caps_eq_a`**. -/
-def capsEqAB (a : Word → Word) (q r : Word) : Bool :=
-  bEqB (a q) (a r) && a (q + 1) == a (r + 1) && a (q + 2) == a (r + 2) &&
-    a (q + 3) == a (r + 3) && bEqB (a (q + 4)) (a (r + 4))
+def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a q) (a r)
 
 /-- **`caps_eq_b`**. -/
-def capsEqBB (a : Word → Word) (q r : Word) : Bool :=
-  a (q + 5) == a (r + 5) && a (q + 6) == a (r + 6)
+def capsEqBB (a : Word → Word) (q r : Word) : Bool := a (q + 6) == a (r + 6)
 
 /-- **`caps_eq_c`**. -/
 def capsEqCB (a : Word → Word) (q r : Word) : Bool :=

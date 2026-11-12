@@ -49,12 +49,9 @@ structure IndInstallLookups (p : Prog) : Prop where
 def cvM (m : Mem) (q n o l t : Word) : Mem :=
   (((m.set64 DLP q n).set64 DLP (q + 1) (o + 1)).set64 DLP (q + 2) l).set64 DLP (q + 3) t
 
-/-- **The model of `ind_caps(q)`**: the fifteen words. -/
+/-- **The model of `ind_caps(q)`**: the ten words the capabilities' decoder reads. -/
 def capsM (m : Mem) (q : Word) : Mem :=
-  (((((((((((((((m.set64 DLP q 0).set64 DLP (q + 1) 0).set64 DLP (q + 2) 0).set64 DLP (q + 3) 0)
-    |>.set64 DLP (q + 4) 0).set64 DLP (q + 5) 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0)
-    |>.set64 DLP (q + 8) 0).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0).set64 DLP (q + 11) 0)
-    |>.set64 DLP (q + 12) 0).set64 DLP (q + 13) 0).set64 DLP (q + 14) 0)
+  (((((((((m.set64 DLP q 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0).set64 DLP (q + 8) 0).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0).set64 DLP (q + 11) 0).set64 DLP (q + 12) 0).set64 DLP (q + 13) 0).set64 DLP (q + 14) 0
 
 /-- The eleven words of a rule at `q`. -/
 def ruleM (m : Mem) (q n nf e : Word) : Mem :=

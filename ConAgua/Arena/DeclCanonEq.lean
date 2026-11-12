@@ -294,7 +294,28 @@ theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {q r : Word} {x y : IIndCaps}
     (hx : decCaps R q.toNat = some x) (hy : decCaps R r.toNat = some y) :
     capsEqAll rd q r = decide (x = y) := by
-  sorry
+  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
+  obtain ⟨b0, h0, n6, h6, al, h8, n12, h9, ct, h10, ex⟩ := hx
+  have ex := Option.some.inj ex; subst ex
+  obtain ⟨b0', h0', n6', h6', al', h8', n12', h9', ct', h10', ey⟩ := hy
+  have ey := Option.some.inj ey; subst ey
+  obtain ⟨w0, f0, rfl⟩ := boolW0_ hR h0
+  obtain ⟨w0', f0', rfl⟩ := boolW0_ hR h0'
+  obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl h6
+  obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := 6) (kn := 6) hR rfl h6'
+  obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := 12) (kn := 12) hR rfl h9
+  obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := 12) (kn := 12) hR rfl h9'
+  have hal := slAt_ok hR (q := q) (r := r) (i := 10) (j := 11) (kn := 10) rfl rfl rfl h8 h8'
+  have hct := slAt_ok hR (q := q) (r := r) (i := 13) (j := 14) (kn := 13) rfl rfl rfl h10 h10'
+  apply bool_of_iff
+  simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f6, f6', f12, f12', hal, hct,
+    Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IIndCaps.mk.injEq, fld_nat, fld_bool]
+  simp only [and_assoc]
+  constructor
+  · rintro ⟨a1, a2, a3, a4, a5⟩
+    exact ⟨a1, a3, a4, a2, a5⟩
+  · rintro ⟨a1, a3, a4, a2, a5⟩
+    exact ⟨a1, a2, a3, a4, a5⟩
 
 /-! ## Recursor rules -/
 

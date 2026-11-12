@@ -117,3 +117,21 @@ a declarative refinement (exceptions: `pow_nat`, `size_bytes`); no walk tactic.
   with written hand-overs (`_tmp/ronsync3/{core,ind}-handoff.md`). The generated program
   (`Checker/Prog*.lean`) waits for core's `DefEqBaseE`/`DefEqKnot` to build (`checker_prog.py`
   needs every module).
+* 02:35–02:50 program regenerated (`checker_prog.py`: 1790 functions, 0 stubs; two name clashes
+  between modules had to go first, the dump imports every module together), the generated
+  function lists (nv/core/loop/leaf/phaseb, preloop-ws), `import all ConAgua.Arena.NatSized` in
+  the six closure checks that unfold the program (a missing `import all` of a module with
+  `@[no_expose]` functions shows only as a kernel "application type mismatch" in `prog_all`),
+  `checker.s`/`pins.bin`. **First verdicts** (`diff-e2e --tests` at con-leche eb2c5939,
+  sequential): 725 of 730 agree; the 5 others are the `nat_size_limit_*` fixtures that con-leche's
+  `E2E_FLAGS` run at `--max-nat-size=16` — at the default maximum con-ron 4ca283d1 accepts them
+  too, so every verdict is the twin's at the default.
+* 02:50–03:10 milestones merged: core (the whole Nat area at 0 sorry; left: the binders' and
+  stuck certificates' four refinements and the new certificates'), ind (its area at 0 sorry: the
+  projection guard `pgr_okH`, `cb_ref`, `TailRef`; L: `proj_guard_rows_at` aborts where `np + i`
+  wraps (deviation row), a capacity check in `proj_guard_rows`), decl (`cd_ref`/`cdk_ref` at the
+  twin's order with `DeclKindSpec` and `indKindEnv`, the basis names' refinements; `check_decl`'s
+  computed abort replaced by one `fail` per reason code, since `l_model` cannot take the
+  `abort (.var k)` splice). The per-function write-set checks found the new guard calling the
+  `hb` memo walks directly (they write `CTL[214‥215]`, which the inductive memos' and the core
+  stage's frames exclude): ind makes them leaves, with their frame lemmas.

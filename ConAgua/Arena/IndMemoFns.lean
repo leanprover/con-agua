@@ -39,7 +39,8 @@ theorem imC_spec : ∀ x ∈ imC, x.toNat ≠ 52 ∧ x.toNat ≠ 158 ∧ (x.toNa
 
 /-- The leaves of `imFns`: `consts_resolve_ffast` and `struct_used_later` (infer_proj's field check,
 which clears and walks the stage's `hb` memo), each writing its own memo. -/
-def imLeaves : List FnName := ["consts_resolve_ffast", "struct_used_later"]
+def imLeaves : List FnName :=
+  ["consts_resolve_ffast", "struct_used_later", "has_loose_b_var_b_fast", "has_loose_bvar_in"]
 
 /-- **The loop's callees outside the inductive arm**: the call closure in the checker's program
 of the declaration arms but the inductive one, `install_value`, `and_pin_ok`, `is_none`,
@@ -77,7 +78,7 @@ def imFns : List FnName :=
    "check_structural_nat_pin", "check_structural_nat_pin_at_fe2", "check_sum_ctor",
    "check_sum_ctor_tail", "check_sum_ctors", "check_sum_tele", "check_thm_val", "check_type_pins",
    "ci_at_lps", "ci_canon_defn", "ci_canon_eq", "ci_canon_rec", "ci_eq", "ci_eq_rest", "ci_to_cv",
-   "close_telescope", "cons_block_inds", "const_e", "const_find", "const_name_of", "const_push",
+   "close_telescope", "close_telescope_go", "cons_block_inds", "const_e", "const_find", "const_name_of", "const_push",
    "const_ty_at", "const_val_at", "consts_resolve_all", "ct_clear", "ct_find", "ct_put", "ctl_get",
    "ctor_family", "cv_at_lps", "cv_canon_eq", "cv_clear", "cv_eq", "cv_find", "cv_lps", "cv_new",
    "cv_put", "cv_rd", "cv_wr", "de_clear", "de_find", "de_put", "declined_at_definition", "defeq",
@@ -207,7 +208,11 @@ def imFns : List FnName :=
    "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step",
    "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top", "wk_clear",
    "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put", "wscoped_bfast",
-   "zero_find", "zero_push"]
+   "zero_find", "zero_push",
+   "basis_names_ok", "basis_names_error", "basis_name_unreserved",
+   "block_names_unreserved", "basis_name_hit", "basis_name_hit_go", "block_names_eq",
+   "pin_list_ok", "block_links_ok", "block_links_ok_go", "block_link_ok_at", "rules_link_ok",
+   "pin_link_ok", "pin_link_go", "const_named", "pin_copies_ok", "pin_copy_ok", "pin_agrees"]
 
 /-- `imFns` as a tree of name codes. -/
 names_tree imTree : imFns

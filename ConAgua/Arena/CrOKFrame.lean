@@ -91,12 +91,14 @@ theorem crOK_frameFn {p : Prog} {fs : List FnName} (hp : closedA p crA crC fs = 
 /-- **The leaves keep `CrOK`**: `consts_resolve_ffast` by its model, `struct_used_later` by the
 write set of its call closure `fs`. -/
 theorem crLeaves_of {p : Prog} (hp : L.Ind.CrfF p) {fs : List FnName}
-    (hs : closedA p crA crC fs = true) (hg : "struct_used_later" ∈ fs) : CrLeaves p := by
+    (hs : closedA p crA crC fs = true)
+    (hg : ∀ g ∈ ["struct_used_later", "has_loose_b_var_b_fast", "has_loose_bvar_in"], g ∈ fs) :
+    CrLeaves p := by
   intro g hg' n m₀ vs
   simp only [imLeaves, List.mem_cons, List.not_mem_nil, or_false] at hg'
-  rcases hg' with rfl | rfl
+  rcases hg' with rfl | rfl | rfl | rfl
   · exact crOK_crf hp n m₀ vs
-  · exact crOK_frameFn hs hg n m₀ vs
+  all_goals exact crOK_frameFn hs (hg _ (by simp)) n m₀ vs
 
 /-- **A call of a function of `imFns` keeps `CrOK`.** -/
 theorem invoke_crOK {p : Prog} (hcl : IndMemoClosed p) (hl : CrLeaves p) (n : Nat)

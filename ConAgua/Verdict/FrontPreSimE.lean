@@ -153,6 +153,7 @@ import all ConAgua.Scan.Values
 import all ConAgua.Arena.BasisL
 import all ConAgua.Arena.IndDeclConsts
 import all ConAgua.Arena.IndStream
+import all ConAgua.Arena.NatSized
 import ConAgua.Compiler.InlineCorrect
 import ConAgua.Compiler.Main
 

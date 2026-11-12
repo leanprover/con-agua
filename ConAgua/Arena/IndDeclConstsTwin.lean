@@ -2,6 +2,8 @@ module
 
 public import ConRon.Bridge.Checker.Install
 import ConRon.Bridge.Checker.Names
+import ConRon.Bridge.Checker.Basis
+import ConRon.Bridge.Inductives.Install
 
 @[expose] public section
 
@@ -28,7 +30,57 @@ theorem declConstants_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclar
     (hd : ∃ d, Frontend.denoteDecl s.store pd = some d)
     (hrun : ConRon.Arena.declConstants pd s = .ok (L, s')) :
     CheckOK false env fe s' ∧ Ext s.store s'.store := by
-  sorry
+  obtain ⟨d, hd⟩ := hd
+  cases pd with
+  | defnDecl v e hint =>
+    simp only [ConRon.Arena.declConstants] at hrun
+    obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun; exact ⟨hok, Ext.refl _⟩
+  | thmDecl v e =>
+    simp only [ConRon.Arena.declConstants] at hrun
+    obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun; exact ⟨hok, Ext.refl _⟩
+  | opaqueDecl v e =>
+    simp only [ConRon.Arena.declConstants] at hrun
+    obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun; exact ⟨hok, Ext.refl _⟩
+  | axiomDecl v =>
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
+    obtain ⟨cv, hcv, rfl⟩ := hd
+    simp only [ConRon.Arena.declConstants, declConstantsAxiom] at hrun
+    obtain ⟨qs, s1, g1, r1⟩ := AM.bind_ok hrun
+    obtain ⟨rfl, -⟩ := pinAt_run (x := ConLeche.quotSoundName) hok.pins rfl g1
+    rcases AM.ite_ok r1 with ⟨-, k⟩ | ⟨-, k⟩
+    · obtain ⟨ci, s2, g2, k2⟩ := AM.bind_ok k
+      obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+      obtain ⟨hr, -⟩ := quotAt_run hok.state hok.readOK hcv g2
+      exact ⟨hr.checkOK hok, hr.ext⟩
+    · obtain ⟨sa, s2, g2, r2⟩ := AM.bind_ok k
+      obtain ⟨rfl, -⟩ := pinAt_run (x := ConLeche.sorryAxName) hok.pins rfl g2
+      rcases AM.ite_ok r2 with ⟨-, k3⟩ | ⟨-, k3⟩
+      · obtain ⟨rfl, rfl⟩ := AM.pure_ok k3; exact ⟨hok, Ext.refl _⟩
+      · obtain ⟨rfl, rfl⟩ := AM.pure_ok k3; exact ⟨hok, Ext.refl _⟩
+  | quotDecl k v =>
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
+    obtain ⟨cv, hcv, rfl⟩ := hd
+    simp only [ConRon.Arena.declConstants] at hrun
+    obtain ⟨ci, s2, g2, k2⟩ := AM.bind_ok hrun
+    obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+    obtain ⟨hr, -⟩ := quotAt_run hok.state hok.readOK hcv g2
+    exact ⟨hr.checkOK hok, hr.ext⟩
+  | indDecl block nP =>
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
+    obtain ⟨b, hb, rfl⟩ := hd
+    simp only [ConRon.Arena.declConstants] at hrun
+    obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok hrun
+    obtain ⟨hp2, -, hq⟩ := readBlock_installS hok hb g2
+    have hok2 := checkOK_of_pstep hok hp2
+    cases q with
+    | error e =>
+      obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+      exact ⟨hok2, hp2.ext⟩
+    | ok p =>
+      simp only [ROp, Except.toOption] at hq
+      obtain ⟨pP, -, hdp⟩ := hq
+      obtain ⟨hp3, -, -⟩ := blockConstants_run hok2.state hok2.pins hdp k2
+      exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
 
 /-- **The twin's `declTables` keeps `CheckOK`** and grows the store. -/
 theorem declTables_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclaration}
@@ -36,6 +88,34 @@ theorem declTables_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclarati
     (hd : ∃ d, Frontend.denoteDecl s.store pd = some d)
     (hrun : ConRon.Arena.declTables pd s = .ok (Q, s')) :
     CheckOK false env fe s' ∧ Ext s.store s'.store := by
-  sorry
+  obtain ⟨d, hd⟩ := hd
+  cases pd with
+  | indDecl block nP =>
+    simp only [Frontend.denoteDecl, Option.map_eq_some_iff] at hd
+    obtain ⟨b, hb, rfl⟩ := hd
+    simp only [ConRon.Arena.declTables] at hrun
+    obtain ⟨q, s2, g2, k2⟩ := AM.bind_ok hrun
+    obtain ⟨hp2, -, hq⟩ := readBlock_installS hok hb g2
+    have hok2 := checkOK_of_pstep hok hp2
+    cases q with
+    | error e =>
+      obtain ⟨rfl, rfl⟩ := AM.pure_ok k2
+      exact ⟨hok2, hp2.ext⟩
+    | ok p =>
+      simp only [ROp, Except.toOption] at hq
+      obtain ⟨pP, -, hdp⟩ := hq
+      obtain ⟨hms, -⟩ := dShape_inv hdp
+      obtain ⟨o, s3, k3, k4⟩ := AM.bind_ok k2
+      obtain ⟨hp3, -, -⟩ := blockTables_run p.members pP.members hok2.state hdp hms k3
+      cases o with
+      | none =>
+        obtain ⟨rfl, rfl⟩ := AM.pure_ok k4
+        exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
+      | some q =>
+        obtain ⟨rfl, rfl⟩ := AM.pure_ok k4
+        exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
+  | _ =>
+    simp only [ConRon.Arena.declTables] at hrun
+    obtain ⟨rfl, rfl⟩ := AM.pure_ok hrun; exact ⟨hok, Ext.refl _⟩
 
 end L.Ind

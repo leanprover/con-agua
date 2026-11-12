@@ -71,6 +71,16 @@ abbrev UsF (p : Prog) : Prop := ProgHas p usP
 theorem UsF.closed {p : Prog} (hp : UsF p) : closedA p usA usC usFns = true :=
   closedW_of_agree usP_closed (hp.agree usFns)
 
+/-- The `hb` walk's leaves of the stages' write-set checks (`has_loose_b_var_b_fast`, the
+projection guard's `has_loose_bvar_in`) with their callees, beside `struct_used_later`'s. -/
+def hbLeafP : Prog :=
+  [("has_loose_bvar_in", hasLooseBVarInL), ("has_loose_bvar_in_go", hasLooseBVarInGoL)] ++ usP
+
+/-- The functions the two leaves reach. -/
+def hbLeafFns : List FnName :=
+  ["has_loose_bvar_in", "has_loose_bvar_in_go", "has_loose_b_var_b_fast", "hb_clear",
+    "has_loose_b_var_b_go", "hb_find", "has_loose_b_var_b_ins", "hb_put", "e_view"] ++ bvbFns
+
 /-! ## The spec at any arguments -/
 
 theorem structUsedLater_specV {p : Prog} (hp : UsF p) (n : Nat) (s₀ : St) (vs : List Word) :
@@ -100,6 +110,9 @@ theorem structUsedLater_specV {p : Prog} (hp : UsF p) (n : Nat) (s₀ : St) (vs 
 /-- What the `hb` walk writes: its memo and the bound walk's, with their control words. -/
 def hbWA : List TieredArray := [HBM, BMEMO]
 def hbWC : List Word := [214, 215, 24, 25]
+
+/-- **The two leaves write only the `hb` memo and the bound walk's.** -/
+theorem hbLeafP_closed : closedA hbLeafP hbWA hbWC hbLeafFns = true := by decide +kernel
 
 theorem hbInsW_frame {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) :
     MemFrame hbWA hbWC m m' := by

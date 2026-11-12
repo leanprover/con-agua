@@ -832,12 +832,13 @@ theorem decTbl_sn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd
   exact ⟨hw32, rfl⟩
 
 /-- `proj_guard_rows`' words against `projGuardRows`' answer, run from `m₀` to `m`: `(0, _, _)`
-none; `(1, ro, rn)` the rows at the old top `ro`, below the new top. -/
+none; `(1, ro, rn)` the rows at `ro` (at or above the old top: the substitution under them), below
+the new top. -/
 def PgrRes (m₀ m : Mem) (r : List Word) : Option (Array (Nat × EIdx)) → Prop
   | none => r.headD 0 = 0
-  | some rows => r.headD 0 ≠ 0 ∧ r.tail.headD 0 = spTop m₀ ∧
-      rows.size = (r.tail.tail.headD 0).toNat ∧ RowsAt m (spTop m₀) rows ∧
-      (spTop m₀).toNat + 2 * rows.size ≤ (spTop m).toNat
+  | some rows => r.headD 0 ≠ 0 ∧ (spTop m₀).toNat ≤ (r.tail.headD 0).toNat ∧
+      rows.size = (r.tail.tail.headD 0).toNat ∧ RowsAt m (r.tail.headD 0) rows ∧
+      (r.tail.headD 0).toNat + 2 * rows.size ≤ (spTop m).toNat
 
 /-- **`proj_guard_rows` refines `projGuardRows`** (no slot reached: its lifted run): the rows left
 on the stack above the old top, the twin's level readbacks kept. -/
@@ -950,11 +951,11 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   · have g : r3.headD 0 = 0 := hres3
     rw [cpgE.k_proj_guard_rows.eq_2, ite_eq_left g]
     exact fun _ => ErrClaim.of_error rfl rfl
-  obtain ⟨g4, hro, hsz, hrows, hb⟩ := hres3
-  rw [cpgE.k_proj_guard_rows.eq_2, ite_eq_right g4, hro]
+  obtain ⟨g4, -, hsz, hrows, hb⟩ := hres3
+  rw [cpgE.k_proj_guard_rows.eq_2, ite_eq_right g4]
   simp only
   have hc := cgr_ref p hp.cgrP n F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb mode hm4 hebm
-    R hRW hRI gL rows (spTop m2) (r3.tail.tail.headD 0) hsz (n + 1) (Nat.le_refl _) m3 a3 M3 0 _ hS3 hrows hb
+    R hRW hRI gL rows (r3.tail.headD 0) (r3.tail.tail.headD 0) hsz (n + 1) (Nat.le_refl _) m3 a3 M3 0 _ hS3 hrows hb
     (hgs.keep hL3)
   refine RefE.tail_eq (k := cpgE.k_check_guard_rows p (rdW (m1.arr64 CTL) 136))
     (f := fun v => ([0], v.2.set64 CTL 136 (rdW (m1.arr64 CTL) 136)))
