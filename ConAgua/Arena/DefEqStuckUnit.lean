@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.DefEqStuckShape
 import ConAgua.Arena.IndView
 import ConAgua.Arena.RefWalk
@@ -39,14 +40,51 @@ def suTailT (r : CoreFnsA) (depth : Nat) (b wta : EIdx) : AM Bool := do
 /-- **`struct_unit_tail` refines `suTailT`, both outcomes**: the errors are the `infer_io`, `whnf`
 and `defeq` slots'. -/
 @[refines_part ConRon.Arena.structUnitCert "b's type against a's (suTailT)"]
-theorem sut_ref (p : Prog) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
+theorem sut_ref (p : Prog) (hq : StuckProg p) (n : Nat) (hk : KnotUpTo p n) (F : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d b wta : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hwta : HW wta) :
     RefE (KnotUpToE p n) (sutE p (n + 1) s₀.mem mode vis d b wta)
       (suTailT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE b) (decE wta)) a₀
       (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  sorry
+  have hK := hk n (Nat.le_refl _)
+  simp only [sutE]
+  unfold suTailT
+  refine RefE.bind_callE (fun _ => rfl) (hK.inferIO F s₀ a₀ dn vis fe M eb mode d b hF hn hs hb)
+    (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).inferIO F s₀ a₀ dn vis fe M eb mode d b hF hn hs hb)
+    fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
+  dsimp only [sutE.k_infer_io]
+  have hs₁ : SlotPre ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hs.mode4, hs.eb_mode⟩
+  refine RefE.bind_callE (fun _ => rfl) (hK.whnf F _ _ dn vis fe M₁ eb mode d _ hF hn hs₁ h₁.resOk)
+    (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).whnf F _ _ dn vis fe M₁ eb mode d _ hF hn hs₁
+      h₁.resOk)
+    fun r₂ m₂ _ h₂ => RefE.after_core (w := id) h₂ fun M₂ hS₂ _ => ?_
+  have hh2 : HW (r₂.headD 0) := h₂.resOk
+  have hs₂ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode := ⟨hS₂, hs.mode4, hs.eb_mode⟩
+  simp only [sutE.k_whnf, isForallE, decH, tag_beq_w _ hh2 6 (by decide) ETag.forallE rfl 6 rfl]
+  by_cases h6 : tagW (r₂.headD 0) = 6
+  · simp only [h6, decide_true, ↓reduceIte]
+    refine RefE.bind_callW (fun _ => rfl) (ioNeutral_at p hq.leaf n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb b hS₂ hb)
+      fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
+    dsimp only [sutE.k_io_neutral]
+    by_cases g0 : r₃.headD 0 = 0
+    · rw [ite_eq_left g0, L.Arena.decBool_false_of g0]
+      exact RefE.ret rfl (CorePost.ret hS₃ rfl hw0)
+    rw [ite_eq_right g0, L.Arena.decBool_true_of g0]
+    simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+    have hs₃ : SlotPre ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hs.mode4, hs.eb_mode⟩
+    rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
+    exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₃ eb mode d wta _ hF hn hs₃ hwta hh2)
+      (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₃ eb mode d wta _ hF hn
+        hs₃ hwta hh2)
+      fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
+  simp only [h6, decide_false, Bool.false_eq_true, ↓reduceIte]
+  rw [← bind_pure ((coreKnot (decMode mode) (decEager mode) fe id F).defeq _ _ _)]
+  exact RefE.bind_callE (fun _ => rfl) (hK.defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn hs₂ hwta hh2)
+    (fun (hkE : KnotUpToE p n) => (hkE n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode d wta _ hF hn
+      hs₂ hwta hh2)
+    fun _ _ _ h => RefE.ret rfl ⟨h.after, rfl, h.resOk⟩
+
 
 /-! ## `struct_unit_cert` -/
 
