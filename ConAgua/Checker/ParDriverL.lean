@@ -143,7 +143,7 @@ theorem callE_of_run {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s : St}
 /-- **The sequential driver's jobs**: a returning `check_jobs(0, k)` (`k` the number of records)
 on a memory that agrees with the flushed memory after the index build on every array the jobs
 name means the twin's jobs over every record accept from the index state's worker. -/
-theorem checkJobs_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkJobs_seq {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -199,7 +199,7 @@ theorem checkJobs_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
   have H := hH (recCall_stepE hJP hFD hLD hdn hrec hpp hds hden hPD)
   have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I s₂.mem { PA.sF with caches := Caches.empty } :=
     hJ0.setGlob _
-  obtain ⟨-, hacc⟩ := pool_twin Vt H hst [(s₂.mem, List.range PA.ds.size)]
+  obtain ⟨-, hacc⟩ := pool_twin H hst [(s₂.mem, List.range PA.ds.size)]
     (fun t ht => by
       rw [List.mem_singleton] at ht; subst ht
       exact ⟨_, ⟨hJ, PExt.of_ext (Ext.refl _), rfl⟩, sameEnter_worker.symm⟩)
@@ -234,7 +234,7 @@ theorem clearsOK_words : ∀ (l : List MemoSch) {m₁ m₂ : Mem}, m₁.words = 
 
 /-- **`check_jobs` after the flush**, as a triple: from a memory that is the flush of one agreeing
 with `m` on every array the jobs name. -/
-theorem checkJobs_seqT (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkJobs_seqT {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -255,7 +255,7 @@ theorem checkJobs_seqT (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
     exact clearsOK_words _ (m₁ := m₂) (m₂ := m) rfl (clearsOK_agree hc _ hAg hfx)
   have hA2 := flushMem_agree hAg hc
   have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
-  exact checkJobs_seq Vt hF hfok hJP hn hhi (fun a ha => by
+  exact checkJobs_seq hF hfok hJP hn hhi (fun a ha => by
     rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]) hrun
 
 theorem checkerProg_flushProg : FlushProg checkerProg := by
@@ -265,7 +265,7 @@ theorem checkerProg_flushProg : FlushProg checkerProg := by
 build on every array the jobs name, with the range `[0, k)` (`k` the number of records) and an
 empty seed `CTLF`, a run that returns `ACCEPT` means the twin's jobs over every record accept from
 the index state's worker. -/
-theorem checkB_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
+theorem checkB_seq {b pb : ByteArray}
     {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (hF : FoldAt b pb sz PA m₇ m)
     (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
@@ -284,7 +284,7 @@ theorem checkB_seq (Vt : Type w) [ConLeche.SetTheory Vt] {b pb : ByteArray}
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hJ := checkJobs_seqT Vt hF hJP n (by omega) hi hhi
+    have hJ := checkJobs_seqT hF hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,

@@ -32,7 +32,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- **`FoldOK` at a job's start**, from a worker's state at a position whose prefix the fold
 accepted with distinct names (con-ron's `view_foldOK` at the scratch state, as in `job_spec`). -/
-theorem worker_foldOK (Vt : Type w) [ConLeche.SetTheory Vt]
+theorem worker_foldOK
     {pinsP : List ConLeche.NatOpPinSet} {dsP : List ConLeche.Declaration} {I : IStreamIndex}
     {s₁ a : AState} {k : Nat} (hpinsOK : PinsOK s₁) (hpersPins : PersPins s₁)
     (hI : IndexDenotes s₁.store I (ConLeche.Cached.buildIndex dsP.toArray))
@@ -73,7 +73,7 @@ variable {Rel Call}
 /-- **A worker's chain, refined**: from a related worker's state, a chain of steps at positions
 whose prefixes the fold accepted is the twin's `checkJobList` accepting, and each record's
 `checkDecl` accepting at its prefix's environment. -/
-theorem pool_walk (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
+theorem pool_walk (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
       (s₁ := s₁) Rel Call) :
     ∀ (l : List Nat) (r : σ) (a : AState), Rel r a → WorkerOK s₁ a → JobChain Call r l →
       (∀ x ∈ l, x < ds.size ∧ PrefixOK pinsP dsP x ∧
@@ -91,7 +91,7 @@ theorem pool_walk (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := p
     | @cons _ _ r' _ hcall hrest =>
       obtain ⟨htk, hPt, hndt⟩ := hl t List.mem_cons_self
       obtain ⟨htk', hdk⟩ := H.hden t htk
-      have hF := worker_foldOK Vt H.hpinsOK H.hpersPins H.hI H.hpI htk' hPt hndt hw
+      have hF := worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI htk' hPt hndt hw
       obtain ⟨a', hj, hr'⟩ := H.hstep t r r' a htk hr hcall hF
       obtain ⟨hw', env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
         H.hpI hw htk htk' hdk hPt hndt hj
@@ -112,7 +112,7 @@ theorem JobChain.append_left {Run : Nat → σ → σ → Prop} :
 start state related to the driver state's worker and a chain of steps (`ths`), with claims
 increasing in each worker and covering the positions below `n`, give every prefix of the records
 up to length `n` accepted by the pure fold with distinct names. -/
-theorem pool_prefix (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
+theorem pool_prefix (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
       (s₁ := s₁) Rel Call) (hst : StateOK s₁)
     (ths : List (σ × List Nat)) (hstart : ∀ t ∈ ths, Rel t.1 s₁.worker)
     (hchain : ∀ t ∈ ths, JobChain Call t.1 t.2) (hinc : ∀ t ∈ ths, t.2.Pairwise (· < ·))
@@ -149,7 +149,7 @@ theorem pool_prefix (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins :=
         have := hchain th hth
         rw [he, show pre ++ k :: post = (pre ++ [k]) ++ post by simp] at this
         exact JobChain.append_left this
-      obtain ⟨-, hds⟩ := pool_walk Vt H (pre ++ [k]) th.1 s₁.worker (hstart th hth)
+      obtain ⟨-, hds⟩ := pool_walk H (pre ++ [k]) th.1 s₁.worker (hstart th hth)
         (WorkerOK.start hst) hc fun x hx => by
           rcases List.mem_append.mp hx with hx | hx
           · have := hpre x hx
@@ -166,7 +166,7 @@ state related to the driver state's worker and a chain of steps (`ths`), whose c
 of the records, increase in each worker and cover the positions, give every prefix of the records
 accepted by the pure fold with distinct names, and every worker's list accepted by the twin's
 `checkJobList` from the driver state's worker. -/
-theorem pool_twin (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
+theorem pool_twin (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
       (s₁ := s₁) Rel Call) (hst : StateOK s₁)
     (ths : List (σ × List Nat)) (hstart : ∀ t ∈ ths, Rel t.1 s₁.worker)
     (hchain : ∀ t ∈ ths, JobChain Call t.1 t.2) (hinc : ∀ t ∈ ths, t.2.Pairwise (· < ·))
@@ -174,9 +174,9 @@ theorem pool_twin (Vt : Type w) [ConLeche.SetTheory Vt] (H : PoolHyps (pins := p
     (∀ k ≤ ds.size, PrefixOK pinsP dsP k ∧
       ((ConLeche.Cached.recsConsts (dsP.take k)).map (·.name)).Nodup) ∧
     ∀ t ∈ ths, ∃ s'', checkJobList V pins I ds t.2 s₁.worker = .ok (.ok (), s'') := by
-  have main := pool_prefix Vt H hst ths hstart hchain hinc ds.size (Nat.le_refl _) hcov
+  have main := pool_prefix H hst ths hstart hchain hinc ds.size (Nat.le_refl _) hcov
   refine ⟨main, fun th hth => ?_⟩
-  exact (pool_walk Vt H th.2 th.1 s₁.worker (hstart th hth) (WorkerOK.start hst) (hchain th hth)
+  exact (pool_walk H th.2 th.1 s₁.worker (hstart th hth) (WorkerOK.start hst) (hchain th hth)
     fun x hx => have := hrange th hth x hx; ⟨this, main x (by omega)⟩).1
 
 end pool

@@ -307,7 +307,7 @@ set_option linter.constructorNameAsVariable false in
 /-- **The threads' accept is the twin's pooled accept**, for the committed file `checker.s`:
 the trusted threaded harness runs as `ThreadsRun` says. And every call, entry 1 and each
 `ca_check_b`, returns with the caller's registers (`RegsRestored`). -/
-theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] ∧
@@ -383,7 +383,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
   have hthr := threadsAcc_runs k0 hcode dm₀ st₀ B ths hR.toThreadsAcc hhdr hent' hdisj
   obtain ⟨f, hf⟩ := Classical.axiomOfChoice hthr
   refine ⟨?_, hRR₀, fun t ht i hi => (hf t ht).2.2.2.1 i hi⟩
-  refine threads_twinAcceptsPooled V checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
+  refine threads_twinAcceptsPooled checkerCd_proved b pb _ hin abiFuel hN rs₁ m₁ h₁ hge B hBeq
     (ths.map fun t => (zeroMem checkerTab, f t)) (fun t' ht' => ?_) (fun j hj => ?_) ?_
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     obtain ⟨h1, h2, -, -, -⟩ := hf t ht
@@ -405,10 +405,10 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (V : Type w) [ConLeche.SetTheor
 
 /-- **The threads' accept is the twin's pooled accept** (`threadsRun_twinAcceptsPooled_regs`
 without the registers). -/
-theorem threadsRun_twinAcceptsPooled [Host] (V : Type w) [ConLeche.SetTheory V] (k0 : Nat) (hcode : Code checkerFile k0)
+theorem threadsRun_twinAcceptsPooled [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (b pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
     (hR : ThreadsRun b pb dm₀ ra₀ st₀ B ths) : TwinAcceptsPooled [b] :=
-  (threadsRun_twinAcceptsPooled_regs V k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
+  (threadsRun_twinAcceptsPooled_regs k0 hcode b pb h64 dm₀ ra₀ st₀ B ths hR).1
 
 end ConAgua.Final
