@@ -19,8 +19,8 @@ open L.Front
 
 /-! ## Tests -/
 
--- `ind_caps`' 15 words decode to the default `IIndCaps` (`decI 0` is the default handle).
-#guard decCaps (aread #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]) 0 ==
+-- `ind_caps`' record of zero words decodes to the default `IIndCaps` (`decI 0` is the default handle).
+#guard decCaps (aread (Array.replicate L.Caps.size.toNat 0)) 0 ==
   some ({} : ConRon.Arena.IIndCaps)
 
 /-- The lines before the inductive line (after the header line): name 1 = `Unit`, 2 = `Unit.unit`, 3 = `Unit.rec`,

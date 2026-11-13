@@ -80,7 +80,7 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
   return 0
 }
 
-/-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, 20 words; `4`
+/-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, `CI.indSize` words; `4`
 constructor, 8; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its slices too. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
 @[no_expose] def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p, ez) {

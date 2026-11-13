@@ -41,7 +41,7 @@ abbrev putE (m : Mem) (a v : Word) (k : Mem → Option (List Word × Mem)) :
 /-- A constant record's size by its kind word: the sizes `rci_ci` allocates (the refinements'
 table of the kinds). -/
 def ciSize (k : Word) : Option Word :=
-  if k = 0 then some 5 else if k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some 20
+  if k = 0 then some 5 else if k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some CI.indSize
   else if k = 4 then some 8 else if k = 5 then some 10 else none
 
 end models

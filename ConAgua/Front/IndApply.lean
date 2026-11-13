@@ -32,7 +32,7 @@ other declarations' universe parameter lists live in; a constant's universe para
 
 | constant | words at `p` |
 |---|---|
-| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (15: `0,0,0,0,0,0,0, 1,0,0, 0,0, 0, 0,0`) — 20 |
+| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (`Caps.size` words, every field `0`) — `CI.indSize` |
 | `ctorInfo cv nP nF induct` | `4`, cv, `nP`, `nF`, `induct` — 8 |
 | `recInfo cv major pre rules` | `5`, cv, `major`, `pre`, rules.off, rules.cnt — 9; each rule 11 words (`decRule`): `ctor, nfields, 0, 0 (plain), 0, 0, 0, 0, rhs, 0, 0` |
 
@@ -449,14 +449,15 @@ def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
   return 0
 }
 
-/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) in the 15-word record at `DIND[q]` (`decCaps`; words
-`q + 1‥q + 5` are unused). -/
+/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) in the record at `DIND[q]` (`decCaps`): every
+field `0`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indCaps : FunDecl := lfn (q) {
-  DIND.u64[q] := 0; DIND.u64[q + 6] := 0; DIND.u64[q + 7] := 0;
-  DIND.u64[q + 8] := 0; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0; DIND.u64[q + 11] := 0;
-  DIND.u64[q + 12] := 0; DIND.u64[q + 13] := 0; DIND.u64[q + 14] := 0;
+  DIND.u64[q + ⟪Caps.eta⟫] := 0; DIND.u64[q + ⟪Caps.nIdx⟫] := 0;
+  DIND.u64[q + ⟪Caps.neverZero⟫] := 0; DIND.u64[q + ⟪Caps.allOff⟫] := 0;
+  DIND.u64[q + ⟪Caps.allLen⟫] := 0; DIND.u64[q + ⟪Caps.nparams⟫] := 0;
+  DIND.u64[q + ⟪Caps.ctorsOff⟫] := 0; DIND.u64[q + ⟪Caps.ctorsLen⟫] := 0;
   return 0
 }
 

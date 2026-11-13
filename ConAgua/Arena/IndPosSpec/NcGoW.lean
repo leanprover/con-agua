@@ -366,14 +366,6 @@ theorem ncW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
     obtain ⟨w, hw, hc⟩ := h2 i (by simpa using hi)
     exact ⟨w, by simpa using hw, by simpa using hc.mono fun _ hx => hx.1⟩
 
-theorem decCaps_ctors {a : Nat → Option Word} {q : Nat} {caps : IIndCaps}
-    (h : decCaps a q = some caps) :
-    nat? a (q + 12) = some caps.nparams ∧ hlist? a (q + 13) = some caps.ctors := by
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨_, _, _, _, _, _, np, hnp, cts, hcts, _, _, heq⟩ := h
-  cases Option.some.inj heq
-  exact ⟨hnp, hcts⟩
-
 /-- A number read off the constant records is the word L reads there. -/
 theorem erecP_rdN {m : Mem} {i v : Nat} {x : Word} (h : nat? (erecP m) i = some v) (hx : x.toNat = i) :
     (erRd m x).toNat = v := by

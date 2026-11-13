@@ -89,13 +89,13 @@ def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
   return q
 }
 
-/-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
+/-- `rci_caps(q, c)`: an inductive's capabilities to the record at `c` (`decCaps`); the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:312-316 ConRon.Arena.Frontend.internCaps
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   x := call rom_u64_c(q);
-  ez := call erec_put(c, x);
+  ez := call erec_put(c + ⟪Caps.eta⟫, x);
   x := call rom_u64_c(q + 8);
   ez := call erec_put(c + ⟪Caps.nIdx⟫, x);
   x := call rom_u64_c(q + 16);
