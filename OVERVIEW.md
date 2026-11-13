@@ -1209,7 +1209,7 @@ the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
 `scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 730 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
 not-accept with it, sequentially and with `--jobs=4`
-([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L44)).
+([how](https://github.com/leanprover/con-agua/blob/master/scripts/diff-e2e.py#L2-L46)).
 Seven of them, the `nat_size_limit_*` fixtures, are pinned at a maximum
 `Nat` size of 16 bytes (con-leche's test table runs them with
 `--max-nat-size=16`); the checker runs every input at the default maximum

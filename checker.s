@@ -89092,21 +89092,6 @@ jae ca_error
 movq 1176(%r15,%rcx,8), %rcx
 movq %rdx, (%rcx,%rax,8)
 movq $0, %r10
-lea 2(%r11), %r13
-movq $0, %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r10
 lea 3(%r11), %r13
 movq $1, %r12
 movq %r13, %rbx
@@ -89193,36 +89178,6 @@ cmpq 2648(%r15,%rax,8), %r12
 jae ca_error
 movq 1176(%r15,%rax,8), %rcx
 movq (%rcx,%r12,8), %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r10
-lea 9(%r11), %r13
-movq $0, %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r10
-lea 10(%r11), %r13
-movq $0, %r12
 movq %r13, %rbx
 shrq $40, %rbx
 movq $1099511627775, %rsi
@@ -184402,30 +184357,6 @@ jae ca_error
 movq 1176(%r15,%rcx,8), %rcx
 movq %rdx, (%rcx,%rax,8)
 movq $0, %r11
-lea 2(%rdi), %r13
-lea 2(%r8), %rax
-shrq $40, %rax
-andq $1, %rax
-lea 2(%r8), %r12
-movq $1099511627775, %rcx
-andq %rcx, %r12
-cmpq 2648(%r15,%rax,8), %r12
-jae ca_error
-movq 1176(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r11
 lea 3(%rdi), %r13
 lea 3(%r8), %rax
 shrq $40, %rax
@@ -184551,54 +184482,6 @@ lea 8(%r8), %rax
 shrq $40, %rax
 andq $1, %rax
 lea 8(%r8), %r12
-movq $1099511627775, %rcx
-andq %rcx, %r12
-cmpq 2648(%r15,%rax,8), %r12
-jae ca_error
-movq 1176(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r11
-lea 9(%rdi), %r13
-lea 9(%r8), %rax
-shrq $40, %rax
-andq $1, %rax
-lea 9(%r8), %r12
-movq $1099511627775, %rcx
-andq %rcx, %r12
-cmpq 2648(%r15,%rax,8), %r12
-jae ca_error
-movq 1176(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r13, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %r13, %rsi
-movq %rsi, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 2648(%r15,%rcx,8), %rax
-jae ca_error
-movq 1176(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-movq $0, %r11
-lea 10(%rdi), %r13
-lea 10(%r8), %rax
-shrq $40, %rax
-andq $1, %rax
-lea 10(%r8), %r12
 movq $1099511627775, %rcx
 andq %rcx, %r12
 cmpq 2648(%r15,%rax,8), %r12
