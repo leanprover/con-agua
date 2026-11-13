@@ -420,7 +420,7 @@ theorem isCtorApp_run_const (fe : IFEnv) (a : AState) (e h : EIdx)
 at `q + 6`. -/
 theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat) ∧
+    (rd q = 4 → ∃ cv fam, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat fam) ∧
     (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
@@ -431,12 +431,12 @@ theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   constructor
   · intro hw; subst hw
     simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, hc⟩ := h
+    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, fam, -, hc⟩ := h
     cases hc
     have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
     have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
-    exact ⟨cv, by rw [h5, h6]⟩
-  · intro hw cv np nf hc
+    exact ⟨cv, fam, by rw [h5, h6]⟩
+  · intro hw cv np nf fam hc
     subst hc
     have hne : w.toNat ≠ 4 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
     rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
