@@ -124,7 +124,7 @@ consts-resolve site, the twin's `fail (← unresolvedConstsError …)` (`uce_err
 theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
     {visR : Word} {feR : IFEnv} {envR : ConLeche.Env} {a : AState} {m : Mem} {cvR gen : Word}
     {cv : IConstantVal} (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hA : AbsOK m)
     {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
     (hgP : denoteE a.store (decI gen) = some genP) :
@@ -163,7 +163,7 @@ theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NI
     (L.Arena.cvLps_specW p hp.alloc hp.copy hp.eti hp.lps N ⟨m2, Locals.init []⟩ cvR) h3
   rw [hs3] at h3'
   have hg12 := hg1.trans hg2
-  obtain ⟨hS3, hg3, hd3, -⟩ := cvLpsA_stage h3' hS2 (ArrExt.decCV (L.Ind.IWGrow.ext hg12) hqd) hqb
+  obtain ⟨hS3, hg3, hd3, -⟩ := cvLpsA_stage h3' hS2 (ArrExt.decCV (L.Ind.IWGrow.ext hg12) hqd)
   have hA3 : AbsOK m3 := by
     have hA2 : AbsOK m2 := (AFr.of_frame (lbbF_frame h1)).trans (AFr.of_frame (hffF_frame h2)) hA
     cases N with

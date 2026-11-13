@@ -136,7 +136,7 @@ theorem crs_ref (hP : CrsProgE p) (henv : ConLeche.EnvWF env) (visR pO pL : Word
   -- `cv_lps`: L only
   refine RefE.onlySim (fun _ => crsE.k_cv_lps.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   rw [crsE.k_cv_lps.arm1]
-  obtain ⟨hS1, hg1, hd1, ht1⟩ := cvLpsA_stage h1 hS hcv (rec3CVExt_lt hS hext)
+  obtain ⟨hS1, hg1, hd1, ht1⟩ := cvLpsA_stage h1 hS hcv
   have hA1 := cvLpsA_afr h1 hA
   have hC1 : StageC dn visR feR env m1 a := hC.of_check hS1 hA1 hC.check (Ext.refl _)
   have hma1 := hma.imp fun _ h => maMR_mfr (cvLpsWA_mfr h1) h

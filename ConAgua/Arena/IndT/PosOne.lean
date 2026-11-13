@@ -108,7 +108,7 @@ theorem oneRef_step (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (ih : NbRef p dn vis fe en
   rw [oneK_eq]
   -- the crest, typed
   have hR1 := crest_ref hq hIlpf dn vis fe henv (k := n) (by omega) hC hCc.hus hCc.hnames hCc.hnamesb hCc.hnn
-    (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb hcv hcv3 hP hA hpre
+    (hCc.hds.get (OMono.decHL _ _)) hCc.hdsb hCc.hholes hCc.hholesb hcv hP hA hpre
     hcvP hcl
   have hs1 := ncrE_spec p L.ct n ⟨m, Locals.init []⟩ vis no nl us dO dL hO hL cv hi
   rcases c1 : callE p n "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi] m with e1 | ⟨rc, m1⟩

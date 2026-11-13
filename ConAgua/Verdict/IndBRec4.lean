@@ -229,7 +229,7 @@ theorem crc_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
     {envR : ConLeche.Env} (henvR : ConLeche.EnvWF envR) {a : AState} (N : Nat) (hN : N ≤ 2 ^ 62)
     {m : Mem} {pO pL cvR n gen : Word} {cv : IConstantVal} {pushed : List NIdx}
     (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hA : AbsOK m)
     (hpu : decHL m pO.toNat pL.toNat = some pushed) (hpb : pO.toNat + pL.toNat ≤ iwTop m)
     (hma : ∃ mp, maMR m mp) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
@@ -243,7 +243,7 @@ theorem crc_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
   rw [crcE.arm1]
   unfold ConRon.Arena.classRuleCheck
   rw [crgT_bind]
-  refine RefE.bindE (fun _ => rfl) id (crg_ref hp hApd N hC hgen hqd hqb hA hcvP hgP)
+  refine RefE.bindE (fun _ => rfl) id (crg_ref hp hApd N hC hgen hqd hA hcvP hgP)
     fun ⟨r1, m1⟩ _ a1 _ ⟨hC1, hg1, hA1, c14, hfvP, hf1⟩ => ?_
   dsimp only at hC1 hg1 hA1 hf1
   obtain ⟨mp, hM⟩ := hma
@@ -338,7 +338,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
     {envR : ConLeche.Env} (henvR : ConLeche.EnvWF envR) {a : AState} (N : Nat) (hN : N ≤ 2 ^ 62)
     {m : Mem} {pO pL cvR n gen : Word} {cv : IConstantVal} {pushed : List NIdx}
     (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hA : AbsOK m)
     (hpu : decHL m pO.toNat pL.toNat = some pushed) (hpb : pO.toNat + pL.toNat ≤ iwTop m)
     (hma : ∃ mp, maMR m mp) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
@@ -352,7 +352,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
   rw [cruleE.arm1]
   unfold ConRon.Arena.classRuleOk
   refine RefE.bindE (fun _ => rfl) id
-    (crc_ref hq hp hApd henvR N (by omega) hC hgen hqd hqb hA hpu hpb hma hcvP hgP)
+    (crc_ref hq hp hApd henvR N (by omega) hC hgen hqd hA hpu hpb hma hcvP hgP)
     fun ⟨r1, m1⟩ _ a1 _ hP => ?_
   dsimp only [cruleE.k_class_rule_check]
   exact RefE.ret rfl ⟨hP.stage, hP.grow, rfl, rfl, hP.abs, hP.ma, hP.core⟩
@@ -365,7 +365,7 @@ theorem classRuleOk_refinesC (hp : CruleProg p) (hApd : ApdF p) (N : Nat) (hN : 
     (a₀ : AState) (visR pO pL : Word) (feR : IFEnv) {envR : ConLeche.Env}
     (henvR : ConLeche.EnvWF envR) (cvR n gen : Word) (cv : IConstantVal) (pushed : List NIdx)
     (hC : StageC dn visR feR envR s₀.mem a₀) (hgen : H gen)
-    (hqd : decCV (erecP s₀.mem) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64)
+    (hqd : decCV (erecP s₀.mem) cvR.toNat = some cv)
     (hA : AbsOK s₀.mem) (hpu : decHL s₀.mem pO.toNat pL.toNat = some pushed)
     (hpb : pO.toNat + pL.toNat ≤ iwTop s₀.mem) (hma : ∃ mp, maMR s₀.mem mp)
     {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
@@ -380,7 +380,7 @@ theorem classRuleOk_refinesC (hp : CruleProg p) (hApd : ApdF p) (N : Nat) (hN : 
       decW0E s'.mem r (AM.res (ConRon.Arena.classRuleOk .verified feR pushed cv n.toNat (decI gen)) a₀) ∧
       AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (cruleE_spec p hp N s₀ visR pO pL cvR n gen)
-    (crule_ref hq hp hApd henvR N hN hC hgen hqd hqb hA hpu hpb hma hcvP hgP)) ?_
+    (crule_ref hq hp hApd henvR N hN hC hgen hqd hA hpu hpb hma hcvP hgP)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, by rw [hst]; exact hR.stage, hR.grow,
@@ -447,7 +447,7 @@ theorem cr1_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
     rw [L.toNat_add_of_not_lt hb, e0, e8, e1, t1]
     rw [UInt64.toNat_add, t0, t8]; exact congrArg (· + X.nF) (Nat.mod_eq_of_lt hns)
   have h := crule_ref hq hp hApd henvR N (by omega) hC hgen (rec2DecCV_erecP hcv hext)
-    (rec3CVExt_lt hC.stage hext) hA hpu hpb hma hcvP hgP
+    hA hpu hpb hma hcvP hgP
     (n := rdW (m.arr64 IW) g + rdW (m.arr64 IW) (g + 8) + rdW (m.arr64 IW) (x + 1))
   rwa [hn] at h
 

@@ -128,7 +128,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
     (hnn : dL.toNat + names.length < 2 ^ 64)
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
     (hho : decHL m hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop m)
-    (hcv : decCVp m cv.toNat = some cvv) (hcv3 : cv.toNat + CV.type.toNat < 2 ^ 64) (hP : PosMR m) (hA : AbsOK m)
+    (hcv : decCVp m cv.toNat = some cvv) (hP : PosMR m) (hA : AbsOK m)
     {usP : List ConLeche.Level} {dsP : List ConLeche.Expr} {namesP : List ConLeche.Name}
     {holesP : List ConLeche.Expr} {cvP : ConLeche.ConstantVal}
     (hpre : CtorsPre a.store (decI us) ds names holes hi.toNat usP dsP namesP holesP)

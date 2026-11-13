@@ -49,7 +49,7 @@ theorem flush_stage {vis : Word} {fe : IFEnv} {m : Mem}
 theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
-    (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + CV.type.toNat < 2 ^ 64) :
+    (hq : decCV (erA m) q.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
