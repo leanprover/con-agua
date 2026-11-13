@@ -429,7 +429,8 @@ theorem ircW_kdc2 {k q r p p' : Word} {m6 m' : Mem}
     (h : ircW.k_dind_copy_2 k q r p (some m6) = some (p', m')) :
     p = p' ∧ (if k = 5 then erecPutMem (erecPutMem m6 (p + 2) q) (p + 7) r
       else erecPutMem m6 (p + 2) q) = m' := by
-  simp only [ircW.k_dind_copy_2, ircW.j2] at h
+  -- a whole-record copy (`ind_rec_copy`): the offsets as numbers (`rec_unfold`)
+  simp only [ircW.k_dind_copy_2, ircW.j2, rec_unfold, UInt64.reduceAdd] at h
   revert h
   repeat' split
   all_goals simp_all
@@ -696,6 +697,8 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   | zero => rw [ircW.eq_1] at h; cases h
   | succ n =>
   rw [ircW.arm1] at h
+  -- a whole-record copy (`ind_rec_copy`): the offsets as numbers (`rec_unfold`)
+  try simp only [rec_unfold, UInt64.reduceAdd] at h
   obtain ⟨kk, hkk, hk345⟩ := decCI_front_kind hc hF
   obtain ⟨kw, hTk, rfl⟩ : ∃ kw, (trunc (m.arr64 DLP) t)[s.toNat]? = some kw ∧ kw.toNat = kk := by
     simpa [nat?] using hkk
@@ -711,6 +714,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   | some x =>
   obtain ⟨q, m1⟩ := x
   rw [ha1, ircW.k_erec_alloc.arm1] at h
+  try simp only [rec_unfold, UInt64.reduceAdd] at h
   obtain ⟨hq, ht1, hW1, hok1⟩ := erAlloc_f ha1 hW
   have hw1 := hW1 (fun i => fTop m ≤ i)
   have hP1 : m1.arr64 DLP = m.arr64 DLP := hw1.dlp
@@ -741,11 +745,13 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   · have e : kw = 3 := UInt64.toNat_inj.mp (by rw [h3]; rfl)
     subst e
     rw [ircW.k_dind_copy.arm1 n s 3 q m2 rfl] at h
+    try simp only [rec_unfold, UInt64.reduceAdd] at h
     exact irc_fin h hw2 hW hc hF hP hkk rfl (by rfl) (Or.inl rfl) (by omega) hlr hl hsrc2
       (fun h5 => by simp at h5)
   · have e : kw = 4 := UInt64.toNat_inj.mp (by rw [h4]; rfl)
     subst e
     rw [ircW.k_dind_copy.arm2 n s 4 q m2 (by decide) rfl] at h
+    try simp only [rec_unfold, UInt64.reduceAdd] at h
     exact irc_fin h hw2 hW hc hF hP hkk rfl (by rfl) (Or.inr (Or.inl rfl)) (by omega) hlr hl
       hsrc2 (fun h5 => by simp at h5)
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
@@ -753,6 +759,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     have hg : ¬ 1152921504606846976 ≤ rdW (m2.arr64 DLP) (s + 8) := fun hg => by
       rw [ircW.k_dind_copy.abort1 n s 5 q m2 (by decide) (by decide) rfl hg] at h; cases h
     rw [ircW.k_dind_copy.arm3 n s 5 q m2 (by decide) (by decide) rfl hg, hP2] at h
+    try simp only [rec_unfold, UInt64.reduceAdd] at h
     rw [hP2] at hg
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
@@ -763,6 +770,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     | some x =>
     obtain ⟨r, m3⟩ := x
     rw [ha3, ircW.k_erec_alloc_3.arm1] at h
+    try simp only [rec_unfold, UInt64.reduceAdd] at h
     obtain ⟨hr, ht3, hW3, hok3⟩ := erAlloc_f ha3 hok2
     have hw3 := hW3 (fun i => fTop m2 ≤ i)
     have hP3 : m3.arr64 DLP = m.arr64 DLP := by rw [hw3.dlp, hP2]
@@ -772,6 +780,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     | none => rw [hd4, ircW.k_dind_copy_3.none] at h; cases h
     | some m4 =>
     rw [hd4, ircW.k_dind_copy_3.arm1] at h
+    try simp only [rec_unfold, UInt64.reduceAdd] at h
     have hr3 : r.toNat = fB m3 + fTop m2 := by rw [eB3]; exact hr
     have hrr3 := fTop_le hok3
     have hcap2 := fCap hok2

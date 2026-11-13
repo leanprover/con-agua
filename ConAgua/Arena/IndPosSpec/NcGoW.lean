@@ -122,14 +122,6 @@ theorem CsAt.grow {m m' : Mem} {o : Nat} {xs : List (IConstantVal × Nat)}
   (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP
     (fun i hi => hg.iwGet _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.iw
 
-/-- A decoded constant's name word is read. -/
-theorem decCV_rd {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    ∃ w, a q = some w := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨x, hx, -⟩ := h
-  obtain ⟨w, hw, -⟩ := hd?_some hx
-  exact ⟨w, hw⟩
-
 /-- A slice after word `co` is the slice at the word `co + 1` (a read word is below `2 ^ 64`). -/
 theorem hslice?_wshift {k : IdxKind} {a : Nat → Option Word} {co : Word} {n : Nat} {xs : List (Idx k)}
     (h : hslice? a (co.toNat + 1) n = some xs) (ha : ∀ i v, a i = some v → i < 2 ^ 64) :
@@ -250,14 +242,13 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
         | _ => exact absurd hrun1 (by simp [ConRon.Arena.nestCtorEntry, StateT.run, StateT.pure, pure, Except.pure])
       subst hci'
       have hcvE : decCV (erecP m) (ciq.toNat + CI.cv.toNat) = some cv := (decCI_ctorInfo_iff.mp hci).2.1
-      have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
-        L.toNat_add_of_lt _ _ (show ciq.toNat + 1 < 2 ^ 64 by
-          obtain ⟨_, e⟩ := decCV_rd hcvE; have := erecP_lt64 e; simpa using this)
+      have hciq1 : (ciq + CI.cv).toNat = ciq.toNat + CI.cv.toNat :=
+        off_add_toNat rfl (by obtain ⟨_, e, -⟩ := decCV_name hcvE; exact erecP_lt64 e)
       have hU : UInt64.size = 2 ^ 64 := rfl
       have hnF : (UInt64.ofNat nF).toNat = nF := UInt64.toNat_ofNat_of_lt' (by omega)
       have hnPc : (UInt64.ofNat nPc).toNat = nPc := UInt64.toNat_ofNat_of_lt' (by omega)
       have htopb : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hsz
-      rcases hrec : posRecW m2 [ciq + 1, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · rw [ncGoW.k_rec2.none] at h; cases h
+      rcases hrec : posRecW m2 [ciq + CI.cv, UInt64.ofNat nF] with _ | ⟨q3, m3⟩ <;> rw [hrec] at h; · rw [ncGoW.k_rec2.none] at h; cases h
       obtain ⟨hS3, hg3, hq3, ht3, hget3⟩ := posRecW_stage hrec hS2 (by simp)
       simp only [List.length_cons, List.length_nil] at ht3
       have hcol : (cs + ol).toNat = cs.toNat + ol.toNat := L.toNat_add_of_lt _ _ (by omega)
@@ -274,7 +265,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
           (OutR cs.toNat N (iwTop (m3.set64 IW (cs + ol) q3))) := by
         have hg2' := hg2.iw
         refine ⟨⟨by rw [ht4]; omega, Or.inr (by omega)⟩, ⟨by rw [ht4]; omega, Or.inr (by omega)⟩,
-          (ciq + 1).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
+          (ciq + CI.cv).toNat, ?_, by rw [hciq1]; exact hE4.decCV hcvE, ?_⟩
         · have := hget3 0 (by simp)
           simp only [iwN, nat?, iwA, aread_apply, set64IW_get]
           rw [ite_eq_right (by omega)]; simp at this; simp [this]

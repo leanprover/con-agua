@@ -544,12 +544,12 @@ theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {r
 /-- The memory after `rec_info_rec`'s ten `erec_put`s (each copy reads the memory of its time). -/
 def riMem (m1 : Mem) (q cv mi rp isK reo rel : Word) : Mem :=
   let m2 := erecPutMem m1 q 5
-  let m3 := erecPutMem m2 (q + 1) (erRd m2 cv)
-  let m4 := erecPutMem m3 (q + 2) (erRd m3 (cv + 1))
-  let m5 := erecPutMem m4 (q + 3) (erRd m4 (cv + 2))
-  let m6 := erecPutMem m5 (q + 4) (erRd m5 (cv + 3))
-  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + 5) mi) (q + 6) rp) (q + 7) reo)
-    (q + 8) rel) (q + 9) isK
+  let m3 := erecPutMem m2 (q + (CI.cv + CV.name)) (erRd m2 cv)
+  let m4 := erecPutMem m3 (q + (CI.cv + CV.lpsOff)) (erRd m3 (cv + CV.lpsOff))
+  let m5 := erecPutMem m4 (q + (CI.cv + CV.lpsLen)) (erRd m4 (cv + CV.lpsLen))
+  let m6 := erecPutMem m5 (q + (CI.cv + CV.type)) (erRd m5 (cv + CV.type))
+  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + CI.recMajor) mi) (q + CI.recPrefix) rp) (q + CI.recRulesOff) reo)
+    (q + CI.recRulesLen) rel) (q + CI.recIsK) isK
 
 l_model ri_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some erecPut)
   fns [hL.rir ↦ riW]
@@ -558,12 +558,12 @@ l_model ri_spec (p : Prog) (hL : CbrLook p) (hpu : p.lookup "erec_put" = some er
 
 /-- `riW` by its memory `riMem`. -/
 theorem riW_eq (m : Mem) (cv mi rp isK reo rel : Word) : riW m cv mi rp isK reo rel =
-    match erAllocW m 10 with
+    match erAllocW m CI.recSize with
     | none => none
     | some (q, m1) =>
-      if 4294967296 ≤ erRd (riMem m1 q cv mi rp isK reo rel) (q + 1) then none
+      if 4294967296 ≤ erRd (riMem m1 q cv mi rp isK reo rel) (q + (CI.cv + CV.name)) then none
       else some (q, riMem m1 q cv mi rp isK reo rel) := by
-  rw [riW.arm1]; rcases erAllocW m 10 with _ | ⟨q, m1⟩ <;> rfl
+  rw [riW.arm1]; rcases erAllocW m CI.recSize with _ | ⟨q, m1⟩ <;> rfl
 
 theorem riMem_eq {m1 : Mem} {q cq mi rp isK reo rel : Word}
     (hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 10,
@@ -578,7 +578,8 @@ theorem riMem_eq {m1 : Mem} {q cq mi rp isK reo rel : Word}
     fun x hx => hfr x hx 2 (by decide)
   have f3 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 3) ∨ erOff x ≠ erOff (q + 3) :=
     fun x hx => hfr x hx 3 (by decide)
-  simp only [riMem, wrER]
+  -- a whole-record writer: the offsets as numbers (`rec_unfold`)
+  simp only [riMem, wrER, rec_unfold, UInt64.reduceAdd]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
@@ -596,16 +597,17 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     (hru : decRules (erecP m) reo.toNat rel.toNat = some rules) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp.toNat (isK != 0) rules) := by
-  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
+  rcases h1 : erAllocW m CI.recSize with _ | ⟨q1, m1⟩
   · simp [riW_eq, h1] at h
-  have e : riW m cq mi rp isK reo rel = if 4294967296 ≤ erRd (riMem m1 q1 cq mi rp isK reo rel) (q1 + 1)
+  have e : riW m cq mi rp isK reo rel = if 4294967296 ≤ erRd (riMem m1 q1 cq mi rp isK reo rel) (q1 + (CI.cv + CV.name))
       then none else some (q1, riMem m1 q1 cq mi rp isK reo rel) := by simp [riW_eq, h1]
   rw [e] at h
   split at h
   · cases h
   obtain ⟨rfl, rfl⟩ : q1 = q ∧ riMem m1 q1 cq mi rp isK reo rel = m' := by simpa using h
   have hcv0 := hcv
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  -- a whole-record writer: the offsets as numbers (`rec_unfold`)
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
   obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
   obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
@@ -641,7 +643,7 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   rw [riMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
   obtain ⟨hS', hg, -, -, -, -, hget⟩ :=
-    erRec_stage h1 hS [5, w0, w1, w2, w3, mi, rp, reo, rel, isK] (by simp)
+    erRec_stage h1 hS [5, w0, w1, w2, w3, mi, rp, reo, rel, isK] (by simp [rec_unfold])
   refine ⟨hS', hg, ?_⟩
   generalize wrER m1 q1 _ = M at hS' hg hget
   have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
@@ -654,9 +656,10 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     · simp at hw ⊢; rw [hw2] at hw; exact Option.some.inj hw
     · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
     · omega
-  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
-      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcv
   have n0 : nat? (erecP M) q1.toNat = some 5 := by
     have := hget 0 (by simp); simp only [Nat.add_zero] at this; simp [nat?, this]
@@ -666,7 +669,7 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have n8 : nat? (erecP M) (q1.toNat + 8) = some rel.toNat := by simp [nat?, hget 8 (by simp)]
   have b9 : bool? (erecP M) (q1.toNat + 9) = some (isK != 0) := by simp [bool?, hget 9 (by simp)]
   have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.ext hg).decRules hru
-  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, b9, hru',
+  simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, b9, hru',
     Option.pure_def]
 
 /-! ## The `abstract1` memo -/

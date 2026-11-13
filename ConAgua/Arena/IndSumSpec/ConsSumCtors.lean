@@ -175,7 +175,7 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   rw [ciRecMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
-  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS [4, w0, w1, w2, w3, nP, nF, T] (by simp)
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS [4, w0, w1, w2, w3, nP, nF, T] (by simp [rec_unfold])
   refine ⟨hS', hg, ?_⟩
   generalize wrER m1 q1 _ = M at hS' hg hget
   have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
