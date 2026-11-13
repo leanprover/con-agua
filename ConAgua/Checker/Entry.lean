@@ -196,7 +196,6 @@ constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:288-301 ConRon.Arena.indParamsOk
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.indParamsOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

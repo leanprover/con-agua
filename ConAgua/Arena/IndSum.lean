@@ -249,7 +249,7 @@ def checkSumCtorsL : FunDecl :=
 kind 4: `[4, cv's 4 words copied inline, nP, nF, T]`, 8 words). The name word and the family `T` are
 checked to be handles (lane `indproofs2`: `env_push`'s spec needs the name; a decoded constant's
 name and family always are). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-153 ConRon.Arena.consSumCtors
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
 def ctorInfoRecL : FunDecl := lfn (cv, nP, nF, T) locals (rec, ez) {
   rec := call erec_alloc(8);
@@ -271,7 +271,7 @@ processes the head before recursing on the tail), each with the family `T` it is
 Pure (the index push touches no term): the only effect is the environment push. Returns the new
 view. Self-recursive on the slice, as the twin is on the list (lane `indproofs2`: rewritten from a
 `while` loop for the refinement). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-153 ConRon.Arena.consSumCtors
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
 def consSumCtorsL : FunDecl := lfn (nP, T, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
   if ctorsLen == 0 { return vis };

@@ -102,7 +102,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
           split
           · rename_i heq
             simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
-            obtain ⟨rfl, rfl, rfl⟩ := heq
+            obtain ⟨rfl, rfl, rfl, rfl⟩ := heq
             simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc]
             congr 1; funext c; congr 1; funext b
             split
@@ -123,7 +123,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
                 rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ _ _ rfl)]
                 simp
           · rename_i hne
-            rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ rfl)]
+            rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ _ rfl)]
             simp
   · congr 1; funext cn
     split
@@ -147,7 +147,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
           split
           · rename_i heq
             simp only [Option.some.injEq, IConstantInfo.ctorInfo.injEq] at heq
-            obtain ⟨rfl, rfl, rfl⟩ := heq
+            obtain ⟨rfl, rfl, rfl, rfl⟩ := heq
             simp only [UInt64.reduceToNat, and_self, ↓reduceIte, bind_assoc]
             congr 1; funext c; congr 1; funext b
             split
@@ -168,7 +168,7 @@ theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
                 rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ _ _ rfl)]
                 simp
           · rename_i hne
-            rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ rfl)]
+            rw [ite_eq_right (by rintro ⟨rfl, rfl⟩; exact hne _ _ rfl)]
             simp
     · rfl
 

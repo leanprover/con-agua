@@ -85,13 +85,13 @@ theorem post_push (st : StateD) (d : IDeclaration) (hd : GoodDecl d) :
   Post.bind (Q := fun s => s.decls = st.decls.push d) (Post.ret rfl) fun s hs =>
     Post.ret (by intro st' h; cases h; exact .inr ⟨d, hs, hd⟩)
 
-theorem post_installIndD (st : StateD) (tys : List IndTypeRec) (cts : List IndCtorRec)
+theorem post_installIndD (st : StateD) (tys : List IndTypeRec) (cts : List (IndCtorRec × NIdx))
     (rcs : List IndRecRec) (nPd : Nat) :
     Post (installIndD st tys cts rcs nPd) (fun s => ∃ d, s.decls = st.decls.push d ∧ GoodDecl d) := by
   unfold installIndD
   refine Post.bind (Post.mapM (Q := GoodCI) _ fun t _ =>
     Post.bind (Post.any _) fun _ _ => Post.ret trivial) fun types ht => ?_
-  refine Post.bind (Post.mapM (Q := GoodCI) _ fun t _ =>
+  refine Post.bind (Post.mapM (Q := GoodCI) _ fun ⟨_, _⟩ _ =>
     Post.bind (Post.any _) fun _ _ => Post.ret trivial) fun ctors hc => ?_
   refine Post.bind (Post.mapM (Q := GoodCI) _ fun t _ =>
     Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ => Post.ret trivial)

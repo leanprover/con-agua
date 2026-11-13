@@ -184,7 +184,7 @@ theorem ipo_twin_other (nP : Nat) (ci : IConstantInfo) (rest : List IConstantInf
     (indParamsOk nP (ci :: rest)).run a = (indParamsOk nP rest).run a := by
   cases ci with
   | indInfo cv caps => exact absurd rfl (h1 cv caps)
-  | ctorInfo cv x y _ => exact absurd rfl (h2 cv x y)
+  | ctorInfo cv x y fam => exact absurd rfl (h2 cv x y fam)
   | _ => rfl
 
 /-- **`ind_params_ok`' loop refines `indParamsOk`** on the records from `j`: reading only, the
@@ -238,11 +238,11 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
   have n3 : ∀ x : Nat, x ≠ 3 → wk.toNat = x → wk ≠ 3 := fun x hx h0 e => hx (by rw [← h0, e]; rfl)
   have n4 : ∀ x : Nat, x ≠ 4 → wk.toNat = x → wk ≠ 4 := fun x hx h0 e => hx (by rw [← h0, e]; rfl)
   rcases hk with ⟨h0, cv, -, hx⟩ | ⟨h0, cv, v, hi, -, -, -, hx⟩ | ⟨h0, cv, -, hx⟩ |
-    ⟨h0, cv, caps, hcv, -, hx⟩ | ⟨h0, cv, npc, nf, -, hnpc, -, hx⟩ |
+    ⟨h0, cv, caps, hcv, -, hx⟩ | ⟨h0, cv, npc, nf, fam, -, hnpc, -, -, hx⟩ |
     ⟨h0, cv, mi, rp, ro, rc, kk, rules, -, -, -, -, -, -, -, hx⟩
-  · rw [hx]; exact other _ (n3 0 (by decide) h0) (n4 0 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · rw [hx]; exact other _ (n3 1 (by decide) h0) (n4 1 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
-  · rw [hx]; exact other _ (n3 2 (by decide) h0) (n4 2 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
+  · rw [hx]; exact other _ (n3 0 (by decide) h0) (n4 0 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ _ e => by cases e)
+  · rw [hx]; exact other _ (n3 1 (by decide) h0) (n4 1 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ _ e => by cases e)
+  · rw [hx]; exact other _ (n3 2 (by decide) h0) (n4 2 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ _ e => by cases e)
   · -- a type former
     rw [hx]
     have hw3 : wk = 3 := UInt64.toNat_inj.mp (by rw [h0]; rfl)
@@ -301,7 +301,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
       have : (npc == np.toNat) = true := by
         simp only [beq_iff_eq]; have := Classical.not_not.mp hne; rw [← this, hnpcT]
       simp [this, hres]
-  · rw [hx]; exact other _ (n3 5 (by decide) h0) (n4 5 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ e => by cases e)
+  · rw [hx]; exact other _ (n3 5 (by decide) h0) (n4 5 (by decide) h0) (fun _ _ e => by cases e) (fun _ _ _ _ e => by cases e)
 
 theorem ipoW_sig : ∀ (k : Nat) (m : Mem) (np o l j : Word) (sg : Sig), ipoW k m np o l j = some sg →
     sg = .normal ∨ sg = .ret [0] := by

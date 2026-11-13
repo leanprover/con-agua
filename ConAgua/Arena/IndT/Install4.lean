@@ -51,6 +51,25 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- **The twin's `consBlockInds` is a pure step** (each capability record's never-zero read goes
+through the readback memo; con-ron's `blockCapsAt_run`), the store unchanged. -/
+theorem consBlockInds_pstep {p₁ : BlockShape} {p₁P : ConLeche.BlockShape} {isRec : Bool} :
+    ∀ (cvs : List IConstantVal) (i : Nat) (fe : IFEnv) {s s' : AState} {fe' : IFEnv},
+      ConRon.Bridge.StateOK s → ConRon.Bridge.ReadLCacheOK s.caches.readLC s.store →
+      ConRon.Bridge.Inductives.dShape s.store p₁ = some p₁P →
+      ConRon.Arena.consBlockInds p₁ isRec cvs i fe s = .ok (fe', s') → PStep s s' ∧ s'.store = s.store
+  | [], _, _, s, s', fe', hok, _, _, hrun => by
+    unfold ConRon.Arena.consBlockInds at hrun
+    obtain ⟨rfl, rfl⟩ := ConRon.Bridge.AM.pure_ok hrun
+    exact ⟨PStep.refl hok, rfl⟩
+  | cv :: rest, i, fe, s, s', fe', hok, hrl, hp, hrun => by
+    unfold ConRon.Arena.consBlockInds at hrun
+    obtain ⟨caps, s1, k1, z1⟩ := ConRon.Bridge.AM.bind_ok hrun
+    obtain ⟨q1, e1, -⟩ := ConRon.Bridge.Inductives.blockCapsAt_run hok hrl hp k1
+    obtain ⟨q2, e2⟩ := consBlockInds_pstep rest (i + 1) _ q1.ok (q1.cframe.readL hrl)
+      (by rw [e1]; exact hp) z1
+    exact ⟨q1.trans q2, e2.trans e1⟩
+
 /-- A callee proved at every positive fuel up to a bound is simulated at every fuel up to it. -/
 theorem _root_.L.Arena.Sim.callW_posB {α : Type} {p : Prog} {f : FnName} {args : List Word} {m : Mem} {op : AM α}
     {a : AState} {Q : List Word → α → Mem → AState → Prop} {N : Nat}
@@ -241,7 +260,7 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
     hP.withSort (k + 1) k3.stage k3.abs (hqd.grow (decBS_mono _) k03.grow)
     (partsHsrc_grow k03.grow hq9 hsrc) hs32 (ConRon.Bridge.denoteL_ext h1b hx13) r4 m4 c4
   have hA4 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c4 k3.abs
-  obtain ⟨c4', -⟩ := ConRon.Bridge.Inductives.BlockShape.withSort_spec fe bs bsP
+  obtain ⟨c4', hdp1⟩ := ConRon.Bridge.Inductives.BlockShape.withSort_spec fe bs bsP
     (decI (r1.tail.headD 0)) s0P a3 a4 p1 k3.stage.check
     ⟨ConRon.Bridge.Inductives.dShape_ext k03.core.ext _ _ hbsP, ConRon.Bridge.denoteL_ext h1b hx13⟩ hr4
   have k4 := InsAt.cstep k3.stage hS4 hA4 hg4 c4'
@@ -269,24 +288,30 @@ theorem cbi_ref (hP : IndsProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : A
   have hcvs : PSlR decCVp (bs.members.map (·.declared)) (rdW (m4.arr64 CTL) 200) (UInt64.ofNat bs.k) s5.mem :=
     ⟨by rw [hkk]; exact decPLcv_decB hdd (by omega), by have := hkk; omega⟩
   simp only [List.headD_cons, List.tail_cons]
-  -- the formers consed (L only; pure in the twin)
-  refine RefE.onlySim (fun _ => cbiE.k_cons_block_inds.none ..) (fun _ _ h => h) fun r6 m6 c6 => ?_
-  rw [cbiE.k_cons_block_inds.arm1]
+  -- the formers consed (the twin's `consBlockInds`: each capability record's never-zero read)
+  refine RefE.bindLift (fun _ => cbiE.k_cons_block_inds.none ..) fun r6 m6 c6 => ?_
+  have hTw4 := k4.stage.stageT.twin
   obtain ⟨-, hp9, -⟩ := partsShapeFacts hp1 hsrc4
   have hp1' := hp1.grow (decBS_mono _) hg5
   have hsrc5 := partsHsrc_grow hg5 hp9 hsrc4
   rw [hmeq] at hcvs
-  obtain ⟨s6, rfl, -, hS6, hg6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+  obtain ⟨s6, rfl, -, fe1, a6, hrun6, hS6, hg6, hst6, -⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
     (consBlockInds_refines p hP.toConsIndsProg (k + 1) _ a4 vis fe (r4.headD 0) isRec _ _ 0 p1 b _ hb hS5
-      hp1' hsrc5 hcvs (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)) c6
+      hTw4.readL hTw4.den.sort hp1' hsrc5 hcvs
+      (by simp only [UInt64.toNat_zero, Nat.zero_add]; exact UInt64.toNat_lt _)) c6
+  refine ⟨_, _, hrun6, ?_⟩
+  rw [cbiE.k_cons_block_inds.arm1]
+  obtain ⟨hps6, -⟩ := consBlockInds_pstep _ 0 fe k4.stage.check.state k4.stage.check.caches.readL hdp1
+    hrun6
   have hA6 := hk _ (by simp [indsKeepCalleesC]) _ _ _ _ _ c6 hA5
   obtain ⟨-, hp9', -⟩ := partsShapeFacts hp1' hsrc5
-  simp only [UInt64.toNat_zero] at hS6
+  try simp only [UInt64.toNat_zero] at hS6
   exact RefE.ret rfl ⟨⟨hS6, (k04.grow.trans hg5).trans hg6, hp1'.grow (decBS_mono _) hg6,
     partsHsrc_grow hg6 hp9' hsrc5⟩, hA6, fun hrb =>
     ((hrb4 ((hrb.grow (k1.trans k2).grow (by omega)).grow k3.grow
       (by have := (k1.trans k2).grow.1; omega))).grow (hg5.trans hg6) (by omega)),
-    fun hmb => (hmb4 ((hmb.grow (k1.trans k2).grow).grow k3.grow)).grow (hg5.trans hg6), k04.core⟩
+    fun hmb => (hmb4 ((hmb.grow (k1.trans k2).grow).grow k3.grow)).grow (hg5.trans hg6),
+    k04.core.trans (hps6.toCore k4.stage.check)⟩
 
 
 include hq henv hV hcr hCS hOpf hLC hApd hCrk in

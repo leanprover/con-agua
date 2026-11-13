@@ -77,7 +77,6 @@ def ifenvPushDelta : FunDecl := lfn (vis, lo, ll, qo, ql) locals (v, u) {
 /-- `block_formers_go(p, isRec, d.off, d.len, i)`: the formers as declared from member `i` on,
 each `.indInfo` with its capability record at `isRec`. -/
 -- con-ron: ConRon/Arena/Install.lean:55-60 ConRon.Arena.blockFormers
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockFormers` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockFormers]
 def blockFormersGo : FunDecl := lfn (p, isRec, dO, dL, i) locals (caps, q, ro, rl, o, l) {
   if dL == 0 { return (0, 0) };
@@ -91,7 +90,6 @@ def blockFormersGo : FunDecl := lfn (p, isRec, dO, dL, i) locals (caps, q, ro, r
 /-- `block_formers(p, isRec)`: the formers, in block order, as declared, with the capabilities
 their block gives them. -/
 -- con-ron: ConRon/Arena/Install.lean:55-60 ConRon.Arena.blockFormers
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockFormers` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockFormers]
 def blockFormers : FunDecl := lfn (p, isRec) locals (dO, dL, o, l) {
   (dO, dL) := call block_shape_declared(p);
@@ -291,7 +289,6 @@ def blockTables : FunDecl := lfn (p, mo, ml) locals (st, q, ok, to, tl, o, l) {
 /-- `block_constants(p)`: the block's constants, in push order: the formers (at official's
 `is_rec`, `block_is_rec`), the constructors, the recursors. -/
 -- con-ron: ConRon/Arena/Install.lean:134-141 ConRon.Arena.blockConstants
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockConstants` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockConstants]
 def blockConstants : FunDecl := lfn (p) locals (isRec, fo, fl, co, cl, ro, rl, ao, al, bo, bl) {
   isRec := call block_is_rec(p);
