@@ -92,7 +92,7 @@ variable {p : Prog} (hkp : KnotStageProg p) (hV : CcvProg p) (hApd : ApdF p) (hC
 
 include hkp hV hApd hCrk hCrf hIlpf hOpf hLC hLT in
 /-- **`check_block_tail`'s model refines `checkBlockTail`, both outcomes.** -/
-theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtProg p)
+theorem tail_ref (hP : TailProg p) (_hMc : McLook p) (P : GrcProgE p) (hF : FtProg p)
     (hWt : WhnfTopE p) {dn : NIdx → Option ConLeche.Name} (hCs : CcvSims p dn)
     (hfR : ∀ f ∈ grcMemoCallees, RcKeepF p f) (hfRc : ∀ f ∈ grcRcCallees, RcKeepF p f)
     (hMa : ∀ f ∈ ["gen_rec_check_prep", "class_fe_r", "block_shape_names_of", "flush_caches"], MaKeepF p f)

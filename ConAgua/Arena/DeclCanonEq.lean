@@ -313,10 +313,10 @@ theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
   simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f6, f6', f7, f7', f12, f12', hal, hct,
     Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IIndCaps.mk.injEq, fld_nat, fld_bool]
   by_cases e6 : w6 = w6'
-  · simp only [e6, ne_eq, not_true_eq_false, ite_false, beq_iff_eq]
+  · simp only [e6, ne_eq, not_true_eq_false, ite_false]
     exact ⟨fun h => by simp_all, fun h => by simp_all⟩
   · have : ¬ w6.toNat = w6'.toNat := fun h => e6 (UInt64.toNat_inj.mp h)
-    simp [e6, this]
+    simp [e6]
 
 /-! ## Recursor rules -/
 

@@ -59,7 +59,7 @@ theorem formersFrom_cons (bs : BlockShape) (b : Bool) (cv : IConstantVal) (cvs :
       let c ← ConRon.Arena.blockCapsAt bs i b
       let r ← formersFrom bs b cvs (i + 1)
       pure (IConstantInfo.indInfo cv c :: r)) := by
-  simp [formersFrom, List.zipIdx_cons, List.mapM_cons, bind_assoc]
+  simp [formersFrom, List.zipIdx_cons, List.mapM_cons]
 
 theorem blockFormers_eq (bs : BlockShape) (b : Bool) :
     ConRon.Arena.blockFormers bs b = formersFrom bs b (bs.members.map (·.declared)) 0 := rfl
