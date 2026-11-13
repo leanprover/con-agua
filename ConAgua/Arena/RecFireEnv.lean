@@ -85,7 +85,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
     (hfe : FireEnv fe lps rule cvj) :
     FireCore m a (erRd m (rl + 3)) (erRd m (rl + 4)) (erRd m (rl + 5)) (erRd m (ctorP + 2))
       (erRd m (ctorP + 3)) rule cvj.levelParams := by
-  obtain ⟨⟨c, cv, mI, rP, isK, rules, hf, -, hmem⟩, ⟨cj, np', nf', hfj⟩⟩ := hfe
+  obtain ⟨⟨c, cv, mI, rP, isK, rules, hf, -, hmem⟩, ⟨cj, np', nf', fam', hfj⟩⟩ := hfe
   rcases decRule_fireE (erRdOK m) hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, hk, hsl⟩
   · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 (erRdOK m) (L.Arena.decCI_ctor_cv hci)
     exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ hfj⟩

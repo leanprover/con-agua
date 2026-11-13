@@ -352,11 +352,36 @@ theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState)
         exact fsl_sortView r n (d + 1) b2 a3 a' s h
     · cases h
 
+/-- An `indInfo` record's `nIdx` (`q + 11`), `nparams` (`q + 17`) and `neverZero` (`q + 12`)
+words. -/
+theorem decCI_ind_nz {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
+    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat ∧
+      caps.neverZero = (rd (q + 12) != 0) := by
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, -, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
+  obtain ⟨cv', -, caps', hcaps, he⟩ := h
+  cases he
+  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, nz, hnz, hc⟩ := hcaps
+  simp only [Option.some.injEq] at hc
+  subst hc
+  simp only [nat?, bool?, Option.map_eq_some_iff] at hni hnp hnz
+  obtain ⟨w1, hw1, rfl⟩ := hni
+  obtain ⟨w2, hw2, rfl⟩ := hnp
+  obtain ⟨w3, hw3, rfl⟩ := hnz
+  have e1 : rd (q + 11) = w1 := hR.offN (k := 11) (by simpa [Nat.add_assoc] using hw1) (by decide)
+  have e2 : rd (q + 17) = w2 := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hw2) (by decide)
+  have e3 : rd (q + 12) = w3 := hR.offN (k := 12) (by simpa [Nat.add_assoc] using hw3) (by decide)
+  exact ⟨by rw [e1], by rw [e2], by rw [e3]⟩
+
 /-- An `indInfo` record's `nIdx` (`q + 11`) and `nparams` (`q + 17`) words. -/
 theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
-    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat := by
-  sorry
+    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat :=
+  ⟨(decCI_ind_nz hR h).1, (decCI_ind_nz hR h).2.1⟩
 
 /-- What `former_never_zero_at`'s refinement needs of a program. -/
 structure FnzaProg (p : Prog) : Prop extends FslProg p where
