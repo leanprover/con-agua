@@ -122,6 +122,7 @@ smono_derive ConRon.Arena.instantiate1Go
 smono_derive ConRon.Arena.instantiate1Fast
 smono_derive ConRon.Arena.formerSortLoop
 smono_derive ConRon.Arena.formerNeverZeroAt
+smono_derive ConRon.Arena.familyNeverZeroAt
 smono_derive ConRon.Arena.projNodesGo
 smono_derive ConRon.Arena.etaProjs
 smono_derive ConRon.Arena.etaFabArgsE

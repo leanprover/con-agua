@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Env
 import ConAgua.Arena.PinsNatOp
+public import ConAgua.Arena.NatOpShim
 public import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

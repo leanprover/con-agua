@@ -81,4 +81,29 @@ vocabulary.
 
 ## 2. Progress log
 
-* 2026-11-13 07:07 start; 07:15 report; stage 0 sent to the coordinator.
+* 2026-11-13 07:07 start; 07:10 report; stage 0 sent to the coordinator.
+* 07:11–07:17 bump (`79c91c281`). `bump-con-ron.sh c78714ac` stopped at two conflicting patches.
+  con-leche/0003 (the `CSOK.*_hit_ws` companions of the `vcgen` ∧-split): upstream moved the two
+  `whnfCore` memo lemmas from `KnotC` to `DiscC4` (#572), so their companions moved with them:
+  the new patch con-leche/0004, and `DiscC4`'s new `whnfCoreLoopC_spec` finds them through
+  `conleche_grind`. con-ron/0002: upstream's new `Arms/WhnfCore` loop proofs (lane B, explicit
+  triples) needed the same ∧-split pattern (`all_goals subst_vars`, one closer per conjunct, eight
+  sites), `Frontend/Lines`' four `MProd` states became `Prod` (the field order of our toolchain's
+  `Prod` state is not `MProd`'s: `(Option …) × (Array … × Nat)`), `Walks/IotaMajor`'s old hunk
+  dropped (upstream rewrote the arm, and the new text builds). ConLeche, ConRonArena,
+  ConRonBridge build. 208 `CHANGED` markers.
+* 07:17–07:22 stage 3a: `decCI`'s constructor reads the family at `p + 7` (`hd?`), `decCaps`
+  `neverZero` at `q + 7` (the old `sortZ` word), `ArrExt.decCI`/`decCaps`, the layout table;
+  `Rom/CIEnc`: the constructor's family name after `nF`, `bw neverZero` after `ctors`;
+  `RomCI`'s item model (the family name is one more name item), `ErecRd.decCI_split`,
+  `InitLink`. The arity codemod over the whole tree (`_tmp/ronsync4/arity.py`, `arity2.py`: 35
+  files: binders, match arms, hypotheses with `{fam : NIdx}`), the same as rules in
+  `scripts/sync-rules/ronsync4.txt` (plus generic `obtain`/`exact`/`fun` rules for base proofs).
+* 07:22–07:28 compile passes (build, ladder `--write` on the failing files, build): ladder round
+  1 (5 files, 12 failing theorems, 0 closed), round 2 (10 files, 24 failing, 3 closed at the
+  codemod rung). By hand: `KnotMono1`'s store-monotonicity list at the new twin (the new
+  `whnfCore` memo and stuck-spine functions, `natBinOpOfName?`/`natBinOpResult`; `ctorFamily`
+  is pure now), `DeclCanonEq.ciD` and `installIndD_pre` at the new arity, and a TEMPORARY shim
+  `Arena/NatOpShim.lean` (con-ron 4ca283d1's `natOpResult`, verbatim) so that the 754 modules
+  behind `PinsNatOp` elaborate until the `Nat` port deletes it (upstream's lead did the same
+  for #573's fields).

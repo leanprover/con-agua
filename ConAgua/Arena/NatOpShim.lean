@@ -5,7 +5,7 @@ public import ConRon.Arena.Core
 @[expose] public section
 
 /-!
-# TEMPORARY compile shim (lane ronsync4, stage 3a): the removed `natOpResult`
+# TEMPORARY compile shim (lane ronsync4, stage 3a): the removed `natOpResult` and `natBinOpName`
 
 con-ron's #556 P-N replaced the name dispatch `natOpResult` by `natBinOpOfName?` and
 `natBinOpResult`. Until the `Nat` area is ported, the old function (con-ron 4ca283d1, verbatim) keeps
@@ -54,5 +54,16 @@ def natOpResult (c : NIdx) (a b : Nat) : AM (Option EIdx) := do
     let x ← constE n
     pure (some x)
   else pure none
+
+/-- TEMPORARY: con-ron 4ca283d1's `natBinOpName` (removed upstream). -/
+def natBinOpName (c : NIdx) : AM Bool := do
+  let ad ← natAddName; let su ← natSubName; let mu ← natMulName
+  let po ← natPowName; let be ← natBeqName; let bl ← natBleName
+  let di ← natDivName; let mo ← natModName; let gc ← natGcdName
+  let la ← natLandName; let lo ← natLorName; let xo ← natXorName
+  let sl ← natShiftLeftName; let sr ← natShiftRightName
+  pure (c == ad || c == su || c == mu || c == po || c == be || c == bl ||
+    c == di || c == mo || c == gc || c == la || c == lo || c == xo ||
+    c == sl || c == sr)
 
 end ConRon.Arena

@@ -59,7 +59,6 @@ smono_derive ConRon.Arena.lazyDeltaProjReduction
 smono_derive ConRon.Arena.defeqProjPair
 smono_derive ConRon.Arena.etaCtorShape
 smono_derive ConRon.Arena.structEtaCertWith
-smono_derive ConRon.Arena.etaCtorPartialFam
 smono_derive ConRon.Arena.etaCtorPartial
 smono_derive ConRon.Arena.structEtaFullAt
 smono_derive ConRon.Arena.structEtaFull
