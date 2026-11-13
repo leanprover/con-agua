@@ -917,18 +917,12 @@ def structEtaCertWithL : FunDecl :=
   return r
 }
 
-/-- The family half of `etaCtorPartial`: the family `ty` (the constructor's type) ends in is a
-stored η family whose projection table's constructor is `c`. The `eta` word is read before
-`find_table`. -/
+/-- The family half of `etaCtorPartial`: the constructor's family (its record's `induct`, `T`) is a
+stored η family whose projection table's constructor is `c`. One lookup, no walk; the `eta` word
+is read before `find_table`. -/
 -- con-ron: ConRon/Arena/Core.lean:1652-1663 ConRon.Arena.etaCtorPartialFam
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.etaCtorPartialFam` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.etaCtorPartialFam]
-def etaCtorPartialFamL : FunDecl := lfn (vis, c, ty) locals (pr, hh, t, i, T, f, q, eta, tq) {
-  pr := call pi_result(ty);
-  hh := call get_app_fn(pr);
-  if ⟦hh⟧.tag != 3 { return 0 };
-  (t, i) := node CONST⟦hh⟧;
-  T := CONST⟨t, i⟩.n;
+def etaCtorPartialFamL : FunDecl := lfn (vis, c, T) locals (f, q, eta, tq) {
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC⦃q⦄ != 3 { return 0 };
@@ -944,9 +938,8 @@ lacks, or `(0, 0)`. The record words are read before the first call after `env_f
 top is put back after the spine is counted. The sum of the constructor's counts must fit a word
 (a capacity). -/
 -- con-ron: ConRon/Arena/Core.lean:1665-1686 ConRon.Arena.etaCtorPartial
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.etaCtorPartial` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.etaCtorPartial]
-def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf, ty, top, ao, an, ok) {
+def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf, T, top, ao, an, ok) {
   hh := call get_app_fn(a);
   if ⟦hh⟧.tag != 3 { return (0, 0) };
   (t, i) := node CONST⟦hh⟧;
@@ -956,13 +949,13 @@ def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf,
   if EREC⦃p⦄ != 4 { return (0, 0) };
   np := EREC⦃p + 5⦄;
   nf := EREC⦃p + 6⦄;
-  ty := EREC⦃p + 4⦄;
+  T := EREC⦃p + 7⦄;
   if np + nf < np { abort };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
   CTL.u64[136] := top;
   if np + nf <= an { return (0, 0) };
-  ok := call eta_ctor_partial_fam(vis, c, ty);
+  ok := call eta_ctor_partial_fam(vis, c, T);
   if ok == 0 { return (0, 0) };
   return (1, np + nf - an)
 }

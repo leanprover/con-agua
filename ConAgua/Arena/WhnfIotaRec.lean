@@ -19,8 +19,8 @@ the head and calls the pieces below, one per block of the twin's nest:
   top put back after the rest (`iota_rec_fire2`);
 * `iota_rec_fire2(…, mo, mn)`: the argument count, the certificate family (`iota_rec_fam`), the
   rule's right-hand side applied to the leading arguments and the fields;
-* `iota_rec_fam(…)`: the verified-mode block (`recFireLevels`, `iotaCase3At` at the recursor's
-  `isK`);
+* `iota_rec_fam(…)`: the verified-mode block (`iotaNoCert`, then `recFireLevels`, `iotaCase3At` at
+  the recursor's `isK` and the constructor's `induct`);
 * `iota_rec_vck(…, cmpL)`: the level comparison (`lvls_eq_c`, the twin's cached `lvlsEq?`),
   the parameter comparison (`iota_rec_cmp`), the constructor telescope, the indices;
 * `iota_rec_cmp(…)`: the parameter comparands (`rec_fire_args`) against the major's leading
@@ -114,16 +114,21 @@ comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`)
   return ok
 }
 
-/-- The certificate family: nothing in a trusted mode or outside case 3, else `iota_rec_vck`. -/
+/-- The certificate family: nothing in a trusted mode, where the stored facts need no certificate
+(`iota_no_cert` at the rule's comparand level count, `rec_fire_level_count`) or outside case 3;
+else `iota_rec_vck`. -/
 -- con-ron: ConRon/Arena/Core.lean:2360-2451 ConRon.Arena.iotaRecAt
 -- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaNoCert`, `ConRon.Arena.recFireLevelCount` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)
-    locals (cmpL, c3, r) {
+    locals (lc, nc, cmpL, c3, r) {
   if mode & 1 != 0 { return 1 };
+  lc := call rec_fire_level_count(EREC⦃rl + 3⦄, EREC⦃rl + 5⦄, EREC⦃ctorP + 3⦄);
+  nc := call iota_no_cert(vis, EREC⦃recP + 9⦄, EREC⦃ctorP + 7⦄, lc);
+  if nc != 0 { return 1 };
   cmpL := call rec_fire_levels(EREC⦃rl + 3⦄, EREC⦃rl + 4⦄, EREC⦃rl + 5⦄,
     EREC⦃recP + 2⦄, EREC⦃recP + 3⦄, us, EREC⦃ctorP + 2⦄, EREC⦃ctorP + 3⦄);
-  c3 := call iota_case3_at(mode, vis, EREC⦃recP + 9⦄, ctorP, cmpL);
+  c3 := call iota_case3_at(mode, vis, EREC⦃recP + 9⦄, EREC⦃ctorP + 7⦄, cmpL);
   if c3 == 0 { return 1 };
   r := call iota_rec_vck(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL);
   return r

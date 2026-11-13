@@ -35,43 +35,32 @@ variable {p : Prog} (hq : KnotAllProg p)
 /-! ## `whnf_core` (`WhnfCoreLoop`, `WhnfCoreProj`, `WhnfCoreAppLoop`) -/
 
 include hq in
-/-- **`whnf_core_step` refines `whnfCoreStep`.** -/
+/-- **`whnf_core_step` refines `whnfCoreStep`** at the spine head `h`. -/
 @[refines ConRon.Arena.whnfCoreStep]
 theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
+    (MM : ModeMaps) (eb mode cheap d h e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hh : HW h) (he : HW e) :
+    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, h, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
+        (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   whnfCoreStep_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk F
-    hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he
+    hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he
 
 include hq in
-/-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
-@[refines ConRon.Arena.whnfCoreLoop]
-theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreLoop_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk F K
-    hF hK hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he
-
-include hq in
-/-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
+/-- **`whnf_core` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62` from no pending
+keys; the knot's slot one level up is this body, `knot_whnfCore_eq`). -/
 @[refines ConRon.Arena.whnfCoreBody]
 theorem whnfCoreBody_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (hn : n + 1 ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
+    CoreSpec p (n + 1) "whnf_core" [mode, cheap, vis, d, e]
       (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreBody_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk F
-    hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he
+        (decE e)) decH s₀ a₀ dn vis fe MM eb := by
+  have h := KnotAllProg.whnfCoreStep hq n hk (F + 1) s₀ a₀ dn vis fe MM eb mode cheap d e (by omega) hn hs he
+  rw [knot_whnfCore_eq] at h
+  simpa only [whnfCoreBody] using h
 
 include hq in
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/

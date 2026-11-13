@@ -99,9 +99,8 @@ def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+/-- con-ron: ConRon/Arena/Core.lean:1118-1151 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
 def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -115,9 +114,8 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   return n
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+/-- con-ron: ConRon/Arena/Core.lean:1118-1151 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
 def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
@@ -131,9 +129,8 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   return n
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+/-- con-ron: ConRon/Arena/Core.lean:1118-1151 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
 def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

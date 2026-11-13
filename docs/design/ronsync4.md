@@ -107,13 +107,13 @@ vocabulary.
   `Arena/NatOpShim.lean` (con-ron 4ca283d1's `natOpResult`, verbatim) so that the 754 modules
   behind `PinsNatOp` elaborate until the `Nat` port deletes it (upstream's lead did the same
   for #573's fields).
-* 07:28–07:35 compile passes 3–4 (`KnotMono2`: `etaCtorPartialFam` is pure now; the shim's
+* 07:28–07:33 compile passes 3–4 (`KnotMono2`: `etaCtorPartialFam` is pure now; the shim's
   `natBinOpName`; `WhnfIotaRefine.decCI_ctorR`, `WhnfDeltaRefine`'s `natZeroOk`/`natSuccOk`
   statements at the family; ladder rounds 3–4: 23 more failing theorems, 4 closed at the codemod
   rung). Left blocked: `WhnfCoreLoop` (the slot and the loop changed: core's), `IndKindEnvProof`
   (`blockCapsAt`/`blockFormers` monadic: ind's), `AsmStubEq`/`AsmFileEq` (the ROM bytes changed:
   `checker.s` regenerated at integration). Tickets so far: 47 (`_tmp/ronsync4/tickets-r1.tsv`).
-* 07:36 fan-out: helpers `ronsync4-core` (#556 P-A, #572), `ronsync4-ind` (#573 write side: the
+* 07:33 fan-out: helpers `ronsync4-core` (#556 P-A, #572), `ronsync4-ind` (#573 write side: the
   install, the front, the ROM reader, the declaration arms), `ronsync4-rn` (#573 read side and
   the `Nat` dispatch #556 P-W/P-N, #557), briefs `_tmp/ronsync4/brief-{common,core,ind,rn}.md`,
   3 build threads each (lead 3).

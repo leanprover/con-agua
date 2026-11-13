@@ -11,7 +11,7 @@ public import ConAgua.Arena.WhnfIota
 @[expose] public section
 
 /-!
-# ι-reduction: proofs of `WhnfIota.lean`'s specs, part 6 (`const_name_of`, record readers)
+# ι-reduction: proofs of `WhnfIota.lean`'s specs, part 6 (record readers)
 
 (ronsync2: `iota_case3`, `iota_ctor_never_prop`, `e_rec_get` and `ind_caps_check` left the twin and
 the program with the sync; their models and refinements are deleted.)
@@ -24,14 +24,6 @@ open scoped Lean.Order
 set_option experimental.vcgen true
 
 namespace L.Arena
-
-/-! ## The small L functions -/
-
-l_model constNameOf_spec (p : Prog) (hp : p.lookup "const_name_of" = some constNameOfL)
-  fns [hp ↦ cnoW ro]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-  finish [tierW, idxW]
 
 /-! ## The record of an inductive -/
 
