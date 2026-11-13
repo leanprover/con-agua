@@ -159,7 +159,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
       else pure none := by
   rw [iotaRecAt]
   by_cases hT : (hd.tag == ETag.const) = true
-  · rw [if_pos hT, if_pos hT]
+  · rw [ite_eq_left hT, ite_eq_left hT]
     congr 1; funext x
     rcases x with _ | ⟨c, us⟩
     · rfl
@@ -198,7 +198,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
                       bind_assoc, L.Arena.ite_bind, pure_bind]
               · rw [ite_eq_right ht, ite_eq_right ht]
             · rw [ite_eq_right hc, ite_eq_right hc]
-  · rw [if_neg hT, if_neg hT]
+  · rw [ite_eq_right hT, ite_eq_right hT]
 
 end twin
 
