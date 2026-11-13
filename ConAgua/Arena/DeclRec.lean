@@ -204,7 +204,7 @@ theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Na
   mapM_some_of _ _ _ (fun j hj => hd?_mask (h j (List.mem_range.mp hj)))
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
-theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
+theorem decCV_of_slice {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
     (h0 : a q = some (mask32 wn)) (h1 : a (q + CV.lpsOff.toNat) = some s)
     (h2 : a (q + CV.lpsLen.toNat) = some ll) (h3 : a (q + CV.type.toNat) = some (mask32 wt))
     (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (mask32 (f j))) :
@@ -401,7 +401,7 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
       intro j hj
       refine hG'.ext _ _ ?_
       rw [hget1 j hj, ← hW1, dlpWords_get _ _ _ _ hj (by rw [hlo1]; omega), hlo1]
-    rw [decCV_of_words w1 w2 w3 w4 hsl, sliceL_map_decI, hl, hn, ht]
+    rw [decCV_of_slice w1 w2 w3 w4 hsl, sliceL_map_decI, hl, hn, ht]
   have hvM : (hd? (erecP M) (p.toNat + 5) : Option EIdx) =
       some (decI (dw (m.arr64 DECL) i.toNat 5)) := hd?_mask w5
   have hhint : decHint (erecP M) (p.toNat + 6) =

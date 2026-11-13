@@ -99,7 +99,7 @@ theorem StageT.of_wrER {m : Mem} {a : AState} {d : Word} {ws : List Word}
 end
 
 /-- A constant value from its four words. -/
-theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
+theorem decCV_of_ws {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
     (h0 : a q = some w0) (h0l : w0.toNat < 2 ^ 32) (h1 : a (q + CV.lpsOff.toNat) = some w1)
     (h2 : a (q + CV.lpsLen.toNat) = some w2) (hs : hslice? a w1.toNat w2.toNat = some ps)
     (h3 : a (q + CV.type.toNat) = some w3) (h3l : w3.toNat < 2 ^ 32) :
@@ -114,7 +114,7 @@ theorem decCV_of_wr4 {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {p
     (hrd : ∀ j < [w0, w1, w2, w3].length, a (q + j) = [w0, w1, w2, w3][j]?) (h0l : w0.toNat < 2 ^ 32)
     (hs : hslice? a w1.toNat w2.toNat = some ps) (h3l : w3.toNat < 2 ^ 32) :
     decCV a q = some ⟨decI w0, ps, decI w3⟩ :=
-  decCV_of_words (by simpa using hrd 0 (by simp)) h0l (by simpa [rec_unfold] using hrd 1 (by simp))
+  decCV_of_ws (by simpa using hrd 0 (by simp)) h0l (by simpa [rec_unfold] using hrd 1 (by simp))
     (by simpa [rec_unfold] using hrd 2 (by simp)) hs (by simpa [rec_unfold] using hrd 3 (by simp)) h3l
 
 theorem word_add12 (c : Word) : c + 1 + 2 = c + 3 := by rw [UInt64.add_assoc]; rfl
