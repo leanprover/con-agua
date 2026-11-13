@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IWFrame
+import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -636,53 +637,6 @@ theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
     simp only [List.mapM_cons]
     rw [h x (List.mem_cons_self ..), mapM_congr_of f g xs (fun y hy => h y (List.mem_cons_of_mem _ hy))]
 
-/-- **A copied constant value with a new type** decodes as `{cv with type := ty}`: the name and
-the level-parameter slice words copied from `cv`'s record, the slice itself unchanged. -/
-theorem decCV_copy {a a' : Nat → Option Word} {cq q : Nat} {cv : IConstantVal} {ty : Word} (N : Nat)
-    (h : decCV a cq = some cv) (h0 : a' (q) = a (cq)) (h1 : a' (q + 1) = a (cq + 1))
-    (h2 : a' (q + 2) = a (cq + 2)) (h3 : a' (q + 3) = some ty) (hty : ty.toNat < 2 ^ 32)
-    (hlow : ∀ i < N, a' (i) = a (i))
-    (hsl : ∀ lo ll, nat? a (cq + 1) = some lo → nat? a (cq + 2) = some ll → lo + ll ≤ N ∨ ll = 0) :
-    decCV a' q = some { cv with type := decI ty } := by
-  simp only [decCV, bind, Option.bind, pure] at h ⊢
-  -- a whole-record writer (`cv_new`): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceToNat] at h ⊢
-  have hn : (hd? a' q : Option NIdx) = hd? a cq := by simp only [hd?, h0]
-  rw [hn]
-  cases e0 : (hd? a cq : Option NIdx) with
-  | none => rw [e0] at h; simp at h
-  | some nm =>
-  rw [e0] at h; simp only at h ⊢
-  simp only [hlist?, bind, Option.bind] at h ⊢
-  have hl1 : nat? a' (q + 1) = nat? a (cq + 1) := by simp only [nat?, h1]
-  have hl2 : nat? a' (q + 1 + 1) = nat? a (cq + 1 + 1) := by simp only [nat?, show q + 1 + 1 = q + 2 by omega, h2]
-  rw [hl1, hl2]
-  cases e1 : nat? a (cq + 1) with
-  | none => rw [e1] at h; simp at h
-  | some lo =>
-  cases e2 : nat? a (cq + 1 + 1) with
-  | none => rw [e1, e2] at h; simp at h
-  | some ll =>
-  rw [e1, e2] at h; simp only at h ⊢
-  have hN := hsl lo ll e1 (by simpa using e2)
-  have hs : (hslice? a' lo ll : Option (List NIdx)) = hslice? a lo ll := by
-    simp only [hslice?]
-    exact mapM_congr_of _ _ _ (fun j hj => by
-      have := List.mem_range.mp hj
-      simp only [hd?, hlow (lo + j) (by omega)])
-  rw [hs]
-  cases e3 : (hslice? a lo ll : Option (List NIdx)) with
-  | none => rw [e3] at h; simp at h
-  | some lps =>
-  rw [e3] at h; simp only at h ⊢
-  cases e4 : (hd? a (cq + 3) : Option EIdx) with
-  | none => rw [e4] at h; simp at h
-  | some t =>
-  rw [e4] at h
-  simp only [Option.some.injEq] at h
-  subst h
-  simp [hd?, h3, hty]
-
 /-! ## `cv_new`: a fresh constant-value record -/
 
 /-- The model of `cv_new(nm, lo, ll, ty)`. -/
@@ -692,10 +646,10 @@ l_model cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   specs [erecAlloc_specW p ha n, erecPut_specW p hpu n]
   grind [arena_grind]
 
-/-- A run of `cv_new`: the allocation and the four writes. -/
+/-- A run of `cv_new`: the allocation and the record's image (`CV.img`). -/
 theorem cvNewW_some {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
-    ∃ m1, erAllocW m 4 = some (q, m1) ∧ m' = wrER m1 q [nm, lo, ll, ty] := by
-  rcases h1 : erAllocW m 4 with _ | ⟨q1, m1⟩ <;> rw [cvNewW.arm1, h1] at h
+    ∃ m1, erAllocW m CV.size = some (q, m1) ∧ m' = wrERo m1 q (CV.img nm lo ll ty) := by
+  rcases h1 : erAllocW m CV.size with _ | ⟨q1, m1⟩ <;> rw [cvNewW.arm1, h1] at h
   · cases h
   simp only [cvNewW.k_erec_alloc] at h
   split at h; · cases h
@@ -705,8 +659,8 @@ theorem cvNewW_some {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll t
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   refine ⟨m1, rfl, ?_⟩
-  simp only [wrER]
-  rw [show q1 + 1 + 1 = q1 + 2 by ac_rfl, show q1 + 2 + 1 = q1 + 3 by ac_rfl]
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, CV.img, recImg, rec_unfold, List.replicate, UInt64.add_assoc]
 
 /-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
 relation and decodes as `{cv with type := ty}`. -/
@@ -714,38 +668,24 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq ty q : Word} {cv : IConstantVal}
     (h : cvNewW m (erRd m cq) (erRd m (cq + CV.lpsOff)) (erRd m (cq + CV.lpsLen)) ty = some (q, m'))
     (hS : StageR vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hty : ty.toNat < 2 ^ 32) :
-    StageR vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧ erTopOf m' q = erTopOf m q + 4 ∧
+    StageR vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧
+      erTopOf m' q = erTopOf m q + CV.size.toNat ∧
       q.toNat < 2 ^ 41 ∧ (q.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
   obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
-  obtain ⟨hS', hg, hq, htop, hq41, htier, hget⟩ := erRec_stage h1 hS
-    [erRd m cq, erRd m (cq + CV.lpsOff), erRd m (cq + CV.lpsLen), ty] (by simp)
+  obtain ⟨hS', hg, hq, htop, hq41, htier, hget⟩ := erRecO_stage h1 hS
+    (CV.img (erRd m cq) (erRd m (cq + CV.lpsOff)) (erRd m (cq + CV.lpsLen)) ty) (CV.img_length ..).symm
+  rw [CV.img_length] at htop
   refine ⟨hS', hg, hq, htop, hq41, htier, ?_⟩
-  -- the source record's words; a whole-record writer (`cv_new`): the offsets as numbers
-  simp only [decCVp, decCV, hlist?, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
-  simp only [rec_unfold, UInt64.reduceToNat] at hcv ⊢
-  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, hlps⟩, t, ht, rfl⟩ := hcv
-  obtain ⟨w0, hw0, hw0l, rfl⟩ := hd?_some hnm
-  obtain ⟨w1, hw1, rfl⟩ : ∃ w, erA m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
-    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
-  obtain ⟨w2, hw2, rfl⟩ : ∃ w, erA m (cq.toNat + 1 + 1) = some w ∧ w.toNat = ll := by
-    simp only [nat?, Option.map_eq_some_iff] at hll; exact hll
-  have r0 : erRd m cq = w0 := (erRd_of_erecP (by simpa [erA] using hw0)).1
-  obtain ⟨r1, -⟩ := erRd_add (j := 1) (cq := cq) (m := m) (by simpa [erA] using hw1) (by decide)
-  obtain ⟨r2, -⟩ := erRd_add (j := 2) (cq := cq) (m := m) (by simpa [erA, Nat.add_assoc] using hw2) (by decide)
-  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl] at r1 r2
-  have g0 := hget 0 (by simp)
-  have g1 := hget 1 (by simp)
-  have g2 := hget 2 (by simp)
-  have g3 := hget 3 (by simp)
-  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.add_zero, r0, r1, r2] at g0 g1 g2 g3
-  have hlps' : (hslice? (erecP m) w1.toNat w2.toNat : Option (List NIdx)) = some lps := hlps
-  have hs : (hslice? (erecP (wrER m1 q [w0, w1, w2, ty])) w1.toNat w2.toNat : Option (List NIdx)) =
-      some lps := by rw [r0, r1, r2] at hg; exact ArrExt.hslice? (IWGrow.ext hg) hlps'
-  rw [r0, r1, r2]
-  simp only [decCVp, decCV, rec_unfold, UInt64.reduceToNat, hlist?, erA, nat?, hd?, g0, g1,
-    Nat.add_assoc, g2, g3, hw0l, hty, ite_true, Option.map_some, bind, Option.bind_some, pure]
-  rw [hs]; rfl
+  obtain ⟨e1, e2, hs, -, -, -⟩ := decCV_rd (erRdOK m) hcv
+  have hw : CVRecW (erecP (wrERo m1 q (CV.img (erRd m cq) (erRd m (cq + CV.lpsOff))
+      (erRd m (cq + CV.lpsLen)) ty))) q.toNat (erRd m cq) (erRd m (cq + CV.lpsOff))
+      (erRd m (cq + CV.lpsLen)) ty :=
+    ⟨hget _ _ (CV.img_name ..), hget _ _ (CV.img_lo ..), hget _ _ (CV.img_ll ..),
+      hget _ _ (CV.img_ty ..)⟩
+  have := decCV_of_words hw e2 hty (ArrExt.hslice? (IWGrow.ext hg) hs)
+  unfold decCVp
+  unfold erA; rw [this, ← e1]
 
 /-! ## `erec_put` and the tagged read; `env_push` under the stage relation -/
 
