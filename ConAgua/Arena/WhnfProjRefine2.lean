@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.WhnfProjRefine
 import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.RecLayout.TblDec
 import ConAgua.Arena.WhnfDelta
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
@@ -43,16 +44,11 @@ theorem run_of_callW {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {m : Mem
 /-! ## `find_proj` -/
 
 theorem decTbl_numFields {R : Nat → Option Word} {q : Nat} {tbl : IProjTable} (h : decTbl R q = some tbl) :
-    ∃ w, R (q + 7) = some w ∧ tbl.numFields = w.toNat := by
-  cases h7 : nat? R (q + 7) with
-  | none => simp [decTbl, h7] at h
-  | some k =>
-    simp [decTbl, h7] at h
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := h
-    simp only [nat?, Option.map_eq_some_iff] at h7
-    obtain ⟨w, hw, rfl⟩ := h7
-    exact ⟨w, hw, rfl⟩
+    ∃ w, R (q + ProjTbl.numFields.toNat) = some w ∧ tbl.numFields = w.toNat := by
+  obtain ⟨-, -, -, -, h7, -⟩ := decTbl_eq_some.mp h
+  simp only [nat?, Option.map_eq_some_iff] at h7
+  obtain ⟨w, hw, e⟩ := h7
+  exact ⟨w, hw, e.symm⟩
 
 /-- The model of `find_proj` past `find_table`'s run: `(flag, record, memory)`. -/
 def findProjK (T i : Word) (res : Option (List Word × Mem)) : Option (Word × Word × Mem) :=
@@ -61,7 +57,7 @@ def findProjK (T i : Word) (res : Option (List Word × Mem)) : Option (Word × W
   | none => none
   | some (r, m₁) =>
     if r.headD 0 = 0 then some (0, 0, m₁)
-    else if i < erRd m₁ (r.headD 0 - 1 + 7) then some (1, r.headD 0 - 1, m₁)
+    else if i < erRd m₁ (r.headD 0 - 1 + ProjTbl.numFields) then some (1, r.headD 0 - 1, m₁)
     else some (0, 0, m₁)
 
 theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis T i : Word) :
@@ -115,7 +111,7 @@ theorem findProj_word (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   have hfT : fe.findTable? (decI T) = some tbl := by rw [hft, tblFound, ite_eq_right h0, htbl]
   rw [← h1] at htbl
   obtain ⟨w, hw7, hnf⟩ := decTbl_numFields htbl
-  have hrd : erRd s₀.mem (r₁.headD 0 - 1 + 7) = w := (erRdOK s₀.mem).offN (k := 7) hw7 (by decide)
+  have hrd : erRd s₀.mem (r₁.headD 0 - 1 + ProjTbl.numFields) = w := (erRdOK s₀.mem).at _ rfl hw7
   rw [hrd] at hW
   by_cases bi : i < w
   · rw [ite_eq_left bi] at hW

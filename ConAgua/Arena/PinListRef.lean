@@ -5,11 +5,12 @@ public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.RecLayout.RuleDec
+import ConAgua.Arena.DeclCanonLvl
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
 import ConAgua.Arena.IndexLoops
-import ConAgua.Arena.DeclCanonRules
 import ConAgua.L.WordOff
 import ConAgua.Arena.InferFieldSort
 
@@ -792,7 +793,7 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
   have ht : C.toConstantVal.levelParams =
       Cp.toConstantVal.levelParams.map (ConRon.Arena.canonNameMap Rp R) := hb5.mp h0
   rw [e5] at h
-  cases h6 : rulesLinkOkW p n m4 bo bl po pl ro rl rpo rpl (qo + 11) (ql - 1) with
+  cases h6 : rulesLinkOkW p n m4 bo bl po pl ro rl rpo rpl (qo + Rule.size) (ql - 1) with
   | none => rw [h6] at h; simp [rulesLinkOkW.k_rules_link_ok] at h
   | some x6 =>
   obtain ⟨r6, m6⟩ := x6
@@ -800,10 +801,10 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
   cases h
   have hql : (ql - 1).toNat = k := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
-  have hrs6 : decRules (erecP m4) (qo + 11).toNat (ql - 1).toNat = some rls := by
+  have hrs6 : decRules (erecP m4) (qo + Rule.size).toNat (ql - 1).toNat = some rls := by
     rw [he4, he3, hql]; exact decRules_shift hrls (erRdOK m).lt
   obtain ⟨b, a', hrun, hT', hg', hok', hr', hx', hb'⟩ :=
-    ih m4 _ a5 (qo + 11) (ql - 1) rls r6 hT5 hok5 hr5 (hB.grow ciF_mono hg34) (hPs.grow ciF_mono hg34)
+    ih m4 _ a5 (qo + Rule.size) (ql - 1) rls r6 hT5 hok5 hr5 (hB.grow ciF_mono hg34) (hPs.grow ciF_mono hg34)
       (hR.grow hg34) (hRp.grow hg34) ⟨_, ConRon.Bridge.denoteCIList_mono hx5 _ _ hBd⟩
       ⟨_, ConRon.Bridge.denoteCIList_mono hx5 _ _ hPd⟩ ⟨_, ConRon.Bridge.denoteNListE_ext hx5 _ _ hRT⟩
       ⟨_, ConRon.Bridge.denoteNListE_ext hx5 _ _ hRpT⟩ hrs6 h6

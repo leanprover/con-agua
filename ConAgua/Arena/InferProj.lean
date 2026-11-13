@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.RecLayout.TblDec
 public import ConAgua.Arena.InferBodySpine
 import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.InferProjModels
@@ -40,19 +41,6 @@ namespace L.Arena
 
 /-! ## The words of a projection table record -/
 
-/-- A decoded handle list at words `q + j`, `q + j + 1`: the slice those two words name. -/
-theorem hlist_words {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
-    {q : Word} {j : Nat} {l : List (Idx k)}
-    (h : hlist? R (q.toNat + j) = some l) :
-    hslice? R (rd (q + UInt64.ofNat j)).toNat (rd (q + UInt64.ofNat (j + 1))).toNat = some l := by
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
-  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := h
-  have hj := hR.lt _ _ hwc
-  have r1 : rd (q + UInt64.ofNat j) = wo := hR.offN hwo (by omega)
-  have r2 : rd (q + UInt64.ofNat (j + 1)) = wc :=
-    hR.offN (by simpa [Nat.add_assoc] using hwc) (by omega)
-  rw [r1, r2]; exact hs
-
 /-- A decoded handle at word `q + j`. -/
 theorem hd_word {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
     {q : Word} {j : Nat} {x : Idx k} (h : hd? R (q.toNat + j) = some x) :
@@ -61,18 +49,6 @@ theorem hd_word {k : IdxKind} {R : Nat → Option Word} {rd : Word → Word} (hR
   have hj := hR.lt _ _ hw
   rw [hR.offN hw (by omega)]
   exact ⟨hw32, rfl⟩
-
-/-- **The fields of a decoded projection table** `proj_type_at` reads: the level parameters' slice
-(words `q + 3`, `q + 4`) and the bodies' slice (`q + 9`, `q + 10`). -/
-theorem decTbl_fields {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) :
-    hslice? R (rd (q + 3)).toNat (rd (q + 4)).toNat = some tbl.levelParams ∧
-    hslice? R (rd (q + 9)).toNat (rd (q + 10)).toNat = some tbl.bodies.toList := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨sn, -, lps, hlps, np, -, ct, -, nf, -, bd, hbd, hc⟩ := h
-  subst hc
-  exact ⟨hlist_words hR (j := 3) hlps, by simpa using hlist_words hR (j := 9) hbd⟩
 
 /-- Element `i` of a decoded slice, or `0` past its end, as L reads it (`if i < cnt { a[off + i] }`). -/
 def sliceAt (rd : Word → Word) (o c i : Word) : Word := if i < c then rd (o + i) else 0
@@ -169,7 +145,7 @@ theorem InferProjProg.cpgProg {p : Prog} (hp : InferProjProg p) (hc : InferProjC
 
 /-- The body word `proj_type_at` reads: entry `i` of the bodies' slice, or `0`. -/
 def projBodyW (m : Mem) (q i : Word) : Word :=
-  sliceAt (erRd m) (erRd m (q + 9)) (erRd m (q + 10)) i
+  sliceAt (erRd m) (erRd m (q + ProjTbl.bodiesOff)) (erRd m (q + ProjTbl.bodiesLen)) i
 
 /-! ## Refinement helpers -/
 
@@ -214,13 +190,13 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   subst hs0
   refine ⟨hloc, ?_⟩
   have hil := hp.walk.instListOK
-  obtain ⟨hlps, hbd⟩ := decTbl_fields (erRdOK s.mem) hq
+  obtain ⟨-, -, hlps, -, -, -, -, hbd⟩ := decTbl_rd (erRdOK s.mem) hq
   obtain ⟨hbw, hbdec⟩ := sliceAt_dec (k := .expr) (erRdOK s.mem) hbd i
   have hbody : (decE (projBodyW s.mem q i) : EIdx) = (tbl.entry i.toNat).body := by
     simp only [IProjTable.entry, array_getD_toList]; exact hbdec
   rw [ptaW.eq_2] at hW
-  have hj : (if i < erRd s.mem (q + 10) then
-        ptaW.j1 p n q us to tn pe (erRd s.mem (erRd s.mem (q + 9) + i)) s.mem
+  have hj : (if i < erRd s.mem (q + ProjTbl.bodiesLen) then
+        ptaW.j1 p n q us to tn pe (erRd s.mem (erRd s.mem (q + ProjTbl.bodiesOff) + i)) s.mem
       else ptaW.j1 p n q us to tn pe 0 s.mem) = ptaW.j1 p n q us to tn pe (projBodyW s.mem q i) s.mem := by
     unfold projBodyW sliceAt; split <;> rfl
   erw [hj, ptaW.j1.eq_1] at hW
@@ -402,14 +378,14 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
     exact RefE.abortAt g1 fun _ => ErrClaim.of_error (projAtT_errT _ _ _ _ _ _ _ _ _ xs hxs hne) rfl
   refine RefE.pass g1 ?_
   have hTs : T = sn := Classical.not_not.mp g1
-  by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 (tierA EREC ((q + 5) >>> 40))) (q + 5 &&& 1099511627775)
+  by_cases g2 : r₁.tail.headD 0 ≠ rdW (m₁.arr64 (tierA EREC ((q + ProjTbl.numParams) >>> 40))) (q + ProjTbl.numParams &&& 1099511627775)
   · have hl : (xs.length != (tbl.entry i.toNat).numParams) = true := by
       simp only [bne_iff_ne, ne_eq, hlen0]
       intro h; apply g2; apply UInt64.toNat_inj.mp; rw [h]; exact hnp
     exact RefE.abortAt g2 fun _ =>
       ErrClaim.of_error (projAtT_errNP _ _ _ _ _ _ _ _ _ xs hxs (by rw [hTs]) hl) rfl
   refine RefE.pass g2 ?_
-  have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 (tierA EREC ((q + 5) >>> 40))) (q + 5 &&& 1099511627775) :=
+  have g2' : r₁.tail.headD 0 = rdW (m₁.arr64 (tierA EREC ((q + ProjTbl.numParams) >>> 40))) (q + ProjTbl.numParams &&& 1099511627775) :=
     Classical.not_not.mp g2
   have hlen : xs.length = (tbl.entry i.toNat).numParams := by rw [hlen0, g2']; exact hnp.symm
   -- `ls_node`
@@ -426,14 +402,14 @@ theorem ipa_ref (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n F
   have hr₂' : r₂ = [o₂, l₂] := by rw [hr₂]; exact hl₂
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat := lsNodeW_viewLen hS₁.arena.base hus hl₂
-  by_cases g3 : [o₂, l₂].tail.headD 0 ≠ rdW (m₂.arr64 (tierA EREC ((q + 4) >>> 40))) (q + 4 &&& 1099511627775)
+  by_cases g3 : [o₂, l₂].tail.headD 0 ≠ rdW (m₂.arr64 (tierA EREC ((q + ProjTbl.lpsLen) >>> 40))) (q + ProjTbl.lpsLen &&& 1099511627775)
   · have hl : l₂.toNat ≠ (tbl.entry i.toNat).levelParams.length := by
       intro h; apply g3; apply UInt64.toNat_inj.mp; simp only [List.tail_cons, List.headD_cons]
       rw [h]; exact hlp
     exact RefE.abortAt g3 fun _ =>
       ErrClaim.of_error (projAtT_errLP _ _ _ _ _ _ _ _ _ xs _ hxs (by rw [hTs]) hlen hvl hl) rfl
   refine RefE.pass g3 ?_
-  have g3' : l₂ = rdW (m₂.arr64 (tierA EREC ((q + 4) >>> 40))) (q + 4 &&& 1099511627775) := by
+  have g3' : l₂ = rdW (m₂.arr64 (tierA EREC ((q + ProjTbl.lpsLen) >>> 40))) (q + ProjTbl.lpsLen &&& 1099511627775) := by
     simpa using g3
   have hlpl : l₂.toNat = (tbl.entry i.toNat).levelParams.length := by rw [g3']; exact hlp.symm
   have hT1 := projAtT_run R fe (decI sn) (decI T) (decI us) (tbl.entry i.toNat) (decE te) (decE pe) a₀

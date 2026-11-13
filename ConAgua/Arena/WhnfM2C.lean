@@ -143,9 +143,9 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 @[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, tq, major)
     locals (pc, ec, ep, ef, f, tmaj, T2, ust, ustl, to, tn, r) {
   pc := EREC⦃indP + 3⦄;
-  ec := EREC⦃tq + 5⦄;
-  ep := EREC⦃tq + 4⦄;
-  ef := EREC⦃tq + 6⦄;
+  ec := EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄;
+  ep := EREC⦃tq + ⟪ProjTbl.numParams - 1⟫⦄;
+  ef := EREC⦃tq + ⟪ProjTbl.numFields - 1⟫⦄;
   (f, tmaj, T2, ust, ustl) := call m2c_pre(mode, vis, d, major);
   if f == 0 { return major };
   (to, tn) := call get_app_args(tmaj);

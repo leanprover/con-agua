@@ -53,16 +53,16 @@ l_model incW_spec (p : Prog) (hp : p.lookup "iota_no_cert" = some iotaNoCertL)
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
 /-- **`rec_fire_level_count` refines `recFireLevelCount`** at a decoded rule and constructor: the
-fire kind word `rl + 3`, the stored level list's length `rl + 5`, the constructor's level count
+fire kind word `rl + Rule.fire`, the stored level list's length `rl + Rule.lvlsLen`, the constructor's level count
 `ctorP + 3`. -/
 @[refines ConRon.Arena.recFireLevelCount]
 theorem rflc_count {m : Mem} {rl ctorP : Word} {rule : IRecRule} {cvj : IConstantVal} {np nf : Nat}
     {fam : NIdx} (hrule : decRule (erecP m) rl.toNat = some rule)
     (hci : decCI (erecP m) ctorP.toNat = some (.ctorInfo cvj np nf fam)) :
-    rflcW m (erRd m (rl + 3)) (erRd m (rl + 5)) (erRd m (ctorP + 3)) =
-      some (if erRd m (rl + 3) = 0 then erRd m (ctorP + 3) else erRd m (rl + 5)) ∧
+    rflcW m (erRd m (rl + Rule.fire)) (erRd m (rl + Rule.lvlsLen)) (erRd m (ctorP + 3)) =
+      some (if erRd m (rl + Rule.fire) = 0 then erRd m (ctorP + 3) else erRd m (rl + Rule.lvlsLen)) ∧
     recFireLevelCount rule cvj.levelParams =
-      (if erRd m (rl + 3) = 0 then erRd m (ctorP + 3) else erRd m (rl + 5)).toNat := by
+      (if erRd m (rl + Rule.fire) = 0 then erRd m (ctorP + 3) else erRd m (rl + Rule.lvlsLen)).toNat := by
   refine ⟨by unfold rflcW; split <;> simp_all, ?_⟩
   obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd1 (q := ctorP) (erRdOK m) (L.Arena.decCI_ctor_cv hci)
   rcases decRule_fireE (erRdOK m) hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, hk, hsl⟩
@@ -182,7 +182,7 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   simp only [IConstantInfo.ctorInfo.injEq] at he
   obtain ⟨-, -, -, rfl⟩ := he
   obtain ⟨hW0, hcnt⟩ := rflc_count hrule hci
-  rcases c0 : callW p n "rec_fire_level_count" [erRd s₀.mem (rl + 3), erRd s₀.mem (rl + 5),
+  rcases c0 : callW p n "rec_fire_level_count" [erRd s₀.mem (rl + Rule.fire), erRd s₀.mem (rl + Rule.lvlsLen),
       erRd s₀.mem (ctorP + 3)] s₀.mem with _ | ⟨r0, m0⟩
   · erw [c0, liftE_none, irFamE.k_rec_fire_level_count.none]; exact RefE.of_cls0 (by simp)
   erw [c0, liftE_some, irFamE.k_rec_fire_level_count.arm1]
@@ -395,7 +395,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hmsize : margs.toList.length = mn.toNat := by simp [hsm.size]
   -- the count
   have hlen_iff : margs.toList.length = np + rule.nfields ↔
-      ¬ mn < erRd s₀.mem (ctorP + 5) ∧ mn - erRd s₀.mem (ctorP + 5) = erRd s₀.mem (rl + 1) := by
+      ¬ mn < erRd s₀.mem (ctorP + 5) ∧ mn - erRd s₀.mem (ctorP + 5) = erRd s₀.mem (rl + Rule.nfields) := by
     rw [hmsize, hcpw, hnfw]
     constructor
     · intro h
@@ -420,7 +420,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · erw [ite_eq_left l1]
     exact hres0.resolve_right fun h => (hlen_iff.mp h).1 l1
   erw [ite_eq_right l1]
-  by_cases l2 : mn - erRd s₀.mem (ctorP + 5) ≠ erRd s₀.mem (rl + 1)
+  by_cases l2 : mn - erRd s₀.mem (ctorP + 5) ≠ erRd s₀.mem (rl + Rule.nfields)
   · erw [ite_eq_left l2]
     exact hres0.resolve_right fun h => l2 (hlen_iff.mp h).2
   erw [ite_eq_right l2]
@@ -452,9 +452,9 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   refine RefE.bindLift (fun _ => rfl) fun rr m2 c2 => ?_
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
     (ruleRhsAt_refines' p hp.toIotaProg' hw.instLP (N + 1) ⟨s1.mem, Locals.init []⟩ _ dn vis fe M1 eb c (erRd s₀.mem rl)
-      (erRd s₀.mem (recP + 2)) (erRd s₀.mem (recP + 3)) (erRd s₀.mem (rl + 8)) us lps hS1 hcw hctw hrhsw hus
+      (erRd s₀.mem (recP + 2)) (erRd s₀.mem (recP + 3)) (erRd s₀.mem (rl + Rule.rhs)) us lps hS1 hcw hctw hrhsw hus
       (by rw [k1.2.2.2]; exact hlps)) c2
-  have hrhs' : (decE (erRd s₀.mem (rl + 8)) : EIdx) = rule.rhs := hrhs.symm
+  have hrhs' : (decE (erRd s₀.mem (rl + Rule.rhs)) : EIdx) = rule.rhs := hrhs.symm
   rw [← hctor, hrhs'] at ok2 res2 hS2
   have hrun2' := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2'
@@ -702,9 +702,9 @@ theorem findRule_mem : ∀ (rules : List IRecRule) (c : NIdx) (rl : IRecRule),
     · obtain ⟨h1, h2⟩ := findRule_mem xs c rl h; exact ⟨List.mem_cons_of_mem _ h1, h2⟩
 
 
-/-- A found rule's record is one of the slice's: `find_rule` answers `ro + 11 * j`, `j < rc`. -/
+/-- A found rule's record is one of the slice's: `find_rule` answers `ro + Rule.size * j`, `j < rc`. -/
 theorem frN_found (rd : Word → Word) (ro rc c : Word) (i : Nat) (hne : (frN rd ro rc c i).headD 0 ≠ 0) :
-    ∃ j : Word, j < rc ∧ (frN rd ro rc c i).tail.headD 0 = ro + 11 * j := by
+    ∃ j : Word, j < rc ∧ (frN rd ro rc c i).tail.headD 0 = ro + Rule.size * j := by
   fun_induction frN rd ro rc c i with
   | case1 i hi _ => exact ⟨UInt64.ofNat i, UInt64.lt_iff_toNat_lt.mpr (by have := rc.toNat_lt; simp; omega), rfl⟩
   | case2 i _ _ ih => exact ih hne
@@ -719,16 +719,16 @@ theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (
   obtain ⟨t, ht, -, -, hW⟩ := triple_of_callW (findRule_spec p hp n ⟨m, Locals.init []⟩ ro rc c) h
   subst hW
   obtain ⟨j, hj, hq⟩ := frN_found _ ro rc c 0 hne
-  obtain ⟨hl, hg⟩ := decRules_getR _ _ _ hr
+  obtain ⟨hl, hg⟩ := decRules_get hr
   have hj' : j.toNat < rc.toNat := hj
   have hdr := hg j.toNat hj'
   obtain ⟨rule, hrule⟩ : ∃ rule, rules[j.toNat]? = some rule :=
     ⟨rules[j.toNat], List.getElem?_eq_getElem (by omega)⟩
   rw [hrule] at hdr
-  have hw := rule_idx (erRdOK m) ro j rule hdr
+  have hw := rule_idx (erRdOK m) ro j hdr
   refine ⟨rule, ?_⟩
   rw [hq]
-  show decRule (erecP m) (ro + 11 * j).toNat = some rule
+  show decRule (erecP m) (ro + Rule.size * j).toNat = some rule
   rw [hw]; exact hdr
 
 /-- `prepare_major`'s error claim at fuel `N + 1` (the premises of `prepareMajor_refines'`). -/

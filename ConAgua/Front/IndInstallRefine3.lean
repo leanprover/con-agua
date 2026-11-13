@@ -3,6 +3,7 @@ module
 public import ConAgua.Front.IndInstallRefine2
 import ConAgua.L.WordOff
 import ConAgua.Front.IndApplyRefine
+import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.DeclRec
 
 @[expose] public section
@@ -77,7 +78,11 @@ theorem ruleM_dec (m : Mem) (q n nf e : Word) (hs : q.toNat + 11 ≤ (m.arr64 DL
   have v10 : wd (ruleM m q n nf e) DLP (q.toNat + 10) = 0 := by
     unfold ruleM; rw [wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v10] at h10
-  simp [decRule, hd?, nat?, hlist?, h0, h1, h3, h4, h5, h6, h7, h8, hn, he]
+  -- the record as `parse_rule_d` writes it, word by word
+  exact decRule_of (by simp [hd?, h0, hn])
+    (show nat? (aread P) (q.toNat + 1) = some nf.toNat by simp [nat?, h1])
+    (show hd? (aread P) (q.toNat + 8) = some (decI e) by simp [hd?, h8, he])
+    (show nat? (aread P) (q.toNat + 3) = some 0 by simp [nat?, h3])
 
 /-- `parse_rule_d` writes only its eleven words. -/
 theorem ruleM_out (m : Mem) (q n nf e : Word) (hq : q.toNat + 11 < 2 ^ 64) (j : Nat)

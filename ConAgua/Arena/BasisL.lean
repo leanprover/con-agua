@@ -5,6 +5,7 @@ import ConAgua.Census.Attr
 import ConAgua.Layout
 import ConAgua.L.Notation
 public import ConAgua.Arena.RecLayout.CI
+public import ConAgua.Arena.RecLayout.Rule
 public import ConAgua.L.Syntax
 public import ConAgua.Arena.Reasons
 
@@ -29,7 +30,7 @@ quotient record's tests (`quotPinHit`, `quotPredsOk`). On lane `induct`'s conven
   (`readNamesM`, `Level.subst`) are the name handles themselves (`denoteN` injective):
   `pinLinkOk`'s `Level.subst rp (r.map .param) (.param p)` is `canon_name_map`'s lookup.
 * A pin at new names is a fresh record (`ci_at_lps`): the cv inline (`cv_at_lps` writes 4 words),
-  a definition's value, a recursor's rules (`rules_at_lps`, a fresh 11-word rule slice) renamed,
+  a definition's value, a recursor's rules (`rules_at_lps`, a fresh rule slice) renamed,
   every other word copied.
 -/
 
@@ -82,30 +83,32 @@ def fireLevelsAt : FunDecl := lfn (fo, fl, ko, kc, us) locals (vo, vc, b, c, x, 
   return d
 }
 
-/-- `rules_at_lps_go(ko, kc, us, o, l, d)`: the rules of the `EREC` slice `(o, l)` (11-word
-records) at the new names, written to the 11-word records at `d`: each right-hand side
+/-- `rules_at_lps_go(ko, kc, us, o, l, d)`: the rules of the `EREC` slice `(o, l)` (`Rule.size`-word
+records) at the new names, written to the records at `d`: each right-hand side
 (`instLPFast`), then its firing mode (a `levels` fire's levels substituted, every other mode as it
 is), then the rest. Returns `0`. -/
 -- con-ron: ConRon/Arena/Basis.lean:67-78 ConRon.Arena.rulesAtLps
 @[no_expose, l_impl ConRon.Arena.rulesAtLps]
 def rulesAtLpsGo : FunDecl := lfn (ko, kc, us, o, l, d) locals (rhs, k, lo, ez, u) {
   if l == 0 { return 0 };
-  rhs := call inst_lp(ko, kc, us, EREC⦃o + 8⦄);
-  k := EREC⦃o + 3⦄;
-  lo := EREC⦃o + 4⦄;
-  if k == 2 { lo := call fire_levels_at(EREC⦃o + 4⦄, EREC⦃o + 5⦄, ko, kc, us) };
+  rhs := call inst_lp(ko, kc, us, EREC⦃o + ⟪Rule.rhs⟫⦄);
+  k := EREC⦃o + ⟪Rule.fire⟫⦄;
+  lo := EREC⦃o + ⟪Rule.lvlsOff⟫⦄;
+  if k == 2 {
+    lo := call fire_levels_at(EREC⦃o + ⟪Rule.lvlsOff⟫⦄, EREC⦃o + ⟪Rule.lvlsLen⟫⦄, ko, kc, us)
+  };
   ez := call erec_put(d, EREC⦃o⦄);
-  ez := call erec_put(d + 1, EREC⦃o + 1⦄);
+  ez := call erec_put(d + ⟪Rule.nfields⟫, EREC⦃o + ⟪Rule.nfields⟫⦄);
   ez := call erec_put(d + 2, 0);
-  ez := call erec_put(d + 3, k);
-  ez := call erec_put(d + 4, lo);
-  ez := call erec_put(d + 5, EREC⦃o + 5⦄);
-  ez := call erec_put(d + 6, EREC⦃o + 6⦄);
-  ez := call erec_put(d + 7, EREC⦃o + 7⦄);
-  ez := call erec_put(d + 8, rhs);
+  ez := call erec_put(d + ⟪Rule.fire⟫, k);
+  ez := call erec_put(d + ⟪Rule.lvlsOff⟫, lo);
+  ez := call erec_put(d + ⟪Rule.lvlsLen⟫, EREC⦃o + ⟪Rule.lvlsLen⟫⦄);
+  ez := call erec_put(d + ⟪Rule.pinsOff⟫, EREC⦃o + ⟪Rule.pinsOff⟫⦄);
+  ez := call erec_put(d + ⟪Rule.pinsLen⟫, EREC⦃o + ⟪Rule.pinsLen⟫⦄);
+  ez := call erec_put(d + ⟪Rule.rhs⟫, rhs);
   ez := call erec_put(d + 9, 0);
   ez := call erec_put(d + 10, 0);
-  u := call rules_at_lps_go(ko, kc, us, o + 11, l - 1, d + 11);
+  u := call rules_at_lps_go(ko, kc, us, o + ⟪Rule.size⟫, l - 1, d + ⟪Rule.size⟫);
   return 0
 }
 
@@ -147,7 +150,7 @@ def ciAtLps : FunDecl := lfn (p, po, pl) locals (k, n, r, z, us, io, il, v, ez, 
     us := call param_levels(io, il);
     rl := EREC⦃p + 8⦄;
     if 1152921504606846976 <= rl { abort };
-    ro := call erec_alloc(11 * rl);
+    ro := call erec_alloc(⟪Rule.size⟫ * rl);
     z := call rules_at_lps_go(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, EREC⦃p + 7⦄, rl, ro);
     ez := call erec_put(r + 5, EREC⦃p + 5⦄);
     ez := call erec_put(r + 6, EREC⦃p + 6⦄);
@@ -237,7 +240,7 @@ def rulesLinkOk : FunDecl :=
   (so, sl) := call cv_lps(d + 1);
   e := call pin_link_ok(ro, rl, rpo, rpl, co, cl, so, sl);
   if e == 0 { return 0 };
-  e := call rules_link_ok(bo, bl, po, pl, ro, rl, rpo, rpl, qo + 11, ql - 1);
+  e := call rules_link_ok(bo, bl, po, pl, ro, rl, rpo, rpl, qo + ⟪Rule.size⟫, ql - 1);
   return e
 }
 

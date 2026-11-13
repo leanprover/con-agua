@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.RecLayout.RuleDec
 public import ConAgua.Arena.DeclCanonExpr2
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -31,28 +32,6 @@ l_model canonRulesEq_spec (p : Prog) (hp : CanonProg p)
   fns [hp.get "canon_rules_eq" ↦ cnCrW]
   specs [ruleEqButRhs_spec p hp n, canonExprEq_spec p hp n]
   grind [arena_grind]
-
-theorem decRules_length {R : Nat → Option Word} {o l : Nat} {xs : List IRecRule}
-    (h : decRules R o l = some xs) : xs.length = l := by
-  have := mapM_opt_length _ _ _ h
-  simpa using this
-
-/-- The next rule's records, at the word address. -/
-theorem decRules_shift {R : Nat → Option Word} {o : Word} {k : Nat} {rs : List IRecRule}
-    (h : decRules R (o.toNat + 11) k = some rs) (hR : ∀ i v, R i = some v → i < 2 ^ 64) :
-    decRules R (o + 11).toNat k = some rs := by
-  cases k with
-  | zero => simpa [decRules] using h
-  | succ k =>
-  have h' := h
-  rw [decRules_succ] at h'
-  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
-  obtain ⟨r0, hr0, -⟩ := h'
-  obtain ⟨w, hw, -⟩ := hd?_some (decRule_ctor hr0)
-  have := hR _ _ hw
-  have e : (o + 11).toNat = o.toNat + 11 := by
-    rw [UInt64.toNat_add]; simp only [show (11 : Word).toNat = 11 from rfl]; omega
-  rw [e]; exact h
 
 theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (po pl qo ql co cl fuel o1 l1 o2 l2 x : Word) (ps qs cs : List NIdx)
@@ -132,8 +111,8 @@ theorem cnCrW_ok {vis : Word} {fe : IFEnv} (k : Nat) :
           have hx2 := decRules_shift (ArrExt.decRules (L.Ind.IWGrow.ext hg1) hxs'e) (erRdOK m1).lt
           have hy2 := decRules_shift (ArrExt.decRules (L.Ind.IWGrow.ext hg1) hys'e) (erRdOK m1).lt
           rw [← l1p, ← l2p] at *
-          obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl fuel (o1 + 11) (l1 - 1)
-            (o2 + 11) (l2 - 1) x ps qs cs _ _ h hS1 (hC.grow hg1) hL hP1 hx2 hy2
+          obtain ⟨b2, hb2, hr2, hS2, hg2, hP2⟩ := ih m1 m' a po pl qo ql co cl fuel (o1 + Rule.size) (l1 - 1)
+            (o2 + Rule.size) (l2 - 1) x ps qs cs _ _ h hS1 (hC.grow hg1) hL hP1 hx2 hy2
           exact ⟨b2, hb2, hr2, hS2, hg1.trans hg2, hP2⟩)
         (fun h0 => by
           rw [ite_eq_left h0] at h

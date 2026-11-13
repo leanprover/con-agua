@@ -50,31 +50,6 @@ theorem recFireArgs_plain_run (rl : IRecRule) (cnP : Nat) (lps : List NIdx) (us 
     (recFireArgs rl cnP lps us args rP).run a = .ok (args.take cnP, a) := by
   rcases h with h | ⟨lv, h⟩ <;> simp [recFireArgs, h] <;> rfl
 
-/-- A rule record whose fire kind word is not `1` is not nested. -/
-theorem decRule_notNested {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule}
-    (hR : RdOK R rd) (h : decRule R q.toNat = some rl) (h1 : rd (q + 3) ≠ 1) :
-    rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls := by
-  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨kd, hkd, h⟩ := h
-  simp only [nat?, Option.map_eq_some_iff] at hkd
-  obtain ⟨w3, hw3, rfl⟩ := hkd
-  have e3 : rd (q + 3) = w3 := hR.at 3 rfl hw3
-  rw [e3] at h1
-  have hne : w3.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp (by rw [e]; rfl))
-  rcases hk : w3.toNat with _ | _ | _ | k
-  · rw [hk] at h
-    simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-    obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inl rfl
-  · exact absurd hk hne
-  · rw [hk] at h
-    cases hlv : hlist? (k := .level) R (q.toNat + 4) with
-    | none => rw [hlv] at h; simp at h
-    | some lv =>
-      rw [hlv] at h
-      simp only [Option.bind_some, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, _, _, _, _, _, rfl⟩ := h; exact .inr ⟨lv, rfl⟩
-  · rw [hk] at h; simp at h
-
 /-- **`rec_fire_args` refines `recFireArgs`.** Statement changes: `CoreAfterG` (the nested arm leaves a
 slice on the stack) and both input slices below the stack top. -/
 theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
@@ -153,25 +128,25 @@ theorem erecP_atW {m : Mem} {q : Word} {k : Nat} {w : Word} (h : erecP m (q.toNa
   rw [← e] at h
   exact ⟨(erecP_tagRead h).1, erRd_of _ _ h⟩
 
-/-- **A decoded projection table's words** at `q + 5`, `q + 6`, `q + 7`. -/
+/-- **A decoded projection table's words** `numParams`, `ctor`, `numFields`, read tagged in
+bounds. -/
 theorem decTbl_wordsT {m : Mem} {q : Word} {tbl : IProjTable} (h : decTbl (erecP m) q.toNat = some tbl) :
-    (erIn m (q + 5) ∧ (erRd m (q + 5)).toNat = tbl.numParams) ∧
-    (erIn m (q + 6) ∧ HW (erRd m (q + 6)) ∧ tbl.ctor = decI (erRd m (q + 6))) ∧
-    (erIn m (q + 7) ∧ (erRd m (q + 7)).toNat = tbl.numFields) := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨sn, -, lp, -, np, hnp, c, hc, nf, hnf, bd, -, rfl⟩ := h
+    (erIn m (q + ProjTbl.numParams) ∧ (erRd m (q + ProjTbl.numParams)).toNat = tbl.numParams) ∧
+    (erIn m (q + ProjTbl.ctor) ∧ HW (erRd m (q + ProjTbl.ctor)) ∧
+      tbl.ctor = decI (erRd m (q + ProjTbl.ctor))) ∧
+    (erIn m (q + ProjTbl.numFields) ∧ (erRd m (q + ProjTbl.numFields)).toNat = tbl.numFields) := by
+  obtain ⟨-, -, hnp, hc, hnf, -⟩ := decTbl_eq_some.mp h
   simp only [nat?, Option.map_eq_some_iff] at hnp hnf
-  obtain ⟨w5, hw5, rfl⟩ := hnp
-  obtain ⟨w7, hw7, rfl⟩ := hnf
-  obtain ⟨w6, hw6, h32, rfl⟩ := hd?_some hc
-  obtain ⟨i5, e5⟩ := erecP_atW (k := 5) hw5 (by decide)
-  obtain ⟨i6, e6⟩ := erecP_atW (k := 6) hw6 (by decide)
-  obtain ⟨i7, e7⟩ := erecP_atW (k := 7) hw7 (by decide)
-  exact ⟨⟨i5, by rw [show (q + 5 : Word) = q + UInt64.ofNat 5 from rfl, e5]⟩,
-    ⟨i6, by show HW (erRd m (q + UInt64.ofNat 6)); rw [e6]; exact h32,
-      by rw [show (q + 6 : Word) = q + UInt64.ofNat 6 from rfl, e6]⟩,
-    ⟨i7, by rw [show (q + 7 : Word) = q + UInt64.ofNat 7 from rfl, e7]⟩⟩
+  obtain ⟨w5, hw5, e5'⟩ := hnp
+  obtain ⟨w7, hw7, e7'⟩ := hnf
+  obtain ⟨w6, hw6, h32, e6'⟩ := hd?_some hc
+  have := ProjTbl.size_le
+  obtain ⟨i5, e5⟩ := erecP_atW hw5 (by have := ProjTbl.numParams_lt; omega)
+  obtain ⟨i6, e6⟩ := erecP_atW hw6 (by have := ProjTbl.ctor_lt; omega)
+  obtain ⟨i7, e7⟩ := erecP_atW hw7 (by have := ProjTbl.numFields_lt; omega)
+  simp only [UInt64.ofNat_toNat] at i5 e5 i6 e6 i7 e7
+  exact ⟨⟨i5, by rw [e5, e5']⟩, ⟨i6, by show HW _; rw [e6]; exact h32, by rw [e6, e6']⟩,
+    ⟨i7, by rw [e7, e7']⟩⟩
 
 /-- Model of the `and_rescue_slots` loop at L fuel `k` (the table words read tagged). -/
 def iotaArW (p : Prog) (vis ctor nP an : Word) : Nat → Mem → Word → Option (List Word × Mem)
@@ -182,12 +157,12 @@ def iotaArW (p : Prog) (vis ctor nP an : Word) : Nat → Mem → Word → Option
       | none => none
       | some (r₁, m₁) =>
         if r₁.headD 0 = 0 then some ([0], m₁)
-        else if ¬ erIn m₁ (r₁.tail.headD 0 + 6) then none
-        else if erRd m₁ (r₁.tail.headD 0 + 6) ≠ ctor then some ([0], m₁)
-        else if ¬ erIn m₁ (r₁.tail.headD 0 + 5) then none
-        else if erRd m₁ (r₁.tail.headD 0 + 5) ≠ nP then some ([0], m₁)
-        else if ¬ erIn m₁ (r₁.tail.headD 0 + 7) then none
-        else if erRd m₁ (r₁.tail.headD 0 + 7) ≠ 2 then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + ProjTbl.ctor) then none
+        else if erRd m₁ (r₁.tail.headD 0 + ProjTbl.ctor) ≠ ctor then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + ProjTbl.numParams) then none
+        else if erRd m₁ (r₁.tail.headD 0 + ProjTbl.numParams) ≠ nP then some ([0], m₁)
+        else if ¬ erIn m₁ (r₁.tail.headD 0 + ProjTbl.numFields) then none
+        else if erRd m₁ (r₁.tail.headD 0 + ProjTbl.numFields) ≠ 2 then some ([0], m₁)
         else iotaArW p vis ctor nP an k m₁ (j + 1)
     else some ([1], m)
 
@@ -286,7 +261,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
     rw [← k1.2.2.2] at htbl
     obtain ⟨⟨i5, e5⟩, ⟨i6, w6, e6⟩, ⟨i7, e7⟩⟩ := decTbl_wordsT htbl
     simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, i6, i5, i7, not_true_eq_false] at hL
-    by_cases c6 : erRd m₁ (r₁.tail.headD 0 + 6) ≠ ctor
+    by_cases c6 : erRd m₁ (r₁.tail.headD 0 + ProjTbl.ctor) ≠ ctor
     · rw [ite_eq_left c6] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
@@ -294,7 +269,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
         rw [e6, decI_beq _ _ w6 hctor]; simpa using c6
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
     rw [ite_eq_right c6] at hL
-    by_cases c5 : erRd m₁ (r₁.tail.headD 0 + 5) ≠ nP
+    by_cases c5 : erRd m₁ (r₁.tail.headD 0 + ProjTbl.numParams) ≠ nP
     · rw [ite_eq_left c5] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
@@ -302,7 +277,7 @@ theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.N
         rw [← e5]; simpa using fun e => c5 (UInt64.toNat_inj.mp e)
       simp [andRescueSlotsGo, hsome, IProjTable.entry, this]
     rw [ite_eq_right c5] at hL
-    by_cases c7 : erRd m₁ (r₁.tail.headD 0 + 7) ≠ 2
+    by_cases c7 : erRd m₁ (r₁.tail.headD 0 + ProjTbl.numFields) ≠ 2
     · rw [ite_eq_left c7] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       refine hgo false ?_ rfl rfl
