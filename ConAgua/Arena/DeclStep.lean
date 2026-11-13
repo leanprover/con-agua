@@ -82,7 +82,7 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
 }
 
 /-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, `CI.indSize` words;
-`4` constructor, `CI.ctorSize`; `5` recursor, `CI.recSize` and its 11-word rules; the layout of
+`4` constructor, `CI.ctorSize`; `5` recursor, `CI.recSize` and its `Rule.size`-word rules; the layout of
 `EREC`'s records) copied into `EREC`, its slices too. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
 @[no_expose] def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p, ez) {
@@ -93,8 +93,8 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
   if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := ⟪CI.ctorSize⟫ } else if k == 5 {
     n := ⟪CI.recSize⟫;
     if DIND.u64[s + ⟪CI.recRulesLen⟫] >= 1152921504606846976 { abort };
-    r := call erec_alloc(11 * DIND.u64[s + ⟪CI.recRulesLen⟫]);
-    z := call dind_copy(r, DIND.u64[s + ⟪CI.recRulesOff⟫], 11 * DIND.u64[s + ⟪CI.recRulesLen⟫])
+    r := call erec_alloc(⟪Rule.size⟫ * DIND.u64[s + ⟪CI.recRulesLen⟫]);
+    z := call dind_copy(r, DIND.u64[s + ⟪CI.recRulesOff⟫], ⟪Rule.size⟫ * DIND.u64[s + ⟪CI.recRulesLen⟫])
   } else { abort };
   p := call erec_alloc(n);
   z := call dind_copy(p, s, n);

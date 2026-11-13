@@ -28,9 +28,8 @@ checked only by `Prog.wf` (closure) and, where nothing on the path stubs out, a 
 `[names.off, names.len, lps.off, lps.len, nP, nIdxs.off, nIdxs.len, params.off, params.len, sort,
 lvls, formers.off, formers.len]`, `NestState` `[keys.off, keys.len, active.off, active.len, nfs.off, nfs.len]` (keys/active:
 `NestKey` pointers; nfs: `NestCtorNf` pointers). `IConstantInfo` word `p` is the kind (3 =
-`indInfo`); `cv` at `p + 1` (4 words: name, lps.off, lps.len, type); `indInfo`'s caps at `p + 5`
-(15 words: … `all.off`/`all.len` at `p + 5 + 10`/`+ 11`, `nparams` at `+ 12`, `ctors.off`/`.len`
-at `+ 13`/`+ 14`).
+`indInfo`); `cv` at `p + 1` (4 words: name, lps.off, lps.len, type); `indInfo`'s caps at
+`p + CI.indCaps`, its fields at the offsets `RecLayout/Caps.lean` names.
 
 `NestKey` equality is word-wise (name, lvls, and the `ds` list all equal): `nest_key_eq`,
 `nest_keys_contains` below. `nest_occ_any` is the repeated `List.anyM (nestOcc …)` pattern;

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.ProjGuardRowsGo
+import ConAgua.Arena.RecLayout.TblDec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -49,20 +50,6 @@ def GRows (m : Mem) (ro : Word) (rows : Array (Nat × EIdx)) : Prop :=
 
 /-! ## `proj_guard_rows` -/
 
-/-- A table record's parameter count (word `q + 5`) and constructor (word `q + 6`). -/
-theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) :
-    tbl.numParams = (rd (q + 5)).toNat ∧ HW (rd (q + 6)) ∧ tbl.ctor = decI (rd (q + 6)) := by
-  unfold decTbl at h
-  simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
-  obtain ⟨sn, -, lp, -, np, hnp, ct, hct, nf, -, bs, -, rfl⟩ := h
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some hct
-  have e : rd (q + 6) = w := hR.offN (k := 6) hw (by decide)
-  simp only [nat?, Option.map_eq_some_iff] at hnp
-  obtain ⟨v, hv, rfl⟩ := hnp
-  have e5 : rd (q + 5) = v := hR.offN (k := 5) hv (by decide)
-  rw [e, e5]
-  exact ⟨rfl, hw32, rfl⟩
 
 theorem cv_eta (cv : IConstantVal) : cv = ⟨cv.name, cv.levelParams, cv.type⟩ := rfl
 
@@ -244,17 +231,17 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   clear h hs'
   rcases n with _ | n
   · cases hW
-  obtain ⟨hnp, hct32, hct⟩ := decTbl_npc (erRdOK m) hq
+  obtain ⟨-, -, -, hnp, hct32, hct, -⟩ := decTbl_rd (erRdOK m) hq
   simp only [pgrW] at hW
   rw [erRd_congr rfl rfl, erRd_congr rfl rfl] at hW
-  rcases c1 : callW p n "env_find" [erRd m (q + 6), vis] m with _ | ⟨r1, m1⟩
+  rcases c1 : callW p n "env_find" [erRd m (q + ProjTbl.ctor), vis] m with _ | ⟨r1, m1⟩
   · rw [c1, pgrW.k_env_find.none] at hW; cases hW
   rw [c1] at hW
   obtain ⟨s1, hs1, hm1, -, hfind, hdec⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envFind_refines p hP.envRowGet hP.baseRowGet hP.envFind n _ vis _ hS.env hct32) c1
   have hm1' : m1 = m := hs1 ▸ hm1
   subst hm1'
-  have hctor : (tbl.entry i.toNat).ctor = decI (erRd m1 (q + 6)) := hct
+  have hctor : (tbl.entry i.toNat).ctor = decI (erRd m1 (q + ProjTbl.ctor)) := hct
   by_cases g1 : r1.headD 0 = 0
   · rw [pgrW.k_env_find.arm1 _ _ _ _ _ _ _ g1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -305,7 +292,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   have htop2 : spTop m2 = co := hco
   have ht12 : spTop m2 = spTop m1 := hSt2.top
   -- `opf_go`: the parameters opened, the substitution on the stack at `co`
-  rcases c3 : callW p n "opf_go" [erRd m1 (q + 5), r2.headD 0, 0, co, 0] m2 with _ | ⟨r3, m3⟩
+  rcases c3 : callW p n "opf_go" [erRd m1 (q + ProjTbl.numParams), r2.headD 0, 0, co, 0] m2 with _ | ⟨r3, m3⟩
   · rw [c3] at hW; cases hW
   rw [c3] at hW
   simp only [pgrW.k_opf_go] at hW
@@ -315,7 +302,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     hS2 hr2 (by simpa using L.Arena.SpineR.nil_at m2 _ hcob) (by rw [hco]; simp) (by simp; omega)
   have hlk3 : a3.store.lss = a2.store.lss := by
     have := (keepsW_opfRawGo _ _ _ _).run hrun3; simp only [cpl, Prod.mk.injEq] at this; exact this.2.2
-  have hnpE : (tbl.entry i.toNat).numParams = (erRd m1 (q + 5)).toNat := hnp
+  have hnpE : (tbl.entry i.toNat).numParams = (erRd m1 (q + ProjTbl.numParams)).toNat := hnp
   have hrunT : ∀ (y : Option (Array (Nat × EIdx))) (a4 : AState),
       (match x3 with
         | some (_, acc, rr) => projGuardRowsAt (tbl.entry i.toNat) acc rr
@@ -354,7 +341,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     rw [ite_eq_right (by rw [g3]; decide)] at hW
     simp only [UInt64.add_zero] at htop3 hsl3 hbel3
     generalize hro : rdW (m3.arr64 CTL) 136 = ro at hW
-    rcases c4 : callW p n "proj_guard_rows_at" [i, co, erRd m1 (q + 5), r3.tail.headD 0, ro] m3 with
+    rcases c4 : callW p n "proj_guard_rows_at" [i, co, erRd m1 (q + ProjTbl.numParams), r3.tail.headD 0, ro] m3 with
       _ | ⟨r4, m4⟩
     · rw [c4] at hW; cases hW
     rw [c4] at hW
@@ -362,7 +349,7 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     obtain ⟨-, hg4, hbk4, hpl4⟩ := pg_frame hP.toPgraProg (f := "proj_guard_rows_at") (h := c4)
     have hb3 := hsl3.bound
     have hsz32 : (m3.arr64 SPN).size = (m2.arr64 SPN).size := hsz3
-    have hro' : ro.toNat = co.toNat + (erRd m1 (q + 5)).toNat := by
+    have hro' : ro.toNat = co.toNat + (erRd m1 (q + ProjTbl.numParams)).toNat := by
       rw [← hro, htop3, UInt64.toNat_add]; omega
     obtain ⟨y, a4, M4, hrun4, hS4, hK4, hsz4, ht4, hkb4, hres4⟩ := pgra_okC hP.toPgraProg n
       (tbl.entry i.toNat) rfl hnpE c4 hS3 hrr hsl3 (by simp only [spTop]; rw [hro]; omega) hro

@@ -25,9 +25,8 @@ member, nfs.off, nfs.len, pfvs.off, pfvs.len]` (`member`: `0` none, `t + 1` some
 `BlockShape` (9 words at `p`): `[members.off, members.len, recs.off, recs.len, nP, elim, resSort,
 large, isProp]`. `MemberShape` (4 words): `[cvT, nIdx, ctors.off, ctors.len]`. `RecShape` (6
 words): `[cvR, rP, mI, tgt, rhss.off, rhss.len]`. `IConstantVal` (4 words at `cv`): `[name,
-lps.off, lps.len, type]`. An `IRecRule` is an 11-word `EREC` record (`decRule`, `ConAgua/Arena/
-EnvRec.lean`): `[ctor, nfields, ctorParams, fire kind, fire lvls (off, len), fire pins (off, len),
-rhs, k, eta]`.
+lps.off, lps.len, type]`. An `IRecRule` is a `Rule.size`-word `EREC` record (`decRule`,
+`RecLayout/Rule.lean`).
 -/
 
 namespace L.Ind
@@ -722,21 +721,21 @@ def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
   return (1, lo, ll, po, pl)
 }
 
-/-- `generated_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields
+/-- `generated_rule_nested(old, flo, fll, fpo, fpl)`: a fresh rule record, `old`'s fields
 with the NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:503-514 ConRon.Arena.generatedRules
 @[no_expose, l_impl ConRon.Arena.generatedRules]
 def generatedRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp, ez) {
-  newp := call erec_alloc(11);
+  newp := call erec_alloc(⟪Rule.size⟫);
   ez := call erec_put(newp, EREC⦃old⦄);
-  ez := call erec_put(newp + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(newp + ⟪Rule.nfields⟫, EREC⦃old + ⟪Rule.nfields⟫⦄);
   ez := call erec_put(newp + 2, 0);
-  ez := call erec_put(newp + 3, 1);
-  ez := call erec_put(newp + 4, flo);
-  ez := call erec_put(newp + 5, fll);
-  ez := call erec_put(newp + 6, fpo);
-  ez := call erec_put(newp + 7, fpl);
-  ez := call erec_put(newp + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(newp + ⟪Rule.fire⟫, 1);
+  ez := call erec_put(newp + ⟪Rule.lvlsOff⟫, flo);
+  ez := call erec_put(newp + ⟪Rule.lvlsLen⟫, fll);
+  ez := call erec_put(newp + ⟪Rule.pinsOff⟫, fpo);
+  ez := call erec_put(newp + ⟪Rule.pinsLen⟫, fpl);
+  ez := call erec_put(newp + ⟪Rule.rhs⟫, EREC⦃old + ⟪Rule.rhs⟫⦄);
   ez := call erec_put(newp + 9, 0);
   ez := call erec_put(newp + 10, 0);
   return newp
@@ -808,42 +807,43 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   return r
 }
 
-/-- `rule_copy(b, old)`: the 11 words of the rule record at `old` copied to `EREC[b ‥ b + 11)`. -/
+/-- `rule_copy(b, old)`: the `Rule.size` words of the rule record at `old` copied to
+`EREC[b ‥ b + Rule.size)`. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:531-543 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
   ez := call erec_put(b, EREC⦃old⦄);
-  ez := call erec_put(b + 1, EREC⦃old + 1⦄);
+  ez := call erec_put(b + ⟪Rule.nfields⟫, EREC⦃old + ⟪Rule.nfields⟫⦄);
   ez := call erec_put(b + 2, EREC⦃old + 2⦄);
-  ez := call erec_put(b + 3, EREC⦃old + 3⦄);
-  ez := call erec_put(b + 4, EREC⦃old + 4⦄);
-  ez := call erec_put(b + 5, EREC⦃old + 5⦄);
-  ez := call erec_put(b + 6, EREC⦃old + 6⦄);
-  ez := call erec_put(b + 7, EREC⦃old + 7⦄);
-  ez := call erec_put(b + 8, EREC⦃old + 8⦄);
+  ez := call erec_put(b + ⟪Rule.fire⟫, EREC⦃old + ⟪Rule.fire⟫⦄);
+  ez := call erec_put(b + ⟪Rule.lvlsOff⟫, EREC⦃old + ⟪Rule.lvlsOff⟫⦄);
+  ez := call erec_put(b + ⟪Rule.lvlsLen⟫, EREC⦃old + ⟪Rule.lvlsLen⟫⦄);
+  ez := call erec_put(b + ⟪Rule.pinsOff⟫, EREC⦃old + ⟪Rule.pinsOff⟫⦄);
+  ez := call erec_put(b + ⟪Rule.pinsLen⟫, EREC⦃old + ⟪Rule.pinsLen⟫⦄);
+  ez := call erec_put(b + ⟪Rule.rhs⟫, EREC⦃old + ⟪Rule.rhs⟫⦄);
   ez := call erec_put(b + 9, EREC⦃old + 9⦄);
   ez := call erec_put(b + 10, EREC⦃old + 10⦄);
   return 0
 }
 
-/-- `rules_to_erec_go(base, ro, rl)`: copy the 11-word rule records `IW[ro ‥ ro + rl)` point to into
+/-- `rules_to_erec_go(base, ro, rl)`: copy the rule records `IW[ro ‥ ro + rl)` point to into
 the `EREC` run at `base`, first to last; a self-recursion. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:531-543 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
   if rl == 0 { return 0 };
   u := call rule_copy(base, IW.u64[ro]);
-  u := call rules_to_erec_go(base + 11, ro + 1, rl - 1);
+  u := call rules_to_erec_go(base + ⟪Rule.size⟫, ro + 1, rl - 1);
   return 0
 }
 
-/-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run (a
+/-- Copy an `IW` pointer-list of rule records into one fresh CONSECUTIVE `EREC` run (a
 recursor record's rules, `decRules`; a capacity abort above `2^32` rules). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:531-543 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
   if 4294967296 <= rl { abort };
-  base := call erec_alloc(rl * 11);
+  base := call erec_alloc(rl * ⟪Rule.size⟫);
   u := call rules_to_erec_go(base, ro, rl);
   return (base, rl)
 }

@@ -472,86 +472,6 @@ theorem decCI_ctor_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + CI.cv.toNat) = some cv :=
   (decCI_split hR h).2.2.2.2.1 h4
 
-/-- The common fields of a decoded rule record. -/
-theorem decRule_tail {R : Nat → Option Word} {q : Nat} {fire : IRecRuleFire} {rl : IRecRule}
-    (h : ((hd? R q).bind fun c => (nat? R (q + 1)).bind fun nf =>
-      (hd? R (q + 8)).bind fun rhs => pure (IRecRule.mk c nf fire rhs)) = some rl) :
-    rl.fire = fire ∧ hd? R q = some rl.ctor ∧ nat? R (q + 1) = some rl.nfields ∧
-      hd? R (q + 8) = some rl.rhs := by
-  simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-  obtain ⟨c, hc, nf, hnf, rhs, hrhs, rfl⟩ := h
-  exact ⟨rfl, hc, hnf, hrhs⟩
-
-/-- The words of a rule record (`EnvRec.lean`'s layout: fire kind `q + 3`, `0` plain, `1` nested
-with its pins at `q + 6`, `2` levels). -/
-theorem decRule_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule} (hR : RdOK R rd)
-    (h : decRule R q.toNat = some rl) :
-    HW (rd q) ∧ rl.ctor = decI (rd q) ∧ rl.nfields = (rd (q + 1)).toNat ∧
-      (rd (q + 3) = 0 → rl.fire = .plain) ∧
-      (rd (q + 3) = 1 → ∃ lv pins, rl.fire = .nested lv pins ∧
-        hslice? R (rd (q + 6)).toNat (rd (q + 7)).toNat = some pins) ∧
-      (rd (q + 3) = 2 → ∃ lv, rl.fire = .levels lv) ∧
-      HW (rd (q + 8)) ∧ rl.rhs = decI (rd (q + 8)) := by
-  simp only [decRule, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨kd, hkd, h⟩ := h
-  simp only [nat?, Option.map_eq_some_iff] at hkd
-  obtain ⟨w3, hw3, rfl⟩ := hkd
-  have e3 : rd (q + 3) = w3 := hR.at 3 rfl hw3
-  have common : ∀ fire, ((hd? R q.toNat).bind fun c => (nat? R (q.toNat + 1)).bind
-      fun nf => (hd? R (q.toNat + 8)).bind fun rhs => pure (IRecRule.mk c nf fire rhs)) =
-      some rl →
-      HW (rd q) ∧ rl.ctor = decI (rd q) ∧ rl.nfields = (rd (q + 1)).toNat ∧
-      HW (rd (q + 8)) ∧ rl.rhs = decI (rd (q + 8)) := by
-    intro fire hf
-    obtain ⟨-, hc, hnf, hrhs⟩ := decRule_tail hf
-    obtain ⟨w0, hw0, hl0, e0⟩ := hd?_some hc
-    obtain ⟨w8, hw8, hl8, e8⟩ := hd?_some hrhs
-    simp only [nat?, Option.map_eq_some_iff] at hnf
-    obtain ⟨w1, hw1, e1⟩ := hnf
-    rw [hR.rd _ _ hw0, hR.at 1 rfl hw1, hR.at 8 rfl hw8]
-    exact ⟨hl0, e0, e1.symm, hl8, e8⟩
-  rcases hk : w3.toNat with _ | _ | _ | k
-  · rw [hk] at h
-    simp only [Option.bind_some] at h
-    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
-    have hf := (decRule_tail h).1
-    have h30 : rd (q + 3) = 0 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
-    refine ⟨c1, c2, c3, fun _ => hf, fun h3 => ?_, fun h3 => ?_, c5, c6⟩ <;>
-      rw [h30] at h3 <;> exact absurd h3 (by decide)
-  · rw [hk] at h
-    cases hlv : hlist? (k := .level) R (q.toNat + 4) with
-    | none => rw [hlv] at h; simp at h
-    | some lv =>
-    cases hp : hlist? (k := .expr) R (q.toNat + 6) with
-    | none => rw [hlv, hp] at h; simp at h
-    | some pins =>
-    rw [hlv, hp] at h
-    simp only [Option.bind_some] at h
-    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
-    have hf := (decRule_tail h).1
-    have h31 : rd (q + 3) = 1 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
-    refine ⟨c1, c2, c3, fun h3 => ?_, fun _ => ⟨lv, pins, hf, ?_⟩, fun h3 => ?_, c5, c6⟩
-    · rw [h31] at h3; exact absurd h3 (by decide)
-    · simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.map_eq_some_iff] at hp
-      obtain ⟨o, ⟨w6, hw6, rfl⟩, c, ⟨w7, hw7, rfl⟩, hs⟩ := hp
-      rw [hR.at 6 rfl hw6, hR.at 7 rfl (by rw [← hw7]; congr 1)]
-      exact hs
-    · rw [h31] at h3; exact absurd h3 (by decide)
-  · rw [hk] at h
-    cases hlv : hlist? (k := .level) R (q.toNat + 4) with
-    | none => rw [hlv] at h; simp at h
-    | some lv =>
-    rw [hlv] at h
-    simp only [Option.bind_some] at h
-    obtain ⟨c1, c2, c3, c5, c6⟩ := common _ h
-    have hf := (decRule_tail h).1
-    have h32 : rd (q + 3) = 2 := by rw [e3]; exact UInt64.toNat_inj.mp (by rw [hk]; rfl)
-    refine ⟨c1, c2, c3, fun h3 => ?_, fun h3 => ?_, fun _ => ⟨lv, hf⟩, c5, c6⟩ <;>
-      rw [h32] at h3 <;> exact absurd h3 (by decide)
-  · rw [hk] at h
-    simp at h
-
 theorem callW_erecPush_no (p : Prog) (hp : p.lookup "erec_push" = some erecPushL) (n : Nat) (m : Mem)
     (o c kd : Word) (hk : kd ≠ 1) (r : List Word) (m' : Mem)
     (h : callW p n "erec_push" [o, c, kd] m = some (r, m')) : r.headD 0 = 0 ∧ m' = m := by
@@ -654,16 +574,16 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   unfold iotaRecCmpT
   -- the pins
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun rp m1 c1 => ?_
-  change callW p (N + 1) "erec_push" [erRd s₀.mem (rl + 6), erRd s₀.mem (rl + 7),
-    erRd s₀.mem (rl + 3)] s₀.mem = some (rp, m1) at c1
+  change callW p (N + 1) "erec_push" [erRd s₀.mem (rl + Rule.pinsOff), erRd s₀.mem (rl + Rule.pinsLen),
+    erRd s₀.mem (rl + Rule.fire)] s₀.mem = some (rp, m1) at c1
   dsimp only [irCmpE.k_erec_push]
   have P1 : MemFrame [SPN] [136] s₀.mem m1 ∧ StackGrew s₀.mem m1 ∧
-      (erRd s₀.mem (rl + 3) = 1 → rp.headD 0 = spTop s₀.mem ∧
+      (erRd s₀.mem (rl + Rule.fire) = 1 → rp.headD 0 = spTop s₀.mem ∧
         ∃ lv pins, rule.fire = .nested lv pins ∧
-          SpineR m1 (rp.headD 0) (erRd s₀.mem (rl + 7)) pins.toArray ∧
-          (rp.headD 0).toNat + (erRd s₀.mem (rl + 7)).toNat ≤ (spTop m1).toNat) := by
-    by_cases hk1 : erRd s₀.mem (rl + 3) = 1
-    · obtain ⟨lv, pins, hfire, hpins⟩ := hfne hk1
+          SpineR m1 (rp.headD 0) (erRd s₀.mem (rl + Rule.pinsLen)) pins.toArray ∧
+          (rp.headD 0).toNat + (erRd s₀.mem (rl + Rule.pinsLen)).toNat ≤ (spTop m1).toNat) := by
+    by_cases hk1 : erRd s₀.mem (rl + Rule.fire) = 1
+    · obtain ⟨lv, pins, hfire, -, hpins⟩ := hfne hk1
       rw [hk1] at c1
       obtain ⟨fr, gr, hr0, ht1, hsp⟩ := callW_erecPush p hp.erecPush (N + 1) s₀.mem _ _ pins
         hspn hpins rp m1 c1
@@ -691,9 +611,10 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have htop1 : (spTop s₀.mem).toNat ≤ (spTop m1).toNat := gr1.1
   obtain ⟨t2, ht2, -, ok2, ⟨M2, hS2, hK2, gr2⟩, xs, res2, hxs⟩ := triple_of_callW
     (recFireArgs_refines' p hp.toIotaProg' hc hw hEI (N + 1) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb
-      (erRd s₀.mem (rl + 3)) (rp.headD 0) (erRd s₀.mem (rl + 7)) (erRd s₀.mem (recP + (CI.cv + CV.lpsOff)))
-      (erRd s₀.mem (recP + (CI.cv + CV.lpsLen))) us so
-      (erRd s₀.mem (recP + CI.recMajor) + 1) (erRd s₀.mem (recP + CI.recPrefix)) (erRd s₀.mem (ctorP + CI.ctorNparams)) rule lps args
+      (erRd s₀.mem (rl + Rule.fire)) (rp.headD 0) (erRd s₀.mem (rl + Rule.pinsLen))
+      (erRd s₀.mem (recP + (CI.cv + CV.lpsOff))) (erRd s₀.mem (recP + (CI.cv + CV.lpsLen))) us so
+      (erRd s₀.mem (recP + CI.recMajor) + 1) (erRd s₀.mem (recP + CI.recPrefix))
+      (erRd s₀.mem (ctorP + CI.ctorNparams)) rule lps args
       hS1 hus (by rw [eP1]; exact hlps) (by rw [hsn]; exact hsa1)
       (fun h => let ⟨_, lv, pins, hf, hsp, _⟩ := hpush h; ⟨lv, pins, hf, hsp⟩)
       (decRule_notNested (erRdOK s₀.mem) hrule)

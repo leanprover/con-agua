@@ -70,7 +70,7 @@ variable (m0 : Mem) (c q tq tn lpe uslen : Word)
 
 /-- The tests of `struct_eta_cert_go`, all passed. -/
 def sgOK : Prop :=
-  erRd m0 (q + (CI.indCaps + Caps.eta)) ≠ 0 ∧ erRd m0 (tq + 5) = c ∧ tn = erRd m0 (tq + 4) ∧ uslen = erRd m0 (q + (CI.cv + CV.lpsLen)) ∧
+  erRd m0 (q + (CI.indCaps + Caps.eta)) ≠ 0 ∧ erRd m0 (tq + (ProjTbl.ctor - 1)) = c ∧ tn = erRd m0 (tq + (ProjTbl.numParams - 1)) ∧ uslen = erRd m0 (q + (CI.cv + CV.lpsLen)) ∧
     lpe ≠ 0
 
 end sgKarms
@@ -82,24 +82,24 @@ variable (p : Prog) (n : Nat) (m0 : Mem) (mode vis d b us c T q tq us2 ao an to 
 /-- `struct_eta_cert_go`'s tests, all passed: the tail. -/
 theorem secgE_yes (h : sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
     secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
-      (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
+      (erRd m0 (tq + (ProjTbl.ctor - 1))) (erRd m0 (tq + (ProjTbl.numParams - 1))) (erRd m0 (tq + (ProjTbl.numFields - 1)))
       (erRd m0 (q + (CI.cv + CV.lpsLen))) lpe (.ok (r, m)) =
     secgE.k_struct_eta_cert_tail p (sectE p n m mode vis d b us T us2 ao an to tn
-      (erRd m0 (tq + 4)) (erRd m0 (tq + 6))) := by
+      (erRd m0 (tq + (ProjTbl.numParams - 1))) (erRd m0 (tq + (ProjTbl.numFields - 1)))) := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
   simp only [secgE.k_ls_node, h1, h2, h3, h4, h5, ne_eq, not_true_eq_false, ↓reduceIte]
 
 /-- `struct_eta_cert_go`'s tests, one failed: `false`. -/
 theorem secgE_no (h : ¬ sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
     secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
-      (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
+      (erRd m0 (tq + (ProjTbl.ctor - 1))) (erRd m0 (tq + (ProjTbl.numParams - 1))) (erRd m0 (tq + (ProjTbl.numFields - 1)))
       (erRd m0 (q + (CI.cv + CV.lpsLen))) lpe (.ok (r, m)) = .ok ([0], m) := by
   unfold secgE.k_ls_node
   by_cases h1 : erRd m0 (q + (CI.indCaps + Caps.eta)) = 0
   · simp only [h1, ↓reduceIte]
-  by_cases h2 : erRd m0 (tq + 5) ≠ c
+  by_cases h2 : erRd m0 (tq + (ProjTbl.ctor - 1)) ≠ c
   · simp only [h1, h2, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h3 : tn ≠ erRd m0 (tq + 4)
+  by_cases h3 : tn ≠ erRd m0 (tq + (ProjTbl.numParams - 1))
   · simp only [h1, h2, h3, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h4 : r.tail.headD 0 ≠ erRd m0 (q + (CI.cv + CV.lpsLen))
   · simp only [h1, h2, h3, h4, ne_eq, not_false_eq_true, ↓reduceIte]
@@ -169,8 +169,8 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
       sgOK s₀.mem c q tq tn (r₁.headD 0) (r₄.tail.headD 0) := by
     unfold sgOK
     rw [hIR.eta, hTc, hlenT, hTp, hlpT]
-    have e2 : decI (erRd s₀.mem (tq + 5)) = (decI c : NIdx) ↔
-        erRd s₀.mem (tq + 5) = c :=
+    have e2 : decI (erRd s₀.mem (tq + (ProjTbl.ctor - 1))) = (decI c : NIdx) ↔
+        erRd s₀.mem (tq + (ProjTbl.ctor - 1)) = c :=
       ⟨fun h => decI_inj hTcw hcw h, fun h => by rw [h]⟩
     have e7 : cvc.levelParams = cvT.levelParams ↔ r₁.headD 0 ≠ 0 := by
       have h1 : decBool r₁ = decide (cvc.levelParams = cvT.levelParams) := hr₁

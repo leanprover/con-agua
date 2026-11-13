@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.RecLayout.RuleDec
 public import ConAgua.Front.StateDR
 public import ConAgua.Arena.RecLayout.CVDec
 import ConRon.Bridge.Grind
@@ -107,18 +108,9 @@ theorem decCI_walk {a : Array Word} {p : Nat} {ci : IConstantInfo}
     by simpa using how, by simpa using hcw, hr⟩
 
 theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule (aread a) q = some r) :
-    ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
-  unfold decRule at h
-  simp only [Option.pure_def, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨n0, -, h⟩ := h
-  have fin : ∀ z (hz : hd? (aread a) (q + 8) = some z), r.rhs = z →
-      ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
-    intro z hz he; obtain ⟨w, hw, hl, rfl⟩ := hd?_some hz; exact ⟨w, hw, hl, he⟩
-  rcases n0 with _ | _ | _ | n0 <;> simp only [Option.bind_eq_some_iff] at h
-  · obtain ⟨_, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
-  · obtain ⟨_, -, _, -, _, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
-  · obtain ⟨_, -, _, -, _, -, _, -, z, hz, he⟩ := h; cases Option.some.inj he; exact fin z hz rfl
-  · simp at h
+    ∃ w, a[q + Rule.rhs.toNat]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by
+  obtain ⟨w, hw, hl, e⟩ := hd?_some (decRule_fields h).2.2
+  exact ⟨w, by simpa [aread_apply] using hw, hl, by rw [e, decE_eq]⟩
 
 theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
     (h : decRules (aread a) off cnt = some rules) :

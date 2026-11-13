@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.RecLayout.CapsDec
+import ConAgua.Arena.RecLayout.TblDec
 import ConAgua.Arena.KnotMono
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.WhnfM2CRefine2
@@ -821,18 +822,6 @@ theorem cpgE_erec {p : Prog} (hE : ErecPKept p) {k : Nat} {m : Mem} {mode vis q 
 
 /-! ## `check_proj_guard` -/
 
-/-- A table record's structure name (word `q + 2`). -/
-theorem decTbl_sn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) :
-    HW (rd (q + 2)) ∧ tbl.structName = decI (rd (q + 2)) := by
-  unfold decTbl at h
-  simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
-  obtain ⟨sn, hsn, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
-  obtain ⟨w, hw, hw32, rfl⟩ := hd?_some hsn
-  have e : rd (q + 2) = w := hR.offN (k := 2) hw (by decide)
-  rw [e]
-  exact ⟨hw32, rfl⟩
-
 /-- `proj_guard_rows`' words against `projGuardRows`' answer, run from `m₀` to `m`: `(0, _, _)`
 none; `(1, ro, rn)` the rows at `ro` (at or above the old top: the substitution under them), below
 the new top. -/
@@ -885,13 +874,13 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     RefE (KnotUpToE p n) (cpgE p (n + 1) m mode vis q i us)
       (checkProjGuard R fe (tbl.entry i.toNat) (decI us)) a
       (CorePost (fun _ => ()) dn m vis fe M eb (fun _ => True)) := by
-  obtain ⟨hsn, hsnd⟩ := decTbl_sn (erRdOK m) hq
+  obtain ⟨hsn, hsnd, -⟩ := decTbl_rd (erRdOK m) hq
   simp only [erRd] at hsn hsnd
   unfold ConRon.Arena.checkProjGuard
   rw [cpgE.eq_2]
   have hsn' : (tbl.entry i.toNat).structName = tbl.structName := rfl
   rw [hsn', hsnd]
-  rcases c1 : callW p n "env_find" [rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775), vis] m
+  rcases c1 : callW p n "env_find" [rdW (m.arr64 (tierA EREC ((q + ProjTbl.structName) >>> 40))) (q + ProjTbl.structName &&& 1099511627775), vis] m
     with _ | ⟨r1, m1⟩
   · rw [liftE_none, cpgE.k_env_find.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]
@@ -901,11 +890,11 @@ theorem cpg_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   subst hm1'
   by_cases g1 : r1.headD 0 = 0
   · rw [cpgE.k_env_find.eq_2, ite_eq_left g1]
-    have : fe.find? (decI (rdW (m1.arr64 (tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775))) = none := by
+    have : fe.find? (decI (rdW (m1.arr64 (tierA EREC ((q + ProjTbl.structName) >>> 40))) (q + ProjTbl.structName &&& 1099511627775))) = none := by
       rw [hfind]; simp only [envFound, g1, ↓reduceIte]
     rw [this]; exact fun _ => ErrClaim.of_error rfl rfl
   obtain ⟨ci, hci⟩ := hdec g1
-  have hfind' : fe.find? (decI (rdW (m1.arr64 (tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775))) =
+  have hfind' : fe.find? (decI (rdW (m1.arr64 (tierA EREC ((q + ProjTbl.structName) >>> 40))) (q + ProjTbl.structName &&& 1099511627775))) =
       some ci := by rw [hfind]; simp only [envFound, g1, ↓reduceIte]; exact hci
   rw [hfind']
   have hK := L.Arena.decCI_indK (erRdOK m1) hci

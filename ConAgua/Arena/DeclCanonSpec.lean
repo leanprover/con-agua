@@ -140,7 +140,7 @@ def erSlAtB (a : Word → Word) (p q i : Word) : Bool :=
   erSlEqB a (a (p + i)) (a (p + i + 1)) (a (q + i)) (a (q + i + 1))
 
 /-- **`caps_eq_a`**. -/
-def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a q) (a r)
+def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a (q + Caps.eta)) (a (r + Caps.eta))
 
 /-- **`caps_eq_b`**. -/
 def capsEqBB (a : Word → Word) (q r : Word) : Bool :=
@@ -157,12 +157,12 @@ def capsEqAll (a : Word → Word) (q r : Word) : Bool := capsEqAB a q r && capsE
 
 /-- **`rule_eq_a`**. -/
 def ruleEqAB (a : Word → Word) (q r : Word) : Bool :=
-  a q == a r && a (q + 1) == a (r + 1) && a (q + 3) == a (r + 3)
+  a q == a r && a (q + Rule.nfields) == a (r + Rule.nfields) && a (q + Rule.fire) == a (r + Rule.fire)
 
 /-- **`rule_eq_b`**. -/
 def ruleEqBB (a : Word → Word) (q r : Word) : Bool :=
-  if a (q + 3) = 1 then erSlAtB a q r 4 && erSlAtB a q r 6
-  else if a (q + 3) = 2 then erSlAtB a q r 4 else true
+  if a (q + Rule.fire) = 1 then erSlAtB a q r Rule.lvlsOff && erSlAtB a q r Rule.pinsOff
+  else if a (q + Rule.fire) = 2 then erSlAtB a q r Rule.lvlsOff else true
 
 /-- **`rule_eq_but_rhs`**. -/
 def ruleEqButRhsB (a : Word → Word) (q r : Word) : Bool :=
@@ -172,7 +172,8 @@ def ruleEqButRhsB (a : Word → Word) (q r : Word) : Bool :=
 def rulesEqN (a : Word → Word) : Nat → Word → Word → Bool
   | 0, _, _ => true
   | c + 1, o1, o2 =>
-    ruleEqButRhsB a o1 o2 && a (o1 + 8) == a (o2 + 8) && rulesEqN a c (o1 + 11) (o2 + 11)
+    ruleEqButRhsB a o1 o2 && a (o1 + Rule.rhs) == a (o2 + Rule.rhs) &&
+      rulesEqN a c (o1 + Rule.size) (o2 + Rule.size)
 
 /-- **`rules_eq`**. -/
 def rulesEqB (a : Word → Word) (o1 l1 o2 l2 : Word) : Bool :=
@@ -203,8 +204,8 @@ variable (a : Word → Word) (c : Nat) (o1 o2 l1 l2 : Word) (x y q r h g p : Wor
 theorem slEqN_succ : slEqN a (c + 1) o1 o2 = (a o1 == a o2 && slEqN a c (o1 + 1) (o2 + 1)) :=
   rfl
 theorem rulesEqN_succ : rulesEqN a (c + 1) o1 o2 =
-    (ruleEqButRhsB a o1 o2 && a (o1 + 8) == a (o2 + 8) &&
-      rulesEqN a c (o1 + 11) (o2 + 11)) := rfl
+    (ruleEqButRhsB a o1 o2 && a (o1 + Rule.rhs) == a (o2 + Rule.rhs) &&
+      rulesEqN a c (o1 + Rule.size) (o2 + Rule.size)) := rfl
 
 /-- One step of the slice comparison, as the L code takes it. -/
 theorem erSlEqB_step (hl : l1 = l2) (h0 : l1 ≠ 0) :
@@ -231,8 +232,8 @@ theorem rulesEqB_nil (hl : l1 = l2) (h0 : l1 = 0) : rulesEqB a o1 l1 o2 l2 = tru
   subst hl; subst h0; simp [rulesEqB, rulesEqN]
 
 theorem rulesEqB_step (hl : l1 = l2) (h0 : l1 ≠ 0) :
-    rulesEqB a o1 l1 o2 l2 = (ruleEqButRhsB a o1 o2 && a (o1 + 8) == a (o2 + 8) &&
-      rulesEqB a (o1 + 11) (l1 - 1) (o2 + 11) (l2 - 1)) := by
+    rulesEqB a o1 l1 o2 l2 = (ruleEqButRhsB a o1 o2 && a (o1 + Rule.rhs) == a (o2 + Rule.rhs) &&
+      rulesEqB a (o1 + Rule.size) (l1 - 1) (o2 + Rule.size) (l2 - 1)) := by
   subst hl
   have hc : l1.toNat = (l1 - 1).toNat + 1 := L.toNat_eq_toNat_sub_one_add_one _ h0
   simp only [rulesEqB, beq_self_eq_true, Bool.true_and]
@@ -451,8 +452,8 @@ theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Wor
   have hk1 : (l1 - 1).toNat = k := by
     rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
   have hB : rulesEqB (erRd m) o1 l1 o2 l1 = (ruleEqButRhsB (erRd m) o1 o2 &&
-      erRd m (o1 + 8) == erRd m (o2 + 8) &&
-      rulesEqB (erRd m) (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1)) := by
+      erRd m (o1 + Rule.rhs) == erRd m (o2 + Rule.rhs) &&
+      rulesEqB (erRd m) (o1 + Rule.size) (l1 - 1) (o2 + Rule.size) (l1 - 1)) := by
     simp only [rulesEqB, beq_self_eq_true, Bool.true_and, hk, hk1, rulesEqN]
   cases h1 : callW p n "rule_eq_but_rhs" [o1, o2] m with
   | none => rw [h1] at h; simp [rulesEqW.k_rule_eq_but_rhs] at h
@@ -470,19 +471,19 @@ theorem rulesEqW_ok : ∀ (n : Nat) (m : Mem) (o1 l1 o2 l2 : Word) (r : List Wor
     simp [hB, this]
   have ht : ruleEqButRhsB (erRd m) o1 o2 = true := by
     cases e : ruleEqButRhsB (erRd m) o1 o2 <;> simp_all
-  by_cases h8 : erRd m (o1 + 8) ≠ erRd m (o2 + 8)
+  by_cases h8 : erRd m (o1 + Rule.rhs) ≠ erRd m (o2 + Rule.rhs)
   · rw [rulesEqW.k_rule_eq_but_rhs.arm2 p n _ _ _ _ _ _ hz h8] at h; cases h
-    have : (erRd m (o1 + 8) == erRd m (o2 + 8)) = false := by simpa using h8
+    have : (erRd m (o1 + Rule.rhs) == erRd m (o2 + Rule.rhs)) = false := by simpa using h8
     simp [hB, this]
   rw [rulesEqW.k_rule_eq_but_rhs.arm3 p n _ _ _ _ _ _ hz (Classical.not_not.mp h8)] at h
-  cases h2 : rulesEqW p n m (o1 + 11) (l1 - 1) (o2 + 11) (l1 - 1) with
+  cases h2 : rulesEqW p n m (o1 + Rule.size) (l1 - 1) (o2 + Rule.size) (l1 - 1) with
   | none => rw [h2] at h; simp [rulesEqW.k_rules_eq] at h
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
   rw [h2, rulesEqW.k_rules_eq.eq_2] at h; cases h
   obtain ⟨e2, hr2⟩ := ih _ _ _ _ _ _ _ h2
   refine ⟨e2, ?_⟩
-  have : (erRd m (o1 + 8) == erRd m (o2 + 8)) = true := by simpa using h8
+  have : (erRd m (o1 + Rule.rhs) == erRd m (o2 + Rule.rhs)) = true := by simpa using h8
   simp only [List.headD_cons, hr2, hB, ht, this, Bool.true_and]
 
 theorem rulesEq_spec (n : Nat) : ∀ (s₀ : St) (o1 l1 o2 l2 : Word),

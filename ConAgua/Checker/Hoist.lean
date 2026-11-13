@@ -239,12 +239,12 @@ fuel `fu`). -/
 }
 
 /-- `hoist_rules_go(k, i, tg, ws, sp, ro, rc, r)`: the right-hand sides of the recursor rules
-`r ‥ rc` at `DIND[ro ..]` (eleven words each, the right-hand side at `+ 8`). -/
+`r ‥ rc` at `DIND[ro ..]` (`Rule.size` words each, `RecLayout/Rule.lean`). -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:79-89 ConRon.Arena.Frontend.usedConstsRules
 @[no_expose, l_impl ConRon.Arena.Frontend.usedConstsRules]
 def hoistRulesGoL : FunDecl := lfn (k, i, tg, ws, sp, ro, rc, r) locals (x) {
   if rc <= r { return sp };
-  sp := call hoist_walk(DIND.u64[ro + 11 * r + 8], i, k, tg, ws, sp, 4000000000);
+  sp := call hoist_walk(DIND.u64[ro + ⟪Rule.size⟫ * r + ⟪Rule.rhs⟫], i, k, tg, ws, sp, 4000000000);
   x := call hoist_rules_go(k, i, tg, ws, sp, ro, rc, r + 1);
   return x
 }

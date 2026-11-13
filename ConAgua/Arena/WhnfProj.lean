@@ -34,7 +34,7 @@ def findProjL : FunDecl := lfn (vis, t, i) locals (r, q) {
   r := call find_table(vis, t);
   if r == 0 { return (0, 0) };
   q := r - 1;
-  if i < EREC⦃q + 7⦄ { return (1, q) };
+  if i < EREC⦃q + ⟪ProjTbl.numFields⟫⦄ { return (1, q) };
   return (0, 0)
 }
 

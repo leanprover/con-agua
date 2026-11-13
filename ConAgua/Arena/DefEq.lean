@@ -847,9 +847,9 @@ def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, tq, us2, ao, an, to, tn)
     locals (eta, ec, ep, nf, lpn, lpo, cpo, cpn, lpe, lo, uslen, r) {
   eta := EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄;
-  ec := EREC⦃tq + 5⦄;
-  ep := EREC⦃tq + 4⦄;
-  nf := EREC⦃tq + 6⦄;
+  ec := EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄;
+  ep := EREC⦃tq + ⟪ProjTbl.numParams - 1⟫⦄;
+  nf := EREC⦃tq + ⟪ProjTbl.numFields - 1⟫⦄;
   lpo := EREC⦃q + ⟪CI.cv + CV.lpsOff⟫⦄;
   lpn := EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄;
   cpo := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
@@ -924,7 +924,7 @@ def etaCtorPartialFamL : FunDecl := lfn (vis, c, T) locals (f, q, eta, tq) {
   tq := call find_table(vis, T);
   if tq == 0 { return 0 };
   if eta == 0 { return 0 };
-  return u64(EREC⦃tq + 5⦄ == c)
+  return u64(EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄ == c)
 }
 
 /-- **A partially applied η constructor**: `(1, k)`, `k > 0` the arguments `a`'s constructor head
@@ -1107,9 +1107,9 @@ def unitLikeShapeL : FunDecl := lfn (vis, w)
   if usl != lpn { return (0, 0, 0) };
   tq := call find_table(vis, S);
   if tq == 0 { return (0, 0, 0) };
-  np := EREC⦃tq + 4⦄;
-  tc := EREC⦃tq + 5⦄;
-  nf := EREC⦃tq + 6⦄;
+  np := EREC⦃tq + ⟪ProjTbl.numParams - 1⟫⦄;
+  tc := EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄;
+  nf := EREC⦃tq + ⟪ProjTbl.numFields - 1⟫⦄;
   top := CTL.u64[136];
   (to, tn) := call get_app_args(w);
   if tn != np {

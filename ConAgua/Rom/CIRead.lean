@@ -12,7 +12,7 @@ public import ConAgua.Rom.CIConst
 (the interface of `DeclArmsNat.lean`'s `romStubs`, the specs of `DeclRomStubs.lean`) read the
 structured region `romCIData` of the ROM (at `ciOff`; the encoding is `ConAgua/Rom/CIEnc.lean`'s)
 and build the records `EnvRec.lean`'s decoders read: a constant in `EREC` (`decCI`; its lists are
-`EREC` slices, recursor rules 11-word records), a constant value in `EREC` (`decCV`, 4 words), a
+`EREC` slices, recursor rules `Rule.size`-word records), a constant value in `EREC` (`decCV`, 4 words), a
 block an `IW` slice of `EREC` pointers. Every name, level and expression goes through the ROM
 readers over the program's constant data (`rom_name_c`, `rom_level_c`, `rom_expr_c`,
 `rom_exprs_to_c`, `CIConst.lean`: a job has no pin-data buffer), at a fresh expression memo per
@@ -89,13 +89,13 @@ def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
   return q
 }
 
-/-- `rci_caps(q, c)`: an inductive's capabilities to the 15 words at `c` (`decCaps`); the position
+/-- `rci_caps(q, c)`: an inductive's capabilities to the record at `c` (`decCaps`); the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:312-316 ConRon.Arena.Frontend.internCaps
 @[no_expose, l_impl ConRon.Arena.Frontend.internCaps]
 def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   x := call rom_u64_c(q);
-  ez := call erec_put(c, x);
+  ez := call erec_put(c + ⟪Caps.eta⟫, x);
   x := call rom_u64_c(q + 8);
   ez := call erec_put(c + ⟪Caps.nIdx⟫, x);
   x := call rom_u64_c(q + 16);
@@ -107,7 +107,7 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   return q + 8
 }
 
-/-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
+/-- `rci_rule(q, r)`: a recursor rule to the record at `r` (`decRule`) at the current
 memo; the position after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:297-302 ConRon.Arena.Frontend.internRule
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:286-295 ConRon.Arena.Frontend.internFire
@@ -116,41 +116,41 @@ def rciRule : FunDecl := lfn (q, r) locals (h, x, f, l, o, ez) {
   (h, q) := call rom_name_c(q);
   ez := call erec_put(r, h);
   x := call rom_u64_c(q);
-  ez := call erec_put(r + 1, x);
+  ez := call erec_put(r + ⟪Rule.nfields⟫, x);
   f := call rom_u64_c(q + 8);
-  ez := call erec_put(r + 3, f);
+  ez := call erec_put(r + ⟪Rule.fire⟫, f);
   q := q + 16;
-  ez := call erec_put(r + 4, 0);
-  ez := call erec_put(r + 5, 0);
-  ez := call erec_put(r + 6, 0);
-  ez := call erec_put(r + 7, 0);
+  ez := call erec_put(r + ⟪Rule.lvlsOff⟫, 0);
+  ez := call erec_put(r + ⟪Rule.lvlsLen⟫, 0);
+  ez := call erec_put(r + ⟪Rule.pinsOff⟫, 0);
+  ez := call erec_put(r + ⟪Rule.pinsLen⟫, 0);
   if f == 1 || f == 2 {
     l := call rom_u64_c(q);
     o := call erec_alloc(l);
-    ez := call erec_put(r + 4, o);
-    ez := call erec_put(r + 5, l);
+    ez := call erec_put(r + ⟪Rule.lvlsOff⟫, o);
+    ez := call erec_put(r + ⟪Rule.lvlsLen⟫, l);
     q := call rci_lvls_to(q + 8, o, l)
   };
   if f == 1 {
     l := call rom_u64_c(q);
     o := call erec_alloc(l);
-    ez := call erec_put(r + 6, o);
-    ez := call erec_put(r + 7, l);
+    ez := call erec_put(r + ⟪Rule.pinsOff⟫, o);
+    ez := call erec_put(r + ⟪Rule.pinsLen⟫, l);
     q := call rom_exprs_to_c(q + 8, o, l)
   };
   (h, q) := call rom_expr_c(q);
-  ez := call erec_put(r + 8, h);
+  ez := call erec_put(r + ⟪Rule.rhs⟫, h);
   return q
 }
 
-/-- `rci_rules_to(q, o, k)`: `k` rules to the 11-word records at `o`, `o + 11`, …; the position
+/-- `rci_rules_to(q, o, k)`: `k` rules to the records at `o`, `o + Rule.size`, …; the position
 after. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:304-310 ConRon.Arena.Frontend.internRules
 @[no_expose, l_impl ConRon.Arena.Frontend.internRules]
 def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
   if k == 0 { return q };
   q := call rci_rule(q, o);
-  r := call rci_rules_to(q, o + 11, k - 1);
+  r := call rci_rules_to(q, o + ⟪Rule.size⟫, k - 1);
   return r
 }
 
@@ -198,7 +198,7 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
     x := call rom_u64_c(q + 16);
     ez := call erec_put(p + ⟪CI.recIsK⟫, x);
     l := call rom_u64_c(q + 24);
-    o := call erec_alloc(11 * l);
+    o := call erec_alloc(⟪Rule.size⟫ * l);
     ez := call erec_put(p + ⟪CI.recRulesOff⟫, o);
     ez := call erec_put(p + ⟪CI.recRulesLen⟫, l);
     q := call rci_rules_to(q + 32, o, l);

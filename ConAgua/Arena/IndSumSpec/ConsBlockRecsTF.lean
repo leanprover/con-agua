@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndSumSpec.TsrW
 public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
+import ConAgua.Arena.RecLayout.RuleDec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -129,98 +130,6 @@ theorem PSlR.uncons {α : Type} {f : Mem → Nat → Option α} {xs : List α} {
 end L.Ind
 
 end
-end
-
-end
-
-section
-
-noncomputable section
-
-set_option experimental.vcgen true
-
-open ConRon.Arena
-open Std.WP
-open scoped Lean.Order
-
-namespace L.Ind
-
-open L.Arena
-
-local notation "V" => ConLeche.CheckMode.verified
-
-/-! ## Rule records at another address -/
-
-section shift
-variable {a b : Array Word}
-
-/-- A rule record copied word for word: each word it reads at `q` present at `q'`, its fire's
-slices in a larger pool. -/
-theorem decRule_copy {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} (h : decRule R q = some rl)
-    (hext : ArrExt R R') (hw : ∀ i, i < 11 → ∀ v, R (q + i) = some v → R' (q' + i) = some v) :
-    decRule R' q' = some rl := by
-  have nat' : ∀ i, i < 11 → ∀ x, nat? R (q + i) = some x → nat? R' (q' + i) = some x := by
-    intro i hi x hx
-    simp only [L.Arena.nat?, Option.map_eq_some_iff] at hx ⊢
-    obtain ⟨v, hv, rfl⟩ := hx; exact ⟨v, hw i hi v hv, rfl⟩
-  have hd' : ∀ {k : IdxKind} i, i < 11 → ∀ x : Idx k, hd? R (q + i) = some x → hd? R' (q' + i) = some x := by
-    intro k i hi x hx
-    simp only [L.Arena.hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
-    obtain ⟨v, hv, hx⟩ := hx; exact ⟨v, hw i hi v hv, hx⟩
-  have hl' : ∀ {k : IdxKind} i, i + 1 < 11 → ∀ xs : List (Idx k), hlist? R (q + i) = some xs →
-      hlist? R' (q' + i) = some xs := by
-    intro k i hi xs hx
-    simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
-    obtain ⟨o, ho, c, hc, hs⟩ := hx
-    refine ⟨o, nat' i (by omega) o ho, c, ?_, hext.hslice? hs⟩
-    have := nat' (i + 1) hi c (by simpa [Nat.add_assoc] using hc)
-    simpa [Nat.add_assoc] using this
-  unfold L.Arena.decRule at h ⊢
-  cases h3 : L.Arena.nat? R (q + 3) with
-  | none => simp [h3] at h
-  | some t =>
-    rw [nat' 3 (by decide) t h3]; rw [h3] at h
-    simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at h ⊢
-    have tail : ∀ (f : IRecRuleFire), (do
-        let ctor ← L.Arena.hd? R q
-        let nfields ← L.Arena.nat? R (q + 1)
-        let rhs ← L.Arena.hd? R (q + 8)
-        pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some rl →
-        (do
-        let ctor ← L.Arena.hd? R' q'
-        let nfields ← L.Arena.nat? R' (q' + 1)
-        let rhs ← L.Arena.hd? R' (q' + 8)
-        pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some rl := by
-      intro f hf
-      simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hf ⊢
-      obtain ⟨c, hc, nf, hnf, r, hr, e'⟩ := hf
-      exact ⟨c, by simpa using hd' 0 (by decide) c (by simpa using hc), nf, nat' 1 (by decide) nf hnf,
-        r, hd' 8 (by decide) r hr, e'⟩
-    match t, h with
-    | 0, h => simp only at h ⊢; exact tail _ h
-    | 1, h =>
-      cases hy : L.Arena.hlist? (k := .level) R (q + 4) with
-      | none => simp [hy] at h
-      | some y =>
-        cases hz : L.Arena.hlist? (k := .expr) R (q + 6) with
-        | none => simp [hy, hz] at h
-        | some z =>
-          rw [hy, hz] at h; rw [hl' 4 (by decide) y hy, hl' 6 (by decide) z hz]
-          simp only [Option.bind_some] at h ⊢
-          exact tail _ h
-    | 2, h =>
-      cases hy : L.Arena.hlist? (k := .level) R (q + 4) with
-      | none => simp [hy] at h
-      | some y =>
-        rw [hy] at h; rw [hl' 4 (by decide) y hy]
-        simp only [Option.bind_some] at h ⊢
-        exact tail _ h
-    | t + 3, h => simp at h
-
-end shift
-
-end L.Ind
-
 end
 
 end
@@ -532,11 +441,13 @@ theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {r
   have hrj : rules[j] = rlj := by
     rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
   rw [hrj]
-  refine decRule_copy hfj (IWGrow.ext hg1) (fun i hi w hw => ?_)
+  refine decRule_congr (fun i hi w hw => ?_) (IWGrow.ext hg1) hfj
+  -- `rules_to_erec` copies all `Rule.size` words of each record
+  have hi : i < 11 := hi
   obtain ⟨v', w', hv', hw', hrd, -⟩ := hword j hj i hi
   rw [hvj] at hv'; cases hv'
   rw [hw] at hw'; cases hw'
-  rw [show b.toNat + 11 * j + i = b.toNat + (11 * j + i) by omega,
+  rw [show b.toNat + Rule.size.toNat * j + i = b.toNat + (11 * j + i) by rw [Nat.add_assoc]; rfl,
     hget1 (11 * j + i) (by rw [ruleWords_length]; omega), ruleWords_get m ro rl.toNat j i hj hi, hrd]
 
 /-! ## `rec_info_rec` -/

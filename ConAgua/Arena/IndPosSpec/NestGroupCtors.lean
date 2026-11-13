@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndPosSpec.NoConstWf
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecLayout.CapsDec
 import all Init.Data.List.Control
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -89,20 +90,20 @@ theorem ntW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
     have : erRd m ciq = 3 := by simpa using h3
     simp only [nat?, hw, Option.map_some]; rw [← e, this]; rfl
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  obtain ⟨hnp, hcts⟩ := decCaps_ctors hcaps
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hcts
-  obtain ⟨o, ho, l, hl, hns⟩ := hcts
-  have hb : ciq.toNat + 5 + 13 + 1 < 2 ^ 64 := by obtain ⟨_, e⟩ := nat?_rd hl; exact erecP_lt64 e
-  have e13 : (ciq + 5 + 13).toNat = ciq.toNat + 5 + 13 := by
-    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
-  have e14 : (ciq + 5 + 14).toNat = ciq.toNat + 5 + 13 + 1 := by
-    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
-  have e12 : (ciq + 5 + 12).toNat = ciq.toNat + 5 + 12 := by
-    rw [L.toNat_add_of_lt _ _ (by simp; omega), L.toNat_add_of_lt _ _ (by simp; omega)]; rfl
-  have ro := erecP_rdN ho e13
-  have rl := erecP_rdN hl e14
-  generalize erRd m (ciq + 5 + 13) = co at h ro
-  generalize erRd m (ciq + 5 + 14) = cl at h rl
+  obtain ⟨-, -, -, hnp, hcts, -⟩ := decCaps_eq_some.mp hcaps
+  obtain ⟨o, l, ho, hl, hns⟩ := hlist?_some hcts
+  obtain ⟨-, -, -, -, o5, o6, o7, -⟩ := Caps.order
+  have := Caps.nparams_lt; have := Caps.ctorsOff_lt; have := Caps.size_le; have := CI.indCaps_le
+  have hb : ciq.toNat + CI.indCaps.toNat + Caps.ctorsOff.toNat + 1 < 2 ^ 64 := by
+    obtain ⟨_, e⟩ := nat?_rd hl; exact erecP_lt64 e
+  have eA : ∀ f : Word, f.toNat ≤ Caps.ctorsLen.toNat →
+      (ciq + CI.indCaps + f).toNat = ciq.toNat + CI.indCaps.toNat + f.toNat := fun f hf => by
+    rw [L.toNat_add_of_lt _ _ (by rw [L.toNat_add_of_lt _ _ (by omega)]; omega),
+      L.toNat_add_of_lt _ _ (by omega)]
+  have ro := erecP_rdN ho (eA _ (by omega))
+  have rl := erecP_rdN hl (by rw [eA _ (Nat.le_refl _), o7]; omega)
+  generalize erRd m (ciq + CI.indCaps + Caps.ctorsOff) = co at h ro
+  generalize erRd m (ciq + CI.indCaps + Caps.ctorsLen) = cl at h rl
   rw [nestContainer_ind hfind]
   cases k with
   | zero => rw [ncWf.eq_1, ntWf.k_nest_container_ctors.none] at h; cases h
@@ -127,7 +128,7 @@ theorem ntW_ok (fe : IFEnv) (vis C : Word) (hC : H C)
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨_, a', hrun', hS2, hg2, rfl, ?_, rfl, by simpa using h2, by simpa using h3'⟩
     simp only [List.tail_cons, List.headD_cons]
-    exact erecP_rdN ((GrowX.of_grow (q := 0) (n := 0) hg2).erecP.nat? hnp) e12
+    exact erecP_rdN ((GrowX.of_grow (q := 0) (n := 0) hg2).erecP.nat? hnp) (eA _ (by omega))
   | cons c ys =>
     rw [ntWf.k_nest_container_ctors.arm2 (hc1 := fun e => by rw [e] at h1; simp at h1)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)

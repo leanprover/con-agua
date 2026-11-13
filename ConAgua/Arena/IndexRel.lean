@@ -181,7 +181,7 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
 structure `w`) of record position `r`: its base table row written if it has none. -/
 theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Word}
     {tb : IProjTable} (htb : decTbl (erecP m) q.toNat = some tb) {w : Word}
-    (hw : erecP m (q.toNat + 2) = some w) {r : Word} (hr : r.toNat + 1 < 2 ^ 64)
+    (hw : erecP m (q.toNat + ProjTbl.structName.toNat) = some w) {r : Word} (hr : r.toNat + 1 < 2 ^ 64)
     (hset : (baseTbl m w).1 = 0 → rowTag w ≤ 2 ∧ rowTier w = 0 ∧
       rowIx w + 1 < (m.arr64 (tixArr (rowTag w))).size) :
     IndexR (if (baseTbl m w).1 = 0 then baseTblSet m w (r + 1) q else m)

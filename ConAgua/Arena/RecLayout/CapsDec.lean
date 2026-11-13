@@ -17,6 +17,25 @@ change of the layout ends here.
 
 open ConRon.Arena
 
+namespace L.Caps
+
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the scalar
+fields first, then each slice's offset word followed by its length word, the record's size last. -/
+theorem order : eta.toNat < nIdx.toNat ∧ nIdx.toNat < neverZero.toNat ∧
+    neverZero.toNat < allOff.toNat ∧ allLen.toNat = allOff.toNat + 1 ∧
+    allLen.toNat < nparams.toNat ∧ nparams.toNat < ctorsOff.toNat ∧
+    ctorsLen.toNat = ctorsOff.toNat + 1 ∧ ctorsLen.toNat < size.toNat := by
+  simp [eta, nIdx, neverZero, allOff, allLen, nparams, ctorsOff, ctorsLen, size]
+
+end L.Caps
+
+namespace L.CI
+
+/-- The capabilities follow the kind word and the constant value (4 words) directly. -/
+theorem indCaps_toNat : indCaps.toNat = 5 := by simp [indCaps]
+
+end L.CI
+
 namespace L.Arena
 
 /-- **A decoded `IIndCaps`, word by word.** -/
@@ -44,6 +63,62 @@ theorem decCaps_of {R : Nat → Option Word} {q : Nat} {c : IIndCaps}
     (hcs : hlist? R (q + Caps.ctorsOff.toNat) = some c.ctors)
     (hnz : bool? R (q + Caps.neverZero.toNat) = some c.neverZero) : decCaps R q = some c :=
   decCaps_eq_some.mpr ⟨he, hn, ha, hnp, hcs, hnz⟩
+
+/-- **An `IIndCaps` record's words** at `q` of a reader: each field's word (a writer's
+postcondition; `decCaps_of_words` decodes it). -/
+structure CapsRecW (a : Nat → Option Word) (q : Nat) (eta nIdx nz allO allL np ctO ctL : Word) :
+    Prop where
+  eta : a (q + Caps.eta.toNat) = some eta
+  nIdx : a (q + Caps.nIdx.toNat) = some nIdx
+  nz : a (q + Caps.neverZero.toNat) = some nz
+  allO : a (q + Caps.allOff.toNat) = some allO
+  allL : a (q + Caps.allLen.toNat) = some allL
+  np : a (q + Caps.nparams.toNat) = some np
+  ctO : a (q + Caps.ctorsOff.toNat) = some ctO
+  ctL : a (q + Caps.ctorsLen.toNat) = some ctL
+
+/-- The record's words carried to another reader that holds the same `Caps.size` words. -/
+theorem CapsRecW.shift {a b : Nat → Option Word} {q e : Nat} {w0 w1 w2 w3 w4 w5 w6 w7 : Word}
+    (h : CapsRecW a q w0 w1 w2 w3 w4 w5 w6 w7)
+    (hw : ∀ j < Caps.size.toNat, b (e + j) = a (q + j)) : CapsRecW b e w0 w1 w2 w3 w4 w5 w6 w7 :=
+  ⟨(hw _ Caps.eta_lt).trans h.eta, (hw _ Caps.nIdx_lt).trans h.nIdx,
+    (hw _ Caps.neverZero_lt).trans h.nz, (hw _ Caps.allOff_lt).trans h.allO,
+    (hw _ Caps.allLen_lt).trans h.allL, (hw _ Caps.nparams_lt).trans h.np,
+    (hw _ Caps.ctorsOff_lt).trans h.ctO, (hw _ Caps.ctorsLen_lt).trans h.ctL⟩
+
+/-- **A record's words decode** (the two slices given). -/
+theorem decCaps_of_words {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 w4 w5 w6 w7 : Word}
+    {xs ys : List NIdx} (h : CapsRecW a q w0 w1 w2 w3 w4 w5 w6 w7)
+    (hA : hslice? a w3.toNat w4.toNat = some xs) (hC : hslice? a w6.toNat w7.toNat = some ys) :
+    decCaps a q = some (⟨w0 != 0, xs, w5.toNat, w1.toNat, ys, w2 != 0⟩ : IIndCaps) := by
+  have hl : ∀ {o : Nat} {wo wl : Word} {zs : List NIdx}, a o = some wo → a (o + 1) = some wl →
+      hslice? a wo.toNat wl.toNat = some zs → hlist? a o = some zs := fun ho hl hs => by
+    simp only [hlist?, nat?, ho, hl, Option.map_some, Option.bind_eq_bind, Option.bind_some, hs]
+  refine decCaps_of (by simp only [bool?, h.eta, Option.map_some])
+    (by simp only [nat?, h.nIdx, Option.map_some]) (hl h.allO ?_ hA)
+    (by simp only [nat?, h.np, Option.map_some]) (hl h.ctO ?_ hC)
+    (by simp only [bool?, h.nz, Option.map_some])
+  · rw [Nat.add_assoc, ← Caps.allLen_toNat]; exact h.allL
+  · rw [Nat.add_assoc, ← Caps.ctorsLen_toNat]; exact h.ctL
+
+set_option linter.deprecated false in
+/-- **A record written field by field** (eight word stores into array `A` at `q + Caps.f`, in
+the fields' order) holds its words. -/
+theorem capsRecW_set64 {m : Mem} {A : TieredArray} {q w0 w1 w2 w3 w4 w5 w6 w7 : Word}
+    (hb : q.toNat + Caps.size.toNat ≤ (m.arr64 A).size) (h64 : q.toNat + Caps.size.toNat < 2 ^ 64) :
+    CapsRecW (aread ((((((((((m.set64 A (q + Caps.eta) w0).set64 A (q + Caps.nIdx) w1).set64 A
+      (q + Caps.neverZero) w2).set64 A (q + Caps.allOff) w3).set64 A (q + Caps.allLen) w4).set64 A
+      (q + Caps.nparams) w5).set64 A (q + Caps.ctorsOff) w6).set64 A (q + Caps.ctorsLen) w7).arr64 A)))
+      q.toNat w0 w1 w2 w3 w4 w5 w6 w7 := by
+  obtain ⟨o1, o2, o3, o4, o5, o6, o7, o8⟩ := Caps.order
+  have e : ∀ f : Word, f.toNat < Caps.size.toNat → (q + f).toNat = q.toNat + f.toNat := fun f hf => by
+    rw [UInt64.toNat_add]; omega
+  simp only [Mem.arr64_set64_same, e _ Caps.eta_lt, e _ Caps.nIdx_lt, e _ Caps.neverZero_lt,
+    e _ Caps.allOff_lt, e _ Caps.allLen_lt, e _ Caps.nparams_lt, e _ Caps.ctorsOff_lt,
+    e _ Caps.ctorsLen_lt]
+  have := Caps.ctorsLen_lt
+  constructor <;> simp (disch := omega) only [aread_apply, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, if_pos, if_neg, ite_true]
 
 /-- **A decoded `IIndCaps` at L's word addresses** `q + Caps.f` (any reader `R` with its word
 read `rd`: the record pool, an array). -/

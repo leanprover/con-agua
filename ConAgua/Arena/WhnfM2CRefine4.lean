@@ -200,10 +200,10 @@ theorem m2cEta_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     exact hmaj' (fun e => g2 ((decI_inj_iff hT2 hT).mp e.1))
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   simp only [_root_.L.Ind.erRd_foldN]
-  by_cases g3 : r2'.tail.headD 0 ≠ erRd m (tq + 4)
+  by_cases g3 : r2'.tail.headD 0 ≠ erRd m (tq + (ProjTbl.numParams - 1))
   · rw [m2cEtaE.k_get_app_args.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3]
     exact hmaj' (fun e => g3 (UInt64.toNat_inj.mp (by rw [← hlen, e.2.1, htw.2.1])))
-  have g3' : r2'.tail.headD 0 = erRd m (tq + 4) := by simpa using g3
+  have g3' : r2'.tail.headD 0 = erRd m (tq + (ProjTbl.numParams - 1)) := by simpa using g3
   by_cases g4 : L.tail.tail.tail.tail.headD 0 ≠ erRd m (indP + (CI.cv + CV.lpsLen))
   · rw [m2cEtaE.k_get_app_args.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g2' g3' g4]
     exact hmaj' (fun e => g4 (UInt64.toNat_inj.mp (by rw [← hll, e.2.2, hlps])))

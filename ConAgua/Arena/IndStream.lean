@@ -209,7 +209,7 @@ def generatedFireL : FunDecl := lfn (M, rP) locals (k, lo, ll, po, pl) {
 }
 
 /-- `stream_rules_shape(rules.off, rules.cnt, ctors.off, ctors.len)`: the record's rules (an `EREC`
-run of 11-word rules) against the generated recursor's class (`[cv, nF]` pointers): one rule per
+run of rule records) against the generated recursor's class (`[cv, nF]` pointers): one rule per
 constructor, in order, each with its field count. -/
 -- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:166-176 ConRon.Arena.streamRulesShape
 @[no_expose, l_impl ConRon.Arena.streamRulesShape]
@@ -217,8 +217,10 @@ def streamRulesShapeL : FunDecl := lfn (ro, rl, co, cl) locals (c, u) {
   if rl == 0 && cl == 0 { return 0 };
   if rl == 0 || cl == 0 { fail R_THE_RECURSOR_CARRIES };
   c := IW.u64[co];
-  if EREC⦃ro⦄ != EREC⦃IW.u64[c]⦄ || EREC⦃ro + 1⦄ != IW.u64[c + 1] { fail R_THE_RECURSOR_S_RULE_FOR_IS };
-  u := call stream_rules_shape(ro + 11, rl - 1, co + 1, cl - 1);
+  if EREC⦃ro⦄ != EREC⦃IW.u64[c]⦄ || EREC⦃ro + ⟪Rule.nfields⟫⦄ != IW.u64[c + 1] {
+    fail R_THE_RECURSOR_S_RULE_FOR_IS
+  };
+  u := call stream_rules_shape(ro + ⟪Rule.size⟫, rl - 1, co + 1, cl - 1);
   return 0
 }
 
@@ -230,9 +232,9 @@ generated one needs none). -/
 def streamRulesCheckL : FunDecl := lfn (vis, lo, ll, ro, rl, go, gl) locals (s, u) {
   if rl == 0 && gl == 0 { return 0 };
   if rl == 0 || gl == 0 { abort };
-  s := EREC⦃ro + 8⦄;
+  s := EREC⦃ro + ⟪Rule.rhs⟫⦄;
   if s != IW.u64[go] { u := call rule_agree(vis, lo, ll, s, IW.u64[go]) };
-  u := call stream_rules_check(vis, lo, ll, ro + 11, rl - 1, go + 1, gl - 1);
+  u := call stream_rules_check(vis, lo, ll, ro + ⟪Rule.size⟫, rl - 1, go + 1, gl - 1);
   return 0
 }
 

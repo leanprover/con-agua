@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.IndFields
 public import ConAgua.Arena.RecLayout.CI
+public import ConAgua.Arena.RecLayout.Rule
 public import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
 
@@ -32,9 +33,9 @@ other declarations' universe parameter lists live in; a constant's universe para
 
 | constant | words at `p` |
 |---|---|
-| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (15: `0,0,0,0,0,0,0, 1,0,0, 0,0, 0, 0,0`) — 20 |
+| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (`Caps.size` words, every field `0`) — `CI.indSize` |
 | `ctorInfo cv nP nF induct` | `4`, cv, `nP`, `nF`, `induct` — 8 |
-| `recInfo cv major pre rules` | `5`, cv, `major`, `pre`, rules.off, rules.cnt — 9; each rule 11 words (`decRule`): `ctor, nfields, 0, 0 (plain), 0, 0, 0, 0, rhs, 0, 0` |
+| `recInfo cv major pre rules` | `5`, cv, `major`, `pre`, rules.off, rules.cnt — 9; each rule a `Rule.size`-word record (`decRule`, `RecLayout/Rule.lean`): `ctor`, `nfields`, `rhs`, a plain fire, the unread words `0` |
 
 The relation is `IndDeclAt` (`StateDR.lean`). The line's hook: `Line.lean`'s `apply_dline` calls
 `apply_ind(nm)` at `pl = 25`, `nm` being the `inductive` member's value position (`decl_val`,
@@ -449,48 +450,51 @@ def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
   return 0
 }
 
-/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) in the 15-word record at `DIND[q]` (`decCaps`; words
-`q + 1‥q + 5` are unused). -/
+/-- `ind_caps(q)`: the default `IIndCaps` (`{}`) in the record at `DIND[q]` (`decCaps`): every
+field `0`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indCaps : FunDecl := lfn (q) {
-  DIND.u64[q] := 0; DIND.u64[q + 6] := 0; DIND.u64[q + 7] := 0;
-  DIND.u64[q + 8] := 0; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0; DIND.u64[q + 11] := 0;
-  DIND.u64[q + 12] := 0; DIND.u64[q + 13] := 0; DIND.u64[q + 14] := 0;
+  DIND.u64[q + ⟪Caps.eta⟫] := 0; DIND.u64[q + ⟪Caps.nIdx⟫] := 0;
+  DIND.u64[q + ⟪Caps.neverZero⟫] := 0; DIND.u64[q + ⟪Caps.allOff⟫] := 0;
+  DIND.u64[q + ⟪Caps.allLen⟫] := 0; DIND.u64[q + ⟪Caps.nparams⟫] := 0;
+  DIND.u64[q + ⟪Caps.ctorsOff⟫] := 0; DIND.u64[q + ⟪Caps.ctorsLen⟫] := 0;
   return 0
 }
 
 /-- `parse_rule_d(q, rp)`: `parseRuleD` of the rule record `IFL[rp‥rp + 3)`, written as the
-11-word `IRecRule` at `DIND[q]` (`decRule`). -/
+`IRecRule` record at `DIND[q]` (`decRule`). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:250-254 ConRon.Arena.Frontend.parseRuleD
 @[no_expose, l_impl ConRon.Arena.Frontend.parseRuleD]
 def parseRuleD : FunDecl := lfn (q, rp) locals (n, e) {
   n := call name_get(IFL.u64[rp]);
   e := call expr_get(IFL.u64[rp + 2]);
-  DIND.u64[q] := n; DIND.u64[q + 1] := IFL.u64[rp + 1]; DIND.u64[q + 2] := 0;
-  DIND.u64[q + 3] := 0; DIND.u64[q + 4] := 0; DIND.u64[q + 5] := 0; DIND.u64[q + 6] := 0;
-  DIND.u64[q + 7] := 0; DIND.u64[q + 8] := e; DIND.u64[q + 9] := 0; DIND.u64[q + 10] := 0;
+  DIND.u64[q] := n; DIND.u64[q + ⟪Rule.nfields⟫] := IFL.u64[rp + 1]; DIND.u64[q + 2] := 0;
+  DIND.u64[q + ⟪Rule.fire⟫] := 0; DIND.u64[q + ⟪Rule.lvlsOff⟫] := 0;
+  DIND.u64[q + ⟪Rule.lvlsLen⟫] := 0; DIND.u64[q + ⟪Rule.pinsOff⟫] := 0;
+  DIND.u64[q + ⟪Rule.pinsLen⟫] := 0; DIND.u64[q + ⟪Rule.rhs⟫] := e; DIND.u64[q + 9] := 0;
+  DIND.u64[q + 10] := 0;
   return 0
 }
 
 /-- `ind_rules_go(lo, o, n, j)`: the rule records at `IFL[o]` from the `j`-th to the `n`-th,
-written as 11-word rules at `DIND[lo]`. -/
+written as rule records at `DIND[lo]`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indRulesGo : FunDecl := lfn (lo, o, n, j) locals (u) {
   if n <= j { return 0 };
-  u := call parse_rule_d(lo + 11 * j, o + 3 * j);
+  u := call parse_rule_d(lo + ⟪Rule.size⟫ * j, o + 3 * j);
   u := call ind_rules_go(lo, o, n, j + 1);
   return 0
 }
 
 /-- `ind_rules(o, n)`: the `n` rule records at `IFL[o]` (3 words each) as a fresh `DIND` slice of
-11-word rules; `(off, n)`. -/
+rule records; `(off, n)`. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indRules : FunDecl := lfn (o, n) locals (lo, u) {
   if 4294967296 <= n { abort R_CAP_WORD };
-  lo := call dind_alloc(11 * n);
+  lo := call dind_alloc(⟪Rule.size⟫ * n);
   u := call ind_rules_go(lo, o, n, 0);
   return (lo, n)
 }

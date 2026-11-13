@@ -630,7 +630,7 @@ theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat}
     (hc : decCI (aread (trunc (m.arr64 DLP) t)) s.toNat = some c) (hF : FrontCI c)
     (hP : (m.arr64 DLP).size < 2 ^ 63)
     (hkk : nat? (aread (trunc (m.arr64 DLP) t)) s.toNat = some kk) (hkw : kw.toNat = kk)
-    (hnn : nn.toNat = if kk = 3 then 20 else if kk = 4 then 8 else 10) (hk345 : kk = 3 ∨ kk = 4 ∨ kk = 5)
+    (hnn : nn.toNat = if kk = 3 then CI.indSize.toNat else if kk = 4 then 8 else 10) (hk345 : kk = 3 ∨ kk = 4 ∨ kk = 5)
     (hql : fB m + fTop m ≤ q.toNat)
     (hlr : q.toNat + (rdW (m.arr64 DLP) (s + 3)).toNat ≤ fB m + fTop mx)
     (hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, erecP mx (q.toNat + j) =
@@ -645,7 +645,8 @@ theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat}
     ErW (fun i => fTop m ≤ i) m m' ∧ fB m + fTop m ≤ p.toNat ∧
       RecRob (erecP m') (fB m + fTop m) (fB m + fTop m') p.toNat c := by
   have hWx := hwx.iwok hW
-  have hn3 : 3 ≤ nn.toNat := by rw [hnn]; split <;> (try split) <;> omega
+  have hn3 : 3 ≤ nn.toNat := by
+    have := CI.indSize_toNat; have := CI.indCaps_ge; rw [hnn]; split <;> (try split) <;> omega
   have hn5 : kw = 5 → 8 ≤ nn.toNat := fun h5 => by
     subst h5; rw [hnn]; simp at hkw; subst hkw; decide
   obtain ⟨hp, ht', hW', hs0, hwords⟩ := ircT_ok hT hWx hn3 hn5

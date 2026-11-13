@@ -22,7 +22,7 @@ helpers where a twin function has more than one loop or a long straight-line bod
 * **`blockSplitRecs`'s element** (`IConstantVal × Nat × Nat × Bool × List IRecRule`, a recursor
   before it is folded into a `RecShape`): a fresh `IW` record `[cvR, mI, rP, rules.off, rules.len,
   isK]` (`rules`
-  an `EREC` slice of 11-word `decRule` records, unchanged — nothing to copy, it already lives in
+  an `EREC` slice of `decRule` records, unchanged — nothing to copy, it already lives in
   `EREC` and stays there).
 * **`blockSplitCtors`'s element** (`IConstantVal × Nat × Nat`, a constructor before grouping):
   `[cv, nP, nF]`.

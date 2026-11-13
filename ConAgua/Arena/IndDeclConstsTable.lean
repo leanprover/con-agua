@@ -331,7 +331,11 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     rw [← hl3] at hsl3'
     rw [← hl4] at hsl4'
     simp only [List.headD_cons, List.tail_cons]
-    simp only [decTbl, Option.bind_eq_bind, hd?, hlist?, nat?, e2, e3, e4, e5, e6, e7, e9, e10,
+    -- `block_table` writes the record word by word: its offsets as numbers
+    simp only [decTbl, show ProjTbl.structName.toNat = 2 from rfl, show ProjTbl.lpsOff.toNat = 3 from rfl,
+      show ProjTbl.numParams.toNat = 5 from rfl, show ProjTbl.ctor.toNat = 6 from rfl,
+      show ProjTbl.numFields.toNat = 7 from rfl, show ProjTbl.bodiesOff.toNat = 9 from rfl,
+      Option.bind_eq_bind, hd?, hlist?, nat?, e2, e3, e4, e5, e6, e7, e9, e10,
       show q.toNat + 9 + 1 = q.toNat + 10 from rfl,
       Option.map_some, Option.bind_some, hw0lt, hwnlt, ite_true, hsl3', hsl4', hnPW, hnFW,
       Option.pure_def, ← hname, Array.toArray_toList]
