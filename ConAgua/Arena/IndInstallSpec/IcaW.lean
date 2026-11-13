@@ -668,6 +668,7 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     have := hget 0 (by decide); simp only [Nat.add_zero] at this
     simp [nat?, this, iirWs]
   refine ⟨hS', hg, ?_⟩
+  simp only [rec_unfold, UInt64.reduceToNat] at hcaps
   simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv',
     hcaps, Option.pure_def]
 

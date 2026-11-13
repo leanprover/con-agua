@@ -186,7 +186,8 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       rw [← hq5]
       exact capsM_dec m₂ (q1 + CI.indCaps) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    simp [decCI, rec_unfold, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
+    have gcv' : decCV (L.Arena.aread P) (q1.toNat + CI.cv.toNat) = some cvp := gcv
+    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv', gcaps]
 
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/

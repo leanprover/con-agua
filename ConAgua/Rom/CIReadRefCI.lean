@@ -51,6 +51,8 @@ theorem ciHead (kn : Nat) (sz : Word) (hsz : ciSize (UInt64.ofNat kn) = some sz)
     ciW.j1 p k (q + 8) (UInt64.ofNat kn) sz m = some (r, m') := by
   have hw := callW_model (M := fun mq => ciW p k mq q) (ci_specW rom p hL k · q) hc
   unfold ciW at hw
+  -- a whole-record writer (`rci_ci`): the offsets as numbers (`rec_unfold`)
+  try simp only [rec_unfold, UInt64.reduceAdd] at hw
   replace hw := u64_some hL hw
   have e0 := u64_at hr q 0 [] kn _ (by rw [hd]; rfl) (by simp) hkn
   simp only [UInt64.add_zero] at e0
@@ -173,6 +175,7 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat}
   have hj := ciHead hL hr kn 5 hsz (by omega) ((encCV seen v).1 ++ ([] ++ rest)) _ m q r m'
     (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
+  try simp only [rec_unfold, UInt64.reduceAdd] at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, -, hq2,
     hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv kn 5 (by decide) []
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
@@ -191,8 +194,12 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat}
   have e0 := (h1 pp.toNat ⟨by omega, by omega⟩).trans hw0
   have ecv := hH2 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
   rcases hkn with rfl | rfl
-  · simp [decCI, nat?_of e0, ecv]
-  · simp [decCI, nat?_of e0, ecv]
+  · try simp only [rec_unfold, UInt64.reduceToNat] at ecv
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecaps
+    simp [decCI, rec_unfold, UInt64.reduceToNat, nat?_of e0, ecv]
+  · try simp only [rec_unfold, UInt64.reduceToNat] at ecv
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecaps
+    simp [decCI, rec_unfold, UInt64.reduceToNat, nat?_of e0, ecv]
 
 /-- A constructor: the constant value, the two counts, the family's name. -/
 theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat}
@@ -208,6 +215,7 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat}
   have hj := ciHead hL hr 4 8 rfl (by omega) ((encCV seen v).1 ++ ((u64B nP ++ u64B nF ++ encName fam) ++ rest))
     _ m q r m' (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
+  try simp only [rec_unfold, UInt64.reduceAdd] at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2,
     hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 4 8 (by decide) (u64B nP ++ u64B nF ++ encName fam)
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
@@ -289,7 +297,9 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat}
         (m' := m5) (fun i _ => by rw [hE5, ← hm4]) (fun _ h => h.elim)).putER (pp + 7) (r5.headD 0)
           (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have hlt5' : (r5.head?.getD 0).toNat < 2 ^ 32 := by simpa using hlt5
-    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, hd?, e7, hlt5', L.toNat_ofNat_of_lt hnP,
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecv
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecaps
+    simp [decCI, rec_unfold, UInt64.reduceToNat, nat?_of e0, ecv, nat?_of e5, nat?_of e6, hd?, e7, hlt5', L.toNat_ofNat_of_lt hnP,
       L.toNat_ofNat_of_lt hnF]
 
 /-- An inductive. -/
@@ -306,6 +316,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
   have hj := ciHead hL hr 3 CI.indSize rfl (by omega) ((encCV seen v).1 ++ ((encCaps caps) ++ rest)) _ m q r m'
     (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
+  try simp only [rec_unfold, UInt64.reduceAdd] at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2,
     hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 3 CI.indSize (by decide) (encCaps caps)
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
@@ -337,7 +348,9 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
     have ecv := (hH2.ekeep hek3 (fun i hi => ⟨by omega, by omega⟩) hIW3) m''
       (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have ecaps := hH3 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-    simp [decCI, nat?_of e0, ecv, ecaps]
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecv
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecaps
+    simp [decCI, rec_unfold, UInt64.reduceToNat, nat?_of e0, ecv, ecaps]
 
 set_option maxHeartbeats 1000000 in
 /-- A recursor (plain rules). -/
@@ -355,6 +368,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
   have hj := ciHead hL hr 5 10 rfl (by omega) ((encCV seen v).1 ++ ((u64B mI ++ (u64B rP ++ (u64B (if isK then 1 else 0) ++ (u64B rs.length ++ (encRules (encCV seen v).2 rs).1)))) ++ rest)) _ m q r m'
     (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
+  try simp only [rec_unfold, UInt64.reduceAdd] at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2,
     hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 5 10 (by decide) (u64B mI ++ (u64B rP ++ (u64B (if isK then 1 else 0) ++ (u64B rs.length ++ (encRules (encCV seen v).2 rs).1))))
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
@@ -498,7 +512,9 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
           · right; exact hi) (fun _ h => h)) m''
         (fun i hi => h1 i (by rcases hi with hi | hi <;> omega)) (fun _ h => h.elim)
     rw [← hkw] at e9
-    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, bool?_of e9, nat?_of e7, nat?_of e8,
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecv
+    try simp only [rec_unfold, UInt64.reduceToNat] at ecaps
+    simp [decCI, rec_unfold, UInt64.reduceToNat, nat?_of e0, ecv, nat?_of e5, nat?_of e6, bool?_of e9, nat?_of e7, nat?_of e8,
       L.toNat_ofNat_of_lt hmI, L.toNat_ofNat_of_lt hrP, L.toNat_ofNat_of_lt (show rs.length < 2 ^ 64 by omega), bw_ne]
     simp at erules; simp [erules]
 

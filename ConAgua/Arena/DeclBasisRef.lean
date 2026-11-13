@@ -9,6 +9,7 @@ import ConAgua.Arena.DeclAndPinIndRef
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -137,8 +138,10 @@ theorem blockNamesEqW_ok : ∀ (n : Nat) (m m' : Mem) (ao al bo bl : Word) (A B 
   rw [decB_ciF] at hx hy
   obtain ⟨wx, hwx, hwx32, hnx⟩ := decCI_name hx
   obtain ⟨wy, hwy, hwy32, hny⟩ := decCI_name hy
-  have ex : erRd m (rdW (m.arr64 IW) ao + 1) = wx := (erRdOK m).off hwx (by simp)
-  have ey : erRd m (rdW (m.arr64 IW) bo + 1) = wy := (erRdOK m).off hwy (by simp)
+  have ex : erRd m (rdW (m.arr64 IW) ao + (CI.cv + CV.name)) = wx :=
+    (erRdOK m).at _ CI.cv_name_toNat hwx
+  have ey : erRd m (rdW (m.arr64 IW) bo + (CI.cv + CV.name)) = wy :=
+    (erRdOK m).at _ CI.cv_name_toNat hwy
   by_cases h3 : wx ≠ wy
   · rw [ite_eq_left (by simpa only [L.Ind.erRd_foldN, ex, ey] using h3)] at h; cases h
     refine ⟨rfl, rfl, by
