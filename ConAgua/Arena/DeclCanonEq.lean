@@ -5,6 +5,7 @@ import ConAgua.Arena.RecLayout.CapsDec
 import ConRon.Bridge.Grind
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.RecLayout.RuleDec
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -161,22 +162,12 @@ theorem hlistW_ {kk : IdxKind} {R : Nat → Option Word} {rd : Word → Word} {q
 /-- A decoded constant value's words through the reader. -/
 theorem cvFields {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} (h : decCV R q.toNat = some cv) :
-    ∃ wn o l wt : Word, rd q = wn ∧ rd (q + 1) = o ∧ rd (q + 2) = l ∧ rd (q + 3) = wt ∧
+    ∃ wn o l wt : Word, rd q = wn ∧ rd (q + CV.lpsOff) = o ∧ rd (q + CV.lpsLen) = l ∧
+      rd (q + CV.type) = wt ∧
       wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧ cv.name = decI wn ∧ cv.type = decI wt ∧
       hslice? R o.toNat l.toNat = some cv.levelParams := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
-  obtain ⟨n, hn, lps, hl, t, ht, e⟩ := h
-  have e' := Option.some.inj e
-  subst e'
-  obtain ⟨wn, e0, hn32, rfl⟩ := hd?_some hn
-  obtain ⟨wt, e3, ht32, rfl⟩ := hd?_some ht
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
-  obtain ⟨o, ho, c, hc', hs⟩ := hl
-  simp only [nat?, Option.map_eq_some_iff] at ho hc'
-  obtain ⟨wo, hwo, rfl⟩ := ho
-  obtain ⟨wl, hwl, rfl⟩ := hc'
-  exact ⟨wn, wo, wl, wt, hR.rd _ _ e0, hR.at 1 rfl hwo, hR.at 2 rfl hwl, hR.at 3 rfl e3,
-    hn32, ht32, rfl, rfl, hs⟩
+  obtain ⟨h1, h2, h3, -, h5, h6⟩ := decCV_rd hR h
+  exact ⟨_, _, _, _, rfl, rfl, rfl, rfl, h2, h6, h1, h5, h3⟩
 
 /-- **`cv_eq`'s model is the constant values' equality**, through any reader. -/
 theorem cvEqB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q r : Word}
@@ -198,7 +189,7 @@ theorem cvEqB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
 theorem hintD {R : Nat → Option Word} {q : Nat} {x : ConLeche.ReducibilityHint} (h : decHint R q = some x) :
     ∃ wk, R q = some wk ∧
       ((wk.toNat = 0 ∧ x = .opaque) ∨ (wk.toNat = 1 ∧ x = .abbrev) ∨
-       (wk.toNat = 2 ∧ ∃ w, R (q + 1) = some w ∧ x = .regular w.toNat)) := by
+       (wk.toNat = 2 ∧ ∃ w, R (q + Hint.height.toNat) = some w ∧ x = .regular w.toNat)) := by
   simp only [decHint, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   obtain ⟨wk, e, rfl⟩ := natD hk
@@ -242,8 +233,8 @@ theorem hintEqB_ok {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
   · have : wk ≠ wk' := fun e => by have := congrArg UInt64.toNat e; omega
     simp [this]
   · rw [w2 _ k0, w2 _ k1]
-    have a1 : rd (h + 1) = w := rdW_off hR (k := 1) (by simpa using hw)
-    have a2 : rd (g + 1) = w' := rdW_off hR (k := 1) (by simpa using hw')
+    have a1 : rd (h + Hint.height) = w := hR.at Hint.height rfl hw
+    have a2 : rd (g + Hint.height) = w' := hR.at Hint.height rfl hw'
     simp only [a1, a2]
     by_cases e : w = w'
     · subst e; simp
@@ -497,31 +488,31 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
   · have a1 : wk = 0 := wl wk 0 (by decide) k0
     have a2 : wk' = 0 := wl wk' 0 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB]
     simp [c1]
   · have a1 : wk = 1 := wl wk 1 (by decide) k0
     have a2 : wk' = 1 := wl wk' 1 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
-    obtain ⟨w5, f5, u5, rfl⟩ := hdW_ (q := p) (k := 5) (kn := 5) hR rfl hv
-    obtain ⟨v5, g5, t5, rfl⟩ := hdW_ (q := q) (k := 5) (kn := 5) hR rfl hv'
-    have c2 := hintEqB_ok' hR (p := p) (q := q) (k := 6) (kn := 6) rfl hhi hhi'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
+    obtain ⟨w5, f5, u5, rfl⟩ := hdW_ (q := p) (k := CI.defnValue) (kn := CI.defnValue.toNat) hR rfl hv
+    obtain ⟨v5, g5, t5, rfl⟩ := hdW_ (q := q) (k := CI.defnValue) (kn := CI.defnValue.toNat) hR rfl hv'
+    have c2 := hintEqB_ok' hR (p := p) (q := q) (k := CI.defnHint) (kn := CI.defnHint.toNat) rfl hhi hhi'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, c1, c2]
     simp [decI_inj_iff u5 t5]
   · have a1 : wk = 2 := wl wk 2 (by decide) k0
     have a2 : wk' = 2 := wl wk' 2 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB]
     simp [c1]
   · have a1 : wk = 3 := wl wk 3 (by decide) k0
     have a2 : wk' = 3 := wl wk' 3 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
     have c2 := capsEqAll_ok' hR (p := p) (q := q) (k := CI.indCaps) rfl hcaps hcaps'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, c1, c2]
@@ -529,30 +520,30 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
   · have a1 : wk = 4 := wl wk 4 (by decide) k0
     have a2 : wk' = 4 := wl wk' 4 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
-    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := 5) (kn := 5) hR rfl hnp
-    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl hnp'
-    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := 6) (kn := 6) hR rfl hnf
-    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl hnf'
-    obtain ⟨w7, f7, u7, rfl⟩ := hdW_ (q := p) (k := 7) (kn := 7) hR rfl hfam
-    obtain ⟨v7, g7, t7, rfl⟩ := hdW_ (q := q) (k := 7) (kn := 7) hR rfl hfam'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
+    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := CI.ctorNparams) (kn := CI.ctorNparams.toNat) hR rfl hnp
+    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := CI.ctorNparams) (kn := CI.ctorNparams.toNat) hR rfl hnp'
+    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := CI.ctorNfields) (kn := CI.ctorNfields.toNat) hR rfl hnf
+    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := CI.ctorNfields) (kn := CI.ctorNfields.toNat) hR rfl hnf'
+    obtain ⟨w7, f7, u7, rfl⟩ := hdW_ (q := p) (k := CI.ctorInduct) (kn := CI.ctorInduct.toNat) hR rfl hfam
+    obtain ⟨v7, g7, t7, rfl⟩ := hdW_ (q := q) (k := CI.ctorInduct) (kn := CI.ctorInduct.toNat) hR rfl hfam'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, f7, g7, c1]
     simp [fld_nat, decI_inj_iff u7 t7, and_assoc]
   · have a1 : wk = 5 := wl wk 5 (by decide) k0
     have a2 : wk' = 5 := wl wk' 5 (by decide) k1
     subst a1 a2
-    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
-    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := 5) (kn := 5) hR rfl hmi
-    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl hmi'
-    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := 6) (kn := 6) hR rfl hrp
-    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl hrp'
-    obtain ⟨w7, f7, rfl⟩ := natW_ (q := p) (k := 7) (kn := 7) hR rfl ho
-    obtain ⟨v7, g7, rfl⟩ := natW_ (q := q) (k := 7) (kn := 7) hR rfl ho'
-    obtain ⟨w8, f8, rfl⟩ := natW_ (q := p) (k := 8) (kn := 8) hR rfl hc
-    obtain ⟨v8, g8, rfl⟩ := natW_ (q := q) (k := 8) (kn := 8) hR rfl hc'
-    obtain ⟨w9, f9, rfl⟩ := boolW_ (q := p) (k := 9) (kn := 9) hR rfl hk
-    obtain ⟨v9, g9, rfl⟩ := boolW_ (q := q) (k := 9) (kn := 9) hR rfl hk'
+    have c1 := cvEqB_ok' hR (p := p) (q := q) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
+    obtain ⟨w5, f5, rfl⟩ := natW_ (q := p) (k := CI.recMajor) (kn := CI.recMajor.toNat) hR rfl hmi
+    obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := CI.recMajor) (kn := CI.recMajor.toNat) hR rfl hmi'
+    obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := CI.recPrefix) (kn := CI.recPrefix.toNat) hR rfl hrp
+    obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := CI.recPrefix) (kn := CI.recPrefix.toNat) hR rfl hrp'
+    obtain ⟨w7, f7, rfl⟩ := natW_ (q := p) (k := CI.recRulesOff) (kn := CI.recRulesOff.toNat) hR rfl ho
+    obtain ⟨v7, g7, rfl⟩ := natW_ (q := q) (k := CI.recRulesOff) (kn := CI.recRulesOff.toNat) hR rfl ho'
+    obtain ⟨w8, f8, rfl⟩ := natW_ (q := p) (k := CI.recRulesLen) (kn := CI.recRulesLen.toNat) hR rfl hc
+    obtain ⟨v8, g8, rfl⟩ := natW_ (q := q) (k := CI.recRulesLen) (kn := CI.recRulesLen.toNat) hR rfl hc'
+    obtain ⟨w9, f9, rfl⟩ := boolW_ (q := p) (k := CI.recIsK) (kn := CI.recIsK.toNat) hR rfl hk
+    obtain ⟨v9, g9, rfl⟩ := boolW_ (q := q) (k := CI.recIsK) (kn := CI.recIsK.toNat) hR rfl hk'
     have c2 := rulesEqB_ok hR hr hr'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, f7, g7, f8, g8, f9, g9, c1, c2]
