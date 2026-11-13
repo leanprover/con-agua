@@ -201,4 +201,68 @@ theorem indHdImg_ty (ck nm lo ll ty : Word) :
     (indHdImg ck nm lo ll ty)[(cv + CV.type).toNat]? = some (some ty) := by
   simp [indHdImg, recImg, rec_unfold]
 
+/-- **An axiom's record image** (`RecLayout/Img.lean`): the kind word and the constant value (the
+stores of `check_constant_val`'s and `class_const_ok_lit`'s fresh `axiomInfo` records). -/
+def axImg (ck nm lo ll ty : Word) : List (Option Word) :=
+  recImg axiomSize [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty)]
+
+theorem axImg_length (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty).length = axiomSize.toNat := recImg_length _ _
+theorem axImg_kind (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(kind).toNat]? = some (some ck) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_name (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_lo (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_ll (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_ty (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [axImg, recImg, rec_unfold]
+
+/-- **A recursor's record image** (`RecLayout/Img.lean`): the kind word, the constant value and the
+recursor's fields (`rec_info_rec`'s and `class_fe_r_rec`'s stores). -/
+def recInfoImg (ck nm lo ll ty mi rp ro rl ik : Word) : List (Option Word) :=
+  L.recImg recSize [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty), (recMajor, mi), (recPrefix, rp), (recRulesOff, ro), (recRulesLen, rl),
+    (recIsK, ik)]
+
+theorem recInfoImg_length (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik).length = recSize.toNat := L.recImg_length _ _
+theorem recInfoImg_kind (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(kind).toNat]? = some (some ck) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_name (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_lo (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_ll (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_ty (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_major (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recMajor).toNat]? = some (some mi) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_prefix (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recPrefix).toNat]? = some (some rp) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_rulesOff (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recRulesOff).toNat]? = some (some ro) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_rulesLen (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recRulesLen).toNat]? = some (some rl) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+theorem recInfoImg_isK (ck nm lo ll ty mi rp ro rl ik : Word) :
+    (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recIsK).toNat]? = some (some ik) := by
+  simp [recInfoImg, L.recImg, rec_unfold]
+
 end L.CI
