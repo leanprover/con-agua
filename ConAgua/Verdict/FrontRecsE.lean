@@ -44,7 +44,7 @@ def ViewReadR (a : AState) : Prop :=
 /-- The facts of the validation before its recursor loop: `VFacts` without the recursors. -/
 abbrev VFactsR (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List IndCtorRec)
     (TN : List NIdx) (TT : List EIdx) (LS : List (List NIdx)) (CN : List NIdx) (fuel nPd : Nat)
-    (ordered : List IndCtorRec) : Prop :=
+    (ordered : List (IndCtorRec × NIdx)) : Prop :=
   VFacts st a tys cts [] TN TT LS CN fuel nPd ordered
 
 /-- A read-only `forIn` that yields before index `j` and is done at `j`. -/
@@ -100,7 +100,7 @@ theorem exInv_of {α : Type} {X : AM (RecordVerdict ⊕ α)} {a : AState}
   obtain ⟨z, h1, w, rfl⟩ := h; exact ⟨w, h1⟩
 
 /-- The verdict a failing recursor loop leaves in its state. -/
-def LoopInv (s : Option (RecordVerdict ⊕ List IndCtorRec × Nat) × Unit) : Prop :=
+def LoopInv (s : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat) × Unit) : Prop :=
   ∃ w, s.1 = some (.inl (.invalid w))
 
 set_option hygiene false in
@@ -116,7 +116,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
     subst hw
     exact ⟨_, rfl, w, rfl⟩
   refine forIn_done_exR _ a _ _
-    (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl j hj _ ?rstep ?rdone
+    (fun _ => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)), ())) rfl j hj _ ?rstep ?rdone
   case rstep =>
     intro j hj
     obtain ⟨rn, hrn, h1, h2, h3, v, hv, hin⟩ := hpre j hj
@@ -130,7 +130,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
         · subst hsv
           try simp only []
           rw [run_bind _ _ a _ (forIn_yield' _ a _ _
-            (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl ?_)]
+            (fun _ => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)), ())) rfl ?_)]
           · rfl
           · intro j' hj'
             simp only [List.getElem_zip]
@@ -175,7 +175,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
           subst hw
           exact ⟨_, rfl, _, rfl, ⟨w, rfl⟩⟩
         refine forIn_done_exR _ a _ _
-          (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl jj
+          (fun _ => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)), ())) rfl jj
           (by rw [List.length_zip]; omega) _ ?_ ?_
         · intro j' hj'
           simp only [List.getElem_zip]
@@ -197,7 +197,7 @@ macro "recsfail_tac" : tactic => `(tactic| (
 
 theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx} {LS : List (List NIdx)} {CN : List NIdx}
-    {fuel nPd : Nat} {ordered : List IndCtorRec}
+    {fuel nPd : Nat} {ordered : List (IndCtorRec × NIdx)}
     (hV : VFactsR st a tys cts TN TT LS CN fuel nPd ordered)
     (hnest : (tys.any fun x => x.numNested != 0) = false)
     (hF : RecsFail st a TN TT nPd tys.length ordered.length fuel rcs)
@@ -211,13 +211,13 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
   rw [ite_eq_left hV.nodup]
   simp only [hV.flen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a), hV.hfuel]
-  rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+  rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
     (ordered.take (fpos LS i)).toArray)) ?h0 ?hstep)]
   case h0 => simp [fpos]
   case hstep =>
     intro i hi
     simp only [List.getElem_zip]
-    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
       (ordered.take (fpos LS i + c)).toArray, c)) ?i0 ?istep)]
     case i0 => simp
     case istep =>
@@ -228,9 +228,9 @@ theorem validateIndD_recsFail {st : StateD} {a : AState} {tys : List IndTypeRec}
       have hck : cts[k]! = cts[k] := getElem!_pos cts k hk
       rw [hck] at hord
       have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
-      rw [hTNi] at hind
+      rw [hTNi] at hind hord
       have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
-      have hpush : (ordered.take (fpos LS i + c)).toArray.push cts[k] =
+      have hpush : (ordered.take (fpos LS i + c)).toArray.push (cts[k], TN[i]) =
           (ordered.take (fpos LS i + (c + 1))).toArray := by
         rw [← hord, take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]

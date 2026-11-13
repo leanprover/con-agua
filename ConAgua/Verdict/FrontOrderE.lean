@@ -239,29 +239,53 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
   rw [ite_eq_left hnd]
   simp only [hlen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a)]
-  let ordered : List IndCtorRec := LS.flatten.map fun nn => cts[((ctorIxOf CN)[nn]?).getD 0]!
-  have hordl : ordered.length = LS.flatten.length := by simp only [ordered, List.length_map]
+  let TS : List (List NIdx) := (List.range LS.length).map fun j => (LS[j]!).map fun _ => TN[j]!
+  have hTSl : TS.map List.length = LS.map List.length := by
+    apply List.ext_getElem (by simp [TS])
+    intro j h1 h2
+    simp only [TS, List.getElem_map, List.getElem_range, List.length_map]
+    rw [getElem!_pos LS j (by simpa using h2)]
+  have hTSf : TS.flatten.length = LS.flatten.length := by
+    rw [List.length_flatten, List.length_flatten, hTSl]
+  let ordered : List (IndCtorRec × NIdx) :=
+    (LS.flatten.zip TS.flatten).map fun x => (cts[((ctorIxOf CN)[x.1]?).getD 0]!, x.2)
+  have hordl : ordered.length = LS.flatten.length := by
+    simp only [ordered, List.length_map, List.length_zip, hTSf, Nat.min_self]
   have hord : ∀ i' (hi' : i' < LS.length) c' (hc' : c' < LS[i'].length) k,
       (ctorIxOf CN)[LS[i'][c']]? = some k →
-      ∃ hp : fpos LS i' + c' < ordered.length, ordered[fpos LS i' + c'] = cts[k]! := by
+      ∃ hp : fpos LS i' + c' < ordered.length, ordered[fpos LS i' + c'] = (cts[k]!, TN[i']!) := by
     intro i' hi' c' hc' k hk
     have hp := fpos_lt LS i' c' hi' hc'
+    have hiT : i' < TS.length := by simp [TS, hi']
+    have hcT : c' < TS[i'].length := by
+      simp only [TS, List.getElem_map, List.getElem_range, List.length_map]
+      rw [getElem!_pos LS i' hi']; exact hc'
+    have hfT : fpos TS i' = fpos LS i' := by
+      rw [fpos, fpos, List.map_take, List.map_take, hTSl]
+    have eT := getElem_flatten' TS i' c' hiT hcT
+    have eL := getElem_flatten' LS i' c' hi' hc'
     refine ⟨by rw [hordl]; exact hp, ?_⟩
-    simp only [ordered, List.getElem_map]
-    rw [← getElem_flatten' LS i' c' hi' hc', hk]; rfl
+    simp only [ordered, List.getElem_map, List.getElem_zip]
+    rw [← eL, hk]
+    have : TS.flatten[fpos LS i' + c']'(by rw [hTSf]; exact hp) = TN[i']! := by
+      have e2 : TS.flatten[fpos LS i' + c']'(by rw [hTSf]; exact hp) =
+          TS.flatten[fpos TS i' + c']'(fpos_lt TS i' c' hiT hcT) := by simp only [hfT]
+      rw [e2, ← eT]
+      simp [TS]
+    rw [this]; rfl
   refine run_bind_ex (fun b => ∃ w, b.1 = some (Sum.inl (RecordVerdict.invalid w))) ?_ ?_
   rotate_left
   · rintro ⟨r, arr⟩ ⟨w, hw⟩
     simp only at hw; subst hw
     exact ⟨_, ⟨w, rfl⟩, rfl⟩
   have hzl' : (TN.zip LS).length = LS.length := by simp [hzl]
-  refine forIn_done_ex _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+  refine forIn_done_ex _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
     (ordered.take (fpos LS i)).toArray)) (by simp [fpos]) i (by rw [hzl']; exact hi) _ ?_ ?_
   · -- the types before: every constructor passes
     intro i' hi''
     have hi' : i' < LS.length := by omega
     simp only [List.getElem_zip]
-    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
       (ordered.take (fpos LS i' + c)).toArray, c)) ?i0 ?istep)]
     case i0 => simp
     case istep =>
@@ -272,9 +296,9 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
       rw [hck] at hord'
       have hiT : i' < TN.length := by omega
       have hTNi : TN[i']! = TN[i'] := getElem!_pos TN i' hiT
-      rw [hTNi] at hind
+      rw [hTNi] at hind hord'
       have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
-      have hpush : (ordered.take (fpos LS i' + c)).toArray.push cts[k] =
+      have hpush : (ordered.take (fpos LS i' + c)).toArray.push (cts[k], TN[i']) =
           (ordered.take (fpos LS i' + (c + 1))).toArray := by
         rw [← hord', take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
@@ -290,13 +314,13 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
     rfl
   · simp only [List.getElem_zip]
     refine run_bind_exG ForInStep.done
-      (fun (b : Option (RecordVerdict ⊕ List IndCtorRec × Nat) × Array IndCtorRec × Nat) =>
+      (fun (b : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat) × Array (IndCtorRec × NIdx) × Nat) =>
         ∃ w, b.1 = some (Sum.inl (RecordVerdict.invalid w))) ?_ ?_
     rotate_left
     · rintro ⟨r, arr⟩ ⟨w, hw⟩
       simp only at hw; subst hw
       exact ⟨_, ⟨w, rfl⟩, rfl⟩
-    refine forIn_done_ex _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+    refine forIn_done_ex _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
       (ordered.take (fpos LS i + c)).toArray, c)) (by simp) c hc _ ?_ ?_
     · intro c' hc'
       have hc'' : c' < LS[i].length := by omega
@@ -306,9 +330,9 @@ theorem validateIndD_orderFail {st : StateD} {a : AState} {tys : List IndTypeRec
       rw [hck] at hord'
       have hiT : i < TN.length := by omega
       have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
-      rw [hTNi] at hind
+      rw [hTNi] at hind hord'
       have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
-      have hpush : (ordered.take (fpos LS i + c')).toArray.push cts[k] =
+      have hpush : (ordered.take (fpos LS i + c')).toArray.push (cts[k], TN[i]) =
           (ordered.take (fpos LS i + (c' + 1))).toArray := by
         rw [← hord', take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
