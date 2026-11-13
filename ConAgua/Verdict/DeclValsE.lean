@@ -443,7 +443,7 @@ its memo carried across), the unresolved constants' error by `uce_errClaim_lo`. 
 theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem}
     {q v : Word} {cv : IConstantVal} (hS : StageT dn vis fe m a)
-    (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + CV.type.toNat < 2 ^ 64) (hv : v.toNat < 2 ^ 32)
+    (hqd : decCV (erecP m) q.toNat = some cv) (hv : v.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (valueGuardsE p n m vis q v) (valueGuards fe cv (decI v)) a
       (fun w _ a' => CcvPost dn vis fe m w.2 a') := by
@@ -545,7 +545,7 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkDefnValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) (by rw [e1]; exact erecP_lt64 hwt) hwvl hlps hCr)
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkDefnValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -599,7 +599,7 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkOpaqueValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) (by rw [e1]; exact erecP_lt64 hwt) hwvl hlps hCr)
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkOpaqueValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -713,7 +713,7 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => checkThmValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨s4.mem, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
     (vg_ref hP hap hcrf n hS4 (by rw [e1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg14) hcv)
-      (by rw [e1]; exact erecP_lt64 hwt) hwvl hlps4 hCr4)
+      hwvl hlps4 hCr4)
     fun r5 s5 y5 a5 _ _ _ hP5 => ?_
   rw [checkThmValE.k_value_guards.arm1]
   have hS5 := hP5.stage

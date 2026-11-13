@@ -179,7 +179,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {mâ‚€ m : Mem} {aâ‚
   | zero => simp [cvAtLpsW] at hW
   | succ n =>
   -- a whole-record writer (`cv_at_lps`): the offsets as numbers (`rec_unfold`)
-  simp only [cvAtLpsW, rec_unfold, UInt64.reduceAdd] at hW
+  simp only [cvAtLpsW, rec_unfold] at hW
   -- `er_to_iw(po, pl)`
   cases h1 : callW p n "er_to_iw" [po, pl] m with
   | none => rw [h1] at hW; simp [cvAtLpsW.k_er_to_iw] at hW

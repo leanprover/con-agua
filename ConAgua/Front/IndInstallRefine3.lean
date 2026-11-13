@@ -291,7 +291,7 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   | succ n =>
   rw [recRW.arm1] at h
   -- a whole-record writer (`ind_rec`): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceAdd] at h
+  simp only [rec_unfold] at h
   rcases h1 : allocW m DLP 10 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [recRW.k_dind_alloc.none] at h; cases h
   rw [recRW.k_dind_alloc.arm1] at h

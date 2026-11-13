@@ -76,7 +76,7 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   have hw := callW_model (M := fun mq => cvW p k mq q pp) (cv_specW rom p hL k · q pp) hc
   unfold cvW at hw
   -- a whole-record writer (`rci_cv`): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceAdd] at hw
+  simp only [rec_unfold] at hw
   have hlt := hI.er_lt
   -- the name
   obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw

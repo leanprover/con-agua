@@ -343,10 +343,6 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
     rw [hrl]
     have hcv1 : decCVp m1 (UInt64.ofNat pc).toNat = some cv0 := by
       rw [hpw]; exact hcv0.stab (OMono.decCVp _) m1 hg1
-    have hb3 : (UInt64.ofNat pc).toNat + 3 < 2 ^ 64 := by
-      rw [hpw]
-      obtain ⟨w, hw3, -, -⟩ := hd?_some (decCV_type (show decCV (erA (truncM m)) pc = some cv0 from hcv0))
-      exact erecP_lt64 (truncM_er_get hw3)
     generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
     refine Sim.bindK (by simp [bmgW.k_block_counts]) (fun _ _ => by rw [bmgW.k_block_counts])
       (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ ExcNN x2 r2 ∧ (∀ p q, x2 = .ok (p, q) → q < 2 ^ 64) ∧
@@ -356,14 +352,14 @@ theorem bmgW_sim {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
       | none =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 none hS1.check.arena.base e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
+          cv0 none hS1.check.arena.base e hcv1 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
         have hP2 := bcW_ptop e (stageR_ptop hS1)
         exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.size IW]; exact hP2.1), hg2⟩
       | some q =>
         intro hE; dsimp only; intro r2 m2 e
         obtain ⟨b1, b2⟩ := hxb q rfl
         obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
-          cv0 (some (q.2.1, q.2.2.1)) hS1.check.arena.base e hcv1 hb3
+          cv0 (some (q.2.1, q.2.2.1)) hS1.check.arena.base e hcv1
           (by subst hE; simp [encONN, UInt64.toNat_ofNat_of_lt' b1, UInt64.toNat_ofNat_of_lt' b2])
           h1 h2 h3 h4 h5 h6 hS1.iw.iwSize hS1.iw.ctl
         have hP2 := bcW_ptop e (stageR_ptop hS1)

@@ -164,7 +164,7 @@ theorem abnW_eq {m : Mem} {t : Nat}
     have e2 : rdW (m.arr64 DLP) (w + (CI.cv + CV.name)) = x := by
       have : (w + (CI.cv + CV.name)).toNat = w.toNat + CI.cv.toNat :=
         off_add_toNat CI.cv_name_toNat (by omega)
-      simp only [rdW, this, Nat.mod_eq_of_lt (show w.toNat + CI.cv.toNat < 2 ^ 64 by omega), hxP,
+      simp only [rdW, this, hxP,
         Option.getD_some]
     have ebo : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have ih' := ih (bo + 1) cs (by rw [ebo]; exact hcs) (Or.inl (by omega))

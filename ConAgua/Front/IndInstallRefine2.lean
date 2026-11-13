@@ -200,7 +200,7 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hpt := hD.ptop
   rw [ctorRW.arm1] at h
   -- a whole-record writer (`ind_ctor`): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceAdd] at h
+  simp only [rec_unfold] at h
   rcases h1 : allocW m DLP 8 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [ctorRW.k_dind_alloc.none] at h; cases h
   rw [ctorRW.k_dind_alloc.arm1] at h
@@ -215,7 +215,7 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   | some m₂ =>
   rw [h2, ctorRW.k_ind_cv.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide), Option.some.injEq,
-    Prod.mk.injEq, rec_unfold, UInt64.reduceAdd] at h
+    Prod.mk.injEq, rec_unfold] at h
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 4) := P1.set q1 4 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 4).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP

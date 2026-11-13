@@ -752,7 +752,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
   · have e : kw = 4 := UInt64.toNat_inj.mp (by rw [h4]; rfl)
     subst e
     rw [ircW.k_dind_copy.arm2 n s 4 q m2 (by decide) rfl] at h
-    try simp only [rec_unfold, UInt64.reduceAdd] at h
+    try simp only [rec_unfold] at h
     exact irc_fin h hw2 hW hc hF hP hkk rfl (by rfl) (Or.inr (Or.inl rfl)) (by omega) hlr hl
       hsrc2 (fun h5 => by simp at h5)
   · have e : kw = 5 := UInt64.toNat_inj.mp (by rw [h5]; rfl)
@@ -760,7 +760,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     have hg : ¬ 1152921504606846976 ≤ rdW (m2.arr64 DLP) (s + 8) := fun hg => by
       rw [ircW.k_dind_copy.abort1 n s 5 q m2 (by decide) (by decide) rfl hg] at h; cases h
     rw [ircW.k_dind_copy.arm3 n s 5 q m2 (by decide) (by decide) rfl hg, hP2] at h
-    try simp only [rec_unfold, UInt64.reduceAdd] at h
+    try simp only [rec_unfold] at h
     rw [hP2] at hg
     have hb : (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60 := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hg); simpa using this
@@ -771,7 +771,7 @@ theorem ircW_ok {n : Nat} {m m' : Mem} {t : Nat}
     | some x =>
     obtain ⟨r, m3⟩ := x
     rw [ha3, ircW.k_erec_alloc_3.arm1] at h
-    try simp only [rec_unfold, UInt64.reduceAdd] at h
+    try simp only [rec_unfold] at h
     obtain ⟨hr, ht3, hW3, hok3⟩ := erAlloc_f ha3 hok2
     have hw3 := hW3 (fun i => fTop m2 ≤ i)
     have hP3 : m3.arr64 DLP = m.arr64 DLP := by rw [hw3.dlp, hP2]
