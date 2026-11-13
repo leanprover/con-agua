@@ -176,3 +176,50 @@ elaborating as far as its own changes allowed.
 
 None. No file under `ConAgua/Final`, `ConAgua/Audit`, `ConAgua/E2E` changed; upstream's capstone
 statements did not change either.
+
+## 4. Performance
+
+Against master `dfe9fbdd7`, both binaries `make` from the committed `checker.s`, `Init` (Lean
+4.35's export, `_tmp/fixtures/init/init435.ndjson`), CPU 44 (one thread) or 24–39 (`--jobs=16`):
+
+| | master | ronsync4 | Δ |
+|---|---:|---:|---:|
+| `Init`, `instructions:u`, one thread (`perf stat`; `bench.py` agrees: 223 412 M / 217 202 M) | 223 407 M | 217 200 M | **−2.78 %** |
+| `Init`, peak RSS, one thread | 631 MB | 620 MB | −1.7 % |
+| `Init`, peak RSS, `--jobs=16` | 768 MB | 768 MB | 0 % |
+| `Init` wall, `--jobs=16` (16 paired rounds, load 31–35) | 7.69 s | 8.20 s | mean −1.8 % [−11.9, +8.4], p = 0.61 |
+| `Init` wall, one thread (`bench.py`, 12 interleaved rounds, load 134) | 37.2 s | 38.9 s | spread 142–161 %: not a measurement |
+
+The wall times could not be measured: the machine's load stayed between 30 and 134 the whole
+time (another job's, not ours; the coordinator also reported the disk filling), so the
+interleaved rounds' spread is larger than any effect (ronsync3 measured 17.2 s and 3.16 s at load
+≈ 1). The instruction count is load-independent: −2.78 %, against upstream's −5.61 % for the whole
+task #152 on its own binary (#572 alone +2.7 % there; the stuck spine −5.5 %). No regression in
+instructions or memory; the wall comparison should be repeated on a quiet machine (or by
+`perf-overview.py` after the landing).
+
+## 5. Results
+
+* **Proofs.** Zero `sorry`; the axiom guards unchanged; the whole library builds; every gate
+  green (`gates.sh`: 15 OK).
+* **Provenance.** `provenance.py check --strict`: every citation exact at con-ron c78714ac,
+  con-leche ca6af099; no marker left (159 L items re-checked).
+* **Verdicts.** `diff-e2e --tests` at con-leche ca6af099 with `--refs` (con-ron c78714ac,
+  e2e-ref): 726/726 agree, UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF 0; 7 skipped (con-leche's
+  `E2E_FLAGS` fixtures, D49). `e2e.py --latest ''`: 780 fixtures, all agree (2 time out in all
+  three).
+* **Deviations.** None added (no aborts beyond fixed capacities: the pending-key stack).
+* **Statements.** No final statement changed.
+
+### What went wrong
+
+* The first full build after the bump stopped at only 8 failing modules, but they blocked 760 of
+  1421 modules; three lead compile passes (the ladder for theorems, hand fixes for definitions and
+  statements, a TEMPORARY shim for the removed `natOpResult`) before the fan-out kept the helpers
+  from blocking each other for long, but the helpers still needed one round of "make your
+  failing modules elaborate first" before their real work (ronsync3's lesson, applied earlier).
+* A merge into the worktree during a running build (lead): the wrapper caught it (nothing
+  published), a rebuild fixed it.
+* The core helper's first loop with `if`-chain tag tests made the generated model time out even at
+  10× the heartbeats; branch-free bit masks fixed it.
+* The wall-time comparison could not be done (load, above).
