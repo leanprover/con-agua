@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndT.BlockRM
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -166,22 +167,6 @@ theorem rfE_pos {p : Prog} (hcl : CoreStageClosed p) (hP : RfProg p) {k : Nat} {
   obtain ⟨q, m4⟩ := (r, m')
   exact hP3.fr (cvNewW_mfr (liftE_ok h))
 
-/-- The caps' parameter and index counts, as the words that hold them. -/
-theorem decCaps_counts {m : Mem} {q : Word} {caps : IIndCaps} (h : decCaps (erecP m) q.toNat = some caps) :
-    (erRd m (q + 12)).toNat = caps.nparams ∧ (erRd m (q + 6)).toNat = caps.nIdx := by
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
-  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, _, _, rfl⟩ := h
-  simp only [nat?, Option.map_eq_some_iff] at hni hnp
-  obtain ⟨w1, hw1, rfl⟩ := hnp
-  obtain ⟨w2, hw2, rfl⟩ := hni
-  have h1 := L.Arena.erecP_lt64 hw1
-  have h2 := L.Arena.erecP_lt64 hw2
-  have e1 : (q + 12).toNat = q.toNat + 12 := by rw [UInt64.toNat_add]; simp; omega
-  have e2 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
-  rw [← e1] at hw1; rw [← e2] at hw2
-  rw [(erRd_of_erecP hw1).1, (erRd_of_erecP hw2).1]
-  exact ⟨rfl, rfl⟩
-
 section ft
 variable {p : Prog} (hq : KnotStageProg p) (hP : FtProg p) {dn : NIdx → Option ConLeche.Name}
   {vis : Word} {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
@@ -218,13 +203,13 @@ theorem ft_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq capsq :
     exact RefE.ret rfl ⟨hC, IWGrow.refl m, hA, ConRon.Bridge.CoreStep.refl hC.check, hty32, htye⟩
   rw [ite_eq_right hz]
   simp only [show (r1.headD 0 != 0) = true by simpa using hz, ite_true]
-  obtain ⟨hnp, hni⟩ := decCaps_counts hcaps
-  change RefE _ (if erRd m (capsq + 12) + erRd m (capsq + 6) < erRd m (capsq + 12) then _ else _) _ _ _
+  obtain ⟨-, hni, -, hnp, -⟩ := decCaps_rd (erRdOK m) hcaps
+  change RefE _ (if erRd m (capsq + Caps.nparams) + erRd m (capsq + Caps.nIdx) < erRd m (capsq + Caps.nparams) then _ else _) _ _ _
   refine RefE.abort0 rfl fun hov => ?_
-  have hsum : (erRd m (capsq + 12) + erRd m (capsq + 6)).toNat = caps.nparams + caps.nIdx := by
-    rw [L.toNat_add_of_not_lt hov, hnp, hni]
+  have hsum : (erRd m (capsq + Caps.nparams) + erRd m (capsq + Caps.nIdx)).toNat = caps.nparams + caps.nIdx := by
+    rw [L.toNat_add_of_not_lt hov, ← hnp, ← hni]
   -- `reduced_former`
-  have hRF := rf_ref hq hP.toRfProg henv k (by omega) (n := erRd m (capsq + 12) + erRd m (capsq + 6))
+  have hRF := rf_ref hq hP.toRfProg henv k (by omega) (n := erRd m (capsq + Caps.nparams) + erRd m (capsq + Caps.nIdx))
     hC hA hcv hcvP hws
   rw [hsum] at hRF
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl)

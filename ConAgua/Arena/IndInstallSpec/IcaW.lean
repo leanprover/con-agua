@@ -530,7 +530,7 @@ l_model erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
 
 /-- The model of `ind_info_rec(cv, caps)`. -/
 def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=
-  match erAllocW m 20 with
+  match erAllocW m CI.indSize with
   | none => none
   | some (q, m1) => some (q, wrER m1 q (iirWs m cv caps))
 
@@ -582,7 +582,7 @@ theorem iirK_eq {p : Prog} (hpu : p.lookup "erec_put" = some erecPut)
     exact erPut5W_wrER h2
   unfold iirW
   rw [iirK.arm1] at h
-  rcases h1 : erAllocW m 20 with _ | ⟨q, m1⟩
+  rcases h1 : erAllocW m CI.indSize with _ | ⟨q, m1⟩
   · rw [h1] at h; cases h
   obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
   rw [h1, iirK.k_erec_alloc.arm1] at h
@@ -628,11 +628,12 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') q.toNat = some (.indInfo cvv c) := by
   unfold iirW at h
-  rcases h1 : erAllocW m 20 with _ | ⟨q1, m1⟩
+  rcases h1 : erAllocW m CI.indSize with _ | ⟨q1, m1⟩
   · rw [h1] at h; cases h
   rw [h1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS (iirWs m cv caps) (by simp [iirWs])
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS (iirWs m cv caps)
+    (by simp [iirWs, CI.indSize, CI.indCaps, Caps.size])
   have hlen : (iirWs m cv caps).length = 20 := by simp [iirWs]
   rw [hlen] at hget
   generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg hget
@@ -686,7 +687,8 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     have := hget 0 (by decide); simp only [Nat.add_zero] at this
     simp [nat?, this, iirWs]
   refine ⟨hS', hg, ?_⟩
-  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', hcaps, Option.pure_def]
+  simp only [decCI, CI.indCaps, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv',
+    hcaps, Option.pure_def]
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (p1 isRec o l vis i : Word) (r : List Word)
@@ -702,7 +704,7 @@ theorem installIirRun {p : Prog} (hP : ConsIndsProg p) {n : Nat} {m m' : Mem} {c
   · rw [iirK.eq_1] at hK; cases hK
   · exfalso
     rw [iirK.arm1] at hK
-    cases h1 : erAllocW m 20 with
+    cases h1 : erAllocW m CI.indSize with
     | none => simp only [h1, iirK.k_erec_alloc.none] at hK; cases hK
     | some x =>
       obtain ⟨q, m1⟩ := x
