@@ -143,4 +143,38 @@ theorem indCaps_add_toNat {f : Word} (hf : f.toNat < Caps.size.toNat) :
 
 attribute [rec_unfold] kind cv axiomSize thmSize defnValue defnHint defnSize ctorNparams ctorNfields ctorInduct ctorSize recMajor recPrefix recRulesOff recRulesLen recIsK recSize indCaps indSize
 
+/-- **A definition's record image** (`RecLayout/Img.lean`): what `erec_ci`'s field-by-field
+stores leave (the kind word, the constant value, the value, the hint's two words). -/
+def defnImg (ck nm lo ll ty v hk hh : Word) : List (Option Word) :=
+  recImg defnSize [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty), (defnValue, v), (defnHint, hk), (defnHint + Hint.height, hh)]
+
+theorem defnImg_length (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh).length = defnSize.toNat := recImg_length _ _
+
+theorem defnImg_kind (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(kind).toNat]? = some (some ck) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_name (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_lo (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_ll (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_ty (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_value (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(defnValue).toNat]? = some (some v) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_hint (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(defnHint).toNat]? = some (some hk) := by
+  simp [defnImg, recImg, rec_unfold]
+theorem defnImg_height (ck nm lo ll ty v hk hh : Word) :
+    (defnImg ck nm lo ll ty v hk hh)[(defnHint + Hint.height).toNat]? = some (some hh) := by
+  simp [defnImg, recImg, rec_unfold]
+
 end L.CI
