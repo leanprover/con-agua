@@ -229,11 +229,13 @@ def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, 
   return (0, e)
 }
 
-/-- The mode's `whnfCore` memo at `e`: `(1, x)` a hit, `(0, 0)` a miss (`wk` in the cheap mode,
-`wc` otherwise, at the mode's eager bit). -/
+/-- The loop's lookup: at a key, the mode's `whnfCore` memo at `e`: `(1, x)` a hit, `(0, 0)` a miss
+(`wk` in the cheap mode, `wc` otherwise, at the mode's eager bit); `(0, 0)` at a non-key. -/
+-- con-ron: ConRon/Arena/Core.lean:2886-2890 ConRon.Arena.whnfCoreLookupAt
 -- con-ron: ConRon/Arena/Core.lean:2880-2884 ConRon.Arena.whnfCoreLookup
-@[no_expose, l_impl ConRon.Arena.whnfCoreLookup]
-def whnfCoreLookupL : FunDecl := lfn (mode, cheap, e) locals (fd, j, dd) {
+@[no_expose, l_impl ConRon.Arena.whnfCoreLookupAt ConRon.Arena.whnfCoreLookup]
+def whnfCoreLookupL : FunDecl := lfn (mode, key, cheap, e) locals (fd, j, dd) {
+  if key == 0 { return (0, 0) };
   if cheap != 0 {
     (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
     if fd != 0 { return (1, WKM.u64[j * 4 + 3]) };
