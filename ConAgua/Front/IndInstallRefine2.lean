@@ -4,7 +4,6 @@ public import ConAgua.Front.IndInstallRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Front.IndApplyRefine
-import ConAgua.Front.IndApplyRefine2
 import ConAgua.L.WordOff
 
 @[expose] public section

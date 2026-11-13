@@ -46,6 +46,23 @@ theorem decTbl_of {R : Nat → Option Word} {p : Nat} {t : IProjTable}
     (h6 : hlist? R (p + ProjTbl.bodiesOff.toNat) = some t.bodies.toList) : decTbl R p = some t :=
   decTbl_eq_some.mpr ⟨h1, h2, h3, h4, h5, h6⟩
 
+/-- **A table's words decode** (a writer's field words, its two slices given). -/
+theorem decTbl_of_words {R : Nat → Option Word} {p : Nat} {sn lo ll np c nf bo bl : Word}
+    {lps : List NIdx} {bs : Array EIdx}
+    (h2 : R (p + ProjTbl.structName.toNat) = some sn) (h3 : R (p + ProjTbl.lpsOff.toNat) = some lo)
+    (h4 : R (p + ProjTbl.lpsLen.toNat) = some ll) (h5 : R (p + ProjTbl.numParams.toNat) = some np)
+    (h6 : R (p + ProjTbl.ctor.toNat) = some c) (h7 : R (p + ProjTbl.numFields.toNat) = some nf)
+    (h9 : R (p + ProjTbl.bodiesOff.toNat) = some bo) (h10 : R (p + ProjTbl.bodiesLen.toNat) = some bl)
+    (hsn : sn.toNat < 2 ^ 32) (hc : c.toNat < 2 ^ 32) (hl : hslice? R lo.toNat ll.toNat = some lps)
+    (hb : hslice? R bo.toNat bl.toNat = some bs.toList) :
+    decTbl R p = some ⟨decI sn, lps, np.toNat, decI c, nf.toNat, bs⟩ := by
+  have h4' : R (p + ProjTbl.lpsOff.toNat + 1) = some ll := by
+    rw [Nat.add_assoc, ← ProjTbl.lpsLen_toNat]; exact h4
+  have h10' : R (p + ProjTbl.bodiesOff.toNat + 1) = some bl := by
+    rw [Nat.add_assoc, ← ProjTbl.bodiesLen_toNat]; exact h10
+  exact decTbl_of (by simp [hd?, h2, hsn]) (by simp [hlist?, nat?, h3, h4', hl])
+    (by simp [nat?, h5]) (by simp [hd?, h6, hc]) (by simp [nat?, h7]) (by simp [hlist?, nat?, h9, h10', hb])
+
 /-- **A decoded `IProjTable` at L's word addresses** `q + ProjTbl.f` (any reader `R` with its word
 read `rd`: the record pool, an array). -/
 theorem decTbl_rd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}

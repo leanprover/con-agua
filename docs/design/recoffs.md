@@ -262,3 +262,56 @@ keyed by the reference binary's hash): REFDIFF 0 for both the master and the com
 the 8 fixtures and on the full set (no UNSOUND/INCOMPLETE/CRASH/TIMEOUT). Nothing on master
 changed; `diff-e2e.py --refs` does not rebuild e2e-ref, so a stale reference can show REFDIFF
 after a twin bump.
+
+## recoffs2
+
+Lane `recoffs2` continues §4's next steps: the perturbation of the remaining layouts, the whole-record
+writers by name, the two compactions, and the stale-reference trap of §6. Helpers `recoffs2-front`
+(the front's writers, `ci_at_lps`, the rule and table writers, the `Decl*` cluster) and
+`recoffs2-rom` (the ROM reader, then the files the whole-library perturbation found).
+
+### The perturbation: `--scale`
+
+A gap cannot perturb a record that embeds another (§5): the constant record embeds the constant
+value, the hint and the caps record, so `CI.cv + CV.size` grows by the gap while the fields after it
+move by the gap only, and they overlap. `layout_perturb.py --scale K` multiplies every offset by
+`K` instead (a slice's length word stays right after its offset word): linear, so the embedded
+records still end where the next field starts. Also new: `--target` (build only some modules and
+their imports), `--keep` (leave the perturbed files for `lake env lean`), no cache writes (the
+perturbed artifacts are of no use), the log kept in `.lake/layout_perturb.log`.
+
+### Writers of a whole record: the record's image
+
+A positional writer model (`wrER m q [w0, …, w7]`) cannot survive a layout with gaps, and the dead
+words of the rule and table records are gaps. The writers are now modelled by the record's *image*:
+`L.recImg size fields : List (Option Word)` (`RecLayout/Img.lean`), the value at each field's
+offset and `none` elsewhere, and `L.Ind.wrERo` (`IndMaster.lean`), which stores the `some`s and
+skips the `none`s. Each layout defines its images (`CV.img`, `CI.defnImg`, `CI.indHdImg`,
+`CI.axImg`, `CI.recInfoImg`, `Rule.img`); the one proof per writer that
+its stores are the image is computational (`simp [wrERo, …Img, recImg, rec_unfold, UInt64.add_assoc]`:
+it re-evaluates for every layout), everything after it goes through `erRecO_stage`/`wrERo_fresh`
+(`QuotFns.lean`), the image's get lemmas and the `…RecW` field-word lemma sets (`CVRecW`,
+`RuleRecW`, `CapsRecW`). `erRecO_words`: every word of the record's region can be read (the words
+between the fields included), for the `RuleWordsIn` facts. Shared writer modules: `RecInfoW.lean`
+(the `.recInfo` records of `rec_info_rec` and `class_fe_r_rec`), `axRec_core` in `DeclValsE.lean`
+(the fresh `axiomInfo` records of `check_constant_val` and `class_const_ok_lit`).
+
+### L changes (`checker.s` regenerated; verdicts identical)
+
+* `ind_info_rec`'s header: `er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, …)` (five consecutive words) is
+  `er_put_ci(q, 3, cv)`, the kind word and the constant value's fields by name.
+* The rule record's dead words are no longer stored by `parse_rule_d`, `rules_at_lps_go`,
+  `generated_rule_nested` and `rule_copy` (8 fields, not 11 words).
+* Literal offsets left in L text: the constant's name read in `hoist_names_go`, `decl_declares_go`,
+  `decl_key` (`+ 1` → `+ ⟪CI.cv⟫`), `idx_tables`' `EREC⦃q + 2⦄` (`ProjTbl.structName`).
+* The rule-count guards of `ind_rec_copy` and `ci_at_lps` are `2^57`, not `2^60`: `Rule.size * n`
+  must not wrap for any `Rule.size ≤ 64` (the layout's only stated bound), as the ROM reader's.
+  Unreachable counts either way (2^57 rule records do not fit in memory).
+
+### `diff-e2e.py --refs` and stale references (§6)
+
+`diff-e2e.py --refs` now builds `e2e-ref` (`scripts/lake build e2e-ref`) when it is missing or older
+than `vendor/UPSTREAM` or `pins.bin` (every twin bump rewrites both), and refuses a con-ron whose
+build tree (a git checkout, the default `_tmp/ref/con-ron-integrate`) is not at `vendor/UPSTREAM`'s
+con-ron revision or whose binary is older than that commit (no cargo here to rebuild it). The main
+checkout's `e2e-ref` was in fact stale again when this landed (built 14:29, ronsync5 at 15:29).

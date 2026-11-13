@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IlpRd
-import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.DeclCanonLvl
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv

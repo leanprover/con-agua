@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.L.Syntax
 public import ConAgua.Arena.RecLayout.Attr
 public import ConAgua.Arena.RecLayout.Img
 

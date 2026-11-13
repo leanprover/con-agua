@@ -425,7 +425,7 @@ end rel
 /-! ## The `abstract1` memo across the rules' writers -/
 
 theorem ruleMem_afr (m : Mem) (q nm nF rO : Word) : AFr m (ruleMem m q nm nF rO) := by
-  rw [ruleMem_eq]; exact wrER_afr _ m q
+  rw [ruleMem_eq]; exact AFr.of_frame (wrERo_frame _ m q)
 
 theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List Word),
     rgoW n m cO cL rO rL o = some (r, m') → AFr m m'

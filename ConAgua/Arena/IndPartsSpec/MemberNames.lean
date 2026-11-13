@@ -15,7 +15,6 @@ import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.Arena.SimLib
 import ConAgua.L.WordOff
-import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
