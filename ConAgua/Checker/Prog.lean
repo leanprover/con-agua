@@ -891,7 +891,7 @@ def checkerProg : Prog := [
   ("er_copy_er", L.Ind.erCopyEr),
   ("er_from_iw", L.Ind.erFromIw),
   ("er_from_iw_go", L.Ind.erFromIwGo),
-  ("er_put5", L.Ind.erPut5),
+  ("er_put_ci", L.Ind.erPutCi),
   ("er_sl_at", L.Ind.erSlAt),
   ("er_sl_eq", L.Ind.erSlEq),
   ("er_slice_eq", L.Arena.erSliceEqL),
