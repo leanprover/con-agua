@@ -18,7 +18,7 @@ public import ConAgua.Verdict.WhnfModels2E
 run (`callE`), the family's own callees through their unified models, every other callee (outside
 the verdict closure) through its `Option` model. Each `…_ref` refines the twin's arm for both
 outcomes (`RefE` with `CorePost`): the errors claim the twin's failures under the `whnf` slot's
-claims (`KnotUpToE`); `reduce_nat_wf`'s safety net declines on two literals (`redWfS`). The ok
+claims (`KnotUpToE`). The ok
 halves are `ReduceNatSpec'` (`reduceNat_refines`), the error half `ReduceNatE` (`reduceNatE_of`).
 -/
 
@@ -41,9 +41,9 @@ theorem CorePost.relist {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {
 
 /-! ## `reduceNat`'s arms at the new twin
 
-con-ron's `reduceNat` (`ConRon/Arena/Core.lean`) split at the L code's functions, as
-`WhnfDeltaRefine3/4`'s `redSuccT` … `redHeadT`, at the new twin: the successor arm asks
-`natLitStored`, the safety net no guard beyond `natOpWfNames`. -/
+con-ron's `reduceNat` (`ConRon/Arena/Core.lean`) split at the L code's functions: the successor
+arm (`redSuccS`), the application arm (`redAppS`: the operation found once, `natBinOpOfName?`,
+then `WhnfDeltaRefine3`'s `redOpT`). -/
 
 /-- The successor arm of `reduceNat`. -/
 def redSuccS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (b : EIdx) :
@@ -54,26 +54,6 @@ def redSuccS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (b : EIdx) :
     | some n => litNatSized (n + 1)
     | none => pure none
   else pure none
-
-/-- The safety-net arm of `reduceNat`. -/
-def redWfS (r : CoreFnsA) (depth : Nat) (c : NIdx) (a b : EIdx) : AM (Option EIdx) := do
-  let wf ← natOpWfNames
-  if wf.contains c then do
-    match ← rawNatLit? (← r.whnf depth a) with
-    | some _ => do
-      match ← rawNatLit? (← r.whnf depth b) with
-      | some _ =>
-        fail (.notImplemented "native Nat computation on literals")
-      | none => pure none
-    | none => pure none
-  else pure none
-
-/-- The binary arm of `reduceNat`, past the level test. -/
-def redBinS (r : CoreFnsA) (depth : Nat) (c : NIdx) (a b : EIdx) : AM (Option EIdx) := do
-  if ← natBinOpName c then
-    redOpT r depth c a b
-  else
-    redWfS r depth c a b
 
 /-- The `.const c us` arm of `reduceNat`'s `match ← view f`. -/
 def redConstS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (us : LsIdx) (b : EIdx) :
@@ -87,7 +67,10 @@ def redAppS (r : CoreFnsA) (depth : Nat) (g a b : EIdx) : AM (Option EIdx) := do
     match ← view g with
     | .const c us => do
       let el ← emptyLevels
-      if us != el then pure none else redBinS r depth c a b
+      if us != el then pure none else
+        match ← natBinOpOfName? c with
+        | some op => redOpT r depth op a b
+        | none => pure none
     | _ => pure none
   else pure none
 
@@ -193,10 +176,10 @@ include hp in
 normalizations'. -/
 theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hc : HW c) (ha : HW a) (hb : HW b) :
-    RefE (KnotUpToE p n) (reduceNatOpE p n s₀.mem mode vis d c a b)
-      (redOpT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decI c) (decE a) (decE b)) a₀
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d : Word) (op : NatBinOp) (a b : Word)
+    (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (ha : HW a) (hb : HW b) :
+    RefE (KnotUpToE p n) (reduceNatOpE p n s₀.mem mode vis d (natBinOpW op) a b)
+      (redOpT (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat op (decE a) (decE b)) a₀
       (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   cases n with
   | zero => rw [reduceNatOpE.eq_1]; exact RefE.of_cls0 (by simp)
@@ -235,86 +218,21 @@ theorem reduceNatOp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     (r₄.tail.headD 0).toNat (r₄.tail.tail.headD 0).toNat) by unfold rawDec; rw [ite_eq_right hf4]]
   obtain ⟨hsl2', hpv2, hnorm2'⟩ := hSt₃.pool.slice (hslice2 hf2).1 (hslice2 hf2).2
   rw [← hpv2]
-  refine RefE.onlySim (fun _ => reduceNatOpE.k_nat_op_result.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
-  obtain ⟨s₅, hs₅, -, hok5, href5⟩ := triple_of_callW (hno n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb c _ _ _ _ hS₃ hc
+  refine RefE.onlySim (fun _ => reduceNatOpE.k_nat_bin_op_result.none ..) (fun _ _ h => h) fun r₅ m₅ h5 => ?_
+  obtain ⟨s₅, hs₅, -, hok5, href5⟩ := triple_of_callW (hno n ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb op _ _ _ _ hS₃
     hsl2' (hslice4 hf4).1 hnorm2' (hslice4 hf4).2) h5
   by_cases h2 : r₅.headD 0 = 2
   · have he := href5 h2
-    simp only [reduceNatOpE.k_nat_op_result, h2, ↓reduceIte]
+    simp only [reduceNatOpE.k_nat_bin_op_result, h2, ↓reduceIte]
     repeat' split
     all_goals exact RefE.natRefused (by decide) he
-  rw [reduceNatOpE.k_nat_op_result.arm1 _ _ _ h2]
+  rw [reduceNatOpE.k_nat_bin_op_result.arm1 _ _ _ h2]
   have hP5 := hok5 h2
   rw [hs₅] at hP5
   have hrun5 := AM.run_of_ok _ _ hP5.run
   rw [hP5.res] at hrun5
   exact RefE.ret hrun5 ⟨hP5.after, (by simp only [decOptR, id, List.headD_cons,
     List.tail_cons, decOpt_norm]), resW_norm _ _⟩
-
-include hp in
-/-- **`reduce_nat_wf` refines `redWfS`, both outcomes**: two literals decline (the twin's safety
-net), the other errors are the operands' head normalizations'. -/
-theorem reduceNatWf_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
-    (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hc : HW c) (ha : HW a) (hb : HW b) :
-    RefE (KnotUpToE p n) (reduceNatWfE p n s₀.mem mode vis d c a b)
-      (redWfS (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decI c) (decE a) (decE b)) a₀
-      (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
-  have hC := hS.rel
-  cases n with
-  | zero => rw [reduceNatWfE.eq_1]; exact RefE.of_cls0 (by simp)
-  | succ n =>
-  rw [reduceNatWfE.arm1]; unfold redWfS
-  refine RefE.onlySim (fun _ => reduceNatWfE.k_nat_op_is_wf.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
-  obtain ⟨s₁', hs₁', hm₁, -, -, hwfsel, -⟩ := triple_of_callW
-    (natOpIsWfL_spec p hp.natOpIsWf n ⟨s₀.mem, Locals.init []⟩ c) h1
-  obtain rfl : m₁ = s₀.mem := by rw [← hs₁', hm₁]
-  refine RefE.bind_right (natOpWfNames_run hC.pins) ?_
-  have hb₂ : ([decI (pinW s₀.mem 22), decI (pinW s₀.mem 23), decI (pinW s₀.mem 24),
-      decI (pinW s₀.mem 25), decI (pinW s₀.mem 26), decI (pinW s₀.mem 27), decI (pinW s₀.mem 28),
-      decI (pinW s₀.mem 29)] : List NIdx).contains (decI c) = decide (r₁.headD 0 ≠ 0) := by
-    rw [wfContains hC.pins c hc, ← hwfsel]
-    exact Bool.eq_iff_iff.mpr (by simp [bne_iff_ne])
-  by_cases hgo : r₁.headD 0 ≠ 0
-  case neg =>
-    rw [reduceNatWfE.k_nat_op_is_wf.arm2 _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hgo), reduceNatWfE.j1]
-    exact RefE.ite_neg (by rw [hb₂, decide_eq_false hgo]; decide) (RefE.ret rfl (CorePost.ret hC rfl resW_zero))
-  rw [reduceNatWfE.k_nat_op_is_wf.arm1 _ _ _ _ _ _ _ _ _ hgo]
-  refine RefE.ite_pos (by rw [hb₂, decide_eq_true hgo]) ?_
-  have hSP₂ : SlotPre ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode := ⟨hC, hS.mode4, hS.eb_mode⟩
-  refine RefE.bind_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => reduceNatWfE.k_whnf.none ..)
-    ((hk n (by omega)).whnf F _ _ dn vis fe MM eb mode d a (by omega) (by omega) hSP₂ ha)
-    (fun hkE => (hkE n (by omega)).whnf F _ _ dn vis fe MM eb mode d a (by omega) (by omega) hSP₂ ha)
-    fun r₃ m₃ _ h3 => RefE.after_core (w := id) h3 fun M₃ hS₃ _ => ?_
-  rw [reduceNatWfE.k_whnf.arm1]
-  refine RefE.onlySim (fun _ => reduceNatWfE.k_raw_nat_lit.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
-  obtain ⟨rfl, hrun4, -, -⟩ := callW_rawNatLit p hp n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb _
-    hS₃ h3.resOk r₄ m₄ h4
-  refine RefE.bind_right hrun4 ?_
-  by_cases hf4 : r₄.headD 0 = 0
-  · rw [reduceNatWfE.k_raw_nat_lit.arm2 _ _ _ _ _ _ _ _ hf4, reduceNatWfE.j1,
-      show rawDec m₄ r₄ = none by unfold rawDec; rw [ite_eq_left hf4]]
-    exact RefE.ret rfl (CorePost.ret hS₃ rfl resW_zero)
-  rw [reduceNatWfE.k_raw_nat_lit.arm1 _ _ _ _ _ _ _ _ hf4, show rawDec m₄ r₄ = some (pv (vpool m₄)
-    (r₄.tail.headD 0).toNat (r₄.tail.tail.headD 0).toNat) by unfold rawDec; rw [ite_eq_right hf4]]
-  have hSP₄ : SlotPre ⟨m₄, Locals.init []⟩ _ dn vis fe M₃ eb mode := ⟨hS₃, hS.mode4, hS.eb_mode⟩
-  refine RefE.bind_callE (s₀ := ⟨m₄, Locals.init []⟩) (fun _ => reduceNatWfE.k_whnf_2.none ..)
-    ((hk n (by omega)).whnf F _ _ dn vis fe M₃ eb mode d b (by omega) (by omega) hSP₄ hb)
-    (fun hkE => (hkE n (by omega)).whnf F _ _ dn vis fe M₃ eb mode d b (by omega) (by omega) hSP₄ hb)
-    fun r₅ m₅ _ h5 => RefE.after_core (w := id) h5 fun M₅ hS₅ _ => ?_
-  rw [reduceNatWfE.k_whnf_2.arm1]
-  refine RefE.onlySim (fun _ => reduceNatWfE.k_raw_nat_lit_2.none ..) (fun _ _ h => h) fun r₆ m₆ h6 => ?_
-  obtain ⟨rfl, hrun6, -, -⟩ := callW_rawNatLit p hp n ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb _
-    hS₅ h5.resOk r₆ m₆ h6
-  refine RefE.bind_right hrun6 ?_
-  by_cases hf6 : r₆.headD 0 = 0
-  · rw [reduceNatWfE.k_raw_nat_lit_2.arm1 _ _ _ hf6, reduceNatWfE.j1,
-      show rawDec m₆ r₆ = none by unfold rawDec; rw [ite_eq_left hf6]]
-    exact RefE.ret rfl (CorePost.ret hS₅ rfl resW_zero)
-  rw [reduceNatWfE.k_raw_nat_lit_2.abort1 _ _ _ hf6, show rawDec m₆ r₆ = some (pv (vpool m₆)
-    (r₆.tail.headD 0).toNat (r₆.tail.tail.headD 0).toNat) by unfold rawDec; rw [ite_eq_right hf6]]
-  exact fun _ => ErrClaim.fail _ _ rfl
 
 include hp in
 /-- **`reduce_nat_k` refines `redHeadS` at a constant head, both outcomes** (`redConstS`; the
@@ -356,7 +274,7 @@ theorem reduceNatK_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
 
 include hp in
 /-- **`reduce_nat_ap` refines `redHeadS` at an application head, both outcomes** (`redAppS`; the
-errors are `reduce_nat_op`'s or `reduce_nat_wf`'s). -/
+errors are `reduce_nat_op`'s). -/
 theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
     (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode)
@@ -396,26 +314,27 @@ theorem reduceNatAp_ref (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F) (hn2 
     exact RefE.ite_pos (by rw [hb₁, decide_eq_false hne]; rfl) (RefE.ret rfl (CorePost.ret hC rfl resW_zero))
   rw [reduceNatApE.k_pin_word.arm2 _ _ _ _ _ _ _ _ _ _ _ (by simpa using hne)]
   refine RefE.ite_neg (by rw [hb₁]; simpa using hne) ?_
-  unfold redBinS
-  refine RefE.onlySim (fun _ => reduceNatApE.k_nat_bin_op_name.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
-  obtain ⟨t₂, ht₂, hm₂, -, hsel2, -⟩ := triple_of_callW
-    (natBinOpNameL_spec p hp.natBinOpName n ⟨s₀.mem, Locals.init []⟩ hflag cw) h2
+  refine RefE.onlySim (fun _ => reduceNatApE.k_nat_bin_op_of_name.none ..) (fun _ _ h => h)
+    fun r₂ m₂ h2 => ?_
+  obtain ⟨t₂, ht₂, hm₂, -, hsel2⟩ := triple_of_callW
+    (natBinOpOfNameL_spec p hp.natBinOpOfName n ⟨s₀.mem, Locals.init []⟩ hflag cw) h2
   obtain rfl : m₂ = s₀.mem := by rw [← ht₂, hm₂]
-  refine RefE.bind_right (natBinOpName_run hC.pins cw hnl) ?_
+  refine RefE.bind_right (natBinOpOfName_run hC.pins cw hnl) ?_
   have hSP : SlotPre ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode := ⟨hC, hS.mode4, hS.eb_mode⟩
-  by_cases hgo : r₂.headD 0 ≠ 0
-  · rw [reduceNatApE.k_nat_bin_op_name.arm1 _ _ _ _ _ _ _ _ _ _ hgo]
-    refine RefE.ite_pos (by rw [← hsel2]; simpa using hgo) ?_
+  cases hop : natBinOpOfSel (pinW s₀.mem) cw with
+  | none =>
+    rw [hop] at hsel2
+    rw [reduceNatApE.k_nat_bin_op_of_name.arm1 _ _ _ _ _ _ _ _ _ (by rw [hsel2]; rfl)]
+    exact RefE.ret rfl (CorePost.ret hC rfl resW_zero)
+  | some op =>
+    rw [hop] at hsel2
+    rw [reduceNatApE.k_nat_bin_op_of_name.arm2 _ _ _ _ _ _ _ _ _
+      (by rw [hsel2]; exact natBinOpW_ne_zero op)]
+    simp only [hsel2, natBinOpOptW]
     exact RefE.tail_eq (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
       (fun h => h.mono (by omega)) rfl (CorePost.relist (MemFrame.refl _ _ _))
       (reduceNatOp_ref p hp hno n F (by omega) (by omega) (hk.mono (by omega))
-        ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode d cw xw b hSP hnl hxw hb)
-  · rw [reduceNatApE.k_nat_bin_op_name.arm2 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hgo)]
-    refine RefE.ite_neg (by rw [← hsel2]; simpa using hgo) ?_
-    exact RefE.tail_eq (reduceNatApE.k_reduce_nat_op.none p) (fun v => reduceNatApE.k_reduce_nat_op.arm1 p v.1 v.2)
-      (fun h => h.mono (by omega)) rfl (CorePost.relist (MemFrame.refl _ _ _))
-      (reduceNatWf_ref p hp n F (by omega) (by omega) (hk.mono (by omega))
-        ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode d cw xw b hSP hnl hxw hb)
+        ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode d op xw b hSP hxw hb)
 
 include hp in
 /-- **`reduce_nat_head` refines `redHeadS`, both outcomes** (the errors are `reduce_nat_k`'s or

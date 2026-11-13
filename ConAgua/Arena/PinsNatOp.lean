@@ -173,6 +173,8 @@ theorem rdW_PINS_ofNat (m : Mem) (k : Nat) :
   simp only [rdW, pinW]
   rfl
 
+-- fourteen arms, one `vcgen` each, then plain `grind` per goal
+set_option maxHeartbeats 2000000 in
 /-- **`nat_bin_op_result` refines `natBinOpResult`** under any relation `R` its arms keep
 (`NatArmsR`), and the filled pin table (the `beq`/`ble` arms' pins, the maximum `Nat` size): the dispatch on the operation's code and
 every arm. The operands are normalised slices (every `lit` record's is). -/
