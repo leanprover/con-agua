@@ -11,17 +11,11 @@ import ConAgua.Arena.DerRel
 @[expose] public section
 
 /-!
-# The knot's `whnfCore` slot: stuck tags, the memo, the body
-
-`whnf_core(mode, cheap, vis, d, e)` (`WhnfCore.lean`) refines the `whnfCore` slot of
-`coreKnot mode eager fe id (F + 1)`: a stuck tag answers `e` without touching memo or store
-(`whnfCoreStuckTag`, `stuck_iff`), a memo hit (`whnfCoreCheapC` in the cheap mode, `whnfCoreC`
-otherwise, at the current generation) answers the entry, a miss runs `whnf_core_loop` (the
-body, `whnfCoreBody … (coreKnot … F)`), records it and answers it.
+# The knot's `whnfCore` slot: stuck tags, the mode memos
 
 Here: the tags, the memo's model `memoSlotW` (the other memo slots' pattern), the relation across a
-mode memo's `find; put`, the twin's slot runs. The refinement is `core_ref` (`WhnfCoreLoop.lean`),
-over the unified model, with the memo lemmas of `CoreRefine.lean`.
+mode memo's `find; put`. Since con-ron's #572 the `whnfCore` slot is the loop itself, which runs the
+memo (`WhnfCore.lean`); the refinement is `core_ref` (`WhnfCoreLoop.lean`).
 -/
 
 open ConRon.Arena
@@ -200,44 +194,6 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       (hS.den.frameE (hf.arr EREC (by decide) (by decide))).caches rfl rfl rfl,
       hS.mode.frame hf (by simp) (by simp), hS.iwF hf⟩,
     StackKept.of_frame hf⟩
-
-/-! ## The twin's slot -/
-
-section twin
-variable (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (c : Bool) (d : Nat) (e : EIdx)
-  (a : AState)
-
-theorem knot_whnfCore_stuck (h : whnfCoreStuckTag e = true) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore c d e).run a = .ok (e, a) := by
-  sorry
-
-theorem knot_whnfCore_hitK (h : whnfCoreStuckTag e = false) (x : EIdx)
-    (hm : a.caches.whnfCoreCheapC[e]? = some x) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a = .ok (x, a) := by
-  sorry
-
-theorem knot_whnfCore_hitF (h : whnfCoreStuckTag e = false) (x : EIdx)
-    (hm : a.caches.whnfCoreC[e]? = some x) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a = .ok (x, a) := by
-  sorry
-
-theorem knot_whnfCore_missK (h : whnfCoreStuckTag e = false)
-    (hm : a.caches.whnfCoreCheapC[e]? = none) (x : EIdx) (a₁ : AState)
-    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe true d e).run a = .ok (x, a₁)) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a =
-      .ok (x, { a₁ with caches := { a₁.caches with
-        whnfCoreCheapC := a₁.caches.whnfCoreCheapC.insert e x } }) := by
-  sorry
-
-theorem knot_whnfCore_missF (h : whnfCoreStuckTag e = false)
-    (hm : a.caches.whnfCoreC[e]? = none) (x : EIdx) (a₁ : AState)
-    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe false d e).run a = .ok (x, a₁)) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a =
-      .ok (x, { a₁ with caches := { a₁.caches with
-        whnfCoreC := a₁.caches.whnfCoreC.insert e x } }) := by
-  sorry
-
-end twin
 
 /-! ## The slot refines the twin's slot -/
 
