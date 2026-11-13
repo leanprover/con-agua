@@ -60,7 +60,7 @@ theorem decTbl_of_words {R : Nat → Option Word} {p : Nat} {sn lo ll np c nf bo
     rw [Nat.add_assoc, ← ProjTbl.lpsLen_toNat]; exact h4
   have h10' : R (p + ProjTbl.bodiesOff.toNat + 1) = some bl := by
     rw [Nat.add_assoc, ← ProjTbl.bodiesLen_toNat]; exact h10
-  exact decTbl_of (by simp [hd?, h2, hsn]) (by simp [hlist?, nat?, h3, h4', hl])
+  exact decTbl_of (by simp only [hd?, h2, Option.bind_some]; simp [hsn]) (by simp [hlist?, nat?, h3, h4', hl])
     (by simp [nat?, h5]) (by simp [hd?, h6, hc]) (by simp [nat?, h7]) (by simp [hlist?, nat?, h9, h10', hb])
 
 /-- **A decoded `IProjTable` at L's word addresses** `q + ProjTbl.f` (any reader `R` with its word

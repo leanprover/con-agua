@@ -1525,8 +1525,8 @@ theorem envPushTable_refines (hs : p.lookup "tbl_own_set" = some tblOwnSetL)
       s'.mem = tblSet s₀.mem (erecRd s₀.mem (q + ProjTbl.structName)) (q + 1); ⊤⦄ :=
   triple_post (envPushTable_spec p hs hp n s₀ q) fun r s ⟨h1, h2, h3, h5, h6⟩ => by
     obtain ⟨w, hw, -, -⟩ := decTbl_name htb
-    have hq : (q + ProjTbl.structName).toNat = q.toNat + ProjTbl.structName.toNat := by
-      have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
+    have hq : (q + ProjTbl.structName).toNat = q.toNat + ProjTbl.structName.toNat :=
+      off_add_toNat rfl (erecP_lt64 hw)
     have hr : erecRd s₀.mem (q + ProjTbl.structName) = w := erecRd_of (by rw [hq]; exact hw)
     rw [hr] at h5 h6
     exact ⟨h2, by rw [h1, hr]; exact hE.pushTable htb hw h5 h6, h1⟩
