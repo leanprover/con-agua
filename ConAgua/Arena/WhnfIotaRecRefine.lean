@@ -16,6 +16,7 @@ public import ConAgua.Arena.WhnfIotaRefine4
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.WhnfIotaRec
 public import ConAgua.Arena.FormerNZRef
+public import ConAgua.Arena.ErecRdCV
 import ConAgua.Arena.FuelConsts
 import ConAgua.Arena.IndLibSpec
 
@@ -76,22 +77,25 @@ theorem iotaRecVckT_eq (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx) (args : 
       else pure false) := by
   simp only [iotaRecVckT, iotaRecCmpT, bind_assoc]
 
-/-- The certificate family (`isK` the recursor record's). -/
-def iotaRecFamT (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
-    (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) : AM Bool :=
-  if mode.verifiedChecks then do
+/-- The certificate family (`isK` the recursor record's, `induct` the constructor's family): the
+stored facts first (`iotaNoCert`), then case 3. -/
+def iotaRecFamT (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx)
+    (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) :
+    AM Bool :=
+  if !mode.verifiedChecks then pure true
+  else if iotaNoCert fe isK induct (recFireLevelCount rl cvj.levelParams) then pure true
+  else do
     let cmpL ← recFireLevels rl lps us cvj.levelParams
-    if ← iotaCase3At r fe isK cvj cmpL then
+    if ← iotaCase3At r fe isK induct cmpL then
       iotaRecVckT r fe depth mI rP cnP lps us args usj cvj rl margs cmpL
     else pure true
-  else pure true
 
 /-- The fire past the major's arguments. -/
-def iotaRecFire2T (c : NIdx) (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx)
-    (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) (margs : List EIdx) :
-    AM (Option EIdx) :=
+def iotaRecFire2T (c : NIdx) (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps : List NIdx)
+    (us : LsIdx) (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule)
+    (margs : List EIdx) : AM (Option EIdx) :=
   if margs.length = cnP + rl.nfields then do
-    let fam ← iotaRecFamT mode r fe depth isK mI rP cnP lps us args usj cvj rl margs
+    let fam ← iotaRecFamT mode r fe depth isK induct mI rP cnP lps us args usj cvj rl margs
     if fam then do
       let rhs ← ruleRhsAt c rl.ctor lps rl.rhs us
       let x ← mkAppN rhs (args.take rP ++ margs.drop cnP)
@@ -100,11 +104,11 @@ def iotaRecFire2T (c : NIdx) (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (u
   else pure none
 
 /-- The major's arguments, then the fire. -/
-def iotaRecFireT (c : NIdx) (isK : Bool) (mI rP cnP : Nat) (lps : List NIdx) (us : LsIdx)
-    (args : List EIdx) (major : EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule) :
-    AM (Option EIdx) := do
+def iotaRecFireT (c : NIdx) (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps : List NIdx)
+    (us : LsIdx) (args : List EIdx) (major : EIdx) (usj : LsIdx) (cvj : IConstantVal)
+    (rl : IRecRule) : AM (Option EIdx) := do
   let margs ← getAppArgs coreWalkFuel major
-  iotaRecFire2T mode r fe depth c isK mI rP cnP lps us args usj cvj rl margs
+  iotaRecFire2T mode r fe depth c isK induct mI rP cnP lps us args usj cvj rl margs
 
 /-- The major's preparation, its head's constructor, the rule. -/
 def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool)
@@ -116,10 +120,10 @@ def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK
     match ← view hh with
     | .const cj usj =>
       match fe.find? cj with
-      | some (.ctorInfo cvj cnP _ _) =>
+      | some (.ctorInfo cvj cnP _ induct) =>
         match findRule rules cj with
         | some rl =>
-          iotaRecFireT mode r fe depth c isK mI rP cnP cv.levelParams us args major usj cvj rl
+          iotaRecFireT mode r fe depth c isK induct mI rP cnP cv.levelParams us args major usj cvj rl
         | none => pure none
       | _ => pure none
     | _ => pure none
@@ -153,9 +157,10 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
         | none => failDanglingE
         | some (c, us) => iotaRecCT mode r fe depth c us sargs n
       else pure none := by
-  unfold iotaRecAt
-  split
-  · congr 1; funext x
+  rw [iotaRecAt]
+  by_cases hT : (hd.tag == ETag.const) = true
+  · rw [if_pos hT, if_pos hT]
+    congr 1; funext x
     rcases x with _ | ⟨c, us⟩
     · rfl
     · unfold iotaRecCT
@@ -193,7 +198,7 @@ theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
                       bind_assoc, L.Arena.ite_bind, pure_bind]
               · rw [ite_eq_right ht, ite_eq_right ht]
             · rw [ite_eq_right hc, ite_eq_right hc]
-  · rfl
+  · rw [if_neg hT, if_neg hT]
 
 end twin
 
@@ -461,58 +466,6 @@ theorem irRdW {b : Array Word} {q : Word} {w : Word} (hsz : b.size < 2 ^ 63) (c 
     rw [UInt64.toNat_add, hc, Nat.mod_eq_of_lt (by omega)]
   simp only [rdW, this, hb]; rfl
 
-/-- The words of a `ConstantVal` decoded at `q + 1`. -/
-theorem decCV_rd1 {R : Nat → Option Word} {rd : Word → Word} {q : Word} {cv : IConstantVal} (hR : RdOK R rd)
-    (h : decCV R (q.toNat + 1) = some cv) :
-    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) ∧
-      hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams ∧
-      cv.levelParams.length = (rd (q + 3)).toNat ∧
-      HW (rd (q + 4)) ∧ cv.type = decI (rd (q + 4)) := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-    Option.some.injEq] at h
-  obtain ⟨nm, hn, ls, hl, ty, ht, rfl⟩ := h
-  obtain ⟨w1, hw1, hl1, rfl⟩ := hd?_some hn
-  obtain ⟨w4, hw4, hl4, rfl⟩ := hd?_some ht
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
-  obtain ⟨o, ⟨w2, hw2, rfl⟩, c, ⟨w3, hw3, rfl⟩, hs⟩ := hl
-  have e1 : rd (q + 1) = w1 := hR.at 1 rfl hw1
-  have e2 : rd (q + 2) = w2 := hR.at 2 rfl (by rw [← hw2]; congr 1)
-  have e3 : rd (q + 3) = w3 := hR.at 3 rfl (by rw [← hw3]; congr 1)
-  have e4 : rd (q + 4) = w4 := hR.at 4 rfl (by rw [← hw4]; congr 1)
-  rw [e1, e2, e3, e4]
-  exact ⟨hl1, rfl, hs, (by simpa using L.Ind.mapM_opt_length _ _ _ hs), hl4, rfl⟩
-
-/-- A recursor record by its kind word `5`. -/
-theorem decCI_rec_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
-    {ci : IConstantInfo} (hR : RdOK R rd) (h : decCI R q.toNat = some ci) :
-    (rd q = 5 → ∃ cv rules, ci = .recInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat (rd (q + 9) != 0)
-      rules ∧ decCV R (q.toNat + 1) = some cv ∧
-      decRules R (rd (q + 7)).toNat (rd (q + 8)).toNat = some rules) ∧
-    (rd q ≠ 5 → ∀ cv mI rP isK rules, ci ≠ .recInfo cv mI rP isK rules) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rd q = w := hR.rd _ _ hq
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  constructor
-  · intro hw; subst hw
-    simp only [show UInt64.toNat 5 = 5 from rfl, bool?, Option.bind_eq_some_iff,
-      Option.map_eq_some_iff] at h
-    obtain ⟨cv, hcv, mI, ⟨w5, hw5, rfl⟩, rP, ⟨w6, hw6, rfl⟩, k, ⟨w9, hw9, rfl⟩, o, ⟨w7, hw7, rfl⟩,
-      c, ⟨w8, hw8, rfl⟩, rules, hrules, hc⟩ := h
-    cases hc
-    have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
-    have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
-    have h7 : rd (q + 7) = w7 := hR.offN (k := 7) (hk := by decide) hw7
-    have h8 : rd (q + 8) = w8 := hR.offN (k := 8) (hk := by decide) hw8
-    have h9 : rd (q + 9) = w9 := hR.offN (k := 9) (hk := by decide) hw9
-    exact ⟨cv, rules, by rw [h5, h6, h9], hcv, by rw [h7, h8]; exact hrules⟩
-  · intro hw cv mI rP isK rules hc
-    subst hc
-    have hne : w.toNat ≠ 5 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
@@ -694,9 +647,9 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hspn := hS.spn
   obtain ⟨-, -, -, -, hfne, -, -, -⟩ := decRule_rd (erRdOK s₀.mem) hrule
   have hk4 : erRd s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
-    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
+    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ _ rfl
   have hcpw : np = (erRd s₀.mem (ctorP + 5)).toNat := by
-    obtain ⟨cv', he⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
+    obtain ⟨cv', he, -⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
     cases he; rfl
   subst hcpw
   unfold iotaRecCmpT
@@ -959,11 +912,11 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   simp only [vckE]
   have hspn := hS.spn
   have hk4 : erRd s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
-    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
-  obtain ⟨_, _, _, e4, hcv⟩ := (decCI_split (erRdOK s₀.mem) hci).2.2.2.2.1 hk4
+    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ _ rfl
+  obtain ⟨_, _, _, _, e4, hcv⟩ := (decCI_split (erRdOK s₀.mem) hci).2.2.2.2.1 hk4
   cases e4
   have hcpw : np = (erRd s₀.mem (ctorP + 5)).toNat := by
-    obtain ⟨cv', he⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
+    obtain ⟨cv', he, -⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
     cases he; rfl
   subst hcpw
   obtain ⟨hnn, hname, hlpsj, -, hty, htype⟩ := decCV_rd1 (erRdOK s₀.mem) hcv

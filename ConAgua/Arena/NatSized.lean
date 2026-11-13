@@ -13,7 +13,7 @@ import ConAgua.Census.Attr
 The twin's `natSizeBytes` (`8 · (log2 n / 64 + 1)`) is read off a normalised slice's limb count,
 `8 · max(l, 1)` (`NatCmpFacts.sizeBytes_pv`); the maximum is `PINS[72]` (`PinsFull.maxNatSize`).
 `lit_nat_sized` refuses a computed numeral above it (`add`, `sub`, `mul`, `succ`), `pow_refused`
-and `shift_left_refused` a `pow` or `shiftLeft` before computing (`natOpResult`'s guards).
+and `shift_left_refused` a `pow` or `shiftLeft` before computing (`natBinOpResult`'s guards).
 
 **The refusals travel as sentinel handles.** The `Nat` arms are outside the verdict closure
 (`nvFns`: they abort only with class-`0` codes), so a refusal is not a `fail` there: the arm

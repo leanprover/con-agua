@@ -250,9 +250,9 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hspn := hS.spn
   obtain ⟨hctw, hctor, hnfw, -, -, -, hrhsw, hrhs⟩ := decRule_rd (erRdOK s₀.mem) hrule
   have hk4 : erRd s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
-    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ rfl
+    (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ _ rfl
   have hcpw : np = (erRd s₀.mem (ctorP + 5)).toNat := by
-    obtain ⟨cv', he⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
+    obtain ⟨cv', he, -⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
     cases he; rfl
   have hmsz : (mo + mn).toNat = mo.toNat + mn.toNat := by
     have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
@@ -739,7 +739,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     have hnc := (decCI_ctorR (erRdOK s₀.mem) hci).2 k4
     cases ci <;> first | exact absurd rfl (hnc _ _ _) | exact RefE.ret rfl (hpost _ ⟨M2, hS2, hK2, hSt12⟩)
   rw [ite_eq_right k4]
-  obtain ⟨cvj, rfl⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 (Classical.not_not.mp k4)
+  obtain ⟨cvj, rfl, -⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 (Classical.not_not.mp k4)
   -- the rule
   have hrules2 : decRules (erecP m2) (erRd s₀.mem (recP + 7)).toNat (erRd s₀.mem (recP + 8)).toNat =
       some rules := by rw [k2.2.2.2]; exact hrules

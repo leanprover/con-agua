@@ -53,7 +53,6 @@ namespace L.Arena
 
 /-- con-leche: `CoreDefs.lean:51-58` `isCtorApp` — the spine's head is a stored constructor. -/
 -- con-ron: ConRon/Arena/Core.lean:332-343 ConRon.Arena.isCtorApp
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.isCtorApp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.isCtorApp]
 def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   hh := call get_app_fn(e);
@@ -118,14 +117,6 @@ and its capabilities at `p + 5` (`eta` `p + 5`, `etaCtor` `p + 6`, `nIdx` `p + 1
 `p + 17`). A zero-ness datum lives on the level heap `LH` (`lv_zero`'s convention), so the core
 writes no `EREC` word (`CoreErec.lean`). -/
 
-/-- The head name of a `const` handle (the view checks, then the stored name). -/
--- con-ron: ConRon/Arena/Core.lean:383-390 ConRon.Arena.ctorFamily
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.ctorFamily` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
-  (t, i) := node CONST⟦hh⟧;
-  return CONST⟨t, i⟩.n
-}
-
 /-- `former_res_sort(ty)`: the sort a stored type ends in, `(1, u)`, or `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Core.lean:345-354 ConRon.Arena.formerResSort
 @[no_expose, l_impl ConRon.Arena.formerResSort]
@@ -177,16 +168,11 @@ def formerNeverZeroL : FunDecl := lfn (p, us) locals (po, pc, t0, w, o, c, vo, v
   return x
 }
 
-/-- `ctor_family(vis, cq)`: the family the constructor record `cq`'s type concludes in, `(1, p)`
-with `p` the inductive's record, or `(0, 0)`. -/
+/-- `ctor_family(vis, T)`: the family stored at a constructor's `induct` `T` (the constructor
+record's word `7`), `(1, p)` with `p` the inductive's record, or `(0, 0)`: one lookup, no walk. -/
 -- con-ron: ConRon/Arena/Core.lean:383-390 ConRon.Arena.ctorFamily
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.ctorFamily` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.ctorFamily]
-def ctorFamilyL : FunDecl := lfn (vis, cq) locals (pr, hh, T, f, q) {
-  pr := call pi_result(EREC⦃cq + 4⦄);
-  hh := call get_app_fn(pr);
-  if ⟦hh⟧.tag != 3 { return (0, 0) };
-  T := call const_name_of(hh);
+def ctorFamilyL : FunDecl := lfn (vis, T) locals (f, q) {
   (f, q) := call env_find(T, vis);
   if f == 0 { return (0, 0) };
   if EREC⦃q⦄ != 3 { return (0, 0) };
@@ -238,21 +224,55 @@ def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
   return r
 }
 
-/-- `iota_case3_at(mode, vis, isK, cq, us)`: case 3 of the ι split: the recursor is not K and the
-constructor `cq`'s family may be `Prop` at the comparand levels `us` (a family not found, or at
-another level count, may). The family is not read at a K recursor. -/
+/-- `iota_case3_at(mode, vis, isK, T, us)`: case 3 of the ι split: the recursor is not K and the
+family stored at the constructor's `induct` `T` may be `Prop` at the comparand levels `us` (a family
+not found, or at another level count, may). The family is not read at a K recursor. -/
 -- con-ron: ConRon/Arena/Core.lean:1980-1999 ConRon.Arena.iotaCase3At
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.iotaCase3At` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.iotaCase3At]
-def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, uso, usl, nz) {
+def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, T, us) locals (ok, p, lp, uso, usl, nz) {
   if isK != 0 { return 0 };
-  (ok, p) := call ctor_family(vis, cq);
+  (ok, p) := call ctor_family(vis, T);
   if ok == 0 { return 1 };
   lp := EREC⦃p + 3⦄;
   (uso, usl) := call ls_node(us);
   if lp != usl { return 1 };
   nz := call former_never_zero_at(mode, vis, p, us);
   return u64(nz == 0)
+}
+
+/-- `iota_no_cert(vis, isK, T, n)`: a rule fires with no certificate, by the stored facts: at a K
+recursor, or where the family stored at the constructor's `induct` `T` records a sort that is never
+zero (`neverZero`, the inductive record's word `12`: its capabilities' word `7`) and has `n` level
+parameters. -/
+-- con-ron: ConRon/Arena/Core.lean:2001-2012 ConRon.Arena.iotaNoCert
+@[no_expose, l_impl ConRon.Arena.iotaNoCert]
+def iotaNoCertL : FunDecl := lfn (vis, isK, T, n) locals (f, q) {
+  if isK != 0 { return 1 };
+  (f, q) := call env_find(T, vis);
+  if f == 0 { return 0 };
+  if EREC⦃q⦄ != 3 { return 0 };
+  if EREC⦃q + 12⦄ == 0 { return 0 };
+  return u64(EREC⦃q + 3⦄ == n)
+}
+
+/-- `rec_fire_level_count(k, lc, cpc)`: how many comparand levels a rule has (`recFireLevelCount`):
+a plain rule (fire kind `k = 0`) the constructor's level-parameter count `cpc`, a nested or
+levels rule its stored level list's length `lc` (the rule record's word `5`). -/
+-- con-ron: ConRon/Arena/Core.lean:2014-2021 ConRon.Arena.recFireLevelCount
+@[no_expose, l_impl ConRon.Arena.recFireLevelCount]
+def recFireLevelCountL : FunDecl := lfn (k, lc, cpc) locals () {
+  if k == 0 { return cpc };
+  return lc
+}
+
+/-- `family_never_zero_at(mode, vis, p, us)`: is the family `p`'s sort never zero at the levels
+`us`: its recorded fact first (`neverZero`, word `p + 12`), else `former_never_zero_at`. -/
+-- con-ron: ConRon/Arena/Core.lean:2023-2029 ConRon.Arena.familyNeverZeroAt
+@[no_expose, l_impl ConRon.Arena.familyNeverZeroAt]
+def familyNeverZeroAtL : FunDecl := lfn (mode, vis, p, us) locals (r) {
+  if EREC⦃p + 12⦄ != 0 { return 1 };
+  r := call former_never_zero_at(mode, vis, p, us);
+  return r
 }
 
 /-- `eta_rescue_table(tq, ctor, cq, p)`: the structure-η rescue's standing condition at use:
@@ -764,7 +784,8 @@ structure IotaProg (p : Prog) : Prop where
   isCtorApp : p.lookup "is_ctor_app" = some isCtorAppL
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
-  constNameOf : p.lookup "const_name_of" = some constNameOfL
+  iotaNoCert : p.lookup "iota_no_cert" = some iotaNoCertL
+  recFireLevelCount : p.lookup "rec_fire_level_count" = some recFireLevelCountL
   formerResSort : p.lookup "former_res_sort" = some formerResSortL
   formerDefHeaded : p.lookup "former_def_headed" = some formerDefHeadedL
   formerZ : p.lookup "former_z" = some formerZL

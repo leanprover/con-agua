@@ -70,16 +70,16 @@ theorem decCI_kind_cases {a : Nat → Option Word} {p : Nat}
   obtain ⟨k, hk, h⟩ := h
   refine ⟨k, hk, ?_⟩
   match k, h with
-  | 0, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 1, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 2, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 3, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 0, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 1, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 2, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 3, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 4, h =>
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, a1, h1, b1, h2, rfl⟩ := h
-    left; exact ⟨rfl, cv, a1, b1, rfl, hcv, h1, h2⟩
-  | 5, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
-  | 6, h => right; refine ⟨by decide, fun cv n f hc => ?_⟩; subst hc; simp_all []
+    obtain ⟨cv, hcv, a1, h1, b1, h2, t1, -, rfl⟩ := h
+    left; exact ⟨rfl, cv, a1, b1, t1, rfl, hcv, h1, h2⟩
+  | 5, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
+  | 6, h => right; refine ⟨by decide, fun cv n f fam hc => ?_⟩; subst hc; simp_all []
   | (_ + 7), h => simp at h
 
 theorem erecP_ext_grow {m m' : Mem} (hg : IWGrow m m') : ArrExt (erecP m) (erA m') := hg.ext
@@ -103,7 +103,7 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
   have hk0 := erec_nat (m := m) (w := ciq) (c := 0) (by simpa using hk) (by decide)
   have e0 : UInt64.ofNat 0 = 0 := rfl
   rw [e0, UInt64.add_zero] at hk0
-  rcases hcases with ⟨rfl, cv, nPc, nF, rfl, hcv, hnP, hnF⟩ | ⟨hne, hnc⟩
+  rcases hcases with ⟨rfl, cv, nPc, nF, fam, rfl, hcv, hnP, hnF⟩ | ⟨hne, hnc⟩
   · have hker : erRd m ciq = 4 := by rw [hk0.1]; rfl
     have hP := erec_nat (m := m) (w := ciq) (c := 5) hnP (by decide)
     have hF := erec_nat (m := m) (w := ciq) (c := 6) hnF (by decide)
@@ -123,10 +123,10 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
     obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erec_hd (m := m) (w := ciq) (c := 1 + 3) hty (by decide)
     have e13 : ciq + 1 + 3 = ciq + UInt64.ofNat (1 + 3) := by rw [UInt64.add_assoc]; rfl
     rw [e13, hwt, hP', hF'] at h
-    refine ⟨?_, fun hh => absurd rfl (hh cv nPc nF)⟩
-    intro cv' nPc' nF' hc
+    refine ⟨?_, fun hh => absurd rfl (hh cv nPc nF fam)⟩
+    intro cv' nPc' nF' fam' hc
     obtain ⟨rfl, rfl, rfl⟩ : cv = cv' ∧ nPc = nPc' ∧ nF = nF' := by
-      simp only [IConstantInfo.ctorInfo.injEq] at hc; exact ⟨hc.1, hc.2.1, hc.2.2⟩
+      simp only [IConstantInfo.ctorInfo.injEq] at hc; exact ⟨hc.1, hc.2.1, hc.2.2.1⟩
     refine ⟨hsum, ?_⟩
     rcases hs : stripF 6 m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with _ | ⟨r1, m1⟩ <;> rw [hs] at h; · rw [stripW.k_strip_pis.none] at h; cases h
     have hk' : (UInt64.ofNat nPc + UInt64.ofNat nF).toNat = nPc + nF := by
@@ -164,7 +164,7 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
       exact hne (by simpa using this)
     rw [stripW.arm1 (hc1 := hker)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    exact ⟨fun cv nPc nF hc => absurd hc (hnc cv nPc nF), fun _ => ⟨rfl, rfl⟩⟩
+    exact ⟨fun cv nPc nF fam hc => absurd hc (hnc cv nPc nF fam), fun _ => ⟨rfl, rfl⟩⟩
 
 l_model nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
     (hv : p.lookup "e_view" = some eView)
@@ -189,8 +189,8 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
   · rw [entryW.k_nest_ctor_entry_strip.none] at h; cases h
   obtain ⟨hctor, hnon⟩ := stripW_ok h0 hS hci
   by_cases hc : ∃ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam
-  · obtain ⟨cv, nPc, nF, rfl⟩ := hc
-    obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl
+  · obtain ⟨cv, nPc, nF, fam, rfl⟩ := hc
+    obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF fam rfl
     cases x with
     | none =>
       simp only [StripOut] at hout
@@ -238,7 +238,7 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
             EStore.viewConst_of_view _ _ ht n0 us0 (hdE ▸ hv)
           have hbeq : (n0 == decI C) = decide (vt.headD 0 = C) := by
             rw [← hn2]; exact decI_beq _ _ hn1 hC
-          have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF)).run a =
+          have htwin : (ConRon.Arena.nestCtorEntry (decI C) (.ctorInfo cv nPc nF fam)).run a =
               .ok (if vt.headD 0 = C then some (cv, nPc, nF) else none, a2) := by
             simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind, hrun1, except_ok_bind, hrun2, ht, beq_self_eq_true, ite_true, L.Ind.viewConst_run, hview, hbeq]
             by_cases hcn : vt.headD 0 = C
@@ -254,13 +254,13 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
             simp only [hcn, ite_false, EntryOut]
-  · have hne : ∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam := fun cv n f hh => hc ⟨cv, n, f, hh⟩
+  · have hne : ∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam := fun cv n f fam hh => hc ⟨cv, n, f, fam, hh⟩
     obtain ⟨rfl, rfl⟩ := hnon hne
     rw [entryW.k_nest_ctor_entry_strip.arm1 (hc1 := rfl)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     cases ci with
-    | ctorInfo cv n f _ => exact absurd ⟨cv, n, f, rfl⟩ hc
+    | ctorInfo cv n f fam => exact absurd ⟨cv, n, f, fam, rfl⟩ hc
     | _ => rfl
 
 l_model nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p)

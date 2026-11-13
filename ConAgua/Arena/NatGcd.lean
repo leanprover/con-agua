@@ -64,9 +64,8 @@ def gcdLoop : Stmt := lblk (oa, la, ob, lb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+/-- con-ron: ConRon/Arena/Core.lean:1118-1151 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
 def natGcd : FunDecl := lfn (oa, la, ob, lb) {
   ⟪gcdLoop⟫;
   return (ob, lb)
