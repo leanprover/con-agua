@@ -328,7 +328,7 @@ theorem nidx_word_inj {n n' : NIdx} (h : n.word.toUInt64 = n'.word.toUInt64) : n
   rw [← decI_word n, ← decI_word n', h]
 
 theorem decTbl_name {a : Nat → Option Word} {p : Nat} {t : IProjTable} (h : decTbl a p = some t) :
-    ∃ w, a (p + 2) = some w ∧ w.toNat < 2 ^ 32 ∧ t.structName = decI w := by
+    ∃ w, a (p + ProjTbl.structName.toNat) = some w ∧ w.toNat < 2 ^ 32 ∧ t.structName = decI w := by
   simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at h
   obtain ⟨n, hn, -, -, -, -, -, -, -, -, -, -, rfl⟩ := h
@@ -705,7 +705,7 @@ theorem erecP_lt64 {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i <
 
 /-- A decoded table record sits below `2^64 - 2`. -/
 theorem decTbl_lt {m : Mem} {p : Nat} {t : IProjTable} (h : decTbl (erecP m) p = some t) :
-    p + 2 < 2 ^ 64 := by
+    p + ProjTbl.structName.toNat < 2 ^ 64 := by
   obtain ⟨w, hw, -, -⟩ := decTbl_name h
   exact erecP_lt64 hw
 
@@ -1038,7 +1038,7 @@ theorem OwnBelow.of_tblSet {m : Mem} {w v : Word} (h : OwnBelow m) : OwnBelow (t
 
 /-- **`pushTable`**: the own table row of the table's structure becomes the record. -/
 theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
-    (htb : decTbl (erecP m) q.toNat = some tb) {w : Word} (hw : erecP m (q.toNat + 2) = some w)
+    (htb : decTbl (erecP m) q.toNat = some tb) {w : Word} (hw : erecP m (q.toNat + ProjTbl.structName.toNat) = some w)
     (ht : rowTag w ≤ 2) (hb : rowIx w + 1 < (m.arr64 (otxArrT w)).size) :
     EnvR (tblSet m w (q + 1)) vis (fe.pushTable tb) := by
   obtain ⟨w', hw', hw32, hname⟩ := decTbl_name htb
@@ -1522,9 +1522,9 @@ theorem envPushTable_spec (hs : p.lookup "tbl_own_set" = some tblOwnSetL)
     (hp : p.lookup "env_push_table" = some envPushTableL) (n : Nat) (s₀ : St) (q : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push_table" [q]
-    ⦃fun r s' => s'.mem = tblSet s₀.mem (erecRd s₀.mem (q + 2)) (q + 1) ∧ LocEq s' s₀ ∧
-      r = [0] ∧ rowTag (erecRd s₀.mem (q + 2)) ≤ 2 ∧
-      rowIx (erecRd s₀.mem (q + 2)) + 1 < (s₀.mem.arr64 (otxArrT (erecRd s₀.mem (q + 2)))).size; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = tblSet s₀.mem (erecRd s₀.mem (q + ProjTbl.structName)) (q + 1) ∧ LocEq s' s₀ ∧
+      r = [0] ∧ rowTag (erecRd s₀.mem (q + ProjTbl.structName)) ≤ 2 ∧
+      rowIx (erecRd s₀.mem (q + ProjTbl.structName)) + 1 < (s₀.mem.arr64 (otxArrT (erecRd s₀.mem (q + ProjTbl.structName)))).size; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, envPushTableL]
   cases n with
@@ -1548,12 +1548,12 @@ theorem envPushTable_refines (hs : p.lookup "tbl_own_set" = some tblOwnSetL)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push_table" [q]
     ⦃fun _ s' => LocEq s' s₀ ∧ EnvR s'.mem vis (fe.pushTable tb) ∧
-      s'.mem = tblSet s₀.mem (erecRd s₀.mem (q + 2)) (q + 1); ⊤⦄ :=
+      s'.mem = tblSet s₀.mem (erecRd s₀.mem (q + ProjTbl.structName)) (q + 1); ⊤⦄ :=
   triple_post (envPushTable_spec p hs hp n s₀ q) fun r s ⟨h1, h2, h3, h5, h6⟩ => by
     obtain ⟨w, hw, -, -⟩ := decTbl_name htb
-    have hq : (q + 2).toNat = q.toNat + 2 := by
+    have hq : (q + ProjTbl.structName).toNat = q.toNat + ProjTbl.structName.toNat := by
       have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
-    have hr : erecRd s₀.mem (q + 2) = w := erecRd_of (by rw [hq]; exact hw)
+    have hr : erecRd s₀.mem (q + ProjTbl.structName) = w := erecRd_of (by rw [hq]; exact hw)
     rw [hr] at h5 h6
     exact ⟨h2, by rw [h1, hr]; exact hE.pushTable htb hw h5 h6, h1⟩
 

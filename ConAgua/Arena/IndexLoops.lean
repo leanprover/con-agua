@@ -270,11 +270,11 @@ theorem itLoop_close {m₀ m m' : Mem} {I : IStreamIndex} {ts : List IProjTable}
   have hvq : q.toNat = v := by subst hq; simp; omega
   rw [← hP, ← hvq] at htb
   obtain ⟨w, hw, -, -⟩ := decTbl_name htb
-  have hw1 : erecP m (q + 2).toNat = some w := by
+  have hw1 : erecP m (q + ProjTbl.structName).toNat = some w := by
     have := erecP_lt64 hw
-    rw [UInt64.toNat_add]; simp only [show (2 : Word).toNat = 2 from rfl]
+    rw [UInt64.toNat_add]
     rw [Nat.mod_eq_of_lt (by omega)]; exact hw
-  have hrd : erecRd m (q + 2) = w := erecRd_of hw1
+  have hrd : erecRd m (q + ProjTbl.structName) = w := erecRd_of hw1
   rw [hrd] at hset hm'
   have hst := IndexR.insertTable hI.idx htb hw hr hset
   refine ⟨by omega, ?_, ?_⟩
