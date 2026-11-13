@@ -156,9 +156,9 @@ theorem ciPre_of {p : Prog} (hP : QuotAtProg p) (n : Nat) {m m1 m2 m3 : Mem} {a 
   obtain ⟨hS2, hg2, hf2⟩ := StageR.putFresh hT.stage hT1.stage hqf1 hg1 (v := k)
     (by rw [hoff]; exact Nat.le_refl _)
   have hT2 : StageT dn vis fe (erecPutMem m1 r k) a := StageT.of_wrER (ws := [k]) hT1 hS2
+  have hax := axiomSize_toNat; have := CV.size_pos; have := CI.cv_pos
   have hkw : erecP (erecPutMem m1 r k) r.toNat = some k :=
     erecP_putMem_self (by omega) (by omega)
-  have hax := axiomSize_toNat; have := CV.size_pos; have := CI.cv_pos
   obtain ⟨e1, eo1, et1⟩ := erAddr (c := CI.cv) (by omega) hr41
   have hcv := ArrExt.decCV hg2.ext (decCI_cv hci)
   have et2 : erTopOf (erecPutMem m1 r k) r = erTopOf m1 r := by
@@ -659,7 +659,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.axiomInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · exact decCI_axiomInfo_iff.mpr ⟨by simp [nat?, hpre.kw],
+    · rw [List.headD_cons]
+      exact decCI_axiomInfo_iff.mpr ⟨by rw [nat?, hpre.kw]; rfl,
         hpre.cvR _ (fun _ _ _ h => h) hpre.grow.ext⟩
   | defnInfo cv v hint =>
     obtain rfl : w = 1 := UInt64.toNat_inj.mp hkd
@@ -733,7 +734,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       have hvh : CI.defnValue.toNat < CI.defnHint.toNat := by decide
       have hhs : CI.defnHint.toNat + Hint.size.toNat ≤ CI.defnSize.toNat := by decide
       have e5 : erecP s'.mem ((r1.headD 0).toNat + CI.defnValue.toNat) = some (r6.headD 0) := by
-        rw [hout8 _ (fun j hj => by unfold erOff at hq htp; omega)]; exact hv7
+        rw [hout8 _ (fun j hj => by unfold erOff at htp; omega)]; exact hv7
       have hd5 : (hd? (erecP s'.mem) ((r1.headD 0).toNat + CI.defnValue.toNat) : Option EIdx) =
           some e6 := by
         simp only [hd?, e5, Option.bind_eq_bind, Option.bind_some, h32, ↓reduceIte, ← hdec6, decH,
@@ -743,7 +744,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [Nat.add_zero] at e0
       have hh : decHint (erecP s'.mem) ((r1.headD 0).toNat + CI.defnHint.toNat) = some hint :=
         decHint_sh e0 e1 hhint
-      exact decCI_defnInfo_iff.mpr ⟨by simp [nat?, hpre8.kw],
+      rw [List.headD_cons]
+      exact decCI_defnInfo_iff.mpr ⟨by rw [nat?, hpre8.kw]; rfl,
         hpre8.cvR _ (fun _ _ _ h => h) hpre8.grow.ext, hd5, hh⟩
   | thmInfo cv =>
     obtain rfl : w = 2 := UInt64.toNat_inj.mp hkd
@@ -757,7 +759,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.thmInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · exact decCI_thmInfo_iff.mpr ⟨by simp [nat?, hpre.kw],
+    · rw [List.headD_cons]
+      exact decCI_thmInfo_iff.mpr ⟨by rw [nat?, hpre.kw]; rfl,
         hpre.cvR _ (fun _ _ _ h => h) hpre.grow.ext⟩
   | indInfo cv caps =>
     obtain rfl : w = 3 := UInt64.toNat_inj.mp hkd
@@ -779,7 +782,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.indInfo cv' caps, a3, ?_, hT4, hg4, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · exact decCI_indInfo_iff.mpr ⟨by simp [nat?, hk4], hcv4,
+    · rw [List.headD_cons]
+      exact decCI_indInfo_iff.mpr ⟨by rw [nat?, hk4]; rfl, hcv4,
         decCaps_congr (fun j hj => hc4 j hj) hg4.ext hcaps⟩
   | ctorInfo cv np nf fam =>
     obtain rfl : w = 4 := UInt64.toNat_inj.mp hkd
@@ -811,7 +815,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.ctorInfo cv' np nf fam, a3, ?_, hT4, hg4, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · exact decCI_ctorInfo_iff.mpr ⟨by simp [nat?, hk4], hcv4,
+    · rw [List.headD_cons]
+      exact decCI_ctorInfo_iff.mpr ⟨by rw [nat?, hk4]; rfl, hcv4,
         nat?_sh (tr _ (Nat.le_refl _) (by omega)) hnp, nat?_sh (tr _ (by omega) (by omega)) hnf,
         hd?_sh (tr _ (by omega) (by omega)) hfam⟩
   | recInfo cv mI rP isK rules =>
@@ -987,9 +992,10 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [L.Arena.except_ok_bind]
       rw [StateT.run_bind, hrun7]
       rfl
-    · exact decCI_recInfo_iff.mpr ⟨by simp [nat?, hpre12.kw],
-        hpre12.cvR _ (fun _ _ _ h => h) hpre12.grow.ext, by simp [nat?, e5], by simp [nat?, e6],
-        by simp [bool?, hv12], _, _, by simp [nat?, e7], by simp [nat?, e8], hrs12⟩
+    · rw [List.headD_cons]
+      exact decCI_recInfo_iff.mpr ⟨by rw [nat?, hpre12.kw]; rfl,
+        hpre12.cvR _ (fun _ _ _ h => h) hpre12.grow.ext, by rw [nat?, e5]; rfl, by rw [nat?, e6]; rfl,
+        by rw [bool?, hv12]; rfl, _, _, by rw [nat?, e7]; rfl, by rw [nat?, e8]; rfl, hrs12⟩
 
 /-- **`CiAtLpsSim` from the rules' simulation.** -/
 theorem ciAtLpsSim_of {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) : CiAtLpsSim p dn :=
