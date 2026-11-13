@@ -7,16 +7,20 @@ public import ConAgua.Arena.ErecRd
 @[expose] public section
 
 /-!
-# `whnfCore`: the knot's slot, the loop, the step, the batched β spine, projections
+# `whnfCore`: the knot's slot (the loop and its memo policy), the step, the stuck spine, the batched β spine, projections
 
 con-ron's head normalisation without δ (`Arena/Core.lean:2140-2395` and the knot's `whnfCore`
 slot, `:3546`), in L:
 
 | L | twin |
 |---|---|
-| `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot: `whnfCoreStuckTag`, the memo (`whnfCoreCheapC` / `whnfCoreC`, at the mode's eager bit), `whnfCoreBody` |
-| `whnf_core_loop(mode, cheap, vis, d, e)` | `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel` (an uncounted L loop) |
-| `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_core_app` |
+| `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot = `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel e #[] #[]` (an uncounted L loop; the pending keys a stack slice) |
+| `whnf_core_lookup_at(mode, key, cheap, e)` | `whnfCoreLookupAt`, `whnfCoreLookup` (`wk`/`wc` at the mode's eager bit) |
+| `whnf_core_store_chain(mode, cheap, pb, pn, pc, v)` | `whnfCoreStoreChain` |
+| `whnf_core_store_keys(mode, o, n, i, v)`, `whnf_core_store_cheap_keys(…)` | `whnfCoreStoreKeys`, `whnfCoreStoreCheapKeys` |
+| `whnf_core_step(mode, cheap, vis, d, h, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_stuck` or `whnf_core_app` |
+| `whnf_stuck(mode, vis, d, h, e)`, `iota_target(vis, h)` | `whnfStuck`, `iotaTarget` |
+| `whnf_core_app(mode, cheap, vis, d, e)` | `whnfCoreStepApp` |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
 | `beta_peel(t, a, ao, an, i)` | `betaPeel t #[a] args i` (the accumulator a stack slice) |
 | `whnf_core_step_proj(mode, cheap, vis, d, e, sn, i, pe)` | `whnfCoreStepProj` |
@@ -44,54 +48,86 @@ namespace L.Arena
 
 /-! ## The L code -/
 
-/-- The knot's `whnfCore` slot. -/
--- con-ron: ConRon/Arena/Core.lean:2494-2508 ConRon.Arena.whnfCoreStuckTag
-@[no_expose, l_impl ConRon.Arena.whnfCoreStuckTag]
-def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x, u) {
-  g := ⟦e⟧.tag;
-  if g != 4 && g != 9 && g != 7 && g != 0 { return e };
-  if cheap != 0 {
-    (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
-    if fd != 0 { return WKM.u64[j * 4 + 3] };
-    x := call whnf_core_loop(mode, 1, vis, d, e);
-    (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
-    u := call wk_put(e, ((mode >> 1) & 1) << 32, x, fd, j);
-    return x
-  };
-  (fd, j, dd) := call wc_find(e, ((mode >> 1) & 1) << 32);
-  if fd != 0 { return WCM.u64[j * 4 + 3] };
-  x := call whnf_core_loop(mode, 0, vis, d, e);
-  (fd, j, dd) := call wc_find(e, ((mode >> 1) & 1) << 32);
-  u := call wc_put(e, ((mode >> 1) & 1) << 32, x, fd, j);
-  return x
-}
-
-/-- The loop of `whnf_core_loop`, named for its spec. -/
-def whnfCoreLoopB : Stmt := lblk (mode, cheap, vis, d, e, st, r) {
+/-- The loop of `whnf_core`, named for its spec. -/
+def whnfCoreLoopB : Stmt :=
+    lblk (mode, cheap, vis, d, e, pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
   while 0 == 0 {
-    (st, r) := call whnf_core_step(mode, cheap, vis, d, e);
-    if st == 0 { return r };
+    g := ⟦e⟧.tag;
+    if (657 >> g) & 1 == 0 {
+      u := call whnf_core_store_chain(mode, cheap, pb, pn, pc, e);
+      CTL.u64[136] := pb;
+      return e
+    };
+    h := call get_app_fn(e);
+    hg := ⟦h⟧.tag;
+    sh := (334 >> hg) & 1;
+    key := ((640 >> g) & 1) | (u64(g == 4) & (1 - sh));
+    safe := ((128 >> g) & 1) | (u64(g == 4) & (sh | u64(hg == 5)));
+    (f, x) := call whnf_core_lookup_at(mode, key, cheap, e);
+    if f != 0 {
+      u := call whnf_core_store_chain(mode, cheap, pb, pn, pn, x);
+      CTL.u64[136] := pb;
+      return x
+    };
+    (st, r) := call whnf_core_step(mode, cheap, vis, d, h, e);
+    stb := u64(cheap == 0) & key & (u64(st != 0) | u64(g != 4) | u64(r != e));
+    if stb != 0 {
+      if len(SPN.u64) <= pb + pn { abort };
+      SPN.u64[pb + pn] := e;
+      pn += 1;
+      CTL.u64[136] := pb + pn
+    };
+    if safe == 0 { pc := pn };
+    if st == 0 {
+      u := call whnf_core_store_chain(mode, cheap, pb, pn, pc, r);
+      CTL.u64[136] := pb;
+      return r
+    };
     e := r
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.whnfCoreLoop`, `ConRon.Arena.pushCheapKey`, `ConRon.Arena.pushKey`, `ConRon.Arena.whnfCoreCheapSafe`, `ConRon.Arena.whnfCoreKey`, `ConRon.Arena.whnfCoreLookupAt`, `ConRon.Arena.whnfCoreStoreChain`, `ConRon.Arena.whnfCoreStoresDone` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.whnfCoreBody` changed; re-check the L code and its proofs, then delete this line
-con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.whnfCoreLoop` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop]
-def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
+/-- **The knot's `whnfCore` slot: the loop** (`whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel e #[]
+#[]`, an uncounted L loop), with the official memo policy (con-ron's #572): a stuck tag ends the
+chain before any lookup (`whnfCoreStuckTag`); every other step computes the spine head `h`
+(`getAppFn`), looks its term up when it is a key (`whnfCoreKey`, `whnfCoreLookupAt`: `wk` in the
+cheap mode, `wc` otherwise, at the mode's eager bit), and a hit ends the chain. **The pending keys**
+`pend` are the stack slice `SPN[pb, pb + pn)` at the top found at entry (`pb`), pushed as they come
+(the step restores the top it found, so they survive it); the cheap keys `pendC` are its suffix
+from `pc` (`pushCheapKey` either pushes where `pushKey` pushes or empties `pendC`: then `pc := pn`).
+At a chain's end the keys are stored (`whnf_core_store_chain`) and the top put back. `isStuckHead`,
+`whnfCoreKey`, `whnfCoreCheapSafe`, `whnfCoreStoresDone`, `pushKey`, `pushCheapKey` are inline, the tag
+tests branch-free as bit masks over the tag (`657`: the tags `bvar`, `app`, `letE`, `proj` that
+`whnfCoreStuckTag` rejects; `334`: `fvar`, `sort`, `const`, `forallE`, `lit`, the stuck heads; `640`:
+`letE`, `proj`; `128`: `letE`), so the loop's model has few paths. A full stack aborts (a fixed
+capacity). -/
+-- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
+-- con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop
+-- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
+-- con-ron: ConRon/Arena/Core.lean:2796-2804 ConRon.Arena.whnfCoreKey
+-- con-ron: ConRon/Arena/Core.lean:2812-2819 ConRon.Arena.whnfCoreCheapSafe
+-- con-ron: ConRon/Arena/Core.lean:2806-2810 ConRon.Arena.whnfCoreStoresDone
+-- con-ron: ConRon/Arena/Core.lean:2821-2824 ConRon.Arena.pushKey
+-- con-ron: ConRon/Arena/Core.lean:2826-2831 ConRon.Arena.pushCheapKey
+-- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
+-- con-ron: ConRon/Arena/Core.lean:2494-2508 ConRon.Arena.whnfCoreStuckTag
+@[no_expose, l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop ConRon.Arena.whnfCoreStuckTag
+  ConRon.Arena.isStuckHead ConRon.Arena.whnfCoreKey ConRon.Arena.whnfCoreCheapSafe
+  ConRon.Arena.whnfCoreStoresDone ConRon.Arena.pushKey ConRon.Arena.pushCheapKey
+  ConRon.Arena.coreKnot]
+def whnfCoreL : FunDecl :=
+    lfn (mode, cheap, vis, d, e) locals (pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
+  pb := CTL.u64[136];
+  pn := 0;
+  pc := 0;
   ⟪whnfCoreLoopB⟫;
   abort
 }
 
-/-- The `app` arm of `whnf_core_step` (its own function: the arms' chains of calls are proved
-apart). -/
--- con-ron: ConRon/Arena/Core.lean:2767-2792 ConRon.Arena.whnfCoreStep
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.whnfCoreStep` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.whnfCoreStep`, `ConRon.Arena.isStuckHead`, `ConRon.Arena.whnfCoreStepApp`, `ConRon.Arena.whnfStuck` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.whnfCoreStep]
+/-- The `app` arm of `whnf_core_step` at a head that is not its own head normal form: the batched
+β spine. -/
+-- con-ron: ConRon/Arena/Core.lean:2754-2765 ConRon.Arena.whnfCoreStepApp
+@[no_expose, l_impl ConRon.Arena.whnfCoreStepApp]
 def whnfCoreAppL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
   top := CTL.u64[136];
@@ -102,11 +138,9 @@ def whnfCoreAppL : FunDecl :=
   return (st, r)
 }
 
-/-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
--- con-ron: ConRon/Arena/Core.lean:2767-2792 ConRon.Arena.whnfCoreStep
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.whnfCoreStep` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.whnfCoreStep`, `ConRon.Arena.isStuckHead`, `ConRon.Arena.whnfCoreStepApp`, `ConRon.Arena.whnfStuck` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.whnfCoreStep]
+/-- The second half of `whnf_core_app`: the reduct's spine, then the β/ι walk. -/
+-- con-ron: ConRon/Arena/Core.lean:2754-2765 ConRon.Arena.whnfCoreStepApp
+@[no_expose, l_impl ConRon.Arena.whnfCoreStepApp]
 def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
   top := CTL.u64[136];
   (hd, ho, hn) := call head_and_args(v);
@@ -115,12 +149,13 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
   return (st, r)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2767-2792 ConRon.Arena.whnfCoreStep -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.whnfCoreStep` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.whnfCoreStep`, `ConRon.Arena.isStuckHead`, `ConRon.Arena.whnfCoreStepApp`, `ConRon.Arena.whnfStuck` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.whnfCoreStep]
+/-- The step at the spine head `h` (the loop's `getAppFn`): an application whose head is its own
+head normal form (`isStuckHead`, inline) is `whnf_stuck`'s, any other `whnf_core_app`'s. -/
+-- con-ron: ConRon/Arena/Core.lean:2767-2792 ConRon.Arena.whnfCoreStep
+-- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
+@[no_expose, l_impl ConRon.Arena.whnfCoreStep ConRon.Arena.isStuckHead]
 def whnfCoreStepL : FunDecl :=
-    lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
+    lfn (mode, cheap, vis, d, h, e) locals (g, t, i, hg, st, r) {
   g := ⟦e⟧.tag;
   t := ⟦e⟧.tier;
   i := ⟦e⟧.idx;
@@ -128,6 +163,11 @@ def whnfCoreStepL : FunDecl :=
   if g == 4 {
     i := ⟦e⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
+    hg := ⟦h⟧.tag;
+    if (334 >> hg) & 1 != 0 {
+      (st, r) := call whnf_stuck(mode, vis, d, h, e);
+      return (st, r)
+    };
     (st, r) := call whnf_core_app(mode, cheap, vis, d, e);
     return (st, r)
   };
@@ -150,6 +190,98 @@ def whnfCoreStepL : FunDecl :=
   if g == 6 { if FORALL⟨t⟩.count <= i { abort }; return (0, e) };
   if g == 8 { if LIT⟨t⟩.count <= i { abort }; return (0, e) };
   abort
+}
+
+/-- The ι target of a spine head `h`: `(1, mI)` at a stored recursor at its own number of levels
+(the twin's `some (mI + 1)`: the word is the major's index, so the length never wraps), `(0, 0)`
+otherwise; a dangling handle aborts. -/
+-- con-ron: ConRon/Arena/Core.lean:2628-2643 ConRon.Arena.iotaTarget
+@[no_expose, l_impl ConRon.Arena.iotaTarget]
+def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
+  if ⟦h⟧.tag != 3 { return (0, 0) };
+  (t, x) := node CONST⟦h⟧;
+  (f, q) := call env_find(CONST⟨t, x⟩.n, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃q⦄ != 5 { return (0, 0) };
+  (lo, usl) := call ls_node(CONST⟨t, x⟩.us);
+  if usl == EREC⦃q + 3⦄ { return (1, EREC⦃q + 5⦄) };
+  return (0, 0)
+}
+
+/-- The stuck spine `e` at head `h`: the ι step once, at the target prefix `k + 1` of the
+spine's arguments (pushed at the top by `get_app_args`, the top put back), else `e` itself. -/
+-- con-ron: ConRon/Arena/Core.lean:2645-2663 ConRon.Arena.whnfStuck
+@[no_expose, l_impl ConRon.Arena.whnfStuck]
+def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, st, e2, e3) {
+  (f, k) := call iota_target(vis, h);
+  if f == 0 { return (0, e) };
+  top := CTL.u64[136];
+  (ao, an) := call get_app_args(e);
+  if k < an {
+    (st, e2) := call iota_rec_at(mode, vis, d, h, ao, k + 1);
+    if st != 0 {
+      e3 := call mk_app_n_from(e2, ao, an, k + 1);
+      CTL.u64[136] := top;
+      return (1, e3)
+    }
+  };
+  CTL.u64[136] := top;
+  return (0, e)
+}
+
+/-- The loop's lookup: at a key, the mode's `whnfCore` memo at `e`: `(1, x)` a hit, `(0, 0)` a miss
+(`wk` in the cheap mode, `wc` otherwise, at the mode's eager bit); `(0, 0)` at a non-key. -/
+-- con-ron: ConRon/Arena/Core.lean:2886-2890 ConRon.Arena.whnfCoreLookupAt
+-- con-ron: ConRon/Arena/Core.lean:2880-2884 ConRon.Arena.whnfCoreLookup
+@[no_expose, l_impl ConRon.Arena.whnfCoreLookupAt ConRon.Arena.whnfCoreLookup]
+def whnfCoreLookupL : FunDecl := lfn (mode, key, cheap, e) locals (fd, j, dd) {
+  if key == 0 { return (0, 0) };
+  if cheap != 0 {
+    (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
+    if fd != 0 { return (1, WKM.u64[j * 4 + 3]) };
+    return (0, 0)
+  };
+  (fd, j, dd) := call wc_find(e, ((mode >> 1) & 1) << 32);
+  if fd != 0 { return (1, WCM.u64[j * 4 + 3]) };
+  return (0, 0)
+}
+
+/-- The keys `SPN[o + i, o + n)` map to `v` in the full mode's memo (`wc`, `whnfCoreSet` each). -/
+-- con-ron: ConRon/Arena/Core.lean:2851-2858 ConRon.Arena.whnfCoreStoreKeys
+-- con-ron: ConRon/Arena/Core.lean:2833-2840 ConRon.Arena.whnfCoreSet
+@[no_expose, l_impl ConRon.Arena.whnfCoreStoreKeys ConRon.Arena.whnfCoreSet]
+def whnfCoreStoreKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j, dd, u) {
+  for i < n {
+    k := SPN.u64[o + i];
+    (fd, j, dd) := call wc_find(k, ((mode >> 1) & 1) << 32);
+    u := call wc_put(k, ((mode >> 1) & 1) << 32, v, fd, j)
+  };
+  return 0
+}
+
+/-- The cheap keys `SPN[o + i, o + n)` map to `v` in the cheap mode's memo (`wk`,
+`whnfCoreCheapSet` each). -/
+-- con-ron: ConRon/Arena/Core.lean:2860-2867 ConRon.Arena.whnfCoreStoreCheapKeys
+-- con-ron: ConRon/Arena/Core.lean:2842-2849 ConRon.Arena.whnfCoreCheapSet
+@[no_expose, l_impl ConRon.Arena.whnfCoreStoreCheapKeys ConRon.Arena.whnfCoreCheapSet]
+def whnfCoreStoreCheapKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j, dd, u) {
+  for i < n {
+    k := SPN.u64[o + i];
+    (fd, j, dd) := call wk_find(k, ((mode >> 1) & 1) << 32);
+    u := call wk_put(k, ((mode >> 1) & 1) << 32, v, fd, j)
+  };
+  return 0
+}
+
+/-- Store a finished chain: `pend` the slice `SPN[pb, pb + pn)`, `pendC` its suffix from `pc`. -/
+-- con-ron: ConRon/Arena/Core.lean:2869-2878 ConRon.Arena.whnfCoreStoreChain
+@[no_expose, l_impl ConRon.Arena.whnfCoreStoreChain]
+def whnfCoreStoreChainL : FunDecl := lfn (mode, cheap, pb, pn, pc, v) locals (u) {
+  if cheap != 0 { return 0 };
+  if pn == 0 { return 0 };
+  u := call whnf_core_store_keys(mode, pb, pn, 0, v);
+  u := call whnf_core_store_cheap_keys(mode, pb + pc, pn - pc, 0, v);
+  return 0
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2581-2612 ConRon.Arena.whnfApp
@@ -310,8 +442,13 @@ def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
 structure WhnfCoreProg (p : Prog) : Prop where
   spine : SpineProg p
   core : p.lookup "whnf_core" = some whnfCoreL
-  loop : p.lookup "whnf_core_loop" = some whnfCoreLoopL
   step : p.lookup "whnf_core_step" = some whnfCoreStepL
+  lookup : p.lookup "whnf_core_lookup_at" = some whnfCoreLookupL
+  storeKeys : p.lookup "whnf_core_store_keys" = some whnfCoreStoreKeysL
+  storeCheapKeys : p.lookup "whnf_core_store_cheap_keys" = some whnfCoreStoreCheapKeysL
+  storeChain : p.lookup "whnf_core_store_chain" = some whnfCoreStoreChainL
+  iotaTarget : p.lookup "iota_target" = some iotaTargetL
+  stuck : p.lookup "whnf_stuck" = some whnfStuckL
   lsn : p.lookup "ls_node" = some lsNode
   capp : p.lookup "whnf_core_app" = some whnfCoreAppL
   capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
