@@ -640,7 +640,8 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
   -- the constant's words
   have hcvE : decCV (erecP m) cv.toNat = some cvv := decCVp_truncM hcv
   have hcv0 := hcvE
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  -- a whole-record writer (`ind_info_rec`): the offsets as numbers (`rec_unfold`)
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
   obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
   obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cv.toNat + 1) = some w ∧ w.toNat = lo := by
@@ -663,9 +664,10 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     · rw [IWGrow.ext hg _ _ hw2]; simp [iirWs, r2]
     · rw [IWGrow.ext hg _ _ hw3]; simp [iirWs, r3]
     · omega
-  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cvv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
-      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcvE
   -- the capability record's words
   have hc15 := hcp.1
@@ -687,7 +689,7 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     have := hget 0 (by decide); simp only [Nat.add_zero] at this
     simp [nat?, this, iirWs]
   refine ⟨hS', hg, ?_⟩
-  simp only [decCI, CI.indCaps, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv',
+  simp only [decCI, CI.indCaps, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv',
     hcaps, Option.pure_def]
 
 section arms
