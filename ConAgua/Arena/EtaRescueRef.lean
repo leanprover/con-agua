@@ -13,6 +13,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -33,7 +34,6 @@ namespace L.Arena
 
 /-- `er_sl_eq`'s spec at its own lookup (`StubIndRefine.erSlEq_spec'`'s, for callers that cannot
 import that file). -/
-import ConAgua.Arena.RecLayout.CIDec
 theorem erSlEq_spec (p : Prog) (hp : p.lookup "er_sl_eq" = some L.Ind.erSlEq) (n : Nat) :
     ∀ (s₀ : St) (o1 l1 o2 l2 : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "er_sl_eq" [o1, l1, o2, l2]
@@ -129,8 +129,8 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   have hE : caps.eta = true := by rw [heta]; simpa using g1
   have hC : (tb.ctor == decI ctor) = true := by rw [hcd, g2']; simp
   simp only [L.Ind.erRd_foldN] at h
-  rcases c1 : callW p n "er_sl_eq" [erRd m (cq + 2), erRd m (cq + 3), erRd m (q + 2),
-      erRd m (q + 3)] m with _ | ⟨r1, m1⟩
+  rcases c1 : callW p n "er_sl_eq" [erRd m (cq + (CI.cv + CV.lpsOff)), erRd m (cq + (CI.cv + CV.lpsLen)), erRd m (q + (CI.cv + CV.lpsOff)),
+      erRd m (q + (CI.cv + CV.lpsLen))] m with _ | ⟨r1, m1⟩
   · rw [c1, ertW.k_er_sl_eq.none] at h; cases h
   rw [c1] at h
   obtain ⟨s1, hs1, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

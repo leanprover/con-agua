@@ -236,4 +236,29 @@ theorem decCI_rec_rd (hR : RdOK R rd) {q : Word} {ci : IConstantInfo}
       ⟨-, -, -, -, -, -, -, -, -, ⟨⟩⟩ | ⟨hk, -⟩
     exact hw (UInt64.toNat_inj.mp (by rw [hk]; rfl))
 
+/-- **A constructor record by its kind word `4`** (and no other kind's word decodes to one). -/
+theorem decCI_ctorR (hR : RdOK R rd) {q : Word} {ci : IConstantInfo}
+    (h : decCI R q.toNat = some ci) :
+    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + CI.ctorNparams)).toNat
+      (rd (q + CI.ctorNfields)).toNat (decI (rd (q + CI.ctorInduct))) ∧
+      (rd (q + CI.ctorInduct)).toNat < 2 ^ 32) ∧
+    (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
+  obtain ⟨wk, e, hx⟩ := decCI_cases h
+  have hrd : rd q = wk := hR.rd _ _ e
+  rw [hrd]
+  constructor
+  · intro h4
+    subst h4
+    rcases hx with ⟨hk, -⟩ | ⟨hk, -⟩ | ⟨hk, -⟩ | ⟨hk, -⟩ |
+      ⟨-, cv, np, nf, fam, -, ha, hb, hf, rfl⟩ | ⟨hk, -⟩
+    all_goals first | (exfalso; simp at hk) | skip
+    obtain ⟨e1, e2⟩ := hd?_rd hR hf
+    refine ⟨cv, ?_, e2⟩
+    rw [← nat?_rd hR ha, ← nat?_rd hR hb, ← e1]
+  · intro hw cv np nf fam hc
+    subst hc
+    rcases hx with ⟨-, -, -, ⟨⟩⟩ | ⟨-, -, -, -, -, -, -, ⟨⟩⟩ | ⟨-, -, -, ⟨⟩⟩ | ⟨-, -, -, -, -, ⟨⟩⟩ |
+      ⟨hk, -⟩ | ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, ⟨⟩⟩
+    exact hw (UInt64.toNat_inj.mp (by rw [hk]; rfl))
+
 end L.Arena

@@ -388,7 +388,7 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
   have w7 : erecP M (p.toNat + 6 + 1) = some (dw (m.arr64 DECL) i.toNat 7) := by
     simpa using hget2 7 (by decide)
   have hcvG : ∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
-      decCV (erecP M) (p.toNat + CI.cv.toNat) = some cv := by
+      decCV (erecP M) (p.toNat + 1) = some cv := by
     intro cv hcv
     obtain ⟨hn, ht, hb, hl⟩ := hcv
     have hptop := hD.ptop

@@ -4,6 +4,7 @@ import ConAgua.Arena.DeclCanonEq
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.DeclCanonSpec
 import all ConAgua.Arena.DeclArmsCanon
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -43,16 +44,6 @@ end specs
 
 /-! ## The relational lemma -/
 
-theorem ctc_ok {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (_hS : StageR vis fe m a) {x : Word} {ci : IConstantInfo}
-    (hci : decCI (erecP m) x.toNat = some ci) :
-    decCV (erecP m) (x + 1).toNat = some ci.toConstantVal := by
-  have hcv := decCI_cv hci
-  obtain ⟨w, hw, -⟩ := decCV_name hcv
-  have hb := erecP_lt64 hw
-  have e : (x + 1).toNat = x.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  rw [e]; exact hcv
-
 section refs
 variable (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 include hp
@@ -69,7 +60,7 @@ theorem ciToCv_refines (q : Word) (ci : IConstantInfo) :
   refine triple_post (ciToCv_spec' p hp n s₀ q) ?_
   rintro r s' ⟨hl, hm, hr⟩
   exact ⟨hl, trivial, by rw [hm]; exact hS, by rw [hm]; exact IWGrow.refl _,
-    by rw [hm]; show decCV _ (r.headD 0).toNat = some ci.toConstantVal; rw [hr]; exact ctc_ok hS hci⟩
+    by rw [hm]; show decCV _ (r.headD 0).toNat = some ci.toConstantVal; rw [hr]; exact decCI_cv_rd (erRdOK _) hci⟩
 
 end refs
 

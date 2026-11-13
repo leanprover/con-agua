@@ -187,9 +187,9 @@ theorem target_ref (p : Prog) (hp : WhnfCoreProg p) (G : Prop) (n : Nat) (m : Me
   subst hol
   have hlr : (viewLsLen (decI (tfld m CONST (tierW h) (idxW h) 1))).run a = .ok (some l.toNat, a) := by
     show Except.ok (a.store.lss.viewLen _, a) = _; rw [hvl]
-  by_cases u1 : [o, l].tail.headD 0 = erRd m (q + 3)
+  by_cases u1 : [o, l].tail.headD 0 = erRd m (q + (CI.cv + CV.lpsLen))
   · erw [iotaTargetE.k_ls_node.arm1 (hc1 := u1)]
-    refine RefE.ret (y := some ((erRd m (q + 5)).toNat + 1)) ?_ (CorePost.ret hS (by simp [decTgt]; rfl) trivial)
+    refine RefE.ret (y := some ((erRd m (q + CI.recMajor)).toNat + 1)) ?_ (CorePost.ret hS (by simp [decTgt]; rfl) trivial)
     rw [htw, hfind']
     simp only [StateT.run_bind, hlr, except_ok_bind]
     simp only [List.tail_cons, List.headD_cons] at u1

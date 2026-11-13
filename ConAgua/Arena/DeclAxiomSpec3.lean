@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -123,7 +124,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     simp only at hm3
     rw [hm3] at hJ
     have hpin : decCV (erA m2) (r3.headD 0).toNat = some ci2.toConstantVal := by
-      rw [hr3]; exact ctc_ok hS2 (DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hci2)
+      rw [hr3]; exact decCI_cv_rd (erRdOK _) (DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hci2)
     obtain ⟨wn, hwn, -⟩ := decCV_name hcv
     have hq1 : (q + 1).toNat = q.toNat + 1 := by
       have := erecP_lt64 hwn; rw [UInt64.toNat_add]; simp; omega

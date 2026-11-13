@@ -8,6 +8,7 @@ import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.WhnfCoreRefine
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -16,7 +17,7 @@ import all ConAgua.Arena.DefEq
 
 Reads only: `get_app_fn`, the head's `const` record, `env_find`, the constructor record's counts,
 `get_app_args` (its slice dropped: the top put back). Shared helpers for the structure-η side:
-`envFind_callW` (a run of `env_find`), `decCI_ctorR` (a constructor record's counts, `WhnfIotaRefine.lean`),
+`envFind_callW` (a run of `env_find`), `decCI_ctorR` (a constructor record's counts, `RecLayout/CIDec.lean`),
 `getAppArgs_callW`, `CoreS.restoreTop` (the relation after the top is put back).
 -/
 
