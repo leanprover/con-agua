@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Front.IndFields
+public import ConAgua.Arena.RecLayout.CI
 public import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
 
@@ -498,10 +499,10 @@ def indRules : FunDecl := lfn (o, n) locals (lo, u) {
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indType : FunDecl := lfn (t) locals (q, u) {
-  q := call dind_alloc(20);
+  q := call dind_alloc(⟪CI.indSize⟫);
   DIND.u64[q] := 3;
   u := call ind_cv(q + 1, IFR.u64[t], IFR.u64[t + 1], IFR.u64[t + 2]);
-  u := call ind_caps(q + 5);
+  u := call ind_caps(q + ⟪CI.indCaps⟫);
   return q
 }
 

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Handle
+public import ConAgua.Arena.RecLayout.CI
 public import ConRon.Arena.Env
 
 @[expose] public section
@@ -33,7 +34,7 @@ and L may compare words where the twin compares handles.
 | 0 | `axiomInfo cv` | cv at `p+1` |
 | 1 | `defnInfo cv value hint` | cv at `p+1`; `value` `p+5`; hint `p+6` (0 opaque, 1 abbrev, 2 regular), height `p+7` |
 | 2 | `thmInfo cv` | cv at `p+1` |
-| 3 | `indInfo cv caps` | cv at `p+1`; caps at `p+5` (15 words, `decCaps`) |
+| 3 | `indInfo cv caps` | cv at `p+1`; caps at `p + CI.indCaps` (`decCaps`) |
 | 4 | `ctorInfo cv np nf induct` | cv at `p+1`; `p+5`, `p+6`; the family `induct` `p+7` |
 | 5 | `recInfo cv major pre isK rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (11-word records); `isK` `p+9` |
 
@@ -43,11 +44,7 @@ A recursor rule (11 words at `q`): `ctor` `q`, `nfields` `q+1`, the fire's kind 
 install-computed `ctorParams`, `k`, `eta`, which con-leche's task #480 removed; the offsets of
 the rest are kept).
 
-`IIndCaps` (15 words at `q`): `eta` `q`, `nIdx` `q+6`, `neverZero` `q+7`, `all` `q+10`, `q+11`,
-`nparams` `q+12`, `ctors` `q+13`, `q+14`; words `q+1`‥`q+5` are not read (the removed `etaCtor`,
-`etaParams`, `etaFields`, `unitlike`, `unitParams`, con-leche's task #515), nor `q+8`, `q+9` (the
-removed `sortZ`, whose first word `neverZero` took, con-leche's task #573); the offsets of the
-rest are kept.
+`IIndCaps`: `RecLayout/Caps.lean` (`Caps.size` words at `q`, the field offsets named there).
 
 `IProjTable` (13 words, at `p`; not a constant: the environment's table component): word `p` is
 `6` and word `p+1` is `0` (the kind and name words of the constant records' layout, kept so that
@@ -111,12 +108,12 @@ def decRule (q : Nat) : Option IRecRule := do
 def decRules (off cnt : Nat) : Option (List IRecRule) :=
   (List.range cnt).mapM fun j => decRule a (off + 11 * j)
 
-/-- `IIndCaps`: 15 words at `q` (`eta`, five unread words, `nIdx`, `neverZero`, two unread words,
-`all` (2), `nparams`, `ctors` (2)). -/
+/-- `IIndCaps`: `Caps.size` words at `q`, laid out by `RecLayout/Caps.lean`. -/
 def decCaps (q : Nat) : Option IIndCaps := do
-  pure { eta := ← bool? a q, nIdx := ← nat? a (q + 6),
-         all := ← hlist? a (q + 10), nparams := ← nat? a (q + 12), ctors := ← hlist? a (q + 13),
-         neverZero := ← bool? a (q + 7) }
+  pure { eta := ← bool? a (q + Caps.eta.toNat), nIdx := ← nat? a (q + Caps.nIdx.toNat),
+         all := ← hlist? a (q + Caps.allOff.toNat), nparams := ← nat? a (q + Caps.nparams.toNat),
+         ctors := ← hlist? a (q + Caps.ctorsOff.toNat),
+         neverZero := ← bool? a (q + Caps.neverZero.toNat) }
 
 /-- `IProjTable` at `p` (a table record). -/
 def decTbl (p : Nat) : Option IProjTable := do
@@ -130,7 +127,7 @@ def decCI (p : Nat) : Option IConstantInfo := do
   | 0 => pure (.axiomInfo (← decCV a (p + 1)))
   | 1 => pure (.defnInfo (← decCV a (p + 1)) (← hd? a (p + 5)) (← decHint a (p + 6)))
   | 2 => pure (.thmInfo (← decCV a (p + 1)))
-  | 3 => pure (.indInfo (← decCV a (p + 1)) (← decCaps a (p + 5)))
+  | 3 => pure (.indInfo (← decCV a (p + 1)) (← decCaps a (p + CI.indCaps.toNat)))
   | 4 => pure (.ctorInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6)) (← hd? a (p + 7)))
   | 5 => pure (.recInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6))
       (← bool? a (p + 9)) (← decRules a (← nat? a (p + 7)) (← nat? a (p + 8))))

@@ -95,18 +95,18 @@ counts only for a regular hint (kind `2`). -/
 /-- `caps_eq_b(q, q')`: `nIdx` and `neverZero` (words `6`, `7`; words `8`, `9` are not read). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqB : FunDecl := lfn (q, r) locals (e) {
-  if EREC⦃q + 6⦄ != EREC⦃r + 6⦄ { return 0 };
-  e := call b_eq(EREC⦃q + 7⦄, EREC⦃r + 7⦄);
+  if EREC⦃q + ⟪Caps.nIdx⟫⦄ != EREC⦃r + ⟪Caps.nIdx⟫⦄ { return 0 };
+  e := call b_eq(EREC⦃q + ⟪Caps.neverZero⟫⦄, EREC⦃r + ⟪Caps.neverZero⟫⦄);
   return e
 }
 
 /-- `caps_eq_c(q, q')`: `all`, `nparams`, `ctors` (words `10‥14`). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqC : FunDecl := lfn (q, r) locals (e) {
-  e := call er_sl_at(q, r, 10);
+  e := call er_sl_at(q, r, ⟪Caps.allOff⟫);
   if e == 0 { return 0 };
-  if EREC⦃q + 12⦄ != EREC⦃r + 12⦄ { return 0 };
-  e := call er_sl_at(q, r, 13);
+  if EREC⦃q + ⟪Caps.nparams⟫⦄ != EREC⦃r + ⟪Caps.nparams⟫⦄ { return 0 };
+  e := call er_sl_at(q, r, ⟪Caps.ctorsOff⟫);
   return e
 }
 
@@ -178,7 +178,7 @@ values agree. -/
     e := call hint_eq(p + 6, q + 6);
     return e
   };
-  if k == 3 { e := call caps_eq(p + 5, q + 5); return e };
+  if k == 3 { e := call caps_eq(p + ⟪CI.indCaps⟫, q + ⟪CI.indCaps⟫); return e };
   if k == 4 {
     if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
     if EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 };

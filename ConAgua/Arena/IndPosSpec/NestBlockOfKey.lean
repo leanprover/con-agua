@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealAr
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
@@ -55,7 +56,7 @@ reaches the `.indInfo` arm from `nat? a p = some 3` (`Env.lean`'s `decCI_name` d
 same match generically, for the name field). -/
 theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI a p = some ci) (hk : nat? a p = some 3) :
-    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps a (p + 5) = some caps := by
+    ∃ cv caps, ci = .indInfo cv caps ∧ decCaps a (p + CI.indCaps.toNat) = some caps := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk', h⟩ := h
   have hk3 : k = 3 := Option.some.inj (hk'.symm.trans hk)
@@ -112,8 +113,8 @@ theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = envFound m found q)
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
     hslice? (erA m)
-        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 15) else 0).toNat
-        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 16) else 0).toNat
+        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + (CI.indCaps + Caps.allOff)) else 0).toNat
+        (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + (CI.indCaps + Caps.allLen)) else 0).toNat
       = some (nestBlockOf fe (decI c)) := by
   rw [nestBlockOf]
   unfold envFound at hfound
@@ -136,33 +137,9 @@ theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
         rw [UInt64.toNat_ofNat_of_lt' (nat?_lt hk)] at h2
         simpa using h2
       subst hk3'
-      obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk
+      obtain ⟨cv, caps, rfl, -⟩ := decCI_kind3 hci hk
       simp only [hfound, ite_eq_left hk3]
-      simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-      obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, _, _, heq⟩ := hcaps
-      have hallcaps : caps.all = vall := by
-        have h' := Option.some.inj heq; rw [← h']
-      obtain ⟨o, l, ho, hl, hslc⟩ := hlist?_some hvall
-      have ho' : nat? (erA m) (q.toNat + 15) = some o := by
-        rw [show q.toNat + 15 = q.toNat + 5 + 10 by omega]; exact ho
-      have hl' : nat? (erA m) (q.toNat + 16) = some l := by
-        rw [show q.toNat + 16 = q.toNat + 5 + 10 + 1 by omega]; exact hl
-      have hb : q.toNat + 16 < 2 ^ 64 := by
-        simp only [nat?, Option.map_eq_some_iff] at hl'
-        obtain ⟨w, hw, -⟩ := hl'; exact erecP_lt64 hw
-      have e15 : (q + 15 : Word) = UInt64.ofNat (q.toNat + 15) := by
-        apply UInt64.toNat_inj.mp
-        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
-        simp; omega
-      have e16 : (q + 16 : Word) = UInt64.ofNat (q.toNat + 16) := by
-        apply UInt64.toNat_inj.mp
-        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
-        simp; omega
-      rw [e15, e16, erN_rdW ho', erN_rdW hl']
-      have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (nat?_lt ho')
-      have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (nat?_lt hl')
-      rw [hoo, hll, hallcaps]
-      exact hslc
+      exact (decCI_indInfo_rd (erRdOK m) hci).2.2.2.2.1
     · simp only [ite_eq_right hk3]
       cases ci with
       | indInfo cv caps =>
@@ -176,18 +153,6 @@ theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : 
   simp only [nat?, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
-
-/-- An `indInfo` record's word `p + 16` (its `all` slice's length) is read. -/
-theorem decCI_indInfo_bound {a : Nat → Option Word} {p : Nat}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a p = some (.indInfo cv caps)) :
-    ∃ v, a (p + 16) = some v := by
-  obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, -⟩ := hcaps
-  obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
-  simp only [nat?, Option.map_eq_some_iff] at hl
-  obtain ⟨w, hw, -⟩ := hl
-  exact ⟨w, by rw [show p + 16 = p + 5 + 10 + 1 by omega]; exact hw⟩
 
 /-! ## `nest_ctor_entry_strip`, `nest_ctor_entry` -/
 

@@ -4,6 +4,7 @@ import ConAgua.Arena.IndLibSpec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.EnvRec
+import ConAgua.Arena.RecLayout.CapsDec
 
 @[expose] public section
 
@@ -118,23 +119,28 @@ theorem decCV_reloc {T B : (Nat → Option Word)} {s p q : Nat} {K : Nat → Pro
   refine ⟨nm, h.hd hK1 rfl rfl hnm, lps, ⟨q, hq, cnt, h.nat hK3 (by omega) (by omega) hcnt,
     hslice?_sh hsl (hl off cnt hoff hcnt)⟩, ty, h.hd hK4 (by omega) (by omega) hty, rfl⟩
 
-/-- An inductive's capabilities at `s + 5` (words `5‥19`), of the front's shape. -/
+/-- An inductive's capabilities at `s + CI.indCaps` (to the record's end), of the front's shape
+(empty slices). -/
 theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
-    {K : Nat → Prop} {caps : IIndCaps} (h : ShR T B s p K) (hK : ∀ k, 5 ≤ k → k < 20 → K k)
-    (hc : decCaps T (s + 5) = some caps) (hall : caps.all = []) (hct : caps.ctors = []) :
-    decCaps B (p + 5) = some caps := by
-  simp only [decCaps, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-  obtain ⟨eta, h0, ni, h6, al, h10, np, h12, ct, h13, nz, h7, rfl⟩ := hc
-  simp only at hall hct
-  subst hall hct
-  exact ⟨eta, h.bool (hK 5 (Nat.le_refl _) (by omega)) (by omega) (by omega) h0,
-    ni, h.nat (hK 11 (by omega) (by omega)) (by omega) (by omega) h6,
-    [], hlist?_nil_sh h (hK 15 (by omega) (by omega)) (hK 16 (by omega) (by omega))
-      (by omega) (by omega) h10,
-    np, h.nat (hK 17 (by omega) (by omega)) (by omega) (by omega) h12,
-    [], hlist?_nil_sh h (hK 18 (by omega) (by omega)) (hK 19 (by omega) (by omega))
-      (by omega) (by omega) h13,
-    nz, h.bool (hK 12 (by omega) (by omega)) (by omega) (by omega) h7, rfl⟩
+    {K : Nat → Prop} {caps : IIndCaps} (h : ShR T B s p K)
+    (hK : ∀ k, CI.indCaps.toNat ≤ k → k < CI.indSize.toNat → K k)
+    (hc : decCaps T (s + CI.indCaps.toNat) = some caps) (hall : caps.all = []) (hct : caps.ctors = []) :
+    decCaps B (p + CI.indCaps.toNat) = some caps := by
+  obtain ⟨h0, h6, h10, h12, h13, h7⟩ := decCaps_eq_some.mp hc
+  rw [hall] at h10; rw [hct] at h13
+  have hk : ∀ f : Word, f.toNat < Caps.size.toNat → K (CI.indCaps.toNat + f.toNat) := fun f hf =>
+    hK _ (by omega) (by rw [CI.indSize_toNat]; omega)
+  have := Caps.allLen_lt; have := Caps.allLen_toNat; have := Caps.ctorsLen_lt
+  have := Caps.ctorsLen_toNat
+  refine decCaps_eq_some.mpr ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact h.bool (hk _ Caps.eta_lt) (by omega) (by omega) h0
+  · exact h.nat (hk _ Caps.nIdx_lt) (by omega) (by omega) h6
+  · rw [hall]; exact hlist?_nil_sh h (hk _ Caps.allOff_lt)
+      (by rw [Nat.add_assoc, ← Caps.allLen_toNat]; exact hk _ Caps.allLen_lt) (by omega) (by omega) h10
+  · exact h.nat (hk _ Caps.nparams_lt) (by omega) (by omega) h12
+  · rw [hct]; exact hlist?_nil_sh h (hk _ Caps.ctorsOff_lt)
+      (by rw [Nat.add_assoc, ← Caps.ctorsLen_toNat]; exact hk _ Caps.ctorsLen_lt) (by omega) (by omega) h13
+  · exact h.bool (hk _ Caps.neverZero_lt) (by omega) (by omega) h7
 
 /-- A plain rule's words: the fire word `0`, the constructor, the field count, the right-hand side. -/
 theorem decRule_plain {R : Nat → Option Word} {q : Nat} {rr : IRecRule} (h : decRule R q = some rr)
@@ -195,7 +201,7 @@ theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List
 `s` the record; `B` the copy at `p`, its level parameters at `q` (word `2`), a recursor's rules at
 `r` (word `7`); every other word of the record (`K kk`, by the kind `kk`) reappears. -/
 def relocK (kk k : Nat) : Prop :=
-  k < (if kk = 3 then 20 else if kk = 4 then 8 else 10) ∧ k ≠ 2 ∧ (kk = 5 → k ≠ 7)
+  k < (if kk = 3 then CI.indSize.toNat else if kk = 4 then 8 else 10) ∧ k ≠ 2 ∧ (kk = 5 → k ≠ 7)
 
 theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
     {c : IConstantInfo} (hc : decCI T s = some c) (hF : FrontCI c)
@@ -215,6 +221,7 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
   have hk0 : nat? B (p + 0) = some kk := by
     refine h.nat (k := 0) ?_ rfl rfl (by simpa using hk)
     refine ⟨?_, by omega, by omega⟩
+    have := CI.indSize_toNat; have := CI.indCaps_ge
     split <;> (try split) <;> omega
   simp only [Nat.add_zero] at hk0
   rw [hk0]
@@ -231,7 +238,9 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
     simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
     obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := hc
     obtain ⟨hall, hct⟩ := hF
-    have hK : ∀ k, k < 20 → k ≠ 2 → relocK 3 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
+    have hK : ∀ k, k < CI.indSize.toNat → k ≠ 2 → relocK 3 k := fun k h1 h2 =>
+      ⟨by simpa using h1, h2, by omega⟩
+    have hsz := CI.indSize_toNat; have := Caps.size_pos; have := CI.indCaps_ge
     exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
         (hK 4 (by omega) (by omega)) hcv hq hl,
       caps, decCaps_reloc h (fun k h1 h2 => hK k h2 (by omega)) hcaps hall hct, rfl⟩

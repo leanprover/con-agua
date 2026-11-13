@@ -175,7 +175,7 @@ def classNPcOf : FunDecl := lfn (p, vis, i) locals (mo, ml, b, found, q, kind) {
   (found, q) := call env_find(i, vis);
   if found == 0 { return 0 };
   kind := EREC⦃q⦄;
-  if kind == 3 { return EREC⦃q + 17⦄ };
+  if kind == 3 { return EREC⦃q + ⟪CI.indCaps + Caps.nparams⟫⦄ };
   return 0
 }
 

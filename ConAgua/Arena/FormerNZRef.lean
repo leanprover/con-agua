@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Arena.FormerSortRef
 public import ConAgua.Arena.PropReadW
 import ConAgua.Arena.InferFieldSort
@@ -352,37 +353,6 @@ theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState)
         exact fsl_sortView r n (d + 1) b2 a3 a' s h
     · cases h
 
-/-- An `indInfo` record's `nIdx` (`q + 11`), `nparams` (`q + 17`) and `neverZero` (`q + 12`)
-words. -/
-theorem decCI_ind_nz {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
-    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat ∧
-      caps.neverZero = (rd (q + 12) != 0) := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  rcases k with _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨cv', -, caps', hcaps, he⟩ := h
-  cases he
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, nz, hnz, hc⟩ := hcaps
-  simp only [Option.some.injEq] at hc
-  subst hc
-  simp only [nat?, bool?, Option.map_eq_some_iff] at hni hnp hnz
-  obtain ⟨w1, hw1, rfl⟩ := hni
-  obtain ⟨w2, hw2, rfl⟩ := hnp
-  obtain ⟨w3, hw3, rfl⟩ := hnz
-  have e1 : rd (q + 11) = w1 := hR.offN (k := 11) (by simpa [Nat.add_assoc] using hw1) (by decide)
-  have e2 : rd (q + 17) = w2 := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hw2) (by decide)
-  have e3 : rd (q + 12) = w3 := hR.offN (k := 12) (by simpa [Nat.add_assoc] using hw3) (by decide)
-  exact ⟨by rw [e1], by rw [e2], by rw [e3]⟩
-
-/-- An `indInfo` record's `nIdx` (`q + 11`) and `nparams` (`q + 17`) words. -/
-theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
-    caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat :=
-  ⟨(decCI_ind_nz hR h).1, (decCI_ind_nz hR h).2.1⟩
-
 /-- What `former_never_zero_at`'s refinement needs of a program. -/
 structure FnzaProg (p : Prog) : Prop extends FslProg p where
   fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
@@ -441,7 +411,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
       (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
   obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
-  obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
+  obtain ⟨-, hni, -, hnp, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [fnzaE.eq_2]
   split
@@ -477,7 +447,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
   rw [fnzaE.k_inst_lp.arm1]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
-    (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+    (erRd m1 (q + (CI.indCaps + Caps.nparams)) + erRd m1 (q + (CI.indCaps + Caps.nIdx))) (r3.headD 0) hS3 h3.resOk
   simp only [L.Ind.erRd_foldN] at hn' hni hnp; rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
   refine RefE.bind_coreE (w := id) (fun _ => fnzaE.k_former_sort_loop.none ..) id hf
     fun r4 m4 _ h4 M4 hS4 _ => ?_
@@ -522,10 +492,11 @@ theorem fanza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 
     RefE (KnotUpToE p n) (fanzaE p (n + 1) m mode vis q us)
       (ConRon.Arena.familyNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
-  obtain ⟨-, -, hnz⟩ := decCI_ind_nz (erRdOK m) hci
+  obtain ⟨-, -, hnz, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hnz
   unfold ConRon.Arena.familyNeverZeroAt
-  by_cases g : rdW (m.arr64 (tierA EREC ((q + 12) >>> 40))) ((q + 12) &&& 1099511627775) ≠ 0
+  by_cases g : rdW (m.arr64 (tierA EREC ((q + (CI.indCaps + Caps.neverZero)) >>> 40)))
+      ((q + (CI.indCaps + Caps.neverZero)) &&& 1099511627775) ≠ 0
   · rw [fanzaE.arm1 _ _ _ _ _ _ _ g]
     rw [show caps.neverZero = true by rw [hnz]; simpa using g]
     simp only [↓reduceIte]

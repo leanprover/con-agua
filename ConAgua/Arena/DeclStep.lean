@@ -88,7 +88,7 @@ constructor, 8; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its 
   q := call erec_alloc(DIND.u64[s + 3]);
   z := call dind_copy(q, DIND.u64[s + 2], DIND.u64[s + 3]);
   r := 0;
-  if k == 3 { n := 20 } else if k == 4 { n := 8 } else if k == 5 {
+  if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := 8 } else if k == 5 {
     n := 10;
     if DIND.u64[s + 8] >= 1152921504606846976 { abort };
     r := call erec_alloc(11 * DIND.u64[s + 8]);

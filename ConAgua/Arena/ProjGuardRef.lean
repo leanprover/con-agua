@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.KnotMono
 import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.WhnfM2CRefine2
@@ -199,7 +200,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     RefE (KnotUpToE p n) (pgsE p (n + 1) m mode vis q us) (projGuardSort R cvT caps (decI us)) a
       (PgsPost dn m vis fe M eb) := by
   obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
-  obtain ⟨hni, hnp⟩ := decCI_ind_n (erRdOK m) hci
+  obtain ⟨-, hni, -, hnp, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [pgsE.eq_2]
   split
@@ -260,11 +261,11 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   refine RefE.mono (R := PgsPost dn m3 vis fe M3 eb) ?_ (PgsPost.comp hK3 hSt3)
   rw [pgsE.k_inst_lp.arm1]; simp only [L.Ind.erRd_foldN]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
-    (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+    (erRd m1 (q + (CI.indCaps + Caps.nparams)) + erRd m1 (q + (CI.indCaps + Caps.nIdx))) (r3.headD 0) hS3 h3.resOk
   simp only [L.Ind.erRd_foldN] at hn' hni hnp
   rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl,
     ← formerSortLoop_congr hRW] at hf
-  rcases hx4 : fslE p n m3 mode vis 0 (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) with
+  rcases hx4 : fslE p n m3 mode vis 0 (erRd m1 (q + (CI.indCaps + Caps.nparams)) + erRd m1 (q + (CI.indCaps + Caps.nIdx))) (r3.headD 0) with
     e4 | ⟨r4, m4⟩
   · rw [hx4] at hf; rw [pgsE.k_former_sort_loop.none]
     exact RefE.bind_left fun hg => hf hg

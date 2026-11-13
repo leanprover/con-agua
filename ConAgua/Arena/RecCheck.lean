@@ -304,7 +304,7 @@ def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
   if f == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
   kind := EREC⦃q⦄;
   if kind != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  tyI := call family_telescope(vis, q + 1, q + 5);
+  tyI := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
   (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
   tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, tyI);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);

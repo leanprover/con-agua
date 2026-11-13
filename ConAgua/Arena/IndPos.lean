@@ -374,11 +374,11 @@ def nestContainer : FunDecl :=
   (found, q) := call env_find(C, vis);
   if found == 0 { return (0, 0, 0, 0) };
   if EREC⦃q⦄ != 3 { return (0, 0, 0, 0) };
-  capsq := q + 5;
-  ctorsOff := EREC⦃capsq + 13⦄;
-  ctorsLen := EREC⦃capsq + 14⦄;
+  capsq := q + ⟪CI.indCaps⟫;
+  ctorsOff := EREC⦃capsq + ⟪Caps.ctorsOff⟫⦄;
+  ctorsLen := EREC⦃capsq + ⟪Caps.ctorsLen⟫⦄;
   (csOff, csLen, firstNPc) := call nest_container_ctors(vis, C, ctorsOff, ctorsLen);
-  if csLen == 0 { return (1, EREC⦃capsq + 12⦄, csOff, 0) };
+  if csLen == 0 { return (1, EREC⦃capsq + ⟪Caps.nparams⟫⦄, csOff, 0) };
   return (1, firstNPc, csOff, csLen)
 }
 

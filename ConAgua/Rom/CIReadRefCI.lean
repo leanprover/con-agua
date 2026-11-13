@@ -338,7 +338,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
       (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have ecaps := hH3 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
-    simp [decCI, nat?_of e0, ecv, ecaps]
+    simp [decCI, CI.indCaps, nat?_of e0, ecv, ecaps]
 
 set_option maxHeartbeats 1000000 in
 /-- A recursor (plain rules). -/

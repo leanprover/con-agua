@@ -69,7 +69,7 @@ variable (m0 : Mem) (c q tq tn lpe uslen : Word)
 
 /-- The tests of `struct_eta_cert_go`, all passed. -/
 def sgOK : Prop :=
-  erRd m0 (q + 5) ≠ 0 ∧ erRd m0 (tq + 5) = c ∧ tn = erRd m0 (tq + 4) ∧ uslen = erRd m0 (q + 3) ∧
+  erRd m0 (q + (CI.indCaps + Caps.eta)) ≠ 0 ∧ erRd m0 (tq + 5) = c ∧ tn = erRd m0 (tq + 4) ∧ uslen = erRd m0 (q + 3) ∧
     lpe ≠ 0
 
 end sgKarms
@@ -80,7 +80,7 @@ variable (p : Prog) (n : Nat) (m0 : Mem) (mode vis d b us c T q tq us2 ao an to 
 
 /-- `struct_eta_cert_go`'s tests, all passed: the tail. -/
 theorem secgE_yes (h : sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
-    secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + 5))
+    secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
       (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
       (erRd m0 (q + 3)) lpe (.ok (r, m)) =
     secgE.k_struct_eta_cert_tail p (sectE p n m mode vis d b us T us2 ao an to tn
@@ -90,11 +90,11 @@ theorem secgE_yes (h : sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
 
 /-- `struct_eta_cert_go`'s tests, one failed: `false`. -/
 theorem secgE_no (h : ¬ sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
-    secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + 5))
+    secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
       (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
       (erRd m0 (q + 3)) lpe (.ok (r, m)) = .ok ([0], m) := by
   unfold secgE.k_ls_node
-  by_cases h1 : erRd m0 (q + 5) = 0
+  by_cases h1 : erRd m0 (q + (CI.indCaps + Caps.eta)) = 0
   · simp only [h1, ↓reduceIte]
   by_cases h2 : erRd m0 (tq + 5) ≠ c
   · simp only [h1, h2, ne_eq, not_false_eq_true, ↓reduceIte]

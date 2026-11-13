@@ -213,8 +213,8 @@ def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
   po := EREC⦃p + 2⦄;
   pc := EREC⦃p + 3⦄;
   ty := EREC⦃p + 4⦄;
-  n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
-  if n < EREC⦃p + 17⦄ { abort };
+  n := EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ + EREC⦃p + ⟪CI.indCaps + Caps.nIdx⟫⦄;
+  if n < EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ { abort };
   (f, u) := call former_res_sort(ty);
   if f != 0 { r := call former_never_zero(p, us); return r };
   ity := call inst_lp(po, pc, us, ty);
@@ -251,7 +251,7 @@ def iotaNoCertL : FunDecl := lfn (vis, isK, T, n) locals (f, q) {
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC⦃q⦄ != 3 { return 0 };
-  if EREC⦃q + 12⦄ == 0 { return 0 };
+  if EREC⦃q + ⟪CI.indCaps + Caps.neverZero⟫⦄ == 0 { return 0 };
   return u64(EREC⦃q + 3⦄ == n)
 }
 
@@ -270,7 +270,7 @@ def recFireLevelCountL : FunDecl := lfn (k, lc, cpc) locals () {
 -- con-ron: ConRon/Arena/Core.lean:2023-2029 ConRon.Arena.familyNeverZeroAt
 @[no_expose, l_impl ConRon.Arena.familyNeverZeroAt]
 def familyNeverZeroAtL : FunDecl := lfn (mode, vis, p, us) locals (r) {
-  if EREC⦃p + 12⦄ != 0 { return 1 };
+  if EREC⦃p + ⟪CI.indCaps + Caps.neverZero⟫⦄ != 0 { return 1 };
   r := call former_never_zero_at(mode, vis, p, us);
   return r
 }
@@ -284,7 +284,7 @@ The table (`tq`) or `0`. -/
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
-  if EREC⦃p + 5⦄ == 0 { return 0 };
+  if EREC⦃p + ⟪CI.indCaps + Caps.eta⟫⦄ == 0 { return 0 };
   if EREC⦃tq + 5⦄ != ctor { return 0 };
   r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
   if r == 0 { return 0 };

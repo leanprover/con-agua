@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.QuotAtT
 import ConRon.Bridge.Checker.Canon
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.IlpRd
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
@@ -52,18 +53,6 @@ theorem hlist?_sh {k : IdxKind} {i i' : Nat} {xs : List (Idx k)} (e0 : WAt R R' 
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
   obtain ⟨o, ho, c, hc, hs⟩ := hx
   exact ⟨o, nat?_sh e0 ho, c, nat?_sh e1 hc, he.hslice? hs⟩
-
-/-- **An inductive's capabilities, copied**: the 15 words at `q'` are those at `q`, the slices they
-point to read on. -/
-theorem decCaps_sh {q q' : Nat} {x : IIndCaps} (w : ∀ j < 15, WAt R R' (q + j) (q' + j))
-    (he : ArrExt R R') (hx : decCaps R q = some x) : decCaps R' q' = some x := by
-  have w0 : WAt R R' q q' := by simpa using w 0 (by omega)
-  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, enz, hnz, e⟩ := hx
-  exact ⟨e1, bool?_sh w0 h1, e7, nat?_sh (w 6 (by omega)) h7,
-    e9, hlist?_sh (w 10 (by omega)) (w 11 (by omega)) he h9,
-    e10, nat?_sh (w 12 (by omega)) h10,
-    e11, hlist?_sh (w 13 (by omega)) (w 14 (by omega)) he h11, enz, bool?_sh (w 7 (by omega)) hnz, e⟩
 
 /-- A reducibility hint, copied (its two words). -/
 theorem decHint_sh {q q' : Nat} {x : ConLeche.ReducibilityHint} (e0 : WAt R R' q q')
@@ -364,37 +353,35 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
 /-- **The copied tail** (`er_copy_er(r + 5, c + 5, l)`) after the record's head. -/
 theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : AState}
-    {r nn k c l : Word} {cv' : IConstantVal} {r4 : List Word} (hT : StageT dn vis fe m a)
-    (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (hl : 5 + l.toNat ≤ nn.toNat)
-    (h : callW p n "er_copy_er" [r + 5, c + 5, l] m3 = some (r4, m4)) :
+    {r nn k c o l : Word} {cv' : IConstantVal} {r4 : List Word} (hT : StageT dn vis fe m a)
+    (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (ho : 5 ≤ o.toNat) (hl : o.toNat + l.toNat ≤ nn.toNat)
+    (h : callW p n "er_copy_er" [r + o, c + o, l] m3 = some (r4, m4)) :
     StageT dn vis fe m4 a3 ∧ IWGrow m m4 ∧ erecP m4 r.toNat = some k ∧
       decCV (erecP m4) (r.toNat + 1) = some cv' ∧
-      ∀ j < l.toNat, WAt (erecP m) (erecP m4) (c.toNat + 5 + j) (r.toNat + 5 + j) := by
+      ∀ j < l.toNat, WAt (erecP m) (erecP m4) (c.toNat + o.toNat + j) (r.toNat + o.toNat + j) := by
   have hcap := hpre.cap
   have htop := hpre.top
   have hbase := hpre.base
-  obtain ⟨e5, eo5, et5⟩ := erAddr (r := r) (c := 5) (by simp; omega) hpre.r41
-  simp only [show (5 : Word).toNat = 5 from rfl] at e5 eo5
-  have hq : erOff r + 5 + l.toNat < 2 ^ 40 := by omega
+  obtain ⟨e5, eo5, et5⟩ := erAddr (r := r) (c := o) (by omega) hpre.r41
+  have hq : erOff r + o.toNat + l.toNat < 2 ^ 40 := by omega
   have hr41 := hpre.r41
   unfold erOff at hq
   obtain ⟨hS4, hg4, -, hrd4, hout4, ws, rfl⟩ := erCopyEr_fresh hP.erCopyEr hP.erPut hT.stage
     hpre.stT.stage hpre.fr hpre.grow (by rw [et5, eo5]; omega) (by rw [et5, eo5]; omega)
     (by rw [e5]; omega) h
   have hT4 := StageT.of_wrER hpre.stT hS4
-  have hoth : ∀ i, i < 5 → erecP (wrER m3 (r + 5) ws) (r.toNat + i) = erecP m3 (r.toNat + i) :=
+  have hoth : ∀ i, i < 5 → erecP (wrER m3 (r + o) ws) (r.toNat + i) = erecP m3 (r.toNat + i) :=
     fun i hi => hout4 _ fun j hj => by rw [e5]; omega
   refine ⟨hT4, hg4, by simpa using (hoth 0 (by omega)).trans (by simpa using hpre.kw), ?_, ?_⟩
   · exact hpre.cvR _ (fun j hj => by
       have := hoth (1 + j) (by omega); rwa [← Nat.add_assoc] at this) hg4.ext
   · intro j hj w hw
-    rw [show r.toNat + 5 + j = (r + 5).toNat + j by rw [e5]]
+    rw [show r.toNat + o.toNat + j = (r + o).toNat + j by rw [e5]]
     refine hrd4 j hj w ?_
-    have h5 : (5 : Word).toNat = 5 := rfl
     have := L.Arena.erecP_lt64 hw
-    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_ofNat', h5]
-    rw [show (c.toNat + 5) % 2 ^ 64 + j % 2 ^ 64 = c.toNat + 5 + j by omega,
-      Nat.mod_eq_of_lt this]; exact hw
+    have e : (c + o + UInt64.ofNat j).toNat = c.toNat + o.toNat + j := by
+      simp only [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
+    rw [e]; exact hw
 
 /-- The four words of a decoded constant value exist. -/
 theorem decCV_def {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
@@ -786,11 +773,12 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
-    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 15) (by decide) h4
+    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (o := CI.indCaps) (l := Caps.size) CI.indCaps_ge
+      (by first | decide | exact Nat.le_of_eq CI.indSize_toNat.symm) h4
     refine ⟨.indInfo cv' caps0, a3, ?_, hT4, hg4, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · have hc := decCaps_sh (fun j hj => hc4 j hj) hg4.ext hcaps
+    · have hc := decCaps_congr (fun j hj => hc4 j hj) hg4.ext hcaps
       simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hcv4, show (3 : Word).toNat = 3 from rfl, hc]
       rfl
@@ -813,7 +801,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
-    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 3) (by decide) h4
+    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (o := 5) (l := 3) (by decide) (by decide) h4
+    simp only [UInt64.reduceToNat] at hc4
     refine ⟨.ctorInfo cv' w5.toNat w6.toNat (decI w7), a3, ?_, hT4, hg4, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
