@@ -86,7 +86,8 @@ def fireLevelsAt : FunDecl := lfn (fo, fl, ko, kc, us) locals (vo, vc, b, c, x, 
 /-- `rules_at_lps_go(ko, kc, us, o, l, d)`: the rules of the `EREC` slice `(o, l)` (`Rule.size`-word
 records) at the new names, written to the records at `d`: each right-hand side
 (`instLPFast`), then its firing mode (a `levels` fire's levels substituted, every other mode as it
-is), then the rest. Returns `0`. -/
+is), then the rest (the live fields by name, `RecLayout/Rule.lean`; the unused words are not
+written). Returns `0`. -/
 -- con-ron: ConRon/Arena/Basis.lean:67-78 ConRon.Arena.rulesAtLps
 @[no_expose, l_impl ConRon.Arena.rulesAtLps]
 def rulesAtLpsGo : FunDecl := lfn (ko, kc, us, o, l, d) locals (rhs, k, lo, ez, u) {
@@ -99,15 +100,12 @@ def rulesAtLpsGo : FunDecl := lfn (ko, kc, us, o, l, d) locals (rhs, k, lo, ez, 
   };
   ez := call erec_put(d, EREC⦃o⦄);
   ez := call erec_put(d + ⟪Rule.nfields⟫, EREC⦃o + ⟪Rule.nfields⟫⦄);
-  ez := call erec_put(d + 2, 0);
   ez := call erec_put(d + ⟪Rule.fire⟫, k);
   ez := call erec_put(d + ⟪Rule.lvlsOff⟫, lo);
   ez := call erec_put(d + ⟪Rule.lvlsLen⟫, EREC⦃o + ⟪Rule.lvlsLen⟫⦄);
   ez := call erec_put(d + ⟪Rule.pinsOff⟫, EREC⦃o + ⟪Rule.pinsOff⟫⦄);
   ez := call erec_put(d + ⟪Rule.pinsLen⟫, EREC⦃o + ⟪Rule.pinsLen⟫⦄);
   ez := call erec_put(d + ⟪Rule.rhs⟫, rhs);
-  ez := call erec_put(d + 9, 0);
-  ez := call erec_put(d + 10, 0);
   u := call rules_at_lps_go(ko, kc, us, o + ⟪Rule.size⟫, l - 1, d + ⟪Rule.size⟫);
   return 0
 }
