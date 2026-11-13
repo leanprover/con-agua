@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.WhnfM2CRefine4
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
@@ -8,7 +9,6 @@ import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.WhnfM2CRefine2
 import ConAgua.Arena.WhnfM2CRefine4
-import ConAgua.Arena.DeclCanonEq
 import all ConAgua.Arena.WhnfM2C
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.EtaRescueRef

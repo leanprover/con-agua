@@ -6,11 +6,11 @@ import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecLayout.RuleDec
+import ConAgua.Arena.DeclCanonLvl
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
 import ConAgua.Arena.IndexLoops
-import ConAgua.Arena.DeclCanonRules
 import ConAgua.L.WordOff
 import ConAgua.Arena.InferFieldSort
 

@@ -3,15 +3,11 @@ module
 public import ConAgua.Arena.QuotCiT
 public import ConAgua.Arena.InstLPSpec
 import ConAgua.Arena.RecFireCore
-import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.InstLPRef
-import ConAgua.Arena.RecFireEnv
-import ConAgua.Arena.WhnfIotaRecRefine
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Checker.Canon
-import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.InferFieldSort
 
 @[expose] public section

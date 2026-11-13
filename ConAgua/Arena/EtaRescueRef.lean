@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.RecLayout.TblDec
+import ConAgua.Arena.Verdict
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IndRecRead
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr

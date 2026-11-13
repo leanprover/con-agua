@@ -1,7 +1,7 @@
 module
 
-import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.RecLayout.RuleDec
+import ConAgua.Arena.ErecRdCV
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.EtaRescueRef

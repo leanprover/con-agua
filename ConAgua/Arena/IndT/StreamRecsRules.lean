@@ -1,15 +1,13 @@
 module
 
 public import ConAgua.Arena.IndT.StreamRecsTy
+import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.RefWalk
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import ConRon.Bridge.Inductives.StreamRecs
 import ConRon.Bridge.Checker.Canon
-import ConAgua.Arena.DeclCanonEq
-import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.IndPosSpec.NestKeyMap
-import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndStream
 
