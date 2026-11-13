@@ -51,7 +51,7 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## `blockCapsAt`: one member's `IIndCaps` (`decCaps`, 15 words) -/
+/-! ## `blockCapsAt`: one member's `IIndCaps` (`decCaps`) -/
 
 /-- `block_caps_ctor_names(o, l)`: the ctor-name list of a `(cv, nF)` pointer slice `(o, l)`, built
 fresh in `IW`. -/

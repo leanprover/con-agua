@@ -37,7 +37,6 @@ structure MnzProg (p : Prog) : Prop where
 /-- The lookups of `block_caps_at`. -/
 structure CapsProg (p : Prog) : Prop where
   alloc : p.lookup "iw_alloc" = some iwAlloc
-  rec5 : p.lookup "rec5" = some rec5
   namesCopy : p.lookup "member_names_copy" = some memberNamesCopy
   names : p.lookup "block_shape_member_names" = some blockShapeMemberNames
   erAlloc : p.lookup "erec_alloc" = some erecAlloc
@@ -57,11 +56,11 @@ def ShapeSrc (m : Mem) (q : Word) : Prop :=
 
 /-! ## The capability record's decoding -/
 
-/-- **`IIndCaps` at `IW[q‥q+15)`**, decoded in every array that holds those words (at any `e`) and
-extends the record pool in use, both tiers (where `cons_block_inds` copies them). -/
+/-- **`IIndCaps` at `IW[q‥q+Caps.size)`**, decoded in every array that holds those words (at any
+`e`) and extends the record pool in use, both tiers (where `cons_block_inds` copies them). -/
 def CapsAt (m : Mem) (q : Nat) (c : IIndCaps) : Prop :=
-  q + 15 ≤ iwTop m ∧ ∀ (a : Nat → Option Word) (e : Nat), (∀ i < 15, a (e + i) = iwA m (q + i)) →
-    ArrExt (erA m) a → decCaps a e = some c
+  q + Caps.size.toNat ≤ iwTop m ∧ ∀ (a : Nat → Option Word) (e : Nat),
+    (∀ i < Caps.size.toNat, a (e + i) = iwA m (q + i)) → ArrExt (erA m) a → decCaps a e = some c
 
 theorem CapsAt.grow {m m' : Mem} {q : Nat} {c : IIndCaps}
     (h : CapsAt m q c) (hg : IWGrow m m') : CapsAt m' q c := by
