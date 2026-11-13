@@ -125,6 +125,7 @@ import all ConAgua.Front.ApplyDecl
 import all ConAgua.Front.ApplyExpr
 import all ConAgua.Front.Driver
 import all ConAgua.Front.Fields
+import all ConAgua.Front.FieldsDecl
 import all ConAgua.Front.IdTable
 import all ConAgua.Front.IndApply
 import all ConAgua.Front.IndFields
