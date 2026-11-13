@@ -155,7 +155,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨cv, rules, rfl, hcv, hrules⟩ := (decCI_rec_rd (erRdOK s₀.mem) hci).1 (Classical.not_not.mp k5)
   generalize hrecP : re.tail.headD 0 = recP at *
   -- the arity
-  have hmIw := (erRd s₀.mem (recP + 5)).toNat_lt
+  have hmIw := (erRd s₀.mem (recP + CI.recMajor)).toNat_lt
   by_cases s0 : sn = 0
   · rw [ite_eq_left s0]
     exact hnone _ rfl (cT_run_arity _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ hfind (by rw [hsz, s0]; simp))
@@ -165,12 +165,12 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       have : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
       rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
   have hsnp : sn.toNat ≠ 0 := fun h => s0 (UInt64.toNat_inj.mp (by simpa using h))
-  by_cases a1 : sn - 1 ≠ erRd s₀.mem (recP + 5)
+  by_cases a1 : sn - 1 ≠ erRd s₀.mem (recP + CI.recMajor)
   · erw [ite_eq_left a1]
     exact hnone _ rfl (cT_run_arity _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ hfind (by
       rw [hsz]; intro h; apply a1; apply UInt64.toNat_inj.mp; rw [hsn1]; omega))
   erw [ite_eq_right a1]
-  have hn : xs.size = (erRd s₀.mem (recP + 5)).toNat + 1 := by
+  have hn : xs.size = (erRd s₀.mem (recP + CI.recMajor)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
   obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
@@ -192,12 +192,12 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
   subst hm3'
   simp only [irCE.k_peel_pis]
-  have hrunP' : (peelPis ((erRd s₀.mem (recP + 5)).toNat + 1) cv.type).run a₀ =
+  have hrunP' : (peelPis ((erRd s₀.mem (recP + CI.recMajor)).toNat + 1) cv.type).run a₀ =
       .ok (decOpt (rp.headD 0) (rp.tail.headD 0), a₀) := by
     rw [htype, ← hn, hsz]; exact hrunP
-  have htk : (takeEidx xs xs.size).toList.length = (erRd s₀.mem (recP + 5)).toNat + 1 := by
+  have htk : (takeEidx xs xs.size).toList.length = (erRd s₀.mem (recP + CI.recMajor)).toNat + 1 := by
     rw [takeEidx_size]; simp [hn]
-  by_cases u1 : [o, l].tail.headD 0 ≠ erRd s₀.mem (recP + 3)
+  by_cases u1 : [o, l].tail.headD 0 ≠ erRd s₀.mem (recP + (CI.cv + CV.lpsLen))
   · erw [ite_eq_left u1]
     exact hnone _ rfl (cT_run_check _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ hfind hn hvl hrunP'
       (fun ⟨_, h2, _⟩ => u1 (by rw [hlen] at h2; exact UInt64.toNat_inj.mp h2)))
@@ -208,7 +208,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (fun ⟨_, _, h3⟩ => by rw [p0] at h3; simp [decOpt] at h3))
   rw [ite_eq_right p0]
   -- the major
-  have hcnd : (takeEidx xs xs.size).toList.length = (erRd s₀.mem (recP + 5)).toNat + 1 ∧
+  have hcnd : (takeEidx xs xs.size).toList.length = (erRd s₀.mem (recP + CI.recMajor)).toNat + 1 ∧
       UInt64.toNat ([o, l].tail.headD 0) = cv.levelParams.length ∧
       (decOpt (rp.headD 0) (rp.tail.headD 0)).isSome = true := by
     refine ⟨htk, ?_, by unfold decOpt; rw [ite_eq_right p0]; rfl⟩

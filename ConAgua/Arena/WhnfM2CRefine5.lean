@@ -41,25 +41,6 @@ theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK
   have e' : rd q = w := hR.rd _ _ hw
   exact ⟨by rw [e', e], by rw [e']; exact hl⟩
 
-/-- A constructor record's level-parameter count, type and parameter count words. -/
-theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {nP nF : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv nP nF fam)) :
-    cv.levelParams.length = (rd (q + 3)).toNat ∧ nP = (rd (q + 5)).toNat ∧
-      cv.type = decI (rd (q + 4)) ∧ HW (rd (q + 4)) := by
-  obtain ⟨-, -, -, hlen, hty32, hty⟩ := decCV_rd_ci hR (decCI_ctorInfo_iff.mp h).2.1
-  refine ⟨hlen, ?_, hty, hty32⟩
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  rcases k with _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨_, -, np, hnp, _, -, _, -, he⟩ := h
-  simp only [IConstantInfo.ctorInfo.injEq] at he
-  obtain ⟨-, rfl, -⟩ := he
-  simp only [nat?, Option.map_eq_some_iff] at hnp
-  obtain ⟨w, hw, rfl⟩ := hnp
-  have e : rd (q + 5) = w := hR.offN (k := 5) (by simpa [Nat.add_assoc] using hw) (by decide)
-  rw [e]
-
 /-- The kind word of a decoded record says whether it is an inductive or a constructor. -/
 theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
@@ -99,7 +80,8 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl
         cvj cnP (decI T) cvT caps (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   obtain ⟨hctor, hctorHW⟩ := decRule_ctorRd (erRdOK m) hrl
-  obtain ⟨hlp, hnp, -, -⟩ := decCI_ctorWords (erRdOK m) hcj
+  obtain ⟨-, hcvj, hnp, -⟩ := decCI_ctorInfo_rd (erRdOK m) hcj
+  obtain ⟨-, -, -, hlp, -, -⟩ := decCV_rd_ci (erRdOK m) hcvj
   have hR : ∀ v y a', GrowPost decH dn m vis fe M eb ResH v y a' →
       GrowPost decH dn m vis fe M eb ResH ([v.1.headD 0], v.2) y a' :=
     GrowPost.of_tail (KeptAll.refl _ _) (StackKept.refl _).toGrew
@@ -179,11 +161,11 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   rw [hm4']
   by_cases g4 : r4.headD 0 = 0
   · rw [m2cCtorE.k_env_find.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g4]
-    have hn : fe.find? (decI (erRd m (cvjP + 7))) = none := by
+    have hn : fe.find? (decI (erRd m (cvjP + CI.ctorInduct))) = none := by
       rw [hfind]; simp only [envFound, g4, ↓reduceIte]
     exact RefE.ret (by simp only [m2cCtorT, hn]; rfl) hA0
   obtain ⟨ci, hciE⟩ := hfound g4
-  have hfind' : fe.find? (decI (erRd m (cvjP + 7))) = some ci := by
+  have hfind' : fe.find? (decI (erRd m (cvjP + CI.ctorInduct))) = some ci := by
     rw [hfind]; simp only [envFound, g4, ↓reduceIte]; exact hciE
   obtain ⟨hind, -⟩ := decCI_kind34' (erRdOK m) hciE
   by_cases g5 : erRd m (r4.tail.headD 0) ≠ 3

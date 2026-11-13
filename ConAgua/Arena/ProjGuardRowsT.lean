@@ -64,17 +64,6 @@ theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
   rw [e, e5]
   exact ⟨rfl, hw32, rfl⟩
 
-/-- A constant record's name (word `q + 1`). -/
-theorem decCV_nameRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} (h : decCV R (q.toNat + CI.cv.toNat) = some cv) :
-    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hn, ls, -, ty, -, hc⟩ := h
-  cases hc
-  obtain ⟨w, hw, hl, rfl⟩ := hd?_some hn
-  have e : rd (q + 1) = w := hR.offN (k := 1) hw (by decide)
-  rw [e]; exact ⟨hl, rfl⟩
-
 theorem cv_eta (cv : IConstantVal) : cv = ⟨cv.name, cv.levelParams, cv.type⟩ := rfl
 
 /-- What `proj_guard_rows`' refinement needs of a program. -/
@@ -279,19 +268,18 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
   rw [pgrW.k_env_find.arm2 _ _ _ _ _ _ _ g1] at hW
   generalize hc : r1.tail.headD 0 = c at hW hci
   have hcv := decCI_cv hci
-  obtain ⟨-, -, hlps, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m1) hcv
-  obtain ⟨hnn32, hnn⟩ := decCV_nameRd (erRdOK m1) hcv
+  obtain ⟨hnn32, hnn, hlps, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m1) hcv
   simp only [erRd_congr rfl rfl] at hW
   -- `const_ty_at`
-  rcases c2 : callW p n "const_ty_at" [erRd m1 (c + 1), erRd m1 (c + 2), erRd m1 (c + 3),
-      erRd m1 (c + 4), us] m1 with _ | ⟨r2, m2⟩
+  rcases c2 : callW p n "const_ty_at" [erRd m1 (c + (CI.cv + CV.name)), erRd m1 (c + (CI.cv + CV.lpsOff)),
+      erRd m1 (c + (CI.cv + CV.lpsLen)), erRd m1 (c + (CI.cv + CV.type)), us] m1 with _ | ⟨r2, m2⟩
   · rw [c2] at hW; cases hW
   rw [c2] at hW
   simp only [pgrW.k_const_ty_at] at hW
   have h2 := CoreSpec.of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (hCT n ⟨m1, Locals.init []⟩ a dn vis fe M eb _ _ _ _ us _ hS hnn32 hty32 hus hlps) c2
-  have hcvE : ci.toConstantVal = ⟨decI (erRd m1 (c + 1)), ci.toConstantVal.levelParams,
-      decE (erRd m1 (c + 4))⟩ := by
+  have hcvE : ci.toConstantVal = ⟨decI (erRd m1 (c + (CI.cv + CV.name))), ci.toConstantVal.levelParams,
+      decE (erRd m1 (c + (CI.cv + CV.type)))⟩ := by
     rw [cv_eta ci.toConstantVal, hnn, hty]; rfl
   have hrun2 : (constTyAt ci.toConstantVal (decI us)).run a =
       .ok (decE (r2.headD 0), AM.st (constTyAt ci.toConstantVal (decI us)) a) := by
