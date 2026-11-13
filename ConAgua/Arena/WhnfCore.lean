@@ -72,7 +72,7 @@ def whnfCoreLoopB : Stmt :=
     (st, r) := call whnf_core_step(mode, cheap, vis, d, h, e);
     stb := u64(cheap == 0) & key & (u64(st != 0) | u64(g != 4) | u64(r != e));
     if stb != 0 {
-      if len(SPN.u64) <= pb + pn { abort };
+      if len(SPN.u64) <= pb + pn || len(CTL.u64) <= 136 { abort };
       SPN.u64[pb + pn] := e;
       pn += 1;
       CTL.u64[136] := pb + pn
@@ -100,7 +100,7 @@ At a chain's end the keys are stored (`whnf_core_store_chain`) and the top put b
 tests branch-free as bit masks over the tag (`657`: the tags `bvar`, `app`, `letE`, `proj` that
 `whnfCoreStuckTag` rejects; `334`: `fvar`, `sort`, `const`, `forallE`, `lit`, the stuck heads; `640`:
 `letE`, `proj`; `128`: `letE`), so the loop's model has few paths. A full stack aborts (a fixed
-capacity). -/
+capacity), and so does a top past the stack's end at entry. -/
 -- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
 -- con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop
 -- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
@@ -118,6 +118,7 @@ capacity). -/
 def whnfCoreL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
   pb := CTL.u64[136];
+  if len(SPN.u64) < pb { abort };
   pn := 0;
   pc := 0;
   ⟪whnfCoreLoopB⟫;
@@ -199,7 +200,10 @@ otherwise; a dangling handle aborts. -/
 @[no_expose, l_impl ConRon.Arena.iotaTarget]
 def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
   if ⟦h⟧.tag != 3 { return (0, 0) };
-  (t, x) := node CONST⟦h⟧;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CONST⟨t⟩.count <= x { abort };
   (f, q) := call env_find(CONST⟨t, x⟩.n, vis);
   if f == 0 { return (0, 0) };
   if EREC⦃q⦄ != 5 { return (0, 0) };
@@ -413,7 +417,6 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2689-2696 ConRon.Arena.projCert
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.projCert` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:2698-2704 ConRon.Arena.projCertAt
 con-ron: ConRon/Arena/Core.lean:2682-2687 ConRon.Arena.teleArityOk -/
 @[no_expose, l_impl ConRon.Arena.projCert ConRon.Arena.projCertAt ConRon.Arena.teleArityOk]
