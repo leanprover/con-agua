@@ -45,9 +45,10 @@ structure IndInstallLookups (p : Prog) : Prop where
 
 /-! ## Models -/
 
-/-- The constant value's four words at `q`. -/
+/-- The constant value's fields at `q` (`RecLayout/CV.lean`; the name at offset 0 is word `q`). -/
 def cvM (m : Mem) (q n o l t : Word) : Mem :=
-  (((m.set64 DLP q n).set64 DLP (q + 1) (o + 1)).set64 DLP (q + 2) l).set64 DLP (q + 3) t
+  (((m.set64 DLP q n).set64 DLP (q + CV.lpsOff) (o + 1)).set64 DLP (q + CV.lpsLen) l).set64 DLP
+    (q + CV.type) t
 
 /-- **The model of `ind_caps(q)`**: every field of the capabilities `0`. -/
 def capsM (m : Mem) (q : Word) : Mem :=
@@ -55,18 +56,20 @@ def capsM (m : Mem) (q : Word) : Mem :=
     ).set64 DLP (q + Caps.allOff) 0).set64 DLP (q + Caps.allLen) 0).set64 DLP (q + Caps.nparams) 0
     ).set64 DLP (q + Caps.ctorsOff) 0).set64 DLP (q + Caps.ctorsLen) 0
 
-/-- The eleven words of a rule at `q`. -/
+/-- A rule's live fields at `q` (`RecLayout/Rule.lean`; the constructor at offset 0 is word `q`):
+a `plain` fire, no levels, no pins. -/
 def ruleM (m : Mem) (q n nf e : Word) : Mem :=
-  ((((((((((((m.set64 DLP q n).set64 DLP (q + 1) nf).set64 DLP (q + 2) 0).set64 DLP (q + 3) 0)
-    |>.set64 DLP (q + 4) 0).set64 DLP (q + 5) 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0)
-    |>.set64 DLP (q + 8) e).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0))
+  ((((((((m.set64 DLP q n).set64 DLP (q + Rule.nfields) nf).set64 DLP (q + Rule.fire) 0)
+    |>.set64 DLP (q + Rule.lvlsOff) 0).set64 DLP (q + Rule.lvlsLen) 0).set64 DLP (q + Rule.pinsOff) 0)
+    |>.set64 DLP (q + Rule.pinsLen) 0).set64 DLP (q + Rule.rhs) e)
 
-/-- The last four words of a `recInfo` record at `q`. -/
+/-- A `recInfo` record's own fields at `q` (after the constant value; `RecLayout/CI.lean`). -/
 def recTailM (m : Mem) (q r lo ln : Word) : Mem :=
-  ((((m.set64 DLP (q + 5) (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) +
-      rdW (m.arr64 IFR) (r + 6) + rdW (m.arr64 IFR) (r + 5))).set64 DLP (q + 6)
+  ((((m.set64 DLP (q + CI.recMajor) (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) +
+      rdW (m.arr64 IFR) (r + 6) + rdW (m.arr64 IFR) (r + 5))).set64 DLP (q + CI.recPrefix)
       (rdW (m.arr64 IFR) (r + 8) + rdW (m.arr64 IFR) (r + 7) + rdW (m.arr64 IFR) (r + 6))).set64
-    DLP (q + 7) lo).set64 DLP (q + 8) ln).set64 DLP (q + 9) (rdW (m.arr64 IFR) (r + 4))
+    DLP (q + CI.recRulesOff) lo).set64 DLP (q + CI.recRulesLen) ln).set64 DLP (q + CI.recIsK)
+    (rdW (m.arr64 IFR) (r + 4))
 
 /-! ## Specs -/
 
@@ -107,7 +110,7 @@ l_model rule_spec (p : Prog) (hL : IndApplyLookups p) (hI : IndInstallLookups p)
   specs [nameGet_spec p hL.decl.expr.front n, exprGet_spec p hL.decl.expr n]
   grind [arena_grind] guards ["name_get", "expr_get"]
 
-/-- `cvW` in the users' shape: the two lookups, `lp_put`, the four words (`cvM`). -/
+/-- `cvW` in the users' shape: the two lookups, `lp_put`, the value's fields (`cvM`). -/
 theorem cvW_eq (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : cvW b m q nm lps ty =
     wK (fun nh => wK (fun th => mK (fun m₁ =>
       some (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0) th)) (lpPutW b m lps))
@@ -115,7 +118,7 @@ theorem cvW_eq (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : cvW b m q nm l
   unfold cvW; simp only [lkW]
   split <;> (try split) <;> simp_all [wK] <;> cases lpPutW b m lps <;> rfl
 
-/-- `ruleW` in the users' shape: the two lookups, the eleven words (`ruleM`). -/
+/-- `ruleW` in the users' shape: the two lookups, the rule's fields (`ruleM`). -/
 theorem ruleW_eq (m : Mem) (q rp : Word) : ruleW m q rp =
     wK (fun nh => wK (fun eh => some (ruleM m q nh (rdW (m.arr64 IFL) (rp + 1)) eh))
       (lkW m EID (rdW (m.arr64 IFL) (rp + 2)))) (lkW m NID (rdW (m.arr64 IFL) rp)) := by
