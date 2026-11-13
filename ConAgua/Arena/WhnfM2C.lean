@@ -18,7 +18,7 @@ projections, on the spine stack; the twin has no stack).
 | L | twin part |
 |---|---|
 | `m2c_head(mode, vis, d, isK, ro, rc, major)` | the constructor test, the single rule, its `ctorInfo` |
-| `m2c_ctor(mode, vis, d, isK, ro, cvjP, major)` | the family `T` (head of the constructor type's Π-result), its `indInfo` |
+| `m2c_ctor(mode, vis, d, isK, ro, cvjP, major)` | the family `T` (the constructor's `induct`), its `indInfo` |
 | `m2c_const_view(hh)` | the `view` of a `const` head |
 | `m2c_arms(mode, vis, d, isK, ro, cvjP, T, indP, major)` | the dispatch on the recursor's `isK`, then `eta_rescue_table` |
 | `m2c_pre(mode, vis, d, major)` | the major's type `tmaj` in whnf, its head `T'.{ust}`, `ust`'s length (all three arms) |
@@ -35,8 +35,6 @@ namespace L.Arena
 
 /-- The constructor test, the single rule, its constructor's record; then `m2c_ctor`.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cHeadL : FunDecl := lfn (mode, vis, d, isK, ro, rc, major) locals (ok, f, q, r) {
   ok := call is_ctor_app(vis, major);
   if ok != 0 { return major };
@@ -48,17 +46,12 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
   return r
 }
 
-/-- The family of the constructor (`cvjP` its record): the head of its type's Π-result, an
-inductive; then `m2c_arms`.
+/-- The family of the constructor (`cvjP` its record): the one stored at its `induct` (word `7`),
+an inductive; then `m2c_arms`.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cCtorL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, major)
-    locals (piRes, hh, T, us, f, indP, r) {
-  piRes := call pi_result(EREC⦃cvjP + 4⦄);
-  hh := call get_app_fn(piRes);
-  if ⟦hh⟧.tag != 3 { return major };
-  (T, us) := call m2c_const_view(hh);
+    locals (T, f, indP, r) {
+  T := EREC⦃cvjP + 7⦄;
   (f, indP) := call env_find(T, vis);
   if f == 0 { return major };
   if EREC⦃indP⦄ != 3 { return major };
@@ -69,8 +62,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 /-- The name and the universe arguments of a `const` handle (the view checks, then the stored
 record).
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cConstViewL : FunDecl := lfn (hh) locals (t, i) {
   (t, i) := node CONST⟦hh⟧;
   return (CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
@@ -81,8 +72,6 @@ family's projection table) pick the arm;
 the K and `And` arms get the rule's constructor, the constructor's level-parameter count and
 parameter count.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cArmsL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, T, indP, major) locals (tq, er, r) {
   if isK != 0 {
     r := call m2c_k(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
@@ -101,8 +90,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 /-- The major's type in whnf and its head: `(0, …)` if the head is not a constant, else
 `(1, tmaj, T', ust, ustl)` (`ustl` the length of `ust`).
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cPreL : FunDecl := lfn (mode, vis, d, major) locals (ioa, tmaj, hh, T2, ust, uo, ul) {
   ioa := call infer_io(mode, vis, d, major);
   tmaj := call whnf(mode, vis, d, ioa);
@@ -115,8 +102,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 
 /-- The type check and the proof-irrelevance run of a fabricated `fab` (K and `And` arms).
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cCheckL : FunDecl := lfn (mode, vis, d, tmaj, fab, major) locals (ok, ioa, ir) {
   ok := call fab_scope_ok(d, fab, major);
   if ok == 0 { return major };
@@ -130,8 +115,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 
 /-- The K arm: the major's type's head is the family at the constructor's level count.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cKL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
     locals (f, tmaj, T2, ust, ustl, r) {
   (f, tmaj, T2, ust, ustl) := call m2c_pre(mode, vis, d, major);
@@ -144,8 +127,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 
 /-- The K arm's fabrication: the constructor applied to the type's first `cnP` arguments.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cK2L : FunDecl := lfn (mode, vis, d, ctor, cnP, tmaj, ust, major)
     locals (to, tn, hd, fab, r) {
   (to, tn) := call get_app_args(tmaj);
@@ -159,8 +140,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 /-- The η arm (`indP` the family's record, `tq` its projection table plus one): the type's head,
 argument count (the table's parameter count) and level count.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, tq, major)
     locals (pc, ec, ep, ef, f, tmaj, T2, ust, ustl, to, tn, r) {
   pc := EREC⦃indP + 3⦄;
@@ -177,14 +156,12 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
   return r
 }
 
-/-- The η arm's fabrication: the instantiated non-`Prop` test at the use
-(`former_never_zero_at`), the η spine at the table's constructor `ec` and field count `ef`.
+/-- The η arm's fabrication: the instantiated non-`Prop` test at the use, the stored fact first
+(`family_never_zero_at`), the η spine at the table's constructor `ec` and field count `ef`.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cEta2L : FunDecl := lfn (mode, vis, d, T, indP, ec, ef, to, tn, ust, major)
     locals (ok, nz, fo, fn, hd, fab) {
-  nz := call former_never_zero_at(mode, vis, indP, ust);
+  nz := call family_never_zero_at(mode, vis, indP, ust);
   if nz == 0 { return major };
   (fo, fn) := call eta_fab_args(T, to, tn, major, ef);
   hd := call intern_const(ec, ust);
@@ -196,8 +173,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 
 /-- The `And` arm: the family is the pinned `And`, its two projection slots ready to fire.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cAndL : FunDecl := lfn (mode, vis, d, T, major, ctor, lpl, cnP)
     locals (an, f, tmaj, T2, ust, ustl, to, tn, ars, r) {
   an := call pin_at(11);
@@ -217,8 +192,6 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 /-- The `And` arm's fabrication: the two projections pushed after the type's arguments (the
 slice `(to, tn)` ends at the stack top), the constructor applied to all of them.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def m2cAnd2L : FunDecl := lfn (mode, vis, d, ctor, T, tmaj, to, tn, ust, major)
     locals (p0, p1, hd, fab, r) {
   p0 := call mk_proj(T, 0, major);
@@ -249,6 +222,7 @@ structure M2CProg (p : Prog) : Prop where
   and_ : p.lookup "m2c_and" = some m2cAndL
   and2 : p.lookup "m2c_and2" = some m2cAnd2L
   fnza : p.lookup "former_never_zero_at" = some formerNeverZeroAtL
+  fanza : p.lookup "family_never_zero_at" = some familyNeverZeroAtL
   fsl : p.lookup "former_sort_loop" = some formerSortLoopL
   findTable : FindTableProg p
 
