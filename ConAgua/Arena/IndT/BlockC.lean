@@ -473,6 +473,7 @@ theorem checkBlockInds_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockSh
   obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨p₁, _, hw, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h
   unfold BlockShape.withSort at hw
   obtain ⟨_, _, -, hw⟩ := ConRon.Bridge.AM.bind_ok hw
