@@ -449,7 +449,7 @@ theorem natZeroOk_run_none (a : AState) : (natZeroOk none).run a = .ok (false, a
 theorem natZeroOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natZeroOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf _)
   | _ => rfl
 
 theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) (cv : IConstantVal)
@@ -496,7 +496,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
-  obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
+  obtain ⟨cv, np, nf, fam,  rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
   | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
@@ -583,7 +583,7 @@ theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a
 theorem natSuccOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natSuccOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf _)
   | _ => rfl
 
 theorem natSuccOk_run_lps (a : AState) (cv : IConstantVal) (np nf : Nat)
@@ -650,7 +650,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
-  obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
+  obtain ⟨cv, np, nf, fam,  rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
   · erw [ite_eq_left hk3] at hW

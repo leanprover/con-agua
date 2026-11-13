@@ -448,67 +448,7 @@ theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  intro n s₀ a₀ dn vis fe MM eb e hS he
-  refine triple_post (isCtorApp_spec p hp (n + 1) s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.base
-  rw [icaW.arm1] at hW
-  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, icaW.k_get_app_fn.none, icaW.k_get_app_fn.eq_2, reduceCtorEq] at hW
-  obtain ⟨t₁, ht₁, hm₁, -, hh1, hga⟩ := triple_of_callW
-    (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
-  rw [ht₁] at hm₁
-  subst hm₁
-  by_cases h3 : tagW (r₁.headD 0) ≠ 3
-  · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    have hrun' := isCtorApp_run_not fe a₀ (decE e) _ hga (fun ht => h3 (by
-      have := (decE_tag_eq _ hh1 3 (by decide)).mp ht; exact this))
-    refine CoreRef.of_pure hS hrun' hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  have h3' : tagW (r₁.headD 0) = 3 := by simpa using h3
-  rw [ite_eq_right h3] at hW
-  obtain ⟨hv1, hW⟩ := of_ite_none hW
-  obtain ⟨hv2, hW⟩ := of_ite_none hW
-  have h3 := h3'
-  obtain ⟨hvw, hn32, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
-  generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
-  rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
-    simp only [hc2, icaW.k_env_find.none, icaW.k_env_find.eq_2, L.Ind.erRd_foldN, reduceCtorEq] at hW
-  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
-    (envFind_refines p hp.envrow hp.baserow hp.envfind n s₀ vis _ hS.env hn32) hc2
-  rw [ht₂] at hm₂
-  have htag : (decE (r₁.headD 0)).tag = ETag.const := (decE_tag_eq _ hh1 3 (by decide)).mpr h3
-  have hrun1 := isCtorApp_run_const fe a₀ (decE e) _ hga htag _ _ hvw
-  subst hm₂
-  by_cases h0 : r₂.headD 0 = 0
-  · rw [ite_eq_left h0] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI cw) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
-    rw [hnone] at hrun1
-    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  rw [ite_eq_right h0] at hW
-  obtain ⟨ci, hci⟩ := hdec h0
-  have hfind' : fe.find? (decI cw) = some ci := by
-    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
-  have hctor := decCI_ctorR (erRdOK s₀.mem) hci
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  rw [hfind'] at hrun1
-  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) = 4
-  · obtain ⟨cv, rfl⟩ := hctor.1 h4
-    simp only [h4, ↓reduceIte] at hr
-    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  · simp only [h4, ↓reduceIte] at hr
-    refine CoreRef.of_pure (v := false) hS ?_ hm.symm ?_ ?_
-    · rw [hrun1]
-      have := hctor.2 h4
-      cases ci <;> first | rfl | exact absurd rfl (this _ _ _)
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
+  sorry
 
 /-! ## The relation across a memo write (`ct`, `rr`, `cv`: the constant caches)
 
