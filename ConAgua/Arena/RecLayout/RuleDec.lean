@@ -296,4 +296,80 @@ theorem decRules_shift {R : Nat → Option Word} {o : Word} {k : Nat} {rs : List
     rw [UInt64.toNat_add]; omega
   rw [e]; exact h
 
+/-! ## A rule's words, written field by field -/
+
+/-- **A rule record's words** at `q` of a reader: each field's word (a writer's postcondition;
+`decRule_of_words` decodes it, the fire from `RuleRecW.plain`/`levels`/`nested`). -/
+structure RuleRecW (a : Nat → Option Word) (q : Nat) (c nf fk lo ll po pl rhs : Word) : Prop where
+  ctor : a (q + Rule.ctor.toNat) = some c
+  nf : a (q + Rule.nfields.toNat) = some nf
+  fk : a (q + Rule.fire.toNat) = some fk
+  lo : a (q + Rule.lvlsOff.toNat) = some lo
+  ll : a (q + Rule.lvlsLen.toNat) = some ll
+  po : a (q + Rule.pinsOff.toNat) = some po
+  pl : a (q + Rule.pinsLen.toNat) = some pl
+  rhs : a (q + Rule.rhs.toNat) = some rhs
+
+/-- The record's words carried to another reader that holds the same `Rule.size` words. -/
+theorem RuleRecW.shift {a b : Nat → Option Word} {q e : Nat} {w0 w1 w2 w3 w4 w5 w6 w7 : Word}
+    (h : RuleRecW a q w0 w1 w2 w3 w4 w5 w6 w7)
+    (hw : ∀ j < Rule.size.toNat, b (e + j) = a (q + j)) : RuleRecW b e w0 w1 w2 w3 w4 w5 w6 w7 :=
+  ⟨(hw _ Rule.ctor_lt).trans h.ctor, (hw _ Rule.nfields_lt).trans h.nf,
+    (hw _ Rule.fire_lt).trans h.fk, (hw _ Rule.lvlsOff_lt).trans h.lo,
+    (hw _ Rule.lvlsLen_lt).trans h.ll, (hw _ Rule.pinsOff_lt).trans h.po,
+    (hw _ Rule.pinsLen_lt).trans h.pl, (hw _ Rule.rhs_lt).trans h.rhs⟩
+
+section words
+variable {a : Nat → Option Word} {q : Nat} {c nf fk lo ll po pl rhs : Word}
+
+/-- A `plain` fire's words. -/
+theorem RuleRecW.plain (h : RuleRecW a q c nf fk lo ll po pl rhs) (hk : fk = 0) :
+    RuleFireAt a q .plain := by
+  simp [RuleFireAt, nat?, h.fk, hk]
+
+/-- A `levels` fire's words. -/
+theorem RuleRecW.levels (h : RuleRecW a q c nf fk lo ll po pl rhs) (hk : fk = 2)
+    {lv : List LIdx} (hs : hslice? a lo.toNat ll.toNat = some lv) : RuleFireAt a q (.levels lv) := by
+  have hl := h.ll
+  rw [Rule.lvlsLen_toNat, ← Nat.add_assoc] at hl
+  exact ⟨by simp [nat?, h.fk, hk], hlist?_of h.lo hl hs⟩
+
+/-- A `nested` fire's words. -/
+theorem RuleRecW.nested (h : RuleRecW a q c nf fk lo ll po pl rhs) (hk : fk = 1)
+    {lv : List LIdx} {ps : List EIdx} (hs : hslice? a lo.toNat ll.toNat = some lv)
+    (hp : hslice? a po.toNat pl.toNat = some ps) : RuleFireAt a q (.nested lv ps) := by
+  have hl := h.ll
+  rw [Rule.lvlsLen_toNat, ← Nat.add_assoc] at hl
+  have hpl := h.pl
+  rw [Rule.pinsLen_toNat, ← Nat.add_assoc] at hpl
+  exact ⟨by simp [nat?, h.fk, hk], hlist?_of h.lo hl hs, hlist?_of h.po hpl hp⟩
+
+/-- **A rule's words decode** (the fire given). -/
+theorem decRule_of_words (h : RuleRecW a q c nf fk lo ll po pl rhs) (hc : c.toNat < 2 ^ 32)
+    (hr : rhs.toNat < 2 ^ 32) {f : IRecRuleFire} (hf : RuleFireAt a q f) :
+    decRule a q = some ⟨decI c, nf.toNat, f, decI rhs⟩ := by
+  have hc' := h.ctor
+  rw [ctor_add] at hc'
+  exact decRule_of (by simp [hd?, hc', hc]) (by simp [nat?, h.nf]) (by simp [hd?, h.rhs, hr]) hf
+
+end words
+
+set_option linter.deprecated false in
+/-- **A rule written field by field** (eight word stores into array `A` at `q + Rule.f`, in the
+fields' order) holds its words. -/
+theorem ruleRecW_set64 {m : Mem} {A : TieredArray} {q w0 w1 w2 w3 w4 w5 w6 w7 : Word}
+    (hb : q.toNat + Rule.size.toNat ≤ (m.arr64 A).size) (h64 : q.toNat + Rule.size.toNat < 2 ^ 64) :
+    RuleRecW (aread ((((((((((m.set64 A (q + Rule.ctor) w0).set64 A (q + Rule.nfields) w1).set64 A
+      (q + Rule.fire) w2).set64 A (q + Rule.lvlsOff) w3).set64 A (q + Rule.lvlsLen) w4).set64 A
+      (q + Rule.pinsOff) w5).set64 A (q + Rule.pinsLen) w6).set64 A (q + Rule.rhs) w7).arr64 A)))
+      q.toNat w0 w1 w2 w3 w4 w5 w6 w7 := by
+  obtain ⟨o1, o2, o3, o4, o5, o6, o7, o8⟩ := Rule.order
+  have e : ∀ f : Word, f.toNat < Rule.size.toNat → (q + f).toNat = q.toNat + f.toNat := fun f hf => by
+    rw [UInt64.toNat_add]; omega
+  simp only [Mem.arr64_set64_same, e _ Rule.ctor_lt, e _ Rule.nfields_lt, e _ Rule.fire_lt,
+    e _ Rule.lvlsOff_lt, e _ Rule.lvlsLen_lt, e _ Rule.pinsOff_lt, e _ Rule.pinsLen_lt,
+    e _ Rule.rhs_lt]
+  constructor <;> simp (disch := omega) only [aread_apply, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, if_pos, if_neg, ite_true]
+
 end L.Arena

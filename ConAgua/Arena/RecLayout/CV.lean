@@ -47,6 +47,12 @@ theorem lpsLen_toNat : lpsLen.toNat = lpsOff.toNat + 1 := by simp [lpsLen, lpsOf
 
 theorem size_pos : 0 < size.toNat := by simp [size]
 
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the name,
+the slice's offset word followed by its length word, the type, the record's size last. -/
+theorem order : name.toNat < lpsOff.toNat ∧ lpsLen.toNat = lpsOff.toNat + 1 ∧
+    lpsLen.toNat < type.toNat ∧ type.toNat < size.toNat := by
+  simp [name, lpsOff, lpsLen, type, size]
+
 /-- The name is word `q` itself (`decCV` and L read it there). -/
 theorem name_toNat : name.toNat = 0 := by simp [name]
 

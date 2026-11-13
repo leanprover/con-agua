@@ -59,6 +59,15 @@ theorem size_pos : 0 < size.toNat := by simp [size]
 @[rec_layout] theorem pinsLen_lt : pinsLen.toNat < size.toNat := by simp [pinsLen, size]
 @[rec_layout] theorem rhs_lt : rhs.toNat < size.toNat := by simp [rhs, size]
 
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the scalar
+fields first, then each slice's offset word followed by its length word, the right-hand side, the
+record's size last. -/
+theorem order : ctor.toNat < nfields.toNat ∧ nfields.toNat < fire.toNat ∧
+    fire.toNat < lvlsOff.toNat ∧ lvlsLen.toNat = lvlsOff.toNat + 1 ∧
+    lvlsLen.toNat < pinsOff.toNat ∧ pinsLen.toNat = pinsOff.toNat + 1 ∧
+    pinsLen.toNat < rhs.toNat ∧ rhs.toNat < size.toNat := by
+  simp [ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size]
+
 /-- A slice's length word follows its offset word. -/
 theorem lvlsLen_eq : lvlsLen = lvlsOff + 1 := by simp [lvlsLen, lvlsOff]
 theorem pinsLen_eq : pinsLen = pinsOff + 1 := by simp [pinsLen, pinsOff]
