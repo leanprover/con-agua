@@ -87,3 +87,60 @@ the names where they are written. The cost: a proof that still says `q + 17` kee
 * Unfold sites left outside `RecLayout/`: 8, all in the whole-record writers' proofs
   (`IcaW` 3, `IndInstallRefine2` 3, `CIReadRefCaps` 1, `CIReadRefCI` 1), which batch 3 rewrites.
 * 45 files, +514/−312 lines (with the three new `RecLayout` files, about 280 lines).
+
+## 3. The test: `IIndCaps` compacted from 15 to 8 words
+
+### Batch 2a: the whole-record writers by name (code change)
+
+Before the compaction could be a layout-file change, the code that writes a whole caps record had
+to stop being positional:
+
+* `block_caps_fin` (`Arena/IndInstall.lean`): `iw_alloc(⟪Caps.size⟫)` and one `IW` store per
+  field (it was three `rec5`s of 15 positional words); `ind_info_rec` copies the record with the
+  existing loop `block_caps_at_er_copy_go(q + ⟪CI.indCaps⟫, caps, ⟪Caps.size⟫)` (it was three
+  `er_put5`s); the front's `ind_caps` (`Front/IndApply.lean`) stores the eight fields by name (it
+  stored ten words, two of them dead); `rci_caps`' and `caps_eq_a`'s `eta` read/write at
+  `+ ⟪Caps.eta⟫` (an extra `add`; they are not hot).
+* One lemma per writer shape in `CapsDec.lean`: `CapsRecW` (a record's field words in a reader),
+  `CapsRecW.shift`, `decCaps_of_words`, `capsRecW_set64` (eight stores in field order hold the
+  fields), `Caps.order` (the fields' order: the facts `omega` needs to keep two fields apart; a
+  layout that keeps the order keeps every user). The writer proofs use these:
+  `IcaW.capsFin_rec`/`icfW_ok`/`installCapsTail`, `iirK_eq`/`iirW_stage` (the record is
+  `header ++ ieWords … Caps.size …`), `IndInstallRefine2.capsM_*`, `CIReadRefCaps.caps_rel`,
+  `DeclCanonEq.capsEqAll_ok`; deleted: `installRec5`, `installDecCaps`, the list form of
+  `CapsWords`, `CapsProg.rec5`.
+* 13 files, +358/−316 lines (without `checker.s`).
+
+### Batch 2b: the compaction
+
+`RecLayout/Caps.lean`: `eta 0, nIdx 1, neverZero 2, allOff 3, allLen 4, nparams 5, ctorsOff 6,
+ctorsLen 7, size 8` (8 lines). The build then failed in four proof files, each a literal that the
+reducible names had tolerated until the values changed:
+
+| file | what | lines |
+|---|---|---:|
+| `IndPosSpec/NestGroupCtors.lean` | `nest_container`'s proof read the ctors slice at `ciq + 5 + 13`/`+ 14`, `nparams` at `+ 12`, through a local copy of the caps decoder (`NcGoW.decCaps_ctors`, deleted) | +16/−15, −8 |
+| `DeclAndPinIndCopy2.lean` | `irc_fin`'s size table `if kk = 3 then 20 …` | +3/−2 |
+| `Rom/CIReadRefW.lean` | the hand model `ciSize`'s `some 20` | 1 |
+| `QuotCiT.lean` | a `cases h4 : callW … "er_copy_er" [r + 5, c + 5, 15]` | 1 |
+
+plus 7 comment/test lines that still said 15 or 20 (`IndPos2`, `IndApply`, `DeclStep`, `IcaW`,
+the `#guard` in `IndTest`). So: **8 layout lines + 21 proof lines in 4 files** (and the
+regenerated `checker.s`).
+
+**A second layout change after those fixes** (fields spread with gaps: `nIdx 2, neverZero 3,
+allOff 5, allLen 6, nparams 7, ctorsOff 9, ctorsLen 10, size 12`; not landed): the whole library
+built with only `Caps.lean` changed; only `AsmFileEq` failed, as it must until `checker.s` is
+regenerated (`checker_prog.py`, `asm_file.py`). That is the user's target: a layout change is the
+layout file.
+
+**What would have caught the leftovers earlier**: the names are `@[reducible]` (§2), so a literal
+in proof text keeps checking against the named L text; only a changed value finds it. A cheap
+check for the remaining records is the same perturbation (shift every offset by a gap, build,
+revert): about one world rebuild (35 min at 2 threads on this machine).
+
+**Performance** (`scripts/bench.py --set init --reps 3`, master b12763a4f vs the branch, load
+19–108, so wall time is not meaningful): `init435` 217 197 M → 217 196 M instructions, peak RSS
+620 MB both; `init-prelude` 1 160 M both, 27 MB both. `checker.s` 230 932 → 230 857 → 230 821
+lines (builders, compaction). Verdicts: `diff-e2e.py --refs` with the branch's binary: no
+UNSOUND/INCOMPLETE/CRASH/TIMEOUT; the same 8 REFDIFF (e2e-ref) as master's binary.
