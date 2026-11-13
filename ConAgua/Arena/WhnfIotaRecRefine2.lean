@@ -170,9 +170,9 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   unfold iotaRecFamT
   rw [decMode_verified mode hm4]
   by_cases hv : mode &&& 1 ≠ 0
-  · rw [ite_eq_left hv, if_pos (by simpa using hv)]
+  · rw [ite_eq_left hv, ite_eq_left (by simpa using hv)]
     exact RefE.ret rfl (CorePost.ret hS rfl (by show HW (1 : Word); unfold HW; decide))
-  rw [ite_eq_right hv, if_neg (by simpa using hv)]
+  rw [ite_eq_right hv, ite_eq_right (by simpa using hv)]
   -- the stored facts (`iotaNoCert`)
   have hk4 : erRd s₀.mem ctorP = 4 := Classical.byContradiction fun h =>
     (decCI_ctorR (erRdOK s₀.mem) hci).2 h _ _ _ _ rfl
@@ -202,10 +202,10 @@ theorem fam_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   rw [hr0', ← hcnt] at hnc
   by_cases g1 : r1.headD 0 ≠ 0
   · erw [irFamE.k_iota_no_cert.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ g1]
-    rw [if_pos (hnc.mp g1)]
+    rw [ite_eq_left (hnc.mp g1)]
     exact RefE.ret rfl (CorePost.ret hS rfl (by show HW (1 : Word); unfold HW; decide))
   erw [irFamE.k_iota_no_cert.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by simpa using g1)]
-  rw [if_neg (fun h => g1 (hnc.mpr h))]
+  rw [ite_eq_right (fun h => g1 (hnc.mpr h))]
   -- the comparand levels
   refine RefE.bindLift (fun _ => rfl) fun rv m1 c1 => ?_
   obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hr1⟩ := CoreSpec.run
@@ -267,7 +267,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (iotaRecFamT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (erRd s₀.mem (recP + 9) != 0) fam
         (erRd s₀.mem (recP + 5)).toNat (erRd s₀.mem (recP + 6)).toNat np lps
         (decI us) args.toList (decI usj) cvj rule margs.toList) decBool s₀ a₀ dn vis fe MM eb :=
-  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn sn lps rule cvj np nf fam
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn sn lps rule cvj np nf _fam
       args margs hS hm4 hebm hus husj hlps hrule hci hfe hsa hsat hmI hsm hsmt hcpm =>
     RefE.coreSpec (irFamE_spec p hp.fam (n + 1) s₀ mode vis d us recP so usj ctorP rl mo mn)
       (fam_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d us recP so usj ctorP
@@ -510,7 +510,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
       (iotaRecFire2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c) (erRd s₀.mem (recP + 9) != 0) fam
         (erRd s₀.mem (recP + 5)).toNat (erRd s₀.mem (recP + 6)).toNat np lps
         (decI us) args.toList (decI usj) cvj rule margs.toList) decOptR s₀ a₀ dn vis fe MM eb ResW :=
-  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl mo mn sn lps rule cvj np nf fam
+  fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl mo mn sn lps rule cvj np nf _fam
       args margs hS hm4 hebm hcw hus husj hlps hrule hci hfe hsa hsat hmI hsm hsmt =>
     RefE.coreSpec (fire2E_spec p hp.fire2 (n + 1) s₀ mode vis d c us recP so usj ctorP rl mo mn)
       (fire2_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
@@ -600,7 +600,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
         (decI us) args.toList (decE major) (decI usj) cvj rule) decOptR s₀ a₀ dn vis fe MM eb
       ResW :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl major sn lps rule cvj np
-      nf fam args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa hsat hmI =>
+      nf _fam args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa hsat hmI =>
     RefE.coreSpec (irFireE_spec p hp.fire (n + 1) s₀ mode vis d c us recP so usj ctorP rl major)
       (fire_ref p hp hc hw hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so usj
         ctorP rl major sn lps rule cvj np nf args hS hm4 hebm hcw hus husj hmaj hlps hrule hci hfe hsa
