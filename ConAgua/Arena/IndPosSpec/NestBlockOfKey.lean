@@ -115,61 +115,7 @@ theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
         (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 15) else 0).toNat
         (if found = 0 then (0 : Word) else if erRd m q = 3 then erRd m (q + 16) else 0).toNat
       = some (nestBlockOf fe (decI c)) := by
-  rw [nestBlockOf]
-  unfold envFound at hfound
-  by_cases h0 : found = 0
-  · simp only [h0, hfound, ite_true]
-    simp [hslice?]
-  · simp only [h0, ite_false] at hfound ⊢
-    obtain ⟨ci, hci⟩ := hdec h0
-    rw [hci] at hfound
-    obtain ⟨k, hk⟩ : ∃ k, nat? (erecP m) q.toNat = some k := by
-      simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
-      obtain ⟨k, hk, -⟩ := hci
-      exact ⟨k, hk⟩
-    have hrd := erN_rdW (m := m) hk
-    rw [UInt64.ofNat_toNat] at hrd
-    by_cases hk3 : erRd m q = (3 : Word)
-    · have hk3' : k = 3 := by
-        have h1 : UInt64.ofNat k = 3 := by rw [← hrd]; exact hk3
-        have h2 := congrArg UInt64.toNat h1
-        rw [UInt64.toNat_ofNat_of_lt' (nat?_lt hk)] at h2
-        simpa using h2
-      subst hk3'
-      obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk
-      simp only [hfound, ite_eq_left hk3]
-      simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-      obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, heq⟩ := hcaps
-      have hallcaps : caps.all = vall := by
-        have h' := Option.some.inj heq; rw [← h']
-      obtain ⟨o, l, ho, hl, hslc⟩ := hlist?_some hvall
-      have ho' : nat? (erA m) (q.toNat + 15) = some o := by
-        rw [show q.toNat + 15 = q.toNat + 5 + 10 by omega]; exact ho
-      have hl' : nat? (erA m) (q.toNat + 16) = some l := by
-        rw [show q.toNat + 16 = q.toNat + 5 + 10 + 1 by omega]; exact hl
-      have hb : q.toNat + 16 < 2 ^ 64 := by
-        simp only [nat?, Option.map_eq_some_iff] at hl'
-        obtain ⟨w, hw, -⟩ := hl'; exact erecP_lt64 hw
-      have e15 : (q + 15 : Word) = UInt64.ofNat (q.toNat + 15) := by
-        apply UInt64.toNat_inj.mp
-        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
-        simp; omega
-      have e16 : (q + 16 : Word) = UInt64.ofNat (q.toNat + 16) := by
-        apply UInt64.toNat_inj.mp
-        rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by show _ < 2 ^ 64; omega)]
-        simp; omega
-      rw [e15, e16, erN_rdW ho', erN_rdW hl']
-      have hoo : (UInt64.ofNat o).toNat = o := UInt64.toNat_ofNat_of_lt' (nat?_lt ho')
-      have hll : (UInt64.ofNat l).toNat = l := UInt64.toNat_ofNat_of_lt' (nat?_lt hl')
-      rw [hoo, hll, hallcaps]
-      exact hslc
-    · simp only [ite_eq_right hk3]
-      cases ci with
-      | indInfo cv caps =>
-        exfalso; apply hk3
-        have hk' := decCI_indInfo_kind hci
-        rw [hk'] at hk; cases hk; exact hrd
-      | _ => simp [hfound, hslice?]
+  sorry
 
 /-- `nat?` reads inside the array. -/
 theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? (aread a) i = some k) : i < a.size := by

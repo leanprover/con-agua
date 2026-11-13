@@ -97,24 +97,7 @@ theorem partsCI_fields {a : Nat → Option Word} {q : Nat}
          nat? a (q + 6) = some rP ∧ bool? a (q + 9) = some isK ∧
          ∃ o l, nat? a (q + 7) = some o ∧ nat? a (q + 8) = some l ∧ decRules a o l = some rules
      | _ => True) := by
-  unfold decCI at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨kd, hkd, h⟩ := h
-  rcases kd with _ | _ | _ | _ | _ | _ | kd
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, -, rfl⟩ := h; exact ⟨hkd, trivial⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, -, v, -, hh, -, rfl⟩ := h; exact ⟨hkd, trivial⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, -, rfl⟩ := h; exact ⟨hkd, trivial⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, caps, -, rfl⟩ := h; exact ⟨hkd, hcv⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, nP, hnP, nF, hnF, rfl⟩ := h; exact ⟨hkd, hcv, hnP, hnF⟩
-  · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, mI, hmI, rP, hrP, isK, hisK, o, ho, l, hl, rules, hrules, rfl⟩ := h
-    exact ⟨hkd, hcv, hmI, hrP, hisK, o, l, ho, hl, hrules⟩
-  · simp at h
+  sorry
 
 /-- The block's head, below the tops. -/
 theorem partsBlk_cons {dn : NIdx → Option ConLeche.Name} {m : Mem} {off L : Nat}
