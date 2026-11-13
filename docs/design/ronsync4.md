@@ -142,3 +142,11 @@ vocabulary.
   family (`ctor_family`, `iota_case3_at`, `m2c_ctor`, `eta_ctor_partial_fam` read `EREC[q + 7]`;
   no type walk), `iota_no_cert`, `rec_fire_level_count`, `family_never_zero_at` with generated
   models and refinements; `iota_rec_fam` checks the stored facts before case 3. No deviation row.
+* 09:26 ind finished (0 sorry in its area): `ctor_info_rec(cv, nP, nF, T)` (8 words, the family at
+  `p + 7`), `cons_sum_ctors` with the family, `cons_block_ctors`/`check_block_tail` over the
+  constructor groups (new `block_shape_ctor_groups`, `block_ctors_groups`), new
+  `member_never_zero` (`former_z` on the declared former; refinement `MemberNZ.lean` under
+  `StageR`/`ReadLCOK`/`SortsDen`), `block_caps_fin` writes `neverZero`; the front pairs each
+  constructor with its type's name (`vi_order`'s parallel `IFL` slice, `ind_ctor(c, T)`); the ROM
+  reader at the new encoding; `ci_eq`/`caps_eq`/`ci_canon_eq` compare the family and `neverZero`.
+  No deviation row. `R_NATIVE_NAT_COMPUTATION` dropped (reasons renumbered).
