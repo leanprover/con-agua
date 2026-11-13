@@ -654,7 +654,7 @@ theorem riRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     · simp at hw ⊢; rw [hw2] at hw; exact Option.some.inj hw
     · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
     · omega
-  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
+  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cv := by
     rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
       (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcv

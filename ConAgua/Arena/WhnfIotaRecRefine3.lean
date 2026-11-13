@@ -6,6 +6,7 @@ import ConAgua.Arena.IndPosSpec.NestBlockOfKey
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConRon.Bridge.Grind
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -172,7 +173,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hn : xs.size = (erRd s₀.mem (recP + 5)).toNat + 1 := by
     have := congrArg UInt64.toNat (Classical.not_not.mp a1); rw [hsn1] at this; omega
   -- the levels' length and the telescope
-  obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd1 (erRdOK s₀.mem) hcv
+  obtain ⟨-, hname, hlps, hlen, htyw, htype⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   refine RefE.onlySim (fun _ => irCE.k_ls_node.none ..) (fun _ _ h => h) fun rl m2 c2 => ?_
   obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lvl.lsnode n
     ⟨s₀.mem, Locals.init []⟩ us) c2

@@ -17,6 +17,7 @@ import ConAgua.Front.Preserve
 import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqStuckCert
 import ConAgua.Arena.InstLPLevel
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

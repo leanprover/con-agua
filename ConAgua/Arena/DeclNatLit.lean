@@ -74,7 +74,7 @@ theorem decCV_typeWR {rd : Nat → Option Word} {q : Nat} {cv : IConstantVal}
 
 /-- A record's constant value reads: the level-parameter count word and the type word. -/
 theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal}
-    (h : decCV (erecP m) (q.toNat + 1) = some cv) :
+    (h : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv) :
     ∃ wt, ((erRd m (q + 3) = 0) ↔ cv.levelParams.isEmpty = true) ∧
       erRd m (q + 4) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
       ∀ m', IWGrow m m' → erRd m' (q + 3) = erRd m (q + 3) ∧ erRd m' (q + 4) = wt := by
@@ -107,8 +107,8 @@ theorem tagWord {m : Mem} {q : Word} {ci : IConstantInfo}
 /-- The record's constant value decodes at `q + 1`. -/
 theorem ciCv_decodes {m : Mem} {q : Word} {ci : IConstantInfo} {cv : IConstantVal}
     (h : decCI (erecP m) q.toNat = some ci)
-    (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + 1) = some cv :=
-  hcv ▸ L.Arena.decCI_cvA h
+    (hcv : ci.toConstantVal = cv) : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv :=
+  hcv ▸ decCI_cv h
 
 structure NatLitProg (p : Prog) : Prop extends NatCvProg p where
   lNatIndOk : p.lookup "nat_ind_ok" = some natIndOkL

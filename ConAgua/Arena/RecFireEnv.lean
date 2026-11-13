@@ -4,6 +4,7 @@ import ConAgua.Arena.WhnfIotaRecRefine
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.EtaRescueRef
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -87,7 +88,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
       (erRd m (ctorP + 3)) rule cvj.levelParams := by
   obtain ⟨⟨c, cv, mI, rP, isK, rules, hf, -, hmem⟩, ⟨cj, np', nf', fam', hfj⟩⟩ := hfe
   rcases decRule_fireE (erRdOK m) hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, hk, hsl⟩
-  · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 (erRdOK m) (L.Arena.decCI_ctor_cv hci)
+  · obtain ⟨-, -, hlp, -⟩ := decCV_rd_ci (erRdOK m) (decCI_ctorInfo_iff.mp hci).2.1
     exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ hfj⟩
   · refine .inr ⟨h0, lvls, hk, hsl, ?_⟩
     rcases hk with hk | ⟨pins, hn⟩

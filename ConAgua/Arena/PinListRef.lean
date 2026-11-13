@@ -12,6 +12,7 @@ import ConAgua.Arena.IndexLoops
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.L.WordOff
 import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -44,7 +45,7 @@ theorem pinAgrees_eq_of_not_ind {x y : IConstantInfo}
 
 theorem ciD_ind {R : Nat → Option Word} {q : Nat} {v : IConstantVal} {c : IIndCaps}
     (h : decCI R q = some (.indInfo v c)) : ∃ w, R q = some w ∧ w.toNat = 3 := by
-  obtain ⟨wk, e, hx⟩ := ciD h
+  obtain ⟨wk, e, hx⟩ := decCI_cases h
   refine ⟨wk, e, ?_⟩
   rcases hx with ⟨k, _, _, h1⟩ | ⟨k, _, _, _, _, _, _, h1⟩ | ⟨k, _, _, h1⟩ | ⟨k, _⟩ |
     ⟨k, _, _, _, _, _, _, _, _, h1⟩ | ⟨k, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h1⟩
@@ -62,8 +63,8 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
   cases n with
   | zero => simp [pinAgreesW] at hW
   | succ n =>
-  obtain ⟨wk, e, hxk⟩ := ciD hx
-  obtain ⟨wk', e', hyk⟩ := ciD hy
+  obtain ⟨wk, e, hxk⟩ := decCI_cases hx
+  obtain ⟨wk', e', hyk⟩ := decCI_cases hy
   have r1 : erRd m c = wk := erRd_of _ _ e
   have r2 : erRd m d = wk' := erRd_of _ _ e'
   by_cases h3 : erRd m c = 3 ∧ erRd m d = 3
@@ -160,10 +161,10 @@ theorem pinCopyOk_sim (hP : PinListLProg p) (n : Nat) {m : Mem} {a : AState} {c 
   | zero => simp [pinCopyOkW] at hW
   | succ n =>
   rw [pinCopyOkW.arm1] at hW
-  have hccv : decCV (erecP m) (c.toNat + 1) = some ci.toConstantVal := decCI_cvA hci
-  have hpcv : decCV (erecP m) (pin.toNat + 1) = some pc.toConstantVal := decCI_cvA hpc
-  obtain ⟨hsl, hlen, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
-  obtain ⟨-, hplen, -⟩ := L.Arena.decCV_rd (erRdOK m) hpcv
+  have hccv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some ci.toConstantVal := decCI_cv hci
+  have hpcv : decCV (erecP m) (pin.toNat + CI.cv.toNat) = some pc.toConstantVal := decCI_cv hpc
+  obtain ⟨-, -, hsl, hlen, -⟩ := decCV_rd_ci (erRdOK m) hccv
+  obtain ⟨-, -, -, hplen, -⟩ := decCV_rd_ci (erRdOK m) hpcv
   -- `cv_lps(c + 1)`
   cases h2 : callW p n "cv_lps" [c + 1] m with
   | none => rw [h2] at hW; simp [pinCopyOkW.k_cv_lps] at hW
@@ -638,8 +639,8 @@ theorem cvLps_sim (hP : PinListLProg p) {n : Nat} {m m2 : Mem} {a : AState} {c :
     StageT dn vis fe m2 a ∧ IWGrow m m2 ∧ erecP m2 = erecP m ∧ (∀ x, erRd m2 x = erRd m x) ∧
       NSl ci.toConstantVal.levelParams (r2.headD 0) (r2.tail.headD 0) m2 := by
   have hQ := hP.basis.rules.toQuotAtProg
-  have hccv : decCV (erecP m) (c.toNat + 1) = some ci.toConstantVal := decCI_cvA hci
-  obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
+  have hccv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some ci.toConstantVal := decCI_cv hci
+  obtain ⟨-, -, hsl, -, -⟩ := decCV_rd_ci (erRdOK m) hccv
   obtain ⟨s2, rfl, -, hW2, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (cvLps_specW p hQ.iwAlloc hQ.erCopy hQ.erToIw hQ.cvLps n _ (c + 1)) h
   cases n with
@@ -816,7 +817,7 @@ end rules
 
 theorem kindW {m : Mem} {c : Word} {ci : IConstantInfo} (h : decCI (erecP m) c.toNat = some ci) :
     (erRd m c).toNat = ciKindQ ci := by
-  obtain ⟨wk, e, -⟩ := ciD h
+  obtain ⟨wk, e, -⟩ := decCI_cases h
   rw [erRd_of c wk e]; exact decCI_kindW h e
 
 theorem kindW_eq {m : Mem} {c : Word} {ci : IConstantInfo} (h : decCI (erecP m) c.toNat = some ci)
@@ -828,7 +829,7 @@ theorem decCI_rec_rules {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
     {cv : IConstantVal} {mi rp : Nat} {k : Bool} {rules : List IRecRule}
     (h : decCI R q.toNat = some (.recInfo cv mi rp k rules)) :
     decRules R (rd (q + 7)).toNat (rd (q + 8)).toNat = some rules := by
-  obtain ⟨wk, -, hx⟩ := ciD h
+  obtain ⟨wk, -, hx⟩ := decCI_cases h
   rcases hx with ⟨-, _, _, h1⟩ | ⟨-, _, _, _, _, _, _, h1⟩ | ⟨-, _, _, h1⟩ | ⟨-, _, _, _, _, h1⟩ |
     ⟨-, _, _, _, _, _, _, _, _, h1⟩ | ⟨-, cv', mi', rp', o, cnt, k', rules', -, -, -, ho, hcnt, -, hrules, h1⟩
   all_goals (try (cases h1; done))
@@ -865,8 +866,8 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
     obtain ⟨cv, np, nf, fam, rfl⟩ : ∃ cv np nf fam, ci = .ctorInfo cv np nf fam := by
       cases ci <;> simp [ciKindQ] at hk
       exact ⟨_, _, _, _, rfl⟩
-    have hccv : decCV (erecP m) (c.toNat + 1) = some cv := decCI_cvA hci
-    obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
+    have hccv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv := decCI_cv hci
+    obtain ⟨-, -, hsl, -, -⟩ := decCV_rd_ci (erRdOK m) hccv
     cases h1 : callW p n "er_sl_eq" [erRd m (c + 2), erRd m (c + 3), fo, fl] m with
     | none => rw [h1] at h; simp [blockLinkOkAtW.k_er_sl_eq] at h
     | some x1 =>
@@ -1038,7 +1039,7 @@ theorem blockLinksOkW_ok (hP : PinListLProg p) {n : Nat} {m m' : Mem} {a : AStat
     · rw [ite_eq_left hbl] at h
       obtain ⟨c, cs', rfl, hc, -⟩ := (hB.pslr hbl).uncons hbl hT.stage.iw.iwSize
       rw [decB_ciF] at hc
-      obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) (decCI_cvA hc)
+      obtain ⟨-, -, hsl, -, -⟩ := decCV_rd_ci (erRdOK m) (decCI_cv hc)
       exact ⟨_, _, hsl, h⟩
     · rw [ite_eq_right hbl] at h
       have e1 : block = [] := List.eq_nil_of_length_eq_zero (by

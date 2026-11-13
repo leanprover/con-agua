@@ -19,6 +19,7 @@ import ConAgua.Arena.IotaCase3Ref
 import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqMid
 import ConAgua.Arena.IndRealOpf2
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -64,7 +65,7 @@ theorem rflc_count {m : Mem} {rl ctorP : Word} {rule : IRecRule} {cvj : IConstan
     recFireLevelCount rule cvj.levelParams =
       (if erRd m (rl + 3) = 0 then erRd m (ctorP + 3) else erRd m (rl + 5)).toNat := by
   refine ⟨by unfold rflcW; split <;> simp_all, ?_⟩
-  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd1 (q := ctorP) (erRdOK m) (L.Arena.decCI_ctor_cv hci)
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (q := ctorP) (erRdOK m) (decCI_ctorInfo_iff.mp hci).2.1
   rcases decRule_fireE (erRdOK m) hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, hk, hsl⟩
   · simp only [recFireLevelCount, hpl, h0, ↓reduceIte, hlen]
   · rw [ite_eq_right h0]
@@ -781,7 +782,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (MM : ModeMaps) (eb mode d c us recP so sn : Word) (cv : IConstantVal) (rules : List IRecRule)
     (xs : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hm4 : mode < 4)
     (hebm : eb = (mode >>> 1) &&& 1) (hcw : HW c) (hus : HW us)
-    (hcv : decCV (erecP s₀.mem) (recP.toNat + 1) = some cv)
+    (hcv : decCV (erecP s₀.mem) (recP.toNat + CI.cv.toNat) = some cv)
     (hrules : decRules (erecP s₀.mem) (erRd s₀.mem (recP + 7)).toNat
       (erRd s₀.mem (recP + 8)).toNat = some rules)
     (hrecF : ∃ cr mI rP isK, fe.find? cr = some (.recInfo cv mI rP isK rules))
@@ -793,7 +794,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         (erRd s₀.mem (recP + 9) != 0) rules xs.toList) a₀ (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
   simp only [irMajorE]
   have hspn := hS.spn
-  obtain ⟨-, -, hlps, -, -, -⟩ := decCV_rd1 (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, hlps, -, -, -⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   cases n with
   | zero => rw [callW_zero, liftE_none, irMajorE.k_intern_bvar.none]; exact RefE.of_cls0 (by simp)
   | succ N =>
@@ -934,7 +935,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     (MM : ModeMaps) (eb mode d c us recP so sn : Word) (cv : IConstantVal) (rules : List IRecRule)
     (xs : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW c → HW us →
-    decCV (erecP s₀.mem) (recP.toNat + 1) = some cv →
+    decCV (erecP s₀.mem) (recP.toNat + CI.cv.toNat) = some cv →
     decRules (erecP s₀.mem) (erRd s₀.mem (recP + 7)).toNat
       (erRd s₀.mem (recP + 8)).toNat = some rules →
     (∃ cr mI rP isK, fe.find? cr = some (.recInfo cv mI rP isK rules)) →

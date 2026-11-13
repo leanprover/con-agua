@@ -13,6 +13,7 @@ import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndSumSpec.DecHLTake
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecClassSpec.MjProg
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

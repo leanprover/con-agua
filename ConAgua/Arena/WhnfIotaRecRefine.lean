@@ -469,7 +469,7 @@ theorem irRdW {b : Array Word} {q : Word} {w : Word} (hsz : b.size < 2 ^ 63) (c 
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     {ci : IConstantInfo} (hR : RdOK R rd) (h : decCI R q.toNat = some ci) (h4 : rd q = 4) :
-    ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + 1) = some cv :=
+    ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + CI.cv.toNat) = some cv :=
   (decCI_split hR h).2.2.2.2.1 h4
 
 /-- The common fields of a decoded rule record. -/
@@ -918,7 +918,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     obtain ⟨cv', he, -⟩ := (decCI_ctorR (erRdOK s₀.mem) hci).1 hk4
     cases he; rfl
   subst hcpw
-  obtain ⟨hnn, hname, hlpsj, -, hty, htype⟩ := decCV_rd1 (erRdOK s₀.mem) hcv
+  obtain ⟨hnn, hname, hlpsj, -, hty, htype⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   have hmsz : (mo + mn).toNat = mo.toNat + mn.toNat := by
     have := hsm.bound; rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
   rw [iotaRecVckT_eq]

@@ -204,7 +204,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
   obtain ⟨wk, hwk⟩ := decCI_rd hci
   have ek := erecKind hwk
   -- a pass: the shape's constant value against the pin
-  have pass : ∀ cv, fpcShape k ci = some cv → decCV (erecP m) (q.toNat + 1) = some cv →
+  have pass : ∀ cv, fpcShape k ci = some cv → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       fpcW.j1 p n id q m = some (r, m') →
       ∃ b a', (clauseT fe (decI nm) k (romCvT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by

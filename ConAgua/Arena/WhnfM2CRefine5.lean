@@ -12,6 +12,7 @@ import ConAgua.Arena.DeclCanonEq
 import all ConAgua.Arena.WhnfM2C
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.EtaRescueRef
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -45,7 +46,7 @@ theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
     {cv : IConstantVal} {nP nF : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv nP nF fam)) :
     cv.levelParams.length = (rd (q + 3)).toNat ∧ nP = (rd (q + 5)).toNat ∧
       cv.type = decI (rd (q + 4)) ∧ HW (rd (q + 4)) := by
-  obtain ⟨-, hlen, hty, hty32⟩ := decCV_rd hR (L.Arena.decCI_ctor_cv h)
+  obtain ⟨-, -, -, hlen, hty32, hty⟩ := decCV_rd_ci hR (decCI_ctorInfo_iff.mp h).2.1
   refine ⟨hlen, ?_, hty, hty32⟩
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h

@@ -15,6 +15,7 @@ import ConAgua.Arena.IndexLoops
 import all ConAgua.Arena.BasisL
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -160,7 +161,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     (hf : MemFrame quotA quotC m₀ m) (hg : IWGrow m₀ m)
     {d c po pl : Word} {cv : IConstantVal} {ps : List NIdx} {psv : List ConLeche.Name}
     (hd0 : erTopOf m₀ d ≤ erOff d) (hdt : erOff d + 4 ≤ erTopOf m d) (hd41 : d.toNat < 2 ^ 41)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv)
     (hps : hslice? (erecP m₀) po.toNat pl.toNat = some ps)
     (hden : ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv) :
     Sim (callW p n "cv_at_lps" [d, c + 1, po, pl] m) (cv.atLps ps) a
@@ -209,7 +210,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     (hpf12.arr _ (plA_not (by simp [plBad])) (by decide))
   have he12 : erecP s2.mem = erecP m := by rw [he2, he1]
   simp only [hr2, L.add_one_add_one, word_add12, word_add13] at hW
-  obtain ⟨hlps, -, hty, hty32⟩ := decCV_rd (erRdOK m) hcv
+  obtain ⟨-, -, hlps, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m) hcv
   cases h3 : callW p n "inst_lp" [erRd m (c + 2), erRd m (c + 3), r2.headD 0, erRd m (c + 4)] s2.mem with
   | none => rw [h3] at hW; simp [cvAtLpsW.k_inst_lp] at hW
   | some x3 =>
@@ -437,7 +438,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   rw [h1] at hW; simp only [quotPinHitW.k_quot_pin] at hW
   obtain ⟨ci, a1, hrun1, hT1, hg1, hci⟩ := hQ.qp n vis fe m a k hT hok r1 m1 h1
   obtain ⟨hst1, -⟩ := ConRon.Bridge.quotPin_run (s' := a1) hok hrun1
-  have hpcv : decCV (erecP m1) ((r1.headD 0).toNat + 1) = some ci.toConstantVal := decCI_cvA hci
+  have hpcv : decCV (erecP m1) ((r1.headD 0).toNat + CI.cv.toNat) = some ci.toConstantVal := decCI_cv hci
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
   -- `cv_lps(q)`
   cases h2 : callW p n "cv_lps" [q] m1 with
@@ -451,7 +452,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   | zero => exact absurd hW2 (by simp [L.Arena.cvLpsW])
   | succ n0 =>
   rw [L.Arena.cvLpsW_step] at hW2
-  obtain ⟨hsl1, hlen1⟩ := decCV_rdq (erRdOK m1) hq1
+  obtain ⟨-, -, hsl1, hlen1, -⟩ := decCV_rd (erRdOK m1) hq1
   obtain ⟨hS2, hg2, hdl2, htop2, -⟩ := erToIwW_stage hW2 hT1.stage hsl1
   have hT2 : StageT dn vis fe s2.mem a1 := StageT.of_iw hT1 hS2 (erToIwW_iwFr hW2)
   have hf2 := erToIwW_iwFr hW2
@@ -471,7 +472,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   rw [h3] at hW; simp only [quotPinHitW.k_sl_nodup] at hW
   simp only [hm3, hrd2] at hW
   rw [← hwsd] at hnd
-  obtain ⟨-, hplen, -, -⟩ := decCV_rd (erRdOK m1) hpcv
+  obtain ⟨-, -, -, hplen, -, -⟩ := decCV_rd_ci (erRdOK m1) hpcv
   have hlen2 : cv.levelParams.length = (r2.tail.headD 0).toNat := hslice?_lenR hdl2
   have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + 3)) ↔
       (nameNodup cv.levelParams && cv.levelParams.length == ci.toConstantVal.levelParams.length) = true := by
@@ -586,7 +587,7 @@ theorem quotAt_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : C
   obtain ⟨ci, a1, hrun1, hT1, hg1, hci⟩ := hQ.qp n vis fe m a k hT hok r1 m1 h1
   obtain ⟨hst1, hpin⟩ := ConRon.Bridge.quotPin_run (s' := a1) hok hrun1
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
-  obtain ⟨hsl1, -⟩ := decCV_rdq (erRdOK m1) hq1
+  obtain ⟨-, -, hsl1, -, -⟩ := decCV_rd (erRdOK m1) hq1
   simp only [L.Ind.erRd_foldN] at hW
   cases h2 : callW p n "ci_at_lps" [r1.headD 0, erRd m1 (q + 1), erRd m1 (q + 2)] m1 with
   | none => rw [h2] at hW; simp [quotAtW.k_ci_at_lps] at hW

@@ -218,7 +218,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     List.drop_eq_getElem_cons (by omega)
   have hj1 : j + 1 ≤ l := UInt64.le_iff_toNat_le.mpr (by rw [UInt64.toNat_add]; simp; omega)
   have hqT : (UInt64.ofNat q : Word).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  obtain ⟨wk, hwk, hk⟩ := ciD hci
+  obtain ⟨wk, hwk, hk⟩ := decCI_cases hci
   have hkw : erRd m (erRd m (o + j)) = wk := by rw [hpw']; exact L.Arena.erRd_of _ _ (by rw [hqT]; exact hwk)
   have hoff : ∀ t : Nat, q + t < 2 ^ 64 → erRd m (o + j) + UInt64.ofNat t = UInt64.ofNat (q + t) := by
     intro t ht; rw [hpw']; apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add] <;> omega

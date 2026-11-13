@@ -663,7 +663,7 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
     · rw [IWGrow.ext hg _ _ hw2]; simp [iirWs, r2]
     · rw [IWGrow.ext hg _ _ hw3]; simp [iirWs, r3]
     · omega
-  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
+  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cvv := by
     rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
       (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcvE

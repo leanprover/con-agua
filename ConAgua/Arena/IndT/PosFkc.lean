@@ -262,7 +262,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     rw [(erRd_of_erecP hw).1] at h3'
     simp [nat?, hw, h3']
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  have hcv : decCV (erecP m) (q.toNat + 1) = some cv := by
+  have hcv : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv := by
     simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
     obtain ⟨kd, hkd, hci⟩ := hci
     rw [hk3] at hkd; cases hkd

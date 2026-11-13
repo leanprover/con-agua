@@ -90,7 +90,7 @@ def StripOut (m : Mem) (r : List Word) (ciq : Word) (cv : IConstantVal) (nPc nF 
     Option (List EIdx × EIdx) → Prop
   | none => r = [0, 0, 0, 0, 0]
   | some (_, b) => ∃ w, r = [1, ciq + 1, UInt64.ofNat nPc, UInt64.ofNat nF, w] ∧ w.toNat < 2 ^ 32 ∧
-      decI w = b ∧ decCV (erecP m) (ciq.toNat + 1) = some cv
+      decI w = b ∧ decCV (erecP m) (ciq.toNat + CI.cv.toNat) = some cv
 
 theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {ciq : Word} {r : List Word} {ci : IConstantInfo}

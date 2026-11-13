@@ -12,6 +12,7 @@ import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
 import ConAgua.Arena.EtaRescueRef
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -248,7 +249,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
           obtain ⟨rfl, rfl, rfl⟩ := this; exact ⟨fam', rfl⟩
         | _ => exact absurd hrun1 (by simp [ConRon.Arena.nestCtorEntry, StateT.run, StateT.pure, pure, Except.pure])
       subst hci'
-      have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := L.Arena.decCI_ctor_cv hci
+      have hcvE : decCV (erecP m) (ciq.toNat + CI.cv.toNat) = some cv := (decCI_ctorInfo_iff.mp hci).2.1
       have hciq1 : (ciq + 1).toNat = ciq.toNat + 1 :=
         L.toNat_add_of_lt _ _ (show ciq.toNat + 1 < 2 ^ 64 by
           obtain ⟨_, e⟩ := decCV_rd hcvE; have := erecP_lt64 e; simpa using this)

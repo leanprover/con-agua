@@ -209,7 +209,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hg3 := hP3.grow
     generalize s3.mem = m3 at hS3 hg3 hP3 ⊢
     -- the levels
-    have hcv3 : decCV (erecP m3) (q.toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
+    have hcv3 : decCV (erecP m3) (q.toNat + CI.cv.toNat) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
     have e1' : erRd m3 (q + 2) = w1 :=
       L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 1 + 1 by

@@ -18,6 +18,7 @@ import ConAgua.L.ModelGen
 import all ConAgua.Arena.LevelZero
 import ConAgua.L.WordOff
 import ConAgua.Arena.InstLPLevel
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

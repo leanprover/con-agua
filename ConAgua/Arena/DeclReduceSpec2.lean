@@ -95,7 +95,7 @@ theorem decCI_kind0 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
     (w = 0 → ∃ cv, decCV a (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
   constructor
   · intro h0
@@ -114,7 +114,7 @@ theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
     (w = 3 → ∃ cv caps, decCV a (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
   constructor
   · intro h0
@@ -141,7 +141,7 @@ theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
     (w = 4 → ∃ cv np nf fam, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
       nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf fam) ∧
       (w ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
   constructor
   · intro h0
@@ -170,7 +170,7 @@ theorem decCI_kind5 {a : Nat → Option Word} {p : Nat}
     (w = 5 → ∃ cv mi rp k rules, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧
       nat? a (p + 6) = some rp ∧ ci = .recInfo cv mi rp k rules) ∧
       (w ≠ 5 → ∀ cv mi rp k rules, ci ≠ .recInfo cv mi rp k rules) := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
   constructor
   · intro h0
@@ -403,7 +403,7 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg4) hcvN
     have hna4 : decCI (erecP m4) (r4.headD 0).toNat = some na :=
       DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hna
-    have hnacv := ciD_cv hna4
+    have hnacv := decCI_cv hna4
     obtain ⟨wn', hwn', -⟩ := decCV_name hnacv
     have hp1 : (r4.headD 0 + 1).toNat = (r4.headD 0).toNat + 1 :=
       L.toNat_add_ofNat_of_lt _ 1 (erecP_lt64 hwn')

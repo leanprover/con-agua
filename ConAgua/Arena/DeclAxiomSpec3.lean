@@ -104,7 +104,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
   generalize hq : (findRes m vis nm).tail.headD 0 = q at hW hci hfind
   obtain ⟨wk, hwk⟩ := decCI_rd hci
   have ek := erecKind hwk
-  have pass : ∀ cv, fpShape k ca cb ci = some cv → decCV (erecP m) (q.toNat + 1) = some cv →
+  have pass : ∀ cv, fpShape k ca cb ci = some cv → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       fpW.j1 p n id q m = some (r, m') →
       ∃ b a', (clausePT fe (decI nm) k ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
@@ -163,7 +163,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
   -- the counts at `+5`, `+6`
   have counts : ∀ {w5 w6 : Word} {cv : IConstantVal} {x y : Nat},
       erecP m (q.toNat + 5) = some w5 → erecP m (q.toNat + 6) = some w6 → x = w5.toNat →
-      y = w6.toNat → decCV (erecP m) (q.toNat + 1) = some cv →
+      y = w6.toNat → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       (∀ cv', fpShape wk ca cb ci = some cv' ↔ (x = ca.toNat ∧ y = cb.toNat) ∧ cv' = cv) →
       ∃ b a', (clausePT fe (decI nm) wk ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by

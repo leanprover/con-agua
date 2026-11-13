@@ -197,7 +197,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨x3, a3, hrun3, hS3, hg3, ⟨hx32, hx3⟩, hA3, hP3⟩ := hF N _ cv caps m m3 a rt hP hS hci h3
     -- the levels
     have hcvP := (decCI_indInfo_iff.mp hci).2.1
-    have hcv3 : decCV (erecP m3) ((r2.tail.headD 0).toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvP
+    have hcv3 : decCV (erecP m3) ((r2.tail.headD 0).toNat + CI.cv.toNat) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvP
     obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
     have hq64 := erecP_lt64 hw2
     have e1 : erRd m3 (r2.tail.headD 0 + 2) = w1 :=

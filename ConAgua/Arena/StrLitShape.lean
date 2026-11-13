@@ -8,6 +8,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.StrLit
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -99,7 +100,7 @@ theorem callW_natIndAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natIndAtCv_spec p hp (n + 1) s₀ q) h
-  obtain ⟨-, hlen⟩ := decCV_rdq (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, -⟩ := decCV_rd (erRdOK s₀.mem) hcv
   obtain ⟨-, -, ⟨w3, hw3, hl3, hty⟩⟩ := decCV_words hcv
   have hq3 : erRd s₀.mem (q + 3) = w3 := (erRdOK s₀.mem).off hw3 (by simp)
   rw [natIndAtCvW.eq_2] at hW
@@ -150,7 +151,7 @@ theorem callW_natZeroAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natZeroAtCv_spec p hp (n + 1) s₀ q) h
-  obtain ⟨-, hlen⟩ := decCV_rdq (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, -⟩ := decCV_rd (erRdOK s₀.mem) hcv
   obtain ⟨-, -, ⟨w3, hw3, hl3, hty⟩⟩ := decCV_words hcv
   have hq3 : erRd s₀.mem (q + 3) = w3 := (erRdOK s₀.mem).off hw3 (by simp)
   rw [natZeroAtCvW.eq_2] at hW
@@ -225,7 +226,7 @@ theorem callW_natSuccAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (natSuccAtCv_spec p hp (n + 1) s₀ q) h
-  obtain ⟨-, hlen⟩ := decCV_rdq (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, -⟩ := decCV_rd (erRdOK s₀.mem) hcv
   obtain ⟨-, -, ⟨w3, hw3, htyl, hty⟩⟩ := decCV_words hcv
   have hq3 : erRd s₀.mem (q + 3) = w3 := (erRdOK s₀.mem).off hw3 (by simp)
   rw [← hq3] at htyl hty
@@ -372,7 +373,7 @@ theorem litShapeOk_call (hS : CoreS dn m a vis fe M eb) {c : Word} {ci : IConsta
   change litShapeOkW p (n + 1) m c = some (r.headD 0, s'.mem) at hW
   generalize s'.mem = m' at hW ⊢
   rw [litShapeOkW.eq_2, erRd_congr rfl rfl] at hW
-  have hcv := decCI_cvA hci
+  have hcv := decCI_cv hci
   obtain ⟨nw, hnw, hnwl, hnm⟩ := decCV_name hcv
   have hc1 : (c + 1).toNat = c.toNat + 1 := by
     have := erecP_lt64 hnw; rw [UInt64.toNat_add]; simp; omega

@@ -173,7 +173,7 @@ theorem target_ref (p : Prog) (hp : WhnfCoreProg p) (G : Prop) (n : Nat) (m : Me
   have k5 : erRd m (r₁.tail.headD 0) = 5 := Classical.not_not.mp k5
   erw [iotaTargetE.k_env_find.arm3 (hc1 := f0) (hc2 := k5)]
   obtain ⟨cv, rules, rfl, hcv, -⟩ := (decCI_rec_rd (erRdOK m) hci).1 k5
-  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd1 (erRdOK m) hcv
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (erRdOK m) hcv
   generalize hq : r₁.tail.headD 0 = q at *
   refine RefE.onlySim (fun _ => iotaTargetE.k_ls_node.none ..) (fun _ _ h => h) fun rl m2 c2 => ?_
   obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lsn n ⟨m, Locals.init []⟩ _) c2

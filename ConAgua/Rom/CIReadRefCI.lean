@@ -99,7 +99,7 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr)
       EKeep (fun _ => False) m m2 ∧ m2.arr64 IW = m.arr64 IW ∧
       erA m2 (pp.toNat) = some (UInt64.ofNat kn) ∧
       Holds (fun i => (pp.toNat + 1 ≤ i ∧ i < pp.toNat + 5) ∨ (erT m + sz.toNat ≤ i ∧ i < erT m2))
-        (fun _ => False) (fun m => decCV (erA m) (pp.toNat + 1)) m2 icv ∧
+        (fun _ => False) (fun m => decCV (erA m) (pp.toNat + CI.cv.toNat)) m2 icv ∧
       K rA r2 m2 = some (r, m') := by
   have hlt := hI.er_lt
   have hgo := hI.erT_mono
@@ -484,7 +484,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat}
       rw [g _ (by omega) (by omega), hk8 _ (by omega)]; exact w7
     have e8 : erA m'' (pp.toNat + 8) = some (UInt64.ofNat rs.length) := by
       rw [g _ (by omega) (by omega), hk8 _ (by omega)]; exact w8
-    have ecv : decCV (erA m'') (pp.toNat + 1) = some icv := by
+    have ecv : decCV (erA m'') (pp.toNat + CI.cv.toNat) = some icv := by
       refine hH2 m'' (fun i hi => ?_) (fun _ h => h.elim)
       rw [h1 i (by omega), hkey i (by omega) (by omega) (by omega) (by omega) (by omega) (by omega)]
     have erules : decRules (erA m'') (r4.headD 0).toNat rs.length = some irs := by

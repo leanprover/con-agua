@@ -19,6 +19,7 @@ import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.InferFieldSort
 import ConAgua.L.WordOff
 import ConAgua.Arena.BasisBlockT
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -92,7 +93,7 @@ theorem erecCiW_okAT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     (hcv : L.Front.CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
     StageT dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') (r.headD 0).toNat = some (.axiomInfo cv) ∧
-      decCV (erecP m') ((r.headD 0).toNat + 1) = some cv := by
+      decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some cv := by
   obtain ⟨hS', hg, h1, h2, -⟩ := erecCiW_okA h hS.stage hD hi hcv
   have hf := erecCiW_frame h
   exact ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩

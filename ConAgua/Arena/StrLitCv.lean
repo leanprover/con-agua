@@ -8,6 +8,7 @@ import Std.WP.Triple.SpecLemmas
 import ConAgua.L.ModelGen
 import ConAgua.Arena.InferLeaves
 import all ConAgua.Arena.StrLit
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -50,7 +51,7 @@ theorem cv_call (_hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
   simp only [strCvW, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   simp only [erRd_congr rfl rfl, List.headD_cons, List.tail_cons]
-  obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erRdOK m) (decCI_cvA hci)
+  obtain ⟨-, -, hsl, hlen, hhw, hty⟩ := decCV_rd_ci (erRdOK m) (decCI_cv hci)
   exact ⟨hm.symm, hsl, hlen, hty, hhw⟩
 
 end calls

@@ -162,7 +162,7 @@ theorem bluW_ok {m : Mem} {a : AState} {R : List NIdx} (hP : PinsR m a.pins)
   obtain ⟨c, ⟨v, hv, hc⟩, cs, hcs, rfl⟩ := hd
   obtain ⟨w, hw, rfl⟩ : ∃ w, erecP m bo.toNat = some w ∧ w.toNat = v := by
     simp only [nat?, Option.map_eq_some_iff] at hv; exact hv
-  have hcv := decCI_cvA (q := w) hc
+  have hcv := decCI_cv hc
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv
   have hq1 : (w + 1).toNat = w.toNat + 1 := L.toNat_add_ofNat_of_lt w 1 (erecP_lt64 hwn)
   have e1 : rdW (m.arr64 (tierA EREC (bo >>> 40))) (bo &&& 1099511627775) = w := by

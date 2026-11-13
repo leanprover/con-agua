@@ -8,6 +8,7 @@ import ConAgua.Arena.WhnfCoreRefine
 public import ConAgua.Arena.StrLitExt
 import all ConAgua.Arena.Infer
 public import ConAgua.Arena.IndTwin
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -65,7 +66,7 @@ theorem decTbl_npc {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
 
 /-- A constant record's name (word `q + 1`). -/
 theorem decCV_nameRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
+    {cv : IConstantVal} (h : decCV R (q.toNat + CI.cv.toNat) = some cv) :
     HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨nm, hn, ls, -, ty, -, hc⟩ := h
@@ -277,8 +278,8 @@ theorem pgr_okH (p : Prog) (hP : PgrProg p) (hCT : ConstTyAtOK p)
     rw [hctor, hfind]; simp only [envFound, g1, ↓reduceIte]; exact hci
   rw [pgrW.k_env_find.arm2 _ _ _ _ _ _ _ g1] at hW
   generalize hc : r1.tail.headD 0 = c at hW hci
-  have hcv := decCI_cvA hci
-  obtain ⟨hlps, -, hty, hty32⟩ := L.Arena.decCV_rd (erRdOK m1) hcv
+  have hcv := decCI_cv hci
+  obtain ⟨-, -, hlps, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m1) hcv
   obtain ⟨hnn32, hnn⟩ := decCV_nameRd (erRdOK m1) hcv
   simp only [erRd_congr rfl rfl] at hW
   -- `const_ty_at`

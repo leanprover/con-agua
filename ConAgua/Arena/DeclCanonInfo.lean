@@ -61,7 +61,7 @@ l_model ciCanonDefn_spec (p : Prog) (hp : CanonProg p)
 theorem ciD_defn {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI a p = some (.defnInfo cv v hi)) :
     decCV a (p + 1) = some cv ∧ hd? a (p + 5) = some v ∧ decHint a (p + 6) = some hi := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
       ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, fam, hc, hnp, hnf, hfam, hx⟩ |
       ⟨-, c, mi, rp, o, c', kk, rules, hc, hmi, hrp, ho, hc', hkk, hr, hx⟩ <;>
@@ -163,7 +163,7 @@ theorem ciD_rec {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧ nat? a (p + 6) = some rp ∧
     bool? a (p + 9) = some isK ∧
     ∃ o c, nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧ decRules a o c = some rules := by
-  obtain ⟨wk, e, hk⟩ := ciD h
+  obtain ⟨wk, e, hk⟩ := decCI_cases h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
       ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, fam, hc, hnp, hnf, hfam, hx⟩ |
       ⟨-, c, mi', rp', o, c', k', rules', hc, hmi, hrp, ho, hc', hk', hr, hx⟩ <;>
@@ -302,8 +302,8 @@ theorem cieW_ok {vis : Word} {fe : IFEnv}
   | zero => simp [cieW] at h
   | succ k =>
   rw [cieW.eq_2] at h; simp only [erRd_foldN, cieW.j1] at h
-  obtain ⟨wk, e, hx⟩ := ciD hp
-  obtain ⟨wk', e', hy⟩ := ciD hq
+  obtain ⟨wk, e, hx⟩ := decCI_cases hp
+  obtain ⟨wk', e', hy⟩ := decCI_cases hq
   have r1 : erRd m p = wk := erRd_of p wk e
   have r2 : erRd m q = wk' := erRd_of q wk' e'
   simp only [r1, r2] at h

@@ -6,6 +6,7 @@ import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.IlpRd
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -119,7 +120,7 @@ structure CiPre (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   kw : erecP m3 r.toNat = some k
   /-- The constant value decodes in every later reader keeping its four words. -/
   cvR : ∀ Y : Mem, (∀ j < 4, erecP Y (r.toNat + 1 + j) = erecP m3 (r.toNat + 1 + j)) →
-    ArrExt (erecP m) (erecP Y) → decCV (erecP Y) (r.toNat + 1) = some cv'
+    ArrExt (erecP m) (erecP Y) → decCV (erecP Y) (r.toNat + CI.cv.toNat) = some cv'
 
 /-- **The record's head**: `erec_alloc(nn)`, `erec_put(r, k)`, `cv_at_lps(r + 1, c + 1, po, pl)`. -/
 theorem ciPre_of {p : Prog} (hP : QuotAtProg p) (n : Nat) {m m1 m2 m3 : Mem} {a : AState}
@@ -148,7 +149,7 @@ theorem ciPre_of {p : Prog} (hP : QuotAtProg p) (n : Nat) {m m1 m2 m3 : Mem} {a 
     erecP_putMem_self (by omega) (by omega)
   obtain ⟨e1, eo1, et1⟩ := erAddr (c := 1) (by simp; omega) hr41
   simp only [UInt64.toNat_one] at e1 eo1
-  have hcv := ArrExt.decCV hg2.ext (decCI_cvA hci)
+  have hcv := ArrExt.decCV hg2.ext (decCI_cv hci)
   have et2 : erTopOf (erecPutMem m1 r k) r = erTopOf m1 r := by
     simp only [erTopOf, erTop, erecTop1, erecPutMem_ctl]
   have hd0 : erTopOf m (r + 1) ≤ erOff (r + 1) := by rw [et1, eo1, hoff]; omega
@@ -357,7 +358,7 @@ theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : ASta
     (hpre : CiPre dn vis fe m m3 a3 r nn k cv') (ho : 5 ≤ o.toNat) (hl : o.toNat + l.toNat ≤ nn.toNat)
     (h : callW p n "er_copy_er" [r + o, c + o, l] m3 = some (r4, m4)) :
     StageT dn vis fe m4 a3 ∧ IWGrow m m4 ∧ erecP m4 r.toNat = some k ∧
-      decCV (erecP m4) (r.toNat + 1) = some cv' ∧
+      decCV (erecP m4) (r.toNat + CI.cv.toNat) = some cv' ∧
       ∀ j < l.toNat, WAt (erecP m) (erecP m4) (c.toNat + o.toNat + j) (r.toNat + o.toNat + j) := by
   have hcap := hpre.cap
   have htop := hpre.top
@@ -631,7 +632,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
   have ew : erRd m c = w := erRd_of _ _ hw
   simp only [show rdW (m.arr64 (tierA EREC (c >>> 40))) (c &&& 1099511627775) = erRd m c from rfl,
     ew] at hW
-  have hcv := decCI_cvA hci
+  have hcv := decCI_cv hci
   have hkd := decCI_kindW hci hw
   cases ci with
   | axiomInfo cv =>
@@ -677,9 +678,9 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       plStep hP.toQuotAtProg hpre.stT hst3.ok (ArrExt.hslice? hpre.grow.ext hps) hden3 h4 h5
     have hpre5 := hpre.step hT5 hg5 hf5
     -- `inst_lp`
-    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv :=
-      ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
-    obtain ⟨hlps, -⟩ := decCV_rd (erRdOK m5) hcv5
+    have hcv5 : decCV (erecP m5) (c.toNat + CI.cv.toNat) = some cv :=
+      ArrExt.decCV hpre5.grow.ext (decCI_cv hci)
+    obtain ⟨-, -, hlps, -⟩ := decCV_rd_ci (erRdOK m5) hcv5
     obtain ⟨wv, hwv, hwv32, rfl⟩ : ∃ wv, erecP m (c.toNat + 5) = some wv ∧ wv.toNat < 2 ^ 32 ∧
         decI wv = v0 := by
       simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hv0
@@ -869,8 +870,8 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     have hqf6 := callW_quotFrame hP.quot (by decide) h6
     have rd6 : ∀ x : Word, rdW (m6.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m6 x :=
       fun _ => rfl
-    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
-    obtain ⟨hlps6, -⟩ := decCV_rd (R := erecP m5) (rd := erRd m6)
+    have hcv5 : decCV (erecP m5) (c.toNat + CI.cv.toNat) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cv hci)
+    obtain ⟨-, -, hlps6, -⟩ := decCV_rd_ci (R := erecP m5) (rd := erRd m6)
       ⟨fun a v h => erRd_of _ _ (hg6.ext _ _ h), fun _ _ h => L.Arena.erecP_lt64 h⟩ hcv5
     simp only [rd6, show c + 7 = c + UInt64.ofNat 7 from rfl,
       hsrc m6 (hpre5.grow.trans hg6) 7 w7 hw7] at hW

@@ -455,7 +455,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
     · simp only [ne_eq, hk1, not_true_eq_false, ite_false] at hW
       -- the record is a definition
       obtain ⟨cv, v, hint, rfl, hk, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
-          erecP m (rf.tail.headD 0).toNat = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + 1) = some cv := by
+          erecP m (rf.tail.headD 0).toNat = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + CI.cv.toNat) = some cv := by
         rcases decCI_defn_cases hci with h | ⟨wk, hwk, hne, -⟩
         · exact h
         · exfalso; have := (erRd_of_erecP hwk).1; rw [hk1] at this; exact hne this.symm

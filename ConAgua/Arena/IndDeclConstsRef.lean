@@ -435,7 +435,7 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
     (h0 : DcSt dn vis fe env m a) (hnd : L.Rom.NamesDn dn a L.Rom.quotNames)
     (hci : decCI (erecP m) q.toNat = some (.axiomInfo cv))
-    (hcv : decCV (erecP m) (q.toNat + 1) = some cv) (hcvd : Frontend.denoteCV a.store cv = some c)
+    (hcv : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv) (hcvd : Frontend.denoteCV a.store cv = some c)
     (h : daW p n m q = some (r, m')) :
     ∃ cis a', (ConRon.Arena.declConstantsAxiom cv).run a = .ok (cis, a') ∧
       KeepPost vis fe decCIL m m' a' r cis ∧ DcSt dn vis fe env m' a' ∧ DcIdx m m' := by

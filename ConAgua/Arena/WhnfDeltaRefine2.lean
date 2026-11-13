@@ -19,6 +19,7 @@ import all ConAgua.Arena.NatAdd
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Store
 import ConAgua.Front.NatDecLink
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -1041,7 +1042,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   obtain ⟨cv', v', hint', hci_eq, hcv, hv', hvl⟩ := hdefn hk1
   injection hci_eq with hcv_eq hv_eq hh_eq
   subst hcv_eq hv_eq
-  obtain ⟨hslice, hlen, -, -⟩ := decCV_rd (erRdOK _) hcv
+  obtain ⟨-, -, hslice, hlen, -, -⟩ := decCV_rd_ci (erRdOK _) hcv
   unfold unfoldDefnAtW at hW
   by_cases g1 : tagW usw ≠ 0
   · rw [ite_eq_left g1] at hW; cases hW

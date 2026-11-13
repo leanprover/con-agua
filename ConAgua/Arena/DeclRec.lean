@@ -95,9 +95,10 @@ def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
 def eciMem (m3 : Mem) (p i kind s ll : Word) : Mem :=
   let D := m3.arr64 DECL
   erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m3
-    p kind) (p + 1) (mask32 (rdW D (2 + 8 * i)))) (p + 2) s) (p + 3) ll) (p + 4)
-    (mask32 (rdW D (5 + 8 * i)))) (p + 5) (mask32 (rdW D (6 + 8 * i)))) (p + 6)
-    (hintCode (rdW D (7 + 8 * i)))) (p + 7) (rdW D (8 + 8 * i))
+    p kind) (p + (CI.cv + CV.name)) (mask32 (rdW D (2 + 8 * i)))) (p + (CI.cv + CV.lpsOff)) s)
+    (p + (CI.cv + CV.lpsLen)) ll) (p + (CI.cv + CV.type))
+    (mask32 (rdW D (5 + 8 * i)))) (p + CI.defnValue) (mask32 (rdW D (6 + 8 * i)))) (p + CI.defnHint)
+    (hintCode (rdW D (7 + 8 * i)))) (p + (CI.defnHint + Hint.height)) (rdW D (8 + 8 * i))
 
 theorem erecPutMem_decl (m : Mem) (a v : Word) : (erecPutMem m a v).arr64 DECL = m.arr64 DECL := by
   rw [erecPutMem_arr, ite_eq_right (by unfold erTier; split <;> decide)]
@@ -112,7 +113,7 @@ theorem erecCiW_some {n : Nat} {m m' : Mem} {i kind : Word} {r : List Word}
     (h : erecCiW (n + 1) m i kind = some (r, m')) :
     ∃ s m1 m2 p m3, erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) = some (s, m1) ∧
       dlpCopyW n m1 s (1 + rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)) = some m2 ∧
-      erAllocW m2 8 = some (p, m3) ∧ r = [p] ∧
+      erAllocW m2 CI.defnSize = some (p, m3) ∧ r = [p] ∧
       m' = eciMem m3 p i kind s (rdW (m.arr64 DECL) (4 + 8 * i)) := by
   rw [erecCiW.arm1] at h
   rcases h1 : erAllocW m (rdW (m.arr64 DECL) (4 + 8 * i)) with _ | ⟨s, m1⟩ <;> rw [h1] at h
@@ -122,7 +123,7 @@ theorem erecCiW_some {n : Nat} {m m' : Mem} {i kind : Word} {r : List Word}
     with _ | m2 <;> rw [h2] at h
   · rw [erecCiW.k_dlp_copy.none] at h; cases h
   rw [erecCiW.k_dlp_copy.arm1] at h
-  rcases h3 : erAllocW m2 8 with _ | ⟨p, m3⟩ <;> rw [h3] at h
+  rcases h3 : erAllocW m2 CI.defnSize with _ | ⟨p, m3⟩ <;> rw [h3] at h
   · rw [erecCiW.k_erec_alloc_2.none] at h; cases h
   refine ⟨s, m1, m2, p, m3, rfl, h2, h3, ?_⟩
   simp only [erecCiW.k_erec_alloc_2, erecCiW.j1, erecPutMem_decl] at h
@@ -204,29 +205,28 @@ theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Na
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
 theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
-    (h0 : a q = some (mask32 wn)) (h1 : a (q + 1) = some s) (h2 : a (q + 2) = some ll)
-    (h3 : a (q + 3) = some (mask32 wt))
+    (h0 : a q = some (mask32 wn)) (h1 : a (q + CV.lpsOff.toNat) = some s)
+    (h2 : a (q + CV.lpsLen.toNat) = some ll) (h3 : a (q + CV.type.toNat) = some (mask32 wt))
     (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (mask32 (f j))) :
     decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
-  have h2' : a (q + 1 + 1) = some ll := h2
-  simp [decCV, hlist?, nat?, hd?_mask h0, hd?_mask h3, h1, h2', hslice?_mask hs]
+  have h2' : a (q + CV.lpsOff.toNat + 1) = some ll := by
+    rw [Nat.add_assoc, ← CV.lpsLen_toNat]; exact h2
+  exact decCV_of (hd?_mask h0) (by simp [hlist?, nat?, h1, h2', hslice?_mask hs]) (hd?_mask h3)
 
 /-- **A constant value moved**: its four words copied, the slice read in an extension. -/
 theorem decCV_move {a b : Nat → Option Word} {q cq : Nat} {cv : IConstantVal} (hext : ArrExt a b)
-    (h0 : b q = a cq) (h1 : b (q + 1) = a (cq + 1)) (h2 : b (q + 2) = a (cq + 2))
-    (h3 : b (q + 3) = a (cq + 3)) (h : decCV a cq = some cv) : decCV b q = some cv := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
-  obtain ⟨nm, hn, lps, hl, ty, ht, e⟩ := h
-  refine ⟨nm, ?_, lps, ?_, ty, ?_, e⟩
-  · simp only [hd?, h0]; exact hn
-  · simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl ⊢
-    obtain ⟨lo, hlo, ll, hll, hs⟩ := hl
-    refine ⟨lo, ?_, ll, ?_, hext.hslice? hs⟩
-    · simp only [nat?] at hlo ⊢; rw [h1]; exact hlo
-    · simp only [nat?] at hll ⊢
-      rw [show q + 1 + 1 = q + 2 from rfl, h2]; rw [show cq + 1 + 1 = cq + 2 from rfl] at hll
-      exact hll
-  · simp only [hd?, h3]; exact ht
+    (h0 : b q = a cq) (h1 : b (q + CV.lpsOff.toNat) = a (cq + CV.lpsOff.toNat))
+    (h2 : b (q + CV.lpsLen.toNat) = a (cq + CV.lpsLen.toNat))
+    (h3 : b (q + CV.type.toNat) = a (cq + CV.type.toNat)) (h : decCV a cq = some cv) :
+    decCV b q = some cv := by
+  obtain ⟨hn, hl, ht⟩ := decCV_eq_some.mp h
+  refine decCV_of (by simp only [hd?, h0]; exact hn) ?_ (by simp only [hd?, h3]; exact ht)
+  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl ⊢
+  obtain ⟨lo, hlo, ll, hll, hs⟩ := hl
+  refine ⟨lo, by simp only [nat?] at hlo ⊢; rw [h1]; exact hlo, ll, ?_, hext.hslice? hs⟩
+  simp only [nat?] at hll ⊢
+  rw [Nat.add_assoc, ← CV.lpsLen_toNat, h2]; rw [Nat.add_assoc, ← CV.lpsLen_toNat] at hll
+  exact hll
 
 theorem getElem?_rdW' {a : Array Word} {x : Word} {k : Nat} (hk : x.toNat = k) (h : k < a.size) :
     a[k]? = some (rdW a x) := by
@@ -302,7 +302,8 @@ theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d 
 
 theorem eciMem_eq (m3 : Mem) (p i kind s ll : Word) :
     eciMem m3 p i kind s ll = wrER m3 p (eciWords (m3.arr64 DECL) i kind s ll) := by
-  simp only [eciMem, eciWords, wrER, UInt64.add_assoc, UInt64.reduceAdd]
+  -- the whole record's words in order: the offsets as numbers (`rec_unfold`)
+  simp only [eciMem, eciWords, wrER, rec_unfold, UInt64.add_assoc, UInt64.reduceAdd]
 
 /-! ### `erec_vg` -/
 
@@ -323,12 +324,14 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ nat? (erecP m') (r.headD 0).toNat = some ck.toNat ∧
       (∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
-        decCV (erecP m') ((r.headD 0).toNat + 1) = some cv) ∧
-      (hd? (erecP m') ((r.headD 0).toNat + 5) : Option EIdx) =
+        decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some cv) ∧
+      (hd? (erecP m') ((r.headD 0).toNat + CI.defnValue.toNat) : Option EIdx) =
         some (decI (dw (m.arr64 DECL) i.toNat 5)) ∧
-      decHint (erecP m') ((r.headD 0).toNat + 6) =
+      decHint (erecP m') ((r.headD 0).toNat + CI.defnHint.toNat) =
         some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) ∧
-      erOff (r.headD 0) + 8 ≤ erTopOf m' (r.headD 0) := by
+      erOff (r.headD 0) + CI.defnSize.toNat ≤ erTopOf m' (r.headD 0) := by
+  -- the whole record `erec_ci` writes, word by word: the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat, UInt64.reduceAdd]
   cases n with
   | zero => rw [erecCiW.eq_1] at h; cases h
   | succ n =>
@@ -385,7 +388,7 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
   have w7 : erecP M (p.toNat + 6 + 1) = some (dw (m.arr64 DECL) i.toNat 7) := by
     simpa using hget2 7 (by decide)
   have hcvG : ∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
-      decCV (erecP M) (p.toNat + 1) = some cv := by
+      decCV (erecP M) (p.toNat + CI.cv.toNat) = some cv := by
     intro cv hcv
     obtain ⟨hn, ht, hb, hl⟩ := hcv
     have hptop := hD.ptop
@@ -404,7 +407,7 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
   have hhint : decHint (erecP M) (p.toNat + 6) =
       some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) := by
     unfold decHint hintW
-    simp only [nat?, w6, w7, hintCode]
+    simp only [nat?, w6, w7, hintCode, rec_unfold, UInt64.reduceToNat]
     by_cases e1 : dw (m.arr64 DECL) i.toNat 6 = 1
     · simp [e1]
     by_cases e2 : dw (m.arr64 DECL) i.toNat 6 = 2
@@ -416,7 +419,7 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
 
 /-- **`erec_ci(i, ck)` builds the constant record of declaration `i`**: the stage relation kept,
 the pool grown, the record decoding as the constant `installStepGo` pushes (`stepCI`), its
-constant value at `q + 1`, its value at `q + 5`, all of it below the top. -/
+constant value at `q + CI.cv`, its value at `q + CI.defnValue`, all of it below the top. -/
 theorem erecCiW_ok {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
     {ci : IConstantInfo}
@@ -424,9 +427,9 @@ theorem erecCiW_ok {vis : Word} {fe : IFEnv} {a : AState}
     (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') (r.headD 0).toNat = some ci ∧
-      decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
-      hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
-      erOff (r.headD 0) + 8 ≤ erTopOf m' (r.headD 0) := by
+      decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some (stepCV ds[i.toNat]) ∧
+      hd? (erecP m') ((r.headD 0).toNat + CI.defnValue.toNat) = some (stepVal ds[i.toNat]) ∧
+      erOff (r.headD 0) + CI.defnSize.toNat ≤ erTopOf m' (r.headD 0) := by
   obtain ⟨hS', hG', hk, hcvG, hvM, hhint, htop⟩ := erecCiW_core h hS hD hi
   have hdecl := hD.recs i.toNat hi
   generalize (r.headD 0).toNat = p at hk hcvG hvM hhint htop ⊢
@@ -457,8 +460,8 @@ theorem erecCiW_okA {vis : Word} {fe : IFEnv} {a : AState}
     (hcv : CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') (r.headD 0).toNat = some (.axiomInfo cv) ∧
-      decCV (erecP m') ((r.headD 0).toNat + 1) = some cv ∧
-      erOff (r.headD 0) + 8 ≤ erTopOf m' (r.headD 0) := by
+      decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some cv ∧
+      erOff (r.headD 0) + CI.defnSize.toNat ≤ erTopOf m' (r.headD 0) := by
   obtain ⟨hS', hG', hk, hcvG, -, -, htop⟩ := erecCiW_core h hS hD hi
   refine ⟨hS', hG', ?_, hcvG _ hcv, htop⟩
   have hk0 : nat? (erecP m') (r.headD 0).toNat = some 0 := by simpa using hk

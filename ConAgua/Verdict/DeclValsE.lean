@@ -28,6 +28,7 @@ public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecGenSpec.CftW
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -514,7 +515,7 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} {hint : ConLeche.ReducibilityHint} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkDefnValE p n m vis c) (checkDefnVal V fe cv (decI wv) hint) a
@@ -569,7 +570,7 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkOpaqueValE p n m vis c) (checkOpaqueVal V fe cv (decI wv)) a
@@ -626,7 +627,7 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK false env fe a ∧
       Frontend.denoteCV a.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)

@@ -30,6 +30,7 @@ import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.Store
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -384,7 +385,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   obtain ⟨cv, caps, rfl, hcv⟩ := hind (by simpa using hk3)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   erw [ite_eq_right hk3] at hW
   by_cases hk4 : erRd s₀.mem (q + 3) ≠ 0
   · erw [ite_eq_left hk4] at hW
@@ -497,7 +498,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
   | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
   | some q₁ =>
@@ -651,7 +652,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
   · erw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
