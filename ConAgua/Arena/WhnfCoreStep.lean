@@ -15,8 +15,8 @@ import ConAgua.L.WordOff
 The step dispatches on the handle's tag after the view's checks; the `app` arm (`whnf_core_app`,
 `WhnfCore.lean`) walks the spine (`get_app_spine`), normalises the head (the knot's `whnfCore`
 slot), takes the reduct's own spine (`head_and_args`) and runs the batched β/ι walk (`whnf_app`),
-then puts the stack top back. Twin: `whnfCoreStep` (`Arena/Core.lean:2351`), its `.app` clause
-named `whnfCoreAppT` here. One refinement each over the unified models (`capp2_ref`, `capp_ref`),
+then puts the stack top back. Twin: `whnfCoreStepApp`, the `.app` clause of `whnfCoreStep` at a
+head that is not its own head normal form. One refinement each over the unified models (`capp2_ref`, `capp_ref`),
 both outcomes.
 -/
 
@@ -30,18 +30,9 @@ namespace L.Arena
 
 /-! ## The `app` arm -/
 
-/-- The twin's `.app` clause of `whnfCoreStep`. -/
-def whnfCoreAppT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool) (depth : Nat)
-    (e : EIdx) : AM WhnfStep := do
-  let sp ← getAppSpine coreWalkFuel e
-  let v ← r.whnfCore cheap depth sp.1
-  let same := v == sp.1
-  let hv ← headAndArgs v
-  whnfApp mode r fe depth v hv.1 hv.2 same sp.2.1 sp.2.2 0
-
-theorem whnfCoreAppT_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool)
+theorem whnfCoreStepApp_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool)
     (depth : Nat) (e : EIdx) :
-    whnfCoreAppT mode r fe cheap depth e = (do
+    whnfCoreStepApp mode r fe cheap depth e = (do
       let sp ← getAppSpine coreWalkFuel e
       let v ← r.whnfCore cheap depth sp.1
       whnfCoreApp2T mode r fe depth v sp.1 sp.2.1 sp.2.2) := by rfl
@@ -109,13 +100,13 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
       hno hlo htop)
 
 include hp hwc hcc in
-/-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep` (`whnfCoreAppT`), both
+/-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep` (`whnfCoreStepApp`), both
 outcomes**: the errors are the head's `whnf_core` slot's and `whnf_core_app2`'s. -/
 theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     RefE (AppG p N) (coreAppE p (N + 1) s₀.mem mode cheap vis d e)
-      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
+      (whnfCoreStepApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
       a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   simp only [coreAppE]
@@ -125,7 +116,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
     (getAppSpine_refines p hp.spine N ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base e he hS.spn) h1
   rw [ht₁] at hf₁ hg₁ htop1 hxs hns
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
-  rw [whnfCoreAppT_eq]
+  rw [whnfCoreStepApp_eq]
   refine RefE.bind_right hsp ?_
   refine RefE.bind_callE (s₀ := ⟨m₁, Locals.init []⟩)
     (x := fun c => coreAppE.k_whnf_core p N mode vis d (rdW (s₀.mem.arr64 CTL) 136) (r₁.headD 0)
@@ -175,7 +166,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (N + 1) "whnf_core_app" [mode, cheap, vis, d, e]
-      (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
+      (whnfCoreStepApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
       decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreAppE_spec p hp.capp hp.capp2 hp.app (N + 1) s₀ mode cheap vis d e)
     (capp_ref p hp hwc hcc N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)

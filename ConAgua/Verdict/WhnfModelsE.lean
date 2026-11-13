@@ -28,8 +28,6 @@ namespace L.Arena
 
 l_model whnfCoreE_spec (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
   fns [hf ↦ whnfCoreE list]
-  specs [callW_spec p n "wk_find", callW_spec p n "wk_put", callW_spec p n "wc_find",
-    callW_spec p n "wc_put"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

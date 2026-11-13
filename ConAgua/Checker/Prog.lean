@@ -2085,7 +2085,6 @@ def checkerProg : Prog := [
   ("whnf_core", L.Arena.whnfCoreL),
   ("whnf_core_app", L.Arena.whnfCoreAppL),
   ("whnf_core_app2", L.Arena.whnfCoreApp2L),
-  ("whnf_core_loop", L.Arena.whnfCoreLoopL),
   ("whnf_core_step", L.Arena.whnfCoreStepL),
   ("whnf_core_step_proj", L.Arena.whnfCoreStepProjL),
   ("whnf_loop", L.Arena.whnfLoopL),

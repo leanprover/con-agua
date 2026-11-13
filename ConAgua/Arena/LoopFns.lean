@@ -286,7 +286,8 @@ def loopFns : List FnName :=
    "unit_like_loop", "unit_like_shape", "unit_like_shape_at", "unit_like_struct",
    "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "value_guards", "view_ls",
    "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put", "whnf",
-   "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_loop", "whnf_core_step",
+   "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_keys",
+    "whnf_core_store_cheap_keys", "whnf_stuck", "iota_target", "whnf_core_step",
    "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top", "whnf_walk_fuel",
    "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put",
    "wscoped_bfast", "zero_find", "zero_push"]

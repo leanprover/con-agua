@@ -127,7 +127,8 @@ def coreFns : List FnName := [
   "unfold_definition", "unfold_defn_at", "unfoldable_head", "unit_like_fields", "unit_like_loop",
   "unit_like_shape", "unit_like_shape_at", "unit_like_struct", "unwrap_id_defs", "unwrap_step",
   "wc_find", "wc_put", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app",
-  "whnf_core_app2", "whnf_core_loop", "whnf_core_step", "whnf_core_step_proj", "whnf_loop",
+  "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_keys",
+    "whnf_core_store_cheap_keys", "whnf_stuck", "iota_target", "whnf_core_step", "whnf_core_step_proj", "whnf_loop",
   "whnf_step", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node", "ws_put",
   "wscoped_bfast", "zero_find", "zero_push"
 ]

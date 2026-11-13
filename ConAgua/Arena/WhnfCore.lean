@@ -15,7 +15,7 @@ slot, `:3546`), in L:
 | L | twin |
 |---|---|
 | `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot = `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel e #[] #[]` (an uncounted L loop; the pending keys a stack slice) |
-| `whnf_core_lookup(mode, cheap, e)` | `whnfCoreLookup` (`wk`/`wc` at the mode's eager bit) |
+| `whnf_core_lookup_at(mode, key, cheap, e)` | `whnfCoreLookupAt`, `whnfCoreLookup` (`wk`/`wc` at the mode's eager bit) |
 | `whnf_core_store_chain(mode, cheap, pb, pn, pc, v)` | `whnfCoreStoreChain` |
 | `whnf_core_store_keys(mode, o, n, i, v)`, `whnf_core_store_cheap_keys(…)` | `whnfCoreStoreKeys`, `whnfCoreStoreCheapKeys` |
 | `whnf_core_step(mode, cheap, vis, d, h, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_stuck` or `whnf_core_app` |
@@ -53,35 +53,24 @@ def whnfCoreLoopB : Stmt :=
     lblk (mode, cheap, vis, d, e, pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
   while 0 == 0 {
     g := ⟦e⟧.tag;
-    if g != 4 && g != 9 && g != 7 && g != 0 {
+    if (657 >> g) & 1 == 0 {
       u := call whnf_core_store_chain(mode, cheap, pb, pn, pc, e);
       CTL.u64[136] := pb;
       return e
     };
     h := call get_app_fn(e);
     hg := ⟦h⟧.tag;
-    sh := 0;
-    if hg == 2 || hg == 1 || hg == 6 || hg == 3 || hg == 8 { sh := 1 };
-    key := 0;
-    safe := 0;
-    if g == 4 {
-      if sh == 0 { key := 1 };
-      if hg == 5 || sh != 0 { safe := 1 }
-    } else if g == 9 { key := 1 } else if g == 7 { key := 1; safe := 1 };
-    if key != 0 {
-      (f, x) := call whnf_core_lookup(mode, cheap, e);
-      if f != 0 {
-        u := call whnf_core_store_chain(mode, cheap, pb, pn, pn, x);
-        CTL.u64[136] := pb;
-        return x
-      }
+    sh := (334 >> hg) & 1;
+    key := ((640 >> g) & 1) | (u64(g == 4) & (1 - sh));
+    safe := ((128 >> g) & 1) | (u64(g == 4) & (sh | u64(hg == 5)));
+    (f, x) := call whnf_core_lookup_at(mode, key, cheap, e);
+    if f != 0 {
+      u := call whnf_core_store_chain(mode, cheap, pb, pn, pn, x);
+      CTL.u64[136] := pb;
+      return x
     };
     (st, r) := call whnf_core_step(mode, cheap, vis, d, h, e);
-    stb := 0;
-    if cheap == 0 && key != 0 {
-      stb := 1;
-      if st == 0 && g == 4 && r == e { stb := 0 }
-    };
+    stb := u64(cheap == 0) & key & (u64(st != 0) | u64(g != 4) | u64(r != e));
     if stb != 0 {
       if len(SPN.u64) <= pb + pn { abort };
       SPN.u64[pb + pn] := e;
@@ -107,8 +96,11 @@ cheap mode, `wc` otherwise, at the mode's eager bit), and a hit ends the chain. 
 (the step restores the top it found, so they survive it); the cheap keys `pendC` are its suffix
 from `pc` (`pushCheapKey` either pushes where `pushKey` pushes or empties `pendC`: then `pc := pn`).
 At a chain's end the keys are stored (`whnf_core_store_chain`) and the top put back. `isStuckHead`,
-`whnfCoreKey`, `whnfCoreCheapSafe`, `whnfCoreStoresDone`, `pushKey`, `pushCheapKey` are inline. A full
-stack aborts (a fixed capacity). -/
+`whnfCoreKey`, `whnfCoreCheapSafe`, `whnfCoreStoresDone`, `pushKey`, `pushCheapKey` are inline, the tag
+tests branch-free as bit masks over the tag (`657`: the tags `bvar`, `app`, `letE`, `proj` that
+`whnfCoreStuckTag` rejects; `334`: `fvar`, `sort`, `const`, `forallE`, `lit`, the stuck heads; `640`:
+`letE`, `proj`; `128`: `letE`), so the loop's model has few paths. A full stack aborts (a fixed
+capacity). -/
 -- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
 -- con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop
 -- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
@@ -117,13 +109,12 @@ stack aborts (a fixed capacity). -/
 -- con-ron: ConRon/Arena/Core.lean:2806-2810 ConRon.Arena.whnfCoreStoresDone
 -- con-ron: ConRon/Arena/Core.lean:2821-2824 ConRon.Arena.pushKey
 -- con-ron: ConRon/Arena/Core.lean:2826-2831 ConRon.Arena.pushCheapKey
--- con-ron: ConRon/Arena/Core.lean:2886-2890 ConRon.Arena.whnfCoreLookupAt
 -- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
 -- con-ron: ConRon/Arena/Core.lean:2494-2508 ConRon.Arena.whnfCoreStuckTag
 @[no_expose, l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop ConRon.Arena.whnfCoreStuckTag
   ConRon.Arena.isStuckHead ConRon.Arena.whnfCoreKey ConRon.Arena.whnfCoreCheapSafe
   ConRon.Arena.whnfCoreStoresDone ConRon.Arena.pushKey ConRon.Arena.pushCheapKey
-  ConRon.Arena.whnfCoreLookupAt ConRon.Arena.coreKnot]
+  ConRon.Arena.coreKnot]
 def whnfCoreL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
   pb := CTL.u64[136];
@@ -173,7 +164,7 @@ def whnfCoreStepL : FunDecl :=
     i := ⟦e⟧.aidx;
     if APP⟨t⟩.count <= i { abort };
     hg := ⟦h⟧.tag;
-    if hg == 2 || hg == 1 || hg == 6 || hg == 3 || hg == 8 {
+    if (334 >> hg) & 1 != 0 {
       (st, r) := call whnf_stuck(mode, vis, d, h, e);
       return (st, r)
     };
@@ -450,7 +441,7 @@ structure WhnfCoreProg (p : Prog) : Prop where
   spine : SpineProg p
   core : p.lookup "whnf_core" = some whnfCoreL
   step : p.lookup "whnf_core_step" = some whnfCoreStepL
-  lookup : p.lookup "whnf_core_lookup" = some whnfCoreLookupL
+  lookup : p.lookup "whnf_core_lookup_at" = some whnfCoreLookupL
   storeKeys : p.lookup "whnf_core_store_keys" = some whnfCoreStoreKeysL
   storeCheapKeys : p.lookup "whnf_core_store_cheap_keys" = some whnfCoreStoreCheapKeysL
   storeChain : p.lookup "whnf_core_store_chain" = some whnfCoreStoreChainL
