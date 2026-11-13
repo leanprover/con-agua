@@ -317,24 +317,30 @@ def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, r
   return v2
 }
 
-/-- `ind_info_rec(cv, caps)`: a fresh `.indInfo` record — kind `3` and the constant's four `EREC`
-words at `cv` (`er_put5`), then the capability record's `Caps.size` `IW` words at `caps`, copied
+/-- `ind_info_rec(cv, caps)`: a fresh `.indInfo` record — kind `3` and the constant value at `cv`
+copied (`er_put_ci`), then the capability record's `Caps.size` `IW` words at `caps`, copied
 to `CI.indCaps` (`block_caps_at_er_copy_go`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
   q := call erec_alloc(⟪CI.indSize⟫);
-  u := call er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, EREC⦃cv + 3⦄);
+  u := call er_put_ci(q, 3, cv);
   u := call block_caps_at_er_copy_go(q + ⟪CI.indCaps⟫, caps, ⟪Caps.size⟫);
   return q
 }
 
-/-- `er_put5(d, a, b, c, e, f)`: `EREC[d‥d+5) := [a, b, c, e, f]`. -/
+/-- `er_put_ci(q, k, cv)`: a constant record's head at `q` — the kind word `k` and a copy of the
+constant value at `cv` (its fields read first, then stored at `q + CI.cv + CV.f`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
-def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
-  ez := call erec_put(d, a); ez := call erec_put(d + 1, b); ez := call erec_put(d + 2, c); ez := call erec_put(d + 3, e);
-  ez := call erec_put(d + 4, f);
+def erPutCi : FunDecl := lfn (q, k, cv) locals (n, lo, ll, t, ez) {
+  n := EREC⦃cv⦄; lo := EREC⦃cv + ⟪CV.lpsOff⟫⦄; ll := EREC⦃cv + ⟪CV.lpsLen⟫⦄;
+  t := EREC⦃cv + ⟪CV.type⟫⦄;
+  ez := call erec_put(q, k);
+  ez := call erec_put(q + ⟪CI.cv⟫, n);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsOff⟫, lo);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsLen⟫, ll);
+  ez := call erec_put(q + ⟪CI.cv + CV.type⟫, t);
   return 0
 }
 
@@ -780,7 +786,7 @@ def indInstallFns : Prog :=
    ("block_is_rec", blockIsRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
-   ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put5", erPut5),
+   ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put_ci", erPutCi),
    ("check_block_inds", checkBlockInds), ("block_shape_nest_ctx", blockShapeNestCtx),
    ("check_block_ctors", checkBlockCtors),
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),

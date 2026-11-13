@@ -177,4 +177,28 @@ theorem defnImg_height (ck nm lo ll ty v hk hh : Word) :
     (defnImg ck nm lo ll ty v hk hh)[(defnHint + Hint.height).toNat]? = some (some hh) := by
   simp [defnImg, recImg, rec_unfold]
 
+/-- **An inductive record's head image** (`RecLayout/Img.lean`): the kind word and the constant
+value, the `CI.indCaps` words before the capabilities (`er_put_ci`'s stores). -/
+def indHdImg (ck nm lo ll ty : Word) : List (Option Word) :=
+  recImg indCaps [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty)]
+
+theorem indHdImg_length (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty).length = indCaps.toNat := recImg_length _ _
+theorem indHdImg_kind (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty)[(kind).toNat]? = some (some ck) := by
+  simp [indHdImg, recImg, rec_unfold]
+theorem indHdImg_name (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [indHdImg, recImg, rec_unfold]
+theorem indHdImg_lo (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [indHdImg, recImg, rec_unfold]
+theorem indHdImg_ll (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [indHdImg, recImg, rec_unfold]
+theorem indHdImg_ty (ck nm lo ll ty : Word) :
+    (indHdImg ck nm lo ll ty)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [indHdImg, recImg, rec_unfold]
+
 end L.CI
