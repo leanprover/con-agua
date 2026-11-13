@@ -121,7 +121,7 @@ private def internCV (cv : ConstantVal) : AM IConstantVal := do
 /-- con-leche: none — intern an `IndCaps`: its scalars (the fixture's member
 and constructor lists are empty). -/
 private def internCaps (c : IndCaps) : AM IIndCaps := do
-  pure { eta := c.eta, nparams := c.nparams, nIdx := c.nIdx }
+  pure { eta := c.eta, nparams := c.nparams, nIdx := c.nIdx, neverZero := c.neverZero }
 
 /-- con-leche: none — intern a `RecRuleFire`. -/
 private def internFire : RecRuleFire → AM IRecRuleFire
@@ -163,7 +163,9 @@ private def internCI : ConstantInfo → AM IConstantInfo
     let icv ← internCV cv
     let ic ← internCaps caps
     pure (.indInfo icv ic)
-  | .ctorInfo cv nP nF => do pure (.ctorInfo (← internCV cv) nP nF)
+  | .ctorInfo cv nP nF T => do
+    let icv ← internCV cv
+    pure (.ctorInfo icv nP nF (← internName T))
   | .recInfo cv mI rP isK rules => do
     let icv ← internCV cv
     let rs ← internRules rules
@@ -214,8 +216,8 @@ private def envCL : ConLeche.Env :=
      .axiomInfo ⟨propName, [], .sort .zero⟩,
      .axiomInfo ⟨axName, [], natTy⟩,
      .defnInfo ⟨twoName, [], natTy⟩ (.app succE (.app succE zeroE)) (.regular 1),
-     .ctorInfo ⟨ConLeche.natSuccName, [], .forallE natTy natTy⟩ 0 1,
-     .ctorInfo ⟨ConLeche.natZeroName, [], natTy⟩ 0 0,
+     .ctorInfo ⟨ConLeche.natSuccName, [], .forallE natTy natTy⟩ 0 1 ConLeche.natName,
+     .ctorInfo ⟨ConLeche.natZeroName, [], natTy⟩ 0 0 ConLeche.natName,
      .indInfo ⟨ConLeche.natName, [], .sort (.succ .zero)⟩ {} ], []⟩
 
 /-! ## The subject terms, written once
@@ -656,9 +658,12 @@ it against a state whose table was filled by hand gives that entry back. -/
     pure (r == r₂)
   | none => pure false)
 
-/- A `whnf` run populates `whnfC` and `whnfCoreC`, never the infer tables. -/
+/- A `whnf` run populates `whnfC`, never the infer tables; a β step's key
+lands in `whnfCoreC` (con-leche's task #572: the stored arms only — `two` is
+an easy case of `whnfCore`, stored nowhere). -/
 #guard runB (do
   let _ ← whnf MU FX.fe F 0 FX.two
+  let _ ← whnf MU FX.fe F 0 FX.betaTwo
   let s ← get
   pure (s.caches.whnfC.size > 0 && s.caches.whnfCoreC.size > 0 &&
     s.caches.inferC.size == 0))

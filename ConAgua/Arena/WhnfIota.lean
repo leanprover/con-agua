@@ -52,7 +52,8 @@ namespace L.Arena
 /-! ## `is_ctor_app(vis, e)`, `is_str_lit(h)` -/
 
 /-- con-leche: `CoreDefs.lean:51-58` `isCtorApp` — the spine's head is a stored constructor. -/
--- con-ron: ConRon/Arena/Core.lean:331-342 ConRon.Arena.isCtorApp
+-- con-ron: ConRon/Arena/Core.lean:332-343 ConRon.Arena.isCtorApp
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.isCtorApp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.isCtorApp]
 def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
   hh := call get_app_fn(e);
@@ -65,7 +66,7 @@ def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
 }
 
 /-- con-leche: `Core.lean:695-699` `Expr.isStrLit` — the tag, then the literal kind. -/
--- con-ron: ConRon/Arena/Core.lean:2239-2247 ConRon.Arena.isStrLit
+-- con-ron: ConRon/Arena/Core.lean:2242-2250 ConRon.Arena.isStrLit
 @[no_expose, l_impl ConRon.Arena.isStrLit]
 def isStrLitL : FunDecl := lfn (h) locals (t, i) {
   if ⟦h⟧.tag != 8 { return 0 };
@@ -84,7 +85,7 @@ def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
 
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
 constructor is `c`, as a linear scan of the rule-record slice. -/
--- con-ron: ConRon/Arena/Core.lean:2350-2355 ConRon.Arena.findRule
+-- con-ron: ConRon/Arena/Core.lean:2353-2358 ConRon.Arena.findRule
 @[no_expose, l_impl ConRon.Arena.findRule]
 def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   i := 0;
@@ -97,7 +98,7 @@ def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
 Not tagged `@[l_impl]` on its own (it fuses a lookup declaration and a list membership test, as
 the house style allows for small dispatchers); `major_to_ctor`'s eta branch is its only caller. -/
 
-/-- con-ron: ConRon/Arena/Core.lean:1549-1553 ConRon.Arena.reservedBasisNames -/
+/-- con-ron: ConRon/Arena/Core.lean:1531-1535 ConRon.Arena.reservedBasisNames -/
 @[no_expose] def reservedContainsL : FunDecl := lfn (x) locals (j) {
   if PINS.u64[0] == 0 { abort };
   j := 0;
@@ -118,14 +119,15 @@ and its capabilities at `p + 5` (`eta` `p + 5`, `etaCtor` `p + 6`, `nIdx` `p + 1
 writes no `EREC` word (`CoreErec.lean`). -/
 
 /-- The head name of a `const` handle (the view checks, then the stored name). -/
--- con-ron: ConRon/Arena/Core.lean:382-395 ConRon.Arena.ctorFamily
+-- con-ron: ConRon/Arena/Core.lean:383-390 ConRon.Arena.ctorFamily
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.ctorFamily` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
   (t, i) := node CONST⟦hh⟧;
   return CONST⟨t, i⟩.n
 }
 
 /-- `former_res_sort(ty)`: the sort a stored type ends in, `(1, u)`, or `(0, 0)`. -/
--- con-ron: ConRon/Arena/Core.lean:344-353 ConRon.Arena.formerResSort
+-- con-ron: ConRon/Arena/Core.lean:345-354 ConRon.Arena.formerResSort
 @[no_expose, l_impl ConRon.Arena.formerResSort]
 def formerResSortL : FunDecl := lfn (ty) locals (pr, t, i) {
   pr := call pi_result(ty);
@@ -135,7 +137,7 @@ def formerResSortL : FunDecl := lfn (ty) locals (pr, t, i) {
 }
 
 /-- `former_def_headed(ty)`: a stored former (type `ty`) that does not show its telescope. -/
--- con-ron: ConRon/Arena/Core.lean:355-360 ConRon.Arena.formerDefHeaded
+-- con-ron: ConRon/Arena/Core.lean:356-361 ConRon.Arena.formerDefHeaded
 @[no_expose, l_impl ConRon.Arena.formerDefHeaded]
 def formerDefHeadedL : FunDecl := lfn (ty) locals (f, u) {
   (f, u) := call former_res_sort(ty);
@@ -146,7 +148,7 @@ def formerDefHeadedL : FunDecl := lfn (ty) locals (f, u) {
 leaves one: `(0, 0, 0)` for `never`, `(1, o, c)` for `ifAllZero` with the names the heap words
 `LH[o ‥ o + c)`, pushed above the heap top `CTL[192]` (which stays raised: the caller puts it
 back); `ifAllZero []` where the sort is not read. -/
--- con-ron: ConRon/Arena/Core.lean:362-370 ConRon.Arena.formerZ
+-- con-ron: ConRon/Arena/Core.lean:363-371 ConRon.Arena.formerZ
 @[no_expose, l_impl ConRon.Arena.formerZ]
 def formerZL : FunDecl := lfn (ty) locals (f, u, t0, z) {
   t0 := CTL.u64[192];
@@ -161,7 +163,7 @@ def formerZL : FunDecl := lfn (ty) locals (f, u, t0, z) {
 `us`, is provably nonzero: `Level.substPW ks vs (formerZ cvT)` is `never` (`lv_spw`, the keys the
 family's level parameters, an `EREC` slice, the values `us`' `POOL` slice, the datum on the heap);
 the heap top put back. -/
--- con-ron: ConRon/Arena/Core.lean:372-380 ConRon.Arena.formerNeverZero
+-- con-ron: ConRon/Arena/Core.lean:373-381 ConRon.Arena.formerNeverZero
 @[no_expose, l_impl ConRon.Arena.formerNeverZero]
 def formerNeverZeroL : FunDecl := lfn (p, us) locals (po, pc, t0, w, o, c, vo, vc, x) {
   po := EREC⦃p + 2⦄;
@@ -177,7 +179,8 @@ def formerNeverZeroL : FunDecl := lfn (p, us) locals (po, pc, t0, w, o, c, vo, v
 
 /-- `ctor_family(vis, cq)`: the family the constructor record `cq`'s type concludes in, `(1, p)`
 with `p` the inductive's record, or `(0, 0)`. -/
--- con-ron: ConRon/Arena/Core.lean:382-395 ConRon.Arena.ctorFamily
+-- con-ron: ConRon/Arena/Core.lean:383-390 ConRon.Arena.ctorFamily
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.ctorFamily` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.ctorFamily]
 def ctorFamilyL : FunDecl := lfn (vis, cq) locals (pr, hh, T, f, q) {
   pr := call pi_result(EREC⦃cq + 4⦄);
@@ -194,7 +197,7 @@ def ctorFamilyL : FunDecl := lfn (vis, cq) locals (pr, hh, T, f, q) {
 each reached by `whnf`, then a sort: `(1, u)` or `(0, 0)`. The body is instantiated at a fresh free
 variable at depth `d` (`inst_entry`, the memoized `instantiate1`). The depth capacity: `d + 1` must
 not wrap. -/
--- con-ron: ConRon/Arena/Core.lean:1958-1982 ConRon.Arena.formerSortLoop
+-- con-ron: ConRon/Arena/Core.lean:1935-1959 ConRon.Arena.formerSortLoop
 @[no_expose, l_impl ConRon.Arena.formerSortLoop]
 def formerSortLoopL : FunDecl := lfn (mode, vis, d, n, e) locals (w, t, i, dom, b, fv, b2, f, u) {
   w := call whnf(mode, vis, d, e);
@@ -217,7 +220,7 @@ def formerSortLoopL : FunDecl := lfn (mode, vis, d, n, e) locals (w, t, i, dom, 
 /-- `former_never_zero_at(mode, vis, p, us)`: is the family `p`'s sort never zero at the levels
 `us`, computed where it is asked: read off a type that ends in a sort (`former_never_zero`), else
 walked to by `former_sort_loop` at the use's levels (from depth `0`); no sort reached is `0`. -/
--- con-ron: ConRon/Arena/Core.lean:1984-2001 ConRon.Arena.formerNeverZeroAt
+-- con-ron: ConRon/Arena/Core.lean:1961-1978 ConRon.Arena.formerNeverZeroAt
 @[no_expose, l_impl ConRon.Arena.formerNeverZeroAt]
 def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
     locals (po, pc, ty, n, f, u, r, ity) {
@@ -238,7 +241,8 @@ def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
 /-- `iota_case3_at(mode, vis, isK, cq, us)`: case 3 of the ι split: the recursor is not K and the
 constructor `cq`'s family may be `Prop` at the comparand levels `us` (a family not found, or at
 another level count, may). The family is not read at a K recursor. -/
--- con-ron: ConRon/Arena/Core.lean:2003-2021 ConRon.Arena.iotaCase3At
+-- con-ron: ConRon/Arena/Core.lean:1980-1999 ConRon.Arena.iotaCase3At
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.iotaCase3At` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.iotaCase3At]
 def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, uso, usl, nz) {
   if isK != 0 { return 0 };
@@ -256,7 +260,7 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, cq, us) locals (ok, p, lp, us
 the table's constructor (word `tq + 5`) of the η family `p` (`eta`) and carrying the family's level
 parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s rescue.
 The table (`tq`) or `0`. -/
--- con-ron: ConRon/Arena/Core.lean:2054-2069 ConRon.Arena.etaRescueTable?
+-- con-ron: ConRon/Arena/Core.lean:2062-2077 ConRon.Arena.etaRescueTable?
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
@@ -281,8 +285,8 @@ def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
 
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`/`projNodesGo` — the
 `.proj T j b` spine, `j = 0, …, nF - 1`, pushed in order. -/
--- con-ron: ConRon/Arena/Core.lean:1542-1547 ConRon.Arena.etaProjs
--- con-ron: ConRon/Arena/Core.lean:1533-1540 ConRon.Arena.projNodesGo
+-- con-ron: ConRon/Arena/Core.lean:1524-1529 ConRon.Arena.etaProjs
+-- con-ron: ConRon/Arena/Core.lean:1515-1522 ConRon.Arena.projNodesGo
 @[no_expose, l_impl ConRon.Arena.etaProjs ConRon.Arena.projNodesGo]
 def etaProjsL : FunDecl := lfn (T, b, nF) locals (o, j, pr) {
   o := CTL.u64[136];
@@ -297,7 +301,7 @@ def etaProjsL : FunDecl := lfn (T, b, nF) locals (o, j, pr) {
 /-- con-leche: `CoreDefs.lean:750-754` `etaFabArgsE` — the major's type's arguments, then the
 major's projections. The second slice is pushed directly after the first (nothing intervenes), so
 the concatenation is the one combined slice. -/
--- con-ron: ConRon/Arena/Core.lean:2023-2029 ConRon.Arena.etaFabArgsE
+-- con-ron: ConRon/Arena/Core.lean:2031-2037 ConRon.Arena.etaFabArgsE
 @[no_expose, l_impl ConRon.Arena.etaFabArgsE]
 def etaFabArgsL : FunDecl := lfn (T, to, tn, major, nF) locals (o2, n2) {
   (o2, n2) := call eta_projs(T, major, nF);
@@ -323,8 +327,8 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, an, j, flag, q) {
 `andRescueSlots` / `FEnv.andRescueSlotsF` — the pinned `And`'s two projection slots, ready to
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
 `numFields` at `q + 7` (`EnvRec.lean`'s `decTbl`). -/
--- con-ron: ConRon/Arena/Core.lean:2031-2043 ConRon.Arena.andRescueSlotsGo
--- con-ron: ConRon/Arena/Core.lean:2045-2052 ConRon.Arena.andRescueSlots
+-- con-ron: ConRon/Arena/Core.lean:2039-2051 ConRon.Arena.andRescueSlotsGo
+-- con-ron: ConRon/Arena/Core.lean:2053-2060 ConRon.Arena.andRescueSlots
 @[no_expose, l_impl ConRon.Arena.andRescueSlotsGo ConRon.Arena.andRescueSlots]
 def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP) locals (an, j, flag, q) {
   an := call pin_at(11);
@@ -338,7 +342,7 @@ def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP) locals (an, j, flag, q) {
 /-- con-leche: `Core.lean:502-663` (the shared scope guard) `fabScopeOk` — well-scoped, closed
 under loose bvars, and every free variable of `fab` is one of `major`'s. All three callees are
 phase-4-walk stubs. -/
--- con-ron: ConRon/Arena/Core.lean:2075-2092 ConRon.Arena.fabScopeOk
+-- con-ron: ConRon/Arena/Core.lean:2083-2100 ConRon.Arena.fabScopeOk
 @[no_expose, l_impl ConRon.Arena.fabScopeOk]
 def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
   ok := call wscoped_bfast(d, fab);
@@ -353,7 +357,7 @@ def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
 
 /-- con-leche: `Core.lean:665-677` `litMajorToCtor` — a `Nat` literal major one layer, a `String`
 literal to its reduced constructor form. -/
--- con-ron: ConRon/Arena/Core.lean:2210-2223 ConRon.Arena.litMajorToCtor
+-- con-ron: ConRon/Arena/Core.lean:2213-2226 ConRon.Arena.litMajorToCtor
 @[no_expose, l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
   if ⟦h⟧.tag != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
@@ -380,7 +384,9 @@ stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_ta
 pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
--- con-ron: ConRon/Arena/Core.lean:2094-2208 ConRon.Arena.majorToCtor
+-- con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor
+-- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.majorToCtor]
 def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
@@ -395,7 +401,7 @@ def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals
 a K-flagged recursor (the record's `isK`) the K rescue runs on the raw major; elsewhere the structure rescues run on
 the major as found first (a `String` literal skips that attempt), and only if they produce no
 constructor is the major head-normalized, its literal converted, and the rescue tried again. -/
--- con-ron: ConRon/Arena/Core.lean:2249-2275 ConRon.Arena.prepareMajor
+-- con-ron: ConRon/Arena/Core.lean:2252-2278 ConRon.Arena.prepareMajor
 @[no_expose, l_impl ConRon.Arena.prepareMajor]
 def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
     locals (majorK, ok, majorE, major0, major1, res) {
@@ -434,7 +440,7 @@ def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
 
 /-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
 spine `(ao, an)`. -/
--- con-ron: ConRon/Arena/Core.lean:1439-1450 ConRon.Arena.piResidual
+-- con-ron: ConRon/Arena/Core.lean:1421-1432 ConRon.Arena.piResidual
 @[no_expose, l_impl ConRon.Arena.piResidual]
 def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
   i := 0;
@@ -456,7 +462,7 @@ def defeqListLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
 /-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. As the
 twin, it compares the common prefix pairwise (stopping at the first `false`) and only then the
 lengths: an early length test would skip the twin's `defeq` calls and their cache writes. -/
--- con-ron: ConRon/Arena/Core.lean:1452-1459 ConRon.Arena.defEqList
+-- con-ron: ConRon/Arena/Core.lean:1434-1441 ConRon.Arena.defEqList
 @[no_expose, l_impl ConRon.Arena.defEqList]
 def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
   i := 0;
@@ -469,7 +475,7 @@ def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
 /-- con-leche: `Core.lean:280-296` `iotaIndexOk` — the canonical-index comparison of a firing
 ι redex. The stack top is restored after the `get_app_args` slice (the twin's list is a value; the
 refinement specs promise `StackKept`). -/
--- con-ron: ConRon/Arena/Core.lean:1461-1471 ConRon.Arena.iotaIndexOk
+-- con-ron: ConRon/Arena/Core.lean:1443-1453 ConRon.Arena.iotaIndexOk
 @[no_expose, l_impl ConRon.Arena.iotaIndexOk]
 def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)
     locals (flag, res, top, ao2, an2, an3) {
@@ -491,7 +497,7 @@ def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo
 (callers test `!= 1`, which the cache decoder `decO` reads the same as `== 2`).
 `lvl_eq_c`'s answer word is `0` none (a decline, `abort`), `1` false, `2` true. The comparison is the
 CACHED `lvl_eq_c` (the twin's `lvlEq?` consults and fills the verdict cache). -/
--- con-ron: ConRon/Arena/Core.lean:1473-1498 ConRon.Arena.proofIrrel
+-- con-ron: ConRon/Arena/Core.lean:1455-1480 ConRon.Arena.proofIrrel
 @[no_expose] def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
     locals (ta, tta, hh, t, i, uT, z, ok) {
   ta := call infer_io(mode, vis, d, x);
@@ -508,7 +514,7 @@ CACHED `lvl_eq_c` (the twin's `lvlEq?` consults and fills the verdict cache). -/
 
 /-- con-leche: `Core.lean:298-320` `proofIrrel` — proof irrelevance: both sides' types' sorts are
 `Prop` (two `proof_irrel_half`s; the second only if the first is a sort, as the twin). -/
--- con-ron: ConRon/Arena/Core.lean:1473-1498 ConRon.Arena.proofIrrel
+-- con-ron: ConRon/Arena/Core.lean:1455-1480 ConRon.Arena.proofIrrel
 @[no_expose, l_impl ConRon.Arena.proofIrrel]
 def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (ra, rb) {
   ra := call proof_irrel_half(mode, vis, d, a);
@@ -527,7 +533,7 @@ caches `ruleRhsC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `Cor
 /-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
 is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
 callee wrote the memo. -/
--- con-ron: ConRon/Arena/Core.lean:213-228 ConRon.Arena.ruleRhsAt
+-- con-ron: ConRon/Arena/Core.lean:214-229 ConRon.Arena.ruleRhsAt
 @[no_expose, l_impl ConRon.Arena.ruleRhsAt]
 def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
     locals (k2, fd, j, dd, r, dum) {
@@ -542,7 +548,7 @@ def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
 
 /-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. The probe is repeated
 after `inst_lp` (as `const_val_at` does). -/
--- con-ron: ConRon/Arena/Core.lean:182-195 ConRon.Arena.constTyAt
+-- con-ron: ConRon/Arena/Core.lean:183-196 ConRon.Arena.constTyAt
 @[no_expose, l_impl ConRon.Arena.constTyAt]
 def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
   (fd, j, dd) := call ct_find(n, us);
@@ -589,7 +595,7 @@ def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, an, rP, pvo, pvc, so, j, q
 pins, `instSpinePins`) — each pin level-instantiated (`inst_lp`) then spined over the leading
 `rP` arguments of the spine `(ao, an)` (`inst_spine`; the twin's `args.take rP`: all `an` of them
 when `an < rP`, the index still starting at `rP - 1`), pushed in order. -/
--- con-ron: ConRon/Arena/Core.lean:2301-2311 ConRon.Arena.instSpinePins
+-- con-ron: ConRon/Arena/Core.lean:2304-2314 ConRon.Arena.instSpinePins
 @[no_expose, l_impl ConRon.Arena.instSpinePins]
 def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, an, rP, pvo, pvc) locals (so, j, q, s) {
   if rP < an { an := rP };
@@ -605,7 +611,7 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, an, rP, pvo, pvc) locals (s
 comparands of a firing rule: a `.nested` rule's stored pins, instantiated and spined; a `.plain`
 or `.levels` rule's the recursor's own leading `cnP` arguments, the stored constructor's parameter
 count (`args.take cnP` of the spine `(ao, an)`: all `an` of them when `an < cnP`). -/
--- con-ron: ConRon/Arena/Core.lean:2338-2348 ConRon.Arena.recFireArgs
+-- con-ron: ConRon/Arena/Core.lean:2341-2351 ConRon.Arena.recFireArgs
 @[no_expose, l_impl ConRon.Arena.recFireArgs]
 def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, an, rP, cnP)
     locals (so, sc) {
@@ -621,7 +627,7 @@ def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, an, rP, c
 
 /-- The domain check of `iota_certs_full_forall`: the argument's FULL-grade inferred type is defeq
 to the domain `ty` opened by the accumulator `(aco, acn)`. -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def iotaCertsFullCheckL : FunDecl := lfn (mode, vis, d, ty, aco, acn, arg) locals (ty2, ta, ok) {
   ty2 := call inst_list(ty, aco, acn, 0);
   ta := call infer(mode, vis, d, arg);
@@ -632,7 +638,7 @@ to the domain `ty` opened by the accumulator `(aco, acn)`. -/
 /-- The view checks of a handle, by tag (`ViewL.lean`'s `viewOK`): the scratch tier open for a
 scratch handle, the index below the tier's count. Aborts on a dangling handle (the twin's `view`
 fails there); returns `0`. -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
   t := ⟦h⟧.tier;
   x := ⟦h⟧.idx;
@@ -654,15 +660,15 @@ fails there); returns `0`. -/
 }
 
 /-- A control word (a one-line reader, so that callers' proofs read it through a call). -/
--- con-ron: ConRon/Arena/Core.lean:1432-1437 ConRon.Arena.iotaCertsFull
+-- con-ron: ConRon/Arena/Core.lean:1414-1419 ConRon.Arena.iotaCertsFull
 @[no_expose] def ctlGetL : FunDecl := lfn (k) locals () { return CTL.u64[k] }
 
 /-- A stack word (a one-line reader, so that callers' proofs read it through a call). -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def spnGetL : FunDecl := lfn (k) locals () { return SPN.u64[k] }
 
 /-- The record of a `forallE` handle: its domain and body (the guards of a stored-node read). -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
   (t, x) := node FORALL⟦h⟧;
   return (FORALL⟨t, x⟩.ty, FORALL⟨t, x⟩.b)
@@ -671,7 +677,7 @@ fails there); returns `0`. -/
 /-- The `forallE` arm of `iota_certs_full_aux` (split off: the function was too long for `vcgen`):
 `h` a `forallE`; certify the argument `SPN[ao + i]` against its instantiated domain, push it on the
 accumulator, and continue with the body. -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def iotaCertsFullForallL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
     locals (ty, body, arg, ok, dum) {
   (ty, body) := call iota_certs_full_parts(h);
@@ -688,7 +694,7 @@ accumulator, and continue with the body. -/
 /-- The `bvar` arm of `iota_certs_full_aux`: the telescope ran out of syntactic binders with a
 pending substitution; flush the accumulator into `h` and look again (with an empty accumulator at
 the stack top). -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose] def iotaCertsFullFlushL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (ty2, dum) {
   dum := call expr_view_ok(h);
   if acn == 0 { return 0 };
@@ -703,7 +709,7 @@ argument's FULL-grade inferred type is defeq to the corresponding (instantiated)
 pending substitutions carried in an accumulator opened in one `instantiateList`. The accumulator
 is the stack slice `(aco, acn)`, pushed directly above the fixed spine `(ao, an)`; nothing
 intervenes between a growth and the next read, so it stays contiguous. -/
--- con-ron: ConRon/Arena/Core.lean:1398-1430 ConRon.Arena.iotaCertsFullAux
+-- con-ron: ConRon/Arena/Core.lean:1380-1412 ConRon.Arena.iotaCertsFullAux
 @[no_expose, l_impl ConRon.Arena.iotaCertsFullAux]
 def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (dum) {
   if i < an {
@@ -724,7 +730,7 @@ def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) lo
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`/
 `iotaCertsFullI` — the empty-accumulator entry. The stack top is restored after the walk (the
 accumulator is scratch; the refinement specs promise `StackKept`). -/
--- con-ron: ConRon/Arena/Core.lean:1432-1437 ConRon.Arena.iotaCertsFull
+-- con-ron: ConRon/Arena/Core.lean:1414-1419 ConRon.Arena.iotaCertsFull
 @[no_expose, l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
   top := call ctl_get(136);
@@ -740,7 +746,9 @@ already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the 
 (`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). The head's
 `const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
 from `iota_rec_c` on). -/
--- con-ron: ConRon/Arena/Core.lean:2357-2444 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2360-2451 ConRon.Arena.iotaRecAt
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaNoCert`, `ConRon.Arena.recFireLevelCount` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.iotaRecAt]
 def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
   (hf, c, us) := call iota_rec_head(hd);

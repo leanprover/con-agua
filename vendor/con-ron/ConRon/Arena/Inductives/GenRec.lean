@@ -73,7 +73,7 @@ structure ClassCtor where
   tyN : EIdx
   deriving Inhabited
 
-/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2120-2122 closeLamsGoC
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2207-2209 closeLamsGoC
 con-leche: ConLeche/Kernel/Inductives/GenRec.lean:86-89 closeLams
 `closeTelescopeGo` with `λ` binders: each domain and the body abstracted
 once over the `k` binders outside it. -/
@@ -84,7 +84,7 @@ def closeLamsGo (i : Nat) : Nat → List EIdx → EIdx → AM EIdx
     let inner ← closeLamsGo i (k + 1) bs body
     internE (.lam d' inner)
 
-/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2125-2126 closeLamsC
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:2212-2213 closeLamsC
 con-leche: ConLeche/Kernel/Inductives/GenRec.lean:86-89 closeLams
 Close a telescope of `λ`s opened at `i ..< i + bs.length`. -/
 def closeLams (bs : List EIdx) (i : Nat) (body : EIdx) : AM EIdx :=
@@ -607,7 +607,7 @@ def classRecTysOk (mode : CheckMode) (fe : IFEnv) (g : ClassGen) (k : Nat) :
 
 /-- con-leche: ConLeche/Kernel/Inductives/GenRec.lean:421-440 classRuleCheck
 con-leche: ConLeche/Cached/IndRec.lean:378-398 classRuleCheckC
-con-leche: ConLeche/Cached/CheckerC.lean:155-181 sharedOpsRuleR
+con-leche: ConLeche/Cached/CheckerC.lean:159-185 sharedOpsRuleR
 **The check of a generated rule**: closed, its level parameters the
 recursor's, resolving and typed at the rule-less recursors' environment `feR`
 (`sharedOpsRuleR`'s flush leaving the inference), its λ-telescope `n` long, its
@@ -747,7 +747,7 @@ def checkBlockClasses (mode : CheckMode) (fe : IFEnv) (p : BlockShape) (params :
         class per member (official: invalid recursor)")
 
 /-- con-leche: ConLeche/Kernel/Inductives/RecCheck.lean:125-129 classFeR
-con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:328-336 consBlockRecsBare
+con-leche: ConLeche/Kernel/Inductives/BlockInstall.lean:332-340 consBlockRecsBare
 con-leche: ConLeche/Kernel/Inductives/RecCheck.lean:117-123 consBlockRecsBareF
 **The rule-less generated recursors consed onto the constructors'
 environment**, pushed TEMPORARILY (the module note): each recursor `m` at its

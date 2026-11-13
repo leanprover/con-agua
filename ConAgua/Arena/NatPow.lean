@@ -111,6 +111,7 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t, pb) {
   o := CTL.u64[0];
@@ -136,6 +137,7 @@ def powTwoLoop : Stmt := lblk (oa, la, e, x, k) {
 /-- `limb_push(v)`: push the one limb `v` at the pool top; its offset (`pow_nat`'s two shift
 operands). -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def limbPushL : FunDecl := lfn (v) locals (o, t, pb) {
   o := CTL.u64[0];
@@ -152,6 +154,7 @@ one-limb base `2^k` is the shift `1 <<< k·e` (`nat_shl` of a pushed one-limb `1
 one-limb `k·e`; `k·e < 2^38`), any other base square-and-multiply (`nat_pow`). Returns the
 result's slice `(o, l)`. -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def powNatL : FunDecl := lfn (oa, la, e) locals (x, k, s, o, o2, o3, l) {
   if la == 1 {

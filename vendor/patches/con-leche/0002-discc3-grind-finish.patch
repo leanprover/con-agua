@@ -2,12 +2,12 @@ iotaRecC_spec: pass Expr.WScoped.of_not_hasFvar to finish; grind no longer finds
 chaining on nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 2).
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
-index c47e839dbf0391d5d75b926be3ccd94c61a70efe..f14078fa910172ef5a342ee8e4002ce510bf7890 100644
+index 8df7e46420c523f042f36d227d026f4a0679c054..2aba0fb1017a5161ce98e9888ba3f3380f10d570 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
-@@ -966,7 +966,7 @@ theorem iotaRecC_spec (ih : SSimC .verified eager env f)
+@@ -1081,7 +1081,7 @@ theorem iotaRecC_spec (ih : SSimC .verified eager env f)
        iotaCertGate_of, CheckMode.verifiedChecks, → EnvWF.rules_ok henv] =>
-     vcgen [iotaRecI_eq, certAtI, mkAppNM, prepareMajorC_spec ih henv,
+     vcgen [iotaRecI_eq, certAtI, prepareMajorC_spec ih henv,
        iotaCertC_spec ih henv (mode := .verified) (eager := eager) (env := env),
 -      ruleRhsAtM_spec (mode := .verified) (eager := eager) (env := env)] <;> finish
 +      ruleRhsAtM_spec (mode := .verified) (eager := eager) (env := env)] <;> finish [Expr.WScoped.of_not_hasFvar]

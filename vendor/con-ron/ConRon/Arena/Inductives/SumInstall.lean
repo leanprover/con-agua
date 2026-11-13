@@ -140,15 +140,17 @@ def checkSumCtors (mode : CheckMode) (fe₀ fe : IFEnv) (T : NIdx)
     checkSumCtor mode fe₀ fe T lps nP nIdx resSort isProp large c.1 c.2 cvTa
     checkSumCtors mode fe₀ fe T lps nP nIdx resSort isProp large cvTa cs
 
-/-- con-leche: ConLeche/Kernel/Inductives/SumInstall.lean:119-122 consSumCtors
+/-- con-leche: ConLeche/Kernel/Inductives/SumInstall.lean:119-125 consSumCtors
 con-leche: ConLeche/Cached/IndBlock.lean:37-40 consSumCtorsF
-The constructors' conses, in order (the first constructor deepest).  Pure: the
-index push touches no term. -/
-def consSumCtors (nP : Nat) : List (IConstantVal × Nat) → IFEnv → IFEnv
+The constructors' conses, in order (the first constructor deepest), each with
+the family `T` it is declared under as its `induct`: the constructor check has
+established that its declared type concludes in `T`.  Pure: the index push
+touches no term. -/
+def consSumCtors (nP : Nat) (T : NIdx) : List (IConstantVal × Nat) → IFEnv → IFEnv
   | [], fe => fe
-  | c :: cs, fe => consSumCtors nP cs (fe.push (.ctorInfo c.1 nP c.2))
+  | c :: cs, fe => consSumCtors nP T cs (fe.push (.ctorInfo c.1 nP c.2 T))
 
-/-- con-leche: ConLeche/Kernel/Inductives/SumInstall.lean:124-130 sumRules
+/-- con-leche: ConLeche/Kernel/Inductives/SumInstall.lean:127-133 sumRules
 The stored rules: constructor `j`'s with the generated right-hand side `j`,
 `.plain` (the major is the family at the recursor's parameters). -/
 def sumRules : List (IConstantVal × Nat) → List EIdx → List IRecRule

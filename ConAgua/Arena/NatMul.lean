@@ -91,6 +91,7 @@ def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpResult]
 def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t, pt, pb) {
   top := CTL.u64[0];

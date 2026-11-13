@@ -34,7 +34,7 @@ open L.Arena
 /-- `open_pis_at_fvars(n, e, i)`: `openPisAtFvars n e i`, as `(1, fvs.off, n, body)` (the free
 variables an `IW` slice, in binder order) or `(0, 0, 0, 0)` (`opa_go` pushes them on `SPN`, read
 back and popped; a first index `i ≥ 2^63` a capacity abort, D33). -/
--- con-ron: ConRon/Arena/Core.lean:2846-2862 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:3042-3058 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def openPisAtFvarsL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   if i >> 63 != 0 { abort };

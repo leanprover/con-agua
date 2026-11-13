@@ -44,7 +44,7 @@ open L.Arena L.Ind
 /-- `lv_zero_caps(l)`: `(0, 0, 0)` for `never`, `(1, off, len)` for `ifAllZero` with the
 parameter names at `EREC[off ‥ off + len)`. -/
 -- con-leche: ConLeche/Kernel/Level.lean:187-197 ConLeche.Level.zeronessOf
--- con-ron: ConRon/Arena/Core.lean:362-370 ConRon.Arena.formerZ
+-- con-ron: ConRon/Arena/Core.lean:363-371 ConRon.Arena.formerZ
 @[no_expose] def lvZeroCapsL : FunDecl := lfn (l) locals (t0, z, n, q, u) {
   t0 := CTL.u64[192];
   z := call lv_zero(l);
@@ -72,7 +72,7 @@ parameter names at `EREC[off ‥ off + len)`. -/
 order `inst_list` reads): each domain instantiated by the free variables made so far in one
 `inst_list` pass, the residual left raw: `(1, residual)` or `(0, 0)`; the free variables made are
 pushed (so the substitution the twin returns is `SPN[co ‥ co + cn + n)`). -/
--- con-ron: ConRon/Arena/Core.lean:2864-2883 ConRon.Arena.openPisRawGo
+-- con-ron: ConRon/Arena/Core.lean:3060-3079 ConRon.Arena.openPisRawGo
 @[no_expose, l_impl ConRon.Arena.openPisRawGo]
 def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b) {
   if n == 0 { return (1, e) };
@@ -87,7 +87,7 @@ def opfGo : FunDecl := lfn (n, e, i, co, cn) locals (g, x, y, w, d, fv, u, ok, b
 
 /-- `opa_go(n, e, i)`: `openPisAtFvars n e i`: `(1, body)` or `(0, 0)`; the free variables made
 are pushed. -/
--- con-ron: ConRon/Arena/Core.lean:2846-2862 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:3042-3058 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def opaGo : FunDecl := lfn (n, e, i) locals (g, x, y, w, fv, b, u, ok) {
   if n == 0 { return (1, e) };
@@ -105,7 +105,7 @@ binder order) or `(0, 0, 0, 0)`: the raw opening (`opf_go`), then the residual i
 pass. No fallback, as the twin: instantiating at free variables never makes a binder appear. A
 first fvar index `i ≥ 2^63` aborts (a capacity guard, deviation D33: the indices `i, i + 1, …`
 must not wrap). -/
--- con-ron: ConRon/Arena/Core.lean:2885-2895 ConRon.Arena.openPisAtFvarsF
+-- con-ron: ConRon/Arena/Core.lean:3081-3091 ConRon.Arena.openPisAtFvarsF
 @[no_expose, l_impl ConRon.Arena.openPisAtFvarsF]
 def openPisAtFvarsFL : FunDecl := lfn (n, e, i) locals (co, ok, r, b, q, u) {
   if i >> 63 != 0 { abort };

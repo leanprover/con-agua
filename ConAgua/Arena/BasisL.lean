@@ -121,6 +121,7 @@ def rulesAtLpsGo : FunDecl := lfn (ko, kc, us, o, l, d) locals (rhs, k, lo, ez, 
 the names `ps` (the `EREC` slice `(po, pl)`), a definition's value and a recursor's rules renamed,
 every other word copied. -/
 -- con-ron: ConRon/Arena/Basis.lean:80-100 ConRon.Arena.IConstantInfo.atLps
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.atLps` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.atLps]
 def ciAtLps : FunDecl := lfn (p, po, pl) locals (k, n, r, z, us, io, il, v, ez, ro, rl) {
   k := EREC⦃p⦄;
@@ -244,6 +245,7 @@ def rulesLinkOk : FunDecl :=
 carries the former's names (the `EREC` slice `(fo, fl)`); a recursor against a pin recursor links
 the pin's rules; every other pair passes. -/
 -- con-ron: ConRon/Arena/Basis.lean:148-155 ConRon.Arena.blockLinkOkAt
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockLinkOkAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockLinkOkAt]
 def blockLinkOkAt : FunDecl :=
     lfn (bo, bl, po, pl, fo, fl, c, p) locals (e, ro, rl, rpo, rpl) {

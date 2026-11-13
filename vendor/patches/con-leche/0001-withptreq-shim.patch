@@ -25,7 +25,7 @@ index 5831e72b372b48ab1d9e59e53a12f27d926b7a23..aa990a407aeadd185f54be205825ac1c
  theorem sameB_eq {α : Type} [BEq α] [LawfulBEq α] (a b : α) : sameB a b = (a == b) := by rfl
  
 diff --git a/vendor/con-leche/ConLeche/Kernel/Expr.lean b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-index 8e7f3d9c240378ea822aaa01f3ca7360e3f4d78b..a74b13523e79e8292a4cf72704e1cb298d84762f 100644
+index d6bbea3da603de59a24ec6049d0871fad5b6f10c..dc33b69cebb3bd2a82801cc4bc780f4c5cbf2b46 100644
 --- a/vendor/con-leche/ConLeche/Kernel/Expr.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/Expr.lean
 @@ -8,7 +8,7 @@ proves.  `import all` makes that body visible **in this module only**;
@@ -59,7 +59,7 @@ index 8e7f3d9c240378ea822aaa01f3ca7360e3f4d78b..a74b13523e79e8292a4cf72704e1cb29
        | isTrue h => isTrue (by rw [h])
        | isFalse h => isFalse (fun e => h (Literal.natVal.inj e))
      | .strVal s, .strVal t =>
-@@ -942,7 +942,7 @@ on equal addresses only, where the runtime pointer test answers
+@@ -947,7 +947,7 @@ on equal addresses only, where the runtime pointer test answers
  to the structural `decEq`, which `decEqPtr` does not exist yet to
  replace.  Code outside the equality uses `ptrDec`. -/
  @[inline] def ptrDecStruct (a b : Expr) : Decidable (a = b) :=
@@ -68,7 +68,7 @@ index 8e7f3d9c240378ea822aaa01f3ca7360e3f4d78b..a74b13523e79e8292a4cf72704e1cb29
  
  /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
  addresses are the filter; the stored objects, tested by identity, are
-@@ -1178,7 +1178,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
+@@ -1245,7 +1245,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
  memoised descent.  What both `==` (`beq_eq_beqMemo`) and every
  `DecidableEq` use (`decEqPtr`, `decEq_eq_decEqPtr`) run. -/
  @[inline] def beqMemo (a b : Expr) : Bool :=
@@ -77,7 +77,7 @@ index 8e7f3d9c240378ea822aaa01f3ca7360e3f4d78b..a74b13523e79e8292a4cf72704e1cb29
      (fun h => by subst h; simp)
  
  /-- The executed equality decides `a = b`: `withPtrEq a b k h` is
-@@ -1210,7 +1210,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
+@@ -1277,7 +1277,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
  a fallback that compiled code would run is `decEqPtr`, never the
  structural walk. -/
  @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=

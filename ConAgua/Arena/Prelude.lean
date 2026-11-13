@@ -45,7 +45,7 @@ def allPinsOff : Word :=
 def internAllPinsL : FunDecl := internAllPinsAt allPinsOff
 
 /-- `rom_expr(pos)` as the program has it (the expression ROM reader at the program's ROM). -/
--- con-ron: ConRon/Arena/Frontend/Readback.lean:192-254 ConRon.Arena.Frontend.internExprGo
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:195-257 ConRon.Arena.Frontend.internExprGo
 @[no_expose, l_impl ConRon.Arena.Frontend.internExprGo]
 def romExprL : FunDecl := romExpr romData
 

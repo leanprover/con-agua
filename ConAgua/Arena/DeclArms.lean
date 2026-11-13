@@ -167,6 +167,7 @@ def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
 `3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `+5`, `+6`), and its
 constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chains. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:52-97 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -184,6 +185,7 @@ constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chai
 inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
 its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:52-97 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def stdAxFamily : FunDecl :=
     lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
   n := call pin_at(s1);
@@ -204,6 +206,7 @@ its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:52-97 ConRon.Arena.stdAxiomOk
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.stdAxiomOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.stdAxiomOk]
 def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, e, cn) {
   pn := call pin_at(32);
@@ -228,6 +231,7 @@ def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, e, cn) {
 a constructor `4` with no parameters and no fields), its constant value matching `rom_cv(id)`.
 One clause of `trustCompilerOk`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:101-114 ConRon.Arena.trustCompilerOk
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.trustCompilerOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def findPinnedCv : FunDecl := lfn (vis, n, k, id) locals (f, r, p, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
@@ -243,6 +247,7 @@ One clause of `trustCompilerOk`. -/
 /-- `trust_compiler_ok(vis, q)`: `trustCompilerOk`: the `True` family stored with the pinned
 shapes, the axiom's type the pin's. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:101-114 ConRon.Arena.trustCompilerOk
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.trustCompilerOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.trustCompilerOk]
 def trustCompilerOkL : FunDecl := lfn (vis, q) locals (n, e, p) {
   n := call pin_at(40);

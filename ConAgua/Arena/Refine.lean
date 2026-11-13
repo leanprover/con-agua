@@ -128,7 +128,8 @@ def decE (w : Word) : EIdx := ConRon.Arena.Idx.ofWord w.toUInt32
 /-- `nat_add_lit(oa, la, ob, lb)`: add two literal slices and intern the sum, refused above the
 run's maximum `Nat` size (`lit_nat_sized`, the twin's `litNatSized (a + b)`). -/
 -- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult
--- con-ron: ConRon/Arena/Core.lean:1063-1073 ConRon.Arena.litNatSized
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natOpResult` is gone upstream; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:1059-1069 ConRon.Arena.litNatSized
 @[no_expose, l_impl ConRon.Arena.natOpResult ConRon.Arena.litNatSized]
 def natAddLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   o := CTL.u64[0];

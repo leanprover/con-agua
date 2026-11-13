@@ -87,7 +87,7 @@ def slsGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2277-2287 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/Core.lean:2280-2290 ConRon.Arena.substLevelsAt -/
 @[no_expose, l_impl ConRon.Arena.substLevelsAt]
 def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   if l == 0 { return 0 };
@@ -98,7 +98,7 @@ def sleGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (h, r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2289-2299 ConRon.Arena.substParamLevels -/
+/-- con-ron: ConRon/Arena/Core.lean:2292-2302 ConRon.Arena.substParamLevels -/
 @[no_expose, l_impl ConRon.Arena.substParamLevels]
 def slpGo : FunDecl := lfn (o, l, b, ko, kc, vo, vc) locals (f, v, h, r) {
   if l == 0 { return 0 };
@@ -384,7 +384,7 @@ fuel explicit: anything but `coreWalkFuel` aborts, as `WhnfEntry.lean`'s `_f` ad
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2313-2336 ConRon.Arena.recFireLevels — a `.nested` or `.levels`
+/-- con-ron: ConRon/Arena/Core.lean:2316-2339 ConRon.Arena.recFireLevels — a `.nested` or `.levels`
 rule (kind `1`, `2`) substitutes its stored levels, a `.plain` one the constructor's parameters. -/
 @[no_expose, l_impl ConRon.Arena.recFireLevels]
 def recFireLevelsL : FunDecl := lfn (fireKind, fvo, fvc, po, pc, us, qo, qc) locals (vo, vc, b, c, x, r) {

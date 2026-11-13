@@ -847,7 +847,7 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
--- con-ron: ConRon/Arena/Core.lean:1549-1553 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1531-1535 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
   r := call reserved_from(n, 0);
@@ -855,7 +855,7 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 }
 
 /-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
--- con-ron: ConRon/Arena/Core.lean:1549-1553 ConRon.Arena.reservedBasisNames
+-- con-ron: ConRon/Arena/Core.lean:1531-1535 ConRon.Arena.reservedBasisNames
 @[no_expose] def reservedFrom : FunDecl := lfn (n, j) locals (r) {
   if 16 <= j { return 0 };
   if PINS.u64[55 + j] == n { return 1 };
@@ -864,15 +864,15 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 }
 
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
--- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 @[no_expose] def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
 
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` declines. -/
--- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
--- con-ron: ConRon/Arena/Core.lean:313-318 ConRon.Arena.liftFueled
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:314-319 ConRon.Arena.liftFueled
 @[no_expose] def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   r := call lvl_eq_c(u, v);
   if r == 0 { fail R_RESOURCE_LIMIT_FUEL };

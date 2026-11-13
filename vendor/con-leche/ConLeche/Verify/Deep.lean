@@ -177,6 +177,10 @@ private theorem rawNatLit?_shiftFrom (p : Nat) (e : Expr) :
   cases e <;> try rfl
   case fvar => rw [shiftFrom_fvar]; rfl
 
+private theorem isLit_shiftFrom {p : Nat} {e : Expr} :
+    (shiftFrom p e).isLit = e.isLit := by
+  cases e <;> first | rfl | (rw [shiftFrom_fvar]; done) | (rw [shiftFrom_fvar]; rfl)
+
 /-- The constructor form of a literal is closed, hence shift-fixed. -/
 private theorem shiftFrom_natLitToConstructor (p n : Nat) :
     shiftFrom p (natLitToConstructor n) = natLitToConstructor n := by
@@ -413,7 +417,7 @@ private theorem reduceNat_shift (_henv : EnvWF env)
           show reduceNat _ env (d + 1)
             (.app (.app (.const c []) (shiftFrom p b)) (shiftFrom p a)) = _
           simp only [reduceNat]
-          refine ite_rel _ (fun _ => ?_) (fun _ => ?_)
+          refine ite_rel _ (fun _ => ?_) (fun _ => rfl)
           · -- first argument first; the second only behind a literal (D15)
             refine bind_rel _ _ (ih.whnf hpd hwgb.2) ?_
             intro w₁ _
@@ -433,17 +437,6 @@ private theorem reduceNat_shift (_henv : EnvWF env)
                 | some r =>
                   rcases natOpResult_shape hres with ⟨n', rfl⟩ | ⟨bn, rfl⟩ <;>
                     rfl
-          · refine ite_rel _ (fun _ => ?_) (fun _ => rfl)
-            refine bind_rel _ _ (ih.whnf hpd hwgb.2) ?_
-            intro w₁ _
-            rw [rawNatLit?_shiftFrom]
-            cases rawNatLit? w₁ with
-            | none => rfl
-            | some n₁ =>
-              refine bind_rel _ _ (ih.whnf hpd hwfa.2) ?_
-              intro w₂ _
-              rw [rawNatLit?_shiftFrom]
-              cases rawNatLit? w₂ <;> rfl
 
 /-- `reduceNat_shift` under the defeq-side fvar guard: the pruned
 branch is `pure none` on both sides. -/
@@ -663,7 +656,7 @@ private theorem structEtaCertWith_shift (henv : EnvWF env)
   | none => rfl
   | some ci =>
     cases ci <;> try rfl
-    case ctorInfo cvc cnP cnF =>
+    case ctorInfo cvc cnP cnF _ =>
     simp only [getAppArgs_shiftFrom, List.length_map]
     refine ite_congr' (fun _ => ?_) (fun _ => rfl)
     rw [getAppFn_shiftFrom]
@@ -870,7 +863,7 @@ theorem unitLikeShape_shiftFrom (henv : EnvWF env) (p : Nat) (w : Expr) :
         | none => rfl
         | some ci =>
           cases ci <;> try rfl
-          case ctorInfo cvC nPc nFc =>
+          case ctorInfo cvC nPc nFc _ =>
           dsimp only
           have hc : (cvC.type.instantiateLevelParams cvC.levelParams us).hasFvar = false := by
             rw [hasFvar_instantiateLevelParams]
@@ -884,7 +877,7 @@ theorem unitLikeShape_shiftFrom (henv : EnvWF env) (p : Nat) (w : Expr) :
 /-- The field telescope of a well-scoped instance is well-scoped. -/
 theorem unitLikeShape_WScoped (henv : EnvWF env) {d : Nat} {w tele : Expr} {n : Nat}
     (hw : WScoped d w) (h : unitLikeShape env w = some (tele, n)) : WScoped d tele := by
-  obtain ⟨S, us, _, _, _, cvC, _, _, -, -, -, -, -, -, hfC, -, ht⟩ := unitLikeShape_some h
+  obtain ⟨S, us, _, _, _, cvC, _, _, _, -, -, -, -, -, -, hfC, -, ht⟩ := unitLikeShape_some h
   have hc : (cvC.type.instantiateLevelParams cvC.levelParams us).hasFvar = false := by
     rw [hasFvar_instantiateLevelParams]
     exact (henv.consts _ (Env.find?_mem hfC)).1
@@ -1090,10 +1083,7 @@ private theorem majorToCtor_shift (henv : EnvWF env)
       | none => rfl
       | some ci =>
         cases ci <;> try rfl
-        case ctorInfo cvj cnP cnF =>
-        dsimp only
-        cases hpi : (cvj.type.piResult).getAppFn <;> try rfl
-        case const T us₀ =>
+        case ctorInfo cvj cnP cnF T =>
         dsimp only
         cases hfT : env.find? T with
         | none => rfl
@@ -1274,7 +1264,7 @@ theorem iotaRec_WScoped (henv : EnvWF env)
     (h : iotaRec mode (pureFns mode eager env fuel) env d e = .ok (some e''))
     (hw : WScoped d e) : WScoped d e'' := by
   obtain ⟨c, us, cv, mI, rP, isK, rules, major, cj, usj,
-    cvj, cnP, cnF, r, hfn, hfc, hlen, -, hprep,
+    cvj, cnP, cnF, induct, r, hfn, hfc, hlen, -, hprep,
     hmfn, hfj,
     hrule,
     hml, hlev, hpeq, hmcerts, -, rfl⟩ :=
@@ -1545,7 +1535,7 @@ private theorem iotaRec_shift (henv : EnvWF env)
     | none => rfl
     | some cij =>
       cases cij <;> try rfl
-      case ctorInfo cvj cnP cnF =>
+      case ctorInfo cvj cnP cnF _ =>
       dsimp only
       cases hrule : rules.find? (fun r' => r'.ctor == cj) with
       | none => rfl
@@ -1776,7 +1766,10 @@ theorem whnfLoop_shift (henv : EnvWF env)
     have hwe₂ : WScoped d e₂ := by
       rcases reduceNat_inv ho with ⟨k, rfl⟩ | ⟨bn, rfl⟩ <;>
         simp [WScoped]
-    exact ihN hpd hwe₂
+    rw [isLit_shiftFrom]
+    by_cases hl : e₂.isLit = true
+    · rw [ite_eq_left hl, ite_eq_left hl]; rfl
+    · rw [ite_eq_right hl, ite_eq_right hl]; exact ihN hpd hwe₂
   | none =>
     rw [unfoldDefinition_shiftFrom henv]
     cases hu : unfoldDefinition env e₁ with
@@ -2210,10 +2203,6 @@ private theorem headIsProj_shiftFrom {p : Nat} {e : Expr} :
 
 private theorem isNatZero_shiftFrom {p : Nat} {e : Expr} :
     (shiftFrom p e).isNatZero = e.isNatZero := by
-  cases e <;> first | rfl | (rw [shiftFrom_fvar]; done) | (rw [shiftFrom_fvar]; rfl)
-
-private theorem isLit_shiftFrom {p : Nat} {e : Expr} :
-    (shiftFrom p e).isLit = e.isLit := by
   cases e <;> first | rfl | (rw [shiftFrom_fvar]; done) | (rw [shiftFrom_fvar]; rfl)
 
 private theorem natPred?_shiftFrom {p : Nat} {e : Expr} :

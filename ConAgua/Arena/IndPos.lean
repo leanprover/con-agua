@@ -307,6 +307,7 @@ def nestKindsFlat : FunDecl := lfn (off, cnt) locals (ok, r) {
 `ciq` is no constructor record or its type does not bind its parameters and fields. Aborts when
 `nPc + nF` wraps (a capacity guard: the twin adds them as `Nat`s; docs/deviations.md). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:477-493 ConRon.Arena.nestCtorEntry
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.nestCtorEntry` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.nestCtorEntry]
 def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bsLen, body) {
   if EREC⦃ciq⦄ != 4 { return (0, 0, 0, 0, 0) };
@@ -321,6 +322,7 @@ def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bs
 
 /-- `nest_ctor_entry(C, ciq)`: `nestCtorEntry`, `ciq` the stored constant's `EREC` pointer. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:477-493 ConRon.Arena.nestCtorEntry
+-- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.nestCtorEntry` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.nestCtorEntry]
 def nestCtorEntry : FunDecl := lfn (C, ciq) locals (ok0, cv, nPc, nF, body, hd, g, n, us, z) {
   (ok0, cv, nPc, nF, body) := call nest_ctor_entry_strip(ciq);
