@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.IndPosSpec.EntryW
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
@@ -104,7 +105,8 @@ theorem memberNamesW_stage {vis : Word} {fe : IFEnv} {a : AState}
 theorem decCI_ind_cases {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ k, nat? a p = some k ∧
-      ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧ nat? a (p + 17) = some caps.nparams) ∨
+      ((k = 3 ∧ ∃ cv caps, ci = .indInfo cv caps ∧
+          nat? a (p + (CI.indCaps + Caps.nparams).toNat) = some caps.nparams) ∨
        (k ≠ 3 ∧ ∀ cv caps, ci ≠ .indInfo cv caps)) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
@@ -117,10 +119,8 @@ theorem decCI_ind_cases {a : Nat → Option Word} {p : Nat}
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := h
     left; refine ⟨rfl, cv, caps, rfl, ?_⟩
-    simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-      Option.some.injEq] at hcaps
-    obtain ⟨_, _, _, _, _, _, np, hnp, _, _, _, _, rfl⟩ := hcaps
-    simpa [Nat.add_assoc] using hnp
+    rw [CI.indCaps_add_toNat Caps.nparams_lt, ← Nat.add_assoc]
+    exact (decCaps_eq_some.mp hcaps).2.2.2.1
   | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 6, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all []
@@ -217,10 +217,11 @@ theorem npcW_ok {vis : Word} {fe : IFEnv} {a : AState}
   · rw [npcW.k_sl_contains.arm3 (hc1 := hb1) (hc2 := h0) (hc3 := by rw [erRd_foldN, hkr.1]; rfl),
       erRd_foldN] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    have hr17 := erec_nat (m := m1) (w := (findRes m1 vis i).tail.headD 0) (c := 17) hnp (by decide)
+    have hr17 := erec_nat (m := m1) (w := (findRes m1 vis i).tail.headD 0) hnp (UInt64.toNat_lt _)
+    rw [UInt64.ofNat_toNat] at hr17
     rw [npc_ind hnc hfci]
     refine ⟨hS1, hg1, ?_, hr17.2⟩
-    rw [show (17 : Word) = UInt64.ofNat 17 from rfl, hr17.1]
+    rw [hr17.1]
   · have hne : erRd m1 ((findRes m1 vis i).tail.headD 0) ≠ 3 := by
       rw [hkr.1]; intro e
       have := congrArg UInt64.toNat e

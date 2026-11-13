@@ -26,23 +26,23 @@ which are sized by `Caps.size`).
 namespace L.Caps
 
 /-- `eta`: whether the type is a structure-like one whose values are η-expandable. -/
-def eta : Word := 0
+@[reducible] def eta : Word := 0
 /-- `nIdx`: the number of indices. -/
-def nIdx : Word := 6
+@[reducible] def nIdx : Word := 6
 /-- `neverZero`: whether the type's universe is never zero. -/
-def neverZero : Word := 7
+@[reducible] def neverZero : Word := 7
 /-- `all`: the block's types, a name slice (offset word). -/
-def allOff : Word := 10
+@[reducible] def allOff : Word := 10
 /-- `all`: the slice's length word. -/
-def allLen : Word := 11
+@[reducible] def allLen : Word := 11
 /-- `nparams`: the number of parameters. -/
-def nparams : Word := 12
+@[reducible] def nparams : Word := 12
 /-- `ctors`: the constructors, a name slice (offset word). -/
-def ctorsOff : Word := 13
+@[reducible] def ctorsOff : Word := 13
 /-- `ctors`: the slice's length word. -/
-def ctorsLen : Word := 14
+@[reducible] def ctorsLen : Word := 14
 /-- The record's size in words. -/
-def size : Word := 15
+@[reducible] def size : Word := 15
 
 /-! ## The layout facts -/
 

@@ -846,7 +846,7 @@ twin's pure tests (`er_slice_eq`, the level list's length) run before the tests.
 def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, tq, us2, ao, an, to, tn)
     locals (eta, ec, ep, nf, lpn, lpo, cpo, cpn, lpe, lo, uslen, r) {
-  eta := EREC⦃q + 5⦄;
+  eta := EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄;
   ec := EREC⦃tq + 5⦄;
   ep := EREC⦃tq + 4⦄;
   nf := EREC⦃tq + 6⦄;
@@ -920,7 +920,7 @@ def etaCtorPartialFamL : FunDecl := lfn (vis, c, T) locals (f, q, eta, tq) {
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC⦃q⦄ != 3 { return 0 };
-  eta := EREC⦃q + 5⦄;
+  eta := EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄;
   tq := call find_table(vis, T);
   if tq == 0 { return 0 };
   if eta == 0 { return 0 };
@@ -1100,7 +1100,7 @@ def unitLikeShapeL : FunDecl := lfn (vis, w)
   (f, q) := call env_find(S, vis);
   if f == 0 { return (0, 0, 0) };
   if EREC⦃q⦄ != 3 { return (0, 0, 0) };
-  eta := EREC⦃q + 5⦄;
+  eta := EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄;
   lpn := EREC⦃q + 3⦄;
   (lo, usl) := call ls_node(us);
   if eta == 0 { return (0, 0, 0) };

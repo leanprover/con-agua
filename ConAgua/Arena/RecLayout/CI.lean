@@ -15,19 +15,27 @@ record layout (`RecLayout/Caps.lean`), L code and proofs use these names, not nu
 namespace L.CI
 
 /-- The kind word (0 axiom, 1 definition, 2 theorem, 3 inductive, 4 constructor, 5 recursor). -/
-def kind : Word := 0
+@[reducible] def kind : Word := 0
 /-- The constant value (`IConstantVal`); its first word, the name, is the index key. -/
-def cv : Word := 1
+@[reducible] def cv : Word := 1
 
 /-! ## `indInfo` -/
 
 /-- An inductive's capabilities (`Caps.size` words). -/
-def indCaps : Word := 5
+@[reducible] def indCaps : Word := 5
 /-- The size of an inductive's record. -/
-def indSize : Word := indCaps + Caps.size
+@[reducible] def indSize : Word := indCaps + Caps.size
 
 theorem indSize_toNat : indSize.toNat = indCaps.toNat + Caps.size.toNat := by
   simp [indSize, indCaps, Caps.size]
 theorem indCaps_le : indCaps.toNat ≤ 64 := by simp [indCaps]
+/-- The kind word and the constant value come first. -/
+theorem indCaps_ge : 5 ≤ indCaps.toNat := by simp [indCaps]
+
+/-- A field of the capabilities, at its place in an inductive's record, as a number. -/
+theorem indCaps_add_toNat {f : Word} (hf : f.toNat < Caps.size.toNat) :
+    (indCaps + f).toNat = indCaps.toNat + f.toNat := by
+  have := Caps.size_le; have := indCaps_le
+  rw [UInt64.toNat_add]; omega
 
 end L.CI

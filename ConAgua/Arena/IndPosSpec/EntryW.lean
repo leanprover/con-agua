@@ -36,7 +36,8 @@ open L.Arena
 theorem blk_k3 {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = envFound m found q) (h0 : found ≠ 0)
     (hex : ∃ ci, decCI (erecP m) q.toNat = some ci) (hk : erRd m q = 3) :
-    hslice? (erA m) (erRd m (q + 15)).toNat (erRd m (q + 16)).toNat =
+    hslice? (erA m) (erRd m (q + (CI.indCaps + Caps.allOff))).toNat
+      (erRd m (q + (CI.indCaps + Caps.allLen))).toNat =
       some (nestBlockOf fe (decI c)) := by
   have := nestBlockOf_key found q hfound (fun _ => hex)
   simpa [h0, hk] using this

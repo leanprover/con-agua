@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.ErecRd
+public import ConAgua.Arena.RecLayout.CapsDec
 
 @[expose] public section
 
@@ -42,12 +43,13 @@ theorem decCI_ctorLp {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R
 structure IndRecR (R : Nat → Option Word) (rd : Word → Word) (q : Word) (cv : IConstantVal) (caps : IIndCaps) :
     Prop where
   lp : hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams
-  eta : caps.eta = (rd (q + 5) != 0)
+  eta : caps.eta = (rd (q + (CI.indCaps + Caps.eta)) != 0)
 
 /-- An inductive record decodes to `IndRecR`. -/
 theorem decCI_indCaps {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps))  :
     IndRecR R rd q cv caps := by
+  have heta := (decCI_indInfo_rd hR h).1
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -63,10 +65,6 @@ theorem decCI_indCaps {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK 
   obtain ⟨nm, -, ls, ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩, ty, -, rfl⟩ := hcv
   have h2 : rd (q + 2) = wo := hR.offN (k := 2) (hk := by decide) (by simpa [Nat.add_assoc] using hwo)
   have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide) (by simpa [Nat.add_assoc] using hwc)
-  simp only [decCaps, bool?, nat?, hlist?, Option.bind_eq_bind, Option.pure_def,
-    Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at hcaps
-  obtain ⟨e, ⟨we, hwe, rfl⟩, -, -, -, -, -, -, -, -, -, -, rfl⟩ := hcaps
-  have h5 : rd (q + 5) = we := hR.offN (k := 5) (hk := by decide) (by simpa [Nat.add_assoc] using hwe)
-  exact ⟨by rw [h2, h3]; exact hs, by rw [h5]⟩
+  exact ⟨by rw [h2, h3]; exact hs, heta⟩
 
 end L.Arena

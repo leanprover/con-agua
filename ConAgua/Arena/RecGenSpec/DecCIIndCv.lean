@@ -100,7 +100,7 @@ theorem decCI_ind_cv {a : Nat → Option Word} {q : Nat} {cv : IConstantVal}
   | none => simp [e] at h
   | some cv' =>
     simp only [e, Option.bind_some] at h
-    cases e2 : decCaps a (q + 5) with
+    cases e2 : decCaps a (q + CI.indCaps.toNat) with
     | none => simp [e2] at h
     | some c =>
       simp only [e2, Option.bind_some, Option.pure_def, Option.some.injEq,

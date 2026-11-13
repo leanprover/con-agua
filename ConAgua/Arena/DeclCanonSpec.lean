@@ -143,11 +143,13 @@ def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a q) (a r)
 
 /-- **`caps_eq_b`**. -/
 def capsEqBB (a : Word → Word) (q r : Word) : Bool :=
-  if a (q + 6) ≠ a (r + 6) then false else bEqB (a (q + 7)) (a (r + 7))
+  if a (q + Caps.nIdx) ≠ a (r + Caps.nIdx) then false
+  else bEqB (a (q + Caps.neverZero)) (a (r + Caps.neverZero))
 
 /-- **`caps_eq_c`**. -/
 def capsEqCB (a : Word → Word) (q r : Word) : Bool :=
-  erSlAtB a q r 10 && a (q + 12) == a (r + 12) && erSlAtB a q r 13
+  erSlAtB a q r Caps.allOff && a (q + Caps.nparams) == a (r + Caps.nparams) &&
+    erSlAtB a q r Caps.ctorsOff
 
 /-- **`caps_eq`**. -/
 def capsEqAll (a : Word → Word) (q r : Word) : Bool := capsEqAB a q r && capsEqBB a q r && capsEqCB a q r
@@ -178,7 +180,7 @@ def rulesEqB (a : Word → Word) (o1 l1 o2 l2 : Word) : Bool :=
 /-- **`ci_eq_rest`**. -/
 def ciEqRestB (a : Word → Word) (p q k : Word) : Bool :=
   if k = 1 then a (p + 5) == a (q + 5) && hintEqB a (p + 6) (q + 6)
-  else if k = 3 then capsEqAll a (p + 5) (q + 5)
+  else if k = 3 then capsEqAll a (p + CI.indCaps) (q + CI.indCaps)
   else if k = 4 then a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) && a (p + 7) == a (q + 7)
   else if k = 5 then
     a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) &&
