@@ -369,6 +369,115 @@ theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word),
         · rw [ite_eq_right hr, ite_eq_right (by omega)]
     · simp [e]
 
+/-- Write the `some` words of `ws` at the tagged addresses `q, q + 1, …` and skip the `none`s: a
+record written field by field (`erec_put(q + ⟪R.f⟫, …)`), its image `R.img …` from the record's
+layout (`RecLayout/`), the words between the fields left as they were. -/
+def wrERo (m : Mem) (q : Word) : List (Option Word) → Mem
+  | [] => m
+  | none :: xs => wrERo m (q + 1) xs
+  | some x :: xs => wrERo (erecPutMem m q x) (q + 1) xs
+
+theorem wrERo_frame : ∀ (ws : List (Option Word)) (m : Mem) (q : Word),
+    MemFrame [EREC, tier1 EREC] [] m (wrERo m q ws)
+  | [], _m, _q => MemFrame.refl _ _ _
+  | none :: ws, _m, _q => wrERo_frame ws _ _
+  | some x :: ws, _m, _q => (erecPutMem_frame _m _q x).trans (wrERo_frame ws _ _)
+
+theorem wrERo_ctl : ∀ (ws : List (Option Word)) (m : Mem) (q : Word),
+    (wrERo m q ws).arr64 CTL = m.arr64 CTL
+  | [], _, _ => rfl
+  | none :: ws, m, q => by simp only [wrERo]; rw [wrERo_ctl ws]
+  | some x :: ws, m, q => by simp only [wrERo]; rw [wrERo_ctl ws, erecPutMem_ctl]
+
+/-- **What `wrERo` leaves in the tier arrays**: the written words at their offsets (in bounds), every
+other word as it was. -/
+theorem wrERo_get : ∀ (ws : List (Option Word)) (m : Mem) (q : Word),
+    erOff q + ws.length ≤ 2 ^ 40 → q.toNat + ws.length < 2 ^ 64 → ∀ (b : TieredArray) (i : Nat),
+    ((wrERo m q ws).arr64 b)[i]? =
+      if b = erTier q ∧ erOff q ≤ i ∧ i < erOff q + ws.length ∧ i < (m.arr64 b).size ∧
+        (ws[i - erOff q]?).join.isSome
+      then (ws[i - erOff q]?).join else (m.arr64 b)[i]?
+  | [], m, q, _, _, b, i => by simp [wrERo]
+  | [none], m, q, _, _, b, i => by
+    simp only [wrERo]; split
+    · rename_i h; obtain ⟨-, h1, h2, -, h3⟩ := h
+      rw [show i - erOff q = 0 by simp at h2; omega] at h3; simp at h3
+    · rfl
+  | [some x], m, q, _, _, b, i => by
+    simp only [wrERo, erecPutMem_arr, List.length_singleton]
+    by_cases e : b = erTier q
+    · subst e
+      simp only [ite_true, true_and, Array.getElem?_setIfInBounds]
+      by_cases hi : erOff q = i
+      · subst hi
+        by_cases hb : erOff q < (m.arr64 (erTier q)).size
+        · simp [hb]
+        · simp [hb]
+      · rw [ite_eq_right hi, ite_eq_right (by omega)]
+    · simp [e]
+  | a :: y :: ws, m, q, h1, h2, b, i => by
+    have hlen : (a :: y :: ws).length = ws.length + 2 := rfl
+    rw [hlen] at h1 h2
+    obtain ⟨ho, ht⟩ := erOff_succ (q := q) (by omega) (by omega)
+    have hm : ∃ m', wrERo m q (a :: y :: ws) = wrERo m' (q + 1) (y :: ws) ∧
+        ∀ b', (m'.arr64 b').size = (m.arr64 b').size ∧ ∀ j, j ≠ erOff q ∨ b' ≠ erTier q →
+          (m'.arr64 b')[j]? = (m.arr64 b')[j]? ∧
+        ((m'.arr64 (erTier q))[erOff q]? = if erOff q < (m.arr64 (erTier q)).size then
+          (a.or ((m.arr64 (erTier q))[erOff q]?)) else none) := by
+      cases a with
+      | none =>
+        refine ⟨m, rfl, fun b' => ⟨rfl, fun j _ => ⟨rfl, ?_⟩⟩⟩
+        split
+        · simp
+        · rename_i hb; simp [hb]
+      | some x =>
+        refine ⟨erecPutMem m q x, rfl, fun b' => ⟨?_, fun j hj => ⟨?_, ?_⟩⟩⟩
+        · rw [erecPutMem_arr]; split <;> simp
+        · rw [erecPutMem_arr]; split
+          · rename_i e; subst e
+            rcases hj with hj | hj
+            · rw [Array.getElem?_setIfInBounds_ne (Ne.symm hj)]
+            · exact absurd rfl hj
+          · rfl
+        · rw [erecPutMem_arr, ite_eq_left rfl]
+          split
+          · rename_i hb; simp [hb]
+          · rename_i hb; simp [hb]
+    obtain ⟨m', e, hm'⟩ := hm
+    have ih := wrERo_get (y :: ws) m' (q + 1)
+      (by simp only [List.length_cons, ho]; omega)
+      (by simp only [List.length_cons]; rw [UInt64.toNat_add]; simp; omega) b i
+    rw [e, ih, ho, ht]
+    obtain ⟨hsz, hrest⟩ := hm' b
+    simp only [List.length_cons, hsz]
+    by_cases hi : b = erTier q ∧ erOff q = i
+    · obtain ⟨rfl, rfl⟩ := hi
+      have h0 := (hrest (erOff q + 1) (.inl (by omega))).2
+      rw [ite_eq_right (by omega)]
+      by_cases hb : erOff q < (m.arr64 (erTier q)).size
+      · rw [h0, ite_eq_left hb]
+        cases a <;> simp [hb]
+      · rw [h0, ite_eq_right hb]
+        simp only [hb, and_false, false_and, ite_false]
+        exact (Array.getElem?_eq_none (by omega)).symm
+    · have hne : i ≠ erOff q ∨ b ≠ erTier q := by
+        by_cases e1 : b = erTier q
+        · exact .inl (fun e2 => hi ⟨e1, e2.symm⟩)
+        · exact .inr e1
+      rw [(hrest i hne).1]
+      by_cases hr : b = erTier q ∧ erOff q + 1 ≤ i ∧ i < erOff q + 1 + (ws.length + 1) ∧
+          i < (m.arr64 b).size
+      · have : i - erOff q = (i - (erOff q + 1)) + 1 := by omega
+        simp only [hr, true_and, this, List.getElem?_cons_succ]
+        obtain ⟨-, h1', h2', h3'⟩ := hr
+        simp only [show erOff q ≤ i by omega, show i < erOff q + (ws.length + 2) by omega, true_and]
+      · by_cases e1 : b = erTier q
+        · subst e1
+          have hne' : i ≠ erOff q := fun e2 => hi ⟨rfl, e2.symm⟩
+          rw [ite_eq_right (fun h => hr ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1⟩), ite_eq_right
+            (fun h => hr ⟨h.1, by omega, by omega, h.2.2.2.1⟩)]
+        · simp [e1]
+
 /-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
 returned address keeps the stage relation and grows the pools; the words read back through
 `erecP`, the address in the flag's tier at its old top. -/
@@ -441,6 +550,84 @@ theorem erRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     by_cases t : q.toNat / 2 ^ 40 % 2 = 0
     · simp only [t, ite_true] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
     · simp only [t, ite_false] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+
+/-- **A record allocated in `EREC` and written field by field** (`erRec_stage` for `wrERo`):
+`erec_alloc(ws.length)` then the `some` words of `ws` at the
+returned address keeps the stage relation and grows the pools; the words read back through
+`erecP`, the address in the flag's tier at its old top. -/
+theorem erRecO_stage {vis : Word} {fe : IFEnv} {a : AState}
+    {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (hS : StageR vis fe m a)
+    (ws : List (Option Word)) (hk : k.toNat = ws.length) :
+    StageR vis fe (wrERo m1 q ws) a ∧ IWGrow m (wrERo m1 q ws) ∧ erOff q = erTopOf m q ∧
+      erTopOf (wrERo m1 q ws) q = erTopOf m q + ws.length ∧ q.toNat < 2 ^ 41 ∧
+      (q.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧
+      (∀ j x, ws[j]? = some (some x) → erecP (wrERo m1 q ws) (q.toNat + j) = some x) := by
+  obtain ⟨hg1, hf1, hoff, htop1, hsz1, htier, hq41, hW1⟩ := erAllocW_spec h hS.iw
+  have hfw := wrERo_frame ws m1 q
+  have hcw := wrERo_ctl ws m1 q
+  have hcap : (m.arr64 (erTier q)).size < 2 ^ 40 := by
+    unfold erTier; split
+    · exact hS.iw.erCap
+    · exact hS.iw.er1Cap
+  have hsz : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hf1.size
+  have hm1 : ∀ b : TieredArray, b ≠ CTL → m1.arr64 b = m.arr64 b := fun b hb => hf1.arr b (by simp) hb
+  have hget := wrERo_get ws m1 q (by omega) (by omega)
+  have hT : ∀ m' : Mem, m'.arr64 CTL = m1.arr64 CTL → erTopOf m' q = erTopOf m1 q := fun m' e => by
+    simp only [erTopOf, erTop, erecTop1, e]
+  -- the growth from `m`
+  have hgrow : ErecGrow m (wrERo m1 q ws) := by
+    refine ⟨?_, fun i hi => ?_, ?_, fun i hi => ?_⟩
+    · simp only [erTop, hcw]; exact hg1.top
+    · rw [hget, ite_eq_right, hm1 _ (by decide)]
+      rintro ⟨e, h2, -⟩
+      have : erTopOf m q = erTop m := by
+        unfold erTier at e; unfold erTopOf; split at e
+        · rename_i t; simp [t]
+        · cases e
+      omega
+    · simp only [erecTop1, hcw]; exact hg1.top1
+    · rw [hget, ite_eq_right, hm1 _ (by decide)]
+      rintro ⟨e, h2, -⟩
+      have : erTopOf m q = erecTop1 m := by
+        unfold erTier at e; unfold erTopOf; split at e
+        · cases e
+        · rename_i t; simp [t]
+      omega
+  have hfr : MemFrame [EREC, tier1 EREC] [129, 130] m (wrERo m1 q ws) :=
+    (hf1.mono (by simp) (by simp)).trans (hfw.mono (by simp) (by simp))
+  have hW : IWOK (wrERo m1 q ws) := IWOK.of_er hfw hW1
+  have hI : (wrERo m1 q ws).arr64 IW = m.arr64 IW := by
+    rw [hfw.arr IW (by decide) (by decide), hm1 _ (by decide)]
+  have h200 : rdW ((wrERo m1 q ws).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.ctl 200 (by simp)
+  refine ⟨⟨CheckR.erGrow hS.check hfr hgrow, hW⟩,
+    { iw := (by simp only [iwTop, h200]; exact Nat.le_refl _),
+      er := hgrow.top, iwGet := (fun i _ => by rw [hI]), erGet := hgrow.get, er1 := hgrow.top1,
+      er1Get := hgrow.get1 }, hoff, ?_, hq41, htier,
+    fun j x hx => ?_⟩
+  · rw [hT _ hcw, htop1, hk]
+  · have hj : j < ws.length := (List.getElem?_eq_some_iff.mp hx).1
+    have hjl : erOff q + j < 2 ^ 40 := by
+      have e1 := hsz1; have e2 := htop1; have e3 := hk; have e4 := hcap; omega
+    have hoj : (q.toNat + j) % 2 ^ 40 = erOff q + j := by unfold erOff at hjl ⊢; omega
+    have htj : (q.toNat + j) / 2 ^ 40 % 2 = q.toNat / 2 ^ 40 % 2 := by
+      have : (q.toNat + j) / 2 ^ 40 = q.toNat / 2 ^ 40 := by unfold erOff at hjl; omega
+      rw [this]
+    have hlt : erOff q + j < (m1.arr64 (erTier q)).size := by
+      rw [hsz]; have e1 := hsz1; have e2 := htop1; have e3 := hk; omega
+    have hgj := hget (erTier q) (erOff q + j)
+    simp only [show erOff q + j - erOff q = j by omega, hx, Option.join_some, Option.isSome_some,
+      and_true] at hgj
+    rw [ite_eq_left (by refine ⟨?_, ?_, ?_⟩ <;> first | trivial | omega)] at hgj
+    have htopw : erOff q + j < erTopOf (wrERo m1 q ws) q := by
+      rw [hT _ hcw, htop1]; have e3 := hk; omega
+    unfold erecP
+    rw [ite_eq_left (show q.toNat + j < 2 ^ 64 by omega), htj, hoj]
+    unfold erTopOf at htopw
+    unfold erTier at hgj
+    by_cases t : q.toNat / 2 ^ 40 % 2 = 0
+    · simp only [t, ite_true] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+    · simp only [t, ite_false] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+
 
 theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
     ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
