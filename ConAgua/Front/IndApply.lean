@@ -463,17 +463,17 @@ def indCaps : FunDecl := lfn (q) {
 }
 
 /-- `parse_rule_d(q, rp)`: `parseRuleD` of the rule record `IFL[rp‥rp + 3)`, written as the
-`IRecRule` record at `DIND[q]` (`decRule`). -/
+`IRecRule` record at `DIND[q]` (`decRule`): its live fields, by name (`RecLayout/Rule.lean`; the
+record's unused words are not written). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:250-254 ConRon.Arena.Frontend.parseRuleD
 @[no_expose, l_impl ConRon.Arena.Frontend.parseRuleD]
 def parseRuleD : FunDecl := lfn (q, rp) locals (n, e) {
   n := call name_get(IFL.u64[rp]);
   e := call expr_get(IFL.u64[rp + 2]);
-  DIND.u64[q] := n; DIND.u64[q + ⟪Rule.nfields⟫] := IFL.u64[rp + 1]; DIND.u64[q + 2] := 0;
+  DIND.u64[q] := n; DIND.u64[q + ⟪Rule.nfields⟫] := IFL.u64[rp + 1];
   DIND.u64[q + ⟪Rule.fire⟫] := 0; DIND.u64[q + ⟪Rule.lvlsOff⟫] := 0;
   DIND.u64[q + ⟪Rule.lvlsLen⟫] := 0; DIND.u64[q + ⟪Rule.pinsOff⟫] := 0;
-  DIND.u64[q + ⟪Rule.pinsLen⟫] := 0; DIND.u64[q + ⟪Rule.rhs⟫] := e; DIND.u64[q + 9] := 0;
-  DIND.u64[q + 10] := 0;
+  DIND.u64[q + ⟪Rule.pinsLen⟫] := 0; DIND.u64[q + ⟪Rule.rhs⟫] := e;
   return 0
 }
 

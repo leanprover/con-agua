@@ -92,7 +92,7 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
   r := 0;
   if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := ⟪CI.ctorSize⟫ } else if k == 5 {
     n := ⟪CI.recSize⟫;
-    if DIND.u64[s + ⟪CI.recRulesLen⟫] >= 1152921504606846976 { abort };
+    if DIND.u64[s + ⟪CI.recRulesLen⟫] >= 144115188075855872 { abort };
     r := call erec_alloc(⟪Rule.size⟫ * DIND.u64[s + ⟪CI.recRulesLen⟫]);
     z := call dind_copy(r, DIND.u64[s + ⟪CI.recRulesOff⟫], ⟪Rule.size⟫ * DIND.u64[s + ⟪CI.recRulesLen⟫])
   } else { abort };

@@ -47,14 +47,6 @@ theorem RecAt.keep {m m' : Mem} {q : Nat} {ci : IConstantInfo} (h : RecAt m q ci
     RecAt m' q ci :=
   fun P hP => h P (fun i h1 h2 => by rw [hP i h1 (Nat.le_trans h2 ht), hk i h1 h2])
 
-theorem wd_set_ne (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat ≠ j) :
-    wd (m.set64 A i v) A j = wd m A j := by
-  rw [wd_setA]; simp [h]
-
-theorem wd_set_eq (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat = j)
-    (hs : j < (m.arr64 A).size) : wd (m.set64 A i v) A j = v := by
-  rw [wd_setA]; simp [h, hs]
-
 theorem range_map_eq {α β : Type} (l : List α) (f : Nat → β) (g : α → β)
     (h : ∀ j (hj : j < l.length), f j = g l[j]) : (List.range l.length).map f = l.map g := by
   apply List.ext_getElem (by simp)
@@ -108,6 +100,19 @@ theorem capsM_out (m : Mem) (q : Word) (hq : q.toNat + Caps.size.toNat < 2 ^ 64)
 
 /-! ## The type and constructor records -/
 
+/-- **An `indInfo` record's layout**: the kind word, the constant value, the capabilities. -/
+theorem ind_layout : 0 < CI.cv.toNat ∧ CI.cv.toNat + CV.size.toNat ≤ CI.indCaps.toNat ∧
+    CI.indSize.toNat = CI.indCaps.toNat + Caps.size.toNat ∧ CI.indSize.toNat ≤ 128 :=
+  ⟨CI.cv_pos, by simp [CI.cv, CV.size, CI.indCaps], CI.indSize_toNat,
+    by simp [CI.indSize, CI.indCaps, Caps.size]⟩
+
+/-- **A `ctorInfo` record's layout**: the kind word, the constant value, the three fields in
+order. -/
+theorem ctor_layout : 0 < CI.cv.toNat ∧ CI.cv.toNat + CV.size.toNat ≤ CI.ctorNparams.toNat ∧
+    CI.ctorNparams.toNat < CI.ctorNfields.toNat ∧ CI.ctorNfields.toNat < CI.ctorInduct.toNat ∧
+    CI.ctorInduct.toNat < CI.ctorSize.toNat ∧ CI.ctorSize.toNat ≤ 128 := by
+  simp [CI.cv, CV.size, CI.ctorNparams, CI.ctorNfields, CI.ctorInduct, CI.ctorSize]
+
 /-- The twin's constant of a type record (`installIndD`'s `types`). -/
 def tyT (st : StateD) (t : IndTypeRec) : AM IConstantInfo := do
   pure (IConstantInfo.indInfo (← parseCVD st t.cv) {})
@@ -134,10 +139,11 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   rw [typeW.k_dind_alloc.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
-  have hsz := CI.indSize_toNat; have h5 := CI.indCaps_toNat
+  obtain ⟨l1, l2, l3, l4⟩ := ind_layout
+  have := CV.size_pos; have := Caps.size_pos
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
-  cases h2 : cvW b.data (m₁.set64 DLP q1 3) (q1 + 1) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
+  cases h2 : cvW b.data (m₁.set64 DLP q1 3) (q1 + CI.cv) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
       (rdW (m₁.arr64 IFR) (t + 2)) with
   | none => rw [h2, typeW.k_ind_cv.none] at h; cases h
   | some m₂ =>
@@ -156,7 +162,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   have r2 : rdW (m₁.arr64 IFR) (t + 2) = wd m IFR (t.toNat + 2) := by
     rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h2
-  have hq1 : (q1 + 1).toNat = q1.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have hq1 : (q1 + CI.cv).toNat = q1.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (by omega)
   obtain ⟨cvp, C1, C2, C3, C3', C4, C5, C6⟩ :=
     cvW_facts a hL1 n0.1 y0.1 l0 (by omega) (by rw [hq1, ht1]; omega) h2
   have hrun : (tyT st ty).run a = .ok (.indInfo cvp {}, a) := by
@@ -178,7 +184,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
     have g0 : P[q1.toNat]? = some 3 := by
       rw [hP.get (Nat.le_refl _) (by rw [ht3, ht2]; omega), hc0 _ (by omega),
         C4 _ (by omega) (by omega), wd_set_eq _ _ _ _ _ rfl (by omega)]
-    have gcv : decCV (L.Arena.aread P) (q1.toNat + 1) = some cvp := by
+    have gcv : decCV (L.Arena.aread P) (q1.toNat + CI.cv.toNat) = some cvp := by
       rw [← hq1]
       exact C6 (L.Arena.aread P) (fun i hi => by
         rw [L.Arena.aread_apply, hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
@@ -186,8 +192,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       rw [← hq5]
       exact capsM_dec m₂ (q1 + CI.indCaps) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    have gcv' : decCV (L.Arena.aread P) (q1.toNat + CI.cv.toNat) = some cvp := gcv
-    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv', gcaps]
+    exact decCI_indInfo_iff.mpr ⟨by simp [nat?, g0], gcv, gcaps⟩
 
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/
@@ -199,27 +204,26 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hps := hD.psize
   have hpt := hD.ptop
   rw [ctorRW.arm1] at h
-  -- a whole-record writer (`ind_ctor`): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold] at h
-  rcases h1 : allocW m DLP 8 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  obtain ⟨l1, l2, l3, l4, l5, l6⟩ := ctor_layout
+  have := CV.size_pos
+  rcases h1 : allocW m DLP CI.ctorSize with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [ctorRW.k_dind_alloc.none] at h; cases h
   rw [ctorRW.k_dind_alloc.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
-  simp only [show (8 : Word).toNat = 8 from rfl] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
-  cases h2 : cvW b.data (m₁.set64 DLP q1 4) (q1 + 1) (rdW (m₁.arr64 IFR) c) (rdW (m₁.arr64 IFR) (c + 1))
+  cases h2 : cvW b.data (m₁.set64 DLP q1 4) (q1 + CI.cv) (rdW (m₁.arr64 IFR) c) (rdW (m₁.arr64 IFR) (c + 1))
       (rdW (m₁.arr64 IFR) (c + 2)) with
   | none => rw [h2, ctorRW.k_ind_cv.none] at h; cases h
   | some m₂ =>
   rw [h2, ctorRW.k_ind_cv.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide), Option.some.injEq,
-    Prod.mk.injEq, rec_unfold] at h
+    Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 4) := P1.set q1 4 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 4).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP
-  have ht1 : topN (m₁.set64 DLP q1 4) DLP = topN m DLP + 8 := by
+  have ht1 : topN (m₁.set64 DLP q1 4) DLP = topN m DLP + CI.ctorSize.toNat := by
     rw [← P3]; unfold topN; rw [wd_set_ne _ _ _ _ _ (by omega)]
   have hL1 : LkR (m₁.set64 DLP q1 4) st := hD.frame Pq.frame (by rw [ht1, hs1]; omega)
   obtain ⟨⟨n0, l0, y0⟩, f0, p0, -, -⟩ := hF
@@ -229,35 +233,36 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have r2 : rdW (m₁.arr64 IFR) (c + 2) = wd m IFR (c.toNat + 2) := by
     rw [hifr, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [r0, r1, r2] at h2
-  have hq1 : (q1 + 1).toNat = q1.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have hq1 : (q1 + CI.cv).toNat = q1.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (by omega)
   obtain ⟨cvp, C1, C2, C3, C3', C4, C5, C6⟩ :=
     cvW_facts a hL1 n0.1 y0.1 l0 (by omega) (by rw [hq1, ht1]; omega) h2
   have hrun : (ctT st ct (decI tt)).run a = .ok (.ctorInfo cvp ct.numParams ct.numFields (decI tt), a) := by
     unfold ctT; rw [run_bind _ _ a _ C1]; rfl
   rw [resOf_eq hrun]
   have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.size DLP, hs1]
-  have ht2 : topN m₂ DLP = topN m DLP + 8 + ct.cv.levelParams.length := by rw [C3, ht1]
+  have ht2 : topN m₂ DLP = topN m DLP + CI.ctorSize.toNat + ct.cv.levelParams.length := by rw [C3, ht1]
   have hifr2 : m₂.arr64 IFR = m.arr64 IFR := by rw [C2.1 IFR (by decide) (by decide), Pq.other IFR (by decide) (by decide)]
-  have hq5 : (q1 + 5).toNat = q1.toNat + 5 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hq6 : (q1 + 6).toNat = q1.toNat + 6 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hq7 : (q1 + 7).toNat = q1.toNat + 7 := L.toNat_add_of_lt _ _ (by simp; omega)
+  have hq5 : (q1 + CI.ctorNparams).toNat = q1.toNat + CI.ctorNparams.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hq6 : (q1 + CI.ctorNfields).toNat = q1.toNat + CI.ctorNfields.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hq7 : (q1 + CI.ctorInduct).toNat = q1.toNat + CI.ctorInduct.toNat := L.toNat_add_of_lt _ _ (by omega)
   have w5 : rdW (m₂.arr64 IFR) (c + 5) = wd m IFR (c.toNat + 5) := by
     rw [hifr2, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   have w4 : rdW (m₂.arr64 IFR) (c + 4) = wd m IFR (c.toNat + 4) := by
     rw [hifr2, rdW_wdI _ _ _ _ (by simp; omega)]; rfl
   rw [w5, w4]
-  have hc0 : ∀ i, (i ≠ q1.toNat + 5 ∧ i ≠ q1.toNat + 6 ∧ i ≠ q1.toNat + 7) →
-      wd (((m₂.set64 DLP (q1 + 5) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + 6) (wd m IFR (c.toNat + 4))).set64 DLP (q1 + 7) tt) DLP i =
-        wd m₂ DLP i := fun i hi => by
+  have hc0 : ∀ i, (i < q1.toNat + CI.ctorNparams.toNat ∨ q1.toNat + CI.ctorSize.toNat ≤ i) →
+      wd (((m₂.set64 DLP (q1 + CI.ctorNparams) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + CI.ctorNfields)
+        (wd m IFR (c.toNat + 4))).set64 DLP (q1 + CI.ctorInduct) tt) DLP i = wd m₂ DLP i := fun i hi => by
     rw [wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega)]
-  have hsz : ((((m₂.set64 DLP (q1 + 5) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + 6)
-      (wd m IFR (c.toNat + 4))).set64 DLP (q1 + 7) tt).arr64 DLP).size = (m.arr64 DLP).size := by simp only [L.Mem.size64_set64]; exact hs2
-  have hfr : MemFrame [DLP] [] m₂ (((m₂.set64 DLP (q1 + 5) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + 6)
-      (wd m IFR (c.toNat + 4))).set64 DLP (q1 + 7) tt) :=
+  have hsz : ((((m₂.set64 DLP (q1 + CI.ctorNparams) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + CI.ctorNfields)
+      (wd m IFR (c.toNat + 4))).set64 DLP (q1 + CI.ctorInduct) tt).arr64 DLP).size = (m.arr64 DLP).size := by
+    simp only [L.Mem.size64_set64]; exact hs2
+  have hfr : MemFrame [DLP] [] m₂ (((m₂.set64 DLP (q1 + CI.ctorNparams) (wd m IFR (c.toNat + 5))).set64 DLP
+      (q1 + CI.ctorNfields) (wd m IFR (c.toNat + 4))).set64 DLP (q1 + CI.ctorInduct) tt) :=
     ((MemFrame.set64 _ DLP (by decide) _ _).trans (MemFrame.set64 _ DLP (by decide) _ _)).trans
       (MemFrame.set64 _ DLP (by decide) _ _)
-  have ht3 : topN (((m₂.set64 DLP (q1 + 5) (wd m IFR (c.toNat + 5))).set64 DLP (q1 + 6)
-      (wd m IFR (c.toNat + 4))).set64 DLP (q1 + 7) tt) DLP = topN m₂ DLP := by
+  have ht3 : topN (((m₂.set64 DLP (q1 + CI.ctorNparams) (wd m IFR (c.toNat + 5))).set64 DLP
+      (q1 + CI.ctorNfields) (wd m IFR (c.toNat + 4))).set64 DLP (q1 + CI.ctorInduct) tt) DLP = topN m₂ DLP := by
     unfold topN; rw [hc0 0 (by omega)]
   refine ⟨hrun, ⟨Pq.frame.trans (C2.trans hfr), by rw [ht3, ht2]; omega,
     fun i h1 h2 => ?_⟩, P2, ?_, ?_⟩
@@ -267,20 +272,21 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
     have g0 : P[q1.toNat]? = some 4 := by
       rw [hP.get (Nat.le_refl _) (by rw [ht3, ht2]; omega), hc0 _ (by omega),
         C4 _ (by omega) (by omega), wd_set_eq _ _ _ _ _ rfl (by omega)]
-    have gcv : decCV (L.Arena.aread P) (q1.toNat + 1) = some cvp := by
+    have gcv : decCV (L.Arena.aread P) (q1.toNat + CI.cv.toNat) = some cvp := by
       rw [← hq1]
       exact C6 (L.Arena.aread P) (fun i hi => by
         rw [L.Arena.aread_apply, hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
-    have g5 : P[q1.toNat + 5]? = some (wd m IFR (c.toNat + 5)) := by
-      rw [hP.get (by omega) (by rw [ht3, ht2]; omega), wd_set_ne _ _ _ _ _ (by omega), wd_set_ne _ _ _ _ _ (by omega),
-        wd_set_eq _ _ _ _ _ hq5 (by omega)]
-    have g6 : P[q1.toNat + 6]? = some (wd m IFR (c.toNat + 4)) := by
+    have g5 : P[q1.toNat + CI.ctorNparams.toNat]? = some (wd m IFR (c.toNat + 5)) := by
+      rw [hP.get (by omega) (by rw [ht3, ht2]; omega), wd_set_ne _ _ _ _ _ (by omega),
+        wd_set_ne _ _ _ _ _ (by omega), wd_set_eq _ _ _ _ _ hq5 (by omega)]
+    have g6 : P[q1.toNat + CI.ctorNfields.toNat]? = some (wd m IFR (c.toNat + 4)) := by
       rw [hP.get (by omega) (by rw [ht3, ht2]; omega), wd_set_ne _ _ _ _ _ (by omega),
         wd_set_eq _ _ _ _ _ hq6 (by simp only [L.Mem.size64_set64]; omega)]
-    have g7 : P[q1.toNat + 7]? = some tt := by
+    have g7 : P[q1.toNat + CI.ctorInduct.toNat]? = some tt := by
       rw [hP.get (by omega) (by rw [ht3, ht2]; omega),
         wd_set_eq _ _ _ _ _ hq7 (by simp only [L.Mem.size64_set64]; omega)]
-    simp [decCI, rec_unfold, nat?, hd?, L.Arena.aread_apply, g0, gcv, g5, g6, g7, p0.1, f0.1, htt]
+    exact decCI_ctorInfo_iff.mpr ⟨by simp [nat?, g0], gcv, by simp [nat?, g5, p0.1],
+      by simp [nat?, g6, f0.1], by simp [hd?, g7, htt]⟩
 
 
 end L.Front.Ind
