@@ -48,7 +48,6 @@ namespace L.Arena
 /-! ## The slots -/
 
 /-- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:4254-4260 ConRon.Arena.inferSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferSet]
 def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
@@ -62,7 +61,6 @@ def inferSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:4262-4269 ConRon.Arena.inferIOSet
 con-ron: ConRon/Arena/Core.lean:271-276 ConRon.Arena.CoreFnsA.ioView -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.inferIOSet ConRon.Arena.CoreFnsA.ioView]
@@ -77,7 +75,6 @@ def inferIOSlotL : FunDecl := lfn (mode, vis, d, e) locals (k, fd, j, dd, x, z) 
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:4271-4278 ConRon.Arena.defeqSet -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.defeqSet]
 def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z) {
@@ -91,7 +88,6 @@ def defeqSlotL : FunDecl := lfn (mode, vis, d, a, b) locals (k, fd, j, dd, x, z)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.coreKnot` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:4280-4295 ConRon.Arena.enterEager
 con-ron: ConRon/Arena/Core.lean:4297-4311 ConRon.Arena.leaveEager -/
 @[no_expose, l_impl ConRon.Arena.coreKnot ConRon.Arena.enterEager ConRon.Arena.leaveEager]

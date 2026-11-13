@@ -417,7 +417,6 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2689-2696 ConRon.Arena.projCert
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.projCert` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:2698-2704 ConRon.Arena.projCertAt
 con-ron: ConRon/Arena/Core.lean:2682-2687 ConRon.Arena.teleArityOk -/
 @[no_expose, l_impl ConRon.Arena.projCert ConRon.Arena.projCertAt ConRon.Arena.teleArityOk]
