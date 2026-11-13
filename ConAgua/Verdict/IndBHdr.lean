@@ -212,7 +212,7 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
     {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn)
     {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {q : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal}
-    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
     (hden : Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (classConstOkHeaderE p n m vis q) (cchT fe cv) a
       (fun v _ a' => CchPost dn vis fe m v.2 a') := by
@@ -367,7 +367,7 @@ include hP hq hApd hCrf hC in
 `Base.lean`'s, their errors the core stubs' claims). -/
 theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal}
-    (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv)
     (hA : AbsOK m) (hden : Frontend.denoteCV a.store cv = some c) :
     RefE (VerdictCtxU p) (classConstOkE p n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun v _ a' => CcoPost dn vis fe m v.2 a') := by
@@ -375,7 +375,7 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
   | zero => rw [classConstOkE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   rw [classConstOkE.arm1, cchT_bind]
-  refine RefE.bindE (fun _ => rfl) id (cch_ref hP hApd hCrf hC n hS hq' hqb hden hA.cr)
+  refine RefE.bindE (fun _ => rfl) id (cch_ref hP hApd hCrf hC n hS hq' hden hA.cr)
     fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
   dsimp only [classConstOkE.k_class_const_ok_header]
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hq').2.2
@@ -397,14 +397,14 @@ include hP hq hApd hCrf hC in
 @[refines ConRon.Arena.classConstOk]
 theorem classConstOk_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q : Word) (cv : IConstantVal) {c : ConLeche.ConstantVal} (hS : StageT dn vis fe s₀.mem a₀)
-    (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hq' : decCV (erecP s₀.mem) q.toNat = some cv)
     (hA : AbsOK s₀.mem) (hden : Frontend.denoteCV a₀.store cv = some c) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk V fe cv) a₀ ∧
       KPT dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk V fe cv) a₀)
         (AM.res (ConRon.Arena.classConstOk V fe cv) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (classConstOkE_spec p hP n s₀ vis q)
-    (cco_ref hP hq hApd hCrf hC n hn hS hq' hqb hA hden)) ?_
+    (cco_ref hP hq hApd hCrf hC n hn hS hq' hA hden)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, trivial⟩, hR.abs⟩
