@@ -103,7 +103,9 @@ def rciCaps : FunDecl := lfn (q, c) locals (x, ez) {
   ez := call erec_put(c + 12, x);
   q := call rci_name_sl(q + 24, c + 10);
   q := call rci_name_sl(q, c + 13);
-  return q
+  x := call rom_u64_c(q);
+  ez := call erec_put(c + 7, x);
+  return q + 8
 }
 
 /-- `rci_rule(q, r)`: a recursor rule to the 11-word record at `r` (`decRule`) at the current
@@ -163,7 +165,7 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
   k := call rom_u64_c(q);
   q := q + 8;
   if k == 0 { n := 5 } else if k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := 20 }
-  else if k == 4 { n := 7 } else if k == 5 { n := 10 } else { abort };
+  else if k == 4 { n := 8 } else if k == 5 { n := 10 } else { abort };
   p := call erec_alloc(n);
   ez := call erec_put(p, k);
   q := call rci_cv(q, p + 1);
@@ -185,7 +187,9 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
     ez := call erec_put(p + 5, x);
     x := call rom_u64_c(q + 8);
     ez := call erec_put(p + 6, x);
-    return (p, q + 16)
+    (h, q) := call rom_name_c(q + 16);
+    ez := call erec_put(p + 7, h);
+    return (p, q)
   };
   if k == 5 {
     x := call rom_u64_c(q);

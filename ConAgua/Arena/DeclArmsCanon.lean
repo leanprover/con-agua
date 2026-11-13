@@ -92,10 +92,12 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `caps_eq_b(q, q')`: `nIdx` (word `6`; words `7‥9` are not read). -/
+/-- `caps_eq_b(q, q')`: `nIdx` and `neverZero` (words `6`, `7`; words `8`, `9` are not read). -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
-@[no_expose] def capsEqB : FunDecl := lfn (q, r) locals () {
-  return u64(EREC⦃q + 6⦄ == EREC⦃r + 6⦄)
+@[no_expose] def capsEqB : FunDecl := lfn (q, r) locals (e) {
+  if EREC⦃q + 6⦄ != EREC⦃r + 6⦄ { return 0 };
+  e := call b_eq(EREC⦃q + 7⦄, EREC⦃r + 7⦄);
+  return e
 }
 
 /-- `caps_eq_c(q, q')`: `all`, `nparams`, `ctors` (words `10‥14`). -/
@@ -179,7 +181,8 @@ values agree. -/
   if k == 3 { e := call caps_eq(p + 5, q + 5); return e };
   if k == 4 {
     if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
-    return u64(EREC⦃p + 6⦄ == EREC⦃q + 6⦄)
+    if EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 };
+    return u64(EREC⦃p + 7⦄ == EREC⦃q + 7⦄)
   };
   if k == 5 {
     if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ { return 0 };
@@ -447,7 +450,8 @@ def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
   if 5 < k { abort };
   if k == 1 { e := call ci_canon_defn(p, q); return e };
   if k == 4 {
-    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ || EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 }
+    if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ || EREC⦃p + 6⦄ != EREC⦃q + 6⦄ || EREC⦃p + 7⦄ != EREC⦃q + 7⦄ {
+      return 0 }
   };
   if k == 5 { e := call ci_canon_rec(p, q); return e };
   e := call cv_canon_eq(p + 1, q + 1);

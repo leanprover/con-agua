@@ -23,7 +23,7 @@ each tagged `@[l_impl …]`.
 `stub` in `indInstallForeign`, closing this module's program on its own):
 
 * `IndSum`: `check_sum_tele(n, cvTa0) → (cvTa, s)`; `check_sum_ctors(vis0, vis, T, lps.off,
-  lps.len, nP, nIdx, resSort, isProp, large, cvTa, ctors.off, ctors.len)`; `cons_sum_ctors(nP,
+  lps.len, nP, nIdx, resSort, isProp, large, cvTa, ctors.off, ctors.len)`; `cons_sum_ctors(nP, T,
   ctors.off, ctors.len, vis) → vis'`;
   `check_struct_field_sorts_i(vis, isProp, large, s, nP, fvs.off, fvs.len, idx.off, idx.len, j)`;
   `param_levels(lps.off, lps.len) → lvls`; `check_struct_proj_table(T, lps.off, lps.len, nP, nF,
@@ -33,7 +33,7 @@ each tagged `@[l_impl …]`.
 * `IndParts`: `block_shape_with_sort(p, s)`, `block_shape_with_members(p, ms.off, ms.len)`,
   `block_shape_member_names`, `block_shape_lps`, `block_shape_n_idxs`, `block_shape_formers`,
   `block_shape_declared`, `block_shape_member_ctors` (a list of pointers to the members' ctor-slice
-  headers), `block_shape_all_ctors`.
+  headers), `block_shape_ctor_groups` (the member records, read as the groups), `block_shape_all_ctors`.
 * `RecGen`: `check_block_classes(vis, p, params.off, params.len) → (rd, ms.off, ms.len)`,
   `class_seeds`, `gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd,
   ms.off, ms.len, block.off, block.len) → (vis', out.off, out.len)`, `gen_rec_check_pop_all`.
@@ -43,7 +43,7 @@ each tagged `@[l_impl …]`.
   `stream_recs_check(vis, recs.off, recs.len, out.off, out.len)`.
 * `IndDeclConsts`: `block_recs(p, recs.off, recs.len)`, `block_tables(p, ms.off, ms.len)`,
   `ifenv_push_delta(vis, L.off, L.len, Q.off, Q.len) → vis'`.
-* the core tier: `former_def_headed(ty)` (`Core.lean`'s `formerDefHeaded`), the declarations':
+* the core tier: `former_z(ty) → (w, o, c)` (`Core.lean`'s `formerZ`), `former_def_headed(ty)` (`Core.lean`'s `formerDefHeaded`), the declarations':
   `check_constant_val(vis, cv, allowOp)`.
 -/
 
@@ -56,8 +56,6 @@ open L.Arena
 /-- `block_caps_ctor_names(o, l)`: the ctor-name list of a `(cv, nF)` pointer slice `(o, l)`, built
 fresh in `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, u) {
   q := call iw_alloc(l);
@@ -68,8 +66,6 @@ def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, u) {
 /-- `block_caps_at_er_copy(o, l)`: an `IW` slice copied into fresh `EREC` words (the reverse of
 `er_to_iw`), for `IIndCaps`'s `all`/`ctors` fields (both EREC slices). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
   q := call erec_alloc(l);
@@ -79,8 +75,6 @@ def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
 
 /-- `block_caps_at_er_copy_go(d, s, l)`: `EREC[d + j] := IW[s + j]` for `j < l`, recursively. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
   if l == 0 { return 0 };
@@ -89,36 +83,49 @@ def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
   return 0
 }
 
+/-- `member_never_zero(p, mi)`: `memberNeverZero` — whether member `mi`'s former, as declared
+(member word `4`), ends in a sort that is never zero: `former_z`'s datum is `never` (its first word
+`0`); `0` past the members (the default member's type ends in no sort). The level heap's top
+`CTL[192]`, which `former_z` leaves raised, is put back. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-56 ConRon.Arena.memberNeverZero
+@[no_expose, l_impl ConRon.Arena.memberNeverZero]
+def memberNeverZero : FunDecl := lfn (p, mi) locals (ms, t0, w, o, c) {
+  if IW.u64[p + 1] <= mi { return 0 };
+  ms := IW.u64[IW.u64[p] + mi];
+  t0 := CTL.u64[192];
+  (w, o, c) := call former_z(EREC⦃IW.u64[ms + 4] + 3⦄);
+  CTL.u64[192] := t0;
+  return u64(w == 0)
+}
+
 /-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps`, a fresh 15-word `IW` record (the
-`EREC` layout of `decCaps`; `ind_info_rec` copies it into the former's record). At exactly one
-constructor `eta` (index-free, the block not recursive: official's `is_non_rec_structure`); else
-its default `0`. At every member `all` (the member names, copied into `EREC`), `nparams`, `nIdx`
-(`0` past the members) and the member's ctor names (copied into `EREC`). Pure in the twin: no
-level is read. Every field is computed first, the record written last (three consecutive `rec5`s;
-the words `decCaps` does not read, `1`‥`5` (the removed `etaCtor`, `etaParams`, `etaFields`,
-`unitlike`, `unitParams`) and `7`‥`9` (the removed `sortZ`), are `0`). -/
+`EREC` layout of `decCaps`; `ind_info_rec` copies it into the former's record). First the
+member's never-zero fact (`member_never_zero`), then: at exactly one constructor `eta` (index-free,
+the block not recursive: official's `is_non_rec_structure`); else its default `0`. At every member
+`all` (the member names, copied into `EREC`), `nparams`, `nIdx` (`0` past the members), the
+member's ctor names (copied into `EREC`) and `neverZero`. Every field is computed first, the
+record written last (three consecutive `rec5`s; the words `decCaps` does not read, `1`‥`5` (the
+removed `etaCtor`, `etaParams`, `etaFields`, `unitlike`, `unitParams`) and `8`, `9` (the removed
+`sortZ`'s second word), are `0`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals (coff, clen, one, ms, nIdx, w0, caps) {
+def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals (nz, coff, clen, one, ms, nIdx, w0, caps) {
+  nz := call member_never_zero(p, mi);
   (coff, clen, one, ms, nIdx) := call block_caps_head(p, mi);
   if one == 1 {
     w0 := call block_caps_one(ms, isRec)
   } else {
     w0 := 0
   };
-  caps := call block_caps_fin(p, coff, clen, w0, nIdx);
+  caps := call block_caps_fin(p, coff, clen, w0, nIdx, nz);
   return caps
 }
 
-/-- `block_caps_fin(p, coff, clen, w0, nIdx)`: `blockCapsAt`'s record — the member names and the
-ctor names copied into `EREC`, then the 15 words (three consecutive `rec5`s at the pool top). -/
+/-- `block_caps_fin(p, coff, clen, w0, nIdx, nz)`: `blockCapsAt`'s record — the member names and
+the ctor names copied into `EREC`, then the 15 words (three consecutive `rec5`s at the pool top). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
-def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, nIdx) locals
+def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, nIdx, nz) locals
     (namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL, np, caps, u) {
   (namesO, namesL) := call block_shape_member_names(p);
   (allQ, allL) := call block_caps_at_er_copy(namesO, namesL);
@@ -126,7 +133,7 @@ def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, nIdx) locals
   (ctQ, ctL) := call block_caps_at_er_copy(ctNO, ctNL);
   np := IW.u64[p + 4];
   caps := call rec5(w0, 0, 0, 0, 0);
-  u := call rec5(0, nIdx, 0, 0, 0);
+  u := call rec5(0, nIdx, nz, 0, 0);
   u := call rec5(allQ, allL, np, ctQ, ctL);
   return caps
 }
@@ -135,8 +142,6 @@ def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, nIdx) locals
 members, and at no constructor), whether it has exactly one constructor, its record pointer, and
 its index count (`0` past the members: the default member's). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
   if IW.u64[p + 1] <= mi { return (0, 0, 0, 0, 0) };
@@ -148,8 +153,6 @@ def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
 /-- `block_caps_one(ms, is_rec)`: the one-constructor field `eta` (index-free, the block not
 recursive: official's `is_non_rec_structure`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.blockCapsAt`, `ConRon.Arena.memberNeverZero` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCapsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsOne : FunDecl := lfn (ms, isRec) locals () {
   return u64(IW.u64[ms + 1] == 0) & u64(isRec == 0)
@@ -532,17 +535,17 @@ def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL) locals
   return 0
 }
 
-/-- `cons_block_ctors(nP, ctorLists.off, ctorLists.len, vis)`: the members' constructors consed,
-member by member, in block order (each list a pointer to an `[off, len]` header; recursion as the
-twin's). -/
+/-- `cons_block_ctors(nP, groups.off, groups.len, vis)`: the members' constructors consed, member
+by member, in block order, each group under its member's name (`BlockShape.ctorGroups`: the groups
+are the member records, `block_shape_ctor_groups`; the name the `EREC` word at the member's `cvT`,
+the constructors its `[ctors.off, ctors.len]` words `2`, `3`); recursion as the twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:315-322 ConRon.Arena.consBlockCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consBlockCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockCtors]
-def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) {
-  if caLen == 0 { return vis };
-  mp := IW.u64[caOff];
-  v1 := call cons_sum_ctors(nP, IW.u64[mp], IW.u64[mp + 1], vis);
-  v2 := call cons_block_ctors(nP, caOff + 1, caLen - 1, v1);
+def consBlockCtors : FunDecl := lfn (nP, gOff, gLen, vis) locals (ms, v1, v2) {
+  if gLen == 0 { return vis };
+  ms := IW.u64[gOff];
+  v1 := call cons_sum_ctors(nP, EREC⦃IW.u64[ms]⦄, IW.u64[ms + 2], IW.u64[ms + 3], vis);
+  v2 := call cons_block_ctors(nP, gOff + 1, gLen - 1, v1);
   return v2
 }
 
@@ -662,7 +665,7 @@ def checkBlockTail : FunDecl := lfn (blockO, blockL, q, tO, tL) locals
   env1 := IW.u64[q];
   p := IW.u64[q + 1];
   u := call check_block_idx_sorts(env1, p, IW.u64[p], IW.u64[p + 1]);
-  (mcO, mcL) := call block_shape_member_ctors(p);
+  (mcO, mcL) := call block_shape_ctor_groups(p);
   fe2 := call cons_block_ctors(IW.u64[p + 4], mcO, mcL, env1);
   u := call flush_caches();
   nested := call block_nested_bit(p, IW.u64[q + 2], IW.u64[q + 3]);
@@ -777,6 +780,7 @@ def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
 def indInstallFns : Prog :=
   [("block_caps_ctor_names", blockCapsCtorNames), ("block_caps_at_er_copy", blockCapsAtErCopy),
    ("block_caps_at_er_copy_go", blockCapsAtErCopyGo),
+   ("member_never_zero", memberNeverZero),
    ("block_caps_at", blockCapsAt), ("block_caps_head", blockCapsHead), ("block_caps_fin", blockCapsFin), ("block_caps_one", blockCapsOne),
    ("pi_doms_mention_any", piDomsMentionAny), ("block_is_rec_member", blockIsRecMember), ("block_is_rec_go", blockIsRecGo),
    ("block_is_rec", blockIsRec), ("check_block_tele", checkBlockTele),
@@ -802,7 +806,7 @@ def indInstallFns : Prog :=
 /-- Stubs for the functions of OTHER modules this module calls (arity per the naming rule; see
 the module doc comment for each one's convention). -/
 def indInstallForeign : Prog :=
-  [("check_sum_tele", stub 2), ("check_sum_ctors", stub 13), ("cons_sum_ctors", stub 4),
+  [("check_sum_tele", stub 2), ("check_sum_ctors", stub 13), ("cons_sum_ctors", stub 5),
    ("check_struct_field_sorts_i", stub 10), ("param_levels", stub 2),
    ("check_struct_proj_table", stub 7),
    ("mentions_any_const", stub 3), ("nest_holes", stub 1), ("nest_ctx_hi_at", stub 2),
@@ -810,13 +814,13 @@ def indInstallForeign : Prog :=
    ("block_shape_with_sort", stub 2), ("block_shape_with_members", stub 3),
    ("block_shape_member_names", stub 1), ("block_shape_lps", stub 1), ("block_shape_n_idxs", stub 1),
    ("block_shape_formers", stub 1), ("block_shape_declared", stub 1),
-   ("block_shape_member_ctors", stub 1),
+   ("block_shape_member_ctors", stub 1), ("block_shape_ctor_groups", stub 1),
    ("block_shape_all_ctors", stub 1), ("check_block_classes", stub 4),
    ("class_seeds", stub 5), ("gen_rec_check", stub 12), ("block_nested_bit", stub 3),
    ("gen_rec_check_pop_all", stub 3), ("stream_k_check", stub 5), ("stream_recs_check", stub 5),
    ("block_rec_infos_tf", stub 4), ("block_recs", stub 3), ("block_tables", stub 3),
    ("ifenv_push_delta", stub 5), ("former_def_headed", stub 1), ("reduced_former", stub 3),
-   ("check_constant_val", stub 3), ("member_names_copy", stub 3)]
+   ("check_constant_val", stub 3), ("member_names_copy", stub 3), ("former_z", stub 1)]
 
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard

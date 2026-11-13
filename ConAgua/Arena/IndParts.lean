@@ -309,6 +309,16 @@ def memberCtorsCopy : FunDecl := lfn (d, s, l) locals (u) {
   return 0
 }
 
+/-- `block_shape_ctor_groups(p)`: `p.ctorGroups`, the constructors grouped by member, each under its
+member's name. No copy: the groups are the member records themselves (the members' `IW` slice),
+each read as its `cvT`'s name (the `EREC` word at member word `0`) and its `[ctors.off,
+ctors.len]` (member words `2`, `3`), as `nest_out_kinds` reads its outputs. -/
+-- con-ron: ConRon/Arena/Inductives/BlockShape.lean:117-122 ConRon.Arena.BlockShape.ctorGroups
+@[no_expose, l_impl ConRon.Arena.BlockShape.ctorGroups]
+def blockShapeCtorGroups : FunDecl := lfn (p) locals () {
+  return (IW.u64[p], IW.u64[p + 1])
+}
+
 /-! ## Recognition -/
 
 /-- `block_split_recs(off, l)`: `blockSplitRecs` of the `off, l` slice of `EREC` constant-record
@@ -917,6 +927,7 @@ def indPartsFns : Prog :=
    ("block_shape_with_members", blockShapeWithMembers), ("block_shape_formers", blockShapeFormers),
    ("block_shape_declared", blockShapeDeclared), ("member_field_copy", memberFieldCopy),
    ("block_shape_member_ctors", blockShapeMemberCtors), ("member_ctors_copy", memberCtorsCopy),
+   ("block_shape_ctor_groups", blockShapeCtorGroups),
    ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
    ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),

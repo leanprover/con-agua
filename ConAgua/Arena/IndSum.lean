@@ -245,14 +245,14 @@ def checkSumCtorsL : FunDecl :=
   return 0
 }
 
-/-- `ctor_info_rec(cv, nP, nF)`: the `.ctorInfo cv nP nF` constant record in `EREC` (`decCI` kind
-4: `[4, cv's 4 words copied inline, nP, nF]`, 7 words). The name word is checked to be a handle
-(lane `indproofs2`: `env_push`'s spec needs it; a decoded constant's name always is). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consSumCtors` changed; re-check the L code and its proofs, then delete this line
+/-- `ctor_info_rec(cv, nP, nF, T)`: the `.ctorInfo cv nP nF T` constant record in `EREC` (`decCI`
+kind 4: `[4, cv's 4 words copied inline, nP, nF, T]`, 8 words). The name word and the family `T` are
+checked to be handles (lane `indproofs2`: `env_push`'s spec needs the name; a decoded constant's
+name and family always are). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-153 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
-def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec, ez) {
-  rec := call erec_alloc(7);
+def ctorInfoRecL : FunDecl := lfn (cv, nP, nF, T) locals (rec, ez) {
+  rec := call erec_alloc(8);
   ez := call erec_put(rec, 4);
   ez := call erec_put(rec + 1, EREC⦃cv⦄);
   ez := call erec_put(rec + 2, EREC⦃cv + 1⦄);
@@ -260,25 +260,27 @@ def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec, ez) {
   ez := call erec_put(rec + 4, EREC⦃cv + 3⦄);
   ez := call erec_put(rec + 5, nP);
   ez := call erec_put(rec + 6, nF);
+  ez := call erec_put(rec + 7, T);
   if 4294967296 <= EREC⦃rec + 1⦄ { abort };
+  if 4294967296 <= T { abort };
   return rec
 }
 
-/-- `cons_sum_ctors(nP, ctorsOff, ctorsLen, vis)`: the constructors' conses, in order (the twin
-processes the head before recursing on the tail). Pure (the index push touches no term): the only
-effect is the environment push. Returns the new view. Self-recursive on the slice, as the twin is on
-the list (lane `indproofs2`: rewritten from a `while` loop for the refinement). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consSumCtors` changed; re-check the L code and its proofs, then delete this line
+/-- `cons_sum_ctors(nP, T, ctorsOff, ctorsLen, vis)`: the constructors' conses, in order (the twin
+processes the head before recursing on the tail), each with the family `T` it is declared under.
+Pure (the index push touches no term): the only effect is the environment push. Returns the new
+view. Self-recursive on the slice, as the twin is on the list (lane `indproofs2`: rewritten from a
+`while` loop for the refinement). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-153 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
-def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
+def consSumCtorsL : FunDecl := lfn (nP, T, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
   if ctorsLen == 0 { return vis };
   c := IW.u64[ctorsOff];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
-  rec := call ctor_info_rec(cv, nP, nF);
+  rec := call ctor_info_rec(cv, nP, nF, T);
   v := call env_push(vis, rec);
-  r := call cons_sum_ctors(nP, ctorsOff + 1, ctorsLen - 1, v);
+  r := call cons_sum_ctors(nP, T, ctorsOff + 1, ctorsLen - 1, v);
   return r
 }
 
@@ -731,7 +733,7 @@ def indSumForeign : Prog := []
 -- `cons_sum_ctors` on the empty constructor list: the view is unchanged.
 #guard
   match run (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) 1000
-    "cons_sum_ctors" [2, 0, 0, 7] testMem with
+    "cons_sum_ctors" [2, 0, 0, 0, 7] testMem with
   | .ok ([7], _) => true
   | _ => false
 

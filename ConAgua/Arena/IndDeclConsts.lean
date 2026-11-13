@@ -31,7 +31,7 @@ one-constant record's constant is `erec_ci(i, kind)` (the lead's `DeclStep.lean`
 **Foreign callees** (the lead's pins): `quot_at(slot, cv)` → constant record (`slot`
 `QuotKind.slot`: `0` type, `1` ctor, `2` lift, `3` ind, `4` sound; `cv` an `EREC` constant value);
 `pin_at`, `erec_ci`, `ind_block_to_erec`; this lane's `read_block`, `block_is_rec`,
-`block_caps_at`, `ind_info_rec`, `ctor_info_rec`, `block_shape_declared`, `block_shape_all_ctors`,
+`block_caps_at`, `ind_info_rec`, `ctor_info_rec`, `block_shape_declared`, `block_shape_ctor_groups`,
 `block_shape_lps`, `struct_proj_bodies`, `rec_info_rec`.
 -/
 
@@ -99,26 +99,39 @@ def blockFormers : FunDecl := lfn (p, isRec) locals (dO, dL, o, l) {
   return (o, l)
 }
 
-/-- `block_ctors_go(nP, c.off, c.len)`: `.ctorInfo c.1 nP c.2` for each `[cv, nF]`. -/
+/-- `block_ctors_go(nP, T, c.off, c.len)`: `.ctorInfo c.1 nP c.2 T` for each `[cv, nF]` of one
+group. -/
 -- con-ron: ConRon/Arena/Install.lean:62-66 ConRon.Arena.blockCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCtors]
-def blockCtorsGo : FunDecl := lfn (nP, co, cl) locals (c, q, ro, rl, o, l) {
+def blockCtorsGo : FunDecl := lfn (nP, T, co, cl) locals (c, q, ro, rl, o, l) {
   if cl == 0 { return (0, 0) };
   c := IW.u64[co];
-  q := call ctor_info_rec(IW.u64[c], nP, IW.u64[c + 1]);
-  (ro, rl) := call block_ctors_go(nP, co + 1, cl - 1);
+  q := call ctor_info_rec(IW.u64[c], nP, IW.u64[c + 1], T);
+  (ro, rl) := call block_ctors_go(nP, T, co + 1, cl - 1);
   (o, l) := call sl_cons(q, ro, rl);
   return (o, l)
 }
 
-/-- `block_ctors(p)`: the constructors of every member, as declared, in block order. -/
+/-- `block_ctors_groups(nP, g.off, g.len)`: the groups' `flatMap` — each group (a member record,
+`block_shape_ctor_groups`) under its member's name, appended in order. -/
 -- con-ron: ConRon/Arena/Install.lean:62-66 ConRon.Arena.blockCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockCtors]
-def blockCtors : FunDecl := lfn (p) locals (co, cl, o, l) {
-  (co, cl) := call block_shape_all_ctors(p);
-  (o, l) := call block_ctors_go(IW.u64[p + 4], co, cl);
+def blockCtorsGroups : FunDecl := lfn (nP, go, gl) locals (ms, ao, al, ro, rl, o, l) {
+  if gl == 0 { return (0, 0) };
+  ms := IW.u64[go];
+  (ao, al) := call block_ctors_go(nP, EREC⦃IW.u64[ms]⦄, IW.u64[ms + 2], IW.u64[ms + 3]);
+  (ro, rl) := call block_ctors_groups(nP, go + 1, gl - 1);
+  (o, l) := call sl_append(ao, al, ro, rl);
+  return (o, l)
+}
+
+/-- `block_ctors(p)`: the constructors of every member, as declared, in block order, each under its
+member's name (`p.ctorGroups`). -/
+-- con-ron: ConRon/Arena/Install.lean:62-66 ConRon.Arena.blockCtors
+@[no_expose, l_impl ConRon.Arena.blockCtors]
+def blockCtors : FunDecl := lfn (p) locals (go, gl, o, l) {
+  (go, gl) := call block_shape_ctor_groups(p);
+  (o, l) := call block_ctors_groups(IW.u64[p + 4], go, gl);
   return (o, l)
 }
 
@@ -370,7 +383,8 @@ def declTables : FunDecl := lfn (i) locals (bo, bl, e, p, ok, o, l) {
 def indDeclConstsFns : Prog :=
   [("ifenv_push_all", ifenvPushAll), ("ifenv_push_tables", ifenvPushTables),
    ("ifenv_push_delta", ifenvPushDelta), ("block_formers_go", blockFormersGo),
-   ("block_formers", blockFormers), ("block_ctors_go", blockCtorsGo), ("block_ctors", blockCtors),
+   ("block_formers", blockFormers), ("block_ctors_go", blockCtorsGo),
+   ("block_ctors_groups", blockCtorsGroups), ("block_ctors", blockCtors),
    ("expr_drop_vars", exprDropVars), ("expr_drop_vars_list", exprDropVarsList),
    ("rec_fire", recFire), ("rules_refire", rulesRefire), ("block_rec", blockRec),
    ("block_recs", blockRecs), ("block_table", blockTable), ("block_tables", blockTables),
@@ -380,8 +394,8 @@ def indDeclConstsFns : Prog :=
 
 /-- Stubs for the functions of OTHER modules this module calls. -/
 def indDeclConstsForeign : Prog :=
-  [("block_caps_at", stub 3), ("ind_info_rec", stub 2), ("ctor_info_rec", stub 3),
-   ("block_shape_declared", stub 1), ("block_shape_all_ctors", stub 1), ("block_shape_lps", stub 1),
+  [("block_caps_at", stub 3), ("ind_info_rec", stub 2), ("ctor_info_rec", stub 4),
+   ("block_shape_declared", stub 1), ("block_shape_ctor_groups", stub 1), ("block_shape_lps", stub 1),
    ("struct_proj_bodies", stub 4), ("rec_info_rec", stub 6), ("er_from_iw", stub 2),
    ("block_is_rec", stub 1), ("read_block", stub 3), ("quot_at", stub 2), ("erec_ci", stub 2),
    ("ind_block_to_erec", stub 1), ("env_push_table", stub 1)]
