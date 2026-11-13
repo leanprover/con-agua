@@ -18,7 +18,7 @@ import all ConAgua.Arena.WhnfDelta
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 3 (`nat_succ_lit`, `reduce_nat`'s arms)
 
-Split from `WhnfDeltaRefine.lean`. The twin's arms and their runs; the arms' refinements, for
+Split from `WhnfDeltaRefine.lean`. The twin's binary arm and the runs; the arms' refinements, for
 both outcomes, are `Verdict/WhnfNatE.lean`'s.
 -/
 
@@ -229,110 +229,16 @@ theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
 
 end refs17
 
-/-! ## `reduce_nat`: the twin's arms -/
+/-! ## `reduce_nat`: the binary operation's arm -/
 
-/-- The `Nat.succ` arm of `reduceNat`, past the level test. -/
-def redSuccT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (b : EIdx) :
-    AM (Option EIdx) := do
-  let ns ← pinNatSucc
-  if c == ns && (← natLitSupported fe) then do
-    match ← rawNatLit? (← r.whnf depth b) with
-    | some n => do
-      let x ← internE (.lit (.natVal (n + 1)))
-      pure (some x)
-    | none => pure none
-  else pure none
-
-/-- The certified binary operation arm of `reduceNat`. -/
-def redOpT (r : CoreFnsA) (depth : Nat) (c : NIdx) (a b : EIdx) : AM (Option EIdx) := do
+/-- The binary operation arm of `reduceNat`, once the operation `op` is found. -/
+def redOpT (r : CoreFnsA) (depth : Nat) (op : NatBinOp) (a b : EIdx) : AM (Option EIdx) := do
   match ← rawNatLit? (← r.whnf depth a) with
   | some n₁ => do
     match ← rawNatLit? (← r.whnf depth b) with
-    | some n₂ => natOpResult c n₁ n₂
+    | some n₂ => natBinOpResult op n₁ n₂
     | none => pure none
   | none => pure none
-
-/-- The safety-net arm of `reduceNat`. -/
-def redWfT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) :
-    AM (Option EIdx) := do
-  let wf ← natOpWfNames
-  if wf.contains c && (← natLitSupported fe) then do
-    match ← rawNatLit? (← r.whnf depth a) with
-    | some _ => do
-      match ← rawNatLit? (← r.whnf depth b) with
-      | some _ =>
-        fail (.notImplemented "native Nat computation on literals")
-      | none => pure none
-    | none => pure none
-  else pure none
-
-/-- The binary arm of `reduceNat`, past the level test. -/
-def redBinT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (a b : EIdx) :
-    AM (Option EIdx) := do
-  if ← natBinOpName c then
-    redOpT r depth c a b
-  else
-    redWfT r fe depth c a b
-
-/-! ## `reduce_nat_succ`, `reduce_nat_op`, `reduce_nat_wf` -/
-
-/-- `natOpWfNames` with its pins read: pin word `k` is `w k`. -/
-def natOpWfSel (w : Nat → Word) (c : Word) : Bool :=
-  decide (c = w 22) || decide (c = w 23) || decide (c = w 24) || decide (c = w 25) ||
-  decide (c = w 26) || decide (c = w 27) || decide (c = w 28) || decide (c = w 29)
-
-theorem natOpIsWfL_spec (p : Prog) (hp : p.lookup "nat_op_is_wf" = some natOpIsWfL) (n : Nat)
-    (s₀ : St) (c : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_is_wf" [c]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ pinW s₀.mem 0 ≠ 0 ∧
-      (r.headD 0 != 0) = natOpWfSel (pinW s₀.mem) c ∧ HW (r.headD 0); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, natOpIsWfL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [natOpWfSel, pinW_eq, HW]
-
-theorem natOpWfNames_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
-    natOpWfNames.run a = .ok ([decI (pinW m 22), decI (pinW m 23), decI (pinW m 24),
-      decI (pinW m 25), decI (pinW m 26), decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)], a) := by
-  simp only [natOpWfNames, natDivName, natModName, natGcdName, natLandName, natLorName, natXorName,
-    natShiftLeftName, natShiftRightName, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand, pinNatLor,
-    pinNatXor, pinNatShiftLeft, pinNatShiftRight, PIN_NAT_DIV, PIN_NAT_MOD, PIN_NAT_GCD, PIN_NAT_LAND,
-    PIN_NAT_LOR, PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT, StateT.run_bind,
-    pinAt_run h _ (by decide : 21 < 51), pinAt_run h _ (by decide : 22 < 51),
-    pinAt_run h _ (by decide : 23 < 51), pinAt_run h _ (by decide : 24 < 51),
-    pinAt_run h _ (by decide : 25 < 51), pinAt_run h _ (by decide : 26 < 51),
-    pinAt_run h _ (by decide : 27 < 51), pinAt_run h _ (by decide : 28 < 51), except_ok_bind]
-  rfl
-
-theorem wfContains {m : Mem} {a : AState} (h : PinsFull m a.pins) (c : Word) (hc : HW c) :
-    ([decI (pinW m 22), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25), decI (pinW m 26),
-      decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)] : List NIdx).contains (decI c) =
-      natOpWfSel (pinW m) c := by
-  have hb : ∀ i, i < 51 → ((decI c : NIdx) == decI (pinW m (1 + i))) = decide (c = pinW m (1 + i)) :=
-    fun i hi => decI_beq _ _ hc (h.names_lt i hi)
-  have e22 : ((decI c : NIdx) == decI (pinW m 22)) = decide (c = pinW m 22) := hb 21 (by decide)
-  have e23 : ((decI c : NIdx) == decI (pinW m 23)) = decide (c = pinW m 23) := hb 22 (by decide)
-  have e24 : ((decI c : NIdx) == decI (pinW m 24)) = decide (c = pinW m 24) := hb 23 (by decide)
-  have e25 : ((decI c : NIdx) == decI (pinW m 25)) = decide (c = pinW m 25) := hb 24 (by decide)
-  have e26 : ((decI c : NIdx) == decI (pinW m 26)) = decide (c = pinW m 26) := hb 25 (by decide)
-  have e27 : ((decI c : NIdx) == decI (pinW m 27)) = decide (c = pinW m 27) := hb 26 (by decide)
-  have e28 : ((decI c : NIdx) == decI (pinW m 28)) = decide (c = pinW m 28) := hb 27 (by decide)
-  have e29 : ((decI c : NIdx) == decI (pinW m 29)) = decide (c = pinW m 29) := hb 28 (by decide)
-  simp only [List.contains, List.elem, natOpWfSel, e22, e23, e24, e25, e26, e27, e28, e29]
-  generalize decide (c = pinW m 22) = x1
-  generalize decide (c = pinW m 23) = x2
-  generalize decide (c = pinW m 24) = x3
-  generalize decide (c = pinW m 25) = x4
-  generalize decide (c = pinW m 26) = x5
-  generalize decide (c = pinW m 27) = x6
-  generalize decide (c = pinW m 28) = x7
-  generalize decide (c = pinW m 29) = x8
-  revert x1 x2 x3 x4 x5 x6 x7 x8
-  decide
 
 theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, tier1 CREC, CSLOT, tier1 CSLOT, CLP, tier1 CLP] [18, 19] m m') (k : Nat) :
     pinW m' k = pinW m k := by
@@ -360,23 +266,24 @@ theorem Grows.slice {m m' : Mem} (hg : Grows m m') {o l : Word} (hs : SliceOK m 
       Norm (vpool m') o.toNat l.toNat :=
   (PoolGrew.of_grows hg).slice hs hn
 
-/-- `nat_op_result` refines `natOpResult` under `CoreS` (the `Nat` lane's: `PinsNatOp.lean`'s
-`natOpResultL_refines`, at `ArenaD` and `CoreS`, in the whnf program). Taken as a hypothesis. -/
+/-- `nat_bin_op_result` refines `natBinOpResult` under `CoreS` (`PinsNatOp.lean`'s
+`natBinOpResultL_refines`, at `CoreS`, in the whnf program; `CoreNatOp.lean`). Taken as a
+hypothesis. -/
 def NatOpResultOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb c oa la ob lb : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW c →
+    (MM : ModeMaps) (eb : Word) (op : NatBinOp) (oa la ob lb : Word), CoreS dn s₀.mem a₀ vis fe MM eb →
     SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
     Norm (vpool s₀.mem) oa.toNat la.toNat → Norm (vpool s₀.mem) ob.toNat lb.toNat →
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_op_result" [c, oa, la, ob, lb]
+    invoke p (exec p n) "nat_bin_op_result" [natBinOpW op, oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      (r.headD 0 ≠ 2 → CoreRef (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
+      (r.headD 0 ≠ 2 → CoreRef (natBinOpResult op (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ decOptR dn s₀.mem vis fe MM eb r s'.mem
         (fun _ => True)) ∧
-      (r.headD 0 = 2 → (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
+      (r.headD 0 = 2 → (natBinOpResult op (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)).run a₀ = .error (natRefusal (r.tail.headD 0))); ⊤⦄
 
-/-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
+/-- `reduce_nat_op`'s normalised result reads as `nat_bin_op_result`'s. -/
 theorem decOpt_norm (x y : Word) :
     decOpt (if x ≠ 0 then 1 else 0) (y &&& 4294967295) = decOpt x y := by
   by_cases hx : x = 0
