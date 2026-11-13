@@ -4,6 +4,7 @@ meta import ConAgua.Arena.DeclArmsCanon
 import ConAgua.Census.Attr
 import ConAgua.Layout
 import ConAgua.L.Notation
+public import ConAgua.Arena.RecLayout.CI
 public import ConAgua.L.Syntax
 public import ConAgua.Arena.Reasons
 
