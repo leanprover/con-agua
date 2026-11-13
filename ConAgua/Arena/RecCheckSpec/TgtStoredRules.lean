@@ -38,7 +38,7 @@ theorem generatedRules_refines (p : Prog) (hL : TsrLook p) (hpu : p.lookup "erec
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ rules a',
       (ConRon.Arena.generatedRules rP.toNat TM rhss).run a₀ = .ok (rules, a') ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
-      Rec11 s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ StageR vis fe s'.mem a' ∧
       IWGrow s₀.mem s'.mem ∧ AbsOK s'.mem; ⊤⦄ :=
   triple_post (tsr_spec p hL hpu n s₀ rP M rhso rhsl) fun _ _ ⟨hl, hm⟩ =>

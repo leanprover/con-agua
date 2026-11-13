@@ -75,11 +75,11 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
 
 /-! ## `find_rule(ro, rc, c)`
 
-It reads only the 11-word rule records at `(ro, rc)` in `EREC`; it does not touch `AM`. -/
+It reads only the `Rule.size`-word rule records at `(ro, rc)` in `EREC`; it does not touch `AM`. -/
 
 /-- The scan of `find_rule` (a named block, for the proofs). -/
 def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
-  for i < rc { if EREC⦃ro + 11 * i⦄ == c { return (1, ro + 11 * i) } }
+  for i < rc { if EREC⦃ro + ⟪Rule.size⟫ * i⦄ == c { return (1, ro + ⟪Rule.size⟫ * i) } }
 }
 
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
@@ -277,7 +277,7 @@ def familyNeverZeroAtL : FunDecl := lfn (mode, vis, p, us) locals (r) {
 
 /-- `eta_rescue_table(tq, ctor, cq, p)`: the structure-η rescue's standing condition at use:
 `tq` the family's projection table (`find_table`'s answer, `0` for none), `ctor` (its record `cq`)
-the table's constructor (word `tq + 5`) of the η family `p` (`eta`) and carrying the family's level
+the table's constructor (`ProjTbl.ctor`, through the handle `tq`) of the η family `p` (`eta`) and carrying the family's level
 parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s rescue.
 The table (`tq`) or `0`. -/
 -- con-ron: ConRon/Arena/Core.lean:2062-2077 ConRon.Arena.etaRescueTable?
@@ -285,7 +285,7 @@ The table (`tq`) or `0`. -/
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
   if EREC⦃p + ⟪CI.indCaps + Caps.eta⟫⦄ == 0 { return 0 };
-  if EREC⦃tq + 5⦄ != ctor { return 0 };
+  if EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄ != ctor { return 0 };
   r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
   if r == 0 { return 0 };
   ai := call pin_at(48);
@@ -336,17 +336,16 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, an, j, flag, q) {
   while j < 2 {
     (flag, q) := call find_proj(vis, an, j);
     if flag == 0 { return 0 };
-    if EREC⦃q + 6⦄ != ctor { return 0 };
-    if EREC⦃q + 5⦄ != nP { return 0 };
-    if EREC⦃q + 7⦄ != 2 { return 0 };
+    if EREC⦃q + ⟪ProjTbl.ctor⟫⦄ != ctor { return 0 };
+    if EREC⦃q + ⟪ProjTbl.numParams⟫⦄ != nP { return 0 };
+    if EREC⦃q + ⟪ProjTbl.numFields⟫⦄ != 2 { return 0 };
     j += 1
   }
 }
 
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlotsGo` /
 `andRescueSlots` / `FEnv.andRescueSlotsF` — the pinned `And`'s two projection slots, ready to
-fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
-`numFields` at `q + 7` (`EnvRec.lean`'s `decTbl`). -/
+fire. `q` is the table record `find_proj` hands back (`RecLayout/Tbl.lean`). -/
 -- con-ron: ConRon/Arena/Core.lean:2039-2051 ConRon.Arena.andRescueSlotsGo
 -- con-ron: ConRon/Arena/Core.lean:2053-2060 ConRon.Arena.andRescueSlots
 @[no_expose, l_impl ConRon.Arena.andRescueSlotsGo ConRon.Arena.andRescueSlots]

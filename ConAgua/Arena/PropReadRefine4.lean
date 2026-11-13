@@ -31,18 +31,14 @@ open ConLeche (Name Level PropWhen)
 handle of `tbl.bodies.getD i default`. -/
 theorem decTbl_body {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) (i : Word) :
-    HW (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) ∧
-      decE (if i < rd (q + 10) then rd (rd (q + 9) + i) else 0) =
+    HW (if i < rd (q + ProjTbl.bodiesLen) then rd (rd (q + ProjTbl.bodiesOff) + i) else 0) ∧
+      decE (if i < rd (q + ProjTbl.bodiesLen) then rd (rd (q + ProjTbl.bodiesOff) + i) else 0) =
         tbl.bodies.getD i.toNat default := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨-, -, -, -, -, -, -, -, -, -, bs, hbs, rfl⟩ := h
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-    Option.map_eq_some_iff] at hbs
-  obtain ⟨off, ⟨wo, hwo, rfl⟩, cnt, ⟨wc, hwc, rfl⟩, hs⟩ := hbs
-  have h9 : rd (q + 9) = wo := hR.offN (k := 9) hwo (by decide)
-  have h10 : rd (q + 10) = wc := hR.offN (k := 10) (by simpa [Nat.add_assoc] using hwc) (by decide)
-  rw [h9, h10]
+  obtain ⟨-, -, -, -, -, -, -, hs⟩ := decTbl_rd hR h
+  rcases tbl with ⟨_, _, _, _, _, ⟨bs⟩⟩
+  dsimp only at hs
+  generalize rd (q + ProjTbl.bodiesOff) = wo at hs ⊢
+  generalize rd (q + ProjTbl.bodiesLen) = wc at hs ⊢
   obtain ⟨hlen, hget⟩ := hslice?_get hs
   by_cases hi : i < wc
   · have hi' : i.toNat < wc.toNat := UInt64.lt_iff_toNat_lt.mp hi

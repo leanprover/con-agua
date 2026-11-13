@@ -5,6 +5,7 @@ public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.EnvRec
 import ConAgua.Arena.RecLayout.CapsDec
+import ConAgua.Arena.RecLayout.RuleDec
 
 @[expose] public section
 
@@ -142,45 +143,21 @@ theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
       (by rw [Nat.add_assoc, ← Caps.ctorsLen_toNat]; exact hk _ Caps.ctorsLen_lt) (by omega) (by omega) h13
   · exact h.bool (hk _ Caps.neverZero_lt) (by omega) (by omega) h7
 
-/-- A plain rule's words: the fire word `0`, the constructor, the field count, the right-hand side. -/
-theorem decRule_plain {R : Nat → Option Word} {q : Nat} {rr : IRecRule} (h : decRule R q = some rr)
-    (hp : rr.fire = .plain) :
-    nat? R (q + 3) = some 0 ∧ hd? R q = some rr.ctor ∧ nat? R (q + 1) = some rr.nfields ∧
-      hd? R (q + 8) = some rr.rhs := by
-  unfold decRule at h
-  cases hk : nat? R (q + 3) with
-  | none => simp [hk] at h
-  | some k =>
-  rw [hk] at h
-  rcases k with _ | _ | _ | k
-  · simp only [Option.bind_some, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨c, hc, nf, hnf, rh, hrh, rfl⟩ := h
-    exact ⟨rfl, hc, hnf, hrh⟩
-  · simp only [Option.bind_some, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨_, -, _, -, _, -, _, -, _, -, rfl⟩ := h
-    cases hp
-  · simp only [Option.bind_some, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨_, -, _, -, _, -, _, -, rfl⟩ := h
-    cases hp
-  · simp at h
-
-/-- A plain recursor rule whose 11 words reappear. -/
+/-- A plain recursor rule whose `Rule.size` words reappear. -/
 theorem decRule_reloc {T B : (Nat → Option Word)} {o q : Nat} {rr : IRecRule}
-    (h : ShR T B o q (fun k => k < 11)) (hr : decRule T o = some rr) (hp : rr.fire = .plain) :
-    decRule B q = some rr := by
-  obtain ⟨h3, h0, h1, h8⟩ := decRule_plain hr hp
-  unfold decRule
-  rw [h.nat (k := 3) (by omega) rfl rfl h3, h.hd (k := 0) (j := q) (by omega) rfl rfl h0,
-    h.nat (k := 1) (by omega) rfl rfl h1, h.hd (k := 8) (by omega) rfl rfl h8]
+    (h : ShR T B o q (fun k => k < Rule.size.toNat)) (hr : decRule T o = some rr)
+    (hp : rr.fire = .plain) : decRule B q = some rr := by
+  obtain ⟨hc, hn, hrh, hf⟩ := decRule_eq_some.mp hr
   obtain ⟨c, nf, fire, rhs⟩ := rr
   simp only at hp
   subst hp
-  rfl
+  exact decRule_of (h.hd Rule.ctor_lt rfl rfl hc) (h.nat Rule.nfields_lt rfl rfl hn)
+    (h.hd Rule.rhs_lt rfl rfl hrh) (h.nat (k := Rule.fire.toNat) Rule.fire_lt rfl rfl hf)
 
 /-- A rule slice whose words reappear. -/
 theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List IRecRule}
     (hr : decRules T o c = some rules) (hp : ∀ r ∈ rules, r.fire = .plain)
-    (hs : ∀ x v, x < 11 * c → T (o + x) = some v → B (q + x) = some v) :
+    (hs : ∀ x v, x < Rule.size.toNat * c → T (o + x) = some v → B (q + x) = some v) :
     decRules B q c = some rules := by
   unfold decRules at hr ⊢
   have hlen := L.Ind.mapM_opt_length _ _ _ hr
@@ -194,7 +171,9 @@ theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List
     simp only [Option.some.injEq] at this
     rw [this]; exact List.getElem_mem _
   refine decRule_reloc (fun k v hk hv => ?_) hy (hp y hmem)
-  have := hs (11 * j + k) v (by omega) (by rw [← Nat.add_assoc]; exact hv)
+  have := hs (Rule.size.toNat * j + k) v
+    (Nat.lt_of_lt_of_le (Nat.add_lt_add_left hk _) (by rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hj'))
+    (by rw [← Nat.add_assoc]; exact hv)
   rw [← Nat.add_assoc] at this; exact this
 
 /-- **The relocated copy of a front constant record decodes as the record.** `T` the cut pool,
@@ -211,7 +190,7 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
       ∀ j v, j < cnt → T (off + j) = some v → B (q + j) = some v)
     (hr : nat? T s = some 5 → nat? B (p + 7) = some r ∧
       ∀ off cnt, nat? T (s + 7) = some off → nat? T (s + 8) = some cnt →
-        ∀ x v, x < 11 * cnt → T (off + x) = some v → B (r + x) = some v) :
+        ∀ x v, x < Rule.size.toNat * cnt → T (off + x) = some v → B (r + x) = some v) :
     decCI B p = some c := by
   unfold decCI at hc ⊢
   cases hk : nat? T s with

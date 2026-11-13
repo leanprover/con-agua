@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndSumSpec.SumRules
 public import ConAgua.Arena.IndSumSpec.TblProg
 public import ConAgua.Arena.RecCheckSpec.TsrLook
 import ConAgua.Arena.IndPosSpec.FgW
+import ConAgua.Arena.RecLayout.RuleDec
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -160,48 +161,20 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## Rule records at another address -/
 
-/-- The plain fields of a decoded rule record. -/
-theorem decRule_fields {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
-    hd? R q = some rl.ctor ∧ nat? R (q + 1) = some rl.nfields ∧ hd? R (q + 8) = some rl.rhs := by
-  unfold decRule at h
-  cases h3 : nat? R (q + 3) with
-  | none => simp [h3] at h
-  | some t =>
-    simp only [h3, Option.bind_eq_bind, Option.bind_some] at h
-    match t, h with
-    | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-      obtain ⟨_, -, c, hc, nf, hnf, r, hr, rfl⟩ := h; exact ⟨hc, hnf, hr⟩
-    | _ + 3, h => simp at h
-
-/-- A rule record whose plain fields (words `0`, `1`, `8`) are copied and whose fire is a NESTED one
-at slices the new reader decodes. -/
+/-- A rule record whose plain fields are copied and whose fire is a NESTED one at slices the new
+reader decodes. -/
 theorem decRule_nested {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} {lo ll po pl : Word}
     {lvls : List LIdx} {pins : List EIdx} (h : decRule R q = some rl)
-    (h0 : R' q' = R q) (h1 : R' (q' + 1) = R (q + 1)) (h8 : R' (q' + 8) = R (q + 8))
-    (h3 : R' (q' + 3) = some 1) (h4 : R' (q' + 4) = some lo) (h5 : R' (q' + 5) = some ll)
-    (h6 : R' (q' + 6) = some po) (h7 : R' (q' + 7) = some pl)
+    (h0 : R' q' = R q) (h1 : R' (q' + Rule.nfields.toNat) = R (q + Rule.nfields.toNat))
+    (h8 : R' (q' + Rule.rhs.toNat) = R (q + Rule.rhs.toNat))
+    (h3 : R' (q' + Rule.fire.toNat) = some 1) (h4 : R' (q' + Rule.lvlsOff.toNat) = some lo)
+    (h5 : R' (q' + Rule.lvlsLen.toNat) = some ll) (h6 : R' (q' + Rule.pinsOff.toNat) = some po)
+    (h7 : R' (q' + Rule.pinsLen.toNat) = some pl)
     (hl : hslice? R' lo.toNat ll.toNat = some lvls) (hp : hslice? R' po.toNat pl.toNat = some pins) :
-    decRule R' q' = some { rl with fire := .nested lvls pins } := by
-  obtain ⟨hc, hn, hr⟩ := decRule_fields h
-  have hc' : hd? R' q' = some rl.ctor := by rw [← hc]; simp only [hd?, h0]
-  have hn' : nat? R' (q' + 1) = some rl.nfields := by rw [← hn]; simp only [nat?, h1]
-  have hr' : hd? R' (q' + 8) = some rl.rhs := by rw [← hr]; simp only [hd?, h8]
-  have hl' : hlist? R' (q' + 4) = some lvls := by
-    simp only [hlist?, nat?, h4, show q' + 4 + 1 = q' + 5 by omega, h5, Option.map_some,
-      Option.bind_eq_bind, Option.bind_some, hl]
-  have hp' : hlist? R' (q' + 6) = some pins := by
-    simp only [hlist?, nat?, h6, show q' + 6 + 1 = q' + 7 by omega, h7, Option.map_some,
-      Option.bind_eq_bind, Option.bind_some, hp]
-  have hk : nat? R' (q' + 3) = some 1 := by simp [nat?, h3]
-  unfold decRule
-  simp only [hk, Option.bind_eq_bind, Option.bind_some, hl', hp', hc', hn', hr', Option.pure_def]
+    decRule R' q' = some { rl with fire := .nested lvls pins } :=
+  decRule_refire h h0 h1 h8 ⟨by simp [nat?, h3],
+    hlist?_of h4 (by rw [Nat.add_assoc, ← Rule.lvlsLen_toNat]; exact h5) hl,
+    hlist?_of h6 (by rw [Nat.add_assoc, ← Rule.pinsLen_toNat]; exact h7) hp⟩
 
 /-! ## `generated_rules_remap` -/
 
@@ -294,6 +267,7 @@ theorem rmRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (old.toNat + 1) = some w ∧ w.toNat = rl.nfields := by
     simp only [nat?, Option.map_eq_some_iff] at hn; exact hn
   obtain ⟨w8, hw8, -, -⟩ := hd?_some hr
+  change erecP m (old.toNat + 8) = some w8 at hw8
   have r0 : erRd m old = w0 := (erRd_of_erecP hw0).1
   obtain ⟨r1, e1⟩ := erRd_add (j := 1) (cq := old) (m := m) hw1 (by decide)
   obtain ⟨r8, e8⟩ := erRd_add (j := 8) (cq := old) (m := m) hw8 (by decide)
@@ -318,11 +292,12 @@ theorem rmRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hext := IWGrow.ext hg
   refine decRule_nested hold (lo := flo) (ll := fll) (po := fpo) (pl := fpl)
     (by have := g 0 (by decide); simp only [Nat.add_zero] at this; rw [this, hw0]; rfl)
-    (by rw [g 1 (by decide), hw1]; rfl) (by rw [g 8 (by decide), hw8]; rfl)
+    (by rw [show Rule.nfields.toNat = 1 from rfl, g 1 (by decide), hw1]; rfl)
+    (by rw [show Rule.rhs.toNat = 8 from rfl, g 8 (by decide), hw8]; rfl)
     (g 3 (by decide)) (g 4 (by decide)) (g 5 (by decide)) (g 6 (by decide)) (g 7 (by decide))
     (hext.hslice? hl) (hext.hslice? hp)
 
-/-! ## `Rec11` of pointer slices -/
+/-! ## `RuleWordsIn` of pointer slices -/
 
 theorem decNL_get' {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL m o l = some xs) :
     ∀ j < l, ∃ v, iwN m (o + j) = some v ∧ xs[j]? = some v := by
@@ -339,13 +314,13 @@ theorem decNL_get' {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL m o l = some
   exact ⟨v, hv, hx⟩
 
 theorem rec11_of_decNL {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys)
-    (hall : ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w) : Rec11 m o l := by
+    (hall : ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w) : RuleWordsIn m o l := by
   intro j hj v hv i hi
   obtain ⟨v', hv', hx⟩ := decNL_get' h j hj
   rw [hv] at hv'; cases hv'
   exact hall v (List.mem_of_getElem? hx) i hi
 
-theorem rec11_mem {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys) (hR : Rec11 m o l) :
+theorem rec11_mem {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys) (hR : RuleWordsIn m o l) :
     ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w := by
   intro v hv i hi
   obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hv
@@ -400,7 +375,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
     hslice? (erecP m) flo.toNat fll.toNat = some lvls → hslice? (erecP m) fpo.toNat fpl.toNat = some pins →
     decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (rules.map fun rl => { rl with fire := .nested lvls pins }) ∧
-      Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   induction n with
   | zero => intro m m' ro rl flo fll fpo fpl r rules lvls pins h; simp [tsrmW] at h
@@ -449,7 +424,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   rcases hps : decNL m2 (rr.headD 0).toNat (rr.tail.headD 0).toNat with _ | ps <;> rw [hps] at hd2
   · cases hd2
   obtain ⟨-, -, hn3, -⟩ := consW_stageN h3 hS2 hb2 hps
-  have hR3 : Rec11 m3 (rc.headD 0).toNat (rc.tail.headD 0).toNat := by
+  have hR3 : RuleWordsIn m3 (rc.headD 0).toNat (rc.tail.headD 0).toNat := by
     refine rec11_of_decNL hn3 fun v hv i hi => ?_
     rcases List.mem_cons.mp hv with rfl | hv
     · obtain ⟨w, hw⟩ := hw1 i hi
@@ -559,7 +534,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
     (hA : AbsOK m) :
     ∃ rules a', (ConRon.Arena.generatedRules rP.toNat TM rhss).run a = .ok (rules, a') ∧
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
-      Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       AbsOK m' := by
   obtain _ | n := n

@@ -358,7 +358,7 @@ theorem uls_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} (
   refine RefE.bind_right hargs ?_
   dsimp only [ulsE.k_get_app_args]
   have hlen : targs.length = (r₅.tail.headD 0).toNat := by simpa using hsp.size
-  by_cases g3 : r₅.tail.headD 0 ≠ erRd s₀.mem (r₄.headD 0 + 4)
+  by_cases g3 : r₅.tail.headD 0 ≠ erRd s₀.mem (r₄.headD 0 + (ProjTbl.numParams - 1))
   · rw [ite_eq_left g3, ite_eq_right (by rw [hlen, hTp]; exact fun h => g3 (UInt64.toNat_inj.mp h))]
     obtain ⟨hS', hK'⟩ := hS.restoreTop' hf5 hg5
     exact RefE.ret rfl ⟨⟨M, hS', KeptAll.refl _ _, hK'⟩, rfl, fun h => absurd rfl h⟩

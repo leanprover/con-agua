@@ -2,9 +2,10 @@ module
 
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.RecLayout.TblDec
+import ConAgua.Arena.Verdict
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.IndRecRead
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -67,27 +68,14 @@ theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {n
   cases he; exact hcv
 
 /-- **The words of a found table** (`find_table`'s answer `tq ≠ 0`, the record at `tq - 1`): the
-parameter count at `tq + 4`, the constructor at `tq + 5`, the field count at `tq + 6`. -/
+parameter count, the constructor and the field count, read through the handle. -/
 theorem tblFound_words {m : Mem} {tq : Word} {tb : IProjTable} (h : tblFound m tq = some tb) :
-    tq ≠ 0 ∧ tb.numParams = (erRd m (tq + 4)).toNat ∧ HW (erRd m (tq + 5)) ∧
-      tb.ctor = decI (erRd m (tq + 5)) ∧ tb.numFields = (erRd m (tq + 6)).toNat := by
+    tq ≠ 0 ∧ tb.numParams = (erRd m (tq + (ProjTbl.numParams - 1))).toNat ∧
+      HW (erRd m (tq + (ProjTbl.ctor - 1))) ∧ tb.ctor = decI (erRd m (tq + (ProjTbl.ctor - 1))) ∧
+      tb.numFields = (erRd m (tq + (ProjTbl.numFields - 1))).toNat := by
   have h0 : tq ≠ 0 := by rintro rfl; simp [tblFound] at h
   simp only [tblFound, h0, ↓reduceIte] at h
-  have hq : (tq - 1).toNat = tq.toNat - 1 := by
-    have : (1 : Word) ≤ tq := by
-      have : tq.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simp [e]))
-      rw [UInt64.le_iff_toNat_le]; simp; omega
-    rw [UInt64.toNat_sub_of_le _ _ this]; rfl
-  have h' : decTbl (erecP m) (tq - 1).toNat = some tb := by rw [hq]; exact h
-  obtain ⟨-, hp, hw, hc, hf⟩ := decTbl_words (erRdOK m) h'
-  have e5 : tq - 1 + 5 = tq + 4 := by
-    rw [show (5 : Word) = 1 + 4 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
-  have e6 : tq - 1 + 6 = tq + 5 := by
-    rw [show (6 : Word) = 1 + 5 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
-  have e7 : tq - 1 + 7 = tq + 6 := by
-    rw [show (7 : Word) = 1 + 6 from rfl, ← UInt64.add_assoc, UInt64.sub_add_cancel]
-  rw [e5] at hp; rw [e6] at hw hc; rw [e7] at hf
-  exact ⟨h0, hp, hw, hc, hf⟩
+  exact ⟨h0, decTbl_rd1 (erRdOK m) h0 h⟩
 
 /-- **`eta_rescue_table` refines `etaRescueTable?`** (memory and twin state kept): the answer is
 `find_table`'s `tq` or `0`, decoded as the twin's `Option IProjTable`. -/
@@ -125,7 +113,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     refine ⟨rfl, ?_, fun h => absurd rfl h⟩
     have : caps.eta = false := by rw [heta, g1]; rfl
     simp [etaRescueTable?, this, hz]; rfl
-  by_cases g2 : erRd m (tq + 5) ≠ ctor
+  by_cases g2 : erRd m (tq + (ProjTbl.ctor - 1)) ≠ ctor
   · rw [ertW.arm3 _ _ _ _ _ _ _ g0 g1 g2] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
@@ -133,7 +121,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     have : (tb.ctor == decI ctor) = false := by
       rw [hcd]; simpa using fun e => g2 ((decI_inj_iff hcw hctor).mp e)
     simp [etaRescueTable?, this, hz]; rfl
-  have g2' : erRd m (tq + 5) = ctor := by simpa using g2
+  have g2' : erRd m (tq + (ProjTbl.ctor - 1)) = ctor := by simpa using g2
   rw [ertW.arm4 _ _ _ _ _ _ _ g0 g1 g2'] at h
   have hE : caps.eta = true := by rw [heta]; simpa using g1
   have hC : (tb.ctor == decI ctor) = true := by rw [hcd, g2']; simp

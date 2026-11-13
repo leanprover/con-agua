@@ -144,3 +144,72 @@ revert): about one world rebuild (35 min at 2 threads on this machine).
 620 MB both; `init-prelude` 1 160 M both, 27 MB both. `checker.s` 230 932 → 230 857 → 230 821
 lines (builders, compaction). Verdicts: `diff-e2e.py --refs` with the branch's binary: no
 UNSOUND/INCOMPLETE/CRASH/TIMEOUT; the same 8 REFDIFF (e2e-ref) as master's binary.
+
+### Batch 3: recursor rules and projection tables by name (helper `recoffs-rule`)
+
+* `RecLayout/Rule.lean` (`L.Rule`: `ctor`, `nfields`, `fire`, `lvlsOff`, `lvlsLen`, `pinsOff`,
+  `pinsLen`, `rhs`, `size` 11), `RecLayout/Tbl.lean` (`L.ProjTbl`, not `L.Tbl`: that name is the
+  twin's hash table, open in the arena proofs; `size` 13), and `RuleDec.lean`/`TblDec.lean`.
+  `decRules` strides by `Rule.size`. `find_table` hands out the table's address plus one, so L
+  reads `EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄`.
+* About 140 L lines; about 20 duplicated decoder lemmas deleted, about 15 restated over the names
+  (62 files, +1194/−1219). `checker.s` unchanged.
+* Left: writes to the dead words keep their numbers (rule words 2, 9, 10; table words 8, 11, 12);
+  the whole-record writer proofs (`rule_copy`, `rules_to_erec`, `rmRec_stage`, `ruleM_*`,
+  `rules_at_lps_go`) are still 11-word positional, as the caps writers were before batch 2a; a
+  few `11 * j` strides in `CIReadRefCI`, `HoistDecode`/`HoistWalkRef`, `DeclAndPinIndCopy2` still
+  say 11 (reducible defeq lets them check). A compaction of these records would find them, as
+  batch 2b found the caps leftovers.
+* Dead words: the rule record 3 of 11; the table 3 of 13 plus the two words nothing reads (kind
+  and name, kept so the table looked like a constant record), 5 of 13.
+
+## 4. lrecords after named offsets: recommendation
+
+**Where things stand (master 0120575b02).** The caps, rule and table records are named; the
+constant record and the constant value are in progress (helper `recoffs-ci`). Unfold sites left
+outside `RecLayout/` that state an offset's number: 0 for the caps record; 4 for rules and tables
+(`IndDeclConstsTable`'s `block_table`, `TsrW.rmRec_stage` ×2, `ConsBlockRecsTF`'s stride), all in
+whole-record writer proofs; plus 13 offset-free `unfold decRules`/`simp [decRules]` (slices). The
+caps test (§3): one layout change cost 8 layout lines + 21 proof lines (leftover literals); the
+next one cost the layout file alone.
+
+**What the compiler-owned layout (lrecords S, with R1–R3) would still add.**
+
+* Not the user's goal any more: with named offsets a layout change is already the layout file.
+* Structural frames instead of address reasoning: `Caps.order`, `capsRecW_set64`,
+  `decCaps_congr` and the writer lemmas (≈200 lines per record kind in `…Dec.lean`, written once)
+  exist because fields are words of one array; field arrays would make them frame lemmas of the
+  memory model. The saving is those files, not their users.
+* 32-bit loads of packed fields and capacity hints (performance), and one primitive for the
+  frozen images.
+* Not EREC's records at all. lrecords §3 designs fixed-stride tiered store records (`TRec`:
+  `APP`, `LIT`, …), which already have named fields (`R⟨t, i⟩.f`, `StoreFields` rows). The
+  records this lane named live in a bump-allocated pool (`erec_alloc(n)`), vary by kind (the kind
+  word picks the layout), nest (`indInfo` embeds the caps record) and hold slices. Owning that
+  layout in the compiler needs a tagged-union record construct and pool allocation in L's
+  semantics: a new design, not R1/R2/S.
+
+**Cost and saving.** Named offsets: caps (both batches, with the tooling and the two writer
+rewrites) about 3 agent-hours; rules and tables about 2 h (helper); the constant record and value
+about 3–4 h (helper, in progress). lrecords S: 90–150 h (§4.2), for structural frames and
+packed loads on the store records. R1 (counts out of `CTL`) and R2 (masked packed pushes) stay as
+§7.2/§7.3 found: no proof saving on their own.
+
+**Recommendation.** Do not start R1/R2/S for the layout-change goal: named offsets meet it at
+about a twentieth of the cost. Next steps, in order of value:
+
+1. Land the constant record and value (`recoffs-ci`).
+2. One perturbation build per record kind (shift every offset by a gap, build, revert; about one
+   world rebuild each, or all kinds at once) to flush the literals the reducible names tolerate;
+   the caps run found 4 files.
+3. The rule writers by name as batch 2a did for caps (`rule_copy`, `rules_to_erec`,
+   `rules_at_lps_go`, `parse_rule_d`; `rmRec_stage`, `ruleM_*`), then compact the rule record
+   (3 dead words of 11) and the projection table (5 unused of 13) the way §3 did: install-time
+   memory only, no measurable `Init` change expected (the caps compaction changed `Init` by
+   −1 M of 217 197 M instructions).
+4. Optional: `IW` scratch records, only where one layout is shared by several functions (the
+   positivity context `ctx`, `NestState`); the `rec5`/`rec6` tuples private to one function gain
+   little.
+
+Revisit S only for its performance side (32-bit packed loads on the hot store records), measured
+first with a prototype of batch O (lrecords §4.2).
