@@ -642,6 +642,7 @@ theorem blockGo_ok' (n : Nat) :
       have hRA : RulesAt m₁ ow 0 rules := by
         intro q hq
         obtain ⟨w', hw', hl', hr'⟩ := hrr q hq
+        have := Rule.order
         obtain ⟨hPw, hwt⟩ := trunc_get hw' (by omega)
         rw [hD1, rdW_of (idxRule ow q (by omega)) hPw]
         exact ⟨hl', hr'⟩
