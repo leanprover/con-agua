@@ -212,7 +212,7 @@ theorem keeps_validateIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRe
     keeps_piSortTeleLen]
 
 theorem keeps_installIndD (st : StateD) (tys : List ConLeche.Frontend.IndTypeRec)
-    (cts : List ConLeche.Frontend.IndCtorRec) (rcs : List ConLeche.Frontend.IndRecRec) (nPd : Nat) :
+    (cts : List (ConLeche.Frontend.IndCtorRec × NIdx)) (rcs : List ConLeche.Frontend.IndRecRec) (nPd : Nat) :
     Keeps (installIndD st tys cts rcs nPd) := by
   intro c p; unfold installIndD pushDecl
   repeat' keeps_step [keeps_parseCVD, keeps_parseRuleD]

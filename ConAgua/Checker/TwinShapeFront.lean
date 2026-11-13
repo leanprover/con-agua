@@ -74,7 +74,7 @@ theorem post_parseRuleD (st : StateD) (ru : RuleRec) :
   unfold ConRon.Arena.Frontend.parseRuleD
   exact Post.bind (Post.any _) fun _ _ => Post.bind (Post.any _) fun _ _ => Post.ret rfl
 
-theorem post_installIndDF (st : StateD) (tys : List IndTypeRec) (cts : List IndCtorRec)
+theorem post_installIndDF (st : StateD) (tys : List IndTypeRec) (cts : List (IndCtorRec × NIdx))
     (rcs : List IndRecRec) (nPd : Nat) :
     L.Front.Post (installIndD st tys cts rcs nPd)
       (fun s => ∃ d, s.decls = st.decls.push d ∧ FrontDecl d) := by
