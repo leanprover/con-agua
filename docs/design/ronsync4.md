@@ -117,7 +117,7 @@ vocabulary.
   install, the front, the ROM reader, the declaration arms), `ronsync4-rn` (#573 read side and
   the `Nat` dispatch #556 P-W/P-N, #557), briefs `_tmp/ronsync4/brief-{common,core,ind,rn}.md`,
   3 build threads each (lead 3).
-* 07:38–07:55 helpers' unblock commits merged (ind: `TwinStep`, `EntryW`, `IndKindEnvProof` at
+* 07:38–08:12 helpers' unblock commits merged (ind: `TwinStep`, `EntryW`, `IndKindEnvProof` at
   the monadic install, proved; rn: the `Nat` dispatch ported, `NatOpShim` deleted, the readers by
   the family; core: `whnf_core` is the loop now, the pending keys a stack slice, the memo and
   stuck-spine functions with generated models). One conflict (`IndArmFns`' write-set lists).
