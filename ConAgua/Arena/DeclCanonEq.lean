@@ -507,8 +507,8 @@ theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
        (wk.toNat = 2 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .thmInfo cv) ∨
        (wk.toNat = 3 ∧ ∃ cv caps, decCV R (p + 1) = some cv ∧ decCaps R (p + 5) = some caps ∧
           x = .indInfo cv caps) ∨
-       (wk.toNat = 4 ∧ ∃ cv np nf, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
-          nat? R (p + 6) = some nf ∧ x = .ctorInfo cv np nf) ∨
+       (wk.toNat = 4 ∧ ∃ cv np nf fam, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
+          nat? R (p + 6) = some nf ∧ hd? R (p + 7) = some fam ∧ x = .ctorInfo cv np nf fam) ∨
        (wk.toNat = 5 ∧ ∃ cv mi rp o c k rules, decCV R (p + 1) = some cv ∧
           nat? R (p + 5) = some mi ∧ nat? R (p + 6) = some rp ∧
           nat? R (p + 7) = some o ∧ nat? R (p + 8) = some c ∧
@@ -538,8 +538,8 @@ theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     exact .inr (.inr (.inr (.inl ⟨hh, cv, caps, hcv, hc, rfl⟩)))
   · rename_i hh
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, np, hnp, nf, hnf, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, hcv, hnp, hnf, rfl⟩))))
+    obtain ⟨cv, hcv, np, hnp, nf, hnf, fam, hfam, rfl⟩ := h
+    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, fam, hcv, hnp, hnf, hfam, rfl⟩))))
   · rename_i hh
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, mi, hmi, rp, hrp, k, hkk, o, ho, c, hc, rules, hr, rfl⟩ := h

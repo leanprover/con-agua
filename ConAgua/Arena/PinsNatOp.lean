@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.NatArms
+public import ConAgua.Arena.NatOpShim
 import ConAgua.Arena.Pins
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
