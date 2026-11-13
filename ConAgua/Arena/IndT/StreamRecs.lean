@@ -116,8 +116,6 @@ theorem csr_ref (fe : IFEnv) (n : Nat) (hn : n ≤ 2 ^ 62) :
   have hqb : q < 2 ^ 64 := hrdq.2
   rw [hrd0.1, hrdq.1]
   have hqt : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-  have hqb3 : (UInt64.ofNat q : Word).toNat + 3 < 2 ^ 64 := by
-    rw [hqt]; exact rec3CVExt_lt hS hext
   unfold ConRon.Arena.classStreamRecs
   -- `check_constant_val`
   have h1R := ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS (n := n) (by omega) hC.stageT

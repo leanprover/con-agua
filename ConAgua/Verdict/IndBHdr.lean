@@ -249,12 +249,12 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   have hCr3 := hcr3 hCr
   have hlpsN : ∃ ks, cv.levelParams.mapM (denoteN a3.store.ns) = some ks := denoteCV_lps (hden3 _ _ hden)
   -- `cv_lps(q)`
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have e1 : rdW (m3.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hg3.ext _ _ hw1)
-  have e2 : rdW (m3.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hg3.ext _ _ hw2)
+  have e1 : rdW (m3.arr64 (L.tierA EREC ((q + CV.lpsOff) >>> 40))) (q + CV.lpsOff &&& 1099511627775) =
+      w1 := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m3).at _ rfl (hg3.ext _ _ hw1)
+  have e2 : rdW (m3.arr64 (L.tierA EREC ((q + CV.lpsLen) >>> 40))) (q + CV.lpsLen &&& 1099511627775) =
+      w2 := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m3).at _ rfl (hg3.ext _ _ hw2)
   have hsl3 : hslice? (erA m3) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg3.ext hsl
   refine RefE.onlySim (fun _ => classConstOkHeaderE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   rw [classConstOkHeaderE.k_cv_lps.arm1]

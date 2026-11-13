@@ -260,7 +260,8 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   dsimp only [ctorE.k_check_constant_val]
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (dcv m1 k1.grow)
-  rw [show rdW (m1.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w1 from hw1]
+  rw [show rdW (m1.arr64 (tierA EREC ((cvCw + CV.type) >>> 40))) (cvCw + CV.type &&& 1099511627775) = w1
+    from hw1]
   refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (L.toNat_add_of_lt _ _ hnf) hw1d
     (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ _ ⟨k2, ho2, hdo2⟩ => ?_
   dsimp only [ctorE.k_strip_pis]
