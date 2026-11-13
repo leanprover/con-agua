@@ -1,6 +1,6 @@
 Restore the old safe ConLeche.withPtrEq (deprecated and made unsafe upstream in Lean on 2026-09-21)
 as ConLeche/Util/PtrEq.lean, and use it at the three call sites; withPtrEqDecEq's new signature
-in Kernel/Expr.lean. Toolchain nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 1).
+in Kernel/PtrDecEq.lean (ConLeche.ptrDecEq, since con-leche #578 the one caller of withPtrEqDecEq). Toolchain nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 1).
 
 diff --git a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
 index 5831e72b372b48ab1d9e59e53a12f27d926b7a23..aa990a407aeadd185f54be205825ac1c0eb593be 100644
@@ -25,7 +25,7 @@ index 5831e72b372b48ab1d9e59e53a12f27d926b7a23..aa990a407aeadd185f54be205825ac1c
  theorem sameB_eq {α : Type} [BEq α] [LawfulBEq α] (a b : α) : sameB a b = (a == b) := by rfl
  
 diff --git a/vendor/con-leche/ConLeche/Kernel/Expr.lean b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-index d6bbea3da603de59a24ec6049d0871fad5b6f10c..dc33b69cebb3bd2a82801cc4bc780f4c5cbf2b46 100644
+index 97bf655eeda8e9a701b0c8f963ff43174f432c3f..db9b6bb27b450a1d4e38cc0fddfb5da230e4dd29 100644
 --- a/vendor/con-leche/ConLeche/Kernel/Expr.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/Expr.lean
 @@ -8,7 +8,7 @@ proves.  `import all` makes that body visible **in this module only**;
@@ -37,37 +37,6 @@ index d6bbea3da603de59a24ec6049d0871fad5b6f10c..dc33b69cebb3bd2a82801cc4bc780f4c
  
  /-!
  # Kernel expressions
-@@ -88,7 +88,7 @@ before the structural step, at every node — `level.cpp:125` is `kind` →
- `hash` → `is_eqp` → structural.  The children start over with the
- pointer, the parameter with `Name.decEqPtr`. -/
- def Level.decEqPtr (a b : Level) : Decidable (a = b) :=
--  withPtrEqDecEq a b fun _ =>
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b fun _ =>
-     if hh : a.hashData = b.hashData then
-       match a, b with
-       | .zero, .zero => isTrue rfl
-@@ -163,10 +163,10 @@ the literal's hash (`Expr.beqMemo`, `enterBeq`).  A memo hit on a
- literal that was found again in a new node is then one pointer test,
- not a walk over the number's words. -/
- @[inline] def Literal.decEqPtr (a b : Literal) : Decidable (a = b) :=
--  withPtrEqDecEq a b fun _ =>
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b fun _ =>
-     match a, b with
-     | .natVal n, .natVal m =>
--      match withPtrEqDecEq n m (fun _ => Nat.decEq n m) with
-+      match withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) n m (fun _ => Nat.decEq n m) with
-       | isTrue h => isTrue (by rw [h])
-       | isFalse h => isFalse (fun e => h (Literal.natVal.inj e))
-     | .strVal s, .strVal t =>
-@@ -947,7 +947,7 @@ on equal addresses only, where the runtime pointer test answers
- to the structural `decEq`, which `decEqPtr` does not exist yet to
- replace.  Code outside the equality uses `ptrDec`. -/
- @[inline] def ptrDecStruct (a b : Expr) : Decidable (a = b) :=
--  withPtrEqDecEq a b (fun _ => decEq a b)
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b (fun _ => decEq a b)
- 
- /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
- addresses are the filter; the stored objects, tested by identity, are
 @@ -1245,7 +1245,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
  memoised descent.  What both `==` (`beq_eq_beqMemo`) and every
  `DecidableEq` use (`decEqPtr`, `decEq_eq_decEqPtr`) run. -/
@@ -77,45 +46,26 @@ index d6bbea3da603de59a24ec6049d0871fad5b6f10c..dc33b69cebb3bd2a82801cc4bc780f4c
      (fun h => by subst h; simp)
  
  /-- The executed equality decides `a = b`: `withPtrEq a b k h` is
-@@ -1277,7 +1277,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
- a fallback that compiled code would run is `decEqPtr`, never the
- structural walk. -/
- @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=
--  withPtrEqDecEq a b (fun _ => inferInstance)
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b (fun _ => inferInstance)
- 
- /-- The executed equality is the specification. -/
- theorem beqMemo_eq (a b : Expr) : beqMemo a b = decide (a = b) := by
-diff --git a/vendor/con-leche/ConLeche/Kernel/Name.lean b/vendor/con-leche/ConLeche/Kernel/Name.lean
-index 152a5e99b83360d06606c598c72f567d6a665047..ccd32783d14af7148eb0f8d443b4c04138b8fa16 100644
---- a/vendor/con-leche/ConLeche/Kernel/Name.lean
-+++ b/vendor/con-leche/ConLeche/Kernel/Name.lean
-@@ -1,6 +1,7 @@
+diff --git a/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean b/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
+index 32041dd6e1d8b579c2d47d4018795e97adbd1fb1..d4db9e28461774eeb7a2b8eb6c3856b15381d035 100644
+--- a/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
++++ b/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
+@@ -1,6 +1,6 @@
  module
  
- public import Std.Data.HashMap
+-public import Init.Util
 +public import ConLeche.Util.PtrEq
- /-!
- # Hierarchical names
  
-@@ -70,7 +71,7 @@ almost always by their hashes.  The component comparison is
- pointer-first too (`lean_string_eq` tests `s1 == s2`; the `Nat`
- component goes through `withPtrEqDecEq`). -/
- def Name.decEqPtr (a b : Name) : Decidable (a = b) :=
--  withPtrEqDecEq a b fun _ =>
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b fun _ =>
-     if hh : a.hashData = b.hashData then
-       match a, b with
-       | .anonymous, .anonymous => isTrue rfl
-@@ -81,7 +82,7 @@ def Name.decEqPtr (a b : Name) : Decidable (a = b) :=
-           | isFalse hp => isFalse (fun e => hp (Name.str.inj e).1)
-         else isFalse (fun e => hs (Name.str.inj e).2)
-       | .num p n, .num q m =>
--        match withPtrEqDecEq n m (fun _ => Nat.decEq n m) with
-+        match withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) n m (fun _ => Nat.decEq n m) with
-         | isTrue hn =>
-           match Name.decEqPtr p q with
-           | isTrue hp => isTrue (by rw [hp, hn])
+ /-!
+ # The pointer-first decision, behind one name
+@@ -27,6 +27,6 @@ namespace ConLeche
+ /-- `withPtrEqDecEq a b k`: the pointer test, then `k ()`. -/
+ @[inline] def ptrDecEq {α : Type u} (a b : α) (k : Unit → Decidable (a = b)) :
+     Decidable (a = b) :=
+-  withPtrEqDecEq a b k
++  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b k
+ 
+ end ConLeche
 diff --git a/vendor/con-leche/ConLeche/Util/PtrEq.lean b/vendor/con-leche/ConLeche/Util/PtrEq.lean
 new file mode 100644
 index 0000000000000000000000000000000000000000..d4e0fd15c75748076e3ae69569ad61120735b342
