@@ -24,7 +24,7 @@ The buffer is `romData ++ encPinSets pins`:
   references.
 
 The generator (`ConAgua/Rom/Gen.lean`, `lake exe romgen OUT`) writes the buffer for con-leche's
-first variant (`natOpPinSets.head`, the repository toolchain's).
+first `N` variants (`natOpPinSets.take N`, newest toolchain first).
 -/
 
 namespace L.Rom

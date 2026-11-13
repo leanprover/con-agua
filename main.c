@@ -66,7 +66,7 @@ extern ca_res ca_check_b(const uint64_t *buf, uint64_t buf_len, uint64_t j, void
 extern const uint64_t ca_region_size, ca_slot, ca_w0, ca_nw, ca_out_off, ca_worker_size;
 
 /* The pin data (the checker's startup data and con-leche's `Nat`-operation pin variants, the set
-   con-ron embeds): `pins.bin`, written by `romgen pins.bin 3` and kept up to date by
+   con-ron embeds): `pins.bin`, written by `romgen pins.bin 4` and kept up to date by
    scripts/asm_file.py. Not trusted: the theorem holds for every pin buffer, and the checker decodes
    and checks it at run time. C23 `#embed` (GCC >= 15, Clang >= 19). */
 static const uint8_t pins[] = {

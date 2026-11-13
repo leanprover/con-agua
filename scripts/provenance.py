@@ -97,7 +97,7 @@ EXEMPT = ("ConAgua/Spike/",)
 # declarations are indexed (for name resolution and the callee pass), and the
 # root namespace (a twin name `ConRon.…` belongs to con-ron).
 UPSTREAMS = {
-    "con-ron": {"prefix": "proof/", "dirs": ["ConRon/Arena"], "ns": "ConRon"},
+    "con-ron": {"prefix": "proof/", "dirs": ["ConRon/Arena", "ConRon/Bridge"], "ns": "ConRon"},
     "con-leche": {"prefix": "", "dirs": ["ConLeche/Frontend", "ConLeche/Kernel",
                                           "ConLeche/Cached"], "ns": "ConLeche"},
 }

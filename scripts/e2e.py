@@ -82,7 +82,7 @@ T_CONRON = 120      # seconds per con-ron run
 T_PERF = 120        # seconds per `perf stat` run
 
 ENTRIES = ["check", "check_np"]
-PIN_VARIANTS = 3  # the variants in `pins.bin` (`romgen pins.bin 3`: all of `natOpPinSets`)
+PIN_VARIANTS = 4  # the variants in `pins.bin` (`romgen pins.bin 4`: all of `natOpPinSets`)
 # further roots of the assembled program (test entries and the functions `e2e-diff` runs)
 ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
 E2E_SOURCE = "L.E2E.e2eProg"
