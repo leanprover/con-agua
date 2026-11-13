@@ -201,6 +201,30 @@ theorem indHdImg_ty (ck nm lo ll ty : Word) :
     (indHdImg ck nm lo ll ty)[(cv + CV.type).toNat]? = some (some ty) := by
   simp [indHdImg, recImg, rec_unfold]
 
+/-- **An axiom's record image** (`RecLayout/Img.lean`): the kind word and the constant value (the
+stores of `check_constant_val`'s and `class_const_ok_lit`'s fresh `axiomInfo` records). -/
+def axImg (ck nm lo ll ty : Word) : List (Option Word) :=
+  recImg axiomSize [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty)]
+
+theorem axImg_length (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty).length = axiomSize.toNat := recImg_length _ _
+theorem axImg_kind (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(kind).toNat]? = some (some ck) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_name (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_lo (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_ll (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [axImg, recImg, rec_unfold]
+theorem axImg_ty (ck nm lo ll ty : Word) :
+    (axImg ck nm lo ll ty)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [axImg, recImg, rec_unfold]
+
 /-- **A recursor's record image** (`RecLayout/Img.lean`): the kind word, the constant value and the
 recursor's fields (`rec_info_rec`'s and `class_fe_r_rec`'s stores). -/
 def recInfoImg (ck nm lo ll ty mi rp ro rl ik : Word) : List (Option Word) :=
