@@ -10,7 +10,7 @@ restores the files:
 * every offset `n > 0` becomes `n + GAP` (a gap of `GAP` unused words after the offset-0 word),
   so the fields keep their order and a slice's length word still follows its offset word;
   offset-0 fields stay (L reads them as `A⦃q⦄`, by design) and so do definitions that are not a
-  numeral (sums such as `CI.indSize`) and stored values (`…Val`, such as `ProjTbl.kindVal`);
+  numeral (sums such as `CI.indSize` or `CI.axiomSize`, which follow their parts);
 * or, with `--scale K`, every numeral offset `n` becomes `K * n`, except a slice's length word
   (`fooLen` next to `fooOff`), which stays right after its offset word (`K * off + 1`). A gap
   cannot perturb a record that embeds another (the constant record embeds the constant value, the
@@ -62,7 +62,7 @@ def perturb(path, gap, scale):
     out, changes = [], []
     for line in lines:
         m = DEF.match(line.rstrip("\n"))
-        if m and int(m.group(3)) > 0 and not m.group(2).endswith("Val"):
+        if m and int(m.group(3)) > 0:
             name, old = m.group(2), int(m.group(3))
             off = name[:-3] + "Off" if name.endswith("Len") else None
             if not scale:

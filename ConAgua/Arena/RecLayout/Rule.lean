@@ -17,8 +17,8 @@ levels (`levels`, `nested`) and the pins (`nested` only), each an offset word an
 right after it.
 
 Words `2`, `9` and `10` are not read (they held the install-computed `ctorParams`, `k` and
-`eta`, which con-leche's task #480 removed; the offsets of the rest were kept): the writers put
-`0` there.
+`eta`, which con-leche's task #480 removed; the offsets of the rest were kept), and the writers do
+not write them (their image, `Rule.img`).
 
 **The offsets are names**, as for every record layout (`RecLayout/Caps.lean`): L code writes
 `EREC⦃q + ⟪Rule.rhs⟫⦄`, and the compiler evaluates the constant. The field at offset 0, `ctor`,
