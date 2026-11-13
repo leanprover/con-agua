@@ -11,11 +11,9 @@ import ConAgua.Arena.IndInstallSpec.PartsAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecClassSpec.MjProg
-import ConAgua.Arena.RecClassSpec.PiBWRoom
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
-public import ConAgua.Arena.RecSim
 public import ConRon.Arena.Inductives.BlockInstall
 public import ConRon.Bridge.Inductives.Install
 import all ConAgua.Arena.IndInstall
