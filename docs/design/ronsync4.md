@@ -150,3 +150,29 @@ vocabulary.
   constructor with its type's name (`vi_order`'s parallel `IFL` slice, `ind_ctor(c, T)`); the ROM
   reader at the new encoding; `ci_eq`/`caps_eq`/`ci_canon_eq` compare the family and `neverZero`.
   No deviation row. `R_NATIVE_NAT_COMPUTATION` dropped (reasons renumbered).
+* 09:26–09:52 integration: the helpers' last milestones merged (no conflict), `R_NATIVE_NAT_COMPUTATION`
+  dropped, a full build, then the program regenerated (`checker_prog.py`, the generated function
+  lists, `preloop_ws.py`, `asm_file.py`: `checker.s`, `pins.bin`): **09:52 the whole library builds
+  (4 416 jobs), zero `sorry`, the axiom guards unchanged; `provenance.py check --strict` clean
+  (no marker left; 159 L items re-checked); `bump-con-ron.sh --check` ok.**
+* 09:55–10:04 verdicts (§5) and performance (§4).
+
+## 2. The ladder's yield against the estimate
+
+Estimate (stage 0): a mixed sync; the codemod rung should pay for the theorems that fail only by
+the `ctorInfo` arity, not for the ported functions' refinements. Measured: the arity codemod went
+over the whole tree before the first build (stage 3a; 35 files changed by the script, so those
+theorems never failed), and the ladder then saw **76 failing theorems in five rounds and closed 7**
+(all at the codemod rung, by the generic `obtain`/`exact`/`fun` arity rules); the other 69 were
+tickets, closed by the helpers in their areas along with the ports. As in ronsync3 the ladder was
+mostly the compile-pass tool (turning failing theorems into `sorry` tickets so the modules behind
+them elaborate); the codemod rules paid where the base proof differed from the new one only by the
+family's binder. What the ladder cannot do — definitions and statements that fail (the TEMPORARY
+`natOpResult` shim, `KnotMono1`'s list, `ciD`, the `decCI_ctorR` statements) — the lead fixed by
+hand in three compile passes before the fan-out, so that each helper started with its area
+elaborating as far as its own changes allowed.
+
+## 3. Statement changes of the final theorems
+
+None. No file under `ConAgua/Final`, `ConAgua/Audit`, `ConAgua/E2E` changed; upstream's capstone
+statements did not change either.
