@@ -127,7 +127,7 @@ input. The theorem takes no set-theory model: a record's job is checked at the
 stream index's view of its position, and con-ron's Theorem 1 obtains the fold
 invariant there from con-leche's model-free fact that the pure fold keeps the
 environment well formed
-([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L265-L267)).
+([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L283-L285)).
 
 [`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L76-L86)
 is the stages con-ron's binary runs, from the twin's start state: intern the
@@ -832,7 +832,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
    ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L266-L271),
-   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L136-L153)).
+   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L137-L154)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
 from L's syntax. Most word models and specs are generated: the `l_model`
@@ -1156,11 +1156,11 @@ takes one worker's failing list to the sequential run's verdict (a job's
 result from a worker's state equal to its result from the sequential run's
 state).
 
-On 2026-11-12 (con-leche `eb2c5939`, con-ron `4ca283d1`), `ca_start` agreed
-with con-leche's pinned verdicts on 725 of the 730 fixtures of
-`scripts/diff-e2e.py` (§10.3), sequentially; the other five are
-`nat_size_limit_*` fixtures pinned at a smaller maximum `Nat` size, which the
-checker accepts at the default maximum, as con-ron does.
+On 2026-11-13 (con-leche `ca6af099`, con-ron `c78714ac`), `ca_start` agreed
+with con-leche's pinned verdicts on all 726 fixtures `scripts/diff-e2e.py`
+compares (§10.3), sequentially; it skips the seven fixtures con-leche runs with
+command-line flags the checker does not take (the smaller maximum `Nat` size,
+[docs/deviations.md](docs/deviations.md)).
 
 ## 10. Keeping the port honest
 
@@ -1169,7 +1169,7 @@ checker accepts at the default maximum, as con-ron does.
 L is a close twin of con-ron: it computes what the twin computes, the way the
 twin computes it, data structure for data structure. Every L function carries a
 citation line naming the twin code it stands for, at the vendored revision
-(`-- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?`, or
+(`-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?`, or
 `con-ron: none — <reason>` for plumbing);
 `scripts/provenance.py check` verifies them, and `scripts/bump-con-ron.sh`
 moves them when the twin is re-vendored and marks the code whose twin changed;
