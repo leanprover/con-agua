@@ -245,13 +245,13 @@ theorem itLoop_close {m₀ m m' : Mem} {I : IStreamIndex} {ts : List IProjTable}
     (hL : decPL m₀ (fun q => decTbl (erecP m₀) q) o.toNat ts.length = some ts) (hl : ts.length = l.toNat)
     (hsz : (m₀.arr64 IW).size < 2 ^ 64) (hr : r.toNat + 1 < 2 ^ 64) {j : Word} (hj : j < l)
     (hI : ItInv m₀ I r.toNat ts j.toNat m)
-    (hm' : m' = if (baseTbl m (erecRd m (rdW (m.arr64 IW) (o + j) + 2))).1 = 0 then
-        baseTblSet m (erecRd m (rdW (m.arr64 IW) (o + j) + 2)) (r + 1) (rdW (m.arr64 IW) (o + j)) else m)
-    (hset : (baseTbl m (erecRd m (rdW (m.arr64 IW) (o + j) + 2))).1 = 0 →
-      rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + 2)) ≤ 2 ∧
-      rowTier (erecRd m (rdW (m.arr64 IW) (o + j) + 2)) = 0 ∧
-      rowIx (erecRd m (rdW (m.arr64 IW) (o + j) + 2)) + 1 <
-        (m.arr64 (tixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + 2))))).size) :
+    (hm' : m' = if (baseTbl m (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName))).1 = 0 then
+        baseTblSet m (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName)) (r + 1) (rdW (m.arr64 IW) (o + j)) else m)
+    (hset : (baseTbl m (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName))).1 = 0 →
+      rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName)) ≤ 2 ∧
+      rowTier (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName)) = 0 ∧
+      rowIx (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName)) + 1 <
+        (m.arr64 (tixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + ProjTbl.structName))))).size) :
     (j + 1).toNat ≤ l.toNat ∧ ItInv m₀ I r.toNat ts (j + 1).toNat m' := by
   have hj' : j.toNat < l.toNat := hj
   have hs := L.toNat_add_one_of_word_lt _ _ hj
