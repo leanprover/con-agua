@@ -114,12 +114,12 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
   obtain ⟨hrc, hrn, -⟩ := decRule_fields hr
   -- the rule's words
   obtain ⟨hwH, hwc⟩ := erRd_hd hrc
-  have hro1 : ro.toNat + 1 < 2 ^ 64 := by
+  have hro1 : ro.toNat + Rule.nfields.toNat < 2 ^ 64 := by
     simp only [nat?, Option.map_eq_some_iff] at hrn
     obtain ⟨w, hw, -⟩ := hrn
     exact erA_lt hw
-  have e1 : (ro + 1).toNat = ro.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hwn : (erRd m (ro + 1)).toNat = r.nfields := erRd_natA (by rw [e1]; exact hrn)
+  have e1 : (ro + Rule.nfields).toNat = ro.toNat + Rule.nfields.toNat := by rw [UInt64.toNat_add]; omega
+  have hwn : (erRd m (ro + Rule.nfields)).toNat = r.nfields := erRd_natA (by rw [e1]; exact hrn)
   -- the constructor record's words
   simp only [decCN, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
     Option.some.injEq] at hc
@@ -137,7 +137,7 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
     rw [show (UInt64.ofNat q + 1 : Word) = UInt64.ofNat (q + 1) by simp [UInt64.ofNat_add]]
     exact eq2
   -- the guard
-  have key : (erRd m ro = wn ∧ erRd m (ro + 1) = UInt64.ofNat nf) ↔
+  have key : (erRd m ro = wn ∧ erRd m (ro + Rule.nfields) = UInt64.ofNat nf) ↔
       (r.ctor == (cv, nf).1.name && r.nfields == (cv, nf).2) = true := by
     simp only [Bool.and_eq_true, beq_iff_eq]
     rw [hwc, hname, decI_inj_iff hwH hwnH, ← hwn]
@@ -149,7 +149,7 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
   refine RefE.ofArms (fun h => srsE.abort2 _ _ _ _ _ _ _ h0 h1 h)
     (fun h => srsE.arm2 _ _ _ _ _ _ _ h0 h1 h) ?_
   simp only [eq0, eq1, eq2']
-  change RefE G (if (erRd m ro ≠ erRd m (UInt64.ofNat cvp) ∨ erRd m (ro + 1) ≠ UInt64.ofNat nf) then _
+  change RefE G (if (erRd m ro ≠ erRd m (UInt64.ofNat cvp) ∨ erRd m (ro + Rule.nfields) ≠ UInt64.ofNat nf) then _
     else _) _ a _
   simp only [eN]
   refine RefE.guard (jp := fun _ => ConRon.Arena.streamRulesShape rs' cs') rfl (fun h => by
@@ -163,24 +163,24 @@ theorem srs_ref {G : Prop} (N : Nat) : ∀ (m : Mem) (a : AState) (ro rl co cl :
       have := key.mp ⟨Classical.not_not.mp h2.1, Classical.not_not.mp h2.2⟩
       rw [h] at this; exact absurd this (by decide)) fun _ _ => ?_
   -- the rest
-  have hrs'' : decRules (erA m) (ro + 11).toNat (rl - 1).toNat = some rs' := by
+  have hrs'' : decRules (erA m) (ro + Rule.size).toNat (rl - 1).toNat = some rs' := by
     have e4 : (rl - 1).toNat = rl' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [e4]
     cases rl' with
     | zero => simp [decRules] at hrs' ⊢; exact hrs'
     | succ k =>
-      have hb : ro.toNat + 11 < 2 ^ 64 := by
+      have hb : ro.toNat + Rule.size.toNat < 2 ^ 64 := by
         rw [decRules_succ] at hrs'
         simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hrs'
         obtain ⟨r2, hr2, -⟩ := hrs'
         obtain ⟨hc2, -⟩ := decRule_fields hr2
         obtain ⟨w, hw, -⟩ := hd?_some hc2
         exact erA_lt hw
-      rw [show (ro + 11).toNat = ro.toNat + 11 by rw [UInt64.toNat_add]; simp; omega]
+      rw [show (ro + Rule.size).toNat = ro.toNat + Rule.size.toNat by rw [UInt64.toNat_add]; omega]
       exact hrs'
   exact RefE.lastE (K := srsE.k_stream_rules_shape p) (f := fun v => (0, v.2)) (fun _ => rfl)
-    (fun _ => rfl) id (ih m a (ro + 11) (rl - 1) (co + 1) (cl - 1) rs' cs' hsz hrs'' hcs'')
+    (fun _ => rfl) id (ih m a (ro + Rule.size) (rl - 1) (co + 1) (cl - 1) rs' cs' hsz hrs'' hcs'')
     fun _ _ _ _ h => h
 
 end sims
@@ -254,11 +254,11 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
   · rw [hxd, hgsd] at hgsP; simp at hgsP
   -- the words
   obtain ⟨-, -, hrh⟩ := decRule_fields hr
-  have hro8 : ro.toNat + 8 < 2 ^ 64 := by
+  have hro8 : ro.toNat + Rule.rhs.toNat < 2 ^ 64 := by
     obtain ⟨w, hw, -⟩ := hd?_some hrh
     exact erA_lt hw
-  have e8 : (ro + 8).toNat = ro.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨hsH, hsr⟩ := erRd_hd (a := ro + 8) (by rw [e8]; exact hrh)
+  have e8 : (ro + Rule.rhs).toNat = ro.toNat + Rule.rhs.toNat := by rw [UInt64.toNat_add]; omega
+  obtain ⟨hsH, hsr⟩ := erRd_hd (a := ro + Rule.rhs) (by rw [e8]; exact hrh)
   have hsz : (m.arr64 IW).size < 2 ^ 64 := hC.stage.iw.iwSize
   obtain ⟨w0, ew0, hw0H, hw0⟩ := decHL_word hg hsz 0 (by omega)
   rw [show (0 : Nat).toUInt64 = (0 : Word) from rfl, UInt64.add_zero] at ew0
@@ -270,30 +270,30 @@ theorem srk_ref (hq : KnotStageProg p) (henv : ConLeche.EnvWF env)
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
   have hrl1 : (rl - 1).toNat = rl' := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
-  have hrs'' : decRules (erA m) (ro + 11).toNat (rl - 1).toNat = some rs' := by
+  have hrs'' : decRules (erA m) (ro + Rule.size).toNat (rl - 1).toNat = some rs' := by
     rw [hrl1]; exact decRules_shift hrs' (erRdOK m).lt
   have hgs'' : decHL m (go + 1).toNat (gl - 1).toNat = some gs' := by rw [hgo1, hgl1]; exact hgs'
   have hgb' : (go + 1).toNat + (gl - 1).toNat ≤ iwTop m := by omega
   rw [ConRon.Arena.streamRulesCheck.eq_1]
-  have key : (r.rhs == decI w0) = true ↔ erRd m (ro + 8) = w0 := by
+  have key : (r.rhs == decI w0) = true ↔ erRd m (ro + Rule.rhs) = w0 := by
     rw [beq_iff_eq, hsr, decI_inj_iff hsH hw0H]
-  by_cases heq : erRd m (ro + 8) = w0
+  by_cases heq : erRd m (ro + Rule.rhs) = w0
   · rw [srkE.arm3 _ _ _ _ _ _ _ _ _ _ h0 h1 (by rw [ew0]; exact heq), ite_eq_left (key.mpr heq),
       srkE.j1.eq_1]
     refine RefE.lastE (K := srkE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
-      (fun _ => rfl) id (ih (by omega) m a lo ll (ro + 11) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
+      (fun _ => rfl) id (ih (by omega) m a lo ll (ro + Rule.size) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
         ysP gs' gsP' hC hA hl hlb hlps hrs'' hysP hgs'' (.inl hgb') hgsd) fun _ _ _ _ h => h
   rw [srkE.arm2 _ _ _ _ _ _ _ _ _ _ h0 h1 (by rw [ew0]; exact heq),
     ite_eq_right (fun h => heq (key.mp h))]
   rw [ew0, hsr]
-  change RefE _ (srkE.k_rule_agree p N vis lo ll ro rl go gl (raE p N m vis lo ll (erRd m (ro + 8)) w0))
+  change RefE _ (srkE.k_rule_agree p N vis lo ll ro rl go gl (raE p N m vis lo ll (erRd m (ro + Rule.rhs)) w0))
     _ a _
   refine RefE.bindE (fun _ => srkE.k_rule_agree.none ..) id
-    (ra_ref (s := erRd m (ro + 8)) (g := w0) hq henv hApd hCrf N (by omega) hC hA hsH hw0H hl hlb
+    (ra_ref (s := erRd m (ro + Rule.rhs)) (g := w0) hq henv hApd hCrf N (by omega) hC hA hsH hw0H hl hlb
       hlps (by rw [← hsr]; exact hyr) hxd) fun ⟨r1, m1⟩ _ a1 _ hR1 => ?_
   rw [srkE.k_rule_agree.arm1, srkE.j1.eq_1]
   refine RefE.lastE (K := srkE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
-    (fun _ => rfl) id (ih (by omega) m1 a1 lo ll (ro + 11) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
+    (fun _ => rfl) id (ih (by omega) m1 a1 lo ll (ro + Rule.size) (rl - 1) (go + 1) (gl - 1) lps lpsP rs'
       ysP gs' gsP' hR1.stage hR1.abs (by rw [decHL_grow hR1.grow hlb]; exact hl)
       (Nat.le_trans hlb hR1.grow.iw)
       (ConRon.Bridge.denoteNList_ext hR1.core.ext.lss.ls.ns _ _ hlps)
