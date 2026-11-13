@@ -675,9 +675,12 @@ theorem erecP_lt64 {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i <
 /-- A decoded table record's handle (its address plus one) does not wrap. -/
 theorem decTbl_lt {m : Mem} {p : Nat} {t : IProjTable} (h : decTbl (erecP m) p = some t) :
     p + 1 < 2 ^ 64 := by
-  obtain ⟨w, hw, -, -⟩ := decTbl_name h
+  -- the level parameters' length word, at `p + ProjTbl.lpsOff + 1`
+  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  obtain ⟨-, -, l, hl, -⟩ := h
+  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hl
+  obtain ⟨-, -, c, ⟨w, hw, -⟩, -⟩ := hl
   have := erecP_lt64 hw
-  have := ProjTbl.structName_pos
   omega
 
 /-- **`rawTable?` through the rows.** -/

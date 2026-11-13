@@ -310,15 +310,12 @@ def sumRulesGoL : FunDecl := lfn (cO, cL, rO, rL, o) locals (c, cv, nF, rec, z, 
   rec := call erec_alloc(⟪Rule.size⟫);
   ez := call erec_put(rec, EREC⦃cv⦄);
   ez := call erec_put(rec + ⟪Rule.nfields⟫, nF);
-  ez := call erec_put(rec + 2, 0);
   ez := call erec_put(rec + ⟪Rule.fire⟫, 0);
   ez := call erec_put(rec + ⟪Rule.lvlsOff⟫, 0);
   ez := call erec_put(rec + ⟪Rule.lvlsLen⟫, 0);
   ez := call erec_put(rec + ⟪Rule.pinsOff⟫, 0);
   ez := call erec_put(rec + ⟪Rule.pinsLen⟫, 0);
   ez := call erec_put(rec + ⟪Rule.rhs⟫, IW.u64[rO]);
-  ez := call erec_put(rec + 9, 0);
-  ez := call erec_put(rec + 10, 0);
   IW.u64[o] := rec;
   z := call sum_rules_go(cO + 1, cL - 1, rO + 1, rL - 1, o + 1);
   return 0
