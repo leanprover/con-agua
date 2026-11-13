@@ -165677,12 +165677,6 @@ jae ca_error
 movq 968(%r15), %rdx
 movq %rax, (%rdx,%rcx,8)
 movq (%rsp), %rax
-addq $2, %rax
-cmpq 2440(%r15), %rax
-jae ca_error
-movq 968(%r15), %rcx
-movq $0, (%rcx,%rax,8)
-movq (%rsp), %rax
 addq $3, %rax
 cmpq 2440(%r15), %rax
 jae ca_error
@@ -165719,18 +165713,6 @@ cmpq 2440(%r15), %rcx
 jae ca_error
 movq 968(%r15), %rdx
 movq %rax, (%rdx,%rcx,8)
-movq (%rsp), %rax
-addq $9, %rax
-cmpq 2440(%r15), %rax
-jae ca_error
-movq 968(%r15), %rcx
-movq $0, (%rcx,%rax,8)
-movq (%rsp), %rax
-addq $10, %rax
-cmpq 2440(%r15), %rax
-jae ca_error
-movq 968(%r15), %rcx
-movq $0, (%rcx,%rax,8)
 movq $0, %rax
 jmp .Lca_parse_rule_d_0R
 .Lca_parse_rule_d_0Z:
