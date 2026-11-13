@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
