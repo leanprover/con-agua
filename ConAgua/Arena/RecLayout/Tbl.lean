@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Syntax
 public import ConAgua.Arena.RecLayout.Attr
+public import ConAgua.Arena.RecLayout.Img
 
 @[expose] public section
 
@@ -15,7 +16,7 @@ length word right after it.
 
 The first two words are `ProjTbl.kindVal` and `0` (the kind and name words of the constant records'
 layout; nothing reads them). Words `8`, `11` and `12` are not read (the removed `structSort` and
-`guards`): the writer puts `0` there.
+`guards`), and the writer does not write them (its image, `ProjTbl.img`).
 
 **The offsets are names**, as for every record layout (`RecLayout/Caps.lean`): L code writes
 `EREC⦃q + ⟪ProjTbl.ctor⟫⦄`, and the compiler evaluates the constant. The kind word at offset 0 stays
@@ -79,5 +80,54 @@ theorem lpsLen_eq : lpsLen = lpsOff + 1 := by simp [lpsLen, lpsOff]
 theorem bodiesLen_eq : bodiesLen = bodiesOff + 1 := by simp [bodiesLen, bodiesOff]
 theorem lpsLen_toNat : lpsLen.toNat = lpsOff.toNat + 1 := by simp [lpsLen, lpsOff]
 theorem bodiesLen_toNat : bodiesLen.toNat = bodiesOff.toNat + 1 := by simp [bodiesLen, bodiesOff]
+
+/-- **The record's image** (`RecLayout/Img.lean`): what a field-by-field writer stores (the
+unused words are not written). -/
+def img (kw nm sn lo ll np c nf bo bl : Word) : List (Option Word) :=
+  recImg size [(kind, kw), (name, nm), (structName, sn), (lpsOff, lo), (lpsLen, ll), (numParams, np),
+    (ctor, c), (numFields, nf), (bodiesOff, bo), (bodiesLen, bl)]
+
+theorem img_length (kw nm sn lo ll np c nf bo bl : Word) : (img kw nm sn lo ll np c nf bo bl).length = size.toNat :=
+  recImg_length _ _
+theorem img_kind (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[kind.toNat]? = some (some kw) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_name (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[name.toNat]? = some (some nm) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_sn (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[structName.toNat]? = some (some sn) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_lo (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[lpsOff.toNat]? = some (some lo) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_ll (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[lpsLen.toNat]? = some (some ll) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_np (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[numParams.toNat]? = some (some np) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_ctor (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[ctor.toNat]? = some (some c) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_nf (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[numFields.toNat]? = some (some nf) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_bo (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[bodiesOff.toNat]? = some (some bo) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
+theorem img_bl (kw nm sn lo ll np c nf bo bl : Word) :
+    (img kw nm sn lo ll np c nf bo bl)[bodiesLen.toNat]? = some (some bl) := by
+  simp [img, recImg, kind, name, structName, lpsOff, lpsLen, numParams, ctor, numFields, bodiesOff,
+    bodiesLen, size, List.replicate]
 
 end L.ProjTbl

@@ -10,6 +10,7 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import all ConAgua.Arena.IndDeclConsts
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.RecLayout.TblDec
 
 @[expose] public section
 
@@ -19,8 +20,8 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 `block_table(p, ms)` refines one member of con-ron's `blockTables` (`Arena/Install.lean`): a
 structure-like member's constructor (`MemberShape.structCtor?`), its projection bodies
 (`struct_proj_bodies`, `spbW_ok`), the block's level parameters (`block_shape_lps`, `lpsW_dec`)
-and the bodies copied into `EREC` (`er_from_iw`, `efF_stage`), the 13-word table record
-(`erec_alloc`, `erec_put`s: `btMem_eq`, `erRec_stage`). `block_tables(p, mo, ml)` refines
+and the bodies copied into `EREC` (`er_from_iw`, `efF_stage`), the table record
+(`erec_alloc`, the field stores: `btMem_eq`, its image `ProjTbl.img`, `erRecO_stage`). `block_tables(p, mo, ml)` refines
 `blockTables p ms`.
 -/
 
@@ -93,15 +94,14 @@ theorem blockTables_cons (bs : BlockShape) (ms : MemberShape) (rest : List Membe
 
 /-! ## `block_table`: the model -/
 
-/-- The memory after the table record's thirteen `erec_put`s (each argument read at its time). -/
+/-- The memory after the table record's field stores (each argument read at its time). -/
 def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
-  let m6 := erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m1 q 6) (q + 1) 0) (q + 2) T)
-    (q + 3) elo) (q + 4) ell
-  let m7 := erecPutMem m6 (q + 5) (rdW (m6.arr64 IW) (pp + 4))
-  let m8 := erecPutMem m7 (q + 6) (erRd m7 cv)
-  let m9 := erecPutMem m8 (q + 7) (rdW (m8.arr64 IW) (c + 1))
-  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m9 (q + 8) 0) (q + 9) ebo) (q + 10) ebl)
-    (q + 11) 0) (q + 12) 0
+  let m6 := erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m1 q ProjTbl.kindVal)
+    (q + ProjTbl.name) 0) (q + ProjTbl.structName) T) (q + ProjTbl.lpsOff) elo) (q + ProjTbl.lpsLen) ell
+  let m7 := erecPutMem m6 (q + ProjTbl.numParams) (rdW (m6.arr64 IW) (pp + 4))
+  let m8 := erecPutMem m7 (q + ProjTbl.ctor) (erRd m7 cv)
+  let m9 := erecPutMem m8 (q + ProjTbl.numFields) (rdW (m8.arr64 IW) (c + 1))
+  erecPutMem (erecPutMem m9 (q + ProjTbl.bodiesOff) ebo) (q + ProjTbl.bodiesLen) ebl
 
 /-- **The model of `block_table(p, ms)`** at exec fuel `n`. -/
 l_model dbt_spec {p : Prog} (hP : TablesProg p)
@@ -115,29 +115,18 @@ l_model dbt_spec {p : Prog} (hP : TablesProg p)
 
 /-! ## `block_table`: the record -/
 
-theorem btMem_eq {m1 : Mem} {q pp c cv T elo ell ebo ebl : Word} (hfr : ErApart q 13 cv) :
-    btMem m1 q pp c cv T elo ell ebo ebl = wrER m1 q [6, 0, T, elo, ell, rdW (m1.arr64 IW) (pp + 4),
-      erRd m1 cv, rdW (m1.arr64 IW) (c + 1), 0, ebo, ebl, 0, 0] := by
-  have f : ∀ j < 6, erTier cv ≠ erTier (q + UInt64.ofNat j) ∨ erOff cv ≠ erOff (q + UInt64.ofNat j) :=
-    fun j hj => hfr j (by omega)
-  have f0 : erTier cv ≠ erTier q ∨ erOff cv ≠ erOff q := by simpa using f 0 (by decide)
-  have f1 := f 1 (by decide)
-  have f2 := f 2 (by decide)
-  have f3 := f 3 (by decide)
-  have f4 := f 4 (by decide)
-  have f5 := f 5 (by decide)
-  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl,
-    show (UInt64.ofNat 3 : Word) = 3 from rfl, show (UInt64.ofNat 4 : Word) = 4 from rfl,
-    show (UInt64.ofNat 5 : Word) = 5 from rfl] at f1 f2 f3 f4 f5
-  simp only [btMem, wrER, erecPutMem_iw]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
-    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
-    show q + 9 + 1 = q + 10 by ac_rfl, show q + 10 + 1 = q + 11 by ac_rfl,
-    show q + 11 + 1 = q + 12 by ac_rfl]
-  rw [erRd_erecPutMem_ne f5, erRd_erecPutMem_ne f4, erRd_erecPutMem_ne f3, erRd_erecPutMem_ne f2,
-    erRd_erecPutMem_ne f1, erRd_erecPutMem_ne f0]
+theorem btMem_eq {m1 : Mem} {q pp c cv T elo ell ebo ebl : Word} (hfr : ErApart q ProjTbl.size.toNat cv) :
+    btMem m1 q pp c cv T elo ell ebo ebl = wrERo m1 q (ProjTbl.img ProjTbl.kindVal 0 T elo ell
+      (rdW (m1.arr64 IW) (pp + 4)) (erRd m1 cv) (rdW (m1.arr64 IW) (c + 1)) ebo ebl) := by
+  have fA : ∀ g : Word, g.toNat < ProjTbl.size.toNat → erTier cv ≠ erTier (q + g) ∨ erOff cv ≠ erOff (q + g) :=
+    fun g hg => by have := hfr g.toNat hg; rwa [UInt64.ofNat_toNat] at this
+  have f0 : erTier cv ≠ erTier q ∨ erOff cv ≠ erOff q := by simpa using hfr 0 ProjTbl.size_pos
+  simp only [btMem, erecPutMem_iw]
+  simp (disch := first | exact f0 | exact fA _ (by decide)) only [erRd_erecPutMem_ne]
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, ProjTbl.img, recImg, ProjTbl.kind, ProjTbl.name, ProjTbl.structName, ProjTbl.lpsOff,
+    ProjTbl.lpsLen, ProjTbl.numParams, ProjTbl.ctor, ProjTbl.numFields, ProjTbl.bodiesOff,
+    ProjTbl.bodiesLen, ProjTbl.size, List.replicate, UInt64.add_assoc]
 
 /-- One member's table result: `(0, _)` no table, `(1, q)` the table record at `q`, `(2, _)` the
 twin's `none`. -/
@@ -293,7 +282,7 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   have hwn4 : erecP m4 cvw.toNat = some wn := by
     exact IWGrow.ext hg04 _ _ hwn
-  have hfr : ErApart q 13 cvw := fun j hj => erFresh hW5 hS4.iw hwn4 hj
+  have hfr : ErApart q ProjTbl.size.toNat cvw := fun j hj => erFresh hW5 hS4.iw hwn4 hj
   rw [btMem_eq hfr]
   obtain ⟨-, hf5, -⟩ := erAllocW_spec hW5 hS4.iw
   have hr5 : ∀ x, erRd m5 x = erRd m4 x := fun x => by
@@ -306,40 +295,29 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     have := (iwRd (o := cw) (w := 1) (by rw [hcwv]; simpa using hnF)).2
     rw [UInt64.toNat_add]; simp at this ⊢; omega
   rw [hr5, (erRd_of_erecP hwn4).1, hI5, rdW_iw_grow hg04 l4, rdW_iw_grow hg04 l1]
-  obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRec_stage hW5 hS4 [6, 0, w0, r3.headD 0, r3.tail.headD 0,
-    rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0] rfl
-  have hA6 : AbsOK (wrER m5 q [6, 0, w0, r3.headD 0, r3.tail.headD 0,
-      rdW (m.arr64 IW) (pp + 4), wn, rdW (m.arr64 IW) (cw + 1), 0, r4.headD 0, r4.tail.headD 0, 0, 0]) :=
-    (show AFr _ _ from AFr.of_frame (wrER_frame _ _ _)) (erAllocW_afr hW5 hA4)
+  obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRecO_stage hW5 hS4 (ProjTbl.img ProjTbl.kindVal 0 w0
+    (r3.headD 0) (r3.tail.headD 0) (rdW (m.arr64 IW) (pp + 4)) wn (rdW (m.arr64 IW) (cw + 1))
+    (r4.headD 0) (r4.tail.headD 0)) (ProjTbl.img_length ..).symm
+  have hA6 : AbsOK (wrERo m5 q (ProjTbl.img ProjTbl.kindVal 0 w0
+      (r3.headD 0) (r3.tail.headD 0) (rdW (m.arr64 IW) (pp + 4)) wn (rdW (m.arr64 IW) (cw + 1))
+      (r4.headD 0) (r4.tail.headD 0))) :=
+    (show AFr _ _ from AFr.of_frame (wrERo_frame _ _ _)) (erAllocW_afr hW5 hA4)
   refine ⟨some (some ⟨mS.declared.name, bs.lps, bs.nP, cv0.name, nF, bodies⟩), a1, ?_, hS6, hg04.trans hg6, hA6,
     rfl, ?_⟩
   · simp only [tblOne, hsc, StateT.run_bind, hrun1, except_ok_bind]
     rfl
-  · generalize wrER m5 q _ = M at hg6 hget
+  · generalize wrERo m5 q _ = M at hg6 hget
     have hgM : IWGrow m3 M := hg4.trans hg6
-    have e2 := hget 2 (by simp)
-    have e3 := hget 3 (by simp)
-    have e4 := hget 4 (by simp)
-    have e5 := hget 5 (by simp)
-    have e6 := hget 6 (by simp)
-    have e7 := hget 7 (by simp)
-    have e9 := hget 9 (by simp)
-    have e10 := hget 10 (by simp)
-    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at e2 e3 e4 e5 e6 e7 e9 e10
     have hsl3' := (IWGrow.ext hgM).hslice? hsl3
     have hsl4' := (IWGrow.ext hg6).hslice? hsl4
     rw [← hl3] at hsl3'
     rw [← hl4] at hsl4'
     simp only [List.headD_cons, List.tail_cons]
-    -- `block_table` writes the record word by word: its offsets as numbers
-    simp only [decTbl, show ProjTbl.structName.toNat = 2 from rfl, show ProjTbl.lpsOff.toNat = 3 from rfl,
-      show ProjTbl.numParams.toNat = 5 from rfl, show ProjTbl.ctor.toNat = 6 from rfl,
-      show ProjTbl.numFields.toNat = 7 from rfl, show ProjTbl.bodiesOff.toNat = 9 from rfl,
-      Option.bind_eq_bind, hd?, hlist?, nat?, e2, e3, e4, e5, e6, e7, e9, e10,
-      show q.toNat + 9 + 1 = q.toNat + 10 from rfl,
-      Option.map_some, Option.bind_some, hw0lt, hwnlt, ite_true, hsl3', hsl4', hnPW, hnFW,
-      Option.pure_def, ← hname, Array.toArray_toList]
-    rw [hnm0, hnm']
+    rw [decTbl_of_words (hget _ _ (ProjTbl.img_sn ..)) (hget _ _ (ProjTbl.img_lo ..))
+      (hget _ _ (ProjTbl.img_ll ..)) (hget _ _ (ProjTbl.img_np ..)) (hget _ _ (ProjTbl.img_ctor ..))
+      (hget _ _ (ProjTbl.img_nf ..)) (hget _ _ (ProjTbl.img_bo ..)) (hget _ _ (ProjTbl.img_bl ..))
+      hw0lt hwnlt hsl3' (by rw [Array.toList_toArray] at hsl4' ⊢; exact hsl4')]
+    rw [hnPW, hnFW, ← hname, hnm0, hnm']
 
 /-! ## `block_tables` -/
 
