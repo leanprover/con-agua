@@ -703,11 +703,13 @@ theorem erecP_lt64 {m : Mem} {i : Nat} {v : Word} (h : erecP m i = some v) : i <
   · assumption
   · simp at h
 
-/-- A decoded table record sits below `2^64 - 2`. -/
+/-- A decoded table record's handle (its address plus one) does not wrap. -/
 theorem decTbl_lt {m : Mem} {p : Nat} {t : IProjTable} (h : decTbl (erecP m) p = some t) :
-    p + ProjTbl.structName.toNat < 2 ^ 64 := by
+    p + 1 < 2 ^ 64 := by
   obtain ⟨w, hw, -, -⟩ := decTbl_name h
-  exact erecP_lt64 hw
+  have := erecP_lt64 hw
+  have := ProjTbl.structName_pos
+  omega
 
 /-- **`rawTable?` through the rows.** -/
 theorem EnvR.rawTable_eq (h : EnvR m vis fe) {t : Word} (ht : t.toNat < 2 ^ 32) :

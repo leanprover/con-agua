@@ -70,6 +70,10 @@ theorem size_pos : 0 < size.toNat := by simp [size]
 @[rec_layout] theorem bodiesOff_lt : bodiesOff.toNat < size.toNat := by simp [bodiesOff, size]
 @[rec_layout] theorem bodiesLen_lt : bodiesLen.toNat < size.toNat := by simp [bodiesLen, size]
 
+/-- The structure name is not the first word: a decoded table's address plus one (the
+environment's handle) does not wrap. -/
+theorem structName_pos : 0 < structName.toNat := by simp [structName]
+
 /-- A slice's length word follows its offset word. -/
 theorem lpsLen_eq : lpsLen = lpsOff + 1 := by simp [lpsLen, lpsOff]
 theorem bodiesLen_eq : bodiesLen = bodiesOff + 1 := by simp [bodiesLen, bodiesOff]
