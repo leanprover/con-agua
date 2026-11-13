@@ -36,12 +36,12 @@ open L.Arena
 local notation "V" => ConLeche.CheckMode.verified
 
 set_option experimental.vcgen true in
-/-- **`check_block_tail`'s unified model**: `block_shape_member_ctors`, `cons_block_ctors`, the
+/-- **`check_block_tail`'s unified model**: `block_shape_ctor_groups`, `cons_block_ctors`, the
 flush and the nested bit (outside the verdict closure) lifted; the index sorts, the recursor stage,
 the stream's checks and the tables through their calls. -/
 l_model ictlE_spec (p : Prog) (hP : TailProg p)
   fns [hP.tail ↦ ictlE]
-  specs [callW_spec p n "block_shape_member_ctors", callW_spec p n "cons_block_ctors",
+  specs [callW_spec p n "block_shape_ctor_groups", callW_spec p n "cons_block_ctors",
     callW_spec p n "flush_caches", callW_spec p n "block_nested_bit"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
@@ -68,7 +68,7 @@ theorem checkBlockTail_split (mode : ConLeche.CheckMode) (block : List IConstant
     (Q : List IProjTable) :
     ConRon.Arena.checkBlockTail mode block q Q = (do
       ConRon.Arena.checkBlockIdxSorts mode q.env1 q.p q.p.members
-      let fe₂ := ConRon.Arena.consBlockCtors q.p.nP q.p.memberCtors q.env1
+      let fe₂ := ConRon.Arena.consBlockCtors q.p.nP q.p.ctorGroups q.env1
       ConRon.Arena.flushCaches
       let nested := ConRon.Arena.blockNestedBit q.p q.kinds
       let (fe₂b, out) ← ConRon.Arena.checkBlockRec mode fe₂ q.p nested q.params q.tbl q.rd q.cls block

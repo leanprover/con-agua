@@ -55,7 +55,7 @@ def imFns : List FnName :=
    "and_rescue_slots", "apd_clear", "apd_find", "apd_put", "app_count", "app_count_at", "app_fill",
    "app_fill_n", "app_find", "app_push", "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam",
    "ar_let", "ar_node", "ar_proj", "b_eq", "base_row_get", "bb_go", "bb_memo", "bb_node",
-   "beta_peel", "binder_dom", "block_caps_at", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
+   "beta_peel", "binder_dom", "block_caps_at", "member_never_zero", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
    "block_caps_ctor_names", "block_caps_fin", "block_caps_head", "block_caps_one", "block_nest_ctx",
    "block_shape_declared", "block_shape_formers", "block_shape_lps", "block_shape_member_names",
    "block_shape_n_idxs", "block_shape_nest_ctx", "block_shape_with_sort", "bm_clear", "bm_find",

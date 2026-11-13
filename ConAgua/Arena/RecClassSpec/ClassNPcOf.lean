@@ -119,7 +119,7 @@ theorem decCI_ind_cases {a : Nat → Option Word} {p : Nat}
     left; refine ⟨rfl, cv, caps, rfl, ?_⟩
     simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
       Option.some.injEq] at hcaps
-    obtain ⟨_, _, _, _, _, _, np, hnp, _, _, rfl⟩ := hcaps
+    obtain ⟨_, _, _, _, _, _, np, hnp, _, _, _, _, rfl⟩ := hcaps
     simpa [Nat.add_assoc] using hnp
   | 4, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]
   | 5, h => right; refine ⟨by decide, fun cv c hc => ?_⟩; subst hc; simp_all [Option.bind_eq_some_iff]

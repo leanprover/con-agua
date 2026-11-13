@@ -142,7 +142,8 @@ def erSlAtB (a : Word → Word) (p q i : Word) : Bool :=
 def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a q) (a r)
 
 /-- **`caps_eq_b`**. -/
-def capsEqBB (a : Word → Word) (q r : Word) : Bool := a (q + 6) == a (r + 6)
+def capsEqBB (a : Word → Word) (q r : Word) : Bool :=
+  if a (q + 6) ≠ a (r + 6) then false else bEqB (a (q + 7)) (a (r + 7))
 
 /-- **`caps_eq_c`**. -/
 def capsEqCB (a : Word → Word) (q r : Word) : Bool :=
@@ -178,7 +179,7 @@ def rulesEqB (a : Word → Word) (o1 l1 o2 l2 : Word) : Bool :=
 def ciEqRestB (a : Word → Word) (p q k : Word) : Bool :=
   if k = 1 then a (p + 5) == a (q + 5) && hintEqB a (p + 6) (q + 6)
   else if k = 3 then capsEqAll a (p + 5) (q + 5)
-  else if k = 4 then a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6)
+  else if k = 4 then a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) && a (p + 7) == a (q + 7)
   else if k = 5 then
     a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) &&
       rulesEqB a (a (p + 7)) (a (p + 8)) (a (q + 7)) (a (q + 8)) && bEqB (a (p + 9)) (a (q + 9))
@@ -337,7 +338,7 @@ theorem capsEqB_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld64_rdT_spec, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE, bEq_spec p hp n] <;>
       finish (gen := 20) [rdW_eq, capsEqBB, erRd]
 
 theorem capsEqC_spec (n : Nat) (s₀ : St) (x : Word) (y : Word) :

@@ -127,7 +127,7 @@ def ciAtLps : FunDecl := lfn (p, po, pl) locals (k, n, r, z, us, io, il, v, ez, 
   k := EREC⦃p⦄;
   if 5 < k { abort };
   n := 5;
-  if k == 1 { n := 8 } else if k == 3 { n := 20 } else if k == 4 { n := 7 } else if k == 5 {
+  if k == 1 { n := 8 } else if k == 3 { n := 20 } else if k == 4 { n := 8 } else if k == 5 {
     n := 10 };
   r := call erec_alloc(n);
   ez := call erec_put(r, k);
@@ -141,7 +141,7 @@ def ciAtLps : FunDecl := lfn (p, po, pl) locals (k, n, r, z, us, io, il, v, ez, 
     return r
   };
   if k == 3 { z := call er_copy_er(r + 5, p + 5, 15); return r };
-  if k == 4 { z := call er_copy_er(r + 5, p + 5, 2); return r };
+  if k == 4 { z := call er_copy_er(r + 5, p + 5, 3); return r };
   if k == 5 {
     (io, il) := call er_to_iw(po, pl);
     us := call param_levels(io, il);

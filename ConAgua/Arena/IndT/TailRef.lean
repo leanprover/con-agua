@@ -50,7 +50,7 @@ theorem checkBlockTail_split' (mode : ConLeche.CheckMode) (block : List IConstan
     ConRon.Arena.checkBlockTail mode block q Q =
       (ConRon.Arena.checkBlockIdxSorts mode q.env1 q.p q.p.members >>= fun _ =>
         ConRon.Arena.flushCaches >>= fun _ =>
-        ConRon.Arena.checkBlockRec mode (ConRon.Arena.consBlockCtors q.p.nP q.p.memberCtors q.env1) q.p
+        ConRon.Arena.checkBlockRec mode (ConRon.Arena.consBlockCtors q.p.nP q.p.ctorGroups q.env1) q.p
             (ConRon.Arena.blockNestedBit q.p q.kinds) q.params q.tbl q.rd q.cls block >>= fun x =>
         tailStreamT mode q.p x.1 x.2 >>= fun fe₃ =>
         ConRon.Arena.checkBlockTables fe₃ Q >>= fun _ => pure fe₃) := by
@@ -68,7 +68,7 @@ structure TailPostM (m : Mem) (a : AState) (w : Word) (fe' : IFEnv) (m' : Mem) (
 /-- The callees of `check_block_tail` before the recursor stage, which keep the recursor stage's
 memos and the `MAM` memo. -/
 def tailPreCallees : List FnName :=
-  ["check_block_idx_sorts", "block_shape_member_ctors", "cons_block_ctors", "flush_caches"]
+  ["check_block_idx_sorts", "block_shape_ctor_groups", "cons_block_ctors", "flush_caches"]
 
 theorem mapM_some_mono {α β : Type} {f g : α → Option β} (hfg : ∀ k x, f k = some x → g k = some x) :
     ∀ (l : List α) (ks : List β), l.mapM f = some ks → l.mapM g = some ks
@@ -109,7 +109,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
     (hrel : ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a.store) (henv₁ : ConLeche.EnvWF env₁)
     (hqP : ConRon.Bridge.Inductives.dPass a.store env₁ q = some qP)
     (hT : ∀ cv ∈ qP.p.formers, ConLeche.Expr.WScoped 0 cv.type)
-    (henv₂ : ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁))
+    (henv₂ : ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.ctorGroups env₁))
     (hMs : ∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) (hpl : qP.params.length = qP.p.nP)
     (hnPb : q.p.nP + 1 < 2 ^ 64) {tO tL : Word} {Q : List IProjTable}
     (hQ : decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q) (hbQ : tO.toNat + tL.toNat ≤ iwTop m)
@@ -181,36 +181,36 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   dsimp only at hC1 hg1 hA1 c1'
   have hR1 : RcMR s1.mem := hRk _ (by simp [tailPreCallees]) _ _ _ _ _ d1 hR0
   have hma1 := hMk _ (by simp [tailPreCallees]) _ _ _ _ _ d1 hB.ind.stage.ma
-  -- `block_shape_member_ctors` (L only)
-  have hq1 := hbsD.grow (decBS_mono _) hg1
-  have hsl1 := hsl.grow' hbsD hg1
-  refine RefE.onlySim (fun _ => ictlE.k_block_shape_member_ctors.none ..)
-    (Q := fun r m2 => callW p n "block_shape_member_ctors" [pp] s1.mem = some (r, m2))
+  -- `block_shape_ctor_groups` (L only: the members' slice, read as the groups)
+  refine RefE.onlySim (fun _ => ictlE.k_block_shape_ctor_groups.none ..)
+    (Q := fun r m2 => callW p n "block_shape_ctor_groups" [pp] s1.mem = some (r, m2))
     (fun _ _ h => h) fun r2 m2 c2 => ?_
-  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
-    (blockShapeMemberCtors_spec p hMc.ha hMc.hc hMc.hp n _ pp) c2
+  obtain ⟨s2, hs2, -, hm2, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (bscg_spec p hP.cg n _ pp) c2
   subst hs2
-  obtain ⟨hr2, hcss2, hg2, hfr2, hroom2⟩ := mctorsW_dec hW2 hC1.stage.iw.iwSize hC1.stage.iw.ctl
-    (ShapeSl.membersB hq1 hsl1) hsl1
-  rw [ictlE.k_block_shape_member_ctors.arm1, hr2]
+  simp only at hm2 hW2
+  simp only [bscgW, Option.some.injEq] at hW2
+  subst hW2
+  rw [ictlE.k_block_shape_ctor_groups.arm1]
   simp only [List.headD_cons, List.tail_cons]
-  generalize rdW (s1.mem.arr64 CTL) 200 = caO at hcss2 ⊢
-  generalize (UInt64.ofNat bs.k : Word) = caL at hcss2 ⊢
-  have hS2 : StageR vis fe s2.mem a1 := stage_frame_iw hC1.stage hfr2 hroom2
-  have hA2 : AbsOK s2.mem := AFr.of_frame hfr2 (by decide) (by decide) hA1
+  have hS2 : StageR vis fe s2.mem a1 := by rw [hm2]; exact hC1.stage
+  have hA2 : AbsOK s2.mem := by rw [hm2]; exact hA1
   have hR2 := hRk _ (by simp [tailPreCallees]) _ _ _ _ _ c2 hR1
   have hma2 := hMk _ (by simp [tailPreCallees]) _ _ _ _ _ c2 hma1
+  have hg2 : IWGrow s1.mem s2.mem := by rw [hm2]; exact IWGrow.refl _
   have g12 := hg1.trans hg2
+  obtain ⟨hmdG, hmbG, -, -⟩ := bsAt (hbsD.grow (decBS_mono _) g12) (hsl.grow' hbsD g12)
+  have hcssN := ctorGroups_psl hmdG hmbG
+  generalize rdW (s2.mem.arr64 IW) pp = caO at hcssN ⊢
+  generalize rdW (s2.mem.arr64 IW) (pp + 1) = caL at hcssN ⊢
   -- `cons_block_ctors` (the twin's `fe₂`, a pure function)
   have h4 : (rdW (s2.mem.arr64 IW) (pp + 4)).toNat = bs.nP :=
     (bsAt (hbsD.grow (decBS_mono _) g12) (hsl.grow' hbsD g12)).2.2.2
-  have hcssN : PSlR decCNS bs.memberCtors caO caL s2.mem :=
-    ⟨decPL_weak (fun _ _ h => decCNSB_decCNS (m := s2.mem) h) hcss2.dec, hcss2.bound⟩
   refine RefE.onlySim (fun _ => ictlE.k_cons_block_ctors.none ..)
     (Q := fun r m3 => callW p n "cons_block_ctors" [rdW (s2.mem.arr64 IW) (pp + 4), caO, caL, vis] s2.mem
       = some (r, m3)) (fun _ _ h => h) fun r3 m3 c3 => ?_
   obtain ⟨s3, hs3, -, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis bs.memberCtors hS2 hcssN) c3
+    (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 fe _ _ _ vis bs.ctorGroups hS2 hcssN) c3
   subst hs3
   rw [h4] at hS3
   rw [ictlE.k_cons_block_ctors.arm1]
@@ -218,8 +218,8 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   have hR3 := hRk _ (by simp [tailPreCallees]) _ _ _ _ _ c3 hR2
   have hma3 := hMk _ (by simp [tailPreCallees]) _ _ _ _ _ c3 hma2
   obtain ⟨env₂, hrel₂, he₂⟩ := (ConRon.Bridge.Inductives.consBlockCtors_spec c1'.ok.state.wf bs.nP
-    bs.memberCtors qP.p.memberCtors fe env₁
-    (ConRon.Bridge.Inductives.memberCtors_denote (ConRon.Bridge.Inductives.dShape_ext c1'.ext _ _ hpP))
+    bs.ctorGroups qP.p.ctorGroups fe env₁
+    (ConRon.Bridge.Inductives.ctorGroups_denote (ConRon.Bridge.Inductives.dShape_ext c1'.ext _ _ hpP))
     (hrel.mono c1'.ext)).denote
   have henv₂' : ConLeche.EnvWF env₂ := by rw [he₂, hnPP]; exact henv₂
   -- the flush

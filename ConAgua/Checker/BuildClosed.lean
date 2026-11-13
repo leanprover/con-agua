@@ -172,10 +172,10 @@ open L.Arena L.Compiler
 def biFns : List FnName :=
   ["build_index", "sl_snoc", "intern_letE", "letE_find", "letE_push", "app_count", "app_fill", "app_find", "app_push", "base_row_get",
    "base_row_set", "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo",
-   "bb_node", "block_caps_at", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
+   "bb_node", "block_caps_at", "member_never_zero", "former_z", "former_res_sort", "pi_result", "lv_zero", "lh_push", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
    "block_caps_ctor_names", "block_caps_fin", "block_caps_head", "block_caps_one",
    "block_constants", "block_counts", "block_counts_head", "block_counts_pure", "block_ctors",
-   "block_ctors_go", "block_formers", "block_formers_go", "block_groups", "block_groups_go",
+   "block_ctors_go", "block_ctors_groups", "block_shape_ctor_groups", "block_formers", "block_formers_go", "block_groups", "block_groups_go",
    "block_groups_one", "block_is_rec", "block_is_rec_go", "block_is_rec_member",
    "block_member_counts", "block_member_counts_find", "block_member_counts_go", "block_names_eq",
    "block_rec", "block_recs", "read_block", "block_shape_all_ctors", "block_shape_all_ctors_go",
