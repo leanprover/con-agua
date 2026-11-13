@@ -103,6 +103,11 @@ This surfaced real `grind`/compiler regressions between the two nightlies
    proof as explicit arguments, rather than assuming a single project-global
    one) — one line, `withPtrEqDecEq a b (...)` →
    `withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b (...)`.
+   Since con-leche #578 (bump to 6810492c, lane ronsync5) upstream routes every
+   `withPtrEqDecEq` call (`Name`, `Level`, `Literal`, `Expr`) through one
+   definition, `ConLeche.ptrDecEq` (`ConLeche/Kernel/PtrDecEq.lean`): the patch
+   now changes that one call instead of the call sites, and `Kernel/Name.lean`
+   is pristine.
 
 2. **One single-line `grind` fix landed**: `ConLeche/Verify/Cached/DiscC3.lean`,
    `iotaRecC_spec`'s `<;> finish` → `<;> finish [Expr.WScoped.of_not_hasFvar]`.

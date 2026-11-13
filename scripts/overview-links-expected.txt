@@ -8,8 +8,8 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	c78714acbdb8aacf8a4417dc07a78cc226d6981d	https://github.com/leanprover/con-ron.git
-     4  con-leche	ca6af0990eb2cace195587723558019b0f3dae0a	https://github.com/leanprover/con-leche.git
+     3  con-ron	42a086407cab3c400b359f75b5d24942825626b5	https://github.com/leanprover/con-ron.git
+     4  con-leche	6810492c1ccc325b4a2bbf9dfe70bd07fd933da2	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L43
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
@@ -2110,8 +2110,8 @@
      7    (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
      8    `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
      9    checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-    10  * `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 3`
-    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+    10  * `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 4`
+    11    (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (4
     12    variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
     13    Regenerate after a change to the startup data or a twin bump.
     14  
@@ -2464,7 +2464,7 @@
     94  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
     95  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
     96  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
-    97  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost).
+    97  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost); four since con-leche #578 (`romgen pins.bin 4`, lane ronsync5).
     98  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
 
 == scripts/e2e.py#L2-L25

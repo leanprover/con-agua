@@ -9,7 +9,7 @@ public import ConAgua.Rom.PinStream
 # `romgen OUT`: write the pin-data buffer (lane `romload`)
 
 Writes `pinBuffer (natOpPinSets.take N)` (default `N = 1`) (`ConAgua/Rom/PinStream.lean`): the checker's startup data and
-con-leche's first `N` `Nat`-operation pin variants (the first is the repository toolchain's). Not trusted: the buffer
+con-leche's first `N` `Nat`-operation pin variants (newest toolchain first, con-leche #578). Not trusted: the buffer
 is an input of the checker like the file it checks (DESIGN.md, "The pin data as an input").
 -/
 
