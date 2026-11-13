@@ -416,11 +416,12 @@ theorem isCtorApp_run_const (fe : IFEnv) (a : AState) (e h : EIdx)
   | none => rfl
   | some ci => cases ci <;> rfl
 
-/-- **A constructor record's counts** (any reader): kind word `4`, parameters at `q + 5`, fields
-at `q + 6`. -/
+/-- **A constructor record's counts and family** (any reader): kind word `4`, parameters at `q + 5`,
+fields at `q + 6`, the family (`induct`, a handle) at `q + 7`. -/
 theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 4 → ∃ cv fam, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat fam) ∧
+    (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat (decI (rd (q + 7))) ∧
+      (rd (q + 7)).toNat < 2 ^ 32) ∧
     (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
@@ -431,11 +432,20 @@ theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   constructor
   · intro hw; subst hw
     simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, fam, -, hc⟩ := h
+    obtain ⟨cv, hcv, np, ⟨w5, hw5, rfl⟩, nf, ⟨w6, hw6, rfl⟩, fam, hfam, hc⟩ := h
     cases hc
     have h5 : rd (q + 5) = w5 := hR.offN (k := 5) (hk := by decide) hw5
     have h6 : rd (q + 6) = w6 := hR.offN (k := 6) (hk := by decide) hw6
-    exact ⟨cv, fam, by rw [h5, h6]⟩
+    simp only [hd?] at hfam
+    cases hw7 : R (q.toNat + 7) with
+    | none => rw [hw7] at hfam; cases hfam
+    | some w7 =>
+    rw [hw7] at hfam
+    have h7 : rd (q + 7) = w7 := hR.offN (k := 7) (hk := by decide) hw7
+    simp only [Option.bind_eq_bind, Option.bind_some] at hfam
+    split at hfam
+    · cases hfam; exact ⟨cv, by rw [h5, h6, h7], by rw [h7]; assumption⟩
+    · cases hfam
   · intro hw cv np nf fam hc
     subst hc
     have hne : w.toNat ≠ 4 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
