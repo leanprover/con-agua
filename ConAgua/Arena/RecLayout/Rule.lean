@@ -46,6 +46,8 @@ namespace L.Rule
 /-- The record's size in words (the stride of a rule slice). -/
 @[reducible] def size : Word := 11
 
+attribute [rec_unfold] ctor nfields fire lvlsOff lvlsLen pinsOff pinsLen rhs size
+
 /-! ## The layout facts -/
 
 theorem size_le : size.toNat ≤ 64 := by simp [size]

@@ -2493,7 +2493,7 @@
     24  Usage: scripts/e2e.py [--no-build] [--jobs N] [--only REGEX] [--rerun-failing [RESULTS]]
     25                       [--trace {disagree,all,none}] [--trace-sample N] [--write] [--csv]
 
-== scripts/diff-e2e.py#L2-L44
+== scripts/diff-e2e.py#L2-L46
      2  """The end-to-end differential of the shipped binary: `./checker FILE.ndjson` on every fixture of
      3  con-leche's test suite that has a pinned expectation, against that expectation. No Lean needed.
      4  
@@ -2531,12 +2531,14 @@
     36  fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
     37  first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
     38  never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
-    39  (`--no-cache` ignores the cache.) Needs the references built as `scripts/bench.py` does (`.lake/build/bin/e2e-ref`,
-    40  con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`).
-    41  
-    42  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
-    43  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
-    44  """
+    39  (`--no-cache` ignores the cache.) The references: `.lake/build/bin/e2e-ref`, built (`scripts/lake build
+    40  e2e-ref`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
+    41  stale one; con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`, refused when its
+    42  checkout is not at `vendor/UPSTREAM`'s con-ron revision or the binary is older than that commit.
+    43  
+    44  `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
+    45  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
+    46  """
 
 == scripts/gates.sh#L11-L23
     11  # Steps, in order (stops at the first failure):
