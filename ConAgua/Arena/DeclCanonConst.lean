@@ -81,7 +81,7 @@ theorem cvLpsW_ok {vis : Word} {fe : IFEnv} {a : AState}
   | succ n =>
   rw [L.Arena.cvLpsW_step] at h
   obtain ⟨-, -, hsl, -, -⟩ := decCV_rd (erRdOK m) hq
-  have h' : erToIwW n m (erRd m (q + 1)) (erRd m (q + 2)) = some (r, m') := h
+  have h' : erToIwW n m (erRd m (q + CV.lpsOff)) (erRd m (q + CV.lpsLen)) = some (r, m') := h
   obtain ⟨hS', hg, hdl, htop, -⟩ := erToIwW_stage h' hS hsl
   have e0 : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
   have e1 : r.getD 1 0 = r.tail.headD 0 := by rcases r with _ | ⟨_, _ | _⟩ <;> rfl
@@ -110,7 +110,7 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   | succ k =>
   rw [ctxW.arm1, ← erRd] at h
   obtain ⟨-, -, -, hlen0, -⟩ := decCV_rd (erRdOK m) hcv
-  generalize erRd m (cp + 2) = w2 at h hlen0
+  generalize erRd m (cp + CV.lpsLen) = w2 at h hlen0
   have hlen : w2.toNat = cv.levelParams.length := hlen0.symm
   cases h1 : cnW k m w2 with
   | none => rw [h1, ctxW.k_canon_names.none] at h; cases h
@@ -156,11 +156,11 @@ l_model cvCanonEq_spec (p : Prog) (hp : CanonProg p)
 
 /-- The three words of a constant value that the comparison reads. -/
 theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (h : decCV (erecP m) q.toNat = some cv) :
-    ∃ wn w2 wt : Word, erRd m q = wn ∧ erRd m (q + 2) = w2 ∧
-      erRd m (q + 3) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
+    ∃ wn w2 wt : Word, erRd m q = wn ∧ erRd m (q + CV.lpsLen) = w2 ∧
+      erRd m (q + CV.type) = wt ∧ wn.toNat < 2 ^ 32 ∧ wt.toNat < 2 ^ 32 ∧
       cv.name = decI wn ∧ cv.type = decI wt ∧ w2.toNat = cv.levelParams.length := by
   obtain ⟨⟨wn, hn, hn32, hnm⟩, ⟨w2, hw2, hlen⟩, ⟨wt, ht, ht32, htm⟩⟩ := decCV_words h
-  exact ⟨wn, w2, wt, erRd_of q wn hn, (erRdOK m).at 2 rfl hw2, (erRdOK m).at 3 rfl ht, hn32, ht32,
+  exact ⟨wn, w2, wt, erRd_of q wn hn, (erRdOK m).at CV.lpsLen rfl hw2, (erRdOK m).at CV.type rfl ht, hn32, ht32,
     hnm, htm, hlen.symm⟩
 
 set_option maxRecDepth 100000 in
@@ -177,7 +177,7 @@ theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   obtain ⟨wn, w2, wt, e0, e2, e3, hn32, ht32, hnm, htm, hlen⟩ := cvWords hcv
   obtain ⟨vn, v2, vt, f0, f2, f3, gn32, gt32, gnm, gtm, glen⟩ := cvWords hcv'
   by_cases hc : wn ≠ vn ∨ w2 ≠ v2
-  · rw [cvceW.arm1 k m q r (show erRd m q ≠ erRd m r ∨ erRd m (q + 2) ≠ erRd m (r + 2) by
+  · rw [cvceW.arm1 k m q r (show erRd m q ≠ erRd m r ∨ erRd m (q + CV.lpsLen) ≠ erRd m (r + CV.lpsLen) by
       rw [e0, e2, f0, f2]; exact hc)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
@@ -193,7 +193,7 @@ theorem cvceW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
         simp [this]
     unfold IConstantVal.canonEq
     rw [hb]; rfl
-  · rw [cvceW.arm2 k m q r (show ¬ (erRd m q ≠ erRd m r ∨ erRd m (q + 2) ≠ erRd m (r + 2)) by
+  · rw [cvceW.arm2 k m q r (show ¬ (erRd m q ≠ erRd m r ∨ erRd m (q + CV.lpsLen) ≠ erRd m (r + CV.lpsLen)) by
       rw [e0, e2, f0, f2]; exact hc)] at h
     have hw : wn = vn ∧ w2 = v2 := by
       rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩

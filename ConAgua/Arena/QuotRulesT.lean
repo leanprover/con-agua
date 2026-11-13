@@ -98,32 +98,6 @@ theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule}
     obtain ⟨w, hw, e⟩ := nat?_word hk
     exact hW.levels (kw w 2 hw e) (hlv y rfl)
 
-/-- **A rule's image** (`RecLayout/Img.lean`): what `rules_at_lps_go`'s field-by-field stores
-leave. -/
-def ruleImg (c nf fk lo ll po pl x : Word) : List (Option Word) :=
-  recImg Rule.size [(Rule.ctor, c), (Rule.nfields, nf), (Rule.fire, fk), (Rule.lvlsOff, lo),
-    (Rule.lvlsLen, ll), (Rule.pinsOff, po), (Rule.pinsLen, pl), (Rule.rhs, x)]
-
-section img
-variable (c nf fk lo ll po pl x : Word)
-
-theorem ruleImg_length : (ruleImg c nf fk lo ll po pl x).length = Rule.size.toNat :=
-  recImg_length _ _
-
-/-- The image's fields: what a reader of the written record sees (`RuleRecW`). -/
-theorem ruleImg_fields :
-    (ruleImg c nf fk lo ll po pl x)[Rule.ctor.toNat]? = some (some c) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.nfields.toNat]? = some (some nf) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.fire.toNat]? = some (some fk) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.lvlsOff.toNat]? = some (some lo) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.lvlsLen.toNat]? = some (some ll) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.pinsOff.toNat]? = some (some po) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.pinsLen.toNat]? = some (some pl) ∧
-    (ruleImg c nf fk lo ll po pl x)[Rule.rhs.toNat]? = some (some x) := by
-  simp [ruleImg, recImg, Rule.ctor, Rule.nfields, Rule.fire, Rule.lvlsOff, Rule.lvlsLen,
-    Rule.pinsOff, Rule.pinsLen, Rule.rhs, Rule.size, List.replicate]
-
-end img
 
 /-! ## The record words -/
 
@@ -632,13 +606,13 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
         (erecPutMem mf d w0) (d + Rule.nfields) w1) (d + Rule.fire) (erRd m (o + Rule.fire)))
         (d + Rule.lvlsOff) lo) (d + Rule.lvlsLen) w5) (d + Rule.pinsOff) w6) (d + Rule.pinsLen) w7)
         (d + Rule.rhs) (r1.headD 0) =
-        wrERo mf d (ruleImg w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)) := by
+        wrERo mf d (Rule.img w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)) := by
       -- the image's entries in order (the layout's numbers: a whole-record writer)
-      simp [wrERo, ruleImg, recImg, Rule.ctor, Rule.nfields, Rule.fire, Rule.lvlsOff, Rule.lvlsLen,
+      simp [wrERo, Rule.img, recImg, Rule.ctor, Rule.nfields, Rule.fire, Rule.lvlsOff, Rule.lvlsLen,
         Rule.pinsOff, Rule.pinsLen, Rule.rhs, Rule.size, List.replicate, UInt64.add_assoc]
     rw [hX8] at hW3
-    generalize himg : ruleImg w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0) = img at hW3
-    have himgl : img.length = Rule.size.toNat := by rw [← himg, ruleImg_length]
+    generalize himg : Rule.img w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0) = img at hW3
+    have himgl : img.length = Rule.size.toNat := by rw [← himg, Rule.img_length]
     obtain ⟨hSh, hgh, hfh, hrdh, houth⟩ := wrERo_fresh h₀ img mf a2 d hT2.stage hfm hgm hd0
       (by rw [himgl]; omega) hd41
     rw [himgl] at houth
@@ -687,8 +661,14 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
         rw [edS]
         unfold erOff at hreg
         omega
-      obtain ⟨i0, i1, i2, i3, i4, i5, i6, i7⟩ := ruleImg_fields w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7
-        (r1.headD 0)
+      have i0 := Rule.img_ctor w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i1 := Rule.img_nf w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i2 := Rule.img_fk w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i3 := Rule.img_lo w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i4 := Rule.img_ll w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i5 := Rule.img_po w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i6 := Rule.img_pl w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
+      have i7 := Rule.img_rhs w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0)
       rw [himg] at i0 i1 i2 i3 i4 i5 i6 i7
       have hRW : RuleRecW (erecP Y) d.toNat w0 w1 (erRd m (o + Rule.fire)) lo w5 w6 w7 (r1.headD 0) :=
         ⟨hcell _ _ Rule.ctor_lt i0, hcell _ _ Rule.nfields_lt i1, hcell _ _ Rule.fire_lt i2,
