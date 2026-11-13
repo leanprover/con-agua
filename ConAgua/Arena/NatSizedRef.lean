@@ -20,7 +20,7 @@ import all ConAgua.Arena.Refine
 # The size refusal and the `Nat.add` arm
 
 `lit_nat_sized` against the twin's `litNatSized` (the run's maximum `Nat` size, `PINS[72]`), and
-`nat_add_lit` against `natOpResult`'s `Nat.add` arm, `litNatSized (a + b)`. An arm that may refuse
+`nat_add_lit` against `natBinOpResult`'s `Nat.add` arm, `litNatSized (a + b)`. An arm that may refuse
 is refined by `NatRes`: a handle word is the twin's `some`, a sentinel (`NatSized.lean`) the twin's
 failure with the matching message.
 -/
@@ -33,7 +33,7 @@ open ConRon.Arena (AM AState EIdx ENodeView internE)
 
 namespace L.Arena
 
-/-- The `Nat.add` arm of `natOpResult` (`Arena/Core.lean`), verbatim: the sum, refused above the
+/-- The `Nat.add` arm of `natBinOpResult` (`Arena/Core.lean`), verbatim: the sum, refused above the
 run's maximum `Nat` size. -/
 def natAddArm (a b : Nat) : AM (Option EIdx) := ConRon.Arena.litNatSized (a + b)
 
@@ -192,9 +192,9 @@ theorem litNatSized_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.m
       | (refine NatRes.ofIntern (pv (vpool s₀.mem) o.toNat l.toNat) _ rfl ?_ ?_ ?_ ?_ <;> (try rw [hrun, ite_eq_right]) <;> simp_all [Locals.init])
 
 include hpl hpc hpt hpa hpn hz hsr hls hpool hgrow hI in
-/-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm** (`litNatSized (a + b)`): a handle word
+/-- **`nat_add_lit` refines `natBinOpResult`'s `Nat.add` arm** (`litNatSized (a + b)`): a handle word
 where the arena arm interns the sum, the sentinel where it refuses it (`NatRes`). -/
-@[refines_part ConRon.Arena.natOpResult "Nat.add"]
+@[refines_part ConRon.Arena.natBinOpResult "Nat.add"]
 theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem a₀)
     (hmx : (rdW (s₀.mem.arr64 PINS) 72).toNat = a₀.pins.maxNatSize)
     (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)

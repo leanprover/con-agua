@@ -360,23 +360,24 @@ theorem Grows.slice {m m' : Mem} (hg : Grows m m') {o l : Word} (hs : SliceOK m 
       Norm (vpool m') o.toNat l.toNat :=
   (PoolGrew.of_grows hg).slice hs hn
 
-/-- `nat_op_result` refines `natOpResult` under `CoreS` (the `Nat` lane's: `PinsNatOp.lean`'s
-`natOpResultL_refines`, at `ArenaD` and `CoreS`, in the whnf program). Taken as a hypothesis. -/
+/-- `nat_bin_op_result` refines `natBinOpResult` under `CoreS` (`PinsNatOp.lean`'s
+`natBinOpResultL_refines`, at `CoreS`, in the whnf program; `CoreNatOp.lean`). Taken as a
+hypothesis. -/
 def NatOpResultOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb c oa la ob lb : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW c →
+    (MM : ModeMaps) (eb : Word) (op : NatBinOp) (oa la ob lb : Word), CoreS dn s₀.mem a₀ vis fe MM eb →
     SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
     Norm (vpool s₀.mem) oa.toNat la.toNat → Norm (vpool s₀.mem) ob.toNat lb.toNat →
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_op_result" [c, oa, la, ob, lb]
+    invoke p (exec p n) "nat_bin_op_result" [natBinOpW op, oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧
-      (r.headD 0 ≠ 2 → CoreRef (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
+      (r.headD 0 ≠ 2 → CoreRef (natBinOpResult op (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)) a₀ decOptR dn s₀.mem vis fe MM eb r s'.mem
         (fun _ => True)) ∧
-      (r.headD 0 = 2 → (natOpResult (decI c) (pv (vpool s₀.mem) oa.toNat la.toNat)
+      (r.headD 0 = 2 → (natBinOpResult op (pv (vpool s₀.mem) oa.toNat la.toNat)
         (pv (vpool s₀.mem) ob.toNat lb.toNat)).run a₀ = .error (natRefusal (r.tail.headD 0))); ⊤⦄
 
-/-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
+/-- `reduce_nat_op`'s normalised result reads as `nat_bin_op_result`'s. -/
 theorem decOpt_norm (x y : Word) :
     decOpt (if x ≠ 0 then 1 else 0) (y &&& 4294967295) = decOpt x y := by
   by_cases hx : x = 0

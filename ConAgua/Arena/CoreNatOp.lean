@@ -27,19 +27,19 @@ import all ConAgua.Arena.Store
 @[expose] public section
 
 /-!
-# `nat_op_result` under `CoreS` (the first of `WhnfDelta`'s two assumed facts)
+# `nat_bin_op_result` under `CoreS` (the first of `WhnfDelta`'s two assumed facts)
 
-Lane `nat2`/`pinsenv` proved `natOpResultL_refines`: `nat_op_result` in the concrete program
-`natArmProg` refines `natOpResult` under `ArenaR`. `NatOpResultOK p` (`WhnfDeltaRefine3.lean`)
+`natBinOpResultL_refines` (`PinsNatOp.lean`): `nat_bin_op_result` in the concrete program
+`natArmProg` refines `natBinOpResult` under `ArenaR`. `NatOpResultOK p` (`WhnfDeltaRefine3.lean`)
 wants it in any program `p` that agrees with `natArmProg'` on `natFns`, under `CoreS`:
 
 * **The program**: `invoke_agreeOn` (`CoreAgree.lean`) twice, `p` → `natArmProg'` → `natArmProg`,
   with `natArmProg'_closed` and `natArmProg_closed` (both `decide +kernel` on the text) as the
   call-closure witnesses.
-* **The memory**: `nat_op_result`'s write set (`natA`, `natC`: the pool, the `lit` and `const`
+* **The memory**: `nat_bin_op_result`'s write set (`natA`, `natC`: the pool, the `lit` and `const`
   tables and their counts) is below every other tier of `CoreS` and avoids the derived-range
   arrays, the walk memos and the stack.
-* **The twin state**: `natOpResult` reads pins and interns at most one leaf (a `lit`, or a `const`
+* **The twin state**: `natBinOpResult` reads pins and interns at most one leaf (a `lit`, or a `const`
   for `Nat.beq`/`Nat.ble`): `LeafOp`. A leaf step keeps the caches, the pins and the level store
   (`cpl`), and carries `DerR` (at any memory) over: a new `lit`/`const` node has both ranges `0`.
 -/
@@ -166,8 +166,8 @@ theorem leafOp_constE {n : NIdx} : LeafOp (constE n) := by
     rw [e1] at h
     exact leafOp_internConst n us a e2 r a' h
 
-/-- **`natOpResult` is a leaf step**: fifteen pin reads, then at most one leaf interned. -/
-theorem leafOp_natOpResult (c : NIdx) (x y : Nat) : LeafOp (natOpResult c x y) := by
+/-- **`natBinOpResult` is a leaf step**: at most three pin reads, then at most one leaf interned. -/
+theorem leafOp_natBinOpResult (op : NatBinOp) (x y : Nat) : LeafOp (natBinOpResult op x y) := by
   have hl : ∀ v : Nat, LeafOp (do let r ← internE (.lit (.natVal v)); Pure.pure (some r) : AM (Option EIdx)) :=
     fun v => LeafOp.bind (leafOp_internLit _) (fun _ => LeafOp.pure _)
   have hc : ∀ n : NIdx, LeafOp (do let r ← constE n; Pure.pure (some r) : AM (Option EIdx)) :=
@@ -196,11 +196,7 @@ theorem leafOp_natOpResult (c : NIdx) (x y : Nat) : LeafOp (natOpResult c x y) :
     split at h
     · cases h
     · cases h; exact LeafStep.refl _
-  simp only [natOpResult, natPredName, natAddName, natSubName, natMulName, natPowName,
-    natBeqName, natBleName, natDivName, natModName, natGcdName, natLandName, natLorName,
-    natXorName, natShiftLeftName, natShiftRightName, pinNatPred, pinNatAdd, pinNatSub,
-    pinNatMul, pinNatPow, pinNatBeq, pinNatBle, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand,
-    pinNatLor, pinNatXor, pinNatShiftLeft, pinNatShiftRight]
+  cases op <;> simp only [natBinOpResult, boolTrueName, boolFalseName, pinBoolTrue, pinBoolFalse]
   repeat' first
     | exact hl _
     | exact hc _
@@ -209,6 +205,7 @@ theorem leafOp_natOpResult (c : NIdx) (x y : Nat) : LeafOp (natOpResult c x y) :
     | (apply LeafOp.bind hpg; intro _)
     | (apply LeafOp.bind hsg; intro _)
     | (apply LeafOp.bind (leafOp_pinAt _); intro _)
+    | (apply LeafOp.bind (LeafOp.ite (leafOp_pinAt _) (leafOp_pinAt _)); intro _)
     | apply LeafOp.ite
 
 /-! ## The program -/
@@ -237,10 +234,11 @@ theorem natC_lt : ∀ x ∈ natC, x.toNat < 20 := by
   intro x hx; simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
   rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide
 
-/-- **`nat_op_result` in a program agreeing with `natArmProg'`** runs as in `natArmProg`. -/
-theorem invoke_natOpResult {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f)
+/-- **`nat_bin_op_result` in a program agreeing with `natArmProg'`** runs as in `natArmProg`. -/
+theorem invoke_natBinOpResult {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f)
     (n : Nat) (vs : List Word) :
-    invoke p (exec p n) "nat_op_result" vs = invoke natArmProg (exec natArmProg n) "nat_op_result" vs :=
+    invoke p (exec p n) "nat_bin_op_result" vs =
+      invoke natArmProg (exec natArmProg n) "nat_bin_op_result" vs :=
   (invoke_agreeOn natArmProg'_closed hp n (by decide) vs).trans
     (invoke_agreeOn natArmProg_closed natArmProg'_agree n (by decide) vs)
 
@@ -290,11 +288,8 @@ theorem cmpArmP {g : FnName} {arm : Nat → Nat → AM (Option EIdx)} (hg : g �
   subst hs
   exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
 
-/-- **The sixteen arms under `ArenaP m₀`.** -/
+/-- **The fourteen arms under `ArenaP m₀`.** -/
 theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
-  pred := fun n s₀ a₀ hR oa la ha hmode =>
-    natPredLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ha hmode
   pow := fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natPowLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
       rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
@@ -336,7 +331,7 @@ theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
 
 /-! ## The relation -/
 
-/-- **`CoreS` across `nat_op_result`**: the arena relation from the refinement, the derived ranges
+/-- **`CoreS` across `nat_bin_op_result`**: the arena relation from the refinement, the derived ranges
 and every upper tier by the frame and the leaf step. -/
 theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hR : ArenaR m' a')
@@ -365,26 +360,26 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
   · rw [hl]; exact hS.nwf
 
-/-- **`nat_op_result` refines `natOpResult` under `CoreS`** in every program that agrees with
+/-- **`nat_bin_op_result` refines `natBinOpResult` under `CoreS`** in every program that agrees with
 `natArmProg'` on `natFns` (the first assumed fact of `WhnfDeltaRefine4.lean`). -/
 theorem natOpResultOK_of_agree {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f) :
     NatOpResultOK p := by
-  intro n s₀ a₀ dn vis fe MM eb c oa la ob lb hS hc ha hb hna hnb
-  simp only [invoke_natOpResult hp]
+  intro n s₀ a₀ dn vis fe MM eb op oa la ob lb hS ha hb hna hnb
+  simp only [invoke_natBinOpResult hp]
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hN⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (natOpResultL_refinesR (ArenaP s₀.mem) (natArmsR_pool s₀.mem) n s₀ a₀ ⟨hS.arena.base, PoolGrew.refl _⟩
-      ⟨fun _ => hS.pins⟩ c oa la ob lb hc ha hb hna hnb hS.mode)
+    (natBinOpResultL_refinesR (ArenaP s₀.mem) (natArmsR_pool s₀.mem) n s₀ a₀ ⟨hS.arena.base, PoolGrew.refl _⟩
+      hS.pins op oa la ob lb ha hb hna hnb hS.mode)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (invoke_memFrame natArmProg_closed n (by decide) _ s₀)
   subst hs
   refine ⟨hloc, fun h2 => ?_, hN.2⟩
   obtain ⟨hok, ⟨hR, hPG⟩, hres⟩ := hN.1 h2
   have hrun' := AM.run_of_ok _ _ hok
-  have hL : LeafStep a₀ (AM.st (natOpResult (decI c) (pv (vpool s.mem) oa.toNat la.toNat)
+  have hL : LeafStep a₀ (AM.st (natBinOpResult op (pv (vpool s.mem) oa.toNat la.toNat)
       (pv (vpool s.mem) ob.toNat lb.toNat)) a₀) := by
-    have h := leafOp_natOpResult (decI c) (pv (vpool s.mem) oa.toNat la.toNat)
+    have h := leafOp_natBinOpResult op (pv (vpool s.mem) oa.toNat la.toNat)
       (pv (vpool s.mem) ob.toNat lb.toNat)
     unfold LeafOp at h; exact h _ _ _ hrun'
   obtain ⟨hS', hSt⟩ := hS.of_natOp hR hL hf hPG
