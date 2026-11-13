@@ -36,8 +36,10 @@ on the fixture and the reference binary, so they are cached in `_tmp/bench/verdi
 fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
 first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
 never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
-(`--no-cache` ignores the cache.) Needs the references built as `scripts/bench.py` does (`.lake/build/bin/e2e-ref`,
-con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`).
+(`--no-cache` ignores the cache.) The references: `.lake/build/bin/e2e-ref`, built (`scripts/lake build
+e2e-ref`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
+stale one; con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`, refused when its
+checkout is not at `vendor/UPSTREAM`'s con-ron revision or the binary is older than that commit.
 
 `--jobs N` is passed to the checker (`--jobs=N`, the threaded mode; 1, the default, passes nothing
 and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
@@ -165,6 +167,45 @@ def file_hash(path):
     return h.hexdigest()
 
 
+def fresh_e2e_ref(ref_bin):
+    """Build e2e-ref when it is missing or older than the twin pins (`vendor/UPSTREAM`, rewritten by
+    every twin bump) or `pins.bin`: a reference built before a bump decides the old twin's way and
+    shows false REFDIFFs (8 of them after ronsync4, docs/design/recoffs.md §6). The verdict cache is
+    keyed by the binary's hash, so a rebuilt reference starts a fresh cache. Lake decides what the
+    build does; when it leaves the binary as it was (a checkout touched the pins without changing
+    them), the next run asks Lake again (a few seconds)."""
+    pins = [os.path.join(ROOT, "vendor", "UPSTREAM"), os.path.join(ROOT, "pins.bin")]
+    newest = max(os.path.getmtime(p) for p in pins)
+    if os.access(ref_bin, os.X_OK) and os.path.getmtime(ref_bin) >= newest:
+        return
+    why = "not built" if not os.path.exists(ref_bin) else "older than vendor/UPSTREAM or pins.bin"
+    print(f"diff-e2e --refs: e2e-ref is {why}: scripts/lake build e2e-ref", file=sys.stderr, flush=True)
+    r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", "e2e-ref"], cwd=ROOT,
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not os.access(ref_bin, os.X_OK):
+        sys.exit(f"diff-e2e --refs: building e2e-ref failed; a stale reference would report false "
+                 f"REFDIFFs, so no run:\n{r.stdout[-3000:]}\n{r.stderr[-3000:]}")
+
+
+def conron_matches_pin(con_ron):
+    """Refuse a con-ron built from another revision than `vendor/UPSTREAM` pins (its checkout's HEAD
+    differs, or the binary is older than that commit), when its build tree is a git checkout (the
+    default `_tmp/ref/con-ron-integrate`): there is no cargo here to rebuild it."""
+    src = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(con_ron))))
+    r = subprocess.run(["git", "-C", src, "rev-parse", "HEAD"], capture_output=True, text=True)
+    if r.returncode != 0:
+        return  # not a checkout (`$CON_RON` elsewhere): the caller vouches for it
+    want = upstream_rev("con-ron")
+    if r.stdout.strip() != want:
+        sys.exit(f"diff-e2e --refs: {con_ron} is built from {src} at {r.stdout.strip()[:12]}, but "
+                 f"vendor/UPSTREAM pins con-ron {want[:12]}: a stale reference reports false REFDIFFs. "
+                 f"Copy the bump's con-ron build there (or point $CON_RON at one).")
+    t = subprocess.run(["git", "-C", src, "log", "-1", "--format=%ct"], capture_output=True, text=True)
+    if t.returncode == 0 and os.path.getmtime(con_ron) < int(t.stdout.strip()):
+        sys.exit(f"diff-e2e --refs: {con_ron} is older than its checkout's commit {want[:12]}: "
+                 f"rebuild it (cargo build --release in {src}) or copy the bump's build there.")
+
+
 class Refs:
     """con-ron and e2e-ref as verdict sources, with the on-disk verdict cache (see the docstring)."""
 
@@ -173,9 +214,10 @@ class Refs:
         self.e2e = e2e
         npins = e2e.PIN_VARIANTS
         self.ref_bin = os.path.join(ROOT, ".lake", "build", "bin", "e2e-ref")
-        for b in (e2e.CON_RON, self.ref_bin):
-            if not os.access(b, os.X_OK):
-                sys.exit(f"diff-e2e --refs: {b} is not built (scripts/bench.py builds e2e-ref; con-ron: DESIGN.md, lane integrate)")
+        fresh_e2e_ref(self.ref_bin)
+        if not os.access(e2e.CON_RON, os.X_OK):
+            sys.exit(f"diff-e2e --refs: {e2e.CON_RON} is not built (con-ron: DESIGN.md, lane integrate)")
+        conron_matches_pin(e2e.CON_RON)
         self.pins = os.path.join(ROOT, "_tmp", "bench", os.path.basename(ROOT), f"pins{npins}.con-ron-pins")
         if not os.path.exists(self.pins):
             os.makedirs(os.path.dirname(self.pins), exist_ok=True)
