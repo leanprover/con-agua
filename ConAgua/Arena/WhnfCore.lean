@@ -100,7 +100,7 @@ At a chain's end the keys are stored (`whnf_core_store_chain`) and the top put b
 tests branch-free as bit masks over the tag (`657`: the tags `bvar`, `app`, `letE`, `proj` that
 `whnfCoreStuckTag` rejects; `334`: `fvar`, `sort`, `const`, `forallE`, `lit`, the stuck heads; `640`:
 `letE`, `proj`; `128`: `letE`), so the loop's model has few paths. A full stack aborts (a fixed
-capacity). -/
+capacity), and so does a top past the stack's end at entry. -/
 -- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
 -- con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop
 -- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
@@ -118,6 +118,7 @@ capacity). -/
 def whnfCoreL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (pb, pn, pc, g, h, hg, sh, key, safe, f, x, st, r, stb, u) {
   pb := CTL.u64[136];
+  if len(SPN.u64) < pb { abort };
   pn := 0;
   pc := 0;
   ⟪whnfCoreLoopB⟫;
