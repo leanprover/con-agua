@@ -124,3 +124,21 @@ vocabulary.
   Interface for core: `Arena/ErecRdCV.lean` (`decCV_rd1`, `decCI_rec_rd`, moved verbatim from
   `WhnfIotaRecRefine`). `R_NATIVE_NAT_COMPUTATION` (only user: the deleted `reduce_nat_wf`) goes at
   integration (a renumbering rebuilds every module).
+* 08:21 core finished (0 sorry in its area): `whnf_core` is the loop (the knot's slot keeps no memo
+  of its own, mirroring the twin), the pending keys a stack slice from the entry top (the cheap
+  keys a suffix of it), the tag tests (`isStuckHead`, `whnfCoreKey`, `whnfCoreCheapSafe`,
+  `whnfCoreStoresDone`) branch-free bit masks (the first version with `if` chains made the
+  generated loop model time out at 10× the heartbeats); new `whnf_core_lookup_at`,
+  `whnf_core_store_{chain,keys,cheap_keys}`, `iota_target` (`(1, mI)` for `some (mI + 1)`),
+  `whnf_stuck`; `whnf_core_step` takes the spine head. Two capacity aborts (stack full at a key
+  push, stack top past `SPN` at entry): fixed capacities, no row. Refinements `coreLoop_ref`
+  (`PendR`, `LoopInv` over the stack slice), `core_ref`, `step_ref`, the memo functions'
+  (`WhnfCoreMemo.lean`), the stuck spine's (`WhnfStuck.lean`, with the twin lemma
+  `iotaRecAt_prefix`).
+* 08:46 rn finished (0 sorry in its area): `NatBinOp` as a word code (`natBinOpW`, 1‥14, 0 for
+  none; `decNatBinOp`), `nat_bin_op_of_name`/`nat_bin_op_result` (one `vcgen` per operation,
+  `PinsNatOp`), `reduce_nat_wf`/`nat_op_is_wf`/`nat_op_result`/`nat_bin_op_name`/`const_name_of`
+  removed, the shim deleted; `whnf_step` answers a literal reduct at once; the readers by the
+  family (`ctor_family`, `iota_case3_at`, `m2c_ctor`, `eta_ctor_partial_fam` read `EREC[q + 7]`;
+  no type walk), `iota_no_cert`, `rec_fire_level_count`, `family_never_zero_at` with generated
+  models and refinements; `iota_rec_fam` checks the stored facts before case 3. No deviation row.
