@@ -81,7 +81,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
     c ci k m a r1 m1 ⟨hS, hci⟩ h1
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hrun1)
   obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWordsAt hcv
-  by_cases hl : erRd m1 (r1.headD 0 + 2) = 0
+  by_cases hl : erRd m1 (r1.headD 0 + CV.lpsLen) = 0
   · simp only [ne_eq, hl, not_true_eq_false, ite_false] at hw
     have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
     replace hw := ntBW_some hw; obtain ⟨r2, m2, h2, hw⟩ := hw
@@ -104,7 +104,7 @@ theorem boolCtorOk_ref (hN : NatGuardProg p) (c : Word) (ci : IConstantInfo) :
       rfl
     refine ⟨_, a3, hrun, hS3, hg1.trans hg3, ?_⟩
     simp only [decW0B, List.headD_cons]
-    simp only [show erRd m3 (r1.headD 0 + 3) = wt from hst3]
+    simp only [show erRd m3 (r1.headD 0 + CV.type) = wt from hst3]
     by_cases he : wt = r3.headD 0
     · rw [ite_eq_left he, decide_eq_true he]; decide
     · rw [ite_eq_right he, decide_eq_false he]; decide

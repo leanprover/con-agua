@@ -648,6 +648,48 @@ theorem erRecO_stage {vis : Word} {fe : IFEnv} {a : AState}
     · simp only [t, ite_false] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
 
 
+/-- **Every word of a record written field by field can be read** (the words between the fields
+are the region's old words): the record's region lies below the new top. -/
+theorem erRecO_words {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (hW : IWOK m)
+    (ws : List (Option Word)) (hk : k.toNat = ws.length) :
+    ∀ j < ws.length, ∃ w, erecP (wrERo m1 q ws) (q.toNat + j) = some w := by
+  obtain ⟨-, hf1, hoff, htop1, hsz1, -, hq41, -⟩ := erAllocW_spec h hW
+  have hcw := wrERo_ctl ws m1 q
+  have hcap : (m.arr64 (erTier q)).size < 2 ^ 40 := by
+    unfold erTier; split
+    · exact hW.erCap
+    · exact hW.er1Cap
+  have hsz : ∀ b, (m1.arr64 b).size = (m.arr64 b).size := hf1.size
+  have hget := wrERo_get ws m1 q (by omega) (by omega)
+  have hT : ∀ m' : Mem, m'.arr64 CTL = m1.arr64 CTL → erTopOf m' q = erTopOf m1 q := fun m' e => by
+    simp only [erTopOf, erTop, erecTop1, e]
+  intro j hj
+  have hjl : erOff q + j < 2 ^ 40 := by
+    have e1 := hsz1; have e2 := htop1; have e3 := hk; have e4 := hcap; omega
+  have hoj : (q.toNat + j) % 2 ^ 40 = erOff q + j := by unfold erOff at hjl ⊢; omega
+  have htj : (q.toNat + j) / 2 ^ 40 % 2 = q.toNat / 2 ^ 40 % 2 := by
+    have : (q.toNat + j) / 2 ^ 40 = q.toNat / 2 ^ 40 := by unfold erOff at hjl; omega
+    rw [this]
+  have hlt : erOff q + j < (m1.arr64 (erTier q)).size := by
+    rw [hsz]; have e1 := hsz1; have e2 := htop1; have e3 := hk; omega
+  obtain ⟨w, hgj⟩ : ∃ w, ((wrERo m1 q ws).arr64 (erTier q))[erOff q + j]? = some w := by
+    rw [hget (erTier q) (erOff q + j)]
+    split
+    · rename_i hc
+      obtain ⟨-, -, -, -, hs⟩ := hc
+      exact Option.isSome_iff_exists.mp hs
+    · exact ⟨_, Array.getElem?_eq_getElem hlt⟩
+  have htopw : erOff q + j < erTopOf (wrERo m1 q ws) q := by
+    rw [hT _ hcw, htop1]; have e3 := hk; omega
+  refine ⟨w, ?_⟩
+  unfold erecP
+  rw [ite_eq_left (show q.toNat + j < 2 ^ 64 by omega), htj, hoj]
+  unfold erTopOf at htopw
+  unfold erTier at hgj
+  by_cases t : q.toNat / 2 ^ 40 % 2 = 0
+  · simp only [t, ite_true] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+  · simp only [t, ite_false] at htopw hgj ⊢; rw [ite_eq_left htopw]; exact hgj
+
 theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
     ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
   | [], _ => rfl

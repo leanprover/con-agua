@@ -28,6 +28,7 @@ public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.L.WordOff
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.RecInfoW
 
 @[expose] public section
 

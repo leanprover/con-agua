@@ -128,6 +128,49 @@ theorem decRule_congr {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule}
   simp only [nat?, Option.map_eq_some_iff] at hn ⊢
   obtain ⟨v, hv, e⟩ := hn; exact ⟨v, w _ Rule.nfields_lt v hv, e⟩
 
+/-- A rule record's field offsets (the words a field-by-field copy carries). -/
+def Rule.fields : List Word :=
+  [Rule.ctor, Rule.nfields, Rule.fire, Rule.lvlsOff, Rule.lvlsLen, Rule.pinsOff, Rule.pinsLen, Rule.rhs]
+
+/-- `RuleFireAt.congr` for a reader that agrees on the record's fields only. -/
+theorem RuleFireAt.congrF {R R' : Nat → Option Word} {q q' : Nat} {f : IRecRuleFire}
+    (w : ∀ o ∈ Rule.fields, ∀ v, R (q + o.toNat) = some v → R' (q' + o.toNat) = some v)
+    (he : ArrExt R R') (h : RuleFireAt R q f) : RuleFireAt R' q' f := by
+  have wn : ∀ o ∈ Rule.fields, ∀ {n}, nat? R (q + o.toNat) = some n → nat? R' (q' + o.toNat) = some n :=
+    fun o ho n hn => by
+      simp only [nat?, Option.map_eq_some_iff] at hn ⊢
+      obtain ⟨v, hv, rfl⟩ := hn; exact ⟨v, w o ho v hv, rfl⟩
+  have wl : ∀ {k : IdxKind} (o l : Word), o ∈ Rule.fields → l ∈ Rule.fields → l.toNat = o.toNat + 1 →
+      ∀ {xs : List (Idx k)}, hlist? R (q + o.toNat) = some xs → hlist? R' (q' + o.toNat) = some xs :=
+    fun o l ho hl e xs hx => by
+      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨a, ha, c, hc, hs⟩ := hx
+      refine ⟨a, wn o ho ha, c, ?_, he.hslice? hs⟩
+      have := wn l hl (n := c) (by rw [e, ← Nat.add_assoc]; exact hc)
+      rwa [e, ← Nat.add_assoc] at this
+  cases f with
+  | plain => exact wn _ (by simp [Rule.fields]) h
+  | nested => exact ⟨wn _ (by simp [Rule.fields]) h.1,
+      wl _ _ (by simp [Rule.fields]) (by simp [Rule.fields]) Rule.lvlsLen_toNat h.2.1,
+      wl _ _ (by simp [Rule.fields]) (by simp [Rule.fields]) Rule.pinsLen_toNat h.2.2⟩
+  | levels => exact ⟨wn _ (by simp [Rule.fields]) h.1,
+      wl _ _ (by simp [Rule.fields]) (by simp [Rule.fields]) Rule.lvlsLen_toNat h.2⟩
+
+/-- **`decRule_congr` for a reader that agrees on the record's fields only** (a field-by-field
+copy: the words between the fields are not carried). -/
+theorem decRule_congrF {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule}
+    (w : ∀ o ∈ Rule.fields, ∀ v, R (q + o.toNat) = some v → R' (q' + o.toNat) = some v)
+    (he : ArrExt R R') (h : decRule R q = some rl) : decRule R' q' = some rl := by
+  obtain ⟨hc, hn, hr, hf⟩ := decRule_eq_some.mp h
+  have wd : ∀ {k : IdxKind} (o : Word), o ∈ Rule.fields → ∀ {x : Idx k},
+      hd? R (q + o.toNat) = some x → hd? R' (q' + o.toNat) = some x := fun o ho x hx => by
+    simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+    obtain ⟨v, hv, hx⟩ := hx; exact ⟨v, w o ho v hv, hx⟩
+  refine decRule_of (wd Rule.ctor (by simp [Rule.fields]) hc) ?_ (wd _ (by simp [Rule.fields]) hr)
+    (hf.congrF w he)
+  simp only [nat?, Option.map_eq_some_iff] at hn ⊢
+  obtain ⟨v, hv, e⟩ := hn; exact ⟨v, w _ (by simp [Rule.fields]) v hv, e⟩
+
 /-- **A rule refired**: its plain fields' words carried to `R'` at `q'`, its fire `f` at the words
 there, decode the rule with the fire `f`. -/
 theorem decRule_refire {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} {f : IRecRuleFire}
