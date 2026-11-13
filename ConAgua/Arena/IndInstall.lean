@@ -318,7 +318,7 @@ allocation, five words at a time. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
-  q := call erec_alloc(20);
+  q := call erec_alloc(⟪CI.indSize⟫);
   u := call er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, EREC⦃cv + 3⦄);
   u := call er_put5(q + 5, IW.u64[caps], IW.u64[caps + 1], IW.u64[caps + 2], IW.u64[caps + 3],
     IW.u64[caps + 4]);

@@ -343,7 +343,7 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
   (f, q) := call env_find(IW.u64[m], vis);
   if f == 0 { abort };
   if EREC⦃q⦄ != 3 { abort };
-  ty := call family_telescope(vis, q + 1, q + 5);
+  ty := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
   (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
   e := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[m + 1], ty);
   return e

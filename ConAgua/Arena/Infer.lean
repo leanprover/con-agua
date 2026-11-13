@@ -422,8 +422,8 @@ def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f,
   po := EREC⦃p + 2⦄;
   pc := EREC⦃p + 3⦄;
   ty := EREC⦃p + 4⦄;
-  n := EREC⦃p + 17⦄ + EREC⦃p + 11⦄;
-  if n < EREC⦃p + 17⦄ { abort };
+  n := EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ + EREC⦃p + ⟪CI.indCaps + Caps.nIdx⟫⦄;
+  if n < EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ { abort };
   (f, u) := call former_res_sort(ty);
   if f != 0 {
     a := call lv_always_zero(u);
@@ -597,8 +597,8 @@ def inferProjL : FunDecl :=
     if cT == sn {
       (to, tn) := call get_app_args(te);
       (f, q) := call env_find(cT, vis);
-      if f != 0 && EREC⦃q⦄ == 3 && EREC⦃q + 19⦄ == 1 && EREC⦃q + 17⦄ < tn {
-        (f, q) := call env_find(EREC⦃EREC⦃q + 18⦄⦄, vis);
+      if f != 0 && EREC⦃q⦄ == 3 && EREC⦃q + ⟪CI.indCaps + Caps.ctorsLen⟫⦄ == 1 && EREC⦃q + ⟪CI.indCaps + Caps.nparams⟫⦄ < tn {
+        (f, q) := call env_find(EREC⦃EREC⦃q + ⟪CI.indCaps + Caps.ctorsOff⟫⦄⦄, vis);
         if f != 0 && EREC⦃q⦄ == 4 && i < EREC⦃q + 6⦄ { fail R_PROJECTION_ON_AN }
       }
     };

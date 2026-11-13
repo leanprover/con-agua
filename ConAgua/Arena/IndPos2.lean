@@ -125,8 +125,8 @@ type where that shows one, else its reduct at its parameters and indices (`caps`
 def familyTelescopeL : FunDecl := lfn (vis, cv, caps) locals (dh, k, cvR) {
   dh := call former_def_headed(EREC⦃cv + 3⦄);
   if dh == 0 { return EREC⦃cv + 3⦄ };
-  k := EREC⦃caps + 12⦄ + EREC⦃caps + 6⦄;
-  if k < EREC⦃caps + 12⦄ { abort };
+  k := EREC⦃caps + ⟪Caps.nparams⟫⦄ + EREC⦃caps + ⟪Caps.nIdx⟫⦄;
+  if k < EREC⦃caps + ⟪Caps.nparams⟫⦄ { abort };
   cvR := call reduced_former(vis, cv, k);
   return EREC⦃cvR + 3⦄
 }
@@ -161,7 +161,7 @@ def familyKeyCheckL : FunDecl := lfn (vis, d, c, us, dO, dL) locals
   if EREC⦃q⦄ != 3 { fail R_A_FAMILY_S };
   (ok, nl) := call view_ls_len(us);
   if nl != EREC⦃q + 3⦄ { fail R_INCORRECT_NUMBER_OF_UNIVERSE };
-  ty := call family_telescope(vis, q + 1, q + 5);
+  ty := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
   (lo, ll) := call cv_lps(q + 1);
   t := call inst_lp_fast(⟪CWF⟫, lo, ll, us, ty);
   u := call check_spine_at(vis, d, t, dO, dL);
@@ -184,7 +184,7 @@ def nestInstTypeTyL : FunDecl := lfn (vis, key) locals
   cvC := q + 1;
   (found, nl) := call view_ls_len(IW.u64[key + 1]);
   if nl != EREC⦃cvC + 2⦄ { fail R_NESTED_POSITIVITY_INCORRECT };
-  tyC := call family_telescope(vis, cvC, q + 5);
+  tyC := call family_telescope(vis, cvC, q + ⟪CI.indCaps⟫);
   (ok2, bo, bl, bdy) := call strip_pis(IW.u64[key + 3], tyC);
   if ok2 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
   (lo, ll) := call cv_lps(cvC);
@@ -244,7 +244,7 @@ def nestBlockOfL : FunDecl := lfn (vis, c) locals (found, q, kind) {
   if found == 0 { return (0, 0) };
   kind := EREC⦃q⦄;
   if kind != 3 { return (0, 0) };
-  return (EREC⦃q + 15⦄, EREC⦃q + 16⦄)
+  return (EREC⦃q + ⟪CI.indCaps + Caps.allOff⟫⦄, EREC⦃q + ⟪CI.indCaps + Caps.allLen⟫⦄)
 }
 
 /-- `nestFrameMates.go`: the group-mates accumulator, each kept once, recursively (like
