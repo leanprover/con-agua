@@ -19,7 +19,7 @@ namespace L.Arena
 
 /-- **A constructor record's level parameters**: the slice at `p + 2`, `p + 3`. -/
 theorem decCI_ctorLp {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {np nf : Nat} (h : decCI R q.toNat = some (.ctorInfo cv np nf)) :
+    {cv : IConstantVal} {np nf : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv np nf fam)) :
     hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h

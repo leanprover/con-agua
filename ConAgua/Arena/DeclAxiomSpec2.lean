@@ -34,7 +34,7 @@ open L.Ind
 /-- The pinned shape `k` of a stored constant: its constant value when it has the shape. -/
 def fpcShape (k : Word) : IConstantInfo → Option IConstantVal
   | .indInfo cv _ => if k = 3 then some cv else none
-  | .ctorInfo cv nP nF => if k = 4 ∧ nP = 0 ∧ nF = 0 then some cv else none
+  | .ctorInfo cv nP nF _ => if k = 4 ∧ nP = 0 ∧ nF = 0 then some cv else none
   | _ => none
 
 /-- The lookups of the compiler-trust family. -/
@@ -158,7 +158,7 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
       | none => simp
       | some ci2 =>
         cases ci2 with
-        | ctorInfo cvTi nP nF =>
+        | ctorInfo cvTi nP nF _ =>
           simp only [Option.bind_some, fpcShape]
           by_cases e : nP = 0 ∧ nF = 0
           · obtain ⟨rfl, rfl⟩ := e

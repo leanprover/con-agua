@@ -284,7 +284,7 @@ theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInf
   | thmInfo v =>
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
-  | ctorInfo v _ _ =>
+  | ctorInfo v _ _ _ =>
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
   | defnInfo v _ _ =>

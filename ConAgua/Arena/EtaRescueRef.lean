@@ -58,7 +58,7 @@ l_model ertW_spec (p : Prog) (hf : p.lookup "eta_rescue_table" = some etaRescueT
 
 /-- A `ctorInfo` record's constant value decodes at `q + 1`. -/
 theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {nP nF : Nat}
-    (h : decCI R q = some (.ctorInfo cv nP nF)) : decCV R (q + 1) = some cv := by
+    {fam : NIdx} (h : decCI R q = some (.ctorInfo cv nP nF fam)) : decCV R (q + 1) = some cv := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, -, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | k <;>
@@ -95,7 +95,7 @@ theorem tblFound_words {m : Mem} {tq : Word} {tb : IProjTable} (h : tblFound m t
 theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
     (hpa : p.lookup "pin_at" = some pinAtL) {n : Nat} {m m' : Mem} {a : AState} (hP : PinsR m a.pins)
     {tq ctor cq q : Word} (hctor : HW ctor) {cvj : IConstantVal} {nP nF : Nat} {cvT : IConstantVal}
-    {caps : IIndCaps} (hcj : decCI (erecP m) cq.toNat = some (.ctorInfo cvj nP nF))
+    {caps : IIndCaps} {fam : NIdx} (hcj : decCI (erecP m) cq.toNat = some (.ctorInfo cvj nP nF fam))
     (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps))
     (htq : tq ≠ 0 → ∃ tb, decTbl (erecP m) (tq.toNat - 1) = some tb) {w : Word}
     (h : ertW p n m tq ctor cq q = some (w, m')) :

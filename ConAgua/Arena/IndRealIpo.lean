@@ -180,11 +180,11 @@ theorem decEBlk_get {dn : NIdx → Option ConLeche.Name} {m : Mem} {o l : Nat} {
   exact this
 
 theorem ipo_twin_other (nP : Nat) (ci : IConstantInfo) (rest : List IConstantInfo) (a : AState)
-    (h1 : ∀ cv caps, ci ≠ .indInfo cv caps) (h2 : ∀ cv x y, ci ≠ .ctorInfo cv x y) :
+    (h1 : ∀ cv caps, ci ≠ .indInfo cv caps) (h2 : ∀ cv x y fam, ci ≠ .ctorInfo cv x y fam) :
     (indParamsOk nP (ci :: rest)).run a = (indParamsOk nP rest).run a := by
   cases ci with
   | indInfo cv caps => exact absurd rfl (h1 cv caps)
-  | ctorInfo cv x y => exact absurd rfl (h2 cv x y)
+  | ctorInfo cv x y _ => exact absurd rfl (h2 cv x y)
   | _ => rfl
 
 /-- **`ind_params_ok`' loop refines `indParamsOk`** on the records from `j`: reading only, the
@@ -228,7 +228,7 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
       (indParamsOk np.toNat (blk.drop (j.toNat + 1))).run a = .ok (decide (r' = .normal), a) :=
     fun r' h' => by rw [← hj1n]; exact ih (j + 1) r' h' hj1
   have other : ∀ ci, wk ≠ 3 → wk ≠ 4 →
-      (∀ cv caps, ci ≠ .indInfo cv caps) → (∀ cv x y, ci ≠ .ctorInfo cv x y) →
+      (∀ cv caps, ci ≠ .indInfo cv caps) → (∀ cv x y fam, ci ≠ .ctorInfo cv x y fam) →
       (indParamsOk np.toNat (ci :: blk.drop (j.toNat + 1))).run a = .ok (decide (r = .normal), a) := by
     intro ci hw3 hw4 h1 h2
     rw [ipoW_other (h := hj) (h3 := by rw [hkw]; exact hw3),

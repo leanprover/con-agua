@@ -116,7 +116,7 @@ def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK
     match ← view hh with
     | .const cj usj =>
       match fe.find? cj with
-      | some (.ctorInfo cvj cnP _) =>
+      | some (.ctorInfo cvj cnP _ _) =>
         match findRule rules cj with
         | some rl =>
           iotaRecFireT mode r fe depth c isK mI rP cnP cv.levelParams us args major usj cvj rl
@@ -517,7 +517,7 @@ theorem decCI_rec_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
 /-- A constructor record by its kind word `4`. -/
 theorem decCI_ctor_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     {ci : IConstantInfo} (hR : RdOK R rd) (h : decCI R q.toNat = some ci) (h4 : rd q = 4) :
-    ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV R (q.toNat + 1) = some cv :=
+    ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + 1) = some cv :=
   (decCI_split hR h).2.2.2.2.1 h4
 
 /-- The common fields of a decoded rule record. -/
@@ -677,7 +677,7 @@ theorem irCmp_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hlps : hslice? (erecP s₀.mem) (erRd s₀.mem (recP + 2)).toNat
       (erRd s₀.mem (recP + 3)).toNat = some lps)
     (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
-    (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf))
+    {fam : NIdx} (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf fam))
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (erRd s₀.mem (recP + 5)).toNat + 1 = sn.toNat)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat)
@@ -946,7 +946,7 @@ theorem vck_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hlps : hslice? (erecP s₀.mem) (erRd s₀.mem (recP + 2)).toNat
       (erRd s₀.mem (recP + 3)).toNat = some lps)
     (hrule : decRule (erecP s₀.mem) rl.toNat = some rule)
-    (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf))
+    {fam : NIdx} (hci : decCI (erecP s₀.mem) ctorP.toNat = some (.ctorInfo cvj np nf fam))
     (hsa : SpineR s₀.mem so sn args) (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
     (hmI : (erRd s₀.mem (recP + 5)).toNat + 1 = sn.toNat)
     (hsm : SpineR s₀.mem mo mn margs) (hsmt : mo + mn = spTop s₀.mem)

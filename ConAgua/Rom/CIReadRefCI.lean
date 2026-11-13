@@ -31,7 +31,7 @@ def ciFits : ConLeche.ConstantInfo → Bool
   | .axiomInfo v => cvFits v
   | .thmInfo v => cvFits v
   | .indInfo v c => cvFits v && capsFits c
-  | .ctorInfo v nP nF => cvFits v && decide (nP < 2 ^ 64) && decide (nF < 2 ^ 64)
+  | .ctorInfo v nP nF _ => cvFits v && decide (nP < 2 ^ 64) && decide (nF < 2 ^ 64)
   | .recInfo v mI rP _ rs => cvFits v && decide (mI < 2 ^ 64) && decide (rP < 2 ^ 64) &&
       decide (rs.length < 2 ^ 59) && rs.all ruleFits
   | _ => false
@@ -492,7 +492,7 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   | indInfo v caps =>
     simp only [ciFits, Bool.and_eq_true] at hfit
     exact ci_ind hL hr seen memo v hfit.1 caps hfit.2 k a m q rest r m' hI hM hst hd hc
-  | ctorInfo v nP nF =>
+  | ctorInfo v nP nF _ =>
     simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
     exact ci_ctor hL hr seen memo v hfit.1.1 nP nF hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
   | recInfo v mI rP isK rs =>

@@ -157,7 +157,7 @@ theorem etaCtorShape_run_nonconst (fe : IFEnv) (e : EIdx) (a : AState) (hh : EId
 theorem etaCtorShape_run_other (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c : NIdx)
     (us : LsIdx) (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a))
     (ht : (hh.tag == ETag.const) = true) (hv : a.store.view hh = some (.const c us))
-    (hf : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
+    (hf : ∀ cv np nf fam, fe.find? c ≠ some (.ctorInfo cv np nf fam)) :
     (etaCtorShape fe e).run a = .ok (false, a) := by
   simp only [etaCtorShape, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte,
     view_run _ _ _ hv]
@@ -167,7 +167,7 @@ theorem etaCtorShape_run_other (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) 
 theorem etaCtorShape_run_ctor (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c : NIdx)
     (us : LsIdx) (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a))
     (ht : (hh.tag == ETag.const) = true) (hv : a.store.view hh = some (.const c us))
-    (cv : IConstantVal) (np nf : Nat) (hf : fe.find? c = some (.ctorInfo cv np nf))
+    (cv : IConstantVal) (np nf : Nat) {fam : NIdx} (hf : fe.find? c = some (.ctorInfo cv np nf fam))
     (xs : List EIdx) (hargs : (getAppArgs coreWalkFuel e).run a = .ok (xs, a)) :
     (etaCtorShape fe e).run a = .ok (xs.length == np + nf, a) := by
   simp only [etaCtorShape, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte,

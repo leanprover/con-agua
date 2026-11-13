@@ -135,7 +135,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
     (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
-    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
+    {fam : NIdx} (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf fam))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
       (setWtbT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
@@ -233,7 +233,7 @@ theorem structEtaCertWith_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b wtb 
         view hh >>= fun v => match v with
           | .const c us =>
             match fe.find? c with
-            | some (.ctorInfo cvc cnP cnF) => do
+            | some (.ctorInfo cvc cnP cnF _) => do
               let aargs ← getAppArgs coreWalkFuel a
               if aargs.length = cnP + cnF then setWtbT r fe depth b c us cvc aargs wtb
               else pure false
@@ -259,7 +259,7 @@ theorem setWith_nonconst (ht : (hh.tag == ETag.const) = false) :
 
 theorem setWith_other (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = true)
     (hv : st.store.view hh = some (.const c us))
-    (hf : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
+    (hf : ∀ cv np nf fam, fe.find? c ≠ some (.ctorInfo cv np nf fam)) :
     (structEtaCertWith r fe depth a b wtb).run st = .ok (false, st) := by
   rw [structEtaCertWith_eq]
   simp only [StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv]
@@ -268,7 +268,7 @@ theorem setWith_other (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = tru
 
 theorem setWith_ctor (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = true)
     (hv : st.store.view hh = some (.const c us)) (cvc : IConstantVal) (np nf : Nat)
-    (hf : fe.find? c = some (.ctorInfo cvc np nf)) (aargs : List EIdx)
+    {fam : NIdx} (hf : fe.find? c = some (.ctorInfo cvc np nf fam)) (aargs : List EIdx)
     (hargs : (getAppArgs coreWalkFuel a).run st = .ok (aargs, st)) :
     (structEtaCertWith r fe depth a b wtb).run st =
       (if aargs.length = np + nf then setWtbT r fe depth b c us cvc aargs wtb else pure false).run st := by

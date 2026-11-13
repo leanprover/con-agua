@@ -74,7 +74,7 @@ returned record. -/
 theorem cfam_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m : Mem}
     {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {cq : Word} {cvj : IConstantVal} {np nf : Nat}
-    (hci : decCI (erecP m) cq.toNat = some (.ctorInfo cvj np nf)) {r : List Word} {m' : Mem}
+    {fam : NIdx} (hci : decCI (erecP m) cq.toNat = some (.ctorInfo cvj np nf fam)) {r : List Word} {m' : Mem}
     (h : cfamW p n m vis cq = some (r, m')) :
     m' = m ∧ ∃ res, (ctorFamily fe cvj).run a = .ok (res, a) ∧ (r.headD 0 = 0 → res = none) ∧
       (r.headD 0 ≠ 0 → ∃ cvT caps, res = some (cvT, caps) ∧
@@ -196,7 +196,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
     (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (m : Mem) (a : AState)
     (M : ModeMaps) (isK cq us : Word) (cvj : IConstantVal) (np nf : Nat)
-    (hS : CoreS dn m a vis fe M eb) (hci : decCI (erecP m) cq.toNat = some (.ctorInfo cvj np nf))
+    (hS : CoreS dn m a vis fe M eb) {fam : NIdx} (hci : decCI (erecP m) cq.toNat = some (.ctorInfo cvj np nf fam))
     (hus : HW us) :
     RefE (KnotUpToE p n) (ic3E p (n + 1) m mode vis isK cq us)
       (iotaCase3At (coreKnot (decMode mode) (decEager mode) fe id F) fe (isK != 0) cvj (decI us)) a

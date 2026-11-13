@@ -229,7 +229,7 @@ def itemsCI : ConLeche.ConstantInfo → List Item
   | .defnInfo v e _ => itemsCV v ++ [.ex e]
   | .thmInfo v => itemsCV v
   | .indInfo v c => itemsCV v ++ itemsCaps c
-  | .ctorInfo v _ _ => itemsCV v
+  | .ctorInfo v _ _ _ => itemsCV v
   | .recInfo v _ _ _ rs => itemsCV v ++ itemsRules rs
 
 theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
@@ -262,7 +262,7 @@ theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     refine (Sim.bind (is := itemsCV v) (js := itemsCaps c) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
     obtain ⟨m₁, _⟩ := r
     exact (Sim.bind (is := itemsCaps c) (js := []) (sim_caps c m₁) fun _ => Sim.pure _ _ _ rfl).congr (by simp)
-  | ctorInfo v nP nF =>
+  | ctorInfo v nP nF _ =>
     have h : Frontend.internCI m (.ctorInfo v nP nF) = Frontend.internCV m v >>= fun r => match r with
         | (m, cv) => pure (m, .ctorInfo cv nP nF) := rfl
     rw [h]

@@ -37,9 +37,9 @@ namespace L.Arena
 constructor's type is the handle at `q + 4`. -/
 theorem decCI_ctor {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rd (q + 4)) ∧
+    (rd q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ cv.type = decI (rd (q + 4)) ∧
       (rd (q + 4)).toNat < 2 ^ 32) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+    (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   have hs := decCI_split hR h
   refine ⟨fun h4 => ?_, hs.2.2.2.2.2⟩
   obtain ⟨cv, np, nf, rfl, hcv⟩ := hs.2.2.2.2.1 h4
@@ -92,18 +92,18 @@ theorem projCert_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (vi
     finish [projCertW_none, projCertW_kind, projCertW_peel]
 
 theorem projCert_run_none (fe : IFEnv) (c : NIdx) (args : List EIdx) (a : AState)
-    (h : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
+    (h : ∀ cv np nf fam, fe.find? c ≠ some (.ctorInfo cv np nf fam)) :
     (projCert fe c args).run a = .ok (false, a) := by
   unfold projCert
   cases e : fe.find? c with
   | none => rfl
   | some ci =>
     cases ci with
-    | ctorInfo cv np nf => exact absurd e (h cv np nf)
+    | ctorInfo cv np nf _ => exact absurd e (h cv np nf)
     | _ => rfl
 
 theorem projCert_run_ctor (fe : IFEnv) (c : NIdx) (args : List EIdx) (a : AState)
-    (cv : IConstantVal) (np nf : Nat) (h : fe.find? c = some (.ctorInfo cv np nf)) (o : Option EIdx)
+    (cv : IConstantVal) (np nf : Nat) {fam : NIdx} (h : fe.find? c = some (.ctorInfo cv np nf fam)) (o : Option EIdx)
     (hp : (peelPis args.length cv.type).run a = .ok (o, a)) :
     (projCert fe c args).run a = .ok (o.isSome, a) := by
   simp only [projCert, h, teleArityOk, StateT.run_bind, hp, except_ok_bind]; rfl

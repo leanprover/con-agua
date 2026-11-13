@@ -167,8 +167,8 @@ theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     (rd q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
     (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV R (q.toNat + 1) = some cv) ∧
     (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (rd q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV R (q.toNat + 1) = some cv) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+    (rd q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + 1) = some cv) ∧
+    (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -225,8 +225,8 @@ theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP
     (erRd m q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
     (erRd m q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
     (erRd m q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (erRd m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRd m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
+    (erRd m q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
+    (erRd m q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) :=
   decCI_split (erRdOK m) h
 
 end L.Arena

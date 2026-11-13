@@ -193,7 +193,7 @@ theorem blockSplitCtors_mem : ∀ (block : List IConstantInfo) {cs rs},
     obtain ⟨-, rfl⟩ := h; simp
   | ci :: rest, cs, rs, h => by
     cases ci with
-    | ctorInfo cv a b =>
+    | ctorInfo cv a b _ =>
       simp only [ConRon.Arena.blockSplitCtors] at h
       split at h
       · rename_i q hq

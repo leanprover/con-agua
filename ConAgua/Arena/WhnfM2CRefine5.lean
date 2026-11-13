@@ -43,7 +43,7 @@ theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK
 
 /-- A constructor record's level-parameter count, type and parameter count words. -/
 theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {nP nF : Nat} (h : decCI R q.toNat = some (.ctorInfo cv nP nF)) :
+    {cv : IConstantVal} {nP nF : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv nP nF fam)) :
     cv.levelParams.length = (rd (q + 3)).toNat ∧ nP = (rd (q + 5)).toNat ∧
       cv.type = decI (rd (q + 4)) ∧ HW (rd (q + 4)) := by
   obtain ⟨-, hlen, hty, hty32⟩ := decCV_rd hR (L.Arena.decCI_ctor_cv h)
@@ -64,7 +64,7 @@ theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
 theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
     ((∃ cv caps, ci = .indInfo cv caps) ↔ rd q = 3) ∧
-      ((∃ cv nP nF, ci = .ctorInfo cv nP nF) ↔ rd q = 4) := by
+      ((∃ cv nP nF fam, ci = .ctorInfo cv nP nF fam) ↔ rd q = 4) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   simp only [nat?, Option.map_eq_some_iff] at hk
@@ -92,7 +92,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hT : HW T) (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat)
     (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF))
+    {fam : NIdx} (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF fam))
     (hci : decCI (erecP m) indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d isK ro cvjP T indP major)
@@ -160,7 +160,7 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (eb mode d isK ro cvjP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
+    {fam : NIdx} (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF fam)) :
     RefE (M2CCtxE p N) (m2cCtorE p (N + 1) m mode vis d isK ro cvjP major)
       (m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl cvj cnP
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
@@ -270,7 +270,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (decE major)).run a = (match rules with
         | [rl] =>
           match fe.find? rl.ctor with
-          | some (.ctorInfo cvj cnP _cnF) =>
+          | some (.ctorInfo cvj cnP _cnF _) =>
             m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl cvj cnP
               (decE major)
           | _ => pure (decE major)
@@ -314,7 +314,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     refine RefE.ret ?_ hA1
     rw [hstep]; simp only [hfind']
     cases ci with
-    | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
+    | ctorInfo cv nP nF _ => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
     | _ => rfl
   rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa [erRd] using g4)]
   obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)

@@ -156,7 +156,7 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   match rules with
   | [rl] =>
     match fe.find? rl.ctor with
-    | some (.ctorInfo cvj cnP _cnF) => m2cCtorT mode r fe depth isK rl cvj cnP major
+    | some (.ctorInfo cvj cnP _cnF _) => m2cCtorT mode r fe depth isK rl cvj cnP major
     | _ => pure major
   | _ => pure major
 

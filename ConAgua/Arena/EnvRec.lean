@@ -34,7 +34,7 @@ and L may compare words where the twin compares handles.
 | 1 | `defnInfo cv value hint` | cv at `p+1`; `value` `p+5`; hint `p+6` (0 opaque, 1 abbrev, 2 regular), height `p+7` |
 | 2 | `thmInfo cv` | cv at `p+1` |
 | 3 | `indInfo cv caps` | cv at `p+1`; caps at `p+5` (15 words, `decCaps`) |
-| 4 | `ctorInfo cv np nf` | cv at `p+1`; `p+5`, `p+6` |
+| 4 | `ctorInfo cv np nf induct` | cv at `p+1`; `p+5`, `p+6`; the family `induct` `p+7` |
 | 5 | `recInfo cv major pre isK rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (11-word records); `isK` `p+9` |
 
 A recursor rule (11 words at `q`): `ctor` `q`, `nfields` `q+1`, the fire's kind `q+3` (0
@@ -43,10 +43,11 @@ A recursor rule (11 words at `q`): `ctor` `q`, `nfields` `q+1`, the fire's kind 
 install-computed `ctorParams`, `k`, `eta`, which con-leche's task #480 removed; the offsets of
 the rest are kept).
 
-`IIndCaps` (15 words at `q`): `eta` `q`, `nIdx` `q+6`, `all` `q+10`, `q+11`, `nparams` `q+12`,
-`ctors` `q+13`, `q+14`; words `q+1`‥`q+5` are not read (the removed `etaCtor`, `etaParams`,
-`etaFields`, `unitlike`, `unitParams`, con-leche's task #515), nor `q+7`‥`q+9` (the removed
-`sortZ`); the offsets of the rest are kept.
+`IIndCaps` (15 words at `q`): `eta` `q`, `nIdx` `q+6`, `neverZero` `q+7`, `all` `q+10`, `q+11`,
+`nparams` `q+12`, `ctors` `q+13`, `q+14`; words `q+1`‥`q+5` are not read (the removed `etaCtor`,
+`etaParams`, `etaFields`, `unitlike`, `unitParams`, con-leche's task #515), nor `q+8`, `q+9` (the
+removed `sortZ`, whose first word `neverZero` took, con-leche's task #573); the offsets of the
+rest are kept.
 
 `IProjTable` (13 words, at `p`; not a constant: the environment's table component): word `p` is
 `6` and word `p+1` is `0` (the kind and name words of the constant records' layout, kept so that
@@ -110,11 +111,12 @@ def decRule (q : Nat) : Option IRecRule := do
 def decRules (off cnt : Nat) : Option (List IRecRule) :=
   (List.range cnt).mapM fun j => decRule a (off + 11 * j)
 
-/-- `IIndCaps`: 15 words at `q` (`eta`, five unread words, `nIdx`, three unread words, `all` (2),
-`nparams`, `ctors` (2)). -/
+/-- `IIndCaps`: 15 words at `q` (`eta`, five unread words, `nIdx`, `neverZero`, two unread words,
+`all` (2), `nparams`, `ctors` (2)). -/
 def decCaps (q : Nat) : Option IIndCaps := do
   pure { eta := ← bool? a q, nIdx := ← nat? a (q + 6),
-         all := ← hlist? a (q + 10), nparams := ← nat? a (q + 12), ctors := ← hlist? a (q + 13) }
+         all := ← hlist? a (q + 10), nparams := ← nat? a (q + 12), ctors := ← hlist? a (q + 13),
+         neverZero := ← bool? a (q + 7) }
 
 /-- `IProjTable` at `p` (a table record). -/
 def decTbl (p : Nat) : Option IProjTable := do
@@ -129,7 +131,7 @@ def decCI (p : Nat) : Option IConstantInfo := do
   | 1 => pure (.defnInfo (← decCV a (p + 1)) (← hd? a (p + 5)) (← decHint a (p + 6)))
   | 2 => pure (.thmInfo (← decCV a (p + 1)))
   | 3 => pure (.indInfo (← decCV a (p + 1)) (← decCaps a (p + 5)))
-  | 4 => pure (.ctorInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6)))
+  | 4 => pure (.ctorInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6)) (← hd? a (p + 7)))
   | 5 => pure (.recInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6))
       (← bool? a (p + 9)) (← decRules a (← nat? a (p + 7)) (← nat? a (p + 8))))
   | _ => none
@@ -259,8 +261,9 @@ theorem ArrExt.decRules {o c : Nat} {xs : List IRecRule} (hx : decRules a o c = 
 
 theorem ArrExt.decCaps {q : Nat} {x : IIndCaps} (hx : decCaps a q = some x) : decCaps b q = some x := by
   simp only [L.Arena.decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
-  exact ⟨e1, h.bool? h1, e7, h.nat? h7, e9, h.hlist? h9, e10, h.nat? h10, e11, h.hlist? h11, e⟩
+  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, e12, h12, e⟩ := hx
+  exact ⟨e1, h.bool? h1, e7, h.nat? h7, e9, h.hlist? h9, e10, h.nat? h10, e11, h.hlist? h11,
+    e12, h.bool? h12, e⟩
 
 theorem ArrExt.decTbl {p : Nat} {x : IProjTable} (hx : decTbl a p = some x) : decTbl b p = some x := by
   simp only [L.Arena.decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
@@ -291,8 +294,8 @@ theorem ArrExt.decCI {p : Nat} {x : IConstantInfo} (hx : decCI a p = some x) : d
       obtain ⟨y, hy, z, hz, e⟩ := hx; exact ⟨y, h.decCV hy, z, h.decCaps hz, e⟩
     | 4, hx =>
       simp only [Option.bind_eq_some_iff] at hx ⊢
-      obtain ⟨y, hy, z, hz, w, hw, e⟩ := hx
-      exact ⟨y, h.decCV hy, z, h.nat? hz, w, h.nat? hw, e⟩
+      obtain ⟨y, hy, z, hz, w, hw, i, hi, e⟩ := hx
+      exact ⟨y, h.decCV hy, z, h.nat? hz, w, h.nat? hw, i, h.hd? hi, e⟩
     | 5, hx =>
       simp only [Option.bind_eq_some_iff] at hx ⊢
       obtain ⟨y, hy, z, hz, w, hw, kk, hkk, o, ho, c, hc, r, hr, e⟩ := hx

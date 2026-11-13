@@ -794,7 +794,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hcv4, show (3 : Word).toNat = 3 from rfl, hc]
       rfl
-  | ctorInfo cv np nf =>
+  | ctorInfo cv np nf _ =>
     obtain rfl : w = 4 := UInt64.toNat_inj.mp hkd
     have hci' := hci
     simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,

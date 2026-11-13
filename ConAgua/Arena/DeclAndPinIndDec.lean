@@ -31,7 +31,7 @@ namespace L.Arena
 (the default capabilities), a constructor, a recursor with plain rules. -/
 def FrontCI : IConstantInfo → Prop
   | .indInfo _ caps => caps.all = [] ∧ caps.ctors = []
-  | .ctorInfo _ _ _ => True
+  | .ctorInfo _ _ _ _ => True
   | .recInfo _ _ _ _ rules => ∀ r ∈ rules, r.fire = .plain
   | _ => False
 

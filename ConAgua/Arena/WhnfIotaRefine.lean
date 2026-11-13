@@ -407,7 +407,7 @@ theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
 theorem isCtorApp_run_const (fe : IFEnv) (a : AState) (e h : EIdx)
     (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag = ETag.const)
     (c : NIdx) (us : LsIdx) (hv : a.store.view h = some (.const c us)) :
-    (isCtorApp fe e).run a = .ok (match fe.find? c with | some (.ctorInfo _ _ _) => true | _ => false, a) := by
+    (isCtorApp fe e).run a = .ok (match fe.find? c with | some (.ctorInfo _ _ _ _) => true | _ => false, a) := by
   have hv' : (view h).run a = .ok (.const c us, a) := by
     simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
   simp only [isCtorApp, StateT.run_bind, hga, except_ok_bind]
@@ -421,7 +421,7 @@ at `q + 6`. -/
 theorem decCI_ctorR {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
     (rd q = 4 → ∃ cv, ci = .ctorInfo cv (rd (q + 5)).toNat (rd (q + 6)).toNat) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+    (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>

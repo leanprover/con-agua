@@ -57,7 +57,7 @@ def unitRun (kr : String) (nf : Nat) : Option Mem :=
     (dw D 0 0, dw D 0 3, dw D 0 4,
       ((decCIs (m.arr64 DIND) (dw D 0 2).toNat (dw D 0 3).toNat).map
         (·.map fun
-          | .indInfo _ _ => 3 | .ctorInfo _ np nf => 40 + 10 * np + nf
+          | .indInfo _ _ => 3 | .ctorInfo _ np nf _ => 40 + 10 * np + nf
           | .recInfo _ maj pre _ rs => 500 + 100 * maj + 10 * pre + rs.length | _ => 0)))) ==
   some (6, 3, 0, some [3, 40, 721])
 -- The recursor's `k` is not checked (the twin's `validateIndD` does not): `k := true` installs,

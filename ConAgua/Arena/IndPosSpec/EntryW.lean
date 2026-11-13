@@ -63,9 +63,9 @@ theorem erec_hd {m : Mem} {w : Word} {c : Nat} {k : IdxKind} {x : Idx k}
 theorem decCI_kind_cases {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ k, nat? a p = some k ∧
-      ((k = 4 ∧ ∃ cv nPc nF, ci = .ctorInfo cv nPc nF ∧ decCV a (p + 1) = some cv ∧
+      ((k = 4 ∧ ∃ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam ∧ decCV a (p + 1) = some cv ∧
           nat? a (p + 5) = some nPc ∧ nat? a (p + 6) = some nF) ∨
-       (k ≠ 4 ∧ ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF)) := by
+       (k ≠ 4 ∧ ∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam)) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   refine ⟨k, hk, ?_⟩
@@ -95,10 +95,10 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {ciq : Word} {r : List Word} {ci : IConstantInfo}
     (h : stripW m ciq = some (r, m')) (hS : StageR vis fe m a)
     (hci : decCI (erecP m) ciq.toNat = some ci) :
-    (∀ cv nPc nF, ci = .ctorInfo cv nPc nF → nPc + nF < 2 ^ 64 ∧
+    (∀ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam → nPc + nF < 2 ^ 64 ∧
       ∃ x a', (stripPis (nPc + nF) cv.type).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
         IWGrow m m' ∧ StripOut m r ciq cv nPc nF x) ∧
-    ((∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF) → r = [0, 0, 0, 0, 0] ∧ m' = m) := by
+    ((∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam) → r = [0, 0, 0, 0, 0] ∧ m' = m) := by
   obtain ⟨k, hk, hcases⟩ := decCI_kind_cases hci
   have hk0 := erec_nat (m := m) (w := ciq) (c := 0) (by simpa using hk) (by decide)
   have e0 : UInt64.ofNat 0 = 0 := rfl
@@ -188,7 +188,7 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
   rcases h0 : stripW m ciq with _ | ⟨r0, m0⟩ <;> rw [h0] at h
   · rw [entryW.k_nest_ctor_entry_strip.none] at h; cases h
   obtain ⟨hctor, hnon⟩ := stripW_ok h0 hS hci
-  by_cases hc : ∃ cv nPc nF, ci = .ctorInfo cv nPc nF
+  by_cases hc : ∃ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam
   · obtain ⟨cv, nPc, nF, rfl⟩ := hc
     obtain ⟨hsum, x, a1, hrun1, hS1, hg1, hout⟩ := hctor cv nPc nF rfl
     cases x with
@@ -254,13 +254,13 @@ theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
             refine ⟨_, a2, htwin, hS2, hg1.trans hg2, ?_⟩
             simp only [hcn, ite_false, EntryOut]
-  · have hne : ∀ cv nPc nF, ci ≠ .ctorInfo cv nPc nF := fun cv n f hh => hc ⟨cv, n, f, hh⟩
+  · have hne : ∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam := fun cv n f hh => hc ⟨cv, n, f, hh⟩
     obtain ⟨rfl, rfl⟩ := hnon hne
     rw [entryW.k_nest_ctor_entry_strip.arm1 (hc1 := rfl)] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
     refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
     cases ci with
-    | ctorInfo cv n f => exact absurd ⟨cv, n, f, rfl⟩ hc
+    | ctorInfo cv n f _ => exact absurd ⟨cv, n, f, rfl⟩ hc
     | _ => rfl
 
 l_model nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestResHeadL) (had : AdF p)

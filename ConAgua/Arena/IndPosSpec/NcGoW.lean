@@ -242,7 +242,7 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       simp only [List.tail_cons, List.headD_cons] at h
       have hci' : ci = .ctorInfo cv nPc nF := by
         cases ci with
-        | ctorInfo cv' nPc' nF' =>
+        | ctorInfo cv' nPc' nF' _ =>
           have := nestCtorEntry_some hrun1
           simp only [Prod.mk.injEq] at this
           obtain ⟨rfl, rfl, rfl⟩ := this; rfl

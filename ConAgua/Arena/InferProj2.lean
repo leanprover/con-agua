@@ -147,7 +147,7 @@ theorem envFind_callE {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
 /-- The constructor test of `projIndexedStructLike`: `c` a constructor with more than `i` fields. -/
 def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
   match fe.find? c with
-  | some (.ctorInfo _ _ nF) => decide (i < nF)
+  | some (.ctorInfo _ _ nF _) => decide (i < nF)
   | _ => false
 
 /-- **`projIndexedStructLike` at `T = sn` from `env_find(T)`'s record**: the L test `f ≠ 0`, kind

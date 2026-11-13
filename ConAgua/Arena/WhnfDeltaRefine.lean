@@ -446,10 +446,10 @@ theorem pinNat_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 
 theorem natZeroOk_run_none (a : AState) : (natZeroOk none).run a = .ok (false, a) := rfl
 
-theorem natZeroOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf, ci ≠ .ctorInfo cv np nf)
+theorem natZeroOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natZeroOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf)
   | _ => rfl
 
 theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) (cv : IConstantVal)
@@ -580,10 +580,10 @@ l_model natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p)
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 
-theorem natSuccOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf, ci ≠ .ctorInfo cv np nf)
+theorem natSuccOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natSuccOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf)
   | _ => rfl
 
 theorem natSuccOk_run_lps (a : AState) (cv : IConstantVal) (np nf : Nat)

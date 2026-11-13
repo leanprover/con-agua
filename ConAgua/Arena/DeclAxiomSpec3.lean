@@ -37,7 +37,7 @@ open L.Ind
 /-- The pinned shape `(k, a, b)` of a stored constant: its constant value when it has the shape. -/
 def fpShape (k a b : Word) : IConstantInfo → Option IConstantVal
   | .indInfo cv _ => if k = 3 then some cv else none
-  | .ctorInfo cv nP nF => if k = 4 ∧ nP = a.toNat ∧ nF = b.toNat then some cv else none
+  | .ctorInfo cv nP nF _ => if k = 4 ∧ nP = a.toNat ∧ nF = b.toNat then some cv else none
   | .recInfo cv mI rP _ _ => if k = 5 ∧ mI = a.toNat ∧ rP = b.toNat then some cv else none
   | _ => none
 

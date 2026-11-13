@@ -81,7 +81,7 @@ theorem lpsDen_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IRec
 theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IRecRule}
     {cvj : IConstantVal} {np nf : Nat} {rl ctorP : Word}
     (hrule : decRule (erecP m) rl.toNat = some rule)
-    (hci : decCI (erecP m) ctorP.toNat = some (.ctorInfo cvj np nf))
+    {fam : NIdx} (hci : decCI (erecP m) ctorP.toNat = some (.ctorInfo cvj np nf fam))
     (hfe : FireEnv fe lps rule cvj) :
     FireCore m a (erRd m (rl + 3)) (erRd m (rl + 4)) (erRd m (rl + 5)) (erRd m (ctorP + 2))
       (erRd m (ctorP + 3)) rule cvj.levelParams := by

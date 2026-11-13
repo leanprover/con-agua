@@ -862,7 +862,7 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
   by_cases k4 : erRd m c = 4
   · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h; simp only [erRd_foldN] at h
     have hk := (kindW_eq hci 4).mp k4
-    obtain ⟨cv, np, nf, rfl⟩ : ∃ cv np nf, ci = .ctorInfo cv np nf := by
+    obtain ⟨cv, np, nf, rfl⟩ : ∃ cv np nf fam, ci = .ctorInfo cv np nf fam := by
       cases ci <;> simp [ciKindQ] at hk
       exact ⟨_, _, _, rfl⟩
     have hccv : decCV (erecP m) (c.toNat + 1) = some cv := decCI_cvA hci

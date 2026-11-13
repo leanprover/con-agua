@@ -140,7 +140,7 @@ theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
     (w = 4 → ∃ cv np nf, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
       nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf) ∧
-      (w ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+      (w ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   obtain ⟨wk, e, hk⟩ := ciD h
   rw [hw] at e; cases e
   constructor

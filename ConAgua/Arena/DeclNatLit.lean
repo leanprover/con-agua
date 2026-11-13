@@ -270,7 +270,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     have htag := tagWord hci
     by_cases h4 : erRd m q = 4
     · cases ci with
-      | ctorInfo cv np nf =>
+      | ctorInfo cv np nf _ =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
@@ -378,7 +378,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     have htag := tagWord hci
     by_cases h4 : erRd m q = 4
     · cases ci with
-      | ctorInfo cv np nf =>
+      | ctorInfo cv np nf _ =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
