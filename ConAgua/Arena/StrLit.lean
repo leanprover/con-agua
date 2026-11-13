@@ -34,7 +34,6 @@ namespace L.Arena
 /-- `str_cv(p)`: the constant value of the record at `p` (`IConstantInfo.toConstantVal`, inline at
 `p + 1`) as `(lo, ll, ty)`: the level parameters `EREC[lo‥lo+ll)` and the type. -/
 -- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def strCvL : FunDecl := lfn (p) locals () {
   return (EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄)
 }
@@ -230,7 +229,6 @@ def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
 /-- `nat_zero_at_cv(q)`: `natZeroOk (some (.ctorInfo cv 0 0))` at the constant value `q` (no level
 parameters, type `Nat`; `Nat` interned first, as the twin does). -/
 -- con-ron: ConRon/Arena/Core.lean:493-500 ConRon.Arena.natZeroOk
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natZeroOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natZeroOk]
 def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
   nt := call pin_at(1);
@@ -242,7 +240,6 @@ def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
 /-- `nat_succ_at_cv(q)`: `natSuccOk (some (.ctorInfo cv 0 1))` at the constant value `q` (no level
 parameters, type `Nat → Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:502-514 ConRon.Arena.natSuccOk
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.natSuccOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natSuccOk]
 def natSuccAtCvL : FunDecl := lfn (q) locals (nt, nc, ty, t, i, dom, body) {
   if EREC⦃q + 2⦄ != 0 { return 0 };
@@ -262,7 +259,6 @@ literal's name must have; any other name passes. The three `Nat` names are read 
 guards ask for (`nat_ind_at_cv`, `nat_zero_at_cv`, `nat_succ_at_cv` at the record's constant value
 `p + 1`). The cited `if`-chain, each name pinned only when the chain reaches it. -/
 -- con-ron: ConRon/Arena/Core.lean:817-835 ConRon.Arena.litShapeOk
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.litShapeOk` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.litShapeOk]
 def litShapeOkL : FunDecl := lfn (p) locals (n, x, r) {
   n := EREC⦃p + 1⦄;

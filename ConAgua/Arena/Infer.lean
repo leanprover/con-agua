@@ -576,7 +576,6 @@ def inferProjAtL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:3569-3603 ConRon.Arena.inferProj
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.projMissError`, `ConRon.Arena.projIndexedStructLike` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:301-312 ConRon.Arena.projMissError -/
 @[no_expose, l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=

@@ -405,8 +405,6 @@ pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.familyNeverZeroAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.majorToCtor]
 def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
@@ -767,8 +765,6 @@ already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the 
 `const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
 from `iota_rec_c` on). -/
 -- con-ron: ConRon/Arena/Core.lean:2360-2451 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 4ca283d1 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaNoCert`, `ConRon.Arena.recFireLevelCount` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.iotaRecAt]
 def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
   (hf, c, us) := call iota_rec_head(hd);

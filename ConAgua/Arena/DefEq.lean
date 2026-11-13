@@ -169,7 +169,6 @@ def erSliceEqLoop : Stmt := lblk (o1, n1, o2, n2, i) {
 /-- `er_slice_eq(o1, n1, o2, n2)`: two `EREC` slices of handles are the same list (the twin's
 `cvc.levelParams = cvT.levelParams`). -/
 -- con-ron: ConRon/Arena/Core.lean:1584-1633 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def erSliceEqL : FunDecl := lfn (o1, n1, o2, n2) locals (i) {
   if n1 != n2 { return 0 };
@@ -803,7 +802,6 @@ def etaCertL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1635-1650 ConRon.Arena.etaCtorShape -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.etaCtorShape` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.etaCtorShape]
 def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an, nf) {
   hh := call get_app_fn(a);
@@ -823,7 +821,6 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
 /-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
 the fields; split off for the proofs). Leaves the projections' slice on the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1584-1633 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertTailL : FunDecl :=
     lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {
@@ -845,7 +842,6 @@ def structEtaCertTailL : FunDecl :=
 list's length, the level parameters. Every record word is read before the first call, and the
 twin's pure tests (`er_slice_eq`, the level list's length) run before the tests. -/
 -- con-ron: ConRon/Arena/Core.lean:1584-1633 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertGoL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, T, q, tq, us2, ao, an, to, tn)
@@ -873,7 +869,6 @@ def structEtaCertGoL : FunDecl :=
 table (none: `false`) and spine, then the keys (split off for the proofs). Leaves its slices on
 the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1584-1633 ConRon.Arena.structEtaCertWith
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWtbL : FunDecl :=
     lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, tq, to, tn, r) {
@@ -893,7 +888,6 @@ def structEtaCertWtbL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1584-1633 ConRon.Arena.structEtaCertWith -/
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.structEtaCertWith` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWithL : FunDecl :=
     lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
@@ -1079,7 +1073,6 @@ def unitLikeFieldsL : FunDecl := lfn (mode, vis, ulf, n, d, tele)
 stored, its type at the levels `us`, its `nP` parameter binders dropped and instantiated with the
 slice `(to, tn)`: `(1, tele, nF)`, or `(0, 0, 0)`. -/
 -- con-ron: ConRon/Arena/Core.lean:1800-1816 ConRon.Arena.unitLikeShapeAt
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.unitLikeShapeAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.unitLikeShapeAt]
 def unitLikeShapeAtL : FunDecl := lfn (vis, us, to, tn, tctor, nP, nF) locals (f, p, cty, ok, body, tele) {
   (f, p) := call env_find(tctor, vis);

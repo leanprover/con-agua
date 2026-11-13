@@ -37,7 +37,7 @@ l_model irFireE_spec (p : Prog) (hf : p.lookup "iota_rec_fire" = some iotaRecFir
 
 l_model irFamE_spec (p : Prog) (hf : p.lookup "iota_rec_fam" = some iotaRecFamL)
   fns [hf ↦ irFamE list]
-  specs [callW_spec p n "rec_fire_levels", callW_spec p n "iota_case3"]
+  specs [callW_spec p n "rec_fire_level_count", callW_spec p n "iota_no_cert", callW_spec p n "rec_fire_levels"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
