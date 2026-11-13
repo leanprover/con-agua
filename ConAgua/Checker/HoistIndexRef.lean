@@ -117,11 +117,12 @@ theorem hNamesGo_ok (n : Nat) : ∀ (m m' : Mem) (k o c q r : Word) (P : Array W
       obtain ⟨pw, hpw, rfl⟩ := hp
       obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw (by omega)
       obtain ⟨w, hw, hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      have hcv1 := CI.cv_le; have hcv0 := CI.cv_pos
       obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw (by omega)
       have hP0 : (P[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1 : rdW (m.arr64 DIND) (o + q) = pw :=
         hix_rdW (hP ▸ hPq) (by rw [UInt64.toNat_add]; omega)
-      have e2 : rdW (m.arr64 DIND) (pw + 1) = w :=
+      have e2 : rdW (m.arr64 DIND) (pw + CI.cv) = w :=
         hix_rdW (hP ▸ hPw) (by rw [UInt64.toNat_add]; simp; omega)
       rw [e1, e2] at h
       rcases hi : hInsW m w k with _ | ⟨z, m₁⟩ <;> rw [hi] at h

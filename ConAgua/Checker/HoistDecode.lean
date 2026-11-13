@@ -127,8 +127,11 @@ theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
 theorem idxRule (ow : Word) (q : Nat) (h : ow.toNat + Rule.size.toNat * q + Rule.rhs.toNat < 2 ^ 64) :
     (ow + Rule.size * (0 + UInt64.ofNat q) + Rule.rhs).toNat =
       ow.toNat + Rule.size.toNat * q + Rule.rhs.toNat := by
+  have := Nat.le_mul_of_pos_left q Rule.size_pos
   have hq : (UInt64.ofNat q).toNat = q := by simp; omega
   rw [UInt64.zero_add, UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, hq]
+  generalize Rule.size.toNat = s at h ⊢
+  generalize Rule.rhs.toNat = r at h ⊢
   rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
 
 theorem toNat_rec (r : Word) (hr : r.toNat < 2 ^ 59) : (1 + 8 * r).toNat = 1 + 8 * r.toNat := by

@@ -495,24 +495,28 @@ def armsMasterFns : Prog :=
 
 /-! ## Runs on stub-free paths -/
 
-/-- Two constant records in a test memory: `EREC[0‥]` an `axiomInfo` (name `7`, parameters the
-slice `[3, 4]` at `20`, type `9`), `EREC[8‥]` the same, `EREC[16‥]` one with type `10`. -/
+/-- An `axiomInfo` record at `q` of `e` (name `7`, the parameter slice at `lo`, two long, type
+`ty`), at the layout's words. -/
+def armsTestAx (e : Array Word) (q : Nat) (lo ty : Word) : Array Word :=
+  e |>.set! q 0 |>.set! (q + (CI.cv + CV.name).toNat) 7 |>.set! (q + (CI.cv + CV.lpsOff).toNat) lo
+    |>.set! (q + (CI.cv + CV.lpsLen).toNat) 2 |>.set! (q + (CI.cv + CV.type).toNat) ty
+
+/-- Three constant records in a test memory: `EREC[0‥]` an `axiomInfo` (name `7`, parameters the
+slice `[3, 4]` at `100`, type `9`), `EREC[32‥]` the same (its slice at `102`), `EREC[64‥]` one
+with type `3`. -/
 def armsTestMem : Mem :=
-  let e := (Array.replicate 64 (0 : Word))
-    |>.set! 0 0 |>.set! 1 7 |>.set! 2 20 |>.set! 3 2 |>.set! 4 9
-    |>.set! 8 0 |>.set! 9 7 |>.set! 10 22 |>.set! 11 2 |>.set! 12 9
-    |>.set! 16 0 |>.set! 17 7 |>.set! 18 20 |>.set! 19 2 |>.set! 20 3 |>.set! 21 4
-    |>.set! 22 3 |>.set! 23 4
-  testMem.putWords EREC e
+  let e := (Array.replicate 128 (0 : Word))
+    |>.set! 100 3 |>.set! 101 4 |>.set! 102 3 |>.set! 103 4
+  testMem.putWords EREC (armsTestAx (armsTestAx (armsTestAx e 0 100 9) 32 102 9) 64 100 3)
 
 -- `ci_eq` of two equal axiom records (their parameter slices at different places), and of two
--- that differ in the type (`EREC[16‥]`'s type word is `EREC[20] = 3`).
+-- that differ in the type.
 #guard
   (match run (declArmsCanonFns ++ libFns ++ stubFns ++ masterFns ++ armsMasterFns) 1000 "ci_eq"
-      [0, 8] armsTestMem with
+      [0, 32] armsTestMem with
    | .ok ([1], _) => true | _ => false) &&
   (match run (declArmsCanonFns ++ libFns ++ stubFns ++ masterFns ++ armsMasterFns) 1000 "ci_eq"
-      [0, 16] armsTestMem with
+      [0, 64] armsTestMem with
    | .ok ([0], _) => true | _ => false)
 
 end L.Ind
