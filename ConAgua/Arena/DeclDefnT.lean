@@ -138,19 +138,21 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   simp only [stepCV, stepVal] at hcv1 hv1
   generalize r1.headD 0 = q at hci1 hcv1 hv1 ⊢
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by have := erecP_lt64 hwt; omega)
-  have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv1
-  have ewn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
+  have ewn : rdW (m1.arr64 (L.tierA EREC ((q + (CI.cv + CV.name)) >>> 40)))
+      (q + (CI.cv + CV.name) &&& 1099511627775) = wn :=
+    (erRdOK m1).at _ CI.cv_name_toNat hwn
   rw [ewn]
   -- the constant check, a certified operation's name allowed
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by have := erecP_lt64 hwt; omega)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt)
     hcvd hCr1 (allow := 1)
   rw [show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩)
     (fun _ => checkDeclDefnE.k_check_constant_val.none ..)
-    (checkConstantVal_specE p hX.ccv n _ vis (q + 1) 1) (fun hG => hG.nv) id hcc
+    (checkConstantVal_specE p hX.ccv n _ vis (q + CI.cv) 1) (fun hG => hG.nv) id hcc
     fun r3 s3 _ a3 h3 _ hrun3 hP3 => ?_
   rw [checkDeclDefnE.k_check_constant_val.arm1]
   dsimp only at hP3
