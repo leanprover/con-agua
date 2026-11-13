@@ -144,7 +144,7 @@ theorem iConstantInfo_name_refines {a : Array Word} {p : Nat}
   · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hcv hv
   · obtain ⟨v, hv, rfl⟩ := h; exact hcv hv
   · obtain ⟨v, hv, _, _, rfl⟩ := h; exact hcv hv
-  · obtain ⟨v, hv, _, _, _, _, rfl⟩ := h; exact hcv hv
+  · obtain ⟨v, hv, _, _, _, _, _, _, rfl⟩ := h; exact hcv hv
   · obtain ⟨v, hv, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h; exact hcv hv
 
 end L.Arena

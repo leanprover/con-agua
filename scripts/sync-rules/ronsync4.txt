@@ -1,0 +1,23 @@
+# Re-proof ladder rules of the sync con-ron 4ca283d1 -> c78714ac, con-leche eb2c5939 -> ca6af099
+# (upstream task #152). Written by lane ronsync4 (docs/design/ronsync4.md) as it restates.
+# Format: scripts/reproof-ladder.py, class Rules.
+#
+# The one mechanical change of the sync is #573's fourth `ctorInfo` field (the family `induct`).
+# Applied to the whole tree once at stage 3a (`_tmp/ronsync4/arity.py`, `arity2.py`); the same
+# rules here re-apply it to a base proof the ladder retries.
+
+vocab_hook vocab_attr.py
+
+[codemod]
+# #573: binders that quantify a constructor record's fields get the family
+sub ([∀∃]) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*),([^\n]*?)\.ctorInfo \2 \3 \4\b(?! [A-Za-z_]) ==> "\1 \2 \3 \4 fam,\5.ctorInfo \2 \3 \4 fam"
+# #573: match arms on a constructor record ignore the family
+sub (\|\s*\.?ctorInfo) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*)(\s*=>) ==> "\1 \2 \3 \4 _\5"
+sub (\|\s*some \(\.ctorInfo) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*)\)(\s*=>) ==> "\1 \2 \3 \4 _)\5"
+sub (\|\s*\.ctorInfo) _ _ _(\s*=>) ==> "\1 _ _ _ _\2"
+# #573: destructuring an `∃ cv np nf fam, …` fact
+sub obtain ⟨(\w+), (\w+), (\w+), rfl⟩ : ∃ \1 \2 \3 fam, ==> "obtain ⟨\1, \2, \3, fam, rfl⟩ : ∃ \1 \2 \3 fam,"
+# #556 P-N / #557: `natOpResult` is gone; its dispatch is `natBinOpOfName?` + `natBinOpResult`
+# (no rule: a shape change, restated by hand)
+
+[names]
