@@ -201,6 +201,7 @@ theorem tail_ref (hP : TailProg p) (hMc : McLook p) (P : GrcProgE p) (hF : FtPro
   have g12 := hg1.trans hg2
   obtain ⟨hmdG, hmbG, -, -⟩ := bsAt (hbsD.grow (decBS_mono _) g12) (hsl.grow' hbsD g12)
   have hcssN := ctorGroups_psl hmdG hmbG
+  rw [← hm2]
   generalize rdW (s2.mem.arr64 IW) pp = caO at hcssN ⊢
   generalize rdW (s2.mem.arr64 IW) (pp + 1) = caL at hcssN ⊢
   -- `cons_block_ctors` (the twin's `fe₂`, a pure function)
