@@ -13,7 +13,6 @@ import ConAgua.Arena.IlpRd
 import ConAgua.Arena.DeclAndPinIndRef
 import ConAgua.Arena.IndexLoops
 import all ConAgua.Arena.BasisL
-import ConAgua.L.WordOff
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.RecLayout.CIDec
 

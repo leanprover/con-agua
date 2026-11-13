@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndSumSpec.ConsBlockRecsTF
-import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.IndInstallSpec.IcbiW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

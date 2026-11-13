@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndSumSpec.TsrW
 public import ConAgua.Arena.RecGenSpec.DecRR
-import ConAgua.Arena.IndInstallSpec.IcbiW
 public import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.RecLayout.CIDec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL

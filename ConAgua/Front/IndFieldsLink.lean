@@ -2,12 +2,12 @@ module
 
 public import ConAgua.Front.IndFieldsSpec
 import ConAgua.Front.FieldsDeclLink
+import ConAgua.Front.IndInstallRefine
 public import ConAgua.Front.IndRel
 import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import Std.Tactic.BVDecide.Normalize.Prop
 import all ConAgua.Scan.Key
-import ConAgua.Front.IndInstallRefine2
 
 @[expose] public section
 

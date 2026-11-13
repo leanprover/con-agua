@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Rom.CIReadRefRule
-import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefCV
