@@ -70,7 +70,7 @@ theorem indParamsOkL_eq : L.Checker.indParamsOkL = indParamsOkL' := by rfl
 
 /-- The constructor check, then the next record. -/
 def ipoK (m : Mem) (np pw : Word) (rest : Option Sig) : Option Sig :=
-  if erRd m pw = 4 ∧ erRd m (pw + 5) ≠ np then some (.ret [0]) else rest
+  if erRd m pw = 4 ∧ erRd m (pw + CI.ctorNparams) ≠ np then some (.ret [0]) else rest
 
 /-- After `pi_sort_tele_len`. -/
 def ipoT (m : Mem) (np pw : Word) (rest : Option Sig) : Option (Word × Word) → Option Sig
@@ -84,15 +84,15 @@ def ipoW : Nat → Mem → Word → Word → Word → Word → Option Sig
     if j < l then
       if erRd m (erRd m (o + j)) = 3 then
         ipoT m np (erRd m (o + j)) (ipoW k m np o l (j + 1))
-          (L.Front.Ind.sortTeleW k m CWF (erRd m (erRd m (o + j) + 4)))
+          (L.Front.Ind.sortTeleW k m CWF (erRd m (erRd m (o + j) + (CI.cv + CV.type))))
       else ipoK m np (erRd m (o + j)) (ipoW k m np o l (j + 1))
     else some .normal
 
 section arms
 variable (k : Nat) (m : Mem) (np o l j pw ok n : Word) (rest : Option Sig)
-theorem ipoK_bad (h : erRd m pw = 4 ∧ erRd m (pw + 5) ≠ np) :
+theorem ipoK_bad (h : erRd m pw = 4 ∧ erRd m (pw + CI.ctorNparams) ≠ np) :
     ipoK m np pw rest = some (.ret [0]) := by simp only [ipoK]; rw [ite_eq_left h]
-theorem ipoK_ok (h : ¬ (erRd m pw = 4 ∧ erRd m (pw + 5) ≠ np)) :
+theorem ipoK_ok (h : ¬ (erRd m pw = 4 ∧ erRd m (pw + CI.ctorNparams) ≠ np)) :
     ipoK m np pw rest = rest := by simp only [ipoK]; rw [ite_eq_right h]
 theorem ipoT_none : ipoT m np pw rest none = none := rfl
 theorem ipoT_bad (h : ok ≠ 0 ∧ n < np) : ipoT m np pw rest (some (ok, n)) = some (.ret [0]) := by
@@ -103,7 +103,7 @@ theorem ipoW_exit (h : ¬ j < l) : ipoW (k + 1) m np o l j = some .normal := by
   simp only [ipoW]; rw [ite_eq_right h]
 theorem ipoW_ind (h : j < l) (h3 : erRd m (erRd m (o + j)) = 3) :
     ipoW (k + 1) m np o l j = ipoT m np (erRd m (o + j)) (ipoW k m np o l (j + 1))
-      (L.Front.Ind.sortTeleW k m CWF (erRd m (erRd m (o + j) + 4))) := by
+      (L.Front.Ind.sortTeleW k m CWF (erRd m (erRd m (o + j) + (CI.cv + CV.type)))) := by
   simp only [ipoW]; rw [ite_eq_left h, ite_eq_left h3]
 theorem ipoW_other (h : j < l) (h3 : ¬ erRd m (erRd m (o + j)) = 3) :
     ipoW (k + 1) m np o l j = ipoK m np (erRd m (o + j)) (ipoW k m np o l (j + 1)) := by
@@ -247,16 +247,15 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     rw [hx]
     have hw3 : wk = 3 := UInt64.toNat_inj.mp (by rw [h0]; rfl)
     rw [ipoW_ind (h := hj) (h3 := by rw [hkw]; exact hw3)] at h
-    obtain ⟨-, -, hty⟩ := decCV_some hcv
-    have hq4 : q + 1 + 3 = q + 4 := by omega
-    rw [hq4] at hty
-    have hq4b : q + 4 < 2 ^ 64 := by
-      cases hw4 : erA m (q + 4) with
-      | none => simp [hd?, hw4] at hty
+    obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
+    rw [Nat.add_assoc, ← CI.cv_add_toNat CV.type_le] at hty
+    have hq4b : q + (CI.cv + CV.type).toNat < 2 ^ 64 := by
+      cases hw4 : erA m (q + (CI.cv + CV.type).toNat) with
+      | none => rw [hd?, hw4] at hty; cases hty
       | some w => exact erecP_lt64 hw4
     obtain ⟨w, hwr, -, hwd⟩ := erH_rdW hty hq4b
-    have hp4 : erRd m (erRd m (o + j) + 4) = w := by
-      rw [show (4 : Word) = UInt64.ofNat 4 from rfl, hoff 4 hq4b]; exact hwr
+    have hp4 : erRd m (erRd m (o + j) + (CI.cv + CV.type)) = w := by
+      rw [← @UInt64.ofNat_toNat (CI.cv + CV.type), hoff _ hq4b]; exact hwr
     rw [hp4] at h
     rcases hst : L.Front.Ind.sortTeleW k m CWF w with _ | ⟨ok, n⟩
     · rw [hst, ipoT_none] at h; cases h
@@ -282,12 +281,12 @@ theorem ipoW_ok (dn : NIdx → Option ConLeche.Name) {m : Mem} {a : AState} (hR 
     rw [hx]
     have hw4 : wk = 4 := UInt64.toNat_inj.mp (by rw [h0]; rfl)
     rw [ipoW_other (h := hj) (h3 := by rw [hkw, hw4]; decide)] at h
-    have hq5b : q + 5 < 2 ^ 64 := by
+    have hq5b : q + CI.ctorNparams.toNat < 2 ^ 64 := by
       simp only [nat?, Option.map_eq_some_iff] at hnpc
       obtain ⟨w, hw, -⟩ := hnpc
       exact erecP_lt64 hw
-    obtain ⟨hp5, hnb⟩ := erRd_nat (q := erRd m (o + j) + 5) hnpc
-      (by rw [show (5 : Word) = UInt64.ofNat 5 from rfl, hoff 5 hq5b]; simp; omega)
+    obtain ⟨hp5, hnb⟩ := erRd_nat (q := erRd m (o + j) + CI.ctorNparams) hnpc
+      (by rw [← @UInt64.ofNat_toNat CI.ctorNparams, hoff _ hq5b]; simp; omega)
     have hnpcT : (UInt64.ofNat npc : Word).toNat = npc := UInt64.toNat_ofNat_of_lt' hnb
     simp only [indParamsOk, StateT.run_bind]
     by_cases hne : UInt64.ofNat npc ≠ np

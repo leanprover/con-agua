@@ -15,6 +15,7 @@ public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.Pins
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -207,8 +208,9 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
     RefE True (installBasisDeclE p n m vis c) (installBasisDecl fe ci) a
       (fun v fe' a' => IbdPost dn m v.1 v.2 fe' a') := by
   obtain ⟨w, hw1, hwl, hname⟩ := decCI_name hci
-  have ew : rdW (m.arr64 (tierA EREC ((c + 1) >>> 40))) ((c + 1) &&& 1099511627775) = w :=
-    (erRd_add (j := 1) hw1 (by omega)).1
+  have ew : rdW (m.arr64 (tierA EREC ((c + (CI.cv + CV.name)) >>> 40)))
+      ((c + (CI.cv + CV.name)) &&& 1099511627775) = w :=
+    (erRdOK m).at (CI.cv + CV.name) CI.cv_name_toNat hw1
   cases n with
   | zero => rw [installBasisDeclE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>

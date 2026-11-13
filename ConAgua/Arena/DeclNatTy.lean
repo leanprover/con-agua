@@ -150,7 +150,7 @@ theorem natOpCod_ref (hN : NatTyProg p) (c e : Word) :
         obtain ⟨wt, hiff, hrd, hlt, hty, -⟩ := cvWordsAt hcv
         have hp54 : (pinW m6 54).toNat < 2 ^ 32 := hF6.lv_lt.2.2
         have hr7' : r7.headD 0 = pinW m6 54 := by rw [hr7]; rfl
-        by_cases hl : erRd m6 (r6.headD 0 + 2) = 0
+        by_cases hl : erRd m6 (r6.headD 0 + CV.lpsLen) = 0
         · simp only [ne_eq, hl, not_true_eq_false, ite_false, Option.some.injEq, Prod.mk.injEq] at hw
           obtain ⟨rfl, rfl⟩ := hw
           have hisE : ci.toConstantVal.levelParams.isEmpty = true := hiff.mp hl
@@ -460,9 +460,9 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
         · exact h
         · exfalso; have := (erRd_of_erecP hwk).1; rw [hk1] at this; exact hne this.symm
       obtain ⟨wt, hiffc, hrd, hlt, hty, -⟩ := natCvWords hcv
-      by_cases hl : erRd m (rf.tail.headD 0 + 3) = 0
+      by_cases hl : erRd m (rf.tail.headD 0 + (CI.cv + CV.lpsLen)) = 0
       · simp only [hl, not_true_eq_false, ite_false] at hW
-        cases h2 : callW p k "nat_op_ty_pinned" [vis, w, erRd m (rf.tail.headD 0 + 4)] m with
+        cases h2 : callW p k "nat_op_ty_pinned" [vis, w, erRd m (rf.tail.headD 0 + (CI.cv + CV.type))] m with
         | none => rw [h2] at hW; simp [ntBW] at hW
         | some q2 =>
         obtain ⟨rt, m2⟩ := q2

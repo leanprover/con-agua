@@ -101,16 +101,11 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
     (hcv.grow (fun q => OMono.decCVp q) hg).1.get (OMono.decPL (fun q => OMono.decCVp q) _ _)
   obtain ⟨v, hv, hcvj⟩ := decPL_getH m hdm j.toNat hjn
   have hrv : (rdW (m.arr64 IW) (o + j)).toNat = v := rd_iwN hv (by have := (rdW (s0.arr64 CTL) 200).toNat_lt; simp only [iwTop] at hT0; omega)
-  have hv3 : v + 3 < 2 ^ 64 := by
-    simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvj
-    obtain ⟨_, _, _, _, _, hty, -⟩ := hcvj
-    obtain ⟨w, hw, -⟩ := hd?_some hty
-    have := erecP_lt64 hw; omega
   obtain ⟨hw32, hty⟩ := decCVp_type (q := rdW (m.arr64 IW) (o + j)) (by rw [hrv]; exact hcvj)
-  have hrw : rdW (m.arr64 (tierA EREC ((rdW (m.arr64 IW) (o + j) + 3) >>> 40)))
-      ((rdW (m.arr64 IW) (o + j) + 3) &&& 1099511627775) = erRd m (rdW (m.arr64 IW) (o + j) + 3) := rfl
+  have hrw : rdW (m.arr64 (tierA EREC ((rdW (m.arr64 IW) (o + j) + CV.type) >>> 40)))
+      ((rdW (m.arr64 IW) (o + j) + CV.type) &&& 1099511627775) = erRd m (rdW (m.arr64 IW) (o + j) + CV.type) := rfl
   rw [hrw] at h
-  generalize erRd m (rdW (m.arr64 IW) (o + j) + 3) = w at h hw32 hty
+  generalize erRd m (rdW (m.arr64 IW) (o + j) + CV.type) = w at h hw32 hty
   -- the write
   have hqj : q.toNat + j.toNat < (m.arr64 IW).size := by omega
   have hdec := decHL_write m q j w _ hw32 hsz hqj hacc
