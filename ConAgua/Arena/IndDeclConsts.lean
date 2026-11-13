@@ -192,17 +192,17 @@ fire's slices in `EREC`). -/
 def rulesRefire : FunDecl := lfn (d, s, cnt, kind, lo, ll, po, pl) locals (ez, u) {
   if cnt == 0 { return 0 };
   ez := call erec_put(d, EREC⦃s⦄);
-  ez := call erec_put(d + 1, EREC⦃s + 1⦄);
+  ez := call erec_put(d + ⟪Rule.nfields⟫, EREC⦃s + ⟪Rule.nfields⟫⦄);
   ez := call erec_put(d + 2, 0);
-  ez := call erec_put(d + 3, kind);
-  ez := call erec_put(d + 4, lo);
-  ez := call erec_put(d + 5, ll);
-  ez := call erec_put(d + 6, po);
-  ez := call erec_put(d + 7, pl);
-  ez := call erec_put(d + 8, EREC⦃s + 8⦄);
+  ez := call erec_put(d + ⟪Rule.fire⟫, kind);
+  ez := call erec_put(d + ⟪Rule.lvlsOff⟫, lo);
+  ez := call erec_put(d + ⟪Rule.lvlsLen⟫, ll);
+  ez := call erec_put(d + ⟪Rule.pinsOff⟫, po);
+  ez := call erec_put(d + ⟪Rule.pinsLen⟫, pl);
+  ez := call erec_put(d + ⟪Rule.rhs⟫, EREC⦃s + ⟪Rule.rhs⟫⦄);
   ez := call erec_put(d + 9, 0);
   ez := call erec_put(d + 10, 0);
-  u := call rules_refire(d + 11, s + 11, cnt - 1, kind, lo, ll, po, pl);
+  u := call rules_refire(d + ⟪Rule.size⟫, s + ⟪Rule.size⟫, cnt - 1, kind, lo, ll, po, pl);
   return 0
 }
 
@@ -217,7 +217,7 @@ def blockRec : FunDecl := lfn (p, rc) locals
   (epo, epl) := call er_from_iw(po, pl);
   cnt := IW.u64[rc + 5];
   if 4294967296 <= cnt { abort };
-  run := call erec_alloc(11 * cnt);
+  run := call erec_alloc(⟪Rule.size⟫ * cnt);
   u := call rules_refire(run, IW.u64[rc + 4], cnt, k, elo, ell, epo, epl);
   q := call rec_info_rec(IW.u64[rc], IW.u64[rc + 2], IW.u64[rc + 1], IW.u64[rc + 6], run, cnt);
   return q
@@ -235,9 +235,8 @@ def blockRecs : FunDecl := lfn (p, ro, rl) locals (q, to, tl, o, l) {
   return (o, l)
 }
 
-/-- `block_table(p, ms)`: a structure-like member's table record (13 words: kind `6`, `0`,
-`structName`, lps, `numParams`, `ctor`, `numFields`, `0`, bodies, `0`, `0`; its lists copied into
-`EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like; `(2, 0)` where its
+/-- `block_table(p, ms)`: a structure-like member's table record (`RecLayout/Tbl.lean`; its lists
+copied into `EREC`), `(1, q)`; `(0, 0)` at a member that is not structure-like; `(2, 0)` where its
 constructor's type is too short for the bodies (the twin's `none`). -/
 -- con-ron: ConRon/Arena/Install.lean:116-132 ConRon.Arena.blockTables
 @[no_expose, l_impl ConRon.Arena.blockTables]
@@ -253,18 +252,18 @@ def blockTable : FunDecl := lfn (p, ms) locals
   (lo, ll) := call block_shape_lps(p);
   (elo, ell) := call er_from_iw(lo, ll);
   (ebo, ebl) := call er_from_iw(bo, bl);
-  q := call erec_alloc(13);
-  ez := call erec_put(q, 6);
-  ez := call erec_put(q + 1, 0);
-  ez := call erec_put(q + 2, T);
-  ez := call erec_put(q + 3, elo);
-  ez := call erec_put(q + 4, ell);
-  ez := call erec_put(q + 5, IW.u64[p + 4]);
-  ez := call erec_put(q + 6, EREC⦃cv⦄);
-  ez := call erec_put(q + 7, IW.u64[c + 1]);
+  q := call erec_alloc(⟪Tbl.size⟫);
+  ez := call erec_put(q, ⟪Tbl.kindVal⟫);
+  ez := call erec_put(q + ⟪Tbl.name⟫, 0);
+  ez := call erec_put(q + ⟪Tbl.structName⟫, T);
+  ez := call erec_put(q + ⟪Tbl.lpsOff⟫, elo);
+  ez := call erec_put(q + ⟪Tbl.lpsLen⟫, ell);
+  ez := call erec_put(q + ⟪Tbl.numParams⟫, IW.u64[p + 4]);
+  ez := call erec_put(q + ⟪Tbl.ctor⟫, EREC⦃cv⦄);
+  ez := call erec_put(q + ⟪Tbl.numFields⟫, IW.u64[c + 1]);
   ez := call erec_put(q + 8, 0);
-  ez := call erec_put(q + 9, ebo);
-  ez := call erec_put(q + 10, ebl);
+  ez := call erec_put(q + ⟪Tbl.bodiesOff⟫, ebo);
+  ez := call erec_put(q + ⟪Tbl.bodiesLen⟫, ebl);
   ez := call erec_put(q + 11, 0);
   ez := call erec_put(q + 12, 0);
   return (1, q)

@@ -285,7 +285,7 @@ def consSumCtorsL : FunDecl := lfn (nP, T, ctorsOff, ctorsLen, vis) locals (c, c
 }
 
 /-- `sum_rules(ctorsOff, ctorsLen, rhssOff, rhssLen)`: the rules, constructor `j`'s with the
-generated right-hand side `j`, `.plain` (each a fresh 11-word `EREC` rule record, `EnvRec.lean`;
+generated right-hand side `j`, `.plain` (each a fresh `EREC` rule record, `RecLayout/Rule.lean`;
 the unread words `0`), stopping at the shorter of the two lists, as the twin's paired match does.
 Returns the rule pointers as an `IW` list. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:153-159 ConRon.Arena.sumRules
@@ -307,16 +307,16 @@ def sumRulesGoL : FunDecl := lfn (cO, cL, rO, rL, o) locals (c, cv, nF, rec, z, 
   c := IW.u64[cO];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
-  rec := call erec_alloc(11);
+  rec := call erec_alloc(⟪Rule.size⟫);
   ez := call erec_put(rec, EREC⦃cv⦄);
-  ez := call erec_put(rec + 1, nF);
+  ez := call erec_put(rec + ⟪Rule.nfields⟫, nF);
   ez := call erec_put(rec + 2, 0);
-  ez := call erec_put(rec + 3, 0);
-  ez := call erec_put(rec + 4, 0);
-  ez := call erec_put(rec + 5, 0);
-  ez := call erec_put(rec + 6, 0);
-  ez := call erec_put(rec + 7, 0);
-  ez := call erec_put(rec + 8, IW.u64[rO]);
+  ez := call erec_put(rec + ⟪Rule.fire⟫, 0);
+  ez := call erec_put(rec + ⟪Rule.lvlsOff⟫, 0);
+  ez := call erec_put(rec + ⟪Rule.lvlsLen⟫, 0);
+  ez := call erec_put(rec + ⟪Rule.pinsOff⟫, 0);
+  ez := call erec_put(rec + ⟪Rule.pinsLen⟫, 0);
+  ez := call erec_put(rec + ⟪Rule.rhs⟫, IW.u64[rO]);
   ez := call erec_put(rec + 9, 0);
   ez := call erec_put(rec + 10, 0);
   IW.u64[o] := rec;
@@ -376,14 +376,14 @@ an internal error, an `abort`) and its table not yet taken. Nothing is pushed. -
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (t, vis) locals (lo, ll, bo, bl, scopedOk, found, q, r) {
-  (lo, ll) := call er_to_iw(EREC⦃t + 3⦄, EREC⦃t + 4⦄);
-  (bo, bl) := call er_to_iw(EREC⦃t + 9⦄, EREC⦃t + 10⦄);
-  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + 5⦄, lo, ll, bo, bl);
-  if bl != EREC⦃t + 7⦄ { abort };
+  (lo, ll) := call er_to_iw(EREC⦃t + ⟪Tbl.lpsOff⟫⦄, EREC⦃t + ⟪Tbl.lpsLen⟫⦄);
+  (bo, bl) := call er_to_iw(EREC⦃t + ⟪Tbl.bodiesOff⟫⦄, EREC⦃t + ⟪Tbl.bodiesLen⟫⦄);
+  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + ⟪Tbl.numParams⟫⦄, lo, ll, bo, bl);
+  if bl != EREC⦃t + ⟪Tbl.numFields⟫⦄ { abort };
   if scopedOk != 1 { abort };
-  (found, q) := call env_find(EREC⦃t + 2⦄, vis);
+  (found, q) := call env_find(EREC⦃t + ⟪Tbl.structName⟫⦄, vis);
   if found == 0 { abort };
-  r := call find_table(vis, EREC⦃t + 2⦄);
+  r := call find_table(vis, EREC⦃t + ⟪Tbl.structName⟫⦄);
   if r != 0 { fail R_PROJECTION_TABLE_TAKEN };
   return 0
 }

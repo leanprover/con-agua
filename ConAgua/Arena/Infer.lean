@@ -374,8 +374,8 @@ stack top, so `pe` is pushed right after it). `q` is the table record, `i` the f
 @[no_expose, l_impl ConRon.Arena.IProjEntry.typeAt]
 def projTypeAtL : FunDecl := lfn (q, i, us, to, tn, pe) locals (body, b, r) {
   body := 0;
-  if i < EREC⦃q + 10⦄ { body := EREC⦃EREC⦃q + 9⦄ + i⦄ };
-  b := call inst_lp(EREC⦃q + 3⦄, EREC⦃q + 4⦄, us, body);
+  if i < EREC⦃q + ⟪Tbl.bodiesLen⟫⦄ { body := EREC⦃EREC⦃q + ⟪Tbl.bodiesOff⟫⦄ + i⦄ };
+  b := call inst_lp(EREC⦃q + ⟪Tbl.lpsOff⟫⦄, EREC⦃q + ⟪Tbl.lpsLen⟫⦄, us, body);
   if len(SPN.u64) <= to + tn { abort };
   SPN.u64[to + tn] := pe;
   CTL.u64[136] := to + tn + 1;
@@ -525,8 +525,8 @@ capacity. -/
 -- con-ron: ConRon/Arena/Core.lean:3275-3298 ConRon.Arena.projGuardRows
 @[no_expose, l_impl ConRon.Arena.projGuardRows]
 def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, ok, r, ro, rn) {
-  np := EREC⦃q + 5⦄;
-  (f, c) := call env_find(EREC⦃q + 6⦄, vis);
+  np := EREC⦃q + ⟪Tbl.numParams⟫⦄;
+  (f, c) := call env_find(EREC⦃q + ⟪Tbl.ctor⟫⦄, vis);
   if f == 0 { return (0, 0, 0) };
   cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
   co := CTL.u64[136];
@@ -540,12 +540,12 @@ def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, o
 }
 
 /-- `check_proj_guard(mode, vis, q, i, us)`: the official `infer_proj` restriction at this use of
-field `i` of the table record `q` (the structure's name at `q + 2`); the stack top put back. -/
+field `i` of the table record `q` (the structure's name at `q + Tbl.structName`); the stack top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:3300-3317 ConRon.Arena.checkProjGuard
 @[no_expose, l_impl ConRon.Arena.checkProjGuard]
 def checkProjGuardL : FunDecl := lfn (mode, vis, q, i, us) locals (top, f, p, g, gs, ok, ro, rn, u) {
   top := CTL.u64[136];
-  (f, p) := call env_find(EREC⦃q + 2⦄, vis);
+  (f, p) := call env_find(EREC⦃q + ⟪Tbl.structName⟫⦄, vis);
   if f == 0 { fail R_PROJECTION_FROM_A };
   if EREC⦃p⦄ != 3 { fail R_PROJECTION_FROM_A };
   (g, gs) := call proj_guard_sort(mode, vis, p, us);
@@ -566,9 +566,9 @@ def inferProjAtL : FunDecl :=
   top := CTL.u64[136];
   (to, tn) := call get_app_args(te);
   if T != sn { fail R_INVALID_PROJECTION_THE };
-  if tn != EREC⦃q + 5⦄ { fail R_PROJECTION_PARAMETER_MISMATCH };
+  if tn != EREC⦃q + ⟪Tbl.numParams⟫⦄ { fail R_PROJECTION_PARAMETER_MISMATCH };
   (lo, usl) := call ls_node(us);
-  if usl != EREC⦃q + 4⦄ { fail R_PROJECTION_WITHOUT_A };
+  if usl != EREC⦃q + ⟪Tbl.lpsLen⟫⦄ { fail R_PROJECTION_WITHOUT_A };
   u := call check_proj_guard(mode, vis, q, i, us);
   r := call proj_type_at(q, i, us, to, tn, pe);
   CTL.u64[136] := top;

@@ -75,8 +75,8 @@ top is raised over the comparand slice (it lies below it already) and put back a
 @[no_expose] def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, ctorP, rl, mo)
     locals (top, pvo, ao, an, x, ok) {
   top := CTL.u64[136];
-  pvo := call erec_push(EREC⦃rl + 6⦄, EREC⦃rl + 7⦄, EREC⦃rl + 3⦄);
-  (ao, an) := call rec_fire_args(EREC⦃rl + 3⦄, pvo, EREC⦃rl + 7⦄, EREC⦃recP + 2⦄,
+  pvo := call erec_push(EREC⦃rl + ⟪Rule.pinsOff⟫⦄, EREC⦃rl + ⟪Rule.pinsLen⟫⦄, EREC⦃rl + ⟪Rule.fire⟫⦄);
+  (ao, an) := call rec_fire_args(EREC⦃rl + ⟪Rule.fire⟫⦄, pvo, EREC⦃rl + ⟪Rule.pinsLen⟫⦄, EREC⦃recP + 2⦄,
     EREC⦃recP + 3⦄, us, so, EREC⦃recP + 5⦄ + 1, EREC⦃recP + 6⦄, EREC⦃ctorP + 5⦄);
   x := call stack_cover(ao + an);
   ok := call defeq_list(mode, vis, d, mo, EREC⦃ctorP + 5⦄, ao, an);
@@ -115,10 +115,10 @@ else `iota_rec_vck`. -/
 @[no_expose] def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (lc, nc, cmpL, c3, r) {
   if mode & 1 != 0 { return 1 };
-  lc := call rec_fire_level_count(EREC⦃rl + 3⦄, EREC⦃rl + 5⦄, EREC⦃ctorP + 3⦄);
+  lc := call rec_fire_level_count(EREC⦃rl + ⟪Rule.fire⟫⦄, EREC⦃rl + ⟪Rule.lvlsLen⟫⦄, EREC⦃ctorP + 3⦄);
   nc := call iota_no_cert(vis, EREC⦃recP + 9⦄, EREC⦃ctorP + 7⦄, lc);
   if nc != 0 { return 1 };
-  cmpL := call rec_fire_levels(EREC⦃rl + 3⦄, EREC⦃rl + 4⦄, EREC⦃rl + 5⦄,
+  cmpL := call rec_fire_levels(EREC⦃rl + ⟪Rule.fire⟫⦄, EREC⦃rl + ⟪Rule.lvlsOff⟫⦄, EREC⦃rl + ⟪Rule.lvlsLen⟫⦄,
     EREC⦃recP + 2⦄, EREC⦃recP + 3⦄, us, EREC⦃ctorP + 2⦄, EREC⦃ctorP + 3⦄);
   c3 := call iota_case3_at(mode, vis, EREC⦃recP + 9⦄, EREC⦃ctorP + 7⦄, cmpL);
   if c3 == 0 { return 1 };
@@ -138,11 +138,11 @@ at `mI + 1`) and the fields. -/
   rP := EREC⦃recP + 6⦄;
   rP := rP - (rP - EREC⦃recP + 5⦄ - 1) * u64(EREC⦃recP + 5⦄ < rP);
   if mn < cp { return (0, 0) };
-  if mn - cp != EREC⦃rl + 1⦄ { return (0, 0) };
+  if mn - cp != EREC⦃rl + ⟪Rule.nfields⟫⦄ { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
   rhs := call rule_rhs_at(c, EREC⦃rl⦄, EREC⦃recP + 2⦄, EREC⦃recP + 3⦄,
-    EREC⦃rl + 8⦄, us);
+    EREC⦃rl + ⟪Rule.rhs⟫⦄, us);
   x := call mk_app_n(rhs, so, rP);
   x := call mk_app_n_from(x, mo, mn, cp);
   return (1, x)

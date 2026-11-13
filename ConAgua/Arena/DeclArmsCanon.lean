@@ -15,7 +15,7 @@ The twin's `Canon.lean` (the lockstep canonical-form comparisons `IConstantInfo.
 
 * Constant records and constant values are `EREC` pointers (`decCI`/`decCV`, `EnvRec.lean`).
   A constant's level parameters are an `EREC` slice; the canonical comparisons take them as `IW`
-  slices (`cv_lps`), as every list argument is. Recursor rules stay `EREC` slices of 11-word
+  slices (`cv_lps`), as every list argument is. Recursor rules stay `EREC` slices of `Rule.size`-word
   records (`decRules`): `canon_rules_eq` and `rules_eq` take the `EREC` slice `(off, cnt)`.
 * **Equality of decoded records is word equality**, except where the decoder forgets: a `Bool`
   word (`bool?`: any nonzero word is `true`, `b_eq`), the height of a non-regular hint
@@ -121,33 +121,32 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `rule_eq_a(q, q')`: `ctor`, `nfields`, the fire kind (words `0`, `1`, `3`; word `2` is not
-read). -/
+/-- `rule_eq_a(q, q')`: `ctor`, `nfields`, the fire kind (`RecLayout/Rule.lean`). -/
 -- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[no_expose] def ruleEqA : FunDecl := lfn (q, r) locals () {
   if EREC⦃q⦄ != EREC⦃r⦄ { return 0 };
-  if EREC⦃q + 1⦄ != EREC⦃r + 1⦄ { return 0 };
-  return u64(EREC⦃q + 3⦄ == EREC⦃r + 3⦄)
+  if EREC⦃q + ⟪Rule.nfields⟫⦄ != EREC⦃r + ⟪Rule.nfields⟫⦄ { return 0 };
+  return u64(EREC⦃q + ⟪Rule.fire⟫⦄ == EREC⦃r + ⟪Rule.fire⟫⦄)
 }
 
-/-- `rule_eq_b(q, q')`: a nested fire's two slices (words `4‥7`), a `levels` fire's level slice
-(words `4`, `5`); a plain fire has none. -/
+/-- `rule_eq_b(q, q')`: a nested fire's two slices (levels and pins), a `levels` fire's level
+slice; a plain fire has none. -/
 -- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[no_expose] def ruleEqB : FunDecl := lfn (q, r) locals (e) {
-  if EREC⦃q + 3⦄ == 1 {
-    e := call er_sl_at(q, r, 4);
+  if EREC⦃q + ⟪Rule.fire⟫⦄ == 1 {
+    e := call er_sl_at(q, r, ⟪Rule.lvlsOff⟫);
     if e == 0 { return 0 };
-    e := call er_sl_at(q, r, 6);
+    e := call er_sl_at(q, r, ⟪Rule.pinsOff⟫);
     return e
   };
-  if EREC⦃q + 3⦄ == 2 {
-    e := call er_sl_at(q, r, 4);
+  if EREC⦃q + ⟪Rule.fire⟫⦄ == 2 {
+    e := call er_sl_at(q, r, ⟪Rule.lvlsOff⟫);
     return e
   };
   return 1
 }
 
-/-- `rule_eq_but_rhs(q, q')`: two recursor rules (`decRule`, 11 words) agree on every field but
+/-- `rule_eq_but_rhs(q, q')`: two recursor rules (`decRule`) agree on every field but
 `rhs` (the twin's `{ r with rhs := default } == { r' with rhs := default }`). -/
 -- con-ron: ConRon/Arena/Canon.lean:180-194 ConRon.Arena.canonRulesEq
 @[no_expose] def ruleEqButRhs : FunDecl := lfn (q, r) locals (e) {
@@ -157,15 +156,15 @@ read). -/
   return e
 }
 
-/-- `rules_eq(o, l, o', l')`: two `EREC` rule slices (11-word records) are equal. -/
+/-- `rules_eq(o, l, o', l')`: two `EREC` rule slices (`Rule.size`-word records) are equal. -/
 -- con-ron: none — the derived `List IRecRule` equality
 @[no_expose] def rulesEq : FunDecl := lfn (o1, l1, o2, l2) locals (e) {
   if l1 != l2 { return 0 };
   if l1 == 0 { return 1 };
   e := call rule_eq_but_rhs(o1, o2);
   if e == 0 { return 0 };
-  if EREC⦃o1 + 8⦄ != EREC⦃o2 + 8⦄ { return 0 };
-  e := call rules_eq(o1 + 11, l1 - 1, o2 + 11, l2 - 1);
+  if EREC⦃o1 + ⟪Rule.rhs⟫⦄ != EREC⦃o2 + ⟪Rule.rhs⟫⦄ { return 0 };
+  e := call rules_eq(o1 + ⟪Rule.size⟫, l1 - 1, o2 + ⟪Rule.size⟫, l2 - 1);
   return e
 }
 
@@ -396,11 +395,12 @@ def canonRulesEq : FunDecl :=
   if l1 == 0 || l2 == 0 { return 0 };
   e := call rule_eq_but_rhs(o1, o2);
   if e == 0 { return 0 };
-  a := EREC⦃o1 + 8⦄;
-  b := EREC⦃o2 + 8⦄;
+  a := EREC⦃o1 + ⟪Rule.rhs⟫⦄;
+  b := EREC⦃o2 + ⟪Rule.rhs⟫⦄;
   e := call canon_expr_eq(po, pl, qo, ql, co, cl, fuel, a, b);
   if e == 0 { return 0 };
-  e := call canon_rules_eq(po, pl, qo, ql, co, cl, fuel, o1 + 11, l1 - 1, o2 + 11, l2 - 1);
+  e := call canon_rules_eq(po, pl, qo, ql, co, cl, fuel, o1 + ⟪Rule.size⟫, l1 - 1,
+    o2 + ⟪Rule.size⟫, l2 - 1);
   return e
 }
 

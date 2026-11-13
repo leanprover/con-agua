@@ -285,7 +285,7 @@ def headProofProjL : FunDecl := lfn (vis, f, sn, i) locals (fd, q, b, k, o, c) {
   (fd, q) := call find_proj(vis, sn, i);
   if fd == 0 { return (0, 0, 0) };
   b := 0;
-  if i < EREC⦃q + 10⦄ { b := EREC⦃EREC⦃q + 9⦄ + i⦄ };
+  if i < EREC⦃q + ⟪Tbl.bodiesLen⟫⦄ { b := EREC⦃EREC⦃q + ⟪Tbl.bodiesOff⟫⦄ + i⦄ };
   (k, o, c) := call type_sort_pw(vis, f, b);
   if k == 1 { return (1, 0, 0) };
   return (0, 0, 0)

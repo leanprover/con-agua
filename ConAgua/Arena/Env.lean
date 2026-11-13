@@ -225,12 +225,12 @@ def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
   return r
 }
 
-/-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + 2`)
+/-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + Tbl.structName`)
 in the own layer (`IFEnv.pushTable`). -/
 -- con-ron: ConRon/Arena/Env.lean:282-286 ConRon.Arena.IFEnv.pushTable
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, z) {
-  w := EREC⦃q + 2⦄;
+  w := EREC⦃q + ⟪Tbl.structName⟫⦄;
   z := call tbl_own_set(w, q + 1);
   return 0
 }
