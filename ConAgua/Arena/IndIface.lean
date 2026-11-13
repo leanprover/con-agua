@@ -830,18 +830,18 @@ def slNodup : FunDecl := lfn (o, l) locals (b, r) {
 /-- `cv_new(name, lo, ll, ty)`: a fresh constant value in `EREC` (`lo`, `ll` an `EREC` slice). -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
 @[no_expose] def cvNew : FunDecl := lfn (nm, lo, ll, ty) locals (q, ez) {
-  q := call erec_alloc(4);
+  q := call erec_alloc(⟪CV.size⟫);
   ez := call erec_put(q, nm);
-  ez := call erec_put(q + 1, lo);
-  ez := call erec_put(q + 2, ll);
-  ez := call erec_put(q + 3, ty);
+  ez := call erec_put(q + ⟪CV.lpsOff⟫, lo);
+  ez := call erec_put(q + ⟪CV.lpsLen⟫, ll);
+  ez := call erec_put(q + ⟪CV.type⟫, ty);
   return q
 }
 
 /-- `cv_lps(cv)`: a constant's level parameters, copied into `IW`. -/
 -- con-ron: none — constant-value records in `EREC` (the twin's `ConstantVal` structure)
 @[no_expose] def cvLps : FunDecl := lfn (q) locals (o, l) {
-  (o, l) := call er_to_iw(EREC⦃q + 1⦄, EREC⦃q + 2⦄);
+  (o, l) := call er_to_iw(EREC⦃q + ⟪CV.lpsOff⟫⦄, EREC⦃q + ⟪CV.lpsLen⟫⦄);
   return (o, l)
 }
 

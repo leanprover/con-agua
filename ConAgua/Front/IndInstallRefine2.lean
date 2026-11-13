@@ -186,7 +186,8 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       rw [← hq5]
       exact capsM_dec m₂ (q1 + CI.indCaps) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
+    have gcv' : decCV (L.Arena.aread P) (q1.toNat + CI.cv.toNat) = some cvp := gcv
+    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv', gcaps]
 
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/
@@ -198,6 +199,8 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   have hps := hD.psize
   have hpt := hD.ptop
   rw [ctorRW.arm1] at h
+  -- a whole-record writer (`ind_ctor`): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold] at h
   rcases h1 : allocW m DLP 8 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [ctorRW.k_dind_alloc.none] at h; cases h
   rw [ctorRW.k_dind_alloc.arm1] at h
@@ -211,7 +214,8 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
   | none => rw [h2, ctorRW.k_ind_cv.none] at h; cases h
   | some m₂ =>
   rw [h2, ctorRW.k_ind_cv.arm1] at h
-  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide), Option.some.injEq, Prod.mk.injEq] at h
+  simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide), Option.some.injEq,
+    Prod.mk.injEq, rec_unfold] at h
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 4) := P1.set q1 4 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 4).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP
@@ -276,7 +280,7 @@ theorem ctorRW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD 
     have g7 : P[q1.toNat + 7]? = some tt := by
       rw [hP.get (by omega) (by rw [ht3, ht2]; omega),
         wd_set_eq _ _ _ _ _ hq7 (by simp only [L.Mem.size64_set64]; omega)]
-    simp [decCI, nat?, hd?, L.Arena.aread_apply, g0, gcv, g5, g6, g7, p0.1, f0.1, htt]
+    simp [decCI, rec_unfold, nat?, hd?, L.Arena.aread_apply, g0, gcv, g5, g6, g7, p0.1, f0.1, htt]
 
 
 end L.Front.Ind

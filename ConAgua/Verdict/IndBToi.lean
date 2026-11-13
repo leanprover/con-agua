@@ -122,7 +122,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     rw [(erRd_of_erecP hw0).1] at h3'
     simp [nat?, hw0, h3']
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3'
-  have hcv : decCV (erecP m) (q.toNat + 1) = some cv := by
+  have hcv : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv := by
     simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
     obtain ⟨kd, hkd, hci⟩ := hci
     rw [hk3'] at hkd; cases hkd
@@ -143,7 +143,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
   have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
-  have hFT := ft_ref hq hF henv n (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+  have hFT := ft_ref hq hF henv n (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF n _ vis _ _) (fun hG => hG.nv)
     id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
@@ -161,7 +161,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     rw [show q + 1 + 1 = q + 2 by rw [UInt64.add_assoc]; rfl,
       show q + 1 + 2 = q + 3 by rw [UInt64.add_assoc]; rfl]
     exact hlp
-  obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3 (by rw [e1]; omega)
+  obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3
   -- `inst_lp_fast`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨tl, a4, hrun5, ⟨hS5, hg5, htlH, htld⟩, ⟨_, _, hfA, hfC, hf5⟩, hA5⟩ :=

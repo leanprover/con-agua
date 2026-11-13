@@ -148,11 +148,13 @@ theorem hd?_ofR {k : IdxKind} {a : Nat → Option Word} {i : Nat} {w : Word} (h 
 
 /-- A constant value from its words, over a reader. -/
 theorem decCV_ofR {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
-    (h0 : a q = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a (q + 1) = some s)
-    (h2 : a (q + 2) = some ll) (h3 : a (q + 3) = some wt) (ht : wt.toNat < 2 ^ 32)
+    (h0 : a q = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a (q + CV.lpsOff.toNat) = some s)
+    (h2 : a (q + CV.lpsLen.toNat) = some ll) (h3 : a (q + CV.type.toNat) = some wt)
+    (ht : wt.toNat < 2 ^ 32)
     (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (f j) ∧ (f j).toNat < 2 ^ 32) :
     decCV a q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
-  have h2' : a (q + 1 + 1) = some ll := h2
+  have h2' : a (q + CV.lpsOff.toNat + 1) = some ll := by
+    rw [Nat.add_assoc, ← CV.lpsLen_toNat]; exact h2
   have hsl : (hslice? a s.toNat ll.toNat : Option (List NIdx)) =
       some ((List.range ll.toNat).map fun j => decI (f j)) :=
     L.Arena.mapM_some_of _ _ _ (fun j hj => hd?_ofR (hs j (List.mem_range.mp hj)).1 (hs j (List.mem_range.mp hj)).2)
@@ -160,8 +162,9 @@ theorem decCV_ofR {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : N
 
 /-- A constant value from its words (handles below `2^32`). -/
 theorem decCV_of {a : Array Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
-    (h0 : a[q]? = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a[q + 1]? = some s)
-    (h2 : a[q + 2]? = some ll) (h3 : a[q + 3]? = some wt) (ht : wt.toNat < 2 ^ 32)
+    (h0 : a[q]? = some wn) (hn : wn.toNat < 2 ^ 32) (h1 : a[q + CV.lpsOff.toNat]? = some s)
+    (h2 : a[q + CV.lpsLen.toNat]? = some ll) (h3 : a[q + CV.type.toNat]? = some wt)
+    (ht : wt.toNat < 2 ^ 32)
     (hs : ∀ j < ll.toNat, a[s.toNat + j]? = some (f j) ∧ (f j).toNat < 2 ^ 32) :
     decCV (aread a) q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
   exact decCV_ofR h0 hn h1 h2 h3 ht hs

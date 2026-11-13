@@ -151,9 +151,9 @@ theorem sr1_ref (hP : StrProg p) (hG : GfLook p) (hSno : SnoSim p dn) (hq : Knot
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, show UInt64.ofNat 1 = (1 : Word) from rfl,
     show UInt64.ofNat 2 = (2 : Word) from rfl, UInt64.add_zero] at eq2 e2' e1'
   obtain ⟨-, -, ⟨wt, hwt, hwtH, hwtE⟩⟩ := decCV_words hcvr
-  have et : rdW (m2.arr64 (L.tierA EREC ((UInt64.ofNat qr + 3) >>> 40)))
-      (UInt64.ofNat qr + 3 &&& 1099511627775) = wt :=
-    (erRdOK m2).off (hR2.grow.ext _ _ (by have h := hwt; rw [truncM_erA] at h; exact h)) (by rw [hqrN]; rfl)
+  have et : rdW (m2.arr64 (L.tierA EREC ((UInt64.ofNat qr + CV.type) >>> 40)))
+      (UInt64.ofNat qr + CV.type &&& 1099511627775) = wt :=
+    (erRdOK m2).off (hR2.grow.ext _ _ (by have h := hwt; rw [truncM_erA] at h; exact h)) (by rw [hqrN])
   rw [hrw] at e1'
   rw [eq2, et, e2', e1', hwtE]
   generalize hmw : (UInt64.ofNat rc.mI : Word) = mIw at e2N ⊢

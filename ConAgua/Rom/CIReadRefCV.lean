@@ -44,7 +44,7 @@ theorem holds_decCV {m : Mem} {q : Nat} {SL SI : Nat → Prop} {n t : Word} {l :
   have e1 := (h1 q (.inl rfl)).trans hn
   have e3 := (h1 (q + 3) (.inr (.inr rfl))).trans ht
   have e2 := hl m' (fun i hi => h1 i (.inr (.inl hi))) h2
-  simp [decCV, hd?, e1, e3, e2, hnl, htl]
+  simp [decCV, rec_unfold, hd?, e1, e3, e2, hnl, htl]
 
 /-- A constant value fits its encoding. -/
 def cvFits (cv : ConLeche.ConstantVal) : Bool :=
@@ -75,6 +75,8 @@ theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr
   obtain ⟨⟨hfn, hfl⟩, hfe⟩ := hfit
   have hw := callW_model (M := fun mq => cvW p k mq q pp) (cv_specW rom p hL k · q pp) hc
   unfold cvW at hw
+  -- a whole-record writer (`rci_cv`): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold] at hw
   have hlt := hI.er_lt
   -- the name
   obtain ⟨r1, m1, h1, hw⟩ := L.Ind.ntBW_some hw

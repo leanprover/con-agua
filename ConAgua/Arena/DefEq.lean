@@ -115,7 +115,7 @@ def unfoldableHeadL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p, lo, l) {
   if f == 0 { return 0 };
   if EREC⦃p⦄ != 1 { return 0 };
   (lo, l) := call ls_node(CONST⟨t, i⟩.us);
-  return u64(l == EREC⦃p + 3⦄)
+  return u64(l == EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:432-443 ConRon.Arena.headHint -/
@@ -127,7 +127,7 @@ def headHintL : FunDecl := lfn (vis, e) locals (hh, t, i, f, p) {
   (f, p) := call env_find(CONST⟨t, i⟩.n, vis);
   if f == 0 { return (0, 0) };
   if EREC⦃p⦄ != 1 { return (0, 0) };
-  return (EREC⦃p + 6⦄, EREC⦃p + 7⦄)
+  return (EREC⦃p + ⟪CI.defnHint⟫⦄, EREC⦃p + ⟪CI.defnHint + Hint.height⟫⦄)
 }
 
 /-- `hint_lt(k1, h1, k2, h2)`: `ReducibilityHint.lt` on two `(kind, height)` hints (con-leche's
@@ -813,9 +813,9 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
   CTL.u64[136] := top;
-  nf := EREC⦃p + 6⦄;
+  nf := EREC⦃p + ⟪CI.ctorNfields⟫⦄;
   if an < nf { return 0 };
-  return u64(an - nf == EREC⦃p + 5⦄)
+  return u64(an - nf == EREC⦃p + ⟪CI.ctorNparams⟫⦄)
 }
 
 /-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
@@ -850,10 +850,10 @@ def structEtaCertGoL : FunDecl :=
   ec := EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄;
   ep := EREC⦃tq + ⟪ProjTbl.numParams - 1⟫⦄;
   nf := EREC⦃tq + ⟪ProjTbl.numFields - 1⟫⦄;
-  lpo := EREC⦃q + 2⦄;
-  lpn := EREC⦃q + 3⦄;
-  cpo := EREC⦃p + 2⦄;
-  cpn := EREC⦃p + 3⦄;
+  lpo := EREC⦃q + ⟪CI.cv + CV.lpsOff⟫⦄;
+  lpn := EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄;
+  cpo := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
+  cpn := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
   lpe := call er_slice_eq(cpo, cpn, lpo, lpn);
   (lo, uslen) := call ls_node(us2);
   if eta == 0 { return 0 };
@@ -901,8 +901,8 @@ def structEtaCertWithL : FunDecl :=
   if EREC⦃p⦄ != 4 { return 0 };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
-  nf := EREC⦃p + 6⦄;
-  if an < nf || an - nf != EREC⦃p + 5⦄ {
+  nf := EREC⦃p + ⟪CI.ctorNfields⟫⦄;
+  if an < nf || an - nf != EREC⦃p + ⟪CI.ctorNparams⟫⦄ {
     CTL.u64[136] := top;
     return 0
   };
@@ -941,9 +941,9 @@ def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf,
   (f, p) := call env_find(c, vis);
   if f == 0 { return (0, 0) };
   if EREC⦃p⦄ != 4 { return (0, 0) };
-  np := EREC⦃p + 5⦄;
-  nf := EREC⦃p + 6⦄;
-  T := EREC⦃p + 7⦄;
+  np := EREC⦃p + ⟪CI.ctorNparams⟫⦄;
+  nf := EREC⦃p + ⟪CI.ctorNfields⟫⦄;
+  T := EREC⦃p + ⟪CI.ctorInduct⟫⦄;
   if np + nf < np { abort };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(a);
@@ -1078,7 +1078,7 @@ def unitLikeShapeAtL : FunDecl := lfn (vis, us, to, tn, tctor, nP, nF) locals (f
   (f, p) := call env_find(tctor, vis);
   if f == 0 { return (0, 0, 0) };
   if EREC⦃p⦄ != 4 { return (0, 0, 0) };
-  cty := call inst_lp(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, EREC⦃p + 4⦄);
+  cty := call inst_lp(EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄, us, EREC⦃p + ⟪CI.cv + CV.type⟫⦄);
   (ok, body) := call peel_pis(nP, cty);
   if ok == 0 { return (0, 0, 0) };
   tele := call inst_list(body, to, tn, 0);
@@ -1101,7 +1101,7 @@ def unitLikeShapeL : FunDecl := lfn (vis, w)
   if f == 0 { return (0, 0, 0) };
   if EREC⦃q⦄ != 3 { return (0, 0, 0) };
   eta := EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄;
-  lpn := EREC⦃q + 3⦄;
+  lpn := EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄;
   (lo, usl) := call ls_node(us);
   if eta == 0 { return (0, 0, 0) };
   if usl != lpn { return (0, 0, 0) };

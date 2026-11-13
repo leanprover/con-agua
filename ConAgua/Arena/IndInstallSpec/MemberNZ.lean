@@ -123,16 +123,14 @@ theorem frzR_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL)
 
 /-- A type word of a constant value decoded in the record pool. -/
 theorem decCV_typeW {m : Mem} {d : Nat} {cv : IConstantVal} (h : decCV (erecP m) d = some cv) :
-    HW (erRd m (UInt64.ofNat d + 3)) ∧ cv.type = decE (erRd m (UInt64.ofNat d + 3)) := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨_, -, _, -, ty, hty, rfl⟩ := h
-  obtain ⟨w, hw, hwl, rfl⟩ := hd?_some hty
+    HW (erRd m (UInt64.ofNat d + CV.type)) ∧ cv.type = decE (erRd m (UInt64.ofNat d + CV.type)) := by
+  obtain ⟨-, -, ⟨w, hw, hwl, e⟩⟩ := decCV_words h
   have hl := erecP_lt64 hw
-  have e : (UInt64.ofNat d + 3 : Word).toNat = d + 3 := by
-    rw [UInt64.toNat_add]; simp; omega
-  have := (erRd_of_erecP (a := UInt64.ofNat d + 3) (by rw [e]; exact hw)).1
-  rw [this]; exact ⟨hwl, rfl⟩
+  have hd : (UInt64.ofNat d : Word).toNat = d :=
+    UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)
+  have := (erRd_of_erecP (a := UInt64.ofNat d + CV.type)
+    (by rw [off_add_toNat rfl (by omega), hd]; exact hw)).1
+  rw [this, e]; exact ⟨hwl, rfl⟩
 
 /-- **`member_never_zero`'s model refines `memberNeverZero`** under `StageR`, `ReadLCOK` and
 `SortsDen`: the fact as a word, the heap the only writes (its top put back), the twin's store
@@ -181,7 +179,7 @@ theorem mnzW_ok {p : Prog} (P : MnzProg p) {n : Nat} {vis : Word} {fe : IFEnv} {
   obtain ⟨hwd, -, -⟩ := partsIwRd hd4 (w := UInt64.ofNat v + 4) hv4
   rw [hw0, hwv, hwd] at h
   obtain ⟨hty, hcv⟩ := decCV_typeW (decCVp_truncM hdecl)
-  rcases c1 : callW p n "former_z" [erRd m (UInt64.ofNat d + 3)] m with _ | ⟨r1, m1⟩
+  rcases c1 : callW p n "former_z" [erRd m (UInt64.ofNat d + CV.type)] m with _ | ⟨r1, m1⟩
   · simp only [erRd] at c1; rw [c1, mnzW.k_former_z.none] at h; cases h
   have c1' := c1
   simp only [erRd] at c1'

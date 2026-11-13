@@ -213,3 +213,52 @@ about a twentieth of the cost. Next steps, in order of value:
 
 Revisit S only for its performance side (32-bit packed loads on the hot store records), measured
 first with a prototype of batch O (lrecords §4.2).
+
+### Batch 4: the constant record and the constant value by name (helper `recoffs-ci`)
+
+* `RecLayout/CV.lean` (`L.CV`: `name` 0, `lpsOff`, `lpsLen`, `type`, `size`), `RecLayout/CI.lean`
+  extended to every kind (`defnValue`, `defnHint`, `defnSize`, `Hint.*`, `ctorNparams`,
+  `ctorNfields`, `ctorInduct`, `ctorSize`, `recMajor`, `recPrefix`, `recRulesOff`, `recRulesLen`,
+  `recIsK`, `recSize`, `axiomSize`, `thmSize`); `CVDec.lean` (word facts, one iff per kind) and
+  `CIDec.lean` (at L's word addresses). `decCV`, `decHint`, `decCI` read at the names.
+* About 390 L lines (every constant-record and constant-value read and write, the builders
+  `erec_ci`, `cv_new`, `ind_rec_copy`, the ROM reader, the front's `DIND` records); about 20
+  duplicated decoder lemmas deleted (`ErecRdCV.lean` entirely), the rest restated through
+  `CVDec`/`CIDec`. 149 files, +2252/−2113. `checker.s` unchanged.
+* Left: 152 lines in 17 files use the simp set `rec_unfold` (the names back to numerals), all in
+  proofs about code that writes or copies a whole record (`erec_ci`, `cv_new`, `cv_at_lps`,
+  `ci_at_lps`, `ind_rec_copy`, `ctor_info_rec`, `rec_info_rec`, the front's and the ROM's
+  writers), and `PropReadW`; some of those statements and a few readers (`CloseLams.decCV_some`
+  and its callers, `DeclReduceSpec2.decCI_kind*`, parts of `DeclValsE`) still say numbers.
+* Finding: a proof that says a number still matches L text with a single reducible name
+  (`CV.lpsOff` against `1`) but not with a sum (`CI.cv + CV.lpsLen` against `3`): `rw`'s
+  matching does not evaluate `UInt64` addition. Most of the fallout was of this kind.
+
+## 5. `scripts/layout_perturb.py`
+
+The leftover literals are found only by changing values (§3), so the perturbation is a script:
+every nonzero offset of the chosen layout files gets a gap of `--gap` words (order and slice
+adjacency kept; offset-0 fields, sums and stored values (`…Val`) stay), then `scripts/lake build`,
+then the files are restored; it lists the failing modules (clean: only `Checker.AsmFileEq`, whose
+`checker.s` is stale by design). Not a gate (a world rebuild, about 35–50 min at 2 threads here).
+
+First run, `Rule.lean` and `Tbl.lean` (gap 3, master fd45c48b2): 7 modules besides `AsmFileEq`
+still depend on an offset's number: `DeclAndPinIndCopy2`, `IndSumSpec/SumRules`, `IndexLoops`,
+`PropReadRefine4`, `Checker/HoistDecode`, `Front/IndApplySpec2`, `Rom/CIReadRefRule` (the rule
+writers' 11-word lists and the `11 * j` strides helper B listed, and a few readers it did not
+reach). The caps record (after batch 2b) is clean: a gap perturbation (§3) built with only
+`Caps.lean` changed.
+
+## 6. A verdict note: the REFDIFFs in §3
+
+§3's `diff-e2e.py --refs` runs (branch and master binaries, about 14:25) reported the same 8
+REFDIFF: `unitlike_wide`, `unitlike_fieldless`, `unitlike_lean4_match4`, `unitlike_lean4_13371`,
+`eta_partial_ctor`, `arena/bad/tutorial/115_etaCtor` (e2e-ref rejects, con-leche accepts) and
+`nat_size_ok`, `nat_shift_over_max_size` (`maxNatSize`). These are the behaviours ronsync3/ronsync4
+changed (unit-like/η-ctor caps removed, the maximum `Nat` size), and the main checkout's
+`.lake/build/bin/e2e-ref` was then still the build from before ronsync4's con-leche bump: it was
+rebuilt at 14:29 (by `bench.py`, which builds it). Rerun with the rebuilt e2e-ref (the cache is
+keyed by the reference binary's hash): REFDIFF 0 for both the master and the compacted binary, on
+the 8 fixtures and on the full set (no UNSOUND/INCOMPLETE/CRASH/TIMEOUT). Nothing on master
+changed; `diff-e2e.py --refs` does not rebuild e2e-ref, so a stale reference can show REFDIFF
+after a twin bump.

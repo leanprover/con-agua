@@ -168,12 +168,12 @@ theorem iwReset_specW (p : Prog) (hp : p.lookup "iw_reset" = some iwReset) (n : 
 /-- The model of `cv_lps(q)` (its copy runs at `n - 1`). -/
 def cvLpsW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, q => erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
-      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775))
+  | n + 1, m, q => erToIwW n m (rdW (m.arr64 (tierA EREC ((q + CV.lpsOff) >>> 40))) ((q + CV.lpsOff) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + CV.lpsLen) >>> 40))) ((q + CV.lpsLen) &&& 1099511627775))
 
 theorem cvLpsW_step (n : Nat) (m : Mem) (q : Word) :
-    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
-      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775)) :=
+    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 (tierA EREC ((q + CV.lpsOff) >>> 40))) ((q + CV.lpsOff) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + CV.lpsLen) >>> 40))) ((q + CV.lpsLen) &&& 1099511627775)) :=
   rfl
 
 grind_pattern [ind_grind] cvLpsW_step => cvLpsW (n + 1) m q
@@ -204,28 +204,9 @@ open L.Ind
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
-theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
-    ∃ w1 w2, a[q + 1]? = some w1 ∧ a[q + 2]? = some w2 ∧
-      hslice? (aread a) w1.toNat w2.toNat = some cv.levelParams := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := h
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
-  obtain ⟨w1, hw1, rfl⟩ := ho2
-  obtain ⟨w2, hw2, rfl⟩ := hl2
-  exact ⟨w1, w2, hw1, hw2, hsl⟩
-
 theorem rdW_of_get? {a : Array Word} {x w : Word} {k : Nat} (hk : k = x.toNat) (h : a[k]? = some w) :
     rdW a x = w := by
   subst hk; simp [rdW, h]
-
-theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV (aread a) q = some cv) :
-    ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
-  exact hd?_some hty
 
 /-- The memory after `iw_reset` is in the stage relation. -/
 theorem iwReset_stage {vis : Word} {fe : IFEnv} {m : Mem}

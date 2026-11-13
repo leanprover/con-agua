@@ -168,7 +168,7 @@ the index binders to the rule prefix). -/
 def recFire : FunDecl := lfn (p, rc) locals
     (ok, bo, bl, rest, g, dom, b, z, hd, x, us, lo, ll, ao, al, nI, po, pl) {
   if IW.u64[rc + 3] < IW.u64[p + 1] { return (0, 0, 0, 0, 0) };
-  (ok, bo, bl, rest) := call strip_pis(IW.u64[rc + 2], EREC⦃IW.u64[rc] + 3⦄);
+  (ok, bo, bl, rest) := call strip_pis(IW.u64[rc + 2], EREC⦃IW.u64[rc] + ⟪CV.type⟫⦄);
   if ok == 0 { return (0, 0, 0, 0, 0) };
   if ⟦rest⟧.tag != 6 { return (0, 0, 0, 0, 0) };
   (g, dom, b, z) := call e_view(rest);
@@ -247,7 +247,7 @@ def blockTable : FunDecl := lfn (p, ms) locals
   c := IW.u64[IW.u64[ms + 2]];
   cv := IW.u64[c];
   T := EREC⦃IW.u64[ms + 4]⦄;
-  (ok, bo, bl) := call struct_proj_bodies(T, IW.u64[p + 4], IW.u64[c + 1], EREC⦃cv + 3⦄);
+  (ok, bo, bl) := call struct_proj_bodies(T, IW.u64[p + 4], IW.u64[c + 1], EREC⦃cv + ⟪CV.type⟫⦄);
   if ok == 0 { return (2, 0) };
   (lo, ll) := call block_shape_lps(p);
   (elo, ell) := call er_from_iw(lo, ll);
@@ -307,13 +307,13 @@ installs its pin at the record's names, `sorryAx` nothing, any other axiom itsel
 @[no_expose, l_impl ConRon.Arena.declConstantsAxiom]
 def declConstantsAxiom : FunDecl := lfn (q) locals (qs, sa, r, o, l) {
   qs := call pin_at(4);
-  if EREC⦃q + 1⦄ == qs {
-    r := call quot_at(4, q + 1);
+  if EREC⦃q + ⟪CI.cv + CV.name⟫⦄ == qs {
+    r := call quot_at(4, q + ⟪CI.cv⟫);
     (o, l) := call sl_new1(r);
     return (o, l)
   };
   sa := call pin_at(13);
-  if EREC⦃q + 1⦄ == sa { return (0, 0) };
+  if EREC⦃q + ⟪CI.cv + CV.name⟫⦄ == sa { return (0, 0) };
   (o, l) := call sl_new1(q);
   return (o, l)
 }
@@ -348,7 +348,7 @@ def declConstants : FunDecl := lfn (i) locals (k, q, w, slot, r, bo, bl, o, l) {
     w := DECL.u64[7 + 8 * i];
     slot := 3;
     if w == 1 { slot := 0 } else if w == 2 { slot := 1 } else if w == 3 { slot := 2 };
-    r := call quot_at(slot, q + 1);
+    r := call quot_at(slot, q + ⟪CI.cv⟫);
     (o, l) := call sl_new1(r);
     return (o, l)
   };

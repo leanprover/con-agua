@@ -158,14 +158,14 @@ theorem IcInv.step {m₀ m : Mem} {I : IStreamIndex} {cs : List IConstantInfo} {
     (h : IcInv m₀ I cs j m) (hL : decPL m₀ (fun q => decCI (erecP m₀) q) o.toNat cs.length = some cs)
     (hj : j < cs.length) (hc : 128 < (m₀.arr64 CTL).size) (hsz : (m₀.arr64 IW).size < 2 ^ 64)
     (hnx : (rdW (m.arr64 CTL) 128).toNat < 4294967294)
-    (hset : (baseRow m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1))).1 = 0 →
-      rowTag (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1)) ≤ 2 ∧
-      rowTier (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1)) = 0 ∧
-      rowIx (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1)) + 1 <
-        (m.arr64 (eixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1))))).size) :
+    (hset : (baseRow m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name)))).1 = 0 →
+      rowTag (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name))) ≤ 2 ∧
+      rowTier (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name))) = 0 ∧
+      rowIx (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name))) + 1 <
+        (m.arr64 (eixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name)))))).size) :
     IcInv m₀ I cs (j + 1)
-      ((if (baseRow m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1))).1 = 0 then
-          baseSet m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + 1)) (rdW (m.arr64 CTL) 128 + 1)
+      ((if (baseRow m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name)))).1 = 0 then
+          baseSet m (erecRd m (rdW (m.arr64 IW) (o + UInt64.ofNat j) + (CI.cv + CV.name))) (rdW (m.arr64 CTL) 128 + 1)
             (rdW (m.arr64 IW) (o + UInt64.ofNat j))
         else m).set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) := by
   obtain ⟨hP, hiw, hIW⟩ := erecP_of_frameI h.frame
@@ -179,11 +179,9 @@ theorem IcInv.step {m₀ m : Mem} {I : IStreamIndex} {cs : List IConstantInfo} {
   have hvq : q.toNat = v := by subst hq; simp; omega
   rw [← hP, ← hvq] at hci
   obtain ⟨w, hw, -, -⟩ := decCI_name hci
-  have hw1 : erecP m (q + 1).toNat = some w := by
-    have := erecP_lt64 hw
-    rw [UInt64.toNat_add]; simp only [show (1 : Word).toNat = 1 from rfl]
-    rw [Nat.mod_eq_of_lt (by omega)]; exact hw
-  have hrd : erecRd m (q + 1) = w := erecRd_of hw1
+  have hw1 : erecP m (q + (CI.cv + CV.name)).toNat = some w := by
+    rw [off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)]; exact hw
+  have hrd : erecRd m (q + (CI.cv + CV.name)) = w := erecRd_of hw1
   rw [hrd] at hset ⊢
   have hn := h.idx.next
   have hnx' : (insC I (cs.take j)).next < 2 ^ 32 - 2 := by rw [← hn]; omega
@@ -204,14 +202,14 @@ theorem icLoop_close {m₀ m m' : Mem} {I : IStreamIndex} {cs : List IConstantIn
     (hL : decPL m₀ (fun q => decCI (erecP m₀) q) o.toNat cs.length = some cs) (hl : cs.length = l.toNat)
     (hc : 128 < (m₀.arr64 CTL).size) (hsz : (m₀.arr64 IW).size < 2 ^ 64) {j : Word} (hj : j < l)
     (hI : IcInv m₀ I cs j.toNat m) (hnx : ¬ 4294967294 ≤ rdW (m.arr64 CTL) 128)
-    (hm' : m' = if (baseRow m (erecRd m (rdW (m.arr64 IW) (o + j) + 1))).1 = 0 then
-        baseSet m (erecRd m (rdW (m.arr64 IW) (o + j) + 1)) (rdW (m.arr64 CTL) 128 + 1)
+    (hm' : m' = if (baseRow m (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name)))).1 = 0 then
+        baseSet m (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name))) (rdW (m.arr64 CTL) 128 + 1)
           (rdW (m.arr64 IW) (o + j)) else m)
-    (hset : (baseRow m (erecRd m (rdW (m.arr64 IW) (o + j) + 1))).1 = 0 →
-      rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + 1)) ≤ 2 ∧
-      rowTier (erecRd m (rdW (m.arr64 IW) (o + j) + 1)) = 0 ∧
-      rowIx (erecRd m (rdW (m.arr64 IW) (o + j) + 1)) + 1 <
-        (m.arr64 (eixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + 1))))).size) :
+    (hset : (baseRow m (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name)))).1 = 0 →
+      rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name))) ≤ 2 ∧
+      rowTier (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name))) = 0 ∧
+      rowIx (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name))) + 1 <
+        (m.arr64 (eixArr (rowTag (erecRd m (rdW (m.arr64 IW) (o + j) + (CI.cv + CV.name)))))).size) :
     (j + 1).toNat ≤ l.toNat ∧
       IcInv m₀ I cs (j + 1).toNat (m'.set64 CTL 128 (rdW (m.arr64 CTL) 128 + 1)) := by
   have hj' : j.toNat < l.toNat := hj

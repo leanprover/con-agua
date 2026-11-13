@@ -25,7 +25,7 @@ quotient record's tests (`quotPinHit`, `quotPredsOk`). On lane `induct`'s conven
   of pointers (the ROM's blocks, `rom_basis_decls(kind)`). The block of a stream record arrives
   as an `EREC` slice of pointers (`ind_block_to_erec`): the entry points that compare it
   (`basis_name_hit`, `basis_names_ok`) copy it into `IW` (`er_to_iw`) first.
-* A list of level-parameter names `ps` is an `EREC` slice (a record's own, `(p + 2, p + 3)`);
+* A list of level-parameter names `ps` is an `EREC` slice (a record's own, `(p + CI.cv + CV.lpsOff, p + CI.cv + CV.lpsLen)`);
   `atLps` shares it with the record it builds. The read-back names and levels of the twin
   (`readNamesM`, `Level.subst`) are the name handles themselves (`denoteN` injective):
   `pinLinkOk`'s `Level.subst rp (r.map .param) (.param p)` is `canon_name_map`'s lookup.
@@ -48,11 +48,11 @@ names replaced positionally by `ps.map .param`. Returns `0`. -/
 def cvAtLps : FunDecl := lfn (d, q, po, pl) locals (io, il, us, ty, ez) {
   (io, il) := call er_to_iw(po, pl);
   us := call param_levels(io, il);
-  ty := call inst_lp(EREC⦃q + 1⦄, EREC⦃q + 2⦄, us, EREC⦃q + 3⦄);
+  ty := call inst_lp(EREC⦃q + ⟪CV.lpsOff⟫⦄, EREC⦃q + ⟪CV.lpsLen⟫⦄, us, EREC⦃q + ⟪CV.type⟫⦄);
   ez := call erec_put(d, EREC⦃q⦄);
-  ez := call erec_put(d + 1, po);
-  ez := call erec_put(d + 2, pl);
-  ez := call erec_put(d + 3, ty);
+  ez := call erec_put(d + ⟪CV.lpsOff⟫, po);
+  ez := call erec_put(d + ⟪CV.lpsLen⟫, pl);
+  ez := call erec_put(d + ⟪CV.type⟫, ty);
   return 0
 }
 
@@ -129,34 +129,34 @@ every other word copied. -/
 def ciAtLps : FunDecl := lfn (p, po, pl) locals (k, n, r, z, us, io, il, v, ez, ro, rl) {
   k := EREC⦃p⦄;
   if 5 < k { abort };
-  n := 5;
-  if k == 1 { n := 8 } else if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := 8 } else if k == 5 {
-    n := 10 };
+  n := ⟪CI.axiomSize⟫;
+  if k == 1 { n := ⟪CI.defnSize⟫ } else if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := ⟪CI.ctorSize⟫ } else if k == 5 {
+    n := ⟪CI.recSize⟫ };
   r := call erec_alloc(n);
   ez := call erec_put(r, k);
-  z := call cv_at_lps(r + 1, p + 1, po, pl);
+  z := call cv_at_lps(r + ⟪CI.cv⟫, p + ⟪CI.cv⟫, po, pl);
   if k == 1 {
     (io, il) := call er_to_iw(po, pl);
     us := call param_levels(io, il);
-    v := call inst_lp(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, EREC⦃p + 5⦄);
-    ez := call erec_put(r + 5, v);
-    z := call er_copy_er(r + 6, p + 6, 2);
+    v := call inst_lp(EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄, us, EREC⦃p + ⟪CI.defnValue⟫⦄);
+    ez := call erec_put(r + ⟪CI.defnValue⟫, v);
+    z := call er_copy_er(r + ⟪CI.defnHint⟫, p + ⟪CI.defnHint⟫, ⟪Hint.size⟫);
     return r
   };
   if k == 3 { z := call er_copy_er(r + ⟪CI.indCaps⟫, p + ⟪CI.indCaps⟫, ⟪Caps.size⟫); return r };
-  if k == 4 { z := call er_copy_er(r + 5, p + 5, 3); return r };
+  if k == 4 { z := call er_copy_er(r + ⟪CI.ctorNparams⟫, p + ⟪CI.ctorNparams⟫, ⟪CI.ctorSize - CI.ctorNparams⟫); return r };
   if k == 5 {
     (io, il) := call er_to_iw(po, pl);
     us := call param_levels(io, il);
-    rl := EREC⦃p + 8⦄;
+    rl := EREC⦃p + ⟪CI.recRulesLen⟫⦄;
     if 1152921504606846976 <= rl { abort };
     ro := call erec_alloc(⟪Rule.size⟫ * rl);
-    z := call rules_at_lps_go(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, EREC⦃p + 7⦄, rl, ro);
-    ez := call erec_put(r + 5, EREC⦃p + 5⦄);
-    ez := call erec_put(r + 6, EREC⦃p + 6⦄);
-    ez := call erec_put(r + 7, ro);
-    ez := call erec_put(r + 8, rl);
-    ez := call erec_put(r + 9, EREC⦃p + 9⦄);
+    z := call rules_at_lps_go(EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄, us, EREC⦃p + ⟪CI.recRulesOff⟫⦄, rl, ro);
+    ez := call erec_put(r + ⟪CI.recMajor⟫, EREC⦃p + ⟪CI.recMajor⟫⦄);
+    ez := call erec_put(r + ⟪CI.recPrefix⟫, EREC⦃p + ⟪CI.recPrefix⟫⦄);
+    ez := call erec_put(r + ⟪CI.recRulesOff⟫, ro);
+    ez := call erec_put(r + ⟪CI.recRulesLen⟫, rl);
+    ez := call erec_put(r + ⟪CI.recIsK⟫, EREC⦃p + ⟪CI.recIsK⟫⦄);
     return r
   };
   return r
@@ -169,7 +169,7 @@ capabilities compared), every other pair by the derived equality. -/
 -- con-ron: ConRon/Arena/Basis.lean:102-107 ConRon.Arena.pinAgrees
 @[no_expose, l_impl ConRon.Arena.pinAgrees]
 def pinAgrees : FunDecl := lfn (c, d) locals (e) {
-  if EREC⦃c⦄ == 3 && EREC⦃d⦄ == 3 { e := call cv_eq(c + 1, d + 1); return e };
+  if EREC⦃c⦄ == 3 && EREC⦃d⦄ == 3 { e := call cv_eq(c + ⟪CI.cv⟫, d + ⟪CI.cv⟫); return e };
   e := call ci_eq(c, d);
   return e
 }
@@ -179,10 +179,10 @@ the pin at them (`ci_at_lps`, computed only then). -/
 -- con-ron: ConRon/Arena/Basis.lean:109-116 ConRon.Arena.pinCopyOk
 @[no_expose, l_impl ConRon.Arena.pinCopyOk]
 def pinCopyOk : FunDecl := lfn (c, pin) locals (io, il, d, a, e) {
-  (io, il) := call cv_lps(c + 1);
+  (io, il) := call cv_lps(c + ⟪CI.cv⟫);
   d := call sl_nodup(io, il);
-  if d != 0 && il == EREC⦃pin + 3⦄ {
-    a := call ci_at_lps(pin, EREC⦃c + 2⦄, EREC⦃c + 3⦄);
+  if d != 0 && il == EREC⦃pin + ⟪CI.cv + CV.lpsLen⟫⦄ {
+    a := call ci_at_lps(pin, EREC⦃c + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃c + ⟪CI.cv + CV.lpsLen⟫⦄);
     e := call pin_agrees(c, a);
     return e
   };
@@ -220,7 +220,7 @@ the first named `n`, else `(0, 0)`. -/
 def constNamed : FunDecl := lfn (o, l, n) locals (c, f, r) {
   if l == 0 { return (0, 0) };
   c := IW.u64[o];
-  if EREC⦃c + 1⦄ == n { return (1, c) };
+  if EREC⦃c + ⟪CI.cv + CV.name⟫⦄ == n { return (1, c) };
   (f, r) := call const_named(o + 1, l - 1, n);
   return (f, r)
 }
@@ -236,8 +236,8 @@ def rulesLinkOk : FunDecl :=
   (f, c) := call const_named(bo, bl, EREC⦃qo⦄);
   (g, d) := call const_named(po, pl, EREC⦃qo⦄);
   if f == 0 || g == 0 { return 0 };
-  (co, cl) := call cv_lps(c + 1);
-  (so, sl) := call cv_lps(d + 1);
+  (co, cl) := call cv_lps(c + ⟪CI.cv⟫);
+  (so, sl) := call cv_lps(d + ⟪CI.cv⟫);
   e := call pin_link_ok(ro, rl, rpo, rpl, co, cl, so, sl);
   if e == 0 { return 0 };
   e := call rules_link_ok(bo, bl, po, pl, ro, rl, rpo, rpl, qo + ⟪Rule.size⟫, ql - 1);
@@ -252,13 +252,13 @@ the pin's rules; every other pair passes. -/
 def blockLinkOkAt : FunDecl :=
     lfn (bo, bl, po, pl, fo, fl, c, p) locals (e, ro, rl, rpo, rpl) {
   if EREC⦃c⦄ == 4 {
-    e := call er_sl_eq(EREC⦃c + 2⦄, EREC⦃c + 3⦄, fo, fl);
+    e := call er_sl_eq(EREC⦃c + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃c + ⟪CI.cv + CV.lpsLen⟫⦄, fo, fl);
     return e
   };
   if EREC⦃c⦄ == 5 && EREC⦃p⦄ == 5 {
-    (ro, rl) := call cv_lps(c + 1);
-    (rpo, rpl) := call cv_lps(p + 1);
-    e := call rules_link_ok(bo, bl, po, pl, ro, rl, rpo, rpl, EREC⦃p + 7⦄, EREC⦃p + 8⦄);
+    (ro, rl) := call cv_lps(c + ⟪CI.cv⟫);
+    (rpo, rpl) := call cv_lps(p + ⟪CI.cv⟫);
+    e := call rules_link_ok(bo, bl, po, pl, ro, rl, rpo, rpl, EREC⦃p + ⟪CI.recRulesOff⟫⦄, EREC⦃p + ⟪CI.recRulesLen⟫⦄);
     return e
   };
   return 1
@@ -286,8 +286,8 @@ def blockLinksOk : FunDecl := lfn (bo, bl, po, pl) locals (c, fo, fl, e) {
   fl := 0;
   if bl != 0 {
     c := IW.u64[bo];
-    fo := EREC⦃c + 2⦄;
-    fl := EREC⦃c + 3⦄
+    fo := EREC⦃c + ⟪CI.cv + CV.lpsOff⟫⦄;
+    fl := EREC⦃c + ⟪CI.cv + CV.lpsLen⟫⦄
   };
   e := call block_links_ok_go(bo, bl, po, pl, fo, fl, bo, bl, po, pl);
   return e
@@ -325,7 +325,7 @@ records: equally long, the names pairwise equal). -/
 def blockNamesEq : FunDecl := lfn (ao, al, bo, bl) locals (e) {
   if al != bl { return 0 };
   if al == 0 { return 1 };
-  if EREC⦃IW.u64[ao] + 1⦄ != EREC⦃IW.u64[bo] + 1⦄ { return 0 };
+  if EREC⦃IW.u64[ao] + ⟪CI.cv + CV.name⟫⦄ != EREC⦃IW.u64[bo] + ⟪CI.cv + CV.name⟫⦄ { return 0 };
   e := call block_names_eq(ao + 1, al - 1, bo + 1, bl - 1);
   return e
 }
@@ -370,7 +370,7 @@ slice of record pointers). -/
 @[no_expose, l_impl ConRon.Arena.basisNamesOk]
 def blockNamesUnreserved : FunDecl := lfn (bo, bl) locals (c, r) {
   if bl == 0 { return 1 };
-  c := call reserved_contains(EREC⦃EREC⦃bo⦄ + 1⦄);
+  c := call reserved_contains(EREC⦃EREC⦃bo⦄ + ⟪CI.cv + CV.name⟫⦄);
   if c != 0 { return 0 };
   r := call block_names_unreserved(bo + 1, bl - 1);
   return r
@@ -438,7 +438,7 @@ def quotPin : FunDecl := lfn (k) locals (o, l) {
 @[no_expose, l_impl ConRon.Arena.quotAt]
 def quotAt : FunDecl := lfn (k, q) locals (c, r) {
   c := call quot_pin(k);
-  r := call ci_at_lps(c, EREC⦃q + 1⦄, EREC⦃q + 2⦄);
+  r := call ci_at_lps(c, EREC⦃q + ⟪CV.lpsOff⟫⦄, EREC⦃q + ⟪CV.lpsLen⟫⦄);
   return r
 }
 
@@ -450,9 +450,9 @@ def quotPinHitL : FunDecl := lfn (k, q) locals (c, io, il, d, a, z, e) {
   c := call quot_pin(k);
   (io, il) := call cv_lps(q);
   d := call sl_nodup(io, il);
-  if d != 0 && il == EREC⦃c + 3⦄ {
-    a := call erec_alloc(4);
-    z := call cv_at_lps(a, c + 1, EREC⦃q + 1⦄, EREC⦃q + 2⦄);
+  if d != 0 && il == EREC⦃c + ⟪CI.cv + CV.lpsLen⟫⦄ {
+    a := call erec_alloc(⟪CV.size⟫);
+    z := call cv_at_lps(a, c + ⟪CI.cv⟫, EREC⦃q + ⟪CV.lpsOff⟫⦄, EREC⦃q + ⟪CV.lpsLen⟫⦄);
     e := call cv_eq(q, a);
     return e
   };

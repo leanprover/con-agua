@@ -27,18 +27,19 @@ and L may compare words where the twin compares handles.
 
 ## The layouts (offsets from the record address `p`)
 
-`IConstantVal` (4 words, at `q`): `name`, `lps.off`, `lps.len`, `type`.
+`IConstantVal`: `RecLayout/CV.lean` (`CV.size` words at `q`: `name`, the lps slice, `type`).
 
-`IConstantInfo` (word `p` is the kind; **word `p + 1` is always the index key** `ci.name`):
+`IConstantInfo`: `RecLayout/CI.lean` (word `p + CI.kind` is the kind; the value is at `p + CI.cv`,
+so **word `p + CI.cv` is always the index key** `ci.name`):
 
-| kind | constructor | words |
+| kind | constructor | fields (offsets `CI.…`) |
 |---:|---|---|
-| 0 | `axiomInfo cv` | cv at `p+1` |
-| 1 | `defnInfo cv value hint` | cv at `p+1`; `value` `p+5`; hint `p+6` (0 opaque, 1 abbrev, 2 regular), height `p+7` |
-| 2 | `thmInfo cv` | cv at `p+1` |
-| 3 | `indInfo cv caps` | cv at `p+1`; caps at `p + CI.indCaps` (`decCaps`) |
-| 4 | `ctorInfo cv np nf induct` | cv at `p+1`; `p+5`, `p+6`; the family `induct` `p+7` |
-| 5 | `recInfo cv major pre isK rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (`Rule.size`-word records); `isK` `p+9` |
+| 0 | `axiomInfo cv` | `cv`; size `axiomSize` |
+| 1 | `defnInfo cv value hint` | `cv`; `defnValue`; the hint at `defnHint` (`Hint.kind`: 0 opaque, 1 abbrev, 2 regular; `Hint.height`); size `defnSize` |
+| 2 | `thmInfo cv` | `cv`; size `thmSize` |
+| 3 | `indInfo cv caps` | `cv`; caps at `indCaps` (`decCaps`); size `indSize` |
+| 4 | `ctorInfo cv np nf induct` | `cv`; `ctorNparams`, `ctorNfields`, the family `ctorInduct`; size `ctorSize` |
+| 5 | `recInfo cv major pre isK rules` | `cv`; `recMajor`, `recPrefix`; rules slice `recRulesOff`, `recRulesLen` (`Rule.size`-word records); `recIsK`; size `recSize` |
 
 A recursor rule: `RecLayout/Rule.lean` (`Rule.size` words at `q`, the field offsets named there).
 
@@ -76,16 +77,16 @@ def hslice? {k : IdxKind} (off cnt : Nat) : Option (List (Idx k)) :=
 def hlist? {k : IdxKind} (i : Nat) : Option (List (Idx k)) := do
   hslice? a (← nat? a i) (← nat? a (i + 1))
 
-/-- `IConstantVal` at `q`. -/
+/-- `IConstantVal` at `q`, laid out by `RecLayout/CV.lean` (the name, at offset 0, is word `q`). -/
 def decCV (q : Nat) : Option IConstantVal := do
-  pure ⟨← hd? a q, ← hlist? a (q + 1), ← hd? a (q + 3)⟩
+  pure ⟨← hd? a q, ← hlist? a (q + CV.lpsOff.toNat), ← hd? a (q + CV.type.toNat)⟩
 
-/-- A reducibility hint at `q` (kind) and `q + 1` (height). -/
+/-- A reducibility hint at `q`: its kind (word `q`, `Hint.kind` = 0) and height (`Hint.height`). -/
 def decHint (q : Nat) : Option ConLeche.ReducibilityHint := do
   match ← nat? a q with
   | 0 => pure .opaque
   | 1 => pure .abbrev
-  | 2 => pure (.regular (← nat? a (q + 1)))
+  | 2 => pure (.regular (← nat? a (q + Hint.height.toNat)))
   | _ => none
 
 /-- A recursor rule: a `Rule.size`-word record at `q`, laid out by `RecLayout/Rule.lean`. -/
@@ -117,16 +118,20 @@ def decTbl (p : Nat) : Option IProjTable := do
          ctor := ← hd? a (p + ProjTbl.ctor.toNat), numFields := ← nat? a (p + ProjTbl.numFields.toNat),
          bodies := (← hlist? a (p + ProjTbl.bodiesOff.toNat)).toArray }
 
-/-- **The constant record at `p`.** -/
+/-- **The constant record at `p`**, laid out by `RecLayout/CI.lean` (the kind, at offset 0, is word
+`p`). -/
 def decCI (p : Nat) : Option IConstantInfo := do
   match ← nat? a p with
-  | 0 => pure (.axiomInfo (← decCV a (p + 1)))
-  | 1 => pure (.defnInfo (← decCV a (p + 1)) (← hd? a (p + 5)) (← decHint a (p + 6)))
-  | 2 => pure (.thmInfo (← decCV a (p + 1)))
-  | 3 => pure (.indInfo (← decCV a (p + 1)) (← decCaps a (p + CI.indCaps.toNat)))
-  | 4 => pure (.ctorInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6)) (← hd? a (p + 7)))
-  | 5 => pure (.recInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6))
-      (← bool? a (p + 9)) (← decRules a (← nat? a (p + 7)) (← nat? a (p + 8))))
+  | 0 => pure (.axiomInfo (← decCV a (p + CI.cv.toNat)))
+  | 1 => pure (.defnInfo (← decCV a (p + CI.cv.toNat)) (← hd? a (p + CI.defnValue.toNat))
+      (← decHint a (p + CI.defnHint.toNat)))
+  | 2 => pure (.thmInfo (← decCV a (p + CI.cv.toNat)))
+  | 3 => pure (.indInfo (← decCV a (p + CI.cv.toNat)) (← decCaps a (p + CI.indCaps.toNat)))
+  | 4 => pure (.ctorInfo (← decCV a (p + CI.cv.toNat)) (← nat? a (p + CI.ctorNparams.toNat))
+      (← nat? a (p + CI.ctorNfields.toNat)) (← hd? a (p + CI.ctorInduct.toNat)))
+  | 5 => pure (.recInfo (← decCV a (p + CI.cv.toNat)) (← nat? a (p + CI.recMajor.toNat))
+      (← nat? a (p + CI.recPrefix.toNat)) (← bool? a (p + CI.recIsK.toNat))
+      (← decRules a (← nat? a (p + CI.recRulesOff.toNat)) (← nat? a (p + CI.recRulesLen.toNat))))
   | _ => none
 
 end dec

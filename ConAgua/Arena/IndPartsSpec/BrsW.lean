@@ -238,15 +238,15 @@ theorem bslW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
   have hlvE : cv.levelParams = lv := by rw [← hcvT]
   simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
   obtain ⟨o', ho, l', hlw, hsl⟩ := hlv
-  have hq2lt : cvR0.toNat + 1 + 1 < 2 ^ 64 := by
+  have hq2lt : cvR0.toNat + CV.lpsOff.toNat + 1 < 2 ^ 64 := by
     have h' := hlw; simp only [nat?, Option.map_eq_some_iff] at h'
     obtain ⟨_, e, -⟩ := h'; exact erecP_lt64 (truncM_er_get e)
-  obtain ⟨w1, hw1b⟩ := partsErRd (IWGrow.refl m) ho (w := cvR0 + 1) (by rw [UInt64.toNat_add]; simp; omega)
-  obtain ⟨w2, hw2b⟩ := partsErRd (IWGrow.refl m) hlw (w := cvR0 + 2) (by rw [UInt64.toNat_add]; simp; omega)
+  obtain ⟨w1, hw1b⟩ := partsErRd (IWGrow.refl m) ho (w := cvR0 + CV.lpsOff) (off_add_toNat rfl (by omega))
+  obtain ⟨w2, hw2b⟩ := partsErRd (IWGrow.refl m) hlw (w := cvR0 + CV.lpsLen) (by rw [off_add_toNat CV.lpsLen_toNat (by omega)]; omega)
   rcases n with _ | n
   · simp [bslW] at h
-  have w1' : rdW (m.arr64 (tierA EREC ((cvR0 + 1) >>> 40))) ((cvR0 + 1) &&& 1099511627775) = _ := w1
-  have w2' : rdW (m.arr64 (tierA EREC ((cvR0 + 2) >>> 40))) ((cvR0 + 2) &&& 1099511627775) = _ := w2
+  have w1' : rdW (m.arr64 (tierA EREC ((cvR0 + CV.lpsOff) >>> 40))) ((cvR0 + CV.lpsOff) &&& 1099511627775) = _ := w1
+  have w2' : rdW (m.arr64 (tierA EREC ((cvR0 + CV.lpsLen) >>> 40))) ((cvR0 + CV.lpsLen) &&& 1099511627775) = _ := w2
   rw [bslW.eq_2, w1', w2'] at h
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   by_cases h0 : l' = 0

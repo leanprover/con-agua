@@ -5,6 +5,7 @@ import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.DefEqStuckShape
 public import ConAgua.Arena.PropReadRefine
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -163,9 +164,9 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [h0, ↓reduceIte] at hW
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
-  have hcv := decCI_cvA hci
+  have hcv := decCI_cv hci
   generalize hcvr : ci.toConstantVal = cv at hcv
-  obtain ⟨hw1, -, hw4, hty, hsl⟩ := infer_decCV_words (erRdOK _) hcv
+  obtain ⟨hw1, -, hsl, -, hw4, hty⟩ := decCV_rd_ci (erRdOK _) hcv
   by_cases hne : lsNodeW m₁ us = []
   · simp [hne] at hW
   simp only [hne, ↓reduceIte] at hW
@@ -181,10 +182,10 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
       except_ok_bind, show ∀ x, (viewLsLen x).run a = .ok (a.store.lss.viewLen x, a) from
         fun _ => rfl, hvl]
   have hlen : ids.length = cv.levelParams.length ↔
-      (lsNodeW m₁ us).tail.headD 0 = erRd m₁ (r₁.tail.headD 0 + 3) := by
+      (lsNodeW m₁ us).tail.headD 0 = erRd m₁ (r₁.tail.headD 0 + (CI.cv + CV.lpsLen)) := by
     rw [hlen1, hslice?_lenR hsl, ← hlen2]
     exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
-  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ erRd m₁ (r₁.tail.headD 0 + 3)
+  by_cases hl : (lsNodeW m₁ us).tail.headD 0 ≠ erRd m₁ (r₁.tail.headD 0 + (CI.cv + CV.lpsLen))
   · simp only [hl, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
     have : ¬ ids.length = cv.levelParams.length := fun h => hl (hlen.mp h)
@@ -192,7 +193,7 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
   simp only [hl, ↓reduceIte] at hW
   have hlen' : ids.length = cv.levelParams.length := hlen.mpr (by simpa using hl)
   -- the datum of the type
-  rcases hc2 : sub (erRd m₁ (r₁.tail.headD 0 + 4)) m₁ with _ | ⟨r₂, m₂⟩ <;>
+  rcases hc2 : sub (erRd m₁ (r₁.tail.headD 0 + (CI.cv + CV.type))) m₁ with _ | ⟨r₂, m₂⟩ <;>
     rw [hc2] at hW
   · cases hW
   obtain ⟨res₂, a₂, hrun₂, hRd₂, hd₂⟩ := hsub hS hw4 hc2
@@ -214,8 +215,8 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     rcases res₂ with _ | pw
     · exact absurd (hd₂.none_iff.mpr rfl) hk0
     · exact ⟨pw, rfl⟩
-  rcases hc3 : callW p n "subst_pw_at" [erRd m₂ (r₁.tail.headD 0 + 2),
-      erRd m₂ (r₁.tail.headD 0 + 3), us, r₂.headD 0, r₂.tail.headD 0,
+  rcases hc3 : callW p n "subst_pw_at" [erRd m₂ (r₁.tail.headD 0 + (CI.cv + CV.lpsOff)),
+      erRd m₂ (r₁.tail.headD 0 + (CI.cv + CV.lpsLen)), us, r₂.headD 0, r₂.tail.headD 0,
       r₂.tail.tail.headD 0] m₂ with _ | ⟨r₃, m₃⟩
   · rw [hc3] at hW; cases hW
   rw [hc3] at hW

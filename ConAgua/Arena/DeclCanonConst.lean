@@ -13,6 +13,7 @@ public import ConAgua.Arena.DeclCvg
 import all ConAgua.Arena.DeclArmsCanon
 import ConAgua.L.WordOff
 import ConAgua.Arena.FVarRangeRefine
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -79,7 +80,7 @@ theorem cvLpsW_ok {vis : Word} {fe : IFEnv} {a : AState}
   | zero => simp [L.Arena.cvLpsW] at h
   | succ n =>
   rw [L.Arena.cvLpsW_step] at h
-  obtain ⟨hsl, -⟩ := decCV_rdq (erRdOK m) hq
+  obtain ⟨-, -, hsl, -, -⟩ := decCV_rd (erRdOK m) hq
   have h' : erToIwW n m (erRd m (q + 1)) (erRd m (q + 2)) = some (r, m') := h
   obtain ⟨hS', hg, hdl, htop, -⟩ := erToIwW_stage h' hS hsl
   have e0 : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
@@ -108,7 +109,7 @@ theorem ctxW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
   | zero => rw [ctxW.eq_1] at h; cases h
   | succ k =>
   rw [ctxW.arm1, ← erRd] at h
-  obtain ⟨-, hlen0⟩ := decCV_rdq (erRdOK m) hcv
+  obtain ⟨-, -, -, hlen0, -⟩ := decCV_rd (erRdOK m) hcv
   generalize erRd m (cp + 2) = w2 at h hlen0
   have hlen : w2.toNat = cv.levelParams.length := hlen0.symm
   cases h1 : cnW k m w2 with

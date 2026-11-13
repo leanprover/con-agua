@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
@@ -34,16 +35,16 @@ namespace L.Arena
 /-! ## `env_find`: a found row is a row -/
 
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
-constructor's type is the handle at `q + 4`. -/
+constructor's type is the handle at `q + (CI.cv + CV.type)`. -/
 theorem decCI_ctor {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ cv.type = decI (rd (q + 4)) ∧
-      (rd (q + 4)).toNat < 2 ^ 32) ∧
+    (rd q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧
+      cv.type = decI (rd (q + (CI.cv + CV.type))) ∧ (rd (q + (CI.cv + CV.type))).toNat < 2 ^ 32) ∧
     (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   have hs := decCI_split hR h
   refine ⟨fun h4 => ?_, hs.2.2.2.2.2⟩
   obtain ⟨cv, np, nf, fam,  rfl, hcv⟩ := hs.2.2.2.2.1 h4
-  obtain ⟨-, -, hty, hlt⟩ := decCV_rd hR hcv
+  obtain ⟨-, -, -, -, hlt, hty⟩ := decCV_rd_ci hR hcv
   exact ⟨cv, np, nf, _, rfl, hty, hlt⟩
 
 /-! ## Runs of plain triples -/
@@ -57,7 +58,7 @@ def projCertW (p : Prog) (n : Nat) (m : Mem) (vis k _ao an : Word) : Option (Wor
   | some (r₁, m₁) =>
     if r₁.headD 0 = 0 then some (0, m₁)
     else if erRd m₁ (r₁.tail.headD 0) ≠ 4 then some (0, m₁)
-    else match callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + 4)] m₁ with
+    else match callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + (CI.cv + CV.type))] m₁ with
       | none => none
       | some (r₂, m₂) => some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂)
 
@@ -75,7 +76,7 @@ theorem projCertW_kind (h : callW p n "env_find" [k, vis] m = some (r₁, m₁))
 
 theorem projCertW_peel (h : callW p n "env_find" [k, vis] m = some (r₁, m₁)) (h0 : ¬ r₁.headD 0 = 0)
     (h4 : ¬ erRd m₁ (r₁.tail.headD 0) ≠ 4)
-    (h2 : callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + 4)] m₁ = some (r₂, m₂)) :
+    (h2 : callW p n "peel_pis" [an, erRd m₁ (r₁.tail.headD 0 + (CI.cv + CV.type))] m₁ = some (r₂, m₂)) :
     projCertW p n m vis k ao an = some (if r₂.headD 0 ≠ 0 then 1 else 0, m₂) := by
   simp only [projCertW, h, h0, h4, h2, ↓reduceIte]
 
@@ -157,7 +158,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h4] at hW
   obtain ⟨cv, np, nf, fam,  rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
-  rcases hc2 : callW p n "peel_pis" [an, erRd s.mem (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
+  rcases hc2 : callW p n "peel_pis" [an, erRd s.mem (r₁.tail.headD 0 + (CI.cv + CV.type))] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
     (peelPis_refines p hp.spine n s a₀ hS.arena.base an _ htw) hc2

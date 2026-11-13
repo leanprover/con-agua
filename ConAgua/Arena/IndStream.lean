@@ -246,10 +246,10 @@ def streamRecCompareL : FunDecl := lfn (vis, rc, g) locals (cvR, cvG, lo, ll, n,
   cvR := IW.u64[rc];
   cvG := IW.u64[g];
   (lo, ll) := call cv_lps(cvG);
-  if EREC⦃cvR + 3⦄ != EREC⦃cvG + 3⦄ {
+  if EREC⦃cvR + ⟪CV.type⟫⦄ != EREC⦃cvG + ⟪CV.type⟫⦄ {
     n := IW.u64[rc + 2] + 1;
     if n == 0 { abort };
-    u := call rec_ty_check(vis, lo, ll, n, EREC⦃cvR + 3⦄, EREC⦃cvG + 3⦄)
+    u := call rec_ty_check(vis, lo, ll, n, EREC⦃cvR + ⟪CV.type⟫⦄, EREC⦃cvG + ⟪CV.type⟫⦄)
   };
   u := call stream_rules_check(vis, lo, ll, IW.u64[rc + 4], IW.u64[rc + 5], IW.u64[g + 2],
     IW.u64[g + 3]);
@@ -264,7 +264,7 @@ def streamRecCheckL : FunDecl := lfn (vis, rc, g) locals (M, u, k, lo, ll, po, p
   M := IW.u64[g + 1];
   u := call stream_rules_shape(IW.u64[rc + 4], IW.u64[rc + 5], IW.u64[M + 6], IW.u64[M + 7]);
   (k, lo, ll, po, pl) := call generated_fire(M, IW.u64[rc + 1]);
-  ok := call stream_nested_ok(EREC⦃IW.u64[rc] + 3⦄, IW.u64[rc + 2], IW.u64[rc + 1], k, lo, ll, po,
+  ok := call stream_nested_ok(EREC⦃IW.u64[rc] + ⟪CV.type⟫⦄, IW.u64[rc + 2], IW.u64[rc + 1], k, lo, ll, po,
     pl);
   if ok == 0 { fail R_THE_RECURSOR_S_STORED };
   u := call stream_rec_compare(vis, rc, g);

@@ -334,7 +334,7 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
     t := mem - 1;
     if t < cvTasLen {
       cvp := IW.u64[cvTasOff + t];
-      return EREC⦃cvp + 3⦄
+      return EREC⦃cvp + ⟪CV.type⟫⦄
     };
     e := call intern_bvar(0);
     if 4294967296 <= e { abort };
@@ -343,8 +343,8 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
   (f, q) := call env_find(IW.u64[m], vis);
   if f == 0 { abort };
   if EREC⦃q⦄ != 3 { abort };
-  ty := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
-  (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
+  ty := call family_telescope(vis, q + ⟪CI.cv⟫, q + ⟪CI.indCaps⟫);
+  (lo, ll) := call er_to_iw(EREC⦃q + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄);
   e := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[m + 1], ty);
   return e
 }
@@ -355,7 +355,7 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d, b, h, a, u) {
   n := EREC⦃q⦄;
-  t := EREC⦃q + 3⦄;
+  t := EREC⦃q + ⟪CV.type⟫⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call class_const_ok_lit(q);
@@ -379,12 +379,12 @@ def classConstOkHeader : FunDecl := lfn (vis, q) locals (n, t, f, r, c, o, l, d,
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:539-562 ConRon.Arena.classConstOk
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
-  q := call erec_alloc(5);
+  q := call erec_alloc(⟪CI.axiomSize⟫);
   ez := call erec_put(q, 0);
-  ez := call erec_put(q + 1, EREC⦃cv⦄);
-  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
-  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
-  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.name⟫, EREC⦃cv⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsOff⟫, EREC⦃cv + ⟪CV.lpsOff⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsLen⟫, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.type⟫, EREC⦃cv + ⟪CV.type⟫⦄);
   r := call lit_shape_ok(q);
   return r
 }
@@ -394,7 +394,7 @@ def classConstOkLit : FunDecl := lfn (cv) locals (q, ez, r) {
 @[no_expose, l_impl ConRon.Arena.classConstOk]
 def classConstOkL : FunDecl := lfn (vis, cv) locals (u, s) {
   u := call class_const_ok_header(vis, cv);
-  s := call infer_type_core(vis, 0, EREC⦃cv + 3⦄);
+  s := call infer_type_core(vis, 0, EREC⦃cv + ⟪CV.type⟫⦄);
   u := call ensure_sort_core(vis, 0, s);
   return 0
 }
@@ -411,7 +411,7 @@ def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
   (ok, gty) := call class_gen_rec_ty(g, c);
   if ok == 0 { abort };
   cvp := IW.u64[rc];
-  cvG := call cv_new(EREC⦃cvp⦄, EREC⦃cvp + 1⦄, EREC⦃cvp + 2⦄, gty);
+  cvG := call cv_new(EREC⦃cvp⦄, EREC⦃cvp + ⟪CV.lpsOff⟫⦄, EREC⦃cvp + ⟪CV.lpsLen⟫⦄, gty);
   r := call class_rec_ty_check(vis, cvRi, cvG);
   return cvG
 }
@@ -422,7 +422,7 @@ constant and defeq to the stream's checked type `cvRi`. -/
 @[no_expose, l_impl ConRon.Arena.classRecTyCheck]
 def classRecTyCheckL : FunDecl := lfn (vis, cvRi, cvG) locals (r, eq) {
   r := call class_const_ok(vis, cvG);
-  eq := call is_def_eq_core(vis, 0, EREC⦃cvRi + 3⦄, EREC⦃cvG + 3⦄);
+  eq := call is_def_eq_core(vis, 0, EREC⦃cvRi + ⟪CV.type⟫⦄, EREC⦃cvG + ⟪CV.type⟫⦄);
   if eq == 0 { fail R_GENERATED_RECURSOR_THE_TYPE };
   return 0
 }
@@ -740,18 +740,18 @@ unless the copied name word is a handle, which `env_push` needs). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:749-766 ConRon.Arena.classFeR
 @[no_expose, l_impl ConRon.Arena.classFeR]
 def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q, ez) {
-  q := call erec_alloc(10);
+  q := call erec_alloc(⟪CI.recSize⟫);
   ez := call erec_put(q, 5);
-  ez := call erec_put(q + 1, EREC⦃cv⦄);
-  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
-  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
-  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
-  ez := call erec_put(q + 5, mi);
-  ez := call erec_put(q + 6, rp3);
-  ez := call erec_put(q + 7, 0);
-  ez := call erec_put(q + 8, 0);
-  ez := call erec_put(q + 9, 0);
-  if 4294967296 <= EREC⦃q + 1⦄ { abort };
+  ez := call erec_put(q + ⟪CI.cv + CV.name⟫, EREC⦃cv⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsOff⟫, EREC⦃cv + ⟪CV.lpsOff⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsLen⟫, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.type⟫, EREC⦃cv + ⟪CV.type⟫⦄);
+  ez := call erec_put(q + ⟪CI.recMajor⟫, mi);
+  ez := call erec_put(q + ⟪CI.recPrefix⟫, rp3);
+  ez := call erec_put(q + ⟪CI.recRulesOff⟫, 0);
+  ez := call erec_put(q + ⟪CI.recRulesLen⟫, 0);
+  ez := call erec_put(q + ⟪CI.recIsK⟫, 0);
+  if 4294967296 <= EREC⦃q + ⟪CI.cv + CV.name⟫⦄ { abort };
   return q
 }
 
@@ -810,7 +810,7 @@ def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
 def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   q := call iw_alloc(cvTasLen);
   j := 0;
-  for j < cvTasLen { IW.u64[q + j] := EREC⦃IW.u64[cvTasOff + j] + 3⦄ };
+  for j < cvTasLen { IW.u64[q + j] := EREC⦃IW.u64[cvTasOff + j] + ⟪CV.type⟫⦄ };
   return (q, cvTasLen)
 }
 

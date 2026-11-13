@@ -435,7 +435,7 @@ def dindAlloc : FunDecl := lfn (n) locals (o) {
 }
 
 /-- `ind_cv(q, name, lps, type)`: `parseCVD` (name, type, universe parameters, in that order),
-written as the 4-word constant value at `DIND[q]`; the universe parameters are `lp_put`'s slice
+written as the constant value (`CV.size` words, `RecLayout/CV.lean`) at `DIND[q]`; the universe parameters are `lp_put`'s slice
 (`ApplyDecl.lean`, the same pool). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:230-237 ConRon.Arena.Frontend.parseCVD
 @[no_expose, l_impl ConRon.Arena.Frontend.parseCVD]
@@ -444,9 +444,9 @@ def indCv : FunDecl := lfn (q, nm, lps, ty) locals (n, t, o, l) {
   t := call expr_get(ty);
   (o, l) := call lp_put(lps);
   DIND.u64[q] := n;
-  DIND.u64[q + 1] := o + 1;
-  DIND.u64[q + 2] := l;
-  DIND.u64[q + 3] := t;
+  DIND.u64[q + ⟪CV.lpsOff⟫] := o + 1;
+  DIND.u64[q + ⟪CV.lpsLen⟫] := l;
+  DIND.u64[q + ⟪CV.type⟫] := t;
   return 0
 }
 
@@ -505,7 +505,7 @@ def indRules : FunDecl := lfn (o, n) locals (lo, u) {
 def indType : FunDecl := lfn (t) locals (q, u) {
   q := call dind_alloc(⟪CI.indSize⟫);
   DIND.u64[q] := 3;
-  u := call ind_cv(q + 1, IFR.u64[t], IFR.u64[t + 1], IFR.u64[t + 2]);
+  u := call ind_cv(q + ⟪CI.cv⟫, IFR.u64[t], IFR.u64[t + 1], IFR.u64[t + 2]);
   u := call ind_caps(q + ⟪CI.indCaps⟫);
   return q
 }
@@ -515,12 +515,12 @@ its pointer. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indCtor : FunDecl := lfn (c, tt) locals (q, u) {
-  q := call dind_alloc(8);
+  q := call dind_alloc(⟪CI.ctorSize⟫);
   DIND.u64[q] := 4;
-  u := call ind_cv(q + 1, IFR.u64[c], IFR.u64[c + 1], IFR.u64[c + 2]);
-  DIND.u64[q + 5] := IFR.u64[c + 5];
-  DIND.u64[q + 6] := IFR.u64[c + 4];
-  DIND.u64[q + 7] := tt;
+  u := call ind_cv(q + ⟪CI.cv⟫, IFR.u64[c], IFR.u64[c + 1], IFR.u64[c + 2]);
+  DIND.u64[q + ⟪CI.ctorNparams⟫] := IFR.u64[c + 5];
+  DIND.u64[q + ⟪CI.ctorNfields⟫] := IFR.u64[c + 4];
+  DIND.u64[q + ⟪CI.ctorInduct⟫] := tt;
   return q
 }
 
@@ -529,16 +529,16 @@ its constant value, as the twin); its pointer. -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:356-381 ConRon.Arena.Frontend.installIndD
 @[no_expose, l_impl ConRon.Arena.Frontend.installIndD]
 def indRec : FunDecl := lfn (r) locals (q, u, lo, ln, a) {
-  q := call dind_alloc(10);
+  q := call dind_alloc(⟪CI.recSize⟫);
   DIND.u64[q] := 5;
   (lo, ln) := call ind_rules(IFR.u64[r + 9], IFR.u64[r + 10]);
-  u := call ind_cv(q + 1, IFR.u64[r], IFR.u64[r + 1], IFR.u64[r + 2]);
+  u := call ind_cv(q + ⟪CI.cv⟫, IFR.u64[r], IFR.u64[r + 1], IFR.u64[r + 2]);
   a := IFR.u64[r + 8] + IFR.u64[r + 7] + IFR.u64[r + 6];
-  DIND.u64[q + 5] := a + IFR.u64[r + 5];
-  DIND.u64[q + 6] := a;
-  DIND.u64[q + 7] := lo;
-  DIND.u64[q + 8] := ln;
-  DIND.u64[q + 9] := IFR.u64[r + 4];
+  DIND.u64[q + ⟪CI.recMajor⟫] := a + IFR.u64[r + 5];
+  DIND.u64[q + ⟪CI.recPrefix⟫] := a;
+  DIND.u64[q + ⟪CI.recRulesOff⟫] := lo;
+  DIND.u64[q + ⟪CI.recRulesLen⟫] := ln;
+  DIND.u64[q + ⟪CI.recIsK⟫] := IFR.u64[r + 4];
   return q
 }
 

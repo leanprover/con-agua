@@ -14,6 +14,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.DeclArmsCanon
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -57,16 +58,6 @@ l_model ertW_spec (p : Prog) (hf : p.lookup "eta_rescue_table" = some etaRescueT
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
-/-- A `ctorInfo` record's constant value decodes at `q + 1`. -/
-theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {nP nF : Nat}
-    {fam : NIdx} (h : decCI R q = some (.ctorInfo cv nP nF fam)) : decCV R (q + 1) = some cv := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  rcases k with _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨cv', hcv, _, -, _, -, _, -, he⟩ := h
-  cases he; exact hcv
-
 /-- **The words of a found table** (`find_table`'s answer `tq ≠ 0`, the record at `tq - 1`): the
 parameter count, the constructor and the field count, read through the handle. -/
 theorem tblFound_words {m : Mem} {tq : Word} {tb : IProjTable} (h : tblFound m tq = some tb) :
@@ -101,7 +92,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   have hT : tblFound m tq = some tb := by simp [tblFound, g0, htb]
   obtain ⟨-, -, hcw, hcd, -⟩ := tblFound_words hT
   have hrec := decCI_indCaps (erRdOK m) hci
-  obtain ⟨hlj, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ctor_cv hcj)
+  obtain ⟨-, -, hlj, -⟩ := decCV_rd_ci (erRdOK m) (decCI_ctorInfo_iff.mp hcj).2.1
   have hlT := hrec.lp
   have heta := hrec.eta
   have hz : tblFound m 0 = none := by simp [tblFound]
@@ -126,8 +117,8 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   have hE : caps.eta = true := by rw [heta]; simpa using g1
   have hC : (tb.ctor == decI ctor) = true := by rw [hcd, g2']; simp
   simp only [L.Ind.erRd_foldN] at h
-  rcases c1 : callW p n "er_sl_eq" [erRd m (cq + 2), erRd m (cq + 3), erRd m (q + 2),
-      erRd m (q + 3)] m with _ | ⟨r1, m1⟩
+  rcases c1 : callW p n "er_sl_eq" [erRd m (cq + (CI.cv + CV.lpsOff)), erRd m (cq + (CI.cv + CV.lpsLen)), erRd m (q + (CI.cv + CV.lpsOff)),
+      erRd m (q + (CI.cv + CV.lpsLen))] m with _ | ⟨r1, m1⟩
   · rw [c1, ertW.k_er_sl_eq.none] at h; cases h
   rw [c1] at h
   obtain ⟨s1, hs1, -, hm1, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)

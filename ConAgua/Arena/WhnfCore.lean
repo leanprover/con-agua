@@ -208,7 +208,7 @@ def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
   if f == 0 { return (0, 0) };
   if EREC⦃q⦄ != 5 { return (0, 0) };
   (lo, usl) := call ls_node(CONST⟨t, x⟩.us);
-  if usl == EREC⦃q + 3⦄ { return (1, EREC⦃q + 5⦄) };
+  if usl == EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (1, EREC⦃q + ⟪CI.recMajor⟫⦄) };
   return (0, 0)
 }
 
@@ -424,7 +424,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   (f, q) := call env_find(k, vis);
   if f == 0 { return 0 };
   if EREC⦃q⦄ != 4 { return 0 };
-  (ok, r) := call peel_pis(an, EREC⦃q + 4⦄);
+  (ok, r) := call peel_pis(an, EREC⦃q + ⟪CI.cv + CV.type⟫⦄);
   return u64(ok != 0)
 }
 

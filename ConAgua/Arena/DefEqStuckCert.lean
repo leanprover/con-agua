@@ -11,6 +11,7 @@ import ConAgua.Arena.DefEqStuckEta
 import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.IndRecRead
 import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

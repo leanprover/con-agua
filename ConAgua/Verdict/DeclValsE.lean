@@ -27,7 +27,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecGenSpec.CftW
+import ConAgua.Arena.IlpRd
 
 @[expose] public section
 
@@ -101,16 +101,20 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     {cv : IConstantVal} {r1 r2 r3 r4 r5 r6 : List Word}
     (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
     (hw0 : erecP m q.toNat = some nw) (hw3 : erecP m (q.toNat + 3) = some t)
-    (h1 : callW p n "erec_alloc" [5] m = some (r1, m1))
+    (h1 : callW p n "erec_alloc" [CI.axiomSize] m = some (r1, m1))
     (h2 : callW p n "erec_put" [r1.headD 0, 0] m1 = some (r2, m2))
-    (h3 : callW p n "erec_put" [r1.headD 0 + 1, nw] m2 = some (r3, m3))
-    (h4 : callW p n "erec_put" [r1.headD 0 + 2,
-      rdW (m3.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775)] m3 = some (r4, m4))
-    (h5 : callW p n "erec_put" [r1.headD 0 + 3,
-      rdW (m4.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775)] m4 = some (r5, m5))
-    (h6 : callW p n "erec_put" [r1.headD 0 + 4, t] m5 = some (r6, m6)) :
+    (h3 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.name), nw] m2 = some (r3, m3))
+    (h4 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.lpsOff),
+      rdW (m3.arr64 (L.tierA EREC ((q + CV.lpsOff) >>> 40))) (q + CV.lpsOff &&& 1099511627775)] m3 =
+        some (r4, m4))
+    (h5 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.lpsLen),
+      rdW (m4.arr64 (L.tierA EREC ((q + CV.lpsLen) >>> 40))) (q + CV.lpsLen &&& 1099511627775)] m4 =
+        some (r5, m5))
+    (h6 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.type), t] m5 = some (r6, m6)) :
     StageT dn vis fe m6 a ∧ IWGrow m m6 ∧ MemFrame [EREC, tier1 EREC] [129, 130] m m6 ∧
       decCI (erecP m6) (r1.headD 0).toNat = some (.axiomInfo cv) := by
+  -- a whole-record writer (the `axiomInfo` record): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceAdd] at h1 h3 h4 h5 h6
   have hA := callW_erecAlloc hp.alloc h1
   generalize r1.headD 0 = A at hA h2 h3 h4 h5 h6 ⊢
   obtain ⟨hT1, hg1, hoff, htop, h41⟩ := erAlloc_stageT hA hS
@@ -167,11 +171,15 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   have r4 := hrd 4 (by simp)
   simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4
   have hcv6 : decCV (erecP (wrER m1 A [0, nw, w1, w2, t])) (A.toNat + 1) = some cv :=
-    L.Arena.decCV_move hg6.ext (by rw [r1, hw0]) (by rw [show A.toNat + 1 + 1 = A.toNat + 2 by omega, r2, hw1])
-      (by rw [show A.toNat + 1 + 2 = A.toNat + 3 by omega, r3, hw2])
-      (by rw [show A.toNat + 1 + 3 = A.toNat + 4 by omega, r4, hw3]) hqd
+    L.Arena.decCV_move hg6.ext (by rw [r1, hw0])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 1 = A.toNat + 2 by omega, r2, hw1])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 2 = A.toNat + 3 by omega, r3, hw2])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 3 = A.toNat + 4 by omega, r4, hw3]) hqd
   have hk0 : nat? (erecP (wrER m1 A [0, nw, w1, w2, t])) A.toNat = some 0 := by simp [nat?, r0]
-  simp [decCI, hk0, hcv6]
+  simp [decCI, rec_unfold, UInt64.reduceToNat, hk0, hcv6]
 
 /-- What `check_constant_val` gives besides the twin's run: the stage, the growth, the memos; the
 walk memos (`AbsOK`) kept. -/
@@ -244,7 +252,7 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
@@ -434,13 +442,13 @@ its memo carried across), the unresolved constants' error by `uce_errClaim_lo`. 
 theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem}
     {q v : Word} {cv : IConstantVal} (hS : StageT dn vis fe m a)
-    (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32)
+    (hqd : decCV (erecP m) q.toNat = some cv) (hv : v.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (valueGuardsE p n m vis q v) (valueGuards fe cv (decI v)) a
       (fun w _ a' => CcvPost dn vis fe m w.2 a') := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
+  have hq1 : (q + 1).toNat = q.toNat + 1 := off_add_toNat rfl (erecP_lt64 hw1)
+  have hq2 : (q + 2).toNat = q.toNat + 2 := off_add_toNat rfl (erecP_lt64 hw2)
   cases n with
   | zero => rw [valueGuardsE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
@@ -514,20 +522,19 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} {hint : ConLeche.ReducibilityHint} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + CI.defnValue.toNat) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkDefnValE p n m vis c) (checkDefnVal V fe cv (decI wv) hint) a
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .defnInfo cv (decI wv) hint) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
-  have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
-  have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
-  have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+  have e1 : (c + CI.cv).toNat = c.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have ev : rdW (m.arr64 (L.tierA EREC ((c + CI.defnValue) >>> 40))) (c + CI.defnValue &&& 1099511627775) =
+      wv := (erRdOK m).at _ rfl hwv
+  have et : rdW (m.arr64 (L.tierA EREC ((c + (CI.cv + CV.type)) >>> 40)))
+      (c + (CI.cv + CV.type) &&& 1099511627775) = wt :=
+    (erRdOK m).at _ (CI.cv_add_toNat CV.type_le) (by rw [← Nat.add_assoc]; exact hwt)
   cases n with
   | zero => rw [checkDefnValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -536,8 +543,8 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
   simp only [checkDefnVal]
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkDefnValE.k_value_guards.none ..)
-    (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + 1) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) (by rw [e1]; omega) hwvl hlps hCr)
+    (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkDefnValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -569,20 +576,19 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + CI.defnValue.toNat) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkOpaqueValE p n m vis c) (checkOpaqueVal V fe cv (decI wv)) a
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .axiomInfo cv) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
-  have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
-  have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
-  have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+  have e1 : (c + CI.cv).toNat = c.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have ev : rdW (m.arr64 (L.tierA EREC ((c + CI.defnValue) >>> 40))) (c + CI.defnValue &&& 1099511627775) =
+      wv := (erRdOK m).at _ rfl hwv
+  have et : rdW (m.arr64 (L.tierA EREC ((c + (CI.cv + CV.type)) >>> 40)))
+      (c + (CI.cv + CV.type) &&& 1099511627775) = wt :=
+    (erRdOK m).at _ (CI.cv_add_toNat CV.type_le) (by rw [← Nat.add_assoc]; exact hwt)
   cases n with
   | zero => rw [checkOpaqueValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -591,8 +597,8 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
   simp only [checkOpaqueVal]
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkOpaqueValE.k_value_guards.none ..)
-    (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + 1) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) (by rw [e1]; omega) hwvl hlps hCr)
+    (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkOpaqueValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -626,7 +632,7 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
     (hkp : CrKeep p) (hcrf : L.Ind.CrfF p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {c : Word}
     {cv : IConstantVal} {wv : Word} (hS : StageT dn vis fe m a)
-    (hcv : decCV (erecP m) (c.toNat + 1) = some cv) (hwv : erecP m (c.toNat + 5) = some wv)
+    (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + CI.defnValue.toNat) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
     (hpre : ∃ env cP, ConLeche.EnvWF env ∧ ConRon.Bridge.CheckOK false env fe a ∧
       Frontend.denoteCV a.store cv = some cP ∧ ConLeche.Expr.WScoped 0 cP.type)
@@ -636,14 +642,13 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
         y = .thmInfo cv) := by
   have hL := hq.knot.lvc
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
-  have hc5 : c.toNat + 5 < 2 ^ 64 := erecP_lt64 hwv
-  have e5 : (c + 5).toNat = c.toNat + 5 := L.toNat_add_ofNat_of_lt c 5 (by omega)
-  have e4 : (c + 4).toNat = c.toNat + 4 := L.toNat_add_ofNat_of_lt c 4 (by omega)
-  have e1 : (c + 1).toNat = c.toNat + 1 := L.toNat_add_ofNat_of_lt c 1 (by omega)
-  have ev : rdW (m.arr64 (L.tierA EREC ((c + 5) >>> 40))) (c + 5 &&& 1099511627775) = wv := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e5]; exact hwv)
-  have et : rdW (m.arr64 (L.tierA EREC ((c + 4) >>> 40))) (c + 4 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [e4]; simpa [Nat.add_assoc] using hwt)
+  have e1 : (c + CI.cv).toNat = c.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have ev : rdW (m.arr64 (L.tierA EREC ((c + CI.defnValue) >>> 40))) (c + CI.defnValue &&& 1099511627775) =
+      wv := (erRdOK m).at _ rfl hwv
+  have et : rdW (m.arr64 (L.tierA EREC ((c + (CI.cv + CV.type)) >>> 40)))
+      (c + (CI.cv + CV.type) &&& 1099511627775) = wt :=
+    (erRdOK m).at _ (CI.cv_add_toNat CV.type_le) (by rw [← Nat.add_assoc]; exact hwt)
   cases n with
   | zero => rw [checkThmValE.eq_1]; exact RefE.of_cls0 (by simp)
   | succ n =>
@@ -705,9 +710,9 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
   have hg14 := hg1.trans (hg2.trans hg4)
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => checkThmValE.k_value_guards.none ..)
-    (valueGuards_specE p hP n ⟨s4.mem, Locals.init []⟩ vis (c + 1) wv) (fun hG => hG.nv) id
+    (valueGuards_specE p hP n ⟨s4.mem, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
     (vg_ref hP hap hcrf n hS4 (by rw [e1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg14) hcv)
-      (by rw [e1]; omega) hwvl hlps4 hCr4)
+      hwvl hlps4 hCr4)
     fun r5 s5 y5 a5 _ _ _ hP5 => ?_
   rw [checkThmValE.k_value_guards.arm1]
   have hS5 := hP5.stage

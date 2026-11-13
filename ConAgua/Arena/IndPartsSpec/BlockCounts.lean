@@ -262,7 +262,7 @@ theorem bcPure_nonsort (m : Mem) (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g �
 theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP : Word)
     (r : List Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
     (hR : ArenaR m a) (h : bcW n m nPd k nC nR cvT rOk rMI rRP = some (r, m'))
-    (hcv : decCVp m cvT.toNat = some cv) (hb : cvT.toNat + 3 < 2 ^ 64)
+    (hcv : decCVp m cvT.toNat = some cv)
     (hrr : rr = if rOk = 0 then none else some (rMI.toNat, rRP.toNat))
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
@@ -280,7 +280,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   obtain ⟨r0, hr0, h⟩ := L.Arena.of_K h (bcW.k_block_counts_pure.none _)
   rw [bcW.k_block_counts_pure.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hty32, hty⟩ := decCVp_type hcv hb
+  obtain ⟨hty32, hty⟩ := decCVp_type hcv
   obtain ⟨bs, res, v, hrun, hsh, hlen, hview, hiff, hg, hf⟩ :=
     bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc
   rw [show r1.tail.headD 0 = r1.getD 1 0 by rw [hsh]; rfl] at hr0
@@ -385,7 +385,7 @@ theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
     (hp : p.lookup "block_counts" = some blockCounts) (n : Nat) (s₀ : St) (a₀ : AState)
     (nPd k nC nR cvT rOk rMI rRP : Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
-    (hR : ArenaR s₀.mem a₀) (hcv : decCVp s₀.mem cvT.toNat = some cv) (hb : cvT.toNat + 3 < 2 ^ 64)
+    (hR : ArenaR s₀.mem a₀) (hcv : decCVp s₀.mem cvT.toNat = some cv)
     (hrr : rr = if rOk = 0 then none else some (rMI.toNat, rRP.toNat))
     (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
@@ -399,7 +399,7 @@ theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   refine triple_post (blockCounts_spec p ha hc hv hs hpb hh hpp hp n s₀ nPd k nC nR cvT rOk rMI rRP) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, hrun, hr, -, hg, hf⟩ := bcW_ok n s₀.mem s'.mem a₀ nPd k nC nR cvT rOk rMI rRP r cv rr
-    hR hm hcv hb hrr h1 h2 h3 h4 h5 h6 hsz hcl
+    hR hm hcv hrr h1 h2 h3 h4 h5 h6 hsz hcl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hr, hg, hf⟩
 

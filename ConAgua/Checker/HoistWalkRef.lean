@@ -611,7 +611,7 @@ theorem blockGo_ok' (n : Nat) :
     obtain ⟨cv, kw, w, htc, hkw, hw4, hwl, hty, hrec⟩ := decCI_walk hci
     obtain ⟨hPk, -⟩ := trunc_get hkw hpN
     obtain ⟨hP4, h4t⟩ := trunc_get hw4 (by omega)
-    rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of (off_toNat (by omega)) hP4, hBlockGoW.k_hoist_walk.eq_def] at hb
+    rw [hBlockGoW.arm2 n m k i tg ws sp o c q hc, hpd, rdW_of (off_add_toNat rfl (by omega)) hP4, hBlockGoW.k_hoist_walk.eq_def] at hb
     rcases h1 : hWalkW n m w i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
     · cases hb
     simp only at hb
@@ -637,7 +637,7 @@ theorem blockGo_ok' (n : Nat) :
     · rw [ite_eq_left h5] at hb
       obtain ⟨hP7, h7t⟩ := trunc_get h7 (by omega)
       obtain ⟨hP8, h8t⟩ := trunc_get h8 (by omega)
-      rw [rdW_of (off_toNat (by omega)) hP7, rdW_of (off_toNat (by omega)) hP8, hBlockGoW.k_hoist_rules_go.eq_def] at hb
+      rw [rdW_of (off_add_toNat rfl (by omega)) hP7, rdW_of (off_add_toNat rfl (by omega)) hP8, hBlockGoW.k_hoist_rules_go.eq_def] at hb
       obtain ⟨hlen, hrr⟩ := decRules_facts hr
       have hRA : RulesAt m₁ ow 0 rules := by
         intro q hq

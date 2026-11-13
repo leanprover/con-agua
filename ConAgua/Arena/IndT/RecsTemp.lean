@@ -116,11 +116,9 @@ theorem cbrt_ok {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
   obtain ⟨e0, t0⟩ := rec2RdN (w := io) (k := 0) (by simpa using hcq) hsz
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at e0
   obtain ⟨w, hw, hw32, hwnm⟩ := decCI_name hci
-  have hq1 : (UInt64.ofNat cq + 1 : Word).toNat = cq + 1 := by
-    have := L.Arena.erecP_lt64 hw; rw [UInt64.toNat_add, t0]; simp; omega
-  have ew : rdW (m.arr64 (tierA EREC ((UInt64.ofNat cq + 1 : Word) >>> 40)))
-      ((UInt64.ofNat cq + 1 : Word) &&& 1099511627775) = w :=
-    (erRd_of_erecP (a := UInt64.ofNat cq + 1) (by rw [hq1]; exact hw)).1
+  have ew : rdW (m.arr64 (tierA EREC ((UInt64.ofNat cq + (CI.cv + CV.name) : Word) >>> 40)))
+      ((UInt64.ofNat cq + (CI.cv + CV.name) : Word) &&& 1099511627775) = w :=
+    (erRdOK m).at _ CI.cv_name_toNat (by rw [t0]; exact hw)
   rw [cbrtE.arm2 _ _ _ _ _ _ _ _ hz, e0, ew] at h
   -- `env_row_get`
   rcases h1 : callW p n "env_row_get" [w] m with _ | ⟨r1, m1⟩

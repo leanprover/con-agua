@@ -35,27 +35,27 @@ structure NatGuardProg (p : Prog) : Prop extends NatLitProg p where
 word, and that they stay under growth. -/
 theorem cvWordsAt {m : Mem} {q : Word} {cv : IConstantVal}
     (h : decCV (erecP m) q.toNat = some cv) :
-    ∃ wt, ((erRd m (q + 2) = 0) ↔ cv.levelParams.isEmpty = true) ∧
-      erRd m (q + 3) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
-      ∀ m', IWGrow m m' → erRd m' (q + 2) = erRd m (q + 2) ∧ erRd m' (q + 3) = wt := by
-  obtain ⟨wl, hwl, hlen⟩ := decCV_lps_len h
-  obtain ⟨wt, hwt, hlt, hty⟩ := decCV_typeWR h
-  have hb := erecP_lt64 hwt
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hwl' : erecP m (q + 2).toNat = some wl := by rw [hq2]; exact hwl
-  have hwt' : erecP m (q + 3).toNat = some wt := by rw [hq3]; exact hwt
-  have e2 : erRd m (q + 2) = wl := (erRd_of_erecP hwl').1
-  have e3 : erRd m (q + 3) = wt := (erRd_of_erecP hwt').1
-  have hst : ∀ m', IWGrow m m' → erRd m' (q + 2) = erRd m (q + 2) ∧ erRd m' (q + 3) = wt := by
+    ∃ wt, ((erRd m (q + CV.lpsLen) = 0) ↔ cv.levelParams.isEmpty = true) ∧
+      erRd m (q + CV.type) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
+      ∀ m', IWGrow m m' → erRd m' (q + CV.lpsLen) = erRd m (q + CV.lpsLen) ∧
+        erRd m' (q + CV.type) = wt := by
+  obtain ⟨-, ⟨wl, hwl, hlen⟩, ⟨wt, hwt, hlt, hty⟩⟩ := decCV_words h
+  have hwl' : erecP m (q + CV.lpsLen).toNat = some wl := by
+    rw [off_add_toNat rfl (erecP_lt64 hwl)]; exact hwl
+  have hwt' : erecP m (q + CV.type).toNat = some wt := by
+    rw [off_add_toNat rfl (erecP_lt64 hwt)]; exact hwt
+  have e2 : erRd m (q + CV.lpsLen) = wl := (erRd_of_erecP hwl').1
+  have e3 : erRd m (q + CV.type) = wt := (erRd_of_erecP hwt').1
+  have hst : ∀ m', IWGrow m m' → erRd m' (q + CV.lpsLen) = erRd m (q + CV.lpsLen) ∧
+      erRd m' (q + CV.type) = wt := by
     intro m' hg
     exact ⟨by rw [e2]; exact (erRd_of_erecP (hg.ext _ _ hwl')).1, (erRd_of_erecP (hg.ext _ _ hwt')).1⟩
   refine ⟨wt, ?_, e3, hlt, hty, hst⟩
   rw [e2]
   simp only [List.isEmpty_iff_length_eq_zero]
   constructor
-  · intro hw0; rw [← hlen, hw0]; rfl
-  · intro hl; exact UInt64.toNat_inj.mp (by simpa [hlen] using hl)
+  · intro hw0; rw [hlen, hw0]; rfl
+  · intro hl; rw [hlen] at hl; exact UInt64.toNat_inj.mp (by simpa using hl)
 
 section guard
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}

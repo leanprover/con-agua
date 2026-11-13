@@ -6,6 +6,7 @@ import ConRon.Bridge.Grind
 import ConAgua.L.WordOff
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WhnfIotaRefine6
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

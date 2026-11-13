@@ -124,9 +124,7 @@ theorem cdmpFe2_ref (hD : DmProg7 p) (hcl : LeafClosed p) (hkp : CrKeep p) (hF2 
   rotate_left
   · exact absurd hkk (by rw [(erRd_of_erecP hw1).1]; exact hne)
   obtain ⟨wv, -, hk5, hwl, hwd⟩ := decCI_defn_val hci
-  have hq5 : (q + 5).toNat = q.toNat + 5 := by
-    have := erecP_lt64 hk5; rw [UInt64.toNat_add]; simp; omega
-  have e5 : erRd m4 (q + 5) = wv := (erRd_of_erecP (by rw [hq5]; exact hk5)).1
+  have e5 : erRd m4 (q + CI.defnValue) = wv := (erRdOK m4).at _ rfl hk5
   rw [e5]
   exact RefE.ret rfl ⟨⟨hS1, hg1, hwl, hwd, hfr, hown⟩, hkp.call (im_mem _ rfl) h1⟩
 

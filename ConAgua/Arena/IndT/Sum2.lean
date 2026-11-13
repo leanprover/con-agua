@@ -80,10 +80,8 @@ theorem ct_ref (m : Mem) (a : AState) (n cvTa0 : Word) (cvTa : IConstantVal)
   have hS := hC.stage
   rw [ctE.arm1]
   obtain ⟨w, hw, hw32, hwd⟩ := (decCV_words hta).2.2
-  have h3 : (cvTa0 + 3).toNat = cvTa0.toNat + 3 := by
-    have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
-  have hw' : rdW (m.arr64 (tierA EREC ((cvTa0 + 3) >>> 40))) (cvTa0 + 3 &&& 1099511627775) = w :=
-    L.Arena.erRd_of _ _ (by rw [h3]; exact hw)
+  have hw' : rdW (m.arr64 (tierA EREC ((cvTa0 + CV.type) >>> 40))) (cvTa0 + CV.type &&& 1099511627775) = w :=
+    (erRdOK m).at _ rfl hw
   rw [hw']
   have hdw : denoteE a.store (decI w) = some cvTaP.type := by
     rw [← hwd]; exact ConRon.Bridge.denoteCV_type hcvTaP

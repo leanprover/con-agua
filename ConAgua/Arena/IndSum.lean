@@ -87,7 +87,7 @@ block's check puts a former at its telescope, `reduce_member`). Returns `(cvTa0,
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:31-43 ConRon.Arena.checkSumTele
 @[no_expose, l_impl ConRon.Arena.checkSumTele]
 def checkSumTeleL : FunDecl := lfn (n, cvTa0) locals (ok, bso, bsl, body, g, x, y, z) {
-  (ok, bso, bsl, body) := call strip_pis(n, EREC⦃cvTa0 + 3⦄);
+  (ok, bso, bsl, body) := call strip_pis(n, EREC⦃cvTa0 + ⟪CV.type⟫⦄);
   if ok == 0 { fail R_DIRECT_SUM_TYPE_FORMER };
   if ⟦body⟧.tag != 2 { fail R_DIRECT_SUM_TYPE_FORMER };
   (g, x, y, z) := call e_view(body);
@@ -209,13 +209,13 @@ def checkSumCtorL : FunDecl :=
   locals (u1, ok1, bso1, bsl1, cbody, resOk, cqOk, cqOff, cqLen, cqBody, tqOk, tqOff, tqLen, tqBody,
     tdOff, tdLen, u2, u3) {
   u1 := call check_constant_val(vis, cvC, 0);
-  (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC⦃cvC + 3⦄);
+  (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC⦃cvC + ⟪CV.type⟫⦄);
   if ok1 == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
   resOk := call struct_ctor_resid_ok(T, lpsOff, lpsLen, nP, nF, nIdx, cbody);
   if resOk == 0 { fail R_DIRECT_SUM_INVALID };
-  (cqOk, cqOff, cqLen, cqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvC + 3⦄, 0);
+  (cqOk, cqOff, cqLen, cqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvC + ⟪CV.type⟫⦄, 0);
   if cqOk == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
-  (tqOk, tqOff, tqLen, tqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + 3⦄, 0);
+  (tqOk, tqOff, tqLen, tqBody) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + ⟪CV.type⟫⦄, 0);
   if tqOk == 0 { fail R_DIRECT_SUM_TYPE };
   (tdOff, tdLen) := call fvar_type_ds(tqOff, tqLen);
   u2 := call check_struct_doms_at(vis, 0, cqOff, cqLen, tdOff, tdLen, nP);
@@ -252,16 +252,16 @@ name and family always are). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
 def ctorInfoRecL : FunDecl := lfn (cv, nP, nF, T) locals (rec, ez) {
-  rec := call erec_alloc(8);
+  rec := call erec_alloc(⟪CI.ctorSize⟫);
   ez := call erec_put(rec, 4);
-  ez := call erec_put(rec + 1, EREC⦃cv⦄);
-  ez := call erec_put(rec + 2, EREC⦃cv + 1⦄);
-  ez := call erec_put(rec + 3, EREC⦃cv + 2⦄);
-  ez := call erec_put(rec + 4, EREC⦃cv + 3⦄);
-  ez := call erec_put(rec + 5, nP);
-  ez := call erec_put(rec + 6, nF);
-  ez := call erec_put(rec + 7, T);
-  if 4294967296 <= EREC⦃rec + 1⦄ { abort };
+  ez := call erec_put(rec + ⟪CI.cv + CV.name⟫, EREC⦃cv⦄);
+  ez := call erec_put(rec + ⟪CI.cv + CV.lpsOff⟫, EREC⦃cv + ⟪CV.lpsOff⟫⦄);
+  ez := call erec_put(rec + ⟪CI.cv + CV.lpsLen⟫, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
+  ez := call erec_put(rec + ⟪CI.cv + CV.type⟫, EREC⦃cv + ⟪CV.type⟫⦄);
+  ez := call erec_put(rec + ⟪CI.ctorNparams⟫, nP);
+  ez := call erec_put(rec + ⟪CI.ctorNfields⟫, nF);
+  ez := call erec_put(rec + ⟪CI.ctorInduct⟫, T);
+  if 4294967296 <= EREC⦃rec + ⟪CI.cv + CV.name⟫⦄ { abort };
   if 4294967296 <= T { abort };
   return rec
 }

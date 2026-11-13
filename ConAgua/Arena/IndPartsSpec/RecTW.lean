@@ -13,6 +13,7 @@ import ConAgua.L.ModelGen
 import ConAgua.L.WordOff
 import ConAgua.Arena.IndInstallSpec.DomsW
 import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -398,21 +399,10 @@ theorem sort_head_iff (m1 : Mem) (res : Word) (v : ENodeView) (hv : ViewR (eView
       exact absurd hh (by decide)
     · rintro ⟨u, hu⟩; cases hu
 
-theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
-    (hb : q.toNat + 3 < 2 ^ 64) :
-    (erRd m (q + 3)).toNat < 2 ^ 32 ∧ decE (erRd m (q + 3)) = cv.type := by
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
-  have hty' : ty = cv.type := by rw [← hcv]
-  have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  rcases hw : erA m (q.toNat + 3) with _ | w
-  · simp [hd?, hw] at hty
-  have hrd : erRd m (q + 3) = w := L.Arena.erRd_of _ _ (by rw [e]; exact hw)
-  by_cases hl : w.toNat < 2 ^ 32
-  · simp [hd?, hw, hl] at hty
-    rw [hrd]
-    exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
-  · simp [hd?, hw, hl] at hty
+theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv) :
+    (erRd m (q + CV.type)).toNat < 2 ^ 32 ∧ decE (erRd m (q + CV.type)) = cv.type := by
+  obtain ⟨-, -, -, -, hty, hlt⟩ := decCV_rd (erRdOK m) (show decCV (erecP m) q.toNat = some cv from h)
+  exact ⟨hlt, by rw [hty]; rfl⟩
 
 end L.Ind
 

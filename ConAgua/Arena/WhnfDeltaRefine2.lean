@@ -19,6 +19,7 @@ import all ConAgua.Arena.NatAdd
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Store
 import ConAgua.Front.NatDecLink
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -922,11 +923,11 @@ def unfoldDefnAtW (p : Prog) (n : Nat) (m : Mem) (e nw usw q : Word) : Option (W
   if tagW usw ≠ 0 then none
   else if tierW usw ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
   else if tcnt m LVLS (tierW usw) ≤ idxW usw then none
-  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ erRd m (q + 3) then
+  else if tfld m LVLS (tierW usw) (idxW usw) 1 ≠ erRd m (q + (CI.cv + CV.lpsLen)) then
     some (0, 0, m)
   else
-  match callW p n "const_val_at" [nw, erRd m (q + 2), erRd m (q + 3),
-      erRd m (q + 5), usw] m with
+  match callW p n "const_val_at" [nw, erRd m (q + (CI.cv + CV.lpsOff)), erRd m (q + (CI.cv + CV.lpsLen)),
+      erRd m (q + CI.defnValue), usw] m with
   | none => none
   | some (r₃, m₃) =>
   match callW p n "get_app_args" [e] m₃ with
@@ -1041,7 +1042,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   obtain ⟨cv', v', hint', hci_eq, hcv, hv', hvl⟩ := hdefn hk1
   injection hci_eq with hcv_eq hv_eq hh_eq
   subst hcv_eq hv_eq
-  obtain ⟨hslice, hlen, -, -⟩ := decCV_rd (erRdOK _) hcv
+  obtain ⟨-, -, hslice, hlen, -, -⟩ := decCV_rd_ci (erRdOK _) hcv
   unfold unfoldDefnAtW at hW
   by_cases g1 : tagW usw ≠ 0
   · rw [ite_eq_left g1] at hW; cases hW
@@ -1066,7 +1067,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     | none => rw [hv] at hvl'; cases hvl'
     | some l => rw [hv] at hvl'; exact ⟨l, rfl, Option.some.inj hvl'⟩
   by_cases g4 : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 ≠
-      erRd s₀.mem (q + 3)
+      erRd s₀.mem (q + (CI.cv + CV.lpsLen))
   · rw [ite_eq_left g4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hm⟩ := hW
@@ -1080,11 +1081,11 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
     · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, by decide⟩
   rw [ite_eq_right g4] at hW
   have g4' : tfld s₀.mem LVLS (tierW usw) (idxW usw) 1 =
-      erRd s₀.mem (q + 3) := by simpa using g4
+      erRd s₀.mem (q + (CI.cv + CV.lpsLen)) := by simpa using g4
   have hleneq : l.length = cv.levelParams.length := by rw [hllen, hlen, g4']
   -- const_val_at
-  cases h1 : callW p n "const_val_at" [nw, erRd s₀.mem (q + 2),
-      erRd s₀.mem (q + 3), erRd s₀.mem (q + 5), usw] s₀.mem with
+  cases h1 : callW p n "const_val_at" [nw, erRd s₀.mem (q + (CI.cv + CV.lpsOff)),
+      erRd s₀.mem (q + (CI.cv + CV.lpsLen)), erRd s₀.mem (q + CI.defnValue), usw] s₀.mem with
   | none => rw [h1] at hW; cases hW
   | some q₁ =>
   obtain ⟨r₃, m₃⟩ := q₁
@@ -1092,7 +1093,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) 
   dsimp only at hW
   obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hlp n s₀ a₀ dn vis
     fe MM eb nw _ _ _ usw cv.levelParams hC hnw hvl hus hslice r₃ m₃ h1
-  have hv'' : value = decE (erRd s₀.mem (q + 5)) := hv'
+  have hv'' : value = decE (erRd s₀.mem (q + CI.defnValue)) := hv'
   rw [← hv''] at hok1 hS₃ hres1
   have hrun1 := AM.run_of_ok _ _ hok1
   rw [hres1] at hrun1

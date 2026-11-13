@@ -11,6 +11,7 @@ import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -104,7 +105,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
   generalize hq : (findRes m vis nm).tail.headD 0 = q at hW hci hfind
   obtain ⟨wk, hwk⟩ := decCI_rd hci
   have ek := erecKind hwk
-  have pass : ∀ cv, fpShape k ca cb ci = some cv → decCV (erecP m) (q.toNat + 1) = some cv →
+  have pass : ∀ cv, fpShape k ca cb ci = some cv → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       fpW.j1 p n id q m = some (r, m') →
       ∃ b a', (clausePT fe (decI nm) k ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
@@ -123,13 +124,12 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     simp only at hm3
     rw [hm3] at hJ
     have hpin : decCV (erA m2) (r3.headD 0).toNat = some ci2.toConstantVal := by
-      rw [hr3]; exact ctc_ok hS2 (DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hci2)
+      rw [hr3]; exact decCI_cv_rd (erRdOK _) (DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hci2)
     obtain ⟨wn, hwn, -⟩ := decCV_name hcv
-    have hq1 : (q + 1).toNat = q.toNat + 1 := by
-      have := erecP_lt64 hwn; rw [UInt64.toNat_add]; simp; omega
-    have hcv2 : decCV (erA m2) (q + 1).toNat = some cv := by
+    have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwn)
+    have hcv2 : decCV (erA m2) (q + CI.cv).toNat = some cv := by
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcv
-    rcases h4 : callW p n "matches_pin" [q + 1, r3.headD 0] m2 with _ | ⟨r4, m4⟩
+    rcases h4 : callW p n "matches_pin" [q + CI.cv, r3.headD 0] m2 with _ | ⟨r4, m4⟩
     · rw [h4, fpW.k_matches_pin.none] at hJ; cases hJ
     rw [h4, fpW.k_matches_pin.arm1] at hJ
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hJ)
@@ -163,7 +163,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
   -- the counts at `+5`, `+6`
   have counts : ∀ {w5 w6 : Word} {cv : IConstantVal} {x y : Nat},
       erecP m (q.toNat + 5) = some w5 → erecP m (q.toNat + 6) = some w6 → x = w5.toNat →
-      y = w6.toNat → decCV (erecP m) (q.toNat + 1) = some cv →
+      y = w6.toNat → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       (∀ cv', fpShape wk ca cb ci = some cv' ↔ (x = ca.toNat ∧ y = cb.toNat) ∧ cv' = cv) →
       ∃ b a', (clausePT fe (decI nm) wk ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by

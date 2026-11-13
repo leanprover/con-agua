@@ -1,9 +1,9 @@
 module
 
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.RecGenSpec.CftW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -126,12 +126,6 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
       rw [hrv.1]
       have hv64 := hrv.2
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
-        (by
-          rw [UInt64.toNat_ofNat_of_lt' hv64]
-          simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
-          obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
-          obtain ⟨w, hw, -⟩ := hd?_some hty
-          have := L.Arena.erecP_lt64 hw; omega)
       refine RefE.ret (y := (cvTas[kk - 1]'(by omega)).type) (a' := a) ?_ ⟨hS, IWGrow.refl m, hA, ⟨hty.1, hty.2⟩⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : kk - 1 < cvTas.length)]
       rfl
@@ -185,7 +179,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
     have hfci : fe.find? M.ind = some (.indInfo cv caps) := by rw [← hwiE, hfind, hci]
     rw [hfci]
-    have hcvq : decCV (erecP m) (q.toNat + 1) = some cv := L.Arena.decCI_ind_cv hci
+    have hcvq : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv := (decCI_indInfo_iff.mp hci).2.1
     obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
     have hq64 := L.Arena.erecP_lt64 hv16
     have := CI.indCaps_ge
@@ -200,7 +194,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
       show decCV (erA (truncM m)) _ = _
       rw [truncM_erA, e1]; exact hcvq
-    have hFT := ft_ref hq hF henv N (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+    have hFT := ft_ref hq hF henv N (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
       (by rw [e5]; exact hcaps) hcvP hws
     refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF N _ vis _ _) (fun hG => hG.nv)
       id hFT fun r3 s3 ty a2 _ _ hr3 hP3 => ?_
@@ -209,15 +203,13 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hg3 := hP3.grow
     generalize s3.mem = m3 at hS3 hg3 hP3 ⊢
     -- the levels
-    have hcv3 : decCV (erecP m3) (q.toNat + 1) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
-    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
-    have e1' : erRd m3 (q + 2) = w1 :=
-      L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 1 + 1 by
-        rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
-    have e2' : erRd m3 (q + 3) = w2 :=
-      L.Arena.erRd_of _ _ (by rw [show (q + 3).toNat = q.toNat + 1 + 2 by
-        rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
-    change RefE _ (cftE.k_er_to_iw p N mp (r3.headD 0) (liftE (callW p N "er_to_iw" [erRd m3 (q + 2), erRd m3 (q + 3)] m3))) _ _ _
+    have hcv3 : decCV (erecP m3) (q.toNat + CI.cv.toNat) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
+    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv3
+    have e1' : erRd m3 (q + (CI.cv + CV.lpsOff)) = w1 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsOff_le) (by rw [← Nat.add_assoc]; exact hw1)
+    have e2' : erRd m3 (q + (CI.cv + CV.lpsLen)) = w2 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsLen_le) (by rw [← Nat.add_assoc]; exact hw2)
+    change RefE _ (cftE.k_er_to_iw p N mp (r3.headD 0) (liftE (callW p N "er_to_iw" [erRd m3 (q + (CI.cv + CV.lpsOff)), erRd m3 (q + (CI.cv + CV.lpsLen))] m3))) _ _ _
     rw [e1', e2']
     refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
     obtain ⟨s4, hs4, -, h4W⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)

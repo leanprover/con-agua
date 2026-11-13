@@ -42,7 +42,7 @@ def idxConstsL : FunDecl := lfn (o, n) locals (j, q, w, c, p, nx, z) {
   j := 0;
   for j < n {
     q := IW.u64[o + j];
-    w := EREC⦃q + 1⦄;
+    w := EREC⦃q + ⟪CI.cv + CV.name⟫⦄;
     nx := CTL.u64[128];
     if 4294967294 <= nx { abort };
     (c, p) := call base_row_get(w);

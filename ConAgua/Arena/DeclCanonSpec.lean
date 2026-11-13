@@ -125,13 +125,14 @@ def bEqB (x y : Word) : Bool := (x != 0) == (y != 0)
 /-- **`cv_eq`**. -/
 def cvEqB (a : Word → Word) (q r : Word) : Bool :=
   if a q ≠ a r ∨
-      erSlEqB a (a (q + 1)) (a (q + 2)) (a (r + 1)) (a (r + 2)) = false then false
-  else a (q + 3) == a (r + 3)
+      erSlEqB a (a (q + CV.lpsOff)) (a (q + CV.lpsLen)) (a (r + CV.lpsOff)) (a (r + CV.lpsLen)) = false
+    then false
+  else a (q + CV.type) == a (r + CV.type)
 
 /-- **`hint_eq`**. -/
 def hintEqB (a : Word → Word) (h g : Word) : Bool :=
   if a h ≠ a g then false
-  else if a h = 2 then a (h + 1) == a (g + 1)
+  else if a h = 2 then a (h + Hint.height) == a (g + Hint.height)
   else true
 
 /-- `er_sl_at`. -/
@@ -180,19 +181,22 @@ def rulesEqB (a : Word → Word) (o1 l1 o2 l2 : Word) : Bool :=
 
 /-- **`ci_eq_rest`**. -/
 def ciEqRestB (a : Word → Word) (p q k : Word) : Bool :=
-  if k = 1 then a (p + 5) == a (q + 5) && hintEqB a (p + 6) (q + 6)
+  if k = 1 then a (p + CI.defnValue) == a (q + CI.defnValue) && hintEqB a (p + CI.defnHint) (q + CI.defnHint)
   else if k = 3 then capsEqAll a (p + CI.indCaps) (q + CI.indCaps)
-  else if k = 4 then a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) && a (p + 7) == a (q + 7)
+  else if k = 4 then
+    a (p + CI.ctorNparams) == a (q + CI.ctorNparams) && a (p + CI.ctorNfields) == a (q + CI.ctorNfields) &&
+      a (p + CI.ctorInduct) == a (q + CI.ctorInduct)
   else if k = 5 then
-    a (p + 5) == a (q + 5) && a (p + 6) == a (q + 6) &&
-      rulesEqB a (a (p + 7)) (a (p + 8)) (a (q + 7)) (a (q + 8)) && bEqB (a (p + 9)) (a (q + 9))
+    a (p + CI.recMajor) == a (q + CI.recMajor) && a (p + CI.recPrefix) == a (q + CI.recPrefix) &&
+      rulesEqB a (a (p + CI.recRulesOff)) (a (p + CI.recRulesLen)) (a (q + CI.recRulesOff))
+        (a (q + CI.recRulesLen)) && bEqB (a (p + CI.recIsK)) (a (q + CI.recIsK))
   else true
 
 /-- **`ci_eq`** (`5 < kind` aborts in L; the model is arbitrary there). -/
 def ciEqB (a : Word → Word) (p q : Word) : Bool :=
   if a p ≠ a q then false
   else if 5 < a p then false
-  else cvEqB a (p + 1) (q + 1) && ciEqRestB a p q (a p)
+  else cvEqB a (p + CI.cv) (q + CI.cv) && ciEqRestB a p q (a p)
 
 section arms
 variable (a : Word → Word) (c : Nat) (o1 o2 l1 l2 : Word) (x y q r h g p : Word)

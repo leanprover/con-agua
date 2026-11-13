@@ -30,6 +30,7 @@ import all ConAgua.Arena.NatSub
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.Store
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -384,9 +385,9 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   obtain ⟨cv, caps, rfl, hcv⟩ := hind (by simpa using hk3)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   erw [ite_eq_right hk3] at hW
-  by_cases hk4 : erRd s₀.mem (q + 3) ≠ 0
+  by_cases hk4 : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) ≠ 0
   · erw [ite_eq_left hk4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -401,7 +402,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
-  have hk4' : erRd s₀.mem (q + 3) = 0 := by simpa using hk4
+  have hk4' : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) = 0 := by simpa using hk4
   rcases h1 : callW p n "pin_word" [54] s₀.mem with _ | ⟨r₁, m₁⟩
     <;> simp only [h1, natIndOkW.k_pin_word, reduceCtorEq] at hW
   obtain ⟨rfl, -, hr₁⟩ := callW_pinWord p hp.pinWord n s₀.mem 54 r₁ m₁ h1
@@ -410,7 +411,7 @@ theorem callW_natIndOk (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : ASta
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
   have hb : (cv.levelParams.isEmpty && cv.type == decI (pinW s₀.mem 54)) =
-      decide (erRd s₀.mem (q + 4) = r₁.headD 0) := by
+      decide (erRd s₀.mem (q + (CI.cv + CV.type)) = r₁.headD 0) := by
     have hl0 : cv.levelParams.isEmpty = true := by
       simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk4']; rfl
     rw [hl0, hty, hr₁, decI_beq _ _ htyl hC.pins.lv_lt.2.2]
@@ -497,7 +498,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
   | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
   | some q₁ =>
@@ -526,7 +527,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [hrun, hres]; rfl
   have hz := natZeroOk_run_ctor hC.pins cv np nf fam _ hrun'
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
-  by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
+  by_cases hk3 : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) ≠ 0
   · rw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -543,7 +544,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
-  have hk3' : erRd s₀.mem (q + 3) = 0 := by simpa using hk3
+  have hk3' : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) = 0 := by simpa using hk3
   refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩
   · rw [hres']
     have hl0 : cv.levelParams.isEmpty = true := by
@@ -551,7 +552,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     rw [hl0, hty]
     show _ = decBool [r.headD 0]
     rw [← hr]
-    show (true && (decI (erRd s₀.mem (q + 4)) == decI (r₂.headD 0))) = _
+    show (true && (decI (erRd s₀.mem (q + (CI.cv + CV.type))) == decI (r₂.headD 0))) = _
     rw [decI_beq _ _ htyl hhw]
     simp [L.Arena.decBool_ite]
   · show ResH [r.headD 0]
@@ -651,8 +652,8 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
   obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
-  obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
-  by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
+  obtain ⟨-, -, -, hlen, htyl, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
+  by_cases hk3 : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) ≠ 0
   · erw [ite_eq_left hk3] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
@@ -665,7 +666,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk3] at hW
-  have hk3' : erRd s₀.mem (q + 3) = 0 := by simpa using hk3
+  have hk3' : erRd s₀.mem (q + (CI.cv + CV.lpsLen)) = 0 := by simpa using hk3
   have hl0 : cv.levelParams.isEmpty = true := by
     simp only [List.isEmpty_iff, ← List.length_eq_zero_iff]; rw [hlen, hk3']; rfl
   cases h1 : callW p n "pin_at" [1] s₀.mem with
@@ -694,14 +695,14 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
     rw [hrun, hres]; rfl
   simp only [hE] at hW
-  by_cases hg : tagW (erRd s₀.mem (q + 4)) ≠ 6
+  by_cases hg : tagW (erRd s₀.mem (q + (CI.cv + CV.type))) ≠ 6
   · rw [ite_eq_left hg] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
     have hz := natSuccOk_run_nonforall hC.pins cv np nf fam _ hl0 hrun' (by
       rw [hty]
-      cases hb : ((decI (erRd s₀.mem (q + 4)) : EIdx).tag == ETag.forallE)
+      cases hb : ((decI (erRd s₀.mem (q + (CI.cv + CV.type))) : EIdx).tag == ETag.forallE)
       · rfl
       · exfalso; exact hg ((decE_tag_forallE _ htyl).mp (beq_iff_eq.mp hb)))
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
@@ -709,19 +710,19 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · rw [hres']; simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right hg] at hW
-  have hg' : tagW (erRd s₀.mem (q + 4)) = 6 := by simpa using hg
-  by_cases hsc : tierW (erRd s₀.mem (q + 4)) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
+  have hg' : tagW (erRd s₀.mem (q + (CI.cv + CV.type))) = 6 := by simpa using hg
+  by_cases hsc : tierW (erRd s₀.mem (q + (CI.cv + CV.type))) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
   · rw [ite_eq_left hsc] at hW; cases hW
   rw [ite_eq_right hsc] at hW
-  by_cases hbd : tcnt m₂ FORALL (tierW (erRd s₀.mem (q + 4))) ≤
-      idxW (erRd s₀.mem (q + 4))
+  by_cases hbd : tcnt m₂ FORALL (tierW (erRd s₀.mem (q + (CI.cv + CV.type)))) ≤
+      idxW (erRd s₀.mem (q + (CI.cv + CV.type)))
   · rw [ite_eq_left hbd] at hW; cases hW
   rw [ite_eq_right hbd] at hW
   rw [ite_some_pair] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   rw [← hm]
-  have hvOK : viewOK m₂ (erRd s₀.mem (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
+  have hvOK : viewOK m₂ (erRd s₀.mem (q + (CI.cv + CV.type))) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.base _ htyl hvOK hg'
   have hz := natSuccOk_run_forall hC.pins cv np nf fam _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forallE _ htyl).mpr hg')) (by rw [hty]; exact hview)

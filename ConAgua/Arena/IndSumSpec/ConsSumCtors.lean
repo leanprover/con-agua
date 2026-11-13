@@ -38,11 +38,12 @@ open L.Arena
 /-- The memory after `ctor_info_rec`'s eight `erec_put`s (each copy reads the memory of its time). -/
 def ciRecMem (m1 : Mem) (q cv nP nF T : Word) : Mem :=
   let m2 := erecPutMem m1 q 4
-  let m3 := erecPutMem m2 (q + 1) (erRd m2 cv)
-  let m4 := erecPutMem m3 (q + 2) (erRd m3 (cv + 1))
-  let m5 := erecPutMem m4 (q + 3) (erRd m4 (cv + 2))
-  let m6 := erecPutMem m5 (q + 4) (erRd m5 (cv + 3))
-  erecPutMem (erecPutMem (erecPutMem m6 (q + 5) nP) (q + 6) nF) (q + 7) T
+  let m3 := erecPutMem m2 (q + (CI.cv + CV.name)) (erRd m2 cv)
+  let m4 := erecPutMem m3 (q + (CI.cv + CV.lpsOff)) (erRd m3 (cv + CV.lpsOff))
+  let m5 := erecPutMem m4 (q + (CI.cv + CV.lpsLen)) (erRd m4 (cv + CV.lpsLen))
+  let m6 := erecPutMem m5 (q + (CI.cv + CV.type)) (erRd m5 (cv + CV.type))
+  erecPutMem (erecPutMem (erecPutMem m6 (q + CI.ctorNparams) nP) (q + CI.ctorNfields) nF)
+    (q + CI.ctorInduct) T
 
 /-- The model of `ctor_info_rec(cv, nP, nF, T)`. -/
 def ciRecW (m : Mem) (cv nP nF T : Word) : Option (Word × Mem) :=
@@ -85,9 +86,13 @@ theorem rdW_set64_ne_er {m : Mem} {x y v : Word} (h : x.toNat ≠ y.toNat) :
   simp [h]
 
 /-- The four copied words of a constant, decoded at a shifted place, decode the same. -/
-theorem decCV_shift {a : Nat → Option Word} {q c : Nat} (h0 : a q = a c) (h1 : a (q + 1) = a (c + 1))
-    (h2 : a (q + 2) = a (c + 2)) (h3 : a (q + 3) = a (c + 3)) : decCV a q = decCV a c := by
-  simp only [decCV, hlist?, hd?, nat?, h0, h1, Nat.add_assoc, show 1 + 1 = 2 from rfl, h2, h3]
+theorem decCV_shift {a : Nat → Option Word} {q c : Nat} (h0 : a q = a c)
+    (h1 : a (q + CV.lpsOff.toNat) = a (c + CV.lpsOff.toNat))
+    (h2 : a (q + CV.lpsLen.toNat) = a (c + CV.lpsLen.toNat))
+    (h3 : a (q + CV.type.toNat) = a (c + CV.type.toNat)) : decCV a q = decCV a c := by
+  have h2' : a (q + CV.lpsOff.toNat + 1) = a (c + CV.lpsOff.toNat + 1) := by
+    rw [Nat.add_assoc, Nat.add_assoc, ← CV.lpsLen_toNat]; exact h2
+  simp only [decCV, hlist?, hd?, nat?, h0, h1, h2', h3]
 
 theorem ciRecMem_eq {m1 : Mem} {q cq nP nF T : Word}
     (hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 8,
@@ -102,7 +107,8 @@ theorem ciRecMem_eq {m1 : Mem} {q cq nP nF T : Word}
     fun x hx => hfr x hx 2 (by decide)
   have f3 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 3) ∨ erOff x ≠ erOff (q + 3) :=
     fun x hx => hfr x hx 3 (by decide)
-  simp only [ciRecMem, wrER]
+  -- a whole-record writer (`ctor_info_rec`): the offsets as numbers (`rec_unfold`)
+  simp only [ciRecMem, wrER, rec_unfold, UInt64.reduceAdd]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl]
@@ -119,7 +125,7 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
       decCI (erecP m') q.toNat = some (.ctorInfo cv nP.toNat nF.toNat (decI T)) := by
   rcases h1 : erAllocW m 8 with _ | ⟨q1, m1⟩
   · simp [ciRecW, h1] at h
-  have e : ciRecW m cq nP nF T = if 4294967296 ≤ erRd (ciRecMem m1 q1 cq nP nF T) (q1 + 1)
+  have e : ciRecW m cq nP nF T = if 4294967296 ≤ erRd (ciRecMem m1 q1 cq nP nF T) (q1 + (CI.cv + CV.name))
       then none else if 4294967296 ≤ T then none else some (q1, ciRecMem m1 q1 cq nP nF T) := by
     simp [ciRecW, h1]
   rw [e] at h
@@ -133,7 +139,8 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   obtain ⟨rfl, rfl⟩ : q1 = q ∧ ciRecMem m1 q1 cq nP nF T = m' := by simpa using h
   -- the constant's four words, in the old pool
   have hcv0 := hcv
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  -- a whole-record writer (`ctor_info_rec`): the offsets as numbers (`rec_unfold`)
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
   obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
   obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
@@ -168,7 +175,7 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   rw [ciRecMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
-  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS [4, w0, w1, w2, w3, nP, nF, T] (by simp)
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS [4, w0, w1, w2, w3, nP, nF, T] (by simp [rec_unfold])
   refine ⟨hS', hg, ?_⟩
   generalize wrER m1 q1 _ = M at hS' hg hget
   have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
@@ -182,8 +189,9 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
     · omega
   have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
-      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcv
   have n0 : nat? (erecP M) q1.toNat = some 4 := by
     have := hget 0 (by simp); simp only [Nat.add_zero] at this; simp [nat?, this]
@@ -191,7 +199,8 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have n6 : nat? (erecP M) (q1.toNat + 6) = some nF.toNat := by simp [nat?, hget 6 (by simp)]
   have n7 : hd? (erecP M) (q1.toNat + 7) = some (decI T : NIdx) := by
     simp [hd?, hget 7 (by simp), hTlt]
-  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, Option.pure_def]
+  simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5,
+    n6, n7, Option.pure_def]
 
 /-! ## `cons_sum_ctors`: the relation to the twin -/
 

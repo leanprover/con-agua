@@ -8,6 +8,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -144,7 +145,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   rw [ic3E.k_ctor_family.eq_2, ite_eq_right f0]
   obtain ⟨cvT, caps, hfam, hciT, hfT⟩ := hsome f0
   rw [hfam]
-  obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hciT)
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hciT).2.1
   dsimp only
   -- the comparand levels' length
   rcases c2 : callW p (k + 1) "ls_node" [us] m with _ | ⟨r₂, m₂⟩
@@ -162,8 +163,8 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   subst hol
   refine RefE.bind_right (by rw [viewLsLen_run, hvl]) ?_
   dsimp only
-  have hlen' : (erRd m (r₁.tail.headD 0 + 3)).toNat = cvT.levelParams.length := hlen.symm
-  by_cases hl : erRd m (r₁.tail.headD 0 + 3) ≠ l
+  have hlen' : (erRd m (r₁.tail.headD 0 + (CI.cv + CV.lpsLen))).toNat = cvT.levelParams.length := hlen.symm
+  by_cases hl : erRd m (r₁.tail.headD 0 + (CI.cv + CV.lpsLen)) ≠ l
   · rw [ic3E.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ (by simpa [erRd] using hl)]
     have hb : (cvT.levelParams.length == l.toNat) = false := by
       rw [← hlen']; simpa using fun e => hl (UInt64.toNat_inj.mp e)

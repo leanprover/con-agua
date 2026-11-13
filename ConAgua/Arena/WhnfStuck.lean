@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.WhnfCoreAppLoop
-public import ConAgua.Arena.ErecRdCV
+public import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfCoreProj
@@ -173,7 +173,7 @@ theorem target_ref (p : Prog) (hp : WhnfCoreProg p) (G : Prop) (n : Nat) (m : Me
   have k5 : erRd m (r₁.tail.headD 0) = 5 := Classical.not_not.mp k5
   erw [iotaTargetE.k_env_find.arm3 (hc1 := f0) (hc2 := k5)]
   obtain ⟨cv, rules, rfl, hcv, -⟩ := (decCI_rec_rd (erRdOK m) hci).1 k5
-  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd1 (erRdOK m) hcv
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (erRdOK m) hcv
   generalize hq : r₁.tail.headD 0 = q at *
   refine RefE.onlySim (fun _ => iotaTargetE.k_ls_node.none ..) (fun _ _ h => h) fun rl m2 c2 => ?_
   obtain ⟨t2, ht2, hs2, hne2, hr2⟩ := triple_of_callW (lsNode_spec p hp.lsn n ⟨m, Locals.init []⟩ _) c2
@@ -187,9 +187,9 @@ theorem target_ref (p : Prog) (hp : WhnfCoreProg p) (G : Prop) (n : Nat) (m : Me
   subst hol
   have hlr : (viewLsLen (decI (tfld m CONST (tierW h) (idxW h) 1))).run a = .ok (some l.toNat, a) := by
     show Except.ok (a.store.lss.viewLen _, a) = _; rw [hvl]
-  by_cases u1 : [o, l].tail.headD 0 = erRd m (q + 3)
+  by_cases u1 : [o, l].tail.headD 0 = erRd m (q + (CI.cv + CV.lpsLen))
   · erw [iotaTargetE.k_ls_node.arm1 (hc1 := u1)]
-    refine RefE.ret (y := some ((erRd m (q + 5)).toNat + 1)) ?_ (CorePost.ret hS (by simp [decTgt]; rfl) trivial)
+    refine RefE.ret (y := some ((erRd m (q + CI.recMajor)).toNat + 1)) ?_ (CorePost.ret hS (by simp [decTgt]; rfl) trivial)
     rw [htw, hfind']
     simp only [StateT.run_bind, hlr, except_ok_bind]
     simp only [List.tail_cons, List.headD_cons] at u1

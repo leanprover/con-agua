@@ -204,7 +204,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
   obtain ⟨wk, hwk⟩ := decCI_rd hci
   have ek := erecKind hwk
   -- a pass: the shape's constant value against the pin
-  have pass : ∀ cv, fpcShape k ci = some cv → decCV (erecP m) (q.toNat + 1) = some cv →
+  have pass : ∀ cv, fpcShape k ci = some cv → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       fpcW.j1 p n id q m = some (r, m') →
       ∃ b a', (clauseT fe (decI nm) k (romCvT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
@@ -215,11 +215,10 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     rw [h2, fpcW.k_rom_cv.arm1] at hJ
     obtain ⟨pin, a2, hrun2, hS2, hg2, hpin⟩ := h.red.rom.cv vis fe id hid n _ a r2 m2 hS h2
     obtain ⟨wn, hwn, -⟩ := decCV_name hcv
-    have hq1 : (q + 1).toNat = q.toNat + 1 := by
-      have := erecP_lt64 hwn; rw [UInt64.toNat_add]; simp; omega
-    have hcv2 : decCV (erA m2) (q + 1).toNat = some cv := by
+    have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwn)
+    have hcv2 : decCV (erA m2) (q + CI.cv).toNat = some cv := by
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcv
-    rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] m2 with _ | ⟨r3, m3⟩
+    rcases h3 : callW p n "matches_pin" [q + CI.cv, r2.headD 0] m2 with _ | ⟨r3, m3⟩
     · rw [h3, fpcW.k_matches_pin.none] at hJ; cases hJ
     rw [h3, fpcW.k_matches_pin.arm1] at hJ
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hJ)

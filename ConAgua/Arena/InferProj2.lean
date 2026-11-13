@@ -12,6 +12,7 @@ import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.DefEqLeaves2
 import ConRon.Bridge.Grind
 import ConAgua.Arena.DefEqStuckCert
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

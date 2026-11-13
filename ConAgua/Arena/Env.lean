@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Tiers
+public import ConAgua.Arena.RecLayout.CVDec
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -127,13 +128,13 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   return (0, 0)
 }
 
-/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + 1`) into the own layer at
+/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own layer at
 counter `vis`; returns the new view `vis + 1`. -/
 -- con-ron: ConRon/Arena/Env.lean:277-280 ConRon.Arena.IFEnv.push
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
   if 4294967294 <= vis { abort };
-  w := EREC⦃q + 1⦄;
+  w := EREC⦃q + ⟪CI.cv + CV.name⟫⦄;
   z := call env_row_set(w, vis + 1, q);
   return vis + 1
 }
@@ -248,38 +249,6 @@ def envProg : Prog :=
 section helpers
 open ConRon.Arena Std.WP
 open scoped Lean.Order
-
-theorem hd?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
-    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  cases e : a i with
-  | none => simp [hd?, e] at h
-  | some w => simp [hd?, e] at h; exact ⟨w, rfl, h.1, h.2.symm⟩
-
-theorem decCV_name {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    ∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w := by
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨n, hn, ls, -, ty, -, rfl⟩ := h
-  exact hd?_some hn
-
-theorem decCI_name {a : Nat → Option Word} {p : Nat} {ci : IConstantInfo} (h : decCI a p = some ci) :
-    ∃ w, a (p + 1) = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
-  cases e : decCV a (p + 1) with
-  | none =>
-    exfalso; simp only [decCI, e, Option.bind_eq_bind] at h
-    cases hk : nat? a p with
-    | none => simp [hk] at h
-    | some k => simp only [hk, Option.bind_some] at h; split at h <;> simp_all
-  | some cv =>
-    obtain ⟨w, h1, h2, h3⟩ := decCV_name e
-    refine ⟨w, by simpa using h1, h2, ?_⟩
-    rw [← h3]
-    simp only [decCI, e, Option.bind_eq_bind] at h
-    cases hk : nat? a p with
-    | none => simp [hk] at h
-    | some k =>
-      simp only [hk, Option.bind_some] at h
-      split at h <;> simp [Option.bind_eq_some_iff] at h <;> grind [IConstantInfo.name]
 
 theorem triple_post {α : Type} {prog : M α} {P : St → Prop} {Q Q' : α → St → Prop}
     (h : ⦃fun s => P s⦄ prog ⦃fun r s => Q r s; ⊤⦄) (hq : ∀ r s, Q r s → Q' r s) :
@@ -837,7 +806,7 @@ theorem OwnBelow.of_ownSet {m : Mem} {w c p : Word} (h : OwnBelow m) (hc32 : c.t
 
 /-- **`push`**: the own row of the record's name becomes `(vis + 1, q)`. -/
 theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
-    (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + 1) = some w)
+    (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + CI.cv.toNat) = some w)
     (hv : vis.toNat < 2 ^ 32 - 2) (ht : rowTag w ≤ 2)
     (hb : rowIx w + 1 < (m.arr64 (ownArr w)).size) :
     EnvR (ownSet m w (vis + 1) q) (vis + 1) (fe.push ci) := by
@@ -1445,9 +1414,9 @@ theorem envPush_spec (hs : p.lookup "env_row_set" = some envRowSetL)
     (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) (vis q : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + 1)) (vis + 1) q ∧ LocEq s' s₀ ∧
-      r = [vis + 1] ∧ vis.toNat < 4294967294 ∧ rowTag (erecRd s₀.mem (q + 1)) ≤ 2 ∧
-      rowIx (erecRd s₀.mem (q + 1)) + 1 < (s₀.mem.arr64 (ownArr (erecRd s₀.mem (q + 1)))).size; ⊤⦄ := by
+    ⦃fun r s' => s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q ∧ LocEq s' s₀ ∧
+      r = [vis + 1] ∧ vis.toNat < 4294967294 ∧ rowTag (erecRd s₀.mem (q + (CI.cv + CV.name))) ≤ 2 ∧
+      rowIx (erecRd s₀.mem (q + (CI.cv + CV.name))) + 1 < (s₀.mem.arr64 (ownArr (erecRd s₀.mem (q + (CI.cv + CV.name))))).size; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, envPushL]
   cases n with
@@ -1471,12 +1440,12 @@ theorem envPush_refines (hs : p.lookup "env_row_set" = some envRowSetL)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ r = [vis + 1] ∧ EnvR s'.mem (vis + 1) (fe.push ci) ∧
-      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + 1)) (vis + 1) q; ⊤⦄ :=
+      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ :=
   triple_post (envPush_spec p hs hp n s₀ vis q) fun r s ⟨h1, h2, h3, h4, h5, h6⟩ => by
     obtain ⟨w, hw, -, -⟩ := decCI_name hci
-    have hq : (q + 1).toNat = q.toNat + 1 := by
-      have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
-    have hr : erecRd s₀.mem (q + 1) = w := erecRd_of (by rw [hq]; exact hw)
+    have hq : (q + (CI.cv + CV.name)).toNat = q.toNat + CI.cv.toNat :=
+      off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)
+    have hr : erecRd s₀.mem (q + (CI.cv + CV.name)) = w := erecRd_of (by rw [hq]; exact hw)
     rw [hr] at h1 h5 h6
     exact ⟨h2, h3, by rw [h1]; exact hE.push hci hw (by omega) h5 h6, by rw [h1, hr]⟩
 

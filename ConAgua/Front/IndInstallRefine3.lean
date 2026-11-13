@@ -290,6 +290,8 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
   | zero => simp [recRW] at h
   | succ n =>
   rw [recRW.arm1] at h
+  -- a whole-record writer (`ind_rec`): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold] at h
   rcases h1 : allocW m DLP 10 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [recRW.k_dind_alloc.none] at h; cases h
   rw [recRW.k_dind_alloc.arm1] at h
@@ -412,6 +414,6 @@ theorem recRW_twin {n : Nat} {b : ByteArray} {m m' : Mem} {st : StateD} (a : ASt
       rfl
     have a9 : (wd m IFR (r.toNat + 4) != 0) = rc.k := by
       rw [fK]; cases rc.k <;> decide
-    simp [decCI, nat?, bool?, g0, gcv, g5, g6, g7', g8, g9, a3, a4, a9, gru]
+    simp [decCI, rec_unfold, nat?, bool?, g0, gcv, g5, g6, g7', g8, g9, a3, a4, a9, gru]
 
 end L.Front.Ind

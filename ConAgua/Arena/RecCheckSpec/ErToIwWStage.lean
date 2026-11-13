@@ -377,7 +377,7 @@ theorem erToIwW_stage {vis : Word} {fe : IFEnv} {a : AState}
 
 /-- The model of `cv_lps(q)`. -/
 def cvLpsW (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  erToIwW (n - 1) m (erRd m (q + 1)) (erRd m (q + 2))
+  erToIwW (n - 1) m (erRd m (q + CV.lpsOff)) (erRd m (q + CV.lpsLen))
 
 theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
     (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
@@ -396,20 +396,15 @@ theorem cvLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem cvLpsW_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
-    (hcv : decCVp m q.toNat = some cv) (hq : q.toNat + 3 < 2 ^ 64) :
+    (hcv : decCVp m q.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
-  obtain ⟨-, hl, -⟩ := decCV_some (a := erA m) (q := q.toNat) hcv
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hl
-  obtain ⟨o', ho, l', hl', hs⟩ := hl
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨hr1, hob⟩ := erRd_nat ho hq1
-  obtain ⟨hr2, hlb⟩ := erRd_nat hl' (by rw [hq2])
+  obtain ⟨w1, w2, hw1, hw2, hs⟩ := decCV_slice (show decCV (erecP m) q.toNat = some cv from hcv)
+  have hr1 : erRd m (q + CV.lpsOff) = w1 := (erRdOK m).at _ rfl hw1
+  have hr2 : erRd m (q + CV.lpsLen) = w2 := (erRdOK m).at _ rfl hw2
   simp only [cvLpsW, hr1, hr2] at h
-  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage h hS
-    (by rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hs)
+  obtain ⟨hS', hg, hdec, ht, hE⟩ := erToIwW_stage h hS hs
   exact ⟨hS', hg, hE, hdec, ht⟩
 
 /-! ## `target_ctor_at` -/

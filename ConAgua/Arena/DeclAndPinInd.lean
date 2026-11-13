@@ -3,10 +3,10 @@ module
 public import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.Env
 import ConAgua.Arena.Pins
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclAndPin
+import ConAgua.Arena.RecLayout.CVDec
 
 @[expose] public section
 
@@ -36,9 +36,9 @@ open L.Front (DECL DLP IndDeclAt dw trunc decCIs)
 
 /-- The name test on the record the pointer `DLP[bo]` names. -/
 def abnHit (m : Mem) (bo : Word) : Prop :=
-  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 12 ∨
-  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 49 ∨
-  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 50
+  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 12 ∨
+  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 49 ∨
+  lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 50
 
 instance (m : Mem) (bo : Word) : Decidable (abnHit m bo) := by unfold abnHit; infer_instance
 
@@ -51,9 +51,9 @@ theorem abnW_zero (m : Mem) (bo bl : Word) (h : bl = 0) : abnW m bo bl.toNat = 0
   subst h; rfl
 
 theorem abnW_hit (m : Mem) (bo bl : Word) (h : bl ≠ 0)
-    (hh : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 12 ∨
-      lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 49 ∨
-      lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) = rdW (m.arr64 PINS) 50) :
+    (hh : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 12 ∨
+      lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 49 ∨
+      lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) = rdW (m.arr64 PINS) 50) :
     abnW m bo bl.toNat = 1 := by
   have hb : bl.toNat = (bl - 1).toNat + 1 := by
     have : bl.toNat ≠ 0 := fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
@@ -62,15 +62,15 @@ theorem abnW_hit (m : Mem) (bo bl : Word) (h : bl ≠ 0)
   rw [hb]; simp only [abnW, abnHit]; rw [ite_eq_left hh]
 
 theorem abnW_miss (m : Mem) (bo bl : Word) (h : bl ≠ 0)
-    (h1 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) ≠ rdW (m.arr64 PINS) 12)
-    (h2 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) ≠ rdW (m.arr64 PINS) 49)
-    (h3 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + 1)) ≠ rdW (m.arr64 PINS) 50) :
+    (h1 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) ≠ rdW (m.arr64 PINS) 12)
+    (h2 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) ≠ rdW (m.arr64 PINS) 49)
+    (h3 : lo32 (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) bo + (CI.cv + CV.name))) ≠ rdW (m.arr64 PINS) 50) :
     abnW m bo bl.toNat = abnW m (bo + 1) (bl - 1).toNat := by
   have hb : bl.toNat = (bl - 1).toNat + 1 := by
     have : bl.toNat ≠ 0 := fun h0 => h (UInt64.toNat_inj.mp (by simpa using h0))
     have := bl.toNat_lt
     rw [UInt64.toNat_sub]; simp; omega
-  rw [hb]; simp only [abnW, abnHit]; rw [ite_eq_right (by simp [h1, h2, h3])]
+  rw [hb]; simp only [abnW, abnHit]; rw [ite_eq_right (by rintro (e | e | e) <;> contradiction)]
 
 theorem andBlockNamed_specW (p : Prog) (hp : p.lookup "and_block_named" = some andBlockNamed)
     (n : Nat) : ∀ (s₀ : St) (bo bl : Word),
@@ -156,13 +156,16 @@ theorem abnW_eq {m : Mem} {t : Nat}
       simp only [nat?, Option.map_eq_some_iff] at hv; exact hv
     obtain ⟨hwP, -⟩ := L.Arena.trunc_get_some hw (by omega)
     obtain ⟨x, hx, hxl, hname⟩ := decCI_name hc
+    have := CI.cv_pos
     obtain ⟨hxP, -⟩ := L.Arena.trunc_get_some hx (by omega)
     have hbolt : bo.toNat < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hwP).1
-    have hwlt : w.toNat + 1 < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hxP).1
+    have hwlt : w.toNat + CI.cv.toNat < (m.arr64 DLP).size := (Array.getElem?_eq_some_iff.mp hxP).1
     have e1 : rdW (m.arr64 DLP) bo = w := by simp [rdW, hwP]
-    have e2 : rdW (m.arr64 DLP) (w + 1) = x := by
-      have : (w + 1).toNat = w.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-      simp [rdW, this, hxP]
+    have e2 : rdW (m.arr64 DLP) (w + (CI.cv + CV.name)) = x := by
+      have : (w + (CI.cv + CV.name)).toNat = w.toNat + CI.cv.toNat :=
+        off_add_toNat CI.cv_name_toNat (by omega)
+      simp only [rdW, this, hxP,
+        Option.getD_some]
     have ebo : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have ih' := ih (bo + 1) cs (by rw [ebo]; exact hcs) (Or.inl (by omega))
     have hx32 := lo32_of_lt hxl

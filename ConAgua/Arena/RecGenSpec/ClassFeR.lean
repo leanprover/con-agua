@@ -103,12 +103,12 @@ open L.Arena
 /-- The memory after `class_fe_r_rec`'s ten `erec_put`s (each copy reads the memory of its time). -/
 def cfrMem (m1 : Mem) (q cv mi rp3 : Word) : Mem :=
   let m2 := erecPutMem m1 q 5
-  let m3 := erecPutMem m2 (q + 1) (erRd m2 cv)
-  let m4 := erecPutMem m3 (q + 2) (erRd m3 (cv + 1))
-  let m5 := erecPutMem m4 (q + 3) (erRd m4 (cv + 2))
-  let m6 := erecPutMem m5 (q + 4) (erRd m5 (cv + 3))
-  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + 5) mi) (q + 6) rp3) (q + 7) 0)
-    (q + 8) 0) (q + 9) 0
+  let m3 := erecPutMem m2 (q + (CI.cv + CV.name)) (erRd m2 cv)
+  let m4 := erecPutMem m3 (q + (CI.cv + CV.lpsOff)) (erRd m3 (cv + CV.lpsOff))
+  let m5 := erecPutMem m4 (q + (CI.cv + CV.lpsLen)) (erRd m4 (cv + CV.lpsLen))
+  let m6 := erecPutMem m5 (q + (CI.cv + CV.type)) (erRd m5 (cv + CV.type))
+  erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m6 (q + CI.recMajor) mi) (q + CI.recPrefix) rp3) (q + CI.recRulesOff) 0)
+    (q + CI.recRulesLen) 0) (q + CI.recIsK) 0
 
 /-- **`class_fe_r_rec(cv, mi, rp3)`'s model `cfrRecW`** (generated). -/
 l_model cfrRec_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -175,7 +175,8 @@ theorem cfrMem_eq {m1 : Mem} {q cq mi rp3 : Word}
     fun x hx => hfr x hx 2 (by decide)
   have f3 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 3) ∨ erOff x ≠ erOff (q + 3) :=
     fun x hx => hfr x hx 3 (by decide)
-  simp only [cfrMem, wrER]
+  -- a whole-record writer: the offsets as numbers (`rec_unfold`)
+  simp only [cfrMem, wrER, rec_unfold, UInt64.reduceAdd]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
@@ -186,9 +187,9 @@ theorem cfrMem_eq {m1 : Mem} {q cq mi rp3 : Word}
 
 /-- A run of `class_fe_r_rec`'s model: the allocation, then the ten writes (`cfrMem`). -/
 theorem cfrRecW_some {m m' : Mem} {cq mi rp3 q : Word} (h : cfrRecW m cq mi rp3 = some (q, m')) :
-    ∃ q1 m1, erAllocW m 10 = some (q1, m1) ∧ q1 = q ∧ m' = cfrMem m1 q1 cq mi rp3 := by
+    ∃ q1 m1, erAllocW m CI.recSize = some (q1, m1) ∧ q1 = q ∧ m' = cfrMem m1 q1 cq mi rp3 := by
   rw [cfrRecW.arm1] at h
-  rcases h1 : erAllocW m 10 with _ | ⟨q1, m1⟩
+  rcases h1 : erAllocW m CI.recSize with _ | ⟨q1, m1⟩
   · rw [h1, cfrRecW.k_erec_alloc.none] at h; cases h
   rw [h1, cfrRecW.k_erec_alloc.eq_2] at h
   iterate 11 (obtain ⟨-, h⟩ := of_ite_none h)
@@ -204,7 +205,8 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
       decCI (erecP m') q.toNat = some (.recInfo cv mi.toNat rp3.toNat false []) := by
   obtain ⟨q1, m1, h1, rfl, rfl⟩ := cfrRecW_some h
   have hcv0 := hcv
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure] at hcv0
+  -- a whole-record writer: the offsets as numbers (`rec_unfold`)
+  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
   obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
   obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
@@ -240,7 +242,7 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   rw [cfrMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
   obtain ⟨hS', hg, -, -, -, -, hget⟩ :=
-    erRec_stage h1 hS [5, w0, w1, w2, w3, mi, rp3, 0, 0, 0] (by simp)
+    erRec_stage h1 hS [5, w0, w1, w2, w3, mi, rp3, 0, 0, 0] (by simp [rec_unfold])
   refine ⟨hS', hg, ?_⟩
   generalize wrER m1 q1 _ = M at hS' hg hget
   have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
@@ -254,8 +256,9 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
     · omega
   have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
-      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
+      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
     exact ArrExt.decCV (IWGrow.ext hg) hcv
   have n0 : nat? (erecP M) q1.toNat = some 5 := by
     have := hget 0 (by simp); simp only [Nat.add_zero] at this; simp [nat?, this]
@@ -264,7 +267,7 @@ theorem cfrRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have n7 : nat? (erecP M) (q1.toNat + 7) = some 0 := by simp [nat?, hget 7 (by simp)]
   have n8 : nat? (erecP M) (q1.toNat + 8) = some 0 := by simp [nat?, hget 8 (by simp)]
   have b9 : bool? (erecP M) (q1.toNat + 9) = some false := by simp [bool?, hget 9 (by simp)]
-  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, b9, Option.pure_def]
+  simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, b9, Option.pure_def]
   simp [decRules]
 
 /-! ## The twin's accumulator, the displaced rows -/
@@ -422,9 +425,9 @@ theorem envPush_ownC {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
   obtain ⟨s', hs', hm, -, hr, hv, ht, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (envPush_spec p hrs hpu n ⟨m, Locals.init []⟩ vis c) hc
   obtain ⟨w, hw, hw32, hnm⟩ := decCI_name hci
-  have hq : (c + 1).toNat = c.toNat + 1 := by
-    have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
-  have hrd : erecRd m (c + 1) = w := erecRd_of (by rw [hq]; exact hw)
+  have hq : (c + (CI.cv + CV.name)).toNat = c.toNat + CI.cv.toNat :=
+    off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)
+  have hrd : erecRd m (c + (CI.cv + CV.name)) = w := erecRd_of (by rw [hq]; exact hw)
   simp only [hrd] at hm ht hb
   refine ⟨?_, hr, hv⟩
   rw [← hs', hm]

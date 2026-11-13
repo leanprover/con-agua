@@ -127,10 +127,10 @@ theorem rtc_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {cvRi q : W
   -- the two types, read below the top
   obtain ⟨wt, hwt, hwtH, hwtE⟩ := (decCV_words hdRi).2.2
   obtain ⟨wg, hwg, hwgH, hwgE⟩ := (decCV_words hdG).2.2
-  have et : rdW (m4.arr64 (L.tierA EREC ((cvRi + 3) >>> 40))) (cvRi + 3 &&& 1099511627775) = wt :=
-    (erRdOK m4).off (hg4.ext _ _ hwt) (by simp)
-  have eg : rdW (m4.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wg :=
-    (erRdOK m4).off (hg4.ext _ _ hwg) (by simp)
+  have et : rdW (m4.arr64 (L.tierA EREC ((cvRi + CV.type) >>> 40))) (cvRi + CV.type &&& 1099511627775) = wt :=
+    (erRdOK m4).at _ rfl (hg4.ext _ _ hwt)
+  have eg : rdW (m4.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wg :=
+    (erRdOK m4).at _ rfl (hg4.ext _ _ hwg)
   rw [et, eg]
   -- `is_def_eq_core(vis, 0, cvRi.type, cvG.type)`
   have hdx : denoteE a4.store (decI wt) = some cvRiP.type := by

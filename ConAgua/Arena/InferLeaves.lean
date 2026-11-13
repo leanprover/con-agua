@@ -21,6 +21,7 @@ import all ConAgua.Arena.Infer
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -643,42 +644,9 @@ theorem inferBody_const (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
   simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-/-- A decoded constant record has its `ConstantVal` at `q + 1`. -/
-theorem decCI_cvA {R : Nat → Option Word} {q : Word}
-    {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    decCV R (q.toNat + 1) = some ci.toConstantVal := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h; simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h)
-  all_goals first
-    | (simp at h; done)
-    | ((first
-        | obtain ⟨cv, hcv, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h
-        | obtain ⟨cv, hcv, _, -, _, -, _, -, _, -, _, -, _, -, rfl⟩ := h)
-       exact hcv)
-
 theorem hslice?_length {k : IdxKind} {b : Array Word} {o c : Nat} {xs : List (Idx k)}
     (h : hslice? (aread b) o c = some xs) : xs.length = c := by
   unfold hslice? at h; simpa using L.Ind.mapM_opt_length _ _ _ h
-
-/-- The words of a decoded `ConstantVal` at `q + 1`: name, level-parameter slice, type. -/
-theorem infer_decCV_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
-    {q : Word} {cv : IConstantVal} (h : decCV R (q.toNat + 1) = some cv) :
-    HW (rd (q + 1)) ∧ cv.name = decI (rd (q + 1)) ∧ HW (rd (q + 4)) ∧
-      cv.type = decI (rd (q + 4)) ∧
-      hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
-  obtain ⟨⟨w1, hw1, hl1, hn⟩, -, -⟩ := decCV_words h
-  have e1 : rd (q + 1) = w1 := hR.off hw1 (by simp)
-  obtain ⟨hsl, -, hty, hl4⟩ := decCV_rd hR h
-  exact ⟨by rw [e1]; exact hl1, by rw [e1]; exact hn, hl4, hty, hsl⟩
 
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by
@@ -743,10 +711,10 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' : fe.find? (decI nm) = some ci := by
     rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
-  have hcv := decCI_cvA hci
+  have hcv := decCI_cv hci
   generalize hcvr : ci.toConstantVal = cv at hcv
   refine RefE.abort0 (by rfl) fun hne => ?_
-  obtain ⟨hw1, hname, hw4, hty, hsl⟩ := infer_decCV_words (erRdOK _) hcv
+  obtain ⟨hw1, hname, hsl, -, hw4, hty⟩ := decCV_rd_ci (erRdOK _) hcv
   obtain ⟨ids, hv, hlen1, hlen2⟩ := lsNodeW_view hS.arena.base hus hne
   rw [show inferConstT fe (decI nm) (decI us) = (viewLs (decI us) >>= fun usl =>
       if (usl.length != cv.levelParams.length) = true then fail (.invalid "incorrect number of universe levels")
@@ -758,10 +726,10 @@ theorem inferConst_ref (p : Prog) (hp : InferLeafProg p) (hct : ConstTyAtOK p) (
       simp only [bne_iff_ne, ne_eq]
       intro h; exact hl (UInt64.toNat_inj.mp h))
     (fun hb hl => by
-      rw [hslice?_lenR hsl, show erRd s₀.mem (r₁.tail.headD 0 + 3) = _ from hl.symm, hlen1, hlen2] at hb
+      rw [hslice?_lenR hsl, show erRd s₀.mem (r₁.tail.headD 0 + (CI.cv + CV.lpsLen)) = _ from hl.symm, hlen1, hlen2] at hb
       simp at hb) fun _ _ => ?_
-  have hcv' : cv = ⟨decI (erRd s₀.mem (r₁.tail.headD 0 + 1)), cv.levelParams,
-      decE (erRd s₀.mem (r₁.tail.headD 0 + 4))⟩ := by
+  have hcv' : cv = ⟨decI (erRd s₀.mem (r₁.tail.headD 0 + (CI.cv + CV.name))), cv.levelParams,
+      decE (erRd s₀.mem (r₁.tail.headD 0 + (CI.cv + CV.type)))⟩ := by
     rw [← hname, decE_eq, ← hty]
   rw [hcv', ← bind_pure (constTyAt _ _)]
   refine RefE.bind_callW (fun _ => rfl)

@@ -277,9 +277,7 @@ theorem snpFe2_ref (hN : NatSubProg' p) (hcl : LeafClosed p) (hF2 : Fe2Closed p)
   rotate_left
   · exact absurd hkk (by rw [(erRd_of_erecP hw1).1]; exact hne)
   obtain ⟨wv, -, hk5, hwl, hwd⟩ := decCI_defn_val hci
-  have hq5 : (q + 5).toNat = q.toNat + 5 := by
-    have := erecP_lt64 hk5; rw [UInt64.toNat_add]; simp; omega
-  have e5 : erRd m4 (q + 5) = wv := (erRd_of_erecP (by rw [hq5]; exact hk5)).1
+  have e5 : erRd m4 (q + CI.defnValue) = wv := (erRdOK m4).at _ rfl hk5
   rw [e5]
   exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hwl, hwd, hfr, hown⟩
 

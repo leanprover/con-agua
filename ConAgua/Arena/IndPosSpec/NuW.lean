@@ -55,7 +55,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   unfold nrcW at h
   rcases hlp : cvLpsW (k + 2) m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [nrcW.k_cv_lps] at h
   rw [nrcW.k_cv_lps.arm1] at h
-  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := L.Ind.cvLpsW_stage hlp hS hcv hcv3
+  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := L.Ind.cvLpsW_stage hlp hS hcv
   -- the instantiation's arguments
   obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
   replace cin1 := cin1 hc

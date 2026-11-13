@@ -15,6 +15,7 @@ import ConAgua.Arena.WhnfDeltaRefine
 import ConAgua.L.WordOff
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DefEqStuck
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -218,7 +219,7 @@ theorem ulsa_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} 
   erw [ite_eq_right h4]
   obtain ⟨cvc, hci_eq, -⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci ⊢
-  obtain ⟨hlp, -, hty, htyw⟩ := decCV_rd (erRdOK s₀.mem) (L.Arena.decCI_ctor_cv hci)
+  obtain ⟨-, -, hlp, -, htyw, hty⟩ := decCV_rd_ci (erRdOK s₀.mem) (decCI_ctorInfo_iff.mp hci).2.1
   simp only [L.Ind.erRd_foldN] at *
   rw [hty]
   refine RefE.bind_callW (fun _ => rfl) (hc.instLP n s₀ a₀ dn vis fe M eb _ _ us _ cvc.levelParams hS

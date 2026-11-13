@@ -153,7 +153,7 @@ def blockShapeLps : FunDecl := lfn (p) locals (off, l, m, cv, o, pl) {
   if l == 0 { return (0, 0) };
   m := IW.u64[off];
   cv := IW.u64[m];
-  (o, pl) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
+  (o, pl) := call er_to_iw(EREC⦃cv + ⟪CV.lpsOff⟫⦄, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
   return (o, pl)
 }
 
@@ -332,7 +332,8 @@ def blockSplitRecs : FunDecl := lfn (off, l) locals (ci, ok, ro, rl, rc, o2, l2)
   if EREC⦃ci⦄ != 5 { return (0, 0, 0) };
   (ok, ro, rl) := call block_split_recs(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0) };
-  rc := call rec6(ci + 1, EREC⦃ci + 5⦄, EREC⦃ci + 6⦄, EREC⦃ci + 7⦄, EREC⦃ci + 8⦄, EREC⦃ci + 9⦄);
+  rc := call rec6(ci + ⟪CI.cv⟫, EREC⦃ci + ⟪CI.recMajor⟫⦄, EREC⦃ci + ⟪CI.recPrefix⟫⦄, EREC⦃ci + ⟪CI.recRulesOff⟫⦄,
+    EREC⦃ci + ⟪CI.recRulesLen⟫⦄, EREC⦃ci + ⟪CI.recIsK⟫⦄);
   (o2, l2) := call sl_cons(rc, ro, rl);
   return (1, o2, l2)
 }
@@ -351,7 +352,7 @@ def blockSplitCtors : FunDecl := lfn (off, l) locals (ci, ok, co, cl, ro, rl, c,
   };
   (ok, co, cl, ro, rl) := call block_split_ctors(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0, 0, 0) };
-  c := call rec3(ci + 1, EREC⦃ci + 5⦄, EREC⦃ci + 6⦄);
+  c := call rec3(ci + ⟪CI.cv⟫, EREC⦃ci + ⟪CI.ctorNparams⟫⦄, EREC⦃ci + ⟪CI.ctorNfields⟫⦄);
   (o2, l2) := call sl_cons(c, co, cl);
   return (1, o2, l2, ro, rl)
 }
@@ -419,7 +420,7 @@ def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) loca
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:256-279 ConRon.Arena.blockCounts
 @[no_expose, l_impl ConRon.Arena.blockCounts]
 def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) {
-  ty := EREC⦃cvT + 3⦄;
+  ty := EREC⦃cvT + ⟪CV.type⟫⦄;
   (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
   (g, x, y, z) := call e_view(res);
   return (bl, g)
@@ -444,7 +445,7 @@ leading `∀`s off `c.type`, then `member_idx_at` the head of what remains. -/
 def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl, body, hd, rok, ri) {
   nF := IW.u64[c + 1];
   if nP + nF < nP { abort };
-  ty := EREC⦃IW.u64[c] + 3⦄;
+  ty := EREC⦃IW.u64[c] + ⟪CV.type⟫⦄;
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
   hd := call get_app_fn_f(⟪CWF⟫, body);
@@ -499,7 +500,7 @@ wanted `(wo, wl)` (`1`/`0`). -/
 @[no_expose, l_impl ConRon.Arena.blockRecLpsOk]
 def blockRecLpsOne : FunDecl := lfn (rc, wo, wl) locals (cv, rpo, rpl, eqv) {
   cv := IW.u64[rc];
-  (rpo, rpl) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
+  (rpo, rpl) := call er_to_iw(EREC⦃cv + ⟪CV.lpsOff⟫⦄, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
   eqv := call sl_eq(rpo, rpl, wo, wl);
   return eqv
 }
@@ -593,7 +594,7 @@ def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t,
   if rl == 0 { return (0, 0, 0) };
   e := IW.u64[ro];
   mI := IW.u64[e + 1];
-  t := call rec_target_of(no, nl, mI, EREC⦃IW.u64[e] + 3⦄);
+  t := call rec_target_of(no, nl, mI, EREC⦃IW.u64[e] + ⟪CV.type⟫⦄);
   if t == m { return (1, mI, IW.u64[e + 2]) };
   (a, b, c) := call block_member_counts_find(no, nl, ro + 1, rl - 1, m);
   return (a, b, c)
@@ -648,7 +649,7 @@ def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
 def formersLpsOk : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, plo, pll, eqv, r) {
   if ctl == 0 { return 1 };
   cv := IW.u64[cto];
-  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
+  (plo, pll) := call er_to_iw(EREC⦃cv + ⟪CV.lpsOff⟫⦄, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
   eqv := call sl_eq(plo, pll, lo, ll);
   if eqv == 0 { return 0 };
   r := call formers_lps_ok(cto + 1, ctl - 1, lo, ll);
@@ -671,7 +672,7 @@ def ctorsParamsOk : FunDecl := lfn (nP, cso, csl) locals (r) {
 def ctorsLpsOk : FunDecl := lfn (cso, csl, lo, ll) locals (cv, plo, pll, eqv, r) {
   if csl == 0 { return 1 };
   cv := IW.u64[IW.u64[cso]];
-  (plo, pll) := call er_to_iw(EREC⦃cv + 1⦄, EREC⦃cv + 2⦄);
+  (plo, pll) := call er_to_iw(EREC⦃cv + ⟪CV.lpsOff⟫⦄, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
   eqv := call sl_eq(plo, pll, lo, ll);
   if eqv == 0 { return 0 };
   r := call ctors_lps_ok(cso + 1, csl - 1, lo, ll);
@@ -727,7 +728,7 @@ rules.len, isK]`, `decRS`'s order; the rules the record's `EREC` slice, not copi
 def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (e, tgt, rc, o, l) {
   if rl == 0 { return (0, 0) };
   e := IW.u64[ro];
-  tgt := call rec_target_of(no, nl, IW.u64[e + 1], EREC⦃IW.u64[e] + 3⦄);
+  tgt := call rec_target_of(no, nl, IW.u64[e + 1], EREC⦃IW.u64[e] + ⟪CV.type⟫⦄);
   rc := call rec7(IW.u64[e], IW.u64[e + 2], IW.u64[e + 1], tgt, IW.u64[e + 3], IW.u64[e + 4],
     IW.u64[e + 5]);
   (o, l) := call block_shape_recs_of(no, nl, ro + 1, rl - 1);
@@ -740,8 +741,8 @@ anything else (including no level parameters at all): `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:359-429 ConRon.Arena.readBlock
 @[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeLarge : FunDecl := lfn (cvR0, lo, ll) locals (off, cnt, elim, rlo, rll, eqv, has) {
-  off := EREC⦃cvR0 + 1⦄;
-  cnt := EREC⦃cvR0 + 2⦄;
+  off := EREC⦃cvR0 + ⟪CV.lpsOff⟫⦄;
+  cnt := EREC⦃cvR0 + ⟪CV.lpsLen⟫⦄;
   if cnt == 0 { return (0, 0) };
   elim := EREC⦃off⦄;
   (rlo, rll) := call er_to_iw(off + 1, cnt - 1);
@@ -806,7 +807,7 @@ def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, i
 @[no_expose, l_impl ConRon.Arena.readBlock]
 def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll)
     locals (s, z, eq, isProp, ok, q) {
-  s := call block_shape_result_sort(nPd, io, il, EREC⦃IW.u64[cto] + 3⦄);
+  s := call block_shape_result_sort(nPd, io, il, EREC⦃IW.u64[cto] + ⟪CV.type⟫⦄);
   z := call pin_word(53);
   eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
@@ -827,7 +828,7 @@ def readBlockAt : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
   (no, nl) := call block_shape_names_of(cto, ctl);
   (e, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
   if e != 0 { return (e, 0) };
-  (lo, ll) := call er_to_iw(EREC⦃cvT0 + 1⦄, EREC⦃cvT0 + 2⦄);
+  (lo, ll) := call er_to_iw(EREC⦃cvT0 + ⟪CV.lpsOff⟫⦄, EREC⦃cvT0 + ⟪CV.lpsLen⟫⦄);
   b := call formers_lps_ok(cto, ctl, lo, ll);
   if b == 0 { return (⟪R_INDUCTIVE_TYPE_DECLARES_OTHER⟫, 0) };
   b := call ctors_params_ok(nPd, cso, csl);

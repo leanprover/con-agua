@@ -474,71 +474,12 @@ theorem capsEqAll_ok' {R : Nat → Option Word} {rd : Word → Word}
     rw [UInt64.toNat_add, hk]; exact Nat.mod_eq_of_lt (by omega)
   exact capsEqAll_ok hR (by rw [b1 hx]; exact hx) (by rw [b1 hy]; exact hy)
 
-theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
-    (h : decCI R p = some x) :
-    ∃ wk, R p = some wk ∧
-      ((wk.toNat = 0 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .axiomInfo cv) ∨
-       (wk.toNat = 1 ∧ ∃ cv v hi, decCV R (p + 1) = some cv ∧ hd? R (p + 5) = some v ∧
-          decHint R (p + 6) = some hi ∧ x = .defnInfo cv v hi) ∨
-       (wk.toNat = 2 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .thmInfo cv) ∨
-       (wk.toNat = 3 ∧ ∃ cv caps, decCV R (p + 1) = some cv ∧
-          decCaps R (p + CI.indCaps.toNat) = some caps ∧
-          x = .indInfo cv caps) ∨
-       (wk.toNat = 4 ∧ ∃ cv np nf fam, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
-          nat? R (p + 6) = some nf ∧ hd? R (p + 7) = some fam ∧ x = .ctorInfo cv np nf fam) ∨
-       (wk.toNat = 5 ∧ ∃ cv mi rp o c k rules, decCV R (p + 1) = some cv ∧
-          nat? R (p + 5) = some mi ∧ nat? R (p + 6) = some rp ∧
-          nat? R (p + 7) = some o ∧ nat? R (p + 8) = some c ∧
-          bool? R (p + 9) = some k ∧
-          decRules R o c = some rules ∧ x = .recInfo cv mi rp k rules)) := by
-  unfold decCI at h
-  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
-  obtain ⟨k, hk, h⟩ := h
-  obtain ⟨wk, e, rfl⟩ := natD hk
-  refine ⟨wk, e, ?_⟩
-  split at h
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h
-    exact .inl ⟨hh, cv, hcv, rfl⟩
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, v, hv, hi, hhi, rfl⟩ := h
-    exact .inr (.inl ⟨hh, cv, v, hi, hcv, hv, hhi, rfl⟩)
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, rfl⟩ := h
-    exact .inr (.inr (.inl ⟨hh, cv, hcv, rfl⟩))
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, caps, hc, rfl⟩ := h
-    exact .inr (.inr (.inr (.inl ⟨hh, cv, caps, hcv, hc, rfl⟩)))
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, np, hnp, nf, hnf, fam, hfam, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, fam, hcv, hnp, hnf, hfam, rfl⟩))))
-  · rename_i hh
-    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, mi, hmi, rp, hrp, k, hkk, o, ho, c, hc, rules, hr, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inr
-      ⟨hh, cv, mi, rp, o, c, k, rules, hcv, hmi, hrp, ho, hc, hkk, hr, rfl⟩))))
-  · simp at h
-
-/-- **A decoded record's constant value sits at `p + 1`** (every kind holds it inline, the twin's
-pure `toConstantVal`). -/
-theorem ciD_cv {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
-    (h : decCI R p = some x) : decCV R (p + 1) = some x.toConstantVal := by
-  obtain ⟨_, _, hx⟩ := ciD h
-  rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, _, _, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
-    ⟨-, cv, _, hcv, -, rfl⟩ | ⟨-, cv, _, _, _, hcv, -, -, -, rfl⟩ |
-    ⟨-, cv, _, _, _, _, _, _, hcv, -, -, -, -, -, -, rfl⟩ <;> exact hcv
-
 theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {p q : Word} {x y : IConstantInfo}
     (hx : decCI R p.toNat = some x) (hy : decCI R q.toNat = some y) :
     ciEqB rd p q = decide (x = y) := by
-  obtain ⟨wk, e, hx⟩ := ciD hx
-  obtain ⟨wk', e', hy⟩ := ciD hy
+  obtain ⟨wk, e, hx⟩ := decCI_cases hx
+  obtain ⟨wk', e', hy⟩ := decCI_cases hy
   have r1 := L.Arena.RdOK.rd hR _ _ e
   have r2 := L.Arena.RdOK.rd hR _ _ e'
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>

@@ -120,24 +120,6 @@ theorem capsRecW_set64 {m : Mem} {A : TieredArray} {q w0 w1 w2 w3 w4 w5 w6 w7 : 
   constructor <;> simp (disch := omega) only [aread_apply, Array.set!_eq_setIfInBounds,
     Array.getElem?_setIfInBounds, Array.size_setIfInBounds, if_pos, if_neg, ite_true]
 
-/-- A slice field's two words. -/
-theorem hlist?_words {k : IdxKind} {R : Nat → Option Word} {i : Nat} {l : List (Idx k)}
-    (h : hlist? R i = some l) :
-    ∃ o c, R i = some o ∧ R (i + 1) = some c ∧ hslice? R o.toNat c.toNat = some l := by
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at h
-  obtain ⟨_, ⟨o, ho, rfl⟩, _, ⟨c, hc, rfl⟩, hs⟩ := h
-  exact ⟨o, c, ho, hc, hs⟩
-
-/-- A number field's word. -/
-theorem nat?_word {R : Nat → Option Word} {i n : Nat} (h : nat? R i = some n) :
-    ∃ w, R i = some w ∧ w.toNat = n := by
-  simp only [nat?, Option.map_eq_some_iff] at h; exact h
-
-/-- A flag field's word. -/
-theorem bool?_word {R : Nat → Option Word} {i : Nat} {b : Bool} (h : bool? R i = some b) :
-    ∃ w, R i = some w ∧ (w != 0) = b := by
-  simp only [bool?, Option.map_eq_some_iff] at h; exact h
-
 /-- **A decoded `IIndCaps` at L's word addresses** `q + Caps.f` (any reader `R` with its word
 read `rd`: the record pool, an array). -/
 theorem decCaps_rd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}

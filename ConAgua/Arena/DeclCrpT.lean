@@ -17,7 +17,6 @@ import ConRon.Bridge.Checker.Base
 public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Core.Knot
 import all ConAgua.Arena.DeclArms
-import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -642,18 +641,18 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   generalize r1.headD 0 = q at hci1 hcv1 hv1 ⊢
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCV_name hcv1
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hqb : q.toNat + 1 + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by omega)
-  have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
   obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some hv1
-  have hq5 : (q + 5).toNat = q.toNat + 5 := L.toNat_add_ofNat_of_lt q 5 (erecP_lt64 hwv)
-  have exn : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
-  have exv : rdW (m1.arr64 (L.tierA EREC ((q + 5) >>> 40))) (q + 5 &&& 1099511627775) = wv := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq5]; exact hwv)
+  have exn : rdW (m1.arr64 (L.tierA EREC ((q + (CI.cv + CV.name)) >>> 40)))
+      (q + (CI.cv + CV.name) &&& 1099511627775) = wn :=
+    (erRdOK m1).at _ CI.cv_name_toNat hwn
+  have exv : rdW (m1.arr64 (L.tierA EREC ((q + CI.defnValue) >>> 40))) (q + CI.defnValue &&& 1099511627775) =
+      wv := (erRdOK m1).at _ rfl hwv
   rw [exn, exv]
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by omega) hcvd hCr1 (allow := 0)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt) hcvd hCr1 (allow := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_

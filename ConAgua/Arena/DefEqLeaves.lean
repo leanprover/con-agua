@@ -13,6 +13,7 @@ import ConRon.Bridge.Grind
 import all ConAgua.Arena.DefEq
 import all ConAgua.Arena.Pins
 import ConAgua.Arena.Inst1Refine
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -489,64 +490,29 @@ theorem mapM_length {β : Type} {f : Nat → Option β} :
     simp [mapM_length hys]
 
 /-- The kind word of a decoded constant record says whether it is a definition; a definition's
-level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7` (over any reader). -/
+level-parameter count is word `q + (CI.cv + CV.lpsLen)`, its hint words `q + CI.defnHint`,
+`q + (CI.defnHint + Hint.height)` (over any reader). -/
 theorem decCI_defn {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
-    (rd q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rd (q + 6)) (rd (q + 7))) ∧
-      cv.levelParams.length = (rd (q + 3)).toNat ∧ (rd (q + 6)).toNat ≤ 2) ∧
+    (rd q = 1 → ∃ cv v, ci = .defnInfo cv v
+        (decHintW (rd (q + CI.defnHint)) (rd (q + (CI.defnHint + Hint.height)))) ∧
+      cv.levelParams.length = (rd (q + (CI.cv + CV.lpsLen))).toNat ∧
+      (rd (q + CI.defnHint)).toNat ≤ 2) ∧
     (rd q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  have hrd : rd q = w := hR.rd _ _ hq
-  rw [hrd]
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  constructor
-  · intro hw; subst hw
-    simp only [show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, v, -, hint, hhint, hc⟩ := h
-    cases hc
-    simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-      Option.map_eq_some_iff] at hhint
-    obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
-    have h6 : rd (q + 6) = wk := hR.offN (k := 6) (hk := by decide) hwk
-    rw [h6]
-    refine ⟨cv, v, ?_, ?_, ?_⟩
-    · rcases hkk : wk.toNat with _ | _ | _ | k
-      · rw [hkk] at hk; cases hk
-        have : wk = 0 := UInt64.toNat_inj.mp (by simpa using hkk)
-        simp [decHintW, this]
-      · rw [hkk] at hk; cases hk
-        have : wk = 1 := UInt64.toNat_inj.mp (by simpa using hkk)
-        simp [decHintW, this]
-      · rw [hkk] at hk
-        simp only [Option.map_eq_some_iff, Option.bind_eq_some_iff, Option.pure_def,
-          Option.some.injEq] at hk
-        obtain ⟨hh, ⟨wh, hwh, rfl⟩, rfl⟩ := hk
-        have h7 : rd (q + 7) = wh := hR.offN (k := 7) (hk := by decide)
-          (by simpa [Nat.add_assoc] using hwh)
-        have h0 : wk ≠ 0 := fun e => by subst e; simp at hkk
-        have h1 : wk ≠ 1 := fun e => by subst e; simp at hkk
-        simp [decHintW, h0, h1, h7]
-      · rw [hkk] at hk; simp at hk
-    · simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcv
-      obtain ⟨nm, -, ls, hls, ty, -, hc⟩ := hcv
-      cases hc
-      simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
-        Option.map_eq_some_iff] at hls
-      obtain ⟨o, -, c, ⟨wc, hwc, rfl⟩, hs⟩ := hls
-      have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide)
-        (by simpa [Nat.add_assoc] using hwc)
-      rw [h3]
-      simp only [hslice?] at hs
-      rw [mapM_length hs, List.length_range]
-    · rcases hkk : wk.toNat with _ | _ | _ | k <;> try omega
-      rw [hkk] at hk; simp at hk
-  · intro hw cv v hint hc
-    subst hc
-    have hne : w.toNat ≠ 1 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
-    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
+  have hs := decCI_split hR h
+  refine ⟨fun h1 => ?_, hs.2.1⟩
+  obtain ⟨cv, v, hint, rfl, hcv, -, -⟩ := hs.1 h1
+  obtain ⟨-, -, -, -, hh⟩ := decCI_defnInfo_rd hR h
+  have hlen := (decCV_rd_ci hR hcv).2.2.2.1
+  rcases decHint_eq_some.mp hh with ⟨rfl, hk⟩ | ⟨rfl, hk⟩ | ⟨n, rfl, hk, hn⟩
+  · have e6 : rd (q + CI.defnHint) = 0 := UInt64.toNat_inj.mp (by rw [← nat?_rd hR hk]; rfl)
+    exact ⟨cv, v, by simp [decHintW, e6], hlen, by rw [e6]; decide⟩
+  · have e6 : rd (q + CI.defnHint) = 1 := UInt64.toNat_inj.mp (by rw [← nat?_rd hR hk]; rfl)
+    exact ⟨cv, v, by simp [decHintW, e6], hlen, by rw [e6]; decide⟩
+  · have e6 : rd (q + CI.defnHint) = 2 := UInt64.toNat_inj.mp (by rw [← nat?_rd hR hk]; rfl)
+    have e7 : n = (rd (q + (CI.defnHint + Hint.height))).toNat :=
+      nat?_rd hR (by rw [CI.defnHeight_toNat, ← Nat.add_assoc]; exact hn)
+    exact ⟨cv, v, by simp [decHintW, e6, e7], hlen, by rw [e6]; decide⟩
 
 /-! ## `head_hint` -/
 
@@ -737,7 +703,7 @@ def ufEnvF (p : Prog) (n : Nat) (hh : Word) (x : List Word × Mem) : Option (Wor
   if x.1.headD 0 = 0 then some (0, x.2)
   else if erRd x.2 (x.1.tail.headD 0) ≠ 1 then some (0, x.2)
   else (callW p n "ls_node" [tfld x.2 CONST (tierW hh) (idxW hh) 1] x.2).bind
-    (ufLsF (x.1.tail.headD 0 + 3))
+    (ufLsF (x.1.tail.headD 0 + (CI.cv + CV.lpsLen)))
 
 /-- After `get_app_fn`: the head. -/
 def ufHeadF (p : Prog) (n : Nat) (vis : Word) (x : List Word × Mem) : Option (Word × Mem) :=

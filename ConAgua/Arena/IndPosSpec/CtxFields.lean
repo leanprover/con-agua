@@ -6,10 +6,10 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 public import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
-import ConAgua.Arena.Env
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndCopy2
 import all ConAgua.Arena.IndIface
+import ConAgua.Arena.RecLayout.CVDec
 
 @[expose] public section
 

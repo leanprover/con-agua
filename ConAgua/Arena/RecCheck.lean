@@ -303,8 +303,8 @@ def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
   if f == 0 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
   kind := EREC⦃q⦄;
   if kind != 3 { fail R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT };
-  tyI := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
-  (lo, ll) := call er_to_iw(EREC⦃q + 2⦄, EREC⦃q + 3⦄);
+  tyI := call family_telescope(vis, q + ⟪CI.cv⟫, q + ⟪CI.indCaps⟫);
+  (lo, ll) := call er_to_iw(EREC⦃q + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄);
   tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, tyI);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);
   if ok == 0 { fail R_TARGET_REC_THE_MAJOR_S };
@@ -579,10 +579,10 @@ instantiated at the major's levels. -/
 @[no_expose, l_impl ConRon.Arena.targetCtorAt]
 def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   mem := IW.u64[M + 8];
-  if mem != 0 { return EREC⦃c + 3⦄ };
+  if mem != 0 { return EREC⦃c + ⟪CV.type⟫⦄ };
   us := IW.u64[M + 1];
   (lo, ll) := call cv_lps(c);
-  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃c + 3⦄);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃c + ⟪CV.type⟫⦄);
   return r
 }
 
@@ -854,18 +854,18 @@ reads it). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:531-543 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def recInfoRec : FunDecl := lfn (cv, mI, rP, isK, reo, rel) locals (q, ez) {
-  q := call erec_alloc(10);
+  q := call erec_alloc(⟪CI.recSize⟫);
   ez := call erec_put(q, 5);
-  ez := call erec_put(q + 1, EREC⦃cv⦄);
-  ez := call erec_put(q + 2, EREC⦃cv + 1⦄);
-  ez := call erec_put(q + 3, EREC⦃cv + 2⦄);
-  ez := call erec_put(q + 4, EREC⦃cv + 3⦄);
-  ez := call erec_put(q + 5, mI);
-  ez := call erec_put(q + 6, rP);
-  ez := call erec_put(q + 7, reo);
-  ez := call erec_put(q + 8, rel);
-  ez := call erec_put(q + 9, isK);
-  if 4294967296 <= EREC⦃q + 1⦄ { abort };
+  ez := call erec_put(q + ⟪CI.cv + CV.name⟫, EREC⦃cv⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsOff⟫, EREC⦃cv + ⟪CV.lpsOff⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.lpsLen⟫, EREC⦃cv + ⟪CV.lpsLen⟫⦄);
+  ez := call erec_put(q + ⟪CI.cv + CV.type⟫, EREC⦃cv + ⟪CV.type⟫⦄);
+  ez := call erec_put(q + ⟪CI.recMajor⟫, mI);
+  ez := call erec_put(q + ⟪CI.recPrefix⟫, rP);
+  ez := call erec_put(q + ⟪CI.recRulesOff⟫, reo);
+  ez := call erec_put(q + ⟪CI.recRulesLen⟫, rel);
+  ez := call erec_put(q + ⟪CI.recIsK⟫, isK);
+  if 4294967296 <= EREC⦃q + ⟪CI.cv + CV.name⟫⦄ { abort };
   return q
 }
 

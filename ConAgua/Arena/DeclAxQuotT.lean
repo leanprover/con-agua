@@ -92,7 +92,7 @@ theorem erecCiW_okAT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     (hcv : L.Front.CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
     StageT dn vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') (r.headD 0).toNat = some (.axiomInfo cv) ∧
-      decCV (erecP m') ((r.headD 0).toNat + 1) = some cv := by
+      decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some cv := by
   obtain ⟨hS', hg, h1, h2, -⟩ := erecCiW_okA h hS.stage hD hi hcv
   have hf := erecCiW_frame h
   exact ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
@@ -216,12 +216,13 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   generalize hq0 : r1.headD 0 = q at hci1 hcv1 ⊢
   obtain ⟨wn, hwn, hwnl, hname0⟩ := decCV_name hcv1
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hqb : q.toNat + 1 + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by omega)
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
   have hname : cv.name = decI wn := hname0
-  have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
-  have ex : rdW (m1.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = wn := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
+  have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
+  have ex : rdW (m1.arr64 (L.tierA EREC ((q + (CI.cv + CV.name)) >>> 40)))
+      (q + (CI.cv + CV.name) &&& 1099511627775) = wn :=
+    (erRdOK m1).at _ CI.cv_name_toNat hwn
   rw [ex]
   -- `Quot.sound`
   refine RefE.bindLift (fun _ => checkDeclAxiomE.k_pin_at.none ..) fun r2 m2 h2 => ?_
@@ -246,7 +247,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   rw [ep2] at eq2
   simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by omega) hcvd hCr1 (allow := 0)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt) hcvd hCr1 (allow := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclAxiomE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_
@@ -269,7 +270,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   -- the standard axioms
   refine RefE.bindLift (fun _ => checkDeclAxiomE.k_std_axiom_ok.none ..) fun r4 m4 h4 => ?_
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (stdAxiomOk_refines p hX.std dn hdn vis fe (q + 1) cv n ⟨m3, Locals.init []⟩ a3
+    (stdAxiomOk_refines p hX.std dn hdn vis fe (q + CI.cv) cv n ⟨m3, Locals.init []⟩ a3
       ⟨hS3.stage, ArrExt.decCV hPx hcv1'⟩) h4
   subst hs4
   have hM4 := hlf (leaf_mem _ rfl) h4 hM3
@@ -309,7 +310,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
     (fun eq5 => by rw [ep5]; exact of_decide_eq_true eq5) (fun _ _ => ?_) fun _ _ => ?_
   · refine RefE.bindLift (fun _ => checkDeclAxiomE.k_trust_compiler_ok.none ..) fun r6 m6 h6 => ?_
     obtain ⟨s6, hs6, -, hok6, hS6, hg6, hb6, -⟩ := triple_of_callW (s₀ := ⟨m5, Locals.init []⟩)
-      (trustCompilerOk_refines p hX.tco dn vis fe (q + 1) cv n ⟨m5, Locals.init []⟩ a4
+      (trustCompilerOk_refines p hX.tco dn vis fe (q + CI.cv) cv n ⟨m5, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h6
     subst hs6
     refine ⟨_, _, AM.run_of_ok _ _ hok6, ?_⟩
@@ -340,7 +341,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   refine RefE.split (fun eq8 => by simpa using eq8) (fun eq8 => by simpa using eq8) (fun _ _ => ?_) fun _ _ => ?_
   · refine RefE.bindLift (fun _ => checkDeclAxiomE.k_of_reduce_ax_ok.none ..) fun r9 m9 h9 => ?_
     obtain ⟨s9, hs9, -, hok9, hS9, hg9, hb9, -⟩ := triple_of_callW (s₀ := ⟨m8, Locals.init []⟩)
-      (ofReduceAxOk_refines p hX.ora dn hdn vis fe (q + 1) cv n ⟨m8, Locals.init []⟩ a4
+      (ofReduceAxOk_refines p hX.ora dn hdn vis fe (q + CI.cv) cv n ⟨m8, Locals.init []⟩ a4
         ⟨hS4, ArrExt.decCV hP4 hcv1'⟩) h9
     subst hs9
     refine ⟨_, _, AM.run_of_ok _ _ hok9, ?_⟩
@@ -438,10 +439,11 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   simp only [stepCV, stepVal] at hcv1 hv1
   generalize r1.headD 0 = q at hci1 hcv1 hv1 ⊢
   obtain ⟨wt, hwt, -, -⟩ := (decCV_words hcv1).2.2
-  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (by have := erecP_lt64 hwt; omega)
-  have hcv1' : decCV (erecP m1) (q + 1).toNat = some cv := by rw [hq1]; exact hcv1
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat :=
+    off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
+  have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by have := erecP_lt64 hwt; omega)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt)
     hcvd hCr1 (allow := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclThmE.k_check_constant_val.none ..) id hcc

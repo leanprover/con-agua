@@ -14,6 +14,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.WordOff
 public import ConAgua.Arena.IndPosSpec.NkFields
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -151,7 +152,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
     rw [(erRd_of_erecP hw).1] at h3'
     simp [nat?, hw, h3']
   obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
-  have hcv : decCV (erecP m) (q.toNat + 1) = some cv := by
+  have hcv : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv := by
     simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
     obtain ⟨kd, hkd, hci⟩ := hci
     rw [hk3] at hkd; cases hkd
@@ -161,18 +162,11 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
   obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
   have hq64 := L.Arena.erecP_lt64 hv16
   have := CI.indCaps_ge
-  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e12 : (q + 1 + 2).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add, e1]; simp; omega
-  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨-, hlps, -⟩ := decCV_some hcv
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
-  obtain ⟨lo, hlo, ll, hll, hsl⟩ := hlps
-  have hlen : (erRd m (q + 1 + 2)).toNat = cv.levelParams.length := by
-    simp only [nat?, Option.map_eq_some_iff] at hll
-    obtain ⟨w, hw, rfl⟩ := hll
-    rw [← e12] at hw
-    rw [(erRd_of_erecP hw).1]
-    simpa using (mapM_opt_length _ _ _ hsl).symm
+  obtain ⟨wn, hwn, -⟩ := decCV_name hcv
+  have e1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwn)
+  have e5 : (q + CI.indCaps).toNat = q.toNat + CI.indCaps.toNat := off_add_toNat rfl hq64
+  have hlen : (erRd m (q + CI.cv + CV.lpsLen)).toNat = cv.levelParams.length :=
+    (decCV_rd (erRdOK m) (q := q + CI.cv) (by rw [e1]; exact hcv)).2.2.2.1.symm
   -- the twin's container and its denotation
   obtain ⟨hcn, hlv, hdsP⟩ := ConRon.Bridge.Inductives.dKey_inv hkey
   have hfind' : fe.find? kk.cname = some (.indInfo cv caps) := by rw [← hcd]; exact hfind
@@ -197,20 +191,20 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
   refine ⟨some l'.toNat, a, by simp [ConRon.Arena.viewLsLen, hvl]; rfl, ?_⟩
   dsimp only [ntyE.k_view_ls_len]
   simp only [hln, List.tail_cons, List.headD_cons]
-  change RefE _ (if l' ≠ erRd m (q + 1 + 2) then _ else _) _ _ _
+  change RefE _ (if l' ≠ erRd m (q + CI.cv + CV.lpsLen) then _ else _) _ _ _
   refine RefE.guardThen (by decide) (fun h => by rw [← hlen]; simpa [UInt64.toNat_inj] using h)
     (fun h => by rw [← hlen] at h; simpa [UInt64.toNat_inj] using h) fun hneq _ => ?_
   have hl'eq : l'.toNat = cv.levelParams.length := by rw [← hlen, Classical.not_not.mp hneq]
   -- `family_telescope`
-  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+  have hcvB : DecB (fun m => decCVp m (q + CI.cv).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
-  have hFT := ft_ref hq hF henv k (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+  have hFT := ft_ref hq hF henv k (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF k _ vis _ _) (fun hG => hG.nv)
     id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
   dsimp only [ntyE.k_family_telescope]
-  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF k ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
+  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF k ⟨m, Locals.init []⟩ vis (q + CI.cv) (q + CI.indCaps)) hc3
   obtain ⟨c2, tyCP, htyCP, -⟩ := ConRon.Bridge.Inductives.familyTelescope_specF ConRon.Bridge.CoreSpec.of_core
     henv cv cvP caps capsP hws a a2 tyC hC.check ⟨hcvP, hcapsP⟩ hr3
   have hS3 := hP3.stage.stage
@@ -234,11 +228,11 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
   refine RefE.pass (by rw [hx4.1]; decide) ?_
   -- `cv_lps`
   have hg34 := hg3.trans hg4
-  have hcv4 : decCVp m4 (q + 1).toNat = some cv := by
+  have hcv4 : decCVp m4 (q + CI.cv).toNat = some cv := by
     rw [e1]; exact hg34.ext.decCV hcv
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
   dsimp only [ntyE.k_cv_lps]
-  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS4 hcv4 (by rw [e1]; omega)
+  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS4 hcv4
   have hg35 := hg34.trans hg5
   have hlv5 : rdW (m5.arr64 IW) (key + 1) = rdW (m.arr64 IW) (key + 1) := by
     simp (disch := omega) only [rdW, off_toNat]; rw [hg35.iwGet _ (by omega)]

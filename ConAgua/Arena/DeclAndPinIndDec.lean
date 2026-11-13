@@ -116,6 +116,8 @@ theorem decCV_reloc {T B : (Nat → Option Word)} {s p q : Nat} {K : Nat → Pro
       ∀ j v, j < cnt → T (off + j) = some v → B (q + j) = some v) :
     decCV B (p + 1) = some cv := by
   simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv ⊢
+  -- a whole-record relocation: the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at hcv ⊢
   obtain ⟨nm, hnm, lps, ⟨off, hoff, cnt, hcnt, hsl⟩, ty, hty, rfl⟩ := hcv
   refine ⟨nm, h.hd hK1 rfl rfl hnm, lps, ⟨q, hq, cnt, h.nat hK3 (by omega) (by omega) hcnt,
     hslice?_sh hsl (hl off cnt hoff hcnt)⟩, ty, h.hd hK4 (by omega) (by omega) hty, rfl⟩
@@ -193,6 +195,8 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
         ∀ x v, x < Rule.size.toNat * cnt → T (off + x) = some v → B (r + x) = some v) :
     decCI B p = some c := by
   unfold decCI at hc ⊢
+  -- a whole-record relocation: the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at hc ⊢
   cases hk : nat? T s with
   | none => simp [hk] at hc
   | some kk =>

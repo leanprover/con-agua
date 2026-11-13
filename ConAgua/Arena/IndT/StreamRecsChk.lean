@@ -145,12 +145,12 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
   -- the two type words
   obtain ⟨-, -, ⟨wt, hwt, hwtH, hwtE⟩⟩ := decCV_words hcvr
   obtain ⟨-, -, ⟨wg, hwg, hwgH, hwgE⟩⟩ := decCV_words hcvg
-  have et : rdW (m1.arr64 (L.tierA EREC ((UInt64.ofNat qr + 3) >>> 40)))
-      (UInt64.ofNat qr + 3 &&& 1099511627775) = wt :=
-    (erRdOK m1).off (hg1.ext _ _ hwt) (by rw [hqrN]; rfl)
-  have eg : rdW (m1.arr64 (L.tierA EREC ((UInt64.ofNat qg + 3) >>> 40)))
-      (UInt64.ofNat qg + 3 &&& 1099511627775) = wg :=
-    (erRdOK m1).off (hg1.ext _ _ hwg) (by rw [hqgN]; rfl)
+  have et : rdW (m1.arr64 (L.tierA EREC ((UInt64.ofNat qr + CV.type) >>> 40)))
+      (UInt64.ofNat qr + CV.type &&& 1099511627775) = wt :=
+    (erRdOK m1).off (hg1.ext _ _ hwt) (by rw [hqrN])
+  have eg : rdW (m1.arr64 (L.tierA EREC ((UInt64.ofNat qg + CV.type) >>> 40)))
+      (UInt64.ofNat qg + CV.type &&& 1099511627775) = wg :=
+    (erRdOK m1).off (hg1.ext _ _ hwg) (by rw [hqgN])
   have key : (rc.cvR.type == g.1.type) = true ↔ wt = wg := by
     rw [beq_iff_eq, hwtE, hwgE, decI_inj_iff hwtH hwgH]
   unfold ConRon.Arena.streamRecCompare

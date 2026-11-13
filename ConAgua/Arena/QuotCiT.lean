@@ -6,6 +6,7 @@ import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.IlpRd
 import ConAgua.L.WordOff
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -90,6 +91,8 @@ theorem decCV_move {R R' R₀ : Nat → Option Word} {q : Nat} {cv : IConstantVa
     (hw : ∀ j < 4, R' (q + j) = R (q + j)) : decCV R' q = some cv := by
   have w0 : R' q = R q := by simpa using hw 0 (by omega)
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
+  -- the value's four words in order (a whole-record copy): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at h ⊢
   obtain ⟨nm, hn, ps, hp, t, ht, e⟩ := h
   refine ⟨nm, hd?_sh (fun _ e => by rw [w0]; exact e) hn, ps, ?_, t,
     hd?_sh (fun _ e => by rw [hw 3 (by omega)]; exact e) ht, e⟩
@@ -148,7 +151,7 @@ theorem ciPre_of {p : Prog} (hP : QuotAtProg p) (n : Nat) {m m1 m2 m3 : Mem} {a 
     erecP_putMem_self (by omega) (by omega)
   obtain ⟨e1, eo1, et1⟩ := erAddr (c := 1) (by simp; omega) hr41
   simp only [UInt64.toNat_one] at e1 eo1
-  have hcv := ArrExt.decCV hg2.ext (decCI_cvA hci)
+  have hcv := ArrExt.decCV hg2.ext (decCI_cv hci)
   have et2 : erTopOf (erecPutMem m1 r k) r = erTopOf m1 r := by
     simp only [erTopOf, erTop, erecTop1, erecPutMem_ctl]
   have hd0 : erTopOf m (r + 1) ≤ erOff (r + 1) := by rw [et1, eo1, hoff]; omega
@@ -319,16 +322,19 @@ theorem ciJ1_inv {p : Prog} {n : Nat} {c po pl k nn : Word} {m m' : Mem} {res : 
       callW p n "cv_at_lps" [r1.headD 0 + 1, c + 1, po, pl] m2 = some (r3, m3) ∧
       ciAtLpsW.k_cv_at_lps p n c po pl k (r1.headD 0) (some (r3, m3)) = some (res, m') := by
   simp only [ciAtLpsW.j1] at hW
+  try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
   cases h1 : callW p n "erec_alloc" [nn] m with
   | none => rw [h1] at hW; simp [ciAtLpsW.k_erec_alloc] at hW
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
   rw [h1] at hW; simp only [ciAtLpsW.k_erec_alloc] at hW
+  try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
   cases h2 : callW p n "erec_put" [r1.headD 0, k] m1 with
   | none => rw [h2] at hW; simp [ciAtLpsW.k_erec_put] at hW
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
   rw [h2] at hW; simp only [ciAtLpsW.k_erec_put] at hW
+  try simp only [rec_unfold] at hW
   cases h3 : callW p n "cv_at_lps" [r1.headD 0 + 1, c + 1, po, pl] m2 with
   | none => rw [h3] at hW; simp [ciAtLpsW.k_cv_at_lps] at hW
   | some x3 =>
@@ -387,6 +393,8 @@ theorem ciCopy {p : Prog} (hP : CiProg p) {n : Nat} {m m3 m4 : Mem} {a a3 : ASta
 theorem decCV_def {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV R q = some cv) :
     ∀ j < 4, ∃ w, R (q + j) = some w := by
   simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h
+  -- the value's four words in order: the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at h
   obtain ⟨nm, hn, ps, hp, t, ht, -⟩ := h
   simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?, Option.map_eq_some_iff] at hp
   obtain ⟨o, ⟨w1, hw1, -⟩, l, ⟨w2, hw2, -⟩, -⟩ := hp
@@ -622,6 +630,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
   | zero => simp [ciAtLpsW] at hW
   | succ n =>
   simp only [ciAtLpsW] at hW
+  try simp only [rec_unfold, UInt64.reduceAdd] at hW
   -- the kind word
   have hk0 : ∃ w, erecP m c.toNat = some w := by
     cases e : erecP m c.toNat with
@@ -631,7 +640,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
   have ew : erRd m c = w := erRd_of _ _ hw
   simp only [show rdW (m.arr64 (tierA EREC (c >>> 40))) (c &&& 1099511627775) = erRd m c from rfl,
     ew] at hW
-  have hcv := decCI_cvA hci
+  have hcv := decCI_cv hci
   have hkd := decCI_kindW hci hw
   cases ci with
   | axiomInfo cv =>
@@ -645,13 +654,13 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.axiomInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · simp only [List.headD_cons, decCI, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
+    · simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hpre.cvR _ (fun _ _ => rfl) hpre.grow.ext]
       rfl
   | defnInfo cv v hint =>
     obtain rfl : w = 1 := UInt64.toNat_inj.mp hkd
     have hci' := hci
-    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+    simp only [decCI, rec_unfold, UInt64.reduceToNat, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
       show (1 : Word).toNat = 1 from rfl, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq, IConstantInfo.defnInfo.injEq] at hci'
     obtain ⟨cv0, -, v0, hv0, hint0, hhint, -, rfl, rfl⟩ := hci'
@@ -659,6 +668,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
     obtain ⟨hst3, -⟩ := ConRon.Bridge.IConstantVal.atLps_run hok hr hcvd hden hrun
     -- `er_to_iw`, `param_levels`
@@ -667,19 +677,21 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
     rw [h4] at hW; simp only [ciAtLpsW.k_er_to_iw] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     cases h5 : callW p n "param_levels" [r4.headD 0, r4.tail.headD 0] m4 with
     | none => rw [h5] at hW; simp [ciAtLpsW.k_param_levels] at hW
     | some x5 =>
     obtain ⟨r5, m5⟩ := x5
     rw [h5] at hW; simp only [ciAtLpsW.k_param_levels] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd] at hW
     have hden3 := ConRon.Bridge.denoteNListE_ext hst3.ext _ _ hden
     obtain ⟨us, a5, hrun5, hT5, hg5, hf5, he5, hrd5, hH5, hus5, hst5, -⟩ :=
       plStep hP.toQuotAtProg hpre.stT hst3.ok (ArrExt.hslice? hpre.grow.ext hps) hden3 h4 h5
     have hpre5 := hpre.step hT5 hg5 hf5
     -- `inst_lp`
     have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv :=
-      ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
-    obtain ⟨hlps, -⟩ := decCV_rd (erRdOK m5) hcv5
+      ArrExt.decCV hpre5.grow.ext (decCI_cv hci)
+    obtain ⟨-, -, hlps, -⟩ := decCV_rd_ci (erRdOK m5) hcv5
     obtain ⟨wv, hwv, hwv32, rfl⟩ : ∃ wv, erecP m (c.toNat + 5) = some wv ∧ wv.toNat < 2 ^ 32 ∧
         decI wv = v0 := by
       simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hv0
@@ -697,6 +709,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x6 =>
     obtain ⟨r6, m6⟩ := x6
     rw [h6] at hW; simp only [ciAtLpsW.k_inst_lp] at hW
+    try simp only [rec_unfold] at hW
     obtain ⟨e6, a6, hrun6, hT6, hg6, hf6, he6, -, hdec6, h32⟩ :=
       instStep hP.toQuotAtProg hT5 hH5 hwv32 hlps h6
     have hpre6 := hpre5.step hT6 hg6 hf6
@@ -706,6 +719,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x7 =>
     obtain ⟨r7, m7⟩ := x7
     rw [h7] at hW; simp only [ciAtLpsW.k_erec_put_2] at hW
+    try simp only [rec_unfold] at hW
     rw [callW_erecPut hP.erPut h7] at hW
     obtain ⟨hpre7, hv7, hout7⟩ := hpre6.put (o := 5) (v := r6.headD 0) hT (by decide) (by decide)
     cases h8 : callW p n "er_copy_er" [r1.headD 0 + 6, c + 6, 2]
@@ -715,6 +729,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     obtain ⟨r8, m8⟩ := x8
     rw [h8] at hW
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨hpre8, hc8, hout8⟩ := ciCopyO hP hT hpre7 (o := 6) (l := 2) (by decide) (by decide) h8
     refine ⟨.defnInfo cv' e6 hint0, a6, ?_, hpre8.stT, hpre8.grow, ?_⟩
@@ -737,7 +752,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
           decE_eq]
       have hh : decHint (erecP s'.mem) ((r1.headD 0).toNat + 6) = some hint0 :=
         decHint_sh (by simpa using hc8 0 (by decide)) (hc8 1 (by decide)) hhint
-      simp only [List.headD_cons, decCI, nat?, hpre8.kw, Option.map_some, Option.bind_eq_bind,
+      simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hpre8.kw, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hpre8.cvR _ (fun _ _ => rfl) hpre8.grow.ext,
         show (1 : Word).toNat = 1 from rfl, hd5, hh]
       rfl
@@ -752,25 +767,27 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     refine ⟨.thmInfo cv', a3, ?_, hpre.stT, hpre.grow, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
-    · simp only [List.headD_cons, decCI, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
+    · simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hpre.kw, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hpre.cvR _ (fun _ _ => rfl) hpre.grow.ext]
       rfl
   | indInfo cv caps =>
     obtain rfl : w = 3 := UInt64.toNat_inj.mp hkd
     have hci' := hci
-    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+    simp only [decCI, rec_unfold, UInt64.reduceToNat, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
       show (3 : Word).toNat = 3 from rfl, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq, IConstantInfo.indInfo.injEq] at hci'
     obtain ⟨cv0, -, caps0, hcaps, -, rfl⟩ := hci'
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
-    cases h4 : callW p n "er_copy_er" [r1.headD 0 + CI.indCaps, c + CI.indCaps, Caps.size] m3 with
+    try simp only [rec_unfold] at hW
+    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 8] m3 with
     | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
     rw [h4] at hW
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
     obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (o := CI.indCaps) (l := Caps.size) CI.indCaps_ge
@@ -779,13 +796,14 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
     · have hc := decCaps_congr (fun j hj => hc4 j hj) hg4.ext hcaps
-      simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
+      simp only [rec_unfold, UInt64.reduceToNat] at hc
+      simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hk4, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hcv4, show (3 : Word).toNat = 3 from rfl, hc]
       rfl
   | ctorInfo cv np nf fam =>
     obtain rfl : w = 4 := UInt64.toNat_inj.mp hkd
     have hci' := hci
-    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+    simp only [decCI, rec_unfold, UInt64.reduceToNat, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
       show (4 : Word).toNat = 4 from rfl, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq, IConstantInfo.ctorInfo.injEq, Option.map_eq_some_iff] at hci'
     obtain ⟨cv0, -, x5, ⟨w5, hw5, rfl⟩, x6, ⟨w6, hw6, rfl⟩, f7, hf7, -, rfl, rfl, rfl⟩ := hci'
@@ -793,12 +811,14 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    try simp only [rec_unfold, UInt64.reduceSub] at hW
     cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 3] m3 with
     | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
     rw [h4] at hW
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
     obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (o := 5) (l := 3) (by decide) (by decide) h4
@@ -812,13 +832,13 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [Nat.add_zero] at e5
       rw [show (r1.headD 0).toNat + 5 + 1 = (r1.headD 0).toNat + 6 by omega] at e6
       rw [show (r1.headD 0).toNat + 5 + 2 = (r1.headD 0).toNat + 7 by omega] at e7
-      simp only [List.headD_cons, decCI, nat?, hd?, hk4, Option.map_some, Option.bind_eq_bind,
+      simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hd?, hk4, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hcv4, show (4 : Word).toNat = 4 from rfl, e5, e6, e7, hw7l, ite_true]
       rfl
   | recInfo cv mI rP isK rules =>
     obtain rfl : w = 5 := UInt64.toNat_inj.mp hkd
     have hci' := hci
-    simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+    simp only [decCI, rec_unfold, UInt64.reduceToNat, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
       show (5 : Word).toNat = 5 from rfl, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq, IConstantInfo.recInfo.injEq, Option.map_eq_some_iff, bool?] at hci'
     obtain ⟨cv0, -, x5, ⟨w5, hw5, rfl⟩, x6, ⟨w6, hw6, rfl⟩, x9, ⟨w9, hw9, rfl⟩, x7, ⟨w7, hw7, rfl⟩,
@@ -827,6 +847,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
     obtain ⟨hst3, -⟩ := ConRon.Bridge.IConstantVal.atLps_run hok hr hcvd hden hrun
     -- `er_to_iw`, `param_levels`
@@ -835,11 +856,13 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
     rw [h4] at hW; simp only [ciAtLpsW.k_er_to_iw_2] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     cases h5 : callW p n "param_levels" [r4.headD 0, r4.tail.headD 0] m4 with
     | none => rw [h5] at hW; simp [ciAtLpsW.k_param_levels_2] at hW
     | some x5 =>
     obtain ⟨r5, m5⟩ := x5
     rw [h5] at hW; simp only [ciAtLpsW.k_param_levels_2] at hW
+    try simp only [rec_unfold] at hW
     have hden3 := ConRon.Bridge.denoteNListE_ext hst3.ext _ _ hden
     obtain ⟨us, a5, hrun5, hT5, hg5, hf5, he5, hrd5, hH5, hus5, hst5, hls5⟩ :=
       plStep hP.toQuotAtProg hpre.stT hst3.ok (ArrExt.hslice? hpre.grow.ext hps) hden3 h4 h5
@@ -865,12 +888,13 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x6 =>
     obtain ⟨r6, m6⟩ := x6
     rw [h6] at hW; simp only [ciAtLpsW.k_erec_alloc_2] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd] at hW
     obtain ⟨hT6, hg6, hoff6, htop6, hro41⟩ := erAlloc_stageT (callW_erecAlloc hP.erAlloc h6) hpre5.stT
     have hqf6 := callW_quotFrame hP.quot (by decide) h6
     have rd6 : ∀ x : Word, rdW (m6.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd m6 x :=
       fun _ => rfl
-    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cvA hci)
-    obtain ⟨hlps6, -⟩ := decCV_rd (R := erecP m5) (rd := erRd m6)
+    have hcv5 : decCV (erecP m5) (c.toNat + 1) = some cv := ArrExt.decCV hpre5.grow.ext (decCI_cv hci)
+    obtain ⟨-, -, hlps6, -⟩ := decCV_rd_ci (R := erecP m5) (rd := erRd m6)
       ⟨fun a v h => erRd_of _ _ (hg6.ext _ _ h), fun _ _ h => L.Arena.erecP_lt64 h⟩ hcv5
     simp only [rd6, show c + 7 = c + UInt64.ofNat 7 from rfl,
       hsrc m6 (hpre5.grow.trans hg6) 7 w7 hw7] at hW
@@ -881,6 +905,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x7 =>
     obtain ⟨r7, m7⟩ := x7
     rw [h7] at hW; simp only [ciAtLpsW.k_rules_at_lps_go] at hW
+    try simp only [rec_unfold] at hW
     have hcvd5 := ConRon.Bridge.denoteCV_ext hcvd (hst3.ext.trans hst5.ext)
     have hden5 := ConRon.Bridge.denoteNListE_ext hst5.ext _ _ hden3
     have hr5 := (ConRon.Bridge.RStep.of_istep hst5 hst3.read).read
@@ -901,6 +926,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x8 =>
     obtain ⟨r8, m8⟩ := x8
     rw [h8] at hW; simp only [ciAtLpsW.k_erec_put_3] at hW
+    try simp only [rec_unfold] at hW
     rw [callW_erecPut hP.erPut h8] at hW
     obtain ⟨hpre8, hv8, hout8⟩ := hpre7.put (o := 5) (v := w5) hT (by decide) (by decide)
     generalize erecPutMem m7 (r1.headD 0 + 5) w5 = m8 at hpre8 hv8 hout8 hW ⊢
@@ -914,6 +940,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x9 =>
     obtain ⟨r9, m9⟩ := x9
     rw [h9] at hW; simp only [ciAtLpsW.k_erec_put_4] at hW
+    try simp only [rec_unfold] at hW
     rw [callW_erecPut hP.erPut h9] at hW
     obtain ⟨hpre9, hv9, hout9⟩ := hpre8.put (o := 6) (v := w6) hT (by decide) (by decide)
     generalize erecPutMem m8 (r1.headD 0 + 6) w6 = m9 at hpre9 hv9 hout9 hW ⊢
@@ -925,6 +952,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x10 =>
     obtain ⟨r10, m10⟩ := x10
     rw [h10] at hW; simp only [ciAtLpsW.k_erec_put_5] at hW
+    try simp only [rec_unfold] at hW
     rw [callW_erecPut hP.erPut h10] at hW
     obtain ⟨hpre10, hv10, hout10⟩ := hpre9.put (o := 7) (v := r6.headD 0) hT (by decide) (by decide)
     generalize erecPutMem m9 (r1.headD 0 + 7) (r6.headD 0) = m10 at hpre10 hv10 hout10 hW ⊢
@@ -936,6 +964,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x11 =>
     obtain ⟨r11, m11⟩ := x11
     rw [h11] at hW; simp only [ciAtLpsW.k_erec_put_6] at hW
+    try simp only [rec_unfold] at hW
     rw [callW_erecPut hP.erPut h11] at hW
     obtain ⟨hpre11, hv11, hout11⟩ := hpre10.put (o := 8) (v := w8) hT (by decide) (by decide)
     generalize erecPutMem m10 (r1.headD 0 + 8) w8 = m11 at hpre11 hv11 hout11 hW ⊢
@@ -949,6 +978,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     | some x12 =>
     obtain ⟨r12, m12⟩ := x12
     rw [h12] at hW; simp only [ciAtLpsW.k_er_copy_er] at hW
+    try simp only [rec_unfold, UInt64.reduceAdd, UInt64.reduceSub] at hW
     rw [callW_erecPut hP.erPut h12] at hW
     obtain ⟨hpre12, hv12, hout12⟩ := hpre11.put (o := 9) (v := w9) hT (by decide) (by decide)
     generalize erecPutMem m11 (r1.headD 0 + 9) w9 = m12 at hpre12 hv12 hout12 hW ⊢
@@ -1006,7 +1036,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [L.Arena.except_ok_bind]
       rw [StateT.run_bind, hrun7]
       rfl
-    · simp only [List.headD_cons, decCI, nat?, hpre12.kw, Option.map_some, Option.bind_eq_bind,
+    · simp only [List.headD_cons, decCI, rec_unfold, UInt64.reduceToNat, nat?, hpre12.kw, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hpre12.cvR _ (fun _ _ => rfl) hpre12.grow.ext,
         show (5 : Word).toNat = 5 from rfl, e5, e6, e7, e8, bool?, hv12, hrs12]
       rfl
