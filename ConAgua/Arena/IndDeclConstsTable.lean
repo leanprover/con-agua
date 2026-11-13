@@ -21,8 +21,8 @@ import ConAgua.Arena.RecLayout.TblDec
 structure-like member's constructor (`MemberShape.structCtor?`), its projection bodies
 (`struct_proj_bodies`, `spbW_ok`), the block's level parameters (`block_shape_lps`, `lpsW_dec`)
 and the bodies copied into `EREC` (`er_from_iw`, `efF_stage`), the table record
-(`erec_alloc`, the field stores: `btMem_eq`, its image `ProjTbl.img`, `erRecO_stage`). `block_tables(p, mo, ml)` refines
-`blockTables p ms`.
+(`erec_alloc`, the field stores: `btMem_eq`, its image `ProjTbl.img`, `erRecO_stage`).
+`block_tables(p, mo, ml)` refines `blockTables p ms`.
 -/
 
 noncomputable section
@@ -96,8 +96,8 @@ theorem blockTables_cons (bs : BlockShape) (ms : MemberShape) (rest : List Membe
 
 /-- The memory after the table record's field stores (each argument read at its time). -/
 def btMem (m1 : Mem) (q pp c cv T elo ell ebo ebl : Word) : Mem :=
-  let m6 := erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m1 q ProjTbl.kindVal)
-    (q + ProjTbl.name) 0) (q + ProjTbl.structName) T) (q + ProjTbl.lpsOff) elo) (q + ProjTbl.lpsLen) ell
+  let m6 := erecPutMem (erecPutMem (erecPutMem m1 (q + ProjTbl.structName) T) (q + ProjTbl.lpsOff) elo)
+    (q + ProjTbl.lpsLen) ell
   let m7 := erecPutMem m6 (q + ProjTbl.numParams) (rdW (m6.arr64 IW) (pp + 4))
   let m8 := erecPutMem m7 (q + ProjTbl.ctor) (erRd m7 cv)
   let m9 := erecPutMem m8 (q + ProjTbl.numFields) (rdW (m8.arr64 IW) (c + 1))
@@ -116,15 +116,14 @@ l_model dbt_spec {p : Prog} (hP : TablesProg p)
 /-! ## `block_table`: the record -/
 
 theorem btMem_eq {m1 : Mem} {q pp c cv T elo ell ebo ebl : Word} (hfr : ErApart q ProjTbl.size.toNat cv) :
-    btMem m1 q pp c cv T elo ell ebo ebl = wrERo m1 q (ProjTbl.img ProjTbl.kindVal 0 T elo ell
+    btMem m1 q pp c cv T elo ell ebo ebl = wrERo m1 q (ProjTbl.img T elo ell
       (rdW (m1.arr64 IW) (pp + 4)) (erRd m1 cv) (rdW (m1.arr64 IW) (c + 1)) ebo ebl) := by
   have fA : ∀ g : Word, g.toNat < ProjTbl.size.toNat → erTier cv ≠ erTier (q + g) ∨ erOff cv ≠ erOff (q + g) :=
     fun g hg => by have := hfr g.toNat hg; rwa [UInt64.ofNat_toNat] at this
-  have f0 : erTier cv ≠ erTier q ∨ erOff cv ≠ erOff q := by simpa using hfr 0 ProjTbl.size_pos
   simp only [btMem, erecPutMem_iw]
-  simp (disch := first | exact f0 | exact fA _ (by decide)) only [erRd_erecPutMem_ne]
+  simp (disch := exact fA _ (by decide)) only [erRd_erecPutMem_ne]
   -- the image's entries in order (the layout's numbers: a whole-record writer)
-  simp [wrERo, ProjTbl.img, recImg, ProjTbl.kind, ProjTbl.name, ProjTbl.structName, ProjTbl.lpsOff,
+  simp [wrERo, ProjTbl.img, recImg, ProjTbl.structName, ProjTbl.lpsOff,
     ProjTbl.lpsLen, ProjTbl.numParams, ProjTbl.ctor, ProjTbl.numFields, ProjTbl.bodiesOff,
     ProjTbl.bodiesLen, ProjTbl.size, List.replicate, UInt64.add_assoc]
 
@@ -295,10 +294,10 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     have := (iwRd (o := cw) (w := 1) (by rw [hcwv]; simpa using hnF)).2
     rw [UInt64.toNat_add]; simp at this ⊢; omega
   rw [hr5, (erRd_of_erecP hwn4).1, hI5, rdW_iw_grow hg04 l4, rdW_iw_grow hg04 l1]
-  obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRecO_stage hW5 hS4 (ProjTbl.img ProjTbl.kindVal 0 w0
+  obtain ⟨hS6, hg6, -, -, -, -, hget⟩ := erRecO_stage hW5 hS4 (ProjTbl.img w0
     (r3.headD 0) (r3.tail.headD 0) (rdW (m.arr64 IW) (pp + 4)) wn (rdW (m.arr64 IW) (cw + 1))
     (r4.headD 0) (r4.tail.headD 0)) (ProjTbl.img_length ..).symm
-  have hA6 : AbsOK (wrERo m5 q (ProjTbl.img ProjTbl.kindVal 0 w0
+  have hA6 : AbsOK (wrERo m5 q (ProjTbl.img w0
       (r3.headD 0) (r3.tail.headD 0) (rdW (m.arr64 IW) (pp + 4)) wn (rdW (m.arr64 IW) (cw + 1))
       (r4.headD 0) (r4.tail.headD 0))) :=
     (show AFr _ _ from AFr.of_frame (wrERo_frame _ _ _)) (erAllocW_afr hW5 hA4)
