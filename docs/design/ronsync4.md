@@ -198,6 +198,24 @@ task #152 on its own binary (#572 alone +2.7 % there; the stuck spine −5.5 %).
 instructions or memory; the wall comparison should be repeated on a quiet machine (or by
 `perf-overview.py` after the landing).
 
+**Wall time, repeated (lane wallq, 2026-11-13).** Both binaries `make` from the committed files at
+`dfe9fbdd7` and `8ea7eccbf`, `Init` as above. Each round runs the four cases (two binaries, one
+thread on CPU 44 and `--jobs=16` on CPUs 24–39) in random order, after one warm-up round; the
+1-minute load was read before and after every run, and a round with any reading above 12 was
+discarded. 99 rounds 13:31–14:52, 57 kept (load 4.8–11.9, the benchmark's own runs included; the
+other load was the recoffs lane's Lean jobs, which no CPU choice avoided), 42 discarded. Per-round
+difference ronsync4 against master, mean with its 95 % interval, Wilcoxon signed-rank:
+
+| `Init` wall, 57 paired rounds | master (median) | ronsync4 (median) | Δ median | Δ mean [95 %] | p |
+|---|---:|---:|---:|---:|---:|
+| one thread (CPU 44) | 18.44 s | 18.16 s | −1.5 % | −1.55 % [−3.17, +0.08] | 0.04 |
+| `--jobs=16` (CPUs 24–39) | 3.41 s | 3.38 s | −2.4 % | −1.1 % [−5.3, +3.1] | 0.33 |
+
+One thread: faster by about 1.5 %, just significant (p = 0.04); the interval contains the
+instruction count's −2.78 %, and excludes a slowdown beyond +0.1 %. Sixteen threads: no effect
+resolved (the load moves single runs by up to 40 %). No regression. (The medians are 7 % and 8 %
+above ronsync3's at load ≈ 1.)
+
 ## 5. Results
 
 * **Proofs.** Zero `sorry`; the axiom guards unchanged; the whole library builds; every gate
