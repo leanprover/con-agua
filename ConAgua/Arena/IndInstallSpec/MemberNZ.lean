@@ -121,16 +121,6 @@ theorem frzR_ok {p : Prog} (hpr : p.lookup "pi_result" = some piResultL)
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨_, _, hrun, rfl, hXok, hS₂, he.memFrame, by simp [hpw, PropWhen.isNever]⟩
 
-/-- The lookups `member_never_zero` reaches. -/
-structure MnzProg (p : Prog) : Prop where
-  mnz : p.lookup "member_never_zero" = some memberNeverZero
-  fz : p.lookup "former_z" = some formerZL
-  fr : p.lookup "former_res_sort" = some formerResSortL
-  pr : p.lookup "pi_result" = some piResultL
-  node : p.lookup "lv_node" = some lvNode
-  push : p.lookup "lh_push" = some lhPush
-  zero : p.lookup "lv_zero" = some lvZero
-
 /-- A type word of a constant value decoded in the record pool. -/
 theorem decCV_typeW {m : Mem} {d : Nat} {cv : IConstantVal} (h : decCV (erecP m) d = some cv) :
     HW (erRd m (UInt64.ofNat d + 3)) ∧ cv.type = decE (erRd m (UInt64.ofNat d + 3)) := by

@@ -23,16 +23,16 @@ open ConLeche.Frontend (IndCtorRec IndTypeRec IndRecRec CVRec RuleRec)
 namespace L.Front.Ind
 
 /-- The install loops: record `j` by `R` at `ptr m j`, its pointer at `bo + j`. -/
-def instGo (R : Nat → Mem → Word → Option (Word × Mem)) (ptr : Mem → Word → Word) :
+def instGo (R : Nat → Mem → Word → Word → Option (Word × Mem)) (ptr : Mem → Word → Word) :
     Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, bo, tn, j =>
     if tn ≤ j then some m
-    else allocK (fun q m₁ => instGo R ptr n (m₁.set64 DLP (bo + j) q) bo tn (j + 1)) (R n m (ptr m j))
+    else allocK (fun q m₁ => instGo R ptr n (m₁.set64 DLP (bo + j) q) bo tn (j + 1)) (R n m j (ptr m j))
 
 theorem instTypesW_eq (b : Array UInt8) (to : Word) :
     ∀ n m bo tn j, instTypesW b n m bo to tn j =
-      instGo (fun _ m p => typeW b m p) (fun _ j => to + 11 * j) n m bo tn j
+      instGo (fun _ m _ p => typeW b m p) (fun _ j => to + 11 * j) n m bo tn j
   | 0, _, _, _, _ => by rw [instTypesW.eq_1]; rfl
   | n + 1, m, bo, tn, j => by
     simp only [instGo]
@@ -45,24 +45,25 @@ theorem instTypesW_eq (b : Array UInt8) (to : Word) :
         obtain ⟨q, m₁⟩ := x
         rw [instTypesW.k_ind_type.arm1, instTypesW.k_inst_types_id, instTypesW_eq b to n]; rfl
 
-theorem instCtorsW_eq (b : Array UInt8) (oo : Word) :
-    ∀ n m bo on j, instCtorsW b n m bo oo on j =
-      instGo (fun _ m p => ctorRW b m p) (fun m j => rdW (m.arr64 IFL) (oo + j)) n m bo on j
+theorem instCtorsW_eq (b : Array UInt8) (oo tf : Word) :
+    ∀ n m bo on j, instCtorsW b n m bo oo tf on j =
+      instGo (fun _ m j p => ctorRW b m p (rdW (m.arr64 IFL) (tf + j))) (fun m j => rdW (m.arr64 IFL) (oo + j))
+        n m bo on j
   | 0, _, _, _, _ => by rw [instCtorsW.eq_1]; rfl
   | n + 1, m, bo, on, j => by
     simp only [instGo]
     by_cases hc : on ≤ j
     · rw [instCtorsW.arm1 (hc1 := hc), ite_eq_left hc]
     · rw [instCtorsW.arm2 (hc1 := hc), ite_eq_right hc]
-      cases h : ctorRW b m (rdW (m.arr64 IFL) (oo + j)) with
+      cases h : ctorRW b m (rdW (m.arr64 IFL) (oo + j)) (rdW (m.arr64 IFL) (tf + j)) with
       | none => rw [instCtorsW.k_ind_ctor.none]; rfl
       | some x =>
         obtain ⟨q, m₁⟩ := x
-        rw [instCtorsW.k_ind_ctor.arm1, instCtorsW.k_inst_ctors_id, instCtorsW_eq b oo n]; rfl
+        rw [instCtorsW.k_ind_ctor.arm1, instCtorsW.k_inst_ctors_id, instCtorsW_eq b oo tf n]; rfl
 
 theorem instRecsW_eq (b : Array UInt8) (ro : Word) :
     ∀ n m bo rn j, instRecsW b n m bo ro rn j =
-      instGo (fun n m p => recRW b n m p) (fun _ j => ro + 11 * j) n m bo rn j
+      instGo (fun n m _ p => recRW b n m p) (fun _ j => ro + 11 * j) n m bo rn j
   | 0, _, _, _, _ => by rw [instRecsW.eq_1]; rfl
   | n + 1, m, bo, rn, j => by
     simp only [instGo]
@@ -78,10 +79,10 @@ theorem instRecsW_eq (b : Array UInt8) (ro : Word) :
 /-- **The install loop against the twin's `mapM`.** `R` at the `k`-th pointer is the twin's `f`
 on the `k`-th element (`hR`, for every memory that only differs from `m₀` in `DLP`). -/
 theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : List α) (f : α → AM IConstantInfo)
-    (R : Nat → Mem → Word → Option (Word × Mem)) (ptr : Mem → Word → Word) (m₀ : Mem) (bo tn : Word)
+    (R : Nat → Mem → Word → Word → Option (Word × Mem)) (ptr : Mem → Word → Word) (m₀ : Mem) (bo tn : Word)
     (htn : tn.toNat = xs.length)
     (hR : ∀ n m k q m', LkR m st → MemFrame [DLP] [] m₀ m → k < xs.length →
-      R n m (ptr m (UInt64.ofNat k)) = some (q, m') →
+      R n m (UInt64.ofNat k) (ptr m (UInt64.ofNat k)) = some (q, m') →
       (f xs[k]!).run a = .ok (resOf (f xs[k]!) a, a) ∧ PExt m m' ∧ q.toNat = topN m DLP + 1 ∧
         LkR m' st ∧ RecAt m' q.toNat (resOf (f xs[k]!) a)) :
     ∀ n (m m' : Mem) (j : Word), LkR m st → MemFrame [DLP] [] m₀ m → j.toNat ≤ xs.length →
@@ -106,7 +107,7 @@ theorem instGo_twin {α : Type} [Inhabited α] {st : StateD} (a : AState) (xs : 
     rename_i hlj
     have hjl : j.toNat < xs.length := by
       rw [← htn]; exact Classical.byContradiction fun h' => hlj (UInt64.le_iff_toNat_le.mpr (by omega))
-    rcases h1 : R n m (ptr m j) with _ | ⟨q, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
+    rcases h1 : R n m j (ptr m j) with _ | ⟨q, m₁⟩ <;> simp only [h1, allocK, reduceCtorEq] at h
     have hj' : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
     obtain ⟨S1, S2, S3, S4, S5⟩ := hR n m j.toNat q m₁ hL hf hjl (by rw [hj']; exact h1)
     have hbj : (bo + j).toNat = bo.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
