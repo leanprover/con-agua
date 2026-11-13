@@ -5,8 +5,6 @@ public import ConAgua.Arena.IndT.PosMc
 public import ConAgua.Arena.IndT.BlockC
 import ConAgua.Arena.IndRealSctC
 import ConAgua.Arena.RecCheckSpec.BlockNestedBit
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
-import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndInstallSpec.PosFreeMfr
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.IndT.PassCS

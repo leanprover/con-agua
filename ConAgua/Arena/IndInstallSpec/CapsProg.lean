@@ -2,9 +2,7 @@ module
 
 public import ConAgua.Arena.DeclRec
 public import ConAgua.Arena.WhnfIota
-public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Arena.LevelZero
-public import ConAgua.Arena.LevelHeap
 
 @[expose] public section
 

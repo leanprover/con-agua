@@ -18,7 +18,6 @@ import all ConAgua.Arena.WhnfIotaRec
 public import ConAgua.Arena.FormerNZRef
 public import ConAgua.Arena.ErecRdCV
 import ConAgua.Arena.FuelConsts
-import ConAgua.Arena.IndLibSpec
 
 @[expose] public section
 

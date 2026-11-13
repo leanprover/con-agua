@@ -7,11 +7,8 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.L.ModelGen
 public import ConAgua.Verdict.WhnfModelsE
 import ConAgua.Arena.RefWalk
-import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfCore
 

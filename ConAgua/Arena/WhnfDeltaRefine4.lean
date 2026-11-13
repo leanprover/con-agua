@@ -1,9 +1,9 @@
 module
 
-public import ConAgua.Arena.WhnfDeltaRefine3
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
+public import ConAgua.Arena.WhnfDeltaRefine3
 
 @[expose] public section
 

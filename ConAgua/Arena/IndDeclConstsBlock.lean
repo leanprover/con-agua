@@ -2,9 +2,7 @@ module
 
 public import ConAgua.Arena.IndDeclConstsRecs
 public import ConAgua.Arena.IndInstallSpec.BlockRawRec
-import ConAgua.Arena.IndPosSpec.RootHoles
 import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr

@@ -4,18 +4,18 @@ public import ConAgua.Arena.FormerNZRef
 public import ConAgua.Arena.IndInstallSpec.CapsProg
 public import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndInstallSpec.PartsAt
-import ConAgua.Arena.IndRealFvt
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.LdRd
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.WhnfIota
+import ConAgua.Arena.IndPartsSpec.RulePrefixAt
+import ConAgua.Arena.IndRealFvt
+import ConAgua.Arena.LdRd
 
 @[expose] public section
 

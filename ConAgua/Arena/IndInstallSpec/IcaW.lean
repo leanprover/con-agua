@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Arena.IndInstallSpec.CapsProg
 public import ConAgua.Arena.IndInstallSpec.IcbiW
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons

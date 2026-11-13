@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.WhnfM2CRefine4
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfM2CRefine3
 import ConRon.Bridge.Grind

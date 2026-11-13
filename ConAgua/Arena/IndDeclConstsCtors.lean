@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndDeclConstsFormers
-public import ConAgua.Arena.IndPartsSpec.AllCtors
 public import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndInstallSpec.BlockCapsAt
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
@@ -10,7 +9,6 @@ import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.RecClassSpec.MjProg
 import ConAgua.Arena.IndInstallSpec.PartsAt
 public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
-import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import all ConAgua.Arena.IndParts
 public import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 public import ConAgua.Arena.GrindAttr
@@ -19,7 +17,6 @@ public import ConAgua.L.GrindAttr
 import all ConAgua.Arena.IndDeclConsts
 
 import ConAgua.L.ModelGen
-import ConAgua.L.WordOff
 
 @[expose] public section
 

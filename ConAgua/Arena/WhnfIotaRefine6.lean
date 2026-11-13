@@ -3,9 +3,9 @@ module
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
-import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.WhnfIota
+import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfIota
 
 @[expose] public section

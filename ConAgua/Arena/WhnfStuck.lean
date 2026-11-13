@@ -8,9 +8,7 @@ import ConAgua.Arena.WhnfCoreProj
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.Verdict
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Checker.NoVerdictFns
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
