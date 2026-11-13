@@ -285,8 +285,10 @@ theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInf
     simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
     obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
   | ctorInfo v _ _ _ =>
-    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
-    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
   | defnInfo v _ _ =>
     simp only [ConRon.Arena.Frontend.denoteCI] at hd
     split at hd
