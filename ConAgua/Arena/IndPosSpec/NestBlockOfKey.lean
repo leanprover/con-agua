@@ -165,12 +165,6 @@ theorem erec_rd {m : Mem} {w : Word} {c : Nat} {v : Word} (h : erecP m (w.toNat 
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hc]; exact Nat.mod_eq_of_lt (by omega)
   exact (erRd_of_erecP (by rw [e]; exact h)).1
 
-theorem decCV_type {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    hd? a (q + 3) = some cv.type := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨_, _, _, _, _, hd, hq⟩ := h
-  rw [← Option.some.inj hq]; exact hd
-
 /-! ### `viewConst` against `view` -/
 
 theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.const) (n : NIdx) (us : LsIdx)

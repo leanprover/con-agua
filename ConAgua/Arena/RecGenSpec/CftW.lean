@@ -44,7 +44,7 @@ def cftW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Opti
   | N + 1, m, vis, o, l, mp =>
     if rdW (m.arr64 IW) (mp + 8) ≠ 0 then
       if rdW (m.arr64 IW) (mp + 8) - 1 < l then
-        some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m)
+        some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + CV.type)], m)
       else cftK1 (binternW m 0)
     else cftK2 cR N vis mp (findRes m vis (rdW (m.arr64 IW) mp)) m
 
@@ -52,7 +52,7 @@ section arms
 variable (cR : CallM) (N : Nat) (m : Mem) (vis o l mp : Word)
 theorem cftW_mem (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp =
-      some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + 3)], m) := by
+      some ([erRd m (rdW (m.arr64 IW) (o + (rdW (m.arr64 IW) (mp + 8) - 1)) + CV.type)], m) := by
   simp only [cftW]; rw [ite_eq_left h, ite_eq_left h2]
 theorem cftW_out (h : rdW (m.arr64 IW) (mp + 8) ≠ 0) (h2 : ¬ rdW (m.arr64 IW) (mp + 8) - 1 < l) :
     cftW cR (N + 1) m vis o l mp = cftK1 (binternW m 0) := by

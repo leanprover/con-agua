@@ -301,14 +301,14 @@ theorem decNL_get' {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL m o l = some
   exact ⟨v, hv, hx⟩
 
 theorem rec11_of_decNL {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys)
-    (hall : ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w) : RuleWordsIn m o l := by
+    (hall : ∀ v ∈ ys, ∀ i < Rule.size.toNat, ∃ w, erecP m (v + i) = some w) : RuleWordsIn m o l := by
   intro j hj v hv i hi
   obtain ⟨v', hv', hx⟩ := decNL_get' h j hj
   rw [hv] at hv'; cases hv'
   exact hall v (List.mem_of_getElem? hx) i hi
 
 theorem rec11_mem {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys) (hR : RuleWordsIn m o l) :
-    ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w := by
+    ∀ v ∈ ys, ∀ i < Rule.size.toNat, ∃ w, erecP m (v + i) = some w := by
   intro v hv i hi
   obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hv
   have hl := decNL_length m h
@@ -425,7 +425,7 @@ end rel
 /-! ## The `abstract1` memo across the rules' writers -/
 
 theorem ruleMem_afr (m : Mem) (q nm nF rO : Word) : AFr m (ruleMem m q nm nF rO) := by
-  rw [ruleMem_eq]; exact wrER_afr _ m q
+  rw [ruleMem_eq]; exact AFr.of_frame (wrERo_frame _ m q)
 
 theorem rgoW_afr : ∀ (n : Nat) (m m' : Mem) (cO cL rO rL o : Word) (r : List Word),
     rgoW n m cO cL rO rL o = some (r, m') → AFr m m'

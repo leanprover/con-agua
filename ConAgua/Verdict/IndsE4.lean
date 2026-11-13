@@ -74,7 +74,7 @@ by the caller; the denotations as con-ron's `checkBlockAgree_specF`'s proof has 
 theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     {nP fvs0O fvs0L s0 cvTa s : Word} {cv : IConstantVal} {fvs0 : List EIdx}
     (hC : StageC dn vis fe env m a) (hA : AbsOK m)
-    (hty : (erRd m (cvTa + 3)).toNat < 2 ^ 32 ∧ decI (erRd m (cvTa + 3)) = cv.type)
+    (hty : (erRd m (cvTa + CV.type)).toNat < 2 ^ 32 ∧ decI (erRd m (cvTa + CV.type)) = cv.type)
     (hfvs0 : decHL m fvs0O.toNat fvs0L.toNat = some fvs0)
     (hfot : fvs0O.toNat + fvs0L.toNat ≤ iwTop m) (hs : H s) (hs0 : H s0)
     {tyP : ConLeche.Expr} {xs0 : List ConLeche.Expr} {sP s0P : ConLeche.Level}
@@ -91,14 +91,14 @@ theorem cbao_ref (hP : AgreeProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a :
   | succ n =>
   have hStage := hC.stage
   have hz : UInt64.toNat 0 = 0 := rfl
-  have hty' : cv.type = decI (erRd m (cvTa + 3)) := hty.2.symm
+  have hty' : cv.type = decI (erRd m (cvTa + CV.type)) := hty.2.symm
   rw [cbaoE.arm1]
   unfold agreeBodyAM
   rw [hty']
   -- `open_pis_at_fvars_f`
   refine RefE.bindLift (fun _ => rfl) fun ra m1 h1 => ?_
   obtain ⟨x1, a1, hrun1, hSt1, hg1, hdec1, hA1⟩ := opfF_okRA hty.1 (L.Ind.callW_opfF hOpf h1) hStage hA
-  have hdty : denoteE a.store (decI (erRd m (cvTa + 3))) = some tyP := by
+  have hdty : denoteE a.store (decI (erRd m (cvTa + CV.type))) = some tyP := by
     rw [hty.2]; exact htyP
   obtain ⟨p1, ho1⟩ := ConRon.Bridge.Inductives.openPisAtFvarsF_run hC.check.state hdty hrun1
   have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hSt1 hA1 p1

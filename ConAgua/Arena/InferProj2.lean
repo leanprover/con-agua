@@ -176,11 +176,11 @@ theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
     · rfl
 
 /-- **The constructor test from `env_find(c)`'s record**: `f ≠ 0`, kind `4`, `i` below the field
-count at `q + 6`. -/
+count at `q + CI.ctorNfields`. -/
 theorem ctorFieldsGt_eq {fe : IFEnv} {m : Mem} {c : NIdx} {f q iw : Word}
     (hf : fe.find? c = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
-    ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ erRd m q = 4 ∧ iw < erRd m (q + 6)) := by
+    ctorFieldsGt fe c iw.toNat = decide (f ≠ 0 ∧ erRd m q = 4 ∧ iw < erRd m (q + CI.ctorNfields)) := by
   by_cases f0 : f = 0
   · have hn : fe.find? c = none := by rw [hf]; simp [envFound, f0]
     simp [ctorFieldsGt, hn, f0]
@@ -339,7 +339,7 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
         simp only [erRd] at hcf
         by_cases C2 : r₈.headD 0 ≠ 0 ∧
             rdW (m₈.arr64 (tierA EREC (r₈.tail.headD 0 >>> 40))) (r₈.tail.headD 0 &&& 1099511627775) = 4 ∧
-            i < rdW (m₈.arr64 (tierA EREC ((r₈.tail.headD 0 + 6) >>> 40))) (r₈.tail.headD 0 + 6 &&& 1099511627775)
+            i < rdW (m₈.arr64 (tierA EREC ((r₈.tail.headD 0 + CI.ctorNfields) >>> 40))) (r₈.tail.headD 0 + CI.ctorNfields &&& 1099511627775)
         · rw [ite_eq_left C2]
           refine fun _ => ?_
           have hpt : projIndexedStructLike fe (decI wT) (decI wT) i.toNat xs'.length = true := by

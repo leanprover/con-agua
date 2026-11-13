@@ -134,7 +134,7 @@ theorem brW_ok {p : Prog} (hP : RecsProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   rw [ite_eq_right hbig] at h
   have hc32 : (rdW (m.arr64 IW) (rc + 5)).toNat < 2 ^ 32 := by
     have : ¬ _ := fun c => hbig (UInt64.le_iff_toNat_le.mpr c); simp at this; omega
-  rcases h4 : erAllocW m3 (11 * rdW (m.arr64 IW) (rc + 5)) with _ | ⟨run, m4⟩ <;> rw [h4] at h
+  rcases h4 : erAllocW m3 (Rule.size * rdW (m.arr64 IW) (rc + 5)) with _ | ⟨run, m4⟩ <;> rw [h4] at h
   · simp [brW.k_erec_alloc] at h
   simp only [brW.k_erec_alloc] at h
   obtain ⟨-, hf4, -⟩ := erAllocW_spec h4 hS3.iw

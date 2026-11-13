@@ -131,16 +131,16 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     cases h2; exact h1
   obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
   have hq64 := L.Arena.erecP_lt64 hv16
-  have := CI.indCaps_ge
-  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have hcvi : CI.cv.toNat < CI.indCaps.toNat := by decide
+  have e1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have e5 : (q + CI.indCaps).toNat = q.toNat + CI.indCaps.toNat := L.toNat_add_of_lt _ _ hq64
   -- the twin's inductive and its denotation
   obtain ⟨IP, cc, -, hcc, he⟩ := hC.check.ienv.hit _ _ hfind
   obtain ⟨cvP, capsP, hcvP, hcapsP, rfl⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hcc
   have hws : ConLeche.Expr.WScoped 0 cvP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (henv.consts _ (ConLeche.Env.find?_mem he)).1
   -- `family_telescope`
-  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+  have hcvB : DecB (fun m => decCVp m (q + CI.cv).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
   have hFT := ft_ref hq hF henv n (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
@@ -148,18 +148,16 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF n _ vis _ _) (fun hG => hG.nv)
     id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
   dsimp only [toiE.k_family_telescope]
-  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF n ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
+  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hF n ⟨m, Locals.init []⟩ vis (q + CI.cv) (q + CI.indCaps)) hc3
   have hS3 := hP3.stage.stage
   have hg3 := hP3.grow
   generalize s3.mem = m3 at hS3 hg3 hP3 hs3' ⊢
   -- `er_to_iw` (`cv_lps`'s reading)
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 hlp => ?_
   dsimp only [toiE.k_er_to_iw]
-  have hcv3 : decCVp m3 (q + 1).toNat = some cv := by rw [e1]; exact hg3.ext.decCV hcv
-  have hlp' : cvLpsW (n + 1) m3 (q + 1) = some (r4, m4) := by
-    simp only [cvLpsW, Nat.add_sub_cancel]
-    rw [show q + 1 + 1 = q + 2 by rw [UInt64.add_assoc]; rfl,
-      show q + 1 + 2 = q + 3 by rw [UInt64.add_assoc]; rfl]
+  have hcv3 : decCVp m3 (q + CI.cv).toNat = some cv := by rw [e1]; exact hg3.ext.decCV hcv
+  have hlp' : cvLpsW (n + 1) m3 (q + CI.cv) = some (r4, m4) := by
+    simp only [cvLpsW, Nat.add_sub_cancel, UInt64.add_assoc]
     exact hlp
   obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3
   -- `inst_lp_fast`

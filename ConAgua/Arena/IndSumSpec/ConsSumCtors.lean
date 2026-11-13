@@ -12,6 +12,8 @@ public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.WhnfBase
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.RecInfoW
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -47,10 +49,10 @@ def ciRecMem (m1 : Mem) (q cv nP nF T : Word) : Mem :=
 
 /-- The model of `ctor_info_rec(cv, nP, nF, T)`. -/
 def ciRecW (m : Mem) (cv nP nF T : Word) : Option (Word × Mem) :=
-  match erAllocW m 8 with
+  match erAllocW m CI.ctorSize with
   | none => none
   | some (q, m1) =>
-    if 4294967296 ≤ erRd (ciRecMem m1 q cv nP nF T) (q + 1) then none
+    if 4294967296 ≤ erRd (ciRecMem m1 q cv nP nF T) (q + (CI.cv + CV.name)) then none
     else if 4294967296 ≤ T then none
     else some (q, ciRecMem m1 q cv nP nF T)
 
@@ -80,41 +82,22 @@ l_model csc_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
 
 /-! ## `ctor_info_rec` under the stage relation -/
 
-theorem rdW_set64_ne_er {m : Mem} {x y v : Word} (h : x.toNat ≠ y.toNat) :
-    rdW ((m.set64 EREC x v).arr64 EREC) y = rdW (m.arr64 EREC) y := by
-  simp only [rdW, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  simp [h]
-
-/-- The four copied words of a constant, decoded at a shifted place, decode the same. -/
-theorem decCV_shift {a : Nat → Option Word} {q c : Nat} (h0 : a q = a c)
-    (h1 : a (q + CV.lpsOff.toNat) = a (c + CV.lpsOff.toNat))
-    (h2 : a (q + CV.lpsLen.toNat) = a (c + CV.lpsLen.toNat))
-    (h3 : a (q + CV.type.toNat) = a (c + CV.type.toNat)) : decCV a q = decCV a c := by
-  have h2' : a (q + CV.lpsOff.toNat + 1) = a (c + CV.lpsOff.toNat + 1) := by
-    rw [Nat.add_assoc, Nat.add_assoc, ← CV.lpsLen_toNat]; exact h2
-  simp only [decCV, hlist?, hd?, nat?, h0, h1, h2', h3]
-
-theorem ciRecMem_eq {m1 : Mem} {q cq nP nF T : Word}
-    (hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 8,
-      erTier x ≠ erTier (q + UInt64.ofNat j) ∨ erOff x ≠ erOff (q + UInt64.ofNat j)) :
-    ciRecMem m1 q cq nP nF T = wrER m1 q [4, erRd m1 cq, erRd m1 (cq + 1), erRd m1 (cq + 2),
-      erRd m1 (cq + 3), nP, nF, T] := by
-  have f0 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier q ∨ erOff x ≠ erOff q :=
-    fun x hx => by simpa using hfr x hx 0 (by decide)
-  have f1 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 1) ∨ erOff x ≠ erOff (q + 1) :=
-    fun x hx => hfr x hx 1 (by decide)
-  have f2 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 2) ∨ erOff x ≠ erOff (q + 2) :=
-    fun x hx => hfr x hx 2 (by decide)
-  have f3 : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], erTier x ≠ erTier (q + 3) ∨ erOff x ≠ erOff (q + 3) :=
-    fun x hx => hfr x hx 3 (by decide)
-  -- a whole-record writer (`ctor_info_rec`): the offsets as numbers (`rec_unfold`)
-  simp only [ciRecMem, wrER, rec_unfold, UInt64.reduceAdd]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl]
-  simp (disch := first
-    | exact f0 _ (by simp) | exact f1 _ (by simp) | exact f2 _ (by simp) | exact f3 _ (by simp))
+/-- **The stores are the record's image** (`CI.ctorImg`, `wrERo`), when the constant value's words
+are not in the record's region. -/
+theorem ciRecMem_eq {m1 : Mem} {q cv nP nF T : Word}
+    (hfr : ∀ x ∈ [cv, cv + CV.lpsOff, cv + CV.lpsLen, cv + CV.type], ∀ o : Word,
+      o.toNat < CI.ctorSize.toNat → erTier x ≠ erTier (q + o) ∨ erOff x ≠ erOff (q + o)) :
+    ciRecMem m1 q cv nP nF T = wrERo m1 q (CI.ctorImg 4 (erRd m1 cv)
+      (erRd m1 (cv + CV.lpsOff)) (erRd m1 (cv + CV.lpsLen)) (erRd m1 (cv + CV.type)) nP nF T) := by
+  have h0 : ∀ x ∈ [cv, cv + CV.lpsOff, cv + CV.lpsLen, cv + CV.type],
+      erTier x ≠ erTier q ∨ erOff x ≠ erOff q := fun x hx => by
+    simpa using hfr x hx 0 (by decide)
+  simp only [ciRecMem]
+  -- the reads first (each at a word outside the record), then the stores in field order
+  simp (disch := first | exact h0 _ (by simp) | exact hfr _ (by simp) _ (by decide))
     only [erRd_erecPutMem_ne]
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, CI.ctorImg, recImg, rec_unfold, UInt64.add_assoc]
 
 /-- **`ctor_info_rec` under the stage relation**: a fresh `.ctorInfo` record of the constant at `cq`
 (decoded in the record pool below its top), the stage relation kept. -/
@@ -123,7 +106,7 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     (hS : StageR vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decCI (erecP m') q.toNat = some (.ctorInfo cv nP.toNat nF.toNat (decI T)) := by
-  rcases h1 : erAllocW m 8 with _ | ⟨q1, m1⟩
+  rcases h1 : erAllocW m CI.ctorSize with _ | ⟨q1, m1⟩
   · simp [ciRecW, h1] at h
   have e : ciRecW m cq nP nF T = if 4294967296 ≤ erRd (ciRecMem m1 q1 cq nP nF T) (q1 + (CI.cv + CV.name))
       then none else if 4294967296 ≤ T then none else some (q1, ciRecMem m1 q1 cq nP nF T) := by
@@ -137,70 +120,46 @@ theorem ciRec_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hTlt : T.toNat < 2 ^ 32 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hT); simpa using this
   obtain ⟨rfl, rfl⟩ : q1 = q ∧ ciRecMem m1 q1 cq nP nF T = m' := by simpa using h
-  -- the constant's four words, in the old pool
-  have hcv0 := hcv
-  -- a whole-record writer (`ctor_info_rec`): the offsets as numbers (`rec_unfold`)
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
-  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
-  obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
-  obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
-    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
-  obtain ⟨w2, hw2, -⟩ : ∃ w, erecP m (cq.toNat + 2) = some w ∧ w.toNat = ll := by
-    simp only [nat?, Option.map_eq_some_iff, Nat.add_assoc] at hll; exact hll
-  obtain ⟨w3, hw3, -, -⟩ := hd?_some ht
-  have hW : ∀ i < 4, ∃ w, erecP m (cq.toNat + i) = some w := by
-    intro i hi
-    rcases i with _ | _ | _ | _ | i
-    · exact ⟨w0, by simpa using hw0⟩
-    · exact ⟨w1, hw1⟩
-    · exact ⟨w2, hw2⟩
-    · exact ⟨w3, hw3⟩
-    · omega
-  have r0 : erRd m cq = w0 := (erRd_of_erecP (by simpa using hw0)).1
-  obtain ⟨r1, e1⟩ := erRd_add (j := 1) (cq := cq) (m := m) hw1 (by decide)
-  obtain ⟨r2, e2⟩ := erRd_add (j := 2) (cq := cq) (m := m) hw2 (by decide)
-  obtain ⟨r3, e3⟩ := erRd_add (j := 3) (cq := cq) (m := m) hw3 (by decide)
-  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl,
-    show (UInt64.ofNat 3 : Word) = 3 from rfl] at r1 r2 r3 e1 e2 e3
-  have hfr : ∀ x ∈ [cq, cq + 1, cq + 2, cq + 3], ∀ j < 8,
-      erTier x ≠ erTier (q1 + UInt64.ofNat j) ∨ erOff x ≠ erOff (q1 + UInt64.ofNat j) := by
-    intro x hx j hj
+  obtain ⟨⟨w0, hw0, -⟩, -, ⟨w3, hw3, -⟩⟩ := decCV_words hcv
+  obtain ⟨w1, w2, hw1, hw2, -⟩ := decCV_slice hcv
+  have r := erRdOK m
+  have hfr : ∀ x ∈ [cq, cq + CV.lpsOff, cq + CV.lpsLen, cq + CV.type], ∀ o : Word,
+      o.toNat < CI.ctorSize.toNat → erTier x ≠ erTier (q1 + o) ∨ erOff x ≠ erOff (q1 + o) := by
+    intro x hx o ho
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
     rcases hx with rfl | rfl | rfl | rfl
-    · exact erFresh h1 hS.iw (by simpa using hw0) hj
-    · exact erFresh h1 hS.iw (by rw [e1]; exact hw1) hj
-    · exact erFresh h1 hS.iw (by rw [e2]; exact hw2) hj
-    · exact erFresh h1 hS.iw (by rw [e3]; exact hw3) hj
+    · exact erFreshW h1 hS.iw hw0 ho
+    · exact erFreshW h1 hS.iw (by rw [rd_off_toNat r hw1]; exact hw1) ho
+    · exact erFreshW h1 hS.iw (by rw [rd_off_toNat r hw2]; exact hw2) ho
+    · exact erFreshW h1 hS.iw (by rw [rd_off_toNat r hw3]; exact hw3) ho
   obtain ⟨-, hf1, -⟩ := erAllocW_spec h1 hS.iw
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
-  rw [ciRecMem_eq hfr, hr1, hr1, hr1, hr1, r0, r1, r2, r3]
-  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS [4, w0, w1, w2, w3, nP, nF, T] (by simp [rec_unfold])
+  rw [ciRecMem_eq hfr, hr1, hr1, hr1, hr1]
+  generalize hI : CI.ctorImg 4 (erRd m cq) (erRd m (cq + CV.lpsOff)) (erRd m (cq + CV.lpsLen))
+    (erRd m (cq + CV.type)) nP nF T = I
+  have hIl : I.length = CI.ctorSize.toNat := by rw [← hI, CI.ctorImg_length]
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRecO_stage h1 hS I hIl.symm
   refine ⟨hS', hg, ?_⟩
-  generalize wrER m1 q1 _ = M at hS' hg hget
-  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cq.toNat + i) := by
-    intro i hi
-    obtain ⟨w, hw⟩ := hW i hi
-    rw [IWGrow.ext hg _ _ hw, Nat.add_assoc, hget (1 + i) (by simp; omega)]
-    rcases i with _ | _ | _ | _ | i
-    · simp at hw ⊢; rw [hw0] at hw; exact Option.some.inj hw
-    · simp at hw ⊢; rw [hw1] at hw; exact Option.some.inj hw
-    · simp at hw ⊢; rw [hw2] at hw; exact Option.some.inj hw
-    · simp at hw ⊢; rw [hw3] at hw; exact Option.some.inj hw
-    · omega
-  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
-      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
-      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
-    exact ArrExt.decCV (IWGrow.ext hg) hcv
-  have n0 : nat? (erecP M) q1.toNat = some 4 := by
-    have := hget 0 (by simp); simp only [Nat.add_zero] at this; simp [nat?, this]
-  have n5 : nat? (erecP M) (q1.toNat + 5) = some nP.toNat := by simp [nat?, hget 5 (by simp)]
-  have n6 : nat? (erecP M) (q1.toNat + 6) = some nF.toNat := by simp [nat?, hget 6 (by simp)]
-  have n7 : hd? (erecP M) (q1.toNat + 7) = some (decI T : NIdx) := by
-    simp [hd?, hget 7 (by simp), hTlt]
-  simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5,
-    n6, n7, Option.pure_def]
+  generalize wrERo m1 q1 I = M at hS' hg hget
+  have g := fun {o : Word} {x : Word} (e : I[o.toNat]? = some (some x)) => hget o.toNat x e
+  obtain ⟨en, enl, hsl, -, et, etl⟩ := decCV_rd r hcv
+  have adj : ∀ f : Word, f.toNat ≤ 64 →
+      q1.toNat + (CI.cv + f).toNat = q1.toNat + CI.cv.toNat + f.toNat := fun f hf => by
+    rw [CI.cv_add_toNat hf, Nat.add_assoc]
+  have hw : CVRecW (erecP M) (q1.toNat + CI.cv.toNat) (erRd m cq) (erRd m (cq + CV.lpsOff))
+      (erRd m (cq + CV.lpsLen)) (erRd m (cq + CV.type)) :=
+    ⟨by rw [← adj _ CV.name_le]; exact g (hI ▸ CI.ctorImg_name ..),
+      by rw [← adj _ CV.lpsOff_le]; exact g (hI ▸ CI.ctorImg_lo ..),
+      by rw [← adj _ CV.lpsLen_le]; exact g (hI ▸ CI.ctorImg_ll ..),
+      by rw [← adj _ CV.type_le]; exact g (hI ▸ CI.ctorImg_ty ..)⟩
+  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cv := by
+    rw [decCV_of_words hw enl etl (ArrExt.hslice? (IWGrow.ext hg) hsl), ← en, ← et]
+  have n0 := g (o := CI.kind) (hI ▸ CI.ctorImg_kind ..)
+  rw [show CI.kind.toNat = 0 from rfl, Nat.add_zero] at n0
+  exact decCI_ctorInfo_iff.mpr ⟨by simp [nat?, n0], hcv',
+    by simp [nat?, g (hI ▸ CI.ctorImg_nparams ..)], by simp [nat?, g (hI ▸ CI.ctorImg_nfields ..)],
+    by simp [hd?, g (hI ▸ CI.ctorImg_induct ..), hTlt]⟩
 
 /-! ## `cons_sum_ctors`: the relation to the twin -/
 

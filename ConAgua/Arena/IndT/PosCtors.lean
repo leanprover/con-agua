@@ -6,7 +6,6 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.L.WordOff
@@ -78,9 +77,9 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
     have := rd_iwN (m := m) (p := w) (i := 0) (by simpa using hq) (by simp; omega); simpa using this
   have hrn : (rdW (m.arr64 IW) (w + 1)).toNat = nFn := rd_iwN (by simpa using hnF) (by simp; omega)
   rw [hrw]
-  obtain ⟨-, -, hty⟩ := decCV_some hcvv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcvv
   obtain ⟨wt, hwt, -⟩ := hd?_some hty
-  have hq3 : q + 3 < 2 ^ 64 := by
+  have hq3 : q + CV.type.toNat < 2 ^ 64 := by
     have := _root_.L.Arena.erecP_lt64 hwt; omega
   rw [nestCtors_cons, oneK_split]
   -- one constructor

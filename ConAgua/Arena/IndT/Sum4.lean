@@ -5,7 +5,6 @@ import ConRon.Bridge.Checker.Base
 public import ConAgua.Arena.IndT.Sum3
 public import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndT.SumSteps
 import ConAgua.Arena.IndRealMemoCrT
@@ -24,6 +23,7 @@ import ConLeche.Verify.Denote.IndFrame
 public import ConRon.Bridge.Inductives.Rel
 import all ConAgua.Arena.IndSum
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.IhW
 
 @[expose] public section
 
@@ -249,7 +249,7 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   have dta : ∀ m', IWGrow m0 m' → decCVp m' cvTaw.toNat = some cvTa :=
     fun m' hg => (rec3CVExt_of_trunc (hta.stab (OMono.decCVp _) m' hg)).2
   refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) (allow := 0) hV hq hApd hCrk hcr hCS (by omega)
-    hC.stageT (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) (rec3CVExt_lt hC.stage hcvx) hcvCP
+    hC.stageT (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) hcvCP
     hA.cr.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core
     hC.check henv hcvCP hr1
@@ -260,7 +260,8 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   dsimp only [ctorE.k_check_constant_val]
   -- `strip_pis`
   obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (dcv m1 k1.grow)
-  rw [show rdW (m1.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w1 from hw1]
+  rw [show rdW (m1.arr64 (tierA EREC ((cvCw + CV.type) >>> 40))) (cvCw + CV.type &&& 1099511627775) = w1
+    from hw1]
   refine RefE.bindSim (fun _ => rfl) (strip_step hP k1 hw1l (L.toNat_add_of_lt _ _ hnf) hw1d
     (ConRon.Bridge.denoteCV_type hcA)) fun r2 o2 m2 a2 _ _ ⟨k2, ho2, hdo2⟩ => ?_
   dsimp only [ctorE.k_strip_pis]
@@ -276,7 +277,8 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   have k03 := k02.trans k3
   -- the constructor's opened telescope
   obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (dcv m3 k03.grow)
-  rw [show rdW (m3.arr64 (tierA EREC ((cvCw + 3) >>> 40))) (cvCw + 3 &&& 1099511627775) = w3 from hw3]
+  rw [show rdW (m3.arr64 (tierA EREC ((cvCw + CV.type) >>> 40))) (cvCw + CV.type &&& 1099511627775) = w3
+    from hw3]
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k3 hw3l hw3d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcA) (k2.trans k3).core.ext))
     fun r4 o4 m4 a4 _ _ ⟨k4, ho4, hdo4⟩ => ?_
@@ -286,7 +288,8 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
   have k04 := k03.trans k4
   -- the type former's opened telescope
   obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (dta m4 k04.grow)
-  rw [show rdW (m4.arr64 (tierA EREC ((cvTaw + 3) >>> 40))) (cvTaw + 3 &&& 1099511627775) = w5 from hw5]
+  rw [show rdW (m4.arr64 (tierA EREC ((cvTaw + CV.type) >>> 40))) (cvTaw + CV.type &&& 1099511627775) = w5
+    from hw5]
   refine RefE.bindSim (fun _ => rfl) (opf_step hOpf k4 hw5l hw5d
     (ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_type hcvTaP) k04.core.ext))
     fun r5 o5 m5 a5 _ _ ⟨k5, ho5, hdo5⟩ => ?_

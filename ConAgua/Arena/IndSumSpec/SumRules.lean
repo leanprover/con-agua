@@ -94,22 +94,22 @@ theorem sumDecHL_tail {m : Mem} {o l : Nat} {x : EIdx} {xs : List EIdx}
 
 /-! ## `sum_rules_go`: the word model -/
 
-/-- The memory after the rule record's eleven `erec_put`s (the name read before them, the
+/-- The memory after the rule record's eight field stores (the name read before them, the
 right-hand side read from `IW` at its time). -/
 def ruleMem (m : Mem) (q nm nF rO : Word) : Mem :=
-  let m1 := erecPutMem (erecPutMem (erecPutMem m q nm) (q + 1) nF) (q + 2) 0
-  let m2 := erecPutMem (erecPutMem (erecPutMem m1 (q + 3) 0) (q + 4) 0) (q + 5) 0
-  let m3 := erecPutMem (erecPutMem m2 (q + 6) 0) (q + 7) 0
-  erecPutMem (erecPutMem (erecPutMem m3 (q + 8) (rdW (m3.arr64 IW) rO)) (q + 9) 0) (q + 10) 0
+  let m1 := erecPutMem (erecPutMem (erecPutMem m q nm) (q + Rule.nfields) nF) (q + Rule.fire) 0
+  let m2 := erecPutMem (erecPutMem (erecPutMem m1 (q + Rule.lvlsOff) 0) (q + Rule.lvlsLen) 0)
+    (q + Rule.pinsOff) 0
+  let m3 := erecPutMem m2 (q + Rule.pinsLen) 0
+  erecPutMem m3 (q + Rule.rhs) (rdW (m3.arr64 IW) rO)
 
+/-- The stores are the rule's image (`Rule.img`). -/
 theorem ruleMem_eq (m : Mem) (q nm nF rO : Word) :
-    ruleMem m q nm nF rO = wrER m q [nm, nF, 0, 0, 0, 0, 0, 0, rdW (m.arr64 IW) rO, 0, 0] := by
-  simp only [ruleMem, wrER, erecPutMem_iw]
-  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
-    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
-    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
-    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
-    show q + 9 + 1 = q + 10 by ac_rfl]
+    ruleMem m q nm nF rO = wrERo m q (Rule.img nm nF 0 0 0 0 0 (rdW (m.arr64 IW) rO)) := by
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [ruleMem, wrERo, Rule.img, recImg, Rule.ctor, Rule.nfields, Rule.fire, Rule.lvlsOff,
+    Rule.lvlsLen, Rule.pinsOff, Rule.pinsLen, Rule.rhs, Rule.size, List.replicate, UInt64.add_assoc,
+    erecPutMem_iw]
 
 /-- **The model of `sum_rules_go(cO, cL, rO, rL, o)`** at exec fuel `n`. -/
 l_model rgoW_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -255,19 +255,15 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   have hr2 : erRd m2 w2 = erRd m w2 := by
     unfold erRd; rw [hf2.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   rw [hI2, hr2, hwn', hwr] at h
-  obtain ⟨hSM, hgM, -, -, -, -, hget⟩ := erRec_stage hal hS [wn, w3, 0, 0, 0, 0, 0, 0, wr, 0, 0] rfl
-  generalize hM : wrER m2 q _ = M at hSM hgM hget h
-  -- the record decodes, all its words in the pool
+  obtain ⟨hSM, hgM, -, -, -, -, hget⟩ :=
+    erRecO_stage hal hS (Rule.img wn w3 0 0 0 0 0 wr) (Rule.img_length ..).symm
+  have hq11 : ∀ i < Rule.size.toNat, ∃ w, erecP (wrERo m2 q (Rule.img wn w3 0 0 0 0 0 wr)) (q.toNat + i) = some w :=
+    fun i hi => erRecO_words hal hS.iw _ (Rule.img_length ..).symm i (by rw [Rule.img_length]; exact hi)
+  generalize hM : wrERo m2 q _ = M at hSM hgM hget hq11 h
+  -- the record decodes from its fields
   have hrec : rlDec M q.toNat = some { ctor := decI wn, nfields := w3.toNat, fire := .plain, rhs := decI wr } :=
-    sumDecRule_words (by simpa using hget 0 (by simp)) (hget 1 (by simp)) (hget 3 (by simp))
-      (hget 8 (by simp)) hwnl hwrl
-  have hq11 : ∀ i < Rule.size.toNat, ∃ w, erecP M (q.toNat + i) = some w := by
-    intro i hi
-    -- the record's words as `sum_rules_go` writes them (one per word of `Rule.size`)
-    have hi : i < 11 := hi
-    have := hget i (by simpa using hi)
-    rw [List.getElem?_eq_getElem (by simpa using hi)] at this
-    exact ⟨_, this⟩
+    sumDecRule_words (hget _ _ (Rule.img_ctor ..)) (hget _ _ (Rule.img_nf ..)) (hget _ _ (Rule.img_fk ..))
+      (hget _ _ (Rule.img_rhs ..)) hwnl hwrl
   -- the pointer written
   have hoT : o.toNat < iwTop m := by simp only [Nat.min_def] at hroom; split at hroom <;> omega
   have hoS : o.toNat < (M.arr64 IW).size := by

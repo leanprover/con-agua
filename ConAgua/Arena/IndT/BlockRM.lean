@@ -175,12 +175,12 @@ theorem rf_ref (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {cvq n : Wor
   rw [rfE.arm1]
   unfold reducedFormer
   -- `whnf_telescope`
-  have hW := wt_ref hq hP.wtp henv k hk m a 0 n (erRd m (cvq + 3)) 0 0 [] hC hA hty32
+  have hW := wt_ref hq hP.wtp henv k hk m a 0 n (erRd m (cvq + CV.type)) 0 0 [] hC hA hty32
     (by simpa using n.toNat_lt) (decHL_zero_zero m) (by simp)
     (by rw [htye]; exact ConRon.Bridge.denoteCV_type hcvP) hws
   rw [htye, show UInt64.toNat (0 : Word) = 0 from rfl] at hW
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl)
-    (wtE_spec p hP.wtp k _ vis 0 n (erRd m (cvq + 3)) 0 0) (fun hG => hG.nv) id hW
+    (wtE_spec p hP.wtp k _ vis 0 n (erRd m (cvq + CV.type)) 0 0) (fun hG => hG.nv) id hW
     fun r1 s1 x1 a1 _ _ hr1 hW1 => ?_
   obtain ⟨bs1, s1L⟩ := x1
   dsimp only [rfE.k_whnf_telescope]

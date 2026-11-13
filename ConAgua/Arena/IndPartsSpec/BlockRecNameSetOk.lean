@@ -94,7 +94,7 @@ theorem ctmW_sim {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
   revert r m'
   show Sim _ _ a _
   have h1 := L.Ind.RelW.simS (stripF_pis_ok vis fe (nP + UInt64.ofNat nF)
-    (erRd m (UInt64.ofNat cvp + 3)) htyl) hS
+    (erRd m (UInt64.ofNat cvp + CV.type)) htyl) hS
   rw [hk, htye] at h1
   refine Sim.bindK (body := fun r m1 => if r.headD 0 = 0 then some ([0, 0], m1)
       else ctmW.k_get_app_fn_f n no nl lvls (gafF m1 [CWF, r.tail.tail.tail.headD 0]))

@@ -10,7 +10,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
 import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.RecClassSpec.CloseLams
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.UCtx
@@ -49,9 +48,9 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
+  have hcv3 : cv.toNat + CV.type.toNat < 2 ^ 64 := erecP_lt64 hwt
   unfold nrcW at h
   rcases hlp : cvLpsW (k + 2) m cv with _ | ⟨r1, m1⟩ <;> rw [hlp] at h; · simp [nrcW.k_cv_lps] at h
   rw [nrcW.k_cv_lps.arm1] at h
@@ -61,8 +60,8 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   replace cin1 := cin1 hc
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hrd3 : erRd m1 (cv + 3) = wt := (erRd_of_erecP (hg1.ext _ _ (by rw [e3]; exact hwt))).1
+  have e3 : (cv + CV.type).toNat = cv.toNat + CV.type.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hrd3 : erRd m1 (cv + CV.type) = wt := (erRd_of_erecP (hg1.ext _ _ (by rw [e3]; exact hwt))).1
   rw [hrd3] at h
   rcases hst : cR (k + 2) "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hst] at h; · simp [nrcW.k_inst_lp_fast] at h
   rw [nrcW.k_inst_lp_fast.arm1] at h
@@ -97,7 +96,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : ∀ (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + CV.type)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
       StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
     (h : nuW cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
@@ -108,11 +107,11 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
   have hhiW := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hrd3 : erRd m (cv + 3) = wt := (erRd_of_erecP (by rw [e3]; exact hwt)).1
+  have hcv3 : cv.toNat + CV.type.toNat < 2 ^ 64 := erecP_lt64 hwt
+  have e3 : (cv + CV.type).toNat = cv.toNat + CV.type.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hrd3 : erRd m (cv + CV.type) = wt := (erRd_of_erecP (by rw [e3]; exact hwt)).1
   unfold nuW at h
   rw [hrd3] at h
   obtain ⟨mp0, hM0⟩ := hP.no
@@ -264,7 +263,7 @@ theorem nuWf_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : ∀ (k' : Nat) (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + CV.type)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
       StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
     (h : nuWf cR k m ctx cv = some (r, m')) (hS : StageR vis fe m a)
@@ -280,7 +279,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     (hJI : ∀ (m : Mem) (a : AState) (cv : Word) (cvv : IConstantVal), J m a → Pcv cvv →
       decCV (erecP m) cv.toNat = some cvv → ∀ (k' : Nat) (m1 : Mem) (a1 : AState) (r1 : List Word) (b : Bool),
       pdoW (k' + 3) m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
-        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + 3)) = some (r1, m1) →
+        (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 4)) (erRd m (cv + CV.type)) = some (r1, m1) →
       (ConRon.Arena.piDomsOcc c.names c.nP (c.hiAt 0) c.nP cvv.type).run a = .ok (b, a1) →
       StageR vis fe m1 a1 → IlpRd cR dn vis fe (IlpBase m1 a1))
     (hJnu : ∀ (k : Nat) (m m' : Mem) (a a' : AState) (cv : Word) (cvv : IConstantVal) (r : List Word) (x : Bool),

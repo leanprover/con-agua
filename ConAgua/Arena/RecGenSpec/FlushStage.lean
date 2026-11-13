@@ -49,25 +49,19 @@ theorem flush_stage {vis : Word} {fe : IFEnv} {m : Mem}
 theorem cvLpsA_stage {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal}
     (h : L.Arena.cvLpsW n m q = some (r, m')) (hS : StageR vis fe m a)
-    (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) :
+    (hq : decCV (erA m) q.toNat = some cv) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hq
-  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := hq
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
-  obtain ⟨w1, hw1, rfl⟩ := ho2
-  obtain ⟨w2, hw2, rfl⟩ := hl2
-  have e1 : erRd m (q + 1) = w1 :=
-    L.Arena.erRd_of _ _ (by rw [show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega]; exact hw1)
-  have e2 : erRd m (q + 2) = w2 :=
-    L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 2 by rw [UInt64.toNat_add]; simp; omega]; exact hw2)
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
+  have e1 : erRd m (q + CV.lpsOff) = w1 := L.Arena.erRd_of _ _ (by
+    rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw1; omega)]; exact hw1)
+  have e2 : erRd m (q + CV.lpsLen) = w2 := L.Arena.erRd_of _ _ (by
+    rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw2; omega)]; exact hw2)
   rcases n with _ | n
   · simp [L.Arena.cvLpsW] at h
   rw [L.Arena.cvLpsW_step] at h
-  change erToIwW n m (erRd m (q + 1)) (erRd m (q + 2)) = some (r, m') at h
+  change erToIwW n m (erRd m (q + CV.lpsOff)) (erRd m (q + CV.lpsLen)) = some (r, m') at h
   rw [e1, e2] at h
   obtain ⟨hS4, hg4, hdec4, htop4, -⟩ := erToIwW_stage h hS hsl
   exact ⟨hS4, hg4, hdec4, Nat.le_of_eq htop4⟩

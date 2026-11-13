@@ -104,7 +104,7 @@ stub's claim). -/
 theorem rtc_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {cvRi q : Word}
     {CVRi CVG : IConstantVal} {cvRiP cvGP : ConLeche.ConstantVal} (hC : StageC dn vis fe env m a)
     (hdRi : decCV (erecP m) cvRi.toNat = some CVRi) (hdG : decCV (erecP m) q.toNat = some CVG)
-    (hqb : q.toNat + 3 < 2 ^ 64) (hA : AbsOK m)
+    (hA : AbsOK m)
     (hRiP : Frontend.denoteCV a.store CVRi = some cvRiP) (hGP : Frontend.denoteCV a.store CVG = some cvGP)
     (hRi : ConLeche.Expr.WScoped 0 cvRiP.type) :
     RefE (VerdictCtxU p) (classRecTyCheckE p n m vis cvRi q)
@@ -117,7 +117,7 @@ theorem rtc_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {cvRi q : W
   unfold ConRon.Arena.classRecTyCheck
   -- `class_const_ok(vis, q)`
   refine RefE.bindE (fun _ => rfl) id
-    (cco_ref hP hq hApd hCrf hCs n (by omega) hC.stageT hdG hqb hA hGP)
+    (cco_ref hP hq hApd hCrf hCs n (by omega) hC.stageT hdG hA hGP)
     fun ⟨r4, m4⟩ u a4 hrun4 ⟨hS4, hg4, hA4⟩ => ?_
   dsimp only at hS4 hg4 hA4
   obtain ⟨c4, -, ⟨hwG, -⟩, -⟩ := ConRon.Bridge.Inductives.classConstOk_spec fe
@@ -208,7 +208,6 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   obtain ⟨hS3, hg3, -, -, hq41, -, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) hgH
   have hext3 : CVExt m3 q.toNat := CVExt.of_dec hdec3
-  have hqb : q.toNat + 3 < 2 ^ 64 := by omega
   have hA3 := cvNewW_afr h3 hA2
   have hC3 : StageC dn vis fe env m3 a2 := hC2.of_pstep hS3 hA3 (PStep.refl hC2.check.state)
   have p12 := p1.trans p2
@@ -220,7 +219,7 @@ theorem rto_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {g k rc cvR
   -- `class_rec_ty_check(vis, cvRi, q)`
   have hri := hcvRi.stab (OMono.decCVp _) m3 (hg12.trans hg3)
   refine RefE.bindE (fun _ => rfl) id
-    (rtc_ref hP hq hApd hCrf hCs henv n (by omega) hC3 hri (rec2DecCV_erecP hdec3 hext3) hqb hA3
+    (rtc_ref hP hq hApd hCrf hCs henv n (by omega) hC3 hri (rec2DecCV_erecP hdec3 hext3) hA3
       (dExt_denoteCV p12.ext _ _ hRiP) hcvG hRi) fun ⟨r4, m4⟩ u a4 hrun4 ⟨hC4, hg4, hA4⟩ => ?_
   dsimp only at hC4 hg4 hA4
   dsimp only [classRecTyOkE.k_class_rec_ty_check]

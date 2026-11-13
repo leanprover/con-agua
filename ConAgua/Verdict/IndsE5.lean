@@ -91,7 +91,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
   rw [cbagE.arm2 p n m vis nP c0 s0 o l hl]
   rw [installAgree_cons]
   obtain ⟨hty0, htye0⟩ := partsCVType hc0 (w := c0) rfl
-  have hd0 : denoteE a.store (decI (erRd m (c0 + 3))) = some cv0P.type := by
+  have hd0 : denoteE a.store (decI (erRd m (c0 + CV.type))) = some cv0P.type := by
     rw [htye0]; exact ConRon.Bridge.denoteCV_type hc0P
   -- member 0's telescope
   refine RefE.onlySim (fun _ => cbagE.k_open_pis_at_fvars_f.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
@@ -116,7 +116,7 @@ theorem cbag_ref (hP : AgreeProg p) (nP c0 s0 : Word) (cv0 : IConstantVal) {cv0P
   rw [g1, g2] at hfd hfb
   -- the twin's prefix: member 0's telescope opened
   have hpre : ∀ {β : Type} (k : List EIdx × EIdx → AM β),
-      (openPisAtFvarsF nP.toNat (decI (erRd m (c0 + 3))) 0 >>= fun x =>
+      (openPisAtFvarsF nP.toNat (decI (erRd m (c0 + CV.type))) 0 >>= fun x =>
         unwrapOr x (.internal "block: type former telescope") >>= k).run a = (k (fvs0, body0)).run a1 := by
     intro β k
     simp only [StateT.run_bind]

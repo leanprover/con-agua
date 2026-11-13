@@ -212,7 +212,7 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
     {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn)
     {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem} {q : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal}
-    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
     (hden : Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (classConstOkHeaderE p n m vis q) (cchT fe cv) a
       (fun v _ a' => CchPost dn vis fe m v.2 a') := by
@@ -221,9 +221,8 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hwt)
+  have et : rdW (m.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wt := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m).at _ rfl hwt
   cases n with
   | zero => rw [classConstOkHeaderE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
@@ -250,12 +249,12 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   have hCr3 := hcr3 hCr
   have hlpsN : ∃ ks, cv.levelParams.mapM (denoteN a3.store.ns) = some ks := denoteCV_lps (hden3 _ _ hden)
   -- `cv_lps(q)`
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  have e1 : rdW (m3.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775) = w1 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hg3.ext _ _ hw1)
-  have e2 : rdW (m3.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775) = w2 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hg3.ext _ _ hw2)
+  have e1 : rdW (m3.arr64 (L.tierA EREC ((q + CV.lpsOff) >>> 40))) (q + CV.lpsOff &&& 1099511627775) =
+      w1 := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m3).at _ rfl (hg3.ext _ _ hw1)
+  have e2 : rdW (m3.arr64 (L.tierA EREC ((q + CV.lpsLen) >>> 40))) (q + CV.lpsLen &&& 1099511627775) =
+      w2 := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m3).at _ rfl (hg3.ext _ _ hw2)
   have hsl3 : hslice? (erA m3) w1.toNat w2.toNat = some cv.levelParams := ArrExt.hslice? hg3.ext hsl
   refine RefE.onlySim (fun _ => classConstOkHeaderE.k_cv_lps.none ..) (fun _ _ h => h) fun r11 m11 h11 => ?_
   rw [classConstOkHeaderE.k_cv_lps.arm1]
@@ -368,7 +367,7 @@ include hP hq hApd hCrf hC in
 `Base.lean`'s, their errors the core stubs' claims). -/
 theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal}
-    (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hS : StageT dn vis fe m a) (hq' : decCV (erecP m) q.toNat = some cv)
     (hA : AbsOK m) (hden : Frontend.denoteCV a.store cv = some c) :
     RefE (VerdictCtxU p) (classConstOkE p n m vis q) (ConRon.Arena.classConstOk V fe cv) a
       (fun v _ a' => CcoPost dn vis fe m v.2 a') := by
@@ -376,13 +375,12 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
   | zero => rw [classConstOkE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
   rw [classConstOkE.arm1, cchT_bind]
-  refine RefE.bindE (fun _ => rfl) id (cch_ref hP hApd hCrf hC n hS hq' hqb hden hA.cr)
+  refine RefE.bindE (fun _ => rfl) id (cch_ref hP hApd hCrf hC n hS hq' hden hA.cr)
     fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
   dsimp only [classConstOkE.k_class_const_ok_header]
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hq').2.2
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have et : rdW (m1.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hg1.ext _ _ hwt)
+  have et : rdW (m1.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wt := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m1).at _ rfl (hg1.ext _ _ hwt)
   rw [et, hty]
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
     (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))
@@ -399,14 +397,14 @@ include hP hq hApd hCrf hC in
 @[refines ConRon.Arena.classConstOk]
 theorem classConstOk_refinesT (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (q : Word) (cv : IConstantVal) {c : ConLeche.ConstantVal} (hS : StageT dn vis fe s₀.mem a₀)
-    (hq' : decCV (erecP s₀.mem) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
+    (hq' : decCV (erecP s₀.mem) q.toNat = some cv)
     (hA : AbsOK s₀.mem) (hden : Frontend.denoteCV a₀.store cv = some c) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_const_ok" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classConstOk V fe cv) a₀ ∧
       KPT dn vis fe s₀.mem decUnit (r, s'.mem) (AM.st (ConRon.Arena.classConstOk V fe cv) a₀)
         (AM.res (ConRon.Arena.classConstOk V fe cv) a₀) ∧ AbsOK s'.mem; ⊤⦄ := by
   refine triple_post (RefE.triple (classConstOkE_spec p hP n s₀ vis q)
-    (cco_ref hP hq hApd hCrf hC n hn hS hq' hqb hA hden)) ?_
+    (cco_ref hP hq hApd hCrf hC n hn hS hq' hA hden)) ?_
   rintro r s' ⟨hl, x, a', run, hR⟩
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl, hok, ⟨by rw [hst]; exact hR.stage, hR.grow, trivial⟩, hR.abs⟩

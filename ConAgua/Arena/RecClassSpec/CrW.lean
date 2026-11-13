@@ -208,14 +208,15 @@ theorem crW_ok (vis : Word) (fe : IFEnv) (cR : CallM)
       have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hrdm := iwN_off (k := 2) hmIq (by have := iwN_lt hmIq; omega)
       simp only [show UInt64.ofNat 2 = 2 from rfl] at hrdm
-      obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := q) hcv
+      obtain ⟨-, -, htyp⟩ := (decCV_eq_some (R := erA m) (q := q)).mp hcv
       have hqb : q < 2 ^ 64 := hrdq.2
-      have hq3 : q + 3 < 2 ^ 64 := by
-        rcases hw : erA m (q + 3) with _ | w
+      have hq3 : q + CV.type.toNat < 2 ^ 64 := by
+        rcases hw : erA m (q + CV.type.toNat) with _ | w
         · simp [hd?, hw] at htyp
         · exact erecP_lt64 (m := m) hw
       obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erH_rdW htyp hq3
-      have hq3w : UInt64.ofNat q + 3 = UInt64.ofNat (q + 3) := by simp [UInt64.ofNat_add]
+      have hq3w : UInt64.ofNat q + CV.type = UInt64.ofNat (q + CV.type.toNat) := by
+        rw [UInt64.ofNat_add, UInt64.ofNat_toNat]
       have hguard : rdW (m.arr64 IW) (rdW (m.arr64 IW) ro + 2) + 1 ≠ 0 := by
         intro h0; rw [crW.abort1 cR n m nP mo ml ro rl hrl h0] at h; cases h
       have hmIw : (UInt64.ofNat rc.mI + 1).toNat = rc.mI + 1 := by
@@ -1581,7 +1582,7 @@ def readW (cR : CallM) : Nat → Mem → Word → Word → Word → Word → Wor
   | N + 1, m, p, vis, nP, ro, rl =>
     if rl = 0 then some ([0, 0], m)
     else rdK1 cR N p vis nP ro rl (rdW (m.arr64 IW) ro)
-      (cR N "open_pis_at_fvars_f" [nP, erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m)
+      (cR N "open_pis_at_fvars_f" [nP, erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + CV.type), 0] m)
 
 /-! ## Arms -/
 
@@ -1594,7 +1595,7 @@ theorem readW_nil (h : rl = 0) : readW cR (N + 1) m p vis nP ro rl = some ([0, 0
   simp [readW, h]
 theorem readW_ok (h : rl ≠ 0) : readW cR (N + 1) m p vis nP ro rl =
     rdK1 cR N p vis nP ro rl (rdW (m.arr64 IW) ro)
-      (cR N "open_pis_at_fvars_f" [nP, erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + 3), 0] m) := by
+      (cR N "open_pis_at_fvars_f" [nP, erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro) + CV.type), 0] m) := by
   simp [readW, h]
 theorem rdK1_fail (h : r1.headD 0 = 0) : rdK1 cR N p vis nP ro rl rc0 (some (r1, m1)) = some ([0, 0], m1) := by
   rw [rdK1, ite_eq_left h]
@@ -1853,9 +1854,9 @@ theorem readW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
   rw [UInt64.ofNat_toNat] at hrd0
   have hrdq := iwN_rdW hq (by omega)
   have hqb : q < 2 ^ 64 := hrdq.2
-  have hq3 : (UInt64.ofNat q).toNat + 3 < 2 ^ 64 := by
+  have hq3 : (UInt64.ofNat q).toNat + CV.type.toNat < 2 ^ 64 := by
     rw [UInt64.toNat_ofNat_of_lt' hqb]
-    obtain ⟨w, hw, -⟩ := hd?_some (decCV_type hcv)
+    obtain ⟨w, hw, -⟩ := hd?_some ((decCV_eq_some.mp hcv).2.2)
     exact erecP_lt64 (m := m) hw
   obtain ⟨htyH, htyE⟩ := decCVp_type (q := UInt64.ofNat q)
     (by rw [UInt64.toNat_ofNat_of_lt' hqb]; exact hcv)

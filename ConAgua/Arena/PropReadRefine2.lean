@@ -29,10 +29,10 @@ open ConLeche (Name Level PropWhen)
 
 /-! ## Helpers -/
 
-/-- A decoded definition record: its value is word `q + 5`. -/
+/-- A decoded definition record: its value is word `q + CI.defnValue`. -/
 theorem decCI_defnV {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) (h1 : rd q = 1) :
-    ∃ cv hint, ci = .defnInfo cv (decE (rd (q + 5))) hint ∧ HW (rd (q + 5)) := by
+    ∃ cv hint, ci = .defnInfo cv (decE (rd (q + CI.defnValue))) hint ∧ HW (rd (q + CI.defnValue)) := by
   obtain ⟨cv, v, hint, rfl, -, rfl, hlt⟩ := (decCI_split hR h).1 h1
   exact ⟨cv, hint, rfl, hlt⟩
 
@@ -156,7 +156,7 @@ theorem uws_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     all_goals first | rfl | exact absurd rfl (hnd cv v hint)
   simp only [h1, ne_eq, not_true_eq_false, ↓reduceIte] at hW
   obtain ⟨cv, hint, hci_eq, hv5⟩ := decCI_defnV (erRdOK _) hci h1
-  generalize erRd m₂ (r₂.tail.headD 0 + 5) = vw at hci_eq hv5 hW
+  generalize erRd m₂ (r₂.tail.headD 0 + CI.defnValue) = vw at hci_eq hv5 hW
   rcases hlp : lamProjW m₂ f 0 vw with _ | ⟨lf, k, jj⟩ <;> rw [hlp] at hW
   · cases hW
   simp only [uwsW.k_lam_proj] at hW
