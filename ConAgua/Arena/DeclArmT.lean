@@ -64,8 +64,8 @@ theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
     (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
     StageT dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') (r.headD 0).toNat = some ci ∧
       decCV (erecP m') ((r.headD 0).toNat + CI.cv.toNat) = some (stepCV ds[i.toNat]) ∧
-      hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
-      erOff (r.headD 0) + 8 ≤ erTopOf m' (r.headD 0) := by
+      hd? (erecP m') ((r.headD 0).toNat + CI.defnValue.toNat) = some (stepVal ds[i.toNat]) ∧
+      erOff (r.headD 0) + CI.defnSize.toNat ≤ erTopOf m' (r.headD 0) := by
   obtain ⟨hS', hg, h1, h2, h3, h4⟩ := erecCiW_ok h hS.stage hD hi hci
   have hf := erecCiW_frame h
   refine ⟨⟨hS', hS.twin.frame hf ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
