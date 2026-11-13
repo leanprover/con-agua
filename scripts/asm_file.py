@@ -7,8 +7,8 @@
   (`ConAguaAsm/Checker.lean`), and the kernel checks that it is the compiler's output,
   `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
   checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
-* `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 3`
-  (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+* `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 4`
+  (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (4
   variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
   Regenerate after a change to the startup data or a twin bump.
 
@@ -26,7 +26,7 @@ import argparse, os, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LAKE = os.path.join(ROOT, "scripts", "lake")
-PIN_VARIANTS = "3"
+PIN_VARIANTS = "4"
 
 
 def cross_check():

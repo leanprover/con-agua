@@ -25,7 +25,7 @@ def romTestPool : Prog :=
   [("intern_reserved_pins", internReservedPinsL), ("rom_names_to", romNamesTo),
    ("rom_levels", romLevels), ("rom_lvls_go", romLvlsGo), ("stk_push", stkPush), ("stk_pool", stkPool),
    ("rom_ex_leaf", romExLeaf), ("rom_ex_ref", romExRef), ("rom_ex_one", romExOne),
-   ("rom_ex_two", romExTwo), ("memo_get", memoGet)] ++
+   ("rom_ex_two", romExTwo), ("memo_get", memoGet), ("erec_put", L.Ind.erecPut)] ++
   L.Ind.libFns ++ liftProg ++ litProg ++ appProg ++ bvarProg ++ constProg ++
   forallProg ++ fvarProg ++ lamProg ++ letProg ++ lsProg ++ nanonProg ++ nstrProg ++ nnumProg ++
   projProg ++ sortProg ++ succProg ++ zeroProg ++ maxProg ++ imaxProg ++ paramProg

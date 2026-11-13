@@ -32,7 +32,7 @@ ConLeche/Frontend/CheckerIO	CheckerIO	34
 ConLeche/Frontend/CheckerIO	foldChunks	60
 ConLeche/Frontend/CheckerIO	foldReads	14
 ConLeche/Frontend/CheckerIO	instCheckerIOIO	9
-ConLeche/Frontend/CheckerIO	openReadIO	26
+ConLeche/Frontend/CheckerIO	openReadIO	27
 ConLeche/Frontend/CheckerIO	parMapWorkersIO	56
 ConLeche/Frontend/CheckerIO	parWorker	26
 ConLeche/Frontend/ExportC	declOfF	39

@@ -1009,7 +1009,7 @@ make regen-check    # fail if either committed file is stale
 ```
 
 ([what it does](https://github.com/leanprover/con-agua/blob/master/scripts/asm_file.py#L2-L21);
-`pins.bin` is `scripts/lake exe romgen pins.bin 3`,
+`pins.bin` is `scripts/lake exe romgen pins.bin 4`,
 [`ConAgua/Rom/Gen.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Rom/Gen.lean#L18-L27)).
 Regeneration is a convenience, not part of the trust: the build fails at
 `checkerFile_eq` if `checker.s` is not exactly the compiler's output (§8.4),
