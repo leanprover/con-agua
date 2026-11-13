@@ -315,3 +315,32 @@ than `vendor/UPSTREAM` or `pins.bin` (every twin bump rewrites both), and refuse
 build tree (a git checkout, the default `_tmp/ref/con-ron-integrate`) is not at `vendor/UPSTREAM`'s
 con-ron revision or whose binary is older than that commit (no cargo here to rebuild it). The main
 checkout's `e2e-ref` was in fact stale again when this landed (built 14:29, ronsync5 at 15:29).
+
+### Batch 2: the rest of the writers, the whole-library perturbation clean
+
+* The table and the remaining rule writers: `rules_refire`, `sum_rules_go` (no dead rule words),
+  `block_table` (no words 8, 11, 12, no kind and name words; `ProjTbl.kind`, `kindVal`, `name` and
+  `structName_pos` are gone, `Env.decTbl_lt` takes its bound from the level slice's length word),
+  through `Rule.img`, `ProjTbl.img`/`decTbl_of_words`, `erRecO_stage`, `erRecO_words`;
+  `ctor_info_rec` through `CI.ctorImg`; `block_split`'s `sl_cons(ci + 1, …)` is `ci + ⟪CI.cv⟫`.
+* `decRule_congrF`/`RuleFireAt.congrF` (`RuleDec.lean`): a rule decodes the same in a reader that
+  agrees on its fields only (a field-by-field copy does not carry the words between them).
+* Duplicate decoder lemmas deleted for `decCV_eq_some` (`NestBlockOfKey.decCV_type`,
+  `CloseLams.decCV_some`), statements restated by name (`decCI_kind_cases`, `partsCI_fields`,
+  `partsCVType`, `decCN_wordsE`, `tcW_ok`, `OneRef`, …). Several hypotheses `q.toNat + 3 < 2 ^ 64`
+  (the type word in bounds) existed only to make `q + 3` a number; with the reads by name
+  (`RdOK.at`) nothing uses them, and they are gone (`ccv_ref`, `cch_ref`, `cco_ref`, `rtc_ref`,
+  `crest_ref`, `cvLpsA_stage`, `crg_ref`, `crc_ref`, `crule_ref`, `classRuleOk_refinesC`).
+
+**The perturbation, all five layouts at once** (`layout_perturb.py --scale 2`, whole library, about
+8 minutes at 7 threads once the perturbed dependencies are built): the first run after the helpers'
+work found 4 modules (`DeclArmT`, `IndDeclConstsRecs`, `DeclValsE`, `PosTopE2`), then 6, 3, 1, 1
+(each run reaches the modules behind the last failures), then **clean: only `AsmFileEq`** (the
+committed `checker.s` is stale for the perturbed layout, as it must be). The discovery runs with
+temporary `sorry`s in the perturbed tree (recoffs2-rom's method) found about 57 failing files in
+the first whole-library CI+CV run, before the fixes.
+
+`rec_unfold` users left outside `RecLayout/`: one computational image equation per writer (the
+stores are the image: `cvNewW_some`, `eciMem_eq`, `erPutCiW_wrERo`, `axImg_eq`, `recInfoMem_eq`,
+`rmMem_eq`, `cpMem_eq`, `ciRecMem_eq`, and the front's and QuotRulesT's), which re-evaluate for any
+layout, and `PropReadW`'s two `simp_all` (both sides of a model equation unfold alike).
