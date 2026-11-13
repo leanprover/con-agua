@@ -99,6 +99,8 @@ theorem recRulesLen_toNat : recRulesLen.toNat = recRulesOff.toNat + 1 := by
 /-! ## The layout facts: every offset is small (`omega`'s bounds) -/
 
 @[rec_layout] theorem cv_le : cv.toNat ≤ 64 := by simp [cv]
+/-- The value comes after the kind word. -/
+@[rec_layout] theorem cv_pos : 0 < cv.toNat := by simp [cv]
 @[rec_layout] theorem defnValue_le : defnValue.toNat ≤ 64 := by simp [defnValue]
 @[rec_layout] theorem defnHint_le : defnHint.toNat ≤ 64 := by simp [defnHint]
 @[rec_layout] theorem ctorNparams_le : ctorNparams.toNat ≤ 64 := by simp [ctorNparams]

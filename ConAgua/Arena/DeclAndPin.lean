@@ -35,13 +35,13 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsF DeclAt CVAt dw)
 
 /-- `and_block_named(bo, bl)`: some member of the inductive block at `DLP[bo ‥ bo + bl)` (record
-pointers into `DLP` (`DIND`), a record's name at `+ 1`) declares one of the three pinned `And` names. -/
+pointers into `DLP` (`DIND`), a record's name at `+ CI.cv + CV.name`) declares one of the three pinned `And` names. -/
 -- con-ron: ConRon/Arena/Basis.lean:301-306 ConRon.Arena.blockAndNamed
 @[no_expose, l_impl ConRon.Arena.blockAndNamed]
 def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
   if bl == 0 { return 0 };
   s := DLP.u64[bo];
-  x := DLP.u64[s + 1] & 4294967295;
+  x := DLP.u64[s + ⟪CI.cv + CV.name⟫] & 4294967295;
   if x == PINS.u64[12] || x == PINS.u64[49] || x == PINS.u64[50] { return 1 };
   r := call and_block_named(bo + 1, bl - 1);
   return r

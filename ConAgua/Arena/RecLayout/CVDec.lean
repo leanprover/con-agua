@@ -39,6 +39,29 @@ theorem bool?_word {R : Nat → Option Word} {i : Nat} {b : Bool} (h : bool? R i
     ∃ w, R i = some w ∧ (w != 0) = b := by
   simp only [bool?, Option.map_eq_some_iff] at h; exact h
 
+theorem hd?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
+    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
+  cases e : a i with
+  | none => simp [hd?, e] at h
+  | some w => simp [hd?, e] at h; exact ⟨w, rfl, h.1, h.2.symm⟩
+
+/-- A decoded slice has the slice's length. -/
+theorem hslice?_lenR {k : IdxKind} {R : Nat → Option Word} {o c : Nat} {l : List (Idx k)}
+    (h : hslice? R o c = some l) : l.length = c := by
+  unfold hslice? at h
+  have key : ∀ (xs : List Nat) (r : List (Idx k)), xs.mapM (fun j => hd? R (o + j)) = some r →
+      r.length = xs.length := by
+    intro xs
+    induction xs with
+    | nil => intro r h; simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at h; subst h; rfl
+    | cons x xs ih =>
+      intro r h
+      simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+        Option.some.injEq] at h
+      obtain ⟨y, -, ys, hys, rfl⟩ := h
+      simp [ih ys hys]
+  simpa using key _ _ h
+
 /-! ## The constant value -/
 
 /-- **A decoded `IConstantVal`, word by word.** -/
@@ -66,6 +89,16 @@ theorem decCV_name {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : 
   cases e : a q with
   | none => simp [hd?, e] at hn
   | some w => simp [hd?, e] at hn; exact ⟨w, rfl, hn.1, hn.2.symm⟩
+
+/-- The pure words of a decoded `IConstantVal` (the name, the slice's length, the type). -/
+theorem decCV_words {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    (∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w) ∧
+    (∃ w, a (q + CV.lpsLen.toNat) = some w ∧ cv.levelParams.length = w.toNat) ∧
+    (∃ w, a (q + CV.type.toNat) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w) := by
+  obtain ⟨hn, hl, ht⟩ := decCV_eq_some.mp h
+  refine ⟨hd?_some hn, ?_, hd?_some ht⟩
+  obtain ⟨o, c, -, hc, hs⟩ := hlist?_words hl
+  refine ⟨c, by rw [CV.lpsLen_toNat, ← Nat.add_assoc]; exact hc, by simpa using hslice?_lenR hs⟩
 
 /-! ## The reducibility hint -/
 

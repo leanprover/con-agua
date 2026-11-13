@@ -1858,7 +1858,7 @@ theorem readW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
     obtain ⟨w, hw, -⟩ := hd?_some (decCV_type hcv)
     exact erecP_lt64 (m := m) hw
   obtain ⟨htyH, htyE⟩ := decCVp_type (q := UInt64.ofNat q)
-    (by rw [UInt64.toNat_ofNat_of_lt' hqb]; exact hcv) hq3
+    (by rw [UInt64.toNat_ofNat_of_lt' hqb]; exact hcv)
   rw [hrd0, hrdq.1]
   rw [← htyE]
   refine RSim.bind (K := rdK1 cR N p vis nP ro rl (UInt64.ofNat p0)) rfl (hO.sim N hS hJ htyH) ?_

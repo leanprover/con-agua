@@ -71,16 +71,6 @@ theorem decCV_rd (hR : RdOK R rd) {q : Word} {cv : IConstantVal} (h : decCV R q.
   refine ⟨by rw [hnm, hR.rd _ _ hw], by rw [hR.rd _ _ hw]; exact hlt, hs, ?_, e1, e2⟩
   simpa using hslice?_lenR hs
 
-/-- The pure words of a decoded `IConstantVal` (the name, the slice's length, the type). -/
-theorem decCV_words {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    (∃ w, a q = some w ∧ w.toNat < 2 ^ 32 ∧ cv.name = decI w) ∧
-    (∃ w, a (q + CV.lpsLen.toNat) = some w ∧ cv.levelParams.length = w.toNat) ∧
-    (∃ w, a (q + CV.type.toNat) = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w) := by
-  obtain ⟨hn, hl, ht⟩ := decCV_eq_some.mp h
-  refine ⟨hd?_some hn, ?_, hd?_some ht⟩
-  obtain ⟨o, c, -, hc, hs⟩ := hlist?_words hl
-  refine ⟨c, by rw [CV.lpsLen_toNat, ← Nat.add_assoc]; exact hc, by simpa using hslice?_lenR hs⟩
-
 /-! ## A constant record -/
 
 /-- The constant value of a decoded record at its word address `p + CI.cv`. -/

@@ -106,7 +106,7 @@ theorem gftW_ok (p : Prog) (s0 m1 : Mem) (o l q : Word) (cvTas : List IConstantV
     obtain ⟨_, _, _, _, _, hty, -⟩ := hcvj
     obtain ⟨w, hw, -⟩ := hd?_some hty
     have := erecP_lt64 hw; omega
-  obtain ⟨hw32, hty⟩ := decCVp_type (q := rdW (m.arr64 IW) (o + j)) (by rw [hrv]; exact hcvj) (by rw [hrv]; exact hv3)
+  obtain ⟨hw32, hty⟩ := decCVp_type (q := rdW (m.arr64 IW) (o + j)) (by rw [hrv]; exact hcvj)
   have hrw : rdW (m.arr64 (tierA EREC ((rdW (m.arr64 IW) (o + j) + 3) >>> 40)))
       ((rdW (m.arr64 IW) (o + j) + 3) &&& 1099511627775) = erRd m (rdW (m.arr64 IW) (o + j) + 3) := rfl
   rw [hrw] at h

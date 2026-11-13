@@ -126,12 +126,6 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
       rw [hrv.1]
       have hv64 := hrv.2
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
-        (by
-          rw [UInt64.toNat_ofNat_of_lt' hv64]
-          simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
-          obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
-          obtain ⟨w, hw, -⟩ := hd?_some hty
-          have := L.Arena.erecP_lt64 hw; omega)
       refine RefE.ret (y := (cvTas[kk - 1]'(by omega)).type) (a' := a) ?_ ⟨hS, IWGrow.refl m, hA, ⟨hty.1, hty.2⟩⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : kk - 1 < cvTas.length)]
       rfl

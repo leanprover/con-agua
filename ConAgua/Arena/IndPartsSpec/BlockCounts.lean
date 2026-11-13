@@ -280,7 +280,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
   obtain ⟨r0, hr0, h⟩ := L.Arena.of_K h (bcW.k_block_counts_pure.none _)
   rw [bcW.k_block_counts_pure.arm1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hty32, hty⟩ := decCVp_type hcv hb
+  obtain ⟨hty32, hty⟩ := decCVp_type hcv
   obtain ⟨bs, res, v, hrun, hsh, hlen, hview, hiff, hg, hf⟩ :=
     bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc
   rw [show r1.tail.headD 0 = r1.getD 1 0 by rw [hsh]; rfl] at hr0

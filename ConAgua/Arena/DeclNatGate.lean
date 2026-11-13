@@ -7,6 +7,7 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.DeclNatSpec
 import all ConAgua.Arena.DeclArmsNat
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -34,69 +35,32 @@ def defnMono : IConstantInfo → Bool
 
 theorem decCI_defn_cases {rd : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI rd p = some ci) :
-    (∃ cv v hint, ci = .defnInfo cv v hint ∧ rd p = some 1 ∧ decCV rd (p + 1) = some cv) ∨
+    (∃ cv v hint, ci = .defnInfo cv v hint ∧ rd p = some 1 ∧ decCV rd (p + CI.cv.toNat) = some cv) ∨
     (∃ w, rd p = some w ∧ w ≠ 1 ∧ ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
-  unfold decCI at h
-  cases hk : nat? rd p with
-  | none => simp [hk] at h
-  | some k =>
-  have hw : ∃ w, rd p = some w ∧ w.toNat = k := by
-    simp only [nat?, Option.map_eq_some_iff] at hk
-    obtain ⟨w, hw, hk⟩ := hk; exact ⟨w, hw, hk⟩
-  obtain ⟨w, hw, hwk⟩ := hw
-  rw [hk] at h
-  simp only [bind, Option.bind_eq_some_iff] at h
-  obtain ⟨a1, ha1, h⟩ := h
-  cases ha1
-  by_cases h1 : k = 1
+  obtain ⟨w, hw, hx⟩ := decCI_cases h
+  by_cases h1 : w = 1
   · subst h1
-    left
-    simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, v, hv, hh, hhint, rfl⟩ := h
-    have : w = 1 := UInt64.toNat_inj.mp (by simpa using hwk)
-    exact ⟨cv, v, hh, rfl, by rw [hw, this], hcv⟩
-  · right
-    refine ⟨w, hw, ?_, ?_⟩
-    · intro e; apply h1; rw [← hwk, e]; rfl
-    · intro cv v hint e; subst e
-      rcases k with _ | _ | _ | _ | _ | _ | _ | k
-      · simp [Option.bind_eq_some_iff] at h
-      · exact h1 rfl
-      all_goals simp [Option.bind_eq_some_iff] at h
-
-theorem decCV_lps_len {rd : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV rd q = some cv) :
-    ∃ w, rd (q + 2) = some w ∧ w.toNat = cv.levelParams.length := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := (by
-    simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := h
-    simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-    obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-    simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
-    obtain ⟨w1, hw1, rfl⟩ := ho2
-    obtain ⟨w2, hw2, rfl⟩ := hl2
-    exact ⟨w1, w2, hw1, hw2, hsl⟩ : ∃ w1 w2 : Word, rd (q + 1) = some w1 ∧ rd (q + 1 + 1) = some w2 ∧
-      hslice? rd w1.toNat w2.toNat = some cv.levelParams)
-  refine ⟨w2, hw2, ?_⟩
-  unfold hslice? at hsl
-  simpa using (mapM_opt_length _ _ _ hsl).symm
+    rcases hx with ⟨hk, -⟩ | ⟨-, cv, v, hi, hcv, -, -, rfl⟩ | ⟨hk, -⟩ | ⟨hk, -⟩ | ⟨hk, -⟩ | ⟨hk, -⟩
+    all_goals first | (exfalso; simp at hk; done) | skip
+    exact .inl ⟨cv, v, hi, rfl, hw, hcv⟩
+  · refine .inr ⟨w, hw, h1, fun cv v hint e => ?_⟩
+    subst e
+    rcases hx with ⟨-, -, -, ⟨⟩⟩ | ⟨hk, -⟩ | ⟨-, -, -, ⟨⟩⟩ | ⟨-, -, -, -, -, ⟨⟩⟩ |
+      ⟨-, -, -, -, -, -, -, -, -, ⟨⟩⟩ | ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, ⟨⟩⟩
+    exact h1 (UInt64.toNat_inj.mp (by rw [hk]; rfl))
 
 theorem defnMono_words {m : Mem} {q : Word} {ci : IConstantInfo}
     (h : decCI (erecP m) q.toNat = some ci) :
     (erRd m q ≠ 1 ∧ defnMono ci = false) ∨
-    (erRd m q = 1 ∧ (defnMono ci = true ↔ erRd m (q + 3) = 0)) := by
+    (erRd m q = 1 ∧ (defnMono ci = true ↔ erRd m (q + (CI.cv + CV.lpsLen)) = 0)) := by
   rcases decCI_defn_cases h with ⟨cv, v, hint, rfl, hk, hcv⟩ | ⟨w, hw, hne, hnd⟩
   · right
     refine ⟨(erRd_of_erecP hk).1, ?_⟩
-    obtain ⟨w, hw, hwl⟩ := decCV_lps_len hcv
-    have hq3 : (q + 3).toNat = q.toNat + 3 := by
-      have := erecP_lt64 hw; rw [UInt64.toNat_add]; simp; omega
-    have e3 : erRd m (q + 3) = w :=
-      (erRd_of_erecP (by rw [hq3, show q.toNat + 3 = q.toNat + 1 + 2 by omega]; exact hw)).1
-    rw [e3]
-    simp only [defnMono, List.isEmpty_iff_length_eq_zero]
+    have hwl := (decCV_rd_ci (erRdOK m) hcv).2.2.2.1
+    simp only [defnMono, List.isEmpty_iff_length_eq_zero, hwl]
     constructor
-    · intro hl; exact UInt64.toNat_inj.mp (by simpa [hwl] using hl)
-    · intro hw0; rw [← hwl, hw0]; rfl
+    · intro hl; exact UInt64.toNat_inj.mp (by simpa using hl)
+    · intro hw0; rw [hw0]; rfl
   · left
     refine ⟨by rw [(erRd_of_erecP hw).1]; exact hne, ?_⟩
     cases ci with
@@ -205,7 +169,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
         simp only [hdm]
         exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
       · simp only [ne_eq, hk1, not_true_eq_false, ite_false] at hw
-        by_cases h3 : erRd m1 (r1.tail.headD 0 + 3) = 0
+        by_cases h3 : erRd m1 (r1.tail.headD 0 + (CI.cv + CV.lpsLen)) = 0
         rotate_left
         · simp only [h3, not_false_eq_true, ite_true] at hw
           simp only [Option.some.injEq, Prod.mk.injEq] at hw

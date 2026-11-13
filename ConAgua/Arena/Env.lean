@@ -250,12 +250,6 @@ section helpers
 open ConRon.Arena Std.WP
 open scoped Lean.Order
 
-theorem hd?_some {k : IdxKind} {a : Nat → Option Word} {i : Nat} {x : Idx k} (h : hd? a i = some x) :
-    ∃ w, a i = some w ∧ w.toNat < 2 ^ 32 ∧ x = decI w := by
-  cases e : a i with
-  | none => simp [hd?, e] at h
-  | some w => simp [hd?, e] at h; exact ⟨w, rfl, h.1, h.2.symm⟩
-
 theorem triple_post {α : Type} {prog : M α} {P : St → Prop} {Q Q' : α → St → Prop}
     (h : ⦃fun s => P s⦄ prog ⦃fun r s => Q r s; ⊤⦄) (hq : ∀ r s, Q r s → Q' r s) :
     ⦃fun s => P s⦄ prog ⦃fun r s => Q' r s; ⊤⦄ :=

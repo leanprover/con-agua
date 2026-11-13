@@ -145,12 +145,6 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
       rw [hrv.1]
       have hv64 := hrv.2
       have hty := decCVp_type (q := UInt64.ofNat v) (by rw [UInt64.toNat_ofNat_of_lt' hv64]; exact hcvv)
-        (by
-          rw [UInt64.toNat_ofNat_of_lt' hv64]
-          simp only [decCVp, decCV, bind, Option.bind_eq_some_iff] at hcvv
-          obtain ⟨_, _, _, _, _, hty, -⟩ := hcvv
-          obtain ⟨w, hw, -⟩ := hd?_some hty
-          have := erecP_lt64 hw; omega)
       refine ⟨_, a, ?_, hS, IWGrow.refl m, ⟨hty.1, hty.2⟩, AFr.refl _⟩
       simp only [ConRon.Arena.classFormerTy, hmem', List.getElem?_eq_getElem (by omega : k - 1 < cvTas.length)]
       rfl

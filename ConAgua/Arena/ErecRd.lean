@@ -79,21 +79,4 @@ theorem erRd_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : Mem
     (hA : (EREC : TieredArray) ∉ A) (hA1 : tier1 EREC ∉ A) : erRd m' = erRd m :=
   funext (erRd_congr (hf.arr _ hA (by decide)) (hf.arr _ hA1 (by decide)))
 
-/-- A decoded slice has the slice's length. -/
-theorem hslice?_lenR {k : IdxKind} {R : Nat → Option Word} {o c : Nat} {l : List (Idx k)}
-    (h : hslice? R o c = some l) : l.length = c := by
-  unfold hslice? at h
-  have key : ∀ (xs : List Nat) (r : List (Idx k)), xs.mapM (fun j => hd? R (o + j)) = some r →
-      r.length = xs.length := by
-    intro xs
-    induction xs with
-    | nil => intro r h; simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at h; subst h; rfl
-    | cons x xs ih =>
-      intro r h
-      simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-        Option.some.injEq] at h
-      obtain ⟨y, -, ys, hys, rfl⟩ := h
-      simp [ih ys hys]
-  simpa using key _ _ h
-
 end L.Arena
