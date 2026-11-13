@@ -30,7 +30,7 @@ def fpos (LS : List (List NIdx)) (i : Nat) : Nat := ((LS.take i).map List.length
 /-- **What the validation's pieces return.** -/
 structure VFacts (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List IndCtorRec)
     (rcs : List IndRecRec) (TN : List NIdx) (TT : List EIdx) (LS : List (List NIdx))
-    (CN : List NIdx) (fuel nPd : Nat) (ordered : List IndCtorRec) : Prop where
+    (CN : List NIdx) (fuel nPd : Nat) (ordered : List (IndCtorRec × NIdx)) : Prop where
   safe : (tys.any fun x => x.isUnsafe) = false
   np1 : nPd = (tys.map fun x => x.numParams).head?.getD 0
   np2 : ((tys.map fun x => x.numParams).all fun x => x == nPd) = true
@@ -46,7 +46,7 @@ structure VFacts (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List 
   lslen : LS.length = tys.length
   ordlen : ordered.length = cts.length
   order : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length),
-    ∃ k, ∃ _ : fpos LS i + c < ordered.length, ordered[fpos LS i + c] = cts[k]! ∧
+    ∃ k, ∃ _ : fpos LS i + c < ordered.length, ordered[fpos LS i + c] = (cts[k]!, TN[i]!) ∧
       CtorOK st a cts CN LS[i][c] c (TN[i]!) nPd fuel k
   recs : ∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else rcs),
     RecOK st a TN TT nPd tys.length ordered.length fuel r
@@ -125,7 +125,7 @@ set_option hygiene false in
 /-- The recursor loop of `validateIndD`. -/
 macro "recs_tac" : tactic => `(tactic| (
   rw [run_bind _ _ a _ (forIn_yield' _ a _ _
-    (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl ?rstep)]
+    (fun _ => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)), ())) rfl ?rstep)]
   case rstep =>
     intro j hj
     obtain ⟨rn, hrn, h1, h2, h3, v, hv, hin⟩ := hV.recs _ (List.getElem_mem hj)
@@ -139,7 +139,7 @@ macro "recs_tac" : tactic => `(tactic| (
         · subst hsv
           simp only []
           rw [run_bind _ _ a _ (forIn_yield' _ a _ _
-            (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl ?_)]
+            (fun _ => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)), ())) rfl ?_)]
           · rfl
           · intro j' hj'
             simp only [List.getElem_zip]
@@ -165,7 +165,7 @@ macro "recs_tac" : tactic => `(tactic| (
 
 theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx} {LS : List (List NIdx)} {CN : List NIdx}
-    {fuel nPd : Nat} {ordered : List IndCtorRec}
+    {fuel nPd : Nat} {ordered : List (IndCtorRec × NIdx)}
     (hV : VFacts st a tys cts rcs TN TT LS CN fuel nPd ordered) :
     (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inr (ordered, nPd), a) := by
   unfold ConRon.Arena.Frontend.validateIndD
@@ -175,13 +175,13 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
   rw [ite_eq_left hV.nodup]
   simp only [hV.flen, beq_self_eq_true, ite_true]
   rw [run_bind _ _ a _ (storeFuel_run a), hV.hfuel]
-  rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+  rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun i => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
     (ordered.take (fpos LS i)).toArray)) ?h0 ?hstep)]
   case h0 => simp [fpos]
   case hstep =>
     intro i hi
     simp only [List.getElem_zip]
-    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)),
+    rw [run_bind _ _ a _ (forIn_yield' _ a _ _ (fun c => ((none : Option (RecordVerdict ⊕ List (IndCtorRec × NIdx) × Nat)),
       (ordered.take (fpos LS i + c)).toArray, c)) ?i0 ?istep)]
     case i0 => simp
     case istep =>
@@ -192,9 +192,9 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
       have hck : cts[k]! = cts[k] := getElem!_pos cts k hk
       rw [hck] at hord
       have hTNi : TN[i]! = TN[i] := getElem!_pos TN i hiT
-      rw [hTNi] at hind
+      rw [hTNi] at hind hord
       have hA : cts.toArray[k]? = some cts[k] := by simp [hk]
-      have hpush : (ordered.take (fpos LS i + c)).toArray.push cts[k] =
+      have hpush : (ordered.take (fpos LS i + c)).toArray.push (cts[k], TN[i]) =
           (ordered.take (fpos LS i + (c + 1))).toArray := by
         rw [← hord, take_push _ _ hp, Nat.add_assoc]
       simp only [hfold, hA]
