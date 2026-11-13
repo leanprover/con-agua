@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Arena.Handle
 public import ConAgua.Arena.RecLayout.CI
+public import ConAgua.Arena.RecLayout.Rule
+public import ConAgua.Arena.RecLayout.Tbl
 public import ConRon.Arena.Env
 
 @[expose] public section
@@ -13,7 +15,7 @@ The twin's environment values (`IConstantVal`, `IConstantInfo`, `IProjTable`) ar
 of handles, lists of recursor rules (each with lists of its own), an `IIndCaps` with two lists, an
 `IProjTable` with an `Array`. In L they are **records in a word pool**: a record is a run of
 words at an address `p`, every list is a slice `(off, cnt)` of the same pool (two words of the
-record), and a list of records is a slice of fixed-size records (recursor rules, 11 words). The
+record), and a list of records is a slice of fixed-size records (recursor rules, `Rule.size` words). The
 decoders below are the value relations (`decE`'s analogue): `decCI a p = some ci` says that the
 record at `p` of the pool read by `a` denotes `ci`. A pool is read through a **reader**
 `a : Nat → Option Word` (`aread` of an array; `erecP`, `Tiers.lean`, for `EREC`, whose two tiers
@@ -36,21 +38,13 @@ and L may compare words where the twin compares handles.
 | 2 | `thmInfo cv` | cv at `p+1` |
 | 3 | `indInfo cv caps` | cv at `p+1`; caps at `p + CI.indCaps` (`decCaps`) |
 | 4 | `ctorInfo cv np nf induct` | cv at `p+1`; `p+5`, `p+6`; the family `induct` `p+7` |
-| 5 | `recInfo cv major pre isK rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (11-word records); `isK` `p+9` |
+| 5 | `recInfo cv major pre isK rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (`Rule.size`-word records); `isK` `p+9` |
 
-A recursor rule (11 words at `q`): `ctor` `q`, `nfields` `q+1`, the fire's kind `q+3` (0
-`plain`, 1 `nested`, 2 `levels`), its level slice `q+4`, `q+5`, its pin slice `q+6`, `q+7`
-(`nested` only), `rhs` `q+8`; words `q+2`, `q+9`, `q+10` are not read (they held the
-install-computed `ctorParams`, `k`, `eta`, which con-leche's task #480 removed; the offsets of
-the rest are kept).
+A recursor rule: `RecLayout/Rule.lean` (`Rule.size` words at `q`, the field offsets named there).
 
 `IIndCaps`: `RecLayout/Caps.lean` (`Caps.size` words at `q`, the field offsets named there).
 
-`IProjTable` (13 words, at `p`; not a constant: the environment's table component): word `p` is
-`6` and word `p+1` is `0` (the kind and name words of the constant records' layout, kept so that
-the fields keep their offsets), `structName` `p+2`, lps `p+3`,`p+4`, `numParams` `p+5`, `ctor`
-`p+6`, `numFields` `p+7`, bodies `p+9`,`p+10`; words `p+8`, `p+11`, `p+12` are not read (the
-removed `structSort` and `guards`).
+`IProjTable` (not a constant: the environment's table component): `RecLayout/Tbl.lean`.
 
 The declarations themselves are the front's records (`DECL`/`DLP`, `Front/StateDR.lean`'s
 `DeclsF`); an inductive block's constants are a slice of constant records in `DLP`.
@@ -94,19 +88,20 @@ def decHint (q : Nat) : Option ConLeche.ReducibilityHint := do
   | 2 => pure (.regular (← nat? a (q + 1)))
   | _ => none
 
-/-- A recursor rule: an 11-word record at `q` (`ctor`, `nfields`, the fire's kind (0 plain, 1
-nested, 2 levels) at `q + 3`, its level slice, its pin slice, `rhs` at `q + 8`). -/
+/-- A recursor rule: a `Rule.size`-word record at `q`, laid out by `RecLayout/Rule.lean`. -/
 def decRule (q : Nat) : Option IRecRule := do
-  let fire ← match ← nat? a (q + 3) with
+  let fire ← match ← nat? a (q + Rule.fire.toNat) with
     | 0 => some IRecRuleFire.plain
-    | 1 => some (IRecRuleFire.nested (← hlist? a (q + 4)) (← hlist? a (q + 6)))
-    | 2 => some (IRecRuleFire.levels (← hlist? a (q + 4)))
+    | 1 => some (IRecRuleFire.nested (← hlist? a (q + Rule.lvlsOff.toNat))
+        (← hlist? a (q + Rule.pinsOff.toNat)))
+    | 2 => some (IRecRuleFire.levels (← hlist? a (q + Rule.lvlsOff.toNat)))
     | _ => none
-  pure { ctor := ← hd? a q, nfields := ← nat? a (q + 1), fire, rhs := ← hd? a (q + 8) }
+  pure { ctor := ← hd? a (q + Rule.ctor.toNat), nfields := ← nat? a (q + Rule.nfields.toNat), fire,
+         rhs := ← hd? a (q + Rule.rhs.toNat) }
 
-/-- The rules of the slice `(off, cnt)` of 11-word records. -/
+/-- The rules of the slice `(off, cnt)` of `Rule.size`-word records. -/
 def decRules (off cnt : Nat) : Option (List IRecRule) :=
-  (List.range cnt).mapM fun j => decRule a (off + 11 * j)
+  (List.range cnt).mapM fun j => decRule a (off + Rule.size.toNat * j)
 
 /-- `IIndCaps`: `Caps.size` words at `q`, laid out by `RecLayout/Caps.lean`. -/
 def decCaps (q : Nat) : Option IIndCaps := do
@@ -115,11 +110,12 @@ def decCaps (q : Nat) : Option IIndCaps := do
          ctors := ← hlist? a (q + Caps.ctorsOff.toNat),
          neverZero := ← bool? a (q + Caps.neverZero.toNat) }
 
-/-- `IProjTable` at `p` (a table record). -/
+/-- `IProjTable` at `p` (a table record), laid out by `RecLayout/Tbl.lean`. -/
 def decTbl (p : Nat) : Option IProjTable := do
-  pure { structName := ← hd? a (p + 2),
-         levelParams := ← hlist? a (p + 3), numParams := ← nat? a (p + 5), ctor := ← hd? a (p + 6),
-         numFields := ← nat? a (p + 7), bodies := (← hlist? a (p + 9)).toArray }
+  pure { structName := ← hd? a (p + Tbl.structName.toNat),
+         levelParams := ← hlist? a (p + Tbl.lpsOff.toNat), numParams := ← nat? a (p + Tbl.numParams.toNat),
+         ctor := ← hd? a (p + Tbl.ctor.toNat), numFields := ← nat? a (p + Tbl.numFields.toNat),
+         bodies := (← hlist? a (p + Tbl.bodiesOff.toNat)).toArray }
 
 /-- **The constant record at `p`.** -/
 def decCI (p : Nat) : Option IConstantInfo := do
@@ -211,20 +207,20 @@ theorem ArrExt.decHint {q : Nat} {x : ConLeche.ReducibilityHint} (hx : decHint a
 
 theorem ArrExt.decRule {q : Nat} {x : IRecRule} (hx : decRule a q = some x) : decRule b q = some x := by
   unfold L.Arena.decRule at hx ⊢
-  cases h3 : L.Arena.nat? a (q + 3) with
+  cases h3 : L.Arena.nat? a (q + Rule.fire.toNat) with
   | none => simp [h3] at hx
   | some t =>
     rw [h.nat? h3]; rw [h3] at hx
     simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at hx ⊢
     have tail : ∀ (f : IRecRuleFire), (do
-        let ctor ← L.Arena.hd? a q
-        let nfields ← L.Arena.nat? a (q + 1)
-        let rhs ← L.Arena.hd? a (q + 8)
+        let ctor ← L.Arena.hd? a (q + Rule.ctor.toNat)
+        let nfields ← L.Arena.nat? a (q + Rule.nfields.toNat)
+        let rhs ← L.Arena.hd? a (q + Rule.rhs.toNat)
         pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some x →
         (do
-        let ctor ← L.Arena.hd? b q
-        let nfields ← L.Arena.nat? b (q + 1)
-        let rhs ← L.Arena.hd? b (q + 8)
+        let ctor ← L.Arena.hd? b (q + Rule.ctor.toNat)
+        let nfields ← L.Arena.nat? b (q + Rule.nfields.toNat)
+        let rhs ← L.Arena.hd? b (q + Rule.rhs.toNat)
         pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) = some x := by
       intro f hf
       simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hf ⊢
@@ -233,17 +229,17 @@ theorem ArrExt.decRule {q : Nat} {x : IRecRule} (hx : decRule a q = some x) : de
     match t, hx with
     | 0, hx => simp only at hx ⊢; exact tail _ hx
     | 1, hx =>
-      cases hy : L.Arena.hlist? (k := .level) a (q + 4) with
+      cases hy : L.Arena.hlist? (k := .level) a (q + Rule.lvlsOff.toNat) with
       | none => simp [hy] at hx
       | some y =>
-        cases hz : L.Arena.hlist? (k := .expr) a (q + 6) with
+        cases hz : L.Arena.hlist? (k := .expr) a (q + Rule.pinsOff.toNat) with
         | none => simp [hy, hz] at hx
         | some z =>
           rw [hy, hz] at hx; rw [h.hlist? hy, h.hlist? hz]
           simp only [Option.bind_some] at hx ⊢
           exact tail _ hx
     | 2, hx =>
-      cases hy : L.Arena.hlist? (k := .level) a (q + 4) with
+      cases hy : L.Arena.hlist? (k := .level) a (q + Rule.lvlsOff.toNat) with
       | none => simp [hy] at hx
       | some y =>
         rw [hy] at hx; rw [h.hlist? hy]
@@ -253,7 +249,8 @@ theorem ArrExt.decRule {q : Nat} {x : IRecRule} (hx : decRule a q = some x) : de
 
 theorem ArrExt.decRules {o c : Nat} {xs : List IRecRule} (hx : decRules a o c = some xs) :
     decRules b o c = some xs :=
-  ArrExt.mapM (f := fun j => L.Arena.decRule a (o + 11 * j)) (g := fun j => L.Arena.decRule b (o + 11 * j))
+  ArrExt.mapM (f := fun j => L.Arena.decRule a (o + Rule.size.toNat * j))
+    (g := fun j => L.Arena.decRule b (o + Rule.size.toNat * j))
     (fun _ _ hy => h.decRule hy) _ _ hx
 
 theorem ArrExt.decCaps {q : Nat} {x : IIndCaps} (hx : decCaps a q = some x) : decCaps b q = some x := by
