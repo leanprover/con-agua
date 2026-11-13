@@ -33,13 +33,6 @@ theorem isCtorApp_coreFn : "is_ctor_app" ∈ coreFns := List.elem_iff.mp (by dec
 
 /-! ## Record words -/
 
-/-- A rule record's `ctor` word. -/
-theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {rl : IRecRule} (h : decRule R q.toNat = some rl) : rl.ctor = decI (rd q) ∧ HW (rd q) := by
-  obtain ⟨w, hw, hl, e⟩ := hd?_some (L.Ind.decRule_ctor h)
-  have e' : rd q = w := hR.rd _ _ hw
-  exact ⟨by rw [e', e], by rw [e']; exact hl⟩
-
 /-- A constructor record's level-parameter count, type and parameter count words. -/
 theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {nP nF : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv nP nF fam)) :
@@ -97,7 +90,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d isK ro cvjP T indP major)
       (m2cArmsT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl
         cvj cnP (decI T) cvT caps (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
-  obtain ⟨hctor, hctorHW⟩ := decRule_ctorRd (erRdOK m) hrl
+  obtain ⟨hctorHW, hctor, -⟩ := decRule_rd (erRdOK m) hrl
   obtain ⟨hlp, hnp, -, -⟩ := decCI_ctorWords (erRdOK m) hcj
   have hR : ∀ v y a', GrowPost decH dn m vis fe M eb ResH v y a' →
       GrowPost decH dn m vis fe M eb ResH ([v.1.headD 0], v.2) y a' :=
@@ -242,7 +235,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
         | _ => pure (decE major)).run (AM.st (isCtorApp fe (decE major)) a) := by
     simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
     rfl
-  obtain ⟨hlen, hget⟩ := L.Arena.decRules_getR _ _ _ hr
+  obtain ⟨hlen, hget⟩ := L.Arena.decRules_get hr
   by_cases g2 : rc ≠ 1
   · rw [m2cHeadE.k_is_ctor_app.arm2 _ _ _ _ _ _ _ _ _ _ _ g1' g2]
     refine RefE.ret ?_ hA1
@@ -260,7 +253,7 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   have hrl : decRule (erecP m) ro.toNat = some rl := by
     have := hget 0 (by decide); simpa using this
   have hrl1 : decRule (erecP m1) ro.toNat = some rl := by rw [e1]; exact hrl
-  obtain ⟨hctor, l0⟩ := decRule_ctorRd (erRdOK m1) hrl1
+  obtain ⟨l0, hctor, -⟩ := decRule_rd (erRdOK m1) hrl1
   refine RefE.onlySim (fun _ => m2cHeadE.k_env_find.none ..)
     (fun r2 m2 h => callW_envFindI p hp.toIotaProg' (N' + 1) m1 vis _ hS1.env l0 r2 m2 h)
     fun r2 m2 ⟨hm2, hfind, hfound⟩ => ?_

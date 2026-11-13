@@ -492,14 +492,14 @@ theorem ecpf_ref (p : Prog) (hq : StuckProg p) {G : Prop} (n : Nat) (m : Mem) (a
   erw [ite_eq_right g1]
   rw [show caps.eta = true by rw [heta]; simpa using g1]
   simp only [↓reduceIte]
-  have hb : (tb.ctor == decI c) = decide (erRd m (r₄.headD 0 + 5) = c) := by
+  have hb : (tb.ctor == decI c) = decide (erRd m (r₄.headD 0 + (ProjTbl.ctor - 1)) = c) := by
     rw [hcd]
-    by_cases e : erRd m (r₄.headD 0 + 5) = c
+    by_cases e : erRd m (r₄.headD 0 + (ProjTbl.ctor - 1)) = c
     · rw [e, decide_eq_true rfl]; exact beq_self_eq_true _
-    · have : ¬ (decI (erRd m (r₄.headD 0 + 5)) : NIdx) = decI c := fun h' => e (decI_inj hcw hc h')
+    · have : ¬ (decI (erRd m (r₄.headD 0 + (ProjTbl.ctor - 1))) : NIdx) = decI c := fun h' => e (decI_inj hcw hc h')
       rw [decide_eq_false e]; exact beq_false_of_ne this
   rw [hb]
-  by_cases e : erRd m (r₄.headD 0 + 5) = c
+  by_cases e : erRd m (r₄.headD 0 + (ProjTbl.ctor - 1)) = c
   · erw [ite_eq_left e]; rw [decide_eq_true e]; exact RefE.ret rfl ⟨rfl, rfl, rfl, hw1⟩
   · erw [ite_eq_right e]; rw [decide_eq_false e]; exact RefE.ret rfl ⟨rfl, rfl, rfl, hw0⟩
 

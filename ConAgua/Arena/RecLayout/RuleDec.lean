@@ -33,6 +33,12 @@ def RuleFireAt (R : Nat → Option Word) (q : Nat) : IRecRuleFire → Prop
 
 theorem ctor_add (q : Nat) : q + Rule.ctor.toNat = q := rfl
 
+/-- A slice field from its two words. -/
+theorem hlist?_of {k : IdxKind} {R : Nat → Option Word} {i : Nat} {o l : Word} {xs : List (Idx k)}
+    (ho : R i = some o) (hl : R (i + 1) = some l) (hs : hslice? R o.toNat l.toNat = some xs) :
+    hlist? R i = some xs := by
+  simp [hlist?, nat?, ho, hl, hs]
+
 /-- **A decoded rule, word by word.** -/
 theorem decRule_eq_some {R : Nat → Option Word} {q : Nat} {rl : IRecRule} :
     decRule R q = some rl ↔
