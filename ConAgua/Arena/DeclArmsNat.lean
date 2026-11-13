@@ -194,7 +194,7 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
   (f, r) := call env_find(IW.u64[o], vis);
   if f == 0 { return 0 };
   if EREC⦃r⦄ != 1 { return 0 };
-  if EREC⦃r + 3⦄ != 0 { return 0 };
+  if EREC⦃r + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
   e := call nat_op_deps_stored(vis, o + 1, l - 1);
   return e
 }
@@ -204,10 +204,10 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
 @[no_expose, l_impl ConRon.Arena.boolCtorOk]
 def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   q := call ci_to_cv(p);
-  if EREC⦃q + 2⦄ != 0 { return 0 };
+  if EREC⦃q + ⟪CV.lpsLen⟫⦄ != 0 { return 0 };
   n := call pin_at(29);
   b := call const_e(n);
-  return u64(EREC⦃q + 3⦄ == b)
+  return u64(EREC⦃q + ⟪CV.type⟫⦄ == b)
 }
 
 /-- `nat_op_bool_ctors(vis)`: the `Bool` constructors' conjunct of `natOpGuard`: `Bool.true` then
@@ -261,8 +261,8 @@ def natOpCodL : FunDecl := lfn (vis, c, e) locals (be, bl, bn, bc, f, r, q, s1, 
     if f == 0 { return 0 };
     q := call ci_to_cv(r);
     s1 := call pin_word(54);
-    if EREC⦃q + 2⦄ != 0 { return 0 };
-    return u64(EREC⦃q + 3⦄ == s1)
+    if EREC⦃q + ⟪CV.lpsLen⟫⦄ != 0 { return 0 };
+    return u64(EREC⦃q + ⟪CV.type⟫⦄ == s1)
   };
   nn := call pin_at(1);
   nc := call const_e(nn);
@@ -302,8 +302,8 @@ def natOpStoredOkL : FunDecl := lfn (vis, n) locals (f, r, e) {
   (f, r) := call env_find(n, vis);
   if f == 0 { return 0 };
   if EREC⦃r⦄ != 1 { return 0 };
-  if EREC⦃r + 3⦄ != 0 { return 0 };
-  e := call nat_op_ty_pinned(vis, n, EREC⦃r + 4⦄);
+  if EREC⦃r + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
+  e := call nat_op_ty_pinned(vis, n, EREC⦃r + ⟪CI.cv + CV.type⟫⦄);
   return e
 }
 
@@ -626,7 +626,7 @@ def typePinStoredL : FunDecl := lfn (vis, n) locals (f, r, q, z, s) {
     return s
   };
   q := call ci_to_cv(r);
-  return EREC⦃q + 3⦄
+  return EREC⦃q + ⟪CV.type⟫⦄
 }
 
 /-- `div_mod_cert_proofs(ps, c)`: the variant's certificate proofs of op `c`, copied into `IW`. -/
@@ -1043,7 +1043,7 @@ def boolCtorTypedL : FunDecl := lfn (vis2, n) locals (f, r, q, bn, bt) {
   q := call ci_to_cv(r);
   bn := call pin_at(29);
   bt := call const_e(bn);
-  return u64(EREC⦃q + 3⦄ == bt)
+  return u64(EREC⦃q + ⟪CV.type⟫⦄ == bt)
 }
 
 /-- `eq_stored(vis)`: `(fe.find? eqName).isSome`, the test the three guards share (the
@@ -1252,7 +1252,7 @@ def checkDivModPinAtFe2L : FunDecl := lfn (vis2, c) locals (g, f, r) {
   (f, r) := call env_find(c, vis2);
   if f == 0 { abort };
   if EREC⦃r⦄ != 1 { abort };
-  return EREC⦃r + 5⦄
+  return EREC⦃r + ⟪CI.defnValue⟫⦄
 }
 
 /-- `check_div_mod_pin(po, pl, vis, p, c)`: the gate after the definition check: the record `p`

@@ -127,13 +127,13 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   return (0, 0)
 }
 
-/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + 1`) into the own layer at
+/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own layer at
 counter `vis`; returns the new view `vis + 1`. -/
 -- con-ron: ConRon/Arena/Env.lean:277-280 ConRon.Arena.IFEnv.push
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
   if 4294967294 <= vis { abort };
-  w := EREC⦃q + 1⦄;
+  w := EREC⦃q + ⟪CI.cv + CV.name⟫⦄;
   z := call env_row_set(w, vis + 1, q);
   return vis + 1
 }

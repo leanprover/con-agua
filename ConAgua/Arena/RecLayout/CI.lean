@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.RecLayout.Caps
+public import ConAgua.Arena.RecLayout.CV
 
 @[expose] public section
 
@@ -8,9 +9,28 @@ public import ConAgua.Arena.RecLayout.Caps
 # The layout of a constant record (`IConstantInfo`)
 
 A constant record in the record pool `EREC` (decoder `L.Arena.decCI`, `Arena/EnvRec.lean`): the
-kind word, the constant value (`IConstantVal`, 4 words) and the kind's own fields. As for every
-record layout (`RecLayout/Caps.lean`), L code and proofs use these names, not numbers.
+kind word, the constant value (`IConstantVal`, `CV.size` words, `RecLayout/CV.lean`) and the
+kind's own fields. As for every record layout (`RecLayout/Caps.lean`), L code and proofs use these
+names, not numbers: a field of the value is `CI.cv + CV.f` (`EREC⦃p + ⟪CI.cv + CV.type⟫⦄`), a
+kind's field `CI.<kind><Field>`, the record's size `CI.<kind>Size`.
+
+The kind word is at offset 0, so L reads it as `EREC⦃p⦄` (`p + ⟪CI.kind⟫` would compile to an
+extra `add`).
+
+A definition's reducibility hint (decoder `L.Arena.decHint`) is a record of its own, `Hint.size`
+words at `CI.defnHint`: its kind (0 opaque, 1 abbrev, 2 regular) and, for `regular`, the height.
 -/
+
+namespace L.Hint
+
+/-- The hint's kind (0 opaque, 1 abbrev, 2 regular). -/
+@[reducible] def kind : Word := 0
+/-- A `regular` hint's height. -/
+@[reducible] def height : Word := 1
+/-- The record's size in words. -/
+@[reducible] def size : Word := 2
+
+end L.Hint
 
 namespace L.CI
 
@@ -18,6 +38,55 @@ namespace L.CI
 @[reducible] def kind : Word := 0
 /-- The constant value (`IConstantVal`); its first word, the name, is the index key. -/
 @[reducible] def cv : Word := 1
+
+/-- The first word after the constant value: the kinds' own fields start here. -/
+theorem cv_end : (cv + CV.size).toNat = 5 := by simp [cv, CV.size]
+
+/-! ## `axiomInfo`, `thmInfo`: the value only -/
+
+/-- The size of an axiom's record. -/
+@[reducible] def axiomSize : Word := cv + CV.size
+/-- The size of a theorem's record. -/
+@[reducible] def thmSize : Word := cv + CV.size
+
+/-! ## `defnInfo` -/
+
+/-- `value`: the definition's body (a handle). -/
+@[reducible] def defnValue : Word := 5
+/-- `hint`: the reducibility hint (`Hint.size` words). -/
+@[reducible] def defnHint : Word := 6
+/-- The size of a definition's record. -/
+@[reducible] def defnSize : Word := defnHint + Hint.size
+
+/-! ## `ctorInfo` -/
+
+/-- `numParams`: the constructor's number of parameters. -/
+@[reducible] def ctorNparams : Word := 5
+/-- `numFields`: the constructor's number of fields. -/
+@[reducible] def ctorNfields : Word := 6
+/-- `induct`: the constructor's inductive type (a name handle). -/
+@[reducible] def ctorInduct : Word := 7
+/-- The size of a constructor's record. -/
+@[reducible] def ctorSize : Word := 8
+
+/-! ## `recInfo` -/
+
+/-- `majorIdx`: the position of the major premise. -/
+@[reducible] def recMajor : Word := 5
+/-- `rulePrefix`: the twin's `rulePrefix` (`IConstantInfo.recInfo`). -/
+@[reducible] def recPrefix : Word := 6
+/-- `rules`: the recursor rules, a slice of rule records (offset word). -/
+@[reducible] def recRulesOff : Word := 7
+/-- `rules`: the slice's length word. -/
+@[reducible] def recRulesLen : Word := 8
+/-- `isK`: whether the recursor is a K-like one. -/
+@[reducible] def recIsK : Word := 9
+/-- The size of a recursor's record. -/
+@[reducible] def recSize : Word := 10
+
+theorem recRulesLen_eq : recRulesLen = recRulesOff + 1 := by simp [recRulesLen, recRulesOff]
+theorem recRulesLen_toNat : recRulesLen.toNat = recRulesOff.toNat + 1 := by
+  simp [recRulesLen, recRulesOff]
 
 /-! ## `indInfo` -/
 
