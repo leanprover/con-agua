@@ -287,7 +287,7 @@ words of the rule and table records are gaps. The writers are now modelled by th
 `L.recImg size fields : List (Option Word)` (`RecLayout/Img.lean`), the value at each field's
 offset and `none` elsewhere, and `L.Ind.wrERo` (`IndMaster.lean`), which stores the `some`s and
 skips the `none`s. Each layout defines its images (`CV.img`, `CI.defnImg`, `CI.indHdImg`,
-`CI.axImg`, `CI.recInfoImg`, `CI.ctorImg`, `Rule.img`, `ProjTbl.img`); the one proof per writer that
+`CI.axImg`, `CI.recInfoImg`, `Rule.img`); the one proof per writer that
 its stores are the image is computational (`simp [wrERo, …Img, recImg, rec_unfold, UInt64.add_assoc]`:
 it re-evaluates for every layout), everything after it goes through `erRecO_stage`/`wrERo_fresh`
 (`QuotFns.lean`), the image's get lemmas and the `…RecW` field-word lemma sets (`CVRecW`,
@@ -300,12 +300,10 @@ between the fields included), for the `RuleWordsIn` facts. Shared writer modules
 
 * `ind_info_rec`'s header: `er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, …)` (five consecutive words) is
   `er_put_ci(q, 3, cv)`, the kind word and the constant value's fields by name.
-* The dead words are no longer stored: the rule writers (`parse_rule_d`, `rules_at_lps_go`,
-  `rules_refire`, `sum_rules_go`, `generated_rule_nested`, `rule_copy`: 8 fields, not 11 words) and
-  the projection table's `block_table` (words 8, 11, 12, and the kind and name words nothing reads).
+* The rule record's dead words are no longer stored by `parse_rule_d`, `rules_at_lps_go`,
+  `generated_rule_nested` and `rule_copy` (8 fields, not 11 words).
 * Literal offsets left in L text: the constant's name read in `hoist_names_go`, `decl_declares_go`,
-  `decl_key` (`+ 1` → `+ ⟪CI.cv⟫`), `idx_tables`' `EREC⦃q + 2⦄` (`ProjTbl.structName`),
-  `block_split`'s `ci + 1`.
+  `decl_key` (`+ 1` → `+ ⟪CI.cv⟫`), `idx_tables`' `EREC⦃q + 2⦄` (`ProjTbl.structName`).
 * The rule-count guards of `ind_rec_copy` and `ci_at_lps` are `2^57`, not `2^60`: `Rule.size * n`
   must not wrap for any `Rule.size ≤ 64` (the layout's only stated bound), as the ROM reader's.
   Unreachable counts either way (2^57 rule records do not fit in memory).
