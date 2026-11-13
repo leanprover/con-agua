@@ -42,7 +42,7 @@ abbrev putE (m : Mem) (a v : Word) (k : Mem → Option (List Word × Mem)) :
 table of the kinds). -/
 def ciSize (k : Word) : Option Word :=
   if k = 0 then some 5 else if k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some 20
-  else if k = 4 then some 7 else if k = 5 then some 10 else none
+  else if k = 4 then some 8 else if k = 5 then some 10 else none
 
 end models
 
@@ -95,7 +95,7 @@ l_model rulesTo_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
 
 l_model ci_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
   fns [hL.rci_ci ↦ ciW list]
-  specs [callW_spec p n "rom_u64_c", callW_spec p n "erec_alloc", callW_spec p n "erec_put", callW_spec p n "rci_cv", callW_spec p n "rom_expr_c", callW_spec p n "rci_caps", callW_spec p n "rci_rules_to"]
+  specs [callW_spec p n "rom_u64_c", callW_spec p n "erec_alloc", callW_spec p n "erec_put", callW_spec p n "rci_cv", callW_spec p n "rom_expr_c", callW_spec p n "rci_caps", callW_spec p n "rci_rules_to", callW_spec p n "rom_name_c"]
   grind [arena_grind] finish [ntBW] gen 20 bind ntBW pfuel
 
 l_model blockTo_specW (rom : List UInt8) (p : Prog) (hL : RomCIProg rom p)
