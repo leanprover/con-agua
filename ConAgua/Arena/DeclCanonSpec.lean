@@ -139,7 +139,7 @@ def erSlAtB (a : Word → Word) (p q i : Word) : Bool :=
   erSlEqB a (a (p + i)) (a (p + i + 1)) (a (q + i)) (a (q + i + 1))
 
 /-- **`caps_eq_a`**. -/
-def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a q) (a r)
+def capsEqAB (a : Word → Word) (q r : Word) : Bool := bEqB (a (q + Caps.eta)) (a (r + Caps.eta))
 
 /-- **`caps_eq_b`**. -/
 def capsEqBB (a : Word → Word) (q r : Word) : Bool :=

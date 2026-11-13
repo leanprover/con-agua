@@ -12,7 +12,7 @@ import ConAgua.Arena.DeclNatCv
 /-!
 # The ROM constant readers: an inductive's capabilities (helper `decls4-rom`)
 
-`rci_caps(q, c)` refines `Frontend.internCaps` into the 15 words at `c` (`decCaps`). The twin keeps
+`rci_caps(q, c)` refines `Frontend.internCaps` into the record at `c` (`decCaps`). The twin keeps
 the `sortZ` names as values and interns none; the reader interns them (`rci_name_sl`) and `decPW`
 reads them back through `dn`. Both agree when every such name already has a handle that `dn` and
 the store decode to it (`NamesDn`) in a well-formed store (`ZOK`): re-interning finds the handle
@@ -166,21 +166,21 @@ section caps
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
-/-- **`rci_caps` refines `Frontend.internCaps`**, into the 15 words at `c`. -/
+/-- **`rci_caps` refines `Frontend.internCaps`**, into the record at `c`. -/
 @[refines_part ConRon.Arena.Frontend.internCaps "capabilities that fit the ROM encoding"]
 theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     (seen : List ConLeche.Expr) (memo : EMemo)
     (caps : ConLeche.IndCaps) (hfit : capsFits caps = true) (k : Nat) (m : Mem) (a : AState)
     (q c : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hst : stkTop m = 0) (hd : rom.drop q.toNat = encCaps caps ++ rest)
-    (hc0 : erT m₀ ≤ c.toNat) (hc15 : c.toNat + 15 ≤ erT m)
+    (hc0 : erT m₀ ≤ c.toNat) (hc15 : c.toNat + Caps.size.toNat ≤ erT m)
     (hc : callW p (k + 1) "rci_caps" [q, c] m = some (r, m')) :
     ∃ (ic : IIndCaps) (a' : AState), (Frontend.internCaps caps).run a = .ok (ic, a') ∧
       RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = 0 ∧
       (r.headD 0).toNat = q.toNat + (encCaps caps).length ∧
-      EKeep (fun i => c.toNat ≤ i ∧ i < c.toNat + 15) m m' ∧ erT m ≤ erT m' ∧
+      EKeep (fun i => c.toNat ≤ i ∧ i < c.toNat + Caps.size.toNat) m m' ∧ erT m ≤ erT m' ∧
       m'.arr64 IW = m.arr64 IW ∧
-      Holds (fun i => (c.toNat ≤ i ∧ i < c.toNat + 15) ∨ (erT m ≤ i ∧ i < erT m'))
+      Holds (fun i => (c.toNat ≤ i ∧ i < c.toNat + Caps.size.toNat) ∨ (erT m ≤ i ∧ i < erT m'))
         (fun _ => False) (fun m => decCaps (erA m) c.toNat) m' ic := by
   simp only [capsFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
   obtain ⟨⟨⟨hfa, hfc⟩, hnp⟩, hix⟩ := hfit
@@ -203,21 +203,28 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
     (by rw [hd', List.append_assoc]) (by simp [u64B]) hnp
   rw [e0, e1, e2] at hw
   clear e0 e1 e2
+  obtain ⟨o1, o2, o3, o4, o5, o6, o7, o8⟩ := Caps.order
+  have hoff : ∀ f : Word, f.toNat < Caps.size.toNat → (c + f).toNat = c.toNat + f.toNat :=
+    fun f hf => by rw [UInt64.toNat_add]; omega
+  have fE := hoff _ Caps.eta_lt; have fI := hoff _ Caps.nIdx_lt
+  have fZ := hoff _ Caps.neverZero_lt; have fA := hoff _ Caps.allOff_lt
+  have fP := hoff _ Caps.nparams_lt; have fC := hoff _ Caps.ctorsOff_lt
   generalize hv0 : UInt64.ofNat (if caps.eta then 1 else 0) = v0 at hw
-  change ntBW (callW p k "rci_name_sl" [q + 24, c + 10] (putERs m [(c, v0),
-    (c + 6, UInt64.ofNat caps.nIdx), (c + 12, UInt64.ofNat caps.nparams)])) _ = some (r, m') at hw
-  generalize hws : [(c, v0), (c + 6, UInt64.ofNat caps.nIdx), (c + 12, UInt64.ofNat caps.nparams)] = ws
-    at hw
+  change ntBW (callW p k "rci_name_sl" [q + 24, c + Caps.allOff] (putERs m [(c + Caps.eta, v0),
+    (c + Caps.nIdx, UInt64.ofNat caps.nIdx), (c + Caps.nparams, UInt64.ofNat caps.nparams)])) _ =
+    some (r, m') at hw
+  generalize hws : [(c + Caps.eta, v0), (c + Caps.nIdx, UInt64.ofNat caps.nIdx),
+    (c + Caps.nparams, UInt64.ofNat caps.nparams)] = ws at hw
   have hwsB : ∀ jw ∈ ws, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT m := by
     intro jw hjw; rw [← hws] at hjw
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
-    rcases hjw with rfl | rfl | rfl <;> constructor <;> off_omega
+    rcases hjw with rfl | rfl | rfl <;> simp only [fE, fI, fP] <;> omega
   have hws41 : ∀ jw ∈ ws, jw.1.toNat < 2 ^ 41 := fun jw h => by have := (hwsB jw h).2; omega
   obtain ⟨hI1, hM1, hs1, ht1, hIW1⟩ := putERs_facts ws m hI hM hwsB
   have hget : ∀ j w, (j, w) ∈ ws → erA (putERs m ws) j.toNat = some w := by
     intro j w hjw
     refine putERs_get ws m j w hI hwsB ?_ hjw
-    rw [← hws]; simp (disch := omega) only [off_toNat, List.map_cons, List.map_nil]; simp
+    rw [← hws]; simp only [List.map_cons, List.map_nil, fE, fI, fP]; simp; omega
   have hq24 : (q + 24).toNat = q.toNat + 24 := by rw [UInt64.toNat_add]; simp; off_omega
   clear hd
   -- the two name lists
@@ -228,14 +235,14 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   have hd2 : rom.drop (q + 24).toNat = encNameL caps.all ++ (encNameL caps.ctors ++ (bw caps.neverZero ++ rest)) := by
     rw [hq24, ← List.drop_drop, hd']; simp [u64B, bw]
   obtain ⟨wsA, a2, hrun2, hltA, hI10, hM10, hs10, hq2, hek10, ht10, hIW10, hH10⟩ :=
-    nameSl_rel hL hr seen memo caps.all hfa k _ a _ (c + 10) _ _ m10 hI1 hM1 hd2
-      (by off_omega) (by off_omega) h2
+    nameSl_rel hL hr seen memo caps.all hfa k _ a _ (c + Caps.allOff) _ _ m10 hI1 hM1 hd2
+      (by rw [fA]; omega) (by rw [fA]; omega) h2
   obtain ⟨r3, m11, h3, hw⟩ := L.Ind.ntBW_some hw
   have hd3 : rom.drop (r2.headD 0).toNat = encNameL caps.ctors ++ (bw caps.neverZero ++ rest) :=
     drop_shift rom _ (encNameL caps.all) _ _ (by rw [hd2, List.append_assoc]) _ hq2
   obtain ⟨wsC, a3, hrun3, hltC, hI11, hM11, hs11, hq3, hek11, ht11, hIW11, hH11⟩ :=
-    nameSl_rel hL hr seen memo caps.ctors hfc k _ a2 _ (c + 13) _ _ m11 hI10 hM10 hd3
-      (by off_omega) (by off_omega) h3
+    nameSl_rel hL hr seen memo caps.ctors hfc k _ a2 _ (c + Caps.ctorsOff) _ _ m11 hI10 hM10 hd3
+      (by rw [fC]; omega) (by rw [fC]; omega) h3
   -- `neverZero`
   replace hw := putE_some hL (u64_some hL hw)
   have hd4 : rom.drop (r3.headD 0).toNat = bw caps.neverZero ++ rest :=
@@ -245,42 +252,45 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   rw [e7] at hw
   simp only [Option.some.injEq, Prod.mk.injEq, List.headD_cons] at hw
   obtain ⟨rfl, rfl⟩ := hw
-  have hc7lt : (c + 7).toNat < erT m11 := by off_omega
-  have hc7ge : erT m₀ ≤ (c + 7).toNat := by off_omega
+  have hc7lt : (c + Caps.neverZero).toNat < erT m11 := by rw [fZ]; omega
+  have hc7ge : erT m₀ ≤ (c + Caps.neverZero).toNat := by rw [fZ]; omega
   obtain ⟨hI12, hM12, hs12, ht12, hIW12, hget7, hne7⟩ :=
-    putER_facts hI11 hM11 (c + 7) (UInt64.ofNat (if caps.neverZero then 1 else 0)) hc7ge hc7lt
-  generalize hm12 : erecPutMem m11 (c + 7) (UInt64.ofNat (if caps.neverZero then 1 else 0)) = m12 at *
-  have hek12 : EKeep (fun i => i = (c + 7).toNat) m11 m12 :=
+    putER_facts hI11 hM11 (c + Caps.neverZero) (UInt64.ofNat (if caps.neverZero then 1 else 0)) hc7ge hc7lt
+  generalize hm12 : erecPutMem m11 (c + Caps.neverZero) (UInt64.ofNat (if caps.neverZero then 1 else 0)) = m12 at *
+  have hek12 : EKeep (fun i => i = (c + Caps.neverZero).toNat) m11 m12 :=
     ⟨by omega, fun i hi hn => hne7 i hn (by have := hI11.er_lt; omega)⟩
+  rw [fA] at hek10 hH10; rw [fC] at hek11 hH11; rw [fZ] at hek12 hget7 hne7
   -- the facts
-  have hk11 : ∀ i, i < erT m → ¬ (c.toNat + 10 ≤ i ∧ i < c.toNat + 12) →
-      ¬ (c.toNat + 13 ≤ i ∧ i < c.toNat + 15) →
+  have hk11 : ∀ i, i < erT m → ¬ (c.toNat + Caps.allOff.toNat ≤ i ∧ i < c.toNat + Caps.allOff.toNat + 2) →
+      ¬ (c.toNat + Caps.ctorsOff.toNat ≤ i ∧ i < c.toNat + Caps.ctorsOff.toNat + 2) →
       erA m11 i = erA (putERs m ws) i := by
     intro i hi hn hn'
-    rw [hek11.2 i (by off_omega) (by off_omega), hek10.2 i (by off_omega) (by off_omega)]
-  have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = c.toNat + i → i < 13 →
-      ¬ (10 ≤ i ∧ i < 12) → erA m11 (c.toNat + i) = some w := by
-    intro j w i hjw hj h13 h8
-    rw [hk11 _ (by off_omega) (by off_omega) (by off_omega), ← hj]
+    rw [hek11.2 i (by omega) hn', hek10.2 i (by omega) hn]
+  have hword : ∀ (j w : Word) (f : Word), (j, w) ∈ ws → j = c + f → f.toNat < Caps.size.toNat →
+      ¬ (Caps.allOff.toNat ≤ f.toNat ∧ f.toNat < Caps.allOff.toNat + 2) →
+      ¬ (Caps.ctorsOff.toNat ≤ f.toNat ∧ f.toNat < Caps.ctorsOff.toNat + 2) →
+      erA m11 (c.toNat + f.toNat) = some w := by
+    intro j w f hjw hj hf h1 h2
+    rw [hk11 _ (by omega) (by omega) (by omega), ← hoff f hf, ← hj]
     exact hget j w hjw
-  have hW0' := hword c v0 0 (by rw [← hws]; simp) (by simp) (by decide) (by decide)
-  have hW6' := hword (c + 6) (UInt64.ofNat caps.nIdx) 6 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide) (by decide)
-  have hW12' := hword (c + 12) (UInt64.ofNat caps.nparams) 12 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide) (by decide)
-  simp only [Nat.add_zero] at hW0'
-  have hc7 : (c + 7).toNat = c.toNat + 7 := off_toNat (by omega)
-  have hW0 : erA m12 c.toNat = some v0 := by rw [hne7 _ (by omega) (by off_omega)]; exact hW0'
-  have hW6 : erA m12 (c.toNat + 6) = some (UInt64.ofNat caps.nIdx) := by
-    rw [hne7 _ (by omega) (by off_omega)]; exact hW6'
-  have hW12 : erA m12 (c.toNat + 12) = some (UInt64.ofNat caps.nparams) := by
-    rw [hne7 _ (by omega) (by off_omega)]; exact hW12'
-  have hW7 : erA m12 (c.toNat + 7) = some (UInt64.ofNat (if caps.neverZero then 1 else 0)) := by
-    rw [← hc7]; exact hget7
-  simp (disch := omega) only [off_toNat] at hH10 hH11
-  have hA' := (hH10.ekeep hek11 (fun i hi => ⟨by off_omega, by off_omega⟩) hIW11).ekeep hek12
-    (fun i hi => ⟨by off_omega, by off_omega⟩) hIW12
-  have hC' := hH11.ekeep hek12 (fun i hi => ⟨by off_omega, by off_omega⟩) hIW12
+  have hW0' := hword _ v0 Caps.eta (by rw [← hws]; simp) rfl Caps.eta_lt (by omega) (by omega)
+  have hW6' := hword _ (UInt64.ofNat caps.nIdx) Caps.nIdx (by rw [← hws]; simp) rfl Caps.nIdx_lt
+    (by omega) (by omega)
+  have hW12' := hword _ (UInt64.ofNat caps.nparams) Caps.nparams (by rw [← hws]; simp) rfl
+    Caps.nparams_lt (by omega) (by omega)
+  have hW0 : erA m12 (c.toNat + Caps.eta.toNat) = some v0 := by
+    rw [hne7 _ (by omega) (by omega)]; exact hW0'
+  have hW6 : erA m12 (c.toNat + Caps.nIdx.toNat) = some (UInt64.ofNat caps.nIdx) := by
+    rw [hne7 _ (by omega) (by omega)]; exact hW6'
+  have hW12 : erA m12 (c.toNat + Caps.nparams.toNat) = some (UInt64.ofNat caps.nparams) := by
+    rw [hne7 _ (by omega) (by omega)]; exact hW12'
+  have hW7 : erA m12 (c.toNat + Caps.neverZero.toNat) =
+      some (UInt64.ofNat (if caps.neverZero then 1 else 0)) := hget7
+  have hA' := (hH10.ekeep hek11 (fun i hi => ⟨by omega, by omega⟩) hIW11).ekeep hek12
+    (fun i hi => ⟨by omega, by omega⟩) hIW12
+  have hC' := hH11.ekeep hek12 (fun i hi => ⟨by omega, by omega⟩) hIW12
   refine ⟨(⟨caps.eta, wsA.map decI, caps.nparams, caps.nIdx, wsC.map decI, caps.neverZero⟩ : IIndCaps), a3, ?_, hI12, hM12,
-    by rw [hs12, hs11, hs10, hs1, hst], ?_, ⟨by off_omega, fun i hi hR => ?_⟩, by off_omega,
+    by rw [hs12, hs11, hs10, hs1, hst], ?_, ⟨by omega, fun i hi hR => ?_⟩, by omega,
     by rw [hIW12, hIW11, hIW10, hIW1], ?_⟩
   · simp only [Frontend.internCaps]
     rw [run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]
@@ -292,29 +302,28 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
       rw [UInt64.toNat_add, show (8 : Word).toNat = 8 from rfl, Nat.mod_eq_of_lt (show _ < 2 ^ 64 by omega)]
     simp only [List.headD_cons]; rw [h8, hq3, hq2, hq24, encCaps_len caps]
     omega
-  · rw [hne7 _ (by omega) (by off_omega), hk11 _ (by off_omega) (by off_omega) (by off_omega),
+  · rw [hne7 _ (by omega) (by omega), hk11 _ (by omega) (by omega) (by omega),
       putERs_ne ws m i (by
         intro jw hjw; rw [← hws] at hjw
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
-        rcases hjw with rfl | rfl | rfl <;> off_omega) (by omega) hws41]
+        rcases hjw with rfl | rfl | rfl <;> simp only [fE, fI, fP] <;> omega) (by omega) hws41]
   · have hH := holds_decCaps (c := c.toNat)
       (⟨caps.eta, wsA.map decI, caps.nparams, caps.nIdx, wsC.map decI, caps.neverZero⟩ : IIndCaps)
       v0 _ _ _ hW0 hW6 hW7 hW12
       (by rw [← hv0]; exact (bw_ne _).symm)
       (L.toNat_ofNat_of_lt hix).symm (bw_ne _).symm (L.toNat_ofNat_of_lt hnp).symm hA' hC'
     refine hH.mono (fun i hi => ?_) (fun _ h => h)
-    simp only [Caps.eta, Caps.nIdx, Caps.neverZero, Caps.nparams, UInt64.reduceToNat] at hi
     rcases hi with hi | hi | hi | hi | hi | hi
-    · left; off_omega
-    · left; off_omega
-    · left; off_omega
-    · left; off_omega
+    · left; omega
+    · left; omega
+    · left; omega
+    · left; omega
     · rcases hi with hi | hi
-      · left; off_omega
-      · right; off_omega
+      · left; omega
+      · right; omega
     · rcases hi with hi | hi
-      · left; off_omega
-      · right; off_omega
+      · left; omega
+      · right; omega
 
 end caps
 

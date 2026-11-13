@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.RecLayout.CapsDec
 import ConRon.Bridge.Grind
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.RecLayout.RuleDec
@@ -295,21 +296,22 @@ theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
     (hR : RdOK R rd) {q r : Word} {x y : IIndCaps}
     (hx : decCaps R q.toNat = some x) (hy : decCaps R r.toNat = some y) :
     capsEqAll rd q r = decide (x = y) := by
-  simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
-  obtain ⟨b0, h0, n6, h6, al, h8, n12, h9, ct, h10, nz, h7, ex⟩ := hx
-  have ex := Option.some.inj ex; subst ex
-  obtain ⟨b0', h0', n6', h6', al', h8', n12', h9', ct', h10', nz', h7', ey⟩ := hy
-  have ey := Option.some.inj ey; subst ey
-  obtain ⟨w0, f0, rfl⟩ := boolW0_ hR h0
-  obtain ⟨w0', f0', rfl⟩ := boolW0_ hR h0'
-  obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl h6
-  obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := 6) (kn := 6) hR rfl h6'
-  obtain ⟨w7, f7, rfl⟩ := boolW_ (q := q) (k := 7) (kn := 7) hR rfl h7
-  obtain ⟨w7', f7', rfl⟩ := boolW_ (q := r) (k := 7) (kn := 7) hR rfl h7'
-  obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := 12) (kn := 12) hR rfl h9
-  obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := 12) (kn := 12) hR rfl h9'
-  have hal := slAt_ok hR (q := q) (r := r) (i := 10) (j := 11) (kn := 10) rfl rfl rfl h8 h8'
-  have hct := slAt_ok hR (q := q) (r := r) (i := 13) (j := 14) (kn := 13) rfl rfl rfl h10 h10'
+  rcases x with ⟨b0, al, n12, n6, ct, nz⟩
+  rcases y with ⟨b0', al', n12', n6', ct', nz'⟩
+  obtain ⟨h0, h6, h8, h9, h10, h7⟩ := decCaps_eq_some.mp hx
+  obtain ⟨h0', h6', h8', h9', h10', h7'⟩ := decCaps_eq_some.mp hy
+  obtain ⟨w0, f0, rfl⟩ := boolW_ (q := q) (k := Caps.eta) hR rfl h0
+  obtain ⟨w0', f0', rfl⟩ := boolW_ (q := r) (k := Caps.eta) hR rfl h0'
+  obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := Caps.nIdx) hR rfl h6
+  obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := Caps.nIdx) hR rfl h6'
+  obtain ⟨w7, f7, rfl⟩ := boolW_ (q := q) (k := Caps.neverZero) hR rfl h7
+  obtain ⟨w7', f7', rfl⟩ := boolW_ (q := r) (k := Caps.neverZero) hR rfl h7'
+  obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := Caps.nparams) hR rfl h9
+  obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := Caps.nparams) hR rfl h9'
+  have hal := slAt_ok hR (q := q) (r := r) (i := Caps.allOff) (j := Caps.allLen) rfl
+    Caps.allLen_toNat Caps.allLen_eq.symm h8 h8'
+  have hct := slAt_ok hR (q := q) (r := r) (i := Caps.ctorsOff) (j := Caps.ctorsLen) rfl
+    Caps.ctorsLen_toNat Caps.ctorsLen_eq.symm h10 h10'
   apply bool_of_iff
   simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f6, f6', f7, f7', f12, f12', hal, hct,
     Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IIndCaps.mk.injEq, fld_nat, fld_bool]
@@ -464,16 +466,13 @@ theorem capsEqAll_ok' {R : Nat → Option Word} {rd : Word → Word}
     (hx : decCaps R (p.toNat + kn) = some x) (hy : decCaps R (q.toNat + kn) = some y) :
     capsEqAll rd (p + k) (q + k) = decide (x = y) := by
   have b1 : ∀ {r : Word} {z : IIndCaps}, decCaps R (r.toNat + kn) = some z →
-      ∃ w, R (r.toNat + kn) = some w := by
+      (r + k).toNat = r.toNat + kn := by
     intro r z h
-    simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-    obtain ⟨b, hb, -⟩ := h
+    obtain ⟨hb, -⟩ := decCaps_eq_some.mp h
     obtain ⟨w, hw, -⟩ := boolD hb
-    exact ⟨w, hw⟩
-  obtain ⟨w, hw⟩ := b1 hx
-  obtain ⟨w', hw'⟩ := b1 hy
-  exact capsEqAll_ok hR (by rw [toNat_add_of_get hR hk hw]; exact hx)
-    (by rw [toNat_add_of_get hR hk hw']; exact hy)
+    have hlt := hR.lt _ _ hw
+    rw [UInt64.toNat_add, hk]; exact Nat.mod_eq_of_lt (by omega)
+  exact capsEqAll_ok hR (by rw [b1 hx]; exact hx) (by rw [b1 hy]; exact hy)
 
 theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     (h : decCI R p = some x) :
@@ -482,7 +481,8 @@ theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
        (wk.toNat = 1 ∧ ∃ cv v hi, decCV R (p + 1) = some cv ∧ hd? R (p + 5) = some v ∧
           decHint R (p + 6) = some hi ∧ x = .defnInfo cv v hi) ∨
        (wk.toNat = 2 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .thmInfo cv) ∨
-       (wk.toNat = 3 ∧ ∃ cv caps, decCV R (p + 1) = some cv ∧ decCaps R (p + 5) = some caps ∧
+       (wk.toNat = 3 ∧ ∃ cv caps, decCV R (p + 1) = some cv ∧
+          decCaps R (p + CI.indCaps.toNat) = some caps ∧
           x = .indInfo cv caps) ∨
        (wk.toNat = 4 ∧ ∃ cv np nf fam, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
           nat? R (p + 6) = some nf ∧ hd? R (p + 7) = some fam ∧ x = .ctorInfo cv np nf fam) ∨
@@ -581,7 +581,7 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     have a2 : wk' = 3 := wl wk' 3 (by decide) k1
     subst a1 a2
     have c1 := cvEqB_ok' hR (p := p) (q := q) (k := 1) (kn := 1) rfl hcv hcv'
-    have c2 := capsEqAll_ok' hR (p := p) (q := q) (k := 5) (kn := 5) rfl hcaps hcaps'
+    have c2 := capsEqAll_ok' hR (p := p) (q := q) (k := CI.indCaps) rfl hcaps hcaps'
     apply bool_of_iff
     simp only [ciEqB, r1, r2, ciEqRestB, c1, c2]
     simp

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.IndInstallRefine
 public import Std.Tactic.BVDecide.Normalize.Prop
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Front.IndApplyRefine
 import ConAgua.Front.IndApplyRefine2
 import ConAgua.L.WordOff
@@ -67,56 +68,8 @@ theorem AgreesFrom.get {P : Array Word} {m : Mem} {q : Nat} (h : AgreesFrom P m 
 
 /-! ## The capabilities -/
 
-/-- `ind_caps`' fifteen words decode as the default capabilities. -/
-theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size) (hq : q.toNat + 15 < 2 ^ 64)
-    (P : Array Word)
-    (h : ∀ k, k < 15 → P[q.toNat + k]? = some (wd (capsM m q) DLP (q.toNat + k))) :
-    decCaps (aread P) q.toNat = some {} := by
-  have h0 := h 0 (by decide)
-  simp only [Nat.add_zero] at h0
-  have v0 : wd (capsM m q) DLP q.toNat = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ q.toNat (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ q.toNat (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ q.toNat (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ q.toNat (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ q.toNat (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ q.toNat (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ q.toNat (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ q.toNat (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ q.toNat (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP q _ q.toNat rfl]; omega
-  rw [v0] at h0
-  have h6 := h 6 (by decide)
-  have v6 : wd (capsM m q) DLP (q.toNat + 6) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 6) _ (q.toNat + 6) (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v6] at h6
-  have h7 := h 7 (by decide)
-  have v7 : wd (capsM m q) DLP (q.toNat + 7) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 7) _ (q.toNat + 7) (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v7] at h7
-  have h10 := h 10 (by decide)
-  have v10 : wd (capsM m q) DLP (q.toNat + 10) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 10) _ (q.toNat + 10) (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v10] at h10
-  have h11 := h 11 (by decide)
-  have v11 : wd (capsM m q) DLP (q.toNat + 11) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 11) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 11) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ (q.toNat + 11) (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 11) _ (q.toNat + 11) (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v11] at h11
-  have h12 := h 12 (by decide)
-  have v12 : wd (capsM m q) DLP (q.toNat + 12) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 12) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ (q.toNat + 12) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 12) _ (q.toNat + 12) (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v12] at h12
-  have h13 := h 13 (by decide)
-  have v13 : wd (capsM m q) DLP (q.toNat + 13) = 0 := by
-    unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ (q.toNat + 13) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_eq _ DLP (q + 13) _ (q.toNat + 13) (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v13] at h13
-  have h14 := h 14 (by decide)
-  have v14 : wd (capsM m q) DLP (q.toNat + 14) = 0 := by
-    unfold capsM; rw [wd_set_eq _ DLP (q + 14) _ (q.toNat + 14) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
-  rw [v14] at h14
-  simp [decCaps, Caps.eta, Caps.nIdx, Caps.neverZero, Caps.allOff, Caps.nparams, Caps.ctorsOff,
-    L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h6, h7, h10, h11, h12, h13, h14]
-
-/-- `ind_caps` writes only its fifteen words. -/
-theorem capsM_out (m : Mem) (q : Word) (hq : q.toNat + 15 < 2 ^ 64) (j : Nat)
-    (hj : j < q.toNat ∨ q.toNat + 15 ≤ j) : wd (capsM m q) DLP j = wd m DLP j := by
-  unfold capsM; rw [wd_set_ne _ DLP (q + 14) _ j (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 13) _ j (by rw [L.toNat_add_of_lt q 13 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 12) _ j (by rw [L.toNat_add_of_lt q 12 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 11) _ j (by rw [L.toNat_add_of_lt q 11 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 10) _ j (by rw [L.toNat_add_of_lt q 10 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 9) _ j (by rw [L.toNat_add_of_lt q 9 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 8) _ j (by rw [L.toNat_add_of_lt q 8 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 7) _ j (by rw [L.toNat_add_of_lt q 7 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP (q + 6) _ j (by rw [L.toNat_add_of_lt q 6 (by simp; omega)]; simp only [UInt64.reduceToNat]; omega), wd_set_ne _ DLP q _ j (by omega)]
-
 theorem capsM_frame (m : Mem) (q : Word) : MemFrame [DLP] [] m (capsM m q) := by
   unfold capsM
-  refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
-  refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
   refine MemFrame.trans ?_ (MemFrame.set64 _ DLP (by decide) _ _)
@@ -128,6 +81,30 @@ theorem capsM_frame (m : Mem) (q : Word) : MemFrame [DLP] [] m (capsM m q) := by
 
 theorem capsM_size (m : Mem) (q : Word) : ((capsM m q).arr64 DLP).size = (m.arr64 DLP).size :=
   (capsM_frame m q).size DLP
+
+/-- `ind_caps`' words decode as the default capabilities. -/
+theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + Caps.size.toNat ≤ (m.arr64 DLP).size)
+    (hq : q.toNat + Caps.size.toNat < 2 ^ 64) (P : Array Word)
+    (h : ∀ k, k < Caps.size.toNat → P[q.toNat + k]? = some (wd (capsM m q) DLP (q.toNat + k))) :
+    decCaps (aread P) q.toNat = some {} := by
+  have hw0 : CapsRecW (aread ((capsM m q).arr64 DLP)) q.toNat 0 0 0 0 0 0 0 0 :=
+    capsRecW_set64 (m := m) (A := DLP) hs hq
+  have hw := hw0.shift (b := aread P) (e := q.toNat) (fun j hj => by
+    have hj' : q.toNat + j < ((capsM m q).arr64 DLP).size := by rw [capsM_size]; omega
+    simp only [aread_apply, h j hj, wd, Array.getElem?_eq_getElem hj', Option.getD_some])
+  rw [decCaps_of_words hw (xs := []) (ys := []) (by simp [hslice?]) (by simp [hslice?])]
+  rfl
+
+/-- `ind_caps` writes only its record's words. -/
+theorem capsM_out (m : Mem) (q : Word) (hq : q.toNat + Caps.size.toNat < 2 ^ 64) (j : Nat)
+    (hj : j < q.toNat ∨ q.toNat + Caps.size.toNat ≤ j) : wd (capsM m q) DLP j = wd m DLP j := by
+  have e : ∀ f : Word, f.toNat < Caps.size.toNat → (q + f).toNat ≠ j := fun f hf => by
+    rw [UInt64.toNat_add]; omega
+  unfold capsM
+  rw [wd_set_ne _ _ _ _ _ (e _ Caps.ctorsLen_lt), wd_set_ne _ _ _ _ _ (e _ Caps.ctorsOff_lt),
+    wd_set_ne _ _ _ _ _ (e _ Caps.nparams_lt), wd_set_ne _ _ _ _ _ (e _ Caps.allLen_lt),
+    wd_set_ne _ _ _ _ _ (e _ Caps.allOff_lt), wd_set_ne _ _ _ _ _ (e _ Caps.neverZero_lt),
+    wd_set_ne _ _ _ _ _ (e _ Caps.nIdx_lt), wd_set_ne _ _ _ _ _ (e _ Caps.eta_lt)]
 
 /-! ## The type and constructor records -/
 
@@ -157,7 +134,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   rw [typeW.k_dind_alloc.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
-  simp only [CI.indSize, CI.indCaps, Caps.size, UInt64.reduceAdd, UInt64.reduceToNat] at P3 P4
+  have hsz := CI.indSize_toNat; have h5 := CI.indCaps_toNat
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
   cases h2 : cvW b.data (m₁.set64 DLP q1 3) (q1 + 1) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
@@ -169,7 +146,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   obtain ⟨rfl, rfl⟩ := h
   have Pq : PExt m (m₁.set64 DLP q1 3) := P1.set q1 3 (by omega) (by omega)
   have hs1 : ((m₁.set64 DLP q1 3).arr64 DLP).size = (m.arr64 DLP).size := Pq.size DLP
-  have ht1 : topN (m₁.set64 DLP q1 3) DLP = topN m DLP + 20 := by
+  have ht1 : topN (m₁.set64 DLP q1 3) DLP = topN m DLP + CI.indSize.toNat := by
     rw [← P3]; unfold topN; rw [wd_set_ne _ _ _ _ _ (by omega)]
   have hL1 : LkR (m₁.set64 DLP q1 3) st := hD.frame Pq.frame (by rw [ht1, hs1]; omega)
   obtain ⟨n0, l0, y0⟩ := hF
@@ -186,11 +163,11 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
     unfold tyT; rw [run_bind _ _ a _ C1]; rfl
   rw [resOf_eq hrun]
   have hs2 : (m₂.arr64 DLP).size = (m.arr64 DLP).size := by rw [C2.size DLP, hs1]
-  have ht2 : topN m₂ DLP = topN m DLP + 20 + ty.cv.levelParams.length := by rw [C3, ht1]
-  have hq5 : (q1 + 5).toNat = q1.toNat + 5 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hc0 : ∀ i, (i < q1.toNat + 5 ∨ q1.toNat + 20 ≤ i) → wd (capsM m₂ (q1 + 5)) DLP i = wd m₂ DLP i :=
+  have ht2 : topN m₂ DLP = topN m DLP + CI.indSize.toNat + ty.cv.levelParams.length := by rw [C3, ht1]
+  have hq5 : (q1 + CI.indCaps).toNat = q1.toNat + CI.indCaps.toNat := L.toNat_add_of_lt _ _ (by simp; omega)
+  have hc0 : ∀ i, (i < q1.toNat + CI.indCaps.toNat ∨ q1.toNat + CI.indSize.toNat ≤ i) → wd (capsM m₂ (q1 + CI.indCaps)) DLP i = wd m₂ DLP i :=
     fun i hi => capsM_out _ _ (by omega) i (by omega)
-  have ht3 : topN (capsM m₂ (q1 + 5)) DLP = topN m₂ DLP := by
+  have ht3 : topN (capsM m₂ (q1 + CI.indCaps)) DLP = topN m₂ DLP := by
     unfold topN; rw [hc0 0 (by omega)]
   refine ⟨hrun, ⟨Pq.frame.trans (C2.trans (capsM_frame _ _)), by rw [ht3, ht2]; omega,
     fun i h1 h2 => ?_⟩, P2, ?_, ?_⟩
@@ -205,11 +182,11 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       rw [← hq1]
       exact C6 (L.Arena.aread P) (fun i hi => by
         rw [L.Arena.aread_apply, hP.get (by omega) (by rw [ht3, ht2]; omega), hc0 i (by omega)])
-    have gcaps : decCaps (L.Arena.aread P) (q1.toNat + 5) = some {} := by
+    have gcaps : decCaps (L.Arena.aread P) (q1.toNat + CI.indCaps.toNat) = some {} := by
       rw [← hq5]
-      exact capsM_dec m₂ (q1 + 5) (by rw [hs2]; omega) (by omega) P
+      exact capsM_dec m₂ (q1 + CI.indCaps) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    simp [decCI, CI.indCaps, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
+    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
 
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/

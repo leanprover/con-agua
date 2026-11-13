@@ -85,14 +85,14 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `caps_eq_a(q, q')`: `eta` (word `0`; words `1‥5` are not read). -/
+/-- `caps_eq_a(q, q')`: `eta`. -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqA : FunDecl := lfn (q, r) locals (e) {
-  e := call b_eq(EREC⦃q⦄, EREC⦃r⦄);
+  e := call b_eq(EREC⦃q + ⟪Caps.eta⟫⦄, EREC⦃r + ⟪Caps.eta⟫⦄);
   return e
 }
 
-/-- `caps_eq_b(q, q')`: `nIdx` and `neverZero` (words `6`, `7`; words `8`, `9` are not read). -/
+/-- `caps_eq_b(q, q')`: `nIdx` and `neverZero`. -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqB : FunDecl := lfn (q, r) locals (e) {
   if EREC⦃q + ⟪Caps.nIdx⟫⦄ != EREC⦃r + ⟪Caps.nIdx⟫⦄ { return 0 };
@@ -100,7 +100,7 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `caps_eq_c(q, q')`: `all`, `nparams`, `ctors` (words `10‥14`). -/
+/-- `caps_eq_c(q, q')`: `all`, `nparams`, `ctors`. -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEqC : FunDecl := lfn (q, r) locals (e) {
   e := call er_sl_at(q, r, ⟪Caps.allOff⟫);
@@ -110,7 +110,7 @@ counts only for a regular hint (kind `2`). -/
   return e
 }
 
-/-- `caps_eq(q, q')`: two `IIndCaps` records (`decCaps`, 15 words) are equal. -/
+/-- `caps_eq(q, q')`: two `IIndCaps` records (`decCaps`) are equal. -/
 -- con-ron: none — the derived `IIndCaps` equality, at `decCaps`' decoding
 @[no_expose] def capsEq : FunDecl := lfn (q, r) locals (e) {
   e := call caps_eq_a(q, r);

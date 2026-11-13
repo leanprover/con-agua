@@ -49,9 +49,11 @@ structure IndInstallLookups (p : Prog) : Prop where
 def cvM (m : Mem) (q n o l t : Word) : Mem :=
   (((m.set64 DLP q n).set64 DLP (q + 1) (o + 1)).set64 DLP (q + 2) l).set64 DLP (q + 3) t
 
-/-- **The model of `ind_caps(q)`**: the ten words the capabilities' decoder reads. -/
+/-- **The model of `ind_caps(q)`**: every field of the capabilities `0`. -/
 def capsM (m : Mem) (q : Word) : Mem :=
-  (((((((((m.set64 DLP q 0).set64 DLP (q + 6) 0).set64 DLP (q + 7) 0).set64 DLP (q + 8) 0).set64 DLP (q + 9) 0).set64 DLP (q + 10) 0).set64 DLP (q + 11) 0).set64 DLP (q + 12) 0).set64 DLP (q + 13) 0).set64 DLP (q + 14) 0
+  (((((((m.set64 DLP (q + Caps.eta) 0).set64 DLP (q + Caps.nIdx) 0).set64 DLP (q + Caps.neverZero) 0
+    ).set64 DLP (q + Caps.allOff) 0).set64 DLP (q + Caps.allLen) 0).set64 DLP (q + Caps.nparams) 0
+    ).set64 DLP (q + Caps.ctorsOff) 0).set64 DLP (q + Caps.ctorsLen) 0
 
 /-- The eleven words of a rule at `q`. -/
 def ruleM (m : Mem) (q n nf e : Word) : Mem :=
@@ -120,7 +122,7 @@ theorem ruleW_eq (m : Mem) (q rp : Word) : ruleW m q rp =
   unfold ruleW; simp only [lkW]
   split <;> (try split) <;> simp_all [wK] <;> rfl
 
-/-- **The model of `ind_caps(q)`**: the fifteen words (`capsM`). -/
+/-- **The model of `ind_caps(q)`** (`capsM`). -/
 l_model caps_spec (p : Prog) (hI : IndInstallLookups p)
   fns [hI.ind_caps ↦ capsW void]
   grind [arena_grind]

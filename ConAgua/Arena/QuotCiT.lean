@@ -765,7 +765,7 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
-    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 15] m3 with
+    cases h4 : callW p n "er_copy_er" [r1.headD 0 + CI.indCaps, c + CI.indCaps, Caps.size] m3 with
     | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
