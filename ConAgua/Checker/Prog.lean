@@ -153,7 +153,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1790 functions, 0 of them stubs.
+1798 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -488,6 +488,7 @@ def checkerProg : Prog := [
   ("block_counts_pure", L.Ind.blockCountsPure),
   ("block_ctors", L.Ind.blockCtors),
   ("block_ctors_go", L.Ind.blockCtorsGo),
+  ("block_ctors_groups", L.Ind.blockCtorsGroups),
   ("block_formers", L.Ind.blockFormers),
   ("block_formers_go", L.Ind.blockFormersGo),
   ("block_groups", L.Ind.blockGroups),
@@ -522,6 +523,7 @@ def checkerProg : Prog := [
   ("block_recs", L.Ind.blockRecs),
   ("block_shape_all_ctors", L.Ind.blockShapeAllCtors),
   ("block_shape_all_ctors_go", L.Ind.blockShapeAllCtorsGo),
+  ("block_shape_ctor_groups", L.Ind.blockShapeCtorGroups),
   ("block_shape_ctors_copy", L.Ind.blockShapeCtorsCopy),
   ("block_shape_ctors_of", L.Ind.blockShapeCtorsOf),
   ("block_shape_declared", L.Ind.blockShapeDeclared),
@@ -795,8 +797,6 @@ def checkerProg : Prog := [
   ("ctl_get", L.Arena.ctlGetL),
   ("ctl_sum", L.Front.Ind.ctlSum),
   ("ctor_family", L.Arena.ctorFamilyL),
-  ("iota_no_cert", L.Arena.iotaNoCertL),
-  ("rec_fire_level_count", L.Arena.recFireLevelCountL),
   ("ctor_info_rec", L.Ind.ctorInfoRecL),
   ("ctor_member", L.Ind.ctorMember),
   ("ctors_have_name", L.Ind.ctorsHaveName),
@@ -925,6 +925,7 @@ def checkerProg : Prog := [
   ("expr_view_ok", L.Arena.exprViewOkL),
   ("fab_scope_ok", L.Arena.fabScopeOkL),
   ("family_key_check", L.Ind.familyKeyCheckL),
+  ("family_never_zero_at", L.Arena.familyNeverZeroAtL),
   ("family_telescope", L.Ind.familyTelescopeL),
   ("field_doms_resolve", L.Ind.fieldDomsResolveL),
   ("find_pinned", L.Ind.findPinned),
@@ -950,7 +951,6 @@ def checkerProg : Prog := [
   ("former_def_headed", L.Arena.formerDefHeadedL),
   ("former_never_zero", L.Arena.formerNeverZeroL),
   ("former_never_zero_at", L.Arena.formerNeverZeroAtL),
-  ("family_never_zero_at", L.Arena.familyNeverZeroAtL),
   ("former_res_sort", L.Arena.formerResSortL),
   ("former_sort_loop", L.Arena.formerSortLoopL),
   ("former_z", L.Arena.formerZL),
@@ -1275,6 +1275,7 @@ def checkerProg : Prog := [
   ("iota_certs_full_forall", L.Arena.iotaCertsFullForallL),
   ("iota_certs_full_parts", L.Arena.iotaCertsFullPartsL),
   ("iota_index_ok", L.Arena.iotaIndexOkL),
+  ("iota_no_cert", L.Arena.iotaNoCertL),
   ("iota_rec_at", L.Arena.iotaRecAtL),
   ("iota_rec_c", L.Arena.iotaRecCL),
   ("iota_rec_cmp", L.Arena.iotaRecCmpL),
@@ -1284,6 +1285,7 @@ def checkerProg : Prog := [
   ("iota_rec_head", L.Arena.iotaRecHeadL),
   ("iota_rec_major", L.Arena.iotaRecMajorL),
   ("iota_rec_vck", L.Arena.iotaRecVckL),
+  ("iota_target", L.Arena.iotaTargetL),
   ("is_bool_true", L.Arena.isBoolTrueL),
   ("is_ctor_app", L.Arena.isCtorAppL),
   ("is_def_eq_core", L.Arena.isDefEqCoreL),
@@ -1459,6 +1461,7 @@ def checkerProg : Prog := [
   ("member_field_copy", L.Ind.memberFieldCopy),
   ("member_idx_at", L.Ind.memberIdxAt),
   ("member_names_copy", L.Ind.memberNamesCopy),
+  ("member_never_zero", L.Ind.memberNeverZero),
   ("memo_get", L.Rom.memoGet),
   ("memo_push", L.Rom.memoPush),
   ("mentions_any_const", L.Ind.mentionsAnyConst),
@@ -1761,6 +1764,7 @@ def checkerProg : Prog := [
   ("rec_doms_at", L.Ind.recDomsAtL),
   ("rec_fire", L.Ind.recFire),
   ("rec_fire_args", L.Arena.recFireArgsL),
+  ("rec_fire_level_count", L.Arena.recFireLevelCountL),
   ("rec_fire_levels", L.Arena.recFireLevelsL),
   ("rec_info_rec", L.Ind.recInfoRec),
   ("rec_k_expected", L.Ind.recKExpected),
@@ -2085,10 +2089,15 @@ def checkerProg : Prog := [
   ("whnf_core", L.Arena.whnfCoreL),
   ("whnf_core_app", L.Arena.whnfCoreAppL),
   ("whnf_core_app2", L.Arena.whnfCoreApp2L),
+  ("whnf_core_lookup_at", L.Arena.whnfCoreLookupL),
   ("whnf_core_step", L.Arena.whnfCoreStepL),
   ("whnf_core_step_proj", L.Arena.whnfCoreStepProjL),
+  ("whnf_core_store_chain", L.Arena.whnfCoreStoreChainL),
+  ("whnf_core_store_cheap_keys", L.Arena.whnfCoreStoreCheapKeysL),
+  ("whnf_core_store_keys", L.Arena.whnfCoreStoreKeysL),
   ("whnf_loop", L.Arena.whnfLoopL),
   ("whnf_step", L.Arena.whnfStepL),
+  ("whnf_stuck", L.Arena.whnfStuckL),
   ("whnf_telescope", L.Ind.whnfTelescopeL),
   ("whnf_top", L.Arena.whnfTopL),
   ("whnf_walk_fuel", L.Ind.whnfWalkFuel),
