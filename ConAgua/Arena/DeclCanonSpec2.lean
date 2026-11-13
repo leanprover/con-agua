@@ -10,7 +10,7 @@ import ConAgua.Arena.RecLayout.CIDec
 /-!
 # `ci_to_cv` in L (lane `decls3`, helper `decls3-canon`)
 
-`ci_to_cv(p)` is `p + 1`, the inline constant value of the constant record at `p`; it refines the
+`ci_to_cv(p)` is `p + CI.cv`, the inline constant value of the constant record at `p`; it refines the
 twin's pure projection `IConstantInfo.toConstantVal` (`ciToCv_refines`).
 -/
 
@@ -30,7 +30,7 @@ include hp
 
 theorem ciToCv_spec' (n : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "ci_to_cv" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = x + 1; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = x + CI.cv; ⊤⦄ := by
   rw [invoke_eq _ (hp.get "ci_to_cv")]
   simp only [callFn, ciToCv]
   cases n with
