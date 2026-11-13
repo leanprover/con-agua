@@ -238,7 +238,7 @@ first with a prototype of batch O (lrecords §4.2).
 
 The leftover literals are found only by changing values (§3), so the perturbation is a script:
 every nonzero offset of the chosen layout files gets a gap of `--gap` words (order and slice
-adjacency kept; offset-0 fields, sums and stored values (`…Val`) stay), then `scripts/lake build`,
+adjacency kept; offset-0 fields, sums and stored values (`…Val`, none left since recoffs2) stay), then `scripts/lake build`,
 then the files are restored; it lists the failing modules (clean: only `Checker.AsmFileEq`, whose
 `checker.s` is stale by design). Not a gate (a world rebuild, about 35–50 min at 2 threads here).
 
@@ -344,3 +344,26 @@ the first whole-library CI+CV run, before the fixes.
 stores are the image: `cvNewW_some`, `eciMem_eq`, `erPutCiW_wrERo`, `axImg_eq`, `recInfoMem_eq`,
 `rmMem_eq`, `cpMem_eq`, `ciRecMem_eq`, and the front's and QuotRulesT's), which re-evaluate for any
 layout, and `PropReadW`'s two `simp_all` (both sides of a model equation unfold alike).
+
+### Batch 3: the two compactions
+
+**The rule record, 11 → 8 words** (`ctor 0, nfields 1, fire 2, lvlsOff 3, lvlsLen 4, pinsOff 5,
+pinsLen 6, rhs 7, size 8`): the change is `RecLayout/Rule.lean` alone (7 values and the doc
+paragraph about the unused words, +9/−10 lines) and the regenerated `checker.s`. **0 lines outside
+`RecLayout/`.** The build failed only `AsmFileEq` until `checker.s` was regenerated.
+
+**The projection table, 13 → 8 words** (`structName 0, lpsOff 1, lpsLen 2, numParams 3, ctor 4,
+numFields 5, bodiesOff 6, bodiesLen 7, size 8`): `RecLayout/Tbl.lean` (9 values, the doc), one line
+of `RecLayout/TblDec.lean` (`decTbl_of_words`: a `simp [hd?, h2]` that normalized
+`p + structName.toNat` to `p` before it could use `h2` once `structName` was `0`), and **2 lines
+outside `RecLayout/`**: `Env.lean`'s `envPushTable_refines`, whose `simp; omega` had nothing left
+for `omega` with the offset `0` (now `off_add_toNat`). Neither was a literal offset: two proofs that
+depended on an offset being nonzero, which a perturbation (offsets only grow) cannot find.
+`structName` at `0` needed no other change: `find_table` hands out the address plus one, and
+`EREC⦃tq + ⟪ProjTbl.f - 1⟫⦄` wraps to `tq - 1 + f` as before.
+
+**Performance** (`bench.py --set init --reps 3`, load 8, the batch-2 binary against each
+compaction): `init435` 217 224 M → 217 224 M (rule) → 217 223 M (table) instructions, peak RSS
+604 → 599 → 599 MB; `init-prelude` 1 188 M and 27 MB throughout (wall times within their spread).
+`checker.s` 230 417 directives throughout (the strides and offsets change, not the code). Verdicts:
+`diff-e2e.py --refs` on the compacted binary: 726 agree, no UNSOUND/INCOMPLETE/CRASH/TIMEOUT, REFDIFF 0.

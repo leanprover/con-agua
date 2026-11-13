@@ -15,9 +15,8 @@ The fire (`IRecRuleFire`) is a kind word (0 `plain`, 1 `nested`, 2 `levels`) and
 levels (`levels`, `nested`) and the pins (`nested` only), each an offset word and a length word
 right after it.
 
-Words `2`, `9` and `10` are not read (they held the install-computed `ctorParams`, `k` and
-`eta`, which con-leche's task #480 removed; the offsets of the rest were kept), and the writers do
-not write them (their image, `Rule.img`).
+The record has no unused words (the install-computed `ctorParams`, `k` and `eta`, which
+con-leche's task #480 removed, had words of their own until the layout was compacted).
 
 **The offsets are names**, as for every record layout (`RecLayout/Caps.lean`): L code writes
 `EREC⦃q + ⟪Rule.rhs⟫⦄`, and the compiler evaluates the constant. The field at offset 0, `ctor`,
@@ -31,19 +30,19 @@ namespace L.Rule
 /-- `nfields`: the constructor's number of fields. -/
 @[reducible] def nfields : Word := 1
 /-- The fire's kind (0 `plain`, 1 `nested`, 2 `levels`). -/
-@[reducible] def fire : Word := 3
+@[reducible] def fire : Word := 2
 /-- The fire's levels, a slice (offset word). -/
-@[reducible] def lvlsOff : Word := 4
+@[reducible] def lvlsOff : Word := 3
 /-- The fire's levels: the slice's length word. -/
-@[reducible] def lvlsLen : Word := 5
+@[reducible] def lvlsLen : Word := 4
 /-- The fire's pins (`nested`), a slice (offset word). -/
-@[reducible] def pinsOff : Word := 6
+@[reducible] def pinsOff : Word := 5
 /-- The fire's pins: the slice's length word. -/
-@[reducible] def pinsLen : Word := 7
+@[reducible] def pinsLen : Word := 6
 /-- `rhs`: the rule's right-hand side (an expression handle). -/
-@[reducible] def rhs : Word := 8
+@[reducible] def rhs : Word := 7
 /-- The record's size in words (the stride of a rule slice). -/
-@[reducible] def size : Word := 11
+@[reducible] def size : Word := 8
 
 attribute [rec_unfold] ctor nfields fire lvlsOff lvlsLen pinsOff pinsLen rhs size
 
