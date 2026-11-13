@@ -161,13 +161,13 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   refine RefE.ofArms (fun h => ncrE.k_sl_nodup.abort1 (hc1 := h) ..) (fun h => ncrE.k_sl_nodup.arm1 (hc1 := h) ..)
     (RefE.guardThen (by decide) (fun h => by grind) (fun h => by grind) fun _ _ => ?_)
   -- the instantiated type
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
-  have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have hrdt : rdW (m1.arr64 (tierA EREC ((cv + 3) >>> 40))) (cv + 3 &&& 1099511627775) = wt := by
-    change erRd m1 (cv + 3) = wt
+  have e3 : (cv + CV.type).toNat = cv.toNat + CV.type.toNat := L.toNat_add_of_lt _ _ (by have := erecP_lt64 hwt; omega)
+  have hrdt : rdW (m1.arr64 (tierA EREC ((cv + CV.type) >>> 40))) (cv + CV.type &&& 1099511627775) = wt := by
+    change erRd m1 (cv + CV.type) = wt
     rw [erRd_frame (erToIwW_iwFr (show erToIwW _ m _ _ = some (r1, m1) from hlp)) (by decide) (by decide)]
-    exact (erRd_of_erecP (a := cv + 3) (by rw [e3]; exact hwt)).1
+    exact (erRd_of_erecP (a := cv + CV.type) (by rw [e3]; exact hwt)).1
   rw [hrdt]
   refine RefE.bindLift (fun _ => ncrE.k_inst_lp_fast.none ..) fun r2 m2 hil => ?_
   obtain ⟨cty, a1, hrun1, ⟨hS2, hg2, hcH, hcd⟩, ⟨A2, C2, hA2s, hC2s, hfr2⟩, hAF2⟩ :=
