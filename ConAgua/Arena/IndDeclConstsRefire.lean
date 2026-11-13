@@ -195,12 +195,14 @@ theorem FireAt.ext {R R' : Nat → Option Word} (hx : ArrExt R R') {k lo ll po p
   | nested lv ps => exact ⟨h.1, hx.hslice? h.2.1, hx.hslice? h.2.2⟩
   | levels _ => exact h.elim
 
-/-- A rule record whose plain fields (words `0`, `1`, `8`) are copied and whose fire is `f`. -/
-theorem decRule_refire {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} {k lo ll po pl : Word}
+/-- A rule record whose plain fields are copied and whose fire is `f`, its words at `q'`. -/
+theorem decRule_refireAt {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} {k lo ll po pl : Word}
     {f : IRecRuleFire} (h : decRule R q = some rl)
-    (h0 : R' q' = R q) (h1 : R' (q' + 1) = R (q + 1)) (h8 : R' (q' + 8) = R (q + 8))
-    (h3 : R' (q' + 3) = some k) (h4 : R' (q' + 4) = some lo) (h5 : R' (q' + 5) = some ll)
-    (h6 : R' (q' + 6) = some po) (h7 : R' (q' + 7) = some pl) (hf : FireAt R' k lo ll po pl f) :
+    (h0 : R' q' = R q) (h1 : R' (q' + Rule.nfields.toNat) = R (q + Rule.nfields.toNat))
+    (h8 : R' (q' + Rule.rhs.toNat) = R (q + Rule.rhs.toNat))
+    (h3 : R' (q' + Rule.fire.toNat) = some k) (h4 : R' (q' + Rule.lvlsOff.toNat) = some lo)
+    (h5 : R' (q' + Rule.lvlsLen.toNat) = some ll) (h6 : R' (q' + Rule.pinsOff.toNat) = some po)
+    (h7 : R' (q' + Rule.pinsLen.toNat) = some pl) (hf : FireAt R' k lo ll po pl f) :
     decRule R' q' = some { rl with fire := f } := by
   cases f with
   | nested lv ps =>
@@ -210,13 +212,7 @@ theorem decRule_refire {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule}
   | plain =>
     have hk : k = 0 := hf
     subst hk
-    obtain ⟨hc, hn, hr⟩ := decRule_fields h
-    have hc' : hd? R' q' = some rl.ctor := by rw [← hc]; simp only [hd?, h0]
-    have hn' : nat? R' (q' + 1) = some rl.nfields := by rw [← hn]; simp only [nat?, h1]
-    have hr' : hd? R' (q' + 8) = some rl.rhs := by rw [← hr]; simp only [hd?, h8]
-    have hk' : nat? R' (q' + 3) = some 0 := by simp [nat?, h3]
-    unfold decRule
-    simp only [hk', Option.bind_eq_bind, Option.bind_some, hc', hn', hr', Option.pure_def]
+    exact L.Arena.decRule_refire h h0 h1 h8 (show nat? R' _ = some 0 by simp [nat?, h3])
 
 /-- **`rules_refire` into a fresh run, under the stage relation**: the run decodes as the source
 rules, each refired. -/
@@ -233,7 +229,7 @@ theorem rrW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m1 m' : Mem}
   obtain ⟨-, hf1, -⟩ := erAllocW_spec ha hS.iw
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
-  obtain ⟨hlen, hget⟩ := L.Arena.decRules_getR _ _ _ hd
+  obtain ⟨hlen, hget⟩ := L.Arena.decRules_get hd
   -- the source words read
   have hword : ∀ j < cnt.toNat, ∀ i, (i = 0 ∨ i = 1 ∨ i = 8) → ∃ w,
       erecP m (o.toNat + 11 * j + i) = some w ∧ erRd m (o + UInt64.ofNat (11 * j + i)) = w ∧
@@ -242,6 +238,10 @@ theorem rrW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m1 m' : Mem}
     have hrj := hget j hj
     rw [List.getElem?_eq_getElem (by omega)] at hrj
     obtain ⟨hc0, hn0, hr0⟩ := decRule_fields hrj
+    -- `rules_refire` copies the words by number
+    change hd? _ (o.toNat + 11 * j) = _ at hc0
+    change nat? _ (o.toNat + 11 * j + 1) = _ at hn0
+    change hd? _ (o.toNat + 11 * j + 8) = _ at hr0
     have hw : ∃ w, erecP m (o.toNat + 11 * j + i) = some w := by
       rcases hi with rfl | rfl | rfl
       · obtain ⟨w, hw, -⟩ := hd?_some hc0; exact ⟨w, by simpa using hw⟩
@@ -293,7 +293,7 @@ theorem rrW_ok {vis : Word} {fe : IFEnv} {a : AState} {n : Nat} {m m1 m' : Mem}
       rw [← hrd, ← e]; rfl
     · simp only [refireRec]
       rw [← hrd, ← e]; rfl
-  refine decRule_refire hrj (gw 0 (by simp)) (gw 1 (by simp)) (gw 8 (by simp)) (g 3 (by omega)) (g 4 (by omega))
+  refine decRule_refireAt hrj (gw 0 (by simp)) (gw 1 (by simp)) (gw 8 (by simp)) (g 3 (by omega)) (g 4 (by omega))
     (g 5 (by omega)) (g 6 (by omega)) (g 7 (by omega)) (hf.ext hext)
 
 end L.Ind
