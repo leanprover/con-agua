@@ -144,3 +144,21 @@ revert): about one world rebuild (35 min at 2 threads on this machine).
 620 MB both; `init-prelude` 1 160 M both, 27 MB both. `checker.s` 230 932 → 230 857 → 230 821
 lines (builders, compaction). Verdicts: `diff-e2e.py --refs` with the branch's binary: no
 UNSOUND/INCOMPLETE/CRASH/TIMEOUT; the same 8 REFDIFF (e2e-ref) as master's binary.
+
+### Batch 3: recursor rules and projection tables by name (helper `recoffs-rule`)
+
+* `RecLayout/Rule.lean` (`L.Rule`: `ctor`, `nfields`, `fire`, `lvlsOff`, `lvlsLen`, `pinsOff`,
+  `pinsLen`, `rhs`, `size` 11), `RecLayout/Tbl.lean` (`L.ProjTbl`, not `L.Tbl`: that name is the
+  twin's hash table, open in the arena proofs; `size` 13), and `RuleDec.lean`/`TblDec.lean`.
+  `decRules` strides by `Rule.size`. `find_table` hands out the table's address plus one, so L
+  reads `EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄`.
+* About 140 L lines; about 20 duplicated decoder lemmas deleted, about 15 restated over the names
+  (62 files, +1194/−1219). `checker.s` unchanged.
+* Left: writes to the dead words keep their numbers (rule words 2, 9, 10; table words 8, 11, 12);
+  the whole-record writer proofs (`rule_copy`, `rules_to_erec`, `rmRec_stage`, `ruleM_*`,
+  `rules_at_lps_go`) are still 11-word positional, as the caps writers were before batch 2a; a
+  few `11 * j` strides in `CIReadRefCI`, `HoistDecode`/`HoistWalkRef`, `DeclAndPinIndCopy2` still
+  say 11 (reducible defeq lets them check). A compaction of these records would find them, as
+  batch 2b found the caps leftovers.
+* Dead words: the rule record 3 of 11; the table 3 of 13 plus the two words nothing reads (kind
+  and name, kept so the table looked like a constant record), 5 of 13.
