@@ -8,7 +8,7 @@
   `checkerFile_eq` in `ConAgua/Checker/AsmFileEq.lean`). Regenerate after every change to the
   checker's L code (`ConAgua/Checker/Prog.lean`), the compiler or the stub.
 * `pins.bin`: the pin data `main.c` embeds, written by `romgen pins.bin 4`
-  (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (3
+  (`ConAgua/Rom/Gen.lean`): the checker's startup data and all of con-leche's `natOpPinSets` (4
   variants, the set con-ron embeds). Not trusted either: the theorems hold for every pin buffer.
   Regenerate after a change to the startup data or a twin bump.
 
