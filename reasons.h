@@ -13,7 +13,6 @@ static const char *const reasons[] = {
   "inductive block : shape not recognised",
   "inductive block whose type records disagree on numParams",
   "inferType beyond the supported fragment",
-  "native Nat computation on literals",
   "nested positivity: fuel",
   "non-standard axiom (…), apparently added by the `…` tactic; con-leche does not support such axioms at the moment",
   "non-standard axiom (…); con-leche does not support such axioms at the moment",

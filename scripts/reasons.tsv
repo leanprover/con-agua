@@ -11,7 +11,6 @@ R_DIRECT_SUM_TYPE	decline	direct sum: type former telescope
 R_INDUCTIVE_BLOCK_SHAPE	decline	inductive block : shape not recognised
 R_INDUCTIVE_BLOCK_WHOSE	decline	inductive block whose type records disagree on numParams
 R_INFERTYPE_BEYOND_THE	decline	inferType beyond the supported fragment
-R_NATIVE_NAT_COMPUTATION	decline	native Nat computation on literals
 R_NESTED_POSITIVITY_FUEL	decline	nested positivity: fuel
 R_NON_STANDARD_AXIOM	decline	non-standard axiom (…), apparently added by the `…` tactic; con-leche does not support such axioms at the moment
 R_NON_STANDARD_AXIOM_CON	decline	non-standard axiom (…); con-leche does not support such axioms at the moment
