@@ -9,7 +9,6 @@ import ConAgua.Arena.DeclAndPinIndRef
 import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import all ConAgua.Arena.IndIface
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

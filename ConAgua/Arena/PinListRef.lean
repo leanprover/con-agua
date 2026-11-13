@@ -11,7 +11,6 @@ import ConRon.Bridge.Checker.Canon
 import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Specs
 import ConAgua.Arena.IndexLoops
-import ConAgua.L.WordOff
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.RecLayout.CIDec
 

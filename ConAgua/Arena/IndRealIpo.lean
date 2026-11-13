@@ -6,7 +6,6 @@ public import ConAgua.Arena.RecSim
 public import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConRon.Bridge.Grind

@@ -15,7 +15,6 @@ public import ConAgua.Arena.Verdict
 public import ConAgua.Checker.NoVerdictFns
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.Pins
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

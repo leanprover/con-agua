@@ -11,7 +11,6 @@ import all ConAgua.Arena.IndStream
 import ConAgua.Arena.BasisBlockC
 public import ConAgua.Arena.IndT.StreamRecsRules
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Arena.RecLayout.CVDec
+public import ConAgua.Arena.ErecRd
 public import ConAgua.Arena.WhnfBase
 
 @[expose] public section

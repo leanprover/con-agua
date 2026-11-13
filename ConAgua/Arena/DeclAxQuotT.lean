@@ -19,7 +19,6 @@ import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.InferFieldSort
 import ConAgua.L.WordOff
 import ConAgua.Arena.BasisBlockT
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

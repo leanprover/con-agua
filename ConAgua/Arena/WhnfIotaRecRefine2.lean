@@ -14,7 +14,6 @@ import ConAgua.L.ModelGen
 public import ConAgua.Arena.WhnfIotaRecRefine
 import all ConAgua.Arena.WhnfIotaRec
 import all ConAgua.Arena.WhnfIota
-import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.IotaCase3Ref
 import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqMid

@@ -11,7 +11,6 @@ import all ConAgua.Arena.IndSum
 import ConAgua.Arena.IndT.Lift
 public import ConAgua.Arena.TwinStep
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

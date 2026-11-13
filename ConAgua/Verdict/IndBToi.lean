@@ -15,7 +15,6 @@ import all ConAgua.Arena.RecCheck
 public import ConAgua.Verdict.PosFt
 import ConRon.Bridge.Inductives.Positivity
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

@@ -17,8 +17,6 @@ import ConRon.Bridge.Checker.Base
 public import ConRon.Bridge.Checker.DeclVal
 public import ConRon.Bridge.Core.Knot
 import all ConAgua.Arena.DeclArms
-import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

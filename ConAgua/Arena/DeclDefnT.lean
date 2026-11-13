@@ -14,8 +14,6 @@ import ConRon.Bridge.Checker.NatOpNames
 public import ConAgua.Arena.DeclNatGateSpec
 import all ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclArmDefn
-import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.IndDecStab
-import ConAgua.Arena.Env
 import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.RecLayout.CVDec
 
 @[expose] public section
 

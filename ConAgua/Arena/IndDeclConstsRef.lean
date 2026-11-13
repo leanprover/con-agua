@@ -24,7 +24,6 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndT.BlockCS
 import ConAgua.Arena.ExceptOpt
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

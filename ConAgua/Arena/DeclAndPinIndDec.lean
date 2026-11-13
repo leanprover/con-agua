@@ -4,7 +4,6 @@ import ConAgua.Arena.IndLibSpec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.EnvRec
-import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.RecLayout.RuleDec
 

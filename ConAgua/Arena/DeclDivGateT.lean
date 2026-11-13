@@ -12,7 +12,6 @@ import ConRon.Bridge.Checker.DeclVal
 import all ConAgua.Arena.DeclArms
 import all ConAgua.Arena.DeclArmsNat
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

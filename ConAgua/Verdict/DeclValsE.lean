@@ -27,8 +27,7 @@ public import ConAgua.Arena.KnotEntry
 public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecGenSpec.CftW
-import ConAgua.Arena.RecLayout.CIDec
+import ConAgua.Arena.IlpRd
 
 @[expose] public section
 

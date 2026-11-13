@@ -6,7 +6,6 @@ import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.L.ModelGen
-import ConAgua.Arena.InferLeaves
 import all ConAgua.Arena.StrLit
 import ConAgua.Arena.RecLayout.CIDec
 

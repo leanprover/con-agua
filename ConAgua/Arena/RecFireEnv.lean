@@ -3,7 +3,6 @@ module
 import ConAgua.Arena.RecLayout.RuleDec
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.WhnfIota
-import ConAgua.Arena.EtaRescueRef
 import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section

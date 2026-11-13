@@ -6,7 +6,6 @@ public import ConAgua.Arena.RecGen
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.Env
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

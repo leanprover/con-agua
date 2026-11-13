@@ -1,9 +1,9 @@
 module
 
+public import ConAgua.Arena.RecGenSpec.DecCIIndCv
 import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndRealIlpL
-public import ConAgua.Arena.RecGenSpec.CftW
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -21,7 +21,6 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.RecGenSpec.Set64
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

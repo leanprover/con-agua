@@ -11,8 +11,6 @@ import ConAgua.Arena.IndPosSpec.DpGoW
 import ConRon.Bridge.Grind
 import all ConAgua.Arena.IndPos
 import ConAgua.L.WordOff
-import ConAgua.Arena.EtaRescueRef
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

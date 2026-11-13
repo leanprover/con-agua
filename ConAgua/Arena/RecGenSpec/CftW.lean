@@ -17,8 +17,6 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndDecStab
 import all ConAgua.Arena.RecGen
-import ConAgua.Arena.FormerNZRef
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

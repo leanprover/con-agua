@@ -16,7 +16,6 @@ public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealAr
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.RecCheck
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

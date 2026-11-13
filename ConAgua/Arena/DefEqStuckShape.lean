@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DefEqStuck
 import ConAgua.Arena.InferBodySpine
-public import ConAgua.Arena.WhnfIotaRefine
 import ConAgua.Arena.IndView
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.WhnfCoreRefine

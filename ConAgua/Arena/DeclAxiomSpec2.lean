@@ -8,7 +8,6 @@ import ConAgua.L.ModelGen
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclArms
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

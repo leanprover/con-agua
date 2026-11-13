@@ -15,7 +15,6 @@ import ConAgua.Arena.RecClassSpec.MjProg
 public import ConAgua.L.ErrSpec
 import ConAgua.L.WordOff
 import ConAgua.Arena.Verdict
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

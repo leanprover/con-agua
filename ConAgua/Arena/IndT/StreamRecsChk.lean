@@ -17,7 +17,6 @@ import ConAgua.Arena.IndInstallSpec.DomsW
 import all ConAgua.Arena.IndStream
 public import ConAgua.Arena.IndDecStab
 import ConAgua.L.WordOff
-import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 

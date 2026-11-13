@@ -1,13 +1,11 @@
 module
 
-import ConAgua.Arena.DeclNatGate
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConRon.Bridge.Grind
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.DeclNatCv
 import all ConAgua.Arena.WhnfDelta
-import ConAgua.Arena.InferLeaves
 
 @[expose] public section
 

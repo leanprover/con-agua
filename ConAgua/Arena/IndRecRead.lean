@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.ErecRd
 public import ConAgua.Arena.RecLayout.CIDec
+public import ConAgua.Arena.RecLayout.CapsDec
 
 @[expose] public section
 
