@@ -790,7 +790,7 @@ def conron_report(res):
         return []
     lines = ["## `check` against both references: `e2e-ref` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
              "`con-ron --jobs=1 --pins P FILE` at the vendored revision (exit codes: 0 accept, 1 reject, 2 decline, "
-             "3 error; `P`: the same pin list as the others, `natOpPinSets.take 3` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `e2e-ref FILE --pins=3`, and the compiled `check`. Accept is the "
+             f"3 error; `P`: the same pin list as the others, `natOpPinSets.take {PIN_VARIANTS}` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `e2e-ref FILE --pins={PIN_VARIANTS}`, and the compiled `check`. Accept is the "
              "verdict compared.", "",
              "| con-ron | e2e-ref | L `check` | fixtures |", "|---|---|---|---:|"]
     def acc(v):
