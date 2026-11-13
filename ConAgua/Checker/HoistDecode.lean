@@ -114,7 +114,8 @@ theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule (area
 
 theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
     (h : decRules (aread a) off cnt = some rules) :
-    rules.length = cnt ∧ ∀ q (hq : q < rules.length), ∃ w, a[off + 11 * q + 8]? = some w ∧
+    rules.length = cnt ∧ ∀ q (hq : q < rules.length),
+      ∃ w, a[off + Rule.size.toNat * q + Rule.rhs.toNat]? = some w ∧
       w.toNat < 2 ^ 32 ∧ rules[q].rhs = decE w := by
   have hl := mapM_opt_length _ _ _ h
   simp only [List.length_range] at hl
@@ -123,13 +124,11 @@ theorem decRules_facts {a : Array Word} {off cnt : Nat} {rules : List IRecRule}
   simp only [List.getElem_range] at this
   exact decRule_rhs this
 
-theorem idx11 (ow : Word) (q : Nat) (h : ow.toNat + 11 * q + 8 < 2 ^ 64) :
-    (ow + 11 * (0 + UInt64.ofNat q) + 8).toNat = ow.toNat + 11 * q + 8 := by
+theorem idxRule (ow : Word) (q : Nat) (h : ow.toNat + Rule.size.toNat * q + Rule.rhs.toNat < 2 ^ 64) :
+    (ow + Rule.size * (0 + UInt64.ofNat q) + Rule.rhs).toNat =
+      ow.toNat + Rule.size.toNat * q + Rule.rhs.toNat := by
   have hq : (UInt64.ofNat q).toNat = q := by simp; omega
   rw [UInt64.zero_add, UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, hq]
-  have : (11 : UInt64).toNat = 11 := rfl
-  have : (8 : UInt64).toNat = 8 := rfl
-  simp only [*]
   rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
 
 theorem toNat_rec (r : Word) (hr : r.toNat < 2 ^ 59) : (1 + 8 * r).toNat = 1 + 8 * r.toNat := by

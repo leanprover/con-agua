@@ -26,9 +26,12 @@ Not a gate: one run is a world rebuild (about 35 minutes at `LEAN_NUM_THREADS=2`
 machine). The files are restored with `git checkout` even when the build fails or is interrupted.
 
 Usage:
-  scripts/layout_perturb.py [--gap N | --scale K] [--dry-run] [LAYOUT.lean ...]
+  scripts/layout_perturb.py [--gap N | --scale K] [--dry-run] [--target MOD ...] [--keep] [LAYOUT.lean ...]
     (default: every file of ConAgua/Arena/RecLayout/ except the `…Dec.lean` lemma files and
-    `Attr.lean`; `--dry-run` prints the changes and builds nothing)
+    `Attr.lean`; `--dry-run` prints the changes and builds nothing; `--target` builds only these
+    modules and what they import, not the whole library; `--keep` leaves the perturbed layout files
+    in place, for `lake env lean` on a failing file against the perturbed build; restore them with
+    `git checkout` before committing)
 """
 import argparse
 import os
@@ -80,6 +83,8 @@ def main():
     ap.add_argument("--gap", type=int, default=3)
     ap.add_argument("--scale", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--target", action="append", default=[])
+    ap.add_argument("--keep", action="store_true")
     a = ap.parse_args()
     files = [os.path.abspath(f) for f in a.files] or layout_files()
     rel = [os.path.relpath(f, ROOT) for f in files]
@@ -100,13 +105,14 @@ def main():
             with open(f, "w", encoding="utf-8") as fh:
                 fh.write(text)
         env = dict(os.environ, LAKE_ARTIFACT_CACHE="false")
-        res = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build"], cwd=ROOT,
+        res = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", *a.target], cwd=ROOT,
                              capture_output=True, text=True, env=env)
         with open(os.path.join(ROOT, ".lake", "layout_perturb.log"), "w", encoding="utf-8") as fh:
             fh.write(res.stdout + res.stderr)
         log = res.stdout + res.stderr
     finally:
-        subprocess.run(["git", "checkout", "--", *rel], cwd=ROOT, check=True)
+        if not a.keep:
+            subprocess.run(["git", "checkout", "--", *rel], cwd=ROOT, check=True)
     failed = sorted(set(re.findall(r"✖ \[\d+/\d+\] Building (\S+)", log)))
     errors = [l for l in log.splitlines() if l.startswith("error: ConAgua/")]
     print(f"failed modules: {len(failed)}")
@@ -117,7 +123,8 @@ def main():
     unexpected = [m for m in failed if m != "ConAgua.Checker.AsmFileEq"]
     print("clean: only the stale checker.s" if not unexpected else
           f"{len(unexpected)} module(s) still depend on an offset's number")
-    print("restored the layout files; rebuild (`scripts/lake build`, cache hits) before other work")
+    print("kept the perturbed layout files (git checkout them before committing)" if a.keep else
+          "restored the layout files; rebuild (`scripts/lake build`, cache hits) before other work")
     return 1 if unexpected else 0
 
 

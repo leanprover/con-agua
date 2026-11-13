@@ -498,12 +498,12 @@ theorem hoistWalk_ok (n : Nat) :
   fun m m' a e i k tg ws sp fu sp' seen acc hA he hs hb =>
     walkOK n m m' a e i k tg ws sp fu sp' seen acc hA he hs hb
 
-/-- The rules `rules` are the eleven-word records at `DIND[ro + 11 r ..]`, right-hand sides at
-`+ 8`. -/
+/-- The rules `rules` are the `Rule.size`-word records at `DIND[ro + Rule.size * r ..]`, right-hand
+sides at `+ Rule.rhs`. -/
 def RulesAt (m : Mem) (ro r : Word) (rules : List IRecRule) : Prop :=
   ∀ q (h : q < rules.length),
-    (rdW (m.arr64 DIND) (ro + 11 * (r + UInt64.ofNat q) + 8)).toNat < 2 ^ 32 ∧
-    rules[q].rhs = decE (rdW (m.arr64 DIND) (ro + 11 * (r + UInt64.ofNat q) + 8))
+    (rdW (m.arr64 DIND) (ro + Rule.size * (r + UInt64.ofNat q) + Rule.rhs)).toNat < 2 ^ 32 ∧
+    rules[q].rhs = decE (rdW (m.arr64 DIND) (ro + Rule.size * (r + UInt64.ofNat q) + Rule.rhs))
 
 /-- **`hoist_rules_go` refines `usedConstsRules`.** -/
 theorem hoistRulesGo_ok (n : Nat) :
@@ -533,7 +533,7 @@ theorem hoistRulesGo_ok (n : Nat) :
     have h0 : r + UInt64.ofNat 0 = r := by simp
     rw [h0] at hw0 hr0
     simp only [List.getElem_cons_zero] at hr0
-    rcases h1 : hWalkW n m (rdW (m.arr64 DIND) (ro + 11 * r + 8)) i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
+    rcases h1 : hWalkW n m (rdW (m.arr64 DIND) (ro + Rule.size * r + Rule.rhs)) i k tg ws sp 4000000000 with _ | ⟨sp₁, m₁⟩ <;> rw [h1] at hb
     · cases hb
     simp only at hb
     have W1 := walkOK n m m₁ a _ i k tg ws sp 4000000000 sp₁ seen acc hA hw0 hs h1
@@ -643,7 +643,7 @@ theorem blockGo_ok' (n : Nat) :
         intro q hq
         obtain ⟨w', hw', hl', hr'⟩ := hrr q hq
         obtain ⟨hPw, hwt⟩ := trunc_get hw' (by omega)
-        rw [hD1, rdW_of (idx11 ow q (by omega)) hPw]
+        rw [hD1, rdW_of (idxRule ow q (by omega)) hPw]
         exact ⟨hl', hr'⟩
       rcases h2 : hRulesGoW n m₁ k i tg ws sp₁ ow cw 0 with _ | ⟨sp₂, m₂⟩ <;> rw [h2] at hb
       · cases hb

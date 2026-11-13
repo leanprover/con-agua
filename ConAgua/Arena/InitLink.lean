@@ -119,12 +119,12 @@ theorem aStateInit_refines (sz : TieredArray → Nat)
   ⟨arenaD_init sz (by omega) hpool hpool1 hsz, cachesEmpty_refines sz hctl,
     (pinsEmpty_refines sz).2, fun _ => ⟨rfl, rfl, rfl, rfl⟩⟩
 
-/-- **A constant's name is the handle in word `1` of its record**: the key `env_push` files the
+/-- **A constant's name is the handle in word `CI.cv` of its record**: the key `env_push` files the
 record under, and what `decCI` reads (`IConstantInfo.name`, pure on the twin's side). -/
 @[refines ConRon.Arena.IConstantInfo.name]
 theorem iConstantInfo_name_refines {a : Array Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI (aread a) p = some ci) :
-    ∃ w, a[p + 1]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
+    ∃ w, a[p + CI.cv.toNat]? = some w ∧ w.toNat < 2 ^ 32 ∧ ci.name = decI w := by
   simp only [decCI, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
   obtain ⟨t, -, h⟩ := h
   have hcv : ∀ {q : Nat} {v : IConstantVal}, decCV (aread a) q = some v →
