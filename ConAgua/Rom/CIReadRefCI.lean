@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Rom.CIReadRefRule
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefCV
@@ -302,15 +303,14 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
     CIPost m₀ a₀ T seen memo (.indInfo v caps) m a q r m' := by
   unfold CIPost
   simp only [encCI] at hd ⊢
-  have hj := ciHead hL hr 3 20 rfl (by omega) ((encCV seen v).1 ++ ((encCaps caps) ++ rest)) _ m q r m'
+  have hj := ciHead hL hr 3 CI.indSize rfl (by omega) ((encCV seen v).1 ++ ((encCaps caps) ++ rest)) _ m q r m'
     (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2,
-    hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 3 20 (by decide) (encCaps caps)
+    hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 3 CI.indSize (by decide) (encCaps caps)
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
   simp only [hrA, hr2] at hw
-  replace ht2 : erT m + 20 ≤ erT m2 := ht2
-  rw [show (20 : Word).toNat = 20 from rfl] at hH2
+  have hsz := CI.indSize_toNat; have h5 := CI.indCaps_toNat
   have i1 : (UInt64.ofNat 3 = 1) = False := by decide
   have i3 : (UInt64.ofNat 3 = 3) = True := by decide
   simp only [i1, i3, ite_false, ite_true] at hw
@@ -319,10 +319,10 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
   obtain ⟨rfl, rfl⟩ := hw
   have hlt := hI2.er_lt
   have hgo := hI.erT_mono
-  have hp5 : (pp + 5).toNat = pp.toNat + 5 := by
-    rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+  have hp5 : (pp + CI.indCaps).toNat = pp.toNat + CI.indCaps.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨ic, a3, hrun3, hI3, hM3, hs3, hq3, hek3, ht3, hIW3, hH3⟩ :=
-    caps_rel hL hr _ memo1 caps hcaps k' m2 a1 q2 (pp + 5) rest r3 m3 hI2 hM2 hs2 hd2
+    caps_rel hL hr _ memo1 caps hcaps k' m2 a1 q2 (pp + CI.indCaps) rest r3 m3 hI2 hM2 hs2 hd2
       (by omega) (by omega) h3
   rw [hp5] at hek3 hH3
   refine ⟨memo1, .indInfo icv ic, a3, ?_, hI3, hM3, hs3, ?_,
@@ -337,8 +337,7 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
     have ecv := (hH2.ekeep hek3 (fun i hi => ⟨by omega, by omega⟩) hIW3) m''
       (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
     have ecaps := hH3 m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-    have : pp.toNat + 1 + 4 = pp.toNat + 5 := by omega
-    simp [decCI, CI.indCaps, nat?_of e0, ecv, ecaps]
+    simp [decCI, nat?_of e0, ecv, ecaps]
 
 set_option maxHeartbeats 1000000 in
 /-- A recursor (plain rules). -/
