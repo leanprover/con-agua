@@ -358,9 +358,9 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
   have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hS.spn
   simp only [secwE.k_get_app_args, herec]
-  by_cases hcnt : ¬ r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + 6) ∧
-      r₃.tail.headD 0 - erRd s₀.mem (r₂.tail.headD 0 + 6) =
-        erRd s₀.mem (r₂.tail.headD 0 + 5)
+  by_cases hcnt : ¬ r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + CI.ctorNfields) ∧
+      r₃.tail.headD 0 - erRd s₀.mem (r₂.tail.headD 0 + CI.ctorNfields) =
+        erRd s₀.mem (r₂.tail.headD 0 + CI.ctorNparams)
   · rw [ite_eq_right (fun h => h.elim hcnt.1 (fun h' => h' hcnt.2))]
     rw [ite_eq_left (by rw [hlen]; exact (count_iff _ _ _).mpr hcnt)]
     cases n with
@@ -377,7 +377,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
             (by have := hsp.bound; omega)
           rw [htop3, ← hr30]; omega))
   · rw [ite_eq_left (by
-      by_cases hc1 : r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + 6)
+      by_cases hc1 : r₃.tail.headD 0 < erRd s₀.mem (r₂.tail.headD 0 + CI.ctorNfields)
       · exact .inl hc1
       · exact .inr (fun e => hcnt ⟨hc1, e⟩))]
     rw [ite_eq_right (by rw [hlen, count_iff]; exact hcnt)]
@@ -590,17 +590,17 @@ theorem ecp_ref (p : Prog) (hq : StuckProg p) {G : Prop} (n : Nat) (m : Mem) (a�
   have hA' : CoreAfter dn m (m₃.set64 CTL 136 (rdW (m.arr64 CTL) 136)) a₀ vis fe M eb :=
     ⟨M, hS', KeptAll.refl _ _, hK'⟩
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
-  generalize erRd m (r₂.tail.headD 0 + 5) = npw at hsum hov ⊢
-  generalize erRd m (r₂.tail.headD 0 + 6) = nfw at hsum hov ⊢
+  generalize erRd m (r₂.tail.headD 0 + CI.ctorNparams) = npw at hsum hov ⊢
+  generalize erRd m (r₂.tail.headD 0 + CI.ctorNfields) = nfw at hsum hov ⊢
   by_cases g : npw + nfw ≤ r₃.tail.headD 0
   · rw [ite_eq_left g, ite_eq_right (by rw [hlen, ← hsum]; exact Nat.not_lt.mpr (UInt64.le_iff_toNat_le.mp g))]
     exact hl _ a₀ _ rfl hA'
   rw [ite_eq_right g, ite_eq_left (by
     rw [hlen, ← hsum]; exact UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp g))]
-  show RefE G _ (pure (etaCtorPartialFam fe (decI k) (decI (erRd m (r₂.tail.headD 0 + 7)))) >>=
+  show RefE G _ (pure (etaCtorPartialFam fe (decI k) (decI (erRd m (r₂.tail.headD 0 + CI.ctorInduct)))) >>=
     fun b => if b = true then pure (some (npw.toNat + nfw.toNat - aargs.length)) else pure none) a₀ _
   refine RefE.bindE (fun _ => rfl) (fun hg => hg) (ecpf_ref p hq _ _ a₀ hS' k
-    (erRd m (r₂.tail.headD 0 + 7)) hnw hfw) fun v y a₁ _ hQ => ?_
+    (erRd m (r₂.tail.headD 0 + CI.ctorInduct)) hnw hfw) fun v y a₁ _ hQ => ?_
   obtain ⟨e5, ha1, hy, -⟩ := hQ
   obtain ⟨r₅, m₅⟩ := v
   simp only at e5 hy

@@ -229,7 +229,7 @@ theorem crc_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
     {envR : ConLeche.Env} (henvR : ConLeche.EnvWF envR) {a : AState} (N : Nat) (hN : N ≤ 2 ^ 62)
     {m : Mem} {pO pL cvR n gen : Word} {cv : IConstantVal} {pushed : List NIdx}
     (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
     (hpu : decHL m pO.toNat pL.toNat = some pushed) (hpb : pO.toNat + pL.toNat ≤ iwTop m)
     (hma : ∃ mp, maMR m mp) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
@@ -338,7 +338,7 @@ theorem crule_ref (hp : CruleProg p) (hApd : ApdF p) {visR : Word} {feR : IFEnv}
     {envR : ConLeche.Env} (henvR : ConLeche.EnvWF envR) {a : AState} (N : Nat) (hN : N ≤ 2 ^ 62)
     {m : Mem} {pO pL cvR n gen : Word} {cv : IConstantVal} {pushed : List NIdx}
     (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
     (hpu : decHL m pO.toNat pL.toNat = some pushed) (hpb : pO.toNat + pL.toNat ≤ iwTop m)
     (hma : ∃ mp, maMR m mp) {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
@@ -365,7 +365,7 @@ theorem classRuleOk_refinesC (hp : CruleProg p) (hApd : ApdF p) (N : Nat) (hN : 
     (a₀ : AState) (visR pO pL : Word) (feR : IFEnv) {envR : ConLeche.Env}
     (henvR : ConLeche.EnvWF envR) (cvR n gen : Word) (cv : IConstantVal) (pushed : List NIdx)
     (hC : StageC dn visR feR envR s₀.mem a₀) (hgen : H gen)
-    (hqd : decCV (erecP s₀.mem) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64)
+    (hqd : decCV (erecP s₀.mem) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64)
     (hA : AbsOK s₀.mem) (hpu : decHL s₀.mem pO.toNat pL.toNat = some pushed)
     (hpb : pO.toNat + pL.toNat ≤ iwTop s₀.mem) (hma : ∃ mp, maMR s₀.mem mp)
     {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}

@@ -221,8 +221,8 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
   have hty0 : cv0.type = decI w3 := by rw [← Option.some.inj hcvE]; exact hty'
   have hnm0 : cv0.name = nm := by rw [← Option.some.inj hcvE]
   obtain ⟨wn, hwn, hwnlt, hnm'⟩ := hd?_some hnm
-  obtain ⟨r3e, -⟩ := erRd_add (cq := cvw) (j := 3) (m := m) hw3 (by decide)
-  rw [show (UInt64.ofNat 3 : Word) = 3 from rfl] at r3e
+  obtain ⟨r3e, -⟩ := erRd_add (cq := cvw) (j := CV.type.toNat) (m := m) hw3 CV.type.toNat_lt
+  rw [UInt64.ofNat_toNat] at r3e
   rw [hT, r3e] at h
   -- the parameters' word
   have hqt : decBS (truncM m) pp.toNat = some bs := hq

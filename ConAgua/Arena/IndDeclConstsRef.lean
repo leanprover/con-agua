@@ -610,14 +610,13 @@ theorem dconW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLec
     rw [eD1, ek6, qSlot_eq, hqk] at h
     generalize r1.headD 0 = q at hcv1 h
     obtain ⟨wn, hwn, -, -⟩ := decCV_name hcv1
-    have hqb : q.toNat + 1 < 2 ^ 64 := L.Arena.erecP_lt64 hwn
-    have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (L.Arena.erecP_lt64 hwn)
     obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h (by simp [dconW.k_erec_ci.none])
     rw [dconW.k_erec_ci.arm1] at h
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [dconW.k_sl_new1.none])
     rw [dconW.k_sl_new1.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe k (q + 1) cv n s1.mem a r2 m2
+    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe k (q + CI.cv) cv n s1.mem a r2 m2
       ⟨h01.stageT, h01.chk.state, h01.chk.readOK, hpre.quotDn, by rw [hq1]; exact hcv1, c, hc⟩ h2
     have hS2 := hT2.stage
     obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h01.chk.state h01.chk.readOK hc hrun2

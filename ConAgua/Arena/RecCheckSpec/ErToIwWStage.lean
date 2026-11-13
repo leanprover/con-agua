@@ -418,11 +418,11 @@ def tcK2 : Option (List Word × Mem) → Option (List Word × Mem)
 def tcK1 (cR : CallM) (n : Nat) (us c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
-    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, erRd m1 (c + 3)] m1)
+    tcK2 (cR n "inst_lp_fast" [CWF, r.headD 0, r.tail.headD 0, us, erRd m1 (c + CV.type)] m1)
 
 /-- **The model of `target_ctor_at`** (its `inst_lp_fast` read through `cR`). -/
 def tcW (cR : CallM) (n : Nat) (m : Mem) (M c : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([erRd m (c + 3)], m)
+  if rdW (m.arr64 IW) (M + 8) ≠ 0 then some ([erRd m (c + CV.type)], m)
   else tcK1 cR n (rdW (m.arr64 IW) (M + 1)) c (cvLpsW n m c)
 
 theorem decTM_ds {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :

@@ -307,7 +307,7 @@ theorem uls_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} (
   erw [ite_eq_right h4]
   obtain ⟨cvS, caps, rfl⟩ := hind.1 (by simpa using h4)
   have hIR := decCI_indCaps (erRdOK s₀.mem) hci
-  have hlpS : cvS.levelParams.length = (erRd s₀.mem (r₂.tail.headD 0 + 3)).toNat := hslice?_lenR hIR.lp
+  have hlpS : cvS.levelParams.length = (erRd s₀.mem (r₂.tail.headD 0 + (CI.cv + CV.lpsLen))).toNat := hslice?_lenR hIR.lp
   simp only [L.Ind.erRd_foldN] at *
   try simp only
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
@@ -329,7 +329,7 @@ theorem uls_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} (
     exact hl _ (by simp; rfl)
   erw [ite_eq_right g1]
   rw [show caps.eta = true by rw [heta]; simpa using g1, hlpS]
-  by_cases g2 : r₃.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + 3)
+  by_cases g2 : r₃.tail.headD 0 ≠ erRd s₀.mem (r₂.tail.headD 0 + (CI.cv + CV.lpsLen))
   · erw [ite_eq_left g2]
     rw [ite_eq_right (fun h => g2 (UInt64.toNat_inj.mp h.2))]
     exact hl _ rfl

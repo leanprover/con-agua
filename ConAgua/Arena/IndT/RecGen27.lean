@@ -209,7 +209,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   subst cam
   have hER2 : erRd s2.mem (UInt64.ofNat ca) = erRd m1 (UInt64.ofNat ca) := by
     have hcv2 : decCVp s2.mem ca = some cA'.1 := (hcv.grow (OMono.decCVp _) hg2).get (OMono.decCVp _)
-    obtain ⟨hnm2, -, -⟩ := decCV_some (a := erA s2.mem) (q := ca) hcv2
+    obtain ⟨hnm2, -, -⟩ := (decCV_eq_some (R := erA s2.mem) (q := ca)).mp hcv2
     obtain ⟨w, hw, hwH, hwD⟩ := erH_rdW hnm2 hca64
     rw [hw]; exact (decI_inj_iff hwH hnmH).mp (hwD.trans hnmD.symm)
   rw [show rdW (s2.mem.arr64 (tierA EREC (UInt64.ofNat ca >>> 40))) (UInt64.ofNat ca &&& 1099511627775) =
@@ -306,7 +306,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hk6 := callW_keepW (callW_of_callE h6)
   -- `target_ctor_at`
   have hg26 : IWGrow m1 s6.mem := (k2.trans (k4.trans (k5.trans k6))).grow
-  have hca3' : ca + 3 < 2 ^ 64 := hca3
+  have hca3' : ca + CV.type.toNat < 2 ^ 64 := hca3
   have hkm6 : KeepW m s6.mem := hk1.trans (hk2.trans (hk4.trans (hk5.trans hk6)))
   refine RefE.bindLift (fun _ => cxoE.k_target_ctor_at.none ..) fun r7 m7 c7 => ?_
   rw [cxoE.k_target_ctor_at.arm1]

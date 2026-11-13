@@ -124,7 +124,7 @@ consts-resolve site, the twin's `fail (← unresolvedConstsError …)` (`uce_err
 theorem crg_ref {p : Prog} (hp : CruleProg p) (hApd : ApdF p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
     {visR : Word} {feR : IFEnv} {envR : ConLeche.Env} {a : AState} {m : Mem} {cvR gen : Word}
     {cv : IConstantVal} (hC : StageC dn visR feR envR m a) (hgen : H gen)
-    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + 3 < 2 ^ 64) (hA : AbsOK m)
+    (hqd : decCV (erecP m) cvR.toNat = some cv) (hqb : cvR.toNat + CV.type.toNat < 2 ^ 64) (hA : AbsOK m)
     {cvRP : ConLeche.ConstantVal} {genP : ConLeche.Expr}
     (hcvP : Frontend.denoteCV a.store cv = some cvRP)
     (hgP : denoteE a.store (decI gen) = some genP) :

@@ -907,15 +907,15 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · intro hG
     have h := hG.fire N (hk.mono (by omega)) (hG.knot.mono (by omega)) F (by omega) (by omega)
       ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d c us recP so (rv.tail.tail.headD 0)
-      (re.tail.headD 0) (rr.tail.headD 0) (rm.headD 0) sn cv.levelParams rule cvj (erRd s₀.mem (re.tail.headD 0 + 5)).toNat
-      (erRd s₀.mem (re.tail.headD 0 + 6)).toNat (decI (erRd s₀.mem (re.tail.headD 0 + 7))) xs hS2 hm4
+      (re.tail.headD 0) (rr.tail.headD 0) (rm.headD 0) sn cv.levelParams rule cvj (erRd s₀.mem (re.tail.headD 0 + CI.ctorNparams)).toNat
+      (erRd s₀.mem (re.tail.headD 0 + CI.ctorNfields)).toNat (decI (erRd s₀.mem (re.tail.headD 0 + CI.ctorInduct))) xs hS2 hm4
       hebm hcw hus husjw hr1
     rw [k2.2.2.1, k2.2.2.2] at h
     exact CoreSpecE.of_callE (h hlps hdr hci hfe hsa2 hsat2 hmI) c6
   have hfi := iotaRecFire_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega)
     (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d c us recP so (rv.tail.tail.headD 0)
-    (re.tail.headD 0) (rr.tail.headD 0) (rm.headD 0) sn cv.levelParams rule cvj (erRd s₀.mem (re.tail.headD 0 + 5)).toNat
-      (erRd s₀.mem (re.tail.headD 0 + 6)).toNat (decI (erRd s₀.mem (re.tail.headD 0 + 7))) xs hS2 hm4 hebm
+    (re.tail.headD 0) (rr.tail.headD 0) (rm.headD 0) sn cv.levelParams rule cvj (erRd s₀.mem (re.tail.headD 0 + CI.ctorNparams)).toNat
+      (erRd s₀.mem (re.tail.headD 0 + CI.ctorNfields)).toNat (decI (erRd s₀.mem (re.tail.headD 0 + CI.ctorInduct))) xs hS2 hm4 hebm
     hcw hus husjw hr1
   rw [k2.2.2.1, k2.2.2.2] at hfi
   obtain ⟨hrun6, ⟨M6, hS6, hK6, hSt6⟩, hr6⟩ := CoreSpec.run (hfi hlps hdr hci hfe hsa2 hsat2 hmI)

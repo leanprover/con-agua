@@ -51,7 +51,7 @@ open L.Arena
 /-- **A constant's level parameters compared with `lps`** (`er_to_iw`, then `sl_eq`). -/
 theorem partsLpsEq {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m1 : Mem} {q : Nat} {cv : IConstantVal} {rp : List Word} {lo ll e : Word} {lps : List NIdx}
-    (h : erToIwW n m (erRd m (UInt64.ofNat q + 1)) (erRd m (UInt64.ofNat q + 2)) =
+    (h : erToIwW n m (erRd m (UInt64.ofNat q + CV.lpsOff)) (erRd m (UInt64.ofNat q + CV.lpsLen)) =
       some (rp, m1))
     (he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll = some e)
     (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64)
@@ -1136,8 +1136,8 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   refine Sim.bindK rfl (fun _ _ => by rw [btW.k_block_shape_result_sort])
     (Q := fun r s m' a' => ((H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR vis fe m' a' ∧ IWGrow m m') ∧
       (bsoTwin nPd.toNat nIdxs cvT0.type).run a = .ok (s, a')) ∧
-      bsoW m nPd io ctl (erRd m (UInt64.ofNat p0 + 3)) = some (r, m')) ?_ ?_
-  · have := bsoW_sim (nP := nPd) (ty := erRd m (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
+      bsoW m nPd io ctl (erRd m (UInt64.ofNat p0 + CV.type)) = some (r, m')) ?_ ?_
+  · have := bsoW_sim (nP := nPd) (ty := erRd m (UInt64.ofNat p0 + CV.type)) hS hns hnsb htyl
     rw [htye] at this
     exact this.withRun.withEq
   rintro r1 sv m1 a1 ⟨⟨⟨hs, hsv, hS1, hg1⟩, hrun1⟩, he1⟩
@@ -1266,7 +1266,7 @@ theorem rbaW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   simp only [h21, ne_eq, not_true_eq_false, ite_false]
   -- level parameters (model only)
   intro r m' e
-  rcases h3 : erToIwW (n + 3) m2 (erRd m2 (UInt64.ofNat p0 + 1)) (erRd m2 (UInt64.ofNat p0 + 2)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
+  rcases h3 : erToIwW (n + 3) m2 (erRd m2 (UInt64.ofNat p0 + CV.lpsOff)) (erRd m2 (UInt64.ofNat p0 + CV.lpsLen)) with _ | ⟨r3, m3⟩ <;> rw [h3] at e
   · cases e
   simp only [rbaW.k_er_to_iw] at e
   obtain ⟨hS3, hg3, hd3, ht3⟩ := partsLpsCopy h3 hS2 (hcv0.grow (OMono.decCVp _) hg02) hpb
