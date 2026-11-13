@@ -125,10 +125,10 @@ theorem bnc_ok {p : Prog} (hP : PosBlkProg p) (hOpf : OpfF p) {dn : NIdx → Opt
     ⟨by rw [hkT]; exact decPLcv_decB hd1 (by omega), by rw [hkT]; omega⟩
   obtain ⟨pc, cv0, cvs, hfm, hw, hpb, hcv0, -⟩ := partsPSl_cons hcv hk0
   obtain ⟨htyl, htye⟩ := partsCVType hcv0 (UInt64.toNat_ofNat_of_lt' hpb)
-  rw [hw, show rdW (m1.arr64 (tierA EREC ((UInt64.ofNat pc + 3 : Word) >>> 40)))
-    ((UInt64.ofNat pc + 3 : Word) &&& 1099511627775) = erRd m1 (UInt64.ofNat pc + 3) from rfl] at hx
+  rw [hw, show rdW (m1.arr64 (tierA EREC ((UInt64.ofNat pc + CV.type : Word) >>> 40)))
+    ((UInt64.ofNat pc + CV.type : Word) &&& 1099511627775) = erRd m1 (UInt64.ofNat pc + CV.type) from rfl] at hx
   -- `open_pis_at_fvars_f`
-  rcases h2 : callW p n "open_pis_at_fvars_f" [UInt64.ofNat bs.nP, erRd m1 (UInt64.ofNat pc + 3), 0] m1
+  rcases h2 : callW p n "open_pis_at_fvars_f" [UInt64.ofNat bs.nP, erRd m1 (UInt64.ofNat pc + CV.type), 0] m1
     with _ | ⟨r2, m2⟩
   · rw [h2] at hx; simp [bncE.k_open_pis_at_fvars_f] at hx
   rw [h2, liftE_some] at hx
