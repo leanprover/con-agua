@@ -105,7 +105,7 @@ def ecsK3 (top q : Word) (res : Option (List Word × Mem)) : Option (Word × Mem
       if r.tail.headD 0 < erRd (m.set64 CTL 136 top) (q + 6) then
         some (0, m.set64 CTL 136 top)
       else some (if r.tail.headD 0 - erRd (m.set64 CTL 136 top) (q + 6) =
-          erRd (m.set64 CTL 136 top) (q + 5) then 1 else 0, m.set64 CTL 136 top)
+          erRd (m.set64 CTL 136 top) (q + (CI.indCaps + Caps.eta)) then 1 else 0, m.set64 CTL 136 top)
     else none
 
 /-- After `env_find`: a constructor record, then the arguments. -/

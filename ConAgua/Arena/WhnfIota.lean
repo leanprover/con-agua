@@ -284,7 +284,7 @@ The table (`tq`) or `0`. -/
 @[no_expose, l_impl ConRon.Arena.etaRescueTable?]
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
-  if EREC⦃p + 5⦄ == 0 { return 0 };
+  if EREC⦃p + ⟪CI.indCaps + Caps.eta⟫⦄ == 0 { return 0 };
   if EREC⦃tq + 5⦄ != ctor { return 0 };
   r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
   if r == 0 { return 0 };

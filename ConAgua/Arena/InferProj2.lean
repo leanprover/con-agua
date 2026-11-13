@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Arena.InferProj
 public import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.WhnfCoreProj
@@ -85,51 +86,23 @@ theorem inferProj_miss (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Na
     view_run _ _ _ hv, h4, h5]
   rfl
 
-/-- **An inductive record's parameter count and constructors**: `nparams` at `q + 17`, the
-constructor slice at `q + 18`, `q + 19`. -/
+/-- **An inductive record's parameter count and constructors** (its capabilities' `nparams` and
+`ctors` slice, `decCI_indInfo_rd`). -/
 theorem decCI_indNC {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
-    caps.nparams = (rd (q + 17)).toNat ∧ caps.ctors.length = (rd (q + 19)).toNat ∧
-    ∀ c, caps.ctors = [c] → c = decI (rd (rd (q + 18))) ∧ HW (rd (rd (q + 18))) := by
-  cases hq : R q.toNat with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-  all_goals (rw [hk] at h)
-  all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
-    and_false, exists_false, Option.pure_def] at h
-  obtain ⟨cv', -, caps', hcaps, hc⟩ := h
-  cases hc
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
-    Option.some.injEq] at hcaps
-  obtain ⟨_, _, _, _, _, _, np, hnp, cs, hcs, _, _, hc⟩ := hcaps
-  subst hc
-  simp only [nat?, Option.map_eq_some_iff] at hnp
-  obtain ⟨wnp, hwnp, rfl⟩ := hnp
-  simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hcs
-  obtain ⟨o, ⟨wo, hwo, rfl⟩, c, ⟨wc, hwc, rfl⟩, hs⟩ := hcs
-  have h17 : rd (q + 17) = wnp := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hwnp) (by decide)
-  have h18 : rd (q + 18) = wo := hR.offN (k := 18) (by simpa [Nat.add_assoc] using hwo) (by decide)
-  have h19 : rd (q + 19) = wc := hR.offN (k := 19) (by simpa [Nat.add_assoc] using hwc) (by decide)
-  refine ⟨by rw [h17], by rw [h19, (hslice?_get hs).1], ?_⟩
-  intro c' hc'
-  simp only at hc'
-  subst hc'
-  have h1 : wc.toNat = 1 := by have := (hslice?_get hs).1; simp at this; omega
-  rw [h1] at hs
-  simp only [hslice?, List.range_one, List.mapM_cons, List.mapM_nil, hd?, Option.bind_eq_bind,
-    Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq, Nat.add_zero] at hs
-  obtain ⟨x, ⟨w', hw', hx⟩, _, rfl, hxs⟩ := hs
-  simp only [List.cons.injEq, and_true] at hxs
-  subst hxs
-  have hrd : rd wo = w' := hR.rd _ _ hw'
-  rw [h18, hrd]
-  split at hx
-  · rename_i hlt
-    cases hx
-    exact ⟨rfl, hlt⟩
-  · cases hx
+    caps.nparams = (rd (q + (CI.indCaps + Caps.nparams))).toNat ∧
+    caps.ctors.length = (rd (q + (CI.indCaps + Caps.ctorsLen))).toNat ∧
+    ∀ c, caps.ctors = [c] → c = decI (rd (rd (q + (CI.indCaps + Caps.ctorsOff)))) ∧
+      HW (rd (rd (q + (CI.indCaps + Caps.ctorsOff)))) := by
+  obtain ⟨-, -, -, hnp, -, hs⟩ := decCI_indInfo_rd hR h
+  obtain ⟨hlen, hget⟩ := hslice?_get hs
+  refine ⟨hnp, hlen, fun c hc => ?_⟩
+  rw [hc] at hlen hget
+  obtain ⟨w, hw, hlt, hx⟩ := hget 0 (by simp at hlen; omega)
+  simp only [Nat.add_zero, List.getElem?_cons_zero, Option.some.injEq] at hw hx
+  have hrd : rd (rd (q + (CI.indCaps + Caps.ctorsOff))) = w := hR.rd _ _ hw
+  rw [hrd]
+  exact ⟨hx, hlt⟩
 
 /-- **An ok `env_find` run**: the memory unchanged, the twin's `find?` decoded, a found record
 decodes. -/

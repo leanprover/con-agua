@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Arena.WhnfIota
 public import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
@@ -118,7 +119,7 @@ theorem ert_ok {p : Prog} (hes : p.lookup "er_sl_eq" = some L.Ind.erSlEq)
   have heta := hrec.eta
   have hz : tblFound m 0 = none := by simp [tblFound]
   rw [hT]
-  by_cases g1 : erRd m (q + 5) = 0
+  by_cases g1 : erRd m (q + (CI.indCaps + Caps.eta)) = 0
   · rw [ertW.arm2 _ _ _ _ _ _ _ g0 g1] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h

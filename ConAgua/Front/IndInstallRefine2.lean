@@ -105,7 +105,8 @@ theorem capsM_dec (m : Mem) (q : Word) (hs : q.toNat + 15 ≤ (m.arr64 DLP).size
   have v14 : wd (capsM m q) DLP (q.toNat + 14) = 0 := by
     unfold capsM; rw [wd_set_eq _ DLP (q + 14) _ (q.toNat + 14) (by rw [L.toNat_add_of_lt q 14 (by simp; omega)]; rfl)]; simp only [L.Mem.size64_set64]; omega
   rw [v14] at h14
-  simp [decCaps, L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h6, h7, h10, h11, h12, h13, h14]
+  simp [decCaps, Caps.eta, Caps.nIdx, Caps.neverZero, Caps.allOff, Caps.nparams, Caps.ctorsOff,
+    L.Arena.aread_apply, bool?, hd?, nat?, hlist?, hslice?, h0, h6, h7, h10, h11, h12, h13, h14]
 
 /-- `ind_caps` writes only its fifteen words. -/
 theorem capsM_out (m : Mem) (q : Word) (hq : q.toNat + 15 < 2 ^ 64) (j : Nat)
@@ -151,12 +152,12 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
   have hps := hD.psize
   have hpt := hD.ptop
   rw [typeW.arm1] at h
-  rcases h1 : allocW m DLP 20 with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
+  rcases h1 : allocW m DLP CI.indSize with _ | ⟨q1, m₁⟩ <;> rw [h1] at h
   · rw [typeW.k_dind_alloc.none] at h; cases h
   rw [typeW.k_dind_alloc.arm1] at h
   simp only [DIND, Mem.arr64_set64_ne _ _ _ _ _ (show (IFR : TieredArray) ≠ DLP by decide)] at h
   obtain ⟨P1, P2, P3, P4, P5⟩ := allocP_facts hD.psize hD.ptop h1
-  simp only [show (20 : Word).toNat = 20 from rfl] at P3 P4
+  simp only [CI.indSize, CI.indCaps, Caps.size, UInt64.reduceAdd, UInt64.reduceToNat] at P3 P4
   have hifr : m₁.arr64 IFR = m.arr64 IFR := P1.other IFR (by decide) (by decide)
   have hsm1 : (m₁.arr64 DLP).size = (m.arr64 DLP).size := P1.size DLP
   cases h2 : cvW b.data (m₁.set64 DLP q1 3) (q1 + 1) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
@@ -208,7 +209,7 @@ theorem typeW_twin {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD :
       rw [← hq5]
       exact capsM_dec m₂ (q1 + 5) (by rw [hs2]; omega) (by omega) P
         (fun k hk => hP.get (by omega) (by rw [ht3, ht2]; omega))
-    simp [decCI, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
+    simp [decCI, CI.indCaps, nat?, L.Arena.aread_apply, g0, gcv, gcaps]
 
 
 /-- **`ind_ctor` against the twin's constructor constant.** -/

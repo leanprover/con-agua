@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefBase
@@ -122,27 +123,27 @@ theorem bw_ne (b : Bool) : (UInt64.ofNat (if b then 1 else 0) != 0) = b := by ca
 
 theorem holds_decCaps {m : Mem} {c : Nat} {SA SC : Nat → Prop}
     (ic : IIndCaps) (we wix wnz wnp : Word)
-    (h0 : erA m c = some we) (h6 : erA m (c + 6) = some wix) (h7 : erA m (c + 7) = some wnz)
-    (h12 : erA m (c + 12) = some wnp)
+    (h0 : erA m (c + Caps.eta.toNat) = some we) (h6 : erA m (c + Caps.nIdx.toNat) = some wix)
+    (h7 : erA m (c + Caps.neverZero.toNat) = some wnz)
+    (h12 : erA m (c + Caps.nparams.toNat) = some wnp)
     (he : ic.eta = (we != 0)) (hix : ic.nIdx = wix.toNat) (hnz : ic.neverZero = (wnz != 0))
     (hnp : ic.nparams = wnp.toNat)
-    (hA : Holds SA (fun _ => False) (fun m => (hlist? (erA m) (c + 10) : Option (List NIdx))) m ic.all)
-    (hC : Holds SC (fun _ => False) (fun m => (hlist? (erA m) (c + 13) : Option (List NIdx))) m
+    (hA : Holds SA (fun _ => False) (fun m => (hlist? (erA m) (c + Caps.allOff.toNat) : Option (List NIdx))) m
+      ic.all)
+    (hC : Holds SC (fun _ => False) (fun m => (hlist? (erA m) (c + Caps.ctorsOff.toNat) : Option (List NIdx))) m
       ic.ctors) :
-    Holds (fun i => (c ≤ i ∧ i < c + 8) ∨ i = c + 12 ∨ SA i ∨ SC i)
+    Holds (fun i => i = c + Caps.eta.toNat ∨ i = c + Caps.nIdx.toNat ∨ i = c + Caps.neverZero.toNat ∨
+        i = c + Caps.nparams.toNat ∨ SA i ∨ SC i)
       (fun _ => False) (fun m => decCaps (erA m) c) m ic := by
   intro m' hE hI
-  have g : ∀ i, (c ≤ i ∧ i < c + 8) → erA m' i = erA m i := fun i hi => hE i (.inl hi)
-  have e0 := (g c (by omega)).trans h0
-  have e6 := (g (c + 6) (by omega)).trans h6
-  have e7 := (g (c + 7) (by omega)).trans h7
-  have e12 := (hE (c + 12) (.inr (.inl rfl))).trans h12
-  have eA := hA m' (fun i hi => hE i (.inr (.inr (.inl hi)))) (fun _ h => h.elim)
-  have eC := hC m' (fun i hi => hE i (.inr (.inr (.inr hi)))) (fun _ h => h.elim)
-  have : ic = ⟨we != 0, ic.all, wnp.toNat, wix.toNat, ic.ctors, wnz != 0⟩ := by
-    cases ic; simp_all
-  rw [this]
-  simp [decCaps, bool?_of e0, nat?_of e6, bool?_of e7, eA, nat?_of e12, eC]
+  have e0 := (hE _ (.inl rfl)).trans h0
+  have e6 := (hE _ (.inr (.inl rfl))).trans h6
+  have e7 := (hE _ (.inr (.inr (.inl rfl)))).trans h7
+  have e12 := (hE _ (.inr (.inr (.inr (.inl rfl))))).trans h12
+  have eA := hA m' (fun i hi => hE i (.inr (.inr (.inr (.inr (.inl hi)))))) (fun _ h => h.elim)
+  have eC := hC m' (fun i hi => hE i (.inr (.inr (.inr (.inr (.inr hi)))))) (fun _ h => h.elim)
+  exact decCaps_of (by rw [bool?_of e0, he]) (by rw [nat?_of e6, hix]) eA (by rw [nat?_of e12, hnp]) eC
+    (by rw [bool?_of e7, hnz])
 
 /-! ## `rci_caps` -/
 
@@ -302,7 +303,10 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
       (by rw [← hv0]; exact (bw_ne _).symm)
       (L.toNat_ofNat_of_lt hix).symm (bw_ne _).symm (L.toNat_ofNat_of_lt hnp).symm hA' hC'
     refine hH.mono (fun i hi => ?_) (fun _ h => h)
-    rcases hi with hi | hi | hi | hi
+    simp only [Caps.eta, Caps.nIdx, Caps.neverZero, Caps.nparams, UInt64.reduceToNat] at hi
+    rcases hi with hi | hi | hi | hi | hi | hi
+    · left; off_omega
+    · left; off_omega
     · left; off_omega
     · left; off_omega
     · rcases hi with hi | hi
