@@ -193,15 +193,12 @@ def rulesRefire : FunDecl := lfn (d, s, cnt, kind, lo, ll, po, pl) locals (ez, u
   if cnt == 0 { return 0 };
   ez := call erec_put(d, EREC⦃s⦄);
   ez := call erec_put(d + ⟪Rule.nfields⟫, EREC⦃s + ⟪Rule.nfields⟫⦄);
-  ez := call erec_put(d + 2, 0);
   ez := call erec_put(d + ⟪Rule.fire⟫, kind);
   ez := call erec_put(d + ⟪Rule.lvlsOff⟫, lo);
   ez := call erec_put(d + ⟪Rule.lvlsLen⟫, ll);
   ez := call erec_put(d + ⟪Rule.pinsOff⟫, po);
   ez := call erec_put(d + ⟪Rule.pinsLen⟫, pl);
   ez := call erec_put(d + ⟪Rule.rhs⟫, EREC⦃s + ⟪Rule.rhs⟫⦄);
-  ez := call erec_put(d + 9, 0);
-  ez := call erec_put(d + 10, 0);
   u := call rules_refire(d + ⟪Rule.size⟫, s + ⟪Rule.size⟫, cnt - 1, kind, lo, ll, po, pl);
   return 0
 }
@@ -261,11 +258,8 @@ def blockTable : FunDecl := lfn (p, ms) locals
   ez := call erec_put(q + ⟪ProjTbl.numParams⟫, IW.u64[p + 4]);
   ez := call erec_put(q + ⟪ProjTbl.ctor⟫, EREC⦃cv⦄);
   ez := call erec_put(q + ⟪ProjTbl.numFields⟫, IW.u64[c + 1]);
-  ez := call erec_put(q + 8, 0);
   ez := call erec_put(q + ⟪ProjTbl.bodiesOff⟫, ebo);
   ez := call erec_put(q + ⟪ProjTbl.bodiesLen⟫, ebl);
-  ez := call erec_put(q + 11, 0);
-  ez := call erec_put(q + 12, 0);
   return (1, q)
 }
 
