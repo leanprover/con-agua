@@ -200,7 +200,10 @@ otherwise; a dangling handle aborts. -/
 @[no_expose, l_impl ConRon.Arena.iotaTarget]
 def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
   if ⟦h⟧.tag != 3 { return (0, 0) };
-  (t, x) := node CONST⟦h⟧;
+  t := ⟦h⟧.tier;
+  x := ⟦h⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CONST⟨t⟩.count <= x { abort };
   (f, q) := call env_find(CONST⟨t, x⟩.n, vis);
   if f == 0 { return (0, 0) };
   if EREC⦃q⦄ != 5 { return (0, 0) };

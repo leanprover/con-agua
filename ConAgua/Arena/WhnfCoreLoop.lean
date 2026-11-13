@@ -106,7 +106,30 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     fun c hc => ⟨ht, by simpa using hc⟩
   by_cases g4 : tagW e = 4
   · rw [ite_eq_left g4]
-    sorry
+    refine RefE.abort0 (by decide) fun hc4 => ?_
+    have hvapp := (view_app s₀.mem a₀ hR e hh' ⟨ht, by simpa using hc4⟩ g4).1
+    by_cases hsk : (334 : Word) >>> tagW h &&& 1 ≠ 0
+    · rw [ite_eq_left hsk]
+      have hst : isStuckHead (decE h) = true := by rw [isStuckHead_w h hh]; simpa using hsk
+      refine RefE.of_run_eq (step_run_stuck _ _ hvapp hst) ?_
+      cases n with
+      | zero => exact RefE.of_cls0 rfl
+      | succ N =>
+      exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+        (·.mono (Nat.le_succ N))
+        (stuck_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h e
+          hs hh he) fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
+    rw [ite_eq_right hsk]
+    have hst : isStuckHead (decE h) = false := by rw [isStuckHead_w h hh]; simpa using hsk
+    refine RefE.of_run_eq (step_run_app _ _ hvapp hst) ?_
+    cases n with
+    | zero => exact RefE.of_cls0 rfl
+    | succ N =>
+    have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
+      eb mode cheap d e hs he
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+      (·.mono (Nat.le_succ N)) h1
+      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g4]
   by_cases g9 : tagW e = 9
   · rw [ite_eq_left g9]
@@ -258,52 +281,6 @@ theorem loop_go (ht : whnfCoreStuckTag e = false) :
 end twinLoop
 
 /-! ## The loop's words and the pending keys -/
-
-/-- A tag word is one of 16. -/
-theorem tagW_fin (x : Word) (hx : HW x) : ∃ k : Fin 16, tagW x = (k.val : Nat).toUInt64 :=
-  ⟨⟨(tagW x).toNat, tagW_lt x hx⟩, by simp⟩
-
-/-- `isStuckHead` off the tag mask `334` (`fvar`, `sort`, `const`, `forallE`, `lit`). -/
-theorem isStuckHead_w (h : Word) (hh : HW h) :
-    isStuckHead (decE h) = ((334 : Word) >>> tagW h &&& 1 != 0) := by
-  simp only [isStuckHead, decE_tag h hh]
-  obtain ⟨k, hk⟩ := tagW_fin h hh
-  rw [hk]; clear hk; revert k; decide
-
-/-- `whnfCoreStuckTag` off the tag mask `657` (`bvar`, `app`, `letE`, `proj`). -/
-theorem stuckTag_w (e : Word) (he : HW e) :
-    whnfCoreStuckTag (decE e) = ((657 : Word) >>> tagW e &&& 1 == 0) := by
-  simp only [whnfCoreStuckTag, decE_tag e he]
-  obtain ⟨k, hk⟩ := tagW_fin e he
-  rw [hk]; clear hk; revert k; decide
-
-/-- `whnfCoreKey` as the loop's `key` word. -/
-theorem key_w (h e : Word) (hh : HW h) (he : HW e) :
-    whnfCoreKey (decE h) (decE e) =
-      (((640 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&& (1 - ((334 : Word) >>> tagW h &&& 1))) != 0) := by
-  simp only [whnfCoreKey, isStuckHead, decE_tag e he, decE_tag h hh]
-  obtain ⟨k, hk⟩ := tagW_fin e he
-  obtain ⟨j, hj⟩ := tagW_fin h hh
-  rw [hk, hj]; clear hk hj; revert k j; decide
-
-/-- `whnfCoreCheapSafe` as the loop's `safe` word. -/
-theorem safe_w (h e : Word) (hh : HW h) (he : HW e) :
-    whnfCoreCheapSafe (decE h) (decE e) =
-      (((128 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&&
-        (((334 : Word) >>> tagW h &&& 1) ||| (if tagW h = 5 then (1 : Word) else 0))) != 0) := by
-  simp only [whnfCoreCheapSafe, isStuckHead, decE_tag e he, decE_tag h hh]
-  obtain ⟨k, hk⟩ := tagW_fin e he
-  obtain ⟨j, hj⟩ := tagW_fin h hh
-  rw [hk, hj]; clear hk hj; revert k j; decide
-
-
-/-- The `key` word is a bit. -/
-theorem key01 (h e : Word) (hh : HW h) (he : HW e) :
-    ((640 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&& (1 - ((334 : Word) >>> tagW h &&& 1))) = 0 ∨
-    ((640 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&& (1 - ((334 : Word) >>> tagW h &&& 1))) = 1 := by
-  obtain ⟨k, hk⟩ := tagW_fin e he
-  obtain ⟨j, hj⟩ := tagW_fin h hh
-  rw [hk, hj]; clear hk hj; revert k j; decide
 
 /-- The `stb` word's meaning. -/
 theorem stb_iff (cheap kw st g rv e : Word) (hk : kw = 0 ∨ kw = 1) :
