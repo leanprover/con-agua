@@ -278,7 +278,7 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
     RefE (VerdictCtxU p) (classConstOkHeaderE p n m vis q) (cchT fe cv) a
       (fun v _ a' => CchPost dn vis fe m v.2 a') := by
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx

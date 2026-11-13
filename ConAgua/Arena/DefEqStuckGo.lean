@@ -70,7 +70,7 @@ variable (m0 : Mem) (c q tq tn lpe uslen : Word)
 
 /-- The tests of `struct_eta_cert_go`, all passed. -/
 def sgOK : Prop :=
-  erRd m0 (q + (CI.indCaps + Caps.eta)) ≠ 0 ∧ erRd m0 (tq + 5) = c ∧ tn = erRd m0 (tq + 4) ∧ uslen = erRd m0 (q + 3) ∧
+  erRd m0 (q + (CI.indCaps + Caps.eta)) ≠ 0 ∧ erRd m0 (tq + 5) = c ∧ tn = erRd m0 (tq + 4) ∧ uslen = erRd m0 (q + (CI.cv + CV.lpsLen)) ∧
     lpe ≠ 0
 
 end sgKarms
@@ -83,7 +83,7 @@ variable (p : Prog) (n : Nat) (m0 : Mem) (mode vis d b us c T q tq us2 ao an to 
 theorem secgE_yes (h : sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
     secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
       (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
-      (erRd m0 (q + 3)) lpe (.ok (r, m)) =
+      (erRd m0 (q + (CI.cv + CV.lpsLen))) lpe (.ok (r, m)) =
     secgE.k_struct_eta_cert_tail p (sectE p n m mode vis d b us T us2 ao an to tn
       (erRd m0 (tq + 4)) (erRd m0 (tq + 6))) := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := h
@@ -93,7 +93,7 @@ theorem secgE_yes (h : sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
 theorem secgE_no (h : ¬ sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
     secgE.k_ls_node p n mode vis d b us c T us2 ao an to tn (erRd m0 (q + (CI.indCaps + Caps.eta)))
       (erRd m0 (tq + 5)) (erRd m0 (tq + 4)) (erRd m0 (tq + 6))
-      (erRd m0 (q + 3)) lpe (.ok (r, m)) = .ok ([0], m) := by
+      (erRd m0 (q + (CI.cv + CV.lpsLen))) lpe (.ok (r, m)) = .ok ([0], m) := by
   unfold secgE.k_ls_node
   by_cases h1 : erRd m0 (q + (CI.indCaps + Caps.eta)) = 0
   · simp only [h1, ↓reduceIte]
@@ -101,7 +101,7 @@ theorem secgE_no (h : ¬ sgOK m0 c q tq tn lpe (r.tail.headD 0)) :
   · simp only [h1, h2, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h3 : tn ≠ erRd m0 (tq + 4)
   · simp only [h1, h2, h3, ne_eq, not_false_eq_true, ↓reduceIte]
-  by_cases h4 : r.tail.headD 0 ≠ erRd m0 (q + 3)
+  by_cases h4 : r.tail.headD 0 ≠ erRd m0 (q + (CI.cv + CV.lpsLen))
   · simp only [h1, h2, h3, h4, ne_eq, not_false_eq_true, ↓reduceIte]
   by_cases h5 : lpe = 0
   · simp only [h1, h2, h3, h4, h5, ↓reduceIte]
@@ -160,7 +160,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   unfold setGoK
   -- the tests
   have hlenT : targs.toList.length = tn.toNat := by simpa using ht.size
-  have hlpT : cvT.levelParams.length = (erRd s₀.mem (q + 3)).toNat :=
+  have hlpT : cvT.levelParams.length = (erRd s₀.mem (q + (CI.cv + CV.lpsLen))).toNat :=
     hslice?_lenR hIR.lp
   have hiff : (caps.eta = true ∧ tbl.ctor = decI c ∧
       targs.toList.length = tbl.numParams ∧

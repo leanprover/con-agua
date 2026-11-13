@@ -245,7 +245,7 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
@@ -439,7 +439,7 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (valueGuardsE p n m vis q v) (valueGuards fe cv (decI v)) a
       (fun w _ a' => CcvPost dn vis fe m w.2 a') := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := L.Ind.decCV_sliceR hqd
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
   have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   cases n with

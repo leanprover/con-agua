@@ -14,6 +14,7 @@ import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.WordOff
 public import ConAgua.Arena.IndPosSpec.NkFields
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -205,7 +206,7 @@ theorem nty_ref {p : Prog} (hl : NtyLook p) (hq : KnotStageProg p) (hF : FtProg 
   have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
-  have hFT := ft_ref hq hF henv k (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+  have hFT := ft_ref hq hF henv k (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF k _ vis _ _) (fun hG => hG.nv)
     id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_

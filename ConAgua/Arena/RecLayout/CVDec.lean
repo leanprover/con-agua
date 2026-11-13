@@ -100,6 +100,13 @@ theorem decCV_words {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h :
   obtain ⟨o, c, -, hc, hs⟩ := hlist?_words hl
   refine ⟨c, by rw [CV.lpsLen_toNat, ← Nat.add_assoc]; exact hc, by simpa using hslice?_lenR hs⟩
 
+/-- The level-parameter slice of a decoded value: its two words and the slice. -/
+theorem decCV_slice {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w1 w2, a (q + CV.lpsOff.toNat) = some w1 ∧ a (q + CV.lpsLen.toNat) = some w2 ∧
+      hslice? a w1.toNat w2.toNat = some cv.levelParams := by
+  obtain ⟨o, c, ho, hc, hs⟩ := hlist?_words (decCV_eq_some.mp h).2.1
+  exact ⟨o, c, ho, by rw [CV.lpsLen_toNat, ← Nat.add_assoc]; exact hc, hs⟩
+
 /-! ## The reducibility hint -/
 
 /-- **A decoded hint, word by word.** -/

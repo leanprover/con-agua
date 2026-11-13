@@ -163,8 +163,8 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   subst hol
   refine RefE.bind_right (by rw [viewLsLen_run, hvl]) ?_
   dsimp only
-  have hlen' : (erRd m (r₁.tail.headD 0 + 3)).toNat = cvT.levelParams.length := hlen.symm
-  by_cases hl : erRd m (r₁.tail.headD 0 + 3) ≠ l
+  have hlen' : (erRd m (r₁.tail.headD 0 + (CI.cv + CV.lpsLen))).toNat = cvT.levelParams.length := hlen.symm
+  by_cases hl : erRd m (r₁.tail.headD 0 + (CI.cv + CV.lpsLen)) ≠ l
   · rw [ic3E.k_ls_node.arm1 _ _ _ _ _ _ _ _ _ (by simpa [erRd] using hl)]
     have hb : (cvT.levelParams.length == l.toNat) = false := by
       rw [← hlen']; simpa using fun e => hl (UInt64.toNat_inj.mp e)

@@ -18,6 +18,7 @@ import Std.WP.Triple.SpecLemmas
 public import ConAgua.Arena.IndDecStab
 import all ConAgua.Arena.RecGen
 import ConAgua.Arena.FormerNZRef
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -89,22 +90,9 @@ theorem classFormerTy_spec (p : Prog) (h : CftProg p) (cR : CallM) (hcR : CallSp
 def FtRd (cR : CallM) (mode : ConLeche.CheckMode) (vis : Word) (fe : IFEnv) (Pre : Mem → AState → Prop) : Prop :=
   ∀ (k : Nat) (q : Word) (cv : IConstantVal) (caps : IIndCaps) (m m' : Mem) (a : AState) (r : List Word),
     Pre m a → StageR vis fe m a → decCI (erecP m) q.toNat = some (.indInfo cv caps) →
-    cR k "family_telescope" [vis, q + 1, q + 5] m = some (r, m') →
+    cR k "family_telescope" [vis, q + CI.cv, q + CI.indCaps] m = some (r, m') →
     ∃ x a', (familyTelescope mode fe cv caps).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       decW0E m' r x ∧ AFr m m' ∧ Pre m' a'
-
-/-- The levels' slice of a decoded constant value (any reader). -/
-theorem decCV_sliceR {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    ∃ w1 w2, a (q + 1) = some w1 ∧ a (q + 2) = some w2 ∧
-      hslice? a w1.toNat w2.toNat = some cv.levelParams := by
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-  obtain ⟨nm, -, lv, hlv, ty, -, rfl⟩ := h
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-  simp only [nat?, Option.map_eq_some_iff] at ho2 hl2
-  obtain ⟨w1, hw1, rfl⟩ := ho2
-  obtain ⟨w2, hw2, rfl⟩ := hl2
-  exact ⟨w1, w2, hw1, hw2, hsl⟩
 
 theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {N : Nat} {m m' : Mem} {o l mp : Word} {r : List Word} {M : TargetMajor} {cvTas : List IConstantVal}
@@ -192,14 +180,12 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     -- the levels
     have hcvP := (decCI_indInfo_iff.mp hci).2.1
     have hcv3 : decCV (erecP m3) ((r2.tail.headD 0).toNat + CI.cv.toNat) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvP
-    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
+    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv3
     have hq64 := erecP_lt64 hw2
-    have e1 : erRd m3 (r2.tail.headD 0 + 2) = w1 :=
-      L.Arena.erRd_of _ _ (by rw [show (r2.tail.headD 0 + 2).toNat = (r2.tail.headD 0).toNat + 1 + 1 by
-        rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
-    have e2 : erRd m3 (r2.tail.headD 0 + 3) = w2 :=
-      L.Arena.erRd_of _ _ (by rw [show (r2.tail.headD 0 + 3).toNat = (r2.tail.headD 0).toNat + 1 + 2 by
-        rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
+    have e1 : erRd m3 (r2.tail.headD 0 + (CI.cv + CV.lpsOff)) = w1 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsOff_le) (by rw [← Nat.add_assoc]; exact hw1)
+    have e2 : erRd m3 (r2.tail.headD 0 + (CI.cv + CV.lpsLen)) = w2 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsLen_le) (by rw [← Nat.add_assoc]; exact hw2)
     rw [e1, e2] at h
     obtain ⟨⟨r4, m4⟩, h4, h⟩ := of_K h rfl
     rw [cftK3_some] at h

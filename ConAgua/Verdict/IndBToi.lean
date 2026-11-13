@@ -15,6 +15,7 @@ import all ConAgua.Arena.RecCheck
 public import ConAgua.Verdict.PosFt
 import ConRon.Bridge.Inductives.Positivity
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -143,7 +144,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
   have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
-  have hFT := ft_ref hq hF henv n (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+  have hFT := ft_ref hq hF henv n (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF n _ vis _ _) (fun hG => hG.nv)
     id hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_

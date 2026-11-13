@@ -87,7 +87,7 @@ def cArmK2 (p : Prog) (n : Nat) (us q : Word) :
   | none => none
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
-    else t3W (callW p n "subst_pw_at" [erRd m (q + 2), erRd m (q + 3), us,
+    else t3W (callW p n "subst_pw_at" [erRd m (q + (CI.cv + CV.lpsOff)), erRd m (q + (CI.cv + CV.lpsLen)), us,
       r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m)
 
 /-- After `env_find`: the stored constant, the level count, then `sub` at its type. -/
@@ -97,9 +97,9 @@ def cArmK1 (p : Prog) (n : Nat) (us : Word) (sub : Word → Mem → Option (List
   | some (r, m) =>
     if r.headD 0 = 0 then some (0, 0, 0, m)
     else if lsNodeW m us = [] then none
-    else if (lsNodeW m us).tail.headD 0 ≠ erRd m (r.tail.headD 0 + 3) then
+    else if (lsNodeW m us).tail.headD 0 ≠ erRd m (r.tail.headD 0 + (CI.cv + CV.lpsLen)) then
       some (0, 0, 0, m)
-    else cArmK2 p n us (r.tail.headD 0) (sub (erRd m (r.tail.headD 0 + 4)) m)
+    else cArmK2 p n us (r.tail.headD 0) (sub (erRd m (r.tail.headD 0 + (CI.cv + CV.type))) m)
 
 theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St)
     (vis f k cn us : Word) :
@@ -112,7 +112,7 @@ theorem headTypeConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "head_type_res",
       callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, erRd, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [cArmK1, cArmK2, t3W, erRd, rec_unfold, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
@@ -127,7 +127,7 @@ theorem headProofConst_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : S
   vcgen [evalE_tld, tld, ld64_rdT_spec, evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec,
       callW_spec p n "env_find", lsNode_spec p (hp.get "ls_node") n, callW_spec p n "type_sort_pw",
       callW_spec p n "subst_pw_at"] <;>
-  simp_all [cArmK1, cArmK2, t3W, erRd, LocEq, BinOp.eval, St.setLocs_cons,
+  simp_all [cArmK1, cArmK2, t3W, erRd, rec_unfold, LocEq, BinOp.eval, St.setLocs_cons,
     Cmp.eval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 

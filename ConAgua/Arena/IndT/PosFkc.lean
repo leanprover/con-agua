@@ -22,6 +22,7 @@ import ConLeche.Verify.BridgeDecl
 import ConLeche.Verify.InferLemmas
 import all ConAgua.Arena.IndPos2
 import ConAgua.Arena.BasisBlockC
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -313,7 +314,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
   have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
-  have hFT := ft_ref hq hP.ft henv k (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+  have hFT := ft_ref hq hP.ft henv k (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
     (by rw [e5]; exact hcaps) hcvP hws
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hP.ft k _ vis _ _) hGnv
     (fun hG => ⟨hGnv hG, hGw hG⟩) hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_

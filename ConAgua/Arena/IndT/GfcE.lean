@@ -21,6 +21,7 @@ public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConRon.Bridge.Inductives.RecCheck
 import ConAgua.Arena.RecGenSpec.Set64
 import ConAgua.Arena.IndPosSpec.EnvFindWHit
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -194,7 +195,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
       show decCV (erA (truncM m)) _ = _
       rw [truncM_erA, e1]; exact hcvq
-    have hFT := ft_ref hq hF henv N (by omega) (cvq := q + 1) (capsq := q + 5) hC hA hcvB
+    have hFT := ft_ref hq hF henv N (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
       (by rw [e5]; exact hcaps) hcvP hws
     refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hF N _ vis _ _) (fun hG => hG.nv)
       id hFT fun r3 s3 ty a2 _ _ hr3 hP3 => ?_
@@ -204,14 +205,12 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     generalize s3.mem = m3 at hS3 hg3 hP3 ⊢
     -- the levels
     have hcv3 : decCV (erecP m3) (q.toNat + CI.cv.toNat) = some cv := ArrExt.decCV (IWGrow.ext hg3) hcvq
-    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_sliceR hcv3
-    have e1' : erRd m3 (q + 2) = w1 :=
-      L.Arena.erRd_of _ _ (by rw [show (q + 2).toNat = q.toNat + 1 + 1 by
-        rw [UInt64.toNat_add, show (2 : Word).toNat = 2 from rfl]; omega]; exact hw1)
-    have e2' : erRd m3 (q + 3) = w2 :=
-      L.Arena.erRd_of _ _ (by rw [show (q + 3).toNat = q.toNat + 1 + 2 by
-        rw [UInt64.toNat_add, show (3 : Word).toNat = 3 from rfl]; omega]; exact hw2)
-    change RefE _ (cftE.k_er_to_iw p N mp (r3.headD 0) (liftE (callW p N "er_to_iw" [erRd m3 (q + 2), erRd m3 (q + 3)] m3))) _ _ _
+    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv3
+    have e1' : erRd m3 (q + (CI.cv + CV.lpsOff)) = w1 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsOff_le) (by rw [← Nat.add_assoc]; exact hw1)
+    have e2' : erRd m3 (q + (CI.cv + CV.lpsLen)) = w2 :=
+      (erRdOK m3).at _ (CI.cv_add_toNat CV.lpsLen_le) (by rw [← Nat.add_assoc]; exact hw2)
+    change RefE _ (cftE.k_er_to_iw p N mp (r3.headD 0) (liftE (callW p N "er_to_iw" [erRd m3 (q + (CI.cv + CV.lpsOff)), erRd m3 (q + (CI.cv + CV.lpsLen))] m3))) _ _ _
     rw [e1', e2']
     refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
     obtain ⟨s4, hs4, -, h4W⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
