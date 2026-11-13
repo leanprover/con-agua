@@ -141,9 +141,9 @@ theorem cdq_ref {p : Prog} (hQ : QuotArmProg p) {dn : NIdx → Option ConLeche.N
   refine RefE.onlySim (fun _ => checkDeclQuotE.k_erec_ci.none ..) (fun _ _ h => h) fun r1 m1 h1 => ?_
   rw [checkDeclQuotE.k_erec_ci.arm1]
   obtain ⟨hS1, hg1, -, hcv1⟩ := erecCiW_okAT h1 hS hD hi hcvAt
-  have hq1 : (r1.headD 0 + 1).toNat = (r1.headD 0).toNat + 1 := by
+  have hq1 : (r1.headD 0 + CI.cv).toNat = (r1.headD 0).toNat + CI.cv.toNat := by
     obtain ⟨w, hw, -⟩ := decCV_name hcv1
-    exact L.toNat_add_ofNat_of_lt _ 1 (L.Arena.erecP_lt64 hw)
+    exact off_add_toNat rfl (L.Arena.erecP_lt64 hw)
   exact L.Arena.RefE.mono (cqr_ref hQ.cqr hQ.leaf hQs n k hS1 hok hr (by rw [hq1]; exact hcv1) hden)
     fun v fe' a' h => ⟨h.stage, hg1.trans h.grow, h.memos⟩
 
@@ -247,7 +247,7 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   rw [ep2] at eq2
   simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt) hcvd hCr1 (allow := 0)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' hcvd hCr1 (allow := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclAxiomE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_
@@ -443,7 +443,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
     off_add_toNat rfl (by have := erecP_lt64 hwt; omega)
   have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1'
     hcvd hCr1 (allow := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclThmE.k_check_constant_val.none ..) id hcc

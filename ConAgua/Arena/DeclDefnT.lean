@@ -145,7 +145,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     (erRdOK m1).at _ CI.cv_name_toNat hwn
   rw [ewn]
   -- the constant check, a certified operation's name allowed
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' (by rw [hq1]; exact erecP_lt64 hwt)
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1'
     hcvd hCr1 (allow := 1)
   rw [show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩)

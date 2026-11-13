@@ -257,7 +257,7 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q allow : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal} (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
-    (hqb : q.toNat + 3 < 2 ^ 64) (hden : Frontend.denoteCV a.store cv = some c)
+    (hden : Frontend.denoteCV a.store cv = some c)
     (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by

@@ -221,9 +221,8 @@ theorem cch_ref {p : Prog} (hP : CchProg p) (hApd : ApdF p) (hCrf : CrfF p)
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hwt)
+  have et : rdW (m.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wt := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m).at _ rfl hwt
   cases n with
   | zero => rw [classConstOkHeaderE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
@@ -380,9 +379,8 @@ theorem cco_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {q : Word} 
     fun ⟨r1, m1⟩ _ a1 hrun ⟨hS1, hg1, hA1⟩ => ?_
   dsimp only [classConstOkE.k_class_const_ok_header]
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hq').2.2
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have et : rdW (m1.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hg1.ext _ _ hwt)
+  have et : rdW (m1.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wt := by
+    rw [erRd_congr rfl rfl]; exact (erRdOK m1).at _ rfl (hg1.ext _ _ hwt)
   rw [et, hty]
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h2 => hG.core.inferTypeCore n (by omega) hS1 0 wt hwtl _ h2)
     (RSim.coreAbs hq.closed (by decide) (hA1 hA) (inferT_rsim hq n (by omega) hS1 0 wt hwtl))
