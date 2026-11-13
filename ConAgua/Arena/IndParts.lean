@@ -269,7 +269,6 @@ def blockShapeFormers : FunDecl := lfn (p) locals (q, u) {
 /-- `block_shape_declared(p)`: `p.members.map (·.declared)`, the members' formers as declared, a
 fresh `IW` slice of `EREC` pointers. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:185-201 ConRon.Arena.checkBlockInds
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.checkBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockInds]
 def blockShapeDeclared : FunDecl := lfn (p) locals (q, u) {
   q := call iw_alloc(IW.u64[p + 1]);
@@ -341,7 +340,6 @@ def blockSplitRecs : FunDecl := lfn (off, l) locals (ci, ok, ro, rl, rc, o2, l2)
 /-- `block_split_ctors(off, l)`: `blockSplitCtors`: the leading `ctorInfo` (kind `4`) elements, each
 folded into `[cv, nP, nF]`, then `block_split_recs` on the rest (recursive as the twin). -/
 -- con-ron: ConRon/Arena/Inductives/BlockShape.lean:198-210 ConRon.Arena.blockSplitCtors
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.blockSplitCtors` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.blockSplitCtors]
 def blockSplitCtors : FunDecl := lfn (off, l) locals (ci, ok, co, cl, ro, rl, c, o2, l2) {
   if l == 0 { return (1, 0, 0, 0, 0) };

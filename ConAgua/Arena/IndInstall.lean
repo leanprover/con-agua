@@ -87,7 +87,7 @@ def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u, ez) {
 (member word `4`), ends in a sort that is never zero: `former_z`'s datum is `never` (its first word
 `0`); `0` past the members (the default member's type ends in no sort). The level heap's top
 `CTL[192]`, which `former_z` leaves raised, is put back. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-56 ConRon.Arena.memberNeverZero
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-55 ConRon.Arena.memberNeverZero
 @[no_expose, l_impl ConRon.Arena.memberNeverZero]
 def memberNeverZero : FunDecl := lfn (p, mi) locals (ms, t0, w, o, c) {
   if IW.u64[p + 1] <= mi { return 0 };
@@ -302,7 +302,6 @@ consed, in block order, each with its capability record at `is_rec` (member `i` 
 recursion as the twin's; the `.indInfo` record (kind `3`, the constant's four words, the
 capability record's 15) is `ind_info_rec`'s. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, rec, v1, v2) {
   if cvL == 0 { return vis };
@@ -317,7 +316,6 @@ def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, r
 words at `cv`, the capability record's 15 `IW` words at `caps` — written right after its
 allocation, five words at a time. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
   q := call erec_alloc(20);
@@ -333,7 +331,6 @@ def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
 
 /-- `er_put5(d, a, b, c, e, f)`: `EREC[d‥d+5) := [a, b, c, e, f]`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.consBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
   ez := call erec_put(d, a); ez := call erec_put(d + 1, b); ez := call erec_put(d + 2, c); ez := call erec_put(d + 3, e);
@@ -344,7 +341,6 @@ def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals (ez) {
 /-- `check_block_inds(vis, p, is_rec)`: **stage 1** — the k type formers, checked, agreed and
 consed as declared (`block_shape_declared`); returns `(vis', p1)`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:185-201 ConRon.Arena.checkBlockInds
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.checkBlockInds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockInds]
 def checkBlockInds : FunDecl := lfn (vis, p, isRec) locals
     (moff, mlen, ms0, nP, cvTa0, s0, cvsO, cvsL, u, p1, dO, dL, fe1) {
@@ -638,7 +634,6 @@ generated family's records pushed in place (a flush entering), the stream's recu
 the pushes undone in reverse order (`gen_rec_check_pop_all`) and the flush leaving. Returns the
 constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-145 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
     (u, io, il, feG, po, pl, fe3) {
@@ -658,7 +653,6 @@ recursors, the stream's K flags and recursors against them (`check_block_tail_st
 checks of the block's projection tables `Q` (an `IW` slice of table records); returns the
 constructors' environment (`q` a `BlockPass` pointer). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-145 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q, tO, tL) locals
     (env1, p, u, mcO, mcL, fe2, nested, fe2b, outO, outL, fe3) {

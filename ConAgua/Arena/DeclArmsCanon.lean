@@ -216,7 +216,6 @@ values agree. -/
 /-- `ci_to_cv(p)`: `IConstantInfo.toConstantVal` → the constant value pointer: the inline one at
 `p + 1` (every constant record has it there). -/
 -- con-ron: ConRon/Arena/Env.lean:168-172 ConRon.Arena.IConstantInfo.toConstantVal
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.toConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.toConstantVal]
 def ciToCv : FunDecl := lfn (p) locals () {
   return p + 1
@@ -407,7 +406,6 @@ def canonRulesEq : FunDecl :=
 
 /-- `ci_canon_defn(p, p')`: two definitions, hints first, then the common data, then the values. -/
 -- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def ciCanonDefn : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, a, b) {
   e := call hint_eq(p + 6, q + 6);
   if e == 0 { return 0 };
@@ -423,7 +421,6 @@ def canonRulesEq : FunDecl :=
 /-- `ci_canon_rec(p, p')`: two recursors, the two counts and `isK` first, then the common data,
 then the rules. -/
 -- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def ciCanonRec : FunDecl := lfn (p, q) locals (e, co, cl, po, pl, qo, ql, o1, l1, o2, l2) {
   if EREC⦃p + 5⦄ != EREC⦃q + 5⦄ || EREC⦃p + 6⦄ != EREC⦃q + 6⦄ { return 0 };
   e := call b_eq(EREC⦃p + 9⦄, EREC⦃q + 9⦄);
@@ -442,7 +439,6 @@ then the rules. -/
 /-- `ci_canon_eq(p, p')`: `IConstantInfo.canonEq`, kind by kind (a definition's hints first, a
 recursor's two counts first; an inductive's capabilities are not compared). -/
 -- con-ron: ConRon/Arena/Canon.lean:196-221 ConRon.Arena.IConstantInfo.canonEq
--- con-ron: CHANGED since 4ca283d1 — `ConRon.Arena.IConstantInfo.canonEq` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IConstantInfo.canonEq]
 def ciCanonEq : FunDecl := lfn (p, q) locals (k, e) {
   k := EREC⦃p⦄;
