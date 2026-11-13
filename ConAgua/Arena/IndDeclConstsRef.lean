@@ -24,6 +24,7 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndT.BlockCS
 import ConAgua.Arena.ExceptOpt
+import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -443,10 +444,10 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   · simp [daW] at h
   rw [daW.arm1] at h
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv
-  have hqb : q.toNat + 1 < 2 ^ 64 := L.Arena.erecP_lt64 hwn
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have ex : ∀ {m₁ : Mem}, erecP m₁ (q.toNat + 1) = some wn → erRd m₁ (q + 1) = wn :=
-    fun h => (erRd_of_erecP (by rw [hq1]; exact h)).1
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (L.Arena.erecP_lt64 hwn)
+  have ex : ∀ {m₁ : Mem}, erecP m₁ (q.toNat + CI.cv.toNat) = some wn →
+      erRd m₁ (q + (CI.cv + CV.name)) = wn :=
+    fun h => (erRdOK _).at _ CI.cv_name_toNat h
   -- `Quot.sound`'s pin
   obtain ⟨⟨r1, m1⟩, h1, h⟩ := of_K h (by simp [daW.k_pin_at.none])
   rw [daW.k_pin_at.eq_2] at h
@@ -468,7 +469,7 @@ theorem daW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
     obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [daW.k_sl_new1.none])
     rw [daW.k_sl_new1.arm1] at h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe .sound (q + 1) cv n m a r2 m2
+    obtain ⟨ci, a2, hrun2, hT2, hg2, hd2⟩ := hP.basis.quotAt dn vis fe .sound (q + CI.cv) cv n m a r2 m2
       ⟨h0.stageT, h0.chk.state, h0.chk.readOK, hnd, by rw [hq1]; exact hcv, c, hcvd⟩ h2
     have hS2 := hT2.stage
     obtain ⟨hr2, -⟩ := ConRon.Bridge.quotAt_run h0.chk.state h0.chk.readOK hcvd hrun2

@@ -86,6 +86,8 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
       decCI (erecP m6) (r1.headD 0).toNat = some (.axiomInfo cv) := by
   obtain ⟨nw, hw0, -, -⟩ := decCV_name hqd
   obtain ⟨t, hw3, -, -⟩ := (decCV_words hqd).2.2
+  -- a whole-record writer (the `axiomInfo` record): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at hw3
   have hA := callW_erecAlloc hp.alloc h1
   generalize r1.headD 0 = A at hA h2 h3 h4 h5 h6 ⊢
   obtain ⟨hT1, hg1, hoff, htop, h41⟩ := erAlloc_stageT hA hS
@@ -159,11 +161,15 @@ theorem ccl_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
   have r4 := hrd 4 (by simp)
   simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4
   have hcv6 : decCV (erecP (wrER m1 A [0, nw, w1, w2, t])) (A.toNat + 1) = some cv :=
-    L.Arena.decCV_move hg6.ext (by rw [r1, hw0]) (by rw [show A.toNat + 1 + 1 = A.toNat + 2 by omega, r2, hw1])
-      (by rw [show A.toNat + 1 + 2 = A.toNat + 3 by omega, r3, hw2])
-      (by rw [show A.toNat + 1 + 3 = A.toNat + 4 by omega, r4, hw3]) hqd
+    L.Arena.decCV_move hg6.ext (by rw [r1, hw0])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 1 = A.toNat + 2 by omega, r2, hw1])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 2 = A.toNat + 3 by omega, r3, hw2])
+      (by simp only [rec_unfold, UInt64.reduceToNat]
+          rw [show A.toNat + 1 + 3 = A.toNat + 4 by omega, r4, hw3]) hqd
   have hk0 : nat? (erecP (wrER m1 A [0, nw, w1, w2, t])) A.toNat = some 0 := by simp [nat?, r0]
-  simp [decCI, hk0, hcv6]
+  simp [decCI, rec_unfold, UInt64.reduceToNat, hk0, hcv6]
 
 /-- **`class_const_ok_lit(q)` refines `litShapeOk (.axiomInfo cv)`** under `StageT` (`ccl_rec`, then
 `CcvSims.lit` at the fresh record). -/
@@ -183,31 +189,38 @@ theorem ccl_sim {p : Prog} (hp : RecProg p) (hl : p.lookup "class_const_ok_lit" 
   | zero => rw [cclLitW.eq_1] at h0; cases h0
   | succ n =>
   rw [cclLitW.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h1 : callW p n "erec_alloc" [5] m with _ | ⟨r1, m1⟩ <;> rw [h1] at h0
   · simp [cclLitW.k_erec_alloc] at h0
   rw [cclLitW.k_erec_alloc.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h2 : callW p n "erec_put" [r1.headD 0, 0] m1 with _ | ⟨r2, m2⟩ <;> rw [h2] at h0
   · simp [cclLitW.k_erec_put] at h0
   rw [cclLitW.k_erec_put.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h3 : callW p n "erec_put" [r1.headD 0 + 1,
       rdW (m2.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775)] m2 with _ | ⟨r3, m3⟩ <;> rw [h3] at h0
   · simp [cclLitW.k_erec_put_2] at h0
   rw [cclLitW.k_erec_put_2.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h4 : callW p n "erec_put" [r1.headD 0 + 2,
       rdW (m3.arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775)] m3 with _ | ⟨r4, m4⟩ <;>
     rw [h4] at h0
   · simp [cclLitW.k_erec_put_3] at h0
   rw [cclLitW.k_erec_put_3.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h5 : callW p n "erec_put" [r1.headD 0 + 3,
       rdW (m4.arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775)] m4 with _ | ⟨r5, m5⟩ <;>
     rw [h5] at h0
   · simp [cclLitW.k_erec_put_4] at h0
   rw [cclLitW.k_erec_put_4.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h6 : callW p n "erec_put" [r1.headD 0 + 4,
       rdW (m5.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775)] m5 with _ | ⟨r6, m6⟩ <;>
     rw [h6] at h0
   · simp [cclLitW.k_erec_put_5] at h0
   rw [cclLitW.k_erec_put_5.arm1] at h0
+  try simp only [rec_unfold, UInt64.reduceAdd] at h0
   rcases h7 : callW p n "lit_shape_ok" [r1.headD 0] m6 with _ | ⟨r7, m7⟩ <;> rw [h7] at h0
   · simp [cclLitW.k_lit_shape_ok] at h0
   obtain ⟨hT6, hg6, hf6, hci6⟩ := ccl_rec hp hS hqd hqb h1 h2 h3 h4 h5 h6
