@@ -41,9 +41,6 @@ namespace L.CI
 /-- The constant value (`IConstantVal`); its first word, the name, is the index key. -/
 @[reducible] def cv : Word := 1
 
-/-- The first word after the constant value: the kinds' own fields start here. -/
-theorem cv_end : (cv + CV.size).toNat = 5 := by simp [cv, CV.size]
-
 /-! ## `axiomInfo`, `thmInfo`: the value only -/
 
 /-- The size of an axiom's record. -/
