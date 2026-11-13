@@ -3,6 +3,7 @@ module
 import ConAgua.Rom.CIReadRefCaps
 import ConAgua.L.WordOff
 import ConAgua.Rom.CIReadRefNames
+import ConAgua.Arena.RecLayout.RuleDec
 public import ConAgua.Rom.CIReadRefBase
 public import ConAgua.Rom.CIReadSpec
 import ConAgua.Rom.ReadScr
@@ -45,23 +46,24 @@ theorem holds_mapM_range {α : Type} [Inhabited α] {SE SI : Nat → Prop} {g : 
 
 /-- `decRule` of a plain rule from its words. -/
 theorem holds_decRule {m : Mem} {q : Nat} (irl : IRecRule) (wc wnf wf wrhs : Word)
-    (h0 : erA m q = some wc) (h1 : erA m (q + 1) = some wnf)
-    (h3 : erA m (q + 3) = some wf) (h8 : erA m (q + 8) = some wrhs)
+    (h0 : erA m q = some wc) (h1 : erA m (q + Rule.nfields.toNat) = some wnf)
+    (h3 : erA m (q + Rule.fire.toNat) = some wf) (h8 : erA m (q + Rule.rhs.toNat) = some wrhs)
     (hc : wc.toNat < 2 ^ 32) (hr : wrhs.toNat < 2 ^ 32) (hf : wf.toNat = 0)
     (ec : irl.ctor = decI wc) (enf : irl.nfields = wnf.toNat)
     (efi : irl.fire = .plain) (er : irl.rhs = decI wrhs) :
-    Holds (fun i => q ≤ i ∧ i < q + 11) (fun _ => False) (fun m => decRule (erA m) q) m irl := by
+    Holds (fun i => q ≤ i ∧ i < q + Rule.size.toNat) (fun _ => False) (fun m => decRule (erA m) q) m irl := by
   intro m' hE _
-  have g : ∀ i, i < 11 → erA m' (q + i) = erA m (q + i) := fun i hi => hE _ ⟨by omega, by omega⟩
-  have e0 := (g 0 (by omega)).trans h0
-  have e1 := (g 1 (by omega)).trans h1
-  have e3 := (g 3 (by omega)).trans h3
-  have e8 := (g 8 (by omega)).trans h8
-  simp only [Nat.add_zero] at e0
+  have g : ∀ i, i < Rule.size.toNat → erA m' (q + i) = erA m (q + i) :=
+    fun i hi => hE _ ⟨by omega, by omega⟩
+  have e0 : erA m' q = some wc := (g _ Rule.ctor_lt).trans h0
+  have e1 := (g _ Rule.nfields_lt).trans h1
+  have e3 := (g _ Rule.fire_lt).trans h3
+  have e8 := (g _ Rule.rhs_lt).trans h8
   have : irl = ⟨decI wc, wnf.toNat, .plain, decI wrhs⟩ := by
     cases irl; simp_all
   rw [this]
-  simp [decRule, nat?_of e3, hf, hd?, e0, hc, nat?_of e1, e8, hr]
+  exact decRule_of (by simp [hd?, e0, hc]) (by simp [nat?_of e1]) (by simp [hd?, e8, hr])
+    (show nat? _ _ = some 0 by simp [nat?_of e3, hf])
 
 /-- A plain rule that fits its encoding. -/
 def ruleFits (rl : ConLeche.RecRule) : Bool :=
@@ -87,25 +89,28 @@ theorem encRule_eqL (seen : List ConLeche.Expr) (rl : ConLeche.RecRule) (lvls : 
 /-- `decRule` of a rule firing at levels, from its words and the level slice. -/
 theorem holds_decRuleL {m : Mem} {q : Nat} {SL : Nat → Prop} (irl : IRecRule) (wc wnf wf wrhs : Word)
     (hls : List LIdx)
-    (h0 : erA m q = some wc) (h1 : erA m (q + 1) = some wnf)
-    (h3 : erA m (q + 3) = some wf) (h8 : erA m (q + 8) = some wrhs)
-    (hl : Holds SL (fun _ => False) (fun m => (hlist? (erA m) (q + 4) : Option (List LIdx))) m hls)
+    (h0 : erA m q = some wc) (h1 : erA m (q + Rule.nfields.toNat) = some wnf)
+    (h3 : erA m (q + Rule.fire.toNat) = some wf) (h8 : erA m (q + Rule.rhs.toNat) = some wrhs)
+    (hl : Holds SL (fun _ => False)
+      (fun m => (hlist? (erA m) (q + Rule.lvlsOff.toNat) : Option (List LIdx))) m hls)
     (hc : wc.toNat < 2 ^ 32) (hr : wrhs.toNat < 2 ^ 32) (hf : wf.toNat = 2)
     (ec : irl.ctor = decI wc) (enf : irl.nfields = wnf.toNat)
     (efi : irl.fire = .levels hls) (er : irl.rhs = decI wrhs) :
-    Holds (fun i => (q ≤ i ∧ i < q + 11) ∨ SL i) (fun _ => False) (fun m => decRule (erA m) q) m irl := by
+    Holds (fun i => (q ≤ i ∧ i < q + Rule.size.toNat) ∨ SL i) (fun _ => False)
+      (fun m => decRule (erA m) q) m irl := by
   intro m' hE hI
-  have g : ∀ i, i < 11 → erA m' (q + i) = erA m (q + i) := fun i hi => hE _ (.inl ⟨by omega, by omega⟩)
-  have e0 := (g 0 (by omega)).trans h0
-  have e1 := (g 1 (by omega)).trans h1
-  have e3 := (g 3 (by omega)).trans h3
-  have e8 := (g 8 (by omega)).trans h8
+  have g : ∀ i, i < Rule.size.toNat → erA m' (q + i) = erA m (q + i) :=
+    fun i hi => hE _ (.inl ⟨by omega, by omega⟩)
+  have e0 : erA m' q = some wc := (g _ Rule.ctor_lt).trans h0
+  have e1 := (g _ Rule.nfields_lt).trans h1
+  have e3 := (g _ Rule.fire_lt).trans h3
+  have e8 := (g _ Rule.rhs_lt).trans h8
   have eL := hl m' (fun i hi => hE i (.inr hi)) hI
-  simp only [Nat.add_zero] at e0
   have : irl = ⟨decI wc, wnf.toNat, .levels hls, decI wrhs⟩ := by
     cases irl; simp_all
   rw [this]
-  simp [decRule, nat?_of e3, hf, hd?, e0, hc, nat?_of e1, e8, hr, eL]
+  exact decRule_of (by simp [hd?, e0, hc]) (by simp [nat?_of e1]) (by simp [hd?, e8, hr])
+    (show nat? _ _ = some 2 ∧ _ from ⟨by simp [nat?_of e3, hf], eL⟩)
 
 section rule
 variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
@@ -155,10 +160,10 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   rw [e1, e2] at hw
   replace hw := putE_some hL (putE_some hL (putE_some hL (putE_some hL (putE_some hL hw))))
   change (if (0 : Word) = 1 ∨ (0 : Word) = 2 then _ else
-    ruleW.j1 p k (r1.tail.headD 0 + 16) rr 0 (putERs m1 [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields),
-      (rr + 3, 0), (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)])) = some (r, m') at hw
-  generalize hws : [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields), ((rr + 3 : Word), (0 : Word)),
-    (rr + 4, 0), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)] = ws at hw
+    ruleW.j1 p k (r1.tail.headD 0 + 16) rr 0 (putERs m1 [(rr, r1.headD 0), (rr + Rule.nfields, UInt64.ofNat rl.nfields),
+      (rr + Rule.fire, 0), (rr + Rule.lvlsOff, 0), (rr + Rule.lvlsLen, 0), (rr + Rule.pinsOff, 0), (rr + Rule.pinsLen, 0)])) = some (r, m') at hw
+  generalize hws : [(rr, r1.headD 0), (rr + Rule.nfields, UInt64.ofNat rl.nfields), ((rr + Rule.fire : Word), (0 : Word)),
+    (rr + Rule.lvlsOff, 0), (rr + Rule.lvlsLen, 0), (rr + Rule.pinsOff, 0), (rr + Rule.pinsLen, 0)] = ws at hw
   have hwsB : ∀ jw ∈ ws, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT m1 := by
     intro jw hjw; rw [← hws] at hjw
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
@@ -189,9 +194,9 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨hI5, hM5, hs5, ht5, hIW5, hg5, hn5⟩ :=
-    putER_facts hI4 hM4 (rr + 8) (r4.headD 0) (by off_omega) (by off_omega)
+    putER_facts hI4 hM4 (rr + Rule.rhs) (r4.headD 0) (by off_omega) (by off_omega)
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = rr.toNat + i → i < 8 →
-      erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + i) = some w := by
+      erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + i) = some w := by
     intro j w i hjw hj h8
     rw [hn5 _ (by off_omega) (by off_omega), hE4, ← hj]
     exact hget j w hjw
@@ -213,10 +218,10 @@ theorem rule_relP {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
         rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> off_omega) (by omega) hws41, hE1]
   · have hW0 := hword rr (r1.headD 0) 0 (by rw [← hws]; simp) (by simp) (by decide)
-    have hW1 := hword (rr + 1) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
-    have hW3 := hword (rr + 3) 0 3 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
+    have hW1 := hword (rr + Rule.nfields) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
+    have hW3 := hword (rr + Rule.fire) 0 3 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
     simp only [Nat.add_zero] at hW0
-    have hW8 : erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + 8) = some (r4.headD 0) := by
+    have hW8 : erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + 8) = some (r4.headD 0) := by
       rw [← off_toNat (by omega)]; exact hg5
     exact (holds_decRule _ _ _ _ _ hW0 hW1 hW3 hW8 hlt1 hlt4 rfl rfl (L.toNat_ofNat_of_lt hnf).symm rfl
       rfl).mono (fun i hi => .inl hi) (fun _ h => h)
@@ -272,10 +277,10 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   replace hw := putE_some hL (putE_some hL (putE_some hL (putE_some hL (putE_some hL hw))))
   change (if UInt64.ofNat 2 = 1 ∨ UInt64.ofNat 2 = 2 then
     ntBW (callW p k "rom_u64_c" [r1.tail.headD 0 + 16] (putERs m1 [(rr, r1.headD 0),
-      (rr + 1, UInt64.ofNat rl.nfields), (rr + 3, UInt64.ofNat 2), (rr + 4, 0), (rr + 5, 0), (rr + 6, 0),
-      (rr + 7, 0)])) _ else _) = some (r, m') at hw
-  generalize hws : [(rr, r1.headD 0), (rr + 1, UInt64.ofNat rl.nfields), ((rr + 3 : Word), UInt64.ofNat 2),
-    (rr + 4, (0 : Word)), (rr + 5, 0), (rr + 6, 0), (rr + 7, 0)] = ws at hw
+      (rr + Rule.nfields, UInt64.ofNat rl.nfields), (rr + Rule.fire, UInt64.ofNat 2), (rr + Rule.lvlsOff, 0), (rr + Rule.lvlsLen, 0), (rr + Rule.pinsOff, 0),
+      (rr + Rule.pinsLen, 0)])) _ else _) = some (r, m') at hw
+  generalize hws : [(rr, r1.headD 0), (rr + Rule.nfields, UInt64.ofNat rl.nfields), ((rr + Rule.fire : Word), UInt64.ofNat 2),
+    (rr + Rule.lvlsOff, (0 : Word)), (rr + Rule.lvlsLen, 0), (rr + Rule.pinsOff, 0), (rr + Rule.pinsLen, 0)] = ws at hw
   have hwsB : ∀ jw ∈ ws, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT m1 := by
     intro jw hjw; rw [← hws] at hjw
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
@@ -308,8 +313,8 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   have hsa : stkTop ma = stkTop (putERs m1 ws) := hfa.ctl 131 (by decide)
   replace hw := putE_some hL (putE_some hL hw)
   change ntBW (callW p k "rci_lvls_to" [r1.tail.headD 0 + 16 + 8, ra.headD 0, UInt64.ofNat lvls.length]
-    (putERs ma [(rr + 4, ra.headD 0), (rr + 5, UInt64.ofNat lvls.length)])) _ = _ at hw
-  generalize hws2 : [(rr + 4, ra.headD 0), (rr + 5, UInt64.ofNat lvls.length)] = ws2 at hw
+    (putERs ma [(rr + Rule.lvlsOff, ra.headD 0), (rr + Rule.lvlsLen, UInt64.ofNat lvls.length)])) _ = _ at hw
+  generalize hws2 : [(rr + Rule.lvlsOff, ra.headD 0), (rr + Rule.lvlsLen, UInt64.ofNat lvls.length)] = ws2 at hw
   have hwsB2 : ∀ jw ∈ ws2, erT m₀ ≤ jw.1.toNat ∧ jw.1.toNat < erT ma := by
     intro jw hjw; rw [← hws2] at hjw
     simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
@@ -351,10 +356,10 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   obtain ⟨hI5, hM5, hs5, ht5, hIW5, hg5, hn5⟩ :=
-    putER_facts hI4 hM4 (rr + 8) (r4.headD 0) (by off_omega) (by off_omega)
+    putER_facts hI4 hM4 (rr + Rule.rhs) (r4.headD 0) (by off_omega) (by off_omega)
   -- below the slice, the record's words through the slice and the rhs
   have hthrough : ∀ i, i < erT m → i ≠ rr.toNat + 8 →
-      erA (erecPutMem m4 (rr + 8) (r4.headD 0)) i = erA (putERs ma ws2) i := fun i hi h8 => by
+      erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) i = erA (putERs ma ws2) i := fun i hi h8 => by
     rw [hn5 i (by off_omega) (by omega), hE4, hek3.2 i (by omega) (by omega)]
   have hne2 : ∀ i, i < erT m → i ≠ rr.toNat + 4 → i ≠ rr.toNat + 5 →
       erA (putERs ma ws2) i = erA (putERs m1 ws) i := fun i hi h4' h5' => by
@@ -363,7 +368,7 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
       rcases hjw with rfl | rfl <;> off_omega) (by omega) hws41', hka i (by omega)]
   have hword : ∀ (j w : Word) (i : Nat), (j, w) ∈ ws → j.toNat = rr.toNat + i → i < 4 →
-      erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + i) = some w := by
+      erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + i) = some w := by
     intro j w i hjw hj h8
     rw [hthrough _ (by omega) (by omega), hne2 _ (by omega) (by omega) (by omega), ← hj]
     exact hget j w hjw
@@ -385,19 +390,19 @@ theorem rule_relL {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.E
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
         rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> off_omega) (by omega) hws41, hE1]
   · have hW0 := hword rr (r1.headD 0) 0 (by rw [← hws]; simp) (by simp) (by decide)
-    have hW1 := hword (rr + 1) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
-    have hW3 := hword (rr + 3) (UInt64.ofNat 2) 3 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
+    have hW1 := hword (rr + Rule.nfields) (UInt64.ofNat rl.nfields) 1 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
+    have hW3 := hword (rr + Rule.fire) (UInt64.ofNat 2) 3 (by rw [← hws]; simp) (off_toNat (by omega)) (by decide)
     simp only [Nat.add_zero] at hW0
-    have hW8 : erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + 8) = some (r4.headD 0) := by
+    have hW8 : erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + 8) = some (r4.headD 0) := by
       rw [← off_toNat (by omega)]; exact hg5
-    have w4 := hget2 (rr + 4) (ra.headD 0) (by rw [← hws2]; simp)
-    have w5 := hget2 (rr + 5) (UInt64.ofNat lvls.length) (by rw [← hws2]; simp)
+    have w4 := hget2 (rr + Rule.lvlsOff) (ra.headD 0) (by rw [← hws2]; simp)
+    have w5 := hget2 (rr + Rule.lvlsLen) (UInt64.ofNat lvls.length) (by rw [← hws2]; simp)
     rw [off_toNat (by omega)] at w4 w5
-    have hW4 : erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + 4) = some (ra.headD 0) := by
+    have hW4 : erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + 4) = some (ra.headD 0) := by
       rw [hthrough _ (by omega) (by omega)]; exact w4
-    have hW5 : erA (erecPutMem m4 (rr + 8) (r4.headD 0)) (rr.toNat + 4 + 1) = some (UInt64.ofNat lvls.length) := by
+    have hW5 : erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) (rr.toNat + 4 + 1) = some (UInt64.ofNat lvls.length) := by
       rw [hthrough _ (by omega) (by omega)]; exact w5
-    have hWs : ∀ j (hj : j < wl.length), erA (erecPutMem m4 (rr + 8) (r4.headD 0)) ((ra.headD 0).toNat + j) =
+    have hWs : ∀ j (hj : j < wl.length), erA (erecPutMem m4 (rr + Rule.rhs) (r4.headD 0)) ((ra.headD 0).toNat + j) =
         some wl[j] := fun j hj => by
       have := hwlt; have := hwl; have := hI3.er_lt
       rw [hn5 _ (by off_omega) (by omega), hE4]; exact hwd j hj

@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IWFrame
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -144,17 +145,19 @@ theorem rulesW_succ (n : Nat) (m : Mem) (cO cL rO rL : Word) : rulesW (n + 1) m 
 /-- The rule decoder. -/
 abbrev rlDec (m : Mem) (q : Nat) : Option IRecRule := decRule (erecP m) q
 
-/-- The pointers `IW[o ‥ o + l)` point to rule records whose eleven words are all in the pool
-(`rules_to_erec` copies all eleven). -/
-def Rec11 (m : Mem) (o l : Nat) : Prop :=
-  ∀ j < l, ∀ v, iwN m (o + j) = some v → ∀ i < 11, ∃ w, erecP m (v + i) = some w
+/-- The pointers `IW[o ‥ o + l)` point to rule records whose `Rule.size` words are all in the pool
+(`rules_to_erec` copies all of them). -/
+def RuleWordsIn (m : Mem) (o l : Nat) : Prop :=
+  ∀ j < l, ∀ v, iwN m (o + j) = some v → ∀ i < Rule.size.toNat, ∃ w, erecP m (v + i) = some w
 
 /-- **A plain rule record's decoding**, from its words. -/
 theorem sumDecRule_words {R : Nat → Option Word} {q : Nat} {c nF rhs : Word}
-    (h0 : R q = some c) (h1 : R (q + 1) = some nF) (h3 : R (q + 3) = some 0) (h8 : R (q + 8) = some rhs)
+    (h0 : R q = some c) (h1 : R (q + Rule.nfields.toNat) = some nF)
+    (h3 : R (q + Rule.fire.toNat) = some 0) (h8 : R (q + Rule.rhs.toNat) = some rhs)
     (hc : c.toNat < 2 ^ 32) (hr : rhs.toNat < 2 ^ 32) :
-    decRule R q = some { ctor := decI c, nfields := nF.toNat, fire := .plain, rhs := decI rhs } := by
-  simp [decRule, nat?, hd?, h0, h1, h3, h8, hc, hr]
+    decRule R q = some { ctor := decI c, nfields := nF.toNat, fire := .plain, rhs := decI rhs } :=
+  decRule_of (by simp [hd?, h0, hc]) (by simp [nat?, h1]) (by simp [hd?, h8, hr])
+    (show nat? R _ = some 0 by simp [nat?, h3])
 
 theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m := by
   unfold rlDec
@@ -163,8 +166,8 @@ theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m :
 theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
 
-theorem Rec11.grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : Rec11 m o l) (hb : o + l ≤ iwTop m) :
-    Rec11 m' o l := by
+theorem RuleWordsIn.grow {m m' : Mem} (hg : IWGrow m m') {o l : Nat} (h : RuleWordsIn m o l) (hb : o + l ≤ iwTop m) :
+    RuleWordsIn m' o l := by
   intro j hj v hv i hi
   have hv' : iwN m (o + j) = some v := by
     simp only [iwN, nat?, iwA, aread_apply] at hv ⊢
@@ -181,12 +184,12 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
     rgoW n m cO cL rO rL o = some (r, m') →
     StageR vis fe m a → IWGrow m0 m → iwTop m0 ≤ q0.toNat → o.toNat = q0.toNat + j →
     o.toNat + min cL.toNat rL.toNat ≤ iwTop m →
-    decPL m (rlDec m) q0.toNat j = some acc → Rec11 m q0.toNat j →
+    decPL m (rlDec m) q0.toNat j = some acc → RuleWordsIn m q0.toNat j →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m0 cs →
     DecB (fun m => decHL m rO.toNat rL.toNat) m0 rhss →
     StageR vis fe m' a ∧ IWGrow m0 m' ∧
       decPL m' (rlDec m') q0.toNat (j + (sumRules cs rhss).length) = some (acc ++ sumRules cs rhss) ∧
-      Rec11 m' q0.toNat (j + (sumRules cs rhss).length) ∧
+      RuleWordsIn m' q0.toNat (j + (sumRules cs rhss).length) ∧
       (sumRules cs rhss).length = min cL.toNat rL.toNat ∧
       q0.toNat + j + (sumRules cs rhss).length ≤ iwTop m' := by
   induction n with
@@ -244,7 +247,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
     have := hrh0; simp only [DecB, hR] at this; exact sumDecHL_tail this
   obtain ⟨wr, hwr, hwrl, hwrd, hrO⟩ := sumRd_of_decHL_truncM (o := rO) (l := rL) (by rw [hR]; exact hrh')
   rw [hw, hw2, hw3] at h
-  rcases hal : erAllocW m 11 with _ | ⟨q, m2⟩ <;> rw [hal] at h
+  rcases hal : erAllocW m Rule.size with _ | ⟨q, m2⟩ <;> rw [hal] at h
   · rw [rgoW.k_erec_alloc.none] at h; cases h
   rw [rgoW.k_erec_alloc_some, ruleMem_eq] at h
   obtain ⟨-, hf2, -⟩ := erAllocW_spec hal hS.iw
@@ -254,12 +257,14 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
   rw [hI2, hr2, hwn', hwr] at h
   obtain ⟨hSM, hgM, -, -, -, -, hget⟩ := erRec_stage hal hS [wn, w3, 0, 0, 0, 0, 0, 0, wr, 0, 0] rfl
   generalize hM : wrER m2 q _ = M at hSM hgM hget h
-  -- the record decodes, all eleven words in the pool
+  -- the record decodes, all its words in the pool
   have hrec : rlDec M q.toNat = some { ctor := decI wn, nfields := w3.toNat, fire := .plain, rhs := decI wr } :=
     sumDecRule_words (by simpa using hget 0 (by simp)) (hget 1 (by simp)) (hget 3 (by simp))
       (hget 8 (by simp)) hwnl hwrl
-  have hq11 : ∀ i < 11, ∃ w, erecP M (q.toNat + i) = some w := by
+  have hq11 : ∀ i < Rule.size.toNat, ∃ w, erecP M (q.toNat + i) = some w := by
     intro i hi
+    -- the record's words as `sum_rules_go` writes them (one per word of `Rule.size`)
+    have hi : i < 11 := hi
     have := hget i (by simpa using hi)
     rw [List.getElem?_eq_getElem (by simpa using hi)] at this
     exact ⟨_, this⟩
@@ -272,7 +277,7 @@ theorem rgoW_ok {vis : Word} {fe : IFEnv} {a : AState}
       (by omega) hacc
   have hacc' := sumDecPL_write M (rlDec M) q0.toNat j o q acc _ ho (by omega) haccM hrec
   rw [← rlDec_set_iw M o q] at hacc'
-  have h11' : Rec11 (M.set64 IW o q) q0.toNat (j + 1) := by
+  have h11' : RuleWordsIn (M.set64 IW o q) q0.toNat (j + 1) := by
     intro k hk v hv i hi
     have hE : erecP (M.set64 IW o q) = erecP M :=
       erecP_frame (MemFrame.set64 M IW (by decide) o q) (by decide) (by decide) (by simp) (by simp)
@@ -327,7 +332,7 @@ theorem rulesW_ok {vis : Word} {fe : IFEnv} {a : AState}
     (hrh : DecB (fun m => decHL m rO.toNat rL.toNat) m rhss) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some (sumRules cs rhss) ∧
-      Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   rw [rulesW_succ] at h
   generalize hk : (if rL < cL then rL else cL) = k at h
@@ -368,7 +373,7 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [cO, cL, rO, rL]
     ⦃fun r s' => LocEq s' s₀ ∧ StageR vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (sumRules cs rhss) ∧
-      Rec11 s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (rulesW_spec p ha hpu hg hia hp (n + 1) s₀ cO cL rO rL) ?_
   rintro r s' ⟨hl, hm⟩

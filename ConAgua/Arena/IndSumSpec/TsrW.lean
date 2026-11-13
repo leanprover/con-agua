@@ -322,7 +322,7 @@ theorem rmRec_stage {vis : Word} {fe : IFEnv} {a : AState}
     (g 3 (by decide)) (g 4 (by decide)) (g 5 (by decide)) (g 6 (by decide)) (g 7 (by decide))
     (hext.hslice? hl) (hext.hslice? hp)
 
-/-! ## `Rec11` of pointer slices -/
+/-! ## `RuleWordsIn` of pointer slices -/
 
 theorem decNL_get' {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL m o l = some xs) :
     ∀ j < l, ∃ v, iwN m (o + j) = some v ∧ xs[j]? = some v := by
@@ -339,13 +339,13 @@ theorem decNL_get' {m : Mem} {o l : Nat} {xs : List Nat} (h : decNL m o l = some
   exact ⟨v, hv, hx⟩
 
 theorem rec11_of_decNL {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys)
-    (hall : ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w) : Rec11 m o l := by
+    (hall : ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w) : RuleWordsIn m o l := by
   intro j hj v hv i hi
   obtain ⟨v', hv', hx⟩ := decNL_get' h j hj
   rw [hv] at hv'; cases hv'
   exact hall v (List.mem_of_getElem? hx) i hi
 
-theorem rec11_mem {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys) (hR : Rec11 m o l) :
+theorem rec11_mem {m : Mem} {o l : Nat} {ys : List Nat} (h : decNL m o l = some ys) (hR : RuleWordsIn m o l) :
     ∀ v ∈ ys, ∀ i < 11, ∃ w, erecP m (v + i) = some w := by
   intro v hv i hi
   obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hv
@@ -400,7 +400,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
     hslice? (erecP m) flo.toNat fll.toNat = some lvls → hslice? (erecP m) fpo.toNat fpl.toNat = some pins →
     decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (rules.map fun rl => { rl with fire := .nested lvls pins }) ∧
-      Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a ∧ IWGrow m m' := by
   induction n with
   | zero => intro m m' ro rl flo fll fpo fpl r rules lvls pins h; simp [tsrmW] at h
@@ -449,7 +449,7 @@ theorem tsrmW_ok (n : Nat) : ∀ {m m' : Mem} {ro rl flo fll fpo fpl : Word} {r 
   rcases hps : decNL m2 (rr.headD 0).toNat (rr.tail.headD 0).toNat with _ | ps <;> rw [hps] at hd2
   · cases hd2
   obtain ⟨-, -, hn3, -⟩ := consW_stageN h3 hS2 hb2 hps
-  have hR3 : Rec11 m3 (rc.headD 0).toNat (rc.tail.headD 0).toNat := by
+  have hR3 : RuleWordsIn m3 (rc.headD 0).toNat (rc.tail.headD 0).toNat := by
     refine rec11_of_decNL hn3 fun v hv i hi => ?_
     rcases List.mem_cons.mp hv with rfl | hv
     · obtain ⟨w, hw⟩ := hw1 i hi
@@ -559,7 +559,7 @@ theorem tsrW_ok (n : Nat) {m m' : Mem} {a : AState} {rP M rhso rhsl : Word} {r :
     (hA : AbsOK m) :
     ∃ rules a', (ConRon.Arena.generatedRules rP.toNat TM rhss).run a = .ok (rules, a') ∧
       decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
-      Rec11 m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      RuleWordsIn m' (r.headD 0).toNat (r.tail.headD 0).toNat ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ StageR vis fe m' a' ∧ IWGrow m m' ∧
       AbsOK m' := by
   obtain _ | n := n

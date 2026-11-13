@@ -277,7 +277,7 @@ def familyNeverZeroAtL : FunDecl := lfn (mode, vis, p, us) locals (r) {
 
 /-- `eta_rescue_table(tq, ctor, cq, p)`: the structure-η rescue's standing condition at use:
 `tq` the family's projection table (`find_table`'s answer, `0` for none), `ctor` (its record `cq`)
-the table's constructor (word `tq + 5`) of the η family `p` (`eta`) and carrying the family's level
+the table's constructor (`ProjTbl.ctor`, through the handle `tq`) of the η family `p` (`eta`) and carrying the family's level
 parameters; `And.intro` (pin 48, read only when the chain reaches it) is left to `And`'s rescue.
 The table (`tq`) or `0`. -/
 -- con-ron: ConRon/Arena/Core.lean:2062-2077 ConRon.Arena.etaRescueTable?
