@@ -390,6 +390,24 @@ theorem wrERo_ctl : ∀ (ws : List (Option Word)) (m : Mem) (q : Word),
   | none :: ws, m, q => by simp only [wrERo]; rw [wrERo_ctl ws]
   | some x :: ws, m, q => by simp only [wrERo]; rw [wrERo_ctl ws, erecPutMem_ctl]
 
+theorem wrERo_append : ∀ (xs ys : List (Option Word)) (m : Mem) (q : Word),
+    wrERo m q (xs ++ ys) = wrERo (wrERo m q xs) (q + UInt64.ofNat xs.length) ys
+  | [], ys, m, q => by simp [wrERo]
+  | none :: xs, ys, m, q => by
+    simp only [List.cons_append, wrERo, List.length_cons]
+    rw [wrERo_append xs ys, UInt64.add_assoc]; congr 2
+    apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]; omega
+  | some x :: xs, ys, m, q => by
+    simp only [List.cons_append, wrERo, List.length_cons]
+    rw [wrERo_append xs ys, UInt64.add_assoc]; congr 2
+    apply UInt64.toNat_inj.mp; simp [UInt64.toNat_add]; omega
+
+/-- A list of words all stored is `wrER`. -/
+theorem wrERo_map_some : ∀ (ws : List Word) (m : Mem) (q : Word),
+    wrERo m q (ws.map some) = wrER m q ws
+  | [], _, _ => rfl
+  | x :: ws, m, q => by simp only [List.map_cons, wrERo, wrER]; rw [wrERo_map_some ws]
+
 /-- **What `wrERo` leaves in the tier arrays**: the written words at their offsets (in bounds), every
 other word as it was. -/
 theorem wrERo_get : ∀ (ws : List (Option Word)) (m : Mem) (q : Word),

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.IcbiW
+import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.IndInstallSpec.PartsShapeFacts
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
@@ -28,7 +29,7 @@ public import ConAgua.Arena.IndInstallSpec.MemberNZ
 /-!
 # IcaW
 
-The generated models of `block_caps_head`, `block_caps_one`, `block_caps_fin`, `block_caps_at`, `er_put5`
+The generated models of `block_caps_head`, `block_caps_one`, `block_caps_fin`, `block_caps_at`, `er_put_ci`
 and `ind_info_rec`, and their refinements (`blockCapsAt_ok`, `iirW_stage`, `consBlockInds_refines`).
 -/
 
@@ -507,18 +508,19 @@ open L.Arena
 
 /-! ## `ind_info_rec` -/
 
-/-- The record's words, read in the memory before the allocation: the kind word and the constant's
-four words, then the capability record's `Caps.size` words. -/
-def iirWs (m : Mem) (cv caps : Word) : List Word :=
-  [3, erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3)] ++
-    ieWords (m.arr64 IW) Caps.size.toNat caps
+/-- The record's image (`wrERo`), read in the memory before the allocation: the head (the kind
+word and the constant's value, `CI.indHdImg`), then the capability record's `Caps.size` words. -/
+def iirImg (m : Mem) (cv caps : Word) : List (Option Word) :=
+  CI.indHdImg 3 (erRd m cv) (erRd m (cv + CV.lpsOff)) (erRd m (cv + CV.lpsLen)) (erRd m (cv + CV.type)) ++
+    (ieWords (m.arr64 IW) Caps.size.toNat caps).map some
 
-theorem iirWs_length (m : Mem) (cv caps : Word) : (iirWs m cv caps).length = CI.indSize.toNat := by
-  rw [iirWs, List.length_append, ieWords_length, CI.indSize_toNat, CI.indCaps_toNat]; rfl
+theorem iirImg_length (m : Mem) (cv caps : Word) : (iirImg m cv caps).length = CI.indSize.toNat := by
+  rw [iirImg, List.length_append, CI.indHdImg_length, List.length_map, ieWords_length,
+    CI.indSize_toNat]
 
-l_model erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "er_put5" = some erPut5)
-  fns [hp ↦ erPut5W void]
+l_model erPutCi_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
+    (hp : p.lookup "er_put_ci" = some erPutCi)
+  fns [hp ↦ erPutCiW void]
   specs [erecPut_specW p hpu n]
   grind [arena_grind] simp []
 
@@ -526,12 +528,12 @@ l_model erPut5_spec (p : Prog) (hpu : p.lookup "erec_put" = some erecPut)
 def iirW (m : Mem) (cv caps : Word) : Option (Word × Mem) :=
   match erAllocW m CI.indSize with
   | none => none
-  | some (q, m1) => some (q, wrER m1 q (iirWs m cv caps))
+  | some (q, m1) => some (q, wrERo m1 q (iirImg m cv caps))
 
 l_model iir_specK (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
     (hp : p.lookup "ind_info_rec" = some indInfoRec)
   fns [hp ↦ iirK list]
-  specs [erecAlloc_specW p ha n, callW_spec p n "er_put5", callW_spec p n "block_caps_at_er_copy_go"]
+  specs [erecAlloc_specW p ha n, callW_spec p n "er_put_ci", callW_spec p n "block_caps_at_er_copy_go"]
   grind [arena_grind] finish [rdW_eq] gen 40 instances 20000
 
 theorem wrER_IW (m : Mem) (q : Word) (ws : List Word) : (wrER m q ws).arr64 IW = m.arr64 IW :=
@@ -554,51 +556,45 @@ theorem erAllocW_arr {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1))
   refine ⟨hc _ (by decide), fun x => ?_⟩
   unfold erRd; rw [hc _ (by rw [tierA_EREC]; split <;> decide)]
 
-/-- `er_put5`'s five stores are one `wrER`. -/
-theorem erPut5W_wrER {m m' : Mem} {d a b c e f : Word} (h : erPut5W m d a b c e f = some m') :
-    m' = wrER m d [a, b, c, e, f] := by
-  unfold erPut5W at h
+/-- `er_put_ci`'s stores are the head's image. -/
+theorem erPutCiW_wrERo {m m' : Mem} {q k cv : Word} (h : erPutCiW m q k cv = some m') :
+    m' = wrERo m q (CI.indHdImg k (erRd m cv) (erRd m (cv + CV.lpsOff)) (erRd m (cv + CV.lpsLen))
+      (erRd m (cv + CV.type))) := by
+  unfold erPutCiW at h
+  simp only [erRd_foldN] at h
   iterate 5 (split at h; · cases h)
   cases h
-  simp only [wrER, UInt64.add_assoc, UInt64.reduceAdd]
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, CI.indHdImg, recImg, rec_unfold, UInt64.add_assoc]
 
-/-- `ind_info_rec`'s four writes are the record written at once. -/
+/-- `ind_info_rec`'s writes are the record's image. -/
 theorem iirK_eq {p : Prog} (hpu : p.lookup "erec_put" = some erecPut)
-    (hp : p.lookup "er_put5" = some erPut5)
+    (hp : p.lookup "er_put_ci" = some erPutCi)
     (hcg : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo) {n : Nat} {m m' : Mem}
     {cv caps : Word} {r : List Word} (h : iirK p (n + 2) m cv caps = some (r, m')) :
     ∃ q, r = [q] ∧ iirW m cv caps = some (q, m') := by
-  have put : ∀ (mm : Mem) (d x0 x1 x2 x3 x4 : Word) (rr : List Word) (mm' : Mem),
-      callW p (n + 1) "er_put5" [d, x0, x1, x2, x3, x4] mm = some (rr, mm') →
-      mm' = wrER mm d [x0, x1, x2, x3, x4] := by
-    intro mm d x0 x1 x2 x3 x4 rr mm' hc
-    obtain ⟨s', rfl, -, h2⟩ := triple_of_callW (s₀ := ⟨mm, Locals.init []⟩)
-      (erPut5_spec p hpu hp (n + 1) _ d x0 x1 x2 x3 x4) hc
-    exact erPut5W_wrER h2
   unfold iirW
   rw [iirK.arm1] at h
   rcases h1 : erAllocW m CI.indSize with _ | ⟨q, m1⟩
   · rw [h1] at h; cases h
   obtain ⟨hI1, hE1⟩ := erAllocW_arr h1
   rw [h1, iirK.k_erec_alloc.arm1] at h
-  simp only [erRd_foldN] at h
-  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK.k_er_put5.arm1] at h
-  have e2 := put _ _ _ _ _ _ _ _ _ h2
-  have i2 : m2.arr64 IW = m.arr64 IW := by rw [e2, wrER_IW, hI1]
+  obtain ⟨⟨r2, m2⟩, h2, h⟩ := of_K h rfl; rw [iirK.k_er_put_ci.arm1] at h
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (erPutCi_spec p hpu hp (n + 1) _ q 3 cv) h2
+  have e2 := erPutCiW_wrERo hW2
+  have i2 : s2.mem.arr64 IW = m.arr64 IW := by
+    rw [e2, (wrERo_frame _ _ _).1 IW (by simp [EREC, IW]) (by decide), hI1]
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h rfl; rw [iirK.k_block_caps_at_er_copy_go.arm1] at h
-  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+  obtain ⟨s3, hs3, -, hW3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
     (ieCopy_spec p hcg hpu (n + 1) _ _ _ _) h3
   simp only at hW3; subst hs3
   have e3 := ieCopyW_wrER _ _ _ _ _ _ hW3
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
   refine ⟨q, rfl, ?_⟩
   simp only [hE1] at e2
-  have hl5 : q + UInt64.ofNat
-      ([3, erRd m cv, erRd m (cv + 1), erRd m (cv + 2), erRd m (cv + 3)] : List Word).length =
-      q + CI.indCaps := by
-    congr 1
   dsimp only
-  rw [iirWs, wrER_append, hl5, e3, i2, e2]
+  rw [iirImg, wrERo_append, CI.indHdImg_length, UInt64.ofNat_toNat, wrERo_map_some, e3, i2, e2]
 
 /-- **`ind_info_rec` under the stage relation**: a fresh `.indInfo` record of the constant at `cv`
 (decoded below the tops) and the capability record at `caps`. -/
@@ -613,64 +609,54 @@ theorem iirW_stage {vis : Word} {fe : IFEnv} {a : AState}
   · rw [h1] at h; cases h
   rw [h1] at h
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRec_stage h1 hS (iirWs m cv caps)
-    (iirWs_length m cv caps).symm
-  have hlen : (iirWs m cv caps).length = 5 + Caps.size.toNat := by
-    rw [iirWs_length, CI.indSize_toNat, CI.indCaps_toNat]
-  rw [hlen] at hget
-  generalize hM : wrER m1 q1 (iirWs m cv caps) = M at hS' hg hget
-  -- the constant's words
+  obtain ⟨hS', hg, -, -, -, -, hget⟩ := erRecO_stage h1 hS (iirImg m cv caps)
+    (iirImg_length m cv caps).symm
+  generalize hM : wrERo m1 q1 (iirImg m cv caps) = M at hS' hg hget
+  -- the head's words
+  have hd : ∀ {o : Word} {x : Word}, o.toNat < CI.indCaps.toNat →
+      (CI.indHdImg 3 (erRd m cv) (erRd m (cv + CV.lpsOff)) (erRd m (cv + CV.lpsLen))
+        (erRd m (cv + CV.type)))[o.toNat]? = some (some x) → erecP M (q1.toNat + o.toNat) = some x :=
+    fun ho e => hget _ _ (by rw [iirImg, List.getElem?_append_left (by rw [CI.indHdImg_length]; exact ho), e])
   have hcvE : decCV (erecP m) cv.toNat = some cvv := decCVp_truncM hcv
-  have hcv0 := hcvE
-  -- a whole-record writer (`ind_info_rec`): the offsets as numbers (`rec_unfold`)
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, rec_unfold, UInt64.reduceToNat] at hcv0
-  obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, -⟩, t, ht, -⟩ := hcv0
-  obtain ⟨w0, hw0, -, -⟩ := hd?_some hnm
-  obtain ⟨w1, hw1, -⟩ : ∃ w, erecP m (cv.toNat + 1) = some w ∧ w.toNat = lo := by
-    simp only [nat?, Option.map_eq_some_iff] at hlo; exact hlo
-  obtain ⟨w2, hw2, -⟩ : ∃ w, erecP m (cv.toNat + 2) = some w ∧ w.toNat = ll := by
-    simp only [nat?, Option.map_eq_some_iff, Nat.add_assoc] at hll; exact hll
-  obtain ⟨w3, hw3, -, -⟩ := hd?_some ht
-  have r0 : erRd m cv = w0 := (erRd_of_erecP (by simpa using hw0)).1
-  obtain ⟨r1, -⟩ := erRd_add (j := 1) (cq := cv) (m := m) hw1 (by decide)
-  obtain ⟨r2, -⟩ := erRd_add (j := 2) (cq := cv) (m := m) hw2 (by decide)
-  obtain ⟨r3, -⟩ := erRd_add (j := 3) (cq := cv) (m := m) hw3 (by decide)
-  simp only [show (UInt64.ofNat 1 : Word) = 1 from rfl, show (UInt64.ofNat 2 : Word) = 2 from rfl,
-    show (UInt64.ofNat 3 : Word) = 3 from rfl] at r1 r2 r3
-  have hw : ∀ i, i < 4 → erecP M (q1.toNat + 1 + i) = erecP M (cv.toNat + i) := by
-    intro i hi
-    rw [Nat.add_assoc, hget (1 + i) (by omega)]
-    rcases i with _ | _ | _ | _ | i
-    · rw [IWGrow.ext hg _ _ (by simpa using hw0)]; simp [iirWs, r0]
-    · rw [IWGrow.ext hg _ _ hw1]; simp [iirWs, r1]
-    · rw [IWGrow.ext hg _ _ hw2]; simp [iirWs, r2]
-    · rw [IWGrow.ext hg _ _ hw3]; simp [iirWs, r3]
-    · omega
-  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cvv := by
-    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa [rec_unfold] using hw 1 (by decide))
-      (by simpa [rec_unfold, Nat.add_assoc] using hw 2 (by decide))
-      (by simpa [rec_unfold, Nat.add_assoc] using hw 3 (by decide))]
-    exact ArrExt.decCV (IWGrow.ext hg) hcvE
+  obtain ⟨en, enl, hsl, -, et, etl⟩ := decCV_rd (erRdOK m) hcvE
+  have cvb := CI.cv_le
+  have hic := CI.indCaps_ge
+  have o4 := CV.order
+  have ho : ∀ f : Word, f.toNat < CV.size.toNat → (CI.cv + f).toNat < CI.indCaps.toNat := fun f hf => by
+    rw [CI.cv_add_toNat (by have := CV.size_le; omega)]
+    have : CI.cv.toNat + CV.size.toNat ≤ CI.indCaps.toNat := by simp [rec_layout, CI.cv, CV.size, CI.indCaps]
+    omega
+  have adj : ∀ f : Word, f.toNat ≤ 64 →
+      q1.toNat + (CI.cv + f).toNat = q1.toNat + CI.cv.toNat + f.toNat := fun f hf => by
+    rw [CI.cv_add_toNat hf, Nat.add_assoc]
+  have hw : CVRecW (erecP M) (q1.toNat + CI.cv.toNat) (erRd m cv) (erRd m (cv + CV.lpsOff))
+      (erRd m (cv + CV.lpsLen)) (erRd m (cv + CV.type)) :=
+    ⟨by rw [← adj _ CV.name_le]; exact hd (ho _ CV.name_lt) (CI.indHdImg_name ..),
+      by rw [← adj _ CV.lpsOff_le]; exact hd (ho _ CV.lpsOff_lt) (CI.indHdImg_lo ..),
+      by rw [← adj _ CV.lpsLen_le]; exact hd (ho _ CV.lpsLen_lt) (CI.indHdImg_ll ..),
+      by rw [← adj _ CV.type_le]; exact hd (ho _ CV.type_lt) (CI.indHdImg_ty ..)⟩
+  have hcv' : decCV (erecP M) (q1.toNat + CI.cv.toNat) = some cvv := by
+    rw [decCV_of_words hw enl etl (ArrExt.hslice? (IWGrow.ext hg) hsl), ← en, ← et]
   -- the capability record's words
-  have hc15 := hcp.1
   have hcaps : decCaps (erecP M) (q1.toNat + CI.indCaps.toNat) = some c := by
     refine hcp.2 (erecP M) _ (fun i hi => ?_) (IWGrow.ext hg)
-    rw [CI.indCaps_toNat, show q1.toNat + 5 + i = q1.toNat + (5 + i) by omega, hget (5 + i) (by omega)]
     have hIsz : iwTop m ≤ (m.arr64 IW).size := hS.iw.iw
     have hsz := hS.iw.iwSize
-    rw [iirWs, List.getElem?_append_right (by simp), ieWords_get _ _ _ _ (by simpa using hi)]
-    simp only [List.length_cons, List.length_nil, show 5 + i - (4 + 1) = i by omega, iwA, aread_apply,
-      rdW]
-    have e : (caps + UInt64.ofNat i).toNat = caps.toNat + i := by
-      rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
-    rw [e, Array.getElem?_eq_getElem (by omega)]; simp
+    have hc15 := hcp.1
+    rw [Nat.add_assoc, hget (CI.indCaps.toNat + i) (rdW (m.arr64 IW) (caps + UInt64.ofNat i))]
+    · simp only [iwA, aread_apply, rdW]
+      have e : (caps + UInt64.ofNat i).toNat = caps.toNat + i := by
+        rw [UInt64.toNat_add, UInt64.toNat_ofNat']; omega
+      rw [e, Array.getElem?_eq_getElem (by omega)]; simp
+    · rw [iirImg, List.getElem?_append_right (by rw [CI.indHdImg_length]; omega), CI.indHdImg_length,
+        show CI.indCaps.toNat + i - CI.indCaps.toNat = i by omega, List.getElem?_map,
+        ieWords_get _ _ _ _ (by simpa using hi)]
+      rfl
   have n0 : nat? (erecP M) q1.toNat = some 3 := by
-    have := hget 0 (by decide); simp only [Nat.add_zero] at this
-    simp [nat?, this, iirWs]
-  refine ⟨hS', hg, ?_⟩
-  simp only [rec_unfold, UInt64.reduceToNat] at hcaps
-  simp only [decCI, rec_unfold, UInt64.reduceToNat, Option.bind_eq_bind, n0, Option.bind_some, hcv',
-    hcaps, Option.pure_def]
+    have := hd (o := CI.kind) (by simp [rec_layout, CI.kind, CI.indCaps]) (CI.indHdImg_kind ..)
+    simp only [show CI.kind.toNat = 0 from rfl, Nat.add_zero] at this
+    simp [nat?, this]
+  exact ⟨hS', hg, decCI_indInfo_iff.mpr ⟨n0, hcv', hcaps⟩⟩
 
 section arms
 variable (p : Prog) (n : Nat) (m : Mem) (p1 isRec o l vis i : Word) (r : List Word)
@@ -690,8 +676,8 @@ theorem installIirRun {p : Prog} (hP : ConsIndsProg p) {n : Nat} {m m' : Mem} {c
     | none => simp only [h1, iirK.k_erec_alloc.none] at hK; cases hK
     | some x =>
       obtain ⟨q, m1⟩ := x
-      simp only [h1, iirK.k_erec_alloc.arm1, callW_zero, iirK.k_er_put5.none] at hK; cases hK
-  exact iirK_eq hP.recP.put hP.put5 hP.erCopyGo hK
+      simp only [h1, iirK.k_erec_alloc.arm1, callW_zero, iirK.k_er_put_ci.none] at hK; cases hK
+  exact iirK_eq hP.recP.put hP.putCi hP.erCopyGo hK
 
 /-- **`cons_block_inds`' model refines `consBlockInds`** (pure in the twin): each member's former
 pushed with its capability record `blockCapsAt bs i isRec`, the stage relation at the returned view. -/

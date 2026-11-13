@@ -91,7 +91,7 @@ def nvFns : List L.FnName :=
    "div_mod_slot", "div_mod_type_pins", "div_shl1", "div_step", "div_sub", "dlp_copy", "dp_clear",
    "dp_find", "dp_put", "e_view", "eid_sp_clear", "ek_copy", "env_find", "env_pop_temp",
    "env_push", "env_push_table", "env_row_get", "env_row_set", "eq_at1", "eq_stored", "er_copy",
-   "er_copy_er", "er_from_iw", "er_from_iw_go", "er_put5", "er_sl_at", "er_sl_eq", "er_slice_eq",
+   "er_copy_er", "er_from_iw", "er_from_iw_go", "er_put_ci", "er_sl_at", "er_sl_eq", "er_slice_eq",
    "er_to_iw", "erase_each", "erase_fvar_tys", "erec_alloc", "erec_ci", "erec_push", "erec_put",
    "esc_one", "esc_sur", "esp_find", "esp_put", "eta_ctor_partial", "eta_ctor_partial_fam",
    "eta_ctor_shape", "eta_fab_args", "eta_projs", "eta_rescue_table", "expr_drop_vars",
