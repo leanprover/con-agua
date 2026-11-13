@@ -72,7 +72,7 @@ def whnfCoreLoopB : Stmt :=
     (st, r) := call whnf_core_step(mode, cheap, vis, d, h, e);
     stb := u64(cheap == 0) & key & (u64(st != 0) | u64(g != 4) | u64(r != e));
     if stb != 0 {
-      if len(SPN.u64) <= pb + pn { abort };
+      if len(SPN.u64) <= pb + pn || len(CTL.u64) <= 136 { abort };
       SPN.u64[pb + pn] := e;
       pn += 1;
       CTL.u64[136] := pb + pn

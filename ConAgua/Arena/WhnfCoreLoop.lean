@@ -268,7 +268,7 @@ fuel up to `n` (for the body's callees), `whnf_core` at `n + 1` refines the slot
 `WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
-    RefE.coreSpec (whnfCoreE_spec p hp.core (n + 1) s₀ mode cheap vis d e)
+    RefE.coreSpec (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e)
       (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end slot

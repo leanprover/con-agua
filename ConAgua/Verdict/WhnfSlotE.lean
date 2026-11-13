@@ -45,7 +45,7 @@ include hp hwc hcc hsup hnv hI in
 theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
-    RefE.coreSpecE (whnfCoreE_spec p hp.core (n + 1) s₀ mode cheap vis d e) hnv
+    RefE.coreSpecE (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e) hnv
       (coreStepE_of p hp hwc hcc hsup hnv hI n hk hkE)
       (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 

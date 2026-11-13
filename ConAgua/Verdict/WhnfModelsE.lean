@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Verdict.WhnfModels2E
+public import ConAgua.Arena.WhnfCoreMemo
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
@@ -26,8 +27,10 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-l_model whnfCoreE_spec (p : Prog) (hf : p.lookup "whnf_core" = some whnfCoreL)
-  fns [hf ↦ whnfCoreE list]
+l_model whnfCoreE_spec (p : Prog) (hp : WhnfCoreProg p)
+  fns [hp.core ↦ whnfCoreE list]
+  specs [callW_spec p n "get_app_fn", whnfCoreLookupE_spec p hp.lookup n,
+    whnfCoreStoreChainE_spec p hp.storeChain hp.storeKeys hp.storeCheapKeys n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
