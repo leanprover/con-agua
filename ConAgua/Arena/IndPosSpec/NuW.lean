@@ -10,7 +10,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import all Init.Data.List.Control
 import ConAgua.Arena.IndPosSpec.SnocWStage
-import ConAgua.Arena.RecClassSpec.CloseLams
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import ConAgua.Arena.IndPosSpec.BvbWMfr
 public import ConAgua.Arena.IndPosSpec.UCtx

@@ -6,7 +6,6 @@ import ConAgua.Arena.IndRealAbsPos
 import ConAgua.Arena.IndPosSpec.Snoc
 import ConAgua.Arena.IndPosSpec.GgW
 import ConAgua.Arena.IndPosSpec.SnocWMfr
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.IndPosSpec.CfW
 import ConAgua.L.WordOff

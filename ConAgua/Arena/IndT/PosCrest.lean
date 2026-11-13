@@ -15,7 +15,6 @@ public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.KnotEntry
 public import ConAgua.Arena.TwinStep
 public import ConAgua.Verdict.VCtx
-import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.L.WordOff
 
 @[expose] public section

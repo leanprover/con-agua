@@ -12,7 +12,6 @@ import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndPartsSpec.BlockRecNamesUnreserved
 import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.IndRealMemoCrT
 import ConRon.Bridge.Checker.Base
 import ConAgua.Arena.StageC

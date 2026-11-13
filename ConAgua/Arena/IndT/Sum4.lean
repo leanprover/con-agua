@@ -5,7 +5,6 @@ import ConRon.Bridge.Checker.Base
 public import ConAgua.Arena.IndT.Sum3
 public import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecGenSpec.Classes
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RecGenSpec.ClassFeR
 import ConAgua.Arena.IndT.SumSteps
 import ConAgua.Arena.IndRealMemoCrT
@@ -24,6 +23,7 @@ import ConLeche.Verify.Denote.IndFrame
 public import ConRon.Bridge.Inductives.Rel
 import all ConAgua.Arena.IndSum
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.IhW
 
 @[expose] public section
 

@@ -11,7 +11,6 @@ import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.RecGenSpec.ClassFeR
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StageC
 import ConAgua.Checker.NoVerdictTree
@@ -25,6 +24,7 @@ public import ConAgua.Verdict.DeclValsE
 public import ConRon.Bridge.Checker.Hyp
 public import ConRon.Bridge.Inductives.Records
 import ConAgua.L.WordOff
+import ConAgua.Arena.RecClassSpec.MjProg
 
 @[expose] public section
 

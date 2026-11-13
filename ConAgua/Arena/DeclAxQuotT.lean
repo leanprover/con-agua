@@ -17,7 +17,6 @@ public import ConAgua.Arena.DeclAxiomSpec
 public import ConAgua.Arena.DeclAxiomSpec2
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.InferFieldSort
-import ConAgua.L.WordOff
 import ConAgua.Arena.BasisBlockT
 
 @[expose] public section

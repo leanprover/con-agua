@@ -5,7 +5,6 @@ public import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecClassSpec.CrW
 import ConAgua.Arena.RecGenSpec.ClassFeR
 public import ConAgua.Arena.RecGenSpec.ClassMinorSlot
-import ConAgua.Arena.RecGenSpec.Rec3TmdWDecB
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndT.Lift
