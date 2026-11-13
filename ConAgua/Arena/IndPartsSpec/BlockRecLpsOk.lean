@@ -94,6 +94,7 @@ theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : Li
   · rw [hr] at hh ⊢
     simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
     rw [hdec]
+    exact hsl
   · rw [hr]; simpa using htp
 
 theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec : RecShape)

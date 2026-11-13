@@ -80,7 +80,7 @@ theorem ctorsRef_step (n : Nat) (ih : NbRef p dn vis fe env n) : CtorsRef p dn v
   rw [hrw]
   obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcvv
   obtain ⟨wt, hwt, -⟩ := hd?_some hty
-  have hq3 : q + 3 < 2 ^ 64 := by
+  have hq3 : q + CV.type.toNat < 2 ^ 64 := by
     have := _root_.L.Arena.erecP_lt64 hwt; omega
   rw [nestCtors_cons, oneK_split]
   -- one constructor

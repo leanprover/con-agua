@@ -234,7 +234,7 @@ theorem brmW_sim {vis : Word} {fe : IFEnv} {no nl : Word}
     obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
     rw [hw, hcw, partsAnyM_cons]
     have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
-    rw [CWF_eq, show decE (erRd m (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
+    rw [CWF_eq, show decE (erRd m (UInt64.ofNat cvp + CV.type)) = cv.type from htye] at h1
     exact brrK_sim (rest := fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
       (brmW.k_pi_doms_mention_any.none ..) (fun r m1 h => brmW.k_pi_doms_mention_any.arm1 _ _ _ _ _ r m1 h)
       (fun r m1 h => brmW.k_pi_doms_mention_any.arm2 _ _ _ _ _ r m1 h) brmW.k_block_is_rec_member.none brmW.k_block_is_rec_member.arm1

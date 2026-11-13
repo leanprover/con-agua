@@ -38,7 +38,7 @@ local notation "V" => ConLeche.CheckMode.verified
 over both tiers), `nF`. -/
 theorem decCN_wordsE {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (fun m => decCN m cA.toNat) m x)
     (hsz : (m.arr64 IW).size < 2 ^ 64) :
-    ∃ a : Nat, rdW (m.arr64 IW) cA = UInt64.ofNat a ∧ a + 3 < 2 ^ 64 ∧
+    ∃ a : Nat, rdW (m.arr64 IW) cA = UInt64.ofNat a ∧ a + CV.type.toNat < 2 ^ 64 ∧
       DecB (fun m => decCVp m a) m x.1 ∧ H (erRd m (UInt64.ofNat a)) ∧
       decI (erRd m (UInt64.ofNat a)) = x.1.name ∧
       rdW (m.arr64 IW) (cA + 1) = UInt64.ofNat x.2 ∧ x.2 < 2 ^ 64 ∧ cA.toNat + 1 < iwTop m := by
@@ -52,7 +52,7 @@ theorem decCN_wordsE {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (
   obtain ⟨hnm2, -, hty2⟩ := (decCV_eq_some (R := erA m) (q := a)).mp hcv'
   simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hty2
   obtain ⟨w3, hw3, -⟩ := hty2
-  have h3 : a + 3 < 2 ^ 64 := erecP_lt64 hw3
+  have h3 : a + CV.type.toNat < 2 ^ 64 := erecP_lt64 hw3
   obtain ⟨w, hw, hwH, hwD⟩ := erH_rdW hnm2 (by omega)
   refine ⟨a, by simpa using ra.1, h3, hcv, by rw [hw]; exact hwH, by rw [hw]; exact hwD, by simpa using rn.1, rn.2,
     hnt⟩

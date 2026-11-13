@@ -84,7 +84,7 @@ theorem pinAgreesW_ok {p : Prog} (hc : CanonProg p)
       try (simp at k0)
     rcases hyk with ⟨k0, -⟩ | ⟨k0, -⟩ | ⟨k0, -⟩ | ⟨-, cv', caps', hcv', -, rfl⟩ | ⟨k0, -⟩ | ⟨k0, -⟩ <;>
       try (simp at k0)
-    have hb := cvEqB_ok' (erRdOK m) (p := c) (q := d) (k := 1) (kn := 1) rfl hcv hcv'
+    have hb := cvEqB_ok' (erRdOK m) (p := c) (q := d) (k := CI.cv) (kn := CI.cv.toNat) rfl hcv hcv'
     simp only [List.headD_cons, hr1, hb, ConRon.Arena.pinAgrees, beq_iff_eq]
     by_cases hcc : cv = cv' <;> simp [hcc]
   · rw [pinAgreesW.eq_2] at hW; erw [ite_eq_right h3] at hW
@@ -587,8 +587,8 @@ theorem constNamedW_ok {m : Mem} (hsz : (m.arr64 IW).size < 2 ^ 64) {nw : Word}
   obtain ⟨c, cs', rfl, hc, hC'⟩ := (hC.pslr hl).uncons hl hsz
   rw [decB_ciF] at hc
   obtain ⟨w, hw, hwlt, hname⟩ := decCI_name hc
-  have hrd : erRd m (rdW (m.arr64 IW) o + 1) = w := (erRdOK m).at 1 rfl hw
-  by_cases he : erRd m (rdW (m.arr64 IW) o + 1) = nw
+  have hrd : erRd m (rdW (m.arr64 IW) o + (CI.cv + CV.name)) = w := (erRdOK m).at _ CI.cv_name_toNat hw
+  by_cases he : erRd m (rdW (m.arr64 IW) o + (CI.cv + CV.name)) = nw
   · rw [constNamedW.arm2 n m o l nw hl he] at h; cases h
     have hb : (c.name == decI nw) = true := by rw [hname, ← hrd, he]; simp
     refine ⟨rfl, ?_⟩
@@ -744,13 +744,13 @@ theorem rulesLinkOkW_ok (hP : PinListLProg p) {block pins : List IConstantInfo}
     | some Cp => exact ⟨Cp, rfl⟩
   rw [x1] at hn1; rw [x2] at hn2
   -- `cv_lps(c + 1)`, `cv_lps(d + 1)`
-  cases h3 : callW p n "cv_lps" [r1.tail.headD 0 + 1] m with
+  cases h3 : callW p n "cv_lps" [r1.tail.headD 0 + CI.cv] m with
   | none => rw [h3] at h; simp [rulesLinkOkW.k_cv_lps] at h
   | some x3 =>
   obtain ⟨r3, m3⟩ := x3
   obtain ⟨hT3, hg3, he3, -, hN3⟩ := cvLps_sim hP hT hn1.2 h3
   rw [h3, rulesLinkOkW.k_cv_lps.eq_2] at h
-  cases h4 : callW p n "cv_lps" [r2.tail.headD 0 + 1] m3 with
+  cases h4 : callW p n "cv_lps" [r2.tail.headD 0 + CI.cv] m3 with
   | none => rw [h4] at h; simp [rulesLinkOkW.k_cv_lps_2] at h
   | some x4 =>
   obtain ⟨r4, m4⟩ := x4

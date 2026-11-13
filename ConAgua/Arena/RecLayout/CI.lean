@@ -265,4 +265,37 @@ theorem recInfoImg_isK (ck nm lo ll ty mi rp ro rl ik : Word) :
     (recInfoImg ck nm lo ll ty mi rp ro rl ik)[(recIsK).toNat]? = some (some ik) := by
   simp [recInfoImg, L.recImg, rec_unfold]
 
+/-- **A constructor record's image** (`RecLayout/Img.lean`): the kind word, the constant value,
+the counts and the family (`ctor_info_rec`'s stores). -/
+def ctorImg (ck nm lo ll ty np nf ind : Word) : List (Option Word) :=
+  L.recImg ctorSize [(kind, ck), (cv + CV.name, nm), (cv + CV.lpsOff, lo), (cv + CV.lpsLen, ll),
+    (cv + CV.type, ty), (ctorNparams, np), (ctorNfields, nf), (ctorInduct, ind)]
+
+theorem ctorImg_length (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind).length = ctorSize.toNat := L.recImg_length _ _
+theorem ctorImg_kind (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(kind).toNat]? = some (some ck) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_name (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(cv + CV.name).toNat]? = some (some nm) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_lo (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(cv + CV.lpsOff).toNat]? = some (some lo) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_ll (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(cv + CV.lpsLen).toNat]? = some (some ll) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_ty (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(cv + CV.type).toNat]? = some (some ty) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_nparams (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(ctorNparams).toNat]? = some (some np) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_nfields (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(ctorNfields).toNat]? = some (some nf) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+theorem ctorImg_induct (ck nm lo ll ty np nf ind : Word) :
+    (ctorImg ck nm lo ll ty np nf ind)[(ctorInduct).toNat]? = some (some ind) := by
+  simp [ctorImg, L.recImg, rec_unfold]
+
 end L.CI

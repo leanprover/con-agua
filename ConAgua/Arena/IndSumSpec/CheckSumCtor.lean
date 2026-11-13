@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndSumSpec.SumProg
 import ConAgua.Arena.IndSumSpec.FieldDomsResolve
 import ConAgua.Arena.IndSumSpec.StructCtorResidOk
 import ConAgua.Arena.IndSim
+import ConAgua.Arena.RecLayout.CIDec
 public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.Arena.IndSumSpec.ColW
 public import ConAgua.Arena.IndSumSpec.StructProjArgP

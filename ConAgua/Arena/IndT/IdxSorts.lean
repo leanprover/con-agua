@@ -132,9 +132,9 @@ theorem iis_ref (hP : IdxProg p) (pp : Word) (bs : BlockShape) {bsP : ConLeche.B
   unfold idxOneAM
   simp only [bind_assoc]
   -- `open_pis_at_fvars_f`
-  rw [show rdW (m.arr64 (tierA EREC ((UInt64.ofNat a0 + 3) >>> 40))) ((UInt64.ofNat a0 + 3) &&& 1099511627775) =
-    erRd m (UInt64.ofNat a0 + 3) from rfl]
-  rcases h1 : opfF m [UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx, erRd m (UInt64.ofNat a0 + 3), 0]
+  rw [show rdW (m.arr64 (tierA EREC ((UInt64.ofNat a0 + CV.type) >>> 40))) ((UInt64.ofNat a0 + CV.type) &&& 1099511627775) =
+    erRd m (UInt64.ofNat a0 + CV.type) from rfl]
+  rcases h1 : opfF m [UInt64.ofNat bs.nP + UInt64.ofNat msh.nIdx, erRd m (UInt64.ofNat a0 + CV.type), 0]
     with _ | ⟨r1, m1⟩
   · rw [liftE_none, iisE.k_open_pis_at_fvars_f.none]; exact RefE.of_cls0 (by simp)
   rw [liftE_some]

@@ -131,16 +131,16 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     cases h2; exact h1
   obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
   have hq64 := L.Arena.erecP_lt64 hv16
-  have := CI.indCaps_ge
-  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have hcvi : CI.cv.toNat < CI.indCaps.toNat := by decide
+  have e1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have e5 : (q + CI.indCaps).toNat = q.toNat + CI.indCaps.toNat := L.toNat_add_of_lt _ _ hq64
   -- the twin's inductive and its denotation
   obtain ⟨IP, cc, -, hcc, he⟩ := hC.check.ienv.hit _ _ hfind
   obtain ⟨cvP, capsP, hcvP, hcapsP, rfl⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hcc
   have hws : ConLeche.Expr.WScoped 0 cvP.type :=
     ConLeche.Expr.WScoped.of_not_hasFvar (henv.consts _ (ConLeche.Env.find?_mem he)).1
   -- `family_telescope`
-  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+  have hcvB : DecB (fun m => decCVp m (q + CI.cv).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
   have hFT := ft_ref hq hF henv n (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB

@@ -374,7 +374,7 @@ def blockSplit : FunDecl := lfn (off, l) locals (ci, ok, q, co, cl, ro, rl, fo, 
   };
   (ok, q) := call block_split(off + 1, l - 1);
   if ok == 0 { return (0, 0) };
-  (fo, fl) := call sl_cons(ci + 1, IW.u64[q], IW.u64[q + 1]);
+  (fo, fl) := call sl_cons(ci + ⟪CI.cv⟫, IW.u64[q], IW.u64[q + 1]);
   q2 := call rec6(fo, fl, IW.u64[q + 2], IW.u64[q + 3], IW.u64[q + 4], IW.u64[q + 5]);
   return (1, q2)
 }

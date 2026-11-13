@@ -306,7 +306,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   have hk6 := callW_keepW (callW_of_callE h6)
   -- `target_ctor_at`
   have hg26 : IWGrow m1 s6.mem := (k2.trans (k4.trans (k5.trans k6))).grow
-  have hca3' : ca + 3 < 2 ^ 64 := hca3
+  have hca3' : ca + CV.type.toNat < 2 ^ 64 := hca3
   have hkm6 : KeepW m s6.mem := hk1.trans (hk2.trans (hk4.trans (hk5.trans hk6)))
   refine RefE.bindLift (fun _ => cxoE.k_target_ctor_at.none ..) fun r7 m7 c7 => ?_
   rw [cxoE.k_target_ctor_at.arm1]

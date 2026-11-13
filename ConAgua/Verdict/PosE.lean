@@ -366,7 +366,7 @@ def OneRef (n : Nat) : Prop :=
     (holesP : List ConLeche.Expr) (cvP : ConLeche.ConstantVal) (nsP : ConLeche.NestState),
     StageC dn vis fe env m a → WCtx dn vis fe m ctx po pl c prog →
     CtorsCtx m us dO dL no nl hO hL ds names holes →
-    decCV (erecP m) cv.toNat = some cvv → cv.toNat + 3 < 2 ^ 64 → NSB m ns NS → PosMR m → AbsOK m →
+    decCV (erecP m) cv.toNat = some cvv → cv.toNat + CV.type.toNat < 2 ^ 64 → NSB m ns NS → PosMR m → AbsOK m →
     ConLeche.NestCtxOk ctxP → dCtx a.store env.find? c = some ctxP → dProg a.store prog = some progP →
     CtorsPre a.store (decI us) ds names holes hi.toNat usP dsP namesP holesP →
     Frontend.denoteCV a.store cvv = some cvP → cvP.type.hasFvar = false →
