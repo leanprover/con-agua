@@ -162,7 +162,7 @@ theorem toi_ref (henv : ConLeche.EnvWF env) (n : Nat) (hn : n ≤ 2 ^ 62) {m : M
     rw [show q + 1 + 1 = q + 2 by rw [UInt64.add_assoc]; rfl,
       show q + 1 + 2 = q + 3 by rw [UInt64.add_assoc]; rfl]
     exact hlp
-  obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3 (by rw [e1]; omega)
+  obtain ⟨hS4, hg4, -, hdec4, -⟩ := L.Ind.cvLpsW_stage hlp' hS3 hcv3
   -- `inst_lp_fast`
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨tl, a4, hrun5, ⟨hS5, hg5, htlH, htld⟩, ⟨_, _, hfA, hfC, hf5⟩, hA5⟩ :=

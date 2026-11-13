@@ -168,12 +168,12 @@ theorem iwReset_specW (p : Prog) (hp : p.lookup "iw_reset" = some iwReset) (n : 
 /-- The model of `cv_lps(q)` (its copy runs at `n - 1`). -/
 def cvLpsW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
-  | n + 1, m, q => erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
-      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775))
+  | n + 1, m, q => erToIwW n m (rdW (m.arr64 (tierA EREC ((q + CV.lpsOff) >>> 40))) ((q + CV.lpsOff) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + CV.lpsLen) >>> 40))) ((q + CV.lpsLen) &&& 1099511627775))
 
 theorem cvLpsW_step (n : Nat) (m : Mem) (q : Word) :
-    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 (tierA EREC ((q + 1) >>> 40))) ((q + 1) &&& 1099511627775))
-      (rdW (m.arr64 (tierA EREC ((q + 2) >>> 40))) ((q + 2) &&& 1099511627775)) :=
+    cvLpsW (n + 1) m q = erToIwW n m (rdW (m.arr64 (tierA EREC ((q + CV.lpsOff) >>> 40))) ((q + CV.lpsOff) &&& 1099511627775))
+      (rdW (m.arr64 (tierA EREC ((q + CV.lpsLen) >>> 40))) ((q + CV.lpsLen) &&& 1099511627775)) :=
   rfl
 
 grind_pattern [ind_grind] cvLpsW_step => cvLpsW (n + 1) m q

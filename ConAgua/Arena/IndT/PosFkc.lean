@@ -330,7 +330,7 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     rw [e1]; exact hg3.ext.decCV hcv
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
   dsimp only [fkcE.k_cv_lps]
-  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS3 hcv4 (by rw [e1]; omega)
+  obtain ⟨hS5, hg5, -, hdec5, -⟩ := L.Ind.cvLpsW_stage hlp hS3 hcv4
   have hg35 := hg3.trans hg5
   -- `inst_lp_fast`
   refine RefE.bindLift (fun _ => rfl) fun r6 m6 hil => ?_

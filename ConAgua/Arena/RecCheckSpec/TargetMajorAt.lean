@@ -218,7 +218,7 @@ theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
     rw [hwl] at h
     rcases hcl : cvLpsW n m c with _ | ⟨r1, m1⟩ <;> rw [hcl] at h <;>
       try (simp only [tcK1, reduceCtorEq] at h; done)
-    obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv hcb
+    obtain ⟨hS1, hg1, hE, hdec1, hto⟩ := cvLpsW_stage hcl hS hcv
     simp only [tcK1] at h
     rw [L.Arena.erRd_of (m := m1) _ _ (by rw [hc3]; exact hg1.ext _ _ hwtA)] at h
     rcases hi : cR n "inst_lp_fast" [CWF, r1.headD 0, r1.tail.headD 0, wl, wt] m1 with _ | ⟨r2, m2⟩ <;> rw [hi] at h <;>

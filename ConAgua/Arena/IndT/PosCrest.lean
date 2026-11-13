@@ -146,7 +146,7 @@ theorem crest_ref {k : Nat} (hn : k ≤ 2 ^ 62) {m : Mem} {a : AState}
   -- the level parameters (L only)
   refine RefE.onlySim (fun _ => ncrE.k_cv_lps.none ..) (fun _ _ h => h) fun r1 m1 hlp => ?_
   rw [ncrE.k_cv_lps.arm1]
-  obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := L.Ind.cvLpsW_stage hlp hS hcv hcv3
+  obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := L.Ind.cvLpsW_stage hlp hS hcv
   have hA1 : AbsOK m1 := erToIwW_afr (show erToIwW _ m _ _ = some (r1, m1) from hlp) hA
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.iw.iw hS1.iw.iwSize
   obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL m1 _ _ _ hdec1 (by omega)
