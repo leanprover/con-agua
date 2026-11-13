@@ -164,10 +164,11 @@ theorem bluW_ok {m : Mem} {a : AState} {R : List NIdx} (hP : PinsR m a.pins)
     simp only [nat?, Option.map_eq_some_iff] at hv; exact hv
   have hcv := decCI_cv hc
   obtain ⟨wn, hwn, hwnl, hname⟩ := decCV_name hcv
-  have hq1 : (w + 1).toNat = w.toNat + 1 := L.toNat_add_ofNat_of_lt w 1 (erecP_lt64 hwn)
+  have hq1 : (w + (CI.cv + CV.name)).toNat = w.toNat + CI.cv.toNat :=
+    off_add_toNat CI.cv_name_toNat (erecP_lt64 hwn)
   have e1 : rdW (m.arr64 (tierA EREC (bo >>> 40))) (bo &&& 1099511627775) = w := by
     rw [erRd_congr (m := m) (m' := m) rfl rfl]; exact erRd_of _ _ hw
-  have e2 : rdW (m.arr64 (tierA EREC ((w + 1) >>> 40))) ((w + 1) &&& 1099511627775) = wn := by
+  have e2 : rdW (m.arr64 (tierA EREC ((w + (CI.cv + CV.name)) >>> 40))) ((w + (CI.cv + CV.name)) &&& 1099511627775) = wn := by
     rw [erRd_congr (m := m) (m' := m) rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hwn)
   rw [e1, e2] at h
   have hcn : c.name = decI wn := by

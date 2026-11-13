@@ -280,7 +280,7 @@ theorem recOK_new {D P : Array Word} {ds : Array IDeclaration} (hF : DeclsF D P 
     UInt64.toNat_zero, Option.bind_eq_bind, Option.bind_some] at hci
   have := hG ci hmem
   revert hci this
-  cases L.Arena.decCV (L.Arena.aread (trunc P t)) (0 + 1) <;> intro hci <;> simp at hci
+  cases L.Arena.decCV (L.Arena.aread (trunc P t)) (0 + CI.cv.toNat) <;> intro hci <;> simp at hci
   subst hci
   simp [GoodCI]
 

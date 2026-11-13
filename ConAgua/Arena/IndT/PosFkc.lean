@@ -273,18 +273,11 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
   obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
   have hq64 := L.Arena.erecP_lt64 hv16
   have := CI.indCaps_ge
-  have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e12 : (q + 3).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨-, hlps, -⟩ := decCV_some hcv
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
-  obtain ⟨lo, hlo, ll, hll, hsl⟩ := hlps
-  have hlen : (erRd m (q + 3)).toNat = cv.levelParams.length := by
-    simp only [nat?, Option.map_eq_some_iff] at hll
-    obtain ⟨w, hw, rfl⟩ := hll
-    rw [← e12] at hw
-    rw [(erRd_of_erecP hw).1]
-    simpa using (mapM_opt_length _ _ _ hsl).symm
+  obtain ⟨wn, hwn, -⟩ := decCV_name hcv
+  have e1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwn)
+  have e5 : (q + CI.indCaps).toNat = q.toNat + CI.indCaps.toNat := off_add_toNat rfl hq64
+  have hlen : (erRd m (q + (CI.cv + CV.lpsLen))).toNat = cv.levelParams.length :=
+    (decCV_rd_ci (erRdOK m) hcv).2.2.2.1.symm
   -- the twin's family and its denotation
   obtain ⟨cc, hcc, he⟩ := ConRon.Bridge.Inductives.find_some_rel hC.check.ienv hcP hfind
   obtain ⟨cvP, capsP, hcvP, hcapsP, rfl⟩ := ConRon.Bridge.Inductives.denoteCI_indInfo_inv hcc
@@ -307,11 +300,11 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
   refine ⟨some l'.toNat, a, by simp [ConRon.Arena.viewLsLen, hvl]; rfl, ?_⟩
   dsimp only [fkcE.k_view_ls_len]
   simp only [hln, List.tail_cons, List.headD_cons]
-  change RefE _ (if l' ≠ erRd m (q + 3) then _ else _) _ _ _
+  change RefE _ (if l' ≠ erRd m (q + (CI.cv + CV.lpsLen)) then _ else _) _ _ _
   refine RefE.guardThen (by decide) (fun h => by rw [← hlen]; simpa [UInt64.toNat_inj] using h)
     (fun h => by rw [← hlen] at h; simpa [UInt64.toNat_inj] using h) fun hneq _ => ?_
   -- `family_telescope`
-  have hcvB : DecB (fun m => decCVp m (q + 1).toNat) m cv := by
+  have hcvB : DecB (fun m => decCVp m (q + CI.cv).toNat) m cv := by
     show decCV (erA (truncM m)) _ = _
     rw [truncM_erA, e1]; exact hcv
   have hFT := ft_ref hq hP.ft henv k (by omega) (cvq := q + CI.cv) (capsq := q + CI.indCaps) hC hA hcvB
@@ -319,14 +312,14 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (ftE_spec p hP.ft k _ vis _ _) hGnv
     (fun hG => ⟨hGnv hG, hGw hG⟩) hFT fun r3 s3 tyC a2 hc3 _ hr3 hP3 => ?_
   dsimp only [fkcE.k_family_telescope]
-  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hP.ft k ⟨m, Locals.init []⟩ vis (q + 1) (q + 5)) hc3
+  obtain ⟨s3', hs3', -, hfx3⟩ := triple_of_callE (ftE_spec p hP.ft k ⟨m, Locals.init []⟩ vis (q + CI.cv) (q + CI.indCaps)) hc3
   obtain ⟨c2, tyCP, htyCP, hF1⟩ := ConRon.Bridge.Inductives.familyTelescope_specF ConRon.Bridge.CoreSpec.of_core
     henv cv cvP caps capsP hws a a2 tyC hC.check ⟨hcvP, hcapsP⟩ hr3
   have hS3 := hP3.stage.stage
   have hg3 := hP3.grow
   generalize s3.mem = m3 at hS3 hg3 hP3 hs3' ⊢
   -- `cv_lps`
-  have hcv4 : decCVp m3 (q + 1).toNat = some cv := by
+  have hcv4 : decCVp m3 (q + CI.cv).toNat = some cv := by
     rw [e1]; exact hg3.ext.decCV hcv
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r5 m5 hlp => ?_
   dsimp only [fkcE.k_cv_lps]

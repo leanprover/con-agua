@@ -114,10 +114,8 @@ theorem rfW_ok {p : Prog} (hP : FireProg p) {vis : Word} {fe : IFEnv} {n : Nat} 
   rw [hcw] at h
   have hcvE : decCV (erecP m) aw = some rs.cvR := decCVp_truncM hcv
   obtain ⟨-, -, ⟨w, hw, hw32, hwd⟩⟩ := decCV_words hcvE
-  have h3 : (cw + 3).toNat = aw + 3 := by
-    have := erecP_lt64 hw; rw [UInt64.toNat_add, hcwv]; simp; omega
-  have hw' : rdW (m.arr64 (tierA EREC ((cw + 3) >>> 40))) (cw + 3 &&& 1099511627775) = w :=
-    L.Arena.erRd_of _ _ (by rw [h3]; exact hw)
+  have hw' : rdW (m.arr64 (tierA EREC ((cw + CV.type) >>> 40))) (cw + CV.type &&& 1099511627775) = w :=
+    (erRdOK m).at _ rfl (by rw [hcwv]; exact hw)
   rw [hw'] at h
   generalize hmIw : rdW (m.arr64 IW) (rc + 2) = mIw at h hmIW
   rcases hs : stripF 6 m [mIw, w] with _ | ⟨r1, m1⟩ <;> rw [hs] at h
