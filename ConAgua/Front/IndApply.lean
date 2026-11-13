@@ -32,7 +32,7 @@ other declarations' universe parameter lists live in; a constant's universe para
 
 | constant | words at `p` |
 |---|---|
-| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (15: `0,0,0,0,0,0,0, 1,0,0, 0,0, 0, 0,0`) — 20 |
+| `indInfo cv {}` | `3`, cv (4: name, lps.off, lps.len, type), the default `IIndCaps` (`Caps.size` words, every field `0`) — `CI.indSize` |
 | `ctorInfo cv nP nF induct` | `4`, cv, `nP`, `nF`, `induct` — 8 |
 | `recInfo cv major pre rules` | `5`, cv, `major`, `pre`, rules.off, rules.cnt — 9; each rule 11 words (`decRule`): `ctor, nfields, 0, 0 (plain), 0, 0, 0, 0, rhs, 0, 0` |
 

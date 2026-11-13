@@ -186,7 +186,7 @@ theorem capsFin_rec {vis : Word} {fe : IFEnv} {a : AState} {m m5 : Mem}
       (hk _ Caps.ctorsOff_lt)).set_iw _ _ (hk _ Caps.ctorsLen_lt))
   · exact capsRecW_set64 (m := m5) (A := IW) (by omega) (by omega)
 
-/-- **`block_caps_fin`'s record**: the stage relation kept, the 15 words at the returned pointer,
+/-- **`block_caps_fin`'s record**: the stage relation kept, the record's words at the returned pointer,
 the member names and the ctor names as `EREC` slices below the record pool's top. -/
 theorem icfW_ok {p : Prog} (hP : CapsProg p) {n : Nat}
     {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
