@@ -128,11 +128,11 @@ def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
 theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
     (hf : fe.find? T = envFound m f q)
     (hs : f ≠ 0 → ∃ ci, decCI (erecP m) q.toNat = some ci) :
-    (¬ (f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + 19) = 1 ∧ erRd m (q + 17) < tn) →
+    (¬ (f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + (CI.indCaps + Caps.ctorsLen)) = 1 ∧ erRd m (q + (CI.indCaps + Caps.nparams)) < tn) →
       projIndexedStructLike fe T T i tn.toNat = false) ∧
-    ((f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + 19) = 1 ∧ erRd m (q + 17) < tn) →
-      HW (erRd m (erRd m (q + 18))) ∧
-      projIndexedStructLike fe T T i tn.toNat = ctorFieldsGt fe (decI (erRd m (erRd m (q + 18)))) i) := by
+    ((f ≠ 0 ∧ erRd m q = 3 ∧ erRd m (q + (CI.indCaps + Caps.ctorsLen)) = 1 ∧ erRd m (q + (CI.indCaps + Caps.nparams)) < tn) →
+      HW (erRd m (erRd m (q + (CI.indCaps + Caps.ctorsOff)))) ∧
+      projIndexedStructLike fe T T i tn.toNat = ctorFieldsGt fe (decI (erRd m (erRd m (q + (CI.indCaps + Caps.ctorsOff))))) i) := by
   by_cases f0 : f = 0
   · have hn : fe.find? T = none := by rw [hf]; simp [envFound, f0]
     refine ⟨fun _ => ?_, fun h => absurd h.1 (by simpa using f0)⟩
@@ -143,11 +143,11 @@ theorem pisl_first {fe : IFEnv} {m : Mem} {T : NIdx} {f q tn : Word} {i : Nat}
   by_cases h3 : erRd m q = 3
   · obtain ⟨cv, caps, rfl⟩ := hK.1 h3
     obtain ⟨hnp, hlen, hc⟩ := decCI_indNC (erRdOK m) hci
-    by_cases h19 : erRd m (q + 19) = 1
+    by_cases h19 : erRd m (q + (CI.indCaps + Caps.ctorsLen)) = 1
     · have hl1 : caps.ctors.length = 1 := by rw [hlen, h19]; rfl
       obtain ⟨c, hc1⟩ := List.length_eq_one_iff.mp hl1
       obtain ⟨hcw, hhw⟩ := hc c hc1
-      by_cases h17 : erRd m (q + 17) < tn
+      by_cases h17 : erRd m (q + (CI.indCaps + Caps.nparams)) < tn
       · refine ⟨fun h => absurd ⟨f0, h3, h19, h17⟩ h, fun _ => ⟨hhw, ?_⟩⟩
         have hlt : caps.nparams < tn.toNat := by rw [hnp]; exact UInt64.lt_iff_toNat_lt.mp h17
         simp only [projIndexedStructLike, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hfind,
@@ -325,8 +325,8 @@ theorem ip_grade (p : Prog) (hp : InferProjProg p) (hpj : ProjProg p) (hc : Infe
       simp only [erRd] at hP
       by_cases C1 : r₇.headD 0 ≠ 0 ∧
           rdW (m₇.arr64 (tierA EREC (r₇.tail.headD 0 >>> 40))) (r₇.tail.headD 0 &&& 1099511627775) = 3 ∧
-          rdW (m₇.arr64 (tierA EREC ((r₇.tail.headD 0 + 19) >>> 40))) (r₇.tail.headD 0 + 19 &&& 1099511627775) = 1 ∧
-          rdW (m₇.arr64 (tierA EREC ((r₇.tail.headD 0 + 17) >>> 40))) (r₇.tail.headD 0 + 17 &&& 1099511627775) <
+          rdW (m₇.arr64 (tierA EREC ((r₇.tail.headD 0 + (CI.indCaps + Caps.ctorsLen)) >>> 40))) (r₇.tail.headD 0 + (CI.indCaps + Caps.ctorsLen) &&& 1099511627775) = 1 ∧
+          rdW (m₇.arr64 (tierA EREC ((r₇.tail.headD 0 + (CI.indCaps + Caps.nparams)) >>> 40))) (r₇.tail.headD 0 + (CI.indCaps + Caps.nparams) &&& 1099511627775) <
             r₆.tail.headD 0
       · rw [ite_eq_left C1]
         obtain ⟨hwc, hpe1⟩ := hP.2 C1

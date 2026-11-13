@@ -271,6 +271,8 @@ theorem installDecCaps {a : Nat → Option Word} {e : Nat}
   simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at e0 e6
   simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at e10 e11 e12 e13 e14
   unfold decCaps
+  simp only [Caps.eta, Caps.nIdx, Caps.neverZero, Caps.allOff, Caps.nparams, Caps.ctorsOff,
+    UInt64.reduceToNat, Nat.add_zero]
   simp only [bool?, nat?, hlist?, e0, e6, e7, e10, e12, e13,
     show e + 10 + 1 = e + 11 by omega, show e + 13 + 1 = e + 14 by omega, e11, e14, Option.map_some,
     hx, hy, bind, Option.bind_some, pure]

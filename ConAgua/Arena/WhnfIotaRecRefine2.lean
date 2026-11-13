@@ -121,7 +121,8 @@ theorem inc_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Con
   obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci4)
   simp only [erRd] at hnz hlen
   generalize r₄.tail.headD 0 = q at *
-  by_cases g : rdW (m.arr64 (tierA EREC ((q + 12) >>> 40))) (q + 12 &&& 1099511627775) = 0
+  by_cases g : rdW (m.arr64 (tierA EREC ((q + (CI.indCaps + Caps.neverZero)) >>> 40)))
+      (q + (CI.indCaps + Caps.neverZero) &&& 1099511627775) = 0
   · rw [ite_eq_left g] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
