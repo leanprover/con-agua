@@ -322,7 +322,7 @@ theorem uls_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} (
   rw [hvl]
   dsimp only [ulsE.k_ls_node]
   have heta := hIR.eta
-  by_cases g1 : erRd s₀.mem (r₂.tail.headD 0 + 5) = 0
+  by_cases g1 : erRd s₀.mem (r₂.tail.headD 0 + (CI.indCaps + Caps.eta)) = 0
   · erw [ite_eq_left g1]
     rw [show caps.eta = false by rw [heta, g1]; rfl]
     exact hl _ (by simp; rfl)

@@ -447,7 +447,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     fun r3 m3 _ h3 => RefE.after_core (w := id) h3 fun M3 hS3 _ => ?_
   rw [fnzaE.k_inst_lp.arm1]
   have hf := fsl_ref p hp.toFslProg n F hk hnF hn62 dn vis fe eb mode hm4 hebm n (by omega) m3 _ M3 0
-    (erRd m1 (q + 17) + erRd m1 (q + 11)) (r3.headD 0) hS3 h3.resOk
+    (erRd m1 (q + (CI.indCaps + Caps.nparams)) + erRd m1 (q + (CI.indCaps + Caps.nIdx))) (r3.headD 0) hS3 h3.resOk
   simp only [L.Ind.erRd_foldN] at hn' hni hnp; rw [hn', ← hni, ← hnp, show ((0 : Word)).toNat = 0 from rfl] at hf
   refine RefE.bind_coreE (w := id) (fun _ => fnzaE.k_former_sort_loop.none ..) id hf
     fun r4 m4 _ h4 M4 hS4 _ => ?_
@@ -495,7 +495,8 @@ theorem fanza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 
   obtain ⟨-, -, hnz, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hnz
   unfold ConRon.Arena.familyNeverZeroAt
-  by_cases g : rdW (m.arr64 (tierA EREC ((q + 12) >>> 40))) ((q + 12) &&& 1099511627775) ≠ 0
+  by_cases g : rdW (m.arr64 (tierA EREC ((q + (CI.indCaps + Caps.neverZero)) >>> 40)))
+      ((q + (CI.indCaps + Caps.neverZero)) &&& 1099511627775) ≠ 0
   · rw [fanzaE.arm1 _ _ _ _ _ _ _ g]
     rw [show caps.neverZero = true by rw [hnz]; simpa using g]
     simp only [↓reduceIte]

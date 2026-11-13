@@ -84,18 +84,20 @@ theorem decCaps_rd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
     hR.at _ rfl hal, hR.at _ rfl hco, hR.at _ rfl hcl]
   exact ⟨e1.symm, e2.symm, e3.symm, e4.symm, has, hcs⟩
 
-/-- **Two readers that agree on a record's words** (and extend each other elsewhere, for the
-slices) decode the same `IIndCaps`. -/
+/-- **A record's words carried to another reader** (each word `R` reads at `q + j`, `R'` reads at
+`q' + j`; the slices through `ArrExt`) decode the same `IIndCaps`. -/
 theorem decCaps_congr {R R' : Nat → Option Word} {q q' : Nat} {c : IIndCaps}
-    (w : ∀ j < Caps.size.toNat, R (q + j) = R' (q' + j)) (he : ArrExt R R')
+    (w : ∀ j < Caps.size.toNat, ∀ v, R (q + j) = some v → R' (q' + j) = some v) (he : ArrExt R R')
     (h : decCaps R q = some c) : decCaps R' q' = some c := by
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := decCaps_eq_some.mp h
   have wb : ∀ f : Word, f.toNat < Caps.size.toNat → ∀ {b}, bool? R (q + f.toNat) = some b →
       bool? R' (q' + f.toNat) = some b := fun f hf b hb => by
-    simpa only [bool?, w _ hf] using hb
+    obtain ⟨v, hv, rfl⟩ := bool?_word hb
+    simp [bool?, w _ hf v hv]
   have wn : ∀ f : Word, f.toNat < Caps.size.toNat → ∀ {n}, nat? R (q + f.toNat) = some n →
       nat? R' (q' + f.toNat) = some n := fun f hf n hn => by
-    simpa only [nat?, w _ hf] using hn
+    obtain ⟨v, hv, rfl⟩ := nat?_word hn
+    simp [nat?, w _ hf v hv]
   have wl : ∀ {k : IdxKind} (f g : Word), f.toNat < Caps.size.toNat → g.toNat < Caps.size.toNat →
       g.toNat = f.toNat + 1 → ∀ {l : List (Idx k)}, hlist? R (q + f.toNat) = some l →
       hlist? R' (q' + f.toNat) = some l := fun f g hf hg hfg l hl => by
