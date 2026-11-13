@@ -172,6 +172,48 @@ theorem decRule_rd {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl
   · exact ⟨_, _, rfl, sl _ _ Rule.lvlsLen_toNat hf.2.1, sl _ _ Rule.pinsLen_toNat hf.2.2⟩
   · exact ⟨_, rfl, sl _ _ Rule.lvlsLen_toNat hf.2⟩
 
+/-- A decoded rule's constructor (offset 0). -/
+theorem decRule_ctor {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
+    hd? R q = some rl.ctor :=
+  (decRule_fields h).1
+
+/-- **A rule's fire datum at its words**: kind `0` plain; otherwise levels or nested, its levels
+the slice at `Rule.lvlsOff`, `Rule.lvlsLen`. -/
+theorem decRule_fireE {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule}
+    (hR : RdOK R rd) (h : decRule R q.toNat = some rl) :
+    (rd (q + Rule.fire) = 0 ∧ rl.fire = .plain) ∨
+    (rd (q + Rule.fire) ≠ 0 ∧ ∃ lvls, (rl.fire = .levels lvls ∨ ∃ pins, rl.fire = .nested lvls pins) ∧
+      hslice? R (rd (q + Rule.lvlsOff)).toNat (rd (q + Rule.lvlsLen)).toNat = some lvls) := by
+  obtain ⟨-, -, -, h0, h1, h2, -, -⟩ := decRule_rd hR h
+  obtain ⟨wk, hwk, ek⟩ := (decRule_fire h).kind
+  have e3 := hR.at _ rfl hwk
+  rcases rl with ⟨c, nf, f, r⟩
+  cases f with
+  | plain => exact .inl ⟨by rw [e3]; exact UInt64.toNat_inj.mp (by simpa using ek), rfl⟩
+  | nested lv ps =>
+    have e : rd (q + Rule.fire) = 1 := by rw [e3]; exact UInt64.toNat_inj.mp (by simpa using ek)
+    obtain ⟨lv', ps', hf, hl, -⟩ := h1 e
+    cases hf
+    exact .inr ⟨by rw [e]; decide, lv, .inr ⟨ps, rfl⟩, hl⟩
+  | levels lv =>
+    have e : rd (q + Rule.fire) = 2 := by rw [e3]; exact UInt64.toNat_inj.mp (by simpa using ek)
+    obtain ⟨lv', hf, hl⟩ := h2 e
+    cases hf
+    exact .inr ⟨by rw [e]; decide, lv, .inl rfl, hl⟩
+
+/-- A rule whose fire kind word is not `1` is not nested. -/
+theorem decRule_notNested {R : Nat → Option Word} {rd : Word → Word} {q : Word} {rl : IRecRule}
+    (hR : RdOK R rd) (h : decRule R q.toNat = some rl) (h1 : rd (q + Rule.fire) ≠ 1) :
+    rl.fire = .plain ∨ ∃ lvls, rl.fire = .levels lvls := by
+  obtain ⟨wk, hwk, ek⟩ := (decRule_fire h).kind
+  have e3 := hR.at _ rfl hwk
+  rcases rl with ⟨c, nf, f, r⟩
+  cases f with
+  | plain => exact .inl rfl
+  | nested => exact absurd (by rw [e3]; exact UInt64.toNat_inj.mp (by simpa using ek)) h1
+  | levels lv => exact .inr ⟨lv, rfl⟩
+
+
 /-! ## Rule slices -/
 
 theorem decRules_succ (R : Nat → Option Word) (o n : Nat) :
@@ -229,5 +271,23 @@ theorem rule_idx {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd)
   rw [UInt64.toNat_add, UInt64.toNat_mul]
   rw [Nat.mod_eq_of_lt (a := Rule.size.toNat * i.toNat) (by omega)]
   omega
+
+/-- The next rule's records, at the word address. -/
+theorem decRules_shift {R : Nat → Option Word} {o : Word} {k : Nat} {rs : List IRecRule}
+    (h : decRules R (o.toNat + Rule.size.toNat) k = some rs) (hR : ∀ i v, R i = some v → i < 2 ^ 64) :
+    decRules R (o + Rule.size).toNat k = some rs := by
+  cases k with
+  | zero => simpa [decRules] using h
+  | succ k =>
+  have h' := h
+  rw [decRules_succ] at h'
+  simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
+  obtain ⟨r0, hr0, -⟩ := h'
+  obtain ⟨w, hw, -⟩ := hd?_some (decRule_ctor hr0)
+  have := hR _ _ hw
+  have := Rule.size_le
+  have e : (o + Rule.size).toNat = o.toNat + Rule.size.toNat := by
+    rw [UInt64.toNat_add]; omega
+  rw [e]; exact h
 
 end L.Arena

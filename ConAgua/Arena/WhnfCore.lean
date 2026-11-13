@@ -394,9 +394,9 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
   (lo, usl) := call ls_node(us);
-  np := EREC⦃q + ⟪Tbl.numParams⟫⦄;
-  nf := EREC⦃q + ⟪Tbl.numFields⟫⦄;
-  if k == EREC⦃q + ⟪Tbl.ctor⟫⦄ && i < nf && nf <= an && an - nf == np && usl == EREC⦃q + ⟪Tbl.lpsLen⟫⦄ {
+  np := EREC⦃q + ⟪ProjTbl.numParams⟫⦄;
+  nf := EREC⦃q + ⟪ProjTbl.numFields⟫⦄;
+  if k == EREC⦃q + ⟪ProjTbl.ctor⟫⦄ && i < nf && nf <= an && an - nf == np && usl == EREC⦃q + ⟪ProjTbl.lpsLen⟫⦄ {
     (st, r) := call reduce_proj_arg(mode, vis, k, ao, an, np + i);
     return (st, r)
   };

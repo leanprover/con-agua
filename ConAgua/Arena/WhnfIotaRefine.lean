@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -40,23 +41,6 @@ namespace L.Arena
 
 /-! ## Decoding rule records -/
 
-theorem decRule_fields (a : Array Word) (q : Nat) (rl : IRecRule) (h : decRule (aread a) q = some rl) :
-    ∃ w, a[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w := by
-  have hc : hd? (aread a) q = some rl.ctor := by
-    unfold decRule at h
-    rcases hk : nat? (aread a) (q + 3) with _ | k
-    · simp [hk] at h
-    · rcases k with _ | _ | _ | k <;>
-        simp only [hk, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
-          Option.pure_def, Option.some.injEq] at h
-      all_goals first
-        | (obtain ⟨c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (obtain ⟨x1, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (obtain ⟨x1, -, x2, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (simp at h)
-  obtain ⟨w, hw, h32, he⟩ := hd?_some hc
-  exact ⟨w, by simpa [aread_apply] using hw, h32, he⟩
-
 theorem mapM_option_get {α β : Type} (f : α → Option β) : ∀ (l : List α) (rs : List β),
     l.mapM f = some rs → rs.length = l.length ∧ ∀ j (hj : j < l.length), f l[j] = rs[j]? := by
   intro l
@@ -73,48 +57,6 @@ theorem mapM_option_get {α β : Type} (f : α → Option β) : ∀ (l : List α
     | zero => simp [hy]
     | succ j => simpa using h2 j (by simpa using hj)
 
-theorem decRules_get (a : Array Word) (off cnt : Nat) (rs : List IRecRule)
-    (h : decRules (aread a) off cnt = some rs) :
-    rs.length = cnt ∧ ∀ j, j < cnt → decRule (aread a) (off + 11 * j) = rs[j]? := by
-  obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
-  simp at h1
-  exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem_range] using this⟩
-
-/-- A decoded rule's constructor word, read through a reader. -/
-theorem decRule_ctorR {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl) :
-    ∃ w, R q = some w ∧ w.toNat < 2 ^ 32 ∧ rl.ctor = decI w := by
-  have hc : hd? R q = some rl.ctor := by
-    unfold decRule at h
-    rcases hk : nat? R (q + 3) with _ | k
-    · simp [hk] at h
-    · rcases k with _ | _ | _ | k <;>
-        simp only [hk, Option.bind_eq_bind, Option.bind_some, Option.bind_eq_some_iff,
-          Option.pure_def, Option.some.injEq] at h
-      all_goals first
-        | (obtain ⟨c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (obtain ⟨x1, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (obtain ⟨x1, -, x2, -, c, hc, nf, -, rh, -, rfl⟩ := h; exact hc)
-        | (simp at h)
-  exact hd?_some hc
-
-/-- The rules of a decoded slice, one by one (any reader). -/
-theorem decRules_getR {R : Nat → Option Word} (off cnt : Nat) (rs : List IRecRule)
-    (h : decRules R off cnt = some rs) :
-    rs.length = cnt ∧ ∀ j, j < cnt → decRule R (off + 11 * j) = rs[j]? := by
-  obtain ⟨h1, h2⟩ := mapM_option_get _ _ _ h
-  simp at h1
-  exact ⟨h1, fun j hj => by have := h2 j (by simpa using hj); simpa [List.getElem?_range] using this⟩
-
-/-- The model's index arithmetic does not wrap on a decoded record. -/
-theorem rule_idx {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro i : Word)
-    (rl : IRecRule) (h : decRule R (ro.toNat + 11 * i.toNat) = some rl) :
-    (ro + 11 * i).toNat = ro.toNat + 11 * i.toNat := by
-  obtain ⟨w, hw, -⟩ := decRule_ctorR h
-  have hlt := hR.lt _ _ hw
-  rw [UInt64.toNat_add, UInt64.toNat_mul]
-  simp
-  omega
-
 /-! ## `find_rule(ro, rc, c)` -/
 
 theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1 :=
@@ -125,24 +67,24 @@ theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1
 successful runs). -/
 def frN (rd : Word → Word) (ro rc c : Word) (i : Nat) : List Word :=
   if i < rc.toNat then
-    if rd (ro + 11 * UInt64.ofNat i) = c then [1, ro + 11 * UInt64.ofNat i] else frN rd ro rc c (i + 1)
+    if rd (ro + Rule.size * UInt64.ofNat i) = c then [1, ro + Rule.size * UInt64.ofNat i] else frN rd ro rc c (i + 1)
   else [0, 0]
 termination_by rc.toNat - i
 
 theorem frN_end (rd : Word → Word) (ro rc c x : Word) (h : ¬ x < rc) : frN rd ro rc c x.toNat = [0, 0] := by
   rw [frN, ite_eq_right (fun e => h (UInt64.lt_iff_toNat_lt.mpr e))]
-theorem frN_hit (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : rd (ro + 11 * x) = c) :
-    frN rd ro rc c x.toNat = [1, ro + 11 * x] := by
+theorem frN_hit (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : rd (ro + Rule.size * x) = c) :
+    frN rd ro rc c x.toNat = [1, ro + Rule.size * x] := by
   rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h)]; simp [hc]
-theorem frN_miss (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rd (ro + 11 * x) = c) :
+theorem frN_miss (rd : Word → Word) (ro rc c x : Word) (h : x < rc) (hc : ¬ rd (ro + Rule.size * x) = c) :
     frN rd ro rc c x.toNat = frN rd ro rc c (x + 1).toNat := by
   rw [frN, ite_eq_left (UInt64.lt_iff_toNat_lt.mp h), L.toNat_add_one_of_word_lt _ _ h]; simp [hc]
 
 theorem frN_hitT (m : Mem) (ro rc c x : Word) (h : x < rc)
-    (hc : rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
-    frN (erRd m) ro rc c x.toNat = [1, ro + 11 * x] := frN_hit _ ro rc c x h hc
+    (hc : rdW (m.arr64 (tierA EREC ((ro + Rule.size * x) >>> 40))) ((ro + Rule.size * x) &&& 0xFFFFFFFFFF) = c) :
+    frN (erRd m) ro rc c x.toNat = [1, ro + Rule.size * x] := frN_hit _ ro rc c x h hc
 theorem frN_missT (m : Mem) (ro rc c x : Word) (h : x < rc)
-    (hc : ¬ rdW (m.arr64 (tierA EREC ((ro + 11 * x) >>> 40))) ((ro + 11 * x) &&& 0xFFFFFFFFFF) = c) :
+    (hc : ¬ rdW (m.arr64 (tierA EREC ((ro + Rule.size * x) >>> 40))) ((ro + Rule.size * x) &&& 0xFFFFFFFFFF) = c) :
     frN (erRd m) ro rc c x.toNat = frN (erRd m) ro rc c (x + 1).toNat := frN_miss _ ro rc c x h hc
 
 theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
@@ -174,15 +116,15 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
 /-- Rule `i` of a decoded slice, as the model reads it. -/
 theorem frN_at {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro rc : Word)
     (rules : List IRecRule)
-    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + 11 * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
+    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + Rule.size.toNat * j) = rules[j]?) (i : Nat) (hi : i < rc.toNat)
     (hlen : rules.length = rc.toNat) :
-    ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rd (ro + 11 * UInt64.ofNat i) = w ∧
-      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule R (ro + 11 * UInt64.ofNat i).toNat = some rl := by
+    ∃ rl w, rules.drop i = rl :: rules.drop (i + 1) ∧ rd (ro + Rule.size * UInt64.ofNat i) = w ∧
+      w.toNat < 2 ^ 32 ∧ rl.ctor = decI w ∧ decRule R (ro + Rule.size * UInt64.ofNat i).toNat = some rl := by
   have hi' : (UInt64.ofNat i).toNat = i := by have := rc.toNat_lt; simp; omega
   obtain ⟨rl, hrl⟩ : ∃ rl, rules[i]? = some rl := ⟨rules[i], List.getElem?_eq_getElem (by omega)⟩
   have hdr := hget i hi
   rw [hrl] at hdr
-  have hw := rule_idx hR ro (UInt64.ofNat i) rl (by rw [hi']; exact hdr)
+  have hw := rule_idx hR ro (UInt64.ofNat i) (by rw [hi']; exact hdr)
   rw [hi'] at hw
   obtain ⟨w, hwE, hw32, hctor⟩ := decRule_ctorR hdr
   refine ⟨rl, w, ?_, hR.rd _ _ (by rw [hw]; exact hwE), hw32, hctor, by rw [hw]; exact hdr⟩
@@ -191,7 +133,7 @@ theorem frN_at {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (
 /-- **The scan model computes `findRule`**, by the model's own induction. -/
 theorem frN_rel {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) (ro rc c : Word)
     (hc : HW c) (rules : List IRecRule) (hlen : rules.length = rc.toNat)
-    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + 11 * j) = rules[j]?) (i : Nat) :
+    (hget : ∀ j, j < rc.toNat → decRule R (ro.toNat + Rule.size.toNat * j) = rules[j]?) (i : Nat) :
     findRule (rules.drop i) (decI c) =
       (if (frN rd ro rc c i).headD 0 = 0 then none else decRule R ((frN rd ro rc c i).tail.headD 0).toNat) := by
   fun_induction frN rd ro rc c i with
@@ -218,7 +160,7 @@ theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL)
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hmem, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (findRule_spec p hp n s₀ ro rc c)
-  obtain ⟨hl, hg⟩ := decRules_getR _ _ _ hr
+  obtain ⟨hl, hg⟩ := decRules_get hr
   have := frN_rel (erRdOK s₀.mem) ro rc c hc rules hl hg 0
   refine ⟨hmem, hloc, ?_⟩
   simpa [decRuleAt, hW] using this

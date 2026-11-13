@@ -8,23 +8,26 @@ public import ConAgua.Arena.RecLayout.Attr
 /-!
 # The layout of a projection table record (`IProjTable`)
 
-A structure's projection table is a `Tbl.size`-word record in the record pool `EREC` (not a
+A structure's projection table is a `ProjTbl.size`-word record in the record pool `EREC` (not a
 constant: the environment's table component); the decoder is `L.Arena.decTbl`
 (`Arena/EnvRec.lean`). The level parameters and the bodies are slices: an offset word and a
 length word right after it.
 
-The first two words are `Tbl.kindVal` and `0` (the kind and name words of the constant records'
+The first two words are `ProjTbl.kindVal` and `0` (the kind and name words of the constant records'
 layout; nothing reads them). Words `8`, `11` and `12` are not read (the removed `structSort` and
 `guards`): the writer puts `0` there.
 
 **The offsets are names**, as for every record layout (`RecLayout/Caps.lean`): L code writes
-`EREC⦃q + ⟪Tbl.ctor⟫⦄`, and the compiler evaluates the constant. The kind word at offset 0 stays
+`EREC⦃q + ⟪ProjTbl.ctor⟫⦄`, and the compiler evaluates the constant. The kind word at offset 0 stays
 `erec_put(q, …)` in L. The environment hands a table out as its address plus one
 (`raw_table`, `find_table`; `0` for none): a read through such a handle `tq` is
-`EREC⦃tq + ⟪Tbl.ctor - 1⟫⦄`.
+`EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄`.
+
+The namespace is `L.ProjTbl`, not `L.Tbl`: `Tbl` is the twin's hash table (`ConRon.Arena.Tbl`),
+open wherever the arena's proofs are.
 -/
 
-namespace L.Tbl
+namespace L.ProjTbl
 
 /-- The kind word (it holds `kindVal`). Offset 0. -/
 @[reducible] def kind : Word := 0
@@ -73,4 +76,4 @@ theorem bodiesLen_eq : bodiesLen = bodiesOff + 1 := by simp [bodiesLen, bodiesOf
 theorem lpsLen_toNat : lpsLen.toNat = lpsOff.toNat + 1 := by simp [lpsLen, lpsOff]
 theorem bodiesLen_toNat : bodiesLen.toNat = bodiesOff.toNat + 1 := by simp [bodiesLen, bodiesOff]
 
-end L.Tbl
+end L.ProjTbl

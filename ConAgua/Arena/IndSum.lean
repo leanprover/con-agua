@@ -376,14 +376,14 @@ an internal error, an `abort`) and its table not yet taken. Nothing is pushed. -
 @[no_expose, l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableL : FunDecl :=
   lfn (t, vis) locals (lo, ll, bo, bl, scopedOk, found, q, r) {
-  (lo, ll) := call er_to_iw(EREC⦃t + ⟪Tbl.lpsOff⟫⦄, EREC⦃t + ⟪Tbl.lpsLen⟫⦄);
-  (bo, bl) := call er_to_iw(EREC⦃t + ⟪Tbl.bodiesOff⟫⦄, EREC⦃t + ⟪Tbl.bodiesLen⟫⦄);
-  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + ⟪Tbl.numParams⟫⦄, lo, ll, bo, bl);
-  if bl != EREC⦃t + ⟪Tbl.numFields⟫⦄ { abort };
+  (lo, ll) := call er_to_iw(EREC⦃t + ⟪ProjTbl.lpsOff⟫⦄, EREC⦃t + ⟪ProjTbl.lpsLen⟫⦄);
+  (bo, bl) := call er_to_iw(EREC⦃t + ⟪ProjTbl.bodiesOff⟫⦄, EREC⦃t + ⟪ProjTbl.bodiesLen⟫⦄);
+  scopedOk := call check_struct_proj_table_scoped(vis, EREC⦃t + ⟪ProjTbl.numParams⟫⦄, lo, ll, bo, bl);
+  if bl != EREC⦃t + ⟪ProjTbl.numFields⟫⦄ { abort };
   if scopedOk != 1 { abort };
-  (found, q) := call env_find(EREC⦃t + ⟪Tbl.structName⟫⦄, vis);
+  (found, q) := call env_find(EREC⦃t + ⟪ProjTbl.structName⟫⦄, vis);
   if found == 0 { abort };
-  r := call find_table(vis, EREC⦃t + ⟪Tbl.structName⟫⦄);
+  r := call find_table(vis, EREC⦃t + ⟪ProjTbl.structName⟫⦄);
   if r != 0 { fail R_PROJECTION_TABLE_TAKEN };
   return 0
 }

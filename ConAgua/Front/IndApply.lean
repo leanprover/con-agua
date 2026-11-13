@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.IndFields
 public import ConAgua.Arena.RecLayout.CI
+public import ConAgua.Arena.RecLayout.Rule
 public import ConAgua.Front.ApplyDecl
 import ConAgua.Census.Attr
 

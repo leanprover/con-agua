@@ -1,6 +1,7 @@
 module
 
 import ConAgua.Arena.ProjView
+public import ConAgua.Arena.RecLayout.TblDec
 public import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfCoreSlot
 import ConAgua.Arena.GrindAttr
@@ -209,31 +210,6 @@ theorem add_toNat_of_lt (q : Word) (c : Nat) (hc : c < 2 ^ 63) (h : q.toNat + c 
     (q + c.toUInt64).toNat = q.toNat + c := by
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']
   rw [Nat.mod_eq_of_lt (by omega : c < 2 ^ 64), Nat.mod_eq_of_lt (by omega)]
-
-/-- **The words of a decoded projection table**: the level-parameter count at `q + 4`, the
-parameter count at `q + 5`, the constructor handle at `q + 6`, the field count at `q + 7`. -/
-theorem decTbl_words {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {tbl : IProjTable} (h : decTbl R q.toNat = some tbl) :
-    tbl.levelParams.length = (rd (q + 4)).toNat ∧ tbl.numParams = (rd (q + 5)).toNat ∧
-    HW (rd (q + 6)) ∧ tbl.ctor = decI (rd (q + 6)) ∧
-    tbl.numFields = (rd (q + 7)).toNat := by
-  simp only [decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
-    Option.some.injEq] at h
-  obtain ⟨sn, -, lps, hlps, np, hnp, ct, hct, nf, hnf, bd, -, hc⟩ := h
-  subst hc
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hlps
-  obtain ⟨o, ho, c, hcn, hsl⟩ := hlps
-  simp only [nat?, Option.map_eq_some_iff] at hnp hnf ho hcn
-  obtain ⟨wnp, hwnp, rfl⟩ := hnp
-  obtain ⟨wnf, hwnf, rfl⟩ := hnf
-  obtain ⟨wc, hwc, rfl⟩ := hcn
-  obtain ⟨w6, hw6, hw6l, hw6d⟩ := hd?_some hct
-  have r4 : rd (q + 4) = wc := hR.offN (k := 4) (by simpa [Nat.add_assoc] using hwc) (by decide)
-  have r5 : rd (q + 5) = wnp := hR.offN (k := 5) hwnp (by decide)
-  have r6 : rd (q + 6) = w6 := hR.offN (k := 6) hw6 (by decide)
-  have r7 : rd (q + 7) = wnf := hR.offN (k := 7) hwnf (by decide)
-  rw [r4, r5, r6, r7]
-  exact ⟨hslice?_lenR hsl, rfl, hw6l, hw6d, rfl⟩
 
 /-! ## `ls_node` against `viewLsLen` -/
 
@@ -645,17 +621,17 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
   subst hr₂'
   have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat :=
     lsNodeW_viewLen hS₁.arena.base hus hl₂
-  obtain ⟨hlp', hnp', hw6', hctor', hnf'⟩ : tbl.levelParams.length = (erRd m₂ (q + 4)).toNat ∧
-      tbl.numParams = (erRd m₂ (q + 5)).toNat ∧ HW (erRd m₂ (q + 6)) ∧
-      tbl.ctor = decI (erRd m₂ (q + 6)) ∧
-      tbl.numFields = (erRd m₂ (q + 7)).toNat := by
+  obtain ⟨hlp', hnp', hw6', hctor', hnf'⟩ : tbl.levelParams.length = (erRd m₂ (q + ProjTbl.lpsLen)).toNat ∧
+      tbl.numParams = (erRd m₂ (q + ProjTbl.numParams)).toNat ∧ HW (erRd m₂ (q + ProjTbl.ctor)) ∧
+      tbl.ctor = decI (erRd m₂ (q + ProjTbl.ctor)) ∧
+      tbl.numFields = (erRd m₂ (q + ProjTbl.numFields)).toNat := by
     rw [hE₁]; exact ⟨hlp, hnp, hw6, hctor, hnf⟩
   -- the twin up to the shape test
   have hbnd := hsp₁.bound
   have hlen : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simpa using this
-  have hcond := fire_cond_iff tbl i k (erRd m₂ (q + 6)) (erRd m₂ (q + 5))
-    (erRd m₂ (q + 7)) (r₁.tail.headD 0) l₂ (erRd m₂ (q + 4))
+  have hcond := fire_cond_iff tbl i k (erRd m₂ (q + ProjTbl.ctor)) (erRd m₂ (q + ProjTbl.numParams))
+    (erRd m₂ (q + ProjTbl.numFields)) (r₁.tail.headD 0) l₂ (erRd m₂ (q + ProjTbl.lpsLen))
     xs.length hk hw6' hctor' hnp' hnf' hlen hlp'
   have hpreP : (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
           xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
@@ -674,15 +650,15 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
     intro h
     simp only [rpFireT, StateT.run_bind, hxs, except_ok_bind, viewLsLen_run, hvl]
     rw [ite_eq_right h]
-  by_cases hLc : k = erRd m₂ (q + 6) ∧ i < erRd m₂ (q + 7) ∧
-      erRd m₂ (q + 7) ≤ r₁.tail.headD 0 ∧
-      r₁.tail.headD 0 - erRd m₂ (q + 7) = erRd m₂ (q + 5) ∧
-      ([o₂, l₂] : List Word).tail.headD 0 = erRd m₂ (q + 4)
+  by_cases hLc : k = erRd m₂ (q + ProjTbl.ctor) ∧ i < erRd m₂ (q + ProjTbl.numFields) ∧
+      erRd m₂ (q + ProjTbl.numFields) ≤ r₁.tail.headD 0 ∧
+      r₁.tail.headD 0 - erRd m₂ (q + ProjTbl.numFields) = erRd m₂ (q + ProjTbl.numParams) ∧
+      ([o₂, l₂] : List Word).tail.headD 0 = erRd m₂ (q + ProjTbl.lpsLen)
   · simp only [eq_true hLc, ↓reduceIte] at hW
     have hTc := hcond.mpr hLc
     have hpre := hpreP hTc
     cases hc4 : callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
-        erRd m₂ (q + 5) + i] m₂ with
+        erRd m₂ (q + ProjTbl.numParams) + i] m₂ with
     | none => simp only [hc4, rpFireW.k_reduce_proj_arg] at hW; cases hW
     | some q₄ =>
     obtain ⟨r₄, m₄⟩ := q₄
@@ -698,7 +674,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       exact Nat.le_refl _
     have hspR : SpineR m₂ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
       hsp₁
-    have hjn : (erRd m₂ (q + 5) + i).toNat = tbl.numParams + i.toNat := by
+    have hjn : (erRd m₂ (q + ProjTbl.numParams) + i).toNat = tbl.numParams + i.toNat := by
       have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
       have hle := UInt64.le_iff_toNat_le.mp hLc.2.2.1
       have heq := congrArg UInt64.toNat hLc.2.2.2.1
@@ -707,7 +683,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (_hc : ProjCallees p)
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega), ← hnp']
     have harg := rpArg_refines p hp N { s with mem := m₂ }
       a₀
-      dn vis fe MM eb mode k (r₁.headD 0) (r₁.tail.headD 0) (erRd m₂ (q + 5) + i)
+      dn vis fe MM eb mode k (r₁.headD 0) (r₁.tail.headD 0) (erRd m₂ (q + ProjTbl.numParams) + i)
       xs.toArray ⟨hS₁, hs.mode4, hs.eb_mode⟩ hk hspR
     obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := CoreSpec.of_callW harg hc4
     have e1 : xs.toArray.toList = xs := rfl

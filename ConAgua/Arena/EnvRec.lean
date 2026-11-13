@@ -112,10 +112,10 @@ def decCaps (q : Nat) : Option IIndCaps := do
 
 /-- `IProjTable` at `p` (a table record), laid out by `RecLayout/Tbl.lean`. -/
 def decTbl (p : Nat) : Option IProjTable := do
-  pure { structName := ← hd? a (p + Tbl.structName.toNat),
-         levelParams := ← hlist? a (p + Tbl.lpsOff.toNat), numParams := ← nat? a (p + Tbl.numParams.toNat),
-         ctor := ← hd? a (p + Tbl.ctor.toNat), numFields := ← nat? a (p + Tbl.numFields.toNat),
-         bodies := (← hlist? a (p + Tbl.bodiesOff.toNat)).toArray }
+  pure { structName := ← hd? a (p + ProjTbl.structName.toNat),
+         levelParams := ← hlist? a (p + ProjTbl.lpsOff.toNat), numParams := ← nat? a (p + ProjTbl.numParams.toNat),
+         ctor := ← hd? a (p + ProjTbl.ctor.toNat), numFields := ← nat? a (p + ProjTbl.numFields.toNat),
+         bodies := (← hlist? a (p + ProjTbl.bodiesOff.toNat)).toArray }
 
 /-- **The constant record at `p`.** -/
 def decCI (p : Nat) : Option IConstantInfo := do

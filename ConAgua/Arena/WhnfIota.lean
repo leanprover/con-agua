@@ -285,7 +285,7 @@ The table (`tq`) or `0`. -/
 def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
   if EREC⦃p + ⟪CI.indCaps + Caps.eta⟫⦄ == 0 { return 0 };
-  if EREC⦃tq + ⟪Tbl.ctor - 1⟫⦄ != ctor { return 0 };
+  if EREC⦃tq + ⟪ProjTbl.ctor - 1⟫⦄ != ctor { return 0 };
   r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
   if r == 0 { return 0 };
   ai := call pin_at(48);
@@ -336,9 +336,9 @@ def andRescueLoop : Stmt := lblk (vis, ctor, nP, an, j, flag, q) {
   while j < 2 {
     (flag, q) := call find_proj(vis, an, j);
     if flag == 0 { return 0 };
-    if EREC⦃q + ⟪Tbl.ctor⟫⦄ != ctor { return 0 };
-    if EREC⦃q + ⟪Tbl.numParams⟫⦄ != nP { return 0 };
-    if EREC⦃q + ⟪Tbl.numFields⟫⦄ != 2 { return 0 };
+    if EREC⦃q + ⟪ProjTbl.ctor⟫⦄ != ctor { return 0 };
+    if EREC⦃q + ⟪ProjTbl.numParams⟫⦄ != nP { return 0 };
+    if EREC⦃q + ⟪ProjTbl.numFields⟫⦄ != 2 { return 0 };
     j += 1
   }
 }
