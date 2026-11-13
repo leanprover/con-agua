@@ -162,7 +162,7 @@ def nameTree (fs : List String) : NTree :=
 
 /-- `front_reset()`: the id tables emptied (their dense sizes `0`, their sparse maps cleared);
 the declaration records stay. -/
--- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:492-501 ConRon.Arena.Frontend.StateD.init
 @[no_expose] def frontResetL : FunDecl := lfn () locals (z) {
   CTL.u64[70] := 0;
   CTL.u64[71] := 0;

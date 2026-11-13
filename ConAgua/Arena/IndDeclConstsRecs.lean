@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IndDeclConstsRefire
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
-public import ConAgua.Arena.IndInstallSpec.InstallCtxWord9
 import ConAgua.L.ModelGen
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

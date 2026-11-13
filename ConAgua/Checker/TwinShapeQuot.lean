@@ -74,7 +74,7 @@ theorem denoteCI_ind {st : EStore} {ci : IConstantInfo} {cv : ConstantVal} {caps
   | axiomInfo v => simp [denoteCI] at h
   | defnInfo v e hh => simp only [denoteCI] at h; split at h <;> simp at h
   | thmInfo v => simp [denoteCI] at h
-  | ctorInfo v a b => simp [denoteCI] at h
+  | ctorInfo v a b T => simp only [denoteCI] at h; split at h <;> simp at h
   | recInfo v a b rs => simp only [denoteCI] at h; split at h <;> simp at h
 
 /-- The raw `Eq` block, interned, holds a handle denoting `u`. -/

@@ -270,7 +270,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     have htag := tagWord hci
     by_cases h4 : erRd m q = 4
     · cases ci with
-      | ctorInfo cv np nf =>
+      | ctorInfo cv np nf fam =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
@@ -291,7 +291,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
             have := pinAt_run hF 1 (by decide)
             rw [hr1]; exact this
-          have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a =
+          have hrun : (natZeroOk (some (.ctorInfo cv np nf fam))).run a =
               .ok (decide (wt = r2.headD 0), a2) := by
             simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
               Bool.true_and, hty, decI_beq _ _ hlt hx2l, ← hx2, StateT.run_pure]
@@ -313,7 +313,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
             have := pinAt_run hF 1 (by decide)
             rw [hr1]; exact this
-          have hrun : (natZeroOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
+          have hrun : (natZeroOk (some (.ctorInfo cv np nf fam))).run a = .ok (false, a2) := by
             simp only [natZeroOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
               Bool.false_and, StateT.run_pure]
             rfl
@@ -378,7 +378,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
     have htag := tagWord hci
     by_cases h4 : erRd m q = 4
     · cases ci with
-      | ctorInfo cv np nf =>
+      | ctorInfo cv np nf fam =>
         rw [ite_eq_right (by simpa using h4)] at hw
         have hcvd := ciCv_decodes (cv := cv) hci rfl
         obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hcvd
@@ -411,7 +411,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
               rw [UInt64.lt_iff_toNat_lt]
               exact Nat.lt_of_not_le (fun e => hv2 (UInt64.le_iff_toNat_le.mpr e))⟩
             obtain ⟨hview, hdlt, hblt⟩ := view_forall m2 a2 hS2.check.arena.base wt hlt hvok h6
-            have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a =
+            have hrun : (natSuccOk (some (.ctorInfo cv np nf fam))).run a =
                 .ok (decide (tfld m2 FORALL (tierW wt) (idxW wt) 0 = r2.headD 0 ∧
                   tfld m2 FORALL (tierW wt) (idxW wt) 1 = r2.headD 0), a2) := by
               simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
@@ -431,7 +431,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
           · rw [ite_eq_left (by simpa using h6)] at hw
             simp only [Option.some.injEq, Prod.mk.injEq] at hw
             obtain ⟨rfl, rfl⟩ := hw
-            have hrun : (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a2) := by
+            have hrun : (natSuccOk (some (.ctorInfo cv np nf fam))).run a = .ok (false, a2) := by
               simp only [natSuccOk, pinNat_eq, StateT.run_bind, e1, L.Arena.except_ok_bind, hr2, hisE,
                 Bool.not_true, Bool.false_eq_true, ite_false, hty]
               rw [decI_tag_forallE_beq wt hlt]

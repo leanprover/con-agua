@@ -42,7 +42,7 @@ open L.Arena
 /-! ## The name lists -/
 
 /-- `nat_op_names()`: `natOpNames` (`pred, add, sub, mul, pow, beq, ble`), an `IW` slice. -/
--- con-ron: ConRon/Arena/Core.lean:924-930 ConRon.Arena.natOpNames
+-- con-ron: ConRon/Arena/Core.lean:920-926 ConRon.Arena.natOpNames
 @[no_expose, l_impl ConRon.Arena.natOpNames]
 def natOpNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, q) {
   a := call pin_at(14); b := call pin_at(15); c := call pin_at(16); d := call pin_at(17);
@@ -55,7 +55,7 @@ def natOpNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, q) {
 
 /-- `nat_div_mod_names()`: `natDivModNames` (`div, mod, gcd, land, lor, xor, shiftLeft,
 shiftRight`), an `IW` slice. -/
--- con-ron: ConRon/Arena/Core.lean:932-938 ConRon.Arena.natDivModNames
+-- con-ron: ConRon/Arena/Core.lean:928-934 ConRon.Arena.natDivModNames
 @[no_expose, l_impl ConRon.Arena.natDivModNames]
 def natDivModNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, h, q) {
   a := call pin_at(21); b := call pin_at(22); c := call pin_at(23); d := call pin_at(24);
@@ -68,7 +68,7 @@ def natDivModNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, h, q) {
 
 /-- `nat_op_pins_a(q)`: the pin slots `14‥21` (`pred, add, sub, mul, pow, beq, ble, div`) into
 `IW[q‥q+7]`. -/
--- con-ron: ConRon/Arena/Core.lean:949-972 ConRon.Arena.natOpDeps
+-- con-ron: ConRon/Arena/Core.lean:945-968 ConRon.Arena.natOpDeps
 @[no_expose] def natOpPinsAL : FunDecl := lfn (q) locals (a, b, c, d, e, f, g, h) {
   a := call pin_at(14); b := call pin_at(15); c := call pin_at(16); d := call pin_at(17);
   e := call pin_at(18); f := call pin_at(19); g := call pin_at(20); h := call pin_at(21);
@@ -79,7 +79,7 @@ def natDivModNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, h, q) {
 
 /-- `nat_op_pins_b(q)`: the pin slots `22‥28` (`mod, gcd, land, lor, xor, shiftLeft,
 shiftRight`) into `IW[q‥q+6]`. -/
--- con-ron: ConRon/Arena/Core.lean:949-972 ConRon.Arena.natOpDeps
+-- con-ron: ConRon/Arena/Core.lean:945-968 ConRon.Arena.natOpDeps
 @[no_expose] def natOpPinsBL : FunDecl := lfn (q) locals (a, b, c, d, e, f, g) {
   a := call pin_at(22); b := call pin_at(23); c := call pin_at(24); d := call pin_at(25);
   e := call pin_at(26); f := call pin_at(27); g := call pin_at(28);
@@ -90,7 +90,7 @@ shiftRight`) into `IW[q‥q+6]`. -/
 
 /-- `nat_op_pins_c(q)`: the pin slots `1, 2, 3, 30, 31, 29` (`Nat, Nat.zero, Nat.succ,
 Bool.true, Bool.false, Bool`) into `IW[q‥q+5]`. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natOpPinsCL : FunDecl := lfn (q) locals (a, b, c, d, e, f) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(30);
   e := call pin_at(31); f := call pin_at(29);
@@ -104,7 +104,7 @@ operation pins at once, `natOpDeps`' and `natOpEquations`' opening lines), as a 
 record: words `0‥14` the slots `14‥28`, then `Nat`, `Nat.zero`, `Nat.succ`, `Bool.true`,
 `Bool.false`, `Bool` (words `15‥20`). A pin read changes no state and cannot fail once one has
 succeeded, so reading them up front is the twin's behaviour; the split keeps each proof small. -/
--- con-ron: ConRon/Arena/Core.lean:949-972 ConRon.Arena.natOpDeps
+-- con-ron: ConRon/Arena/Core.lean:945-968 ConRon.Arena.natOpDeps
 @[no_expose] def natOpPinsL : FunDecl := lfn () locals (q, u) {
   q := call iw_alloc(21);
   u := call nat_op_pins_a(q);
@@ -114,7 +114,7 @@ succeeded, so reading them up front is the twin's behaviour; the split keeps eac
 }
 
 /-- `nat_op_deps(c)`: `natOpDeps c`, an `IW` slice. -/
--- con-ron: ConRon/Arena/Core.lean:949-972 ConRon.Arena.natOpDeps
+-- con-ron: ConRon/Arena/Core.lean:945-968 ConRon.Arena.natOpDeps
 @[no_expose, l_impl ConRon.Arena.natOpDeps]
 def natOpDepsL : FunDecl :=
     lfn (c) locals (pi, pr, ad, su, mu, po, be, bl, di, mo, gc, la, lo, xo, sl, sr, q) {
@@ -187,7 +187,7 @@ def natOpDepsL : FunDecl :=
 
 /-- `nat_op_deps_stored(vis, o, l)`: every name of the slice is stored as a level-monomorphic
 definition. -/
--- con-ron: ConRon/Arena/Core.lean:1162-1171 ConRon.Arena.natOpDepsStored
+-- con-ron: ConRon/Arena/Core.lean:1153-1162 ConRon.Arena.natOpDepsStored
 @[no_expose, l_impl ConRon.Arena.natOpDepsStored]
 def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
   if l == 0 { return 1 };
@@ -200,7 +200,7 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
 }
 
 /-- `bool_ctor_ok(p)`: the stored `Bool` constructor `p` is level-free, at the type `Bool`. -/
--- con-ron: ConRon/Arena/Core.lean:1173-1183 ConRon.Arena.boolCtorOk
+-- con-ron: ConRon/Arena/Core.lean:1164-1174 ConRon.Arena.boolCtorOk
 @[no_expose, l_impl ConRon.Arena.boolCtorOk]
 def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   q := call ci_to_cv(p);
@@ -212,7 +212,7 @@ def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
 
 /-- `nat_op_bool_ctors(vis)`: the `Bool` constructors' conjunct of `natOpGuard`: `Bool.true` then
 `Bool.false` stored, level-free, at the type `Bool` (`boolCtorOk`). -/
--- con-ron: ConRon/Arena/Core.lean:1185-1209 ConRon.Arena.natOpGuard
+-- con-ron: ConRon/Arena/Core.lean:1176-1200 ConRon.Arena.natOpGuard
 @[no_expose] def natOpBoolCtorsL : FunDecl := lfn (vis) locals (bt, f, r, ok, bf) {
   bt := call pin_at(30);
   (f, r) := call env_find(bt, vis);
@@ -227,7 +227,7 @@ def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
 }
 
 /-- `nat_op_guard(vis, c)`: `natOpGuard fe c`. -/
--- con-ron: ConRon/Arena/Core.lean:1185-1209 ConRon.Arena.natOpGuard
+-- con-ron: ConRon/Arena/Core.lean:1176-1200 ConRon.Arena.natOpGuard
 @[no_expose, l_impl ConRon.Arena.natOpGuard]
 def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m, ok) {
   s := call nat_lit_supported(vis);
@@ -248,7 +248,7 @@ def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m,
 
 /-- `nat_op_cod(vis, c, e)`: `natOpCod`: `Bool` (stored at `Sort 1`) for the comparisons, `Nat`
 otherwise. -/
--- con-ron: ConRon/Arena/Core.lean:1267-1286 ConRon.Arena.natOpCod
+-- con-ron: ConRon/Arena/Core.lean:1250-1269 ConRon.Arena.natOpCod
 @[no_expose, l_impl ConRon.Arena.natOpCod]
 def natOpCodL : FunDecl := lfn (vis, c, e) locals (be, bl, bn, bc, f, r, q, s1, nn, nc) {
   be := call pin_at(19);
@@ -271,7 +271,7 @@ def natOpCodL : FunDecl := lfn (vis, c, e) locals (be, bl, bn, bc, f, r, q, s1, 
 
 /-- `nat_op_ty_pinned(vis, c, ty)`: `natOpTyPinned`: `Nat → cod` for `pred`, `Nat → Nat → cod`
 otherwise (the tag tested on the handle before the view, as the twin does). -/
--- con-ron: ConRon/Arena/Core.lean:1288-1314 ConRon.Arena.natOpTyPinned
+-- con-ron: ConRon/Arena/Core.lean:1271-1297 ConRon.Arena.natOpTyPinned
 @[no_expose, l_impl ConRon.Arena.natOpTyPinned]
 def natOpTyPinnedL : FunDecl :=
     lfn (vis, c, ty) locals (nn, nc, pr, t, d, b, z, t2, d2, b2, z2, r) {
@@ -296,7 +296,7 @@ def natOpTyPinnedL : FunDecl :=
 
 /-- `nat_op_stored_ok(vis, n)`: `n` is stored as a level-monomorphic definition of the pinned
 type. -/
--- con-ron: ConRon/Arena/Core.lean:1316-1322 ConRon.Arena.natOpStoredOk
+-- con-ron: ConRon/Arena/Core.lean:1299-1305 ConRon.Arena.natOpStoredOk
 @[no_expose, l_impl ConRon.Arena.natOpStoredOk]
 def natOpStoredOkL : FunDecl := lfn (vis, n) locals (f, r, e) {
   (f, r) := call env_find(n, vis);
@@ -321,7 +321,7 @@ def natOpStoredOkAllL : FunDecl := lfn (vis, o, l) locals (e) {
 /-! ## The recurrence equations -/
 
 /-- `nat_ap1(n, a)`: `const n [] a`. -/
--- con-ron: ConRon/Arena/Core.lean:974-979 ConRon.Arena.natAp1
+-- con-ron: ConRon/Arena/Core.lean:970-975 ConRon.Arena.natAp1
 @[no_expose, l_impl ConRon.Arena.natAp1]
 def natAp1L : FunDecl := lfn (n, a) locals (f, r) {
   f := call const_e(n);
@@ -330,7 +330,7 @@ def natAp1L : FunDecl := lfn (n, a) locals (f, r) {
 }
 
 /-- `nat_ap2(n, a, b)`: `const n [] a b`. -/
--- con-ron: ConRon/Arena/Core.lean:981-984 ConRon.Arena.natAp2
+-- con-ron: ConRon/Arena/Core.lean:977-980 ConRon.Arena.natAp2
 @[no_expose, l_impl ConRon.Arena.natAp2]
 def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
   f := call nat_ap1(n, a);
@@ -339,7 +339,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_list2(a1, b1, a2, b2)`: the two-equation list `[(a1, b1), (a2, b2)]`. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqList2 : FunDecl := lfn (a1, b1, a2, b2) locals (q, p1, p2) {
   p1 := call rec2(a1, b1);
   p2 := call rec2(a2, b2);
@@ -350,7 +350,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_list3(a1, b1, a2, b2, a3, b3)`: the three-equation list. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqList3 : FunDecl := lfn (a1, b1, a2, b2, a3, b3) locals (q, p1, p2, p3) {
   p1 := call rec2(a1, b1);
   p2 := call rec2(a2, b2);
@@ -361,7 +361,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_list4(a1, b1, a2, b2, a3, b3, a4, b4)`: the four-equation list. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqList4 : FunDecl :=
     lfn (a1, b1, a2, b2, a3, b3, a4, b4) locals (q, p1, p2, p3, p4) {
   p1 := call rec2(a1, b1);
@@ -374,7 +374,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_pr(c, z, x, sx)`: `Nat.pred`'s equations `pred 0 = 0`, `pred (succ x) = x`. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqPr : FunDecl := lfn (c, z, x, sx) locals (l1, l2, q, u) {
   l1 := call nat_ap1(c, z);
   l2 := call nat_ap1(c, sx);
@@ -384,7 +384,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 
 /-- `nat_eq_un(c, x, y, z, sy, w)`: `add`'s and `sub`'s equations: `c x 0 = x`,
 `c x (succ y) = w (c x y)` (`w` the successor for `add`, the predecessor for `sub`). -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqUn : FunDecl := lfn (c, x, y, z, sy, w) locals (l1, l2, r3, r2, q, u) {
   l1 := call nat_ap2(c, x, z);
   l2 := call nat_ap2(c, x, sy);
@@ -395,7 +395,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_mu(c, x, y, z, sy, ad)`: `mul`'s equations. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqMu : FunDecl := lfn (c, x, y, z, sy, ad) locals (l1, l2, r3, r2, q, u) {
   l1 := call nat_ap2(c, x, z);
   l2 := call nat_ap2(c, x, sy);
@@ -406,7 +406,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_po(c, x, y, z, sy, sN, mu)`: `pow`'s equations. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqPo : FunDecl := lfn (c, x, y, z, sy, sN, mu) locals (l1, sz, l2, r3, r2, q, u) {
   l1 := call nat_ap2(c, x, z);
   sz := call nat_ap1(sN, z);
@@ -418,7 +418,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_be(c, x, y, z, sx, sy, bT, bF)`: `Nat.beq`'s four equations. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqBe : FunDecl := lfn (c, x, y, z, sx, sy, bT, bF) locals (l1, l2, l3, l4, r4, q, u) {
   l1 := call nat_ap2(c, z, z);
   l2 := call nat_ap2(c, z, sy);
@@ -430,7 +430,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 }
 
 /-- `nat_eq_bl(c, x, y, z, sx, sy, bT, bF)`: `Nat.ble`'s three equations. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqBl : FunDecl := lfn (c, x, y, z, sx, sy, bT, bF) locals (l1, l2, l3, r3, q, u) {
   l1 := call nat_ap2(c, z, y);
   l2 := call nat_ap2(c, sx, z);
@@ -443,7 +443,7 @@ def natAp2L : FunDecl := lfn (n, a, b) locals (f, r) {
 /-- `nat_eq_ctx(pi, d)`: the terms `natOpEquations` builds before it dispatches, in its order: `x :=
 fvar d`, `y := fvar (d + 1)` at `Nat`, `Nat.zero`, `Nat.succ`'s name, `succ x`, `succ y`,
 `Bool.true`, `Bool.false`, as an 8-word `IW` record `[x, y, z, sN, sx, sy, bT, bF]`. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqCtx : FunDecl := lfn (pi, d) locals (nN, natTy, x, y, zN, z, sN, sx, sy, u, bT, bF, q) {
   nN := IW.u64[pi + 15];
   natTy := call const_e(nN);
@@ -466,7 +466,7 @@ fvar d`, `y := fvar (d + 1)` at `Nat`, `Nat.zero`, `Nat.succ`'s name, `succ x`, 
 
 /-- `nat_eq_disp(c, pi, cx)`: the dispatch of `natOpEquations` over the seven operations, from the
 pin record `pi` and the term record `cx`. -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose] def natEqDisp : FunDecl := lfn (c, pi, cx) locals (q, l) {
   if c == IW.u64[pi] { (q, l) := call nat_eq_pr(c, IW.u64[cx + 2], IW.u64[cx], IW.u64[cx + 4]); return (q, l) };
   if c == IW.u64[pi + 1] { (q, l) := call nat_eq_un(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[cx + 3]); return (q, l) };
@@ -480,7 +480,7 @@ pin record `pi` and the term record `cx`. -/
 
 /-- `nat_op_equations(d, c)`: `natOpEquations d c`, the equations of the seven structural
 operations over `x := fvar d`, `y := fvar (d + 1)` (every pin read first, as the twin does). -/
--- con-ron: ConRon/Arena/Core.lean:986-1049 ConRon.Arena.natOpEquations
+-- con-ron: ConRon/Arena/Core.lean:982-1045 ConRon.Arena.natOpEquations
 @[no_expose, l_impl ConRon.Arena.natOpEquations]
 def natOpEquationsL : FunDecl :=
     lfn (d, c) locals (pi, cx, q, l) {
@@ -492,7 +492,7 @@ def natOpEquationsL : FunDecl :=
 
 /-- `subst_const0(n, r, fuel, h)`: `Expr.substConst0`: `.const n []` replaced by `r` through an
 application spine. -/
--- con-ron: ConRon/Arena/Core.lean:1219-1233 ConRon.Arena.substConst0
+-- con-ron: ConRon/Arena/Core.lean:1202-1216 ConRon.Arena.substConst0
 @[no_expose, l_impl ConRon.Arena.substConst0]
 def substConst0L : FunDecl := lfn (n, r, fuel, h) locals (t, x, y, z, el, f2, a2, e) {
   if fuel == 0 { abort };
@@ -513,7 +513,7 @@ def substConst0L : FunDecl := lfn (n, r, fuel, h) locals (t, x, y, z, el, f2, a2
 
 /-- `subst_const_all(n, r, fuel, h)`: `Expr.substConstAll`: everywhere, under binders too
 (`fvar` annotations not entered). -/
--- con-ron: ConRon/Arena/Core.lean:1235-1265 ConRon.Arena.substConstAll
+-- con-ron: ConRon/Arena/Core.lean:1218-1248 ConRon.Arena.substConstAll
 @[no_expose, l_impl ConRon.Arena.substConstAll]
 def substConstAllL : FunDecl := lfn (n, r, fuel, h) locals (t, x, y, z, el, a, b, c, e) {
   if fuel == 0 { abort };

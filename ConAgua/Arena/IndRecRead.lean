@@ -19,7 +19,7 @@ namespace L.Arena
 
 /-- **A constructor record's level parameters**: the slice at `p + 2`, `p + 3`. -/
 theorem decCI_ctorLp {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {np nf : Nat} (h : decCI R q.toNat = some (.ctorInfo cv np nf)) :
+    {cv : IConstantVal} {np nf : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv np nf fam)) :
     hslice? R (rd (q + 2)).toNat (rd (q + 3)).toNat = some cv.levelParams := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
@@ -29,7 +29,7 @@ theorem decCI_ctorLp {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R
   all_goals (rw [hk] at h)
   all_goals simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq,
     and_false, exists_false, Option.pure_def] at h
-  obtain ⟨cv', hcv, np', -, nf', -, hc⟩ := h
+  obtain ⟨cv', hcv, np', -, nf', -, fam', -, hc⟩ := h
   cases hc
   simp only [decCV, hlist?, nat?, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
     Option.map_eq_some_iff, Option.some.injEq] at hcv
@@ -65,7 +65,7 @@ theorem decCI_indCaps {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK 
   have h3 : rd (q + 3) = wc := hR.offN (k := 3) (hk := by decide) (by simpa [Nat.add_assoc] using hwc)
   simp only [decCaps, bool?, nat?, hlist?, Option.bind_eq_bind, Option.pure_def,
     Option.bind_eq_some_iff, Option.map_eq_some_iff, Option.some.injEq] at hcaps
-  obtain ⟨e, ⟨we, hwe, rfl⟩, -, -, -, -, -, -, -, -, rfl⟩ := hcaps
+  obtain ⟨e, ⟨we, hwe, rfl⟩, -, -, -, -, -, -, -, -, -, -, rfl⟩ := hcaps
   have h5 : rd (q + 5) = we := hR.offN (k := 5) (hk := by decide) (by simpa [Nat.add_assoc] using hwe)
   exact ⟨by rw [h2, h3]; exact hs, by rw [h5]⟩
 

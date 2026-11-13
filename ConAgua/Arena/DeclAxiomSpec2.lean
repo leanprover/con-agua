@@ -34,7 +34,7 @@ open L.Ind
 /-- The pinned shape `k` of a stored constant: its constant value when it has the shape. -/
 def fpcShape (k : Word) : IConstantInfo → Option IConstantVal
   | .indInfo cv _ => if k = 3 then some cv else none
-  | .ctorInfo cv nP nF => if k = 4 ∧ nP = 0 ∧ nF = 0 then some cv else none
+  | .ctorInfo cv nP nF _ => if k = 4 ∧ nP = 0 ∧ nF = 0 then some cv else none
   | _ => none
 
 /-- The lookups of the compiler-trust family. -/
@@ -158,7 +158,7 @@ theorem trustCompilerOk_eq (fe : IFEnv) (cv : IConstantVal) :
       | none => simp
       | some ci2 =>
         cases ci2 with
-        | ctorInfo cvTi nP nF =>
+        | ctorInfo cvTi nP nF _ =>
           simp only [Option.bind_some, fpcShape]
           by_cases e : nP = 0 ∧ nF = 0
           · obtain ⟨rfl, rfl⟩ := e
@@ -235,7 +235,10 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     rw [hfind, hci, Option.bind_some]
     rcases hk with rfl | rfl
     · have := (decCI_kind3 hci hwk).2 hkw; cases ci <;> simp_all [fpcShape]
-    · have := (decCI_kind4 hci hwk).2 hkw; cases ci <;> simp_all [fpcShape]
+    · have := (decCI_kind4 hci hwk).2 hkw
+      cases ci with
+      | ctorInfo cv np nf fam => exact absurd rfl (this cv np nf fam)
+      | _ => simp_all [fpcShape]
   subst hkw
   rcases hk with hk3 | hk4
   · subst hk3
@@ -244,7 +247,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
     rw [hq] at hW
     exact pass cv (by simp [fpcShape]) hcv hW
   subst hk4
-  obtain ⟨cv, np, nf, hcv, h5, h6, rfl⟩ := (decCI_kind4 hci hwk).1 rfl
+  obtain ⟨cv, np, nf, fam, hcv, h5, h6, rfl⟩ := (decCI_kind4 hci hwk).1 rfl
   obtain ⟨w5, e5, rfl⟩ := natD h5
   obtain ⟨w6, e6, rfl⟩ := natD h6
   have hq5 : (q + 5).toNat = q.toNat + 5 := by

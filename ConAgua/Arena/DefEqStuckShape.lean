@@ -157,7 +157,7 @@ theorem etaCtorShape_run_nonconst (fe : IFEnv) (e : EIdx) (a : AState) (hh : EId
 theorem etaCtorShape_run_other (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c : NIdx)
     (us : LsIdx) (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a))
     (ht : (hh.tag == ETag.const) = true) (hv : a.store.view hh = some (.const c us))
-    (hf : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
+    (hf : ∀ cv np nf fam, fe.find? c ≠ some (.ctorInfo cv np nf fam)) :
     (etaCtorShape fe e).run a = .ok (false, a) := by
   simp only [etaCtorShape, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte,
     view_run _ _ _ hv]
@@ -167,7 +167,7 @@ theorem etaCtorShape_run_other (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) 
 theorem etaCtorShape_run_ctor (fe : IFEnv) (e : EIdx) (a : AState) (hh : EIdx) (c : NIdx)
     (us : LsIdx) (hgaf : (getAppFn coreWalkFuel e).run a = .ok (hh, a))
     (ht : (hh.tag == ETag.const) = true) (hv : a.store.view hh = some (.const c us))
-    (cv : IConstantVal) (np nf : Nat) (hf : fe.find? c = some (.ctorInfo cv np nf))
+    (cv : IConstantVal) (np nf : Nat) {fam : NIdx} (hf : fe.find? c = some (.ctorInfo cv np nf fam))
     (xs : List EIdx) (hargs : (getAppArgs coreWalkFuel e).run a = .ok (xs, a)) :
     (etaCtorShape fe e).run a = .ok (xs.length == np + nf, a) := by
   simp only [etaCtorShape, StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte,
@@ -241,16 +241,16 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
   · simp only [h0, ↓reduceIte] at hW
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
-      (fun cv np nf e => by rw [hnone] at e; cases e)) rfl
+      (fun cv np nf fam e => by rw [hnone] at e; cases e)) rfl
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
   have hctor := L.Arena.decCI_ctorR (erRdOK _) hci
   rcases (Classical.em (erRd s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
   · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
     exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
-      (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) rfl
+      (fun cv np nf fam e => hctor.2 h4 cv np nf fam (by rw [hfind'] at e; exact Option.some.inj e))) rfl
   simp only [h0, h4, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  obtain ⟨cv, hci_eq⟩ := hctor.1 h4
+  obtain ⟨cv, hci_eq, -⟩ := hctor.1 h4
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   obtain ⟨hf3, hg3, -, -, xs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS he hc3
   simp only [ecsK3] at hW

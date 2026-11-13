@@ -91,7 +91,7 @@ theorem partsCI_fields {a : Nat → Option Word} {q : Nat}
     nat? a q = some (ciKind ci) ∧
     (match ci with
      | .indInfo cv _ => decCV a (q + 1) = some cv
-     | .ctorInfo cv nP nF => decCV a (q + 1) = some cv ∧ nat? a (q + 5) = some nP ∧
+     | .ctorInfo cv nP nF _ => decCV a (q + 1) = some cv ∧ nat? a (q + 5) = some nP ∧
          nat? a (q + 6) = some nF
      | .recInfo cv mI rP isK rules => decCV a (q + 1) = some cv ∧ nat? a (q + 5) = some mI ∧
          nat? a (q + 6) = some rP ∧ bool? a (q + 9) = some isK ∧
@@ -110,7 +110,7 @@ theorem partsCI_fields {a : Nat → Option Word} {q : Nat}
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, caps, -, rfl⟩ := h; exact ⟨hkd, hcv⟩
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, nP, hnP, nF, hnF, rfl⟩ := h; exact ⟨hkd, hcv, hnP, hnF⟩
+    obtain ⟨cv, hcv, nP, hnP, nF, hnF, _, _, rfl⟩ := h; exact ⟨hkd, hcv, hnP, hnF⟩
   · simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, mI, hmI, rP, hrP, isK, hisK, o, ho, l, hl, rules, hrules, rfl⟩ := h
     exact ⟨hkd, hcv, hmI, hrP, hisK, o, l, ho, hl, hrules⟩
@@ -373,7 +373,7 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
         obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
         exact ⟨hS1, hg1, by simp only [Option.map_some, CtorsR]; exact ⟨rfl, PSlR.nil _ _, hR1.2⟩⟩
     cases x with
-    | ctorInfo cv nP nF =>
+    | ctorInfo cv nP nF _ =>
       obtain ⟨hcv, hnP, hnF⟩ := (partsCI_fields hx).2
       rw [bscW.arm3 n m off l hl (by simp only [erRd_foldN]; rw [hoff, hkw]; rfl)] at h
       simp only [erRd_foldN] at h; rw [hoff] at h

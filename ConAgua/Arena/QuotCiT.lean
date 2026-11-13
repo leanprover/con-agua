@@ -59,11 +59,11 @@ theorem decCaps_sh {q q' : Nat} {x : IIndCaps} (w : ∀ j < 15, WAt R R' (q + j)
     (he : ArrExt R R') (hx : decCaps R q = some x) : decCaps R' q' = some x := by
   have w0 : WAt R R' q q' := by simpa using w 0 (by omega)
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
-  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, e⟩ := hx
+  obtain ⟨e1, h1, e7, h7, e9, h9, e10, h10, e11, h11, enz, hnz, e⟩ := hx
   exact ⟨e1, bool?_sh w0 h1, e7, nat?_sh (w 6 (by omega)) h7,
     e9, hlist?_sh (w 10 (by omega)) (w 11 (by omega)) he h9,
     e10, nat?_sh (w 12 (by omega)) h10,
-    e11, hlist?_sh (w 13 (by omega)) (w 14 (by omega)) he h11, e⟩
+    e11, hlist?_sh (w 13 (by omega)) (w 14 (by omega)) he h11, enz, bool?_sh (w 7 (by omega)) hnz, e⟩
 
 /-- A reducibility hint, copied (its two words). -/
 theorem decHint_sh {q q' : Nat} {x : ConLeche.ReducibilityHint} (e0 : WAt R R' q q')
@@ -794,17 +794,18 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
       simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
         Option.bind_some, hcv4, show (3 : Word).toNat = 3 from rfl, hc]
       rfl
-  | ctorInfo cv np nf =>
+  | ctorInfo cv np nf fam =>
     obtain rfl : w = 4 := UInt64.toNat_inj.mp hkd
     have hci' := hci
     simp only [decCI, nat?, hw, Option.map_some, Option.bind_eq_bind, Option.bind_some,
       show (4 : Word).toNat = 4 from rfl, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq, IConstantInfo.ctorInfo.injEq, Option.map_eq_some_iff] at hci'
-    obtain ⟨cv0, -, x5, ⟨w5, hw5, rfl⟩, x6, ⟨w6, hw6, rfl⟩, -, rfl, rfl⟩ := hci'
+    obtain ⟨cv0, -, x5, ⟨w5, hw5, rfl⟩, x6, ⟨w6, hw6, rfl⟩, f7, hf7, -, rfl, rfl, rfl⟩ := hci'
+    obtain ⟨w7, hw7, hw7l, rfl⟩ := hd?_some hf7
     simp (config := { decide := true }) only [↓reduceIte] at hW
     obtain ⟨r1, m1, r2, m2, r3, m3, h1, h2, h3, hW⟩ := ciJ1_inv hW
     simp (config := { decide := true }) only [ciAtLpsW.k_cv_at_lps, ↓reduceIte] at hW
-    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 2] m3 with
+    cases h4 : callW p n "er_copy_er" [r1.headD 0 + 5, c + 5, 3] m3 with
     | none => rw [h4] at hW; simp [ciAtLpsW.k_er_copy_er] at hW
     | some x4 =>
     obtain ⟨r4, m4⟩ := x4
@@ -812,16 +813,18 @@ theorem ciAtLps_sim {p : Prog} (hP : CiProg p) (hR : RulesAtSim p dn) (n : Nat) 
     simp only [ciAtLpsW.k_er_copy_er, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
     obtain ⟨cv', a3, hrun, hpre⟩ := ciPre_of hP.toQuotAtProg n hT hok hci hps hden (by decide) h1 h2 h3
-    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 2) (by decide) h4
-    refine ⟨.ctorInfo cv' w5.toNat w6.toNat, a3, ?_, hT4, hg4, ?_⟩
+    obtain ⟨hT4, hg4, hk4, hcv4, hc4⟩ := ciCopy hP hT hpre (l := 3) (by decide) h4
+    refine ⟨.ctorInfo cv' w5.toNat w6.toNat (decI w7), a3, ?_, hT4, hg4, ?_⟩
     · simp only [IConstantInfo.atLps, StateT.run_bind]
       rw [show (cv.atLps ps).run a = .ok (cv', a3) from hrun]; rfl
     · have e5 := hc4 0 (by decide) w5 (by simpa using hw5)
       have e6 := hc4 1 (by decide) w6 hw6
+      have e7 := hc4 2 (by decide) w7 (by simpa [Nat.add_assoc] using hw7)
       simp only [Nat.add_zero] at e5
       rw [show (r1.headD 0).toNat + 5 + 1 = (r1.headD 0).toNat + 6 by omega] at e6
-      simp only [List.headD_cons, decCI, nat?, hk4, Option.map_some, Option.bind_eq_bind,
-        Option.bind_some, hcv4, show (4 : Word).toNat = 4 from rfl, e5, e6]
+      rw [show (r1.headD 0).toNat + 5 + 2 = (r1.headD 0).toNat + 7 by omega] at e7
+      simp only [List.headD_cons, decCI, nat?, hd?, hk4, Option.map_some, Option.bind_eq_bind,
+        Option.bind_some, hcv4, show (4 : Word).toNat = 4 from rfl, e5, e6, e7, hw7l, ite_true]
       rfl
   | recInfo cv mI rP isK rules =>
     obtain rfl : w = 5 := UInt64.toNat_inj.mp hkd

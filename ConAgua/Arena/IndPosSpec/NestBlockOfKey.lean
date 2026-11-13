@@ -139,7 +139,7 @@ theorem nestBlockOf_key {fe : IFEnv} {c : Word} {m : Mem}
       obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk
       simp only [hfound, ite_eq_left hk3]
       simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-      obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, heq⟩ := hcaps
+      obtain ⟨_, _, _, _, vall, hvall, _, _, _, _, _, _, heq⟩ := hcaps
       have hallcaps : caps.all = vall := by
         have h' := Option.some.inj heq; rw [← h']
       obtain ⟨o, l, ho, hl, hslc⟩ := hlist?_some hvall

@@ -103,7 +103,7 @@ theorem decCI_indNC {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R 
   cases hc
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff,
     Option.some.injEq] at hcaps
-  obtain ⟨_, _, _, _, _, _, np, hnp, cs, hcs, hc⟩ := hcaps
+  obtain ⟨_, _, _, _, _, _, np, hnp, cs, hcs, _, _, hc⟩ := hcaps
   subst hc
   simp only [nat?, Option.map_eq_some_iff] at hnp
   obtain ⟨wnp, hwnp, rfl⟩ := hnp
@@ -147,7 +147,7 @@ theorem envFind_callE {p : Prog} (hg : p.lookup "env_row_get" = some envRowGetL)
 /-- The constructor test of `projIndexedStructLike`: `c` a constructor with more than `i` fields. -/
 def ctorFieldsGt (fe : IFEnv) (c : NIdx) (i : Nat) : Bool :=
   match fe.find? c with
-  | some (.ctorInfo _ _ nF) => decide (i < nF)
+  | some (.ctorInfo _ _ nF _) => decide (i < nF)
   | _ => false
 
 /-- **`projIndexedStructLike` at `T = sn` from `env_find(T)`'s record**: the L test `f ≠ 0`, kind
@@ -214,14 +214,14 @@ theorem ctorFieldsGt_eq {fe : IFEnv} {m : Mem} {c : NIdx} {f q iw : Word}
   have hfind : fe.find? c = some ci := by rw [hf]; simp only [envFound, f0, ↓reduceIte]; exact hci
   have hK := L.Arena.decCI_ctorR (erRdOK m) hci
   by_cases h4 : erRd m q = 4
-  · obtain ⟨cv, rfl⟩ := hK.1 h4
+  · obtain ⟨cv, rfl, -⟩ := hK.1 h4
     simp only [ctorFieldsGt, hfind, f0, h4, ne_eq, not_false_eq_true, true_and, decide_eq_decide]
     exact UInt64.lt_iff_toNat_lt.symm
   · have hni := hK.2 h4
     have : ctorFieldsGt fe c iw.toNat = false := by
       simp only [ctorFieldsGt, hfind]
       split
-      · rename_i cv np nf hci'; cases hci'; exact absurd rfl (hni cv np nf)
+      · rename_i cv np nf fam hci'; cases hci'; exact absurd rfl (hni cv np nf fam)
       · rfl
     rw [this]; simp [h4]
 

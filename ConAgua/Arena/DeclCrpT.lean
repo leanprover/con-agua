@@ -44,6 +44,7 @@ value check (`checkConstantVal_bridge_of_fold`, `checkOpaqueVal_bridge`), as con
 -/
 
 open ConRon.Arena
+open ConLeche (IndWF CtorWF)
 open Std.WP
 open scoped Lean.Order
 

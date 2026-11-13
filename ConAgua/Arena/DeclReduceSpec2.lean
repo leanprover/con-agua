@@ -138,22 +138,22 @@ theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
 is not. -/
 theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
-    (w = 4 → ∃ cv np nf, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
-      nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf) ∧
-      (w ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+    (w = 4 → ∃ cv np nf fam, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
+      nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf fam) ∧
+      (w ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   obtain ⟨wk, e, hk⟩ := ciD h
   rw [hw] at e; cases e
   constructor
   · intro h0
     subst h0
-    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, np, nf, hcv, h5, h6, rfl⟩ | ⟨h1, -⟩
+    rcases hk with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨-, cv, np, nf, fam, hcv, h5, h6, -, rfl⟩ | ⟨h1, -⟩
     · simp at h1
     · simp at h1
     · simp at h1
     · simp at h1
-    · exact ⟨cv, np, nf, hcv, h5, h6, rfl⟩
+    · exact ⟨cv, np, nf, fam, hcv, h5, h6, rfl⟩
     · simp at h1
-  · intro h0 cv np nf hc
+  · intro h0 cv np nf fam hc
     subst hc
     rcases hk with ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨-, h2⟩ | ⟨h1, -⟩ | ⟨-, h2⟩
     · simp_all

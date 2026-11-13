@@ -167,8 +167,8 @@ theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
     (rd q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
     (rd q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV R (q.toNat + 1) = some cv) ∧
     (rd q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (rd q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV R (q.toNat + 1) = some cv) ∧
-    (rd q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+    (rd q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV R (q.toNat + 1) = some cv) ∧
+    (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   cases hq : R q.toNat with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
@@ -200,10 +200,10 @@ theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
   · have wv : w = 4 := UInt64.toNat_inj.mp (by rw [w4]; rfl)
     subst wv
     simp only [show UInt64.toNat 4 = 4 from rfl, Option.bind_eq_some_iff] at h
-    obtain ⟨cv, hcv, np, -, nf, -, hc⟩ := h
+    obtain ⟨cv, hcv, np, -, nf, -, ind, -, hc⟩ := h
     cases hc
     refine ⟨fun h1 => absurd h1 (by decide), fun _ _ _ _ => by simp, fun h3 => absurd h3 (by decide),
-      fun _ _ _ => by simp, fun _ => ⟨cv, _, _, rfl, hcv⟩, fun hn => absurd rfl hn⟩
+      fun _ _ _ => by simp, fun _ => ⟨cv, _, _, _, rfl, hcv⟩, fun hn => absurd rfl hn⟩
   have n1 : w ≠ 1 := fun e => w1 (by rw [e]; rfl)
   have n3 : w ≠ 3 := fun e => w3 (by rw [e]; rfl)
   have n4 : w ≠ 4 := fun e => w4 (by rw [e]; rfl)
@@ -214,7 +214,7 @@ theorem decCI_split {R : Nat → Option Word} {rd : Word → Word} {q : Word}
   · intro _ cv v hc; subst hc
     rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
     all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
-  · intro _ cv v n hc; subst hc
+  · intro _ cv v n fam hc; subst hc
     rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
     all_goals (rw [hk] at h w1 w3 w4; simp [Option.bind_eq_some_iff] at h w1 w3 w4)
 
@@ -225,8 +225,8 @@ theorem decCI_splitE {m : Mem} {q : Word} {ci : IConstantInfo} (h : decCI (erecP
     (erRd m q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) ∧
     (erRd m q = 3 → ∃ cv caps, ci = .indInfo cv caps ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
     (erRd m q ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) ∧
-    (erRd m q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
-    (erRd m q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) :=
+    (erRd m q = 4 → ∃ cv np nf fam, ci = .ctorInfo cv np nf fam ∧ decCV (erecP m) (q.toNat + 1) = some cv) ∧
+    (erRd m q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) :=
   decCI_split (erRdOK m) h
 
 end L.Arena

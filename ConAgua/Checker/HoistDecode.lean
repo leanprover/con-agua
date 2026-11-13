@@ -117,7 +117,7 @@ theorem decCI_walk {a : Array Word} {p : Nat} {ci : IConstantInfo}
   · obtain ⟨cv, hcv, _, _, he⟩ := h; cases Option.some.inj he
     obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
     exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
+  · obtain ⟨cv, hcv, _, _, _, _, _, _, he⟩ := h; cases Option.some.inj he
     obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
     exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
   · obtain ⟨cv, hcv, mi, _, rp, _, k, _, off, ho, cnt, hc, rules, hr, he⟩ := h; cases Option.some.inj he

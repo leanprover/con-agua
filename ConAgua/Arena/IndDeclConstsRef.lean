@@ -415,11 +415,13 @@ theorem diW_ok {p : Prog} (hP : DeclConstsProg p) {dn : NIdx → Option ConLeche
   obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
     (bk_spec p hP.bk n _ pp) h4
   obtain ⟨mp, hmp⟩ := h03.mem.stage.ma
-  obtain ⟨cis, a4, hrun4, hd4, hb4, hS4, hg4⟩ := bkW_ok hP.toBlockProg hS3 hq hsl.1 hmp hW4
+  have hTw3 := h03.stageT.twin
+  obtain ⟨cis, a4, hrun4, hd4, hb4, hS4, hg4⟩ := bkW_ok hP.toBlockProg hS3 hq hsl.1 hmp hTw3.readL
+    hTw3.den.sort hW4
   simp only [ConRon.Bridge.Inductives.ROp] at hq3
   obtain ⟨pP, -, hdP⟩ := hq3
   obtain ⟨hps4, -, -⟩ := ConRon.Bridge.Inductives.blockConstants_run h03.chk.state h03.chk.pins
-    hdP hrun4
+    h03.chk.caches.readL hdP hrun4
   obtain ⟨h04, hX4⟩ := h03.step0 hP.leaf dcF_bk dc0F_bk h4 hS4 (checkOK_of_pstep h03.chk hps4)
     hps4.ext
   refine ⟨cis, a4, ?_, ⟨hS4, hg3.trans hg4, ⟨by simpa using hd4, by simpa using hb4⟩⟩,

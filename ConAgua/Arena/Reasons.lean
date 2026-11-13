@@ -36,395 +36,393 @@ abbrev R_INDUCTIVE_BLOCK_SHAPE : L.Word := 38
 abbrev R_INDUCTIVE_BLOCK_WHOSE : L.Word := 42
 /-- decline: inferType beyond the supported fragment -/
 abbrev R_INFERTYPE_BEYOND_THE : L.Word := 46
-/-- decline: native Nat computation on literals -/
-abbrev R_NATIVE_NAT_COMPUTATION : L.Word := 50
 /-- decline: nested positivity: fuel -/
-abbrev R_NESTED_POSITIVITY_FUEL : L.Word := 54
+abbrev R_NESTED_POSITIVITY_FUEL : L.Word := 50
 /-- decline: non-standard axiom (…), apparently added by the `…` tactic; con-leche does not support such axioms at the moment -/
-abbrev R_NON_STANDARD_AXIOM : L.Word := 58
+abbrev R_NON_STANDARD_AXIOM : L.Word := 54
 /-- decline: non-standard axiom (…); con-leche does not support such axioms at the moment -/
-abbrev R_NON_STANDARD_AXIOM_CON : L.Word := 62
+abbrev R_NON_STANDARD_AXIOM_CON : L.Word := 58
 /-- decline: nonstandard structural Nat operation -/
-abbrev R_NONSTANDARD_STRUCTURAL_NAT : L.Word := 66
+abbrev R_NONSTANDARD_STRUCTURAL_NAT : L.Word := 62
 /-- decline: nonstandard structural Nat operation environment -/
-abbrev R_NONSTANDARD_STRUCTURAL_NAT_OPERATION : L.Word := 70
+abbrev R_NONSTANDARD_STRUCTURAL_NAT_OPERATION : L.Word := 66
 /-- decline: projection on an indexed structure-like type -/
-abbrev R_PROJECTION_ON_AN : L.Word := 74
+abbrev R_PROJECTION_ON_AN : L.Word := 70
 /-- decline: projection without a native entry -/
-abbrev R_PROJECTION_WITHOUT_A : L.Word := 78
+abbrev R_PROJECTION_WITHOUT_A : L.Word := 74
 /-- decline: quotient basis requires the pinned Eq basis -/
-abbrev R_QUOTIENT_BASIS_REQUIRES : L.Word := 82
+abbrev R_QUOTIENT_BASIS_REQUIRES : L.Word := 78
 /-- decline: quotient declaration mismatch -/
-abbrev R_QUOTIENT_DECLARATION_MISMATCH : L.Word := 86
+abbrev R_QUOTIENT_DECLARATION_MISMATCH : L.Word := 82
 /-- decline: quotient soundness axiom mismatch -/
-abbrev R_QUOTIENT_SOUNDNESS_AXIOM : L.Word := 90
+abbrev R_QUOTIENT_SOUNDNESS_AXIOM : L.Word := 86
 /-- decline: resource limit: fuel exhausted: … -/
-abbrev R_RESOURCE_LIMIT_FUEL : L.Word := 94
+abbrev R_RESOURCE_LIMIT_FUEL : L.Word := 90
 /-- decline: standard axiom shape mismatch -/
-abbrev R_STANDARD_AXIOM_SHAPE : L.Word := 98
+abbrev R_STANDARD_AXIOM_SHAPE : L.Word := 94
 /-- decline: string literals before the String support declarations -/
-abbrev R_STRING_LITERALS_BEFORE : L.Word := 102
+abbrev R_STRING_LITERALS_BEFORE : L.Word := 98
 /-- decline: unsafe axiom -/
-abbrev R_UNSAFE_AXIOM_2 : L.Word := 106
+abbrev R_UNSAFE_AXIOM_2 : L.Word := 102
 /-- decline: unsafe inductive declaration -/
-abbrev R_UNSAFE_INDUCTIVE_DECLARATION : L.Word := 110
+abbrev R_UNSAFE_INDUCTIVE_DECLARATION : L.Word := 106
 /-- decline: unsafe opaque declaration -/
-abbrev R_UNSAFE_OPAQUE_DECLARATION : L.Word := 114
+abbrev R_UNSAFE_OPAQUE_DECLARATION : L.Word := 110
 /-- decline: unsupported Lean.trustCompiler shape -/
-abbrev R_UNSUPPORTED_LEAN_TRUSTCOMPILER : L.Word := 118
+abbrev R_UNSUPPORTED_LEAN_TRUSTCOMPILER : L.Word := 114
 /-- decline: unsupported Nat.div/mod environment -/
-abbrev R_UNSUPPORTED_NAT_DIV : L.Word := 122
+abbrev R_UNSUPPORTED_NAT_DIV : L.Word := 118
 /-- decline: unsupported Nat.div/mod spelling (no pin variant matched — …) -/
-abbrev R_UNSUPPORTED_NAT_DIV_MOD : L.Word := 126
+abbrev R_UNSUPPORTED_NAT_DIV_MOD : L.Word := 122
 /-- decline: unsupported compiler-trust axiom environment -/
-abbrev R_UNSUPPORTED_COMPILER_TRUST : L.Word := 130
+abbrev R_UNSUPPORTED_COMPILER_TRUST : L.Word := 126
 /-- decline: unsupported compiler-trust opaque declaration -/
-abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE : L.Word := 134
+abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE : L.Word := 130
 /-- decline: unsupported compiler-trust opaque spelling -/
-abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING : L.Word := 138
+abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING : L.Word := 134
 /-- decline: unsupported compiler-trust opaque spelling (pin ground constants absent) -/
-abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING_PIN : L.Word := 142
+abbrev R_UNSUPPORTED_COMPILER_TRUST_OPAQUE_SPELLING_PIN : L.Word := 138
 /-- decline: use of the sorryAx axiom -/
-abbrev R_USE_OF_THE : L.Word := 146
+abbrev R_USE_OF_THE : L.Word := 142
 /-- decline: use of the sorryAx axiom in … -/
-abbrev R_USE_OF_THE_SORRYAX : L.Word := 150
+abbrev R_USE_OF_THE_SORRYAX : L.Word := 146
 /-- decline: whnf beyond the supported fragment -/
-abbrev R_WHNF_BEYOND_THE : L.Word := 154
+abbrev R_WHNF_BEYOND_THE : L.Word := 150
 /-- reject: Nat literal without the Nat basis declarations -/
-abbrev R_NAT_LITERAL_WITHOUT : L.Word := 157
+abbrev R_NAT_LITERAL_WITHOUT : L.Word := 153
 /-- reject: No such constructor … -/
-abbrev R_NO_SUCH_CONSTRUCTOR : L.Word := 161
+abbrev R_NO_SUCH_CONSTRUCTOR : L.Word := 157
 /-- reject: `And` must be the standard `And` -/
-abbrev R_AND_MUST_BE : L.Word := 165
+abbrev R_AND_MUST_BE : L.Word := 161
 /-- reject: application type mismatch -/
-abbrev R_APPLICATION_TYPE_MISMATCH : L.Word := 169
+abbrev R_APPLICATION_TYPE_MISMATCH : L.Word := 165
 /-- reject: constructor … declares cidx …; it is constructor … of … -/
-abbrev R_CONSTRUCTOR_DECLARES_CIDX : L.Word := 173
+abbrev R_CONSTRUCTOR_DECLARES_CIDX : L.Word := 169
 /-- reject: constructor … declares induct …; it is a constructor of … -/
-abbrev R_CONSTRUCTOR_DECLARES_INDUCT : L.Word := 177
+abbrev R_CONSTRUCTOR_DECLARES_INDUCT : L.Word := 173
 /-- reject: constructor … declares … fields at … parameters; its type has … binders -/
-abbrev R_CONSTRUCTOR_DECLARES_FIELDS : L.Word := 181
+abbrev R_CONSTRUCTOR_DECLARES_FIELDS : L.Word := 177
 /-- reject: direct rec: duplicate constructor -/
-abbrev R_DIRECT_REC_DUPLICATE : L.Word := 185
+abbrev R_DIRECT_REC_DUPLICATE : L.Word := 181
 /-- reject: direct sum: field universe too large -/
-abbrev R_DIRECT_SUM_FIELD_UNIVERSE : L.Word := 189
+abbrev R_DIRECT_SUM_FIELD_UNIVERSE : L.Word := 185
 /-- reject: direct sum: index expression mentions the block -/
-abbrev R_DIRECT_SUM_INDEX : L.Word := 193
+abbrev R_DIRECT_SUM_INDEX : L.Word := 189
 /-- reject: direct sum: invalid constructor return type -/
-abbrev R_DIRECT_SUM_INVALID : L.Word := 197
+abbrev R_DIRECT_SUM_INVALID : L.Word := 193
 /-- reject: direct sum: large eliminator with a non-propositional field outside the indices -/
-abbrev R_DIRECT_SUM_LARGE : L.Word := 201
+abbrev R_DIRECT_SUM_LARGE : L.Word := 197
 /-- reject: direct sum: type former does not reduce to a sort -/
-abbrev R_DIRECT_SUM_TYPE_FORMER : L.Word := 205
+abbrev R_DIRECT_SUM_TYPE_FORMER : L.Word := 201
 /-- reject: direct sum: type former does not reduce to a telescope -/
-abbrev R_DIRECT_SUM_TYPE_FORMER_DOES : L.Word := 209
+abbrev R_DIRECT_SUM_TYPE_FORMER_DOES : L.Word := 205
 /-- reject: duplicate constructor name in an inductive type's ctors -/
-abbrev R_DUPLICATE_CONSTRUCTOR_NAME : L.Word := 213
+abbrev R_DUPLICATE_CONSTRUCTOR_NAME : L.Word := 209
 /-- reject: duplicate declaration -/
-abbrev R_DUPLICATE_DECLARATION_2 : L.Word := 217
+abbrev R_DUPLICATE_DECLARATION_2 : L.Word := 213
 /-- reject: duplicate universe parameters -/
-abbrev R_DUPLICATE_UNIVERSE_PARAMETERS : L.Word := 221
+abbrev R_DUPLICATE_UNIVERSE_PARAMETERS : L.Word := 217
 /-- reject: duplicate universe parameters in -/
-abbrev R_DUPLICATE_UNIVERSE_PARAMETERS_IN : L.Word := 225
+abbrev R_DUPLICATE_UNIVERSE_PARAMETERS_IN : L.Word := 221
 /-- reject: expected a sort -/
-abbrev R_EXPECTED_A_SORT : L.Word := 229
+abbrev R_EXPECTED_A_SORT : L.Word := 225
 /-- reject: free variable out of scope -/
-abbrev R_FREE_VARIABLE_OUT : L.Word := 233
+abbrev R_FREE_VARIABLE_OUT : L.Word := 229
 /-- reject: function expected -/
-abbrev R_FUNCTION_EXPECTED_2 : L.Word := 237
+abbrev R_FUNCTION_EXPECTED_2 : L.Word := 233
 /-- reject: generated recursor: a recorded normal form of is too short -/
-abbrev R_GENERATED_RECURSOR_A : L.Word := 241
+abbrev R_GENERATED_RECURSOR_A : L.Word := 237
 /-- reject: generated recursor: field of does not end in its inductive hypothesis's class (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_FIELD : L.Word := 245
+abbrev R_GENERATED_RECURSOR_FIELD : L.Word := 241
 /-- reject: generated recursor: field of does not land at its inductive hypothesis's class at every node of the positivity check (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_FIELD_OF : L.Word := 249
+abbrev R_GENERATED_RECURSOR_FIELD_OF : L.Word := 245
 /-- reject: generated recursor: large eliminator on a block whose sort may be Prop (official: elim_only_at_universe_zero) -/
-abbrev R_GENERATED_RECURSOR_LARGE : L.Word := 253
+abbrev R_GENERATED_RECURSOR_LARGE : L.Word := 249
 /-- reject: generated recursor: the block declares no family -/
-abbrev R_GENERATED_RECURSOR_THE : L.Word := 257
+abbrev R_GENERATED_RECURSOR_THE : L.Word := 253
 /-- reject: generated recursor: the inductive hypotheses of 's minor premise are not its recursive fields (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_INDUCTIVE : L.Word := 261
+abbrev R_GENERATED_RECURSOR_THE_INDUCTIVE : L.Word := 257
 /-- reject: generated recursor: the recursor family does not have exactly one class per member (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSOR : L.Word := 265
+abbrev R_GENERATED_RECURSOR_THE_RECURSOR : L.Word := 261
 /-- reject: generated recursor: the recursor family is not of the generated shape (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSOR_FAMILY : L.Word := 269
+abbrev R_GENERATED_RECURSOR_THE_RECURSOR_FAMILY : L.Word := 265
 /-- reject: generated recursor: the recursor record's member is not its class's -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSOR_RECORD : L.Word := 273
+abbrev R_GENERATED_RECURSOR_THE_RECURSOR_RECORD : L.Word := 269
 /-- reject: generated recursor: the recursor record's rule prefix or major index is not the generated one -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSOR_RECORD_S : L.Word := 277
+abbrev R_GENERATED_RECURSOR_THE_RECURSOR_RECORD_S : L.Word := 273
 /-- reject: generated recursor: the recursors' prefix does not have exactly one minor premise for (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSORS : L.Word := 281
+abbrev R_GENERATED_RECURSOR_THE_RECURSORS : L.Word := 277
 /-- reject: generated recursor: the recursors' prefix has a minor premise for no constructor of a class (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_RECURSORS_PREFIX : L.Word := 285
+abbrev R_GENERATED_RECURSOR_THE_RECURSORS_PREFIX : L.Word := 281
 /-- reject: generated recursor: the rule of calls a class whose recursor the stream omits (official: unknown constant) -/
-abbrev R_GENERATED_RECURSOR_THE_RULE : L.Word := 289
+abbrev R_GENERATED_RECURSOR_THE_RULE : L.Word := 285
 /-- reject: generated recursor: the type of is not the generated one (official: invalid recursor) -/
-abbrev R_GENERATED_RECURSOR_THE_TYPE : L.Word := 293
+abbrev R_GENERATED_RECURSOR_THE_TYPE : L.Word := 289
 /-- reject: incorrect number of universe levels -/
-abbrev R_INCORRECT_NUMBER_OF : L.Word := 297
+abbrev R_INCORRECT_NUMBER_OF : L.Word := 293
 /-- reject: invalid occurrence of a datatype being declared in the type of : it must be applied to the parameters and universe levels of the mutual declaration -/
-abbrev R_INVALID_OCCURRENCE_OF : L.Word := 301
+abbrev R_INVALID_OCCURRENCE_OF : L.Word := 297
 /-- reject: invalid projection: not a structure-like type, or no such field -/
-abbrev R_INVALID_PROJECTION_NOT : L.Word := 305
+abbrev R_INVALID_PROJECTION_NOT : L.Word := 301
 /-- reject: invalid projection: the node names another structure -/
-abbrev R_INVALID_PROJECTION_THE : L.Word := 309
+abbrev R_INVALID_PROJECTION_THE : L.Word := 305
 /-- reject: let value type mismatch -/
-abbrev R_LET_VALUE_TYPE : L.Word := 313
+abbrev R_LET_VALUE_TYPE : L.Word := 309
 /-- reject: loose bound variable in type -/
-abbrev R_LOOSE_BOUND_VARIABLE : L.Word := 317
+abbrev R_LOOSE_BOUND_VARIABLE : L.Word := 313
 /-- reject: loose bound variable in value -/
-abbrev R_LOOSE_BOUND_VARIABLE_IN : L.Word := 321
+abbrev R_LOOSE_BOUND_VARIABLE_IN : L.Word := 317
 /-- reject: mutually inductive types must live in the same universe -/
-abbrev R_MUTUALLY_INDUCTIVE_TYPES : L.Word := 325
+abbrev R_MUTUALLY_INDUCTIVE_TYPES : L.Word := 321
 /-- reject: nested positivity: a container's index telescope mentions the block (official: unknown constant) -/
-abbrev R_NESTED_POSITIVITY_A : L.Word := 329
+abbrev R_NESTED_POSITIVITY_A : L.Word := 325
 /-- reject: nested positivity: incorrect number of universe levels for a nested inductive datatype (official: incorrect number of universe levels) -/
-abbrev R_NESTED_POSITIVITY_INCORRECT : L.Word := 333
+abbrev R_NESTED_POSITIVITY_INCORRECT : L.Word := 329
 /-- reject: nested positivity: invalid nested inductive datatype, its constructor has a duplicate universe level parameter (official: duplicate universe level parameter) -/
-abbrev R_NESTED_POSITIVITY_INVALID : L.Word := 337
+abbrev R_NESTED_POSITIVITY_INVALID : L.Word := 333
 /-- reject: nested positivity: invalid nested inductive datatype, its constructor type does not bind its fields (official: ill-formed constructor) -/
-abbrev R_NESTED_POSITIVITY_INVALID_NESTED : L.Word := 341
+abbrev R_NESTED_POSITIVITY_INVALID_NESTED : L.Word := 337
 /-- reject: nested positivity: invalid nested inductive datatype, its constructor type does not bind the parameters (official: ill-formed constructor) -/
-abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE : L.Word := 345
+abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE : L.Word := 341
 /-- reject: nested positivity: invalid nested inductive datatype, its type does not bind its parameters (official: ill-formed inductive type) -/
-abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE : L.Word := 349
+abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE : L.Word := 345
 /-- reject: nested positivity: invalid nested inductive datatype, its type is not a telescope ending in a sort (official: type expected) -/
-abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE_ITS : L.Word := 353
+abbrev R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE_ITS : L.Word := 349
 /-- reject: nested positivity: invalid return type — a constructor's result index mentions the block -/
-abbrev R_NESTED_POSITIVITY_INVALID_RETURN : L.Word := 357
+abbrev R_NESTED_POSITIVITY_INVALID_RETURN : L.Word := 353
 /-- reject: nested positivity: mutually inductive types must live in the same universe -/
-abbrev R_NESTED_POSITIVITY_MUTUALLY : L.Word := 361
+abbrev R_NESTED_POSITIVITY_MUTUALLY : L.Word := 357
 /-- reject: nested positivity: nested inductive datatypes parameters cannot contain local variables -/
-abbrev R_NESTED_POSITIVITY_NESTED : L.Word := 365
+abbrev R_NESTED_POSITIVITY_NESTED : L.Word := 361
 /-- reject: nested positivity: non positive occurrence of the datatypes being declared -/
-abbrev R_NESTED_POSITIVITY_NON : L.Word := 369
+abbrev R_NESTED_POSITIVITY_NON : L.Word := 365
 /-- reject: nested positivity: non valid occurrence of the datatypes being declared -/
-abbrev R_NESTED_POSITIVITY_NON_VALID : L.Word := 373
+abbrev R_NESTED_POSITIVITY_NON_VALID : L.Word := 369
 /-- reject: nested positivity: non valid occurrence of the datatypes being declared (a later field or the result depends on a recursive or nested field) -/
-abbrev R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE : L.Word := 377
+abbrev R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE : L.Word := 373
 /-- reject: nested positivity: non valid occurrence of the datatypes being declared (an instantiation in progress, reached through reduction) -/
-abbrev R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE_OF : L.Word := 381
+abbrev R_NESTED_POSITIVITY_NON_VALID_OCCURRENCE_OF : L.Word := 377
 /-- reject: nested positivity: number of parameters mismatch in inductive datatype declaration (a container's group) -/
-abbrev R_NESTED_POSITIVITY_NUMBER : L.Word := 385
+abbrev R_NESTED_POSITIVITY_NUMBER : L.Word := 381
 /-- reject: nested positivity: type expected (a container instance that is not fully applied) -/
-abbrev R_NESTED_POSITIVITY_TYPE : L.Word := 389
+abbrev R_NESTED_POSITIVITY_TYPE : L.Word := 385
 /-- reject: number of parameters mismatch -/
-abbrev R_NUMBER_OF_PARAMETERS : L.Word := 393
+abbrev R_NUMBER_OF_PARAMETERS : L.Word := 389
 /-- reject: parameters of all inductive datatypes must match -/
-abbrev R_PARAMETERS_OF_ALL : L.Word := 397
+abbrev R_PARAMETERS_OF_ALL : L.Word := 393
 /-- reject: projection from a propositional structure must be a proposition -/
-abbrev R_PROJECTION_FROM_A : L.Word := 401
+abbrev R_PROJECTION_FROM_A : L.Word := 397
 /-- reject: projection index out of range -/
-abbrev R_PROJECTION_INDEX_OUT : L.Word := 405
+abbrev R_PROJECTION_INDEX_OUT : L.Word := 401
 /-- reject: projection parameter mismatch -/
-abbrev R_PROJECTION_PARAMETER_MISMATCH : L.Word := 409
+abbrev R_PROJECTION_PARAMETER_MISMATCH : L.Word := 405
 /-- reject: projection table taken -/
-abbrev R_PROJECTION_TABLE_TAKEN : L.Word := 413
+abbrev R_PROJECTION_TABLE_TAKEN : L.Word := 409
 /-- reject: recursor … declares k := …; the generated recursor of this block is… K-like -/
-abbrev R_RECURSOR_DECLARES_K : L.Word := 417
+abbrev R_RECURSOR_DECLARES_K : L.Word := 413
 /-- reject: recursor … declares … indices; … has … at … parameters -/
-abbrev R_RECURSOR_DECLARES_INDICES : L.Word := 421
+abbrev R_RECURSOR_DECLARES_INDICES : L.Word := 417
 /-- reject: recursor … declares … minor premises; the block has … constructors -/
-abbrev R_RECURSOR_DECLARES_MINOR : L.Word := 425
+abbrev R_RECURSOR_DECLARES_MINOR : L.Word := 421
 /-- reject: recursor … declares … motives; the block has … inductive types -/
-abbrev R_RECURSOR_DECLARES_MOTIVES : L.Word := 429
+abbrev R_RECURSOR_DECLARES_MOTIVES : L.Word := 425
 /-- reject: recursor … declares … parameters; the block declares … -/
-abbrev R_RECURSOR_DECLARES_PARAMETERS : L.Word := 433
+abbrev R_RECURSOR_DECLARES_PARAMETERS : L.Word := 429
 /-- reject: reserved basis name -/
-abbrev R_RESERVED_BASIS_NAME : L.Word := 437
+abbrev R_RESERVED_BASIS_NAME : L.Word := 433
 /-- reject: target rec: a recursor is named for a pinned basis constant, a literal guard's slot or a certified Nat operation -/
-abbrev R_TARGET_REC_A : L.Word := 441
+abbrev R_TARGET_REC_A : L.Word := 437
 /-- reject: target rec: the block does not split -/
-abbrev R_TARGET_REC_THE : L.Word := 445
+abbrev R_TARGET_REC_THE : L.Word := 441
 /-- reject: target rec: the block's auxiliary recursor names are not the generated ones (T.rec_1 … T.rec_n) -/
-abbrev R_TARGET_REC_THE_BLOCK : L.Word := 449
+abbrev R_TARGET_REC_THE_BLOCK : L.Word := 445
 /-- reject: target rec: the block's recursor names are not the generated ones (one T.rec per member) -/
-abbrev R_TARGET_REC_THE_BLOCK_S : L.Word := 453
+abbrev R_TARGET_REC_THE_BLOCK_S : L.Word := 449
 /-- reject: target rec: the major's parameters mention more than the recursor's parameters -/
-abbrev R_TARGET_REC_THE_MAJOR : L.Word := 457
+abbrev R_TARGET_REC_THE_MAJOR : L.Word := 453
 /-- reject: target rec: the major's type former does not bind its parameters (official: ill-formed inductive type) -/
-abbrev R_TARGET_REC_THE_MAJOR_S : L.Word := 461
+abbrev R_TARGET_REC_THE_MAJOR_S : L.Word := 457
 /-- reject: target rec: the major's type former is not a telescope ending in a sort (official: type expected) -/
-abbrev R_TARGET_REC_THE_MAJOR_S_TYPE : L.Word := 465
+abbrev R_TARGET_REC_THE_MAJOR_S_TYPE : L.Word := 461
 /-- reject: target rec: the recursor record is not the generated recursor (constructor grouping) -/
-abbrev R_TARGET_REC_THE_RECURSOR : L.Word := 469
+abbrev R_TARGET_REC_THE_RECURSOR : L.Word := 465
 /-- reject: target rec: the recursor's level parameters are not the generated ones -/
-abbrev R_TARGET_REC_THE_RECURSOR_S : L.Word := 473
+abbrev R_TARGET_REC_THE_RECURSOR_S : L.Word := 469
 /-- reject: target rec: the recursor's major is Quot, which is no inductive -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR : L.Word := 477
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR : L.Word := 473
 /-- reject: target rec: the recursor's major is an outside inductive at an instantiation that is no auxiliary type of the block (official generates no such auxiliary recursor: `elim_nested_inductive`, `is_nested`) -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS : L.Word := 481
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS : L.Word := 477
 /-- reject: target rec: the recursor's major is not a stored inductive -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT : L.Word := 485
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_IS_NOT : L.Word := 481
 /-- reject: target rec: the recursor's major lives in another universe than the block (Q1) -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES : L.Word := 489
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_LIVES : L.Word := 485
 /-- reject: target rec: the recursor's major premise is not an inductive's application -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE : L.Word := 493
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE : L.Word := 489
 /-- reject: target rec: the recursor's major premise is not the member at its parameters and its index binders -/
-abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS : L.Word := 497
+abbrev R_TARGET_REC_THE_RECURSOR_S_MAJOR_PREMISE_IS : L.Word := 493
 /-- reject: target rec: two recursors of the block share a name -/
-abbrev R_TARGET_REC_TWO : L.Word := 501
+abbrev R_TARGET_REC_TWO : L.Word := 497
 /-- reject: the inductive block lists … constructors and carries … constructor records -/
-abbrev R_THE_INDUCTIVE_BLOCK : L.Word := 505
+abbrev R_THE_INDUCTIVE_BLOCK : L.Word := 501
 /-- reject: type mismatch in definition -/
-abbrev R_TYPE_MISMATCH_IN : L.Word := 509
+abbrev R_TYPE_MISMATCH_IN : L.Word := 505
 /-- reject: type mismatch in opaque -/
-abbrev R_TYPE_MISMATCH_IN_OPAQUE : L.Word := 513
+abbrev R_TYPE_MISMATCH_IN_OPAQUE : L.Word := 509
 /-- reject: type mismatch in theorem -/
-abbrev R_TYPE_MISMATCH_IN_THEOREM : L.Word := 517
+abbrev R_TYPE_MISMATCH_IN_THEOREM : L.Word := 513
 /-- reject: type mismatch in … -/
-abbrev R_TYPE_MISMATCH_IN_2 : L.Word := 521
+abbrev R_TYPE_MISMATCH_IN_2 : L.Word := 517
 /-- reject: type of theorem is not a proposition -/
-abbrev R_TYPE_OF_THEOREM : L.Word := 525
+abbrev R_TYPE_OF_THEOREM : L.Word := 521
 /-- reject: undeclared universe parameter in type -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER : L.Word := 529
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER : L.Word := 525
 /-- reject: undeclared universe parameter in type of -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN : L.Word := 533
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN : L.Word := 529
 /-- reject: undeclared universe parameter in value -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE : L.Word := 537
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_VALUE : L.Word := 533
 /-- reject: unexpected free variable in type -/
-abbrev R_UNEXPECTED_FREE_VARIABLE : L.Word := 541
+abbrev R_UNEXPECTED_FREE_VARIABLE : L.Word := 537
 /-- reject: unexpected free variable in value -/
-abbrev R_UNEXPECTED_FREE_VARIABLE_IN : L.Word := 545
+abbrev R_UNEXPECTED_FREE_VARIABLE_IN : L.Word := 541
 /-- reject: unknown constant -/
-abbrev R_UNKNOWN_CONSTANT_2 : L.Word := 549
+abbrev R_UNKNOWN_CONSTANT_2 : L.Word := 545
 /-- reject: unknown constant in … -/
-abbrev R_UNKNOWN_CONSTANT_IN : L.Word := 553
+abbrev R_UNKNOWN_CONSTANT_IN : L.Word := 549
 /-- other: capacity: a table of the checker's region is full -/
-abbrev R_CAP_TABLE : L.Word := 556
+abbrev R_CAP_TABLE : L.Word := 552
 /-- other: capacity: a store's node count reached its limit -/
-abbrev R_CAP_STORE : L.Word := 560
+abbrev R_CAP_STORE : L.Word := 556
 /-- other: capacity: a count or index past the word range -/
-abbrev R_CAP_WORD : L.Word := 564
+abbrev R_CAP_WORD : L.Word := 560
 /-- other: capacity: a key word does not fit the hash-cons key -/
-abbrev R_CAP_KEY : L.Word := 568
+abbrev R_CAP_KEY : L.Word := 564
 /-- other: capacity: the sparse id table is full -/
-abbrev R_CAP_ID_MEMO : L.Word := 572
+abbrev R_CAP_ID_MEMO : L.Word := 568
 /-- other: capacity: the region is too small for the arrays -/
-abbrev R_CAP_REGION : L.Word := 576
+abbrev R_CAP_REGION : L.Word := 572
 /-- other: a number of more than 18 digits -/
-abbrev R_LONG_NUMBER : L.Word := 580
+abbrev R_LONG_NUMBER : L.Word := 576
 /-- other: an escaped safety or kind string -/
-abbrev R_ESCAPED_STRING : L.Word := 584
+abbrev R_ESCAPED_STRING : L.Word := 580
 /-- other: pin data the checker does not read -/
-abbrev R_PIN_DATA : L.Word := 588
+abbrev R_PIN_DATA : L.Word := 584
 /-- other: recursion depth limit reached -/
-abbrev R_DEPTH : L.Word := 592
+abbrev R_DEPTH : L.Word := 588
 /-- other: internal check failed -/
-abbrev R_INTERNAL : L.Word := 596
+abbrev R_INTERNAL : L.Word := 592
 /-- reject: unknown constant in type -/
-abbrev R_UNKNOWN_CONSTANT_IN_TYPE : L.Word := 601
+abbrev R_UNKNOWN_CONSTANT_IN_TYPE : L.Word := 597
 /-- reject: unknown constant in value -/
-abbrev R_UNKNOWN_CONSTANT_IN_VALUE : L.Word := 605
+abbrev R_UNKNOWN_CONSTANT_IN_VALUE : L.Word := 601
 /-- reject: unknown constant in type of -/
-abbrev R_UNKNOWN_CONSTANT_IN_TYPE_OF : L.Word := 609
+abbrev R_UNKNOWN_CONSTANT_IN_TYPE_OF : L.Word := 605
 /-- reject: unknown constant in generated rule of -/
-abbrev R_UNKNOWN_CONSTANT_IN_GENERATED : L.Word := 613
+abbrev R_UNKNOWN_CONSTANT_IN_GENERATED : L.Word := 609
 /-- reject: unknown constant in the domains of a generated rule of -/
-abbrev R_UNKNOWN_CONSTANT_IN_THE : L.Word := 617
+abbrev R_UNKNOWN_CONSTANT_IN_THE : L.Word := 613
 /-- decline: use of the sorryAx axiom in type -/
-abbrev R_USE_OF_THE_SORRYAX_IN_TYPE : L.Word := 622
+abbrev R_USE_OF_THE_SORRYAX_IN_TYPE : L.Word := 618
 /-- decline: use of the sorryAx axiom in value -/
-abbrev R_USE_OF_THE_SORRYAX_IN_VALUE : L.Word := 626
+abbrev R_USE_OF_THE_SORRYAX_IN_VALUE : L.Word := 622
 /-- decline: use of the sorryAx axiom in type of -/
-abbrev R_USE_OF_THE_SORRYAX_IN_TYPE_OF : L.Word := 630
+abbrev R_USE_OF_THE_SORRYAX_IN_TYPE_OF : L.Word := 626
 /-- decline: use of the sorryAx axiom in generated rule of -/
-abbrev R_USE_OF_THE_SORRYAX_IN_GENERATED : L.Word := 634
+abbrev R_USE_OF_THE_SORRYAX_IN_GENERATED : L.Word := 630
 /-- decline: use of the sorryAx axiom in the domains of a generated rule of -/
-abbrev R_USE_OF_THE_SORRYAX_IN_THE : L.Word := 638
+abbrev R_USE_OF_THE_SORRYAX_IN_THE : L.Word := 634
 /-- decline: a declaration at a literal's name with another shape -/
-abbrev R_A_DECLARATION_AT : L.Word := 642
+abbrev R_A_DECLARATION_AT : L.Word := 638
 /-- decline: a declaration at a literal's name with another shape () -/
-abbrev R_A_DECLARATION_AT_A : L.Word := 646
+abbrev R_A_DECLARATION_AT_A : L.Word := 642
 /-- decline: quotient declaration before what it needs -/
-abbrev R_QUOTIENT_DECLARATION_BEFORE : L.Word := 650
+abbrev R_QUOTIENT_DECLARATION_BEFORE : L.Word := 646
 /-- decline: this family stored at a definition -/
-abbrev R_THIS_FAMILY_STORED : L.Word := 654
+abbrev R_THIS_FAMILY_STORED : L.Word := 650
 /-- reject: a certified Nat operation's name, not a definition: … -/
-abbrev R_A_CERTIFIED_NAT : L.Word := 657
+abbrev R_A_CERTIFIED_NAT : L.Word := 653
 /-- reject: a family's key is no stored family -/
-abbrev R_A_FAMILY_S : L.Word := 661
+abbrev R_A_FAMILY_S : L.Word := 657
 /-- reject: application type mismatch at a family's parameters -/
-abbrev R_APPLICATION_TYPE_MISMATCH_AT : L.Word := 665
+abbrev R_APPLICATION_TYPE_MISMATCH_AT : L.Word := 661
 /-- reject: direct rec: a family at a `Bool` constructor's name -/
-abbrev R_DIRECT_REC_A : L.Word := 669
+abbrev R_DIRECT_REC_A : L.Word := 665
 /-- reject: direct sum: a type former's declared type and its reduct differ -/
-abbrev R_DIRECT_SUM_A : L.Word := 673
+abbrev R_DIRECT_SUM_A : L.Word := 669
 /-- reject: function expected at a family's parameters -/
-abbrev R_FUNCTION_EXPECTED_AT : L.Word := 677
+abbrev R_FUNCTION_EXPECTED_AT : L.Word := 673
 /-- reject: incorrect number of universe levels at a family's key -/
-abbrev R_INCORRECT_NUMBER_OF_UNIVERSE : L.Word := 681
+abbrev R_INCORRECT_NUMBER_OF_UNIVERSE : L.Word := 677
 /-- reject: projection from a structure whose type reaches no sort -/
-abbrev R_PROJECTION_FROM_A_STRUCTURE : L.Word := 685
+abbrev R_PROJECTION_FROM_A_STRUCTURE : L.Word := 681
 /-- reject: recursor declares k := ; the generated recursor of this block is K-like -/
-abbrev R_RECURSOR_DECLARES_K_THE : L.Word := 689
+abbrev R_RECURSOR_DECLARES_K_THE : L.Word := 685
 /-- reject: reserved basis name: the block is not the pinned one -/
-abbrev R_RESERVED_BASIS_NAME_THE : L.Word := 693
+abbrev R_RESERVED_BASIS_NAME_THE : L.Word := 689
 /-- reject: the recursor 's rule for has a right-hand side that is not closed -/
-abbrev R_THE_RECURSOR_S : L.Word := 697
+abbrev R_THE_RECURSOR_S : L.Word := 693
 /-- reject: the recursor 's rule for has a right-hand side that is not definitionally equal to the generated one -/
-abbrev R_THE_RECURSOR_S_RULE : L.Word := 701
+abbrev R_THE_RECURSOR_S_RULE : L.Word := 697
 /-- reject: the recursor 's rule for has a right-hand side whose type is not the generated one's -/
-abbrev R_THE_RECURSOR_S_RULE_FOR : L.Word := 705
+abbrev R_THE_RECURSOR_S_RULE_FOR : L.Word := 701
 /-- reject: the recursor 's rule for has an undeclared universe parameter -/
-abbrev R_THE_RECURSOR_S_RULE_FOR_HAS : L.Word := 709
+abbrev R_THE_RECURSOR_S_RULE_FOR_HAS : L.Word := 705
 /-- reject: the recursor 's rule for is not the generated one's (constructor , fields) -/
-abbrev R_THE_RECURSOR_S_RULE_FOR_IS : L.Word := 713
+abbrev R_THE_RECURSOR_S_RULE_FOR_IS : L.Word := 709
 /-- reject: the recursor 's stored type does not apply its major's container at the generated firing data -/
-abbrev R_THE_RECURSOR_S_STORED : L.Word := 717
+abbrev R_THE_RECURSOR_S_STORED : L.Word := 713
 /-- reject: the recursor carries more or fewer rules than the generated one ( unmatched) -/
-abbrev R_THE_RECURSOR_CARRIES : L.Word := 721
+abbrev R_THE_RECURSOR_CARRIES : L.Word := 717
 /-- reject: the type of the recursor is not closed -/
-abbrev R_THE_TYPE_OF : L.Word := 725
+abbrev R_THE_TYPE_OF : L.Word := 721
 /-- reject: the type of the recursor is not the generated one: it has fewer than binders -/
-abbrev R_THE_TYPE_OF_THE : L.Word := 729
+abbrev R_THE_TYPE_OF_THE : L.Word := 725
 /-- reject: the type of the recursor is not the generated one: its body after the major differs -/
-abbrev R_THE_TYPE_OF_THE_RECURSOR : L.Word := 733
+abbrev R_THE_TYPE_OF_THE_RECURSOR : L.Word := 729
 /-- reject: the type of the recursor is not the generated one: the domain of binder differs -/
-abbrev R_THE_TYPE_OF_THE_RECURSOR_IS : L.Word := 737
+abbrev R_THE_TYPE_OF_THE_RECURSOR_IS : L.Word := 733
 /-- reject: two modules store different constants named … -/
-abbrev R_TWO_MODULES_STORE : L.Word := 741
+abbrev R_TWO_MODULES_STORE : L.Word := 737
 /-- reject: undeclared universe parameter in the type of the recursor -/
-abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE : L.Word := 745
+abbrev R_UNDECLARED_UNIVERSE_PARAMETER_IN_THE : L.Word := 741
 /-- decline: use of the sorryAx axiom in the type of the recursor -/
-abbrev R_USE_OF_THE_SORRYAX_IN_REC_TYPE : L.Word := 750
+abbrev R_USE_OF_THE_SORRYAX_IN_REC_TYPE : L.Word := 746
 /-- decline: use of the sorryAx axiom in the recursor's rule -/
-abbrev R_USE_OF_THE_SORRYAX_IN_REC_RULE : L.Word := 754
+abbrev R_USE_OF_THE_SORRYAX_IN_REC_RULE : L.Word := 750
 /-- reject: unknown constant in the type of the recursor -/
-abbrev R_UNKNOWN_CONSTANT_IN_REC_TYPE : L.Word := 757
+abbrev R_UNKNOWN_CONSTANT_IN_REC_TYPE : L.Word := 753
 /-- reject: unknown constant in the recursor's rule -/
-abbrev R_UNKNOWN_CONSTANT_IN_REC_RULE : L.Word := 761
+abbrev R_UNKNOWN_CONSTANT_IN_REC_RULE : L.Word := 757
 /-- reject: constructor declares another parameter count than the block -/
-abbrev R_CONSTRUCTOR_DECLARES_ANOTHER : L.Word := 765
+abbrev R_CONSTRUCTOR_DECLARES_ANOTHER : L.Word := 761
 /-- reject: constructor declares other universe parameters than its type -/
-abbrev R_CONSTRUCTOR_DECLARES_OTHER : L.Word := 769
+abbrev R_CONSTRUCTOR_DECLARES_OTHER : L.Word := 765
 /-- reject: constructor declares other universe parameters than the block's inductive types -/
-abbrev R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE : L.Word := 773
+abbrev R_CONSTRUCTOR_DECLARES_OTHER_UNIVERSE : L.Word := 769
 /-- reject: inductive block carries no recursor records; the input must carry the recursors of every inductive block -/
-abbrev R_INDUCTIVE_BLOCK_CARRIES : L.Word := 777
+abbrev R_INDUCTIVE_BLOCK_CARRIES : L.Word := 773
 /-- reject: inductive block declares no inductive type -/
-abbrev R_INDUCTIVE_BLOCK_DECLARES : L.Word := 781
+abbrev R_INDUCTIVE_BLOCK_DECLARES : L.Word := 777
 /-- reject: inductive block: its records are not the inductive types, then the constructors, then the recursors -/
-abbrev R_INDUCTIVE_BLOCK_ITS : L.Word := 785
+abbrev R_INDUCTIVE_BLOCK_ITS : L.Word := 781
 /-- reject: inductive type declares more parameters than its type has binders -/
-abbrev R_INDUCTIVE_TYPE_DECLARES : L.Word := 789
+abbrev R_INDUCTIVE_TYPE_DECLARES : L.Word := 785
 /-- reject: inductive type declares other universe parameters than the block's first type -/
-abbrev R_INDUCTIVE_TYPE_DECLARES_OTHER : L.Word := 793
+abbrev R_INDUCTIVE_TYPE_DECLARES_OTHER : L.Word := 789
 /-- reject: no recursor of the block eliminates the inductive type -/
-abbrev R_NO_RECURSOR_OF : L.Word := 797
+abbrev R_NO_RECURSOR_OF : L.Word := 793
 /-- reject: reserved basis name in the block of -/
-abbrev R_RESERVED_BASIS_NAME_IN : L.Word := 801
+abbrev R_RESERVED_BASIS_NAME_IN : L.Word := 797
 /-- reject: target rec: a recursor is named for a literal guard's slot or a certified Nat operation -/
-abbrev R_TARGET_REC_A_RECURSOR : L.Word := 805
+abbrev R_TARGET_REC_A_RECURSOR : L.Word := 801
 /-- reject: the argument counts of a recursor do not fit the block -/
-abbrev R_THE_ARGUMENT_COUNTS : L.Word := 809
+abbrev R_THE_ARGUMENT_COUNTS : L.Word := 805
 /-- reject: the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size -/
-abbrev R_THE_KERNEL_REFUSED : L.Word := 813
+abbrev R_THE_KERNEL_REFUSED : L.Word := 809
 /-- reject: the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer -/
-abbrev R_THE_KERNEL_REFUSED_TO : L.Word := 817
+abbrev R_THE_KERNEL_REFUSED_TO : L.Word := 813
 /-- reject: the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size -/
-abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE : L.Word := 821
+abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE : L.Word := 817
 /-- reject: the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer -/
-abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT : L.Word := 825
+abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT : L.Word := 821
 
 end L.Arena

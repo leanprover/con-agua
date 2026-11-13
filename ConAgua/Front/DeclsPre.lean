@@ -59,7 +59,7 @@ theorem parseExprEntryD_pre (i : Nat) (r : ExprRec) :
   cases r <;> simp only [parseExprEntryD, StateD.level_pre, StateD.name_pre, StateD.expr_pre,
     StateD.freshExpr_pre, map_bind, map_pure] <;> rfl
 
-theorem installIndD_pre (tys : List IndTypeRec) (cts : List IndCtorRec) (rcs : List IndRecRec)
+theorem installIndD_pre (tys : List IndTypeRec) (cts : List (IndCtorRec × NIdx)) (rcs : List IndRecRec)
     (nPd : Nat) :
     installIndD (st.pre D) tys cts rcs nPd = StateD.pre D <$> installIndD st tys cts rcs nPd := by
   simp only [installIndD, parseCVD_pre, parseRuleD_pre, pushDecl_pre, map_bind]

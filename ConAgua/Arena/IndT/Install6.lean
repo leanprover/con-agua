@@ -8,7 +8,6 @@ import ConAgua.Arena.IndRealSctC
 public import ConAgua.Arena.IndInstallSpec.PnfW
 public import ConAgua.Verdict.PosTopE1
 import ConAgua.Arena.IndT.Install1
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndPartsSpec.PartsPSlCons
 import ConAgua.Arena.IndPosSpec.KlB
 import ConAgua.Arena.IndPosSpec.NestKeyMap

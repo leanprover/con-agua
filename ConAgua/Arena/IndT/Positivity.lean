@@ -8,7 +8,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Arena.IlpRdReal
-import ConAgua.Arena.IndInstallSpec.ConsBlockCtors
 import ConAgua.Arena.IndInstallSpec.InstallRec2PSl
 import ConAgua.Arena.IndPosSpec.FgW
 import ConAgua.Arena.IndPosSpec.Grow

@@ -5,7 +5,6 @@ public import ConAgua.Arena.DeclCanonView2
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.Arena.IndSumSpec.TsrW
 import ConAgua.L.ModelGen
-import ConAgua.Arena.Verdict
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr

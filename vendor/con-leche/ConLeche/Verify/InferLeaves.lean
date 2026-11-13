@@ -296,7 +296,7 @@ theorem unfoldDefinition_fvarLeaves {env : Env} (henv : EnvWF env)
   | some (.axiomInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
-  | some (.ctorInfo _ _ _) => intro h; exact nomatch h
+  | some (.ctorInfo _ _ _ _) => intro h; exact nomatch h
   | some (.recInfo _ _ _ _ _) => intro h; exact nomatch h
   | some (.defnInfo cv value hint) => ?_
   intro h
@@ -336,7 +336,7 @@ theorem unfoldDefinition_looseBVars {env : Env} (henv : EnvWF env)
   | some (.axiomInfo _) => intro h; exact nomatch h
   | some (.thmInfo _) => intro h; exact nomatch h
   | some (.indInfo _ _) => intro h; exact nomatch h
-  | some (.ctorInfo _ _ _) => intro h; exact nomatch h
+  | some (.ctorInfo _ _ _ _) => intro h; exact nomatch h
   | some (.recInfo _ _ _ _ _) => intro h; exact nomatch h
   | some (.defnInfo cv value hint) => ?_
   intro h
@@ -419,7 +419,7 @@ theorem whnfPres_fvarLeaves {env : Env} (henv : EnvWF env) :
           · exact Or.inr hb
         · -- iota step
           obtain ⟨c, us, cv, mI, rP, isK, rules, major, cj, usj,
-            cvj, cnP, cnF, r, hfn, hfc, hlen, -, hprep,
+            cvj, cnP, cnF, induct, r, hfn, hfc, hlen, -, hprep,
             hmfn, hfj,
             hrule,
             hml, hlev, hpeq, hmcerts, -, rfl⟩ :=
@@ -501,7 +501,9 @@ theorem whnfPres_fvarLeaves {env : Env} (henv : EnvWF env) :
         | succ n ihN =>
           intro d e e' h l hl
           obtain ⟨e₁, hwc, hcase⟩ := whnfStep_inv h
-          rcases hcase with ⟨e₂, hrn, hcont⟩ | ⟨-, e₂, hu, hcont⟩ | ⟨-, -, rfl⟩
+          rcases hcase with ⟨e₂, hrn, ⟨-, rfl⟩ | hcont⟩ | ⟨-, e₂, hu, hcont⟩ | ⟨-, -, rfl⟩
+          · rcases reduceNat_inv hrn with ⟨k, rfl⟩ | ⟨bn, rfl⟩ <;>
+              simp [Expr.fvarLeaves] at hl
           · rcases reduceNat_inv hrn with ⟨k, rfl⟩ | ⟨bn, rfl⟩ <;>
             · have := ihN hcont l hl
               simp [Expr.fvarLeaves] at this
@@ -570,7 +572,7 @@ theorem whnfPres_looseBVars {env : Env} (henv : EnvWF env) :
             (looseBVarsBounded_instantiate1_gen hb.2 hbf'.2)
         · -- iota step
           obtain ⟨c, us, cv, mI, rP, isK, rules, major, cj, usj,
-            cvj, cnP, cnF, r, hfn, hfc, hlen, -, hprep,
+            cvj, cnP, cnF, induct, r, hfn, hfc, hlen, -, hprep,
             hmfn, hfj,
             hrule,
             hml, hlev, hpeq, hmcerts, -, rfl⟩ :=
@@ -629,7 +631,8 @@ theorem whnfPres_looseBVars {env : Env} (henv : EnvWF env) :
           intro d e e' h hb
           obtain ⟨e₁, hwc, hcase⟩ := whnfStep_inv h
           have hbe₁ := ihCore hwc hb
-          rcases hcase with ⟨e₂, hrn, hcont⟩ | ⟨-, e₂, hu, hcont⟩ | ⟨-, -, rfl⟩
+          rcases hcase with ⟨e₂, hrn, ⟨-, rfl⟩ | hcont⟩ | ⟨-, e₂, hu, hcont⟩ | ⟨-, -, rfl⟩
+          · rcases reduceNat_inv hrn with ⟨k, rfl⟩ | ⟨bn, rfl⟩ <;> simp [looseBVarsBounded]
           · rcases reduceNat_inv hrn with ⟨k, rfl⟩ | ⟨bn, rfl⟩ <;>
               exact ihN hcont (by simp [looseBVarsBounded])
           · exact ihN hcont (unfoldDefinition_looseBVars henv hu hbe₁)

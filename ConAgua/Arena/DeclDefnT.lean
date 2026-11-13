@@ -35,6 +35,7 @@ reach the pin gate.
 -/
 
 open ConRon.Arena
+open ConLeche (IndWF CtorWF)
 open Std.WP
 open scoped Lean.Order
 

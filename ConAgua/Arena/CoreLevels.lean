@@ -48,7 +48,7 @@ theorem decO_encO (o : Option Bool) : decO (encO o) = o := by
 
 /-! ## The L code -/
 
-/-- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq? -/
+/-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq? -/
 @[no_expose, l_impl ConRon.Arena.lvlEq?]
 def lvlEqCL : FunDecl := lfn (u, v) locals (fd, j, d, z) {
   (fd, j, d) := call lq_find(u, v);
@@ -58,7 +58,7 @@ def lvlEqCL : FunDecl := lfn (u, v) locals (fd, j, d, z) {
 }
 
 /-- A miss of `lvl_eq_c`: run the algorithm, record a `some` answer. -/
--- con-ron: ConRon/Arena/Core.lean:136-153 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
 @[no_expose] def lvlEqRecL : FunDecl := lfn (u, v) locals (fd, j, d, z, x) {
   z := call lvl_eq(u, v);
   if z == 0 { return 0 };
@@ -67,7 +67,7 @@ def lvlEqCL : FunDecl := lfn (u, v) locals (fd, j, d, z) {
   return z
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:155-172 ConRon.Arena.lvlsEq? -/
+/-- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq? -/
 @[no_expose, l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqCL : FunDecl := lfn (us, vs) locals (fd, j, d, z) {
   (fd, j, d) := call lsq_find(us, vs);
@@ -77,7 +77,7 @@ def lvlsEqCL : FunDecl := lfn (us, vs) locals (fd, j, d, z) {
 }
 
 /-- A miss of `lvls_eq_c`. -/
--- con-ron: ConRon/Arena/Core.lean:155-172 ConRon.Arena.lvlsEq?
+-- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq?
 @[no_expose] def lvlsEqRecL : FunDecl := lfn (us, vs) locals (fd, j, d, z, x) {
   z := call lvls_eq(us, vs);
   if z == 0 { return 0 };

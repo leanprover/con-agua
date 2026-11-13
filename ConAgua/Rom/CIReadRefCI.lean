@@ -6,6 +6,7 @@ import ConAgua.Rom.CIReadRefNames
 public import ConAgua.Rom.CIReadRefCV
 public import ConAgua.Rom.CIReadRefCaps
 import ConAgua.Arena.DeclNatCv
+import ConAgua.Rom.ReadScr
 
 @[expose] public section
 
@@ -31,7 +32,7 @@ def ciFits : ConLeche.ConstantInfo → Bool
   | .axiomInfo v => cvFits v
   | .thmInfo v => cvFits v
   | .indInfo v c => cvFits v && capsFits c
-  | .ctorInfo v nP nF => cvFits v && decide (nP < 2 ^ 64) && decide (nF < 2 ^ 64)
+  | .ctorInfo v nP nF T => cvFits v && decide (nP < 2 ^ 64) && decide (nF < 2 ^ 64) && nameFits T
   | .recInfo v mI rP _ rs => cvFits v && decide (mI < 2 ^ 64) && decide (rP < 2 ^ 64) &&
       decide (rs.length < 2 ^ 59) && rs.all ruleFits
   | _ => false
@@ -192,72 +193,103 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat}
   · simp [decCI, nat?_of e0, ecv]
   · simp [decCI, nat?_of e0, ecv]
 
-/-- A constructor. -/
+/-- A constructor: the constant value, the two counts, the family's name. -/
 theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat}
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
-    (nP nF : Nat) (hnP : nP < 2 ^ 64) (hnF : nF < 2 ^ 64)
+    (nP nF : Nat) (fam : ConLeche.Name) (hnP : nP < 2 ^ 64) (hnF : nF < 2 ^ 64) (hfam : nameFits fam = true)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
     (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
-    (hd : rom.drop q.toNat = (encCI seen (.ctorInfo v nP nF)).1 ++ rest)
+    (hd : rom.drop q.toNat = (encCI seen (.ctorInfo v nP nF fam)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
-    CIPost m₀ a₀ T seen memo (.ctorInfo v nP nF) m a q r m' := by
+    CIPost m₀ a₀ T seen memo (.ctorInfo v nP nF fam) m a q r m' := by
   unfold CIPost
   simp only [encCI] at hd ⊢
-  have hj := ciHead hL hr 4 7 rfl (by omega) ((encCV seen v).1 ++ ((u64B nP ++ u64B nF) ++ rest)) _ m q r m'
-    (by rw [hd]; simp [List.append_assoc]) hc
+  have hj := ciHead hL hr 4 8 rfl (by omega) ((encCV seen v).1 ++ ((u64B nP ++ u64B nF ++ encName fam) ++ rest))
+    _ m q r m' (by rw [hd]; simp [List.append_assoc]) hc
   unfold ciW.j1 at hj
   obtain ⟨rA, r2, pp, q2, memo1, icv, a1, m2, k', hrA, hr2, rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2,
-    hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 4 7 (by decide) (u64B nP ++ u64B nF)
+    hek2, hIW2, hw0, hH2, hw⟩ := ciPre hL hr seen memo v hv 4 8 (by decide) (u64B nP ++ u64B nF ++ encName fam)
       _ m a q rest r m' hI hM hst (by rw [hd]; simp [List.append_assoc]) hj
   simp only [hrA, hr2] at hw
-  replace ht2 : erT m + 7 ≤ erT m2 := ht2
-  rw [show (7 : Word).toNat = 7 from rfl] at hH2
+  replace ht2 : erT m + 8 ≤ erT m2 := ht2
+  rw [show (8 : Word).toNat = 8 from rfl] at hH2
   have i1 : (UInt64.ofNat 4 = 1) = False := by decide
   have i3 : (UInt64.ofNat 4 = 3) = False := by decide
   have i4 : (UInt64.ofNat 4 = 4) = True := by decide
   simp only [i1, i3, i4, ite_false, ite_true] at hw
   replace hw := putE_some hL (u64_some hL hw)
   replace hw := putE_some hL (u64_some hL hw)
-  have e1 := u64_at hr q2 0 [] nP (u64B nF ++ rest) (by rw [hd2, List.append_assoc]; rfl) (by simp) hnP
+  have e1 := u64_at hr q2 0 [] nP (u64B nF ++ encName fam ++ rest)
+    (by rw [hd2, List.append_assoc, List.append_assoc]; rfl) (by simp) hnP
   simp only [UInt64.add_zero] at e1
-  have e2 := u64_at hr q2 8 (u64B nP) nF rest (by rw [hd2, List.append_assoc]) (by simp [u64B]) hnF
+  have e2 := u64_at hr q2 8 (u64B nP) nF (encName fam ++ rest)
+    (by rw [hd2, List.append_assoc, List.append_assoc]) (by simp [u64B]) hnF
   rw [e1, e2] at hw
-  simp only [List.headD_cons, Option.some.injEq, Prod.mk.injEq] at hw
-  obtain ⟨rfl, rfl⟩ := hw
+  simp only [List.headD_cons] at hw
   have hlt := hI2.er_lt
   have hgo := hI.erT_mono
   obtain ⟨hI3, hM3, hs3, ht3, hIW3, hg3, hn3⟩ := putER_facts hI2 hM2 (pp + 5) (UInt64.ofNat nP) (by off_omega)
     (by off_omega)
   obtain ⟨hI4, hM4, hs4, ht4, hIW4, hg4, hn4⟩ := putER_facts hI3 hM3 (pp + 6) (UInt64.ofNat nF) (by off_omega)
     (by off_omega)
-  have hlen := drop_len rom _ (u64B nP ++ u64B nF) _ (by rw [hd2]) (by simp [u64B])
+  have hlen := drop_len rom _ (u64B nP ++ u64B nF) _ (by rw [hd2, List.append_assoc]) (by simp [u64B])
   simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlen
   have hrom := hr; simp only [RomOK] at hrom
-  refine ⟨memo1, .ctorInfo icv nP nF, a1, ?_, hI4, hM4, by rw [hs4, hs3, hs2], ?_,
-    ⟨by omega, fun i hi _ => ?_⟩, by simp [hpp], by rw [hIW4, hIW3, hIW2], ?_⟩
-  · simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ hrun2]; rfl
+  -- the family's name
+  generalize hm4 : erecPutMem (erecPutMem m2 (pp + 5) (UInt64.ofNat nP)) (pp + 6) (UInt64.ofNat nF) = m4
+    at hw hI4 hM4 hs4 ht4 hIW4 hg4 hn4
+  have hq16 : (q2 + 16).toNat = q2.toNat + 16 := by rw [UInt64.toNat_add]; simp; omega
+  have hdn : rom.drop (q2 + 16).toNat = encName fam ++ rest := by
+    rw [hq16, ← List.drop_drop, hd2]; simp [u64B]
+  obtain ⟨r5, m5, h5, hw⟩ := L.Ind.ntBW_some hw
+  obtain ⟨a5, hrun5, hA5, hk5, hlt5, hq5, hf5, hmo5⟩ := nameCall hL hr fam hfam hI4.arena hI4.mode hdn h5
+  obtain ⟨hI5, -, -, hIW5, ht5, -, hE5⟩ := hI4.expr hA5 hmo5 (hf5.mono (fun b hb => by simp [ExprA, RomA, hb])
+    (fun x hx => by simp [ExprC, RomC, hx])) hk5 (L.Arena.internName_ks _ _ _ _ hrun5)
+  have hM5 := hM4.frameG hf5 (by decide) (by decide)
+  have hs5 : stkTop m5 = stkTop m4 := hf5.ctl 131 (by decide)
+  obtain ⟨rb, m6, hb, hw⟩ := L.Ind.ntBW_some hw
+  rw [putCall hL hb] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hp7lt : (pp + 7).toNat < erT m5 := by rw [ht5, ht4, ht3]; off_omega
+  obtain ⟨hI6, hM6, hs6, ht6, hIW6, hg6, hn6⟩ := putER_facts hI5 hM5 (pp + 7) (r5.headD 0) (by off_omega) hp7lt
+  refine ⟨memo1, .ctorInfo icv nP nF (decI (r5.headD 0)), a5, ?_, hI6, hM6,
+    by rw [hs6, hs5, hs4, hs3, hs2], ?_,
+    ⟨by omega, fun i hi _ => ?_⟩, by simp [hpp], by rw [hIW6, hIW5, hIW4, hIW3, hIW2], ?_⟩
+  · simp only [Frontend.internCI]; rw [run_bind_of _ _ _ _ _ hrun2]
+    simp only [StateT.run_bind, hrun5, except_ok_bind]; rfl
   · simp only [List.tail_cons, List.headD_cons]
-    rw [off_toNat (by omega), hq2]
+    rw [hq5, hq16, hq2]
     simp [u64B]; omega
-  · rw [hn4 _ (by off_omega) (by omega), hn3 _ (by off_omega) (by omega)]
+  · rw [hn6 _ (by off_omega) (by omega), hE5, hn4 _ (by off_omega) (by omega),
+      hn3 _ (by off_omega) (by omega)]
     exact hek2.2 i hi id
   · intro m'' h1 h2
     simp only [List.headD_cons]
-    have g : ∀ i, pp.toNat ≤ i → i < pp.toNat + 7 →
-        erA m'' i = erA (erecPutMem (erecPutMem m2 (pp + 5) (UInt64.ofNat nP)) (pp + 6)
-          (UInt64.ofNat nF)) i := fun i h h' => h1 i ⟨by omega, by omega⟩
+    have g : ∀ i, pp.toNat ≤ i → i < pp.toNat + 8 →
+        erA m'' i = erA (erecPutMem m5 (pp + 7) (r5.headD 0)) i := fun i h h' => h1 i ⟨by omega, by
+          rw [ht6, ht5, ht4, ht3]; omega⟩
     have e0 : erA m'' pp.toNat = some (UInt64.ofNat 4) := by
-      rw [g _ (by omega) (by omega), hn4 _ (by off_omega) (by omega), hn3 _ (by off_omega) (by omega)]
+      rw [g _ (by omega) (by omega), hn6 _ (by off_omega) (by omega), hE5,
+        hn4 _ (by off_omega) (by omega), hn3 _ (by off_omega) (by omega)]
       exact hw0
     have e5 : erA m'' (pp.toNat + 5) = some (UInt64.ofNat nP) := by
-      rw [g _ (by omega) (by omega), hn4 _ (by off_omega) (by omega), ← off_toNat (by omega)]
+      rw [g _ (by omega) (by omega), hn6 _ (by off_omega) (by omega), hE5,
+        hn4 _ (by off_omega) (by omega), ← off_toNat (by omega)]
       exact hg3
     have e6 : erA m'' (pp.toNat + 6) = some (UInt64.ofNat nF) := by
-      rw [g _ (by omega) (by omega), ← off_toNat (by omega)]
+      rw [g _ (by omega) (by omega), hn6 _ (by off_omega) (by omega), hE5, ← off_toNat (by omega)]
       exact hg4
-    have ecv := ((hH2.putER (pp + 5) (UInt64.ofNat nP) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)).putER (pp + 6)
-      (UInt64.ofNat nF) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
-    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, L.toNat_ofNat_of_lt hnP, L.toNat_ofNat_of_lt hnF]
+    have e7 : erA m'' (pp.toNat + 7) = some (r5.headD 0) := by
+      rw [g _ (by omega) (by omega), ← off_toNat (by omega)]
+      exact hg6
+    have ecv := ((((hH2.putER (pp + 5) (UInt64.ofNat nP) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)).putER (pp + 6)
+      (UInt64.ofNat nF) (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)).keep
+        (m' := m5) (fun i _ => by rw [hE5, ← hm4]) (fun _ h => h.elim)).putER (pp + 7) (r5.headD 0)
+          (fun i hi => ⟨by off_omega, by omega⟩) (by off_omega)) m'' (fun i hi => h1 i (by omega)) (fun _ h => h.elim)
+    have hlt5' : (r5.head?.getD 0).toNat < 2 ^ 32 := by simpa using hlt5
+    simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, hd?, e7, hlt5', L.toNat_ofNat_of_lt hnP,
+      L.toNat_ofNat_of_lt hnF]
 
 /-- An inductive. -/
 theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat}
@@ -492,9 +524,9 @@ theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat}
   | indInfo v caps =>
     simp only [ciFits, Bool.and_eq_true] at hfit
     exact ci_ind hL hr seen memo v hfit.1 caps hfit.2 k a m q rest r m' hI hM hst hd hc
-  | ctorInfo v nP nF =>
+  | ctorInfo v nP nF fam =>
     simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
-    exact ci_ctor hL hr seen memo v hfit.1.1 nP nF hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
+    exact ci_ctor hL hr seen memo v hfit.1.1.1 nP nF fam hfit.1.1.2 hfit.1.2 hfit.2 k m a q rest r m' hI hM hst hd hc
   | recInfo v mI rP isK rs =>
     simp only [ciFits, Bool.and_eq_true, decide_eq_true_eq] at hfit
     exact ci_rec hL hr seen memo v hfit.1.1.1.1 mI rP isK rs hfit.1.1.1.2 hfit.1.1.2 hfit.1.2 hfit.2

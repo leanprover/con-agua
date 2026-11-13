@@ -170,7 +170,7 @@ theorem rfE_pos {p : Prog} (hcl : CoreStageClosed p) (hP : RfProg p) {k : Nat} {
 theorem decCaps_counts {m : Mem} {q : Word} {caps : IIndCaps} (h : decCaps (erecP m) q.toNat = some caps) :
     (erRd m (q + 12)).toNat = caps.nparams ∧ (erRd m (q + 6)).toNat = caps.nIdx := by
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff, Option.some.injEq] at h
-  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, rfl⟩ := h
+  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, _, _, rfl⟩ := h
   simp only [nat?, Option.map_eq_some_iff] at hni hnp
   obtain ⟨w1, hw1, rfl⟩ := hnp
   obtain ⟨w2, hw2, rfl⟩ := hni

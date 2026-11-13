@@ -37,7 +37,7 @@ variable (p : Prog) (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (hlp : InstL
 
 include hp hno hlp in
 /-- **`whnf_step` refines `whnfStep`, both outcomes**: the errors are the `whnf_core` slot's and
-`reduce_nat`'s. -/
+`reduce_nat`'s. A literal reduct is the answer at once (`.done`). -/
 theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
@@ -68,8 +68,15 @@ theorem wstep_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
     have hsome : decOptR r₂ = some (decE (r₂.tail.headD 0)) := by
       simp only [decOptR, decOpt, ite_eq_right hf2]
     rw [hsome]
-    exact RefE.ret rfl ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, by simp [decStep],
-      ⟨by show HW (1 : Word); unfold HW; decide, hrw₂.2⟩⟩
+    -- a literal reduct is the answer (`.done`), any other continues
+    simp only [decE_tag_lit_beq _ hrw₂.2]
+    by_cases hl : tagW (r₂.tail.headD 0) = 8
+    · simp only [hl, ↓reduceIte, decide_true]
+      exact RefE.ret rfl ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, by simp [decStep],
+        ⟨by show HW (0 : Word); unfold HW; decide, hrw₂.2⟩⟩
+    · simp only [hl, ↓reduceIte, decide_false]
+      exact RefE.ret rfl ⟨⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, by simp [decStep],
+        ⟨by show HW (1 : Word); unfold HW; decide, hrw₂.2⟩⟩
   rw [ite_eq_right hf2]
   have hnone : decOptR r₂ = none := by
     simp only [decOptR, decOpt]; rw [ite_eq_left (by simpa using hf2)]

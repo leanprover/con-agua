@@ -122,6 +122,7 @@ smono_derive ConRon.Arena.instantiate1Go
 smono_derive ConRon.Arena.instantiate1Fast
 smono_derive ConRon.Arena.formerSortLoop
 smono_derive ConRon.Arena.formerNeverZeroAt
+smono_derive ConRon.Arena.familyNeverZeroAt
 smono_derive ConRon.Arena.projNodesGo
 smono_derive ConRon.Arena.etaProjs
 smono_derive ConRon.Arena.etaFabArgsE
@@ -156,7 +157,6 @@ smono_derive ConRon.Arena.substLevelsAt
 smono_derive ConRon.Arena.substParamLevels
 smono_derive ConRon.Arena.recFireLevels
 smono_derive ConRon.Arena.viewConstName
-smono_derive ConRon.Arena.ctorFamily
 smono_derive ConRon.Arena.iotaCase3At
 smono_derive ConRon.Arena.lvlsEq?
 smono_derive ConRon.Arena.instSpine
@@ -176,11 +176,19 @@ smono_derive ConRon.Arena.projCert
 smono_derive ConRon.Arena.projCertAt
 smono_derive ConRon.Arena.reduceProjCore
 smono_derive ConRon.Arena.whnfCoreStepProj
+smono_derive ConRon.Arena.iotaTarget
+smono_derive ConRon.Arena.whnfStuck
+smono_derive ConRon.Arena.whnfCoreStepApp
 smono_derive ConRon.Arena.whnfCoreStep
-smono_derive ConRon.Arena.whnfCoreLoop
-smono_derive ConRon.Arena.whnfCoreBody
 smono_derive ConRon.Arena.whnfCoreCheapSet
 smono_derive ConRon.Arena.whnfCoreSet
+smono_derive ConRon.Arena.whnfCoreStoreKeys
+smono_derive ConRon.Arena.whnfCoreStoreCheapKeys
+smono_derive ConRon.Arena.whnfCoreStoreChain
+smono_derive ConRon.Arena.whnfCoreLookup
+smono_derive ConRon.Arena.whnfCoreLookupAt
+smono_derive ConRon.Arena.whnfCoreLoop
+smono_derive ConRon.Arena.whnfCoreBody
 smono_derive ConRon.Arena.rawNatLit?
 smono_derive ConRon.Arena.pinNatAdd
 smono_derive ConRon.Arena.natAddName
@@ -210,7 +218,7 @@ smono_derive ConRon.Arena.pinNatShiftLeft
 smono_derive ConRon.Arena.natShiftLeftName
 smono_derive ConRon.Arena.pinNatShiftRight
 smono_derive ConRon.Arena.natShiftRightName
-smono_derive ConRon.Arena.natBinOpName
+smono_derive ConRon.Arena.natBinOpOfName?
 smono_derive ConRon.Arena.pinNatPred
 smono_derive ConRon.Arena.natPredName
 smono_derive ConRon.Arena.pinBoolTrue
@@ -224,8 +232,7 @@ smono_derive ConRon.Arena.powRefused
 smono_derive ConRon.Arena.powGuard
 smono_derive ConRon.Arena.shiftLeftRefused
 smono_derive ConRon.Arena.shiftLeftGuard
-smono_derive ConRon.Arena.natOpResult
-smono_derive ConRon.Arena.natOpWfNames
+smono_derive ConRon.Arena.natBinOpResult
 smono_derive ConRon.Arena.reduceNat
 smono_derive ConRon.Arena.constValAt
 smono_derive ConRon.Arena.unfoldDefinition

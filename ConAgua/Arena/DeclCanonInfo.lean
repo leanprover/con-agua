@@ -63,7 +63,7 @@ theorem ciD_defn {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     decCV a (p + 1) = some cv ∧ hd? a (p + 5) = some v ∧ decHint a (p + 6) = some hi := by
   obtain ⟨wk, e, hk⟩ := ciD h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
+      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, fam, hc, hnp, hnf, hfam, hx⟩ |
       ⟨-, c, mi, rp, o, c', kk, rules, hc, hmi, hrp, ho, hc', hkk, hr, hx⟩ <;>
     (cases hx <;> first | exact ⟨hc, hv, hh⟩ | skip)
 
@@ -165,7 +165,7 @@ theorem ciD_rec {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     ∃ o c, nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧ decRules a o c = some rules := by
   obtain ⟨wk, e, hk⟩ := ciD h
   rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
+      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, fam, hc, hnp, hnf, hfam, hx⟩ |
       ⟨-, c, mi', rp', o, c', k', rules', hc, hmi, hrp, ho, hc', hk', hr, hx⟩ <;>
     (cases hx <;> first | exact ⟨hc, hmi, hrp, hk', o, c', ho, hc', hr⟩ | skip)
 
@@ -310,10 +310,10 @@ theorem cieW_ok {vis : Word} {fe : IFEnv}
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
   rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
-      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
+      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, fam, hcv, hnp, hnf, hfam, rfl⟩ |
       ⟨k0, cv, mi, rp, o, cc, kk, rules, hcv, hmi, hrp, ho, hcc, hkk, hr, rfl⟩ <;>
   rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
-      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
+      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', fam', hcv', hnp', hnf', hfam', rfl⟩ |
       ⟨k1, cv', mi', rp', o', cc', kk', rules', hcv', hmi', hrp', ho', hcc', hkk', hr', rfl⟩
   all_goals first
     | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
@@ -386,25 +386,30 @@ theorem cieW_ok {vis : Word} {fe : IFEnv}
       (hnp')
     obtain ⟨wd, ed, rfl⟩ := natW_ (erRdOK m) (q := q) (k := 6) (kn := 6) rfl
       (hnf')
-    rw [ea, eb, ec, ed] at h
-    by_cases hc : wa ≠ wc ∨ wb ≠ wd
+    obtain ⟨we, ee, ue, rfl⟩ := hdW_ (erRdOK m) (q := p) (k := 7) (kn := 7) rfl hfam
+    obtain ⟨wf, ef, uf, rfl⟩ := hdW_ (erRdOK m) (q := q) (k := 7) (kn := 7) rfl hfam'
+    rw [ea, eb, ec, ed, ee, ef] at h
+    by_cases hc : ¬wa = wc ∨ ¬wb = wd ∨ ¬we = wf
     · rw [ite_eq_left hc] at h
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hbb : (wa.toNat == wc.toNat && wb.toNat == wd.toNat) = false := by
-        rcases hc with hc | hc
+      have hbb : (wa.toNat == wc.toNat && wb.toNat == wd.toNat && (decI we : NIdx) == decI wf) = false := by
+        rcases hc with hc | hc | hc
         · have : (wa.toNat == wc.toNat) = false := by
             simpa using fun e => hc (UInt64.toNat_inj.mp e)
           simp [this]
         · have : (wb.toNat == wd.toNat) = false := by
             simpa using fun e => hc (UInt64.toNat_inj.mp e)
           simp [this]
+        · have : ((decI we : NIdx) == decI wf) = false := by
+            simpa [decI_inj_iff ue uf] using hc
+          simp [this]
       refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
       simp only [IConstantInfo.canonEq]
       rw [hbb]; rfl
     · rw [ite_eq_right hc] at h
-      have hw : wa = wc ∧ wb = wd := by
-        rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
-      obtain ⟨rfl, rfl⟩ := hw
+      have hw : wa = wc ∧ wb = wd ∧ we = wf := by
+        simp only [not_or, Classical.not_not] at hc; exact hc
+      obtain ⟨rfl, rfl, rfl⟩ := hw
       obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
       refine ⟨b, a', ?_, hr, hq⟩
       simp only [IConstantInfo.canonEq, beq_self_eq_true, Bool.and_self, ite_true]

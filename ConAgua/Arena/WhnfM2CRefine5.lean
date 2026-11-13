@@ -2,7 +2,6 @@ module
 
 import ConAgua.Arena.WhnfM2CRefine4
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.WhnfCoreProj
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfM2CRefine3
 import ConRon.Bridge.Grind
@@ -43,7 +42,7 @@ theorem decRule_ctorRd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK
 
 /-- A constructor record's level-parameter count, type and parameter count words. -/
 theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
-    {cv : IConstantVal} {nP nF : Nat} (h : decCI R q.toNat = some (.ctorInfo cv nP nF)) :
+    {cv : IConstantVal} {nP nF : Nat} {fam : NIdx} (h : decCI R q.toNat = some (.ctorInfo cv nP nF fam)) :
     cv.levelParams.length = (rd (q + 3)).toNat ∧ nP = (rd (q + 5)).toNat ∧
       cv.type = decI (rd (q + 4)) ∧ HW (rd (q + 4)) := by
   obtain ⟨-, hlen, hty, hty32⟩ := decCV_rd hR (L.Arena.decCI_ctor_cv h)
@@ -52,7 +51,7 @@ theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
   obtain ⟨k, -, h⟩ := h
   rcases k with _ | _ | _ | _ | _ | _ | k <;>
     simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨_, -, np, hnp, _, -, he⟩ := h
+  obtain ⟨_, -, np, hnp, _, -, _, -, he⟩ := h
   simp only [IConstantInfo.ctorInfo.injEq] at he
   obtain ⟨-, rfl, -⟩ := he
   simp only [nat?, Option.map_eq_some_iff] at hnp
@@ -64,7 +63,7 @@ theorem decCI_ctorWords {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
 theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {ci : IConstantInfo} (h : decCI R q.toNat = some ci) :
     ((∃ cv caps, ci = .indInfo cv caps) ↔ rd q = 3) ∧
-      ((∃ cv nP nF, ci = .ctorInfo cv nP nF) ↔ rd q = 4) := by
+      ((∃ cv nP nF fam, ci = .ctorInfo cv nP nF fam) ↔ rd q = 4) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
   simp only [nat?, Option.map_eq_some_iff] at hk
@@ -92,7 +91,7 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     (hT : HW T) (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat)
     (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF))
+    {fam : NIdx} (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF fam))
     (hci : decCI (erecP m) indP.toNat = some (.indInfo cvT caps))
     (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) :
     RefE (M2CCtxE p N) (m2cArmsE p (N + 1) m mode vis d isK ro cvjP T indP major)
@@ -154,76 +153,42 @@ theorem m2cArms_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (m2cK_ref p hp hc hpi hE N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
         mode d T major _ _ _ hm4 hebm hT hmaj hctorHW m a M hS)
 
-/-- **`m2c_ctor` refines `m2cCtorT`, both outcomes** (the errors are `m2c_arms`'). -/
+/-- **`m2c_ctor` refines `m2cCtorT`, both outcomes** (the family the constructor record's word
+`7`; the errors are `m2c_arms`'). -/
 theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d isK ro cvjP major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hmaj : HW major) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (hrl : decRule (erecP m) ro.toNat = some rl)
-    (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF)) :
+    {fam : NIdx} (hcj : decCI (erecP m) cvjP.toNat = some (.ctorInfo cvj cnP cnF fam)) :
     RefE (M2CCtxE p N) (m2cCtorE p (N + 1) m mode vis d isK ro cvjP major)
       (m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl cvj cnP
-        (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
+        fam (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cCtorE.arm1]
-  obtain ⟨-, -, hty, l4⟩ := decCI_ctorWords (erRdOK m) hcj
+  have hk4 : erRd m cvjP = 4 := ((decCI_kind34' (erRdOK m) hcj).2.mp ⟨_, _, _, _, rfl⟩)
+  obtain ⟨cv', he, hfw⟩ := (decCI_ctorR (erRdOK m) hcj).1 hk4
+  simp only [IConstantInfo.ctorInfo.injEq] at he
+  obtain ⟨-, -, -, rfl⟩ := he
   have hA0 : GrowPost decH dn m vis fe M eb ResH ([major], m) (decE major) a :=
     ⟨CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
-  have hR := hS.arena.base
-  refine RefE.onlySim (fun _ => m2cCtorE.k_pi_result.none ..) (fun _ _ h =>
-      triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (piResult_refines' p hp.spine.pires N _ a hR _ l4) h)
-    fun r1 m1 ⟨t1, ht1, hm1, _, hh1, hprR⟩ => ?_
-  rw [m2cCtorE.k_pi_result.arm1]
-  have hm1' : m1 = m := ht1.symm.trans hm1
-  rw [hm1']
-  have hpr' : (piResult coreWalkFuel cvj.type).run a = .ok (decE (r1.headD 0), a) := by
-    rw [hty]; exact hprR
-  refine RefE.onlySim (fun _ => m2cCtorE.k_get_app_fn.none ..) (fun _ _ h =>
-      triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-        (getAppFn_refines' p hp.spine.fn N _ a hR (r1.headD 0) hh1) h)
-    fun r2 m2 ⟨t2, ht2, hm2, _, hh2, hga⟩ => ?_
-  have hm2' : m2 = m := ht2.symm.trans hm2
-  rw [hm2']
-  by_cases g2 : tagW (r2.headD 0) ≠ 3
-  · rw [m2cCtorE.k_get_app_fn.arm1 _ _ _ _ _ _ _ _ _ _ _ g2]
-    have ht : ((decE (r2.headD 0)).tag == ETag.const) = false := by
-      rw [decE_const_tag _ hh2]; simpa using g2
-    exact RefE.ret (by simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht]; rfl) hA0
-  have g2' : tagW (r2.headD 0) = 3 := by simpa using g2
-  rw [m2cCtorE.k_get_app_fn.arm2 _ _ _ _ _ _ _ _ _ _ _ g2']
-  have ht : ((decE (r2.headD 0)).tag == ETag.const) = true := by
-    rw [decE_const_tag _ hh2]; simpa using g2'
-  refine RefE.onlySim (fun _ => m2cCtorE.k_m2c_const_view.none ..) (fun _ _ h =>
-      triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (m2cConstView_spec p hp.constView N _ (r2.headD 0)) h)
-    fun r3 m3 ⟨t3, ht3, _, hm3, hcv⟩ => ?_
-  rw [m2cCtorE.k_m2c_const_view.arm1]
-  have hm3' : m3 = m := ht3.symm.trans hm3
-  rw [hm3']
-  simp only [cvwW] at hcv
-  obtain ⟨v1, hcv⟩ := of_ite_none hcv
-  obtain ⟨v2, hcv⟩ := of_ite_none hcv
-  have hr3 := (Option.some.inj hcv).symm
-  obtain ⟨hvw, hn32, -⟩ := L.Ind.view_const_f m a hR (r2.headD 0) hh2 ⟨v1, UInt64.not_le.mp v2⟩ g2'
-  have hn0 : tfld m CONST (tierW (r2.headD 0)) (idxW (r2.headD 0)) 0 = r3.headD 0 := by
-    rw [hr3]; rfl
-  rw [hn0] at hvw hn32
+  simp only [L.Ind.erRd_foldN] at *
   refine RefE.onlySim (fun _ => m2cCtorE.k_env_find.none ..)
-    (fun r4 m4 h => callW_envFindI p hp.toIotaProg' N m vis _ hS.env hn32 r4 m4 h)
+    (fun r4 m4 h => callW_envFindI p hp.toIotaProg' N m vis _ hS.env hfw r4 m4 h)
     fun r4 m4 ⟨hm4', hfind, hfound⟩ => ?_
   rw [hm4']
-  have hview := view_run _ _ _ hvw
   by_cases g4 : r4.headD 0 = 0
   · rw [m2cCtorE.k_env_find.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g4]
-    have hn : fe.find? (decI (r3.headD 0)) = none := by rw [hfind]; simp only [envFound, g4, ↓reduceIte]
-    exact RefE.ret (by
-      simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hn]; rfl) hA0
+    have hn : fe.find? (decI (erRd m (cvjP + 7))) = none := by
+      rw [hfind]; simp only [envFound, g4, ↓reduceIte]
+    exact RefE.ret (by simp only [m2cCtorT, hn]; rfl) hA0
   obtain ⟨ci, hciE⟩ := hfound g4
-  have hfind' : fe.find? (decI (r3.headD 0)) = some ci := by
+  have hfind' : fe.find? (decI (erRd m (cvjP + 7))) = some ci := by
     rw [hfind]; simp only [envFound, g4, ↓reduceIte]; exact hciE
   obtain ⟨hind, -⟩ := decCI_kind34' (erRdOK m) hciE
   by_cases g5 : erRd m (r4.tail.headD 0) ≠ 3
   · rw [m2cCtorE.k_env_find.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4 g5]
     refine RefE.ret ?_ hA0
-    simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
+    simp only [m2cCtorT, hfind']
     cases ci with
     | indInfo cv caps => exact absurd (hind.mp ⟨cv, caps, rfl⟩) g5
     | _ => rfl
@@ -234,10 +199,10 @@ theorem m2cCtor_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   | succ N' =>
   exact RefE.tail_eq (m2cCtorE.k_m2c_arms.none p) (fun v => m2cCtorE.k_m2c_arms.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _))
-    (by simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind'])
+    (by simp only [m2cCtorT, hfind'])
     (GrowPost.of_tail (KeptAll.refl _ _) (StackKept.refl _).toGrew)
     (m2cArms_ref p hp hc hpi hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
-      mode d isK ro cvjP _ _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj hciE
+      mode d isK ro cvjP _ _ major hm4 hebm hfw hmaj rl cvj cnP cnF cvT caps m a M hS hrl hcj hciE
       ⟨_, hfind'⟩)
 
 /-- **`m2c_head` refines `m2cHeadT`, both outcomes** (the errors are `m2c_ctor`'s). -/
@@ -270,9 +235,9 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       (decE major)).run a = (match rules with
         | [rl] =>
           match fe.find? rl.ctor with
-          | some (.ctorInfo cvj cnP _cnF) =>
+          | some (.ctorInfo cvj cnP _cnF T) =>
             m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl cvj cnP
-              (decE major)
+              T (decE major)
           | _ => pure (decE major)
         | _ => pure (decE major)).run (AM.st (isCtorApp fe (decE major)) a) := by
     simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
@@ -314,10 +279,10 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     refine RefE.ret ?_ hA1
     rw [hstep]; simp only [hfind']
     cases ci with
-    | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4
+    | ctorInfo cv nP nF fam => exact absurd (hctr.mp ⟨cv, nP, nF, fam, rfl⟩) g4
     | _ => rfl
   rw [m2cHeadE.k_env_find.arm3 _ _ _ _ _ _ _ _ _ _ g3 (by simpa [erRd] using g4)]
-  obtain ⟨cvj, cnP, cnF, rfl⟩ := hctr.mpr (by simpa using g4)
+  obtain ⟨cvj, cnP, cnF, fam, rfl⟩ := hctr.mpr (by simpa using g4)
   exact RefE.tail_eq (m2cHeadE.k_m2c_ctor.none p) (fun v => m2cHeadE.k_m2c_ctor.arm1 p v.1 v.2)
     (fun h => h.mono (Nat.le_succ _)) (by rw [hstep]; simp only [hfind'])
     (GrowPost.of_tail hK1 hSt1.toGrew)

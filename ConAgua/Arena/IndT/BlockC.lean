@@ -192,7 +192,7 @@ structure PassOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (w
     ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a'.store ∧ ConLeche.EnvWF env₁ ∧
     ConRon.Bridge.Inductives.dPass a'.store env₁ q = some qP ∧
     (∀ cv ∈ qP.p.formers, ConLeche.Expr.WScoped 0 cv.type) ∧
-    ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) ∧
+    ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.ctorGroups env₁) ∧
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) ∧ qP.params.length = qP.p.nP
   record : BPassR (rdW (m'.arr64 IW) w) q.env1 m' w q
   shape : ShapeSl m' (rdW (m'.arr64 IW) (w + 1))
@@ -229,7 +229,7 @@ def TailRefS : Prop :=
     ConRon.Bridge.Inductives.EnvRel env₁ q.env1 a.store → ConLeche.EnvWF env₁ →
     ConRon.Bridge.Inductives.dPass a.store env₁ q = some qP →
     (∀ cv ∈ qP.p.formers, ConLeche.Expr.WScoped 0 cv.type) →
-    ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.memberCtors env₁) →
+    ConLeche.EnvWF (ConLeche.consBlockCtors qP.p.nP qP.p.ctorGroups env₁) →
     (∀ M ∈ qP.cls, ConLeche.Cached.ClassMajScoped qP.p.nP M) → qP.params.length = qP.p.nP →
     q.p.nP + 1 < 2 ^ 64 →
     ∀ (tO tL : Word) (Q : List IProjTable), decPL m (decTbl (erecP m)) tO.toNat tL.toNat = some Q →
@@ -473,6 +473,7 @@ theorem checkBlockInds_nP {mode : ConLeche.CheckMode} {fe : IFEnv} {bs : BlockSh
   obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨p₁, _, hw, h⟩ := ConRon.Bridge.AM.bind_ok h
+  obtain ⟨_, _, -, h⟩ := ConRon.Bridge.AM.bind_ok h
   obtain ⟨rfl, -⟩ := ConRon.Bridge.AM.pure_ok h
   unfold BlockShape.withSort at hw
   obtain ⟨_, _, -, hw⟩ := ConRon.Bridge.AM.bind_ok hw

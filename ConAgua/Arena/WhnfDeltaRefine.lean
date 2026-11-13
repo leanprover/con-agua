@@ -446,15 +446,15 @@ theorem pinNat_run {m : Mem} {a : AState} (h : PinsFull m a.pins) :
 
 theorem natZeroOk_run_none (a : AState) : (natZeroOk none).run a = .ok (false, a) := rfl
 
-theorem natZeroOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf, ci ≠ .ctorInfo cv np nf)
+theorem natZeroOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natZeroOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf _)
   | _ => rfl
 
 theorem natZeroOk_run_ctor {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins) (cv : IConstantVal)
-    (np nf : Nat) (nc : EIdx) (h : (constE (decI (pinW m 2))).run a = .ok (nc, a₁)) :
-    (natZeroOk (some (.ctorInfo cv np nf))).run a =
+    (np nf : Nat) (fam : NIdx) (nc : EIdx) (h : (constE (decI (pinW m 2))).run a = .ok (nc, a₁)) :
+    (natZeroOk (some (.ctorInfo cv np nf fam))).run a =
       .ok (cv.levelParams.isEmpty && cv.type == nc, a₁) := by
   simp only [natZeroOk, StateT.run_bind, pinNat_run hP, except_ok_bind, h]; rfl
 
@@ -496,7 +496,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
-  obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
+  obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   cases h1 : callW p n "pin_at" [1] s₀.mem with
   | none => rw [h1, natZeroOkW.k_pin_at.none] at hW; cases hW
@@ -524,7 +524,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
     rw [hrun, hres]; rfl
-  have hz := natZeroOk_run_ctor hC.pins cv np nf _ hrun'
+  have hz := natZeroOk_run_ctor hC.pins cv np nf fam _ hrun'
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
   · rw [ite_eq_left hk3] at hW
@@ -580,30 +580,30 @@ l_model natSuccOk_spec (p : Prog) (hp : WhnfDeltaProg p)
 
 theorem natSuccOk_run_none (a : AState) : (natSuccOk none).run a = .ok (false, a) := rfl
 
-theorem natSuccOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf, ci ≠ .ctorInfo cv np nf)
+theorem natSuccOk_run_other {ci : IConstantInfo} (h : ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam)
     (a : AState) : (natSuccOk (some ci)).run a = .ok (false, a) := by
   cases ci with
-  | ctorInfo cv np nf => exact absurd rfl (h cv np nf)
+  | ctorInfo cv np nf _ => exact absurd rfl (h cv np nf _)
   | _ => rfl
 
-theorem natSuccOk_run_lps (a : AState) (cv : IConstantVal) (np nf : Nat)
+theorem natSuccOk_run_lps (a : AState) (cv : IConstantVal) (np nf : Nat) (fam : NIdx)
     (h : cv.levelParams.isEmpty = false) :
-    (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a) := by
+    (natSuccOk (some (.ctorInfo cv np nf fam))).run a = .ok (false, a) := by
   simp only [natSuccOk, h]; rfl
 
 theorem natSuccOk_run_nonforall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins)
-    (cv : IConstantVal) (np nf : Nat) (nc : EIdx) (hl : cv.levelParams.isEmpty = true)
+    (cv : IConstantVal) (np nf : Nat) (fam : NIdx) (nc : EIdx) (hl : cv.levelParams.isEmpty = true)
     (h : (constE (decI (pinW m 2))).run a = .ok (nc, a₁))
     (ht : (cv.type.tag == ETag.forallE) = false) :
-    (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (false, a₁) := by
+    (natSuccOk (some (.ctorInfo cv np nf fam))).run a = .ok (false, a₁) := by
   simp only [natSuccOk, hl, StateT.run_bind, pinNat_run hP, except_ok_bind, h, ht, Bool.not_true,
     Bool.false_eq_true, ↓reduceIte]; rfl
 
 theorem natSuccOk_run_forall {m : Mem} {a a₁ : AState} (hP : PinsFull m a.pins)
-    (cv : IConstantVal) (np nf : Nat) (nc dom body : EIdx) (hl : cv.levelParams.isEmpty = true)
+    (cv : IConstantVal) (np nf : Nat) (fam : NIdx) (nc dom body : EIdx) (hl : cv.levelParams.isEmpty = true)
     (h : (constE (decI (pinW m 2))).run a = .ok (nc, a₁))
     (ht : (cv.type.tag == ETag.forallE) = true) (hv : a₁.store.view cv.type = some (.forallE dom body)) :
-    (natSuccOk (some (.ctorInfo cv np nf))).run a = .ok (dom == nc && body == nc, a₁) := by
+    (natSuccOk (some (.ctorInfo cv np nf fam))).run a = .ok (dom == nc && body == nc, a₁) := by
   simp only [natSuccOk, hl, StateT.run_bind, pinNat_run hP, except_ok_bind, h, ht,
     view_run _ _ _ hv, Bool.not_true, Bool.false_eq_true, ↓reduceIte]; rfl
 
@@ -650,7 +650,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     · simp only [decBool, ← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   erw [ite_eq_right hk4] at hW
-  obtain ⟨cv, np, nf, rfl, hcv⟩ := hctor (by simpa using hk4)
+  obtain ⟨cv, np, nf, fam, rfl, hcv⟩ := hctor (by simpa using hk4)
   obtain ⟨-, hlen, hty, htyl⟩ := decCV_rd (erRdOK s₀.mem) hcv
   by_cases hk3 : erRd s₀.mem (q + 3) ≠ 0
   · erw [ite_eq_left hk3] at hW
@@ -699,7 +699,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    have hz := natSuccOk_run_nonforall hC.pins cv np nf _ hl0 hrun' (by
+    have hz := natSuccOk_run_nonforall hC.pins cv np nf fam _ hl0 hrun' (by
       rw [hty]
       cases hb : ((decI (erRd s₀.mem (q + 4)) : EIdx).tag == ETag.forallE)
       · rfl
@@ -723,7 +723,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   rw [← hm]
   have hvOK : viewOK m₂ (erRd s₀.mem (q + 4)) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.base _ htyl hvOK hg'
-  have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
+  have hz := natSuccOk_run_forall hC.pins cv np nf fam _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forallE _ htyl).mpr hg')) (by rw [hty]; exact hview)
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩

@@ -85,14 +85,15 @@ theorem getElem?_of_wd {m m' : Mem} {j : Nat} (hs : (m'.arr64 DLP).size = (m.arr
 @[refines ConRon.Arena.Frontend.installIndD]
 theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hA : ArenaD m a) (hD : StateDR m st)
-    {to tn co cn ro rn oo np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
-    {rcs : List IndRecRec} {ordered : List IndCtorRec}
+    {to tn co cn ro rn oo tf np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
+    {rcs : List IndRecRec} {ordered : List (IndCtorRec × NIdx)}
     (hF : IndFR b m to tn co cn ro rn tys cts rcs) (hIFR : topN m IFR < 2 ^ 62)
     (hIFL : topN m IFL < 2 ^ 62) (hord : ordered.length = cts.length)
-    (hoo : oo.toNat + cts.length < 2 ^ 63)
+    (hoo : oo.toNat + cts.length < 2 ^ 63) (htf : tf.toNat + cts.length < 2 ^ 63)
     (hptr : ∀ p (hp : p < ordered.length), ∃ k, ∃ _ : k < cts.length,
-      wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k])
-    (hnp : np.toNat < 2 ^ 63) (h : installW b.data n m to tn oo cn ro rn np = some m') :
+      wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ (wd m IFL (tf.toNat + p)).toNat < 2 ^ 32 ∧
+        ordered[p] = (cts[k], decI (wd m IFL (tf.toNat + p))))
+    (hnp : np.toNat < 2 ^ 63) (h : installW b.data n m to tn oo tf cn ro rn np = some m') :
     ∃ st', (ConRon.Arena.Frontend.installIndD st tys ordered rcs np.toNat).run a = .ok (st', a) ∧
       ArenaD m' a ∧ StateDR m' st' ∧ MemFrame [DLP, DECL] [] m m' := by
   obtain ⟨hTn, hTy, hCn, hCt, hRn, hRc⟩ := hF
@@ -123,7 +124,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
   rcases h2 : instTypesW b.data n m₁ bo to tn 0 with _ | m₂ <;>
     simp only [h2, installW.k_inst_types.none, installW.k_inst_types.arm1, reduceCtorEq] at h
-  rcases h3 : instCtorsW b.data n m₂ (bo + tn) oo cn 0 with _ | m₃ <;>
+  rcases h3 : instCtorsW b.data n m₂ (bo + tn) oo tf cn 0 with _ | m₃ <;>
     simp only [h3, installW.k_inst_ctors.none, installW.k_inst_ctors.arm1, reduceCtorEq] at h
   rcases h4 : instRecsW b.data n m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;>
     simp only [h4, installW.k_inst_recs.none, installW.k_inst_recs.arm1, installW.k_decl_push_id, reduceCtorEq] at h
@@ -131,7 +132,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types
   rw [instTypesW_eq] at h2
-  obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m p => typeW b.data m p)
+  obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m _ p => typeW b.data m p)
     (fun _ j => to + 11 * j) m₁ bo tn hTn (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by rw [hf.arr IFR (by decide) (by decide), hifr1]
       have hk' := @L.toNat_ofNat_of_lt k (by omega)
@@ -145,24 +146,27 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   -- the constructors
   have hbt : (bo + tn).toNat = bo.toNat + tys.length := by rw [L.toNat_add_of_lt _ _ (by omega), hTn]
   rw [instCtorsW_eq] at h3
-  obtain ⟨C1, C2, C3, C4, C5⟩ := instGo_twin a ordered (ctT st) (fun _ m p => ctorRW b.data m p)
+  obtain ⟨C1, C2, C3, C4, C5⟩ := instGo_twin a ordered (fun c => ctT st c.1 c.2)
+    (fun _ m j p => ctorRW b.data m p (rdW (m.arr64 IFL) (tf + j)))
     (fun m j => rdW (m.arr64 IFL) (oo + j)) m₂ (bo + tn) cn (by rw [hCn, hord])
     (fun n' mi p q mo hLi hf hp hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
         rw [hf.arr IFR (by decide) (by decide), T1.1 IFR (by decide) (by decide), hifr1]
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
         rw [hf.arr IFL (by decide) (by decide), T1.1 IFL (by decide) (by decide), hifl1]
-      obtain ⟨k, hk, hw, hok⟩ := hptr p hp
+      obtain ⟨k, hk, hw, htt, hok⟩ := hptr p hp
       have hp' := @L.toNat_ofNat_of_lt p (by omega)
       have hrd : rdW (mi.arr64 IFL) (oo + UInt64.ofNat p) = co + 10 * UInt64.ofNat k := by
         rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp', hw]
+      have hrdT : rdW (mi.arr64 IFL) (tf + UInt64.ofNat p) = wd m IFL (tf.toNat + p) := by
+        rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp']
       have hk' := @L.toNat_ofNat_of_lt k (by omega)
       have hw' : (co + 10 * UInt64.ofNat k).toNat = co.toNat + 10 * k := by
         have := w_addmul co (UInt64.ofNat k) 10 (by decide) (by rw [hk']; omega)
         rw [hk'] at this; exact this
       rw [getElem!_eq _ _ hp, hok]
-      rw [hrd] at hR
-      exact ctorRW_twin a hLi (by rw [hw']; exact (hCt.2.2 k hk).congr hifr) (by rw [hw']; omega) hR)
+      rw [hrd, hrdT] at hR
+      exact ctorRW_twin a hLi (by rw [hw']; exact (hCt.2.2 k hk).congr hifr) (by rw [hw']; omega) htt hR)
     n m₂ m₃ 0 T3 (MemFrame.refl _ _ _) (by simp) (by rw [hbt]; omega) (by rw [hbt, hord]; omega) h3
   rw [hbt, hord] at C4 C5
   simp only [UInt64.toNat_zero, Nat.add_zero] at C4 C5
@@ -170,7 +174,7 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
   have hbtc : (bo + tn + cn).toNat = bo.toNat + tys.length + cts.length := by
     rw [L.toNat_add_of_lt _ _ (by rw [hbt]; omega), hbt, hCn]
   rw [instRecsW_eq] at h4
-  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m p => recRW b.data n m p)
+  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m _ p => recRW b.data n m p)
     (fun _ j => ro + 11 * j) m₃ (bo + tn + cn) rn hRn
     (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
@@ -200,7 +204,8 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
     mapM_run _ _ a tys (fun x hx => by
       obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hx
       have := (T5 k hk (Nat.zero_le _)).1; rwa [getElem!_eq _ _ hk] at this)
-  have rC : (ordered.mapM (ctT st)).run a = .ok (ordered.map fun c => resOf (ctT st c) a, a) :=
+  have rC : (ordered.mapM fun c => ctT st c.1 c.2).run a =
+      .ok (ordered.map fun c => resOf (ctT st c.1 c.2) a, a) :=
     mapM_run _ _ a ordered (fun x hx => by
       obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hx
       have := (C5 k (hord ▸ hk) (Nat.zero_le _)).1; rwa [getElem!_eq _ _ hk] at this)
@@ -209,13 +214,17 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       obtain ⟨k, hk, rfl⟩ := List.mem_iff_getElem.mp hx
       have := (R5 k hk (Nat.zero_le _)).1; rwa [getElem!_eq _ _ hk] at this)
   refine ⟨{ st with decls := st.decls.push (.indDecl ((tys.map fun t => resOf (tyT st t) a) ++
-    (ordered.map fun c => resOf (ctT st c) a) ++ (rcs.map fun r => resOf (recT st r) a)) np.toNat) },
+    (ordered.map fun c => resOf (ctT st c.1 c.2) a) ++ (rcs.map fun r => resOf (recT st r) a)) np.toNat) },
     ?_, ?_, ?_, (hfr4.mono (by simp) (by simp)).trans (G1.mono (by simp) (by simp))⟩
   · have rT' : (tys.mapM fun t => (do pure (IConstantInfo.indInfo (← parseCVD st t.cv) {}) : AM _)).run a =
         .ok (tys.map fun t => resOf (tyT st t) a, a) := rT
-    have rC' : (ordered.mapM fun c => (do
-        pure (IConstantInfo.ctorInfo (← parseCVD st c.cv) c.numParams c.numFields) : AM _)).run a =
-        .ok (ordered.map fun c => resOf (ctT st c) a, a) := rC
+    have rC' : (ordered.mapM fun ((c, T) : IndCtorRec × NIdx) => (do
+        pure (IConstantInfo.ctorInfo (← parseCVD st c.cv) c.numParams c.numFields T) : AM _)).run a =
+        .ok (ordered.map fun c => resOf (ctT st c.1 c.2) a, a) := by
+      have e : (fun (x : IndCtorRec × NIdx) => match x with
+          | (c, T) => (do pure (IConstantInfo.ctorInfo (← parseCVD st c.cv) c.numParams c.numFields T) : AM _)) =
+          fun c => ctT st c.1 c.2 := funext fun ⟨_, _⟩ => rfl
+      rw [e]; exact rC
     have rR' : (rcs.mapM fun r => (do
         let rules ← r.rules.mapM (ConRon.Arena.Frontend.parseRuleD st)
         pure (IConstantInfo.recInfo (← parseCVD st r.cv)
@@ -272,14 +281,14 @@ theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : 
       have e : (trunc (m₄.arr64 DLP) (topN m₄ DLP))[s]? = some (wd m₄ DLP s) := hAg 1 (Nat.le_refl _) s h1 h2
       simp [L.Arena.nat?, aread_apply, e, hr _ (hAg _ h3)]
     have hTlen : (tys.map fun t => resOf (tyT st t) a).length = tys.length := by simp
-    have hClen : (ordered.map fun c => resOf (ctT st c) a).length = cts.length := by simp [hord]
+    have hClen : (ordered.map fun c => resOf (ctT st c.1 c.2) a).length = cts.length := by simp [hord]
     have hRlen : (rcs.map fun r => resOf (recT st r) a).length = rcs.length := by simp
     rw [L.Arena.mapM_some_of _ (fun j => ((tys.map fun t => resOf (tyT st t) a) ++
-        (ordered.map fun c => resOf (ctT st c) a) ++ (rcs.map fun r => resOf (recT st r) a))[j]!) _
+        (ordered.map fun c => resOf (ctT st c.1 c.2) a) ++ (rcs.map fun r => resOf (recT st r) a))[j]!) _
       (fun j hj => ?_)]
     · congr 1
       have := range_map_getElem! ((tys.map fun t => resOf (tyT st t) a) ++
-        (ordered.map fun c => resOf (ctT st c) a) ++ (rcs.map fun r => resOf (recT st r) a)) id
+        (ordered.map fun c => resOf (ctT st c.1 c.2) a) ++ (rcs.map fun r => resOf (recT st r) a)) id
       simp only [List.map_id, List.length_append, hTlen, hClen, hRlen, id] at this
       exact this
     have hj' := List.mem_range.mp hj

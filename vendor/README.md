@@ -50,6 +50,14 @@ Bumps since (DESIGN.md has the details):
   `Bridge` (upstream no longer needs its `Checker/{Arms,Hyp,Split}` hunks; new sites in
   `Inductives/{StreamRecs,Positivity}`, `Frontend/Olean/{Closure,MergeAll}`, the `split at h`
   pattern of the new `do` elaborator).
+* 2026-11-13: con-ron `4ca283d1` → `c78714ac`, con-leche `eb2c5939` → `ca6af099` (con-ron task
+  #152: the constructor's family, the stuck spine, the official `whnfCore` memo policy).
+  `con-leche/0003` lost its two `whnfCore` hunks (the memo lemmas moved to `DiscC4.lean`): they
+  are the new `0004`, plus `CSOK.whnfCore{,Cheap}_hit_ws` in the new `whnfCoreLoopC_spec`.
+  `con-ron/0002`: upstream's new `Arms/WhnfCore` loop proofs get the `vcgen` ∧-split pattern
+  (`all_goals subst_vars`, one closer per conjunct); `Frontend/Lines`' `MProd` states as `Prod`
+  (the field order of the `Prod` state differs); `Walks/IotaMajor`'s old hunk dropped (upstream
+  rewrote the arm).
 
 Patches at the first vendoring:
 
@@ -58,6 +66,7 @@ Patches at the first vendoring:
 | `con-leche/0001-withptreq-shim.patch` | `ConLeche.withPtrEq` shim and its three call sites, `withPtrEqDecEq`'s new signature |
 | `con-leche/0002-discc3-grind-finish.patch` | `iotaRecC_spec`: one lemma passed to `finish` |
 | `con-leche/0003-knotc-vcgen-conj-split.patch` | five `CSOK.*_hit_ws` companion lemmas (the `vcgen` ∧-split) |
+| `con-leche/0004-discc4-vcgen-conj-split.patch` | the same for the two `whnfCore` memo lemmas, moved to `DiscC4` (added at the 2026-11-13 bump) |
 | `con-ron/0001-wfproofs-rfl.patch` | `Tbl.node?_push_eq`: a trailing `rfl` |
 | `con-ron/0002-bridge-toolchain.patch` | the 31 `ConRon.Bridge` files (three toolchain changes, see "ConRonBridge") |
 

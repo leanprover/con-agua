@@ -58,6 +58,21 @@ theorem ordList_get (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l p : Nat)
     (ordList m oo co cts l)[p] = cts.getD (((wd m IFL (oo + p)).toNat - co) / 10) default := by
   simp [ordList]
 
+/-- The ordered constructors read back from the two slices at `oo` (record pointers) and `tf` (the
+types' names): record `(w - co) / 10` for each pointer `w`, paired with its family. -/
+def ordListP (m : Mem) (oo tf co : Nat) (cts : List IndCtorRec) (l : Nat) : List (IndCtorRec × NIdx) :=
+  (List.range l).map fun p => (cts.getD (((wd m IFL (oo + p)).toNat - co) / 10) default,
+    decI (wd m IFL (tf + p)))
+
+theorem ordListP_length (m : Mem) (oo tf co : Nat) (cts : List IndCtorRec) (l : Nat) :
+    (ordListP m oo tf co cts l).length = l := by simp [ordListP]
+
+theorem ordListP_get (m : Mem) (oo tf co : Nat) (cts : List IndCtorRec) (l p : Nat)
+    (hp : p < (ordListP m oo tf co cts l).length) :
+    (ordListP m oo tf co cts l)[p] = (cts.getD (((wd m IFL (oo + p)).toNat - co) / 10) default,
+      decI (wd m IFL (tf + p))) := by
+  simp [ordListP]
+
 /-- A write set of the level heap only is an `IExt`. -/
 theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := by
   have hI : m'.arr64 IFL = m.arr64 IFL := h.arr IFL (by decide) (by decide)
@@ -126,19 +141,25 @@ theorem R_DUPLICATE_cls : (Err.abort R_DUPLICATE_CONSTRUCTOR_NAME).cls = 1 := by
 theorem R_BLOCK_cls : (Err.abort R_THE_INDUCTIVE_BLOCK).cls = 1 := by decide
 
 /-- **`validate_ind_d`'s ok half**: `validateIndD` succeeds with the ordered constructors, which
-the model left as record pointers at `oo` (the first result word), and `nPd` (the second). -/
+the model left as record pointers at `oo` (the first result word) paired with their types' names
+at `tf` (the second), and `nPd` (the third). -/
 structure ValidatePost (st : StateD) (a : AState) (tys : List IndTypeRec) (cts : List IndCtorRec)
     (rcs : List IndRecRec) (co : Word) (m : Mem) (v : List Word × Mem) : Prop where
-  twin : ∃ ordered : List IndCtorRec,
-    (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a = .ok (.inr (ordered, (v.1.tail.headD 0).toNat), a) ∧
+  twin : ∃ ordered : List (IndCtorRec × NIdx),
+    (ConRon.Arena.Frontend.validateIndD st tys cts rcs).run a =
+        .ok (.inr (ordered, (v.1.tail.tail.headD 0).toNat), a) ∧
       ordered.length = cts.length ∧
       ∀ p (hp : p < ordered.length), ∃ k, ∃ _ : k < cts.length,
-        wd v.2 IFL ((v.1.headD 0).toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k]
+        wd v.2 IFL ((v.1.headD 0).toNat + p) = co + 10 * UInt64.ofNat k ∧
+        (wd v.2 IFL ((v.1.tail.headD 0).toNat + p)).toNat < 2 ^ 32 ∧
+        ordered[p] = (cts[k], decI (wd v.2 IFL ((v.1.tail.headD 0).toNat + p)))
   ext : IExt m v.2
   top : TopOK v.2
   off : 1 ≤ (v.1.headD 0).toNat
   room : (v.1.headD 0).toNat + cts.length ≤ topN v.2 IFL + 1
-  np : (v.1.tail.headD 0).toNat < 10 ^ 18
+  offT : 1 ≤ (v.1.tail.headD 0).toNat
+  roomT : (v.1.tail.headD 0).toNat + cts.length ≤ topN v.2 IFL + 1
+  np : (v.1.tail.tail.headD 0).toNat < 10 ^ 18
 
 /-- **`validate_ind_d`, both outcomes**: on the records of an inductive line (`IndFR`), the
 model's ok value is `validateIndD`'s success (`ValidatePost`), its error (of class `≠ 0`, at the
@@ -319,7 +340,7 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
       refine ⟨by omega, ?_⟩
       rw [hkeep34 p hp]; exact l8 p hp)
     (by rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full, hflen]; exact Nat.le_refl _)
-  rcases h10 : viOrderE p n m₄ to tn tyn fo cno co cn fuel np with e10 | ⟨oo, m₅⟩ <;> rw [h10] at hor
+  rcases h10 : viOrderE p n m₄ to tn tyn fo cno co cn fuel np with e10 | ⟨ov, m₅⟩ <;> rw [h10] at hor
   · rw [viTailE.k_vi_order.none, validateE.k_vi_tail.none]
     intro hX hk
     obtain ⟨hc1, hOW⟩ := hor trivial
@@ -330,8 +351,10 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     obtain ⟨v, hv, hc⟩ := validateIndD_orderFail_cls (rcs := rcs) hVP hnd hflen hzl hX.1 hfuel.symm hO
     exact .inr ⟨v, a, hv, by rw [hc, hc1]⟩
   rw [viTailE.k_vi_order.arm1]
-  obtain ⟨o1, o2, o3, o4, o5⟩ := hor
-  dsimp only at o1 o2 o3 o4 o5
+  obtain ⟨o1, o1T, o2, o3, o4, o5, o6⟩ := hor
+  dsimp only at o1 o1T o2 o3 o4 o5 o6
+  generalize hoo : ov.headD 0 = oo at *
+  generalize htf : ov.tail.headD 0 = tf at *
   have e15 := e14.trans o2
   have hR₅ : ArenaR m₅ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₅ e15.frame a hR
   have hD₅ : StateDR m₅ st := hD.frame e15.frame (by decide) (by decide) (by decide) (by decide) (by decide)
@@ -348,8 +371,9 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     simp only [List.mem_range] at hi; rw [hTTw i hi]
   -- the order's facts, per type and position
   have hordf : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length), ∃ k,
-      ∃ _ : fpos LS i + c < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
-        (ordList m₅ oo.toNat co.toNat cts cts.length)[fpos LS i + c] = cts[k]! ∧
+      ∃ _ : fpos LS i + c < (ordListP m₅ oo.toNat tf.toNat co.toNat cts cts.length).length,
+        (ordListP m₅ oo.toNat tf.toNat co.toNat cts cts.length)[fpos LS i + c] =
+          (cts[k]!, (islice (k := .name) m₁ tyn.toNat tys.length)[i]!) ∧
         CtorOK st a cts (islice m₄ cno.toNat cts.length) LS[i][c] c
           ((islice (k := .name) m₁ tyn.toNat tys.length)[i]!) np.toNat fuel.toNat k := by
     intro i hi c hc
@@ -359,19 +383,22 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     rw [hps4 i (by omega)] at w1 w2
     have hpl := fpos_lt LS i c hi hc
     have hkk : kk < cts.length := w2.1
-    refine ⟨kk, by rw [ordList_length]; omega, ?_, ?_⟩
-    · rw [ordList_get, ← Nat.add_assoc, ptr_rec cts co kk hkk hco _ w1, getElem!_pos cts kk hkk]
+    have w3 := o6 i (by omega) c hcn'
+    rw [hps4 i (by omega)] at w3
+    refine ⟨kk, by rw [ordListP_length]; omega, ?_, ?_⟩
+    · rw [ordListP_get, ← Nat.add_assoc, ← Nat.add_assoc, ptr_rec cts co kk hkk hco _ w1, getElem!_pos cts kk hkk,
+        hTNL i hi, w3]
     · rw [hnnL i hi c hc, hTNL i hi, ← Nat.add_assoc]
       exact w2
   -- the facts, for any recursor list whose records pass
   have hV : ∀ R : List IndRecRec, (∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else R),
       RecOK st a (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) np.toNat
-        tys.length (ordList m₅ oo.toNat co.toNat cts cts.length).length fuel.toNat r) →
+        tys.length (ordListP m₅ oo.toNat tf.toNat co.toNat cts cts.length).length fuel.toNat r) →
       VFacts st a tys cts R (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) LS
-        (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordList m₅ oo.toNat co.toNat cts cts.length) := by
+        (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordListP m₅ oo.toNat tf.toNat co.toNat cts cts.length) := by
     intro R hrecs
     refine ⟨hsafe, np1, np2, by simpa using t1, by simpa using u1, l1, by simpa using v1, hnd, hflen,
-      hfuel.symm, islice_length _ _ _, islice_length _ _ _, hLSl, ordList_length _ _ _ _ _, hordf,
+      hfuel.symm, islice_length _ _ _, islice_length _ _ _, hLSl, ordListP_length _ _ _ _ _ _, hordf,
       hrecs⟩
   -- the recursors
   have hTy₅ : ListF (TyF b m₅) m₅ 11 to.toNat tys := hTy.ext e15 (fun _ _ x => x.ext e15)
@@ -386,7 +413,7 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     intro hX hk
     obtain ⟨hc1, hany, hRF⟩ := hrs trivial hk
     rw [hTN, hTT, hTn, hCn] at hRF
-    rw [← ordList_length m₅ oo.toNat co.toNat cts cts.length] at hRF
+    rw [← ordListP_length m₅ oo.toNat tf.toNat co.toNat cts cts.length] at hRF
     obtain ⟨w, hw⟩ := validateIndD_recsFail (hV [] (fun r hr => by split at hr <;> simp at hr)) hany hRF
       hX.2.1 hX.2.2
     exact .inr ⟨_, a, hw, by rw [twinCls_invalid, hc1]⟩
@@ -394,16 +421,23 @@ theorem validate_ref {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
   obtain ⟨hm7, hrecs⟩ := hrs
   dsimp only at hm7
   rw [hm7]
-  rw [hTN, hTT, hTn, hCn, ← ordList_length m₅ oo.toNat co.toNat cts cts.length] at hrecs
-  refine ⟨⟨_, validateIndD_ok (hV rcs hrecs), ordList_length _ _ _ _ _, fun p hp => ?_⟩, e15,
+  rw [hTN, hTT, hTn, hCn, ← ordListP_length m₅ oo.toNat tf.toNat co.toNat cts cts.length] at hrecs
+  refine ⟨⟨_, validateIndD_ok (hV rcs hrecs), ordListP_length _ _ _ _ _ _, fun p hp => ?_⟩, e15,
     ⟨o3.1, o3.2⟩, by simp only [List.headD_cons]; omega,
-    by simp only [List.headD_cons]; rw [o4, o1]; omega, np3⟩
-  rw [ordList_length] at hp
+    by simp only [List.headD_cons]; rw [o4, o1]; omega,
+    by simp only [List.headD_cons, List.tail_cons]; omega,
+    by simp only [List.headD_cons, List.tail_cons]; rw [o4, o1T]; omega, np3⟩
+  rw [ordListP_length] at hp
   obtain ⟨i, c, hi, hc, hpe⟩ := flat_pos LS p (by rw [hflen]; exact hp)
   have hcn' : c < cntF m₄ to i := by rw [hcntL i hi]; exact hc
   obtain ⟨kk, w1, w2⟩ := o5 i (by omega) c hcn'
-  rw [hps4 i (by omega), Nat.add_assoc, hpe] at w1
-  refine ⟨kk, w2.1, by simp only [wd, List.headD_cons] at w1 ⊢; exact w1, ?_⟩
-  rw [ordList_get, ptr_rec cts co kk w2.1 hco _ w1]
+  have w3 := o6 i (by omega) c hcn'
+  rw [hps4 i (by omega), Nat.add_assoc, hpe] at w1 w3
+  have hi' : i < tys.length := by omega
+  refine ⟨kk, w2.1, by simp only [wd, List.headD_cons] at w1 ⊢; exact w1, ?_, ?_⟩
+  · simp only [List.headD_cons, List.tail_cons]
+    rw [w3, ((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]; exact t7 i hi'
+  rw [ordListP_get, ptr_rec cts co kk w2.1 hco _ w1]
+  simp only [List.headD_cons, List.tail_cons]
 
 end L.Front.Ind

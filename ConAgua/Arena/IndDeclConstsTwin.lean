@@ -79,8 +79,9 @@ theorem declConstants_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclar
     | ok p =>
       simp only [ROp, Except.toOption] at hq
       obtain ⟨pP, -, hdp⟩ := hq
-      obtain ⟨hp3, -, -⟩ := blockConstants_run hok2.state hok2.pins hdp k2
+      obtain ⟨hp3, -, -⟩ := blockConstants_run hok2.state hok2.pins hok2.caches.readL hdp k2
       exact ⟨checkOK_of_pstep hok2 hp3, hp2.ext.trans hp3.ext⟩
+
 
 /-- **The twin's `declTables` keeps `CheckOK`** and grows the store. -/
 theorem declTables_chk {env : Env} {fe : IFEnv} {s s' : AState} {pd : IDeclaration}

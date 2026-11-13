@@ -37,7 +37,7 @@ open L.Ind
 /-- The pinned shape `(k, a, b)` of a stored constant: its constant value when it has the shape. -/
 def fpShape (k a b : Word) : IConstantInfo → Option IConstantVal
   | .indInfo cv _ => if k = 3 then some cv else none
-  | .ctorInfo cv nP nF => if k = 4 ∧ nP = a.toNat ∧ nF = b.toNat then some cv else none
+  | .ctorInfo cv nP nF _ => if k = 4 ∧ nP = a.toNat ∧ nF = b.toNat then some cv else none
   | .recInfo cv mI rP _ _ => if k = 5 ∧ mI = a.toNat ∧ rP = b.toNat then some cv else none
   | _ => none
 
@@ -145,7 +145,10 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     rw [hfind, hci, Option.bind_some]
     rcases hk with rfl | rfl | rfl
     · have := (decCI_kind3 hci hwk).2 hkw; cases ci <;> simp_all [fpShape]
-    · have := (decCI_kind4 hci hwk).2 hkw; cases ci <;> simp_all [fpShape]
+    · have := (decCI_kind4 hci hwk).2 hkw
+      cases ci with
+      | ctorInfo cv np nf fam => exact absurd rfl (this cv np nf fam)
+      | _ => simp_all [fpShape]
     · have := (decCI_kind5 hci hwk).2 hkw
       cases ci with
       | recInfo cv mi rp kk rules => exact absurd rfl (this cv mi rp kk rules)
@@ -187,7 +190,7 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
         obtain ⟨hxy, -⟩ := (hsh cv').mp e
         exact absurd (counts_iff.mpr (by rw [← hx, ← hy]; exact hxy)) hz
   rcases hk45 with rfl | rfl
-  · obtain ⟨cv, np, nf, hcv, h5, h6, rfl⟩ := (decCI_kind4 hci hwk).1 rfl
+  · obtain ⟨cv, np, nf, fam, hcv, h5, h6, rfl⟩ := (decCI_kind4 hci hwk).1 rfl
     obtain ⟨w5, e5, rfl⟩ := natD h5
     obtain ⟨w6, e6, rfl⟩ := natD h6
     exact counts e5 e6 rfl rfl hcv fun cv' => by

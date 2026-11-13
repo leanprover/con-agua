@@ -47,7 +47,7 @@ theorem ciD_ind {R : Nat → Option Word} {q : Nat} {v : IConstantVal} {c : IInd
   obtain ⟨wk, e, hx⟩ := ciD h
   refine ⟨wk, e, ?_⟩
   rcases hx with ⟨k, _, _, h1⟩ | ⟨k, _, _, _, _, _, _, h1⟩ | ⟨k, _, _, h1⟩ | ⟨k, _⟩ |
-    ⟨k, _, _, _, _, _, _, h1⟩ | ⟨k, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h1⟩
+    ⟨k, _, _, _, _, _, _, _, _, h1⟩ | ⟨k, _, _, _, _, _, _, _, _, _, _, _, _, _, _, h1⟩
   all_goals first | exact k | cases h1
 
 /-- **`pin_agrees(c, d)` decides `pinAgrees`** (pure). -/
@@ -830,7 +830,7 @@ theorem decCI_rec_rules {R : Nat → Option Word} {rd : Word → Word} (hR : RdO
     decRules R (rd (q + 7)).toNat (rd (q + 8)).toNat = some rules := by
   obtain ⟨wk, -, hx⟩ := ciD h
   rcases hx with ⟨-, _, _, h1⟩ | ⟨-, _, _, _, _, _, _, h1⟩ | ⟨-, _, _, h1⟩ | ⟨-, _, _, _, _, h1⟩ |
-    ⟨-, _, _, _, _, _, _, h1⟩ | ⟨-, cv', mi', rp', o, cnt, k', rules', -, -, -, ho, hcnt, -, hrules, h1⟩
+    ⟨-, _, _, _, _, _, _, _, _, h1⟩ | ⟨-, cv', mi', rp', o, cnt, k', rules', -, -, -, ho, hcnt, -, hrules, h1⟩
   all_goals (try (cases h1; done))
   cases h1
   simp only [nat?, Option.map_eq_some_iff] at ho hcnt
@@ -862,9 +862,9 @@ theorem blockLinkOkAtW_ok (hP : PinListLProg p) {block pins : List IConstantInfo
   by_cases k4 : erRd m c = 4
   · rw [blockLinkOkAtW.arm1 p n m bo bl po pl fo fl c q k4] at h; simp only [erRd_foldN] at h
     have hk := (kindW_eq hci 4).mp k4
-    obtain ⟨cv, np, nf, rfl⟩ : ∃ cv np nf, ci = .ctorInfo cv np nf := by
+    obtain ⟨cv, np, nf, fam, rfl⟩ : ∃ cv np nf fam, ci = .ctorInfo cv np nf fam := by
       cases ci <;> simp [ciKindQ] at hk
-      exact ⟨_, _, _, rfl⟩
+      exact ⟨_, _, _, _, rfl⟩
     have hccv : decCV (erecP m) (c.toNat + 1) = some cv := decCI_cvA hci
     obtain ⟨hsl, -, -⟩ := L.Arena.decCV_rd (erRdOK m) hccv
     cases h1 : callW p n "er_sl_eq" [erRd m (c + 2), erRd m (c + 3), fo, fl] m with

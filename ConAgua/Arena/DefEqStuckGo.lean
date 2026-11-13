@@ -121,7 +121,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
     (hcw : HW c) (hT : HW T) (hus2 : HW us2)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
     (hvus2 : ∃ x c', a₀.store.view x = some (.const c' (decI us2)))
-    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
+    {fam : NIdx} (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf fam))
     (hcvT : decCI (erecP s₀.mem) q.toNat = some (.indInfo cvT caps))
     (htbl : tblFound s₀.mem tq = some tbl)
     (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)

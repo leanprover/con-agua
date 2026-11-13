@@ -42,14 +42,15 @@ namespace L.Front.Ind
 /-- **`install_ind_d` appends one inductive record.** -/
 theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : StateD}
     (hD : StateDR m st)
-    {to tn co cn ro rn oo np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
-    {rcs : List IndRecRec} {ordered : List IndCtorRec}
+    {to tn co cn ro rn oo tf np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
+    {rcs : List IndRecRec} {ordered : List (IndCtorRec × NIdx)}
     (hF : IndFR b m to tn co cn ro rn tys cts rcs) (hIFR : topN m IFR < 2 ^ 62)
     (hIFL : topN m IFL < 2 ^ 62) (hord : ordered.length = cts.length)
-    (hoo : oo.toNat + cts.length < 2 ^ 63)
+    (hoo : oo.toNat + cts.length < 2 ^ 63) (htf : tf.toNat + cts.length < 2 ^ 63)
     (hptr : ∀ p (hp : p < ordered.length), ∃ k, ∃ _ : k < cts.length,
-      wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ ordered[p] = cts[k])
-    (h : installW b.data n m to tn oo cn ro rn np = some m') : DGrow m m' := by
+      wd m IFL (oo.toNat + p) = co + 10 * UInt64.ofNat k ∧ (wd m IFL (tf.toNat + p)).toNat < 2 ^ 32 ∧
+        ordered[p] = (cts[k], decI (wd m IFL (tf.toNat + p))))
+    (h : installW b.data n m to tn oo tf cn ro rn np = some m') : DGrow m m' := by
   obtain ⟨hTn, hTy, hCn, hCt, hRn, hRc⟩ := hF
   have hL := StateDR.lkR hD
   have hps := hL.psize
@@ -78,7 +79,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   have hL1 : LkR m₁ st := hL.frame P1.frame (by rw [P3, P1.size DLP]; omega)
   rcases h2 : instTypesW b.data n m₁ bo to tn 0 with _ | m₂ <;>
     simp only [h2, installW.k_inst_types.none, installW.k_inst_types.arm1, reduceCtorEq] at h
-  rcases h3 : instCtorsW b.data n m₂ (bo + tn) oo cn 0 with _ | m₃ <;>
+  rcases h3 : instCtorsW b.data n m₂ (bo + tn) oo tf cn 0 with _ | m₃ <;>
     simp only [h3, installW.k_inst_ctors.none, installW.k_inst_ctors.arm1, reduceCtorEq] at h
   rcases h4 : instRecsW b.data n m₃ (bo + tn + cn) ro rn 0 with _ | m₄ <;>
     simp only [h4, installW.k_inst_recs.none, installW.k_inst_recs.arm1, installW.k_decl_push_id, reduceCtorEq] at h
@@ -86,7 +87,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   have hifl1 : m₁.arr64 IFL = m.arr64 IFL := P1.other IFL (by decide) (by decide)
   -- the types
   rw [instTypesW_eq] at h2
-  obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m p => typeW b.data m p)
+  obtain ⟨T1, T2, T3, T4, T5⟩ := instGo_twin a tys (tyT st) (fun _ m _ p => typeW b.data m p)
     (fun _ j => to + 11 * j) m₁ bo tn hTn (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by rw [hf.1 IFR (by decide) (by decide), hifr1]
       have hk' := @L.toNat_ofNat_of_lt k (by omega)
@@ -100,24 +101,27 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   -- the constructors
   have hbt : (bo + tn).toNat = bo.toNat + tys.length := by rw [L.toNat_add_of_lt _ _ (by omega), hTn]
   rw [instCtorsW_eq] at h3
-  obtain ⟨C1, C2, C3, C4, C5⟩ := instGo_twin a ordered (ctT st) (fun _ m p => ctorRW b.data m p)
+  obtain ⟨C1, C2, C3, C4, C5⟩ := instGo_twin a ordered (fun c => ctT st c.1 c.2)
+    (fun _ m j p => ctorRW b.data m p (rdW (m.arr64 IFL) (tf + j)))
     (fun m j => rdW (m.arr64 IFL) (oo + j)) m₂ (bo + tn) cn (by rw [hCn, hord])
     (fun n' mi p q mo hLi hf hp hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
         rw [hf.1 IFR (by decide) (by decide), T1.1 IFR (by decide) (by decide), hifr1]
       have hifl : mi.arr64 IFL = m.arr64 IFL := by
         rw [hf.1 IFL (by decide) (by decide), T1.1 IFL (by decide) (by decide), hifl1]
-      obtain ⟨k, hk, hw, hok⟩ := hptr p hp
+      obtain ⟨k, hk, hw, htt, hok⟩ := hptr p hp
       have hp' := @L.toNat_ofNat_of_lt p (by omega)
       have hrd : rdW (mi.arr64 IFL) (oo + UInt64.ofNat p) = co + 10 * UInt64.ofNat k := by
         rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp', hw]
+      have hrdT : rdW (mi.arr64 IFL) (tf + UInt64.ofNat p) = wd m IFL (tf.toNat + p) := by
+        rw [hifl, rdW_wdI _ _ _ _ (by rw [hp']; omega), hp']
       have hk' := @L.toNat_ofNat_of_lt k (by omega)
       have hw' : (co + 10 * UInt64.ofNat k).toNat = co.toNat + 10 * k := by
         have := w_addmul co (UInt64.ofNat k) 10 (by decide) (by rw [hk']; omega)
         rw [hk'] at this; exact this
       rw [getElem!_eq _ _ hp, hok]
-      rw [hrd] at hR
-      exact ctorRW_twin a hLi (by rw [hw']; exact (hCt.2.2 k hk).congr hifr) (by rw [hw']; omega) hR)
+      rw [hrd, hrdT] at hR
+      exact ctorRW_twin a hLi (by rw [hw']; exact (hCt.2.2 k hk).congr hifr) (by rw [hw']; omega) htt hR)
     n m₂ m₃ 0 T3 (MemFrame.refl _ _ _) (by simp) (by rw [hbt]; omega) (by rw [hbt, hord]; omega) h3
   rw [hbt, hord] at C4 C5
   simp only [UInt64.toNat_zero, Nat.add_zero] at C4 C5
@@ -125,7 +129,7 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   have hbtc : (bo + tn + cn).toNat = bo.toNat + tys.length + cts.length := by
     rw [L.toNat_add_of_lt _ _ (by rw [hbt]; omega), hbt, hCn]
   rw [instRecsW_eq] at h4
-  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m p => recRW b.data n m p)
+  obtain ⟨R1, R2, R3, R4, R5⟩ := instGo_twin a rcs (recT st) (fun n m _ p => recRW b.data n m p)
     (fun _ j => ro + 11 * j) m₃ (bo + tn + cn) rn hRn
     (fun n' mi k q mo hLi hf hk hR => by
       have hifr : mi.arr64 IFR = m.arr64 IFR := by
@@ -279,18 +283,20 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
     (callW_of_callE h2)
   rw [hs2] at hV2
   rw [hs2'] at hK2
-  obtain ⟨⟨ordered, V1, V4, V7⟩, V2, V3, V5, V6, V8⟩ := hV2
-  dsimp only at V1 V2 V3 V4 V5 V6 V7 V8
+  obtain ⟨⟨ordered, V1, V4, V7⟩, V2, V3, V5, V6, V5T, V6T, V8⟩ := hV2
+  dsimp only at V1 V2 V3 V4 V5 V6 V7 V8 V5T V6T
   -- `install_ind_d`
-  rcases h3 : callW p n "install_ind_d" [to, tn, q.headD 0, cn, ro, rn, q.tail.headD 0] m₂ with _ | ⟨r3, m₃⟩
+  rcases h3 : callW p n "install_ind_d" [to, tn, q.headD 0, q.tail.headD 0, cn, ro, rn, q.tail.tail.headD 0] m₂
+    with _ | ⟨r3, m₃⟩
   · rw [liftE_none, applyIndE.k_install_ind_d.none]; exact fun _ hk => absurd (by simp) hk
   rw [liftE_some, applyIndE.k_install_ind_d.arm1]
   have hm2 : m₂.arr8 IN = b.data := by rw [hK2.arr8, hK1.arr8]; exact hm
   obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
-    (install_spec p hAL hII b.data hsize n ⟨m₂, Locals.init []⟩ to tn (q.headD 0) cn ro rn
-      (q.tail.headD 0) hm2) h3
-  generalize q.headD 0 = oo at hW3 V1 V5 V6 V7
-  generalize q.tail.headD 0 = np at hW3 V1 V8
+    (install_spec p hAL hII b.data hsize n ⟨m₂, Locals.init []⟩ to tn (q.headD 0) (q.tail.headD 0) cn ro rn
+      (q.tail.tail.headD 0) hm2) h3
+  generalize q.headD 0 = oo at *
+  generalize q.tail.tail.headD 0 = np at *
+  generalize q.tail.headD 0 = tf at *
   have hfr2 := V2.frame
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.base,
@@ -300,12 +306,12 @@ theorem applyInd_ref {p : Prog} (hAL : IndApplyLookups p) (hFI : IndFieldLookups
   have hs2'' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.size IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1
   have hIFL2 : topN m₂ IFL < 2 ^ 62 := by have := V3.2; omega
-  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 (by omega) hW3
+  obtain ⟨st', I1, I2, I3, I4⟩ := installW_twin hA2 hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) (by omega) V7 (by omega) hW3
   have hk : DK m m₂ := (DK.ofFrame hfr1 (by decide) (by decide)).trans
     (DK.ofFrame hfr2 (by decide) (by decide))
   refine ⟨⟨st', ?_, I3⟩, I2, fun hmo => MemFrame.modeOK I4 (by simp) (by simp)
     (MemFrame.modeOK hfr2 (by decide) (by decide) (MemFrame.modeOK hfr1 (by simp) (by simp) hmo)),
-    DGrow.ofDK hk (installW_grow a hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) V7 hW3)⟩
+    DGrow.ofDK hk (installW_grow a hD2 (hF.ext V2) hIFR2 hIFL2 V4 (by omega) (by omega) V7 hW3)⟩
   unfold processLineCoreD
   simp only []
   rw [run_bind _ _ a _ V1]

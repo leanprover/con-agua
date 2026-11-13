@@ -90,7 +90,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:352-361 ConLeche.Frontend.IdTable.b
 
 /-! ## `front_init()` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init -/
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:492-501 ConRon.Arena.Frontend.StateD.init -/
 @[no_expose, l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h, z) {
   h := call intern_nanon();

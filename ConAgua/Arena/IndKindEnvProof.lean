@@ -89,40 +89,46 @@ theorem EnvGrowDen.pushTable {st : EStore} {fe0 fe : IFEnv} {t : IProjTable}
     · rw [ite_eq_right hn] at hc; left; simp only [IFEnv.rawTable?]; exact hc
   · rw [ite_eq_right hf] at hc'; cases hc'
 
-/-- The formers, consed. -/
+/-- The formers, consed (the capability records' never-zero reads change no environment). -/
 theorem EnvGrowDen.consBlockInds {st : EStore} {p₁ : BlockShape} {isRec : Bool} :
-    ∀ (cvs : List IConstantVal) (i : Nat) {fe0 fe : IFEnv}, EnvGrowDen st fe0 fe → TblGate fe →
+    ∀ (cvs : List IConstantVal) (i : Nat) {fe0 fe fe' : IFEnv} {s s' : AState},
+      consBlockInds p₁ isRec cvs i fe s = .ok (fe', s') → EnvGrowDen st fe0 fe → TblGate fe →
       (∀ cv ∈ cvs, ∃ ks, Frontend.denoteNList st.ns cv.levelParams = some ks) →
-      EnvGrowDen st fe0 (consBlockInds p₁ isRec cvs i fe) ∧ TblGate (consBlockInds p₁ isRec cvs i fe)
-  | [], _, _, _, h, hg, _ => ⟨h, hg⟩
-  | cv :: cvs, i, _, fe, h, hg, hd => by
+      EnvGrowDen st fe0 fe' ∧ TblGate fe'
+  | [], _, _, fe, fe', s, s', hr, h, hg, _ => by
+    unfold ConRon.Arena.consBlockInds at hr
+    obtain ⟨rfl, -⟩ := AM.pure_ok hr; exact ⟨h, hg⟩
+  | cv :: cvs, i, _, fe, fe', s, s', hr, h, hg, hd => by
+    unfold ConRon.Arena.consBlockInds at hr
+    obtain ⟨caps, s1, -, hr⟩ := AM.bind_ok hr
     obtain ⟨ks, hks⟩ := hd cv (by simp)
-    exact EnvGrowDen.consBlockInds cvs (i + 1)
-      (h.push' hg (ciLvlDen_of (ci := .indInfo cv (blockCapsAt p₁ i isRec)) hks
+    exact EnvGrowDen.consBlockInds cvs (i + 1) hr
+      (h.push' hg (ciLvlDen_of (ci := .indInfo cv caps) hks
         (fun _ _ _ _ _ e => nomatch e)))
       (hg.push _) (fun cv' h' => hd cv' (by simp [h']))
 
 /-- One member's constructors, consed. -/
-theorem EnvGrowDen.consSumCtors {st : EStore} {nP : Nat} :
+theorem EnvGrowDen.consSumCtors {st : EStore} {nP : Nat} {T : NIdx} :
     ∀ (cs : List (IConstantVal × Nat)) {fe0 fe : IFEnv}, EnvGrowDen st fe0 fe → TblGate fe →
       (∀ c ∈ cs, ∃ ks, Frontend.denoteNList st.ns c.1.levelParams = some ks) →
-      EnvGrowDen st fe0 (consSumCtors nP cs fe) ∧ TblGate (consSumCtors nP cs fe)
+      EnvGrowDen st fe0 (consSumCtors nP T cs fe) ∧ TblGate (consSumCtors nP T cs fe)
   | [], _, _, h, hg, _ => ⟨h, hg⟩
   | c :: cs, _, fe, h, hg, hd => by
     obtain ⟨ks, hks⟩ := hd c (by simp)
     exact EnvGrowDen.consSumCtors cs
-      (h.push' hg (ciLvlDen_of (ci := .ctorInfo c.1 nP c.2) hks (fun _ _ _ _ _ e => nomatch e)))
+      (h.push' hg (ciLvlDen_of (ci := .ctorInfo c.1 nP c.2 T) hks (fun _ _ _ _ _ e => nomatch e)))
       (hg.push _) (fun c' h' => hd c' (by simp [h']))
 
 /-- Every member's constructors, consed. -/
 theorem EnvGrowDen.consBlockCtors {st : EStore} {nP : Nat} :
-    ∀ (css : List (List (IConstantVal × Nat))) {fe0 fe : IFEnv}, EnvGrowDen st fe0 fe → TblGate fe →
-      (∀ cs ∈ css, ∀ c ∈ cs, ∃ ks, Frontend.denoteNList st.ns c.1.levelParams = some ks) →
+    ∀ (css : List (NIdx × List (IConstantVal × Nat))) {fe0 fe : IFEnv}, EnvGrowDen st fe0 fe →
+      TblGate fe →
+      (∀ g ∈ css, ∀ c ∈ g.2, ∃ ks, Frontend.denoteNList st.ns c.1.levelParams = some ks) →
       EnvGrowDen st fe0 (consBlockCtors nP css fe) ∧ TblGate (consBlockCtors nP css fe)
   | [], _, _, h, hg, _ => ⟨h, hg⟩
-  | cs :: css, _, fe, h, hg, hd => by
-    obtain ⟨h1, g1⟩ := EnvGrowDen.consSumCtors (nP := nP) cs h hg (hd cs (by simp))
-    exact EnvGrowDen.consBlockCtors css h1 g1 (fun cs' h' => hd cs' (by simp [h']))
+  | (T, cs) :: css, _, fe, h, hg, hd => by
+    obtain ⟨h1, g1⟩ := EnvGrowDen.consSumCtors (nP := nP) (T := T) cs h hg (hd (T, cs) (by simp))
+    exact EnvGrowDen.consBlockCtors css h1 g1 (fun g' h' => hd g' (by simp [h']))
 
 theorem EnvGrowDen.pushAll {st : EStore} :
     ∀ (L : List IConstantInfo) {fe0 fe : IFEnv}, EnvGrowDen st fe0 fe → TblGate fe →
@@ -156,7 +162,8 @@ theorem withSort_members {p p₁ : BlockShape} {x : LIdx} {s s' : AState}
 
 theorem checkBlockInds_env {fe fe₁ : IFEnv} {p p₁ : BlockShape} {isRec : Bool} {s s' : AState}
     (h : checkBlockInds mode fe p isRec s = .ok ((fe₁, p₁), s')) :
-    fe₁ = consBlockInds p₁ isRec (p.members.map (·.declared)) 0 fe ∧ p₁.members = p.members := by
+    (∃ sa sb, consBlockInds p₁ isRec (p.members.map (·.declared)) 0 fe sa = .ok (fe₁, sb)) ∧
+      p₁.members = p.members := by
   unfold checkBlockInds at h
   cases hm : p.members with
   | nil => rw [hm] at h; exact absurd h (fun h' => AM.fail_ok h')
@@ -166,14 +173,16 @@ theorem checkBlockInds_env {fe fe₁ : IFEnv} {p p₁ : BlockShape} {isRec : Boo
   obtain ⟨_, _, _, h⟩ := AM.bind_ok h
   obtain ⟨_, _, _, h⟩ := AM.bind_ok h
   obtain ⟨p₂, _, hw, h⟩ := AM.bind_ok h
+  obtain ⟨fe₂, _, hc, h⟩ := AM.bind_ok h
   obtain ⟨he, -⟩ := AM.pure_ok h
   simp only [Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
-  exact ⟨rfl, (withSort_members hw).trans hm⟩
+  exact ⟨⟨_, _, by first | exact hc | simpa [hm] using hc⟩, (withSort_members hw).trans hm⟩
 
 theorem checkBlockPass_env {fe : IFEnv} {p : BlockShape} {isRec : Bool} {q : BlockPass} {s s' : AState}
     (h : checkBlockPass mode fe p isRec s = .ok (q, s')) :
-    q.env1 = consBlockInds q.p isRec (p.members.map (·.declared)) 0 fe ∧ q.p.members = p.members := by
+    (∃ sa sb, consBlockInds q.p isRec (p.members.map (·.declared)) 0 fe sa = .ok (q.env1, sb)) ∧
+      q.p.members = p.members := by
   unfold checkBlockPass at h
   obtain ⟨⟨fe₁, p₁⟩, _, h1, h⟩ := AM.bind_ok h
   have e := checkBlockInds_env h1
@@ -195,12 +204,12 @@ theorem genRecCheck_env {fe : IFEnv} {p : BlockShape} {nb : Bool}
 theorem checkBlockTail_env {block : List IConstantInfo} {q : BlockPass} {Q : List IProjTable}
     {fe₃ : IFEnv} {s s' : AState}
     (h : checkBlockTail mode block q Q s = .ok (fe₃, s')) :
-    GR.FEq fe₃ (consBlockCtors q.p.nP q.p.memberCtors q.env1) := by
+    GR.FEq fe₃ (consBlockCtors q.p.nP q.p.ctorGroups q.env1) := by
   unfold checkBlockTail at h
   obtain ⟨_, _, _, h⟩ := AM.bind_ok h
   obtain ⟨_, _, _, h⟩ := AM.bind_ok h
   obtain ⟨⟨fe₂b, out⟩, _, hr, h⟩ := AM.bind_ok h
-  have e1 : GR.FEq fe₂b (consBlockCtors q.p.nP q.p.memberCtors q.env1) :=
+  have e1 : GR.FEq fe₂b (consBlockCtors q.p.nP q.p.ctorGroups q.env1) :=
     genRecCheck_env (r := (fe₂b, out)) hr
   iterate 8 (try (obtain ⟨_, _, _, h⟩ := AM.bind_ok h))
   obtain ⟨rfl, -⟩ := AM.pure_ok h
@@ -418,14 +427,16 @@ theorem checkBlock_grow (hk : CoreSpec Arena.checkFuel)
   obtain ⟨he1, hqm⟩ := checkBlockPass_env h7
   have hfe₂ := checkBlockTail_env h9
   have g1 : EnvGrowDen s'.store fe q.env1 ∧ TblGate q.env1 := by
-    rw [he1]
-    exact EnvGrowDen.consBlockInds _ 0 (EnvGrowDen.refl' _ fe) hgate (by simpa [hkd] using hdecl)
-  have g2 := EnvGrowDen.consBlockCtors (st := s'.store) (nP := q.p.nP) q.p.memberCtors g1.1 g1.2
+    obtain ⟨sa, sb, hc1⟩ := he1
+    exact EnvGrowDen.consBlockInds _ 0 hc1 (EnvGrowDen.refl' _ fe) hgate (by simpa [hkd] using hdecl)
+  have g2 := EnvGrowDen.consBlockCtors (st := s'.store) (nP := q.p.nP) q.p.ctorGroups g1.1 g1.2
     (by
-      intro cs hcs c hc
-      rw [Arena.BlockShape.memberCtors, hqm] at hcs
-      have hcs' : cs ∈ p₀.members.map (·.ctors) := by rw [← hkc]; exact hcs
-      exact hctors cs hcs' c hc)
+      intro g hg c hc
+      rw [Arena.BlockShape.ctorGroups, hqm] at hg
+      obtain ⟨ms, hms, rfl⟩ := List.mem_map.mp hg
+      have hcs' : ms.ctors ∈ p₀.members.map (·.ctors) := by
+        rw [← hkc]; exact List.mem_map.mpr ⟨ms, hms, rfl⟩
+      exact hctors _ hcs' c hc)
   have g3 := g2.1.ofFEq hfe₂
   have gg3 : TblGate fe₂ := GR.FEq.gate hfe₂ g2.2
   have g4 := EnvGrowDen.pushAll recs g3 gg3 (fun ci hci => by

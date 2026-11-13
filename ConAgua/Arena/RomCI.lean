@@ -160,7 +160,7 @@ theorem sim_caps (c : ConLeche.IndCaps) (m : EMemo) : Sim (internCaps c) m (item
   have h : internCaps c = Frontend.internNameList c.all >>= fun al =>
       Frontend.internNameList c.ctors >>= fun ctors =>
         pure { eta := c.eta, all := al, nparams := c.nparams,
-               nIdx := c.nIdx, ctors := ctors } := rfl
+               nIdx := c.nIdx, ctors := ctors, neverZero := c.neverZero } := rfl
   rw [h]
   exact (Sim.bind (is := c.all.map .nm) (js := c.ctors.map .nm ++ []) (sim_nameList _ m) fun _ =>
     Sim.bind (is := c.ctors.map .nm) (js := []) (sim_nameList _ m) fun _ => Sim.pure _ _ _ rfl).congr
@@ -229,7 +229,7 @@ def itemsCI : ConLeche.ConstantInfo → List Item
   | .defnInfo v e _ => itemsCV v ++ [.ex e]
   | .thmInfo v => itemsCV v
   | .indInfo v c => itemsCV v ++ itemsCaps c
-  | .ctorInfo v _ _ => itemsCV v
+  | .ctorInfo v _ _ T => itemsCV v ++ [.nm T]
   | .recInfo v _ _ _ rs => itemsCV v ++ itemsRules rs
 
 theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
@@ -262,12 +262,13 @@ theorem sim_ci (ci : ConLeche.ConstantInfo) (m : EMemo) :
     refine (Sim.bind (is := itemsCV v) (js := itemsCaps c) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
     obtain ⟨m₁, _⟩ := r
     exact (Sim.bind (is := itemsCaps c) (js := []) (sim_caps c m₁) fun _ => Sim.pure _ _ _ rfl).congr (by simp)
-  | ctorInfo v nP nF =>
-    have h : Frontend.internCI m (.ctorInfo v nP nF) = Frontend.internCV m v >>= fun r => match r with
-        | (m, cv) => pure (m, .ctorInfo cv nP nF) := rfl
+  | ctorInfo v nP nF T =>
+    have h : Frontend.internCI m (.ctorInfo v nP nF T) = Frontend.internCV m v >>= fun r => match r with
+        | (m, cv) => internName T >>= fun t => pure (m, .ctorInfo cv nP nF t) := rfl
     rw [h]
-    refine (Sim.bind (is := itemsCV v) (js := []) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
-    obtain ⟨m₁, _⟩ := r; exact Sim.pure _ _ _ rfl
+    refine (Sim.bind (is := itemsCV v) (js := [.nm T]) (sim_cv v m) fun r => ?_).congr (by simp [itemsCI])
+    obtain ⟨m₁, _⟩ := r
+    exact (Sim.bind (is := [.nm T]) (js := []) (sim_name T m₁) fun _ => Sim.pure _ _ _ rfl).congr (by simp)
   | recInfo v mI rP k rs =>
     have h : Frontend.internCI m (.recInfo v mI rP k rs) = Frontend.internCV m v >>= fun r => match r with
         | (m, cv) => internRules m rs >>= fun r' => match r' with | (m, rules) => pure (m, .recInfo cv mI rP k rules) := rfl

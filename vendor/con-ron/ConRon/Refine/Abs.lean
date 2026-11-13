@@ -615,6 +615,7 @@ def absIndCaps (c : env.IndCaps) : ConLeche.IndCaps where
   nparams := c.nparams.val
   nIdx := c.n_idx.val
   ctors := absNames c.ctors
+  neverZero := c.never_zero
 
 /-- `ConLeche/Kernel/Env.lean:471` — `ConstantInfo`. -/
 def absConstantInfo : env.ConstantInfo → ConLeche.ConstantInfo
@@ -622,7 +623,7 @@ def absConstantInfo : env.ConstantInfo → ConLeche.ConstantInfo
   | .DefnInfo cv v h => .defnInfo (absConstantVal cv) (absExpr v) (absHint h)
   | .ThmInfo cv => .thmInfo (absConstantVal cv)
   | .IndInfo cv c => .indInfo (absConstantVal cv) (absIndCaps c)
-  | .CtorInfo cv np nf => .ctorInfo (absConstantVal cv) np.val nf.val
+  | .CtorInfo cv np nf t => .ctorInfo (absConstantVal cv) np.val nf.val (absName t)
   | .RecInfo cv mi rp k rs =>
     .recInfo (absConstantVal cv) mi.val rp.val k (rs.val.map absRecRule)
 
@@ -700,7 +701,7 @@ def ConstantInfoWF : env.ConstantInfo → Prop
   | .DefnInfo cv v _ => ConstantValWF cv ∧ ExprWF v
   | .ThmInfo cv => ConstantValWF cv
   | .IndInfo cv c => ConstantValWF cv ∧ IndCapsWF c
-  | .CtorInfo cv _ _ => ConstantValWF cv
+  | .CtorInfo cv _ _ t => ConstantValWF cv ∧ NameWF t
   | .RecInfo cv _ _ _ rs => ConstantValWF cv ∧ RecRulesWF rs
 
 /-- A `Vec<ConstantInfo>` — or a `Vec<P<ConstantInfo>>`, the same type in the

@@ -58,7 +58,7 @@ l_model m2cKE_spec (p : Prog) (hp : M2CProg p)
 
 l_model m2cEta2E_spec (p : Prog) (hp : M2CProg p)
   fns [hp.eta2 ↦ m2cEta2E list]
-  specs [fnzaE_spec p hp.fnza hp.fsl n,
+  specs [fanzaE_spec p hp.fanza hp.fnza hp.fsl n,
     callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "fab_scope_ok"]
   grind [arena_grind] fold [tierW, idxW]

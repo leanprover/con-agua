@@ -64,9 +64,9 @@ def ncProj (c : IConstantVal × Nat × Nat) : IConstantVal × Nat := (c.1, c.2.2
 theorem GrowX.erecP {q n : Nat} {m m' : Mem} (h : GrowX q n m m') : ArrExt (erecP m) (erecP m') :=
   (⟨h.er, h.erGet, h.er1, h.er1Get⟩ : ErecGrow m m').ext
 
-theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {a a' : AState}
+theorem nestCtorEntry_some {C : NIdx} {cv : IConstantVal} {nPc nF : Nat} {fam : NIdx} {a a' : AState}
     {x : IConstantVal × Nat × Nat}
-    (h : (ConRon.Arena.nestCtorEntry C (.ctorInfo cv nPc nF)).run a = .ok (some x, a')) :
+    (h : (ConRon.Arena.nestCtorEntry C (.ctorInfo cv nPc nF fam)).run a = .ok (some x, a')) :
     x = (cv, nPc, nF) := by
   simp only [ConRon.Arena.nestCtorEntry, StateT.run_bind] at h
   cases h1 : (stripPis (nPc + nF) cv.type).run a with
@@ -240,12 +240,12 @@ theorem ncGoW_ok (fe : IFEnv) (vis C cs : Word) (N : Nat)
       subst hr2
       rw [ncGoW.k_nest_ctor_entry.arm1 (hc1 := by simp)] at h
       simp only [List.tail_cons, List.headD_cons] at h
-      have hci' : ci = .ctorInfo cv nPc nF := by
+      obtain ⟨fam, hci'⟩ : ∃ fam, ci = .ctorInfo cv nPc nF fam := by
         cases ci with
-        | ctorInfo cv' nPc' nF' =>
+        | ctorInfo cv' nPc' nF' fam' =>
           have := nestCtorEntry_some hrun1
           simp only [Prod.mk.injEq] at this
-          obtain ⟨rfl, rfl, rfl⟩ := this; rfl
+          obtain ⟨rfl, rfl, rfl⟩ := this; exact ⟨fam', rfl⟩
         | _ => exact absurd hrun1 (by simp [ConRon.Arena.nestCtorEntry, StateT.run, StateT.pure, pure, Except.pure])
       subst hci'
       have hcvE : decCV (erecP m) (ciq.toNat + 1) = some cv := L.Arena.decCI_ctor_cv hci
@@ -370,7 +370,7 @@ theorem decCaps_ctors {a : Nat → Option Word} {q : Nat} {caps : IIndCaps}
     (h : decCaps a q = some caps) :
     nat? a (q + 12) = some caps.nparams ∧ hlist? a (q + 13) = some caps.ctors := by
   simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨_, _, _, _, _, _, np, hnp, cts, hcts, heq⟩ := h
+  obtain ⟨_, _, _, _, _, _, np, hnp, cts, hcts, _, _, heq⟩ := h
   cases Option.some.inj heq
   exact ⟨hnp, hcts⟩
 

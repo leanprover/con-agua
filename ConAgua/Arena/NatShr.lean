@@ -147,8 +147,8 @@ def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb) {
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1114-1160 ConRon.Arena.natOpResult -/
-@[no_expose, l_impl ConRon.Arena.natOpResult]
+/-- con-ron: ConRon/Arena/Core.lean:1118-1151 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
 def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

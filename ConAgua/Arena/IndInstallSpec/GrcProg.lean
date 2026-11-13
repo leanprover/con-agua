@@ -161,6 +161,7 @@ structure TailProg (p : Prog) : Prop where
   hci : p.lookup "ctor_info_rec" = some ctorInfoRecL
   hcs : p.lookup "cons_sum_ctors" = some consSumCtorsL
   hcbc : p.lookup "cons_block_ctors" = some consBlockCtors
+  cg : p.lookup "block_shape_ctor_groups" = some blockShapeCtorGroups
   flush : FlushProg p
   nf : p.lookup "nest_field_kind_flat" = some nestFieldKindFlat
   ni : p.lookup "nest_kinds_flat_inner" = some nestKindsFlatInner

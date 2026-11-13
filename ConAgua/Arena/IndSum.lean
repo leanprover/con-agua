@@ -245,13 +245,14 @@ def checkSumCtorsL : FunDecl :=
   return 0
 }
 
-/-- `ctor_info_rec(cv, nP, nF)`: the `.ctorInfo cv nP nF` constant record in `EREC` (`decCI` kind
-4: `[4, cv's 4 words copied inline, nP, nF]`, 7 words). The name word is checked to be a handle
-(lane `indproofs2`: `env_push`'s spec needs it; a decoded constant's name always is). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-149 ConRon.Arena.consSumCtors
+/-- `ctor_info_rec(cv, nP, nF, T)`: the `.ctorInfo cv nP nF T` constant record in `EREC` (`decCI`
+kind 4: `[4, cv's 4 words copied inline, nP, nF, T]`, 8 words). The name word and the family `T` are
+checked to be handles (lane `indproofs2`: `env_push`'s spec needs the name; a decoded constant's
+name and family always are). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
-def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec, ez) {
-  rec := call erec_alloc(7);
+def ctorInfoRecL : FunDecl := lfn (cv, nP, nF, T) locals (rec, ez) {
+  rec := call erec_alloc(8);
   ez := call erec_put(rec, 4);
   ez := call erec_put(rec + 1, EREC⦃cv⦄);
   ez := call erec_put(rec + 2, EREC⦃cv + 1⦄);
@@ -259,24 +260,27 @@ def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec, ez) {
   ez := call erec_put(rec + 4, EREC⦃cv + 3⦄);
   ez := call erec_put(rec + 5, nP);
   ez := call erec_put(rec + 6, nF);
+  ez := call erec_put(rec + 7, T);
   if 4294967296 <= EREC⦃rec + 1⦄ { abort };
+  if 4294967296 <= T { abort };
   return rec
 }
 
-/-- `cons_sum_ctors(nP, ctorsOff, ctorsLen, vis)`: the constructors' conses, in order (the twin
-processes the head before recursing on the tail). Pure (the index push touches no term): the only
-effect is the environment push. Returns the new view. Self-recursive on the slice, as the twin is on
-the list (lane `indproofs2`: rewritten from a `while` loop for the refinement). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-149 ConRon.Arena.consSumCtors
+/-- `cons_sum_ctors(nP, T, ctorsOff, ctorsLen, vis)`: the constructors' conses, in order (the twin
+processes the head before recursing on the tail), each with the family `T` it is declared under.
+Pure (the index push touches no term): the only effect is the environment push. Returns the new
+view. Self-recursive on the slice, as the twin is on the list (lane `indproofs2`: rewritten from a
+`while` loop for the refinement). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:143-151 ConRon.Arena.consSumCtors
 @[no_expose, l_impl ConRon.Arena.consSumCtors]
-def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
+def consSumCtorsL : FunDecl := lfn (nP, T, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
   if ctorsLen == 0 { return vis };
   c := IW.u64[ctorsOff];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
-  rec := call ctor_info_rec(cv, nP, nF);
+  rec := call ctor_info_rec(cv, nP, nF, T);
   v := call env_push(vis, rec);
-  r := call cons_sum_ctors(nP, ctorsOff + 1, ctorsLen - 1, v);
+  r := call cons_sum_ctors(nP, T, ctorsOff + 1, ctorsLen - 1, v);
   return r
 }
 
@@ -284,7 +288,7 @@ def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, 
 generated right-hand side `j`, `.plain` (each a fresh 11-word `EREC` rule record, `EnvRec.lean`;
 the unread words `0`), stopping at the shorter of the two lists, as the twin's paired match does.
 Returns the rule pointers as an `IW` list. -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:151-157 ConRon.Arena.sumRules
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:153-159 ConRon.Arena.sumRules
 @[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesL : FunDecl := lfn (cO, cL, rO, rL) locals (n, o, z) {
   n := cL;
@@ -296,7 +300,7 @@ def sumRulesL : FunDecl := lfn (cO, cL, rO, rL) locals (n, o, z) {
 
 /-- `sum_rules_go(cO, cL, rO, rL, o)`: the rules of the paired slices `(cO, cL)`, `(rO, rL)`, their
 pointers written at `o, o + 1, …`; stops at the shorter. Self-recursive, as the twin is. -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:151-157 ConRon.Arena.sumRules
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:153-159 ConRon.Arena.sumRules
 @[no_expose, l_impl ConRon.Arena.sumRules]
 def sumRulesGoL : FunDecl := lfn (cO, cL, rO, rL, o) locals (c, cv, nF, rec, z, ez) {
   if cL == 0 || rL == 0 { return 0 };
@@ -489,7 +493,7 @@ def structProjArgPL : FunDecl := lfn (T, j) locals (b, e) {
 
 /-- `has_loose_b_var_b_ins(e, i, r)`: record the answer `r` for `(e, i)` in the `hb` memo and
 return it (probes again right before the put, as every insert does). -/
--- con-ron: ConRon/Arena/Core.lean:2897-2902 ConRon.Arena.hasLooseBVarBIns
+-- con-ron: ConRon/Arena/Core.lean:3093-3098 ConRon.Arena.hasLooseBVarBIns
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBIns]
 def hasLooseBVarBInsL : FunDecl := lfn (e, i, r) locals (fd, j, d, u) {
   (fd, j, d) := call hb_find(e, i);
@@ -503,7 +507,7 @@ the tag: `bvar`/`fvar`/`sort`/`const`/`lit` direct answers, the rest (`app`, `la
 `letE`, `proj`) through the `hb` memo, short-circuiting at the first `true` child (as the twin's
 `match` does for `app`/`lam`/`forallE`/`letE`). The twin's `memo` is dropped (the memo is the `hb`
 array, per `IndIface`'s per-call-memo convention). -/
--- con-ron: ConRon/Arena/Core.lean:2904-2950 ConRon.Arena.hasLooseBVarBGo
+-- con-ron: ConRon/Arena/Core.lean:3100-3146 ConRon.Arena.hasLooseBVarBGo
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBGo]
 def hasLooseBVarBGoL : FunDecl :=
   lfn (f, i, h) locals (bb, g, x, y, z, fd, j, d, r1, r) {
@@ -535,7 +539,7 @@ def hasLooseBVarBGoL : FunDecl :=
 }
 
 /-- `has_loose_b_var_b_fast(i, e)`: the executed `hasLooseBVarB` — clear the `hb` memo, walk. -/
--- con-ron: ConRon/Arena/Core.lean:2952-2955 ConRon.Arena.hasLooseBVarBFast
+-- con-ron: ConRon/Arena/Core.lean:3148-3151 ConRon.Arena.hasLooseBVarBFast
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBFast]
 def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   u := call hb_clear();
@@ -550,7 +554,7 @@ direct answers, the rest through the `hb` memo keyed by the node and the window'
 fixed for the walk), short-circuiting at the first `true` child. The twin's per-call `memo` is the
 `hb` array (`IndIface`'s per-call-memo convention; `hasLooseBVarBGo`'s and this walk's top calls
 each clear it, and neither runs inside the other). -/
--- con-ron: ConRon/Arena/Core.lean:2957-3002 ConRon.Arena.hasLooseBVarInGo
+-- con-ron: ConRon/Arena/Core.lean:3153-3198 ConRon.Arena.hasLooseBVarInGo
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarInGo]
 def hasLooseBVarInGoL : FunDecl :=
   lfn (f, w, d, h) locals (bb, g, x, y, z, fd, j, dd, r1, r) {
@@ -583,7 +587,7 @@ def hasLooseBVarInGoL : FunDecl :=
 
 /-- `has_loose_bvar_in(d, w, e)`: the window query (one memoized DAG walk, the `hb` memo cleared);
 an empty window asks nothing. -/
--- con-ron: ConRon/Arena/Core.lean:3004-3008 ConRon.Arena.hasLooseBVarIn
+-- con-ron: ConRon/Arena/Core.lean:3200-3204 ConRon.Arena.hasLooseBVarIn
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarIn]
 def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
   if w == 0 { return 0 };
@@ -594,7 +598,7 @@ def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
 
 /-- `struct_used_later(cty, nP, j)`: field `j` is used by a later field (official's `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`). Its own top call (clears `hb`). -/
--- con-ron: ConRon/Arena/Core.lean:3010-3016 ConRon.Arena.structUsedLater
+-- con-ron: ConRon/Arena/Core.lean:3206-3212 ConRon.Arena.structUsedLater
 @[no_expose, l_impl ConRon.Arena.structUsedLater]
 def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) {
   (ok, bo, bl, body) := call strip_pis(nP + j + 1, cty);
@@ -729,7 +733,7 @@ def indSumForeign : Prog := []
 -- `cons_sum_ctors` on the empty constructor list: the view is unchanged.
 #guard
   match run (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) 1000
-    "cons_sum_ctors" [2, 0, 0, 7] testMem with
+    "cons_sum_ctors" [2, 0, 0, 0, 7] testMem with
   | .ok ([7], _) => true
   | _ => false
 

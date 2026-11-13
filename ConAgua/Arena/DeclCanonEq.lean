@@ -295,27 +295,28 @@ theorem capsEqAll_ok {R : Nat → Option Word} {rd : Word → Word}
     (hx : decCaps R q.toNat = some x) (hy : decCaps R r.toNat = some y) :
     capsEqAll rd q r = decide (x = y) := by
   simp only [decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx hy
-  obtain ⟨b0, h0, n6, h6, al, h8, n12, h9, ct, h10, ex⟩ := hx
+  obtain ⟨b0, h0, n6, h6, al, h8, n12, h9, ct, h10, nz, h7, ex⟩ := hx
   have ex := Option.some.inj ex; subst ex
-  obtain ⟨b0', h0', n6', h6', al', h8', n12', h9', ct', h10', ey⟩ := hy
+  obtain ⟨b0', h0', n6', h6', al', h8', n12', h9', ct', h10', nz', h7', ey⟩ := hy
   have ey := Option.some.inj ey; subst ey
   obtain ⟨w0, f0, rfl⟩ := boolW0_ hR h0
   obtain ⟨w0', f0', rfl⟩ := boolW0_ hR h0'
   obtain ⟨w6, f6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl h6
   obtain ⟨w6', f6', rfl⟩ := natW_ (q := r) (k := 6) (kn := 6) hR rfl h6'
+  obtain ⟨w7, f7, rfl⟩ := boolW_ (q := q) (k := 7) (kn := 7) hR rfl h7
+  obtain ⟨w7', f7', rfl⟩ := boolW_ (q := r) (k := 7) (kn := 7) hR rfl h7'
   obtain ⟨w12, f12, rfl⟩ := natW_ (q := q) (k := 12) (kn := 12) hR rfl h9
   obtain ⟨w12', f12', rfl⟩ := natW_ (q := r) (k := 12) (kn := 12) hR rfl h9'
   have hal := slAt_ok hR (q := q) (r := r) (i := 10) (j := 11) (kn := 10) rfl rfl rfl h8 h8'
   have hct := slAt_ok hR (q := q) (r := r) (i := 13) (j := 14) (kn := 13) rfl rfl rfl h10 h10'
   apply bool_of_iff
-  simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f6, f6', f12, f12', hal, hct,
+  simp only [capsEqAll, capsEqAB, capsEqBB, capsEqCB, f0, f0', f6, f6', f7, f7', f12, f12', hal, hct,
     Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, IIndCaps.mk.injEq, fld_nat, fld_bool]
-  simp only [and_assoc]
-  constructor
-  · rintro ⟨a1, a2, a3, a4, a5⟩
-    exact ⟨a1, a3, a4, a2, a5⟩
-  · rintro ⟨a1, a3, a4, a2, a5⟩
-    exact ⟨a1, a2, a3, a4, a5⟩
+  by_cases e6 : w6 = w6'
+  · simp only [e6, ne_eq, not_true_eq_false, ite_false]
+    exact ⟨fun h => by simp_all, fun h => by simp_all⟩
+  · have : ¬ w6.toNat = w6'.toNat := fun h => e6 (UInt64.toNat_inj.mp h)
+    simp [e6]
 
 /-! ## Recursor rules -/
 
@@ -528,8 +529,8 @@ theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
        (wk.toNat = 2 ∧ ∃ cv, decCV R (p + 1) = some cv ∧ x = .thmInfo cv) ∨
        (wk.toNat = 3 ∧ ∃ cv caps, decCV R (p + 1) = some cv ∧ decCaps R (p + 5) = some caps ∧
           x = .indInfo cv caps) ∨
-       (wk.toNat = 4 ∧ ∃ cv np nf, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
-          nat? R (p + 6) = some nf ∧ x = .ctorInfo cv np nf) ∨
+       (wk.toNat = 4 ∧ ∃ cv np nf fam, decCV R (p + 1) = some cv ∧ nat? R (p + 5) = some np ∧
+          nat? R (p + 6) = some nf ∧ hd? R (p + 7) = some fam ∧ x = .ctorInfo cv np nf fam) ∨
        (wk.toNat = 5 ∧ ∃ cv mi rp o c k rules, decCV R (p + 1) = some cv ∧
           nat? R (p + 5) = some mi ∧ nat? R (p + 6) = some rp ∧
           nat? R (p + 7) = some o ∧ nat? R (p + 8) = some c ∧
@@ -559,8 +560,8 @@ theorem ciD {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     exact .inr (.inr (.inr (.inl ⟨hh, cv, caps, hcv, hc, rfl⟩)))
   · rename_i hh
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-    obtain ⟨cv, hcv, np, hnp, nf, hnf, rfl⟩ := h
-    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, hcv, hnp, hnf, rfl⟩))))
+    obtain ⟨cv, hcv, np, hnp, nf, hnf, fam, hfam, rfl⟩ := h
+    exact .inr (.inr (.inr (.inr (.inl ⟨hh, cv, np, nf, fam, hcv, hnp, hnf, hfam, rfl⟩))))
   · rename_i hh
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨cv, hcv, mi, hmi, rp, hrp, k, hkk, o, ho, c, hc, rules, hr, rfl⟩ := h
@@ -574,7 +575,7 @@ theorem ciD_cv {R : Nat → Option Word} {p : Nat} {x : IConstantInfo}
     (h : decCI R p = some x) : decCV R (p + 1) = some x.toConstantVal := by
   obtain ⟨_, _, hx⟩ := ciD h
   rcases hx with ⟨-, cv, hcv, rfl⟩ | ⟨-, cv, _, _, hcv, -, -, rfl⟩ | ⟨-, cv, hcv, rfl⟩ |
-    ⟨-, cv, _, hcv, -, rfl⟩ | ⟨-, cv, _, _, hcv, -, -, rfl⟩ |
+    ⟨-, cv, _, hcv, -, rfl⟩ | ⟨-, cv, _, _, _, hcv, -, -, -, rfl⟩ |
     ⟨-, cv, _, _, _, _, _, _, hcv, -, -, -, -, -, -, rfl⟩ <;> exact hcv
 
 theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
@@ -588,10 +589,10 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
   have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
     UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
   rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
-      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
+      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, fam, hcv, hnp, hnf, hfam, rfl⟩ |
       ⟨k0, cv, mi, rp, o, c, k, rules, hcv, hmi, hrp, ho, hc, hk, hr, rfl⟩ <;>
   rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
-      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
+      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', fam', hcv', hnp', hnf', hfam', rfl⟩ |
       ⟨k1, cv', mi', rp', o', c', k', rules', hcv', hmi', hrp', ho', hc', hk', hr', rfl⟩
   all_goals first
     | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
@@ -637,9 +638,11 @@ theorem ciEqB_ok {R : Nat → Option Word} {rd : Word → Word}
     obtain ⟨v5, g5, rfl⟩ := natW_ (q := q) (k := 5) (kn := 5) hR rfl hnp'
     obtain ⟨w6, f6, rfl⟩ := natW_ (q := p) (k := 6) (kn := 6) hR rfl hnf
     obtain ⟨v6, g6, rfl⟩ := natW_ (q := q) (k := 6) (kn := 6) hR rfl hnf'
+    obtain ⟨w7, f7, u7, rfl⟩ := hdW_ (q := p) (k := 7) (kn := 7) hR rfl hfam
+    obtain ⟨v7, g7, t7, rfl⟩ := hdW_ (q := q) (k := 7) (kn := 7) hR rfl hfam'
     apply bool_of_iff
-    simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, c1]
-    simp [fld_nat]
+    simp only [ciEqB, r1, r2, ciEqRestB, f5, g5, f6, g6, f7, g7, c1]
+    simp [fld_nat, decI_inj_iff u7 t7, and_assoc]
   · have a1 : wk = 5 := wl wk 5 (by decide) k0
     have a2 : wk' = 5 := wl wk' 5 (by decide) k1
     subst a1 a2

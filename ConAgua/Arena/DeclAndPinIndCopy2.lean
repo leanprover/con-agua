@@ -629,7 +629,7 @@ theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat}
     (hc : decCI (aread (trunc (m.arr64 DLP) t)) s.toNat = some c) (hF : FrontCI c)
     (hP : (m.arr64 DLP).size < 2 ^ 63)
     (hkk : nat? (aread (trunc (m.arr64 DLP) t)) s.toNat = some kk) (hkw : kw.toNat = kk)
-    (hnn : nn.toNat = if kk = 3 then 20 else if kk = 4 then 7 else 10) (hk345 : kk = 3 ∨ kk = 4 ∨ kk = 5)
+    (hnn : nn.toNat = if kk = 3 then 20 else if kk = 4 then 8 else 10) (hk345 : kk = 3 ∨ kk = 4 ∨ kk = 5)
     (hql : fB m + fTop m ≤ q.toNat)
     (hlr : q.toNat + (rdW (m.arr64 DLP) (s + 3)).toNat ≤ fB m + fTop mx)
     (hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, erecP mx (q.toNat + j) =

@@ -135,7 +135,7 @@ theorem secwtb_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
     (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
     (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
-    (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf))
+    {fam : NIdx} (hcvc : decCI (erecP s₀.mem) pc.toNat = some (.ctorInfo cvc np nf fam))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (SetG p n) (secwtbE p (n + 1) s₀.mem mode vis d b us c pc ao an wtb)
       (setWtbT (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE b) (decI c) (decI us) cvc
@@ -233,7 +233,7 @@ theorem structEtaCertWith_eq (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b wtb 
         view hh >>= fun v => match v with
           | .const c us =>
             match fe.find? c with
-            | some (.ctorInfo cvc cnP cnF) => do
+            | some (.ctorInfo cvc cnP cnF _) => do
               let aargs ← getAppArgs coreWalkFuel a
               if aargs.length = cnP + cnF then setWtbT r fe depth b c us cvc aargs wtb
               else pure false
@@ -259,7 +259,7 @@ theorem setWith_nonconst (ht : (hh.tag == ETag.const) = false) :
 
 theorem setWith_other (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = true)
     (hv : st.store.view hh = some (.const c us))
-    (hf : ∀ cv np nf, fe.find? c ≠ some (.ctorInfo cv np nf)) :
+    (hf : ∀ cv np nf fam, fe.find? c ≠ some (.ctorInfo cv np nf fam)) :
     (structEtaCertWith r fe depth a b wtb).run st = .ok (false, st) := by
   rw [structEtaCertWith_eq]
   simp only [StateT.run_bind, hgaf, except_ok_bind, ht, ↓reduceIte, view_run _ _ _ hv]
@@ -268,7 +268,7 @@ theorem setWith_other (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = tru
 
 theorem setWith_ctor (c : NIdx) (us : LsIdx) (ht : (hh.tag == ETag.const) = true)
     (hv : st.store.view hh = some (.const c us)) (cvc : IConstantVal) (np nf : Nat)
-    (hf : fe.find? c = some (.ctorInfo cvc np nf)) (aargs : List EIdx)
+    {fam : NIdx} (hf : fe.find? c = some (.ctorInfo cvc np nf fam)) (aargs : List EIdx)
     (hargs : (getAppArgs coreWalkFuel a).run st = .ok (aargs, st)) :
     (structEtaCertWith r fe depth a b wtb).run st =
       (if aargs.length = np + nf then setWtbT r fe depth b c us cvc aargs wtb else pure false).run st := by
@@ -331,7 +331,7 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   · rw [ite_eq_left h0]
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv np nf e => by rw [hnone] at e; cases e)) hl
+      (fun cv np nf fam e => by rw [hnone] at e; cases e)) hl
   rw [ite_eq_right h0]
   obtain ⟨ci, hci⟩ := hfound h0
   have hfind' := find_of_found hfind h0 hci
@@ -339,9 +339,9 @@ theorem secw_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
   by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) ≠ 4
   · erw [ite_eq_left h4]
     exact RefE.of_run_eq (setWith_other _ fe _ _ _ _ a₀ _ hgaf _ _ hct hv
-      (fun cv np nf e => hctor.2 h4 cv np nf (by rw [hfind'] at e; exact Option.some.inj e))) hl
+      (fun cv np nf fam e => hctor.2 h4 cv np nf fam (by rw [hfind'] at e; exact Option.some.inj e))) hl
   erw [ite_eq_right h4]
-  obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
+  obtain ⟨cvc, hci_eq, -⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci
   -- the constructor's spine
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppArgs_callW hq.leaf.core.spine hS ha h)
@@ -432,48 +432,19 @@ def ReadPost {α : Type} (dec : List Word → α) (ok : List Word → Prop) (m :
   v.2 = m ∧ a' = a ∧ y = dec v.1 ∧ ok v.1
 
 /-- **`eta_ctor_partial_fam` refines `etaCtorPartialFam`, both outcomes** (the errors are aborts
-and its callees' class-`0` failures). -/
+and its callees' class-`0` failures): one lookup of the family `T`, no walk. -/
 theorem ecpf_ref (p : Prog) (hq : StuckProg p) {G : Prop} (n : Nat) (m : Mem) (a₀ : AState)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
-    (hS : CoreS dn m a₀ vis fe M eb) (c ty : Word) (hc : HW c) (hty : HW ty) :
-    RefE G (ecpfE p n m vis c ty) (etaCtorPartialFam fe (decI c) (decE ty)) a₀
+    (hS : CoreS dn m a₀ vis fe M eb) (c k : Word) (hc : HW c) (hnw : HW k) :
+    RefE G (ecpfE p n m vis c k) (pure (etaCtorPartialFam fe (decI c) (decI k)) : AM Bool) a₀
       (ReadPost decBool ResH m a₀) := by
-  have hR := hS.arena.base
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ n =>
   simp only [ecpfE]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (piResult_refines' p hq.leaf.core.spine.pires n _ a₀ hR ty hty) h)
-    fun r₁ m₁ hx1 => ?_
-  obtain ⟨s', hs', hm, -, hh1, hpr⟩ := hx1
-  have e1 : m₁ = m := hs'.symm.trans hm
-  rw [e1]
   unfold etaCtorPartialFam
-  refine RefE.bind_right hpr ?_
-  dsimp only [ecpfE.k_pi_result]
-  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => getAppFn_callW hq.leaf hR hh1 h)
-    fun r₂ m₂ ⟨e2, hh, hgaf⟩ => ?_
-  subst m₂
-  refine RefE.bind_right hgaf ?_
-  dsimp only [ecpfE.k_get_app_fn]
-  generalize r₂.headD 0 = h at hh hgaf ⊢
   have hl : RefE G (.ok ([0], m) : Except Err (List Word × Mem)) (pure false : AM Bool) a₀
       (ReadPost decBool ResH m a₀) := RefE.ret rfl ⟨rfl, rfl, rfl, hw0⟩
-  by_cases h3 : tagW h ≠ 3
-  · rw [ite_eq_left h3, decE_tag_const_beq _ hh]
-    simpa [h3] using hl
-  rw [ite_eq_right h3]
-  have h3' : tagW h = 3 := by simpa using h3
-  refine RefE.abort0 (by decide) fun hsc => ?_
-  refine RefE.abort0 (by decide) fun hcc => ?_
-  have hvo : viewOK m h CONST := ⟨hsc, by simpa using hcc⟩
-  obtain ⟨hv, hnw, -⟩ := L.Ind.view_const_f m a₀ hR h hh hvo h3'
-  rw [decE_tag_const_beq _ hh]
-  simp only [h3', decide_true, ↓reduceIte]
-  refine RefE.bind_right (view_run _ _ _ hv) ?_
-  generalize tfld m CONST (tierW h) (idxW h) 0 = k at hnw hv ⊢
-  simp only
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => envFind_callW hq.leaf.core hS.env hnw h)
     fun r₃ m₃ ⟨e3, hfind, hfound⟩ => ?_
   subst m₃
@@ -600,12 +571,11 @@ theorem ecp_ref (p : Prog) (hq : StuckProg p) {G : Prop} (n : Nat) (m : Mem) (a�
   rw [hfind']
   by_cases h4 : erRd m (r₂.tail.headD 0) ≠ 4
   · erw [ite_eq_left h4]
-    rcases ci with _ | _ | _ | _ | ⟨cv, np, nf⟩ | _ | _ <;> try exact hl m a₀ _ rfl hA0
-    exact absurd rfl (hctor.2 h4 cv np nf)
+    rcases ci with _ | _ | _ | _ | ⟨cv, np, nf, fam⟩ | _ | _ <;> try exact hl m a₀ _ rfl hA0
+    exact absurd rfl (hctor.2 h4 cv np nf fam)
   erw [ite_eq_right h4]
-  obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
+  obtain ⟨cvc, hci_eq, hfw⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci ⊢
-  obtain ⟨-, -, hty, htyw⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ctor_cv hci)
   simp only [L.Ind.erRd_foldN] at *
   refine RefE.abort0 (by decide) fun hov => ?_
   have hsum := toNat_add_of_not_lt' hov
@@ -626,9 +596,10 @@ theorem ecp_ref (p : Prog) (hq : StuckProg p) {G : Prop} (n : Nat) (m : Mem) (a�
     exact hl _ a₀ _ rfl hA'
   rw [ite_eq_right g, ite_eq_left (by
     rw [hlen, ← hsum]; exact UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp g))]
-  rw [hty]
+  show RefE G _ (pure (etaCtorPartialFam fe (decI k) (decI (erRd m (r₂.tail.headD 0 + 7)))) >>=
+    fun b => if b = true then pure (some (npw.toNat + nfw.toNat - aargs.length)) else pure none) a₀ _
   refine RefE.bindE (fun _ => rfl) (fun hg => hg) (ecpf_ref p hq _ _ a₀ hS' k
-    (erRd m (r₂.tail.headD 0 + 4)) hnw htyw) fun v y a₁ _ hQ => ?_
+    (erRd m (r₂.tail.headD 0 + 7)) hnw hfw) fun v y a₁ _ hQ => ?_
   obtain ⟨e5, ha1, hy, -⟩ := hQ
   obtain ⟨r₅, m₅⟩ := v
   simp only at e5 hy

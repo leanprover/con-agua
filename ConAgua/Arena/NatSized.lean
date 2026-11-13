@@ -13,7 +13,7 @@ import ConAgua.Census.Attr
 The twin's `natSizeBytes` (`8 · (log2 n / 64 + 1)`) is read off a normalised slice's limb count,
 `8 · max(l, 1)` (`NatCmpFacts.sizeBytes_pv`); the maximum is `PINS[72]` (`PinsFull.maxNatSize`).
 `lit_nat_sized` refuses a computed numeral above it (`add`, `sub`, `mul`, `succ`), `pow_refused`
-and `shift_left_refused` a `pow` or `shiftLeft` before computing (`natOpResult`'s guards).
+and `shift_left_refused` a `pow` or `shiftLeft` before computing (`natBinOpResult`'s guards).
 
 **The refusals travel as sentinel handles.** The `Nat` arms are outside the verdict closure
 (`nvFns`: they abort only with class-`0` codes), so a refusal is not a `fail` there: the arm
@@ -35,7 +35,7 @@ abbrev natRefusedPowSize : Word := 9223372036854775811
 abbrev natRefusedShlExp : Word := 9223372036854775812
 
 /-- `size_bytes(l)`: the size in bytes of a normalised literal of `l` limbs, `8 · max(l, 1)`. -/
--- con-ron: ConRon/Arena/Core.lean:1051-1054 ConRon.Arena.natSizeBytes
+-- con-ron: ConRon/Arena/Core.lean:1047-1050 ConRon.Arena.natSizeBytes
 @[no_expose, l_impl ConRon.Arena.natSizeBytes]
 def sizeBytesL : FunDecl := lfn (l) locals () {
   if l == 0 { return 8 };
@@ -43,7 +43,7 @@ def sizeBytesL : FunDecl := lfn (l) locals () {
 }
 
 /-- `nat_size_refused(l)`: the literal of `l` limbs is above the run's maximum (`PINS[72]`). -/
--- con-ron: ConRon/Arena/Core.lean:1056-1061 ConRon.Arena.natSizeRefused
+-- con-ron: ConRon/Arena/Core.lean:1052-1057 ConRon.Arena.natSizeRefused
 @[no_expose, l_impl ConRon.Arena.natSizeRefused]
 def natSizeRefusedL : FunDecl := lfn (l) locals (s) {
   s := call size_bytes(l);
@@ -53,7 +53,7 @@ def natSizeRefusedL : FunDecl := lfn (l) locals (s) {
 /-- `lit_nat_sized(o, l)`: a computed numeral, the slice `(o, l)`, refused above the run's maximum
 (the sentinel `natRefusedSize`), otherwise interned (the handle word masked to its 32 bits, so a
 handle is never a sentinel). -/
--- con-ron: ConRon/Arena/Core.lean:1063-1073 ConRon.Arena.litNatSized
+-- con-ron: ConRon/Arena/Core.lean:1059-1069 ConRon.Arena.litNatSized
 @[no_expose, l_impl ConRon.Arena.litNatSized]
 def litNatSizedL : FunDecl := lfn (o, l) locals (r, h) {
   r := call nat_size_refused(l);
@@ -65,7 +65,7 @@ def litNatSizedL : FunDecl := lfn (o, l) locals (r, h) {
 /-- `pow_refused(oa, la, e)`: `a ^ e` would be above the maximum (`natSizeBytes a > m / e`, as
 `m < s · e` with the 128-bit product: L has no division); a base `≤ 1` (the empty slice, or the
 one limb `1`) and the exponent `0` are never refused. -/
--- con-ron: ConRon/Arena/Core.lean:1075-1082 ConRon.Arena.powRefused
+-- con-ron: ConRon/Arena/Core.lean:1071-1078 ConRon.Arena.powRefused
 @[no_expose, l_impl ConRon.Arena.powRefused]
 def powRefusedL : FunDecl := lfn (oa, la, e) locals (s) {
   if la == 0 { return 0 };
@@ -78,7 +78,7 @@ def powRefusedL : FunDecl := lfn (oa, la, e) locals (s) {
 
 /-- `shift_left_refused(la, e)`: `a <<< e` would be above the maximum,
 `natSizeBytes a + e / 8 + 1 > m`. -/
--- con-ron: ConRon/Arena/Core.lean:1096-1100 ConRon.Arena.shiftLeftRefused
+-- con-ron: ConRon/Arena/Core.lean:1092-1096 ConRon.Arena.shiftLeftRefused
 @[no_expose, l_impl ConRon.Arena.shiftLeftRefused]
 def shiftLeftRefusedL : FunDecl := lfn (la, e) locals (s) {
   s := call size_bytes(la);

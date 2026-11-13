@@ -31,7 +31,7 @@ namespace L.Arena
 (the default capabilities), a constructor, a recursor with plain rules. -/
 def FrontCI : IConstantInfo → Prop
   | .indInfo _ caps => caps.all = [] ∧ caps.ctors = []
-  | .ctorInfo _ _ _ => True
+  | .ctorInfo _ _ _ _ => True
   | .recInfo _ _ _ _ rules => ∀ r ∈ rules, r.fire = .plain
   | _ => False
 
@@ -124,7 +124,7 @@ theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
     (hc : decCaps T (s + 5) = some caps) (hall : caps.all = []) (hct : caps.ctors = []) :
     decCaps B (p + 5) = some caps := by
   simp only [decCaps, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-  obtain ⟨eta, h0, ni, h6, al, h10, np, h12, ct, h13, rfl⟩ := hc
+  obtain ⟨eta, h0, ni, h6, al, h10, np, h12, ct, h13, nz, h7, rfl⟩ := hc
   simp only at hall hct
   subst hall hct
   exact ⟨eta, h.bool (hK 5 (Nat.le_refl _) (by omega)) (by omega) (by omega) h0,
@@ -133,7 +133,8 @@ theorem decCaps_reloc {T B : (Nat → Option Word)} {s p : Nat}
       (by omega) (by omega) h10,
     np, h.nat (hK 17 (by omega) (by omega)) (by omega) (by omega) h12,
     [], hlist?_nil_sh h (hK 18 (by omega) (by omega)) (hK 19 (by omega) (by omega))
-      (by omega) (by omega) h13, rfl⟩
+      (by omega) (by omega) h13,
+    nz, h.bool (hK 12 (by omega) (by omega)) (by omega) (by omega) h7, rfl⟩
 
 /-- A plain rule's words: the fire word `0`, the constructor, the field count, the right-hand side. -/
 theorem decRule_plain {R : Nat → Option Word} {q : Nat} {rr : IRecRule} (h : decRule R q = some rr)
@@ -194,7 +195,7 @@ theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List
 `s` the record; `B` the copy at `p`, its level parameters at `q` (word `2`), a recursor's rules at
 `r` (word `7`); every other word of the record (`K kk`, by the kind `kk`) reappears. -/
 def relocK (kk k : Nat) : Prop :=
-  k < (if kk = 3 then 20 else if kk = 4 then 7 else 10) ∧ k ≠ 2 ∧ (kk = 5 → k ≠ 7)
+  k < (if kk = 3 then 20 else if kk = 4 then 8 else 10) ∧ k ≠ 2 ∧ (kk = 5 → k ≠ 7)
 
 theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
     {c : IConstantInfo} (hc : decCI T s = some c) (hF : FrontCI c)
@@ -236,12 +237,13 @@ theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
       caps, decCaps_reloc h (fun k h1 h2 => hK k h2 (by omega)) hcaps hall hct, rfl⟩
   · -- constructor
     simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, a1, h1, a2, h2, rfl⟩ := hc
-    have hK : ∀ k, k < 7 → k ≠ 2 → relocK 4 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
+    obtain ⟨cv, hcv, a1, h1, a2, h2, a3, h3, rfl⟩ := hc
+    have hK : ∀ k, k < 8 → k ≠ 2 → relocK 4 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
     exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
         (hK 4 (by omega) (by omega)) hcv hq hl,
       a1, h.nat (hK 5 (by omega) (by omega)) rfl rfl h1,
-      a2, h.nat (hK 6 (by omega) (by omega)) rfl rfl h2, rfl⟩
+      a2, h.nat (hK 6 (by omega) (by omega)) rfl rfl h2,
+      a3, h.hd (hK 7 (by omega) (by omega)) rfl rfl h3, rfl⟩
   · -- recursor
     simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
     obtain ⟨cv, hcv, a1, h1, a2, h2, kb, hkb, hc⟩ := hc

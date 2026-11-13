@@ -7,23 +7,20 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 public import Std.WP.Tactic
 import ConAgua.Arena.WhnfCoreProj
-import ConAgua.Arena.WhnfCoreSlot
-import ConAgua.L.ModelGen
 public import ConAgua.Verdict.WhnfModelsE
 import ConAgua.Arena.RefWalk
-import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfCore
 
 @[expose] public section
 
 /-!
-# The `whnf_core` loop and slot (phase 5, lane `whnf`)
+# The `whnf_core` loop and slot (phase 5, lane `whnf`; con-ron's #572 memo policy)
 
-The loop's unified model `whnfCoreLoopE` refines `whnfCoreLoop`, both outcomes, iteration by
-iteration through `whnf_core_step`'s (`step_ref`, both outcomes, over its unified model); the body
-is the loop at `whnfCoreLoopFuel`, and the slot one level up (`core_ref`, both outcomes) is the memo
-around the body.
+`whnf_core`'s unified model `whnfCoreE` is the loop: its iteration `whnfCoreE.loop1` refines
+`whnfCoreLoop` from pending keys on the stack (`PendR`), both outcomes, iteration by iteration
+through `whnf_core_step`'s (`step_ref`, both outcomes, over its unified model); the slot one level
+up (`core_ref`) is the loop at `whnfCoreLoopFuel` from no pending keys (`knot_whnfCore_eq`).
 -/
 
 open ConRon.Arena
@@ -43,29 +40,33 @@ def isDoneV : ENodeView → Bool
 
 section stepRuns
 variable {mode : ConLeche.CheckMode} {eager : Bool} {r : CoreFnsA} {fe : IFEnv} {cheap : Bool} {depth : Nat}
-  {e : EIdx} {a : AState}
+  {h e : EIdx} {a : AState}
 
 theorem step_run_done (v : ENodeView) (hv : a.store.view e = some v) (hd : isDoneV v = true) :
-    (whnfCoreStep mode r fe cheap depth e).run a = .ok (.done e, a) := by
+    (whnfCoreStep mode r fe cheap depth h e).run a = .ok (.done e, a) := by
   simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   cases v <;> simp [isDoneV] at hd <;> rfl
 
-theorem step_run_app (f x : EIdx) (hv : a.store.view e = some (.app f x)) :
-    (whnfCoreStep mode r fe cheap depth e).run a = (whnfCoreAppT mode r fe cheap depth e).run a := by
-  simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]; try rfl
+theorem step_run_app (f x : EIdx) (hv : a.store.view e = some (.app f x)) (hs : isStuckHead h = false) :
+    (whnfCoreStep mode r fe cheap depth h e).run a = (whnfCoreStepApp mode r fe cheap depth e).run a := by
+  simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs]; try rfl
+
+theorem step_run_stuck (f x : EIdx) (hv : a.store.view e = some (.app f x)) (hs : isStuckHead h = true) :
+    (whnfCoreStep mode r fe cheap depth h e).run a = (whnfStuck mode r fe depth h e).run a := by
+  simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs]; try rfl
 
 theorem step_run_proj (sn : NIdx) (i : Nat) (pe : EIdx) (hv : a.store.view e = some (.proj sn i pe)) :
-    (whnfCoreStep mode r fe cheap depth e).run a =
+    (whnfCoreStep mode r fe cheap depth h e).run a =
       (whnfCoreStepProj mode r fe cheap depth e sn i pe).run a := by
   simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]; try rfl
 
 theorem step_run_let (t v b : EIdx) (hv : a.store.view e = some (.letE t v b)) :
-    (whnfCoreStep mode r fe cheap depth e).run a =
+    (whnfCoreStep mode r fe cheap depth h e).run a =
       (do let e' ← instantiate1Fast coreWalkFuel b v 0; pure (WhnfStep.cont e') : AM WhnfStep).run a := by
   simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]; try rfl
 
 theorem step_run_bvar (i : Nat) (hv : a.store.view e = some (.bvar i)) :
-    (whnfCoreStep mode r fe cheap depth e).run a =
+    (whnfCoreStep mode r fe cheap depth h e).run a =
       (ConRon.Arena.fail (.notImplemented "whnf beyond the supported fragment") : AM WhnfStep).run a := by
   simp only [whnfCoreStep, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]; try rfl
 
@@ -81,21 +82,21 @@ twin's `.bvar` arm); the `app` and `proj` arms' errors are `whnf_core_app`'s and
 `whnf_core_step_proj`'s (`AppG`). -/
 theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (he : HW e) :
-    RefE (AppG p n) (whnfCoreStepE p (n + 1) s₀.mem mode cheap vis d e)
+    (MM : ModeMaps) (eb mode cheap d h e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hh : HW h) (he : HW e) :
+    RefE (AppG p n) (whnfCoreStepE p (n + 1) s₀.mem mode cheap vis d h e)
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
+        (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
   have hS := hs.rel
   have hR := hS.arena.base
-  have hh : e.toNat < 2 ^ 32 := he
+  have hh' : e.toNat < 2 ^ 32 := he
   simp only [whnfCoreStepE]
   refine RefE.abort0 (by decide) fun ht => ?_
   -- a stuck arm answers `(0, e)` after its view check
   have done : ∀ v : ENodeView, a₀.store.view (decE e) = some v → isDoneV v = true →
       RefE (AppG p n) (.ok ([0, e], s₀.mem))
         (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-          (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
+          (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
     RefE.ret (step_run_done v hv hd) (CorePost.ret hS (by simp [decStep])
       ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
   have vok : ∀ c : TRec, ¬ tcnt s₀.mem c (tierW e) ≤ idxW e → viewOK s₀.mem e c :=
@@ -103,20 +104,34 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   by_cases g4 : tagW e = 4
   · rw [ite_eq_left g4]
     refine RefE.abort0 (by decide) fun hc4 => ?_
-    refine RefE.of_run_eq (step_run_app _ _ (view_app s₀.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1) ?_
+    have hvapp := (view_app s₀.mem a₀ hR e hh' ⟨ht, by simpa using hc4⟩ g4).1
+    by_cases hsk : (334 : Word) >>> tagW h &&& 1 ≠ 0
+    · rw [ite_eq_left hsk]
+      have hst : isStuckHead (decE h) = true := by rw [isStuckHead_w h hh]; simpa using hsk
+      refine RefE.of_run_eq (step_run_stuck _ _ hvapp hst) ?_
+      cases n with
+      | zero => exact RefE.of_cls0 rfl
+      | succ N =>
+      exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+        (·.mono (Nat.le_succ N))
+        (stuck_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h e
+          hs hh he) fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
+    rw [ite_eq_right hsk]
+    have hst : isStuckHead (decE h) = false := by rw [isStuckHead_w h hh]; simpa using hsk
+    refine RefE.of_run_eq (step_run_app _ _ hvapp hst) ?_
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
     have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
       eb mode cheap d e hs he
-    exact RefE.lastE (K := whnfCoreStepE.k_whnf_core_app p) (fun _ => rfl) (fun _ => rfl)
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
       (·.mono (Nat.le_succ N)) h1
       fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g4]
   by_cases g9 : tagW e = 9
   · rw [ite_eq_left g9]
     refine RefE.abort0 (by decide) fun hc9 => ?_
-    obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh (vok _ hc9) g9
+    obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh' (vok _ hc9) g9
     refine RefE.of_run_eq (step_run_proj _ _ _ hv) ?_
     cases n with
     | zero => exact RefE.of_cls0 rfl
@@ -125,14 +140,14 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
       (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
       (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
       (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
-    exact RefE.lastE (K := whnfCoreStepE.k_whnf_core_app p) (fun _ => rfl) (fun _ => rfl)
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
       (·.knot.mono (Nat.le_succ N)) h1
       fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
   rw [ite_eq_right g9]
   by_cases g7 : tagW e = 7
   · rw [ite_eq_left g7]
     refine RefE.abort0 (by decide) fun hc7 => ?_
-    obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh (vok _ hc7) g7
+    obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh' (vok _ hc7) g7
     refine RefE.of_run_eq (step_run_let _ _ _ hv) ?_
     refine RefE.bind_callW (s₀ := s₀) (fun _ => rfl) (hcc.inst1 n s₀ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv)
       fun r₁ m₁ _ h₁ => RefE.ret rfl ⟨h₁.after, by simp [decStep, decH], ⟨by
@@ -141,41 +156,41 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   by_cases g0 : tagW e = 0
   · rw [ite_eq_left g0]
     refine RefE.abort0 (by decide) fun hc0 => ?_
-    exact fun _ => L.Arena.ErrClaim.congr_run (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh (vok _ hc0) g0))
+    exact fun _ => L.Arena.ErrClaim.congr_run (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh' (vok _ hc0) g0))
       (ErrClaim.fail _ _ rfl)
   rw [ite_eq_right g0]
   by_cases g1 : tagW e = 1
   · rw [ite_eq_left g1]
     refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh (vok _ hc) g1
+    obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh' (vok _ hc) g1
     exact done _ hv' rfl
   rw [ite_eq_right g1]
   by_cases g2 : tagW e = 2
   · rw [ite_eq_left g2]
     refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh (vok _ hc) g2
+    obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh' (vok _ hc) g2
     exact done _ hv' rfl
   rw [ite_eq_right g2]
   by_cases g3 : tagW e = 3
   · rw [ite_eq_left g3]
     refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh (vok _ hc) g3
+    obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh' (vok _ hc) g3
     exact done _ hv' rfl
   rw [ite_eq_right g3]
   by_cases g5 : tagW e = 5
   · rw [ite_eq_left g5]
     refine RefE.abort0 (by decide) fun hc => ?_
-    exact done _ (view_lam s₀.mem a₀ hR e hh (vok _ hc) g5).1 rfl
+    exact done _ (view_lam s₀.mem a₀ hR e hh' (vok _ hc) g5).1 rfl
   rw [ite_eq_right g5]
   by_cases g6 : tagW e = 6
   · rw [ite_eq_left g6]
     refine RefE.abort0 (by decide) fun hc => ?_
-    exact done _ (view_forall s₀.mem a₀ hR e hh (vok _ hc) g6).1 rfl
+    exact done _ (view_forall s₀.mem a₀ hR e hh' (vok _ hc) g6).1 rfl
   rw [ite_eq_right g6]
   by_cases g8 : tagW e = 8
   · rw [ite_eq_left g8]
     refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh (vok _ hc) g8
+    obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh' (vok _ hc) g8
     exact done _ hv' rfl
   rw [ite_eq_right g8]
   exact RefE.of_cls0 (by decide)
@@ -184,138 +199,380 @@ include hp hwc hcc hsup in
 /-- **`whnf_core_step` refines `whnfCoreStep`** (`step_ref`'s ok half). -/
 theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
+    (MM : ModeMaps) (eb mode cheap d h e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (hh : HW h) (he : HW e) :
+    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, h, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  RefE.coreSpec (whnfCoreStepE_spec p hp (n + 1) s₀ mode cheap vis d e)
-    (step_ref p hp hwc hcc hsup n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
+        (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
+  RefE.coreSpec (whnfCoreStepE_spec p hp (n + 1) s₀ mode cheap vis d h e)
+    (step_ref p hp hwc hcc hsup n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
 end step
-
-
-/-- **`whnf_core_loop`'s model, both outcomes**: each iteration a run of `whnf_core_step`
-(`callE`), done on `(0, v)`, continuing on `(1, e')`. -/
-l_model whnfCoreLoop_specE (p : Prog) (hf : p.lookup "whnf_core_loop" = some whnfCoreLoopL)
-  fns [hf ↦ whnfCoreLoopE] grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-  finish [tierW, idxW] unified
 
 /-- **`whnf_core_step`'s error claim** at every L fuel up to `n` (what the loop's errors claim
 from; `step_ref`'s error half, `coreStepE_of`). -/
 def CoreStepE (p : Prog) (n : Nat) : Prop :=
   ∀ j, j ≤ n → ∀ (F : Nat), j ≤ F → j ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb mode cheap d e : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    CoreSpecE p (j + 1) "whnf_core_step" [mode, cheap, vis, d, e]
+    (eb mode cheap d h e : Word), SlotPre s₀ a₀ dn vis fe MM eb mode → HW h → HW e →
+    CoreSpecE p (j + 1) "whnf_core_step" [mode, cheap, vis, d, h, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) s₀ a₀
+        (decE h) (decE e)) s₀ a₀
+
+/-! ## The pending keys -/
+
+/-- **The loop's pending keys** at memory `m`: `pend` is the stack slice `SPN[pb, pb + pn)` right
+below the top, `pendC` its suffix from `pc`. -/
+structure PendR (m : Mem) (pb pn pc : Word) (pend pendC : Array EIdx) : Prop where
+  slice : SpineR m pb pn pend
+  pc_le : pc.toNat ≤ pn.toNat
+  suffix : pend.extract pc.toNat pend.size = pendC
+  top : spTop m = pb + pn
+
+/-! ## The twin's loop, arm by arm -/
+
+section twinLoop
+variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool) (depth K : Nat) (e : EIdx)
+  (pend pendC : Array EIdx)
+
+/-- The loop's step answer: the done arm stores the chain, the cont arm continues. -/
+def loopS (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool) (depth K : Nat) (e : EIdx)
+    (pend pendC : Array EIdx) (h : EIdx) : ConRon.Arena.WhnfStep → AM EIdx
+  | .done v =>
+    whnfCoreStoreChain cheap
+      (pushKey (if cheap then false else whnfCoreStoresDone (whnfCoreKey h e) e v) e pend)
+      (pushCheapKey (whnfCoreCheapSafe h e)
+        (if cheap then false else whnfCoreStoresDone (whnfCoreKey h e) e v) e pendC) v >>= fun _ => pure v
+  | .cont e' =>
+    whnfCoreLoop mode r fe cheap depth K e'
+      (pushKey (if cheap then false else whnfCoreKey h e) e pend)
+      (pushCheapKey (whnfCoreCheapSafe h e) (if cheap then false else whnfCoreKey h e) e pendC)
+
+/-- The loop past the lookup. -/
+def loopO (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (cheap : Bool) (depth K : Nat) (e : EIdx)
+    (pend pendC : Array EIdx) (h : EIdx) : Option EIdx → AM EIdx
+  | some x => whnfCoreStoreChain cheap pend #[] x >>= fun _ => pure x
+  | none => whnfCoreStep mode r fe cheap depth h e >>= loopS mode r fe cheap depth K e pend pendC h
+
+/-- The loop at a stuck tag: the chain stored, `e` answered. -/
+theorem loop_stuck (ht : whnfCoreStuckTag e = true) :
+    whnfCoreLoop mode r fe cheap depth (K + 1) e pend pendC =
+      (whnfCoreStoreChain cheap pend pendC e >>= fun _ => pure e) := by
+  rw [whnfCoreLoop]; simp only [ht, ite_true]
+
+/-- The loop past the stuck test: the spine head, the lookup, `loopO`. -/
+theorem loop_go (ht : whnfCoreStuckTag e = false) :
+    whnfCoreLoop mode r fe cheap depth (K + 1) e pend pendC =
+      (getAppFn coreWalkFuel e >>= fun h => whnfCoreLookupAt (whnfCoreKey h e) cheap e >>=
+        loopO mode r fe cheap depth K e pend pendC h) := by
+  rw [whnfCoreLoop]; simp only [ht, Bool.false_eq_true, ite_false]
+  congr 1; funext h; congr 1; funext o
+  cases o with
+  | some x => rfl
+  | none =>
+    simp only [loopO]; congr 1; funext st
+    cases st with
+    | done v => cases cheap <;> simp [loopS]
+    | cont e' => cases cheap <;> simp [loopS]
+
+end twinLoop
+
+/-! ## The loop's words and the pending keys -/
+
+/-- The `stb` word's meaning. -/
+theorem stb_iff (cheap kw st g rv e : Word) (hk : kw = 0 ∨ kw = 1) :
+    ((if cheap = 0 then (1 : Word) else 0) &&& kw &&&
+        (((if st ≠ 0 then (1 : Word) else 0) ||| if g ≠ 4 then (1 : Word) else 0) ||| if rv ≠ e then (1 : Word) else 0) ≠ 0) ↔
+      (cheap = 0 ∧ kw = 1 ∧ (st ≠ 0 ∨ g ≠ 4 ∨ rv ≠ e)) := by
+  rcases hk with rfl | rfl <;> by_cases h1 : cheap = 0 <;> by_cases h2 : st ≠ 0 <;> by_cases h3 : g ≠ 4 <;>
+    by_cases h4 : rv ≠ e <;> simp_all
+
+/-- What the loop keeps of the stack below the entry's top. -/
+structure LoopInv (m₀ m : Mem) (pb : Word) : Prop where
+  below : ∀ j : Word, j < pb → spW m j = spW m₀ j
+  size : (m.arr64 SPN).size = (m₀.arr64 SPN).size
+  bk : BKept m₀ m
+  pg : PoolGrew m₀ m
+
+theorem LoopInv.kept {m₀ m m' : Mem} {pb : Word} (h : LoopInv m₀ m pb) (hk : StackKept m m')
+    (hle : pb ≤ spTop m) : LoopInv m₀ m' pb :=
+  ⟨fun j hj => (hk.below j (UInt64.lt_of_lt_of_le hj hle)).trans (h.below j hj), hk.size.trans h.size,
+    h.bk.trans hk.bstk, h.pg.trans hk.pool⟩
+
+/-- The pending keys survive a run that kept the stack below the top. -/
+theorem PendR.kept {m m' : Mem} {pb pn pc : Word} {pend pendC : Array EIdx} (h : PendR m pb pn pc pend pendC)
+    (hk : StackKept m m') (hspn : (m.arr64 SPN).size < 2 ^ 63) : PendR m' pb pn pc pend pendC := by
+  have hb := h.slice.bound
+  refine ⟨h.slice.keep hk.size hk.below ?_ hspn, h.pc_le, h.suffix, hk.top.trans h.top⟩
+  rw [h.top, L.toNat_add_of_lt _ _ (by omega)]; exact Nat.le_refl _
+
+/-- The cheap keys emptied (`pushCheapKey` past an unsafe step). -/
+theorem PendR.reset {m : Mem} {pb pn pc : Word} {pend pendC : Array EIdx} (h : PendR m pb pn pc pend pendC) :
+    PendR m pb pn pn pend #[] :=
+  ⟨h.slice, Nat.le_refl _, by rw [h.slice.size]; simp; omega, h.top⟩
+
+
+/-- The push's capacity check passed: room on the stack, and the top's word exists. -/
+theorem push_room {m : Mem} {pb pn : Word} (hspn : (m.arr64 SPN).size < 2 ^ 63)
+    (hroom : ¬ (m.len64 SPN ≤ pb + pn ∨ m.len64 CTL ≤ 136)) (hpn : pb.toNat + pn.toNat < 2 ^ 63) :
+    pb.toNat + pn.toNat < (m.arr64 SPN).size ∧ (136 : Word).toNat < (m.arr64 CTL).size := by
+  simp only [not_or, UInt64.not_le] at hroom
+  obtain ⟨h1, h2⟩ := hroom
+  constructor
+  · rw [UInt64.lt_iff_toNat_lt, L.toNat_add_of_lt _ _ (by omega)] at h1
+    simp only [L.Mem.len64, UInt64.toNat_ofNat'] at h1
+    rw [Nat.mod_eq_of_lt (by omega)] at h1; exact h1
+  · rw [UInt64.lt_iff_toNat_lt] at h2
+    simp only [L.Mem.len64, UInt64.toNat_ofNat'] at h2
+    have := Nat.mod_le (m.arr64 CTL).size (2 ^ 64)
+    show 136 < _; have : (136 : Word).toNat = 136 := rfl; omega
+
+/-- The pending keys past a push of `e` (the cheap keys keep their start). -/
+theorem PendR.push {m : Mem} {pb pn pc : Word} {pend pendC : Array EIdx} (h : PendR m pb pn pc pend pendC)
+    (hspn : (m.arr64 SPN).size < 2 ^ 63) (hroom : ¬ (m.len64 SPN ≤ pb + pn ∨ m.len64 CTL ≤ 136))
+    (e : Word) (he : HW e) :
+    PendR ((m.set64 SPN (pb + pn) e).set64 CTL 136 (pb + (pn + 1))) pb (pn + 1) pc (pend.push (decE e))
+      (pendC.push (decE e)) := by
+  have hb := h.slice.bound
+  obtain ⟨hr1, hr2⟩ := push_room hspn hroom (by omega)
+  have hn1 : (pn + 1).toNat = pn.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  refine ⟨(h.slice.push hspn hr1 e he).setCtl 136 _, by rw [hn1]; have := h.pc_le; omega, ?_, ?_⟩
+  · rw [← h.suffix]; have := h.pc_le; have := h.slice.size
+    apply Array.toList_inj.mp; simp [Array.toList_extract, List.extract]
+    rw [List.drop_append_of_le_length (by simp; omega)]
+    rw [List.take_of_length_le (by simp; omega)]
+    rw [List.take_of_length_le (l := List.drop _ _) (by simp)]
+  · unfold spTop
+    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact hr2⟩]
+
+/-- **A chain's end**: the answer `x`, the top put back to the entry's. -/
+theorem fin_post {dn : NIdx → Option ConLeche.Name} {m₀ m₁ : Mem} {a₁ : AState} {vis : Word} {fe : IFEnv}
+    {MM₀ M₁ : ModeMaps} {eb pb x : Word} {y : EIdx} (hS : CoreS dn m₁ a₁ vis fe M₁ eb)
+    (hK : KeptAll MM₀ M₁ eb) (hI : LoopInv m₀ m₁ pb) (htop₀ : spTop m₀ = pb) (hle : pb ≤ spTop m₁)
+    (hx : HW x) (hy : y = decE x) :
+    CorePost decH dn m₀ vis fe MM₀ eb ResH ([x], m₁.set64 CTL 136 pb) y a₁ := by
+  subst htop₀
+  exact ⟨⟨M₁, hS.frame_stk (MemFrame.setCtl m₁ 136 _) (by simp) (by simp), hK,
+    StackKept.restoreTop hI.below hle hI.size hI.bk hI.pg⟩, hy, hx⟩
+
+
+/-- Handle equality off the words. -/
+theorem decE_beq_w (v e : Word) (hv : HW v) (he : HW e) : (decE v == decE e) = decide (v = e) := by
+  rw [← evalW_eq_ne v e hv he]; by_cases h : v = e <;> simp [Cmp.evalW, Cmp.eval, h]
+
+/-- The loop's `stb` word is the twin's store decision (`whnfCoreStoresDone` at a done step,
+the key at a continued one; nothing in the cheap mode). -/
+theorem stb_twin (cheap kw st rv e : Word) (hk : kw = 0 ∨ kw = 1) (hrv : HW rv) (he : HW e) :
+    (if (cheap != 0) = true then false
+      else if st = 0 then whnfCoreStoresDone (kw != 0) (decE e) (decE rv) else (kw != 0)) =
+    decide ((if cheap = 0 then (1 : Word) else 0) &&& kw &&&
+        (((if st ≠ 0 then (1 : Word) else 0) ||| if tagW e ≠ 4 then (1 : Word) else 0) |||
+          if rv ≠ e then (1 : Word) else 0) ≠ 0) := by
+  have ht : ((decE e).tag == ETag.app) = decide (tagW e = 4) := decE_tag_beq e he 4 (by decide)
+  rw [Bool.eq_iff_iff, decide_eq_true_iff, stb_iff cheap kw st (tagW e) rv e hk]
+  simp only [whnfCoreStoresDone, ht, decE_beq_w rv e hrv he]
+  rcases hk with rfl | rfl <;> by_cases h1 : cheap = 0 <;> by_cases h2 : st = 0 <;>
+    by_cases h3 : tagW e = 4 <;> by_cases h4 : rv = e <;> simp_all
+
 
 section loopRef
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
   (hsup : ∀ fe : IFEnv, SupKeep fe)
 
 include hp hwc hcc hsup in
-/-- **The loop refines `whnfCoreLoop`, both outcomes**, at every twin loop fuel `K ≥ k`: each
-iteration is `whnf_core_step`'s (`whnfCoreStep_refines'`, its error claim `CoreStepE`). -/
+/-- **The loop refines `whnfCoreLoop`, both outcomes**, at every twin loop fuel `K ≥ k`, from
+pending keys `pend`/`pendC` (`PendR`) above the entry's top `pb`: each iteration is
+`whnf_core_step`'s (`whnfCoreStep_refines'`, its error claim `CoreStepE`). -/
+@[refines ConRon.Arena.whnfCoreLoop]
 theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode cheap d : Word)
-    (hmode : mode < 4) :
-    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (eb e : Word),
-      CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW e →
-      RefE (CoreStepE p n) (whnfCoreLoopE.loop1 p k m mode cheap vis d e)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode cheap d pb : Word)
+    (hmode : mode < 4) (m₀ : Mem) (MM₀ : ModeMaps) (eb : Word) (heb : eb = (mode >>> 1) &&& 1)
+    (htop₀ : spTop m₀ = pb) :
+    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K → ∀ (m : Mem) (a : AState) (MM : ModeMaps) (e pn pc : Word)
+      (pend pendC : Array EIdx),
+      CoreS dn m a vis fe MM eb → KeptAll MM₀ MM eb → HW e → PendR m pb pn pc pend pendC →
+      LoopInv m₀ m pb →
+      RefE (CoreStepE p n) (whnfCoreE.loop1 p k m mode cheap vis d e pb pn pc)
         (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0)
-          d.toNat K (decE e)) a
-        (fun v y a' => CorePost decH dn m vis fe MM eb ResH ([v.1], v.2) y a') := by
+          d.toNat K (decE e) pend pendC) a
+        (CorePost decH dn m₀ vis fe MM₀ eb ResH) := by
   intro k
   induction k with
-  | zero =>
-    intro _ _ _ _ _ _ _ _ _ _ _
-    simp only [whnfCoreLoopE.loop1]; exact RefE.of_cls0 rfl
+  | zero => intros; simp only [whnfCoreE.loop1]; exact RefE.of_cls0 rfl
   | succ k ih =>
-    intro hkn K hK m a MM eb e hS heb he
-    simp only [whnfCoreLoopE.loop1]
-    cases k with
-    | zero => exact RefE.callE_zero (fun _ => whnfCoreLoopE.k_whnf_core_step.none ..)
-    | succ j =>
-    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hs : SlotPre ⟨m, Locals.init []⟩ a dn vis fe MM eb mode := ⟨hS, hmode, heb⟩
-    rw [whnfCoreLoop.eq_2]
-    refine RefE.bind_callE (s₀ := ⟨m, Locals.init []⟩) (fun _ => whnfCoreLoopE.k_whnf_core_step.none ..)
-      (whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega) _ a dn vis
-        fe MM eb mode cheap d e hs he)
-      (fun (hG : CoreStepE p n) => hG j (by omega) F (by omega) (by omega) _ a dn vis fe MM eb mode cheap
-        d e hs he)
-      fun r m₁ _ h₁ => RefE.after_core (w := fun v : Word × Mem => ([v.1], v.2)) h₁ fun M₁ hS₁ _ => ?_
-    by_cases h0 : r.headD 0 = 0
-    · rw [whnfCoreLoopE.k_whnf_core_step.arm1 _ _ _ _ _ _ _ _ h0]
-      simp only [decStep, h0, ↓reduceIte]
-      exact RefE.ret rfl (CorePost.ret hS₁ rfl h₁.resOk.2)
-    rw [whnfCoreLoopE.k_whnf_core_step.arm2 _ _ _ _ _ _ _ _ h0]
-    simp only [decStep, h0, ↓reduceIte]
-    exact ih (by omega) K' (by omega) m₁ _ M₁ eb _ hS₁ heb h₁.resOk.2
-
-include hp hwc hcc hsup in
-/-- `whnf_core_loop` from its run, both outcomes (`coreLoop_ref` at the call's fuel). -/
-theorem whnfCoreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    RefE (CoreStepE p n) (whnfCoreLoopE p (n + 1) s₀.mem mode cheap vis d e)
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) a₀
-      (fun v y a' => CorePost decH dn s₀.mem vis fe MM eb ResH ([v.1], v.2) y a') := by
-  rw [whnfCoreLoopE.arm1]
-  exact coreLoop_ref p hp hwc hcc hsup n hk F hF hn dn vis fe mode cheap d hs.mode4 (n + 1)
-    (Nat.le_refl _) K (by omega) s₀.mem a₀ MM eb e hs.rel hs.eb_mode he
-
-include hp hwc hcc hsup in
-/-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`** (the ok half). -/
-theorem whnfCoreLoop_refines' (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  CoreSpec.of_refE (w := fun v => ([v.1], v.2))
-    (whnfCoreLoop_specE p hp.loop (n + 1) s₀ mode cheap vis d e)
-    (whnfCoreLoop_ref p hp hwc hcc hsup n hk F K hF hK hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
-    fun _ _ => ⟨rfl, rfl, id⟩
-
-include hp hwc hcc hsup in
-/-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
-theorem whnfCoreBody_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreLoop_refines' p hp hwc hcc hsup n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
-    a₀ dn vis fe MM eb mode cheap d e hs he
+  intro hkn K hK m a MM e pn pc pend pendC hS hKA he hP hI
+  obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+  simp only [whnfCoreE.loop1]
+  rw [ite_eq_left trivial]
+  cases k with
+  | zero =>
+    split
+    · simp only [whnfCoreStoreChainE]; exact RefE.of_cls0 rfl
+    · rw [callW_zero, liftE_none, whnfCoreE.k_get_app_fn.none]; exact RefE.of_cls0 (by simp)
+  | succ j =>
+  have hspn := hS.spn
+  have hbd := hP.slice.bound
+  have hpbn : (pb + pn).toNat = pb.toNat + pn.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hle : pb ≤ spTop m := by rw [hP.top, UInt64.le_iff_toNat_le, hpbn]; omega
+  by_cases hst : (657 : Word) >>> tagW e &&& 1 = 0
+  · rw [ite_eq_left hst]
+    have ht : whnfCoreStuckTag (decE e) = true := by rw [stuckTag_w e he]; simp [hst]
+    rw [loop_stuck _ _ _ _ _ _ _ _ _ ht]
+    refine RefE.bindE (fun _ => whnfCoreE.k_whnf_core_store_chain.none ..) id
+      (storeChain_ref p hp (CoreStepE p n) j dn vis fe mode cheap pb pn pc e pend pendC m a MM eb heb he hS
+        hP.slice hP.pc_le hP.suffix (by rw [← hpbn, ← hP.top]; exact Nat.le_refl _)) fun ⟨r₁, m₁⟩ y a₁ _ hQ => ?_
+    obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hQ.after
+    rw [whnfCoreE.k_whnf_core_store_chain.arm1]
+    exact RefE.ret rfl (fin_post hS₁ (hKA.trans hK₁) (hI.kept hSt₁ hle) htop₀ (hSt₁.top ▸ hle) he rfl)
+  rw [ite_eq_right hst]
+  have ht : whnfCoreStuckTag (decE e) = false := by rw [stuckTag_w e he]; simp [hst]
+  rw [loop_go _ _ _ _ _ _ _ _ _ ht]
+  refine RefE.onlySim (K := whnfCoreE.k_get_app_fn p (j + 1) mode cheap vis d e pb pn pc (tagW e))
+    (fun _ => whnfCoreE.k_get_app_fn.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
+  obtain ⟨t₁, ht₁, hm₁, -, hhw, hrun1⟩ := triple_of_callW
+    (getAppFn_refines p hp.spine (j + 1) ⟨m, Locals.init []⟩ a hS.arena.base e he) h1
+  have hm1 : m₁ = m := by rw [← ht₁]; exact hm₁
+  rw [hm1]
+  rw [whnfCoreE.k_get_app_fn.arm1]
+  refine RefE.bind_right hrun1 ?_
+  generalize r₁.headD 0 = h at hhw ⊢
+  rw [key_w h e hhw he]
+  have hkw01 := key01 h e hhw he
+  generalize hkw : ((640 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&&
+    (1 - ((334 : Word) >>> tagW h &&& 1))) = kw at hkw01 ⊢
+  refine RefE.bindE (fun _ => whnfCoreE.k_whnf_core_lookup_at.none ..) id
+    (lookup_ref p hp (CoreStepE p n) j m a dn vis fe MM eb mode kw cheap e hS heb he)
+    fun ⟨r₂, m₂⟩ o a₂ hrun2 hQ => ?_
+  obtain ⟨M₂, hS₂, hK₂, hSt₂⟩ := hQ.after
+  have hI₂ := hI.kept hSt₂ hle
+  have hP₂ := hP.kept hSt₂ hspn
+  have hle₂ : pb ≤ spTop m₂ := hSt₂.top ▸ hle
+  have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hS₂.spn
+  by_cases hf : r₂.headD 0 ≠ 0
+  · -- a hit: the chain stored, the entry answered
+    rw [whnfCoreE.k_whnf_core_lookup_at.arm1 (hc1 := hf)]
+    have ho : o = some (decE (r₂.tail.headD 0)) := by rw [hQ.res]; simp only [decOptR, decOpt, hf, ite_false]
+    subst ho
+    simp only [loopO]
+    have hbd₂ := hP₂.slice.bound
+    refine RefE.bindE (fun _ => whnfCoreE.k_whnf_core_store_chain_2.none ..) id
+      (storeChain_ref p hp (CoreStepE p n) j dn vis fe mode cheap pb pn pn _ pend #[] m₂ a₂ M₂ eb heb
+        hQ.valid.2 hS₂ hP₂.slice (Nat.le_refl _) (by rw [hP₂.slice.size]; simp; omega)
+        (by rw [← hpbn, ← hP₂.top]; exact Nat.le_refl _)) fun ⟨r₃, m₃⟩ y a₃ _ hQ₃ => ?_
+    obtain ⟨M₃, hS₃, hK₃, hSt₃⟩ := hQ₃.after
+    rw [whnfCoreE.k_whnf_core_store_chain_2.arm1]
+    exact RefE.ret rfl (fin_post hS₃ ((hKA.trans hK₂).trans hK₃) (hI₂.kept hSt₃ hle₂) htop₀
+      (hSt₃.top ▸ hle₂) hQ.valid.2 rfl)
+  have hf : r₂.headD 0 = 0 := Classical.not_not.mp hf
+  rw [whnfCoreE.k_whnf_core_lookup_at.arm2 (hc1 := hf)]
+  have ho : o = none := by rw [hQ.res]; simp only [decOptR, decOpt, hf, ite_true]
+  subst ho
+  simp only [loopO]
+  have hsw01 := safe_w h e hhw he
+  generalize hsw : ((128 : Word) >>> tagW e &&& 1 ||| (if tagW e = 4 then (1 : Word) else 0) &&&
+    (((334 : Word) >>> tagW h &&& 1) ||| (if tagW h = 5 then (1 : Word) else 0))) = sw at hsw01 ⊢
+  have hkey := key_w h e hhw he
+  rw [hkw] at hkey
+  refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩) (fun _ => whnfCoreE.k_whnf_core_step.none ..)
+    (whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
+      mode cheap d h e ⟨hS₂, hmode, heb⟩ hhw he)
+    (fun hG => hG j (by omega) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb mode cheap d h e
+      ⟨hS₂, hmode, heb⟩ hhw he) fun r₃ m₃ _ hR3 => ?_
+  obtain ⟨-, ⟨M₃, hS₃, hK₃, hSt₃⟩, -, hrw3⟩ := hR3
+  generalize AM.st (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe
+    (cheap != 0) d.toNat (decE h) (decE e)) a₂ = a₃ at hS₃ ⊢
+  have hI₃ := hI₂.kept hSt₃ hle₂
+  have hP₃ := hP₂.kept hSt₃ hspn₂
+  have hle₃ : pb ≤ spTop m₃ := hSt₃.top ▸ hle₂
+  have hspn₃ : (m₃.arr64 SPN).size < 2 ^ 63 := hS₃.spn
+  have hK₃' := (hKA.trans hK₂).trans hK₃
+  -- the rest of the iteration, from the pending keys past the push
+  have tail : ∀ (m' : Mem) (pn' pc' : Word),
+      CoreS dn m' a₃ vis fe M₃ eb → LoopInv m₀ m' pb →
+      PendR m' pb pn' pc'
+        (pushKey (if (cheap != 0) = true then false
+          else if r₃.headD 0 = 0 then whnfCoreStoresDone (kw != 0) (decE e) (decE (r₃.tail.headD 0))
+          else (kw != 0)) (decE e) pend)
+        (pushCheapKey (sw != 0) (if (cheap != 0) = true then false
+          else if r₃.headD 0 = 0 then whnfCoreStoresDone (kw != 0) (decE e) (decE (r₃.tail.headD 0))
+          else (kw != 0)) (decE e) pendC) →
+      RefE (CoreStepE p n) (whnfCoreE.j2 p (j + 1) mode cheap vis d pb pn' pc' (r₃.headD 0) (r₃.tail.headD 0) m')
+        (loopS (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat K'
+          (decE e) pend pendC (decE h) (decStep r₃)) a₃ (CorePost decH dn m₀ vis fe MM₀ eb ResH) := by
+    intro m' pn' pc' hS' hI' hP'
+    have hle' : pb ≤ spTop m' := by
+      rw [hP'.top, UInt64.le_iff_toNat_le, L.toNat_add_of_lt _ _ (by have := hP'.slice.bound; have := hS'.spn; omega)]
+      omega
+    by_cases hs0 : r₃.headD 0 = 0
+    · rw [whnfCoreE.j2.arm1 (hc1 := hs0)]
+      simp only [hs0, ite_true] at hP'
+      simp only [decStep, hs0, ite_true, loopS, hkey, hsw01]
+      refine RefE.bindE (fun _ => whnfCoreE.k_whnf_core_store_chain_3.none ..) id
+        (storeChain_ref p hp (CoreStepE p n) j dn vis fe mode cheap pb pn' pc' _ _ _ m' a₃ M₃ eb heb hrw3.2 hS'
+          hP'.slice hP'.pc_le hP'.suffix (by
+            rw [hP'.top, L.toNat_add_of_lt _ _ (by have := hP'.slice.bound; have := hS'.spn; omega)]; exact Nat.le_refl _)) fun ⟨r₄, m₄⟩ y a₄ _ hQ₄ => ?_
+      obtain ⟨M₄, hS₄, hK₄, hSt₄⟩ := hQ₄.after
+      rw [whnfCoreE.k_whnf_core_store_chain_3.arm1]
+      exact RefE.ret rfl (fin_post hS₄ (hK₃'.trans hK₄) (hI'.kept hSt₄ hle') htop₀ (hSt₄.top ▸ hle')
+        hrw3.2 rfl)
+    · rw [whnfCoreE.j2.arm2 (hc1 := hs0)]
+      simp only [hs0, ite_false] at hP'
+      simp only [decStep, hs0, ite_false, loopS, hkey, hsw01]
+      exact ih (by omega) K' (by omega) m' a₃ M₃ _ pn' pc' _ _ hS' hK₃' hrw3.2 hP' hI'
+  have hstb := stb_twin cheap kw (r₃.headD 0) (r₃.tail.headD 0) e hkw01 hrw3.2 he
+  rw [hstb] at tail
+  by_cases hsb : ((if cheap = 0 then (1 : Word) else 0) &&& kw &&&
+      (((if r₃.headD 0 ≠ 0 then (1 : Word) else 0) ||| if tagW e ≠ 4 then (1 : Word) else 0) |||
+        if r₃.tail.headD 0 ≠ e then (1 : Word) else 0)) ≠ 0
+  · by_cases hroom : m₃.len64 SPN ≤ pb + pn ∨ m₃.len64 CTL ≤ 136
+    · rw [whnfCoreE.k_whnf_core_step.abort1 (hc1 := hsb) (hc2 := hroom)]; exact RefE.of_cls0 rfl
+    rw [whnfCoreE.k_whnf_core_step.arm1 (hc1 := hsb) (hc2 := hroom)]
+    rw [decide_eq_true hsb] at tail
+    simp only [pushKey, ite_true, pushCheapKey] at tail
+    have hP₄ := hP₃.push hspn₃ hroom e he
+    have hbd₃ := hP₃.slice.bound
+    obtain ⟨hr1, hr2⟩ := push_room hspn₃ hroom (by omega)
+    have hfr := spnCtl_frame m₃ (pb + pn) e (pb + (pn + 1))
+    have hS₄ := hS₃.frame_stk hfr (by simp) (by simp)
+    have hI₄ : LoopInv m₀ ((m₃.set64 SPN (pb + pn) e).set64 CTL 136 (pb + (pn + 1))) pb :=
+      ⟨fun i hi => by
+        rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
+          have := UInt64.lt_iff_toNat_lt.mp hi
+          rw [← h, hpbn] at this; omega)]
+        exact hI₃.below i hi,
+       by simp only [L.Mem.size64_set64]; exact hI₃.size,
+       hI₃.bk.trans (BKept.of_frame hfr (by decide) (by decide)),
+       hI₃.pg.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩
+    by_cases hs : sw = 0
+    · rw [whnfCoreE.j1.arm1 (hc1 := hs)]
+      simp only [hs, bne_self_eq_false, Bool.false_eq_true, ite_false] at tail
+      exact tail _ _ _ hS₄ hI₄ hP₄.reset
+    · rw [whnfCoreE.j1.arm2 (hc1 := hs)]
+      simp only [hs, bne_iff_ne, ne_eq, not_false_eq_true, ite_true] at tail
+      exact tail _ _ _ hS₄ hI₄ hP₄
+  · rw [whnfCoreE.k_whnf_core_step.arm2 (hc1 := Classical.not_not.mp hsb)]
+    rw [decide_eq_false hsb] at tail
+    simp only [pushKey, Bool.false_eq_true, ite_false, pushCheapKey] at tail
+    by_cases hs : sw = 0
+    · rw [whnfCoreE.j1.arm1 (hc1 := hs)]
+      simp only [hs, bne_self_eq_false, Bool.false_eq_true, ite_false] at tail
+      exact tail _ _ _ hS₃ hI₃ hP₃.reset
+    · rw [whnfCoreE.j1.arm2 (hc1 := hs)]
+      simp only [hs, bne_iff_ne, ne_eq, not_false_eq_true, ite_true] at tail
+      exact tail _ _ _ hS₃ hI₃ hP₃
 
 end loopRef
 
-/-! ## The slot: a mode memo around the body -/
+/-! ## The slot: the loop at `whnfCoreLoopFuel`, no pending keys -/
 
-section twin
-variable (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (d : Nat) (e : EIdx) (a : AState)
-
-theorem knot_whnfCore_missK_err (h : whnfCoreStuckTag e = false)
-    (hm : a.caches.whnfCoreCheapC[e]? = none) (ce : CheckError)
-    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe true d e).run a = .error ce) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore true d e).run a = .error ce := by
-  simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
-
-theorem knot_whnfCore_missF_err (h : whnfCoreStuckTag e = false)
-    (hm : a.caches.whnfCoreC[e]? = none) (ce : CheckError)
-    (hb : (whnfCoreBody mode (coreKnot mode eager fe id F) fe false d e).run a = .error ce) :
-    ((coreKnot mode eager fe id (F + 1)).whnfCore false d e).run a = .error ce := by
-  simp [coreKnot, h, hm, StateT.run_bind, hb]; try rfl
-
-end twin
+/-- **The knot's `whnfCore` slot is the body** one level down (con-ron's #572: no stuck-tag test,
+no memo in the slot). -/
+theorem knot_whnfCore_eq (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv) (F : Nat) (c : Bool)
+    (d : Nat) (e : EIdx) :
+    (coreKnot mode eager fe id (F + 1)).whnfCore c d e =
+      whnfCoreLoop mode (coreKnot mode eager fe id F) fe c d whnfCoreLoopFuel e #[] #[] := by
+  simp only [coreKnot, whnfCoreBody, id]
 
 section slot
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
@@ -323,9 +580,8 @@ variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCalle
 
 include hp hwc hcc hsup in
 /-- **`whnf_core` at `n + 1` refines the knot's `whnfCore` slot of `coreKnot mode eager fe id F`, both
-outcomes**, `F ≥ n + 1`: a stuck tag answers itself, a memo hit its entry, a miss the body's
-answer (`whnf_core_loop` at `n`, through its run), recorded. The errors are the body's
-(`CoreStepE`). -/
+outcomes**, `F ≥ n + 1`: the loop from no pending keys at the entry's top (`coreLoop_ref`). The
+errors are the step's (`CoreStepE`). -/
 theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e : Word) (hF : n + 1 ≤ F) (hn : n + 1 ≤ 2 ^ 62)
@@ -335,98 +591,21 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
   have hS := hs.rel
-  have heb := hS.core.eb1
-  have hkey : ((mode >>> 1) &&& 1) <<< 32 = genW 0 eb := ebKey_eq mode eb hs.eb_mode
-  simp only [whnfCoreE]
-  by_cases hst : tagW e ≠ 4 ∧ tagW e ≠ 9 ∧ tagW e ≠ 7 ∧ tagW e ≠ 0
-  · rw [ite_eq_left hst]
-    have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
-    exact RefE.ret (knot_whnfCore_stuck _ _ fe F' (cheap != 0) d.toNat _ a₀ ht) (CorePost.ret hS rfl he)
-  rw [ite_eq_right hst]
-  have ht : whnfCoreStuckTag (decE e) = false := by rw [stuck_iff e he]; simpa using hst
-  -- the body's error claim at fuel `n' + 1`
-  have body : ∀ (n' : Nat), n = n' + 1 → ∀ (c : Word) (er : Err),
-      callE p (n' + 1) "whnf_core_loop" [mode, c, vis, d, e] s₀.mem = .error er → CoreStepE p n →
-      ErrClaim (whnfCoreBody (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F') fe (c != 0) d.toNat
-        (decE e)) a₀ er := by
-    intro n' hn' c er h2 hG
-    exact CoreSpecE.of_callE (RefE.coreSpecE (whnfCoreLoop_specE p hp.loop (n' + 1) s₀ mode c vis d e)
-      trivial (fun j hj => hG j (by omega)) (whnfCoreLoop_ref p hp hwc hcc hsup n' (hk.mono (by omega))
-        F' whnfCoreLoopFuel (by omega) (by simp only [whnfCoreLoopFuel]; omega) (by omega) s₀ a₀ dn vis
-        fe MM eb mode c d e hs he)) h2
-  by_cases hc : cheap ≠ 0
-  · rw [ite_eq_left hc]
-    have hcb : (cheap != 0) = true := by simpa using hc
-    rw [hcb]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wkf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
-    rw [hkey] at hr
-    subst hm hr
-    have hf := hS.core.wk.findE heb e he hne
-    simp only [whnfCoreE.k_wk_find]
-    by_cases h1' : (mfindG wkSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-    · rw [ite_eq_left h1']
-      exact RefE.ret (knot_whnfCore_hitK _ _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
-        (CorePost.ret hS rfl (hf.1 h1').2)
-    rw [ite_eq_right h1']
-    have hmiss := hf.2 (by simpa using h1')
-    cases n with
-    | zero => exact RefE.callE_zero (fun _ => rfl)
-    | succ n' =>
-    rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 1, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
-    · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missK_err _ _ fe F' d.toNat _ a₀ ht
-        hmiss ce h') (body n' rfl 1 _ h2 hG)
-    obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
-      (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
-        vis fe MM eb mode 1 d e hs he) (callW_of_callE h2)
-    simp only [whnfCoreE.k_whnf_core_loop]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
-    simp only [whnfCoreE.k_wk_find_2]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
-    simp only [whnfCoreE.k_wk_put]
-    have hset := callW_memoSet hp.wkf hp.wkp h3 h4
-    rw [hkey] at hset
-    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₂.headD 0) he hrw hset
-    have hb1 : ((1 : Word) != 0) = true := rfl
-    rw [hb1] at hok hres
-    have hrun := knot_whnfCore_missK _ _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
-    rw [hres] at hrun
-    exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.wk _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
-  · rw [ite_eq_right hc]
-    have hcb : (cheap != 0) = false := by simpa using hc
-    rw [hcb]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => callW_memoFind hp.wcf h) fun r₁ m₁ ⟨hm, hne, hr⟩ => ?_
-    rw [hkey] at hr
-    subst hm hr
-    have hf := hS.core.wc.findE heb e he hne
-    simp only [whnfCoreE.k_wc_find]
-    by_cases h1' : (mfindG wcSch s₀.mem e (genW 0 eb)).headD 0 ≠ 0
-    · rw [ite_eq_left h1']
-      exact RefE.ret (knot_whnfCore_hitF _ _ fe F' d.toNat _ a₀ ht _ (hf.1 h1').1)
-        (CorePost.ret hS rfl (hf.1 h1').2)
-    rw [ite_eq_right h1']
-    have hmiss := hf.2 (by simpa using h1')
-    cases n with
-    | zero => exact RefE.callE_zero (fun _ => rfl)
-    | succ n' =>
-    rcases h2 : callE p (n' + 1) "whnf_core_loop" [mode, 0, vis, d, e] s₀.mem with e2 | ⟨r₂, m₂⟩
-    · exact fun hG => ErrClaim.of_run_eq (fun ce h' => knot_whnfCore_missF_err _ _ fe F' d.toNat _ a₀ ht
-        hmiss ce h') (body n' rfl 0 _ h2 hG)
-    obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW
-      (whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s₀ a₀ dn
-        vis fe MM eb mode 0 d e hs he) (callW_of_callE h2)
-    simp only [whnfCoreE.k_whnf_core_loop_2]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₃ m₃ h3 => ?_
-    simp only [whnfCoreE.k_wc_find_2]
-    refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
-    simp only [whnfCoreE.k_wk_put]
-    have hset := callW_memoSet hp.wcf hp.wcp h3 h4
-    rw [hkey] at hset
-    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₂.headD 0) he hrw hset
-    have hb0 : ((0 : Word) != 0) = false := rfl
-    rw [hb0] at hok hres
-    have hrun := knot_whnfCore_missF _ _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
-    rw [hres] at hrun
-    exact RefE.ret hrun ⟨⟨_, hS₂, hK₁.wc _ _, hSt₁.trans hSt₂⟩, rfl, hrw⟩
+  have hspn := hS.spn
+  by_cases hab : s₀.mem.len64 SPN < rdW (s₀.mem.arr64 CTL) 136
+  · rw [whnfCoreE.abort1 (hc1 := hab)]; exact RefE.of_cls0 rfl
+  rw [whnfCoreE.arm1 (hc1 := hab), knot_whnfCore_eq]
+  have hpb : (spTop s₀.mem).toNat ≤ (s₀.mem.arr64 SPN).size := by
+    rw [UInt64.not_lt, UInt64.le_iff_toNat_le] at hab
+    simp only [L.Mem.len64, UInt64.toNat_ofNat'] at hab
+    rw [Nat.mod_eq_of_lt (by omega)] at hab; exact hab
+  exact coreLoop_ref p hp hwc hcc hsup n hk F' (by omega) (by omega) dn vis fe mode cheap d
+    (spTop s₀.mem) hs.mode4 s₀.mem MM eb hs.eb_mode rfl (n + 1) (Nat.le_refl _) ConRon.Arena.whnfCoreLoopFuel
+    (by simp only [ConRon.Arena.whnfCoreLoopFuel]; omega) s₀.mem a₀ MM e 0 0 #[] #[] hS (KeptAll.refl _ _) he
+    ⟨⟨rfl, by simpa using hpb, fun _ h => by simp at h, fun _ h => by simp at h⟩, Nat.le_refl _,
+      by simp, by simp⟩
+    ⟨fun _ _ => rfl, rfl, BKept.refl _, PoolGrew.refl _⟩
+
 
 include hp hwc hcc hsup in
 /-- **The knot's `whnfCore` slot, one level up** (`core_ref`'s ok half): given the knot at every
@@ -434,7 +613,7 @@ fuel up to `n` (for the body's callees), `whnf_core` at `n + 1` refines the slot
 `WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
-    RefE.coreSpec (whnfCoreE_spec p hp.core (n + 1) s₀ mode cheap vis d e)
+    RefE.coreSpec (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e)
       (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end slot
