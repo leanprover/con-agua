@@ -729,15 +729,12 @@ def generatedRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp,
   newp := call erec_alloc(⟪Rule.size⟫);
   ez := call erec_put(newp, EREC⦃old⦄);
   ez := call erec_put(newp + ⟪Rule.nfields⟫, EREC⦃old + ⟪Rule.nfields⟫⦄);
-  ez := call erec_put(newp + 2, 0);
   ez := call erec_put(newp + ⟪Rule.fire⟫, 1);
   ez := call erec_put(newp + ⟪Rule.lvlsOff⟫, flo);
   ez := call erec_put(newp + ⟪Rule.lvlsLen⟫, fll);
   ez := call erec_put(newp + ⟪Rule.pinsOff⟫, fpo);
   ez := call erec_put(newp + ⟪Rule.pinsLen⟫, fpl);
   ez := call erec_put(newp + ⟪Rule.rhs⟫, EREC⦃old + ⟪Rule.rhs⟫⦄);
-  ez := call erec_put(newp + 9, 0);
-  ez := call erec_put(newp + 10, 0);
   return newp
 }
 
@@ -807,22 +804,19 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   return r
 }
 
-/-- `rule_copy(b, old)`: the `Rule.size` words of the rule record at `old` copied to
-`EREC[b ‥ b + Rule.size)`. -/
+/-- `rule_copy(b, old)`: the fields of the rule record at `old` copied to the record at `b`
+(`Rule.size` words). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:531-543 ConRon.Arena.blockRecInfosTF
 @[no_expose, l_impl ConRon.Arena.blockRecInfosTF]
 def ruleCopy : FunDecl := lfn (b, old) locals (ez) {
   ez := call erec_put(b, EREC⦃old⦄);
   ez := call erec_put(b + ⟪Rule.nfields⟫, EREC⦃old + ⟪Rule.nfields⟫⦄);
-  ez := call erec_put(b + 2, EREC⦃old + 2⦄);
   ez := call erec_put(b + ⟪Rule.fire⟫, EREC⦃old + ⟪Rule.fire⟫⦄);
   ez := call erec_put(b + ⟪Rule.lvlsOff⟫, EREC⦃old + ⟪Rule.lvlsOff⟫⦄);
   ez := call erec_put(b + ⟪Rule.lvlsLen⟫, EREC⦃old + ⟪Rule.lvlsLen⟫⦄);
   ez := call erec_put(b + ⟪Rule.pinsOff⟫, EREC⦃old + ⟪Rule.pinsOff⟫⦄);
   ez := call erec_put(b + ⟪Rule.pinsLen⟫, EREC⦃old + ⟪Rule.pinsLen⟫⦄);
   ez := call erec_put(b + ⟪Rule.rhs⟫, EREC⦃old + ⟪Rule.rhs⟫⦄);
-  ez := call erec_put(b + 9, EREC⦃old + 9⦄);
-  ez := call erec_put(b + 10, EREC⦃old + 10⦄);
   return 0
 }
 

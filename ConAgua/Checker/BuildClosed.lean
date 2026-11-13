@@ -187,7 +187,7 @@ def biFns : List FnName :=
    "const_push", "ctor_info_rec", "ctor_member", "cv_at_lps", "decl_constants",
    "decl_constants_axiom", "decl_constants_ind", "decl_tables", "der_b", "der_bv", "dind_copy",
    "dlp_copy", "e_view", "ek_copy", "er_copy", "er_copy_er", "er_from_iw", "er_from_iw_go",
-   "er_put5", "er_to_iw", "erec_alloc", "erec_ci", "erec_put", "expr_drop_vars",
+   "er_put_ci", "er_to_iw", "erec_alloc", "erec_ci", "erec_put", "expr_drop_vars",
    "expr_drop_vars_list", "fire_levels_at", "forall_find", "forall_push", "fvar_find", "fvar_push",
    "get_app_args", "get_app_args_f", "get_app_fn", "get_app_fn_f", "i1l_app", "i1l_clear",
    "i1l_find", "i1l_forall", "i1l_go", "i1l_lam", "i1l_let", "i1l_proj", "i1l_put", "idx_add",

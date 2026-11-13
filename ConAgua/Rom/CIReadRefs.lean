@@ -172,7 +172,7 @@ theorem romCvRef_of (vis : Word) (fe : IFEnv) : RomCvRef p vis fe := by
   obtain ⟨rfl, rfl⟩ := hw
   have hfit : cvFits (romCvVals[id.toNat]'(by simp [romCvVals]; omega)) = true :=
     List.all_eq_true.mp romCvVals_fit _ (List.getElem_mem _)
-  replace ht2 : erT m2 = erT m1 + 4 := ht2
+  replace ht2 : erT m2 = erT m1 + CV.size.toNat := ht2
   have hgo := hI0.erT_mono
   obtain ⟨memo', icv, a', hrun, hI4, -, -, -, -, ht4, -, hH⟩ :=
     cv_rel hL hr [] ∅ _ hfit n m3 a _ _ rest' r4 m4 hI3 hM3 hs3 hpos (by omega) (by omega) h4

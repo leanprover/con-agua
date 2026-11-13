@@ -78,7 +78,7 @@ theorem liftE_ok {α : Type} {o : Option α} {x : α} (h : liftE o = .ok x) : o 
 theorem cvNewW_mfr {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
     MFr [] [] m m' := by
   obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
-  exact (erAllocW_mfr h1).trans (wrER_mfr _ _ _)
+  exact (erAllocW_mfr h1).trans (MFr.of_frame (wrERo_frame _ _ _) (by simp [EREC]) (by simp))
 
 /-- **`whnf_telescope` keeps the positivity memos** (`whnf_top` by the core's claim, the rest by
 their frames). -/

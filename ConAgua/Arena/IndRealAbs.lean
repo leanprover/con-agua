@@ -293,7 +293,7 @@ theorem wrER_afr (ws : List Word) (m : Mem) (q : Word) : AFr m (wrER m q ws) :=
 theorem cvNewW_afr {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll ty = some (q, m')) :
     AFr m m' := by
   obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
-  exact (erAllocW_afr h1).trans (wrER_afr _ _ _)
+  exact (erAllocW_afr h1).trans (AFr.of_frame (wrERo_frame _ _ _))
 
 theorem sointernW_afr {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : AFr m m' :=
   AFr.of_frame (sointernW_frame m u r m' h)

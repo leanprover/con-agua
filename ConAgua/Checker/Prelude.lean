@@ -192,7 +192,7 @@ pointer) is named `n`. -/
 -- con-ron: ConRon/Arena/Frontend/Prepare.lean:76-78 ConRon.Arena.Frontend.declares
 @[no_expose] def declDeclaresGoL : FunDecl := lfn (o, c, n, j) locals (r) {
   if c <= j { return 0 };
-  if DIND.u64[DIND.u64[o + j] + 1] == n { return 1 };
+  if DIND.u64[DIND.u64[o + j] + ⟪CI.cv⟫] == n { return 1 };
   r := call decl_declares_go(o, c, n, j + 1);
   return r
 }
@@ -218,7 +218,7 @@ def declKeyL : FunDecl := lfn (i) locals (x, r) {
   x := 1 + 8 * i;
   if DECL.u64[x] != 6 { return DECL.u64[x + 1] };
   if DECL.u64[x + 3] != 0 {
-    return DIND.u64[DIND.u64[DECL.u64[x + 2]] + 1]
+    return DIND.u64[DIND.u64[DECL.u64[x + 2]] + ⟪CI.cv⟫]
   };
   r := call intern_nanon();
   return r

@@ -108,19 +108,27 @@ theorem hlist?_nil_sh {kk : IdxKind} {T B : (Nat → Option Word)} {s p : Nat} {
 
 /-! ## The relocation -/
 
-/-- The constant value at `s + 1`, its level-parameter slice relocated to `q`. -/
+/-- The constant value at `s + CI.cv`, its level-parameter slice relocated to `q`. -/
 theorem decCV_reloc {T B : (Nat → Option Word)} {s p q : Nat} {K : Nat → Prop} {cv : IConstantVal}
-    (h : ShR T B s p K) (hK1 : K 1) (hK3 : K 3) (hK4 : K 4)
-    (hcv : decCV T (s + 1) = some cv) (hq : nat? B (p + 2) = some q)
-    (hl : ∀ off cnt, nat? T (s + 2) = some off → nat? T (s + 3) = some cnt →
+    (h : ShR T B s p K) (hKn : K CI.cv.toNat) (hKl : K (CI.cv + CV.lpsLen).toNat)
+    (hKt : K (CI.cv + CV.type).toNat)
+    (hcv : decCV T (s + CI.cv.toNat) = some cv) (hq : nat? B (p + (CI.cv + CV.lpsOff).toNat) = some q)
+    (hl : ∀ off cnt, nat? T (s + (CI.cv + CV.lpsOff).toNat) = some off →
+      nat? T (s + (CI.cv + CV.lpsLen).toNat) = some cnt →
       ∀ j v, j < cnt → T (off + j) = some v → B (q + j) = some v) :
-    decCV B (p + 1) = some cv := by
-  simp only [decCV, hlist?, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv ⊢
-  -- a whole-record relocation: the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceToNat] at hcv ⊢
-  obtain ⟨nm, hnm, lps, ⟨off, hoff, cnt, hcnt, hsl⟩, ty, hty, rfl⟩ := hcv
-  refine ⟨nm, h.hd hK1 rfl rfl hnm, lps, ⟨q, hq, cnt, h.nat hK3 (by omega) (by omega) hcnt,
-    hslice?_sh hsl (hl off cnt hoff hcnt)⟩, ty, h.hd hK4 (by omega) (by omega) hty, rfl⟩
+    decCV B (p + CI.cv.toNat) = some cv := by
+  have eo := CI.cv_add_toNat CV.lpsOff_le
+  have el := CI.cv_add_toNat CV.lpsLen_le
+  have et := CI.cv_add_toNat CV.type_le
+  have e1 := CV.lpsLen_toNat
+  obtain ⟨hn, hlst, ht⟩ := decCV_eq_some.mp hcv
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlst
+  obtain ⟨off, hoff, cnt, hcnt, hsl⟩ := hlst
+  refine decCV_eq_some.mpr ⟨h.hd hKn rfl rfl hn, ?_, h.hd hKt (by omega) (by omega) ht⟩
+  simp only [hlist?, bind, Option.bind_eq_some_iff]
+  refine ⟨q, by rw [Nat.add_assoc, ← eo]; exact hq, cnt, h.nat hKl (by omega) (by omega) hcnt,
+    hslice?_sh hsl (hl off cnt (by rw [eo, ← Nat.add_assoc]; exact hoff)
+      (by rw [el, e1]; simpa [Nat.add_assoc] using hcnt))⟩
 
 /-- An inductive's capabilities at `s + CI.indCaps` (to the record's end), of the front's shape
 (empty slices). -/
@@ -179,77 +187,59 @@ theorem decRules_reloc {T B : (Nat → Option Word)} {o q c : Nat} {rules : List
   rw [← Nat.add_assoc] at this; exact this
 
 /-- **The relocated copy of a front constant record decodes as the record.** `T` the cut pool,
-`s` the record; `B` the copy at `p`, its level parameters at `q` (word `2`), a recursor's rules at
-`r` (word `7`); every other word of the record (`K kk`, by the kind `kk`) reappears. -/
+`s` the record; `B` the copy at `p`, its level parameters at `q` (word `CI.cv + CV.lpsOff`), a
+recursor's rules at `r` (word `CI.recRulesOff`); every other word of the record (`K kk`, by the
+kind `kk`) reappears. -/
 def relocK (kk k : Nat) : Prop :=
-  k < (if kk = 3 then CI.indSize.toNat else if kk = 4 then 8 else 10) ∧ k ≠ 2 ∧ (kk = 5 → k ≠ 7)
+  k < (if kk = 3 then CI.indSize.toNat else if kk = 4 then CI.ctorSize.toNat else CI.recSize.toNat) ∧
+    k ≠ (CI.cv + CV.lpsOff).toNat ∧ (kk = 5 → k ≠ CI.recRulesOff.toNat)
 
 theorem decCI_reloc {T B : (Nat → Option Word)} {s p q r : Nat}
     {c : IConstantInfo} (hc : decCI T s = some c) (hF : FrontCI c)
     (hsh : ∀ kk, nat? T s = some kk → ShR T B s p (relocK kk))
-    (hq : nat? B (p + 2) = some q)
-    (hl : ∀ off cnt, nat? T (s + 2) = some off → nat? T (s + 3) = some cnt →
+    (hq : nat? B (p + (CI.cv + CV.lpsOff).toNat) = some q)
+    (hl : ∀ off cnt, nat? T (s + (CI.cv + CV.lpsOff).toNat) = some off →
+      nat? T (s + (CI.cv + CV.lpsLen).toNat) = some cnt →
       ∀ j v, j < cnt → T (off + j) = some v → B (q + j) = some v)
-    (hr : nat? T s = some 5 → nat? B (p + 7) = some r ∧
-      ∀ off cnt, nat? T (s + 7) = some off → nat? T (s + 8) = some cnt →
+    (hr : nat? T s = some 5 → nat? B (p + CI.recRulesOff.toNat) = some r ∧
+      ∀ off cnt, nat? T (s + CI.recRulesOff.toNat) = some off →
+        nat? T (s + CI.recRulesLen.toNat) = some cnt →
         ∀ x v, x < Rule.size.toNat * cnt → T (off + x) = some v → B (r + x) = some v) :
     decCI B p = some c := by
-  unfold decCI at hc ⊢
-  -- a whole-record relocation: the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceToNat] at hc ⊢
-  cases hk : nat? T s with
-  | none => simp [hk] at hc
-  | some kk =>
-  have h := hsh kk hk
-  have hk0 : nat? B (p + 0) = some kk := by
-    refine h.nat (k := 0) ?_ rfl rfl (by simpa using hk)
-    refine ⟨?_, by omega, by omega⟩
-    have := CI.indSize_toNat; have := CI.indCaps_ge
-    split <;> (try split) <;> omega
-  simp only [Nat.add_zero] at hk0
-  rw [hk0]
-  rw [hk] at hc
-  simp only [bind, Option.bind_some] at hc ⊢
-  rcases kk with _ | _ | _ | _ | _ | _ | kk
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, _, -, _, -, rfl⟩ := hc; exact hF.elim
-  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
-    obtain ⟨cv, -, rfl⟩ := hc; exact hF.elim
-  · -- inductive
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, caps, hcaps, rfl⟩ := hc
+  have k0 : ∀ {kk x : Nat} (h : ShR T B s p (relocK kk)), (kk = 3 ∨ kk = 4 ∨ kk = 5) →
+      nat? T s = some x → nat? B p = some x := fun h hk hx => by
+    refine h.nat (k := 0) ⟨?_, by decide, fun _ => by decide⟩ rfl rfl hx
+    rcases hk with rfl | rfl | rfl <;> decide
+  -- each word's `relocK` side condition: the layout's facts, evaluated
+  cases c with
+  | axiomInfo _ => exact hF.elim
+  | defnInfo _ _ _ => exact hF.elim
+  | thmInfo _ => exact hF.elim
+  | indInfo cv caps =>
+    obtain ⟨hk, hcv, hcaps⟩ := decCI_indInfo_iff.mp hc
+    have h := hsh 3 hk
     obtain ⟨hall, hct⟩ := hF
-    have hK : ∀ k, k < CI.indSize.toNat → k ≠ 2 → relocK 3 k := fun k h1 h2 =>
-      ⟨by simpa using h1, h2, by omega⟩
-    have hsz := CI.indSize_toNat; have := Caps.size_pos; have := CI.indCaps_ge
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
-        (hK 4 (by omega) (by omega)) hcv hq hl,
-      caps, decCaps_reloc h (fun k h1 h2 => hK k h2 (by omega)) hcaps hall hct, rfl⟩
-  · -- constructor
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, a1, h1, a2, h2, a3, h3, rfl⟩ := hc
-    have hK : ∀ k, k < 8 → k ≠ 2 → relocK 4 k := fun k h1 h2 => ⟨by simpa using h1, h2, by omega⟩
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega)) (hK 3 (by omega) (by omega))
-        (hK 4 (by omega) (by omega)) hcv hq hl,
-      a1, h.nat (hK 5 (by omega) (by omega)) rfl rfl h1,
-      a2, h.nat (hK 6 (by omega) (by omega)) rfl rfl h2,
-      a3, h.hd (hK 7 (by omega) (by omega)) rfl rfl h3, rfl⟩
-  · -- recursor
-    simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc ⊢
-    obtain ⟨cv, hcv, a1, h1, a2, h2, kb, hkb, hc⟩ := hc
-    obtain ⟨ro, hro, rc, hrc, rules, hrules, rfl⟩ := hc
-    have hK : ∀ k, k < 10 → k ≠ 2 → k ≠ 7 → relocK 5 k := fun k h1 h2 h3 =>
-      ⟨by simpa using h1, h2, fun _ => h3⟩
-    obtain ⟨hr7, hrs⟩ := hr (by simpa using hk)
-    exact ⟨cv, decCV_reloc h (hK 1 (by omega) (by omega) (by omega))
-        (hK 3 (by omega) (by omega) (by omega)) (hK 4 (by omega) (by omega) (by omega)) hcv hq hl,
-      a1, h.nat (hK 5 (by omega) (by omega) (by omega)) rfl rfl h1,
-      a2, h.nat (hK 6 (by omega) (by omega) (by omega)) rfl rfl h2,
-      kb, h.bool (hK 9 (by omega) (by omega) (by omega)) rfl rfl hkb,
-      r, hr7, rc, h.nat (hK 8 (by omega) (by omega) (by omega)) rfl rfl hrc,
-      rules, decRules_reloc hrules hF (hrs ro rc hro hrc), rfl⟩
-  · simp at hc
+    refine decCI_indInfo_iff.mpr ⟨k0 h (.inl rfl) hk, decCV_reloc h ⟨by decide, by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩ hcv hq hl,
+      decCaps_reloc h (fun k h1 h2 => ⟨by simpa using h2, ?_, fun e => absurd e (by decide)⟩) hcaps hall hct⟩
+    have : (CI.cv + CV.lpsOff).toNat < CI.indCaps.toNat := by decide
+    omega
+  | ctorInfo cv np nf fam =>
+    obtain ⟨hk, hcv, h1, h2, h3⟩ := decCI_ctorInfo_iff.mp hc
+    have h := hsh 4 hk
+    exact decCI_ctorInfo_iff.mpr ⟨k0 h (.inr (.inl rfl)) hk, decCV_reloc h ⟨by decide, by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩ hcv hq hl,
+      h.nat ⟨by decide, by decide, by decide⟩ rfl rfl h1, h.nat ⟨by decide, by decide, by decide⟩ rfl rfl h2,
+      h.hd ⟨by decide, by decide, by decide⟩ rfl rfl h3⟩
+  | recInfo cv mi rp kb rules =>
+    obtain ⟨hk, hcv, h1, h2, hkb, ro, rc, hro, hrc, hrules⟩ := decCI_recInfo_iff.mp hc
+    have h := hsh 5 hk
+    obtain ⟨hr7, hrs⟩ := hr hk
+    exact decCI_recInfo_iff.mpr ⟨k0 h (.inr (.inr rfl)) hk, decCV_reloc h ⟨by decide, by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩ hcv hq hl,
+      h.nat ⟨by decide, by decide, by decide⟩ rfl rfl h1, h.nat ⟨by decide, by decide, by decide⟩ rfl rfl h2,
+      h.bool ⟨by decide, by decide, by decide⟩ rfl rfl hkb,
+      r, rc, hr7, h.nat ⟨by decide, by decide, by decide⟩ rfl rfl hrc,
+      decRules_reloc hrules hF (hrs ro rc hro hrc)⟩
 
 end L.Arena

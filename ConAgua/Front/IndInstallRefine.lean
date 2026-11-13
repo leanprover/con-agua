@@ -10,6 +10,7 @@ public import ConAgua.Front.IndRel
 public import ConAgua.Front.StateDR
 import ConAgua.L.WordOff
 import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section
 
@@ -169,40 +170,55 @@ theorem decCV_of {a : Array Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Wor
     decCV (aread a) q = some ⟨decI wn, (List.range ll.toNat).map (fun j => decI (f j)), decI wt⟩ := by
   exact decCV_ofR h0 hn h1 h2 h3 ht hs
 
-/-- The words of `cvM`. -/
-theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr64 DLP).size)
-    (hq4 : q.toNat + 4 < 2 ^ 64) :
-    wd (cvM m q n o l t) DLP j =
-      if j = q.toNat then n else if j = q.toNat + 1 then o + 1 else if j = q.toNat + 2 then l
-      else if j = q.toNat + 3 then t else wd m DLP j := by
-  have e1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have e2 : (q + 2).toNat = q.toNat + 2 := L.toNat_add_of_lt _ _ (by simp; omega)
-  have e3 : (q + 3).toNat = q.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)
-  simp only [cvM, wd_setA, L.Mem.size64_set64, e1, e2, e3, true_and]
-  by_cases h0 : j = q.toNat
-  · subst h0; simp; omega
-  by_cases h1 : j = q.toNat + 1
-  · subst h1; simp; omega
-  by_cases h2 : j = q.toNat + 2
-  · subst h2; simp; omega
-  by_cases h3 : j = q.toNat + 3
-  · subst h3; simp; omega
-  simp [Ne.symm h0, Ne.symm h1, Ne.symm h2, Ne.symm h3, h0, h1, h2, h3]
+theorem wd_set_ne (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat ≠ j) :
+    wd (m.set64 A i v) A j = wd m A j := by
+  rw [wd_setA]; simp [h]
 
-/-- **`ind_cv` against `parseCVD`**: the constant value's four words at `q`, its universe
+theorem wd_set_eq (m : Mem) (A : ArrId) (i v : Word) (j : Nat) (h : i.toNat = j)
+    (hs : j < (m.arr64 A).size) : wd (m.set64 A i v) A j = v := by
+  rw [wd_setA]; simp [h, hs]
+
+/-- A record's field word `q + f` (`f` below the record's size `n`), as a number. -/
+theorem fld_toNat {q f : Word} {n : Nat} (hf : f.toNat < n) (h : q.toNat + n < 2 ^ 64) :
+    (q + f).toNat = q.toNat + f.toNat := L.toNat_add_of_lt _ _ (by omega)
+
+theorem cvM_frame (m : Mem) (q n o l t : Word) : MemFrame [DLP] [] m (cvM m q n o l t) := by
+  unfold cvM
+  exact (((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
+    (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _)
+
+/-- `ind_cv`'s stores write only the value's words. -/
+theorem cvM_out (m : Mem) (q n o l t : Word) (hq : q.toNat + CV.size.toNat < 2 ^ 64) (j : Nat)
+    (hj : j < q.toNat ∨ q.toNat + CV.size.toNat ≤ j) : wd (cvM m q n o l t) DLP j = wd m DLP j := by
+  have e : ∀ f : Word, f.toNat < CV.size.toNat → (q + f).toNat ≠ j := fun f hf => by
+    rw [fld_toNat hf hq]; omega
+  have := CV.size_pos
+  unfold cvM
+  rw [wd_set_ne _ _ _ _ _ (e _ CV.type_lt), wd_set_ne _ _ _ _ _ (e _ CV.lpsLen_lt),
+    wd_set_ne _ _ _ _ _ (e _ CV.lpsOff_lt), wd_set_ne _ _ _ _ _ (by omega)]
+
+/-- `ind_cv`'s stores hold the value's fields (`CVRecW`). -/
+theorem cvM_recW (m : Mem) (q n o l t : Word) (hb : q.toNat + CV.size.toNat ≤ (m.arr64 DLP).size)
+    (h64 : q.toNat + CV.size.toNat < 2 ^ 64) :
+    CVRecW (aread ((cvM m q n o l t).arr64 DLP)) q.toNat n (o + 1) l t := by
+  have h := cvRecW_set64 (m := m) (A := DLP) (nm := n) (lo := o + 1) (ll := l) (ty := t) hb h64
+  have e : q + CV.name = q := UInt64.toNat_inj.mp (by rw [fld_toNat CV.name_lt h64, CV.name_toNat, Nat.add_zero])
+  rwa [e] at h
+
+/-- **`ind_cv` against `parseCVD`**: the constant value's fields at `q`, its universe
 parameters appended by `lp_put`; they decode as the twin's constant value. -/
 @[refines_part ConRon.Arena.Frontend.parseCVD "a block's constant values (ind_cv)"]
 theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {q nm lps ty : Word} {cv : CVRec}
     (hnm : nm.toNat = cv.name) (hty : ty.toNat = cv.type) (hlps : ItemsR (listN b.data lps) cv.levelParams)
-    (hq1 : 1 ≤ q.toNat) (hq : q.toNat + 4 ≤ topN m DLP + 1)
+    (hq1 : 1 ≤ q.toNat) (hq : q.toNat + CV.size.toNat ≤ topN m DLP + 1)
     (h : cvW b.data m q nm lps ty = some m') :
     ∃ cvp, (parseCVD st cv).run a = .ok (cvp, a) ∧ MemFrame [DLP] [] m m' ∧
       topN m' DLP = topN m DLP + cv.levelParams.length ∧ topN m' DLP + 1 ≤ (m'.arr64 DLP).size ∧
       (∀ i, 1 ≤ i → i < q.toNat → wd m' DLP i = wd m DLP i) ∧
-      (∀ i, q.toNat + 4 ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) ∧
-      (∀ P : Nat → Option Word, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
-        P i = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
+      (∀ i, q.toNat + CV.size.toNat ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) ∧
+      (∀ P : Nat → Option Word, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + CV.size.toNat) ∨
+        (topN m DLP < i ∧ i ≤ topN m' DLP) → P i = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
   have hps := hD.psize
   have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
   rw [cvW_eq] at h
@@ -233,50 +249,40 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
     show ((m₁.arr64 DLP)[0]?.getD 0).toNat = _
     rw [F7]; simp only [Option.getD_some]
     rw [L.toNat_add_of_lt _ _ (by rw [F1, hrdN]; omega), F1, hrdN]; simp
-  have hq3 : q.toNat + 3 < (m₁.arr64 DLP).size := by rw [hs1]; omega
+  have hq3 : q.toNat + CV.size.toNat ≤ (m₁.arr64 DLP).size := by rw [hs1]; omega
+  have hq64 : q.toNat + CV.size.toNat < 2 ^ 64 := by omega
+  -- the value's stores, as `cvM`: its words (`CVRecW`), the rest kept
+  have hout := cvM_out m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th hq64
+  have hsz : ((cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th).arr64 DLP).size =
+      (m.arr64 DLP).size := by rw [(cvM_frame _ _ _ _ _ _).size DLP, hs1]
   have htopF : topN (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th) DLP =
       topN m DLP + (listN b.data lps).length := by
-    rw [← htop1]
-    unfold topN; rw [cvM_wd _ _ _ _ _ _ 0 hq3 (by omega)]
-    rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
-  refine ⟨cvp, hpc, F2.trans (by
-      unfold cvM; exact ((((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
-        (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_, ?_⟩
+    rw [← htop1]; unfold topN; rw [hout 0 (.inl (by omega))]
+  refine ⟨cvp, hpc, F2.trans (cvM_frame _ _ _ _ _ _), ?_, ?_, ?_, ?_, ?_⟩
   · rw [htopF, ← hlen]
-  · rw [htopF]; unfold cvM; simp only [L.Mem.size64_set64]; rw [hs1]; rw [F1, hrdN] at F3; omega
+  · rw [htopF, hsz]; rw [F1, hrdN] at F3; omega
   · intro i h1 h2
-    rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
-    simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, ite_false]
+    rw [hout i (.inl h2)]
     simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
   · intro i h1 h2
-    rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
-    simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
-      show i ≠ q.toNat + 3 by omega, ite_false]
+    rw [hout i (.inr h1)]
     simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
   · intro P hP
-    have hw := fun j => cvM_wd m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th j hq3 (by omega)
-    have e0 := hP q.toNat (.inl ⟨by omega, by omega⟩)
-    have e1 := hP (q.toNat + 1) (.inl ⟨by omega, by omega⟩)
-    have e2 := hP (q.toNat + 2) (.inl ⟨by omega, by omega⟩)
-    have e3 := hP (q.toNat + 3) (.inl ⟨by omega, by omega⟩)
-    rw [hw] at e0 e1 e2 e3
-    simp only [show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
-           show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
-           show q.toNat + 3 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat + 2 by omega, ↓reduceIte] at e0 e1 e2 e3
+    have hW := (cvM_recW m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th hq3 hq64).shift
+      (b := P) (e := q.toNat) (fun j hj => by
+        rw [hP _ (.inl ⟨by omega, by omega⟩), aread_apply, wd_some _ _ _ (by rw [hsz]; omega)])
+    have e0 := hW.name
+    rw [CV.name_toNat, Nat.add_zero] at e0
     have ho : (rdW (m.arr64 DLP) 0 + 1).toNat = topN m DLP + 1 := by
       rw [UInt64.toNat_add, hrdN]; simp; omega
     have hc : (lsCntN b.data (lps + 1) 0).toNat = (listN b.data lps).length := by
       rw [F1]; simp
-    have := decCV_ofR (f := fun j => tblW m NID (listN b.data lps)[j]!) e0 n2 e1 e2 e3 y2 (fun j hj => by
+    have := decCV_ofR (f := fun j => tblW m NID (listN b.data lps)[j]!) e0 n2 hW.lo hW.ll hW.ty y2 (fun j hj => by
       rw [hc] at hj
       have hmem : (listN b.data lps)[j]! ∈ listN b.data lps := by
         rw [getElem!_pos (listN b.data lps) j hj]; exact List.getElem_mem hj
       refine ⟨?_, (tbl_read hD.names _ (F6 _ hmem)).2.1⟩
-      rw [ho, hP _ (.inr ⟨by omega, by rw [htopF]; omega⟩), hw]
-      simp only [show topN m DLP + 1 + j ≠ q.toNat by omega, show topN m DLP + 1 + j ≠ q.toNat + 1 by omega,
-        show topN m DLP + 1 + j ≠ q.toNat + 2 by omega, show topN m DLP + 1 + j ≠ q.toNat + 3 by omega,
-        ite_false]
+      rw [ho, hP _ (.inr ⟨by omega, by rw [htopF]; omega⟩), hout _ (.inr (by omega))]
       have := F5 j hj
       rw [hrdN, show 1 + topN m DLP + j = topN m DLP + 1 + j by omega] at this
       simp only [wd]; rw [this, getElem!_pos (listN b.data lps) j hj]; rfl)

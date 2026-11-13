@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.L.Syntax
 public import ConAgua.Arena.RecLayout.Attr
+public import ConAgua.Arena.RecLayout.Img
 
 @[expose] public section
 
@@ -47,6 +47,12 @@ theorem lpsLen_toNat : lpsLen.toNat = lpsOff.toNat + 1 := by simp [lpsLen, lpsOf
 
 theorem size_pos : 0 < size.toNat := by simp [size]
 
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the name,
+the slice's offset word followed by its length word, the type, the record's size last. -/
+theorem order : name.toNat < lpsOff.toNat ∧ lpsLen.toNat = lpsOff.toNat + 1 ∧
+    lpsLen.toNat < type.toNat ∧ type.toNat < size.toNat := by
+  simp [name, lpsOff, lpsLen, type, size]
+
 /-- The name is word `q` itself (`decCV` and L read it there). -/
 theorem name_toNat : name.toNat = 0 := by simp [name]
 
@@ -54,6 +60,22 @@ theorem name_toNat : name.toNat = 0 := by simp [name]
 @[rec_layout] theorem lpsOff_le : lpsOff.toNat ≤ 64 := by simp [lpsOff]
 @[rec_layout] theorem lpsLen_le : lpsLen.toNat ≤ 64 := by simp [lpsLen]
 @[rec_layout] theorem type_le : type.toNat ≤ 64 := by simp [type]
+
+/-- **The record's image** (`RecLayout/Img.lean`): what a field-by-field writer stores. -/
+def img (nm lo ll ty : Word) : List (Option Word) :=
+  recImg size [(name, nm), (lpsOff, lo), (lpsLen, ll), (type, ty)]
+
+theorem img_length (nm lo ll ty : Word) : (img nm lo ll ty).length = size.toNat :=
+  recImg_length _ _
+
+theorem img_name (nm lo ll ty : Word) : (img nm lo ll ty)[name.toNat]? = some (some nm) := by
+  simp [img, recImg, name, lpsOff, lpsLen, type, size, List.replicate]
+theorem img_lo (nm lo ll ty : Word) : (img nm lo ll ty)[lpsOff.toNat]? = some (some lo) := by
+  simp [img, recImg, name, lpsOff, lpsLen, type, size, List.replicate]
+theorem img_ll (nm lo ll ty : Word) : (img nm lo ll ty)[lpsLen.toNat]? = some (some ll) := by
+  simp [img, recImg, name, lpsOff, lpsLen, type, size, List.replicate]
+theorem img_ty (nm lo ll ty : Word) : (img nm lo ll ty)[type.toNat]? = some (some ty) := by
+  simp [img, recImg, name, lpsOff, lpsLen, type, size, List.replicate]
 
 attribute [rec_unfold] name lpsOff lpsLen type size
 

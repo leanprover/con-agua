@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.IndPartsSpec.RulePrefixAt
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.IndGrindAttr
@@ -14,7 +15,6 @@ import all ConAgua.Arena.IndParts
 import ConAgua.L.ModelGen
 import ConAgua.Arena.SimLib
 import ConAgua.L.WordOff
-import ConAgua.Arena.ErecRd
 
 @[expose] public section
 
@@ -339,8 +339,8 @@ theorem lpsW_nil (h : rdW (m.arr64 IW) (p + 1) = 0) : lpsW (n + 1) m p = some ([
 /-- Member `0`'s level parameters, copied: `er_to_iw`'s two results passed on. -/
 theorem lpsW_cons (h : rdW (m.arr64 IW) (p + 1) ≠ 0) : lpsW (n + 1) m p =
     erToIwW n m
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
-      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2)) := by
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + CV.lpsOff))
+      (erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + CV.lpsLen)) := by
   rw [lpsW.arm2 n m p h]
   rcases hx : erToIwW n _ _ _ with _ | ⟨r, m1⟩
   · rfl
@@ -390,36 +390,21 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
     replace hv : iwN m o = some v := by simpa using hv
     obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
     obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
-    have hcv' := hcv
-    simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-    obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-    have hlvE : lv = y.cvT.levelParams := by rw [← hcvT]
-    simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-    obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-    simp only [nat?, erA, Option.map_eq_some_iff] at ho2 hl2
-    obtain ⟨w1, hw1, rfl⟩ := ho2
-    obtain ⟨w2, hw2, rfl⟩ := hl2
-    have hi1 : a + 1 < 2 ^ 64 := erecP_lt64 hw1
-    have hi2 : a + 2 < 2 ^ 64 := erecP_lt64 hw2
-    have hrd1 : erRd m (UInt64.ofNat (a + 1)) = w1 := by
-      have : (UInt64.ofNat (a + 1)).toNat = a + 1 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      exact L.Arena.erRd_of _ _ (by rw [this]; exact hw1)
-    have hrd2 : erRd m (UInt64.ofNat (a + 2)) = w2 := by
-      have : (UInt64.ofNat (a + 2)).toNat = a + 2 := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-      exact L.Arena.erRd_of _ _ (by rw [this]; exact hw2)
-    have e3 : UInt64.ofNat a + 1 = UInt64.ofNat (a + 1) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    have e4 : UInt64.ofNat a + 2 = UInt64.ofNat (a + 2) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+    have hva64 : a < 2 ^ 64 := by
+      obtain ⟨w, hw, -⟩ := decCV_name (show decCV (erecP m) a = some y.cvT from hcv)
+      exact erecP_lt64 hw
+    have hcvU : decCV (erecP m) (UInt64.ofNat a).toNat = some y.cvT := by
+      rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hcv
+    obtain ⟨-, -, hsl, -⟩ := decCV_rd (erRdOK m) hcvU
     have hv'' : rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = UInt64.ofNat a := by
       rw [ho', hv']; exact hva'
-    rw [hv'', e3, e4, hrd1, hrd2] at h
+    rw [hv''] at h
     obtain ⟨hr, hdec, hgrow, hfr, -, htp, hroom⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
     have hh := erToIwW_two h
     refine ⟨hh, ?_, hgrow, hfr, ?_, hroom⟩
     · rw [hr] at hh ⊢
       simp only [List.headD_cons, List.tail_cons]
-      rw [hdec, hlps, ← hlvE]
+      rw [hdec, hlps]
       exact hsl
     · rw [hr]; simp only [List.headD_cons, List.tail_cons]; omega
 

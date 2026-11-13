@@ -91,7 +91,7 @@ open L.Arena
 structure ConsIndsProg (p : Prog) : Prop extends CapsProg p where
   recP : RecProg p
   iir : p.lookup "ind_info_rec" = some indInfoRec
-  put5 : p.lookup "er_put5" = some erPut5
+  putCi : p.lookup "er_put_ci" = some erPutCi
   cbi : p.lookup "cons_block_inds" = some consBlockInds
 
 end L.Ind

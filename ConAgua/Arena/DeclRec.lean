@@ -86,11 +86,6 @@ l_model dlpCopy_specW (p : Prog) (hp : p.lookup "dlp_copy" = some dlpCopy)
 `1`, `0`, `2`. -/
 def hintCode (hq : Word) : Word := if hq = 1 then 1 else if hq = 2 then 0 else 2
 
-/-- The constant record's eight words (`D` read in `m3`). -/
-def eciWords (D : Array Word) (i kind s ll : Word) : List Word :=
-  [kind, mask32 (rdW D (2 + 8 * i)), s, ll, mask32 (rdW D (5 + 8 * i)), mask32 (rdW D (6 + 8 * i)),
-   hintCode (rdW D (7 + 8 * i)), rdW D (8 + 8 * i)]
-
 /-- The memory after `erec_ci`'s eight `erec_put`s. -/
 def eciMem (m3 : Mem) (p i kind s ll : Word) : Mem :=
   let D := m3.arr64 DECL
@@ -204,7 +199,7 @@ theorem hslice?_mask {k : IdxKind} {a : Nat → Option Word} {o l : Nat} {f : Na
   mapM_some_of _ _ _ (fun j hj => hd?_mask (h j (List.mem_range.mp hj)))
 
 /-- A constant value from its words: the name and type masked, the slice of masked words. -/
-theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
+theorem decCV_of_slice {a : Nat → Option Word} {q : Nat} {wn wt s ll : Word} {f : Nat → Word}
     (h0 : a q = some (mask32 wn)) (h1 : a (q + CV.lpsOff.toNat) = some s)
     (h2 : a (q + CV.lpsLen.toNat) = some ll) (h3 : a (q + CV.type.toNat) = some (mask32 wt))
     (hs : ∀ j < ll.toNat, a (s.toNat + j) = some (mask32 (f j))) :
@@ -301,9 +296,11 @@ theorem dlpCopyW_eq : ∀ (n : Nat) (m m' : Mem) (d s l : Word), dlpCopyW n m d 
       rfl
 
 theorem eciMem_eq (m3 : Mem) (p i kind s ll : Word) :
-    eciMem m3 p i kind s ll = wrER m3 p (eciWords (m3.arr64 DECL) i kind s ll) := by
-  -- the whole record's words in order: the offsets as numbers (`rec_unfold`)
-  simp only [eciMem, eciWords, wrER, rec_unfold, UInt64.add_assoc, UInt64.reduceAdd]
+    eciMem m3 p i kind s ll = wrERo m3 p (CI.defnImg kind (mask32 (rdW (m3.arr64 DECL) (2 + 8 * i))) s ll
+      (mask32 (rdW (m3.arr64 DECL) (5 + 8 * i))) (mask32 (rdW (m3.arr64 DECL) (6 + 8 * i)))
+      (hintCode (rdW (m3.arr64 DECL) (7 + 8 * i))) (rdW (m3.arr64 DECL) (8 + 8 * i))) := by
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [eciMem, wrERo, CI.defnImg, recImg, rec_unfold, UInt64.add_assoc]
 
 /-! ### `erec_vg` -/
 
@@ -330,8 +327,6 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
       decHint (erecP m') ((r.headD 0).toNat + CI.defnHint.toNat) =
         some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) ∧
       erOff (r.headD 0) + CI.defnSize.toNat ≤ erTopOf m' (r.headD 0) := by
-  -- the whole record `erec_ci` writes, word by word: the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceToNat, UInt64.reduceAdd]
   cases n with
   | zero => rw [erecCiW.eq_1] at h; cases h
   | succ n =>
@@ -354,41 +349,37 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
     (dw (m.arr64 DECL) i.toNat 3).toNat = ws1 at h3
   obtain ⟨hS2, hG2, -, -, -, -, hget1⟩ := erRec_stage h1 hS ws1 (by rw [← hW1, dlpWords_length])
   rw [eciMem_eq, hD3]
-  have hws : eciWords (m.arr64 DECL) i ck s (dw (m.arr64 DECL) i.toNat 3) =
-      [ck, mask32 (dw (m.arr64 DECL) i.toNat 1), s, dw (m.arr64 DECL) i.toNat 3,
-       mask32 (dw (m.arr64 DECL) i.toNat 4), mask32 (dw (m.arr64 DECL) i.toNat 5),
-       hintCode (dw (m.arr64 DECL) i.toNat 6), dw (m.arr64 DECL) i.toNat 7] := by
-    simp only [eciWords]
-    rw [rdW_dw _ (c := 2) (k := 1) hi8 (by decide) (by decide),
-      rdW_dw _ (c := 5) (k := 4) hi8 (by decide) (by decide),
-      rdW_dw _ (c := 6) (k := 5) hi8 (by decide) (by decide),
-      rdW_dw _ (c := 7) (k := 6) hi8 (by decide) (by decide),
-      rdW_dw _ (c := 8) (k := 7) hi8 (by decide) (by decide)]
-  rw [hws]
-  obtain ⟨hS', hG', hoff, htop', -, -, hget2⟩ := erRec_stage h3 hS2
-    [ck, mask32 (dw (m.arr64 DECL) i.toNat 1), s, dw (m.arr64 DECL) i.toNat 3,
-       mask32 (dw (m.arr64 DECL) i.toNat 4), mask32 (dw (m.arr64 DECL) i.toNat 5),
-       hintCode (dw (m.arr64 DECL) i.toNat 6), dw (m.arr64 DECL) i.toNat 7] rfl
-  generalize wrER m3 p _ = M at hS' hG' htop' hget2
-  simp only [List.length_cons, List.length_nil] at htop' hget2
+  rw [rdW_dw _ (c := 2) (k := 1) hi8 (by decide) (by decide),
+    rdW_dw _ (c := 5) (k := 4) hi8 (by decide) (by decide),
+    rdW_dw _ (c := 6) (k := 5) hi8 (by decide) (by decide),
+    rdW_dw _ (c := 7) (k := 6) hi8 (by decide) (by decide),
+    rdW_dw _ (c := 8) (k := 7) hi8 (by decide) (by decide)]
+  generalize hI : CI.defnImg ck (mask32 (dw (m.arr64 DECL) i.toNat 1)) s (dw (m.arr64 DECL) i.toNat 3)
+    (mask32 (dw (m.arr64 DECL) i.toNat 4)) (mask32 (dw (m.arr64 DECL) i.toNat 5))
+    (hintCode (dw (m.arr64 DECL) i.toNat 6)) (dw (m.arr64 DECL) i.toNat 7) = I
+  have hIl : I.length = CI.defnSize.toNat := by rw [← hI, CI.defnImg_length]
+  obtain ⟨hS', hG', hoff, htop', -, -, hget2⟩ := erRecO_stage h3 hS2 I hIl.symm
+  generalize wrERo m3 p I = M at hS' hG' htop' hget2
+  rw [hIl] at htop'
   have hl1 : ws1.length = (dw (m.arr64 DECL) i.toNat 3).toNat := by rw [← hW1, dlpWords_length]
   rw [hl1] at hget1
-  have w0 : erecP M p.toNat = some ck := by simpa using hget2 0 (by decide)
-  have w1 : erecP M (p.toNat + 1) = some (mask32 (dw (m.arr64 DECL) i.toNat 1)) := by
-    simpa using hget2 1 (by decide)
-  have w2 : erecP M (p.toNat + 1 + 1) = some s := by simpa using hget2 2 (by decide)
-  have w3 : erecP M (p.toNat + 1 + 2) = some (dw (m.arr64 DECL) i.toNat 3) := by
-    simpa using hget2 3 (by decide)
-  have w4 : erecP M (p.toNat + 1 + 3) = some (mask32 (dw (m.arr64 DECL) i.toNat 4)) := by
-    simpa using hget2 4 (by decide)
-  have w5 : erecP M (p.toNat + 5) = some (mask32 (dw (m.arr64 DECL) i.toNat 5)) := by
-    simpa using hget2 5 (by decide)
-  have w6 : erecP M (p.toNat + 6) = some (hintCode (dw (m.arr64 DECL) i.toNat 6)) := by
-    simpa using hget2 6 (by decide)
-  have w7 : erecP M (p.toNat + 6 + 1) = some (dw (m.arr64 DECL) i.toNat 7) := by
-    simpa using hget2 7 (by decide)
+  have g := fun {o : Word} {x : Word} (e : I[o.toNat]? = some (some x)) => hget2 o.toNat x e
+  have w0 := g (o := CI.kind) (hI ▸ CI.defnImg_kind ..)
+  have w1 := g (hI ▸ CI.defnImg_name ..)
+  have w2 := g (hI ▸ CI.defnImg_lo ..)
+  have w3 := g (hI ▸ CI.defnImg_ll ..)
+  have w4 := g (hI ▸ CI.defnImg_ty ..)
+  have w5 := g (hI ▸ CI.defnImg_value ..)
+  have w6 := g (hI ▸ CI.defnImg_hint ..)
+  have w7 := g (hI ▸ CI.defnImg_height ..)
+  rw [show CI.kind.toNat = 0 from rfl, Nat.add_zero] at w0
+  rw [CI.cv_name_toNat] at w1
+  rw [CI.cv_add_toNat CV.lpsOff_le, ← Nat.add_assoc] at w2
+  rw [CI.cv_add_toNat CV.lpsLen_le, ← Nat.add_assoc] at w3
+  rw [CI.cv_add_toNat CV.type_le, ← Nat.add_assoc] at w4
+  rw [CI.defnHeight_toNat, ← Nat.add_assoc] at w7
   have hcvG : ∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
-      decCV (erecP M) (p.toNat + 1) = some cv := by
+      decCV (erecP M) (p.toNat + CI.cv.toNat) = some cv := by
     intro cv hcv
     obtain ⟨hn, ht, hb, hl⟩ := hcv
     have hptop := hD.ptop
@@ -401,18 +392,18 @@ theorem erecCiW_core {vis : Word} {fe : IFEnv} {a : AState}
       intro j hj
       refine hG'.ext _ _ ?_
       rw [hget1 j hj, ← hW1, dlpWords_get _ _ _ _ hj (by rw [hlo1]; omega), hlo1]
-    rw [decCV_of_words w1 w2 w3 w4 hsl, sliceL_map_decI, hl, hn, ht]
-  have hvM : (hd? (erecP M) (p.toNat + 5) : Option EIdx) =
+    rw [decCV_of_slice w1 w2 w3 w4 hsl, sliceL_map_decI,
+      hl, hn, ht]
+  have hvM : (hd? (erecP M) (p.toNat + CI.defnValue.toNat) : Option EIdx) =
       some (decI (dw (m.arr64 DECL) i.toNat 5)) := hd?_mask w5
-  have hhint : decHint (erecP M) (p.toNat + 6) =
+  have hhint : decHint (erecP M) (p.toNat + CI.defnHint.toNat) =
       some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) := by
-    unfold decHint hintW
-    simp only [nat?, w6, w7, hintCode, rec_unfold, UInt64.reduceToNat]
+    rw [decHint_eq_some]
     by_cases e1 : dw (m.arr64 DECL) i.toNat 6 = 1
-    · simp [e1]
+    · simp [hintW, e1, hintCode, nat?, w6]
     by_cases e2 : dw (m.arr64 DECL) i.toNat 6 = 2
-    · simp [e2]
-    · simp [e1, e2]
+    · simp [hintW, e2, hintCode, nat?, w6]
+    · simp [hintW, e1, e2, hintCode, nat?, w6, w7]
   have hk : nat? (erecP M) p.toNat = some ck.toNat := by simp [nat?, w0]
   simp only [List.headD_cons]
   exact ⟨hS', hG2.trans hG', hk, hcvG, hvM, hhint, by omega⟩

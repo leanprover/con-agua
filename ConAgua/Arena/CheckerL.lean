@@ -60,7 +60,7 @@ def idxTablesL : FunDecl := lfn (o, n, r) locals (j, q, w, c, p, z) {
   j := 0;
   for j < n {
     q := IW.u64[o + j];
-    w := EREC⦃q + 2⦄;
+    w := EREC⦃q + ⟪ProjTbl.structName⟫⦄;
     (c, p) := call tbl_base_get(w);
     if c == 0 { z := call tbl_base_set(w, r + 1, q) }
   };

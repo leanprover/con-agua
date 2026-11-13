@@ -52,7 +52,8 @@ theorem erecCiW_frame {n : Nat} {m m' : Mem} {i k : Word} {r : List Word}
   have fW : ∀ (m : Mem) (q : Word) (ws : List Word), MemFrame [EREC, tier1 EREC] [129, 130] m (wrER m q ws) :=
     fun m q ws => (wrER_frame ws m q).mono (fun _ h => h) (fun _ h => by simp at h)
   rw [dlpCopyW_eq _ _ _ _ _ _ h2] at h3
-  exact (((fA h1).trans (fW _ _ _)).trans (fA h3)).trans (by rw [eciMem_eq]; exact fW _ _ _)
+  exact (((fA h1).trans (fW _ _ _)).trans (fA h3)).trans (by
+    rw [eciMem_eq]; exact (wrERo_frame _ _ _).mono (fun _ h => h) (fun _ h => by simp at h))
 
 /-- `StageT` across `erec_ci` (an `EREC` writer: `TwinOK.frame`). -/
 theorem erecCiW_okT {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}

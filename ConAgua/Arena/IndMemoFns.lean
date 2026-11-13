@@ -89,7 +89,7 @@ def imFns : List FnName :=
    "div_mod_env_guard", "div_mod_pin_guard", "div_mod_slot", "div_mod_type_pins", "div_shl1",
    "div_step", "div_sub", "dlp_copy", "e_rec_get", "e_view", "ek_copy", "ensure_sort",
    "ensure_sort_core", "env_erase", "env_find", "env_ix", "env_pop_temp", "env_push", "env_row_get",
-   "env_row_set", "eq_at1", "eq_stored", "er_copy", "er_copy_er", "er_put5", "er_sl_at", "er_sl_eq",
+   "env_row_set", "eq_at1", "eq_stored", "er_copy", "er_copy_er", "er_put_ci", "er_sl_at", "er_sl_eq",
    "er_slice_eq", "er_to_iw", "erase_installed", "erase_installed_tables", "erec_alloc", "erec_ci",
    "erec_cp", "erec_push", "erec_put", "erec_rd1", "erec_rd2", "erec_rd3", "erec_rd4", "erec_rd5",
    "erec_vg", "erec_wr1", "erec_wr2", "erec_wr3", "erec_wr4", "erec_wr5", "eta_cert",

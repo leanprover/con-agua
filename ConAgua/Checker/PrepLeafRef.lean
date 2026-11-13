@@ -63,11 +63,12 @@ theorem pDeclGo_ok (n : Nat) : ∀ (m : Mem) (o c q w r : Word) (P : Array Word)
       obtain ⟨pw, hpw, rfl⟩ := hp
       obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw (by omega)
       obtain ⟨w', hw', hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      have hcv1 := CI.cv_le; have hcv0 := CI.cv_pos
       obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw' (by omega)
       have hP0 : (P[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1 : rdW (m.arr64 DIND) (o + q) = pw :=
         hix_rdW (hP ▸ hPq) (by rw [UInt64.toNat_add]; omega)
-      have e2 : rdW (m.arr64 DIND) (pw + 1) = w' :=
+      have e2 : rdW (m.arr64 DIND) (pw + CI.cv) = w' :=
         hix_rdW (hP ▸ hPw) (by rw [UInt64.toNat_add]; simp; omega)
       simp only [List.map_cons, pl_contains_cons, hname]
       by_cases hww : w' = w
@@ -172,10 +173,11 @@ theorem pKey_ok (m m' : Mem) (a : AState) (i r : Word) (d : IDeclaration)
       obtain ⟨pw, hpw, rfl⟩ := hp
       obtain ⟨hPq, hqt⟩ := L.Arena.trunc_get_some hpw ho
       obtain ⟨w', hw', hw32, hname⟩ := L.Arena.iConstantInfo_name_refines hci
+      have hcv1 := CI.cv_le; have hcv0 := CI.cv_pos
       obtain ⟨hPw, hpt⟩ := L.Arena.trunc_get_some hw' (by omega)
       have hP0 : ((m.arr64 DLP)[0]?.getD 0).toNat < 2 ^ 64 := UInt64.toNat_lt _
       have e1' : rdW (m.arr64 DIND) (dw (m.arr64 DECL) i.toNat 2) = pw := hix_rdW hPq rfl
-      have e2' : rdW (m.arr64 DIND) (pw + 1) = w' :=
+      have e2' : rdW (m.arr64 DIND) (pw + CI.cv) = w' :=
         hix_rdW hPw (by rw [UInt64.toNat_add]; simp; omega)
       rw [e1', e2']
       refine ⟨a, ?_, hw32, hA, hHF, rfl, rfl, rfl⟩

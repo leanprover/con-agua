@@ -93,7 +93,7 @@ theorem matchesPin_refines (p : Prog) (hC : CanonProg p)
 /-- A record of kind word `0` is an `axiomInfo`, any other kind word is not. -/
 theorem decCI_kind0 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
-    (w = 0 → ∃ cv, decCV a (p + 1) = some cv ∧ ci = .axiomInfo cv) ∧
+    (w = 0 → ∃ cv, decCV a (p + CI.cv.toNat) = some cv ∧ ci = .axiomInfo cv) ∧
       (w ≠ 0 → ∀ cv, ci ≠ .axiomInfo cv) := by
   obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
@@ -112,7 +112,7 @@ theorem decCI_kind0 {a : Nat → Option Word} {p : Nat}
 /-- A record of kind word `3` is an `indInfo`, any other kind word is not. -/
 theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
-    (w = 3 → ∃ cv caps, decCV a (p + 1) = some cv ∧ ci = .indInfo cv caps) ∧
+    (w = 3 → ∃ cv caps, decCV a (p + CI.cv.toNat) = some cv ∧ ci = .indInfo cv caps) ∧
       (w ≠ 3 → ∀ cv caps, ci ≠ .indInfo cv caps) := by
   obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
@@ -134,12 +134,12 @@ theorem decCI_kind3 {a : Nat → Option Word} {p : Nat}
     · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
     all_goals simp_all
 
-/-- A record of kind word `4` is a `ctorInfo` with its counts at `+5`, `+6`; any other kind word
-is not. -/
+/-- A record of kind word `4` is a `ctorInfo` with its counts at `CI.ctorNparams`, `CI.ctorNfields`;
+any other kind word is not. -/
 theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
-    (w = 4 → ∃ cv np nf fam, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some np ∧
-      nat? a (p + 6) = some nf ∧ ci = .ctorInfo cv np nf fam) ∧
+    (w = 4 → ∃ cv np nf fam, decCV a (p + CI.cv.toNat) = some cv ∧ nat? a (p + CI.ctorNparams.toNat) = some np ∧
+      nat? a (p + CI.ctorNfields.toNat) = some nf ∧ ci = .ctorInfo cv np nf fam) ∧
       (w ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
@@ -163,12 +163,12 @@ theorem decCI_kind4 {a : Nat → Option Word} {p : Nat}
     · exact h0 (UInt64.toNat_inj.mp (by simpa using h1))
     · simp_all
 
-/-- A record of kind word `5` is a `recInfo` with its counts at `+5`, `+6`; any other kind word
-is not. -/
+/-- A record of kind word `5` is a `recInfo` with its counts at `CI.recMajor`, `CI.recPrefix`; any
+other kind word is not. -/
 theorem decCI_kind5 {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} {w : Word} (h : decCI a p = some ci) (hw : a p = some w) :
-    (w = 5 → ∃ cv mi rp k rules, decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧
-      nat? a (p + 6) = some rp ∧ ci = .recInfo cv mi rp k rules) ∧
+    (w = 5 → ∃ cv mi rp k rules, decCV a (p + CI.cv.toNat) = some cv ∧ nat? a (p + CI.recMajor.toNat) = some mi ∧
+      nat? a (p + CI.recPrefix.toNat) = some rp ∧ ci = .recInfo cv mi rp k rules) ∧
       (w ≠ 5 → ∀ cv mi rp k rules, ci ≠ .recInfo cv mi rp k rules) := by
   obtain ⟨wk, e, hk⟩ := decCI_cases h
   rw [hw] at e; cases e
@@ -303,10 +303,10 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {vis : Word}
   have hrun2 := AM.run_of_ok _ _ hok2
   have hpin := decRCV_get hd2
   obtain ⟨wn, hwn, -⟩ := decCV_name hcvR
-  have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (erecP_lt64 hwn)
-  have hcvR2 : decCV (erA s2.mem) (q + 1).toNat = some cvR := by
+  have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (erecP_lt64 hwn)
+  have hcvR2 : decCV (erA s2.mem) (q + CI.cv).toNat = some cvR := by
     rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg2) hcvR
-  rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] s2.mem with _ | ⟨r3, m3⟩
+  rcases h3 : callW p n "matches_pin" [q + CI.cv, r2.headD 0] s2.mem with _ | ⟨r3, m3⟩
   · rw [h3, rsoW.k_matches_pin.none] at hW; cases hW
   rw [h3, rsoW.k_matches_pin.arm1] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -398,18 +398,18 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
       h.rom.ci (fun _ => none) vis fe 0 (by decide) n _ a r4 m4 hS h4
     have hrun4' : ConRon.Arena.natA.run a = .ok (na, a4) := hrun4
     obtain ⟨wn, hwn, -⟩ := decCV_name hcvN
-    have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (erecP_lt64 hwn)
-    have hcvN4 : decCV (erA m4) (q + 1).toNat = some cvN := by
+    have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (erecP_lt64 hwn)
+    have hcvN4 : decCV (erA m4) (q + CI.cv).toNat = some cvN := by
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg4) hcvN
     have hna4 : decCI (erecP m4) (r4.headD 0).toNat = some na :=
       DecB.get ⟨fun _ _ _ he h => he.2.decCI h⟩ hna
     have hnacv := decCI_cv hna4
     obtain ⟨wn', hwn', -⟩ := decCV_name hnacv
-    have hp1 : (r4.headD 0 + 1).toNat = (r4.headD 0).toNat + 1 :=
-      L.toNat_add_ofNat_of_lt _ 1 (erecP_lt64 hwn')
-    have hnacv' : decCV (erA m4) (r4.headD 0 + 1).toNat = some na.toConstantVal := by
+    have hp1 : (r4.headD 0 + CI.cv).toNat = (r4.headD 0).toNat + CI.cv.toNat :=
+      L.toNat_add_of_lt _ _ (erecP_lt64 hwn')
+    have hnacv' : decCV (erA m4) (r4.headD 0 + CI.cv).toNat = some na.toConstantVal := by
       rw [hp1]; exact hnacv
-    rcases h5 : callW p n "matches_pin" [q + 1, r4.headD 0 + 1] m4 with _ | ⟨r5, m5⟩
+    rcases h5 : callW p n "matches_pin" [q + CI.cv, r4.headD 0 + CI.cv] m4 with _ | ⟨r5, m5⟩
     · rw [h5, reoW.k_matches_pin.none] at hW; cases hW
     rw [h5, reoW.k_matches_pin.arm1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -468,10 +468,10 @@ theorem reoW_ok {p : Prog} (h : RedProg p) {vis : Word}
     obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := h.rom.cv vis fe 5 (by decide) n _ a r4 m4 hS h4
     have hrun4' : boolCvA.run a = .ok (pin, a4) := hrun4
     obtain ⟨wn, hwn, -⟩ := decCV_name hcvB
-    have hq1 : (q + 1).toNat = q.toNat + 1 := L.toNat_add_ofNat_of_lt q 1 (erecP_lt64 hwn)
-    have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
+    have hq1 : (q + CI.cv).toNat = q.toNat + CI.cv.toNat := L.toNat_add_of_lt _ _ (erecP_lt64 hwn)
+    have hcvB4 : decCV (erA m4) (q + CI.cv).toNat = some cvB := by
       rw [hq1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg4) hcvB
-    rcases h5 : callW p n "matches_pin" [q + 1, r4.headD 0] m4 with _ | ⟨r5, m5⟩
+    rcases h5 : callW p n "matches_pin" [q + CI.cv, r4.headD 0] m4 with _ | ⟨r5, m5⟩
     · rw [h5, reoW.k_matches_pin.none] at hW; cases hW
     rw [h5, reoW.k_matches_pin.arm1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -557,7 +557,7 @@ theorem rsoW_frame {p : Prog} (h : RedProg p) (hcl : RcvaClosed p) {vis : Word} 
   · rw [h2, rsoW.k_reduce_op_cv_a.none] at hW; cases hW
   rw [h2, rsoW.k_reduce_op_cv_a.arm1] at hW
   have hf2 := (run_memFrame hcl (by simp [rcvaFns]) (run_of_callW h2)).1
-  rcases h3 : callW p n "matches_pin" [q + 1, r2.headD 0] m2 with _ | ⟨r3, m3⟩
+  rcases h3 : callW p n "matches_pin" [q + CI.cv, r2.headD 0] m2 with _ | ⟨r3, m3⟩
   · rw [h3, rsoW.k_matches_pin.none] at hW; cases hW
   rw [h3, rsoW.k_matches_pin.arm1] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)

@@ -251,4 +251,48 @@ theorem decCI_ctorR (hR : RdOK R rd) {q : Word} {ci : IConstantInfo}
       ⟨hk, -⟩ | ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, ⟨⟩⟩
     exact hw (UInt64.toNat_inj.mp (by rw [hk]; rfl))
 
+/-! ## A constant value's words, written field by field -/
+
+/-- **An `IConstantVal` record's words** at `q` of a reader: each field's word (a writer's
+postcondition; `decCV_of_words` decodes it). -/
+structure CVRecW (a : Nat → Option Word) (q : Nat) (nm lo ll ty : Word) : Prop where
+  name : a (q + CV.name.toNat) = some nm
+  lo : a (q + CV.lpsOff.toNat) = some lo
+  ll : a (q + CV.lpsLen.toNat) = some ll
+  ty : a (q + CV.type.toNat) = some ty
+
+/-- The record's words carried to another reader that holds the same `CV.size` words. -/
+theorem CVRecW.shift {a b : Nat → Option Word} {q e : Nat} {nm lo ll ty : Word}
+    (h : CVRecW a q nm lo ll ty) (hw : ∀ j < CV.size.toNat, b (e + j) = a (q + j)) :
+    CVRecW b e nm lo ll ty :=
+  ⟨(hw _ CV.name_lt).trans h.name, (hw _ CV.lpsOff_lt).trans h.lo,
+    (hw _ CV.lpsLen_lt).trans h.ll, (hw _ CV.type_lt).trans h.ty⟩
+
+/-- **A constant value's words decode** (the level-parameter slice and the two handles given). -/
+theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {nm lo ll ty : Word}
+    {lps : List NIdx} (h : CVRecW a q nm lo ll ty) (hnm : nm.toNat < 2 ^ 32)
+    (hty : ty.toNat < 2 ^ 32) (hs : hslice? a lo.toNat ll.toNat = some lps) :
+    decCV a q = some ⟨decI nm, lps, decI ty⟩ := by
+  have hn := h.name
+  rw [CV.name_toNat, Nat.add_zero] at hn
+  refine decCV_of (by simp [hd?, hn, hnm]) ?_ (by simp [hd?, h.ty, hty])
+  have hl := h.ll
+  rw [CV.lpsLen_toNat, ← Nat.add_assoc] at hl
+  simp only [hlist?, nat?, h.lo, hl, Option.map_some, Option.bind_eq_bind, Option.bind_some, hs]
+
+set_option linter.deprecated false in
+/-- **A constant value written field by field** (four word stores into array `A` at
+`q + CV.f`, in the fields' order) holds its words. -/
+theorem cvRecW_set64 {m : Mem} {A : TieredArray} {q nm lo ll ty : Word}
+    (hb : q.toNat + CV.size.toNat ≤ (m.arr64 A).size) (h64 : q.toNat + CV.size.toNat < 2 ^ 64) :
+    CVRecW (aread (((((m.set64 A (q + CV.name) nm).set64 A (q + CV.lpsOff) lo).set64 A
+      (q + CV.lpsLen) ll).set64 A (q + CV.type) ty).arr64 A)) q.toNat nm lo ll ty := by
+  obtain ⟨o1, o2, o3, o4⟩ := CV.order
+  have e : ∀ f : Word, f.toNat < CV.size.toNat → (q + f).toNat = q.toNat + f.toNat := fun f hf => by
+    rw [UInt64.toNat_add]; omega
+  simp only [Mem.arr64_set64_same, e _ CV.name_lt, e _ CV.lpsOff_lt, e _ CV.lpsLen_lt,
+    e _ CV.type_lt]
+  constructor <;> simp (disch := omega) only [aread_apply, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, Array.size_setIfInBounds, if_pos, if_neg, ite_true]
+
 end L.Arena

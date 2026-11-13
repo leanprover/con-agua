@@ -249,12 +249,12 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {vis : Word}
   obtain ⟨cv, np, nf, fam, hcv, h5, h6, rfl⟩ := (decCI_kind4 hci hwk).1 rfl
   obtain ⟨w5, e5, rfl⟩ := natD h5
   obtain ⟨w6, e6, rfl⟩ := natD h6
-  have hq5 : (q + 5).toNat = q.toNat + 5 := by
-    have := erecP_lt64 e5; rw [UInt64.toNat_add]; simp; omega
-  have hq6 : (q + 6).toNat = q.toNat + 6 := by
-    have := erecP_lt64 e6; rw [UInt64.toNat_add]; simp; omega
-  have r5 := erecKind (q := q + 5) (by rw [hq5]; exact e5)
-  have r6 := erecKind (q := q + 6) (by rw [hq6]; exact e6)
+  have hq5 : (q + CI.ctorNparams).toNat = q.toNat + CI.ctorNparams.toNat :=
+    L.toNat_add_of_lt _ _ (erecP_lt64 e5)
+  have hq6 : (q + CI.ctorNfields).toNat = q.toNat + CI.ctorNfields.toNat :=
+    L.toNat_add_of_lt _ _ (erecP_lt64 e6)
+  have r5 := erecKind (q := q + CI.ctorNparams) (by rw [hq5]; exact e5)
+  have r6 := erecKind (q := q + CI.ctorNfields) (by rw [hq6]; exact e6)
   have i5 : w5 = 0 ↔ w5.toNat = 0 := ⟨fun h => by simp [h], fun h => UInt64.toNat_inj.mp (by simpa using h)⟩
   have i6 : w6 = 0 ↔ w6.toNat = 0 := ⟨fun h => by simp [h], fun h => UInt64.toNat_inj.mp (by simpa using h)⟩
   by_cases hz : w5 ≠ 0 ∨ w6 ≠ 0

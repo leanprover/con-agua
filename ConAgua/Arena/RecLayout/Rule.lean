@@ -1,7 +1,7 @@
 module
 
-public import ConAgua.L.Syntax
 public import ConAgua.Arena.RecLayout.Attr
+public import ConAgua.Arena.RecLayout.Img
 
 @[expose] public section
 
@@ -45,6 +45,8 @@ namespace L.Rule
 /-- The record's size in words (the stride of a rule slice). -/
 @[reducible] def size : Word := 11
 
+attribute [rec_unfold] ctor nfields fire lvlsOff lvlsLen pinsOff pinsLen rhs size
+
 /-! ## The layout facts -/
 
 theorem size_le : size.toNat ≤ 64 := by simp [size]
@@ -59,10 +61,52 @@ theorem size_pos : 0 < size.toNat := by simp [size]
 @[rec_layout] theorem pinsLen_lt : pinsLen.toNat < size.toNat := by simp [pinsLen, size]
 @[rec_layout] theorem rhs_lt : rhs.toNat < size.toNat := by simp [rhs, size]
 
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the scalar
+fields first, then each slice's offset word followed by its length word, the right-hand side, the
+record's size last. -/
+theorem order : ctor.toNat < nfields.toNat ∧ nfields.toNat < fire.toNat ∧
+    fire.toNat < lvlsOff.toNat ∧ lvlsLen.toNat = lvlsOff.toNat + 1 ∧
+    lvlsLen.toNat < pinsOff.toNat ∧ pinsLen.toNat = pinsOff.toNat + 1 ∧
+    pinsLen.toNat < rhs.toNat ∧ rhs.toNat < size.toNat := by
+  simp [ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size]
+
 /-- A slice's length word follows its offset word. -/
 theorem lvlsLen_eq : lvlsLen = lvlsOff + 1 := by simp [lvlsLen, lvlsOff]
 theorem pinsLen_eq : pinsLen = pinsOff + 1 := by simp [pinsLen, pinsOff]
 theorem lvlsLen_toNat : lvlsLen.toNat = lvlsOff.toNat + 1 := by simp [lvlsLen, lvlsOff]
 theorem pinsLen_toNat : pinsLen.toNat = pinsOff.toNat + 1 := by simp [pinsLen, pinsOff]
+
+/-- **The record's image** (`RecLayout/Img.lean`): what a field-by-field writer stores (the
+unused words are not written). -/
+def img (c nf fk lo ll po pl x : Word) : List (Option Word) :=
+  recImg size [(ctor, c), (nfields, nf), (fire, fk), (lvlsOff, lo), (lvlsLen, ll), (pinsOff, po),
+    (pinsLen, pl), (rhs, x)]
+
+theorem img_length (c nf fk lo ll po pl x : Word) : (img c nf fk lo ll po pl x).length = size.toNat :=
+  recImg_length _ _
+theorem img_ctor (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[ctor.toNat]? = some (some c) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_nf (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[nfields.toNat]? = some (some nf) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_fk (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[fire.toNat]? = some (some fk) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_lo (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[lvlsOff.toNat]? = some (some lo) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_ll (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[lvlsLen.toNat]? = some (some ll) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_po (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[pinsOff.toNat]? = some (some po) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_pl (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[pinsLen.toNat]? = some (some pl) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
+theorem img_rhs (c nf fk lo ll po pl x : Word) :
+    (img c nf fk lo ll po pl x)[rhs.toNat]? = some (some x) := by
+  simp [img, recImg, ctor, nfields, fire, lvlsOff, lvlsLen, pinsOff, pinsLen, rhs, size, List.replicate]
 
 end L.Rule

@@ -192,6 +192,83 @@ theorem wrER_fresh {vis : Word} {fe : IFEnv} {m₀ : Mem} {a₀ : AState} (h₀ 
         rwa [show d.toNat + (j + 1) = d.toNat + 1 + j by omega] at this)]
       exact erecP_putMem_other (by have := hi 0 (by simp); simpa using this)
 
+/-- **A record's image written into the region allocated above a base state's top** (`wrERo`,
+`wrER_fresh` for a field-by-field writer): `StageR` kept, the growth and the frame from the base
+kept, the written words read back, every other address as before. -/
+theorem wrERo_fresh {vis : Word} {fe : IFEnv} {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a₀) :
+    ∀ (ws : List (Option Word)) (m : Mem) (a : AState) (d : Word), StageR vis fe m a →
+    MemFrame quotA quotC m₀ m → IWGrow m₀ m → erTopOf m₀ d ≤ erOff d →
+    erOff d + ws.length ≤ erTopOf m d → d.toNat < 2 ^ 41 →
+    StageR vis fe (wrERo m d ws) a ∧ IWGrow m₀ (wrERo m d ws) ∧
+      MemFrame quotA quotC m₀ (wrERo m d ws) ∧
+      (∀ j x, ws[j]? = some (some x) → erecP (wrERo m d ws) (d.toNat + j) = some x) ∧
+      (∀ i, (∀ j < ws.length, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) →
+        erecP (wrERo m d ws) i = erecP m i)
+  | [], m, a, d, hS, hf, hg, _, _, _ => ⟨hS, hg, hf, fun j x hj => by simp at hj, fun i _ => rfl⟩
+  | o :: ws, m, a, d, hS, hf, hg, hd0, hdt, hd41 => by
+    simp only [List.length_cons] at hdt
+    have ⟨htop, hcap⟩ := hS.iw.topOf d
+    -- the first entry: a store at `d` or none
+    obtain ⟨m1, hU, hS1, hg1, hf1, hself, hother, hT1⟩ : ∃ m1, wrERo m d (o :: ws) = wrERo m1 (d + 1) ws ∧
+        StageR vis fe m1 a ∧ IWGrow m₀ m1 ∧ MemFrame quotA quotC m₀ m1 ∧
+        (∀ x, o = some x → erecP m1 d.toNat = some x) ∧
+        (∀ i, i % 2 ^ 41 ≠ d.toNat % 2 ^ 41 → erecP m1 i = erecP m i) ∧
+        erTopOf m1 d = erTopOf m d := by
+      cases o with
+      | none => exact ⟨m, rfl, hS, hg, hf, fun x h => by simp at h, fun _ _ => rfl, rfl⟩
+      | some x =>
+        obtain ⟨hS1, hg1, hf1⟩ := StageR.putFresh h₀ hS hf hg hd0 (v := x)
+        refine ⟨erecPutMem m d x, rfl, hS1, hg1, hf1, fun y hy => ?_,
+          fun i hi => erecP_putMem_other hi, ?_⟩
+        · cases hy; exact erecP_putMem_self (by omega) (by omega)
+        · simp only [erTopOf, erTop, erecTop1, erecPutMem_ctl]
+    cases ws with
+    | nil =>
+      have hU' : wrERo m d [o] = m1 := hU
+      rw [hU']
+      refine ⟨hS1, hg1, hf1, fun j x hj => ?_, fun i hi => ?_⟩
+      · obtain ⟨rfl, hx⟩ : j = 0 ∧ o = some x := by
+          cases j with
+          | zero => simpa using hj
+          | succ j => simp at hj
+        simpa using hself x hx
+      · exact hother i (by have := hi 0 (by simp); simpa using this)
+    | cons y ws =>
+    simp only [List.length_cons] at hdt
+    have hoff : erOff d + 1 < 2 ^ 40 := by omega
+    have h64 : d.toNat + 1 < 2 ^ 64 := by unfold erOff at hoff; omega
+    obtain ⟨ho, ht⟩ := erOff_succ hoff h64
+    have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hbit : (d + 1).toNat / 2 ^ 40 % 2 = d.toNat / 2 ^ 40 % 2 := by
+      rw [hd1]; unfold erOff at hoff; omega
+    have hT : ∀ m' : Mem, erTopOf m' (d + 1) = erTopOf m' d := fun m' => by
+      simp only [erTopOf, hbit]
+    obtain ⟨hS2, hg2, hf2, hrd, hout⟩ := wrERo_fresh h₀ (y :: ws) _ a (d + 1) hS1 hf1 hg1
+      (by rw [hT, ho]; omega) (by rw [hT, hT1, ho]; simp only [List.length_cons]; omega)
+      (by rw [hd1]; unfold erOff at hoff; omega)
+    have hlt : ∀ j ≤ ws.length + 1, d.toNat + j < 2 ^ 41 := fun j hj => by
+      unfold erOff at hdt; omega
+    refine ⟨hU ▸ hS2, hU ▸ hg2, hU ▸ hf2, fun j x hj => ?_, fun i hi => ?_⟩
+    · rw [hU]
+      cases j with
+      | zero =>
+        simp only [Nat.add_zero, List.getElem?_cons_zero, Option.some.injEq] at hj ⊢
+        rw [hout _ (fun j hj => by
+          rw [hd1]; simp only [List.length_cons] at hj
+          have h1 := hlt (j + 1) (by omega)
+          have h2 : d.toNat < 2 ^ 41 := hd41
+          rw [Nat.mod_eq_of_lt h2, Nat.mod_eq_of_lt (by omega)]; omega)]
+        exact hself x hj
+      | succ j =>
+        simp only [List.getElem?_cons_succ] at hj
+        have := hrd j x hj
+        rw [hd1, show d.toNat + 1 + j = d.toNat + (j + 1) by omega] at this
+        exact this
+    · rw [hU, hout i (fun j hj => by
+        rw [hd1]; have := hi (j + 1) (by simp only [List.length_cons] at hj ⊢; omega)
+        rwa [show d.toNat + (j + 1) = d.toNat + 1 + j by omega] at this)]
+      exact hother i (by have := hi 0 (by simp); simpa using this)
+
 /-! ## The level-parameter functions leave the records and the core memos alone -/
 
 /-- The call closure of `param_levels` and `er_to_iw` in `checkerProg` (`_tmp/p3r/plfns.lean`). -/

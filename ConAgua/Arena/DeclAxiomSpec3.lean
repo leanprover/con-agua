@@ -160,20 +160,21 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
     obtain ⟨cv, caps, hcv, rfl⟩ := (decCI_kind3 hci hwk).1 rfl
     exact pass cv (by simp [fpShape]) hcv hW
   have hk3 : wk ≠ 3 := by rcases hk45 with rfl | rfl <;> decide
-  -- the counts at `+5`, `+6`
+  -- the counts at `CI.ctorNparams`, `CI.ctorNfields` (a recursor's are at the same words)
   have counts : ∀ {w5 w6 : Word} {cv : IConstantVal} {x y : Nat},
-      erecP m (q.toNat + 5) = some w5 → erecP m (q.toNat + 6) = some w6 → x = w5.toNat →
+      erecP m (q.toNat + CI.ctorNparams.toNat) = some w5 →
+        erecP m (q.toNat + CI.ctorNfields.toNat) = some w6 → x = w5.toNat →
       y = w6.toNat → decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv →
       (∀ cv', fpShape wk ca cb ci = some cv' ↔ (x = ca.toNat ∧ y = cb.toNat) ∧ cv' = cv) →
       ∃ b a', (clausePT fe (decI nm) wk ca cb (romPinT id.toNat)).run a = .ok (b, a') ∧
         StageR vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b := by
     intro w5 w6 cv x y e5 e6 hx hy hcv hsh
-    have hq5 : (q + 5).toNat = q.toNat + 5 := by
-      have := erecP_lt64 e5; rw [UInt64.toNat_add]; simp; omega
-    have hq6 : (q + 6).toNat = q.toNat + 6 := by
-      have := erecP_lt64 e6; rw [UInt64.toNat_add]; simp; omega
-    have r5 := erecKind (q := q + 5) (by rw [hq5]; exact e5)
-    have r6 := erecKind (q := q + 6) (by rw [hq6]; exact e6)
+    have hq5 : (q + CI.ctorNparams).toNat = q.toNat + CI.ctorNparams.toNat :=
+      L.toNat_add_of_lt _ _ (erecP_lt64 e5)
+    have hq6 : (q + CI.ctorNfields).toNat = q.toNat + CI.ctorNfields.toNat :=
+      L.toNat_add_of_lt _ _ (erecP_lt64 e6)
+    have r5 := erecKind (q := q + CI.ctorNparams) (by rw [hq5]; exact e5)
+    have r6 := erecKind (q := q + CI.ctorNfields) (by rw [hq6]; exact e6)
     by_cases hz : w5 = ca ∧ w6 = cb
     · rw [fpW.k_env_find.arm4 p n _ ca cb id _ _ hf (by rw [hq, ek]) hk3
         (by rw [hq, r5, r6]; intro c; rcases c with c | c; exact c hz.1; exact c hz.2), hq] at hW
@@ -198,6 +199,8 @@ theorem fp_call {p : Prog} (h : StdProg p) {vis : Word}
       · intro hh; split at hh <;> simp_all
       · rintro ⟨hxy, rfl⟩; simp [hxy]
   · obtain ⟨cv, mi, rp, kk, rules, hcv, h5, h6, rfl⟩ := (decCI_kind5 hci hwk).1 rfl
+    rw [CI.recMajor_eq] at h5
+    rw [CI.recPrefix_eq] at h6
     obtain ⟨w5, e5, rfl⟩ := natD h5
     obtain ⟨w6, e6, rfl⟩ := natD h6
     exact counts e5 e6 rfl rfl hcv fun cv' => by

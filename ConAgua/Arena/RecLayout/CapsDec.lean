@@ -29,13 +29,6 @@ theorem order : eta.toNat < nIdx.toNat ∧ nIdx.toNat < neverZero.toNat ∧
 
 end L.Caps
 
-namespace L.CI
-
-/-- The capabilities follow the kind word and the constant value (4 words) directly. -/
-theorem indCaps_toNat : indCaps.toNat = 5 := by simp [indCaps]
-
-end L.CI
-
 namespace L.Arena
 
 /-- **A decoded `IIndCaps`, word by word.** -/
@@ -172,7 +165,7 @@ theorem decCaps_congr {R R' : Nat → Option Word} {q q' : Nat} {c : IIndCaps}
 /-- **An `indInfo` record's value and capabilities.** -/
 theorem decCI_indInfo {R : Nat → Option Word} {p : Nat} {cv : IConstantVal} {c : IIndCaps}
     (h : decCI R p = some (.indInfo cv c)) :
-    nat? R p = some 3 ∧ decCV R (p + 1) = some cv ∧ decCaps R (p + CI.indCaps.toNat) = some c := by
+    nat? R p = some 3 ∧ decCV R (p + CI.cv.toNat) = some cv ∧ decCaps R (p + CI.indCaps.toNat) = some c := by
   unfold decCI at h
   cases hk : nat? R p with
   | none => simp [hk] at h

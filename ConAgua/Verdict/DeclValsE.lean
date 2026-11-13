@@ -26,8 +26,8 @@ public import ConAgua.Arena.IndRealApdT
 public import ConAgua.Arena.KnotEntry
 public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.L.WordOff
 import ConAgua.Arena.IlpRd
+import ConAgua.Arena.RecInfoW
 
 @[expose] public section
 
@@ -92,15 +92,74 @@ l_model checkOpaqueVal_specE (p : Prog) (hp : ValProg p)
 
 theorem word_add31 (d : Word) : d + 3 + 1 = d + 4 := by rw [UInt64.add_assoc]; rfl
 
-/-- **The fresh `axiomInfo cv` record `check_constant_val` builds for `lit_shape_ok`**:
-`erec_alloc(5)`, then the kind word `0` and the four words of the constant value at `q` (name,
-the universe parameters' slice, type) copied above the top: `StageT` kept, the pools grown, only
-the record pool and its tops written, the record decoding to `axiomInfo cv`. -/
+/-- **A fresh `axiomInfo cv` record** (`CI.axImg`): allocated (`CI.axiomSize`) above the top, the
+kind word `0`, then the constant value at `q` copied field by field; `StageT` kept, the pools grown,
+only the record pool and its tops written, the record decoding to `axiomInfo cv`. -/
+theorem axRec_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m1 : Mem} {A q : Word} {cv : IConstantVal}
+    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
+    (hA : erAllocW m CI.axiomSize = some (A, m1)) :
+    StageT dn vis fe (wrERo m1 A (CI.axImg 0 (erRd m q) (erRd m (q + CV.lpsOff))
+        (erRd m (q + CV.lpsLen)) (erRd m (q + CV.type)))) a ∧
+      IWGrow m (wrERo m1 A (CI.axImg 0 (erRd m q) (erRd m (q + CV.lpsOff))
+        (erRd m (q + CV.lpsLen)) (erRd m (q + CV.type)))) ∧
+      MemFrame [EREC, tier1 EREC] [129, 130] m (wrERo m1 A (CI.axImg 0 (erRd m q)
+        (erRd m (q + CV.lpsOff)) (erRd m (q + CV.lpsLen)) (erRd m (q + CV.type)))) ∧
+      decCI (erecP (wrERo m1 A (CI.axImg 0 (erRd m q) (erRd m (q + CV.lpsOff))
+        (erRd m (q + CV.lpsLen)) (erRd m (q + CV.type))))) A.toNat = some (.axiomInfo cv) := by
+  obtain ⟨hT1, hg1, hoff, htop, h41⟩ := erAlloc_stageT hA hS
+  have hf1 : MemFrame [] [129, 130] m m1 := (erAllocW_spec hA hS.stage.iw).2.1
+  have hfq : MemFrame quotA quotC m m1 :=
+    hf1.mono (fun _ h => by simp at h) (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide)
+  generalize hI : CI.axImg 0 (erRd m q) (erRd m (q + CV.lpsOff)) (erRd m (q + CV.lpsLen))
+    (erRd m (q + CV.type)) = I
+  have hIl : I.length = CI.axiomSize.toNat := by rw [← hI, CI.axImg_length]
+  obtain ⟨hS6, hg6, -, hrd, -⟩ := wrERo_fresh hS.stage I m1 a A hT1.stage hfq hg1 (by omega)
+    (by rw [hIl, htop]; omega) h41
+  refine ⟨StageT.of_wrERo hT1 hS6, hg6,
+    (hf1.mono (fun _ h => by simp at h) (fun _ h => h)).trans
+      ((wrERo_frame _ _ _).mono (fun _ h => h) (fun _ h => by simp at h)), ?_⟩
+  have g := fun {o : Word} {x : Word} (e : I[o.toNat]? = some (some x)) => hrd o.toNat x e
+  obtain ⟨en, enl, hsl, -, et, etl⟩ := decCV_rd (erRdOK m) hqd
+  have adj : ∀ f : Word, f.toNat ≤ 64 →
+      A.toNat + (CI.cv + f).toNat = A.toNat + CI.cv.toNat + f.toNat := fun f hf => by
+    rw [CI.cv_add_toNat hf, Nat.add_assoc]
+  have hw : CVRecW (erecP (wrERo m1 A I)) (A.toNat + CI.cv.toNat) (erRd m q) (erRd m (q + CV.lpsOff))
+      (erRd m (q + CV.lpsLen)) (erRd m (q + CV.type)) :=
+    ⟨by rw [← adj _ CV.name_le]; exact g (hI ▸ CI.axImg_name ..),
+      by rw [← adj _ CV.lpsOff_le]; exact g (hI ▸ CI.axImg_lo ..),
+      by rw [← adj _ CV.lpsLen_le]; exact g (hI ▸ CI.axImg_ll ..),
+      by rw [← adj _ CV.type_le]; exact g (hI ▸ CI.axImg_ty ..)⟩
+  have n0 := g (o := CI.kind) (hI ▸ CI.axImg_kind ..)
+  rw [show CI.kind.toNat = 0 from rfl, Nat.add_zero] at n0
+  refine decCI_axiomInfo_iff.mpr ⟨by simp [nat?, n0], ?_⟩
+  rw [decCV_of_words hw enl etl (ArrExt.hslice? hg6.ext hsl), ← en, ← et]
+
+/-- A word of the old pool is not overwritten by a store into a fresh region (`erFreshW`); the
+allocation itself leaves the pool's words. -/
+theorem axRd_fresh {m m1 : Mem} {A x : Word} {k : Word} (hA : erAllocW m k = some (A, m1))
+    (hW : IWOK m) {w : Word} (hx : erecP m x.toNat = some w) :
+    erRd m1 x = erRd m x ∧ ∀ (M : Mem) (o v : Word), o.toNat < k.toNat →
+      erRd (erecPutMem M (A + o) v) x = erRd M x := by
+  obtain ⟨-, hf1, -⟩ := erAllocW_spec hA hW
+  refine ⟨by unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)],
+    fun M o v ho => erRd_erecPutMem_ne (erFreshW hA hW hx ho)⟩
+
+/-- The stores of a fresh `axiomInfo` record (`axRec_core`'s image), in field order. -/
+theorem axImg_eq (m1 : Mem) (A n lo ll t : Word) :
+    erecPutMem (erecPutMem (erecPutMem (erecPutMem (erecPutMem m1 A 0) (A + (CI.cv + CV.name)) n)
+      (A + (CI.cv + CV.lpsOff)) lo) (A + (CI.cv + CV.lpsLen)) ll) (A + (CI.cv + CV.type)) t =
+    wrERo m1 A (CI.axImg 0 n lo ll t) := by
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, CI.axImg, recImg, rec_unfold, UInt64.add_assoc]
+
+/-- **The fresh `axiomInfo cv` record `check_constant_val` builds for `lit_shape_ok`**: the stores
+of `axRec_core`, the name and type read before them, the slice words between them. -/
 theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m1 m2 m3 m4 m5 m6 : Mem} {q nw t : Word}
     {cv : IConstantVal} {r1 r2 r3 r4 r5 r6 : List Word}
-    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64)
-    (hw0 : erecP m q.toNat = some nw) (hw3 : erecP m (q.toNat + 3) = some t)
+    (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
+    (hw0 : erRd m q = nw) (hw3 : erRd m (q + CV.type) = t)
     (h1 : callW p n "erec_alloc" [CI.axiomSize] m = some (r1, m1))
     (h2 : callW p n "erec_put" [r1.headD 0, 0] m1 = some (r2, m2))
     (h3 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.name), nw] m2 = some (r3, m3))
@@ -113,73 +172,24 @@ theorem ccv_rec {p : Prog} (hp : RecProg p) {dn : NIdx → Option ConLeche.Name}
     (h6 : callW p n "erec_put" [r1.headD 0 + (CI.cv + CV.type), t] m5 = some (r6, m6)) :
     StageT dn vis fe m6 a ∧ IWGrow m m6 ∧ MemFrame [EREC, tier1 EREC] [129, 130] m m6 ∧
       decCI (erecP m6) (r1.headD 0).toNat = some (.axiomInfo cv) := by
-  -- a whole-record writer (the `axiomInfo` record): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceAdd] at h1 h3 h4 h5 h6
   have hA := callW_erecAlloc hp.alloc h1
   generalize r1.headD 0 = A at hA h2 h3 h4 h5 h6 ⊢
-  obtain ⟨hT1, hg1, hoff, htop, h41⟩ := erAlloc_stageT hA hS
-  have hf1 : MemFrame [] [129, 130] m m1 := (erAllocW_spec hA hS.stage.iw).2.1
   rw [callW_erecPut hp.put h2] at h3
   rw [callW_erecPut hp.put h3] at h4
   rw [callW_erecPut hp.put h4] at h5
   rw [callW_erecPut hp.put h5] at h6
   rw [callW_erecPut hp.put h6]
-  -- the source words, read below the top
-  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hq2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
-  obtain ⟨w1, hw1⟩ : ∃ w, erecP m (q.toNat + 1) = some w := by
-    simp only [decCV, hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?, Option.map_eq_some_iff] at hqd
-    obtain ⟨_, _, _, ⟨_, ⟨w, hw, -⟩, _⟩, _⟩ := hqd; exact ⟨w, hw⟩
-  obtain ⟨w2, hw2⟩ : ∃ w, erecP m (q.toNat + 2) = some w := by
-    simp only [decCV, hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?, Option.map_eq_some_iff] at hqd
-    obtain ⟨_, _, _, ⟨_, _, _, ⟨w, hw, -⟩, _⟩, _⟩ := hqd; exact ⟨w, hw⟩
-  have hfq : MemFrame quotA quotC m m1 :=
-    hf1.mono (fun _ h => by simp at h) (fun x hx => by simp at hx; rcases hx with rfl | rfl <;> decide)
-  have h5n : (5 : Word).toNat = 5 := rfl
-  have htop' : erOff A + 5 ≤ erTopOf m1 A := by rw [htop]; omega
-  have hbase : erTopOf m A ≤ erOff A := by omega
-  -- the copied slice words, read before the copy
-  obtain ⟨-, hgP2, -, -, -⟩ := wrER_fresh hS.stage [0, nw] m1 a A hT1.stage hfq hg1 hbase
-    (by simp; omega) h41
-  have hx2 : rdW ((wrER m1 A [0, nw]).arr64 (L.tierA EREC ((q + 1) >>> 40))) (q + 1 &&& 1099511627775)
-      = w1 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq1]; exact hgP2.ext _ _ hw1)
-  have e3 : erecPutMem (erecPutMem m1 A 0) (A + 1) nw = wrER m1 A [0, nw] := rfl
-  rw [e3, hx2] at h5 h6 ⊢
-  have e4 : erecPutMem (wrER m1 A [0, nw]) (A + 2) w1 = wrER m1 A [0, nw, w1] := by
-    simp only [wrER, L.add_one_add_one]
-  rw [e4] at h5 h6 ⊢
-  obtain ⟨-, hgP3, -, -, -⟩ := wrER_fresh hS.stage [0, nw, w1] m1 a A hT1.stage hfq hg1 hbase
-    (by simp; omega) h41
-  have hx3 : rdW ((wrER m1 A [0, nw, w1]).arr64 (L.tierA EREC ((q + 2) >>> 40))) (q + 2 &&& 1099511627775)
-      = w2 := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq2]; exact hgP3.ext _ _ hw2)
-  rw [hx3]
-  have e6 : erecPutMem (erecPutMem (wrER m1 A [0, nw, w1]) (A + 3) w2) (A + 4) t =
-      wrER m1 A [0, nw, w1, w2, t] := by
-    simp only [wrER, L.add_one_add_one, word_add21, word_add31]
-  rw [e6]
-  obtain ⟨hS6, hg6, -, hrd, -⟩ := wrER_fresh hS.stage [0, nw, w1, w2, t] m1 a A hT1.stage hfq hg1 hbase
-    (by simp; omega) h41
-  refine ⟨StageT.of_wrER hT1 hS6, hg6,
-    (hf1.mono (fun _ h => by simp at h) (fun _ h => h)).trans
-      ((wrER_frame _ _ _).mono (fun _ h => h) (fun _ h => by simp at h)), ?_⟩
-  have r0 := hrd 0 (by simp)
-  have r1 := hrd 1 (by simp)
-  have r2 := hrd 2 (by simp)
-  have r3 := hrd 3 (by simp)
-  have r4 := hrd 4 (by simp)
-  simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4
-  have hcv6 : decCV (erecP (wrER m1 A [0, nw, w1, w2, t])) (A.toNat + 1) = some cv :=
-    L.Arena.decCV_move hg6.ext (by rw [r1, hw0])
-      (by simp only [rec_unfold, UInt64.reduceToNat]
-          rw [show A.toNat + 1 + 1 = A.toNat + 2 by omega, r2, hw1])
-      (by simp only [rec_unfold, UInt64.reduceToNat]
-          rw [show A.toNat + 1 + 2 = A.toNat + 3 by omega, r3, hw2])
-      (by simp only [rec_unfold, UInt64.reduceToNat]
-          rw [show A.toNat + 1 + 3 = A.toNat + 4 by omega, r4, hw3]) hqd
-  have hk0 : nat? (erecP (wrER m1 A [0, nw, w1, w2, t])) A.toNat = some 0 := by simp [nat?, r0]
-  simp [decCI, rec_unfold, UInt64.reduceToNat, hk0, hcv6]
+  simp only [erRd_foldN]
+  -- the slice words, read between the stores: the pool's words, above which the stores are
+  obtain ⟨w1, w2, hw1, hw2, -⟩ := decCV_slice hqd
+  have fo := axRd_fresh hA hS.stage.iw (by rw [rd_off_toNat (erRdOK m) hw1]; exact hw1)
+  have fl := axRd_fresh hA hS.stage.iw (by rw [rd_off_toNat (erRdOK m) hw2]; exact hw2)
+  have o0 : ∀ {x : Word} (f : erRd m1 x = erRd m x ∧ ∀ (M : Mem) (o v : Word),
+      o.toNat < CI.axiomSize.toNat → erRd (erecPutMem M (A + o) v) x = erRd M x) (M : Mem) (v : Word),
+      erRd (erecPutMem M A v) x = erRd M x := fun f M v => by simpa using f.2 M 0 v (by decide)
+  rw [fo.2 _ _ _ (by decide), o0 fo, fo.1, fl.2 _ _ _ (by decide), fl.2 _ _ _ (by decide), o0 fl,
+    fl.1, ← hw0, ← hw3, axImg_eq]
+  exact axRec_core hS hqd hA
 
 /-- What `check_constant_val` gives besides the twin's run: the stage, the growth, the memos; the
 walk memos (`AbsOK`) kept. -/
@@ -256,9 +266,8 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hqd).2.2
   have ex : rdW (m.arr64 (L.tierA EREC (q >>> 40))) (q &&& 1099511627775) = wx := by
     rw [erRd_congr rfl rfl]; exact erRd_of _ _ hwx
-  have hq3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have et : rdW (m.arr64 (L.tierA EREC ((q + 3) >>> 40))) (q + 3 &&& 1099511627775) = wt := by
-    rw [erRd_congr rfl rfl]; exact erRd_of _ _ (by rw [hq3]; exact hwt)
+  have et : rdW (m.arr64 (L.tierA EREC ((q + CV.type) >>> 40))) (q + CV.type &&& 1099511627775) = wt :=
+    (erRdOK m).at CV.type rfl hwt
   have hnm : denoteN a.store.ns cv.name = some c.name := (ConRon.Bridge.denoteCV_inv hden).1
   cases n with
   | zero => rw [checkConstantValE.eq_1]; exact RefE.of_cls0 rfl
@@ -304,7 +313,8 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
   rw [checkConstantValE.k_erec_put_4.arm1]
   refine RefE.onlySim (fun _ => checkConstantValE.k_erec_put_5.none ..) (fun _ _ h => h) fun r9 m9 h9 => ?_
   rw [checkConstantValE.k_erec_put_5.arm1]
-  obtain ⟨hT9, hg9, hf9, hci9⟩ := ccv_rec hP.val.rcp hS hqd hqb hwx hwt h4 h5 h6 h7 h8 h9
+  obtain ⟨hT9, hg9, hf9, hci9⟩ := ccv_rec hP.val.rcp hS hqd (erRd_of _ _ hwx) ((erRdOK m).at CV.type rfl hwt)
+    h4 h5 h6 h7 h8 h9
   have hCr9 := CrOK.frame hCr hf9 (by decide) (by decide)
   have hA9 : AFr m m9 := AFr.of_frame hf9
   -- `lit_shape_ok(a)`
