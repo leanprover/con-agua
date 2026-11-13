@@ -58,21 +58,6 @@ theorem rrW_cons {n : Nat} {m : Mem} {d s cnt k lo ll po pl : Word} (h : cnt ≠
 
 theorem add_ruleCtor (s : Word) : s + Rule.ctor = s := by simp [Rule.ctor]
 
-/-- `EREC⦃x⦄` across a record image written elsewhere. -/
-theorem erRd_wrERo_ne : ∀ (ws : List (Option Word)) (m : Mem) (q x : Word), ErApart q ws.length x →
-    erRd (wrERo m q ws) x = erRd m x
-  | [], _, _, _, _ => rfl
-  | o :: ws, m, q, x, h => by
-    have h' : ErApart (q + 1) ws.length x := fun j hj => by
-      have := h (j + 1) (by simp; omega)
-      rwa [show q + UInt64.ofNat (j + 1) = q + 1 + UInt64.ofNat j by rw [UInt64.ofNat_add]; ac_rfl] at this
-    cases o with
-    | none => simp only [wrERo]; exact erRd_wrERo_ne ws _ (q + 1) x h'
-    | some w =>
-      simp only [wrERo]
-      rw [erRd_wrERo_ne ws _ (q + 1) x h']
-      exact erRd_erecPutMem_ne (by simpa using h 0 (by simp))
-
 /-- The fields a refired record copies from its source: the constructor, the field count, the
 right-hand side. -/
 def copiedF : List Word := [Rule.ctor, Rule.nfields, Rule.rhs]
@@ -166,7 +151,7 @@ theorem rrW_mem (k lo ll po pl : Word) : ∀ (n : Nat) (m m' : Mem) (d s cnt : W
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
     have hS := Rule.size_pos
     have hSc : Rule.size.toNat * cnt.toNat = Rule.size.toNat + Rule.size.toNat * (cnt.toNat - 1) := by
-      rw [← Nat.mul_succ]; congr 1; omega
+      rw [Nat.add_comm, ← Nat.mul_succ]; congr 1; omega
     rcases h2 : rrW n (rrMem m d s k lo ll po pl) (d + Rule.size) (s + Rule.size) (cnt - 1) k lo ll po pl
       with _ | ⟨r2, m2⟩ <;> simp only [h2, rrW.k_rules_refire, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h

@@ -316,7 +316,7 @@ theorem btW_ok {vis : Word} {fe : IFEnv} {n : Nat} {m m' : Mem}
     rw [decTbl_of_words (hget _ _ (ProjTbl.img_sn ..)) (hget _ _ (ProjTbl.img_lo ..))
       (hget _ _ (ProjTbl.img_ll ..)) (hget _ _ (ProjTbl.img_np ..)) (hget _ _ (ProjTbl.img_ctor ..))
       (hget _ _ (ProjTbl.img_nf ..)) (hget _ _ (ProjTbl.img_bo ..)) (hget _ _ (ProjTbl.img_bl ..))
-      hw0lt hwnlt hsl3' (by rw [Array.toList_toArray] at hsl4' ⊢; exact hsl4')]
+      hw0lt hwnlt hsl3' (bs := bodies) hsl4']
     rw [hnPW, hnFW, ← hname, hnm0, hnm']
 
 /-! ## `block_tables` -/
