@@ -13,9 +13,8 @@ constant: the environment's table component); the decoder is `L.Arena.decTbl`
 (`Arena/EnvRec.lean`). The level parameters and the bodies are slices: an offset word and a
 length word right after it.
 
-Words `0` and `1` (once the kind and name words of the constant records' layout), `8`, `11` and `12`
-(the removed `structSort` and `guards`) are not read, and the writer does not write them (its image,
-`ProjTbl.img`).
+The record has no unused words (the kind and name words of the constant records' layout and the
+removed `structSort` and `guards` had words of their own until the layout was compacted).
 
 **The offsets are names**, as for every record layout (`RecLayout/Caps.lean`): L code writes
 `EREC⦃q + ⟪ProjTbl.ctor⟫⦄`, and the compiler evaluates the constant. The environment hands a
@@ -29,23 +28,23 @@ open wherever the arena's proofs are.
 namespace L.ProjTbl
 
 /-- `structName`: the structure (a name handle). -/
-@[reducible] def structName : Word := 2
+@[reducible] def structName : Word := 0
 /-- `levelParams`, a slice (offset word). -/
-@[reducible] def lpsOff : Word := 3
+@[reducible] def lpsOff : Word := 1
 /-- `levelParams`: the slice's length word. -/
-@[reducible] def lpsLen : Word := 4
+@[reducible] def lpsLen : Word := 2
 /-- `numParams`. -/
-@[reducible] def numParams : Word := 5
+@[reducible] def numParams : Word := 3
 /-- `ctor`: the structure's constructor (a name handle). -/
-@[reducible] def ctor : Word := 6
+@[reducible] def ctor : Word := 4
 /-- `numFields`. -/
-@[reducible] def numFields : Word := 7
+@[reducible] def numFields : Word := 5
 /-- `bodies`, a slice (offset word). -/
-@[reducible] def bodiesOff : Word := 9
+@[reducible] def bodiesOff : Word := 6
 /-- `bodies`: the slice's length word. -/
-@[reducible] def bodiesLen : Word := 10
+@[reducible] def bodiesLen : Word := 7
 /-- The record's size in words. -/
-@[reducible] def size : Word := 13
+@[reducible] def size : Word := 8
 
 /-! ## The layout facts -/
 
