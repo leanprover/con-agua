@@ -188,4 +188,3 @@ ConAgua/Arena/IndInstallSpec/MemberNZ.lean	import ConAgua.Arena.LdRd	# the build
 ConAgua/Arena/WhnfDeltaRefine4.lean	public import ConAgua.Arena.WhnfDeltaRefine3	# the build needs it: a name reached only through this import (shake cannot see the use; deleting it broke the build in the sync ronsync4)
 ConAgua/Arena/WhnfIotaRefine6.lean	import ConAgua.L.ModelGen	# the build needs it: a name reached only through this import (shake cannot see the use; deleting it broke the build in the sync ronsync4)
 ConAgua/Arena/WhnfIotaRefine6.lean	public import ConAgua.Arena.WhnfIota	# the build needs it: a name reached only through this import (shake cannot see the use; deleting it broke the build in the sync ronsync4)
-ConAgua/Arena/EtaRescueRef.lean	import ConAgua.Arena.Verdict	# the build needs it: `ld64_rdW_specT` in the `l_model`s' generated proofs (it came through WhnfCoreProj before)
