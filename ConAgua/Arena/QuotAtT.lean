@@ -100,20 +100,22 @@ end
 
 /-- A constant value from its four words. -/
 theorem decCV_of_words {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
-    (h0 : a q = some w0) (h0l : w0.toNat < 2 ^ 32) (h1 : a (q + 1) = some w1)
-    (h2 : a (q + 1 + 1) = some w2) (hs : hslice? a w1.toNat w2.toNat = some ps)
-    (h3 : a (q + 3) = some w3) (h3l : w3.toNat < 2 ^ 32) :
+    (h0 : a q = some w0) (h0l : w0.toNat < 2 ^ 32) (h1 : a (q + CV.lpsOff.toNat) = some w1)
+    (h2 : a (q + CV.lpsLen.toNat) = some w2) (hs : hslice? a w1.toNat w2.toNat = some ps)
+    (h3 : a (q + CV.type.toNat) = some w3) (h3l : w3.toNat < 2 ^ 32) :
     decCV a q = some ⟨decI w0, ps, decI w3⟩ := by
-  simp only [decCV, hlist?, hd?, nat?, h0, h0l, h1, h2, hs, h3, h3l, Option.map_some, bind,
-    Option.bind_some, ite_true, pure]
+  have h2' : a (q + CV.lpsOff.toNat + 1) = some w2 := by
+    rw [Nat.add_assoc, ← CV.lpsLen_toNat]; exact h2
+  refine decCV_of (by simp [hd?, h0, h0l]) ?_ (by simp [hd?, h3, h3l])
+  simp only [hlist?, nat?, h1, h2', hs, Option.map_some, bind, Option.bind_some]
 
 /-- A constant value from its four words, as `wrER` leaves them. -/
 theorem decCV_of_wr4 {a : Nat → Option Word} {q : Nat} {w0 w1 w2 w3 : Word} {ps : List NIdx}
     (hrd : ∀ j < [w0, w1, w2, w3].length, a (q + j) = [w0, w1, w2, w3][j]?) (h0l : w0.toNat < 2 ^ 32)
     (hs : hslice? a w1.toNat w2.toNat = some ps) (h3l : w3.toNat < 2 ^ 32) :
     decCV a q = some ⟨decI w0, ps, decI w3⟩ :=
-  decCV_of_words (by simpa using hrd 0 (by simp)) h0l (by simpa using hrd 1 (by simp))
-    (by simpa [Nat.add_assoc] using hrd 2 (by simp)) hs (by simpa using hrd 3 (by simp)) h3l
+  decCV_of_words (by simpa using hrd 0 (by simp)) h0l (by simpa [rec_unfold] using hrd 1 (by simp))
+    (by simpa [rec_unfold] using hrd 2 (by simp)) hs (by simpa [rec_unfold] using hrd 3 (by simp)) h3l
 
 theorem word_add12 (c : Word) : c + 1 + 2 = c + 3 := by rw [UInt64.add_assoc]; rfl
 theorem word_add13 (c : Word) : c + 1 + 3 = c + 4 := by rw [UInt64.add_assoc]; rfl
@@ -164,7 +166,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
     (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv)
     (hps : hslice? (erecP m₀) po.toNat pl.toNat = some ps)
     (hden : ConRon.Arena.Frontend.denoteNList a.store.ns ps = some psv) :
-    Sim (callW p n "cv_at_lps" [d, c + 1, po, pl] m) (cv.atLps ps) a
+    Sim (callW p n "cv_at_lps" [d, c + CI.cv, po, pl] m) (cv.atLps ps) a
       (fun _ cv' m' a' => StageT dn vis fe m' a' ∧ IWGrow m₀ m' ∧ MemFrame quotA quotC m₀ m' ∧
         decCV (erecP m') d.toNat = some cv' ∧
         (∀ i, (∀ j < 4, i % 2 ^ 41 ≠ (d.toNat + j) % 2 ^ 41) → erecP m' i = erecP m i) ∧
@@ -172,11 +174,12 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
         ∀ x, erTopOf m' x = erTopOf m x) := by
   intro r m' h
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (cvAtLps_specW p hP.cvAt n _ d (c + 1) po pl) h
+    (cvAtLps_specW p hP.cvAt n _ d (c + CI.cv) po pl) h
   cases n with
   | zero => simp [cvAtLpsW] at hW
   | succ n =>
-  simp only [cvAtLpsW] at hW
+  -- a whole-record writer (`cv_at_lps`): the offsets as numbers (`rec_unfold`)
+  simp only [cvAtLpsW, rec_unfold, UInt64.reduceAdd] at hW
   -- `er_to_iw(po, pl)`
   cases h1 : callW p n "er_to_iw" [po, pl] m with
   | none => rw [h1] at hW; simp [cvAtLpsW.k_er_to_iw] at hW
@@ -267,7 +270,7 @@ theorem cvAtLps_sim {p : Prog} (hP : QuotAtProg p) (n : Nat) {m₀ m : Mem} {a�
   obtain ⟨hSw, hgw, hfw, hrd, hout⟩ := wrER_fresh h₀ [erRd m (c + 1), po, pl, r3.headD 0] s3.mem _ d
     hT3.stage hf3' hg3' hd0 (by simp only [List.length_cons, List.length_nil]; omega) hd41
   obtain ⟨⟨w0, hw0, hw0l, hname⟩, -, -⟩ := decCV_words hcv
-  have e0 : erRd m (c + 1) = w0 := (erRdOK m).off hw0 (by simp)
+  have e0 : erRd m (c + 1) = w0 := (erRdOK m).at CI.cv rfl hw0
   have hrun3 := L.Arena.AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   refine ⟨⟨cv.name, ps, decH r3⟩, _, ?_, StageT.of_wrER hT3 hSw, hgw, hfw, ?_, fun i hi => ?_,
@@ -474,7 +477,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
   rw [← hwsd] at hnd
   obtain ⟨-, -, -, hplen, -, -⟩ := decCV_rd_ci (erRdOK m1) hpcv
   have hlen2 : cv.levelParams.length = (r2.tail.headD 0).toNat := hslice?_lenR hdl2
-  have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + 3)) ↔
+  have hcond : (r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + (CI.cv + CV.lpsLen))) ↔
       (nameNodup cv.levelParams && cv.levelParams.length == ci.toConstantVal.levelParams.length) = true := by
     rw [Bool.and_eq_true, ← hnd, beq_iff_eq, hlen2, hplen, bne_iff_ne, ne_eq]
     exact and_congr_right fun _ => ⟨fun e => by rw [e], fun e => UInt64.toNat_inj.mp e⟩
@@ -484,7 +487,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
         else pure false).run a1 = .ok (b, a') := by
     intro b a'
     simp only [ConRon.Arena.quotPinHit, StateT.run_bind, hrun1, L.Arena.except_ok_bind]
-  by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + 3)
+  by_cases hc : r3.headD 0 ≠ 0 ∧ r2.tail.headD 0 = erRd m1 (r1.headD 0 + (CI.cv + CV.lpsLen))
   case neg =>
     rw [ite_eq_right hc] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -510,7 +513,7 @@ theorem quotPinHit_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (n 
     (hf4.arr _ (by simp) (by decide)) x).trans (hrd2 x)
   simp only [hrd4] at hW
   -- `cv_at_lps(a, c + 1, EREC⦃q + 1⦄, EREC⦃q + 2⦄)`
-  cases h5 : callW p (n0 + 1) "cv_at_lps" [r4.headD 0, r1.headD 0 + 1, erRd m1 (q + 1), erRd m1 (q + 2)] m4 with
+  cases h5 : callW p (n0 + 1) "cv_at_lps" [r4.headD 0, r1.headD 0 + CI.cv, erRd m1 (q + CV.lpsOff), erRd m1 (q + CV.lpsLen)] m4 with
   | none => rw [h5] at hW; simp [quotPinHitW.k_cv_at_lps] at hW
   | some x5 =>
   obtain ⟨r5, m5⟩ := x5
@@ -589,7 +592,7 @@ theorem quotAt_sim {p : Prog} (hP : QuotAtProg p) (hQ : QuotPinSim p dn) (hC : C
   have hq1 : decCV (erecP m1) q.toNat = some cv := ArrExt.decCV hg1.erecGrow.ext hq
   obtain ⟨-, -, hsl1, -, -⟩ := decCV_rd (erRdOK m1) hq1
   simp only [L.Ind.erRd_foldN] at hW
-  cases h2 : callW p n "ci_at_lps" [r1.headD 0, erRd m1 (q + 1), erRd m1 (q + 2)] m1 with
+  cases h2 : callW p n "ci_at_lps" [r1.headD 0, erRd m1 (q + CV.lpsOff), erRd m1 (q + CV.lpsLen)] m1 with
   | none => rw [h2] at hW; simp [quotAtW.k_ci_at_lps] at hW
   | some x2 =>
   obtain ⟨r2, m2⟩ := x2
