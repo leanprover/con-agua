@@ -78,12 +78,12 @@ def m2cKT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) 
     if T' = T ∧ lpl = ustl.length then m2cK2T mode r fe depth ctor cnP tmaj ust major
     else pure major
 
-/-- The η arm's fabrication: the instantiated non-`Prop` test at the use (`formerNeverZeroAt`),
-the η spine at the table's constructor and field count. -/
+/-- The η arm's fabrication: the instantiated non-`Prop` test at the use, the stored fact first
+(`familyNeverZeroAt`), the η spine at the table's constructor and field count. -/
 def m2cEta2T (r : CoreFnsA) (depth : Nat) (T : NIdx) (cvT : IConstantVal)
     (caps : IIndCaps) (tbl : IProjTable) (targs : List EIdx) (ust : LsIdx) (major : EIdx) :
     AM EIdx := do
-  if ← formerNeverZeroAt r cvT caps ust then do
+  if ← familyNeverZeroAt r cvT caps ust then do
     let fabArgs ← etaFabArgsE T targs major tbl.numFields
     let hd ← internE (.const tbl.ctor ust)
     let fab ← mkAppN hd fabArgs
@@ -136,18 +136,12 @@ def m2cArmsT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   | some tbl => m2cEtaT r depth T cvT caps tbl major
   | none => m2cAndT mode r fe depth rl.ctor cvj.levelParams.length cnP T major
 
-/-- The family of the constructor. -/
+/-- The family of the constructor, stored at its `induct` `T`. -/
 def m2cCtorT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)
-    (rl : IRecRule) (cvj : IConstantVal) (cnP : Nat) (major : EIdx) : AM EIdx := do
-  let hh ← getAppFn coreWalkFuel (← piResult coreWalkFuel cvj.type)
-  if hh.tag == ETag.const then
-    match ← view hh with
-    | .const T _ =>
-      match fe.find? T with
-      | some (.indInfo cvT caps) => m2cArmsT mode r fe depth isK rl cvj cnP T cvT caps major
-      | _ => pure major
-    | _ => pure major
-  else pure major
+    (rl : IRecRule) (cvj : IConstantVal) (cnP : Nat) (T : NIdx) (major : EIdx) : AM EIdx :=
+  match fe.find? T with
+  | some (.indInfo cvT caps) => m2cArmsT mode r fe depth isK rl cvj cnP T cvT caps major
+  | _ => pure major
 
 /-- The constructor test, the single rule, its constructor. -/
 def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)
@@ -156,7 +150,7 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   match rules with
   | [rl] =>
     match fe.find? rl.ctor with
-    | some (.ctorInfo cvj cnP _cnF _) => m2cCtorT mode r fe depth isK rl cvj cnP major
+    | some (.ctorInfo cvj cnP _cnF T) => m2cCtorT mode r fe depth isK rl cvj cnP T major
     | _ => pure major
   | _ => pure major
 
@@ -164,7 +158,7 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
 theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (recName : NIdx) (isK : Bool) (rules : List IRecRule) (major : EIdx) :
     majorToCtor mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
-  sorry
+  rfl
 
 /-! ## Word models and L specs
 

@@ -402,6 +402,28 @@ theorem formerNeverZeroAt_fwd {mode : ConLeche.CheckMode} {eager : Bool} {fe : I
     ∀ x w, IsSC w → a.store.view x = some w → a'.store.view x = some w :=
   fun x w _ hv => ((KM.ConRon.Arena.formerNeverZeroAt _ cvT caps us (knot_smono mode fe F eager)).run h).view x w hv
 
+/-- **`family_never_zero_at`'s unified model** (`former_never_zero_at` through its unified model). -/
+l_model fanzaE_spec (p : Prog) (hf : p.lookup "family_never_zero_at" = some familyNeverZeroAtL)
+  (hz : p.lookup "former_never_zero_at" = some formerNeverZeroAtL)
+  (hs : p.lookup "former_sort_loop" = some formerSortLoopL)
+  fns [hf ↦ fanzaE list]
+  specs [fnzaE_spec p hz hs n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **`familyNeverZeroAt` keeps the store's `sort`/`const` views** (the recorded fact reads
+nothing; `formerNeverZeroAt_fwd` otherwise). -/
+theorem familyNeverZeroAt_fwd {mode : ConLeche.CheckMode} {eager : Bool} {fe : IFEnv} {F : Nat}
+    {cvT : IConstantVal} {caps : IIndCaps} {us : LsIdx} {a a' : AState} {b : Bool}
+    (h : (ConRon.Arena.familyNeverZeroAt (coreKnot mode eager fe id F) cvT caps us).run a = .ok (b, a')) :
+    ∀ x w, IsSC w → a.store.view x = some w → a'.store.view x = some w := by
+  unfold ConRon.Arena.familyNeverZeroAt at h
+  split at h
+  · cases h; exact fun _ _ _ hv => hv
+  · exact formerNeverZeroAt_fwd h
+
 section fnza
 variable (p : Prog) (hp : FnzaProg p)
 include hp
@@ -487,6 +509,38 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     rw [hw5]; cases (ConLeche.Level.zeronessOf l).isNever <;> rfl
   · show HW (r5.headD 0)
     rw [hw5]; split <;> (unfold HW; decide)
+
+/-- **`family_never_zero_at` refines `familyNeverZeroAt`, both outcomes**: the recorded fact
+(`neverZero`, word `q + 12`) first, else `former_never_zero_at` (`fnza_ref`). -/
+theorem fanza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode : Word)
+    (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (m : Mem) (a : AState) (M : ModeMaps)
+    (q us : Word) (cvT : IConstantVal) (caps : IIndCaps) (hS : CoreS dn m a vis fe M eb)
+    (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps))
+    (hks : ∃ ks, cvT.levelParams.mapM (denoteN a.store.ns) = some ks) (hus : HW us)
+    (hlsd : ∃ ls, denoteLs a.store.lss (decI us) = some ls) :
+    RefE (KnotUpToE p n) (fanzaE p (n + 1) m mode vis q us)
+      (ConRon.Arena.familyNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
+      (CorePost decBool dn m vis fe M eb ResH) := by
+  obtain ⟨-, -, hnz⟩ := decCI_ind_nz (erRdOK m) hci
+  simp only [erRd] at hnz
+  unfold ConRon.Arena.familyNeverZeroAt
+  by_cases g : rdW (m.arr64 (tierA EREC ((q + 12) >>> 40))) ((q + 12) &&& 1099511627775) ≠ 0
+  · rw [fanzaE.arm1 _ _ _ _ _ _ _ g]
+    rw [show caps.neverZero = true by rw [hnz]; simpa using g]
+    simp only [↓reduceIte]
+    exact RefE.ret rfl (CorePost.ret hS rfl (by unfold ResH HW; decide))
+  rw [fanzaE.arm2 _ _ _ _ _ _ _ (by simpa using g)]
+  rw [show caps.neverZero = false by rw [hnz]; simpa using g]
+  simp only [Bool.false_eq_true, ↓reduceIte]
+  cases n with
+  | zero => rw [fnzaE.eq_1, fanzaE.k_former_never_zero_at.none]; exact RefE.of_cls0 (by simp)
+  | succ N =>
+  exact RefE.tail_eq (fun _ => fanzaE.k_former_never_zero_at.none ..)
+    (fun v => fanzaE.k_former_never_zero_at.arm1 p v.1 v.2) (fun h => h.mono (Nat.le_succ N)) rfl
+    (fun v y a' h => ⟨h.after, by simpa [decBool] using h.res, h.valid⟩)
+    (fnza_ref p hp N F (hk.mono (Nat.le_succ N)) (by omega) (by omega) dn vis fe eb mode hm4 hebm m a M
+      q us cvT caps hS hci hks hus hlsd)
 
 end fnza
 
