@@ -83,25 +83,31 @@ theorem erAddr {r c : Word} (hc : erOff r + c.toNat < 2 ^ 40) (hr : r.toNat < 2 
   refine ⟨h1, ?_, fun X => by simp only [erTopOf, h2]⟩
   unfold erOff at hc ⊢; rw [h1]; omega
 
-/-- A constant value whose slice words point below a base: it decodes in every reader with the
-same four words that extends the base. -/
+/-- An `axiomInfo`'s (or a theorem's) record: the kind word and the constant value. -/
+theorem axiomSize_toNat : CI.axiomSize.toNat = CI.cv.toNat + CV.size.toNat :=
+  layout_add_toNat CI.cv_le CV.size_le
+
+/-- A constant value whose slice words point below a base: it decodes in every reader that holds
+its `CV.size` words and extends the base. -/
 theorem decCV_move {R R' R₀ : Nat → Option Word} {q : Nat} {cv : IConstantVal} {o l : Word}
-    {xs : List NIdx} (h : decCV R q = some cv) (ho : R (q + 1) = some o) (hl : R (q + 2) = some l)
+    {xs : List NIdx} (h : decCV R q = some cv) (ho : R (q + CV.lpsOff.toNat) = some o)
+    (hl : R (q + CV.lpsLen.toNat) = some l)
     (h0 : hslice? R₀ o.toNat l.toNat = some xs) (he : ArrExt R₀ R) (he' : ArrExt R₀ R')
-    (hw : ∀ j < 4, R' (q + j) = R (q + j)) : decCV R' q = some cv := by
-  have w0 : R' q = R q := by simpa using hw 0 (by omega)
-  simp only [decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at h ⊢
-  -- the value's four words in order (a whole-record copy): the offsets as numbers (`rec_unfold`)
-  simp only [rec_unfold, UInt64.reduceToNat] at h ⊢
-  obtain ⟨nm, hn, ps, hp, t, ht, e⟩ := h
-  refine ⟨nm, hd?_sh (fun _ e => by rw [w0]; exact e) hn, ps, ?_, t,
-    hd?_sh (fun _ e => by rw [hw 3 (by omega)]; exact e) ht, e⟩
-  simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, nat?, ho, hl, Option.map_some,
-    Option.some.injEq, exists_eq_left'] at hp ⊢
-  have e1 := he.hslice? h0
-  rw [hp] at e1; cases e1
-  rw [show q + 1 + 1 = q + 2 by omega, hw 1 (by omega), hw 2 (by omega), ho, hl]
-  simpa using he'.hslice? h0
+    (hw : ∀ j < CV.size.toNat, WAt R R' (q + j) (q + j)) : decCV R' q = some cv := by
+  obtain ⟨hn, hp, ht⟩ := decCV_eq_some.mp h
+  have w0 := hw _ CV.name_lt
+  rw [CV.name_toNat, Nat.add_zero] at w0
+  have hl1 : R (q + CV.lpsOff.toNat + 1) = some l := by rw [Nat.add_assoc, ← CV.lpsLen_toNat]; exact hl
+  have hl1' : R' (q + CV.lpsOff.toNat + 1) = some l := by
+    rw [Nat.add_assoc, ← CV.lpsLen_toNat]; exact hw _ CV.lpsLen_lt _ hl
+  have hp0 : hlist? R (q + CV.lpsOff.toNat) = some xs := by
+    simp only [hlist?, nat?, ho, hl1, Option.map_some, Option.bind_eq_bind, Option.bind_some,
+      he.hslice? h0]
+  have exs : cv.levelParams = xs := Option.some.inj (hp.symm.trans hp0)
+  refine decCV_eq_some.mpr ⟨hd?_sh w0 hn, ?_, hd?_sh (hw _ CV.type_lt) ht⟩
+  rw [exs]
+  simp only [hlist?, nat?, hw _ CV.lpsOff_lt _ ho, hl1', Option.map_some, Option.bind_eq_bind,
+    Option.bind_some, he'.hslice? h0]
 
 /-! ## `ci_at_lps`: the record's head (`erec_alloc`, the kind word, `cv_at_lps`) -/
 
