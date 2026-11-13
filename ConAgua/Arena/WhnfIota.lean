@@ -833,7 +833,7 @@ parameters are `lps`), and a constructor of the environment. State-free, so it p
 def FireEnv (fe : IFEnv) (lps : List NIdx) (rule : IRecRule) (cvj : IConstantVal) : Prop :=
   (∃ c cv mI rP isK rules, fe.find? c = some (.recInfo cv mI rP isK rules) ∧ cv.levelParams = lps ∧
       rule ∈ rules) ∧
-    ∃ c np nf, fe.find? c = some (.ctorInfo cvj np nf)
+    ∃ c np nf fam, fe.find? c = some (.ctorInfo cvj np nf fam)
 
 /-- `rec_fire_levels(fireKind, fvo, fvc, po, pc, us, qo, qc)` refines `recFireLevels rl lps us
 cvjLps` (`rl.fire` decoded from `(fireKind, fvo, fvc)`, `lps` the `EREC` slice `(po, pc)`, `cvjLps`

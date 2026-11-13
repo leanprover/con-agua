@@ -42,9 +42,9 @@ theorem decCI_ctor {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R r
     (rd q ≠ 4 → ∀ cv np nf fam, ci ≠ .ctorInfo cv np nf fam) := by
   have hs := decCI_split hR h
   refine ⟨fun h4 => ?_, hs.2.2.2.2.2⟩
-  obtain ⟨cv, np, nf, rfl, hcv⟩ := hs.2.2.2.2.1 h4
+  obtain ⟨cv, np, nf, fam,  rfl, hcv⟩ := hs.2.2.2.2.1 h4
   obtain ⟨-, -, hty, hlt⟩ := decCV_rd hR hcv
-  exact ⟨cv, np, nf, rfl, hty, hlt⟩
+  exact ⟨cv, np, nf, _, rfl, hty, hlt⟩
 
 /-! ## Runs of plain triples -/
 
@@ -99,7 +99,7 @@ theorem projCert_run_none (fe : IFEnv) (c : NIdx) (args : List EIdx) (a : AState
   | none => rfl
   | some ci =>
     cases ci with
-    | ctorInfo cv np nf _ => exact absurd e (h cv np nf)
+    | ctorInfo cv np nf _ => exact absurd e (h cv np nf _)
     | _ => rfl
 
 theorem projCert_run_ctor (fe : IFEnv) (c : NIdx) (args : List EIdx) (a : AState)
@@ -131,7 +131,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   · rw [ite_eq_left h0] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
-    have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
+    have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf fam h => by
       rw [hnone] at h; cases h)
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
     rw [← hm]
@@ -147,8 +147,8 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   by_cases h4 : erRd s.mem (r₁.tail.headD 0) ≠ 4
   · rw [ite_eq_left h4] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf h => by
-      rw [hfind'] at h; cases h; exact hctor.2 h4 cv np nf rfl)
+    have hrun' := projCert_run_none fe (decI k) args.toList a₀ (fun cv np nf fam h => by
+      rw [hfind'] at h; cases h; exact hctor.2 h4 cv np nf _ rfl)
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
     rw [← hm]
     refine ⟨hok, ?_, ?_, ?_⟩
@@ -156,7 +156,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     · rw [hres]; simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
   rw [ite_eq_right h4] at hW
-  obtain ⟨cv, np, nf, rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
+  obtain ⟨cv, np, nf, fam,  rfl, hty, htw⟩ := hctor.1 (by simpa using h4)
   rcases hc2 : callW p n "peel_pis" [an, erRd s.mem (r₁.tail.headD 0 + 4)] s.mem with _ | ⟨r₂, m₂⟩ <;> simp only [hc2, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW

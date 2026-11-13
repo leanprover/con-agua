@@ -17,6 +17,13 @@ sub (\|\s*some \(\.ctorInfo) ([A-Za-z_][\w'₀-₉]*) ([A-Za-z_][\w'₀-₉]*) (
 sub (\|\s*\.ctorInfo) _ _ _(\s*=>) ==> "\1 _ _ _ _\2"
 # #573: destructuring an `∃ cv np nf fam, …` fact
 sub obtain ⟨(\w+), (\w+), (\w+), rfl⟩ : ∃ \1 \2 \3 fam, ==> "obtain ⟨\1, \2, \3, fam, rfl⟩ : ∃ \1 \2 \3 fam,"
+# #573: the same, generic (guarded by the file mentioning a constructor record; the ladder only
+# keeps text that elaborates)
+sub-if ctorInfo obtain ⟨((?:cv|cvj|cvc)[\w']*), ((?:np|nP|cnP)[\w']*), ((?:nf|nF|cnF)[\w']*), ==> "obtain ⟨\1, \2, \3, fam, "
+sub-if ctorInfo exact ⟨((?:cv|cvj|cvc)[\w']*), ((?:np|nP|cnP)[\w']*), ((?:nf|nF|cnF)[\w']*), rfl ==> "exact ⟨\1, \2, \3, _, rfl"
+sub-if ctorInfo \(fun ((?:cv)[\w']*) ((?:np|nP)[\w']*) ((?:nf|nF)[\w']*) (h[\w']*) => ==> "(fun \1 \2 \3 fam \4 =>"
+sub-if ctorInfo \b(h[\w']*) ((?:cv)[\w']*) ((?:np|nP)[\w']*) ((?:nf|nF)[\w']*)\) ==> "\1 \2 \3 \4 _)"
+sub-if ctorInfo \b(h[\w']*\.2) (h[\w']*) ((?:cv)[\w']*) ((?:np|nP)[\w']*) ((?:nf|nF)[\w']*) rfl ==> "\1 \2 \3 \4 \5 _ rfl"
 # #556 P-N / #557: `natOpResult` is gone; its dispatch is `natBinOpOfName?` + `natBinOpResult`
 # (no rule: a shape change, restated by hand)
 

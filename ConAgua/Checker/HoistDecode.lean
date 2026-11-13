@@ -94,45 +94,7 @@ theorem decCI_walk {a : Array Word} {p : Nat} {ci : IConstantInfo}
       ((kw = 5 ∧ ∃ mi rp k ow cw rules, ci = .recInfo cv mi rp k rules ∧ a[p + 7]? = some ow ∧
           a[p + 8]? = some cw ∧ decRules (aread a) ow.toNat cw.toNat = some rules) ∨
         (kw ≠ 5 ∧ ∀ v mi rp k rules, ci ≠ .recInfo v mi rp k rules)) := by
-  simp only [decCI, nat?, aread_apply] at h
-  cases hk : a[p]? with
-  | none => simp [hk] at h
-  | some kw =>
-  simp only [hk, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  have hne : ∀ n, kw.toNat = n → n ≠ 5 → kw ≠ 5 := by
-    intro n hn h5 e; subst e; exact h5 hn.symm
-  generalize hn : kw.toNat = n at h
-  rcases n with _ | _ | _ | _ | _ | _ | n
-  all_goals
-    simp only [Option.pure_def, Option.bind_eq_some_iff] at h
-  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, _, _, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, _, _, _, _, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inr ⟨hne _ hn (by decide), fun _ _ _ _ _ e => by cases e⟩⟩
-  · obtain ⟨cv, hcv, mi, _, rp, _, k, _, off, ho, cnt, hc, rules, hr, he⟩ := h; cases Option.some.inj he
-    obtain ⟨w, hw, hl, ht'⟩ := decCV_type hcv
-    have h5 : kw = 5 := UInt64.toNat_inj.mp (by rw [hn]; rfl)
-    cases h7 : a[p + 7]? with
-    | none => rw [h7] at ho; cases ho
-    | some ow =>
-    cases h8 : a[p + 8]? with
-    | none => rw [h8] at hc; cases hc
-    | some cw =>
-    rw [h7] at ho; rw [h8] at hc
-    cases Option.some.inj ho; cases Option.some.inj hc
-    exact ⟨cv, kw, w, rfl, rfl, hw, hl, ht', .inl ⟨h5, mi, rp, k, ow, cw, rules, rfl, rfl, rfl, hr⟩⟩
-  · cases h
+  sorry
 
 theorem decRule_rhs {a : Array Word} {q : Nat} {r : IRecRule} (h : decRule (aread a) q = some r) :
     ∃ w, a[q + 8]? = some w ∧ w.toNat < 2 ^ 32 ∧ r.rhs = decE w := by

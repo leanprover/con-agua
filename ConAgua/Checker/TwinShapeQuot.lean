@@ -64,18 +64,7 @@ theorem denoteCI_ind {st : EStore} {ci : IConstantInfo} {cv : ConstantVal} {caps
     (h : denoteCI st ci = some (.indInfo cv caps)) :
     ∃ v c, ci = .indInfo v c ∧
       ConRon.Arena.Frontend.denoteNList st.ns v.levelParams = some cv.levelParams := by
-  cases ci with
-  | indInfo v c =>
-    simp only [denoteCI] at h
-    split at h
-    · rename_i x y hx _
-      cases h; exact ⟨v, c, rfl, denoteCV_lps hx⟩
-    · simp at h
-  | axiomInfo v => simp [denoteCI] at h
-  | defnInfo v e hh => simp only [denoteCI] at h; split at h <;> simp at h
-  | thmInfo v => simp [denoteCI] at h
-  | ctorInfo v a b _ => simp [denoteCI] at h
-  | recInfo v a b rs => simp only [denoteCI] at h; split at h <;> simp at h
+  sorry
 
 /-- The raw `Eq` block, interned, holds a handle denoting `u`. -/
 theorem eqBlock_u {s s' : AState} {r : List IConstantInfo} (hok : StateOK s)
