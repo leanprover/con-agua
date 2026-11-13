@@ -213,10 +213,10 @@ theorem ulsa_ref (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) {G : Prop} 
   rw [hfind']
   by_cases h4 : erRd s₀.mem (r₁.tail.headD 0) ≠ 4
   · erw [ite_eq_left h4]
-    rcases ci with _ | _ | _ | _ | ⟨cv, np, nf⟩ | _ | _ <;> try exact hl _ rfl
-    exact absurd rfl (hctor.2 h4 cv np nf)
+    rcases ci with _ | _ | _ | _ | ⟨cv, np, nf, fam⟩ | _ | _ <;> try exact hl _ rfl
+    exact absurd rfl (hctor.2 h4 cv np nf fam)
   erw [ite_eq_right h4]
-  obtain ⟨cvc, hci_eq⟩ := hctor.1 (by simpa using h4)
+  obtain ⟨cvc, hci_eq, -⟩ := hctor.1 (by simpa using h4)
   rw [hci_eq] at hci ⊢
   obtain ⟨hlp, -, hty, htyw⟩ := decCV_rd (erRdOK s₀.mem) (L.Arena.decCI_ctor_cv hci)
   simp only [L.Ind.erRd_foldN] at *

@@ -59,7 +59,12 @@ l_model ertW_spec (p : Prog) (hf : p.lookup "eta_rescue_table" = some etaRescueT
 /-- A `ctorInfo` record's constant value decodes at `q + 1`. -/
 theorem decCI_ctor_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {nP nF : Nat}
     {fam : NIdx} (h : decCI R q = some (.ctorInfo cv nP nF fam)) : decCV R (q + 1) = some cv := by
-  sorry
+  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
+  obtain ⟨k, -, h⟩ := h
+  rcases k with _ | _ | _ | _ | _ | _ | k <;>
+    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
+  obtain ⟨cv', hcv, _, -, _, -, _, -, he⟩ := h
+  cases he; exact hcv
 
 /-- **The words of a found table** (`find_table`'s answer `tq ≠ 0`, the record at `tq - 1`): the
 parameter count at `tq + 4`, the constructor at `tq + 5`, the field count at `tq + 6`. -/

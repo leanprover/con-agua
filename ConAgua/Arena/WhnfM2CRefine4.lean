@@ -31,7 +31,7 @@ include hp hc hcc hpr hilp
 
 omit hcc in
 /-- **`m2c_eta2` refines `m2cEta2T`, both outcomes** (the slice `(to, tn)` ends at the stack top;
-the errors are `former_never_zero_at`'s). -/
+the errors are `family_never_zero_at`'s). -/
 theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d T indP ec ef to tn ust major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
@@ -46,7 +46,7 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
         (decI ust) (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
   rw [m2cEta2E.arm1]
   cases N with
-  | zero => rw [fnzaE.eq_1, m2cEta2E.k_former_never_zero_at.none]; exact RefE.of_cls0 (by simp)
+  | zero => rw [fanzaE.eq_1, m2cEta2E.k_family_never_zero_at.none]; exact RefE.of_cls0 (by simp)
   | succ N' =>
   unfold m2cEta2T
   -- `former_never_zero_at`
@@ -54,20 +54,20 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     obtain ⟨c, hcf⟩ := hfe; exact hS.den.constLps c _ hcf
   have hlsd : ∃ ls, denoteLs a.store.lss (decI ust) = some ls := by
     obtain ⟨x, c, hx⟩ := hvus; exact hS.den.constLs x c _ hx
-  have hf := fnza_ref p (hp.fnzaProg hpr hilp hc.inst1) N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega)
-    dn vis fe eb mode hm4 hebm m a M indP ust cvT caps hS hci hks hus hlsd
-  refine RefE.bind_coreEG (w := id) (fun _ => m2cEta2E.k_former_never_zero_at.none ..)
+  have hf := fanza_ref p (hp.fnzaProg hpr hilp hc.inst1) N' F (hk.mono (Nat.le_succ _)) (by omega)
+    (by omega) dn vis fe eb mode hm4 hebm m a M indP ust cvT caps hS hci hks hus hlsd
+  refine RefE.bind_coreEG (w := id) (fun _ => m2cEta2E.k_family_never_zero_at.none ..)
     (fun (hG : M2CCtxE p (N' + 1)) => hG.knot.mono (Nat.le_succ _)) hf
     fun r4 m4 _ h4 M4 hS4 hSt4 => ?_
   have hrun4 := AM.run_of_ok _ _ h4.run
   have hA4 : GrowPost decH dn m4 vis fe M4 eb ResH (id ([major], m4)) (decE major)
-      (AM.st (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI ust)) a) :=
+      (AM.st (ConRon.Arena.familyNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI ust)) a) :=
     ⟨CoreAfter.toG ⟨M4, hS4, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
   by_cases g4 : r4.headD 0 = 0
-  · rw [m2cEta2E.k_former_never_zero_at.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g4]
+  · rw [m2cEta2E.k_family_never_zero_at.arm1 _ _ _ _ _ _ _ _ _ _ _ _ g4]
     simp only [L.Arena.decBool_false_of g4, Bool.false_eq_true, ↓reduceIte]
     exact RefE.ret rfl hA4
-  rw [m2cEta2E.k_former_never_zero_at.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4]
+  rw [m2cEta2E.k_family_never_zero_at.arm2 _ _ _ _ _ _ _ _ _ _ _ _ g4]
   simp only [L.Arena.decBool_true_of g4, ↓reduceIte]
   have hspn := hS.spn
   have hSt34 := hSt4
@@ -77,10 +77,10 @@ theorem m2cEta2_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
       rw [← htop, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn
   have htop4 : to + tn = spTop m4 := htop.trans hSt34.1.symm
-  have hvus4 : ∃ x c, (AM.st (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps
+  have hvus4 : ∃ x c, (AM.st (ConRon.Arena.familyNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps
       (decI ust)) a).store.view x = some (.const c (decI ust)) := by
     obtain ⟨x, c, hx⟩ := hvus
-    exact ⟨x, c, formerNeverZeroAt_fwd hrun4 x _ (.inr ⟨_, _, rfl⟩) hx⟩
+    exact ⟨x, c, familyNeverZeroAt_fwd hrun4 x _ (.inr ⟨_, _, rfl⟩) hx⟩
   rw [hecE, hef]
   rcases c5 : callW p (N' + 1) "eta_fab_args" [T, to, tn, major, ef] m4 with _ | ⟨r5, m5⟩
   · rw [liftE_none, m2cEta2E.k_eta_fab_args.none]; exact RefE.of_cls0 (by simp)

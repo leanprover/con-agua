@@ -203,6 +203,86 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p (n + 1) "eta_ctor_shape" [vis, e] (etaCtorShape fe (decE e)) decBool s₀ a₀ dn vis
       fe MM eb := by
-  sorry
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (etaCtorShape_spec p hq n s₀ vis e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hR := hS.arena.base
+  have hres : ∀ x : Word, some (x, s.mem) = some (r.headD 0, s'.mem) → HW x → ∀ v,
+      (etaCtorShape fe (decE e)).run a₀ = .ok (v, a₀) → v = (x != 0) →
+      CoreRef (etaCtorShape fe (decE e)) a₀ decBool dn s.mem vis fe MM eb r s'.mem := by
+    intro x hxy hx v hv hvx
+    obtain ⟨h1, h3⟩ := Prod.mk.inj (Option.some.inj hxy)
+    rw [← h3]
+    refine coreRef_pure hS hv ?_ ?_
+    · rw [hvx, decBool, ← h1]
+    · unfold ResH; rw [← h1]; exact hx
+  obtain ⟨r₁, m₁, hc, hW⟩ := callW_cases rfl hW
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hq.leaf hS.arena.base he hc
+  simp only [ecsK1] at hW
+  generalize r₁.headD 0 = h at hh hgaf hW
+  rcases (Classical.em (tagW h = 3)).symm with h3 | h3
+  · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte] at hW
+    exact hres 0 hW hw0 _
+      (etaCtorShape_run_nonconst fe _ a₀ _ hgaf (by rw [decE_tag_const_beq _ hh]; simp [h3])) rfl
+  have hs : ¬ (tierW h ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0) := fun hs => by simp [h3, hs] at hW
+  have hcc : ¬ tcnt s.mem CONST (tierW h) ≤ idxW h := fun hcc => by simp [h3, hs, hcc] at hW
+  simp only [h3, hs, hcc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have hvo : viewOK s.mem h CONST := ⟨hs, by simpa using hcc⟩
+  obtain ⟨hv, hnw, huw⟩ := L.Ind.view_const_f s.mem a₀ hR h hh hvo h3
+  have hct : ((decE h).tag == ETag.const) = true := by rw [decE_tag_const_beq _ hh]; simp [h3]
+  generalize tfld s.mem CONST (tierW h) (idxW h) 0 = k at hnw hW hv
+  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
+  obtain ⟨rfl, hfind, hfound⟩ := envFind_callW hq.leaf.core hS.env hnw hc2
+  simp only [ecsK2] at hW
+  by_cases h0 : r₂.headD 0 = 0
+  · simp only [h0, ↓reduceIte] at hW
+    have hnone : fe.find? (decI k) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
+    exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
+      (fun cv np nf fam e => by rw [hnone] at e; cases e)) rfl
+  obtain ⟨ci, hci⟩ := hfound h0
+  have hfind' := find_of_found hfind h0 hci
+  have hctor := L.Arena.decCI_ctorR (erRdOK _) hci
+  rcases (Classical.em (erRd s.mem (r₂.tail.headD 0) = 4)).symm with h4 | h4
+  · simp only [h0, h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
+    exact hres 0 hW hw0 _ (etaCtorShape_run_other fe _ a₀ _ _ _ hgaf hct hv
+      (fun cv np nf fam e => hctor.2 h4 cv np nf fam (by rw [hfind'] at e; exact Option.some.inj e))) rfl
+  simp only [h0, h4, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  obtain ⟨cv, hci_eq, -⟩ := hctor.1 h4
+  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
+  obtain ⟨hf3, hg3, -, -, xs, hargs, hsp⟩ := getAppArgs_callW hq.leaf.core.spine hS he hc3
+  simp only [ecsK3] at hW
+  have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
+    by_cases h : (136 : Word).toNat < (m₃.arr64 CTL).size
+    · exact h
+    · simp only [h, ↓reduceIte] at hW; cases hW
+  simp only [h136, ↓reduceIte] at hW
+  obtain ⟨hS', hK'⟩ := hS.restoreTop hf3 hg3 h136
+  have herec : erRd (m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = erRd s.mem := by
+    funext x
+    exact erRd_congr
+      (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hf3.1 EREC (by simp [EREC, SPN]) (by decide))
+      (by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+          exact hf3.1 (tier1 EREC) (by simp [EREC, SPN, tier1]) (by decide)) x
+  rw [herec] at hW
+  have hrun := etaCtorShape_run_ctor fe _ a₀ _ _ _ hgaf hct hv cv _ _ (by rw [hfind', hci_eq]) xs
+    hargs
+  have hlen : xs.length = (r₃.tail.headD 0).toNat := by
+    have := hsp.size; simpa using this
+  have hW' : some ((if r₃.tail.headD 0 < erRd s.mem (r₂.tail.headD 0 + 6) then (0 : Word)
+      else if r₃.tail.headD 0 - erRd s.mem (r₂.tail.headD 0 + 6) =
+        erRd s.mem (r₂.tail.headD 0 + 5) then 1 else 0),
+      m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = some (r.headD 0, s'.mem) := by
+    rw [← hW]; split <;> rfl
+  rw [count_test _ _ _ xs.length hlen] at hW'
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW'
+  obtain ⟨hr, hm⟩ := hW'
+  obtain ⟨hok, hst, hres'⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hok, ?_, ?_, ?_⟩
+  · rw [hst, ← hm]; exact ⟨MM, hS', KeptAll.refl _ _, hK'⟩
+  · rw [hres', decBool, ← hr]; split <;> simp_all
+  · unfold ResH; rw [← hr]; split <;> first | exact hw0 | exact hw1
 
 end L.Arena

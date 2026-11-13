@@ -138,14 +138,14 @@ theorem callW_natIndAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
   · show ResH [r.headD 0]
     rw [← hr]; exact L.Arena.resH_ite _
 
-/-- **`nat_zero_at_cv(q)` refines `natZeroOk (some (.ctorInfo cv 0 0))`** at the constant value
+/-- **`nat_zero_at_cv(q)` refines `natZeroOk (some (.ctorInfo cv 0 0 fam))`** at the constant value
 `q`. -/
 @[refines ConRon.Arena.natZeroOk]
 theorem callW_natZeroAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb q : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    {cv : IConstantVal} (hcv : decCV (erecP s₀.mem) q.toNat = some cv) (np nf : Nat)
+    {cv : IConstantVal} (hcv : decCV (erecP s₀.mem) q.toNat = some cv) (np nf : Nat) (fam : NIdx)
     (r : List Word) (m' : Mem) (h : callW p n "nat_zero_at_cv" [q] s₀.mem = some (r, m')) :
-    CRef (natZeroOk (some (.ctorInfo cv np nf))) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
+    CRef (natZeroOk (some (.ctorInfo cv np nf fam))) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -180,7 +180,7 @@ theorem callW_natZeroAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
     rw [hrun, hres]; rfl
-  have hz := natZeroOk_run_ctor hC.pins cv np nf _ hrun'
+  have hz := natZeroOk_run_ctor hC.pins cv np nf fam _ hrun'
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   by_cases hk2 : erRd s₀.mem (q + 2) ≠ 0
   · rw [ite_eq_left hk2] at hW
@@ -213,14 +213,14 @@ theorem callW_natZeroAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   · show ResH [r.headD 0]
     rw [← hr]; exact L.Arena.resH_ite _
 
-/-- **`nat_succ_at_cv(q)` refines `natSuccOk (some (.ctorInfo cv 0 1))`** at the constant value
+/-- **`nat_succ_at_cv(q)` refines `natSuccOk (some (.ctorInfo cv 0 1 fam))`** at the constant value
 `q`. -/
 @[refines ConRon.Arena.natSuccOk]
 theorem callW_natSuccAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb q : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    {cv : IConstantVal} (hcv : decCV (erecP s₀.mem) q.toNat = some cv) (np nf : Nat)
+    {cv : IConstantVal} (hcv : decCV (erecP s₀.mem) q.toNat = some cv) (np nf : Nat) (fam : NIdx)
     (r : List Word) (m' : Mem) (h : callW p n "nat_succ_at_cv" [q] s₀.mem = some (r, m')) :
-    CRef (natSuccOk (some (.ctorInfo cv np nf))) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
+    CRef (natSuccOk (some (.ctorInfo cv np nf fam))) a₀ decBool dn s₀.mem vis fe MM eb r m' ResH := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
   | succ n =>
@@ -277,7 +277,7 @@ theorem callW_natSuccAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    have hz := natSuccOk_run_nonforall hC.pins cv np nf _ hl0 hrun' (by
+    have hz := natSuccOk_run_nonforall hC.pins cv np nf fam _ hl0 hrun' (by
       rw [hty]
       cases hb : ((decI (erRd s₀.mem (q + 3)) : EIdx).tag == ETag.forallE)
       · rfl
@@ -301,7 +301,7 @@ theorem callW_natSuccAtCv (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
   rw [← hm]
   have hvOK : viewOK m₂ (erRd s₀.mem (q + 3)) FORALL := ⟨hsc, by simpa using hbd⟩
   obtain ⟨hview, hd, hb⟩ := view_forall m₂ _ hS.arena.base _ htyl hvOK hg'
-  have hz := natSuccOk_run_forall hC.pins cv np nf _ _ _ hl0 hrun' (by
+  have hz := natSuccOk_run_forall hC.pins cv np nf fam _ _ _ hl0 hrun' (by
       rw [hty]; exact beq_iff_eq.mpr ((decE_tag_forallE _ htyl).mpr hg')) (by rw [hty]; exact hview)
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', by rw [hst']; exact hS, ?_, hfr, ?_⟩
@@ -325,12 +325,12 @@ variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche
 include hp
 
 /-- **One arm of the name chain**: the pin read, the name compared, `T` at a match, else `E`. -/
-theorem lsoArm {T E : AM Bool} (hS : CoreS dn m a vis fe M eb) {ci : IConstantInfo} {nw : Word}
-    (hnw : HW nw) (hname : ci.name = decI nw) {i : Word} {rp : List Word} {mp : Mem}
+theorem lsoArm {T E : NIdx → AM Bool} (hS : CoreS dn m a vis fe M eb) {ci : IConstantInfo}
+    {nw : Word} (hnw : HW nw) (hname : ci.name = decI nw) {i : Word} {rp : List Word} {mp : Mem}
     (hc : callW p n "pin_at" [i] m = some (rp, mp)) (k : Nat) (hk : i.toNat = k) (hi51 : i ≠ 51)
-    (hT : mp = m → nw = rp.headD 0 → CoreRef T a decBool dn m vis fe M eb r m')
-    (hE : mp = m → nw ≠ rp.headD 0 → CoreRef E a decBool dn m vis fe M eb r m') :
-    CoreRef (pinAt k >>= fun x => if (ci.name == x) = true then T else E) a decBool dn m vis fe M eb
+    (hT : mp = m → nw = rp.headD 0 → CoreRef (T (decI (rp.headD 0))) a decBool dn m vis fe M eb r m')
+    (hE : mp = m → nw ≠ rp.headD 0 → CoreRef (E (decI (rp.headD 0))) a decBool dn m vis fe M eb r m') :
+    CoreRef (pinAt k >>= fun x => if (ci.name == x) = true then T x else E x) a decBool dn m vis fe M eb
       r m' := by
   obtain ⟨hm, -, hi, hr⟩ := callW_pinAt p hp.pinAt n m i rp mp hc hi51
   subst hk
@@ -404,7 +404,7 @@ theorem litShapeOk_call (hS : CoreS dn m a vis fe M eb) {c : Word} {ci : IConsta
   · subst m1; rw [ite_eq_left he] at hW
     refine lsoGate p hW fun r₂ m₂ h₂ => ?_
     exact (callW_natZeroAtCv p hp n ⟨m, Locals.init []⟩ a dn vis fe M eb (c + 1) hS
-      (by rw [hc1]; exact hcv) 0 0 r₂ m₂ h₂).core
+      (by rw [hc1]; exact hcv) 0 0 _ r₂ m₂ h₂).core
   subst m1; rw [ite_eq_right he] at hW
   -- `Nat.succ`
   rcases h1 : callW p n "pin_at" [3] m with _ | ⟨r1, m1⟩
@@ -414,7 +414,7 @@ theorem litShapeOk_call (hS : CoreS dn m a vis fe M eb) {c : Word} {ci : IConsta
   · subst m1; rw [ite_eq_left he] at hW
     refine lsoGate p hW fun r₂ m₂ h₂ => ?_
     exact (callW_natSuccAtCv p hp n ⟨m, Locals.init []⟩ a dn vis fe M eb (c + 1) hS
-      (by rw [hc1]; exact hcv) 0 1 r₂ m₂ h₂).core
+      (by rw [hc1]; exact hcv) 0 1 _ r₂ m₂ h₂).core
   subst m1; rw [ite_eq_right he] at hW
   -- `String`
   rcases h1 : callW p n "pin_at" [5] m with _ | ⟨r1, m1⟩
