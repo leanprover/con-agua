@@ -1,6 +1,10 @@
 module
 
 public import ConAgua.Arena.DeclRec
+public import ConAgua.Arena.WhnfIota
+public import ConAgua.Arena.WhnfSpineRefine
+public import ConAgua.Arena.LevelZero
+public import ConAgua.Arena.LevelHeap
 
 @[expose] public section
 
@@ -22,6 +26,16 @@ namespace L.Ind
 
 open L.Arena
 
+/-- The lookups `member_never_zero` reaches. -/
+structure MnzProg (p : Prog) : Prop where
+  mnz : p.lookup "member_never_zero" = some memberNeverZero
+  fz : p.lookup "former_z" = some formerZL
+  fr : p.lookup "former_res_sort" = some formerResSortL
+  pr : p.lookup "pi_result" = some piResultL
+  node : p.lookup "lv_node" = some lvNode
+  push : p.lookup "lh_push" = some lhPush
+  zero : p.lookup "lv_zero" = some lvZero
+
 /-- The lookups of `block_caps_at`. -/
 structure CapsProg (p : Prog) : Prop where
   alloc : p.lookup "iw_alloc" = some iwAlloc
@@ -37,6 +51,7 @@ structure CapsProg (p : Prog) : Prop where
   head : p.lookup "block_caps_head" = some blockCapsHead
   one : p.lookup "block_caps_one" = some blockCapsOne
   caps : p.lookup "block_caps_at" = some blockCapsAt
+  mnz : MnzProg p
 
 /-- The members' slice of a shape record lies below the top. -/
 def ShapeSrc (m : Mem) (q : Word) : Prop :=
