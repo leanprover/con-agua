@@ -112,13 +112,13 @@ theorem hpp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   obtain ⟨-, -, hE, -⟩ := hek n "find_proj" _ m r₁ m₁ rfl hc1
   obtain ⟨hbw, hbe⟩ := decTbl_body (erRdOK m) htbl i
   simp only [L.Ind.erRd_foldN] at hW
-  replace hW : hppW.j1 p n vis f (if i < erRd m₁ (r₁.tail.headD 0 + 10) then
-      erRd m₁ (erRd m₁ (r₁.tail.headD 0 + 9) + i) else 0) m₁ = some (x₀, x₁, x₂, m') := by
-    rw [← hW]; by_cases hi : i < erRd m₁ (r₁.tail.headD 0 + 10) <;> simp only [hi, ↓reduceIte]
+  replace hW : hppW.j1 p n vis f (if i < erRd m₁ (r₁.tail.headD 0 + ProjTbl.bodiesLen) then
+      erRd m₁ (erRd m₁ (r₁.tail.headD 0 + ProjTbl.bodiesOff) + i) else 0) m₁ = some (x₀, x₁, x₂, m') := by
+    rw [← hW]; by_cases hi : i < erRd m₁ (r₁.tail.headD 0 + ProjTbl.bodiesLen) <;> simp only [hi, ↓reduceIte]
   rw [hE] at hW
   unfold hppW.j1 at hW
-  generalize (if i < erRd m (r₁.tail.headD 0 + 10) then
-    erRd m (erRd m (r₁.tail.headD 0 + 9) + i) else 0) = b at hW hbw hbe
+  generalize (if i < erRd m (r₁.tail.headD 0 + ProjTbl.bodiesLen) then
+    erRd m (erRd m (r₁.tail.headD 0 + ProjTbl.bodiesOff) + i) else 0) = b at hW hbw hbe
   obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hafter
   rcases hc2 : callW p n "type_sort_pw" [vis, f, b] m₁ with _ | ⟨r₂, m₂⟩ <;> rw [hc2] at hW
   · cases hW
