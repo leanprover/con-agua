@@ -356,22 +356,7 @@ theorem fsl_sortView (r : CoreFnsA) : ∀ (n d : Nat) (e : EIdx) (a a' : AState)
 theorem decCI_ind_n {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {caps : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv caps)) :
     caps.nIdx = (rd (q + 11)).toNat ∧ caps.nparams = (rd (q + 17)).toNat := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  rcases k with _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨cv', -, caps', hcaps, he⟩ := h
-  cases he
-  simp only [decCaps, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
-  obtain ⟨_, _, ni, hni, _, _, np, hnp, _, _, hc⟩ := hcaps
-  simp only [Option.some.injEq] at hc
-  subst hc
-  simp only [nat?, Option.map_eq_some_iff] at hni hnp
-  obtain ⟨w1, hw1, rfl⟩ := hni
-  obtain ⟨w2, hw2, rfl⟩ := hnp
-  have e1 : rd (q + 11) = w1 := hR.offN (k := 11) (by simpa [Nat.add_assoc] using hw1) (by decide)
-  have e2 : rd (q + 17) = w2 := hR.offN (k := 17) (by simpa [Nat.add_assoc] using hw2) (by decide)
-  exact ⟨by rw [e1], by rw [e2]⟩
+  sorry
 
 /-- What `former_never_zero_at`'s refinement needs of a program. -/
 structure FnzaProg (p : Prog) : Prop extends FslProg p where

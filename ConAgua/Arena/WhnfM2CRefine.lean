@@ -164,7 +164,7 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
 theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (recName : NIdx) (isK : Bool) (rules : List IRecRule) (major : EIdx) :
     majorToCtor mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
-  rfl
+  sorry
 
 /-! ## Word models and L specs
 

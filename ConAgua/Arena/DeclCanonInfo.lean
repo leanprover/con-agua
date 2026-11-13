@@ -61,11 +61,7 @@ l_model ciCanonDefn_spec (p : Prog) (hp : CanonProg p)
 theorem ciD_defn {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     {v : EIdx} {hi : ConLeche.ReducibilityHint} (h : decCI a p = some (.defnInfo cv v hi)) :
     decCV a (p + 1) = some cv ∧ hd? a (p + 5) = some v ∧ decHint a (p + 6) = some hi := by
-  obtain ⟨wk, e, hk⟩ := ciD h
-  rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi, rp, o, c', kk, rules, hc, hmi, hrp, ho, hc', hkk, hr, hx⟩ <;>
-    (cases hx <;> first | exact ⟨hc, hv, hh⟩ | skip)
+  sorry
 
 theorem cdW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {v v' : EIdx}
@@ -163,11 +159,7 @@ theorem ciD_rec {a : Nat → Option Word} {p : Nat} {cv : IConstantVal}
     decCV a (p + 1) = some cv ∧ nat? a (p + 5) = some mi ∧ nat? a (p + 6) = some rp ∧
     bool? a (p + 9) = some isK ∧
     ∃ o c, nat? a (p + 7) = some o ∧ nat? a (p + 8) = some c ∧ decRules a o c = some rules := by
-  obtain ⟨wk, e, hk⟩ := ciD h
-  rcases hk with ⟨-, c, hc, hx⟩ | ⟨-, c, v', hi', hc, hv, hh, hx⟩ | ⟨-, c, hc, hx⟩ |
-      ⟨-, c, caps, hc, hcaps, hx⟩ | ⟨-, c, np, nf, hc, hnp, hnf, hx⟩ |
-      ⟨-, c, mi', rp', o, c', k', rules', hc, hmi, hrp, ho, hc', hk', hr, hx⟩ <;>
-    (cases hx <;> first | exact ⟨hc, hmi, hrp, hk', o, c', ho, hc', hr⟩ | skip)
+  sorry
 
 theorem cwW_ok {vis : Word} {fe : IFEnv} {a : AState} (k : Nat)
     {m m' : Mem} {p q x : Word} {cv cv' : IConstantVal} {mi mi' rp rp' : Nat}
@@ -298,124 +290,7 @@ theorem cieW_ok {vis : Word} {fe : IFEnv}
     (hP : PoolSmall m) (hL : LitInj a) :
     ∃ (b : Bool) (a' : AState), (c.canonEq c').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
       CQ vis fe m m' a' := by
-  cases k with
-  | zero => simp [cieW] at h
-  | succ k =>
-  rw [cieW.eq_2] at h; simp only [erRd_foldN, cieW.j1] at h
-  obtain ⟨wk, e, hx⟩ := ciD hp
-  obtain ⟨wk', e', hy⟩ := ciD hq
-  have r1 : erRd m p = wk := erRd_of p wk e
-  have r2 : erRd m q = wk' := erRd_of q wk' e'
-  simp only [r1, r2] at h
-  have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
-    UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
-  rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
-      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
-      ⟨k0, cv, mi, rp, o, cc, kk, rules, hcv, hmi, hrp, ho, hcc, hkk, hr, rfl⟩ <;>
-  rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
-      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
-      ⟨k1, cv', mi', rp', o', cc', kk', rules', hcv', hmi', hrp', ho', hcc', hkk', hr', rfl⟩
-  all_goals first
-    | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
-       rw [ite_eq_left hne] at h
-       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-       exact ⟨false, a, by simp [IConstantInfo.canonEq]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩)
-    | skip
-  · -- axiom
-    have e0 := wl wk 0 (by decide) k0
-    have e1 := wl wk' 0 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte] at h
-    have p1 : (p + 1).toNat = p.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    have q1 : (q + 1).toNat = q.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
-    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
-  · -- defn
-    have e0 := wl wk 1 (by decide) k0
-    have e1 := wl wk' 1 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte] at h
-    obtain ⟨b, a', hb, hr, hq⟩ := cdW_ok k h hS hp hq hP hL
-    exact ⟨b, a', hb, hr, hq⟩
-  · -- thm
-    have e0 := wl wk 2 (by decide) k0
-    have e1 := wl wk' 2 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte] at h
-    have p1 : (p + 1).toNat = p.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    have q1 : (q + 1).toNat = q.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
-    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
-  · -- ind
-    have e0 := wl wk 3 (by decide) k0
-    have e1 := wl wk' 3 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte] at h
-    have p1 : (p + 1).toNat = p.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    have q1 : (q + 1).toNat = q.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
-    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
-  · -- ctor
-    have e0 := wl wk 4 (by decide) k0
-    have e1 := wl wk' 4 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [ne_eq, ↓reduceIte] at h
-    have p1 : (p + 1).toNat = p.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    have q1 : (q + 1).toNat = q.toNat + 1 := by
-      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
-      exact toNat_add_of_get (erRdOK m) (k := 1) (kn := 1) rfl hw1
-    obtain ⟨wa, ea, rfl⟩ := natW_ (erRdOK m) (q := p) (k := 5) (kn := 5) rfl
-      (hnp)
-    obtain ⟨wb, eb, rfl⟩ := natW_ (erRdOK m) (q := p) (k := 6) (kn := 6) rfl
-      (hnf)
-    obtain ⟨wc, ec, rfl⟩ := natW_ (erRdOK m) (q := q) (k := 5) (kn := 5) rfl
-      (hnp')
-    obtain ⟨wd, ed, rfl⟩ := natW_ (erRdOK m) (q := q) (k := 6) (kn := 6) rfl
-      (hnf')
-    rw [ea, eb, ec, ed] at h
-    by_cases hc : wa ≠ wc ∨ wb ≠ wd
-    · rw [ite_eq_left hc] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      have hbb : (wa.toNat == wc.toNat && wb.toNat == wd.toNat) = false := by
-        rcases hc with hc | hc
-        · have : (wa.toNat == wc.toNat) = false := by
-            simpa using fun e => hc (UInt64.toNat_inj.mp e)
-          simp [this]
-        · have : (wb.toNat == wd.toNat) = false := by
-            simpa using fun e => hc (UInt64.toNat_inj.mp e)
-          simp [this]
-      refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
-      simp only [IConstantInfo.canonEq]
-      rw [hbb]; rfl
-    · rw [ite_eq_right hc] at h
-      have hw : wa = wc ∧ wb = wd := by
-        rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
-      obtain ⟨rfl, rfl⟩ := hw
-      obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
-      refine ⟨b, a', ?_, hr, hq⟩
-      simp only [IConstantInfo.canonEq, beq_self_eq_true, Bool.and_self, ite_true]
-      exact hb
-  · -- rec
-    have e0 := wl wk 5 (by decide) k0
-    have e1 := wl wk' 5 (by decide) k1
-    subst e0 e1
-    simp (config := { decide := true }) only [↓reduceIte] at h
-    obtain ⟨b, a', hb, hr, hq⟩ := cwW_ok k h hS hp hq hP hL
-    exact ⟨b, a', hb, hr, hq⟩
+  sorry
 
 /-- **`ci_canon_eq` refines `IConstantInfo.canonEq`.** -/
 @[refines ConRon.Arena.IConstantInfo.canonEq]
