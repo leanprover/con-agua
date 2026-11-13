@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Verdict.PosFt
 public import ConAgua.Arena.IndRealIlpL
 public import ConAgua.Arena.RecGenSpec.CftW
@@ -185,8 +186,9 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     have hfci : fe.find? M.ind = some (.indInfo cv caps) := by rw [← hwiE, hfind, hci]
     rw [hfci]
     have hcvq : decCV (erecP m) (q.toNat + 1) = some cv := L.Arena.decCI_ind_cv hci
-    obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
+    obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
     have hq64 := L.Arena.erecP_lt64 hv16
+    have := CI.indCaps_ge
     have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
     -- the twin's family and its denotation

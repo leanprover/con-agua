@@ -135,6 +135,16 @@ theorem decCI_indInfo {R : Nat → Option Word} {p : Nat} {cv : IConstantVal} {c
     | 5, h => simp [Option.bind_eq_some_iff] at h
     | k + 6, h => simp at h
 
+/-- An `indInfo` record's capabilities start with a word that is read (a bound for the record's
+addresses). -/
+theorem decCI_indInfo_word {R : Nat → Option Word} {p : Nat} {cv : IConstantVal} {c : IIndCaps}
+    (h : decCI R p = some (.indInfo cv c)) : ∃ v, R (p + CI.indCaps.toNat) = some v := by
+  obtain ⟨-, -, hc⟩ := decCI_indInfo h
+  obtain ⟨he, -⟩ := decCaps_eq_some.mp hc
+  obtain ⟨w, hw, -⟩ := bool?_word he
+  have := Caps.eta_lt
+  exact ⟨w, by simpa [Caps.eta] using hw⟩
+
 /-- An `indInfo` record's capabilities at L's word addresses `q + (CI.indCaps + Caps.f)`. -/
 theorem decCI_indInfo_rd {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {q : Word}
     {cv : IConstantVal} {c : IIndCaps} (h : decCI R q.toNat = some (.indInfo cv c)) :

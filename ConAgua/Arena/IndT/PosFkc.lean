@@ -1,5 +1,6 @@
 module
 
+import ConAgua.Arena.RecLayout.CapsDec
 public import ConAgua.Verdict.PosNty
 public import ConAgua.Arena.IndT.Install1
 public import ConAgua.Arena.GrindAttr
@@ -268,8 +269,9 @@ theorem fkc_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _roo
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at hci
     obtain ⟨cv', h1, _, _, h2⟩ := hci
     cases h2; exact h1
-  obtain ⟨v16, hv16⟩ := decCI_indInfo_bound hci
+  obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
   have hq64 := L.Arena.erecP_lt64 hv16
+  have := CI.indCaps_ge
   have e1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e12 : (q + 3).toNat = q.toNat + 1 + 1 + 1 := by rw [UInt64.toNat_add]; simp; omega
   have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
