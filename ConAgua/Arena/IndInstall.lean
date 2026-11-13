@@ -98,15 +98,13 @@ def memberNeverZero : FunDecl := lfn (p, mi) locals (ms, t0, w, o, c) {
   return u64(w == 0)
 }
 
-/-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps`, a fresh 15-word `IW` record (the
-`EREC` layout of `decCaps`; `ind_info_rec` copies it into the former's record). First the
-member's never-zero fact (`member_never_zero`), then: at exactly one constructor `eta` (index-free,
-the block not recursive: official's `is_non_rec_structure`); else its default `0`. At every member
-`all` (the member names, copied into `EREC`), `nparams`, `nIdx` (`0` past the members), the
-member's ctor names (copied into `EREC`) and `neverZero`. Every field is computed first, the
-record written last (three consecutive `rec5`s; the words `decCaps` does not read, `1`‥`5` (the
-removed `etaCtor`, `etaParams`, `etaFields`, `unitlike`, `unitParams`) and `8`, `9` (the removed
-`sortZ`'s second word), are `0`). -/
+/-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps`, a fresh `IW` record of `Caps.size`
+words (the `EREC` layout of `decCaps`, `RecLayout/Caps.lean`; `ind_info_rec` copies it into the
+former's record). First the member's never-zero fact (`member_never_zero`), then: at exactly one
+constructor `eta` (index-free, the block not recursive: official's `is_non_rec_structure`); else
+its default `0`. At every member `all` (the member names, copied into `EREC`), `nparams`, `nIdx`
+(`0` past the members), the member's ctor names (copied into `EREC`) and `neverZero`. Every field
+is computed first, the record written last (`block_caps_fin`, field by field). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals (nz, coff, clen, one, ms, nIdx, w0, caps) {
@@ -122,19 +120,26 @@ def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals (nz, coff, clen, one, ms,
 }
 
 /-- `block_caps_fin(p, coff, clen, w0, nIdx, nz)`: `blockCapsAt`'s record — the member names and
-the ctor names copied into `EREC`, then the 15 words (three consecutive `rec5`s at the pool top). -/
+the ctor names copied into `EREC`, then a fresh record of `Caps.size` words at the pool top, its
+fields written by name (words no field names are left as `iw_alloc` gives them). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:57-84 ConRon.Arena.blockCapsAt
 @[no_expose, l_impl ConRon.Arena.blockCapsAt]
 def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, nIdx, nz) locals
-    (namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL, np, caps, u) {
+    (namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL, np, caps) {
   (namesO, namesL) := call block_shape_member_names(p);
   (allQ, allL) := call block_caps_at_er_copy(namesO, namesL);
   (ctNO, ctNL) := call block_caps_ctor_names(coff, clen);
   (ctQ, ctL) := call block_caps_at_er_copy(ctNO, ctNL);
   np := IW.u64[p + 4];
-  caps := call rec5(w0, 0, 0, 0, 0);
-  u := call rec5(0, nIdx, nz, 0, 0);
-  u := call rec5(allQ, allL, np, ctQ, ctL);
+  caps := call iw_alloc(⟪Caps.size⟫);
+  IW.u64[caps + ⟪Caps.eta⟫] := w0;
+  IW.u64[caps + ⟪Caps.nIdx⟫] := nIdx;
+  IW.u64[caps + ⟪Caps.neverZero⟫] := nz;
+  IW.u64[caps + ⟪Caps.allOff⟫] := allQ;
+  IW.u64[caps + ⟪Caps.allLen⟫] := allL;
+  IW.u64[caps + ⟪Caps.nparams⟫] := np;
+  IW.u64[caps + ⟪Caps.ctorsOff⟫] := ctQ;
+  IW.u64[caps + ⟪Caps.ctorsLen⟫] := ctL;
   return caps
 }
 
@@ -300,7 +305,7 @@ def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
 /-- `cons_block_inds(p1, is_rec, cvs.off, cvs.len, vis, i)`: the formers `cvs` (as declared)
 consed, in block order, each with its capability record at `is_rec` (member `i` first), by
 recursion as the twin's; the `.indInfo` record (kind `3`, the constant's four words, the
-capability record's 15) is `ind_info_rec`'s. Returns the new view. -/
+capability record) is `ind_info_rec`'s. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, rec, v1, v2) {
@@ -312,20 +317,15 @@ def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, r
   return v2
 }
 
-/-- `ind_info_rec(cv, caps)`: a fresh `.indInfo` record — kind `3`, the constant's four `EREC`
-words at `cv`, the capability record's 15 `IW` words at `caps` — written right after its
-allocation, five words at a time. -/
+/-- `ind_info_rec(cv, caps)`: a fresh `.indInfo` record — kind `3` and the constant's four `EREC`
+words at `cv` (`er_put5`), then the capability record's `Caps.size` `IW` words at `caps`, copied
+to `CI.indCaps` (`block_caps_at_er_copy_go`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:174-183 ConRon.Arena.consBlockInds
 @[no_expose, l_impl ConRon.Arena.consBlockInds]
 def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
   q := call erec_alloc(⟪CI.indSize⟫);
   u := call er_put5(q, 3, EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, EREC⦃cv + 3⦄);
-  u := call er_put5(q + 5, IW.u64[caps], IW.u64[caps + 1], IW.u64[caps + 2], IW.u64[caps + 3],
-    IW.u64[caps + 4]);
-  u := call er_put5(q + 10, IW.u64[caps + 5], IW.u64[caps + 6], IW.u64[caps + 7], IW.u64[caps + 8],
-    IW.u64[caps + 9]);
-  u := call er_put5(q + 15, IW.u64[caps + 10], IW.u64[caps + 11], IW.u64[caps + 12],
-    IW.u64[caps + 13], IW.u64[caps + 14]);
+  u := call block_caps_at_er_copy_go(q + ⟪CI.indCaps⟫, caps, ⟪Caps.size⟫);
   return q
 }
 

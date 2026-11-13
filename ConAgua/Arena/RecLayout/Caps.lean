@@ -57,6 +57,14 @@ theorem size_le : size.toNat ≤ 64 := by simp [size]
 @[rec_layout] theorem ctorsOff_lt : ctorsOff.toNat < size.toNat := by simp [ctorsOff, size]
 @[rec_layout] theorem ctorsLen_lt : ctorsLen.toNat < size.toNat := by simp [ctorsLen, size]
 
+/-- **The fields' order** (the facts `omega` needs to keep two fields' words apart): the scalar
+fields first, then each slice's offset word followed by its length word, the record's size last. -/
+theorem order : eta.toNat < nIdx.toNat ∧ nIdx.toNat < neverZero.toNat ∧
+    neverZero.toNat < allOff.toNat ∧ allLen.toNat = allOff.toNat + 1 ∧
+    allLen.toNat < nparams.toNat ∧ nparams.toNat < ctorsOff.toNat ∧
+    ctorsLen.toNat = ctorsOff.toNat + 1 ∧ ctorsLen.toNat < size.toNat := by
+  simp [eta, nIdx, neverZero, allOff, allLen, nparams, ctorsOff, ctorsLen, size]
+
 /-- A slice's length word follows its offset word. -/
 theorem allLen_eq : allLen = allOff + 1 := by simp [allLen, allOff]
 theorem ctorsLen_eq : ctorsLen = ctorsOff + 1 := by simp [ctorsLen, ctorsOff]
