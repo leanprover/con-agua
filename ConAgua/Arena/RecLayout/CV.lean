@@ -47,4 +47,26 @@ theorem lpsLen_toNat : lpsLen.toNat = lpsOff.toNat + 1 := by simp [lpsLen, lpsOf
 
 theorem size_pos : 0 < size.toNat := by simp [size]
 
+/-- The name is word `q` itself (`decCV` and L read it there). -/
+theorem name_toNat : name.toNat = 0 := by simp [name]
+
+@[rec_layout] theorem name_le : name.toNat ≤ 64 := by simp [name]
+@[rec_layout] theorem lpsOff_le : lpsOff.toNat ≤ 64 := by simp [lpsOff]
+@[rec_layout] theorem lpsLen_le : lpsLen.toNat ≤ 64 := by simp [lpsLen]
+@[rec_layout] theorem type_le : type.toNat ≤ 64 := by simp [type]
+
 end L.CV
+
+namespace L
+
+/-- A sum of two layout offsets (each at most `64`) as a number. -/
+theorem layout_add_toNat {a b : Word} (ha : a.toNat ≤ 64) (hb : b.toNat ≤ 64) :
+    (a + b).toNat = a.toNat + b.toNat := by
+  rw [UInt64.toNat_add]; omega
+
+/-- A record's word `q + f` as a number, when the record's words are below `2 ^ 64`. -/
+theorem off_add_toNat {q f : Word} {n : Nat} (hf : f.toNat = n) (h : q.toNat + n < 2 ^ 64) :
+    (q + f).toNat = q.toNat + n := by
+  rw [UInt64.toNat_add, hf]; omega
+
+end L

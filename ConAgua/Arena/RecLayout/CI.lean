@@ -94,6 +94,33 @@ theorem recPrefix_eq : recPrefix = ctorNfields := by simp [recPrefix, ctorNfield
 theorem recRulesLen_toNat : recRulesLen.toNat = recRulesOff.toNat + 1 := by
   simp [recRulesLen, recRulesOff]
 
+/-! ## The layout facts: every offset is small (`omega`'s bounds) -/
+
+@[rec_layout] theorem cv_le : cv.toNat ≤ 64 := by simp [cv]
+@[rec_layout] theorem defnValue_le : defnValue.toNat ≤ 64 := by simp [defnValue]
+@[rec_layout] theorem defnHint_le : defnHint.toNat ≤ 64 := by simp [defnHint]
+@[rec_layout] theorem ctorNparams_le : ctorNparams.toNat ≤ 64 := by simp [ctorNparams]
+@[rec_layout] theorem ctorNfields_le : ctorNfields.toNat ≤ 64 := by simp [ctorNfields]
+@[rec_layout] theorem ctorInduct_le : ctorInduct.toNat ≤ 64 := by simp [ctorInduct]
+@[rec_layout] theorem recMajor_le : recMajor.toNat ≤ 64 := by simp [recMajor]
+@[rec_layout] theorem recPrefix_le : recPrefix.toNat ≤ 64 := by simp [recPrefix]
+@[rec_layout] theorem recRulesOff_le : recRulesOff.toNat ≤ 64 := by simp [recRulesOff]
+@[rec_layout] theorem recRulesLen_le : recRulesLen.toNat ≤ 64 := by simp [recRulesLen]
+@[rec_layout] theorem recIsK_le : recIsK.toNat ≤ 64 := by simp [recIsK]
+@[rec_layout] theorem hintHeight_le : Hint.height.toNat ≤ 64 := by simp [Hint.height]
+
+/-- A field of the constant value, at its place in a constant record, as a number. -/
+theorem cv_add_toNat {f : Word} (hf : f.toNat ≤ 64) : (cv + f).toNat = cv.toNat + f.toNat :=
+  layout_add_toNat cv_le hf
+
+/-- The name word is the value's first word. -/
+theorem cv_name_toNat : (cv + CV.name).toNat = cv.toNat := by
+  rw [cv_add_toNat CV.name_le, CV.name_toNat, Nat.add_zero]
+
+/-- A regular hint's height word, as a number. -/
+theorem defnHeight_toNat : (defnHint + Hint.height).toNat = defnHint.toNat + Hint.height.toNat :=
+  layout_add_toNat defnHint_le hintHeight_le
+
 /-! ## `indInfo` -/
 
 /-- An inductive's capabilities (`Caps.size` words). -/

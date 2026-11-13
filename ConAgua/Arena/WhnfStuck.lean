@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Arena.WhnfCoreAppLoop
-public import ConAgua.Arena.ErecRdCV
+public import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfCoreProj

@@ -16,7 +16,7 @@ public import ConAgua.Arena.WhnfIotaRefine4
 import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.WhnfIotaRec
 public import ConAgua.Arena.FormerNZRef
-public import ConAgua.Arena.ErecRdCV
+public import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.FuelConsts
 
 @[expose] public section
