@@ -219,9 +219,9 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
   · simp [fnzW] at h
   rw [fnzW.arm1] at h
   obtain ⟨-, -, hl, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hci).2.1
-  change fnzW.k_former_z p n us (erRd m (q + 2)) (erRd m (q + 3)) (rdW (m.arr64 CTL) 192)
-    (callW p n "former_z" [erRd m (q + 4)] m) = some (w, m') at h
-  rcases c1 : callW p n "former_z" [erRd m (q + 4)] m with _ | ⟨r1, m1⟩
+  change fnzW.k_former_z p n us (erRd m (q + (CI.cv + CV.lpsOff))) (erRd m (q + (CI.cv + CV.lpsLen))) (rdW (m.arr64 CTL) 192)
+    (callW p n "former_z" [erRd m (q + (CI.cv + CV.type))] m) = some (w, m') at h
+  rcases c1 : callW p n "former_z" [erRd m (q + (CI.cv + CV.type))] m with _ | ⟨r1, m1⟩
   · rw [c1, fnzW.k_former_z.none] at h; cases h
   rw [c1, fnzW.k_former_z.arm1] at h
   obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
@@ -271,10 +271,10 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
     have hN := nameN_rel _ hS1.nwf
     have hvs := (lvsR_of_slice hR1 ids vs _ _ s2 (by have := m1.top.toNat_lt; have := hR1.lit.1.top41; omega)
       hdl).toAR
-    have hkr : NmsK (nameN a1.store.lss.ls.ns) m1 (keyT EREC) (erRd m (q + 2)) (erRd m (q + 3)) ks :=
+    have hkr : NmsK (nameN a1.store.lss.ls.ns) m1 (keyT EREC) (erRd m (q + (CI.cv + CV.lpsOff))) (erRd m (q + (CI.cv + CV.lpsLen))) ks :=
       nmsAR_of_hslice _ _ _ cvT.levelParams ks _ _ rfl (by rw [he1']; exact hl) hk
-    rcases c3 : callW p n "lv_spw" [r1.tail.headD 0, r1.tail.tail.headD 0, erRd m (q + 2),
-        erRd m (q + 3), tfld m1 LVLS (tierW us) (idxW us) 0, tfld m1 LVLS (tierW us) (idxW us) 1] m1
+    rcases c3 : callW p n "lv_spw" [r1.tail.headD 0, r1.tail.tail.headD 0, erRd m (q + (CI.cv + CV.lpsOff)),
+        erRd m (q + (CI.cv + CV.lpsLen)), tfld m1 LVLS (tierW us) (idxW us) 0, tfld m1 LVLS (tierW us) (idxW us) 1] m1
       with _ | ⟨r3, m3⟩
     · rw [c3, fnzW.k_lv_spw.none] at h; cases h
     rw [c3, fnzW.k_lv_spw.arm1] at h
@@ -472,7 +472,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     rw [hw5]; split <;> (unfold HW; decide)
 
 /-- **`family_never_zero_at` refines `familyNeverZeroAt`, both outcomes**: the recorded fact
-(`neverZero`, word `q + 12`) first, else `former_never_zero_at` (`fnza_ref`). -/
+(`neverZero`, word `q + (CI.indCaps + Caps.neverZero)`) first, else `former_never_zero_at` (`fnza_ref`). -/
 theorem fanza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode : Word)
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (m : Mem) (a : AState) (M : ModeMaps)

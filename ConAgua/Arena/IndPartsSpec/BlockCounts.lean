@@ -93,9 +93,9 @@ theorem arenaR_frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m'
 
 theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word)
     (hR : ArenaR m a) (h : bchW n m cvT = some (r1, m1))
-    (hty : (erRd m (cvT + 3)).toNat < 2 ^ 32)
+    (hty : (erRd m (cvT + CV.type)).toNat < 2 ^ 32)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
-    ∃ bs res v, (ConRon.Arena.piBinders coreWalkFuel (decE (erRd m (cvT + 3)))).run a
+    ∃ bs res v, (ConRon.Arena.piBinders coreWalkFuel (decE (erRd m (cvT + CV.type)))).run a
         = .ok ((bs, res), a) ∧ r1 = [r1.headD 0, r1.getD 1 0] ∧ (r1.headD 0).toNat = bs.length ∧
       a.store.view res = some v ∧ ((r1.getD 1 0 = 2) ↔ ∃ u, v = .sort u) ∧
       IWGrow m m1 ∧ MemFrame [IW] [200] m m1 := by

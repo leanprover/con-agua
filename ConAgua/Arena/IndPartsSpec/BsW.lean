@@ -90,12 +90,12 @@ theorem partsCI_fields {a : Nat → Option Word} {q : Nat}
     {ci : IConstantInfo} (h : decCI a q = some ci) :
     nat? a q = some (ciKind ci) ∧
     (match ci with
-     | .indInfo cv _ => decCV a (q + 1) = some cv
-     | .ctorInfo cv nP nF _ => decCV a (q + 1) = some cv ∧ nat? a (q + 5) = some nP ∧
-         nat? a (q + 6) = some nF
-     | .recInfo cv mI rP isK rules => decCV a (q + 1) = some cv ∧ nat? a (q + 5) = some mI ∧
-         nat? a (q + 6) = some rP ∧ bool? a (q + 9) = some isK ∧
-         ∃ o l, nat? a (q + 7) = some o ∧ nat? a (q + 8) = some l ∧ decRules a o l = some rules
+     | .indInfo cv _ => decCV a (q + CI.cv.toNat) = some cv
+     | .ctorInfo cv nP nF _ => decCV a (q + CI.cv.toNat) = some cv ∧ nat? a (q + CI.ctorNparams.toNat) = some nP ∧
+         nat? a (q + CI.ctorNfields.toNat) = some nF
+     | .recInfo cv mI rP isK rules => decCV a (q + CI.cv.toNat) = some cv ∧ nat? a (q + CI.recMajor.toNat) = some mI ∧
+         nat? a (q + CI.recPrefix.toNat) = some rP ∧ bool? a (q + CI.recIsK.toNat) = some isK ∧
+         ∃ o l, nat? a (q + CI.recRulesOff.toNat) = some o ∧ nat? a (q + CI.recRulesLen.toNat) = some l ∧ decRules a o l = some rules
      | _ => True) := by
   unfold decCI at h
   simp only [bind, Option.bind_eq_some_iff] at h
@@ -275,17 +275,17 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨hok1, hsl1⟩ := hR1
       rw [bsrW.k_block_split_recs.arm2 n _ r1 m1 (by rw [hok1]; decide)] at h
       have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-      obtain ⟨w5, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 5) (by rw [hqw]; exact hmI)
-      obtain ⟨w6, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 6) (by rw [hqw]; exact hrP)
-      obtain ⟨w7, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 7) (by rw [hqw]; exact hro)
-      obtain ⟨w8, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 8) (by rw [hqw]; exact hrl)
-      have w9 := partsErB hg1 (w := UInt64.ofNat q) (k := 9) (by rw [hqw]; exact hisK)
-      have hq1 : (UInt64.ofNat q + 1).toNat = q + 1 := by
-        have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
+      obtain ⟨w5, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.recMajor) (by rw [hqw]; exact hmI)
+      obtain ⟨w6, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.recPrefix) (by rw [hqw]; exact hrP)
+      obtain ⟨w7, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.recRulesOff) (by rw [hqw]; exact hro)
+      obtain ⟨w8, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.recRulesLen) (by rw [hqw]; exact hrl)
+      have w9 := partsErB hg1 (w := UInt64.ofNat q) (k := CI.recIsK) (by rw [hqw]; exact hisK)
+      have hq1 : (UInt64.ofNat q + CI.cv).toNat = q + CI.cv.toNat := by
+        have := partsDecCV_lt hcv; have := CI.cv_le; rw [UInt64.toNat_add, hqw]; omega
       simp only [erRd_foldN] at h
-      cases h2 : posRecW m1 [UInt64.ofNat q + 1, erRd m1 (UInt64.ofNat q + 5),
-          erRd m1 (UInt64.ofNat q + 6), erRd m1 (UInt64.ofNat q + 7),
-          erRd m1 (UInt64.ofNat q + 8), erRd m1 (UInt64.ofNat q + 9)] with
+      cases h2 : posRecW m1 [UInt64.ofNat q + CI.cv, erRd m1 (UInt64.ofNat q + CI.recMajor),
+          erRd m1 (UInt64.ofNat q + CI.recPrefix), erRd m1 (UInt64.ofNat q + CI.recRulesOff),
+          erRd m1 (UInt64.ofNat q + CI.recRulesLen), erRd m1 (UInt64.ofNat q + CI.recIsK)] with
       | none => rw [h2, bsrW.k_rec6.none] at h; cases h
       | some x2 =>
       obtain ⟨rc, m2⟩ := x2
@@ -293,8 +293,8 @@ theorem bsrW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨hS2, hg2, -, -, hget⟩ := partsFresh h2 hS1 (by simp)
       have hg02 := hg1.trans hg2
       have hdec : DecB (fun m => decSR m rc.toNat) m2 (cv, mI, rP, isK, rules) := by
-        have hcv2 : decCVp (truncM m2) (q + 1) = some cv :=
-          (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg02
+        have hcv2 : decCVp (truncM m2) (q + CI.cv.toNat) = some cv :=
+          (show DecB (fun m => decCVp m (q + CI.cv.toNat)) m cv from hcv).grow (OMono.decCVp _) hg02
         have hru2 : decRules (erA (truncM m2)) ro rl = some rules :=
           (show DecB (fun m => decRules (erA m) ro rl) m rules from hrules).grow
             (L.Ind.OMono.decRules _ _) hg02
@@ -391,17 +391,17 @@ theorem bscW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
       obtain ⟨hok1, hsl1, hsr1⟩ := hR1
       rw [bscW.k_block_split_ctors.arm2 n _ r1 m1 (by rw [hok1]; decide)] at h
       have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-      obtain ⟨w5, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 5) (by rw [hqw]; exact hnP)
-      obtain ⟨w6, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := 6) (by rw [hqw]; exact hnF)
-      have hq1 : (UInt64.ofNat q + 1).toNat = q + 1 := by
-        have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
+      obtain ⟨w5, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.ctorNparams) (by rw [hqw]; exact hnP)
+      obtain ⟨w6, -⟩ := partsErW hg1 (w := UInt64.ofNat q) (k := CI.ctorNfields) (by rw [hqw]; exact hnF)
+      have hq1 : (UInt64.ofNat q + CI.cv).toNat = q + CI.cv.toNat := by
+        have := partsDecCV_lt hcv; have := CI.cv_le; rw [UInt64.toNat_add, hqw]; omega
       obtain ⟨c, m2, h2, h⟩ := ipK_inv h (bscW.k_rec3.none _ _ _ _ _)
       rw [bscW.k_rec3.arm1] at h
       obtain ⟨hS2, hg2, -, -, hget⟩ := partsFresh h2 hS1 (by simp)
       have hg02 := hg1.trans hg2
       have hdec : DecB (fun m => decSC m c.toNat) m2 (cv, nP, nF) := by
-        have hcv2 : decCVp (truncM m2) (q + 1) = some cv :=
-          (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg02
+        have hcv2 : decCVp (truncM m2) (q + CI.cv.toNat) = some cv :=
+          (show DecB (fun m => decCVp m (q + CI.cv.toNat)) m cv from hcv).grow (OMono.decCVp _) hg02
         have g0 := hget 0 (by simp); have g1 := hget 1 (by simp); have g2 := hget 2 (by simp)
         simp only [List.getElem_cons_zero, List.getElem_cons_succ, Nat.add_zero, erRd_foldN, hq1, w5, w6]
           at g0 g1 g2
@@ -510,10 +510,10 @@ theorem bsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       rw [bsW.k_block_split.arm2 n _ r1 m1 (by rw [hok1]; decide)] at h
       generalize hq1 : r1.tail.headD 0 = q1 at h htop1 hts1 hcs1 hrs1
       have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
-      have hq1' : (UInt64.ofNat q + 1).toNat = q + 1 := by
-        have := partsDecCV_lt hcv; rw [UInt64.toNat_add, hqw]; simp; omega
-      have hy : DecB (fun m => decCVp m (UInt64.ofNat q + 1).toNat) m1 cv := by
-        rw [hq1']; exact (show DecB (fun m => decCVp m (q + 1)) m cv from hcv).grow (OMono.decCVp _) hg1
+      have hq1' : (UInt64.ofNat q + CI.cv).toNat = q + CI.cv.toNat := by
+        have := partsDecCV_lt hcv; have := CI.cv_le; rw [UInt64.toNat_add, hqw]; omega
+      have hy : DecB (fun m => decCVp m (UInt64.ofNat q + CI.cv).toNat) m1 cv := by
+        rw [hq1']; exact (show DecB (fun m => decCVp m (q + CI.cv.toNat)) m cv from hcv).grow (OMono.decCVp _) hg1
       obtain ⟨r2, m2, h2, h⟩ := ipK_inv h (bsW.k_sl_cons.none _)
       rw [bsW.k_sl_cons.arm1] at h
       obtain ⟨hS2, hg2, hd2, ht2⟩ := partsConsPL (fun _ => OMono.decCVp _) h2 hS1 hts1.2 hts1.1 hy

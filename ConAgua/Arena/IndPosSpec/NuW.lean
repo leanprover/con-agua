@@ -49,7 +49,7 @@ theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ decOE m' r x ∧ PosMR m' ∧ (PccAfr → AFr m m') := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
   unfold nrcW at h
@@ -108,7 +108,7 @@ theorem nuW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨hn, hnb, -, -, hnP, -⟩ := ctx_fields hc hin htop
   have hhiW := nhiW_toNat (nf := 0) hc hin htop (by simpa using hhi)
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨-, -, hty⟩ := decCV_eq_some.mp hcv
   obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
   have hcv3 : cv.toNat + 3 < 2 ^ 64 := erecP_lt64 hwt
   have e3 : (cv + 3).toNat = cv.toNat + 3 := L.toNat_add_of_lt _ _ (by simp; omega)

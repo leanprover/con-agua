@@ -70,47 +70,30 @@ l_model blockRecLpsOk_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   grind [arena_grind]
 
 /-- **`er_to_iw` of a constant's level parameters**: for the constant at `EREC` pointer `a0`, the
-copy of `(EREC[a0 + 1], EREC[a0 + 2])` decodes as its `levelParams`. -/
+copy of `(EREC[a0 + CV.lpsOff], EREC[a0 + CV.lpsLen])` decodes as its `levelParams`. -/
 theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : List Word}
-    (h : erToIwW n m (erRd m (UInt64.ofNat a0 + 1))
-      (erRd m (UInt64.ofNat a0 + 2)) = some (r, m'))
+    (h : erToIwW n m (erRd m (UInt64.ofNat a0 + CV.lpsOff))
+      (erRd m (UInt64.ofNat a0 + CV.lpsLen)) = some (r, m'))
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size)
     (hE : (m.arr64 EREC).size < 2 ^ 64) (hcv : decCVp m a0 = some cv) :
     r = [r.headD 0, r.getD 1 0] ∧
     decHL m' (r.headD 0).toNat (r.getD 1 0).toNat = some cv.levelParams ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
     (r.headD 0).toNat + (r.getD 1 0).toNat = iwTop m' ∧ IWRoom m m' := by
-  have hcv' := hcv
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-  have hlvE : lv = cv.levelParams := by rw [← hcvT]
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
-  simp only [nat?, erA, Option.map_eq_some_iff] at ho2 hl2
-  obtain ⟨w1, hw1, rfl⟩ := ho2
-  obtain ⟨w2, hw2, rfl⟩ := hl2
-  have hi1 : a0 + 1 < 2 ^ 64 := erecP_lt64 hw1
-  have hi2 : a0 + 2 < 2 ^ 64 := erecP_lt64 hw2
-  have hrd1 : erRd m (UInt64.ofNat a0 + 1) = w1 := by
-    have e3 : UInt64.ofNat a0 + 1 = UInt64.ofNat (a0 + 1) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    have : (UInt64.ofNat (a0 + 1)).toNat = a0 + 1 :=
-      UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e3]; exact L.Arena.erRd_of _ _ (by rw [this]; exact hw1)
-  have hrd2 : erRd m (UInt64.ofNat a0 + 2) = w2 := by
-    have e4 : UInt64.ofNat a0 + 2 = UInt64.ofNat (a0 + 2) := by
-      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
-    have : (UInt64.ofNat (a0 + 2)).toNat = a0 + 2 :=
-      UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
-    rw [e4]; exact L.Arena.erRd_of _ _ (by rw [this]; exact hw2)
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice (show decCV (erecP m) a0 = some cv from hcv)
+  have ha0 : (UInt64.ofNat a0).toNat = a0 :=
+    UInt64.toNat_ofNat_of_lt' (by have := erecP_lt64 hw1; rw [UInt64_size_eq]; omega)
+  have hrd1 : erRd m (UInt64.ofNat a0 + CV.lpsOff) = w1 := L.Arena.erRd_of _ _ (by
+    rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw1; omega), ha0]; exact hw1)
+  have hrd2 : erRd m (UInt64.ofNat a0 + CV.lpsLen) = w2 := L.Arena.erRd_of _ _ (by
+    rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw2; omega), ha0]; exact hw2)
   rw [hrd1, hrd2] at h
   obtain ⟨hr, hdec, hgrow, hfr, -, htp, hroom⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
   have hh := erToIwW_two h
   refine ⟨by rw [L.getD_one]; exact hh, ?_, hgrow, hfr, ?_, hroom⟩
   · rw [hr] at hh ⊢
     simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
-    rw [hdec, ← hlvE]
-    exact hsl
+    rw [hdec]
   · rw [hr]; simpa using htp
 
 theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec : RecShape)

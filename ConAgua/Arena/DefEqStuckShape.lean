@@ -102,10 +102,10 @@ def ecsK3 (top q : Word) (res : Option (List Word × Mem)) : Option (Word × Mem
   | none => none
   | some (r, m) =>
     if (136 : Word).toNat < (m.arr64 CTL).size then
-      if r.tail.headD 0 < erRd (m.set64 CTL 136 top) (q + 6) then
+      if r.tail.headD 0 < erRd (m.set64 CTL 136 top) (q + CI.ctorNfields) then
         some (0, m.set64 CTL 136 top)
-      else some (if r.tail.headD 0 - erRd (m.set64 CTL 136 top) (q + 6) =
-          erRd (m.set64 CTL 136 top) (q + (CI.indCaps + Caps.eta)) then 1 else 0, m.set64 CTL 136 top)
+      else some (if r.tail.headD 0 - erRd (m.set64 CTL 136 top) (q + CI.ctorNfields) =
+          erRd (m.set64 CTL 136 top) (q + CI.ctorNparams) then 1 else 0, m.set64 CTL 136 top)
     else none
 
 /-- After `env_find`: a constructor record, then the arguments. -/
@@ -142,7 +142,9 @@ theorem etaCtorShape_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (v
   simp_all [ecsK1, ecsK2, ecsK3, erRd, tierW, idxW, LocEq, BinOp.eval,
     St.setLocs_cons, CTL, EREC, Cmp.eval, Cmp.evalW,
     St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
-    Locals.init_cons_succ, L.Mem.size64_set64, TieredArray.t0]
+    Locals.init_cons_succ, L.Mem.size64_set64, TieredArray.t0,
+    -- the L text's offsets are evaluated constants: the model's names unfolded to match them
+    CI.ctorNfields, CI.ctorNparams]
   all_goals (intro h; simp only [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le] at *; omega)
 
 /-! ### The twin's runs, by case -/
@@ -271,9 +273,9 @@ theorem etaCtorShape_refines (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St)
     hargs
   have hlen : xs.length = (r₃.tail.headD 0).toNat := by
     have := hsp.size; simpa using this
-  have hW' : some ((if r₃.tail.headD 0 < erRd s.mem (r₂.tail.headD 0 + 6) then (0 : Word)
-      else if r₃.tail.headD 0 - erRd s.mem (r₂.tail.headD 0 + 6) =
-        erRd s.mem (r₂.tail.headD 0 + 5) then 1 else 0),
+  have hW' : some ((if r₃.tail.headD 0 < erRd s.mem (r₂.tail.headD 0 + CI.ctorNfields) then (0 : Word)
+      else if r₃.tail.headD 0 - erRd s.mem (r₂.tail.headD 0 + CI.ctorNfields) =
+        erRd s.mem (r₂.tail.headD 0 + CI.ctorNparams) then 1 else 0),
       m₃.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) = some (r.headD 0, s'.mem) := by
     rw [← hW]; split <;> rfl
   rw [count_test _ _ _ xs.length hlen] at hW'

@@ -227,15 +227,6 @@ theorem findIdx_toNat (ws : List Word) (x : Word) :
     · simp [h]
     · simp [h, this, ih]
 
-/-- `decCV`'s fields, read back (the `Env.lean` decoder, over an explicit array). -/
-theorem decCV_some {a : Nat → Option Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    hd? a q = some cv.name ∧ hlist? a (q + 1) = some cv.levelParams ∧
-      hd? a (q + 3) = some cv.type := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hnm, l, hl, t, ht, heq⟩ := h
-  obtain rfl := (Option.some.injEq _ _).mp heq.symm
-  exact ⟨hnm, hl, ht⟩
-
 /-- A decoded `EREC` handle, read back as a memory word (`iwH_rdW`'s analogue over `EREC`). -/
 theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
     (hi : i < 2 ^ 64) :

@@ -85,13 +85,9 @@ theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx
 
 /-- A constant's type word, read where the model reads it. -/
 theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv) :
-    ∃ w, erRd m (q + 3) = w ∧ H w ∧ decI w = cv.type := by
-  have h' := h
-  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h'
-  obtain ⟨nm, -, lps, -, t, ht, rfl⟩ := h'
-  obtain ⟨w, hw, hwl, rfl⟩ := hd?_some ht
-  obtain ⟨e, -⟩ := erRd_add (cq := q) (j := 3) (m := m) hw (by decide)
-  exact ⟨w, e, hwl, rfl⟩
+    ∃ w, erRd m (q + CV.type) = w ∧ H w ∧ decI w = cv.type := by
+  obtain ⟨-, -, -, -, hty, hlt⟩ := decCV_rd (erRdOK m) (show decCV (erecP m) q.toNat = some cv from h)
+  exact ⟨_, rfl, hlt, hty.symm⟩
 
 end L.Ind
 

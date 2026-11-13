@@ -49,7 +49,7 @@ theorem decCN_wordsE {m : Mem} {cA : Word} {x : IConstantVal × Nat} (h : DecB (
   have ra := iwN_rdW_at (w := cA) (k := 0) (by simpa using ha') hsz
   have rn := iwN_rdW_at (w := cA) (k := 1) hn' hsz
   have hcv' : decCVp m a = some x.1 := (show DecB (fun m => decCVp m a) m x.1 from hcv).get (OMono.decCVp _)
-  obtain ⟨hnm2, -, hty2⟩ := decCV_some (a := erA m) (q := a) hcv'
+  obtain ⟨hnm2, -, hty2⟩ := (decCV_eq_some (R := erA m) (q := a)).mp hcv'
   simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hty2
   obtain ⟨w3, hw3, -⟩ := hty2
   have h3 : a + 3 < 2 ^ 64 := erecP_lt64 hw3

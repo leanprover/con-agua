@@ -141,10 +141,10 @@ theorem nhGoW_ok (fe : IFEnv) (vis ctx : Word) (c : NestCtx) (k : Nat) :
       have := rd_iwN (m := m) (p := rdW (m.arr64 IW) (ctx + 11) + mm) (i := 0) (by simpa [eq] using hq)
         (by simp; omega)
       simpa using this
-    obtain ⟨w, hw, hwH', hwd'⟩ := hd?_some (decCV_type hcvq)
-    have e3 : (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3).toNat = q + 3 := by
-      rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw; simp; omega), rq]; rfl
-    have hrw : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + 3) = w :=
+    obtain ⟨w, hw, hwH', hwd'⟩ := hd?_some ((decCV_eq_some.mp hcvq).2.2)
+    have e3 : (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + CV.type).toNat = q + CV.type.toNat := by
+      rw [L.toNat_add_of_lt _ _ (by have := erecP_lt64 hw; omega), rq]
+    have hrw : erRd m (rdW (m.arr64 IW) (rdW (m.arr64 IW) (ctx + 11) + mm) + CV.type) = w :=
       L.Arena.erRd_of _ _ (by rw [e3]; exact hw)
     rw [hrw] at h
     have hgf : c.formers[mm.toNat]? = some (c.formers[mm.toNat]'(by rw [hflen]; exact hmmf)) :=

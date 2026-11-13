@@ -64,8 +64,9 @@ theorem erec_hd {m : Mem} {w : Word} {c : Nat} {k : IdxKind} {x : Idx k}
 theorem decCI_kind_cases {a : Nat → Option Word} {p : Nat}
     {ci : IConstantInfo} (h : decCI a p = some ci) :
     ∃ k, nat? a p = some k ∧
-      ((k = 4 ∧ ∃ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam ∧ decCV a (p + 1) = some cv ∧
-          nat? a (p + 5) = some nPc ∧ nat? a (p + 6) = some nF) ∨
+      ((k = 4 ∧ ∃ cv nPc nF fam, ci = .ctorInfo cv nPc nF fam ∧
+          decCV a (p + CI.cv.toNat) = some cv ∧ nat? a (p + CI.ctorNparams.toNat) = some nPc ∧
+          nat? a (p + CI.ctorNfields.toNat) = some nF) ∨
        (k ≠ 4 ∧ ∀ cv nPc nF fam, ci ≠ .ctorInfo cv nPc nF fam)) := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
   obtain ⟨k, hk, h⟩ := h
@@ -89,7 +90,7 @@ theorem erecP_ext_grow {m m' : Mem} (hg : IWGrow m m') : ArrExt (erecP m) (erA m
 def StripOut (m : Mem) (r : List Word) (ciq : Word) (cv : IConstantVal) (nPc nF : Nat) :
     Option (List EIdx × EIdx) → Prop
   | none => r = [0, 0, 0, 0, 0]
-  | some (_, b) => ∃ w, r = [1, ciq + 1, UInt64.ofNat nPc, UInt64.ofNat nF, w] ∧ w.toNat < 2 ^ 32 ∧
+  | some (_, b) => ∃ w, r = [1, ciq + CI.cv, UInt64.ofNat nPc, UInt64.ofNat nF, w] ∧ w.toNat < 2 ^ 32 ∧
       decI w = b ∧ decCV (erecP m) (ciq.toNat + CI.cv.toNat) = some cv
 
 theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
@@ -106,11 +107,12 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
   rw [e0, UInt64.add_zero] at hk0
   rcases hcases with ⟨rfl, cv, nPc, nF, fam, rfl, hcv, hnP, hnF⟩ | ⟨hne, hnc⟩
   · have hker : erRd m ciq = 4 := by rw [hk0.1]; rfl
-    have hP := erec_nat (m := m) (w := ciq) (c := 5) hnP (by decide)
-    have hF := erec_nat (m := m) (w := ciq) (c := 6) hnF (by decide)
-    have hP' : erRd m (ciq + 5) = UInt64.ofNat nPc := hP.1
-    have hF' : erRd m (ciq + 6) = UInt64.ofNat nF := hF.1
-    by_cases hw : erRd m (ciq + 5) + erRd m (ciq + 6) < erRd m (ciq + 5)
+    have hP := erec_nat (m := m) (w := ciq) hnP CI.ctorNparams.toNat_lt
+    have hF := erec_nat (m := m) (w := ciq) hnF CI.ctorNfields.toNat_lt
+    rw [UInt64.ofNat_toNat] at hP hF
+    have hP' : erRd m (ciq + CI.ctorNparams) = UInt64.ofNat nPc := hP.1
+    have hF' : erRd m (ciq + CI.ctorNfields) = UInt64.ofNat nF := hF.1
+    by_cases hw : erRd m (ciq + CI.ctorNparams) + erRd m (ciq + CI.ctorNfields) < erRd m (ciq + CI.ctorNparams)
     · rw [stripW.abort1 (hc1 := hker) (hc2 := hw)] at h; cases h
     have hsum : nPc + nF < 2 ^ 64 := by
       rw [hP', hF', UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2,
@@ -119,10 +121,12 @@ theorem stripW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
       omega
     rw [stripW.arm2 (hc1 := hker) (hc2 := hw)] at h
     simp only [erRd_foldN] at h
-    have hty := decCV_type hcv
+    have hty := (decCV_eq_some.mp hcv).2.2
     rw [Nat.add_assoc] at hty
-    obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erec_hd (m := m) (w := ciq) (c := 1 + 3) hty (by decide)
-    have e13 : ciq + 1 + 3 = ciq + UInt64.ofNat (1 + 3) := by rw [UInt64.add_assoc]; rfl
+    obtain ⟨wt, hwt, hwtlt, hwtd⟩ := erec_hd (m := m) (w := ciq) (c := CI.cv.toNat + CV.type.toNat) hty
+      (by have := CI.cv_le; have := CV.type_le; omega)
+    have e13 : ciq + CI.cv + CV.type = ciq + UInt64.ofNat (CI.cv.toNat + CV.type.toNat) := by
+      rw [UInt64.add_assoc, UInt64.ofNat_add, UInt64.ofNat_toNat, UInt64.ofNat_toNat]
     rw [e13, hwt, hP', hF'] at h
     refine ⟨?_, fun hh => absurd rfl (hh cv nPc nF fam)⟩
     intro cv' nPc' nF' fam' hc
@@ -176,8 +180,8 @@ l_model nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
 
 def EntryOut (m' : Mem) (r : List Word) (ciq : Word) : Option (IConstantVal × Nat × Nat) → Prop
   | none => r = [0, 0, 0, 0]
-  | some (cv, nPc, nF) => r = [1, ciq + 1, UInt64.ofNat nPc, UInt64.ofNat nF] ∧
-      decCVp m' (ciq.toNat + 1) = some cv ∧ nPc + nF < 2 ^ 64
+  | some (cv, nPc, nF) => r = [1, ciq + CI.cv, UInt64.ofNat nPc, UInt64.ofNat nF] ∧
+      decCVp m' (ciq.toNat + CI.cv.toNat) = some cv ∧ nPc + nF < 2 ^ 64
 
 theorem entryW_ok {fe : IFEnv} {vis : Word} {m m' : Mem}
     {a : AState} {C ciq : Word} {r : List Word} {ci : IConstantInfo} (hC : H C)

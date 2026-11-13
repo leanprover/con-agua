@@ -209,7 +209,7 @@ theorem cxo_ref (n : Nat) (hn : n + 1 ≤ 2 ^ 62) {m : Mem} {a : AState} {vis q 
   subst cam
   have hER2 : erRd s2.mem (UInt64.ofNat ca) = erRd m1 (UInt64.ofNat ca) := by
     have hcv2 : decCVp s2.mem ca = some cA'.1 := (hcv.grow (OMono.decCVp _) hg2).get (OMono.decCVp _)
-    obtain ⟨hnm2, -, -⟩ := decCV_some (a := erA s2.mem) (q := ca) hcv2
+    obtain ⟨hnm2, -, -⟩ := (decCV_eq_some (R := erA s2.mem) (q := ca)).mp hcv2
     obtain ⟨w, hw, hwH, hwD⟩ := erH_rdW hnm2 hca64
     rw [hw]; exact (decI_inj_iff hwH hnmH).mp (hwD.trans hnmD.symm)
   rw [show rdW (s2.mem.arr64 (tierA EREC (UInt64.ofNat ca >>> 40))) (UInt64.ofNat ca &&& 1099511627775) =

@@ -82,10 +82,10 @@ theorem partsIwLt {m : Mem} {i v : Nat} (h : iwN (truncM m) i = some v) : i < iw
 /-- The type handle of a constant decoded below the top. -/
 theorem partsCVType {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (truncM m) q = some cv)
     {w : Word} (hw : w.toNat = q) :
-    (erRd m (w + 3)).toNat < 2 ^ 32 ∧ decI (erRd m (w + 3)) = cv.type := by
-  obtain ⟨x, hx, hxl, hxe⟩ := hd?_some (decCV_type h)
+    (erRd m (w + CV.type)).toNat < 2 ^ 32 ∧ decI (erRd m (w + CV.type)) = cv.type := by
+  obtain ⟨x, hx, hxl, hxe⟩ := hd?_some ((decCV_eq_some.mp h).2.2)
   have hx' := truncM_er_get hx
-  have hw3 : (w + 3).toNat = q + 3 := by have := erecP_lt64 hx'; rw [UInt64.toNat_add]; simp; omega
+  have hw3 : (w + CV.type).toNat = q + CV.type.toNat := by have := erecP_lt64 hx'; have := CV.type_le; rw [UInt64.toNat_add]; omega
   rw [L.Arena.erRd_of _ _ (by rw [hw3]; exact hx')]
   exact ⟨hxl, hxe.symm⟩
 

@@ -186,16 +186,16 @@ theorem targetCtorAt_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem tcW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) (m m' : Mem)
     (a : AState) (Mp c : Word) (bigM : TargetMajor) (cv : IConstantVal) (r : List Word) (cR : CallM)
     (hI : IlpRd cR dn vis fe (IlpBase m a)) (hS : StageR vis fe m a) (hM : decTM m Mp.toNat = some bigM) (hcv : decCVp m c.toNat = some cv)
-    (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + 3 < 2 ^ 64)
+    (hMb : Mp.toNat + 13 < 2 ^ 64) (hcb : c.toNat + CV.type.toNat < 2 ^ 64)
     (h : tcW cR n m Mp c = some (r, m')) :
     ∃ x a', (ConRon.Arena.targetCtorAt bigM cv).run a = .ok (x, a') ∧ StageR vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x ∧ AFr m m' := by
   obtain ⟨hlv, w8, h8, hmem⟩ := decTM_fields hM
-  obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := c.toNat) hcv
+  obtain ⟨-, -, htyp⟩ := (decCV_eq_some (R := erA m) (q := c.toNat)).mp hcv
   obtain ⟨wt, hwtA, hwtlt, hwtd'⟩ := hd?_some htyp
   have hwtd : decI wt = cv.type := hwtd'.symm
-  have hc3 : (c + 3).toNat = c.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
-  have hwt : erRd m (c + 3) = wt := L.Arena.erRd_of _ _ (by rw [hc3]; exact hwtA)
+  have hc3 : (c + CV.type).toNat = c.toNat + CV.type.toNat := L.toNat_add_of_lt _ _ hcb
+  have hwt : erRd m (c + CV.type) = wt := L.Arena.erRd_of _ _ (by rw [hc3]; exact hwtA)
   have e : UInt64.ofNat Mp.toNat = Mp := UInt64.ofNat_toNat
   have h8' := iwN_off (k := 8) h8 (by omega)
   rw [e] at h8'

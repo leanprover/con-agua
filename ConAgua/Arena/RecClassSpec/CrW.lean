@@ -208,7 +208,7 @@ theorem crW_ok (vis : Word) (fe : IFEnv) (cR : CallM)
       have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.iw.iwSize
       have hrdm := iwN_off (k := 2) hmIq (by have := iwN_lt hmIq; omega)
       simp only [show UInt64.ofNat 2 = 2 from rfl] at hrdm
-      obtain ⟨-, -, htyp⟩ := decCV_some (a := erA m) (q := q) hcv
+      obtain ⟨-, -, htyp⟩ := (decCV_eq_some (R := erA m) (q := q)).mp hcv
       have hqb : q < 2 ^ 64 := hrdq.2
       have hq3 : q + 3 < 2 ^ 64 := by
         rcases hw : erA m (q + 3) with _ | w
@@ -1855,7 +1855,7 @@ theorem readW_sim (vis : Word) (fe : IFEnv) (cR : CallM)
   have hqb : q < 2 ^ 64 := hrdq.2
   have hq3 : (UInt64.ofNat q).toNat + 3 < 2 ^ 64 := by
     rw [UInt64.toNat_ofNat_of_lt' hqb]
-    obtain ⟨w, hw, -⟩ := hd?_some (decCV_type hcv)
+    obtain ⟨w, hw, -⟩ := hd?_some ((decCV_eq_some.mp hcv).2.2)
     exact erecP_lt64 (m := m) hw
   obtain ⟨htyH, htyE⟩ := decCVp_type (q := UInt64.ofNat q)
     (by rw [UInt64.toNat_ofNat_of_lt' hqb]; exact hcv)
