@@ -55,6 +55,8 @@ theorem name_toNat : name.toNat = 0 := by simp [name]
 @[rec_layout] theorem lpsLen_le : lpsLen.toNat ≤ 64 := by simp [lpsLen]
 @[rec_layout] theorem type_le : type.toNat ≤ 64 := by simp [type]
 
+attribute [rec_unfold] name lpsOff lpsLen type size
+
 end L.CV
 
 namespace L

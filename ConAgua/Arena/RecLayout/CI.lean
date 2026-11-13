@@ -30,6 +30,8 @@ namespace L.Hint
 /-- The record's size in words. -/
 @[reducible] def size : Word := 2
 
+attribute [rec_unfold] kind height size
+
 end L.Hint
 
 namespace L.CI
@@ -139,5 +141,7 @@ theorem indCaps_add_toNat {f : Word} (hf : f.toNat < Caps.size.toNat) :
     (indCaps + f).toNat = indCaps.toNat + f.toNat := by
   have := Caps.size_le; have := indCaps_le
   rw [UInt64.toNat_add]; omega
+
+attribute [rec_unfold] kind cv axiomSize thmSize defnValue defnHint defnSize ctorNparams ctorNfields ctorInduct ctorSize recMajor recPrefix recRulesOff recRulesLen recIsK recSize indCaps indSize
 
 end L.CI

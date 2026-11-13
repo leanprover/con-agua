@@ -458,6 +458,8 @@ theorem decCV_copy {a a' : Nat → Option Word} {cq q : Nat} {cv : IConstantVal}
     (hsl : ∀ lo ll, nat? a (cq + 1) = some lo → nat? a (cq + 2) = some ll → lo + ll ≤ N ∨ ll = 0) :
     decCV a' q = some { cv with type := decI ty } := by
   simp only [decCV, bind, Option.bind, pure] at h ⊢
+  -- a whole-record writer (`cv_new`): the offsets as numbers (`rec_unfold`)
+  simp only [rec_unfold, UInt64.reduceToNat] at h ⊢
   have hn : (hd? a' q : Option NIdx) = hd? a cq := by simp only [hd?, h0]
   rw [hn]
   cases e0 : (hd? a cq : Option NIdx) with
@@ -523,17 +525,18 @@ theorem cvNewW_some {m m' : Mem} {nm lo ll ty q : Word} (h : cvNewW m nm lo ll t
 relation and decodes as `{cv with type := ty}`. -/
 theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {cq ty q : Word} {cv : IConstantVal}
-    (h : cvNewW m (erRd m cq) (erRd m (cq + 1)) (erRd m (cq + 2)) ty = some (q, m'))
+    (h : cvNewW m (erRd m cq) (erRd m (cq + CV.lpsOff)) (erRd m (cq + CV.lpsLen)) ty = some (q, m'))
     (hS : StageR vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hty : ty.toNat < 2 ^ 32) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ erOff q = erTopOf m q ∧ erTopOf m' q = erTopOf m q + 4 ∧
       q.toNat < 2 ^ 41 ∧ (q.toNat / 2 ^ 40 % 2 = 0 ↔ rdW (m.arr64 CTL) 1 = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
   obtain ⟨m1, h1, rfl⟩ := cvNewW_some h
   obtain ⟨hS', hg, hq, htop, hq41, htier, hget⟩ := erRec_stage h1 hS
-    [erRd m cq, erRd m (cq + 1), erRd m (cq + 2), ty] (by simp)
+    [erRd m cq, erRd m (cq + CV.lpsOff), erRd m (cq + CV.lpsLen), ty] (by simp)
   refine ⟨hS', hg, hq, htop, hq41, htier, ?_⟩
-  -- the source record's words
+  -- the source record's words; a whole-record writer (`cv_new`): the offsets as numbers
   simp only [decCVp, decCV, hlist?, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
+  simp only [rec_unfold, UInt64.reduceToNat] at hcv ⊢
   obtain ⟨nm, hnm, lps, ⟨lo, hlo, ll, hll, hlps⟩, t, ht, rfl⟩ := hcv
   obtain ⟨w0, hw0, hw0l, rfl⟩ := hd?_some hnm
   obtain ⟨w1, hw1, rfl⟩ : ∃ w, erA m (cq.toNat + 1) = some w ∧ w.toNat = lo := by
@@ -553,8 +556,8 @@ theorem cvNew_stage {vis : Word} {fe : IFEnv} {a : AState}
   have hs : (hslice? (erecP (wrER m1 q [w0, w1, w2, ty])) w1.toNat w2.toNat : Option (List NIdx)) =
       some lps := by rw [r0, r1, r2] at hg; exact ArrExt.hslice? (IWGrow.ext hg) hlps'
   rw [r0, r1, r2]
-  simp only [decCVp, decCV, hlist?, erA, nat?, hd?, g0, g1, Nat.add_assoc, g2, g3, hw0l, hty,
-    ite_true, Option.map_some, bind, Option.bind_some, pure]
+  simp only [decCVp, decCV, rec_unfold, UInt64.reduceToNat, hlist?, erA, nat?, hd?, g0, g1,
+    Nat.add_assoc, g2, g3, hw0l, hty, ite_true, Option.map_some, bind, Option.bind_some, pure]
   rw [hs]; rfl
 
 /-! ## `erec_put` and the tagged read; `env_push` under the stage relation -/

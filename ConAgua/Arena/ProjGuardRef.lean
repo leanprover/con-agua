@@ -199,7 +199,7 @@ theorem pgs_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     (hci : decCI (erecP m) q.toNat = some (.indInfo cvT caps)) (hus : HW us) :
     RefE (KnotUpToE p n) (pgsE p (n + 1) m mode vis q us) (projGuardSort R cvT caps (decI us)) a
       (PgsPost dn m vis fe M eb) := by
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
+  obtain ⟨-, -, hl, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hci).2.1
   obtain ⟨-, hni, -, hnp, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [pgsE.eq_2]

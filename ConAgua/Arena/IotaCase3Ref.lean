@@ -144,7 +144,7 @@ theorem ic3_ref (p : Prog) (hp : IotaProg4 p) (hz : FnzaProg p) (n F : Nat) (hk 
   rw [ic3E.k_ctor_family.eq_2, ite_eq_right f0]
   obtain ⟨cvT, caps, hfam, hciT, hfT⟩ := hsome f0
   rw [hfam]
-  obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hciT)
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hciT).2.1
   dsimp only
   -- the comparand levels' length
   rcases c2 : callW p (k + 1) "ls_node" [us] m with _ | ⟨r₂, m₂⟩

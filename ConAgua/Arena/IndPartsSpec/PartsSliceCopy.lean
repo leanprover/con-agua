@@ -80,35 +80,25 @@ theorem partsSliceCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
 /-- `er_to_iw` of a constant's level-parameter slice (decoded below the tops), as a handle slice. -/
 theorem partsLpsCopy {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Nat} {cv : IConstantVal} {r : List Word}
-    (h : erToIwW n m (erRd m (UInt64.ofNat q + 1)) (erRd m (UInt64.ofNat q + 2)) = some (r, m'))
+    (h : erToIwW n m (erRd m (UInt64.ofNat q + CV.lpsOff)) (erRd m (UInt64.ofNat q + CV.lpsLen)) =
+      some (r, m'))
     (hS : StageR vis fe m a) (hcv : DecB (fun m => decCVp m q) m cv) (hq : q < 2 ^ 64) :
     StageR vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
   have hcv' : decCV (erA (truncM m)) q = some cv := hcv
-  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
-  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
-  have hlvE : lv = cv.levelParams := by rw [← hcvT]
-  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
-  obtain ⟨o', ho, l', hl, hsl⟩ := hlv
-  have hrd : ∀ {i v : Nat} {w : Word}, nat? (erA (truncM m)) i = some v → w.toNat = i →
-      erRd m w = UInt64.ofNat v ∧ v < 2 ^ 64 := by
-    intro i v w hv hw
-    rw [truncM_erA] at hv
-    simp only [nat?, Option.map_eq_some_iff] at hv
-    obtain ⟨x, hx, rfl⟩ := hv
-    subst hw
-    exact ⟨by rw [L.Arena.erRd_of _ _ hx, UInt64.ofNat_toNat], x.toNat_lt⟩
-  have hl64 : q + 2 < 2 ^ 64 := by
-    rw [truncM_erA] at hl
-    simp only [nat?, Option.map_eq_some_iff] at hl
-    obtain ⟨x, hx, -⟩ := hl; exact erecP_lt64 hx
+  obtain ⟨-, hlv, -⟩ := decCV_eq_some.mp hcv'
+  obtain ⟨o', l', ho, hl, hsl⟩ := hlist?_words hlv
   have hqw : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hq
-  obtain ⟨w1, hw1b⟩ := hrd ho (w := UInt64.ofNat q + 1) (by rw [UInt64.toNat_add, hqw]; simp; omega)
-  obtain ⟨w2, hw2b⟩ := hrd hl (w := UInt64.ofNat q + 2) (by rw [UInt64.toNat_add, hqw]; simp; omega)
-  rw [w1, w2] at h
-  exact partsSliceCopy h hS
-    (by rw [UInt64.toNat_ofNat_of_lt' hw1b, UInt64.toNat_ofNat_of_lt' hw2b, hsl, hlvE])
+  have ho' := ho; have hl' := hl
+  rw [truncM_erA] at ho' hl'
+  have e1 : erRd m (UInt64.ofNat q + CV.lpsOff) = o' := L.Arena.erRd_of _ _ (by
+    rw [off_add_toNat rfl (by have := erecP_lt64 ho'; omega), hqw]; exact ho')
+  have e2 : erRd m (UInt64.ofNat q + CV.lpsLen) = l' := L.Arena.erRd_of _ _ (by
+    rw [off_add_toNat CV.lpsLen_toNat (by have := erecP_lt64 hl'; omega), hqw, ← Nat.add_assoc]
+    exact hl')
+  rw [e1, e2] at h
+  exact partsSliceCopy h hS hsl
 
 
 end L.Ind

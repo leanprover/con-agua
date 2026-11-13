@@ -105,7 +105,7 @@ theorem rdW_set_ctl (m : Mem) (k v x : Word) (h : k ≠ x) :
 `w`), at the next counter: its base row written if it has none, the counter moved. -/
 theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Word}
     {ci : IConstantInfo} (hci : decCI (erecP m) q.toNat = some ci) {w : Word}
-    (hw : erecP m (q.toNat + 1) = some w) (hnx : I.next < 2 ^ 32 - 2)
+    (hw : erecP m (q.toNat + CI.cv.toNat) = some w) (hnx : I.next < 2 ^ 32 - 2)
     (hset : (baseRow m w).1 = 0 → rowTag w ≤ 2 ∧ rowTier w = 0 ∧
       rowIx w + 1 < (m.arr64 (eixArr (rowTag w))).size) (hc : 128 < (m.arr64 CTL).size) :
     IndexR ((if (baseRow m w).1 = 0 then baseSet m w (rdW (m.arr64 CTL) 128 + 1) q else m).set64 CTL 128

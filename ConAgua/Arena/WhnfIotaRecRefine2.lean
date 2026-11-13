@@ -118,7 +118,7 @@ theorem inc_ok (p : Prog) (hp : IotaProg' p) {n : Nat} {dn : NIdx → Option Con
   rw [ite_eq_right (by simpa [erRd] using k3)] at h
   obtain ⟨cvT, caps, rfl⟩ := hk.1 (Classical.not_not.mp k3)
   obtain ⟨-, -, hnz, -⟩ := decCI_indInfo_rd (erRdOK m) hci4
-  obtain ⟨-, hlen, -, -⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci4)
+  obtain ⟨-, -, -, hlen, -, -⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hci4).2.1
   simp only [erRd] at hnz hlen
   generalize r₄.tail.headD 0 = q at *
   by_cases g : rdW (m.arr64 (tierA EREC ((q + (CI.indCaps + Caps.neverZero)) >>> 40)))

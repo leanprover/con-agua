@@ -66,4 +66,6 @@ theorem ctorsLen_toNat : ctorsLen.toNat = ctorsOff.toNat + 1 := by simp [ctorsLe
 /-- The record's size as a number (a `toNat` bound for `omega`). -/
 theorem size_pos : 0 < size.toNat := by simp [size]
 
+attribute [rec_unfold] eta nIdx neverZero allOff allLen nparams ctorsOff ctorsLen size
+
 end L.Caps

@@ -133,7 +133,7 @@ theorem secg_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCal
       (GrowPost decBool dn s₀.mem vis fe M eb ResH) := by
   have hS := hs.rel
   have hIR := decCI_indCaps (erRdOK _) hcvT
-  have hCL := decCI_ctorLp (erRdOK _) hcvc
+  have hCL := (decCV_rd_ci (erRdOK _) (decCI_ctorInfo_rd (erRdOK _) hcvc).2.1).2.2.1
   obtain ⟨-, hTp, hTcw, hTc, hTf⟩ := tblFound_words htbl
   simp only [secgE]
   cases n with

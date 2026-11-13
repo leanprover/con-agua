@@ -12,7 +12,7 @@ public import ConAgua.Arena.Env
 /-!
 # DecCIIndCv
 
-`cftK4`, `cftK3`, `cftKF`, `cftK2`, `cftK1` (the parts of `class_former_ty`'s model `cftW`), `CftProg`, `decCI_ind_cv`, `decTM_lvls'`.
+`cftK4`, `cftK3`, `cftKF`, `cftK2`, `cftK1` (the parts of `class_former_ty`'s model `cftW`), `CftProg`, `decTM_lvls'`.
 -/
 
 noncomputable section
@@ -86,26 +86,6 @@ structure CftProg (p : Prog) : Prop where
   cft : p.lookup "class_former_ty" = some classFormerTyL
 
 /-! ## Relational lemma -/
-
-theorem decCI_ind_cv {a : Nat → Option Word} {q : Nat} {cv : IConstantVal}
-    {caps : IIndCaps} (h : decCI a q = some (.indInfo cv caps)) : decCV a (q + 1) = some cv := by
-  cases hq : a q with
-  | none => simp [decCI, nat?, hq] at h
-  | some w =>
-  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
-  rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
-  all_goals rw [hk] at h
-  all_goals first | (simp [Option.bind_eq_some_iff] at h; done) | skip
-  cases e : decCV a (q + 1) with
-  | none => simp [e] at h
-  | some cv' =>
-    simp only [e, Option.bind_some] at h
-    cases e2 : decCaps a (q + CI.indCaps.toNat) with
-    | none => simp [e2] at h
-    | some c =>
-      simp only [e2, Option.bind_some, Option.pure_def, Option.some.injEq,
-        IConstantInfo.indInfo.injEq] at h
-      rw [h.1]
 
 theorem decTM_lvls' {m : Mem} {p : Nat} {M : TargetMajor} (h : decTM m p = some M) :
     iwH m (p + 1) = some M.lvls := by

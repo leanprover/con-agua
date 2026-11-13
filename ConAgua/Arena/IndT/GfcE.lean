@@ -185,7 +185,7 @@ theorem cft_refQ (k : Nat) (hk : k ≤ 2 ^ 62) {m : Mem} {a : AState} {o l mp : 
     obtain ⟨cv, caps, rfl, hcaps⟩ := decCI_kind3 hci hk3
     have hfci : fe.find? M.ind = some (.indInfo cv caps) := by rw [← hwiE, hfind, hci]
     rw [hfci]
-    have hcvq : decCV (erecP m) (q.toNat + 1) = some cv := L.Arena.decCI_ind_cv hci
+    have hcvq : decCV (erecP m) (q.toNat + CI.cv.toNat) = some cv := (decCI_indInfo_iff.mp hci).2.1
     obtain ⟨v16, hv16⟩ := decCI_indInfo_word hci
     have hq64 := L.Arena.erecP_lt64 hv16
     have := CI.indCaps_ge

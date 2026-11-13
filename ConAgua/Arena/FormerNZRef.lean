@@ -202,16 +202,6 @@ l_model fnzW_spec (p : Prog) (hf : p.lookup "former_never_zero" = some formerNev
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specT, evalE_tld, tld, evalE_tagE, evalE_idxAE, evalE_idxGE]
 
-/-- An `indInfo` record's constant value decodes at `q + 1`. -/
-theorem decCI_ind_cv {R : Nat → Option Word} {q : Nat} {cv : IConstantVal} {caps : IIndCaps}
-    (h : decCI R q = some (.indInfo cv caps)) : decCV R (q + 1) = some cv := by
-  simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨k, -, h⟩ := h
-  rcases k with _ | _ | _ | _ | _ | _ | k <;>
-    simp only [Option.bind_eq_some_iff, Option.some.injEq, reduceCtorEq, and_false, exists_false] at h
-  obtain ⟨cv', hcv, caps', -, he⟩ := h
-  cases he; exact hcv
-
 /-- **`former_never_zero` refines `formerNeverZero`** (the heap top put back): the datum of
 `former_z` substituted (`lv_spw`, the keys the family's level parameters, the values `us`). -/
 theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = some piResultL)
@@ -227,7 +217,7 @@ theorem fnz_ok {p : Prog} (hpp : PropReadProg p) (hpr : p.lookup "pi_result" = s
   rcases n with _ | n
   · simp [fnzW] at h
   rw [fnzW.arm1] at h
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
+  obtain ⟨-, -, hl, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hci).2.1
   change fnzW.k_former_z p n us (erRd m (q + 2)) (erRd m (q + 3)) (rdW (m.arr64 CTL) 192)
     (callW p n "former_z" [erRd m (q + 4)] m) = some (w, m') at h
   rcases c1 : callW p n "former_z" [erRd m (q + 4)] m with _ | ⟨r1, m1⟩
@@ -410,7 +400,7 @@ theorem fnza_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
     RefE (KnotUpToE p n) (fnzaE p (n + 1) m mode vis q us)
       (formerNeverZeroAt (coreKnot (decMode mode) (decEager mode) fe id F) cvT caps (decI us)) a
       (CorePost decBool dn m vis fe M eb ResH) := by
-  obtain ⟨hl, -, hty, hty32⟩ := decCV_rd (erRdOK m) (L.Arena.decCI_ind_cv hci)
+  obtain ⟨-, -, hl, -, hty32, hty⟩ := decCV_rd_ci (erRdOK m) (decCI_indInfo_iff.mp hci).2.1
   obtain ⟨-, hni, -, hnp, -⟩ := decCI_indInfo_rd (erRdOK m) hci
   simp only [erRd] at hl hty hty32 hni hnp
   rw [fnzaE.eq_2]
