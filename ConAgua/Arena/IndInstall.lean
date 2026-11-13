@@ -93,7 +93,7 @@ def memberNeverZero : FunDecl := lfn (p, mi) locals (ms, t0, w, o, c) {
   if IW.u64[p + 1] <= mi { return 0 };
   ms := IW.u64[IW.u64[p] + mi];
   t0 := CTL.u64[192];
-  (w, o, c) := call former_z(EREC⦃IW.u64[ms + 4] + 3⦄);
+  (w, o, c) := call former_z(EREC⦃IW.u64[ms + 4] + ⟪CV.type⟫⦄);
   CTL.u64[192] := t0;
   return u64(w == 0)
 }
@@ -180,7 +180,7 @@ the member (its ctor slice) mention one of `names` in some binder domain of its 
 @[no_expose, l_impl ConRon.Arena.blockIsRec]
 def blockIsRecMember : FunDecl := lfn (namesO, namesL, coff, clen) locals (b, r) {
   if clen == 0 { return 0 };
-  b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC⦃IW.u64[IW.u64[coff]] + 3⦄);
+  b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC⦃IW.u64[IW.u64[coff]] + ⟪CV.type⟫⦄);
   if b != 0 { return 1 };
   r := call block_is_rec_member(namesO, namesL, coff + 1, clen - 1);
   return r
@@ -221,7 +221,7 @@ def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
   if k < nP { abort };
   z := call check_constant_val(vis, cvT, 0);
   (cvTa, s) := call check_sum_tele(k, cvT);
-  (ok, bsOff, bsLen, body) := call strip_pis(k, EREC⦃cvTa + 3⦄);
+  (ok, bsOff, bsLen, body) := call strip_pis(k, EREC⦃cvTa + ⟪CV.type⟫⦄);
   if ok == 0 { abort };
   srt := call intern_sort(s);
   if body == srt { return (cvTa, s) };
@@ -269,7 +269,7 @@ sort. -/
 @[no_expose, l_impl ConRon.Arena.checkBlockAgree]
 def checkBlockAgreeOne : FunDecl := lfn (vis, nP, fvs0O, fvs0L, s0, cvTa, s) locals
     (ok, fvsO, fvsL, body, domsO, domsL, u, eq) {
-  (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + 3⦄, 0);
+  (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nP, EREC⦃cvTa + ⟪CV.type⟫⦄, 0);
   if ok == 0 { fail R_PARAMETERS_OF_ALL };
   if fvsL != fvs0L { fail R_PARAMETERS_OF_ALL };
   (domsO, domsL) := call fvar_type_ds(fvs0O, fvs0L);
@@ -289,7 +289,7 @@ opening differs). -/
 def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
     (ok0, fvs0O, fvs0L, body0, rp, u) {
   if restL == 0 { return 0 };
-  (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC⦃cvTa0 + 3⦄, 0);
+  (ok0, fvs0O, fvs0L, body0) := call open_pis_at_fvars_f(nP, EREC⦃cvTa0 + ⟪CV.type⟫⦄, 0);
   if ok0 == 0 { abort };
   rp := IW.u64[restO];
   u := call check_block_agree_one(vis, nP, fvs0O, fvs0L, s0, IW.u64[rp], IW.u64[rp + 1]);
@@ -461,7 +461,7 @@ def blockNestCtx : FunDecl := lfn (p) locals
   if fL == 0 { abort };
   if IW.u64[p + 4] + IW.u64[p + 1] < IW.u64[p + 4] { abort };
   cvTa0 := IW.u64[fO];
-  (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC⦃cvTa0 + 3⦄, 0);
+  (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC⦃cvTa0 + ⟪CV.type⟫⦄, 0);
   if ok == 0 { abort };
   if pqL + IW.u64[p + 1] < pqL { abort };
   ctx := call block_shape_nest_ctx(p, pqO, pqL);
@@ -522,7 +522,7 @@ def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL) locals
   nP := IW.u64[p + 4]; ni := IW.u64[ms + 1]; srt := IW.u64[p + 6];
   k := nP + ni;
   if k < nP { abort };
-  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC⦃IW.u64[ms] + 3⦄, 0);
+  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC⦃IW.u64[ms] + ⟪CV.type⟫⦄, 0);
   if ok == 0 { abort };
   dOff := 0; dLen := 0;
   if nP < tqL { dOff := tqO + nP; dLen := tqL - nP };
@@ -607,7 +607,7 @@ push order (`prevs ++ [·]`, `sl_snoc`), for the pop. -/
 def consBlockRecsTemp : FunDecl := lfn (io, il, vis, po, pl) locals (ci, nm, c, q, e, v, no, nl, ro, rl, rv) {
   if il == 0 { return (vis, po, pl) };
   ci := IW.u64[io];
-  nm := EREC⦃ci + 1⦄;
+  nm := EREC⦃ci + ⟪CI.cv + CV.name⟫⦄;
   (c, q) := call env_row_get(nm);
   e := call rec3(nm, c, q);
   v := call env_push(vis, ci);
@@ -696,7 +696,7 @@ declared type checked, reduced (`reduced_former`) and the two compared, a fresh 
 @[no_expose, l_impl ConRon.Arena.reduceMember]
 def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u, k, cvR, eq, q) {
   cvT := IW.u64[ms];
-  dh := call former_def_headed(EREC⦃cvT + 3⦄);
+  dh := call former_def_headed(EREC⦃cvT + ⟪CV.type⟫⦄);
   if dh == 0 { return ms };
   (dO, dL) := call declined_at_definition();
   hit := call sl_contains(dO, dL, EREC⦃cvT⦄);
@@ -705,7 +705,7 @@ def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u,
   k := nP + IW.u64[ms + 1];
   if k < nP { abort };
   cvR := call reduced_former(vis, cvT, k);
-  eq := call is_def_eq_core(vis, 0, EREC⦃cvT + 3⦄, EREC⦃cvR + 3⦄);
+  eq := call is_def_eq_core(vis, 0, EREC⦃cvT + ⟪CV.type⟫⦄, EREC⦃cvR + ⟪CV.type⟫⦄);
   if eq == 0 { fail R_DIRECT_SUM_A };
   q := call rec5(cvR, IW.u64[ms + 1], IW.u64[ms + 2], IW.u64[ms + 3], IW.u64[ms + 4]);
   return q

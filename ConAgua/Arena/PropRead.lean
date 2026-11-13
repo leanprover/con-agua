@@ -134,7 +134,7 @@ def unwrapStepL : FunDecl :=
   (fd, p) := call env_find(CONST⟨t, x⟩.n, vis);
   if fd == 0 { return (0, 0) };
   if EREC⦃p⦄ != 1 { return (0, 0) };
-  (lf, k, j) := call lam_proj(f, 0, EREC⦃p + 5⦄);
+  (lf, k, j) := call lam_proj(f, 0, EREC⦃p + ⟪CI.defnValue⟫⦄);
   if lf == 0 { return (0, 0) };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);
@@ -206,10 +206,10 @@ def headTypeConstL : FunDecl := lfn (vis, f, n, cn, us) locals (fd, p, lo, l, k,
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
-  if l != EREC⦃p + 3⦄ { return (0, 0, 0) };
-  (k, o, c) := call head_type_res(vis, f, n, EREC⦃p + 4⦄);
+  if l != EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, 0, 0) };
+  (k, o, c) := call head_type_res(vis, f, n, EREC⦃p + ⟪CI.cv + CV.type⟫⦄);
   if k == 0 { return (0, 0, 0) };
-  (k, o, c) := call subst_pw_at(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, k, o, c);
+  (k, o, c) := call subst_pw_at(EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄, us, k, o, c);
   return (k, o, c)
 }
 
@@ -270,10 +270,10 @@ def headProofConstL : FunDecl := lfn (vis, f, cn, us) locals (fd, p, lo, l, k, o
   (fd, p) := call env_find(cn, vis);
   if fd == 0 { return (0, 0, 0) };
   (lo, l) := call ls_node(us);
-  if l != EREC⦃p + 3⦄ { return (0, 0, 0) };
-  (k, o, c) := call type_sort_pw(vis, f, EREC⦃p + 4⦄);
+  if l != EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, 0, 0) };
+  (k, o, c) := call type_sort_pw(vis, f, EREC⦃p + ⟪CI.cv + CV.type⟫⦄);
   if k == 0 { return (0, 0, 0) };
-  (k, o, c) := call subst_pw_at(EREC⦃p + 2⦄, EREC⦃p + 3⦄, us, k, o, c);
+  (k, o, c) := call subst_pw_at(EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄, us, k, o, c);
   return (k, o, c)
 }
 

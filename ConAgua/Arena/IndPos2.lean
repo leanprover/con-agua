@@ -109,26 +109,26 @@ binders, `whnf_telescope`), closed: a fresh constant value (`{cv with type := ty
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:212-221 ConRon.Arena.reducedFormer
 @[no_expose, l_impl ConRon.Arena.reducedFormer]
 def reducedFormerL : FunDecl := lfn (vis, cv, n) locals (bo, bl, s, srt, ty, q) {
-  (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC⦃cv + 3⦄, 0, 0);
+  (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC⦃cv + ⟪CV.type⟫⦄, 0, 0);
   srt := call intern_sort(s);
   if 4294967296 <= srt { abort };
   ty := call close_telescope(bo, bl, 0, srt);
-  q := call cv_new(EREC⦃cv⦄, EREC⦃cv + 1⦄, EREC⦃cv + 2⦄, ty);
+  q := call cv_new(EREC⦃cv⦄, EREC⦃cv + ⟪CV.lpsOff⟫⦄, EREC⦃cv + ⟪CV.lpsLen⟫⦄, ty);
   return q
 }
 
 /-- `family_telescope(vis, cv, caps)`: a stored family's type former at its telescope — its stored
 type where that shows one, else its reduct at its parameters and indices (`caps` the family's
-`IIndCaps` in `EREC`: `nparams` at `+ 12`, `nIdx` at `+ 6`). -/
+`IIndCaps` in `EREC`: `Caps.nparams`, `Caps.nIdx`). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:223-232 ConRon.Arena.familyTelescope
 @[no_expose, l_impl ConRon.Arena.familyTelescope]
 def familyTelescopeL : FunDecl := lfn (vis, cv, caps) locals (dh, k, cvR) {
-  dh := call former_def_headed(EREC⦃cv + 3⦄);
-  if dh == 0 { return EREC⦃cv + 3⦄ };
+  dh := call former_def_headed(EREC⦃cv + ⟪CV.type⟫⦄);
+  if dh == 0 { return EREC⦃cv + ⟪CV.type⟫⦄ };
   k := EREC⦃caps + ⟪Caps.nparams⟫⦄ + EREC⦃caps + ⟪Caps.nIdx⟫⦄;
   if k < EREC⦃caps + ⟪Caps.nparams⟫⦄ { abort };
   cvR := call reduced_former(vis, cv, k);
-  return EREC⦃cvR + 3⦄
+  return EREC⦃cvR + ⟪CV.type⟫⦄
 }
 
 /-- `check_spine_at(vis, d, t, args.off, args.len)`: the arguments of an application against the
@@ -160,9 +160,9 @@ def familyKeyCheckL : FunDecl := lfn (vis, d, c, us, dO, dL) locals
   if found == 0 { fail R_A_FAMILY_S };
   if EREC⦃q⦄ != 3 { fail R_A_FAMILY_S };
   (ok, nl) := call view_ls_len(us);
-  if nl != EREC⦃q + 3⦄ { fail R_INCORRECT_NUMBER_OF_UNIVERSE };
-  ty := call family_telescope(vis, q + 1, q + ⟪CI.indCaps⟫);
-  (lo, ll) := call cv_lps(q + 1);
+  if nl != EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { fail R_INCORRECT_NUMBER_OF_UNIVERSE };
+  ty := call family_telescope(vis, q + ⟪CI.cv⟫, q + ⟪CI.indCaps⟫);
+  (lo, ll) := call cv_lps(q + ⟪CI.cv⟫);
   t := call inst_lp_fast(⟪CWF⟫, lo, ll, us, ty);
   u := call check_spine_at(vis, d, t, dO, dL);
   return 0
@@ -181,9 +181,9 @@ def nestInstTypeTyL : FunDecl := lfn (vis, key) locals
   if found == 0 { abort };
   kind := EREC⦃q⦄;
   if kind != 3 { abort };
-  cvC := q + 1;
+  cvC := q + ⟪CI.cv⟫;
   (found, nl) := call view_ls_len(IW.u64[key + 1]);
-  if nl != EREC⦃cvC + 2⦄ { fail R_NESTED_POSITIVITY_INCORRECT };
+  if nl != EREC⦃cvC + ⟪CV.lpsLen⟫⦄ { fail R_NESTED_POSITIVITY_INCORRECT };
   tyC := call family_telescope(vis, cvC, q + ⟪CI.indCaps⟫);
   (ok2, bo, bl, bdy) := call strip_pis(IW.u64[key + 3], tyC);
   if ok2 == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE_DATATYPE };
@@ -395,7 +395,7 @@ def nestCtorsCrestL : FunDecl :=
   (lo, ll) := call cv_lps(cv);
   nodup := call sl_nodup(lo, ll);
   if nodup == 0 { fail R_NESTED_POSITIVITY_INVALID };
-  cty := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃cv + 3⦄);
+  cty := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC⦃cv + ⟪CV.type⟫⦄);
   (ok, cty) := call nest_crest(namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cty);
   if ok == 0 { fail R_NESTED_POSITIVITY_INVALID_NESTED_INDUCTIVE };
   ty := call infer_type_core(vis, hi, cty);
@@ -759,7 +759,7 @@ def nestHolesGoL : FunDecl := lfn (ctx, mm, off, l, outOff, outLen) locals
   if l == 0 { return (1, outOff, outLen) };
   if IW.u64[ctx + 12] <= mm { return (0, 0, 0) };
   cv := IW.u64[IW.u64[ctx + 11] + mm];
-  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC⦃cv + 3⦄);
+  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC⦃cv + ⟪CV.type⟫⦄);
   if ok2 == 0 { return (0, 0, 0) };
   v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
   if 4294967296 <= v { abort };
@@ -783,7 +783,7 @@ def nestHolesL : FunDecl := lfn (ctx) locals (namesOff, namesLen, ok, outOff, ou
 @[no_expose, l_impl ConRon.Arena.nestRootCanon]
 def nestRootCanonL : FunDecl := lfn (ctx, cv) locals (lo, ll, t, ok, e) {
   (lo, ll) := call cv_lps(cv);
-  t := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[ctx + 10], EREC⦃cv + 3⦄);
+  t := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[ctx + 10], EREC⦃cv + ⟪CV.type⟫⦄);
   (ok, e) := call nest_canon_crest(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10],
     IW.u64[ctx + 4], t);
   return (ok, e)
@@ -811,7 +811,7 @@ def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (g, d,
 def nestUniformOkL : FunDecl := lfn (ctx, cv) locals (hi0, occ1, ok, e, occ2) {
   hi0 := call nest_ctx_hi_at(ctx, 0);
   occ1 := call pi_doms_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi0, IW.u64[ctx + 4],
-    EREC⦃cv + 3⦄);
+    EREC⦃cv + ⟪CV.type⟫⦄);
   if occ1 != 0 { return 0 };
   (ok, e) := call nest_root_canon(ctx, cv);
   if ok == 0 { return 0 };

@@ -269,7 +269,7 @@ def classReadRecCls : FunDecl := lfn (nP, mo, ml, ro, rl) locals
   rc := IW.u64[ro];
   mI := IW.u64[rc + 2];
   if mI + 1 == 0 { abort };
-  ty := EREC⦃IW.u64[rc] + 3⦄;
+  ty := EREC⦃IW.u64[rc] + ⟪CV.type⟫⦄;
   (ok, p, c, concl) := call open_pis_at_fvars_f(mI + 1, ty, 0);
   if ok == 0 { return (0, 0, 0) };
   (ok, p) := call fvar_head(concl);
@@ -323,7 +323,7 @@ def classRead : FunDecl := lfn (p, vis, nP, ro, rl) locals
     (rc0, ty, ok, jo, jl, body, k, so, sl, res) {
   if rl == 0 { return (0, 0) };
   rc0 := IW.u64[ro];
-  ty := EREC⦃IW.u64[rc0] + 3⦄;
+  ty := EREC⦃IW.u64[rc0] + ⟪CV.type⟫⦄;
   (ok, jo, jl, body) := call open_pis_at_fvars_f(nP, ty, 0);
   if ok == 0 { return (0, 0) };
   k := call class_read_n_slots(IW.u64[rc0 + 1], nP);

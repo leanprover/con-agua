@@ -310,11 +310,11 @@ def nestKindsFlat : FunDecl := lfn (off, cnt) locals (ok, r) {
 @[no_expose, l_impl ConRon.Arena.nestCtorEntry]
 def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bsLen, body) {
   if EREC⦃ciq⦄ != 4 { return (0, 0, 0, 0, 0) };
-  cv := ciq + 1;
-  nPc := EREC⦃ciq + 5⦄;
-  nF := EREC⦃ciq + 6⦄;
+  cv := ciq + ⟪CI.cv⟫;
+  nPc := EREC⦃ciq + ⟪CI.ctorNparams⟫⦄;
+  nF := EREC⦃ciq + ⟪CI.ctorNfields⟫⦄;
   if nPc + nF < nPc { abort };
-  (ok, bsOff, bsLen, body) := call strip_pis(nPc + nF, EREC⦃cv + 3⦄);
+  (ok, bsOff, bsLen, body) := call strip_pis(nPc + nF, EREC⦃cv + ⟪CV.type⟫⦄);
   if ok == 0 { return (0, 0, 0, 0, 0) };
   return (1, cv, nPc, nF, body)
 }

@@ -46,12 +46,12 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
   return r
 }
 
-/-- The family of the constructor (`cvjP` its record): the one stored at its `induct` (word `7`),
+/-- The family of the constructor (`cvjP` its record): the one stored at its `induct` (word `CI.ctorInduct`),
 an inductive; then `m2c_arms`.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 @[no_expose] def m2cCtorL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, major)
     locals (T, f, indP, r) {
-  T := EREC⦃cvjP + 7⦄;
+  T := EREC⦃cvjP + ⟪CI.ctorInduct⟫⦄;
   (f, indP) := call env_find(T, vis);
   if f == 0 { return major };
   if EREC⦃indP⦄ != 3 { return major };
@@ -74,7 +74,7 @@ parameter count.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 @[no_expose] def m2cArmsL : FunDecl := lfn (mode, vis, d, isK, ro, cvjP, T, indP, major) locals (tq, er, r) {
   if isK != 0 {
-    r := call m2c_k(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
+    r := call m2c_k(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + ⟪CI.cv + CV.lpsLen⟫⦄, EREC⦃cvjP + ⟪CI.ctorNparams⟫⦄);
     return r
   };
   tq := call find_table(vis, T);
@@ -83,7 +83,7 @@ con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
     r := call m2c_eta(mode, vis, d, T, indP, er, major);
     return r
   };
-  r := call m2c_and(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + 3⦄, EREC⦃cvjP + 5⦄);
+  r := call m2c_and(mode, vis, d, T, major, EREC⦃ro⦄, EREC⦃cvjP + ⟪CI.cv + CV.lpsLen⟫⦄, EREC⦃cvjP + ⟪CI.ctorNparams⟫⦄);
   return r
 }
 
@@ -142,7 +142,7 @@ argument count (the table's parameter count) and level count.
 con-ron: ConRon/Arena/Core.lean:2102-2211 ConRon.Arena.majorToCtor -/
 @[no_expose] def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, tq, major)
     locals (pc, ec, ep, ef, f, tmaj, T2, ust, ustl, to, tn, r) {
-  pc := EREC⦃indP + 3⦄;
+  pc := EREC⦃indP + ⟪CI.cv + CV.lpsLen⟫⦄;
   ec := EREC⦃tq + 5⦄;
   ep := EREC⦃tq + 4⦄;
   ef := EREC⦃tq + 6⦄;

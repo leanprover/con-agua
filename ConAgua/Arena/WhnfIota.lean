@@ -157,10 +157,10 @@ the heap top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:373-381 ConRon.Arena.formerNeverZero
 @[no_expose, l_impl ConRon.Arena.formerNeverZero]
 def formerNeverZeroL : FunDecl := lfn (p, us) locals (po, pc, t0, w, o, c, vo, vc, x) {
-  po := EREC⦃p + 2⦄;
-  pc := EREC⦃p + 3⦄;
+  po := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
+  pc := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
   t0 := CTL.u64[192];
-  (w, o, c) := call former_z(EREC⦃p + 4⦄);
+  (w, o, c) := call former_z(EREC⦃p + ⟪CI.cv + CV.type⟫⦄);
   (vo, vc) := call ls_node(us);
   if w == 0 { CTL.u64[192] := t0; return 1 };
   x := call lv_spw(o, c, po, pc, vo, vc);
@@ -210,9 +210,9 @@ walked to by `former_sort_loop` at the use's levels (from depth `0`); no sort re
 @[no_expose, l_impl ConRon.Arena.formerNeverZeroAt]
 def formerNeverZeroAtL : FunDecl := lfn (mode, vis, p, us)
     locals (po, pc, ty, n, f, u, r, ity) {
-  po := EREC⦃p + 2⦄;
-  pc := EREC⦃p + 3⦄;
-  ty := EREC⦃p + 4⦄;
+  po := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
+  pc := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
+  ty := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
   n := EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ + EREC⦃p + ⟪CI.indCaps + Caps.nIdx⟫⦄;
   if n < EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ { abort };
   (f, u) := call former_res_sort(ty);
@@ -233,7 +233,7 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, T, us) locals (ok, p, lp, uso
   if isK != 0 { return 0 };
   (ok, p) := call ctor_family(vis, T);
   if ok == 0 { return 1 };
-  lp := EREC⦃p + 3⦄;
+  lp := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
   (uso, usl) := call ls_node(us);
   if lp != usl { return 1 };
   nz := call former_never_zero_at(mode, vis, p, us);
@@ -242,7 +242,7 @@ def iotaCase3AtL : FunDecl := lfn (mode, vis, isK, T, us) locals (ok, p, lp, uso
 
 /-- `iota_no_cert(vis, isK, T, n)`: a rule fires with no certificate, by the stored facts: at a K
 recursor, or where the family stored at the constructor's `induct` `T` records a sort that is never
-zero (`neverZero`, the inductive record's word `12`: its capabilities' word `7`) and has `n` level
+zero (`neverZero`, the inductive record's word `CI.indCaps + Caps.neverZero`) and has `n` level
 parameters. -/
 -- con-ron: ConRon/Arena/Core.lean:2001-2012 ConRon.Arena.iotaNoCert
 @[no_expose, l_impl ConRon.Arena.iotaNoCert]
@@ -252,7 +252,7 @@ def iotaNoCertL : FunDecl := lfn (vis, isK, T, n) locals (f, q) {
   if f == 0 { return 0 };
   if EREC⦃q⦄ != 3 { return 0 };
   if EREC⦃q + ⟪CI.indCaps + Caps.neverZero⟫⦄ == 0 { return 0 };
-  return u64(EREC⦃q + 3⦄ == n)
+  return u64(EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ == n)
 }
 
 /-- `rec_fire_level_count(k, lc, cpc)`: how many comparand levels a rule has (`recFireLevelCount`):
@@ -286,7 +286,8 @@ def etaRescueTableL : FunDecl := lfn (tq, ctor, cq, p) locals (r, ai) {
   if tq == 0 { return 0 };
   if EREC⦃p + ⟪CI.indCaps + Caps.eta⟫⦄ == 0 { return 0 };
   if EREC⦃tq + 5⦄ != ctor { return 0 };
-  r := call er_sl_eq(EREC⦃cq + 2⦄, EREC⦃cq + 3⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄);
+  r := call er_sl_eq(EREC⦃cq + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃cq + ⟪CI.cv + CV.lpsLen⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄,
+    EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄);
   if r == 0 { return 0 };
   ai := call pin_at(48);
   if ctor == ai { return 0 };

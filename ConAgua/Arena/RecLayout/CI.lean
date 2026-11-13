@@ -51,7 +51,8 @@ theorem cv_end : (cv + CV.size).toNat = 5 := by simp [cv, CV.size]
 
 /-! ## `defnInfo` -/
 
-/-- `value`: the definition's body (a handle). -/
+/-- `value`: the definition's body (a handle). The front's declarations come as records of a
+definition's shape (`erec_ci`), so a theorem's and an opaque's value is at this word too. -/
 @[reducible] def defnValue : Word := 5
 /-- `hint`: the reducibility hint (`Hint.size` words). -/
 @[reducible] def defnHint : Word := 6
@@ -85,6 +86,11 @@ theorem cv_end : (cv + CV.size).toNat = 5 := by simp [cv, CV.size]
 @[reducible] def recSize : Word := 10
 
 theorem recRulesLen_eq : recRulesLen = recRulesOff + 1 := by simp [recRulesLen, recRulesOff]
+
+/-- A recursor's two counts are where a constructor's are (`find_pinned` reads either kind's at
+the same words). -/
+theorem recMajor_eq : recMajor = ctorNparams := by simp [recMajor, ctorNparams]
+theorem recPrefix_eq : recPrefix = ctorNfields := by simp [recPrefix, ctorNfields]
 theorem recRulesLen_toNat : recRulesLen.toNat = recRulesOff.toNat + 1 := by
   simp [recRulesLen, recRulesOff]
 

@@ -44,25 +44,26 @@ open L.Ind (IW)
 }
 
 /-- `erec_ci(i, kind)`: the constant record of `DECL` record `i` with kind word `kind`
-(`decCI`'s layout: kind, the constant value, the value, the hint (`0` opaque, `1` abbrev, `2`
-regular), the height); its universe parameters a fresh `EREC` slice. -/
+(`decCI`'s layout of a definition, `CI.defnSize` words: kind, the constant value, the value, the
+hint (`0` opaque, `1` abbrev, `2` regular), the height); its universe parameters a fresh `EREC`
+slice. -/
 -- con-ron: none — builds the front's record as a constant record (the twin's `checkDecl` takes the declaration's values as they are)
 @[no_expose] def erecCi : FunDecl := lfn (i, kind) locals (lo, ll, s, z, p, hq, ez) {
   lo := DECL.u64[3 + 8 * i];
   ll := DECL.u64[4 + 8 * i];
   s := call erec_alloc(ll);
   z := call dlp_copy(s, 1 + lo, ll);
-  p := call erec_alloc(8);
+  p := call erec_alloc(⟪CI.defnSize⟫);
   ez := call erec_put(p, kind);
-  ez := call erec_put(p + 1, DECL.u64[2 + 8 * i] & 4294967295);
-  ez := call erec_put(p + 2, s);
-  ez := call erec_put(p + 3, ll);
-  ez := call erec_put(p + 4, DECL.u64[5 + 8 * i] & 4294967295);
-  ez := call erec_put(p + 5, DECL.u64[6 + 8 * i] & 4294967295);
+  ez := call erec_put(p + ⟪CI.cv + CV.name⟫, DECL.u64[2 + 8 * i] & 4294967295);
+  ez := call erec_put(p + ⟪CI.cv + CV.lpsOff⟫, s);
+  ez := call erec_put(p + ⟪CI.cv + CV.lpsLen⟫, ll);
+  ez := call erec_put(p + ⟪CI.cv + CV.type⟫, DECL.u64[5 + 8 * i] & 4294967295);
+  ez := call erec_put(p + ⟪CI.defnValue⟫, DECL.u64[6 + 8 * i] & 4294967295);
   hq := DECL.u64[7 + 8 * i];
-  if hq == 1 { ez := call erec_put(p + 6, 1)} else if hq == 2 { ez := call erec_put(p + 6, 0)} else {
-    ez := call erec_put(p + 6, 2)};
-  ez := call erec_put(p + 7, DECL.u64[8 + 8 * i]);
+  if hq == 1 { ez := call erec_put(p + ⟪CI.defnHint⟫, 1)} else if hq == 2 {
+    ez := call erec_put(p + ⟪CI.defnHint⟫, 0)} else { ez := call erec_put(p + ⟪CI.defnHint⟫, 2)};
+  ez := call erec_put(p + ⟪CI.defnHint + Hint.height⟫, DECL.u64[8 + 8 * i]);
   return p
 }
 
@@ -80,24 +81,25 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
   return 0
 }
 
-/-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, 20 words; `4`
-constructor, 8; `5` recursor, 10 and its 11-word rules) copied into `EREC`, its slices too. -/
+/-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, `CI.indSize` words;
+`4` constructor, `CI.ctorSize`; `5` recursor, `CI.recSize` and its 11-word rules; the layout of
+`EREC`'s records) copied into `EREC`, its slices too. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
 @[no_expose] def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p, ez) {
   k := DIND.u64[s];
-  q := call erec_alloc(DIND.u64[s + 3]);
-  z := call dind_copy(q, DIND.u64[s + 2], DIND.u64[s + 3]);
+  q := call erec_alloc(DIND.u64[s + ⟪CI.cv + CV.lpsLen⟫]);
+  z := call dind_copy(q, DIND.u64[s + ⟪CI.cv + CV.lpsOff⟫], DIND.u64[s + ⟪CI.cv + CV.lpsLen⟫]);
   r := 0;
-  if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := 8 } else if k == 5 {
-    n := 10;
-    if DIND.u64[s + 8] >= 1152921504606846976 { abort };
-    r := call erec_alloc(11 * DIND.u64[s + 8]);
-    z := call dind_copy(r, DIND.u64[s + 7], 11 * DIND.u64[s + 8])
+  if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := ⟪CI.ctorSize⟫ } else if k == 5 {
+    n := ⟪CI.recSize⟫;
+    if DIND.u64[s + ⟪CI.recRulesLen⟫] >= 1152921504606846976 { abort };
+    r := call erec_alloc(11 * DIND.u64[s + ⟪CI.recRulesLen⟫]);
+    z := call dind_copy(r, DIND.u64[s + ⟪CI.recRulesOff⟫], 11 * DIND.u64[s + ⟪CI.recRulesLen⟫])
   } else { abort };
   p := call erec_alloc(n);
   z := call dind_copy(p, s, n);
-  ez := call erec_put(p + 2, q);
-  if k == 5 { ez := call erec_put(p + 7, r)};
+  ez := call erec_put(p + ⟪CI.cv + CV.lpsOff⟫, q);
+  if k == 5 { ez := call erec_put(p + ⟪CI.recRulesOff⟫, r)};
   return p
 }
 

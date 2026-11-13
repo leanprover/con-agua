@@ -256,9 +256,9 @@ member's type, a recursor's rules. -/
 def hoistBlockGoL : FunDecl := lfn (k, i, tg, ws, sp, o, c, q) locals (p, x) {
   if c <= q { return sp };
   p := DIND.u64[o + q];
-  sp := call hoist_walk(DIND.u64[p + 4], i, k, tg, ws, sp, 4000000000);
+  sp := call hoist_walk(DIND.u64[p + ⟪CI.cv + CV.type⟫], i, k, tg, ws, sp, 4000000000);
   if DIND.u64[p] == 5 {
-    sp := call hoist_rules_go(k, i, tg, ws, sp, DIND.u64[p + 7], DIND.u64[p + 8], 0)
+    sp := call hoist_rules_go(k, i, tg, ws, sp, DIND.u64[p + ⟪CI.recRulesOff⟫], DIND.u64[p + ⟪CI.recRulesLen⟫], 0)
   };
   x := call hoist_block_go(k, i, tg, ws, sp, o, c, q + 1);
   return x

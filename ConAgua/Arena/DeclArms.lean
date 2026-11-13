@@ -25,7 +25,7 @@ The `.axiomDecl`, `.defnDecl`, `.thmDecl`, `.opaqueDecl` and `.quotDecl` arms of
 (each `(i, vis)` → `vis'`).
 
 * Every arm builds the record's constant in `EREC` first (`erec_ci`, `DeclStep.lean`): the value
-  `cv` is at `p + 1`, the value at `p + 5`, a definition's hint at `p + 6`, `p + 7`; its kind is
+  `cv` is at `p + CI.cv`, the value at `p + CI.defnValue`, a definition's hint at `p + CI.defnHint`; its kind is
   the one the twin's value check returns (`defnInfo`, `thmInfo`, `axiomInfo` for an opaque). The
   value checks return it unpushed, the gates push it temporarily (`env_row_get`, `env_push`,
   `env_pop_temp`: the twin's `fe.idx[n]?`, `fe.push ci`, `popTemp`), the arm pushes last.
@@ -54,17 +54,17 @@ universe parameters, the type's guards, then the type's sort. -/
 def checkConstantValL : FunDecl :=
     lfn (vis, q, allowOp) locals (n, t, f, r, c, a, ez, o, l, d, b, h, u, st) {
   n := EREC⦃q⦄;
-  t := EREC⦃q + 3⦄;
+  t := EREC⦃q + ⟪CV.type⟫⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call nat_op_name(n);
   if c != 0 && allowOp == 0 { fail R_A_CERTIFIED_NAT };
-  a := call erec_alloc(5);
+  a := call erec_alloc(⟪CI.axiomSize⟫);
   ez := call erec_put(a, 0);
-  ez := call erec_put(a + 1, n);
-  ez := call erec_put(a + 2, EREC⦃q + 1⦄);
-  ez := call erec_put(a + 3, EREC⦃q + 2⦄);
-  ez := call erec_put(a + 4, t);
+  ez := call erec_put(a + ⟪CI.cv + CV.name⟫, n);
+  ez := call erec_put(a + ⟪CI.cv + CV.lpsOff⟫, EREC⦃q + ⟪CV.lpsOff⟫⦄);
+  ez := call erec_put(a + ⟪CI.cv + CV.lpsLen⟫, EREC⦃q + ⟪CV.lpsLen⟫⦄);
+  ez := call erec_put(a + ⟪CI.cv + CV.type⟫, t);
   c := call lit_shape_ok(a);
   if c == 0 { fail R_A_DECLARATION_AT };
   (o, l) := call cv_lps(q);
@@ -86,7 +86,7 @@ def checkConstantValL : FunDecl :=
 /-! ## The three value kinds
 
 Each takes the arm's constant record `p` (built by `erec_ci` with the kind the twin returns:
-`defnInfo cv value hint`, `thmInfo cv`, `axiomInfo cv`; the value at `p + 5` either way) and
+`defnInfo cv value hint`, `thmInfo cv`, `axiomInfo cv`; the value at `p + CI.defnValue` either way) and
 returns it unpushed: the arm runs its pinned gates and pushes last. -/
 
 /-- `value_guards(vis, q, v)`: `valueGuards fe cv v` (`q` the constant value): no loose bound
@@ -111,9 +111,9 @@ declared one; returns the record. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:850-863 ConRon.Arena.checkDefnVal
 @[no_expose, l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d) {
-  v := EREC⦃p + 5⦄;
-  t := EREC⦃p + 4⦄;
-  z := call value_guards(vis, p + 1, v);
+  v := EREC⦃p + ⟪CI.defnValue⟫⦄;
+  t := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
+  z := call value_guards(vis, p + ⟪CI.cv⟫, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { fail R_TYPE_MISMATCH_IN };
@@ -125,14 +125,14 @@ returns the record (stored by its statement). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:865-883 ConRon.Arena.checkThmVal
 @[no_expose, l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d) {
-  v := EREC⦃p + 5⦄;
-  t := EREC⦃p + 4⦄;
+  v := EREC⦃p + ⟪CI.defnValue⟫⦄;
+  t := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
   st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
   zr := call pin_word(53);
   e := call lvl_eq_fueled(u, zr);
   if e == 0 { fail R_TYPE_OF_THEOREM };
-  z := call value_guards(vis, p + 1, v);
+  z := call value_guards(vis, p + ⟪CI.cv⟫, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { fail R_TYPE_MISMATCH_IN_THEOREM };
@@ -144,9 +144,9 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d)
 -- con-ron: ConRon/Arena/DeclCheck.lean:885-897 ConRon.Arena.checkOpaqueVal
 @[no_expose, l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d) {
-  v := EREC⦃p + 5⦄;
-  t := EREC⦃p + 4⦄;
-  z := call value_guards(vis, p + 1, v);
+  v := EREC⦃p + ⟪CI.defnValue⟫⦄;
+  t := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
+  z := call value_guards(vis, p + ⟪CI.cv⟫, v);
   vt := call infer_type_core(vis, 0, v);
   d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { fail R_TYPE_MISMATCH_IN_OPAQUE };
@@ -164,7 +164,7 @@ def matchesPinL : FunDecl := lfn (q, pin) locals (e) {
 }
 
 /-- `find_pinned(vis, n, k, a, b, id)`: the stored constant `n` is of kind `k` (an inductive
-`3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `+5`, `+6`), and its
+`3`; a constructor `4` or a recursor `5` with the two counts `a`, `b` at `CI.ctorNparams`, `CI.ctorNfields`, which are a recursor's `CI.recMajor`, `CI.recPrefix`), and its
 constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chains. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:52-97 ConRon.Arena.stdAxiomOk
 @[no_expose] def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
@@ -172,11 +172,11 @@ constant value matches the pin `rom_ci(id)`'s. One clause of `stdAxiomOk`'s chai
   if f == 0 { return 0 };
   if EREC⦃r⦄ != k { return 0 };
   if k != 3 {
-    if EREC⦃r + 5⦄ != a || EREC⦃r + 6⦄ != b { return 0 }
+    if EREC⦃r + ⟪CI.ctorNparams⟫⦄ != a || EREC⦃r + ⟪CI.ctorNfields⟫⦄ != b { return 0 }
   };
   p := call rom_ci(id);
   q := call ci_to_cv(p);
-  e := call matches_pin(r + 1, q);
+  e := call matches_pin(r + ⟪CI.cv⟫, q);
   return e
 }
 
@@ -233,10 +233,10 @@ One clause of `trustCompilerOk`. -/
   if f == 0 { return 0 };
   if EREC⦃r⦄ != k { return 0 };
   if k == 4 {
-    if EREC⦃r + 5⦄ != 0 || EREC⦃r + 6⦄ != 0 { return 0 }
+    if EREC⦃r + ⟪CI.ctorNparams⟫⦄ != 0 || EREC⦃r + ⟪CI.ctorNfields⟫⦄ != 0 { return 0 }
   };
   p := call rom_cv(id);
-  e := call matches_pin(r + 1, p);
+  e := call matches_pin(r + ⟪CI.cv⟫, p);
   return e
 }
 
@@ -275,7 +275,7 @@ def reduceStoredOkL : FunDecl := lfn (vis, c) locals (f, r, p, e) {
   if f == 0 { return 0 };
   if EREC⦃r⦄ != 0 { return 0 };
   p := call reduce_op_cv_a(c);
-  e := call matches_pin(r + 1, p);
+  e := call matches_pin(r + ⟪CI.cv⟫, p);
   return e
 }
 
@@ -291,7 +291,7 @@ def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) 
     if f == 0 { return 0 };
     if EREC⦃r⦄ != 3 { return 0 };
     na := call rom_ci(0);
-    e := call matches_pin(r + 1, na + 1);
+    e := call matches_pin(r + ⟪CI.cv⟫, na + ⟪CI.cv⟫);
     return e
   };
   bn := call pin_at(29);
@@ -299,7 +299,7 @@ def reduceElemOkL : FunDecl := lfn (vis, c) locals (rn, nn, f, r, na, e, bn, p) 
   if f == 0 { return 0 };
   if EREC⦃r⦄ != 3 { return 0 };
   p := call rom_cv(5);
-  e := call matches_pin(r + 1, p);
+  e := call matches_pin(r + ⟪CI.cv⟫, p);
   return e
 }
 
@@ -424,7 +424,7 @@ def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, w, st, v2, z
 -- con-ron: ConRon/Arena/DeclCheck.lean:901-908 ConRon.Arena.installBasisDecl
 @[no_expose, l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
-  n := EREC⦃p + 1⦄;
+  n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   w := call env_push(vis, p);
@@ -459,18 +459,18 @@ of another shape and every other axiom decline; `sorryAx` is skipped. -/
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
   p := call erec_ci(i, 0);
-  n := EREC⦃p + 1⦄;
+  n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
   s := call pin_at(4);
   if n == s {
-    w := call check_quot_record(vis, 4, p + 1);
+    w := call check_quot_record(vis, 4, p + ⟪CI.cv⟫);
     return w
   };
-  z := call check_constant_val(vis, p + 1, 0);
-  e := call std_axiom_ok(vis, p + 1);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
+  e := call std_axiom_ok(vis, p + ⟪CI.cv⟫);
   if e != 0 { w := call env_push(vis, p); return w };
   s := call pin_at(42);
   if n == s {
-    e := call trust_compiler_ok(vis, p + 1);
+    e := call trust_compiler_ok(vis, p + ⟪CI.cv⟫);
     if e == 0 { fail R_UNSUPPORTED_LEAN_TRUSTCOMPILER };
     w := call env_push(vis, p);
     return w
@@ -478,7 +478,7 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
   a := call pin_at(45);
   b := call pin_at(46);
   if n == a || n == b {
-    e := call of_reduce_ax_ok(vis, p + 1);
+    e := call of_reduce_ax_ok(vis, p + ⟪CI.cv⟫);
     if e == 0 { fail R_UNSUPPORTED_COMPILER_TRUST };
     w := call env_push(vis, p);
     return w
@@ -504,7 +504,7 @@ def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, dov, dl, d, f
   (f, r) := call env_find(n, w);
   if f == 0 { abort };
   if EREC⦃r⦄ != 1 { abort };
-  return EREC⦃r + 5⦄
+  return EREC⦃r + ⟪CI.defnValue⟫⦄
 }
 
 /-- `check_structural_nat_pin(vis, p, n)`: `checkStructuralNatPin`: the record `p` pushed for the
@@ -533,8 +533,8 @@ push. -/
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, pl, w) {
   p := call erec_ci(i, 1);
-  n := EREC⦃p + 1⦄;
-  z := call check_constant_val(vis, p + 1, 1);
+  n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 1);
   p := call check_defn_val(vis, p);
   v := vis;
   (no, nl) := call nat_op_names();
@@ -555,7 +555,7 @@ def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, p
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
-  z := call check_constant_val(vis, p + 1, 0);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
   p := call check_thm_val(vis, p);
   w := call env_push(vis, p);
   return w
@@ -568,9 +568,9 @@ push. -/
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
   p := call erec_ci(i, 0);
-  n := EREC⦃p + 1⦄;
-  v := EREC⦃p + 5⦄;
-  z := call check_constant_val(vis, p + 1, 0);
+  n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
+  v := EREC⦃p + ⟪CI.defnValue⟫⦄;
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
   p := call check_opaque_val(vis, p);
   u := vis;
   a := call pin_at(43);
@@ -591,7 +591,7 @@ def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, w) {
   k := 3;
   if kw == 1 { k := 0 } else if kw == 2 { k := 1 } else if kw == 3 { k := 2 };
   p := call erec_ci(i, 0);
-  w := call check_quot_record(vis, k, p + 1);
+  w := call check_quot_record(vis, k, p + ⟪CI.cv⟫);
   return w
 }
 

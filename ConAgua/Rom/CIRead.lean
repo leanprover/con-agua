@@ -83,9 +83,9 @@ current memo; the position after. -/
 def rciCv : FunDecl := lfn (q, p) locals (h, ez) {
   (h, q) := call rom_name_c(q);
   ez := call erec_put(p, h);
-  q := call rci_name_sl(q, p + 1);
+  q := call rci_name_sl(q, p + ⟪CV.lpsOff⟫);
   (h, q) := call rom_expr_c(q);
-  ez := call erec_put(p + 3, h);
+  ez := call erec_put(p + ⟪CV.type⟫, h);
   return q
 }
 
@@ -162,18 +162,19 @@ merge after it). -/
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
   k := call rom_u64_c(q);
   q := q + 8;
-  if k == 0 { n := 5 } else if k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := ⟪CI.indSize⟫ }
-  else if k == 4 { n := 8 } else if k == 5 { n := 10 } else { abort };
+  if k == 0 { n := ⟪CI.axiomSize⟫ } else if k == 2 { n := ⟪CI.thmSize⟫ } else if k == 1 { n := ⟪CI.defnSize⟫ }
+  else if k == 3 { n := ⟪CI.indSize⟫ } else if k == 4 { n := ⟪CI.ctorSize⟫ } else if k == 5 { n := ⟪CI.recSize⟫ }
+  else { abort };
   p := call erec_alloc(n);
   ez := call erec_put(p, k);
-  q := call rci_cv(q, p + 1);
+  q := call rci_cv(q, p + ⟪CI.cv⟫);
   if k == 1 {
     (h, q) := call rom_expr_c(q);
-    ez := call erec_put(p + 5, h);
+    ez := call erec_put(p + ⟪CI.defnValue⟫, h);
     x := call rom_u64_c(q);
-    ez := call erec_put(p + 6, x);
+    ez := call erec_put(p + ⟪CI.defnHint⟫, x);
     x := call rom_u64_c(q + 8);
-    ez := call erec_put(p + 7, x);
+    ez := call erec_put(p + ⟪CI.defnHint + Hint.height⟫, x);
     return (p, q + 16)
   };
   if k == 3 {
@@ -182,24 +183,24 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o, ez) {
   };
   if k == 4 {
     x := call rom_u64_c(q);
-    ez := call erec_put(p + 5, x);
+    ez := call erec_put(p + ⟪CI.ctorNparams⟫, x);
     x := call rom_u64_c(q + 8);
-    ez := call erec_put(p + 6, x);
+    ez := call erec_put(p + ⟪CI.ctorNfields⟫, x);
     (h, q) := call rom_name_c(q + 16);
-    ez := call erec_put(p + 7, h);
+    ez := call erec_put(p + ⟪CI.ctorInduct⟫, h);
     return (p, q)
   };
   if k == 5 {
     x := call rom_u64_c(q);
-    ez := call erec_put(p + 5, x);
+    ez := call erec_put(p + ⟪CI.recMajor⟫, x);
     x := call rom_u64_c(q + 8);
-    ez := call erec_put(p + 6, x);
+    ez := call erec_put(p + ⟪CI.recPrefix⟫, x);
     x := call rom_u64_c(q + 16);
-    ez := call erec_put(p + 9, x);
+    ez := call erec_put(p + ⟪CI.recIsK⟫, x);
     l := call rom_u64_c(q + 24);
     o := call erec_alloc(11 * l);
-    ez := call erec_put(p + 7, o);
-    ez := call erec_put(p + 8, l);
+    ez := call erec_put(p + ⟪CI.recRulesOff⟫, o);
+    ez := call erec_put(p + ⟪CI.recRulesLen⟫, l);
     q := call rci_rules_to(q + 32, o, l);
     return (p, q)
   };
@@ -276,7 +277,7 @@ def romCiL : FunDecl := lfn (id) locals (q, z, p) {
 def romCvL : FunDecl := lfn (id) locals (q, z, p) {
   if id >= 10 { abort };
   q := call rci_slot(12 + id);
-  p := call erec_alloc(4);
+  p := call erec_alloc(⟪CV.size⟫);
   z := call rci_fresh();
   q := call rci_cv(q, p);
   return p

@@ -60,8 +60,9 @@ def inferConstL : FunDecl := lfn (vis, n, us) locals (f, p, lo, l, r) {
     fail R_UNKNOWN_CONSTANT_2
   };
   (lo, l) := call ls_node(us);
-  if l != EREC⦃p + 3⦄ { fail R_INCORRECT_NUMBER_OF };
-  r := call const_ty_at(EREC⦃p + 1⦄, EREC⦃p + 2⦄, EREC⦃p + 3⦄, EREC⦃p + 4⦄, us);
+  if l != EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ { fail R_INCORRECT_NUMBER_OF };
+  r := call const_ty_at(EREC⦃p + ⟪CI.cv + CV.name⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄,
+    EREC⦃p + ⟪CI.cv + CV.type⟫⦄, us);
   return r
 }
 
@@ -419,9 +420,9 @@ sort is walked to (`former_sort_loop`, from depth `0`): never zero asks nothing,
 -- con-ron: ConRon/Arena/Core.lean:3020-3040 ConRon.Arena.projGuardSort
 @[no_expose, l_impl ConRon.Arena.projGuardSort]
 def projGuardSortL : FunDecl := lfn (mode, vis, p, us) locals (po, pc, ty, n, f, u, a, z, ity, nv) {
-  po := EREC⦃p + 2⦄;
-  pc := EREC⦃p + 3⦄;
-  ty := EREC⦃p + 4⦄;
+  po := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
+  pc := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
+  ty := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
   n := EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ + EREC⦃p + ⟪CI.indCaps + Caps.nIdx⟫⦄;
   if n < EREC⦃p + ⟪CI.indCaps + Caps.nparams⟫⦄ { abort };
   (f, u) := call former_res_sort(ty);
@@ -528,7 +529,8 @@ def projGuardRowsL : FunDecl := lfn (vis, q, i, us) locals (np, f, c, cty, co, o
   np := EREC⦃q + 5⦄;
   (f, c) := call env_find(EREC⦃q + 6⦄, vis);
   if f == 0 { return (0, 0, 0) };
-  cty := call const_ty_at(EREC⦃c + 1⦄, EREC⦃c + 2⦄, EREC⦃c + 3⦄, EREC⦃c + 4⦄, us);
+  cty := call const_ty_at(EREC⦃c + ⟪CI.cv + CV.name⟫⦄, EREC⦃c + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃c + ⟪CI.cv + CV.lpsLen⟫⦄,
+    EREC⦃c + ⟪CI.cv + CV.type⟫⦄, us);
   co := CTL.u64[136];
   if len(SPN.u64) < co { abort };
   (ok, r) := call opf_go(np, cty, 0, co, 0);
@@ -599,7 +601,7 @@ def inferProjL : FunDecl :=
       (f, q) := call env_find(cT, vis);
       if f != 0 && EREC⦃q⦄ == 3 && EREC⦃q + ⟪CI.indCaps + Caps.ctorsLen⟫⦄ == 1 && EREC⦃q + ⟪CI.indCaps + Caps.nparams⟫⦄ < tn {
         (f, q) := call env_find(EREC⦃EREC⦃q + ⟪CI.indCaps + Caps.ctorsOff⟫⦄⦄, vis);
-        if f != 0 && EREC⦃q⦄ == 4 && i < EREC⦃q + 6⦄ { fail R_PROJECTION_ON_AN }
+        if f != 0 && EREC⦃q⦄ == 4 && i < EREC⦃q + ⟪CI.ctorNfields⟫⦄ { fail R_PROJECTION_ON_AN }
       }
     };
     fail R_INVALID_PROJECTION_NOT

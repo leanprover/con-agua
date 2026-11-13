@@ -93,9 +93,9 @@ the expected shape: an `indInfo`, no level parameters, type `Sort 1`. -/
 def natIndOkL : FunDecl := lfn (found, p) locals (s1) {
   if found == 0 { return 0 };
   if EREC⦃p⦄ != 3 { return 0 };
-  if EREC⦃p + 3⦄ != 0 { return 0 };
+  if EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
   s1 := call pin_word(54);
-  return u64(EREC⦃p + 4⦄ == s1)
+  return u64(EREC⦃p + ⟪CI.cv + CV.type⟫⦄ == s1)
 }
 
 /-- `nat_zero_ok(found, p)`: the stored `Nat.zero` declaration has the expected shape: a `ctorInfo`,
@@ -109,8 +109,8 @@ def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
   if EREC⦃p⦄ != 4 { return 0 };
   nt := call pin_at(1);
   nc := call const_e(nt);
-  if EREC⦃p + 3⦄ != 0 { return 0 };
-  return u64(EREC⦃p + 4⦄ == nc)
+  if EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
+  return u64(EREC⦃p + ⟪CI.cv + CV.type⟫⦄ == nc)
 }
 
 /-- `nat_succ_ok(found, p)`: the stored `Nat.succ` declaration has the expected (annotated) shape: a
@@ -120,10 +120,10 @@ def natZeroOkL : FunDecl := lfn (found, p) locals (nt, nc) {
 def natSuccOkL : FunDecl := lfn (found, p) locals (nt, nc, ty, t, i, dom, body) {
   if found == 0 { return 0 };
   if EREC⦃p⦄ != 4 { return 0 };
-  if EREC⦃p + 3⦄ != 0 { return 0 };
+  if EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
   nt := call pin_at(1);
   nc := call const_e(nt);
-  ty := EREC⦃p + 4⦄;
+  ty := EREC⦃p + ⟪CI.cv + CV.type⟫⦄;
   if ⟦ty⟧.tag != 6 { return 0 };
   (t, i) := node FORALL⟦ty⟧;
   dom := FORALL⟨t, i⟩.ty;
@@ -279,10 +279,10 @@ every unfolding leaked its spine onto the stack: whnf-delta2). -/
   if ⟦us⟧.tag != 0 { abort };
   (tu, iu) := node LVLS⟦us⟧;
   usl := LVLS⟨tu, iu⟩.l;
-  lpl := EREC⦃p + 3⦄;
+  lpl := EREC⦃p + ⟪CI.cv + CV.lpsLen⟫⦄;
   if usl != lpl { return (0, 0) };
-  po := EREC⦃p + 2⦄;
-  value := EREC⦃p + 5⦄;
+  po := EREC⦃p + ⟪CI.cv + CV.lpsOff⟫⦄;
+  value := EREC⦃p + ⟪CI.defnValue⟫⦄;
   v := call const_val_at(n, po, lpl, value, us);
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);

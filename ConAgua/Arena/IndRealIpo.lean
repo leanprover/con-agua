@@ -47,11 +47,11 @@ def ipoLoop : Stmt := lblk (np, o, l, j, p, k, ok, n) {
     p := EREC⦃o + j⦄;
     k := EREC⦃p⦄;
     if k == 3 {
-      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC⦃p + 4⦄);
+      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC⦃p + ⟪CI.cv + CV.type⟫⦄);
       if ok != 0 && n < np { return 0 }
     };
     if k == 4 {
-      if EREC⦃p + 5⦄ != np { return 0 }
+      if EREC⦃p + ⟪CI.ctorNparams⟫⦄ != np { return 0 }
     }
   }
 }
