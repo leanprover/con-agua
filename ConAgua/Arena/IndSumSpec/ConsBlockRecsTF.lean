@@ -3,7 +3,8 @@ module
 public import ConAgua.Arena.IndSumSpec.TsrW
 public import ConAgua.Arena.RecGenSpec.DecRR
 import ConAgua.Arena.IndInstallSpec.IcbiW
-import ConAgua.Arena.RecLayout.RuleDec
+public import ConAgua.Arena.RecLayout.RuleDec
+import ConAgua.Arena.RecLayout.CIDec
 public import ConAgua.Arena.IndPartsSpec.PartsConsPL
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
@@ -151,19 +152,16 @@ open L.Arena
 
 /-! ## `rules_to_erec` -/
 
-/-- The memory after one record's eleven `erec_put` copies (each copy reads the memory of its time). -/
+/-- The memory after one record's field copies (each copy reads the memory of its time). -/
 def cpMem (m : Mem) (b old : Word) : Mem :=
   let m1 := erecPutMem m b (erRd m old)
-  let m2 := erecPutMem m1 (b + 1) (erRd m1 (old + 1))
-  let m3 := erecPutMem m2 (b + 2) (erRd m2 (old + 2))
-  let m4 := erecPutMem m3 (b + 3) (erRd m3 (old + 3))
-  let m5 := erecPutMem m4 (b + 4) (erRd m4 (old + 4))
-  let m6 := erecPutMem m5 (b + 5) (erRd m5 (old + 5))
-  let m7 := erecPutMem m6 (b + 6) (erRd m6 (old + 6))
-  let m8 := erecPutMem m7 (b + 7) (erRd m7 (old + 7))
-  let m9 := erecPutMem m8 (b + 8) (erRd m8 (old + 8))
-  let m10 := erecPutMem m9 (b + 9) (erRd m9 (old + 9))
-  erecPutMem m10 (b + 10) (erRd m10 (old + 10))
+  let m2 := erecPutMem m1 (b + Rule.nfields) (erRd m1 (old + Rule.nfields))
+  let m3 := erecPutMem m2 (b + Rule.fire) (erRd m2 (old + Rule.fire))
+  let m4 := erecPutMem m3 (b + Rule.lvlsOff) (erRd m3 (old + Rule.lvlsOff))
+  let m5 := erecPutMem m4 (b + Rule.lvlsLen) (erRd m4 (old + Rule.lvlsLen))
+  let m6 := erecPutMem m5 (b + Rule.pinsOff) (erRd m5 (old + Rule.pinsOff))
+  let m7 := erecPutMem m6 (b + Rule.pinsLen) (erRd m6 (old + Rule.pinsLen))
+  erecPutMem m7 (b + Rule.rhs) (erRd m7 (old + Rule.rhs))
 
 /-- The lookups of `block_rec_infos_tf`. -/
 structure CbrLook (p : Prog) : Prop where
@@ -196,9 +194,6 @@ theorem rcpW_some {m m' : Mem} {b old : Word} {r : List Word} (h : rcpW m b old 
   simp only [rcpW.j5] at h; split at h; · cases h
   simp only [rcpW.j6] at h; split at h; · cases h
   simp only [rcpW.j7] at h; split at h; · cases h
-  simp only [rcpW.j8] at h; split at h; · cases h
-  simp only [rcpW.j9] at h; split at h; · cases h
-  simp only [rcpW.j10] at h; split at h; · cases h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   rw [← h.2]; rfl
 
@@ -231,106 +226,140 @@ theorem erRd_wrER_ne : ∀ (ws : List Word) (m : Mem) (q x : Word), ErApart q ws
       rwa [show q + UInt64.ofNat (j + 1) = q + 1 + UInt64.ofNat j by rw [UInt64.ofNat_add]; ac_rfl] at this)]
     exact erRd_erecPutMem_ne (by simpa using h 0 (by simp))
 
-/-- The eleven words of the record at `old`. -/
-def recWords (m : Mem) (old : Word) : List Word :=
-  [erRd m old, erRd m (old + 1), erRd m (old + 2), erRd m (old + 3), erRd m (old + 4), erRd m (old + 5),
-    erRd m (old + 6), erRd m (old + 7), erRd m (old + 8), erRd m (old + 9), erRd m (old + 10)]
+/-- The image of the copy of the record at `old` (`Rule.img`, its fields read in `m`). -/
+def recImgOf (m : Mem) (old : Word) : List (Option Word) :=
+  Rule.img (erRd m (old + Rule.ctor)) (erRd m (old + Rule.nfields)) (erRd m (old + Rule.fire))
+    (erRd m (old + Rule.lvlsOff)) (erRd m (old + Rule.lvlsLen)) (erRd m (old + Rule.pinsOff))
+    (erRd m (old + Rule.pinsLen)) (erRd m (old + Rule.rhs))
 
-theorem recWords_length (m : Mem) (old : Word) : (recWords m old).length = 11 := rfl
+theorem recImgOf_length (m : Mem) (old : Word) : (recImgOf m old).length = Rule.size.toNat :=
+  Rule.img_length ..
 
-theorem recWords_get (m : Mem) (old : Word) (i : Nat) (hi : i < 11) :
-    (recWords m old)[i]? = some (erRd m (old + UInt64.ofNat i)) := by
-  rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 ∨ i = 8 ∨ i = 9 ∨ i = 10 by omega)
-    with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [recWords] <;> rfl
+theorem recImgOf_get (m : Mem) (old : Word) {o : Word} (ho : o ∈ Rule.fields) :
+    (recImgOf m old)[o.toNat]? = some (some (erRd m (old + o))) := by
+  simp only [Rule.fields, List.mem_cons, List.not_mem_nil, or_false] at ho
+  rcases ho with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact Rule.img_ctor ..
+  · exact Rule.img_nf ..
+  · exact Rule.img_fk ..
+  · exact Rule.img_lo ..
+  · exact Rule.img_ll ..
+  · exact Rule.img_po ..
+  · exact Rule.img_pl ..
+  · exact Rule.img_rhs ..
 
-theorem recWords_congr {m m' : Mem} {old : Word}
-    (h : ∀ i < 11, erRd m' (old + UInt64.ofNat i) = erRd m (old + UInt64.ofNat i)) :
-    recWords m' old = recWords m old := by
-  apply List.ext_getElem?
-  intro i
-  by_cases hi : i < 11
-  · rw [recWords_get _ _ _ hi, recWords_get _ _ _ hi, h i hi]
-  · rw [List.getElem?_eq_none (by simp [recWords_length]; omega),
-      List.getElem?_eq_none (by simp [recWords_length]; omega)]
+theorem recImgOf_congr {m m' : Mem} {old : Word}
+    (h : ∀ o ∈ Rule.fields, erRd m' (old + o) = erRd m (old + o)) : recImgOf m' old = recImgOf m old := by
+  simp only [recImgOf]
+  rw [h _ (by simp [Rule.fields]), h _ (by simp [Rule.fields]), h _ (by simp [Rule.fields]),
+    h _ (by simp [Rule.fields]), h _ (by simp [Rule.fields]), h _ (by simp [Rule.fields]),
+    h _ (by simp [Rule.fields]), h _ (by simp [Rule.fields])]
 
-/-- The words of the records the pointers `IW[ro ‥ ro + k)` point to, in order. -/
-def ruleWords (m : Mem) (ro : Word) : Nat → List Word
+/-- The images of the copies of the records the pointers `IW[ro ‥ ro + k)` point to, in order. -/
+def ruleWords (m : Mem) (ro : Word) : Nat → List (Option Word)
   | 0 => []
-  | k + 1 => recWords m (rdW (m.arr64 IW) ro) ++ ruleWords m (ro + 1) k
+  | k + 1 => recImgOf m (rdW (m.arr64 IW) ro) ++ ruleWords m (ro + 1) k
 
-theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat), (ruleWords m ro k).length = 11 * k
+theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat),
+    (ruleWords m ro k).length = Rule.size.toNat * k
   | _, 0 => rfl
-  | ro, k + 1 => by simp [ruleWords, recWords_length, ruleWords_length m (ro + 1) k]; omega
+  | ro, k + 1 => by
+    simp only [ruleWords, List.length_append, recImgOf_length, ruleWords_length m (ro + 1) k]
+    rw [Nat.mul_succ]; omega
 
-theorem ruleWords_get (m : Mem) : ∀ (ro : Word) (k j i : Nat), j < k → i < 11 →
-    (ruleWords m ro k)[11 * j + i]? = some (erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i))
+theorem ruleWords_get (m : Mem) : ∀ (ro : Word) (k j : Nat) {o : Word}, j < k → o ∈ Rule.fields →
+    (ruleWords m ro k)[Rule.size.toNat * j + o.toNat]? =
+      some (some (erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o)))
   | _, 0, _, _, hj, _ => absurd hj (by omega)
-  | ro, k + 1, 0, i, _, hi => by
-    simp only [ruleWords, Nat.mul_zero, Nat.zero_add, show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero]
-    rw [List.getElem?_append_left (by simp [recWords_length]; omega), recWords_get _ _ _ hi]
-  | ro, k + 1, j + 1, i, hj, hi => by
+  | ro, k + 1, 0, o, _, ho => by
+    have hos : o.toNat < Rule.size.toNat := by
+      simp only [Rule.fields, List.mem_cons, List.not_mem_nil, or_false] at ho
+      rcases ho with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+    simp only [ruleWords, Nat.mul_zero, Nat.zero_add, show (UInt64.ofNat 0 : Word) = 0 from rfl,
+      UInt64.add_zero]
+    rw [List.getElem?_append_left (by rw [recImgOf_length]; exact hos), recImgOf_get _ _ ho]
+  | ro, k + 1, j + 1, o, hj, ho => by
+    have hos : o.toNat < Rule.size.toNat := by
+      simp only [Rule.fields, List.mem_cons, List.not_mem_nil, or_false] at ho
+      rcases ho with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
     simp only [ruleWords]
-    rw [List.getElem?_append_right (by simp [recWords_length]; omega)]
-    have e : 11 * (j + 1) + i - (recWords m (rdW (m.arr64 IW) ro)).length = 11 * j + i := by
-      simp [recWords_length]; omega
-    rw [e, ruleWords_get m (ro + 1) k j i (by omega) hi]
+    rw [List.getElem?_append_right (by rw [recImgOf_length, Nat.mul_succ]; omega)]
+    have e : Rule.size.toNat * (j + 1) + o.toNat - (recImgOf m (rdW (m.arr64 IW) ro)).length =
+        Rule.size.toNat * j + o.toNat := by rw [recImgOf_length, Nat.mul_succ]; omega
+    rw [e, ruleWords_get m (ro + 1) k j (by omega) ho]
     have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
     rw [e2]
 
-/-- `IW` the same and the source records' words read the same: the record words agree. -/
+/-- `IW` the same and the source records' fields read the same: the images agree. -/
 theorem ruleWords_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) :
-    ∀ (ro : Word) (k : Nat), (∀ j < k, ∀ i < 11, erRd m' (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) =
-      erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)) →
+    ∀ (ro : Word) (k : Nat), (∀ j < k, ∀ o ∈ Rule.fields,
+      erRd m' (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o) =
+        erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o)) →
       ruleWords m' ro k = ruleWords m ro k
   | _, 0, _ => rfl
   | ro, k + 1, h => by
     simp only [ruleWords, hI]
     congr 1
-    · exact recWords_congr (fun i hi => by simpa using h 0 (by omega) i hi)
-    · exact ruleWords_congr hI (ro + 1) k (fun j hj i hi => by
+    · exact recImgOf_congr (fun o ho => by simpa using h 0 (by omega) o ho)
+    · exact ruleWords_congr hI (ro + 1) k (fun j hj o ho => by
         have e : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by
           rw [UInt64.ofNat_add]; ac_rfl
-        rw [e]; exact h (j + 1) (by omega) i hi)
+        rw [e]; exact h (j + 1) (by omega) o ho)
+
+/-- `EREC⦃x⦄` across an image's stores elsewhere. -/
+theorem erRd_wrERo_ne : ∀ (ws : List (Option Word)) (m : Mem) (q x : Word), ErApart q ws.length x →
+    erRd (wrERo m q ws) x = erRd m x
+  | [], _, _, _, _ => rfl
+  | none :: ws, m, q, x, h => by
+    simp only [wrERo]
+    exact erRd_wrERo_ne ws _ (q + 1) x (fun j hj => by
+      have := h (j + 1) (by simp; omega)
+      rwa [show q + UInt64.ofNat (j + 1) = q + 1 + UInt64.ofNat j by rw [UInt64.ofNat_add]; ac_rfl] at this)
+  | some w :: ws, m, q, x, h => by
+    simp only [wrERo]
+    rw [erRd_wrERo_ne ws _ (q + 1) x (fun j hj => by
+      have := h (j + 1) (by simp; omega)
+      rwa [show q + UInt64.ofNat (j + 1) = q + 1 + UInt64.ofNat j by rw [UInt64.ofNat_add]; ac_rfl] at this)]
+    exact erRd_erecPutMem_ne (by simpa using h 0 (by simp))
 
 theorem cpMem_frame (m : Mem) (b old : Word) : MemFrame [EREC, tier1 EREC] [] m (cpMem m b old) := by
   simp only [cpMem]
   repeat' refine MemFrame.trans ?_ (erecPutMem_frame _ _ _)
   exact MemFrame.refl _ _ _
 
-theorem cpMem_eq {m : Mem} {b old : Word} (hfr : ∀ i < 11, ErApart b 11 (old + UInt64.ofNat i)) :
-    cpMem m b old = wrER m b (recWords m old) := by
-  have hA : ∀ i j : Word, i.toNat < 11 → j.toNat < 11 →
-      erTier (old + i) ≠ erTier (b + j) ∨ erOff (old + i) ≠ erOff (b + j) := by
-    intro i j hi hj
-    have := hfr i.toNat hi j.toNat hj
-    simpa using this
-  have h00 : erTier old ≠ erTier b ∨ erOff old ≠ erOff b := by simpa using hA 0 0 (by decide) (by decide)
-  have h0 : ∀ j : Word, j.toNat < 11 → erTier old ≠ erTier (b + j) ∨ erOff old ≠ erOff (b + j) :=
-    fun j hj => by simpa using hA 0 j (by decide) hj
-  have hB : ∀ i : Word, i.toNat < 11 → erTier (old + i) ≠ erTier b ∨ erOff (old + i) ≠ erOff b :=
-    fun i hi => by simpa using hA i 0 hi (by decide)
-  simp only [cpMem, wrER, recWords]
-  rw [show b + 1 + 1 = b + 2 by ac_rfl, show b + 2 + 1 = b + 3 by ac_rfl,
-    show b + 3 + 1 = b + 4 by ac_rfl, show b + 4 + 1 = b + 5 by ac_rfl,
-    show b + 5 + 1 = b + 6 by ac_rfl, show b + 6 + 1 = b + 7 by ac_rfl,
-    show b + 7 + 1 = b + 8 by ac_rfl, show b + 8 + 1 = b + 9 by ac_rfl,
-    show b + 9 + 1 = b + 10 by ac_rfl]
+theorem cpMem_eq {m : Mem} {b old : Word}
+    (hfr : ∀ o ∈ Rule.fields, ErApart b Rule.size.toNat (old + o)) :
+    cpMem m b old = wrERo m b (recImgOf m old) := by
+  have hA : ∀ o ∈ Rule.fields, ∀ j : Word, j.toNat < Rule.size.toNat →
+      erTier (old + o) ≠ erTier (b + j) ∨ erOff (old + o) ≠ erOff (b + j) := by
+    intro o ho j hj
+    simpa using hfr o ho j.toNat hj
+  have hA0 : ∀ o ∈ Rule.fields, erTier (old + o) ≠ erTier b ∨ erOff (old + o) ≠ erOff b :=
+    fun o ho => by simpa using hA o ho 0 (by decide)
+  have h0 : ∀ j : Word, j.toNat < Rule.size.toNat → erTier old ≠ erTier (b + j) ∨ erOff old ≠ erOff (b + j) :=
+    fun j hj => by simpa using hA Rule.ctor (by simp [Rule.fields]) j hj
+  have h00 : erTier old ≠ erTier b ∨ erOff old ≠ erOff b := by simpa using h0 0 (by decide)
+  simp only [cpMem]
+  -- the reads first (each at a word outside the record), then the stores in field order
   simp (disch := first
     | exact h00
-    | (apply h0; decide)
-    | (apply hB; decide)
-    | (apply hA <;> decide)) only [erRd_erecPutMem_ne]
+    | exact h0 _ (by decide)
+    | exact hA0 _ (by simp [Rule.fields])
+    | exact hA _ (by simp [Rule.fields]) _ (by decide)) only [erRd_erecPutMem_ne]
+  -- the image's entries in order (the layout's numbers: a whole-record writer)
+  simp [wrERo, recImgOf, Rule.img, recImg, rec_unfold, UInt64.add_assoc]
 
 theorem rteGoW_mem : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word),
     rteGoW n m b ro rl = some (r, m') →
-    (∀ j < rl.toNat, ∀ i < 11, ErApart b (11 * rl.toNat) (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)) →
-    m' = wrER m b (ruleWords m ro rl.toNat)
+    (∀ j < rl.toNat, ∀ o ∈ Rule.fields,
+      ErApart b (Rule.size.toNat * rl.toNat) (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o)) →
+    m' = wrERo m b (ruleWords m ro rl.toNat)
   | 0, _, _, _, _, _, _, h, _ => by simp [rteGoW] at h
   | n + 1, m, m', b, ro, rl, r, h, hfr => by
     by_cases h0 : rl = 0
     · rw [rteGoW.arm1 (hc1 := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
-      subst h0; rw [← h.2]; simp [ruleWords, wrER]
+      subst h0; rw [← h.2]; simp [ruleWords, wrERo]
     rw [rteGoW.arm2 (hc1 := h0)] at h
     rcases h1 : rcpW m b (rdW (m.arr64 IW) ro) with _ | ⟨r1, m1⟩ <;>
       simp only [h1, rteGoW.k_rule_copy.none, reduceCtorEq] at h
@@ -339,29 +368,32 @@ theorem rteGoW_mem : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
     have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
     have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
-    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;>
-      simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
+    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + Rule.size) (ro + 1) (rl - 1) with
+      _ | ⟨r2, m2⟩ <;> simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     have hsrc : ∀ j, ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := fun j => by
       rw [UInt64.ofNat_add]; ac_rfl
-    have hfr0 : ∀ i < 11, ErApart b 11 (rdW (m.arr64 IW) ro + UInt64.ofNat i) := fun i hi => by
-      have := hfr 0 (by omega) i hi
+    have hmul : Rule.size.toNat ≤ Rule.size.toNat * rl.toNat := Nat.le_mul_of_pos_right _ (by omega)
+    have hfr0 : ∀ o ∈ Rule.fields, ErApart b Rule.size.toNat (rdW (m.arr64 IW) ro + o) := fun o ho => by
+      have := hfr 0 (by omega) o ho
       simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at this
-      exact this.mono (by omega)
+      exact this.mono hmul
     rw [cpMem_eq hfr0] at h2
-    have hI : (wrER m b (recWords m (rdW (m.arr64 IW) ro))).arr64 IW = m.arr64 IW :=
-      (wrER_frame _ m b).arr IW (by decide) (by decide)
-    have h11 : b + 11 = b + UInt64.ofNat 11 := rfl
-    have ih := rteGoW_mem n _ m2 (b + 11) (ro + 1) (rl - 1) r2 h2 (fun j hj i hi => by
-      rw [hI, hsrc, h11]
-      exact ErApart.shift (by rw [hl1] at hj; exact (hfr (j + 1) (by omega) i hi).mono (by omega)))
-    rw [ih, hl1, ruleWords_congr hI (ro + 1) (rl.toNat - 1) (fun j hj i hi => by
+    have hI : (wrERo m b (recImgOf m (rdW (m.arr64 IW) ro))).arr64 IW = m.arr64 IW :=
+      (wrERo_frame _ m b).arr IW (by decide) (by decide)
+    have hsz : b + Rule.size = b + UInt64.ofNat Rule.size.toNat := by rw [UInt64.ofNat_toNat]
+    have hk : Rule.size.toNat * rl.toNat = Rule.size.toNat + Rule.size.toNat * (rl.toNat - 1) := by
+      calc Rule.size.toNat * rl.toNat = Rule.size.toNat * ((rl.toNat - 1) + 1) := by congr 1; omega
+        _ = _ := by rw [Nat.mul_add_one]; omega
+    have ih := rteGoW_mem n _ m2 (b + Rule.size) (ro + 1) (rl - 1) r2 h2 (fun j hj o ho => by
+      rw [hI, hsrc, hsz]
+      exact ErApart.shift (by rw [hl1] at hj ⊢; rw [← hk]; exact hfr (j + 1) (by omega) o ho))
+    rw [ih, hl1, ruleWords_congr hI (ro + 1) (rl.toNat - 1) (fun j hj o ho => by
       rw [hsrc]
-      exact erRd_wrER_ne _ _ _ _ ((hfr (j + 1) (by omega) i hi).mono (by simp [recWords_length]; omega)))]
+      exact erRd_wrERo_ne _ _ _ _ ((hfr (j + 1) (by omega) o ho).mono (by rw [recImgOf_length]; exact hmul)))]
     conv => rhs; rw [show rl.toNat = (rl.toNat - 1) + 1 by omega]
     simp only [ruleWords]
-    rw [wrER_append, recWords_length]
-    rfl
+    rw [wrERo_append, recImgOf_length, ← hsz]
 
 theorem mapM_range_some {α : Type} : ∀ (xs : List α) (f : Nat → Option α),
     (∀ j (hj : j < xs.length), f j = some xs[j]) → (List.range xs.length).mapM f = some xs
@@ -374,12 +406,13 @@ theorem mapM_range_some {α : Type} : ∀ (xs : List α) (f : Nat → Option α)
     rw [ih]; rfl
 
 /-- **`rules_to_erec` under the stage relation**: a fresh run of copies of the rule records (every
-source record's eleven words in the record pool), decoding as the rules. -/
+source record's fields in the record pool), decoding as the rules. -/
 theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word}
     {r : List Word} {rules : List IRecRule}
     (h : rteW n m ro rl = some (r, m')) (hS : StageR vis fe m a)
     (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules)
-    (hall : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v → ∀ i < 11, ∃ w, erecP m (v + i) = some w) :
+    (hall : ∀ j < rl.toNat, ∀ v, iwN m (ro.toNat + j) = some v → ∀ i < Rule.size.toNat,
+      ∃ w, erecP m (v + i) = some w) :
     StageR vis fe m' a ∧ IWGrow m m' ∧ r.tail.headD 0 = rl ∧
       decRules (erecP m') (r.headD 0).toNat rl.toNat = some rules := by
   obtain _ | n := n
@@ -388,50 +421,56 @@ theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {r
   · rw [rteW.abort1 (hc1 := hbig)] at h; cases h
   rw [rteW.arm1 (hc1 := hbig)] at h
   have hrl : rl.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at hbig; simp at hbig; omega
-  rcases ha : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [ha, rteW.k_erec_alloc, reduceCtorEq] at h
-  rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;> simp only [h1, rteW.k_rules_to_erec_go, reduceCtorEq] at h
+  rcases ha : erAllocW m (rl * Rule.size) with _ | ⟨b, m1⟩ <;>
+    simp only [ha, rteW.k_erec_alloc, reduceCtorEq] at h
+  rcases h1 : rteGoW n m1 b ro rl with _ | ⟨r1, m2⟩ <;>
+    simp only [h1, rteW.k_rules_to_erec_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
-  have hk : (rl * 11).toNat = 11 * rl.toNat := by
-    rw [UInt64.toNat_mul]; simp; omega
+  have hmul := Nat.mul_le_mul_right rl.toNat Rule.size_le
+  have hk : (rl * Rule.size).toNat = Rule.size.toNat * rl.toNat := by
+    rw [UInt64.toNat_mul, Nat.mul_comm]; exact Nat.mod_eq_of_lt (by omega)
   obtain ⟨-, hf1, -⟩ := erAllocW_spec ha hS.iw
   have hI1 : m1.arr64 IW = m.arr64 IW := hf1.arr IW (by simp) (by decide)
   have hr1 : ∀ x, erRd m1 x = erRd m x := fun x => by
     unfold erRd; rw [hf1.arr _ (by simp) (by rw [tierA_EREC]; split <;> decide)]
   have hsz := hS.iw.iwSize
-  -- the source records: their pointers, their words in the old pool
+  have hfo : ∀ o ∈ Rule.fields, o.toNat < Rule.size.toNat := fun o ho => by
+    simp only [Rule.fields, List.mem_cons, List.not_mem_nil, or_false] at ho
+    rcases ho with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  -- the source records: their pointers, their fields' words in the old pool
   have hsrc : ∀ j < rl.toNat, ∃ v, iwN m (ro.toNat + j) = some v ∧
       rdW (m.arr64 IW) (ro + UInt64.ofNat j) = UInt64.ofNat v ∧ (UInt64.ofNat v : Word).toNat = v := by
     intro j hj
     obtain ⟨v, -, hv, -, -⟩ := decPL_get rl.toNat ro.toNat rules hd j hj
     obtain ⟨e, hlt⟩ := iwN_rdW_at (w := ro) (k := j) hv hsz
     exact ⟨v, hv, e, UInt64.toNat_ofNat_of_lt' hlt⟩
-  have hword : ∀ j < rl.toNat, ∀ i < 11, ∃ v w, iwN m (ro.toNat + j) = some v ∧
-      erecP m (v + i) = some w ∧
-      erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) = w ∧
-      (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i).toNat = v + i := by
-    intro j hj i hi
+  have hword : ∀ j < rl.toNat, ∀ o ∈ Rule.fields, ∃ v w, iwN m (ro.toNat + j) = some v ∧
+      erecP m (v + o.toNat) = some w ∧
+      erRd m (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o) = w ∧
+      (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o).toNat = v + o.toNat := by
+    intro j hj o ho
     obtain ⟨v, hv, e, hvv⟩ := hsrc j hj
-    obtain ⟨w, hw⟩ := hall j hj v hv i hi
+    obtain ⟨w, hw⟩ := hall j hj v hv o.toNat (hfo o ho)
     rw [← hvv] at hw
-    obtain ⟨r1, e1⟩ := erRd_add hw (by omega)
-    exact ⟨v, w, hv, by rw [← hvv]; exact hw, by rw [e]; exact r1, by rw [e, e1, hvv]⟩
-  have hfr : ∀ j < rl.toNat, ∀ i < 11,
-      ErApart b (11 * rl.toNat) (rdW (m1.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i) := by
-    intro j hj i hi k hk'
-    obtain ⟨v, w, -, hw, -, ht⟩ := hword j hj i hi
+    have ht := rd_off_toNat (erRdOK m) hw
+    refine ⟨v, w, hv, by rw [← hvv]; exact hw, by rw [e]; exact (erRdOK m).off hw rfl, by rw [e, ht, hvv]⟩
+  have hfr : ∀ j < rl.toNat, ∀ o ∈ Rule.fields,
+      ErApart b (Rule.size.toNat * rl.toNat) (rdW (m1.arr64 IW) (ro + UInt64.ofNat j) + o) := by
+    intro j hj o ho k hk'
+    obtain ⟨v, w, -, hw, -, ht⟩ := hword j hj o ho
     rw [hI1]
-    exact erFresh ha hS.iw (x := rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i)
+    exact erFresh ha hS.iw (x := rdW (m.arr64 IW) (ro + UInt64.ofNat j) + o)
       (by rw [ht]; exact hw) (by rw [hk]; exact hk')
   have hm2 := rteGoW_mem n m1 m2 b ro rl r1 h1 hfr
   subst hm2
   have hrw : ruleWords m1 ro rl.toNat = ruleWords m ro rl.toNat :=
     ruleWords_congr hI1 ro rl.toNat (fun _ _ _ _ => hr1 _)
   rw [hrw]
-  obtain ⟨hS1, hg1, -, -, -, -, hget1⟩ := erRec_stage ha hS (ruleWords m ro rl.toNat)
+  obtain ⟨hS1, hg1, -, -, -, -, hget1⟩ := erRecO_stage ha hS (ruleWords m ro rl.toNat)
     (by rw [ruleWords_length, hk])
   refine ⟨hS1, hg1, rfl, ?_⟩
   simp only [List.headD_cons]
-  generalize hM : wrER m1 b (ruleWords m ro rl.toNat) = M at hS1 hg1 hget1 ⊢
+  generalize hM : wrERo m1 b (ruleWords m ro rl.toNat) = M at hS1 hg1 hget1 ⊢
   have hlen := decPL_length (m := m) hd
   unfold decRules
   rw [← hlen]
@@ -442,14 +481,12 @@ theorem rteW_ok {vis : Word} {fe : IFEnv} (n : Nat) {m m' : Mem} {a : AState} {r
   have hrj : rules[j] = rlj := by
     rw [List.getElem?_eq_getElem (by omega)] at hgj; exact Option.some.inj hgj
   rw [hrj]
-  refine decRule_congr (fun i hi w hw => ?_) (IWGrow.ext hg1) hfj
-  -- `rules_to_erec` copies all `Rule.size` words of each record
-  have hi : i < 11 := hi
-  obtain ⟨v', w', hv', hw', hrd, -⟩ := hword j hj i hi
+  -- `rules_to_erec` copies each record's fields
+  refine decRule_congrF (fun o ho w hw => ?_) (IWGrow.ext hg1) hfj
+  obtain ⟨v', w', hv', hw', hrd, -⟩ := hword j hj o ho
   rw [hvj] at hv'; cases hv'
   rw [hw] at hw'; cases hw'
-  rw [show b.toNat + Rule.size.toNat * j + i = b.toNat + (11 * j + i) by rw [Nat.add_assoc]; rfl,
-    hget1 (11 * j + i) (by rw [ruleWords_length]; omega), ruleWords_get m ro rl.toNat j i hj hi, hrd]
+  rw [Nat.add_assoc, hget1 _ _ (ruleWords_get m ro rl.toNat j hj ho), hrd]
 
 /-! ## `rec_info_rec` -/
 
@@ -500,7 +537,7 @@ theorem rteGoW_afr : ∀ (n : Nat) (m m' : Mem) (b ro rl : Word) (r : List Word)
       simp only [h1, rteGoW.k_rule_copy.none, reduceCtorEq] at h
     rw [rteGoW.k_rule_copy.arm1] at h
     obtain rfl := rcpW_some h1
-    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + 11) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
+    rcases h2 : rteGoW n (cpMem m b (rdW (m.arr64 IW) ro)) (b + Rule.size) (ro + 1) (rl - 1) with _ | ⟨r2, m2⟩ <;> simp only [h2, rteGoW.k_rules_to_erec_go, reduceCtorEq] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
     exact (AFr.of_frame (cpMem_frame m b (rdW (m.arr64 IW) ro))).trans (rteGoW_afr n _ _ _ _ _ _ h2)
 
@@ -511,7 +548,7 @@ theorem rteW_afr {n : Nat} {m m' : Mem} {ro rl : Word} {r : List Word}
   by_cases hb : 4294967296 ≤ rl
   · rw [rteW.abort1 (hc1 := hb)] at h; cases h
   rw [rteW.arm1 (hc1 := hb)] at h
-  rcases h1 : erAllocW m (rl * 11) with _ | ⟨b, m1⟩ <;> simp only [h1, rteW.k_erec_alloc, reduceCtorEq] at h
+  rcases h1 : erAllocW m (rl * Rule.size) with _ | ⟨b, m1⟩ <;> simp only [h1, rteW.k_erec_alloc, reduceCtorEq] at h
   rcases h2 : rteGoW n m1 b ro rl with _ | ⟨r2, m2⟩ <;> simp only [h2, rteW.k_rules_to_erec_go, reduceCtorEq] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
   exact (erAllocW_afr h1).trans (rteGoW_afr n _ _ _ _ _ _ h2)
