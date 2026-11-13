@@ -89,7 +89,7 @@ position `k`. -/
 -- con-ron: ConRon/Arena/Frontend/NatOpGround.lean:127-134 ConRon.Arena.Frontend.insertNames
 @[no_expose] def hoistNamesGoL : FunDecl := lfn (k, o, c, q) locals (z, r) {
   if c <= q { return 0 };
-  z := call hoist_ins(DIND.u64[DIND.u64[o + q] + 1], k);
+  z := call hoist_ins(DIND.u64[DIND.u64[o + q] + ⟪CI.cv⟫], k);
   r := call hoist_names_go(k, o, c, q + 1);
   return r
 }
