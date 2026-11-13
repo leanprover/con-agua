@@ -5,6 +5,7 @@ public import ConAgua.Arena.InstLPSpec
 import ConAgua.Arena.RecFireCore
 import ConAgua.Arena.DeclCanonRules
 import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.InstLPRef
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.WhnfIotaRecRefine
@@ -66,25 +67,19 @@ theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} 
     (hlv : ∀ lv, rl.fire = .levels lv → R' (q' + 4) = some lo ∧
       ∀ ln, R (q + 5) = some ln → hslice? R' lo.toNat ln.toNat = some hs) :
     decRule R' q' = some ⟨rl.ctor, rl.nfields, fireAt rl.fire hs, decI x⟩ := by
+  -- `rules_at_lps_go` writes the record word by word: the words are numbered here
   have nat' : ∀ i, (i = 0 ∨ i = 1 ∨ i = 3 ∨ i = 5 ∨ i = 6 ∨ i = 7) → ∀ y, nat? R (q + i) = some y →
       nat? R' (q' + i) = some y := by
     intro i hi y hy
     simp only [nat?, Option.map_eq_some_iff] at hy ⊢
     obtain ⟨v, hv, rfl⟩ := hy; exact ⟨v, hw i hi v hv, rfl⟩
-  obtain ⟨hc, hn, -⟩ := L.Ind.decRule_fields h
+  obtain ⟨hc, hn, -, hf⟩ := decRule_eq_some.mp h
   have hc' : hd? R' q' = some rl.ctor := by
     simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hc ⊢
     obtain ⟨v, hv, e⟩ := hc; exact ⟨v, by simpa using hw 0 (by simp) v (by simpa using hv), e⟩
   have hn' : nat? R' (q' + 1) = some rl.nfields := nat' 1 (by simp) _ hn
   have hr' : hd? R' (q' + 8) = some (decI x : EIdx) := by
     simp only [hd?, h8, Option.bind_eq_bind, Option.bind_some, hx, ↓reduceIte]
-  have tail : ∀ f : IRecRuleFire, (do
-      let ctor ← hd? R' q'
-      let nfields ← nat? R' (q' + 1)
-      let rhs ← hd? R' (q' + 8)
-      pure ({ ctor, nfields, fire := f, rhs } : IRecRule)) =
-      some ⟨rl.ctor, rl.nfields, f, decI x⟩ := by
-    intro f; simp only [hc', hn', hr', Option.bind_eq_bind, Option.bind_some, Option.pure_def]
   have hlistc : ∀ {k : IdxKind} i, (i = 4 ∨ i = 6) → (∀ lv, rl.fire ≠ .levels lv) →
       ∀ xs : List (Idx k), hlist? R (q + i) = some xs → hlist? R' (q' + i) = some xs := by
     intro k i hi hnl xs hxs
@@ -100,38 +95,25 @@ theorem decRule_atLps {R R' : Nat → Option Word} {q q' : Nat} {rl : IRecRule} 
         simpa [Nat.add_assoc] using this
       · have := nat' 7 (by simp) c (by simpa [Nat.add_assoc] using hc)
         simpa [Nat.add_assoc] using this
-  unfold decRule at h ⊢
-  cases h3 : nat? R (q + 3) with
-  | none => simp [h3] at h
-  | some t =>
-    rw [nat' 3 (by simp) t h3]; rw [h3] at h
-    simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at h ⊢
-    match t, h with
-    | 0, h =>
-      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨_, -, _, -, _, -, rfl⟩ := h
-      exact tail _
-    | 1, h =>
-      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨y, hy, z, hz, _, -, _, -, _, -, rfl⟩ := h
-      have hnl : ∀ lv, IRecRuleFire.nested y z ≠ .levels lv := fun _ e => by cases e
-      simp only [hlistc 4 (by simp) hnl y hy, hlistc 6 (by simp) hnl z hz, Option.bind_some]
-      exact tail _
-    | 2, h =>
-      simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨y, hy, _, -, _, -, _, -, rfl⟩ := h
-      obtain ⟨e4, hsl⟩ := hlv y rfl
-      simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hy
-      obtain ⟨o4, -, c5, hc5, -⟩ := hy
-      simp only [nat?, Option.map_eq_some_iff] at hc5
-      obtain ⟨v5, hv5, rfl⟩ := hc5
-      have h5' := hw 5 (by simp) v5 (by simpa [Nat.add_assoc] using hv5)
-      have hl' : hlist? R' (q' + 4) = some hs := by
-        simp only [hlist?, nat?, e4, show q' + 4 + 1 = q' + 5 by omega, h5', Option.map_some,
-          Option.bind_eq_bind, Option.bind_some, hsl v5 (by simpa [Nat.add_assoc] using hv5)]
-      simp only [hl', Option.bind_some]
-      exact tail _
-    | _ + 3, h => simp at h
+  refine decRule_of hc' hn' hr' ?_
+  rcases rl with ⟨c, nf, f, r⟩
+  cases f with
+  | plain => exact nat' 3 (by simp) _ hf
+  | nested y z =>
+    have hnl : ∀ lv, IRecRuleFire.nested y z ≠ .levels lv := fun _ e => by cases e
+    exact ⟨nat' 3 (by simp) _ hf.1, hlistc 4 (by simp) hnl y hf.2.1, hlistc 6 (by simp) hnl z hf.2.2⟩
+  | levels y =>
+    have hy : hlist? R (q + 4) = some y := hf.2
+    obtain ⟨e4, hsl⟩ := hlv y rfl
+    simp only [hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hy
+    obtain ⟨o4, -, c5, hc5, -⟩ := hy
+    simp only [nat?, Option.map_eq_some_iff] at hc5
+    obtain ⟨v5, hv5, rfl⟩ := hc5
+    have h5' := hw 5 (by simp) v5 (by simpa [Nat.add_assoc] using hv5)
+    refine ⟨nat' 3 (by simp) _ hf.1, ?_⟩
+    show hlist? R' (q' + 4) = some hs
+    simp only [hlist?, nat?, e4, show q' + 4 + 1 = q' + 5 by omega, h5', Option.map_some,
+      Option.bind_eq_bind, Option.bind_some, hsl v5 (by simpa [Nat.add_assoc] using hv5)]
 
 /-! ## The record words -/
 
@@ -460,25 +442,10 @@ theorem agree_cell {m₀ M Y : Mem} (hI : IWOK m₀) {c : Nat} (hc : erecP m₀ 
 
 /-- A `.levels` fire's kind word is `2`. -/
 theorem decRule_levels_w3 {R : Nat → Option Word} {q : Nat} {rl : IRecRule} (h : decRule R q = some rl)
-    {lv : List LIdx} (hf : rl.fire = .levels lv) : ∃ w, R (q + 3) = some w ∧ w.toNat = 2 := by
-  unfold decRule at h
-  cases h3 : nat? R (q + 3) with
-  | none => simp [h3] at h
-  | some t =>
-  simp only [h3, Option.bind_eq_bind, Option.bind_some] at h
-  have hw : ∀ t', nat? R (q + 3) = some t' → t' = 2 → ∃ w, R (q + 3) = some w ∧ w.toNat = 2 :=
-    fun t' ht e => by
-      simp only [nat?, Option.map_eq_some_iff] at ht
-      obtain ⟨w, hw, rfl⟩ := ht; exact ⟨w, hw, e⟩
-  match t, h with
-  | 0, h =>
-    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-    obtain ⟨_, -, _, -, _, -, rfl⟩ := h; cases hf
-  | 1, h =>
-    simp only [Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
-    obtain ⟨_, -, _, -, _, -, _, -, _, -, rfl⟩ := h; cases hf
-  | 2, _ => exact hw 2 h3 rfl
-  | _ + 3, h => simp at h
+    {lv : List LIdx} (hf : rl.fire = .levels lv) : ∃ w, R (q + Rule.fire.toNat) = some w ∧ w.toNat = 2 := by
+  have hk := decRule_fire h
+  rw [hf] at hk
+  exact hk.kind
 
 /-! ## `rules_at_lps_go` -/
 
@@ -541,14 +508,14 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
         rdW (X.arr64 (tierA EREC (x >>> 40))) (x &&& 1099511627775) = erRd X x := fun _ _ => rfl
     rw [rd] at hW
     -- `inst_lp` on the right-hand side
-    cases h1 : callW p n "inst_lp" [ko, kc, us, erRd m (o + 8)] m with
+    cases h1 : callW p n "inst_lp" [ko, kc, us, erRd m (o + Rule.rhs)] m with
     | none => rw [h1] at hW; simp [rulesAtLpsGoW.k_inst_lp.none] at hW
     | some x1 =>
     obtain ⟨r1, mi⟩ := x1
     rw [h1] at hW
     obtain ⟨e1, a1, hrun1, hT1, hg1, hf1, he1, hrd1, hdh1, hx1⟩ :=
       instStep hP.toQuotAtProg hT hus hw8 hlm h1
-    have hrhs' : denoteE a.store (decE (erRd m (o + 8))) = some x0.rhs := by
+    have hrhs' : denoteE a.store (decE (erRd m (o + Rule.rhs))) = some x0.rhs := by
       rw [decE_eq, ← hrh]; exact hrhs0
     obtain ⟨hst1, -⟩ := ConRon.Bridge.instLPFast_run hok hr hlT huT hrhs' hrun1
     have hlT1 := ConRon.Bridge.denoteNListE_ext hst1.ext _ _ hlT
@@ -557,30 +524,24 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     -- the fire
     obtain ⟨lo, hs, mf, a2, hW2, hT2, hg2, hf2, hfire, hlo, hlvs⟩ :
         ∃ (lo : Word) (hs : List LIdx) (mf : Mem) (a2 : AState),
-        rulesAtLpsGoW.j1 p n ko kc us o rl d (r1.headD 0) (erRd m (o + 3)) lo mf = some (res, m') ∧
+        rulesAtLpsGoW.j1 p n ko kc us o rl d (r1.headD 0) (erRd m (o + Rule.fire)) lo mf = some (res, m') ∧
         StageT dn vis fe mf a2 ∧ IWGrow mi mf ∧ MemFrame quotA quotC mi mf ∧
         (rl0.fire.atLps lpsT usT).run a1 = .ok (fireAt rl0.fire hs, a2) ∧
-        ((∀ lv, rl0.fire ≠ .levels lv) → lo = erRd m (o + 4)) ∧
-        (∀ lv, rl0.fire = .levels lv → hs.length = (erRd m (o + 5)).toNat ∧ lo.toNat < 2 ^ 41 ∧
+        ((∀ lv, rl0.fire ≠ .levels lv) → lo = erRd m (o + Rule.lvlsOff)) ∧
+        (∀ lv, rl0.fire = .levels lv → hs.length = (erRd m (o + Rule.lvlsLen)).toNat ∧ lo.toNat < 2 ^ 41 ∧
           erTopOf mi lo ≤ erOff lo ∧ erOff lo + hs.length < 2 ^ 40 ∧
           ∀ j < hs.length, erecP mf (lo.toNat + j) = (lsWords hs)[j]?) := by
-      by_cases hk3 : erRd m (o + 3) = 2
+      by_cases hk3 : erRd m (o + Rule.fire) = 2
       · rw [rulesAtLpsGoW.k_inst_lp.arm1 _ _ _ _ _ _ _ _ _ _ (by rw [rd, hrd1]; exact hk3)] at hW
         simp only [rd] at hW
         rw [hrd1] at hW
-        obtain ⟨lv, hlv⟩ := h32 hk3
-        have hsl : hslice? (erecP m) (erRd m (o + 4)).toNat (erRd m (o + 5)).toNat = some lv := by
-          rcases decRule_fireE (erRdOK m) hrm with ⟨h0, -⟩ | ⟨-, lvls, hfl, hsl⟩
-          · rw [hk3] at h0; cases h0
-          · rcases hfl with hfl | ⟨pins, hfl⟩
-            · rw [hlv] at hfl; cases hfl; exact hsl
-            · rw [hlv] at hfl; cases hfl
+        obtain ⟨lv, hlv, hsl⟩ := h32 hk3
         have hd : ∀ u ∈ lv, ∃ L, denoteL a1.store.ls u = some L := by
           rw [hlv] at hf01
           simp only [ConRon.Arena.Frontend.denoteFire, Option.map_eq_some_iff] at hf01
           obtain ⟨L, hL, -⟩ := hf01
           exact denoteLList_mem hL
-        cases h2 : callW p n "fire_levels_at" [erRd m (o + 4), erRd m (o + 5), ko, kc, us] mi with
+        cases h2 : callW p n "fire_levels_at" [erRd m (o + Rule.lvlsOff), erRd m (o + Rule.lvlsLen), ko, kc, us] mi with
         | none => rw [h2] at hW; simp [rulesAtLpsGoW.k_fire_levels_at.none] at hW
         | some x2 =>
         obtain ⟨r2, mf⟩ := x2
@@ -601,7 +562,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
         rw [hrd1] at hW
         have hnl : ∀ lv, rl0.fire ≠ .levels lv := fun lv hlv => by
           obtain ⟨w, hw, hw2⟩ := decRule_levels_w3 hrm hlv
-          exact hk3 (by rw [(erRdOK m).at 3 rfl hw]; exact UInt64.toNat_inj.mp hw2)
+          exact hk3 (by rw [(erRdOK m).at _ rfl hw]; exact UInt64.toNat_inj.mp hw2)
         refine ⟨_, [], mi, a1, hW, hT1, IWGrow.refl _, MemFrame.refl _ _ _, ?_, fun _ => rfl,
           fun lv h => absurd h (hnl lv)⟩
         cases e : rl0.fire with
@@ -622,7 +583,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     have hsrc : ∀ P : List Word, P.length ≤ 11 → ∀ (c : Word) (j : Nat) (v : Word), c.toNat = j →
         erecP m₁ (o.toNat + j) = some v → erRd (wrER mf d P) (o + c) = v := fun P hP c j v hc hv =>
       (erRdOK _).at c hc ((hg₁₀.trans (hP11 P hP)).ext _ _ hv)
-    generalize hws : [w0, w1, 0, erRd m (o + 3), lo, w5, w6, w7, r1.headD 0, 0, 0] = ws at hW3
+    generalize hws : [w0, w1, 0, erRd m (o + Rule.fire), lo, w5, w6, w7, r1.headD 0, 0, 0] = ws at hW3
     have hwsl : ws.length = 11 := by rw [← hws]; rfl
     obtain ⟨hSh, hgh, hfh, hrdh, houth⟩ := wrER_fresh h₀ ws mf a2 d hT2.stage hfm hgm hd0
       (by rw [hwsl]; omega) hd41
@@ -633,13 +594,13 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
     have hk' : (rl - 1).toNat = k := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     obtain ⟨rs'', a3, hrun3, hT3, hg3, hf3, hok3, hr3, hx3, hun3, hdec3⟩ :=
-      ih n (wrER mf d ws) a2 (o + 11) (rl - 1) (d + 11) rules' xs r' m' hk' hTh hst2.ok hst2.read hfh
+      ih n (wrER mf d ws) a2 (o + Rule.size) (rl - 1) (d + 11) rules' xs r' m' hk' hTh hst2.ok hst2.read hfh
         hgh (by rw [et11, eo11]; omega) (by rw [et11, eo11, erTopOf_wrER]; omega) (by rw [ed11]; unfold erOff at hreg; omega)
         (ConRon.Bridge.denoteNListE_ext hst2.ext _ _ hlT1) (ConRon.Bridge.denoteLs_ext huT1 hst2.ext)
         (decRules_shift hrs' fun _ _ hv => _root_.L.Arena.erecP_lt64 hv)
         (ConRon.Bridge.denoteRules_ext (hst1.ext.trans hst2.ext) _ _ hxs) hW3
     -- the twin
-    have hrh' : rl0.rhs = decE (erRd m (o + 8)) := by rw [decE_eq]; exact hrh
+    have hrh' : rl0.rhs = decE (erRd m (o + Rule.rhs)) := by rw [decE_eq]; exact hrh
     have hrunT : (rulesAtLps lpsH (decI us) lpsT usT (rl0 :: rules')).run a =
         .ok (⟨rl0.ctor, rl0.nfields, fireAt rl0.fire hs, decI (r1.headD 0)⟩ :: rs'', a3) := by
       simp only [rulesAtLps, StateT.run_bind, hrh', hrun1, except_ok_bind, hfire, hrun3]
@@ -720,6 +681,7 @@ theorem rulesGo_sim {p : Prog} (hP : RulesProg p) {m₁ m₀ : Mem} {a₀ : ASta
             exact hdefm _ (hregm (11 + j') (by omega)) (by rw [← Nat.add_assoc]; exact e.symm)
       have htail := hdec3 Y hY hA
       rw [ed11] at htail
+      change decRules (erecP Y) (d.toNat + Rule.size.toNat) k = some rs'' at htail
       simp only [hhead, htail, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
 
 /-- **`StageT` across the name readback cache's write.** -/
