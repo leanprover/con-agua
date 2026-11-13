@@ -70,7 +70,10 @@ def preL (D : Array IDeclaration) : StateD ⊕ RecordVerdict → StateD ⊕ Reco
 
 theorem processLineCoreD_pre (d : DeclRec) :
     processLineCoreD (st.pre D) d = preL D <$> processLineCoreD st d := by
-  sorry
+  cases d <;> simp only [processLineCoreD, parseCVD_pre, getDeclD_pre, validateIndD_pre,
+    pushDecl_pre, installIndD_pre, map_bind, map_pure, preL, bind_map_left, apply_ite,
+    Sum.map_inl, Sum.map_inr, id] <;> congr 1 <;> funext x <;> (try split) <;>
+    simp [map_bind, map_pure, Sum.map_inl, Sum.map_inr]
 
 /-- **A record on the prefixed state** is the record on the state, prefixed. -/
 theorem applyRecord_pre (r : LineRec) :
