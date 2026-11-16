@@ -282,7 +282,7 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
     (hl : (pinLits m).map (·.word.toUInt64) = litWords M)
     (hm : indexFreezeW.k_lit_from p n (callW p n "lit_from" [0, 3] M) = some (r, m')) :
     FrozenR m' (frozenAt I (pinLits m)) ∧ IndexR m' (frozenAt I (pinLits m)) ∧
-      MemFrame [] frozenCtl m m' := by
+      MemFrame [] [172, 173] M m' := by
   have hlo : ∀ x : Word, x.toNat < 160 → rdW (M.arr64 CTL) x = rdW (m.arr64 CTL) x :=
     fun x hx => hout x (not_mem_frozenCtl (.inl (by omega)))
   have hIM : IndexR M I := hI.ctlHi ha hlo
@@ -321,12 +321,7 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
     simp [rdW_set64, Mem.size64_set64]; omega
   · exact IndexR.frozenAt (hIM.ctlHi (fun b hb => by simp only [Mem.arr64_set64_ne _ _ _ _ _ hb])
       (fun x hx => hfr.ctl x (by simp; constructor <;> (intro e; subst e; simp at hx)))) _
-  · refine ⟨fun b _ hb => ?_, fun x hx => ?_, fun b => ?_⟩
-    · simp only [Mem.arr64_set64_ne _ _ _ _ _ hb]; exact ha b hb
-    · rw [hfr.ctl x (by simp; constructor <;> (intro e; subst e; revert hx; decide))]; exact hout x hx
-    · by_cases hb : b = CTL
-      · subst hb; simp [Mem.size64_set64, hsz]
-      · simp only [Mem.arr64_set64_ne _ _ _ _ _ hb, ha b hb]
+  · exact hfr
 
 /-- The control words of the literal names. -/
 def litCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171]
@@ -447,7 +442,7 @@ theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStre
     invoke p (exec p n) "index_freeze" []
     ⦃fun _ s' => LocEq s' s₀ ∧ (I.freeze).run a = .ok (frozenAt I (pinLits s₀.mem), a) ∧
       FrozenR s'.mem (frozenAt I (pinLits s₀.mem)) ∧ IndexR s'.mem (frozenAt I (pinLits s₀.mem)) ∧
-      MemFrame [] frozenCtl s₀.mem s'.mem; ⊤⦄ :=
+      MemFrame [] [172, 173] s₀.mem s'.mem; ⊤⦄ :=
   triple_post (indexFreeze_specW p hP.freeze n s₀) fun r s ⟨hL, hm⟩ => by
     refine ⟨hL, freeze_run hF I, ?_⟩
     cases n with
