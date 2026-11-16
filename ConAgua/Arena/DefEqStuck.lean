@@ -152,10 +152,7 @@ structure StuckCallees (p : Prog) : Prop where
   lvlsEqC : LvlsEqCH p
   /-- Stored levels read back (`StoreDen.lean`). -/
   den : CoreDen
-  strLitStored : StrLitStoredOK p
   strLitCtor : StrLitCtorOK p
-  /-- `strLitStored` keeps every stored node's view (`supKeep_of`, `StrLitKeep.lean`). -/
-  supKeep : ∀ fe, SupKeep fe
   lazyDeltaStep : LazyDeltaStepH p
   reduceProjCore : ReduceProjCoreH p
   /-- The unit-like certificate's walks and level test (`unit_like_shape_at`, `is_prop_type`). -/

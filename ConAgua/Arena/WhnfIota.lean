@@ -50,20 +50,42 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-! ## `is_ctor_app(vis, e)`, `is_str_lit(h)` -/
+/-! ## `ctor_view(vis, e)`, `is_nat_succ_app(e)`, `is_str_lit(h)` -/
 
-/-- con-leche: `CoreDefs.lean:51-58` `isCtorApp` — the spine's head is a stored constructor. -/
--- con-ron: ConRon/Arena/Core.lean:332-343 ConRon.Arena.isCtorApp
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.isCtorApp` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.isCtorApp]
-def isCtorAppL : FunDecl := lfn (vis, e) locals (hh, t, i, c, flag, q) {
+/-- con-leche: `CoreDefs.lean:58-65`/`Cached/CoreC.lean:233-240` `isCtorApp`/`ctorViewC` — the
+major's view (`decMV`, five words `[t, e, c, us, q]`): `t = 1` where the spine's head is a stored
+constructor `c.{us}` (its record `q`), else `t = 0`. -/
+-- con-ron: ConRon/Arena/Core.lean:413-422 ConRon.Arena.ctorView
+@[no_expose, l_impl ConRon.Arena.ctorView]
+def ctorViewL : FunDecl := lfn (vis, e) locals (hh, t, i, c, us, flag, q) {
   hh := call get_app_fn(e);
-  if ⟦hh⟧.tag != 3 { return 0 };
+  if ⟦hh⟧.tag != 3 { return (0, e, 0, 0, 0) };
   (t, i) := node CONST⟦hh⟧;
   c := CONST⟨t, i⟩.n;
+  us := CONST⟨t, i⟩.us;
   (flag, q) := call env_find(c, vis);
-  if flag == 0 { return 0 };
-  return u64(EREC⦃q⦄ == 4)
+  if flag == 0 { return (0, e, 0, 0, 0) };
+  if EREC⦃q⦄ != 4 { return (0, e, 0, 0, 0) };
+  return (1, e, c, us, q)
+}
+
+/-- con-leche: `CoreDefs.lean:48-56` `Expr.isNatSuccApp` — `Nat.succ x`, the level-free constant
+`Nat.succ` (pin 3; the empty level list pin word 52) applied to one argument. -/
+-- con-ron: ConRon/Arena/Core.lean:372-385 ConRon.Arena.isNatSuccApp
+@[no_expose, l_impl ConRon.Arena.isNatSuccApp]
+def isNatSuccAppL : FunDecl := lfn (e) locals (t, i, f, el, ns) {
+  if ⟦e⟧.tag != 4 { return 0 };
+  t := ⟦e⟧.tier;
+  i := ⟦e⟧.aidx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if APP⟨t⟩.count <= i { abort };
+  f := APP⟨t, i⟩.f;
+  if ⟦f⟧.tag != 3 { return 0 };
+  (t, i) := node CONST⟦f⟧;
+  el := call pin_word(52);
+  ns := call pin_at(3);
+  if CONST⟨t, i⟩.us == el && CONST⟨t, i⟩.n == ns { return 1 };
+  return 0
 }
 
 /-- con-leche: `Core.lean:695-699` `Expr.isStrLit` — the tag, then the literal kind. -/
@@ -401,52 +423,72 @@ accepted only to match the twin's argument list. The body is split into small fu
 K and `And` arms leave slices on the spine stack; the twin has no stack, so restoring is always
 faithful). -/
 
-/-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`/`majorToCtorI` — the
+/-- con-leche: `Core.lean:601-757` `majorToCtor` (the rescue) — the
 stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_table`), or the
 pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
-certificate family (off at `.trusted`). -/
--- con-ron: ConRon/Arena/Core.lean:2300-2314 ConRon.Arena.majorToCtor
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.majorToCtor` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.majorToCtor`, `ConRon.Arena.ctorView`, `ConRon.Arena.majorToCtorRescue` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.majorToCtor]
-def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
+certificate family (off at `.trusted`). The answer is the fabricated major, or the major itself. -/
+-- con-ron: ConRon/Arena/Core.lean:2201-2298 ConRon.Arena.majorToCtorRescue
+@[no_expose, l_impl ConRon.Arena.majorToCtorRescue]
+def majorToCtorRescueL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
   r := call m2c_head(mode, vis, d, isK, ro, rc, major);
   CTL.u64[136] := top;
   return r
 }
 
+/-- con-leche: `Core.lean:601-757`/`Cached/CoreC.lean:850-953` `majorToCtor`/`majorToCtorI` — the
+rescue answering the view (`decMV`): the major's own where it is a constructor application, else
+the rescue's, `.stuck` (no lookup) where it gives the major back. -/
+-- con-ron: ConRon/Arena/Core.lean:2308-2314 ConRon.Arena.majorToCtor
+@[no_expose, l_impl ConRon.Arena.majorToCtor]
+def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
+    locals (t, e, c, us, q, x) {
+  (t, e, c, us, q) := call ctor_view(vis, major);
+  if t != 0 { return (t, e, c, us, q) };
+  x := call major_to_ctor_rescue(mode, vis, d, rec, isK, ro, rc, major);
+  if x == major { return (0, x, 0, 0, 0) };
+  (t, e, c, us, q) := call ctor_view(vis, x);
+  return (t, e, c, us, q)
+}
+
 /-! ## `prepare_major(mode, vis, d, rec, isK, ro, rc, major)` -/
 
-/-- con-leche: `Core.lean:701-775`/`Cached/CoreC.lean:553-575` `prepareMajor`/`prepareMajorI` — at
-a K-flagged recursor (the record's `isK`) the K rescue runs on the raw major; elsewhere the structure rescues run on
-the major as found first (a `String` literal skips that attempt), and only if they produce no
-constructor is the major head-normalized, its literal converted, and the rescue tried again. -/
--- con-ron: ConRon/Arena/Core.lean:2367-2389 ConRon.Arena.prepareMajor
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.prepareMajor` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.prepareMajor`, `ConRon.Arena.isNatSuccApp`, `ConRon.Arena.prepareMajorWhnf` changed; re-check the L code and its proofs, then delete this line
+/-- con-leche: `Core.lean:795-874`/`Cached/CoreC.lean:979-1000` `prepareMajor`/`prepareMajorI` —
+the non-K path past a rescue that gave no constructor (or `Nat.succ x`): the major head-normalized,
+its literal converted, the rescue once more (the view). -/
+-- con-ron: ConRon/Arena/Core.lean:2360-2365 ConRon.Arena.prepareMajorWhnf
+@[no_expose, l_impl ConRon.Arena.prepareMajorWhnf]
+def prepareMajorWhnfL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
+    locals (major0, major1, t, e, c, us, q) {
+  major0 := call whnf(mode, vis, d, major);
+  major1 := call lit_major_to_ctor(mode, vis, d, major0);
+  (t, e, c, us, q) := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major1);
+  return (t, e, c, us, q)
+}
+
+/-- con-leche: `Core.lean:795-874`/`Cached/CoreC.lean:979-1000` `prepareMajor`/`prepareMajorI` — at
+a K-flagged recursor (the record's `isK`) the K rescue on the raw major, final; elsewhere the
+structure rescues on the major as found first (a `String` literal skips that attempt), and only if
+they give no constructor, or `Nat.succ x` (`is_nat_succ_app`), `prepare_major_whnf`. The answer is
+the view (`decMV`). -/
+-- con-ron: ConRon/Arena/Core.lean:2378-2389 ConRon.Arena.prepareMajor
 @[no_expose, l_impl ConRon.Arena.prepareMajor]
 def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
-    locals (majorK, ok, majorE, major0, major1, res) {
+    locals (ok, t, e, c, us, q) {
   if isK != 0 {
-    majorK := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major);
-    ok := call is_ctor_app(vis, majorK);
-    if ok != 0 { res := call lit_major_to_ctor(mode, vis, d, majorK); return res }
-    else { return majorK }
-  } else {
-    ok := call is_str_lit(major);
-    if ok != 0 { majorE := major }
-    else { majorE := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major) };
-    ok := call is_ctor_app(vis, majorE);
-    if ok != 0 { return majorE }
-    else {
-      major0 := call whnf(mode, vis, d, majorE);
-      major1 := call lit_major_to_ctor(mode, vis, d, major0);
-      res := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major1);
-      return res
-    }
-  }
+    (t, e, c, us, q) := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major);
+    return (t, e, c, us, q)
+  };
+  ok := call is_str_lit(major);
+  if ok != 0 { t := 0; e := major; c := 0; us := 0; q := 0 }
+  else { (t, e, c, us, q) := call major_to_ctor(mode, vis, d, rec, isK, ro, rc, major) };
+  if t != 0 {
+    ok := call is_nat_succ_app(e);
+    if ok == 0 { return (t, e, c, us, q) }
+  };
+  (t, e, c, us, q) := call prepare_major_whnf(mode, vis, d, rec, isK, ro, rc, e);
+  return (t, e, c, us, q)
 }
 
 /-! ## `pi_residual(e, ao, an)` -/
@@ -548,24 +590,39 @@ def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (ra, rb) {
   return u64(ra != 1) & u64(rb != 1)
 }
 
-/-! ## `rule_body_at(rec, ctor, po, pl, rhs, us)`, `const_ty_at(n, po, pl, ty, us)`
+/-! ## `lam_body(k, e)`, `rule_body_at(rec, ctor, po, pl, rhs, k, us)`, `const_ty_at(n, po, pl, ty, us)`
 
-Both are thin memo wrappers around `inst_lp` (a `WhnfCallees` stub), over the already-installed
+The two memo wrappers are thin around `inst_lp` (a `WhnfCallees` stub), over the already-installed
 caches `ruleBodyC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
 `CoreRefine.lean`'s `rrKey`/`memoRG_findR`/`memoRG_findP`. -/
 
-/-- con-leche: none — `ruleBodyAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
+/-- con-leche: `ExprOps.lean:862-868` `lamBody` — the body under `k` leading λs (under all of
+them where there are fewer). -/
+-- con-ron: ConRon/Arena/ExprOps.lean:1349-1356 ConRon.Arena.lamBody
+@[no_expose, l_impl ConRon.Arena.lamBody]
+def lamBodyL : FunDecl := lfn (k, e) locals (i, t, x) {
+  i := 0;
+  for i < k {
+    if ⟦e⟧.tag != 5 { return e };
+    (t, x) := node LAM⟦e⟧;
+    e := LAM⟨t, x⟩.b
+  };
+  return e
+}
+
+/-- con-leche: `Cached/StateC.lean:469-490` `ruleBodyAtM` — the rule's body under its `k` λs
+(`lam_body`), level-instantiated, memoized on `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
 is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
 callee wrote the memo. -/
--- con-ron: ConRon/Arena/Core.lean:214-229 ConRon.Arena.ruleBodyAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.ruleBodyAt` is gone upstream; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:251-264 ConRon.Arena.ruleBodyAt
 @[no_expose, l_impl ConRon.Arena.ruleBodyAt]
-def ruleBodyAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
-    locals (k2, fd, j, dd, r, dum) {
+def ruleBodyAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, k, us)
+    locals (k2, fd, j, dd, b, r, dum) {
   k2 := ctor | (us << 32);
   (fd, j, dd) := call rr_find(rec, k2);
   if fd != 0 { return rrSch.arr.u64[j * 4 + 3] };
-  r := call inst_lp(po, pl, us, rhs);
+  b := call lam_body(k, rhs);
+  r := call inst_lp(po, pl, us, b);
   (fd, j, dd) := call rr_find(rec, k2);
   dum := call rr_put(rec, k2, r, fd, j);
   return r
@@ -764,21 +821,18 @@ def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) 
   return res
 }
 
-/-! ## `iota_rec_at(mode, vis, d, hd, so, sn)` -/
+/-! ## `iota_rec_at(mode, vis, d, c, us, q, so, sn)` -/
 
-/-- con-leche: `Core.lean:777-876` `iotaRec`/`iotaRecAt` — one ι step at a spine the caller
-already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the spine's length
-(`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). The head's
-`const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
-from `iota_rec_c` on). -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+/-- con-leche: `Core.lean:876-974`/`Cached/CoreC.lean:1002-1080` `iotaRec`/`iotaRecI` — the ι step
+at the stored recursor `c.{us}`, its record `q` found by the caller (which checked the levels), on
+the redex's `mI + 1` arguments, the stack slice `(so, sn)`: the recursor's telescope (`peel_pis`),
+then the rest, split into small functions (`WhnfIotaRec.lean`, from `iota_rec_major` on). -/
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose, l_impl ConRon.Arena.iotaRecAt]
-def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
-  (hf, c, us) := call iota_rec_head(hd);
-  if hf == 0 { return (0, 0) };
-  (r1, r2) := call iota_rec_c(mode, vis, d, c, us, so, sn);
+def iotaRecAtL : FunDecl := lfn (mode, vis, d, c, us, q, so, sn) locals (pf, pr, r1, r2) {
+  (pf, pr) := call peel_pis(sn, EREC⦃q + ⟪CI.cv + CV.type⟫⦄);
+  if pf == 0 { return (0, 0) };
+  (r1, r2) := call iota_rec_major(mode, vis, d, c, us, q, so, sn);
   return (r1, r2)
 }
 
@@ -786,7 +840,8 @@ def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1
 
 /-- What this file's specs need of a program: its own functions, at their names. -/
 structure IotaProg (p : Prog) : Prop where
-  isCtorApp : p.lookup "is_ctor_app" = some isCtorAppL
+  ctorView : p.lookup "ctor_view" = some ctorViewL
+  isNatSuccApp : p.lookup "is_nat_succ_app" = some isNatSuccAppL
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
   iotaNoCert : p.lookup "iota_no_cert" = some iotaNoCertL
@@ -805,13 +860,16 @@ structure IotaProg (p : Prog) : Prop where
   andRescueSlots : p.lookup "and_rescue_slots" = some andRescueSlotsL
   fabScopeOk : p.lookup "fab_scope_ok" = some fabScopeOkL
   litMajorToCtor : p.lookup "lit_major_to_ctor" = some litMajorToCtorL
+  majorToCtorRescue : p.lookup "major_to_ctor_rescue" = some majorToCtorRescueL
   majorToCtor : p.lookup "major_to_ctor" = some majorToCtorL
+  prepareMajorWhnf : p.lookup "prepare_major_whnf" = some prepareMajorWhnfL
   prepareMajor : p.lookup "prepare_major" = some prepareMajorL
   piResidual : p.lookup "pi_residual" = some piResidualL
   defeqList : p.lookup "defeq_list" = some defeqListL
   iotaIndexOk : p.lookup "iota_index_ok" = some iotaIndexOkL
   proofIrrel : p.lookup "proof_irrel" = some proofIrrelL
   proofIrrelHalf : p.lookup "proof_irrel_half" = some proofIrrelHalfL
+  lamBody : p.lookup "lam_body" = some lamBodyL
   ruleBodyAt : p.lookup "rule_body_at" = some ruleBodyAtL
   constTyAt : p.lookup "const_ty_at" = some constTyAtL
   instSpine : p.lookup "inst_spine" = some instSpineL

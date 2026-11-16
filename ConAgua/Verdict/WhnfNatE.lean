@@ -49,7 +49,7 @@ then `WhnfDeltaRefine3`'s `redOpT`). -/
 def redSuccS (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (c : NIdx) (b : EIdx) :
     AM (Option EIdx) := do
   let ns ← pinNatSucc
-  if c == ns && (← natLitStored fe) then do
+  if c == ns && fe.natLit then do
     match ← rawNatLit? (← r.whnf depth b) with
     | some n => litNatSized (n + 1)
     | none => pure none

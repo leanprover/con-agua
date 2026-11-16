@@ -21,18 +21,17 @@ open scoped Lean.Order
 namespace L.Arena
 
 section iotaTop
-variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) (hEI : ErecKeptInst p)
+variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees p) (hmtc : MajorToCtorOK p) (hEI : ErecKeptInst p)
   (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hnv : closedNV p L.Checker.nvFns = true)
   (hPM : PrepareMajorE p) (hF : IotaRecFireE p)
 
-include hp hc hw hsup hmtc hEI hER hEK hnv hPM hF in
+include hp hc hw hmtc hEI hER hEK hnv hPM hF in
 /-- **`IotaRecAtE`**: `iota_rec_at`'s verdicts are `iota_rec_major`'s, through `iota_rec_c`
 (`at_ref`'s error half). -/
 theorem iotaRecAtE_of : IotaRecAtE p :=
   fun N hk hkE F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat =>
     RefE.coreSpecE (irAtE_spec p hp.iotaRecAt hp.recC hp.major (N + 1) s₀ mode vis d hd so sn) hnv
-      ⟨hkE, hnv, hPM, hF⟩ (at_ref p hp hc hw hsup hmtc hEI hER hEK N hk F s₀ a₀ dn vis fe M eb mode d hd
+      ⟨hkE, hnv, hPM, hF⟩ (at_ref p hp hc hw hmtc hEI hER hEK N hk F s₀ a₀ dn vis fe M eb mode d hd
         so sn xs hnF hn62 hpre hhd hsa hsat)
 
 end iotaTop

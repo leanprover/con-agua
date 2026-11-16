@@ -148,30 +148,34 @@ theorem keepsW_inst1Fast (F : Nat) (e v : EIdx) (d : Nat) :
     fun _ => Keeps.bind (keeps_inst1Clear cplW_blind) fun _ => Keeps.pure _
 
 theorem keepsW_instList (F : Nat) :
-    (∀ vs h d, Keeps cpl (instantiateList vs F h d)) ∧
-      (∀ vs h d, Keeps cpl (instantiateListGo vs F h d)) := by
+    (∀ vs n k h d, Keeps cpl (instantiateList vs n k F h d)) ∧
+      (∀ vs n k h d, Keeps cpl (instantiateListGo vs n k F h d)) := by
   induction F with
   | zero =>
-    exact ⟨fun vs h d => by rw [instantiateList_zero]; exact Keeps.fail _,
-      fun vs h d => by rw [instantiateListGo_zero]; exact Keeps.fail _⟩
+    exact ⟨fun vs n k h d => by rw [instantiateList_zero]; exact Keeps.fail _,
+      fun vs n k h d => by rw [instantiateListGo_zero]; exact Keeps.fail _⟩
   | succ F ih =>
     obtain ⟨ih1, ih2⟩ := ih
-    refine ⟨fun vs h d => ?_, fun vs h d => ?_⟩
+    refine ⟨fun vs n k h d => ?_, fun vs n k h d => ?_⟩
     · rw [instantiateList_succ]
       keepsL_auto [instListCutoff, instListArmApp, instListArmBind, instListArmLet,
         instListArmProj, instListArmBVar] using Keeps.pure
-      all_goals exact ih1 _ _ _
+      all_goals exact ih1 _ _ _ _ _
     · rw [instantiateListGo_succ]
       keepsL_auto [instListCutoff, instListGoArmApp, instListGoArmBind, instListGoArmLet,
         instListGoArmProj] using Keeps.pure
-      all_goals first | exact ih1 _ _ _ | exact ih2 _ _ _
+      all_goals first | exact ih1 _ _ _ _ _ | exact ih2 _ _ _ _ _
+
+theorem keepsW_instRevRange (F : Nat) (e : EIdx) (vs : Array EIdx) (s n d : Nat) :
+    Keeps cpl (instantiateRevRange F e vs s n d) := by
+  unfold instantiateRevRange
+  exact Keeps.bind (keepsW_instLClear cplW_blind) fun _ =>
+    Keeps.bind ((keepsW_instList F).2 vs _ _ e d) fun _ =>
+      Keeps.bind (keepsW_instLClear cplW_blind) fun _ => Keeps.pure _
 
 theorem keepsW_instListFast (F : Nat) (e : EIdx) (vs : Array EIdx) (d : Nat) :
-    Keeps cpl (instantiateListFast F e vs d) := by
-  unfold instantiateListFast
-  exact Keeps.bind (keepsW_instLClear cplW_blind) fun _ =>
-    Keeps.bind ((keepsW_instList F).2 vs e d) fun _ =>
-      Keeps.bind (keepsW_instLClear cplW_blind) fun _ => Keeps.pure _
+    Keeps cpl (instantiateListFast F e vs d) :=
+  keepsW_instRevRange F e vs 0 vs.size d
 
 theorem keepsW_abs1Go (d F : Nat) : ∀ h k, Keeps cpl (abstract1Go d F h k) := by
   induction F with

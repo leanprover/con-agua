@@ -102,14 +102,24 @@ l_model m2cCtorE_spec (p : Prog) (hp : M2CProg p)
 
 l_model m2cHeadE_spec (p : Prog) (hp : M2CProg p)
   fns [hp.head ↦ m2cHeadE list]
-  specs [callW_spec p n "is_ctor_app", callW_spec p n "env_find", m2cCtorE_spec p hp n]
+  specs [callW_spec p n "env_find", m2cCtorE_spec p hp n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-l_model mtcE_spec (p : Prog) (hp : M2CProg p) (hf : p.lookup "major_to_ctor" = some majorToCtorL)
-  fns [hf ↦ mtcE list]
+l_model mtcrE_spec (p : Prog) (hp : M2CProg p)
+    (hf : p.lookup "major_to_ctor_rescue" = some majorToCtorRescueL)
+  fns [hf ↦ mtcrE list]
   specs [m2cHeadE_spec p hp n]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+l_model mtcE_spec (p : Prog) (hp : M2CProg p)
+    (hr : p.lookup "major_to_ctor_rescue" = some majorToCtorRescueL)
+    (hf : p.lookup "major_to_ctor" = some majorToCtorL)
+  fns [hf ↦ mtcE list]
+  specs [callW_spec p n "ctor_view", mtcrE_spec p hp hr n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

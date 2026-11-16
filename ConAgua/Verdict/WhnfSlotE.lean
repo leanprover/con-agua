@@ -30,24 +30,23 @@ theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
 /-! ## `whnf_core`: the step's and the slot's claims from their refinements -/
 
 section core
-variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe) (hnv : closedNV p L.Checker.nvFns = true) (hI : IotaRecAtE p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p) (hnv : closedNV p L.Checker.nvFns = true) (hI : IotaRecAtE p)
 
-include hp hwc hcc hsup hnv hI in
+include hp hwc hcc hnv hI in
 /-- **`whnf_core_step`'s claim at every L fuel up to `n`** (`step_ref`'s error half). -/
 theorem coreStepE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) : CoreStepE p n :=
   fun j hj F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he =>
     RefE.coreSpecE (whnfCoreStepE_spec p hp (j + 1) s₀ mode cheap vis d h e) hnv ⟨hkE.mono hj, hI⟩
-      (step_ref p hp hwc hcc hsup j (hk.mono hj) F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
+      (step_ref p hp hwc hcc j (hk.mono hj) F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
-include hp hwc hcc hsup hnv hI in
+include hp hwc hcc hnv hI in
 /-- **The knot's `whnfCore` slot's verdicts, one level up** (`core_ref`'s error half). -/
 theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
     RefE.coreSpecE (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e) hnv
-      (coreStepE_of p hp hwc hcc hsup hnv hI n hk hkE)
-      (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
+      (coreStepE_of p hp hwc hcc hnv hI n hk hkE)
+      (core_ref p hp hwc hcc n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end core
 

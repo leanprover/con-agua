@@ -774,7 +774,7 @@ structure MajorG (p : Prog) (n : Nat) : Prop where
 /-- **`iota_rec_major` refines `iotaRecMajorT`, both outcomes**: the errors are `prepare_major`'s
 and `iota_rec_fire`'s. -/
 theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -828,7 +828,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (hG.knot.mono (by omega)) F (by omega) (by omega) ⟨m1, Locals.init []⟩ _ dn vis fe MM eb mode d c
       (erRd s₀.mem (recP + CI.recIsK)) (erRd s₀.mem (recP + CI.recRulesOff)) (erRd s₀.mem (recP + CI.recRulesLen))
       (rdW (s₀.mem.arr64 SPN) (so + erRd s₀.mem (recP + CI.recMajor))) rules hS1 hm4 hebm hmaj hrules1) c1
-  have hpm := prepareMajor_refines' p hp.toIotaProg4 hc hw hsup hmtc hER N (hk.mono (by omega)) F
+  have hpm := prepareMajor_refines' p hp.toIotaProg4 hc hw hmtc hER N (hk.mono (by omega)) F
     (by omega) (by omega) ⟨m1, Locals.init []⟩ _ dn vis fe MM eb mode d c (erRd s₀.mem (recP + CI.recIsK))
     (erRd s₀.mem (recP + CI.recRulesOff)) (erRd s₀.mem (recP + CI.recRulesLen))
     (rdW (s₀.mem.arr64 SPN) (so + erRd s₀.mem (recP + CI.recMajor))) rules hS1 hm4 hebm hmaj
@@ -927,7 +927,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
 
 /-- **`iota_rec_major` refines `iotaRecMajorT`** (`major_ref`'s ok half). -/
 theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -947,7 +947,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS hm4 hebm hcw hus hcv
       hrules hrecF hsa hsat hmI =>
     RefE.coreSpec (irMajorE_spec p hp.major (n + 1) s₀ mode vis d c us recP so sn)
-      (major_ref p hp hc hw hsup hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us
+      (major_ref p hp hc hw hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us
         recP so sn cv rules xs hS hm4 hebm hcw hus hcv hrules hrecF hsa hsat hmI)
 
 end L.Arena

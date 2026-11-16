@@ -37,7 +37,7 @@ l_model whnfCoreE_spec (p : Prog) (hp : WhnfCoreProg p)
 l_model whnfCoreStepE_spec (p : Prog) (hp : WhnfCoreProg p)
   fns [hp.step ↦ whnfCoreStepE list]
   specs [coreAppE_spec p hp.capp hp.capp2 hp.app n, coreStepProjE_spec p hp.sproj hp.rproj hp.plit n,
-    callW_spec p n "inst1", whnfStuckE_spec p hp.stuck hp.iotaTarget n]
+    callW_spec p n "inst1", whnfStuckE_spec p hp.stuck n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
