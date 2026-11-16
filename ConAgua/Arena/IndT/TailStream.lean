@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.IndT.Tail
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
+import ConAgua.Arena.RecCheckSpec.EraseFVarTys
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.IndInstall
@@ -356,17 +357,33 @@ theorem ts_ref {p : Prog} {dn : NIdx → Option ConLeche.Name} {G : Prop} (hG : 
   rw [ctsE.k_gen_rec_check_pop_all.arm1]
   have hx5 : ConRon.Arena.Ext a.store a5.store := hx4.trans hP5.core.ext
   have hrel₃ : ConRon.Bridge.Inductives.EnvRel env₂
-      (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feG) a5.store :=
+      ((prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feG).setFlags fe.natLit fe.strLit) a5.store :=
     ConRon.Bridge.Inductives.BT.EnvRel.feq hpop (hrel.mono hx5)
+      ((hrel.ienv a rfl).flags.of_same (hpop.2.2.1 ▸ rfl) (fun n => hpop.find? n) rfl rfl)
+  -- the flags set back
+  have hE0 := hC.stage.check.env
+  refine RefE.onlySim (fun _ => ctsE.k_env_set_flags.none ..) (fun _ _ h => h) fun r65 m65 c65 => ?_
+  rw [ctsE.k_env_set_flags.arm1]
+  obtain ⟨s65, rfl, -, hm65, hE65⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
+    (envSetFlags_refines P.ef.setFlags n _ (r6.headD 0) _ _ hS6.check.env
+      (show 161 < (s6.mem.arr64 CTL).size by have := hS6.iw.ctl; omega)) c65
+  rw [← hE0.natLit, ← hE0.strLit] at hE65
+  obtain ⟨hS65, hg65⟩ := StageR.of_flags hS6 (by rw [← hm65]; exact hE65)
+  rw [← hm65] at hS65 hg65
+  have hA65 : AbsOK s65.mem := by
+    rw [hm65]; exact AFr.of_frame (flagsSet_frame _ _ _) (by decide) (by decide) hA6
+  have hR65 : RcMR s65.mem := by
+    rw [hm65]; exact hR6.fr (MFr.of_frame (flagsSet_frame _ _ _) (by simp)
+      (fun x hx => by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
   -- the flush leaving them
-  refine RefE.bindSim (fun _ => ctsE.k_flush_caches_2.none ..) (flushSimT P.flush n hS6 hA6)
+  refine RefE.bindSim (fun _ => ctsE.k_flush_caches_2.none ..) (flushSimT P.flush n hS65 hA65)
     fun r7 _ m7 a7 c7 hrun7 ⟨ha7, hS7, hg7, hA7, _⟩ => ?_
   rw [ctsE.k_flush_caches_2.arm1]
   obtain ⟨hck7, i7, hst7⟩ := ConRon.Bridge.Inductives.ReadOK.flush
     (⟨hP5.core.ok.state, hP5.core.ok.pins, hrel₃.ifenv⟩ : ConRon.Bridge.Inductives.ReadOK _ _ a5) hrun7
   have hx7 : ConRon.Arena.Ext a.store a7.store := by rw [hst7]; exact hx5
   refine RefE.ret rfl ⟨L.Ind.StageC.ofView hC hS7 hA7 hck7 hx7, by rw [hst7]; exact hrel₃,
-    hg04.trans (hg5.trans (hg6.trans hg7)), hA7, hRc _ (by simp) _ _ _ _ _ c7 hR6, ?_⟩
+    hg04.trans (hg5.trans (hg6.trans (hg65.trans hg7))), hA7, hRc _ (by simp) _ _ _ _ _ c7 hR65, ?_⟩
   exact ((p2.toInst.trans i4).trans (hP5.core.toInst)).trans i7
 
 /-- **`check_block_tail_stream`'s contract** (`TsRefS`): `ts_ref` through the call. -/
