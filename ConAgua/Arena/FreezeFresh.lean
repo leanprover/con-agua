@@ -362,7 +362,8 @@ theorem JobM.cut {t : Mem} (h : JobM pins dn ds I t a) : JobM pins dn ds I (ctlC
         ⟨hn 152 (by decide), hn 154 (by decide), hn 156 (by decide)⟩ (by simp)
         ⟨hn 54 (by decide), hn 56 (by decide), hn 58 (by decide)⟩ (by simp) (hn 214 (by decide)), h.mem.dnN⟩,
     by rw [pinW_frame hf (by simp)]; exact h.flag,
-    h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by have := hC x hx; omega), h.fsize⟩
+    h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by have := hC x hx; omega), h.fsize,
+    h.frozen.frame (fun x hx => not_mem_frozenCtl (.inr (by have := hC x hx; omega))) hf⟩
 
 theorem freshZ_idx : ∀ b ∈ freshZ, ¬ (b.hi = false ∧ ((129 ≤ b.arr ∧ b.arr ≤ 134) ∨ b.arr = 137)) := by
   decide
@@ -425,7 +426,8 @@ theorem JobM.fresh {m : Mem} (h : JobM pins dn ds I (truncFrozen m) a) (hw : Sto
       (by rw [fresh_ctl]) (by rw [fresh_ctl]),
     ⟨by rw [fresh_size]; exact hC.mem.erec, by rw [fresh_size]; exact hC.mem.spn,
       by rw [fresh_size]; exact hC.mem.bstk, CoreMemos.fresh hC.mem.memos, hC.mem.dnN⟩,
-    by simp only [pinW, hk PINS (by decide)]; exact hC.flag, IndMemos.fresh hC.memos, hC.fsize⟩,
+    by simp only [pinW, hk PINS (by decide)]; exact hC.flag, IndMemos.fresh hC.memos, hC.fsize,
+    hC.frozen.congr (fun x _ => by rw [fresh_ctl])⟩,
     ⟨hw⟩, hoff, rfl⟩
 
 end main

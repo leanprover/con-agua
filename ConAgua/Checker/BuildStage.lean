@@ -157,7 +157,7 @@ theorem since_indexR : IndexR m {} := by
 
 theorem since_envR : EnvR m 0 bEnvZ := by
   have hz : ∀ i < 10, rdW (m.arr64 CTL) (162 + UInt64.ofNat i) = 0 := by
-    intro i hi; apply since_ctl h; interval_cases i <;> decide
+    intro i hi; apply since_ctl h; revert hi; revert i; decide
   refine EnvR.ofIndex (k := 0) ((since_indexR h).frozenAt _) ⟨?_, ?_, ?_⟩ (since_ownEmpty h)
     (since_ownBelow h) (by rw [since_stamp h]; decide) (by rw [since_ctl h (x := 134) (by decide)]; rfl)
     (by rw [since_ctl h (x := 135) (by decide)]; rfl) ?_ ?_
@@ -166,7 +166,9 @@ theorem since_envR : EnvR m 0 bEnvZ := by
     apply List.ext_getElem (by simp [litWords])
     intro i h1 h2
     simp only [List.length_replicate] at h1
-    simp [litWords, hz i h1]
+    rw [List.getElem_replicate]
+    simp only [litWords, List.getElem_map, List.getElem_range]
+    exact (hz i h1).symm
   · show litFrom _ _ 0 NAT_LIT_COUNT = _
     rw [litFrom_empty _ (by decide), since_ctl h (x := 172) (by decide)]; rfl
   · show litFrom _ _ 0 STR_LIT_COUNT = _
@@ -219,8 +221,9 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
   have sz63 : ∀ t : TieredArray, t ∈ checkerArrays.wordSlots → (m.arr64 t).size < 2 ^ 63 := fun t ht => by
     rw [hS.frame.size]; have := (hS.caps.1 t ht).1; omega
   have hT : TwinOK (dnOf sE.store) m sE (bEnv ({} : IStreamIndex).base sE.pins 0 0) :=
-    TwinOK.of_check (checkOK_congrFe (fun n => by rw [bEnv_find_zero, emptyEnv_find])
-      (fun n => by rw [bEnv_findTable_zero, emptyEnv_findTable]) (bEnv_flags _ _) rfl hdrv)
+    TwinOK.of_check (checkOK_congrFe (fe := ConRon.Bridge.driverFE sE.pins)
+      (fun n => (bEnv_find_zero _ _ n).trans (emptyEnv_find _ n).symm)
+      (fun n => (bEnv_findTable_zero _ _ n).trans (emptyEnv_findTable _ n).symm) (bEnv_flags _ _) rfl hdrv)
       ⟨sz63 _ (by decide), sz63 _ (by decide), sz63 _ (by decide), since_coreMemos hS hctl,
         fun k x hk => by simp only [dnOf] at hk; split at hk <;> simp_all⟩
   have hS0 : L.Ind.StageR 0 bEnvZ m sE :=

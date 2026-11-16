@@ -466,6 +466,7 @@ theorem JobM.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     h.idx.trunc (nmCnt_le h.arena.base) hk hD, h.below.trunc,
     by simp only [stampW, truncFrozen_ctl]; exact h.stamp, DeclsF.trunc h.decls, IWOK.trunc h.iw,
     by rw [truncFrozen_ctl]; exact h.top1, PinSetsR.trunc h.pinsets, h.mem.trunc,
-    by rw [pinW_trunc]; exact h.flag, h.memos.trunc, h.fsize⟩
+    by rw [pinW_trunc]; exact h.flag, h.memos.trunc, h.fsize,
+    h.frozen.congr (fun x _ => by rw [truncFrozen_ctl])⟩
 
 end L.Arena
