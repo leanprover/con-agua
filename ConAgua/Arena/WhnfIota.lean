@@ -382,13 +382,12 @@ literal to its reduced constructor form. -/
 -- con-ron: ConRon/Arena/Core.lean:2316-2329 ConRon.Arena.litMajorToCtor
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.litMajorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.litMajorToCtor]
-def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, c, r) {
+def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, c, r) {
   if ⟦h⟧.tag != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
   (t, i) := node LIT⟦h⟧;
   kind := LIT⟨t, i⟩.kind;
   if kind != 1 { r := call lit_to_ctor_if_nat(vis, h); return r };
-  sup := call str_lit_stored(vis);
-  if sup == 0 { return h };
+  if CTL.u64[161] == 0 { return h };
   c := call str_lit_ctor(h);
   r := call whnf(mode, vis, d, c);
   return r

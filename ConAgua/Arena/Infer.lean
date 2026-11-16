@@ -25,7 +25,7 @@ stack `BSTK`** (array 145, top `CTL[137]`, lane `defeq`; outside every tier of `
 
 **Callees not written yet** (stubs, `DefeqCallees` in `Knot.lean`): `abs_entry(e, d, k)`
 (`abstract1Fast coreWalkFuel`), `ar_entry(e, d, k, c)` (`abstractRangeFast coreWalkFuel`); from lane `whnf`: `inst_list`,
-`inst1`, `inst_lp`, `find_proj`, `str_lit_stored`.
+`inst1`, `inst_lp`, `find_proj`.
 -/
 
 open ConRon.Arena
@@ -80,16 +80,14 @@ def inferLitL : FunDecl := lfn (vis, e) locals (t, i, s, c, r) {
   (t, i) := node LIT⟦e⟧;
   if LIT⟨t, i⟩.kind == 0 {
     c := LIT⟨t, i⟩.l;
-    s := call nat_lit_stored(vis);
-    if s == 0 { fail R_NAT_LITERAL_WITHOUT };
+    if CTL.u64[160] == 0 { fail R_NAT_LITERAL_WITHOUT };
     s := call nat_size_refused(c);
     if s != 0 { fail R_THE_KERNEL_REFUSED };
     c := call pin_at(1);
     r := call const_e(c);
     return r
   };
-  s := call str_lit_stored(vis);
-  if s == 0 { fail R_STRING_LITERALS_BEFORE };
+  if CTL.u64[161] == 0 { fail R_STRING_LITERALS_BEFORE };
   c := call pin_at(5);
   r := call const_e(c);
   return r

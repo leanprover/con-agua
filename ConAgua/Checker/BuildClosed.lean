@@ -170,7 +170,7 @@ open L.Arena L.Compiler
 
 /-- `build_index`'s call closure in the checker's program. -/
 def biFns : List FnName :=
-  ["build_index", "sl_snoc", "intern_letE", "letE_find", "letE_push", "app_count", "app_fill", "app_find", "app_push", "base_row_get",
+  ["build_index", "lit_from", "index_freeze", "sl_snoc", "intern_letE", "letE_find", "letE_push", "app_count", "app_fill", "app_find", "app_push", "base_row_get",
    "base_row_set", "basis_name_hit", "basis_name_hit_go", "bb_go", "bb_memo",
    "bb_node", "block_caps_at", "member_never_zero", "former_z", "former_res_sort", "pi_result", "lv_zero", "lh_push", "block_caps_at_er_copy", "block_caps_at_er_copy_go",
    "block_caps_ctor_names", "block_caps_fin", "block_caps_head", "block_caps_one",

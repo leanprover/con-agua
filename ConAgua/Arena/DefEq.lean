@@ -1210,7 +1210,7 @@ the first call. -/
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
-    lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, ss, c, r) {
+    lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, c, r) {
   (t, i) := node LIT⟦lt⟧;
   if LIT⟨t, i⟩.kind == 1 && ⟦fo⟧.tag == 3 {
     (t, i) := node CONST⟦fo⟧;
@@ -1218,8 +1218,7 @@ def stuckStrL : FunDecl :=
     uo := CONST⟨t, i⟩.us;
     el := call pin_word(52);
     sl := call pin_at(6);
-    ss := call str_lit_stored(vis);
-    if co == sl && uo == el && ss != 0 {
+    if co == sl && uo == el && CTL.u64[161] != 0 {
       c := call str_lit_ctor(lt);
       if side == 0 { r := call defeq(mode, vis, d, c, b) } else { r := call defeq(mode, vis, d, a, c) };
       return r
