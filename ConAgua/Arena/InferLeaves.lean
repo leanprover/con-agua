@@ -568,28 +568,25 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     | strVal str => simp [RecRel, StrRec, h3] at hrel
     | natVal N =>
     simp only [inferLitT]
-    refine RefE.bind_callW (fun _ => rfl) (hc.natLitSup n s₀ a₀ dn vis fe M eb hS)
-      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_nat_lit_stored]
-    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
-      (fun hb => by simpa [decBool] using hb)
+    refine RefE.guardIf (by rfl) (fun h0 => by rw [hS.env.natLit] at *; simp_all)
+      (fun hb => by rw [hS.env.natLit] at *; simp_all)
       fun _ _ => ?_
     obtain ⟨-, hsl, hnorm, hpv, -⟩ := (RecRel_natVal _ _ _ _ ▸ hrel : NatRec _ _ _ N)
     have hl : (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat < 2 ^ 61 := by
       have := hS.arena.base.lit.1.top41; have := hsl.le; omega
     refine RefE.bindLift (fun _ => rfl) fun r₂ m₂ c2 => ?_
-    obtain ⟨s₂, hs₂, -, hm₂, hres⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    obtain ⟨s₂, hs₂, -, hm₂, hres⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
       (natSizeRefused_spec p hp.sizeBytes hp.natSizeRefused n _ _ hl) c2
-    have hm : m₂ = m₁ := hs₂.symm.trans hm₂
+    have hm : m₂ = s₀.mem := hs₂.symm.trans hm₂
     subst hm
     refine ⟨_, _, natSizeRefused_run _ _, ?_⟩
     dsimp only [ilE.k_nat_size_refused]
     have hsz : natSizeBytes N = 8 * max (tfld s₀.mem LIT (tierW e) (idxW e) 2).toNat 1 := by
       rw [← hpv]; exact sizeBytes_pv _ _ _ hnorm
-    have hmx := hS₁.pins.maxNatSize
-    have hpw : (rdW (m₂.arr64 PINS) 72) = pinW m₂ 72 := rfl
+    have hmx := hS.pins.maxNatSize
+    have hpw : (rdW (s₀.mem.arr64 PINS) 72) = pinW s₀.mem 72 := rfl
     simp only [hpw] at hres
-    refine RefE.guardThen (by rfl) (fun h => ?_) (fun h => ?_) fun _ _ => il_arm p hp hc n 1 (by decide) hS₁
+    refine RefE.guardThen (by rfl) (fun h => ?_) (fun h => ?_) fun _ _ => il_arm p hp hc n 1 (by decide) hS
     · rw [hres] at h; split at h <;> simp_all <;> omega
     · rw [hres]; simp only [decide_eq_true_eq] at h; rw [hsz, hmx] at h; simp [h]
   · rw [ite_eq_right h3]
@@ -597,13 +594,10 @@ theorem il_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : N
     | natVal N => simp [RecRel, NatRec, h3] at hrel
     | strVal str =>
     simp only [inferLitT]
-    refine RefE.bind_callW (fun _ => rfl) (hc.strLitSup n s₀ a₀ dn vis fe M eb hS)
-      fun r₁ m₁ _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-    dsimp only [ilE.k_str_lit_stored]
-    refine RefE.guardIf (by rfl) (fun h0 => by simp only [decBool, h0]; rfl)
-      (fun hb => by simpa [decBool] using hb)
+    refine RefE.guardIf (by rfl) (fun h0 => by rw [hS.env.strLit] at *; simp_all)
+      (fun hb => by rw [hS.env.strLit] at *; simp_all)
       fun _ _ => ?_
-    exact il_arm p hp hc n 5 (by decide) hS₁
+    exact il_arm p hp hc n 5 (by decide) hS
 
 /-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`il_ref`'s ok half). -/
 @[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
