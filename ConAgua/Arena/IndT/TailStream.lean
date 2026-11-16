@@ -62,7 +62,7 @@ their calls, the rest lifted. -/
 l_model ctsE_spec (p : Prog) (hP : TsLook p)
   fns [hP.ts ↦ ctsE]
   specs [callW_spec p n "block_rec_infos_tf", callW_spec p n "cons_block_recs_temp",
-    callW_spec p n "flush_caches", callW_spec p n "gen_rec_check_pop_all"]
+    callW_spec p n "flush_caches", callW_spec p n "gen_rec_check_pop_all", callW_spec p n "env_set_flags"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -233,7 +233,7 @@ structure TsProg (p : Prog) : Prop where
   pu : p.lookup "erec_put" = some erecPut
   cbrt : CbrtLook p
   rs : p.lookup "env_row_set" = some envRowSetL
-  push : p.lookup "env_push" = some envPushL
+  ef : EnvFlagsProg p
   rg : p.lookup "env_row_get" = some envRowGetL
   ia : p.lookup "iw_alloc" = some iwAlloc
   r3 : p.lookup "rec3" = some rec3
@@ -303,7 +303,7 @@ theorem ts_ref {p : Prog} {dn : NIdx → Option ConLeche.Name} {G : Prop} (hG : 
   refine RefE.onlySim (fun _ => ctsE.k_cons_block_recs_temp.none ..)
     (Q := fun r m3 => callW p n "cons_block_recs_temp" [r2.headD 0, r2.tail.headD 0, vis, 0, 0] m2 = some (r, m3))
     (fun r m3 hc => hc) fun r3 m3 c3 => ?_
-  obtain ⟨hS3, hg3, hsp3, cs, hspc3, hPop3⟩ := cbrt_call P.cbrt P.rs P.push P.rg P.ia P.r3 P.cp P.sn c3 hS2 hd2 hb2
+  obtain ⟨hS3, hg3, hsp3, cs, hspc3, hPop3⟩ := cbrt_call P.cbrt P.ef P.rg P.ia P.r3 P.cp P.sn c3 hS2 hd2 hb2
   have hA3 : AbsOK m3 := hAk _ _ _ _ _ c3 hA2
   have hR3 : RcMR m3 := hRc _ (by simp) _ _ _ _ _ c3 hR2
   rw [ctsE.k_cons_block_recs_temp.arm1]

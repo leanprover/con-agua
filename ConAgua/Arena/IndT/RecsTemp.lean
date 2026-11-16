@@ -80,8 +80,7 @@ theorem SPL.snoc {α : Type} {dec : Mem → Nat → Option α} {vis : Word} {fe 
 `EREC` pointers below the top, and the displaced rows so far (`prevs`, their counters `cs`) a
 stable slice popping as a stack; the result's view the pushed environment's, the displaced rows
 appended (`decPrev`, `decPrevC`), still a stack. -/
-theorem cbrt_ok {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) (hrg : p.lookup "env_row_get" = some envRowGetL)
+theorem cbrt_ok {p : Prog} (hEF : EnvFlagsProg p) (hrg : p.lookup "env_row_get" = some envRowGetL)
     (hia : p.lookup "iw_alloc" = some iwAlloc) (hr3 : p.lookup "rec3" = some rec3)
     (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (vis : Word) (fe : IFEnv) (io il po pl : Word)
@@ -145,8 +144,9 @@ theorem cbrt_ok {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
   rw [h3, liftE_some, cbrtE.k_env_push.arm1] at h
   have hci2 : decCI (erecP s2.mem) (UInt64.ofNat cq : Word).toNat = some ci := by
     rw [t0]; exact (IWGrow.ext hg2).decCI hci
-  obtain ⟨hS3, hg3⟩ := envPush_stage hrs hpu h3 hS2 hci2
-  obtain ⟨hO3, hr3', hv3⟩ := envPush_ownC hrs hpu h3 hS2.check.env hci2
+  obtain ⟨hS3, hg3⟩ := envPush_stage hEF h3 hS2 hci2
+  obtain ⟨hO3, hr3', hv3⟩ := envPush_ownC hEF h3 hS2.check.env hci2
+    (show 161 < (s2.mem.arr64 CTL).size by have := hS2.iw.ctl; omega)
   -- the displaced row's records
   have hg02 := hg2
   have hprev := rec3PrevD hS.check.env hw32
@@ -218,8 +218,7 @@ theorem cbrt_ok {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
   exact ⟨hS5, hg04.trans hg5, hsp5, cs', hspc5, hPop5⟩
 
 /-- **`cons_block_recs_temp(io, il, vis, 0, 0)`'s call**: `cbrt_ok` from the empty displaced rows. -/
-theorem cbrt_call {p : Prog} (hP : CbrtLook p) (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) (hrg : p.lookup "env_row_get" = some envRowGetL)
+theorem cbrt_call {p : Prog} (hP : CbrtLook p) (hEF : EnvFlagsProg p) (hrg : p.lookup "env_row_get" = some envRowGetL)
     (hia : p.lookup "iw_alloc" = some iwAlloc) (hr3 : p.lookup "rec3" = some rec3)
     (hcp : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
     {n : Nat} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} {io il : Word} {r : List Word}
@@ -235,7 +234,7 @@ theorem cbrt_call {p : Prog} (hP : CbrtLook p) (hrs : p.lookup "env_row_set" = s
   obtain ⟨s', hs', -, hx⟩ := triple_of_callE (cbrtE_spec p hP n ⟨m, Locals.init []⟩ io il vis 0 0)
     (callE_of_callW hc)
   subst hs'
-  exact cbrt_ok hrs hpu hrg hia hr3 hcp hsn n m s'.mem a vis fe io il 0 0 infos [] [] r hx hS hd hb
+  exact cbrt_ok hEF hrg hia hr3 hcp hsn n m s'.mem a vis fe io il 0 0 infos [] [] r hx hS hd hb
     (by simpa using SPL.nil (dec := decPrev) (m := m) 0 (Nat.zero_le _))
     (by simpa using SPL.nil (dec := decPrevC) (m := m) 0 (Nat.zero_le _)) trivial
 
