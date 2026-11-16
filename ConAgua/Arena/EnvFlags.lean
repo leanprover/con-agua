@@ -317,12 +317,102 @@ theorem envPush_refines (hP : EnvFlagsProg p) (n : Nat) (s₀ : St) {fe : IFEnv}
     have hpe := IFEnv.push_eq fe ci
     -- the flags kept: `pushRows`
     have keep : (!fe.strLit && litNameAt fe.base.lits ci.name 0) = false →
-        s.mem = ownSet s₀.mem w (vis + 1) q →
+        s.mem = ownSet s₀.mem w (vis + 1) q → r.headD 0 = vis + 1 →
         r.headD 0 = vis + 1 ∧ EnvR s.mem (vis + 1) (fe.push ci) ∧
           s.mem = flagsSet (ownSet s₀.mem w (vis + 1) q) (rdW (s.mem.arr64 CTL) 160)
             (rdW (s.mem.arr64 CTL) 161) := by
-      intro hre hsm
-      sorry
-    sorry
+      intro hre hsm hr1
+      rw [hpe, ite_eq_right (by rw [hre]; simp), hsm]
+      exact ⟨hr1, hE₁, (flagsSet_self _ hc₁).symm⟩
+    by_cases h161 : rdW ((ownSet s₀.mem w (vis + 1) q).arr64 CTL) 161 = 0
+    case neg =>
+      rw [envPushW.k_env_row_set.arm2 _ _ _ _ _ _ h161, envPushW.j1.eq_1] at hm
+      obtain ⟨hr1, hsm⟩ := Prod.mk.inj (Option.some.inj hm)
+      have hs : fe.strLit = true := by rw [hE.strLit, ← hctl]; simpa using h161
+      exact ⟨hL, keep (by simp [hs]) hsm.symm hr1.symm⟩
+    rw [envPushW.k_env_row_set.arm1 _ _ _ _ _ _ h161] at hm
+    have hs : fe.strLit = false := by rw [hE.strLit, ← hctl]; simpa using h161
+    rcases c2 : callW p n "lit_name_at" [w, 0] (ownSet s₀.mem w (vis + 1) q) with _ | ⟨r₂, m₂⟩
+    · rw [c2, envPushW.k_lit_name_at.eq_1] at hm; cases hm
+    rw [c2] at hm
+    obtain ⟨s₂, hs₂, -, hm₂, hln⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
+      (litNameAt_refines hP.litNameAt n ⟨ownSet s₀.mem w (vis + 1) q, Locals.init []⟩ hE₁.lits w 0 hw32
+        (by simp)) c2
+    simp only at hm₂
+    rw [hs₂] at hm₂; subst hm₂
+    have hname' : ci.name = decI w := hname
+    have hlits : (pushRows fe ci).base.lits = fe.base.lits := rfl
+    rw [hlits, ← hname', show (0 : Word).toNat = 0 from rfl] at hln
+    by_cases h0 : r₂.headD 0 = 0
+    · rw [envPushW.k_lit_name_at.arm2 _ _ _ _ _ h0, envPushW.j1.eq_1] at hm
+      obtain ⟨hr1, hsm⟩ := Prod.mk.inj (Option.some.inj hm)
+      have : litNameAt fe.base.lits ci.name 0 = false := by rw [← hln, h0]; rfl
+      exact ⟨hL, keep (by simp [this]) hsm.symm hr1.symm⟩
+    rw [envPushW.k_lit_name_at.arm1 _ _ _ _ _ h0] at hm
+    have hre : (!fe.strLit && litNameAt fe.base.lits ci.name 0) = true := by
+      rw [hs, ← hln]; simpa using h0
+    rw [hpe, ite_eq_left hre]
+    rcases c3 : callW p n "lits_stored" [vis + 1, 0, 3] (ownSet s₀.mem w (vis + 1) q) with _ | ⟨r₃, m₃⟩
+    · rw [c3, envPushW.k_lits_stored.eq_1] at hm; cases hm
+    rw [c3] at hm
+    obtain ⟨s₃, hs₃, -, hm₃, hl3⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
+      (litsStored_refines hP n ⟨ownSet s₀.mem w (vis + 1) q, Locals.init []⟩ (vis + 1) 0 3 hE₁ (by simp)) c3
+    simp only at hm₃
+    rw [hs₃] at hm₃; subst hm₃
+    replace hl3 : (r₃.headD 0 != 0) = (pushRows fe ci).natLitStoredBy := hl3
+    -- the final flags `a`, `b`
+    have fin : ∀ b : Word, (b != 0) = ((pushRows fe ci).natLitStoredBy && (pushRows fe ci).litsStored 3 10) →
+        envPushW.j2 p vis (r₃.headD 0) b (ownSet s₀.mem w (vis + 1) q) = some (r.headD 0, s.mem) →
+        r.headD 0 = vis + 1 ∧ EnvR s.mem (vis + 1) (let fe2 := (pushRows fe ci).setFlags (pushRows fe ci).natLitStoredBy fe.strLit
+          fe2.setFlags fe2.natLit fe2.strLitStoredBy) ∧
+          s.mem = flagsSet (ownSet s₀.mem w (vis + 1) q) (rdW (s.mem.arr64 CTL) 160)
+            (rdW (s.mem.arr64 CTL) 161) := by
+      intro b hb hj
+      rw [envPushW.j2.arm1, envPushW.j1.eq_1] at hj
+      obtain ⟨hr1, hsm⟩ := Prod.mk.inj (Option.some.inj hj)
+      have e := hE₁.setFlags (r₃.headD 0) b hc₁
+      have ha : (r₃.headD 0 != 0) = (pushRows fe ci).natLitStoredBy := hl3
+      refine ⟨hr1.symm, ?_, ?_⟩
+      · rw [← hsm]
+        simp only [IFEnv.setFlags_setFlags, IFEnv.strLitStoredBy, IFEnv.natLitStoredBy, IFEnv.litsStored_setFlags]
+        rw [ha, hb] at e
+        exact e
+      · rw [← hsm]
+        show flagsSet (ownSet s₀.mem w (vis + 1) q) (r₃.headD 0) b = flagsSet (ownSet s₀.mem w (vis + 1) q)
+          (rdW ((flagsSet (ownSet s₀.mem w (vis + 1) q) (r₃.headD 0) b).arr64 CTL) 160)
+          (rdW ((flagsSet (ownSet s₀.mem w (vis + 1) q) (r₃.headD 0) b).arr64 CTL) 161)
+        rw [flagsSet_rd160 _ _ _ hc₁, flagsSet_rd161 _ _ _ hc₁]
+    by_cases ha0 : r₃.headD 0 = 0
+    · rw [envPushW.k_lits_stored.arm2 _ _ _ _ _ ha0] at hm
+      refine ⟨hL, fin 0 ?_ hm⟩
+      have : (pushRows fe ci).natLitStoredBy = false := by rw [← hl3, ha0]; rfl
+      simp [this]
+    rw [envPushW.k_lits_stored.arm1 _ _ _ _ _ ha0] at hm
+    rcases c4 : callW p n "lits_stored" [vis + 1, 3, 10] (ownSet s₀.mem w (vis + 1) q) with _ | ⟨r₄, m₄⟩
+    · rw [c4, envPushW.k_lits_stored_2.none] at hm; cases hm
+    rw [c4, envPushW.k_lits_stored_2.arm1] at hm
+    obtain ⟨s₄, hs₄, -, hm₄, hl4⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
+      (litsStored_refines hP n ⟨ownSet s₀.mem w (vis + 1) q, Locals.init []⟩ (vis + 1) 3 10 hE₁ (by simp)) c4
+    simp only at hm₄
+    rw [hs₄] at hm₄; subst hm₄
+    replace hl4 : (r₄.headD 0 != 0) = (pushRows fe ci).litsStored 3 10 := hl4
+    refine ⟨hL, fin _ ?_ hm⟩
+    have : (pushRows fe ci).natLitStoredBy = true := by rw [← hl3]; simpa using ha0
+    rw [this, hl4]; rfl
+
+/-- **`env_set_flags(a, b)` refines `IFEnv.setFlags`**: the flag words written, the environment's
+flags `a ≠ 0`, `b ≠ 0`. -/
+@[refines ConRon.Arena.IFEnv.setFlags]
+theorem envSetFlags_refines (hp : p.lookup "env_set_flags" = some envSetFlagsL) (n : Nat) (s₀ : St)
+    {fe : IFEnv} (vis a b : Word) (hE : EnvR s₀.mem vis fe) (hc : 161 < (s₀.mem.arr64 CTL).size) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_set_flags" [a, b]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = flagsSet s₀.mem a b ∧
+      EnvR s'.mem vis (fe.setFlags (a != 0) (b != 0)); ⊤⦄ :=
+  triple_post (envSetFlags_specW p hp n s₀ a b) fun r s ⟨hL, hm⟩ => by
+    rw [envSetFlagsW.arm1] at hm
+    obtain ⟨-, hsm⟩ := Prod.mk.inj (Option.some.inj hm)
+    rw [← hsm]
+    exact ⟨hL, rfl, hE.setFlags a b hc⟩
 
 end L.Arena
