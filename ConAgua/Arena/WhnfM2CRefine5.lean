@@ -53,20 +53,6 @@ theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK 
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
   all_goals grind
 
-/-- A five-word answer is its own five words. -/
-theorem list5_eta (r : List Word) (h : r.length = 5) :
-    [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
-      r.tail.tail.tail.tail.headD 0] = r := by
-  match r, h with
-  | [_, _, _, _, _], _ => rfl
-
-/-- The view decodes alike over the same record pool. -/
-theorem decMV_congr {m m' : Mem} (h : erecP m' = erecP m) (r : List Word) : decMV m' r = decMV m r := by
-  unfold decMV; rw [h]
-
-theorem MVOk_congr {m m' : Mem} (h : erecP m' = erecP m) {r : List Word} (hok : MVOk m' r) : MVOk m r := by
-  unfold MVOk at *; rw [← h]; exact hok
-
 set_option maxRecDepth 8192 in
 theorem ctorView_coreFn : "ctor_view" ∈ coreFns := List.elem_iff.mp (by decide)
 
