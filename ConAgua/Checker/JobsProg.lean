@@ -45,10 +45,11 @@ theorem checkerProg_jobProgPB (bs : List UInt8) (hr : RomOK bs)
     let ⟨F, h, hc⟩ := checkerProg_cdW; ⟨F, h, closedW_subPB bs hc⟩
   have hAP : AndPinIndProg (Prog.subPB bs checkerProg) := by
     refine ⟨hcdP.ibe, ?_, ?_, ?_, ?_, ?_, hcanon⟩ <;> chk_lk
-  refine ⟨?_, ?_, hcdP, ?_, ?_, hAP, hrom.andPin, hap, hcd⟩
+  refine ⟨?_, ?_, hcdP, ?_, ?_, hAP, hrom.andPin, hap, hcd, ?_⟩
   · chk_lk
   · chk_lk
   · prog_bundle []
+  · chk_lk
   · chk_lk
 
 end L.Checker
