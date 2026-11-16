@@ -23,22 +23,14 @@ import ConAgua.Arena.LdRd
 /-!
 # `beta_peel` (proved) and `whnf_app` (groundwork): the batched β spine
 
-`WhnfCore.lean`'s `betaPeelL` and `whnfAppL`, each a `while` loop over the spine's argument array
-(`get_app_spine`'s slices `(ao, an)`, `(ao + an, an)`), with an accumulator (`beta_peel`) or the
-head's growing argument vector (`whnf_app`) pushed at the top of the spine stack (`SPN` = 144,
-top `CTL[136]`).
+`WhnfCore.lean`'s `betaPeelL` and `whnfAppL`, each a loop over the spine's argument array
+(`get_app_spine`'s slices `(ao, an)`, `(ao + an, an)`); `whnf_app` pushes the head's growing argument
+vector at the top of the spine stack (`SPN` = 144, top `CTL[136]`).
 
-**Proved here: `betaPeel_refines`** (with the hypothesis
-`hp : WhnfCoreProg p`). The method follows `WhnfCoreSlot.lean`'s loop: the loop is a named block
-(`betaPeelW`, spliced into `betaPeelL'`, `betaPeelL_eq : betaPeelL = betaPeelL' := rfl`, so
-`WhnfCore.lean` is untouched), its model `peelLoop` is by L fuel (callees through `callW`), the
-block spec `betaPeelW_spec` is by induction on the fuel, `betaPeel_spec` is the function's, and
-`peelFull_ref` is the refinement by induction on the fuel. What `WhnfCoreSlot.lean`'s loop does
-not need: the model's memory changes under stack writes, so each step shows `SpineR` of the
-growing accumulator after the push (`SpineR.push`) and `CoreS` across the write
-(`CoreS.frame_stk`), and across `mk_app_n_from` (`CoreS.of_app`: `ArenaD` from the callee, the
-rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used through
-`hil`, so the theorem depends on that stub's `sorry`.
+**Proved here: `betaPeel_refines'`.** `beta_peel` reads the λ chain and substitutes the spine range
+`args[s:i]` in place (`inst_list` on the slice `(ao + s, i - s)`: `InstRangeOK`, proved in
+`CoreWalks.lean`). Its model `bpW` is generated (`betaPeel_spec`); `bp_ok` is the refinement by
+induction on the spine left, `mk_app_n_from` through `callW_mkAppNFrom` and `CoreS.of_app`.
 
 **Handle words of `mk_app`/`mk_app_n_from` results.** `mkAppNFrom_refines` dropped `HW (r.headD 0)`;
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`consInternM_lt`: a hit's index is below

@@ -231,7 +231,7 @@ def whnfStuckL : FunDecl :=
 /-- The ι step of `whnf_app`'s loop at the application `hd vargs` (`vargs` the slice `(vo, vn)`):
 tried only at a stored recursor (the record `q` looked up here, once) at its own number of levels,
 applied to exactly `mI + 1` arguments (`vn - 1 == mI`, which does not wrap). -/
--- con-ron: ConRon/Arena/Core.lean:2674-2695 ConRon.Arena.whnfAppIota
+-- con-ron: ConRon/Arena/Core.lean:2669-2690 ConRon.Arena.whnfAppIota
 @[no_expose, l_impl ConRon.Arena.whnfAppIota]
 def whnfAppIotaL : FunDecl :=
     lfn (mode, vis, d, hd, vo, vn) locals (t, x, c, us, f, q, lo, usl, st, e2) {
@@ -344,8 +344,6 @@ def whnfAppL : FunDecl :=
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2647-2667 ConRon.Arena.betaPeel -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.betaPeel` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.betaPeel`, `ConRon.Arena.instantiateRevRange` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.betaPeel]
 def betaPeelL : FunDecl := lfn (t, s, ao, an, i) locals (tt, x, e2, e3) {
   for i < an {

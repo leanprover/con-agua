@@ -56,7 +56,6 @@ abbrev ilCut (m : Mem) (h d : Word) : Prop := derBW m h < 32767 ∧ derBW m h �
 /-! ## The L code: the pure walk -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:395-423 ConRon.Arena.instantiateList -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instantiateList` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instantiateList]
 def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
@@ -73,7 +72,6 @@ def ilGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:425-435 ConRon.Arena.instListArmApp -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmApp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmApp]
 def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   (t, i) := node APP⟦h⟧;
@@ -86,7 +84,6 @@ def ilApp : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:437-447 ConRon.Arena.instListArmBind -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmBind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmBind]
 def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -100,7 +97,6 @@ def ilLam : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:437-447 ConRon.Arena.instListArmBind -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmBind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmBind]
 def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
   if d + 1 == 0 { abort };
@@ -114,7 +110,6 @@ def ilForall : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, x, y, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:449-460 ConRon.Arena.instListArmLet -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmLet` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmLet]
 def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
   if d + 1 == 0 { abort };
@@ -130,7 +125,6 @@ def ilLet : FunDecl := lfn (h, d, o, l, fu) locals (t, i, f, a, b, x, y, z, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:462-471 ConRon.Arena.instListArmProj -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmProj` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmProj]
 def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
   (t, i) := node PROJ⟦h⟧;
@@ -143,7 +137,6 @@ def ilProj : FunDecl := lfn (h, d, o, l, fu) locals (t, i, nm, ix, e, x, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:473-498 ConRon.Arena.instListArmBVar -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListArmBVar` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListArmBVar]
 def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
   (t, i) := node BVAR⟦h⟧;
@@ -164,7 +157,6 @@ def ilBVar : FunDecl := lfn (h, d, o, l, fu) locals (t, i, j, q, v, x, r) {
 /-! ## The L code: the memo walk -/
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:527-551 ConRon.Arena.instantiateListGo -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instantiateListGo` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instantiateListGo]
 def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
   if fu == 0 { abort };
@@ -181,7 +173,6 @@ def ilgGo : FunDecl := lfn (h, d, o, l, fu) locals (x, g, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:553-568 ConRon.Arena.instListGoArmApp -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListGoArmApp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListGoArmApp]
 def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
@@ -198,7 +189,6 @@ def ilgApp : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:570-585 ConRon.Arena.instListGoArmBind -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListGoArmBind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListGoArmBind]
 def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -216,7 +206,6 @@ def ilgLam : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:570-585 ConRon.Arena.instListGoArmBind -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListGoArmBind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListGoArmBind]
 def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -234,7 +223,6 @@ def ilgForall : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, x
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:587-603 ConRon.Arena.instListGoArmLet -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListGoArmLet` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListGoArmLet]
 def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -254,7 +242,6 @@ def ilgLet : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, f, a, b, x
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:605-619 ConRon.Arena.instListGoArmProj -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instListGoArmProj` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instListGoArmProj]
 def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call ilm_find(h, d);
