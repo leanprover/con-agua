@@ -212,15 +212,6 @@ theorem CoreSpec.run {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName
   let ⟨hok, hA, hres, hr⟩ := h.of_callW hc
   ⟨hres ▸ AM.run_of_ok _ _ hok, hA, hr⟩
 
-/-- **A refinement from the twin's run.** -/
-theorem CoreRef.of_run {α : Type} [Inhabited α] {T : AM α} {a a' : AState} {v : α}
-    {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
-    (hrun : T.run a = .ok (v, a')) (hA : CoreAfter dn m m' a' vis fe M eb) (hv : v = dec r)
-    (hr : ok r) : CoreRef T a dec dn m vis fe M eb r m' ok := by
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
-
 theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
   rw [h]; rfl
 
@@ -373,7 +364,7 @@ theorem ctorView_refines (p : Prog) (hp : IotaProg' p) :
   have hstuck : (ctorView fe (decE e)).run a₀ = .ok (.stuck (decE e), a₀) →
       CoreRef (ctorView fe (decE e)) a₀ (decMV s₀.mem) dn s₀.mem vis fe MM eb [0, e, 0, 0, 0] s₀.mem
         (MVOk s₀.mem) := fun hrun =>
-    CoreRef.of_pure hS hrun rfl (by simp) ⟨rfl, fun h => absurd rfl h⟩
+    CoreRef.of_pure hS hrun rfl (by simp) ⟨rfl, he, by simp, by simp, fun h => absurd rfl h⟩
   by_cases h3 : tagW (r₁.headD 0) ≠ 3
   · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, hm⟩ := hW
@@ -426,7 +417,7 @@ theorem ctorView_refines (p : Prog) (hp : IotaProg' p) :
     rw [← hm]
     obtain ⟨cv, hcv, -⟩ := hctor.1 h4
     subst hcv
-    refine CoreRef.of_pure hS (by rw [hpre, hfind']; rfl) rfl ?_ ⟨rfl, fun _ => ⟨_, _, _, _, hci⟩⟩
+    refine CoreRef.of_pure hS (by rw [hpre, hfind']; rfl) rfl ?_ ⟨rfl, he, hn32, hu32, fun _ => ⟨_, _, _, _, hci⟩⟩
     exact (decMV_ctor (by decide) hci).symm
   · have h4' : rdW (s₀.mem.arr64 (L.tierA EREC (r₂.tail.headD 0 >>> 40)))
         (r₂.tail.headD 0 &&& 1099511627775) ≠ 4 := by simpa [erRd] using h4

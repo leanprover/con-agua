@@ -29,7 +29,7 @@ theorem betaPeel_refines (hp : WhnfCoreProg p) (hw : CoreWalkProg p) (n : Nat) (
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "beta_peel" [t, s, ao, an, i]
       (betaPeel (decE t) s.toNat args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  betaPeel_refines' p hp hw.instListOK n s₀ a₀ dn vis fe MM eb t s ao an i args hS ht hsi hia har hlo
+  betaPeel_refines' p hp hw.instRangeOK n s₀ a₀ dn vis fe MM eb t s ao an i args hS ht hsi hia har hlo
 
 /-- **`pi_residual` refines `piResidual`.** -/
 @[refines ConRon.Arena.piResidual]

@@ -73,13 +73,51 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hpre : SlotPre s₀ a₀ dn vis fe M eb mode) (hcw : HW c) (hus : HW us)
     (hq : decCI (erecP s₀.mem) q.toNat = some (.recInfo cv mI rP isK rules))
     (hfind : fe.find? (decI c) = some (.recInfo cv mI rP isK rules))
-    (hsa : SpineR s₀.mem so sn xs) (hsz : xs.size = mI + 1)
+    (hsa : SpineR s₀.mem so sn xs) (hsz' : xs.size = mI + 1)
     (hsat : so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat) :
     RefE (MajorG p n) (irAtE p (n + 1) s₀.mem mode vis d c us q so sn)
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI c)
         (decI us) cv mI rP isK rules xs) a₀
       (CorePost decOptR dn s₀.mem vis fe M eb ResW) := by
-  sorry
+  have hS := hpre.rel
+  have hsz : xs.size = sn.toNat := hsa.size
+  have k5 : erRd s₀.mem q = 5 := Classical.byContradiction fun h =>
+    (decCI_rec_rd (erRdOK s₀.mem) hq).2 h _ _ _ _ _ rfl
+  obtain ⟨cv', rules', heq, hcv, hrules⟩ := (decCI_rec_rd (erRdOK s₀.mem) hq).1 k5
+  injection heq with e1 e2 e3 e4 e5
+  subst e1 e5
+  obtain ⟨-, -, -, -, htyw, htype⟩ := decCV_rd_ci (erRdOK s₀.mem) hcv
+  simp only [irAtE]
+  rw [iotaRecAt_eq]
+  cases n with
+  | zero => rw [callW_zero, liftE_none, irAtE.k_peel_pis.eq_1]; exact RefE.of_cls0 (by simp)
+  | succ N =>
+  refine RefE.onlySim (fun _ => irAtE.k_peel_pis.eq_1 ..) (fun _ _ h => h) fun rp m3 c3 => ?_
+  obtain ⟨t3, ht3, hm3, -, -, hrunP⟩ := triple_of_callW
+    (peelPis_refines' p hp.spine.peel (N + 1) ⟨s₀.mem, Locals.init []⟩ a₀ hS.arena.base sn _ htyw) c3
+  have hm3' : s₀.mem = m3 := hm3.symm.trans ht3
+  subst hm3'
+  have hrunP' : (peelPis (mI + 1) cv.type).run a₀ = .ok (decOpt (rp.headD 0) (rp.tail.headD 0), a₀) := by
+    rw [htype, ← hsz', hsz]; exact hrunP
+  refine RefE.bind_right hrunP' ?_
+  dsimp only [irAtE.k_peel_pis]
+  by_cases p0 : rp.headD 0 = 0
+  · rw [ite_eq_left p0]
+    have : decOpt (rp.headD 0) (rp.tail.headD 0) = none := by unfold decOpt; rw [ite_eq_left p0]
+    rw [this]
+    exact RefE.ret rfl (CorePost.ret hS rfl
+      ⟨by show HW (0 : Word); unfold HW; decide, by show HW (0 : Word); unfold HW; decide⟩)
+  rw [ite_eq_right p0]
+  have : decOpt (rp.headD 0) (rp.tail.headD 0) = some (decE (rp.tail.headD 0)) := by
+    unfold decOpt; rw [ite_eq_right p0]
+  rw [this]
+  have hM := major_ref p hp hc hw hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
+    s₀ a₀ dn vis fe M eb mode d c us q so sn cv rules xs hS hpre.mode4 hpre.eb_mode hcw hus
+    hcv hrules ⟨_, _, _, _, hfind⟩ hsa hsat (by rw [← e2, ← hsz, hsz'])
+  rw [← e2, ← e3, ← e4] at hM
+  exact RefE.tail_eq (k := irAtE.k_iota_rec_major p) (G' := MajorG p N)
+    (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩) rfl
+    (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩) hM
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app_iota` and `whnf_stuck`
 assume; `at_ref`'s ok half), from the callees' specs and the stub assumption `ErecKeptRec` (the
