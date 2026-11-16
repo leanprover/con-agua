@@ -55,11 +55,8 @@ theorem whnfApp_nolam (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (d
     whnfApp mode r fe depth v hd vargs same args nodes i =
       (show AM WhnfStep from do
         let ap ← internAppRebuilt nodes[i]! same v args[i]
-        if hd.tag == ETag.const then do
-          let step ← iotaRecAt mode r fe depth hd (vargs.push args[i]) (vargs.push args[i]).size
-          appStepT mode r fe depth hd ap (vargs.push args[i]) (ap == nodes[i]!) args nodes i step
-        else
-          appStepT mode r fe depth hd ap (vargs.push args[i]) (ap == nodes[i]!) args nodes i none) := by
+        let step ← whnfAppIota mode r fe depth hd (vargs.push args[i]) (vargs.push args[i]).size
+        appStepT mode r fe depth hd ap (vargs.push args[i]) (ap == nodes[i]!) args nodes i step) := by
   rw [whnfApp]
   simp only [hi, dite_true, hv, Bool.false_eq_true, ite_false]
   rfl
@@ -102,15 +99,21 @@ theorem apW_ref (k : Nat) (m : Mem) (a : AState) (dn : NIdx → Option ConLeche.
 end appRef0
 /-! ## The ι step's claim and what the `app` arm's errors assume -/
 
-/-- `iota_rec_at`'s error claim at fuel `N + 1` (the shape of `IotaRecAtOK`). -/
+/-- `iota_rec_at`'s error claim at fuel `N + 1` (the shape of `IotaRecAtOK`: the caller's
+record `q`, exactly `mI + 1` arguments). -/
 def IotaRecAtE (p : Prog) : Prop :=
   ∀ N, KnotUpTo p N → KnotUpToE p N → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (eb mode d hd so sn : Word) (xs : Array EIdx), N ≤ F → N ≤ 2 ^ 62 →
-    SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
+    (eb mode d c us q so sn : Word) (xs : Array EIdx) (cv : IConstantVal) (mI rP : Nat)
+    (isK : Bool) (rules : List IRecRule), N ≤ F → N ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW c → HW us →
+    decCI (erecP s₀.mem) q.toNat = some (.recInfo cv mI rP isK rules) →
+    fe.find? (decI c) = some (.recInfo cv mI rP isK rules) →
+    SpineR s₀.mem so sn xs → xs.size = mI + 1 →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    CoreSpecE p (N + 1) "iota_rec_at" [mode, vis, d, hd, so, sn]
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size) s₀ a₀
+    CoreSpecE p (N + 1) "iota_rec_at" [mode, vis, d, c, us, q, so, sn]
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
+        (decI c) (decI us) cv mI rP isK rules xs) s₀ a₀
 
 /-- **What the `app` arm's errors assume** at L fuel `n` (`whnf_app`, `whnf_core_app2`,
 `whnf_core_app`): the knot's slots' claims and `iota_rec_at`'s. -/
