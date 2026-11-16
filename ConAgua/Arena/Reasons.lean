@@ -424,5 +424,7 @@ abbrev R_THE_KERNEL_REFUSED_TO : L.Word := 813
 abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE : L.Word := 817
 /-- reject: the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer -/
 abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT : L.Word := 821
+/-- reject: the recursor 's rule for is not written as a function of the recursor's leading arguments and the constructor's fields -/
+abbrev R_THE_RECURSOR_S_RULE_FOR_IS_NOT : L.Word := 825
 
 end L.Arena

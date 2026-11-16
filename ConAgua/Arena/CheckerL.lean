@@ -20,9 +20,12 @@ so that the assembled program (`Checker/Prog.lean`) does not wait for them.
   `FIRSTS[k]` is the next counter (`IStreamIndex.firsts`), its constants go to the stream
   index's rows (`insertConsts`: a row is written only where none is, the counter always moves),
   its tables to the table rows at position `k` (`insertTables`). The next counter is `CTL[128]`.
-  It runs with the scratch tier off, so every record lands in `EREC`'s tier 0.
+  It runs with the scratch tier off, so every record lands in `EREC`'s tier 0. Past the last
+  record the index is frozen (`index_freeze`): the ten literal names into `CTL[162‥171]`, the
+  literal flags' thresholds into `CTL[172]`, `CTL[173]`.
 * `record_job(k)`: `recordJob`: the scratch bracket, the view of position `k` (`CTL[134]` its
-  first counter, `CTL[135]` the position), a fresh own layer (the stamp `CTL[133]` bumped,
+  first counter, `CTL[135]` the position, the literal flags `CTL[160]`, `CTL[161]` by `from_le`
+  against the thresholds), a fresh own layer (the stamp `CTL[133]` bumped,
   `vis = 0`), the `And` pin, then `check_decl(k, 0)`; the tier-1 records dropped with the bracket.
 * `check_jobs(j, hi)`: the jobs `j‥hi - 1` in order (`checkJobList` over a range).
 -/
@@ -82,10 +85,62 @@ def idxAddL : FunDecl := lfn (k) locals (o, n, z) {
   return 0
 }
 
+/-- `lit_from(i, stop)`: `litFrom` over the stream index's rows of the literal names
+`CTL[162 + i‥162 + stop)`: from which counter a view holds them all, as `optW` (`0` none, `k + 1`
+some `k`): one past the largest counter of their rows, none if one has no row (or the range is
+past the ten names). -/
+-- con-ron: ConRon/Arena/Env.lean:244-258 ConRon.Arena.litFrom
+@[no_expose, l_impl ConRon.Arena.litFrom]
+def litFromL : FunDecl := lfn (i, stop) locals (c, p, k) {
+  if stop <= i { return 1 };
+  if 10 <= i { return 0 };
+  (c, p) := call base_row_get(CTL.u64[162 + i]);
+  if c == 0 { return 0 };
+  k := call lit_from(i + 1, stop);
+  if k == 0 { return 0 };
+  if c <= k - 1 { return k };
+  return c + 1
+}
+
+/-- `index_freeze()`: `IStreamIndex.freeze`: the ten literal names off the pin table into
+`CTL[162‥171]` (`strLitNames`' order: `Nat`, `Nat.zero`, `Nat.succ`, then `String`,
+`String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat`), and the two flags'
+thresholds over them into `CTL[172]` (the first three), `CTL[173]` (all ten). -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:72-79 ConRon.Arena.IStreamIndex.freeze
+-- con-ron: ConRon/Arena/Core.lean:125-138 ConRon.Arena.strLitNames
+-- con-ron: ConRon/Arena/Core.lean:116-123 ConRon.Arena.natLitNames
+@[no_expose, l_impl ConRon.Arena.IStreamIndex.freeze ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
+def indexFreezeL : FunDecl := lfn () locals (a, nf, sf) {
+  a := call pin_at(1);
+  CTL.u64[162] := a;
+  a := call pin_at(2);
+  CTL.u64[163] := a;
+  a := call pin_at(3);
+  CTL.u64[164] := a;
+  a := call pin_at(5);
+  CTL.u64[165] := a;
+  a := call pin_at(6);
+  CTL.u64[166] := a;
+  a := call pin_at(7);
+  CTL.u64[167] := a;
+  a := call pin_at(8);
+  CTL.u64[168] := a;
+  a := call pin_at(9);
+  CTL.u64[169] := a;
+  a := call pin_at(10);
+  CTL.u64[170] := a;
+  a := call pin_at(12);
+  CTL.u64[171] := a;
+  nf := call lit_from(0, 3);
+  sf := call lit_from(0, 10);
+  CTL.u64[172] := nf;
+  CTL.u64[173] := sf;
+  return 0
+}
+
 /-- `build_index(cnt)`: `buildIndex` over records `0‥cnt - 1`, from the empty index (zero rows,
-`CTL[128] = 0`). -/
+`CTL[128] = 0`), frozen past the last record (`index_freeze`). -/
 -- con-ron: ConRon/Arena/StreamIndex.lean:81-96 ConRon.Arena.buildIndexGo
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.buildIndexGo` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/StreamIndex.lean:98-101 ConRon.Arena.buildIndex
 @[no_expose, l_impl ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
 def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
@@ -93,7 +148,17 @@ def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
   for k < cnt {
     z := call idx_add(k)
   };
+  z := call index_freeze();
   return 0
+}
+
+/-- `from_le(o, c)`: `fromLe` of the threshold `o` (`optW`: `0` none, `k + 1` some `k`) at the
+counter `c`: `k ≤ c`. -/
+-- con-ron: ConRon/Arena/Env.lean:260-264 ConRon.Arena.fromLe
+@[no_expose, l_impl ConRon.Arena.fromLe]
+def fromLeL : FunDecl := lfn (o, c) locals () {
+  if o == 0 { return 0 };
+  return u64(o - 1 <= c)
 }
 
 /-! ## The jobs -/
@@ -102,12 +167,10 @@ def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
 (`IStreamIndex.view`), a fresh own layer, `recordCheck` (the `And` pin, then `check_decl` at
 `vis = 0`), the bracket closed (the job's own records, `EREC`'s tier 1, with it). -/
 -- con-ron: ConRon/Arena/StreamIndex.lean:103-110 ConRon.Arena.IStreamIndex.view
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.IStreamIndex.view`, `ConRon.Arena.fromLe` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.IStreamIndex.view` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/StreamIndex.lean:112-120 ConRon.Arena.recordCheck
 -- con-ron: ConRon/Arena/StreamIndex.lean:122-130 ConRon.Arena.recordJob
 @[no_expose, l_impl ConRon.Arena.IStreamIndex.view ConRon.Arena.recordCheck ConRon.Arena.recordJob]
-def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
+def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v, c) {
   z := call scratch_enter();
   CTL.u64[130] := 0;
   z := call iw_reset();
@@ -115,8 +178,13 @@ def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v) {
   if 4294967294 <= st { abort };
   CTL.u64[133] := st + 1;
   if len(FIRSTS.u64) <= k { abort };
-  CTL.u64[134] := FIRSTS.u64[k];
+  c := FIRSTS.u64[k];
+  CTL.u64[134] := c;
   CTL.u64[135] := k;
+  z := call from_le(CTL.u64[172], c);
+  CTL.u64[160] := z;
+  z := call from_le(CTL.u64[173], c);
+  CTL.u64[161] := z;
   ok := call and_pin_ok(k);
   if ok == 0 { fail L.Arena.R_AND_MUST_BE };
   v := call check_decl(k, 0);
@@ -139,6 +207,7 @@ def checkJobsL : FunDecl := lfn (j, hi) locals (z) {
 /-- The check phase's functions. -/
 def checkerProgL : Prog :=
   [("idx_consts", idxConstsL), ("idx_tables", idxTablesL), ("idx_add", idxAddL),
-   ("build_index", buildIndexL), ("record_job", recordJobL), ("check_jobs", checkJobsL)]
+   ("lit_from", litFromL), ("index_freeze", indexFreezeL), ("build_index", buildIndexL),
+   ("from_le", fromLeL), ("record_job", recordJobL), ("check_jobs", checkJobsL)]
 
 end L.Arena

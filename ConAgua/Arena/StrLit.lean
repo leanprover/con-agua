@@ -6,7 +6,7 @@ import ConAgua.Census.Attr
 @[expose] public section
 
 /-!
-# String literals in L: `str_lit_stored`, `lit_shape_ok`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)
+# String literals in L: `lit_shape_ok`, `str_lit_ctor` (lane `defeq2`, helper `defeq2-str`)
 
 Twin: `vendor/con-ron/ConRon/Arena/Core.lean` ("String literals"). L names and their twins:
 
@@ -17,7 +17,6 @@ Twin: `vendor/con-ron/ConRon/Arena/Core.lean` ("String literals"). L names and t
 | `str_param_sort(pn)` | none | `internLNode (.param p)`, `.succ`, `internE (.sort ·)`: the prefix of the three `List` tests |
 | `str_ls1(u)` | `internLsNode [u]` | the one-element list at the pool top |
 | `list_ty_ok`, `list_nil_ty_ok`, `list_cons_ty_ok`, `char_of_nat_ty_ok`, `string_of_list_ty_ok` | the `…TyOk` tests | `(found, q)` is `find?`'s result, as `nat_ind_ok` |
-| `str_lit_stored(vis)` | `strLitStored` | presence of the seven names after `nat_lit_stored` |
 | `lit_shape_ok(p)` | `litShapeOk` | the `…TyOk` test of the name's pin, `1` elsewhere |
 | `str_utf8_char(k, n)` | none | `utf8_char` (`Scan/Utf8.lean`) on the pool's byte words: one code point of `s.toList` |
 | `str_cons_spine(cons, ofNat, nilE, k, n)` | `strLitConsSpine` | the bytes `[k, n)` of the pool; recursion over the characters as the twin's |
@@ -187,35 +186,7 @@ def stringOfListTyOkL : FunDecl :=
   return 0
 }
 
-/-! ## `str_lit_stored`, `lit_shape_ok` -/
-
-/-- `str_lit_stored(vis)`: `nat_lit_stored` and the seven string-support names, by presence only;
-the seven pinned before their conjunction. -/
--- con-ron: ConRon/Arena/Core.lean:798-815 ConRon.Arena.strLitStored
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.strLitStored` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.strLitStored]
-def strLitStoredL : FunDecl :=
-  lfn (vis) locals (r, st, sl, li, ln, lc, ch, co, f1, q1, f2, q2, f3, q3, f4, q4, f5, q5, f6, q6,
-    f7, q7) {
-  r := call nat_lit_stored(vis);
-  if r == 0 { return 0 };
-  st := call pin_at(5);
-  sl := call pin_at(6);
-  li := call pin_at(7);
-  ln := call pin_at(8);
-  lc := call pin_at(9);
-  ch := call pin_at(10);
-  co := call pin_at(12);
-  (f1, q1) := call env_find(st, vis);
-  (f2, q2) := call env_find(sl, vis);
-  (f3, q3) := call env_find(li, vis);
-  (f4, q4) := call env_find(ln, vis);
-  (f5, q5) := call env_find(lc, vis);
-  (f6, q6) := call env_find(ch, vis);
-  (f7, q7) := call env_find(co, vis);
-  return u64(f1 != 0) & u64(f2 != 0) & u64(f3 != 0) & u64(f4 != 0) & u64(f5 != 0) &
-    u64(f6 != 0) & u64(f7 != 0)
-}
+/-! ## `lit_shape_ok` -/
 
 /-- `nat_ind_at_cv(q)`: `natIndOk (some (.indInfo cv {}))` at the constant value `q` (no level
 parameters, type `Sort 1`): `nat_ind_ok` at a record of the kind `litShapeOk` builds. -/

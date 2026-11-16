@@ -94,110 +94,55 @@ theorem projLitToCtor_run_plain (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : W
   | strVal s => exact absurd rfl (hne s)
 
 theorem projLitToCtor_run_unsupported (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word)
-    (hh : HW h) (hg : tagW h = 8) (a a' : AState) (s : String)
+    (hh : HW h) (hg : tagW h = 8) (a : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
-    (hsup : (strLitStored fe).run a = .ok (false, a')) :
-    (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a') := by
+    (hsup : fe.strLit = false) :
+    (projLitToCtor r fe depth (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
   simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup]
   rfl
 
 theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : tagW h = 8) (a a' a₁ a₂ : AState) (s : String)
+    (hg : tagW h = 8) (a a₁ a₂ : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
-    (hsup : (strLitStored fe).run a = .ok (true, a')) (c : EIdx)
-    (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (res : EIdx)
+    (hsup : fe.strLit = true) (c : EIdx)
+    (hc : (strLitToConstructor s).run a = .ok (c, a₁)) (res : EIdx)
     (hres : (r.whnf depth c).run a₁ = .ok (res, a₂)) :
     (projLitToCtor r fe depth (decE h)).run a = .ok (res, a₂) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
   simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 theorem projLitToCtor_err_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Word) (hh : HW h)
-    (hg : tagW h = 8) (a a' a₁ : AState) (s : String)
+    (hg : tagW h = 8) (a a₁ : AState) (s : String)
     (hv : a.store.view (decE h) = some (.lit (.strVal s)))
-    (hsup : (strLitStored fe).run a = .ok (true, a')) (c : EIdx)
-    (hc : (strLitToConstructor s).run a' = .ok (c, a₁)) (ce : CheckError)
+    (hsup : fe.strLit = true) (c : EIdx)
+    (hc : (strLitToConstructor s).run a = .ok (c, a₁)) (ce : CheckError)
     (hres : (r.whnf depth c).run a₁ = .error ce) :
     (projLitToCtor r fe depth (decE h)).run a = .error ce := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
   simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`, both outcomes**: the errors are the `whnf` slot's
-(on a supported string literal). `SupKeep`: the support query keeps the store's views. -/
-theorem plit_ref (p : Prog) (hStrSup : StrLitStoredOK p) (hStrCtor : StrLitCtorOK p) (n : Nat)
+(on a supported string literal). -/
+theorem plit_ref (p : Prog) (hStrCtor : StrLitCtorOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) (hsupKeep : SupKeep fe) :
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) :
     RefE (KnotUpToE p n) (projLitToCtorE p (n + 1) s₀.mem mode vis d h)
       (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  have hS := hs.rel
-  simp only [projLitToCtorE]
-  by_cases htag : tagW h ≠ 8
-  · rw [ite_eq_left htag]
-    exact RefE.ret (projLitToCtor_run_not_lit _ fe d.toNat h hh htag a₀) (CorePost.ret hS rfl hh)
-  rw [ite_eq_right htag]
-  have htag8 : tagW h = 8 := by simpa using htag
-  refine RefE.abort0 (by decide) fun hsc => ?_
-  refine RefE.abort0 (by decide) fun hbd => ?_
-  have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
-  obtain ⟨hviewS, hviewN⟩ := view_lit_kind s₀.mem a₀ hS.arena.base h hh hvOK htag8
-  by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
-  · rw [ite_eq_left hkind]
-    obtain ⟨l, hv, hne⟩ := hviewN hkind
-    exact RefE.ret (projLitToCtor_run_plain _ fe d.toNat h hh htag8 a₀ l hv hne)
-      (CorePost.ret hS rfl hh)
-  rw [ite_eq_right hkind]
-  obtain ⟨s', hv⟩ := hviewS (by simpa using hkind)
-  refine RefE.onlySim (fun _ => projLitToCtorE.k_str_lit_stored.none ..)
-    (fun _ _ h => CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (hStrSup n _ a₀ dn vis fe MM eb hS)
-      h)
-    fun r₁ m₁ ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, _⟩ => ?_
-  have hrr := AM.run_of_ok _ _ hok1
-  rw [hres1] at hrr
-  simp only [projLitToCtorE.k_str_lit_stored]
-  by_cases hsup0 : r₁.headD 0 = 0
-  · rw [ite_eq_left hsup0]
-    have hdb : decBool r₁ = false := by show (r₁.headD 0 != 0) = false; rw [hsup0]; decide
-    rw [hdb] at hrr
-    exact RefE.ret (projLitToCtor_run_unsupported _ fe d.toNat h hh htag8 a₀ _ s' hv hrr)
-      ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, rfl, hh⟩
-  rw [ite_eq_right hsup0]
-  have hdb : decBool r₁ = true := by show (r₁.headD 0 != 0) = true; rw [bne_iff_ne]; exact hsup0
-  rw [hdb] at hrr
-  have hv₁ : (AM.st (strLitStored fe) a₀).store.view (decE h) = some (.lit (.strVal s')) :=
-    hsupKeep a₀ _ _ hv
-  refine RefE.onlySim (fun _ => projLitToCtorE.k_str_lit_ctor.none ..)
-    (fun _ _ hc2 => CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-      (hStrCtor n _ _ dn vis fe M₁ eb h s' hS₁ hh hv₁) hc2)
-    fun r₂ m₂ ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ => ?_
-  have hc2run := AM.run_of_ok _ _ hok2
-  rw [hres2] at hc2run
-  simp only [projLitToCtorE.k_str_lit_ctor]
-  rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
-  · exact fun hkE => ErrClaim.of_run_err (fun ce h' => projLitToCtor_err_ctor _ fe d.toNat h hh htag8
-      a₀ _ _ s' hv hrr _ hc2run ce h')
-      (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode
-        d _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2) c3)
-  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
-    ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hF hn
-      ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2) (callW_of_callE c3)
-  have hrun3 := AM.run_of_ok _ _ hok3
-  rw [hres3] at hrun3
-  exact RefE.ret (projLitToCtor_run_ctor _ fe d.toNat h hh htag8 a₀ _ _ _ s' hv hrr _ hc2run _ hrun3)
-    ⟨⟨M₃, hS₃, hK₁.trans (hK₂.trans hK₃), hSt₁.trans (hSt₂.trans hSt₃)⟩, rfl, hrw3⟩
+  sorry
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`** (`plit_ref`'s ok half). -/
-theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
-    (hStrCtor : StrLitCtorOK p) (n : Nat)
+theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) (hsupKeep : SupKeep fe) :
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h) :
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
       (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM eb :=
   RefE.coreSpec (projLitToCtorE_spec p hp.plit (n + 1) s₀ mode vis d h)
-    (plit_ref p hStrSup hStrCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh hsupKeep)
+    (plit_ref p hStrCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh)
 
 /-! ## The words of a projection table record -/
 
@@ -865,12 +810,11 @@ theorem reduceProjCore_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv
 /-- **`reduce_proj_core` refines `reduceProjCore`, both outcomes**: the errors are
 `proj_lit_to_ctor`'s. `reduce_proj_head` leaves its slice on the stack; the top is put back without
 its bound (`GrowPost.restore`). -/
-theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
-    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p) (hE : ErecKept p) (n : Nat)
+theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d sn i c : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c)
-    (hsup : SupKeep fe) :
+    :
     RefE (KnotUpToE p n) (reduceProjCoreE p (n + 1) s₀.mem mode vis d sn i c)
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) a₀ (CorePost decOptR dn s₀.mem vis fe MM eb ResW) := by
@@ -881,8 +825,8 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
   rw [reduceProjCore_eq]
   unfold rpCoreT
   refine RefE.bindE (fun _ => rfl) (·.mono (Nat.le_succ N))
-    (plit_ref p hStrSup hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe
-      MM eb mode d c hs hc' hsup) fun ⟨r₁, m₁⟩ _ a1 _ ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, hy1, hrw1⟩ => ?_
+    (plit_ref p hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe
+      MM eb mode d c hs hc') fun ⟨r₁, m₁⟩ _ a1 _ ⟨⟨M₁, hS₁, hK₁, hSt₁⟩, hy1, hrw1⟩ => ?_
   subst hy1
   simp only [reduceProjCoreE.k_proj_lit_to_ctor]
   refine RefE.onlySim (fun _ => reduceProjCoreE.k_find_proj.none ..) (fun _ _ h => h) fun r₂ m₂ c2 => ?_
@@ -921,30 +865,27 @@ theorem rp_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
       GrowPost decOptR dn s₀.mem vis fe MM eb ResW (r₃, m₃) _ _).restore _ rfl hrw3)
 
 /-- **`reduce_proj_core` refines `reduceProjCore`** (`rp_ref`'s ok half). -/
-theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
-    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
+theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
     (_hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d sn i c : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c)
-    (hsup : SupKeep fe) :
+    :
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (reduceProjCoreE_spec p hp.rproj hp.plit (n + 1) s₀ mode vis d sn i c)
-    (rp_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc'
-      hsup)
+    (rp_ref p hp hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc')
 
 /-! ## `whnf_core_step_proj` -/
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`, both outcomes**: the errors are the
 scrutinee's head normalization's (a slot's) and `reduce_proj_core`'s. -/
-theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
-    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p) (hE : ErecKept p) (n : Nat)
+theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e sn i pe : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
-    (hsn : HW sn) (hpe : HW pe) (hsup : SupKeep fe) :
+    (hsn : HW sn) (hpe : HW pe) :
     RefE (KnotUpToE p n) (coreStepProjE p (n + 1) s₀.mem mode cheap vis d e sn i pe)
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
@@ -963,9 +904,9 @@ theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK 
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
     refine RefE.bindE (fun _ => rfl) (·.mono (Nat.le_succ N))
-      (rp_ref p hp hStrSup hStrCtor hc hE N (hk.mono (by omega)) F (by omega) (by omega)
+      (rp_ref p hp hStrCtor hc hE N (hk.mono (by omega)) F (by omega) (by omega)
         ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d sn i (r₁.headD 0) ⟨hS₁, hs.mode4, hs.eb_mode⟩
-        hsn hr₁ hsup) fun ⟨r₂, m₂⟩ _ a2 _ ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw2⟩ => ?_
+        hsn hr₁) fun ⟨r₂, m₂⟩ _ a2 _ ⟨⟨M₂, hS₂, hK₂, hSt₂⟩, hy2, hrw2⟩ => ?_
     subst hy2
     simp only [coreStepProjE.k_reduce_proj_core]
     by_cases hf : r₂.headD 0 = 0
@@ -1001,19 +942,18 @@ theorem stepProj_ref (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK 
     exact rest r₁ m₁ _ M₁ hS₁ hK₁ hSt₁ hr₁
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`** (`stepProj_ref`'s ok half). -/
-theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitStoredOK p)
-    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
+theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
     (_hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e sn i pe : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
-    (hsn : HW sn) (hpe : HW pe) (hsup : SupKeep fe) :
+    (hsn : HW sn) (hpe : HW pe) :
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreStepProjE_spec p hp.sproj hp.rproj hp.plit (n + 1) s₀ mode cheap vis d e sn i pe)
-    (stepProj_ref p hp hStrSup hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs
-      he hsn hpe hsup)
+    (stepProj_ref p hp hStrCtor hc hE n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs
+      he hsn hpe)
 
 /-! ## The refinements at the original statements (the stubs instantiated) -/
 

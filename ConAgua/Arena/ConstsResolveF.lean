@@ -186,21 +186,20 @@ def ueMentionsGoL : FunDecl := lfn (f, T, h) locals (g, x, y, z, r, b1, b2, b3) 
   return r
 }
 
-/-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL (←
-strLitStored fe) where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
+/-- `unresolved_consts_error(vis, e, w)`: the twin's `fail (← unresolvedConstsErrorL fe.strLit
+where_ e)` (`w ≤ 1`) and `fail (← unresolvedConstsError where_ e)` (`w ≥ 2`):
 always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type of", `3`
 "generated rule of", `4` "the domains of a generated rule of", `5` "the type of the recursor", `6`
 "the recursor's rule"; the reason of each message). For
-`w ≤ 1`: without the String support declarations, a string literal in `e` (`has_str_lit_go`)
+`w ≤ 1`: without the String support declarations (the string-literal flag `CTL[161]`), a string literal in `e` (`has_str_lit_go`)
 declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
 declines, anything else rejects. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:177-187 ConRon.Arena.unresolvedConstsError
 -- con-ron: ConRon/Arena/CheckerBase.lean:224-237 ConRon.Arena.unresolvedConstsErrorL
 @[no_expose, l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
-def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (s, r, sa, m) {
+def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (r, sa, m) {
   if w <= 1 {
-    s := call str_lit_stored(vis);
-    if s == 0 {
+    if CTL.u64[161] == 0 {
       r := call has_str_lit_go(⟪CWF⟫, e);
       if r != 0 { fail R_STRING_LITERALS_BEFORE }
     }

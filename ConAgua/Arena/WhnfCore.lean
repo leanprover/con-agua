@@ -34,7 +34,7 @@ Callees from elsewhere: the spine walks (`WhnfSpine.lean`), `whnf` (`WhnfDelta.l
 `intern_bvar`; stubs (`CoreCallees` below): `inst1` (`instantiate1Fast` at the exact
 `coreWalkFuel` counter, which lane `exprops`' `inst_entry` does not have), `find_proj`
 (`IFEnv.findProj?`: interns the table name); from
-`WhnfCallees`: `inst_list`, `str_lit_stored`, `str_lit_ctor`.
+`WhnfCallees`: `inst_list`, `str_lit_ctor`.
 
 The `projCertAt` mode test is `mode & 1 == 0` (`verifiedChecks`: the two verified modes).
 -/
@@ -440,14 +440,12 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2331-2343 ConRon.Arena.projLitToCtor -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.projLitToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.projLitToCtor]
-def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
+def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, c) {
   if ⟦h⟧.tag != 8 { return h };
   (t, x) := node LIT⟦h⟧;
   if LIT⟨t, x⟩.kind != 1 { return h };
-  s := call str_lit_stored(vis);
-  if s == 0 { return h };
+  if CTL.u64[161] == 0 { return h };
   c := call str_lit_ctor(h);
   c := call whnf(mode, vis, d, c);
   return c
