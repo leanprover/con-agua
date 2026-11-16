@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.KnotEntry
-public import ConAgua.Arena.EnvFlags
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq

@@ -1,6 +1,5 @@
 module
 
-import ConAgua.Arena.WhnfCoreApp
 public import ConAgua.Arena.RefECore
 import ConAgua.Arena.RefWalk
 public import ConAgua.Arena.KnotE
@@ -16,7 +15,6 @@ import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.WhnfCoreProj
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Checker.NoVerdictFns
 public import ConAgua.Arena.RecLayout.CIDec
 import all ConAgua.Arena.WhnfCore
 

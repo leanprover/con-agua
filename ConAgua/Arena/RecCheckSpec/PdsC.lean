@@ -1,7 +1,7 @@
 module
 
 public import ConRon.Arena.Inductives.RecCheck
-import ConAgua.Arena.WhnfIotaRecRefine
+import ConAgua.Arena.Verdict
 
 @[expose] public section
 

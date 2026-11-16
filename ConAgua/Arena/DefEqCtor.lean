@@ -4,18 +4,14 @@ public import ConAgua.Arena.Knot
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.DefEq
 public import ConAgua.Arena.PropRead
-public import ConAgua.Arena.Env
 public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Checker.NoVerdictFns
-public import ConAgua.L.ErrSpec
 import ConAgua.Arena.RefWalk
-import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndView
 import ConAgua.Arena.PropReadLoops
 import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.LdRd
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConAgua.Checker.NoVerdictTree

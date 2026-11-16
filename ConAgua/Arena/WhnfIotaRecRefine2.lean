@@ -1,7 +1,6 @@
 module
 
 import ConAgua.Arena.RecLayout.CapsDec
-import ConAgua.Arena.LdRd
 import ConAgua.Arena.RecFireEnv
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -17,7 +16,6 @@ import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.IotaCase3Ref
 import ConAgua.L.WordOff
 import ConAgua.Arena.DefEqMid
-import ConAgua.Arena.IndRealOpf2
 import ConAgua.Arena.RecLayout.CIDec
 
 @[expose] public section

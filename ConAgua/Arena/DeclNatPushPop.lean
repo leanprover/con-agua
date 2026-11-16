@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PapW
-public import ConAgua.Arena.EnvFlags
 public import ConAgua.Arena.StageFlags
 import all ConAgua.Arena.Env
 

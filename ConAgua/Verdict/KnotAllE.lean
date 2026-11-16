@@ -15,7 +15,6 @@ meta import ConAgua.Verdict.DefEqAllE
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Arena.StrLitCtor
-import ConAgua.Arena.StrLitBase
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.LoopDeclAgree

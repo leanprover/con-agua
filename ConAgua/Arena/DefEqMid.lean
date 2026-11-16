@@ -7,7 +7,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 public import ConAgua.Verdict.WhnfModels7E
-import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
 import all ConAgua.Arena.DefEq
 

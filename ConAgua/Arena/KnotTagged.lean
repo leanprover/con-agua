@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DefEqKnot
 import ConAgua.Arena.CoreNatOp
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.WhnfDeltaRefine2
 import ConAgua.Arena.WhnfM2CRefine5

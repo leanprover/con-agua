@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.WhnfBase
 
 @[expose] public section
 

@@ -9,7 +9,6 @@ public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
-public import ConAgua.Arena.WhnfBase
 public import ConAgua.Arena.StageFlags
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.DeclCvg

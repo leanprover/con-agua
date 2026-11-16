@@ -6,7 +6,6 @@ import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Verdict.WhnfIotaE
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfPirrE
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfM2CRefine5
 public import ConAgua.Arena.DefEqKnot
 public import ConAgua.Arena.WhnfCoreAppLoop

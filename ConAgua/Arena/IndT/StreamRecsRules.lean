@@ -9,7 +9,6 @@ import ConRon.Bridge.Inductives.StreamRecs
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.IndPosSpec.NestKeyMap
 import ConAgua.Arena.IndInstallSpec.DomsW
-import ConAgua.Arena.StripTeleSpec
 import ConAgua.Arena.IndRealAbs
 import ConAgua.Arena.IndT.Lift
 import all ConAgua.Arena.IndStream

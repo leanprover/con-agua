@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.Tiers
-public import ConAgua.Arena.Refine
 public import ConRon.Arena.Core
 
 @[expose] public section
