@@ -1259,7 +1259,6 @@ def checkDivModPinAtFe2L : FunDecl := lfn (vis2, c) locals (g, f, r) {
 pushed for the reads at the extended view (`check_div_mod_pin_at_fe2`) and popped (the own
 layer's row of `c` put back, `env_pop_temp`, the literal flags set back, `env_set_flags`), then the variant loop at `vis`; returns the view. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:739-756 ConRon.Arena.checkDivModPin
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkDivModPin` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDivModPin]
 def checkDivModPinL : FunDecl := lfn (po, pl, vis, p, c) locals (rc, rq, fn, fs, w, v, v2, z) {
   (rc, rq) := call env_row_get(c);

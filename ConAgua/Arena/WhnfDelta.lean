@@ -298,7 +298,6 @@ def unfoldDefinitionL : FunDecl :=
 one-limb `1` at the pool top, `nat_add_lit`. (`reduce_nat`'s `Nat.succ` arm, as its own function:
 a behaviour-preserving split, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh, pt, pb) {
   oo := CTL.u64[0];
   pt := ⦃oo⦄.tier;
@@ -315,7 +314,6 @@ a behaviour-preserving split, whnf-delta2.) -/
 `b` is head-normalised and, if a literal `n`, answered by the literal `n + 1`. (A behaviour-preserving
 split of `reduce_nat`, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceNatSuccL : FunDecl :=
   lfn (mode, vis, d, c, b) locals (ns, wb, fl1, o1, cnt1, xh) {
   ns := call pin_at(3);
@@ -336,7 +334,6 @@ word (`decOpt` reads the same value): `nat_bin_op_result`'s refinement says noth
 words' high bits, and the callers compute with them (lane `whnf2`). A refusal arrives as a
 sentinel handle (`NatSized.lean`) and fails here with the twin's message. -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceNatOpL : FunDecl :=
   lfn (mode, vis, d, op, a, b) locals (wa, fl1, o1, cnt1, wb, fl2, o2, cnt2, rf, rh) {
   wa := call whnf(mode, vis, d, a);
@@ -358,7 +355,6 @@ sentinel handle (`NatSized.lean`) and fails here with the twin's message. -/
 /-- `reduce_nat_k(mode, vis, d, f, b)`: `reduce_nat`'s arm for an application `f b` whose head `f` is a
 constant: at the empty levels, `reduce_nat_succ`. (A split of `reduce_nat`, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceNatKL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, c, us, el, rf, rh) {
   t2 := ⟦f⟧.tier;
@@ -376,7 +372,6 @@ constant: at the empty levels, `reduce_nat_succ`. (A split of `reduce_nat`, whnf
 is itself an application `g a`: for a constant `g` at the empty levels that names a binary
 operation (`nat_bin_op_of_name`), `reduce_nat_op`. (A split of `reduce_nat`, whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceNatApL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, g, a, t3, i3, c, us, el, op, rf, rh) {
   t2 := ⟦f⟧.tier;
@@ -401,7 +396,6 @@ head `f` (`view f` is not tag-tested first, so all ten tags get their bound chec
 `app` do more). A handle with a tag above `9` is no node: `abort`. (A split of `reduce_nat`,
 whnf-delta2.) -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def reduceNatHeadL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (tag2, t2, i2, rf, rh) {
   tag2 := ⟦f⟧.tag;
@@ -437,7 +431,6 @@ after the application test is `reduce_nat_head`, whose arms are `reduce_nat_k` /
 those `reduce_nat_succ`, `reduce_nat_op` (behaviour-preserving splits,
 whnf-delta2). -/
 -- con-ron: ConRon/Arena/Core.lean:1361-1406 ConRon.Arena.reduceNat
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.reduceNat` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.reduceNat]
 def reduceNatL : FunDecl :=
   lfn (mode, vis, d, e) locals (t, i, f, b, rf, rh) {

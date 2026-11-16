@@ -465,7 +465,8 @@ def apPc (x : Word) : Bool :=
 def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b && b != PINS
 
 /-- The `CTL` words of `cdC`, as a test. -/
-def cdPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 128
+def cdPc (x : Word) : Bool :=
+  decide (x.toNat < 1024) && ((decide (x.toNat < 162) || decide (173 < x.toNat)) && x.toNat != 128)
 
 theorem apPa_mem (b : TieredArray) (h : apPa b = true) : b ∈ apA := by
   simp only [apPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
@@ -484,11 +485,9 @@ theorem cdPa_mem (b : TieredArray) (h : cdPa b = true) : b ∈ cdA := by
   exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem cdPc_mem (x : Word) (h : cdPc x = true) : x ∈ cdC := by
-  simp only [cdPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
+  simp only [cdPc, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [cdC, List.mem_filter, List.mem_map, List.mem_range]
-  refine ⟨x.toNat, ⟨h.1, ?_⟩, UInt64.ofNat_toNat⟩
-  simp only [bne_iff_ne, ne_eq]
-  intro e; apply h.2; rw [e]
+  exact ⟨x.toNat, ⟨h.1, by rw [Bool.and_eq_true]; exact h.2⟩, UInt64.ofNat_toNat⟩
 
 /-- Every function of the checker passes `and_pin_ok`'s per-function check. -/
 prog_all checkerProg_apChk : checkerProg (wsChk CTL apPa apPc apTree)
