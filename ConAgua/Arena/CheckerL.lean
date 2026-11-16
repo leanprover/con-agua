@@ -109,8 +109,7 @@ builder's environment already holds the literal names (the twin's `mkIFEnvLits`,
 `driverFE`), and the pins do not change during the build, so the freeze reads the same names. -/
 -- con-ron: ConRon/Arena/Core.lean:125-138 ConRon.Arena.strLitNames
 -- con-ron: ConRon/Arena/Core.lean:116-123 ConRon.Arena.natLitNames
--- con-ron: ConRon/Arena/Core.lean:140-146 ConRon.Arena.mkIFEnvLits
-@[no_expose, l_impl ConRon.Arena.strLitNames ConRon.Arena.natLitNames ConRon.Arena.mkIFEnvLits]
+@[no_expose, l_impl ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
 def strLitNamesL : FunDecl := lfn () locals (a) {
   a := call pin_at(1);
   CTL.u64[162] := a;

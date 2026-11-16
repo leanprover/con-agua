@@ -328,7 +328,7 @@ def litCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171]
 
 /-- **`str_lit_names()` refines `strLitNames`**: the ten pins' handles in `CTL[162‥171]`
 (`litWords`), nothing else written. -/
-@[refines ConRon.Arena.strLitNames ConRon.Arena.natLitNames ConRon.Arena.mkIFEnvLits]
+@[refines ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
 theorem strLitNames_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {a : AState}
     (hF : PinsFull s₀.mem a.pins) (hc : 173 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄
