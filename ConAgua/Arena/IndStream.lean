@@ -34,7 +34,7 @@ open L.Arena
 /-- `open_pis_at_fvars(n, e, i)`: `openPisAtFvars n e i`, as `(1, fvs.off, n, body)` (the free
 variables an `IW` slice, in binder order) or `(0, 0, 0, 0)` (`opa_go` pushes them on `SPN`, read
 back and popped; a first index `i ≥ 2^63` a capacity abort, D33). -/
--- con-ron: ConRon/Arena/Core.lean:3042-3058 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:3142-3158 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def openPisAtFvarsL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   if i >> 63 != 0 { abort };
@@ -227,7 +227,9 @@ def streamRulesShapeL : FunDecl := lfn (ro, rl, co, cl) locals (c, u) {
 /-- `stream_rules_check(vis, lps.off, lps.len, rules.off, rules.cnt, gs.off, gs.len)`: the record's
 rules' checks, each against the generated right-hand side at its position (a rule equal to the
 generated one needs none). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:178-189 ConRon.Arena.streamRulesCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:178-191 ConRon.Arena.streamRulesCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.streamRulesCheck` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.streamRulesCheck`, `ConRon.Arena.ruleBinds` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.streamRulesCheck]
 def streamRulesCheckL : FunDecl := lfn (vis, lo, ll, ro, rl, go, gl) locals (s, u) {
   if rl == 0 && gl == 0 { return 0 };
@@ -240,7 +242,8 @@ def streamRulesCheckL : FunDecl := lfn (vis, lo, ll, ro, rl, go, gl) locals (s, 
 
 /-- `stream_rec_compare(vis, rc, g)`: the comparison of one recursor — its type unless it is the
 generated one (`rec_ty_check` up to the major, `mI + 1` binders), and its rules. -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:191-199 ConRon.Arena.streamRecCompare
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:193-201 ConRon.Arena.streamRecCompare
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.streamRecCompare` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.streamRecCompare]
 def streamRecCompareL : FunDecl := lfn (vis, rc, g) locals (cvR, cvG, lo, ll, n, u) {
   cvR := IW.u64[rc];
@@ -258,7 +261,7 @@ def streamRecCompareL : FunDecl := lfn (vis, rc, g) locals (cvR, cvG, lo, ll, n,
 
 /-- `stream_rec_check(vis, rc, g)`: one recursor, the stream's against the generated one — the
 rules' shape and the record's major's container, then the comparison. -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:201-211 ConRon.Arena.streamRecCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:203-213 ConRon.Arena.streamRecCheck
 @[no_expose, l_impl ConRon.Arena.streamRecCheck]
 def streamRecCheckL : FunDecl := lfn (vis, rc, g) locals (M, u, k, lo, ll, po, pl, ok) {
   M := IW.u64[g + 1];
@@ -273,7 +276,7 @@ def streamRecCheckL : FunDecl := lfn (vis, rc, g) locals (M, u, k, lo, ll, po, p
 
 /-- `stream_recs_check(vis, recs.off, recs.len, gs.off, gs.len)`: the block's recursors against
 the generated ones, record by record (the generated family is in the records' order). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:213-223 ConRon.Arena.streamRecsCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:215-225 ConRon.Arena.streamRecsCheck
 @[no_expose, l_impl ConRon.Arena.streamRecsCheck]
 def streamRecsCheckL : FunDecl := lfn (vis, ro, rl, go, gl) locals (u) {
   if rl == 0 && gl == 0 { return 0 };
@@ -285,7 +288,7 @@ def streamRecsCheckL : FunDecl := lfn (vis, ro, rl, go, gl) locals (u) {
 
 /-- `stream_k_check(p, recs.off, recs.len, gs.off, gs.len)`: the records' K flags against the
 block — each record's flag the one the generated recursor has (`rec_k_expected`). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:225-234 ConRon.Arena.streamKCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:227-236 ConRon.Arena.streamKCheck
 @[no_expose, l_impl ConRon.Arena.streamKCheck]
 def streamKCheckL : FunDecl := lfn (p, ro, rl, go, gl) locals (rc, e, u) {
   if rl == 0 || gl == 0 { return 0 };

@@ -390,7 +390,9 @@ def betaPeelW : Stmt := lblk (t, a, ao, an, i, co, cn, tt, x, e2, e3) {
 }
 
 /-- `betaPeelL`, with its loop spliced from `betaPeelW`.
-con-ron: ConRon/Arena/Core.lean:2560-2579 ConRon.Arena.betaPeel -/
+con-ron: ConRon/Arena/Core.lean:2647-2667 ConRon.Arena.betaPeel -/
+-- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.betaPeel`, `ConRon.Arena.instantiateRevRange` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.betaPeel` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def betaPeelL' : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
   co := CTL.u64[136];
   if len(SPN.u64) <= co { abort };

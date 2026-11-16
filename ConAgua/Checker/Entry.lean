@@ -169,21 +169,21 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 `Inst1Spec.lean`), which take none (their walks count their own). -/
 
 /-- `abstract1_fast(fuel, e, d, k)`: `abs_entry(e, d, k)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:1726-1732 ConRon.Arena.abstract1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:1750-1756 ConRon.Arena.abstract1Fast
 @[no_expose] def abstract1FastA : FunDecl := lfn (f, e, d, k) locals (r) {
   r := call abs_entry(e, d, k);
   return r
 }
 
 /-- `instantiate1_fast(fuel, e, v, d)`: `inst_entry(e, v, d)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:378-385 ConRon.Arena.instantiate1Fast
 @[no_expose] def instantiate1FastA : FunDecl := lfn (f, e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
 }
 
 /-- `inst1(e, v, d)`: `inst_entry(e, v, d)`. -/
--- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:378-385 ConRon.Arena.instantiate1Fast
 @[no_expose] def inst1A : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r

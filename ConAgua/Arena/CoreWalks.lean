@@ -530,7 +530,7 @@ theorem hasFvar_core (hp : AbsProg p) (hpf : p.lookup "has_fvar" = some hasFvarL
 
 /-- `inst1(e, v, d)`: a call of `inst_entry(e, v, d)` (the checker's `inst1A`, `Checker/Entry.lean`,
 the same text). -/
--- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:378-385 ConRon.Arena.instantiate1Fast
 @[no_expose] def inst1W : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r

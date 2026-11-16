@@ -27,7 +27,7 @@ namespace L.Stubs
 
 open L.Arena L.Ind
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1581-1587 ConRon.Arena.fvarB -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1605-1611 ConRon.Arena.fvarB -/
 @[no_expose, l_impl ConRon.Arena.fvarB]
 def fvarBL : FunDecl := lfn (f, e) locals (r) {
   r := call ab_fvb(e, f);
@@ -37,8 +37,8 @@ def fvarBL : FunDecl := lfn (f, e) locals (r) {
 /-! ## `reserved_rec_name(n)` -/
 
 /-- `pin_range_has(n, k, hi)`: `n` is one of the pins `k ‥ hi - 1` (`pin_at`, in order). -/
--- con-ron: ConRon/Arena/Core.lean:920-926 ConRon.Arena.natOpNames
--- con-ron: ConRon/Arena/Core.lean:928-934 ConRon.Arena.natDivModNames
+-- con-ron: ConRon/Arena/Core.lean:954-960 ConRon.Arena.natOpNames
+-- con-ron: ConRon/Arena/Core.lean:962-968 ConRon.Arena.natDivModNames
 @[no_expose] def pinRangeHas : FunDecl := lfn (n, k, hi) locals (w, r) {
   if hi <= k { return 0 };
   w := call pin_at(k);
@@ -50,7 +50,7 @@ def fvarBL : FunDecl := lfn (f, e) locals (r) {
 /-- `lit_guard_has(n)`: `(← litGuardNames).contains n`: the pins `Nat`, `Nat.zero`, `Nat.succ`,
 `String`, `String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat` (slots 1, 2, 3,
 5‥10, 12), all read first, as the twin builds its list. -/
--- con-ron: ConRon/Arena/Core.lean:1537-1553 ConRon.Arena.litGuardNames
+-- con-ron: ConRon/Arena/Core.lean:1571-1587 ConRon.Arena.litGuardNames
 @[no_expose, l_impl ConRon.Arena.litGuardNames]
 def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(5);
@@ -63,7 +63,7 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
 
 /-- `nat_op_name(n)`: one of the certified operations' names (`natOpNames`, pins 14‥20, then
 `natDivModNames`, pins 21‥28): only a definition may take one. -/
--- con-ron: ConRon/Arena/Core.lean:936-943 ConRon.Arena.natOpName
+-- con-ron: ConRon/Arena/Core.lean:970-977 ConRon.Arena.natOpName
 @[no_expose, l_impl ConRon.Arena.natOpName]
 def natOpNameL : FunDecl := lfn (n) locals (r) {
   r := call pin_range_has(n, 14, 21);
@@ -74,7 +74,7 @@ def natOpNameL : FunDecl := lfn (n) locals (r) {
 
 /-- `reserved_rec_bool(n)`: `Bool` and its two constructors (pins 29, 30, 31), each read only when
 the chain reaches it. -/
--- con-ron: ConRon/Arena/Core.lean:1555-1565 ConRon.Arena.reservedRecBool
+-- con-ron: ConRon/Arena/Core.lean:1589-1599 ConRon.Arena.reservedRecBool
 @[no_expose, l_impl ConRon.Arena.reservedRecBool]
 def reservedRecBoolL : FunDecl := lfn (n) locals (b) {
   b := call pin_at(29);
@@ -85,7 +85,7 @@ def reservedRecBoolL : FunDecl := lfn (n) locals (b) {
   return u64(n == b)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1567-1582 ConRon.Arena.reservedRecName -/
+/-- con-ron: ConRon/Arena/Core.lean:1601-1616 ConRon.Arena.reservedRecName -/
 @[no_expose, l_impl ConRon.Arena.reservedRecName]
 def reservedRecNameL : FunDecl := lfn (n) locals (r) {
   r := call lit_guard_has(n);

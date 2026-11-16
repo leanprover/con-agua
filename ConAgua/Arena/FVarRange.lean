@@ -54,7 +54,7 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1490-1512 ConRon.Arena.fvarRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1514-1536 ConRon.Arena.fvarRangeGo -/
 @[no_expose, l_impl ConRon.Arena.fvarRangeGo]
 def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   if c == 0 { abort };
@@ -66,7 +66,7 @@ def frGo : FunDecl := lfn (h, c) locals (fd, j, d, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1490-1512 ConRon.Arena.fvarRangeGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1514-1536 ConRon.Arena.fvarRangeGo -/
 @[no_expose, l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h, c) locals (g, t, i, f, a, b, x, y, z) {
   g := ⟦h⟧.tag;
@@ -158,7 +158,7 @@ theorem frClrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 46 + 2 �
 grind_pattern [arena_grind] frMemoW_eq => frMemoW n m h c
 grind_pattern [arena_grind] frClrK_some => frClrK (some (r, m₁))
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1564-1570 ConRon.Arena.fvarRangeMemo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1588-1594 ConRon.Arena.fvarRangeMemo -/
 @[no_expose, l_impl ConRon.Arena.fvarRangeMemo]
 def frMemo : FunDecl := lfn (h, c) locals (r, u) {
   u := call fm_clear();

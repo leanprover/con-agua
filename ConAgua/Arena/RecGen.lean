@@ -794,7 +794,8 @@ def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) 
 /-! ## `genRecCheck` -/
 
 /-- `genRecCheck` helper: `nestedBit || ms.any (·.member.isNone)`'s second disjunct. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
   if msLen == 0 { return 0 };
@@ -805,7 +806,8 @@ def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
 }
 
 /-- `genRecCheck` helper: `formers.map (·.type)`. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   q := call iw_alloc(cvTasLen);
@@ -815,7 +817,8 @@ def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
 }
 
 /-- `genRecCheck` helper: `ms2.mapM (classFormerTy mode fe formers)`. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2Len)
     locals (q, j, e) {
@@ -830,7 +833,8 @@ def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2
 
 /-- `genRecCheck` helper: `(rd.slots.filter ClassSlot.isMinor).length == (ctors.map
 List.length).sum` (a sum past `2^64` is above every slot count: `0`). -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
     locals (j, s, minorCnt, ctorSum, hdr) {
@@ -852,7 +856,8 @@ def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
 
 /-- `genRecCheck` helper: the pop, `prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR`, in
 reverse push order. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
   j := prevsLen;
@@ -867,7 +872,8 @@ def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
 /-- `genRecCheck` helper: the pins, the stream's types, the elim guard, the classes' table entries
 and constructors, and the generator up to `cvGs` (checked, generated types). Capacity guards first:
 the pool's size `+ 5`, the parameter count plus the member count and plus the slot count are words. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPrep : FunDecl := lfn
     (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
@@ -923,7 +929,8 @@ block.off, block.len)`: **the generated recursor stage**, as `(vis', out.off, ou
 recursors pushed temporarily (`class_fe_r`), the flush entering them, every rule checked (its
 λ-domains naming none of the `pushed` recursors' names), the pushes undone in reverse order and the
 flush leaving them. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckL : FunDecl := lfn
     (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)

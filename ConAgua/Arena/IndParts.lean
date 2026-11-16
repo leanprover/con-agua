@@ -240,7 +240,7 @@ def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
 
 /-- `block_shape_with_members(p, ms.off, ms.len)`: `{ p with members := ms }`, a fresh 9-word
 record (`checkBlock`'s record update after `reduceMembers`). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:186-216 ConRon.Arena.checkBlock
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:187-217 ConRon.Arena.checkBlock
 @[no_expose, l_impl ConRon.Arena.checkBlock]
 def blockShapeWithMembers : FunDecl := lfn (p, mo, ml) locals (q) {
   q := call iw_alloc(9);

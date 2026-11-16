@@ -50,6 +50,7 @@ value): the fresh name, a certified operation's name only where `allowOp`, a
 literal's name only at its shape (`lit_shape_ok` of a fresh `axiomInfo` record of `cv`), the
 universe parameters, the type's guards, then the type's sort. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:241-272 ConRon.Arena.checkConstantVal
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl :=
     lfn (vis, q, allowOp) locals (n, t, f, r, c, a, ez, o, l, d, b, h, u, st) {
@@ -92,6 +93,7 @@ returns it unpushed: the arm runs its pinned gates and pushes last. -/
 /-- `value_guards(vis, q, v)`: `valueGuards fe cv v` (`q` the constant value): no loose bound
 variable, no free variable, declared universe parameters, resolving constants. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:832-848 ConRon.Arena.valueGuards
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.valueGuards` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.valueGuards]
 def valueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
   b := call loose_bvars_bounded_fast(4000000000, 0, v);
@@ -407,6 +409,7 @@ def checkReducePinPreL : FunDecl := lfn (vis, c, v) locals (e, pa, x, ax) {
 the extended view (the stored constant's type, `reduce_stored_ok`) and popped (`env_pop_temp`),
 then `check_reduce_pin_pre` at `vis`; returns the view. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:785-805 ConRon.Arena.checkReducePin
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkReducePin` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, w, st, v2, z) {
   (rc, rq) := call env_row_get(c);
@@ -511,6 +514,7 @@ def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, dov, dl, d, f
 reads at the extended view and popped (`env_pop_temp`), then the recurrences of the stored value
 (`nat_op_equations 0 n`, `n` replaced by the value) certified at `vis`; returns the view. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:55-72 ConRon.Arena.checkStructuralNatPin
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkStructuralNatPin` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructuralNatPin]
 def checkStructuralNatPinL : FunDecl :=
     lfn (vis, p, n) locals (rc, rq, w, v, v2, eo, el, so, sl, ok) {

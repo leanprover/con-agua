@@ -293,7 +293,7 @@ attribute [local lockstep_simp] ConRon.Refine.absLiteral
       (arena.core.lit_major_to_ctor pers st mode eager lane fu fe depth h) lst
       (litMajorToCtor (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f) lfe (absU depth)
         (absEIdx h)) := by
-  rw [arena.core.lit_major_to_ctor, litMajorToCtor]
+  rw [arena.core.lit_major_to_ctor, litMajorToCtor, hctx.strLit]
   lockstep_c2
 
 @[lockstep] theorem proj_lit_to_ctor_ls {f : Nat} (hk : KnotRel f)
@@ -304,7 +304,7 @@ attribute [local lockstep_simp] ConRon.Refine.absLiteral
       (arena.core.proj_lit_to_ctor pers st mode eager lane fu fe depth h) lst
       (projLitToCtor (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f) lfe (absU depth)
         (absEIdx h)) := by
-  rw [arena.core.proj_lit_to_ctor, projLitToCtor]
+  rw [arena.core.proj_lit_to_ctor, projLitToCtor, hctx.strLit]
   lockstep_c2
 
 /-! ## `etaFabArgsE` -/
@@ -318,6 +318,16 @@ attribute [local lockstep_simp] ConRon.Refine.absLiteral
   lockstep_c2
 
 /-! ## `majorToCtor` -/
+
+@[lockstep] theorem ctor_view_ls {pers st fe lfe e lst}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx pers fe lfe) :
+    LSR pers (fun a b => b = absMajorView a) (arena.core.ctor_view pers st fe e) st lst
+      (ctorView lfe (absEIdx e)) := by
+  apply LSR.of_LS
+  rw [arena.core.ctor_view, ctorView]
+  lockstep_c2
+
 
 attribute [lockstep_inline] arena.core.major_to_ctor_certs
   arena.core.major_to_ctor_k arena.core.major_to_ctor_eta arena.core.major_to_ctor_eta_sort
@@ -575,16 +585,18 @@ condition at use, and the family's table it fabricates at. -/
     exact ⟨_, lst, rfl, rfl, hrel, hinv⟩
 
 set_option maxHeartbeats 0 in
-@[lockstep] theorem major_to_ctor_ls {f : Nat} (hk : KnotRel f)
+@[lockstep] theorem major_to_ctor_rescue_ls {f : Nat} (hk : KnotRel f)
     {pers st mode eager lane fu fe lfe depth recName isK rules major lst}
     (hx : ExprOpsHyp pers)
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hctx : CoreCtx pers fe lfe) (hf : absU fu = f) :
     LS pers (fun a b => b = absEIdx a)
-      (arena.core.major_to_ctor pers st mode eager lane fu fe depth recName isK rules major) lst
-      (majorToCtor (ConRon.Refine.absMode mode) (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
+      (arena.core.major_to_ctor_rescue pers st mode eager lane fu fe depth recName isK rules major)
+      lst
+      (majorToCtorRescue (ConRon.Refine.absMode mode)
+        (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
         lfe (absU depth) (absNIdx recName) isK (rules.val.map absIRecRule) (absEIdx major)) := by
-  rw [arena.core.major_to_ctor, majorToCtor.eq_def]
+  rw [arena.core.major_to_ctor_rescue, majorToCtorRescue.eq_def]
   have hlenv : (alloc.vec.Vec.len rules).val = rules.val.length := alloc.vec.Vec.len_val _
   generalize hL : rules.val.map absIRecRule = L
   rcases L with _ | ⟨x, _ | ⟨y, zs⟩⟩
@@ -604,6 +616,19 @@ set_option maxHeartbeats 0 in
     show LS _ _ _ _ _
     lockstep_c2
 
+set_option maxHeartbeats 0 in
+@[lockstep] theorem major_to_ctor_ls {f : Nat} (hk : KnotRel f)
+    {pers st mode eager lane fu fe lfe depth recName isK rules major lst}
+    (hx : ExprOpsHyp pers)
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx pers fe lfe) (hf : absU fu = f) :
+    LS pers (fun a b => b = absMajorView a)
+      (arena.core.major_to_ctor pers st mode eager lane fu fe depth recName isK rules major) lst
+      (majorToCtor (ConRon.Refine.absMode mode) (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
+        lfe (absU depth) (absNIdx recName) isK (rules.val.map absIRecRule) (absEIdx major)) := by
+  rw [arena.core.major_to_ctor, majorToCtor]
+  lockstep_c2
+
 end majorToCtor
 
 /-! ## `prepareMajor` (fragment `prepare_major_whnf`) -/
@@ -620,17 +645,29 @@ end majorToCtor
 
 attribute [lockstep_inline] arena.core.prepare_major_whnf
 
+/-- `is_nat_succ_app` (the constructor shortcut's `Nat.succ` exclusion) against
+`isNatSuccApp`. -/
+@[lockstep] theorem is_nat_succ_app_ls {pers st e lst}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
+    LSR pers (fun a b => b = a) (arena.core.is_nat_succ_app pers st e) st lst
+      (isNatSuccApp (absEIdx e)) := by
+  apply LSR.of_LS
+  rw [arena.core.is_nat_succ_app, isNatSuccApp]
+  lockstep_c2
+  all_goals (simp only [Bool.true_and, beq_eq_decide]; lockstep_c2)
+
 set_option maxHeartbeats 0 in
 @[lockstep] theorem prepare_major_ls {f : Nat} (hk : KnotRel f)
     {pers st mode eager lane fu fe lfe depth recName isK rules major lst}
     (hx : ExprOpsHyp pers)
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hctx : CoreCtx pers fe lfe) (hf : absU fu = f) :
-    LS pers (fun a b => b = absEIdx a)
+    LS pers (fun a b => b = absMajorView a)
       (arena.core.prepare_major pers st mode eager lane fu fe depth recName isK rules major) lst
       (prepareMajor (ConRon.Refine.absMode mode) (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
         lfe (absU depth) (absNIdx recName) isK (rules.val.map absIRecRule) (absEIdx major)) := by
   rw [arena.core.prepare_major, prepareMajor]
+  simp only [prepareMajorWhnf]
   lockstep_c2
 
 /-! ## `iotaRecAt` -/
@@ -649,17 +686,81 @@ attribute [lockstep_inline] arena.core.iota_rec_major arena.core.iota_rec_fire
   arena.core.iota_rec_cert arena.core.iota_rec_case3 arena.core.iota_rec_fam
   arena.core.iota_rec_reduct
 
+/-- `iota_vals` (the ι reduct's values: two ranges pushed) against `iotaVals`. -/
+@[lockstep] theorem iota_vals_spec (args margs : alloc.vec.Vec arena.handle.EIdx)
+    (p q : Std.Usize) :
+    LSP (arena.core.iota_vals args p margs q)
+      (fun r => absEIdxArr r = iotaVals (absEIdxArr args) p.val (absEIdxArr margs) q.val) := by
+  intro r h
+  rw [arena.core.iota_vals] at h
+  obtain ⟨nf, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨i1, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨acc, hacc, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  have h1 := ExprOps.eidx_copy_upto_refines hacc
+  have h2 := ExprOps.eidx_copy_upto_refines h
+  rw [ExprOps.absEIdxArr_with_capacity, ExprOps.usize_zero_val] at h1
+  have hacc' : ExprOps.absEIdxArr acc = eidxCopyUpto (ExprOps.absEIdxArr args) p.val 0 #[] := by
+    apply Array.ext'; rw [h1]; simp [ExprOps.absEIdxArr]
+  rw [hacc', ExprOps.absEIdxArr_size_len margs] at h2
+  apply Array.ext'
+  simp only [absEIdxArr, List.toList_toArray] at h2 ⊢
+  rw [iotaVals]
+  simpa [ExprOps.absEIdxArr, ExprOps.absEIdxL] using h2.symm
+
+/-- The twin's ι values at its clamped range bounds are the Rust's `iota_vals`
+answer (`iota_vals_spec`), once the bounds agree. -/
+theorem iota_vals_twin {r A M : alloc.vec.Vec arena.handle.EIdx} {p q p' q' : Nat}
+    (h : absEIdxArr r = iotaVals (absEIdxArr A) p (absEIdxArr M) q) (hp : p = p') (hq : q = q') :
+    iotaVals (List.map absEIdx A.val).toArray p' (List.map absEIdx M.val).toArray q' =
+      absEIdxArr r := by
+  subst hp hq; exact h.symm
+
+/-- The twin's spine read back as a list (`sargs.toList`) is the Rust
+vector's list. -/
+theorem absEIdxArr_toList_eq (v : alloc.vec.Vec arena.handle.EIdx) :
+    (absEIdxArr v).toList = absEIdxList v := by
+  simp [absEIdxArr, absEIdxList]
+
+attribute [local lockstep_simp] absEIdxArr_toList_eq
+
 set_option maxHeartbeats 0 in
 @[lockstep] theorem iota_rec_at_ls {f : Nat} (hk : KnotRel f)
-    {pers st mode eager lane fu fe lfe depth hd sargs n lst}
+    {pers st mode eager lane fu fe lfe depth c us cv mI rP isK rules sargs lst}
     (hx : ExprOpsHyp pers)
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hctx : CoreCtx pers fe lfe) (hf : absU fu = f) :
     LS pers (fun a b => b = Option.map absEIdx a)
-      (arena.core.iota_rec_at pers st mode eager lane fu fe depth hd sargs n) lst
+      (arena.core.iota_rec_at pers st mode eager lane fu fe depth c us cv mI rP isK rules sargs)
+      lst
       (iotaRecAt (ConRon.Refine.absMode mode) (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
-        lfe (absU depth) (absEIdx hd) (absEIdxArr sargs) (absSz n)) := by
+        lfe (absU depth) (absNIdx c) (absLsIdx us) (absIConstantVal cv) (absU mI) (absU rP) isK
+        (rules.val.map absIRecRule) (absEIdxArr sargs)) := by
   rw [arena.core.iota_rec_at, iotaRecAt]
+  lockstep_c2
+  -- the reduct's values: the twin clamps its two range bounds with pure
+  -- `if`s inside the argument, the Rust with its own `if`s before `iota_vals`
+  all_goals
+    rw [iota_vals_twin ‹absEIdxArr _ = iotaVals _ _ _ _› ?hp ?hq]
+    case hp =>
+      split <;> (try rw [UScalar.cast_val_eq, Nat.mod_eq_of_lt (by scalar_tac)]) <;> scalar_tac
+    case hq =>
+      split <;> (try rw [UScalar.cast_val_eq, Nat.mod_eq_of_lt (by scalar_tac)]) <;> scalar_tac
+    lockstep_c2
+
+set_option maxHeartbeats 0 in
+/-- `arena::core::whnf_app_iota` (the spine loop's ι step, the recursor's
+record looked up once) against `Arena.whnfAppIota`. -/
+@[lockstep] theorem whnf_app_iota_ls {f : Nat} (hk : KnotRel f)
+    {pers st mode eager lane fu fe lfe depth hd vargs n lst}
+    (hx : ExprOpsHyp pers)
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx pers fe lfe) (hf : absU fu = f) :
+    LS pers (fun a b => b = Option.map absEIdx a)
+      (arena.core.whnf_app_iota pers st mode eager lane fu fe depth hd vargs n) lst
+      (whnfAppIota (ConRon.Refine.absMode mode)
+        (laneKnot (ConRon.Refine.absMode mode) eager lfe lane f)
+        lfe (absU depth) (absEIdx hd) (absEIdxArr vargs) (absSz n)) := by
+  rw [arena.core.whnf_app_iota, whnfAppIota]
   lockstep_c2
 
 end iota

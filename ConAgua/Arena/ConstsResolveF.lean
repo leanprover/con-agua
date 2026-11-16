@@ -35,7 +35,7 @@ open L.Arena L.Ind
 abbrev crSch : MemoSch := ⟨CRM, 158⟩
 
 /-- `pin_found(vis, k)`: pin `k`'s name has a row below `vis`. -/
--- con-ron: ConRon/Arena/Core.lean:540-586 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:607-653 ConRon.Arena.constsResolve
 @[no_expose] def pinFound : FunDecl := lfn (vis, k) locals (n, f, q) {
   n := call pin_at(k);
   (f, q) := call env_find(n, vis);
@@ -44,7 +44,7 @@ abbrev crSch : MemoSch := ⟨CRM, 158⟩
 
 /-- `cr_lit_pins(vis, s)`: the literal's pins resolve (`s ≠ 0`: a `String` literal's ten,
 else a `Nat` literal's three). -/
--- con-ron: ConRon/Arena/Core.lean:540-586 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:607-653 ConRon.Arena.constsResolve
 @[no_expose] def crLitPins : FunDecl := lfn (vis, s) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_found(vis, 1); b := call pin_found(vis, 2); c := call pin_found(vis, 3);
   if s == 0 {
@@ -60,7 +60,7 @@ else a `Nat` literal's three). -/
 }
 
 /-- `cr_leaf(vis, g, x, h)`: `constsResolve` at a leaf of tag `g` (`x` the view's first field). -/
--- con-ron: ConRon/Arena/Core.lean:540-586 ConRon.Arena.constsResolve
+-- con-ron: ConRon/Arena/Core.lean:607-653 ConRon.Arena.constsResolve
 @[no_expose] def crLeaf : FunDecl := lfn (vis, g, x, h) locals (s, f, q, r) {
   if g == 8 {
     s := call is_str_lit(h);

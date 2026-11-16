@@ -117,10 +117,10 @@ and it names no fact anyone has to maintain.
 Add a line here when a new clash appears; the auxiliary's name in the error
 message says which matcher to force. -/
 
-/-- con-leche: none — `ConRon.Arena.isCtorApp`'s (`Core/Walks/Guards.lean`
-against `Core/Walks/Spine.lean`). -/
+/-- con-leche: none — `ConRon.Arena.isCtorApp`'s, which it shares with `isNatSuccApp`
+(`Core/Walks/Guards.lean` against `Core/Walks/Spine.lean`). -/
 theorem matchOwner_isCtorApp (x : ENodeView) :
-    ConRon.Arena.isCtorApp.match_1 (motive := fun _ => Nat) x
+    ConRon.Arena.isNatSuccApp.match_1 (motive := fun _ => Nat) x
       (fun _ _ => 1) (fun _ => 0) ≤ 1 := by
   grind
 
@@ -1122,7 +1122,7 @@ theorem CacheOK.of_empty {env : Env} {s : AState}
   lvlsEq := by intro k r hk; rw [h] at hk; simp [Caches.empty] at hk
   constTy := by intro k i hk; rw [h] at hk; simp [Caches.empty] at hk
   constVal := by intro k i hk; rw [h] at hk; simp [Caches.empty] at hk
-  ruleRhs := by intro k i hk; rw [h] at hk; simp [Caches.empty] at hk
+  ruleBody := by intro k i hk; rw [h] at hk; simp [Caches.empty] at hk
   readL := by intro k u hk; rw [h] at hk; simp [Caches.empty] at hk
   readN := by intro k x hk; rw [h] at hk; simp [Caches.empty] at hk
   readLs := by intro k us hk; rw [h] at hk; simp [Caches.empty] at hk

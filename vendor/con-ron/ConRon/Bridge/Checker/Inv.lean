@@ -470,26 +470,12 @@ at its own name and passes every other name through, whatever the index
 held — no coherence with the list is needed for that, unlike con-leche's
 `mkFEnv_find?`. -/
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:98-105 FEnv.lookup — the emptiness test
-answers what the hash map answers. -/
-theorem IFEnv.find?_eq (fe : IFEnv) (n : NIdx) :
-    fe.find? n = match fe.idx[n]? with
-      | some ci => some ci
-      | none => fe.base.find? n := by
-  simp only [IFEnv.find?, IFEnv.lookup]
-  split
-  · rename_i he
-    rw [Std.HashMap.isEmpty_iff_forall_not_mem] at he
-    have : fe.idx[n]? = none := Std.HashMap.getElem?_eq_none (he n)
-    rw [this]
-  · rfl
-
 /-- con-leche: ConLeche/Kernel/FEnv.lean:130-134 FEnv.push — **a push answers at
 its own name and nowhere else**. -/
 theorem IFEnv.find?_push (fe : IFEnv) (ci : IConstantInfo) (n : NIdx) :
     (fe.push ci).find? n = if (ci.name == n) = true then some ci else fe.find? n := by
-  rw [IFEnv.find?_eq, IFEnv.find?_eq]
-  simp only [IFEnv.push, Std.HashMap.getElem?_insert]
+  rw [IFEnv.find?_eq, IFEnv.find?_eq, IFEnv.push_idx, IFEnv.push_base]
+  simp only [Std.HashMap.getElem?_insert]
   by_cases hb : (ci.name == n) = true <;> simp [hb]
 
 /-- con-leche: ConLeche/Kernel/FEnv.lean:163-167 FEnv.findTable? — **no table
@@ -508,7 +494,7 @@ theorem TblGate.push {fe : IFEnv} (h : TblGate fe) (ci : IConstantInfo) :
   rw [IFEnv.find?_push]
   split
   · rfl
-  · exact h n t ht
+  · exact h n t (by rw [← IFEnv.rawTable?_push fe ci]; exact ht)
 
 /-! ## The two invariants, and the rule that separates them
 
@@ -669,11 +655,10 @@ theorem IFEnvOK.push {env : Env} {fe : IFEnv} {s : AState}
     | true =>
       have hn : ci.name = n := by simpa using hb
       subst hn
-      simp only [IFEnv.findTable?, keyT, Option.isSome_some, ↓reduceIte]
-      rfl
+      simp only [IFEnv.findTable?, keyT, Option.isSome_some, ↓reduceIte, IFEnv.rawTable?_push]
     | false =>
-      simp only [IFEnv.findTable?, keyF n hb, Bool.false_eq_true, ↓reduceIte]
-      rfl
+      simp only [IFEnv.findTable?, keyF n hb, Bool.false_eq_true, ↓reduceIte,
+        IFEnv.rawTable?_push]
   have keyEnvT : ∀ nm : ConLeche.Name,
       (⟨c :: env.consts, env.tables⟩ : Env).findTable? nm
         = if c.name = nm then env.tables.find? (·.structName == c.name)
@@ -685,7 +670,7 @@ theorem IFEnvOK.push {env : Env} {fe : IFEnv} {s : AState}
     · subst hq
       simp only [Option.isSome_some, ↓reduceIte]
     · simp only [hq, ↓reduceIte]
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, h.flags.push ci, by rw [IFEnv.push_base]; exact h.lits⟩
   · -- `hit`
     intro n ci' hf
     cases hb : (ci.name == n) with
@@ -849,18 +834,20 @@ a push**, which is what each of the three value checks
 concludes.  Three of the four clauses are push lemmas (above, and in
 `Bridge/Promote/Exact.lean`); the fourth is `EnvWF.cons`, and its `ConstWF`
 premise is the one thing con-leche does not prove about the value checks (see
-the section note).  Its `IndWF`/`CtorWF` premises hold of every value check's
-record (no inductive, no constructor) by their defaults. -/
+the section note).  Its `IndWF`/`CtorWF`/`RuleWF` premises hold of every value
+check's record (no inductive, no constructor, no recursor) by their
+defaults. -/
 theorem StepOK.push {env : Env} {fe : IFEnv} {s : AState}
     {ci : IConstantInfo} {c : ConstantInfo}
     (h : StepOK env fe s) (hst : StateOK s)
     (hci : Frontend.denoteCI s.store ci = some c)
     (hs : litShapeOk c = true) (hcw : ConstWF ⟨c :: env.consts, env.tables⟩ c)
     (hi : IndWF c := by exact IndWF.of_not_ind (fun _ _ heq => nomatch heq))
-    (hk : CtorWF c := by exact CtorWF.of_not_ctor (fun _ _ _ _ heq => nomatch heq)) :
+    (hk : CtorWF c := by exact CtorWF.of_not_ctor (fun _ _ _ _ heq => nomatch heq))
+    (hr : RuleWF c := by exact RuleWF.of_not_rec (fun _ _ _ _ _ heq => nomatch heq)) :
     StepOK ⟨c :: env.consts, env.tables⟩ (fe.push ci) s where
   ienv := h.ienv.pushStored hst h.gate (TablesStored.of_envWF h.envWF) hci
-  envWF := EnvWF.cons hs h.envWF hcw hi hk
+  envWF := EnvWF.cons hs h.envWF hcw hi hk hr
   coh := h.coh.push ci
   gate := h.gate.push ci
 

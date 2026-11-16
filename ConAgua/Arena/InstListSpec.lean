@@ -93,7 +93,9 @@ theorem ilclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 50 + 2 �
 grind_pattern [arena_grind] instListW_eq => instListW n m e o l d
 grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:647-654 ConRon.Arena.instantiateListFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:660-666 ConRon.Arena.instantiateListFast -/
+-- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.instantiateListFast`, `ConRon.Arena.instantiateRevRange` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.instantiateListFast` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.instantiateListFast]
 def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
   if ILMEMO.u64[3] == 0 && CTL.u64[51] <= ⟪FITLO⟫ { u := call ilm_clear() } else { u := call ilm_fit() };

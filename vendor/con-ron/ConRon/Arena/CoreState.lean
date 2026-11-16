@@ -20,7 +20,7 @@ the whole of one declaration's check and drops at its boundary:
   §8.3 "Levels and names": the ALGORITHM runs on transient trees, the
   VERDICT is cached on the handles;
 * the lazy instantiated-constant caches (`constTyAt` / `constValAt` /
-  `ruleRhsAt`, con-leche's arena task #26), keyed on the name and the
+  `ruleBodyAt`, con-leche's arena task #26), keyed on the name and the
   universe-argument list rather than on the instantiated term — every
   `cv.type.instantiateLevelParams cv.levelParams us` in the checker is one
   of these three.
@@ -55,7 +55,7 @@ open ConLeche
 
 /-! ## The record -/
 
-/-- con-leche: ConLeche/Cached/StateC.lean:119-131 ModeMemos — **the
+/-- con-leche: ConLeche/Cached/StateC.lean:110-122 ModeMemos — **the
 mode-dependent memos**: the six entry-point tables, whose entries are results
 of the knot at ONE mode.  The level verdicts, the stored-constant caches and
 the readback memos are functions of their keys alone and are not among them.
@@ -70,11 +70,11 @@ structure ModeMemos where
   inferIOC : Std.HashMap EIdx EIdx
   defeqC : Std.HashMap (EIdx × EIdx) Bool
 
-/-- con-leche: ConLeche/Cached/StateC.lean:119-131 ModeMemos — the empty set
+/-- con-leche: ConLeche/Cached/StateC.lean:110-122 ModeMemos — the empty set
 (each of con-leche's six fields defaults to `{}`). -/
 def ModeMemos.empty : ModeMemos := ⟨∅, ∅, ∅, ∅, ∅, ∅⟩
 
-/-- con-leche: ConLeche/Cached/StateC.lean:265-302 CState — the
+/-- con-leche: ConLeche/Cached/StateC.lean:256-298 CState — the
 per-declaration caches of the arena checker, in one record beside
 `Monad.lean`'s per-call `Memos`.  Keeping the two apart is deliberate: the
 per-call clear (`inst1Clear` and its ten siblings) and the per-declaration
@@ -108,10 +108,10 @@ structure Caches where
   constTyC : Std.HashMap (NIdx × LsIdx) EIdx
   /-- A stored definition's VALUE at a universe instantiation. -/
   constValC : Std.HashMap (NIdx × LsIdx) EIdx
-  /-- An iota rule's right-hand side at the recursor's universe
-  instantiation, keyed by the recursor, the rule's constructor and the
-  levels — the three data that determine it. -/
-  ruleRhsC : Std.HashMap (NIdx × NIdx × LsIdx) EIdx
+  /-- An iota rule's body under its `rulePrefix + nfields` λs at the
+  recursor's universe instantiation, keyed by the recursor, the rule's
+  constructor and the levels — the three data that determine it. -/
+  ruleBodyC : Std.HashMap (NIdx × NIdx × LsIdx) EIdx
   /-- **The readback memo DESIGN §8.3 promised** and nothing had built
   (task #97-P6-13): "`Level` ops … run on transient `Level` trees read back
   from `LIdx` (*memoised readback per declaration*; levels are small)".  A
@@ -131,20 +131,20 @@ structure Caches where
   way round. -/
   eagerMemos : ModeMemos
 
-/-- con-leche: ConLeche/Cached/StateC.lean:265-302 CState — the empty
+/-- con-leche: ConLeche/Cached/StateC.lean:256-298 CState — the empty
 cache set: what a fresh run and every declaration start from. -/
 def Caches.empty : Caches := ⟨∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ModeMemos.empty⟩
 
 instance : Inhabited Caches := ⟨Caches.empty⟩
 
-/-- con-leche: ConLeche/Cached/StateC.lean:510-512 CState.modeMemos — the
+/-- con-leche: ConLeche/Cached/StateC.lean:503-505 CState.modeMemos — the
 plain tower's mode memos, read out of the record. -/
 def Caches.modeMemos (c : Caches) : ModeMemos :=
   ⟨c.whnfCoreC, c.whnfCoreCheapC, c.whnfC, c.inferC, c.inferIOC, c.defeqC⟩
 
 /-! ## The pin table (task #97-P6-4a) -/
 
-/-- con-leche: ConLeche/Cached/StateC.lean:153-154 maxNatSizeDefault — the
+/-- con-leche: ConLeche/Cached/StateC.lean:144-145 maxNatSizeDefault — the
 official kernel's default maximum `Nat` size, 128 MiB. -/
 def maxNatSizeDefault : Nat := 134217728
 

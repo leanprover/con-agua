@@ -39,7 +39,7 @@ namespace L.Arena
 }
 
 /-- `string_ty_ok(found, p)`: no level parameters, type `Sort 1`. -/
--- con-ron: ConRon/Arena/Core.lean:647-654 ConRon.Arena.stringTyOk
+-- con-ron: ConRon/Arena/Core.lean:714-721 ConRon.Arena.stringTyOk
 @[no_expose, l_impl ConRon.Arena.stringTyOk]
 def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
   if found == 0 { return 0 };
@@ -50,7 +50,7 @@ def stringTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, s1) {
 }
 
 /-- `char_ty_ok(found, p)`: `string_ty_ok`'s body (the twins are the same). -/
--- con-ron: ConRon/Arena/Core.lean:656-663 ConRon.Arena.charTyOk
+-- con-ron: ConRon/Arena/Core.lean:723-730 ConRon.Arena.charTyOk
 @[no_expose, l_impl ConRon.Arena.charTyOk]
 def charTyOkL : FunDecl := stringTyOkL
 
@@ -78,7 +78,7 @@ def charTyOkL : FunDecl := stringTyOkL
 }
 
 /-- `list_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → Sort (u+1)`. -/
--- con-ron: ConRon/Arena/Core.lean:665-682 ConRon.Arena.listTyOk
+-- con-ron: ConRon/Arena/Core.lean:732-749 ConRon.Arena.listTyOk
 @[no_expose, l_impl ConRon.Arena.listTyOk]
 def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z) {
   if found == 0 { return 0 };
@@ -92,7 +92,7 @@ def listTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, pl, so, g, d, b, z
 }
 
 /-- `list_nil_ty_ok(found, p)`: one level parameter `u`, type `Sort (u+1) → List.{u} #0`. -/
--- con-ron: ConRon/Arena/Core.lean:684-718 ConRon.Arena.listNilTyOk
+-- con-ron: ConRon/Arena/Core.lean:751-785 ConRon.Arena.listNilTyOk
 @[no_expose, l_impl ConRon.Arena.listNilTyOk]
 def listNilTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, g, d, b, z, f, x, l1, u1, i, y, w) {
@@ -118,7 +118,7 @@ def listNilTyOkL : FunDecl :=
 
 /-- `list_cons_ty_ok(found, p)`: one level parameter `u`, type
 `(α : Sort (u+1)) → α → List.{u} α → List.{u} α` (in de Bruijn indices). -/
--- con-ron: ConRon/Arena/Core.lean:720-756 ConRon.Arena.listConsTyOk
+-- con-ron: ConRon/Arena/Core.lean:787-823 ConRon.Arena.listConsTyOk
 @[no_expose, l_impl ConRon.Arena.listConsTyOk]
 def listConsTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, pl, so, ps, li, b0, b1, b2, l1, dom3, cod3, g, d, r, z,
@@ -148,7 +148,7 @@ def listConsTyOkL : FunDecl :=
 }
 
 /-- `char_of_nat_ty_ok(found, p)`: no level parameters, type `Nat → Char`. -/
--- con-ron: ConRon/Arena/Core.lean:758-773 ConRon.Arena.charOfNatTyOk
+-- con-ron: ConRon/Arena/Core.lean:825-840 ConRon.Arena.charOfNatTyOk
 @[no_expose, l_impl ConRon.Arena.charOfNatTyOk]
 def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, cc, g, d, b, z) {
   if found == 0 { return 0 };
@@ -165,7 +165,7 @@ def charOfNatTyOkL : FunDecl := lfn (found, p) locals (lo, ll, ty, nt, nc, ch, c
 }
 
 /-- `string_of_list_ty_ok(found, p)`: no level parameters, type `List.{0} Char → String`. -/
--- con-ron: ConRon/Arena/Core.lean:775-796 ConRon.Arena.stringOfListTyOk
+-- con-ron: ConRon/Arena/Core.lean:842-863 ConRon.Arena.stringOfListTyOk
 @[no_expose, l_impl ConRon.Arena.stringOfListTyOk]
 def stringOfListTyOkL : FunDecl :=
   lfn (found, p) locals (lo, ll, ty, zl, zs, li, lc, ch, cc, dom, st, sc, g, d, b, z) {
@@ -192,6 +192,7 @@ def stringOfListTyOkL : FunDecl :=
 /-- `str_lit_stored(vis)`: `nat_lit_stored` and the seven string-support names, by presence only;
 the seven pinned before their conjunction. -/
 -- con-ron: ConRon/Arena/Core.lean:798-815 ConRon.Arena.strLitStored
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.strLitStored` is gone upstream; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.strLitStored]
 def strLitStoredL : FunDecl :=
   lfn (vis) locals (r, st, sl, li, ln, lc, ch, co, f1, q1, f2, q2, f3, q3, f4, q4, f5, q5, f6, q6,
@@ -218,7 +219,7 @@ def strLitStoredL : FunDecl :=
 
 /-- `nat_ind_at_cv(q)`: `natIndOk (some (.indInfo cv {}))` at the constant value `q` (no level
 parameters, type `Sort 1`): `nat_ind_ok` at a record of the kind `litShapeOk` builds. -/
--- con-ron: ConRon/Arena/Core.lean:485-491 ConRon.Arena.natIndOk
+-- con-ron: ConRon/Arena/Core.lean:564-570 ConRon.Arena.natIndOk
 @[no_expose, l_impl ConRon.Arena.natIndOk]
 def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
   if EREC⦃q + ⟪CV.lpsLen⟫⦄ != 0 { return 0 };
@@ -228,7 +229,7 @@ def natIndAtCvL : FunDecl := lfn (q) locals (s1) {
 
 /-- `nat_zero_at_cv(q)`: `natZeroOk (some (.ctorInfo cv 0 0))` at the constant value `q` (no level
 parameters, type `Nat`; `Nat` interned first, as the twin does). -/
--- con-ron: ConRon/Arena/Core.lean:493-500 ConRon.Arena.natZeroOk
+-- con-ron: ConRon/Arena/Core.lean:572-579 ConRon.Arena.natZeroOk
 @[no_expose, l_impl ConRon.Arena.natZeroOk]
 def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
   nt := call pin_at(1);
@@ -239,7 +240,7 @@ def natZeroAtCvL : FunDecl := lfn (q) locals (nt, nc) {
 
 /-- `nat_succ_at_cv(q)`: `natSuccOk (some (.ctorInfo cv 0 1))` at the constant value `q` (no level
 parameters, type `Nat → Nat`). -/
--- con-ron: ConRon/Arena/Core.lean:502-514 ConRon.Arena.natSuccOk
+-- con-ron: ConRon/Arena/Core.lean:581-593 ConRon.Arena.natSuccOk
 @[no_expose, l_impl ConRon.Arena.natSuccOk]
 def natSuccAtCvL : FunDecl := lfn (q) locals (nt, nc, ty, t, i, dom, body) {
   if EREC⦃q + ⟪CV.lpsLen⟫⦄ != 0 { return 0 };
@@ -258,7 +259,7 @@ def natSuccAtCvL : FunDecl := lfn (q) locals (nt, nc, ty, t, i, dom, body) {
 literal's name must have; any other name passes. The three `Nat` names are read at the kinds their
 guards ask for (`nat_ind_at_cv`, `nat_zero_at_cv`, `nat_succ_at_cv` at the record's constant value
 `p + CI.cv`). The cited `if`-chain, each name pinned only when the chain reaches it. -/
--- con-ron: ConRon/Arena/Core.lean:817-835 ConRon.Arena.litShapeOk
+-- con-ron: ConRon/Arena/Core.lean:865-883 ConRon.Arena.litShapeOk
 @[no_expose, l_impl ConRon.Arena.litShapeOk]
 def litShapeOkL : FunDecl := lfn (p) locals (n, x, r) {
   n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
@@ -327,7 +328,7 @@ the code point at `k` and its length, `(0, 0)` for invalid bytes. -/
 /-- `str_cons_spine(cons, ofNat, nilE, k, n)`: the `List.cons` spine of the characters whose UTF-8
 bytes are the pool words `[k, n)`; the rest of the spine first, then the character's nodes, as the
 twin's recursion interns them. -/
--- con-ron: ConRon/Arena/Core.lean:612-624 ConRon.Arena.strLitConsSpine
+-- con-ron: ConRon/Arena/Core.lean:679-691 ConRon.Arena.strLitConsSpine
 @[no_expose, l_impl ConRon.Arena.strLitConsSpine]
 def strConsSpineL : FunDecl := lfn (cons, ofNat, nilE, k, n) locals (c, l, rest, lit, ch, f, r) {
   if n <= k { return nilE };
@@ -364,7 +365,7 @@ form uses (`List.cons.{0} Char`, `Char.ofNat`, `List.nil.{0} Char`), interned in
 /-- `str_lit_ctor(h)`: the constructor form `String.ofList (List.cons.{0} Char (Char.ofNat c₁) …
 (List.nil.{0} Char))` of the string literal `h`: the prefix, then the literal's record (read
 after the prefix, so at the memory the spine reads) gives the bytes' pool slice. -/
--- con-ron: ConRon/Arena/Core.lean:626-645 ConRon.Arena.strLitToConstructor
+-- con-ron: ConRon/Arena/Core.lean:693-712 ConRon.Arena.strLitToConstructor
 @[no_expose, l_impl ConRon.Arena.strLitToConstructor]
 def strLitCtorL : FunDecl :=
   lfn (h) locals (cons, ofNat, nilE, t, i, o, cnt, spine, slN, sl, r) {

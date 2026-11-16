@@ -108,7 +108,7 @@ l_model lvEquivs_spec (p : Prog) (hp : LevelProg p) (hpe : p.lookup "lv_equiv" =
 fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
 function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
 `lvlEq_refines`). -/
--- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
+-- con-ron: ConRon/Arena/Core.lean:168-185 ConRon.Arena.lvlEq?
 @[no_expose, l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {
   CTL.u64[192] := 0;
@@ -157,7 +157,7 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
 
 /-- con-ron's `lvlsEq?` (`Arena/Core.lean:155`) on two level-list handles: `isEquivList` on their
 slices, on a fresh heap; the verdict cache `lvlsEqC` is not represented (as for `lvl_eq`). -/
--- con-ron: ConRon/Arena/Core.lean:156-173 ConRon.Arena.lvlsEq?
+-- con-ron: ConRon/Arena/Core.lean:187-204 ConRon.Arena.lvlsEq?
 @[no_expose, l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqL : FunDecl := lfn (us, vs) locals (a, n, b, k, z) {
   (a, n) := call ls_node(us);

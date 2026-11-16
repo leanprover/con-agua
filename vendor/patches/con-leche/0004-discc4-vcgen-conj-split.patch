@@ -2,10 +2,10 @@ DiscC4: the two whnfCore memo lemmas moved here from KnotC (con-leche #572), so 
 CSOK.*_hit_ws companions (the vcgen conjunction split since lean4#15487) move with them.
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/DiscC4.lean b/vendor/con-leche/ConLeche/Verify/Cached/DiscC4.lean
-index 1f5b72939aaf1db4f379ee05b2fd47cab9811086..f3f6ff5552075c8a472032853a7c5e04bc474d14 100644
+index a9e1bd1708554f4ac329d4e7dee124bbbdc03ff7..1fae2b5e278fa55a413a391ef405080cde70538a 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/DiscC4.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/DiscC4.lean
-@@ -417,6 +417,14 @@ theorem CSOK.whnfCore_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
+@@ -449,6 +449,14 @@ theorem CSOK.whnfCore_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
    exact ⟨⟨F, hrun⟩, whnfCore_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.whnfCore_hit =>
    CSOK mode eager env s, s.whnfCoreC[i]?, Runs ((fueledFns mode eager env).whnfCore false d i) r
@@ -20,7 +20,7 @@ index 1f5b72939aaf1db4f379ee05b2fd47cab9811086..f3f6ff5552075c8a472032853a7c5e04
  
  /-- A cheap whnfCore memo hit answers the fueled cheap whnfCore. -/
  theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-@@ -427,6 +435,14 @@ theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r :
+@@ -459,6 +467,14 @@ theorem CSOK.whnfCoreCheap_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r :
    exact ⟨⟨F, hrun⟩, whnfCore_WScoped henv F hrun hw⟩
  grind_pattern [conleche_grind] CSOK.whnfCoreCheap_hit =>
    CSOK mode eager env s, s.whnfCoreCheapC[i]?, Runs ((fueledFns mode eager env).whnfCore true d i) r

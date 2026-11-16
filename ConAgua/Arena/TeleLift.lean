@@ -19,7 +19,7 @@ namespace L.Ind
 
 open L.Arena
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1376-1384 ConRon.Arena.fvarTypeD -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1400-1408 ConRon.Arena.fvarTypeD -/
 @[no_expose, l_impl ConRon.Arena.fvarTypeD]
 def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
   if ⟦e⟧.tag != 1 { return e };

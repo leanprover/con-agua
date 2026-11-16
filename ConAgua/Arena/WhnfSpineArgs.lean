@@ -33,7 +33,7 @@ namespace L.Arena
 /-! ## `app_count(e)`: the number of `.app` nodes on the spine -/
 
 /-- `app_count(e)`: `get_app_fn`'s loop; the count is the fuel spent.
-con-ron: ConRon/Arena/ExprOps.lean:1299-1310 ConRon.Arena.getAppArgs -/
+con-ron: ConRon/Arena/ExprOps.lean:1311-1322 ConRon.Arena.getAppArgs -/
 @[no_expose] def appCountL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
   ⟪getAppFnLoop⟫;
@@ -94,7 +94,7 @@ def appFillLoop : Stmt := lblk (e, o, n, t, x) {
 }
 
 /-- `app_fill(e, o, n)`.
-con-ron: ConRon/Arena/ExprOps.lean:1299-1310 ConRon.Arena.getAppArgs -/
+con-ron: ConRon/Arena/ExprOps.lean:1311-1322 ConRon.Arena.getAppArgs -/
 @[no_expose] def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillLoop⟫;
   return 0
@@ -261,7 +261,7 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
 }
 
 /-- `app_fill_n(e, o, n)`.
-con-ron: ConRon/Arena/Core.lean:2463-2477 ConRon.Arena.getAppSpineGo -/
+con-ron: ConRon/Arena/Core.lean:2550-2564 ConRon.Arena.getAppSpineGo -/
 @[no_expose] def appFillNL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillNLoop⟫;
   return 0
@@ -528,7 +528,7 @@ theorem gasTwin (m : Mem) (a : AState) (hR : ArenaR m a) :
 
 /-! ## `get_app_args(e)`: count, check room, fill, push -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1299-1310 ConRon.Arena.getAppArgs -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1311-1322 ConRon.Arena.getAppArgs -/
 @[no_expose, l_impl ConRon.Arena.getAppArgs]
 def getAppArgsL : FunDecl := lfn (e) locals (n, o, z) {
   n := call app_count(e);
@@ -681,8 +681,8 @@ theorem nodesW_congr {m m' : Mem} (h : m'.arr64 AREC = m.arr64 AREC)
   | 0, _ => rfl
   | c + 1, e => by simp only [nodesW, fnW, nodesW_congr h h' c, tfld_arr_eq (R := APP) h h']
 
-/-- con-ron: ConRon/Arena/Core.lean:2479-2482 ConRon.Arena.getAppSpine
-con-ron: ConRon/Arena/Core.lean:2463-2477 ConRon.Arena.getAppSpineGo -/
+/-- con-ron: ConRon/Arena/Core.lean:2566-2569 ConRon.Arena.getAppSpine
+con-ron: ConRon/Arena/Core.lean:2550-2564 ConRon.Arena.getAppSpineGo -/
 @[no_expose, l_impl ConRon.Arena.getAppSpine ConRon.Arena.getAppSpineGo]
 def getAppSpineL : FunDecl := lfn (e) locals (n, h, o, z) {
   (n, h) := call app_count(e);
@@ -894,7 +894,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
 
 /-! ## `head_and_args(v)` -/
 
-/-- con-ron: ConRon/Arena/Core.lean:2484-2492 ConRon.Arena.headAndArgs -/
+/-- con-ron: ConRon/Arena/Core.lean:2571-2579 ConRon.Arena.headAndArgs -/
 @[no_expose, l_impl ConRon.Arena.headAndArgs]
 def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
   if ⟦v⟧.tag == 4 {
