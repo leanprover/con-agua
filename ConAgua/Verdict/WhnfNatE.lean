@@ -121,32 +121,28 @@ theorem reduceNatSucc_ref (n F : Nat) (hF : n ≤ F) (hn2 : n ≤ 2 ^ 62)
   | succ n =>
   rw [reduceNatSuccE.arm1]; unfold redSuccS
   refine RefE.bind_right (pinNatSucc_run hC.pins) ?_
-  refine RefE.onlySim (fun _ => reduceNatSuccE.k_nat_lit_stored.none ..) (fun _ _ h => h) fun r₁ m₁ h1 => ?_
-  rw [reduceNatSuccE.k_nat_lit_stored.arm1]
-  have c1 := callW_natLitStored p hp n s₀ a₀ dn vis fe MM eb hC r₁ m₁ h1
-  refine RefE.bind_core (w := id) c1.core fun M₁ hS₁ _ => ?_
   refine RefE.onlySim (fun _ => reduceNatSuccE.k_pin_at.none ..) (fun _ _ h => h) fun r₂ m₂ h2 => ?_
-  obtain ⟨rfl, -, -, hr₂⟩ := callW_pinAt p hp.pinAt n m₁ 3 r₂ m₂ h2
+  obtain ⟨hm₂, -, -, hr₂⟩ := callW_pinAt p hp.pinAt n s₀.mem 3 r₂ m₂ h2
+  subst hm₂
   have hcw : HW (pinW s₀.mem 4) := hC.pins.names_lt 3 (by decide)
-  have hb₁ : ((decI c : NIdx) == decI (pinW s₀.mem 4) && decBool r₁) =
-      decide (c = r₂.headD 0 ∧ r₁.headD 0 ≠ 0) := by
-    rw [decI_beq _ _ hc hcw, hr₂, show (3 : Word).toNat = 3 from rfl,
-      pinW_const_frame c1.2.2.2.1]
-    simp only [decBool]; grind
-  by_cases hgo : c = r₂.headD 0 ∧ r₁.headD 0 ≠ 0
+  have hb₁ : ((decI c : NIdx) == decI (pinW s₀.mem 4) && fe.natLit) =
+      decide (c = r₂.headD 0 ∧ rdW (s₀.mem.arr64 CTL) 160 ≠ 0) := by
+    rw [decI_beq _ _ hc hcw, hr₂, show (3 : Word).toNat = 3 from rfl, hC.env.natLit]
+    grind
+  by_cases hgo : c = r₂.headD 0 ∧ rdW (s₀.mem.arr64 CTL) 160 ≠ 0
   case neg =>
-    rw [show reduceNatSuccE.k_pin_at p n mode vis d c b (r₁.headD 0) (.ok (r₂, m₂)) = .ok ([0, 0], m₂) by
+    rw [show reduceNatSuccE.k_pin_at p n mode vis d c b (.ok (r₂, s₀.mem)) = .ok ([0, 0], s₀.mem) by
       by_cases hcn : c ≠ r₂.headD 0
-      · exact reduceNatSuccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ _ _ hcn
-      · exact reduceNatSuccE.k_pin_at.arm2 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hcn)
+      · exact reduceNatSuccE.k_pin_at.arm1 _ _ _ _ _ _ _ _ _ hcn
+      · exact reduceNatSuccE.k_pin_at.arm2 _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hcn)
           (Classical.byContradiction fun h => hgo ⟨Classical.not_not.mp hcn, h⟩)]
-    exact RefE.ite_neg (by rw [hb₁, decide_eq_false hgo]; decide) (RefE.ret rfl (CorePost.ret hS₁ rfl resW_zero))
-  rw [reduceNatSuccE.k_pin_at.arm3 _ _ _ _ _ _ _ _ _ _ hgo.1 hgo.2]
+    exact RefE.ite_neg (by rw [hb₁, decide_eq_false hgo]; decide) (RefE.ret rfl (CorePost.ret hC rfl resW_zero))
+  rw [reduceNatSuccE.k_pin_at.arm3 _ _ _ _ _ _ _ _ _ hgo.1 hgo.2]
   refine RefE.ite_pos (by rw [hb₁, decide_eq_true hgo]) ?_
-  have hSP₁ : SlotPre ⟨m₂, Locals.init []⟩ _ dn vis fe M₁ eb mode := ⟨hS₁, hS.mode4, hS.eb_mode⟩
-  refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩) (fun _ => reduceNatSuccE.k_whnf.none ..)
-    ((hk n (by omega)).whnf F _ _ dn vis fe M₁ eb mode d b (by omega) (by omega) hSP₁ hb)
-    (fun hkE => (hkE n (by omega)).whnf F _ _ dn vis fe M₁ eb mode d b (by omega) (by omega) hSP₁ hb)
+  have hSP₁ : SlotPre ⟨s₀.mem, Locals.init []⟩ _ dn vis fe MM eb mode := ⟨hC, hS.mode4, hS.eb_mode⟩
+  refine RefE.bind_callE (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => reduceNatSuccE.k_whnf.none ..)
+    ((hk n (by omega)).whnf F _ _ dn vis fe MM eb mode d b (by omega) (by omega) hSP₁ hb)
+    (fun hkE => (hkE n (by omega)).whnf F _ _ dn vis fe MM eb mode d b (by omega) (by omega) hSP₁ hb)
     fun r₃ m₃ _ h3 => RefE.after_core (w := id) h3 fun M₃ hS₃ _ => ?_
   rw [reduceNatSuccE.k_whnf.arm1]
   refine RefE.onlySim (fun _ => reduceNatSuccE.k_raw_nat_lit.none ..) (fun _ _ h => h) fun r₄ m₄ h4 => ?_
