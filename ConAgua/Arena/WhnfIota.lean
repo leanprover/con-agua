@@ -116,22 +116,6 @@ def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   return (0, 0)
 }
 
-/-! ## Reserved names: a small fusion of `reservedBasisNames` and `List.contains`
-
-Not tagged `@[l_impl]` on its own (it fuses a lookup declaration and a list membership test, as
-the house style allows for small dispatchers); `major_to_ctor`'s eta branch is its only caller. -/
-
-/-- con-ron: ConRon/Arena/Core.lean:1565-1569 ConRon.Arena.reservedBasisNames -/
-@[no_expose] def reservedContainsL : FunDecl := lfn (x) locals (j) {
-  if PINS.u64[0] == 0 { abort };
-  j := 0;
-  while j < 16 {
-    if PINS.u64[55 + j] == x { return 1 };
-    j += 1
-  };
-  return 0
-}
-
 /-! ## The family's sort at the use: `former_res_sort`, …, `iota_case3_at`, `eta_rescue_table`
 
 con-leche task #480 removed the install-time data (the rule's `k`/`eta` bits, the capabilities'
