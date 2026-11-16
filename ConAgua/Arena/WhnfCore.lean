@@ -19,10 +19,11 @@ slot, `:3546`), in L:
 | `whnf_core_store_chain(mode, cheap, pb, pn, pc, v)` | `whnfCoreStoreChain` |
 | `whnf_core_store_keys(mode, o, n, i, v)`, `whnf_core_store_cheap_keys(…)` | `whnfCoreStoreKeys`, `whnfCoreStoreCheapKeys` |
 | `whnf_core_step(mode, cheap, vis, d, h, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_stuck` or `whnf_core_app` |
-| `whnf_stuck(mode, vis, d, h, e)`, `iota_target(vis, h)` | `whnfStuck`, `iotaTarget` |
+| `whnf_stuck(mode, vis, d, h, e)` | `whnfStuck` (the recursor's lookup, the cut spine) |
 | `whnf_core_app(mode, cheap, vis, d, e)` | `whnfCoreStepApp` |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
-| `beta_peel(t, a, ao, an, i)` | `betaPeel t #[a] args i` (the accumulator a stack slice) |
+| `whnf_app_iota(mode, vis, d, hd, vo, vn)` | `whnfAppIota` (the recursor's lookup, then `iota_rec_at`) |
+| `beta_peel(t, s, ao, an, i)` | `betaPeel t s args i` (the substitution the spine range `(ao + s, i - s)`, read in place) |
 | `whnf_core_step_proj(mode, cheap, vis, d, e, sn, i, pe)` | `whnfCoreStepProj` |
 | `reduce_proj_core(mode, vis, d, sn, i, c)` | `reduceProjCore` |
 | `proj_lit_to_ctor(mode, vis, d, h)` | `projLitToCtor` |
@@ -193,38 +194,30 @@ def whnfCoreStepL : FunDecl :=
   abort
 }
 
-/-- The ι target of a spine head `h`: `(1, mI)` at a stored recursor at its own number of levels
-(the twin's `some (mI + 1)`: the word is the major's index, so the length never wraps), `(0, 0)`
-otherwise; a dangling handle aborts. -/
--- con-ron: ConRon/Arena/Core.lean:2628-2643 ConRon.Arena.iotaTarget
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaTarget` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.iotaTarget]
-def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
-  if ⟦h⟧.tag != 3 { return (0, 0) };
+/-- The stuck spine `e` at head `h`: at a stored recursor at its own number of levels (the record
+`q` looked up here, once), the ι step once, at the prefix of `mI + 1` of the spine's arguments
+(pushed at the top by `get_app_args`, the top put back), else `e` itself. -/
+-- con-ron: ConRon/Arena/Core.lean:2733-2763 ConRon.Arena.whnfStuck
+@[no_expose, l_impl ConRon.Arena.whnfStuck]
+def whnfStuckL : FunDecl :=
+    lfn (mode, vis, d, h, e) locals (t, x, c, us, f, q, lo, usl, top, ao, an, k, st, e2, e3) {
+  if ⟦h⟧.tag != 3 { return (0, e) };
   t := ⟦h⟧.tier;
   x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= x { abort };
-  (f, q) := call env_find(CONST⟨t, x⟩.n, vis);
-  if f == 0 { return (0, 0) };
-  if EREC⦃q⦄ != 5 { return (0, 0) };
-  (lo, usl) := call ls_node(CONST⟨t, x⟩.us);
-  if usl == EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (1, EREC⦃q + ⟪CI.recMajor⟫⦄) };
-  return (0, 0)
-}
-
-/-- The stuck spine `e` at head `h`: the ι step once, at the target prefix `k + 1` of the
-spine's arguments (pushed at the top by `get_app_args`, the top put back), else `e` itself. -/
--- con-ron: ConRon/Arena/Core.lean:2733-2763 ConRon.Arena.whnfStuck
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.whnfStuck` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.whnfStuck]
-def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, st, e2, e3) {
-  (f, k) := call iota_target(vis, h);
+  c := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
+  (f, q) := call env_find(c, vis);
   if f == 0 { return (0, e) };
+  if EREC⦃q⦄ != 5 { return (0, e) };
+  (lo, usl) := call ls_node(us);
+  if usl != EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, e) };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);
+  k := EREC⦃q + ⟪CI.recMajor⟫⦄;
   if k < an {
-    (st, e2) := call iota_rec_at(mode, vis, d, h, ao, k + 1);
+    (st, e2) := call iota_rec_at(mode, vis, d, c, us, q, ao, k + 1);
     if st != 0 {
       e3 := call mk_app_n_from(e2, ao, an, k + 1);
       CTL.u64[136] := top;
@@ -233,6 +226,31 @@ def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, 
   };
   CTL.u64[136] := top;
   return (0, e)
+}
+
+/-- The ι step of `whnf_app`'s loop at the application `hd vargs` (`vargs` the slice `(vo, vn)`):
+tried only at a stored recursor (the record `q` looked up here, once) at its own number of levels,
+applied to exactly `mI + 1` arguments (`vn - 1 == mI`, which does not wrap). -/
+-- con-ron: ConRon/Arena/Core.lean:2674-2695 ConRon.Arena.whnfAppIota
+@[no_expose, l_impl ConRon.Arena.whnfAppIota]
+def whnfAppIotaL : FunDecl :=
+    lfn (mode, vis, d, hd, vo, vn) locals (t, x, c, us, f, q, lo, usl, st, e2) {
+  if ⟦hd⟧.tag != 3 { return (0, 0) };
+  t := ⟦hd⟧.tier;
+  x := ⟦hd⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CONST⟨t⟩.count <= x { abort };
+  c := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
+  (f, q) := call env_find(c, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃q⦄ != 5 { return (0, 0) };
+  if vn == 0 { return (0, 0) };
+  if vn - 1 != EREC⦃q + ⟪CI.recMajor⟫⦄ { return (0, 0) };
+  (lo, usl) := call ls_node(us);
+  if usl != EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, 0) };
+  (st, e2) := call iota_rec_at(mode, vis, d, c, us, q, vo, vn);
+  return (st, e2)
 }
 
 /-- The loop's lookup: at a key, the mode's `whnfCore` memo at `e`: `(1, x)` a hit, `(0, 0)` a miss
@@ -303,7 +321,7 @@ def whnfAppL : FunDecl :=
     node := SPN.u64[ao + an + i];
     if ⟦v⟧.tag == 5 {
       (t, x) := node LAM⟦v⟧;
-      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
+      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, i, ao, an, i + 1);
       CTL.u64[136] := top;
       return (st, e3)
     };
@@ -313,13 +331,11 @@ def whnfAppL : FunDecl :=
     SPN.u64[vo + vn] := a;
     vn += 1;
     CTL.u64[136] := vo + vn;
-    if ⟦hd⟧.tag == 3 {
-      (st, e2) := call iota_rec_at(mode, vis, d, hd, vo, vn);
-      if st != 0 {
-        e3 := call mk_app_n_from(e2, ao, an, i + 1);
-        CTL.u64[136] := top;
-        return (1, e3)
-      }
+    (st, e2) := call whnf_app_iota(mode, vis, d, hd, vo, vn);
+    if st != 0 {
+      e3 := call mk_app_n_from(e2, ao, an, i + 1);
+      CTL.u64[136] := top;
+      return (1, e3)
     };
     v := ap
   };
@@ -331,28 +347,17 @@ def whnfAppL : FunDecl :=
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.betaPeel` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.betaPeel`, `ConRon.Arena.instantiateRevRange` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.betaPeel]
-def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
-  co := CTL.u64[136];
-  if len(SPN.u64) <= co { abort };
-  SPN.u64[co] := a;
-  cn := 1;
-  CTL.u64[136] := co + 1;
+def betaPeelL : FunDecl := lfn (t, s, ao, an, i) locals (tt, x, e2, e3) {
   for i < an {
     if ⟦t⟧.tag != 5 {
-      e2 := call inst_list(t, co, cn, 0);
+      e2 := call inst_list(t, ao + s, i - s, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
-      CTL.u64[136] := co;
       return (1, e3)
     };
     (tt, x) := node LAM⟦t⟧;
-    t := LAM⟨tt, x⟩.b;
-    if len(SPN.u64) <= co + cn { abort };
-    SPN.u64[co + cn] := SPN.u64[ao + i];
-    cn += 1;
-    CTL.u64[136] := co + cn
+    t := LAM⟨tt, x⟩.b
   };
-  e2 := call inst_list(t, co, cn, 0);
-  CTL.u64[136] := co;
+  e2 := call inst_list(t, ao + s, i - s, 0);
   return (1, e2)
 }
 
@@ -455,12 +460,12 @@ structure WhnfCoreProg (p : Prog) : Prop where
   storeKeys : p.lookup "whnf_core_store_keys" = some whnfCoreStoreKeysL
   storeCheapKeys : p.lookup "whnf_core_store_cheap_keys" = some whnfCoreStoreCheapKeysL
   storeChain : p.lookup "whnf_core_store_chain" = some whnfCoreStoreChainL
-  iotaTarget : p.lookup "iota_target" = some iotaTargetL
   stuck : p.lookup "whnf_stuck" = some whnfStuckL
   lsn : p.lookup "ls_node" = some lsNode
   capp : p.lookup "whnf_core_app" = some whnfCoreAppL
   capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
   app : p.lookup "whnf_app" = some whnfAppL
+  appIota : p.lookup "whnf_app_iota" = some whnfAppIotaL
   peel : p.lookup "beta_peel" = some betaPeelL
   sproj : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL
   rproj : p.lookup "reduce_proj_core" = some reduceProjCoreL

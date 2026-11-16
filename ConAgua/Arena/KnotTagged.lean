@@ -44,7 +44,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, h, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStep_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk F
+  whnfCoreStep_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) n hk F
     hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he
 
 include hq in
@@ -218,7 +218,7 @@ theorem litMajorToCtor_refines :
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
       (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb :=
-  litMajorToCtor_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+  litMajorToCtor_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
 
 include hq in
 @[refines ConRon.Arena.majorToCtor]
@@ -236,8 +236,8 @@ theorem prepareMajor_refines :
     decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, isK, ro, rc, major]
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
-        (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb :=
-  prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+        (isK != 0) rules (decE major)) (decMV s₀.mem) s₀ a₀ dn vis fe MM eb (MVOk s₀.mem) :=
+  prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (majorToCtor_refines hq) (ErecKeptRec.of_closed hq.hcl)
 
 include hq in

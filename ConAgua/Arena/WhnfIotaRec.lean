@@ -7,18 +7,18 @@ public import ConAgua.Arena.WhnfBase
 /-!
 # ι-reduction: `iota_rec_at` split into small functions
 
-The twin's `ConRon.Arena.iotaRecAt` (`vendor/con-ron/ConRon/Arena/Core.lean:2012-2097`) is one
-long nest of lookups and checks. `iota_rec_at` (`WhnfIota.lean`, the `@[l_impl]` function) reads
-the head and calls the pieces below, one per block of the twin's nest:
+The twin's `ConRon.Arena.iotaRecAt` (`vendor/con-ron/ConRon/Arena/Core.lean:2490-2541`) is one
+long nest of checks at the record its caller found. `iota_rec_at` (`WhnfIota.lean`, the
+`@[l_impl]` function) peels the recursor's telescope and calls the pieces below, one per block of
+the twin's nest:
 
-* `iota_rec_c(mode, vis, d, c, us, so, sn)`: the recursor's lookup, the arity, the level-list
-  length, the recursor's telescope (`peelPis`);
-* `iota_rec_major(mode, vis, d, c, us, recP, so, sn)`: the major's preparation, its head's
-  constructor (`iota_rec_head`: a `const` handle's view), the rule;
+* `iota_rec_major(mode, vis, d, c, us, recP, so, sn)`: the major's preparation and view
+  (`prepare_major`: the constructor, its levels and record), the rule;
 * `iota_rec_fire(…, major)`: the major's arguments (a slice at the stack top, `get_app_args`), the
   top put back after the rest (`iota_rec_fire2`);
 * `iota_rec_fire2(…, mo, mn)`: the argument count, the certificate family (`iota_rec_fam`), the
-  rule's right-hand side applied to the leading arguments and the fields;
+  rule's body under its binders (`rule_body_at`) with the leading arguments and the fields
+  substituted (`iotaVals`: two `eidx_copy_upto`s, then `inst_list`);
 * `iota_rec_fam(…)`: the verified-mode block (`iotaNoCert`, then `recFireLevels`, `iotaCase3At` at
   the recursor's `isK` and the constructor's `induct`);
 * `iota_rec_vck(…, cmpL)`: the level comparison (`lvls_eq_c`, the twin's cached `lvlsEq?`),
@@ -26,10 +26,12 @@ the head and calls the pieces below, one per block of the twin's nest:
 * `iota_rec_cmp(…)`: the parameter comparands (`rec_fire_args`) against the major's leading
   arguments (`defeq_list`), the top put back;
 * `erec_push(o, c, k)`: a nested rule's stored pins (an `EREC` slice) copied to the stack top,
-  where `rec_fire_args` reads them; `stack_cover(x)`: the top raised to `x`.
+  where `rec_fire_args` reads them; `stack_cover(x)`: the top raised to `x`;
+* `eidx_copy_upto(o, n)`: the stack slice `(o, n)` copied to the stack top.
 
 The slices: the recursor's arguments `(so, sn)` below the top; the major's arguments `(mo, mn)`
-exactly at the top while `iota_rec_fire2` runs (`iota_certs_full` asks for it).
+exactly at the top while `iota_rec_fire2` runs (`iota_certs_full` asks for it); the substituted
+values pushed above them.
 -/
 
 open ConRon.Arena
@@ -49,9 +51,7 @@ def erecPushLoop : Stmt := lblk (o, c, k, so, j) {
 /-- A nested rule's stored pins (the `EREC` slice `(o, c)`, `k = 1` the rule's fire kind) pushed
 on the stack: the slice's offset is the old top, the top is raised past it. Nothing for `k ≠ 1` (a
 plain rule has no pins). -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def erecPushL : FunDecl := lfn (o, c, k) locals (so, j) {
   if k != 1 { return 0 };
   so := CTL.u64[136];
@@ -73,9 +73,7 @@ plain rule has no pins). -/
 against the major's leading `cnP` arguments (`defEqList`; `cnP` the stored constructor's parameter
 count, `ctorP + CI.ctorNparams`). A nested rule's pins are copied to the stack first; the
 top is raised over the comparand slice (it lies below it already) and put back at the end. -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, ctorP, rl, mo)
     locals (top, pvo, ao, an, x, ok) {
   top := CTL.u64[136];
@@ -93,9 +91,7 @@ top is raised over the comparand slice (it lies below it already) and put back a
 comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`), its parameters
 (`iota_rec_cmp`), its telescope at the full grade (`iota_certs_full`), the indices
 (`iota_index_ok`; the twin's `(args.take mI).drop rP`: the slice from `so + min rP mI`). -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def iotaRecVckL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn, cmpL)
     locals (lok, ok, tyC) {
   lok := call lvls_eq_c(usj, cmpL);
@@ -118,9 +114,7 @@ comparands (`lvls_eq_c`; `0`, the twin's fuel exhaustion, is a decline: `abort`)
 /-- The certificate family: nothing in a trusted mode, where the stored facts need no certificate
 (`iota_no_cert` at the rule's comparand level count, `rec_fire_level_count`) or outside case 3;
 else `iota_rec_vck`. -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def iotaRecFamL : FunDecl := lfn (mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn)
     locals (lc, nc, cmpL, c3, r) {
   if mode & 1 != 0 { return 1 };
@@ -136,34 +130,52 @@ else `iota_rec_vck`. -/
   return r
 }
 
+/-- con-leche: `Cached/CoreC.lean:194-197` `pushRange` — the stack slice `(o, n)` copied to the
+stack top (`SPN[o + j]` below the old top), the top raised past it; the copy's offset (the old top)
+is the answer. -/
+-- con-ron: ConRon/Arena/ExprOps.lean:185-190 ConRon.Arena.eidxCopyUpto
+@[no_expose, l_impl ConRon.Arena.eidxCopyUpto]
+def eidxCopyUptoL : FunDecl := lfn (o, n) locals (so, j) {
+  so := CTL.u64[136];
+  if len(SPN.u64) < so { abort };
+  if len(SPN.u64) - so < n { abort };
+  j := 0;
+  for j < n {
+    SPN.u64[so + j] := SPN.u64[o + j];
+    CTL.u64[136] := so + j + 1
+  };
+  return so
+}
+
 /-- The fire past the major's arguments `(mo, mn)` (at the stack top): their count, the
 certificate family (the parameter count `cp` the stored constructor's, the field count the
-rule's), the rule's right-hand side at the recursor's levels applied to the leading
-`rP` arguments (the twin's `args.take rP`: all `mI + 1` of them when `mI < rP`, so `rP` is capped
-at `mI + 1`) and the fields. -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+rule's), the rule's body under its `rP + nfields` binders at the recursor's levels
+(`rule_body_at`), with the leading `rP` arguments (the twin's `p`: all `mI + 1` of them when
+`mI < rP`, so `rP` is capped at `mI + 1`) and the fields pushed above the top (`iotaVals`) and
+substituted in one walk (`inst_list`). -/
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2476-2477 ConRon.Arena.iotaVals
 @[no_expose] def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn)
-    locals (cp, rP, fam, rhs, x) {
+    locals (cp, rP, fam, body, vo, u, x) {
   cp := EREC⦃ctorP + ⟪CI.ctorNparams⟫⦄;
-  rP := EREC⦃recP + ⟪CI.recPrefix⟫⦄;
-  rP := rP - (rP - EREC⦃recP + ⟪CI.recMajor⟫⦄ - 1) * u64(EREC⦃recP + ⟪CI.recMajor⟫⦄ < rP);
   if mn < cp { return (0, 0) };
   if mn - cp != EREC⦃rl + ⟪Rule.nfields⟫⦄ { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
-  rhs := call rule_body_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
-    EREC⦃rl + ⟪Rule.rhs⟫⦄, us);
-  x := call mk_app_n(rhs, so, rP);
-  x := call mk_app_n_from(x, mo, mn, cp);
+  body := call rule_body_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
+    EREC⦃rl + ⟪Rule.rhs⟫⦄, EREC⦃recP + ⟪CI.recPrefix⟫⦄ + EREC⦃rl + ⟪Rule.nfields⟫⦄, us);
+  rP := EREC⦃recP + ⟪CI.recPrefix⟫⦄;
+  rP := rP - (rP - EREC⦃recP + ⟪CI.recMajor⟫⦄ - 1) * u64(EREC⦃recP + ⟪CI.recMajor⟫⦄ < rP);
+  vo := CTL.u64[136];
+  u := call eidx_copy_upto(so, rP);
+  u := call eidx_copy_upto(mo + cp, mn - cp);
+  x := call inst_list(body, vo, rP + (mn - cp), 0);
+  CTL.u64[136] := vo;
   return (1, x)
 }
 
 /-- The major's arguments on the stack, the fire, the top put back. -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, major)
     locals (top, mo, mn, r1, r2) {
   top := CTL.u64[136];
@@ -173,55 +185,18 @@ at `mI + 1`) and the fields. -/
   return (r1, r2)
 }
 
-/-- A `const` handle's name and level list: `(0, _, _)` for another tag; a dangling handle aborts
-(the twin's `view` fails). -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
-  if ⟦hh⟧.tag != 3 { return (0, 0, 0) };
-  (t, i) := node CONST⟦hh⟧;
-  return (1, CONST⟨t, i⟩.n, CONST⟨t, i⟩.us)
-}
-
-/-- The major premise prepared, its head a stored constructor with a rule. -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
+/-- The major premise prepared and classified (`prepare_major`'s view `[t, major, cj, usj, ctorP]`),
+a stored constructor with a rule. -/
+-- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 @[no_expose] def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
-    locals (b0, major, hh, hf, cj, usj, cf, ctorP, rf, rl, r1, r2) {
+    locals (b0, t, major, cj, usj, ctorP, rf, rl, r1, r2) {
   b0 := call intern_bvar(0);
-  major := call prepare_major(mode, vis, d, c, EREC⦃recP + ⟪CI.recIsK⟫⦄, EREC⦃recP + ⟪CI.recRulesOff⟫⦄, EREC⦃recP + ⟪CI.recRulesLen⟫⦄,
-    SPN.u64[so + EREC⦃recP + ⟪CI.recMajor⟫⦄]);
-  hh := call get_app_fn(major);
-  (hf, cj, usj) := call iota_rec_head(hh);
-  if hf == 0 { return (0, 0) };
-  (cf, ctorP) := call env_find(cj, vis);
-  if cf == 0 { return (0, 0) };
-  if EREC⦃ctorP⦄ != 4 { return (0, 0) };
+  (t, major, cj, usj, ctorP) := call prepare_major(mode, vis, d, c, EREC⦃recP + ⟪CI.recIsK⟫⦄,
+    EREC⦃recP + ⟪CI.recRulesOff⟫⦄, EREC⦃recP + ⟪CI.recRulesLen⟫⦄, SPN.u64[so + EREC⦃recP + ⟪CI.recMajor⟫⦄]);
+  if t == 0 { return (0, 0) };
   (rf, rl) := call find_rule(EREC⦃recP + ⟪CI.recRulesOff⟫⦄, EREC⦃recP + ⟪CI.recRulesLen⟫⦄, cj);
   if rf == 0 { return (0, 0) };
   (r1, r2) := call iota_rec_fire(mode, vis, d, c, us, recP, so, usj, ctorP, rl, major);
-  return (r1, r2)
-}
-
-/-- The recursor `c` at levels `us` on the stack slice `(so, sn)`: its record, the arity, the
-level-list length, its telescope's `sn` binders (`sn - 1` is the major's index). -/
--- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.iotaRecAt`, `ConRon.Arena.iotaVals`, `ConRon.Arena.ruleBodyAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.iotaRecAt` changed; re-check the L code and its proofs, then delete this line
-@[no_expose] def iotaRecCL : FunDecl := lfn (mode, vis, d, c, us, so, sn)
-    locals (flag, recP, uso, usl, pf, pr, r1, r2) {
-  (flag, recP) := call env_find(c, vis);
-  if flag == 0 { return (0, 0) };
-  if EREC⦃recP⦄ != 5 { return (0, 0) };
-  if sn == 0 { return (0, 0) };
-  if sn - 1 != EREC⦃recP + ⟪CI.recMajor⟫⦄ { return (0, 0) };
-  (uso, usl) := call ls_node(us);
-  (pf, pr) := call peel_pis(sn, EREC⦃recP + ⟪CI.cv + CV.type⟫⦄);
-  if usl != EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, 0) };
-  if pf == 0 { return (0, 0) };
-  (r1, r2) := call iota_rec_major(mode, vis, d, c, us, recP, so, sn);
   return (r1, r2)
 }
 
@@ -234,8 +209,7 @@ structure IotaRecProg (p : Prog) : Prop where
   fam : p.lookup "iota_rec_fam" = some iotaRecFamL
   fire2 : p.lookup "iota_rec_fire2" = some iotaRecFire2L
   fire : p.lookup "iota_rec_fire" = some iotaRecFireL
-  head : p.lookup "iota_rec_head" = some iotaRecHeadL
   major : p.lookup "iota_rec_major" = some iotaRecMajorL
-  recC : p.lookup "iota_rec_c" = some iotaRecCL
+  copy : p.lookup "eidx_copy_upto" = some eidxCopyUptoL
 
 end L.Arena
