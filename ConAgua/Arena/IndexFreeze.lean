@@ -97,7 +97,7 @@ theorem IndexR.idx_cases {m : Mem} {I : IStreamIndex} (hI : IndexR m I) (n : NId
 theorem litFrom_rec (hp : p.lookup "lit_from" = some litFromL)
     (hb : p.lookup "base_row_get" = some baseRowGetL) {m : Mem} {I : IStreamIndex}
     {lits : List NIdx} (hI : IndexR m I) (hl : lits.map (·.word.toUInt64) = litWords m)
-    (hrow : ∀ w, (baseRow m w).1.toNat < 2 ^ 63) :
+    :
     ∀ (n : Nat) (i stop r : Word) (m' : Mem), i.toNat ≤ 10 →
       litFromW p n m i stop = some (r, m') →
       m' = m ∧ optW r = litFrom I.base.idx lits i.toNat stop.toNat := by
@@ -160,7 +160,10 @@ theorem litFrom_rec (hp : p.lookup "lit_from" = some litFromL)
     subst hm2
     rw [e1] at ho₂
     rw [← ho₂]
-    have hcr : (r₁.headD 0).toNat < 2 ^ 63 := by rw [hr₁]; exact hrow _
+    have hcr : (r₁.headD 0).toNat < 2 ^ 63 := by
+      have h32 := litW_lt32 hl i.toNat hi10
+      simp only [UInt64.ofNat_toNat] at h32
+      rw [hr₁]; have := hI.rows _ h32; simp; omega
     by_cases h2z : r₂.headD 0 = 0
     · rw [litFromW.k_lit_from.arm1 _ _ _ _ h2z] at h
       obtain ⟨h1, h2⟩ := Prod.mk.inj (Option.some.inj h)
@@ -200,13 +203,13 @@ theorem litFrom_rec (hp : p.lookup "lit_from" = some litFromL)
 theorem litFrom_refines (hp : p.lookup "lit_from" = some litFromL)
     (hb : p.lookup "base_row_get" = some baseRowGetL) (n : Nat) (s₀ : St) {I : IStreamIndex}
     {lits : List NIdx} (hI : IndexR s₀.mem I) (hl : lits.map (·.word.toUInt64) = litWords s₀.mem)
-    (hrow : ∀ w, (baseRow s₀.mem w).1.toNat < 2 ^ 63) (i stop : Word) (hi : i.toNat ≤ 10) :
+    (i stop : Word) (hi : i.toNat ≤ 10) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_from" [i, stop]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
       optW (r.headD 0) = litFrom I.base.idx lits i.toNat stop.toNat; ⊤⦄ :=
   triple_post (litFrom_specW p hp n s₀ i stop) fun r s ⟨hL, hm⟩ => by
-    obtain ⟨h1, h2⟩ := litFrom_rec hp hb hI hl hrow n i stop _ _ hi hm
+    obtain ⟨h1, h2⟩ := litFrom_rec hp hb hI hl n i stop _ _ hi hm
     exact ⟨hL, h1, h2⟩
 
 /-! ## `index_freeze` -/
@@ -265,7 +268,7 @@ theorem freeze_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (I : IStreamI
 
 /-- The freeze past the ten names: the two thresholds (`lit_from`) and their writes. -/
 theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex} {r : Word} {m' : Mem}
-    (hI : IndexR m I) (hrow : ∀ w, (baseRow m w).1.toNat < 2 ^ 63) (hc : 173 < (m.arr64 CTL).size)
+    (hI : IndexR m I) (hc : 173 < (m.arr64 CTL).size)
     (ha : ∀ b : TieredArray, b ≠ CTL → M.arr64 b = m.arr64 b)
     (hout : ∀ x : Word, x ∉ frozenCtl → rdW (M.arr64 CTL) x = rdW (m.arr64 CTL) x)
     (hsz : (M.arr64 CTL).size = (m.arr64 CTL).size)
@@ -276,15 +279,11 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
   have hlo : ∀ x : Word, x.toNat < 160 → rdW (M.arr64 CTL) x = rdW (m.arr64 CTL) x :=
     fun x hx => hout x (not_mem_frozenCtl (.inl (by omega)))
   have hIM : IndexR M I := hI.ctlHi ha hlo
-  have hbr : ∀ w, baseRow M w = baseRow m w := fun w => by
-    simp only [baseRow, ha (eixArr (rowTag w) : TieredArray)
-      (by unfold eixArr; split <;> (try split) <;> decide)]
-  have hrowM : ∀ w, (baseRow M w).1.toNat < 2 ^ 63 := fun w => by rw [hbr]; exact hrow w
   rcases c1 : callW p n "lit_from" [0, 3] M with _ | ⟨r₁, m₁⟩
   · rw [c1, indexFreezeW.k_lit_from.none] at hm; cases hm
   rw [c1, indexFreezeW.k_lit_from.eq_2] at hm
   obtain ⟨t₁, ht₁, -, hm₁, ho₁⟩ := triple_of_callW (s₀ := ⟨M, Locals.init []⟩)
-    (litFrom_refines hP.litFrom hP.baseGet n ⟨M, Locals.init []⟩ hIM hl hrowM 0 3 (by decide)) c1
+    (litFrom_refines hP.litFrom hP.baseGet n ⟨M, Locals.init []⟩ hIM hl 0 3 (by decide)) c1
   simp only at hm₁ ho₁
   have e1 : M = m₁ := by rw [← ht₁, hm₁]
   subst e1
@@ -292,7 +291,7 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
   · rw [c2, indexFreezeW.k_lit_from_2.none] at hm; cases hm
   rw [c2, indexFreezeW.k_lit_from_2.arm1] at hm
   obtain ⟨t₂, ht₂, -, hm₂, ho₂⟩ := triple_of_callW (s₀ := ⟨M, Locals.init []⟩)
-    (litFrom_refines hP.litFrom hP.baseGet n ⟨M, Locals.init []⟩ hIM hl hrowM 0 10 (by decide)) c2
+    (litFrom_refines hP.litFrom hP.baseGet n ⟨M, Locals.init []⟩ hIM hl 0 10 (by decide)) c2
   simp only at hm₂ ho₂
   have e2 : M = m₂ := by rw [← ht₂, hm₂]
   subst e2
@@ -326,8 +325,7 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
 (`FrozenR`), nothing else but `CTL[162‥173]`, the index's rows untouched. -/
 @[refines ConRon.Arena.IStreamIndex.freeze ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
 theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStreamIndex} {a : AState}
-    (hI : IndexR s₀.mem I) (hF : PinsFull s₀.mem a.pins)
-    (hrow : ∀ w, (baseRow s₀.mem w).1.toNat < 2 ^ 63) (hc : 173 < (s₀.mem.arr64 CTL).size) :
+    (hI : IndexR s₀.mem I) (hF : PinsFull s₀.mem a.pins) (hc : 173 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "index_freeze" []
     ⦃fun _ s' => LocEq s' s₀ ∧ (I.freeze).run a = .ok (frozenAt I (pinLits s₀.mem), a) ∧
@@ -416,7 +414,7 @@ theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStre
       simp only [List.range, List.range.loop, List.map_cons, List.map_nil, List.cons.injEq, and_true]
       constructor <;> intro h <;> (obtain ⟨e1, e2, e3, e4, e5, e6, e7, e8, e9, e10⟩ := h) <;>
         exact ⟨e1.symm, e2.symm, e3.symm, e4.symm, e5.symm, e6.symm, e7.symm, e8.symm, e9.symm, e10.symm⟩
-    obtain ⟨h1, h2, h3⟩ := freeze_tail hP hI hrow hc
+    obtain ⟨h1, h2, h3⟩ := freeze_tail hP hI hc
       (fun b hb => by simp only [Mem.arr64_set64_ne _ _ _ _ _ hb])
       (fun x hx => by
         simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
