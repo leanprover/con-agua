@@ -348,6 +348,140 @@ l_model eidxCopy_spec (p : Prog) (hp : p.lookup "eidx_copy_upto" = some eidxCopy
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
     evalE_idxAE, evalE_idxGE, evalE_tagE]
 
+/-- **The `eidx_copy_upto` loop**: slot `j` of the source slice `(o, c)` (below the copy) pushed at
+`so + j`, by induction on the count left. -/
+theorem ecu_ok (m₀ : Mem) (o c so : Word) (xs : Array EIdx) (hx : SpineR m₀ o c xs)
+    (hsrc : o.toNat + c.toNat ≤ so.toNat) :
+    ∀ (K k : Nat) (m : Mem) (j : Word) (m' : Mem), c.toNat - j.toNat = K → j.toNat ≤ c.toNat →
+      spTop m = so + j → (∀ i : Word, i < so → spW m i = spW m₀ i) →
+      so.toNat + c.toNat ≤ (m.arr64 SPN).size → (m.arr64 SPN).size < 2 ^ 63 →
+      (j < c → (136 : Word).toNat < (m.arr64 CTL).size) → ecuW.loop1 k m o c so j = some m' →
+      MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ spTop m' = so + c ∧
+        SpineR m' (so + j) (c - j) (xs.toList.drop j.toNat).toArray := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m j m' hK hj htop hbelow hso hspn h136 hL
+    have hn : ¬ j < c := fun h => by have : j.toNat < c.toNat := h; omega
+    have hjc : j = c := UInt64.toNat_inj.mp (by omega)
+    cases k with
+    | zero => simp [ecuW.loop1] at hL
+    | succ k =>
+    rw [ecuW.loop1.arm2 k m o c so j hn] at hL
+    cases hL
+    subst hjc
+    have hdrop : xs.toList.drop j.toNat = [] := by
+      apply List.drop_eq_nil_of_le; simp [hx.size]
+    rw [hdrop, UInt64.sub_self]
+    refine ⟨MemFrame.refl _ _ _, (StackKept.refl _).toGrew, htop, SpineR.nil_at m _ ?_⟩
+    rw [UInt64.toNat_add]; simp; omega
+  | succ K ih =>
+    intro k m j m' hK hj htop hbelow hso hspn h136 hL
+    have hlt : j < c := by
+      have : j.toNat < c.toNat := by omega
+      exact this
+    have hlt' : j.toNat < c.toNat := hlt
+    cases k with
+    | zero => simp [ecuW.loop1] at hL
+    | succ k =>
+    rw [ecuW.loop1.arm1 k m o c so j hlt] at hL
+    have hsoj : (so + j).toNat = so.toNat + j.toNat := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hoj : (o + j).toNat = o.toNat + j.toNat := by
+      have := hx.bound; rw [UInt64.toNat_add]; simp; omega
+    have hsrcj : o + j < so := by rw [UInt64.lt_iff_toNat_lt, hoj]; omega
+    have hw : rdW (m.arr64 SPN) (o + j) = spW m₀ (o + j) := hbelow _ hsrcj
+    have hw32 : HW (spW m₀ (o + j)) := by
+      have := hx.lt j.toNat hlt'; unfold HW; rw [L.toUInt64_toNat] at this; exact this
+    rw [hw] at hL
+    obtain ⟨hfr, hsp3, hgrew, hslot, hsz3⟩ := push_step m (so + j) (spW m₀ (o + j)) (by omega) (h136 hlt) htop
+      (by omega)
+    have hj1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat c j hlt
+    have h1363 : (136 : Word).toNat < (((m.set64 SPN (so + j) (spW m₀ (o + j))).set64 CTL 136
+        (so + j + 1)).arr64 CTL).size := by simp [L.Mem.size64_set64]; exact h136 hlt
+    have hbelow3 : ∀ i : Word, i < so →
+        spW ((m.set64 SPN (so + j) (spW m₀ (o + j))).set64 CTL 136 (so + j + 1)) i = spW m₀ i := by
+      intro i hi
+      have hi' : i < spTop m := by
+        rw [htop, UInt64.lt_iff_toNat_lt, hsoj]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+      rw [hgrew.below i hi']; exact hbelow i hi
+    obtain ⟨hfr4, hgr4, htop4, hys⟩ := ih k _ (j + 1) m' (by omega) (by omega)
+      (by rw [hsp3, UInt64.add_assoc]) hbelow3
+      (by rw [hsz3]; exact hso) (by rw [hsz3]; exact hspn) (fun _ => h1363) hL
+    refine ⟨hfr.trans hfr4, hgrew.trans hgr4, htop4, ?_⟩
+    have hdrop : xs.toList.drop j.toNat = decE (spW m₀ (o + j)) :: xs.toList.drop (j.toNat + 1) := by
+      rw [List.drop_eq_getElem_cons (by simp [hx.size]; exact hlt')]
+      congr 1
+      have := hx.get j.toNat (by rw [hx.size]; exact hlt')
+      simp only [Array.getElem_toList]; rw [this, L.toUInt64_toNat]
+    have e1 : c - j = (c - (j + 1)) + 1 := by
+      apply UInt64.toNat_inj.mp
+      rw [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega),
+        UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), hj1]
+      simp; omega
+    have e2 : so + (j + 1) = so + j + 1 := by rw [UInt64.add_assoc]
+    have hsjp1 : (so + j + 1).toNat = (so + j).toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    rw [e1, hdrop]
+    rw [e2, hj1] at hys
+    have hsize' : (m'.arr64 SPN).size = (m.arr64 SPN).size := by
+      rw [hgr4.size, hsz3]
+    refine SpineR.cons_slot m' (so + j) (c - (j + 1)) _ _ hw32 ?_ hys ?_ (by rw [hsize']; exact hspn)
+    · have := hgr4.below (so + j) (by rw [hsp3, UInt64.lt_iff_toNat_lt, hsjp1]; omega)
+      rw [this, hslot]
+    · rw [hsize', UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), hsoj]
+      omega
+
+/-- **`eidx_copy_upto` as a run**: the source slice (below the top) copied at the old top, the top
+raised past it, only the stack and its top written. -/
+theorem callW_eidxCopy (p : Prog) (hp : p.lookup "eidx_copy_upto" = some eidxCopyUptoL) (n : Nat) (m : Mem)
+    (o c : Word) (xs : Array EIdx) (hx : SpineR m o c xs) (hsrc : o.toNat + c.toNat ≤ (spTop m).toNat)
+    (hspn : (m.arr64 SPN).size < 2 ^ 63) (r : List Word) (m' : Mem)
+    (h : callW p n "eidx_copy_upto" [o, c] m = some (r, m')) :
+    MemFrame [SPN] [136] m m' ∧ StackGrew m m' ∧ r.headD 0 = spTop m ∧ spTop m' = spTop m + c ∧
+      SpineR m' (spTop m) c xs := by
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (eidxCopy_spec p hp (n + 1) ⟨m, Locals.init []⟩ o c) h
+  rw [ht] at hW
+  simp only [ecuW] at hW
+  obtain ⟨hg1, hW⟩ := of_ite_none hW
+  obtain ⟨hg2, hW⟩ := of_ite_none hW
+  cases hm : ecuW.loop1 (n + 1) m o c (rdW (m.arr64 CTL) 136) 0 with
+  | none => rw [hm] at hW; simp [ecuW.k_loop1] at hW
+  | some m₁ =>
+  rw [hm] at hW
+  simp only [ecuW.k_loop1, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  have h64 : (m.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (m.arr64 CTL) 136).toNat ≤ (m.arr64 SPN).size := by
+    have : ¬ (m.arr64 SPN).size < (rdW (m.arr64 CTL) 136).toNat := by
+      intro h
+      apply hg1
+      simp only [L.Mem.len64] at *
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
+    omega
+  have hso : (rdW (m.arr64 CTL) 136).toNat + c.toNat ≤ (m.arr64 SPN).size := by
+    have h2 := hg2
+    simp only [L.Mem.len64] at h2
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
+      UInt64.toNat_ofNat_of_lt' h64] at h2
+    omega
+  have h136 : (0 : Word) < c → (136 : Word).toNat < (m.arr64 CTL).size := by
+    intro hc
+    refine Classical.byContradiction fun h => ?_
+    have h0 : spTop m = 0 := by
+      simp only [spTop, rdW, Array.getElem?_eq_none (Nat.le_of_not_lt h)]; rfl
+    rw [h0] at hsrc
+    have := UInt64.lt_iff_toNat_lt.mp hc; simp at this hsrc; omega
+  have hspt : spTop m = rdW (m.arr64 CTL) 136 + 0 := by rw [UInt64.add_zero]; rfl
+  obtain ⟨hfr, hgr, htop, hys⟩ := ecu_ok m o c (rdW (m.arr64 CTL) 136) xs hx hsrc
+    (c.toNat - (0 : Word).toNat) (n + 1) m 0 m₁ rfl (by simp) hspt (fun _ _ => rfl) hso hspn h136 hm
+  refine ⟨hfr, hgr, by rw [← hr]; rfl, htop, ?_⟩
+  simp at hys; exact hys
+
 /-- **`iota_rec_fire2`'s model, both outcomes** (generated; `iota_rec_fam` through its run,
 `rule_body_at`, `mk_app_n`, `mk_app_n_from` lifted). -/
 l_model fire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFire2L)
