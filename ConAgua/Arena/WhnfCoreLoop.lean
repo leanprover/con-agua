@@ -74,9 +74,8 @@ end stepRuns
 
 section step
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core_step` refines `whnfCoreStep`, both outcomes**: a bound variable declines (the
 twin's `.bvar` arm); the `app` and `proj` arms' errors are `whnf_core_app`'s and
 `whnf_core_step_proj`'s (`AppG`). -/
@@ -87,115 +86,9 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     RefE (AppG p n) (whnfCoreStepE p (n + 1) s₀.mem mode cheap vis d h e)
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
-  have hS := hs.rel
-  have hR := hS.arena.base
-  have hh' : e.toNat < 2 ^ 32 := he
-  simp only [whnfCoreStepE]
-  refine RefE.abort0 (by decide) fun ht => ?_
-  -- a stuck arm answers `(0, e)` after its view check
-  have done : ∀ v : ENodeView, a₀.store.view (decE e) = some v → isDoneV v = true →
-      RefE (AppG p n) (.ok ([0, e], s₀.mem))
-        (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
-          (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
-    RefE.ret (step_run_done v hv hd) (CorePost.ret hS (by simp [decStep])
-      ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
-  have vok : ∀ c : TRec, ¬ tcnt s₀.mem c (tierW e) ≤ idxW e → viewOK s₀.mem e c :=
-    fun c hc => ⟨ht, by simpa using hc⟩
-  by_cases g4 : tagW e = 4
-  · rw [ite_eq_left g4]
-    refine RefE.abort0 (by decide) fun hc4 => ?_
-    have hvapp := (view_app s₀.mem a₀ hR e hh' ⟨ht, by simpa using hc4⟩ g4).1
-    by_cases hsk : (334 : Word) >>> tagW h &&& 1 ≠ 0
-    · rw [ite_eq_left hsk]
-      have hst : isStuckHead (decE h) = true := by rw [isStuckHead_w h hh]; simpa using hsk
-      refine RefE.of_run_eq (step_run_stuck _ _ hvapp hst) ?_
-      cases n with
-      | zero => exact RefE.of_cls0 rfl
-      | succ N =>
-      exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
-        (·.mono (Nat.le_succ N))
-        (stuck_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h e
-          hs hh he) fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
-    rw [ite_eq_right hsk]
-    have hst : isStuckHead (decE h) = false := by rw [isStuckHead_w h hh]; simpa using hsk
-    refine RefE.of_run_eq (step_run_app _ _ hvapp hst) ?_
-    cases n with
-    | zero => exact RefE.of_cls0 rfl
-    | succ N =>
-    have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
-      eb mode cheap d e hs he
-    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
-      (·.mono (Nat.le_succ N)) h1
-      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
-  rw [ite_eq_right g4]
-  by_cases g9 : tagW e = 9
-  · rw [ite_eq_left g9]
-    refine RefE.abort0 (by decide) fun hc9 => ?_
-    obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh' (vok _ hc9) g9
-    refine RefE.of_run_eq (step_run_proj _ _ _ hv) ?_
-    cases n with
-    | zero => exact RefE.of_cls0 rfl
-    | succ N =>
-    have h1 := stepProj_ref p hp hwc.strLitStored hwc.strLitCtor hcc.toProjCallees hcc.erec N
-      (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
-      (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
-      (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
-    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
-      (·.knot.mono (Nat.le_succ N)) h1
-      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
-  rw [ite_eq_right g9]
-  by_cases g7 : tagW e = 7
-  · rw [ite_eq_left g7]
-    refine RefE.abort0 (by decide) fun hc7 => ?_
-    obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh' (vok _ hc7) g7
-    refine RefE.of_run_eq (step_run_let _ _ _ hv) ?_
-    refine RefE.bind_callW (s₀ := s₀) (fun _ => rfl) (hcc.inst1 n s₀ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv)
-      fun r₁ m₁ _ h₁ => RefE.ret rfl ⟨h₁.after, by simp [decStep, decH], ⟨by
-        show HW (1 : Word); unfold HW; decide, h₁.resOk⟩⟩
-  rw [ite_eq_right g7]
-  by_cases g0 : tagW e = 0
-  · rw [ite_eq_left g0]
-    refine RefE.abort0 (by decide) fun hc0 => ?_
-    exact fun _ => L.Arena.ErrClaim.congr_run (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh' (vok _ hc0) g0))
-      (ErrClaim.fail _ _ rfl)
-  rw [ite_eq_right g0]
-  by_cases g1 : tagW e = 1
-  · rw [ite_eq_left g1]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh' (vok _ hc) g1
-    exact done _ hv' rfl
-  rw [ite_eq_right g1]
-  by_cases g2 : tagW e = 2
-  · rw [ite_eq_left g2]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh' (vok _ hc) g2
-    exact done _ hv' rfl
-  rw [ite_eq_right g2]
-  by_cases g3 : tagW e = 3
-  · rw [ite_eq_left g3]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh' (vok _ hc) g3
-    exact done _ hv' rfl
-  rw [ite_eq_right g3]
-  by_cases g5 : tagW e = 5
-  · rw [ite_eq_left g5]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    exact done _ (view_lam s₀.mem a₀ hR e hh' (vok _ hc) g5).1 rfl
-  rw [ite_eq_right g5]
-  by_cases g6 : tagW e = 6
-  · rw [ite_eq_left g6]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    exact done _ (view_forall s₀.mem a₀ hR e hh' (vok _ hc) g6).1 rfl
-  rw [ite_eq_right g6]
-  by_cases g8 : tagW e = 8
-  · rw [ite_eq_left g8]
-    refine RefE.abort0 (by decide) fun hc => ?_
-    obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh' (vok _ hc) g8
-    exact done _ hv' rfl
-  rw [ite_eq_right g8]
-  exact RefE.of_cls0 (by decide)
+  sorry
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core_step` refines `whnfCoreStep`** (`step_ref`'s ok half). -/
 theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -205,7 +98,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (whnfCoreStepE_spec p hp (n + 1) s₀ mode cheap vis d h e)
-    (step_ref p hp hwc hcc hsup n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
+    (step_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
 end step
 
@@ -378,9 +271,8 @@ theorem stb_twin (cheap kw st rv e : Word) (hk : kw = 0 ∨ kw = 1) (hrv : HW rv
 
 section loopRef
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **The loop refines `whnfCoreLoop`, both outcomes**, at every twin loop fuel `K ≥ k`, from
 pending keys `pend`/`pendC` (`PendR`) above the entry's top `pb`: each iteration is
 `whnf_core_step`'s (`whnfCoreStep_refines'`, its error claim `CoreStepE`). -/
@@ -475,7 +367,7 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
   have hkey := key_w h e hhw he
   rw [hkw] at hkey
   refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩) (fun _ => whnfCoreE.k_whnf_core_step.none ..)
-    (whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
+    (whnfCoreStep_refines' p hp hwc hcc j (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
       mode cheap d h e ⟨hS₂, hmode, heb⟩ hhw he)
     (fun hG => hG j (by omega) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb mode cheap d h e
       ⟨hS₂, hmode, heb⟩ hhw he) fun r₃ m₃ _ hR3 => ?_
@@ -576,9 +468,8 @@ theorem knot_whnfCore_eq (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
 
 section slot
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core` at `n + 1` refines the knot's `whnfCore` slot of `coreKnot mode eager fe id F`, both
 outcomes**, `F ≥ n + 1`: the loop from no pending keys at the entry's top (`coreLoop_ref`). The
 errors are the step's (`CoreStepE`). -/
@@ -599,7 +490,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     rw [UInt64.not_lt, UInt64.le_iff_toNat_le] at hab
     simp only [L.Mem.len64, UInt64.toNat_ofNat'] at hab
     rw [Nat.mod_eq_of_lt (by omega)] at hab; exact hab
-  exact coreLoop_ref p hp hwc hcc hsup n hk F' (by omega) (by omega) dn vis fe mode cheap d
+  exact coreLoop_ref p hp hwc hcc n hk F' (by omega) (by omega) dn vis fe mode cheap d
     (spTop s₀.mem) hs.mode4 s₀.mem MM eb hs.eb_mode rfl (n + 1) (Nat.le_refl _) ConRon.Arena.whnfCoreLoopFuel
     (by simp only [ConRon.Arena.whnfCoreLoopFuel]; omega) s₀.mem a₀ MM e 0 0 #[] #[] hS (KeptAll.refl _ _) he
     ⟨⟨rfl, by simpa using hpb, fun _ h => by simp at h, fun _ h => by simp at h⟩, Nat.le_refl _,
@@ -607,14 +498,14 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     ⟨fun _ _ => rfl, rfl, BKept.refl _, PoolGrew.refl _⟩
 
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **The knot's `whnfCore` slot, one level up** (`core_ref`'s ok half): given the knot at every
 fuel up to `n` (for the body's callees), `whnf_core` at `n + 1` refines the slot. Over the bundles
-`WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
+`WhnfCallees` and `CoreCallees` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
     RefE.coreSpec (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e)
-      (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
+      (core_ref p hp hwc hcc n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end slot
 

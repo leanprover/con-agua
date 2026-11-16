@@ -21,7 +21,7 @@ import all ConAgua.Arena.WhnfIota
 
 The twin `majorToCtor` (`Core.lean:1705-1820`) is one function; its pieces are named here
 (`m2cHeadT` … `m2cCheckT`), each the twin's own code with the values decoded so far as
-parameters, and `majorToCtor` unfolds into them by `rfl` (`majorToCtor_eq`). Each L piece of
+parameters, and `majorToCtorRescue` unfolds into them by `rfl` (`majorToCtorRescue_eq`). Each L piece of
 `WhnfM2C.lean` has a unified model (`Verdict/WhnfModels6E.lean`); `major_to_ctor` itself and the
 leaves outside the verdict closure (`m2c_const_view`, `m2c_eta2`) get a word-level model through
 `callW` and an L spec by `vcgen` + `finish` here.
@@ -143,10 +143,9 @@ def m2cCtorT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   | some (.indInfo cvT caps) => m2cArmsT mode r fe depth isK rl cvj cnP T cvT caps major
   | _ => pure major
 
-/-- The constructor test, the single rule, its constructor. -/
+/-- The single rule, its constructor. -/
 def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)
     (rules : List IRecRule) (major : EIdx) : AM EIdx := do
-  if ← isCtorApp fe major then pure major else
   match rules with
   | [rl] =>
     match fe.find? rl.ctor with
@@ -155,9 +154,9 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   | _ => pure major
 
 /-- **The twin is its pieces.** -/
-theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+theorem majorToCtorRescue_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (recName : NIdx) (isK : Bool) (rules : List IRecRule) (major : EIdx) :
-    majorToCtor mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
+    majorToCtorRescue mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
   rfl
 
 /-! ## Word models and L specs
