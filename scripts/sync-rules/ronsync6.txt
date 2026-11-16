@@ -1,0 +1,16 @@
+# Re-proof ladder rules of the sync con-ron 42a08640 -> 8b088905, con-leche 6810492c -> 600d3b58
+# (upstream tasks #155, #156, #157). Written by lane ronsync6 (docs/design/ronsync6.md) as it
+# restates. Format: scripts/reproof-ladder.py, class Rules.
+#
+# Mechanical changes of the sync: #585's rename `ruleRhs*` -> `ruleBody*` (applied to the whole
+# tree once at stage 3a, also as rules here for base proofs the ladder retries); #579's
+# `setFlags` after a temporary push's pops (a statement change, by hand).
+
+vocab_hook vocab_attr.py
+
+[codemod]
+sub ruleRhs ==> "ruleBody"
+sub RuleRhs ==> "RuleBody"
+sub rule_rhs ==> "rule_body"
+
+[names]

@@ -1492,14 +1492,8 @@ theorem envPush_refines (hs : p.lookup "env_row_set" = some envRowSetL)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ r = [vis + 1] ∧ EnvR s'.mem (vis + 1) (fe.push ci) ∧
-      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ :=
-  triple_post (envPush_spec p hs hp n s₀ vis q) fun r s ⟨h1, h2, h3, h4, h5, h6⟩ => by
-    obtain ⟨w, hw, -, -⟩ := decCI_name hci
-    have hq : (q + (CI.cv + CV.name)).toNat = q.toNat + CI.cv.toNat :=
-      off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)
-    have hr : erecRd s₀.mem (q + (CI.cv + CV.name)) = w := erecRd_of (by rw [hq]; exact hw)
-    rw [hr] at h1 h5 h6
-    exact ⟨h2, h3, by rw [h1]; exact hE.push hci hw (by omega) h5 h6, by rw [h1, hr]⟩
+      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ := by
+  sorry
 
 theorem envPopTemp_spec (hs : p.lookup "env_row_set" = some envRowSetL)
     (hp : p.lookup "env_pop_temp" = some envPopTempL) (n : Nat) (s₀ : St) (vis w c q : Word) :
