@@ -897,38 +897,24 @@ theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : I
   unfold uceT
   by_cases hw : w ≤ 1
   case neg =>
-    rw [uceE.arm2 p n m vis e w hw] at hW
+    rw [uceE.arm3 p n m vis e w hw] at hW
     rw [ite_eq_right hw]
     obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA hF he hW hk wh
     exact ⟨ce, a, hce, hcl⟩
   rw [ite_eq_left hw]
   obtain ⟨dn, M, eb, hS⟩ := hS hw
-  rw [uceE.arm1 p n m vis e w hw] at hW
-  cases h1 : callW p n "str_lit_stored" [vis] m with
-  | none =>
-    rw [h1, liftE_none, uceE.k_str_lit_stored.eq_1] at hW; cases hW; exact absurd (by simp) hk
-  | some q1 =>
-  obtain ⟨r1, m1⟩ := q1
-  rw [h1, liftE_some, uceE.k_str_lit_stored.eq_2] at hW
-  obtain ⟨hok, ⟨M', hS', -, -⟩, hres, -⟩ :=
-    CoreSpec.of_callW (hU.sup n ⟨m, Locals.init []⟩ a dn vis fe M eb hS) h1
-  have hrun := AM.run_of_ok _ _ hok
-  rw [hres] at hrun
-  generalize AM.st (strLitStored fe) a = a1 at hrun hS'
-  rw [StateT.run_bind, hrun, except_ok_bind]
-  dsimp only
-  have hA1 : ArenaR m1 a1 := hS'.arena.base
-  by_cases hr1 : r1.headD 0 = 0
-  · rw [ite_eq_left hr1] at hW
-    have hd : decBool r1 = false := by show (r1.headD 0 != 0) = false; rw [hr1]; rfl
+  have hsl := hS.env.strLit
+  by_cases hr1 : rdW (m.arr64 CTL) 161 = 0
+  · rw [uceE.arm1 p n m vis e w hw hr1] at hW
+    have hd : fe.strLit = false := by rw [hsl, hr1]; rfl
     rw [hd]
-    cases h2 : callW p n "has_str_lit_go" [CWF, e] m1 with
+    cases h2 : callW p n "has_str_lit_go" [CWF, e] m with
     | none =>
       rw [h2, liftE_none, uceE.k_has_str_lit_go.eq_1] at hW; cases hW; exact absurd (by simp) hk
     | some q2 =>
     obtain ⟨r2, m2⟩ := q2
     rw [h2, liftE_some, uceE.k_has_str_lit_go.eq_2] at hW
-    obtain ⟨rfl, mp, hr2⟩ := hsl_callE hU.view hU.hsl (callE_of_callW h2) hA1 he
+    obtain ⟨rfl, mp, hr2⟩ := hsl_callE hU.view hU.hsl (callE_of_callW h2) hA he
     rw [CWF_eq] at hr2
     rw [unresolvedConstsErrorL_false_run wh hr2]
     by_cases hr2' : r2.headD 0 ≠ 0
@@ -937,13 +923,13 @@ theorem uce_ref {p : Prog} {n : Nat} {m : Mem} {a : AState} {vis : Word} {fe : I
       exact ⟨_, _, rfl, rfl⟩
     · rw [ite_eq_right hr2'] at hW
       rw [ite_eq_right (by simpa using hr2')]
-      obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA1 hS'.pins he hW hk wh
-      exact ⟨ce, a1, hce, hcl⟩
-  · rw [ite_eq_right hr1] at hW
-    have hd : decBool r1 = true := by show (r1.headD 0 != 0) = true; exact bne_iff_ne.mpr hr1
+      obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA hF he hW hk wh
+      exact ⟨ce, a, hce, hcl⟩
+  · rw [uceE.arm2 p n m vis e w hw hr1] at hW
+    have hd : fe.strLit = true := by rw [hsl]; simpa using hr1
     rw [hd, unresolvedConstsErrorL_true]
-    obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA1 hS'.pins he hW hk wh
-    exact ⟨ce, a1, hce, hcl⟩
+    obtain ⟨ce, hce, hcl⟩ := uce_rest hU hA hF he hW hk wh
+    exact ⟨ce, a, hce, hcl⟩
 
 
 
@@ -985,7 +971,7 @@ theorem uce_errClaim_lo {α : Type} {p : Prog} (hU : UceProg p)
     obtain ⟨ce, a', hrun, hcl⟩ := uce_claim hU hnv hS.arena.base hS.pins he (fun _ => ⟨dn, M, eb, hS⟩) hc wh hk
     rw [uceT, ite_eq_left hw] at hrun
     refine ⟨ce, ?_, hcl⟩
-    rw [← bind_assoc, StateT.run_bind, hrun, except_ok_bind]
+    rw [StateT.run_bind, hrun, except_ok_bind]
     rfl
 
 

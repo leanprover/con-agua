@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.DeclReduceSpec2
+public import ConAgua.Arena.EnvFlags
 import ConAgua.Arena.GrindAttr
 public import ConAgua.Arena.IndGrindAttr
 import ConAgua.L.GrindAttr
@@ -51,6 +52,7 @@ structure CrpProg (p : Prog) : Prop where
   push : p.lookup "env_push" = some envPushL
   pop : p.lookup "env_pop_temp" = some envPopTempL
   rs : p.lookup "env_row_set" = some envRowSetL
+  ef : EnvFlagsProg p
   /-- `reduce_op_cv_a` leaves the own rows alone (the pop after `reduce_stored_ok`). -/
   rcva : RcvaClosed p
 
@@ -83,7 +85,7 @@ constant's read and the pop through their runs, `check_reduce_pin_pre` by its un
 l_model checkReducePin_specE (p : Prog) (hC : CrpProg p)
   fns [hC.crp ↦ checkReducePinE]
   specs [callW_spec p n "env_row_get", callW_spec p n "env_push", callW_spec p n "reduce_stored_ok",
-    callW_spec p n "env_pop_temp", checkReducePinPre_specE p hC n]
+    callW_spec p n "env_pop_temp", callW_spec p n "env_set_flags", checkReducePinPre_specE p hC n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified

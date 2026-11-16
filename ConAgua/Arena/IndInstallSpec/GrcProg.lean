@@ -125,6 +125,7 @@ structure GrcProg (p : Prog) : Prop where
   flush : FlushProg p
   crr : CrrProg p
   ers : p.lookup "env_row_set" = some envRowSetL
+  esf : p.lookup "env_set_flags" = some envSetFlagsL
   ept : p.lookup "env_pop_temp" = some envPopTempL
   gpa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll
   prep : p.lookup "gen_rec_check_prep" = some genRecCheckPrep

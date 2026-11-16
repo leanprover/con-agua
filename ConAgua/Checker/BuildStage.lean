@@ -133,7 +133,8 @@ theorem since_baseTbl (w : Word) : (baseTbl m w).1 = 0 := by
   · rfl
 
 theorem since_indexR : IndexR m {} := by
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => absurd hi (by simp), by simp, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => absurd hi (by simp), by simp, ?_,
+    fun x _ => by rw [since_baseRow h x]; decide⟩
   · rw [ite_eq_left (since_baseRow h _)]; simp
   · rw [ite_eq_left (since_baseTbl h _)]; simp
   · rw [since_ctl h (x := 128) (by decide)]; rfl

@@ -39,6 +39,9 @@ structure IndexR (m : Mem) (I : IStreamIndex) : Prop where
   firsts : ∀ i (h : i < I.firsts.size), (rdW (m.arr64 FIRSTS) (UInt64.ofNat i)).toNat = I.firsts[i]
   firstsSize : I.firsts.size ≤ (m.arr64 FIRSTS).size
   next : (rdW (m.arr64 CTL) 128).toNat = I.next
+  /-- A row's counter word is below `2^32` (`idx_consts`' capacity: the next counter stays below
+  `2^32 - 2`), so one past it is a word (`lit_from`). -/
+  rows : ∀ w : Word, w.toNat < 2 ^ 32 → (baseRow m w).1.toNat < 2 ^ 32
 
 /-- An optional counter as a word (`IStreamIndex.natFrom`/`strFrom`): `0` for none, `k + 1` for
 `some k`. -/
@@ -188,7 +191,7 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     cases e : I.base.idx[(decI w : NIdx)]? with
     | none => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
     | some y => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hbr, hP]
     by_cases e : n.word.toUInt64 = w
     · by_cases b0 : (baseRow m w).1 = 0
@@ -213,6 +216,17 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
   · rw [a2 _ (by decide) (by decide)]; exact h.firstsSize
   · simp only [Mem.arr64_set64_same, rdW_set!, a1 (CTL : TieredArray) (by decide)]
     simp only [show (128 : Word).toNat = 128 from rfl, hc, and_self, ite_true]; exact hnx1
+  · intro x hx
+    rw [hbr]
+    by_cases b0 : (baseRow m w).1 = 0
+    · obtain ⟨t1, t2, t3⟩ := hset b0
+      have : m1 = baseSet m w (rdW (m.arr64 CTL) 128 + 1) q := by rw [← hm1, ite_eq_left b0]
+      rw [this]
+      by_cases e : x = w
+      · subst e; rw [baseRow_baseSet_self t1 t2 t3]; dsimp only; omega
+      · rw [baseRow_baseSet_other hw32 hx t1 t2 e]; exact h.rows x hx
+    · have : m1 = m := by rw [← hm1, ite_eq_right b0]
+      rw [this]; exact h.rows x hx
 
 /-- **One step of `insertTables`** (`idx_tables`' loop body): the table record at `q` (its
 structure `w`) of record position `r`: its base table row written if it has none. -/
@@ -246,7 +260,7 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     cases e : I.base.tbls[(decI w : NIdx)]? with
     | none => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
     | some y => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [hbr, hP]; exact h.base n
   · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hP]
     by_cases e : n.word.toUInt64 = w
@@ -270,6 +284,7 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
   · rw [a1 _ (by decide)]; exact h.firsts i hi
   · rw [a1 _ (by decide)]; exact h.firstsSize
   · rw [hctl]; exact h.next
+  · intro x hx; rw [hbr]; exact h.rows x hx
 
 /-- **A record's first counter** (`idx_add`'s `FIRSTS[k] := CTL[128]`, `k` the number of records
 so far): `firsts` gains the next counter. -/
@@ -291,7 +306,7 @@ theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
       (rdW (m.arr64 CTL) 128)) x = baseTbl m x := by
     intro x; simp only [baseTbl, a1 (tixArr (rowTag x) : TieredArray) (by unfold tixArr; split <;> (try split) <;> decide)]
   have hsz : (UInt64.ofNat I.firsts.size).toNat = I.firsts.size := by simp; omega
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [hbr, hP]; exact h.base n
   · simp only [hbt, hP]; exact h.btbl n
   · simp only [Array.size_push] at hi
@@ -304,6 +319,7 @@ theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
       exact h.firsts i hi'
   · rw [Mem.size_arr64_set64]; simp; omega
   · rw [hctl]; exact h.next
+  · intro x hx; rw [hbr]; exact h.rows x hx
 
 end rel
 

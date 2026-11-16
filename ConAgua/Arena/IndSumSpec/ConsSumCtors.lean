@@ -10,6 +10,7 @@ import ConAgua.L.ModelGen
 import ConRon.Bridge.Grind
 public import ConAgua.Arena.IndDecStab
 public import ConAgua.Arena.WhnfBase
+public import ConAgua.Arena.StageFlags
 import all ConAgua.Arena.IndSum
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.RecInfoW
@@ -169,18 +170,18 @@ theorem decCVp_truncM {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp (trunc
 
 /-- **`env_push` of a decoded record under the stage relation**: the new view relates the pushed
 environment; the pools are kept. -/
-theorem envPush_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) {n : Nat} {vis : Word} {fe : IFEnv} {a : AState}
+theorem envPush_stage {p : Prog} (hP : EnvFlagsProg p) {n : Nat} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {c : Word} {r : List Word} {ci : IConstantInfo}
     (hc : callW p n "env_push" [vis, c] m = some (r, m'))
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
     StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
-  obtain ⟨s', hs', -, hr, hE, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPush_refines p hrs hpu n ⟨m, Locals.init []⟩ vis c hS.check.env hci) hc
+  obtain ⟨s', hs', -, hr, -, -, -, hE, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPush_refines hP n ⟨m, Locals.init []⟩ vis c hS.check.env hci
+      (show 161 < (m.arr64 CTL).size by have := hS.iw.ctl; omega)) hc
   subst hs' hr
   simp only [List.headD_cons]
   rw [hm] at hE ⊢
-  exact StageR.of_own hS hE
+  exact StageR.of_ownFlags hS hE
 
 /-- A pointer word of the pool read below the top, as the model reads it. -/
 theorem rdW_of_iwN_truncM {m : Mem} {o : Word} {v : Nat} (h : iwN (truncM m) o.toNat = some v) :
@@ -237,7 +238,7 @@ theorem cscW_ok (p : Prog) (hRp : RecProg p) (k : Nat) :
     rcases h2 : callW p k "env_push" [vis, q] m1 with _ | ⟨rv, m2⟩
     · rw [h2, cscW.k_env_push.none] at h; cases h
     rw [h2, cscW.k_env_push.arm1] at h
-    obtain ⟨hS2, hg2⟩ := envPush_stage hRp.rs hRp.push h2 hS1 hci
+    obtain ⟨hS2, hg2⟩ := envPush_stage hRp.ef h2 hS1 hci
     rcases h3 : cscW p k m2 nP T (o + 1) (l - 1) (rv.headD 0) with _ | ⟨rr, m3⟩
     · rw [h3, cscW.k_cons_sum_ctors.none] at h; cases h
     rw [h3, cscW.k_cons_sum_ctors.arm1] at h
