@@ -1249,7 +1249,6 @@ def stuckIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (r) {
 `fo`; `side` `0` when the literal is on the left (`a`). The head's record words are read before
 the first call. -/
 -- con-ron: ConRon/Arena/Core.lean:4220-4289 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckStrL : FunDecl :=
     lfn (mode, vis, d, a, b, side, lt, fo) locals (t, i, co, uo, el, sl, c, r) {
@@ -1273,7 +1272,6 @@ def stuckStrL : FunDecl :=
 /-- `defeqStuck`'s application arm, its congruence (split off for the proofs): `1` when the heads
 and the spines agree pairwise; the top put back. -/
 -- con-ron: ConRon/Arena/Core.lean:4220-4289 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo, bn, fa, fb, ok) {
   top := CTL.u64[136];
@@ -1292,7 +1290,6 @@ def stuckAppCongL : FunDecl := lfn (mode, vis, d, a, b) locals (top, ao, an, bo,
 
 /-- `defeqStuck`'s application arm: spine-wise congruence, else the stuck fallbacks. -/
 -- con-ron: ConRon/Arena/Core.lean:4220-4289 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
   ok := call stuck_app_cong(mode, vis, d, a, b);
@@ -1304,7 +1301,6 @@ def stuckAppL : FunDecl := lfn (mode, vis, d, a, b) locals (ok, r) {
 /-- `defeqStuck`'s free-variable, constant and λ arms and the fallback, by the two views' words
 (split off for the proofs). -/
 -- con-ron: ConRon/Arena/Core.lean:4220-4289 ConRon.Arena.defeqStuck
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def stuckRestL : FunDecl :=
     lfn (mode, vis, d, a, b, ga, a1, a2, gb, b1, b2) locals (z, ok, r) {
@@ -1345,7 +1341,6 @@ def stuckRestL : FunDecl :=
 /-- The tags tested one at a time (no `&&` chains: the proof's paths); the twin's pairs are
 disjoint, so grouping by `a`'s tag keeps its match order.
 con-ron: ConRon/Arena/Core.lean:4220-4289 ConRon.Arena.defeqStuck -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqStuck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.defeqStuck]
 def defeqStuckL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (ga, a1, a2, a3, gb, b1, b2, b3, r) {
