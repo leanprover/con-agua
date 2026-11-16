@@ -131,7 +131,50 @@ theorem plit_ref (p : Prog) (hStrCtor : StrLitCtorOK p) (n : Nat)
     RefE (KnotUpToE p n) (projLitToCtorE p (n + 1) s₀.mem mode vis d h)
       (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) a₀
       (CorePost decH dn s₀.mem vis fe MM eb ResH) := by
-  sorry
+  have hS := hs.rel
+  simp only [projLitToCtorE]
+  by_cases htag : tagW h ≠ 8
+  · rw [ite_eq_left htag]
+    exact RefE.ret (projLitToCtor_run_not_lit _ fe d.toNat h hh htag a₀) (CorePost.ret hS rfl hh)
+  rw [ite_eq_right htag]
+  have htag8 : tagW h = 8 := by simpa using htag
+  refine RefE.abort0 (by decide) fun hsc => ?_
+  refine RefE.abort0 (by decide) fun hbd => ?_
+  have hvOK : viewOK s₀.mem h LIT := ⟨hsc, by simpa using hbd⟩
+  obtain ⟨hviewS, hviewN⟩ := view_lit_kind s₀.mem a₀ hS.arena.base h hh hvOK htag8
+  by_cases hkind : tfld s₀.mem LIT (tierW h) (idxW h) 0 ≠ 1
+  · rw [ite_eq_left hkind]
+    obtain ⟨l, hv, hne⟩ := hviewN hkind
+    exact RefE.ret (projLitToCtor_run_plain _ fe d.toNat h hh htag8 a₀ l hv hne)
+      (CorePost.ret hS rfl hh)
+  rw [ite_eq_right hkind]
+  obtain ⟨s', hv⟩ := hviewS (by simpa using hkind)
+  have hsl := hS.env.strLit
+  by_cases hsup0 : rdW (s₀.mem.arr64 CTL) 161 = 0
+  · rw [ite_eq_left hsup0]
+    exact RefE.ret (projLitToCtor_run_unsupported _ fe d.toNat h hh htag8 a₀ s' hv
+      (by rw [hsl, hsup0]; rfl)) (CorePost.ret hS rfl hh)
+  rw [ite_eq_right hsup0]
+  have hsupT : fe.strLit = true := by rw [hsl]; simpa using hsup0
+  refine RefE.onlySim (fun _ => projLitToCtorE.k_str_lit_ctor.none ..)
+    (fun _ _ hc2 => CoreSpec.of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+      (hStrCtor n _ _ dn vis fe MM eb h s' hS hh hv) hc2)
+    fun r₂ m₂ ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ => ?_
+  have hc2run := AM.run_of_ok _ _ hok2
+  rw [hres2] at hc2run
+  simp only [projLitToCtorE.k_str_lit_ctor]
+  rcases c3 : callE p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with e3 | ⟨r₃, m₃⟩
+  · exact fun hkE => ErrClaim.of_run_err (fun ce h' => projLitToCtor_err_ctor _ fe d.toNat h hh htag8
+      a₀ _ s' hv hsupT _ hc2run ce h')
+      (CoreSpecE.of_callE ((hkE n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode
+        d _ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2) c3)
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
+    ((hk n (Nat.le_refl _)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb mode d _ hF hn
+      ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2) (callW_of_callE c3)
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [hres3] at hrun3
+  exact RefE.ret (projLitToCtor_run_ctor _ fe d.toNat h hh htag8 a₀ _ _ s' hv hsupT _ hc2run _ hrun3)
+    ⟨⟨M₃, hS₃, hK₂.trans hK₃, hSt₂.trans hSt₃⟩, rfl, hrw3⟩
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`** (`plit_ref`'s ok half). -/
 theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrCtor : StrLitCtorOK p) (n : Nat)
