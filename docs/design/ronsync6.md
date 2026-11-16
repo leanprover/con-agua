@@ -175,3 +175,38 @@ test harness `E2E/Diff.lean` builds its empty environment with `mkIFEnvLits` (th
 * `e2e.py --latest ''` with that con-ron: 794 fixtures, all agree (2 time out in all three, as
   before).
 * Census: 100 %, zero `sorry` sources (the 2 bad links of `topLitS` were there before).
+
+## 7. Performance
+
+Against master `1b5dce12c`, both binaries `make` from the committed files, `Init`
+(`_tmp/fixtures/init/init435.ndjson`), CPU 44 (one thread) or 24–39 (`--jobs=16`).
+
+| | master | ronsync6 | Δ |
+|---|---:|---:|---:|
+| `Init`, `instructions:u`, one thread (`perf stat`, 2 runs each, ±0.00 %) | 217 223 M | 202 881 M | **−6.60 %** |
+| `Init`, peak RSS, one thread | 621 MB | 627 MB | +1.0 % |
+| `Init`, peak RSS, `--jobs=16` | 764 MB | 764 MB | 0 % |
+| `Init` wall, one thread (22 kept paired rounds of 24, load ≤ 12, Wilcoxon) | 16.85 s | 14.74 s | mean −12.1 % [−12.9, −11.3], p < 0.001 |
+| `Init` wall, `--jobs=16` (same rounds) | 2.84 s | 2.74 s | mean −7.1 % [−19.0, +4.8], p = 0.006 |
+
+Upstream measured −0.18 % (#155), −4.17 % (#156), −3.91 % (#157) on con-ron's binary: together
+about −8.1 %; L's −6.6 % instructions are in that range. The wall time drops more than the
+instruction count (one thread −12 %): the β peel no longer copies the arguments onto the stack
+and the ι step substitutes once, which saves memory traffic beyond instructions. The literal
+flags (#579) make each literal read one word load instead of up to ten index probes. No regression
+in instructions, memory or wall time.
+
+## 8. What went wrong
+
+* The first lit helper ran out of context after most of #579 (the L code, `EnvFlags`, the freeze);
+  a second one finished it from the hand-over (IndexBuild, Jobs, the gates' flag step). The iota
+  helper likewise left `appLoop_ref` to a fresh helper. Hand-overs worked; earlier splits of the
+  #579 area (the env/index half and the readers half) would have avoided one restart.
+* Merging during the helpers' fast commits: twice a helper reported failures against an older
+  head of another helper (iota's elaborating head had not been merged yet). Merging every helper
+  branch at each announcement, as later done, fixed it.
+* The frame hypotheses that freed "every `CTL` word from 136 up" had to be narrowed in about ten
+  places (`not_mem_envCtl`, `CheckR.frame_hi`, `CoreS.frame*`, `quotPc`, `hCenv`): any new word an
+  existing relation owns meets them; the free range `160‥173` kept the change to those lemmas.
+* The shake tool's binary had lost its interpreter (glibc collected from the Nix store), so the
+  `shake` gate reported every allowlist line as stale until `scripts/shake-setup.sh` rebuilt it.
