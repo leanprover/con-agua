@@ -71,7 +71,7 @@ the reads at the pushed view and the variant loop through their models. -/
 l_model cdmp_specE (p : Prog) (hD : CdmpProg p)
   fns [hD.lCheckDivModPin ↦ cdmpE]
   specs [callW_spec p n "env_row_get", callW_spec p n "env_push", cdmpFe2_specE p hD.fe2 n,
-    callW_spec p n "env_pop_temp", checkDivModPinLoop_specE p hD.toDmProg8 n]
+    callW_spec p n "env_pop_temp", callW_spec p n "env_set_flags", checkDivModPinLoop_specE p hD.toDmProg8 n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
