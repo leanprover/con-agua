@@ -163,6 +163,7 @@ substituted in one walk (`inst_list`). -/
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
   k := EREC⦃recP + ⟪CI.recPrefix⟫⦄ + EREC⦃rl + ⟪Rule.nfields⟫⦄;
+  -- a fixed capacity: the binder count past `2^64` aborts
   if k < EREC⦃recP + ⟪CI.recPrefix⟫⦄ { abort };
   body := call rule_body_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
     EREC⦃rl + ⟪Rule.rhs⟫⦄, k, us);
