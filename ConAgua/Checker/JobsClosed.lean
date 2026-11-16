@@ -404,7 +404,7 @@ def cdFns : List FnName :=
     "reduce_pin_guard", "reduce_proj_arg", "reduce_proj_core", "reduce_proj_fire",
     "reduce_proj_head", "reduce_stored_ok", "reduced_former", "replace_apps", "replace_apps_go",
     "replace_apps_node", "replace_fvars", "replace_fvars_go", "replace_fvars_node",
-    "reserved_contains", "reserved_contains_w", "reserved_from", "reserved_rec_bool",
+    "reserved_contains", "reserved_from", "reserved_rec_bool",
     "reserved_rec_name", "residual_pw", "rf_bank_enter", "rf_bank_leave", "rf_clear", "rf_find",
     "rf_put", "rom_basis_decls", "rom_ci", "rom_cv", "rom_ex_leaf_c", "rom_ex_one_c",
     "rom_ex_ref_c", "rom_ex_two_c", "rom_expr_c", "rom_expr_pin", "rom_exprs_to_c", "rom_level_c",
