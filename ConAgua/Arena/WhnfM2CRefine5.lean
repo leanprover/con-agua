@@ -308,13 +308,13 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   dsimp only [mtcE.k_ctor_view]
   by_cases g1 : r1.headD 0 ≠ 0
   · simp only [g1, ne_eq, not_false_eq_true, ↓reduceIte]
-    obtain ⟨hlen, hq⟩ := hok1
+    obtain ⟨hlen, hw1, hq⟩ := hok1
     obtain ⟨cv, nP, nF, ind, hci⟩ := hq g1
     have hct : (decMV m r1).isCtor = true := by
       have : r1.headD 0 = 0 ↔ False := ⟨g1, False.elim⟩
       simp only [decMV, this, hci, ↓reduceIte]; rfl
     have h5 := list5_eta r1 hlen
-    refine RefE.ret ?_ ⟨⟨M1, hS1, hK1, hSt1⟩, by rw [h5], by rw [h5]; exact ⟨hlen, hq⟩⟩
+    refine RefE.ret ?_ ⟨⟨M1, hS1, hK1, hSt1⟩, by rw [h5], by rw [h5]; exact ⟨hlen, hw1, hq⟩⟩
     simp only [hct, ↓reduceIte]; rfl
   have g1' : r1.headD 0 = 0 := by simpa using g1
   have hst : (decMV m r1).isCtor = false := by unfold decMV; dsimp only; rw [if_pos g1']; rfl
@@ -335,7 +335,7 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
   by_cases g2 : r2.headD 0 = major
   · have hb : (decE (r2.headD 0) == decE major) = true := by rw [g2]; exact beq_self_eq_true _
     simp only [g2, ↓reduceIte] at hb ⊢
-    refine RefE.ret ?_ ⟨⟨M2, hS2, hK1.trans hK2, hSt1.trans hSt2⟩, by rw [decMV_stuck], ⟨rfl, fun h => absurd rfl h⟩⟩
+    refine RefE.ret ?_ ⟨⟨M2, hS2, hK1.trans hK2, hSt1.trans hSt2⟩, by rw [decMV_stuck], ⟨rfl, hmaj, fun h => absurd rfl h⟩⟩
     simp only [hb, ↓reduceIte]; rfl
   have hb : (decE (r2.headD 0) == decE major) = false := by
     rw [show (decE (r2.headD 0) == decE major) = (r2.headD 0 == major) from decI_beq _ _ hw2 hmaj]

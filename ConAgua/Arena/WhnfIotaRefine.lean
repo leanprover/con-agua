@@ -373,7 +373,7 @@ theorem ctorView_refines (p : Prog) (hp : IotaProg' p) :
   have hstuck : (ctorView fe (decE e)).run a₀ = .ok (.stuck (decE e), a₀) →
       CoreRef (ctorView fe (decE e)) a₀ (decMV s₀.mem) dn s₀.mem vis fe MM eb [0, e, 0, 0, 0] s₀.mem
         (MVOk s₀.mem) := fun hrun =>
-    CoreRef.of_pure hS hrun rfl (by simp) ⟨rfl, fun h => absurd rfl h⟩
+    CoreRef.of_pure hS hrun rfl (by simp) ⟨rfl, he, fun h => absurd rfl h⟩
   by_cases h3 : tagW (r₁.headD 0) ≠ 3
   · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, hm⟩ := hW
@@ -426,7 +426,7 @@ theorem ctorView_refines (p : Prog) (hp : IotaProg' p) :
     rw [← hm]
     obtain ⟨cv, hcv, -⟩ := hctor.1 h4
     subst hcv
-    refine CoreRef.of_pure hS (by rw [hpre, hfind']; rfl) rfl ?_ ⟨rfl, fun _ => ⟨_, _, _, _, hci⟩⟩
+    refine CoreRef.of_pure hS (by rw [hpre, hfind']; rfl) rfl ?_ ⟨rfl, he, fun _ => ⟨_, _, _, _, hci⟩⟩
     exact (decMV_ctor (by decide) hci).symm
   · have h4' : rdW (s₀.mem.arr64 (L.tierA EREC (r₂.tail.headD 0 >>> 40)))
         (r₂.tail.headD 0 &&& 1099511627775) ≠ 4 := by simpa [erRd] using h4
