@@ -83,7 +83,7 @@ theorem tailE {β γ : Type} {K : Except Err γ → Except Err β} {x : Except E
 
 /-- The defeq family's callees outside the verdict closure. -/
 def defeqNVList : List FnName :=
-  ["de_find", "de_put", "is_bool_true", "has_fvar", "head_is_proj", "lvls_eq_c", "lvl_eq_c",
+  ["de_find", "de_put", "has_fvar", "head_is_proj", "lvls_eq_c", "lvl_eq_c",
    "pin_word", "pin_at", "str_lit_ctor", "get_app_args", "get_app_fn",
    "inst_list", "spine_head", "same_const_heads", "head_hint", "hint_lt",
    "unfoldable_head", "lazy_fold_ok", "is_eager_reduce", "unfold_definition", "lit_eq", "e_view",

@@ -637,19 +637,24 @@ def checkBlockTables : FunDecl := lfn (vis, tO, tL) locals (u) {
 /-- `check_block_tail_stream(p, fe2b, out.off, out.len)`: the second half of `checkBlockTail` (the
 Rust's `check_block_tail_stream`): the stream's K flags against the generated recursors, the
 generated family's records pushed in place (a flush entering), the stream's recursors against them,
-the pushes undone in reverse order (`gen_rec_check_pop_all`) and the flush leaving. Returns the
+the pushes undone in reverse order (`gen_rec_check_pop_all`), the literal flags set back (`setFlags`:
+`CTL[160]`, `CTL[161]` saved before the pushes) and the flush leaving. Returns the
 constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
-    (u, io, il, feG, po, pl, fe3) {
+    (u, io, il, feG, po, pl, fe3, nl, sl) {
   u := call stream_k_check(p, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
+  nl := CTL.u64[160];
+  sl := CTL.u64[161];
   (io, il) := call block_rec_infos_tf(p, 0, outO, outL);
   (feG, po, pl) := call cons_block_recs_temp(io, il, fe2b, 0, 0);
   u := call flush_caches();
   u := call stream_recs_check(feG, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
   fe3 := call gen_rec_check_pop_all(feG, po, pl);
+  CTL.u64[160] := nl;
+  CTL.u64[161] := sl;
   u := call flush_caches();
   return fe3
 }
