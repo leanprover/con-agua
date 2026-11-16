@@ -71,7 +71,7 @@ theorem ilw_internE {v : ENodeView} {A : List TieredArray} {C : List Word} (r : 
     (h128 : ∀ b ∈ A, b.arr < 96 ∨ 128 ≤ b.arr := by decide) (hpins : (PINS : TieredArray) ∉ A := by decide)
     (henv : AvoidA 129 149 A := by decide)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat := by simp)
-    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat := by simp)
+    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ (136 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat := by simp)
     (hmA : (ILMEMO : TieredArray) ∉ A ∧ (ABMEMO : TieredArray) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
     (hmWA : (WSM : TieredArray) ∉ A ∧ (FLM : TieredArray) ∉ A ∧ (LSM : TieredArray) ∉ A := by decide)
     (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
