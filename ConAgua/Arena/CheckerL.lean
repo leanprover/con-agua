@@ -20,9 +20,9 @@ so that the assembled program (`Checker/Prog.lean`) does not wait for them.
   `FIRSTS[k]` is the next counter (`IStreamIndex.firsts`), its constants go to the stream
   index's rows (`insertConsts`: a row is written only where none is, the counter always moves),
   its tables to the table rows at position `k` (`insertTables`). The next counter is `CTL[128]`.
-  It runs with the scratch tier off, so every record lands in `EREC`'s tier 0. Past the last
-  record the index is frozen (`index_freeze`): the ten literal names into `CTL[162‥171]`, the
-  literal flags' thresholds into `CTL[172]`, `CTL[173]`.
+  It runs with the scratch tier off, so every record lands in `EREC`'s tier 0. The ten literal
+  names go to `CTL[162‥171]` first (`str_lit_names`); past the last record the index is frozen
+  (`index_freeze`): the literal flags' thresholds into `CTL[172]`, `CTL[173]`.
 * `record_job(k)`: `recordJob`: the scratch bracket, the view of position `k` (`CTL[134]` its
   first counter, `CTL[135]` the position, the literal flags `CTL[160]`, `CTL[161]` by `from_le`
   against the thresholds), a fresh own layer (the stamp `CTL[133]` bumped,
@@ -102,15 +102,16 @@ def litFromL : FunDecl := lfn (i, stop) locals (c, p, k) {
   return c + 1
 }
 
-/-- `index_freeze()`: `IStreamIndex.freeze`: the ten literal names off the pin table into
-`CTL[162‥171]` (`strLitNames`' order: `Nat`, `Nat.zero`, `Nat.succ`, then `String`,
-`String.ofList`, `List`, `List.nil`, `List.cons`, `Char`, `Char.ofNat`), and the two flags'
-thresholds over them into `CTL[172]` (the first three), `CTL[173]` (all ten). -/
--- con-ron: ConRon/Arena/StreamIndex.lean:72-79 ConRon.Arena.IStreamIndex.freeze
+/-- `str_lit_names()`: the ten literal names off the pin table into `CTL[162‥171]`
+(`strLitNames`' order: `Nat`, `Nat.zero`, `Nat.succ`, then `String`, `String.ofList`, `List`,
+`List.nil`, `List.cons`, `Char`, `Char.ofNat`). Written before the stream index is built: the
+builder's environment already holds the literal names (the twin's `mkIFEnvLits`, and its proofs'
+`driverFE`), and the pins do not change during the build, so the freeze reads the same names. -/
 -- con-ron: ConRon/Arena/Core.lean:125-138 ConRon.Arena.strLitNames
 -- con-ron: ConRon/Arena/Core.lean:116-123 ConRon.Arena.natLitNames
-@[no_expose, l_impl ConRon.Arena.IStreamIndex.freeze ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
-def indexFreezeL : FunDecl := lfn () locals (a, nf, sf) {
+-- con-ron: ConRon/Arena/Core.lean:140-146 ConRon.Arena.mkIFEnvLits
+@[no_expose, l_impl ConRon.Arena.strLitNames ConRon.Arena.natLitNames ConRon.Arena.mkIFEnvLits]
+def strLitNamesL : FunDecl := lfn () locals (a) {
   a := call pin_at(1);
   CTL.u64[162] := a;
   a := call pin_at(2);
@@ -131,6 +132,15 @@ def indexFreezeL : FunDecl := lfn () locals (a, nf, sf) {
   CTL.u64[170] := a;
   a := call pin_at(12);
   CTL.u64[171] := a;
+  return 0
+}
+
+/-- `index_freeze()`: `IStreamIndex.freeze`: the two literal flags' thresholds over the literal
+names `CTL[162‥171]` (written by `str_lit_names` before the build) into `CTL[172]` (the first
+three), `CTL[173]` (all ten). -/
+-- con-ron: ConRon/Arena/StreamIndex.lean:72-79 ConRon.Arena.IStreamIndex.freeze
+@[no_expose, l_impl ConRon.Arena.IStreamIndex.freeze]
+def indexFreezeL : FunDecl := lfn () locals (nf, sf) {
   nf := call lit_from(0, 3);
   sf := call lit_from(0, 10);
   CTL.u64[172] := nf;
@@ -139,11 +149,13 @@ def indexFreezeL : FunDecl := lfn () locals (a, nf, sf) {
 }
 
 /-- `build_index(cnt)`: `buildIndex` over records `0‥cnt - 1`, from the empty index (zero rows,
-`CTL[128] = 0`), frozen past the last record (`index_freeze`). -/
+`CTL[128] = 0`), the literal names written first (`str_lit_names`), frozen past the last record
+(`index_freeze`). -/
 -- con-ron: ConRon/Arena/StreamIndex.lean:81-96 ConRon.Arena.buildIndexGo
 -- con-ron: ConRon/Arena/StreamIndex.lean:98-101 ConRon.Arena.buildIndex
 @[no_expose, l_impl ConRon.Arena.buildIndexGo ConRon.Arena.buildIndex]
 def buildIndexL : FunDecl := lfn (cnt) locals (k, z) {
+  z := call str_lit_names();
   k := 0;
   for k < cnt {
     z := call idx_add(k)
@@ -207,7 +219,7 @@ def checkJobsL : FunDecl := lfn (j, hi) locals (z) {
 /-- The check phase's functions. -/
 def checkerProgL : Prog :=
   [("idx_consts", idxConstsL), ("idx_tables", idxTablesL), ("idx_add", idxAddL),
-   ("lit_from", litFromL), ("index_freeze", indexFreezeL), ("build_index", buildIndexL),
+   ("lit_from", litFromL), ("str_lit_names", strLitNamesL), ("index_freeze", indexFreezeL), ("build_index", buildIndexL),
    ("from_le", fromLeL), ("record_job", recordJobL), ("check_jobs", checkJobsL)]
 
 end L.Arena

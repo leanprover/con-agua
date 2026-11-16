@@ -182,7 +182,7 @@ def imFns : List FnName :=
    "reduce_nat_ap", "reduce_nat_head", "reduce_nat_k", "reduce_nat_op", "reduce_nat_succ",
    "reduce_op_cv_a", "reduce_pin_guard", "reduce_proj_arg", "reduce_proj_core",
    "reduce_proj_fire", "reduce_proj_head", "reduce_stored_ok", "reduced_former",
-   "reserved_contains", "reserved_contains_w", "reserved_from", "residual_pw", "rom_and_pin",
+   "reserved_contains", "reserved_from", "residual_pw", "rom_and_pin",
    "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_ex_leaf", "rom_ex_leaf_c",
    "rom_ex_one", "rom_ex_one_c", "rom_ex_ref", "rom_ex_ref_c", "rom_ex_two", "rom_ex_two_c",
    "rom_expr", "rom_expr_c", "rom_expr_pin", "rom_exprs_to", "rom_exprs_to_c", "rom_level",

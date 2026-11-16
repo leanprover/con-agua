@@ -641,7 +641,6 @@ the pushes undone in reverse order (`gen_rec_check_pop_all`), the literal flags 
 of `CTL[160]`, `CTL[161]` saved before the pushes) and the flush leaving. Returns the
 constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
     (u, io, il, feG, po, pl, fe3, nl, sl) {
@@ -664,7 +663,6 @@ recursors, the stream's K flags and recursors against them (`check_block_tail_st
 checks of the block's projection tables `Q` (an `IW` slice of table records); returns the
 constructors' environment (`q` a `BlockPass` pointer). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q, tO, tL) locals
     (env1, p, u, mcO, mcL, fe2, nested, fe2b, outO, outL, fe3) {

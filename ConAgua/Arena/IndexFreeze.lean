@@ -46,7 +46,13 @@ l_model litFrom_specW (p : Prog) (hp : p.lookup "lit_from" = some litFromL)
 /-- **`index_freeze` is its model** (generated). -/
 l_model indexFreeze_specW (p : Prog) (hp : p.lookup "index_freeze" = some indexFreezeL)
   fns [hp ↦ indexFreezeW]
-  specs [callW_spec p n "pin_at", callW_spec p n "lit_from"]
+  specs [callW_spec p n "lit_from"]
+  grind [arena_grind]
+
+/-- **`str_lit_names` is its model** (generated). -/
+l_model strLitNames_specW (p : Prog) (hp : p.lookup "str_lit_names" = some strLitNamesL)
+  fns [hp ↦ strLitNamesW]
+  specs [callW_spec p n "pin_at"]
   grind [arena_grind]
 
 /-! ## `from_le` -/
@@ -240,6 +246,7 @@ structure FreezeProg (p : Prog) : Prop where
   litFrom : p.lookup "lit_from" = some litFromL
   baseGet : p.lookup "base_row_get" = some baseRowGetL
   freeze : p.lookup "index_freeze" = some indexFreezeL
+  names : p.lookup "str_lit_names" = some strLitNamesL
 
 theorem pinW_setCtl (m : Mem) (k v : Word) (i : Nat) : pinW (m.set64 CTL k v) i = pinW m i := by
   simp only [pinW, Mem.arr64_set64_ne _ _ _ _ _ (by decide : (PINS : TieredArray) ≠ CTL)]
@@ -321,79 +328,81 @@ theorem freeze_tail (hP : FreezeProg p) {n : Nat} {m M : Mem} {I : IStreamIndex}
       · subst hb; simp [Mem.size64_set64, hsz]
       · simp only [Mem.arr64_set64_ne _ _ _ _ _ hb, ha b hb]
 
-/-- **`index_freeze` refines `IStreamIndex.freeze`**: the names and the thresholds written
-(`FrozenR`), nothing else but `CTL[162‥173]`, the index's rows untouched. -/
-@[refines ConRon.Arena.IStreamIndex.freeze ConRon.Arena.strLitNames ConRon.Arena.natLitNames]
-theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStreamIndex} {a : AState}
-    (hI : IndexR s₀.mem I) (hF : PinsFull s₀.mem a.pins) (hc : 173 < (s₀.mem.arr64 CTL).size) :
+/-- The control words of the literal names. -/
+def litCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171]
+
+/-- **`str_lit_names()` refines `strLitNames`**: the ten pins' handles in `CTL[162‥171]`
+(`litWords`), nothing else written. -/
+@[refines ConRon.Arena.strLitNames ConRon.Arena.natLitNames ConRon.Arena.mkIFEnvLits]
+theorem strLitNames_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {a : AState}
+    (hF : PinsFull s₀.mem a.pins) (hc : 173 < (s₀.mem.arr64 CTL).size) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "index_freeze" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ (I.freeze).run a = .ok (frozenAt I (pinLits s₀.mem), a) ∧
-      FrozenR s'.mem (frozenAt I (pinLits s₀.mem)) ∧ IndexR s'.mem (frozenAt I (pinLits s₀.mem)) ∧
-      MemFrame [] frozenCtl s₀.mem s'.mem; ⊤⦄ :=
-  triple_post (indexFreeze_specW p hP.freeze n s₀) fun r s ⟨hL, hm⟩ => by
-    refine ⟨hL, freeze_run hF I, ?_⟩
+    invoke p (exec p n) "str_lit_names" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ (pinLits s₀.mem).map (·.word.toUInt64) = litWords s'.mem ∧
+      MemFrame [] litCtl s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (strLitNames_specW p hP.names n s₀) fun r s ⟨hL, hm⟩ => by
+    refine ⟨hL, ?_⟩
     cases n with
-    | zero => rw [indexFreezeW.eq_1] at hm; cases hm
+    | zero => rw [strLitNamesW.eq_1] at hm; cases hm
     | succ n =>
-    rw [indexFreezeW.arm1] at hm
+    rw [strLitNamesW.arm1] at hm
     rcases c0 : callW p n "pin_at" [1] s₀.mem with _ | ⟨r0, m0⟩
-    · rw [c0, indexFreezeW.k_pin_at.none] at hm; cases hm
-    rw [c0, indexFreezeW.k_pin_at.arm1] at hm
+    · rw [c0, strLitNamesW.k_pin_at.none] at hm; cases hm
+    rw [c0, strLitNamesW.k_pin_at.arm1] at hm
     obtain ⟨hm0, -, -, hr0⟩ := callW_pinAt p hP.pin n _ 1 r0 m0 c0
     subst hm0
     try simp only [pinW_setCtl] at hr0
     rcases c1 : callW p n "pin_at" [2] (s₀.mem.set64 CTL 162 (r0.headD 0)) with _ | ⟨r1, m1⟩
-    · rw [c1, indexFreezeW.k_pin_at_2.none] at hm; cases hm
-    rw [c1, indexFreezeW.k_pin_at_2.arm1] at hm
+    · rw [c1, strLitNamesW.k_pin_at_2.none] at hm; cases hm
+    rw [c1, strLitNamesW.k_pin_at_2.arm1] at hm
     obtain ⟨hm1, -, -, hr1⟩ := callW_pinAt p hP.pin n _ 2 r1 m1 c1
     subst hm1
     try simp only [pinW_setCtl] at hr1
     rcases c2 : callW p n "pin_at" [3] ((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)) with _ | ⟨r2, m2⟩
-    · rw [c2, indexFreezeW.k_pin_at_3.none] at hm; cases hm
-    rw [c2, indexFreezeW.k_pin_at_3.arm1] at hm
+    · rw [c2, strLitNamesW.k_pin_at_3.none] at hm; cases hm
+    rw [c2, strLitNamesW.k_pin_at_3.arm1] at hm
     obtain ⟨hm2, -, -, hr2⟩ := callW_pinAt p hP.pin n _ 3 r2 m2 c2
     subst hm2
     try simp only [pinW_setCtl] at hr2
     rcases c3 : callW p n "pin_at" [5] (((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)) with _ | ⟨r3, m3⟩
-    · rw [c3, indexFreezeW.k_pin_at_4.none] at hm; cases hm
-    rw [c3, indexFreezeW.k_pin_at_4.arm1] at hm
+    · rw [c3, strLitNamesW.k_pin_at_4.none] at hm; cases hm
+    rw [c3, strLitNamesW.k_pin_at_4.arm1] at hm
     obtain ⟨hm3, -, -, hr3⟩ := callW_pinAt p hP.pin n _ 5 r3 m3 c3
     subst hm3
     try simp only [pinW_setCtl] at hr3
     rcases c4 : callW p n "pin_at" [6] ((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)) with _ | ⟨r4, m4⟩
-    · rw [c4, indexFreezeW.k_pin_at_5.none] at hm; cases hm
-    rw [c4, indexFreezeW.k_pin_at_5.arm1] at hm
+    · rw [c4, strLitNamesW.k_pin_at_5.none] at hm; cases hm
+    rw [c4, strLitNamesW.k_pin_at_5.arm1] at hm
     obtain ⟨hm4, -, -, hr4⟩ := callW_pinAt p hP.pin n _ 6 r4 m4 c4
     subst hm4
     try simp only [pinW_setCtl] at hr4
     rcases c5 : callW p n "pin_at" [7] (((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)).set64 CTL 166 (r4.headD 0)) with _ | ⟨r5, m5⟩
-    · rw [c5, indexFreezeW.k_pin_at_6.none] at hm; cases hm
-    rw [c5, indexFreezeW.k_pin_at_6.arm1] at hm
+    · rw [c5, strLitNamesW.k_pin_at_6.none] at hm; cases hm
+    rw [c5, strLitNamesW.k_pin_at_6.arm1] at hm
     obtain ⟨hm5, -, -, hr5⟩ := callW_pinAt p hP.pin n _ 7 r5 m5 c5
     subst hm5
     try simp only [pinW_setCtl] at hr5
     rcases c6 : callW p n "pin_at" [8] ((((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)).set64 CTL 166 (r4.headD 0)).set64 CTL 167 (r5.headD 0)) with _ | ⟨r6, m6⟩
-    · rw [c6, indexFreezeW.k_pin_at_7.none] at hm; cases hm
-    rw [c6, indexFreezeW.k_pin_at_7.arm1] at hm
+    · rw [c6, strLitNamesW.k_pin_at_7.none] at hm; cases hm
+    rw [c6, strLitNamesW.k_pin_at_7.arm1] at hm
     obtain ⟨hm6, -, -, hr6⟩ := callW_pinAt p hP.pin n _ 8 r6 m6 c6
     subst hm6
     try simp only [pinW_setCtl] at hr6
     rcases c7 : callW p n "pin_at" [9] (((((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)).set64 CTL 166 (r4.headD 0)).set64 CTL 167 (r5.headD 0)).set64 CTL 168 (r6.headD 0)) with _ | ⟨r7, m7⟩
-    · rw [c7, indexFreezeW.k_pin_at_8.none] at hm; cases hm
-    rw [c7, indexFreezeW.k_pin_at_8.arm1] at hm
+    · rw [c7, strLitNamesW.k_pin_at_8.none] at hm; cases hm
+    rw [c7, strLitNamesW.k_pin_at_8.arm1] at hm
     obtain ⟨hm7, -, -, hr7⟩ := callW_pinAt p hP.pin n _ 9 r7 m7 c7
     subst hm7
     try simp only [pinW_setCtl] at hr7
     rcases c8 : callW p n "pin_at" [10] ((((((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)).set64 CTL 166 (r4.headD 0)).set64 CTL 167 (r5.headD 0)).set64 CTL 168 (r6.headD 0)).set64 CTL 169 (r7.headD 0)) with _ | ⟨r8, m8⟩
-    · rw [c8, indexFreezeW.k_pin_at_9.none] at hm; cases hm
-    rw [c8, indexFreezeW.k_pin_at_9.arm1] at hm
+    · rw [c8, strLitNamesW.k_pin_at_9.none] at hm; cases hm
+    rw [c8, strLitNamesW.k_pin_at_9.arm1] at hm
     obtain ⟨hm8, -, -, hr8⟩ := callW_pinAt p hP.pin n _ 10 r8 m8 c8
     subst hm8
     try simp only [pinW_setCtl] at hr8
     rcases c9 : callW p n "pin_at" [12] (((((((((s₀.mem.set64 CTL 162 (r0.headD 0)).set64 CTL 163 (r1.headD 0)).set64 CTL 164 (r2.headD 0)).set64 CTL 165 (r3.headD 0)).set64 CTL 166 (r4.headD 0)).set64 CTL 167 (r5.headD 0)).set64 CTL 168 (r6.headD 0)).set64 CTL 169 (r7.headD 0)).set64 CTL 170 (r8.headD 0)) with _ | ⟨r9, m9⟩
-    · rw [c9, indexFreezeW.k_pin_at_10.none] at hm; cases hm
-    rw [c9, indexFreezeW.k_pin_at_10.arm1] at hm
+    · rw [c9, strLitNamesW.k_pin_at_10.none] at hm; cases hm
+    rw [c9, strLitNamesW.k_pin_at_10.arm1] at hm
     obtain ⟨hm9, -, -, hr9⟩ := callW_pinAt p hP.pin n _ 12 r9 m9 c9
     subst hm9
     try simp only [pinW_setCtl] at hr9
@@ -414,18 +423,37 @@ theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStre
       simp only [List.range, List.range.loop, List.map_cons, List.map_nil, List.cons.injEq, and_true]
       constructor <;> intro h <;> (obtain ⟨e1, e2, e3, e4, e5, e6, e7, e8, e9, e10⟩ := h) <;>
         exact ⟨e1.symm, e2.symm, e3.symm, e4.symm, e5.symm, e6.symm, e7.symm, e8.symm, e9.symm, e10.symm⟩
-    obtain ⟨h1, h2, h3⟩ := freeze_tail hP hI hc
-      (fun b hb => by simp only [Mem.arr64_set64_ne _ _ _ _ _ hb])
-      (fun x hx => by
-        simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
-        simp only [rdW_set64]; simp [Ne.symm hx.1, Ne.symm hx.2.1, Ne.symm hx.2.2.1, Ne.symm hx.2.2.2.1,
-          Ne.symm hx.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.1,
-          Ne.symm hx.2.2.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.2.2.2.1])
-      (by simp [Mem.size64_set64])
-      ((hlitW _ (by simp [Mem.size64_set64]; omega)).mpr (by
+    obtain ⟨-, hsm⟩ := Prod.mk.inj (Option.some.inj hm)
+    rw [← hsm]
+    refine ⟨(hlitW _ (by simp [Mem.size64_set64]; omega)).mpr (by
         simp only [hr0, hr1, hr2, hr3, hr4, hr5, hr6, hr7, hr8, hr9]
         simp [rdW_set64, Mem.size64_set64]
-        omega)) hm
-    exact ⟨h1, h2, h3⟩
+        omega), ?_⟩
+    refine ⟨fun b _ hb => by simp only [Mem.arr64_set64_ne _ _ _ _ _ hb], fun x hx => ?_,
+      fun b => by simp [Mem.size64_set64]⟩
+    simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
+    simp only [rdW_set64]; simp [Ne.symm hx.1, Ne.symm hx.2.1, Ne.symm hx.2.2.1, Ne.symm hx.2.2.2.1,
+      Ne.symm hx.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.1,
+      Ne.symm hx.2.2.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.2.2.1, Ne.symm hx.2.2.2.2.2.2.2.2.2]
+
+/-- **`index_freeze` refines `IStreamIndex.freeze`**: at the literal names already written
+(`str_lit_names`), the thresholds written (`FrozenR`), nothing else but `CTL[172‥173]`, the index's
+rows untouched. -/
+@[refines ConRon.Arena.IStreamIndex.freeze]
+theorem indexFreeze_refines (hP : FreezeProg p) (n : Nat) (s₀ : St) {I : IStreamIndex} {a : AState}
+    (hI : IndexR s₀.mem I) (hF : PinsFull s₀.mem a.pins) (hc : 173 < (s₀.mem.arr64 CTL).size)
+    (hl : (pinLits s₀.mem).map (·.word.toUInt64) = litWords s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "index_freeze" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ (I.freeze).run a = .ok (frozenAt I (pinLits s₀.mem), a) ∧
+      FrozenR s'.mem (frozenAt I (pinLits s₀.mem)) ∧ IndexR s'.mem (frozenAt I (pinLits s₀.mem)) ∧
+      MemFrame [] frozenCtl s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (indexFreeze_specW p hP.freeze n s₀) fun r s ⟨hL, hm⟩ => by
+    refine ⟨hL, freeze_run hF I, ?_⟩
+    cases n with
+    | zero => rw [indexFreezeW.eq_1] at hm; cases hm
+    | succ n =>
+    rw [indexFreezeW.arm1] at hm
+    exact freeze_tail hP hI hc (fun _ _ => rfl) (fun _ _ => rfl) rfl hl hm
 
 end L.Arena

@@ -94,3 +94,25 @@ yield (5–15 % of the failing theorems, the rename rules); otherwise the compil
   ConRonBridge build.
 * 16:45–17:00 stage 3a and the compile passes (build, ladder on the failing modules, hand fixes
   of definitions and statements).
+* 17:00 fan-out: helpers `ronsync6-lit` (#579), `ronsync6-iota` (#582, #583, #585 ι side, #591),
+  `ronsync6-rec` (#592, #585 `ruleBinds`, the inductive tier's flags); briefs
+  `_tmp/ronsync6/brief-{common,lit,iota,rec}.md`, 3 build threads each.
+* 17:05–17:40 the helpers' "elaborate first" milestones merged (statements restated, the removed
+  functions' theorems deleted). The new reason `R_THE_RECURSOR_S_RULE_FOR_IS_NOT` (`ruleBinds`,
+  appended row). The interface grew by the helpers' requests: `envPush_refines` over generated
+  models (`Arena/EnvFlags.lean`, `flagsSet`, `envSetFlags_refines`), `StageR.of_flags`
+  (`Arena/StageFlags.lean`), `IndexR.rows` (the base rows' counters below `2^32`, for `lit_from`).
+  More frame hypotheses that freed every `CTL` word from 136 up now leave out `160‥171`.
+* 17:40 the program regenerated (`Checker/Prog*`, the function lists, `preloop_ws`, `checker.s`).
+  `diff-e2e --tests` at con-leche 600d3b58 with that binary: **740/740 agree**
+  (`stored_rule_lams_short` rejected with the new reason, `strict_succ_counter` accepted).
+  `Init` instructions (one run each, CPU 44, `--jobs=1`): master 217 223 M, branch 202 873 M
+  (**−6.6 %**; upstream measured −0.18 %, −4.17 %, −3.91 % for the three tasks on con-ron).
+* 17:50–18:30 helper `ronsync6-lit` ran out of context (hand-over `_tmp/ronsync6/ronsync6-lit-handoff.md`);
+  `ronsync6-lit2` continues. One layout decision on the way: `str_lit_names` writes the ten
+  literal names into `CTL[162‥171]` before the stream index is built rather than in the freeze:
+  in the twin's proofs the builder's environment already holds them (`driverFE`, as
+  `mkIFEnvLits` for the spec fold), and the pins do not change during the build, so the freeze
+  reads the same names; `index_freeze` keeps only the two thresholds (`litFrom`). `pin_at`
+  cannot abort there (the pin table is filled before the build), so the order is not observable:
+  no deviation row.

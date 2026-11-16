@@ -135,7 +135,7 @@ def nvFns : List L.FnName :=
    "in_put", "ind_block_to_erec", "ind_bool", "ind_caps", "ind_copy_go", "ind_ctor", "ind_cv",
    "ind_fields", "ind_info_rec", "ind_list", "ind_member", "ind_nlist", "ind_num", "ind_obj",
    "ind_params_ok", "ind_pi_tele_len", "ind_rec", "ind_rec_copy", "ind_rules", "ind_rules_go",
-   "ind_size", "ind_slot", "ind_type", "index_freeze", "infer_lam_result", "inst1", "inst_app",
+   "ind_size", "ind_slot", "ind_type", "str_lit_names", "index_freeze", "infer_lam_result", "inst1", "inst_app",
    "inst_ctors", "inst_entry", "inst_forall", "inst_go", "inst_lam", "inst_let", "inst_list",
    "inst_lp", "inst_lp_core", "inst_lp_fast", "inst_pis_with", "inst_proj", "inst_recs",
    "inst_spine", "inst_spine_pins", "inst_types", "install_ind_d", "instantiate1_fast",
