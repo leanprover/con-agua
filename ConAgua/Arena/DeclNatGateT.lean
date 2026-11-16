@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.KnotEntry
+public import ConAgua.Arena.EnvFlags
 public import ConAgua.Verdict.VCtx
 public import ConAgua.Arena.DeclNatGateSpec
 public import ConAgua.Arena.DeclNatOpEq
@@ -196,7 +197,7 @@ l_model snp_specE (p : Prog)
   (hc : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
   fns [hf ↦ snpE]
   specs [callW_spec p n "env_row_get", callW_spec p n "env_push", snpFe2_specE p h2 n,
-    callW_spec p n "env_pop_temp", callW_spec p n "nat_op_equations",
+    callW_spec p n "env_pop_temp", callW_spec p n "env_set_flags", callW_spec p n "nat_op_equations",
     callW_spec p n "subst_const0_pairs", certifyNatEqs_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
@@ -302,6 +303,7 @@ structure SnpProg (p : Prog) : Prop extends NatSubProg' p where
   rs : p.lookup "env_row_set" = some envRowSetL
   push : p.lookup "env_push" = some envPushL
   pop : p.lookup "env_pop_temp" = some envPopTempL
+  ef : EnvFlagsProg p
   fe2 : Fe2Closed p
 
 /-- What the structural gate gives besides the twin's run (from `m`, `a`): `StageC` at the
