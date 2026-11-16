@@ -566,7 +566,7 @@ include hp hc hw hmtc hE
 omit hp hc hw hmtc hE in
 theorem decMV_view_ctor {m : Mem} {t e c us q : Word} (hok : MVOk m [t, e, c, us, q]) (ht : t ≠ 0) :
     (decMV m [t, e, c, us, q]).isCtor = true := by
-  obtain ⟨cv, nP, nF, ind, hq⟩ := hok.2.2 ht
+  obtain ⟨cv, nP, nF, ind, hq⟩ := hok.2.2.2.2 ht
   simp only [List.getD_cons_succ, List.getD_cons_zero] at hq
   rw [decMV_ctor ht hq]; rfl
 
@@ -735,7 +735,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
       simp only [↓reduceIte, pure_bind]
       rw [show (MajorView.stuck (decE major)) = decMV s₀.mem [0, major, 0, 0, 0] from (decMV_stuck _ _ _ _ _).symm]
       exact pmJ1_ref p hp hc hw hmtc hE N hk F hnF hn62 dn vis fe eb mode d rec isK ro rc 0 major 0 0 0 rules
-        hm4 hK0 hebm hmaj s₀.mem m2 _ M2 hS2 e2 ⟨rfl, hmaj, fun h => absurd rfl h⟩ hrules2
+        hm4 hK0 hebm hmaj s₀.mem m2 _ M2 hS2 e2 ⟨rfl, hmaj, by simp, by simp, fun h => absurd rfl h⟩ hrules2
     · rw [ite_eq_right hs2, L.Arena.decBool_false_of (by simpa using hs2)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       rw [← hKf]

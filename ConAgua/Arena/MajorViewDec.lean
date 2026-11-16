@@ -38,10 +38,11 @@ def decMV (m : Mem) (r : List Word) : MajorView :=
     | some (.ctorInfo cv nP nF ind) => .ctor e (decI (r.getD 2 0)) (decI (r.getD 3 0)) cv nP nF ind
     | _ => .stuck e
 
-/-- The words of a well-formed view: five words, the term a handle (below `2 ^ 32`), a `.ctor` view's record
-decoding to a constructor record. -/
+/-- The words of a well-formed view: five words, the term, the name and the level list handles
+(below `2 ^ 32`), a `.ctor` view's record decoding to a constructor record. -/
 def MVOk (m : Mem) (r : List Word) : Prop :=
-  r.length = 5 ∧ (r.getD 1 0).toNat < 2 ^ 32 ∧ (r.headD 0 ≠ 0 →
+  r.length = 5 ∧ (r.getD 1 0).toNat < 2 ^ 32 ∧ (r.getD 2 0).toNat < 2 ^ 32 ∧
+    (r.getD 3 0).toNat < 2 ^ 32 ∧ (r.headD 0 ≠ 0 →
     ∃ cv nP nF ind, decCI (erecP m) (r.getD 4 0).toNat = some (.ctorInfo cv nP nF ind))
 
 @[simp] theorem decMV_stuck (m : Mem) (e c us q : Word) :
@@ -65,7 +66,7 @@ theorem decMV_ext {m m' : Mem} (hx : ArrExt (erecP m) (erecP m')) {r : List Word
   split
   · rfl
   · rename_i ht
-    obtain ⟨cv, nP, nF, ind, hq⟩ := hok.2.2 ht
+    obtain ⟨cv, nP, nF, ind, hq⟩ := hok.2.2.2.2 ht
     rw [hq, hx.decCI hq]
 
 end L.Arena
