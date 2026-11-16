@@ -280,7 +280,8 @@ theorem tail_ref (hP : TailProg p) (_hMc : McLook p) (P : GrcProgE p) (hF : FtPr
     rw [ConLeche.genRecCheck_datF] at hFR
     exact ConLeche.Cached.genRecCheck_recsWF henv₂' hFR hpl (fun M hM => (hMs M hM).2.1)
   have x16 : ConRon.Arena.Ext a1.store a6.store := by rw [← hst4]; exact c6'.ext
-  have hrel₂b := ConRon.Bridge.Inductives.BT.EnvRel.feq hfeq (hrel₂.mono x16)
+  have hrel₂b := ConRon.Bridge.Inductives.BT.EnvRel.feq hfeq.1 (hrel₂.mono x16)
+    (hfeq.2 (hrel₂.ienv _ rfl).flags)
   -- `check_block_tail_stream`
   rw [ictlE.k_check_block_rec.arm1]
   have g06 := g04.trans hG6.grow
