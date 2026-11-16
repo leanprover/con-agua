@@ -96,7 +96,7 @@ theorem poolHyps_of_phaseA {b : ByteArray} (PA : PhaseA b) {σ : Type} (Rel : σ
   obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
   obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, -, hden⟩ :=
     ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
-  obtain ⟨hst', hx, hp', -, hI, hpI⟩ := buildIndex_run constsSpec tablesSpec hst hoff hpd hden PA.idx
+  obtain ⟨hst', hx, hp', -, hI, hpI⟩ := buildIndex_run constsSpec tablesSpec hst hpp hoff hpd hden PA.idx
   have hx' := PExt.of_ext hx
   obtain ⟨hlen, hget⟩ := denoteDecls_getElem hden
   have hden' : ∀ (i : Nat) (hi : i < PA.ds.size), ∃ hi' : i < (ConLeche.Frontend.preparePrelude preC rc.decls).toList.length,
