@@ -176,7 +176,8 @@ theorem envPush_stage {p : Prog} (hP : EnvFlagsProg p) {n : Nat} {vis : Word} {f
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
     StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' := by
   obtain ⟨s', hs', -, hr, -, -, -, hE, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPush_refines hP n ⟨m, Locals.init []⟩ vis c hS.check.env hci (by have := hS.iw.ctl; omega)) hc
+    (envPush_refines hP n ⟨m, Locals.init []⟩ vis c hS.check.env hci
+      (show 161 < (m.arr64 CTL).size by have := hS.iw.ctl; omega)) hc
   subst hs' hr
   simp only [List.headD_cons]
   rw [hm] at hE ⊢
