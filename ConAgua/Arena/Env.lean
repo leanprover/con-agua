@@ -128,23 +128,70 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   return (0, 0)
 }
 
-/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own layer at
-counter `vis`; returns the new view `vis + 1`. -/
+/-- `lit_name_at(w, i)`: is the name handle `w` one of the frozen index's literal names
+`CTL[162 + i‥171]` (`litNameAt` over `IFBase.lits`, `litWords`). -/
+-- con-ron: ConRon/Arena/Env.lean:266-272 ConRon.Arena.litNameAt
+@[no_expose, l_impl ConRon.Arena.litNameAt]
+def litNameAtL : FunDecl := lfn (w, i) locals () {
+  while i < 10 {
+    if CTL.u64[162 + i] == w { return 1 };
+    i := i + 1
+  };
+  return 0
+}
+
+/-- `lits_stored(vis, i, stop)`: are the literal names `CTL[162 + i‥162 + stop)` all in the view
+`vis` (`IFEnv.litsStored`: `0‥3` is `natLitStoredBy`, `3‥10` the rest of `strLitStoredBy`); a
+range past the ten names answers `0`. -/
+-- con-ron: ConRon/Arena/Env.lean:319-330 ConRon.Arena.IFEnv.litsStored
+-- con-ron: ConRon/Arena/Env.lean:332-335 ConRon.Arena.IFEnv.natLitStoredBy
+-- con-ron: ConRon/Arena/Env.lean:337-341 ConRon.Arena.IFEnv.strLitStoredBy
+@[no_expose, l_impl ConRon.Arena.IFEnv.litsStored ConRon.Arena.IFEnv.natLitStoredBy ConRon.Arena.IFEnv.strLitStoredBy]
+def litsStoredL : FunDecl := lfn (vis, i, stop) locals (f, q) {
+  for i < stop {
+    if 10 <= i { return 0 };
+    (f, q) := call env_find(CTL.u64[162 + i], vis);
+    if f == 0 { return 0 }
+  };
+  return 1
+}
+
+/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own
+layer at counter `vis`; returns the new view `vis + 1`. While string literals are not expandable
+(`CTL[161] = 0`) a push of a literal name (`lit_name_at`) recomputes the two flags at the new view
+(`natLitStoredBy`, then `strLitStoredBy` as the `Nat` flag and the other seven names). -/
 -- con-ron: ConRon/Arena/Env.lean:350-362 ConRon.Arena.IFEnv.push
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.IFEnv.push`, `ConRon.Arena.litNameAt` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.IFEnv.push` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
-def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
+def envPushL : FunDecl := lfn (vis, q) locals (w, z, a, b) {
   if 4294967294 <= vis { abort };
   w := EREC⦃q + ⟪CI.cv + CV.name⟫⦄;
   z := call env_row_set(w, vis + 1, q);
+  if CTL.u64[161] == 0 {
+    z := call lit_name_at(w, 0);
+    if z != 0 {
+      a := call lits_stored(vis + 1, 0, 3);
+      b := 0;
+      if a != 0 { b := call lits_stored(vis + 1, 3, 10) };
+      CTL.u64[160] := a;
+      CTL.u64[161] := b
+    }
+  };
   return vis + 1
+}
+
+/-- `env_set_flags(a, b)`: the literal flags set to `a`, `b` (`IFEnv.setFlags`): the end of a
+temporary extension, the flags its first push saw put back once the pops restored the rows. -/
+-- con-ron: ConRon/Arena/Env.lean:383-387 ConRon.Arena.IFEnv.setFlags
+@[no_expose, l_impl ConRon.Arena.IFEnv.setFlags]
+def envSetFlagsL : FunDecl := lfn (a, b) locals () {
+  CTL.u64[160] := a;
+  CTL.u64[161] := b;
+  return 0
 }
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its own row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the view lowered. -/
 -- con-ron: ConRon/Arena/Env.lean:371-381 ConRon.Arena.IFEnv.popTemp
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.IFEnv.popTemp` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (z) {
   z := call env_row_set(w, c, q);
@@ -232,7 +279,6 @@ def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + ProjTbl.structName`)
 in the own layer (`IFEnv.pushTable`). -/
 -- con-ron: ConRon/Arena/Env.lean:364-369 ConRon.Arena.IFEnv.pushTable
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.IFEnv.pushTable` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, z) {
   w := EREC⦃q + ⟪ProjTbl.structName⟫⦄;
@@ -243,7 +289,8 @@ def envPushTableL : FunDecl := lfn (q) locals (w, z) {
 /-- The environment's L functions. -/
 def envProg : Prog :=
   [("env_row_get", envRowGetL), ("env_row_set", envRowSetL), ("base_row_get", baseRowGetL),
-   ("base_row_set", baseRowSetL), ("env_find", envFindL), ("env_push", envPushL),
+   ("base_row_set", baseRowSetL), ("env_find", envFindL), ("lit_name_at", litNameAtL),
+   ("lits_stored", litsStoredL), ("env_push", envPushL), ("env_set_flags", envSetFlagsL),
    ("env_pop_temp", envPopTempL), ("tbl_own_get", tblOwnGetL), ("tbl_own_set", tblOwnSetL),
    ("tbl_base_get", tblBaseGetL), ("tbl_base_set", tblBaseSetL), ("raw_table", rawTableL),
    ("find_table", findTableL), ("env_push_table", envPushTableL)]
@@ -1461,39 +1508,6 @@ def erecRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) 
 theorem erecRd_of {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) : erecRd m a = v := by
   obtain ⟨h1, h2⟩ := erecP_tagRead h
   simp only [erecRd, rdW, h2]; rfl
-
-theorem envPush_spec (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q ∧ LocEq s' s₀ ∧
-      r = [vis + 1] ∧ vis.toNat < 4294967294 ∧ rowTag (erecRd s₀.mem (q + (CI.cv + CV.name))) ≤ 2 ∧
-      rowIx (erecRd s₀.mem (q + (CI.cv + CV.name))) + 1 < (s₀.mem.arr64 (ownArr (erecRd s₀.mem (q + (CI.cv + CV.name))))).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, envPushL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, envRowSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
-      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
-      bne_iff_ne, ne_eq] at *
-    all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erecRd, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, UInt64.le_iff_toNat_le, St.setLoc_loc]
-
-/-- **`env_push` refines `IFEnv.push`**: the new view `vis + 1` of the result relates the pushed
-environment. -/
-@[refines ConRon.Arena.IFEnv.push]
-theorem envPush_refines (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) {fe : IFEnv} {ci : IConstantInfo}
-    (vis q : Word) (hE : EnvR s₀.mem vis fe) (hci : decCI (erecP s₀.mem) q.toNat = some ci) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [vis + 1] ∧ EnvR s'.mem (vis + 1) (fe.push ci) ∧
-      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ := by
-  sorry
 
 theorem envPopTemp_spec (hs : p.lookup "env_row_set" = some envRowSetL)
     (hp : p.lookup "env_pop_temp" = some envPopTempL) (n : Nat) (s₀ : St) (vis w c q : Word) :

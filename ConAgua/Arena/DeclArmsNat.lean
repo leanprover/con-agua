@@ -1257,15 +1257,18 @@ def checkDivModPinAtFe2L : FunDecl := lfn (vis2, c) locals (g, f, r) {
 
 /-- `check_div_mod_pin(po, pl, vis, p, c)`: the gate after the definition check: the record `p`
 pushed for the reads at the extended view (`check_div_mod_pin_at_fe2`) and popped (the own
-layer's row of `c` put back, `env_pop_temp`), then the variant loop at `vis`; returns the view. -/
+layer's row of `c` put back, `env_pop_temp`, the literal flags set back, `env_set_flags`), then the variant loop at `vis`; returns the view. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:739-756 ConRon.Arena.checkDivModPin
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkDivModPin` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDivModPin]
-def checkDivModPinL : FunDecl := lfn (po, pl, vis, p, c) locals (rc, rq, w, v, v2, z) {
+def checkDivModPinL : FunDecl := lfn (po, pl, vis, p, c) locals (rc, rq, fn, fs, w, v, v2, z) {
   (rc, rq) := call env_row_get(c);
+  fn := CTL.u64[160];
+  fs := CTL.u64[161];
   w := call env_push(vis, p);
   v := call check_div_mod_pin_at_fe2(w, c);
   v2 := call env_pop_temp(w, c, rc, rq);
+  z := call env_set_flags(fn, fs);
   z := call check_div_mod_pin_loop(v2, c, v, po, pl);
   return v2
 }
