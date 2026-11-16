@@ -637,8 +637,8 @@ def checkBlockTables : FunDecl := lfn (vis, tO, tL) locals (u) {
 /-- `check_block_tail_stream(p, fe2b, out.off, out.len)`: the second half of `checkBlockTail` (the
 Rust's `check_block_tail_stream`): the stream's K flags against the generated recursors, the
 generated family's records pushed in place (a flush entering), the stream's recursors against them,
-the pushes undone in reverse order (`gen_rec_check_pop_all`), the literal flags set back (`setFlags`:
-`CTL[160]`, `CTL[161]` saved before the pushes) and the flush leaving. Returns the
+the pushes undone in reverse order (`gen_rec_check_pop_all`), the literal flags set back (`env_set_flags`
+of `CTL[160]`, `CTL[161]` saved before the pushes) and the flush leaving. Returns the
 constructors' environment. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.checkBlockTail` changed; re-check the L code and its proofs, then delete this line
@@ -653,8 +653,7 @@ def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
   u := call flush_caches();
   u := call stream_recs_check(feG, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
   fe3 := call gen_rec_check_pop_all(feG, po, pl);
-  CTL.u64[160] := nl;
-  CTL.u64[161] := sl;
+  u := call env_set_flags(nl, sl);
   u := call flush_caches();
   return fe3
 }
@@ -827,7 +826,8 @@ def indInstallForeign : Prog :=
    ("gen_rec_check_pop_all", stub 3), ("stream_k_check", stub 5), ("stream_recs_check", stub 5),
    ("block_rec_infos_tf", stub 4), ("block_recs", stub 3), ("block_tables", stub 3),
    ("ifenv_push_delta", stub 5), ("former_def_headed", stub 1), ("reduced_former", stub 3),
-   ("check_constant_val", stub 3), ("member_names_copy", stub 3), ("former_z", stub 1)]
+   ("check_constant_val", stub 3), ("member_names_copy", stub 3), ("former_z", stub 1),
+   ("env_set_flags", stub 2)]
 
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard
