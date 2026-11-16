@@ -8,8 +8,8 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	42a086407cab3c400b359f75b5d24942825626b5	https://github.com/leanprover/con-ron.git
-     4  con-leche	6810492c1ccc325b4a2bbf9dfe70bd07fd933da2	https://github.com/leanprover/con-leche.git
+     3  con-ron	8b08890599276b4e461cad258d712fee0ddd4ee8	https://github.com/leanprover/con-ron.git
+     4  con-leche	600d3b583b769176e911b06d20ba16330c9a179b	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L43
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
@@ -104,10 +104,10 @@
     29  /-- The code `c` sits at index `k` of the host program. -/
     30  abbrev Code (c : Program) (k : Nat) : Prop := c.IsInfixAt Host.prog k
 
-== vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L283-L285
-   283  theorem foldlM_checkDecl_envWF {F : Nat} :
-   284      ∀ (ds : List Declaration) {env env' : Env}, EnvWF env →
-   285        ds.foldlM (checkDecl .verified (fueledOps .verified F) pins) env = .ok env' → EnvWF env'
+== vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L304-L306
+   304  theorem foldlM_checkDecl_envWF {F : Nat} :
+   305      ∀ (ds : List Declaration) {env env' : Env}, EnvWF env →
+   306        ds.foldlM (checkDecl .verified (fueledOps .verified F) pins) env = .ok env' → EnvWF env'
 
 == ConAgua/Final/Twin.lean#L76-L86
     76  /-- **The twin accepts `chunks`**: the stages con-ron's binary runs, from the twin's start state
@@ -123,7 +123,7 @@
     86      SeqAccepts .verified ipins ds sE I sF
 
 == vendor/con-ron/ConRon/Arena/CoreState.lean#L147-L149
-   147  /-- con-leche: ConLeche/Cached/StateC.lean:153-154 maxNatSizeDefault — the
+   147  /-- con-leche: ConLeche/Cached/StateC.lean:144-145 maxNatSizeDefault — the
    148  official kernel's default maximum `Nat` size, 128 MiB. -/
    149  def maxNatSizeDefault : Nat := 134217728
 
@@ -1586,7 +1586,7 @@
    108  fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
    109  function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
    110  `lvlEq_refines`). -/
-   111  -- con-ron: ConRon/Arena/Core.lean:137-154 ConRon.Arena.lvlEq?
+   111  -- con-ron: ConRon/Arena/Core.lean:168-185 ConRon.Arena.lvlEq?
    112  @[no_expose, l_impl ConRon.Arena.lvlEq?]
    113  def lvlEqL : FunDecl := lfn (u, v) locals (z) {
    114    CTL.u64[192] := 0;
@@ -1610,25 +1610,25 @@
    270      (h : lvlEqW n m u.word.toUInt64 v.word.toUInt64 = some (z, m')) :
    271      ∃ o a', (lvlEq? u v).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
 
-== vendor/con-ron/ConRon/Arena/Core.lean#L137-L154
-   137  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
-   138  at two level HANDLES, with the verdict cached on the pair.  `none` is
-   139  con-leche's fuel exhaustion and is never cached. -/
-   140  def lvlEq? (u v : LIdx) : AM (Option Bool) := do
-   141    let s ← get
-   142    match s.caches.lvlEqC[(u, v)]? with
-   143    | some r => pure (some r)
-   144    | none => do
-   145      let lu ← readLevelM u
-   146      let lv ← readLevelM v
-   147      match Level.isEquiv lu lv with
-   148      | some r => do
-   149        let s ← get
-   150        let mp := s.caches.lvlEqC
-   151        let s := { s with caches := { s.caches with lvlEqC := ∅ } }
-   152        set { s with caches := { s.caches with lvlEqC := mp.insert (u, v) r } }
-   153        pure (some r)
-   154      | none => pure none
+== vendor/con-ron/ConRon/Arena/Core.lean#L168-L185
+   168  /-- con-leche: ConLeche/Kernel/Level.lean:164-169 isEquiv — `Level.isEquiv`
+   169  at two level HANDLES, with the verdict cached on the pair.  `none` is
+   170  con-leche's fuel exhaustion and is never cached. -/
+   171  def lvlEq? (u v : LIdx) : AM (Option Bool) := do
+   172    let s ← get
+   173    match s.caches.lvlEqC[(u, v)]? with
+   174    | some r => pure (some r)
+   175    | none => do
+   176      let lu ← readLevelM u
+   177      let lv ← readLevelM v
+   178      match Level.isEquiv lu lv with
+   179      | some r => do
+   180        let s ← get
+   181        let mp := s.caches.lvlEqC
+   182        let s := { s with caches := { s.caches with lvlEqC := ∅ } }
+   183        set { s with caches := { s.caches with lvlEqC := mp.insert (u, v) r } }
+   184        pure (some r)
+   185      | none => pure none
 
 == ConAgua/L/ModelGen.lean#L12-L65
     12  /-!
@@ -1796,14 +1796,14 @@
     52    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     53      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
-== ConAgua/Checker/BuildStage.lean#L251-L257
-   251  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
-   252      (hsz : ∀ s, sz s < 2 ^ 64) :
-   253      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
-   254        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
-   255        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
-   256          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-   257          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+== ConAgua/Checker/BuildStage.lean#L307-L313
+   307  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+   308      (hsz : ∀ s, sz s < 2 ^ 64) :
+   309      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+   310        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+   311        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
+   312          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+   313          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
 
 == ConAgua/Checker/Pipeline.lean#L74-L77
     74  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`

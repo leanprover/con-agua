@@ -127,7 +127,7 @@ input. The theorem takes no set-theory model: a record's job is checked at the
 stream index's view of its position, and con-ron's Theorem 1 obtains the fold
 invariant there from con-leche's model-free fact that the pure fold keeps the
 environment well formed
-([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L283-L285)).
+([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L304-L306)).
 
 [`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L76-L86)
 is the stages con-ron's binary runs, from the twin's start state: intern the
@@ -832,7 +832,7 @@ Take `lvl_eq`, the uncached core of the twin's `lvlEq?`:
    gives a twin run of `lvlEq? u v` that succeeds with the result `z` encodes,
    and the relation holds again
    ([`lvlEq_refines`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Arena/LevelArena.lean#L266-L271),
-   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L137-L154)).
+   against [the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Core.lean#L168-L185)).
 
 The split keeps `vcgen` away from the twin's monad and the twin's proofs away
 from L's syntax. Most word models and specs are generated: the `l_model`
@@ -885,7 +885,7 @@ from memory related to the twin's state before the stage, a returning call ends
 in memory related to the state after the twin's stage. The stages are proved at
 the checker's program and chained into entry 1's run; the last one, the
 stream index's build, is
-[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L251-L257).
+[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L307-L313).
 The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
 proves its refinement at every twin fuel at least the L fuel
 ([`InputsOK`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L74-L77) bounds only the sizes; the fuel is free).
