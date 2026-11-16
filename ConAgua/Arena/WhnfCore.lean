@@ -551,11 +551,23 @@ structure ProjCallees (p : Prog) : Prop where
   erec : ErecKept p
   projFound : ProjFound p
 
+/-- `inst_list(e, o₀ + s, i - s, d)` refines `instantiateRevRange coreWalkFuel e xs s i d` under
+`CoreS`, the range `xs[s:i]` of the stack slice `(o₀, C)` read in place (`beta_peel`'s
+substitution; proved in `CoreWalks.lean`, `instRangeOK_core`). -/
+def InstRangeOK (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb e o₀ C d : Word) (xs : Array EIdx) (s i : Nat), CoreS dn s₀.mem a₀ vis fe M eb →
+    HW e → SpineR s₀.mem o₀ C xs → o₀.toNat + C.toNat ≤ (spTop s₀.mem).toNat → s ≤ i → i ≤ C.toNat →
+    CoreSpec p n "inst_list" [e, o₀ + s.toUInt64, (i - s).toUInt64, d]
+      (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat) decH s₀ a₀ dn vis fe M eb
+
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
   inst1 : Inst1OK p
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
+  /-- `beta_peel`'s substitution from the spine range (`whnf_app`'s λ arm). -/
+  instRange : InstRangeOK p
 
 /-! ## The specs
 

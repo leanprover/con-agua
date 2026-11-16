@@ -190,7 +190,8 @@ theorem KnotAllProg.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
 include hq in
 /-- Lane `whnf`'s `CoreCallees`. -/
 theorem KnotAllProg.coreC : CoreCallees p :=
-  { toProjCallees := KnotAllProg.projC hq, inst1 := hq.walks.inst1OK, iota := KnotAllProg.iota hq }
+  { toProjCallees := KnotAllProg.projC hq, inst1 := hq.walks.inst1OK, iota := KnotAllProg.iota hq,
+    instRange := hq.walks.instRangeOK }
 
 include hq in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/

@@ -36,7 +36,7 @@ include hp hwc hcc hnv hI in
 /-- **`whnf_core_step`'s claim at every L fuel up to `n`** (`step_ref`'s error half). -/
 theorem coreStepE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) : CoreStepE p n :=
   fun j hj F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he =>
-    RefE.coreSpecE (whnfCoreStepE_spec p hp (j + 1) s₀ mode cheap vis d h e) hnv ⟨hkE.mono hj, hI⟩
+    RefE.coreSpecE (whnfCoreStepE_spec p hp (j + 1) s₀ mode cheap vis d h e) hnv ⟨hkE.mono hj, hI, hnv⟩
       (step_ref p hp hwc hcc j (hk.mono hj) F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
 include hp hwc hcc hnv hI in
