@@ -86,7 +86,113 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     RefE (AppG p n) (whnfCoreStepE p (n + 1) s₀.mem mode cheap vis d h e)
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := by
-  sorry
+  have hS := hs.rel
+  have hR := hS.arena.base
+  have hh' : e.toNat < 2 ^ 32 := he
+  simp only [whnfCoreStepE]
+  refine RefE.abort0 (by decide) fun ht => ?_
+  -- a stuck arm answers `(0, e)` after its view check
+  have done : ∀ v : ENodeView, a₀.store.view (decE e) = some v → isDoneV v = true →
+      RefE (AppG p n) (.ok ([0, e], s₀.mem))
+        (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
+          (decE h) (decE e)) a₀ (CorePost decStep dn s₀.mem vis fe MM eb ResW) := fun v hv hd =>
+    RefE.ret (step_run_done v hv hd) (CorePost.ret hS (by simp [decStep])
+      ⟨by show HW (0 : Word); unfold HW; decide, he⟩)
+  have vok : ∀ c : TRec, ¬ tcnt s₀.mem c (tierW e) ≤ idxW e → viewOK s₀.mem e c :=
+    fun c hc => ⟨ht, by simpa using hc⟩
+  by_cases g4 : tagW e = 4
+  · rw [ite_eq_left g4]
+    refine RefE.abort0 (by decide) fun hc4 => ?_
+    have hvapp := (view_app s₀.mem a₀ hR e hh' ⟨ht, by simpa using hc4⟩ g4).1
+    by_cases hsk : (334 : Word) >>> tagW h &&& 1 ≠ 0
+    · rw [ite_eq_left hsk]
+      have hst : isStuckHead (decE h) = true := by rw [isStuckHead_w h hh]; simpa using hsk
+      refine RefE.of_run_eq (step_run_stuck _ _ hvapp hst) ?_
+      cases n with
+      | zero => exact RefE.of_cls0 rfl
+      | succ N =>
+      exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+        (·.mono (Nat.le_succ N))
+        (stuck_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d h e
+          hs hh he) fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
+    rw [ite_eq_right hsk]
+    have hst : isStuckHead (decE h) = false := by rw [isStuckHead_w h hh]; simpa using hsk
+    refine RefE.of_run_eq (step_run_app _ _ hvapp hst) ?_
+    cases n with
+    | zero => exact RefE.of_cls0 rfl
+    | succ N =>
+    have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
+      eb mode cheap d e hs he
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+      (·.mono (Nat.le_succ N)) h1
+      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
+  rw [ite_eq_right g4]
+  by_cases g9 : tagW e = 9
+  · rw [ite_eq_left g9]
+    refine RefE.abort0 (by decide) fun hc9 => ?_
+    obtain ⟨hv, hsn, hpe⟩ := view_proj s₀.mem a₀ hR e hh' (vok _ hc9) g9
+    refine RefE.of_run_eq (step_run_proj _ _ _ hv) ?_
+    cases n with
+    | zero => exact RefE.of_cls0 rfl
+    | succ N =>
+    have h1 := stepProj_ref p hp hwc.strLitCtor hcc.toProjCallees hcc.erec N
+      (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
+      (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
+      (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe
+    exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
+      (·.knot.mono (Nat.le_succ N)) h1
+      fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
+  rw [ite_eq_right g9]
+  by_cases g7 : tagW e = 7
+  · rw [ite_eq_left g7]
+    refine RefE.abort0 (by decide) fun hc7 => ?_
+    obtain ⟨hv, -, hvv, hbb⟩ := view_let s₀.mem a₀ hR e hh' (vok _ hc7) g7
+    refine RefE.of_run_eq (step_run_let _ _ _ hv) ?_
+    refine RefE.bind_callW (s₀ := s₀) (fun _ => rfl) (hcc.inst1 n s₀ a₀ dn vis fe MM eb _ _ 0 hS hbb hvv)
+      fun r₁ m₁ _ h₁ => RefE.ret rfl ⟨h₁.after, by simp [decStep, decH], ⟨by
+        show HW (1 : Word); unfold HW; decide, h₁.resOk⟩⟩
+  rw [ite_eq_right g7]
+  by_cases g0 : tagW e = 0
+  · rw [ite_eq_left g0]
+    refine RefE.abort0 (by decide) fun hc0 => ?_
+    exact fun _ => L.Arena.ErrClaim.congr_run (step_run_bvar _ (view_bvar s₀.mem a₀ hR e hh' (vok _ hc0) g0))
+      (ErrClaim.fail _ _ rfl)
+  rw [ite_eq_right g0]
+  by_cases g1 : tagW e = 1
+  · rw [ite_eq_left g1]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    obtain ⟨i, ty, hv'⟩ := view_fvar s₀.mem a₀ hR e hh' (vok _ hc) g1
+    exact done _ hv' rfl
+  rw [ite_eq_right g1]
+  by_cases g2 : tagW e = 2
+  · rw [ite_eq_left g2]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    obtain ⟨u, hv'⟩ := view_sort s₀.mem a₀ hR e hh' (vok _ hc) g2
+    exact done _ hv' rfl
+  rw [ite_eq_right g2]
+  by_cases g3 : tagW e = 3
+  · rw [ite_eq_left g3]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    obtain ⟨c, us, hv'⟩ := view_const s₀.mem a₀ hR e hh' (vok _ hc) g3
+    exact done _ hv' rfl
+  rw [ite_eq_right g3]
+  by_cases g5 : tagW e = 5
+  · rw [ite_eq_left g5]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    exact done _ (view_lam s₀.mem a₀ hR e hh' (vok _ hc) g5).1 rfl
+  rw [ite_eq_right g5]
+  by_cases g6 : tagW e = 6
+  · rw [ite_eq_left g6]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    exact done _ (view_forall s₀.mem a₀ hR e hh' (vok _ hc) g6).1 rfl
+  rw [ite_eq_right g6]
+  by_cases g8 : tagW e = 8
+  · rw [ite_eq_left g8]
+    refine RefE.abort0 (by decide) fun hc => ?_
+    obtain ⟨l, hv'⟩ := view_lit s₀.mem a₀ hR e hh' (vok _ hc) g8
+    exact done _ hv' rfl
+  rw [ite_eq_right g8]
+  exact RefE.of_cls0 (by decide)
 
 include hp hwc hcc in
 /-- **`whnf_core_step` refines `whnfCoreStep`** (`step_ref`'s ok half). -/
