@@ -89,15 +89,18 @@ def iotaRecFamT (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps : List NIdx)
       iotaRecVckT r fe depth mI rP cnP lps us args usj cvj rl margs cmpL
     else pure true
 
-/-- The fire past the major's arguments. -/
+/-- The fire past the major's arguments: the rule's body under its binders, the leading arguments
+and the fields substituted (`iotaVals`). -/
 def iotaRecFire2T (c : NIdx) (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps : List NIdx)
     (us : LsIdx) (args : List EIdx) (usj : LsIdx) (cvj : IConstantVal) (rl : IRecRule)
     (margs : List EIdx) : AM (Option EIdx) :=
   if margs.length = cnP + rl.nfields then do
     let fam ← iotaRecFamT mode r fe depth isK induct mI rP cnP lps us args usj cvj rl margs
     if fam then do
-      let rhs ← ruleBodyAt c rl.ctor lps rl.rhs us
-      let x ← mkAppN rhs (args.take rP ++ margs.drop cnP)
+      let body ← ruleBodyAt c rl.ctor lps rl.rhs (rP + rl.nfields) us
+      let p := if rP < args.length then rP else args.length
+      let q := if cnP < margs.length then cnP else margs.length
+      let x ← instantiateListFast coreWalkFuel body (iotaVals args.toArray p margs.toArray q) 0
       pure (some x)
     else pure none
   else pure none
@@ -109,95 +112,30 @@ def iotaRecFireT (c : NIdx) (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps 
   let margs ← getAppArgs coreWalkFuel major
   iotaRecFire2T mode r fe depth c isK induct mI rP cnP lps us args usj cvj rl margs
 
-/-- The major's preparation, its head's constructor, the rule. -/
+/-- The major's preparation and view (`prepareMajor`), the rule. -/
 def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool)
     (rules : List IRecRule) (args : List EIdx) : AM (Option EIdx) := do
   let b0 ← internE (.bvar 0)
-  let major ← prepareMajor mode r fe depth c isK rules (args.getD mI b0)
-  let hh ← getAppFn coreWalkFuel major
-  if hh.tag == ETag.const then
-    match ← view hh with
-    | .const cj usj =>
-      match fe.find? cj with
-      | some (.ctorInfo cvj cnP _ induct) =>
-        match findRule rules cj with
-        | some rl =>
-          iotaRecFireT mode r fe depth c isK induct mI rP cnP cv.levelParams us args major usj cvj rl
-        | none => pure none
-      | _ => pure none
-    | _ => pure none
-  else pure none
+  match ← prepareMajor mode r fe depth c isK rules (args.getD mI b0) with
+  | .ctor major cj usj cvj cnP _ induct =>
+    match findRule rules cj with
+    | some rl =>
+      iotaRecFireT mode r fe depth c isK induct mI rP cnP cv.levelParams us args major usj cvj rl
+    | none => pure none
+  | .stuck _ => pure none
 
-/-- The recursor's record, the arity, the levels' length, the telescope. -/
-def iotaRecCT (c : NIdx) (us : LsIdx) (sargs : Array EIdx) (n : Nat) : AM (Option EIdx) :=
-  match fe.find? c with
-  | some (.recInfo cv mI rP isK rules) => do
-    if n ≠ mI + 1 then pure none
-    else do
-    let args := (takeEidx sargs n).toList
-    match ← viewLsLen us with
-    | none => failDanglingLs
-    | some usl =>
-    let peeled ← peelPis (mI + 1) cv.type
-    if args.length = mI + 1 ∧ usl = cv.levelParams.length ∧ peeled.isSome then
-      iotaRecMajorT mode r fe depth c us cv mI rP isK rules args
-    else pure none
-  | _ => pure none
-
-theorem ite_bind {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
-    (f : α → m β) : (ite c x y >>= f) = ite c (x >>= f) (y >>= f) := by
-  split <;> rfl
-
-/-- **The twin, put back together.** -/
-theorem iotaRecAt_eq (hd : EIdx) (sargs : Array EIdx) (n : Nat) :
-    iotaRecAt mode r fe depth hd sargs n =
-      if hd.tag == ETag.const then do
-        match ← viewConst hd with
-        | none => failDanglingE
-        | some (c, us) => iotaRecCT mode r fe depth c us sargs n
-      else pure none := by
+/-- **The twin, put back together**: the recursor's telescope, then the major's block. -/
+theorem iotaRecAt_eq (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool)
+    (rules : List IRecRule) (sargs : Array EIdx) :
+    iotaRecAt mode r fe depth c us cv mI rP isK rules sargs = (do
+      match ← peelPis (mI + 1) cv.type with
+      | none => pure none
+      | some _ => iotaRecMajorT mode r fe depth c us cv mI rP isK rules sargs.toList) := by
   rw [iotaRecAt]
-  by_cases hT : (hd.tag == ETag.const) = true
-  · rw [ite_eq_left hT, ite_eq_left hT]
-    congr 1; funext x
-    rcases x with _ | ⟨c, us⟩
-    · rfl
-    · unfold iotaRecCT
-      cases h : fe.find? c with
-      | none => simp only [h]
-      | some ci =>
-        cases ci <;> simp only [h]
-        rename_i cv mI rP isK rules
-        by_cases hn : n ≠ mI + 1
-        · rw [ite_eq_left hn, ite_eq_left hn]
-        · rw [ite_eq_right hn, ite_eq_right hn]
-          congr 1; funext x
-          rcases x with _ | usl
-          · rfl
-          · show (peelPis (mI + 1) cv.type >>= _) = (peelPis (mI + 1) cv.type >>= _)
-            congr 1; funext peeled
-            by_cases hc : (takeEidx sargs n).toList.length = mI + 1 ∧ usl = cv.levelParams.length ∧
-                peeled.isSome = true
-            · rw [ite_eq_left hc, ite_eq_left hc]
-              unfold iotaRecMajorT
-              congr 1; funext b0; congr 1; funext major; congr 1; funext hh
-              by_cases ht : (Idx.tag hh == ETag.const) = true
-              · rw [ite_eq_left ht, ite_eq_left ht]
-                congr 1; funext v
-                rcases v with _ | _ | _ | ⟨cj, usj⟩ <;> try rfl
-                show (match fe.find? cj with | _ => _) = _
-                cases h2 : fe.find? cj with
-                | none => simp only [h2]
-                | some ci =>
-                  cases ci <;> simp only [h2]
-                  cases findRule _ cj with
-                  | none => simp only
-                  | some rl =>
-                    simp only [iotaRecFireT, iotaRecFire2T, iotaRecFamT, iotaRecVckT,
-                      bind_assoc, L.Arena.ite_bind, pure_bind]
-              · rw [ite_eq_right ht, ite_eq_right ht]
-            · rw [ite_eq_right hc, ite_eq_right hc]
-  · rw [ite_eq_right hT, ite_eq_right hT]
+  congr 1; funext x
+  rcases x with _ | x
+  · rfl
+  · sorry
 
 end twin
 
