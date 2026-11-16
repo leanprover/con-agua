@@ -219,7 +219,7 @@ theorem litsStored_refines (hP : EnvFlagsProg p) (n : Nat) (s₀ : St) {fe : IFE
 /-- **The memory with the literal flags' words** `CTL[160]`, `CTL[161]` set to `a`, `b`. -/
 def flagsSet (m : Mem) (a b : Word) : Mem := (m.set64 CTL 160 a).set64 CTL 161 b
 
-theorem set64_rdW_self (m : Mem) (a : TieredArray) (k : Word) (h : k.toNat < (m.arr64 a).size) :
+theorem set64_rdW_self_lt (m : Mem) (a : TieredArray) (k : Word) (h : k.toNat < (m.arr64 a).size) :
     m.set64 a k (rdW (m.arr64 a) k) = m := by
   cases m with
   | mk bs ws g =>
@@ -236,8 +236,8 @@ theorem set64_rdW_self (m : Mem) (a : TieredArray) (k : Word) (h : k.toNat < (m.
 theorem flagsSet_self (m : Mem) (h : 161 < (m.arr64 CTL).size) :
     flagsSet m (rdW (m.arr64 CTL) 160) (rdW (m.arr64 CTL) 161) = m := by
   unfold flagsSet
-  rw [set64_rdW_self m CTL 160 (by simp; omega)]
-  exact set64_rdW_self m CTL 161 (by simp; omega)
+  rw [set64_rdW_self_lt m CTL 160 (by simp; omega)]
+  exact set64_rdW_self_lt m CTL 161 (by simp; omega)
 
 theorem flagsSet_rd160 (m : Mem) (a b : Word) (h : 161 < (m.arr64 CTL).size) :
     rdW ((flagsSet m a b).arr64 CTL) 160 = a := by

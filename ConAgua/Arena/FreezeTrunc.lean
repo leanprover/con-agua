@@ -289,7 +289,7 @@ theorem IndexR.trunc {m : Mem} {I : IStreamIndex} (hcnt : ∀ g, g ≤ 2 → nmC
   have he := erecP_trunc m
   refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, by rw [truncFrozen_ctl]; exact h.next,
     fun x hx => ?_⟩
-  rotate_left
+  rotate_right
   · rcases (baseRow_trunc hcnt x).1 with e' | e'
     · rw [e']; exact h.rows x hx
     · rw [e']; decide
