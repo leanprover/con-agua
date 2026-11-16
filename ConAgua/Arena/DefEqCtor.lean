@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Knot
 public import ConAgua.Arena.RefECore
 public import ConAgua.Arena.DefEq
+public import ConAgua.Arena.PropRead
 public import ConAgua.Arena.Env
 public import ConAgua.Arena.WhnfSpineRefine
 public import ConAgua.Checker.NoVerdictFns
@@ -10,7 +11,7 @@ public import ConAgua.L.ErrSpec
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.Verdict
 import ConAgua.Arena.IndView
--- import ConAgua.Arena.PropReadLoops
+import ConAgua.Arena.PropReadLoops
 import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RecLayout.CapsDec
 import ConAgua.Arena.GrindAttr
@@ -100,7 +101,10 @@ theorem aca_callW {p : Prog} (hq : CtorProg p) {n : Nat} {m m' : Mem} {a : AStat
     (hR : ArenaR m a) {e : Word} (he : HW e) {r : List Word}
     (hc : callW p n "app_count_at" [e, 4000000000] m = some (r, m')) :
     m' = m ∧ (numArgs coreWalkFuel (decE e)).run a = .ok ((r.headD 0).toNat, a) := by
-  sorry
+  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (appCountAtL_spec p hq.aca n _ e 4000000000) hc
+  obtain ⟨-, hnum, -, -⟩ := acaW_ok hR he hW
+  exact ⟨hs'.symm.trans hm, hnum⟩
 
 section ct
 variable (p : Prog) (hq : CtorProg p) (hfv : HasFvarOK p)
