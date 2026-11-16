@@ -473,8 +473,8 @@ theorem crp_ref (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) (ha
   refine RefE.onlySim (fun _ => checkReducePinE.k_env_push.none ..) (fun _ _ h => h)
     fun r2 m2 h2 => ?_
   rw [checkReducePinE.k_env_push.arm1]
-  obtain ⟨hS2, hg2⟩ := envPush_stage hC.rs hC.push h2 hS.stage hci
-  obtain ⟨hO2, hr2, hvlt⟩ := envPush_ownC hC.rs hC.push h2 hE hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hC.ef h2 hS.stage hci
+  obtain ⟨hO2, hr2, hvlt⟩ := envPush_ownC hC.ef h2 hE hci (by have := hS.stage.iw.ctl; omega)
   rw [hr2] at hS2 ⊢
   simp only [List.headD_cons] at hS2 ⊢
   have hf2 := callW_leafFrame hcl (leaf_mem _ rfl) h2

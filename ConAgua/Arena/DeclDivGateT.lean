@@ -164,7 +164,7 @@ theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   -- the push
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
   rw [cdmpE.k_env_push.arm1]
-  obtain ⟨hS2, hg2⟩ := envPush_stage hD.snp.rs hD.snp.push h2 hC.stage hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hD.snp.ef h2 hC.stage hci
   have hf2 := callW_leafFrame hcl (leaf_mem _ (by decide)) h2
   -- the reads at the pushed view
   refine RefE.bindE (fun _ => rfl) (fun _ => trivial)
@@ -177,7 +177,7 @@ theorem cdmp_ref (hD : CdmpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p)
   -- the pop
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
   rw [cdmpE.k_env_pop_temp.arm1]
-  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hD.snp.rs hD.snp.push hD.snp.pop hC.stage hci hname hn h2
+  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hD.snp.ef hD.snp.pop hC.stage hci hname hn h2
     hQ3.stage (hg2.trans hQ3.grow) hQ3.own h4
   have hf4 := callW_leafFrame hcl (leaf_mem _ (by decide)) h4
   rw [hname] at hS4
