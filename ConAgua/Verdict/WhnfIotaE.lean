@@ -8,7 +8,7 @@ public import ConAgua.Arena.WhnfIotaRecRefine2
 /-!
 # `iota_rec_at`'s verdict claims, the top (lane `verdicts-b`, helper `k2`)
 
-`iota_rec_at`, `iota_rec_c` and `iota_rec_major` have no verdict site of their own: their claims
+`iota_rec_at` and `iota_rec_major` have no verdict site of their own: their claims
 are `prepare_major`'s and `iota_rec_fire`'s, propagated (`at_ref`'s error half, `iotaRecAtE_of`:
 `IotaRecAtE`).
 -/
@@ -26,13 +26,14 @@ variable (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p) (hw : WhnfCallees
   (hPM : PrepareMajorE p) (hF : IotaRecFireE p)
 
 include hp hc hw hmtc hEI hER hEK hnv hPM hF in
-/-- **`IotaRecAtE`**: `iota_rec_at`'s verdicts are `iota_rec_major`'s, through `iota_rec_c`
+/-- **`IotaRecAtE`**: `iota_rec_at`'s verdicts are `iota_rec_major`'s
 (`at_ref`'s error half). -/
 theorem iotaRecAtE_of : IotaRecAtE p :=
-  fun N hk hkE F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat =>
-    RefE.coreSpecE (irAtE_spec p hp.iotaRecAt hp.recC hp.major (N + 1) s₀ mode vis d hd so sn) hnv
-      ⟨hkE, hnv, hPM, hF⟩ (at_ref p hp hc hw hmtc hEI hER hEK N hk F s₀ a₀ dn vis fe M eb mode d hd
-        so sn xs hnF hn62 hpre hhd hsa hsat)
+  fun N hk hkE F s₀ a₀ dn vis fe M eb mode d c us q so sn xs cv mI rP isK rules hnF hn62 hpre hcw hus
+      hq hfind hsa hsz hsat =>
+    RefE.coreSpecE (irAtE_spec p hp.iotaRecAt hp.major (N + 1) s₀ mode vis d c us q so sn) hnv
+      ⟨hkE, hnv, hPM, hF⟩ (at_ref p hp hc hw hmtc hEI hER hEK N hk F s₀ a₀ dn vis fe M eb mode d c us q
+        so sn xs cv mI rP isK rules hnF hn62 hpre hcw hus hq hfind hsa hsz hsat)
 
 end iotaTop
 
