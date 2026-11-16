@@ -433,11 +433,10 @@ theorem erecKeep_trans {m m' m'' : Mem}
   ⟨h2.1.trans h1.1, h2.2.1.trans h1.2.1, h2.2.2.1.trans h1.2.2.1, h2.2.2.2.trans h1.2.2.2⟩
 
 section pm
-variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) (hE : ErecKeptRec p)
-include hp hc hw hsup hmtc hE
+variable (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p) (hmtc : MajorToCtorOK p) (hE : ErecKeptRec p)
+include hp hc hw hmtc hE
 
-omit hp hc hw hsup hmtc in
+omit hp hc hw hmtc in
 /-- **The tail of `prepare_major`'s non-K arm, both outcomes.** -/
 theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 ≤ F)
     (hn62 : N + 1 ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -445,8 +444,7 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
     (hebm : eb = (mode >>> 1) &&& 1) (hme : HW me) (m3 : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m3 a vis fe M eb)
     (hrules : decRules (erecP m3) ro.toNat rc.toNat = some rules)
-    (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p)
-    (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p) :
+    (hp : IotaProg4 p) (hc : IotaCallees p) (hw : WhnfCallees p) (hmtc : MajorToCtorOK p) :
     RefE (PmG p (N + 1)) (pmE.j1 p (N + 1) mode vis d rec isK ro rc me m3)
       (pmTailT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) rules (decE me))
       a (CorePost decH dn m3 vis fe M eb ResH) := by
@@ -469,10 +467,10 @@ theorem pmTail_ref (N : Nat) (hk : KnotUpTo p (N + 1)) (F : Nat) (hnF : N + 1 �
   dsimp only [pmE.k_whnf]
   have e5 : erecP m5 = erecP m4 := hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c5)
   refine RefE.bind_callE (s₀ := ⟨m5, Locals.init []⟩) (fun _ => rfl)
-    (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
+    (litMajorToCtor_refines' p hp.toIotaProg' hc hw N (hk.mono (Nat.le_succ N)) F (by omega)
       (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk)
     (fun hG => RefE.coreSpecE (lmtcE_spec p hp.litMajorToCtor (N + 1) _ mode vis d _) hG.nv
-      (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
+      (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw N (hk.mono (Nat.le_succ N)) F (by omega)
         (by omega) _ _ dn vis fe M5 eb mode d _ hS5 hm4 hebm h5.resOk))
     fun r6 m6 c6 h6 => RefE.after_core (w := id) h6 fun M6 hS6 _ => ?_
   have e6 : erecP m6 = erecP m5 := hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c6)
@@ -527,10 +525,10 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
       simp only [↓reduceIte]
       rw [← bind_pure (litMajorToCtor _ _ _ _)]
       refine RefE.bind_callE (s₀ := ⟨m3, Locals.init []⟩) (fun _ => rfl)
-        (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
+        (litMajorToCtor_refines' p hp.toIotaProg' hc hw N (hk.mono (Nat.le_succ N)) F (by omega)
           (by omega) _ _ dn vis fe M3 eb mode d _ hS3 hm4 hebm h2.resOk)
         (fun hG => RefE.coreSpecE (lmtcE_spec p hp.litMajorToCtor (N + 1) _ mode vis d _) hG.nv
-          (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw hsup N (hk.mono (Nat.le_succ N)) F (by omega)
+          (hG.knot.mono (Nat.le_succ N)) (lmtc_ref p hc hw N (hk.mono (Nat.le_succ N)) F (by omega)
             (by omega) _ _ dn vis fe M3 eb mode d _ hS3 hm4 hebm h2.resOk)) (fun r4 m4 c4 h4 => ?_)
       obtain ⟨-, hP⟩ := h4.post
       exact RefE.ret rfl ⟨hP.after, rfl, hP.valid⟩
@@ -551,7 +549,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
     · rw [ite_eq_left hs2, L.Arena.decBool_true_of (by simpa using hs2)]
       simp only [↓reduceIte, pure_bind]
       exact pmTail_ref p hE N hk F hnF hn62 dn vis fe eb mode d rec isK ro rc major
-        rules hm4 hK0 hebm hmaj m2 _ M2 hS2 hrules2 hp hc hw hsup hmtc
+        rules hm4 hK0 hebm hmaj m2 _ M2 hS2 hrules2 hp hc hw hmtc
     · rw [ite_eq_right hs2, L.Arena.decBool_false_of (by simpa using hs2)]
       simp only [Bool.false_eq_true, ↓reduceIte]
       rw [← hKf]
@@ -565,7 +563,7 @@ theorem pm_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n
         rw [hE.erecP_eq (by simp [iotaKeptFns]) (callW_of_callE c3)]; exact hrules2
       dsimp only [pmE.k_major_to_ctor_2]
       exact pmTail_ref p hE N hk F hnF hn62 dn vis fe eb mode d rec isK ro rc
-        (r3.headD 0) rules hm4 hK0 hebm h3.resOk m3 _ M3 hS3 hrules3 hp hc hw hsup hmtc
+        (r3.headD 0) rules hm4 hK0 hebm h3.resOk m3 _ M3 hS3 hrules3 hp hc hw hmtc
 
 /-- **`prepare_major` refines `prepareMajor`** (`pm_ref`'s ok half). -/
 theorem prepareMajor_refines' :
@@ -579,7 +577,7 @@ theorem prepareMajor_refines' :
         (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major rules hS hm4 hebm hmaj hr =>
     RefE.coreSpec (pmE_spec p hp.prepareMajor (n + 1) s₀ mode vis d rec isK ro rc major)
-      (pm_ref p hp hc hw hsup hmtc hE n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major
+      (pm_ref p hp hc hw hmtc hE n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major
         rules hS hm4 hebm hmaj hr)
 
 end pm

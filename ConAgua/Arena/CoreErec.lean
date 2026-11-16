@@ -38,10 +38,9 @@ def coreErecC : List Word :=
 
 /-- The roots of `coreFns`. -/
 def coreRoots : List FnName :=
-  ["whnf", "whnf_core", "infer", "infer_io", "defeq", "iota_rec_at", "major_to_ctor",
+  ["whnf", "whnf_core", "infer", "infer_io", "defeq", "iota_rec_at", "major_to_ctor", "major_to_ctor_rescue", "ctor_view", "prepare_major_whnf", "is_nat_succ_app",
    "prepare_major", "inst_lp", "inst_spine", "rec_fire_levels", "iota_case3_at", "lvls_eq_c",
-   "rec_fire_args", "const_ty_at", "iota_certs_full", "lit_major_to_ctor", "is_ctor_app",
-   "is_str_lit", "proof_irrel", "defeq_list", "iota_index_ok", "find_proj"]
+   "rec_fire_args", "const_ty_at", "iota_certs_full", "lit_major_to_ctor", "is_str_lit", "proof_irrel", "defeq_list", "iota_index_ok", "find_proj"]
 
 /-- The call closure of `coreRoots` in the checker's program. -/
 def coreFns : List FnName := [
@@ -83,9 +82,8 @@ def coreFns : List FnName := [
   "intern_succ", "intern_zero", "io_find", "io_neutral", "io_put", "iota_case3_at",
   "iota_certs_full", "iota_certs_full_aux", "iota_certs_full_check", "iota_certs_full_flush",
   "iota_certs_full_forall", "iota_certs_full_parts", "iota_index_ok", "iota_no_cert",
-  "iota_rec_at", "iota_rec_c", "iota_rec_cmp", "iota_rec_fam", "iota_rec_fire", "iota_rec_fire2",
-  "iota_rec_head", "iota_rec_major", "iota_rec_vck", "iota_target", "is_bool_true", "is_ctor_app",
-  "is_eager_reduce", "is_nat_zero", "is_proof_fast", "is_prop_type", "is_str_lit", "keys_ok",
+  "iota_rec_at", "iota_rec_cmp", "iota_rec_fam", "iota_rec_fire", "iota_rec_fire2", "eidx_copy_upto",
+  "iota_rec_major", "iota_rec_vck", "is_bool_true", "is_eager_reduce", "is_nat_zero", "is_proof_fast", "is_prop_type", "is_str_lit", "keys_ok",
   "keys_push", "lam_find", "lam_proj", "lam_push", "lazy_delta_proj_reduction",
   "lazy_delta_reduction", "lazy_delta_step", "lazy_fold_ok", "lazy_iter", "lazy_nat", "ldpr_exit",
   "lds_both", "lds_left", "lds_right", "lds_same", "lds_unfold2", "leaf_guard", "leaf_mem",
@@ -100,7 +98,7 @@ def coreFns : List FnName := [
   "lv_spw", "lv_sub_int", "lv_subsimp", "lv_subst", "lv_zero", "lv_zero_where_zero", "lvl_eq",
   "lvl_eq_c", "lvl_eq_rec", "lvls_eq", "lvls_eq_c", "lvls_eq_rec", "m2c_and", "m2c_and2",
   "m2c_arms", "m2c_check", "m2c_const_view", "m2c_ctor", "m2c_eta", "m2c_eta2", "m2c_head",
-  "m2c_k", "m2c_k2", "m2c_pre", "mac_hi", "major_to_ctor", "max_find", "max_push", "mk_app",
+  "m2c_k", "m2c_k2", "m2c_pre", "mac_hi", "major_to_ctor", "major_to_ctor_rescue", "ctor_view", "prepare_major_whnf", "is_nat_succ_app", "max_find", "max_push", "mk_app",
   "mk_app_n", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj", "nat_add",
   "nat_add_lit", "nat_beq_lit", "nat_bin_op_of_name", "nat_bin_op_result", "nat_ble_lit",
   "nat_cmp", "nat_div_lit", "nat_divmod", "nat_gcd", "nat_gcd_lit", "nat_land", "nat_land_lit",
@@ -116,7 +114,7 @@ def coreFns : List FnName := [
   "raw_nat_lit", "raw_table", "rec_fire_args", "rec_fire_level_count", "rec_fire_levels",
   "reduce_nat", "reduce_nat_ap", "reduce_nat_head", "reduce_nat_k", "reduce_nat_op",
   "reduce_nat_succ", "reduce_proj_arg", "reduce_proj_core", "reduce_proj_fire", "reduce_proj_head",
-  "residual_pw", "rom_lit", "rr_find", "rr_put", "rule_body_at", "same_const_heads",
+  "residual_pw", "rom_lit", "rr_find", "rr_put", "rule_body_at", "lam_body", "same_const_heads",
   "shift_left_refused", "size_bytes", "sl_memo", "sle_go", "slp_go", "sls_go", "sls_memo",
   "sort_find", "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push",
   "stack_cover", "str_cons_spine", "str_ctor_pre", "str_lit_ctor", "str_lit_stored", "str_ls1",
@@ -127,7 +125,7 @@ def coreFns : List FnName := [
   "succ_find", "succ_push", "tbl_base_get", "tbl_own_get", "try_unfold_proj_app", "type_sort_pw",
   "unfold_definition", "unfold_defn_at", "unfoldable_head", "unit_like_fields", "unit_like_loop",
   "unit_like_shape", "unit_like_shape_at", "unit_like_struct", "unwrap_id_defs", "unwrap_step",
-  "wc_find", "wc_put", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_core", "whnf_core_app",
+  "wc_find", "wc_put", "wh_find", "wh_put", "whnf", "whnf_app", "whnf_app_iota", "whnf_core", "whnf_core_app",
   "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_step", "whnf_core_step_proj",
   "whnf_core_store_chain", "whnf_core_store_cheap_keys", "whnf_core_store_keys", "whnf_loop",
   "whnf_step", "whnf_stuck", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",

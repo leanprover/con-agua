@@ -110,7 +110,7 @@ end cRun
 /-- **`iota_rec_c` refines the recursor's block, both outcomes**: the errors are
 `iota_rec_major`'s. -/
 theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -220,7 +220,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   cases n with
   | zero => exact RefE.of_cls0 (e := .outOfFuel) rfl
   | succ N =>
-  have hM := major_ref p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
+  have hM := major_ref p hp hc hw hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega)
     s₀ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS hm4 hebm hcw hus
     hcv hrules ⟨_, _, _, _, hfind⟩ hsa hsat (by omega)
   exact RefE.tail_eq (k := irCE.k_iota_rec_major p) (G' := MajorG p N)
@@ -229,7 +229,7 @@ theorem c_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
 
 /-- **`iota_rec_c` refines the recursor's block** (`c_ref`'s ok half). -/
 theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -241,7 +241,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
         xs.size) decOptR s₀ a₀ dn vis fe MM eb ResW :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs hS hm4 hebm hcw hus hsa hsat =>
     RefE.coreSpec (irCE_spec p hp.recC hp.major (n + 1) s₀ mode vis d c us so sn)
-      (c_ref p hp hc hw hsup hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs
+      (c_ref p hp hc hw hmtc hEI hER hEK n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d c us so sn xs
         hS hm4 hebm hcw hus hsa hsat)
 
 /-! ## `iota_rec_at(mode, vis, d, hd, so, sn)` -/
@@ -267,7 +267,7 @@ end atRun
 
 /-- **`iota_rec_at` refines `iotaRecAt`, both outcomes**: the errors are `iota_rec_c`'s. -/
 theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
@@ -298,19 +298,19 @@ theorem at_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (fun _ => rfl) (fun _ => rfl) (fun hG => ⟨hG.knot.mono (Nat.le_succ N), hG.nv, hG.pm, hG.fire⟩)
     (at_eq_c (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _
       htag hvc) (fun _ _ _ h => ⟨h.after, h.res, h.valid⟩)
-    (c_ref p hp hc hw hsup hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
+    (c_ref p hp hc hw hmtc hEI hER hEK N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
       fe M eb mode d _ _ so sn xs hS hpre.mode4 hpre.eb_mode hcw husw hsa hsat)
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app` assumes; `at_ref`'s ok
 half), from the callees' specs and the stub assumption `ErecKeptRec` (the callees the pieces read
 the record pool after leave it alone). -/
 theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
-    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hw : WhnfCallees p) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
     (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :=
   fun F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat =>
     RefE.coreSpec (irAtE_spec p hp.iotaRecAt hp.recC hp.major (n + 1) s₀ mode vis d hd so sn)
-      (at_ref p hp hc hw hsup hmtc hEI hER hEK n hk F s₀ a₀ dn vis fe M eb mode d hd so sn xs
+      (at_ref p hp hc hw hmtc hEI hER hEK n hk F s₀ a₀ dn vis fe M eb mode d hd so sn xs
         (by omega) (by omega) hpre hhd hsa hsat)
 
 end L.Arena

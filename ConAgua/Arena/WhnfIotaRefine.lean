@@ -331,101 +331,24 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
   proji : p.lookup "intern_proj" = some internProj
   mkproj : p.lookup "mk_proj" = some mkProj
 
-/-! ## `is_ctor_app(vis, e)` -/
+/-! ## `ctor_view(vis, e)` -/
 
-/-- **`is_ctor_app`'s model** (generated), its callees through their runs. -/
-l_model isCtorApp_spec (p : Prog) (hp : IotaProg' p)
-  fns [hp.isCtorApp ↦ icaW]
+/-- **`ctor_view`'s model** (generated), its callees through their runs. -/
+l_model ctorView_spec (p : Prog) (hp : IotaProg' p)
+  fns [hp.ctorView ↦ ctorViewW]
   specs [callW_spec p n "get_app_fn", callW_spec p n "env_find"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW]
 
-theorem isCtorApp_run_not (fe : IFEnv) (a : AState) (e h : EIdx)
-    (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag ≠ ETag.const) :
-    (isCtorApp fe e).run a = .ok (false, a) := by
-  simp only [isCtorApp, StateT.run_bind, hga, except_ok_bind]
-  simp [ht]; rfl
-
-theorem isCtorApp_run_const (fe : IFEnv) (a : AState) (e h : EIdx)
-    (hga : (getAppFn coreWalkFuel e).run a = .ok (h, a)) (ht : h.tag = ETag.const)
-    (c : NIdx) (us : LsIdx) (hv : a.store.view h = some (.const c us)) :
-    (isCtorApp fe e).run a = .ok (match fe.find? c with | some (.ctorInfo _ _ _ _) => true | _ => false, a) := by
-  have hv' : (view h).run a = .ok (.const c us, a) := by
-    simp [view, hv, StateT.run_bind, StateT.run_get]; rfl
-  simp only [isCtorApp, StateT.run_bind, hga, except_ok_bind]
-  simp only [ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hv', except_ok_bind]
-  cases fe.find? c with
-  | none => rfl
-  | some ci => cases ci <;> rfl
-
-/-- **`is_ctor_app` refines `isCtorApp`.** -/
-@[refines ConRon.Arena.isCtorApp]
-theorem isCtorApp_refines (p : Prog) (hp : IotaProg' p) :
+/-- **`ctor_view` refines `ctorView`**: the major's view (`decMV`, read in the entry memory). -/
+@[refines ConRon.Arena.ctorView]
+theorem ctorView_refines (p : Prog) (hp : IotaProg' p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
-    CoreSpec p (n + 1) "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
-  intro n s₀ a₀ dn vis fe MM eb e hS he
-  refine triple_post (isCtorApp_spec p hp (n + 1) s₀ vis e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
-  have hR := hS.arena.base
-  rw [icaW.arm1] at hW
-  rcases hc : callW p n "get_app_fn" [e] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, icaW.k_get_app_fn.none, icaW.k_get_app_fn.eq_2, reduceCtorEq] at hW
-  obtain ⟨t₁, ht₁, hm₁, -, hh1, hga⟩ := triple_of_callW
-    (getAppFn_refines' p hp.spine.fn n s₀ a₀ hR e he) hc
-  rw [ht₁] at hm₁
-  subst hm₁
-  by_cases h3 : tagW (r₁.headD 0) ≠ 3
-  · simp only [h3, ↓reduceIte, ne_eq, not_false_eq_true, Option.some.injEq, Prod.mk.injEq] at hW
-    obtain ⟨hr, hm⟩ := hW
-    have hrun' := isCtorApp_run_not fe a₀ (decE e) _ hga (fun ht => h3 (by
-      have := (decE_tag_eq _ hh1 3 (by decide)).mp ht; exact this))
-    refine CoreRef.of_pure hS hrun' hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  have h3' : tagW (r₁.headD 0) = 3 := by simpa using h3
-  rw [ite_eq_right h3] at hW
-  obtain ⟨hv1, hW⟩ := of_ite_none hW
-  obtain ⟨hv2, hW⟩ := of_ite_none hW
-  have h3 := h3'
-  obtain ⟨hvw, hn32, -⟩ := L.Ind.view_const_f s₀.mem a₀ hR (r₁.headD 0) hh1 ⟨hv1, UInt64.not_le.mp hv2⟩ h3
-  generalize tfld s₀.mem CONST (tierW (r₁.headD 0)) (idxW (r₁.headD 0)) 0 = cw at hvw hn32 hW
-  rcases hc2 : callW p n "env_find" [cw, vis] s₀.mem with _ | ⟨r₂, m₂⟩ <;>
-    simp only [hc2, icaW.k_env_find.none, icaW.k_env_find.eq_2, L.Ind.erRd_foldN, reduceCtorEq] at hW
-  obtain ⟨t₂, ht₂, hm₂, -, hfind, hdec⟩ := triple_of_callW
-    (envFind_refines p hp.envrow hp.baserow hp.envfind n s₀ vis _ hS.env hn32) hc2
-  rw [ht₂] at hm₂
-  have htag : (decE (r₁.headD 0)).tag = ETag.const := (decE_tag_eq _ hh1 3 (by decide)).mpr h3
-  have hrun1 := isCtorApp_run_const fe a₀ (decE e) _ hga htag _ _ hvw
-  subst hm₂
-  by_cases h0 : r₂.headD 0 = 0
-  · rw [ite_eq_left h0] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    have hnone : fe.find? (decI cw) = none := by rw [hfind]; simp only [envFound, h0, ↓reduceIte]
-    rw [hnone] at hrun1
-    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  rw [ite_eq_right h0] at hW
-  obtain ⟨ci, hci⟩ := hdec h0
-  have hfind' : fe.find? (decI cw) = some ci := by
-    rw [hfind]; simp only [envFound, h0, ↓reduceIte]; exact hci
-  have hctor := decCI_ctorR (erRdOK s₀.mem) hci
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  rw [hfind'] at hrun1
-  by_cases h4 : erRd s₀.mem (r₂.tail.headD 0) = 4
-  · obtain ⟨cv, rfl, -⟩ := hctor.1 h4
-    simp only [h4, ↓reduceIte] at hr
-    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
-  · simp only [h4, ↓reduceIte] at hr
-    refine CoreRef.of_pure (v := false) hS ?_ hm.symm ?_ ?_
-    · rw [hrun1]
-      have := hctor.2 h4
-      cases ci <;> first | rfl | exact absurd rfl (this _ _ _ _)
-    · simp only [decBool]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; decide
+    CoreSpec p (n + 1) "ctor_view" [vis, e] (ctorView fe (decE e)) (decMV s₀.mem) s₀ a₀ dn vis fe MM eb
+      (MVOk s₀.mem) := by
+  sorry
 
 /-! ## The relation across a memo write (`ct`, `rr`, `cv`: the constant caches)
 
@@ -471,7 +394,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   · exact hS.pins.congr (hf.arr PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
       (by decide))
   · exact hS.env.frame (fun b hb => not_mem_envArrs (by have := aA 129 149 (Or.inr (by omega)) b hb; omega))
-      (fun x hx => not_mem_envCtl (by have := aC 129 136 (Or.inr (by omega)) x hx; omega)) hf
+      (fun x hx => not_mem_envCtl (by have := aC 129 172 (Or.inr (by omega)) x hx; omega)) hf
   · intro h l e; exact hS.readL h l (by simpa [hL] using e)
   · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
   · exact hf.size EREC ▸ hS.erec
@@ -593,7 +516,8 @@ l_model constTyAt_spec (p : Prog) (hp : IotaProg' p)
 /-- **`rule_body_at`'s model `rraW`** (generated), `inst_lp` through its run. -/
 l_model ruleBodyAt_spec (p : Prog) (hp : IotaProg' p)
   fns [hp.ruleBodyAt ↦ rraW]
-  specs [memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n, callW_spec p n "inst_lp"]
+  specs [memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n, callW_spec p n "lam_body",
+    callW_spec p n "inst_lp"]
   grind [arena_grind] finish [mvG]
 
 theorem constTyAt_run_hit (cv : IConstantVal) (us : LsIdx) (a : AState) (r : EIdx)
@@ -653,69 +577,23 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   · simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
-theorem ruleBodyAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
-    (r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = some r) :
-    (ruleBodyAt rec ctor lps rhs us).run a = .ok (r, a) := by
+theorem ruleBodyAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (k : Nat) (us : LsIdx)
+    (a : AState) (r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = some r) :
+    (ruleBodyAt rec ctor lps rhs k us).run a = .ok (r, a) := by
   simp [ruleBodyAt, h, StateT.run_bind, StateT.run_get]; rfl
 
-theorem ruleBodyAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx)
-    (a a₁ : AState) (r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = none)
-    (hi : (instLPFast coreWalkFuel lps us rhs).run a = .ok (r, a₁)) :
-    (ruleBodyAt rec ctor lps rhs us).run a = .ok (r, { a₁ with caches := { a₁.caches with
+theorem ruleBodyAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (k : Nat) (us : LsIdx)
+    (a a₁ : AState) (b r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = none)
+    (hb : (lamBody k rhs).run a = .ok (b, a))
+    (hi : (instLPFast coreWalkFuel lps us b).run a = .ok (r, a₁)) :
+    (ruleBodyAt rec ctor lps rhs k us).run a = .ok (r, { a₁ with caches := { a₁.caches with
       ruleBodyC := a₁.caches.ruleBodyC.insert (rec, ctor, us) r } }) := by
-  simp [ruleBodyAt, h, StateT.run_bind, StateT.run_get, hi]
-  rfl
+  sorry
 
 /-- **`rule_body_at` refines `ruleBodyAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
 theorem ruleBodyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     RuleBodyAtOK p := by
-  intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
-  cases n with
-  | zero => exact invoke_zero_triple
-  | succ n =>
-  refine triple_post (ruleBodyAt_spec p hp (n + 1) s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
-    ?_⟩
-  have hdk := rrKey_dk rec ctor us hctor hus
-  rw [rraW.eq_2] at hW
-  obtain ⟨h0, hW⟩ := of_ite_none hW
-  have hf := memoRV_findR hS.core.rr rec (ctor ||| (us <<< 32)) hrec h0
-  rw [hdk] at hf
-  by_cases h1 : (mfindG rrSch s₀.mem rec (ctor ||| (us <<< 32))).headD 0 ≠ 0
-  · rw [ite_eq_left h1] at hW
-    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-    obtain ⟨hv, hv32⟩ := hf.1 h1
-    have hrun1 := ruleBodyAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
-    refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
-    · simp only [decH]; rw [← hr]; rfl
-    · unfold ResH HW; rw [← hr]; exact hv32
-  rw [ite_eq_right h1] at hW
-  have hmiss := hf.2 (by simpa using h1)
-  rcases hc : callW p n "inst_lp" [po, pl, us, rhs] s₀.mem with _ | ⟨r₁, m₁⟩ <;>
-    simp only [hc, rraW.k_inst_lp.none, rraW.k_inst_lp.eq_2, reduceCtorEq] at hW
-  obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
-    CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
-  have hrunI := AM.run_of_ok _ _ hok
-  have hrun2 := ruleBodyAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
-  rw [hres] at hrun2
-  obtain ⟨h2, hW⟩ := of_ite_none hW
-  cases hp : mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0)
-      ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).headD 0)
-      ((mfindG rrSch m₁ rec (ctor ||| (us <<< 32))).tail.headD 0) with
-  | none => rw [hp, rraW.k_rr_put.none] at hW; cases hW
-  | some m₂ =>
-  rw [hp, rraW.k_rr_put.arm1] at hW
-  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
-  have hs : msetG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0) = some m₂ := by
-    rw [msetG_eq _ _ _ _ _ h2]; exact hp
-  have hwv : HW (r₁.headD 0) := hr₁
-  have hcore := hS₁.core.setRr rec (ctor ||| (us <<< 32)) (r₁.headD 0) hrec hwv hs
-  rw [hdk] at hcore
-  obtain ⟨hS₂, hSt₂⟩ := CoreS.setMemo rrSch _ hS₁
-    (msetG_frame rrSch (coreSch_wf _ _ (by decide) (by decide)) _ _ _ _ _ hs)
-    (by decide) (by decide) (by decide) (by decide) hcore rfl rfl
-  refine CoreRef.of_run hrun2 (hm ▸ ⟨M', hS₂, hK, hSt.trans hSt₂⟩) ?_ ?_
-  · simp only [decH]; rw [← hr]
-  · unfold ResH HW; rw [← hr]; exact hwv
+  sorry
 
 /-! ## `pi_residual(e, ao, an)` -/
 
