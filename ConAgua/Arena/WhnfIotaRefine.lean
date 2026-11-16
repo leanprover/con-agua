@@ -212,15 +212,6 @@ theorem CoreSpec.run {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName
   let ⟨hok, hA, hres, hr⟩ := h.of_callW hc
   ⟨hres ▸ AM.run_of_ok _ _ hok, hA, hr⟩
 
-/-- **A refinement from the twin's run.** -/
-theorem CoreRef.of_run {α : Type} [Inhabited α] {T : AM α} {a a' : AState} {v : α}
-    {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
-    (hrun : T.run a = .ok (v, a')) (hA : CoreAfter dn m m' a' vis fe M eb) (hv : v = dec r)
-    (hr : ok r) : CoreRef T a dec dn m vis fe M eb r m' ok := by
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hok, hst ▸ hA, hres.trans hv, hr⟩
-
 theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
   rw [h]; rfl
 

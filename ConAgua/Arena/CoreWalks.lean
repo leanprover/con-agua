@@ -325,6 +325,36 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
     ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.walk.frame hf (by decide) (by decide), hS.memos.hbF hf⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
+/-- **`inst_list` refines `instantiateRevRange coreWalkFuel` under `CoreS`** on the range `xs[s:i]`
+of a stack slice (`InstRangeOK`, `beta_peel`'s substitution). -/
+theorem instRangeOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL) :
+    InstRangeOK p := by
+  intro n s₀ a₀ dn vis fe M eb e o₀ C d xs s i hS hE hsp htop hsi hiC
+  cases n with
+  | zero => exact L.Arena.CoreSpec.zero he _ _ _ _ _ _ _ _ _ _ _
+  | succ n =>
+  obtain ⟨mp, hmp⟩ := hS.memos.il
+  have hrun : (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat).run a₀ =
+      (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat).run
+        { a₀ with memos := { a₀.memos with instLC := mp } } := rfl
+  have hA : ArenaL s₀.mem { a₀ with memos := { a₀.memos with instLC := mp } } :=
+    ⟨hS.arena.memo_irrel mp a₀.memos.abs1C, hmp⟩
+  have hbd : o₀.toNat + C.toNat < 2 ^ 64 := by have := hsp.bound; have := hS.spn; omega
+  unfold CoreSpec
+  apply L.M.triple_of_run
+  intro s' r s'' hs hr
+  obtain ⟨hloc, hok, hA', hres, -, hw⟩ := L.M.of_run (P := fun s => s = s₀) hs hr
+    (instList_refines_range p hp he n s₀ _ hA e o₀ C d xs hsp hbd s i hsi hiC hE)
+  obtain ⟨hf, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hr
+    (invoke_memFrame (hp.closed he) (n + 1) (by decide) _ s₀)
+  subst hs
+  obtain ⟨hok, e2, e3⟩ := AM.readings hrun hok
+  rw [← e2] at hA'; rw [← e3] at hres
+  have hk := Keeps.run (keepsW_instRevRange coreWalkFuel (decE e) xs s i d.toNat) (AM.run_of_ok _ _ hok)
+  obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
+    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.walk.frame hf (by decide) (by decide), hS.memos.hbF hf⟩
+  exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
+
 /-- **`inst_entry` refines `instantiate1Fast coreWalkFuel` under `CoreS`** at either of its names
 (`inst_entry`, the walk's; `inst1`, the core's call sites: one `FunDecl` at two names). -/
 theorem inst1_core (hp : InstProg p) (he : p.lookup "inst_entry" = some instEntry)
@@ -600,6 +630,7 @@ structure CoreWalkProg (p : Prog) : Prop where
   hf : p.lookup "has_fvar" = some hasFvarL
 
 theorem CoreWalkProg.instListOK (hp : CoreWalkProg p) : InstListOK p := instListOK_core hp.il hp.ile
+theorem CoreWalkProg.instRangeOK (hp : CoreWalkProg p) : InstRangeOK p := instRangeOK_core hp.il hp.ile
 
 theorem CoreWalkProg.iotaInst1OK (hp : CoreWalkProg p) : IotaInst1OK p :=
   inst1_core hp.inst hp.ie hp.le "inst_entry" hp.ie
