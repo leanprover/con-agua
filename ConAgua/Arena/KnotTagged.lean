@@ -115,7 +115,7 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
       (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfApp_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) n hk F hF hn s₀ a₀ dn vis
+  whnfApp_refines' p hq.core (KnotAllProg.coreC hq) n hk F hF hn s₀ a₀ dn vis
     fe MM eb mode d v hd vo vn same ao an i vargs args nodes hs hv hhd hva htop har hno hlo
 
 /-! ## δ (`WhnfDeltaRefine4`) -/

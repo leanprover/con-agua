@@ -309,8 +309,6 @@ def whnfCoreStoreChainL : FunDecl := lfn (mode, cheap, pb, pn, pc, v) locals (u)
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2692-2717 ConRon.Arena.whnfApp
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.whnfApp`, `ConRon.Arena.whnfAppIota` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.whnfApp` changed; re-check the L code and its proofs, then delete this line
 con-ron: ConRon/Arena/Core.lean:2544-2548 ConRon.Arena.internAppRebuilt -/
 @[no_expose, l_impl ConRon.Arena.whnfApp ConRon.Arena.internAppRebuilt]
 def whnfAppL : FunDecl :=

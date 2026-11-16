@@ -40,7 +40,7 @@ theorem whnfCoreStepApp_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEn
 section app
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_core_app2` refines the second half of the `.app` clause, both outcomes**, the spine's
 arguments and nodes the slices `(so, sn)`, `(so + sn, sn)` below the top: the errors are
 `whnf_app`'s. `head_and_args` leaves its slice on the stack; the top is put back without its
@@ -70,7 +70,7 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
   have hvo : spTop m₃ = r₃.tail.headD 0 + r₃.tail.tail.headD 0 := by rw [htop3, ho3]
   unfold whnfCoreApp2T
   refine RefE.bind_right hha ?_
-  have h4 := app_ref p hp hwc hcc n hk F hF hn ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d v
+  have h4 := app_ref p hp hcc n hk F hF hn ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d v
     (r₃.headD 0) (r₃.tail.headD 0) (r₃.tail.tail.headD 0) (if v = h then 1 else 0) so sn 0 xs args
     nodes ⟨hS₃, hs.mode4, hs.eb_mode⟩ hv hhw hxs hvo har₃ hno₃ (by rw [ho3]; omega)
   have hsame : ((if v = h then (1 : Word) else 0) != 0) = (decE v == decE h) := by
@@ -83,7 +83,7 @@ theorem capp2_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n
   exact (⟨⟨M', hS₄, hK₄, hg₃.trans hSt₄.toGrew⟩, hP.res, hP.valid⟩ :
     GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl hP.valid
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_core_app2` refines the second half of the `.app` clause** (`capp2_ref`'s ok half). -/
 theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -96,10 +96,10 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
       (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE h)
         args nodes) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreApp2E_spec p hp.capp2 hp.app (n + 2) s₀ mode vis d v h so sn)
-    (capp2_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v h so sn args nodes hs hv hh har
+    (capp2_ref p hp hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v h so sn args nodes hs hv hh har
       hno hlo htop)
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep` (`whnfCoreStepApp`), both
 outcomes**: the errors are the head's `whnf_core` slot's and `whnf_core_app2`'s. -/
 theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N ≤ 2 ^ 62)
@@ -148,7 +148,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
     rw [htop1, ← ho1, L.toNat_add_of_lt _ _ (by rw [e1]; omega), e1]
   have hxs₂ := hxs.keep hSt₂.size hSt₂.below (by omega) hspn₁
   have hns₂ := hns.keep hSt₂.size hSt₂.below (by rw [e1]; omega) hspn₁
-  have h4 := capp2_ref p hp hwc hcc n' (hk.mono (by omega)) F (by omega) (by omega)
+  have h4 := capp2_ref p hp hcc n' (hk.mono (by omega)) F (by omega) (by omega)
     ⟨m₂, Locals.init []⟩ _ dn vis fe M' eb mode d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) xs ns ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw₂ hhw hxs₂ hns₂
     (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
@@ -160,7 +160,7 @@ theorem capp_ref (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N 
   exact (⟨⟨M'', hS₄, hK₂.trans hK₄, (hg₁.trans hSt₂.toGrew).trans hSt₄.toGrew⟩, hP.res, hP.valid⟩ :
     GrowPost decStep dn s₀.mem vis fe MM eb ResW (r₄, m₄) y a').restore _ rfl hP.valid
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep`** (`capp_ref`'s ok half). -/
 theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -169,7 +169,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
       (whnfCoreStepApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat (decE e))
       decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (coreAppE_spec p hp.capp hp.capp2 hp.app (N + 1) s₀ mode cheap vis d e)
-    (capp_ref p hp hwc hcc N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
+    (capp_ref p hp hcc N hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e hs he)
 
 end app
 

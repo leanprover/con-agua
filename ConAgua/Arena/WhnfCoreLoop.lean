@@ -121,7 +121,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
-    have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
+    have h1 := capp_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
       eb mode cheap d e hs he
     exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
       (·.mono (Nat.le_succ N)) h1

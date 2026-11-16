@@ -27,7 +27,8 @@ import all ConAgua.Arena.WhnfCore
 
 One refinement over the loop's unified model (`whnfAppE`, `Verdict/WhnfModels2E.lean`), both
 outcomes, by induction on the L fuel (`appLoop_ref`, `app_ref`); its errors are `iota_rec_at`'s
-(`AppG`). `WhnfCoreApp.lean` has the helpers and `beta_peel`.
+(`AppG`). The loop's ι step `whnf_app_iota` (the recursor's lookup) over its own unified model
+(`whnfAppIotaE`, `appIota_ref`). `WhnfCoreApp.lean` has the helpers and `beta_peel`.
 -/
 
 open ConRon.Arena
@@ -162,6 +163,7 @@ include hp hcc in
 /-- **`whnf_app_iota` refines `whnfAppIota`, both outcomes** (the spine loop's ι step at the
 accumulated slice `(vo, vn)`): the recursor's lookup, then `iota_rec_at` at exactly `mI + 1`
 arguments; its errors are `iota_rec_at`'s (`AppG`). -/
+@[refines ConRon.Arena.whnfAppIota]
 theorem appIota_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d hd vo vn : Word) (va : Array EIdx)
@@ -298,7 +300,7 @@ theorem apW_same {p : Prog} {k : Nat} {m : Mem} {v same aW nW : Word} (hs : same
 section appRef
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
-include hp hwc hcc in
+include hp hcc in
 /-- **The `whnf_app` loop refines `whnfApp`, both outcomes**, by induction on the L fuel: its
 errors are `iota_rec_at`'s (`AppG`). -/
 theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
@@ -317,9 +319,266 @@ theorem appLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         (whnfAppE.k_loop1 p top (whnfAppE.loop1 p k m mode vis d v hd vo vn same ao an i top))
         (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) va
           (same != 0) args nodes i.toNat) a (CorePost decStep dn m₀ vis fe MM eb ResW) := by
-  sorry
+  subst htop0
+  intro k
+  induction k with
+  | zero =>
+    intro _ a m v vn same i va MM _ _ _ _ _ _ _ _ _
+    simp only [whnfAppE.loop1]; exact RefE.of_cls0 rfl
+  | succ k ih =>
+    intro hkn a m v vn same i va MM hS hv hva htop htv hb hsz hbk hpg
+    have hspn := hS.spn
+    have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; omega
+    have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := L.toNat_add_of_lt _ _ hvn64
+    have hlt_args : args.size = an.toNat := har₀.size
+    have hle0 : spTop m₀ ≤ spTop m := by
+      rw [UInt64.le_iff_toNat_le, htop]; exact htv
+    simp only [whnfAppE.loop1]
+    by_cases hlt : ¬ i < an
+    · rw [ite_eq_right hlt]
+      have hnlt : ¬ i.toNat < args.size := by
+        rw [hlt_args]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
+      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v)
+          (decE hd) va (same != 0) args nodes i.toNat).run a = .ok (.done (decE v), a) := by
+        rw [whnfApp]; simp only [hnlt, dite_false]; rfl
+      exact RefE.ret hrun ⟨⟨MM, hS.frame_stk (MemFrame.setCtl m 136 _) (by simp) (by simp),
+        KeptAll.refl _ _, StackKept.restoreTop hb hle0 hsz hbk hpg⟩, by simp [decStep],
+        ⟨by simp [HW], hv⟩⟩
+    have hlt : i < an := Classical.not_not.mp hlt
+    rw [ite_eq_left hlt]
+    have hlt' : i.toNat < args.size := by
+      rw [hlt_args]; exact UInt64.lt_iff_toNat_lt.mp hlt
+    have hi1 : (i + 1).toNat = i.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp
+      have := UInt64.lt_iff_toNat_lt.mp hlt
+      have := an.toNat_lt
+      omega
+    have hjtop : ∀ j : Word, j < spTop m₀ → j < spTop m := fun j hj => by
+      rw [htop, UInt64.lt_iff_toNat_lt, hadd]
+      have := UInt64.lt_iff_toNat_lt.mp hj; omega
+    have haoT : ao.toNat + an.toNat ≤ (spTop m₀).toNat := by omega
+    have hnoT : (ao + an).toNat + an.toNat ≤ (spTop m₀).toNat := by
+      have := har₀.bound
+      rw [L.toNat_add_of_lt _ _ (by omega)]; omega
+    have har : SpineR m ao an args := har₀.keepT _ hsz hb haoT hspn0
+    have hno : SpineR m (ao + an) an nodes := hno₀.keepT _ hsz hb hnoT hspn0
+    have hit : (i.toNat).toUInt64 = i := by simp
+    have hxi : args[i.toNat] = decE (spW m (ao + i)) := by
+      have h := har.get i.toNat hlt'
+      rwa [hit] at h
+    have hvv : (spW m (ao + i)).toNat < 2 ^ 32 := by
+      have h := har.lt i.toNat (by rw [← har.size]; exact hlt')
+      rwa [hit] at h
+    by_cases hlam : tagW v = 5
+    · rw [ite_eq_left hlam]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c1 => ?_)
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun c2 => ?_)
+      refine RefE.under (fun _ => rfl) (fun _ => rfl) fun hx =>
+        RefE.onlySim hx (fun _ _ h => h) fun r₁ m₁ hcall => ?_
+      cases k with
+      | zero => rw [callW_zero] at hcall; cases hcall
+      | succ k' =>
+      have hvw : viewOK m v LAM := ⟨c1, UInt64.not_le.mp c2⟩
+      obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.base v hv hvw hlam
+      have hvb := viewBind_lam m a hS.arena.base v hv hvw hlam
+      have hii1 : i ≤ i + 1 := by
+        rw [UInt64.le_iff_toNat_le, hi1]; omega
+      have hi1an : i + 1 ≤ an := by
+        rw [UInt64.le_iff_toNat_le, hi1]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+      have hbeta := betaPeel_refines' p hp hcc.instRange k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _
+        i ao an (i + 1) args hS hbody1 hii1 hi1an har (by rw [htop, hadd]; omega)
+      obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hbeta hcall
+      rw [hi1] at hok hS' hres
+      have hlamtag : ((decE v).tag == ETag.lam) = true := by
+        rw [decE_tag_lam_beq v hv]; simp [hlam]
+      have hrun : (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v)
+          (decE hd) va (same != 0) args nodes i.toNat).run a =
+          .ok (AM.res (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
+            i.toNat args (i.toNat + 1)) a,
+            AM.st (betaPeel (decE (tfld m LAM (tierW v) (idxW v) 1))
+            i.toNat args (i.toNat + 1)) a) := by
+        rw [whnfApp]
+        simp only [hlt', dite_true, hlamtag, ite_true, StateT.run_bind, L.Arena.viewBind_run, hvb,
+          except_ok_bind]
+        exact AM.run_of_ok _ _ hok
+      simp only [Function.comp_apply, whnfAppE.k_beta_peel, whnfAppE.k_loop1, reduceCtorEq, ite_false,
+        Sig.retVal, Sig.retOr]
+      exact RefE.ret hrun ⟨⟨M', hS'.frame_stk (MemFrame.setCtl m₁ 136 _) (by simp) (by simp), hK',
+        StackKept.restoreTop (fun j hj => by rw [hSt'.below j (hjtop j hj)]; exact hb j hj)
+          (by rw [hSt'.top]; exact hle0) (hSt'.size.trans hsz) (hbk.trans hSt'.bstk)
+          (hpg.trans hSt'.pool)⟩, hres, hrw⟩
+    -- the next spine node, the push, then the ι step
+    rw [ite_eq_right hlam]
+    have hnodeget : nodes[i.toNat]! = decE (rdW (m.arr64 SPN) (ao + an + i)) := by
+      have hi2 : i.toNat < nodes.size := by rw [hno.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
+      have h := hno.get i.toNat hi2
+      have hit2 : (ao + an) + (i.toNat).toUInt64 = ao + an + i := by rw [hit]
+      rw [getElem!_pos nodes i.toNat hi2, h, hit2]; rfl
+    have hnW : HW (rdW (m.arr64 SPN) (ao + an + i)) := by
+      have h := hno.lt i.toNat (UInt64.lt_iff_toNat_lt.mp hlt)
+      rwa [hit] at h
+    have hnotlam : ((decE v).tag == ETag.lam) = false := by
+      rw [decE_tag_lam_beq v hv]; simp [hlam]
+    have hunf := whnfApp_nolam (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
+      (decE v) (decE hd) va (same != 0) args nodes i.toNat hlt' hnotlam
+    have hxi' : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := hxi
+    rw [hnodeget, hxi'] at hunf
+    dsimp only at hunf
+    rw [hunf]
+    have rest : ∀ ap m₁, apW p k m v same (rdW (m.arr64 SPN) (ao + i))
+        (rdW (m.arr64 SPN) (ao + an + i)) = some (ap, m₁) →
+        RefE (AppG p n) (whnfAppE.k_loop1 p (spTop m₀) (whnfAppE.j1 p k mode vis d v hd vo vn ao an
+          i (spTop m₀) (rdW (m.arr64 SPN) (ao + i)) (rdW (m.arr64 SPN) (ao + an + i)) ap m₁))
+          (do
+            let ap ← internAppRebuilt (decE (rdW (m.arr64 SPN) (ao + an + i))) (same != 0) (decE v)
+              (decE (rdW (m.arr64 SPN) (ao + i)))
+            let step ← whnfAppIota (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
+              (decE hd) (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
+              (va.push (decE (rdW (m.arr64 SPN) (ao + i)))).size
+            appStepT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) ap
+              (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
+              (ap == decE (rdW (m.arr64 SPN) (ao + an + i))) args nodes i.toNat step) a
+          (CorePost decStep dn m₀ vis fe MM eb ResW) := by
+      intro ap m₁ hapE
+      obtain ⟨a₁, hrunAp, hS₁, hSt₁, hapW⟩ := apW_ref p hp k m a dn vis fe MM eb hS v same
+        (rdW (m.arr64 SPN) (ao + i)) (rdW (m.arr64 SPN) (ao + an + i)) hv hvv hnW ap m₁ hapE
+      refine RefE.bind_right hrunAp ?_
+      simp only [whnfAppE.j1]
+      refine RefE.underIf (fun _ => rfl) (RefE.abort0 (by decide) fun hlen => ?_)
+      -- the stack top is in bounds (it is `vo + vn ≠ 0`)
+      have hc136 : (136 : Word).toNat < (m₁.arr64 CTL).size := by
+        have ht1 : spTop m₁ = vo + vn := hSt₁.1.trans htop
+        refine Classical.byContradiction fun hc => ?_
+        have : spTop m₁ = 0 := by
+          unfold spTop rdW
+          rw [Array.getElem?_eq_none (by omega)]; rfl
+        rw [this] at ht1
+        have h0 : (vo + vn).toNat = 0 := by rw [← ht1]; rfl
+        rw [hadd] at h0
+        have := UInt64.lt_iff_toNat_lt.mp hlt
+        omega
+      have hbd : vo.toNat + vn.toNat < (m₁.arr64 SPN).size := by
+        have h : ¬ UInt64.ofNat (m₁.arr64 SPN).size ≤ vo + vn := hlen
+        rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by
+          have := hSt₁.size; omega), hadd] at h
+        omega
+      have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hSt₁.size ▸ hspn
+      have hva₁ : SpineR m₁ vo vn va :=
+        hva.keep hSt₁.size hSt₁.below (by rw [htop, hadd]; exact Nat.le_refl _) hspn
+      have hvo1 : vo + vn + 1 = vo + (vn + 1) := UInt64.add_assoc _ _ _
+      have hfr := spnCtl_frame m₁ (vo + vn) (rdW (m.arr64 SPN) (ao + i)) (vo + (vn + 1))
+      have hS₂ := hS₁.frame_stk hfr (by simp) (by simp)
+      have hva₂ : SpineR ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+          (vo + (vn + 1))) vo (vn + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) :=
+        (hva₁.push hspn₁ hbd _ hvv).setCtl 136 (vo + (vn + 1))
+      have htop₂ : spTop ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+          (vo + (vn + 1))) = vo + (vn + 1) := by
+        unfold spTop
+        rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact hc136⟩]
+      have hvn1 : (vn + 1).toNat = vn.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      have hadd2 : (vo + (vn + 1)).toNat = vo.toNat + vn.toNat + 1 := by
+        rw [← UInt64.add_assoc, L.toNat_add_of_lt _ _ (by rw [hadd]; have : (1 : Word).toNat = 1 := rfl; omega),
+          hadd]
+        have : (1 : Word).toNat = 1 := rfl
+        omega
+      have htv₂ : (spTop m₀).toNat ≤ (vo + (vn + 1)).toNat := by rw [hadd2]; omega
+      have hb₂ : ∀ j : Word, j < spTop m₀ →
+          spW ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136 (vo + (vn + 1)))
+            j = spW m₀ j := by
+        intro j hj
+        rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
+          have := UInt64.lt_iff_toNat_lt.mp hj
+          rw [← h, hadd] at this; omega), hSt₁.below j (hjtop j hj)]
+        exact hb j hj
+      have hsz₂ : (((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+          (vo + (vn + 1))).arr64 SPN).size = (m₀.arr64 SPN).size := by
+        simp only [L.Mem.size64_set64]; exact hSt₁.size.trans hsz
+      have hbk₂ := hbk.trans (hSt₁.bstk.trans (BKept.of_frame hfr (by decide) (by decide)))
+      have hpg₂ := hpg.trans (hSt₁.pool.trans (PoolGrew.of_frame hfr (by decide) (by decide)))
+      have hsame : ((if ap = rdW (m.arr64 SPN) (ao + an + i) then (1 : Word) else 0) != 0) =
+          (decE ap == decE (rdW (m.arr64 SPN) (ao + an + i))) := by
+        rw [← evalW_eq_ne ap _ hapW hnW]; simp [Cmp.evalW, Cmp.eval]
+      generalize hm₂ : ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+        (vo + (vn + 1))) = m₂ at hS₂ hva₂ htop₂ hb₂ hsz₂ hbk₂ hpg₂
+      cases k with
+      | zero =>
+        exact RefE.under (fun _ => rfl) (fun _ => by simp only [whnfAppE.k_whnf_app_iota.eq_1]) fun hx =>
+          RefE.callE_zero hx
+      | succ k' =>
+      have hIo := appIota_ref p hp hcc k' (hk.mono (by omega)) F
+        (by omega) (by omega) ⟨m₂, Locals.init []⟩ a₁ dn vis fe MM eb mode d hd vo (vn + 1) _
+        ⟨hS₂, hmode, hebm⟩ hhd hva₂ (by rw [htop₂, hadd2]; omega)
+      refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩)
+        (x := fun c => whnfAppE.k_loop1 p (spTop m₀) (whnfAppE.k_whnf_app_iota p (k' + 1) mode vis d v
+          hd vo (vn + 1) (if ap = rdW (m.arr64 SPN) (ao + an + i) then 1 else 0) ao an i (spTop m₀)
+          ap c)) (fun _ => by simp only [whnfAppE.k_whnf_app_iota.eq_1, whnfAppE.k_loop1])
+        (RefE.coreSpec (whnfAppIotaE_spec p hp.appIota (k' + 1) ⟨m₂, Locals.init []⟩ mode vis d hd vo (vn + 1))
+          hIo)
+        (fun hG => RefE.coreSpecE (whnfAppIotaE_spec p hp.appIota (k' + 1) ⟨m₂, Locals.init []⟩ mode vis d hd
+          vo (vn + 1)) hG.nv (hG.mono (by omega)) hIo) (fun rr m₃ _ hI => ?_)
+      obtain ⟨-, ⟨M', hS₃, hK₃, hSt₃⟩, hresI, hrwI⟩ := hI
+      have hva₃ : SpineR m₃ vo (vn + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i)))) :=
+        hva₂.keep hSt₃.size hSt₃.below (by rw [htop₂, hadd2]; omega) (hsz₂ ▸ hspn0)
+      have htop₃ : spTop m₃ = vo + (vn + 1) := hSt₃.1.trans htop₂
+      have hb₃ : ∀ j : Word, j < spTop m₀ → spW m₃ j = spW m₀ j := fun j hj => by
+        rw [hSt₃.below j (by rw [htop₂, UInt64.lt_iff_toNat_lt, hadd2]
+                             have := UInt64.lt_iff_toNat_lt.mp hj; omega)]
+        exact hb₂ j hj
+      have hsz₃ : (m₃.arr64 SPN).size = (m₀.arr64 SPN).size := hSt₃.size.trans hsz₂
+      rw [whnfAppE.k_whnf_app_iota.eq_2]
+      by_cases hz : rr.headD 0 ≠ 0
+      · rw [ite_eq_left hz]
+        have hopt : decOptR rr = some (decE (rr.tail.headD 0)) := decOpt_ne _ _ hz
+        rw [hopt]
+        simp only [appStepT]
+        refine RefE.under (fun _ => rfl) (fun _ => rfl) fun hx =>
+          RefE.onlySim hx (fun _ _ h => h) fun r' m₄ hcM => ?_
+        have hx3 : SpineR m₃ ao an args := har₀.keepT _ hsz₃ hb₃ haoT hspn0
+        obtain ⟨hok2, hD2, hres2, hfr2, hhw2⟩ := callW_mkAppNFrom p hp.spine (k' + 1)
+          ⟨m₃, Locals.init []⟩ _ hS₃.arena (rr.tail.headD 0) ao an (i + 1) args hrwI.2 hx3
+          (by rw [hi1]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega) r' m₄ hcM
+        have hcpl := Keeps.run (keeps_cpl_mkAppNFrom (decE (rr.tail.headD 0)) args
+          (i + 1).toNat) (AM.run_of_ok _ _ hok2)
+        have hS₄ := hS₃.of_app hD2 hcpl hfr2
+        rw [hi1] at hok2 hres2 hS₄
+        have hSt4 := StackKept.of_app_frame hfr2
+        simp only [Function.comp_apply, whnfAppE.k_mk_app_n_from, whnfAppE.k_loop1, reduceCtorEq,
+          ite_false, Sig.retVal, Sig.retOr]
+        have hr2 := AM.run_of_ok _ _ hok2
+        rw [hres2] at hr2
+        refine RefE.ret (by simp only [StateT.run_bind, hr2, except_ok_bind]; rfl)
+          ⟨⟨M', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₃,
+            StackKept.restoreTop (fun j hj => by
+              rw [hSt4.below j (by
+                rw [htop₃, UInt64.lt_iff_toNat_lt, hadd2]
+                have := UInt64.lt_iff_toNat_lt.mp hj; omega)]
+              exact hb₃ j hj) (by rw [hSt4.top, htop₃, UInt64.le_iff_toNat_le, hadd2]; omega)
+              (hSt4.size.trans hsz₃) ((hbk₂.trans hSt₃.bstk).trans hSt4.bstk)
+              ((hpg₂.trans hSt₃.pool).trans hSt4.pool)⟩, by simp [decStep],
+            ⟨by simp [HW], hhw2⟩⟩
+      rw [ite_eq_right hz]
+      have hz' : rr.headD 0 = 0 := by simpa using hz
+      have hopt : decOptR rr = none := by unfold decOptR decOpt; rw [ite_eq_left hz']
+      rw [hopt]
+      simp only [appStepT]
+      have := ih (by omega) _ m₃ ap (vn + 1) (if ap = rdW (m.arr64 SPN) (ao + an + i) then 1 else 0)
+        (i + 1) (va.push (decE (rdW (m.arr64 SPN) (ao + i))))
+        M' hS₃ hapW hva₃ htop₃ (by rw [hadd2]; omega) hb₃ hsz₃ (hbk₂.trans hSt₃.bstk)
+        (hpg₂.trans hSt₃.pool)
+      rw [hi1, hsame] at this
+      exact this.mono fun _ _ _ h => by
+        obtain ⟨M'', h1, h2, h3⟩ := h.after
+        exact ⟨⟨M'', h1, hK₃.trans h2, h3⟩, h.res, h.valid⟩
+    by_cases hs : same ≠ 0
+    · rw [ite_eq_left hs]; exact rest _ _ (apW_same hs)
+    rw [ite_eq_right hs]
+    refine RefE.under (fun _ => rfl) (fun _ => by simp only [whnfAppE.k_mk_app]) fun hx =>
+      RefE.onlySim hx (fun _ _ h => h) fun r₁ m₁ hmk => ?_
+    simp only [Function.comp_apply, whnfAppE.k_mk_app]
+    exact rest _ _ (by simp [apW, hs, hmk])
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_app` refines `whnfApp`, both outcomes**: `vargs` the slice `(vo, vn)` at the top of the
 stack, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
 theorem app_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
@@ -335,12 +594,12 @@ theorem app_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n �
   have hS := hs.rel
   have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; have := hS.spn; omega
   have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := L.toNat_add_of_lt _ _ hvn64
-  exact appLoop_ref p hp hwc hcc n hk F hF hn mode vis d hd vo ao an (spTop s₀.mem) args nodes dn fe
+  exact appLoop_ref p hp hcc n hk F hF hn mode vis d hd vo ao an (spTop s₀.mem) args nodes dn fe
     eb s₀.mem hs.mode4 hs.eb_mode hhd har hno hlo (by rw [htop, hadd]; omega) rfl hS.spn (n + 1)
     (Nat.le_refl _) a₀ s₀.mem v vn same i vargs MM hS hv hva htop (by rw [htop]; exact Nat.le_refl _)
     (fun _ _ => rfl) rfl (BKept.refl _) (PoolGrew.refl _)
 
-include hp hwc hcc in
+include hp hcc in
 /-- **`whnf_app` refines `whnfApp`** (`app_ref`'s ok half). -/
 theorem whnfApp_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -353,7 +612,7 @@ theorem whnfApp_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
       (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (whnfAppE_spec p hp.app (n + 1) s₀ mode vis d v hd vo vn same ao an i)
-    (app_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v hd vo vn same ao an i vargs args
+    (app_ref p hp hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode d v hd vo vn same ao an i vargs args
       nodes hs hv hhd hva htop har hno hlo)
 
 end appRef
