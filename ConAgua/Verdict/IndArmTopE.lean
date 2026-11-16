@@ -70,7 +70,7 @@ theorem indArmSpecE_checker (bs : List UInt8) (hr : RomOK bs)
   have H := indArmProgs_checker bs hr hpre
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
-    ⟨checkerProg_uceLookupsPB bs, strLitStored_core _ H.kp.knot.str⟩
+    ⟨checkerProg_uceLookupsPB bs⟩
   exact indArmSpecE_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc⟩
     (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
     ⟨⟨hnv, checkerProg_coreStubsEPB bs⟩, hU⟩
@@ -84,7 +84,7 @@ theorem jobG_checker (b pb : ByteArray) (PA : PhaseA b) (hpb : pb.size < 2 ^ 63)
   have H := indArmProgs_checker _ hr hpre
   have hnv := checkerProg_nvPB pb.data.toList
   have hU : UceProg (Prog.subPB pb.data.toList checkerProg) :=
-    ⟨checkerProg_uceLookupsPB _, strLitStored_core _ H.kp.knot.str⟩
+    ⟨checkerProg_uceLookupsPB _⟩
   have hG : VerdictCtxU (Prog.subPB pb.data.toList checkerProg) :=
     ⟨⟨hnv, checkerProg_coreStubsEPB _⟩, hU⟩
   exact jobG_of _ _ _ _
