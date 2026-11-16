@@ -445,7 +445,7 @@ theorem bp_ok (p : Prog) (hp : WhnfCoreProg p) (hir : InstRangeOK p) {dn : NIdx 
     simp only [bpW.k_inst_list, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨hok, hA, hres, hr⟩ := bp_inst p hir n hS ht hsi hia har hlo c1
-    rw [betaPeel, dif_neg hni']
+    rw [betaPeel, dite_eq_right hni']
     refine CoreRef.of_run (by rw [StateT.run_bind, AM.run_of_ok _ _ hok]; rfl) hA ?_ ⟨show HW (1 : Word) by unfold HW; decide, hr⟩
     rw [hres]; rfl
   | succ K ih =>

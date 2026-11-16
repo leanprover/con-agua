@@ -611,6 +611,7 @@ theorem lprojArm_ok (hg : tagW h = 9) :
   simp only [internProjE]
   exact ⟨hok, hres, hA₂, hs₂.trans hs₁⟩
 
+omit hbd in
 theorem lbvarArm_ok (_hg : tagW h = 0) :
     LArmRef (n + 1) ilBVarW (instListArmBVar vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
@@ -633,10 +634,10 @@ theorem lbvarArm_ok (_hg : tagW h = 0) :
   have hsub : (J - d).toNat = J.toNat - d.toNat := UInt64.toNat_sub_of_le _ _ hdJ
   by_cases hq : J - d < l
   · have hqk : J.toNat - d.toNat < l.toNat := by rw [← hsub]; exact hq
-    rw [if_pos hqk]
+    rw [ite_eq_left hqk]
     obtain ⟨hqN, hNs, hlt, hvi, hvl⟩ := hsl.entry hq
     simp only [hsub] at hvi hlt hqN
-    rw [dite_cond_eq_true (eq_true ⟨hqN, hNs⟩)]
+    rw [dite_eq_left_of_eq_true (eq_true ⟨hqN, hNs⟩)]
     simp only [hvi]
     rw [StateT.run_bind, instListCutoff_run, except_ok_bind]
     by_cases hcv : ilCut m (slW m (o + (l - 1 - (J - d)))) d
@@ -657,7 +658,7 @@ theorem lbvarArm_ok (_hg : tagW h = 0) :
     rw [hJ] at hb
     have hq' : ¬ J.toNat - d.toNat < l.toNat := by
       rw [← hsub]; exact fun e => hq (UInt64.lt_iff_toNat_lt.mpr e)
-    rw [if_neg hq']
+    rw [ite_eq_right hq']
     have hlJ : l ≤ J := by
       rw [UInt64.le_iff_toNat_le]; omega
     obtain ⟨hok, hA', hres, hs'⟩ := internBVar_L m a hA _ r m' hb
@@ -880,7 +881,7 @@ theorem ilarmOK_succ (n : Nat) (ih : ILGoOK n) : ILArmOK (n + 1) := by
     lforallArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
     lletArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
     lprojArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
-    lbvarArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh⟩
+    lbvarArm_ok n ih m m' a hA h d o l fu r vs N hsl hh⟩
 
 /-- **The model of `il_go` refines `instantiateList`** at the counter's fuel, at every L fuel. -/
 theorem ilOK (n : Nat) : ILGoOK n ∧ ILArmOK n := by

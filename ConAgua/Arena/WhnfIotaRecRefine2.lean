@@ -623,7 +623,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hcpm : np ≤ mn.toNat := by omega
   unfold iotaRecFire2T
   rw [ite_eq_left hlen]
-  simp only [bind_assoc]
+  simp only
   cases n with
   | zero => exact RefE.callE_zero (fun _ => rfl)
   | succ N =>
@@ -1161,7 +1161,7 @@ theorem major_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   obtain ⟨hlen, hw1, hw2, hw3, hq⟩ := hr1
   by_cases v0 : rm.headD 0 = 0
   · rw [ite_eq_left v0]
-    have : decMV m1 rm = .stuck (decE (rm.getD 1 0)) := by unfold decMV; dsimp only; rw [if_pos v0]
+    have : decMV m1 rm = .stuck (decE (rm.getD 1 0)) := by unfold decMV; dsimp only; rw [ite_eq_left v0]
     simp only [this]
     exact RefE.ret rfl (hpost _ ⟨M2, hS2, hK2, hSt12⟩)
   rw [ite_eq_right v0]

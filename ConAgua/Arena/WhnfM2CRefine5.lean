@@ -317,7 +317,7 @@ theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 
     refine RefE.ret ?_ ⟨⟨M1, hS1, hK1, hSt1⟩, by rw [h5], by rw [h5]; exact ⟨hlen, hw1, hw2, hw3, hq⟩⟩
     simp only [hct, ↓reduceIte]; rfl
   have g1' : r1.headD 0 = 0 := by simpa using g1
-  have hst : (decMV m r1).isCtor = false := by unfold decMV; dsimp only; rw [if_pos g1']; rfl
+  have hst : (decMV m r1).isCtor = false := by unfold decMV; dsimp only; rw [ite_eq_left g1']; rfl
   simp only [g1, ↓reduceIte, hst, Bool.false_eq_true]
   have hr1 : decRules (erecP m1) ro.toNat rc.toNat = some rules := by rw [e1]; exact hr
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)
