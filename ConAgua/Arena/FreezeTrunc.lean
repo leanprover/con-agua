@@ -287,7 +287,12 @@ theorem IndexR.trunc {m : Mem} {I : IStreamIndex} (hcnt : ∀ g, g ≤ 2 → nmC
     (hk : IndexKeysIn m I) (hD : (rdW (m.arr64 L.Front.DECL) 0).toNat = I.firsts.size)
     (h : IndexR m I) : IndexR (truncFrozen m) I := by
   have he := erecP_trunc m
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, by rw [truncFrozen_ctl]; exact h.next⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, by rw [truncFrozen_ctl]; exact h.next,
+    fun x hx => ?_⟩
+  rotate_left
+  · rcases (baseRow_trunc hcnt x).1 with e' | e'
+    · rw [e']; exact h.rows x hx
+    · rw [e']; decide
   · cases e : I.base.idx[n]? with
     | none =>
       have h0 := h.base n

@@ -229,7 +229,7 @@ theorem IndexR.ctlHi {m m' : Mem} {I : IStreamIndex} (h : IndexR m I)
   have hF : m'.arr64 FIRSTS = m.arr64 FIRSTS := ha _ (by decide)
   exact ⟨fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
     fun i hi => by rw [hF]; exact h.firsts i hi, by rw [hF]; exact h.firstsSize,
-    by rw [hc 128 (by decide)]; exact h.next⟩
+    by rw [hc 128 (by decide)]; exact h.next, fun x hx => by rw [hb]; exact h.rows x hx⟩
 
 /-- The lookups of the freeze. -/
 structure FreezeProg (p : Prog) : Prop where
@@ -248,7 +248,7 @@ def frozenAt (I : IStreamIndex) (L : List NIdx) : IStreamIndex :=
 
 theorem IndexR.frozenAt {m : Mem} {I : IStreamIndex} (h : IndexR m I) (L : List NIdx) :
     IndexR m (frozenAt I L) :=
-  ⟨h.base, h.btbl, h.firsts, h.firstsSize, h.next⟩
+  ⟨h.base, h.btbl, h.firsts, h.firstsSize, h.next, h.rows⟩
 
 /-- The literal names off the pin table, `strLitNames`' order. -/
 def pinLits (m : Mem) : List NIdx :=
