@@ -54,18 +54,6 @@ instance : Inhabited LazyResA := ⟨.verdict false⟩
 
 /-! ## Small readers -/
 
-/-- con-ron: ConRon/Arena/Core.lean:884-896 ConRon.Arena.isBoolTrue -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.isBoolTrue` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.isBoolTrue]
-def isBoolTrueL : FunDecl := lfn (h) locals (t, i, el, bt) {
-  if ⟦h⟧.tag != 3 { return 0 };
-  (t, i) := node CONST⟦h⟧;
-  el := call pin_word(52);
-  if CONST⟨t, i⟩.us != el { return 0 };
-  bt := call pin_at(30);
-  return u64(CONST⟨t, i⟩.n == bt)
-}
-
 /-- con-ron: ConRon/Arena/Core.lean:932-952 ConRon.Arena.isEagerReduce -/
 @[no_expose, l_impl ConRon.Arena.isEagerReduce]
 def isEagerReduceL : FunDecl := lfn (h) locals (t, i, f, g, er) {
@@ -221,15 +209,6 @@ def defeqListRevL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, j, 
   j := bn;
   ⟪defeqListRevLoop⟫;
   abort
-}
-
-/-- con-ron: ConRon/Arena/Core.lean:3749-3754 ConRon.Arena.boolTrueShortcut -/
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.boolTrueShortcut` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.boolTrueShortcut]
-def boolTrueShortcutL : FunDecl := lfn (mode, vis, d, a) locals (w, r) {
-  w := call whnf(mode, vis, d, a);
-  r := call is_bool_true(w);
-  return r
 }
 
 /-- The constant head of a spine: `(1, n, us)`, or `(0, 0, 0)` when the head is not a constant. -/
@@ -956,6 +935,66 @@ def etaCtorPartialL : FunDecl := lfn (vis, a) locals (hh, t, i, c, f, p, np, nf,
   return (1, np + nf - an)
 }
 
+/-- **The constructor shortcut's target**: `(1, c)` when `e` is fvar-free, its head the stored
+constructor `c`, its spine exactly the parameters and fields (counted: `app_count_at` at the twin's
+`coreWalkFuel`), its family not `Nat` (pin 1), never zero and without η; else `(0, 0)`. The
+constructor record's words are read before the first call after `env_find`; the count test
+`n == np + nf` is `np ≤ n ∧ n - np == nf` (no word overflow). -/
+@[no_expose, l_impl ConRon.Arena.ctorTarget]
+def ctorTargetL : FunDecl :=
+    lfn (vis, e) locals (hf, hh, t, i, c, f, p, np, nf, T, nn, n, x, q) {
+  hf := call has_fvar(e);
+  if hf != 0 { return (0, 0) };
+  hh := call get_app_fn(e);
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
+  (t, i) := node CONST⟦hh⟧;
+  c := CONST⟨t, i⟩.n;
+  (f, p) := call env_find(c, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃p⦄ != 4 { return (0, 0) };
+  np := EREC⦃p + ⟪CI.ctorNparams⟫⦄;
+  nf := EREC⦃p + ⟪CI.ctorNfields⟫⦄;
+  T := EREC⦃p + ⟪CI.ctorInduct⟫⦄;
+  nn := call pin_at(1);
+  if T == nn { return (0, 0) };
+  (n, x) := call app_count_at(e, 4000000000);
+  if n < np { return (0, 0) };
+  if n - np != nf { return (0, 0) };
+  (f, q) := call env_find(T, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃q⦄ != 3 { return (0, 0) };
+  if EREC⦃q + ⟪CI.indCaps + Caps.neverZero⟫⦄ == 0 { return (0, 0) };
+  if EREC⦃q + ⟪CI.indCaps + Caps.eta⟫⦄ != 0 { return (0, 0) };
+  return (1, c)
+}
+
+/-- **The constructor shortcut's gate**: `ctor_target(vis, e)` when the eager bit of `mode` is set
+or the other side `o` is fvar-free; else `(0, 0)`. -/
+@[no_expose, l_impl ConRon.Arena.ctorTargetFor]
+def ctorTargetForL : FunDecl := lfn (mode, vis, o, e) locals (hf, f, c) {
+  if (mode >> 1) & 1 == 0 {
+    hf := call has_fvar(o);
+    if hf != 0 { return (0, 0) }
+  };
+  (f, c) := call ctor_target(vis, e);
+  return (f, c)
+}
+
+/-- **A head normal form against the constructor `c`**: `(1, 1)` when `w`'s head is `c`, `(1, 0)`
+when it is another stored constructor, `(0, 0)` otherwise. -/
+@[no_expose, l_impl ConRon.Arena.ctorHeadAgainst]
+def ctorHeadAgainstL : FunDecl := lfn (vis, c, w) locals (hh, t, i, d, f, p) {
+  hh := call get_app_fn(w);
+  if ⟦hh⟧.tag != 3 { return (0, 0) };
+  (t, i) := node CONST⟦hh⟧;
+  d := CONST⟨t, i⟩.n;
+  if d == c { return (1, 1) };
+  (f, p) := call env_find(d, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃p⦄ != 4 { return (0, 0) };
+  return (1, 0)
+}
+
 /-- The body of structure η at a fully applied constructor, past the shape gate: `b`'s io-inferred
 type, head-normalised, and the certificate against it. -/
 -- con-ron: ConRon/Arena/Core.lean:1776-1785 ConRon.Arena.structEtaFullAt
@@ -1354,23 +1393,13 @@ def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b
   return r
 }
 
-/-- A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat` does not
-wrap); the lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is `.unknown`).
-con-ron: ConRon/Arena/Core.lean:4324-4355 ConRon.Arena.defeqBody -/
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.defeqBody`, `ConRon.Arena.ctorHeadAgainst`, `ConRon.Arena.ctorTargetFor`, `ConRon.Arena.defeqLazy` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqBody` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.defeqBody]
-def defeqBodyL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (bt, hf, sc, qf, qv, pi, a1, b1, lk, la, lb, r) {
-  if a == b { return 1 };
-  if d >> 63 != 0 { abort };
-  bt := call is_bool_true(b);
-  hf := call has_fvar(a);
-  sc := 0;
-  if bt != 0 {
-    if (mode >> 1) & 1 != 0 || hf == 0 { sc := call bool_true_shortcut(mode, vis, d, a) }
-  };
-  if sc != 0 { return 1 };
+/-- **The lazy comparison** (`defeqLazy`): `quick_defeq` and proof irrelevance on the unreduced
+pair, the cheap `whnf_core` of both sides, `quick_defeq` again, the lazy-delta loop, then
+`defeq_tail`. The lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is
+`.unknown`). -/
+@[no_expose, l_impl ConRon.Arena.defeqLazy]
+def defeqLazyL : FunDecl :=
+    lfn (mode, vis, d, a, b) locals (qf, qv, pi, a1, b1, lk, la, lb, r) {
   (qf, qv) := call quick_defeq(mode, vis, d, a, b);
   if qf != 0 { return qv };
   pi := call prop_irrel(mode, vis, d, a, b);
@@ -1383,6 +1412,43 @@ def defeqBodyL : FunDecl :=
   if lk == 0 { return 0 };
   if lk == 1 { return 1 };
   r := call defeq_tail(mode, vis, d, la, lb);
+  return r
+}
+
+/-- **The definitional-equality body**: the syntactic fast path, the constructor shortcut (the
+right side's target first; the other side's `whnf` and its head against the constructor), then
+`defeq_lazy`. A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat`
+does not wrap). -/
+@[no_expose, l_impl ConRon.Arena.defeqBody]
+def defeqBodyL : FunDecl :=
+    lfn (mode, vis, d, a, b) locals (f, c, w, hf, hv, r) {
+  if a == b { return 1 };
+  if d >> 63 != 0 { abort };
+  (f, c) := call ctor_target_for(mode, vis, a, b);
+  if f != 0 {
+    w := call whnf(mode, vis, d, a);
+    (hf, hv) := call ctor_head_against(vis, c, w);
+    if hf == 0 {
+      r := call defeq_lazy(mode, vis, d, a, b);
+      return r
+    };
+    if hv == 0 { return 0 };
+    r := call defeq_lazy(mode, vis, d, w, b);
+    return r
+  };
+  (f, c) := call ctor_target_for(mode, vis, b, a);
+  if f != 0 {
+    w := call whnf(mode, vis, d, b);
+    (hf, hv) := call ctor_head_against(vis, c, w);
+    if hf == 0 {
+      r := call defeq_lazy(mode, vis, d, a, b);
+      return r
+    };
+    if hv == 0 { return 0 };
+    r := call defeq_lazy(mode, vis, d, a, w);
+    return r
+  };
+  r := call defeq_lazy(mode, vis, d, a, b);
   return r
 }
 
