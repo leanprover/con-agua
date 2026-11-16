@@ -2,7 +2,7 @@
 """lprof.py cats BIN CNT [--leaf]  : categories (leaf only with --leaf)
    lprof.py cmp BIN1 CNT1 BIN2 CNT2 [N] : per-function instruction counts side by side, leaf/nonleaf totals"""
 import sys, json, array, collections, importlib.util
-spec = importlib.util.spec_from_file_location("asmprof", "/home/joachim/con-agua/scripts/asmprof.py")
+spec = importlib.util.spec_from_file_location("asmprof", "/home/joachim/p/con-agua/scripts/asmprof.py")
 ap = importlib.util.module_from_spec(spec); spec.loader.exec_module(ap)
 
 def load(binp, cnt):
@@ -39,7 +39,7 @@ if sys.argv[1] == "oracle":
     # lprof.py oracle BIN CNT : leaf/non-leaf totals vs clang -fno-inline (perfgap join_all.txt)
     import re
     cl = {}
-    for ln in open("/home/joachim/con-agua/_tmp/perfgap/join_all.txt"):
+    for ln in open("/home/joachim/p/con-agua/_tmp/perfgap/join_all.txt"):
         m = re.match(r"(\S+)\s+gap.*L\s+([\d.]+)/call clang\s+([\d.]+)/call\s+calls\s+([\d.]+)([MGK]?)", ln)
         if m:
             mult = {"M": 1e6, "G": 1e9, "K": 1e3, "": 1}[m.group(5)]

@@ -294,7 +294,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   binary hash), so after the first run on a given twin sync it costs about one minute too (measured:
   57 s warm, 4-5 minutes cold, load ~240); `--no-cache` forces a fresh reference run. Do not run it
   again after a merge that brings in only unrelated changes.
-- **Velocity log.** Every lane, at every landing, appends one line to the main checkout's `_tmp/velocity.csv` (absolute path `/home/joachim/con-agua/_tmp/velocity.csv`, not in the repository; append, never commit it):
+- **Velocity log.** Every lane, at every landing, appends one line to the main checkout's `_tmp/velocity.csv` (absolute path `/home/joachim/p/con-agua/_tmp/velocity.csv`, not in the repository; append, never commit it):
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
   merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
