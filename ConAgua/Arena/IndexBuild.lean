@@ -131,7 +131,7 @@ theorem bEnv_findTable_zero (b : IFBase) (P : Pins) (n : NIdx) : (bEnv b P 0 0).
 
 theorem bEnv_litsStored (b : IFBase) (P : Pins) (i stop : Nat) (hi : i < stop) :
     (bEnv b P 0 0).litsStored i stop = false := by
-  rw [IFEnv.litsStored.eq_1, if_neg (by omega)]
+  rw [IFEnv.litsStored.eq_1, ite_eq_right_of_eq_false _ _ (by simp; omega)]
   split
   · rw [bEnv_find_zero]
   · rfl
@@ -232,6 +232,57 @@ theorem EnvR.rebase {m m' : Mem} {vis : Word} {fe : IFEnv} {I : IStreamIndex} {A
   · rw [hc 161 (by decide)]; exact h.strLit
   · rw [litWords_congr (fun i hi => hc _ (by
       intro e; have := congrArg UInt64.toNat e; simp at this; omega))]; exact h.lits
+
+/-- **`EnvR` across the literal names' writes** (`str_lit_names`: `CTL[162‥171]`): the
+environment with the names `L` the new words. -/
+theorem EnvR.relits {m m' : Mem} {vis : Word} {fe : IFEnv} {L : List NIdx}
+    (h : EnvR m vis fe) (hf : MemFrame [] litCtl m m') (hl : L.map (·.word.toUInt64) = litWords m') :
+    EnvR m' vis { fe with base := { fe.base with lits := L } } := by
+  have he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b := fun b hb =>
+    hf.arr b (by simp) (fun e => by subst e; revert hb; decide)
+  have hc : ∀ x : Word, x.toNat < 162 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x hx' =>
+    hf.ctl x (fun hx => by simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> exact absurd hx' (by decide))
+  have hP : erecP m' = erecP m := by
+    funext i
+    simp only [erecP, erTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
+      hc 129 (by decide), hc 130 (by decide)]
+    rfl
+  have hs : stampW m' = stampW m := hc 133 (by decide)
+  have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
+    simp only [ownRow, he _ (tierA_oix_mem _ _)]
+  have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
+  have hfind : ∀ w, ownFind m' vis w = ownFind m vis w := fun w => by
+    simp only [ownFind, hraw, hP]
+  have hot : ∀ w, ownTbl m' w = ownTbl m w := fun w => by
+    simp only [ownTbl, he _ (tierA_otx_mem _ _), hs]
+  have hb : ∀ w, baseRow m' w = baseRow m w := fun w => by
+    simp only [baseRow, he _ (eix_mem _)]
+  have hbt : ∀ w, baseTbl m' w = baseTbl m w := fun w => by
+    simp only [baseTbl, he _ (tix_mem _)]
+  exact ⟨fun n => by rw [hfind]; exact h.own n, fun n => by rw [hraw, hP]; exact h.own_dec n,
+    fun n => by rw [hraw]; exact h.fresh n, fun n n' => by rw [hraw, hraw]; exact h.uniq n n',
+    fun n => by rw [hot, hP]; exact h.otbl n, fun n => by rw [hot, hP]; exact h.otbl_dec n,
+    by rw [hc 134 (by decide)]; exact h.below,
+    by rw [hc 135 (by decide)]; exact h.belowRec,
+    fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
+    by rw [hs]; exact h.stamp, fun w hw => by
+      rw [hor, hs, he _ (tierA_otx_mem _ _)]; exact h.ownBelow w hw,
+    by rw [hc 160 (by decide)]; exact h.natLit, by rw [hc 161 (by decide)]; exact h.strLit, hl⟩
+
+/-- **`StageR` across the literal names' writes**, at the environment the new memory relates. -/
+theorem _root_.L.Ind.StageR.of_lits {vis vis' : Word} {fe fe' : IFEnv} {a : AState} {m m' : Mem}
+    (hS : StageR vis fe m a) (hf : MemFrame [] litCtl m m') (hE : EnvR m' vis' fe') :
+    StageR vis' fe' m' a ∧ IWGrow m m' := by
+  have hA3 : (IW : TieredArray) ∉ ([] : List TieredArray) ∧ (EREC : TieredArray) ∉ ([] : List TieredArray) ∧
+      tier1 EREC ∉ ([] : List TieredArray) := by simp
+  have hC3 : (129 : Word) ∉ litCtl ∧ (130 : Word) ∉ litCtl ∧ (200 : Word) ∉ litCtl := by decide
+  refine ⟨⟨⟨⟨ArenaR.frame (fun b hb => by simp at hb) (fun x hx => not_mem_arenaCtl x (by
+      simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide)) hf hS.check.arena.base,
+      DerR.frameM _ _ m _ hf (fun b hb => by simp at hb) a hS.check.arena.der⟩,
+    hS.check.core.frame (fun b hb => by simp at hb) (fun x hx => by simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide) hf,
+    hS.check.pins.frame (fun b hb => by simp at hb) hf, hE,
+    hS.check.mode.frame hf (by decide) (by decide)⟩, IWOK.of_keep hf hA3 hC3 hS.iw⟩,
+    IWGrow.of_keep hf hA3 hC3⟩
 
 /-- **`CheckR` at a new base layer** (`EnvR.rebase`): the arena, the core, the pins and the mode
 read none of the index rows or `CTL[128]`. -/

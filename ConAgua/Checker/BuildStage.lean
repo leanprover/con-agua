@@ -45,10 +45,11 @@ def buildZeroArrs : List TieredArray :=
   tier1s [OIXA, OIXS, OIXN, OTXA, OTXS, OTXN]
 
 /-- The `CTL` words the index build's start needs zero: the index's counter, the stamp, the
-view's bounds, the inductive memos' words. -/
+view's bounds, the inductive memos' words, the literal flags, names and thresholds. -/
 def buildZeroCtls : List Nat :=
   [128, 133, 134, 135, 52, 158, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
-    215, 216, 217, 218, 219, 48, 50, 54, 56, 58, 152, 154, 156]
+    215, 216, 217, 218, 219, 48, 50, 54, 56, 58, 152, 154, 156, 160, 161, 162, 163, 164, 165, 166,
+    167, 168, 169, 170, 171, 172, 173]
 
 theorem preLoopA_buildZero : buildZeroArrs.all (fun b => !preLoopA.contains b) = true := by
   decide +kernel
@@ -101,6 +102,21 @@ theorem tix_zero (g : Nat) : ((tixArr g : ArrId) : TieredArray) ∈ buildZeroArr
 theorem ind_zero_arr : ∀ i : Fin 8, ((201 + i.val : ArrId) : TieredArray) ∈ buildZeroArrs := by
   decide
 
+theorem litFrom_empty (k : Nat) (hk : 0 < k) :
+    litFrom ({} : IStreamIndex).base.idx (List.replicate 10 (decI 0)) 0 k = none := by
+  rw [litFrom.eq_1, ite_eq_right_of_eq_false _ _ (by simp; omega)]
+  simp
+
+/-- The builder's environment before the literal names are written (`CTL[162‥171]` still
+`0`): the view `0` of the empty index frozen at those words. -/
+def bEnvZ : IFEnv := (frozenAt ({} : IStreamIndex) (List.replicate 10 (decI 0))).view 0
+
+theorem bEnvZ_relits (P : Pins) :
+    { bEnvZ with base := { bEnvZ.base with lits := drvLits P } } = bEnv ({} : IStreamIndex).base P 0 0 := by
+  simp only [bEnvZ, IStreamIndex.view, frozenAt, bEnv, litFrom_empty _ (by decide : 0 < NAT_LIT_COUNT),
+    litFrom_empty _ (by decide : 0 < STR_LIT_COUNT)]
+  rfl
+
 section zero
 variable {b pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
   (h : Since (ConAgua.Final.loadMem b pb sz) m pb)
@@ -139,10 +155,26 @@ theorem since_indexR : IndexR m {} := by
   · rw [ite_eq_left (since_baseTbl h _)]; simp
   · rw [since_ctl h (x := 128) (by decide)]; rfl
 
-theorem since_envR : EnvR m 0 (bEnv ({} : IStreamIndex).base 0 0) :=
-  EnvR.ofIndex (k := 0) (since_indexR h) (since_ownEmpty h) (since_ownBelow h)
-    (by rw [since_stamp h]; decide) (by rw [since_ctl h (x := 134) (by decide)]; rfl)
-    (by rw [since_ctl h (x := 135) (by decide)]; rfl)
+theorem since_envR : EnvR m 0 bEnvZ := by
+  have hz : ∀ i < 10, rdW (m.arr64 CTL) (162 + UInt64.ofNat i) = 0 := by
+    intro i hi; apply since_ctl h; interval_cases i <;> decide
+  refine EnvR.ofIndex (k := 0) ((since_indexR h).frozenAt _) ⟨?_, ?_, ?_⟩ (since_ownEmpty h)
+    (since_ownBelow h) (by rw [since_stamp h]; decide) (by rw [since_ctl h (x := 134) (by decide)]; rfl)
+    (by rw [since_ctl h (x := 135) (by decide)]; rfl) ?_ ?_
+  · show (List.replicate 10 (decI 0 : NIdx)).map (·.word.toUInt64) = litWords m
+    rw [List.map_replicate, decI_word_self 0 (by decide)]
+    apply List.ext_getElem (by simp [litWords])
+    intro i h1 h2
+    simp only [List.length_replicate] at h1
+    simp [litWords, hz i h1]
+  · show litFrom _ _ 0 NAT_LIT_COUNT = _
+    rw [litFrom_empty _ (by decide), since_ctl h (x := 172) (by decide)]; rfl
+  · show litFrom _ _ 0 STR_LIT_COUNT = _
+    rw [litFrom_empty _ (by decide), since_ctl h (x := 173) (by decide)]; rfl
+  · show _ = fromLe (litFrom _ _ 0 NAT_LIT_COUNT) _
+    rw [litFrom_empty _ (by decide), since_ctl h (x := 160) (by decide)]; rfl
+  · show _ = fromLe (litFrom _ _ 0 STR_LIT_COUNT) _
+    rw [litFrom_empty _ (by decide), since_ctl h (x := 161) (by decide)]; rfl
 
 theorem since_indMemos (hctl : 220 ≤ (m.arr64 CTL).size) : IndMemos m :=
   IndMemos.zero hctl
@@ -167,15 +199,17 @@ theorem since_coreMemos (hctl : 220 ≤ (m.arr64 CTL).size) : CoreMemos m :=
 
 end zero
 
-/-- **The index build's start**: after the stages up to `intern_all_pins`, the memory is
-`BuildR` at the empty stream index, at the twin's state after the stages. -/
+/-- **The index build's start**: after the stages up to `intern_all_pins` (memory `m`) and the
+literal names' writes (`str_lit_names`, memory `m'`), the memory is `BuildR` at the empty stream
+index, at the twin's state after the stages. -/
 theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
     {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
     {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
     {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
     (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
-    (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) :
-    BuildR (dnOf sE.store) ds m sE {} := by
+    (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) {m' : Mem}
+    (hf : MemFrame [] litCtl m m') (hl : (pinLits m).map (·.word.toUInt64) = litWords m') :
+    BuildR (dnOf sE.store) ds m' sE {} := by
   obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
   obtain ⟨hoff, hdrv, -, -, -, hpd, _rc, _preC, -, hden⟩ := ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
   have hS := h7.since
@@ -184,13 +218,28 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     rw [hS.frame.size]; simp only [ctlMin] at this; omega
   have sz63 : ∀ t : TieredArray, t ∈ checkerArrays.wordSlots → (m.arr64 t).size < 2 ^ 63 := fun t ht => by
     rw [hS.frame.size]; have := (hS.caps.1 t ht).1; omega
-  have hT : TwinOK (dnOf sE.store) m sE (bEnv ({} : IStreamIndex).base 0 0) :=
+  have hT : TwinOK (dnOf sE.store) m sE (bEnv ({} : IStreamIndex).base sE.pins 0 0) :=
     TwinOK.of_check (checkOK_congrFe (fun n => by rw [bEnv_find_zero, emptyEnv_find])
-      (fun n => by rw [bEnv_findTable_zero, emptyEnv_findTable]) hdrv)
+      (fun n => by rw [bEnv_findTable_zero, emptyEnv_findTable]) (bEnv_flags _ _) rfl hdrv)
       ⟨sz63 _ (by decide), sz63 _ (by decide), sz63 _ (by decide), since_coreMemos hS hctl,
         fun k x hk => by simp only [dnOf] at hk; split at hk <;> simp_all⟩
-  refine ⟨⟨⟨h7.arena, core_of_R7 ⟨hA, hB, hC, hD, hE⟩ h7, ⟨fun _ => h7.pinsFull⟩, since_envR hS, h7.mode⟩,
-    h7.iw⟩, hT, h7.pin0, since_indexR hS, h7.decls, ?_, hdrv, hoff, ?_, ?_, since_indMemos hS hctl, ?_⟩
+  have hS0 : L.Ind.StageR 0 bEnvZ m sE :=
+    ⟨⟨h7.arena, core_of_R7 ⟨hA, hB, hC, hD, hE⟩ h7, ⟨fun _ => h7.pinsFull⟩, since_envR hS, h7.mode⟩, h7.iw⟩
+  have hE' : EnvR m' 0 (bEnv ({} : IStreamIndex).base sE.pins 0 0) := by
+    have := (since_envR hS).relits hf (L := drvLits sE.pins) (by rw [← pinLits_drv h7.pinsFull]; exact hl)
+    rwa [bEnvZ_relits] at this
+  have hlo : ∀ x : Word, x.toNat < 160 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x hx' =>
+    hf.ctl x (fun hx => by
+      simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> exact absurd hx' (by decide))
+  have ha : ∀ t : TieredArray, t ≠ CTL → m'.arr64 t = m.arr64 t := fun t ht => hf.arr t (by simp) ht
+  refine ⟨(L.Ind.StageR.of_lits hS0 hf hE').1,
+    hT.frame hf (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+    by rw [pinW_frame hf (by decide)]; exact h7.pin0, (since_indexR hS).ctlHi ha hlo,
+    by rw [ha _ (by decide), ha _ (by decide)]; exact h7.decls, ?_, hdrv, hoff, ?_, ?_,
+    (since_indMemos hS hctl).frame hf (fun b hb => by simp at hb) (fun x hx => by
+      simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_⟩
   · intro i hi b' nP e
     exact frontDecls_of_prefix ⟨hA, hB, hC, hD, hE⟩ i hi b' nP e
   · intro x hx
@@ -204,7 +253,7 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     simp only [quotNames, List.mem_singleton] at hx
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
-  · rw [hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+  · rw [ha _ (by decide), hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
 
 /-! ## The index build at the checker's program -/
 
@@ -238,6 +287,8 @@ write set (`biA`, `biC`). -/
 structure FoldAt (b pb : ByteArray) (sz : TieredArray → Nat) (PA : PhaseA b) (m₇ m : Mem) : Prop where
   r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb PA.ds PA.ipins PA.sE
   build : BuildR (dnOf PA.sE.store) PA.ds m PA.sF PA.I
+  /-- The index is frozen: its literal names and thresholds in `CTL[162‥173]`. -/
+  frozen : FrozenR m PA.I
   fsize : PA.I.firsts.size = PA.ds.size
   grow : BKeep m₇ m
   frame : MemFrame biA biC m₇ m
@@ -268,7 +319,9 @@ theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : 
   refine ⟨?_, hD⟩
   obtain ⟨sA, pre, sB, rc, sC, ds, sD, pins, ipins, sE, hA, hB, hC, hDp, hE, h7⟩ := hQ
   have hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE := ⟨hA, hB, hC, hDp, hE⟩
-  have hR := buildR_of_R7 hsz hpx h7
+  have hctl : 220 ≤ (s.mem.arr64 CTL).size := by
+    have := h7.since.caps.2.1
+    rw [h7.since.frame.size]; simp only [ctlMin] at this; omega
   have hD0 : 0 < (s.mem.arr64 L.Front.DECL).size := by
     have := h7.since.caps.2.2.1; rw [h7.since.frame.size]; exact this
   have hcnt : cnt.toNat = ds.size := by
@@ -276,9 +329,10 @@ theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : 
   have hPB : s.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
     rw [h7.since.keep.arr8]; exact loadMem_pb b pb sz
   rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ hPB] at hrun
-  obtain ⟨I, a', hI, hR', hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
+  obtain ⟨I, a', hI, hR', hFz, hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
     (buildIndex_refines (checkerProg_idxProgPB pb.data.toList
-      (by simpa [RomOK] using hpb) h7.since.pbpre) cnt hcnt n s sE hR)).2
-  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, ⟨h7, hR', hsz', hG, hfr, hby⟩⟩
+      (by simpa [RomOK] using hpb) h7.since.pbpre) cnt hcnt n s sE h7.pinsFull (by omega)
+      (fun _ hf hl => buildR_of_R7 hsz hpx h7 hf hl))).2
+  exact ⟨⟨pins, sA, pre, sB, rc, sC, ds, sD, ipins, sE, I, a', hpx, hI⟩, s.mem, ⟨h7, hR', hFz, hsz', hG, hfr, hby⟩⟩
 
 end L.Checker
