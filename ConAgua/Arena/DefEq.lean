@@ -940,6 +940,7 @@ constructor `c`, its spine exactly the parameters and fields (counted: `app_coun
 `coreWalkFuel`), its family not `Nat` (pin 1), never zero and without η; else `(0, 0)`. The
 constructor record's words are read before the first call after `env_find`; the count test
 `n == np + nf` is `np ≤ n ∧ n - np == nf` (no word overflow). -/
+-- con-ron: ConRon/Arena/Core.lean:1722-1748 ConRon.Arena.ctorTarget
 @[no_expose, l_impl ConRon.Arena.ctorTarget]
 def ctorTargetL : FunDecl :=
     lfn (vis, e) locals (hf, hh, t, i, c, f, p, np, nf, T, nn, n, x, q) {
@@ -970,6 +971,7 @@ def ctorTargetL : FunDecl :=
 
 /-- **The constructor shortcut's gate**: `ctor_target(vis, e)` when the eager bit of `mode` is set
 or the other side `o` is fvar-free; else `(0, 0)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1750-1758 ConRon.Arena.ctorTargetFor
 @[no_expose, l_impl ConRon.Arena.ctorTargetFor]
 def ctorTargetForL : FunDecl := lfn (mode, vis, o, e) locals (hf, f, c) {
   if (mode >> 1) & 1 == 0 {
@@ -982,6 +984,7 @@ def ctorTargetForL : FunDecl := lfn (mode, vis, o, e) locals (hf, f, c) {
 
 /-- **A head normal form against the constructor `c`**: `(1, 1)` when `w`'s head is `c`, `(1, 0)`
 when it is another stored constructor, `(0, 0)` otherwise. -/
+-- con-ron: ConRon/Arena/Core.lean:1760-1774 ConRon.Arena.ctorHeadAgainst
 @[no_expose, l_impl ConRon.Arena.ctorHeadAgainst]
 def ctorHeadAgainstL : FunDecl := lfn (vis, c, w) locals (hh, t, i, d, f, p) {
   hh := call get_app_fn(w);
@@ -1369,11 +1372,9 @@ def defeqStuckL : FunDecl :=
   return r
 }
 
-/-- The second half of `defeqBody`, from the lazy-delta loop's `.unknown` pair on. -/
--- con-ron: ConRon/Arena/Core.lean:4324-4355 ConRon.Arena.defeqBody
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.defeqBody` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since 42a08640 — below `ConRon.Arena.defeqBody`, `ConRon.Arena.ctorHeadAgainst`, `ConRon.Arena.ctorTargetFor`, `ConRon.Arena.defeqLazy` changed; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.defeqBody]
+/-- The second half of `defeqLazy`, from the lazy-delta loop's `.unknown` pair on. -/
+-- con-ron: ConRon/Arena/Core.lean:4291-4322 ConRon.Arena.defeqLazy
+@[no_expose, l_impl ConRon.Arena.defeqLazy]
 def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b2, r) {
   pp := call defeq_proj_pair(mode, vis, d, a1, b1);
   if pp != 0 { return 1 };
@@ -1397,6 +1398,7 @@ def defeqTailL : FunDecl := lfn (mode, vis, d, a1, b1) locals (pp, pa, pb, a2, b
 pair, the cheap `whnf_core` of both sides, `quick_defeq` again, the lazy-delta loop, then
 `defeq_tail`. The lazy loop's verdict words `0`/`1` are tested one by one (`decLR`: any other is
 `.unknown`). -/
+-- con-ron: ConRon/Arena/Core.lean:4291-4322 ConRon.Arena.defeqLazy
 @[no_expose, l_impl ConRon.Arena.defeqLazy]
 def defeqLazyL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (qf, qv, pi, a1, b1, lk, la, lb, r) {
@@ -1419,6 +1421,7 @@ def defeqLazyL : FunDecl :=
 right side's target first; the other side's `whnf` and its head against the constructor), then
 `defeq_lazy`. A depth word `≥ 2^63` aborts (the binder descents below add to it, the twin's `Nat`
 does not wrap). -/
+-- con-ron: ConRon/Arena/Core.lean:4324-4355 ConRon.Arena.defeqBody
 @[no_expose, l_impl ConRon.Arena.defeqBody]
 def defeqBodyL : FunDecl :=
     lfn (mode, vis, d, a, b) locals (f, c, w, hf, hv, r) {

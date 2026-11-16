@@ -928,15 +928,18 @@ def genRecCheckPrep : FunDecl := lfn
 block.off, block.len)`: **the generated recursor stage**, as `(vis', out.off, out.len)`: the rule-less
 recursors pushed temporarily (`class_fe_r`), the flush entering them, every rule checked (its
 λ-domains naming none of the `pushed` recursors' names), the pushes undone in reverse order and the
+literal flags set back (`setFlags`: the words `CTL[160]`, `CTL[161]` saved before the pushes) and the
 flush leaving them. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 -- con-ron: CHANGED since 42a08640 — `ConRon.Arena.genRecCheck` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckL : FunDecl := lfn
     (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
-    locals (g, cvGsOff, cvGsLen, feR, prevsOff, prevsLen, pO, pL, r, outOff, outLen, fe2) {
+    locals (g, cvGsOff, cvGsLen, feR, prevsOff, prevsLen, pO, pL, r, outOff, outLen, fe2, nl, sl) {
   (g, cvGsOff, cvGsLen) := call gen_rec_check_prep(vis, p, nestedBit, paramsOff, paramsLen, tblOff,
     tblLen, rd, msOff, msLen, blockOff, blockLen);
+  nl := CTL.u64[160];
+  sl := CTL.u64[161];
   (feR, prevsOff, prevsLen) := call class_fe_r(p, cvGsOff, cvGsLen, IW.u64[rd + 2], IW.u64[rd + 3],
     vis);
   (pO, pL) := call block_shape_names_of(cvGsOff, cvGsLen);
@@ -944,6 +947,8 @@ def genRecCheckL : FunDecl := lfn
   (outOff, outLen) := call class_recs_rules_ok(feR, pO, pL, g, IW.u64[rd + 2], IW.u64[rd + 3],
     cvGsOff, cvGsLen);
   fe2 := call gen_rec_check_pop_all(feR, prevsOff, prevsLen);
+  CTL.u64[160] := nl;
+  CTL.u64[161] := sl;
   r := call flush_caches();
   return (fe2, outOff, outLen)
 }
