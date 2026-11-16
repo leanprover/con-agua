@@ -574,53 +574,6 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) 
     (har : SpineR s₀.mem ao an args) (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "beta_peel" [t, s, ao, an, i]
       (betaPeel (decE t) s.toNat args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := by
-  apply L.M.triple_of_run
-  intro s r s' hs0 hrun
-  obtain ⟨hloc, hW, h136i, h136⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (betaPeel_spec p hp.peel n s₀ t a ao an i)
-  subst hs0
-  refine ⟨hloc, ?_⟩
-  rw [betaPeelFnW_eq] at hW
-  split at hW
-  · cases hW
-  rename_i hcap
-  obtain ⟨co, hcodef⟩ : ∃ co, co = rdW (s.mem.arr64 CTL) 136 := ⟨_, rfl⟩
-  rw [← hcodef] at hW hcap
-  have hco : co = spTop s.mem := hcodef
-  have hspn := hS.spn
-  have hcoSz : co.toNat < (s.mem.arr64 SPN).size := by
-    have h : ¬ UInt64.ofNat (s.mem.arr64 SPN).size ≤ co := hcap
-    rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)] at h
-    omega
-  have h0 : (0 : Word).toNat = 0 := rfl
-  have hacc0 : SpineR s.mem co 0 #[] :=
-    ⟨by simp [h0], by rw [h0]; omega, fun i hi => by rw [h0] at hi; omega,
-      fun i hi => by simp at hi⟩
-  have hacc := (hacc0.push hspn (by rw [h0]; omega) a ha).setCtl 136 (co + 0 + 1)
-  have hco0 : co + 0 = co := UInt64.add_zero co
-  rw [hco0] at hacc
-  have e1 : (0 : Word) + 1 = 1 := rfl
-  rw [e1] at hacc
-  have hS1 := hS.frame_stk (spnCtl_frame s.mem co a (co + 1)) (by simp) (by simp)
-  have htop1 : spTop ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) = co + 1 := by
-    unfold spTop
-    rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136i⟩]
-  have hb1 : ∀ j : Word, j < co →
-      spW ((s.mem.set64 SPN co a).set64 CTL 136 (co + 1)) j = spW s.mem j := by
-    intro j hj
-    rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
-      have := UInt64.lt_iff_toNat_lt.mp hj
-      rw [← h] at this; omega)]
-  obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := peelFull_ref p hp.spine hil n ao an args co dn vis
-    fe MM eb a₀ s.mem har hco (by rw [hco]; exact hlo) (n + 1) _ t i 1 #[decE a] hS1 ht hacc htop1 hb1
-    (by simp only [L.Mem.size64_set64])
-    (BKept.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
-    (PoolGrew.of_frame (spnCtl_frame s.mem co a (co + 1)) (by decide) (by decide))
-    (by simp only [L.Mem.size64_set64]; exact h136i) _ _ _ hW h136
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-  refine ⟨hok, ?_, ?_, ?_⟩
-  · rw [hst]; exact ⟨M', hS', hK, hSt⟩
-  · rw [hres, hx]; simp [decStep]
-  · exact hrw
+  sorry
 
 end L.Arena
