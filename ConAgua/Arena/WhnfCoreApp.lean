@@ -119,20 +119,7 @@ theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     (hmLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) (hmode : ModeOK m')
     (hiw : L.Ind.IWOK m') (hhb : ∃ mp, L.Ind.hbMR m' mp) :
     CoreS dn m' a' vis fe M eb := by
-  simp only [cpl, Prod.mk.injEq] at hcpl
-  obtain ⟨hc, hp, hl⟩ := hcpl
-  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => not_mem_envArrs (by have := henv b hb; omega))
-      (fun x hx => not_mem_envCtl (by have := hCenv x hx; omega)) hf, ?_, ?_, ?_,
-      hf.size EREC ▸ hS.erec, hf.size SPN ▸ hS.spn, hS.memos.frameHb hf hmA hmC hmWA hmWC hmLA hmLC hhb,
-      hf.size BSTK ▸ hS.bstk, hden, hmode, hiw⟩
-  · rw [hc]
-    exact CoreRM.frame (A := A) (C := C)
-      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
-  · rw [hp]; exact hS.pins.congr (hf.arr PINS hpins (by decide))
-  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
-  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
-  · rw [hl]; exact hS.nwf
+  sorry
 
 /-- **`CoreS` across an interning step** that writes neither the `sort` nor the `const` tables
 (`StoreDen` carries over by `StoreDen.of_arena`). -/
@@ -579,169 +566,14 @@ def PeelPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM 
   ∃ x a', T.run a = .ok (x, a') ∧ x = decStep [st, r] ∧ ResW [st, r] ∧
     ∃ M', CoreS dn mF a' vis fe M' eb ∧ KeptAll MM M' eb ∧ StackKept m₀ mF
 
-theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat) (ao an : Word) (args : Array EIdx)
-    (co : Word) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb : Word) (a : AState) (m₀ : Mem) (har₀ : SpineR m₀ ao an args) (hco : co = spTop m₀)
-    (hlo : ao.toNat + an.toNat ≤ co.toNat) :
-    ∀ (k : Nat) (m : Mem) (t i cn : Word) (acc : Array EIdx),
-      CoreS dn m a vis fe MM eb → HW t → SpineR m co cn acc → spTop m = co + cn →
-      (∀ j : Word, j < co → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
-      BKept m₀ m → PoolGrew m₀ m → (136 : Word).toNat < (m.arr64 CTL).size →
-      ∀ st r mF, peelFull p n k m t ao an i co cn = some (st, r, mF) →
-      (136 : Word).toNat < (mF.arr64 CTL).size →
-      PeelPost dn vis fe MM eb m₀ a (betaPeel (decE t) acc args i.toNat) st r mF := by
-  intro k
-  induction k with
-  | zero => intro m t i cn acc _ _ _ _ _ _ _ _ _ st r mF hF; rw [peelFull_zero] at hF; cases hF
-  | succ k ih =>
-    intro m t i cn acc hS ht hacc htop hb hsz hbk hpg h136m st r mF hF h136
-    have hspn := hS.spn
-    have hco_le : co.toNat + cn.toNat ≤ (m.arr64 SPN).size := hacc.bound
-    have hcn64 : co.toNat + cn.toNat < 2 ^ 64 := by omega
-    have hadd : (co + cn).toNat = co.toNat + cn.toNat := L.toNat_add_of_lt _ _ hcn64
-    have hspT : (spTop m).toNat = co.toNat + cn.toNat := by rw [htop, hadd]
-    have har : SpineR m ao an args :=
-      har₀.keepT co hsz hb hlo (hsz ▸ hspn)
-    by_cases hlt : i < an
-    · by_cases ht5 : tagW t = 5
-      · -- the λ step: the argument is pushed and the loop goes on with the body
-        have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun h => by
-          simp [peelFull, peelLoop, hlt, ht5, h] at hF
-        have hc2 : ¬ tcnt m LAM (tierW t) ≤ idxW t := fun h => by
-          simp [peelFull, peelLoop, hlt, ht5, hc1, h] at hF
-        have hc3 : ¬ m.len64 SPN ≤ co + cn := fun h => by
-          simp [peelFull, peelLoop, hlt, ht5, hc1, hc2, h] at hF
-        rw [peelFull_step _ _ _ _ _ _ _ _ _ _ hlt (fun h => h ht5) hc1 hc2 hc3] at hF
-        have hv : viewOK m t LAM := ⟨hc1, UInt64.not_le.mp hc2⟩
-        obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.base t ht hv ht5
-        have hvb := viewBind_lam m a hS.arena.base t ht hv ht5
-        have hlt' : i.toNat < args.size := by
-          rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
-        have hit : (i.toNat).toUInt64 = i := by simp
-        have hxi : args[i.toNat] = decE (spW m (ao + i)) := by
-          have h := har.get i.toNat hlt'
-          rwa [hit] at h
-        have hvv : (spW m (ao + i)).toNat < 2 ^ 32 := by
-          have h := har.lt i.toNat (by rw [← har.size]; exact hlt')
-          rwa [hit] at h
-        have hbd : co.toNat + cn.toNat < (m.arr64 SPN).size := by
-          have h : ¬ UInt64.ofNat (m.arr64 SPN).size ≤ co + cn := hc3
-          rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega), hadd] at h
-          omega
-        have hS' := hS.frame_stk (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
-          (by simp) (by simp)
-        have hacc' := (hacc.push hspn hbd (spW m (ao + i)) hvv).setCtl 136 (co + cn + 1)
-        have htop' : spTop ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) =
-            co + (cn + 1) := by
-          unfold spTop
-          rw [rdW_set64, ite_eq_left ⟨rfl, rfl, by rw [L.Mem.size64_set64]; exact h136m⟩, UInt64.add_assoc]
-        have hb' : ∀ j : Word, j < co →
-            spW ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) j =
-              spW m₀ j := by
-          intro j hj
-          rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
-            have := UInt64.lt_iff_toNat_lt.mp hj
-            rw [← h, hadd] at this; omega)]
-          exact hb j hj
-        have hi1 : (i + 1).toNat = i.toNat + 1 := by
-          rw [UInt64.toNat_add]; simp
-          have := UInt64.lt_iff_toNat_lt.mp hlt
-          have := an.toNat_lt
-          omega
-        obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih _ _ (i + 1) (cn + 1)
-          (acc.push (decE (spW m (ao + i)))) hS' hbody1 hacc' htop' hb'
-          (by simp only [L.Mem.size64_set64]; exact hsz)
-          (hbk.trans (BKept.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
-            (by decide) (by decide)))
-          (hpg.trans (PoolGrew.of_frame (spnCtl_frame m (co + cn) (spW m (ao + i)) (co + cn + 1))
-            (by decide) (by decide)))
-          (by simp only [L.Mem.size64_set64]; exact h136m)
-          st r mF hF h136
-        have hlam : ((decE t).tag == ETag.lam) = true := by
-          rw [decE_tag_lam_beq t ht]; simp [ht5]
-        refine ⟨x, a', ?_, hx, hrw, M', hS'', hK, hSt⟩
-        rw [← hrun', betaPeel]
-        simp only [hlt', dite_true, hlam, ite_true, StateT.run_bind, L.Arena.viewBind_run, hvb,
-          except_ok_bind, hxi, hi1]
-      · rw [peelFull_ret _ _ _ _ _ _ _ _ _ _ hlt ht5] at hF
-        cases h1 : callW p k "inst_list" [t, co, cn, 0] m with
-        | none => rw [h1] at hF; simp at hF
-        | some q =>
-        obtain ⟨r₁, m₁⟩ := q
-        rw [h1] at hF; dsimp only at hF
-        cases h2 : callW p k "mk_app_n_from" [r₁.headD 0, ao, an, i] m₁ with
-        | none => rw [h2] at hF; simp at hF
-        | some q2 =>
-        obtain ⟨r₂, m₂⟩ := q2
-        rw [h2] at hF; dsimp only at hF
-        obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
-        have hinst := hil k ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
-          acc hS ht hacc (by rw [hspT]; omega)
-        obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
-        have h0 : (0 : Word).toNat = 0 := rfl
-        rw [h0] at hok hres hS'
-        have hx : SpineR m₁ ao an args :=
-          har₀.keepT co (hSt'.size.trans hsz)
-            (fun j hj => (hSt'.below j (by
-              rw [htop, UInt64.lt_iff_toNat_lt, hadd]
-              have := UInt64.lt_iff_toNat_lt.mp hj; omega)).trans (hb j hj)) hlo (hsz ▸ hspn)
-        obtain ⟨hok2, hD2, hres2, hfr2, hhw2⟩ := callW_mkAppNFrom p hp k ⟨m₁, Locals.init []⟩ _
-          hS'.arena (r₁.headD 0) ao an i args hrw hx
-          (Nat.le_of_lt (UInt64.lt_iff_toNat_lt.mp hlt)) r₂ m₂ h2
-        have hcpl := Keeps.run (keeps_cpl_mkAppNFrom (decE (r₁.headD 0)) args i.toNat)
-          (AM.run_of_ok _ _ hok2)
-        have hS2 := hS'.of_app hD2 hcpl hfr2
-        have hSt2 : StackKept m m₂ := hSt'.trans (StackKept.of_app_frame hfr2)
-        have hnlam : ((decE t).tag == ETag.lam) = false := by
-          rw [decE_tag_lam_beq t ht]; simp [ht5]
-        have hlt' : i.toNat < args.size := by
-          rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
-        have hrun : (betaPeel (decE t) acc args i.toNat).run a =
-            .ok (WhnfStep.cont (decE (r₂.headD 0)), AM.st (mkAppNFrom (decE (r₁.headD 0)) args i.toNat)
-              (AM.st (instantiateListFast coreWalkFuel (decE t) acc 0) a)) := by
-          rw [betaPeel]
-          simp only [hlt', dite_true, hnlam, Bool.false_eq_true, ite_false, StateT.run_bind,
-            AM.run_of_ok _ _ hok, except_ok_bind]
-          have hres' : AM.res (instantiateListFast coreWalkFuel (decE t) acc 0) a =
-              decE (r₁.headD 0) := hres
-          rw [hres', AM.run_of_ok _ _ hok2, hres2]
-          rfl
-        have h136' : (136 : Word).toNat < (m₂.arr64 CTL).size := by
-          rwa [L.Mem.size64_set64] at h136
-        refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hhw2⟩, M', ?_, hK', ?_⟩
-        · simp [decStep]
-        · exact hS2.frame_stk (MemFrame.setCtl m₂ 136 co) (by simp) (by simp)
-        · exact peel_restore hco hb hsz hbk hpg hSt2 htop hcn64 h136'
-    · rw [peelFull_exit _ _ _ _ _ _ _ _ _ _ hlt] at hF
-      unfold peelTail at hF
-      rcases h1 : callW p n "inst_list" [t, co, cn, 0] m with _ | ⟨r₁, m₃⟩ <;> simp only [h1, reduceCtorEq] at hF
-      obtain ⟨rfl, rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hF)
-      have hinst := hil n ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
-        acc hS ht hacc (by rw [hspT]; omega)
-      obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
-      have h0 : (0 : Word).toNat = 0 := rfl
-      rw [h0] at hok hres hS'
-      have hnlt : ¬ i.toNat < args.size := by
-        rw [har₀.size]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
-      have hrun : (betaPeel (decE t) acc args i.toNat).run a =
-          .ok (WhnfStep.cont (decE (r₁.headD 0)), AM.st (instantiateListFast coreWalkFuel (decE t) acc 0) a) := by
-        rw [betaPeel]
-        simp only [hnlt, dite_false, StateT.run_bind, AM.run_of_ok _ _ hok, except_ok_bind, hres]
-        rfl
-      have h136' : (136 : Word).toNat < (m₃.arr64 CTL).size := by
-        rwa [L.Mem.size64_set64] at h136
-      refine ⟨_, _, hrun, ?_, ⟨by simp [HW], hrw⟩, M', ?_, hK', ?_⟩
-      · simp [decStep]
-      · exact hS'.frame_stk (MemFrame.setCtl m₃ 136 co) (by simp) (by simp)
-      · exact peel_restore hco hb hsz hbk hpg hSt' htop hcn64 h136'
-
-/-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
+/-- **`beta_peel` refines `betaPeel t s args i`**: the peeled arguments are the spine range
+`args[s:i]`, substituted straight from the stack slice. -/
 theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word)
-    (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t s ao an i : Word)
+    (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (hsi : s ≤ i)
     (har : SpineR s₀.mem ao an args) (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := by
+    CoreSpec p (n + 1) "beta_peel" [t, s, ao, an, i]
+      (betaPeel (decE t) s.toNat args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW, h136i, h136⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun

@@ -1,5 +1,6 @@
 module
 
+public import ConAgua.Arena.MajorViewDec
 public import ConAgua.Arena.WhnfCore
 
 @[expose] public section
@@ -946,7 +947,8 @@ def FabScopeOkOK (p : Prog) : Prop :=
     CoreSpec p n "fab_scope_ok" [d, fab, major] (fabScopeOk d.toNat (decE fab) (decE major)) decBool
       s₀ a₀ dn vis fe MM eb
 
-/-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`. -/
+/-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`: the major's view
+(`decMV`, five words, the constructor's record read in the entry memory). -/
 def MajorToCtorOK (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -955,16 +957,16 @@ def MajorToCtorOK (p : Prog) : Prop :=
     HW major → decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, isK, ro, rc, major]
       (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
-        (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb
+        (isK != 0) rules (decE major)) (decMV s₀.mem) s₀ a₀ dn vis fe MM eb (MVOk s₀.mem)
 
-/-- con-leche: none (`ruleBodyAt`'s cache probe). -/
+/-- con-leche: none (`ruleBodyAt`'s cache probe): the body under `k` λs, level-instantiated. -/
 def RuleBodyAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb rec ctor po pl rhs us : Word) (lps : List NIdx),
+    (MM : ModeMaps) (eb rec ctor po pl rhs k us : Word) (lps : List NIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW rec → HW ctor → HW rhs → HW us →
     hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
-    CoreSpec p n "rule_body_at" [rec, ctor, po, pl, rhs, us]
-      (ruleBodyAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
+    CoreSpec p n "rule_body_at" [rec, ctor, po, pl, rhs, k, us]
+      (ruleBodyAt (decI rec) (decI ctor) lps (decE rhs) k.toNat (decI us)) decH s₀ a₀ dn vis fe MM eb
 
 /-- con-leche: none (`constTyAt`'s cache probe). -/
 def ConstTyAtOK (p : Prog) : Prop :=
