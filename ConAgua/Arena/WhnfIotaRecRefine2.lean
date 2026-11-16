@@ -715,9 +715,55 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   have hS4 := hS3.frame_stk hfr4 (by simp) (by simp)
   -- the substitution
   have hspn4 : (m4.arr64 SPN).size < 2 ^ 63 := by rw [hg4.size]; exact hspn3
-  have hy3' : SpineR m4 (spTop m2) _ _ := hy3.keep hg4.size hg4.below (by rw [htop3]; sorry) hspn3
+  have hb3 := hy3.bound
+  have h23 : (spTop m3).toNat = (spTop m2).toNat +
+      (rpLen (erRd s₀.mem (recP + CI.recMajor)) (erRd s₀.mem (recP + CI.recPrefix))).toNat := by
+    rw [htop3, UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hy3' := hy3.keep hg4.size hg4.below (by omega) hspn3
   have happ := SpineR.append hy3' (by rw [← htop3]; exact hy4) hspn4
-  sorry
+  have hb4 := hy4.bound
+  have h34 : (spTop m4).toNat = (spTop m3).toNat +
+      (mn - erRd s₀.mem (ctorP + CI.ctorNparams)).toNat := by
+    rw [htop4, UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hcnt : (rpLen (erRd s₀.mem (recP + CI.recMajor)) (erRd s₀.mem (recP + CI.recPrefix)) +
+      (mn - erRd s₀.mem (ctorP + CI.ctorNparams))).toNat =
+      (rpLen (erRd s₀.mem (recP + CI.recMajor)) (erRd s₀.mem (recP + CI.recPrefix))).toNat +
+        (mn - erRd s₀.mem (ctorP + CI.ctorNparams)).toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  -- the twin's values are the copied slices
+  have hvals : iotaVals args.toList.toArray
+      (if (erRd s₀.mem (recP + CI.recPrefix)).toNat < args.toList.length then
+        (erRd s₀.mem (recP + CI.recPrefix)).toNat else args.toList.length)
+      margs.toList.toArray (if np < margs.toList.length then np else margs.toList.length) =
+      (args.toList.take (rpLen (erRd s₀.mem (recP + CI.recMajor))
+        (erRd s₀.mem (recP + CI.recPrefix))).toNat).toArray ++
+      margs.extract (erRd s₀.mem (ctorP + CI.ctorNparams)).toNat margs.size := by
+    rw [iotaVals_eq]
+    have hsz := hsa.size
+    have hq : (if np < margs.toList.length then np else margs.toList.length) =
+        (erRd s₀.mem (ctorP + CI.ctorNparams)).toNat := by
+      rw [← hcpw]; split <;> simp_all; omega
+    rw [hq]
+    simp only [Array.toArray_toList, Array.length_toList]
+    congr 1
+    apply Array.ext'
+    simp only [Array.toList_extract, List.extract, Nat.sub_zero, List.drop_zero]
+    congr 1
+    rw [hrpl]; split <;> omega
+  rw [hvals]
+  refine RefE.bindLift (fun _ => rfl) fun rz m5 c5 => ?_
+  obtain ⟨ok5, ⟨M5, hS5, hK5, hSt5⟩, res5, hr5⟩ := CoreSpec.of_callW
+    (hw.instList (N + 1) ⟨m4, Locals.init []⟩ _ dn vis fe M2 eb (rr.headD 0) (spTop m2) _ 0 _ hS4 hr2 happ
+      (by show _ ≤ (spTop m4).toNat; rw [hcnt]; omega)) c5
+  have hrun5 := AM.run_of_ok _ _ ok5
+  rw [res5] at hrun5
+  refine ⟨_, _, hrun5, ?_⟩
+  dsimp only [fire2E.k_inst_list]
+  have hg25 : StackGrew m2 m5 := (hg3.trans hg4).trans hSt5.toGrew
+  refine RefE.ret rfl ⟨⟨M5, hS5.frame_stk (MemFrame.setCtl _ _ _) (by simp) (by simp), hK1.trans (hK2.trans hK5),
+    hSt12.trans (StackKept.restoreG' hg25)⟩, ?_, ?_⟩
+  · rw [decOptR_some_rec _ rfl]; rfl
+  · show ResW [1, rz.headD 0]; unfold ResW HW; exact ⟨by simp, hr5⟩
 
 /-- **`iota_rec_fire2` refines the fire past the major's arguments** (`fire2_ref`'s ok half). -/
 theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
