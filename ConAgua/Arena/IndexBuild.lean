@@ -47,13 +47,15 @@ l_model buildIndex_specW (p : Prog) (hp : p.lookup "build_index" = some buildInd
 
 /-! ## The relations -/
 
-/-- The environment the stream index's builder runs at: the index's base layer, below `c` and
-record position `r` (the job's view, `IStreamIndex.view`, has this shape), no own constants. -/
-def bEnv (b : IFBase) (c r : Nat) : IFEnv :=
-  ⟨⟨[], []⟩, {}, { b with below := c, belowRec := r }, {}⟩
+/-- The literal names the builder's environment carries: the index is not frozen yet, so the
+words `CTL[162‥171]` are still `0` (`EnvR`'s `lits`). -/
+def buildLits : List NIdx := List.replicate 10 (decI 0)
 
-theorem view_eq_bEnv (I : IStreamIndex) (k : Nat) :
-    I.view k = bEnv I.base (I.firsts.getD k I.next) k := rfl
+/-- The environment the stream index's builder runs at: the index's base layer, below `c` and
+record position `r`, no own constants, the literal flags off and the unfrozen names
+(`buildLits`). -/
+def bEnv (b : IFBase) (c r : Nat) : IFEnv :=
+  ⟨⟨[], []⟩, {}, { b with below := c, belowRec := r, lits := buildLits }, {}, false, false⟩
 
 /-- **`IndexR` across a memory that keeps the index rows (arrays `129‥134`), `FIRSTS` and
 `CTL[128]`**, and whose record pool extends the old one. -/
@@ -92,16 +94,17 @@ theorem IndexR.grow {m m' : Mem} {I : IStreamIndex} (h : IndexR m I)
           Prod.mk.injEq] at this
         rw [← this.2, hx.decTbl this.2.symm]
 
-/-- `fe` with the base layer `b` (its bounds kept). -/
+/-- `fe` with the base layer `b` (its bounds and literal names kept). -/
 def _root_.ConRon.Arena.IFEnv.rebase (fe : IFEnv) (b : IFBase) : IFEnv :=
-  ⟨fe.env, fe.idx, { b with below := fe.base.below, belowRec := fe.base.belowRec }, fe.tbls⟩
+  ⟨fe.env, fe.idx, { b with below := fe.base.below, belowRec := fe.base.belowRec, lits := fe.base.lits },
+    fe.tbls, fe.natLit, fe.strLit⟩
 
 theorem bEnv_rebase (b b' : IFBase) (c r : Nat) : (bEnv b c r).rebase b' = bEnv b' c r := rfl
 
 /-! ## The twin-side invariants at an environment that sees nothing
 
 The builder runs at `bEnv I.base 0 0`: no constant and no table is visible, as at the driver's
-empty environment (`DriverOK`'s `mkIFEnv IEnv.empty`). The twin-side invariants (`TwinOK`,
+empty environment (`DriverOK`'s `driverFE`). The twin-side invariants (`TwinOK`,
 `CheckOK`) read the environment through `find?` and `findTable?` alone. -/
 
 theorem bEnv_find_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).find? n = none := by
@@ -112,10 +115,10 @@ theorem bEnv_find_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).find? n = none := 
 theorem bEnv_findTable_zero (b : IFBase) (n : NIdx) : (bEnv b 0 0).findTable? n = none := by
   simp [IFEnv.findTable?, bEnv_find_zero]
 
-theorem emptyEnv_find (n : NIdx) : (mkIFEnv IEnv.empty).find? n = none := by
-  simp [mkIFEnv, IEnv.empty, mkIFEnvGo, IFEnv.find?, IFEnv.lookup, IFBase.find?]
+theorem emptyEnv_find (P : Pins) (n : NIdx) : (ConRon.Bridge.driverFE P).find? n = none := by
+  simp [ConRon.Bridge.driverFE, IFEnv.ofParts, IFEnv.find?, IFEnv.lookup, IFBase.find?]
 
-theorem emptyEnv_findTable (n : NIdx) : (mkIFEnv IEnv.empty).findTable? n = none := by
+theorem emptyEnv_findTable (P : Pins) (n : NIdx) : (ConRon.Bridge.driverFE P).findTable? n = none := by
   simp [IFEnv.findTable?, emptyEnv_find]
 
 theorem _root_.L.Arena.StoreDen.congrFe {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}

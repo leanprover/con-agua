@@ -11,7 +11,7 @@ import all ConAgua.Arena.DefEq
 @[expose] public section
 
 /-!
-# The generated models of `stuck_irrel`, `stuck_str` and `defeq_body`
+# The generated models of `stuck_irrel`, `stuck_str`, `defeq_lazy` and `defeq_body`
 
 Generated `unified` models only, apart from their refinements (`DefEqStuckIrrel.lean`,
 `DefEqStuckStr.lean`, `DefEqBody.lean`): they need the code and their callees' models
@@ -43,18 +43,23 @@ l_model strE_spec (p : Prog) (hf : p.lookup "stuck_str" = some stuckStrL)
     (hi : p.lookup "stuck_irrel" = some stuckIrrelL)
     (hq : CertProg p)
   fns [hf ↦ strE list]
-  specs [callW_spec p n "pin_word", callW_spec p n "pin_at", callW_spec p n "str_lit_stored",
+  specs [callW_spec p n "pin_word", callW_spec p n "pin_at",
     callW_spec p n "str_lit_ctor", siE_spec p hi hq n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] heartbeats 1000000
   unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`defeq_body`'s model, both outcomes** (generated; `is_bool_true` and `has_fvar` lifted, the
-other callees through their runs). -/
+/-- **`defeq_lazy`'s model, both outcomes** (generated; every callee through its run). -/
+l_model lazyE_spec (p : Prog) (hf : p.lookup "defeq_lazy" = some defeqLazyL)
+  fns [hf ↦ lazyE list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+/-- **`defeq_body`'s model, both outcomes** (generated; every callee through its run). -/
 l_model bodyE_spec (p : Prog) (hf : p.lookup "defeq_body" = some defeqBodyL)
   fns [hf ↦ bodyE list]
-  specs [callW_spec p n "is_bool_true", callW_spec p n "has_fvar"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

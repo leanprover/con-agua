@@ -117,7 +117,6 @@ structure DefEqMidProg (p : Prog) : Prop where
   noFvars : p.lookup "defeq_no_fvars" = some defeqNoFvarsL
   foldOk : p.lookup "lazy_fold_ok" = some lazyFoldOkL
   leaf : DefEqLeafProg p
-  bts : p.lookup "bool_true_shortcut" = some boolTrueShortcutL
   tupa : p.lookup "try_unfold_proj_app" = some tryUnfoldProjAppL
   dq : p.lookup "delta_quick" = some deltaQuickL
   off : p.lookup "defeq_offset" = some defeqOffsetL
@@ -213,43 +212,6 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
   exact CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
     (defeqNoFvars_refines p hp hf n _ a₀ dn vis fe M eb a b hS ha hb)
     (fun r r' h => by simp only [decBool, h]) hW
-
-/-! ## `bool_true_shortcut` -/
-
-/-- **`bool_true_shortcut` refines `boolTrueShortcut`, both outcomes**: the errors are the `whnf`
-slot's. -/
-theorem bts_ref (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
-    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d a : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) :
-    RefE (KnotUpToE p n) (btsE p (n + 1) s₀.mem mode vis d a)
-      (boolTrueShortcut (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a)) a₀
-      (CorePost decBool dn s₀.mem vis fe M eb ResH) := by
-  simp only [btsE]
-  unfold boolTrueShortcut
-  cases n with
-  | zero => exact RefE.callE_zero fun _ => btsE.k_whnf.none ..
-  | succ k =>
-  refine RefE.bind_callE (fun _ => btsE.k_whnf.none ..) ((hk _ (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe M eb
-    mode d a hF hn hs ha) (fun (hG : KnotUpToE p (k + 1)) => (hG _ (Nat.le_refl _)).whnf F s₀ a₀ dn vis fe
-      M eb mode d a hF hn hs ha) fun r1 m1 _ h₁ => RefE.after_core (w := id) h₁ fun M₁ hS₁ _ => ?_
-  simp only [btsE.k_whnf]
-  rw [← bind_pure (isBoolTrue _)]
-  refine RefE.bind_callW (fun _ => btsE.k_is_bool_true.none ..) (isBoolTrue_refines p hp.leaf k
-    ⟨m1, Locals.init []⟩ _ dn vis fe M₁ eb _ hS₁ h₁.resOk) fun _ _ _ h₂ => ?_
-  exact RefE.ret rfl ⟨h₂.after, rfl, h₂.resOk⟩
-
-/-- **`bool_true_shortcut` refines `boolTrueShortcut`** at the knot (`bts_ref`'s ok half). -/
-@[refines ConRon.Arena.boolTrueShortcut]
-theorem boolTrueShortcut_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
-    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d a : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) :
-    CoreSpec p (n + 1) "bool_true_shortcut" [mode, vis, d, a]
-      (boolTrueShortcut (coreKnot (decMode mode) (decEager mode) fe id F) d.toNat (decE a)) decBool s₀ a₀ dn vis
-      fe M eb :=
-  RefE.coreSpec (btsE_spec p hp.bts (n + 1) s₀ mode vis d a)
-    (bts_ref p hp n hk F s₀ a₀ dn vis fe M eb mode d a hF hn hs ha)
 
 /-! ## `try_unfold_proj_app` -/
 

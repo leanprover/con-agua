@@ -4,7 +4,7 @@ public import ConAgua.Arena.DefEqBody
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.PropReadRefine4
 import ConAgua.Arena.InferProj2
-import ConAgua.Arena.StrLitSup
+import ConAgua.Arena.StrLitBase
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
