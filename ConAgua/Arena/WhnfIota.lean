@@ -55,7 +55,7 @@ namespace L.Arena
 /-- con-leche: `CoreDefs.lean:58-65`/`Cached/CoreC.lean:233-240` `isCtorApp`/`ctorViewC` — the
 major's view (`decMV`, five words `[t, e, c, us, q]`): `t = 1` where the spine's head is a stored
 constructor `c.{us}` (its record `q`), else `t = 0`. -/
--- con-ron: ConRon/Arena/Core.lean:413-422 ConRon.Arena.ctorView
+-- con-ron: ConRon/Arena/Core.lean:410-422 ConRon.Arena.ctorView
 @[no_expose, l_impl ConRon.Arena.ctorView]
 def ctorViewL : FunDecl := lfn (vis, e) locals (hh, t, i, c, us, flag, q) {
   hh := call get_app_fn(e);
@@ -71,7 +71,7 @@ def ctorViewL : FunDecl := lfn (vis, e) locals (hh, t, i, c, us, flag, q) {
 
 /-- con-leche: `CoreDefs.lean:48-56` `Expr.isNatSuccApp` — `Nat.succ x`, the level-free constant
 `Nat.succ` (pin 3; the empty level list pin word 52) applied to one argument. -/
--- con-ron: ConRon/Arena/Core.lean:372-385 ConRon.Arena.isNatSuccApp
+-- con-ron: ConRon/Arena/Core.lean:367-385 ConRon.Arena.isNatSuccApp
 @[no_expose, l_impl ConRon.Arena.isNatSuccApp]
 def isNatSuccAppL : FunDecl := lfn (e) locals (t, i, f, el, ns) {
   if ⟦e⟧.tag != 4 { return 0 };
@@ -386,7 +386,6 @@ def fabScopeOkL : FunDecl := lfn (d, fab, major) locals (ok) {
 /-- con-leche: `Core.lean:665-677` `litMajorToCtor` — a `Nat` literal major one layer, a `String`
 literal to its reduced constructor form. -/
 -- con-ron: ConRon/Arena/Core.lean:2316-2329 ConRon.Arena.litMajorToCtor
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.litMajorToCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.litMajorToCtor]
 def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, c, r) {
   if ⟦h⟧.tag != 8 { r := call lit_to_ctor_if_nat(vis, h); return r };
@@ -412,7 +411,7 @@ stuck-major rescue: K-flagged (the recursor's `isK`), η-capable (`eta_rescue_ta
 pinned `And`. No certificate on a fabricated
 spine; the K and `And` fabrications keep the type check, and the proof-irrelevance run is a
 certificate family (off at `.trusted`). The answer is the fabricated major, or the major itself. -/
--- con-ron: ConRon/Arena/Core.lean:2201-2298 ConRon.Arena.majorToCtorRescue
+-- con-ron: ConRon/Arena/Core.lean:2190-2298 ConRon.Arena.majorToCtorRescue
 @[no_expose, l_impl ConRon.Arena.majorToCtorRescue]
 def majorToCtorRescueL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) locals (top, r) {
   top := CTL.u64[136];
@@ -424,7 +423,7 @@ def majorToCtorRescueL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major) 
 /-- con-leche: `Core.lean:601-757`/`Cached/CoreC.lean:850-953` `majorToCtor`/`majorToCtorI` — the
 rescue answering the view (`decMV`): the major's own where it is a constructor application, else
 the rescue's, `.stuck` (no lookup) where it gives the major back. -/
--- con-ron: ConRon/Arena/Core.lean:2308-2314 ConRon.Arena.majorToCtor
+-- con-ron: ConRon/Arena/Core.lean:2300-2314 ConRon.Arena.majorToCtor
 @[no_expose, l_impl ConRon.Arena.majorToCtor]
 def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
     locals (t, e, c, us, q, x) {
@@ -441,7 +440,7 @@ def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
 /-- con-leche: `Core.lean:795-874`/`Cached/CoreC.lean:979-1000` `prepareMajor`/`prepareMajorI` —
 the non-K path past a rescue that gave no constructor (or `Nat.succ x`): the major head-normalized,
 its literal converted, the rescue once more (the view). -/
--- con-ron: ConRon/Arena/Core.lean:2360-2365 ConRon.Arena.prepareMajorWhnf
+-- con-ron: ConRon/Arena/Core.lean:2355-2365 ConRon.Arena.prepareMajorWhnf
 @[no_expose, l_impl ConRon.Arena.prepareMajorWhnf]
 def prepareMajorWhnfL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
     locals (major0, major1, t, e, c, us, q) {
@@ -456,7 +455,7 @@ a K-flagged recursor (the record's `isK`) the K rescue on the raw major, final; 
 structure rescues on the major as found first (a `String` literal skips that attempt), and only if
 they give no constructor, or `Nat.succ x` (`is_nat_succ_app`), `prepare_major_whnf`. The answer is
 the view (`decMV`). -/
--- con-ron: ConRon/Arena/Core.lean:2378-2389 ConRon.Arena.prepareMajor
+-- con-ron: ConRon/Arena/Core.lean:2367-2389 ConRon.Arena.prepareMajor
 @[no_expose, l_impl ConRon.Arena.prepareMajor]
 def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, isK, ro, rc, major)
     locals (ok, t, e, c, us, q) {
@@ -582,7 +581,7 @@ caches `ruleBodyC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `Co
 
 /-- con-leche: `ExprOps.lean:862-868` `lamBody` — the body under `k` leading λs (under all of
 them where there are fewer). -/
--- con-ron: ConRon/Arena/ExprOps.lean:1349-1356 ConRon.Arena.lamBody
+-- con-ron: ConRon/Arena/ExprOps.lean:1346-1356 ConRon.Arena.lamBody
 @[no_expose, l_impl ConRon.Arena.lamBody]
 def lamBodyL : FunDecl := lfn (k, e) locals (i, t, x) {
   i := 0;
@@ -598,7 +597,7 @@ def lamBodyL : FunDecl := lfn (k, e) locals (i, t, x) {
 (`lam_body`), level-instantiated, memoized on `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
 is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
 callee wrote the memo. -/
--- con-ron: ConRon/Arena/Core.lean:251-264 ConRon.Arena.ruleBodyAt
+-- con-ron: ConRon/Arena/Core.lean:245-264 ConRon.Arena.ruleBodyAt
 @[no_expose, l_impl ConRon.Arena.ruleBodyAt]
 def ruleBodyAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, k, us)
     locals (k2, fd, j, dd, b, r, dum) {
@@ -811,7 +810,7 @@ def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) 
 at the stored recursor `c.{us}`, its record `q` found by the caller (which checked the levels), on
 the redex's `mI + 1` arguments, the stack slice `(so, sn)`: the recursor's telescope (`peel_pis`),
 then the rest, split into small functions (`WhnfIotaRec.lean`, from `iota_rec_major` on). -/
--- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
+-- con-ron: ConRon/Arena/Core.lean:2479-2538 ConRon.Arena.iotaRecAt
 @[no_expose, l_impl ConRon.Arena.iotaRecAt]
 def iotaRecAtL : FunDecl := lfn (mode, vis, d, c, us, q, so, sn) locals (pf, pr, r1, r2) {
   (pf, pr) := call peel_pis(sn, EREC⦃q + ⟪CI.cv + CV.type⟫⦄);
