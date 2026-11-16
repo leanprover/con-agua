@@ -4,6 +4,7 @@ public import ConAgua.Arena.DeclArmT
 public import ConAgua.Arena.DeclReducePin
 public import ConAgua.Arena.DeclAxQuotT
 import ConAgua.Arena.IndInstallSpec.PapW
+import ConAgua.Arena.DeclNatPushPop
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 import ConAgua.Arena.IndRealMemoCrT
 import ConAgua.Arena.IndRealWalkT
@@ -550,23 +551,31 @@ theorem crp_ref (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) (ha
   rw [← hm4] at hS4R hg4
   have hf4 := callW_leafFrame hcl (leaf_mem _ rfl) h4
   have hCr4 := hkp.call (im_mem _ rfl) h4 hCr3
-  have hT4 : TwinOK dn s4.mem a3 fe' :=
-    (((hS.twin.leafSame hf2).leafI hst3 hf3).leafSame hf4).sameView hsv
-  have hflag : pinW s4.mem 0 ≠ 0 := by
-    rw [pinW_leaf hf4, pinW_leaf hf3, pinW_leaf hf2]; exact hS.flag
   have hvv : vis + 1 - 1 = vis := by simp
   rw [hvv] at hS4R
-  have hS4 : StageT dn vis fe' s4.mem a3 := ⟨hS4R, hT4, hflag⟩
-  have hck4 : CheckOK false env fe' a3 :=
+  -- the flags set back
+  rw [checkReducePinE.k_env_pop_temp.arm1]
+  refine RefE.onlySim (fun _ => checkReducePinE.k_env_set_flags.none ..) (fun _ _ h => h)
+    fun r45 m45 h45 => ?_
+  obtain ⟨hS45R, hg45, -⟩ := L.Ind.setFlags_stage hC.ef hS4R hE.natLit hE.strLit h45
+  have hf45 := callW_leafFrame hcl (leaf_mem _ rfl) h45
+  have hCr45 := hkp.call (im_mem _ rfl) h45 hCr4
+  have hT4 : TwinOK dn m45 a3 (fe'.setFlags fe.natLit fe.strLit) :=
+    ((((hS.twin.leafSame hf2).leafI hst3 hf3).leafSame hf4).leafSame hf45).sameView hsv
+  have hflag : pinW m45 0 ≠ 0 := by
+    rw [pinW_leaf hf45, pinW_leaf hf4, pinW_leaf hf3, pinW_leaf hf2]; exact hS.flag
+  have hS4 : StageT dn vis (fe'.setFlags fe.natLit fe.strLit) m45 a3 := ⟨hS45R, hT4, hflag⟩
+  have hck4 : CheckOK false env (fe'.setFlags fe.natLit fe.strLit) a3 :=
     (hck.mono hst3.ok hst3.ext hst3.caches hst3.pins).congr_find hsv.find hsv.tbls hsv.base
+      (hsv.flags hck.ienv.flags)
   -- the stored test
   by_cases h30 : r3.headD 0 = 0
-  · rw [checkReducePinE.k_env_pop_temp.abort1 p n c v _ r4 s4.mem h30]
+  · rw [checkReducePinE.k_env_set_flags.abort1 p n c v _ _ r45 m45 h30]
     have : x3 = false := by rw [← hx3, h30]; rfl
     subst this
     simp only [Bool.false_eq_true, ↓reduceIte]
     exact fun _ => ErrClaim.fail _ _ rfl
-  rw [checkReducePinE.k_env_pop_temp.arm1 p n c v _ r4 s4.mem h30, hr4, List.headD_cons, hvv]
+  rw [checkReducePinE.k_env_set_flags.arm1 p n c v _ _ r45 m45 h30, hr4, List.headD_cons, hvv]
   have : x3 = true := by rw [← hx3]; simpa using h30
   subst this
   simp only [↓reduceIte]
@@ -575,10 +584,10 @@ theorem crp_ref (hC : CrpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) (ha
   refine RefE.bindE (fun _ => checkReducePinE.k_check_reduce_pin_pre.none ..) id
     (crpp_ref hC hq hcl hap hkp hcrf hn' hS4 hck4 henv
       (ConRon.Bridge.denoteN_ext hnm hst3.ext) (ConRon.Bridge.denote_ext hvx hst3.ext) hws hc hv
-      hCr4)
+      hCr45)
     fun ⟨z, m5⟩ _ a5 _ ⟨hS5, hg5, hCr5, hck5, hext5⟩ => ?_
   rw [checkReducePinE.k_check_reduce_pin_pre.arm1]
-  exact RefE.ret rfl ⟨hS5, hg2.trans (hg3.trans (hg4.trans hg5)), hCr5, hck5,
+  exact RefE.ret rfl ⟨hS5, hg2.trans (hg3.trans (hg4.trans (hg45.trans hg5))), hCr5, hck5,
     hst3.ext.trans hext5, hsv⟩
 
 end crp
@@ -729,6 +738,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
     rw [ite_eq_left hcont]
     -- the reduce-pin gate
     have hok2' := hok2.toStepOK.push hok2.check.state hci2 hsh2 hcw2
+      (hr := ConLeche.RuleWF.of_not_rec (fun _ _ _ _ _ heq => nomatch heq))
     refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_reduce_pin.none ..) id
       (crp_ref hX.crp hq hcl hap hkp hcrf hn' hS4 hok2.check hok2.envWF hok2'
         (ArrExt.decCI hP14 hci1) hname hnm2 hv2

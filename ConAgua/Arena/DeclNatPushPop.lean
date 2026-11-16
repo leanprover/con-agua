@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.IndInstallSpec.PapW
 public import ConAgua.Arena.EnvFlags
+public import ConAgua.Arena.StageFlags
 import all ConAgua.Arena.Env
 
 @[expose] public section
@@ -70,6 +71,24 @@ theorem pushPop_stage {p : Prog} (hP : EnvFlagsProg p)
   obtain ⟨hS3, hg3⟩ := StageR.of_own hS2 hE3
   rw [hr3, List.headD_cons, show vis + 1 - 1 = vis by simp] at *
   exact ⟨hS3, hg3, rfl⟩
+
+/-- **The flags set back after the pop** (`env_set_flags(fn, fs)`, the twin's
+`.setFlags fe.natLit fe.strLit`): `fn`, `fs` the words `CTL[160]`, `CTL[161]` the gate saved
+before its push, which are `fe`'s flags. -/
+theorem setFlags_stage {p : Prog} (hP : EnvFlagsProg p) {k : Nat} {vis x y : Word} {fe fe' : IFEnv}
+    {a : AState} {m m' : Mem} {r : List Word}
+    (hS : StageR vis fe' m a) (hx : fe.natLit = (x != 0)) (hy : fe.strLit = (y != 0))
+    (h : callW p k "env_set_flags" [x, y] m = some (r, m')) :
+    StageR vis (fe'.setFlags fe.natLit fe.strLit) m' a ∧ IWGrow m m' ∧ m' = flagsSet m x y := by
+  obtain ⟨s', hs', -, hm', hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envSetFlags_refines hP.setFlags k _ vis x y hS.check.env
+      (show 161 < (m.arr64 CTL).size by have := hS.iw.ctl; omega)) h
+  rw [← hx, ← hy] at hE'
+  have e : m' = flagsSet m x y := by rw [← hs', hm']
+  rw [hm'] at hE'
+  subst e
+  obtain ⟨h1, h2⟩ := StageR.of_flags hS hE'
+  exact ⟨h1, h2, rfl⟩
 
 /-! ## The reads at the pushed view keep the own rows -/
 
