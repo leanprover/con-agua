@@ -229,7 +229,7 @@ theorem set64_rdW_self (m : Mem) (a : TieredArray) (k : Word) (h : k.toNat < (m.
   · subst s'
     simp only [Mem.arr64] at h ⊢
     rw [rdW, Array.getElem?_eq_getElem h, Option.getD_some, Array.set!_eq_setIfInBounds]
-    apply Array.ext <;> simp [Array.getElem_setIfInBounds]
+    apply Array.ext <;> simp
     grind
   · rfl
 
@@ -259,10 +259,14 @@ theorem IFEnv.litsStored_setFlags (fe : IFEnv) (a b : Bool) (i stop : Nat) :
     (fe.setFlags a b).litsStored i stop = fe.litsStored i stop := by
   obtain ⟨k, hk⟩ : ∃ k, k = stop - i := ⟨_, rfl⟩
   induction k generalizing i with
-  | zero => rw [IFEnv.litsStored, IFEnv.litsStored (fe := fe)]; simp [show stop ≤ i by omega]
+  | zero =>
+    conv => lhs; rw [IFEnv.litsStored]
+    conv => rhs; rw [IFEnv.litsStored]
+    simp [show stop ≤ i by omega]
   | succ k ih =>
     have e := ih (i + 1) (by omega)
-    rw [IFEnv.litsStored, IFEnv.litsStored (fe := fe)]
+    conv => lhs; rw [IFEnv.litsStored]
+    conv => rhs; rw [IFEnv.litsStored]
     simp only [IFEnv.setFlags] at e ⊢
     rw [e]
     rfl
