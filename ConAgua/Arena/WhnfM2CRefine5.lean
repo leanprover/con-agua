@@ -53,6 +53,33 @@ theorem decCI_kind34' {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK 
     simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
   all_goals grind
 
+/-- A five-word answer is its own five words. -/
+theorem list5_eta (r : List Word) (h : r.length = 5) :
+    [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.headD 0] = r := by
+  match r, h with
+  | [_, _, _, _, _], _ => rfl
+
+/-- The view decodes alike over the same record pool. -/
+theorem decMV_congr {m m' : Mem} (h : erecP m' = erecP m) (r : List Word) : decMV m' r = decMV m r := by
+  unfold decMV; rw [h]
+
+theorem MVOk_congr {m m' : Mem} (h : erecP m' = erecP m) {r : List Word} (hok : MVOk m' r) : MVOk m r := by
+  unfold MVOk at *; rw [← h]; exact hok
+
+set_option maxRecDepth 8192 in
+theorem ctorView_coreFn : "ctor_view" ∈ coreFns := List.elem_iff.mp (by decide)
+
+set_option maxRecDepth 8192 in
+theorem mtcr_coreFn : "major_to_ctor_rescue" ∈ coreFns := List.elem_iff.mp (by decide)
+
+/-- **What `major_to_ctor`'s errors assume**: the rescue's (`M2CCtxE`) and the verdict closure
+(the rescue is read through its call). -/
+structure MtcG (p : Prog) (n : Nat) : Prop where
+  knot : KnotUpToE p n
+  pirr : ProofIrrelWE p
+  nv : closedNV p L.Checker.nvFns = true
+
 section top
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecPKept p) (hcc : ProjCallees p) (hpr : PropReadProg p) (hilp : InstLPOK p)
@@ -189,7 +216,63 @@ theorem m2cHead_ref (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     RefE (M2CCtxE p N) (m2cHeadE p (N + 1) m mode vis d isK ro rc major)
       (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rules
         (decE major)) a (GrowPost decH dn m vis fe M eb ResH) := by
-  sorry
+  have hA1 : GrowPost decH dn m vis fe M eb ResH ([major], m) (decE major) a :=
+    ⟨CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, rfl, hmaj⟩
+  obtain ⟨hlen, hget⟩ := L.Arena.decRules_get hr
+  by_cases g2 : rc ≠ 1
+  · rw [m2cHeadE.arm1 (hc1 := g2) ..]
+    refine RefE.ret ?_ hA1
+    match rules, hlen with
+    | [], _ => rfl
+    | [_], hl => exact absurd (UInt64.toNat_inj.mp (by simpa using hl.symm)) g2
+    | _ :: _ :: _, _ => rfl
+  have g2' : rc = 1 := by simpa using g2
+  rw [m2cHeadE.arm2 (hc1 := g2') ..]
+  subst g2'
+  obtain ⟨rl, rfl⟩ : ∃ rl, rules = [rl] := by
+    match rules, hlen with
+    | [x], _ => exact ⟨x, rfl⟩
+  have hrl : decRule (erecP m) ro.toNat = some rl := by
+    have := hget 0 (by decide); simpa using this
+  obtain ⟨l0, hctor, -⟩ := decRule_rd (erRdOK m) hrl
+  cases N with
+  | zero =>
+    rw [callW_zero, liftE_none, m2cHeadE.k_env_find.none]; exact RefE.of_cls0 (by simp)
+  | succ N' =>
+  refine RefE.onlySim (fun _ => m2cHeadE.k_env_find.none ..)
+    (fun r2 m2 h => callW_envFindI p hp.toIotaProg' (N' + 1) m vis _ hS.env l0 r2 m2 h)
+    fun r2 m2 ⟨hm2, hfind, hfound⟩ => ?_
+  rw [hm2]
+  have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id (F)) fe d.toNat
+      (isK != 0) [rl] (decE major)) =
+      (match fe.find? rl.ctor with
+          | some (.ctorInfo cvj cnP _cnF T) =>
+            m2cCtorT (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (isK != 0) rl cvj
+              cnP T (decE major)
+          | _ => pure (decE major)) := rfl
+  by_cases g3 : r2.headD 0 = 0
+  · rw [m2cHeadE.k_env_find.arm1 (hc1 := g3) ..]
+    have hn : fe.find? rl.ctor = none := by
+      rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]
+    exact RefE.ret (by rw [hstep]; simp only [hn]; rfl) hA1
+  obtain ⟨ci, hciE⟩ := hfound g3
+  have hfind' : fe.find? rl.ctor = some ci := by
+    rw [hctor, hfind]; simp only [envFound, g3, ↓reduceIte]; exact hciE
+  obtain ⟨-, hctr⟩ := decCI_kind34' (erRdOK m) hciE
+  by_cases g4 : erRd m (r2.tail.headD 0) ≠ 4
+  · rw [m2cHeadE.k_env_find.arm2 (hc1 := g3) (hc2 := g4) ..]
+    refine RefE.ret ?_ hA1
+    rw [hstep]; simp only [hfind']
+    cases ci with
+    | ctorInfo cv nP nF fam => exact absurd (hctr.mp ⟨cv, nP, nF, fam, rfl⟩) g4
+    | _ => rfl
+  rw [m2cHeadE.k_env_find.arm3 (hc1 := g3) (hc2 := by simpa [erRd] using g4) ..]
+  obtain ⟨cvj, cnP, cnF, fam, rfl⟩ := hctr.mpr (by simpa using g4)
+  exact RefE.tail_eq (m2cHeadE.k_m2c_ctor.none p) (fun v => m2cHeadE.k_m2c_ctor.arm1 p v.1 v.2)
+    (fun h => h.mono (Nat.le_succ _)) (by rw [hstep]; simp only [hfind'])
+    (GrowPost.of_tail (KeptAll.refl _ _) (StackKept.refl _).toGrew)
+    (m2cCtor_ref p hp hc hpi hE hcc hpr hilp N' F (hk.mono (Nat.le_succ _)) (by omega) (by omega) dn vis fe eb
+      mode d isK ro _ major hm4 hebm hmaj rl cvj cnP cnF m _ M hS hrl hciE)
 
 /-- **`major_to_ctor_rescue` refines `majorToCtorRescue`, both outcomes** (the top put back):
 `m2c_head`'s (`m2cHead_ref`). -/
@@ -216,23 +299,80 @@ theorem mtcr_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2
       mode d isK ro rc major hm4 hebm hmaj rules m a M hS hr)
 
 /-- **`major_to_ctor` refines `majorToCtor`, both outcomes**: the view (`ctor_view`), else the
-rescue's (`mtcr_ref`) and its view. -/
+rescue's (`mtcr_ref`) and its view, the records read in the entry memory (the record pool is
+kept: `ErecPKept`). -/
 theorem mtc_ref (n F : Nat) (hk : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d rec isK ro rc major : Word)
     (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hmaj : HW major) (rules : List IRecRule)
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (hr : decRules (erecP m) ro.toNat rc.toNat = some rules) :
-    RefE (M2CCtxE p n) (mtcE p (n + 1) m mode vis d rec isK ro rc major)
+    RefE (MtcG p n) (mtcE p (n + 1) m mode vis d rec isK ro rc major)
       (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec) (isK != 0) rules
         (decE major)) a (CorePost (decMV m) dn m vis fe M eb (MVOk m)) := by
-  sorry
+  simp only [mtcE]
+  cases n with
+  | zero => rw [callW_zero, liftE_none, mtcE.k_ctor_view.none]; exact RefE.of_cls0 (by simp)
+  | succ N =>
+  unfold majorToCtor
+  refine RefE.bindLift (fun _ => rfl) fun r1 m1 c1 => ?_
+  obtain ⟨hrun1, ⟨M1, hS1, hK1, hSt1⟩, hok1⟩ := CoreSpec.run
+    (ctorView_refines p hp.toIotaProg' N ⟨m, Locals.init []⟩ a dn vis fe M eb major hS hmaj) c1
+  have e1 : erecP m1 = erecP m := hE _ _ _ _ _ _ ctorView_coreFn c1
+  refine ⟨_, _, hrun1, ?_⟩
+  dsimp only [mtcE.k_ctor_view]
+  by_cases g1 : r1.headD 0 ≠ 0
+  · simp only [g1, ne_eq, not_false_eq_true, ↓reduceIte]
+    obtain ⟨hlen, hq⟩ := hok1
+    obtain ⟨cv, nP, nF, ind, hci⟩ := hq g1
+    have hct : (decMV m r1).isCtor = true := by
+      have : r1.headD 0 = 0 ↔ False := ⟨g1, False.elim⟩
+      simp only [decMV, this, hci, ↓reduceIte]; rfl
+    have h5 := list5_eta r1 hlen
+    refine RefE.ret ?_ ⟨⟨M1, hS1, hK1, hSt1⟩, by rw [h5], by rw [h5]; exact ⟨hlen, hq⟩⟩
+    simp only [hct, ↓reduceIte]; rfl
+  have g1' : r1.headD 0 = 0 := by simpa using g1
+  have hst : (decMV m r1).isCtor = false := by unfold decMV; dsimp only; rw [if_pos g1']; rfl
+  simp only [g1, ↓reduceIte, hst, Bool.false_eq_true]
+  have hr1 : decRules (erecP m1) ro.toNat rc.toNat = some rules := by rw [e1]; exact hr
+  refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩) (fun _ => rfl)
+    (mtcrE_spec p hp.toM2CProg hp.majorToCtorRescue (N + 1) _ mode vis d rec isK ro rc major)
+    (fun hG => hG.nv) (fun (hG : MtcG p (N + 1)) => (⟨hG.knot.mono (Nat.le_succ N), hG.pirr⟩ : M2CCtxE p N))
+    (mtcr_ref p hp hc hpi hE hcc hpr hilp N F (hk.mono (Nat.le_succ N)) (by omega) (by omega) dn vis fe eb
+      mode d rec isK ro rc major hm4 hebm hmaj rules m1 _ M1 hS1 hr1)
+    fun r2 s2 y a2 c2 _ hrun2 hP2 => ?_
+  obtain ⟨M2, hS2, hK2, hSt2⟩ := hP2.after
+  have e2 : erecP s2.mem = erecP m1 := hE _ _ _ _ _ _ mtcr_coreFn (callW_of_callE c2)
+  have hy : y = decE (r2.headD 0) := hP2.res
+  have hw2 : HW (r2.headD 0) := hP2.valid
+  subst hy
+  dsimp only [mtcE.k_major_to_ctor_rescue]
+  by_cases g2 : r2.headD 0 = major
+  · have hb : (decE (r2.headD 0) == decE major) = true := by rw [g2]; exact beq_self_eq_true _
+    simp only [g2, ↓reduceIte] at hb ⊢
+    refine RefE.ret ?_ ⟨⟨M2, hS2, hK1.trans hK2, hSt1.trans hSt2⟩, by rw [decMV_stuck], ⟨rfl, fun h => absurd rfl h⟩⟩
+    simp only [hb, ↓reduceIte]; rfl
+  have hb : (decE (r2.headD 0) == decE major) = false := by
+    rw [show (decE (r2.headD 0) == decE major) = (r2.headD 0 == major) from decI_beq _ _ hw2 hmaj]
+    simpa using g2
+  simp only [g2, ↓reduceIte, hb, Bool.false_eq_true]
+  rw [← bind_pure (ctorView fe (decE (r2.headD 0)))]
+  refine RefE.bindLift (fun _ => rfl) fun r3 m3 c3 => ?_
+  obtain ⟨hrun3, ⟨M3, hS3, hK3, hSt3⟩, hok3⟩ := CoreSpec.run
+    (ctorView_refines p hp.toIotaProg' N ⟨s2.mem, Locals.init []⟩ a2 dn vis fe M2 eb (r2.headD 0) hS2 hw2) c3
+  have e3 : erecP m3 = erecP s2.mem := hE _ _ _ _ _ _ ctorView_coreFn c3
+  refine ⟨_, _, hrun3, ?_⟩
+  dsimp only [mtcE.k_ctor_view_2]
+  have e31 : erecP s2.mem = erecP m := e2.trans e1
+  have h5 := list5_eta r3 hok3.1
+  refine RefE.ret rfl ⟨⟨M3, hS3, (hK1.trans hK2).trans hK3, (hSt1.trans hSt2).trans hSt3⟩, ?_, ?_⟩
+  · rw [h5]; exact decMV_congr e31.symm r3 ▸ rfl
+  · rw [h5]; exact MVOk_congr e31 hok3
 
 /-- **`major_to_ctor` refines `majorToCtor`** (the callees' specs as hypotheses): `mtc_ref`'s ok
 half. -/
 theorem majorToCtor_refines' : MajorToCtorOK p :=
   fun n hk F hnF s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major rules hn62 hS hm4 hebm hmaj hr =>
-    RefE.coreSpec (mtcE_spec p hp.toM2CProg hp.majorToCtorRescue hp.majorToCtor (n + 1) s₀ mode vis d rec isK
-      ro rc major)
+    RefE.coreSpec (mtcE_spec p hp.majorToCtor (n + 1) s₀ mode vis d rec isK ro rc major)
       (mtc_ref p hp hc hpi hE hcc hpr hilp n F hk hnF hn62 dn vis fe eb mode d rec isK ro rc major hm4 hebm hmaj
         rules s₀.mem a₀ MM hS hr)
 

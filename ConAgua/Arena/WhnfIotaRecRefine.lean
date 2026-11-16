@@ -124,6 +124,10 @@ def iotaRecMajorT (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK
     | none => pure none
   | .stuck _ => pure none
 
+theorem ite_bind {m : Type → Type} [Monad m] {α β : Type} (c : Prop) [Decidable c] (x y : m α)
+    (f : α → m β) : (ite c x y >>= f) = ite c (x >>= f) (y >>= f) := by
+  split <;> rfl
+
 /-- **The twin, put back together**: the recursor's telescope, then the major's block. -/
 theorem iotaRecAt_eq (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (isK : Bool)
     (rules : List IRecRule) (sargs : Array EIdx) :
