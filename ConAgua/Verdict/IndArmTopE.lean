@@ -2,7 +2,7 @@ module
 
 public import ConAgua.Verdict.TopE
 import ConAgua.Arena.IndT.CheckIndDecl
-import ConAgua.Arena.StrLitSup
+import ConAgua.Arena.StrLitBase
 import ConAgua.Checker.IndArm
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.ArmsT

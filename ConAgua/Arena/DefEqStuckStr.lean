@@ -34,7 +34,7 @@ def stuckStrT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (side : Boo
         | .const cO usO => do
           let el ← emptyLevels
           let sl ← pinStringOfList
-          if cO = sl ∧ usO = el ∧ (← strLitStored fe) then do
+          if cO = sl ∧ usO = el ∧ fe.strLit = true then do
             let c ← strLitToConstructor st
             if side then r.defeq depth a c else r.defeq depth c b
           else stuckIrrel r fe depth a b
@@ -47,8 +47,7 @@ theorem stuckStrT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (si
     (st : String) (fo : EIdx) (s : AState) (m : Mem) (hP : PinsFull m s.pins) (cO : NIdx) (usO : LsIdx)
     (ht : (fo.tag == ETag.const) = true) (hv : s.store.view fo = some (.const cO usO)) :
     (stuckStrT r fe depth a b side (.strVal st) fo).run s =
-      (strLitStored fe >>= fun x =>
-        if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ x = true then do
+      (if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ fe.strLit = true then do
           let c ← strLitToConstructor st
           if side then r.defeq depth a c else r.defeq depth c b
         else stuckIrrel r fe depth a b).run s := by

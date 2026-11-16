@@ -471,7 +471,7 @@ end lr
 def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
   match l with
   | .natVal n => do
-      if ← natLitStored fe then do
+      if fe.natLit then do
         if ← natSizeRefused n then
           fail (.invalid "the kernel refused a `Nat` numeral because its size exceeds the maximum; raise it with --max-nat-size")
         else do
@@ -479,7 +479,7 @@ def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
           constE nn
       else fail (.invalid "Nat literal without the Nat basis declarations")
   | .strVal _ => do
-      if ← strLitStored fe then do
+      if fe.strLit then do
         let sn ← pinString
         constE sn
       else fail (.notImplemented
@@ -507,10 +507,6 @@ theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AS
 
 /-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
 structure InferLitCallees (p : Prog) : Prop where
-  natLitSup : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "nat_lit_stored" [vis] (natLitStored fe) decBool s₀ a₀ dn vis fe M eb
-  strLitSup : StrLitStoredOK p
   constE : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
     CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
@@ -519,8 +515,7 @@ structure InferLitCallees (p : Prog) : Prop where
 closure) lifted. -/
 l_model ilE_spec (p : Prog) (hf : p.lookup "infer_lit" = some inferLitL)
   fns [hf ↦ ilE list]
-  specs [callW_spec p n "nat_lit_stored", callW_spec p n "str_lit_stored",
-    callW_spec p n "nat_size_refused", callW_spec p n "pin_at", callW_spec p n "const_e"]
+  specs [callW_spec p n "nat_size_refused", callW_spec p n "pin_at", callW_spec p n "const_e"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]

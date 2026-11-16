@@ -612,7 +612,7 @@ end refs11
 /-- The model of `lit_to_ctor_if_nat`. -/
 l_model litToCtorIfNat_spec (p : Prog) (hp : WhnfDeltaProg p)
   fns [hp.litToCtorIfNat ↦ litToCtorIfNatW ]
-  specs [callW_spec p n "nat_lit_stored", callW_spec p n "nat_lit_to_ctor"]
+  specs [callW_spec p n "nat_lit_to_ctor"]
   grind [arena_grind] fold [tierW, idxW]
   extra [evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   finish [tierW, idxW] gen 30
@@ -631,18 +631,18 @@ theorem litToCtor_run_str (fe : IFEnv) (a : AState) (h : Word) (hh : HW h) (hg :
   simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
   rfl
 
-theorem litToCtor_run_unsup (fe : IFEnv) (a a₁ : AState) (h : Word) (hh : HW h)
+theorem litToCtor_run_unsup (fe : IFEnv) (a : AState) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
-    (hs : (natLitStored fe).run a = .ok (false, a₁)) :
-    (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a₁) := by
+    (hs : fe.natLit = false) :
+    (litToCtorIfNat fe (decE h)).run a = .ok (decE h, a) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
   simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs]
   rfl
 
-theorem litToCtor_run_sup (fe : IFEnv) (a a₁ a₂ : AState) (h : Word) (hh : HW h)
+theorem litToCtor_run_sup (fe : IFEnv) (a a₂ : AState) (h : Word) (hh : HW h)
     (hg : tagW h = 8) (N : Nat) (hv : a.store.view (decE h) = some (.lit (.natVal N)))
-    (hs : (natLitStored fe).run a = .ok (true, a₁)) (x : EIdx)
-    (hc : (natLitToConstructor N).run a₁ = .ok (x, a₂)) :
+    (hs : fe.natLit = true) (x : EIdx)
+    (hc : (natLitToConstructor N).run a = .ok (x, a₂)) :
     (litToCtorIfNat fe (decE h)).run a = .ok (x, a₂) := by
   have ht : ((decE h).tag == ETag.lit) = true := by rw [decE_lit_tag h hh]; simp [hg]
   simp [litToCtorIfNat, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs, hc]

@@ -51,7 +51,7 @@ l_model pmE_spec (p : Prog) (hf : p.lookup "prepare_major" = some prepareMajorL)
 
 l_model lmtcE_spec (p : Prog) (hf : p.lookup "lit_major_to_ctor" = some litMajorToCtorL)
   fns [hf ↦ lmtcE list]
-  specs [callW_spec p n "lit_to_ctor_if_nat", callW_spec p n "str_lit_stored", callW_spec p n "str_lit_ctor"]
+  specs [callW_spec p n "lit_to_ctor_if_nat", callW_spec p n "str_lit_ctor"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
