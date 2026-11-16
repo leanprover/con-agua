@@ -153,7 +153,7 @@ at `mI + 1`) and the fields. -/
   if mn - cp != EREC⦃rl + ⟪Rule.nfields⟫⦄ { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
-  rhs := call rule_rhs_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
+  rhs := call rule_body_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
     EREC⦃rl + ⟪Rule.rhs⟫⦄, us);
   x := call mk_app_n(rhs, so, rP);
   x := call mk_app_n_from(x, mo, mn, cp);

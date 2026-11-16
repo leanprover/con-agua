@@ -76,7 +76,10 @@ smono_derive ConRon.Arena.structUnitCert
 smono_derive ConRon.Arena.stuckIrrel
 smono_derive ConRon.Arena.etaCert
 smono_derive ConRon.Arena.defeqStuck
-smono_derive ConRon.Arena.boolTrueShortcut
+smono_derive ConRon.Arena.ctorTarget
+smono_derive ConRon.Arena.ctorTargetFor
+smono_derive ConRon.Arena.ctorHeadAgainst
+smono_derive ConRon.Arena.defeqLazy
 smono_derive ConRon.Arena.defeqBody
 smono_derive ConRon.Arena.defeqSet
 smono_derive ConRon.Arena.enterEager

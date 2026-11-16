@@ -688,7 +688,7 @@ def iotaKeptFns : List FnName :=
   ["rec_fire_levels", "lvls_eq_c", "rec_fire_args", "const_ty_at", "iota_certs_full",
    "iota_case3_at", "whnf", "infer_io", "lit_major_to_ctor", "is_ctor_app", "is_str_lit",
    "major_to_ctor", "prepare_major", "proof_irrel", "defeq_list", "iota_index_ok", "inst_lp",
-   "inst_spine", "get_app_args", "get_app_fn", "rule_rhs_at", "mk_app_n", "mk_app_n_from",
+   "inst_spine", "get_app_args", "get_app_fn", "rule_body_at", "mk_app_n", "mk_app_n_from",
    "erec_push", "stack_cover", "intern_bvar", "iota_rec_head", "env_find", "find_rule", "ls_node",
    "peel_pis", "iota_rec_cmp", "iota_rec_vck", "iota_rec_fam", "iota_rec_fire2", "iota_rec_fire",
    "iota_rec_major", "ctor_family", "former_never_zero_at"]

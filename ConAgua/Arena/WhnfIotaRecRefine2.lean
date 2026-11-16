@@ -342,10 +342,10 @@ theorem rpLen_toNat (mI rP : Word) : (rpLen mI rP).toNat = min rP.toNat (mI.toNa
     omega
 
 /-- **`iota_rec_fire2`'s model, both outcomes** (generated; `iota_rec_fam` through its run,
-`rule_rhs_at`, `mk_app_n`, `mk_app_n_from` lifted). -/
+`rule_body_at`, `mk_app_n`, `mk_app_n_from` lifted). -/
 l_model fire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFire2L)
   fns [hp ↦ fire2E list]
-  specs [callW_spec p n "rule_rhs_at", callW_spec p n "mk_app_n", callW_spec p n "mk_app_n_from"]
+  specs [callW_spec p n "rule_body_at", callW_spec p n "mk_app_n", callW_spec p n "mk_app_n_from"]
   grind [arena_grind] fold [rpLen] extra [ld64_rdW_specE, ld64_rdW_specT] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
@@ -451,7 +451,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   -- the right-hand side
   refine RefE.bindLift (fun _ => rfl) fun rr m2 c2 => ?_
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
-    (ruleRhsAt_refines' p hp.toIotaProg' hw.instLP (N + 1) ⟨s1.mem, Locals.init []⟩ _ dn vis fe M1 eb c (erRd s₀.mem rl)
+    (ruleBodyAt_refines' p hp.toIotaProg' hw.instLP (N + 1) ⟨s1.mem, Locals.init []⟩ _ dn vis fe M1 eb c (erRd s₀.mem rl)
       (erRd s₀.mem (recP + (CI.cv + CV.lpsOff))) (erRd s₀.mem (recP + (CI.cv + CV.lpsLen))) (erRd s₀.mem (rl + Rule.rhs)) us lps hS1 hcw hctw hrhsw hus
       (by rw [k1.2.2.2]; exact hlps)) c2
   have hrhs' : (decE (erRd s₀.mem (rl + Rule.rhs)) : EIdx) = rule.rhs := hrhs.symm
@@ -461,7 +461,7 @@ theorem fire2_ref (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   simp only [decH] at hrun2'
   have hSt12 := hSt1.trans hSt2
   refine ⟨_, _, hrun2', ?_⟩
-  dsimp only [fire2E.k_rule_rhs_at]
+  dsimp only [fire2E.k_rule_body_at]
   -- the leading arguments
   have hsa2 : SpineR m2 so sn args := hsa.keep hSt12.size hSt12.below hsat hspn
   have hxa := SpineR.take hsa2 (rpLen (erRd s₀.mem (recP + CI.recMajor)) (erRd s₀.mem (recP + CI.recPrefix)))

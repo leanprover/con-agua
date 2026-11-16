@@ -64,7 +64,7 @@ theorem EnvGrowDen.push {st : EStore} {fe y : IFEnv} {ci : IConstantInfo}
   tbl c t ht := by
     left
     have hraw : (y.push ci).rawTable? c = fe.rawTable? c := by
-      simp only [IFEnv.rawTable?, IFEnv.push, h.tbls, h.base]
+      simp only [IFEnv.rawTable?, ConRon.Bridge.IFEnv.push_tbls, ConRon.Bridge.IFEnv.push_base, h.tbls, h.base]
     simp only [IFEnv.findTable?] at ht ⊢
     split at ht
     · rw [hraw] at ht

@@ -1857,7 +1857,7 @@ def checkerProg : Prog := [
   ("rule_eq_a", L.Ind.ruleEqA),
   ("rule_eq_b", L.Ind.ruleEqB),
   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs),
-  ("rule_rhs_at", L.Arena.ruleRhsAtL),
+  ("rule_body_at", L.Arena.ruleBodyAtL),
   ("rules_at_lps_go", L.Ind.rulesAtLpsGo),
   ("rules_eq", L.Ind.rulesEq),
   ("rules_link_ok", L.Ind.rulesLinkOk),

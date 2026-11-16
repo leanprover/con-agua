@@ -40,6 +40,38 @@ structure IndexR (m : Mem) (I : IStreamIndex) : Prop where
   firstsSize : I.firsts.size ≤ (m.arr64 FIRSTS).size
   next : (rdW (m.arr64 CTL) 128).toNat = I.next
 
+/-- An optional counter as a word (`IStreamIndex.natFrom`/`strFrom`): `0` for none, `k + 1` for
+`some k`. -/
+def optW (w : Word) : Option Nat := if w = 0 then none else some (w.toNat - 1)
+
+/-- **The frozen stream index** (`IStreamIndex.freeze`, at the end of `build_index`): the literal
+names are the words `CTL[162‥171]` (`EnvR`'s `lits`), the flags' thresholds `natFrom`/`strFrom`
+the words `CTL[172]`, `CTL[173]` (`optW`). -/
+structure FrozenR (m : Mem) (I : IStreamIndex) : Prop where
+  lits : I.base.lits.map (·.word.toUInt64) = litWords m
+  natFrom : I.natFrom = optW (rdW (m.arr64 CTL) 172)
+  strFrom : I.strFrom = optW (rdW (m.arr64 CTL) 173)
+
+/-- The `CTL` words `FrozenR` reads. -/
+def frozenCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173]
+
+theorem FrozenR.congr {m m' : Mem} {I : IStreamIndex}
+    (hc : ∀ x ∈ frozenCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) (h : FrozenR m I) :
+    FrozenR m' I :=
+  ⟨by rw [litWords_congr (fun i hi => hc _ (by
+      simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false]
+      interval_cases i <;> decide))]; exact h.lits,
+   by rw [hc 172 (by decide)]; exact h.natFrom, by rw [hc 173 (by decide)]; exact h.strFrom⟩
+
+theorem FrozenR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {I : IStreamIndex}
+    (hC : ∀ x ∈ C, x ∉ frozenCtl) (hf : MemFrame A C m m') (h : FrozenR m I) : FrozenR m' I :=
+  h.congr fun x hx => hf.ctl x (fun hm => hC x hm hx)
+
+theorem not_mem_frozenCtl {x : Word} (h : x.toNat < 162 ∨ 174 ≤ x.toNat) : x ∉ frozenCtl :=
+  fun hm => by
+    simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with e | e | e | e | e | e | e | e | e | e | e | e <;> subst e <;> simp at h
+
 /-- The own layer is empty. -/
 def OwnEmpty (m : Mem) : Prop := ∀ w, (ownRaw m w).1 = 0 ∧ ownTbl m w = 0
 
@@ -59,12 +91,17 @@ theorem OwnEmpty.of_below {m : Mem} (_h : OwnBelow m) (hlt : ∀ w, rowTag w ≤
 
 /-- **The environment at a job's start**: the stream index at the view of position `k`, an empty
 own layer, `vis = 0`. -/
-theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (hO : OwnEmpty m)
+theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (hF : FrozenR m I)
+    (hO : OwnEmpty m)
     (hB : OwnBelow m) (hs : (stampW m).toNat < 2 ^ 32) (h134 : (rdW (m.arr64 CTL) 134).toNat = I.firsts.getD k I.next)
-    (h135 : (rdW (m.arr64 CTL) 135).toNat = k) : EnvR m 0 (I.view k) := by
+    (h135 : (rdW (m.arr64 CTL) 135).toNat = k)
+    (h160 : (rdW (m.arr64 CTL) 160 != 0) = fromLe I.natFrom (I.firsts.getD k I.next))
+    (h161 : (rdW (m.arr64 CTL) 161 != 0) = fromLe I.strFrom (I.firsts.getD k I.next)) :
+    EnvR m 0 (I.view k) := by
   refine ⟨fun n => ?_, fun n hn => absurd (hO _).1 hn, fun n hn => absurd (hO _).1 hn,
     fun n _ hn => absurd (hO _).1 hn, fun n => ?_, fun n hn => absurd (hO _).2 hn, ?_, ?_,
-    fun n => hI.base n, fun n => hI.btbl n, hs, hB⟩
+    fun n => hI.base n, fun n => hI.btbl n, hs, hB, by simp only [IStreamIndex.view, h160],
+    by simp only [IStreamIndex.view, h161], by simp only [IStreamIndex.view]; exact hF.lits⟩
   · simp [IStreamIndex.view, ownFind]
   · simp [IStreamIndex.view, (hO _).2]
   · simp only [IStreamIndex.view]; rw [h134]

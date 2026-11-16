@@ -96,7 +96,7 @@ def iotaRecFire2T (c : NIdx) (isK : Bool) (induct : NIdx) (mI rP cnP : Nat) (lps
   if margs.length = cnP + rl.nfields then do
     let fam ← iotaRecFamT mode r fe depth isK induct mI rP cnP lps us args usj cvj rl margs
     if fam then do
-      let rhs ← ruleRhsAt c rl.ctor lps rl.rhs us
+      let rhs ← ruleBodyAt c rl.ctor lps rl.rhs us
       let x ← mkAppN rhs (args.take rP ++ margs.drop cnP)
       pure (some x)
     else pure none

@@ -186,7 +186,7 @@ def imFns : List FnName :=
    "rom_level_c", "rom_levels", "rom_levels_c", "rom_lit", "rom_lvls_go", "rom_lvls_go_c",
    "rom_name", "rom_name_c", "rom_pin_sets", "rom_put", "rom_put_c", "rom_u64", "rom_u64_c",
    "rr_clear", "rr_find", "rr_put", "rset_clear", "rset_find", "rset_put", "rule_eq_a", "rule_eq_b",
-   "rule_eq_but_rhs", "rule_rhs_at", "rule_wr", "rules_at_lps_go", "rules_eq", "same_const_heads",
+   "rule_eq_but_rhs", "rule_body_at", "rule_wr", "rules_at_lps_go", "rules_eq", "same_const_heads",
    "scratch_drop", "scratch_enter", "scratch_reset", "sl_cons", "sl_contains", "sl_eq", "sl_find",
    "sl_get", "sl_getd", "sl_memo", "sl_new1", "sl_nodup", "sl_snoc", "sle_go", "slp_go", "sls_go",
    "sls_memo", "sort_find", "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool",

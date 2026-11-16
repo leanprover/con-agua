@@ -395,7 +395,7 @@ def phaseBFns : List FnName :=
    "rom_exprs_to_c", "rom_level_c", "rom_levels_c", "rom_lit", "rom_lvls_go_c", "rom_name_c",
    "rom_pin_sets", "rom_put_c", "rom_u64_c", "rr_clear", "rr_find", "rr_put", "rset_clear",
    "rset_find", "rset_put", "rule_agree", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs",
-   "rule_rhs_at", "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_refire", "rules_to_erec",
+   "rule_body_at", "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_refire", "rules_to_erec",
    "rules_to_erec_go", "same_const_heads", "scratch_drop", "scratch_enter", "scratch_reset",
    "shift_left_refused", "size_bytes", "sl_all_in", "sl_append", "sl_cons", "sl_contains", "sl_eq",
    "sl_find", "sl_get", "sl_getd", "sl_memo", "sl_new1", "sl_nodup", "sl_set_eq", "sl_snoc",

@@ -148,7 +148,7 @@ declare_arrays checkerArrays
   | /-- The `isDefEq` memo (`deSch`). -/ Arena.DEM : word min 3 := 101
   | /-- The `constType` memo (`ctSch`). -/ Arena.CTM : word min 3 := 102
   | /-- The `constValue` memo (`cvSch`). -/ Arena.CV : word min 3 := 103
-  | /-- The `ruleRhs` memo (`rrSch`). -/ Arena.RRM : word min 3 := 104
+  | /-- The `ruleBody` memo (`rrSch`). -/ Arena.RRM : word min 3 := 104
   | /-- The level-equality memo (`lqSch`). -/ Arena.LQ : word min 3 := 105
   | /-- The level-list-equality memo (`lsqSch`). -/ Arena.LSQ : word min 3 := 106
   -- the environment (`Arena/Tiers.lean`)

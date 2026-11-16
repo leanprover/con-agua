@@ -557,11 +557,11 @@ theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : C
   · exact memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ [ctSch.arr] [ctSch.cs + 1]
       (by decide) (by decide) m m' hf _ h.lsq
 
-/-- **`ruleRhsC`'s `find; put`**. -/
+/-- **`ruleBodyC`'s `find; put`**. -/
 theorem CoreRM.setRr {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
     (k1 k2 w : Word) (hk : k1.toNat < 2 ^ 32) (hw : w.toNat < 2 ^ 32)
     (hs : msetG rrSch m k1 k2 w = some m') :
-    CoreRM m' { c with ruleRhsC := c.ruleRhsC.insert (rrKey.dk k1 k2) (decE w) } M eb := by
+    CoreRM m' { c with ruleBodyC := c.ruleBodyC.insert (rrKey.dk k1 k2) (decE w) } M eb := by
   have hf := msetG_frame rrSch (coreSch_wf _ _ (by decide) (by decide)) m m' k1 k2 w hs
   have wf := coreSch_wf
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, h.eb1, ?_, ?_, ?_, ?_, ?_⟩
@@ -576,13 +576,13 @@ theorem CoreRM.setRr {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : C
   · exact memoRV_frame _ (wf _ _ (by decide) (by decide)) _ _ [rrSch.arr] [rrSch.cs + 1]
       (by decide) (by decide) m m' hf (vh_const m m') _ h.cv
   · exact memoRV_set rrSch (coreSch_wf _ _ (by decide) (by decide)) rrKey VH
-      (fun _ _ _ _ _ h => h) m c.ruleRhsC h.rr k1 k2 w hk (decE w) ⟨rfl, hw⟩ m' hs
+      (fun _ _ _ _ _ h => h) m c.ruleBodyC h.rr k1 k2 w hk (decE w) ⟨rfl, hw⟩ m' hs
   · exact memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ [rrSch.arr] [rrSch.cs + 1]
       (by decide) (by decide) m m' hf _ h.lq
   · exact memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ [rrSch.arr] [rrSch.cs + 1]
       (by decide) (by decide) m m' hf _ h.lsq
 
-/-! ## `const_ty_at`, `rule_rhs_at`: a memo in front of `inst_lp` -/
+/-! ## `const_ty_at`, `rule_body_at`: a memo in front of `inst_lp` -/
 
 /-- **`const_ty_at`'s model `ctaW`** (generated), `inst_lp` through its run. -/
 l_model constTyAt_spec (p : Prog) (hp : IotaProg' p)
@@ -590,9 +590,9 @@ l_model constTyAt_spec (p : Prog) (hp : IotaProg' p)
   specs [memoFindG_spec ctSch p _ hp.ctf n, memoPutG_spec ctSch p _ hp.ctp n, callW_spec p n "inst_lp"]
   grind [arena_grind] finish [mvG]
 
-/-- **`rule_rhs_at`'s model `rraW`** (generated), `inst_lp` through its run. -/
-l_model ruleRhsAt_spec (p : Prog) (hp : IotaProg' p)
-  fns [hp.ruleRhsAt ↦ rraW]
+/-- **`rule_body_at`'s model `rraW`** (generated), `inst_lp` through its run. -/
+l_model ruleBodyAt_spec (p : Prog) (hp : IotaProg' p)
+  fns [hp.ruleBodyAt ↦ rraW]
   specs [memoFindG_spec rrSch p _ hp.rrf n, memoPutG_spec rrSch p _ hp.rrp n, callW_spec p n "inst_lp"]
   grind [arena_grind] finish [mvG]
 
@@ -653,27 +653,27 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   · simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
-theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
-    (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
-    (ruleRhsAt rec ctor lps rhs us).run a = .ok (r, a) := by
-  simp [ruleRhsAt, h, StateT.run_bind, StateT.run_get]; rfl
+theorem ruleBodyAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
+    (r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = some r) :
+    (ruleBodyAt rec ctor lps rhs us).run a = .ok (r, a) := by
+  simp [ruleBodyAt, h, StateT.run_bind, StateT.run_get]; rfl
 
-theorem ruleRhsAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx)
-    (a a₁ : AState) (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = none)
+theorem ruleBodyAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx)
+    (a a₁ : AState) (r : EIdx) (h : a.caches.ruleBodyC[(rec, ctor, us)]? = none)
     (hi : (instLPFast coreWalkFuel lps us rhs).run a = .ok (r, a₁)) :
-    (ruleRhsAt rec ctor lps rhs us).run a = .ok (r, { a₁ with caches := { a₁.caches with
-      ruleRhsC := a₁.caches.ruleRhsC.insert (rec, ctor, us) r } }) := by
-  simp [ruleRhsAt, h, StateT.run_bind, StateT.run_get, hi]
+    (ruleBodyAt rec ctor lps rhs us).run a = .ok (r, { a₁ with caches := { a₁.caches with
+      ruleBodyC := a₁.caches.ruleBodyC.insert (rec, ctor, us) r } }) := by
+  simp [ruleBodyAt, h, StateT.run_bind, StateT.run_get, hi]
   rfl
 
-/-- **`rule_rhs_at` refines `ruleRhsAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
-theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
-    RuleRhsAtOK p := by
+/-- **`rule_body_at` refines `ruleBodyAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
+theorem ruleBodyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
+    RuleBodyAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
   cases n with
   | zero => exact invoke_zero_triple
   | succ n =>
-  refine triple_post (ruleRhsAt_spec p hp (n + 1) s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
+  refine triple_post (ruleBodyAt_spec p hp (n + 1) s₀ rec ctor po pl rhs us) fun r s' ⟨hloc, hW⟩ => ⟨hloc,
     ?_⟩
   have hdk := rrKey_dk rec ctor us hctor hus
   rw [rraW.eq_2] at hW
@@ -684,7 +684,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   · rw [ite_eq_left h1] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     obtain ⟨hv, hv32⟩ := hf.1 h1
-    have hrun1 := ruleRhsAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
+    have hrun1 := ruleBodyAt_run_hit (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ hv
     refine CoreRef.of_pure hS hrun1 hm.symm ?_ ?_
     · simp only [decH]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; exact hv32
@@ -695,7 +695,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
     CoreSpec.of_callW (hlp n s₀ a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
-  have hrun2 := ruleRhsAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
+  have hrun2 := ruleBodyAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
   obtain ⟨h2, hW⟩ := of_ite_none hW
   cases hp : mputG rrSch m₁ rec (ctor ||| (us <<< 32)) (r₁.headD 0)

@@ -548,19 +548,19 @@ def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (ra, rb) {
   return u64(ra != 1) & u64(rb != 1)
 }
 
-/-! ## `rule_rhs_at(rec, ctor, po, pl, rhs, us)`, `const_ty_at(n, po, pl, ty, us)`
+/-! ## `rule_body_at(rec, ctor, po, pl, rhs, us)`, `const_ty_at(n, po, pl, ty, us)`
 
 Both are thin memo wrappers around `inst_lp` (a `WhnfCallees` stub), over the already-installed
-caches `ruleRhsC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
+caches `ruleBodyC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
 `CoreRefine.lean`'s `rrKey`/`memoRG_findR`/`memoRG_findP`. -/
 
-/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
+/-- con-leche: none — `ruleBodyAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
 is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
 callee wrote the memo. -/
--- con-ron: ConRon/Arena/Core.lean:214-229 ConRon.Arena.ruleRhsAt
--- con-ron: CHANGED since 42a08640 — `ConRon.Arena.ruleRhsAt` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.ruleRhsAt]
-def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
+-- con-ron: ConRon/Arena/Core.lean:214-229 ConRon.Arena.ruleBodyAt
+-- con-ron: CHANGED since 42a08640 — `ConRon.Arena.ruleBodyAt` is gone upstream; re-check the L code and its proofs, then delete this line
+@[no_expose, l_impl ConRon.Arena.ruleBodyAt]
+def ruleBodyAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
     locals (k2, fd, j, dd, r, dum) {
   k2 := ctor | (us << 32);
   (fd, j, dd) := call rr_find(rec, k2);
@@ -812,7 +812,7 @@ structure IotaProg (p : Prog) : Prop where
   iotaIndexOk : p.lookup "iota_index_ok" = some iotaIndexOkL
   proofIrrel : p.lookup "proof_irrel" = some proofIrrelL
   proofIrrelHalf : p.lookup "proof_irrel_half" = some proofIrrelHalfL
-  ruleRhsAt : p.lookup "rule_rhs_at" = some ruleRhsAtL
+  ruleBodyAt : p.lookup "rule_body_at" = some ruleBodyAtL
   constTyAt : p.lookup "const_ty_at" = some constTyAtL
   instSpine : p.lookup "inst_spine" = some instSpineL
   instSpinePins : p.lookup "inst_spine_pins" = some instSpinePinsL
@@ -957,14 +957,14 @@ def MajorToCtorOK (p : Prog) : Prop :=
       (majorToCtor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
         (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb
 
-/-- con-leche: none (`ruleRhsAt`'s cache probe). -/
-def RuleRhsAtOK (p : Prog) : Prop :=
+/-- con-leche: none (`ruleBodyAt`'s cache probe). -/
+def RuleBodyAtOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb rec ctor po pl rhs us : Word) (lps : List NIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW rec → HW ctor → HW rhs → HW us →
     hslice? (erecP s₀.mem) po.toNat pl.toNat = some lps →
-    CoreSpec p n "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
-      (ruleRhsAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
+    CoreSpec p n "rule_body_at" [rec, ctor, po, pl, rhs, us]
+      (ruleBodyAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
 
 /-- con-leche: none (`constTyAt`'s cache probe). -/
 def ConstTyAtOK (p : Prog) : Prop :=

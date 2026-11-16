@@ -116,7 +116,7 @@ def coreFns : List FnName := [
   "raw_nat_lit", "raw_table", "rec_fire_args", "rec_fire_level_count", "rec_fire_levels",
   "reduce_nat", "reduce_nat_ap", "reduce_nat_head", "reduce_nat_k", "reduce_nat_op",
   "reduce_nat_succ", "reduce_proj_arg", "reduce_proj_core", "reduce_proj_fire", "reduce_proj_head",
-  "residual_pw", "rom_lit", "rr_find", "rr_put", "rule_rhs_at", "same_const_heads",
+  "residual_pw", "rom_lit", "rr_find", "rr_put", "rule_body_at", "same_const_heads",
   "shift_left_refused", "size_bytes", "sl_memo", "sle_go", "slp_go", "sls_go", "sls_memo",
   "sort_find", "sort_push", "spine_cmp", "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push",
   "stack_cover", "str_cons_spine", "str_ctor_pre", "str_lit_ctor", "str_lit_stored", "str_ls1",

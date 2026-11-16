@@ -154,8 +154,8 @@ include hq in
 theorem constTyAt_refines : ConstTyAtOK p := KnotAllProg.constTy hq
 
 include hq in
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines : RuleRhsAtOK p := ruleRhsAt_refines' p hq.body.iota hq.instLP
+@[refines ConRon.Arena.ruleBodyAt]
+theorem ruleBodyAt_refines : RuleBodyAtOK p := ruleBodyAt_refines' p hq.body.iota hq.instLP
 
 include hq in
 @[refines ConRon.Arena.instSpinePins]

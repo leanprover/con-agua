@@ -150,7 +150,7 @@ theorem memoRV_findP {k₁ k₂ : IdxKind} {S : MemoSch} {m : Mem}
   obtain ⟨v, h1, h2, h3⟩ := memoRV_hit S pairKey VH m t h x y hr hh ⟨hx, hy⟩
   exact ⟨h1.trans (congrArg some h2), h3⟩
 
-/-- A probe of `ruleRhsC`. -/
+/-- A probe of `ruleBodyC`. -/
 theorem memoRV_findR {S : MemoSch} {m : Mem} {t : Std.HashMap (NIdx × NIdx × LsIdx) EIdx}
     (h : MemoRV S rrKey VH m t) (x y : Word) (hx : x.toNat < 2 ^ 32)
     (hr : mfindG S m x y ≠ []) :

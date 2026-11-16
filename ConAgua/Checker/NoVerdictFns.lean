@@ -226,7 +226,7 @@ def nvFns : List L.FnName :=
    "rom_names_to", "rom_pin_sets", "rom_pins_to", "rom_put", "rom_put_c", "rom_sets_to",
    "rom_tpairs_to", "rom_tpins_to", "rom_u64", "rom_u64_c", "rr_clear", "rr_find", "rr_put",
    "rset_clear", "rset_find", "rset_put", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs",
-   "rule_rhs_at", "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_refire", "rules_to_erec",
+   "rule_body_at", "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_refire", "rules_to_erec",
    "rules_to_erec_go", "same_const_heads", "scan_axiom", "scan_binder_info", "scan_bool",
    "scan_def", "scan_hints", "scan_ind_ctor", "scan_ind_ctors", "scan_ind_decl", "scan_ind_rec",
    "scan_ind_recs", "scan_ind_type", "scan_ind_types", "scan_nat_list", "scan_opaque", "scan_quot",
