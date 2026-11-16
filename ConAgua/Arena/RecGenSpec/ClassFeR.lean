@@ -433,8 +433,9 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   -- the push
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (ferW.k_env_push.none ..)
   rw [ferW.k_env_push.arm1] at h
-  obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.rs hp.rp.push h2 hS1 hci
-  obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.rs hp.rp.push h2 hS1.check.env hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.ef h2 hS1 hci
+  obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.ef h2 hS1.check.env hci
+    (show 161 < (m1.arr64 CTL).size by have := hS1.iw.ctl; omega)
   have hO1 : ownC m1 = ownC m := ownC_cfrRecW h1
   -- the displaced row
   obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (ferW.k_rec3.none ..)

@@ -51,7 +51,8 @@ l_model ictlE_spec (p : Prog) (hP : TailProg p)
 /-! ## The twin, split at the L calls -/
 
 /-- `checkBlockTail`'s second half (the Rust's `check_block_tail_stream`): the K flags, the generated
-family pushed in place, a flush, the stream's recursors against it, the pops, a flush. -/
+family pushed in place, a flush, the stream's recursors against it, the pops, the flags set back, a
+flush. -/
 def tailStreamT (mode : ConLeche.CheckMode) (p : BlockShape) (fe₂b : IFEnv)
     (out : List (IConstantVal × TargetMajor × List EIdx)) : AM IFEnv := do
   ConRon.Arena.streamKCheck p p.recs out
@@ -59,7 +60,8 @@ def tailStreamT (mode : ConLeche.CheckMode) (p : BlockShape) (fe₂b : IFEnv)
   let (feG, prevs) := ConRon.Arena.consBlockRecsTemp infos fe₂b []
   ConRon.Arena.flushCaches
   ConRon.Arena.streamRecsCheck mode feG p.recs out
-  let fe₃ := prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feG
+  let fe₃ := (prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feG).setFlags fe₂b.natLit
+    fe₂b.strLit
   ConRon.Arena.flushCaches
   pure fe₃
 
