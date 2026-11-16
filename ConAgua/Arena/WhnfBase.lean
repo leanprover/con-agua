@@ -561,7 +561,7 @@ theorem CoreS.iwF {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
 theorem CoreS.frameSM_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (137 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hmem : CoreMemos m') (hiw : L.Ind.IWOK m') :
     CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
@@ -591,7 +591,7 @@ the level heap, the walk-local memos. -/
 theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (137 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hmem : CoreMemos m') (hIW : (200 : Word) ∉ C := by first | decide | simp) :
     CoreS dn m' a vis fe M eb :=
   hS.frameSM_iw hf hA hC hmem
@@ -602,7 +602,7 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (137 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hIW : (200 : Word) ∉ C := by first | decide | simp)
     (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
@@ -615,7 +615,7 @@ theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
 theorem CoreS.frameS_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ b.arr = 145 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (137 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hiw : L.Ind.IWOK m')
     (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
@@ -629,7 +629,7 @@ arrays `≥ 149` (or 64‥95), `CTL` words `≥ 138` (or 64‥95). The stacks an
 theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (138 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hmem : CoreMemos m') (hIW : (200 : Word) ∉ C := by first | decide | simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   refine ⟨hS.frameSM hf (fun b hb => by have := hA b hb; exact ⟨this.1, this.2.1, by omega⟩)
@@ -649,7 +649,7 @@ memos: the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List TieredArray} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat))
+    (hA : ∀ b ∈ A, b.hi = false ∧ 64 ≤ b.arr ∧ (b.arr < 96 ∨ 149 ≤ b.arr)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ (138 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat))
     (hWA : ∀ b ∈ A, b.arr < 151 ∨ 153 < b.arr := by decide)
     (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) (hIW : (200 : Word) ∉ C := by first | decide | simp)
     (hHB : (L.Ind.HBM : TieredArray) ∉ A := by decide) (hHBc : (214 : Word) ∉ C := by first | decide | simp) :
@@ -912,12 +912,6 @@ def StrLitCtorOK (p : Prog) : Prop :=
     a₀.store.view (decE h) = some (.lit (.strVal s)) →
     CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M eb
 
-/-- `str_lit_stored(vis)` refines `strLitStored fe`. -/
-def StrLitStoredOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
-    CoreSpec p n "str_lit_stored" [vis] (strLitStored fe) decBool s₀ a₀ dn vis fe M eb
-
 /-- **The stub callees.** (It held the knot's `infer`/`infer_io`/`defeq` slot steps too; no proof
 used them, and lane `defeq`'s knot proves those steps from facts that themselves come from proofs
 over this bundle, so they were dropped: helper `whnf4-knot`.) -/
@@ -925,13 +919,5 @@ structure WhnfCallees (p : Prog) : Prop where
   instList : InstListOK p
   instLP : InstLPOK p
   strLitCtor : StrLitCtorOK p
-  strLitStored : StrLitStoredOK p
-
-/-- **`strLitStored` keeps every stored node's view** (it reads the pins and the environment,
-which changes no node). `StrLitStoredOK` says
-nothing about the store; `proj_lit_to_ctor` carries a `view` fact across the call. -/
-def SupKeep (fe : IFEnv) : Prop :=
-  ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
-    (AM.st (strLitStored fe) a).store.view h = some w
 
 end L.Arena

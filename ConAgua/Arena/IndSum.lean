@@ -490,7 +490,7 @@ def structProjArgPL : FunDecl := lfn (T, j) locals (b, e) {
 
 /-- `has_loose_b_var_b_ins(e, i, r)`: record the answer `r` for `(e, i)` in the `hb` memo and
 return it (probes again right before the put, as every insert does). -/
--- con-ron: ConRon/Arena/Core.lean:3093-3098 ConRon.Arena.hasLooseBVarBIns
+-- con-ron: ConRon/Arena/Core.lean:3193-3198 ConRon.Arena.hasLooseBVarBIns
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBIns]
 def hasLooseBVarBInsL : FunDecl := lfn (e, i, r) locals (fd, j, d, u) {
   (fd, j, d) := call hb_find(e, i);
@@ -504,7 +504,7 @@ the tag: `bvar`/`fvar`/`sort`/`const`/`lit` direct answers, the rest (`app`, `la
 `letE`, `proj`) through the `hb` memo, short-circuiting at the first `true` child (as the twin's
 `match` does for `app`/`lam`/`forallE`/`letE`). The twin's `memo` is dropped (the memo is the `hb`
 array, per `IndIface`'s per-call-memo convention). -/
--- con-ron: ConRon/Arena/Core.lean:3100-3146 ConRon.Arena.hasLooseBVarBGo
+-- con-ron: ConRon/Arena/Core.lean:3200-3246 ConRon.Arena.hasLooseBVarBGo
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBGo]
 def hasLooseBVarBGoL : FunDecl :=
   lfn (f, i, h) locals (bb, g, x, y, z, fd, j, d, r1, r) {
@@ -536,7 +536,7 @@ def hasLooseBVarBGoL : FunDecl :=
 }
 
 /-- `has_loose_b_var_b_fast(i, e)`: the executed `hasLooseBVarB` — clear the `hb` memo, walk. -/
--- con-ron: ConRon/Arena/Core.lean:3148-3151 ConRon.Arena.hasLooseBVarBFast
+-- con-ron: ConRon/Arena/Core.lean:3248-3251 ConRon.Arena.hasLooseBVarBFast
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarBFast]
 def hasLooseBVarBFastL : FunDecl := lfn (i, e) locals (u, r) {
   u := call hb_clear();
@@ -551,7 +551,7 @@ direct answers, the rest through the `hb` memo keyed by the node and the window'
 fixed for the walk), short-circuiting at the first `true` child. The twin's per-call `memo` is the
 `hb` array (`IndIface`'s per-call-memo convention; `hasLooseBVarBGo`'s and this walk's top calls
 each clear it, and neither runs inside the other). -/
--- con-ron: ConRon/Arena/Core.lean:3153-3198 ConRon.Arena.hasLooseBVarInGo
+-- con-ron: ConRon/Arena/Core.lean:3253-3298 ConRon.Arena.hasLooseBVarInGo
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarInGo]
 def hasLooseBVarInGoL : FunDecl :=
   lfn (f, w, d, h) locals (bb, g, x, y, z, fd, j, dd, r1, r) {
@@ -584,7 +584,7 @@ def hasLooseBVarInGoL : FunDecl :=
 
 /-- `has_loose_bvar_in(d, w, e)`: the window query (one memoized DAG walk, the `hb` memo cleared);
 an empty window asks nothing. -/
--- con-ron: ConRon/Arena/Core.lean:3200-3204 ConRon.Arena.hasLooseBVarIn
+-- con-ron: ConRon/Arena/Core.lean:3300-3304 ConRon.Arena.hasLooseBVarIn
 @[no_expose, l_impl ConRon.Arena.hasLooseBVarIn]
 def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
   if w == 0 { return 0 };
@@ -595,7 +595,7 @@ def hasLooseBVarInL : FunDecl := lfn (d, w, e) locals (u, r) {
 
 /-- `struct_used_later(cty, nP, j)`: field `j` is used by a later field (official's `infer_proj`'s
 `has_loose_bvars(binding_body(r))` at step `j`). Its own top call (clears `hb`). -/
--- con-ron: ConRon/Arena/Core.lean:3206-3212 ConRon.Arena.structUsedLater
+-- con-ron: ConRon/Arena/Core.lean:3306-3312 ConRon.Arena.structUsedLater
 @[no_expose, l_impl ConRon.Arena.structUsedLater]
 def structUsedLaterL : FunDecl := lfn (cty, nP, j) locals (ok, bo, bl, body, r) {
   (ok, bo, bl, body) := call strip_pis(nP + j + 1, cty);

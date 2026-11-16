@@ -259,6 +259,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     have hCr0 := hkp.call (im_mem _ rfl) h0 hCr6
     have hg70 : IWGrow m7 m0 := hg76.trans hg0
     have hok2 := hok7.toStepOK.push hok7.check.state hciD7 hsh2 hcw2
+      (hr := ConLeche.RuleWF.of_not_rec (fun _ _ _ _ _ heq => nomatch heq))
     refine RefE.bindRun (s₀ := ⟨m0, Locals.init []⟩)
       (fun _ => checkDeclDefnE.k_check_div_mod_pin.none ..)
       (cdmp_specE p hX.dm n _ (r0.headD 0) (r0.tail.headD 0) vis q wn) (fun hG => hG.nv)
@@ -297,12 +298,13 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   · have hno : ns.contains (decI wn) = false := by rw [← hb6, hb]; rfl
     rw [checkDeclDefnE.k_sl_contains.arm2 _ _ _ _ _ _ _ hb, hno]
     simp only [Bool.false_eq_true, ite_false, pure_bind]
-    exact tail fe m6 a5 hC6 ⟨fun _ => rfl, fun _ => rfl, rfl, rfl, rfl⟩
+    exact tail fe m6 a5 hC6 ⟨fun _ => rfl, fun _ => rfl, rfl, rfl, rfl, id⟩
       (ConRon.Bridge.CoreStep.refl hok4.check) hci6 (hgr4.trans hg46) hPS6 hCr6
   have hyes : ns.contains (decI wn) = true := by rw [← hb6]; exact bne_iff_ne.mpr hb
   rw [checkDeclDefnE.k_sl_contains.arm1 _ _ _ _ _ _ _ hb, hyes]
   simp only [ite_true]
   have hok2 := hok4.toStepOK.push hok4.check.state hciD hsh2 hcw2
+    (hr := ConLeche.RuleWF.of_not_rec (fun _ _ _ _ _ heq => nomatch heq))
   refine RefE.bindRun (s₀ := ⟨m6, Locals.init []⟩)
     (fun _ => checkDeclDefnE.k_check_structural_nat_pin.none ..)
     (snp_specE p hX.snp.snp hX.snp.snpFe2 hX.snp.lNatCertify n _ vis q wn) (fun hG => hG.nv)
@@ -316,7 +318,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   have hg67 : IWGrow m6 s7.mem := hQ7.grow
   exact tail fe7 s7.mem a7 hQ7.stage hQ7.same
     ⟨hQ7.stage.check.congr_find (fun k => (hQ7.same.find k).symm) hQ7.same.tbls.symm
-      hQ7.same.base.symm, hQ7.ext, hQ7.pins⟩
+      hQ7.same.base.symm hok4.check.ienv.flags, hQ7.ext, hQ7.pins⟩
     (ArrExt.decCI (L.Ind.IWGrow.ext hg67) hci6) ((hgr4.trans hg46).trans hg67)
     (L.Arena.PinSetsR.step hPS6 hg67 (hfr (by decide) h7w)) (hkp.call (im_mem _ rfl) h7w hCr6)
 

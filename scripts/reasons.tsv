@@ -207,3 +207,4 @@ R_THE_KERNEL_REFUSED	reject	the kernel refused a `Nat` numeral because its size 
 R_THE_KERNEL_REFUSED_TO	reject	the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer
 R_THE_KERNEL_REFUSED_TO_EVALUATE	reject	the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size
 R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT	reject	the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer
+R_THE_RECURSOR_S_RULE_FOR_IS_NOT	reject	the recursor 's rule for is not written as a function of the recursor's leading arguments and the constructor's fields

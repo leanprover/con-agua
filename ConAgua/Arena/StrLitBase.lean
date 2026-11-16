@@ -148,7 +148,6 @@ structure StrLitProg (p : Prog) : Prop extends WhnfDeltaProg' p where
   listConsTyOk : p.lookup "list_cons_ty_ok" = some listConsTyOkL
   charOfNatTyOk : p.lookup "char_of_nat_ty_ok" = some charOfNatTyOkL
   stringOfListTyOk : p.lookup "string_of_list_ty_ok" = some stringOfListTyOkL
-  strLitStored : p.lookup "str_lit_stored" = some strLitStoredL
   litShapeOk : p.lookup "lit_shape_ok" = some litShapeOkL
   natIndAtCv : p.lookup "nat_ind_at_cv" = some natIndAtCvL
   natZeroAtCv : p.lookup "nat_zero_at_cv" = some natZeroAtCvL

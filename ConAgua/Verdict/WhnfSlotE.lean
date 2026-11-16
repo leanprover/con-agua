@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DefEqKnot
 import ConAgua.Arena.CoreNatOp
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfSlotRefine
 public import ConAgua.Arena.WhnfCoreLoop
 
@@ -30,24 +29,23 @@ theorem err_of_k {β γ : Type} {k : Except Err β → Except Err γ}
 /-! ## `whnf_core`: the step's and the slot's claims from their refinements -/
 
 section core
-variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe) (hnv : closedNV p L.Checker.nvFns = true) (hI : IotaRecAtE p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p) (hnv : closedNV p L.Checker.nvFns = true) (hI : IotaRecAtE p)
 
-include hp hwc hcc hsup hnv hI in
+include hp hwc hcc hnv hI in
 /-- **`whnf_core_step`'s claim at every L fuel up to `n`** (`step_ref`'s error half). -/
 theorem coreStepE_of (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) : CoreStepE p n :=
   fun j hj F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he =>
-    RefE.coreSpecE (whnfCoreStepE_spec p hp (j + 1) s₀ mode cheap vis d h e) hnv ⟨hkE.mono hj, hI⟩
-      (step_ref p hp hwc hcc hsup j (hk.mono hj) F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
+    RefE.coreSpecE (whnfCoreStepE_spec p hp (j + 1) s₀ mode cheap vis d h e) hnv ⟨hkE.mono hj, hI, hnv⟩
+      (step_ref p hp hwc hcc j (hk.mono hj) F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
-include hp hwc hcc hsup hnv hI in
+include hp hwc hcc hnv hI in
 /-- **The knot's `whnfCore` slot's verdicts, one level up** (`core_ref`'s error half). -/
 theorem whnfCoreSlot_stepE (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
     RefE.coreSpecE (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e) hnv
-      (coreStepE_of p hp hwc hcc hsup hnv hI n hk hkE)
-      (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
+      (coreStepE_of p hp hwc hcc hnv hI n hk hkE)
+      (core_ref p hp hwc hcc n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end core
 
@@ -59,7 +57,7 @@ bodies' callee `iota_rec_at`. -/
 theorem whnfSlotsE_step {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = true)
     (hI : IotaRecAtE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) ∧ WhnfSlotE p (n + 1) :=
-  ⟨whnfCoreSlot_stepE p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of hnv hI n
+  ⟨whnfCoreSlot_stepE p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) hnv hI n
       hk hkE,
     whnfSlot_stepE p hq.delta (KnotAllProg.instLP hq) (natOpResultOK_of_agree hq.delta.natAgree) hnv
       n hk hkE⟩

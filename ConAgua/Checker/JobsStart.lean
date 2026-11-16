@@ -30,10 +30,10 @@ theorem loArr_nil : LoArr [] := fun _ h => absurd h (by simp)
 theorem PhaseA.twin {b : ByteArray} (PA : PhaseA b) :
     Ext PA.sE.store PA.sF.store ∧ PA.sF.pins = PA.sE.pins := by
   obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
-  obtain ⟨hoff, hdrv, -, -, -, hpd, _rc, _preC, -, hden⟩ :=
+  obtain ⟨hoff, hdrv, hpp, -, -, hpd, _rc, _preC, -, hden⟩ :=
     ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
   obtain ⟨-, hx, hp, -⟩ := ConRon.Bridge.buildIndex_run ConRon.Bridge.constsSpec
-    ConRon.Bridge.tablesSpec hdrv hoff hpd hden PA.idx
+    ConRon.Bridge.tablesSpec hdrv hpp hoff hpd hden PA.idx
   exact ⟨hx, hp⟩
 
 /-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
@@ -60,7 +60,7 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
     hB.idx.frameLo hA0 hC0 hF, hS.check.env.ownBelow.frameLo hA0 hC0 hF,
     by rw [stampW_frameLo hC0 hF]; exact hS.check.env.stamp, declsF_frameLo hA0 hF hB.decls,
     iwOK_frameLo hA0 hC0 hF hS.iw, ?_, pinSetsR_frameLo hA0 hC0 hF ?_, ?_, ?_,
-    hB.memos.frameLo hA0 hC0 hF, h.fsize⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
+    hB.memos.frameLo hA0 hC0 hF, h.fsize, h.frozen.frameLo hC0 hF⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
   · rw [hC0.ctl hF (by decide), h.grow.ctl130]; exact h7.c130
   · exact PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
       (h.frame.ctl _ (not_mem_biC (by decide)))
@@ -91,7 +91,7 @@ theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
   refine ⟨hS.check.arena, hS.check.core, hS.check.pins, hS.check.mode,
     hB.idx, hS.check.env.ownBelow, hS.check.env.stamp, hB.decls, hS.iw, ?_,
     PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
-      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize⟩
+      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize, h.frozen⟩
   · rw [h.grow.ctl130]; exact h7.c130
   · refine ⟨?_, ?_, ?_, h.grow.memos ?_, fun k x hk => ?_⟩
     · rw [hsz]; have := hcaps.2.2.2.2.2.2.1; omega
@@ -118,7 +118,7 @@ theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Opt
     by rw [stampW_frameLo hC hf]; exact h.stamp, declsF_frameLo hA hf h.decls, iwOK_frameLo hA hC hf h.iw,
     by rw [hC.ctl hf (by decide)]; exact h.top1, pinSetsR_frameLo hA hC hf h.pinsets,
     h.mem.frameLo hA hC hf fun k x e => ?_, by rw [pinW_frame hf (by simp)]; exact h.flag,
-    h.memos.frameLo hA hC hf, h.fsize⟩, h.state, h.off, h.caches⟩
+    h.memos.frameLo hA hC hf, h.fsize, h.frozen.frameLo hC hf⟩, h.state, h.off, h.caches⟩
   exact h.mem.dnN k x e
 
 /-- `JobR` reads no global. -/

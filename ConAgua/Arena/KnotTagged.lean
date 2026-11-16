@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.DefEqKnot
 import ConAgua.Arena.CoreNatOp
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.WhnfDeltaRefine2
 import ConAgua.Arena.WhnfM2CRefine5
@@ -44,7 +43,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, h, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStep_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk F
+  whnfCoreStep_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) n hk F
     hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he
 
 include hq in
@@ -72,9 +71,9 @@ theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStepProj_refines' p hq.core (KnotAllProg.whnfC hq).strLitStored
+  whnfCoreStepProj_refines' p hq.core
     (KnotAllProg.whnfC hq).strLitCtor (KnotAllProg.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk
-    F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe (supKeep_of fe)
+    F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe
 
 include hq in
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
@@ -98,9 +97,8 @@ theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
       (projLitToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM eb :=
-  projLitToCtor_refines' p hq.core (KnotAllProg.whnfC hq).strLitStored
+  projLitToCtor_refines' p hq.core
     (KnotAllProg.whnfC hq).strLitCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
-    (supKeep_of fe)
 
 include hq in
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
@@ -116,7 +114,7 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
       (whnfApp (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfApp_refines' p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) n hk F hF hn s₀ a₀ dn vis
+  whnfApp_refines' p hq.core (KnotAllProg.coreC hq) n hk F hF hn s₀ a₀ dn vis
     fe MM eb mode d v hd vo vn same ao an i vargs args nodes hs hv hhd hva htop har hno hlo
 
 /-! ## δ (`WhnfDeltaRefine4`) -/
@@ -154,8 +152,8 @@ include hq in
 theorem constTyAt_refines : ConstTyAtOK p := KnotAllProg.constTy hq
 
 include hq in
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines : RuleRhsAtOK p := ruleRhsAt_refines' p hq.body.iota hq.instLP
+@[refines ConRon.Arena.ruleBodyAt]
+theorem ruleBodyAt_refines : RuleBodyAtOK p := ruleBodyAt_refines' p hq.body.iota hq.instLP
 
 include hq in
 @[refines ConRon.Arena.instSpinePins]
@@ -218,7 +216,7 @@ theorem litMajorToCtor_refines :
     CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
       (litMajorToCtor (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb :=
-  litMajorToCtor_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+  litMajorToCtor_refines' p hq.body.iota (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
 
 include hq in
 @[refines ConRon.Arena.majorToCtor]
@@ -236,8 +234,8 @@ theorem prepareMajor_refines :
     decRules (erecP s₀.mem) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, isK, ro, rc, major]
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
-        (isK != 0) rules (decE major)) decH s₀ a₀ dn vis fe MM eb :=
-  prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+        (isK != 0) rules (decE major)) (decMV s₀.mem) s₀ a₀ dn vis fe MM eb (MVOk s₀.mem) :=
+  prepareMajor_refines' p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (majorToCtor_refines hq) (ErecKeptRec.of_closed hq.hcl)
 
 include hq in

@@ -50,7 +50,7 @@ namespace L.Arena
 /-- Its schema: array 151, stamp/count `CTL[152]`/`CTL[153]`. -/
 abbrev wsSch : MemoSch := ⟨WSM, 152⟩
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:958-986 ConRon.Arena.wscopedBGo -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:970-998 ConRon.Arena.wscopedBGo -/
 @[no_expose, l_impl ConRon.Arena.wscopedBGo]
 def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
@@ -64,10 +64,10 @@ def wsGo : FunDecl := lfn (h, d, c) locals (b, x, fd, j, e, r, u) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:958-986 ConRon.Arena.wscopedBGo
-con-ron: ConRon/Arena/ExprOps.lean:988-994 ConRon.Arena.wscopedBGoArmApp
-con-ron: ConRon/Arena/ExprOps.lean:996-1003 ConRon.Arena.wscopedBGoArmBind
-con-ron: ConRon/Arena/ExprOps.lean:1005-1015 ConRon.Arena.wscopedBGoArmLet -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:970-998 ConRon.Arena.wscopedBGo
+con-ron: ConRon/Arena/ExprOps.lean:1000-1006 ConRon.Arena.wscopedBGoArmApp
+con-ron: ConRon/Arena/ExprOps.lean:1008-1015 ConRon.Arena.wscopedBGoArmBind
+con-ron: ConRon/Arena/ExprOps.lean:1017-1027 ConRon.Arena.wscopedBGoArmLet -/
 @[no_expose, l_impl ConRon.Arena.wscopedBGo ConRon.Arena.wscopedBGoArmApp ConRon.Arena.wscopedBGoArmBind
   ConRon.Arena.wscopedBGoArmLet]
 def wsNode : FunDecl := lfn (h, d, c) locals (g, t, i, f, a, b, x) {
@@ -157,7 +157,7 @@ theorem wsFastW_eq (n : Nat) (m : Mem) (d e : Word) (h0 : rdW (m.arr64 CTL) 152 
 
 grind_pattern [arena_grind] wsFastW_eq => wsFastW n m d e
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1048-1052 ConRon.Arena.wscopedBFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1060-1064 ConRon.Arena.wscopedBFast -/
 @[no_expose, l_impl ConRon.Arena.wscopedBFast]
 def wscopedBFastL : FunDecl := lfn (d, e) locals (r, u) {
   u := call ws_clear();

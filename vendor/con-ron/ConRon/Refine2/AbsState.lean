@@ -261,7 +261,7 @@ structure CachesRel (rc : arena.core_state.Caches) (lc : Caches) : Prop where
   lvlsEqC : RelOn (fun _ => True) rc.lvls_eq_c lc.lvlsEqC absLsIdxPair id
   constTyC : RelOn (fun _ => True) rc.const_ty_c lc.constTyC absNLsKey absEIdx
   constValC : RelOn (fun _ => True) rc.const_val_c lc.constValC absNLsKey absEIdx
-  ruleRhsC : RelOn (fun _ => True) rc.rule_rhs_c lc.ruleRhsC absNNLsKey absEIdx
+  ruleBodyC : RelOn (fun _ => True) rc.rule_body_c lc.ruleBodyC absNNLsKey absEIdx
   readLC : RelOn (fun _ => True) rc.read_l_c lc.readLC absLIdx
     ConRon.Refine.absLevel
   readNC : RelOn (fun _ => True) rc.read_n_c lc.readNC absNIdx
@@ -289,8 +289,8 @@ structure CachesInv (rc : arena.core_state.Caches) : Prop where
     rc.const_ty_c
   constValC : Inv arena.core_state.NLsKey.Insts.Con_ron_coreRonHashmapHashable
     rc.const_val_c
-  ruleRhsC : Inv arena.core_state.NNLsKey.Insts.Con_ron_coreRonHashmapHashable
-    rc.rule_rhs_c
+  ruleBodyC : Inv arena.core_state.NNLsKey.Insts.Con_ron_coreRonHashmapHashable
+    rc.rule_body_c
   readLC : Inv arena.handle.LIdx.Insts.Con_ron_coreRonHashmapHashable rc.read_l_c
   readNC : Inv arena.handle.NIdx.Insts.Con_ron_coreRonHashmapHashable rc.read_n_c
   readLsC : Inv arena.handle.LsIdx.Insts.Con_ron_coreRonHashmapHashable rc.read_ls_c
@@ -478,6 +478,7 @@ entry.  The bounds are the reading layer's, so they are not here. -/
 structure BaseRel (ix : arena.stream_index.IStreamIndex) (b : IFBase) : Prop where
   idx : ∀ n, ixRow ix n = b.idx[absNIdx n]?
   tbls : ∀ n, ixTbl ix n = b.tbls[absNIdx n]?
+  lits : b.lits = ix.lits.val.map absNIdx
 
 /-- **What a reader needs of the frozen base** (`PersTier.env`): its two maps
 well formed, since `HashMap2.get` specifies nothing otherwise, and every counter
@@ -511,6 +512,8 @@ structure IFEnvRead (pers : arena.store.PersTier) (rf : arena.env.IFEnv) (lf : I
   below : lf.base.below = absU rf.base_below
   belowRec : lf.base.belowRec = absU rf.base_below_rec
   baseOK : BaseOK pers
+  natLit : lf.natLit = rf.nat_lit
+  strLit : lf.strLit = rf.str_lit
 
 /-- **A Rust environment layer against the twin's `IFEnv`**: what a reader sees
 (`IFEnvRead`) and the pushed lists.  A job's layer starts empty on both sides

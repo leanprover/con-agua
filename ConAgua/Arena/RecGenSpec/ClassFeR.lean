@@ -325,21 +325,20 @@ theorem ownC_cfrRecW {m m' : Mem} {cq mi rp3 q : Word} (h : cfrRecW m cq mi rp3 
   · exact ownC_frame (MemFrame.setCtl m 130 _) (by simp) (by decide)
 
 /-- **`env_push` at name `ci.name`**: that name's own counter becomes the new view, the others stay. -/
-theorem envPush_ownC {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) {n : Nat} {vis : Word} {fe : IFEnv}
+theorem envPush_ownC {p : Prog} (hP : EnvFlagsProg p) {n : Nat} {vis : Word} {fe : IFEnv}
     {m m' : Mem} {c : Word} {r : List Word} {ci : IConstantInfo}
     (hc : callW p n "env_push" [vis, c] m = some (r, m')) (hE : EnvR m vis fe)
-    (hci : decCI (erecP m) c.toNat = some ci) :
+    (hci : decCI (erecP m) c.toNat = some ci) (hctl : 161 < (m.arr64 CTL).size) :
     ownC m' = updC (ownC m) ci.name (vis + 1) ∧ r = [vis + 1] ∧ vis.toNat < 4294967294 := by
-  obtain ⟨s', hs', hm, -, hr, hv, ht, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPush_spec p hrs hpu n ⟨m, Locals.init []⟩ vis c) hc
+  obtain ⟨s', hs', -, hr, hv, ht, hb, -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPush_refines hP n ⟨m, Locals.init []⟩ vis c hE hci hctl) hc
   obtain ⟨w, hw, hw32, hnm⟩ := decCI_name hci
   have hq : (c + (CI.cv + CV.name)).toNat = c.toNat + CI.cv.toNat :=
     off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)
   have hrd : erecRd m (c + (CI.cv + CV.name)) = w := erecRd_of (by rw [hq]; exact hw)
   simp only [hrd] at hm ht hb
   refine ⟨?_, hr, hv⟩
-  rw [← hs', hm]
+  rw [← hs', hm, ownC_frame (flagsSet_frame _ _ _) (by simp) (by decide)]
   have hv1 : (vis + 1).toNat < 2 ^ 32 := by rw [UInt64.toNat_add]; simp; omega
   funext n'
   simp only [ownC, updC]
@@ -434,8 +433,9 @@ theorem ferW_ok (p : Prog) (hp : CfrProg p) (P : BlockShape) (ro rl : Word) (k :
   -- the push
   obtain ⟨⟨rv, m2⟩, h2, h⟩ := of_K h (ferW.k_env_push.none ..)
   rw [ferW.k_env_push.arm1] at h
-  obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.rs hp.rp.push h2 hS1 hci
-  obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.rs hp.rp.push h2 hS1.check.env hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hp.rp.ef h2 hS1 hci
+  obtain ⟨hO2, hrv, hv2⟩ := envPush_ownC hp.rp.ef h2 hS1.check.env hci
+    (show 161 < (m1.arr64 CTL).size by have := hS1.iw.ctl; omega)
   have hO1 : ownC m1 = ownC m := ownC_cfrRecW h1
   -- the displaced row
   obtain ⟨⟨re, m3⟩, h3, h⟩ := of_K h (ferW.k_rec3.none ..)

@@ -1,15 +1,12 @@
 module
 
 public import ConAgua.Arena.WhnfM2C
-import ConAgua.Arena.WhnfIotaRefine
 import Std.Tactic.BVDecide.Normalize.BitVec
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic
 public import ConAgua.L.Examples
-import ConAgua.Arena.SimLib
-import ConAgua.Front.Preserve
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Arena.WhnfM2C
 import all ConAgua.Arena.WhnfIota
@@ -21,7 +18,7 @@ import all ConAgua.Arena.WhnfIota
 
 The twin `majorToCtor` (`Core.lean:1705-1820`) is one function; its pieces are named here
 (`m2cHeadT` … `m2cCheckT`), each the twin's own code with the values decoded so far as
-parameters, and `majorToCtor` unfolds into them by `rfl` (`majorToCtor_eq`). Each L piece of
+parameters, and `majorToCtorRescue` unfolds into them by `rfl` (`majorToCtorRescue_eq`). Each L piece of
 `WhnfM2C.lean` has a unified model (`Verdict/WhnfModels6E.lean`); `major_to_ctor` itself and the
 leaves outside the verdict closure (`m2c_const_view`, `m2c_eta2`) get a word-level model through
 `callW` and an L spec by `vcgen` + `finish` here.
@@ -143,10 +140,9 @@ def m2cCtorT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   | some (.indInfo cvT caps) => m2cArmsT mode r fe depth isK rl cvj cnP T cvT caps major
   | _ => pure major
 
-/-- The constructor test, the single rule, its constructor. -/
+/-- The single rule, its constructor. -/
 def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (isK : Bool)
     (rules : List IRecRule) (major : EIdx) : AM EIdx := do
-  if ← isCtorApp fe major then pure major else
   match rules with
   | [rl] =>
     match fe.find? rl.ctor with
@@ -155,9 +151,9 @@ def m2cHeadT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Na
   | _ => pure major
 
 /-- **The twin is its pieces.** -/
-theorem majorToCtor_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+theorem majorToCtorRescue_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
     (recName : NIdx) (isK : Bool) (rules : List IRecRule) (major : EIdx) :
-    majorToCtor mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
+    majorToCtorRescue mode r fe depth recName isK rules major = m2cHeadT mode r fe depth isK rules major := by
   rfl
 
 /-! ## Word models and L specs
@@ -194,155 +190,5 @@ def and2Push (m : Mem) (to tn p0 p1 : Word) : Option Mem :=
       136 < (((m.set64 SPN (to + tn) p0).set64 SPN (to + tn + 1) p1).arr64 CTL).size then
     some (((m.set64 SPN (to + tn) p0).set64 SPN (to + tn + 1) p1).set64 CTL 136 (to + tn + 2))
   else none
-
-/-! ## `reserved_contains(x)` (`WhnfIota.lean`'s `reservedContainsL`, the η arm's two tests) -/
-
-/-- The loop of `reservedContainsL`, as a named block (`reservedContainsL` writes the same
-statement inline: `reservedContainsL_eq`). -/
-def resContLoop : Stmt := lblk (x, j) {
-  while j < 16 {
-    if PINS.u64[55 + j] == x { return 1 };
-    j += 1
-  }
-}
-
-theorem reservedContainsL_eq : reservedContainsL = lfn (x) locals (j) {
-  if PINS.u64[0] == 0 { abort };
-  j := 0;
-  ⟪resContLoop⟫;
-  return 0
-} := by rfl
-
-/-- Model of the loop at L fuel `k`. -/
-def rcLoopW (m : Mem) (x : Word) : Nat → Word → Option (List Word × Mem)
-  | 0, _ => none
-  | k + 1, j =>
-    if j < 16 then
-      if rdW (m.arr64 PINS) (55 + j) = x then some ([1], m) else rcLoopW m x k (j + 1)
-    else some ([0], m)
-
-theorem rcLoopW_end (m : Mem) (x : Word) (k : Nat) (j : Word) (h : ¬ j < 16) :
-    rcLoopW m x (k + 1) j = some ([0], m) := by
-  simp only [rcLoopW, h, ↓reduceIte]
-
-theorem rcLoopW_hit (m : Mem) (x : Word) (k : Nat) (j : Word) (h : j < 16)
-    (he : rdW (m.arr64 PINS) (55 + j) = x) : rcLoopW m x (k + 1) j = some ([1], m) := by
-  simp only [rcLoopW, h, he, ↓reduceIte]
-
-theorem rcLoopW_cont (m : Mem) (x : Word) (k : Nat) (j : Word) (h : j < 16)
-    (he : ¬ rdW (m.arr64 PINS) (55 + j) = x) : rcLoopW m x (k + 1) j = rcLoopW m x k (j + 1) := by
-  simp only [rcLoopW, h, he, ↓reduceIte]
-
-theorem resContLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀⦄
-    exec p k resContLoop
-    ⦃fun r s' => r ≠ .brk ∧ rcLoopW s₀.mem (s₀.loc 0) k (s₀.loc 1) = some (r.retOr [0], s'.mem); ⊤⦄ := by
-  induction k generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ k ih =>
-    rw [exec, step_while (w := resContLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
-      finish [rcLoopW_end, rcLoopW_hit, rcLoopW_cont, rdW]
-
-/-- Model of `reserved_contains`. -/
-def rcW_m2c (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
-  if rdW (m.arr64 PINS) 0 = 0 then none else rcLoopW m x (k + 1) 0
-
-theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL)
-    (k : Nat) (s₀ : St) (x : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "reserved_contains_w" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcW_m2c k s₀.mem x = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp, reservedContainsL_eq]
-  simp only [callFn]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, fun s₀ => Triple.step_exec (resContLoop_spec p (k + 1) s₀)] <;>
-    finish [rcW_m2c, rdW]
-
-/-- The loop's answer: a hit from `j` on, or none. -/
-theorem rcLoopW_ok (m : Mem) (x : Word) :
-    ∀ (K k : Nat) (j : Word) (L : List Word) (m' : Mem), 16 - j.toNat = K → j.toNat ≤ 16 →
-      rcLoopW m x k j = some (L, m') →
-      m' = m ∧ (L = [0] ∨ L = [1]) ∧ (L.headD 0 ≠ 0 ↔ ∃ i : Nat, j.toNat ≤ i ∧ i < 16 ∧ pinW m (55 + i) = x) := by
-  intro K
-  induction K with
-  | zero =>
-    intro k j L m' hK hj h
-    cases k with
-    | zero => simp [rcLoopW] at h
-    | succ k =>
-    have hn : ¬ j < 16 := fun h => by
-      have : j.toNat < 16 := h
-      omega
-    rw [rcLoopW_end m x k j hn] at h
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-    refine ⟨rfl, .inl rfl, ?_⟩
-    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_exists, not_and]
-    intro i h1 h2; omega
-  | succ K ih =>
-    intro k j L m' hK hj h
-    cases k with
-    | zero => simp [rcLoopW] at h
-    | succ k =>
-    have hlt : j < 16 := by
-      have : j.toNat < 16 := by omega
-      exact this
-    have hjt : j.toNat < 16 := hlt
-    have e55 : (55 + j).toNat = 55 + j.toNat := by rw [UInt64.toNat_add]; simp; omega
-    have hpw : rdW (m.arr64 PINS) (55 + j) = pinW m (55 + j.toNat) := by
-      simp only [rdW, pinW, e55]
-    by_cases he : rdW (m.arr64 PINS) (55 + j) = x
-    · rw [rcLoopW_hit m x k j hlt he] at h
-      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
-      refine ⟨rfl, .inr rfl, ?_⟩
-      simp only [List.headD_cons, ne_eq]
-      exact ⟨fun _ => ⟨j.toNat, Nat.le_refl _, hjt, hpw ▸ he⟩, fun _ => by decide⟩
-    · rw [rcLoopW_cont m x k j hlt he] at h
-      have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat 16 j hlt
-      obtain ⟨hm, hl, hiff⟩ := ih k (j + 1) L m' (by omega) (by omega) h
-      refine ⟨hm, hl, hiff.trans ?_⟩
-      rw [h1]
-      constructor
-      · rintro ⟨i, h1, h2, h3⟩; exact ⟨i, by omega, h2, h3⟩
-      · rintro ⟨i, h1, h2, h3⟩
-        rcases Nat.lt_or_ge j.toNat i with hl' | hl'
-        · exact ⟨i, by omega, h2, h3⟩
-        · have : i = j.toNat := by omega
-          subst this; exact absurd (hpw ▸ h3) he
-
-/-- **`reserved_contains` as a run**: memory unchanged, and the answer is `reservedBasisNames`'
-membership test. -/
-theorem callW_reservedContains (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL)
-    (n : Nat) (m : Mem) (a : AState) (hP : PinsFull m a.pins) (x : Word) (hx : HW x) (r : List Word)
-    (m' : Mem) (h : callW p n "reserved_contains_w" [x] m = some (r, m')) :
-    m' = m ∧ ∃ l, reservedBasisNames.run a = .ok (l, a) ∧ l.contains (decI x) = (r.headD 0 != 0) ∧
-      ResH r := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (reservedContains_spec p hp k _ x) h
-  simp only [rcW_m2c] at hW
-  obtain ⟨h0, hW⟩ := of_ite_none hW
-  obtain ⟨hm, hl, hiff⟩ := rcLoopW_ok m x _ (k + 1) 0 r s'.mem rfl (by simp) hW
-  refine ⟨hs' ▸ hm, _, pinReserved_run hP, ?_, ?_⟩
-  · have hc : ((List.range 16).map fun i => (decI (pinW m (55 + i)) : NIdx)).contains (decI x) =
-        true ↔ ∃ i : Nat, 0 ≤ i ∧ i < 16 ∧ pinW m (55 + i) = x := by
-      simp only [List.contains_iff_mem, List.mem_map, List.mem_range]
-      constructor
-      · rintro ⟨i, hi, e⟩
-        exact ⟨i, Nat.zero_le _, hi,
-          ((decI_eq_iff _ (hP.reserved_lt i hi) _).mp e).trans (decI_word_self x hx)⟩
-      · rintro ⟨i, -, hi, e⟩; exact ⟨i, hi, by rw [e]⟩
-    have hiff' : r.headD 0 ≠ 0 ↔ ∃ i : Nat, 0 ≤ i ∧ i < 16 ∧ pinW m (55 + i) = x := by
-      simpa using hiff
-    by_cases hr : r.headD 0 = 0
-    · have : ¬ ∃ i : Nat, 0 ≤ i ∧ i < 16 ∧ pinW m (55 + i) = x := fun e => hiff'.mpr e hr
-      rw [hr]
-      exact Bool.eq_false_iff.mpr (fun h' => this (hc.mp h'))
-    · rw [show (r.headD 0 != 0) = true by simpa using hr]; exact hc.mpr (hiff'.mp hr)
-  · unfold ResH HW
-    rcases hl with rfl | rfl <;> decide
 
 end L.Arena

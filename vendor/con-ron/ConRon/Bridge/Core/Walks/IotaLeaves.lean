@@ -5,9 +5,9 @@ The readers the stuck-major rescue and the ι step consult, each an equation
 with con-leche's function.  The walks that call the knot are
 `Walks/IotaMajor.lean` and `Walks/Iota.lean`.
 
-Every proof is `sym only [bridge_grind, …] => vcgen [f, callee specs…] <;>
+Every proof but `ctorView_spec` (an explicit triple, as the ι step it feeds) is `sym only [bridge_grind, …] => vcgen [f, callee specs…] <;>
 finish`.  What makes them `grind`-shaped: each con-leche function as ONE
-equation over tags and projections (`isCtorApp_eq`, `litToCtorIfNat_eq`,
+equation over tags and projections (`litToCtorIfNat_eq`,
 `andRescueSlots_eq` over the named slot walk `andSlotsFrom`, `formerResSort_eq`,
 `ctorFamily_eq`), a twin's nested `match` one constructor deep
 (`litToCtorIfNat_split`), and the callees with `∀`-shaped posts restated as
@@ -24,6 +24,7 @@ import ConRon.Bridge.Core.Walks.Proj
 import ConRon.Bridge.Core.Walks.Cached
 import ConRon.Bridge.Core.Walks.StrLit
 import ConRon.Bridge.ExprOps.Spine
+import ConRon.Bridge.Core.Walks.Spine
 import ConRon.Bridge.Core.Memo
 import ConRon.Bridge.Specs
 public import ConRon.Bridge.Grind
@@ -45,23 +46,87 @@ variable {eager : Bool} {env : Env} {fe : IFEnv}
 
 /-! ## 1. State-only readers -/
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:46-53 isCtorApp — the reader as
-ONE equation over the head's tag, its constant name and the environment's
-constructor projection. -/
-theorem isCtorApp_eq (x : Expr) :
-    ConLeche.isCtorApp env x =
-      (exprTag x.getAppFn == ETag.const && cCtor? (env.find? (exprConstName x.getAppFn))) := by
-  simp only [ConLeche.isCtorApp]
-  cases x.getAppFn <;> rfl
+/-- con-leche: ConLeche/Cached/CoreC.lean:214-221 MajorView — **what a
+classified major means** at the term `y` it denotes: a `.ctor` view's term is
+a constructor application whose head is the view's name and levels and whose
+stored record is the view's; a `.stuck` view's term is no constructor
+application.  (con-leche's own invariant is `Verify/Cached/DiscC3`'s
+`MajorView.OK`.) -/
+@[expose] def MajorViewRel (env : Env) (fe : IFEnv) (st : EStore) : MajorView → Expr → Prop
+  | .ctor e cj usj cvj nP nF ind, y =>
+      denoteE st e = some y ∧ ConLeche.isCtorApp env y = true ∧
+      fe.find? cj = some (.ctorInfo cvj nP nF ind) ∧
+      exprTag y.getAppFn = ETag.const ∧
+      denoteN st.ns cj = some (exprConstName y.getAppFn) ∧
+      denoteLs st.lss usj = some (exprConstLevels y.getAppFn)
+  | .stuck e, y => denoteE st e = some y ∧ ConLeche.isCtorApp env y = false
 
-/-- con-leche: ConLeche/Kernel/CoreDefs.lean:46-53 isCtorApp — **THEOREM 1
-for `isCtorApp`**: an equation with con-leche's reader. -/
-theorem isCtorApp_spec (s₀ : AState) (a : EIdx) (x : Expr)
+/-- con-leche: none — a classified major's term denotes what the view is
+about. -/
+theorem MajorViewRel.expr {st : EStore} {v : MajorView} {y : Expr}
+    (h : MajorViewRel env fe st v y) : denoteE st v.expr = some y := by
+  cases v <;> exact h.1
+
+/-- con-leche: none — the view's flag is `isCtorApp` of what it is about. -/
+theorem MajorViewRel.isCtor {st : EStore} {v : MajorView} {y : Expr}
+    (h : MajorViewRel env fe st v y) : ConLeche.isCtorApp env y = v.isCtor := by
+  cases v
+  · exact h.2.1
+  · exact h.2
+
+/-- con-leche: ConLeche/Kernel/CoreDefs.lean:58-65 isCtorApp
+con-leche: ConLeche/Cached/CoreC.lean:233-240 ctorViewC — **THEOREM 1 for
+`ctorView`**: `isCtorApp` through the index, keeping what the lookup found
+(`MajorViewRel`). -/
+theorem ctorView_spec (s₀ : AState) (a : EIdx) (x : Expr)
     (hok : CheckOK eager env fe s₀) (hda : denoteE s₀.store a = some x) :
-    ⦃fun s => s = s₀⦄ ConRon.Arena.isCtorApp fe a
-    ⦃fun r s' => s' = s₀ ∧ r = ConLeche.isCtorApp env x; ⊤⦄ := by
-  sym only [bridge_grind, isCtorApp_eq] =>
-    vcgen [ConRon.Arena.isCtorApp, ExprOps.getAppFn_spec] <;> finish
+    ⦃fun s => s = s₀⦄ ConRon.Arena.ctorView fe a
+    ⦃fun v s' => s' = s₀ ∧ v.expr = a ∧ MajorViewRel env fe s₀.store v x; ⊤⦄ := by
+  have hwf := hok.state.wf
+  unfold ConRon.Arena.ctorView
+  refine triple_seq (ExprOps.getAppFn_spec coreWalkFuel s₀ a hok.state (by rw [hda]; rfl)) ?_
+  rintro hd s1 ⟨rfl, hrelF⟩
+  have hdd : denoteE s1.store hd = some x.getAppFn := hrelF x hda
+  by_cases htag : (hd.tag == ETag.const) = true
+  · rw [ite_eq_left htag]
+    refine triple_seq (viewConst_spec s1 hd) ?_
+    rintro oc s2 ⟨hs2, hoc⟩
+    subst s2
+    cases oc with
+    | none => exact triple_failDanglingE
+    | some cu =>
+      obtain ⟨cj, usj⟩ := cu
+      have hv := view_of_viewConst_tag htag hoc.symm
+      obtain ⟨cn, ls, hgf, hcn, hls⟩ := denote_const_inv hwf hv hdd
+      dsimp only
+      split
+      next icv nP nF ind hfd =>
+        obtain ⟨dcv, -, hfind⟩ := env_ctor_of_index hok hcn hfd
+        refine triple_pureS ⟨rfl, rfl, hda, ?_, hfd, ?_, ?_, ?_⟩
+        · simp only [ConLeche.isCtorApp, hgf, hfind]
+        · rw [hgf]; rfl
+        · rw [hgf]; exact hcn
+        · rw [hgf]; exact hls
+      next hnd =>
+        have hnc := env_not_ctor_of_index hok hcn (fun v p q t h => hnd v p q t h)
+        refine triple_pureS ⟨rfl, rfl, hda, ?_⟩
+        simp only [ConLeche.isCtorApp, hgf]
+        try
+          generalize henv : env.find? cn = o
+          match o, henv with
+          | some (.ctorInfo cv p q t), henv => exact absurd henv (hnc cv p q t)
+          | some (.axiomInfo _), _ | some (.thmInfo _), _ | some (.indInfo _ _), _
+          | some (.defnInfo _ _ _), _ | some (.recInfo _ _ _ _ _), _ | none, _ => rfl
+  · rw [ite_eq_right htag]
+    refine triple_pureS ⟨rfl, rfl, hda, ?_⟩
+    obtain ⟨vh, hvh⟩ := denoteE_view hdd
+    have hvt := EStore.tagOf_of_view hvh
+    have hnc := denote_not_const hwf hvh hdd (by
+      intro c us h; subst h; exact htag (by rw [hvt]; rfl))
+    simp only [ConLeche.isCtorApp]
+    try
+      generalize x.getAppFn = g at hnc ⊢
+      cases g <;> first | rfl | exact absurd rfl (hnc _ _)
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:197-200 natLitToConstructor —
 **THEOREM 1 for `natLitToConstructor`**: `Nat.zero`, or `Nat.succ` applied to
@@ -99,7 +164,7 @@ theorem litToCtorIfNat_split (h : EIdx) : ConRon.Arena.litToCtorIfNat fe h =
       match ← view h with
       | .lit l =>
         match litNat? l with
-        | some n => do if ← ConRon.Arena.natLitStored fe then
+        | some n => do if fe.natLit then
             ConRon.Arena.natLitToConstructor n else pure h
         | none => pure h
       | _ => pure h
@@ -120,9 +185,8 @@ theorem litToCtorIfNat_spec (s₀ : AState) (h : EIdx) (x : Expr)
     ⦃fun r s' => CheckOK eager env fe s' ∧ Ext s₀.store s'.store ∧
         s'.pins = s₀.pins ∧
         denoteE s'.store r = some (ConLeche.litToCtorIfNat env x); ⊤⦄ := by
-  sym only [bridge_grind, litToCtorIfNat_eq, Option.getD_some] =>
-    vcgen [litToCtorIfNat_split, natLitStored_spec (eager := eager) (env := env) (fe := fe),
-      natLitToConstructor_spec (eager := eager) (env := env) (fe := fe)] <;> finish
+  sym only [bridge_grind, litToCtorIfNat_eq, Option.getD_some, hok.natLitEq] =>
+    vcgen [litToCtorIfNat_split, natLitToConstructor_spec (eager := eager) (env := env) (fe := fe)] <;> finish
 
 /-! ## 2. The family's sort, read off its stored type -/
 

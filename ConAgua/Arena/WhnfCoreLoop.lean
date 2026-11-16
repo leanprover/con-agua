@@ -74,9 +74,8 @@ end stepRuns
 
 section step
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core_step` refines `whnfCoreStep`, both outcomes**: a bound variable declines (the
 twin's `.bvar` arm); the `app` and `proj` arms' errors are `whnf_core_app`'s and
 `whnf_core_step_proj`'s (`AppG`). -/
@@ -122,7 +121,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
-    have h1 := capp_ref p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
+    have h1 := capp_ref p hp hcc N (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM
       eb mode cheap d e hs he
     exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
       (·.mono (Nat.le_succ N)) h1
@@ -136,10 +135,10 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
     cases n with
     | zero => exact RefE.of_cls0 rfl
     | succ N =>
-    have h1 := stepProj_ref p hp hwc.strLitStored hwc.strLitCtor hcc.toProjCallees hcc.erec N
+    have h1 := stepProj_ref p hp hwc.strLitCtor hcc.toProjCallees hcc.erec N
       (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode cheap d e
       (tfld s₀.mem PROJ (tierW e) (idxW e) 0) (tfld s₀.mem PROJ (tierW e) (idxW e) 1)
-      (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe (hsup fe)
+      (tfld s₀.mem PROJ (tierW e) (idxW e) 2) hs he hsn hpe
     exact RefE.lastE (K := whnfCoreStepE.k_whnf_stuck p) (fun _ => rfl) (fun _ => rfl)
       (·.knot.mono (Nat.le_succ N)) h1
       fun _ _ _ _ h => ⟨h.after, h.res, h.valid⟩
@@ -195,7 +194,7 @@ theorem step_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n 
   rw [ite_eq_right g8]
   exact RefE.of_cls0 (by decide)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core_step` refines `whnfCoreStep`** (`step_ref`'s ok half). -/
 theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -205,7 +204,7 @@ theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe (cheap != 0) d.toNat
         (decE h) (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
   RefE.coreSpec (whnfCoreStepE_spec p hp (n + 1) s₀ mode cheap vis d h e)
-    (step_ref p hp hwc hcc hsup n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
+    (step_ref p hp hwc hcc n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d h e hs hh he)
 
 end step
 
@@ -378,9 +377,8 @@ theorem stb_twin (cheap kw st rv e : Word) (hk : kw = 0 ∨ kw = 1) (hrv : HW rv
 
 section loopRef
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **The loop refines `whnfCoreLoop`, both outcomes**, at every twin loop fuel `K ≥ k`, from
 pending keys `pend`/`pendC` (`PendR`) above the entry's top `pb`: each iteration is
 `whnf_core_step`'s (`whnfCoreStep_refines'`, its error claim `CoreStepE`). -/
@@ -475,7 +473,7 @@ theorem coreLoop_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
   have hkey := key_w h e hhw he
   rw [hkw] at hkey
   refine RefE.bind_callE (s₀ := ⟨m₂, Locals.init []⟩) (fun _ => whnfCoreE.k_whnf_core_step.none ..)
-    (whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
+    (whnfCoreStep_refines' p hp hwc hcc j (hk.mono (by omega)) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb
       mode cheap d h e ⟨hS₂, hmode, heb⟩ hhw he)
     (fun hG => hG j (by omega) F (by omega) (by omega) _ a₂ dn vis fe M₂ eb mode cheap d h e
       ⟨hS₂, hmode, heb⟩ hhw he) fun r₃ m₃ _ hR3 => ?_
@@ -576,9 +574,8 @@ theorem knot_whnfCore_eq (mode : ConLeche.CheckMode) (eager : Bool) (fe : IFEnv)
 
 section slot
 variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
-  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **`whnf_core` at `n + 1` refines the knot's `whnfCore` slot of `coreKnot mode eager fe id F`, both
 outcomes**, `F ≥ n + 1`: the loop from no pending keys at the entry's top (`coreLoop_ref`). The
 errors are the step's (`CoreStepE`). -/
@@ -599,7 +596,7 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     rw [UInt64.not_lt, UInt64.le_iff_toNat_le] at hab
     simp only [L.Mem.len64, UInt64.toNat_ofNat'] at hab
     rw [Nat.mod_eq_of_lt (by omega)] at hab; exact hab
-  exact coreLoop_ref p hp hwc hcc hsup n hk F' (by omega) (by omega) dn vis fe mode cheap d
+  exact coreLoop_ref p hp hwc hcc n hk F' (by omega) (by omega) dn vis fe mode cheap d
     (spTop s₀.mem) hs.mode4 s₀.mem MM eb hs.eb_mode rfl (n + 1) (Nat.le_refl _) ConRon.Arena.whnfCoreLoopFuel
     (by simp only [ConRon.Arena.whnfCoreLoopFuel]; omega) s₀.mem a₀ MM e 0 0 #[] #[] hS (KeptAll.refl _ _) he
     ⟨⟨rfl, by simpa using hpb, fun _ h => by simp at h, fun _ h => by simp at h⟩, Nat.le_refl _,
@@ -607,14 +604,14 @@ theorem core_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : ASt
     ⟨fun _ _ => rfl, rfl, BKept.refl _, PoolGrew.refl _⟩
 
 
-include hp hwc hcc hsup in
+include hp hwc hcc in
 /-- **The knot's `whnfCore` slot, one level up** (`core_ref`'s ok half): given the knot at every
 fuel up to `n` (for the body's callees), `whnf_core` at `n + 1` refines the slot. Over the bundles
-`WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
+`WhnfCallees` and `CoreCallees` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
   fun F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he =>
     RefE.coreSpec (whnfCoreE_spec p hp (n + 1) s₀ mode cheap vis d e)
-      (core_ref p hp hwc hcc hsup n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
+      (core_ref p hp hwc hcc n hk F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he)
 
 end slot
 

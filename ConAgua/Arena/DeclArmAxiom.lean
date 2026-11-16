@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndGrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.Arena.IndSumSpec.ConsSumCtors
 public import ConAgua.Arena.DeclRec
-public import ConAgua.Arena.WhnfBase
 
 @[expose] public section
 
@@ -40,6 +39,6 @@ theorem push_call {p : Prog} (hRp : RecProg p) {vis : Word}
     {ci : IConstantInfo} (hc : callW p n "env_push" [vis, c] m = some (r, m'))
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
     StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' :=
-  envPush_stage hRp.rs hRp.push hc hS hci
+  envPush_stage hRp.ef hc hS hci
 
 end L.Arena

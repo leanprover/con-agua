@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.IndInstallSpec.PapW
+public import ConAgua.Arena.StageFlags
 import all ConAgua.Arena.Env
 
 @[expose] public section
@@ -25,8 +26,8 @@ open L.Arena
 /-- **A push popped**: from the stage relation at `vis` before the push of record `pw` (name `nw`),
 and the stage relation at the pushed view after reads that kept the own rows, `env_pop_temp` with
 the own row read before the push gives the stage relation at `vis` of the twin's popped index. -/
-theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+theorem pushPop_stage {p : Prog} (hP : EnvFlagsProg p)
+    (hpt : p.lookup "env_pop_temp" = some envPopTempL)
     {k k' : Nat} {vis pw nw : Word} {fe : IFEnv} {a a2 : AState} {m m1 m2 m3 : Mem}
     {ci : IConstantInfo} {r1 r3 : List Word}
     (hS : StageR vis fe m a) (hci : decCI (erecP m) pw.toNat = some ci) (hnm : ci.name = decI nw)
@@ -39,7 +40,7 @@ theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL
       r3.headD 0 = vis := by
   have hE := hS.check.env
   have hwn : (decI nw : NIdx).word.toUInt64 = nw := decI_word_self nw hn
-  obtain ⟨hO1, hr1, hv1⟩ := envPush_ownC hrs hpu h1 hE hci
+  obtain ⟨hO1, hr1, hv1⟩ := envPush_ownC hP h1 hE hci (by have := hS.iw.ctl; omega)
   have hvis1 : (vis + 1).toNat = vis.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hprev := rec3PrevD_grow hg (rec3PrevD hE hn)
   obtain ⟨hpvE, hcd⟩ := prevD_eq hprev
@@ -48,7 +49,7 @@ theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL
   have hcC : (ownRaw m nw).1 = ownC m ci.name := by rw [hnm]; simp only [ownC, hwn]
   rw [hr1, List.headD_cons] at h3 hS2
   obtain ⟨s3, hs3, -, hr3, hE3, hm3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-    (envPopTemp_refines p hrs hpt k' _ (vis + 1) nw (ownRaw m nw).1 (ownRaw m nw).2 hS2.check.env hn
+    (envPopTemp_refines p hP.rowSet hpt k' _ (vis + 1) nw (ownRaw m nw).1 (ownRaw m nw).2 hS2.check.env hn
       (fun e => by have := congrArg UInt64.toNat e; rw [hvis1] at this; simp at this)
       (by have := hown ci.name; rw [hnm, hwn] at this; rw [this]; simp [updC])
       (ownRaw_fst_lt m nw)
@@ -69,6 +70,24 @@ theorem pushPop_stage {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL
   obtain ⟨hS3, hg3⟩ := StageR.of_own hS2 hE3
   rw [hr3, List.headD_cons, show vis + 1 - 1 = vis by simp] at *
   exact ⟨hS3, hg3, rfl⟩
+
+/-- **The flags set back after the pop** (`env_set_flags(fn, fs)`, the twin's
+`.setFlags fe.natLit fe.strLit`): `fn`, `fs` the words `CTL[160]`, `CTL[161]` the gate saved
+before its push, which are `fe`'s flags. -/
+theorem setFlags_stage {p : Prog} (hP : EnvFlagsProg p) {k : Nat} {vis x y : Word} {fe fe' : IFEnv}
+    {a : AState} {m m' : Mem} {r : List Word}
+    (hS : StageR vis fe' m a) (hx : fe.natLit = (x != 0)) (hy : fe.strLit = (y != 0))
+    (h : callW p k "env_set_flags" [x, y] m = some (r, m')) :
+    StageR vis (fe'.setFlags fe.natLit fe.strLit) m' a ∧ IWGrow m m' ∧ m' = flagsSet m x y := by
+  obtain ⟨s', hs', -, hm', hE'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envSetFlags_refines hP.setFlags k _ vis x y hS.check.env
+      (show 161 < (m.arr64 CTL).size by have := hS.iw.ctl; omega)) h
+  rw [← hx, ← hy] at hE'
+  have e : m' = flagsSet m x y := by rw [← hs', hm']
+  rw [hm'] at hE'
+  subst e
+  obtain ⟨h1, h2⟩ := StageR.of_flags hS hE'
+  exact ⟨h1, h2, rfl⟩
 
 /-! ## The reads at the pushed view keep the own rows -/
 

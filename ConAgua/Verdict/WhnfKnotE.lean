@@ -6,7 +6,6 @@ import ConAgua.Verdict.WhnfIotaRecE
 import ConAgua.Verdict.WhnfIotaE
 import ConAgua.Verdict.WhnfSlotE
 import ConAgua.Verdict.WhnfPirrE
-import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfM2CRefine5
 public import ConAgua.Arena.DefEqKnot
 public import ConAgua.Arena.WhnfCoreAppLoop
@@ -37,7 +36,7 @@ variable {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = tru
 
 include hq hnv in
 theorem KnotAllProg.prepareMajorE : PrepareMajorE p :=
-  prepareMajorE_of p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+  prepareMajorE_of p hq.m2c.toIotaProg4 (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
       (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq))
     (ErecKeptRec.of_closed hq.hcl) hnv
@@ -52,7 +51,7 @@ theorem KnotAllProg.iotaRecFireE : IotaRecFireE p :=
 
 include hq hnv in
 theorem KnotAllProg.iotaRecAtE : IotaRecAtE p :=
-  iotaRecAtE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+  iotaRecAtE_of p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq)
       (ErecPKept.of_closed hq.hcl) (KnotAllProg.projC hq) hq.prop (KnotAllProg.instLP hq))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl) hnv

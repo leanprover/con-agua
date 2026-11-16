@@ -73,11 +73,11 @@ theorem checkerProg_ivOwn0 : ∀ f ∈ ivOwn0, checkerProg.lookup f = ivProg.loo
 /-- `ivFns` but `openFns`, part 1. -/
 def ivOwn1 : List FnName :=
   ["iw_alloc", "er_copy", "sl_nodup", "sl_contains", "env_push",
-   "env_row_set", "erec_put"]
+   "env_row_set", "erec_put", "base_row_get", "lit_name_at", "lits_stored", "env_set_flags"]
 
 set_option maxRecDepth 100000 in
 theorem checkerProg_ivOwn1 : ∀ f ∈ ivOwn1, checkerProg.lookup f = ivProg.lookup f :=
-  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩
+  List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), List.forall_mem_cons.2 ⟨lk_agree rfl (by chk_lk), fun _ h => absurd h List.not_mem_nil⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩⟩
 
 set_option maxRecDepth 100000 in
 theorem ivOwn_of : ∀ f ∈ ivFns, f ∉ openFns →

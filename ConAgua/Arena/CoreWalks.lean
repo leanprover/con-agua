@@ -148,30 +148,34 @@ theorem keepsW_inst1Fast (F : Nat) (e v : EIdx) (d : Nat) :
     fun _ => Keeps.bind (keeps_inst1Clear cplW_blind) fun _ => Keeps.pure _
 
 theorem keepsW_instList (F : Nat) :
-    (∀ vs h d, Keeps cpl (instantiateList vs F h d)) ∧
-      (∀ vs h d, Keeps cpl (instantiateListGo vs F h d)) := by
+    (∀ vs n k h d, Keeps cpl (instantiateList vs n k F h d)) ∧
+      (∀ vs n k h d, Keeps cpl (instantiateListGo vs n k F h d)) := by
   induction F with
   | zero =>
-    exact ⟨fun vs h d => by rw [instantiateList_zero]; exact Keeps.fail _,
-      fun vs h d => by rw [instantiateListGo_zero]; exact Keeps.fail _⟩
+    exact ⟨fun vs n k h d => by rw [instantiateList_zero]; exact Keeps.fail _,
+      fun vs n k h d => by rw [instantiateListGo_zero]; exact Keeps.fail _⟩
   | succ F ih =>
     obtain ⟨ih1, ih2⟩ := ih
-    refine ⟨fun vs h d => ?_, fun vs h d => ?_⟩
+    refine ⟨fun vs n k h d => ?_, fun vs n k h d => ?_⟩
     · rw [instantiateList_succ]
       keepsL_auto [instListCutoff, instListArmApp, instListArmBind, instListArmLet,
         instListArmProj, instListArmBVar] using Keeps.pure
-      all_goals exact ih1 _ _ _
+      all_goals exact ih1 _ _ _ _ _
     · rw [instantiateListGo_succ]
       keepsL_auto [instListCutoff, instListGoArmApp, instListGoArmBind, instListGoArmLet,
         instListGoArmProj] using Keeps.pure
-      all_goals first | exact ih1 _ _ _ | exact ih2 _ _ _
+      all_goals first | exact ih1 _ _ _ _ _ | exact ih2 _ _ _ _ _
+
+theorem keepsW_instRevRange (F : Nat) (e : EIdx) (vs : Array EIdx) (s n d : Nat) :
+    Keeps cpl (instantiateRevRange F e vs s n d) := by
+  unfold instantiateRevRange
+  exact Keeps.bind (keepsW_instLClear cplW_blind) fun _ =>
+    Keeps.bind ((keepsW_instList F).2 vs _ _ e d) fun _ =>
+      Keeps.bind (keepsW_instLClear cplW_blind) fun _ => Keeps.pure _
 
 theorem keepsW_instListFast (F : Nat) (e : EIdx) (vs : Array EIdx) (d : Nat) :
-    Keeps cpl (instantiateListFast F e vs d) := by
-  unfold instantiateListFast
-  exact Keeps.bind (keepsW_instLClear cplW_blind) fun _ =>
-    Keeps.bind ((keepsW_instList F).2 vs e d) fun _ =>
-      Keeps.bind (keepsW_instLClear cplW_blind) fun _ => Keeps.pure _
+    Keeps cpl (instantiateListFast F e vs d) :=
+  keepsW_instRevRange F e vs 0 vs.size d
 
 theorem keepsW_abs1Go (d F : Nat) : ∀ h k, Keeps cpl (abstract1Go d F h k) := by
   induction F with
@@ -317,6 +321,36 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
   obtain ⟨hok, e2, e3⟩ := AM.readings hrun hok
   rw [← e2] at hA'; rw [← e3] at hres
   have hk := Keeps.run (keepsW_instListFast coreWalkFuel (decE e) xs d.toNat) (AM.run_of_ok _ _ hok)
+  obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
+    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.walk.frame hf (by decide) (by decide), hS.memos.hbF hf⟩
+  exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
+
+/-- **`inst_list` refines `instantiateRevRange coreWalkFuel` under `CoreS`** on the range `xs[s:i]`
+of a stack slice (`InstRangeOK`, `beta_peel`'s substitution). -/
+theorem instRangeOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL) :
+    InstRangeOK p := by
+  intro n s₀ a₀ dn vis fe M eb e o₀ C d xs s i hS hE hsp htop hsi hiC
+  cases n with
+  | zero => exact L.Arena.CoreSpec.zero he _ _ _ _ _ _ _ _ _ _ _
+  | succ n =>
+  obtain ⟨mp, hmp⟩ := hS.memos.il
+  have hrun : (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat).run a₀ =
+      (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat).run
+        { a₀ with memos := { a₀.memos with instLC := mp } } := rfl
+  have hA : ArenaL s₀.mem { a₀ with memos := { a₀.memos with instLC := mp } } :=
+    ⟨hS.arena.memo_irrel mp a₀.memos.abs1C, hmp⟩
+  have hbd : o₀.toNat + C.toNat < 2 ^ 64 := by have := hsp.bound; have := hS.spn; omega
+  unfold CoreSpec
+  apply L.M.triple_of_run
+  intro s' r s'' hs hr
+  obtain ⟨hloc, hok, hA', hres, -, hw⟩ := L.M.of_run (P := fun s => s = s₀) hs hr
+    (instList_refines_range p hp he n s₀ _ hA e o₀ C d xs hsp hbd s i hsi hiC hE)
+  obtain ⟨hf, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hr
+    (invoke_memFrame (hp.closed he) (n + 1) (by decide) _ s₀)
+  subst hs
+  obtain ⟨hok, e2, e3⟩ := AM.readings hrun hok
+  rw [← e2] at hA'; rw [← e3] at hres
+  have hk := Keeps.run (keepsW_instRevRange coreWalkFuel (decE e) xs s i d.toNat) (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
     ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.walk.frame hf (by decide) (by decide), hS.memos.hbF hf⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
@@ -530,7 +564,7 @@ theorem hasFvar_core (hp : AbsProg p) (hpf : p.lookup "has_fvar" = some hasFvarL
 
 /-- `inst1(e, v, d)`: a call of `inst_entry(e, v, d)` (the checker's `inst1A`, `Checker/Entry.lean`,
 the same text). -/
--- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast
+-- con-ron: ConRon/Arena/ExprOps.lean:378-385 ConRon.Arena.instantiate1Fast
 @[no_expose] def inst1W : FunDecl := lfn (e, v, d) locals (r) {
   r := call inst_entry(e, v, d);
   return r
@@ -596,6 +630,7 @@ structure CoreWalkProg (p : Prog) : Prop where
   hf : p.lookup "has_fvar" = some hasFvarL
 
 theorem CoreWalkProg.instListOK (hp : CoreWalkProg p) : InstListOK p := instListOK_core hp.il hp.ile
+theorem CoreWalkProg.instRangeOK (hp : CoreWalkProg p) : InstRangeOK p := instRangeOK_core hp.il hp.ile
 
 theorem CoreWalkProg.iotaInst1OK (hp : CoreWalkProg p) : IotaInst1OK p :=
   inst1_core hp.inst hp.ie hp.le "inst_entry" hp.ie

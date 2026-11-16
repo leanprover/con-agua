@@ -4,7 +4,6 @@ public import ConAgua.Arena.DefEqBody
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.PropReadRefine4
 import ConAgua.Arena.InferProj2
-import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
@@ -157,7 +156,7 @@ theorem KnotAllProg.instLP : InstLPOK p := instLP_refines p hq.ilw
 include hq in
 /-- Lane `whnf`'s `WhnfCallees` (four leaves, all proved). -/
 theorem KnotAllProg.whnfC : WhnfCallees p :=
-  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str, strLitStored_core p hq.str⟩
+  ⟨hq.walks.instListOK, hq.instLP, strLitCtor_core p hq.str⟩
 
 include hq in
 /-- `find_proj` and its record-pool facts. -/
@@ -181,7 +180,7 @@ include hq in
 /-- `iota_rec_at` one level up (lane `whnf`'s `iotaRecAt_refines'`, with `major_to_ctor` from
 `majorToCtor_refines'`: neither takes a slot step of this file). -/
 theorem KnotAllProg.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :=
-  iotaRecAt_refines' p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq) supKeep_of
+  iotaRecAt_refines' p hq.iotaRec (KnotAllProg.iotaC hq) (KnotAllProg.whnfC hq)
     (majorToCtor_refines' p hq.m2c (KnotAllProg.iotaC hq) (KnotAllProg.proofIrrel hq) (ErecPKept.of_closed hq.hcl)
       (KnotAllProg.projC hq) hq.prop (instLP_refines p hq.ilw))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
@@ -190,15 +189,16 @@ theorem KnotAllProg.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
 include hq in
 /-- Lane `whnf`'s `CoreCallees`. -/
 theorem KnotAllProg.coreC : CoreCallees p :=
-  { toProjCallees := KnotAllProg.projC hq, inst1 := hq.walks.inst1OK, iota := KnotAllProg.iota hq }
+  { toProjCallees := KnotAllProg.projC hq, inst1 := hq.walks.inst1OK, iota := KnotAllProg.iota hq,
+    instRange := hq.walks.instRangeOK }
 
 include hq in
 /-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
 theorem KnotAllProg.reduceProjCore : ReduceProjCoreH p :=
   fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
-    reduceProjCore_refines' p hq.core (strLitStored_core p hq.str) (strLitCtor_core p hq.str)
+    reduceProjCore_refines' p hq.core (strLitCtor_core p hq.str)
       (KnotAllProg.projC hq) hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
-      mode d sn i c hs hsn hc' (supKeep_of fe)
+      mode d sn i c hs hsn hc'
 
 include hq in
 /-- `unfold_definition` (lane `whnf`'s `unfoldDefinition_refines'`, over `inst_lp`). -/
@@ -213,7 +213,7 @@ theorem KnotAllProg.constTy : ConstTyAtOK p := constTyAt_refines' p hq.body.iota
 include hq in
 /-- The knot's `whnfCore` slot one level up (lane `whnf`'s `whnfCoreSlot_step`). -/
 theorem KnotAllProg.whnfCoreStep (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
-  whnfCoreSlot_step p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of n hk
+  whnfCoreSlot_step p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) n hk
 
 include hq in
 /-- The knot's `whnf` slot one level up (`whnf_refines`, over `inst_lp`; `reduce_nat` through its
@@ -237,16 +237,14 @@ theorem KnotAllProg.lazy : LazyCallees p :=
 include hq in
 theorem KnotAllProg.stuck : StuckCallees p :=
   ⟨KnotAllProg.defeq hq, KnotAllProg.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
-    lvlsEqCH_of p hq.lvc, coreDen_of, strLitStored_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
+    lvlsEqCH_of p hq.lvc, coreDen_of, strLitCtor_core p hq.str,
     lazyDeltaStepH_of p hq.body.lazy (KnotAllProg.lazy hq), KnotAllProg.reduceProjCore hq,
     hq.instLP, hq.walks.instListOK, hq.lvc⟩
 
 include hq in
-/-- The literal callees: `nat_lit_stored`, `const_e` (lane `whnf`'s proofs), `str_lit_stored`. -/
+/-- The literal callee `const_e` (lane `whnf`'s proof). -/
 theorem KnotAllProg.lit : InferLitCallees p :=
-  ⟨fun n s₀ a₀ dn vis fe M eb hS => natLitStored_refines p hq.delta n s₀ a₀ dn vis fe M eb hS,
-    strLitStored_core p hq.str,
-    fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
+  ⟨fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
 
 include hq in
 /-- **`infer_proj`'s callees** (`proj_guard_rows`: `pgrOK_of`). -/

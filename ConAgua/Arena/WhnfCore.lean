@@ -19,10 +19,11 @@ slot, `:3546`), in L:
 | `whnf_core_store_chain(mode, cheap, pb, pn, pc, v)` | `whnfCoreStoreChain` |
 | `whnf_core_store_keys(mode, o, n, i, v)`, `whnf_core_store_cheap_keys(…)` | `whnfCoreStoreKeys`, `whnfCoreStoreCheapKeys` |
 | `whnf_core_step(mode, cheap, vis, d, h, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_stuck` or `whnf_core_app` |
-| `whnf_stuck(mode, vis, d, h, e)`, `iota_target(vis, h)` | `whnfStuck`, `iotaTarget` |
+| `whnf_stuck(mode, vis, d, h, e)` | `whnfStuck` (the recursor's lookup, the cut spine) |
 | `whnf_core_app(mode, cheap, vis, d, e)` | `whnfCoreStepApp` |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
-| `beta_peel(t, a, ao, an, i)` | `betaPeel t #[a] args i` (the accumulator a stack slice) |
+| `whnf_app_iota(mode, vis, d, hd, vo, vn)` | `whnfAppIota` (the recursor's lookup, then `iota_rec_at`) |
+| `beta_peel(t, s, ao, an, i)` | `betaPeel t s args i` (the substitution the spine range `(ao + s, i - s)`, read in place) |
 | `whnf_core_step_proj(mode, cheap, vis, d, e, sn, i, pe)` | `whnfCoreStepProj` |
 | `reduce_proj_core(mode, vis, d, sn, i, c)` | `reduceProjCore` |
 | `proj_lit_to_ctor(mode, vis, d, h)` | `projLitToCtor` |
@@ -33,7 +34,7 @@ Callees from elsewhere: the spine walks (`WhnfSpine.lean`), `whnf` (`WhnfDelta.l
 `intern_bvar`; stubs (`CoreCallees` below): `inst1` (`instantiate1Fast` at the exact
 `coreWalkFuel` counter, which lane `exprops`' `inst_entry` does not have), `find_proj`
 (`IFEnv.findProj?`: interns the table name); from
-`WhnfCallees`: `inst_list`, `str_lit_stored`, `str_lit_ctor`.
+`WhnfCallees`: `inst_list`, `str_lit_ctor`.
 
 The `projCertAt` mode test is `mode & 1 == 0` (`verifiedChecks`: the two verified modes).
 -/
@@ -101,16 +102,16 @@ tests branch-free as bit masks over the tag (`657`: the tags `bvar`, `app`, `let
 `whnfCoreStuckTag` rejects; `334`: `fvar`, `sort`, `const`, `forallE`, `lit`, the stuck heads; `640`:
 `letE`, `proj`; `128`: `letE`), so the loop's model has few paths. A full stack aborts (a fixed
 capacity), and so does a top past the stack's end at entry. -/
--- con-ron: ConRon/Arena/Core.lean:2931-2939 ConRon.Arena.whnfCoreBody
--- con-ron: ConRon/Arena/Core.lean:2892-2929 ConRon.Arena.whnfCoreLoop
--- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
--- con-ron: ConRon/Arena/Core.lean:2796-2804 ConRon.Arena.whnfCoreKey
--- con-ron: ConRon/Arena/Core.lean:2812-2819 ConRon.Arena.whnfCoreCheapSafe
--- con-ron: ConRon/Arena/Core.lean:2806-2810 ConRon.Arena.whnfCoreStoresDone
--- con-ron: ConRon/Arena/Core.lean:2821-2824 ConRon.Arena.pushKey
--- con-ron: ConRon/Arena/Core.lean:2826-2831 ConRon.Arena.pushCheapKey
--- con-ron: ConRon/Arena/Core.lean:4313-4392 ConRon.Arena.coreKnot
--- con-ron: ConRon/Arena/Core.lean:2494-2508 ConRon.Arena.whnfCoreStuckTag
+-- con-ron: ConRon/Arena/Core.lean:3031-3039 ConRon.Arena.whnfCoreBody
+-- con-ron: ConRon/Arena/Core.lean:2992-3029 ConRon.Arena.whnfCoreLoop
+-- con-ron: ConRon/Arena/Core.lean:2721-2731 ConRon.Arena.isStuckHead
+-- con-ron: ConRon/Arena/Core.lean:2896-2904 ConRon.Arena.whnfCoreKey
+-- con-ron: ConRon/Arena/Core.lean:2912-2919 ConRon.Arena.whnfCoreCheapSafe
+-- con-ron: ConRon/Arena/Core.lean:2906-2910 ConRon.Arena.whnfCoreStoresDone
+-- con-ron: ConRon/Arena/Core.lean:2921-2924 ConRon.Arena.pushKey
+-- con-ron: ConRon/Arena/Core.lean:2926-2931 ConRon.Arena.pushCheapKey
+-- con-ron: ConRon/Arena/Core.lean:4432-4511 ConRon.Arena.coreKnot
+-- con-ron: ConRon/Arena/Core.lean:2581-2595 ConRon.Arena.whnfCoreStuckTag
 @[no_expose, l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop ConRon.Arena.whnfCoreStuckTag
   ConRon.Arena.isStuckHead ConRon.Arena.whnfCoreKey ConRon.Arena.whnfCoreCheapSafe
   ConRon.Arena.whnfCoreStoresDone ConRon.Arena.pushKey ConRon.Arena.pushCheapKey
@@ -127,7 +128,7 @@ def whnfCoreL : FunDecl :=
 
 /-- The `app` arm of `whnf_core_step` at a head that is not its own head normal form: the batched
 β spine. -/
--- con-ron: ConRon/Arena/Core.lean:2754-2765 ConRon.Arena.whnfCoreStepApp
+-- con-ron: ConRon/Arena/Core.lean:2854-2865 ConRon.Arena.whnfCoreStepApp
 @[no_expose, l_impl ConRon.Arena.whnfCoreStepApp]
 def whnfCoreAppL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
@@ -140,7 +141,7 @@ def whnfCoreAppL : FunDecl :=
 }
 
 /-- The second half of `whnf_core_app`: the reduct's spine, then the β/ι walk. -/
--- con-ron: ConRon/Arena/Core.lean:2754-2765 ConRon.Arena.whnfCoreStepApp
+-- con-ron: ConRon/Arena/Core.lean:2854-2865 ConRon.Arena.whnfCoreStepApp
 @[no_expose, l_impl ConRon.Arena.whnfCoreStepApp]
 def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
   top := CTL.u64[136];
@@ -152,8 +153,8 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
 
 /-- The step at the spine head `h` (the loop's `getAppFn`): an application whose head is its own
 head normal form (`isStuckHead`, inline) is `whnf_stuck`'s, any other `whnf_core_app`'s. -/
--- con-ron: ConRon/Arena/Core.lean:2767-2792 ConRon.Arena.whnfCoreStep
--- con-ron: ConRon/Arena/Core.lean:2616-2626 ConRon.Arena.isStuckHead
+-- con-ron: ConRon/Arena/Core.lean:2867-2892 ConRon.Arena.whnfCoreStep
+-- con-ron: ConRon/Arena/Core.lean:2721-2731 ConRon.Arena.isStuckHead
 @[no_expose, l_impl ConRon.Arena.whnfCoreStep ConRon.Arena.isStuckHead]
 def whnfCoreStepL : FunDecl :=
     lfn (mode, cheap, vis, d, h, e) locals (g, t, i, hg, st, r) {
@@ -193,36 +194,30 @@ def whnfCoreStepL : FunDecl :=
   abort
 }
 
-/-- The ι target of a spine head `h`: `(1, mI)` at a stored recursor at its own number of levels
-(the twin's `some (mI + 1)`: the word is the major's index, so the length never wraps), `(0, 0)`
-otherwise; a dangling handle aborts. -/
--- con-ron: ConRon/Arena/Core.lean:2628-2643 ConRon.Arena.iotaTarget
-@[no_expose, l_impl ConRon.Arena.iotaTarget]
-def iotaTargetL : FunDecl := lfn (vis, h) locals (t, x, f, q, lo, usl) {
-  if ⟦h⟧.tag != 3 { return (0, 0) };
+/-- The stuck spine `e` at head `h`: at a stored recursor at its own number of levels (the record
+`q` looked up here, once), the ι step once, at the prefix of `mI + 1` of the spine's arguments
+(pushed at the top by `get_app_args`, the top put back), else `e` itself. -/
+-- con-ron: ConRon/Arena/Core.lean:2733-2763 ConRon.Arena.whnfStuck
+@[no_expose, l_impl ConRon.Arena.whnfStuck]
+def whnfStuckL : FunDecl :=
+    lfn (mode, vis, d, h, e) locals (t, x, c, us, f, q, lo, usl, top, ao, an, k, st, e2, e3) {
+  if ⟦h⟧.tag != 3 { return (0, e) };
   t := ⟦h⟧.tier;
   x := ⟦h⟧.idx;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CONST⟨t⟩.count <= x { abort };
-  (f, q) := call env_find(CONST⟨t, x⟩.n, vis);
-  if f == 0 { return (0, 0) };
-  if EREC⦃q⦄ != 5 { return (0, 0) };
-  (lo, usl) := call ls_node(CONST⟨t, x⟩.us);
-  if usl == EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (1, EREC⦃q + ⟪CI.recMajor⟫⦄) };
-  return (0, 0)
-}
-
-/-- The stuck spine `e` at head `h`: the ι step once, at the target prefix `k + 1` of the
-spine's arguments (pushed at the top by `get_app_args`, the top put back), else `e` itself. -/
--- con-ron: ConRon/Arena/Core.lean:2645-2663 ConRon.Arena.whnfStuck
-@[no_expose, l_impl ConRon.Arena.whnfStuck]
-def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, st, e2, e3) {
-  (f, k) := call iota_target(vis, h);
+  c := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
+  (f, q) := call env_find(c, vis);
   if f == 0 { return (0, e) };
+  if EREC⦃q⦄ != 5 { return (0, e) };
+  (lo, usl) := call ls_node(us);
+  if usl != EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, e) };
   top := CTL.u64[136];
   (ao, an) := call get_app_args(e);
+  k := EREC⦃q + ⟪CI.recMajor⟫⦄;
   if k < an {
-    (st, e2) := call iota_rec_at(mode, vis, d, h, ao, k + 1);
+    (st, e2) := call iota_rec_at(mode, vis, d, c, us, q, ao, k + 1);
     if st != 0 {
       e3 := call mk_app_n_from(e2, ao, an, k + 1);
       CTL.u64[136] := top;
@@ -233,10 +228,35 @@ def whnfStuckL : FunDecl := lfn (mode, vis, d, h, e) locals (f, k, top, ao, an, 
   return (0, e)
 }
 
+/-- The ι step of `whnf_app`'s loop at the application `hd vargs` (`vargs` the slice `(vo, vn)`):
+tried only at a stored recursor (the record `q` looked up here, once) at its own number of levels,
+applied to exactly `mI + 1` arguments (`vn - 1 == mI`, which does not wrap). -/
+-- con-ron: ConRon/Arena/Core.lean:2669-2690 ConRon.Arena.whnfAppIota
+@[no_expose, l_impl ConRon.Arena.whnfAppIota]
+def whnfAppIotaL : FunDecl :=
+    lfn (mode, vis, d, hd, vo, vn) locals (t, x, c, us, f, q, lo, usl, st, e2) {
+  if ⟦hd⟧.tag != 3 { return (0, 0) };
+  t := ⟦hd⟧.tier;
+  x := ⟦hd⟧.idx;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CONST⟨t⟩.count <= x { abort };
+  c := CONST⟨t, x⟩.n;
+  us := CONST⟨t, x⟩.us;
+  (f, q) := call env_find(c, vis);
+  if f == 0 { return (0, 0) };
+  if EREC⦃q⦄ != 5 { return (0, 0) };
+  if vn == 0 { return (0, 0) };
+  if vn - 1 != EREC⦃q + ⟪CI.recMajor⟫⦄ { return (0, 0) };
+  (lo, usl) := call ls_node(us);
+  if usl != EREC⦃q + ⟪CI.cv + CV.lpsLen⟫⦄ { return (0, 0) };
+  (st, e2) := call iota_rec_at(mode, vis, d, c, us, q, vo, vn);
+  return (st, e2)
+}
+
 /-- The loop's lookup: at a key, the mode's `whnfCore` memo at `e`: `(1, x)` a hit, `(0, 0)` a miss
 (`wk` in the cheap mode, `wc` otherwise, at the mode's eager bit); `(0, 0)` at a non-key. -/
--- con-ron: ConRon/Arena/Core.lean:2886-2890 ConRon.Arena.whnfCoreLookupAt
--- con-ron: ConRon/Arena/Core.lean:2880-2884 ConRon.Arena.whnfCoreLookup
+-- con-ron: ConRon/Arena/Core.lean:2986-2990 ConRon.Arena.whnfCoreLookupAt
+-- con-ron: ConRon/Arena/Core.lean:2980-2984 ConRon.Arena.whnfCoreLookup
 @[no_expose, l_impl ConRon.Arena.whnfCoreLookupAt ConRon.Arena.whnfCoreLookup]
 def whnfCoreLookupL : FunDecl := lfn (mode, key, cheap, e) locals (fd, j, dd) {
   if key == 0 { return (0, 0) };
@@ -251,8 +271,8 @@ def whnfCoreLookupL : FunDecl := lfn (mode, key, cheap, e) locals (fd, j, dd) {
 }
 
 /-- The keys `SPN[o + i, o + n)` map to `v` in the full mode's memo (`wc`, `whnfCoreSet` each). -/
--- con-ron: ConRon/Arena/Core.lean:2851-2858 ConRon.Arena.whnfCoreStoreKeys
--- con-ron: ConRon/Arena/Core.lean:2833-2840 ConRon.Arena.whnfCoreSet
+-- con-ron: ConRon/Arena/Core.lean:2951-2958 ConRon.Arena.whnfCoreStoreKeys
+-- con-ron: ConRon/Arena/Core.lean:2933-2940 ConRon.Arena.whnfCoreSet
 @[no_expose, l_impl ConRon.Arena.whnfCoreStoreKeys ConRon.Arena.whnfCoreSet]
 def whnfCoreStoreKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j, dd, u) {
   for i < n {
@@ -265,8 +285,8 @@ def whnfCoreStoreKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j, dd,
 
 /-- The cheap keys `SPN[o + i, o + n)` map to `v` in the cheap mode's memo (`wk`,
 `whnfCoreCheapSet` each). -/
--- con-ron: ConRon/Arena/Core.lean:2860-2867 ConRon.Arena.whnfCoreStoreCheapKeys
--- con-ron: ConRon/Arena/Core.lean:2842-2849 ConRon.Arena.whnfCoreCheapSet
+-- con-ron: ConRon/Arena/Core.lean:2960-2967 ConRon.Arena.whnfCoreStoreCheapKeys
+-- con-ron: ConRon/Arena/Core.lean:2942-2949 ConRon.Arena.whnfCoreCheapSet
 @[no_expose, l_impl ConRon.Arena.whnfCoreStoreCheapKeys ConRon.Arena.whnfCoreCheapSet]
 def whnfCoreStoreCheapKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j, dd, u) {
   for i < n {
@@ -278,7 +298,7 @@ def whnfCoreStoreCheapKeysL : FunDecl := lfn (mode, o, n, i, v) locals (k, fd, j
 }
 
 /-- Store a finished chain: `pend` the slice `SPN[pb, pb + pn)`, `pendC` its suffix from `pc`. -/
--- con-ron: ConRon/Arena/Core.lean:2869-2878 ConRon.Arena.whnfCoreStoreChain
+-- con-ron: ConRon/Arena/Core.lean:2969-2978 ConRon.Arena.whnfCoreStoreChain
 @[no_expose, l_impl ConRon.Arena.whnfCoreStoreChain]
 def whnfCoreStoreChainL : FunDecl := lfn (mode, cheap, pb, pn, pc, v) locals (u) {
   if cheap != 0 { return 0 };
@@ -288,8 +308,8 @@ def whnfCoreStoreChainL : FunDecl := lfn (mode, cheap, pb, pn, pc, v) locals (u)
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2581-2612 ConRon.Arena.whnfApp
-con-ron: ConRon/Arena/Core.lean:2457-2461 ConRon.Arena.internAppRebuilt -/
+/-- con-ron: ConRon/Arena/Core.lean:2692-2717 ConRon.Arena.whnfApp
+con-ron: ConRon/Arena/Core.lean:2544-2548 ConRon.Arena.internAppRebuilt -/
 @[no_expose, l_impl ConRon.Arena.whnfApp ConRon.Arena.internAppRebuilt]
 def whnfAppL : FunDecl :=
     lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
@@ -299,7 +319,7 @@ def whnfAppL : FunDecl :=
     node := SPN.u64[ao + an + i];
     if ⟦v⟧.tag == 5 {
       (t, x) := node LAM⟦v⟧;
-      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, a, ao, an, i + 1);
+      (st, e3) := call beta_peel(LAM⟨t, x⟩.b, i, ao, an, i + 1);
       CTL.u64[136] := top;
       return (st, e3)
     };
@@ -309,13 +329,11 @@ def whnfAppL : FunDecl :=
     SPN.u64[vo + vn] := a;
     vn += 1;
     CTL.u64[136] := vo + vn;
-    if ⟦hd⟧.tag == 3 {
-      (st, e2) := call iota_rec_at(mode, vis, d, hd, vo, vn);
-      if st != 0 {
-        e3 := call mk_app_n_from(e2, ao, an, i + 1);
-        CTL.u64[136] := top;
-        return (1, e3)
-      }
+    (st, e2) := call whnf_app_iota(mode, vis, d, hd, vo, vn);
+    if st != 0 {
+      e3 := call mk_app_n_from(e2, ao, an, i + 1);
+      CTL.u64[136] := top;
+      return (1, e3)
     };
     v := ap
   };
@@ -323,34 +341,23 @@ def whnfAppL : FunDecl :=
   return (0, v)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2560-2579 ConRon.Arena.betaPeel -/
+/-- con-ron: ConRon/Arena/Core.lean:2647-2667 ConRon.Arena.betaPeel -/
 @[no_expose, l_impl ConRon.Arena.betaPeel]
-def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
-  co := CTL.u64[136];
-  if len(SPN.u64) <= co { abort };
-  SPN.u64[co] := a;
-  cn := 1;
-  CTL.u64[136] := co + 1;
+def betaPeelL : FunDecl := lfn (t, s, ao, an, i) locals (tt, x, e2, e3) {
   for i < an {
     if ⟦t⟧.tag != 5 {
-      e2 := call inst_list(t, co, cn, 0);
+      e2 := call inst_list(t, ao + s, i - s, 0);
       e3 := call mk_app_n_from(e2, ao, an, i);
-      CTL.u64[136] := co;
       return (1, e3)
     };
     (tt, x) := node LAM⟦t⟧;
-    t := LAM⟨tt, x⟩.b;
-    if len(SPN.u64) <= co + cn { abort };
-    SPN.u64[co + cn] := SPN.u64[ao + i];
-    cn += 1;
-    CTL.u64[136] := co + cn
+    t := LAM⟨tt, x⟩.b
   };
-  e2 := call inst_list(t, co, cn, 0);
-  CTL.u64[136] := co;
+  e2 := call inst_list(t, ao + s, i - s, 0);
   return (1, e2)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2741-2752 ConRon.Arena.whnfCoreStepProj -/
+/-- con-ron: ConRon/Arena/Core.lean:2841-2852 ConRon.Arena.whnfCoreStepProj -/
 @[no_expose, l_impl ConRon.Arena.whnfCoreStepProj]
 def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) locals (c, f, r) {
   if cheap != 0 { c := call whnf_core(mode, 1, vis, d, pe) } else { c := call whnf(mode, vis, d, pe) };
@@ -359,7 +366,7 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
   return (0, e)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
+/-- con-ron: ConRon/Arena/Core.lean:2806-2839 ConRon.Arena.reduceProjCore -/
 @[no_expose, l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
     lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, st, r) {
@@ -374,7 +381,7 @@ def reduceProjCoreL : FunDecl :=
 
 /-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
 constant.
-con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2806-2839 ConRon.Arena.reduceProjCore -/
 @[no_expose] def reduceProjHeadL : FunDecl :=
     lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
@@ -389,7 +396,7 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
 /-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
 level count, the shape conditions (the rule fires unguarded). The twin's `args.length = numParams +
 numFields` (`Nat`) is tested as `nf <= an && an - nf == np`, which does not wrap; then `np + i < an`.
-con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2806-2839 ConRon.Arena.reduceProjCore -/
 @[no_expose] def reduceProjFireL : FunDecl :=
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
@@ -405,7 +412,7 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
 
 /-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
 the verified mode.
-con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
+con-ron: ConRon/Arena/Core.lean:2806-2839 ConRon.Arena.reduceProjCore -/
 @[no_expose] def reduceProjArgL : FunDecl :=
     lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
   b0 := call intern_bvar(0);
@@ -416,9 +423,9 @@ con-ron: ConRon/Arena/Core.lean:2706-2739 ConRon.Arena.reduceProjCore -/
   return (0, 0)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2689-2696 ConRon.Arena.projCert
-con-ron: ConRon/Arena/Core.lean:2698-2704 ConRon.Arena.projCertAt
-con-ron: ConRon/Arena/Core.lean:2682-2687 ConRon.Arena.teleArityOk -/
+/-- con-ron: ConRon/Arena/Core.lean:2789-2796 ConRon.Arena.projCert
+con-ron: ConRon/Arena/Core.lean:2798-2804 ConRon.Arena.projCertAt
+con-ron: ConRon/Arena/Core.lean:2782-2787 ConRon.Arena.teleArityOk -/
 @[no_expose, l_impl ConRon.Arena.projCert ConRon.Arena.projCertAt ConRon.Arena.teleArityOk]
 def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   (f, q) := call env_find(k, vis);
@@ -428,14 +435,13 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   return u64(ok != 0)
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:2228-2240 ConRon.Arena.projLitToCtor -/
+/-- con-ron: ConRon/Arena/Core.lean:2331-2343 ConRon.Arena.projLitToCtor -/
 @[no_expose, l_impl ConRon.Arena.projLitToCtor]
-def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
+def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, c) {
   if ⟦h⟧.tag != 8 { return h };
   (t, x) := node LIT⟦h⟧;
   if LIT⟨t, x⟩.kind != 1 { return h };
-  s := call str_lit_stored(vis);
-  if s == 0 { return h };
+  if CTL.u64[161] == 0 { return h };
   c := call str_lit_ctor(h);
   c := call whnf(mode, vis, d, c);
   return c
@@ -450,12 +456,12 @@ structure WhnfCoreProg (p : Prog) : Prop where
   storeKeys : p.lookup "whnf_core_store_keys" = some whnfCoreStoreKeysL
   storeCheapKeys : p.lookup "whnf_core_store_cheap_keys" = some whnfCoreStoreCheapKeysL
   storeChain : p.lookup "whnf_core_store_chain" = some whnfCoreStoreChainL
-  iotaTarget : p.lookup "iota_target" = some iotaTargetL
   stuck : p.lookup "whnf_stuck" = some whnfStuckL
   lsn : p.lookup "ls_node" = some lsNode
   capp : p.lookup "whnf_core_app" = some whnfCoreAppL
   capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
   app : p.lookup "whnf_app" = some whnfAppL
+  appIota : p.lookup "whnf_app_iota" = some whnfAppIotaL
   peel : p.lookup "beta_peel" = some betaPeelL
   sproj : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL
   rproj : p.lookup "reduce_proj_core" = some reduceProjCoreL
@@ -496,14 +502,21 @@ def FindProjOK (p : Prog) : Prop :=
       (fun r => decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
-/-- `iota_rec_at(mode, vis, d, hd, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`). -/
+/-- `iota_rec_at(mode, vis, d, c, us, q, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`) at the
+recursor `c.{us}` whose record the caller found (`q`, decoding to `.recInfo cv mI rP isK rules`),
+on the redex's arguments, the stack slice `(so, sn)`. -/
 def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d hd so sn : Word) (xs : Array EIdx), n ≤ F → n ≤ 2 ^ 62 →
-    SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
+    (M : ModeMaps) (eb mode d c us q so sn : Word) (xs : Array EIdx) (cv : IConstantVal)
+    (mI rP : Nat) (isK : Bool) (rules : List IRecRule), n ≤ F → n ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW c → HW us →
+    decCI (erecP s₀.mem) q.toNat = some (.recInfo cv mI rP isK rules) →
+    fe.find? (decI c) = some (.recInfo cv mI rP isK rules) →
+    SpineR s₀.mem so sn xs → xs.size = mI + 1 →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    CoreSpec p n "iota_rec_at" [mode, vis, d, hd, so, sn]
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size)
+    CoreSpec p n "iota_rec_at" [mode, vis, d, c, us, q, so, sn]
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
+        (decI c) (decI us) cv mI rP isK rules xs)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
 /-- **`find_proj` leaves the record pool alone**; `reduce_proj_core` reads the table's words after
@@ -536,11 +549,23 @@ structure ProjCallees (p : Prog) : Prop where
   erec : ErecKept p
   projFound : ProjFound p
 
+/-- `inst_list(e, o₀ + s, i - s, d)` refines `instantiateRevRange coreWalkFuel e xs s i d` under
+`CoreS`, the range `xs[s:i]` of the stack slice `(o₀, C)` read in place (`beta_peel`'s
+substitution; proved in `CoreWalks.lean`, `instRangeOK_core`). -/
+def InstRangeOK (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb e o₀ C d : Word) (xs : Array EIdx) (s i : Nat), CoreS dn s₀.mem a₀ vis fe M eb →
+    HW e → SpineR s₀.mem o₀ C xs → o₀.toNat + C.toNat ≤ (spTop s₀.mem).toNat → s ≤ i → i ≤ C.toNat →
+    CoreSpec p n "inst_list" [e, o₀ + s.toUInt64, (i - s).toUInt64, d]
+      (instantiateRevRange coreWalkFuel (decE e) xs s i d.toNat) decH s₀ a₀ dn vis fe M eb
+
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
   inst1 : Inst1OK p
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
+  /-- `beta_peel`'s substitution from the spine range (`whnf_app`'s λ arm). -/
+  instRange : InstRangeOK p
 
 /-! ## The specs
 

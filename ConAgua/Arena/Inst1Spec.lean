@@ -30,7 +30,7 @@ namespace L.Arena
 
 The walk's depth counter starts at `coreWalkFuel` (`4000000000`). -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:382-389 ConRon.Arena.instantiate1Fast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:378-385 ConRon.Arena.instantiate1Fast -/
 @[no_expose, l_impl ConRon.Arena.instantiate1Fast]
 def instEntry : FunDecl := lfn (e, v, d) locals (r, u) {
   u := call if_clear();

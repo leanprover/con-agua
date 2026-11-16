@@ -117,28 +117,4 @@ theorem vmono_natLitSupported (fe : IFEnv) : VMono (natLitSupported fe) := by
     | (unfold pinNat) | (unfold pinNatZero) | (unfold pinNatSucc)
     | with_reducible apply VMono.bind | apply VMono.ite | intro _)
 
-theorem vmono_natLitStored (fe : IFEnv) : VMono (natLitStored fe) := by
-  unfold natLitStored pinNat pinNatZero pinNatSucc
-  repeat' (first
-    | with_reducible exact VMono.pure _ | with_reducible exact vmono_pinAt _
-    | with_reducible apply VMono.bind | with_reducible apply VMono.ite | intro _)
-
-theorem vmono_strLitStored (fe : IFEnv) : VMono (strLitStored fe) := by
-  unfold strLitStored pinString pinStringOfList pinList pinListNil pinListCons pinChar
-    pinCharOfNat
-  repeat' (first
-    | with_reducible exact VMono.pure _ | with_reducible exact vmono_pinAt _
-    | with_reducible exact vmono_natLitStored _
-    | with_reducible apply VMono.bind | with_reducible apply VMono.ite | intro _)
-
-/-- **`strLitStored` keeps every stored node's view.** -/
-theorem supKeep_of (fe : IFEnv) : SupKeep fe := by
-  intro a h w hw
-  have hm := vmono_strLitStored fe
-  unfold VMono at hm
-  unfold AM.st
-  split
-  · next r a' hr => exact hm a r a' hr h w hw
-  · exact hw
-
 end L.Arena

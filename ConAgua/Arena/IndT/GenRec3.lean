@@ -75,7 +75,7 @@ reads the call's walk memos). -/
 l_model gckE_spec (p : Prog) (P : GrcProgE p)
   fns [P.grc ↦ gckE]
   specs [callW_spec p n "class_fe_r", callW_spec p n "block_shape_names_of", callW_spec p n "flush_caches",
-    callW_spec p n "gen_rec_check_pop_all"]
+    callW_spec p n "gen_rec_check_pop_all", callW_spec p n "env_set_flags"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
@@ -619,26 +619,44 @@ theorem gck_ref (P : GrcProgE p) (hF : FtProg p) (hWt : WhnfTopE p)
       (hpv2.grow hg25) (hcs2.grow hg25) (by rw [hown5, hown4, hown3]; exact hpop2)) c6
   have hP6 := hfRc _ (by decide) _ _ _ _ _ c6 hP5
   have hA6 := hkeep _ (by simp [grcKeepCalleesC]) _ _ _ _ _ c6 hA5
+  -- the flags set back
+  have hE1 := hS1.check.env
+  refine RefE.onlySim (fun _ => gckE.k_env_set_flags.none ..) (fun _ _ h => h) fun r65 m65 c65 => ?_
+  rw [gckE.k_env_set_flags.arm1]
+  obtain ⟨s65, rfl, -, hm65, hE65⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
+    (envSetFlags_refines P.esf (n + 1) _ (r6.headD 0) _ _ hS6.check.env
+      (show 161 < (s6.mem.arr64 CTL).size by have := hS6.iw.ctl; omega)) c65
+  rw [← hE1.natLit, ← hE1.strLit] at hE65
+  obtain ⟨hS65, hg65⟩ := StageR.of_flags hS6 (by rw [← hm65]; exact hE65)
+  rw [← hm65] at hS65 hg65
+  have hA65 : AbsOK s65.mem := by
+    rw [hm65]; exact AFr.of_frame (flagsSet_frame _ _ _) (by decide) (by decide) hA6
+  have hP65 : RcMR s65.mem := by
+    rw [hm65]; exact hP6.fr (MFr.of_frame (flagsSet_frame _ _ _) (by simp)
+      (fun x hx => by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide))
   -- the flush back
   refine RefE.onlySim (fun _ => gckE.k_flush_caches_2.none ..) (fun _ _ h => h) fun r7 m7 c7 => ?_
   rw [gckE.k_flush_caches_2.arm1]
-  obtain ⟨s7, rfl, -, hfok7, hfm7⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
+  obtain ⟨s7, rfl, -, hfok7, hfm7⟩ := triple_of_callW (s₀ := ⟨s65.mem, Locals.init []⟩)
     (flushCaches_spec p P.flush (n + 1) _) c7
-  have hP7 := hfRc _ (by decide) _ _ _ _ _ c7 hP6
-  obtain ⟨hS7, hg7⟩ := flush_stage hS6 hfok7
-  have hA7 : AbsOK s7.mem := by rw [hfm7]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA6
+  have hP7 := hfRc _ (by decide) _ _ _ _ _ c7 hP65
+  obtain ⟨hS7, hg7⟩ := flush_stage hS65 hfok7
+  have hA7 : AbsOK s7.mem := by rw [hfm7]; exact AFr.of_frame (flushMem_frame _) (by decide) (by decide) hA65
   rw [← hfm7] at hS7 hg7
   have hext12 : ConRon.Arena.Ext a.store a5.store := c1'.ext.trans c12'.ext
   have hpins12 : a5.pins = a.pins := c12'.pins.trans c1'.pins
   obtain ⟨hok13, -, -⟩ := (⟨c12'.ok.state, hC.check.pins.mono hext12 hpins12, hC.check.ienv.mono hext12⟩ :
     ConRon.Bridge.Inductives.ReadOK env fe a5).flush (flushCaches_run a5)
-  have hok13' : ConRon.Bridge.CheckOK false env (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR)
+  have hok13' : ConRon.Bridge.CheckOK false env
+      ((prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR).setFlags fe.natLit fe.strLit)
       { a5 with caches := Caches.empty } :=
-    ⟨hok13.state, hok13.caches, hok13.pins, ConRon.Bridge.Inductives.GR.FEq.ifenv hpop hok13.ienv⟩
-  refine RefE.ret (y := (prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR, out))
+    ⟨hok13.state, hok13.caches, hok13.pins, ConRon.Bridge.Inductives.GR.FEq.ifenv hpop hok13.ienv
+      (hC.check.ienv.flags.of_same (hpop.2.2.1 ▸ rfl)
+        (fun n => hpop.find? n) rfl rfl)⟩
+  refine RefE.ret (y := ((prevs.foldr (fun x acc => acc.popTemp x.1 x.2) feR).setFlags fe.natLit fe.strLit, out))
     (a' := { a5 with caches := Caches.empty }) (by simp only [StateT.run_bind, flushCaches_run]; rfl)
-    ⟨hC.ofView (by simpa using hS7) hA7 hok13' hext12, hg14.trans (hg5.trans (hg6.trans hg7)),
-    by have := hd5.grow (hg6.trans hg7); simp only [decRRS] at this ⊢; simpa using this, hA7, hP7⟩
+    ⟨hC.ofView (by simpa using hS7) hA7 hok13' hext12, hg14.trans (hg5.trans (hg6.trans (hg65.trans hg7))),
+    by have := hd5.grow (hg6.trans (hg65.trans hg7)); simp only [decRRS] at this ⊢; simpa using this, hA7, hP7⟩
 
 include hkp henv hV hApd hCrk hCrf hIlpf in
 /-- **`gen_rec_check(vis, p, nested, params.off, params.len, tbl.off, tbl.len, rd, ms.off, ms.len,

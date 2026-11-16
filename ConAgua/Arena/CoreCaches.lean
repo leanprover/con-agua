@@ -28,7 +28,7 @@ library (`MemoLib.lean`, four words per slot, epoch stamps):
 | 101 | `deSch` (106, 107) | `defeqC` | `a`, `genW b g` | `Bool` (`≠ 0`) |
 | 102 | `ctSch` (108, 109) | `constTyC` | `n`, `us` | `EIdx` |
 | 103 | `cvSch` (110, 111) | `constValC` | `n`, `us` | `EIdx` |
-| 104 | `rrSch` (112, 113) | `ruleRhsC` | `rec`, `ctor ∣ us << 32` | `EIdx` |
+| 104 | `rrSch` (112, 113) | `ruleBodyC` | `rec`, `ctor ∣ us << 32` | `EIdx` |
 | 105 | `lqSch` (116, 117) | `lvlEqC` | `u`, `v` | `Bool` (`≠ 0`) |
 | 106 | `lsqSch` (118, 119) | `lvlsEqC` | `us`, `vs` | `Bool` (`≠ 0`) |
 
@@ -77,7 +77,7 @@ def flushClears (m : Mem) : Mem :=
 /-- The memory after `flush_caches()`. -/
 def flushMem (m : Mem) : Mem := flushClears m
 
-/-- con-ron: ConRon/Arena/Core.lean:4451-4457 ConRon.Arena.flushCaches -/
+/-- con-ron: ConRon/Arena/Core.lean:4570-4576 ConRon.Arena.flushCaches -/
 @[no_expose, l_impl ConRon.Arena.flushCaches]
 def flushCachesL : FunDecl := lfn () locals (r) {
   r := call wc_clear();

@@ -751,7 +751,7 @@ def checkDivModPin (mode : CheckMode) (pins : List INatOpPinSet)
   let prev := fe.idx[c]?
   let fe2 := fe.push ci
   let value' ← checkDivModPinAtFe2 fe2 c
-  let fe := fe2.popTemp c prev
+  let fe := (fe2.popTemp c prev).setFlags fe.natLit fe.strLit
   checkDivModPinLoop mode fe c value' pins []
   pure fe
 
@@ -797,7 +797,7 @@ def checkReducePin (mode : CheckMode) (fe : IFEnv) (ci : IConstantInfo) (c : NId
   let prev := fe.idx[c]?
   let fe2 := fe.push ci
   let stored ← reduceStoredOk fe2 c
-  let fe := fe2.popTemp c prev
+  let fe := (fe2.popTemp c prev).setFlags fe.natLit fe.strLit
   if stored then do
     checkReducePinPre mode fe c value
     pure fe
@@ -845,7 +845,7 @@ def valueGuards (fe : IFEnv) (cv : IConstantVal) (value : EIdx) : AM Unit := do
     fail (.invalid
       "undeclared universe parameter in value")
   unless ← constsResolveFFast fe value do
-    fail (← unresolvedConstsErrorL (← strLitStored fe) "value" value)
+    fail (← unresolvedConstsErrorL fe.strLit "value" value)
 
 /-- con-leche: ConLeche/Kernel/Checker.lean:30-47 checkDefnVal
 con-leche: ConLeche/Cached/ParsedC.lean:38-55 checkDefnValCI

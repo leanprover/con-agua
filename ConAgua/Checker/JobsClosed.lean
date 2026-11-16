@@ -224,7 +224,7 @@ def cdFns : List FnName :=
     "block_shape_rule_prefix_at", "block_shape_seal", "block_shape_tail",
     "block_shape_with_members", "block_shape_with_sort", "block_split", "block_split_ctors",
     "block_split_recs", "block_table", "block_tables", "bm_clear", "bm_find", "bm_put",
-    "bool_ctor_ok", "bool_ctor_typed", "bool_true_shortcut", "bvar_b", "bvar_find", "bvar_push",
+    "bool_ctor_ok", "bool_ctor_typed", "bvar_b", "bvar_find", "bvar_push",
     "canon_name_map", "caps_eq", "caps_eq_a", "caps_eq_b", "caps_eq_c", "cert_ctx", "cert_ctx_main",
     "cert_ctx_pins", "cert_div_mod", "cert_div_mod_eqs", "cert_div_mod_guards", "cert_eq",
     "cert_gcd", "cert_guard", "cert_halves", "cert_land", "cert_lor", "cert_lor_rhs",
@@ -279,7 +279,9 @@ def cdFns : List FnName :=
     "cr_lit_pins", "crf_go", "crm_clear", "crm_find", "crm_put", "ct_clear", "ct_find", "ct_put",
     "ctl_get", "ctor_family", "iota_no_cert", "rec_fire_level_count", "ctor_info_rec", "ctor_member", "ctors_have_name", "cv_at_lps",
     "cv_clear", "cv_eq", "cv_find", "cv_lps", "cv_new", "cv_put", "de_clear", "de_find", "de_put",
-    "dec_len", "declined_at_definition", "defeq", "defeq_arg", "defeq_binders", "defeq_domain", "defeq_binders_inner", "binder_pair", "quick_binders", "defeq_body",
+    "dec_len", "declined_at_definition", "defeq", "defeq_arg", "defeq_binders", "defeq_domain",
+    "defeq_binders_inner", "binder_pair", "quick_binders", "defeq_body", "defeq_lazy",
+    "ctor_head_against", "ctor_target", "ctor_target_for",
     "defeq_e", "defeq_list", "defeq_list_rev", "defeq_lst",
     "defeq_no_fvars", "defeq_offset", "defeq_proj_pair", "defeq_spine",
     "defeq_spine2", "defeq_stuck", "defeq_tail", "delta_quick", "depth", "depth_go", "depth_node",
@@ -288,7 +290,7 @@ def cdFns : List FnName :=
     "div_mod_certs_guard_go", "div_mod_decl_pin", "div_mod_env_guard", "div_mod_pin_guard",
     "div_mod_slot", "div_mod_type_pins", "div_shl1", "div_step", "div_sub", "dlp_copy", "dp_clear",
     "dp_find", "dp_put", "e_view", "ek_copy", "ensure_sort", "ensure_sort_core", "env_find",
-    "env_pop_temp", "env_push", "env_push_table", "env_row_get", "env_row_set", "eq_at1",
+    "env_pop_temp", "env_push", "lit_name_at", "lits_stored", "env_set_flags", "env_push_table", "env_row_get", "env_row_set", "eq_at1",
     "eq_stored", "er_copy", "er_copy_er", "er_from_iw", "er_from_iw_go", "er_put_ci", "er_sl_at",
     "er_sl_eq", "er_slice_eq", "er_to_iw", "erase_each", "erase_fvar_tys", "erec_alloc", "erec_ci",
     "erec_push", "erec_put", "eta_cert", "eta_cert_body", "eta_cert_ty", "eta_ctor_shape",
@@ -328,9 +330,7 @@ def cdFns : List FnName :=
     "intern_nnum", "intern_nstr", "intern_param", "intern_proj", "intern_sort", "intern_succ",
     "intern_zero", "io_clear", "io_find", "io_neutral", "io_put", "iota_case3_at",
     "iota_certs_full", "iota_certs_full_aux", "iota_certs_full_check", "iota_certs_full_flush",
-    "iota_certs_full_forall", "iota_certs_full_parts", "iota_index_ok", "iota_rec_at", "iota_rec_c",
-    "iota_rec_cmp", "iota_rec_fam", "iota_rec_fire", "iota_rec_fire2", "iota_rec_head",
-    "iota_rec_major", "iota_rec_vck", "is_bool_true", "is_ctor_app", "is_def_eq_core",
+    "iota_certs_full_forall", "iota_certs_full_parts", "iota_index_ok", "iota_rec_at", "iota_rec_cmp", "iota_rec_fam", "iota_rec_fire", "iota_rec_fire2", "eidx_copy_upto", "iota_rec_major", "iota_rec_vck", "is_def_eq_core",
     "is_eager_reduce", "is_nat_zero", "is_proof_fast", "is_str_lit", "iw_alloc", "iw_copy",
     "iw_pool", "iw_to_spn", "keys_ok", "keys_push", "keys_push_iw", "lam_find", "lam_proj", "lam_push", "lazy_delta_proj_reduction",
     "lazy_delta_reduction", "lazy_delta_step", "lazy_fold_ok", "lazy_iter", "lazy_nat", "ldpr_exit",
@@ -349,7 +349,7 @@ def cdFns : List FnName :=
     "lv_subst", "lv_zero", "lv_zero_where_zero", "lvl_eq", "lvl_eq_c", "lvl_eq_fueled",
     "lvl_eq_rec", "lvl_eq_true", "lvls_eq", "lvls_eq_c", "lvls_eq_rec", "m2c_and", "m2c_and2",
     "m2c_arms", "m2c_check", "m2c_const_view", "m2c_ctor", "m2c_eta", "m2c_eta2", "m2c_head",
-    "m2c_k", "m2c_k2", "m2c_pre", "ma_clear", "ma_find", "ma_put", "mac_hi", "major_to_ctor",
+    "m2c_k", "m2c_k2", "m2c_pre", "ma_clear", "ma_find", "ma_put", "mac_hi", "major_to_ctor", "major_to_ctor_rescue", "ctor_view", "prepare_major_whnf", "is_nat_succ_app",
     "matches_pin", "max_find", "max_push", "member_ctors_copy", "member_field_copy",
     "member_idx_at", "member_names_copy", "memo_get", "memo_push", "mentions_any_const",
     "mentions_any_go", "mentions_any_node", "mk_app", "mk_app_n", "mk_app_n_f", "mk_app_n_from",
@@ -358,8 +358,7 @@ def cdFns : List FnName :=
     "nat_beq_lit", "nat_bin_op_of_name", "nat_bin_op_result", "nat_ble_lit", "nat_cmp", "nat_div_lit", "nat_div_mod_names",
     "nat_divmod", "nat_eq_be", "nat_eq_bl", "nat_eq_ctx", "nat_eq_disp", "nat_eq_list2",
     "nat_eq_list3", "nat_eq_list4", "nat_eq_mu", "nat_eq_po", "nat_eq_pr", "nat_eq_un", "nat_gcd",
-    "nat_gcd_lit", "nat_ind_ok", "nat_land", "nat_land_lit", "nat_limb", "nat_lit_stored",
-    "nat_lit_supported", "nat_lit_to_ctor", "nat_lor", "nat_lor_lit", "nat_mod_lit", "nat_mul",
+    "nat_gcd_lit", "nat_ind_ok", "nat_land", "nat_land_lit", "nat_limb", "nat_lit_supported", "nat_lit_to_ctor", "nat_lor", "nat_lor_lit", "nat_mod_lit", "nat_mul",
     "nat_mul_lit", "nat_one", "nat_op_bool_ctors", "nat_op_cod", "nat_op_deps",
     "nat_op_deps_stored", "nat_op_equations", "nat_op_guard", "nat_op_name",
     "nat_op_names", "nat_op_pins", "nat_op_pins_a", "nat_op_pins_b", "nat_op_pins_c",
@@ -405,23 +404,24 @@ def cdFns : List FnName :=
     "reduce_pin_guard", "reduce_proj_arg", "reduce_proj_core", "reduce_proj_fire",
     "reduce_proj_head", "reduce_stored_ok", "reduced_former", "replace_apps", "replace_apps_go",
     "replace_apps_node", "replace_fvars", "replace_fvars_go", "replace_fvars_node",
-    "reserved_contains", "reserved_contains_w", "reserved_from", "reserved_rec_bool",
+    "reserved_contains", "reserved_from", "reserved_rec_bool",
     "reserved_rec_name", "residual_pw", "rf_bank_enter", "rf_bank_leave", "rf_clear", "rf_find",
     "rf_put", "rom_basis_decls", "rom_ci", "rom_cv", "rom_ex_leaf_c", "rom_ex_one_c",
     "rom_ex_ref_c", "rom_ex_two_c", "rom_expr_c", "rom_expr_pin", "rom_exprs_to_c", "rom_level_c",
     "rom_levels_c", "rom_lit", "rom_lvls_go_c", "rom_name_c", "rom_pin_sets", "rom_put_c",
     "rom_u64_c", "rr_clear", "rr_find", "rr_put", "rset_clear", "rset_find", "rset_put",
-    "rule_agree", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs", "rule_rhs_at",
+    "rule_agree", "rule_copy", "rule_eq_a", "rule_eq_b", "rule_eq_but_rhs", "rule_body_at", "lam_body",
     "rules_at_lps_go", "rules_eq", "rules_link_ok", "rules_refire", "rules_to_erec",
     "rules_to_erec_go", "same_const_heads", "sl_all_in", "sl_append", "sl_cons", "sl_contains",
     "sl_eq", "sl_find", "sl_get", "sl_getd", "sl_memo", "sl_new1", "sl_nodup", "sl_set_eq",
     "sl_snoc", "sle_go", "slp_go", "sls_go", "sls_memo", "sort_find", "sort_push", "spine_cmp",
     "spine_head", "spn_get", "spn_ls", "spn_pool", "spn_push", "spn_to_er", "spn_to_iw",
     "stack_cover", "std_ax_family", "std_axiom_ok", "stk_pool", "stk_push", "stmt1",
-    "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_lit_stored", "str_ls1",
+    "str_cons_spine", "str_ctor_pre", "str_cv", "str_lit_ctor", "str_ls1",
     "str_param_sort", "str_utf8_char", "stream_closed", "stream_k_check", "stream_nested_bvars",
     "stream_nested_dom", "stream_nested_ok", "stream_nested_pins", "stream_rec_check",
-    "stream_rec_compare", "stream_recs_check", "stream_rules_check", "stream_rules_shape",
+    "stream_rec_compare", "stream_recs_check", "stream_rules_check", "rule_binds",
+    "stream_rules_shape",
     "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis", "struct_ctor_resid_ok",
     "struct_elim_level", "struct_eta_cert", "struct_eta_cert_go", "struct_eta_cert_tail",
     "struct_eta_cert_with", "struct_eta_cert_wtb", "struct_proj_arg_p", "struct_proj_bodies",
@@ -443,9 +443,8 @@ def cdFns : List FnName :=
     "type_pins_guard", "type_sort_pw", "ue_mentions_go", "unfold_definition", "unfold_defn_at",
     "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step", "value_guards",
     "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put",
-    "whnf", "whnf_app", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_keys",
-    "whnf_core_store_cheap_keys", "whnf_stuck", "iota_target",
-    "whnf_core_step", "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top",
+    "whnf", "whnf_app", "whnf_app_iota", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_keys",
+    "whnf_core_store_cheap_keys", "whnf_stuck", "whnf_core_step", "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top",
     "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",
     "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
 
@@ -466,7 +465,8 @@ def apPc (x : Word) : Bool :=
 def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b && b != PINS
 
 /-- The `CTL` words of `cdC`, as a test. -/
-def cdPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 128
+def cdPc (x : Word) : Bool :=
+  decide (x.toNat < 1024) && ((decide (x.toNat < 162) || decide (173 < x.toNat)) && x.toNat != 128)
 
 theorem apPa_mem (b : TieredArray) (h : apPa b = true) : b ∈ apA := by
   simp only [apPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
@@ -485,11 +485,9 @@ theorem cdPa_mem (b : TieredArray) (h : cdPa b = true) : b ∈ cdA := by
   exact ⟨h.1.1, h.1.2, h.2⟩
 
 theorem cdPc_mem (x : Word) (h : cdPc x = true) : x ∈ cdC := by
-  simp only [cdPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
+  simp only [cdPc, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [cdC, List.mem_filter, List.mem_map, List.mem_range]
-  refine ⟨x.toNat, ⟨h.1, ?_⟩, UInt64.ofNat_toNat⟩
-  simp only [bne_iff_ne, ne_eq]
-  intro e; apply h.2; rw [e]
+  exact ⟨x.toNat, ⟨h.1, by rw [Bool.and_eq_true]; exact h.2⟩, UInt64.ofNat_toNat⟩
 
 /-- Every function of the checker passes `and_pin_ok`'s per-function check. -/
 prog_all checkerProg_apChk : checkerProg (wsChk CTL apPa apPc apTree)

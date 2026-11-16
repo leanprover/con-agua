@@ -58,7 +58,7 @@ theorem _root_.L.Arena.JobR.flush {pins : List INatOpPinSet} {dn : NIdx → Opti
     by rw [stampW_frameLo hC hF]; exact h.stamp, declsF_frameLo hA hF h.decls, iwOK_frameLo hA hC hF h.iw,
     by rw [hC.ctl hF (by decide)]; exact h.top1, pinSetsR_frameLo hA hC hF h.pinsets,
     h.mem.frameLo hA hC hF fun k x e => h.mem.dnN k x e, by rw [pinW_frame hF (by simp)]; exact h.flag,
-    h.memos.frameLo hA hC hF, h.fsize⟩, h.state, h.off, h.caches⟩
+    h.memos.frameLo hA hC hF, h.fsize, h.frozen.frameLo hC hF⟩, h.state, h.off, h.caches⟩
   have := h.core.flush hfok
   rw [h.caches]; exact this
 

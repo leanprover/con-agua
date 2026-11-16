@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.DeclStep
 public import ConAgua.Arena.IndMaster
+public import ConAgua.Arena.EnvFlags
 public import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop
 import ConAgua.Arena.GrindAttr
@@ -50,6 +51,8 @@ structure RecProg (p : Prog) : Prop where
   put : p.lookup "erec_put" = some erecPut
   rs : p.lookup "env_row_set" = some envRowSetL
   push : p.lookup "env_push" = some envPushL
+  /-- The literal flags' functions (`env_push`'s callees, `env_set_flags`). -/
+  ef : EnvFlagsProg p
 
 /-! ## Word models and their `vcgen` specs -/
 

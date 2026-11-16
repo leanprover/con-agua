@@ -31,7 +31,7 @@ name, as con-leche's `Env`/`FEnv`.  A table is not a constant, so
 **The environment.**  `IEnv` is con-leche's association list, `IFEnv` its
 `ConLeche/Kernel/FEnv.lean` index at `NIdx` keys over a frozen base layer
 (`IFBase`, the stream's index: `Arena/StreamIndex.lean`).  The guard twins
-that read them (`natLitStoredF` and its siblings) are `Arena/Core.lean`'s.
+that read them (`natLitSupportedF` and its siblings) are `Arena/Core.lean`'s.
 -/
 module
 
@@ -65,7 +65,7 @@ inductive IRecRuleFire where
   | levels (lvls : List LIdx)
   deriving DecidableEq, Repr, Inhabited
 
-/-- con-leche: ConLeche/Kernel/Env.lean:124-139 RecRule — one iota rule of a
+/-- con-leche: ConLeche/Kernel/Env.lean:124-141 RecRule — one iota rule of a
 recursor: the record's three fields and `fire`, read off the recursor's record
 (the parse placeholder `.plain`), exactly as con-leche's. -/
 structure IRecRule where
@@ -77,7 +77,7 @@ structure IRecRule where
 
 /-! ## Inductive capabilities -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:184-227 IndCaps — the definitional
+/-- con-leche: ConLeche/Kernel/Env.lean:186-229 IndCaps — the definitional
 capabilities of a stored inductive type that its block alone decides.  The
 constructor and the counts every η reader works at are the family's
 projection table's (`IFEnv.findTable?`), not the record's. -/
@@ -101,7 +101,7 @@ structure IIndCaps where
 
 /-! ## Projection tables -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:229-265 ProjTable — one structure's
+/-- con-leche: ConLeche/Kernel/Env.lean:231-267 ProjTable — one structure's
 projection table, every term field a handle; stored in the environment's
 table component (`IEnv.tables`), keyed on `structName`. -/
 structure IProjTable where
@@ -113,7 +113,7 @@ structure IProjTable where
   bodies : Array EIdx
   deriving DecidableEq, Repr, Inhabited
 
-/-- con-leche: ConLeche/Kernel/Env.lean:267-280 ProjEntry — the per-field view
+/-- con-leche: ConLeche/Kernel/Env.lean:269-282 ProjEntry — the per-field view
 of a projection table. -/
 structure IProjEntry where
   structName : NIdx
@@ -125,7 +125,7 @@ structure IProjEntry where
   body : EIdx
   deriving DecidableEq, Repr, Inhabited
 
-/-- con-leche: ConLeche/Kernel/Env.lean:282-286 ProjTable.entry — the view at
+/-- con-leche: ConLeche/Kernel/Env.lean:284-288 ProjTable.entry — the view at
 field `i`.  con-leche's `default` expression becomes the `Inhabited` handle: a
 table is only read at `i < numFields`, where the default is not reachable. -/
 def IProjTable.entry (tbl : IProjTable) (i : Nat) : IProjEntry :=
@@ -134,7 +134,7 @@ def IProjTable.entry (tbl : IProjTable) (i : Nat) : IProjEntry :=
 
 /-! ## Stored constants -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:288-312 ConstantInfo — the information
+/-- con-leche: ConLeche/Kernel/Env.lean:290-314 ConstantInfo — the information
 stored about an accepted constant, over handles.  A theorem is stored by its
 statement only (con-leche task #329 THMVAL); a constructor carries its family's
 name (official's `ConstructorVal.induct`, set by the install from the member it
@@ -151,7 +151,7 @@ inductive IConstantInfo where
 
 /-! ## Declaration records -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:332-368 Declaration — a declaration
+/-- con-leche: ConLeche/Kernel/Env.lean:334-370 Declaration — a declaration
 presented to the checker, over handles.  Six constructors, con-leche's own
 order. -/
 inductive IDeclaration where
@@ -165,19 +165,19 @@ inductive IDeclaration where
 
 /-! ## Reading a stored constant -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:427-429 ConstantInfo.toConstantVal —
+/-- con-leche: ConLeche/Kernel/Env.lean:429-431 ConstantInfo.toConstantVal —
 the constant's common data. -/
 def IConstantInfo.toConstantVal : IConstantInfo → IConstantVal
   | .axiomInfo v | .defnInfo v _ _ | .thmInfo v => v
   | .indInfo v _ | .ctorInfo v _ _ _ | .recInfo v _ _ _ _ => v
 
-/-- con-leche: ConLeche/Kernel/Env.lean:431 name — the constant's
+/-- con-leche: ConLeche/Kernel/Env.lean:433 name — the constant's
 name: the environment index's key. -/
 def IConstantInfo.name : IConstantInfo → NIdx
   | .axiomInfo v | .defnInfo v _ _ | .thmInfo v => v.name
   | .indInfo v _ | .ctorInfo v _ _ _ | .recInfo v _ _ _ _ => v.name
 
-/-- con-leche: ConLeche/Kernel/Env.lean:437-444 Declaration.names — the names a
+/-- con-leche: ConLeche/Kernel/Env.lean:439-446 Declaration.names — the names a
 declaration record declares; `preparePrelude`'s lookup and the ground hoist's
 name index read it. -/
 def IDeclaration.names : IDeclaration → List NIdx
@@ -187,7 +187,7 @@ def IDeclaration.names : IDeclaration → List NIdx
 
 /-! ## The environment -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:448-460 Env — the global environment:
+/-- con-leche: ConLeche/Kernel/Env.lean:450-462 Env — the global environment:
 the constants accepted so far and the structures' projection tables, each list
 newest first.  Names are unique (the checker rejects duplicates), so the order
 is irrelevant for lookup; so are the tables' structure names.  The tables are
@@ -198,11 +198,11 @@ structure IEnv where
   tables : List IProjTable
   deriving Inhabited
 
-/-- con-leche: ConLeche/Kernel/Env.lean:464-465 Env.empty — the empty
+/-- con-leche: ConLeche/Kernel/Env.lean:466-467 Env.empty — the empty
 environment; the starting point of every checker run. -/
 def IEnv.empty : IEnv := ⟨[], []⟩
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:27-39 FBase — **a frozen lookup layer**:
+/-- con-leche: ConLeche/Kernel/FEnv.lean:28-40 FBase — **a frozen lookup layer**:
 the index of a whole stream, built once before any record is checked and never
 written again (`Arena/StreamIndex.lean`).  An entry `n ↦ (c, ci)` says that the
 first constant named `n` in the stream is `ci`, at counter `c`; an entry
@@ -214,52 +214,93 @@ structure IFBase where
   tbls : Std.HashMap NIdx (Nat × IProjTable) := {}
   below : Nat := 0
   belowRec : Nat := 0
+  /-- The literal names (`strLitNames`) as handles, filled when a stream's index
+  is frozen (`IStreamIndex.freeze`), so that a push can tell whether it touched one
+  without the pin table.  Empty in an unfrozen base. -/
+  lits : List NIdx := []
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:41-45 FBase.find? — the base layer's
+/-- con-leche: ConLeche/Kernel/FEnv.lean:42-46 FBase.find? — the base layer's
 lookup: a visible entry's constant. -/
 def IFBase.find? (b : IFBase) (n : NIdx) : Option IConstantInfo :=
   match b.idx[n]? with
   | some (c, ci) => if c < b.below then some ci else none
   | none => none
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:47-51 FBase.findTable? — the base
+/-- con-leche: ConLeche/Kernel/FEnv.lean:48-52 FBase.findTable? — the base
 layer's table lookup: a visible entry's table. -/
 def IFBase.findTable? (b : IFBase) (T : NIdx) : Option IProjTable :=
   match b.tbls[T]? with
   | some (r, t) => if r < b.belowRec then some t else none
   | none => none
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:55-76 FEnv — the environment with its
+/-- con-leche: ConLeche/Kernel/FEnv.lean:54-55 natLitNames — how many of the
+literal names a `Nat` literal's expansion needs: the first three. -/
+def NAT_LIT_COUNT : Nat := 3
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:57-60 strLitNames — how many a string
+literal's expansion needs: all ten. -/
+def STR_LIT_COUNT : Nat := 10
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:62-72 litFrom — **from which counter a
+view of the frozen layer holds all of `lits[i..stop]`**: one past the largest
+counter of their entries, `none` if one has no entry (or the list is short). -/
+def litFrom (idx : Std.HashMap NIdx (Nat × IConstantInfo)) (lits : List NIdx)
+    (i stop : Nat) : Option Nat :=
+  if i ≥ stop then some 0
+  else if h : i < lits.length then
+    match idx[lits[i]]? with
+    | none => none
+    | some (c, _) =>
+      match litFrom idx lits (i + 1) stop with
+      | none => none
+      | some k => if c + 1 ≤ k then some k else some (c + 1)
+  else none
+termination_by stop - i
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:73-76 fromLe — is a counter threshold
+(`litFrom`) reached at `c`. -/
+def fromLe : Option Nat → Nat → Bool
+  | some k, c => decide (k ≤ c)
+  | none, _ => false
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:144-148 litName — is `n` one of the
+literal names from `i` on: the ten names the two literal flags read. -/
+def litNameAt (lits : List NIdx) (n : NIdx) (i : Nat) : Bool :=
+  if h : i < lits.length then
+    if lits[i] == n then true else litNameAt lits n (i + 1)
+  else false
+termination_by lits.length - i
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:189-218 FEnv — the environment with its
 `O(1)` index (DESIGN §8.3 lesson 13) over the frozen layer of a stream's index
-(`base`).  `tbls` is the table map, keyed on the structure's name.  con-leche's
-overlay (`ovl`) is not twinned: the port pushes and pops in place
-(`IFEnv.popTemp`). -/
+(`base`), and the two literal flags of its lookups (`natLitStoredBy`,
+`strLitStoredBy`), set where it is made and kept by every push.  `tbls` is the
+table map, keyed on the structure's name.  con-leche's overlay (`ovl`) is not
+twinned: the port pushes and pops in place (`IFEnv.popTemp`). -/
 structure IFEnv where
   env : IEnv
   idx : Std.HashMap NIdx IConstantInfo
   base : IFBase
   tbls : Std.HashMap NIdx IProjTable
+  natLit : Bool
+  strLit : Bool
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:78-84 mkIdxGo — the index build, from
+/-- con-leche: ConLeche/Kernel/FEnv.lean:237-243 mkIdxGo — the index build, from
 the back: the newest (front) constant is inserted last and wins, exactly as
 `List.find?` takes the first match. -/
 def mkIFEnvGo : List IConstantInfo → Std.HashMap NIdx IConstantInfo
   | [] => ∅
   | ci :: cs => (mkIFEnvGo cs).insert ci.name ci
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:86-90 mkTblsGo — the table map's
+/-- con-leche: ConLeche/Kernel/FEnv.lean:245-249 mkTblsGo — the table map's
 build, from the back: the newest (front) table is inserted last and wins,
 exactly as `List.find?` takes the first. -/
 def mkIFEnvTblsGo : List IProjTable → Std.HashMap NIdx IProjTable
   | [] => ∅
   | t :: ts => (mkIFEnvTblsGo ts).insert t.structName t
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:92-94 mkFEnv — build the indexes of
-`env`, over the empty base. -/
-def mkIFEnv (env : IEnv) : IFEnv :=
-  ⟨env, mkIFEnvGo env.consts, {}, mkIFEnvTblsGo env.tables⟩
-
-/-- con-leche: ConLeche/Kernel/FEnv.lean:98-105 FEnv.lookup — the index, then the
+/-- con-leche: ConLeche/Kernel/FEnv.lean:267-269 FEnv.lookup
+con-leche: ConLeche/Kernel/FEnv.lean:102-110 lookupIn — the index, then the
 frozen layer.  A job's own index is empty until its record pushes, and the
 lookups are hot, so an empty index is not hashed into. -/
 def IFEnv.lookup (fe : IFEnv) (n : NIdx) : Option IConstantInfo :=
@@ -269,47 +310,95 @@ def IFEnv.lookup (fe : IFEnv) (n : NIdx) : Option IConstantInfo :=
     | some ci => some ci
     | none => fe.base.find? n
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:118-128 FEnv.find? — indexed lookup: the
+/-- con-leche: ConLeche/Kernel/FEnv.lean:278-283 FEnv.find?
+con-leche: ConLeche/Kernel/FEnv.lean:112-120 findIn — indexed lookup: the
 own layer, and on a miss the frozen base.  No overlay (the structure's note). -/
 def IFEnv.find? (fe : IFEnv) (n : NIdx) : Option IConstantInfo :=
   fe.lookup n
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:130-134 FEnv.push — the index of the
-cons-extended environment; the base and the tables are untouched. -/
-def IFEnv.push (fe : IFEnv) (ci : IConstantInfo) : IFEnv :=
-  ⟨⟨ci :: fe.env.consts, fe.env.tables⟩, fe.idx.insert ci.name ci, fe.base, fe.tbls⟩
+/-- con-leche: ConLeche/Kernel/FEnv.lean:122-126 natLitStoredBy
+con-leche: ConLeche/Kernel/FEnv.lean:128-134 strLitStoredBy — are the base's
+literal names `lits[i..stop]` all stored in `fe`, read through `find?`.  A list
+too short to hold them answers `false`. -/
+def IFEnv.litsStored (fe : IFEnv) (i stop : Nat) : Bool :=
+  if i ≥ stop then true
+  else if h : i < fe.base.lits.length then
+    match fe.find? fe.base.lits[i] with
+    | some _ => fe.litsStored (i + 1) stop
+    | none => false
+  else false
+termination_by stop - i
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:136-141 FEnv.pushTable — **install a
-projection table**: the table component extended, the constant index
-untouched. -/
+/-- con-leche: ConLeche/Kernel/FEnv.lean:122-126 natLitStoredBy — **are `Nat`
+literals expandable** in `fe`, by lookups: `Nat`, `Nat.zero` and `Nat.succ` are
+stored. -/
+def IFEnv.natLitStoredBy (fe : IFEnv) : Bool := fe.litsStored 0 NAT_LIT_COUNT
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:128-134 strLitStoredBy — **are string
+literals expandable** in `fe`, by lookups: the `Nat` constants and the seven
+string-support constants are stored. -/
+def IFEnv.strLitStoredBy (fe : IFEnv) : Bool :=
+  fe.natLitStoredBy && fe.litsStored NAT_LIT_COUNT STR_LIT_COUNT
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:220-230 FEnv.ofParts — **an index from
+its components**, its literal flags computed by lookups. -/
+def IFEnv.ofParts (env : IEnv) (idx : Std.HashMap NIdx IConstantInfo) (base : IFBase)
+    (tbls : Std.HashMap NIdx IProjTable) : IFEnv :=
+  let fe : IFEnv := ⟨env, idx, base, tbls, false, false⟩
+  ⟨env, idx, base, tbls, fe.natLitStoredBy, fe.strLitStoredBy⟩
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:352-371 FEnv.push — the index of the
+cons-extended environment; the base and the tables are untouched.  The literal
+flags are recomputed only while string literals are not yet expandable and only
+when the pushed name is one of the base's literal names (`litNameAt`); every
+other push leaves them as they are. -/
+def IFEnv.push (fe : IFEnv) (ci : IConstantInfo) : IFEnv :=
+  let re := !fe.strLit && litNameAt fe.base.lits ci.name 0
+  let fe1 : IFEnv := ⟨⟨ci :: fe.env.consts, fe.env.tables⟩, fe.idx.insert ci.name ci,
+    fe.base, fe.tbls, fe.natLit, fe.strLit⟩
+  if re then
+    let fe2 := { fe1 with natLit := fe1.natLitStoredBy }
+    { fe2 with strLit := fe2.strLitStoredBy }
+  else fe1
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:373-379 FEnv.pushTable — **install a
+projection table**: the table component extended, the constant index and the
+literal flags untouched. -/
 def IFEnv.pushTable (fe : IFEnv) (t : IProjTable) : IFEnv :=
-  ⟨⟨fe.env.consts, t :: fe.env.tables⟩, fe.idx, fe.base, fe.tbls.insert t.structName t⟩
+  ⟨⟨fe.env.consts, t :: fe.env.tables⟩, fe.idx, fe.base, fe.tbls.insert t.structName t,
+    fe.natLit, fe.strLit⟩
 
 /-- con-leche: none — **the inverse of a temporary push** (the port's
 `env::ifenv_pop_temp`, task #97-P6-5 lever 5, in place of con-leche's
 `FEnv.overlay`): the pushed constant dropped and the index row under its name put
 back as it was before the push (`prev`, the raw row read with `idx[n]?` before
-it). -/
+it).  The literal flags are left as the push left them (`IFEnv.setFlags`). -/
 def IFEnv.popTemp (fe : IFEnv) (n : NIdx) (prev : Option IConstantInfo) : IFEnv :=
   ⟨⟨fe.env.consts.tail, fe.env.tables⟩,
    (match prev with
     | some r => fe.idx.insert n r
     | none => fe.idx.erase n),
-   fe.base, fe.tbls⟩
+   fe.base, fe.tbls, fe.natLit, fe.strLit⟩
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:168-173 FEnv.rawTable? — the table map's
+/-- con-leche: none — the end of the port's in-place overlay — **the end of a temporary
+extension**: the literal flags of the layer the pushes started from, set back once the pops
+have restored its rows. -/
+def IFEnv.setFlags (fe : IFEnv) (natLit strLit : Bool) : IFEnv :=
+  { fe with natLit, strLit }
+
+/-- con-leche: ConLeche/Kernel/FEnv.lean:406-411 FEnv.rawTable? — the table map's
 lookup, ungated: a miss falls through to the base layer. -/
 def IFEnv.rawTable? (fe : IFEnv) (T : NIdx) : Option IProjTable :=
   match fe.tbls[T]? with
   | some t => some t
   | none => fe.base.findTable? T
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:175-179 FEnv.findTable? — **the table
+/-- con-leche: ConLeche/Kernel/FEnv.lean:413-417 FEnv.findTable? — **the table
 lookup**: `T`'s table, visible exactly where the constant `T` is. -/
 def IFEnv.findTable? (fe : IFEnv) (T : NIdx) : Option IProjTable :=
   if (fe.find? T).isSome then fe.rawTable? T else none
 
-/-- con-leche: ConLeche/Kernel/FEnv.lean:181-185 FEnv.findProj? — indexed
+/-- con-leche: ConLeche/Kernel/FEnv.lean:419-423 FEnv.findProj? — indexed
 projection-table lookup: the structure's table, viewed at field `i`. -/
 def IFEnv.findProj? (fe : IFEnv) (T : NIdx) (i : Nat) : Option IProjEntry :=
   match fe.findTable? T with
@@ -318,7 +407,7 @@ def IFEnv.findProj? (fe : IFEnv) (T : NIdx) (i : Nat) : Option IProjEntry :=
 
 /-! ## The syntactic Π-telescope -/
 
-/-- con-leche: ConLeche/Kernel/Env.lean:374-388 Expr.piSortTeleLen? — the length
+/-- con-leche: ConLeche/Kernel/Env.lean:376-390 Expr.piSortTeleLen? — the length
 of a syntactic Π-telescope ending in a SORT.  A spine walk, so the fuel is the
 store's node count; con-leche's structural recursion is the same walk with the
 node read through `view`. -/

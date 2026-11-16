@@ -25,7 +25,7 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsF)
 
 /-- For `AM.res` at the check's result types. -/
-instance : Inhabited IFEnv := ⟨mkIFEnv IEnv.empty⟩
+instance : Inhabited IFEnv := ⟨IFEnv.ofParts IEnv.empty {} {} {}⟩
 
 /-- A front record that is not an inductive block is a one-constant record. -/
 theorem declAt_of_F {D P : Array Word} {i : Nat} {d : IDeclaration} (h : L.Front.DeclAtF D P i d)

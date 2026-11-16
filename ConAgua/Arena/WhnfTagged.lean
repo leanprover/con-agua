@@ -20,15 +20,16 @@ namespace L.Arena
 
 variable (p : Prog)
 
-/-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
+/-- **`beta_peel` refines `betaPeel t s args i`.** -/
 @[refines ConRon.Arena.betaPeel]
 theorem betaPeel_refines (hp : WhnfCoreProg p) (hw : CoreWalkProg p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb t a ao an i : Word) (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t)
-    (ha : HW a) (har : SpineR s₀.mem ao an args) (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  betaPeel_refines' p hp hw.instListOK n s₀ a₀ dn vis fe MM eb t a ao an i args hS ht ha har hlo
+    (eb t s ao an i : Word) (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t)
+    (hsi : s ≤ i) (hia : i ≤ an) (har : SpineR s₀.mem ao an args)
+    (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
+    CoreSpec p (n + 1) "beta_peel" [t, s, ao, an, i]
+      (betaPeel (decE t) s.toNat args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
+  betaPeel_refines' p hp hw.instRangeOK n s₀ a₀ dn vis fe MM eb t s ao an i args hS ht hsi hia har hlo
 
 /-- **`pi_residual` refines `piResidual`.** -/
 @[refines ConRon.Arena.piResidual]

@@ -722,7 +722,7 @@ theorem icbiW_ok {p : Prog} (hP : ConsIndsProg p) (p1 isRec : Word) (bs : BlockS
   obtain ⟨⟨r3, m3⟩, h3, h⟩ := of_K h (by simp [icbiK3])
   rw [icbiK3_some] at h
   simp only [List.headD_cons] at h3
-  obtain ⟨hS3, hg3⟩ := envPush_stage hP.recP.rs hP.recP.push h3 hS2 hci
+  obtain ⟨hS3, hg3⟩ := envPush_stage hP.recP.ef h3 hS2 hci
   have hg13 := (hg1.trans hg2).trans hg3
   have hi1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   have hl1 : (l - 1).toNat = l.toNat - 1 := by

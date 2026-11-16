@@ -27,7 +27,7 @@ each owning a disjoint range of arrays and `CTL` words, each with **one** group 
 | `StateDR` (front, `Front/StateDR.lean`) | the parse state | 64‥66; 67‥95 reserved | 64‥95 reserved | lane `front2` |
 | `CoreR` | `a.caches` | 96‥106; 107‥127 reserved | 96‥113, 116‥119; others reserved | 11 of 14 tables, both mode-memo sets (lane `whnf`) |
 | `PinsR` | `a.pins` | 128 (`PINS`) | – | filled (lane `pinsenv`) |
-| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 129‥136, 140‥143, tier 1 of 129‥131 | 128 (129: the record top), 133 | filled (lane `pinsenv`; tables: lane `consync`) |
+| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 129‥136, 140‥143, tier 1 of 129‥131 | 128 (129: the record top), 133, 160‥171 (the literal flags and names) | filled (lane `pinsenv`; tables: lane `consync`) |
 | `PendR` (`Checker.lean`) | `pend` (an argument) | 137 | 130 | lane `pinsenv` |
 | argument relations (`PMemo`, `pend`, saved `ModeMemos`, walk-local memos) | arguments | 144‥191 | 136‥191 | not yet |
 
@@ -85,7 +85,7 @@ def pairKey {k₁ k₂ : IdxKind} : MemoKey (Idx k₁ × Idx k₂) where
 /-- `defeqC`'s key: the ordered pair and the generation. -/
 def dKeyG : MemoKey ((EIdx × EIdx) × Word) := genKey pairKey (fun _ _ h => h.2)
 
-/-- `ruleRhsC`'s key: the recursor in the first word, the constructor and the levels packed in
+/-- `ruleBodyC`'s key: the recursor in the first word, the constructor and the levels packed in
 the second (`ctor ∣ us << 32`). -/
 def rrKey : MemoKey (NIdx × NIdx × LsIdx) where
   dk k1 k2 := (decI k1, decI (k2 &&& 0xFFFFFFFF), decI (k2 >>> 32))
@@ -159,7 +159,7 @@ structure CoreRM (m : Mem) (c : Caches) (M : ModeMaps) (eb : Word) : Prop where
   eb1 : eb ≤ 1
   ct : MemoRV ctSch pairKey VH m c.constTyC
   cv : MemoRV cvSch pairKey VH m c.constValC
-  rr : MemoRV rrSch rrKey VH m c.ruleRhsC
+  rr : MemoRV rrSch rrKey VH m c.ruleBodyC
   lq : MemoRG lqSch pairKey decB m c.lvlEqC
   lsq : MemoRG lsqSch pairKey decB m c.lvlsEqC
 
@@ -558,6 +558,15 @@ def OwnBelow (m : Mem) : Prop :=
   ∀ w, rowTag w ≤ 2 → ((ownRow m w).1 >>> 32).toNat ≤ (stampW m).toNat ∧
     (rdN (m.arr64 (tierA (otxArr (rowTag w)) (tierW w))) (rowIx w)).toNat ≤ (stampW m).toNat
 
+/-- The literal names of the frozen stream index in L (`IFBase.lits`, `strLitNames`' order):
+the ten handle words `CTL[162‥171]`, written by the freeze at the end of `build_index`. -/
+def litWords (m : Mem) : List Word :=
+  (List.range 10).map fun i => rdW (m.arr64 CTL) (162 + UInt64.ofNat i)
+
+theorem litWords_congr {m m' : Mem} (h : ∀ i < 10, rdW (m'.arr64 CTL) (162 + UInt64.ofNat i) =
+    rdW (m.arr64 CTL) (162 + UInt64.ofNat i)) : litWords m' = litWords m := by
+  unfold litWords; apply List.map_congr_left; intro i hi; exact h i (List.mem_range.mp hi)
+
 /-- **The environment relation** (one view). Every clause is over all names (a row of a word
 of another tag reads as absent: `ownRaw`, `baseRow`, `ownTbl`, `baseTbl`):
 
@@ -595,6 +604,12 @@ structure EnvR (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
          decTbl (erecP m) (baseTbl m n.word.toUInt64).2.toNat))
   stamp : (stampW m).toNat < 2 ^ 32
   ownBelow : OwnBelow m
+  /-- The `Nat`-literal flag (`IFEnv.natLit`) is `CTL[160]`. -/
+  natLit : fe.natLit = (rdW (m.arr64 CTL) 160 != 0)
+  /-- The string-literal flag (`IFEnv.strLit`) is `CTL[161]`. -/
+  strLit : fe.strLit = (rdW (m.arr64 CTL) 161 != 0)
+  /-- The frozen index's literal names (`IFBase.lits`) are the words `CTL[162‥171]`. -/
+  lits : fe.base.lits.map (·.word.toUInt64) = litWords m
 
 /-- The arrays and globals `EnvR` reads. -/
 def envArrs : List TieredArray :=
@@ -602,7 +617,7 @@ def envArrs : List TieredArray :=
    tier1 OIXS, tier1 OIXN, OTXA, OTXS, OTXN, tier1 OTXA, tier1 OTXS, tier1 OTXN]
 
 /-- The control words `EnvR` reads. -/
-def envCtl : List Word := [129, 130, 133, 134, 135]
+def envCtl : List Word := [129, 130, 133, 134, 135, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171]
 
 /-- The own layer's row arrays of every tag and tier are `EnvR`'s. -/
 theorem tierA_oix_mem (g : Nat) (t : UInt64) : tierA (oixArr g) t ∈ envArrs := by
@@ -619,17 +634,30 @@ theorem eix_mem (g : Nat) : (eixArr g : TieredArray) ∈ envArrs := by
 theorem tix_mem (g : Nat) : (tixArr g : TieredArray) ∈ envArrs := by
   unfold tixArr; split <;> (try split) <;> decide
 
-/-- **`EnvR` reads only `envArrs` and `envCtl`.** -/
-theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
+theorem litW_mem_envCtl : ∀ i < 10, (162 + UInt64.ofNat i : Word) ∈ envCtl := by decide
+
+theorem litW_ne : ∀ i < 10, (162 + UInt64.ofNat i : Word) ≠ 129 ∧ (162 + UInt64.ofNat i : Word) ≠ 130 := by
+  decide
+
+theorem litW_ne' : ∀ i < 10, (162 + UInt64.ofNat i : Word) ≠ 160 ∧ (162 + UInt64.ofNat i : Word) ≠ 161 := by
+  decide
+
+theorem IFEnv.setFlags_self (fe : IFEnv) : fe.setFlags fe.natLit fe.strLit = fe := by
+  cases fe; rfl
+
+/-- **`EnvR` reads only `envArrs` and `envCtl`, the flags aside**: the literal flags set to
+the words `CTL[160]`, `CTL[161]` of `m'` (`IFEnv.setFlags`). -/
+theorem EnvR.congrF {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
-    (hc : ∀ x ∈ envCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
-    (h : EnvR m vis fe) : EnvR m' vis fe := by
+    (hc : ∀ x ∈ envCtl, x ≠ 160 → x ≠ 161 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (h : EnvR m vis fe) :
+    EnvR m' vis (fe.setFlags (rdW (m'.arr64 CTL) 160 != 0) (rdW (m'.arr64 CTL) 161 != 0)) := by
   have hP : erecP m' = erecP m := by
     funext i
     simp only [erecP, erTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
-      hc 129 (by decide), hc 130 (by decide)]
+      hc 129 (by decide) (by decide) (by decide), hc 130 (by decide) (by decide) (by decide)]
     rfl
-  have hs : stampW m' = stampW m := hc 133 (by decide)
+  have hs : stampW m' = stampW m := hc 133 (by decide) (by decide) (by decide)
   have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
     simp only [ownRow, he _ (tierA_oix_mem _ _)]
   have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
@@ -644,10 +672,24 @@ theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
   exact ⟨fun n => by rw [hfind]; exact h.own n, fun n => by rw [hraw, hP]; exact h.own_dec n,
     fun n => by rw [hraw]; exact h.fresh n, fun n n' => by rw [hraw, hraw]; exact h.uniq n n',
     fun n => by rw [hot, hP]; exact h.otbl n, fun n => by rw [hot, hP]; exact h.otbl_dec n,
-    by rw [hc 134 (by decide)]; exact h.below, by rw [hc 135 (by decide)]; exact h.belowRec,
+    by rw [hc 134 (by decide) (by decide) (by decide)]; exact h.below,
+    by rw [hc 135 (by decide) (by decide) (by decide)]; exact h.belowRec,
     fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
     by rw [hs]; exact h.stamp, fun w hw => by
-      rw [hor, hs, he _ (tierA_otx_mem _ _)]; exact h.ownBelow w hw⟩
+      rw [hor, hs, he _ (tierA_otx_mem _ _)]; exact h.ownBelow w hw,
+    rfl, rfl,
+    by rw [litWords_congr (fun i hi => hc _ (litW_mem_envCtl i hi) (litW_ne' i hi).1 (litW_ne' i hi).2)]
+       exact h.lits⟩
+
+/-- **`EnvR` reads only `envArrs` and `envCtl`.** -/
+theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
+    (hc : ∀ x ∈ envCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (h : EnvR m vis fe) : EnvR m' vis fe := by
+  have h' := h.congrF he (fun x hx _ _ => hc x hx)
+  rw [hc 160 (by decide), hc 161 (by decide), ← h.natLit, ← h.strLit, IFEnv.setFlags_self] at h'
+  exact h'
+
 
 /-- **`EnvR` across a frame** that avoids its arrays and control words. -/
 theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
@@ -668,9 +710,11 @@ theorem not_mem_envArrs {b : TieredArray}
     b ∉ envArrs := fun hm => by have := envArrs_arr hm; omega
 
 theorem not_mem_envCtl {x : Word}
-    (h : x.toNat < 129 ∨ 136 ≤ x.toNat ∨ x.toNat = 131 ∨ x.toNat = 132) : x ∉ envCtl := fun hm => by
+    (h : x.toNat < 129 ∨ (136 ≤ x.toNat ∧ x.toNat < 160) ∨ 172 ≤ x.toNat ∨ x.toNat = 131 ∨
+      x.toNat = 132) : x ∉ envCtl := fun hm => by
   simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
-  rcases hm with e | e | e | e | e <;> subst e <;> simp at h
+  rcases hm with e | e | e | e | e | e | e | e | e | e | e | e | e | e | e | e | e <;> subst e <;>
+    simp at h
 
 /-- **`EnvR` across a growth of the record pool** (allocations and writes above the tops):
 the rows are untouched and every decoding they name decodes in the bigger pool too. -/
@@ -703,7 +747,11 @@ theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn hq => ?_, fun n => ?_, fun n hn => ?_,
     by rw [hc 134 (by decide) (by decide) (by decide)]; exact h.below, by rw [hc 135 (by decide) (by decide) (by decide)]; exact h.belowRec,
     fun n => ?_, fun n => ?_, by rw [hs]; exact h.stamp, fun w hw => by
-      rw [hor, hs, he _ (o2 _ _).1 (o2 _ _).2 (tierA_otx_mem _ _)]; exact h.ownBelow w hw⟩
+      rw [hor, hs, he _ (o2 _ _).1 (o2 _ _).2 (tierA_otx_mem _ _)]; exact h.ownBelow w hw,
+    by rw [hc 160 (by decide) (by decide) (by decide)]; exact h.natLit,
+    by rw [hc 161 (by decide) (by decide) (by decide)]; exact h.strLit,
+    by rw [litWords_congr (fun i hi => hc _ (litW_ne i hi).1 (litW_ne i hi).2 (litW_mem_envCtl i hi))]
+       exact h.lits⟩
   · rw [h.own n]; simp only [ownFind, hraw]
     split
     · rename_i c; obtain ⟨ci, hci⟩ := h.own_dec n c.1; rw [hci, hx.decCI hci]
@@ -810,11 +858,13 @@ theorem CheckR.of_walk {m m' : Mem} {a a' : AState} {vis : Word}
 
 /-- **Every tier but the arena's above a writer**: tier-0 arrays from 137 but the own layer's
 (140‥142, 146‥148), and `CTL` words from 131 up but the stamp and the base view (133‥135)
-(the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
+(the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`; not the literal
+flags and names `160‥171`. -/
 theorem CheckR.frame_hi {A : List TieredArray} {C : List Word}
     {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv}
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
-    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135)
+    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135 ∧
+      (x.toNat < 160 ∨ 172 ≤ x.toNat))
     (hf : MemFrame A C m m') (h : CheckR m a vis fe) :
     CheckR m' a vis fe := by
   have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by

@@ -101,6 +101,8 @@ structure JobM (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (
   flag : pinW m 0 ≠ 0
   memos : IndMemos m
   fsize : I.firsts.size = ds.size
+  /-- The index is frozen: its literal names and thresholds in `CTL[162‥173]`. -/
+  frozen : FrozenR m I
 
 /-- **What a worker's memory keeps between two jobs**: the memory's half (`JobM`), and on the
 twin side the store well formed with the scratch tier off and the caches empty. -/
@@ -195,6 +197,10 @@ theorem IndexR.frameLo {I : IStreamIndex} (hA : LoArr A) (hC : LoCtl C) (hf : Me
   h.grow (fun b _ hb => hA.arr hf (by omega)) (hC.ctl hf (by decide))
     (by rw [erecP_frameLo hA hC hf]; exact fun _ _ h => h)
 
+theorem FrozenR.frameLo {I : IStreamIndex} (hC : LoCtl C) (hf : MemFrame A C m m')
+    (h : FrozenR m I) : FrozenR m' I :=
+  h.frame (fun x hx => not_mem_frozenCtl (.inl (by have := hC x hx; omega))) hf
+
 theorem OwnBelow.congr (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
     (h133 : rdW (m'.arr64 CTL) 133 = rdW (m.arr64 CTL) 133) (h : OwnBelow m) : OwnBelow m' := by
   intro w hw
@@ -283,7 +289,7 @@ theorem JobR.enter {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     by rw [stampW_frameLo hC hf]; exact hJ.stamp, declsF_frameLo hA hf hJ.decls, iwOK_frameLo hA hC hf hJ.iw,
     by rw [hC.ctl hf (by decide)]; exact hJ.top1, pinSetsR_frameLo hA hC hf hJ.pinsets,
     hJ.mem.frameLo hA hC hf fun k x e => ?_, by rw [pinW_frame hf (hA.not_hi (by decide))]; exact hJ.flag,
-    hJ.memos.frameLo hA hC hf, hJ.fsize⟩
+    hJ.memos.frameLo hA hC hf, hJ.fsize, hJ.frozen.frameLo hC hf⟩
   · rw [hst]; exact ArenaD.enter _ _ hJ.arena hlo h62 c1 c2 c3 c4 hpt
   · exact hJ.core.frame (.of_low scrArrs_low (by decide))
       (.of_lt (fun x h => resetCtl_lt x h) (by decide)) hf
@@ -312,51 +318,67 @@ structure JobS (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (
   flag : pinW m 0 ≠ 0
   memos : IndMemos m
   idx : IndexR m I
+  frozen : FrozenR m I
 
 /-- **The job's start**: from the memory's half of the job relation (after the bracket's opening),
-`iw_reset` and the stamp bump (the record's view: `CTL[134]` its first counter from `FIRSTS`,
-`CTL[135]` its position) give the stage relation at the view of position `k`, with an empty own
-layer (every row's stamp is below the new one). -/
+`iw_reset`, the stamp bump (the record's view: `CTL[134]` its first counter from `FIRSTS`,
+`CTL[135]` its position) and the literal flags (`CTL[160]`, `CTL[161]`, `from_le` of the frozen
+thresholds at the first counter) give the stage relation at the view of position `k`, with an
+empty own layer (every row's stamp is below the new one). -/
 theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {I : IStreamIndex} {m : Mem} {a : AState} {k : Word}
+    {ds : Array IDeclaration} {I : IStreamIndex} {m : Mem} {a : AState} {k x y : Word}
     (h : JobM pins dn ds I m a) (hk : k.toNat < ds.size)
-    (hst : ¬ 4294967294 ≤ rdW ((m.set64 CTL 200 0).arr64 CTL) 133) :
-    JobS pins dn ds I k.toNat (jobMem (m.set64 CTL 200 0) k) a ∧
-      rdW ((jobMem (m.set64 CTL 200 0) k).arr64 CTL) 130 = 0 := by
+    (hst : ¬ 4294967294 ≤ rdW ((m.set64 CTL 200 0).arr64 CTL) 133)
+    (hx : (x != 0) = fromLe (optW (rdW (m.arr64 CTL) 172)) (rdW (m.arr64 FIRSTS) k).toNat)
+    (hy : (y != 0) = fromLe (optW (rdW (m.arr64 CTL) 173)) (rdW (m.arr64 FIRSTS) k).toNat) :
+    JobS pins dn ds I k.toNat (flagsSet (jobMem (m.set64 CTL 200 0) k) x y) a ∧
+      rdW ((flagsSet (jobMem (m.set64 CTL 200 0) k) x y).arr64 CTL) 130 = 0 := by
   have hsz : 200 < (m.arr64 CTL).size := h.iw.ctl
   generalize hm2 : m.set64 CTL 200 0 = m2 at hst
   have hf2 : MemFrame [] [200] m m2 := hm2 ▸ MemFrame.setCtl m 200 0
   have e2 : ∀ x : Word, x ≠ 200 → rdW (m2.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x hx =>
     hf2.ctl x (by simpa using hx)
   generalize hst' : rdW (m2.arr64 CTL) 133 = st at hst
-  generalize hm3 : jobMem m2 k = m3
+  generalize hm3' : jobMem m2 k = m3'
+  generalize hm3 : flagsSet m3' x y = m3
   have hsz2 : (m2.arr64 CTL).size = (m.arr64 CTL).size := hf2.size CTL
-  have hf3 : MemFrame [] [133, 134, 135] m2 m3 := by
-    rw [← hm3]; unfold jobMem
+  have hf3' : MemFrame [] [133, 134, 135] m2 m3' := by
+    rw [← hm3']; unfold jobMem
     exact (((MemFrame.setCtl _ 133 _).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ 134 _).mono (by simp) (by simp))).trans
       ((MemFrame.setCtl _ 135 _).mono (by simp) (by simp))
-  have hf : MemFrame [] [200, 133, 134, 135] m m3 :=
+  have hf34 : MemFrame [] [160, 161] m3' m3 := hm3 ▸ flagsSet_frame m3' x y
+  have hf3 : MemFrame [] [133, 134, 135, 160, 161] m2 m3 :=
+    (hf3'.mono (by simp) (by simp)).trans (hf34.mono (by simp) (by simp))
+  have hf : MemFrame [] [200, 133, 134, 135, 160, 161] m m3 :=
     (hf2.mono (by simp) (by simp)).trans (hf3.mono (by simp) (by simp))
-  have hC : ∀ x ∈ ([200, 133, 134, 135] : List Word), x = 200 ∨ x = 133 ∨ x = 134 ∨ x = 135 := by
+  have hC : ∀ x ∈ ([200, 133, 134, 135, 160, 161] : List Word),
+      x = 200 ∨ x = 133 ∨ x = 134 ∨ x = 135 ∨ x = 160 ∨ x = 161 := by
     simp
   have eA : ∀ b : TieredArray, b ≠ CTL → m3.arr64 b = m.arr64 b := fun b hb => hf.arr b (by simp) hb
-  have eC : ∀ x : Word, x ≠ 200 → x ≠ 133 → x ≠ 134 → x ≠ 135 →
-      rdW (m3.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x h1 h2 h3 h4 =>
-    hf.ctl x (by simp [h1, h2, h3, h4])
-  -- the three words
+  have eC : ∀ x : Word, x ≠ 200 → x ≠ 133 → x ≠ 134 → x ≠ 135 → x ≠ 160 → x ≠ 161 →
+      rdW (m3.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x h1 h2 h3 h4 h5 h6 =>
+    hf.ctl x (by simp [h1, h2, h3, h4, h5, h6])
+  -- the five words
   have hlt : ∀ x : Word, x.toNat ≤ 200 → x.toNat < (m2.arr64 CTL).size := fun x hx => by omega
+  have e34 : ∀ x : Word, x ≠ 160 → x ≠ 161 → rdW (m3.arr64 CTL) x = rdW (m3'.arr64 CTL) x :=
+    fun x h1 h2 => hf34.ctl x (by simp [h1, h2])
+  have hsz3' : 161 < (m3'.arr64 CTL).size := by rw [hf3'.size, hsz2]; omega
   have v133 : rdW (m3.arr64 CTL) 133 = st + 1 := by
-    rw [← hm3]; unfold jobMem
+    rw [e34 _ (by decide) (by decide), ← hm3']; unfold jobMem
     rw [rdW_set_ctl _ 135 _ 133 (by decide), rdW_set_ctl _ 134 _ 133 (by decide),
       rdW_set64_self _ _ _ _ (hlt 133 (by decide)), hst']
   have v134 : rdW (m3.arr64 CTL) 134 = rdW (m.arr64 FIRSTS) k := by
-    rw [← hm3]; unfold jobMem
+    rw [e34 _ (by decide) (by decide), ← hm3']; unfold jobMem
     rw [rdW_set_ctl _ 135 _ 134 (by decide), rdW_set64_self _ _ _ _ (by rw [Mem.size_arr64_set64]; exact hlt 134 (by decide)),
       Mem.arr64_set64_ne _ _ _ _ _ (by decide), ← hm2, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have v135 : rdW (m3.arr64 CTL) 135 = k := by
-    rw [← hm3]; unfold jobMem
+    rw [e34 _ (by decide) (by decide), ← hm3']; unfold jobMem
     rw [rdW_set64_self _ _ _ _ (by simp only [Mem.size_arr64_set64]; exact hlt 135 (by decide))]
+  have v160 : rdW (m3.arr64 CTL) 160 = x := by rw [← hm3]; exact flagsSet_rd160 _ _ _ hsz3'
+  have v161 : rdW (m3.arr64 CTL) 161 = y := by rw [← hm3]; exact flagsSet_rd161 _ _ _ hsz3'
+  have hFz3 : FrozenR m3 I := h.frozen.frame (fun x hx => by
+    rcases hC x hx with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) hf
   have hstN : st.toNat < 4294967294 := by
     have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hst); simpa using this
   have hst1 : (st + 1).toNat = st.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -377,35 +399,37 @@ theorem JobM.stage {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     rw [hrow, otxArrT, hotx, hs3]; rw [hst0] at h1 h2; omega
   -- the stream index
   have hx3 : erecP m3 = erecP m :=
-    erecP_congr' (eA _ (by decide)) (eA _ (by decide)) (eC 129 (by decide) (by decide) (by decide) (by decide))
-      (eC 130 (by decide) (by decide) (by decide) (by decide))
+    erecP_congr' (eA _ (by decide)) (eA _ (by decide)) (eC 129 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+      (eC 130 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
   have hI3 : IndexR m3 I := h.idx.grow (fun b _ hb => eA b (fun e => by subst e; revert hb; decide))
-    (eC 128 (by decide) (by decide) (by decide) (by decide)) (by rw [hx3]; exact fun _ _ h => h)
+    (eC 128 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)) (by rw [hx3]; exact fun _ _ h => h)
   have h134 : (rdW (m3.arr64 CTL) 134).toNat = I.firsts.getD k.toNat I.next := by
     have hkf : k.toNat < I.firsts.size := by rw [h.fsize]; exact hk
     rw [v134, Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem hkf, Option.getD_some,
       ← h.idx.firsts _ hkf, UInt64.ofNat_toNat]
   have hE3 : EnvR m3 0 (I.view k.toNat) :=
-    EnvR.ofIndex hI3 hO3 hB3 (by rw [hs3]; omega) h134 (by rw [v135])
+    EnvR.ofIndex hI3 hFz3 hO3 hB3 (by rw [hs3]; omega) h134 (by rw [v135])
+      (by rw [v160, hx, ← h134, v134, h.frozen.natFrom])
+      (by rw [v161, hy, ← h134, v134, h.frozen.strFrom])
   have hCK : CheckR m3 a 0 (I.view k.toNat) :=
-    ⟨h.arena.frameHi hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl <;> decide),
+    ⟨h.arena.frameHi hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl|rfl|rfl <;> decide),
       h.core.frame (fun b hb => by simp at hb) (fun x hx => by
-        rcases hC x hx with rfl|rfl|rfl|rfl <;> decide) hf,
+        rcases hC x hx with rfl|rfl|rfl|rfl|rfl|rfl <;> decide) hf,
       h.pinsR.frame (fun b hb => by simp at hb) hf, hE3,
       h.mode.frame hf (by decide) (by decide)⟩
   have hIW : L.Ind.IWOK m3 :=
     IWOK.frame hf3 (by simp) (by simp) (by decide) (by decide) (hm2 ▸ h.iw.reset) (by simp) (by decide)
   refine ⟨⟨⟨hCK, hIW⟩, by rw [eA _ (by decide), eA _ (by decide)]; exact h.decls, ?_, ?_,
-    by rw [pinW_frame hf (by simp)]; exact h.flag, ?_, hI3⟩,
-    by rw [eC 130 (by decide) (by decide) (by decide) (by decide)]; exact h.top1⟩
+    by rw [pinW_frame hf (by simp)]; exact h.flag, ?_, hI3, hFz3⟩,
+    by rw [eC 130 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)]; exact h.top1⟩
   · exact PinSetsR.grow h.pinsets (RecGrow.of_eq (eA _ (by decide))
-      (eC 129 (by decide) (by decide) (by decide) (by decide)))
-      (eC 150 (by decide) (by decide) (by decide) (by decide))
-      (eC 151 (by decide) (by decide) (by decide) (by decide))
+      (eC 129 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)))
+      (eC 150 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+      (eC 151 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
   · exact ⟨by rw [hf.size]; exact h.mem.erec, by rw [hf.size]; exact h.mem.spn,
       by rw [hf.size]; exact h.mem.bstk, h.mem.memos.frame hf (by simp) (by decide),
       h.mem.dnN⟩
-  · exact h.memos.frame hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl <;> decide)
+  · exact h.memos.frame hf (by simp) (fun x hx => by rcases hC x hx with rfl|rfl|rfl|rfl|rfl|rfl <;> decide)
 
 /-! ## The job's write sets
 
@@ -426,7 +450,7 @@ def apA : List TieredArray := leafA.filter apP
 
 /-- The `CTL` words `and_pin_ok` may write. -/
 def apQ (x : Word) : Bool :=
-  x != 128 && x != 150 && x != 151 && x.toNat != 52 && x.toNat != 158 &&
+  (decide (x.toNat < 162) || decide (173 < x.toNat)) && x != 128 && x != 150 && x != 151 && x.toNat != 52 && x.toNat != 158 &&
     (decide (x.toNat < 202) || decide (219 < x.toNat))
 
 def apC : List Word := leafC.filter apQ
@@ -434,8 +458,10 @@ def apC : List Word := leafC.filter apQ
 /-- The arrays `check_decl` may write. -/
 def cdA : List TieredArray := checkerWordArrays.filter fun b => !IdxArr b && b != PINS
 
-/-- The `CTL` words `check_decl` may write. -/
-def cdC : List Word := ((List.range 1024).filter fun x => x != 128).map UInt64.ofNat
+/-- The `CTL` words `check_decl` may write: all but the index's counter and the frozen index's
+literal names and thresholds (`CTL[162‥173]`). -/
+def cdC : List Word :=
+  ((List.range 1024).filter fun x => (decide (x < 162) || decide (173 < x)) && x != 128).map UInt64.ofNat
 
 theorem apA_mem {b : TieredArray} (h : b ∈ apA) : b ∈ leafA ∧ apP b = true := List.mem_filter.mp h
 theorem apC_mem {x : Word} (h : x ∈ apC) : x ∈ leafC ∧ apQ x = true := List.mem_filter.mp h
@@ -458,6 +484,20 @@ theorem cdC_128 : (128 : Word) ∉ cdC := fun h => by
   have : x = 128 := by
     have := congrArg UInt64.toNat e; simp at this; omega
   subst this; simp at h1
+
+theorem apC_frozen {x : Word} (h : x ∈ apC) : x ∉ frozenCtl := by
+  have := (apC_mem h).2
+  simp only [apQ, Bool.and_eq_true] at this
+  obtain ⟨⟨⟨⟨⟨⟨hn, -⟩, -⟩, -⟩, -⟩, -⟩, -⟩ := this
+  simp only [Bool.or_eq_true, decide_eq_true_eq] at hn
+  exact not_mem_frozenCtl (by omega)
+
+theorem cdC_frozen {x : Word} (h : x ∈ cdC) : x ∉ frozenCtl := by
+  simp only [cdC, List.mem_map, List.mem_filter, List.mem_range] at h
+  obtain ⟨y, ⟨hy, h1⟩, e⟩ := h
+  simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] at h1
+  have : x.toNat = y := by rw [← e]; simp; omega
+  exact not_mem_frozenCtl (by omega)
 
 /-- **The stream index across a writer that leaves its arrays and `CTL[128]` alone** and only
 grows the record pool. -/
@@ -498,7 +538,8 @@ theorem andPin_job {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
   rw [hs1] at hKP hgr hdec; rw [hs2] at hfr
   have hrun := AM.run_of_ok _ _ hok1
   obtain ⟨hok', hext, hc, hpins⟩ := ConRon.Bridge.andPinOk_run hok hF.check.pins hd hrun
-  refine ⟨_, _, hrun, hdec.1, ⟨hKP, ?_, ?_, ?_, ?_, ?_, ?_⟩, hgr, hfr, hok', hext, hc, hpins,
+  refine ⟨_, _, hrun, hdec.1, ⟨hKP, ?_, ?_, ?_, ?_, ?_, ?_, hS.frozen.frame (fun x hx => apC_frozen hx) hfr⟩,
+    hgr, hfr, hok', hext, hc, hpins,
     hF.step (hF.check.mono hok' hext hc hpins) hpins⟩
   · rw [hfr.arr _ (fun h => by have := (apA_mem h).2; simp [apP] at this) (by decide),
       hfr.arr _ (fun h => by have := (apA_mem h).2; simp [apP] at this) (by decide)]
@@ -543,7 +584,8 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
     {ds : Array IDeclaration} {I : IStreamIndex} {m₀ m m₁ : Mem} {a a' : AState} {v : Word} {x : IFEnv}
     (hR : LoopR pins m a v x ds) (hcm : CoreMemos m) (hIM : IndMemos m) (hfl : pinW m 0 ≠ 0)
     (hT : TwinMem dn m a') (hfs : I.firsts.size = ds.size)
-    (hI : IndexR m₀ I) (h0 : rdW (m₀.arr64 CTL) 130 = 0) (hf0 : MemFrame (apA ++ cdA) (apC ++ cdC) m₀ m)
+    (hI : IndexR m₀ I) (hFz : FrozenR m₀ I) (h0 : rdW (m₀.arr64 CTL) 130 = 0)
+    (hf0 : MemFrame (apA ++ cdA) (apC ++ cdC) m₀ m)
     (hg : L.Ind.IWGrow m₀ m) (hC : CheckR m₁ a' v x)
     (hf : MemFrame scrArrs (flushCtl ++ (0 :: resetCtl)) m m₁) :
     JobM pins dn ds I (m₁.set64 CTL 130 0) a' := by
@@ -585,7 +627,7 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
   have hI7 : IndexR (m₁.set64 CTL 130 0) I := hI.grow hidx h128 hgrow.ext
   refine ⟨hC.arena.frameHi h7 (by simp) (by simp), hC.core.frame (by simp [AvoidA]) (by simp [AvoidC]) h7,
     hC.pins.frame (by simp [AvoidA]) h7, hC.mode.frame h7 (by decide) (by decide), hI7, ?_, ?_, ?_,
-    IWOK.set130 hiw, ?_, ?_, ?_, ?_, ?_, hfs⟩
+    IWOK.set130 hiw, ?_, ?_, ?_, ?_, ?_, hfs, ?_⟩
   · exact (hR.check.env.ownBelow.frameLo hA hCl hf).frame (fun b hb => by simp at hb) (by decide) h7
   · rw [stampW, e7 _ (by decide)]
     have := hR.check.env.stamp; rw [stampW] at this; rw [hCl.ctl hf (by decide)]; exact this
@@ -601,6 +643,8 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
     · exact hT.bstk
   · rw [pinW_frame h7 (by simp), pinW_frame hf (hA.not_hi (by decide))]; exact hfl
   · exact (hIM.frameLo hA hCl hf).setCtl 130 0 (by decide)
+  · exact ((hFz.frame (fun x hx => (List.mem_append.mp hx).elim apC_frozen cdC_frozen) hf0).frameLo
+      hCl hf).frame (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide) h7
 
 /-- The program facts the jobs take. -/
 structure JobProg (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -617,6 +661,7 @@ structure JobProg (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name
   /-- The write sets of `and_pin_ok` and `check_decl`. -/
   apW : ∃ F, "and_pin_ok" ∈ F ∧ closedA p apA apC F = true
   cdW : ∃ F, "check_decl" ∈ F ∧ closedA p cdA cdC F = true
+  fromLe : p.lookup "from_le" = some fromLeL
 
 /-! ## `record_job` -/
 
@@ -686,13 +731,45 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
   by_cases g2 : (m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).len64 FIRSTS ≤ k
   · rw [recordJobE.k_iw_reset.abort2 p n k r2 m2 g1 g2]; exact RefE.of_cls0 (by decide)
   rw [recordJobE.k_iw_reset.arm1 p n k r2 m2 g1 g2]
-  obtain ⟨hS3, htop3⟩ := hJ1.stage hk (by rw [hm2]; exact g1)
-  rw [hm2] at hS3 htop3
-  clear g1 g2
   rw [show ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).set64 CTL 134
     (rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k)).set64 CTL 135 k =
     jobMem m2 k from rfl]
-  generalize jobMem m2 k = m3 at hS3 htop3 ⊢
+  -- the literal flags (`from_le` of the frozen thresholds at the record's first counter)
+  have hc0 : rdW ((m2.set64 CTL 133 (rdW (m2.arr64 CTL) 133 + 1)).arr64 FIRSTS) k =
+      rdW ((enterMem m).arr64 FIRSTS) k := by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), ← hm2, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  rw [hc0]
+  have hjc : ∀ x : Word, x ≠ 133 → x ≠ 134 → x ≠ 135 → x ≠ 200 →
+      rdW ((jobMem m2 k).arr64 CTL) x = rdW ((enterMem m).arr64 CTL) x := fun x h1 h2 h3 h4 => by
+    rw [← hm2]; unfold jobMem
+    rw [rdW_set_ctl _ 135 _ x (Ne.symm h3), rdW_set_ctl _ 134 _ x (Ne.symm h2),
+      rdW_set_ctl _ 133 _ x (Ne.symm h1), rdW_set_ctl _ 200 _ x (Ne.symm h4)]
+  rcases c3a : callE p n "from_le" [rdW ((jobMem m2 k).arr64 CTL) 172, rdW ((enterMem m).arr64 FIRSTS) k]
+      (jobMem m2 k) with e | ⟨rx, mx⟩
+  · exact fun hG => hnv (_root_.L.Checker.nv_mem (by decide)) hG c3a
+  obtain ⟨sx, hsx, -, hmx, hrx⟩ := triple_of_callW (s₀ := ⟨jobMem m2 k, Locals.init []⟩)
+    (fromLe_refines hP.fromLe n ⟨jobMem m2 k, Locals.init []⟩ _ _) (callW_of_callE c3a)
+  have emx : mx = jobMem m2 k := by rw [← hsx, hmx]
+  subst emx
+  rw [recordJobE.k_from_le.arm1]
+  rcases c3b : callE p n "from_le"
+      [rdW (((jobMem m2 k).set64 CTL 160 (rx.headD 0)).arr64 CTL) 173, rdW ((enterMem m).arr64 FIRSTS) k]
+      ((jobMem m2 k).set64 CTL 160 (rx.headD 0)) with e | ⟨ry, my⟩
+  · exact fun hG => hnv (_root_.L.Checker.nv_mem (by decide)) hG c3b
+  obtain ⟨sy, hsy, -, hmy, hry⟩ := triple_of_callW (s₀ := ⟨(jobMem m2 k).set64 CTL 160 (rx.headD 0), Locals.init []⟩)
+    (fromLe_refines hP.fromLe n ⟨(jobMem m2 k).set64 CTL 160 (rx.headD 0), Locals.init []⟩ _ _)
+    (callW_of_callE c3b)
+  have emy : my = (jobMem m2 k).set64 CTL 160 (rx.headD 0) := by rw [← hsy, hmy]
+  subst emy
+  rw [recordJobE.k_from_le_2.arm1]
+  rw [show ((jobMem m2 k).set64 CTL 160 (rx.headD 0)).set64 CTL 161 (ry.headD 0) =
+    flagsSet (jobMem m2 k) (rx.headD 0) (ry.headD 0) from rfl]
+  rw [hjc 172 (by decide) (by decide) (by decide) (by decide)] at hrx
+  rw [rdW_set_ctl _ 160 _ 173 (by decide), hjc 173 (by decide) (by decide) (by decide) (by decide)] at hry
+  obtain ⟨hS3, htop3⟩ := hJ1.stage hk (by rw [hm2]; exact g1) hrx hry
+  rw [hm2] at hS3 htop3
+  clear g1 g2
+  generalize flagsSet (jobMem m2 k) (rx.headD 0) (ry.headD 0) = m3 at hS3 htop3 ⊢
   -- `and_pin_ok`
   show RefE _ _ ((andPinOk ds[k.toNat] >>= fun b => if b = true then
       (checkDecl V pins (I.view k.toNat) ds[k.toNat] >>= fun _ => pure ())
@@ -766,7 +843,7 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
       by rw [hfr5.size]; exact hS4.mem.bstk, hP5.core,
       fun j x e => hx6.lss.ls.ns j x (hdn j x e) (hJ.mem.dnN j x e)⟩
   refine ⟨⟨JobM.ofDrop hP5.loop hP5.core hP5.ind
-      (by rw [pinW_frame hfr5 cdA_pins]; exact hS4.flag) hT5 hJ.fsize hS3.idx htop3 hf35
+      (by rw [pinW_frame hfr5 cdA_pins]; exact hS4.flag) hT5 hJ.fsize hS3.idx hS3.frozen htop3 hf35
       (hgr4.trans hP5.grow) hC6 hf56, ⟨EStore.dropScratch_wf hst5.wf⟩, rfl, rfl⟩, hx6, ?_⟩
   show a5.pins = a.pins
   rw [hp5, hpins1]

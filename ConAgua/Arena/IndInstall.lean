@@ -637,18 +637,22 @@ def checkBlockTables : FunDecl := lfn (vis, tO, tL) locals (u) {
 /-- `check_block_tail_stream(p, fe2b, out.off, out.len)`: the second half of `checkBlockTail` (the
 Rust's `check_block_tail_stream`): the stream's K flags against the generated recursors, the
 generated family's records pushed in place (a flush entering), the stream's recursors against them,
-the pushes undone in reverse order (`gen_rec_check_pop_all`) and the flush leaving. Returns the
+the pushes undone in reverse order (`gen_rec_check_pop_all`), the literal flags set back (`env_set_flags`
+of `CTL[160]`, `CTL[161]` saved before the pushes) and the flush leaving. Returns the
 constructors' environment. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-145 ConRon.Arena.checkBlockTail
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTailStream : FunDecl := lfn (p, fe2b, outO, outL) locals
-    (u, io, il, feG, po, pl, fe3) {
+    (u, io, il, feG, po, pl, fe3, nl, sl) {
   u := call stream_k_check(p, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
+  nl := CTL.u64[160];
+  sl := CTL.u64[161];
   (io, il) := call block_rec_infos_tf(p, 0, outO, outL);
   (feG, po, pl) := call cons_block_recs_temp(io, il, fe2b, 0, 0);
   u := call flush_caches();
   u := call stream_recs_check(feG, IW.u64[p + 2], IW.u64[p + 3], outO, outL);
   fe3 := call gen_rec_check_pop_all(feG, po, pl);
+  u := call env_set_flags(nl, sl);
   u := call flush_caches();
   return fe3
 }
@@ -658,7 +662,7 @@ binders' sorts, the constructors consed (and the flush entering that environment
 recursors, the stream's K flags and recursors against them (`check_block_tail_stream`), and the
 checks of the block's projection tables `Q` (an `IW` slice of table records); returns the
 constructors' environment (`q` a `BlockPass` pointer). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-145 ConRon.Arena.checkBlockTail
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:120-146 ConRon.Arena.checkBlockTail
 @[no_expose, l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q, tO, tL) locals
     (env1, p, u, mcO, mcL, fe2, nested, fe2b, outO, outL, fe3) {
@@ -681,7 +685,7 @@ def checkBlockTail : FunDecl := lfn (blockO, blockL, q, tO, tL) locals
 /-- `declined_at_definition()`: the families declined at a definition — the names a literal's
 constructor form applies (`String.ofList`, `List.nil`, `List.cons`, `Char.ofNat`) and `Bool`, off
 the pin table, as an `IW` list. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:149-153 ConRon.Arena.declinedAtDefinition
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:150-154 ConRon.Arena.declinedAtDefinition
 @[no_expose, l_impl ConRon.Arena.declinedAtDefinition]
 def declinedAtDefinition : FunDecl := lfn () locals (a, b, c, d, e, q) {
   a := call pin_at(6);
@@ -698,7 +702,7 @@ def declinedAtDefinition : FunDecl := lfn () locals (a, b, c, d, e, q) {
 does not show one (`former_def_headed`), and the family is not one declined at a definition, the
 declared type checked, reduced (`reduced_former`) and the two compared, a fresh member record with
 `cvT` the reduct; else `ms` itself. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:155-172 ConRon.Arena.reduceMember
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:156-173 ConRon.Arena.reduceMember
 @[no_expose, l_impl ConRon.Arena.reduceMember]
 def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u, k, cvR, eq, q) {
   cvT := IW.u64[ms];
@@ -719,7 +723,7 @@ def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u,
 
 /-- `reduce_members(vis, nP, ms.off, ms.len)`: the members, each at its telescope, a flush before
 each (the cached twin's); recursion as the twin's, each record consed onto the rest's slice. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:174-184 ConRon.Arena.reduceMembers
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:175-185 ConRon.Arena.reduceMembers
 @[no_expose, l_impl ConRon.Arena.reduceMembers]
 def reduceMembers : FunDecl := lfn (vis, nP, msO, msL) locals (u, m, ro, rl, o, l) {
   if msL == 0 { return (0, 0) };
@@ -732,7 +736,7 @@ def reduceMembers : FunDecl := lfn (vis, nP, msO, msL) locals (u, m, ro, rl, o, 
 
 /-- `check_block_names(p0)`: `checkBlock`'s opening guards — the distinct constructor and member
 names, and no member at a `Bool` constructor's name. -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:186-216 ConRon.Arena.checkBlock
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:187-217 ConRon.Arena.checkBlock
 @[no_expose, l_impl ConRon.Arena.checkBlock]
 def checkBlockNames : FunDecl := lfn (p0) locals (ctO, ctL, cnO, cnL, nmO, nmL, nd1, nd2, bt, bf, h1, h2) {
   (ctO, ctL) := call block_shape_all_ctors(p0);
@@ -756,7 +760,7 @@ off the block once (`block_tables`; an internal error, an `abort`, where a const
 for them), the checks after the pass (those tables' among them), and the block's install
 (`block_recs` and the same tables pushed onto the constructors' environment the tail hands back,
 `ifenv_push_delta`). -/
--- con-ron: ConRon/Arena/Inductives/BlockTail.lean:186-216 ConRon.Arena.checkBlock
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:187-217 ConRon.Arena.checkBlock
 @[no_expose, l_impl ConRon.Arena.checkBlock]
 def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
     (u, msO, msL, isRec, p1, q, tok, tO, tL, fe2, rO, rL, fe) {
@@ -820,7 +824,8 @@ def indInstallForeign : Prog :=
    ("gen_rec_check_pop_all", stub 3), ("stream_k_check", stub 5), ("stream_recs_check", stub 5),
    ("block_rec_infos_tf", stub 4), ("block_recs", stub 3), ("block_tables", stub 3),
    ("ifenv_push_delta", stub 5), ("former_def_headed", stub 1), ("reduced_former", stub 3),
-   ("check_constant_val", stub 3), ("member_names_copy", stub 3), ("former_z", stub 1)]
+   ("check_constant_val", stub 3), ("member_names_copy", stub 3), ("former_z", stub 1),
+   ("env_set_flags", stub 2)]
 
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard

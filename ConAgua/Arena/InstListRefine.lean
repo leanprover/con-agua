@@ -25,8 +25,8 @@ import ConAgua.Arena.WhnfCoreProj
 * **The substitution as a stack slice** (`SpineR`, `WhnfBase.lean`): every statement carries
   `SpineR m o l vs` and the bound `o + l < 2^64`, and every model step leaves the stack array
   alone (`m'.arr64 ILSPN = m.arr64 ILSPN`, in each post), so the slice survives the children.
-  The `bvar` arm's recursion goes to the slice's last `q` entries, `SpineR` of `lastEidx vs q`
-  (`spineR_last`).
+  The substitution is the twin's range `vs[N - l:N]` (`RangeR`); the `bvar` arm's recursion goes
+  to the range's last `q` entries (`RangeR.last`).
 -/
 
 open ConRon.Arena ConLeche
@@ -202,21 +202,6 @@ theorem eidxCopyUpto_toList (xs : Array EIdx) : ∀ (N i : Nat) (out : Array EId
       simp only [this, dite_false]
       simp [List.drop_eq_nil_of_le (by simp; omega : xs.toList.length ≤ i)]
 
-theorem lastEidx_toList (xs : Array EIdx) (k : Nat) (hk : k < xs.size) :
-    (lastEidx xs k).toList = xs.toList.drop (xs.size - k) := by
-  simp only [lastEidx, hk, ↓reduceIte]
-  rw [eidxCopyUpto_toList xs _ _ #[] (Nat.le_refl _)]; simp
-
-theorem lastEidx_size (xs : Array EIdx) (k : Nat) (hk : k < xs.size) : (lastEidx xs k).size = k := by
-  have := congrArg List.length (lastEidx_toList xs k hk)
-  simp at this; omega
-
-theorem lastEidx_get (xs : Array EIdx) (k : Nat) (hk : k < xs.size) (i : Nat) (hi : i < (lastEidx xs k).size) :
-    (lastEidx xs k)[i] = xs[xs.size - k + i]'(by rw [lastEidx_size xs k hk] at hi; omega) := by
-  have e := lastEidx_toList xs k hk
-  rw [← Array.getElem_toList, ← Array.getElem_toList]
-  simp only [e, List.getElem_drop]
-
 theorem slice_word (o l q : Word) (i : Nat) (_hb : o.toNat + l.toNat < 2 ^ 64) (hq : q < l)
     (_hi : i < q.toNat) :
     o + (l - q) + i.toUInt64 = o + (l.toNat - q.toNat + i).toUInt64 := by
@@ -227,39 +212,75 @@ theorem slice_word (o l q : Word) (i : Nat) (_hb : o.toNat + l.toNat < 2 ^ 64) (
   have := q.toNat_lt
   omega
 
-/-- **The slice's last `q` entries** are `lastEidx vs q`. -/
-theorem spineR_last {m : Mem} {o l q : Word} {vs : Array EIdx} (hx : SpineR m o l vs)
-    (hb : o.toNat + l.toNat < 2 ^ 64) (hq : q < l) :
-    SpineR m (o + (l - q)) q (lastEidx vs q.toNat) ∧ (o + (l - q)).toNat + q.toNat < 2 ^ 64 := by
+/-- **The substitution's range** (the twin's `instantiateList vs N k`, `k` the slice's length): the
+stack slice `(o, l)` is the range `vs[N - l:N]` of the array `vs`, itself the slice `(o₀, C)` with
+`N ≤ C`. The `bvar` arm's re-entry is the same range's last `q` entries (`RangeR.last`). -/
+def RangeR (m : Mem) (o l : Word) (vs : Array EIdx) (N : Nat) : Prop :=
+  ∃ o₀ C : Word, SpineR m o₀ C vs ∧ o₀.toNat + C.toNat < 2 ^ 64 ∧ N ≤ C.toNat ∧ l.toNat ≤ N ∧
+    o.toNat = o₀.toNat + (N - l.toNat)
+
+theorem RangeR.of_spn {m m' : Mem} {o l : Word} {vs : Array EIdx} {N : Nat} (h : RangeR m o l vs N)
+    (hs : m'.arr64 ILSPN = m.arr64 ILSPN) : RangeR m' o l vs N := by
+  obtain ⟨o₀, C, hx, h1, h2, h3, h4⟩ := h
+  exact ⟨o₀, C, hx.of_spn hs, h1, h2, h3, h4⟩
+
+theorem RangeR.bound {m : Mem} {o l : Word} {vs : Array EIdx} {N : Nat} (h : RangeR m o l vs N) :
+    o.toNat + l.toNat < 2 ^ 64 := by
+  obtain ⟨o₀, C, -, h1, h2, h3, h4⟩ := h; omega
+
+theorem RangeR.le_size {m : Mem} {o l : Word} {vs : Array EIdx} {N : Nat} (h : RangeR m o l vs N) :
+    l.toNat ≤ N ∧ N ≤ vs.size := by
+  obtain ⟨o₀, C, hx, -, h2, h3, -⟩ := h; rw [hx.size]; omega
+
+/-- **A whole slice is its own range.** -/
+theorem RangeR.ofSpine {m : Mem} {o l : Word} {vs : Array EIdx} (hx : SpineR m o l vs)
+    (hb : o.toNat + l.toNat < 2 ^ 64) : RangeR m o l vs vs.size :=
+  ⟨o, l, hx, hb, by have := hx.size; omega, by have := hx.size; omega, by have := hx.size; omega⟩
+
+/-- **The range `vs[s:N]` of a slice** (`instantiateRevRange`'s, `s < N ≤ vs.size`): the stack slice
+`(o₀ + s, N - s)`. -/
+theorem RangeR.ofSub {m : Mem} {o₀ C : Word} {vs : Array EIdx} (hx : SpineR m o₀ C vs)
+    (hb : o₀.toNat + C.toNat < 2 ^ 64) (s N : Nat) (hs : s ≤ N) (hN : N ≤ C.toNat) :
+    RangeR m (o₀ + s.toUInt64) (N - s).toUInt64 vs N := by
+  have hC := C.toNat_lt
+  have e1 : (N - s).toUInt64.toNat = N - s := by
+    simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat']; omega
+  refine ⟨o₀, C, hx, hb, hN, by rw [e1]; omega, ?_⟩
+  rw [UInt64.toNat_add, e1]; simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat']; omega
+
+/-- **The range's last `q` entries**: the `bvar` arm's re-entry. -/
+theorem RangeR.last {m : Mem} {o l q : Word} {vs : Array EIdx} {N : Nat} (h : RangeR m o l vs N)
+    (hq : q < l) : RangeR m (o + (l - q)) q vs N ∧ (o + (l - q)).toNat + q.toNat < 2 ^ 64 := by
+  have hb := h.bound
+  obtain ⟨o₀, C, hx, h1, h2, h3, h4⟩ := h
   have hq' : q.toNat < l.toNat := hq
-  have hs : q.toNat < vs.size := by rw [hx.size]; exact hq'
   have ho : (o + (l - q)).toNat = o.toNat + (l.toNat - q.toNat) := by
     rw [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (UInt64.le_of_lt hq)]
     exact Nat.mod_eq_of_lt (by omega)
-  refine ⟨⟨lastEidx_size vs _ hs, ?_, fun i hi => ?_, fun i hi => ?_⟩, by omega⟩
-  · rw [ho]; have := hx.bound; omega
-  · rw [slice_word o l q i hb hq hi]; exact hx.lt _ (by omega)
-  · have hi' : i < q.toNat := by rw [lastEidx_size vs _ hs] at hi; exact hi
-    rw [lastEidx_get vs _ hs i hi, hx.get, slice_word o l q i hb hq hi', hx.size]
+  exact ⟨⟨o₀, C, hx, h1, h2, by omega, by rw [ho]; omega⟩, by omega⟩
 
-theorem spineR_entry {m : Mem} {o l q : Word} {vs : Array EIdx} (hx : SpineR m o l vs)
-    (_hb : o.toNat + l.toNat < 2 ^ 64) (hq : q < l) :
-    ∃ hlt : vs.size - 1 - q.toNat < vs.size,
-      vs[vs.size - 1 - q.toNat] = decE (slW m (o + (l - 1 - q))) ∧
+/-- **The range's entry `q` from its end** (`vs[N - 1 - q]`, the `bvar` arm's value). -/
+theorem RangeR.entry {m : Mem} {o l q : Word} {vs : Array EIdx} {N : Nat} (h : RangeR m o l vs N)
+    (hq : q < l) :
+    q.toNat < N ∧ N ≤ vs.size ∧ ∃ hlt : N - 1 - q.toNat < vs.size,
+      vs[N - 1 - q.toNat] = decE (slW m (o + (l - 1 - q))) ∧
       (slW m (o + (l - 1 - q))).toNat < 2 ^ 32 := by
+  have hb := h.bound
+  obtain ⟨o₀, C, hx, h1, h2, h3, h4⟩ := h
   have hq' : q.toNat < l.toNat := hq
-  have hs : vs.size = l.toNat := hx.size
-  have hw : o + (l - 1 - q) = o + (vs.size - 1 - q.toNat).toUInt64 := by
+  have hs : vs.size = C.toNat := hx.size
+  have hw : o + (l - 1 - q) = o₀ + (N - 1 - q.toNat).toUInt64 := by
     apply UInt64.toNat_inj.mp
-    have h1 : (1 : Word) ≤ l := by
+    have h1' : (1 : Word) ≤ l := by
       rw [UInt64.le_iff_toNat_le]; simp; omega
-    have h2 : q ≤ l - 1 := by
-      rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ h1]; simp; omega
-    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ h2,
-      UInt64.toNat_sub_of_le _ _ h1]
+    have h2' : q ≤ l - 1 := by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ h1']; simp; omega
+    rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ h2',
+      UInt64.toNat_sub_of_le _ _ h1']
     simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat', UInt64.toNat_one]
-    rw [hs]; omega
-  refine ⟨by omega, ?_, ?_⟩
+    have := C.toNat_lt
+    omega
+  refine ⟨by omega, by omega, by omega, ?_, ?_⟩
   · rw [hx.get, slW, hw]; rfl
   · rw [slW, hw]; exact hx.lt _ (by omega)
 
@@ -283,18 +304,18 @@ abbrev SpnR (m₀ m' : Mem) (a' : AState) : Prop := ArenaL m' a' ∧ m'.arr64 IL
 /-- What `il_go`'s model at L fuel `n` and counter `fu` says about `instantiateList vs` at the
 twin fuel `fu.toNat` (exactly: the counter is the twin's `fuel`; any L fuel). -/
 def ILGoOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx),
-    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx) (N : Nat),
+    ArenaL m a → RangeR m o l vs N → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
     ilW n m h d o l fu = some (r, m') →
-    ∃ a', (instantiateList vs fu.toNat (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+    ∃ a', (instantiateList vs N l.toNat fu.toNat (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
       m'.arr64 ILSPN = m.arr64 ILSPN
 
 /-- The same for `ilg_go`'s model and `instantiateListGo vs`. -/
 def ILGGoOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx),
-    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx) (N : Nat),
+    ArenaL m a → RangeR m o l vs N → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
     ilgW n m h d o l fu = some (r, m') →
-    ∃ a', (instantiateListGo vs fu.toNat (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+    ∃ a', (instantiateListGo vs N l.toNat fu.toNat (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
       m'.arr64 ILSPN = m.arr64 ILSPN
 
 /-- The arena arm `arm` refines the L arm `armW` at `h`, under `ArenaL`, keeping the stack. -/
@@ -305,30 +326,30 @@ def LArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word �
 
 /-- The pure walk's six arms, each at its tag. -/
 def ILArmOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx),
-    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
-    (tagW h = 4 → LArmRef n ilAppW (instListArmApp vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 5 → LArmRef n ilLamW (instListArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 6 → LArmRef n ilForallW (instListArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 7 → LArmRef n ilLetW (instListArmLet vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 9 → LArmRef n ilProjW (instListArmProj vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 0 → LArmRef n ilBVarW (instListArmBVar vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r)
+  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx) (N : Nat),
+    ArenaL m a → RangeR m o l vs N → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    (tagW h = 4 → LArmRef n ilAppW (instListArmApp vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 5 → LArmRef n ilLamW (instListArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 6 → LArmRef n ilForallW (instListArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 7 → LArmRef n ilLetW (instListArmLet vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 9 → LArmRef n ilProjW (instListArmProj vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 0 → LArmRef n ilBVarW (instListArmBVar vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r)
 
 /-- The memo walk's five arms, each at its tag. -/
 def ILGArmOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx),
-    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
-    (tagW h = 4 → LArmRef n ilgAppW (instListGoArmApp vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 5 → LArmRef n ilgLamW (instListGoArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+  ∀ (m m' : Mem) (a : AState) (h d o l fu r : Word) (vs : Array EIdx) (N : Nat),
+    ArenaL m a → RangeR m o l vs N → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    (tagW h = 4 → LArmRef n ilgAppW (instListGoArmApp vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 5 → LArmRef n ilgLamW (instListGoArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
     (tagW h = 6 →
-      LArmRef n ilgForallW (instListGoArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 7 → LArmRef n ilgLetW (instListGoArmLet vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
-    (tagW h = 9 → LArmRef n ilgProjW (instListGoArmProj vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r)
+      LArmRef n ilgForallW (instListGoArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 7 → LArmRef n ilgLetW (instListGoArmLet vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r) ∧
+    (tagW h = 9 → LArmRef n ilgProjW (instListGoArmProj vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r)
 
 /-! ## The dispatchers -/
 
 theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
-  intro m m' a h d o l fu r vs hA hsl hbd hh hb
+  intro m m' a h d o l fu r vs N hA hsl hbd hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [ilW.abort1 n m h d o l fu hfu] at hb; cases hb
   rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiateList_succ, StateT.run_bind, instListCutoff_run]
   simp only [except_ok_bind]
@@ -342,7 +363,7 @@ theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
   rw [ilcut_iff m a hA h d hh] at hcut'
   simp only [Bool.not_eq_true] at hcut'
   simp only [hcut', Bool.false_eq_true, ↓reduceIte, decE_tag h hh]
-  have arm := ih m m' a h d o l (fu - 1) r vs hA hsl hbd hh
+  have arm := ih m m' a h d o l (fu - 1) r vs N hA hsl hbd hh
   have t4 : tagW h = 4 ↔ (tagW h).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
   have t5 : tagW h = 5 ↔ (tagW h).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
   have t6 : tagW h = 6 ↔ (tagW h).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
@@ -390,7 +411,7 @@ theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
   exact ⟨a, rfl, hA, by simp⟩
 
 theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n + 1) := by
-  intro m m' a h d o l fu r vs hA hsl hbd hh hb
+  intro m m' a h d o l fu r vs N hA hsl hbd hh hb
   have hfu : ¬ fu = 0 := fun hfu => by rw [ilgW.abort1 n m h d o l fu hfu] at hb; cases hb
   rw [L.toNat_eq_toNat_sub_one_add_one fu hfu, instantiateListGo_succ, StateT.run_bind, instListCutoff_run]
   simp only [except_ok_bind]
@@ -404,7 +425,7 @@ theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n +
   rw [ilcut_iff m a hA h d hh] at hcut'
   simp only [Bool.not_eq_true] at hcut'
   simp only [hcut', Bool.false_eq_true, ↓reduceIte, decE_tag h hh]
-  have arm := ih m m' a h d o l (fu - 1) r vs hA hsl hbd hh
+  have arm := ih m m' a h d o l (fu - 1) r vs N hA hsl hbd hh
   have t4 : tagW h = 4 ↔ (tagW h).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
   have t5 : tagW h = 5 ↔ (tagW h).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
   have t6 : tagW h = 6 ↔ (tagW h).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
@@ -444,7 +465,7 @@ theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n +
   by_cases g0 : tagW h = 0
   · rw [ilgW.arm7 n m h d o l fu hfu hcut g4 g5 g6 g7 g9 g0] at hb
     simp only [show (tagW h).toUInt32 = 0 from (t0.mp g0), ↓reduceIte]
-    exact ihl m m' a h d o l (fu - 1) r vs hA hsl hbd hh hb
+    exact ihl m m' a h d o l (fu - 1) r vs N hA hsl hbd hh hb
   have g0' : ¬ (tagW h).toUInt32 = 0 := fun e => g0 (t0.mpr e)
   simp only [g0', ↓reduceIte]
   rw [ilgW.arm8 n m h d o l fu hfu hcut g4 g5 g6 g7 g9 g0] at hb
@@ -455,12 +476,12 @@ theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n +
 
 section arms
 variable (n : Nat) (ih : ILGoOK n) (m m' : Mem) (a : AState) (hA : ArenaL m a)
-  (h d o l fu r : Word) (vs : Array EIdx) (hsl : SpineR m o l vs) (hbd : o.toNat + l.toNat < 2 ^ 64)
+  (h d o l fu r : Word) (vs : Array EIdx) (N : Nat) (hsl : RangeR m o l vs N) (hbd : o.toNat + l.toNat < 2 ^ 64)
   (hh : h.toNat < 2 ^ 32)
 include ih hA hsl hbd hh
 
 theorem lappArm_ok (hg : tagW h = 4) :
-    LArmRef (n + 1) ilAppW (instListArmApp vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilAppW (instListArmApp vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   rw [instListArmApp]
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -472,10 +493,10 @@ theorem lappArm_ok (hg : tagW h = 4) :
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilAppW.k_il_go.none]) (fun _ _ => by rw [ilAppW.k_il_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := ilAppW.k_il_go_2 x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd haw e)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs N hA₁ (hsl.of_spn hs₁) hbd haw e)
         fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
@@ -484,7 +505,7 @@ theorem lappArm_ok (hg : tagW h = 4) :
   exact ⟨hok, hres, hA₃, hs₃.trans (hs₂.trans hs₁)⟩
 
 theorem llamArm_ok (hg : tagW h = 5) :
-    LArmRef (n + 1) ilLamW (instListArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilLamW (instListArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilLamW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListArmBind]
@@ -497,11 +518,11 @@ theorem llamArm_ok (hg : tagW h = 5) :
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1.1 h hh hv hg, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilLamW.k_il_go.none]) (fun _ _ => by rw [ilLamW.k_il_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := ilLamW.k_il_go_2 x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs N hA₁
           (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
@@ -512,7 +533,7 @@ theorem llamArm_ok (hg : tagW h = 5) :
   exact ⟨hok, hres, hA₃, hs₃.trans (hs₂.trans hs₁)⟩
 
 theorem lforallArm_ok (hg : tagW h = 6) :
-    LArmRef (n + 1) ilForallW (instListArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilForallW (instListArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilForallW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListArmBind]
@@ -525,11 +546,11 @@ theorem lforallArm_ok (hg : tagW h = 6) :
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1.1 h hh hv hg, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilForallW.k_il_go.none]) (fun _ _ => by rw [ilForallW.k_il_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := ilForallW.k_il_go_2 x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs N hA₁
           (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
@@ -540,7 +561,7 @@ theorem lforallArm_ok (hg : tagW h = 6) :
   exact ⟨hok, hres, hA₃, hs₃.trans (hs₂.trans hs₁)⟩
 
 theorem lletArm_ok (hg : tagW h = 7) :
-    LArmRef (n + 1) ilLetW (instListArmLet vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilLetW (instListArmLet vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilLetW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListArmLet]
@@ -553,16 +574,16 @@ theorem lletArm_ok (hg : tagW h = 7) :
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilLetW.k_il_go.none]) (fun _ _ => by rw [ilLetW.k_il_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := ilLetW.k_il_go_2 n d o l fu _ x)
     (by simp only [ilLetW.k_il_go_2.none]) (fun _ _ => by rw [ilLetW.k_il_go_2.arm1])
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd hvw e)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs N hA₁ (hsl.of_spn hs₁) hbd hvw e)
         fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   refine Sim.bindD (K := ilLetW.k_il_go_3 x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA₂
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs N hA₂
           ((hsl.of_spn hs₁).of_spn hs₂) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA₃, hs₃⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
@@ -571,7 +592,7 @@ theorem lletArm_ok (hg : tagW h = 7) :
   exact ⟨hok, hres, hA₄, hs₄.trans (hs₃.trans (hs₂.trans hs₁))⟩
 
 theorem lprojArm_ok (hg : tagW h = 9) :
-    LArmRef (n + 1) ilProjW (instListArmProj vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilProjW (instListArmProj vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   rw [instListArmProj]
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -583,15 +604,16 @@ theorem lprojArm_ok (hg : tagW h = 9) :
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD rfl (fun _ _ => rfl)
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hew e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hew e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
   obtain ⟨hok, hA₂, hres, hs₂⟩ := mkProj_okL m₁ a₁ hA₁ _ _ x r m' hb
   simp only [internProjE]
   exact ⟨hok, hres, hA₂, hs₂.trans hs₁⟩
 
+omit hbd in
 theorem lbvarArm_ok (_hg : tagW h = 0) :
-    LArmRef (n + 1) ilBVarW (instListArmBVar vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilBVarW (instListArmBVar vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   rw [instListArmBVar]
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
@@ -611,11 +633,11 @@ theorem lbvarArm_ok (_hg : tagW h = 0) :
   have hdJ : d ≤ J := UInt64.not_lt.mp hj
   have hsub : (J - d).toNat = J.toNat - d.toNat := UInt64.toNat_sub_of_le _ _ hdJ
   by_cases hq : J - d < l
-  · have hq' : J.toNat - d.toNat < vs.size := by
-      rw [hsl.size, ← hsub]; exact hq
-    rw [dite_eq_left hq']
-    obtain ⟨hlt, hvi, hvl⟩ := spineR_entry hsl hbd hq
-    simp only [hsub] at hvi hlt
+  · have hqk : J.toNat - d.toNat < l.toNat := by rw [← hsub]; exact hq
+    rw [ite_eq_left hqk]
+    obtain ⟨hqN, hNs, hlt, hvi, hvl⟩ := hsl.entry hq
+    simp only [hsub] at hvi hlt hqN
+    rw [dite_eq_left_of_eq_true (eq_true ⟨hqN, hNs⟩)]
     simp only [hvi]
     rw [StateT.run_bind, instListCutoff_run, except_ok_bind]
     by_cases hcv : ilCut m (slW m (o + (l - 1 - (J - d)))) d
@@ -628,19 +650,19 @@ theorem lbvarArm_ok (_hg : tagW h = 0) :
       rw [ilcut_iff m a hA _ d hvl] at hcv
       simp only [Bool.not_eq_true] at hcv
       simp only [hcv, Bool.false_eq_true, ↓reduceIte]
-      obtain ⟨hsl', hbd'⟩ := spineR_last hsl hbd hq
-      have := ih m m' a _ d _ _ fu r _ hA hsl' hbd' hvl hb
+      obtain ⟨hsl', hbd'⟩ := hsl.last hq
+      have := ih m m' a _ d _ _ fu r _ N hA hsl' hbd' hvl hb
       rw [hsub] at this
       exact this
   · rw [ilBVarW.arm4 n m h d o l fu hv.1 (UInt64.not_le.mpr hv.2) (hJ ▸ hj) (hJ ▸ hq)] at hb
     rw [hJ] at hb
-    have hq' : ¬ J.toNat - d.toNat < vs.size := by
-      rw [hsl.size, ← hsub]; exact fun e => hq (UInt64.lt_iff_toNat_lt.mpr e)
-    rw [dite_eq_right hq']
+    have hq' : ¬ J.toNat - d.toNat < l.toNat := by
+      rw [← hsub]; exact fun e => hq (UInt64.lt_iff_toNat_lt.mpr e)
+    rw [ite_eq_right hq']
     have hlJ : l ≤ J := by
-      rw [UInt64.le_iff_toNat_le]; rw [hsl.size] at hq'; omega
+      rw [UInt64.le_iff_toNat_le]; omega
     obtain ⟨hok, hA', hres, hs'⟩ := internBVar_L m a hA _ r m' hb
-    rw [UInt64.toNat_sub_of_le _ _ hlJ, ← hsl.size] at hok hA' hres
+    rw [UInt64.toNat_sub_of_le _ _ hlJ] at hok hA' hres
     simp only [internBVarE]
     rw [AM.run_of_ok _ _ hok, hres]
     exact ⟨_, rfl, hA', hs'⟩
@@ -708,12 +730,12 @@ theorem lprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a
 
 section garms
 variable (n : Nat) (ih : ILGGoOK n) (m m' : Mem) (a : AState) (hA : ArenaL m a)
-  (h d o l fu r : Word) (vs : Array EIdx) (hsl : SpineR m o l vs) (hbd : o.toNat + l.toNat < 2 ^ 64)
+  (h d o l fu r : Word) (vs : Array EIdx) (N : Nat) (hsl : RangeR m o l vs N) (hbd : o.toNat + l.toNat < 2 ^ 64)
   (hh : h.toNat < 2 ^ 32)
 include ih hA hsl hbd hh
 
 theorem gappArm_ok (hg : tagW h = 4) :
-    LArmRef (n + 1) ilgAppW (instListGoArmApp vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilgAppW (instListGoArmApp vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   rw [instListGoArmApp]
   refine lprobe_ok _ _ m m' a hA h d r hh (ilgAppW.arm1 n m h d o l fu) (ilgAppW.abort1 n m h d o l fu) (fun hr hh0 hb => ?_) hb
@@ -726,10 +748,10 @@ theorem gappArm_ok (hg : tagW h = 4) :
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilgAppW.k_ilg_go.none]) (fun _ _ => by rw [ilgAppW.k_ilg_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := ilgAppW.k_ilg_go_2 h d x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd haw e)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs N hA1 (hsl.of_spn hs1) hbd haw e)
         fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   refine Sim.ofD fun r m' hb => ?_
@@ -738,7 +760,7 @@ theorem gappArm_ok (hg : tagW h = 4) :
   exact h7
 
 theorem glamArm_ok (hg : tagW h = 5) :
-    LArmRef (n + 1) ilgLamW (instListGoArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilgLamW (instListGoArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilgLamW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListGoArmBind]
@@ -752,11 +774,11 @@ theorem glamArm_ok (hg : tagW h = 5) :
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1.1 h hh hv hg, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilgLamW.k_ilg_go.none]) (fun _ _ => by rw [ilgLamW.k_ilg_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := ilgLamW.k_ilg_go_2 h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs N hA1
           (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
@@ -767,7 +789,7 @@ theorem glamArm_ok (hg : tagW h = 5) :
   simp only [hbind]; exact h7
 
 theorem gforallArm_ok (hg : tagW h = 6) :
-    LArmRef (n + 1) ilgForallW (instListGoArmBind vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilgForallW (instListGoArmBind vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilgForallW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListGoArmBind]
@@ -781,11 +803,11 @@ theorem gforallArm_ok (hg : tagW h = 6) :
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1.1 h hh hv hg, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilgForallW.k_ilg_go.none]) (fun _ _ => by rw [ilgForallW.k_ilg_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := ilgForallW.k_ilg_go_2 h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs N hA1
           (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
@@ -796,7 +818,7 @@ theorem gforallArm_ok (hg : tagW h = 6) :
   simp only [hbind]; exact h7
 
 theorem gletArm_ok (hg : tagW h = 7) :
-    LArmRef (n + 1) ilgLetW (instListGoArmLet vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilgLetW (instListGoArmLet vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   have hd1 : ¬ d + 1 = 0 := fun hd1 => by rw [ilgLetW.abort1 n m h d o l fu hd1] at hb; cases hb
   rw [instListGoArmLet]
@@ -810,16 +832,16 @@ theorem gletArm_ok (hg : tagW h = 7) :
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD (by simp only [ilgLetW.k_ilg_go.none]) (fun _ _ => by rw [ilgLetW.k_ilg_go.arm1])
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := ilgLetW.k_ilg_go_2 n h d o l fu _ x)
     (by simp only [ilgLetW.k_ilg_go_2.none]) (fun _ _ => by rw [ilgLetW.k_ilg_go_2.arm1])
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd hvw e)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs N hA1 (hsl.of_spn hs1) hbd hvw e)
         fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   refine Sim.bindD (K := ilgLetW.k_ilg_go_3 h d x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA2
+      simpa only [L.toNat_add_one_of_ne d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs N hA2
           ((hsl.of_spn hs1).of_spn hs2) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA3, hs3⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
@@ -830,7 +852,7 @@ theorem gletArm_ok (hg : tagW h = 7) :
   simp only [internLetEE]; exact h7
 
 theorem gprojArm_ok (hg : tagW h = 9) :
-    LArmRef (n + 1) ilgProjW (instListGoArmProj vs fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
+    LArmRef (n + 1) ilgProjW (instListGoArmProj vs N l.toNat fu.toNat (decE h) d.toNat) m m' a h d o l fu r := by
   intro hb
   rw [instListGoArmProj]
   refine lprobe_ok _ _ m m' a hA h d r hh (ilgProjW.arm1 n m h d o l fu) (ilgProjW.abort1 n m h d o l fu) (fun hr hh0 hb => ?_) hb
@@ -843,7 +865,7 @@ theorem gprojArm_ok (hg : tagW h = 9) :
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
   dsimp only
   refine SimD.exists (R := SpnR m) (Sim.bindD rfl (fun _ _ => rfl)
-    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hew e) fun x m₁ a₁ hR => ?_) hb
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs N hA hsl hbd hew e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.ofD fun r m' hb => ?_
   obtain ⟨a', h7, h8, h9⟩ := ltail_ok _ _ a₁ h d r m₁ m' hh (fun r₉ m₉ hr₉ => mkProj_okL m₁ a₁ hA1 _ _ x r₉ m₉ hr₉) hb
@@ -853,52 +875,59 @@ theorem gprojArm_ok (hg : tagW h = 9) :
 end garms
 
 theorem ilarmOK_succ (n : Nat) (ih : ILGoOK n) : ILArmOK (n + 1) := by
-  intro m m' a h d o l fu r vs hA hsl hbd hh
-  exact ⟨lappArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    llamArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    lforallArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    lletArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    lprojArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    lbvarArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh⟩
+  intro m m' a h d o l fu r vs N hA hsl hbd hh
+  exact ⟨lappArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    llamArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    lforallArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    lletArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    lprojArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    lbvarArm_ok n ih m m' a hA h d o l fu r vs N hsl hh⟩
 
 /-- **The model of `il_go` refines `instantiateList`** at the counter's fuel, at every L fuel. -/
 theorem ilOK (n : Nat) : ILGoOK n ∧ ILArmOK n := by
   induction n with
   | zero =>
-    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb => by simp [ilW] at hb,
-      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ => ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb => by simp [ilW] at hb,
+      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     intro _ hb <;> simp [ilAppW, ilLamW, ilForallW, ilLetW, ilProjW, ilBVarW] at hb
   | succ n ih => exact ⟨ilgoOK_succ n ih.2, ilarmOK_succ n ih.1⟩
 
 theorem ilgarmOK_succ (n : Nat) (ih : ILGGoOK n) : ILGArmOK (n + 1) := by
-  intro m m' a h d o l fu r vs hA hsl hbd hh
-  exact ⟨gappArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    glamArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    gforallArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    gletArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh,
-    gprojArm_ok n ih m m' a hA h d o l fu r vs hsl hbd hh⟩
+  intro m m' a h d o l fu r vs N hA hsl hbd hh
+  exact ⟨gappArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    glamArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    gforallArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    gletArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh,
+    gprojArm_ok n ih m m' a hA h d o l fu r vs N hsl hbd hh⟩
 
 /-- **The model of `ilg_go` refines `instantiateListGo`** at the counter's fuel, at every L fuel. -/
 theorem ilgOK (n : Nat) : ILGGoOK n ∧ ILGArmOK n := by
   induction n with
   | zero =>
-    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb => by simp [ilgW] at hb,
-      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hb => by simp [ilgW] at hb,
+      fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     intro _ hb <;> simp [ilgAppW, ilgLamW, ilgForallW, ilgLetW, ilgProjW] at hb
   | succ n ih => exact ⟨ilggoOK_succ n ih.2 (ilOK n).1, ilgarmOK_succ n ih.1⟩
 
 /-! ## The entry `inst_list` refines `instantiateListFast` -/
 
-theorem instListFast_run (F : Nat) (e : EIdx) (vs : Array EIdx) (d : Nat) (a : AState) :
-    (instantiateListFast F e vs d).run a =
-      ((instantiateListGo vs F e d).run (withLLC a ∅) >>= fun p => .ok (p.1, withLLC p.2 ∅)) := by
-  simp only [instantiateListFast, StateT.run_bind, instLClear_run, except_ok_bind]
-  cases (instantiateListGo vs F e d).run (withLLC a ∅) <;> rfl
+theorem instRevRange_run (F : Nat) (e : EIdx) (vs : Array EIdx) (s n d : Nat) (a : AState) :
+    (instantiateRevRange F e vs s n d).run a =
+      ((instantiateListGo vs (if n < vs.size then n else vs.size)
+          ((if n < vs.size then n else vs.size) - s) F e d).run (withLLC a ∅) >>=
+        fun p => .ok (p.1, withLLC p.2 ∅)) := by
+  have hk : (if s < (if n < vs.size then n else vs.size) then (if n < vs.size then n else vs.size) - s
+      else 0) = (if n < vs.size then n else vs.size) - s := by
+    by_cases h1 : n < vs.size <;> simp only [h1, ite_true, ite_false] <;> split <;> omega
+  simp only [instantiateRevRange, hk, StateT.run_bind, instLClear_run, except_ok_bind]
+  cases (instantiateListGo vs _ _ F e d).run (withLLC a ∅) <;> rfl
 
-theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
-    (e o l d r : Word) (vs : Array EIdx) (hsl : SpineR m o l vs) (hbd : o.toNat + l.toNat < 2 ^ 64)
+/-- **`inst_list`'s model on a range** (`instantiateListGo vs N k`, between two clears). -/
+theorem instListW_range (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
+    (e o l d r : Word) (vs : Array EIdx) (N : Nat) (hsl : RangeR m o l vs N)
     (he : e.toNat < 2 ^ 32) (hb : instListW n m e o l d = some (r, m')) :
-    ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+    ∃ a', ((instantiateListGo vs N l.toNat coreWalkFuel (decE e) d.toNat).run (withLLC a ∅) >>=
+        fun p => .ok (p.1, withLLC p.2 ∅)) = .ok (decE r, a') ∧ ArenaL m' a' ∧
       m'.arr64 ILSPN = m.arr64 ILSPN ∧ r.toNat < 2 ^ 32 := by
   simp only [instListW] at hb
   have h0 : ¬ rdW (m.arr64 CTL) 50 + 2 = 0 := fun h0 => by simp [h0] at hb
@@ -914,10 +943,37 @@ theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
     simp only [hw, ilclrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁, hs₁⟩ :=
-      (ilgOK n).1 _ _ _ e d o l 4000000000 r₁ vs hA₀ (hsl.of_spn hs₀) hbd he hw
+      (ilgOK n).1 _ _ _ e d o l 4000000000 r₁ vs N hA₀ (hsl.of_spn hs₀) hsl.bound he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [instListFast_run, ha₁, decE_mask]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
+    exact ⟨_, by rw [ha₁, decE_mask]; rfl, ArenaL.lmemo_clear m₁ a₁ hA₁ h1,
       (spn_of_frame (mclearFitG_frame ilSch ilSch_wf m₁) (by decide)).trans (hs₁.trans hs₀), mask_lt r₁⟩
+
+theorem instListW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
+    (e o l d r : Word) (vs : Array EIdx) (hsl : SpineR m o l vs) (hbd : o.toNat + l.toNat < 2 ^ 64)
+    (he : e.toNat < 2 ^ 32) (hb : instListW n m e o l d = some (r, m')) :
+    ∃ a', (instantiateListFast coreWalkFuel (decE e) vs d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+      m'.arr64 ILSPN = m.arr64 ILSPN ∧ r.toNat < 2 ^ 32 := by
+  obtain ⟨a', h1, h2⟩ := instListW_range n m m' a hA e o l d r vs vs.size (RangeR.ofSpine hsl hbd) he hb
+  refine ⟨a', ?_, h2⟩
+  rw [instantiateListFast, instRevRange_run]
+  simpa [← hsl.size] using h1
+
+/-- **`inst_list(e, o₀ + s, i - s, d)` on a sub-slice** refines `instantiateRevRange vs s i`. -/
+theorem instListW_revRange (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaL m a)
+    (e o₀ C d r : Word) (vs : Array EIdx) (hsl : SpineR m o₀ C vs) (hbd : o₀.toNat + C.toNat < 2 ^ 64)
+    (s i : Nat) (hs : s ≤ i) (hi : i ≤ C.toNat) (he : e.toNat < 2 ^ 32)
+    (hb : instListW n m e (o₀ + s.toUInt64) (i - s).toUInt64 d = some (r, m')) :
+    ∃ a', (instantiateRevRange coreWalkFuel (decE e) vs s i d.toNat).run a = .ok (decE r, a') ∧
+      ArenaL m' a' ∧ m'.arr64 ILSPN = m.arr64 ILSPN ∧ r.toNat < 2 ^ 32 := by
+  obtain ⟨a', h1, h2⟩ := instListW_range n m m' a hA e _ _ d r vs i (RangeR.ofSub hsl hbd s i hs hi) he hb
+  refine ⟨a', ?_, h2⟩
+  have hC := C.toNat_lt
+  have e1 : (i - s).toUInt64.toNat = i - s := by
+    simp only [Nat.toUInt64_eq, UInt64.toNat_ofNat']; omega
+  have e2 : (if i < vs.size then i else vs.size) = i := by rw [hsl.size]; split <;> omega
+  rw [instRevRange_run, e2]
+  rw [e1] at h1
+  exact h1
 
 /-- **`inst_list(e, o, l, d)` refines the arena's `instantiateListFast coreWalkFuel` under
 `ArenaL`**, at every L fuel (the walk's counter starts at `coreWalkFuel`), the substitution `vs`
@@ -938,6 +994,29 @@ theorem instList_refines (p : Prog) (hp : InstListProg p)
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (instList_spec' p hp hpe n s₀ e o l d)
   subst hs
   obtain ⟨a', ha', hA', hs', hlt⟩ := instListW_correct n _ _ a₀ hA e o l d _ vs hsl hbd he hI
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
+  exact ⟨hloc, hok, hst ▸ hA', hres, hs', hlt⟩
+
+/-- **`inst_list(e, o₀ + s, i - s, d)` refines `instantiateRevRange coreWalkFuel e vs s i`**: the
+range `vs[s:i]` of the stack slice `(o₀, C)`, read in place (`beta_peel`'s substitution). -/
+@[refines ConRon.Arena.instantiateRevRange]
+theorem instList_refines_range (p : Prog) (hp : InstListProg p)
+    (hpe : p.lookup "inst_list" = some instListL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hA : ArenaL s₀.mem a₀) (e o₀ C d : Word) (vs : Array EIdx) (hsl : SpineR s₀.mem o₀ C vs)
+    (hbd : o₀.toNat + C.toNat < 2 ^ 64) (s i : Nat) (hs : s ≤ i) (hi : i ≤ C.toNat)
+    (he : e.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "inst_list" [e, o₀ + s.toUInt64, (i - s).toUInt64, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (instantiateRevRange coreWalkFuel (decE e) vs s i d.toNat) a₀ ∧
+      ArenaL s'.mem (AM.st (instantiateRevRange coreWalkFuel (decE e) vs s i d.toNat) a₀) ∧
+      AM.res (instantiateRevRange coreWalkFuel (decE e) vs s i d.toNat) a₀ = decE (r.headD 0) ∧
+      s'.mem.arr64 ILSPN = s₀.mem.arr64 ILSPN ∧ (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s' r s'' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (instList_spec' p hp hpe n s₀ e (o₀ + s.toUInt64) (i - s).toUInt64 d)
+  subst hs
+  obtain ⟨a', ha', hA', hs', hlt⟩ := instListW_revRange n _ _ a₀ hA e o₀ C d _ vs hsl hbd s i hs hi he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
   exact ⟨hloc, hok, hst ▸ hA', hres, hs', hlt⟩
 

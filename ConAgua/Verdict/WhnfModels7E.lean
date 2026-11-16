@@ -26,13 +26,6 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-l_model btsE_spec (p : Prog) (hf : p.lookup "bool_true_shortcut" = some boolTrueShortcutL)
-  fns [hf ↦ btsE list]
-  specs [callW_spec p n "is_bool_true"]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
 l_model tupaE_spec (p : Prog) (hf : p.lookup "try_unfold_proj_app" = some tryUnfoldProjAppL)
   fns [hf ↦ tupaE list]
   specs [callW_spec p n "head_is_proj"]

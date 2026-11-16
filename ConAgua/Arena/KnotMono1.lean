@@ -43,6 +43,7 @@ smono_derive ConRon.Arena.instantiateList
 smono_derive ConRon.Arena.instLGet
 smono_derive ConRon.Arena.instLSet
 smono_derive ConRon.Arena.instantiateListGo
+smono_derive ConRon.Arena.instantiateRevRange
 smono_derive ConRon.Arena.instantiateListFast
 smono_derive ConRon.Arena.mkAppNFrom
 smono_derive ConRon.Arena.betaPeel
@@ -51,7 +52,6 @@ smono_derive ConRon.Arena.viewConst
 smono_derive ConRon.Arena.viewLsLen
 smono_derive ConRon.Arena.failDanglingLs
 smono_derive ConRon.Arena.peelPis
-smono_derive ConRon.Arena.isCtorApp
 smono_derive ConRon.Arena.piResult
 smono_derive ConRon.Arena.viewLs
 smono_derive ConRon.Arena.mkAppN
@@ -128,11 +128,12 @@ smono_derive ConRon.Arena.etaProjs
 smono_derive ConRon.Arena.etaFabArgsE
 smono_derive ConRon.Arena.pinAnd
 smono_derive ConRon.Arena.andRescueSlots
+smono_derive ConRon.Arena.ctorView
+smono_derive ConRon.Arena.majorToCtorRescue
 smono_derive ConRon.Arena.majorToCtor
 smono_derive ConRon.Arena.pinNat
 smono_derive ConRon.Arena.pinNatZero
 smono_derive ConRon.Arena.pinNatSucc
-smono_derive ConRon.Arena.natLitStored
 smono_derive ConRon.Arena.pinString
 smono_derive ConRon.Arena.pinStringOfList
 smono_derive ConRon.Arena.pinList
@@ -140,7 +141,6 @@ smono_derive ConRon.Arena.pinListNil
 smono_derive ConRon.Arena.pinListCons
 smono_derive ConRon.Arena.pinChar
 smono_derive ConRon.Arena.pinCharOfNat
-smono_derive ConRon.Arena.strLitStored
 smono_derive ConRon.Arena.pinEmptyLevels
 smono_derive ConRon.Arena.emptyLevels
 smono_derive ConRon.Arena.constE
@@ -151,8 +151,11 @@ smono_derive ConRon.Arena.litToCtorIfNat
 smono_derive ConRon.Arena.litMajorToCtor
 smono_derive ConRon.Arena.viewLit
 smono_derive ConRon.Arena.isStrLit
+smono_derive ConRon.Arena.isNatSuccApp
+smono_derive ConRon.Arena.prepareMajorWhnf
 smono_derive ConRon.Arena.prepareMajor
-smono_derive ConRon.Arena.ruleRhsAt
+smono_derive ConRon.Arena.lamBody
+smono_derive ConRon.Arena.ruleBodyAt
 smono_derive ConRon.Arena.substLevelsAt
 smono_derive ConRon.Arena.substParamLevels
 smono_derive ConRon.Arena.recFireLevels
@@ -169,6 +172,7 @@ smono_derive ConRon.Arena.iotaCertsFull
 smono_derive ConRon.Arena.piResidual
 smono_derive ConRon.Arena.iotaIndexOk
 smono_derive ConRon.Arena.iotaRecAt
+smono_derive ConRon.Arena.whnfAppIota
 smono_derive ConRon.Arena.whnfApp
 smono_derive ConRon.Arena.projLitToCtor
 smono_derive ConRon.Arena.teleArityOk
@@ -176,7 +180,6 @@ smono_derive ConRon.Arena.projCert
 smono_derive ConRon.Arena.projCertAt
 smono_derive ConRon.Arena.reduceProjCore
 smono_derive ConRon.Arena.whnfCoreStepProj
-smono_derive ConRon.Arena.iotaTarget
 smono_derive ConRon.Arena.whnfStuck
 smono_derive ConRon.Arena.whnfCoreStepApp
 smono_derive ConRon.Arena.whnfCoreStep
@@ -293,5 +296,4 @@ smono_derive ConRon.Arena.IProjEntry.typeAt
 smono_derive ConRon.Arena.inferProj
 smono_derive ConRon.Arena.inferBody
 smono_derive ConRon.Arena.inferSet
-smono_derive ConRon.Arena.isBoolTrue
 smono_derive ConRon.Arena.hasFvarFast

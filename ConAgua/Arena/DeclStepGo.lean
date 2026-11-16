@@ -209,7 +209,8 @@ def ivFns : List FnName :=
   ["erec_ci", "erec_alloc", "erec_put", "dlp_copy", "env_find",
    "env_row_get", "reserved_contains", "reserved_from", "cv_lps",
    "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains", "loose_bvars_bounded_fast",
-   "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "env_push", "env_row_set"]
+   "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast", "env_push", "env_row_set",
+   "env_row_get", "base_row_get", "env_find", "lit_name_at", "lits_stored", "env_set_flags"]
 
 /-- A program with `install_value`'s text. -/
 structure IvProg (p : Prog) : Prop extends TextProg p ivProg ivFns where
@@ -220,7 +221,8 @@ section ivLookups
 variable {p : Prog} (h : IvProg p)
 include h
 theorem IvProg.recP : RecProg p := by
-  constructor <;> exact (h.agree _ (by decide) (by decide)).trans rfl
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    exact (h.agree _ (by decide) (by decide)).trans rfl
 end ivLookups
 
 end L.Arena

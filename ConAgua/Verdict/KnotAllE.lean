@@ -15,7 +15,6 @@ meta import ConAgua.Verdict.DefEqAllE
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.NoVerdictClosed
 import ConAgua.Arena.StrLitCtor
-import ConAgua.Arena.StrLitSup
 import ConAgua.Checker.CoreErec
 import ConAgua.Checker.IndCore
 import ConAgua.Checker.LoopDeclAgree
@@ -211,9 +210,9 @@ include hq hnv in
 theorem KnotAllProg.defeqWhnfE : DefeqWhnfE p where
   reduceProjCore := fun n hk hkE F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc =>
     RefE.coreSpecE (reduceProjCoreE_spec p hq.core.rproj hq.core.plit (n + 1) s₀ mode vis d sn i c) hnv
-      hkE (rp_ref p hq.core (strLitStored_core p hq.str) (strLitCtor_core p hq.str)
+      hkE (rp_ref p hq.core (strLitCtor_core p hq.str)
         (KnotAllProg.projC hq) (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs
-        hsn hc (supKeep_of fe))
+        hsn hc)
   proofIrrel := proofIrrelE_of p hq.m2c.toIotaProg4 (LvlDen.of_den coreDen_of) hnv
 
 include hq hnv in

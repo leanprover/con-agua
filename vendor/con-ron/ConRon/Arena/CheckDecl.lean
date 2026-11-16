@@ -65,7 +65,7 @@ def checkStructuralNatPin (mode : CheckMode) (fe : IFEnv) (ci : IConstantInfo)
   let prev := fe.idx[n]?
   let fe2 := fe.push ci
   let value' ← checkStructuralNatPinAtFe2 fe2 n
-  let fe := fe2.popTemp n prev
+  let fe := (fe2.popTemp n prev).setFlags fe.natLit fe.strLit
   let eqs ← natOpEquations 0 n
   unless ← certifyNatEqs mode fe (← substConst0Pairs n value' eqs) do
     fail (.notImplemented "nonstandard structural Nat operation")
@@ -201,7 +201,7 @@ def checkDeclsPureGo (mode : CheckMode) (pins : List INatOpPinSet) (fe : IFEnv) 
 con-leche: ConLeche/Kernel/CheckDecl.lean:176-180 checkDeclsPure
 **The spec fold**: from the empty environment. -/
 def checkDeclsPure (mode : CheckMode) (pins : List INatOpPinSet)
-    (ds : List IDeclaration) : AM IFEnv :=
-  checkDeclsPureGo mode pins (mkIFEnv IEnv.empty) ds
+    (ds : List IDeclaration) : AM IFEnv := do
+  checkDeclsPureGo mode pins (← mkIFEnvLits IEnv.empty) ds
 
 end ConRon.Arena

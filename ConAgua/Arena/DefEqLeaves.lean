@@ -46,7 +46,6 @@ structure DefEqLeafProg (p : Prog) : Prop where
   core : WhnfCoreProg p
   pinat : p.lookup "pin_at" = some pinAtL
   pinword : p.lookup "pin_word" = some pinWordL
-  bt : p.lookup "is_bool_true" = some isBoolTrueL
   hproj : p.lookup "head_is_proj" = some headIsProjL
   ion : p.lookup "io_neutral" = some ioNeutralL
   eager : p.lookup "is_eager_reduce" = some isEagerReduceL
@@ -115,68 +114,6 @@ theorem hw1 : HW 1 := by unfold HW; decide
 theorem resH_of {c : Prop} [Decidable c] {r : List Word} {x y : Word} (hx : HW x) (hy : HW y)
     (hr : (if c then x else y) = r.headD 0) : ResH r := by
   unfold ResH; rw [← hr]; split <;> assumption
-
-/-! ## `is_bool_true` -/
-
-l_model isBoolTrue_spec (p : Prog) (hp : DefEqLeafProg p)
-  fns [hp.bt ↦ isBoolTrueW ro]
-  specs [pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] finish [tierW, idxW]
-
-theorem isBoolTrue_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
-    (h : Word) (hh : HW h) (w : Word) (hW : isBoolTrueW m h = some w) :
-    (isBoolTrue (decE h)).run a = .ok (w != 0, a) := by
-  unfold isBoolTrueW at hW
-  simp (config := {decide := true}) only [↓reduceIte] at hW
-  rcases (Classical.em (tagW h = 3)).symm with h3 | h3
-  · simp only [ne_eq, h3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
-    subst hW
-    simp only [isBoolTrue, decE_tag_const_beq h hh, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
-    rfl
-  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · simp [h3, hs] at hW
-  by_cases hc : tcnt m CONST (tierW h) ≤ idxW h
-  · simp [h3, hs, hc] at hW
-  obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f m a hR h hh ⟨hs, by simpa using hc⟩ h3
-  have hel := hP.lv_lt.1
-  rw [pinW_rdW m 52 52 rfl] at hel
-  have hbt := hP.names_lt 30 (by decide)
-  rw [pinW_rdW m (1 + 30) (1 + 30) rfl] at hbt
-  simp only [h3, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
-  simp only [isBoolTrue, decE_tag_const_beq h hh, h3, decide_true, ↓reduceIte,
-    StateT.run_bind, view_run _ _ _ hv, except_ok_bind, emptyLevels, pinEmptyLevels_run hP,
-    pinW_rdW m 52 52 rfl, boolTrueName, pinBoolTrue, PIN_BOOL_TRUE]
-  by_cases hus : tfld m CONST (tierW h) (idxW h) 1 = rdW (m.arr64 PINS) 52
-  · simp only [hus, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
-    subst hW
-    rw [decI_bne _ _ hu hel]
-    simp only [bne, hus, decide_true, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
-      StateT.run_bind, pinAt_run hP 30 (by decide), pinW_rdW m (1 + 30) (1 + 30) rfl, except_ok_bind,
-      StateT.run_pure]
-    rw [decI_beq _ _ hn hbt]
-    split <;> (rename_i hx; simp only [hx, decide_true, decide_false]; rfl)
-  · simp only [hus, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
-    subst hW
-    rw [decI_bne _ _ hu hel]
-    simp only [bne, hus, decide_false, Bool.not_false, ↓reduceIte]
-    rfl
-
-/-- **`is_bool_true` refines `isBoolTrue`.** -/
-@[refines ConRon.Arena.isBoolTrue]
-theorem isBoolTrue_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
-    CoreSpec p (n + 1) "is_bool_true" [h] (isBoolTrue (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
-  refine triple_post (isBoolTrue_spec p hp (n + 1) s₀ h) fun r s' ⟨hloc, hm, hW⟩ => ⟨hloc, ?_⟩
-  rw [hm]
-  have hrun' := isBoolTrue_run _ _ hS.arena.base hS.pins h hh _ hW
-  refine coreRef_pure hS hrun' rfl ?_
-  unfold isBoolTrueW at hW
-  unfold ResH HW
-  repeat' split at hW
-  all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
-  all_goals (rw [← hW]; decide)
 
 /-! ## `get_app_fn` runs -/
 

@@ -268,7 +268,7 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
 
 end reset
 
-/-- con-ron: ConRon/Arena/Core.lean:4469-4476 ConRon.Arena.enterScratch -/
+/-- con-ron: ConRon/Arena/Core.lean:4588-4595 ConRon.Arena.enterScratch -/
 @[no_expose, l_impl ConRon.Arena.enterScratch]
 def scratchEnter : FunDecl := lfn () locals (r) {
   r := call scratch_reset(1);
@@ -279,7 +279,7 @@ def scratchEnter : FunDecl := lfn () locals (r) {
   return 0
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:4459-4467 ConRon.Arena.dropScratch -/
+/-- con-ron: ConRon/Arena/Core.lean:4578-4586 ConRon.Arena.dropScratch -/
 @[no_expose, l_impl ConRon.Arena.dropScratch]
 def scratchDrop : FunDecl := lfn () locals (r) {
   r := call flush_caches();

@@ -794,7 +794,7 @@ def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) 
 /-! ## `genRecCheck` -/
 
 /-- `genRecCheck` helper: `nestedBit || ms.any (·.member.isNone)`'s second disjunct. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
   if msLen == 0 { return 0 };
@@ -805,7 +805,7 @@ def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
 }
 
 /-- `genRecCheck` helper: `formers.map (·.type)`. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
   q := call iw_alloc(cvTasLen);
@@ -815,7 +815,7 @@ def genRecCheckFormerTys : FunDecl := lfn (cvTasOff, cvTasLen) locals (q, j) {
 }
 
 /-- `genRecCheck` helper: `ms2.mapM (classFormerTy mode fe formers)`. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2Len)
     locals (q, j, e) {
@@ -830,7 +830,7 @@ def genRecCheckFormerTysC : FunDecl := lfn (vis, cvTasOff, cvTasLen, ms2Off, ms2
 
 /-- `genRecCheck` helper: `(rd.slots.filter ClassSlot.isMinor).length == (ctors.map
 List.length).sum` (a sum past `2^64` is above every slot count: `0`). -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
     locals (j, s, minorCnt, ctorSum, hdr) {
@@ -852,7 +852,7 @@ def genRecCheckMinorOk : FunDecl := lfn (slotsOff, slotsLen, ctorsOff, ctorsLen)
 
 /-- `genRecCheck` helper: the pop, `prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR`, in
 reverse push order. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
   j := prevsLen;
@@ -867,7 +867,7 @@ def genRecCheckPopAll : FunDecl := lfn (vis, prevsOff, prevsLen) locals (j, e) {
 /-- `genRecCheck` helper: the pins, the stream's types, the elim guard, the classes' table entries
 and constructors, and the generator up to `cvGs` (checked, generated types). Capacity guards first:
 the pool's size `+ 5`, the parameter count plus the member count and plus the slot count are words. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckPrep : FunDecl := lfn
     (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
@@ -922,14 +922,17 @@ def genRecCheckPrep : FunDecl := lfn
 block.off, block.len)`: **the generated recursor stage**, as `(vis', out.off, out.len)`: the rule-less
 recursors pushed temporarily (`class_fe_r`), the flush entering them, every rule checked (its
 λ-domains naming none of the `pushed` recursors' names), the pushes undone in reverse order and the
-flush leaving them. -/
--- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-822 ConRon.Arena.genRecCheck
+literal flags set back (`env_set_flags` of the words `CTL[160]`, `CTL[161]` saved before the
+pushes) and the flush leaving them. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:768-823 ConRon.Arena.genRecCheck
 @[no_expose, l_impl ConRon.Arena.genRecCheck]
 def genRecCheckL : FunDecl := lfn
     (vis, p, nestedBit, paramsOff, paramsLen, tblOff, tblLen, rd, msOff, msLen, blockOff, blockLen)
-    locals (g, cvGsOff, cvGsLen, feR, prevsOff, prevsLen, pO, pL, r, outOff, outLen, fe2) {
+    locals (g, cvGsOff, cvGsLen, feR, prevsOff, prevsLen, pO, pL, r, outOff, outLen, fe2, nl, sl) {
   (g, cvGsOff, cvGsLen) := call gen_rec_check_prep(vis, p, nestedBit, paramsOff, paramsLen, tblOff,
     tblLen, rd, msOff, msLen, blockOff, blockLen);
+  nl := CTL.u64[160];
+  sl := CTL.u64[161];
   (feR, prevsOff, prevsLen) := call class_fe_r(p, cvGsOff, cvGsLen, IW.u64[rd + 2], IW.u64[rd + 3],
     vis);
   (pO, pL) := call block_shape_names_of(cvGsOff, cvGsLen);
@@ -937,6 +940,7 @@ def genRecCheckL : FunDecl := lfn
   (outOff, outLen) := call class_recs_rules_ok(feR, pO, pL, g, IW.u64[rd + 2], IW.u64[rd + 3],
     cvGsOff, cvGsLen);
   fe2 := call gen_rec_check_pop_all(feR, prevsOff, prevsLen);
+  r := call env_set_flags(nl, sl);
   r := call flush_caches();
   return (fe2, outOff, outLen)
 }
@@ -996,7 +1000,7 @@ def recGenForeign : Prog :=
    ("class_gen_prefix_binders", stub 1), ("block_shape_member_names", stub 1),
    ("block_shape_formers", stub 1), ("block_shape_names_of", stub 2), ("family_telescope", stub 3),
    ("lit_shape_ok", stub 1), ("mentions_any_const", stub 3), ("check_constant_val", stub 3),
-   ("unresolved_consts_error", stub 3)]
+   ("unresolved_consts_error", stub 3), ("env_set_flags", stub 2)]
 
 /-! ## A pure-enough slice, exercised -/
 

@@ -39,6 +39,41 @@ structure IndexR (m : Mem) (I : IStreamIndex) : Prop where
   firsts : ∀ i (h : i < I.firsts.size), (rdW (m.arr64 FIRSTS) (UInt64.ofNat i)).toNat = I.firsts[i]
   firstsSize : I.firsts.size ≤ (m.arr64 FIRSTS).size
   next : (rdW (m.arr64 CTL) 128).toNat = I.next
+  /-- A row's counter word is below `2^32` (`idx_consts`' capacity: the next counter stays below
+  `2^32 - 2`), so one past it is a word (`lit_from`). -/
+  rows : ∀ w : Word, w.toNat < 2 ^ 32 → (baseRow m w).1.toNat < 2 ^ 32
+
+/-- An optional counter as a word (`IStreamIndex.natFrom`/`strFrom`): `0` for none, `k + 1` for
+`some k`. -/
+def optW (w : Word) : Option Nat := if w = 0 then none else some (w.toNat - 1)
+
+/-- **The frozen stream index** (`IStreamIndex.freeze`, at the end of `build_index`): the literal
+names are the words `CTL[162‥171]` (`EnvR`'s `lits`), the flags' thresholds `natFrom`/`strFrom`
+the words `CTL[172]`, `CTL[173]` (`optW`). -/
+structure FrozenR (m : Mem) (I : IStreamIndex) : Prop where
+  lits : I.base.lits.map (·.word.toUInt64) = litWords m
+  natFrom : I.natFrom = optW (rdW (m.arr64 CTL) 172)
+  strFrom : I.strFrom = optW (rdW (m.arr64 CTL) 173)
+
+/-- The `CTL` words `FrozenR` reads. -/
+def frozenCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173]
+
+theorem litW_mem_frozenCtl : ∀ i < 10, (162 + UInt64.ofNat i : Word) ∈ frozenCtl := by decide
+
+theorem FrozenR.congr {m m' : Mem} {I : IStreamIndex}
+    (hc : ∀ x ∈ frozenCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) (h : FrozenR m I) :
+    FrozenR m' I :=
+  ⟨by rw [litWords_congr (fun i hi => hc _ (litW_mem_frozenCtl i hi))]; exact h.lits,
+   by rw [hc 172 (by decide)]; exact h.natFrom, by rw [hc 173 (by decide)]; exact h.strFrom⟩
+
+theorem FrozenR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {I : IStreamIndex}
+    (hC : ∀ x ∈ C, x ∉ frozenCtl) (hf : MemFrame A C m m') (h : FrozenR m I) : FrozenR m' I :=
+  h.congr fun x hx => hf.ctl x (fun hm => hC x hm hx)
+
+theorem not_mem_frozenCtl {x : Word} (h : x.toNat < 162 ∨ 174 ≤ x.toNat) : x ∉ frozenCtl :=
+  fun hm => by
+    simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with e | e | e | e | e | e | e | e | e | e | e | e <;> subst e <;> simp at h
 
 /-- The own layer is empty. -/
 def OwnEmpty (m : Mem) : Prop := ∀ w, (ownRaw m w).1 = 0 ∧ ownTbl m w = 0
@@ -59,12 +94,17 @@ theorem OwnEmpty.of_below {m : Mem} (_h : OwnBelow m) (hlt : ∀ w, rowTag w ≤
 
 /-- **The environment at a job's start**: the stream index at the view of position `k`, an empty
 own layer, `vis = 0`. -/
-theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (hO : OwnEmpty m)
+theorem EnvR.ofIndex {m : Mem} {I : IStreamIndex} {k : Nat} (hI : IndexR m I) (hF : FrozenR m I)
+    (hO : OwnEmpty m)
     (hB : OwnBelow m) (hs : (stampW m).toNat < 2 ^ 32) (h134 : (rdW (m.arr64 CTL) 134).toNat = I.firsts.getD k I.next)
-    (h135 : (rdW (m.arr64 CTL) 135).toNat = k) : EnvR m 0 (I.view k) := by
+    (h135 : (rdW (m.arr64 CTL) 135).toNat = k)
+    (h160 : (rdW (m.arr64 CTL) 160 != 0) = fromLe I.natFrom (I.firsts.getD k I.next))
+    (h161 : (rdW (m.arr64 CTL) 161 != 0) = fromLe I.strFrom (I.firsts.getD k I.next)) :
+    EnvR m 0 (I.view k) := by
   refine ⟨fun n => ?_, fun n hn => absurd (hO _).1 hn, fun n hn => absurd (hO _).1 hn,
     fun n _ hn => absurd (hO _).1 hn, fun n => ?_, fun n hn => absurd (hO _).2 hn, ?_, ?_,
-    fun n => hI.base n, fun n => hI.btbl n, hs, hB⟩
+    fun n => hI.base n, fun n => hI.btbl n, hs, hB, by simp only [IStreamIndex.view, h160],
+    by simp only [IStreamIndex.view, h161], by simp only [IStreamIndex.view]; exact hF.lits⟩
   · simp [IStreamIndex.view, ownFind]
   · simp [IStreamIndex.view, (hO _).2]
   · simp only [IStreamIndex.view]; rw [h134]
@@ -151,7 +191,7 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     cases e : I.base.idx[(decI w : NIdx)]? with
     | none => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
     | some y => rw [e] at hb; by_cases b0 : (baseRow m w).1 = 0 <;> simp_all
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hbr, hP]
     by_cases e : n.word.toUInt64 = w
     · by_cases b0 : (baseRow m w).1 = 0
@@ -176,6 +216,17 @@ theorem IndexR.insertConst {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
   · rw [a2 _ (by decide) (by decide)]; exact h.firstsSize
   · simp only [Mem.arr64_set64_same, rdW_set!, a1 (CTL : TieredArray) (by decide)]
     simp only [show (128 : Word).toNat = 128 from rfl, hc, and_self, ite_true]; exact hnx1
+  · intro x hx
+    rw [hbr]
+    by_cases b0 : (baseRow m w).1 = 0
+    · obtain ⟨t1, t2, t3⟩ := hset b0
+      have : m1 = baseSet m w (rdW (m.arr64 CTL) 128 + 1) q := by rw [← hm1, ite_eq_left b0]
+      rw [this]
+      by_cases e : x = w
+      · subst e; rw [baseRow_baseSet_self t1 t2 t3]; dsimp only; omega
+      · rw [baseRow_baseSet_other hw32 hx t1 t2 e]; exact h.rows x hx
+    · have : m1 = m := by rw [← hm1, ite_eq_right b0]
+      rw [this]; exact h.rows x hx
 
 /-- **One step of `insertTables`** (`idx_tables`' loop body): the table record at `q` (its
 structure `w`) of record position `r`: its base table row written if it has none. -/
@@ -209,7 +260,7 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
     cases e : I.base.tbls[(decI w : NIdx)]? with
     | none => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
     | some y => rw [e] at hb; by_cases b0 : (baseTbl m w).1 = 0 <;> simp_all
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [hbr, hP]; exact h.base n
   · simp only [Std.HashMap.getElem?_insertIfNew, hname', hmem, hP]
     by_cases e : n.word.toUInt64 = w
@@ -233,6 +284,7 @@ theorem IndexR.insertTable {m : Mem} {I : IStreamIndex} (h : IndexR m I) {q : Wo
   · rw [a1 _ (by decide)]; exact h.firsts i hi
   · rw [a1 _ (by decide)]; exact h.firstsSize
   · rw [hctl]; exact h.next
+  · intro x hx; rw [hbr]; exact h.rows x hx
 
 /-- **A record's first counter** (`idx_add`'s `FIRSTS[k] := CTL[128]`, `k` the number of records
 so far): `firsts` gains the next counter. -/
@@ -254,7 +306,7 @@ theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
       (rdW (m.arr64 CTL) 128)) x = baseTbl m x := by
     intro x; simp only [baseTbl, a1 (tixArr (rowTag x) : TieredArray) (by unfold tixArr; split <;> (try split) <;> decide)]
   have hsz : (UInt64.ofNat I.firsts.size).toNat = I.firsts.size := by simp; omega
-  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_⟩
+  refine ⟨fun n => ?_, fun n => ?_, fun i hi => ?_, ?_, ?_, ?_⟩
   · simp only [hbr, hP]; exact h.base n
   · simp only [hbt, hP]; exact h.btbl n
   · simp only [Array.size_push] at hi
@@ -267,6 +319,7 @@ theorem IndexR.pushFirst {m : Mem} {I : IStreamIndex} (h : IndexR m I)
       exact h.firsts i hi'
   · rw [Mem.size_arr64_set64]; simp; omega
   · rw [hctl]; exact h.next
+  · intro x hx; rw [hbr]; exact h.rows x hx
 
 end rel
 

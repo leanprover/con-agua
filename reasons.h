@@ -207,4 +207,5 @@ static const char *const reasons[] = {
   "the kernel refused to evaluate `Nat.pow` because its second argument does not fit in a 32-bit unsigned integer",
   "the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size",
   "the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer",
+  "the recursor 's rule for is not written as a function of the recursor's leading arguments and the constructor's fields",
 };

@@ -405,14 +405,18 @@ def checkReducePinPreL : FunDecl := lfn (vis, c, v) locals (e, pa, x, ax) {
 
 /-- `check_reduce_pin(vis, p, c, v)`: `checkReducePin`: the record `p` pushed for the one read at
 the extended view (the stored constant's type, `reduce_stored_ok`) and popped (`env_pop_temp`),
-then `check_reduce_pin_pre` at `vis`; returns the view. -/
+the literal flags set back (`env_set_flags`), then `check_reduce_pin_pre` at `vis`; returns the
+view. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:785-805 ConRon.Arena.checkReducePin
 @[no_expose, l_impl ConRon.Arena.checkReducePin]
-def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, w, st, v2, z) {
+def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, fn, fs, w, st, v2, z) {
   (rc, rq) := call env_row_get(c);
+  fn := CTL.u64[160];
+  fs := CTL.u64[161];
   w := call env_push(vis, p);
   st := call reduce_stored_ok(w, c);
   v2 := call env_pop_temp(w, c, rc, rq);
+  z := call env_set_flags(fn, fs);
   if st == 0 { fail R_UNSUPPORTED_COMPILER_TRUST_OPAQUE };
   z := call check_reduce_pin_pre(v2, c, v);
   return v2
@@ -508,16 +512,19 @@ def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, dov, dl, d, f
 }
 
 /-- `check_structural_nat_pin(vis, p, n)`: `checkStructuralNatPin`: the record `p` pushed for the
-reads at the extended view and popped (`env_pop_temp`), then the recurrences of the stored value
+reads at the extended view and popped (`env_pop_temp`, the literal flags set back: `env_set_flags`), then the recurrences of the stored value
 (`nat_op_equations 0 n`, `n` replaced by the value) certified at `vis`; returns the view. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:55-72 ConRon.Arena.checkStructuralNatPin
 @[no_expose, l_impl ConRon.Arena.checkStructuralNatPin]
 def checkStructuralNatPinL : FunDecl :=
-    lfn (vis, p, n) locals (rc, rq, w, v, v2, eo, el, so, sl, ok) {
+    lfn (vis, p, n) locals (rc, rq, fn, fs, w, v, v2, z, eo, el, so, sl, ok) {
   (rc, rq) := call env_row_get(n);
+  fn := CTL.u64[160];
+  fs := CTL.u64[161];
   w := call env_push(vis, p);
   v := call check_structural_nat_pin_at_fe2(w, n);
   v2 := call env_pop_temp(w, n, rc, rq);
+  z := call env_set_flags(fn, fs);
   (eo, el) := call nat_op_equations(0, n);
   (so, sl) := call subst_const0_pairs(n, v, eo, el);
   ok := call certify_nat_eqs(v2, so, sl);

@@ -99,26 +99,34 @@ theorem envPushTable_stageE {p : Prog} (hs : p.lookup "tbl_own_set" = some tblOw
   exact ⟨(StageR.of_envFrame hS (tblSet_frame _ _ _) (otx_rng _) hE).1,
     (StageR.of_envFrame hS (tblSet_frame _ _ _) (otx_rng _) hE).2, _, _, rfl⟩
 
-/-- **`env_push` under the stage relation**, its memory an `ownSet`. -/
-theorem envPush_stageE {p : Prog} (hrs : p.lookup "env_row_set" = some envRowSetL)
-    (hpu : p.lookup "env_push" = some envPushL) {n : Nat} {vis : Word} {fe : IFEnv} {a : AState}
+/-- **`BkMem` across the literal flags' stores** (`flagsSet`, `env_push`'s last step). -/
+theorem BkMem.ofFlags {m : Mem} (h : BkMem m) (x y : Word) : BkMem (flagsSet m x y) := by
+  have hf := flagsSet_frame m x y
+  refine ⟨h.ind.frame hf (fun b hb => by simp at hb) (fun z hz => ?_),
+    CoreMemos.frame hf ⟨by simp, by simp⟩ (by decide) h.core, AFr.of_frame hf (by decide) (by decide) h.abs⟩
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hz
+  rcases hz with rfl | rfl <;> decide
+
+/-- **`env_push` under the stage relation**, its memory an `ownSet` and the flags' stores. -/
+theorem envPush_stageE {p : Prog} (hP : EnvFlagsProg p) {n : Nat} {vis : Word} {fe : IFEnv} {a : AState}
     {m m' : Mem} {c : Word} {r : List Word} {ci : IConstantInfo}
     (hc : callW p n "env_push" [vis, c] m = some (r, m'))
     (hS : StageR vis fe m a) (hci : decCI (erecP m) c.toNat = some ci) :
-    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' ∧ ∃ w c' q, m' = ownSet m w c' q := by
-  obtain ⟨s', hs', -, hr, hE, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (envPush_refines p hrs hpu n ⟨m, Locals.init []⟩ vis c hS.check.env hci) hc
+    StageR (r.headD 0) (fe.push ci) m' a ∧ IWGrow m m' ∧
+      ∃ w c' q x y, m' = flagsSet (ownSet m w c' q) x y := by
+  obtain ⟨s', hs', -, hr, -, -, -, hE, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (envPush_refines hP n ⟨m, Locals.init []⟩ vis c hS.check.env hci
+      (show 161 < (m.arr64 CTL).size by have := hS.iw.ctl; omega)) hc
   subst hs' hr
   simp only [List.headD_cons]
   rw [hm] at hE ⊢
-  exact ⟨(StageR.of_own hS hE).1, (StageR.of_own hS hE).2, _, _, _, rfl⟩
+  exact ⟨(StageR.of_ownFlags hS hE).1, (StageR.of_ownFlags hS hE).2, _, _, _, _, _, rfl⟩
 
 /-! ## The models (generated) -/
 
 /-- The lookups the pushes take. -/
 structure PdProg (p : Prog) : Prop where
-  rs : p.lookup "env_row_set" = some envRowSetL
-  push : p.lookup "env_push" = some envPushL
+  ef : EnvFlagsProg p
   tos : p.lookup "tbl_own_set" = some tblOwnSetL
   pt : p.lookup "env_push_table" = some envPushTableL
   pa : p.lookup "ifenv_push_all" = some ifenvPushAll
@@ -177,8 +185,8 @@ theorem pa_ok {p : Prog} (hP : PdProg p) {a : AState} (n : Nat) :
   rcases h1 : callW p n "env_push" [vis, rdW (m.arr64 IW) o] m with _ | ⟨v, m1⟩
   · rw [h1, paW.k_env_push.none] at h; cases h
   rw [h1, paW.k_env_push.arm1] at h
-  obtain ⟨hS1, hg1, w, c, q, hm1⟩ := envPush_stageE hP.rs hP.push h1 hS (by rw [hrd]; exact hci)
-  have hM1 : BkMem m1 := by rw [hm1]; exact hM.ofEnv (ownSet_frame _ _ _ _) (own_rng _)
+  obtain ⟨hS1, hg1, w, c, q, x, y, hm1⟩ := envPush_stageE hP.ef h1 hS (by rw [hrd]; exact hci)
+  have hM1 : BkMem m1 := by rw [hm1]; exact (hM.ofEnv (ownSet_frame _ _ _ _) (own_rng _)).ofFlags _ _
   rcases h2 : paW p n m1 (v.headD 0) (o + 1) (l - 1) with _ | ⟨r2, m2⟩
   · rw [h2, paW.k_ifenv_push_all.none] at h; cases h
   rw [h2, paW.k_ifenv_push_all.arm1] at h

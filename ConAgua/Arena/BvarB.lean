@@ -45,7 +45,7 @@ end eqs
 
 grind_pattern [arena_grind] bbN_succ => bbN (n + 1) m h f
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1572-1579 ConRon.Arena.bvarB -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1596-1603 ConRon.Arena.bvarB -/
 @[no_expose, l_impl ConRon.Arena.bvarB]
 def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   x := call der_bv(e);
@@ -53,7 +53,7 @@ def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   return x
 }
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1595-1599 ConRon.Arena.looseBVarsBoundedFast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1619-1623 ConRon.Arena.looseBVarsBoundedFast -/
 @[no_expose, l_impl ConRon.Arena.looseBVarsBoundedFast]
 def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
   x := call bvar_b(f, e);

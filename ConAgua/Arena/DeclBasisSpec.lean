@@ -228,7 +228,7 @@ theorem ibd_ref {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Nam
   have hfind := findRes_miss hS.check.env hwl (by simpa using hb)
   refine RefE.onlySim (fun _ => installBasisDeclE.k_env_push.none ..) (fun _ _ h => h) fun r2 m2 h2 => ?_
   rw [installBasisDeclE.k_env_push.arm1]
-  obtain ⟨hS2, hg2⟩ := envPush_stage hB.rcp.rs hB.rcp.push h2 hS hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hB.rcp.ef h2 hS hci
   refine RefE.ret ?_ ⟨by simpa using hS2, hg2⟩
   simp [installBasisDecl, hname, hfind, StateT.run_pure]
   rfl

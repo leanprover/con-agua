@@ -34,7 +34,7 @@ def stuckStrT (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (side : Boo
         | .const cO usO => do
           let el ← emptyLevels
           let sl ← pinStringOfList
-          if cO = sl ∧ usO = el ∧ (← strLitStored fe) then do
+          if cO = sl ∧ usO = el ∧ fe.strLit = true then do
             let c ← strLitToConstructor st
             if side then r.defeq depth a c else r.defeq depth c b
           else stuckIrrel r fe depth a b
@@ -47,8 +47,7 @@ theorem stuckStrT_run (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) (si
     (st : String) (fo : EIdx) (s : AState) (m : Mem) (hP : PinsFull m s.pins) (cO : NIdx) (usO : LsIdx)
     (ht : (fo.tag == ETag.const) = true) (hv : s.store.view fo = some (.const cO usO)) :
     (stuckStrT r fe depth a b side (.strVal st) fo).run s =
-      (strLitStored fe >>= fun x =>
-        if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ x = true then do
+      (if cO = decI (pinW m (1 + 6)) ∧ usO = decI (pinW m 52) ∧ fe.strLit = true then do
           let c ← strLitToConstructor st
           if side then r.defeq depth a c else r.defeq depth c b
         else stuckIrrel r fe depth a b).run s := by
@@ -147,9 +146,6 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
     simp (config := {decide := true}) only [↓reduceIte] at hr₂
     -- `str_lit_stored`
     refine RefE.of_run_eq (stuckStrT_run _ fe _ _ _ _ st _ a₀ s₀.mem hS.pins _ _ hct hv) ?_
-    refine RefE.bind_callW (fun _ => rfl) (hc.strLitStored n s₀ a₀ dn vis fe M eb hS)
-      fun r₃ m₃ _ h₃ => RefE.after_core (w := id) h₃ fun M₃ hS₃ _ => ?_
-    dsimp only [strE.k_str_lit_stored]
     have hsl : HW (rdW (s₀.mem.arr64 PINS) (1 + 6)) := by
       have := hS.pins.names_lt 6 (by decide); rwa [pinW_rdW s₀.mem (1 + 6) (1 + 6) rfl] at this
     have hel : HW (rdW (s₀.mem.arr64 PINS) 52) := by
@@ -158,13 +154,12 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
       decI_inj_iff huw hel]
     rw [hr₁, hr₂]
     by_cases hcond : co = rdW (s₀.mem.arr64 PINS) (1 + 6) ∧ uo = rdW (s₀.mem.arr64 PINS) 52 ∧
-        r₃.headD 0 ≠ 0
+        rdW (s₀.mem.arr64 CTL) 161 ≠ 0
     · rw [ite_eq_left hcond]
       obtain ⟨hc₁, hc₂, hc₃⟩ := hcond
-      rw [ite_eq_left ⟨hc₁, hc₂, L.Arena.decBool_true_of hc₃⟩]
-      have hv₃ := hc.supKeep fe a₀ (decE lt) _ hl
-      refine RefE.bind_callW (fun _ => rfl) (hc.strLitCtor n ⟨m₃, Locals.init []⟩ _ dn vis fe M₃ eb lt st hS₃
-        hlt hv₃) fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
+      rw [ite_eq_left ⟨hc₁, hc₂, by rw [hS.env.strLit]; simpa using hc₃⟩]
+      refine RefE.bind_callW (s₀ := ⟨s₀.mem, Locals.init []⟩) (fun _ => rfl) (hc.strLitCtor n ⟨s₀.mem, Locals.init []⟩ _ dn vis fe M eb lt st hS
+        hlt hl) fun r₄ m₄ _ h₄ => RefE.after_core (w := id) h₄ fun M₄ hS₄ _ => ?_
       dsimp only [strE.k_str_lit_ctor]
       by_cases hsd : side = 0
       · rw [ite_eq_left hsd]
@@ -176,8 +171,8 @@ theorem str_ref (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCall
         exact hdef _ m₄ M₄ _ _ hS₄ ha h₄.resOk
     · rw [ite_eq_right hcond]
       rw [ite_eq_right (fun h => hcond ⟨h.1, h.2.1, fun e => by
-              have := h.2.2; rw [L.Arena.decBool_false_of e] at this; cases this⟩)]
-      exact hirr _ m₃ M₃ hS₃
+              have := h.2.2; rw [hS.env.strLit, e] at this; cases this⟩)]
+      exact hirr _ s₀.mem M hS
 
 /-- **`stuck_str` refines `stuckStrT`** at the knot (`str_ref`'s ok half). -/
 @[refines_part ConRon.Arena.defeqStuck "the string-literal arms (stuckStrT)"]

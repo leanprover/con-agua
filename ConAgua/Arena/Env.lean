@@ -115,7 +115,7 @@ no row). -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` is in the view: the own layer's row below
 `vis`, else the stream index's row below `CTL[134]`; `(0, 0)` otherwise. -/
--- con-ron: ConRon/Arena/Env.lean:272-275 ConRon.Arena.IFEnv.find?
+-- con-ron: ConRon/Arena/Env.lean:313-317 ConRon.Arena.IFEnv.find?
 @[no_expose, l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   if vis != 0 {
@@ -128,20 +128,70 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   return (0, 0)
 }
 
-/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own layer at
-counter `vis`; returns the new view `vis + 1`. -/
--- con-ron: ConRon/Arena/Env.lean:277-280 ConRon.Arena.IFEnv.push
+/-- `lit_name_at(w, i)`: is the name handle `w` one of the frozen index's literal names
+`CTL[162 + i‥171]` (`litNameAt` over `IFBase.lits`, `litWords`). -/
+-- con-ron: ConRon/Arena/Env.lean:266-272 ConRon.Arena.litNameAt
+@[no_expose, l_impl ConRon.Arena.litNameAt]
+def litNameAtL : FunDecl := lfn (w, i) locals () {
+  while i < 10 {
+    if CTL.u64[162 + i] == w { return 1 };
+    i := i + 1
+  };
+  return 0
+}
+
+/-- `lits_stored(vis, i, stop)`: are the literal names `CTL[162 + i‥162 + stop)` all in the view
+`vis` (`IFEnv.litsStored`: `0‥3` is `natLitStoredBy`, `3‥10` the rest of `strLitStoredBy`); a
+range past the ten names answers `0`. -/
+-- con-ron: ConRon/Arena/Env.lean:319-330 ConRon.Arena.IFEnv.litsStored
+-- con-ron: ConRon/Arena/Env.lean:332-335 ConRon.Arena.IFEnv.natLitStoredBy
+-- con-ron: ConRon/Arena/Env.lean:337-341 ConRon.Arena.IFEnv.strLitStoredBy
+@[no_expose, l_impl ConRon.Arena.IFEnv.litsStored ConRon.Arena.IFEnv.natLitStoredBy ConRon.Arena.IFEnv.strLitStoredBy]
+def litsStoredL : FunDecl := lfn (vis, i, stop) locals (f, q) {
+  for i < stop {
+    if 10 <= i { return 0 };
+    (f, q) := call env_find(CTL.u64[162 + i], vis);
+    if f == 0 { return 0 }
+  };
+  return 1
+}
+
+/-- `env_push(vis, q)`: push the record at `q` (its name is word `q + CI.cv + CV.name`) into the own
+layer at counter `vis`; returns the new view `vis + 1`. While string literals are not expandable
+(`CTL[161] = 0`) a push of a literal name (`lit_name_at`) recomputes the two flags at the new view
+(`natLitStoredBy`, then `strLitStoredBy` as the `Nat` flag and the other seven names). -/
+-- con-ron: ConRon/Arena/Env.lean:350-362 ConRon.Arena.IFEnv.push
 @[no_expose, l_impl ConRon.Arena.IFEnv.push]
-def envPushL : FunDecl := lfn (vis, q) locals (w, z) {
+def envPushL : FunDecl := lfn (vis, q) locals (w, z, a, b) {
   if 4294967294 <= vis { abort };
   w := EREC⦃q + ⟪CI.cv + CV.name⟫⦄;
   z := call env_row_set(w, vis + 1, q);
+  if CTL.u64[161] == 0 {
+    z := call lit_name_at(w, 0);
+    if z != 0 {
+      a := call lits_stored(vis + 1, 0, 3);
+      b := 0;
+      if a != 0 { b := call lits_stored(vis + 1, 3, 10) };
+      CTL.u64[160] := a;
+      CTL.u64[161] := b
+    }
+  };
   return vis + 1
+}
+
+/-- `env_set_flags(a, b)`: the literal flags set to `a`, `b` (`IFEnv.setFlags`): the end of a
+temporary extension, the flags its first push saw put back once the pops restored the rows. -/
+-- con-ron: ConRon/Arena/Env.lean:383-387 ConRon.Arena.IFEnv.setFlags
+@[no_expose, l_impl ConRon.Arena.IFEnv.setFlags]
+def envSetFlagsL : FunDecl := lfn (a, b) locals () {
+  CTL.u64[160] := a;
+  CTL.u64[161] := b;
+  return 0
 }
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its own row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the view lowered. -/
--- con-ron: ConRon/Arena/Env.lean:288-298 ConRon.Arena.IFEnv.popTemp
+-- con-ron: ConRon/Arena/Env.lean:371-381 ConRon.Arena.IFEnv.popTemp
 @[no_expose, l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (z) {
   z := call env_row_set(w, c, q);
@@ -204,7 +254,7 @@ record)`, or `(0, 0)`; a scratch name has none. -/
 /-- `raw_table(t)`: the table of structure `t`, ungated (`IFEnv.rawTable?`): the own layer's
 row, else the stream index's row of a record below `CTL[135]`; the record's address plus one,
 `0` for none. -/
--- con-ron: ConRon/Arena/Env.lean:300-305 ConRon.Arena.IFEnv.rawTable?
+-- con-ron: ConRon/Arena/Env.lean:389-394 ConRon.Arena.IFEnv.rawTable?
 @[no_expose, l_impl ConRon.Arena.IFEnv.rawTable?]
 def rawTableL : FunDecl := lfn (t) locals (r, q) {
   r := call tbl_own_get(t);
@@ -217,7 +267,7 @@ def rawTableL : FunDecl := lfn (t) locals (r, q) {
 
 /-- `find_table(vis, t)`: the table of structure `t` if `t` is in the view, else `0`
 (`IFEnv.findTable?`). -/
--- con-ron: ConRon/Arena/Env.lean:307-310 ConRon.Arena.IFEnv.findTable?
+-- con-ron: ConRon/Arena/Env.lean:396-399 ConRon.Arena.IFEnv.findTable?
 @[no_expose, l_impl ConRon.Arena.IFEnv.findTable?]
 def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
   (f, q) := call env_find(t, vis);
@@ -228,7 +278,7 @@ def findTableL : FunDecl := lfn (vis, t) locals (f, q, r) {
 
 /-- `env_push_table(q)`: install the table record at `q` (its structure name is word `q + ProjTbl.structName`)
 in the own layer (`IFEnv.pushTable`). -/
--- con-ron: ConRon/Arena/Env.lean:282-286 ConRon.Arena.IFEnv.pushTable
+-- con-ron: ConRon/Arena/Env.lean:364-369 ConRon.Arena.IFEnv.pushTable
 @[no_expose, l_impl ConRon.Arena.IFEnv.pushTable]
 def envPushTableL : FunDecl := lfn (q) locals (w, z) {
   w := EREC⦃q + ⟪ProjTbl.structName⟫⦄;
@@ -239,7 +289,8 @@ def envPushTableL : FunDecl := lfn (q) locals (w, z) {
 /-- The environment's L functions. -/
 def envProg : Prog :=
   [("env_row_get", envRowGetL), ("env_row_set", envRowSetL), ("base_row_get", baseRowGetL),
-   ("base_row_set", baseRowSetL), ("env_find", envFindL), ("env_push", envPushL),
+   ("base_row_set", baseRowSetL), ("env_find", envFindL), ("lit_name_at", litNameAtL),
+   ("lits_stored", litsStoredL), ("env_push", envPushL), ("env_set_flags", envSetFlagsL),
    ("env_pop_temp", envPopTempL), ("tbl_own_get", tblOwnGetL), ("tbl_own_set", tblOwnSetL),
    ("tbl_base_get", tblBaseGetL), ("tbl_base_set", tblBaseSetL), ("raw_table", rawTableL),
    ("find_table", findTableL), ("env_push_table", envPushTableL)]
@@ -807,12 +858,28 @@ theorem OwnBelow.of_ownSet {m : Mem} {w c p : Word} (h : OwnBelow m) (hc32 : c.t
     · exact h1
   · rw [ownSet_arr_of (otxArrT_arr' x)]; exact h2
 
-/-- **`push`**: the own row of the record's name becomes `(vis + 1, q)`. -/
+/-- **The twin's push without the flags' recomputation**: the branch of `IFEnv.push` that keeps
+the literal flags (a push of a name that is no literal name, or once string literals are
+expandable). The recomputation is `IFEnv.setFlags` on top (`IFEnv.push_eq`). -/
+def pushRows (fe : IFEnv) (ci : IConstantInfo) : IFEnv :=
+  ⟨⟨ci :: fe.env.consts, fe.env.tables⟩, fe.idx.insert ci.name ci, fe.base, fe.tbls, fe.natLit,
+    fe.strLit⟩
+
+/-- **`IFEnv.push` as `pushRows` and the recomputation.** -/
+theorem IFEnv.push_eq (fe : IFEnv) (ci : IConstantInfo) :
+    fe.push ci = if (!fe.strLit && litNameAt fe.base.lits ci.name 0) = true then
+      let fe2 := (pushRows fe ci).setFlags (pushRows fe ci).natLitStoredBy fe.strLit
+      fe2.setFlags fe2.natLit fe2.strLitStoredBy
+    else pushRows fe ci := by
+  unfold IFEnv.push; rfl
+
+/-- **`push`'s rows** (`pushRows`): the own row of the record's name becomes `(vis + 1, q)`; the
+literal flags are left for `EnvR.setFlags`. -/
 theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + CI.cv.toNat) = some w)
     (hv : vis.toNat < 2 ^ 32 - 2) (ht : rowTag w ≤ 2)
     (hb : rowIx w + 1 < (m.arr64 (ownArr w)).size) :
-    EnvR (ownSet m w (vis + 1) q) (vis + 1) (fe.push ci) := by
+    EnvR (ownSet m w (vis + 1) q) (vis + 1) (pushRows fe ci) := by
   obtain ⟨w', hw', hw32, hname⟩ := decCI_name hci
   rw [hw] at hw'; cases hw'
   have hv1 := vis_toNat_succ hv
@@ -827,8 +894,8 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_ownSet m w (vis + 1) q
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
-  · simp only [IFEnv.push, Std.HashMap.getElem?_insert, hname']
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [pushRows, Std.HashMap.getElem?_insert, hname']
     by_cases e : n.word.toUInt64 = w
     · simp only [e, decide_true, ite_true, ownFind, s1, s2, hP, hci, hv1]
       simp [hne]
@@ -851,14 +918,17 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     · exfalso; rw [e', s1, oth n e] at he
       rw [oth n e] at hn; have := h.fresh n hn; rw [he, hv1] at this; omega
     · rw [oth n e, oth n' e'] at he; rw [oth n e] at hn; exact h.uniq n n' hn he
-  · simp only [IFEnv.push, ownTbl_ownSet, hP]; exact h.otbl n
+  · simp only [pushRows, ownTbl_ownSet, hP]; exact h.otbl n
   · rw [ownTbl_ownSet] at hn ⊢; rw [hP]; exact h.otbl_dec n hn
-  · simp only [IFEnv.push, ownSet_ctl]; exact h.below
-  · simp only [IFEnv.push, ownSet_ctl]; exact h.belowRec
-  · simp only [IFEnv.push, baseRow_ownSet, hP]; exact h.base n
-  · simp only [IFEnv.push, baseTbl_ownSet, hP]; exact h.btbl n
+  · simp only [pushRows, ownSet_ctl]; exact h.below
+  · simp only [pushRows, ownSet_ctl]; exact h.belowRec
+  · simp only [pushRows, baseRow_ownSet, hP]; exact h.base n
+  · simp only [pushRows, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
   · exact h.ownBelow.of_ownSet (by rw [hv1]; omega) hs
+  · simp only [pushRows, ownSet_ctl]; exact h.natLit
+  · simp only [pushRows, ownSet_ctl]; exact h.strLit
+  · simp only [pushRows, litWords, ownSet_ctl]; exact h.lits
 
 /-- **`popTemp`**: the own row of `w` (the newest push, counter `vis`) put back to `(c, q)`, the
 row read before that push (`prev` its decoding), and the view lowered. -/
@@ -892,7 +962,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   have hkey : ∀ n : NIdx, ((decI w : NIdx) == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [nidx_beq, hwn]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
   · by_cases e : n.word.toUInt64 = w
     · have e' : n = decI w := by rw [← e, decI_word]
       subst e'
@@ -933,6 +1003,9 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   · simp only [IFEnv.popTemp, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
   · exact h.ownBelow.of_ownSet hc32 hs
+  · simp only [IFEnv.popTemp, ownSet_ctl]; exact h.natLit
+  · simp only [IFEnv.popTemp, ownSet_ctl]; exact h.strLit
+  · simp only [IFEnv.popTemp, litWords, ownSet_ctl]; exact h.lits
 
 /-! ### Table-row writes and the relation -/
 
@@ -1027,7 +1100,7 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_tblSet m w (q + 1)
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp only [IFEnv.pushTable, ownFind, ownRaw_tblSet, hP]; exact h.own n
   · rw [ownRaw_tblSet] at hn ⊢; rw [hP]; exact h.own_dec n hn
   · rw [ownRaw_tblSet] at hn ⊢; exact h.fresh n hn
@@ -1045,6 +1118,29 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
   · simp only [IFEnv.pushTable, baseTbl_tblSet, hP]; exact h.btbl n
   · simp only [stampW, tblSet_ctl]; exact h.stamp
   · exact h.ownBelow.of_tblSet
+  · simp only [IFEnv.pushTable, tblSet_ctl]; exact h.natLit
+  · simp only [IFEnv.pushTable, tblSet_ctl]; exact h.strLit
+  · simp only [IFEnv.pushTable, litWords, tblSet_ctl]; exact h.lits
+
+/-! ### The literal flags -/
+
+theorem rdW_set_ctl_160_161 (m : Mem) (a b x : Word) (hx : x ≠ 160) (hy : x ≠ 161) :
+    rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) x = rdW (m.arr64 CTL) x := by
+  simp only [rdW_set64]; simp [Ne.symm hx, Ne.symm hy]
+
+/-- **The flag words written** (`IFEnv.setFlags`, and the recomputation of `IFEnv.push`): the
+words `CTL[160]`, `CTL[161]` become `a`, `b`, the twin's flags `a ≠ 0`, `b ≠ 0`. -/
+theorem EnvR.setFlags (h : EnvR m vis fe) (a b : Word) (hc : 161 < (m.arr64 CTL).size) :
+    EnvR ((m.set64 CTL 160 a).set64 CTL 161 b) vis (fe.setFlags (a != 0) (b != 0)) := by
+  have h' := h.congrF (m' := (m.set64 CTL 160 a).set64 CTL 161 b) (fun x hx => by
+      have : x ≠ (CTL : TieredArray) := by intro e; subst e; revert hx; decide
+      simp only [Mem.arr64_set64_ne _ _ _ _ _ this])
+    (fun x _ h1 h2 => rdW_set_ctl_160_161 m a b x h1 h2)
+  have e1 : rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) 160 = a := by
+    simp [rdW_set64, Mem.size64_set64]; omega
+  have e2 : rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) 161 = b := by
+    simp [rdW_set64, Mem.size64_set64]; omega
+  rw [e1, e2] at h'; exact h'
 
 /-! ### Stream-index writes (`build_index`) -/
 
@@ -1412,45 +1508,6 @@ def erecRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) 
 theorem erecRd_of {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) : erecRd m a = v := by
   obtain ⟨h1, h2⟩ := erecP_tagRead h
   simp only [erecRd, rdW, h2]; rfl
-
-theorem envPush_spec (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q ∧ LocEq s' s₀ ∧
-      r = [vis + 1] ∧ vis.toNat < 4294967294 ∧ rowTag (erecRd s₀.mem (q + (CI.cv + CV.name))) ≤ 2 ∧
-      rowIx (erecRd s₀.mem (q + (CI.cv + CV.name))) + 1 < (s₀.mem.arr64 (ownArr (erecRd s₀.mem (q + (CI.cv + CV.name))))).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, envPushL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, envRowSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
-      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
-      bne_iff_ne, ne_eq] at *
-    all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erecRd, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, UInt64.le_iff_toNat_le, St.setLoc_loc]
-
-/-- **`env_push` refines `IFEnv.push`**: the new view `vis + 1` of the result relates the pushed
-environment. -/
-@[refines ConRon.Arena.IFEnv.push]
-theorem envPush_refines (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) {fe : IFEnv} {ci : IConstantInfo}
-    (vis q : Word) (hE : EnvR s₀.mem vis fe) (hci : decCI (erecP s₀.mem) q.toNat = some ci) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [vis + 1] ∧ EnvR s'.mem (vis + 1) (fe.push ci) ∧
-      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ :=
-  triple_post (envPush_spec p hs hp n s₀ vis q) fun r s ⟨h1, h2, h3, h4, h5, h6⟩ => by
-    obtain ⟨w, hw, -, -⟩ := decCI_name hci
-    have hq : (q + (CI.cv + CV.name)).toNat = q.toNat + CI.cv.toNat :=
-      off_add_toNat CI.cv_name_toNat (erecP_lt64 hw)
-    have hr : erecRd s₀.mem (q + (CI.cv + CV.name)) = w := erecRd_of (by rw [hq]; exact hw)
-    rw [hr] at h1 h5 h6
-    exact ⟨h2, h3, by rw [h1]; exact hE.push hci hw (by omega) h5 h6, by rw [h1, hr]⟩
 
 theorem envPopTemp_spec (hs : p.lookup "env_row_set" = some envRowSetL)
     (hp : p.lookup "env_pop_temp" = some envPopTempL) (n : Nat) (s₀ : St) (vis w c q : Word) :

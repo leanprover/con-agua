@@ -21,7 +21,7 @@ The twin threads two fuel constants (`ConRon/Arena/Core.lean`); L has no functio
 Two more twin definitions with no L function of their own, by the L facts the checker uses:
 
 * `reservedBasisNames` (`pinReserved`): L keeps the list as the pin table's words `PINS[55‥70]`
-  (read by `reserved_contains`, `reserved_contains_w`); under a filled table they decode to it
+  (read by `reserved_contains`); under a filled table they decode to it
   (`reservedBasisNames_words`).
 * `liftFueled`: every L level comparison returns only when the twin's fueled comparison gives
   `some`, where `liftFueled` is that value (`liftFueled_some`); at `none` the twin declines and L

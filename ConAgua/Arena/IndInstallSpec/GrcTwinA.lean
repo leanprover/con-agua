@@ -65,14 +65,15 @@ def grcTwinC (cvRis : List IConstantVal) (ms2 : List TargetMajor)
     let cvGs ← ConRon.Arena.classRecTysOk mode fe g p.k p.recs cvRis rd.recCls
     k g cvGs
 
-/-- The rest: the pushes, the rules, the pops. -/
+/-- The rest: the pushes, the rules, the pops, the flags set back. -/
 def grcTwinR (g : ConRon.Arena.ClassGen) (cvGs : List IConstantVal) :
     AM (IFEnv × List (IConstantVal × TargetMajor × List EIdx)) := do
   let (feR, prevs) := ConRon.Arena.classFeR p cvGs rd.recCls fe
   let pushed := cvGs.map (·.name)
   ConRon.Arena.flushCaches
   let out ← ConRon.Arena.classRecsRulesOk mode feR pushed g rd.recCls cvGs cvGs rd.recCls
-  let fe2 := prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR
+  let fe2 := (prevs.foldr (fun (n, prev) acc => acc.popTemp n prev) feR).setFlags fe.natLit
+    fe.strLit
   ConRon.Arena.flushCaches
   pure (fe2, out)
 

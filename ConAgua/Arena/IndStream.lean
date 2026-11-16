@@ -34,7 +34,7 @@ open L.Arena
 /-- `open_pis_at_fvars(n, e, i)`: `openPisAtFvars n e i`, as `(1, fvs.off, n, body)` (the free
 variables an `IW` slice, in binder order) or `(0, 0, 0, 0)` (`opa_go` pushes them on `SPN`, read
 back and popped; a first index `i ≥ 2^63` a capacity abort, D33). -/
--- con-ron: ConRon/Arena/Core.lean:3042-3058 ConRon.Arena.openPisAtFvars
+-- con-ron: ConRon/Arena/Core.lean:3142-3158 ConRon.Arena.openPisAtFvars
 @[no_expose, l_impl ConRon.Arena.openPisAtFvars]
 def openPisAtFvarsL : FunDecl := lfn (n, e, i) locals (co, ok, b, q, u) {
   if i >> 63 != 0 { abort };
@@ -224,23 +224,37 @@ def streamRulesShapeL : FunDecl := lfn (ro, rl, co, cl) locals (c, u) {
   return 0
 }
 
-/-- `stream_rules_check(vis, lps.off, lps.len, rules.off, rules.cnt, gs.off, gs.len)`: the record's
-rules' checks, each against the generated right-hand side at its position (a rule equal to the
-generated one needs none). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:178-189 ConRon.Arena.streamRulesCheck
+/-- `rule_binds(rP, ro)`: the rule record `ro`'s right-hand side has at least `rP + nfields`
+manifest `λ`s (`strip_lams`; its domains' `IW` words are left allocated, as its other callers do).
+The count must fit a word (a capacity). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:546-554 ConRon.Arena.ruleBinds
+@[no_expose, l_impl ConRon.Arena.ruleBinds]
+def ruleBindsL : FunDecl := lfn (rP, ro) locals (k, ok, bo, bl, body) {
+  k := rP + EREC⦃ro + ⟪Rule.nfields⟫⦄;
+  if k < rP { abort };
+  (ok, bo, bl, body) := call strip_lams(k, EREC⦃ro + ⟪Rule.rhs⟫⦄);
+  if ok == 0 { fail R_THE_RECURSOR_S_RULE_FOR_IS_NOT };
+  return 0
+}
+
+/-- `stream_rules_check(vis, lps.off, lps.len, rP, rules.off, rules.cnt, gs.off, gs.len)`: the
+record's rules' checks, each binding its arguments (`rule_binds`) and against the generated
+right-hand side at its position (a rule equal to the generated one needs no comparison). -/
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:178-191 ConRon.Arena.streamRulesCheck
 @[no_expose, l_impl ConRon.Arena.streamRulesCheck]
-def streamRulesCheckL : FunDecl := lfn (vis, lo, ll, ro, rl, go, gl) locals (s, u) {
+def streamRulesCheckL : FunDecl := lfn (vis, lo, ll, rP, ro, rl, go, gl) locals (s, u) {
   if rl == 0 && gl == 0 { return 0 };
   if rl == 0 || gl == 0 { abort };
+  u := call rule_binds(rP, ro);
   s := EREC⦃ro + ⟪Rule.rhs⟫⦄;
   if s != IW.u64[go] { u := call rule_agree(vis, lo, ll, s, IW.u64[go]) };
-  u := call stream_rules_check(vis, lo, ll, ro + ⟪Rule.size⟫, rl - 1, go + 1, gl - 1);
+  u := call stream_rules_check(vis, lo, ll, rP, ro + ⟪Rule.size⟫, rl - 1, go + 1, gl - 1);
   return 0
 }
 
 /-- `stream_rec_compare(vis, rc, g)`: the comparison of one recursor — its type unless it is the
 generated one (`rec_ty_check` up to the major, `mI + 1` binders), and its rules. -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:191-199 ConRon.Arena.streamRecCompare
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:193-201 ConRon.Arena.streamRecCompare
 @[no_expose, l_impl ConRon.Arena.streamRecCompare]
 def streamRecCompareL : FunDecl := lfn (vis, rc, g) locals (cvR, cvG, lo, ll, n, u) {
   cvR := IW.u64[rc];
@@ -251,14 +265,14 @@ def streamRecCompareL : FunDecl := lfn (vis, rc, g) locals (cvR, cvG, lo, ll, n,
     if n == 0 { abort };
     u := call rec_ty_check(vis, lo, ll, n, EREC⦃cvR + ⟪CV.type⟫⦄, EREC⦃cvG + ⟪CV.type⟫⦄)
   };
-  u := call stream_rules_check(vis, lo, ll, IW.u64[rc + 4], IW.u64[rc + 5], IW.u64[g + 2],
-    IW.u64[g + 3]);
+  u := call stream_rules_check(vis, lo, ll, IW.u64[rc + 1], IW.u64[rc + 4], IW.u64[rc + 5],
+    IW.u64[g + 2], IW.u64[g + 3]);
   return 0
 }
 
 /-- `stream_rec_check(vis, rc, g)`: one recursor, the stream's against the generated one — the
 rules' shape and the record's major's container, then the comparison. -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:201-211 ConRon.Arena.streamRecCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:203-213 ConRon.Arena.streamRecCheck
 @[no_expose, l_impl ConRon.Arena.streamRecCheck]
 def streamRecCheckL : FunDecl := lfn (vis, rc, g) locals (M, u, k, lo, ll, po, pl, ok) {
   M := IW.u64[g + 1];
@@ -273,7 +287,7 @@ def streamRecCheckL : FunDecl := lfn (vis, rc, g) locals (M, u, k, lo, ll, po, p
 
 /-- `stream_recs_check(vis, recs.off, recs.len, gs.off, gs.len)`: the block's recursors against
 the generated ones, record by record (the generated family is in the records' order). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:213-223 ConRon.Arena.streamRecsCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:215-225 ConRon.Arena.streamRecsCheck
 @[no_expose, l_impl ConRon.Arena.streamRecsCheck]
 def streamRecsCheckL : FunDecl := lfn (vis, ro, rl, go, gl) locals (u) {
   if rl == 0 && gl == 0 { return 0 };
@@ -285,7 +299,7 @@ def streamRecsCheckL : FunDecl := lfn (vis, ro, rl, go, gl) locals (u) {
 
 /-- `stream_k_check(p, recs.off, recs.len, gs.off, gs.len)`: the records' K flags against the
 block — each record's flag the one the generated recursor has (`rec_k_expected`). -/
--- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:225-234 ConRon.Arena.streamKCheck
+-- con-ron: ConRon/Arena/Inductives/StreamRecs.lean:227-236 ConRon.Arena.streamKCheck
 @[no_expose, l_impl ConRon.Arena.streamKCheck]
 def streamKCheckL : FunDecl := lfn (p, ro, rl, go, gl) locals (rc, e, u) {
   if rl == 0 || gl == 0 { return 0 };
@@ -303,7 +317,8 @@ def indStreamFns : Prog :=
    ("rule_agree", ruleAgreeL), ("stream_nested_pins", streamNestedPins),
    ("stream_nested_bvars", streamNestedBvars), ("stream_nested_dom", streamNestedDomL),
    ("stream_nested_ok", streamNestedOkL), ("generated_fire", generatedFireL),
-   ("stream_rules_shape", streamRulesShapeL), ("stream_rules_check", streamRulesCheckL),
+   ("stream_rules_shape", streamRulesShapeL), ("rule_binds", ruleBindsL),
+   ("stream_rules_check", streamRulesCheckL),
    ("stream_rec_compare", streamRecCompareL), ("stream_rec_check", streamRecCheckL),
    ("stream_recs_check", streamRecsCheckL), ("stream_k_check", streamKCheckL)]
 

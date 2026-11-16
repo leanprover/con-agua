@@ -196,7 +196,7 @@ l_model snp_specE (p : Prog)
   (hc : p.lookup "certify_nat_eqs" = some certifyNatEqsL)
   fns [hf ↦ snpE]
   specs [callW_spec p n "env_row_get", callW_spec p n "env_push", snpFe2_specE p h2 n,
-    callW_spec p n "env_pop_temp", callW_spec p n "nat_op_equations",
+    callW_spec p n "env_pop_temp", callW_spec p n "env_set_flags", callW_spec p n "nat_op_equations",
     callW_spec p n "subst_const0_pairs", certifyNatEqs_specE p hc n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
@@ -302,6 +302,7 @@ structure SnpProg (p : Prog) : Prop extends NatSubProg' p where
   rs : p.lookup "env_row_set" = some envRowSetL
   push : p.lookup "env_push" = some envPushL
   pop : p.lookup "env_pop_temp" = some envPopTempL
+  ef : EnvFlagsProg p
   fe2 : Fe2Closed p
 
 /-- What the structural gate gives besides the twin's run (from `m`, `a`): `StageC` at the
@@ -349,7 +350,7 @@ theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vi
   -- the push
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r2 m2 h2 => ?_
   rw [snpE.k_env_push.arm1]
-  obtain ⟨hS2, hg2⟩ := envPush_stage hN.rs hN.push h2 hC.stage hci
+  obtain ⟨hS2, hg2⟩ := envPush_stage hN.ef h2 hC.stage hci
   have hf2 := callW_leafFrame hcl (leaf_mem _ (by decide)) h2
   -- the reads at the pushed view
   refine RefE.bindE (fun _ => rfl) (fun _ => trivial)
@@ -361,19 +362,27 @@ theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vi
   -- the pop
   refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r4 m4 h4 => ?_
   rw [snpE.k_env_pop_temp.arm1]
-  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hN.rs hN.push hN.pop hC.stage hci hname hn h2 hQ3.stage
+  obtain ⟨hS4, hg4, hr4⟩ := pushPop_stage hN.ef hN.pop hC.stage hci hname hn h2 hQ3.stage
     (hg2.trans hQ3.grow) hQ3.own h4
   have hf4 := callW_leafFrame hcl (leaf_mem _ (by decide)) h4
-  rw [hname] at hS4
-  have hck4 : CheckOK false env ((fe.push ci).popTemp ci.name fe.idx[ci.name]?) a3 :=
+  -- the flags set back
+  refine RefE.onlySim (fun _ => rfl) (fun _ _ h => h) fun r45 m45 h45 => ?_
+  rw [snpE.k_env_set_flags.arm1]
+  obtain ⟨hS45, hg45, -⟩ := setFlags_stage hN.ef hS4 hC.stage.check.env.natLit
+    hC.stage.check.env.strLit h45
+  have hf45 := callW_leafFrame hcl (leaf_mem _ (by decide)) h45
+  rw [hname] at hS45
+  have hck4 : CheckOK false env
+      (((fe.push ci).popTemp ci.name fe.idx[ci.name]?).setFlags fe.natLit fe.strLit) a3 :=
     (hC.check.mono hst3 hx3 hc3 hp3).congr_find hsv.find hsv.tbls hsv.base
+      (hsv.flags hC.check.ienv.flags)
   rw [hname] at hck4 hsv
-  have hC4 := StageC.of_frame hC hS4 hck4 ((hf2.trans hQ3.frame).trans hf4) hx3
+  have hC4 := StageC.of_frame hC hS45 hck4 (((hf2.trans hQ3.frame).trans hf4).trans hf45) hx3
   have hnm4 := ConRon.Bridge.denoteN_ext hnm hx3
   -- the equations
   refine RefE.bindLift (fun _ => rfl) fun r5 m5 h5 => ?_
   obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ :=
-    natOpEquations_ref hN.toNatSubProg' 0 n k m4 a3 r5 m5 ⟨hS4, by decide, hn⟩ h5
+    natOpEquations_ref hN.toNatSubProg' 0 n k m45 a3 r5 m5 ⟨hS45, by decide, hn⟩ h5
   have hrun5' : (natOpEquations 0 (decI n)).run a3 = .ok (x5, a5) := hrun5
   refine ⟨_, _, hrun5', ?_⟩
   dsimp only [snpE.k_nat_op_equations]
@@ -407,7 +416,7 @@ theorem snp_ref (hN : SnpProg p) (hq : KnotStageProg p) (hcl : LeafClosed p) {vi
   refine RefE.guardIf rfl (fun e7 => by rw [← hQ7.res.1, e7]; rfl)
     (fun e7 => by rw [← hQ7.res.1] at e7; simpa using e7) fun _ _ => ?_
   rw [hr4] at hC7
-  exact RefE.ret rfl ⟨hC7, ((((hg2.trans hQ3.grow).trans hg4).trans hg5).trans hg6).trans hQ7.grow,
+  exact RefE.ret rfl ⟨hC7, (((((hg2.trans hQ3.grow).trans hg4).trans hg45).trans hg5).trans hg6).trans hQ7.grow,
     ((hx3.trans hx5).trans hx6).trans hstep7.ext, hr4, hsv, by rw [hstep7.pins, hp6, hp5, hp3]⟩
 
 end snp
