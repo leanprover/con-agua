@@ -57,7 +57,8 @@ open L.Arena
 theorem StageR.frame_hi {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {A : List TieredArray} {C : List Word} (hS : StageR vis fe m a) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b.hi = false ∧ 137 ≤ b.arr ∧ (b.arr < 140 ∨ 144 ≤ b.arr) ∧ (b.arr < 146 ∨ 149 ≤ b.arr))
-    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
+    (hC : ∀ x ∈ C, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toNat ≠ 134 ∧ x.toNat ≠ 135 ∧
+      (x.toNat < 160 ∨ 172 ≤ x.toNat)) (hA2 : (IW : TieredArray) ∉ A) (hC2 : (200 : Word) ∉ C) :
     StageR vis fe m' a ∧ IWGrow m m' := by
   have hA3 : (IW : TieredArray) ∉ A ∧ (EREC : TieredArray) ∉ A ∧ tier1 EREC ∉ A :=
     ⟨hA2, fun h => by have := hA _ h; simp [EREC] at this,

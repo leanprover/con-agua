@@ -175,7 +175,8 @@ def quotPa (a : TieredArray) : Bool :=
 
 /-- The `CTL` words of `quotC`, as a test. -/
 def quotPc (w : Word) : Bool :=
-  decide (w.toNat < 256 ∧ (w.toNat = 129 ∨ w.toNat = 130 ∨ (w.toNat ≠ 133 ∧ w.toNat ≠ 134 ∧ w.toNat ≠ 135)))
+  decide (w.toNat < 256 ∧ (w.toNat = 129 ∨ w.toNat = 130 ∨ (w.toNat ≠ 133 ∧ w.toNat ≠ 134 ∧ w.toNat ≠ 135 ∧
+    (w.toNat < 160 ∨ 172 ≤ w.toNat))))
 
 theorem quotPa_mem (a : TieredArray) (h : quotPa a = true) : a ∈ quotA := by
   simp only [quotPa, Bool.and_eq_true, decide_eq_true_eq, List.contains_iff_mem] at h
@@ -186,7 +187,22 @@ theorem quotPa_mem (a : TieredArray) (h : quotPa a = true) : a ∈ quotA := by
   · exact .inr (not_mem_envArrs h2)
 
 theorem quotPc_mem (w : Word) (h : quotPc w = true) : w ∈ quotC := by
-  sorry
+  simp only [quotPc, decide_eq_true_eq] at h
+  obtain ⟨hl, h1⟩ := h
+  simp only [quotC, List.mem_map, List.mem_filter, List.mem_range, decide_eq_true_eq]
+  refine ⟨w.toNat, ⟨hl, ?_⟩, UInt64.ofNat_toNat⟩
+  rcases h1 with h1 | h1 | h1
+  · exact .inl h1
+  · exact .inr (.inl h1)
+  · by_cases e1 : w.toNat = 129
+    · exact .inl e1
+    by_cases e2 : w.toNat = 130
+    · exact .inr (.inl e2)
+    refine .inr (.inr ?_)
+    have e : w.toNat.toUInt64 = w := UInt64.ofNat_toNat
+    rw [e]; simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false]
+    intro hc
+    rcases hc with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> revert h1 e1 e2 <;> decide
 
 /-- Every function of the checker passes the quotient functions' per-function check. -/
 prog_all checkerProg_quotChk : checkerProg (wsChk CTL quotPa quotPc quotTree)
