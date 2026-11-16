@@ -42,9 +42,16 @@ l_model irFamE_spec (p : Prog) (hf : p.lookup "iota_rec_fam" = some iotaRecFamL)
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
+l_model pmwE_spec (p : Prog) (hf : p.lookup "prepare_major_whnf" = some prepareMajorWhnfL)
+  fns [hf ↦ pmwE list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
 l_model pmE_spec (p : Prog) (hf : p.lookup "prepare_major" = some prepareMajorL)
+    (hw : p.lookup "prepare_major_whnf" = some prepareMajorWhnfL)
   fns [hf ↦ pmE list]
-  specs [callW_spec p n "is_str_lit", callW_spec p n "is_nat_succ_app"]
+  specs [callW_spec p n "is_str_lit", callW_spec p n "is_nat_succ_app", pmwE_spec p hw n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -61,12 +68,6 @@ l_model irMajorE_spec (p : Prog) (hf : p.lookup "iota_rec_major" = some iotaRecM
   specs [callW_spec p n "intern_bvar", callW_spec p n "find_rule"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
-  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
-
-l_model pmwE_spec (p : Prog) (hf : p.lookup "prepare_major_whnf" = some prepareMajorWhnfL)
-  fns [hf ↦ pmwE list]
-  grind [arena_grind] fold [tierW, idxW]
-  extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 l_model irAtE_spec (p : Prog) (hf : p.lookup "iota_rec_at" = some iotaRecAtL)

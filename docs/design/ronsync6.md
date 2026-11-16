@@ -108,3 +108,11 @@ yield (5–15 % of the failing theorems, the rename rules); otherwise the compil
   (`stored_rule_lams_short` rejected with the new reason, `strict_succ_counter` accepted).
   `Init` instructions (one run each, CPU 44, `--jobs=1`): master 217 223 M, branch 202 873 M
   (**−6.6 %**; upstream measured −0.18 %, −4.17 %, −3.91 % for the three tasks on con-ron).
+* 17:50–18:30 helper `ronsync6-lit` ran out of context (hand-over `_tmp/ronsync6/ronsync6-lit-handoff.md`);
+  `ronsync6-lit2` continues. One layout decision on the way: `str_lit_names` writes the ten
+  literal names into `CTL[162‥171]` before the stream index is built rather than in the freeze:
+  in the twin's proofs the builder's environment already holds them (`driverFE`, as
+  `mkIFEnvLits` for the spec fold), and the pins do not change during the build, so the freeze
+  reads the same names; `index_freeze` keeps only the two thresholds (`litFrom`). `pin_at`
+  cannot abort there (the pin table is filled before the build), so the order is not observable:
+  no deviation row.

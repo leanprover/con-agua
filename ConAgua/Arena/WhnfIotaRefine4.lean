@@ -17,6 +17,7 @@ import all ConAgua.Arena.CoreLevels
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.WhnfIota
 import ConAgua.Arena.IndView
+import ConAgua.Arena.LdRd
 
 @[expose] public section
 
@@ -168,6 +169,117 @@ theorem pinWord_specM (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pinWordM, pinW_eq, rdW_eq]
+
+/-! ## `is_nat_succ_app(e)` -/
+
+/-- **`is_nat_succ_app`'s model** (generated; `pin_word` through its model). -/
+l_model isNatSuccApp_spec (p : Prog) (hp : IotaProg4 p)
+  fns [hp.isNatSuccApp ↦ insaW]
+  specs [pinWord_specM p hp.pinw n, callW_spec p n "pin_at"]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rd_spec, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
+  finish [tierW, idxW]
+
+/-- **`is_nat_succ_app` refines `isNatSuccApp`** (read-only). -/
+@[refines ConRon.Arena.isNatSuccApp]
+theorem isNatSuccApp_refines (p : Prog) (hp : IotaProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "is_nat_succ_app" [e] (isNatSuccApp (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
+  refine triple_post (isNatSuccApp_spec p hp (n + 1) s₀ e) fun r s' ⟨hloc, hW⟩ => ⟨hloc, ?_⟩
+  have hR := hS.arena.base
+  have hres : ∀ (w : Word), (w = 0 ∨ w = 1) → some (w, s₀.mem) = some (r.headD 0, s'.mem) →
+      (isNatSuccApp (decE e)).run a₀ = .ok (w != 0, a₀) →
+      CoreRef (isNatSuccApp (decE e)) a₀ decBool dn s₀.mem vis fe MM eb r s'.mem ResH := by
+    intro w hw h1 hrun
+    obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj h1)
+    refine CoreRef.of_pure hS hrun hm.symm (by simp only [decBool]; rw [← hr]) ?_
+    unfold ResH HW; rw [← hr]; rcases hw with rfl | rfl <;> decide
+  simp only [insaW] at hW
+  by_cases h4 : tagW e ≠ 4
+  · simp only [h4, ne_eq, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 (.inl rfl) hW ?_
+    simp only [isNatSuccApp, decE_tag_app_beq e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  have h4' : tagW e = 4 := by simpa using h4
+  simp only [h4, ↓reduceIte] at hW
+  obtain ⟨hv1, hW⟩ := of_ite_none hW
+  obtain ⟨hv2, hW⟩ := of_ite_none hW
+  have hvo : viewOKA s₀.mem e := ⟨hv1, UInt64.not_le.mp hv2⟩
+  obtain ⟨hva, hf, -⟩ := view_app s₀.mem a₀ hR e he hvo h4'
+  have hpre : (isNatSuccApp (decE e)).run a₀ = (do
+      let f := decE (tfld s₀.mem APP (tierW e) (idxA e) 0)
+      if f.tag == ETag.const then
+        match ← view f with
+        | .const c us => do
+          let el ← emptyLevels
+          let ns ← pinNatSucc
+          pure (us == el && c == ns)
+        | _ => pure false
+      else pure false : AM Bool).run a₀ := by
+    simp only [isNatSuccApp, decE_tag_app_beq e he, h4', decide_true, ↓reduceIte, StateT.run_bind,
+      view_run _ _ _ hva, except_ok_bind]
+    rfl
+  generalize tfld s₀.mem APP (tierW e) (idxA e) 0 = f at hf hW hpre
+  by_cases f3 : tagW f ≠ 3
+  · simp only [f3, ne_eq, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 (.inl rfl) hW ?_
+    rw [hpre]; simp only [decE_tag_const_beq f hf, f3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  have f3' : tagW f = 3 := by simpa using f3
+  simp only [f3, ↓reduceIte] at hW
+  obtain ⟨fv1, hW⟩ := of_ite_none hW
+  obtain ⟨fv2, hW⟩ := of_ite_none hW
+  have fvo : viewOK s₀.mem f CONST := ⟨fv1, UInt64.not_le.mp fv2⟩
+  obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f s₀.mem a₀ hR f hf fvo f3'
+  have hP := hS.pins
+  have h0 : pinW s₀.mem 0 ≠ 0 := by
+    intro h0; simp [pinWordM, h0, insaW.k_pin_word] at hW
+  rw [show pinWordM s₀.mem 52 = some ([rdW (s₀.mem.arr64 PINS) 52], s₀.mem) by simp [pinWordM, h0]] at hW
+  simp only [insaW.k_pin_word, List.headD_cons] at hW
+  rcases c2 : callW p n "pin_at" [3] s₀.mem with _ | ⟨r2, m2⟩
+  · rw [c2] at hW; simp [insaW.k_pin_at] at hW
+  obtain ⟨s2, hs2, hm2, -, hr2, hpin⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (pinAt_refines p hp.pinat n ⟨s₀.mem, Locals.init []⟩ a₀ ⟨fun _ => hP⟩ 3) c2
+  have hm2' : m2 = s₀.mem := hs2 ▸ hm2
+  subst hm2'
+  rw [c2] at hW
+  simp only [insaW.k_pin_at] at hW
+  have hpin3 := pinAt_run hP 3 (by decide)
+  rw [show ((3 : Word).toNat) = 3 from rfl] at hpin
+  rw [hpin3] at hpin
+  have hns : r2.headD 0 = pinW s₀.mem (1 + 3) := by
+    have := (Except.ok.inj hpin); exact (decI_inj_iff hr2 (hP.names_lt 3 (by decide))).mp (by
+      have := congrArg Prod.fst this; exact this.symm)
+  have hel := hP.lv_lt.1
+  have hns' := hP.names_lt 3 (by decide)
+  have hrun2 : (isNatSuccApp (decE e)).run a₀ = .ok (
+      (decide (tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52) &&
+        decide (tfld s₀.mem CONST (tierW f) (idxW f) 0 = pinW s₀.mem (1 + 3))), a₀) := by
+    rw [hpre]
+    simp only [decE_tag_const_beq f hf, f3', decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hv,
+      except_ok_bind, emptyLevels, pinEmptyLevels_run hP, pinNatSucc, PIN_NAT_SUCC,
+      pinAt_run hP 3 (by decide)]
+    rw [decI_beq _ _ hu hel, decI_beq _ _ hn hns']
+    rfl
+  by_cases hc : tfld s₀.mem CONST (tierW f) (idxW f) 1 = rdW (s₀.mem.arr64 PINS) 52 ∧
+      tfld s₀.mem CONST (tierW f) (idxW f) 0 = r2.headD 0
+  · rw [ite_eq_left hc] at hW
+    refine hres 1 (.inr rfl) hW ?_
+    rw [hrun2, hns] at *
+    rw [hrun2]
+    have e1 : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 := by rw [hc.1]; rfl
+    simp [e1, ← hns, hc.2]
+  · rw [ite_eq_right hc] at hW
+    refine hres 0 (.inl rfl) hW ?_
+    rw [hrun2]
+    have : ¬ (tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52 ∧
+        tfld s₀.mem CONST (tierW f) (idxW f) 0 = pinW s₀.mem (1 + 3)) := by
+      rw [← hns]; exact hc
+    by_cases a1 : tfld s₀.mem CONST (tierW f) (idxW f) 1 = pinW s₀.mem 52
+    · have a2 : ¬ tfld s₀.mem CONST (tierW f) (idxW f) 0 = pinW s₀.mem (1 + 3) := fun h => this ⟨a1, h⟩
+      simp only [a1, a2, decide_true, decide_false, Bool.and_false]; rfl
+    · simp only [a1, decide_false, Bool.false_and]; rfl
 
 /-- **What `proof_irrel_half`'s errors claim from**: the knot's error half up to `n`, `pin_word`
 and `lvl_eq_c` outside the verdict closure. -/
@@ -458,7 +570,7 @@ theorem prepareMajor_refines' :
       (prepareMajor (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decI rec)
         (isK != 0) rules (decE major)) (decMV s₀.mem) s₀ a₀ dn vis fe MM eb (MVOk s₀.mem) :=
   fun n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major rules hS hm4 hebm hmaj hr =>
-    RefE.coreSpec (pmE_spec p hp.prepareMajor (n + 1) s₀ mode vis d rec isK ro rc major)
+    RefE.coreSpec (pmE_spec p hp.prepareMajor hp.prepareMajorWhnf (n + 1) s₀ mode vis d rec isK ro rc major)
       (pm_ref p hp hc hw hmtc hE n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major
         rules hS hm4 hebm hmaj hr)
 

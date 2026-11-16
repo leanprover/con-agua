@@ -27,7 +27,7 @@ include hp hc hw hmtc hE hnv hM in
 and the `whnf` slot's (`pm_ref`'s error half). -/
 theorem prepareMajorE_of : PrepareMajorE p :=
   fun n hk hkE F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec isK ro rc major rules hS hm4 hebm hmaj hr =>
-    RefE.coreSpecE (pmE_spec p hp.prepareMajor (n + 1) s₀ mode vis d rec isK ro rc major) hnv
+    RefE.coreSpecE (pmE_spec p hp.prepareMajor hp.prepareMajorWhnf (n + 1) s₀ mode vis d rec isK ro rc major) hnv
       ⟨hkE, hnv, hM⟩ (pm_ref p hp hc hw hmtc hE n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d rec
         isK ro rc major rules hS hm4 hebm hmaj hr)
 

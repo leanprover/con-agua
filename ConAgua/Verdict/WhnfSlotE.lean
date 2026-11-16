@@ -58,7 +58,7 @@ bodies' callee `iota_rec_at`. -/
 theorem whnfSlotsE_step {p : Prog} (hq : KnotAllProg p) (hnv : closedNV p L.Checker.nvFns = true)
     (hI : IotaRecAtE p) (n : Nat) (hk : KnotUpTo p n) (hkE : KnotUpToE p n) :
     WhnfCoreSlotE p (n + 1) ∧ WhnfSlotE p (n + 1) :=
-  ⟨whnfCoreSlot_stepE p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) supKeep_of hnv hI n
+  ⟨whnfCoreSlot_stepE p hq.core (KnotAllProg.whnfC hq) (KnotAllProg.coreC hq) hnv hI n
       hk hkE,
     whnfSlot_stepE p hq.delta (KnotAllProg.instLP hq) (natOpResultOK_of_agree hq.delta.natAgree) hnv
       n hk hkE⟩
