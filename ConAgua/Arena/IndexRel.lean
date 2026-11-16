@@ -55,12 +55,12 @@ structure FrozenR (m : Mem) (I : IStreamIndex) : Prop where
 /-- The `CTL` words `FrozenR` reads. -/
 def frozenCtl : List Word := [162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173]
 
+theorem litW_mem_frozenCtl : ∀ i < 10, (162 + UInt64.ofNat i : Word) ∈ frozenCtl := by decide
+
 theorem FrozenR.congr {m m' : Mem} {I : IStreamIndex}
     (hc : ∀ x ∈ frozenCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x) (h : FrozenR m I) :
     FrozenR m' I :=
-  ⟨by rw [litWords_congr (fun i hi => hc _ (by
-      simp only [frozenCtl, List.mem_cons, List.not_mem_nil, or_false]
-      interval_cases i <;> decide))]; exact h.lits,
+  ⟨by rw [litWords_congr (fun i hi => hc _ (litW_mem_frozenCtl i hi))]; exact h.lits,
    by rw [hc 172 (by decide)]; exact h.natFrom, by rw [hc 173 (by decide)]; exact h.strFrom⟩
 
 theorem FrozenR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {I : IStreamIndex}

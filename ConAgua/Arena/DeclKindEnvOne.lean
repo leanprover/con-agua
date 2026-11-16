@@ -75,7 +75,7 @@ theorem EnvGrowDen.push {st : EStore} {fe y : IFEnv} {ci : IConstantInfo}
 
 theorem checkStructuralNatPin_env {mode : ConLeche.CheckMode} {fe y : IFEnv} {ci : IConstantInfo}
     {n : NIdx} {s s' : AState} (h : checkStructuralNatPin mode fe ci n s = .ok (y, s')) :
-    y = (fe.push ci).popTemp n fe.idx[n]? := by
+    y = ((fe.push ci).popTemp n fe.idx[n]?).setFlags fe.natLit fe.strLit := by
   unfold checkStructuralNatPin at h
   obtain ⟨_, _, -, h⟩ := AM.bind_ok h
   obtain ⟨_, _, -, h⟩ := AM.bind_ok h
@@ -89,7 +89,7 @@ theorem checkStructuralNatPin_env {mode : ConLeche.CheckMode} {fe y : IFEnv} {ci
 theorem checkDivModPin_env {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {fe y : IFEnv}
     {ci : IConstantInfo} {n : NIdx} {s s' : AState}
     (h : checkDivModPin mode pins fe ci n s = .ok (y, s')) :
-    y = (fe.push ci).popTemp n fe.idx[n]? := by
+    y = ((fe.push ci).popTemp n fe.idx[n]?).setFlags fe.natLit fe.strLit := by
   unfold checkDivModPin at h
   obtain ⟨_, _, -, h⟩ := AM.bind_ok h
   obtain ⟨_, _, -, h⟩ := AM.bind_ok h
@@ -97,7 +97,7 @@ theorem checkDivModPin_env {mode : ConLeche.CheckMode} {pins : List INatOpPinSet
 
 theorem checkReducePin_env {mode : ConLeche.CheckMode} {fe y : IFEnv} {ci : IConstantInfo}
     {n : NIdx} {v : EIdx} {s s' : AState} (h : checkReducePin mode fe ci n v s = .ok (y, s')) :
-    y = (fe.push ci).popTemp n fe.idx[n]? := by
+    y = ((fe.push ci).popTemp n fe.idx[n]?).setFlags fe.natLit fe.strLit := by
   unfold checkReducePin at h
   obtain ⟨_, _, -, h⟩ := AM.bind_ok h
   rcases AM.ite_ok h with ⟨-, h⟩ | ⟨-, h⟩
@@ -106,20 +106,20 @@ theorem checkReducePin_env {mode : ConLeche.CheckMode} {fe y : IFEnv} {ci : ICon
   · exact (AM.fail_ok h).elim
 
 theorem sameView_gate {fe : IFEnv} {ci : IConstantInfo} :
-    ConRon.Bridge.IFEnv.SameView ((fe.push ci).popTemp ci.name fe.idx[ci.name]?) fe :=
+    ConRon.Bridge.IFEnv.SameView (((fe.push ci).popTemp ci.name fe.idx[ci.name]?).setFlags fe.natLit fe.strLit) fe :=
   ConRon.Bridge.IFEnv.sameView_popTemp fe ci
 
 theorem sameView_trans {a b c : IFEnv} (h1 : ConRon.Bridge.IFEnv.SameView a b)
     (h2 : ConRon.Bridge.IFEnv.SameView b c) : ConRon.Bridge.IFEnv.SameView a c :=
   ⟨fun n => (h1.idx n).trans (h2.idx n), fun n => (h1.find n).trans (h2.find n),
-    h1.tbls.trans h2.tbls, h1.base.trans h2.base, h1.env.trans h2.env⟩
+    h1.tbls.trans h2.tbls, h1.base.trans h2.base, h1.env.trans h2.env, fun h => h1.flags (h2.flags h)⟩
 
 theorem sameView_refl (a : IFEnv) : ConRon.Bridge.IFEnv.SameView a a :=
-  ⟨fun _ => rfl, fun _ => rfl, rfl, rfl, rfl⟩
+  ⟨fun _ => rfl, fun _ => rfl, rfl, rfl, rfl, id⟩
 
 /-- `SameView` is a congruence for `push`/`popTemp` of the same constant. -/
 theorem sameView_gate_of {fe fe₁ : IFEnv} {ci : IConstantInfo} (h : ConRon.Bridge.IFEnv.SameView fe₁ fe) :
-    ConRon.Bridge.IFEnv.SameView ((fe₁.push ci).popTemp ci.name fe₁.idx[ci.name]?) fe :=
+    ConRon.Bridge.IFEnv.SameView (((fe₁.push ci).popTemp ci.name fe₁.idx[ci.name]?).setFlags fe₁.natLit fe₁.strLit) fe :=
   sameView_trans (ConRon.Bridge.IFEnv.sameView_popTemp fe₁ ci) h
 
 /-! ## The value checks return the record's constant -/

@@ -634,17 +634,30 @@ theorem eix_mem (g : Nat) : (eixArr g : TieredArray) ∈ envArrs := by
 theorem tix_mem (g : Nat) : (tixArr g : TieredArray) ∈ envArrs := by
   unfold tixArr; split <;> (try split) <;> decide
 
-/-- **`EnvR` reads only `envArrs` and `envCtl`.** -/
-theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
+theorem litW_mem_envCtl : ∀ i < 10, (162 + UInt64.ofNat i : Word) ∈ envCtl := by decide
+
+theorem litW_ne : ∀ i < 10, (162 + UInt64.ofNat i : Word) ≠ 129 ∧ (162 + UInt64.ofNat i : Word) ≠ 130 := by
+  decide
+
+theorem litW_ne' : ∀ i < 10, (162 + UInt64.ofNat i : Word) ≠ 160 ∧ (162 + UInt64.ofNat i : Word) ≠ 161 := by
+  decide
+
+theorem IFEnv.setFlags_self (fe : IFEnv) : fe.setFlags fe.natLit fe.strLit = fe := by
+  cases fe; rfl
+
+/-- **`EnvR` reads only `envArrs` and `envCtl`, the flags aside**: the literal flags set to
+the words `CTL[160]`, `CTL[161]` of `m'` (`IFEnv.setFlags`). -/
+theorem EnvR.congrF {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
-    (hc : ∀ x ∈ envCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
-    (h : EnvR m vis fe) : EnvR m' vis fe := by
+    (hc : ∀ x ∈ envCtl, x ≠ 160 → x ≠ 161 → rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (h : EnvR m vis fe) :
+    EnvR m' vis (fe.setFlags (rdW (m'.arr64 CTL) 160 != 0) (rdW (m'.arr64 CTL) 161 != 0)) := by
   have hP : erecP m' = erecP m := by
     funext i
     simp only [erecP, erTop, erecTop1, he EREC (by decide), he (tier1 EREC) (by decide),
-      hc 129 (by decide), hc 130 (by decide)]
+      hc 129 (by decide) (by decide) (by decide), hc 130 (by decide) (by decide) (by decide)]
     rfl
-  have hs : stampW m' = stampW m := hc 133 (by decide)
+  have hs : stampW m' = stampW m := hc 133 (by decide) (by decide) (by decide)
   have hor : ∀ w, ownRow m' w = ownRow m w := fun w => by
     simp only [ownRow, he _ (tierA_oix_mem _ _)]
   have hraw : ∀ w, ownRaw m' w = ownRaw m w := fun w => by simp only [ownRaw, hor, hs]
@@ -659,14 +672,24 @@ theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
   exact ⟨fun n => by rw [hfind]; exact h.own n, fun n => by rw [hraw, hP]; exact h.own_dec n,
     fun n => by rw [hraw]; exact h.fresh n, fun n n' => by rw [hraw, hraw]; exact h.uniq n n',
     fun n => by rw [hot, hP]; exact h.otbl n, fun n => by rw [hot, hP]; exact h.otbl_dec n,
-    by rw [hc 134 (by decide)]; exact h.below, by rw [hc 135 (by decide)]; exact h.belowRec,
+    by rw [hc 134 (by decide) (by decide) (by decide)]; exact h.below,
+    by rw [hc 135 (by decide) (by decide) (by decide)]; exact h.belowRec,
     fun n => by rw [hb, hP]; exact h.base n, fun n => by rw [hbt, hP]; exact h.btbl n,
     by rw [hs]; exact h.stamp, fun w hw => by
       rw [hor, hs, he _ (tierA_otx_mem _ _)]; exact h.ownBelow w hw,
-    by rw [hc 160 (by decide)]; exact h.natLit, by rw [hc 161 (by decide)]; exact h.strLit,
-    by rw [litWords_congr (fun i hi => hc _ (by
-      simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false]
-      interval_cases i <;> decide))]; exact h.lits⟩
+    rfl, rfl,
+    by rw [litWords_congr (fun i hi => hc _ (litW_mem_envCtl i hi) (litW_ne' i hi).1 (litW_ne' i hi).2)]
+       exact h.lits⟩
+
+/-- **`EnvR` reads only `envArrs` and `envCtl`.** -/
+theorem EnvR.congr {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (he : ∀ b ∈ envArrs, m'.arr64 b = m.arr64 b)
+    (hc : ∀ x ∈ envCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x)
+    (h : EnvR m vis fe) : EnvR m' vis fe := by
+  have h' := h.congrF he (fun x hx _ _ => hc x hx)
+  rw [hc 160 (by decide), hc 161 (by decide), ← h.natLit, ← h.strLit, IFEnv.setFlags_self] at h'
+  exact h'
+
 
 /-- **`EnvR` across a frame** that avoids its arrays and control words. -/
 theorem EnvR.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {vis : Word} {fe : IFEnv}
@@ -727,8 +750,7 @@ theorem EnvR.growC {m m' : Mem} {vis : Word} {fe : IFEnv}
       rw [hor, hs, he _ (o2 _ _).1 (o2 _ _).2 (tierA_otx_mem _ _)]; exact h.ownBelow w hw,
     by rw [hc 160 (by decide) (by decide) (by decide)]; exact h.natLit,
     by rw [hc 161 (by decide) (by decide) (by decide)]; exact h.strLit,
-    by rw [litWords_congr (fun i hi => hc _ (by interval_cases i <;> decide) (by interval_cases i <;> decide)
-      (by simp only [envCtl, List.mem_cons, List.not_mem_nil, or_false]; interval_cases i <;> decide))]
+    by rw [litWords_congr (fun i hi => hc _ (litW_ne i hi).1 (litW_ne i hi).2 (litW_mem_envCtl i hi))]
        exact h.lits⟩
   · rw [h.own n]; simp only [ownFind, hraw]
     split

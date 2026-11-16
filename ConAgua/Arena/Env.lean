@@ -811,12 +811,28 @@ theorem OwnBelow.of_ownSet {m : Mem} {w c p : Word} (h : OwnBelow m) (hc32 : c.t
     · exact h1
   · rw [ownSet_arr_of (otxArrT_arr' x)]; exact h2
 
-/-- **`push`**: the own row of the record's name becomes `(vis + 1, q)`. -/
+/-- **The twin's push without the flags' recomputation**: the branch of `IFEnv.push` that keeps
+the literal flags (a push of a name that is no literal name, or once string literals are
+expandable). The recomputation is `IFEnv.setFlags` on top (`IFEnv.push_eq`). -/
+def pushRows (fe : IFEnv) (ci : IConstantInfo) : IFEnv :=
+  ⟨⟨ci :: fe.env.consts, fe.env.tables⟩, fe.idx.insert ci.name ci, fe.base, fe.tbls, fe.natLit,
+    fe.strLit⟩
+
+/-- **`IFEnv.push` as `pushRows` and the recomputation.** -/
+theorem IFEnv.push_eq (fe : IFEnv) (ci : IConstantInfo) :
+    fe.push ci = if (!fe.strLit && litNameAt fe.base.lits ci.name 0) = true then
+      let fe2 := (pushRows fe ci).setFlags (pushRows fe ci).natLitStoredBy fe.strLit
+      fe2.setFlags fe2.natLit fe2.strLitStoredBy
+    else pushRows fe ci := by
+  unfold IFEnv.push; rfl
+
+/-- **`push`'s rows** (`pushRows`): the own row of the record's name becomes `(vis + 1, q)`; the
+literal flags are left for `EnvR.setFlags`. -/
 theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     (hci : decCI (erecP m) q.toNat = some ci) {w : Word} (hw : erecP m (q.toNat + CI.cv.toNat) = some w)
     (hv : vis.toNat < 2 ^ 32 - 2) (ht : rowTag w ≤ 2)
     (hb : rowIx w + 1 < (m.arr64 (ownArr w)).size) :
-    EnvR (ownSet m w (vis + 1) q) (vis + 1) (fe.push ci) := by
+    EnvR (ownSet m w (vis + 1) q) (vis + 1) (pushRows fe ci) := by
   obtain ⟨w', hw', hw32, hname⟩ := decCI_name hci
   rw [hw] at hw'; cases hw'
   have hv1 := vis_toNat_succ hv
@@ -831,8 +847,8 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_ownSet m w (vis + 1) q
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
-  · simp only [IFEnv.push, Std.HashMap.getElem?_insert, hname']
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [pushRows, Std.HashMap.getElem?_insert, hname']
     by_cases e : n.word.toUInt64 = w
     · simp only [e, decide_true, ite_true, ownFind, s1, s2, hP, hci, hv1]
       simp [hne]
@@ -855,14 +871,17 @@ theorem EnvR.push (h : EnvR m vis fe) {q : Word} {ci : IConstantInfo}
     · exfalso; rw [e', s1, oth n e] at he
       rw [oth n e] at hn; have := h.fresh n hn; rw [he, hv1] at this; omega
     · rw [oth n e, oth n' e'] at he; rw [oth n e] at hn; exact h.uniq n n' hn he
-  · simp only [IFEnv.push, ownTbl_ownSet, hP]; exact h.otbl n
+  · simp only [pushRows, ownTbl_ownSet, hP]; exact h.otbl n
   · rw [ownTbl_ownSet] at hn ⊢; rw [hP]; exact h.otbl_dec n hn
-  · simp only [IFEnv.push, ownSet_ctl]; exact h.below
-  · simp only [IFEnv.push, ownSet_ctl]; exact h.belowRec
-  · simp only [IFEnv.push, baseRow_ownSet, hP]; exact h.base n
-  · simp only [IFEnv.push, baseTbl_ownSet, hP]; exact h.btbl n
+  · simp only [pushRows, ownSet_ctl]; exact h.below
+  · simp only [pushRows, ownSet_ctl]; exact h.belowRec
+  · simp only [pushRows, baseRow_ownSet, hP]; exact h.base n
+  · simp only [pushRows, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
   · exact h.ownBelow.of_ownSet (by rw [hv1]; omega) hs
+  · simp only [pushRows, ownSet_ctl]; exact h.natLit
+  · simp only [pushRows, ownSet_ctl]; exact h.strLit
+  · simp only [pushRows, litWords, ownSet_ctl]; exact h.lits
 
 /-- **`popTemp`**: the own row of `w` (the newest push, counter `vis`) put back to `(c, q)`, the
 row read before that push (`prev` its decoding), and the view lowered. -/
@@ -896,7 +915,7 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   have hkey : ∀ n : NIdx, ((decI w : NIdx) == n) = decide (n.word.toUInt64 = w) := by
     intro n; rw [nidx_beq, hwn]
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
   · by_cases e : n.word.toUInt64 = w
     · have e' : n = decI w := by rw [← e, decI_word]
       subst e'
@@ -937,6 +956,9 @@ theorem EnvR.popTemp (h : EnvR m vis fe) {w c q : Word} (hw : w.toNat < 2 ^ 32) 
   · simp only [IFEnv.popTemp, baseTbl_ownSet, hP]; exact h.btbl n
   · simp only [stampW, ownSet_ctl]; exact hs
   · exact h.ownBelow.of_ownSet hc32 hs
+  · simp only [IFEnv.popTemp, ownSet_ctl]; exact h.natLit
+  · simp only [IFEnv.popTemp, ownSet_ctl]; exact h.strLit
+  · simp only [IFEnv.popTemp, litWords, ownSet_ctl]; exact h.lits
 
 /-! ### Table-row writes and the relation -/
 
@@ -1031,7 +1053,7 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
     intro n; rw [hname, nidx_beq, decI_word_self w hw32]
   have hP := erecP_tblSet m w (q + 1)
   refine ⟨fun n => ?_, fun n hn => ?_, fun n hn => ?_, fun n n' hn he => ?_, fun n => ?_, fun n hn => ?_,
-    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_⟩
+    ?_, ?_, fun n => ?_, fun n => ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp only [IFEnv.pushTable, ownFind, ownRaw_tblSet, hP]; exact h.own n
   · rw [ownRaw_tblSet] at hn ⊢; rw [hP]; exact h.own_dec n hn
   · rw [ownRaw_tblSet] at hn ⊢; exact h.fresh n hn
@@ -1049,6 +1071,29 @@ theorem EnvR.pushTable (h : EnvR m vis fe) {q : Word} {tb : IProjTable}
   · simp only [IFEnv.pushTable, baseTbl_tblSet, hP]; exact h.btbl n
   · simp only [stampW, tblSet_ctl]; exact h.stamp
   · exact h.ownBelow.of_tblSet
+  · simp only [IFEnv.pushTable, tblSet_ctl]; exact h.natLit
+  · simp only [IFEnv.pushTable, tblSet_ctl]; exact h.strLit
+  · simp only [IFEnv.pushTable, litWords, tblSet_ctl]; exact h.lits
+
+/-! ### The literal flags -/
+
+theorem rdW_set_ctl_160_161 (m : Mem) (a b x : Word) (hx : x ≠ 160) (hy : x ≠ 161) :
+    rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) x = rdW (m.arr64 CTL) x := by
+  simp only [rdW_set64]; simp [Ne.symm hx, Ne.symm hy]
+
+/-- **The flag words written** (`IFEnv.setFlags`, and the recomputation of `IFEnv.push`): the
+words `CTL[160]`, `CTL[161]` become `a`, `b`, the twin's flags `a ≠ 0`, `b ≠ 0`. -/
+theorem EnvR.setFlags (h : EnvR m vis fe) (a b : Word) (hc : 161 < (m.arr64 CTL).size) :
+    EnvR ((m.set64 CTL 160 a).set64 CTL 161 b) vis (fe.setFlags (a != 0) (b != 0)) := by
+  have h' := h.congrF (m' := (m.set64 CTL 160 a).set64 CTL 161 b) (fun x hx => by
+      have : x ≠ (CTL : TieredArray) := by intro e; subst e; revert hx; decide
+      simp only [Mem.arr64_set64_ne _ _ _ _ _ this])
+    (fun x _ h1 h2 => rdW_set_ctl_160_161 m a b x h1 h2)
+  have e1 : rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) 160 = a := by
+    simp [rdW_set64, Mem.size64_set64]; omega
+  have e2 : rdW (((m.set64 CTL 160 a).set64 CTL 161 b).arr64 CTL) 161 = b := by
+    simp [rdW_set64, Mem.size64_set64]; omega
+  rw [e1, e2] at h'; exact h'
 
 /-! ### Stream-index writes (`build_index`) -/
 
