@@ -74,7 +74,7 @@ theorem IndexR.grow {m m' : Mem} {I : IStreamIndex} (h : IndexR m I)
       (by unfold tixArr; split <;> (try split) <;> decide)]
   have hF : m'.arr64 FIRSTS = m.arr64 FIRSTS := hA _ (by decide) (by decide)
   refine ⟨fun n => ?_, fun n => ?_, fun i hi => by rw [hF]; exact h.firsts i hi,
-    by rw [hF]; exact h.firstsSize, by rw [h128]; exact h.next⟩
+    by rw [hF]; exact h.firstsSize, by rw [h128]; exact h.next, fun x hx => by rw [hb]; exact h.rows x hx⟩
   · have := h.base n; rw [hb, this]; split
     · rfl
     · cases e : I.base.idx[n]? with
