@@ -135,7 +135,39 @@ theorem iotaRecAt_eq (c : NIdx) (us : LsIdx) (cv : IConstantVal) (mI rP : Nat) (
   congr 1; funext x
   rcases x with _ | x
   · rfl
-  · sorry
+  · simp only [iotaRecMajorT]
+    congr 1; funext b0; congr 1; funext v
+    rcases v with ⟨major, cj, usj, cvj, cnP, nF, induct⟩ | e
+    · simp only
+      cases findRule rules cj with
+      | none => rfl
+      | some rl =>
+        simp only [iotaRecFireT, iotaRecFire2T]
+        congr 1; funext margs
+        by_cases hlen : margs.length = cnP + rl.nfields
+        · simp only [hlen, ↓reduceIte, iotaRecFamT, iotaRecVckT]
+          by_cases hv : mode.verifiedChecks = true
+          · simp only [hv, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+            by_cases hn : iotaNoCert fe isK induct (recFireLevelCount rl cvj.levelParams) = true
+            · simp only [hn, ↓reduceIte, pure_bind]
+            · simp only [hn, Bool.false_eq_true, ↓reduceIte, bind_assoc]
+              congr 1; funext cmpL; congr 1; funext c3
+              split
+              · simp only [bind_assoc]
+                congr 1; funext l1; congr 1; funext l2
+                split
+                · simp only [bind_assoc]
+                  congr 1; funext cmpA; congr 1; funext d1
+                  split
+                  · simp only [bind_assoc]
+                    congr 1; funext tyC; congr 1; funext c4
+                    split <;> simp only [pure_bind]
+                  · simp only [pure_bind]
+                · simp only [pure_bind]
+              · simp only [pure_bind]
+          · simp only [hv, Bool.not_false, ↓reduceIte, pure_bind]
+        · simp only [hlen, ↓reduceIte]
+    · rfl
 
 end twin
 
