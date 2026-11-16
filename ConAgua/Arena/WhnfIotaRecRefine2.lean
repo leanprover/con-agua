@@ -341,6 +341,13 @@ theorem rpLen_toNat (mI rP : Word) : (rpLen mI rP).toNat = min rP.toNat (mI.toNa
     have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
     omega
 
+/-- **`eidx_copy_upto`'s model** (generated): its loop `ecuW.loop1`. -/
+l_model eidxCopy_spec (p : Prog) (hp : p.lookup "eidx_copy_upto" = some eidxCopyUptoL)
+  fns [hp ↦ ecuW list]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE,
+    evalE_idxAE, evalE_idxGE, evalE_tagE]
+
 /-- **`iota_rec_fire2`'s model, both outcomes** (generated; `iota_rec_fam` through its run,
 `rule_body_at`, `mk_app_n`, `mk_app_n_from` lifted). -/
 l_model fire2E_spec (p : Prog) (hp : p.lookup "iota_rec_fire2" = some iotaRecFire2L)

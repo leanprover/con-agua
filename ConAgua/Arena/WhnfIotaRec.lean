@@ -150,20 +150,22 @@ def eidxCopyUptoL : FunDecl := lfn (o, n) locals (so, j) {
 /-- The fire past the major's arguments `(mo, mn)` (at the stack top): their count, the
 certificate family (the parameter count `cp` the stored constructor's, the field count the
 rule's), the rule's body under its `rP + nfields` binders at the recursor's levels
-(`rule_body_at`), with the leading `rP` arguments (the twin's `p`: all `mI + 1` of them when
+(`rule_body_at`; a binder count past `2^64` aborts, a capacity check), with the leading `rP` arguments (the twin's `p`: all `mI + 1` of them when
 `mI < rP`, so `rP` is capped at `mI + 1`) and the fields pushed above the top (`iotaVals`) and
 substituted in one walk (`inst_list`). -/
 -- con-ron: ConRon/Arena/Core.lean:2490-2541 ConRon.Arena.iotaRecAt
 -- con-ron: ConRon/Arena/Core.lean:2476-2477 ConRon.Arena.iotaVals
 @[no_expose] def iotaRecFire2L : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl, mo, mn)
-    locals (cp, rP, fam, body, vo, u, x) {
+    locals (cp, rP, fam, k, body, vo, u, x) {
   cp := EREC⦃ctorP + ⟪CI.ctorNparams⟫⦄;
   if mn < cp { return (0, 0) };
   if mn - cp != EREC⦃rl + ⟪Rule.nfields⟫⦄ { return (0, 0) };
   fam := call iota_rec_fam(mode, vis, d, us, recP, so, usj, ctorP, rl, mo, mn);
   if fam == 0 { return (0, 0) };
+  k := EREC⦃recP + ⟪CI.recPrefix⟫⦄ + EREC⦃rl + ⟪Rule.nfields⟫⦄;
+  if k < EREC⦃recP + ⟪CI.recPrefix⟫⦄ { abort };
   body := call rule_body_at(c, EREC⦃rl⦄, EREC⦃recP + ⟪CI.cv + CV.lpsOff⟫⦄, EREC⦃recP + ⟪CI.cv + CV.lpsLen⟫⦄,
-    EREC⦃rl + ⟪Rule.rhs⟫⦄, EREC⦃recP + ⟪CI.recPrefix⟫⦄ + EREC⦃rl + ⟪Rule.nfields⟫⦄, us);
+    EREC⦃rl + ⟪Rule.rhs⟫⦄, k, us);
   rP := EREC⦃recP + ⟪CI.recPrefix⟫⦄;
   rP := rP - (rP - EREC⦃recP + ⟪CI.recMajor⟫⦄ - 1) * u64(EREC⦃recP + ⟪CI.recMajor⟫⦄ < rP);
   vo := CTL.u64[136];
