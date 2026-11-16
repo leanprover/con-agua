@@ -12,6 +12,7 @@ public import ConAgua.Checker.PipeFinal
 public meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Arena.CheckerL
+import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Env
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndexLoops
