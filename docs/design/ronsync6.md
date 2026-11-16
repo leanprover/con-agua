@@ -116,3 +116,62 @@ yield (5–15 % of the failing theorems, the rename rules); otherwise the compil
   reads the same names; `index_freeze` keeps only the two thresholds (`litFrom`). `pin_at`
   cannot abort there (the pin table is filled before the build), so the order is not observable:
   no deviation row.
+* 18:30–18:45 `ronsync6-iota` finished (all but `appLoop_ref`; hand-over), `ronsync6-iota2` proved
+  `appLoop_ref` (and the missing `whnf_app_iota` refinement, `appIota_ref`), `ronsync6-rec` and
+  `ronsync6-lit2` finished. 18:45 the program regenerated once more; **the whole library builds,
+  zero `sorry`**.
+* 18:48–19:10 gates: OVERVIEW's links at the new revisions (three anchors moved:
+  `foldlM_checkDecl_envWF`, `lvlEq?`, `buildStage_checker`), the new warnings fixed (deprecated
+  names, an unused section variable), the unused imports `lake shake` found dropped (the shake
+  tool itself had to be rebuilt: its glibc had been collected from the Nix store), two census
+  links to `mkIFEnvLits` (no census target) dropped. `gates.sh`: 15 OK.
+
+## 3. What was mirrored (by upstream item)
+
+| upstream | L |
+|---|---|
+| #579 the literal flags as index fields | `CTL[160]`/`CTL[161]` (flags), `CTL[162‥171]` (names), `CTL[172‥173]` (thresholds); new `str_lit_names`, `lit_from`, `index_freeze`, `from_le`, `lit_name_at`, `lits_stored`, `env_set_flags`; `env_push` recomputes at a literal name while `strLit` is false; `record_job` sets the flags by `from_le`; the three pin gates, `gen_rec_check` and `check_block_tail_stream` set the flags back after their pops; every reader reads the word; `nat_lit_stored`, `str_lit_stored` gone |
+| #582 a `Nat.succ` major goes to whnf | `is_nat_succ_app`, `prepare_major_whnf` |
+| #583 the β peel from the spine range | `beta_peel(t, s, ao, an, i)` substitutes the stack slice `args[s:i]` in place (no copy); `inst_list`'s walks restated over the twin's range (`vs n k`) |
+| #585 the ι step peels the rule's λs | `lam_body`, `rule_body_at(…, k, us)` (the memo renamed `ruleBody*`), `eidx_copy_upto` (`iotaVals`), one `inst_list` for the reduct; `rule_binds` and `stream_rules_check(…, rP, …)`: the new rejection (reason `R_THE_RECURSOR_S_RULE_FOR_IS_NOT`) |
+| #591 one lookup per ι step | the view `[t, e, c, us, q]` (`decMV`), `ctor_view`, `major_to_ctor_rescue`, `major_to_ctor`/`prepare_major(_whnf)` answer the view; `iota_rec_at(mode, vis, d, c, us, q, so, sn)` at the caller's record and exactly `mI + 1` arguments (con-ron's deviation (1)); `whnf_app_iota`, `whnf_stuck` do the lookup; `iota_target`, `is_ctor_app`, `iota_rec_c`, `iota_rec_head` gone |
+| #592 the constructor shortcut | `ctor_target`, `ctor_target_for`, `ctor_head_against`, `defeq_lazy` (the old body past the shortcut), `defeq_body`; `is_bool_true`, `bool_true_shortcut` gone |
+
+con-ron's "Deviations kept" mirrored: #156's empty-range walk (the entry walks it, the memo
+cleared alike: L's `inst_list` at a zero-length slice); #157's (1) exactly `mI + 1` arguments,
+(2) the rescue answers a term and the view is made at the end, (3) the record by reference in L
+(con-ron copies it). Every new function has a generated model (`l_model`); no new hand `…W`
+model. New aborts: the `rP + nfields` word overflow (`rule_binds`, `iota_rec_fire2`) and the
+stack bounds: fixed capacities, no deviation row. **Deviation rows added: none.**
+
+## 4. The ladder's yield against the estimate
+
+Estimate (stage 0): low, 5–15 %, an L-code sync. Measured: the lead's compile passes ran the
+ladder 11 times on 58 failing-theorem instances (with repeats across passes) and **closed none**
+at any rung (master, codemod, vocab); the `ruleRhs` → `ruleBody` rename went over the whole tree
+before the first build, so it never failed. As in ronsync3/4 the ladder was the compile-pass
+tool: it turned failing proofs into `sorry` tickets so the modules behind them elaborate. What it
+cannot do — statements and definitions that no longer elaborate (removed twin functions, changed
+signatures) — the lead and then each helper restated by hand ("elaborate first" milestones).
+
+## 5. Statement changes
+
+None in `Final/*`, `Audit/*` (their text and the twin signatures they name are unchanged). The
+test harness `E2E/Diff.lean` builds its empty environment with `mkIFEnvLits` (the removed
+`mkIFEnv`'s replacement). Internal statements restated: listed in §1 and in the helpers' reports
+(e.g. `IotaRecAtOK`, `MajorToCtorOK`, `RuleBodyAtOK`, `betaPeel_refines'`, `envPush_refines`,
+`buildIndex_refines` with `FrozenR`, `JobM.frozen`, `AppG.nv`, `CoreCallees.instRange`).
+
+## 6. Checks
+
+* `gates.sh`: 15 OK. `provenance.py check --strict`: every citation exact at con-ron 8b088905,
+  con-leche 600d3b58, no marker left (94 L items re-checked). `bump-con-ron.sh --check` ok.
+  `asm_file.py --check`: `checker.s`, `pins.bin` up to date (`pins/` did not move: `pins.bin`
+  unchanged).
+* `diff-e2e --tests` at con-leche 600d3b58 with `--refs` (con-ron 8b088905 built in
+  `_tmp/ref/con-ron-8b08`, e2e-ref): **740/740 agree**, UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF 0;
+  7 skipped (`--max-nat-size` fixtures, D49). `stored_rule_lams_short` rejected (the new reason),
+  `strict_succ_counter` accepted.
+* `e2e.py --latest ''` with that con-ron: 794 fixtures, all agree (2 time out in all three, as
+  before).
+* Census: 100 %, zero `sorry` sources (the 2 bad links of `topLitS` were there before).
