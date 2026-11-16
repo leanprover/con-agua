@@ -503,14 +503,21 @@ def FindProjOK (p : Prog) : Prop :=
       (fun r => decEntry (erecP s₀.mem) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
-/-- `iota_rec_at(mode, vis, d, hd, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`). -/
+/-- `iota_rec_at(mode, vis, d, c, us, q, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`) at the
+recursor `c.{us}` whose record the caller found (`q`, decoding to `.recInfo cv mI rP isK rules`),
+on the redex's arguments, the stack slice `(so, sn)`. -/
 def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb mode d hd so sn : Word) (xs : Array EIdx), n ≤ F → n ≤ 2 ^ 62 →
-    SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
+    (M : ModeMaps) (eb mode d c us q so sn : Word) (xs : Array EIdx) (cv : IConstantVal)
+    (mI rP : Nat) (isK : Bool) (rules : List IRecRule), n ≤ F → n ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW c → HW us →
+    decCI (erecP s₀.mem) q.toNat = some (.recInfo cv mI rP isK rules) →
+    fe.find? (decI c) = some (.recInfo cv mI rP isK rules) →
+    SpineR s₀.mem so sn xs → xs.size = mI + 1 →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
-    CoreSpec p n "iota_rec_at" [mode, vis, d, hd, so, sn]
-      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat (decE hd) xs xs.size)
+    CoreSpec p n "iota_rec_at" [mode, vis, d, c, us, q, so, sn]
+      (iotaRecAt (decMode mode) (coreKnot (decMode mode) (decEager mode) fe id F) fe d.toNat
+        (decI c) (decI us) cv mI rP isK rules xs)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
 /-- **`find_proj` leaves the record pool alone**; `reduce_proj_core` reads the table's words after
