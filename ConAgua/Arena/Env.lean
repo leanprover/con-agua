@@ -133,8 +133,9 @@ def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
 -- con-ron: ConRon/Arena/Env.lean:266-272 ConRon.Arena.litNameAt
 @[no_expose, l_impl ConRon.Arena.litNameAt]
 def litNameAtL : FunDecl := lfn (w, i) locals () {
-  for i < 10 {
-    if CTL.u64[162 + i] == w { return 1 }
+  while i < 10 {
+    if CTL.u64[162 + i] == w { return 1 };
+    i := i + 1
   };
   return 0
 }
@@ -1507,39 +1508,6 @@ def erecRd (m : Mem) (a : Word) : Word := rdW (m.arr64 (tierA EREC (a >>> 40))) 
 theorem erecRd_of {m : Mem} {a v : Word} (h : erecP m a.toNat = some v) : erecRd m a = v := by
   obtain ⟨h1, h2⟩ := erecP_tagRead h
   simp only [erecRd, rdW, h2]; rfl
-
-theorem envPush_spec (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) (vis q : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q ∧ LocEq s' s₀ ∧
-      r = [vis + 1] ∧ vis.toNat < 4294967294 ∧ rowTag (erecRd s₀.mem (q + (CI.cv + CV.name))) ≤ 2 ∧
-      rowIx (erecRd s₀.mem (q + (CI.cv + CV.name))) + 1 < (s₀.mem.arr64 (ownArr (erecRd s₀.mem (q + (CI.cv + CV.name))))).size; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, envPushL]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs, envRowSet_spec p hs n]
-    all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
-      St.setLocs_nil, Locals.init, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval, BinOp.eval, rd64_rdWC, beq_iff_eq,
-      bne_iff_ne, ne_eq] at *
-    all_goals subst_vars
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, erecRd, Locals.init, List.getD_cons_zero,
-      List.getD_cons_succ, UInt64.le_iff_toNat_le, St.setLoc_loc]
-
-/-- **`env_push` refines `IFEnv.push`**: the new view `vis + 1` of the result relates the pushed
-environment. -/
-@[refines ConRon.Arena.IFEnv.push]
-theorem envPush_refines (hs : p.lookup "env_row_set" = some envRowSetL)
-    (hp : p.lookup "env_push" = some envPushL) (n : Nat) (s₀ : St) {fe : IFEnv} {ci : IConstantInfo}
-    (vis q : Word) (hE : EnvR s₀.mem vis fe) (hci : decCI (erecP s₀.mem) q.toNat = some ci) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "env_push" [vis, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [vis + 1] ∧ EnvR s'.mem (vis + 1) (fe.push ci) ∧
-      s'.mem = ownSet s₀.mem (erecRd s₀.mem (q + (CI.cv + CV.name))) (vis + 1) q; ⊤⦄ := by
-  sorry
 
 theorem envPopTemp_spec (hs : p.lookup "env_row_set" = some envRowSetL)
     (hp : p.lookup "env_pop_temp" = some envPopTempL) (n : Nat) (s₀ : St) (vis w c q : Word) :
