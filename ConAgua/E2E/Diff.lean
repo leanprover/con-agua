@@ -21,7 +21,7 @@ pipeline does, compare the stores, then run single functions on both sides and c
   same number of nodes in the same tables).
 * **Functions.** For up to `N` persistent expression handles `h` (every tag, evenly spread):
   `whnf(0, 0, 0, h)`, `whnf_core(0, 0, 0, 0, h)`, `infer(0, 0, 0, h)` against the twin's knot
-  (`pureFnsA .verified false (mkIFEnv IEnv.empty) checkFuel`) slots `whnf 0 h`, `whnfCore false 0 h`,
+  (`pureFnsA .verified false fe checkFuel`, `fe` the empty environment `mkIFEnvLits IEnv.empty`) slots `whnf 0 h`, `whnfCore false 0 h`,
   `infer 0 h`, each from the states above (verified mode, the empty environment, view word `0`,
   depth `0`). Agreement: both succeed with the same handle word (low 32 bits: `decE`) and the
   same store counts after, or both fail (the twin throws, L aborts). Prints one line per
@@ -97,7 +97,9 @@ def Tally.add (t : Tally) (s : String) : Tally :=
 
 def runFn (p : Prog) (m₁ : Mem) (a₁ : AState) (name : String) (args : Nat → List Word)
     (twin : CoreFnsA → Nat → AM EIdx) (hs : List Nat) (fuel : Nat) : Tally := Id.run do
-  let fe := mkIFEnv IEnv.empty
+  let fe := match (mkIFEnvLits IEnv.empty).run a₁ with
+    | .ok (fe, _) => fe
+    | .error _ => IFEnv.ofParts IEnv.empty {} {} {}
   let r := pureFnsA .verified false fe checkFuel
   let mut t : Tally := {}
   for h in hs do
