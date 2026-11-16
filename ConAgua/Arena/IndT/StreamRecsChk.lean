@@ -115,20 +115,23 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
     ⟨hC1, hg1, hA1, ConRon.Bridge.CoreStep.refl hC.check⟩
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.iw.iwSize
   -- the record's and the triple's words, below the top
-  obtain ⟨-, -, hwmI, -, ⟨ro, rn, hro, hrn, hrls⟩, -⟩ := decRS_some (show decRS (truncM m) rcw.toNat = some rc from hrc)
+  obtain ⟨-, hwrP, hwmI, -, ⟨ro, rn, hro, hrn, hrls⟩, -⟩ := decRS_some (show decRS (truncM m) rcw.toNat = some rc from hrc)
   rw [truncM_erA] at hrls
   obtain ⟨hwmIb, hwmI⟩ := L.Ind.iwN_truncM_some hwmI
+  obtain ⟨hwrPb, hwrP⟩ := L.Ind.iwN_truncM_some hwrP
   obtain ⟨hrob, hro⟩ := L.Ind.iwN_truncM_some hro
   obtain ⟨hrnb, hrn⟩ := L.Ind.iwN_truncM_some hrn
   obtain ⟨-, -, ⟨go, gl, hgob, hglb, hgo, hgl, hgsB, hgb⟩⟩ := decRR_parts hg
   have hW : ∀ m', IWGrow m m' → (m'.arr64 IW).size < 2 ^ 64 →
       rdW (m'.arr64 IW) (rcw + 2) = UInt64.ofNat rc.mI ∧
       rdW (m'.arr64 IW) (rcw + 4) = UInt64.ofNat ro ∧ rdW (m'.arr64 IW) (rcw + 5) = UInt64.ofNat rn ∧
-      rdW (m'.arr64 IW) (gw + 2) = UInt64.ofNat go ∧ rdW (m'.arr64 IW) (gw + 3) = UInt64.ofNat gl :=
+      rdW (m'.arr64 IW) (gw + 2) = UInt64.ofNat go ∧ rdW (m'.arr64 IW) (gw + 3) = UInt64.ofNat gl ∧
+      rdW (m'.arr64 IW) (rcw + 1) = UInt64.ofNat rc.rP :=
     fun m' hg' hsz' => ⟨(iwN_at (k := 2) hg' hwmIb hwmI hsz').1, (iwN_at (k := 4) hg' hrob hro hsz').1,
       (iwN_at (k := 5) hg' hrnb hrn hsz').1, (iwN_at (k := 2) hg' hgob hgo hsz').1,
-      (iwN_at (k := 3) hg' hglb hgl hsz').1⟩
+      (iwN_at (k := 3) hg' hglb hgl hsz').1, (iwN_at (k := 1) hg' hwrPb hwrP hsz').1⟩
   obtain ⟨-, e2N⟩ := iwN_at (k := 2) (IWGrow.refl m) hwmIb hwmI hsz
+  obtain ⟨-, e1N⟩ := iwN_at (k := 1) (IWGrow.refl m) hwrPb hwrP hsz
   obtain ⟨-, e4N⟩ := iwN_at (k := 4) (IWGrow.refl m) hrob hro hsz
   obtain ⟨-, e5N⟩ := iwN_at (k := 5) (IWGrow.refl m) hrnb hrn hsz
   obtain ⟨-, g2N⟩ := iwN_at (k := 2) (IWGrow.refl m) hgob hgo hsz
@@ -154,14 +157,15 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
   have key : (rc.cvR.type == g.1.type) = true ↔ wt = wg := by
     rw [beq_iff_eq, hwtE, hwgE, decI_inj_iff hwtH hwgH]
   unfold ConRon.Arena.streamRecCompare
+  rw [show rc.rP = (UInt64.ofNat rc.rP : Word).toNat from e1N.symm]
   by_cases heq : wt = wg
   · rw [srcE.k_cv_lps.arm2 p N vis rcw gw _ _ r1 m1 (by rw [et, eg]; exact heq), srcE.j1.arm1]
-    obtain ⟨-, e4, e5, g2, g3⟩ := hW m1 hg1 hsz1
-    rw [e4, e5, g2, g3, ite_eq_left (key.mpr heq)]
+    obtain ⟨-, e4, e5, g2, g3, e1⟩ := hW m1 hg1 hsz1
+    rw [e4, e5, g2, g3, e1, ite_eq_left (key.mpr heq)]
     dsimp only
     exact RefE.lastE (K := srcE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
       (fun _ => rfl) id
-      (srk_ref hq henv hApd hCrf N (by omega) m1 a _ _ _ _ _ _ _ gP.1.levelParams rc.rules rcP.rules
+      (srk_ref hq henv hApd hCrf N (by omega) m1 a _ _ _ _ _ _ _ _ gP.1.levelParams rc.rules rcP.rules
         g.2.2 gP.2.2 hC1 hA1 hl1 hlb1 hlpsG (hrls' m1 hg1) hrules (hgs' m1 hg1) (hgb' m1 hg1) hrh)
       fun _ _ _ _ h => hR1.trans h
   obtain ⟨e2, -⟩ := hW m1 hg1 hsz1
@@ -182,11 +186,11 @@ theorem src_ref (hP : StrProg p) (hq : KnotStageProg p) (henv : ConLeche.EnvWF e
     (rtyc_ref hP.toStrTyProg hq henv hApd hCrf N (by omega) hC1 hA1 hwtH hwgH hl1 hlb1 hlpsG
       (by rw [← hwtE]; exact htyR) (by rw [← hwgE]; exact htyG)) fun ⟨u2, m2⟩ _ a2 _ hR2 => ?_
   have hg2 : IWGrow m m2 := hg1.trans hR2.grow
-  obtain ⟨-, e4, e5, g2, g3⟩ := hW m2 hg2 hR2.stage.stage.iw.iwSize
-  rw [srcE.k_rec_ty_check.arm1, srcE.j1.arm1, e4, e5, g2, g3]
+  obtain ⟨-, e4, e5, g2, g3, e1⟩ := hW m2 hg2 hR2.stage.stage.iw.iwSize
+  rw [srcE.k_rec_ty_check.arm1, srcE.j1.arm1, e4, e5, g2, g3, e1]
   exact RefE.lastE (K := srcE.k_stream_rules_check p) (f := fun v => (0, v.2)) (fun _ => rfl)
     (fun _ => rfl) id
-    (srk_ref hq henv hApd hCrf N (by omega) m2 a2 _ _ _ _ _ _ _ gP.1.levelParams rc.rules rcP.rules
+    (srk_ref hq henv hApd hCrf N (by omega) m2 a2 _ _ _ _ _ _ _ _ gP.1.levelParams rc.rules rcP.rules
       g.2.2 gP.2.2 hR2.stage hR2.abs (by rw [decHL_grow hR2.grow hlb1]; exact hl1)
       (Nat.le_trans hlb1 hR2.grow.iw)
       (ConRon.Bridge.denoteNList_ext hR2.core.ext.lss.ls.ns _ _ hlpsG) (hrls' m2 hg2)
