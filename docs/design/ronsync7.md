@@ -30,7 +30,15 @@ zero `sorry` sources (the 2 bad links of `topLitS` were there before).
 
 ## Gates
 
-See below.
+* `scripts/gates.sh`: 15 OK (links needed `scripts/overview-links.sh --update`: OVERVIEW.md cites
+  `vendor/UPSTREAM#L3-L4`, whose revision changed; the paragraph names no revision).
+* `scripts/provenance.py check --strict`: 1 558 citations, all exact at con-ron `de06320f`, no
+  markers before or after. `scripts/bump-con-ron.sh --check`: ok.
+* `scripts/asm_file.py --check`: `checker.s` and `pins.bin` up to date (no L change, `pins/`
+  did not move).
+* `scripts/diff-e2e.py --parallel 16`: 740 agree (441 accepted, 299 not), 0 unsound, 0
+  incomplete, 0 crash, 0 timeout.
+* No `sorry` and no axiom guard touched (only `vendor/` changed).
 
 ## Follow-ups (not in this lane)
 
