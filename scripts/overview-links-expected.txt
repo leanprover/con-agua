@@ -8,7 +8,7 @@
 >>> OVERVIEW.md
 
 == vendor/UPSTREAM#L3-L4
-     3  con-ron	8b08890599276b4e461cad258d712fee0ddd4ee8	https://github.com/leanprover/con-ron.git
+     3  con-ron	de06320fcdce1ee999bb7a751725e5840d54c3fe	https://github.com/leanprover/con-ron.git
      4  con-leche	600d3b583b769176e911b06d20ba16330c9a179b	https://github.com/leanprover/con-leche.git
 
 == main.c#L1-L43
