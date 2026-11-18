@@ -751,4 +751,173 @@ theorem loop2_val {m : Mem} (hok : PoolOK m) {k : Word} : ∀ (f : Nat) (mi : Me
     subst this
     exact hI
 
+theorem bigLoop_val {p : Prog} {n' : Word} : ∀ (f : Nat) (m : Mem) (k dd k' : Word) (m' : Mem),
+    1 ≤ k.toNat → LevelInv n' (k - 1) dd → bigW.loop1 p f m n' k dd = some (k', m') →
+    m' = m ∧ 1 ≤ k'.toNat ∧ k'.toNat ≤ 64 := by
+  intro f
+  induction f with
+  | zero => intro m k dd k' m' _ _ h; rw [bigW.loop1.eq_1] at h; cases h
+  | succ f ih =>
+    intro m k dd k' m' h1 hI h
+    have hk : (k - 1).toNat = k.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using h1))]; simp
+    by_cases hc : dd + dd ≤ n' - dd - dd
+    · rw [bigW.loop1.arm1 p f m n' k dd hc] at h
+      obtain ⟨hI', -⟩ := hI.step hc
+      have hpow := hI'.pow
+      have ht : (k - 1 + 1).toNat < 64 := by
+        have := hI'.half; have := n'.toNat_lt
+        rcases Nat.lt_or_ge (k - 1 + 1).toNat 64 with hh | hh
+        · exact hh
+        · have : 2 ^ 64 ≤ 2 ^ (k - 1 + 1).toNat := Nat.pow_le_pow_right (by decide) hh
+          omega
+      have hkl := k.toNat_lt
+      have e1 : (k - 1 + 1).toNat = k.toNat := by
+        rw [UInt64.toNat_add, hk]; simp only [UInt64.reduceToNat]; omega
+      have e2 : (k + 1).toNat = k.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+      have e3 : k + 1 - 1 = k - 1 + 1 := UInt64.toNat_inj.mp (by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [e2]; simp)), e2, e1]; simp)
+      exact ih m (k + 1) (dd + dd) k' m' (by omega) (by rw [e3]; exact hI') h
+    · rw [bigW.loop1.arm2 p f m n' k dd hc] at h
+      cases h
+      have hpow := hI.pow; have hhalf := hI.half; have := n'.toNat_lt
+      refine ⟨rfl, h1, ?_⟩
+      rcases Nat.lt_or_ge (k - 1).toNat 63 with hh | hh
+      · omega
+      · have : 2 ^ 63 ≤ 2 ^ (k - 1).toNat := Nat.pow_le_pow_right (by decide) hh
+        omega
+
+/-- A word written into the top's tier at index `i` (the address `T + j`). -/
+theorem vpool_poke (m : Mem) (T i v : Word) (j : Nat) (hT : T.toNat < 2 ^ 41)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hi : i.toNat = T.toNat % 2 ^ 40 + j) (hb : i.toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    vpool (m.set64 (tierA POOL (T >>> 40)) i v) = (vpool m).set! (T.toNat + j) v := by
+  have ht : (T >>> 40).toNat ≤ 1 := tag_tier_le _ hT
+  have hsplit := tag_split T
+  have hidx := tag_idx_toNat T
+  rw [vpool_set64t m _ i v ht hb hs]; congr 1; omega
+
+theorem get_set3 (V : Array Word) (a b c x : Nat) (va vb vc : Word) (hx : x < V.size) :
+    (((V.set! a va).set! b vb).set! c vc)[x]?.getD 0 =
+      if x = c then vc else if x = b then vb else if x = a then va else V[x]?.getD 0 := by
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_setIfInBounds]
+  by_cases e1 : c = x
+  · subst e1; simp [hx]
+  · by_cases e2 : b = x
+    · subst e2; simp [hx, e1, Ne.symm e1]
+    · by_cases e3 : a = x
+      · subst e3; simp [hx, e1, e2, Ne.symm e1, Ne.symm e2]
+      · simp [Ne.symm e1, Ne.symm e2, Ne.symm e3, e1, e2, e3]
+
+/-- **`nat_dec_big`'s first entry**: `10^19` at `T + 2k`, the entry `(T + 2k, 1)` at `T`, the top
+past it. -/
+theorem big_init {m : Mem} {k : Word} (hok : PoolOK m) (hk1 : 1 ≤ k.toNat) (hk64 : k.toNat ≤ 64)
+    (hlen : ¬ m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) + k + k + 1) :
+    BigInv m ((((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k) 10000000000000000000).set64
+      (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64 (tierA POOL (m.top >>> 40))
+      ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)) k 1 := by
+  have h41 := hok.top41
+  have hsm := hok.small
+  have hidx := tag_idx_toNat m.top
+  have hs : (m.arr64 (tierA POOL (m.top >>> 40))).size ≤ 2 ^ 40 := Nat.le_of_lt (hsm.tier _)
+  have e0 : ((m.top &&& 1099511627775) + k).toNat = m.top.toNat % 2 ^ 40 + k.toNat := by
+    rw [UInt64.toNat_add, hidx]; omega
+  have eA : ((m.top &&& 1099511627775) + k + k).toNat = m.top.toNat % 2 ^ 40 + 2 * k.toNat := by
+    rw [UInt64.toNat_add, e0]; omega
+  have eL : ((m.top &&& 1099511627775) + k + k + 1).toNat = m.top.toNat % 2 ^ 40 + 2 * k.toNat + 1 := by
+    rw [UInt64.toNat_add, eA]; simp only [UInt64.reduceToNat]; omega
+  have e1 : ((m.top &&& 1099511627775) + 1).toNat = m.top.toNat % 2 ^ 40 + 1 := by
+    rw [UInt64.toNat_add, hidx]; simp only [UInt64.reduceToNat]; omega
+  have hroom : m.top.toNat % 2 ^ 40 + 2 * k.toNat + 1 ≤ (m.arr64 (tierA POOL (m.top >>> 40))).size := by
+    have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp hlen)
+    have hl : (m.len64 (tierA POOL (m.top >>> 40))).toNat = (m.arr64 (tierA POOL (m.top >>> 40))).size :=
+      UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)
+    rw [eL, hl] at this
+    exact this
+  -- the three writes
+  have v1 := vpool_poke m m.top ((m.top &&& 1099511627775) + k + k) 10000000000000000000 (2 * k.toNat) h41 hs
+    eA (by omega)
+  have v2 := vpool_poke (m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k) 10000000000000000000)
+    m.top (m.top &&& 1099511627775) (m.top + k + k) 0 h41 (by rw [Mem.size_arr64_set64]; exact hs) (by omega)
+    (by rw [Mem.size_arr64_set64]; omega)
+  have v3 := vpool_poke ((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k))
+    m.top ((m.top &&& 1099511627775) + 1) 1 1 h41 (by rw [Mem.size_arr64_set64, Mem.size_arr64_set64]; exact hs)
+    e1 (by rw [Mem.size_arr64_set64, Mem.size_arr64_set64]; omega)
+  rw [v2, v1] at v3
+  have hpf : PFrame m (((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1) :=
+    PFrame.set64 _ _ _ (PFrame.set64 _ _ _ (PFrame.set64 _ _ _ (PFrame.refl m)))
+  have hag : Agree (vpool (((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1)) (vpool m) m.top.toNat := by
+    rw [v3]
+    exact Agree.set _ _ _ _ _ (Agree.set _ _ _ _ _ (Agree.set _ _ _ _ _ (Agree.refl _ _) (by omega))
+      (by omega)) (by omega)
+  have htk : m.top + k + k + 1 = m.top + (k + k + 1) := by
+    simp only [UInt64.add_assoc]
+  have hkk : (k + k + 1).toNat = 2 * k.toNat + 1 := by
+    rw [UInt64.toNat_add, UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+  have hg := Grows.write m _ (k + k + 1) hok hpf hag (by rw [hkk, hidx]; omega)
+  rw [← htk] at hg
+  have hok' := hok.grows hg
+  have hctl : 0 < ((((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1).arr64 CTL).size := by
+    rw [hpf.ctl]; exact hok.ctl
+  have htop := Mem.top_set64 _ (m.top + k + k + 1) hctl
+  have hT2 : (m.top + k + k).toNat = m.top.toNat + 2 * k.toNat := by
+    have : (m.top + k).toNat = m.top.toNat + k.toNat := by rw [UInt64.toNat_add]; omega
+    rw [UInt64.toNat_add, this]; omega
+  have hT3 : (m.top + k + k + 1).toNat = m.top.toNat + 2 * k.toNat + 1 := by
+    rw [UInt64.toNat_add, hT2]; simp only [UInt64.reduceToNat]; omega
+  have hV : vpool ((((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)) =
+      (((vpool m).set! (m.top.toNat + 2 * k.toNat) 10000000000000000000).set! (m.top.toNat + 0)
+        (m.top + k + k)).set! (m.top.toNat + 1) 1 := by
+    rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, v3]
+  have hvs : ∀ x, x < 2 ^ 41 → x < (vpool m).size := fun x hx => by rw [vpool_size]; exact hx
+  obtain ⟨ta, tl⟩ := tbl_vpool ((((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)) m.top 0
+      (by simp; omega)
+  simp only [UInt64.toNat_zero, Nat.mul_zero, Nat.add_zero] at ta tl
+  rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega))] at ta
+  rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega))] at tl
+  rw [if_neg (by omega), if_pos (by omega)] at ta
+  rw [if_pos (by omega)] at tl
+  have h0 : ∀ t : Word, t < 1 → t = 0 := fun t ht => UInt64.toNat_inj.mp (by
+    have := UInt64.lt_iff_toNat_lt.mp ht; simp at this ⊢; omega)
+  have hTt := hg.tier
+  rw [htop] at hTt
+  have hgetA : (vpool ((((m.set64 (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + k + k)
+      10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
+      (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)))[
+        m.top.toNat + 2 * k.toNat]?.getD 0 = 10000000000000000000 := by
+    rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega)), if_neg (by omega), if_neg (by omega), if_pos (by omega)]
+  refine ⟨hok', hg, ⟨?_, by simpa using hk1, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_⟩,
+    by simp, hk64, ?_⟩
+  · rw [htop, hT3]; omega
+  · rw [h0 t ht, ta, hT2]; exact Nat.le_refl _
+  · rw [h0 t ht, ta, tl]
+    unfold SliceOK
+    rw [htop, hT2, hT3]
+    simp only [UInt64.reduceToNat]
+    omega
+  · rw [h0 t ht, ta, tl, hT2]
+    intro _
+    simp only [UInt64.reduceToNat, Nat.sub_self, Nat.add_zero]
+    rw [hgetA]; decide
+  · rw [h0 t ht, ta, tl, hT2]
+    simp only [UInt64.reduceToNat, pv, wt, Nat.add_zero, Nat.mul_zero, Nat.pow_zero, Nat.mul_one, Nat.zero_add,
+      UInt64.toNat_zero]
+    rw [hgetA]; rfl
+  · have hne : tierA POOL (m.top >>> 40) ≠ CTL := by
+      rcases tierA_pool (m.top >>> 40) with e | e <;> rw [e] <;> decide
+    rw [Mem.arr64_set64_ne _ _ _ _ _ hne, Mem.size_arr64_set64, Mem.size_arr64_set64, Mem.size_arr64_set64]
+    exact hroom
+
 end L.Front
