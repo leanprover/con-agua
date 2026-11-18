@@ -663,6 +663,44 @@ theorem mulRowAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
   simp only [CondCode.interp, hcf5, decide_eq_false_iff_not, UInt64.toNat_toBitVec] at hcc5
   refine ev_movRI (mr_code hc (i := 31) rfl) ?_
   refine ev_movRI (mr_code hc (i := 32) rfl) ?_
-  sorry
+  have hl14 : la.toNat ≤ d.regs.r14.toNat := by omega
+  have hR14 : (d.regs.r14 - la).toNat = d.regs.r14.toNat - la.toNat := UInt64.toNat_sub_of_le _ _
+    (UInt64.le_iff_toNat_le.mpr hl14)
+  have hlaF : la.toNat < n := by omega
+  have hrun := mulRow_run p hp σ o nn oa la y n hnl hlaF (by rw [hszA]; exact hqa) (by rw [hszO]; exact hoa)
+    (by rw [hszA]; omega) (by rw [hszO]; omega)
+  rw [← hSA] at hqa
+  rw [← hSO] at hoa hcc3 hcc4 hSOn
+  refine mr_row (d := d) hG hc (tierA 0 (oa >>> 40)) (tierA 0 (o >>> 40)) hTA hTO (oa &&& idxMask) (o &&& idxMask) y la
+    nn (UInt64.ofNat (G.s (G.tab.pos64 (tierA 0 (o >>> 40))) - (o &&& idxMask).toNat)) (d.regs.r14 - la) σ.mem
+    hqa hoa ?_ la.toNat _ 0 (by simp) ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    (by have := L.toNat_ne_zero_of_ne _ hl0; simp only [UInt64.toNat_zero]; omega)
+  all_goals try rs [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13]
+  · intro s' fr hm' hrdi' hr13 hr12 hrcx hrbx hr8' hr14'
+    refine mr_tail hG hc hra hlo hhi (tierA 0 (o >>> 40)) hTO (o &&& idxMask) nn _ (by omega) ?_ ?_ hexh (n - 1)
+      s' _ la _ fr hm' hrdi' hrbx hr8' hr13 hr12 hrcx (by omega) (by rw [hr14', hR14]; omega) rfl
+    · intro M s'' ht e1 e2 e3 e4 e5 e6 e7
+      refine hok [0] { σ with mem := M } s'' (by rw [hrun, ht]; rfl) e1 rfl e2 e3 e4 e5 ?_ e7
+      rw [mulRow_nret]; exact resOut_zero e6
+    · intro s'' ⟨x, hx, hpl⟩ g
+      exact herr s'' ⟨x, by rw [hrun, hx]; rfl, hpl⟩ g
+  · show (d.regs.r14 - la).toNat ≤ _; omega
+  · exact Pres.refl _ _
+  · simpa [mrRows] using hmem
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBA]
+    have := addr_idx BA 0 (oa &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBO]
+    have := addr_idx BO 0 (o &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · simp [mrRows]
+  · apply UInt64.toNat_inj.mp
+    rw [hSO, L.toNat_ofNat_of_lt (by omega)]
+    exact hsub SO _ (by omega) (by omega)
+  · rfl
 
 end L.AsmEsc
