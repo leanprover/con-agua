@@ -291,7 +291,7 @@ def cdFns : List FnName :=
     "der_b", "der_bv", "dind_copy", "div_add", "div_mod_cert_applied", "div_mod_cert_guard",
     "div_mod_cert_proofs", "div_mod_cert_stmts", "div_mod_cert_stmts_at", "div_mod_certs_guard",
     "div_mod_certs_guard_go", "div_mod_decl_pin", "div_mod_env_guard", "div_mod_pin_guard",
-    "div_mod_slot", "div_mod_type_pins", "div_shl1", "div_step", "div_sub", "dlp_copy", "dp_clear",
+    "div_mod_slot", "div_mod_type_pins", "div_2by1", "div_kstep", "div_mod1", "div_modk", "div_norm", "div_recip", "div_submul", "dlp_copy", "dp_clear",
     "dp_find", "dp_put", "e_view", "ek_copy", "ensure_sort", "ensure_sort_core", "env_find",
     "env_pop_temp", "env_push", "lit_name_at", "lits_stored", "env_set_flags", "env_push_table", "env_row_get", "env_row_set", "eq_at1",
     "eq_stored", "er_copy", "er_copy_er", "er_from_iw", "er_from_iw_go", "er_put_ci", "er_sl_at",
