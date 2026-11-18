@@ -27,9 +27,9 @@ open L L.Compiler L.Compiler.Inl
 set_option maxRecDepth 100000 in
 idx_lit_eq checkerIdx : checkerProg
 
-inl_round_eq checkerProgI : 80 checkerIdx checkerProg
+inl_round_eq checkerProgI : 80 checkerXKeys checkerIdx checkerProg
 
-theorem checkerProgI_inline : inlineProg 80 checkerIdx 1 checkerProg = checkerProgI := by
+theorem checkerProgI_inline : inlineProg 80 checkerXKeys checkerIdx 1 checkerProg = checkerProgI := by
   rw [inlineProg, checkerProgI_eq, inlineProg]
 
 theorem checkerProgI_refines : Refines checkerProgI checkerProg where

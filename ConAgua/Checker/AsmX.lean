@@ -2,6 +2,7 @@ module
 
 public import ConAgua.AsmEsc.SubRowAsm
 public import ConAgua.Checker.ProgTab
+public import ConAgua.Checker.AsmKeys
 
 @[expose] public section
 
@@ -23,13 +24,10 @@ namespace L.Checker
 
 open L L.Compiler L.AsmEsc
 
-/-- `nameCode "mul_row"`, as a literal (`nameCode_mul_row`). -/
-abbrev mulRowCode : Nat := 34702489570787084
-
-/-- `nameCode "sub_row"`, as a literal (`nameCode_sub_row`). -/
-abbrev subRowCode : Nat := 34702489570126600
-
 /-- **The hand-written bodies of the checker.** -/
 def checkerX : AsmTab := [(mulRowCode, mulRowAsm checkerTab), (subRowCode, subRowAsm checkerTab)]
+
+/-- The inliner's exclusion list is `checkerX`'s keys. -/
+theorem checkerX_keys : checkerX.map (·.1) = checkerXKeys := rfl
 
 end L.Checker
