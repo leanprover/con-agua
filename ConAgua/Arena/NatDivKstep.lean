@@ -204,6 +204,7 @@ theorem kest_max (T B : Nat) (hB : 0 < B) (hT : T < B * 2 ^ 64) : T / B ≤ (0 -
   have e : (0 - 1 : Word).toNat = 2 ^ 64 - 1 := rfl
   omega
 
+/-- `d > 0` makes `b > 0`. -/
 theorem kest_Bpos (B s w : Nat) (d : Word) (hd : d.toNat = B * sh s / w) (hd0 : 0 < d.toNat) :
     0 < B := by
   rcases Nat.eq_zero_or_pos B with h | h
@@ -412,6 +413,7 @@ theorem divKstep_spec (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s�
         pv (vpool s₀.mem) wj.toNat (lb.toNat + 1) / pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       pv (vpool s'.mem) wj.toNat (lb.toNat + 1) =
         pv (vpool s₀.mem) wj.toNat (lb.toNat + 1) % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
+  have hB := kest_Bpos _ _ _ _ hd hd0
   rw [invoke_eq _ hpk]
   simp only [callFn, divKstep_body]
   cases n with
@@ -424,12 +426,12 @@ theorem divKstep_spec (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s�
       divSubmul_spec p hpm n,
       dcLoop_step_spec p hpl hpc hpa s₀.mem wj lb ob (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1))
         (pv (vpool s₀.mem) ob.toNat lb.toNat) n]
-    all_goals (try simp only [KEstPost, DcInv, DcPost, Expr.pval, Cond.pval, St.setLoc_loc,
-      L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, Cmp.evalW, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, List.headD_cons, Locals.init, List.getD_cons_zero,
+    all_goals (try subst_vars)
+    all_goals (try simp only [KEstPost, DcInv, DcPost, Expr.pval, St.setLoc_loc,
+      L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Nat.reduceEqDiff, reduceIte, List.headD_cons, Locals.init, List.getD_cons_zero,
       List.getD_cons_succ, Sig.retVal, Sig.retOr] at *)
-    all_goals trace_state
-    all_goals sorry
+    all_goals (try (apply St.restore; grind))
+    all_goals grind [LocEq]
 
 end kstep
 
