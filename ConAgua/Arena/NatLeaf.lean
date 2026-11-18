@@ -308,7 +308,8 @@ def bitNLoop (op : BinOp) : Stmt :=
       (.seq (.st64t POOL (.var 6) (.bin .add (.var 7) (.var 4)) (.var 5))
         (.set 4 (.bin .add (.var 4) (.const 1)))))
 
-/-- The bitwise leaf with operator `op`. -/
+/-- The bitwise leaf with operator `op`.
+con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
 @[no_expose] def bitNG (op : BinOp) : FunDecl := lfn (o, oa, ob, n) locals (i, x, pt, pb, ta, qa, tb, qb) {
   pt := ⦃o⦄.tier;
   pb := ⦃o⦄.idx;

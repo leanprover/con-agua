@@ -105,7 +105,8 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
   return n
 }
 
-/-- `lor`/`xor`: `bitCore g` over the longer length, `nat_trim`. -/
+/-- `lor`/`xor`: `bitCore g` over the longer length, `nat_trim`.
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose] def natBitG (g : FnName) : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;

@@ -118,5 +118,6 @@ heartbeat overrides.
 
 Measured on master `a98d69362e` (add/sub already in hand asm): gf3 40.932 G → 37.365 G
 (−8.7 %, exact `instructions:u`). Verdicts: diff-e2e 740 agree; bignum fuzzer 3315/3315.
-Compiled per-limb cost (asm): `and_n`/`or_n`/`xor_n` ≈ 20 (two tiered loads and a store at ≈ 7
-each, the loop's 5), `copy_n` ≈ 13: candidates for hand asm.
+Compiled per-limb cost (asm, inlined into `nat_lor`): `or_n`'s loop 32 instructions per limb (two
+tiered loads and a store at ≈ 7 each, spilled locals, the loop's 5), `copy_n`'s 22: candidates for
+hand asm.
