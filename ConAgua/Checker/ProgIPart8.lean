@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Checker.ProgIdx
+public import ConAgua.Checker.AsmKeys
 meta import ConAgua.Checker.ProgIdx
+meta import ConAgua.Checker.AsmKeys
 import all Init.Data.Repr
 import all ConAgua.Arena.Abs1
 import all ConAgua.Arena.AppStore
@@ -162,6 +164,6 @@ namespace L.Checker
 
 open L L.Compiler
 
-inl_round_fns checkerProgI : 80 checkerIdx checkerProg 1422 1582
+inl_round_fns checkerProgI : 80 checkerXKeys checkerIdx checkerProg 1422 1582
 
 end L.Checker
