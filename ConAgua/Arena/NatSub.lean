@@ -207,18 +207,6 @@ theorem room_le' (m : Mem) (a : TieredArray) (i n r k : Word) (hin : i.toNat ≤
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), hs] at h'
   omega
 
-/-- A pool function's last step: it wrote only the pool (`PFrame`) and kept it below the old top
-`T`, then moved the top past its `r` result limbs: the pool grew. -/
-theorem grows_ctl (m0 m2 : Mem) (T r : Word) (hok : PoolOK m0) (hT0 : m0.top = T)
-    (hf : PFrame m0 m2) (ha : Agree (vpool m2) (vpool m0) T.toNat)
-    (hroom : (T &&& 1099511627775).toNat + r.toNat ≤ (m0.arr64 (tierA POOL (T >>> 40))).size) :
-    Grows m0 (m2.set64 CTL 0 (T + r)) := by
-  subst hT0
-  exact Grows.write m0 m2 r hok hf ha hroom
-
-theorem vpool_ctl (m : Mem) (w : Word) : vpool (m.set64 CTL 0 w) = vpool m :=
-  vpool_set64_ne _ _ _ _ (by decide)
-
 section subCore
 variable (p : Prog) (hps : p.lookup "sub_n" = some subN) (hp1 : p.lookup "sub_1" = some sub1)
   (hpt : p.lookup "nat_trim" = some natTrim)

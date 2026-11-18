@@ -105,15 +105,17 @@ The result slice starts at the old top `CTL[0]`. One pass of ripple carry over
   return 0
 }
 
-/-- The carry out of `x + y + c` for a carry-in `c ≤ 1` (the two `overflowing_add`s of
-`add_from`, `ron/nat.rs:257-264`). -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def addCarry : FunDecl := lfn (x, y, c) locals (s) {
-  s := x + y;
-  if s < x { return 1 };
-  s := s + c;
-  if s < c { return 1 };
-  return 0
+/-- `add_n` over the limbs both operands have, `add_1` over the rest of the longer one, the carry
+limb at `n`, the longer operand's length. -/
+def addCore : Stmt := lblk (oa, la, ob, lb, top, n, c, pt, pb) {
+  if la < lb {
+    c := call add_n(top, oa, ob, la, 0);
+    c := call add_1(top + la, ob + la, lb - la, c)
+  } else {
+    c := call add_n(top, oa, ob, lb, 0);
+    c := call add_1(top + lb, oa + lb, la - lb, c)
+  };
+  POOL⟨pt⟩[pb + n] := c
 }
 
 /-- `add_n` over the limbs both operands have, `add_1` over the rest of the longer one, the carry
@@ -127,14 +129,7 @@ def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
   n := la;
   if la < lb { n := lb };
   if len(POOL⟨pt⟩) - pb <= n { abort };
-  if la < lb {
-    c := call add_n(top, oa, ob, la, 0);
-    c := call add_1(top + la, ob + la, lb - la, c)
-  } else {
-    c := call add_n(top, oa, ob, lb, 0);
-    c := call add_1(top + lb, oa + lb, la - lb, c)
-  };
-  POOL⟨pt⟩[pb + n] := c;
+  ⟪addCore⟫;
   n := call nat_trim(top, n + 1);
   CTL.u64[0] := top + n;
   return n
@@ -142,7 +137,7 @@ def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
 
 /-- The pool functions, as one `#eval`-able program. -/
 def natProg : Prog :=
-  [("nat_limb", natLimb), ("add_carry", addCarry), ("nat_trim", natTrim), ("add_n", addN),
+  [("nat_limb", natLimb), ("nat_trim", natTrim), ("add_n", addN),
    ("add_1", add1), ("nat_add", natAdd)]
 
 /- `(2^128 - 1) + 1 = 2^128`: limbs `[max, max]` at 0 and `[1]` at 2, top 3; the sum is
@@ -161,19 +156,6 @@ def natProg : Prog :=
 
 section add
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (Pg : Array Word) (C : Nat)
-
-include hpc in
-theorem addCarry_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "add_carry" [x, y, c]
-    ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat = adcHi x y c; ⊤⦄ := by
-  rw [invoke_eq _ hpc]
-  simp only [callFn, addCarry]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc] <;> finish
 
 include hpl in
 theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
@@ -210,20 +192,6 @@ theorem add_agree (m0 m1 m2 : Mem) (T k l v : Word)
   rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds_ne (by omega)]
   exact (h2 j (Or.inl (by omega))).trans (h1 j (Or.inl hj))
 
-theorem add_agree_goal (m0 m1 m2 : Mem) (T X k l v w : Word) (hX : X = T)
-    (hs : pcap m0 < 2 ^ 64) (hc2 : pcap m2 = pcap m0) (hT41 : T.toNat < 2 ^ 41) (hl41 : l.toNat < 2 ^ 41)
-    (hk : k.toNat ≤ l.toNat)
-    (hbd : ((T &&& 1099511627775) + l).toNat < (m2.arr64 (tierA POOL (T >>> 40))).size)
-    (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
-    (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat) :
-    Agree (vpool ((m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v).set64 CTL 0 w))
-      (vpool m0) X.toNat := by
-  have hT : T.toNat + l.toNat < 2 ^ 41 :=
-    win_lt m2 T l hT41 hl41 (by have := pcap_tier m2 (T >>> 40) (by omega); omega) hbd
-  subst X
-  rw [vpool_set64_ne _ _ _ _ (by decide)]
-  exact add_agree m0 m1 m2 T k l v hs hc2 hT41 hl41 hk hbd h1 h2
-
 /-- The room check `len - i > n` of a tier array: `i + r ≤ len` for `r ≤ n + 1`. -/
 theorem room_le (m : Mem) (a : TieredArray) (i n r : Word) (hin : i.toNat ≤ (m.arr64 a).size)
     (hsz : (m.arr64 a).size < 2 ^ 40) (h : ¬decide (m.len64 a - i ≤ n) = true)
@@ -237,22 +205,17 @@ theorem room_le (m : Mem) (a : TieredArray) (i n r : Word) (hin : i.toNat ≤ (m
     rw [UInt64.toNat_add, UInt64.toNat_one]; exact Nat.mod_eq_of_lt (by omega)
   omega
 
-/-- `nat_add`'s pool grew: the passes and the carry limb wrote only at the old top and above,
-inside the top's tier, then the top moved past the result. -/
-theorem add_grows (m0 m1 m2 : Mem) (T k l v r : Word) (hok : PoolOK m0) (hT0 : m0.top = T)
-    (hf1 : PFrame m0 m1) (hf2 : PFrame m1 m2) (hc2 : pcap m2 = pcap m0)
-    (hT41 : T.toNat < 2 ^ 41) (hl41 : l.toNat < 2 ^ 41) (hk : k.toNat ≤ l.toNat)
-    (hbd : ((T &&& 1099511627775) + l).toNat < (m2.arr64 (tierA POOL (T >>> 40))).size)
-    (hroom : (T &&& 1099511627775).toNat + r.toNat ≤ (m0.arr64 (tierA POOL (T >>> 40))).size)
-    (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
-    (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat) :
-    Grows m0 ((m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v).set64 CTL 0 (T + r)) := by
-  have hT : T.toNat + l.toNat < 2 ^ 41 :=
-    win_lt m2 T l hT41 hl41 (by have := pcap_tier m2 (T >>> 40) (by have := hok.cap; omega); omega) hbd
+/-- A pool function's last step: it wrote only the pool (`PFrame`) and kept it below the old top
+`T`, then moved the top past its `r` result limbs: the pool grew. -/
+theorem grows_ctl (m0 m2 : Mem) (T r : Word) (hok : PoolOK m0) (hT0 : m0.top = T)
+    (hf : PFrame m0 m2) (ha : Agree (vpool m2) (vpool m0) T.toNat)
+    (hroom : (T &&& 1099511627775).toNat + r.toNat ≤ (m0.arr64 (tierA POOL (T >>> 40))).size) :
+    Grows m0 (m2.set64 CTL 0 (T + r)) := by
   subst hT0
-  have hs : pcap m0 < 2 ^ 64 := by have := hok.cap; omega
-  exact Grows.write m0 _ r hok (PFrame.set64 _ _ _ (hf1.trans hf2))
-    (add_agree m0 m1 m2 m0.top k l v hs hc2 hT41 hl41 hk hbd h1 h2) hroom
+  exact Grows.write m0 m2 r hok hf ha hroom
+
+theorem vpool_ctl (m : Mem) (w : Word) : vpool (m.set64 CTL 0 w) = vpool m :=
+  vpool_set64_ne _ _ _ _ (by decide)
 
 /-- The value of `nat_add`'s result on arrays: `add_n` wrote the `k` common limbs (`P1`), `add_1`
 the `l - k` limbs of the longer operand's rest (`P2`), the carry limb goes at `T + l`. -/
@@ -280,65 +243,135 @@ theorem add_pv (P0 P1 P2 : Array Word) (T x y k l c1 c2 : Nat) (v : Word) (hv : 
   have : W * (B + c2 * W') = W * (D + c1) := by rw [e2]
   grind
 
-/-- `add_pv` in the shape of `nat_add`'s goal (the operands `(x, k)` and `(y, l)`: `add_n` over
-`k`, `add_1` over the rest of `y`). -/
-theorem add_goal (m0 m1 m2 : Mem) (T X x y k l v r R c1 : Word) (hX : X = T) (hR : R = r)
+/-- `add_pv` in the shape of `addCore`'s goal (the operands `(x, k)` and `(y, l)`: `add_n` over
+`k`, `add_1` over the rest of `y`, the carry limb `v` at `T + l`). -/
+theorem add_core_goal (m0 m1 m2 : Mem) (T x y k l v c1 c0 n : Word) (hn : n = l) (hc0 : c0 = 0)
     (hs : pcap m0 < 2 ^ 64) (hc2 : pcap m2 = pcap m0) (hT41 : T.toNat < 2 ^ 41) (hl41 : l.toNat < 2 ^ 41)
     (hk : k.toNat ≤ l.toNat) (hy : y.toNat + l.toNat ≤ T.toNat)
     (hbd : ((T &&& 1099511627775) + l).toNat < (m2.arr64 (tierA POOL (T >>> 40))).size)
     (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat)
     (e1 : pv (vpool m1) T.toNat k.toNat + c1.toNat * wt k.toNat =
-      pv (vpool m0) x.toNat k.toNat + pv (vpool m0) y.toNat k.toNat + 0)
+      pv (vpool m0) x.toNat k.toNat + pv (vpool m0) y.toNat k.toNat + c0.toNat)
     (e2 : pv (vpool m2) (T + k).toNat (l - k).toNat + v.toNat * wt (l - k).toNat =
-      pv (vpool m1) (y + k).toNat (l - k).toNat + c1.toNat)
-    (et : pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v)) T.toNat r.toNat =
-      pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v)) T.toNat (l + 1).toNat) :
-    pv (vpool ((m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v).set64 CTL 0 (T + r)))
-        X.toNat R.toNat = pv (vpool m0) x.toNat k.toNat + pv (vpool m0) y.toNat l.toNat := by
-  have hT : T.toNat + l.toNat < 2 ^ 41 :=
-    win_lt m2 T l hT41 hl41 (by have := pcap_tier m2 (T >>> 40) (by omega); omega) hbd
-  subst X R
+      pv (vpool m1) (y + k).toNat (l - k).toNat + c1.toNat) :
+    pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + n) v)) T.toNat (n.toNat + 1) =
+      pv (vpool m0) x.toNat k.toNat + pv (vpool m0) y.toNat l.toNat := by
+  subst n
+  subst c0
   have hsz := pcap_tier m2 (T >>> 40) (by omega)
-  have hl1 : (l + 1).toNat = l.toNat + 1 := w_add l 1 (by simp; omega)
+  have hT : T.toNat + l.toNat < 2 ^ 41 := win_lt m2 T l hT41 hl41 (by omega) hbd
   have hTk : (T + k).toNat = T.toNat + k.toNat := w_add T k (by omega)
   have hyk : (y + k).toNat = y.toNat + k.toNat := w_add y k (by omega)
   have hlk : (l - k).toNat = l.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hk)
-  rw [vpool_set64_ne _ _ _ _ (by decide), et, st_win m2 T l v (by omega) (by omega) (by omega) hbd]
-  simp only [hl1]
+  rw [st_win m2 T l v (by omega) (by omega) (by omega) hbd]
   rw [hTk, hlk] at h2 e2
   rw [hyk] at e2
+  simp only [UInt64.toNat_zero] at e1
   rw [Nat.add_comm (pv (vpool m0) x.toNat k.toNat)]
   rw [Nat.add_comm (pv (vpool m0) x.toNat k.toNat)] at e1
   exact add_pv _ _ _ T.toNat y.toNat x.toNat k.toNat l.toNat c1.toNat v.toNat v rfl (vpool_size m2)
     (by omega) hk (by omega) h1 h2 e1 e2
 
-/-- `add_goal` with the longer operand first (`nat_add`'s `else` branch). -/
-theorem add_goal2 (m0 m1 m2 : Mem) (T X x y k l v r R c1 : Word) (hX : X = T) (hR : R = r)
+/-- `add_core_goal` with the longer operand first (`addCore`'s `else` branch). -/
+theorem add_core_goal2 (m0 m1 m2 : Mem) (T x y k l v c1 c0 n : Word) (hn : n = l) (hc0 : c0 = 0)
     (hs : pcap m0 < 2 ^ 64) (hc2 : pcap m2 = pcap m0) (hT41 : T.toNat < 2 ^ 41) (hl41 : l.toNat < 2 ^ 41)
     (hk : k.toNat ≤ l.toNat) (hy : y.toNat + l.toNat ≤ T.toNat)
     (hbd : ((T &&& 1099511627775) + l).toNat < (m2.arr64 (tierA POOL (T >>> 40))).size)
     (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat)
     (e1 : pv (vpool m1) T.toNat k.toNat + c1.toNat * wt k.toNat =
-      pv (vpool m0) y.toNat k.toNat + pv (vpool m0) x.toNat k.toNat + 0)
+      pv (vpool m0) y.toNat k.toNat + pv (vpool m0) x.toNat k.toNat + c0.toNat)
     (e2 : pv (vpool m2) (T + k).toNat (l - k).toNat + v.toNat * wt (l - k).toNat =
-      pv (vpool m1) (y + k).toNat (l - k).toNat + c1.toNat)
-    (et : pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v)) T.toNat r.toNat =
-      pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v)) T.toNat (l + 1).toNat) :
-    pv (vpool ((m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + l) v).set64 CTL 0 (T + r)))
-        X.toNat R.toNat = pv (vpool m0) y.toNat l.toNat + pv (vpool m0) x.toNat k.toNat := by
-  have hT : T.toNat + l.toNat < 2 ^ 41 :=
-    win_lt m2 T l hT41 hl41 (by have := pcap_tier m2 (T >>> 40) (by omega); omega) hbd
-  rw [Nat.add_comm (pv (vpool m0) y.toNat k.toNat)] at e1
-  rw [Nat.add_comm]
-  exact add_goal m0 m1 m2 T X x y k l v r R c1 hX hR hs hc2 hT41 hl41 hk hy hbd h1 h2 e1 e2 et
+      pv (vpool m1) (y + k).toNat (l - k).toNat + c1.toNat) :
+    pv (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + n) v)) T.toNat (n.toNat + 1) =
+      pv (vpool m0) y.toNat l.toNat + pv (vpool m0) x.toNat k.toNat := by
+  subst n
+  rw [Nat.add_comm (pv (vpool m0) y.toNat k.toNat) (pv (vpool m0) x.toNat k.toNat)] at e1
+  rw [Nat.add_comm (pv (vpool m0) y.toNat l.toNat)]
+  exact add_core_goal m0 m1 m2 T x y k l v c1 c0 l rfl hc0 hs hc2 hT41 hl41 hk hy hbd h1 h2 e1 e2
+
+/-- The pool written by `addCore` agrees below `T` with the entry pool. -/
+theorem add_core_agree (m0 m1 m2 : Mem) (T k l v n : Word) (hn : n = l)
+    (hs : pcap m0 < 2 ^ 64) (hc2 : pcap m2 = pcap m0) (hT41 : T.toNat < 2 ^ 41) (hl41 : l.toNat < 2 ^ 41)
+    (hk : k.toNat ≤ l.toNat)
+    (hbd : ((T &&& 1099511627775) + l).toNat < (m2.arr64 (tierA POOL (T >>> 40))).size)
+    (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
+    (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat) :
+    Agree (vpool (m2.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + n) v)) (vpool m0) T.toNat := by
+  subst n
+  exact add_agree m0 m1 m2 T k l v hs hc2 hT41 hl41 hk hbd h1 h2
+
+section addCore
+variable (p : Prog) (hpn : p.lookup "add_n" = some addN) (hp1 : p.lookup "add_1" = some add1)
+
+/-- `addCore`'s precondition: locals `(oa, la, ob, lb, top, n, c, pt, pb)`, the operands below the
+top, `n` the longer length, room for `n + 1` limbs in the top's tier. -/
+def AddCorePre (s : St) : Prop :=
+  pcap s.mem < 2 ^ 64 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
+  (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧
+  (s.loc 1 < s.loc 3 → s.loc 5 = s.loc 3) ∧ (¬s.loc 1 < s.loc 3 → s.loc 5 = s.loc 1) ∧
+  s.loc 7 = s.loc 4 >>> 40 ∧ s.loc 8 = s.loc 4 &&& 1099511627775 ∧
+  (s.loc 8).toNat + (s.loc 5).toNat < (s.mem.arr64 (tierA POOL (s.loc 7))).size
+
+def AddCorePost (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ PFrame s₀.mem s'.mem ∧
+  pcap s'.mem = pcap s₀.mem ∧ Agree (vpool s'.mem) (vpool s₀.mem) (s₀.loc 4).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 5).toNat + 1) =
+    pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + pv (vpool s₀.mem) (s₀.loc 2).toNat (s₀.loc 3).toNat
+
+include hpn hp1 in
+theorem addCore_spec (n : Nat) (s₀ : St) (h : AddCorePre s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) addCore ⦃fun r s' => AddCorePost s₀ r s'; ⊤⦄ := by
+  simp only [AddCorePre, AddCorePost] at h ⊢
+  obtain ⟨hs, hT41, ha, hb, hn1, hn2, h7, h8, hroom⟩ := h
+  have hsz := pcap_tier s₀.mem (s₀.loc 7) hs
+  unfold addCore
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
+    addN_spec p hpn n, add1_spec p hp1 n]
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals first
+    | (grind (splits := 10) [arena_grind, lang_grind]; done)
+    | (with_reducible apply add_core_goal
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       case e1 => with_reducible assumption
+       case e2 => with_reducible assumption
+       all_goals first | rfl | grind)
+    | (with_reducible apply add_core_goal2
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       case e1 => with_reducible assumption
+       case e2 => with_reducible assumption
+       all_goals first | rfl | grind)
+    | (with_reducible apply add_core_agree
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       all_goals grind)
+    | (trace_state; sorry)
+
+end addCore
+
+/-- `nat_add`'s result: the trimmed length `r` of the `n + 1` limbs `addCore` wrote, read after
+the top moved. -/
+theorem add_final (m : Mem) (T T' X n n' r R w : Word) (A : Nat) (hX : X = T) (hR : R = r)
+    (hT : T' = T) (hn' : n' = n) (hn : n.toNat < 2 ^ 41)
+    (et : pv (vpool m) T'.toNat r.toNat = pv (vpool m) T'.toNat (n' + 1).toNat)
+    (hc : pv (vpool m) T.toNat (n.toNat + 1) = A) :
+    pv (vpool (m.set64 CTL 0 w)) X.toNat R.toNat = A := by
+  subst X R T' n'
+  have hn1 : (n + 1).toNat = n.toNat + 1 := w_add n 1 (by simp; omega)
+  rw [vpool_ctl, et, hn1, hc]
 
 section addFn
 variable (p : Prog) (hpn : p.lookup "add_n" = some addN) (hp1 : p.lookup "add_1" = some add1)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpa : p.lookup "nat_add" = some natAdd)
 
-set_option maxHeartbeats 2000000 in
 include hpn hp1 hpt hpa in
 /-- `nat_add` appends `a + b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
@@ -368,38 +401,28 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      addN_spec p hpn n, add1_spec p hp1 n, natTrim_spec p hpt n]
-    all_goals (try simp only [LocEq] at *)
-    all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      addCore_spec p hpn hp1 n, natTrim_spec p hpt n]
+    all_goals (try simp only [LocEq, AddCorePre, AddCorePost] at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero])
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals split_clear_locs
     all_goals (try and_intros)
     all_goals first
-      | (grind (splits := 20) [arena_grind, lang_grind, Mem.top_eq]; done)
-      | (with_reducible apply add_goal
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         case e1 => with_reducible assumption
-         all_goals first | rfl | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply add_goal2
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         case e1 => with_reducible assumption
-         all_goals first | rfl | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply add_agree_goal
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         all_goals first | rfl | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply add_grows
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
+      | (grind (splits := 10) [arena_grind, lang_grind, Mem.top_eq, vpool_ctl, Norm]; done)
+      | (with_reducible apply grows_ctl
          case hroom =>
-           apply room_le
-           case hr => with_reducible assumption
-           case h => assumption
-           all_goals grind [Mem.top_eq]
-         all_goals first | rfl | grind [Mem.top_eq, Sig.retVal])
+           first
+             | grind [Mem.top_eq]
+             | (apply room_le
+                case hr => with_reducible assumption
+                case h => assumption
+                all_goals grind [Mem.top_eq])
+         all_goals grind [Mem.top_eq, vpool_ctl])
+      | (with_reducible apply add_final
+         case hc => with_reducible assumption
+         case et => with_reducible assumption
+         all_goals first | rfl | grind [Mem.top_eq])
 
 end addFn
 

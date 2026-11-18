@@ -204,7 +204,7 @@ def cdFns : List FnName :=
   ["check_decl", "close_lams_go", "close_telescope_go", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved", "block_names_unreserved", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
     "ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
     "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
-    "abstract_prefix_list", "add_carry", "all_level_params_defined", "alpd_go", "alpd_ls",
+    "abstract_prefix_list", "all_level_params_defined", "alpd_go", "alpd_ls",
     "and_rescue_slots", "apd_clear", "apd_find", "apd_put", "app_count", "app_count_at", "app_fill",
     "app_fill_n", "app_find", "app_hole", "app_push", "ar_app", "ar_entry", "ar_forall", "ar_go",
     "ar_lam", "ar_let", "ar_node", "ar_proj", "aux_rule_fire", "b_eq",
