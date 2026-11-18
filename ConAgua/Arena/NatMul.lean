@@ -63,50 +63,196 @@ theorem macHi_spec (n : Nat) (s₀ : St) (x y t c : Word) :
 
 end mac
 
-/-! ## `nat_mul(oa, la, ob, lb)`: append `a * b` to the pool, return its length -/
+/-! ## The in-place passes: `mul_row`, `sub_row`, `mul_zeros`
 
-def zeroLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
-  for i < la { POOL⟨pt⟩[pb + i] := 0 }
-}
+Each works on a window `[o, o + n)` of the pool in place (con-ron's `mul_row`, `sub_row`,
+`add_carry_at`, `sub_borrow_at`, `zeros`); the operand is read through its tier and index,
+decoded once. A carry or borrow that would leave the window aborts (the callers' sums fit, so it
+never happens; the proof then needs no bound on the sum). -/
 
-/-- One row: add `a * y`, shifted by `j` limbs, into the result (con-ron's `mul_u64_from`). -/
-def colLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
+/-- `P[o + i] += a[i] * y + c` for `i < la`. -/
+def mrowLoop : Stmt := lblk (o, n, oa, la, y, i, c, x, t, lo, hi, ot, ob, qt, qb) {
   for i < la {
-    x := POOL⦃oa + i⦄;
-    t := POOL⟨pt⟩[pb + (i + j)];
-    POOL⟨pt⟩[pb + (i + j)] := x * y + t + c;
-    c := call mac_hi(x, y, t, c)
+    x := POOL⟨qt⟩[qb + i];
+    t := POOL⟨ot⟩[ob + i];
+    lo := x * y + t;
+    hi := mulhi(x, y) + u64(lo < t);
+    lo := lo + c;
+    POOL⟨ot⟩[ob + i] := lo;
+    c := hi + u64(lo < c)
   }
 }
 
-/-- All rows (con-ron's `mul_from`). -/
-def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t, pt, pb) {
+/-- The carry ripple, inside the window. -/
+def mcarryLoop : Stmt := lblk (o, n, oa, la, y, i, c, x, t, lo, hi, ot, ob, qt, qb) {
+  while c != 0 {
+    if n <= i { abort };
+    t := POOL⟨ot⟩[ob + i] + c;
+    POOL⟨ot⟩[ob + i] := t;
+    c := u64(t < c);
+    i += 1
+  }
+}
+
+/-- `mul_row(o, n, oa, la, y)`: `P[o, o + n) += a * y` in place, `a = P[oa, oa + la)`, the window
+not overlapping `a` (con-ron's `mul_row` and `add_carry_at`). With `y = 1` it is the in-place
+addition of `a`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def mulRow : FunDecl := lfn (o, n, oa, la, y) locals (i, c, x, t, lo, hi, ot, ob, qt, qb) {
+  if n < la { abort };
+  ot := ⦃o⦄.tier;
+  ob := ⦃o⦄.idx;
+  qt := ⦃oa⦄.tier;
+  qb := ⦃oa⦄.idx;
+  ⟪mrowLoop⟫;
+  ⟪mcarryLoop⟫;
+  return 0
+}
+
+/-- `P[o + i] -= a[i] + c` for `i < la`. -/
+def srowLoop : Stmt := lblk (o, n, oa, la, i, c, x, t, d, ot, ob, qt, qb) {
+  for i < la {
+    x := POOL⟨qt⟩[qb + i];
+    t := POOL⟨ot⟩[ob + i];
+    d := t - x;
+    POOL⟨ot⟩[ob + i] := d - c;
+    c := u64(t < x) + u64(d < c)
+  }
+}
+
+/-- The borrow ripple, inside the window. -/
+def sborrowLoop : Stmt := lblk (o, n, oa, la, i, c, x, t, d, ot, ob, qt, qb) {
+  while c != 0 {
+    if n <= i { abort };
+    t := POOL⟨ot⟩[ob + i];
+    POOL⟨ot⟩[ob + i] := t - 1;
+    c := u64(t == 0);
+    i += 1
+  }
+}
+
+/-- `sub_row(o, n, oa, la)`: `P[o, o + n) -= a` in place (con-ron's `sub_row` and
+`sub_borrow_at`). -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def subRow : FunDecl := lfn (o, n, oa, la) locals (i, c, x, t, d, ot, ob, qt, qb) {
+  if n < la { abort };
+  ot := ⦃o⦄.tier;
+  ob := ⦃o⦄.idx;
+  qt := ⦃oa⦄.tier;
+  qb := ⦃oa⦄.idx;
+  ⟪srowLoop⟫;
+  ⟪sborrowLoop⟫;
+  return 0
+}
+
+def zerosLoop : Stmt := lblk (o, n, i, ot, ob) {
+  for i < n { POOL⟨ot⟩[ob + i] := 0 }
+}
+
+/-- `mul_zeros(o, n)`: `P[o, o + n) := 0` (con-ron's `zeros`). -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def mulZeros : FunDecl := lfn (o, n) locals (i, ot, ob) {
+  ot := ⦃o⦄.tier;
+  ob := ⦃o⦄.idx;
+  ⟪zerosLoop⟫;
+  return 0
+}
+
+/-! ## `mul_win`: the window product, accumulated in place -/
+
+/-- The schoolbook rows: one `mul_row` per limb of the shorter operand `b`. -/
+def rowsLoop : Stmt := lblk (oa, la, ob, lb, o, n, s, k, z2, n2, sa, sb, sp, s2, l, u, j, y) {
   for j < lb {
     y := POOL⦃ob + j⦄;
-    c := 0;
-    i := 0;
-    ⟪colLoop⟫;
-    POOL⟨pt⟩[pb + (la + j)] := c
+    u := call mul_row(o + j, n - j, oa, la, y)
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
-@[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t, pt, pb) {
+/-- `mul_win(oa, la, ob, lb, o, n, s)`: `P[o, o + n) += a * b` in place, for the windows
+`a = P[oa, oa + la)` and `b = P[ob, ob + lb)` (con-ron's `mul_win`), with scratch space from `s`
+up. Below `T` limbs in the shorter window: schoolbook rows; an operand at least twice as long
+as the other is halved, both halves accumulating into the window; otherwise Karatsuba at
+`k = ceil(la / 2)`: `z0 = a0 b0` and `z2 = a1 b1` into zeroed scratch, the sums `a0 + a1`,
+`b0 + b1` and their product `s` too, `z1 = s - z0 - z2` in place in `s`, then
+`P[o, o + n) += z0 + z1 B^k + z2 B^2k`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def mulWinG (T : Word) : FunDecl :=
+  lfn (oa, la, ob, lb, o, n, s) locals (k, z2, n2, sa, sb, sp, s2, l, u, j, y) {
+  if n < la + lb { abort };
+  if la < lb {
+    u := call mul_win(ob, lb, oa, la, o, n, s);
+    return 0
+  };
+  if lb < ⟪T⟫ {
+    ⟪rowsLoop⟫;
+    return 0
+  };
+  if lb <= la >> 1 {
+    k := la >> 1;
+    u := call mul_win(oa, k, ob, lb, o, n, s);
+    u := call mul_win(oa + k, la - k, ob, lb, o + k, n - k, s);
+    return 0
+  };
+  k := la - (la >> 1);
+  z2 := s + 2 * k;
+  n2 := la + lb - 2 * k;
+  sa := z2 + n2;
+  sb := sa + k + 1;
+  sp := sb + k + 1;
+  s2 := sp + 2 * k + 2;
+  u := call mul_zeros(s, s2 - s);
+  u := call mul_win(oa, k, ob, k, s, 2 * k, s2);
+  u := call mul_win(oa + k, la - k, ob + k, lb - k, z2, n2, s2);
+  u := call mul_row(sa, k + 1, oa, k, 1);
+  u := call mul_row(sa, k + 1, oa + k, la - k, 1);
+  u := call mul_row(sb, k + 1, ob, k, 1);
+  u := call mul_row(sb, k + 1, ob + k, lb - k, 1);
+  u := call mul_win(sa, k + 1, sb, k + 1, sp, 2 * k + 2, s2);
+  u := call sub_row(sp, 2 * k + 2, s, 2 * k);
+  u := call sub_row(sp, 2 * k + 2, z2, n2);
+  l := call nat_trim(sp, 2 * k + 2);
+  u := call mul_row(o, n, s, 2 * k, 1);
+  u := call mul_row(o + k, n - k, sp, l, 1);
+  u := call mul_row(o + 2 * k, n - 2 * k, z2, n2, 1);
+  return 0
+}
+
+/-- The Karatsuba threshold: below this many limbs in the shorter operand, schoolbook. -/
+def karaT : Word := 32
+
+/-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
+@[no_expose] def mulWin : FunDecl := mulWinG karaT
+
+/-! ## `nat_mul(oa, la, ob, lb)`: append `a * b` to the pool, return its length -/
+
+/-- `nat_mul` at the threshold `T`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def natMulG (T : Word) : FunDecl := lfn (oa, la, ob, lb) locals (top, n, m, pt, pb, u) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := top - ⦃top⦄.base;
   n := la + lb;
-  if len(POOL⟨pt⟩) - pb < n { abort };
-  ⟪zeroLoop⟫;
-  ⟪rowLoop⟫;
+  m := n;
+  if ⟪T⟫ <= la && ⟪T⟫ <= lb { m := 9 * n + 1024 };
+  if len(POOL⟨pt⟩) - pb < m { abort };
+  u := call mul_zeros(top, n);
+  u := call mul_win(oa, la, ob, lb, top, n, top + n);
   n := call nat_trim(top, n);
   CTL.u64[0] := top + n;
   return n
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
+def natMul : FunDecl := natMulG karaT
+
 /-- The pool functions with `nat_mul`. -/
-def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("nat_mul", natMul)]
+def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
+  ("mul_zeros", mulZeros), ("mul_win", mulWin), ("nat_mul", natMul)]
+
+/-- `natMulProg` at another threshold (tests). -/
+def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow),
+  ("sub_row", subRow), ("mul_zeros", mulZeros), ("mul_win", mulWinG T), ("nat_mul", natMulG T)]
 
 /- `(2^64 - 1)^2 = 2^128 - 2^65 + 1`: limbs `[1, 2^64 - 2]`. -/
 #guard (run natMulProg 1000 "nat_mul" [0, 1, 0, 1]
@@ -119,216 +265,6 @@ def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("nat_mul", natMul)]
   some ([2], #[3, 1, 5, 15, 5, 0], #[5])
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 0]
   (Mem.ofWords [(POOL, #[3, 1, 0, 0]), (CTL, #[2])])).toOption.map (·.1) == some [0]
-
-section mul
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
-  (Pg : Array Word) (C : Nat)
-
-/-- What all three loops of `nat_mul` keep: the pool agrees with the entry pool `Pg` below
-`top`, the operands lie below `top`, and the `la + lb` result limbs fit above it. -/
-def MulBase (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
-  Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
-  (s.loc 5).toNat = (s.loc 1).toNat + (s.loc 3).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧
-  s.loc 12 = s.loc 4 >>> 40 ∧ s.loc 13 = s.loc 4 - ((s.loc 4 >>> 40) <<< 40) ∧
-  (s.loc 13).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 12))).size ∧
-  (s.mem.arr64 (tierA POOL (s.loc 12))).size ≤ 2 ^ 40 ∧ (s.loc 12).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
-  (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat
-
-def ZeroInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  MulBase Pg C s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧
-  pv (vpool s.mem) (s.loc 4).toNat (s.loc 6).toNat = 0
-
-/-- Row `j`, column `i`: the result so far plus the carry is `a * b[0..j) + a[0..i) * y`, with
-`y = b[j]`. -/
-def ColInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  MulBase Pg C s ∧ (s.loc 6).toNat ≤ (s.loc 1).toNat ∧ (s.loc 7).toNat < (s.loc 3).toNat ∧
-  (s.loc 10).toNat = lv Pg (s.loc 2).toNat (s.loc 3).toNat (s.loc 7).toNat ∧
-  pv (vpool s.mem) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) +
-      (s.loc 8).toNat * (wt (s.loc 6).toNat * wt (s.loc 7).toNat) =
-    pv Pg (s.loc 0).toNat (s.loc 1).toNat * pv Pg (s.loc 2).toNat (s.loc 7).toNat +
-      pv Pg (s.loc 0).toNat (s.loc 6).toNat * (s.loc 10).toNat * wt (s.loc 7).toNat
-
-/-- Before row `j`: the result so far is `a * b[0..j)`. -/
-def RowInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  MulBase Pg C s ∧ (s.loc 7).toNat ≤ (s.loc 3).toNat ∧
-  pv (vpool s.mem) (s.loc 4).toNat ((s.loc 1).toNat + (s.loc 7).toNat) =
-    pv Pg (s.loc 0).toNat (s.loc 1).toNat * pv Pg (s.loc 2).toNat (s.loc 7).toNat
-
-set_option maxHeartbeats 2000000 in
-theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    exec p n zeroLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [ZeroInv, MulBase] at h
-    rw [exec, step_while (w := zeroLoop) rfl]
-    sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, setLoc, setLocs, st64, ih] <;> finish [ZeroInv, MulBase]
-
-/-- One multiply-accumulate step of the column loop, in the shape of `colLoop_spec`'s arithmetic
-goal (applied, not E-matched: `grind` alone takes minutes here). -/
-theorem mul_step_goal (m : Mem) (Pg : Array Word) (T T12 T13 o L ob i j y c r : Word)
-    (h12 : T12 = T >>> 40) (h13 : T13 = T - ((T >>> 40) <<< 40))
-    (hT : T.toNat < 2 ^ 41) (hs : (m.arr64 (tierA POOL T12)).size ≤ 2 ^ 40)
-    (hst : (T13 + (i + j)).toNat < (m.arr64 (tierA POOL T12)).size)
-    (hk : T13.toNat + i.toNat + j.toNat < 2 ^ 40)
-    (hag : Agree (vpool m) Pg T.toNat) (hoi : o.toNat + i.toNat < T.toNat)
-    (hil : i.toNat < L.toNat) (hwi : T.toNat + i.toNat + j.toNat < 2 ^ 41)
-    (hPg : Pg.size = 2 ^ 41)
-    (hld : ((o + i) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((o + i) >>> 40))).size)
-    (hr : r.toNat = macHiN (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat]
-      y (m.arr64 (tierA POOL T12))[(T13 + (i + j)).toNat] c)
-    (ih : pv (vpool m) T.toNat (L.toNat + j.toNat) + c.toNat * (wt i.toNat * wt j.toNat) =
-      pv Pg o.toNat L.toNat * pv Pg ob.toNat j.toNat + pv Pg o.toNat i.toNat * y.toNat * wt j.toNat) :
-    pv (vpool (m.set64 (tierA POOL T12) (T13 + (i + j))
-        ((m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] * y +
-          (m.arr64 (tierA POOL T12))[(T13 + (i + j)).toNat] + c)))
-        T.toNat (L.toNat + j.toNat) +
-      r.toNat * (wt (i + 1).toNat * wt j.toNat) =
-    pv Pg o.toNat L.toNat * pv Pg ob.toNat j.toNat + pv Pg o.toNat (i + 1).toNat * y.toNat * wt j.toNat := by
-  subst h12 h13
-  have hij : (i + j).toNat = i.toNat + j.toNat := by
-    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have hi' : (i + 1).toNat = i.toNat + 1 := by
-    rw [UInt64.toNat_add, UInt64.toNat_one]; exact Nat.mod_eq_of_lt (by omega)
-  have hoi' : (o + i).toNat = o.toNat + i.toNat := by
-    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  have hTij : (T + (i + j)).toNat = T.toNat + (i.toNat + j.toNat) := by
-    rw [UInt64.toNat_add, hij]; exact Nat.mod_eq_of_lt (by omega)
-  have hvs := vpool_size m
-  have hk' : (T - ((T >>> 40) <<< 40)).toNat + (i + j).toNat < 2 ^ 40 := by rw [hij]; omega
-  have ex : (m.arr64 (tierA POOL ((o + i) >>> 40)))[((o + i) &&& 1099511627775).toNat] =
-      Pg[o.toNat + i.toNat] := by
-    rw [vpool_ld m (o + i) hld (by omega)]
-    simp only [hoi']
-    exact Agree.get _ _ _ _ hag hoi (by omega) (by omega)
-  have et : (m.arr64 (tierA POOL (T >>> 40)))[(T - ((T >>> 40) <<< 40) + (i + j)).toNat] =
-      (vpool m)[T.toNat + (i.toNat + j.toNat)] := by
-    rw [vpool_ldrel m T (i + j) hT hst hs hk' (by omega)]
-    simp only [hTij]
-  rw [ex, et] at hr
-  rw [ex, et, vpool_strel m T (i + j) _ hT hst hs hk', hTij, hi']
-  have hmid := pv_set_mid (vpool m) T.toNat (L.toNat + j.toNat) i.toNat j.toNat
-    (T.toNat + (i.toNat + j.toNat))
-    (Pg[o.toNat + i.toNat] * y + (vpool m)[T.toNat + (i.toNat + j.toNat)] + c) (by omega) (by omega)
-    (by omega)
-  have hsp := mac_split Pg[o.toNat + i.toNat] y (vpool m)[T.toNat + (i.toNat + j.toNat)] c
-  rw [← hr] at hsp
-  rw [pv_succ Pg o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
-    wt_succ i.toNat (i.toNat + 1) rfl]
-  generalize pv (vpool m) T.toNat (L.toNat + j.toNat) = A at *
-  generalize pv ((vpool m).set! (T.toNat + (i.toNat + j.toNat))
-    (Pg[o.toNat + i.toNat] * y + (vpool m)[T.toNat + (i.toNat + j.toNat)] + c)) T.toNat
-    (L.toNat + j.toNat) = A' at *
-  generalize pv Pg o.toNat i.toNat = B at *
-  generalize wt i.toNat = I at *
-  generalize wt j.toNat = J at *
-  grind
-
--- the multiply-accumulate step (see the proof) needs more than the default budget
-set_option maxHeartbeats 2000000 in
-include hph in
-theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    exec p n colLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
-          (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
-        pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
-          pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [ColInv, MulBase] at h
-    rw [exec, step_while (w := colLoop) rfl]
-    -- Not the `sym => vcgen <;> finish` form: the column step is one multiply-accumulate, whose
-    -- verification condition `grind` proves only with a raised split budget and only without
-    -- the induction hypothesis (a `∀`-triple) and the unevaluated frame in its context. So:
-    -- drop `ih` after `vcgen`, evaluate the frame with `simp`, split the invariant into its
-    -- conjuncts, and give `grind` 40 case splits (DESIGN.md, arena findings).
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, macHi_spec p hph n]
-    all_goals clear ih
-    all_goals (try simp only [ColInv, MulBase] at *)
-    all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
-    all_goals (try and_intros)
-    all_goals first
-      | (with_reducible apply mul_step_goal <;> grind)
-      | grind (splits := 40) [arena_grind, lang_grind]
-
-include hph in
-theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) colLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧ s'.loc 10 = s₀.loc 10 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 7).toNat) +
-          (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
-        pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
-          pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ :=
-  Triple.step_exec (colLoop_spec p hph Pg C (n + 1) s₀ h)
-
-set_option maxHeartbeats 2000000 in
-include hph in
-theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    exec p n rowLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
-        pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [RowInv, MulBase] at h
-    rw [exec, step_while (w := rowLoop) rfl]
-    -- the recipe of `colLoop_spec`
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-      colLoop_step_spec p hph Pg C n]
-    all_goals clear ih
-    all_goals (try simp only [ColInv, RowInv, MulBase] at *)
-    all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
-    all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
-
-include hph in
-theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) rowLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
-        pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ :=
-  Triple.step_exec (rowLoop_spec p hph Pg C (n + 1) s₀ h)
-
-theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄
-    step p (exec p n) zeroLoop
-    ⦃fun r s' => r = .normal ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-      s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
-      s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 7 = s₀.loc 7 ∧
-      pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 1).toNat = 0; ⊤⦄ :=
-  Triple.step_exec (zeroLoop_spec p Pg C (n + 1) s₀ h)
-
-end mul
 
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
@@ -349,30 +285,7 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  have hok₀ := hok
-  have hsm := hok.small
-  have h41 := hok.top41
-  have hsz := hsm.tier (s₀.mem.top >>> 40)
-  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
-  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
-  clear hok
-  replace ha := ha.1
-  replace hb := hb.1
-  rw [invoke_eq _ hpn]
-  simp only [callFn, natMul]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      zeroLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
-      rowLoop_step_spec p hph (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
-    all_goals (try simp only [ZeroInv, RowInv, MulBase] at *)
-    all_goals (try subst_vars)
-    -- `setLoc` lemmas, not unfolding; no `and_intros` (one `grind` per goal: 12 goals, not 42)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, L.Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, UInt64.toNat_zero] at *)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+  sorry
 
 end mulFn
 

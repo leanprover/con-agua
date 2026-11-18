@@ -963,7 +963,8 @@ def natBinOpResultL : FunDecl := lfn (op, oa, la, ob, lb) locals (h) {
 
 /-- The pool functions, the `lit` store, and one L arm per operation. -/
 def natArmProg : Prog := storeProg ++
-  [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mac_hi", macHi), ("nat_mul", natMul),
+  [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
+   ("mul_zeros", mulZeros), ("mul_win", mulWin), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),
    ("nat_sub_lit", topLitS "nat_sub"), ("nat_mul_lit", topLitS "nat_mul"),
