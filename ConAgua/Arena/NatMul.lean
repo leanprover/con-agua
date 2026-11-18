@@ -439,6 +439,106 @@ theorem carry_step_goal (m : Mem) (P0 : Array Word) (o i c T11 T12 : Word) (X : 
   generalize wt i.toNat = W at *
   grind
 
+/-- The inline subtract-with-borrow of `sub_row`: `d = t - x`, the limb `d - c`, the borrow
+`u64(t < x) + u64(d < c)`. -/
+theorem sbb_inl (t x c : Word) (hc : c.toNat ≤ 1) :
+    (t - x - c).toNat + x.toNat + c.toNat =
+      t.toNat + (Cmp.ult.evalW t x + Cmp.ult.evalW (t - x) c).toNat * 2 ^ 64 := by
+  have hx := x.toNat_lt; have ht := t.toNat_lt
+  simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt]
+  have e1 : (t - x).toNat = (2 ^ 64 - x.toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
+  have e2 : (t - x - c).toNat = (2 ^ 64 - c.toNat + (t - x).toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
+  split <;> split <;> simp only [UInt64.toNat_add, UInt64.toNat_one, UInt64.toNat_zero] <;> omega
+
+theorem sbb_inl_le (t x c : Word) (hc : c.toNat ≤ 1) :
+    (Cmp.ult.evalW t x + Cmp.ult.evalW (t - x) c).toNat ≤ 1 := by
+  have hx := x.toNat_lt; have ht := t.toNat_lt
+  have e1 : (t - x).toNat = (2 ^ 64 - x.toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
+  simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt]
+  split <;> split <;> simp only [UInt64.toNat_add, UInt64.toNat_one, UInt64.toNat_zero] <;> omega
+
+/-- One step of `sub_row`'s loop, in the shape of its verification condition. -/
+theorem srow_step_goal (m : Mem) (P0 : Array Word) (o oa i c T9 T10 T11 T12 : Word)
+    (h9 : T9 = o >>> 40) (h10 : T10 = o &&& 1099511627775)
+    (h11 : T11 = oa >>> 40) (h12 : T12 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat < 2 ^ 41)
+    (hdis : oa.toNat + i.toNat < o.toNat ∨ o.toNat ≤ oa.toNat) (hc : c.toNat ≤ 1)
+    (hs9 : (m.arr64 (tierA POOL T9)).size ≤ 2 ^ 40) (hs11 : (m.arr64 (tierA POOL T11)).size ≤ 2 ^ 40)
+    (hb11 : (T12 + i).toNat < (m.arr64 (tierA POOL T11)).size)
+    (hb9 : (T10 + i).toNat < (m.arr64 (tierA POOL T9)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat + pv P0 oa.toNat i.toNat = pv P0 o.toNat i.toNat + c.toNat * wt i.toNat) :
+    pv (vpool (m.set64 (tierA POOL T9) (T10 + i)
+        ((m.arr64 (tierA POOL T9))[(T10 + i).toNat] - (m.arr64 (tierA POOL T11))[(T12 + i).toNat] - c)))
+        o.toNat (i + 1).toNat + pv P0 oa.toNat (i + 1).toNat =
+      pv P0 o.toNat (i + 1).toNat +
+        (Cmp.ult.evalW (m.arr64 (tierA POOL T9))[(T10 + i).toNat] (m.arr64 (tierA POOL T11))[(T12 + i).toNat] +
+          Cmp.ult.evalW ((m.arr64 (tierA POOL T9))[(T10 + i).toNat] - (m.arr64 (tierA POOL T11))[(T12 + i).toNat])
+            c).toNat * wt (i + 1).toNat := by
+  subst h9 h10 h11 h12
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have ex := ld_win m oa i (by omega) (by omega) hs11 hb11
+  have et := ld_win m o i (by omega) (by omega) hs9 hb9
+  have hvs := vpool_size m
+  have ex' : (vpool m)[oa.toNat + i.toNat]'(by omega) = P0[oa.toNat + i.toNat]'(by omega) := by
+    have := hoff (oa.toNat + i.toNat) (by omega)
+    simp only [Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < (vpool m).size),
+      Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < P0.size), Option.some.injEq] at this
+    exact this
+  have et' : (vpool m)[o.toNat + i.toNat]'(by omega) = P0[o.toNat + i.toNat]'(by omega) :=
+    Off.get _ _ _ _ _ hoff (by omega) (by omega) (by omega)
+  rw [st_win m o i _ (by omega) (by omega) hs9 hb9, ex, et, ex', et']
+  have hsb := sbb_inl P0[o.toNat + i.toNat] P0[oa.toNat + i.toNat] c hc
+  generalize (Cmp.ult.evalW _ _ + _ : Word) = c' at hsb ⊢
+  rw [hi1, pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega),
+    pv_succ P0 o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
+    pv_succ P0 oa.toNat i.toNat (i.toNat + 1) (oa.toNat + i.toNat) rfl rfl (by omega),
+    wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 o.toNat i.toNat = B at *
+  generalize pv P0 oa.toNat i.toNat = D at *
+  generalize wt i.toNat = W at *
+  grind
+
+/-- One step of a borrow ripple (`P[o + i] -= 1`), in the shape of its verification condition. -/
+theorem borrow_step_goal (m : Mem) (P0 : Array Word) (o i T9 T10 : Word) (X : Nat)
+    (h9 : T9 = o >>> 40) (h10 : T10 = o &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41)
+    (hs9 : (m.arr64 (tierA POOL T9)).size ≤ 2 ^ 40)
+    (hb9 : (T10 + i).toNat < (m.arr64 (tierA POOL T9)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat + X = pv P0 o.toNat i.toNat + wt i.toNat) :
+    pv (vpool (m.set64 (tierA POOL T9) (T10 + i) ((m.arr64 (tierA POOL T9))[(T10 + i).toNat] - 1)))
+        o.toNat (i + 1).toNat + X =
+      pv P0 o.toNat (i + 1).toNat +
+        (Cmp.eq.evalW (m.arr64 (tierA POOL T9))[(T10 + i).toNat] 0).toNat * wt (i + 1).toNat := by
+  subst h9 h10
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have et := ld_win m o i (by omega) (by omega) hs9 hb9
+  have hvs := vpool_size m
+  have et' : (vpool m)[o.toNat + i.toNat]'(by omega) = P0[o.toNat + i.toNat]'(by omega) :=
+    Off.get _ _ _ _ _ hoff (by omega) (by omega) (by omega)
+  rw [st_win m o i _ (by omega) (by omega) hs9 hb9, et, et']
+  have hb : (P0[o.toNat + i.toNat] - 1).toNat + 1 =
+      P0[o.toNat + i.toNat].toNat + (Cmp.eq.evalW P0[o.toNat + i.toNat] 0).toNat * 2 ^ 64 := by
+    have := (P0[o.toNat + i.toNat]).toNat_lt
+    simp only [Cmp.evalW, Cmp.eval, beq_iff_eq]
+    have e1 : (P0[o.toNat + i.toNat] - 1).toNat = (2 ^ 64 - 1 + P0[o.toNat + i.toNat].toNat) % 2 ^ 64 :=
+      UInt64.toNat_sub _ _
+    split
+    · rename_i h; rw [h]; rfl
+    · rename_i h
+      have : P0[o.toNat + i.toNat].toNat ≠ 0 := fun h' => h (UInt64.toNat_inj.mp (by simpa using h'))
+      simp only [UInt64.toNat_zero]; omega
+  generalize (Cmp.eq.evalW _ 0 : Word) = c' at hb ⊢
+  rw [hi1, pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega),
+    pv_succ P0 o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
+    wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 o.toNat i.toNat = B at *
+  generalize wt i.toNat = W at *
+  grind
+
 /-- The tier facts of a window pass over `[o, o + n)` reading `[oa, oa + la)`: locals `o`, `n`,
 `oa`, `la` at `0`-`3`, the decoded tiers and indices at `ot`, `ob`, `qt`, `qb`. -/
 def WinBase (P0 : Array Word) (C : Nat) (ot ob qt qb : Nat) (s : St) : Prop :=
@@ -530,6 +630,144 @@ theorem mcarryLoop_step_spec (n : Nat) (s₀ : St) (h : MCarryInv P0 C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) mcarryLoop ⦃fun r s' => MCarryPost P0 C s₀ r s'; ⊤⦄ :=
   Triple.step_exec (mcarryLoop_spec p P0 C (n + 1) s₀ h)
 
+/-- `sub_row`'s loop: locals `(o, n, oa, la, i, c, x, t, d, ot, ob, qt, qb)`. -/
+def SRowInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  WinBase P0 C 9 10 11 12 s ∧ (s.loc 4).toNat ≤ (s.loc 3).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + pv P0 (s.loc 2).toNat (s.loc 4).toNat =
+    pv P0 (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat
+
+def SRowPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  s'.loc 4 = s₀.loc 3 ∧ (s'.loc 5).toNat ≤ 1 ∧
+  s'.loc 9 = s₀.loc 9 ∧ s'.loc 10 = s₀.loc 10 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 3).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat =
+    pv P0 (s₀.loc 0).toNat (s₀.loc 3).toNat + (s'.loc 5).toNat * wt (s₀.loc 3).toNat
+
+set_option maxHeartbeats 2000000 in
+theorem srowLoop_spec (n : Nat) (s₀ : St) (h : SRowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n srowLoop ⦃fun r s' => SRowPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [SRowInv, WinBase, SRowPost] at h ⊢
+    rw [exec, step_while (w := srowLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [SRowInv, SRowPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply srow_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind, sbb_inl_le]
+
+/-- `sub_row`'s borrow ripple. -/
+def SBorrowInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  WinBase P0 C 9 10 11 12 s ∧ (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + pv P0 (s.loc 2).toNat (s.loc 3).toNat =
+    pv P0 (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat
+
+def SBorrowPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat =
+    pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat
+
+set_option maxHeartbeats 2000000 in
+theorem sborrowLoop_spec (n : Nat) (s₀ : St) (h : SBorrowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n sborrowLoop ⦃fun r s' => SBorrowPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [SBorrowInv, WinBase, SBorrowPost] at h ⊢
+    rw [exec, step_while (w := sborrowLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [SBorrowInv, SBorrowPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq, bne_iff_ne, ne_eq] at *)
+    all_goals first
+      | (with_reducible apply borrow_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind, Off.mono, off_split]
+
+theorem srowLoop_step_spec (n : Nat) (s₀ : St) (h : SRowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) srowLoop ⦃fun r s' => SRowPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (srowLoop_spec p P0 C (n + 1) s₀ h)
+
+theorem sborrowLoop_step_spec (n : Nat) (s₀ : St) (h : SBorrowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) sborrowLoop ⦃fun r s' => SBorrowPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (sborrowLoop_spec p P0 C (n + 1) s₀ h)
+
+/-- `mul_zeros`'s loop: locals `(o, n, i, ot, ob)`. -/
+def ZerosInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧ (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧
+  s.loc 3 = s.loc 0 >>> 40 ∧ s.loc 4 = s.loc 0 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 3))).size ≤ 2 ^ 40 ∧ (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 2).toNat ∧ pv (vpool s.mem) (s.loc 0).toNat (s.loc 2).toNat = 0
+
+def ZerosPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat = 0
+
+/-- One step of `mul_zeros`'s loop. -/
+theorem zeros_step_goal (m : Mem) (P0 : Array Word) (o i T3 T4 : Word)
+    (h3 : T3 = o >>> 40) (h4 : T4 = o &&& 1099511627775)
+    (ho : o.toNat + i.toNat < 2 ^ 41)
+    (hs3 : (m.arr64 (tierA POOL T3)).size ≤ 2 ^ 40)
+    (hb3 : (T4 + i).toNat < (m.arr64 (tierA POOL T3)).size)
+    (ih : pv (vpool m) o.toNat i.toNat = 0) :
+    pv (vpool (m.set64 (tierA POOL T3) (T4 + i) 0)) o.toNat (i + 1).toNat = 0 := by
+  subst h3 h4
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have hvs := vpool_size m
+  rw [st_win m o i _ (by omega) (by omega) hs3 hb3, hi1,
+    pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega), ih]
+  simp
+
+theorem zeros_off_goal (m : Mem) (P0 : Array Word) (o i T3 T4 : Word)
+    (h3 : T3 = o >>> 40) (h4 : T4 = o &&& 1099511627775)
+    (ho : o.toNat + i.toNat < 2 ^ 41)
+    (hs3 : (m.arr64 (tierA POOL T3)).size ≤ 2 ^ 40)
+    (hb3 : (T4 + i).toNat < (m.arr64 (tierA POOL T3)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat) :
+    Off (vpool (m.set64 (tierA POOL T3) (T4 + i) 0)) P0 o.toNat (i + 1).toNat := by
+  subst h3 h4
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  rw [st_win m o i _ (by omega) (by omega) hs3 hb3, hi1]
+  exact Off.set _ _ _ _ _ _ _ hoff rfl rfl
+
+set_option maxHeartbeats 2000000 in
+theorem zerosLoop_spec (n : Nat) (s₀ : St) (h : ZerosInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n zerosLoop ⦃fun r s' => ZerosPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [ZerosInv, ZerosPost] at h ⊢
+    rw [exec, step_while (w := zerosLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [ZerosInv, ZerosPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply zeros_step_goal <;> grind [pcap_eq])
+      | (with_reducible apply zeros_off_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
+
+theorem zerosLoop_step_spec (n : Nat) (s₀ : St) (h : ZerosInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) zerosLoop ⦃fun r s' => ZerosPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (zerosLoop_spec p P0 C (n + 1) s₀ h)
+
 end passes
 
 section passFns
@@ -559,6 +797,60 @@ theorem mulRow_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St
       mrowLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
       mcarryLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
     all_goals (try simp only [MRowInv, MRowPost, MCarryInv, MCarryPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+set_option maxHeartbeats 2000000 in
+/-- `sub_row(o, w, oa, la)`: `P[o, o + w) -= a` in place (`a` off the window). -/
+theorem subRow_spec (hp : p.lookup "sub_row" = some subRow) (n : Nat) (s₀ : St) (o w oa la : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + w.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + la.toNat ≤ pcap s₀.mem)
+    (hd : oa.toNat + la.toNat ≤ o.toNat ∨ o.toNat + w.toNat ≤ oa.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "sub_row" [o, w, oa, la]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat ∧
+      pv (vpool s'.mem) o.toNat w.toNat + pv (vpool s₀.mem) oa.toNat la.toNat =
+        pv (vpool s₀.mem) o.toNat w.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs
+  rw [invoke_eq _ hp]
+  simp only [callFn, subRow]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      srowLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
+      sborrowLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
+    all_goals (try simp only [SRowInv, SRowPost, SBorrowInv, SBorrowPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+set_option maxHeartbeats 2000000 in
+/-- `mul_zeros(o, w)`: `P[o, o + w) := 0`. -/
+theorem mulZeros_spec (hp : p.lookup "mul_zeros" = some mulZeros) (n : Nat) (s₀ : St) (o w : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + w.toNat ≤ pcap s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mul_zeros" [o, w]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat ∧ pv (vpool s'.mem) o.toNat w.toNat = 0; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs
+  rw [invoke_eq _ hp]
+  simp only [callFn, mulZeros]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      zerosLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
+    all_goals (try simp only [ZerosInv, ZerosPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
