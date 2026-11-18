@@ -327,6 +327,10 @@ def bitNLoop (op : BinOp) : Stmt :=
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def xorN : FunDecl := bitNG .xor
 
+theorem andN_eq : andN = bitNG .and := by rfl
+theorem orN_eq : orN = bitNG .or := by rfl
+theorem xorN_eq : xorN = bitNG .xor := by rfl
+
 /-- `P[o + i] := A[oa + i]` for `i < n`. -/
 def copyNLoop : Stmt := lblk (o, oa, n, i, x, pt, pb, ta, qa) {
   for i < n {

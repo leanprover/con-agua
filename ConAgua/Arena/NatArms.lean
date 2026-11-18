@@ -1010,12 +1010,12 @@ theorem natLand_top : TopSpec natArmProg "nat_land" Nat.land := by
 
 theorem natLor_top : TopSpec natArmProg "nat_lor" Nat.lor := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natLor_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natLor_spec natArmProg rfl rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← lor_bv] using this
 
 theorem natXor_top : TopSpec natArmProg "nat_xor" Nat.xor := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natXor_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natXor_spec natArmProg rfl rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← xor_bv] using this
 
 theorem natShl_top : TopSpec natArmProg "nat_shl" Nat.shiftLeft := by
