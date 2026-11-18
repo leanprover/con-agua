@@ -61,7 +61,7 @@ namespace L.Front
 open L.Scan.Utf8 (byteW)
 
 /-- The longest literal `nat_dec` reads by the chunk loop alone (measured, docs/design/bigdec.md). -/
-abbrev decBase : Word := 4864
+abbrev decBase : Word := 7296
 
 /-! ## `dec_chunk(i, k)` -/
 

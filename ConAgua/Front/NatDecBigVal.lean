@@ -145,4 +145,186 @@ theorem vpool_copy64 (t : Word) (ht : t.toNat ≤ 1) :
       · have c2 : ¬ (t.toNat * 2 ^ 40 + di.toNat ≤ j ∧ j < t.toNat * 2 ^ 40 + di.toNat + (n + 1)) := by omega
         simp only [hr, c2, hj, ↓reduceIte]
 
+/-! ## The callees in `natDecProg` -/
+
+/-- The result of a pool operation that appends one slice: the pool grew, the top moved past
+the slice, which is normalised and denotes `v`. -/
+structure Appended (m m' : Mem) (l : Word) (v : Nat) : Prop where
+  grows : Grows m m'
+  top : m'.top = m.top + l
+  norm : Norm (vpool m') m.top.toNat l.toNat
+  val : pv (vpool m') m.top.toNat l.toNat = v
+
+theorem pframe_top {m m' : Mem} {v : Word} (hc : 0 < (m.arr64 CTL).size)
+    (h : PFrame (m.set64 CTL 0 v) m') : m'.top = v := by
+  rw [h.top, Mem.top_set64 _ _ hc]
+
+/-- **`nat_mul` in `natDecProg`**, from its spec. -/
+theorem mul_callW {n : Nat} {m m' : Mem} {oa la ob lb : Word} {r : List Word} (hok : PoolOK m)
+    (ha : SliceOK m oa la) (hb : SliceOK m ob lb)
+    (h : callW natDecProg n "nat_mul" [oa, la, ob, lb] m = some (r, m')) :
+    Appended m m' (r.headD 0) (pv (vpool m) oa.toNat la.toNat * pv (vpool m) ob.toNat lb.toNat) := by
+  obtain ⟨s', rfl, -, hf, -, -, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natMul_spec natDecProg rfl rfl rfl n ⟨m, Locals.init []⟩ oa la ob lb hok ha hb) h
+  exact ⟨hg, pframe_top hok.ctl hf, hN, hv⟩
+
+/-- **`nat_add` in `natDecProg`**, from its spec. -/
+theorem add_callW {n : Nat} {m m' : Mem} {oa la ob lb : Word} {r : List Word} (hok : PoolOK m)
+    (ha : SliceOK m oa la) (hb : SliceOK m ob lb)
+    (h : callW natDecProg n "nat_add" [oa, la, ob, lb] m = some (r, m')) :
+    Appended m m' (r.headD 0) (pv (vpool m) oa.toNat la.toNat + pv (vpool m) ob.toNat lb.toNat) := by
+  obtain ⟨s', rfl, -, hf, -, -, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natAdd_spec natDecProg rfl rfl rfl rfl n ⟨m, Locals.init []⟩
+      oa la ob lb hok ha hb) h
+  exact ⟨hg, pframe_top hok.ctl hf, hN, hv⟩
+
+/-- **`nat_dec_chunks` in `natDecProg`**: the chunk loop's value. -/
+theorem chunks_callW {n : Nat} {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (hok : PoolOK m) (hb : m.arr8 IN = b) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
+    (h : callW natDecProg n "nat_dec_chunks" [c, d] m = some (r, m')) :
+    ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧ Norm (vpool m') m.top.toNat l.toNat ∧
+      pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natDecChunks_specW natDecProg b rfl rfl rfl n ⟨m, Locals.init []⟩ hb c d) h
+  exact natChunksW_val b m s'.mem c d r hok hcd hdig hW
+
+/-! ## The split level -/
+
+/-- The split loop's invariant: `dd = 19 · 2^t`, at most half of `n`. -/
+structure LevelInv (n t dd : Word) : Prop where
+  pow : dd.toNat = 19 * 2 ^ t.toNat
+  half : 2 * dd.toNat ≤ n.toNat
+
+theorem sub2_toNat {n dd : Word} (h : 2 * dd.toNat ≤ n.toNat) :
+    (n - dd - dd).toNat = n.toNat - 2 * dd.toNat := by
+  have hd1 : dd ≤ n := UInt64.le_iff_toNat_le.mpr (by omega)
+  have e0 : (n - dd).toNat = n.toNat - dd.toNat := UInt64.toNat_sub_of_le _ _ hd1
+  have hd2 : dd ≤ n - dd := UInt64.le_iff_toNat_le.mpr (by rw [e0]; omega)
+  rw [UInt64.toNat_sub_of_le _ _ hd2, e0]; omega
+
+theorem LevelInv.step {n t dd : Word} (h : LevelInv n t dd) (hc : dd + dd ≤ n - dd - dd) :
+    LevelInv n (t + 1) (dd + dd) ∧ 4 * dd.toNat ≤ n.toNat := by
+  have h1 := h.pow; have h2 := h.half
+  have hn := n.toNat_lt
+  have e1 : (dd + dd).toNat = 2 * dd.toNat := by rw [UInt64.toNat_add]; omega
+  have e2 : (n - dd - dd).toNat = n.toNat - 2 * dd.toNat := sub2_toNat h2
+  have hc' := UInt64.le_iff_toNat_le.mp hc
+  rw [e1, e2] at hc'
+  have ht : t.toNat < 64 := by
+    rcases Nat.lt_or_ge t.toNat 64 with hh | hh
+    · exact hh
+    · have : 2 ^ 64 ≤ 2 ^ t.toNat := Nat.pow_le_pow_right (by decide) hh
+      omega
+  have e3 : (t + 1).toNat = t.toNat + 1 := by rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+  refine ⟨⟨by rw [e1, e3, Nat.pow_succ]; omega, by rw [e1]; omega⟩, by omega⟩
+
+theorem LevelInv.stop {n t dd : Word} (h : LevelInv n t dd) (hc : ¬ dd + dd ≤ n - dd - dd) :
+    n.toNat < 4 * dd.toNat := by
+  have h1 := h.pow; have h2 := h.half
+  have hn := n.toNat_lt
+  have e1 : (dd + dd).toNat = 2 * dd.toNat := by rw [UInt64.toNat_add]; omega
+  have e2 : (n - dd - dd).toNat = n.toNat - 2 * dd.toNat := sub2_toNat h2
+  rw [UInt64.le_iff_toNat_le, e1, e2] at hc
+  omega
+
+theorem splitLoop_val {p : Prog} {n' : Word} : ∀ (f : Nat) (m : Mem) (t dd t' dd' : Word) (m' : Mem),
+    LevelInv n' t dd → splitW.loop1 p f m n' t dd = some (t', dd', m') →
+    m' = m ∧ LevelInv n' t' dd' := by
+  intro f
+  induction f with
+  | zero => intro m t dd t' dd' m' _ h; rw [splitW.loop1.eq_1] at h; cases h
+  | succ f ih =>
+    intro m t dd t' dd' m' hI h
+    by_cases hc : dd + dd ≤ n' - dd - dd
+    · rw [splitW.loop1.arm1 p f m n' t dd hc] at h
+      exact ih m _ _ t' dd' m' (hI.step hc).1 h
+    · rw [splitW.loop1.arm2 p f m n' t dd hc] at h
+      cases h
+      exact ⟨rfl, hI⟩
+
+/-! ## The copy down to the old top -/
+
+private theorem pv_congr' (p q : Array Word) (a b l : Nat)
+    (h : ∀ i < l, p[a + i]?.getD 0 = q[b + i]?.getD 0) : pv p a l = pv q b l := by
+  induction l with
+  | zero => rfl
+  | succ k ih => simp only [pv, ih (fun i hi => h i (by omega)), h k (by omega)]
+
+/-- A grown pool's top is in the old top's tier, inside its tier array. -/
+theorem Grows.same_tier {m m' : Mem} (hok : PoolOK m) (hg : Grows m m') :
+    m'.top >>> 40 = m.top >>> 40 ∧ m'.top.toNat < 2 ^ 41 ∧
+      m'.top.toNat % 2 ^ 40 ≤ (m'.arr64 (tierA POOL (m.top >>> 40))).size := by
+  have h41 := hok.top41
+  have hsm := hok.small
+  have ht := hg.tier; have hle := hg.le; have hc := hg.cap
+  have hp : pcap m' = 2 ^ 41 - 1 := by rw [hg.pcapEq]; exact pcap_of_small m hsm
+  have hT : m'.top >>> 40 = m.top >>> 40 := tag_tier_eq (by omega)
+  have hin := hg.inn
+  rw [hT, tag_idx_toNat] at hin
+  exact ⟨hT, by omega, hin⟩
+
+/-- **The result copied down to the old top**: a slice `(os, ls)` that ends at the top of a pool
+grown from `m`, copied to `m`'s top `T` (same tier, `T ≤ os`), and the top set to `T + ls`: the
+pool grew from `m`, and the new slice at `T` is the old one. -/
+theorem copy_down {m m₄ : Mem} {os ls : Word} (hok : PoolOK m) (hg : Grows m m₄)
+    (hos : m.top.toNat ≤ os.toNat) (hend : os.toNat + ls.toNat = m₄.top.toNat) :
+    Grows m ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (tierA POOL (m.top >>> 40))
+        (os &&& 1099511627775) ls.toNat).set64 CTL 0 (m.top + ls)) ∧
+    SliceOK ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (tierA POOL (m.top >>> 40))
+        (os &&& 1099511627775) ls.toNat).set64 CTL 0 (m.top + ls)) m.top ls ∧
+    (Norm (vpool m₄) os.toNat ls.toNat →
+      Norm (vpool ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
+        (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat).set64 CTL 0 (m.top + ls)))
+        m.top.toNat ls.toNat) ∧
+    pv (vpool ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (tierA POOL (m.top >>> 40))
+        (os &&& 1099511627775) ls.toNat).set64 CTL 0 (m.top + ls))) m.top.toNat ls.toNat =
+      pv (vpool m₄) os.toNat ls.toNat := by
+  have h41 := hok.top41
+  have hsm := hok.small
+  obtain ⟨hT4, h41', hin4⟩ := Grows.same_tier hok hg
+  have e4 := tag_tier_toNat m₄.top
+  have eT := tag_tier_toNat m.top
+  rw [hT4] at e4
+  have hok4 := hok.grows hg
+  have hsz4 : (m₄.arr64 (tierA POOL (m.top >>> 40))).size ≤ 2 ^ 40 :=
+    Nat.le_of_lt (hok4.small.tier _)
+  have ht : (m.top >>> 40).toNat ≤ 1 := tag_tier_le _ h41
+  have hdi := tag_idx_toNat m.top
+  have hsi := tag_idx_toNat os
+  have hsplit := tag_split m.top
+  have hq : os.toNat / 2 ^ 40 = m.top.toNat / 2 ^ 40 := by omega
+  have hrange : (m.top &&& 1099511627775).toNat ≤ (os &&& 1099511627775).toNat := by omega
+  have hbound : (os &&& 1099511627775).toNat + ls.toNat ≤ (m₄.arr64 (tierA POOL (m.top >>> 40))).size := by
+    omega
+  have hcopy := vpool_copy64 (m.top >>> 40) ht ls.toNat m₄ (m.top &&& 1099511627775) (os &&& 1099511627775)
+    hsz4 hrange hbound
+  have hTl : (m.top + ls).toNat = m.top.toNat + ls.toNat := by
+    rw [UInt64.toNat_add]; omega
+  have hpf : PFrame m₄ (m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
+      (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat) :=
+    PFrame.copy64 (m := m₄) (m.top >>> 40) ls.toNat m₄ _ _ (PFrame.refl m₄)
+  have hag : Agree (vpool (m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
+      (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat)) (vpool m) m.top.toNat := by
+    intro j hj
+    rw [hcopy j, if_neg (by omega)]
+    exact hg.agree j hj
+  have hgr := Grows.reset hok hg hpf hag (m.top + ls) (by omega) (by omega)
+  have hctl : 0 < ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
+      (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat).arr64 CTL).size := by
+    rw [hpf.ctl]; exact hok4.ctl
+  have hget : ∀ i, i < ls.toNat →
+      (vpool (m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
+        (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat))[m.top.toNat + i]? =
+        (vpool m₄)[os.toNat + i]? := by
+    intro i hi
+    rw [hcopy, if_pos (by omega)]
+    congr 1
+    omega
+  refine ⟨hgr, SliceOK.fresh hgr (Mem.top_set64 _ _ hctl), ?_, ?_⟩
+  · intro hN hl
+    rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, hget _ (by omega)]
+    exact hN hl
+  · rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]
+    exact pv_congr' _ _ _ _ _ (fun i hi => by rw [hget i hi])
+
 end L.Front
