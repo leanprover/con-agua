@@ -355,3 +355,58 @@ Correctness:
   All accepted, as on master.
 * Product fuzzer 2100 and division fuzzer 540: the same verdicts as master.
 * `diff-e2e --refs`: 740 agree, 0 REFDIFF.
+
+## Step 11: shifts and zeroing (`shl_n`, `shr_n`, `zero_n`)
+
+The bodies are in `ConAgua/AsmEsc/ShiftAsm.lean` and the proofs in `ShiftAsmSim.lean`.
+
+* `shlAsm` (`shl_n(o, oa, n, s, c)`, carry out): the first limb takes the carry in with `shl`/`or`.
+  Every later limb is one `shld %cl, prev, x`, which gives `(x << s) | (prev >> (64 − s))`.
+  At `s = 0`, `shld` leaves `x` unchanged, which is also L's result `(x << 0) | ((prev >> 1) >> 63)`.
+  The carry out is `(prev >> 1) >> (63 − s)`. 8 instructions per limb.
+* `shrAsm` (`shr_n(o, oa, n, s)`): one `shrd %cl, y, x` per limb, 7 instructions per limb. The
+  window of `A` is checked for `n + 1` limbs, because L reads `A[0]` even when `n = 0`.
+* `zeroAsm` (`zero_n(o, n)`): a store loop, 4 instructions per limb. Kraken models no `rep stos`.
+* `s > 63` goes to `ca_exhausted`.
+
+Trusted base: the parser reads `shld`/`shrd` (`$INT` or `%cl`, then `%R`, then `DST`), as
+Kraken's printer spells them. The check-asm gate covers the forms through `checker.s`.
+
+Step lemmas (`AsmEsc/Step.lean`), from Kraken's semantics: `ev_shldCl`, `ev_shrdCl`, `ev_shlCl`,
+`ev_shrCl`. Edge cases, as Kraken defines them:
+* the count is `cl` masked to 6 bits (`cl_count`), so the "count above the operand size" branch
+  cannot happen for 64-bit operands;
+* a zero count leaves the destination and the flags unchanged;
+* the flags afterwards are left unconstrained (AF undefined, OF defined only for count 1); no code
+  branches on them before a fresh `cmp`.
+
+Value lemmas:
+* `shld_val`: the top half of `(a ++ b) << c` is `(a << c) | (b >> (64 − c))`;
+* `shrd_val`: the bottom half of `(b ++ a) >> c` is `(a >> c) | (b << (64 − c))`;
+* `dshl_eq`, `dshr_eq`: for `s < 64` these equal L's expressions, by `bv_decide`.
+
+L side: `ShiftL.lean`. One loop lemma with a carried word (`wLoop_run`, the model `wRows`) serves
+`shl_n`, where the word is the carry, and `shr_n`, where it is the previous limb. `zero_n` uses
+`g0Loop_run`.
+
+Proof note: the main theorems keep to the prologue. The first limb and the loop are separate
+lemmas (`sh_first`, `sh_step`, `sr_first`, `sr_step`), because tactics such as `generalize … at *`
+and `obtain` in the main theorem's large context ran into the heartbeat limit. The file
+elaborates in 3 s.
+
+Measured on a scratch merge of linleaf4 `38082dd95` (the shift leaves wired into
+`nat_shl`/`nat_shr`). The base is that tree as master will be once it lands: the leaves
+compiled and inlined, plus the asm already landed.
+
+| | base | `shld`/`shrd` | plain `shl`/`shr`/`or` |
+|---|---:|---:|---:|
+| gf3 instructions | 31.93 G | 30.36 G (−4.91 %) | 30.68 G (−3.93 %) |
+| gf3 wall, 10 paired rounds | 2.156 s | −7.0 % [−14.8, +0.9] | −4.8 % [−12.7, +3.2] |
+| Init instructions | flat | flat | flat |
+
+The `shld`/`shrd` version against the plain one: −1.0 % instructions, wall −1.8 % [−9.6, +5.9].
+It is not worse, so it is kept.
+
+Correctness: `SHF`, 576 `Nat.shiftLeft`/`shiftRight` checks against Python's results (each
+result `= true`, and the result plus one `= false`) on 1 to 1000 limbs, shifts 0 to `64·l + 5`. All
+three binaries accept it.
