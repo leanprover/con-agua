@@ -348,10 +348,10 @@ theorem dc_step_goal (m0 : Mem) (wj lb ob : Word) (T B : Nat) (s1 s : St) (rs : 
     Off.trans _ _ _ _ _ hO' hO, by split <;> simp, hq', heq'⟩
 
 section loop
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+variable (p : Prog) (hpN : p.lookup "add_n" = some addN)
+  (hp1 : p.lookup "add_1" = some add1) (hpa : p.lookup "div_add" = some divAdd)
 
-include hpl hpc hpa in
+include hpN hp1 hpa in
 theorem dcLoop_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : St)
     (h : DcInv m0 wj lb ob T B s₀) :
     ⦃fun s => s = s₀⦄ exec p n dcLoop ⦃fun r s' => DcPost m0 wj lb T B r s'; ⊤⦄ := by
@@ -361,7 +361,7 @@ theorem dcLoop_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : S
     simp only [DcInv, DcPost] at h ⊢
     rw [exec, step_while (w := dcLoop) rfl]
     vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs, ih,
-      divAdd_spec p hpl hpc hpa n]
+      divAdd_spec p hpN hp1 hpa n]
     all_goals clear ih
     all_goals (try subst_vars)
     all_goals (try simp only [DcInv, DcPost, Expr.pval, Cond.pval, St.setLoc_loc, L.St.setLoc_mem,
@@ -380,20 +380,20 @@ theorem dcLoop_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : S
               first | exact this.1 | exact this.2)
            | grind)
 
-include hpl hpc hpa in
+include hpN hp1 hpa in
 theorem dcLoop_step_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : St)
     (h : DcInv m0 wj lb ob T B s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) dcLoop ⦃fun r s' => DcPost m0 wj lb T B r s'; ⊤⦄ :=
-  Triple.step_exec (dcLoop_spec p hpl hpc hpa m0 wj lb ob T B (n + 1) s₀ h)
+  Triple.step_exec (dcLoop_spec p hpN hp1 hpa m0 wj lb ob T B (n + 1) s₀ h)
 
 end loop
 
 section kstep
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+variable (p : Prog) (hpN : p.lookup "add_n" = some addN)
+  (hp1 : p.lookup "add_1" = some add1) (hpa : p.lookup "div_add" = some divAdd)
   (hp2 : p.lookup "div_2by1" = some div2by1) (hpm : p.lookup "div_submul" = some divSubmul)
 
-include hpl hpc hpa hp2 hpm in
+include hpN hp1 hpa hp2 hpm in
 /-- `div_kstep` on a window `T < b · 2^64` (`b` the `lb ≥ 2` limbs at `ob`, below the window,
 `d` its top word shifted by `s`): returns `⌊T / b⌋` and leaves `T mod b` in the window. -/
 theorem divKstep_spec (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s₀ : St)
@@ -423,7 +423,7 @@ theorem divKstep_spec (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s�
     vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
       kEst_spec p hp2 (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1)) (pv (vpool s₀.mem) ob.toNat lb.toNat) n,
       divSubmul_spec p hpm n,
-      dcLoop_step_spec p hpl hpc hpa s₀.mem wj lb ob (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1))
+      dcLoop_step_spec p hpN hp1 hpa s₀.mem wj lb ob (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1))
         (pv (vpool s₀.mem) ob.toNat lb.toNat) n]
     all_goals (try subst_vars)
     all_goals (try simp only [KEstPost, DcInv, DcPost, Expr.pval, St.setLoc_loc,

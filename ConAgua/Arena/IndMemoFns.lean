@@ -50,7 +50,7 @@ first steps, which write no memo), with `consts_resolve_ffast` and
 `struct_used_later` leaves (`imLeaves`). It does not contain `check_ind_decl`. -/
 def imFns : List FnName :=
   ["ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
-   "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "add_carry",
+   "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast",
    "all_level_params_defined", "alpd_go", "alpd_ls", "and_block_named", "and_pin_ok",
    "and_rescue_slots", "apd_clear", "apd_find", "apd_put", "app_count", "app_count_at", "app_fill",
    "app_fill_n", "app_find", "app_push", "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam",

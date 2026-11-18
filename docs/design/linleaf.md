@@ -92,3 +92,14 @@ REFDIFF 0; the bignum fuzzer 3315/3315.
 
 Candidates for hand asm (compiled cost per limb, from `checker.s`): `add_n` ≈ 38, `add_1` ≈ 26,
 `sub_n` ≈ 36, `sub_1` ≈ 24; a hand-written body needs about 4–8.
+
+## 4. `div_add` through the leaves; no heartbeat overrides
+
+`div_add(r, n, ob, lb)` (`NatDivSubmul.lean`, `nat_divmod`'s add-back) is now `add_n(r, r, ob, m, 0)`
+then `add_1(r + m, r + m, n - m, c)` with `m = min lb n`: in place, the output window the first
+operand's. The leaves' specs already allowed it (`oa + k ≤ o ∨ o ≤ oa`). `add_carry` lost its last
+caller and is gone (with `adcHi`). `nat_add`'s spec got the same split as `nat_sub`'s (its core
+`addCore` with its own lemma): NatAdd 60 s → 7 s, and neither NatAdd nor NatLeaf needs a
+`maxHeartbeats` override any more. Verdicts: diff-e2e 740 agree; bignum fuzzer 3315/3315; a
+`Nat.div`/`Nat.mod` fuzzer (2000 fixtures, random and edge-pattern limbs, 1–17-limb divisors): no
+mismatch. gf3 unchanged (44.669 G both; gf3 barely divides).

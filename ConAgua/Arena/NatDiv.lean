@@ -7,6 +7,7 @@ meta import ConAgua.Arena.NatDivWord
 meta import ConAgua.Arena.NatDivKstep
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatDivKstep
+public import ConAgua.Arena.NatAdd
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
@@ -857,8 +858,8 @@ theorem dk_eq_goal (Pg : Array Word) (C : Nat) (s sk : St) (rs : List Word)
   grind
 
 set_option maxHeartbeats 4000000 in
-theorem dkLoop_spec (hpl : p.lookup "nat_limb" = some natLimb)
-    (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+theorem dkLoop_spec (hpN : p.lookup "add_n" = some addN)
+    (hp1 : p.lookup "add_1" = some add1) (hpa : p.lookup "div_add" = some divAdd)
     (hp2 : p.lookup "div_2by1" = some div2by1) (hpm : p.lookup "div_submul" = some divSubmul)
     (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s₀ : St) (h : DkInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ exec p n dkLoop ⦃fun r s' => DkPost Pg C s₀ r s'; ⊤⦄ := by
@@ -870,7 +871,7 @@ theorem dkLoop_spec (hpl : p.lookup "nat_limb" = some natLimb)
     simp only [DkPost]
     rw [exec, step_while (w := dkLoop) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
-      divKstep_spec p hpl hpc hpa hp2 hpm hpk n]
+      divKstep_spec p hpN hp1 hpa hp2 hpm hpk n]
     all_goals clear ih
     all_goals (try simp only [DkPost, KBase] at *)
     all_goals (try simp only [DkInv, KBase] at ⊢)
@@ -888,19 +889,19 @@ theorem dkLoop_spec (hpl : p.lookup "nat_limb" = some natLimb)
     all_goals (try and_intros)
     all_goals grind [lang_grind, arena_grind]
 
-theorem dkLoop_step_spec (hpl : p.lookup "nat_limb" = some natLimb)
-    (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+theorem dkLoop_step_spec (hpN : p.lookup "add_n" = some addN)
+    (hp1 : p.lookup "add_1" = some add1) (hpa : p.lookup "div_add" = some divAdd)
     (hp2 : p.lookup "div_2by1" = some div2by1) (hpm : p.lookup "div_submul" = some divSubmul)
     (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s₀ : St) (h : DkInv Pg C s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) dkLoop ⦃fun r s' => DkPost Pg C s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (dkLoop_spec p Pg C hpl hpc hpa hp2 hpm hpk (n + 1) s₀ h)
+  Triple.step_exec (dkLoop_spec p Pg C hpN hp1 hpa hp2 hpm hpk (n + 1) s₀ h)
 
 end dk
 
 /-- The functions `nat_divmod` calls, transitively, as the program `p` binds them. -/
 structure DivFns (p : Prog) : Prop where
-  limb : p.lookup "nat_limb" = some natLimb
-  carry : p.lookup "add_carry" = some addCarry
+  addN : p.lookup "add_n" = some addN
+  add1 : p.lookup "add_1" = some add1
   add : p.lookup "div_add" = some divAdd
   norm : p.lookup "div_norm" = some divNorm
   d2by1 : p.lookup "div_2by1" = some div2by1
@@ -1292,7 +1293,7 @@ theorem divModK_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       divNorm_spec p hf.norm n, divRecip_spec p hf.d2by1 hf.recip n,
       dcpLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
-      dkLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) hf.limb hf.carry hf.add hf.d2by1 hf.submul
+      dkLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) hf.addN hf.add1 hf.add hf.d2by1 hf.submul
         hf.kstep n,
       natTrim_spec p hf.trim n]
     all_goals (try simp only [DcpInv, DcpPost, DkInv, DkPost, KBase] at *)

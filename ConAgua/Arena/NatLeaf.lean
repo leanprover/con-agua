@@ -346,7 +346,6 @@ def AddNPost (P0 : Array Word) (C c0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Pr
   pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat + (s'.loc 4).toNat * wt (s₀.loc 3).toNat =
     pv P0 (s₀.loc 1).toNat (s₀.loc 3).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat + c0
 
-set_option maxHeartbeats 2000000 in
 theorem addNLoop_spec (n : Nat) (s₀ : St) (h : AddNInv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ exec p n addNLoop ⦃fun r s' => AddNPost P0 C c0 s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -370,7 +369,6 @@ theorem addNLoop_step_spec (n : Nat) (s₀ : St) (h : AddNInv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) addNLoop ⦃fun r s' => AddNPost P0 C c0 s₀ r s'; ⊤⦄ :=
   Triple.step_exec (addNLoop_spec p P0 C c0 (n + 1) s₀ h)
 
-set_option maxHeartbeats 2000000 in
 /-- `add_n(o, oa, ob, k, c)`: `P[o, o + k) := a + b + c` (low `k` limbs), the carry out; the
 output window lies below or above each operand window. -/
 theorem addN_spec (hp : p.lookup "add_n" = some addN) (n : Nat) (s₀ : St) (o oa ob k c : Word)
@@ -533,7 +531,6 @@ def Add1Post (P0 : Array Word) (C c0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Pr
   pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat + (s'.loc 3).toNat * wt (s₀.loc 2).toNat =
     pv P0 (s₀.loc 1).toNat (s₀.loc 2).toNat + c0
 
-set_option maxHeartbeats 2000000 in
 theorem add1Loop_spec (n : Nat) (s₀ : St) (h : Add1Inv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ exec p n add1Loop ⦃fun r s' => Add1Post P0 C c0 s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -557,7 +554,6 @@ theorem add1Loop_step_spec (n : Nat) (s₀ : St) (h : Add1Inv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) add1Loop ⦃fun r s' => Add1Post P0 C c0 s₀ r s'; ⊤⦄ :=
   Triple.step_exec (add1Loop_spec p P0 C c0 (n + 1) s₀ h)
 
-set_option maxHeartbeats 2000000 in
 /-- `add_1(o, oa, k, c)`: `P[o, o + k) := a + c` (low `k` limbs), the carry out. -/
 theorem add1_spec (hp : p.lookup "add_1" = some add1) (n : Nat) (s₀ : St) (o oa k c : Word)
     (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
@@ -617,7 +613,6 @@ def SubNPost (P0 : Array Word) (C c0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Pr
   pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat + c0 =
     pv P0 (s₀.loc 1).toNat (s₀.loc 3).toNat + (s'.loc 4).toNat * wt (s₀.loc 3).toNat
 
-set_option maxHeartbeats 2000000 in
 theorem subNLoop_spec (n : Nat) (s₀ : St) (h : SubNInv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ exec p n subNLoop ⦃fun r s' => SubNPost P0 C c0 s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -641,7 +636,6 @@ theorem subNLoop_step_spec (n : Nat) (s₀ : St) (h : SubNInv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) subNLoop ⦃fun r s' => SubNPost P0 C c0 s₀ r s'; ⊤⦄ :=
   Triple.step_exec (subNLoop_spec p P0 C c0 (n + 1) s₀ h)
 
-set_option maxHeartbeats 2000000 in
 /-- `sub_n(o, oa, ob, k, c)`: `P[o, o + k) := a - b - c` (low `k` limbs), the borrow out. -/
 theorem subN_spec (hp : p.lookup "sub_n" = some subN) (n : Nat) (s₀ : St) (o oa ob k c : Word)
     (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
@@ -699,7 +693,6 @@ def Sub1Post (P0 : Array Word) (C c0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Pr
   pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat + c0 =
     pv P0 (s₀.loc 1).toNat (s₀.loc 2).toNat + (s'.loc 3).toNat * wt (s₀.loc 2).toNat
 
-set_option maxHeartbeats 2000000 in
 theorem sub1Loop_spec (n : Nat) (s₀ : St) (h : Sub1Inv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ exec p n sub1Loop ⦃fun r s' => Sub1Post P0 C c0 s₀ r s'; ⊤⦄ := by
   induction n generalizing s₀ with
@@ -723,7 +716,6 @@ theorem sub1Loop_step_spec (n : Nat) (s₀ : St) (h : Sub1Inv P0 C c0 s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) sub1Loop ⦃fun r s' => Sub1Post P0 C c0 s₀ r s'; ⊤⦄ :=
   Triple.step_exec (sub1Loop_spec p P0 C c0 (n + 1) s₀ h)
 
-set_option maxHeartbeats 2000000 in
 /-- `sub_1(o, oa, k, c)`: `P[o, o + k) := a - c` (low `k` limbs), the borrow out. -/
 theorem sub1_spec (hp : p.lookup "sub_1" = some sub1) (n : Nat) (s₀ : St) (o oa k c : Word)
     (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)

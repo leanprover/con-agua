@@ -45,11 +45,11 @@ def coreRoots : List FnName :=
 /-- The call closure of `coreRoots` in the checker's program. -/
 def coreFns : List FnName := [
   "ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
-  "abs_go", "abs_lam", "abs_let", "abs_proj", "add_1", "add_carry", "add_n", "and_rescue_slots",
-  "app_count", "app_count_at", "app_fill", "app_fill_n", "app_find", "app_push", "ar_app",
-  "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node", "ar_proj", "base_row_get",
-  "bb_go", "bb_memo", "bb_node", "beta_peel", "binder_dom", "binder_pair", "bm_clear", "bm_find",
-  "bm_put", "bvar_b", "bvar_find", "bvar_push", "check_guard_rows", "check_proj_guard", "const_e",
+  "abs_go", "abs_lam", "abs_let", "abs_proj", "add_1", "add_n", "and_rescue_slots", "app_count",
+  "app_count_at", "app_fill", "app_fill_n", "app_find", "app_push", "ar_app", "ar_entry",
+  "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node", "ar_proj", "base_row_get", "bb_go",
+  "bb_memo", "bb_node", "beta_peel", "binder_dom", "binder_pair", "bm_clear", "bm_find", "bm_put",
+  "bvar_b", "bvar_find", "bvar_push", "check_guard_rows", "check_proj_guard", "const_e",
   "const_find", "const_push", "const_ty_at", "const_val_at", "ct_find", "ct_put", "ctl_get",
   "ctor_family", "ctor_head_against", "ctor_target", "ctor_target_for", "ctor_view", "cv_find",
   "cv_put", "de_find", "de_put", "defeq", "defeq_arg", "defeq_binders", "defeq_binders_inner",

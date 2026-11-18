@@ -161,7 +161,7 @@ import all ConAgua.Arena.NatSized
 # Phase B's read set in the checker's program (lane parmode)
 
 `phaseBFns`: every function `check_b` (entry 2, the jobs over the frozen arrays) reaches in `checkerProg`, as a
-literal computed from the program's call graph (1393 names; `scripts/phaseb_fns.py` regenerates
+literal computed from the program's call graph (1392 names; `scripts/phaseb_fns.py` regenerates
 it, and the check below fails if a callee is missing). Without `check_b` itself (`phaseBJobFns`,
 the closure of `check_jobs`), none of them names the frozen buffer's arrays `OUT`, `HDRF`,
 `CTLF` (`Arena/Freeze.lean`) or any byte array: `checkerProg_phaseBReads`, so by
@@ -179,11 +179,11 @@ open L.Arena L.Compiler
 def phaseBFns : List FnName :=
   ["ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
    "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
-   "abstract_prefix_list", "add_1", "add_carry", "add_n", "all_level_params_defined", "alpd_go",
-   "alpd_ls", "and_block_named", "and_pin_ok", "and_rescue_slots", "apd_clear", "apd_find",
-   "apd_put", "app_count", "app_count_at", "app_fill", "app_fill_n", "app_find", "app_hole",
-   "app_push", "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node",
-   "ar_proj", "aux_rule_fire", "b_eq", "base_row_get", "basis_name_hit", "basis_name_hit_go",
+   "abstract_prefix_list", "add_1", "add_n", "all_level_params_defined", "alpd_go", "alpd_ls",
+   "and_block_named", "and_pin_ok", "and_rescue_slots", "apd_clear", "apd_find", "apd_put",
+   "app_count", "app_count_at", "app_fill", "app_fill_n", "app_find", "app_hole", "app_push",
+   "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node", "ar_proj",
+   "aux_rule_fire", "b_eq", "base_row_get", "basis_name_hit", "basis_name_hit_go",
    "basis_name_unreserved", "basis_names_error", "basis_names_ok", "bb_go", "bb_memo", "bb_node",
    "beta_peel", "binder_dom", "binder_pair", "block_caps_at", "block_caps_at_er_copy",
    "block_caps_at_er_copy_go", "block_caps_ctor_names", "block_caps_fin", "block_caps_head",
