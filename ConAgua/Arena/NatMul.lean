@@ -4,8 +4,6 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.Word
-public import ConAgua.Arena.NatOff
-public import ConAgua.Arena.NatLeaf
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr

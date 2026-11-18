@@ -3,20 +3,15 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Layout
 meta import ConAgua.Arena.NatLeaf
-public import ConAgua.L.Notation
-public import ConAgua.Arena.Pool
 public import ConAgua.Arena.NatLeaf
 import ConAgua.Arena.NatCmpFacts
-import ConAgua.L.Records
 import ConAgua.Census.Attr
-public import ConAgua.L.Logic
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-import ConAgua.Front.Preserve
 
 @[expose] public section
 

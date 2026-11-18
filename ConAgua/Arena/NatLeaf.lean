@@ -4,7 +4,6 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Layout
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
-public import ConAgua.Arena.Pool
 public import ConAgua.Arena.NatOff
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
