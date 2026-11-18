@@ -341,3 +341,109 @@ theorem c2_loop (TA TB TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTB : G.
 end
 
 end L.AsmEsc
+
+namespace L.AsmEsc
+
+open L L.Arena L.Compiler
+
+theorem resOut_zero' {G : L.Compiler.Layout} {s : MachineData} {w : Word} (h : s.regs.rax = w) :
+    ResOut G 1 [w] s :=
+  ⟨fun i hi _ => by
+    obtain rfl : i = 0 := by omega
+    exact h, fun i h6 h1 => absurd h1 (by simp [maxRes] at h6; omega), by simp⟩
+
+theorem bw_of_le_one {w : Word} (h : ¬ 1 < w) : bw (w == 1) = w := by
+  by_cases h1 : w = 1
+  · subst h1; rfl
+  · have : w = 0 := by
+      have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
+      have h1' : w.toNat ≠ 1 := fun e => h1 (UInt64.toNat_inj.mp e)
+      have e1 : (1 : Word).toNat = 1 := rfl
+      exact UInt64.toNat_inj.mp (by simp; omega)
+    subst this; rfl
+
+/-- **The template meets the compiler's per-function contract**, for any L function `f` with five
+parameters and one result whose run is the model (`Chain2Spec`), in any table where `POOL` (0)
+is a tiered word array with small descriptor offsets, at every fuel. -/
+theorem chain2Asm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok) (f : FnName) (sub : Bool)
+    (fd : FunDecl) (hspec : Chain2Spec p f sub) (hnp : fd.nparams = 5) (hnr : Stmt.nret fd.body = 1)
+    (hdom : G.tab.dom64 (tier1 0) = true)
+    (hoffL : SmallOff (G.tab.len64 (0 : ArrId))) (hoffB : SmallOff (G.tab.base64 (0 : ArrId)))
+    (kf : Nat) (hc : Code (chain2Asm G.tab f sub) kf) (sk : NTree) (n : Nat) :
+    FnSimAt p G sk n f fd kf := by
+  intro vs σ d ra Q hlen hra hargs hlo8 hhi h15 hmem h14 hok herr habrt hexh
+  have hlo : G.lo ≤ d.regs.rsp.toNat := by omega
+  rw [hnp] at hlen
+  obtain ⟨o, oa, ob, nn, cw, rfl⟩ : ∃ o oa ob nn cw, vs = [o, oa, ob, nn, cw] := by
+    match vs, hlen with
+    | [o, oa, ob, nn, cw], _ => exact ⟨o, oa, ob, nn, cw, rfl⟩
+  have hA := hargs.1 (by simp [argRegs])
+  have hrdi : d.regs.rdi = o := UInt64.toBitVec_inj.mp (hA 0 (by simp))
+  have hr8 : d.regs.r8 = oa := UInt64.toBitVec_inj.mp (hA 1 (by simp))
+  have hr9 : d.regs.r9 = ob := UInt64.toBitVec_inj.mp (hA 2 (by simp))
+  have hr10 : d.regs.r10 = nn := UInt64.toBitVec_inj.mp (hA 3 (by simp))
+  have hr11 : d.regs.r11 = cw := UInt64.toBitVec_inj.mp (hA 4 (by simp))
+  have hn0 : 0 < n := by omega
+  have hh := hG.hi_le
+  refine ev_label (c2_code hc (i := 0) rfl) ?_
+  refine ev_cmpRO (c2_code hc (i := 1) rfl) (v := 1) (Or.inl rfl) ?_
+  refine ev_jcc (c2_code hc (i := 2) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · exact hexh _ ⟨rfl, Pres.refl _ _⟩
+  have hc1 : ¬ 1 < cw := by
+    intro h
+    simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.and_eq_false_iff, Bool.not_eq_false',
+      decide_eq_true_eq, beq_iff_eq] at hcc
+    rs [hr11] at hcc
+    rcases hcc with h' | h'
+    · exact absurd (UInt64.lt_iff_toNat_lt.mpr h') (UInt64.not_lt.mpr (UInt64.le_of_lt h))
+    · exact absurd (UInt64.toBitVec_inj.mp h') (fun e => by rw [e] at h; exact UInt64.lt_irrefl _ h)
+  generalize hcdef : (cw == 1) = c
+  have hbw : bw c = cw := by rw [← hcdef]; exact bw_of_le_one hc1
+  subst hbw
+  refine ev_cmpRO (c2_code hc (i := 3) rfl) (v := 0) (Or.inl rfl) ?_
+  refine ev_jcc (c2_code hc (i := 4) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · -- `n = 0`: return the carry
+    simp only [CondCode.interp, cmpFlags_zf, beq_iff_eq] at hcc
+    rs [hr10] at hcc
+    have hn0' : nn = 0 := UInt64.toBitVec_inj.mp hcc
+    subst hn0'
+    refine ev_lbl (Code.label hc (i := 56) rfl) ?_
+    refine ev_label (c2_code hc (i := 56) rfl) ?_
+    refine ev_movRR (c2_code hc (i := 57) rfl) ?_
+    refine frame_ret hG hra hlo hhi ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.refl _ _⟩ (c2_code hc (i := 58) rfl)
+      fun s' e1 e2 e3 e4 e5 e6 => ?_
+    have hrun := hspec σ o oa ob 0 c n (by simp; omega) (Or.inl rfl)
+    simp only [UInt64.toNat_zero, ch2Rows] at hrun
+    refine hok [bw c] σ s' (by rw [hrun]) (by rw [e1]; exact hmem) rfl e2 e3 e4
+      (by rw [e5]; rs; exact Nat.le_refl _) ?_ (by rw [e1]; exact Pres.refl _ _)
+    rw [hnr]; exact resOut_zero' (by rw [e6]; rs [hr11])
+  simp only [CondCode.interp, cmpFlags_zf, beq_eq_false_iff_ne] at hcc
+  rs [hr10] at hcc
+  have hnz : nn ≠ 0 := fun h => hcc (by rw [h])
+  refine ev_movRI (c2_code hc (i := 5) rfl) ?_
+  refine ev_movRR (c2_code hc (i := 6) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (c2_code hc (i := 7) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (c2_code hc (i := 8) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (c2_code hc (i := 9) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_movRR (c2_code hc (i := 10) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (c2_code hc (i := 11) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (c2_code hc (i := 12) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (c2_code hc (i := 13) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_movRR (c2_code hc (i := 14) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (c2_code hc (i := 15) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (c2_code hc (i := 16) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (c2_code hc (i := 17) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_gen (fun s1 => s1.regs.rcx = (o >>> 40) &&& 1 ∧ s1.regs.rdi = o &&& idxMask ∧
+      s1.regs.rdx = (oa >>> 40) &&& 1 ∧ s1.regs.r8 = oa &&& idxMask ∧
+      s1.regs.r12 = (ob >>> 40) &&& 1 ∧ s1.regs.r9 = ob &&& idxMask ∧ s1.regs.r10 = nn ∧
+      s1.regs.r11 = bw c ∧ s1.regs.r14 = d.regs.r14 ∧ s1.regs.r15 = d.regs.r15 ∧
+      s1.regs.rsp = d.regs.rsp ∧ s1.regs.rbp = d.regs.rbp ∧ s1.dmem = d.dmem)
+    (by refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rs [hrdi, hr8, hr9, hr10, hr11, BinOp.eval]
+        all_goals rfl)
+    fun s1 ⟨g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13⟩ => ?_
+  sorry
+
+end L.AsmEsc
