@@ -44,6 +44,7 @@ def check_oleans_fresh():
     `checker.s` fails `checkerFile_eq` (and its binary the prelude). `lake build --no-build` fails
     iff a target would need rebuilding (mtimes are useless: cache-restored oleans look old)."""
     r = subprocess.run([LAKE, "build", "--no-build", "ConAgua.Checker.ProgTab", "ConAgua.Checker.ProgI",
+                        "ConAgua.Checker.AsmX",
                         "ConAgua.Compiler.Run", "ConAgua.Compiler.Abi", "romgen"],
                        cwd=ROOT, capture_output=True, text=True)
     if r.returncode != 0:
@@ -72,7 +73,7 @@ def main():
     a = ap.parse_args()
     if not a.no_build:
         r = subprocess.run([LAKE, "build", "ConAgua.Checker.Prog", "ConAgua.Checker.ProgTab",
-                            "ConAgua.Checker.ProgI", "ConAgua.Compiler.Run",
+                            "ConAgua.Checker.ProgI", "ConAgua.Checker.AsmX", "ConAgua.Compiler.Run",
                             "ConAgua.Compiler.Abi", "ConAgua.AsmFile.CrossCheck", "romgen"],
                            cwd=ROOT, capture_output=True, text=True)
         if r.returncode != 0:
