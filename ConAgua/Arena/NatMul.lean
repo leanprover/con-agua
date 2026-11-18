@@ -164,32 +164,50 @@ def zerosLoop : Stmt := lblk (o, n, i, ot, ob) {
 
 /-! ## `mul_win`: the window product, accumulated in place -/
 
+/-- `kara_sum(o, oa, k, la)`: `P[o, o + k + 1) := a0 + a1` for `a0 = P[oa, oa + k)` and
+`a1 = P[oa + k, oa + la)` (`la - k ≤ k`), the sums of a Karatsuba step. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def karaSum : FunDecl := lfn (o, oa, k, la) locals (u) {
+  u := call mul_zeros(o, k + 1);
+  u := call mul_row(o, k + 1, oa, k, 1);
+  u := call mul_row(o, k + 1, oa + k, la - k, 1);
+  return 0
+}
+
+/-- `kara_prods(oa, la, ob, lb, s)`: the outer products of a Karatsuba step on
+`a = a0 + a1 B^k`, `b = b0 + b1 B^k` (`k = ceil(la / 2)`): `z0 = a0 b0` at `[s, s + 2k)` and
+`z2 = a1 b1` at `[s + 2k, s + la + lb)`, each into zeroed scratch; their own scratch from
+`s2`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def karaProds : FunDecl := lfn (oa, la, ob, lb, s, k, s2) locals (u) {
+  u := call mul_zeros(s, 2 * k);
+  u := call mul_win(oa, k, ob, k, s, 2 * k, s2);
+  u := call mul_zeros(s + 2 * k, la + lb - 2 * k);
+  u := call mul_win(oa + k, la - k, ob + k, lb - k, s + 2 * k, la + lb - 2 * k, s2);
+  return 0
+}
+
 /-- `kara_mid(oa, la, ob, lb, s)`: the three products of a Karatsuba step on `a = a0 + a1 B^k`,
 `b = b0 + b1 B^k` (`k = ceil(la / 2)`, `la / 2 < lb ≤ la`), into the scratch block from `s`:
-`z0 = a0 b0` at `[s, s + 2k)`, `z2 = a1 b1` at `[s + 2k, s + la + lb)`, the sums `a0 + a1` and
-`b0 + b1` (`k + 1` limbs each) above them, and `z1 = (a0 + a1)(b0 + b1) - z0 - z2` at
-`sp = s + la + lb + 2k + 2`, of the length it returns (trimmed). The scratch of its own products
-starts at `s2 = sp + 2k + 2`. -/
+`z0 = a0 b0` at `[s, s + 2k)`, `z2 = a1 b1` at `[s + 2k, s + la + lb)` (`kara_prods`), the
+sums `a0 + a1` and `b0 + b1` (`k + 1` limbs each) above them, and
+`z1 = (a0 + a1)(b0 + b1) - z0 - z2` at `sp = s + la + lb + 2k + 2`, of the length it returns
+(trimmed). The scratch of its own products starts at `s2 = sp + 2k + 2`. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def karaMid : FunDecl := lfn (oa, la, ob, lb, s) locals (k, z2, n2, sa, sb, sp, s2, u) {
+@[no_expose] def karaMid : FunDecl := lfn (oa, la, ob, lb, s) locals (k, sa, sb, sp, s2, u) {
   k := la - (la >> 1);
-  z2 := s + 2 * k;
-  n2 := la + lb - 2 * k;
   sa := s + la + lb;
   sb := sa + k + 1;
   sp := sb + k + 1;
   s2 := sp + 2 * k + 2;
   if ⟪2 ^ 41⟫ <= s2 { abort };
-  u := call mul_zeros(s, s2 - s);
-  u := call mul_win(oa, k, ob, k, s, 2 * k, s2);
-  u := call mul_win(oa + k, la - k, ob + k, lb - k, z2, n2, s2);
-  u := call mul_row(sa, k + 1, oa, k, 1);
-  u := call mul_row(sa, k + 1, oa + k, la - k, 1);
-  u := call mul_row(sb, k + 1, ob, k, 1);
-  u := call mul_row(sb, k + 1, ob + k, lb - k, 1);
+  u := call kara_prods(oa, la, ob, lb, s, k, s2);
+  u := call kara_sum(sa, oa, k, la);
+  u := call kara_sum(sb, ob, k, lb);
+  u := call mul_zeros(sp, 2 * k + 2);
   u := call mul_win(sa, k + 1, sb, k + 1, sp, 2 * k + 2, s2);
   u := call sub_row(sp, 2 * k + 2, s, 2 * k);
-  u := call sub_row(sp, 2 * k + 2, z2, n2);
+  u := call sub_row(sp, 2 * k + 2, s + 2 * k, la + lb - 2 * k);
   u := call nat_trim(sp, 2 * k + 2);
   return u
 }
@@ -265,11 +283,11 @@ def natMul : FunDecl := natMulG karaT
 
 /-- The pool functions with `nat_mul`. -/
 def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
-  ("mul_zeros", mulZeros), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul)]
+  ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul)]
 
 /-- `natMulProg` at another threshold (tests). -/
 def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow),
-  ("sub_row", subRow), ("mul_zeros", mulZeros), ("kara_mid", karaMid), ("mul_win", mulWinG T),
+  ("sub_row", subRow), ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWinG T),
   ("nat_mul", natMulG T)]
 
 /- `(2^64 - 1)^2 = 2^128 - 2^65 + 1`: limbs `[1, 2^64 - 2]`. -/
@@ -891,6 +909,31 @@ theorem mulRow_at_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ :
     obtain ⟨h1, h2, h3, h4⟩ := h
     have := off_lift _ (vpool s₀.mem) o.toNat k.toNat w.toNat _ hk h3 h4
     first | exact h1 | exact h2 | exact this.1 | exact this.2
+
+set_option maxHeartbeats 2000000 in
+/-- `kara_sum(o, oa, k, la)`: `P[o, o + k + 1) := a0 + a1`. -/
+theorem karaSum_spec (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
+    (hp : p.lookup "kara_sum" = some karaSum) (n : Nat) (s₀ : St) (o oa k la : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat + 1 ≤ pcap s₀.mem)
+    (ha : oa.toNat + la.toNat ≤ o.toNat) (hk : k.toNat ≤ la.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "kara_sum" [o, oa, k, la]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat (k.toNat + 1) ∧
+      pv (vpool s'.mem) o.toNat (k.toNat + 1) =
+        pv (vpool s₀.mem) oa.toNat k.toNat + pv (vpool s₀.mem) (oa.toNat + k.toNat) (la.toNat - k.toNat); ⊤⦄ := by
+  have hC := pcap_eq s₀.mem hs
+  have e1 : (k + 1).toNat = k.toNat + 1 := w_add k 1 (by simp; omega)
+  have e2 : (oa + k).toNat = oa.toNat + k.toNat := w_add oa k (by omega)
+  have e3 : (la - k).toNat = la.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hk)
+  rw [invoke_eq _ hp]
+  simp only [callFn, karaSum]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, mulZeros_spec p hpz n, mulRow_spec p hpr n] <;>
+      finish
 
 end passFns
 
