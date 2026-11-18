@@ -289,7 +289,7 @@ fact is that the regions are disjoint and in bounds, proved once in the compiler
   plain: the shipped `./checker` on 628 fixtures against con-leche's expected verdicts, about a minute
   (`--parallel 16`). Once, before the final landing of a change to L code, the compiler, the stubs or
   `main.c`, run the full comparison, `scripts/diff-e2e.py --refs --parallel 16`: the same, plus con-ron
-  and e2e-ref on every fixture (REFDIFF where their accept/not-accept differs from the checker's). The
+  and con-ron-lean-twin on every fixture (REFDIFF where their accept/not-accept differs from the checker's). The
   references' verdicts are cached in `_tmp/bench/verdict-cache/` (keyed by fixture hash and reference
   binary hash), so after the first run on a given twin sync it costs about one minute too (measured:
   57 s warm, 4-5 minutes cold, load ~240); `--no-cache` forces a fresh reference run. Do not run it

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Benchmark harness: the compiled L checker against con-ron, con-leche and e2e-ref (lane `compopt`).
+"""Benchmark harness: the compiled L checker against con-ron, con-leche and the twin (lane `compopt`).
 
 Runs every *system* (one or more compiled L binaries, `con-ron --jobs=1`, `con-leche --jobs=1`,
-`e2e-ref`) on a fixture
+`con-ron-lean-twin`: con-ron's Lean model compiled by Lean, `lakefile.toml`) on a fixture
 set with INTERLEAVED repetitions: per round, the fixtures in random order and per fixture the
 systems in random order, so that drifting machine load hits every system alike. Reports per
 fixture and as geometric means (over the fixtures every system accepts):
@@ -26,7 +26,8 @@ Systems:
                       `vendor/UPSTREAM` pins, when present); run as `con-leche --jobs=1 -- FILE`,
                       in its default (verified) mode with its own embedded pins. Its `Nat`
                       arithmetic is Lean's, i.e. GMP.
-  --no-conron / --no-leche / --no-ref   leave out con-ron / con-leche / e2e-ref.
+  --no-conron / --no-leche / --no-twin   leave out con-ron / con-leche / con-ron-lean-twin
+                      (`--no-ref` is the old spelling of `--no-twin`).
 
 Fixtures: `--set quick|default|full|init` (below), `--only REGEX` (filters the set; with `--set all`,
 every e2e fixture), or explicit ids/paths as positional arguments (an id is `e2e/NAME.ndjson` or
@@ -34,7 +35,7 @@ every e2e fixture), or explicit ids/paths as positional arguments (an id is `e2e
 
 `--reps 0` (verdicts only) is gone: bench.py is for performance work. Verdict checks are
 `scripts/diff-e2e.py` (the shipped binary against con-leche's expectations; `--refs` adds con-ron and
-e2e-ref with cached reference verdicts; `--bin` takes a candidate binary): PLAN.md, "Verdict checks".
+con-ron-lean-twin with cached reference verdicts; `--bin` takes a candidate binary): PLAN.md, "Verdict checks".
 
 Usage: scripts/bench.py [--set S] [--reps N] [--cpus LIST] [--bin NAME=PATH]… [--leche PATH | --no-leche]
                        [--json OUT] [FIXTURE…]
@@ -84,7 +85,7 @@ DEFAULT = QUICK + [
     "arena/good/perf/beta-ladder.ndjson",
     "e2e/complete_c04a_restart_70.ndjson",  # 9 MB, ~43G instructions
 ]
-# where con-ron or e2e-ref are slow (e2e-ref up to ~130G instructions)
+# where con-ron or the twin are slow (con-ron-lean-twin up to ~130G instructions)
 FULL = DEFAULT + [
     # L ~1.47T instructions, ~60 s: 98% in `rf_find` (the banked `rf` memo's bank is shifted out
     # of the hash)
@@ -227,13 +228,13 @@ def main():
     ap.add_argument("--bin", action="append", default=[], metavar="NAME=PATH")
     ap.add_argument("--asm", action="append", default=[], metavar="NAME=PATH.s")
     ap.add_argument("--no-conron", action="store_true")
-    ap.add_argument("--no-ref", action="store_true")
+    ap.add_argument("--no-twin", "--no-ref", dest="no_ref", action="store_true")
     ap.add_argument("--leche", default=None, metavar="PATH", help=f"con-leche binary (default {LECHE} if present)")
     ap.add_argument("--no-leche", action="store_true")
     ap.add_argument("--no-wall", action="store_true", help="one counted round, instructions only")
     ap.add_argument("--json", default=None, help="write all measurements here")
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (e2e-ref, e2e-l)")
+    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (con-ron-lean-twin, e2e-l)")
     args = ap.parse_args()
     if args.reps == 0:
         sys.exit("bench.py --reps 0 no longer checks verdicts; use scripts/diff-e2e.py [--refs] (PLAN.md, 'Verdict checks')")
@@ -242,7 +243,7 @@ def main():
     os.makedirs(e2e.WORK, exist_ok=True)
     if not args.no_build:
         e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins", "e2e-l",
-                 "e2e-ref")  # fixtures are unpacked there (shared with scripts/e2e.py)
+                 "con-ron-lean-twin")  # fixtures are unpacked there (shared with scripts/e2e.py)
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
@@ -276,7 +277,8 @@ def main():
         leche = os.path.abspath(leche)
         systems.append(System("con-leche", "con-leche", lambda f: [leche, "--jobs=1", "--", f]))
     if not args.no_ref:
-        systems.append(System("e2e-ref", "ref", lambda f: [os.path.join(BIN, "e2e-ref"), f, f"--pins={npins}"]))
+        systems.append(System("con-ron-lean-twin", "ref",
+                              lambda f: [os.path.join(BIN, "con-ron-lean-twin"), f, f"--pins={npins}"]))
 
     # warm-up: verdicts
     verdict = {}

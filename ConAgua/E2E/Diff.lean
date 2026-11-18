@@ -13,7 +13,7 @@ public import ConAgua.Final.Statement
 pipeline does, compare the stores, then run single functions on both sides and compare results.
 
 * **States.** Twin: `internReservedPins`, `parseBytes FILE`, `internAllPins P` from
-  `AState.init EStore.empty` (the first stages of `e2e-ref --no-prelude`). L: `L.run` of
+  `AState.init EStore.empty` (the first stages of `con-ron-lean-twin --no-prelude`). L: `L.run` of
   `e2e_front()` (`ConAgua/E2E/Check.lean`: the same three stages) on `loadMem FILE …` (the stubs
   of `PROG` call `__missing_<name>`, so a missing callee is named).
 * **Stores.** For each of the 19 cons tables and both tiers, L's node count `CTL[ca + t]` against

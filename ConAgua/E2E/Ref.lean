@@ -7,7 +7,7 @@ public import ConRon.Arena.Main
 /-!
 # The e2e reference: the twin's pipeline, whole or without the prelude (lane `e2e`)
 
-`e2e-ref FILE [--no-prelude] [--pins=N]` runs con-ron's arena checker (the vendored twin, compiled
+`con-ron-lean-twin FILE [--no-prelude] [--pins=N]` runs con-ron's arena checker (the vendored twin, compiled
 by Lean) on the whole file as one buffer (`parseBytes`, what `front_run` refines), at the pin list
 `natOpPinSets.take N` (default `0`: the empty list, while the program's readers read the ROM, whose
 `L.Rom.romPins = []`; `1` once they read the pin-data buffer `lake exe romgen` writes), in
@@ -55,7 +55,7 @@ open ConRon.Arena in
 def main (args : List String) : IO UInt32 := do
   let withPrelude := !args.contains "--no-prelude"
   let npins := (args.findSome? fun a => if a.startsWith "--pins=" then (a.drop 7).toString.toNat? else none).getD 0
-  let some file := args.find? (!·.startsWith "--") | IO.eprintln "usage: e2e-ref FILE [--no-prelude] [--pins=N]"; return 3
+  let some file := args.find? (!·.startsWith "--") | IO.eprintln "usage: con-ron-lean-twin FILE [--no-prelude] [--pins=N]"; return 3
   let b ← IO.FS.readBinFile file
   match L.E2E.Ref.run b withPrelude (ConLeche.natOpPinSets.take npins) with
   | .ok n => IO.println s!"verdict 0 accepted {n} declarations"; return 0
