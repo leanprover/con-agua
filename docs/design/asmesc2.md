@@ -348,3 +348,10 @@ Measured on the landed tree (base master `fbf177187`, linleaf's bitwise group #3
 * Init unchanged;
 * `B1k` (180 `land`/`lor`/`xor` of 1000-limb operands, each computed twice): −12.5 k instructions
   per operation (the operands are built by `Nat.sub`, which dominates).
+
+Correctness:
+* `BF`: 228 `Nat.land`/`lor`/`xor` checks, each the correct result `= true` and the result plus
+  one `= false`, on random, all-ones and sparse operands of mixed lengths from 1 to 1000 limbs.
+  All accepted, as on master.
+* Product fuzzer 2100 and division fuzzer 540: the same verdicts as master.
+* `diff-e2e --refs`: 740 agree, 0 REFDIFF.
