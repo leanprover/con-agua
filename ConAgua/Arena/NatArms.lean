@@ -424,7 +424,8 @@ theorem pv_of_lt_one (v : Array Word) (o l : Nat) (h : l < 1) : pv v o l = 0 := 
 
 variable (hz : p.lookup "size_bytes" = some sizeBytesL)
   (hpr : p.lookup "pow_refused" = some powRefusedL) (hpw : p.lookup "pow_nat" = some powNatL)
-  (hps : p.lookup "nat_shl" = some natShl) (hlp : p.lookup "limb_push" = some limbPushL)
+  (hps : p.lookup "nat_shl" = some natShl) (hpz : p.lookup "zero_n" = some zeroN) (hpsn : p.lookup "shl_n" = some shlN)
+  (hlp : p.lookup "limb_push" = some limbPushL)
 
 /-- A refused arm: a sentinel (`≥ 2^63`), the twin's failure with its message. -/
 theorem NatRes.refused {R : Mem → AState → Prop} {arm : AM (Option EIdx)} {a₀ : AState}
@@ -498,7 +499,7 @@ theorem powRefusedW_iff (m : Mem) (mx oa la e : Word) (hn : Norm (vpool m) oa.to
     refine ⟨fun h => h0 (ha1.mpr (Or.inl h)), fun h => h0 (ha1.mpr (Or.inr h)), he0.mpr h2, ?_⟩
     rwa [Nat.div_lt_iff_lt_mul (Nat.pos_of_ne_zero h2)] at h3
 
-include hpool hgrow hI hph hpt hpm hpn hz hpr hpw hps hlp in
+include hpool hgrow hI hph hpt hpm hpn hz hpr hpw hps hpz hpsn hlp in
 /-- **`nat_pow_lit` refines the `Nat.pow` arm** (`powGuard`, then the power): the handle, or the
 guard's sentinel (`NatRes`). -/
 theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Nat) (s₀ : St)
@@ -524,7 +525,7 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      powRefused_spec p hz hpr n, powNat_spec p hph hpt hpm hpn hps hpw hlp n, hI a₀ n]
+      powRefused_spec p hz hpr n, powNat_spec p hph hpt hpm hpn hps hpz hpsn hpw hlp n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
       bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
@@ -712,6 +713,7 @@ variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
   (hpt : p.lookup "nat_trim" = some natTrim) (hps : p.lookup "nat_shl" = some natShl)
+  (hpz : p.lookup "zero_n" = some zeroN) (hpsn : p.lookup "shl_n" = some shlN)
   (hz : p.lookup "size_bytes" = some sizeBytesL)
   (hsl : p.lookup "shift_left_refused" = some shiftLeftRefusedL)
 
@@ -732,7 +734,7 @@ theorem natShlArm_run (a b : Nat) (st : AState) :
     · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_self, and_false]; rfl
     · simp only [h0, h1, h2, ↓reduceIte, ne_eq, not_false_eq_true, and_false]; rfl
 
-include hpool hgrow hI hpt hps hz hsl in
+include hpool hgrow hI hpt hps hpz hpsn hz hsl in
 /-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm** (`shiftLeftGuard`, then the shift): the
 handle, or the guard's sentinel (`NatRes`). -/
 theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Nat) (s₀ : St)
@@ -766,7 +768,7 @@ theorem natShlLit_refines (hg : p.lookup "nat_shl_lit" = some natShlLit) (n : Na
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      shiftLeftRefused_spec p hz hsl n, natShl_spec p hpt hps n, hI a₀ n]
+      shiftLeftRefused_spec p hz hsl n, natShl_spec p hpz hpsn hpt hps n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte, beq_iff_eq,
       bne_iff_ne, ne_eq, decide_eq_true_eq] at *)
@@ -1020,7 +1022,7 @@ theorem natXor_top : TopSpec natArmProg "nat_xor" Nat.xor := by
 
 theorem natShl_top : TopSpec natArmProg "nat_shl" Nat.shiftLeft := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natShl_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natShl_spec natArmProg rfl rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← Nat.shiftLeft_eq, Nat.shiftLeft_eq'] using this
 
 theorem natShr_top : TopSpec natArmProg "nat_shr" Nat.shiftRight := by
@@ -1104,7 +1106,7 @@ theorem natXorLit_refinesA : ArmRefinesA "nat_xor_lit" natXorArm :=
 theorem natShlLit_refinesA : ArmRefinesS "nat_shl_lit" natShlArm :=
   fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natShlLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR
       hmx oa la ob lb ha hb hna hnb hmode
 /-- **`nat_shr_lit` refines the `Nat.shiftRight` arm.** -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.shiftRight"]
@@ -1152,7 +1154,7 @@ theorem natPowLit_refinesA : ArmRefinesS "nat_pow_lit" natPowArm :=
   fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natPowLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
       (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl rfl rfl
-      rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
+      rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
 
 /-- **`nat_beq_lit` refines the `Nat.beq` arm under `ArenaR`**, given what the three pin reads
 return in the arena state (they read it and do not change it). -/

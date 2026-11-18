@@ -135,7 +135,7 @@ def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, c, pt, pb) {
 }
 
 /-- The pool functions with `nat_shr`. -/
-def natShrProg : Prog := natProg ++ [("shr_n", shrN), ("nat_shr", natShr)]
+def natShrProg : Prog := natProg ++ [("nat_shr", natShr)]
 
 /- `[0, 6, 2] >>> 65 = [3, 1]`: `a` at 0, `b = [65]` at 3, top 4. -/
 #guard (run natShrProg 100 "nat_shr" [0, 3, 3, 1]
