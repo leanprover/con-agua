@@ -132,3 +132,9 @@ limb shifted alone (`shrCore`). The right shift's word facts (`lowb`, `shr_split
 NatLeaf. Each function's spec composes its core block's lemma and a final lemma (`shl_final`,
 `shr_final`, the latter through the existing `shr_small`). NatShl 23 s and NatShr 16 s, each
 with a commented 1M heartbeat budget (before: 8M and unlimited); NatLeaf 9 s.
+`nat_limb` lost its last caller and is gone. Measured on master `053543944c` (add/sub/bitwise/
+lit_hash in hand asm): gf3 26.104 G → 25.478 G (−2.4 %, exact `instructions:u`), `nat_shr`
+2.66 → 2.03 G by perf sampling (gf3 barely shifts left). Verdicts: diff-e2e 740 agree; bignum
+fuzzer 3315/3315; div/mod fuzzer 2000/2000. Compiled per-limb cost (asm): `shr_n`'s loop about 25
+instructions (two tiered accesses, variable shifts through `rcx`), `shl_n`'s about 24, `zero_n`'s
+about 13: candidates for hand asm.
