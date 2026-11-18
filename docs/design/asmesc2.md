@@ -158,3 +158,61 @@ The checker's list is `checkerXKeys` (`Checker/AsmKeys.lean`, a module with no b
 so that the inlined program does not depend on them). `checkerX_keys` states that it is
 `checkerX`'s keys. With `mul_row` and `sub_row`, which are too large to be inlined anyway, the
 change does nothing: `checker.s` is unchanged (`asm_file.py --check`).
+
+## Step 5: carry-chain templates (for linleaf's `add_n`, `add_1`, `sub_n`, `sub_1`)
+
+`ConAgua/AsmEsc/Chain2.lean` (`chain2Asm tab f sub`, two operand windows) and `Chain1.lean`
+(`chain1Asm tab f sub`, one) are hand-written bodies for any leaf `f(o, oa[, ob], n, c)` that
+computes `P[o + i] := A[oa + i] ± B[ob + i] ± carry` and returns the carry. `sub` chooses `adc`
+or `sbb`. The carry stays in the carry flag across the loop, which is 6 instructions per limb:
+load, `adc`/`sbb` from memory (or from a zero register), store, `inc`, `dec`, `jne`.
+
+Up front: a carry in above 1, a window outside its tier, or too little fuel go to
+`ca_exhausted`. `n = 0` returns the carry.
+
+`chain{2,1}Asm_sim` prove `FnSimAt` for any L function satisfying `Chain{2,1}Spec`: for a carry
+in `c ≤ 1` and `n < F`, when `n = 0` or the windows lie in their tiers, the run returns the pure
+model `ch{2,1}Rows` (one `chStep` per limb). The model reads each limb from the current memory,
+after the earlier limbs' stores, so the windows may overlap; in-place `o = oa` is covered. Each
+leaf adds only an L-side proof of its `Chain*Spec`, once linleaf's bodies are on master.
+
+Measured on a scratch build of linleaf `12cfef0a5` (the four leaves excluded from inlining;
+master `acf6a18d5`; `M` master, `LL` the compiled leaves, `LA` the leaves in asm):
+
+| | M | LL | LA |
+|---|---:|---:|---:|
+| gf3 instructions | 53.58 G | 44.63 G | 40.94 G (−8.3 % vs LL) |
+| gf3 wall (load 10–25) | 2.721 s | 1.979 s | 1.901 s (−3.9 % [−5.3, −2.4] vs LL, p = 0.004) |
+| Init instructions | 202.648 G | 202.654 G | 202.648 G |
+
+Fuzzer 2100/2100 and `diff-e2e --refs` 740/0 for LL and LA. New forms when they land: `adcq`
+and `sbbq` with a memory operand, `sbbq %r, %r`, `incq`, `decq`.
+
+## Step 6: hand-written `div_submul`
+
+`ConAgua/AsmEsc/DivSubmulAsm.lean` (`divSubmulAsm`): `R := R - q·b` on the `n + 1` limbs at `r`,
+returning the borrow out of the top limb (Knuth D4).
+
+Up front: both windows inside their tiers, and their indices with `n` below `2^40`, so that L's
+per-limb tag decode `POOL⦃r + i⦄` keeps `r`'s tier (`tag_add`). Also the fuel for the row.
+
+The row is 12 instructions per limb (`mov q; mul [b+8i]; add c; adc 0; load; sub lo; adc 0;
+store; mov; add; cmp; jb`), against about 54 for the compiled code, which decodes the tag,
+checks bounds and reloads the descriptor on every access. Then the top limb.
+
+The L side is `DivSubmulL.lean` (`divSubmul_run`, against `dsRows`/`dsEnd`), the machine side
+`divSubmulAsm_sim`. The only new step lemma is `ev_mulS` (`mul` with a memory operand); the
+parser already reads `mulq MEM`.
+
+Measured (base master `acf6a18d5`):
+* per extra 2048÷1024-limb division: 60.6 M → 13.3 M instructions (−78 %); the 16-division file
+  −32.1 % instructions, −15.5 % wall [−17.4, −13.6], p = 0.002 (the file is short, start-up
+  dominated);
+* gf3 −0.01 %, Init unchanged;
+* correctness: a new division fuzzer (`Nat.div`/`Nat.mod`, 1–2000-limb operands, 540 cases:
+  180 good accepted, 360 bad rejected, the same as master), `diff-e2e --refs` 740 agree, 0
+  REFDIFF.
+
+`nat_mad` (the decimal reader's multiply-add) was measured too, with its key in the exclusion
+list: per extra 20000-digit literal, 8.29 M → 4.42 M instructions (−47 %). Its compiled loop
+without inlining is 8.38 M. gf3 and Init are unchanged. Not proved yet.
