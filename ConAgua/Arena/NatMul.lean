@@ -10,6 +10,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.LocNF
 import ConAgua.L.Records
+import ConAgua.Arena.NatCmpFacts
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -390,6 +391,54 @@ theorem mrow_step_goal (m : Mem) (P0 : Array Word) (o oa y i c T11 T12 T13 T14 :
   generalize wt i.toNat = W at *
   grind
 
+/-- A window pass's value, from its changed prefix to the whole window. -/
+theorem win_close (p q : Array Word) (o i n X : Nat) (hoff : Off p q o i) (hi : i ≤ n)
+    (h : pv p o i = pv q o i + X) : pv p o n = pv q o n + X := by
+  have e1 := pv_append p o i (n - i); have e2 := pv_append q o i (n - i)
+  rw [show i + (n - i) = n by omega] at e1 e2
+  rw [e1, e2, Off.pv_disj p q o i (o + i) (n - i) hoff (Or.inr (Nat.le_refl _)), h]; omega
+
+/-- `win_close` without the sum, for `grind`: a pass's changed prefix and the whole window. -/
+theorem off_split (p q : Array Word) (o i n : Nat) (hoff : Off p q o i) (hi : i ≤ n) :
+    pv p o n + pv q o i = pv q o n + pv p o i := by
+  have e1 := pv_append p o i (n - i); have e2 := pv_append q o i (n - i)
+  rw [show i + (n - i) = n by omega] at e1 e2
+  rw [e1, e2, Off.pv_disj p q o i (o + i) (n - i) hoff (Or.inr (Nat.le_refl _))]; omega
+
+/-- One step of a carry ripple (`t := P[o + i] + c`), in the shape of its verification
+condition. -/
+theorem carry_step_goal (m : Mem) (P0 : Array Word) (o i c T11 T12 : Word) (X : Nat)
+    (h11 : T11 = o >>> 40) (h12 : T12 = o &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41)
+    (hs11 : (m.arr64 (tierA POOL T11)).size ≤ 2 ^ 40)
+    (hb11 : (T12 + i).toNat < (m.arr64 (tierA POOL T11)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat + c.toNat * wt i.toNat = pv P0 o.toNat i.toNat + X) :
+    pv (vpool (m.set64 (tierA POOL T11) (T12 + i) ((m.arr64 (tierA POOL T11))[(T12 + i).toNat] + c)))
+        o.toNat (i + 1).toNat +
+      (Cmp.ult.evalW ((m.arr64 (tierA POOL T11))[(T12 + i).toNat] + c) c).toNat * wt (i + 1).toNat =
+    pv P0 o.toNat (i + 1).toNat + X := by
+  subst h11 h12
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have et := ld_win m o i (by omega) (by omega) hs11 hb11
+  have hvs := vpool_size m
+  have et' : (vpool m)[o.toNat + i.toNat]'(by omega) = P0[o.toNat + i.toNat]'(by omega) :=
+    Off.get _ _ _ _ _ hoff (by omega) (by omega) (by omega)
+  rw [st_win m o i _ (by omega) (by omega) hs11 hb11, et, et']
+  have hc : (P0[o.toNat + i.toNat] + c).toNat + (Cmp.ult.evalW (P0[o.toNat + i.toNat] + c) c).toNat * 2 ^ 64 =
+      P0[o.toNat + i.toNat].toNat + c.toNat := by
+    have := (P0[o.toNat + i.toNat]).toNat_lt; have := c.toNat_lt
+    simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
+    split <;> simp <;> omega
+  generalize (Cmp.ult.evalW _ c : Word) = c' at hc ⊢
+  rw [hi1, pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega),
+    pv_succ P0 o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
+    wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 o.toNat i.toNat = B at *
+  generalize wt i.toNat = W at *
+  grind
+
 /-- The tier facts of a window pass over `[o, o + n)` reading `[oa, oa + la)`: locals `o`, `n`,
 `oa`, `la` at `0`-`3`, the decoded tiers and indices at `ot`, `ob`, `qt`, `qb`. -/
 def WinBase (P0 : Array Word) (C : Nat) (ot ob qt qb : Nat) (s : St) : Prop :=
@@ -441,7 +490,83 @@ theorem mrowLoop_spec (n : Nat) (s₀ : St) (h : MRowInv P0 C s₀) :
       | (with_reducible apply mrow_step_goal <;> grind [pcap_eq])
       | grind (splits := 8) [arena_grind, lang_grind]
 
+/-- `mul_row`'s carry ripple. -/
+def MCarryInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  WinBase P0 C 11 12 13 14 s ∧ (s.loc 5).toNat ≤ (s.loc 1).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 5).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 5).toNat + (s.loc 6).toNat * wt (s.loc 5).toNat =
+    pv P0 (s.loc 0).toNat (s.loc 5).toNat + pv P0 (s.loc 2).toNat (s.loc 3).toNat * (s.loc 4).toNat
+
+def MCarryPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat =
+    pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat * (s₀.loc 4).toNat
+
+set_option maxHeartbeats 2000000 in
+theorem mcarryLoop_spec (n : Nat) (s₀ : St) (h : MCarryInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n mcarryLoop ⦃fun r s' => MCarryPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [MCarryInv, WinBase, MCarryPost] at h ⊢
+    rw [exec, step_while (w := mcarryLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [MCarryInv, MCarryPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq, bne_iff_ne, ne_eq] at *)
+    all_goals first
+      | (with_reducible apply carry_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind, Off.mono, off_split]
+
+theorem mrowLoop_step_spec (n : Nat) (s₀ : St) (h : MRowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) mrowLoop ⦃fun r s' => MRowPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (mrowLoop_spec p P0 C (n + 1) s₀ h)
+
+theorem mcarryLoop_step_spec (n : Nat) (s₀ : St) (h : MCarryInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) mcarryLoop ⦃fun r s' => MCarryPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (mcarryLoop_spec p P0 C (n + 1) s₀ h)
+
 end passes
+
+section passFns
+variable (p : Prog)
+
+set_option maxHeartbeats 2000000 in
+/-- `mul_row(o, w, oa, la, y)`: `P[o, o + w) += a * y` in place (`a` off the window); only the
+window changes. -/
+theorem mulRow_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St) (o w oa la y : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + w.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + la.toNat ≤ pcap s₀.mem)
+    (hd : oa.toNat + la.toNat ≤ o.toNat ∨ o.toNat + w.toNat ≤ oa.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mul_row" [o, w, oa, la, y]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat ∧
+      pv (vpool s'.mem) o.toNat w.toNat =
+        pv (vpool s₀.mem) o.toNat w.toNat + pv (vpool s₀.mem) oa.toNat la.toNat * y.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs
+  rw [invoke_eq _ hp]
+  simp only [callFn, mulRow]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      mrowLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
+      mcarryLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
+    all_goals (try simp only [MRowInv, MRowPost, MCarryInv, MCarryPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+end passFns
 
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)

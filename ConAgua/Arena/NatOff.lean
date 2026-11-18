@@ -59,4 +59,18 @@ theorem Off.trans (p q r : Array Word) (o n : Nat) (h : Off p q o n) (h' : Off q
     Off p r o n := fun j hj => (h j hj).trans (h' j hj)
 grind_pattern [arena_grind] Off.trans => Off p q o n, Off q r o n
 
+/-- A slice off the region keeps its value. -/
+theorem Off.pv_disj (p q : Array Word) (o k o' l : Nat) (h : Off p q o k) (hl : o' + l ≤ o ∨ o + k ≤ o') :
+    pv p o' l = pv q o' l := by
+  induction l with
+  | zero => rfl
+  | succ l ih => simp only [pv, ih (by omega), h (o' + l) (by omega)]
+
+theorem Off.symm (p q : Array Word) (o n : Nat) (h : Off p q o n) : Off q p o n :=
+  fun j hj => (h j hj).symm
+
+/-- A frame of a smaller region is one of a larger region. -/
+theorem Off.mono (p q : Array Word) (o i n : Nat) (h : Off p q o i) (hi : i ≤ n) : Off p q o n :=
+  fun j hj => h j (by omega)
+
 end L.Arena
