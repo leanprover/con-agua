@@ -74,58 +74,189 @@ theorem hashN_succ (p : Array Word) (o k k' j : Nat) (hk : k' = k + 1) (hj : j =
   subst hk hj; simp [hashN, h]
 grind_pattern [arena_grind] hashN_succ => hashN p o k', hashN p o k, p[j]
 
-/-- Limb `i` of a resolved slice (`sliceRes`) is the tagged read `prd m (o + i)`. -/
-theorem hashN_tstep (m : Mem) (o i : Word) (k : Nat) (hk : k = i.toNat + 1)
-    (h : (o &&& 1099511627775).toNat + i.toNat < 2 ^ 40) :
-    hashN (tpool m) o.toNat k = (hashN (tpool m) o.toNat i.toNat ^^^ prd m (o + i)) * fnvPrime := by
-  subst hk; rw [hashN, tpool_res m o i h]
-grind_pattern [arena_grind] hashN_tstep => hashN (tpool m) o.toNat k, prd m (o + i)
+/-- The hash of `k` limbs from pool position `a` on, starting from the hash `h`. -/
+def hashFrom (p : Array Word) (a : Nat) (h : Word) : Nat → Word
+  | 0 => h
+  | k + 1 => hashFrom p (a + 1) ((h ^^^ (p[a]?.getD 0)) * fnvPrime) k
 
-/-- The loop over a resolved slice (`sliceRes`): `POOL⟨t⟩[x + i]` is limb `i` of `(o, l)`. -/
-def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
-  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫ }
+theorem hashFrom_snoc (p : Array Word) (a : Nat) (h : Word) (k : Nat) :
+    hashFrom p a h (k + 1) = (hashFrom p a h k ^^^ (p[a + k]?.getD 0)) * fnvPrime := by
+  induction k generalizing a h with
+  | zero => rfl
+  | succ k ih => rw [hashFrom, ih, hashFrom, show a + 1 + k = a + (k + 1) by omega]
+
+theorem hashN_hashFrom (p : Array Word) (o k : Nat) : hashN p o k = hashFrom p o fnvBasis k := by
+  induction k with
+  | zero => rfl
+  | succ k ih => rw [hashN, hashFrom_snoc, ih]
+
+/-- A tier's word at index `i` is the pool's word at position `t · 2^40 + i`. -/
+theorem tpool_tier (m : Mem) (t : Word) (i : Nat) (ht : t.toNat < 2 ^ 24) (hi : i < 2 ^ 40) :
+    (tpool m)[t.toNat * 2 ^ 40 + i]?.getD 0 = (m.arr64 (tierA POOL t)).getD i 0 := by
+  have hw : (UInt64.ofNat (t.toNat * 2 ^ 40 + i)).toNat = t.toNat * 2 ^ 40 + i := by
+    rw [UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)]
+  rw [← hw, tpool_getD, prd]
+  have h1 : UInt64.ofNat (t.toNat * 2 ^ 40 + i) >>> 40 = t := by
+    apply UInt64.toNat_inj.mp; rw [tag_tier_toNat, hw]; omega
+  have h2 : (UInt64.ofNat (t.toNat * 2 ^ 40 + i) &&& 1099511627775).toNat = i := by
+    rw [tag_idx_toNat, hw]; omega
+  rw [h1, h2, Array.getD_eq_getD_getElem?]
+
+/-- One round of `hashLoop8`, in the shape of its verification condition. -/
+theorem hash_round8 (m : Mem) (t x l h H : Word) (ht : t.toNat < 2 ^ 24)
+    (hx : x.toNat + l.toNat ≤ 2 ^ 40) (h8 : 8 ≤ l)
+    (hH : H = hashFrom (tpool m) (t.toNat * 2 ^ 40 + x.toNat) h l.toNat) :
+    let A := m.arr64 (tierA POOL t)
+    H = hashFrom (tpool m) (t.toNat * 2 ^ 40 + (x + 8).toNat)
+      (((((((((h ^^^ A.getD x.toNat 0) * fnvPrime ^^^ A.getD (x + 1).toNat 0) * fnvPrime ^^^
+        A.getD (x + 2).toNat 0) * fnvPrime ^^^ A.getD (x + 3).toNat 0) * fnvPrime ^^^
+        A.getD (x + 4).toNat 0) * fnvPrime ^^^ A.getD (x + 5).toNat 0) * fnvPrime ^^^
+        A.getD (x + 6).toNat 0) * fnvPrime ^^^ A.getD (x + 7).toNat 0) * fnvPrime) (l - 8).toNat := by
+  intro A
+  have h8' : 8 ≤ l.toNat := UInt64.le_iff_toNat_le.mp h8
+  have e : ∀ k : Word, k.toNat ≤ 8 → (x + k).toNat = x.toNat + k.toNat := fun k hk => by
+    rw [UInt64.toNat_add]; apply Nat.mod_eq_of_lt; omega
+  have hl : (l - 8).toNat = l.toNat - 8 := by
+    rw [UInt64.toNat_sub_of_le _ _ h8]; rfl
+  rw [hH, hl, show l.toNat = l.toNat - 8 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 by omega]
+  simp only [hashFrom, Nat.add_assoc, Nat.reduceAdd]
+  rw [tpool_tier m t _ ht (by omega), tpool_tier m t _ ht (by omega), tpool_tier m t _ ht (by omega),
+    tpool_tier m t _ ht (by omega), tpool_tier m t _ ht (by omega), tpool_tier m t _ ht (by omega),
+    tpool_tier m t _ ht (by omega), tpool_tier m t _ ht (by omega)]
+  rw [e 1 (by decide), e 2 (by decide), e 3 (by decide), e 4 (by decide), e 5 (by decide),
+    e 6 (by decide), e 7 (by decide), e 8 (by decide)]
+  rfl
+
+/-- Eight limbs per round while at least eight are left (`x` and `l` move on). -/
+def hashLoop8 : Stmt := lblk (o, l, i, h, t, x, q) {
+  while 8 <= l {
+    h := (h ^ POOL⟨t⟩[x]) * q;
+    h := (h ^ POOL⟨t⟩[x + 1]) * q;
+    h := (h ^ POOL⟨t⟩[x + 2]) * q;
+    h := (h ^ POOL⟨t⟩[x + 3]) * q;
+    h := (h ^ POOL⟨t⟩[x + 4]) * q;
+    h := (h ^ POOL⟨t⟩[x + 5]) * q;
+    h := (h ^ POOL⟨t⟩[x + 6]) * q;
+    h := (h ^ POOL⟨t⟩[x + 7]) * q;
+    x += 8;
+    l -= 8
+  }
 }
 
-/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
+/-- The last up to seven limbs. -/
+def hashTail : Stmt := lblk (o, l, i, h, t, x, q) {
+  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * q }
+}
+
+/-- The slice resolved (`sliceRes`), then the limbs eight at a time, then the rest. Its size (more
+than the inliner's 80 nodes, `Compiler/Inline.lean`) keeps it a function of its own, which the
+compiler compiles as a leaf with its locals in registers.
+con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
+@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x, q) {
   h := ⟪fnvBasis⟫;
   ⟪sliceRes 0 1 4 5⟫;
-  ⟪hashLoop⟫;
+  q := ⟪fnvPrime⟫;
+  ⟪hashLoop8⟫;
+  ⟪hashTail⟫;
   return h
 }
 
 section hash
-variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
+variable (p : Prog)
 
-/-- The loop's precondition: the slice resolved, the hash of the limbs before `i`. -/
-def HashRes (s : St) : Prop :=
-  s.loc 4 = s.loc 0 >>> 40 ∧ s.loc 5 = s.loc 0 &&& 1099511627775 ∧
-  (s.loc 0 &&& 1099511627775).toNat + (s.loc 1).toNat ≤ 2 ^ 40 ∧
+/-- The loops' invariant: what is left to hash is `l` limbs from `t · 2^40 + x` (`+ i` in the
+tail), and hashing them from `h` gives `H`. -/
+def HashInv (H : Word) (s : St) : Prop :=
+  (s.loc 4).toNat < 2 ^ 24 ∧ (s.loc 5).toNat + (s.loc 1).toNat ≤ 2 ^ 40 ∧ s.loc 6 = fnvPrime ∧
   (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
-  s.loc 3 = hashN (tpool s.mem) (s.loc 0).toNat (s.loc 2).toNat
+  H = hashFrom (tpool s.mem) ((s.loc 4).toNat * 2 ^ 40 + (s.loc 5).toNat + (s.loc 2).toNat)
+    (s.loc 3) ((s.loc 1).toNat - (s.loc 2).toNat)
 
-theorem hashLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ HashRes s⦄
-    exec p n hashLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
-  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧ HashRes s)
-    (fun h => ⟨rfl, rfl, rfl, h⟩) (by grind [HashRes]) (fun k s₁ => by
-      sym only [lang_grind, arena_grind] =>
-        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [HashRes, LoopPost]) n
+theorem hashLoop8_spec (H : Word) (n : Nat) (s₀ : St) (h : HashInv H s₀) (hi : s₀.loc 2 = 0) :
+    ⦃fun s => s = s₀⦄ exec p n hashLoop8
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ s'.loc 2 = 0 ∧ HashInv H s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := hashLoop8) rfl]
+    vcgen [step, L.evalE_spec, L.evalC_spec, setLoc, setLocs, ih]
+    all_goals clear ih
+    all_goals (try simp only [HashInv] at *)
+    all_goals (try subst_vars)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, Expr.pval, Cond.pval, rd64] at *)
+    all_goals (obtain ⟨h1, h2, h3, h4, h5⟩ := h)
+    all_goals (simp only [hi, UInt64.toNat_zero, Nat.add_zero, Nat.sub_zero] at h2 h4 h5 ⊢)
+    all_goals (try exact ⟨h1, h2, h3, Nat.zero_le _, h5⟩)
+    all_goals (try (rename_i ha; first | exact ha.1 | exact ha.2.1 | exact ha.2.2))
+    all_goals
+      have h8 : (8 : Word) ≤ _ := of_decide_eq_true ‹decide ((8 : Word) ≤ _) = true›
+      refine ⟨h1, ?_, h3, Nat.zero_le _, ?_⟩
+      · have := UInt64.le_iff_toNat_le.mp h8
+        rw [UInt64.toNat_sub_of_le _ _ h8, UInt64.toNat_add]
+        simp only [UInt64.reduceToNat] at this ⊢; omega
+      · rw [h3]; exact hash_round8 _ _ _ _ _ _ h1 h2 h8 h5
 
-theorem hashLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ HashRes s⦄
-    step p (exec p n) hashLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
-  Triple.step_exec (hashLoop_spec p (n + 1) s₀)
+/-- One step of the tail loop, in the shape of its verification condition. -/
+theorem hash_step1 (m : Mem) (t x i l h H : Word) (ht : t.toNat < 2 ^ 24)
+    (hx : x.toNat + l.toNat ≤ 2 ^ 40) (hi : i < l)
+    (hH : H = hashFrom (tpool m) (t.toNat * 2 ^ 40 + x.toNat + i.toNat) h (l.toNat - i.toNat)) :
+    H = hashFrom (tpool m) (t.toNat * 2 ^ 40 + x.toNat + (i + 1).toNat)
+      ((h ^^^ (m.arr64 (tierA POOL t)).getD (x + i).toNat 0) * fnvPrime) (l.toNat - (i + 1).toNat) := by
+  have hi' := UInt64.lt_iff_toNat_lt.mp hi
+  have e1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+  have e2 : (x + i).toNat = x.toNat + i.toNat := by rw [UInt64.toNat_add]; omega
+  have e3 : l.toNat - i.toNat = l.toNat - (i.toNat + 1) + 1 := by omega
+  rw [hH, e1, e2, e3]
+  simp only [hashFrom]
+  rw [Nat.add_assoc _ x.toNat, tpool_tier m t _ ht (by omega), ← Nat.add_assoc, ← Nat.add_assoc]
 
-include hp in
-/-- (The slice's bounds `_hs`, `_hb` are no longer needed: `sliceRes` checks that the slice lies
-in one tier.) -/
-theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2 ^ 64)
-    (_hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
+theorem hashTail_spec (H : Word) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashInv H s⦄ exec p n hashTail
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ s'.loc 3 = H; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ HashInv H s) (fun h => ⟨rfl, h⟩)
+    (fun s ⟨hm, _, _, _, h4, h5⟩ hn => by
+      have : (s.loc 2).toNat = (s.loc 1).toNat := by
+        have := (not_congr UInt64.lt_iff_toNat_lt).mp hn; omega
+      refine ⟨rfl, hm, ?_⟩
+      rw [h5, this, Nat.sub_self, hashFrom])
+    (fun k s₁ => by
+      vcgen [step, L.evalE_spec, L.evalC_spec, setLoc]
+      all_goals (try simp only [HashInv] at *)
+      all_goals (try subst_vars)
+      all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, BinOp.eval,
+        Nat.reduceEqDiff, reduceIte, Expr.pval, rd64, LoopPost_normal] at *)
+      obtain ⟨⟨hm, h1, h2, h3, h4, h5⟩, hlt⟩ := ‹_ ∧ _›
+      have := UInt64.lt_iff_toNat_lt.mp hlt
+      refine ⟨hm, h1, h2, h3, ?_, ?_⟩
+      · rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+      · rw [h3]; exact hash_step1 _ _ _ _ _ _ _ h1 h2 hlt h5) n
+
+theorem hashLoop8_step_spec (H : Word) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashInv H s ∧ s.loc 2 = 0⦄ step p (exec p n) hashLoop8
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ s'.loc 2 = 0 ∧ HashInv H s'; ⊤⦄ :=
+  ⟨fun s ⟨hs, h, hi⟩ => (Triple.step_exec (hashLoop8_spec p H (n + 1) s₀ (hs ▸ h) (hs ▸ hi))).le_wp s hs⟩
+
+theorem hashTail_step_spec (H : Word) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashInv H s⦄ step p (exec p n) hashTail
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ s'.loc 3 = H; ⊤⦄ :=
+  Triple.step_exec (hashTail_spec p H (n + 1) s₀)
+
+/-- The loops' start: the slice resolved, nothing hashed yet. -/
+theorem hash_start (m : Mem) (o l : Word) :
+    (o >>> 40).toNat < 2 ^ 24 ∧ hashN (tpool m) o.toNat l.toNat =
+      hashFrom (tpool m) ((o >>> 40).toNat * 2 ^ 40 + (o &&& 1099511627775).toNat + 0) fnvBasis
+        (l.toNat - 0) := by
+  rw [tag_tier_toNat, tag_idx_toNat, hashN_hashFrom]
+  have := o.toNat_lt
+  refine ⟨by omega, ?_⟩
+  congr 1; omega
+
+/-- (The slice's bounds `_hs`, `_hb` are not needed: `sliceRes` checks that the slice lies in one
+tier.) -/
+theorem litHash_spec (hp : p.lookup "lit_hash" = some litHash) (n : Nat) (s₀ : St) (o l : Word)
+    (_hs : pcap s₀.mem < 2 ^ 64) (_hb : o.toNat + l.toNat ≤ pcap s₀.mem) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (tpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
@@ -135,9 +266,18 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, sliceRes_spec p _ 0 1 4 5 (by decide) (by decide)
-      (by decide), hashLoop_step_spec p n]
-    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, hashN_zero])
+      (by decide), hashLoop8_step_spec p (hashN (tpool s₀.mem) o.toNat l.toNat) n,
+      hashTail_step_spec p (hashN (tpool s₀.mem) o.toNat l.toNat) n]
+    all_goals (try simp only [HashInv] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, L.Locals.init_nil, Locals.init_cons_zero,
+      Locals.init_cons_succ, Sig.retVal, Sig.retOr, Nat.reduceEqDiff, reduceIte, UInt64.toNat_zero] at *)
+    · rename_i s hb
+      obtain ⟨h1, h2⟩ := hash_start s.mem o l
+      exact ⟨h1, hb, trivial, Nat.zero_le _, h2⟩
+    · rename_i h; exact h.2.2
+    · rename_i h2 _ h1; rw [h2.1, h1.1]
+    · rename_i h2 _ _; exact h2.2
 
 end hash
 
