@@ -241,4 +241,46 @@ Measured (base master `acf6a18d5`):
 
 `nat_mad` (the decimal reader's multiply-add) was measured too, with its key in the exclusion
 list: per extra 20000-digit literal, 8.29 M → 4.42 M instructions (−47 %). Its compiled loop
-without inlining is 8.38 M. gf3 and Init are unchanged. Not proved yet.
+without inlining is 8.38 M. gf3 and Init are unchanged. It landed in Step 7.
+
+## Step 7: hand-written `nat_mad`
+
+`ConAgua/AsmEsc/NatMadAsm.lean` (`natMadAsm`): `R := R·w + y` in place on the `n` limbs at `o`,
+returning the carry. This is the decimal reader's multiply-add (`L.Front.natMad`).
+
+`n = 0` returns `y` at once. Otherwise, up front: the window inside its tier, its indices with
+`n` below `2^40` (L reads limb `i` at the tagged address `o + i`, `tag_add`), and the fuel, else
+`ca_exhausted`. The row is 9 instructions per limb: load, `mul %r9`, `add`/`adc` of the carry,
+store, `mov`, `add`, `cmp`, `jb`.
+
+The L side is `NatMadL.lean` (`natMad_run` against `nmRows`), the machine side `natMadAsm_sim`.
+The key `natMadCode` is in `checkerXKeys`, so the caller (`nat_dec_big`) keeps the call instead of
+inlining it. No new instruction forms.
+
+Measured (base master `b0c36f046`, with the add/sub leaves):
+* per extra 20000-digit literal (`N20kW` − `N20k`): 48.86 M → 25.62 M instructions (−47.6 %);
+  the `N20kW` file −2.1 % instructions, wall within noise (−2.1 % [−6.9, +2.7]; the file runs
+  0.1 s);
+* gf3, Init, and the division microbenchmark (`D2k1k`, `D2k1kW`) unchanged (±0.0001 %);
+* correctness: products fuzzer 2100 and division fuzzer 540 (both read large decimal literals),
+  with the same verdicts as master; `diff-e2e --refs` 740 agree, 0 REFDIFF.
+
+## Step 8: measured and skipped (`nat_cmp`, `div_2by1`, `div_recip`)
+
+**`nat_cmp`.** The function is a leaf and is not inlined: `checker.s` keeps an out-of-line copy,
+called from `nat_beq_lit` and `nat_ble_lit` only, and putting its key in the exclusion list changes
+no call site. A hand-written body (8 instructions per limb against about 40) was wired in unproved
+for the measurement, against master `397623e1f`: gf3 +0.000003 % and Init −0.00002 % instructions.
+The limb loop only runs on two equal-length literals, and producing such a literal costs far more
+than comparing it (reading a 1000-limb decimal literal is about 25 M instructions, comparing it
+about 40 k). Skipped; the body was not kept.
+
+**`div_2by1`, `div_recip`.** Kraken models no `div` instruction, so a hand-written body would be
+the same reciprocal algorithm with tighter register use, saving at most their own cost.
+Instruction samples (`perf record -e instructions:u`, master `397623e1f`):
+* division microbenchmark `D2k1kW`: `div_2by1` and `div_recip` together are about 140 k of
+  1.6 G instructions (< 0.01 %; `div_submul` is the hot spot, 15 % of cycles);
+* bigdiv's one-limb gcd (`g1`, 500 gcds at 22.7 k instructions each): about 1.1 M of the
+  gcds' 11.4 M, so a hand-written pair would save at most about 5 % of a one-limb gcd;
+* gf3 and Init: nothing measurable.
+Skipped, since the gain is small.
