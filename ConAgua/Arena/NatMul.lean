@@ -893,7 +893,7 @@ theorem mulRow_at_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ :
     (ha : oa.toNat + la.toNat ≤ pcap s₀.mem)
     (hd : oa.toNat + la.toNat ≤ o.toNat + k.toNat ∨ o.toNat + w.toNat ≤ oa.toNat) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "mul_row" [o + k, w - k, oa, la, y]
+    invoke p (exec p n) "mul_row" [BinOp.add.eval o k, BinOp.sub.eval w k, oa, la, y]
     ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
       Off (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat ∧
       pv (vpool s'.mem) o.toNat w.toNat =
@@ -903,6 +903,7 @@ theorem mulRow_at_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ :
   have e2 : (w - k).toNat = w.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hk)
   have hw := mulRow_spec p hp n s₀ (o + k) (w - k) oa la y hs (by omega) ha (by omega)
   rw [e1, e2] at hw
+  simp only [BinOp.eval]
   vcgen [hw]
   all_goals
     rename_i h
@@ -936,6 +937,64 @@ theorem karaSum_spec (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.looku
       finish
 
 end passFns
+
+section win
+variable (p : Prog) (P0 : Array Word) (C : Nat)
+
+/-- The window product's operands and window: `a`, `b` and the window below the scratch `s`,
+both operands off the window. Locals `(oa, la, ob, lb, o, n, s)` at `0`-`6`. -/
+def WinArgs (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ pcap s.mem = C ∧ (s.loc 6).toNat ≤ C ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 6).toNat ∧
+  (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 6).toNat ∧
+  (s.loc 4).toNat + (s.loc 5).toNat ≤ (s.loc 6).toNat ∧
+  ((s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∨
+    (s.loc 4).toNat + (s.loc 5).toNat ≤ (s.loc 0).toNat) ∧
+  ((s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∨
+    (s.loc 4).toNat + (s.loc 5).toNat ≤ (s.loc 2).toNat)
+
+/-- The schoolbook rows of `mul_win`: rows `[0, j)` are in. -/
+def RowsInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  WinArgs C s ∧ P0.size = 2 ^ 41 ∧ (s.loc 1).toNat + (s.loc 3).toNat ≤ (s.loc 5).toNat ∧
+  (s.loc 10).toNat ≤ (s.loc 3).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 4).toNat (s.loc 5).toNat ∧
+  pv (vpool s.mem) (s.loc 4).toNat (s.loc 5).toNat =
+    pv P0 (s.loc 4).toNat (s.loc 5).toNat +
+      pv P0 (s.loc 0).toNat (s.loc 1).toNat * pv P0 (s.loc 2).toNat (s.loc 10).toNat
+
+def RowsPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 4).toNat (s₀.loc 5).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat =
+    pv P0 (s₀.loc 4).toNat (s₀.loc 5).toNat +
+      pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat * pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat
+
+set_option maxHeartbeats 2000000 in
+theorem rowsLoop_spec (hpr : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St)
+    (h : RowsInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n rowsLoop ⦃fun r s' => RowsPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [RowsInv, WinArgs, RowsPost] at h ⊢
+    rw [exec, step_while (w := rowsLoop) rfl]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih, mulRow_at_spec p hpr n]
+    all_goals clear ih
+    all_goals (try simp only [RowsInv, RowsPost, WinArgs] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
+      BinOp.eval, Mem.size64_set64, Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, Off.trans, Off.pv_disj, pcap_eq]
+
+theorem rowsLoop_step_spec (hpr : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St)
+    (h : RowsInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) rowsLoop ⦃fun r s' => RowsPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (rowsLoop_spec p P0 C hpr (n + 1) s₀ h)
+
+end win
 
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
