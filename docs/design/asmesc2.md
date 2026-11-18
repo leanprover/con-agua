@@ -105,3 +105,41 @@ binary's assembly; AMD EPYC 9455, load 3-7, `cc -O2`, base master `9e83e46da`):
 
 Correctness: mulasm's product fuzzer, 2100 of 2100 agree with master (700 good accepted, 1400
 bad rejected). `diff-e2e.py --refs`: 740 agree, 0 REFDIFF, 0 unsound, 0 incomplete.
+
+## Step 3: hand-written `sub_row`
+
+**Code** (`ConAgua/AsmEsc/SubRowAsm.lean`, `subRowAsm`). The prologue is `mulRowAsm`'s, with the
+same instruction indices. The row is 11 instructions per limb: load `t`, `rdx := 0`,
+`sub rax, [a + 8i]`, `adc rdx, 0reg`, `sub rax, c`, `adc rdx, 0reg`, store, `c := rdx`, then the
+index step. The borrow ripple does `sub 1` on the limb and takes the next borrow (`t = 0`) by
+`adc`. The ripple keeps L's checks and per-step fuel, as in `mul_row`.
+
+**Forms.** No new ones. `subq MEM, %r` was already parsed; its step lemma `ev_subRS` is new in
+`Step.lean`.
+
+**Proof** (standard axioms only). `SubRowL.lean` (334 lines) and `SubRowAsm.lean` (616 lines)
+follow `mul_row`'s files lemma by lemma. They differ in the step function (`srStep`: `t - x - c`,
+the borrow `u64(t < x) + u64(t - x < c)`, through `sbb2_word`), the ripple (`scLoop`, through
+`borrow0_word`), and the locals' numbering. The shared kit stays in `MulRowAsm.lean`: the
+register `rs` simp, `MrFr`, `ev_gen`, `ev_lbl`, `addr_idx`, `pool_desc`, `resOut_zero`, the carry
+lemmas. Writing it took about 40 minutes, most of it adapting the copy. The program-specific
+lemmas (`*_ret`, `*_tail_step`, `*_row_step` and the composition) cannot be shared as they are,
+because their statements name the program's code. A template that takes the loop body and the
+ripple step as parameters is the next step for the linear passes (add_n, sub_n, ...), whose
+shapes differ from these two anyway: no prologue `n < la`, a carry in and a carry out, and the
+output disjoint from the operands.
+
+**Measured** (base: master with `mul_row` asm; the same machine and method as step 2):
+
+| | with mul_row | + sub_row | Δ |
+|---|---:|---:|---:|
+| gf3 instructions | 53.650 G | 53.584 G | −0.12 % (gf3 is schoolbook) |
+| gf3 wall | 2.721 s | 2.715 s | −0.22 % [−0.49, +0.05], p = 0.28 (not significant) |
+| Init instructions | 202.6483 G | 202.6483 G | 0 |
+| per extra product 1024² | 7.38 M | 6.43 M | −13 % |
+| per extra product 8192² | 187.6 M | 159.1 M | −15 % |
+| W1024 / W8192 wall | | | −1.7 % [−2.6, −0.8] (p = 0.006) / −3.2 % [−3.8, −2.7] (p = 0.002) |
+
+Correctness: the product fuzzer, 2100 of 2100 agree with master (the sizes from 48 limbs up run
+Karatsuba, and so `sub_row`). `diff-e2e.py --refs`: 740 agree, 0 REFDIFF. The regenerated
+`checker.s` is byte-identical to the measured one.
