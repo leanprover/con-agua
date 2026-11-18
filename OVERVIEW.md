@@ -1228,7 +1228,7 @@ and completeness.
 ### 10.4 The gates
 
 A branch lands on master only after the gates of
-[`scripts/gates.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/gates.sh#L11-L23)
+[`scripts/gates.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/gates.sh#L11-L24)
 pass on its merge with master: `lake build` (which includes the axiom
 guards, `checkerFile_eq` and the staleness checks of the generated closures),
 the `--check` modes of the closure scripts and of the generator of the checker's program
@@ -1236,24 +1236,25 @@ the `--check` modes of the closure scripts and of the generator of the checker's
 module is built by some target), the citation check `scripts/provenance.py
 check`, the vendor check, `scripts/diff-e2e.py`, the import check `scripts/shake.py` (every
 import that Lean's import minimizer, `lake shake`, finds unused is listed in
-`scripts/shake-allowlist.txt` with the reason the build needs it), the warning check
+`scripts/shake-allowlist.txt` with the reason the build needs it), the assembler check
+`scripts/check-asm.sh` (§2.3), the warning check
 `scripts/lean_warnings.py` (no Lean warning in the changed modules, including those restored from the
 shared build cache, whose warnings are kept in a log store beside it), and this document's link gate.
 Each merge runs the gates its change can affect
-([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L44)).
+([the table](https://github.com/leanprover/con-agua/blob/master/scripts/gate_select.py#L17-L50)).
 `scripts/overview-links.sh` extracts every line-anchored link of OVERVIEW.md
 and README.md with the cited lines into
 `scripts/overview-links-expected.txt`, and fails when they move or change.
 
 Continuous integration
-([`.github/workflows/ci.yml`](https://github.com/leanprover/con-agua/blob/master/.github/workflows/ci.yml#L4-L76))
+([`.github/workflows/ci.yml`](https://github.com/leanprover/con-agua/blob/master/.github/workflows/ci.yml#L4-L80))
 runs on every push and pull request to master, in two jobs. The `checker` job
 needs no Lean: `make`, `make check` and `scripts/diff-e2e.py` (§10.3) on
 con-leche's tests at the vendored revision. The `proof` job runs
 `scripts/lake build` (the axiom guards and `checkerFile_eq` included) and fails on
 any warning in its log that is not Kraken's (`scripts/check-no-warnings.sh`), the
 `--check` modes of `scripts/asm_file.py` (`checker.s` and `pins.bin` are what
-the generators print) and of the closure scripts, `scripts/modules_check.py`,
+the generators print) and of the closure scripts, `scripts/check-asm.sh`, `scripts/modules_check.py`,
 the link gate, `scripts/bump-con-ron.sh --check` (`vendor/` is the upstream
 files plus the patch series), `scripts/provenance.py check` and the import check
 `scripts/shake.py`. It caches

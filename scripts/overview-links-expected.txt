@@ -2543,7 +2543,7 @@
     45  and runs the sequential path). `--parallel P` is how many fixtures run at once (default 4).
     46  """
 
-== scripts/gates.sh#L11-L23
+== scripts/gates.sh#L11-L24
     11  # Steps, in order (stops at the first failure):
     12  #   links       scripts/overview-links.sh            OVERVIEW.md/README.md line anchors
     13  #   vendor      scripts/bump-con-ron.sh --check      vendor/ = upstream + patches
@@ -2553,12 +2553,13 @@
     17  #   build       scripts/lake build ConAgua           (timeout 90 min)
     18  #   warnings    scripts/lean_warnings.py --base BASE   no Lean warning in the changed .lean files (vendor/
     19  #               excluded), also for modules restored from the shared cache (their logs are in the log store)
-    20  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
-    21  #   core-fns, loop-fns, leaf-fns, phaseb-fns, preloop-ws   the generated call closures are current
-    22  #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
-    23  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
+    20  #   check-asm   scripts/check-asm.sh                 as/objdump encode checker.s as Kraken reads it
+    21  #   shake       scripts/shake.py                     every import `lake shake` finds unused is allowlisted
+    22  #   core-fns, loop-fns, leaf-fns, phaseb-fns, preloop-ws   the generated call closures are current
+    23  #   checker-prog  scripts/checker_prog.py --no-build --check   the generated program files are current
+    24  #   e2e         make checker; scripts/diff-e2e.py --parallel 16   verdicts on every fixture
 
-== scripts/gate_select.py#L17-L44
+== scripts/gate_select.py#L17-L50
     17  The table (first match per path; "cheap" = links, vendor, modules, provenance, reasons, always run):
     18  
     19    path                                                        steps
@@ -2568,27 +2569,33 @@
     23    *.md (anywhere), docs/**, LICENSE, .gitignore,              cheap
     24      .gitattributes, .github/**
     25    checker.s, pins.bin                                         build, e2e (checker.s is an input file
-    26                                                                of ConAguaAsm; both go into ./checker)
-    27    main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
-    28    scripts/{core,loop,leaf,phaseb}_fns.{py,lean}, preloop_ws.py  build + that closure check
-    29    scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
-    30    scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
-    31      ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
-    32      generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
-    33      ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
-    34                                                                e2e.py also e2e
-    35    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the five closure checks if
-    36                                                                the module is in the import closure of
-    37                                                                ConAgua.Checker.Prog or of a closure's
-    38                                                                generated file (CoreErec, LoopFns,
-    39                                                                LeafFns, PhaseBReads, PreLoopWS,
-    40                                                                PreLoopWSStages)
-    41    other scripts/** (not run by a gate)                        cheap
-    42    anything else                                               ALL (when unsure, everything)
-    43  
-    44  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`, `preloop_ws.py --check`) run
+    26                                                                of ConAguaAsm; both go into ./checker);
+    27                                                                checker.s also check-asm
+    28    scripts/check-asm.sh, scripts/check_asm.py                  check-asm (which builds what it needs)
+    29    main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
+    30    scripts/{core,loop,leaf,phaseb}_fns.{py,lean}, preloop_ws.py  build + that closure check
+    31    scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
+    32    scripts/checker_prog.py; ConAgua/E2E/Dump.lean,             build, checker-prog (`checker_prog.py
+    33      ConAgua/Checker/{Sources,Entry,Prelude}.lean and the        --no-build --check`: the generator still
+    34      generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
+    35      ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
+    36                                                                e2e.py also e2e
+    37    ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + check-asm for the trusted
+    38                                                                parser (ConAgua/AsmFile/**), the text
+    39                                                                emitter (ConAgua/Compiler/{Run,Abi}) and
+    40                                                                check-asm.sh's drivers (EmitScan,
+    41                                                                EmitStore, WalkEmit); + the five closure checks if
+    42                                                                the module is in the import closure of
+    43                                                                ConAgua.Checker.Prog or of a closure's
+    44                                                                generated file (CoreErec, LoopFns,
+    45                                                                LeafFns, PhaseBReads, PreLoopWS,
+    46                                                                PreLoopWSStages)
+    47    other scripts/** (not run by a gate)                        cheap
+    48    anything else                                               ALL (when unsure, everything)
+    49  
+    50  The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`, `preloop_ws.py --check`) run
 
-== .github/workflows/ci.yml#L4-L76
+== .github/workflows/ci.yml#L4-L80
      4  # WHAT THE JOBS COVER
      5  #
      6  #   checker  The shipped binary, with no Lean anywhere (a few minutes):
@@ -2645,23 +2652,27 @@
     57  #                                 generators print now, plus Kraken's own
     58  #                                 parser reading `checker.s` as the
     59  #                                 trusted parser does), core_fns.py,
-    60  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
-    61  #
-    62  # WHAT IT DELIBERATELY DOES **NOT** COVER
-    63  #
-    64  #   * the differential against the two reference checkers
-    65  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
-    66  #     con-ron's Rust binary), and its interpreter and per-function
-    67  #     sweeps: they need a Rust build of con-ron and Lean executables
-    68  #     on top of the proof build, and take far longer than the verdict
-    69  #     sweep above, which already compares every fixture with the
-    70  #     pinned expectation.
-    71  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
-    72  #     is not in the repository, and a shared runner measures noise.
-    73  #     Timings are measured with `perf stat` on a quiet machine.
-    74  #   * the progress census (`scripts/census.py`) and the build
-    75  #     statistics: reports, not gates.
-    76  #
+    60  #                                 loop_fns.py, leaf_fns.py, preloop_ws.py;
+    61  #              check-asm.sh       `as` + `objdump` encode every
+    62  #                                 instruction of `checker.s` the way
+    63  #                                 Kraken's semantics reads its text (a
+    64  #                                 trusted-base check, about 10 s).
+    65  #
+    66  # WHAT IT DELIBERATELY DOES **NOT** COVER
+    67  #
+    68  #   * the differential against the two reference checkers
+    69  #     (`scripts/e2e.py`: con-ron's arena checker compiled by Lean, and
+    70  #     con-ron's Rust binary), and its interpreter and per-function
+    71  #     sweeps: they need a Rust build of con-ron and Lean executables
+    72  #     on top of the proof build, and take far longer than the verdict
+    73  #     sweep above, which already compares every fixture with the
+    74  #     pinned expectation.
+    75  #   * `scripts/bench.py` and the `Init` benchmark: an export of `Init`
+    76  #     is not in the repository, and a shared runner measures noise.
+    77  #     Timings are measured with `perf stat` on a quiet machine.
+    78  #   * the progress census (`scripts/census.py`) and the build
+    79  #     statistics: reports, not gates.
+    80  #
 
 >>> README.md
 

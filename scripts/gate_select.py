@@ -23,7 +23,9 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
   *.md (anywhere), docs/**, LICENSE, .gitignore,              cheap
     .gitattributes, .github/**
   checker.s, pins.bin                                         build, e2e (checker.s is an input file
-                                                              of ConAguaAsm; both go into ./checker)
+                                                              of ConAguaAsm; both go into ./checker);
+                                                              checker.s also check-asm
+  scripts/check-asm.sh, scripts/check_asm.py                  check-asm (which builds what it needs)
   main.c, Makefile, reasons.h, scripts/diff-e2e.py            e2e
   scripts/{core,loop,leaf,phaseb}_fns.{py,lean}, preloop_ws.py  build + that closure check
   scripts/shake{.py,-setup.sh,-allowlist.txt,-keep.txt}       build, shake
@@ -32,7 +34,11 @@ The table (first match per path; "cheap" = links, vendor, modules, provenance, r
     generated ConAgua/Checker/{Prog,ProgTab,ProgNrt,ProgSkt,    runs and writes the committed text);
     ProgWf,Asm,AsmPart*}.lean; scripts/e2e.py                   .lean files also shake + the closures,
                                                               e2e.py also e2e
-  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + the five closure checks if
+  ConAgua.lean, ConAgua/**.lean, ConAguaAsm/**                build, shake; + check-asm for the trusted
+                                                              parser (ConAgua/AsmFile/**), the text
+                                                              emitter (ConAgua/Compiler/{Run,Abi}) and
+                                                              check-asm.sh's drivers (EmitScan,
+                                                              EmitStore, WalkEmit); + the five closure checks if
                                                               the module is in the import closure of
                                                               ConAgua.Checker.Prog or of a closure's
                                                               generated file (CoreErec, LoopFns,
@@ -46,6 +52,9 @@ The closure checks (`core_fns.py`, `loop_fns.py`, `leaf_fns.py`, `phaseb_fns.py`
 `scripts/diff-e2e.py`: the binary is exactly main.c + checker.s + pins.bin (a change to L code, the
 compiler or the stubs that changes the program changes checker.s, or the build's `checkerFile_eq`
 fails), so these files (and reasons.h, the abort messages) decide whether the verdicts can change.
+`check-asm` is `scripts/check-asm.sh`: `as` + `objdump` encode every instruction of checker.s (and of
+the three small emitted programs) the way Kraken's semantics reads its text (a trusted-base check);
+about 10 s once built. Kraken's printer itself is a dependency (lake-manifest.json: ALL).
 
 `warnings` (scripts/lean_warnings.py: the Lean warnings of the .lean files changed since the base, from
 the build's traces and the log store beside the cache) goes with every selection of `build`.
@@ -58,7 +67,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHEAP = ["links", "vendor", "modules", "provenance", "reasons"]
 CLOSURES = ["core-fns", "loop-fns", "leaf-fns", "phaseb-fns", "preloop-ws"]
-ORDER = CHEAP + ["build", "warnings", "shake"] + CLOSURES + ["checker-prog", "e2e"]
+ORDER = CHEAP + ["build", "warnings", "check-asm", "shake"] + CLOSURES + ["checker-prog", "e2e"]
 
 ALL_EXACT = {"lakefile.toml", "lake-manifest.json", "lean-toolchain", "scripts/lake",
              "scripts/gates.sh", "scripts/gate_select.py"}
@@ -74,6 +83,9 @@ CLOSURE_SCRIPTS = {
 # `scripts/checker_prog.py --no-build --check`: the generator, its inputs' readers and its outputs
 PROG_GEN = re.compile(r"^(scripts/checker_prog\.py|ConAgua/E2E/Dump\.lean|"
                       r"ConAgua/Checker/(Sources|Entry|Prelude|Prog|ProgTab|ProgNrt|ProgSkt|ProgWf|Asm|AsmPart\d+)\.lean)$")
+CHECK_ASM_FILES = {"scripts/check-asm.sh", "scripts/check_asm.py"}
+# the trusted parser, the text emitter and check-asm.sh's emitter drivers
+CHECK_ASM_LEAN = re.compile(r"^ConAgua/(AsmFile/.*|Compiler/(Run|Abi|EmitScan)|Arena/(EmitStore|WalkEmit))\.lean$")
 SHAKE_FILES = {"scripts/shake.py", "scripts/shake-setup.sh", "scripts/shake-allowlist.txt",
                "scripts/shake-keep.txt"}
 # the closure checks read checkerProg (ConAgua.Checker.Prog) and rewrite these files
@@ -114,8 +126,12 @@ def classify(path, root):
         return {"ALL"}
     if path.endswith(".md") or path in CHEAP_EXACT or top in ("docs", ".github"):
         return set()
-    if path in ("checker.s", "pins.bin"):
+    if path == "checker.s":
+        return {"build", "check-asm", "e2e"}
+    if path == "pins.bin":
         return {"build", "e2e"}
+    if path in CHECK_ASM_FILES:
+        return {"check-asm"}
     if path == "scripts/e2e.py":
         return {"build", "checker-prog", "e2e"}  # `dump_sets`, the generator's dump
     if path in E2E_EXACT:
@@ -128,9 +144,10 @@ def classify(path, root):
         return {"build", "shake"}
     if path == "ConAgua.lean" or (top == "ConAgua" and path.endswith(".lean")) or top == "ConAguaAsm":
         m = module_of(path)
+        steps = {"build", "shake"} | ({"check-asm"} if CHECK_ASM_LEAN.match(path) else set())
         if m and m in closure_modules(root):
-            return {"build", "shake", *CLOSURES}
-        return {"build", "shake"}
+            return steps | set(CLOSURES)
+        return steps
     if top == "scripts":
         return set()
     return {"ALL"}
