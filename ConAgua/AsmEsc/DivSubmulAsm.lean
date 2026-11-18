@@ -388,6 +388,80 @@ theorem divSubmulAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
   rw [BitVec.toNat_sub] at hcc1
   simp only [UInt64.toNat_toBitVec, hmask] at hcc1
   have hr40 : (r &&& idxMask).toNat + nn.toNat < 2 ^ 40 := by omega
+  refine ev_movRR (ds_code hc (i := 14) rfl) ?_
+  refine ev_subRR (ds_code hc (i := 15) rfl) fun _ _ => ?_
+  refine ev_cmpRO (ds_code hc (i := 16) rfl) (v := nn) (Or.inr (Or.inr ⟨.r8, rfl, by rs [g6]⟩)) ?_
+  refine ev_jcc (ds_code hc (i := 17) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc2 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc2
+  rs [g4, g5] at hcc2
+  rw [BitVec.toNat_sub] at hcc2
+  simp only [UInt64.toNat_toBitVec, hmask] at hcc2
+  have hb40 : (ob &&& idxMask).toNat + nn.toNat ≤ 2 ^ 40 := by omega
+  -- the window of `R` (with its top limb)
+  refine ev_movRMt (ds_code hc (i := 18) rfl) hoffL (v := UInt64.ofNat SA) (by rs; exact hdA.1) ?_
+  refine ev_subRR (ds_code hc (i := 19) rfl) fun st hcf => ?_
+  rs [g2, hSAn] at hcf
+  refine ev_jcc (ds_code hc (i := 20) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc3 => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSAn] at hcc3
+  refine ev_cmpRO (ds_code hc (i := 21) rfl) (v := nn) (Or.inr (Or.inr ⟨.r8, rfl, by rs [g6]⟩)) ?_
+  refine ev_jcc (ds_code hc (i := 22) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc4 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.or_eq_false_iff, decide_eq_false_iff_not,
+    beq_eq_false_iff_ne] at hcc4
+  rs [g2] at hcc4
+  obtain ⟨hcc4, hcc4'⟩ := hcc4
+  rw [hsub SA _ (by omega) (by omega)] at hcc4
+  simp only [UInt64.toNat_toBitVec] at hcc4
+  have hne : SA - (r &&& idxMask).toNat ≠ nn.toNat := by
+    intro e; apply hcc4'
+    apply BitVec.eq_of_toNat_eq
+    rw [hsub SA _ (by omega) (by omega), e]; rfl
+  have hqa : (r &&& idxMask).toNat + nn.toNat < SA := by omega
+  refine ev_movRMt (ds_code hc (i := 23) rfl) hoffB (v := UInt64.ofNat BA) (by rs; exact hdA.2) ?_
+  refine ev_leaX (ds_code hc (i := 24) rfl) ?_
+  -- the window of `b`
+  refine ev_movRMt (ds_code hc (i := 25) rfl) hoffL (v := UInt64.ofNat SB) (by rs; exact hdB.1) ?_
+  refine ev_subRR (ds_code hc (i := 26) rfl) fun st hcf => ?_
+  rs [g4, hSBn] at hcf
+  refine ev_jcc (ds_code hc (i := 27) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc5 => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSBn] at hcc5
+  refine ev_cmpRO (ds_code hc (i := 28) rfl) (v := nn) (Or.inr (Or.inr ⟨.r8, rfl, by rs [g6]⟩)) ?_
+  refine ev_jcc (ds_code hc (i := 29) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc6 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc6
+  rs [g4] at hcc6
+  rw [hsub SB _ (by omega) (by omega)] at hcc6
+  simp only [UInt64.toNat_toBitVec] at hcc6
+  have hqb' : (ob &&& idxMask).toNat + nn.toNat ≤ SB := by omega
+  refine ev_movRMt (ds_code hc (i := 30) rfl) hoffB (v := UInt64.ofNat BB) (by rs; exact hdB.2) ?_
+  refine ev_leaX (ds_code hc (i := 31) rfl) ?_
+  -- the fuel
+  refine ev_subRR (ds_code hc (i := 32) rfl) fun st hcf => ?_
+  rs [g6, g9] at hcf
+  refine ev_jcc (ds_code hc (i := 33) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc7 => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec] at hcc7
+  refine ev_movRI (ds_code hc (i := 34) rfl) ?_
+  refine ev_movRI (ds_code hc (i := 35) rfl) ?_
+  refine ev_movRI (ds_code hc (i := 36) rfl) ?_
+  have hl14 : nn.toNat ≤ d.regs.r14.toNat := by omega
+  have hR14 : (d.regs.r14 - nn).toNat = d.regs.r14.toNat - nn.toNat := UInt64.toNat_sub_of_le _ _
+    (UInt64.le_iff_toNat_le.mpr hl14)
+  have hnF : nn.toNat < n := by omega
+  have hrun := divSubmul_run p hp σ r nn ob q n hnF hr40 hb40 (by rw [hszA]; exact hqa)
+    (by rw [hszB]; exact hqb')
+  simp only [] at hrun
+  rw [← hSA] at hqa
+  rw [← hSB] at hqb'
+  have hT : ∀ s', MrFr G d s' →
+      MemRel G (dsRows (tierA 0 (r >>> 40)) (tierA 0 (ob >>> 40)) (r &&& idxMask) (ob &&& idxMask) q nn.toNat
+        σ.mem 0 0).1 s'.dmem →
+      s'.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 (tierA 0 (r >>> 40))) + 8 * (r &&& idxMask).toNat) →
+      s'.regs.r13 = nn →
+      s'.regs.r12 = (dsRows (tierA 0 (r >>> 40)) (tierA 0 (ob >>> 40)) (r &&& idxMask) (ob &&& idxMask) q
+        nn.toNat σ.mem 0 0).2 → s'.regs.rcx = 0 → s'.regs.r14 = d.regs.r14 - nn → Ev Q s' (at_ (kf + 52)) := by
+    intro s' fr hm' hrdi' hr13 hr12 hrcx _
+    refine ds_tail hG hc _ hTR (r &&& idxMask) nn hra hlo hhi (by rw [hSA] at *; omega) s' _ _ fr hm' hrdi'
+      hr13 hr12 hrcx fun s'' e1 e2 e3 e4 e5 e6 e7 => ?_
+    refine hok _ _ s'' hrun e1 rfl e2 e3 e4 e5 ?_ e7
+    rw [hnr]; exact resOut_zero' e6
   sorry
 
 end L.AsmEsc
