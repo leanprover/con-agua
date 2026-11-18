@@ -265,15 +265,10 @@ Measured (base master `b0c36f046`, with the add/sub leaves):
 * correctness: products fuzzer 2100 and division fuzzer 540 (both read large decimal literals),
   with the same verdicts as master; `diff-e2e --refs` 740 agree, 0 REFDIFF.
 
-## Step 8: measured and skipped (`nat_cmp`, `div_2by1`, `div_recip`)
+## Step 8: measured and skipped (`div_2by1`, `div_recip`)
 
-**`nat_cmp`.** The function is a leaf and is not inlined: `checker.s` keeps an out-of-line copy,
-called from `nat_beq_lit` and `nat_ble_lit` only, and putting its key in the exclusion list changes
-no call site. A hand-written body (8 instructions per limb against about 40) was wired in unproved
-for the measurement, against master `397623e1f`: gf3 +0.000003 % and Init −0.00002 % instructions.
-The limb loop only runs on two equal-length literals, and producing such a literal costs far more
-than comparing it (reading a 1000-limb decimal literal is about 25 M instructions, comparing it
-about 40 k). Skipped; the body was not kept.
+**`nat_cmp`.** First measured on gf3 and Init (flat) and skipped. Taken up again in Step 9: the
+scope is all bignum limb loops.
 
 **`div_2by1`, `div_recip`.** Kraken models no `div` instruction, so a hand-written body would be
 the same reciprocal algorithm with tighter register use, saving at most their own cost.
@@ -284,3 +279,46 @@ Instruction samples (`perf record -e instructions:u`, master `397623e1f`):
   gcds' 11.4 M, so a hand-written pair would save at most about 5 % of a one-limb gcd;
 * gf3 and Init: nothing measurable.
 Skipped, since the gain is small.
+
+## Step 9: hand-written `nat_cmp`
+
+`ConAgua/AsmEsc/NatCmpAsm.lean` (`natCmpAsm`): `0`, `1` or `2` as the number at `oa` (`la` limbs)
+is below, equal to or above the one at `ob` (`lb` limbs). Different lengths decide at once, and
+`la = lb = 0` gives `1`.
+
+Otherwise, up front: both windows inside their tiers and below `2^40` (L reads limb `k − 1` at
+the tagged address `oa + k − 1`), and fuel for the whole loop, else `ca_exhausted`. The loop runs
+from the top limb down, 8 instructions per limb (`sub`, two loads, `cmp`, `jb`, `ja`, `cmp`,
+`jne`), against about 35 compiled. It leaves through one of three exits (`rax := 0/1/2`, `ret`).
+
+L side: `NatCmpL.lean`.
+* `natCmp_run` against the model `ncRes`.
+* The `return` inside L's `while` is the signal `ncSig`; `ncW_run` proves the loop by induction.
+
+Machine side: `nc_step` (one limb), `nc_loop` (induction), `nc_exit`, and `natCmpAsm_sim`.
+
+Proof note: in the main theorem's large context, `obtain ⟨j, hj⟩ : ∃ j, la.toNat = j + 1` and
+`generalize la.toNat - 1 = j` each ran away; `generalize` hit the heartbeat limit in `whnf`. A
+plain `have` with `la.toNat - 1` passed directly elaborates at once, and the file takes 2 s.
+
+The key `natCmpCode` is in `checkerXKeys`. No call site changes: the function was already a leaf
+that no caller inlines. No new instruction forms.
+
+Measured (base master `a98d69362`):
+* microbenchmark `C1k`: 200 `Nat.ble` of two equal 1000-limb numbers (`2^64000 − i` twice, so
+  the loop runs over every limb): 250.80 M → 245.60 M instructions, a saving of 26.0 k per
+  compare (26 per limb);
+* `C1kB` (the same operands against one whose top limb differs, so the loop stops at once),
+  gf3 and Init: unchanged.
+
+Correctness:
+* `C1kF`: 60 equal-length compares that differ only in the lowest limb, through both orders
+  of `Nat.ble` and `Nat.beq`. Accepted, with output identical to master.
+* Product fuzzer 2100 and division fuzzer 540: the same verdicts as master. Their rejected
+  cases compare equal-length numbers.
+* `diff-e2e --refs`: 740 agree, 0 REFDIFF.
+
+`div_add` after linleaf's #314: `checker.s` has `call ca_f_add_n` and `jmp ca_f_add_1` in
+`div_add`, so the add-back runs the hand-written leaves. The division microbenchmark is unchanged
+by #314 (per extra 2048÷1024-limb division 157.747 M before and 157.748 M after): the add-back
+step is rare.

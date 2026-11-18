@@ -10,6 +10,7 @@ import all ConAgua.Arena.NatMul
 import all ConAgua.Arena.NatDivSubmul
 import all ConAgua.Arena.NatLeaf
 import all ConAgua.Front.NatDec
+import all ConAgua.Arena.NatCmp
 import ConAgua.AsmEsc.ChainL
 
 @[expose] public section
@@ -19,7 +20,7 @@ import ConAgua.AsmEsc.ChainL
 
 `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`: in every layout of `checkerTab`, each body
 of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`,
-`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
+`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
 `addN_spec`, `subN_spec`, `add1_spec`, `sub1_spec`), at the function as `checkerProgI` declares it
 (`checkerProgI_mulRow` …: the inliner leaves these functions, which call nothing, as they are).
 -/
@@ -86,6 +87,13 @@ theorem nameCode_nat_mad : nameCode "nat_mad" = natMadCode := by decide
 theorem checkerProgI_natMad : checkerProgI.lookup "nat_mad" = some L.Front.natMad := by
   rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
     show checkerProg.lookup "nat_mad" = some L.Front.natMad by chk_lk]
+  rfl
+
+theorem nameCode_nat_cmp : nameCode "nat_cmp" = natCmpCode := by decide
+
+theorem checkerProgI_natCmp : checkerProgI.lookup "nat_cmp" = some natCmp := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "nat_cmp" = some natCmp by chk_lk]
   rfl
 
 theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
@@ -182,6 +190,17 @@ theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
     cases hlk
     rw [← hT] at hcode
     exact natMadAsm_sim checkerProgI G hG checkerProgI_natMad (by rw [hT]; exact checkerTab_pool)
+      (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "nat_cmp" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_nat_cmp.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_natCmp] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact natCmpAsm_sim checkerProgI G hG checkerProgI_natCmp (by rw [hT]; exact checkerTab_pool)
       (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
   · cases hl
 

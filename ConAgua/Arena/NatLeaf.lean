@@ -297,8 +297,62 @@ def sub1Loop : Stmt := lblk (o, oa, n, c, i, x, pt, pb, ta, qa) {
   return c
 }
 
+/-- `P[o + i] := A[oa + i] op B[ob + i]` for `i < n`, `op` one of `&`, `|`, `^` (the bitwise
+leaves `and_n`, `or_n`, `xor_n` share this loop; L has no operator parameter, so the loop is built
+from `Stmt` with the operator as a Lean argument). Locals
+`(o, oa, ob, n, i, x, pt, pb, ta, qa, tb, qb)`. -/
+def bitNLoop (op : BinOp) : Stmt :=
+  .while (.cmp .ult (.var 4) (.var 3))
+    (.seq (.set 5 (.bin op (.ld64t POOL (.var 8) (.bin .add (.var 9) (.var 4)))
+        (.ld64t POOL (.var 10) (.bin .add (.var 11) (.var 4)))))
+      (.seq (.st64t POOL (.var 6) (.bin .add (.var 7) (.var 4)) (.var 5))
+        (.set 4 (.bin .add (.var 4) (.const 1)))))
+
+/-- The bitwise leaf with operator `op`.
+con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
+@[no_expose] def bitNG (op : BinOp) : FunDecl := lfn (o, oa, ob, n) locals (i, x, pt, pb, ta, qa, tb, qb) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
+  ⟪bitNLoop op⟫;
+  return 0
+}
+
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def andN : FunDecl := bitNG .and
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def orN : FunDecl := bitNG .or
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def xorN : FunDecl := bitNG .xor
+
+theorem andN_eq : andN = bitNG .and := by rfl
+theorem orN_eq : orN = bitNG .or := by rfl
+theorem xorN_eq : xorN = bitNG .xor := by rfl
+
+/-- `P[o + i] := A[oa + i]` for `i < n`. -/
+def copyNLoop : Stmt := lblk (o, oa, n, i, x, pt, pb, ta, qa) {
+  for i < n {
+    x := POOL⟨ta⟩[qa + i];
+    POOL⟨pt⟩[pb + i] := x
+  }
+}
+
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def copyN : FunDecl := lfn (o, oa, n) locals (i, x, pt, pb, ta, qa) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  ⟪copyNLoop⟫;
+  return 0
+}
+
 /-- The leaves, as one program. -/
-def natLeafProg : Prog := [("add_n", addN), ("add_1", add1), ("sub_n", subN), ("sub_1", sub1)]
+def natLeafProg : Prog := [("add_n", addN), ("add_1", add1), ("sub_n", subN), ("sub_1", sub1),
+  ("and_n", andN), ("or_n", orN), ("xor_n", xorN), ("copy_n", copyN)]
 
 /- `[max, 1] + [1, 2] + 1 = [1, 4]`, carry 0; `[max] + 1 = [0]`, carry 1. -/
 #guard (run natLeafProg 100 "add_n" [4, 0, 2, 2, 1]
@@ -311,6 +365,13 @@ def natLeafProg : Prog := [("add_n", addN), ("add_1", add1), ("sub_n", subN), ("
 #guard (run natLeafProg 100 "sub_n" [4, 0, 2, 2, 0]
   (Mem.ofWords [(POOL, #[0, 1, 1, 0, 7, 7])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
   some ([0], #[0, 1, 1, 0, 0xFFFFFFFFFFFFFFFF, 0])
+/- `[0xF0, 0x0F] | [0x0F, 0xF0] = [0xFF, 0xFF]`; a copy. -/
+#guard (run natLeafProg 100 "or_n" [4, 0, 2, 2]
+  (Mem.ofWords [(POOL, #[0xF0, 0x0F, 0x0F, 0xF0, 0, 0])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
+  some ([0], #[0xF0, 0x0F, 0x0F, 0xF0, 0xFF, 0xFF])
+#guard (run natLeafProg 100 "copy_n" [2, 0, 2]
+  (Mem.ofWords [(POOL, #[5, 7, 0, 0])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
+  some ([0], #[5, 7, 5, 7])
 #guard (run natLeafProg 100 "sub_1" [1, 0, 1, 1]
   (Mem.ofWords [(POOL, #[0, 7])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
   some ([1], #[0, 0xFFFFFFFFFFFFFFFF])
@@ -396,7 +457,7 @@ theorem addN_spec (hp : p.lookup "add_n" = some addN) (n : Nat) (s₀ : St) (o o
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
 
@@ -578,7 +639,7 @@ theorem add1_spec (hp : p.lookup "add_1" = some add1) (n : Nat) (s₀ : St) (o o
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
 
@@ -662,7 +723,7 @@ theorem subN_spec (hp : p.lookup "sub_n" = some subN) (n : Nat) (s₀ : St) (o o
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
 
@@ -740,10 +801,222 @@ theorem sub1_spec (hp : p.lookup "sub_1" = some sub1) (n : Nat) (s₀ : St) (o o
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
 
 end sub1
+
+/-! ## The bitwise leaves and `copy_n` -/
+
+/-- The first `k` limbs of two windows of `p` combined limb by limb with `f`. -/
+def bwv (f : Word → Word → Word) (p : Array Word) (oa ob : Nat) : Nat → Nat
+  | 0 => 0
+  | k + 1 => bwv f p oa ob k + (f (p[oa + k]?.getD 0) (p[ob + k]?.getD 0)).toNat * wt k
+
+/-- One step of a bitwise leaf's loop, in the shape of its verification condition. -/
+theorem bitn_step_goal (op : BinOp) (m : Mem) (P0 : Array Word) (o oa ob i T6 T7 T8 T9 T10 T11 : Word)
+    (h6 : T6 = o >>> 40) (h7 : T7 = o &&& 1099511627775)
+    (h8 : T8 = oa >>> 40) (h9 : T9 = oa &&& 1099511627775)
+    (h10 : T10 = ob >>> 40) (h11 : T11 = ob &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat < 2 ^ 41)
+    (hob : ob.toNat + i.toNat < 2 ^ 41)
+    (hda : oa.toNat + i.toNat < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hdb : ob.toNat + i.toNat < o.toNat ∨ o.toNat ≤ ob.toNat)
+    (hs6 : (m.arr64 (tierA POOL T6)).size ≤ 2 ^ 40) (hs8 : (m.arr64 (tierA POOL T8)).size ≤ 2 ^ 40)
+    (hs10 : (m.arr64 (tierA POOL T10)).size ≤ 2 ^ 40)
+    (hb8 : (T9 + i).toNat < (m.arr64 (tierA POOL T8)).size)
+    (hb10 : (T11 + i).toNat < (m.arr64 (tierA POOL T10)).size)
+    (hb6 : (T7 + i).toNat < (m.arr64 (tierA POOL T6)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat = bwv (BinOp.eval op) P0 oa.toNat ob.toNat i.toNat) :
+    pv (vpool (m.set64 (tierA POOL T6) (T7 + i)
+        (BinOp.eval op (m.arr64 (tierA POOL T8))[(T9 + i).toNat] (m.arr64 (tierA POOL T10))[(T11 + i).toNat])))
+        o.toNat (i + 1).toNat = bwv (BinOp.eval op) P0 oa.toNat ob.toNat (i + 1).toNat := by
+  subst h6 h7 h8 h9 h10 h11
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have hvs := vpool_size m
+  rw [ld_off m P0 oa i o (by omega) (by omega) hP0 hs8 hb8 hoff hda,
+    ld_off m P0 ob i o (by omega) (by omega) hP0 hs10 hb10 hoff hdb,
+    st_win m o i _ (by omega) (by omega) hs6 hb6, hi1,
+    pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega), ih]
+  simp only [bwv, Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < P0.size),
+    Array.getElem?_eq_getElem (by omega : ob.toNat + i.toNat < P0.size), Option.getD_some]
+
+/-- One step of `copy_n`'s loop, in the shape of its verification condition. -/
+theorem copyn_step_goal (m : Mem) (P0 : Array Word) (o oa i T5 T6 T7 T8 : Word)
+    (h5 : T5 = o >>> 40) (h6 : T6 = o &&& 1099511627775)
+    (h7 : T7 = oa >>> 40) (h8 : T8 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat < 2 ^ 41)
+    (hda : oa.toNat + i.toNat < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs5 : (m.arr64 (tierA POOL T5)).size ≤ 2 ^ 40) (hs7 : (m.arr64 (tierA POOL T7)).size ≤ 2 ^ 40)
+    (hb7 : (T8 + i).toNat < (m.arr64 (tierA POOL T7)).size)
+    (hb5 : (T6 + i).toNat < (m.arr64 (tierA POOL T5)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat = pv P0 oa.toNat i.toNat) :
+    pv (vpool (m.set64 (tierA POOL T5) (T6 + i) (m.arr64 (tierA POOL T7))[(T8 + i).toNat]))
+        o.toNat (i + 1).toNat = pv P0 oa.toNat (i + 1).toNat := by
+  subst h5 h6 h7 h8
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have hvs := vpool_size m
+  rw [ld_off m P0 oa i o (by omega) (by omega) hP0 hs7 hb7 hoff hda,
+    st_win m o i _ (by omega) (by omega) hs5 hb5, hi1,
+    pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega), ih,
+    pv_succ P0 oa.toNat i.toNat (i.toNat + 1) (oa.toNat + i.toNat) rfl rfl (by omega)]
+
+section bitn
+variable (p : Prog) (P0 : Array Word) (C : Nat)
+
+/-- A bitwise leaf's loop: locals `(o, oa, ob, n, i, x, pt, pb, ta, qa, tb, qb)`. -/
+def BitNInv (op : BinOp) (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 3).toNat ≤ C ∧ (s.loc 1).toNat + (s.loc 3).toNat ≤ C ∧
+  (s.loc 2).toNat + (s.loc 3).toNat ≤ C ∧
+  ((s.loc 1).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∨ (s.loc 0).toNat ≤ (s.loc 1).toNat) ∧
+  ((s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∨ (s.loc 0).toNat ≤ (s.loc 2).toNat) ∧
+  s.loc 6 = s.loc 0 >>> 40 ∧ s.loc 7 = s.loc 0 &&& 1099511627775 ∧
+  s.loc 8 = s.loc 1 >>> 40 ∧ s.loc 9 = s.loc 1 &&& 1099511627775 ∧
+  s.loc 10 = s.loc 2 >>> 40 ∧ s.loc 11 = s.loc 2 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 6))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧
+  (s.loc 4).toNat ≤ (s.loc 3).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat = bwv (BinOp.eval op) P0 (s.loc 1).toNat (s.loc 2).toNat (s.loc 4).toNat
+
+def BitNPost (op : BinOp) (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 3).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat = bwv (BinOp.eval op) P0 (s₀.loc 1).toNat (s₀.loc 2).toNat (s₀.loc 3).toNat
+
+theorem bitNLoop_spec (op : BinOp) (n : Nat) (s₀ : St) (h : BitNInv op P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n (bitNLoop op) ⦃fun r s' => BitNPost op P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [BitNInv, BitNPost] at h ⊢
+    rw [exec, step_while (w := bitNLoop op) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [BitNInv, BitNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval.eq_1, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply bitn_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
+
+theorem bitNLoop_step_spec (op : BinOp) (n : Nat) (s₀ : St) (h : BitNInv op P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) (bitNLoop op) ⦃fun r s' => BitNPost op P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (bitNLoop_spec p P0 C op (n + 1) s₀ h)
+
+/-- A bitwise leaf `f(o, oa, ob, k)`: `P[o, o + k) := a op b` limb by limb. -/
+theorem bitN_spec (op : BinOp) (f : FnName) (hp : p.lookup f = some (bitNG op)) (n : Nat) (s₀ : St)
+    (o oa ob k : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + k.toNat ≤ pcap s₀.mem)
+    (hda : oa.toNat + k.toNat ≤ o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hdb : ob.toNat + k.toNat ≤ o.toNat ∨ o.toNat ≤ ob.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [o, oa, ob, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧
+      pv (vpool s'.mem) o.toNat k.toNat = bwv (BinOp.eval op) (vpool s₀.mem) oa.toNat ob.toNat k.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs
+  have h3 := pcap_tier s₀.mem (ob >>> 40) hs
+  rw [invoke_eq _ hp]
+  simp only [callFn, bitNG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      bitNLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) op n]
+    all_goals (try simp only [BitNInv, BitNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval.eq_4, BinOp.eval.eq_8,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq, bwv]
+
+end bitn
+
+section copyn
+variable (p : Prog) (P0 : Array Word) (C : Nat)
+
+/-- `copy_n`'s loop: locals `(o, oa, n, i, x, pt, pb, ta, qa)`. -/
+def CopyNInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 2).toNat ≤ C ∧ (s.loc 1).toNat + (s.loc 2).toNat ≤ C ∧
+  ((s.loc 1).toNat + (s.loc 2).toNat ≤ (s.loc 0).toNat ∨ (s.loc 0).toNat ≤ (s.loc 1).toNat) ∧
+  s.loc 5 = s.loc 0 >>> 40 ∧ s.loc 6 = s.loc 0 &&& 1099511627775 ∧
+  s.loc 7 = s.loc 1 >>> 40 ∧ s.loc 8 = s.loc 1 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 5))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 7))).size ≤ 2 ^ 40 ∧
+  (s.loc 3).toNat ≤ (s.loc 2).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 3).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 3).toNat = pv P0 (s.loc 1).toNat (s.loc 3).toNat
+
+def CopyNPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 2).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat = pv P0 (s₀.loc 1).toNat (s₀.loc 2).toNat
+
+theorem copyNLoop_spec (n : Nat) (s₀ : St) (h : CopyNInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n copyNLoop ⦃fun r s' => CopyNPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [CopyNInv, CopyNPost] at h ⊢
+    rw [exec, step_while (w := copyNLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [CopyNInv, CopyNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply copyn_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
+
+theorem copyNLoop_step_spec (n : Nat) (s₀ : St) (h : CopyNInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) copyNLoop ⦃fun r s' => CopyNPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (copyNLoop_spec p P0 C (n + 1) s₀ h)
+
+/-- `copy_n(o, oa, k)`: `P[o, o + k) := A[oa, oa + k)`. -/
+theorem copyN_spec (hp : p.lookup "copy_n" = some copyN) (n : Nat) (s₀ : St) (o oa k : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + k.toNat ≤ pcap s₀.mem)
+    (hda : oa.toNat + k.toNat ≤ o.toNat ∨ o.toNat ≤ oa.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "copy_n" [o, oa, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧
+      pv (vpool s'.mem) o.toNat k.toNat = pv (vpool s₀.mem) oa.toNat k.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs
+  rw [invoke_eq _ hp]
+  simp only [callFn, copyN]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      copyNLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
+    all_goals (try simp only [CopyNInv, CopyNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+end copyn
 
 end L.Arena
