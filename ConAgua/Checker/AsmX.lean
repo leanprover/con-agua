@@ -31,6 +31,8 @@ proof's per-function contract (`checkerX_ok`, `AsmXOk.lean`).
   `ConAgua/AsmEsc/NatMadAsm.lean`.
 * `nat_cmp` (`L.Arena.natCmp`, the comparison of two numbers): `natCmpAsm`,
   `ConAgua/AsmEsc/NatCmpAsm.lean`.
+* `and_n`, `or_n`, `xor_n`, `copy_n` (linleaf's bitwise and copy leaves): the templates `bitAsm`
+  and `copyAsm`, `ConAgua/AsmEsc/BitAsm.lean` (proofs in `BitAsmSim.lean`).
 -/
 
 namespace L.Checker
