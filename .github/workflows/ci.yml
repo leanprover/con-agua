@@ -57,7 +57,11 @@
 #                                 generators print now, plus Kraken's own
 #                                 parser reading `checker.s` as the
 #                                 trusted parser does), core_fns.py,
-#                                 loop_fns.py, leaf_fns.py, preloop_ws.py.
+#                                 loop_fns.py, leaf_fns.py, preloop_ws.py;
+#              check-asm.sh       `as` + `objdump` encode every
+#                                 instruction of `checker.s` the way
+#                                 Kraken's semantics reads its text (a
+#                                 trusted-base check, about 10 s).
 #
 # WHAT IT DELIBERATELY DOES **NOT** COVER
 #
@@ -349,6 +353,9 @@ jobs:
 
       - name: scripts/asm_file.py --check (checker.s, pins.bin)
         run: python3 scripts/asm_file.py --check
+
+      - name: scripts/check-asm.sh (as/objdump agree with Kraken's reading of checker.s)
+        run: scripts/check-asm.sh
 
       - name: The generated call closures (--check)
         run: |

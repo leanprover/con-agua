@@ -10,6 +10,7 @@
 # (the mismatch this script would have caught before it was found by hand).
 #
 # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
+# The gate `check-asm` of scripts/gates.sh (selected by scripts/gate_select.py) and a CI step.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
