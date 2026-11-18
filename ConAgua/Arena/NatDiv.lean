@@ -4,9 +4,12 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatSub
 meta import ConAgua.Arena.NatAdd
 meta import ConAgua.Arena.NatDivWord
+meta import ConAgua.Arena.NatDivSubmul
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.NatOff
+public import ConAgua.Arena.NatDivSubmul
 public import ConAgua.Arena.NatDivWord
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
@@ -56,52 +59,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-! ## `Off`: the frame of an in-place pass -/
-
-/-- `p` and `q` agree off the region `[o, o + n)`. -/
-def Off (p q : Array Word) (o n : Nat) : Prop := ∀ j, (j < o ∨ o + n ≤ j) → p[j]? = q[j]?
-
-theorem Off.refl (p : Array Word) (o n : Nat) : Off p p o n := fun _ _ => rfl
-grind_pattern [arena_grind] Off.refl => Off p p o n
-
-/-- Writing the limb just past the changed prefix extends it. -/
-theorem Off.set (p q : Array Word) (o k k' j : Nat) (v : Word) (h : Off p q o k) (hj : j = o + k)
-    (hk : k' = k + 1) : Off (p.set! j v) q o k' := by
-  intro i hi
-  rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  have : j ≠ i := by omega
-  simp only [this, ite_false]
-  exact h i (by omega)
-grind_pattern [arena_grind] Off.set => Off (p.set! j v) q o k', Off p q o k
-
-theorem Off.get (p q : Array Word) (o k j : Nat) (h : Off p q o k) (hj : o + k ≤ j)
-    (hp : j < p.size) (hq : j < q.size) : p[j] = q[j] := by
-  have := h j (Or.inr hj); simp [hp, hq] at this; exact this
-grind_pattern [arena_grind] Off.get => Off p q o k, p[j]
-
-theorem Off.pv_below (p q : Array Word) (o k o' l : Nat) (h : Off p q o k) (hl : o' + l ≤ o) :
-    pv p o' l = pv q o' l := by
-  induction l with
-  | zero => rfl
-  | succ l ih => simp only [pv, ih (by omega), h (o' + l) (Or.inl (by omega))]
-grind_pattern [arena_grind] Off.pv_below => Off p q o k, pv p o' l
-
-theorem Off.lv_below (p q : Array Word) (o k o' l i : Nat) (h : Off p q o k) (hl : o' + l ≤ o) :
-    lv p o' l i = lv q o' l i := by
-  simp only [lv]; split
-  · rw [h (o' + i) (Or.inl (by omega))]
-  · rfl
-grind_pattern [arena_grind] Off.lv_below => Off p q o k, lv p o' l i
-
-/-- An in-place pass over `[o, o + n)` inside a region `[t, t + m)` agrees with the pool off the
-region. -/
-theorem Off.widen (p q : Array Word) (o n t m : Nat) (h : Off p q o n) (h1 : t ≤ o)
-    (h2 : o + n ≤ t + m) : Off p q t m := fun j hj => h j (by omega)
-
-theorem Off.trans (p q r : Array Word) (o n : Nat) (h : Off p q o n) (h' : Off q r o n) :
-    Off p r o n := fun j hj => (h j hj).trans (h' j hj)
-grind_pattern [arena_grind] Off.trans => Off p q o n, Off q r o n
 
 /-! ## The in-place passes -/
 
@@ -345,30 +302,6 @@ grind_pattern [arena_grind] SliceOK.top0 => SliceOK m o 0
 
 
 /-! ## `nat_divmod(oa, la, ob, lb)` -/
-
-def dsmLoop : Stmt := lblk (r, n, ob, q, i, c, x, y, lo, rt, rb) {
-  for i < n {
-    x := POOL⦃r + i⦄;
-    y := POOL⦃ob + i⦄;
-    lo := q * y + c;
-    c := mulhi(q, y) + u64(lo < c);
-    POOL⟨rt⟩[rb + i] := x - lo;
-    c := c + u64(x < lo)
-  }
-}
-
-/-- `div_submul(r, n, ob, q)`: `R := R - q · b` in place, `R` the `n + 1` limbs at `r` and `b`
-the `n` limbs at `ob`; returns the borrow out of the top limb (con-ron's `mul_u64` and the
-comparison `blt(t, p)` of `dm_correct`). -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divSubmul : FunDecl := lfn (r, n, ob, q) locals (i, c, x, y, lo, rt, rb) {
-  rt := ⦃r⦄.tier;
-  rb := ⦃r⦄.idx;
-  ⟪dsmLoop⟫;
-  x := POOL⦃r + n⦄;
-  POOL⟨rt⟩[rb + n] := x - c;
-  return u64(x < c)
-}
 
 /-- The correction (con-ron's `dm_correct`): while the window is negative (`c` the borrow), one
 decrement of `q` and one addition of `b`; the carry out of the addition ends it. -/
