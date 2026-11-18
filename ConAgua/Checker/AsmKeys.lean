@@ -53,9 +53,12 @@ abbrev xorNCode : Nat := 485871399979
 /-- `nameCode "copy_n"`, as a literal (`nameCode_copy_n`). -/
 abbrev copyNCode : Nat := 124869068680590
 
+/-- `nameCode "lit_hash"`, as a literal (`nameCode_lit_hash`). -/
+abbrev litHashCode : Nat := 7808905953357831252
+
 /-- **The name codes of the hand-written functions.** -/
 def checkerXKeys : List Nat :=
   [mulRowCode, subRowCode, divSubmulCode, addNCode, add1Code, subNCode, sub1Code, natMadCode, natCmpCode, andNCode, orNCode, xorNCode,
-   copyNCode]
+   copyNCode, litHashCode]
 
 end L.Checker
