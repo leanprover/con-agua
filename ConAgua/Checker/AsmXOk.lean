@@ -14,6 +14,7 @@ import all ConAgua.Arena.NatCmp
 import all ConAgua.Arena.Store
 import ConAgua.AsmEsc.ChainL
 import ConAgua.AsmEsc.BitAsmSim
+import ConAgua.AsmEsc.ShiftAsmSim
 
 @[expose] public section
 
@@ -22,7 +23,7 @@ import ConAgua.AsmEsc.BitAsmSim
 
 `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`: in every layout of `checkerTab`, each body
 of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`,
-`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, `bitAsm_sim`, `copyAsm_sim`, `litHashAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
+`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, `bitAsm_sim`, `copyAsm_sim`, `shlAsm_sim`, `shrAsm_sim`, `zeroAsm_sim`, `litHashAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
 `addN_spec`, `subN_spec`, `add1_spec`, `sub1_spec`), at the function as `checkerProgI` declares it
 (`checkerProgI_mulRow` …: the inliner leaves these functions, which call nothing, as they are).
 -/
@@ -131,6 +132,27 @@ theorem nameCode_lit_hash : nameCode "lit_hash" = litHashCode := by decide
 theorem checkerProgI_litHash : checkerProgI.lookup "lit_hash" = some L.Arena.litHash := by
   rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
     show checkerProg.lookup "lit_hash" = some L.Arena.litHash by chk_lk]
+  rfl
+
+theorem nameCode_shl_n : nameCode "shl_n" = shlNCode := by decide
+
+theorem checkerProgI_shlN : checkerProgI.lookup "shl_n" = some shlN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "shl_n" = some shlN by chk_lk]
+  rfl
+
+theorem nameCode_shr_n : nameCode "shr_n" = shrNCode := by decide
+
+theorem checkerProgI_shrN : checkerProgI.lookup "shr_n" = some shrN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "shr_n" = some shrN by chk_lk]
+  rfl
+
+theorem nameCode_zero_n : nameCode "zero_n" = zeroNCode := by decide
+
+theorem checkerProgI_zeroN : checkerProgI.lookup "zero_n" = some zeroN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "zero_n" = some zeroN by chk_lk]
   rfl
 
 theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
@@ -298,6 +320,42 @@ theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
     rw [← hT] at hcode
     exact litHashAsm_sim checkerProgI G hG checkerProgI_litHash (by rw [hT]; exact checkerTab_pool)
       (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "shl_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_shl_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_shlN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact shlAsm_sim checkerProgI G hG (shlN_spec _ checkerProgI_shlN) _ rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "shr_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_shr_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_shrN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact shrAsm_sim checkerProgI G hG (shrN_spec _ checkerProgI_shrN) _ rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "zero_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_zero_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_zeroN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact zeroAsm_sim checkerProgI G hG (zeroN_spec _ checkerProgI_zeroN) _ rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
   · cases hl
 
 end L.Checker
