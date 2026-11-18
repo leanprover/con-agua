@@ -4,6 +4,7 @@ import ConAgua.Final.DrvFinal
 public import ConAgua.Checker.VerdictTop
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.AsmXOk
 import ConAgua.Checker.ProgWf
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Final.DrvAbi
@@ -76,7 +77,7 @@ theorem checkerFile_verdict_of [Host]
           TwinVerdict [b] (st.data.regs.rax &&& 3)))
       dm (label abiStartL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, _, h⟩ => ⟨hpc, fun hV h2 hk => drvErr_twin b pb h64 _ hV (h h2) hk⟩)
-    (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
+    (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
       HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 

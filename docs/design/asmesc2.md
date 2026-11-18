@@ -35,3 +35,73 @@ The proof (`ConAgua/Compiler/SimCall.lean`):
   `X = []` and the statement is `compileProg tab p entry = name` as before.
 
 `checker.s` is byte-identical (`asm_file.py --check`: up to date). The full build passes.
+
+## Step 2: hand-written `mul_row`
+
+**Code** (`ConAgua/AsmEsc/MulRowAsm.lean`, `mulRowAsm`). This is mulasm's variant B, changed in
+two ways. The index counts up to `la` (`cmp`/`jb` at the loop's end), not from `-la` up to 0, so
+the proof has no negative index. `adc` takes a zeroed register (`rcx`), not an immediate.
+Prologue: `n < la` goes to `ca_error` (L's `abort 0`, a plain error), and `la = 0` returns at once.
+Then decode both tags (tier bit, 40-bit index). Then check both windows against their tier's
+length: `len - qb ≥ la` and `len - ob ≥ la`, with no wrap. Then take `la` units of fuel up front.
+Any failed check goes to `ca_exhausted`, which the contract always allows. The row costs 11
+instructions per limb: `mov`, `mul`, `add r,[mem]`, `adc`, `add`, `adc`, store, `mov`, `add`,
+`cmp`, `jb`. The carry ripple keeps L's checks and per-step fuel (`n ≤ i` → `ca_error`;
+`i ≥ len - ob` → `ca_error`, L's `oob`).
+
+**Forms the routine relies on.** New in the trusted parser: `adcq %r, %r`
+(`ConAgua/AsmFile/Parse.lean`, plus `adc` in `scripts/check_asm.py`'s `SUFFIXED`). Already parsed:
+`mulq %r`, `addq MEM, %r`, `lea (%b,%i,8), %r`, `movq` loads and stores with an 8-scaled index,
+`shrq $40`, `andq $1` / `andq %r, %r`, `subq %r, %r`, `cmpq`, `jCC`, `jmp`, `ret`. All are
+baseline x86-64.
+
+**Proof** (standard axioms only; MulRowL elaborates in 0.7 s and MulRowAsm in 3.3 s).
+* `ConAgua/AsmEsc/Step.lean` (105 lines). Step lemmas: `add`/`sub` of registers with their carry,
+  `adc`, `add r, [b + 8i]` with its carry, `lea d, [b + 8i]`. The compiler's `StepGen.lean` already
+  had the scaled loads and stores, `mul`, the shifts and the ALU forms.
+* `ConAgua/AsmEsc/MulRowL.lean` (370 lines). The L side. `mrStep`/`mrRows` give the row as a
+  function of the memory. `mcLoop` gives the carry ripple at fuel `k`. `mrW1_run` and `mrW2_run`
+  are proved by induction with `RunEq`'s step equations. Then `mulRow_run`: with the windows in
+  their tiers and `la < F`, the run is the ripple after the row. Also `mulRow_run_abort` and
+  `mulRow_run_zero`.
+* `ConAgua/AsmEsc/MulRowAsm.lean` (706 lines). The machine side. `mr_row_step` and `mr_tail_step`
+  cover one loop iteration each, against `mrStep`/`mcLoop`. The stores go through
+  `MemRel.store64`/`Pres.store64`, the carries through `carry_eq`, `adc2_word` and `carry_word`.
+  `mr_row` and `mr_tail` are the inductions, `mr_ret` the return. `mulRowAsm_sim` covers the
+  prologue and composes: `FnSimAt p G sk n "mul_row" mulRow kf`, for every program declaring
+  `mul_row` as `mulRow` and every table where `POOL` is tiered with small descriptor offsets.
+* `ConAgua/Checker/AsmX.lean`: `checkerX = [(nameCode "mul_row", mulRowAsm checkerTab)]`.
+  `ConAgua/Checker/AsmXOk.lean`: `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`. The
+  inliner leaves `mul_row`, which calls nothing, unchanged (`checkerProgI_mulRow`).
+* Proof pitfalls: `rw` on an `Ev` goal tries `rfl`, which unfolds `Eventually` until the heartbeat
+  limit; use `ev_lbl` for label rewrites. `generalize` of `G.s …` breaks the link to terms that
+  later lemmas produce; keep `G.s` and rewrite with equations.
+
+**Final statements changed** (approved by the coordinator; the end-to-end statements, `Audit/*`
+and the axiom guards are unchanged):
+* `checkerFile_eq` (`Checker/AsmFileEq.lean`, generated from `checkerAsm_eq`):
+  before `checkerFile = checkerStub ++ compileProg checkerTab checkerProgI "check"`,
+  after `checkerFile = checkerStub ++ compileProgX checkerX checkerTab checkerProgI "check"`.
+* `code_of_checkerFile_par` (`Final/DrvFinal.lean`): the same change in its conclusion.
+* `abi_start_outcome`, `abiMode_outcome`, `abiA_outcome`, `abiA0_outcome` (`Final/ParAbi.lean`),
+  `abiS_outcome` (`SeqAbi.lean`), `abiB_go`, `abiB_outcome` (`BufAbi.lean`), `drv_outcome`
+  (`DrvAbi.lean`). Each gains `{X : AsmTab} (hAX : AsmOkT q tab X)` after `hok`, and its `hcode`
+  changes from `Code (… compileProg tab q "check") k0` to `Code (… compileProgX X tab q "check") k0`.
+  The callers in `DrvFinal`, `EndToEnd`, `VerdictFinal`, `ThreadsFinal` and `ThreadsVerdict` pass
+  `checkerX_ok` (proofs only).
+
+**Measured** (before proving; the regenerated `checker.s` is byte-identical to the measured
+binary's assembly; AMD EPYC 9455, load 3-7, `cc -O2`, base master `9e83e46da`):
+
+| | master | asm | Δ |
+|---|---:|---:|---:|
+| gf3 instructions | 97.96 G | 53.65 G | −45.2 % |
+| gf3 wall (bench.py, 10 paired interleaved rounds) | 3.846 s | 2.790 s | −27.4 % [−27.7, −27.0], Wilcoxon p = 0.002 |
+| Init instructions | 202.649 G | 202.648 G | −0.0003 % |
+| per extra product 1024² (instructions) | 19.93 M | 7.38 M | −63 % |
+| per extra product 8192² | 534.4 M | 187.6 M | −65 % |
+| per extra product 13 × 9519 | 8.06 M | 3.36 M | −58 % |
+| W1024 / W13x9519 / W8192 wall | | | −13.4 % / −10.7 % / −28.7 %, p = 0.002 each |
+
+Correctness: mulasm's product fuzzer, 2100 of 2100 agree with master (700 good accepted, 1400
+bad rejected). `diff-e2e.py --refs`: 740 agree, 0 REFDIFF, 0 unsound, 0 incomplete.
