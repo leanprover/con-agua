@@ -33,7 +33,7 @@ def leafC : List Word :=
 
 /-- The functions of `loopFns` that leave the pins and the core's memos alone. -/
 def leafFns : List FnName :=
-  ["ab_find", "ab_fvb", "add_1", "add_carry", "add_n", "alpd_ls", "and_block_named", "and_pin_ok",
+  ["ab_find", "ab_fvb", "add_1", "add_n", "alpd_ls", "and_block_named", "and_pin_ok",
    "and_rescue_slots", "apd_find", "app_count", "app_count_at", "app_fill", "app_fill_n",
    "app_find", "app_hole", "app_push", "b_eq", "base_row_get", "basis_name_hit",
    "basis_name_hit_go", "basis_name_unreserved", "basis_names_error", "bb_go", "bb_memo",

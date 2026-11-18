@@ -9,7 +9,7 @@ import ConAgua.Arena.GrindAttr
 # Word arithmetic for the limb pool: high words of products and sums
 
 Pure Lean facts about `UInt64` that the multiply loop needs, each as an equation over a named
-function (`mulHiN`, `adcHi`) with a `grind` pattern, so that the ring solver sees the
+function (`mulHiN`) with a `grind` pattern, so that the ring solver sees the
 digit equation `low + high · 2^64 = …` directly.
 -/
 

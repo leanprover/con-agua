@@ -1002,19 +1002,6 @@ grind_pattern [arena_grind] add_c => x + y < x
 grind_pattern [arena_grind] add_nc' => x + y < y
 grind_pattern [arena_grind] add_c' => x + y < y
 
-/-- The carry out of the word addition `x + y + c`. -/
-def adcHi (x y c : Word) : Nat := (x.toNat + y.toNat + c.toNat) / 2 ^ 64
-
-/-- `x + y + c = low word + carry · 2^64`, as an equation the ring solver sees. -/
-theorem adc_split (x y c : Word) :
-    (x + y + c).toNat + adcHi x y c * 2 ^ 64 = x.toNat + y.toNat + c.toNat := by
-  simp only [adcHi]; grind
-grind_pattern [arena_grind] adc_split => adcHi x y c
-
-theorem adcHi_le (x y c : Word) (h : c.toNat ≤ 1) : adcHi x y c ≤ 1 := by
-  simp only [adcHi]; grind
-grind_pattern [arena_grind] adcHi_le => adcHi x y c
-
 /-! ## `pv`, `xv`, `lv` -/
 
 section

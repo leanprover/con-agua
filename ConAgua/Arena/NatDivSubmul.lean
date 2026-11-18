@@ -2,8 +2,9 @@ module
 
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
-public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatLeaf
 import ConAgua.Arena.NatDivFacts
+import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
@@ -34,75 +35,91 @@ namespace L.Arena
 
 /-! ## The in-place passes -/
 
-def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
-  for i < n {
-    x := POOL⦃r + i⦄;
-    y := call nat_limb(ob, lb, i);
-    POOL⟨rt⟩[rb + i] := x + y + c;
-    c := call add_carry(x, y, c)
-  }
-}
-
-/-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
-  rt := ⦃r⦄.tier;
-  rb := ⦃r⦄.idx;
-  ⟪daddLoop⟫;
+/-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. The
+leaves `add_n` (over `b`'s limbs, at most `n`) and `add_1` (the carry through the rest), with the
+output window the first operand's (`NatLeaf.lean`).
+con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
+@[no_expose] def divAdd : FunDecl := lfn (r, n, ob, lb) locals (m, c) {
+  m := lb;
+  if n < lb { m := n };
+  c := call add_n(r, r, ob, m, 0);
+  c := call add_1(r + m, r + m, n - m, c);
   return c
 }
 
 
-section passes
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (P0 : Array Word) (C : Nat)
+/-- The zero-extended prefix of a slice is the slice cut at the prefix's length. -/
+theorem xv_min (p : Array Word) (o l k m : Nat) (hm : m = min l k) : xv p o l k = pv p o m := by
+  subst hm
+  rcases Nat.le_total l k with h | h
+  · rw [xv_full (p := p) (o := o) l k h, Nat.min_eq_left h]
+  · rw [Nat.min_eq_right h]
+    induction k with
+    | zero => rfl
+    | succ k ih => simp only [xv, pv, ih (by omega), lv, show k < l by omega, ite_true]
 
-/-- The invariant of `div_add`'s pass. -/
-def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
-  s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
-  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
-  (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
-  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
-  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat =
-    pv P0 (s.loc 0).toNat (s.loc 4).toNat + xv P0 (s.loc 2).toNat (s.loc 3).toNat (s.loc 4).toNat
+/-- The value `div_add` leaves on arrays: `add_n` wrote the `m` limbs at `r` (`P1`), `add_1` the
+`k - m` after them (`P2`), both in place. -/
+theorem dadd_pv (P0 P1 P2 : Array Word) (r m k c1 c2 B : Nat) (hm : m ≤ k)
+    (h1 : Off P1 P0 r m) (h2 : Off P2 P1 (r + m) (k - m))
+    (e1 : pv P1 r m + c1 * wt m = pv P0 r m + B)
+    (e2 : pv P2 (r + m) (k - m) + c2 * wt (k - m) = pv P1 (r + m) (k - m) + c1) :
+    pv P2 r k + c2 * wt k = pv P0 r k + B := by
+  have a2 := pv_append P2 r m (k - m)
+  have a0 := pv_append P0 r m (k - m)
+  rw [show m + (k - m) = k by omega] at a2 a0
+  have d2 : pv P2 r m = pv P1 r m := Off.pv_disj P2 P1 (r + m) (k - m) r m h2 (Or.inl (by omega))
+  have d1 : pv P1 (r + m) (k - m) = pv P0 (r + m) (k - m) :=
+    Off.pv_disj P1 P0 r m (r + m) (k - m) h1 (Or.inr (by omega))
+  have w := wt_add m (k - m) k (by omega)
+  rw [a2, a0, d2, w]
+  rw [d1] at e2
+  generalize pv P1 r m = A at *
+  generalize pv P2 (r + m) (k - m) = D at *
+  generalize pv P0 (r + m) (k - m) = E at *
+  generalize wt m = W at *
+  generalize wt (k - m) = W' at *
+  have : W * (D + c2 * W') = W * (E + c1) := by rw [e2]
+  grind
 
-def DAddPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
-  (s'.loc 5).toNat ≤ 1 ∧ Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat =
-    pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + xv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 1).toNat
+/-- `dadd_pv` in the shape of `div_add`'s goal. -/
+theorem dadd_goal (m0 m1 m2 : Mem) (r k ob lb m c1 v R c0 : Word) (hR : R = v) (hc0 : c0 = 0)
+    (hm : m.toNat = min lb.toNat k.toNat) (hr41 : r.toNat + k.toNat < 2 ^ 41)
+    (h1 : Off (vpool m1) (vpool m0) r.toNat m.toNat)
+    (h2 : Off (vpool m2) (vpool m1) (r + m).toNat (k - m).toNat)
+    (e1 : pv (vpool m1) r.toNat m.toNat + c1.toNat * wt m.toNat =
+      pv (vpool m0) r.toNat m.toNat + pv (vpool m0) ob.toNat m.toNat + c0.toNat)
+    (e2 : pv (vpool m2) (r + m).toNat (k - m).toNat + v.toNat * wt (k - m).toNat =
+      pv (vpool m1) (r + m).toNat (k - m).toNat + c1.toNat) :
+    pv (vpool m2) r.toNat k.toNat + R.toNat * wt k.toNat =
+      pv (vpool m0) r.toNat k.toNat + xv (vpool m0) ob.toNat lb.toNat k.toNat := by
+  subst R c0
+  have hmk : m.toNat ≤ k.toNat := by omega
+  have hrm : (r + m).toNat = r.toNat + m.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hkm : (k - m).toNat = k.toNat - m.toNat :=
+    UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hmk)
+  rw [hrm, hkm] at h2 e2
+  rw [xv_min _ _ _ _ _ hm]
+  simp only [UInt64.toNat_zero, Nat.add_zero] at e1
+  exact dadd_pv _ _ _ r.toNat m.toNat k.toNat c1.toNat v.toNat _ hmk h1 h2 e1 e2
 
--- the virtual pool's extra `P0.size` conjunct pushes the step past the default budget
-set_option maxHeartbeats 2000000 in
-include hpl hpc in
-theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
-    ⦃fun s => s = s₀⦄ exec p n daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [DAddInv, DAddPost] at h ⊢
-    rw [exec, step_while (w := daddLoop) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
-      addCarry_spec p hpc n]
-    all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals grind (splits := 20) [arena_grind, lang_grind, DAddInv, DAddPost]
-
-include hpl hpc in
-theorem daddLoop_step_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (daddLoop_spec p hpl hpc P0 C (n + 1) s₀ h)
-
-end passes
+/-- `div_add` wrote only its window. -/
+theorem dadd_off (m0 m1 m2 : Mem) (r k m : Word) (hmk : m.toNat ≤ k.toNat)
+    (hr41 : r.toNat + k.toNat < 2 ^ 41)
+    (h1 : Off (vpool m1) (vpool m0) r.toNat m.toNat)
+    (h2 : Off (vpool m2) (vpool m1) (r + m).toNat (k - m).toNat) :
+    Off (vpool m2) (vpool m0) r.toNat k.toNat := by
+  have hrm : (r + m).toNat = r.toNat + m.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hkm : (k - m).toNat = k.toNat - m.toNat :=
+    UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hmk)
+  rw [hrm, hkm] at h2
+  intro j hj
+  exact (h2 j (by omega)).trans (h1 j (by omega))
 
 section passFns
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry)
+variable (p : Prog) (hpN : p.lookup "add_n" = some addN) (hp1 : p.lookup "add_1" = some add1)
 
-include hpl hpc in
+include hpN hp1 in
 theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St)
     (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64)
     (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
@@ -118,10 +135,26 @@ theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc,
-        daddLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n] <;>
-      finish [DAddInv, DAddPost]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      addN_spec p hpN n, add1_spec p hp1 n]
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff])
+    all_goals split_clear_locs
+    all_goals (try and_intros)
+    all_goals first
+      | (grind [arena_grind, lang_grind]; done)
+      | (with_reducible apply dadd_goal
+         case h2 => with_reducible assumption
+         case h1 => with_reducible assumption
+         case e1 => with_reducible assumption
+         case e2 => with_reducible assumption
+         all_goals first | rfl | grind [pcap_eq])
+      | (with_reducible apply dadd_off
+         case h2 => with_reducible assumption
+         case h1 => with_reducible assumption
+         all_goals grind [pcap_eq])
 
 end passFns
 

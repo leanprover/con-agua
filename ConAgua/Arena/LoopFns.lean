@@ -12,7 +12,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 
 `loopFns`: every function the jobs (`check_jobs`: `record_job`, `check_decl`)
 reach in the checker's program (the bracket, the arms, the core, the stage), as a literal computed from
-`checkerProg`'s call graph (1392 names; the decided check in `ConAgua/Checker/LoopAll.lean`
+`checkerProg`'s call graph (1391 names; the decided check in `ConAgua/Checker/LoopAll.lean`
 fails if a callee is missing, then recompute it). No function of it writes the pin table or a
 byte array, and every `CTL` word it writes is below 1024 (`LoopClosed`): a step of the loop keeps
 the pin table, so the pin flag, and every array's size.
@@ -34,11 +34,11 @@ theorem loopA_pins : (PINS : TieredArray) ∉ loopA := by simp [loopA]
 def loopFns : List FnName :=
   ["ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
    "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
-   "abstract_prefix_list", "add_1", "add_carry", "add_n", "all_level_params_defined", "alpd_go",
-   "alpd_ls", "and_block_named", "and_pin_ok", "and_rescue_slots", "apd_clear", "apd_find",
-   "apd_put", "app_count", "app_count_at", "app_fill", "app_fill_n", "app_find", "app_hole",
-   "app_push", "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node",
-   "ar_proj", "aux_rule_fire", "b_eq", "base_row_get", "basis_name_hit", "basis_name_hit_go",
+   "abstract_prefix_list", "add_1", "add_n", "all_level_params_defined", "alpd_go", "alpd_ls",
+   "and_block_named", "and_pin_ok", "and_rescue_slots", "apd_clear", "apd_find", "apd_put",
+   "app_count", "app_count_at", "app_fill", "app_fill_n", "app_find", "app_hole", "app_push",
+   "ar_app", "ar_entry", "ar_forall", "ar_go", "ar_lam", "ar_let", "ar_node", "ar_proj",
+   "aux_rule_fire", "b_eq", "base_row_get", "basis_name_hit", "basis_name_hit_go",
    "basis_name_unreserved", "basis_names_error", "basis_names_ok", "bb_go", "bb_memo", "bb_node",
    "beta_peel", "binder_dom", "binder_pair", "block_caps_at", "block_caps_at_er_copy",
    "block_caps_at_er_copy_go", "block_caps_ctor_names", "block_caps_fin", "block_caps_head",
