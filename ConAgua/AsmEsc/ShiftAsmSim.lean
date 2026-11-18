@@ -697,7 +697,7 @@ theorem shlAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
 section
 variable [Host] {kf : Nat} {tab : Tab}
 
-theorem sr_code (hc : Code (shrAsm tab) kf) {i : Nat} {x : Directive}
+theorem srt_code (hc : Code (shrAsm tab) kf) {i : Nat} {x : Directive}
     (hi : (shrAsm tab)[i]? = some x) : Host.prog[kf + i]? = some x := Code.get hc hi
 
 end
@@ -712,7 +712,7 @@ variable [Host] {G : L.Compiler.Layout} (hG : G.Ok) {kf : Nat} (hc : Code (shrAs
 include hG hc
 
 /-- One step of `shr_n`'s loop (`.L`) at limb `j`, the current limb in `rdx`. -/
-theorem sr_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+theorem srt_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
     (qa ob n sh : Word) (hs : sh < 64) (R14 : UInt64) (m0 : Mem) (x0 : Word)
     (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
     (s : MachineData) (j : Word) (hF : MrFr G d s)
@@ -764,14 +764,14 @@ theorem sr_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab
   rw [hy] at hrA
   have hy' : (M.arr64 TA)[(qa + (j + 1)).toNat]! = y := by simp only [getElem!_pos, hinA]; exact hy
   have hval : dshr x y sh = (x >>> sh) ||| ((y <<< 1) <<< (63 - sh)) := dshr_eq _ _ _ hs
-  refine ev_label (sr_code hc (i := 35) rfl) ?_
-  refine ev_movRR (sr_code hc (i := 36) rfl) ?_
-  refine ev_addRI (sr_code hc (i := 37) rfl) fun st1 => ?_
+  refine ev_label (srt_code hc (i := 35) rfl) ?_
+  refine ev_movRR (srt_code hc (i := 36) rfl) ?_
+  refine ev_addRI (srt_code hc (i := 37) rfl) fun st1 => ?_
   have hr13' : (j.toBitVec + (Int64.ofInt 1).toBitVec) = (j + 1).toBitVec := rfl
-  refine ev_ldX (sr_code hc (i := 38) rfl) (v := y) (by rs [hrsi, hr13]; rw [hr13', haA]; exact hrA) ?_
-  refine ev_shrdCl (sr_code hc (i := 39) rfl) fun st2 => ?_
-  refine ev_stX (sr_code hc (i := 40) rfl) (by rs [hr13]; rw [hr13', haO, hrO]; rfl) ?_
-  refine ev_cmpRO (sr_code hc (i := 41) rfl) (v := n) (Or.inr (Or.inr ⟨.r9, rfl, by rs [hr9]⟩)) ?_
+  refine ev_ldX (srt_code hc (i := 38) rfl) (v := y) (by rs [hrsi, hr13]; rw [hr13', haA]; exact hrA) ?_
+  refine ev_shrdCl (srt_code hc (i := 39) rfl) fun st2 => ?_
+  refine ev_stX (srt_code hc (i := 40) rfl) (by rs [hr13]; rw [hr13', haO, hrO]; rfl) ?_
+  refine ev_cmpRO (srt_code hc (i := 41) rfl) (v := n) (Or.inr (Or.inr ⟨.r9, rfl, by rs [hr9]⟩)) ?_
   have hrow : wRows (shrStep TA TO qa ob sh (63 - sh)) (j + 1).toNat m0 0 x0 =
       (M.set64 TO (ob + j) ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh))), y) := by
     rw [hj1, wRows_succ, hMc, UInt64.zero_add, L.ofNat_toNat]
@@ -786,7 +786,7 @@ theorem sr_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab
       A (BO + 8 * (ob + j).toNat) := by rw [← hr11]; exact haO
   have hv : (dshr (UInt64.ofBitVec x.toBitVec) (UInt64.ofBitVec y.toBitVec) sh).toBitVec =
       ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh))).toBitVec := by rw [← hval]
-  refine ev_jcc (sr_code hc (i := 42) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  refine ev_jcc (srt_code hc (i := 42) rfl) (fun hcc => ?_) (fun hcc => ?_)
   · refine ev_lbl (Code.label hc (i := 35) rfl) ?_
     refine hnext _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
     all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hr11, hr13, hr9, hrcx, hr14, hx]
@@ -810,7 +810,7 @@ theorem sr_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab
     · rw [hr13', haO2, hv]; exact hm'
 
 
-theorem sr_loop (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+theorem srt_loop (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
     (qa ob n sh : Word) (hs : sh < 64) (R14 : UInt64) (m0 : Mem) (x0 : Word)
     (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
     (hE : ∀ s', MrFr G d s' →
@@ -828,27 +828,27 @@ theorem sr_loop (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab
   | zero => intro s j hr _ _ _ _ _ _ _ _ _ hj; omega
   | succ r ih =>
     intro s j hr hF hm hx h1 h2 h3 h4 h5 h6 hj
-    refine sr_step hG hc TA TO hTA hTO qa ob n sh hs R14 m0 x0 hqa hoa s j hF hm hx h1 h2 h3 h4 h5 h6 hj ?_ hE
+    refine srt_step hG hc TA TO hTA hTO qa ob n sh hs R14 m0 x0 hqa hoa s j hF hm hx h1 h2 h3 h4 h5 h6 hj ?_ hE
     intro s' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10
     have := n.toNat_lt
     exact ih s' (j + 1) (by rw [L.toNat_add_one_of_lt (by omega)]; omega) g1 g2 g3 g4 g5 g6 g7 g8 g9 g10
 
-theorem sr_exit {ra : Word} (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra) (hlo : G.lo ≤ d.regs.rsp.toNat)
+theorem srt_exit {ra : Word} (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra) (hlo : G.lo ≤ d.regs.rsp.toNat)
     (hhi : d.regs.rsp.toNat + 8 ≤ G.hi) (s : MachineData) (hF : MrFr G d s)
     (hok : ∀ s', s'.dmem = s.dmem → s'.regs.rsp.toNat = d.regs.rsp.toNat + 8 →
       s'.regs.rbp = d.regs.rbp → s'.regs.r15 = d.regs.r15 → s'.regs.r14.toNat ≤ d.regs.r14.toNat →
       s'.regs.rax = 0 → Ev Q s' (Int64.ofBitVec ra.toBitVec)) :
     Ev Q s (at_ (kf + 43)) := by
-  refine ev_label (sr_code hc (i := 43) rfl) ?_
-  refine ev_movRI (sr_code hc (i := 44) rfl) ?_
-  refine frame_ret hG hra hlo hhi ⟨?_, ?_, ?_, ?_, ?_⟩ (sr_code hc (i := 45) rfl) fun s' e1 e2 e3 e4 e5 e6 => ?_
+  refine ev_label (srt_code hc (i := 43) rfl) ?_
+  refine ev_movRI (srt_code hc (i := 44) rfl) ?_
+  refine frame_ret hG hra hlo hhi ⟨?_, ?_, ?_, ?_, ?_⟩ (srt_code hc (i := 45) rfl) fun s' e1 e2 e3 e4 e5 e6 => ?_
   all_goals try rs [hF.rsp, hF.rbp, hF.r15]
   · exact hF.r14
   · exact hF.pres
   · exact hok s' e1 e2 e3 e4 (by rw [e5]; rs; exact hF.r14) (by rw [e6]; rs)
 
 /-- From index 28: the first limb `x := A[0]`, the store base, then `.L` or (`n = 0`) `.Z`. -/
-theorem sr_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+theorem srt_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
     (qa ob n sh : Word) (hs : sh < 64) (m0 : Mem) (R14 : UInt64)
     (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
     (s : MachineData) (hF : MrFr G d s) (hm : MemRel G m0 s.dmem)
@@ -869,13 +869,13 @@ theorem sr_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.ta
   have hrA : rdW s.dmem (A (BA + 8 * qa.toNat)) = some (m0.arr64 TA)[qa.toNat] := by
     have := hm.get64 TA hTA _ hinA; rw [hBA] at this; exact this
   have hx0 : (m0.arr64 TA)[qa.toNat]! = (m0.arr64 TA)[qa.toNat] := by simp only [getElem!_pos, hinA]
-  refine ev_movRI (sr_code hc (i := 28) rfl) ?_
-  refine ev_movRR (sr_code hc (i := 29) rfl) ?_
-  refine ev_ldX (sr_code hc (i := 30) rfl) (v := (m0.arr64 TA)[qa.toNat]) (by rs; rw [haA]; exact hrA) ?_
-  refine ev_movRR (sr_code hc (i := 31) rfl) ?_
-  refine ev_subRI (sr_code hc (i := 32) rfl) fun st1 => ?_
-  refine ev_cmpRO (sr_code hc (i := 33) rfl) (v := 0) (Or.inl rfl) ?_
-  refine ev_jcc (sr_code hc (i := 34) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  refine ev_movRI (srt_code hc (i := 28) rfl) ?_
+  refine ev_movRR (srt_code hc (i := 29) rfl) ?_
+  refine ev_ldX (srt_code hc (i := 30) rfl) (v := (m0.arr64 TA)[qa.toNat]) (by rs; rw [haA]; exact hrA) ?_
+  refine ev_movRR (srt_code hc (i := 31) rfl) ?_
+  refine ev_subRI (srt_code hc (i := 32) rfl) fun st1 => ?_
+  refine ev_cmpRO (srt_code hc (i := 33) rfl) (v := 0) (Or.inl rfl) ?_
+  refine ev_jcc (srt_code hc (i := 34) rfl) (fun hcc => ?_) (fun hcc => ?_)
   · simp only [CondCode.interp, cmpFlags_zf, beq_iff_eq] at hcc
     rs [hr9] at hcc
     have hn0 : n = 0 := UInt64.toBitVec_inj.mp hcc
@@ -890,7 +890,7 @@ theorem sr_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.ta
   rs [hr9] at hcc
   have hnz : n ≠ 0 := fun h => hcc (by rw [h])
   rw [← hx0] at *
-  refine sr_loop hG hc TA TO hTA hTO qa ob n sh hs (R14) m0 _ (by rw [← hBA] at *; omega) hoa hE n.toNat _ 0
+  refine srt_loop hG hc TA TO hTA hTO qa ob n sh hs (R14) m0 _ (by rw [← hBA] at *; omega) hoa hE n.toNat _ 0
     (by simp) ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
   all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hrdi, hr9, hr10, hr14]
   · rw [← hr14]; exact hF.r14
@@ -924,9 +924,9 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
   have hr10 : d.regs.r10 = sh := UInt64.toBitVec_inj.mp (hA 3 (by simp))
   have hn0 : 0 < n := by omega
   have hh := hG.hi_le
-  refine ev_label (sr_code hc (i := 0) rfl) ?_
-  refine ev_cmpRO (sr_code hc (i := 1) rfl) (v := 63) (Or.inl rfl) ?_
-  refine ev_jcc (sr_code hc (i := 2) rfl) (fun _ => hexh _ ⟨rfl, Pres.refl _ _⟩) (fun hca => ?_)
+  refine ev_label (srt_code hc (i := 0) rfl) ?_
+  refine ev_cmpRO (srt_code hc (i := 1) rfl) (v := 63) (Or.inl rfl) ?_
+  refine ev_jcc (srt_code hc (i := 2) rfl) (fun _ => hexh _ ⟨rfl, Pres.refl _ _⟩) (fun hca => ?_)
   have hs : sh < 64 := by
     simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.and_eq_false_iff, Bool.not_eq_false',
       decide_eq_true_eq, beq_iff_eq] at hca
@@ -937,16 +937,16 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
       have e : sh.toBitVec.toNat = sh.toNat := rfl
       simp only [this, e] at h; simp; omega
     · have := UInt64.toBitVec_inj.mp h; subst this; decide
-  refine ev_movRI (sr_code hc (i := 3) rfl) ?_
-  refine ev_movRR (sr_code hc (i := 4) rfl) ?_
-  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (sr_code hc (i := 5) rfl) fun st => ?_
-  refine ev_aluRI (op := .and) (w := 1) rfl (sr_code hc (i := 6) rfl) fun st => ?_
-  refine ev_aluOp (op := .and) (v := idxMask) rfl (sr_code hc (i := 7) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+  refine ev_movRI (srt_code hc (i := 3) rfl) ?_
+  refine ev_movRR (srt_code hc (i := 4) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (srt_code hc (i := 5) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (srt_code hc (i := 6) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (srt_code hc (i := 7) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
     fun st => ?_
-  refine ev_movRR (sr_code hc (i := 8) rfl) ?_
-  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (sr_code hc (i := 9) rfl) fun st => ?_
-  refine ev_aluRI (op := .and) (w := 1) rfl (sr_code hc (i := 10) rfl) fun st => ?_
-  refine ev_aluOp (op := .and) (v := idxMask) rfl (sr_code hc (i := 11) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+  refine ev_movRR (srt_code hc (i := 8) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (srt_code hc (i := 9) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (srt_code hc (i := 10) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (srt_code hc (i := 11) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
     fun st => ?_
   refine ev_gen (fun s1 => s1.regs.rcx = (o >>> 40) &&& 1 ∧ s1.regs.rdi = o &&& idxMask ∧
       s1.regs.rdx = (oa >>> 40) &&& 1 ∧ s1.regs.r8 = oa &&& idxMask ∧ s1.regs.r9 = nn ∧
@@ -980,13 +980,13 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
   have hX : ∀ s', s'.regs.rbp = d.regs.rbp → s'.dmem = s1.dmem → Ev Q s' (label exhaustedL) :=
     fun s' e1 e2 => hexh _ ⟨e1, by rw [e2, g13]; exact Pres.refl _ _⟩
   -- the window of `a` (`n + 1` limbs)
-  refine ev_movRMt (sr_code hc (i := 12) rfl) hoffL (v := UInt64.ofNat SA) hdA.1 ?_
-  refine ev_subRR (sr_code hc (i := 13) rfl) fun st hcf => ?_
+  refine ev_movRMt (srt_code hc (i := 12) rfl) hoffL (v := UInt64.ofNat SA) hdA.1 ?_
+  refine ev_subRR (srt_code hc (i := 13) rfl) fun st hcf => ?_
   rs [g4, hSAn] at hcf
-  refine ev_jcc (sr_code hc (i := 14) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc => ?_)
+  refine ev_jcc (srt_code hc (i := 14) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc => ?_)
   simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSAn] at hcc
-  refine ev_cmpRO (sr_code hc (i := 15) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
-  refine ev_jcc (sr_code hc (i := 16) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc4 => ?_)
+  refine ev_cmpRO (srt_code hc (i := 15) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
+  refine ev_jcc (srt_code hc (i := 16) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc4 => ?_)
   simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.or_eq_false_iff, decide_eq_false_iff_not,
     beq_eq_false_iff_ne] at hcc4
   rs [g4] at hcc4
@@ -998,27 +998,27 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
     apply BitVec.eq_of_toNat_eq
     rw [hsub SA _ (by omega) (by omega), e]; rfl
   have hqa : (oa &&& idxMask).toNat + nn.toNat + 1 ≤ SA := by omega
-  refine ev_movRMt (sr_code hc (i := 17) rfl) hoffB (v := UInt64.ofNat BA) (by rs; exact hdA.2) ?_
-  refine ev_leaX (sr_code hc (i := 18) rfl) ?_
+  refine ev_movRMt (srt_code hc (i := 17) rfl) hoffB (v := UInt64.ofNat BA) (by rs; exact hdA.2) ?_
+  refine ev_leaX (srt_code hc (i := 18) rfl) ?_
   -- the output window
-  refine ev_movRMt (sr_code hc (i := 19) rfl) hoffL (v := UInt64.ofNat SO) (by rs; exact hdO.1) ?_
-  refine ev_subRR (sr_code hc (i := 20) rfl) fun st hcf => ?_
+  refine ev_movRMt (srt_code hc (i := 19) rfl) hoffL (v := UInt64.ofNat SO) (by rs; exact hdO.1) ?_
+  refine ev_subRR (srt_code hc (i := 20) rfl) fun st hcf => ?_
   rs [g2, hSOn] at hcf
-  refine ev_jcc (sr_code hc (i := 21) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc5 => ?_)
+  refine ev_jcc (srt_code hc (i := 21) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc5 => ?_)
   simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSOn] at hcc5
-  refine ev_cmpRO (sr_code hc (i := 22) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
-  refine ev_jcc (sr_code hc (i := 23) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc6 => ?_)
+  refine ev_cmpRO (srt_code hc (i := 22) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
+  refine ev_jcc (srt_code hc (i := 23) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc6 => ?_)
   simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc6
   rs [g2] at hcc6
   rw [hsub SO _ (by omega) (by omega)] at hcc6
   simp only [UInt64.toNat_toBitVec] at hcc6
   have hoa : (o &&& idxMask).toNat + nn.toNat ≤ SO := by omega
-  refine ev_movRMt (sr_code hc (i := 24) rfl) hoffB (v := UInt64.ofNat BO) (by rs; exact hdO.2) ?_
-  refine ev_leaX (sr_code hc (i := 25) rfl) ?_
+  refine ev_movRMt (srt_code hc (i := 24) rfl) hoffB (v := UInt64.ofNat BO) (by rs; exact hdO.2) ?_
+  refine ev_leaX (srt_code hc (i := 25) rfl) ?_
   -- the fuel
-  refine ev_subRR (sr_code hc (i := 26) rfl) fun st hcf => ?_
+  refine ev_subRR (srt_code hc (i := 26) rfl) fun st hcf => ?_
   rs [g7, g9] at hcf
-  refine ev_jcc (sr_code hc (i := 27) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc7 => ?_)
+  refine ev_jcc (srt_code hc (i := 27) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc7 => ?_)
   simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec] at hcc7
   have hl14 : nn.toNat ≤ d.regs.r14.toNat := by omega
   have hnF : nn.toNat < n := by omega
@@ -1026,7 +1026,7 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
     (Or.inr ⟨by rw [hszO]; exact hoa, by rw [hszO]; omega⟩)
   rw [← hSA] at hqa
   rw [← hSO] at hoa
-  refine sr_first (d := d) hG hc _ _ hTA hTO (oa &&& idxMask) (o &&& idxMask) nn sh hs σ.mem
+  refine srt_first (d := d) hG hc _ _ hTA hTO (oa &&& idxMask) (o &&& idxMask) nn sh hs σ.mem
     (d.regs.r14 - nn) hqa hoa _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ (fun s' fr hm' => ?_)
   all_goals try rs [g1, g2, g3, g4, g5, g7, g9, g10, g11, g12, g13]
   · show (d.regs.r14 - nn).toNat ≤ _
@@ -1044,7 +1044,7 @@ theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
     simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
     rw [this]; rfl
   all_goals try rfl
-  refine sr_exit hG hc hra hlo hhi s' fr fun s'' e1 e2 e3 e4 e5 e6 => ?_
+  refine srt_exit hG hc hra hlo hhi s' fr fun s'' e1 e2 e3 e4 e5 e6 => ?_
   refine hok _ _ s'' hrun (by rw [e1]; exact hm') rfl e2 e3 e4 e5 ?_ (by rw [e1]; exact fr.pres)
   rw [hnr]; exact resOut_zero' e6
 
