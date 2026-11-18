@@ -122,3 +122,27 @@ def copyAsm (tab : Tab) (f : FnName) : Program :=
     i64 .ret ]                                                         -- 37
 
 end L.AsmEsc
+
+namespace L.AsmEsc
+
+open L L.Arena L.Compiler
+
+section
+variable [Host] {k : Nat} {s : MachineData} {Q : MachineState → Prop}
+
+/-- `and`/`or`/`xor rax, [b + 8 i]`: the operation on the register and the limb. -/
+theorem ev_bitOpS {op : BinOp} (hop : op = .and ∨ op = .or ∨ op = .xor) {d b i : Reg64}
+    (hk : Host.prog[k]? = some (bitOp op d (mbi b i .W64)))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, Ev Q { s with
+        regs := s.regs.set64 d (op.eval (UInt64.ofBitVec (s.regs.get64 d)) v).toBitVec,
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  rcases hop with rfl | rfl | rfl
+  · exact ev_andRS hk hv h
+  · exact ev_orRS hk hv h
+  · exact ev_xorRS hk hv h
+
+end
+
+end L.AsmEsc
