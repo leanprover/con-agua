@@ -132,6 +132,19 @@ theorem carry_eq (a b : Word) : decide (2 ^ 64 ≤ a.toNat + b.toNat) = decide (
     · rw [Nat.mod_eq_of_lt h'] at h; omega
     · exact h'
 
+theorem adc_word (h a b : Word) :
+    UInt64.ofBitVec (h.toBitVec + 0 + (if decide (2 ^ 64 ≤ a.toNat + b.toNat) then 1 else 0)) =
+      h + Cmp.evalW .ult (a + b) b := by
+  rw [carry_eq]; simp only [Cmp.evalW, Cmp.eval]
+  by_cases hc : a + b < b <;> simp [hc] <;> rfl
+
+theorem adc2_word (h a b c : Word) :
+    ({ toBitVec := (h.toBitVec + 0 + (if decide (2 ^ 64 ≤ a.toNat + b.toNat) = true then 1 else 0)) + 0 +
+        (if decide (2 ^ 64 ≤ (a + b).toNat + c.toNat) = true then 1 else 0) } : UInt64) =
+      h + Cmp.evalW .ult (a + b) b + Cmp.evalW .ult (a + b + c) c := by
+  rw [carry_eq, carry_eq]; simp only [Cmp.evalW, Cmp.eval]
+  by_cases h1 : a + b < b <;> by_cases h2 : a + b + c < c <;> simp [h1, h2] <;> rfl
+
 theorem carry_word (a b : Word) :
     UInt64.ofBitVec (0 + 0 + (if decide (2 ^ 64 ≤ a.toNat + b.toNat) then 1 else 0)) = Cmp.evalW .ult (a + b) b := by
   rw [carry_eq]; simp only [Cmp.evalW, Cmp.eval]
@@ -315,6 +328,119 @@ theorem mr_tail_step (TO : TieredArray) (hTO : G.tab.dom64 TO = true) (ob n : Wo
   · rw [L.toNat_add_one_of_lt (by omega)]; omega
   · rw [h14m]; omega
   · exact ht'
+
+/-- One step of the row (`.L`), at index `j < la`: the next step (`hnext`) or, after the last, the
+carry ripple (`hT`). -/
+theorem mr_row_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+    (qb ob y la n X : Word) (R14 : UInt64) (m0 : Mem)
+    (hqa : qb.toNat + la.toNat ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + la.toNat ≤ G.s (G.tab.pos64 TO))
+    (s : MachineData) (j : Word) (hF : MrFr G d s)
+    (hm : MemRel G (mrRows TA TO qb ob y j.toNat m0 0 0).1 s.dmem)
+    (hrsi : s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qb.toNat))
+    (hrdi : s.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat))
+    (hr10 : s.regs.r10 = la) (hr11 : s.regs.r11 = y) (hr13 : s.regs.r13 = j)
+    (hr12 : s.regs.r12 = (mrRows TA TO qb ob y j.toNat m0 0 0).2) (hrcx : s.regs.rcx = 0)
+    (hrbx : s.regs.rbx = X) (hr8 : s.regs.r8 = n) (hr14 : s.regs.r14 = R14) (hj : j.toNat < la.toNat)
+    (hnext : ∀ s', MrFr G d s' → MemRel G (mrRows TA TO qb ob y (j + 1).toNat m0 0 0).1 s'.dmem →
+      s'.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qb.toNat) →
+      s'.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s'.regs.r10 = la → s'.regs.r11 = y → s'.regs.r13 = j + 1 →
+      s'.regs.r12 = (mrRows TA TO qb ob y (j + 1).toNat m0 0 0).2 → s'.regs.rcx = 0 → s'.regs.rbx = X →
+      s'.regs.r8 = n → s'.regs.r14 = R14 → (j + 1).toNat < la.toNat → Ev Q s' (at_ (kf + 33)))
+    (hT : ∀ s', MrFr G d s' → MemRel G (mrRows TA TO qb ob y la.toNat m0 0 0).1 s'.dmem →
+      s'.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s'.regs.r13 = la → s'.regs.r12 = (mrRows TA TO qb ob y la.toNat m0 0 0).2 → s'.regs.rcx = 0 →
+      s'.regs.rbx = X → s'.regs.r8 = n → s'.regs.r14 = R14 → Ev Q s' (at_ (kf + 45))) :
+    Ev Q s (at_ (kf + 33)) := by
+  have hpA := G.tab.pos64_lt hTA
+  have hpO := G.tab.pos64_lt hTO
+  have heA := hG.end64 _ hpA
+  have heO := hG.end64 _ hpO
+  generalize hMc : mrRows TA TO qb ob y j.toNat m0 0 0 = Mc at hm hr12
+  obtain ⟨M, c⟩ := Mc
+  simp only at hm hr12
+  have hszA := hm.size64 TA hTA
+  have hszO := hm.size64 TO hTO
+  generalize hBA : G.b (G.tab.pos64 TA) = BA at *
+  generalize hBO : G.b (G.tab.pos64 TO) = BO at *
+  have hqj : (qb + j).toNat = qb.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hoj : (ob + j).toNat = ob.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hinA : (qb + j).toNat < (M.arr64 TA).size := by rw [hqj, hszA]; omega
+  have hinO : (ob + j).toNat < (M.arr64 TO).size := by rw [hoj, hszO]; omega
+  have haA : s.regs.rsi.toBitVec + s.regs.r13.toBitVec * 8 = A (BA + 8 * (qb + j).toNat) := by
+    rw [hrsi, hr13, addr_idx BA qb.toNat j (by omega), hqj]
+  have haO : s.regs.rdi.toBitVec + s.regs.r13.toBitVec * 8 = A (BO + 8 * (ob + j).toNat) := by
+    rw [hrdi, hr13, addr_idx BO ob.toNat j (by omega), hoj]
+  have hrA : rdW s.dmem (A (BA + 8 * (qb + j).toNat)) = some (M.arr64 TA)[(qb + j).toNat] := by
+    have := hm.get64 TA hTA (qb + j).toNat hinA; rw [hBA] at this; exact this
+  have hrO : rdW s.dmem (A (BO + 8 * (ob + j).toNat)) = some (M.arr64 TO)[(ob + j).toNat] := by
+    have := hm.get64 TO hTO (ob + j).toNat hinO; rw [hBO] at this; exact this
+  refine ev_label (mr_code hc (i := 33) rfl) ?_
+  refine ev_ldX (mr_code hc (i := 34) rfl) (v := (M.arr64 TA)[(qb + j).toNat]) (by rs; rw [haA]; exact hrA) ?_
+  refine ev_mulR (mr_code hc (i := 35) rfl) fun st1 => ?_
+  refine ev_addRS (mr_code hc (i := 36) rfl) (v := (M.arr64 TO)[(ob + j).toNat]) (by rs; rw [haO]; exact hrO)
+    fun st2 hcf2 => ?_
+  refine ev_adcRR (mr_code hc (i := 37) rfl) fun st3 => ?_
+  refine ev_addRR (mr_code hc (i := 38) rfl) fun st4 hcf4 => ?_
+  refine ev_adcRR (mr_code hc (i := 39) rfl) fun st5 => ?_
+  refine ev_stX (mr_code hc (i := 40) rfl) (by rs; rw [haO, hrO]; rfl) ?_
+  refine ev_movRR (mr_code hc (i := 41) rfl) ?_
+  refine ev_addRI (mr_code hc (i := 42) rfl) fun st6 => ?_
+  refine ev_cmpRO (mr_code hc (i := 43) rfl) (v := la) (Or.inr (Or.inr ⟨.r10, rfl, by rs [hr10]⟩)) ?_
+  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+  have hrow : mrRows TA TO qb ob y (j + 1).toNat m0 0 0 = mrStep TA TO qb ob y M j c := by
+    rw [hj1, mrRows_succ, hMc, UInt64.zero_add, L.ofNat_toNat]
+  have hstep : mrStep TA TO qb ob y M j c =
+      (M.set64 TO (ob + j) ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat] + c),
+       BinOp.mulhi.eval (M.arr64 TA)[(qb + j).toNat] y +
+         Cmp.evalW .ult ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat])
+           (M.arr64 TO)[(ob + j).toNat] +
+         Cmp.evalW .ult ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat] + c) c) := by
+    simp only [mrStep, getElem!_pos, hinA, hinO]
+  rw [hrow, hstep] at hnext
+  have hm' := MemRel.store64 hG hm hTO hinO
+    ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat] + c)
+  rw [hBO] at hm'
+  have hpres := hF.pres.trans (Pres.store64 hG (top := d.regs.rsp.toNat) (d := s.dmem) hTO
+    (j := (ob + j).toNat) (by omega) ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat] + c).toBitVec)
+  rw [hBO] at hpres
+  rs [hr11, hr12, hr13, hrcx] at hcf2 hcf4
+  have haO' : (UInt64.ofNat (BO + 8 * ob.toNat)).toBitVec + j.toBitVec * 8 = A (BO + 8 * (ob + j).toNat) := by
+    have := haO; rw [hrdi, hr13] at this; exact this
+  have hval : ((M.arr64 TA)[(qb + j).toNat] * y).toBitVec + (M.arr64 TO)[(ob + j).toNat].toBitVec + c.toBitVec =
+      ((M.arr64 TA)[(qb + j).toNat] * y + (M.arr64 TO)[(ob + j).toNat] + c).toBitVec := rfl
+  refine ev_jcc (mr_code hc (i := 44) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · refine ev_lbl (Code.label hc (i := 33) rfl) ?_
+    refine hnext _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hrdi, hr10, hr11, hr12, hr13, hrcx, hrbx, hr8, hr14]
+    · rw [← hr14]; exact hF.r14
+    · rw [haO', hval]; exact hpres
+    · rw [haO', hval]; exact hm'
+    · rfl
+    · rw [hcf2, hcf4]
+      simp only [UInt64.toNat_toBitVec, ← UInt64.toBitVec_add]
+      exact adc2_word _ _ _ _
+    · simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hcc
+      rs [hr13] at hcc
+      exact hcc
+    all_goals done
+  · simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc
+    rs [hr13] at hcc
+    have e1 : (j + 1).toNat = (j.toBitVec + (Int64.ofInt 1).toBitVec).toNat := rfl
+    have e2 : la.toNat = la.toBitVec.toNat := rfl
+    have hla : j + 1 = la := UInt64.toNat_inj.mp (by omega)
+    rw [← hla] at hT
+    rw [hrow, hstep] at hT
+    refine hT _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hrdi, hr10, hr11, hr12, hr13, hrcx, hrbx, hr8, hr14]
+    · rw [← hr14]; exact hF.r14
+    · rw [haO', hval]; exact hpres
+    · rw [haO', hval]; exact hm'
+    · rfl
+    · rw [hcf2, hcf4]
+      simp only [UInt64.toNat_toBitVec, ← UInt64.toBitVec_add]
+      exact adc2_word _ _ _ _
+    all_goals done
 
 end
 

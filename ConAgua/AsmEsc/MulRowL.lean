@@ -122,6 +122,17 @@ theorem mrRows_size (TA TO : TieredArray) (qb ob y : Word) (b : TieredArray) :
   | r + 1, m, i, c => by
     rw [mrRows, mrRows_size TA TO qb ob y b r]; simp only [mrStep, size_set64]
 
+/-- The row's last step: `r + 1` steps are `r` steps, then one at index `i + r`. -/
+theorem mrRows_succ (TA TO : TieredArray) (qb ob y : Word) :
+    ∀ (r : Nat) (m : Mem) (i c : Word), mrRows TA TO qb ob y (r + 1) m i c =
+      mrStep TA TO qb ob y (mrRows TA TO qb ob y r m i c).1 (i + UInt64.ofNat r) (mrRows TA TO qb ob y r m i c).2
+  | 0, m, i, c => by simp [mrRows]
+  | r + 1, m, i, c => by
+    rw [mrRows, mrRows_succ TA TO qb ob y r, mrRows]
+    have e : i + 1 + UInt64.ofNat r = i + UInt64.ofNat (r + 1) := by
+      rw [UInt64.add_assoc, UInt64.ofNat_add, UInt64.add_comm 1]; rfl
+    rw [e]
+
 /-- The row loop at fuel `k ≥ r` with `r` steps to go, its windows in their tiers: `mrRows`. -/
 theorem mrW1_run (p : Prog) (TA TO : TieredArray) (qb ob y la : Word) :
     ∀ (r k : Nat) (σ : St), tierA 0 (σ.loc 13) = TA → tierA 0 (σ.loc 11) = TO → σ.loc 14 = qb →
