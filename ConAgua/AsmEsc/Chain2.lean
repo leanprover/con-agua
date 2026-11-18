@@ -530,6 +530,57 @@ theorem chain2Asm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok) (f :
   refine ev_movRI (c2_code hc (i := 43) rfl) ?_
   refine ev_movRR (c2_code hc (i := 44) rfl) ?_
   refine ev_addRIc (c2_code hc (i := 45) rfl) fun st hcf => ?_
-  sorry
+  rs [g8] at hcf
+  have hcfc : st.cf = c := by rw [hcf]; cases c <;> decide
+  have hl14 : nn.toNat ≤ d.regs.r14.toNat := by omega
+  have hR14 : (d.regs.r14 - nn).toNat = d.regs.r14.toNat - nn.toNat := UInt64.toNat_sub_of_le _ _
+    (UInt64.le_iff_toNat_le.mpr hl14)
+  have hnF : nn.toNat < n := by omega
+  have hrun := hspec σ o oa ob nn c n hnF (Or.inr ⟨by rw [hszA]; exact hqa, by rw [hszB]; exact hqb,
+    by rw [hszO]; exact hoa, by rw [hszA]; omega, by rw [hszB]; omega, by rw [hszO]; omega⟩)
+  simp only [] at hrun
+  rw [← hSA] at hqa
+  rw [← hSB] at hqb
+  rw [← hSO] at hoa
+  refine c2_loop (d := d) hG hc _ _ _ hTA hTB hTO (oa &&& idxMask) (ob &&& idxMask) (o &&& idxMask) nn
+    (d.regs.r14 - nn) σ.mem c hqa hqb hoa ?_ nn.toNat _ 0 (by simp) ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    ?_ ?_ (by have := L.toNat_ne_zero_of_ne _ hnz; simp only [UInt64.toNat_zero]; omega)
+  all_goals try rs [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13]
+  · intro s' fr hm' hcf' hrdx' hr14'
+    refine ev_movRI (c2_code hc (i := 53) rfl) ?_
+    refine ev_adcRRc (c2_code hc (i := 54) rfl) fun st' _ => ?_
+    refine frame_ret hG hra hlo hhi ⟨?_, ?_, ?_, ?_, ?_⟩ (c2_code hc (i := 55) rfl)
+      fun s'' e1 e2 e3 e4 e5 e6 => ?_
+    all_goals try rs [fr.rsp, fr.rbp, fr.r15]
+    · exact fr.r14
+    · exact fr.pres
+    refine hok _ _ s'' hrun
+      (by rw [e1]; exact hm') rfl e2 e3 e4 (by rw [e5]; rs; exact fr.r14) ?_ (by rw [e1]; exact fr.pres)
+    rw [hnr]
+    refine resOut_zero' ?_
+    rw [e6]; rs [hrdx']
+    rw [cfW_bw hcf']
+    simp
+  · show (d.regs.r14 - nn).toNat ≤ _; omega
+  · exact Pres.refl _ _
+  · simpa [ch2Rows] using hmem
+  · simp only [UInt64.toNat_zero, ch2Rows]; exact hcfc
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBA]
+    have := addr_idx BA 0 (oa &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBB]
+    have := addr_idx BB 0 (ob &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBO]
+    have := addr_idx BO 0 (o &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · simp
+  · rfl
 
 end L.AsmEsc
