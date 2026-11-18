@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.AsmEsc.SubRowAsm
+public import ConAgua.AsmEsc.DivSubmulAsm
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.AsmKeys
 
@@ -18,6 +19,8 @@ proof's per-function contract (`checkerX_ok`, `AsmXOk.lean`).
   `ConAgua/AsmEsc/MulRowAsm.lean`.
 * `sub_row` (`L.Arena.subRow`, the in-place subtraction of Karatsuba's middle term): `subRowAsm`,
   `ConAgua/AsmEsc/SubRowAsm.lean`.
+* `div_submul` (`L.Arena.divSubmul`, long division's multiply-subtract step): `divSubmulAsm`,
+  `ConAgua/AsmEsc/DivSubmulAsm.lean`.
 -/
 
 namespace L.Checker
@@ -25,7 +28,9 @@ namespace L.Checker
 open L L.Compiler L.AsmEsc
 
 /-- **The hand-written bodies of the checker.** -/
-def checkerX : AsmTab := [(mulRowCode, mulRowAsm checkerTab), (subRowCode, subRowAsm checkerTab)]
+def checkerX : AsmTab :=
+  [(mulRowCode, mulRowAsm checkerTab), (subRowCode, subRowAsm checkerTab),
+   (divSubmulCode, divSubmulAsm checkerTab)]
 
 /-- The inliner's exclusion list is `checkerX`'s keys. -/
 theorem checkerX_keys : checkerX.map (·.1) = checkerXKeys := rfl

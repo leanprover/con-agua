@@ -20,7 +20,10 @@ abbrev mulRowCode : Nat := 34702489570787084
 /-- `nameCode "sub_row"`, as a literal (`nameCode_sub_row`). -/
 abbrev subRowCode : Nat := 34702489570126600
 
+/-- `nameCode "div_submul"`, as a literal (`nameCode_div_submul`). -/
+abbrev divSubmulCode : Nat := 535373398662674939474756
+
 /-- **The name codes of the hand-written functions.** -/
-def checkerXKeys : List Nat := [mulRowCode, subRowCode]
+def checkerXKeys : List Nat := [mulRowCode, subRowCode, divSubmulCode]
 
 end L.Checker
