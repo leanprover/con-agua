@@ -6,7 +6,6 @@ import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import ConAgua.Census.Attr
 import all ConAgua.Front.Fields
-import ConAgua.Arena.NatCmpFacts
 
 @[expose] public section
 

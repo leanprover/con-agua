@@ -1,7 +1,5 @@
 module
 
-public import ConAgua.Arena.SlotGrow
-public import ConAgua.Arena.NatMul
 public import ConAgua.Front.Fields
 public import Std.Data.DTreeMap.Internal.Operations
 import Std.WP.Triple.SpecLemmas

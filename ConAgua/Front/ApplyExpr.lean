@@ -2,14 +2,9 @@ module
 
 public import ConAgua.Front.Apply
 public import ConAgua.Front.ExprIface
-public import ConAgua.Arena.ExprMk
 public import ConAgua.Front.NatDecBig
 public import ConAgua.Front.Preserve
 public import ConAgua.Front.Unescape
-public import ConAgua.Arena.BVarStore
-public import ConAgua.Arena.ConstStore
-public import ConAgua.Arena.LsStore
-public import ConAgua.Arena.SortStore
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr

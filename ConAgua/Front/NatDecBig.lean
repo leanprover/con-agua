@@ -5,7 +5,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
 import Std.Tactic.BVDecide.Normalize.BitVec
-public import ConAgua.Arena.Frame
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Front.NatDec
