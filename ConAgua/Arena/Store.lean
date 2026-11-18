@@ -81,40 +81,45 @@ theorem hashN_tstep (m : Mem) (o i : Word) (k : Nat) (hk : k = i.toNat + 1)
   subst hk; rw [hashN, tpool_res m o i h]
 grind_pattern [arena_grind] hashN_tstep => hashN (tpool m) o.toNat k, prd m (o + i)
 
-/-- Four limbs per round while at least four are left (`x` and `l` move on): the loop costs one
-test and one fuel unit per four limbs. -/
-def hashLoop4 : Stmt := lblk (o, l, i, h, t, x, q) {
-  while 4 <= l {
-    h := (h ^ POOL⟨t⟩[x]) * q;
-    h := (h ^ POOL⟨t⟩[x + 1]) * q;
-    h := (h ^ POOL⟨t⟩[x + 2]) * q;
-    h := (h ^ POOL⟨t⟩[x + 3]) * q;
-    x += 4;
-    l -= 4
-  }
+/-- The loop over a resolved slice (`sliceRes`): `POOL⟨t⟩[x + i]` is limb `i` of `(o, l)`. -/
+def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
+  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫ }
 }
 
-/-- The last up to three limbs. -/
-def hashLoop : Stmt := lblk (o, l, i, h, t, x, q) {
-  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * q }
-}
-
-/-- The slice resolved (`sliceRes`), then the limbs four at a time. Its size (more than the
-inliner's 80 nodes, `Compiler/Inline.lean`) keeps it a function of its own, which the compiler
-compiles as a leaf with its locals in registers; inlined into `intern_lit` they were on the stack
-(lane linleaf).
-con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x, q) {
+/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
+@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
   h := ⟪fnvBasis⟫;
   ⟪sliceRes 0 1 4 5⟫;
-  q := ⟪fnvPrime⟫;
-  ⟪hashLoop4⟫;
   ⟪hashLoop⟫;
   return h
 }
 
 section hash
 variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
+
+/-- The loop's precondition: the slice resolved, the hash of the limbs before `i`. -/
+def HashRes (s : St) : Prop :=
+  s.loc 4 = s.loc 0 >>> 40 ∧ s.loc 5 = s.loc 0 &&& 1099511627775 ∧
+  (s.loc 0 &&& 1099511627775).toNat + (s.loc 1).toNat ≤ 2 ^ 40 ∧
+  (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
+  s.loc 3 = hashN (tpool s.mem) (s.loc 0).toNat (s.loc 2).toNat
+
+theorem hashLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashRes s⦄
+    exec p n hashLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
+  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧ HashRes s)
+    (fun h => ⟨rfl, rfl, rfl, h⟩) (by grind [HashRes]) (fun k s₁ => by
+      sym only [lang_grind, arena_grind] =>
+        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [HashRes, LoopPost]) n
+
+theorem hashLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ HashRes s⦄
+    step p (exec p n) hashLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
+  Triple.step_exec (hashLoop_spec p (n + 1) s₀)
 
 include hp in
 /-- (The slice's bounds `_hs`, `_hb` are no longer needed: `sliceRes` checks that the slice lies
@@ -124,7 +129,15 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (tpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp]
+  simp only [callFn, litHash]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalArgs, setLoc, sliceRes_spec p _ 0 1 4 5 (by decide) (by decide)
+      (by decide), hashLoop_step_spec p n]
+    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, hashN_zero])
 
 end hash
 

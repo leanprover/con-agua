@@ -1004,17 +1004,17 @@ theorem natMul_top : TopSpec natArmProg "nat_mul" (fun a b => a * b) :=
 
 theorem natLand_top : TopSpec natArmProg "nat_land" Nat.land := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natLand_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natLand_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← land_bv] using this
 
 theorem natLor_top : TopSpec natArmProg "nat_lor" Nat.lor := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natLor_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natLor_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← lor_bv] using this
 
 theorem natXor_top : TopSpec natArmProg "nat_xor" Nat.xor := by
   intro n s₀ oa la ob lb hok ha hb _ _
-  have := natXor_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb
+  have := natXor_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
   simpa only [← xor_bv] using this
 
 theorem natShl_top : TopSpec natArmProg "nat_shl" Nat.shiftLeft := by
@@ -1024,7 +1024,7 @@ theorem natShl_top : TopSpec natArmProg "nat_shl" Nat.shiftLeft := by
 
 theorem natShr_top : TopSpec natArmProg "nat_shr" Nat.shiftRight := by
   intro n s₀ oa la ob lb hok ha hb _ hnb
-  have := natShr_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb hnb
+  have := natShr_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb hnb
   simpa only [← Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq'] using this
 
 /-! ## Under `ArenaR` -/
