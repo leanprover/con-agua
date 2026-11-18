@@ -691,4 +691,216 @@ theorem shlAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
     rw [this]; rfl
   all_goals rfl
 
+
+/-! ## `shr_n` -/
+
+section
+variable [Host] {kf : Nat} {tab : Tab}
+
+theorem sr_code (hc : Code (shrAsm tab) kf) {i : Nat} {x : Directive}
+    (hi : (shrAsm tab)[i]? = some x) : Host.prog[kf + i]? = some x := Code.get hc hi
+
+end
+
+theorem addr_m8 (a j : Word) :
+    (a.toBitVec - 8) + (j + 1).toBitVec * 8 = a.toBitVec + j.toBitVec * 8 := by
+  rw [UInt64.toBitVec_add]; simp only [UInt64.toBitVec_one]; bv_omega
+
+section
+variable [Host] {G : L.Compiler.Layout} (hG : G.Ok) {kf : Nat} (hc : Code (shrAsm G.tab) kf)
+  {d : MachineData} {Q : MachineState → Prop}
+include hG hc
+
+/-- One step of `shr_n`'s loop (`.L`) at limb `j`, the current limb in `rdx`. -/
+theorem sr_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+    (qa ob n sh : Word) (hs : sh < 64) (R14 : UInt64) (m0 : Mem) (x0 : Word)
+    (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
+    (s : MachineData) (j : Word) (hF : MrFr G d s)
+    (hm : MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) j.toNat m0 0 x0).1 s.dmem)
+    (hx : s.regs.rdx = (wRows (shrStep TA TO qa ob sh (63 - sh)) j.toNat m0 0 x0).2)
+    (hrsi : s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qa.toNat))
+    (hr11 : s.regs.r11.toBitVec = (UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat)).toBitVec - 8)
+    (hr13 : s.regs.r13 = j) (hr9 : s.regs.r9 = n) (hrcx : s.regs.rcx = sh)
+    (hr14 : s.regs.r14 = R14) (hj : j.toNat < n.toNat)
+    (hnext : ∀ s', MrFr G d s' →
+      MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) (j + 1).toNat m0 0 x0).1 s'.dmem →
+      s'.regs.rdx = (wRows (shrStep TA TO qa ob sh (63 - sh)) (j + 1).toNat m0 0 x0).2 →
+      s'.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qa.toNat) →
+      s'.regs.r11.toBitVec = (UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat)).toBitVec - 8 →
+      s'.regs.r13 = j + 1 → s'.regs.r9 = n → s'.regs.rcx = sh → s'.regs.r14 = R14 →
+      (j + 1).toNat < n.toNat → Ev Q s' (at_ (kf + 35)))
+    (hE : ∀ s', MrFr G d s' →
+      MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) n.toNat m0 0 x0).1 s'.dmem →
+      Ev Q s' (at_ (kf + 43))) :
+    Ev Q s (at_ (kf + 35)) := by
+  have hpA := G.tab.pos64_lt hTA
+  have hpO := G.tab.pos64_lt hTO
+  have heA := hG.end64 _ hpA
+  have heO := hG.end64 _ hpO
+  generalize hMc : wRows (shrStep TA TO qa ob sh (63 - sh)) j.toNat m0 0 x0 = Mc at hm hx
+  obtain ⟨M, x⟩ := Mc
+  simp only at hm hx
+  have hszA := hm.size64 TA hTA
+  have hszO := hm.size64 TO hTO
+  generalize hBA : G.b (G.tab.pos64 TA) = BA at *
+  generalize hBO : G.b (G.tab.pos64 TO) = BO at *
+  have hj1 : (j + 1).toNat = j.toNat + 1 := L.toNat_add_one_of_lt (by omega)
+  have hqj : (qa + (j + 1)).toNat = qa.toNat + j.toNat + 1 := by
+    rw [L.toNat_add_of_lt _ _ (by omega), hj1]; omega
+  have hoj : (ob + j).toNat = ob.toNat + j.toNat := L.toNat_add_of_lt _ _ (by omega)
+  have hinA : (qa + (j + 1)).toNat < (M.arr64 TA).size := by rw [hqj, hszA]; omega
+  have hinO : (ob + j).toNat < (M.arr64 TO).size := by rw [hoj, hszO]; omega
+  have haA : (UInt64.ofNat (BA + 8 * qa.toNat)).toBitVec + (j + 1).toBitVec * 8 =
+      A (BA + 8 * (qa + (j + 1)).toNat) := by
+    have hsum : qa.toNat + (j + 1).toNat = (qa + (j + 1)).toNat := by rw [hqj, hj1]; omega
+    rw [addr_idx BA qa.toNat (j + 1) (by rw [hj1]; omega), hsum]
+  have haO : s.regs.r11.toBitVec + (j + 1).toBitVec * 8 = A (BO + 8 * (ob + j).toNat) := by
+    rw [hr11, addr_m8, addr_idx BO ob.toNat j (by omega), hoj]
+  have hrA : rdW s.dmem (A (BA + 8 * (qa + (j + 1)).toNat)) = some (M.arr64 TA)[(qa + (j + 1)).toNat] := by
+    have := hm.get64 TA hTA _ hinA; rw [hBA] at this; exact this
+  have hrO : rdW s.dmem (A (BO + 8 * (ob + j).toNat)) = some (M.arr64 TO)[(ob + j).toNat] := by
+    have := hm.get64 TO hTO (ob + j).toNat hinO; rw [hBO] at this; exact this
+  obtain ⟨y, hy⟩ : ∃ y, (M.arr64 TA)[(qa + (j + 1)).toNat]'hinA = y := ⟨_, rfl⟩
+  rw [hy] at hrA
+  have hy' : (M.arr64 TA)[(qa + (j + 1)).toNat]! = y := by simp only [getElem!_pos, hinA]; exact hy
+  have hval : dshr x y sh = (x >>> sh) ||| ((y <<< 1) <<< (63 - sh)) := dshr_eq _ _ _ hs
+  refine ev_label (sr_code hc (i := 35) rfl) ?_
+  refine ev_movRR (sr_code hc (i := 36) rfl) ?_
+  refine ev_addRI (sr_code hc (i := 37) rfl) fun st1 => ?_
+  have hr13' : (j.toBitVec + (Int64.ofInt 1).toBitVec) = (j + 1).toBitVec := rfl
+  refine ev_ldX (sr_code hc (i := 38) rfl) (v := y) (by rs [hrsi, hr13]; rw [hr13', haA]; exact hrA) ?_
+  refine ev_shrdCl (sr_code hc (i := 39) rfl) fun st2 => ?_
+  refine ev_stX (sr_code hc (i := 40) rfl) (by rs [hr13]; rw [hr13', haO, hrO]; rfl) ?_
+  refine ev_cmpRO (sr_code hc (i := 41) rfl) (v := n) (Or.inr (Or.inr ⟨.r9, rfl, by rs [hr9]⟩)) ?_
+  have hrow : wRows (shrStep TA TO qa ob sh (63 - sh)) (j + 1).toNat m0 0 x0 =
+      (M.set64 TO (ob + j) ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh))), y) := by
+    rw [hj1, wRows_succ, hMc, UInt64.zero_add, L.ofNat_toNat]
+    simp only [shrStep, hy']
+  rw [hrow] at hnext
+  have hm' := MemRel.store64 hG hm hTO hinO ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh)))
+  rw [hBO] at hm'
+  have hpres := hF.pres.trans (Pres.store64 hG (top := d.regs.rsp.toNat) (d := s.dmem) hTO
+    (j := (ob + j).toNat) (by omega) ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh))).toBitVec)
+  rw [hBO] at hpres
+  have haO2 : (UInt64.ofNat (BO + 8 * ob.toNat)).toBitVec - 8 + (j + 1).toBitVec * 8 =
+      A (BO + 8 * (ob + j).toNat) := by rw [← hr11]; exact haO
+  have hv : (dshr (UInt64.ofBitVec x.toBitVec) (UInt64.ofBitVec y.toBitVec) sh).toBitVec =
+      ((x >>> sh) ||| ((y <<< 1) <<< (63 - sh))).toBitVec := by rw [← hval]
+  refine ev_jcc (sr_code hc (i := 42) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · refine ev_lbl (Code.label hc (i := 35) rfl) ?_
+    refine hnext _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hr11, hr13, hr9, hrcx, hr14, hx]
+    · rw [← hr14]; exact hF.r14
+    · rw [hr13', haO2, hv]; exact hpres
+    · rw [hr13', haO2, hv]; exact hm'
+    all_goals try rfl
+    · simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hcc
+      rs [hr13] at hcc
+      exact hcc
+  · simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc
+    rs [hr13] at hcc
+    have e1 : (j + 1).toNat = (j.toBitVec + (Int64.ofInt 1).toBitVec).toNat := rfl
+    have e2 : n.toNat = n.toBitVec.toNat := rfl
+    have hla : j + 1 = n := UInt64.toNat_inj.mp (by omega)
+    rw [← hla, hrow] at hE
+    refine hE _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_
+    all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hr11, hr13, hr9, hrcx, hr14, hx]
+    · rw [← hr14]; exact hF.r14
+    · rw [hr13', haO2, hv]; exact hpres
+    · rw [hr13', haO2, hv]; exact hm'
+
+
+theorem sr_loop (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+    (qa ob n sh : Word) (hs : sh < 64) (R14 : UInt64) (m0 : Mem) (x0 : Word)
+    (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
+    (hE : ∀ s', MrFr G d s' →
+      MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) n.toNat m0 0 x0).1 s'.dmem →
+      Ev Q s' (at_ (kf + 43))) :
+    ∀ (r : Nat) (s : MachineData) (j : Word), n.toNat = j.toNat + r → MrFr G d s →
+      MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) j.toNat m0 0 x0).1 s.dmem →
+      s.regs.rdx = (wRows (shrStep TA TO qa ob sh (63 - sh)) j.toNat m0 0 x0).2 →
+      s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qa.toNat) →
+      s.regs.r11.toBitVec = (UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat)).toBitVec - 8 →
+      s.regs.r13 = j → s.regs.r9 = n → s.regs.rcx = sh → s.regs.r14 = R14 → j.toNat < n.toNat →
+      Ev Q s (at_ (kf + 35)) := by
+  intro r
+  induction r with
+  | zero => intro s j hr _ _ _ _ _ _ _ _ _ hj; omega
+  | succ r ih =>
+    intro s j hr hF hm hx h1 h2 h3 h4 h5 h6 hj
+    refine sr_step hG hc TA TO hTA hTO qa ob n sh hs R14 m0 x0 hqa hoa s j hF hm hx h1 h2 h3 h4 h5 h6 hj ?_ hE
+    intro s' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10
+    have := n.toNat_lt
+    exact ih s' (j + 1) (by rw [L.toNat_add_one_of_lt (by omega)]; omega) g1 g2 g3 g4 g5 g6 g7 g8 g9 g10
+
+theorem sr_exit {ra : Word} (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra) (hlo : G.lo ≤ d.regs.rsp.toNat)
+    (hhi : d.regs.rsp.toNat + 8 ≤ G.hi) (s : MachineData) (hF : MrFr G d s)
+    (hok : ∀ s', s'.dmem = s.dmem → s'.regs.rsp.toNat = d.regs.rsp.toNat + 8 →
+      s'.regs.rbp = d.regs.rbp → s'.regs.r15 = d.regs.r15 → s'.regs.r14.toNat ≤ d.regs.r14.toNat →
+      s'.regs.rax = 0 → Ev Q s' (Int64.ofBitVec ra.toBitVec)) :
+    Ev Q s (at_ (kf + 43)) := by
+  refine ev_label (sr_code hc (i := 43) rfl) ?_
+  refine ev_movRI (sr_code hc (i := 44) rfl) ?_
+  refine frame_ret hG hra hlo hhi ⟨?_, ?_, ?_, ?_, ?_⟩ (sr_code hc (i := 45) rfl) fun s' e1 e2 e3 e4 e5 e6 => ?_
+  all_goals try rs [hF.rsp, hF.rbp, hF.r15]
+  · exact hF.r14
+  · exact hF.pres
+  · exact hok s' e1 e2 e3 e4 (by rw [e5]; rs; exact hF.r14) (by rw [e6]; rs)
+
+/-- From index 28: the first limb `x := A[0]`, the store base, then `.L` or (`n = 0`) `.Z`. -/
+theorem sr_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+    (qa ob n sh : Word) (hs : sh < 64) (m0 : Mem) (R14 : UInt64)
+    (hqa : qa.toNat + n.toNat + 1 ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
+    (s : MachineData) (hF : MrFr G d s) (hm : MemRel G m0 s.dmem)
+    (hrsi : s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qa.toNat))
+    (hrdi : s.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat))
+    (hr9 : s.regs.r9 = n) (hr10 : s.regs.r10 = sh) (hr14 : s.regs.r14 = R14)
+    (hE : ∀ s', MrFr G d s' →
+      MemRel G (wRows (shrStep TA TO qa ob sh (63 - sh)) n.toNat m0 0 (m0.arr64 TA)[qa.toNat]!).1 s'.dmem →
+      Ev Q s' (at_ (kf + 43))) :
+    Ev Q s (at_ (kf + 28)) := by
+  have hpA := G.tab.pos64_lt hTA
+  have heA := hG.end64 _ hpA
+  have hszA := hm.size64 TA hTA
+  generalize hBA : G.b (G.tab.pos64 TA) = BA at *
+  have hinA : qa.toNat < (m0.arr64 TA).size := by rw [hszA]; omega
+  have haA : s.regs.rsi.toBitVec + (0 : Word).toBitVec * 8 = A (BA + 8 * qa.toNat) := by
+    rw [hrsi, addr_idx BA qa.toNat 0 (by simp; omega)]; simp
+  have hrA : rdW s.dmem (A (BA + 8 * qa.toNat)) = some (m0.arr64 TA)[qa.toNat] := by
+    have := hm.get64 TA hTA _ hinA; rw [hBA] at this; exact this
+  have hx0 : (m0.arr64 TA)[qa.toNat]! = (m0.arr64 TA)[qa.toNat] := by simp only [getElem!_pos, hinA]
+  refine ev_movRI (sr_code hc (i := 28) rfl) ?_
+  refine ev_movRR (sr_code hc (i := 29) rfl) ?_
+  refine ev_ldX (sr_code hc (i := 30) rfl) (v := (m0.arr64 TA)[qa.toNat]) (by rs; rw [haA]; exact hrA) ?_
+  refine ev_movRR (sr_code hc (i := 31) rfl) ?_
+  refine ev_subRI (sr_code hc (i := 32) rfl) fun st1 => ?_
+  refine ev_cmpRO (sr_code hc (i := 33) rfl) (v := 0) (Or.inl rfl) ?_
+  refine ev_jcc (sr_code hc (i := 34) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · simp only [CondCode.interp, cmpFlags_zf, beq_iff_eq] at hcc
+    rs [hr9] at hcc
+    have hn0 : n = 0 := UInt64.toBitVec_inj.mp hcc
+    subst hn0
+    refine ev_lbl (Code.label hc (i := 43) rfl) ?_
+    refine hE _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_
+    all_goals try rs [hF.rsp, hF.rbp, hF.r15, hr14]
+    · rw [← hr14]; exact hF.r14
+    · exact hF.pres
+    · simpa [wRows] using hm
+  simp only [CondCode.interp, cmpFlags_zf, beq_eq_false_iff_ne] at hcc
+  rs [hr9] at hcc
+  have hnz : n ≠ 0 := fun h => hcc (by rw [h])
+  rw [← hx0] at *
+  refine sr_loop hG hc TA TO hTA hTO qa ob n sh hs (R14) m0 _ (by rw [← hBA] at *; omega) hoa hE n.toNat _ 0
+    (by simp) ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  all_goals try rs [hF.rsp, hF.rbp, hF.r15, hrsi, hrdi, hr9, hr10, hr14]
+  · rw [← hr14]; exact hF.r14
+  · exact hF.pres
+  · simpa [wRows] using hm
+  · simp [wRows]
+  · rw [hBA]
+  all_goals try rfl
+  · have := L.toNat_ne_zero_of_ne _ hnz; simp only [UInt64.toNat_zero]; omega
+
+end
+
 end L.AsmEsc
