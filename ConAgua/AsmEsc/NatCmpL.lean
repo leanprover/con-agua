@@ -29,6 +29,12 @@ def ncRes (TA TB : TieredArray) (qa qb : Word) (m : Mem) : Nat → Word
     let y := (m.arr64 TB)[(qb + UInt64.ofNat k).toNat]!
     if x < y then 0 else if y < x then 2 else ncRes TA TB qa qb m k
 
+/-- Equal limbs `j` pass the comparison down. -/
+theorem ncRes_eq (TA TB : TieredArray) (qa qb : Word) (M : Mem) (j : Nat)
+    (h : (M.arr64 TA)[(qa + UInt64.ofNat j).toNat]! = (M.arr64 TB)[(qb + UInt64.ofNat j).toNat]!) :
+    ncRes TA TB qa qb M (j + 1) = ncRes TA TB qa qb M j := by
+  simp only [ncRes, h, UInt64.lt_irrefl, reduceIte]
+
 /-- The loop's signal for the result `w`: it returns `0` or `2`, and ends normally for `1`. -/
 def ncSig (w : Word) : Sig := if w = 1 then .normal else .ret [w]
 
@@ -171,10 +177,10 @@ theorem ncW_run (p : Prog) (oa ob : Word) :
       rw [hm1] at e2
       exact e2
 
-/-- **`nat_cmp` at fuel `F > la`**: by the lengths, or for equal lengths, with both windows in
+/-- **`nat_cmp` at fuel `F > 0`** (`F > la` for equal lengths): by the lengths, or for equal lengths, with both windows in
 their tiers below `2^40` (or `la = 0`), `ncRes` over the `la` limbs. -/
 theorem natCmp_run (p : Prog) (hp : p.lookup "nat_cmp" = some natCmp) (σ : St) (oa la ob lb : Word)
-    (F : Nat) (hF : la.toNat < F)
+    (F : Nat) (hF0 : 0 < F) (hF : la = lb → la.toNat < F)
     (hw : la = lb → la = 0 ∨ ((oa &&& idxMask).toNat + la.toNat ≤ 2 ^ 40 ∧
       (ob &&& idxMask).toNat + la.toNat ≤ 2 ^ 40 ∧
       (oa &&& idxMask).toNat + la.toNat ≤ (σ.mem.arr64 (tierA 0 (oa >>> 40))).size ∧
@@ -210,6 +216,7 @@ theorem natCmp_run (p : Prog) (hp : p.lookup "nat_cmp" = some natCmp) (σ : St) 
   have g0 : S.loc 0 = oa := by subst hS; rfl
   have g2 : S.loc 2 = ob := by subst hS; rfl
   have g4 : S.loc 4 = la := by subst hS; rfl
+  have hF' := hF heq
   obtain ⟨S1, e1, hm1, _⟩ := ncW_run p oa ob la.toNat F S g0 g2 (by rw [g4]) (by omega)
     (by rw [hM]; rcases hw heq with h | h
         · left; rw [h]; rfl
