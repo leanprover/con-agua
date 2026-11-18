@@ -2,7 +2,7 @@ module
 
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
-public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatLeaf
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.GrindAttr
