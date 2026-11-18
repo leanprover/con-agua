@@ -1127,4 +1127,338 @@ theorem copyN_spec (hp : p.lookup "copy_n" = some copyN) (n : Nat) (s₀ : St) (
 
 end copyn
 
+/-! ## Specs of the shift leaves and `zero_n` -/
+
+/-- One step of `shl_n`'s loop, in the shape of its verification condition. -/
+theorem shln_step_goal (m : Mem) (P0 : Array Word) (o oa i c s rs T8 T9 T10 T11 : Word) (c0 : Nat)
+    (hrs : rs = 63 - s)
+    (h8 : T8 = o >>> 40) (h9 : T9 = o &&& 1099511627775)
+    (h10 : T10 = oa >>> 40) (h11 : T11 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat < 2 ^ 41)
+    (hda : oa.toNat + i.toNat < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs : s.toNat < 64) (hc : c.toNat < sh s.toNat)
+    (hs8 : (m.arr64 (tierA POOL T8)).size ≤ 2 ^ 40) (hs10 : (m.arr64 (tierA POOL T10)).size ≤ 2 ^ 40)
+    (hb10 : (T11 + i).toNat < (m.arr64 (tierA POOL T10)).size)
+    (hb8 : (T9 + i).toNat < (m.arr64 (tierA POOL T8)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat + c.toNat * wt i.toNat = pv P0 oa.toNat i.toNat * sh s.toNat + c0) :
+    pv (vpool (m.set64 (tierA POOL T8) (T9 + i)
+        ((m.arr64 (tierA POOL T10))[(T11 + i).toNat] <<< s ||| c)))
+        o.toNat (i + 1).toNat +
+      ((m.arr64 (tierA POOL T10))[(T11 + i).toNat] >>> 1 >>> rs).toNat * wt (i + 1).toNat =
+      pv P0 oa.toNat (i + 1).toNat * sh s.toNat + c0 := by
+  subst hrs h8 h9 h10 h11
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have hvs := vpool_size m
+  rw [ld_off m P0 oa i o (by omega) (by omega) hP0 hs10 hb10 hoff hda,
+    st_win m o i _ (by omega) (by omega) hs8 hb8]
+  have hsp := shl_split' P0[oa.toNat + i.toNat] c s hs hc
+  rw [hi1, pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega),
+    pv_succ P0 oa.toNat i.toNat (i.toNat + 1) (oa.toNat + i.toNat) rfl rfl (by omega),
+    wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 oa.toNat i.toNat = B at *
+  generalize wt i.toNat = W at *
+  generalize sh s.toNat = S at *
+  grind
+
+/-- One step of `shr_n`'s loop, in the shape of its verification condition. -/
+theorem shrn_step_goal (m : Mem) (P0 : Array Word) (o oa i x s rs T8 T9 T10 T11 : Word) (L0 : Nat)
+    (hrs : rs = 63 - s)
+    (h8 : T8 = o >>> 40) (h9 : T9 = o &&& 1099511627775)
+    (h10 : T10 = oa >>> 40) (h11 : T11 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat + 1 < 2 ^ 41)
+    (hda : oa.toNat + i.toNat + 1 < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs : s.toNat < 64)
+    (hs8 : (m.arr64 (tierA POOL T8)).size ≤ 2 ^ 40) (hs10 : (m.arr64 (tierA POOL T10)).size ≤ 2 ^ 40)
+    (hb10 : (T11 + (i + 1)).toNat < (m.arr64 (tierA POOL T10)).size)
+    (hb8 : (T9 + i).toNat < (m.arr64 (tierA POOL T8)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (hx : x = P0[oa.toNat + i.toNat]?.getD 0)
+    (ih : pv (vpool m) o.toNat i.toNat * sh s.toNat + L0 =
+      pv P0 oa.toNat i.toNat + lowb x.toNat s.toNat * wt i.toNat) :
+    pv (vpool (m.set64 (tierA POOL T8) (T9 + i)
+        (x >>> s ||| (m.arr64 (tierA POOL T10))[(T11 + (i + 1)).toNat] <<< 1 <<< rs)))
+        o.toNat (i + 1).toNat * sh s.toNat + L0 =
+      pv P0 oa.toNat (i + 1).toNat +
+        lowb (m.arr64 (tierA POOL T10))[(T11 + (i + 1)).toNat].toNat s.toNat * wt (i + 1).toNat ∧
+    (m.arr64 (tierA POOL T10))[(T11 + (i + 1)).toNat] = P0[oa.toNat + (i + 1).toNat]?.getD 0 := by
+  subst hrs h8 h9 h10 h11
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have hvs := vpool_size m
+  have ey := ld_off m P0 oa (i + 1) o (by omega) (by omega) hP0 hs10 hb10
+    (Off.mono _ _ _ _ _ hoff (by omega)) (by omega)
+  rw [ey, st_win m o i _ (by omega) (by omega) hs8 hb8]
+  refine ⟨?_, by rw [Array.getElem?_eq_getElem (by omega)]; rfl⟩
+  have hx' : x = P0[oa.toNat + i.toNat]'(by omega) := by
+    rw [hx, Array.getElem?_eq_getElem (by omega)]; rfl
+  rw [hx'] at ih ⊢
+  have hsp := shr_split P0[oa.toNat + i.toNat] P0[oa.toNat + (i + 1).toNat] s hs
+  rw [pv_set_succ (vpool m) o.toNat i.toNat (i + 1).toNat (o.toNat + i.toNat) _ hi1 rfl (by omega),
+    pv_succ P0 oa.toNat i.toNat (i + 1).toNat (oa.toNat + i.toNat) hi1 rfl (by omega),
+    wt_succ i.toNat (i + 1).toNat hi1]
+  generalize P0[oa.toNat + (i + 1).toNat] = Y at hsp ⊢
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 oa.toNat i.toNat = B at *
+  generalize wt i.toNat = W at *
+  generalize sh s.toNat = S at *
+  generalize lowb _ s.toNat = Ly at *
+  grind
+
+section shln
+variable (p : Prog) (P0 : Array Word) (C c0 : Nat)
+
+/-- `shl_n`'s loop: locals `(o, oa, n, s, c, i, x, rs, pt, pb, ta, qa)`. -/
+def ShlNInv (P0 : Array Word) (C c0 : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 2).toNat ≤ C ∧ (s.loc 1).toNat + (s.loc 2).toNat ≤ C ∧
+  ((s.loc 1).toNat + (s.loc 2).toNat ≤ (s.loc 0).toNat ∨ (s.loc 0).toNat ≤ (s.loc 1).toNat) ∧
+  (s.loc 3).toNat < 64 ∧ s.loc 7 = 63 - s.loc 3 ∧
+  s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
+  s.loc 10 = s.loc 1 >>> 40 ∧ s.loc 11 = s.loc 1 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧
+  (s.loc 5).toNat ≤ (s.loc 2).toNat ∧ (s.loc 4).toNat < sh (s.loc 3).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 5).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 5).toNat + (s.loc 4).toNat * wt (s.loc 5).toNat =
+    pv P0 (s.loc 1).toNat (s.loc 5).toNat * sh (s.loc 3).toNat + c0
+
+def ShlNPost (P0 : Array Word) (C c0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  (s'.loc 4).toNat < sh (s₀.loc 3).toNat ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 2).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat + (s'.loc 4).toNat * wt (s₀.loc 2).toNat =
+    pv P0 (s₀.loc 1).toNat (s₀.loc 2).toNat * sh (s₀.loc 3).toNat + c0
+
+theorem shlNLoop_spec (n : Nat) (s₀ : St) (h : ShlNInv P0 C c0 s₀) :
+    ⦃fun s => s = s₀⦄ exec p n shlNLoop ⦃fun r s' => ShlNPost P0 C c0 s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [ShlNInv, ShlNPost] at h ⊢
+    rw [exec, step_while (w := shlNLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [ShlNInv, ShlNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply shln_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
+
+theorem shlNLoop_step_spec (n : Nat) (s₀ : St) (h : ShlNInv P0 C c0 s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) shlNLoop ⦃fun r s' => ShlNPost P0 C c0 s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (shlNLoop_spec p P0 C c0 (n + 1) s₀ h)
+
+/-- `shl_n(o, oa, k, s, c)`: `P[o, o + k) := a · 2^s + c` (low `k` limbs), the carry out
+(`< 2^s`), for `s < 64` and `c < 2^s`. -/
+theorem shlN_spec (hp : p.lookup "shl_n" = some shlN) (n : Nat) (s₀ : St) (o oa k s c : Word)
+    (hs0 : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + k.toNat ≤ pcap s₀.mem)
+    (hda : oa.toNat + k.toNat ≤ o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs : s.toNat < 64) (hc : c.toNat < sh s.toNat) :
+    ⦃fun st => st = s₀⦄
+    invoke p (exec p n) "shl_n" [o, oa, k, s, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧ (r.headD 0).toNat < sh s.toNat ∧
+      pv (vpool s'.mem) o.toNat k.toNat + (r.headD 0).toNat * wt k.toNat =
+        pv (vpool s₀.mem) oa.toNat k.toNat * sh s.toNat + c.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs0
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs0
+  rw [invoke_eq _ hp]
+  simp only [callFn, shlN]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      shlNLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) c.toNat n]
+    all_goals (try simp only [ShlNInv, ShlNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+end shln
+
+/-- The limb `shr_n` reads next is limb `i + 1` of the entry pool. -/
+theorem shrn_x (m : Mem) (P0 : Array Word) (o oa i T10 T11 : Word)
+    (h10 : T10 = oa >>> 40) (h11 : T11 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (hoa : oa.toNat + i.toNat + 1 < 2 ^ 41)
+    (hda : oa.toNat + i.toNat + 1 < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs10 : (m.arr64 (tierA POOL T10)).size ≤ 2 ^ 40)
+    (hb10 : (T11 + (i + 1)).toNat < (m.arr64 (tierA POOL T10)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat) :
+    (m.arr64 (tierA POOL T10))[(T11 + (i + 1)).toNat] = P0[oa.toNat + (i + 1).toNat]?.getD 0 := by
+  subst h10 h11
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  rw [ld_off m P0 oa (i + 1) o (by omega) (by omega) hP0 hs10 hb10
+    (Off.mono _ _ _ _ _ hoff (by omega)) (by omega), Array.getElem?_eq_getElem (by omega)]
+  rfl
+
+section shrn
+variable (p : Prog) (P0 : Array Word) (C L0 : Nat)
+
+/-- `shr_n`'s loop: locals `(o, oa, n, s, i, x, y, rs, pt, pb, ta, qa)`; `x` is limb `i` of `a`. -/
+def ShrNInv (P0 : Array Word) (C L0 : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 2).toNat ≤ C ∧ (s.loc 1).toNat + (s.loc 2).toNat + 1 ≤ C ∧
+  ((s.loc 1).toNat + (s.loc 2).toNat + 1 ≤ (s.loc 0).toNat ∨ (s.loc 0).toNat ≤ (s.loc 1).toNat) ∧
+  (s.loc 3).toNat < 64 ∧ s.loc 7 = 63 - s.loc 3 ∧
+  s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
+  s.loc 10 = s.loc 1 >>> 40 ∧ s.loc 11 = s.loc 1 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧
+  (s.loc 4).toNat ≤ (s.loc 2).toNat ∧
+  s.loc 5 = P0[(s.loc 1).toNat + (s.loc 4).toNat]?.getD 0 ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat * sh (s.loc 3).toNat + L0 =
+    pv P0 (s.loc 1).toNat (s.loc 4).toNat + lowb (s.loc 5).toNat (s.loc 3).toNat * wt (s.loc 4).toNat
+
+def ShrNPost (P0 : Array Word) (C L0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 2).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat * sh (s₀.loc 3).toNat + L0 =
+    pv P0 (s₀.loc 1).toNat (s₀.loc 2).toNat +
+      lowb (P0[(s₀.loc 1).toNat + (s₀.loc 2).toNat]?.getD 0).toNat (s₀.loc 3).toNat * wt (s₀.loc 2).toNat
+
+theorem shrNLoop_spec (n : Nat) (s₀ : St) (h : ShrNInv P0 C L0 s₀) :
+    ⦃fun s => s = s₀⦄ exec p n shrNLoop ⦃fun r s' => ShrNPost P0 C L0 s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [ShrNInv, ShrNPost] at h ⊢
+    have hO := h.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+    rw [exec, step_while (w := shrNLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [ShrNInv, ShrNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply (shrn_step_goal _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _).1 <;> grind [pcap_eq])
+      | (with_reducible apply shrn_x
+         case hoff => exact hO
+         all_goals grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
+
+theorem shrNLoop_step_spec (n : Nat) (s₀ : St) (h : ShrNInv P0 C L0 s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) shrNLoop ⦃fun r s' => ShrNPost P0 C L0 s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (shrNLoop_spec p P0 C L0 (n + 1) s₀ h)
+
+end shrn
+
+section zeron
+variable (p : Prog) (P0 : Array Word) (C : Nat)
+
+/-- `zero_n`'s loop: locals `(o, n, i, pt, pb)`. -/
+def ZeroNInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧ (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧
+  s.loc 3 = s.loc 0 >>> 40 ∧ s.loc 4 = s.loc 0 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc 3))).size ≤ 2 ^ 40 ∧
+  (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 2).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 2).toNat = 0
+
+def ZeroNPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat = 0
+
+theorem zeroNLoop_spec (n : Nat) (s₀ : St) (h : ZeroNInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n zeroNLoop ⦃fun r s' => ZeroNPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [ZeroNInv, ZeroNPost] at h ⊢
+    rw [exec, step_while (w := zeroNLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [ZeroNInv, ZeroNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp only at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | grind (splits := 8) [arena_grind, lang_grind, win_lt, st_win]
+
+theorem zeroNLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroNInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) zeroNLoop ⦃fun r s' => ZeroNPost P0 C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (zeroNLoop_spec p P0 C (n + 1) s₀ h)
+
+end zeron
+
+section shiftFns
+variable (p : Prog)
+
+/-- `shr_n(o, oa, k, s)`: `P[o, o + k) := (a >> s)` limb by limb over the `k + 1` limbs
+`A[oa, oa + k]`: the result times `2^s`, plus the low `s` bits of `A[oa]`, is `A[oa, oa + k)`
+plus the low `s` bits of `A[oa + k]` at weight `k`; for `s < 64`. -/
+theorem shrN_spec (hp : p.lookup "shr_n" = some shrN) (n : Nat) (s₀ : St) (o oa k s : Word)
+    (hs0 : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + k.toNat + 1 ≤ pcap s₀.mem)
+    (hda : oa.toNat + k.toNat + 1 ≤ o.toNat ∨ o.toNat ≤ oa.toNat) (hs : s.toNat < 64) :
+    ⦃fun st => st = s₀⦄
+    invoke p (exec p n) "shr_n" [o, oa, k, s]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧
+      pv (vpool s'.mem) o.toNat k.toNat * sh s.toNat +
+          lowb ((vpool s₀.mem)[oa.toNat]?.getD 0).toNat s.toNat =
+        pv (vpool s₀.mem) oa.toNat k.toNat +
+          lowb ((vpool s₀.mem)[oa.toNat + k.toNat]?.getD 0).toNat s.toNat * wt k.toNat; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs0
+  have h2 := pcap_tier s₀.mem (oa >>> 40) hs0
+  rw [invoke_eq _ hp]
+  simp only [callFn, shrN]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      shrNLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem)
+        (lowb ((vpool s₀.mem)[oa.toNat]?.getD 0).toNat s.toNat) n]
+    all_goals (try simp only [ShrNInv, ShrNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+/-- `zero_n(o, k)`: `P[o, o + k) := 0`. -/
+theorem zeroN_spec (hp : p.lookup "zero_n" = some zeroN) (n : Nat) (s₀ : St) (o k : Word)
+    (hs0 : pcap s₀.mem < 2 ^ 64) (ho : o.toNat + k.toNat ≤ pcap s₀.mem) :
+    ⦃fun st => st = s₀⦄
+    invoke p (exec p n) "zero_n" [o, k]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧
+      pv (vpool s'.mem) o.toNat k.toNat = 0; ⊤⦄ := by
+  have h1 := pcap_tier s₀.mem (o >>> 40) hs0
+  rw [invoke_eq _ hp]
+  simp only [callFn, zeroN]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      zeroNLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
+    all_goals (try simp only [ZeroNInv, ZeroNPost] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
+    all_goals (try and_intros)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
+
+end shiftFns
+
 end L.Arena
