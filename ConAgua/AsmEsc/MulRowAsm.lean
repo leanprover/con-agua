@@ -3,7 +3,6 @@ module
 public import ConAgua.AsmEsc.Step
 public import ConAgua.AsmEsc.MulRowL
 import Kraken.X64.Registers
-import ConAgua.Compiler.StepGen
 
 @[expose] public section
 
