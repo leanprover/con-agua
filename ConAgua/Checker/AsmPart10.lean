@@ -1,10 +1,12 @@
 module
 
 public import ConAgua.Compiler.AsmLit
+public import ConAgua.Checker.AsmX
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.ProgNrt
 public import ConAgua.Checker.ProgSkt
 meta import ConAgua.Compiler.AsmLit
+meta import ConAgua.Checker.AsmX
 meta import ConAgua.Checker.ProgTab
 meta import ConAgua.Checker.ProgNrt
 meta import ConAgua.Checker.ProgSkt
@@ -19,6 +21,6 @@ namespace L.Checker
 open L L.Compiler
 
 set_option asmLitBatch 1 in
-asm_lit_fns checkerAsm : checkerTab checkerNrt checkerSkt checkerProgI 1241 1375
+asm_lit_fns checkerAsm : checkerTab checkerNrt checkerSkt checkerProgI 1241 1375 asm checkerX
 
 end L.Checker

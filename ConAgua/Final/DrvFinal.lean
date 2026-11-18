@@ -8,6 +8,7 @@ import ConAgua.Checker.AsmStubEq
 import ConAgua.Checker.AsmFileEq
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.AsmXOk
+public import ConAgua.Checker.AsmX
 import ConAgua.Checker.ProgWf
 import ConAgua.Checker.CheckARun
 public import ConAgua.Checker.ProgI

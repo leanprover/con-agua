@@ -15,7 +15,7 @@ The final theorems (`ConAgua/Final/EndToEnd.lean`, from `checkerFile_drv_accepts
 `checker.s` (the parallel mode's entries with the driver `ca_start`, the setup stub, the
 trampoline and the functions: exactly what `main.c` is assembled with), as the trusted parser
 reads it when `ConAguaAsm/Checker.lean` is elaborated (`include_asm`). The kernel checked
-`checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`
+`checkerFile_eq : checkerFile = checkerStub ++ compileProgX checkerX checkerTab checkerProgI "check"`
 (`ConAgua/Checker/AsmFileEq.lean`) and `checkerStub_eq` (`ConAgua/Checker/AsmStubEq.lean`), so
 neither the Lean compiler that computed the code nor the printer that wrote the file is trusted;
 the compiled code that reads the file (`parseAsmFile`, `programTerm`/`labelExpr`, the derived

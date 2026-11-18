@@ -80,7 +80,7 @@ the table; if the region is big enough, the stores relate `s.dmem` to the L memo
 the machine returns, with the caller's registers and the memory outside the layout unchanged,
 `rdx = 1` or `check`'s outcome from `m0`. -/
 theorem abi_start_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
-    {X : AsmTab} (hX : AsmOkT q tab X)
+    {X : AsmTab} (hAX : AsmOkT q tab X)
     (hwf : Prog.wf tab q = true) (k0 : Nat) (hcode : Code (abiStub tab ++ compileProgX X tab q "check") k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) (m0 : Mem)
@@ -173,7 +173,7 @@ theorem abi_start_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (ho
     exact hd.union (stores_only dm.regs dm.regs.r8.toNat (abiVals tab) s.dmem 0 (by simp; omega))
       (Nat.le_refl _) (by omega) (Nat.le_refl _) (by simpa using hTE)
   refine eventually_weaken _ _ _ _ ?_
-    (compile_correct_frame_ref q p hq "check" _ (abiLayout_ok hok (abiCall_geom hc hneed)) X (hX _ (abiLayout_ok hok (abiCall_geom hc hneed)) rfl) hwf
+    (compile_correct_frame_ref q p hq "check" _ (abiLayout_ok hok (abiCall_geom hc hneed)) X (hAX _ (abiLayout_ok hok (abiCall_geom hc hneed)) rfl) hwf
       (k0 + (abiStub tab).length) hcode.right fd hentry [] (by simp [hnp]) rfl m0 abiFuelM s1 ra
       hH.hT hH.hN hm hH.hroom hH.htop (fun i h => absurd h (by simp)) hH.hra hH.hcs hH.hcs24 hH.hcs8
       hH.hsv hH.hsv64)
@@ -187,7 +187,7 @@ theorem abi_start_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (ho
 (or `rdx = 1`). The seven instructions at `k`: the label, the size check, the mode store, the jump
 to `ca_setup`. -/
 theorem abiMode_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
-    {X : AsmTab} (hX : AsmOkT q tab X) (hio : abiIO tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true)
     (hwf : Prog.wf tab q = true) (mode : GVar) (hng : mode.id < tab.ng) (w : Word) (lab : Label)
     (k k0 : Nat) (hl : label lab = at_ k)
     (h0 : Host.prog[k + 0]? = some (.label lab))
@@ -214,7 +214,7 @@ theorem abiMode_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok 
   refine ev_jcc h3 (fun hlt => ?_) (fun hge => ?_)
   · simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq, Reg64s.get64_r9, Reg64s.set64_rax,
       UInt64.toNat_toBitVec] at hlt
-    refine abi_start_outcome q p hq tab hok hX hwf _ hcR fd hentry hnp b pb dm ra hc _ _ ?_ (Only.refl _ _ _)
+    refine abi_start_outcome q p hq tab hok hAX hwf _ hcR fd hentry hnp b pb dm ra hc _ _ ?_ (Only.refl _ _ _)
       (Only.refl _ _ _) (fun hneed => absurd hlt ?_)
     · intro r hr; cases r <;> first | exact absurd rfl hr | rfl
     · have e : (UInt64.ofNat (abiNeed tab)).toNat = abiNeed tab :=
@@ -245,7 +245,7 @@ theorem abiMode_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok 
     have hGe : (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).globAddr mode + 8 ≤
         (abiLayout tab dm.regs.r8.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size).tabEnd := by
       simp only [Layout.globAddr, Layout.globStart, Layout.tabEnd, abiLayout_T, abiLayout_tab]; omega
-    refine abi_start_outcome q p hq tab hok hX hwf _ hcR fd hentry hnp b pb dm ra hc _ _ ?_ ?_ ?_ (fun _ => ?_)
+    refine abi_start_outcome q p hq tab hok hAX hwf _ hcR fd hentry hnp b pb dm ra hc _ _ ?_ ?_ ?_ (fun _ => ?_)
     · intro r hr; cases r <;> first | exact absurd rfl hr | rfl
     · rw [hGa]
       exact (Only.wrW (by simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at hGe ⊢; omega)).mono
@@ -271,7 +271,7 @@ theorem abiMode_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok 
 
 /-- **From `ca_start_a`** (entry 1, mode word `1`). -/
 theorem abiA_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
-    {X : AsmTab} (hX : AsmOkT q tab X) (hio : abiIO tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true)
     (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
@@ -285,14 +285,14 @@ theorem abiA_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
   simp only [parStub] at hcP
   replace hcP := hcP.left
   simp only [parStub0] at hcP
-  exact abiMode_outcome q p hq tab hok hX hio hwf mode hng 1 abiStartAL k0 _ (Code.label (i := 0) hcP rfl)
+  exact abiMode_outcome q p hq tab hok hAX hio hwf mode hng 1 abiStartAL k0 _ (Code.label (i := 0) hcP rfl)
     (Code.get (i := 0) hcP rfl) (Code.get (i := 1) hcP rfl) (Code.get (i := 2) hcP rfl)
     (Code.get (i := 3) hcP rfl) (Code.get (i := 4) hcP rfl) (Code.get (i := 5) hcP rfl)
     (Code.get (i := 6) hcP rfl) hcode.right fd hentry hnp b pb dm ra hc
 
 /-- **From `ca_start_a0`** (the sequential driver's entry 1, mode word `3`). -/
 theorem abiA0_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
-    {X : AsmTab} (hX : AsmOkT q tab X) (hio : abiIO tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true)
     (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (fz own : List TieredArray) (hng : mode.id < tab.ng) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
@@ -306,7 +306,7 @@ theorem abiA0_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : 
   simp only [parStub] at hcP
   replace hcP := hcP.left
   simp only [parStub0] at hcP
-  exact abiMode_outcome q p hq tab hok hX hio hwf mode hng 3 abiStartA0L (k0 + 7) _ (Code.label (i := 7) hcP rfl)
+  exact abiMode_outcome q p hq tab hok hAX hio hwf mode hng 3 abiStartA0L (k0 + 7) _ (Code.label (i := 7) hcP rfl)
     (Code.get (i := 7) hcP rfl) (Code.get (i := 8) hcP rfl) (Code.get (i := 9) hcP rfl)
     (Code.get (i := 10) hcP rfl) (Code.get (i := 11) hcP rfl) (Code.get (i := 12) hcP rfl)
     (Code.get (i := 13) hcP rfl) hcode.right fd hentry hnp b pb dm ra hc

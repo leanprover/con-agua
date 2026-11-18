@@ -422,7 +422,10 @@ the results and the final memory, or `rdx = 2` for an error, with the error's
 code in `rax` (an abort's own code, `0` for any other error). It is proved once,
 for every well-formed program. It also allows a table of hand-written function
 bodies in place of compiled ones (`compileProgX`), each proved against the same
-per-function contract as the compiled code (`AsmOk`); the checker uses none.
+per-function contract as the compiled code (`AsmOk`). The checker has one, the
+bignum multiply-accumulate row `mul_row`
+([`mulRowAsm_sim`](ConAgua/AsmEsc/MulRowAsm.lean)), listed in
+[`Checker/AsmX.lean`](ConAgua/Checker/AsmX.lean).
 
 ### 4.3 Kraken
 
@@ -986,7 +989,8 @@ it when the file changes. Then
 [`checkerFile_eq`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/AsmFileEq.lean#L29-L30)
 proves `checkerFile = checkerStub ++ checkerAsm`, where `checkerAsm` is a
 literal that the kernel checked, function by function, to be
-`compileProg checkerTab checkerProgI "check"` (§8.6)
+`compileProgX checkerX checkerTab checkerProgI "check"` (§8.6; `checkerX`:
+the hand-written bodies, §4.2)
 ([`Checker/Asm.lean`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Asm.lean#L42-L51)).
 So neither the compiler run as compiled Lean code nor the printer that wrote
 the file is trusted; a stale file fails the build, naming the first function
