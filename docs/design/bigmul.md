@@ -95,6 +95,61 @@ rows of 13 limbs) and the inline multiply-accumulate. After the change `mul_row`
 per limb product (master's was about 95); con-ron's is about 16. Every local lives on the
 stack in the generated code; that is the codegen gap, not the algorithm.
 
+## The L code, as landed
+
+`mul_win` dispatches; the Karatsuba node is split over three functions so that each proof
+stays small: `kara_prods` (zero and fill `z0`, `z2`; 4 calls), `kara_sum` (a zeroed `k + 1`
+limb sum of the two halves; 3 calls), `kara_mid` (the layout, an abort unless the scratch high
+water mark stays below `2^41`, `kara_prods`, two `kara_sum`s, the product of the sums, two
+`sub_row`s, `nat_trim`; 8 calls). `mul_win`'s Karatsuba branch is then `kara_mid` and three
+`mul_row`s with `y = 1`. `nat_mul` aborts up front unless the top's tier array has `la + lb`
+free words (schoolbook) or `9 (la + lb) + 1024` (both operands at the threshold or above): the
+scratch of a Karatsuba node of `la` limbs is `la + lb + 4k + 4 ≤ 4 la + 6`, its largest child has
+`k + 1 ≤ la / 2 + 2` limbs, so the whole stack is below `8 la + 18 · depth`. (Any store past the
+tier array is an `oob` abort anyway; the check only fails early.)
+
+`mac_hi` is gone (its one caller was `nat_mul`'s old column loop; `macHiN`/`mac_split` with it).
+
 ## Proof
 
-(below)
+`ConAgua/Arena/NatMul.lean`, 379 → ~1 350 lines; no `sorry`, no axiom. New shared file
+`ConAgua/Arena/NatOff.lean`: `Off` (moved unchanged from `NatDiv.lean`, which imports it) and the
+new `OffB` (agree below `s` off a window: `mul_win`'s frame), `Off.pv_disj`, `OffB.pv_disj`,
+`Off.mono`, `Agree.trans` (moved from `NatPow.lean`). New `grind` attribute `winop_grind`
+(`NatGrindAttr.lean`) for the two `pv_disj` patterns, kept out of `arena_grind`.
+
+* The passes (`mul_row`'s two loops, `sub_row`'s two, `mul_zeros`'s) follow `NatDiv`'s passes:
+  an `Off` frame against the entry pool, the value equation additive (the subtrahend on the
+  left), and the loop step closed by a lemma in the goal's shape (`mrow_step_goal`,
+  `carry_step_goal`, `srow_step_goal`, `borrow_step_goal`, `zeros_step_goal`; the word facts
+  `mac_inl`, `sbb_inl` by case split and `omega`). Exit of a ripple: `off_split` (the changed
+  prefix and the whole window) as a `grind` lemma. `mulRow_at_spec` lifts `mul_row` on
+  `[o + k, o + w)` to the whole window (its arguments stated as `BinOp.add.eval o k`, the form
+  `vcgen` sees, so that it matches calls with computed offsets).
+* `mul_win`, `kara_prods`, `kara_mid`: one `Prop` spec each at fuel `n` (`MulWinSpec`, …), the
+  three steps from the specs at `n` (`mulWin_step`, `karaProds_step`, `karaMid_step`), and
+  `mulWin_spec` the induction (as `bbGo_spec`). `rowsLoop` (schoolbook) has its own invariant.
+* The function-level recipe that worked: plain `vcgen` with the callee specs and the IHs, then
+  `clear` the IHs (a `∀`-triple in context sent `grind` into case splits over the argument
+  lists), `simp only [LocEq]`, `simp_all only [St.setLoc_loc, Locals.init_cons_*, …]` (this
+  names every intermediate state's locals by the caller's arguments), then `split_clear_locs`
+  (a small tactic in `NatMul.lean`: `casesAnd`, then clear the `s.loc = Locals.init […]`
+  equations — with them in context `grind` cases on the lists), `and_intros`, and per goal
+  `omega`, an `apply` of a frame or value lemma in the goal's shape followed by
+  `with_reducible assumption` for its premises (`kp_frame`, `kmid_frame`, `halve_frame`,
+  `halve_val`, `kara_frame`, `kara_val`, `nm_agree`), or `grind [arena_grind, lang_grind,
+  winop_grind]`. The positions of a Karatsuba node are one lemma (`kara_pos`: no word sum wraps
+  below `2^41`), proved step by step with `toNat_add_of_lt` (a version by `simp` and `omega` over
+  the `% 2^64` forms ran for minutes).
+* Karatsuba's identity is the `grind` at the end of `kara_val`, after `pv_append` for both
+  operands and `wt (2K) = wt K · wt K`.
+* `natMul_spec`'s statement is unchanged. Its program hypothesis `hph` is now `MulFns p`, the
+  seven callee lookups as ONE tuple equation, so that every caller (`NatPow`, `NatPowNat`,
+  `NatArms`, `CoreNatOp`) still passes `rfl` in the same position.
+
+What went wrong on the way: `simp only [...]` lists naming a lemma of a module not imported
+(`L.St.setLoc_mem` lives in `L/LocNF.lean`, `Mem.size64_set64` in `L/Records.lean`) fail as a
+whole inside `try`, silently; `repeat (obtain ⟨_, _⟩ := ‹_ ∧ _›)` never terminates (the
+anonymous hypothesis is not cleared); a step lemma with a variable that is not in its conclusion
+leaves a metavariable after `apply` (state such premises over the conclusion's variables only,
+or close them by `with_reducible assumption`); `pkill -f <pattern>` killed the calling shell.
