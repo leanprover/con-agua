@@ -628,9 +628,9 @@
    248    | .ok v => ∃ y a', T.run a = .ok (y, a') ∧ R v y a'
    249    | .error e => G → ErrClaim T a e
 
-== ConAgua/Checker/NoVerdictClosed.lean#L232-L233
-   232  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-   233    closedNV_of_all nvTree.eq checkerProg_nvChk
+== ConAgua/Checker/NoVerdictClosed.lean#L233-L234
+   233  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
+   234    closedNV_of_all nvTree.eq checkerProg_nvChk
 
 == ConAgua/Final/DrvAbi.lean#L181-L192
    181  theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)

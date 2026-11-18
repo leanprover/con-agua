@@ -33,7 +33,7 @@ def leafC : List Word :=
 
 /-- The functions of `loopFns` that leave the pins and the core's memos alone. -/
 def leafFns : List FnName :=
-  ["ab_find", "ab_fvb", "add_carry", "alpd_ls", "and_block_named", "and_pin_ok",
+  ["ab_find", "ab_fvb", "add_1", "add_carry", "add_n", "alpd_ls", "and_block_named", "and_pin_ok",
    "and_rescue_slots", "apd_find", "app_count", "app_count_at", "app_fill", "app_fill_n",
    "app_find", "app_hole", "app_push", "b_eq", "base_row_get", "basis_name_hit",
    "basis_name_hit_go", "basis_name_unreserved", "basis_names_error", "bb_go", "bb_memo",
@@ -138,7 +138,7 @@ def leafFns : List FnName :=
    "memo_push", "mentions_any_const", "mentions_any_go", "mentions_any_node", "mk_app", "mk_app_n",
    "mk_app_n_f", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj", "mk_target_major",
    "mul_row", "mul_win", "mul_zeros", "n_idxs_copy", "name_rec", "name_rec_i", "nanon_find",
-   "nanon_push", "nat_add", "add_n", "add_1", "nat_add_lit", "nat_ap1", "nat_ap2", "nat_beq_lit",
+   "nanon_push", "nat_add", "nat_add_lit", "nat_ap1", "nat_ap2", "nat_beq_lit",
    "nat_bin_op_of_name", "nat_bin_op_result", "nat_ble_lit", "nat_cmp", "nat_div_lit",
    "nat_div_mod_names", "nat_divmod", "nat_eq_be", "nat_eq_bl", "nat_eq_ctx", "nat_eq_disp",
    "nat_eq_list2", "nat_eq_list3", "nat_eq_list4", "nat_eq_mu", "nat_eq_po", "nat_eq_pr",
@@ -149,7 +149,7 @@ def leafFns : List FnName :=
    "nat_op_names", "nat_op_pins", "nat_op_pins_a", "nat_op_pins_b", "nat_op_pins_c",
    "nat_op_stored_ok", "nat_op_stored_ok_all", "nat_op_ty_pinned", "nat_pow", "nat_pow_lit",
    "nat_pred", "nat_pred_lit", "nat_shl", "nat_shl_lit", "nat_shr", "nat_shr_lit",
-   "nat_size_refused", "nat_sub", "sub_n", "sub_1", "nat_sub_lit", "nat_succ_at_cv", "nat_succ_lit", "nat_succ_ok",
+   "nat_size_refused", "nat_sub", "nat_sub_lit", "nat_succ_at_cv", "nat_succ_lit", "nat_succ_ok",
    "nat_trim", "nat_var", "nat_xor", "nat_xor_lit", "nat_zero_at_cv", "nat_zero_ok",
    "nest_accept_group", "nest_block_of", "nest_canon_crest", "nest_canon_sub", "nest_cont_checks",
    "nest_cont_new_active", "nest_cont_new_finish", "nest_cont_params_closed", "nest_container",
@@ -196,7 +196,7 @@ def leafFns : List FnName :=
    "stream_nested_bvars", "stream_nested_dom", "stream_nested_ok", "stream_nested_pins",
    "stream_rules_shape", "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis",
    "struct_ctor_resid_ok", "struct_elim_level", "struct_proj_arg_p", "struct_proj_bodies",
-   "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at", "struct_ps_at_go",
+   "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "sub_1", "sub_n",
    "sub_row", "subst_const0", "subst_const0_list", "subst_const0_pairs", "subst_const_all",
    "subst_pw_at", "succ_find", "succ_push", "sum_rules", "sum_rules_go", "ta_clear", "ta_find",
    "ta_put", "target_abs", "target_abs_const", "target_abs_go", "target_abs_node",
