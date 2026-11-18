@@ -59,6 +59,8 @@ theorem mulRow_body : mulRow.body =
               (.seq mrW1 (.seq mrW2 (.ret [.const 0]))))))) := by
   rfl
 
+theorem mulRow_nparams : mulRow.nparams = 5 := by rfl
+
 /-- One multiply-accumulate step at index `i` with carry `c`: the new memory and carry. -/
 def mrStep (TA TO : TieredArray) (qb ob y : Word) (m : Mem) (i c : Word) : Mem × Word :=
   let x := (m.arr64 TA)[(qb + i).toNat]!

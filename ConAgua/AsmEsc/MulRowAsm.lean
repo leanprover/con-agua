@@ -159,6 +159,10 @@ theorem addr_idx (B j : Nat) (i : Word) (h : B + 8 * j + 8 * i.toNat < 2 ^ 64) :
   rw [show (8 : BitVec 64).toNat = 8 from rfl, Nat.mod_eq_of_lt (a := i.toNat * 8) (by omega)]
   rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]; omega
 
+/-- A checkpoint: forget the shape of the state, keep `P` of it. -/
+theorem ev_gen [Host] {Q : MachineState → Prop} {s : MachineData} {pc : Int64} (P : MachineData → Prop)
+    (hP : P s) (h : ∀ s', P s' → Ev Q s' pc) : Ev Q s pc := h s hP
+
 theorem ev_lbl [Host] {Q : MachineState → Prop} {s : MachineData} {l : Label} {k : Nat}
     (hl : label l = at_ k) (h : Ev Q s (at_ k)) : Ev Q s (label l) := hl ▸ h
 
@@ -496,5 +500,99 @@ theorem mr_row (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.
       g12 g13
 
 end
+
+theorem mulRow_nret : Stmt.nret mulRow.body = 1 := by rw [mulRow_body]; rfl
+
+theorem resOut_zero {G : L.Compiler.Layout} {s : MachineData} (h : s.regs.rax = 0) : ResOut G 1 [0] s :=
+  ⟨fun i hi _ => by
+    obtain rfl : i = 0 := by omega
+    exact h, fun i h6 h1 => absurd h1 (by simp [maxRes] at h6; omega), by simp⟩
+
+/-- The value of a tier descriptor word of `POOL`, read through the tier bit of `u` in a register. -/
+theorem pool_desc [Host] {G : L.Compiler.Layout} {m : Mem} {s : MachineData} (hm : MemRel G m s.dmem)
+    (hdom : G.tab.dom64 (tier1 0) = true) (u : Word) {r : Reg64} (hr : s.regs.get64 r = (u &&& 1).toBitVec)
+    (h15 : s.regs.r15.toNat = G.T) :
+    rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + (G.tab.len64 (0 : ArrId)).toNat)) =
+      some (UInt64.ofNat (G.s (G.tab.pos64 (tierA 0 u)))) ∧
+    rdW s.dmem (A (s.regs.r15.toNat + 8 * (s.regs.get64 r).toNat + (G.tab.base64 (0 : ArrId)).toNat)) =
+      some (UInt64.ofNat (G.b (G.tab.pos64 (tierA 0 u)))) := by
+  have hta := G.tab.dom64_tierA hdom u
+  have hoff := tier_off G.tab hdom u
+  rw [hr, UInt64.toNat_toBitVec, h15]
+  constructor
+  · rw [show G.T + 8 * (u &&& 1).toNat + (G.tab.len64 (0 : ArrId)).toNat =
+      G.T + (G.tab.len64 (tierA 0 u)).toNat by omega]
+    exact hm.len64A hta
+  · rw [show G.T + 8 * (u &&& 1).toNat + (G.tab.base64 (0 : ArrId)).toNat =
+      G.T + (G.tab.base64 (tierA 0 u)).toNat by omega]
+    exact hm.base64A hta
+
+/-- **The hand-written `mul_row` meets the compiler's per-function contract**, for any table in
+which `POOL` (0) is a tiered word array with small descriptor offsets, at every fuel. -/
+theorem mulRowAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
+    (hp : p.lookup "mul_row" = some mulRow) (hdom : G.tab.dom64 (tier1 0) = true)
+    (hoffL : SmallOff (G.tab.len64 (0 : ArrId))) (hoffB : SmallOff (G.tab.base64 (0 : ArrId)))
+    (kf : Nat) (hc : Code (mulRowAsm G.tab) kf) (sk : NTree) (n : Nat) :
+    FnSimAt p G sk n "mul_row" mulRow kf := by
+  intro vs σ d ra Q hlen hra hargs hlo8 hhi h15 hmem h14 hok herr habrt hexh
+  have hlo : G.lo ≤ d.regs.rsp.toNat := by omega
+  rw [mulRow_nparams] at hlen
+  obtain ⟨o, nn, oa, la, y, rfl⟩ : ∃ o nn oa la y, vs = [o, nn, oa, la, y] := by
+    match vs, hlen with
+    | [o, nn, oa, la, y], _ => exact ⟨o, nn, oa, la, y, rfl⟩
+  have hA := hargs.1 (by simp [argRegs])
+  have hrdi : d.regs.rdi = o := UInt64.toBitVec_inj.mp (hA 0 (by simp))
+  have hr8 : d.regs.r8 = nn := UInt64.toBitVec_inj.mp (hA 1 (by simp))
+  have hr9 : d.regs.r9 = oa := UInt64.toBitVec_inj.mp (hA 2 (by simp))
+  have hr10 : d.regs.r10 = la := UInt64.toBitVec_inj.mp (hA 3 (by simp))
+  have hr11 : d.regs.r11 = y := UInt64.toBitVec_inj.mp (hA 4 (by simp))
+  have hn0 : 0 < n := by omega
+  have hh := hG.hi_le
+  refine ev_label (mr_code hc (i := 0) rfl) ?_
+  refine ev_cmpRO (mr_code hc (i := 1) rfl) (v := la) (Or.inr (Or.inr ⟨.r10, rfl, by rs [hr10]⟩)) ?_
+  refine ev_jcc (mr_code hc (i := 2) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · -- `n < la`: abort
+    simp only [CondCode.interp, cmpFlags_cf, decide_eq_true_eq] at hcc
+    rs [hr8] at hcc
+    refine herr _ ⟨.abort 0, ?_, by simp⟩ ⟨rfl, Pres.refl _ _⟩
+    exact mulRow_run_abort p hp σ o nn oa la y n hn0 (UInt64.lt_iff_toNat_lt.mpr hcc)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc
+  rs [hr8] at hcc
+  have hnl : ¬ nn < la := fun h => hcc (UInt64.lt_iff_toNat_lt.mp h)
+  refine ev_movRI (mr_code hc (i := 3) rfl) ?_
+  refine ev_cmpRO (mr_code hc (i := 4) rfl) (v := 0) (Or.inl rfl) ?_
+  refine ev_jcc (mr_code hc (i := 5) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · -- `la = 0`: return 0
+    simp only [CondCode.interp, cmpFlags_zf, beq_iff_eq] at hcc
+    rs [hr10] at hcc
+    have hl0 : la = 0 := UInt64.toBitVec_inj.mp hcc
+    subst hl0
+    refine ev_lbl (Code.label hc (i := 61) rfl) ?_
+    refine mr_ret hG hc hra hlo hhi ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.refl _ _⟩ fun s' e1 e2 e3 e4 e5 e6 => ?_
+    refine hok [0] σ s' (mulRow_run_zero p hp σ o nn oa y n hn0) (by rw [e1]; exact hmem) rfl e2 e3 e4
+      (by rw [e5]; rs; exact Nat.le_refl _) ?_ (by rw [e1]; exact Pres.refl _ _)
+    rw [mulRow_nret]; exact resOut_zero e6
+  simp only [CondCode.interp, cmpFlags_zf, beq_eq_false_iff_ne] at hcc
+  rs [hr10] at hcc
+  have hl0 : la ≠ 0 := fun h => hcc (by rw [h])
+  refine ev_movRR (mr_code hc (i := 6) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (mr_code hc (i := 7) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (mr_code hc (i := 8) rfl) fun st => ?_
+  refine ev_movRI (mr_code hc (i := 9) rfl) ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (mr_code hc (i := 10) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_movRR (mr_code hc (i := 11) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (mr_code hc (i := 12) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (mr_code hc (i := 13) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (mr_code hc (i := 14) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_gen (fun s1 => s1.regs.rcx = (o >>> 40) &&& 1 ∧ s1.regs.rdi = o &&& idxMask ∧
+      s1.regs.rdx = (oa >>> 40) &&& 1 ∧ s1.regs.r9 = oa &&& idxMask ∧ s1.regs.r8 = nn ∧ s1.regs.r10 = la ∧
+      s1.regs.r11 = y ∧ s1.regs.r12 = 0 ∧ s1.regs.r14 = d.regs.r14 ∧ s1.regs.r15 = d.regs.r15 ∧
+      s1.regs.rsp = d.regs.rsp ∧ s1.regs.rbp = d.regs.rbp ∧ s1.dmem = d.dmem)
+    (by refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rs [hrdi, hr8, hr9, hr10, hr11, BinOp.eval]
+        all_goals rfl)
+    fun s1 ⟨g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13⟩ => ?_
+  sorry
 
 end L.AsmEsc
