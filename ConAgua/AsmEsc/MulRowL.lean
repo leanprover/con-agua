@@ -219,7 +219,7 @@ theorem mrW2_run (p : Prog) (TO : TieredArray) (ob n : Word) :
     intro σ h11 h12 h1
     rw [mrW2, step_while_run]
     by_cases hc : σ.loc 6 = 0
-    · simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval, bne_self_eq_false]
+    · simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval]
       rw [mcLoop]; simp only [hc, reduceIte, LoopRel]; exact ⟨σ, rfl, rfl⟩
     have hc' : (σ.loc 6 != 0) = true := by simpa using hc
     simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval, hc']
@@ -237,7 +237,7 @@ theorem mrW2_run (p : Prog) (TO : TieredArray) (ob n : Word) :
     intro σ h11 h12 h1
     rw [mrW2, step_while_run]
     by_cases hc : σ.loc 6 = 0
-    · simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval, bne_self_eq_false]
+    · simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval]
       rw [mcLoop]; simp only [hc, reduceIte, LoopRel]; exact ⟨σ, rfl, rfl⟩
     have hc' : (σ.loc 6 != 0) = true := by simpa using hc
     simp only [evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval, hc']
@@ -255,5 +255,81 @@ theorem mrW2_run (p : Prog) (TO : TieredArray) (ob n : Word) :
       exact this
     · rw [mrB2_oob p (exec p (k + 1)) σ hn hO, mcLoop]
       simp only [hc, ← h1, hn, reduceIte, ← h12, ← h11, hO, ↓reduceDIte, LoopRel]
+
+/-- `mul_row` with `n < la` aborts. -/
+theorem mulRow_run_abort (p : Prog) (hp : p.lookup "mul_row" = some mulRow) (σ : St) (o n oa la y : Word)
+    (F : Nat) (hF : 0 < F) (hn : n < la) :
+    (invoke p (exec p F) "mul_row" [o, n, oa, la, y]).run σ = .error (.abort 0) := by
+  obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [invoke, lookupFn, hp]
+  rw [show (do let fd ← (pure mulRow : M FunDecl); callFn (exec p (F + 1)) fd [o, n, oa, la, y]) =
+    callFn (exec p (F + 1)) mulRow [o, n, oa, la, y] from rfl, L.Compiler.callFn_run]
+  rw [show (exec p (F + 1) mulRow.body).run = L.Compiler.stepRun p (exec p F) mulRow.body from rfl,
+    mulRow_body]
+  simp only [step_seq_run, step_ite_run, evalCP, evalP, bind, Except.bind, pure, Except.pure, Cmp.eval,
+    step_abort_run, Locals.init, List.getD_cons_succ, List.getD_cons_zero, hn, decide_true]
+
+/-- The 40-bit index mask of a pool reference. -/
+abbrev idxMask : Word := 1099511627775
+
+/-- **`mul_row` at fuel `F`**, its windows in their tiers and `la < F`: the row (`mrRows`), then the
+carry ripple (`mcLoop`). -/
+theorem mulRow_run (p : Prog) (hp : p.lookup "mul_row" = some mulRow) (σ : St) (o n oa la y : Word)
+    (F : Nat) (hn : ¬ n < la) (hF : la.toNat < F)
+    (hA : (oa &&& idxMask).toNat + la.toNat ≤ (σ.mem.arr64 (tierA 0 (oa >>> 40))).size)
+    (hO : (o &&& idxMask).toNat + la.toNat ≤ (σ.mem.arr64 (tierA 0 (o >>> 40))).size)
+    (hsA : (σ.mem.arr64 (tierA 0 (oa >>> 40))).size < 2 ^ 64)
+    (hsO : (σ.mem.arr64 (tierA 0 (o >>> 40))).size < 2 ^ 64) :
+    (invoke p (exec p F) "mul_row" [o, n, oa, la, y]).run σ =
+      (mcLoop (tierA 0 (o >>> 40)) (o &&& idxMask) n (F - 1)
+        (mrRows (tierA 0 (oa >>> 40)) (tierA 0 (o >>> 40)) (oa &&& idxMask) (o &&& idxMask) y la.toNat σ.mem 0 0).1
+        la
+        (mrRows (tierA 0 (oa >>> 40)) (tierA 0 (o >>> 40)) (oa &&& idxMask) (o &&& idxMask) y la.toNat σ.mem 0 0).2
+        ).map fun m => ([0], { σ with mem := m }) := by
+  obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [invoke, lookupFn, hp]
+  rw [show (do let fd ← (pure mulRow : M FunDecl); callFn (exec p (F + 1)) fd [o, n, oa, la, y]) =
+    callFn (exec p (F + 1)) mulRow [o, n, oa, la, y] from rfl, L.Compiler.callFn_run]
+  rw [show (exec p (F + 1) mulRow.body).run = L.Compiler.stepRun p (exec p F) mulRow.body from rfl,
+    mulRow_body]
+  simp only [step_seq_run, step_ite_run, step_set_run, evalCP, evalP, bind, Except.bind, pure, Except.pure,
+    Except.map, Cmp.eval, BinOp.eval, Locals.init, List.getD_cons_succ, List.getD_cons_zero, hn, decide_false]
+  rw [show StateT.run (step p (exec p F) Stmt.skip) _ = .ok (.normal, _) from rfl]
+  simp only []
+  generalize hS : (((({ mem := σ.mem, loc := Locals.init [o, n, oa, la, y] } : St).setLoc 11 _).setLoc 12 _).setLoc
+    13 _).setLoc 14 _ = S
+  have hL : ∀ v, S.loc v = if v = 14 then oa &&& idxMask else if v = 13 then oa >>> 40 else
+      if v = 12 then o &&& idxMask else if v = 11 then o >>> 40 else Locals.init [o, n, oa, la, y] v := by
+    intro v; subst hS; simp only [St.setLoc_loc, Locals.init, List.getD_cons_succ, List.getD_cons_zero,
+      Nat.reduceEqDiff, reduceIte]
+  have hM : S.mem = σ.mem := by subst hS; rfl
+  have g1 : S.loc 1 = n := by rw [hL]; rfl
+  have g3 : S.loc 3 = la := by rw [hL]; rfl
+  have g4 : S.loc 4 = y := by rw [hL]; rfl
+  have g5 : S.loc 5 = 0 := by rw [hL]; rfl
+  have g6 : S.loc 6 = 0 := by rw [hL]; rfl
+  have g11 : S.loc 11 = o >>> 40 := by rw [hL]; rfl
+  have g12 : S.loc 12 = o &&& idxMask := by rw [hL]; rfl
+  have g13 : S.loc 13 = oa >>> 40 := by rw [hL]; rfl
+  have g14 : S.loc 14 = oa &&& idxMask := by rw [hL]; rfl
+  obtain ⟨S1, e1, hm1, hc1, hi1, hv1⟩ := mrW1_run p _ _ _ _ y la la.toNat F S (by rw [g13]) (by rw [g11])
+    g14 g12 g4 g3 (by rw [g5]; simp) (by omega) (by rw [hM]; exact hA) (by rw [hM]; exact hO)
+    (by rw [hM]; exact hsA) (by rw [hM]; exact hsO)
+  rw [e1]
+  simp only []
+  have hW := mrW2_run p (tierA 0 (o >>> 40)) (o &&& idxMask) n F S1 (by rw [hv1 11 (by omega), g11])
+    (by rw [hv1 12 (by omega), g12]) (by rw [hv1 1 (by omega), g1])
+  rw [hm1, hc1, hi1, hM, g5, g6] at hW
+  simp only [Nat.add_sub_cancel]
+  revert hW
+  generalize stepRun p (exec p F) mrW2 S1 = R
+  generalize mcLoop _ _ _ _ _ _ _ = res
+  intro hW
+  rcases res with e | m
+  · simp only [LoopRel] at hW; subst hW; simp only []
+  · obtain ⟨σ2, h2, hm2⟩ := hW
+    subst h2
+    simp only [step_ret_run, evalArgsP, evalP, bind, Except.bind, pure, Except.pure, Except.map, Sig.retVal,
+      Sig.retOr, hm2]
 
 end L.AsmEsc
