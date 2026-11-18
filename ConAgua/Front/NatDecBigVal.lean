@@ -920,4 +920,57 @@ theorem big_init {m : Mem} {k : Word} (hok : PoolOK m) (hk1 : 1 ≤ k.toNat) (hk
     rw [Mem.arr64_set64_ne _ _ _ _ _ hne, Mem.size_arr64_set64, Mem.size_arr64_set64, Mem.size_arr64_set64]
     exact hroom
 
+theorem big_run {n : Nat} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : callW natDecProg n "nat_dec_big" [c, d] m = some (r, m')) : bigW natDecProg n m c d = some (r, m') := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natDecBig_spec natDecProg rfl n ⟨m, Locals.init []⟩ c d) h
+  exact hW
+
+/-- **`nat_dec_big(c, d)`** on a literal longer than `decBase`: its value appended at the old top. -/
+theorem big_val (b : Array UInt8) (n : Nat) (m m' : Mem) (c d : Word) (r : List Word)
+    (hok : PoolOK m) (hb : m.arr8 IN = b) (hcd : c ≤ d) (hbig : decBase < d - c)
+    (hdig : Digits b c.toNat (d.toNat - c.toNat))
+    (h : callW natDecProg n "nat_dec_big" [c, d] m = some (r, m')) : DecPost b m m' c d r := by
+  have hW := big_run h
+  cases n with
+  | zero => rw [bigW.eq_1] at hW; cases hW
+  | succ n =>
+  rw [bigW.eq_2] at hW
+  have htop0 : rdW (m.arr64 CTL) 0 = m.top := by simp [rdW, Mem.top]
+  rw [htop0] at hW
+  have hdc : (d - c).toNat = d.toNat - c.toNat := UInt64.toNat_sub_of_le _ _ hcd
+  have hbig' := UInt64.lt_iff_toNat_lt.mp hbig
+  have hb38 : 38 ≤ decBase.toNat := by decide
+  rcases hL : bigW.loop1 natDecProg (n + 1) m (d - c) 1 19 with _ | ⟨k, m₀⟩
+  · rw [hL, bigW.k_loop1.eq_1] at hW; cases hW
+  obtain ⟨hm0, hk1, hk64⟩ := bigLoop_val (n + 1) m 1 19 k m₀ (by simp) ⟨by simp, by simp only [UInt64.reduceToNat]; rw [hdc]; omega⟩ hL
+  rw [hL, hm0] at hW
+  by_cases hlen : m.len64 (tierA POOL (m.top >>> 40)) < (m.top &&& 1099511627775) + k + k + 1
+  · rw [bigW.k_loop1.abort1 _ _ _ _ _ _ _ _ _ hlen] at hW; cases hW
+  rw [bigW.k_loop1.arm1 _ _ _ _ _ _ _ _ _ hlen] at hW
+  have hI0 := big_init hok hk1 hk64 hlen
+  rcases hT : bigW.loop2 natDecProg (n + 1) ((((m.set64 (tierA POOL (m.top >>> 40))
+      ((m.top &&& 1099511627775) + k + k) 10000000000000000000).set64 (tierA POOL (m.top >>> 40))
+      (m.top &&& 1099511627775) (m.top + k + k)).set64 (tierA POOL (m.top >>> 40))
+      ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)) (m.top >>> 40)
+      (m.top &&& 1099511627775) k 1 with _ | mk
+  · rw [hT, bigW.k_loop2.eq_1] at hW; cases hW
+  rw [hT, bigW.k_loop2.eq_2] at hW
+  have hIk := loop2_val hok (n + 1) _ 1 mk hI0 hT
+  rcases hS : callW natDecProg n "nat_dec_split" [c, d, m.top, k] mk with _ | ⟨r₅, m₅⟩
+  · rw [hS, bigW.k_nat_dec_split.eq_1] at hW; cases hW
+  rw [hS, bigW.k_nat_dec_split.eq_2] at hW
+  cases hW
+  obtain ⟨hr₅, hg₅, hs₅, hN₅, hv₅⟩ := split_val b n mk m₅ c d m.top k r₅ hIk.ok
+    (by rw [hIk.grows.arr8]; exact hb) hcd hdig hIk.tbl hS
+  have hg : Grows m m₅ := Grows.trans _ _ _ hIk.grows hg₅
+  have hle := hIk.grows.le
+  have hsl := hs₅.le
+  have hh : r₅.headD 0 = mk.top := by rw [hr₅]; rfl
+  rw [hh]
+  obtain ⟨hgF, hsF, hNF, hvF⟩ := copy_down (os := mk.top) (ls := r₅.tail.headD 0) hok hg hle hsl
+  refine ⟨by simp, hgF, by simpa using hsF, by simpa using hNF hN₅, ?_⟩
+  show pv _ m.top.toNat (r₅.tail.headD 0).toNat = _
+  rw [hvF]; exact hv₅
+
 end L.Front
