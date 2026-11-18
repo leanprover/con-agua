@@ -228,6 +228,31 @@ theorem ev_addRIc {r : Reg64} {i : Int} (hk : Host.prog[k]? = some (i64 (.add (.
     rw [BitVec.add_comm]; first | exact cf_add' _ _ | exact cf_add _ _
   · simp [BitVec.add_comm]
 
+/-- `mul [b + 8 i]`: `rdx:rax := rax * v`, unsigned. -/
+theorem ev_mulS {b i : Reg64} (hk : Host.prog[k]? = some (i64 (.mul (.mem (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st, Ev Q { s with
+      regs := ((s.regs.set64 .rax (s.regs.rax * v).toBitVec).set64 .rdx (BinOp.mulhi.eval s.regs.rax v).toBitVec),
+      status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  intro _ _ _ _
+  simp only [show (Width.W64 == Width.W8) = false from rfl, Bool.false_eq_true, ite_false]
+  refine ev_flags h ?_
+  congr 1
+  simp only [BinOp.eval, Width.bits, Reg64s.get64_rax, BitVec.unsigned, UInt64.toNat_toBitVec,
+    UInt64.toNat_ofBitVec]
+  generalize BitVec.ofInt 64 j = w
+  rw [show ((s.regs.rax.toNat : Int) * (w.toNat : Int)) =
+      ((s.regs.rax.toNat * w.toNat : Nat) : Int) by push_cast; rfl, Int.shiftRight_eq_div_pow]
+  apply BitVec.eq_of_toNat_eq
+  simp
+  omega
+
 /-- `lea d, [b + 8 i]`. -/
 theorem ev_leaX {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.lea (rr d) (mbi b i .W64))))
     (h : Ev Q { s with regs := s.regs.set64 d (s.regs.get64 b + s.regs.get64 i * 8) } (at_ (k + 1))) :
