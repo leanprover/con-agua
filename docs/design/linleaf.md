@@ -103,3 +103,20 @@ caller and is gone (with `adcHi`). `nat_add`'s spec got the same split as `nat_s
 `maxHeartbeats` override any more. Verdicts: diff-e2e 740 agree; bignum fuzzer 3315/3315; a
 `Nat.div`/`Nat.mod` fuzzer (2000 fixtures, random and edge-pattern limbs, 1–17-limb divisors): no
 mismatch. gf3 unchanged (44.669 G both; gf3 barely divides).
+
+## 5. The bitwise leaves
+
+`and_n`, `or_n`, `xor_n` (`o, oa, ob, n`) are one generic leaf `bitNG op` (its loop `bitNLoop op` is
+built from `Stmt` with the operator as a Lean argument; L has no operator parameter); `copy_n(o, oa,
+n)` copies. Their specs: `pv` of the output window is `bwv (BinOp.eval op)` (the limb-wise combine
+of the two windows) or the source window's `pv`. `nat_land` calls `and_n` over the shorter length
+(`andCore`); `nat_lor`/`nat_xor` are one generic `natBitG g`: `bitCore g` calls `g` over the shorter
+length and `copy_n` over the rest of the longer operand; `bv_tail_a`/`bv_tail_b` turn that into
+`bv` (the zero-extended combine the public specs use) since `x | 0 = x ^ 0 = x`. Public specs
+unchanged. NatBits elaborates in 8 s (it was about 60 s with the old loops), NatLeaf in 9 s, no
+heartbeat overrides.
+
+Measured on master `a98d69362e` (add/sub already in hand asm): gf3 40.932 G → 37.365 G
+(−8.7 %, exact `instructions:u`). Verdicts: diff-e2e 740 agree; bignum fuzzer 3315/3315.
+Compiled per-limb cost (asm): `and_n`/`or_n`/`xor_n` ≈ 20 (two tiered loads and a store at ≈ 7
+each, the loop's 5), `copy_n` ≈ 13: candidates for hand asm.
