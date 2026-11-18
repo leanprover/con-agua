@@ -165,7 +165,7 @@ open scoped Lean.Order
 
 /-! ## `builtin_prelude` -/
 
-/-- The call closure of `builtin_prelude` in `checkerProg` (249 functions). -/
+/-- The call closure of `builtin_prelude` in `checkerProg` (255 functions). -/
 def stageFns_builtin_prelude : List FnName := [
   "add_carry", "app_find", "app_push", "apply_level", "apply_nnum", "apply_nstr",
   "builtin_prelude", "bvar_find", "bvar_push", "const_find", "const_push", "ctl_sum", "decl_code",
@@ -176,17 +176,18 @@ def stageFns_builtin_prelude : List FnName := [
   "ind_rules", "ind_rules_go", "ind_size", "ind_slot", "intern_app", "intern_bvar", "intern_const",
   "intern_forall", "intern_imax", "intern_lam", "intern_letE", "intern_lit", "intern_lit_str",
   "intern_ls", "intern_max", "intern_nanon", "intern_nnum", "intern_nstr", "intern_param",
-  "intern_proj", "intern_sort", "intern_succ", "intern_zero", "lam_find", "lam_push", "letE_find",
-  "letE_push", "level_fresh", "level_get", "level_put", "lid_sp_clear", "limbs_eq", "lit_find",
-  "lit_find_str", "lit_hash", "lit_match", "lit_match_str", "lit_push", "lit_push_str", "ls_find",
-  "ls_match", "ls_push", "lsp_find", "lsp_put", "mac_hi", "max_find", "max_push", "mk_app",
-  "mk_forall", "mk_lam", "mk_let", "mk_proj", "name_fresh", "name_get", "name_put", "name_rec_pre",
-  "nanon_find", "nanon_push", "nat_add", "nat_limb", "nat_mad", "nat_mul", "nat_trim",
-  "nid_sp_clear", "nnum_find", "nnum_push", "node_bin", "node_let", "node_proj", "nsp_find",
-  "nsp_put", "nstr_find", "nstr_match", "nstr_push", "param_find", "param_push", "parse_rule_d",
-  "pi_sort_tele_len", "pre_apply_decl", "pre_apply_dline", "pre_apply_expr", "pre_apply_ind",
-  "pre_apply_rec", "pre_apply_str", "pre_byte_in", "pre_d_member", "pre_dec_chunk", "pre_decl_cv",
-  "pre_decl_val", "pre_esc_one", "pre_esc_sur", "pre_expr_node", "pre_front_line", "pre_front_run",
+  "intern_proj", "intern_sort", "intern_succ", "intern_zero", "kara_mid", "kara_prods", "kara_sum",
+  "lam_find", "lam_push", "letE_find", "letE_push", "level_fresh", "level_get", "level_put",
+  "lid_sp_clear", "limbs_eq", "lit_find", "lit_find_str", "lit_hash", "lit_match", "lit_match_str",
+  "lit_push", "lit_push_str", "ls_find", "ls_match", "ls_push", "lsp_find", "lsp_put", "max_find",
+  "max_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "mul_row", "mul_win",
+  "mul_zeros", "name_fresh", "name_get", "name_put", "name_rec_pre", "nanon_find", "nanon_push",
+  "nat_add", "nat_limb", "nat_mad", "nat_mul", "nat_trim", "nid_sp_clear", "nnum_find",
+  "nnum_push", "node_bin", "node_let", "node_proj", "nsp_find", "nsp_put", "nstr_find",
+  "nstr_match", "nstr_push", "param_find", "param_push", "parse_rule_d", "pi_sort_tele_len",
+  "pre_apply_decl", "pre_apply_dline", "pre_apply_expr", "pre_apply_ind", "pre_apply_rec",
+  "pre_apply_str", "pre_byte_in", "pre_d_member", "pre_dec_chunk", "pre_decl_cv", "pre_decl_val",
+  "pre_esc_one", "pre_esc_sur", "pre_expr_node", "pre_front_line", "pre_front_run",
   "pre_has_escape", "pre_hex3", "pre_hex4", "pre_hints_num", "pre_hints_obj", "pre_hints_val",
   "pre_ifl_ids", "pre_ind_bool", "pre_ind_ctor", "pre_ind_cv", "pre_ind_fields", "pre_ind_list",
   "pre_ind_member", "pre_ind_nlist", "pre_ind_num", "pre_ind_obj", "pre_ind_rec", "pre_ind_type",
@@ -203,11 +204,11 @@ def stageFns_builtin_prelude : List FnName := [
   "pre_scan_string", "pre_scan_thm", "pre_skip_braced", "pre_skip_digits", "pre_skip_ws",
   "pre_slot_nat", "pre_str_close", "pre_str_code", "pre_str_put_esc", "pre_sub_rec", "pre_sub_val",
   "pre_u_next", "pre_unescape", "pre_utf8_char", "pre_utf8_valid", "pre_value_at", "proj_find",
-  "proj_push", "sort_find", "sort_push", "store_fuel", "sub_bit", "succ_find", "succ_push",
-  "utf8_put", "validate_ind_d", "vi_ctor", "vi_ids_go", "vi_listed", "vi_listed_go", "vi_map",
-  "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams", "vi_order", "vi_order_go", "vi_order_in",
-  "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe", "zero_find",
-  "zero_push"]
+  "proj_push", "sort_find", "sort_push", "store_fuel", "sub_bit", "sub_row", "succ_find",
+  "succ_push", "utf8_put", "validate_ind_d", "vi_ctor", "vi_ids_go", "vi_listed", "vi_listed_go",
+  "vi_map", "vi_map_go", "vi_nested", "vi_np_go", "vi_nparams", "vi_order", "vi_order_go",
+  "vi_order_in", "vi_rec", "vi_rec_idx", "vi_recs", "vi_recs_go", "vi_tail", "vi_unsafe",
+  "zero_find", "zero_push"]
 
 /-- The word arrays (other than `CTL`) the functions of `stageFns_builtin_prelude` store
 into. -/

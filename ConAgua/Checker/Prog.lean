@@ -153,7 +153,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1815 functions, 0 of them stubs.
+1821 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -268,7 +268,7 @@ def preNames : List String := [
 
 def preTree : NTree := nameTree preNames
 
-/-- The functions reachable from `front_run` that are not copied (145): the copies call them
+/-- The functions reachable from `front_run` that are not copied (151): the copies call them
 unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
 def preShared : List String := [
   "add_carry",
@@ -333,6 +333,9 @@ def preShared : List String := [
   "intern_sort",
   "intern_succ",
   "intern_zero",
+  "kara_mid",
+  "kara_prods",
+  "kara_sum",
   "lam_find",
   "lam_push",
   "letE_find",
@@ -353,7 +356,6 @@ def preShared : List String := [
   "ls_push",
   "lsp_find",
   "lsp_put",
-  "mac_hi",
   "max_find",
   "max_push",
   "mk_app",
@@ -361,6 +363,9 @@ def preShared : List String := [
   "mk_lam",
   "mk_let",
   "mk_proj",
+  "mul_row",
+  "mul_win",
+  "mul_zeros",
   "name_fresh",
   "name_get",
   "name_put",
@@ -392,6 +397,7 @@ def preShared : List String := [
   "sort_push",
   "store_fuel",
   "sub_bit",
+  "sub_row",
   "succ_find",
   "succ_push",
   "utf8_put",
