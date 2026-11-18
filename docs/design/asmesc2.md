@@ -241,4 +241,26 @@ Measured (base master `acf6a18d5`):
 
 `nat_mad` (the decimal reader's multiply-add) was measured too, with its key in the exclusion
 list: per extra 20000-digit literal, 8.29 M → 4.42 M instructions (−47 %). Its compiled loop
-without inlining is 8.38 M. gf3 and Init are unchanged. Not proved yet.
+without inlining is 8.38 M. gf3 and Init are unchanged. It landed in Step 7.
+
+## Step 7: hand-written `nat_mad`
+
+`ConAgua/AsmEsc/NatMadAsm.lean` (`natMadAsm`): `R := R·w + y` in place on the `n` limbs at `o`,
+returning the carry. This is the decimal reader's multiply-add (`L.Front.natMad`).
+
+`n = 0` returns `y` at once. Otherwise, up front: the window inside its tier, its indices with
+`n` below `2^40` (L reads limb `i` at the tagged address `o + i`, `tag_add`), and the fuel, else
+`ca_exhausted`. The row is 9 instructions per limb: load, `mul %r9`, `add`/`adc` of the carry,
+store, `mov`, `add`, `cmp`, `jb`.
+
+The L side is `NatMadL.lean` (`natMad_run` against `nmRows`), the machine side `natMadAsm_sim`.
+The key `natMadCode` is in `checkerXKeys`, so the caller (`nat_dec_big`) keeps the call instead of
+inlining it. No new instruction forms.
+
+Measured (base master `b0c36f046`, with the add/sub leaves):
+* per extra 20000-digit literal (`N20kW` − `N20k`): 48.86 M → 25.62 M instructions (−47.6 %);
+  the `N20kW` file −2.1 % instructions, wall within noise (−2.1 % [−6.9, +2.7]; the file runs
+  0.1 s);
+* gf3, Init, and the division microbenchmark (`D2k1k`, `D2k1kW`) unchanged (±0.0001 %);
+* correctness: products fuzzer 2100 and division fuzzer 540 (both read large decimal literals),
+  with the same verdicts as master; `diff-e2e --refs` 740 agree, 0 REFDIFF.
