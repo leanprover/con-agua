@@ -11,6 +11,7 @@ import ConAgua.L.GrindAttr
 import ConAgua.L.LocNF
 import ConAgua.L.Records
 import ConAgua.Arena.NatCmpFacts
+import ConAgua.Arena.NatGrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -1059,6 +1060,94 @@ theorem kara_pos (s la lb oa ob : Word) (hs : s.toNat < 2 ^ 41) (hla : la.toNat 
   · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
   · rw [toNat_add_of_lt _ _ (by omega), ek]
   · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
+
+open Lean Elab Tactic Meta in
+/-- Split the conjunctions among the hypotheses, then clear every `s.loc = t` among them (the
+unfolded `LocEq`s, once `simp_all` has used them to name the callers' locals): `grind` would case
+on the `Locals.init` lists in them. -/
+elab "split_clear_locs" : tactic => do
+  liftMetaTactic fun g => do
+    let mut g ← g.casesAnd
+    for d in (← g.getDecl).lctx do
+      if d.isImplementationDetail then continue
+      let t ← instantiateMVars d.type
+      if t.isAppOfArity ``Eq 3 && (t.getArg! 0).isConstOf ``L.Locals then
+        try g ← g.clear d.fvarId catch _ => pure ()
+    return [g]
+
+section rec
+variable (p : Prog) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
+  (hps : p.lookup "sub_row" = some subRow) (hpt : p.lookup "nat_trim" = some natTrim)
+  (hpu : p.lookup "kara_sum" = some karaSum) (hpp : p.lookup "kara_prods" = some karaProds)
+  (hpm : p.lookup "kara_mid" = some karaMid) (hpw : p.lookup "mul_win" = some mulWin)
+
+/-- The spec of `mul_win` at fuel `n`. -/
+def MulWinSpec (n : Nat) : Prop := ∀ (s₀ : St) (oa la ob lb o w sc : Word),
+    pcap s₀.mem < 2 ^ 64 → sc.toNat ≤ pcap s₀.mem →
+    oa.toNat + la.toNat ≤ sc.toNat → ob.toNat + lb.toNat ≤ sc.toNat → o.toNat + w.toNat ≤ sc.toNat →
+    (oa.toNat + la.toNat ≤ o.toNat ∨ o.toNat + w.toNat ≤ oa.toNat) →
+    (ob.toNat + lb.toNat ≤ o.toNat ∨ o.toNat + w.toNat ≤ ob.toNat) →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mul_win" [oa, la, ob, lb, o, w, sc]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      OffB (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat sc.toNat ∧
+      pv (vpool s'.mem) o.toNat w.toNat =
+        pv (vpool s₀.mem) o.toNat w.toNat +
+          pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄
+
+/-- The spec of `kara_prods` at fuel `n`. -/
+def KaraProdsSpec (n : Nat) : Prop := ∀ (s₀ : St) (oa la ob lb sc k s2 : Word),
+    pcap s₀.mem < 2 ^ 64 → s2.toNat ≤ pcap s₀.mem →
+    oa.toNat + la.toNat ≤ sc.toNat → ob.toNat + lb.toNat ≤ sc.toNat →
+    sc.toNat + la.toNat + lb.toNat ≤ s2.toNat → k.toNat ≤ la.toNat → k.toNat ≤ lb.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "kara_prods" [oa, la, ob, lb, sc, k, s2]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      OffB (vpool s'.mem) (vpool s₀.mem) sc.toNat (la.toNat + lb.toNat) s2.toNat ∧
+      pv (vpool s'.mem) sc.toNat (2 * k.toNat) =
+        pv (vpool s₀.mem) oa.toNat k.toNat * pv (vpool s₀.mem) ob.toNat k.toNat ∧
+      pv (vpool s'.mem) (sc.toNat + 2 * k.toNat) (la.toNat + lb.toNat - 2 * k.toNat) =
+        pv (vpool s₀.mem) (oa.toNat + k.toNat) (la.toNat - k.toNat) *
+          pv (vpool s₀.mem) (ob.toNat + k.toNat) (lb.toNat - k.toNat); ⊤⦄
+
+/-- `kara_prods`'s frame: two zeroings and two products, inside `[s, s + w)` below `s2`. -/
+theorem kp_frame (p0 p1 p2 p3 p4 : Array Word) (s k n2 w s2 : Nat) (h1 : Off p1 p0 s (2 * k))
+    (h2 : OffB p2 p1 s (2 * k) s2) (h3 : Off p3 p2 (s + 2 * k) n2) (h4 : OffB p4 p3 (s + 2 * k) n2 s2)
+    (hw : 2 * k + n2 ≤ w) : OffB p4 p0 s w s2 := fun j hj hw' =>
+  (h4 j hj (by omega)).trans ((h3 j (by omega)).trans ((h2 j hj (by omega)).trans (h1 j (by omega))))
+
+set_option maxHeartbeats 4000000 in
+include hpz hpp in
+theorem karaProds_step (n : Nat) (ih : MulWinSpec p n) : KaraProdsSpec p (n + 1) := by
+  intro s₀ oa la ob lb sc k s2 hs h2 ha hb hsc hka hkb
+  unfold MulWinSpec at ih
+  have hC := pcap_eq s₀.mem hs
+  have e1 : ((2 : Word) * k).toNat = 2 * k.toNat := by
+    rw [UInt64.toNat_mul]; simp only [UInt64.toNat_ofNat]; omega
+  have e2 : (sc + (2 : Word) * k).toNat = sc.toNat + 2 * k.toNat := by
+    rw [toNat_add_of_lt _ _ (by omega), e1]
+  have e3 : (la + lb - (2 : Word) * k).toNat = la.toNat + lb.toNat - 2 * k.toNat := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by
+      rw [toNat_add_of_lt _ _ (by omega), e1]; omega)), toNat_add_of_lt _ _ (by omega), e1]
+  have e4 : (oa + k).toNat = oa.toNat + k.toNat := toNat_add_of_lt _ _ (by omega)
+  have e5 : (ob + k).toNat = ob.toNat + k.toNat := toNat_add_of_lt _ _ (by omega)
+  have e6 : (la - k).toNat = la.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hka)
+  have e7 : (lb - k).toNat = lb.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hkb)
+  rw [invoke_eq _ hpp]
+  simp only [callFn, karaProds]
+  vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, mulZeros_spec p hpz n, ih]
+  all_goals clear ih
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals first
+    | (with_reducible apply kp_frame <;> first | (with_reducible assumption) | omega)
+    | grind (splits := 4) [arena_grind, lang_grind, winop_grind]
+
+end rec
 
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)

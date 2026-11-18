@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Pool
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.NatGrindAttr
 
 @[expose] public section
 
@@ -65,6 +66,7 @@ theorem Off.pv_disj (p q : Array Word) (o k o' l : Nat) (h : Off p q o k) (hl : 
   induction l with
   | zero => rfl
   | succ l ih => simp only [pv, ih (by omega), h (o' + l) (by omega)]
+grind_pattern [winop_grind] Off.pv_disj => Off p q o k, pv p o' l
 
 theorem Off.symm (p q : Array Word) (o n : Nat) (h : Off p q o n) : Off q p o n :=
   fun j hj => (h j hj).symm
@@ -105,5 +107,6 @@ theorem OffB.pv_disj (p q : Array Word) (o w s o' l : Nat) (h : OffB p q o w s) 
   | succ l ih =>
     have := ih (by omega) (by omega)
     simp only [pv, this, h (o' + l) (by omega) (by omega)]
+grind_pattern [winop_grind] OffB.pv_disj => OffB p q o w s, pv p o' l
 
 end L.Arena
