@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.AsmEsc.MulRowAsm
 public import ConAgua.AsmEsc.SubRowAsm
 public import ConAgua.Checker.ProgTab
 
