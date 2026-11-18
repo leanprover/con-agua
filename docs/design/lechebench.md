@@ -147,3 +147,12 @@ fixture's numbers); on Init con-agua 626 MB, con-ron 409 MB, con-leche 308 MB, t
 * Whole files: gf3 1.46× con-leche's instructions but 0.76× its wall; Init 0.82× instructions,
   0.80× wall.
 * Literal reading is 80–190× ahead of con-leche (its reader is quadratic).
+
+## Landing note: `lean_warnings` and modules outside the build targets
+The first submission bounced in the `warnings` gate: the comment edits made
+`ConAgua/E2E/{Diff,Ref}.lean` changed files, which the `build` gate does not build (only exes reach
+them), so they had no trace, and `lean_warnings.py` ran plain `lake lean` on both at once. That has
+to restore their unbuilt imports (`ConRon.Arena.*`) and fails (reproduced: "permission denied" on a
+cache hard link, `ConRon.Arena.Store` "logged failures"). Latent for any edit of such a module.
+Fix: `lean_warnings.py` first builds untraced modules with `scripts/lake build` (cache hits, the log
+comes with the build) and elaborates only what is still unknown.
