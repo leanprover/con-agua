@@ -377,4 +377,197 @@ theorem subN_spec (p : Prog) (hp : p.lookup "sub_n" = some subN) : Chain2Spec p 
     Sig.retVal, Sig.retOr, ch2Rows_eq]
   rw [hm1]
 
+/-! ## `add_1` -/
+
+/-- `add_1`'s loop body (locals `o, oa, n, c, i, x, pt, pb, ta, qa`). -/
+def add1B : Stmt :=
+  .seq (.set 5 (.ld64t 0 (.var 8) (.bin .add (.var 9) (.var 4))))
+    (.seq (.set 5 (.bin .add (.var 5) (.var 3)))
+      (.seq (.set 3 (.cmpw .ult (.var 5) (.var 3)))
+        (.seq (.st64t 0 (.var 6) (.bin .add (.var 7) (.var 4)) (.var 5))
+          (.set 4 (.bin .add (.var 4) (.const 1))))))
+
+theorem add1_body : add1.body =
+    .seq (.set 6 (.bin .shr (.var 0) (.const 40)))
+      (.seq (.set 7 (.bin .and (.var 0) (.const 1099511627775)))
+        (.seq (.set 8 (.bin .shr (.var 1) (.const 40)))
+          (.seq (.set 9 (.bin .and (.var 1) (.const 1099511627775)))
+            (.seq (.while (.cmp .ult (.var 4) (.var 2)) add1B) (.ret [.var 3]))))) := by
+  rfl
+
+theorem add1B_run (p : Prog) (K : Stmt → M Sig) (σ : St) (c : Bool) (hc : σ.loc 3 = bw c)
+    (hA : (σ.loc 9 + σ.loc 4).toNat < (σ.mem.arr64 (tierA 0 (σ.loc 8))).size)
+    (hO : (σ.loc 7 + σ.loc 4).toNat < (σ.mem.arr64 (tierA 0 (σ.loc 6))).size) :
+    ∃ σ', stepRun p K add1B σ = .ok (.normal, σ') ∧
+      σ'.mem = (ch1Step false (tierA 0 (σ.loc 8)) (tierA 0 (σ.loc 6)) (σ.loc 9) (σ.loc 7) σ.mem (σ.loc 4) c).1 ∧
+      σ'.loc 3 = bw (ch1Step false (tierA 0 (σ.loc 8)) (tierA 0 (σ.loc 6)) (σ.loc 9) (σ.loc 7) σ.mem (σ.loc 4) c).2 ∧
+      σ'.loc 4 = σ.loc 4 + 1 ∧ ∀ v : Nat, (v < 3 ∨ 5 < v) → σ'.loc v = σ.loc v := by
+  have hw := add1_word (σ.mem.arr64 (tierA 0 (σ.loc 8)))[(σ.loc 9 + σ.loc 4).toNat] c
+  simp only [add1B, step_seq_run, step_set_run, step_st64t_run, evalP, bind, Except.bind, pure,
+    Except.pure, Except.map, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+    hA, hO, ↓reduceDIte, hc]
+  refine ⟨_, rfl, ?_, ?_, ?_, ?_⟩
+  · simp only [St.setLoc_mem, ch1Step, chStep, getElem!_pos, hA, Bool.false_eq_true, reduceIte, hw.1]
+  · simp only [St.setLoc_loc, ch1Step, chStep, getElem!_pos, hA, Bool.false_eq_true, reduceIte,
+      Nat.reduceEqDiff, hw.2]
+  · simp only [St.setLoc_loc, reduceIte]
+  · intro v hv
+    have h3 : ¬ v = 3 := by omega
+    have h4 : ¬ v = 4 := by omega
+    have h5 : ¬ v = 5 := by omega
+    simp only [St.setLoc_loc, h3, h4, h5, reduceIte]
+
+/-- **`add_1` is the model of the one-window carry chain.** -/
+theorem add1_spec (p : Prog) (hp : p.lookup "add_1" = some add1) : Chain1Spec p "add_1" false := by
+  intro σ o oa n c F hF hw
+  obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [invoke, lookupFn, hp]
+  rw [show (do let fd ← (pure add1 : M FunDecl); callFn (exec p (F + 1)) fd [o, oa, n, bw c]) =
+    callFn (exec p (F + 1)) add1 [o, oa, n, bw c] from rfl, L.Compiler.callFn_run]
+  rw [show (exec p (F + 1) add1.body).run = L.Compiler.stepRun p (exec p F) add1.body from rfl, add1_body]
+  simp only [step_seq_run, step_set_run, evalP, bind, Except.bind, pure, Except.pure,
+    Except.map, BinOp.eval, Locals.init, List.getD_cons_zero]
+  generalize hS : (((({ mem := σ.mem, loc := Locals.init [o, oa, n, bw c] } : St).setLoc 6 _).setLoc 7 _).setLoc
+    8 _).setLoc 9 _ = S
+  have hL : ∀ v, S.loc v = if v = 9 then oa &&& idxMask else if v = 8 then oa >>> 40 else
+      if v = 7 then o &&& idxMask else if v = 6 then o >>> 40 else Locals.init [o, oa, n, bw c] v := by
+    intro v; subst hS; simp only [St.setLoc_loc, Locals.init, List.getD_cons_zero, Nat.reduceEqDiff, reduceIte]
+    rfl
+  have hM : S.mem = σ.mem := by subst hS; rfl
+  have g2 : S.loc 2 = n := by rw [hL]; rfl
+  have g3 : S.loc 3 = bw c := by rw [hL]; rfl
+  have g4 : S.loc 4 = 0 := by rw [hL]; rfl
+  generalize hTA : tierA 0 (oa >>> 40) = TA at hw ⊢
+  generalize hTO : tierA 0 (o >>> 40) = TO at hw ⊢
+  let Fr : St → Prop := fun s => s.loc 6 = o >>> 40 ∧ s.loc 7 = o &&& idxMask ∧ s.loc 8 = oa >>> 40 ∧
+    s.loc 9 = oa &&& idxMask
+  let Inv : Mem → Prop := fun m => n = 0 ∨ ((oa &&& idxMask).toNat + n.toNat ≤ (m.arr64 TA).size ∧
+    (o &&& idxMask).toNat + n.toNat ≤ (m.arr64 TO).size ∧ (m.arr64 TA).size < 2 ^ 64 ∧ (m.arr64 TO).size < 2 ^ 64)
+  have hFr : Fr S := ⟨by rw [hL]; rfl, by rw [hL]; rfl, by rw [hL]; rfl, by rw [hL]; rfl⟩
+  have hInv : ∀ m i c, Inv m → Inv (ch1Step false TA TO (oa &&& idxMask) (o &&& idxMask) m i c).1 := by
+    intro m i c h
+    simp only [Inv, ch1Step, size_set64] at h ⊢
+    exact h
+  have hBody : ∀ (k : Nat) (s : St) (c : Bool), Fr s → Inv s.mem → s.loc 2 = n → s.loc 4 < n → s.loc 3 = bw c →
+      ∃ s', stepRun p (exec p k) add1B s = .ok (.normal, s') ∧
+        s'.mem = (ch1Step false TA TO (oa &&& idxMask) (o &&& idxMask) s.mem (s.loc 4) c).1 ∧
+        s'.loc 3 = bw (ch1Step false TA TO (oa &&& idxMask) (o &&& idxMask) s.mem (s.loc 4) c).2 ∧
+        s'.loc 4 = s.loc 4 + 1 ∧ s'.loc 2 = n ∧ Fr s' := by
+    intro k s c ⟨f6, f7, f8, f9⟩ hI hN hlt hC
+    have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
+    have hn0 : n ≠ 0 := by intro h; subst h; simp at hlt'
+    obtain ⟨i1, i2, i3, i4⟩ := hI.resolve_left hn0
+    obtain ⟨s', e, hm, hc, hi, hv⟩ := add1B_run p (exec p k) s c hC
+      (by rw [f8, f9, hTA, L.toNat_add_of_lt _ _ (by omega)]; omega)
+      (by rw [f6, f7, hTO, L.toNat_add_of_lt _ _ (by omega)]; omega)
+    rw [f6, f7, f8, f9, hTA, hTO] at hm hc
+    refine ⟨s', e, hm, hc, hi, by rw [hv 2 (by omega), hN], ?_, ?_, ?_, ?_⟩
+    · rw [hv 6 (by omega), f6]
+    · rw [hv 7 (by omega), f7]
+    · rw [hv 8 (by omega), f8]
+    · rw [hv 9 (by omega), f9]
+  obtain ⟨S1, e1, hm1, hc1, hF1⟩ := chLoop_run p add1B 4 2 3 n Fr Inv _ hBody hInv n.toNat F S c hFr
+    (by rw [hM]; exact hw) g2 g3 (by rw [g4]; simp) (by omega)
+  rw [e1]
+  rw [hM, g4] at hm1 hc1
+  simp only [step_ret_run, evalArgsP, evalP, bind, Except.bind, pure, Except.pure, Except.map, hc1,
+    Sig.retVal, Sig.retOr, ch1Rows_eq]
+  rw [hm1]
+
+/-! ## `sub_1` -/
+
+/-- `sub_1`'s loop body (locals `o, oa, n, c, i, x, pt, pb, ta, qa`). -/
+def sub1B : Stmt :=
+  .seq (.set 5 (.ld64t 0 (.var 8) (.bin .add (.var 9) (.var 4))))
+    (.seq (.st64t 0 (.var 6) (.bin .add (.var 7) (.var 4)) (.bin .sub (.var 5) (.var 3)))
+      (.seq (.set 3 (.cmpw .ult (.var 5) (.var 3)))
+        (.set 4 (.bin .add (.var 4) (.const 1)))))
+
+theorem sub1_body : sub1.body =
+    .seq (.set 6 (.bin .shr (.var 0) (.const 40)))
+      (.seq (.set 7 (.bin .and (.var 0) (.const 1099511627775)))
+        (.seq (.set 8 (.bin .shr (.var 1) (.const 40)))
+          (.seq (.set 9 (.bin .and (.var 1) (.const 1099511627775)))
+            (.seq (.while (.cmp .ult (.var 4) (.var 2)) sub1B) (.ret [.var 3]))))) := by
+  rfl
+
+theorem sub1B_run (p : Prog) (K : Stmt → M Sig) (σ : St) (c : Bool) (hc : σ.loc 3 = bw c)
+    (hA : (σ.loc 9 + σ.loc 4).toNat < (σ.mem.arr64 (tierA 0 (σ.loc 8))).size)
+    (hO : (σ.loc 7 + σ.loc 4).toNat < (σ.mem.arr64 (tierA 0 (σ.loc 6))).size) :
+    ∃ σ', stepRun p K sub1B σ = .ok (.normal, σ') ∧
+      σ'.mem = (ch1Step true (tierA 0 (σ.loc 8)) (tierA 0 (σ.loc 6)) (σ.loc 9) (σ.loc 7) σ.mem (σ.loc 4) c).1 ∧
+      σ'.loc 3 = bw (ch1Step true (tierA 0 (σ.loc 8)) (tierA 0 (σ.loc 6)) (σ.loc 9) (σ.loc 7) σ.mem (σ.loc 4) c).2 ∧
+      σ'.loc 4 = σ.loc 4 + 1 ∧ ∀ v : Nat, (v < 3 ∨ 5 < v) → σ'.loc v = σ.loc v := by
+  have hw := sub1_word (σ.mem.arr64 (tierA 0 (σ.loc 8)))[(σ.loc 9 + σ.loc 4).toNat] c
+  simp only [sub1B, step_seq_run, step_set_run, step_st64t_run, evalP, bind, Except.bind, pure,
+    Except.pure, Except.map, St.setLoc_loc, St.setLoc_mem, BinOp.eval, Nat.reduceEqDiff, reduceIte,
+    hA, hO, ↓reduceDIte, hc]
+  refine ⟨_, rfl, ?_, ?_, ?_, ?_⟩
+  · simp only [St.setLoc_mem, ch1Step, chStep, getElem!_pos, hA, reduceIte, hw.1]
+  · simp only [St.setLoc_loc, ch1Step, chStep, getElem!_pos, hA, reduceIte,
+      Nat.reduceEqDiff, hw.2]
+  · simp only [St.setLoc_loc, reduceIte]
+  · intro v hv
+    have h3 : ¬ v = 3 := by omega
+    have h4 : ¬ v = 4 := by omega
+    have h5 : ¬ v = 5 := by omega
+    simp only [St.setLoc_loc, h3, h4, h5, reduceIte]
+
+/-- **`sub_1` is the model of the one-window carry chain.** -/
+theorem sub1_spec (p : Prog) (hp : p.lookup "sub_1" = some sub1) : Chain1Spec p "sub_1" true := by
+  intro σ o oa n c F hF hw
+  obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [invoke, lookupFn, hp]
+  rw [show (do let fd ← (pure sub1 : M FunDecl); callFn (exec p (F + 1)) fd [o, oa, n, bw c]) =
+    callFn (exec p (F + 1)) sub1 [o, oa, n, bw c] from rfl, L.Compiler.callFn_run]
+  rw [show (exec p (F + 1) sub1.body).run = L.Compiler.stepRun p (exec p F) sub1.body from rfl, sub1_body]
+  simp only [step_seq_run, step_set_run, evalP, bind, Except.bind, pure, Except.pure,
+    Except.map, BinOp.eval, Locals.init, List.getD_cons_zero]
+  generalize hS : (((({ mem := σ.mem, loc := Locals.init [o, oa, n, bw c] } : St).setLoc 6 _).setLoc 7 _).setLoc
+    8 _).setLoc 9 _ = S
+  have hL : ∀ v, S.loc v = if v = 9 then oa &&& idxMask else if v = 8 then oa >>> 40 else
+      if v = 7 then o &&& idxMask else if v = 6 then o >>> 40 else Locals.init [o, oa, n, bw c] v := by
+    intro v; subst hS; simp only [St.setLoc_loc, Locals.init, List.getD_cons_zero, Nat.reduceEqDiff, reduceIte]
+    rfl
+  have hM : S.mem = σ.mem := by subst hS; rfl
+  have g2 : S.loc 2 = n := by rw [hL]; rfl
+  have g3 : S.loc 3 = bw c := by rw [hL]; rfl
+  have g4 : S.loc 4 = 0 := by rw [hL]; rfl
+  generalize hTA : tierA 0 (oa >>> 40) = TA at hw ⊢
+  generalize hTO : tierA 0 (o >>> 40) = TO at hw ⊢
+  let Fr : St → Prop := fun s => s.loc 6 = o >>> 40 ∧ s.loc 7 = o &&& idxMask ∧ s.loc 8 = oa >>> 40 ∧
+    s.loc 9 = oa &&& idxMask
+  let Inv : Mem → Prop := fun m => n = 0 ∨ ((oa &&& idxMask).toNat + n.toNat ≤ (m.arr64 TA).size ∧
+    (o &&& idxMask).toNat + n.toNat ≤ (m.arr64 TO).size ∧ (m.arr64 TA).size < 2 ^ 64 ∧ (m.arr64 TO).size < 2 ^ 64)
+  have hFr : Fr S := ⟨by rw [hL]; rfl, by rw [hL]; rfl, by rw [hL]; rfl, by rw [hL]; rfl⟩
+  have hInv : ∀ m i c, Inv m → Inv (ch1Step true TA TO (oa &&& idxMask) (o &&& idxMask) m i c).1 := by
+    intro m i c h
+    simp only [Inv, ch1Step, size_set64] at h ⊢
+    exact h
+  have hBody : ∀ (k : Nat) (s : St) (c : Bool), Fr s → Inv s.mem → s.loc 2 = n → s.loc 4 < n → s.loc 3 = bw c →
+      ∃ s', stepRun p (exec p k) sub1B s = .ok (.normal, s') ∧
+        s'.mem = (ch1Step true TA TO (oa &&& idxMask) (o &&& idxMask) s.mem (s.loc 4) c).1 ∧
+        s'.loc 3 = bw (ch1Step true TA TO (oa &&& idxMask) (o &&& idxMask) s.mem (s.loc 4) c).2 ∧
+        s'.loc 4 = s.loc 4 + 1 ∧ s'.loc 2 = n ∧ Fr s' := by
+    intro k s c ⟨f6, f7, f8, f9⟩ hI hN hlt hC
+    have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
+    have hn0 : n ≠ 0 := by intro h; subst h; simp at hlt'
+    obtain ⟨i1, i2, i3, i4⟩ := hI.resolve_left hn0
+    obtain ⟨s', e, hm, hc, hi, hv⟩ := sub1B_run p (exec p k) s c hC
+      (by rw [f8, f9, hTA, L.toNat_add_of_lt _ _ (by omega)]; omega)
+      (by rw [f6, f7, hTO, L.toNat_add_of_lt _ _ (by omega)]; omega)
+    rw [f6, f7, f8, f9, hTA, hTO] at hm hc
+    refine ⟨s', e, hm, hc, hi, by rw [hv 2 (by omega), hN], ?_, ?_, ?_, ?_⟩
+    · rw [hv 6 (by omega), f6]
+    · rw [hv 7 (by omega), f7]
+    · rw [hv 8 (by omega), f8]
+    · rw [hv 9 (by omega), f9]
+  obtain ⟨S1, e1, hm1, hc1, hF1⟩ := chLoop_run p sub1B 4 2 3 n Fr Inv _ hBody hInv n.toNat F S c hFr
+    (by rw [hM]; exact hw) g2 g3 (by rw [g4]; simp) (by omega)
+  rw [e1]
+  rw [hM, g4] at hm1 hc1
+  simp only [step_ret_run, evalArgsP, evalP, bind, Except.bind, pure, Except.pure, Except.map, hc1,
+    Sig.retVal, Sig.retOr, ch1Rows_eq]
+  rw [hm1]
+
 end L.AsmEsc
