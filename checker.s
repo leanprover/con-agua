@@ -128079,136 +128079,35 @@ movq $0, %rax
 addq $96, %rsp
 ret
 ca_f_lit_hash:
-subq $64, %rsp
-movq $0, %r11
-movq $-3750763034362895579, %r13
-movq %rdi, %rbx
-shrq $40, %rbx
-movq $1099511627775, %r12
-andq %rdi, %r12
-movq $1099511627776, %rax
-subq %r12, %rax
-cmpq %r8, %rax
-jae .Lca_lit_hash_2122E
-movq $560, %rax
-movq %rax, %rbx
-jmp ca_abort
-jmp .Lca_lit_hash_2122X
-.Lca_lit_hash_2122E:
-.Lca_lit_hash_2122X:
-movq $1099511628211, %rsi
-.Lca_lit_hash_2221H:
-cmpq $8, %r8
-jb .Lca_lit_hash_2221X
-movq %rbx, %rcx
+movq $-3750763034362895579, %rax
+cmpq $0, %r8
+je .Lasm_lit_hash_Z
+movq $1099511627775, %rdx
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %r12
-jae ca_error
-movq 32(%r15,%rcx,8), %rax
-movq (%rax,%r12,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 1(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 2(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 3(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 4(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 5(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 6(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-movq %rbx, %rcx
-andq $1, %rcx
-lea 7(%r12), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-addq $8, %r12
-subq $8, %r8
-subq $1, %r14
-jb ca_exhausted
-jmp .Lca_lit_hash_2221H
-.Lca_lit_hash_2221X:
-.Lca_lit_hash_22221H:
+andq %rdx, %rdi
+movq %rdx, %r11
+subq %rdi, %r11
 cmpq %r8, %r11
-jae .Lca_lit_hash_22221X
-movq %rbx, %rcx
-andq $1, %rcx
-lea (%r12,%r11,1), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %r13, %rax
-imulq %rsi, %rax
-movq %rax, %r13
-addq $1, %r11
-subq $1, %r14
 jb ca_exhausted
-jmp .Lca_lit_hash_22221H
-.Lca_lit_hash_22221X:
-movq %r13, %rax
-jmp .Lca_lit_hash_0R
-.Lca_lit_hash_0Z:
-movq $0, %rax
-.Lca_lit_hash_0R:
-addq $64, %rsp
+movq 1504(%r15,%rcx,8), %rdx
+subq %rdi, %rdx
+jb ca_exhausted
+cmpq %r8, %rdx
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r8, %r14
+jb ca_exhausted
+movq $1099511628211, %rsi
+.Lasm_lit_hash_L:
+xorq (%rdi), %rax
+imulq %rsi, %rax
+addq $8, %rdi
+decq %r8
+jne .Lasm_lit_hash_L
+.Lasm_lit_hash_Z:
 ret
 ca_f_lit_major_to_ctor:
 movq %rsp, %rax
