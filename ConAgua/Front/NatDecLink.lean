@@ -16,8 +16,9 @@ import ConAgua.Arena.NatCmpFacts
 The facts about the models of `ConAgua.Front.NatDec`, by hand: the chunk loop reads the decimal
 value of its digits (`chunkN_val`), the multiply-add pass multiplies (`madW_val`), the chunk loop
 keeps the slice normalised and denoting the digits read so far (`decW_val`); and con-leche's
-`readNatAt` at a digit run is that decimal value (`readNatAt_decN`). `natDec_spec`: on a literal
-the scanner accepted (`NatValR`), `nat_dec(c, d)` appends the normalised limbs of its value.
+`readNatAt` at a digit run is that decimal value (`readNatAt_decN`). `natChunksW_val`: on digits
+`[c, d)`, `nat_dec_chunks(c, d)` appends the normalised limbs of their value (the long literals:
+`NatDecBigVal.lean`).
 -/
 
 open Std.WP

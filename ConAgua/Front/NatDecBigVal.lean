@@ -307,7 +307,7 @@ theorem copy_down {m m₄ : Mem} {os ls : Word} (hok : PoolOK m) (hg : Grows m m
   have hag : Agree (vpool (m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
       (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat)) (vpool m) m.top.toNat := by
     intro j hj
-    rw [hcopy j, if_neg (by omega)]
+    rw [hcopy j, ite_eq_right (by omega)]
     exact hg.agree j hj
   have hgr := Grows.reset hok hg hpf hag (m.top + ls) (by omega) (by omega)
   have hctl : 0 < ((m₄.copy64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775)
@@ -318,7 +318,7 @@ theorem copy_down {m m₄ : Mem} {os ls : Word} (hok : PoolOK m) (hg : Grows m m
         (tierA POOL (m.top >>> 40)) (os &&& 1099511627775) ls.toNat))[m.top.toNat + i]? =
         (vpool m₄)[os.toNat + i]? := by
     intro i hi
-    rw [hcopy, if_pos (by omega)]
+    rw [hcopy, ite_eq_left (by omega)]
     congr 1
     omega
   refine ⟨hgr, SliceOK.fresh hgr (Mem.top_set64 _ _ hctl), ?_, ?_⟩
@@ -557,15 +557,15 @@ theorem pv_set_out (p : Array Word) (x : Nat) (v : Word) (o l : Nat) (h : x < o 
   apply pv_congr'
   intro i hi
   simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
 
 theorem norm_set_out (p : Array Word) (x : Nat) (v : Word) (o l : Nat) (h : x < o ∨ o + l ≤ x) :
     Norm (p.set! x v) o l ↔ Norm p o l := by
   unfold Norm
   simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   constructor <;> intro hn hl <;> have := hn hl
-  · rwa [if_neg (by omega)] at this
-  · rwa [if_neg (by omega)]
+  · rwa [ite_eq_right (by omega)] at this
+  · rwa [ite_eq_right (by omega)]
 
 /-- `tblA`/`tblL` as reads of the virtual pool. -/
 theorem tbl_vpool (m : Mem) (tbl t : Word) (h : tbl.toNat + 2 * t.toNat + 1 < 2 ^ 41) :
@@ -612,12 +612,12 @@ theorem TblOK.push {mi m₁ m₂ : Mem} {T K i s l : Word} (hok : PoolOK mi) (h 
     have ht' := UInt64.lt_iff_toNat_lt.mp ht
     obtain ⟨a2, l2⟩ := tbl_vpool m₂ T t (by omega)
     obtain ⟨a1, l1⟩ := tbl_vpool m₁ T t (by omega)
-    rw [a2, l2, a1, l1, rd2 _ (by omega), rd2 _ (by omega), if_neg (by omega), if_neg (by omega),
-      if_neg (by omega), if_neg (by omega)]
+    rw [a2, l2, a1, l1, rd2 _ (by omega), rd2 _ (by omega), ite_eq_right (by omega), ite_eq_right (by omega),
+      ite_eq_right (by omega), ite_eq_right (by omega)]
     exact ⟨rfl, rfl⟩
   have eNew : tblA m₂ T i = s ∧ tblL m₂ T i = l := by
     obtain ⟨a2, l2⟩ := tbl_vpool m₂ T i (by omega)
-    rw [a2, l2, rd2 _ (by omega), rd2 _ (by omega), if_neg (by omega), if_pos rfl, if_pos rfl]
+    rw [a2, l2, rd2 _ (by omega), rd2 _ (by omega), ite_eq_right (by omega), ite_eq_left rfl, ite_eq_left rfl]
     exact ⟨rfl, rfl⟩
   -- a slice above the table reads the same
   have hout : ∀ o ln : Nat, T.toNat + 2 * K.toNat ≤ o →
@@ -887,8 +887,8 @@ theorem big_init {m : Mem} {k : Word} (hok : PoolOK m) (hk1 : 1 ≤ k.toNat) (hk
   simp only [UInt64.toNat_zero, Nat.mul_zero, Nat.add_zero] at ta tl
   rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega))] at ta
   rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega))] at tl
-  rw [if_neg (by omega), if_pos (by omega)] at ta
-  rw [if_pos (by omega)] at tl
+  rw [ite_eq_right (by omega), ite_eq_left (by omega)] at ta
+  rw [ite_eq_left (by omega)] at tl
   have h0 : ∀ t : Word, t < 1 → t = 0 := fun t ht => UInt64.toNat_inj.mp (by
     have := UInt64.lt_iff_toNat_lt.mp ht; simp at this ⊢; omega)
   have hTt := hg.tier
@@ -897,7 +897,7 @@ theorem big_init {m : Mem} {k : Word} (hok : PoolOK m) (hk1 : 1 ≤ k.toNat) (hk
       10000000000000000000).set64 (tierA POOL (m.top >>> 40)) (m.top &&& 1099511627775) (m.top + k + k)).set64
       (tierA POOL (m.top >>> 40)) ((m.top &&& 1099511627775) + 1) 1).set64 CTL 0 (m.top + k + k + 1)))[
         m.top.toNat + 2 * k.toNat]?.getD 0 = 10000000000000000000 := by
-    rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega)), if_neg (by omega), if_neg (by omega), if_pos (by omega)]
+    rw [hV, get_set3 _ _ _ _ _ _ _ _ (hvs _ (by omega)), ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_left (by omega)]
   refine ⟨hok', hg, ⟨?_, by simpa using hk1, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_⟩,
     by simp, hk64, ?_⟩
   · rw [htop, hT3]; omega

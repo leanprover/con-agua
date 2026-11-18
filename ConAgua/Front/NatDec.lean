@@ -29,25 +29,36 @@ meta import Std.WP.Tactic
 /-!
 # Decimal `Nat` literals into the limb pool: `nat_dec(c, d)`
 
-con-ron's `frontend/nat_decimal.rs` (`from_decimal`, `from_decimal_go`, `mul_add_small`): the
-digits `[c, d)` of the input are read nineteen at a time (`10^19 < 2^64`), and each chunk is
-folded into the limbs by one multiply-add pass, `limbs := limbs * 10^k + chunk`. In L the limbs
-are a slice at the pool top that grows in place:
+con-ron's `frontend/nat_decimal.rs` (`from_decimal`, `read_chunks`, `read_split`,
+`power_table`, `mul_add_small`). A literal of at most `decBase` digits is read nineteen at a time
+(`10^19 < 2^64`), and each chunk is folded into the limbs by one multiply-add pass,
+`limbs := limbs * 10^k + chunk`. In L the limbs are a slice at the pool top that grows in place:
 
 * `dec_chunk(i, k)`: the value `ch` of the `k ≤ 19` digits at `i`, and `pw = 10^k`.
 * `nat_mad(o, n, w, y)`: the slice `(o, n)` becomes `(o, n) * w + y` in place, the carry out is
   returned (Rust's `u128` accumulator as the low word `x * w + y` and the high word
-  `mulhi(x, w) + u64(lo < y)`). This is the helper lane `nat` has no copy of yet
-  (`mul_add_small`); it belongs with `NatMul.lean`.
-* `nat_dec(c, d)`: the chunk loop; a non-zero carry is one more limb at the end (abort when the
-  pool is full); then the top moves past the slice, which is returned as `(top, n)`.
+  `mulhi(x, w) + u64(lo < y)`).
+* `nat_dec_chunks(c, d)`: the chunk loop; a non-zero carry is one more limb at the end (abort
+  when the pool is full); then the top moves past the slice, which is returned as `(top, n)`.
 
 The limbs are normalised throughout (no leading zero limb is ever written: the carry limb is
 non-zero, and a product of a normalised slice by `10^k ≥ 1` keeps its top limb non-zero).
 
-Each L function's spec is an equation about a named model (`chunkN`, `madW`, `decW`); the
-facts about the models are proved by hand below them, and `natDec_spec` relates the result to
-con-leche's `readNatAt` on a literal the scanner accepted (`NatValR`).
+A longer literal is divided and conquered, `O(M(n) log n)` with `M` the cost of `nat_mul`:
+
+* `nat_dec_big(c, d)`: the table of `P[t] = 10^(19 · 2^t)` (by squaring with `nat_mul`; its
+  index of `(address, length)` pairs at the old top), then `nat_dec_split`, whose result is
+  copied down to the old top.
+* `nat_dec_split(c, d, tbl, k)`: at most `decBase` digits by `nat_dec_chunks`; otherwise
+  `hi · P[t] + lo` (`nat_mul`, `nat_add`) for the low part of exactly `dd = 19 · 2^t` digits,
+  the largest with `4 dd ≤ d - c`, the sum copied down to the top it started from.
+* `nat_dec(c, d)`: the dispatch.
+
+The chunk loop's L functions have specs that are equations about named models (`chunkN`, `madW`,
+`decW`, `natChunksW`), with facts proved by hand in `NatDecLink.lean`. The long path's model is
+`nat_dec_big`'s run in `natDecProg` (`callF`; `NatDecBig.lean` has the generated models over
+`callW`, and `NatDecBigVal.lean` their values). `natDecW_val` relates the result to con-leche's
+`readNatAt` on a literal the scanner accepted (`NatValR`).
 -/
 
 set_option experimental.vcgen true
