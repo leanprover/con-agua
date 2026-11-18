@@ -470,7 +470,7 @@ twin's failure condition. Functions whose call closure aborts only with class
 
 ### 4.5 The composition
 
-[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L181-L191)
+[`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L181-L192)
 is the driver on the machine: `ca_start` calls entry 1, whose setup stub builds
 the layout and enters the trampoline, so `compile_correct` gives one L run of
 `check` in mode 3 (a run of the compiled, inlined program, which is a run of
@@ -1114,7 +1114,7 @@ place, on entry 1's own arrays, so it needs the setup stub's region plus 16
 bytes, where it keeps its return address and the caller's `r15`
 ([the driver](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Abi.lean#L225-L234)).
 Its machine-level theorem
-([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L181-L191))
+([`drv_outcome`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvAbi.lean#L181-L192))
 says that an accept means the two L runs accepted, and an error report
 (`rdx = 2`) that one of them failed with the code in `rax`;
 [`drv_twinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/ParDriverTwin.lean#L101-L111)
