@@ -343,4 +343,24 @@ theorem mulRow_run (p : Prog) (hp : p.lookup "mul_row" = some mulRow) (σ : St) 
     simp only [step_ret_run, evalArgsP, evalP, bind, Except.bind, pure, Except.pure, Except.map, Sig.retVal,
       Sig.retOr, hm2]
 
+/-- `mul_row` with `la = 0` returns `0` and changes nothing. -/
+theorem mulRow_run_zero (p : Prog) (hp : p.lookup "mul_row" = some mulRow) (σ : St) (o n oa y : Word)
+    (F : Nat) (hF : 0 < F) :
+    (invoke p (exec p F) "mul_row" [o, n, oa, 0, y]).run σ = .ok ([0], σ) := by
+  obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
+  simp only [invoke, lookupFn, hp]
+  rw [show (do let fd ← (pure mulRow : M FunDecl); callFn (exec p (F + 1)) fd [o, n, oa, 0, y]) =
+    callFn (exec p (F + 1)) mulRow [o, n, oa, 0, y] from rfl, L.Compiler.callFn_run]
+  rw [show (exec p (F + 1) mulRow.body).run = L.Compiler.stepRun p (exec p F) mulRow.body from rfl,
+    mulRow_body]
+  simp only [step_seq_run, step_ite_run, step_set_run, evalCP, evalP, bind, Except.bind, pure, Except.pure,
+    Except.map, Cmp.eval, BinOp.eval, Locals.init, List.getD_cons_succ, List.getD_cons_zero,
+    UInt64.not_lt_zero, decide_false]
+  rw [show StateT.run (step p (exec p F) Stmt.skip) _ = .ok (.normal, _) from rfl]
+  simp only [mrW1, mrW2, step_while_run, evalCP, evalP, bind, Except.bind, pure, Except.pure,
+    St.setLoc_loc, Nat.reduceEqDiff, reduceIte, Locals.init, List.getD_cons_succ, List.getD_cons_zero,
+    Cmp.eval, UInt64.not_lt_zero, decide_false, bne_self_eq_false, step_ret_run, evalArgsP, Except.map,
+    Sig.retVal, Sig.retOr, List.getD_nil]
+  rfl
+
 end L.AsmEsc

@@ -270,7 +270,7 @@ theorem mr_tail_step (TO : TieredArray) (hTO : G.tab.dom64 TO = true) (ob n : Wo
     refine herr _ ⟨.oob, ?_, by simp⟩ ⟨hF.rbp, hF.pres⟩
     rw [← ht, mcLoop]
     have : ¬ (ob + i).toNat < (M.arr64 TO).size := by rw [hobi, hsz]; omega
-    rw [if_neg hc0, if_neg hni, dif_neg this]
+    rw [ite_eq_right_of_eq_false _ _ (eq_false hc0), ite_eq_right_of_eq_false _ _ (eq_false hni), dite_eq_right_of_eq_false (eq_false this)]
   simp only [CondCode.interp, cmpFlags_cf, Reg64s.get64_r13, hr13, UInt64.toNat_toBitVec, hSn,
     Bool.not_eq_false', decide_eq_true_eq] at hcc
   have hin : (ob + i).toNat < (M.arr64 TO).size := by rw [hobi, hsz]; omega
@@ -309,7 +309,7 @@ theorem mr_tail_step (TO : TieredArray) (hTO : G.tab.dom64 TO = true) (ob n : Wo
   have hm' := MemRel.store64 hG hm hTO hin ((M.arr64 TO)[(ob + i).toNat] + c)
   rw [hB] at hm'
   have ht' := ht
-  rw [mcLoop, if_neg hc0, if_neg hni, dif_pos hin] at ht'
+  rw [mcLoop, ite_eq_right_of_eq_false _ _ (eq_false hc0), ite_eq_right_of_eq_false _ _ (eq_false hni), dite_eq_left_of_eq_true (eq_true hin)] at ht'
   have hpos : 0 < s.regs.r14.toNat := Nat.pos_of_ne_zero (L.toNat_ne_zero_of_ne _ h14)
   have h14m : ({ toBitVec := s.regs.r14.toBitVec - 1 } : UInt64).toNat = s.regs.r14.toNat - 1 :=
     u64_sub_one_toNat hpos
@@ -329,6 +329,7 @@ theorem mr_tail_step (TO : TieredArray) (hTO : G.tab.dom64 TO = true) (ob n : Wo
   · rw [h14m]; omega
   · exact ht'
 
+omit hra hlo hhi in
 /-- One step of the row (`.L`), at index `j < la`: the next step (`hnext`) or, after the last, the
 carry ripple (`hT`). -/
 theorem mr_row_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
@@ -441,6 +442,58 @@ theorem mr_row_step (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G
       simp only [UInt64.toNat_toBitVec, ← UInt64.toBitVec_add]
       exact adc2_word _ _ _ _
     all_goals done
+
+/-- The carry ripple from `.T`, by induction on L's fuel. -/
+theorem mr_tail (TO : TieredArray) (hTO : G.tab.dom64 TO = true) (ob n : Word) (target : Except Err Mem)
+    (hob : ob.toNat ≤ G.s (G.tab.pos64 TO))
+    (hok : ∀ M s', target = .ok M → MemRel G M s'.dmem → s'.regs.rsp.toNat = d.regs.rsp.toNat + 8 →
+      s'.regs.rbp = d.regs.rbp → s'.regs.r15 = d.regs.r15 → s'.regs.r14.toNat ≤ d.regs.r14.toNat →
+      s'.regs.rax = 0 → Pres G d.regs.rsp.toNat d.dmem s'.dmem → Ev Q s' (Int64.ofBitVec ra.toBitVec))
+    (herr : ∀ s', (∃ x, target = .error x ∧ x.plain) → GPost G d.regs.rsp.toNat d s' → Ev Q s' (label errorL))
+    (hexh : ∀ s', GPost G d.regs.rsp.toNat d s' → Ev Q s' (label exhaustedL)) :
+    ∀ (k : Nat) (s : MachineData) (M : Mem) (i c : Word), MrFr G d s → MemRel G M s.dmem →
+      s.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s.regs.rbx = UInt64.ofNat (G.s (G.tab.pos64 TO) - ob.toNat) → s.regs.r8 = n → s.regs.r13 = i →
+      s.regs.r12 = c → s.regs.rcx = 0 → i.toNat ≤ G.s (G.tab.pos64 TO) - ob.toNat → s.regs.r14.toNat ≤ k →
+      mcLoop TO ob n k M i c = target → Ev Q s (at_ (kf + 45)) := by
+  intro k
+  induction k with
+  | zero =>
+    intro s M i c hF hm h1 h2 h3 h4 h5 h6 h7 h8 h9
+    exact mr_tail_step hG hc hra hlo hhi TO hTO ob n target hob hok herr hexh 0 s M i c hF hm h1 h2 h3 h4 h5 h6
+      h7 h8 h9 (fun _ h => absurd h (by omega))
+  | succ k ih =>
+    intro s M i c hF hm h1 h2 h3 h4 h5 h6 h7 h8 h9
+    exact mr_tail_step hG hc hra hlo hhi TO hTO ob n target hob hok herr hexh (k + 1) s M i c hF hm h1 h2 h3 h4
+      h5 h6 h7 h8 h9 (fun k' hk => by cases hk; exact ih)
+
+omit hra hlo hhi in
+/-- The row from `.L`, by induction on the steps left. -/
+theorem mr_row (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.tab.dom64 TO = true)
+    (qb ob y la n X : Word) (R14 : UInt64) (m0 : Mem)
+    (hqa : qb.toNat + la.toNat ≤ G.s (G.tab.pos64 TA)) (hoa : ob.toNat + la.toNat ≤ G.s (G.tab.pos64 TO))
+    (hT : ∀ s', MrFr G d s' → MemRel G (mrRows TA TO qb ob y la.toNat m0 0 0).1 s'.dmem →
+      s'.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s'.regs.r13 = la → s'.regs.r12 = (mrRows TA TO qb ob y la.toNat m0 0 0).2 → s'.regs.rcx = 0 →
+      s'.regs.rbx = X → s'.regs.r8 = n → s'.regs.r14 = R14 → Ev Q s' (at_ (kf + 45))) :
+    ∀ (r : Nat) (s : MachineData) (j : Word), la.toNat = j.toNat + r → MrFr G d s →
+      MemRel G (mrRows TA TO qb ob y j.toNat m0 0 0).1 s.dmem →
+      s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qb.toNat) →
+      s.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s.regs.r10 = la → s.regs.r11 = y → s.regs.r13 = j →
+      s.regs.r12 = (mrRows TA TO qb ob y j.toNat m0 0 0).2 → s.regs.rcx = 0 →
+      s.regs.rbx = X → s.regs.r8 = n → s.regs.r14 = R14 → j.toNat < la.toNat → Ev Q s (at_ (kf + 33)) := by
+  intro r
+  induction r with
+  | zero => intro s j hr _ _ _ _ _ _ _ _ _ _ _ _ hj; omega
+  | succ r ih =>
+    intro s j hr hF hm h1 h2 h3 h4 h5 h6 h7 h8 h9 h10 hj
+    refine mr_row_step hG hc TA TO hTA hTO qb ob y la n X R14 m0 hqa hoa s j hF hm h1 h2 h3 h4 h5
+      h6 h7 h8 h9 h10 hj ?_ hT
+    intro s' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11 g12 g13
+    have := la.toNat_lt
+    exact ih s' (j + 1) (by rw [L.toNat_add_one_of_lt (by omega)]; omega) g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11
+      g12 g13
 
 end
 
