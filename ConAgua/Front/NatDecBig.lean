@@ -9,6 +9,7 @@ import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import all ConAgua.Front.NatDec
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatMul
 
 @[expose] public section
