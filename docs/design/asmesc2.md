@@ -383,7 +383,7 @@ Step lemmas (`AsmEsc/Step.lean`), from Kraken's semantics: `ev_shldCl`, `ev_shrd
 Value lemmas:
 * `shld_val`: the top half of `(a ++ b) << c` is `(a << c) | (b >> (64 − c))`;
 * `shrd_val`: the bottom half of `(b ++ a) >> c` is `(a >> c) | (b << (64 − c))`;
-* `dshl_eq`, `dshr_eq`: for `s < 64` these equal L's expressions, by `bv_decide`.
+* `dshl_eq`, `dshr_eq`: for `s < 64` these equal L's expressions (shift arithmetic on `toBitVec`; `bv_decide` would bring native axioms that the final axiom guards reject).
 
 L side: `ShiftL.lean`. One loop lemma with a carried word (`wLoop_run`, the model `wRows`) serves
 `shl_n`, where the word is the carry, and `shr_n`, where it is the previous limb. `zero_n` uses

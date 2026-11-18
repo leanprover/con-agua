@@ -4,7 +4,6 @@ public import ConAgua.AsmEsc.ShiftAsm
 public import ConAgua.AsmEsc.ShiftL
 public import ConAgua.AsmEsc.BitAsmSim
 import Kraken.X64.Registers
-import Std.Tactic.BVDecide
 
 @[expose] public section
 
@@ -20,29 +19,56 @@ namespace L.AsmEsc
 
 open L L.Arena L.Compiler
 
+theorem amt_sub (k s : UInt64) (_hk : k.toNat ≤ 64) (hs : s.toNat ≤ k.toNat) :
+    ((k - s).toBitVec % 64).toNat = (k.toNat - s.toNat) % 64 := by
+  have e64 : (64 : BitVec 64).toNat = 64 := rfl
+  rw [BitVec.toNat_umod, UInt64.toNat_toBitVec, e64, UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hs)]
+
 theorem dshl_eq (x p s : UInt64) (hs : s < 64) : dshl x p s = (x <<< s) ||| ((p >>> 1) >>> (63 - s)) := by
+  have hs' : s.toNat < 64 := hs
+  have e64 : (64 : BitVec 64).toNat = 64 := rfl
+  have hm : (s % 64).toNat = s.toNat := by rw [UInt64.toNat_mod]; exact Nat.mod_eq_of_lt hs'
+  have a1 : ((64 - s % 64).toBitVec % 64).toNat = (64 - s.toNat) % 64 := by
+    rw [amt_sub 64 (s % 64) (by decide) (by rw [hm]; show s.toNat ≤ 64; omega), hm]; rfl
+  have a2 : ((63 - s).toBitVec % 64).toNat = 63 - s.toNat := by
+    rw [amt_sub 63 s (by decide) (by show s.toNat ≤ 63; omega)]; show (63 - s.toNat) % 64 = _; omega
+  have a3 : ((1 : UInt64).toBitVec % 64).toNat = 1 := rfl
+  have a4 : s.toBitVec.toNat % (64 : BitVec 64).toNat = s.toNat := by
+    rw [e64, UInt64.toNat_toBitVec]; omega
   unfold dshl
-  have : s.toNat < 64 := hs
+  apply UInt64.toBitVec_inj.mp
+  simp only [apply_ite UInt64.toBitVec, UInt64.toBitVec_or, UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight]
+  rw [BitVec.shiftLeft_eq', BitVec.ushiftRight_eq', BitVec.ushiftRight_eq', BitVec.ushiftRight_eq', BitVec.toNat_umod,
+    a1, a2, a3, a4, ← BitVec.shiftRight_add]
   split
   · rename_i h0
-    have : s = 0 := UInt64.toNat_inj.mp (by simp; omega)
-    subst this
-    bv_decide
+    have : s.toNat = 0 := by omega
+    rw [this, BitVec.ushiftRight_eq_zero (by decide), BitVec.shiftLeft_zero, BitVec.or_zero]
   · rename_i h0
-    have h1 : s ≠ 0 := fun e => h0 (by subst e; rfl)
-    bv_decide
+    rw [show 1 + (63 - s.toNat) = (64 - s.toNat) % 64 by omega]
 
 theorem dshr_eq (x y s : UInt64) (hs : s < 64) : dshr x y s = (x >>> s) ||| ((y <<< 1) <<< (63 - s)) := by
+  have hs' : s.toNat < 64 := hs
+  have e64 : (64 : BitVec 64).toNat = 64 := rfl
+  have hm : (s % 64).toNat = s.toNat := by rw [UInt64.toNat_mod]; exact Nat.mod_eq_of_lt hs'
+  have a1 : ((64 - s % 64).toBitVec % 64).toNat = (64 - s.toNat) % 64 := by
+    rw [amt_sub 64 (s % 64) (by decide) (by rw [hm]; show s.toNat ≤ 64; omega), hm]; rfl
+  have a2 : ((63 - s).toBitVec % 64).toNat = 63 - s.toNat := by
+    rw [amt_sub 63 s (by decide) (by show s.toNat ≤ 63; omega)]; show (63 - s.toNat) % 64 = _; omega
+  have a3 : ((1 : UInt64).toBitVec % 64).toNat = 1 := rfl
+  have a4 : s.toBitVec.toNat % (64 : BitVec 64).toNat = s.toNat := by
+    rw [e64, UInt64.toNat_toBitVec]; omega
   unfold dshr
-  have : s.toNat < 64 := hs
+  apply UInt64.toBitVec_inj.mp
+  simp only [apply_ite UInt64.toBitVec, UInt64.toBitVec_or, UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight]
+  rw [BitVec.ushiftRight_eq', BitVec.shiftLeft_eq', BitVec.shiftLeft_eq', BitVec.shiftLeft_eq', BitVec.toNat_umod,
+    a1, a2, a3, a4, ← BitVec.shiftLeft_add]
   split
   · rename_i h0
-    have : s = 0 := UInt64.toNat_inj.mp (by simp; omega)
-    subst this
-    bv_decide
+    have : s.toNat = 0 := by omega
+    rw [this, BitVec.shiftLeft_eq_zero (by decide), BitVec.ushiftRight_zero, BitVec.or_zero]
   · rename_i h0
-    have h1 : s ≠ 0 := fun e => h0 (by subst e; rfl)
-    bv_decide
+    rw [show 1 + (63 - s.toNat) = (64 - s.toNat) % 64 by omega]
 
 /-! ## `zero_n` -/
 
