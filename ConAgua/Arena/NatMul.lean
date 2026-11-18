@@ -305,7 +305,7 @@ theorem mac_inl (x y t c : Word) :
   have e1 : (x * y + t).toNat = ((x * y).toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_add _ _
   have e2 : (x * y + t + c).toNat = ((x * y + t).toNat + c.toNat) % 2 ^ 64 := UInt64.toNat_add _ _
   split <;> split <;>
-    simp only [UInt64.toNat_add, UInt64.toNat_ofNat, UInt64.toNat_one, UInt64.toNat_zero, hh] <;>
+    simp only [UInt64.toNat_add, UInt64.toNat_ofNat, hh] <;>
     omega
 
 /-- Word sums of positions below `2^41` do not wrap. -/
@@ -575,8 +575,8 @@ theorem mrowLoop_spec (n : Nat) (s₀ : St) (h : MRowInv P0 C s₀) :
     all_goals (try subst_vars)
     all_goals (try and_intros)
     all_goals (try dsimp (config := { decide := true }) only [L.St.setLoc_mem, St.setLoc, reduceIte] at *)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
-      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals (try simp only [BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte] at *)
     all_goals first
       | (with_reducible apply mrow_step_goal <;> grind [pcap_eq])
       | grind (splits := 8) [arena_grind, lang_grind]
@@ -709,7 +709,7 @@ def ZerosPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop
   pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat = 0
 
 /-- One step of `mul_zeros`'s loop. -/
-theorem zeros_step_goal (m : Mem) (P0 : Array Word) (o i T3 T4 : Word)
+theorem zeros_step_goal (m : Mem) (_P0 : Array Word) (o i T3 T4 : Word)
     (h3 : T3 = o >>> 40) (h4 : T4 = o &&& 1099511627775)
     (ho : o.toNat + i.toNat < 2 ^ 41)
     (hs3 : (m.arr64 (tierA POOL T3)).size ≤ 2 ^ 40)
@@ -789,7 +789,7 @@ theorem mulRow_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St
       mcarryLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
     all_goals (try simp only [MRowInv, MRowPost, MCarryInv, MCarryPost, WinBase] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
@@ -819,7 +819,7 @@ theorem subRow_spec (hp : p.lookup "sub_row" = some subRow) (n : Nat) (s₀ : St
       sborrowLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
     all_goals (try simp only [SRowInv, SRowPost, SBorrowInv, SBorrowPost, WinBase] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
@@ -843,8 +843,8 @@ theorem mulZeros_spec (hp : p.lookup "mul_zeros" = some mulZeros) (n : Nat) (s�
       zerosLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n]
     all_goals (try simp only [ZerosInv, ZerosPost] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
@@ -959,8 +959,8 @@ theorem rowsLoop_spec (hpr : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ :
     all_goals (try subst_vars)
     all_goals (try and_intros)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval,
-      BinOp.eval, Mem.size64_set64, Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals grind (splits := 8) [arena_grind, lang_grind, Off.trans, Off.pv_disj, pcap_eq]
+      BinOp.eval, Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (splits := 8) [arena_grind, lang_grind, Off.trans, Off.pv_disj]
 
 theorem rowsLoop_step_spec (hpr : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St)
     (h : RowsInv P0 C s₀) :
@@ -1110,9 +1110,8 @@ theorem karaProds_step (n : Nat) (ih : MulWinSpec p n) : KaraProdsSpec p (n + 1)
   vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, mulZeros_spec p hpz n, ih]
   all_goals clear ih
   all_goals (try simp only [LocEq] at *)
-  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
+      reduceIte, Nat.reduceEqDiff])
   all_goals split_clear_locs
   all_goals (try and_intros)
   all_goals first
@@ -1166,7 +1165,7 @@ theorem karaMid_step (n : Nat) (ihw : MulWinSpec p n) (ihp : KaraProdsSpec p n) 
   all_goals (try simp only [LocEq] at *)
   all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+      reduceIte, Nat.reduceEqDiff])
   all_goals split_clear_locs
   all_goals (try and_intros)
   all_goals first
@@ -1207,7 +1206,7 @@ theorem halve_val (p0 p1 p2 : Array Word) (o w oa la ob lb s k o' w' oa' la' : N
 
 /-- The Karatsuba step's frame: three additions inside the window, `kara_mid` above it. -/
 theorem kara_frame (p0 p1 p2 p3 p4 : Array Word) (o w s a3 b3 a4 b4 : Nat) (h1 : Agree p1 p0 s)
-    (h2 : Off p2 p1 o w) (h3 : Off p3 p2 a3 b3) (h4 : Off p4 p3 a4 b4) (hs : o + w ≤ s)
+    (h2 : Off p2 p1 o w) (h3 : Off p3 p2 a3 b3) (h4 : Off p4 p3 a4 b4) (_hs : o + w ≤ s)
     (c3 : o ≤ a3) (c3' : a3 + b3 ≤ o + w) (c4 : o ≤ a4) (c4' : a4 + b4 ≤ o + w) :
     OffB p4 p0 o w s := fun j hj hw =>
   (h4 j (by omega)).trans <| (h3 j (by omega)).trans <| (h2 j hw).trans <| h1 j hj
@@ -1246,7 +1245,7 @@ theorem kara_val (p0 p1 p2 p3 p4 : Array Word) (o w oa la ob lb s K z0l o3 w3 sp
   grind
 
 set_option maxHeartbeats 4000000 in
-include hpr hpm hpw in
+include hpr hpw in
 theorem mulWin_step (n : Nat) (ihw : MulWinSpec p n) (ihm : KaraMidSpec p n) :
     MulWinSpec p (n + 1) := by
   intro s₀ oa la ob lb o w sc hs h2 ha hb ho hda hdb
@@ -1263,7 +1262,7 @@ theorem mulWin_step (n : Nat) (ihw : MulWinSpec p n) (ihm : KaraMidSpec p n) :
   all_goals (try simp only [LocEq, RowsInv, RowsPost, WinArgs] at *)
   all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+      reduceIte, Nat.reduceEqDiff])
   all_goals split_clear_locs
   all_goals (try and_intros)
   all_goals (try have hkp := kara_pos sc la lb oa ob (by omega) (by omega) (by omega) (by omega) (by omega) (by grind) (by grind))
@@ -1306,7 +1305,7 @@ theorem mulWin_spec (n : Nat) : MulWinSpec p n ∧ KaraProdsSpec p n ∧ KaraMid
     · intro s₀ _ _ _ _ _ _ _ _ _ _ _; rw [invoke_eq _ hpm]; simp only [callFn, karaMid]
       vcgen [exec] <;> grind
   | succ n ih =>
-    exact ⟨mulWin_step p hpr hpm hpw n ih.1 ih.2.2, karaProds_step p hpz hpp n ih.1,
+    exact ⟨mulWin_step p hpr hpw n ih.1 ih.2.2, karaProds_step p hpz hpp n ih.1,
       karaMid_step p hpz hpr hps hpt hpu hpm n ih.1 ih.2.1⟩
 
 /-- `nat_mul`'s frame: the zeroing and the product write the window at the top and above it. -/
@@ -1353,7 +1352,7 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     all_goals (try simp only [LocEq] at *)
     all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, List.headD_cons, UInt64.toNat_zero])
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero])
     all_goals split_clear_locs
     all_goals (try and_intros)
     all_goals (try have hag := nm_agree _ _ _ _ _ _ s₀.mem.top.toNat (by with_reducible assumption) (by with_reducible assumption) (by grind [Mem.top_eq]) (by grind [Mem.top_eq]))
