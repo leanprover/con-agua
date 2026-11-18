@@ -38,8 +38,11 @@ abbrev sub1Code : Nat := 219759650271
 /-- `nameCode "nat_mad"`, as a literal (`nameCode_nat_mad`). -/
 abbrev natMadCode : Nat := 29212172247658203
 
+/-- `nameCode "nat_cmp"`, as a literal (`nameCode_nat_cmp`). -/
+abbrev natCmpCode : Nat := 32683224171858665
+
 /-- **The name codes of the hand-written functions.** -/
 def checkerXKeys : List Nat :=
-  [mulRowCode, subRowCode, divSubmulCode, addNCode, add1Code, subNCode, sub1Code, natMadCode]
+  [mulRowCode, subRowCode, divSubmulCode, addNCode, add1Code, subNCode, sub1Code, natMadCode, natCmpCode]
 
 end L.Checker

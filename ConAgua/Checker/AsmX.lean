@@ -4,6 +4,7 @@ public import ConAgua.AsmEsc.SubRowAsm
 public import ConAgua.AsmEsc.DivSubmulAsm
 public import ConAgua.AsmEsc.Chain1
 public import ConAgua.AsmEsc.NatMadAsm
+public import ConAgua.AsmEsc.NatCmpAsm
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.AsmKeys
 
@@ -27,6 +28,8 @@ proof's per-function contract (`checkerX_ok`, `AsmXOk.lean`).
   `chain2Asm` (`ConAgua/AsmEsc/Chain2.lean`) and `chain1Asm` (`Chain1.lean`).
 * `nat_mad` (`L.Front.natMad`, the decimal reader's multiply-add): `natMadAsm`,
   `ConAgua/AsmEsc/NatMadAsm.lean`.
+* `nat_cmp` (`L.Arena.natCmp`, the comparison of two numbers): `natCmpAsm`,
+  `ConAgua/AsmEsc/NatCmpAsm.lean`.
 -/
 
 namespace L.Checker
@@ -39,7 +42,7 @@ def checkerX : AsmTab :=
    (divSubmulCode, divSubmulAsm checkerTab),
    (addNCode, chain2Asm checkerTab "add_n" false), (add1Code, chain1Asm checkerTab "add_1" false),
    (subNCode, chain2Asm checkerTab "sub_n" true), (sub1Code, chain1Asm checkerTab "sub_1" true),
-   (natMadCode, natMadAsm checkerTab)]
+   (natMadCode, natMadAsm checkerTab), (natCmpCode, natCmpAsm checkerTab)]
 
 /-- The inliner's exclusion list is `checkerX`'s keys. -/
 theorem checkerX_keys : checkerX.map (·.1) = checkerXKeys := rfl
