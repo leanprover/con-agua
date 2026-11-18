@@ -212,7 +212,7 @@ grind_pattern [arena_grind] SliceOK.top0 => SliceOK m o 0
 
 /-- One-limb divisor: the limbs of `a` from the top, one `div_2by1` each, the remainder
 (normalised, `r · 2^s`) in a word. -/
-def d1Loop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, pt, pb) {
+def d1Loop : Stmt := lblk (oa, la, ob, top, i, x, q, r, s, d, v, pt, pb) {
   while 0 < i {
     i -= 1;
     x := POOL⦃oa + i⦄;
@@ -221,13 +221,34 @@ def d1Loop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v,
   }
 }
 
+/-- `div_mod1(oa, la, ob)`: `nat_divmod` for a one-limb divisor (con-ron's `u128` case of
+`dm_step`): the quotient's `la` limbs at the top, then the remainder's one limb. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def divMod1 : FunDecl := lfn (oa, la, ob) locals (top, i, x, q, r, s, d, v, pt, pb) {
+  top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  if len(POOL⟨pt⟩) - pb <= la { abort };
+  d := POOL⦃ob⦄;
+  s := call div_norm(d);
+  d := d << s;
+  v := call div_recip(d);
+  i := la;
+  ⟪d1Loop⟫;
+  POOL⟨pt⟩[pb + la] := r >> s;
+  x := call nat_trim(top, la);
+  r := call nat_trim(top + la, 1);
+  CTL.u64[0] := top + la + 1;
+  return (top, x, top + la, r)
+}
+
 /-- The copy of `a` into the work region at `w`. -/
-def dcpLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, pt, pb) {
+def dcpLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, q, s, d, v, pt, pb) {
   for i < la { POOL⟨pt⟩[pb + n + i] := POOL⦃oa + i⦄ }
 }
 
 /-- Knuth's algorithm D, one quotient limb `j` per step from the top (con-ron's `dm_limbs`). -/
-def dkLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, pt, pb) {
+def dkLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, q, s, d, v, pt, pb) {
   while 0 < j {
     j -= 1;
     q := call div_kstep(w + j, lb, ob, s, d, v);
@@ -235,31 +256,15 @@ def dkLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v,
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
-@[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natDivmod : FunDecl := lfn (oa, la, ob, lb)
-    locals (top, n, w, i, j, x, c, q, r, s, d, v, pt, pb) {
+/-- `div_modk(oa, la, ob, lb)`: `nat_divmod` for `2 ≤ lb ≤ la` (Knuth's algorithm D): the
+`la - lb + 1` quotient limbs at the top, then the work region `w` (a copy of `a` and a zero limb),
+whose low `lb` limbs end as the remainder. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def divModK : FunDecl := lfn (oa, la, ob, lb)
+    locals (top, n, w, i, j, x, q, s, d, v, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  if lb == 0 || la < lb {
-    c := call nat_trim(oa, la);
-    return (top, 0, oa, c)
-  };
-  if lb == 1 {
-    if len(POOL⟨pt⟩) - pb <= la { abort };
-    d := POOL⦃ob⦄;
-    s := call div_norm(d);
-    d := d << s;
-    v := call div_recip(d);
-    i := la;
-    ⟪d1Loop⟫;
-    POOL⟨pt⟩[pb + la] := r >> s;
-    x := call nat_trim(top, la);
-    c := call nat_trim(top + la, 1);
-    CTL.u64[0] := top + la + 1;
-    return (top, x, top + la, c)
-  };
   n := la - lb + 1;
   if len(POOL⟨pt⟩) - pb < n { abort };
   if len(POOL⟨pt⟩) - pb - n <= la { abort };
@@ -274,15 +279,32 @@ def natDivmod : FunDecl := lfn (oa, la, ob, lb)
   j := n;
   ⟪dkLoop⟫;
   x := call nat_trim(top, n);
-  c := call nat_trim(w, lb);
+  q := call nat_trim(w, lb);
   CTL.u64[0] := w + lb;
-  return (top, x, w, c)
+  return (top, x, w, q)
+}
+
+/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+@[no_expose, l_impl ConRon.Arena.natBinOpResult]
+def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, x, o, c) {
+  if lb == 0 || la < lb {
+    top := CTL.u64[0];
+    c := call nat_trim(oa, la);
+    return (top, 0, oa, c)
+  };
+  if lb == 1 {
+    (top, x, o, c) := call div_mod1(oa, la, ob);
+    return (top, x, o, c)
+  };
+  (top, x, o, c) := call div_modk(oa, la, ob, lb);
+  return (top, x, o, c)
 }
 
 /-- The pool functions with `nat_divmod`. -/
 def natDivProg : Prog := natProg ++ [("div_add", divAdd), ("div_norm", divNorm),
   ("div_recip", divRecip), ("div_2by1", div2by1), ("div_submul", divSubmul),
-  ("div_kstep", divKstep), ("nat_divmod", natDivmod)]
+  ("div_kstep", divKstep), ("div_mod1", divMod1), ("div_modk", divModK),
+  ("nat_divmod", natDivmod)]
 
 /- `(2^64 + 5) / 3 = 6148914691236517207, rem 0`; quotient `[0x5555555555555557]`. -/
 #guard (run natDivProg 100000 "nat_divmod" [0, 2, 2, 1]
@@ -311,6 +333,8 @@ structure DivFns (p : Prog) : Prop where
   recip : p.lookup "div_recip" = some divRecip
   submul : p.lookup "div_submul" = some divSubmul
   kstep : p.lookup "div_kstep" = some divKstep
+  mod1 : p.lookup "div_mod1" = some divMod1
+  modk : p.lookup "div_modk" = some divModK
   trim : p.lookup "nat_trim" = some natTrim
   divmod : p.lookup "nat_divmod" = some natDivmod
 

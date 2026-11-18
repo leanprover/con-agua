@@ -964,7 +964,8 @@ def natArmProg : Prog := storeProg ++
    ("nat_shr_lit", topLit "nat_shr"),
    ("nat_pow", natPow), ("pow_nat", powNatL), ("limb_push", limbPushL), ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_add", divAdd),
    ("div_norm", divNorm), ("div_recip", divRecip), ("div_2by1", div2by1),
-   ("div_submul", divSubmul), ("div_kstep", divKstep), ("nat_divmod", natDivmod),
+   ("div_submul", divSubmul), ("div_kstep", divKstep), ("div_mod1", divMod1),
+   ("div_modk", divModK), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
    ("nat_mod_lit", natModLit),
    ("nat_cmp", natCmp), ("const_find", constFind), ("const_push", constPush),
@@ -1109,7 +1110,8 @@ theorem natShrLit_refinesA : ArmRefinesA "nat_shr_lit" natShrArm :=
   topLit_refinesA "nat_shr_lit" "nat_shr" _ rfl natShr_top
 
 /-- `natArmProg` has `nat_divmod` and its callees. -/
-theorem divFns_arms : DivFns natArmProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+theorem divFns_arms : DivFns natArmProg :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- **`nat_div_lit` refines the `Nat.div` arm.** -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.div"]
