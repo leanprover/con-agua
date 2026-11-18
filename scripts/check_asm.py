@@ -176,6 +176,22 @@ def strip_annotation(s):
     return s, None
 
 
+def imul_imm_two_operand(o_ops, d_mnem, d_ops):
+    """`imulq $I, %R` (two operands, an immediate source) is the assembler's shorthand for the
+    three-operand `imul $I, %R, %R` (opcode REX.W 6B /r ib or 69 /r id, ModRM reg = r/m = R), and
+    `objdump` prints it that way. Both mean `R := R * sext(I)` with CF = OF = signed overflow: the
+    SDM's IMUL r64, r/m64, imm, and Kraken's `.imul none (.reg R) (.imm I)` (Parse.lean's `imulq`),
+    whose destination defaults to `src1`. So objdump's three operands are folded back to two exactly
+    when both registers are the same register (the immediate and the register are then compared
+    as usual); any other shape is left alone and fails the operand count check."""
+    if (d_mnem == "imul" and len(o_ops) == 2 and len(d_ops) == 3
+            and operand_kind(o_ops[0]) == "imm" and operand_kind(o_ops[1]) == "reg"
+            and operand_kind(d_ops[0]) == "imm" and operand_kind(d_ops[1]) == "reg"
+            and d_ops[1] == d_ops[2]):
+        return [d_ops[0], d_ops[2]]
+    return d_ops
+
+
 def check(s_path, name):
     ours = our_instructions(s_path)
     with tempfile.TemporaryDirectory() as td:
@@ -204,6 +220,7 @@ def check(s_path, name):
             print(f"[{name}] FAIL at instruction {i}: mnemonic {o!r} vs disassembled {d!r}")
             ok = False
             continue
+        d_ops = imul_imm_two_operand(o_ops, strip_suffix(d_mnem), d_ops)
         if len(o_ops) != len(d_ops):
             print(f"[{name}] FAIL at instruction {i}: operand count {o!r} vs {d!r}")
             ok = False
