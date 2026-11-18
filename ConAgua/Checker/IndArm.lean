@@ -85,6 +85,7 @@ import all ConAgua.Arena.NAnonStore
 import all ConAgua.Arena.NNumStore
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp

@@ -49,6 +49,7 @@ import all ConAgua.Front.Line
 import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatMul
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples

@@ -75,6 +75,7 @@ import all ConAgua.Arena.NatDivKstep
 import all ConAgua.Arena.NatDivSubmul
 import all ConAgua.Arena.NatDivWord
 import all ConAgua.Arena.NatGcd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatMul
 import all ConAgua.Arena.NatPow
 import all ConAgua.Arena.NatShl

@@ -69,6 +69,7 @@ import all ConAgua.Arena.NAnonStore
 import all ConAgua.Arena.NNumStore
 import all ConAgua.Arena.NStrStore
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp
@@ -171,7 +172,7 @@ open scoped Lean.Order
 
 /-- The call closure of the pre-loop stages in `checkerProg` (`scripts/preloop_ws.py`). -/
 def preLoopFns : List FnName := [
-  "add_carry", "app_find", "app_push", "apply_decl", "apply_dline", "apply_expr", "apply_ind",
+  "add_1", "add_n", "app_find", "app_push", "apply_decl", "apply_dline", "apply_expr", "apply_ind",
   "apply_level", "apply_nnum", "apply_nstr", "apply_rec", "apply_str", "builtin_prelude",
   "bvar_find", "bvar_push", "byte_in", "cap_check", "const_find", "const_push", "ctl_sum",
   "d_member", "dec_chunk", "decl_code", "decl_cv", "decl_declares", "decl_declares_go", "decl_key",
@@ -202,7 +203,7 @@ def preLoopFns : List FnName := [
   "memo_push", "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "mul_row", "mul_win",
   "mul_zeros", "name_fresh", "name_get", "name_put", "name_rec_pre", "nanon_find", "nanon_push",
   "nat_add", "nat_dec", "nat_dec_big", "nat_dec_chunks", "nat_dec_split", "nat_div_mod_names",
-  "nat_limb", "nat_mad", "nat_mul", "nat_op_deps", "nat_op_names", "nat_op_pins", "nat_op_pins_a",
+  "nat_mad", "nat_mul", "nat_op_deps", "nat_op_names", "nat_op_pins", "nat_op_pins_a",
   "nat_op_pins_b", "nat_op_pins_c", "nat_op_record", "nat_trim", "next_member", "nid_sp_clear",
   "nnum_find", "nnum_push", "node_bin", "node_const", "node_let", "node_lit", "node_lit_str",
   "node_proj", "nsp_find", "nsp_put", "nstr_find", "nstr_match", "nstr_push", "num_end",

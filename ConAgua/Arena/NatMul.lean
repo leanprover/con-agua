@@ -4,7 +4,6 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.Word
-public import ConAgua.Arena.NatOff
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -307,41 +306,6 @@ theorem mac_inl (x y t c : Word) :
     simp only [UInt64.toNat_add, UInt64.toNat_ofNat, hh] <;>
     omega
 
-/-- Word sums of positions below `2^41` do not wrap. -/
-theorem w_add (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
-  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
-
-/-- Positions inside a window pass: `T + i < 2^41` once the store at `⦃T⦄.idx + i` is in bounds. -/
-theorem win_lt (m : Mem) (T i : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
-    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
-    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
-    T.toNat + i.toNat < 2 ^ 41 := by
-  have := tag_idx_lt T; have := tag_split T; have := tag_tier_le T hT
-  rw [w_add _ _ (by omega)] at hb; omega
-
-/-- A load at `⦃T⦄.tier`, `⦃T⦄.idx + i` that succeeds reads the virtual pool at `T + i`. -/
-theorem ld_win (m : Mem) (T i : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
-    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
-    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
-    (m.arr64 (tierA POOL (T >>> 40)))[((T &&& 1099511627775) + i).toNat] =
-      (vpool m)[T.toNat + i.toNat]'(by rw [vpool_size]; exact win_lt m T i hT hi hs hb) := by
-  have hk : (T &&& 1099511627775).toNat + i.toNat < 2 ^ 40 := by
-    have := tag_idx_lt T; rw [w_add _ _ (by omega)] at hb; omega
-  have hk2 : (T.toNat + i.toNat) < 2 ^ 41 := by
-    have := tag_split T; have := tag_tier_le T hT; omega
-  rw [vpool_ldidx m T i hT hb hs hk (by rw [vpool_size, w_add _ _ (by omega)]; omega)]
-  simp only [w_add T i (by omega)]
-
-/-- A store at `⦃T⦄.tier`, `⦃T⦄.idx + i` that succeeds writes the virtual pool at `T + i`. -/
-theorem st_win (m : Mem) (T i v : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
-    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
-    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
-    vpool (m.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + i) v) =
-      (vpool m).set! (T.toNat + i.toNat) v := by
-  have hk : (T &&& 1099511627775).toNat + i.toNat < 2 ^ 40 := by
-    have := tag_idx_lt T; rw [w_add _ _ (by omega)] at hb; omega
-  rw [vpool_stidx m T i v hT hb hs hk, w_add T i (by omega)]
-
 /-- One step of `mul_row`'s row loop, in the shape of its verification condition. -/
 theorem mrow_step_goal (m : Mem) (P0 : Array Word) (o oa y i c T11 T12 T13 T14 : Word)
     (h11 : T11 = o >>> 40) (h12 : T12 = o &&& 1099511627775)
@@ -428,24 +392,6 @@ theorem carry_step_goal (m : Mem) (P0 : Array Word) (o i c T11 T12 : Word) (X : 
   generalize pv P0 o.toNat i.toNat = B at *
   generalize wt i.toNat = W at *
   grind
-
-/-- The inline subtract-with-borrow of `sub_row`: `d = t - x`, the limb `d - c`, the borrow
-`u64(t < x) + u64(d < c)`. -/
-theorem sbb_inl (t x c : Word) (hc : c.toNat ≤ 1) :
-    (t - x - c).toNat + x.toNat + c.toNat =
-      t.toNat + (Cmp.ult.evalW t x + Cmp.ult.evalW (t - x) c).toNat * 2 ^ 64 := by
-  have hx := x.toNat_lt; have ht := t.toNat_lt
-  simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt]
-  have e1 : (t - x).toNat = (2 ^ 64 - x.toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
-  have e2 : (t - x - c).toNat = (2 ^ 64 - c.toNat + (t - x).toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
-  split <;> split <;> simp only [UInt64.toNat_add, UInt64.toNat_one, UInt64.toNat_zero] <;> omega
-
-theorem sbb_inl_le (t x c : Word) (hc : c.toNat ≤ 1) :
-    (Cmp.ult.evalW t x + Cmp.ult.evalW (t - x) c).toNat ≤ 1 := by
-  have hx := x.toNat_lt; have ht := t.toNat_lt
-  have e1 : (t - x).toNat = (2 ^ 64 - x.toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_sub _ _
-  simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt]
-  split <;> split <;> simp only [UInt64.toNat_add, UInt64.toNat_one, UInt64.toNat_zero] <;> omega
 
 /-- One step of `sub_row`'s loop, in the shape of its verification condition. -/
 theorem srow_step_goal (m : Mem) (P0 : Array Word) (o oa i c T9 T10 T11 T12 : Word)
@@ -1031,20 +977,6 @@ theorem kara_pos (s la lb oa ob : Word) (hs : s.toNat < 2 ^ 41) (hla : la.toNat 
   · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
   · rw [toNat_add_of_lt _ _ (by omega), ek]
   · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
-
-open Lean Elab Tactic Meta in
-/-- Split the conjunctions among the hypotheses, then clear every `s.loc = t` among them (the
-unfolded `LocEq`s, once `simp_all` has used them to name the callers' locals): `grind` would case
-on the `Locals.init` lists in them. -/
-elab "split_clear_locs" : tactic => do
-  liftMetaTactic fun g => do
-    let mut g ← g.casesAnd
-    for d in (← g.getDecl).lctx do
-      if d.isImplementationDetail then continue
-      let t ← instantiateMVars d.type
-      if t.isAppOfArity ``Eq 3 && (t.getArg! 0).isConstOf ``L.Locals then
-        try g ← g.clear d.fvarId catch _ => pure ()
-    return [g]
 
 section rec
 variable (p : Prog) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)

@@ -17,6 +17,7 @@ import all ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.ConsLib
 import all ConAgua.Arena.ConstStore
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp
@@ -188,10 +189,11 @@ structure WhnfDeltaProg' (p : Prog) : Prop extends WhnfDeltaProg p where
   envRow' : p.lookup "env_row_get" = some envRowGetL
   baseRow' : p.lookup "base_row_get" = some baseRowGetL
   predLit : p.lookup "nat_pred_lit" = some natPredLit
-  natLimb' : p.lookup "nat_limb" = some natLimb
-  subBorrow' : p.lookup "sub_borrow" = some subBorrow
+  addN' : p.lookup "add_n" = some addN
+  subN' : p.lookup "sub_n" = some subN
+  sub1' : p.lookup "sub_1" = some sub1
   natTrim' : p.lookup "nat_trim" = some natTrim
-  addCarry' : p.lookup "add_carry" = some addCarry
+  add1' : p.lookup "add_1" = some add1
   natAdd' : p.lookup "nat_add" = some natAdd
   litHash' : p.lookup "lit_hash" = some litHash
   limbsEq' : p.lookup "limbs_eq" = some limbsEq
