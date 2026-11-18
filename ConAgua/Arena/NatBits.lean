@@ -160,8 +160,11 @@ theorem bv_tail_a (f : Word → Word → Word) (hf : ∀ x, f x 0 = x) (p : Arra
   induction j with
   | zero => rw [Nat.add_zero, bv_bw f p oa la ob lb lb hl (Nat.le_refl _)]; simp [pv]
   | succ j ih =>
-    rw [← Nat.add_assoc, bv, ih (by omega), pv, lvW, lvW, if_pos (by omega), if_neg (by omega), hf,
-      wt_add lb j (lb + j) rfl, Nat.add_assoc oa lb j]
+    have c1 : lb + j < la := by omega
+    have c2 : ¬lb + j < lb := by omega
+    rw [← Nat.add_assoc, bv, ih (by omega), pv, lvW, lvW]
+    simp only [c1, c2, ite_true, ite_false]
+    rw [hf, wt_add lb j (lb + j) rfl, Nat.add_assoc oa lb j]
     grind
 
 /-- Past `a`'s end, `f 0 y = y` passes `b`'s limbs through. -/
@@ -171,8 +174,11 @@ theorem bv_tail_b (f : Word → Word → Word) (hf : ∀ y, f 0 y = y) (p : Arra
   induction j with
   | zero => rw [Nat.add_zero, bv_bw f p oa la ob lb la (Nat.le_refl _) hl]; simp [pv]
   | succ j ih =>
-    rw [← Nat.add_assoc, bv, ih (by omega), pv, lvW, lvW, if_neg (by omega), if_pos (by omega), hf,
-      wt_add la j (la + j) rfl, Nat.add_assoc ob la j]
+    have c1 : ¬la + j < la := by omega
+    have c2 : la + j < lb := by omega
+    rw [← Nat.add_assoc, bv, ih (by omega), pv, lvW, lvW]
+    simp only [c1, c2, ite_true, ite_false]
+    rw [hf, wt_add la j (la + j) rfl, Nat.add_assoc ob la j]
     grind
 
 /-- The value `bitCore` leaves: the leaf over `k` limbs (`P1`), `copy_n` over the `l - k` limbs of
