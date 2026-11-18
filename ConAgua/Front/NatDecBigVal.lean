@@ -175,7 +175,7 @@ theorem add_callW {n : Nat} {m m' : Mem} {oa la ob lb : Word} {r : List Word} (h
     (h : callW natDecProg n "nat_add" [oa, la, ob, lb] m = some (r, m')) :
     Appended m m' (r.headD 0) (pv (vpool m) oa.toNat la.toNat + pv (vpool m) ob.toNat lb.toNat) := by
   obtain ⟨s', rfl, -, hf, -, hfit, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (natAdd_spec natDecProg rfl rfl n ⟨m, Locals.init []⟩
+    (natAdd_spec natDecProg rfl rfl rfl rfl n ⟨m, Locals.init []⟩
       oa la ob lb hok ha hb) h
   exact ⟨hg, pframe_top hok.ctl hf, hfit, hN, hv⟩
 

@@ -315,9 +315,10 @@ section pred
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
+  (hps : p.lookup "sub_n" = some subN) (hp1 : p.lookup "sub_1" = some sub1)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_sub" = some natSub)
 
-include hpool hgrow hI hpt hpn in
+include hpool hgrow hI hps hp1 hpt hpn in
 theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la)
     (hmode : ModeOK s₀.mem) :
@@ -338,7 +339,7 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      natSub_spec p hpt hpn n, hI a₀ n]
+      natSub_spec p hps hp1 hpt hpn n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, natop_grind, natPredArm]
@@ -955,7 +956,7 @@ def natBinOpResultL : FunDecl := lfn (op, oa, la, ob, lb) locals (h) {
 
 /-- The pool functions, the `lit` store, and one L arm per operation. -/
 def natArmProg : Prog := storeProg ++
-  [("nat_sub", natSub), ("mul_row", mulRow), ("sub_row", subRow),
+  [("sub_n", subN), ("sub_1", sub1), ("nat_sub", natSub), ("mul_row", mulRow), ("sub_row", subRow),
    ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),
@@ -997,7 +998,7 @@ the quotient finds `7`'s node again. -/
 /-! ## The pool functions' specs in `TopSpec` form -/
 
 theorem natSub_top : TopSpec natArmProg "nat_sub" (fun a b => a - b) :=
-  fun n s₀ oa la ob lb hok ha hb _ _ => natSub_spec natArmProg rfl rfl n s₀ oa la ob lb hok ha hb
+  fun n s₀ oa la ob lb hok ha hb _ _ => natSub_spec natArmProg rfl rfl rfl rfl n s₀ oa la ob lb hok ha hb
 
 theorem natMul_top : TopSpec natArmProg "nat_mul" (fun a b => a * b) :=
   fun n s₀ oa la ob lb hok ha hb _ _ => natMul_spec natArmProg rfl rfl rfl n s₀ oa la ob lb hok ha hb
@@ -1103,7 +1104,7 @@ theorem natXorLit_refinesA : ArmRefinesA "nat_xor_lit" natXorArm :=
 theorem natShlLit_refinesA : ArmRefinesS "nat_shl_lit" natShlArm :=
   fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natShlLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl n s₀ a₀ hR
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
       hmx oa la ob lb ha hb hna hnb hmode
 /-- **`nat_shr_lit` refines the `Nat.shiftRight` arm.** -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.shiftRight"]
@@ -1142,7 +1143,7 @@ theorem natPredLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s
       AM.res (natPredArm (pv (vpool s₀.mem) oa.toNat la.toNat)) a₀ =
         some (decE (r.headD 0)); ⊤⦄ :=
   natPredLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-    (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl n s₀ a₀ hR
+    (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
     oa la ha hmode
 
 /-- **`nat_pow_lit` refines the `Nat.pow` arm**, its guard included. -/

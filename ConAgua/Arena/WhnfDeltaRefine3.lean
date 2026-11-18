@@ -67,8 +67,8 @@ theorem internLit_refinesD_hw (p : Prog) (hph : p.lookup "lit_hash" = some litHa
 
 
 section succ
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (hpt : p.lookup "nat_trim" = some natTrim)
+variable (p : Prog) (hpN : p.lookup "add_n" = some addN)
+  (hp1 : p.lookup "add_1" = some add1) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpa : p.lookup "nat_add" = some natAdd) (hpn : p.lookup "nat_add_lit" = some natAddLit)
   (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m)
@@ -88,7 +88,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hsr : p.lookup "nat_size_refused" = some natSizeRefusedL)
   (hls : p.lookup "lit_nat_sized" = some litNatSizedL)
 
-include hpl hpc hpt hpa hpn hpool hgrow hI hg hz hsr hls in
+include hpN hp1 hpt hpa hpn hpool hgrow hI hg hz hsr hls in
 /-- **`nat_succ_lit` refines the `Nat.add` arm at the literal `1`** (`litNatSized (n + 1)`): a
 handle word, or the size refusal's sentinel (`NatRes`). -/
 theorem natSuccLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem a₀)
@@ -123,7 +123,7 @@ theorem natSuccLit_refines_hw (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        fun s => natAddLit_refines p hpl hpc hpt hpa hpn R hpool hgrow hI' hz hsr hls n s a₀] <;>
+        fun s => natAddLit_refines p hpN hp1 hpt hpa hpn R hpool hgrow hI' hz hsr hls n s a₀] <;>
       finish (gen := 20) [natAddArm]
 
 end succ
@@ -211,7 +211,7 @@ theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     MemFrame natA natC s₀.mem m' := by
   have hag := hp.natAgree
   obtain ⟨s', rfl, -, hN⟩ := triple_of_callW
-    (natSuccLit_refines_hw p hp.natLimb' hp.addCarry' hp.natTrim' hp.natAdd'
+    (natSuccLit_refines_hw p hp.addN' hp.add1' hp.natTrim' hp.natAdd'
       ((hag "nat_add_lit" (by decide)).trans rfl)
       (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m)
       (fun _ _ h => h.1.1.lit.1)
