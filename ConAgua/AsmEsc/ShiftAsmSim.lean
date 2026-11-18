@@ -903,4 +903,149 @@ theorem sr_first (TA TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTO : G.ta
 
 end
 
+
+/-- **The `shr_n` body meets the compiler's per-function contract.** -/
+theorem shrAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
+    (hspec : ShrSpec p) (fd : FunDecl) (hnp : fd.nparams = 4) (hnr : Stmt.nret fd.body = 1)
+    (hdom : G.tab.dom64 (tier1 0) = true)
+    (hoffL : SmallOff (G.tab.len64 (0 : ArrId))) (hoffB : SmallOff (G.tab.base64 (0 : ArrId)))
+    (kf : Nat) (hc : Code (shrAsm G.tab) kf) (sk : NTree) (n : Nat) :
+    FnSimAt p G sk n "shr_n" fd kf := by
+  intro vs σ d ra Q hlen hra hargs hlo8 hhi h15 hmem h14 hok herr habrt hexh
+  have hlo : G.lo ≤ d.regs.rsp.toNat := by omega
+  rw [hnp] at hlen
+  obtain ⟨o, oa, nn, sh, rfl⟩ : ∃ o oa nn sh, vs = [o, oa, nn, sh] := by
+    match vs, hlen with
+    | [o, oa, nn, sh], _ => exact ⟨o, oa, nn, sh, rfl⟩
+  have hA := hargs.1 (by simp [argRegs])
+  have hrdi : d.regs.rdi = o := UInt64.toBitVec_inj.mp (hA 0 (by simp))
+  have hr8 : d.regs.r8 = oa := UInt64.toBitVec_inj.mp (hA 1 (by simp))
+  have hr9 : d.regs.r9 = nn := UInt64.toBitVec_inj.mp (hA 2 (by simp))
+  have hr10 : d.regs.r10 = sh := UInt64.toBitVec_inj.mp (hA 3 (by simp))
+  have hn0 : 0 < n := by omega
+  have hh := hG.hi_le
+  refine ev_label (sr_code hc (i := 0) rfl) ?_
+  refine ev_cmpRO (sr_code hc (i := 1) rfl) (v := 63) (Or.inl rfl) ?_
+  refine ev_jcc (sr_code hc (i := 2) rfl) (fun _ => hexh _ ⟨rfl, Pres.refl _ _⟩) (fun hca => ?_)
+  have hs : sh < 64 := by
+    simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.and_eq_false_iff, Bool.not_eq_false',
+      decide_eq_true_eq, beq_iff_eq] at hca
+    rs [hr10] at hca
+    rw [UInt64.lt_iff_toNat_lt]
+    rcases hca with h | h
+    · have : (63 : Word).toBitVec.toNat = 63 := rfl
+      have e : sh.toBitVec.toNat = sh.toNat := rfl
+      simp only [this, e] at h; simp; omega
+    · have := UInt64.toBitVec_inj.mp h; subst this; decide
+  refine ev_movRI (sr_code hc (i := 3) rfl) ?_
+  refine ev_movRR (sr_code hc (i := 4) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (sr_code hc (i := 5) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (sr_code hc (i := 6) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (sr_code hc (i := 7) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_movRR (sr_code hc (i := 8) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (sr_code hc (i := 9) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (sr_code hc (i := 10) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (sr_code hc (i := 11) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_gen (fun s1 => s1.regs.rcx = (o >>> 40) &&& 1 ∧ s1.regs.rdi = o &&& idxMask ∧
+      s1.regs.rdx = (oa >>> 40) &&& 1 ∧ s1.regs.r8 = oa &&& idxMask ∧ s1.regs.r9 = nn ∧
+      s1.regs.r10 = sh ∧ s1.regs.r14 = d.regs.r14 ∧ s1.regs.r15 = d.regs.r15 ∧
+      s1.regs.rsp = d.regs.rsp ∧ s1.regs.rbp = d.regs.rbp ∧ s1.dmem = d.dmem)
+    (by refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rs [hrdi, hr8, hr9, hr10, BinOp.eval]
+        all_goals rfl)
+    fun s1 ⟨g1, g2, g3, g4, g7, g5, g9, g10, g11, g12, g13⟩ => ?_
+  have hTA := G.tab.dom64_tierA hdom (oa >>> 40)
+  have hTO := G.tab.dom64_tierA hdom (o >>> 40)
+  have heA := hG.end64 _ (G.tab.pos64_lt hTA)
+  have heO := hG.end64 _ (G.tab.pos64_lt hTO)
+  have hm1 : MemRel G σ.mem s1.dmem := by rw [g13]; exact hmem
+  have h15' : s1.regs.r15.toNat = G.T := by rw [g10]; exact h15
+  have hdA := pool_desc hm1 hdom (oa >>> 40) (r := .rdx) (by rs [g3]) h15'
+  have hdO := pool_desc hm1 hdom (o >>> 40) (r := .rcx) (by rs [g1]) h15'
+  have hszA := hmem.size64 _ hTA
+  have hszO := hmem.size64 _ hTO
+  generalize hSA : G.s (G.tab.pos64 (tierA 0 (oa >>> 40))) = SA at *
+  generalize hSO : G.s (G.tab.pos64 (tierA 0 (o >>> 40))) = SO at *
+  generalize hBA : G.b (G.tab.pos64 (tierA 0 (oa >>> 40))) = BA at *
+  generalize hBO : G.b (G.tab.pos64 (tierA 0 (o >>> 40))) = BO at *
+  have hSAn : (UInt64.ofNat SA).toNat = SA := L.toNat_ofNat_of_lt (by omega)
+  have hSOn : (UInt64.ofNat SO).toNat = SO := L.toNat_ofNat_of_lt (by omega)
+  have hsub : ∀ (S : Nat) (w : Word), S < 2 ^ 64 → w.toNat ≤ S →
+      ((UInt64.ofNat S).toBitVec - w.toBitVec).toNat = S - w.toNat := by
+    intro S w h1 h2
+    rw [BitVec.toNat_sub, UInt64.toNat_toBitVec, show (UInt64.ofNat S).toBitVec.toNat = S from
+      L.toNat_ofNat_of_lt h1]
+    have := w.toNat_lt; omega
+  have hX : ∀ s', s'.regs.rbp = d.regs.rbp → s'.dmem = s1.dmem → Ev Q s' (label exhaustedL) :=
+    fun s' e1 e2 => hexh _ ⟨e1, by rw [e2, g13]; exact Pres.refl _ _⟩
+  -- the window of `a` (`n + 1` limbs)
+  refine ev_movRMt (sr_code hc (i := 12) rfl) hoffL (v := UInt64.ofNat SA) hdA.1 ?_
+  refine ev_subRR (sr_code hc (i := 13) rfl) fun st hcf => ?_
+  rs [g4, hSAn] at hcf
+  refine ev_jcc (sr_code hc (i := 14) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSAn] at hcc
+  refine ev_cmpRO (sr_code hc (i := 15) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
+  refine ev_jcc (sr_code hc (i := 16) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc4 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, cmpFlags_zf, Bool.or_eq_false_iff, decide_eq_false_iff_not,
+    beq_eq_false_iff_ne] at hcc4
+  rs [g4] at hcc4
+  obtain ⟨hcc4, hcc4'⟩ := hcc4
+  rw [hsub SA _ (by omega) (by omega)] at hcc4
+  simp only [UInt64.toNat_toBitVec] at hcc4
+  have hne : SA - (oa &&& idxMask).toNat ≠ nn.toNat := by
+    intro e; apply hcc4'
+    apply BitVec.eq_of_toNat_eq
+    rw [hsub SA _ (by omega) (by omega), e]; rfl
+  have hqa : (oa &&& idxMask).toNat + nn.toNat + 1 ≤ SA := by omega
+  refine ev_movRMt (sr_code hc (i := 17) rfl) hoffB (v := UInt64.ofNat BA) (by rs; exact hdA.2) ?_
+  refine ev_leaX (sr_code hc (i := 18) rfl) ?_
+  -- the output window
+  refine ev_movRMt (sr_code hc (i := 19) rfl) hoffL (v := UInt64.ofNat SO) (by rs; exact hdO.1) ?_
+  refine ev_subRR (sr_code hc (i := 20) rfl) fun st hcf => ?_
+  rs [g2, hSOn] at hcf
+  refine ev_jcc (sr_code hc (i := 21) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc5 => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec, hSOn] at hcc5
+  refine ev_cmpRO (sr_code hc (i := 22) rfl) (v := nn) (Or.inr (Or.inr ⟨.r9, rfl, by rs [g7]⟩)) ?_
+  refine ev_jcc (sr_code hc (i := 23) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc6 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc6
+  rs [g2] at hcc6
+  rw [hsub SO _ (by omega) (by omega)] at hcc6
+  simp only [UInt64.toNat_toBitVec] at hcc6
+  have hoa : (o &&& idxMask).toNat + nn.toNat ≤ SO := by omega
+  refine ev_movRMt (sr_code hc (i := 24) rfl) hoffB (v := UInt64.ofNat BO) (by rs; exact hdO.2) ?_
+  refine ev_leaX (sr_code hc (i := 25) rfl) ?_
+  -- the fuel
+  refine ev_subRR (sr_code hc (i := 26) rfl) fun st hcf => ?_
+  rs [g7, g9] at hcf
+  refine ev_jcc (sr_code hc (i := 27) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc7 => ?_)
+  simp only [CondCode.interp, hcf, decide_eq_false_iff_not, UInt64.toNat_toBitVec] at hcc7
+  have hl14 : nn.toNat ≤ d.regs.r14.toNat := by omega
+  have hnF : nn.toNat < n := by omega
+  have hrun := hspec σ o oa nn sh n hnF (by rw [hszA]; exact hqa) (by rw [hszA]; omega)
+    (Or.inr ⟨by rw [hszO]; exact hoa, by rw [hszO]; omega⟩)
+  rw [← hSA] at hqa
+  rw [← hSO] at hoa
+  refine sr_first (d := d) hG hc _ _ hTA hTO (oa &&& idxMask) (o &&& idxMask) nn sh hs σ.mem
+    (d.regs.r14 - nn) hqa hoa _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ (fun s' fr hm' => ?_)
+  all_goals try rs [g1, g2, g3, g4, g5, g7, g9, g10, g11, g12, g13]
+  · show (d.regs.r14 - nn).toNat ≤ _
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hl14)]; omega
+  · exact Pres.refl _ _
+  · exact hmem
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBA]
+    have := addr_idx BA 0 (oa &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  · apply UInt64.toBitVec_inj.mp
+    rw [hBO]
+    have := addr_idx BO 0 (o &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  all_goals try rfl
+  refine sr_exit hG hc hra hlo hhi s' fr fun s'' e1 e2 e3 e4 e5 e6 => ?_
+  refine hok _ _ s'' hrun (by rw [e1]; exact hm') rfl e2 e3 e4 e5 ?_ (by rw [e1]; exact fr.pres)
+  rw [hnr]; exact resOut_zero' e6
+
 end L.AsmEsc
