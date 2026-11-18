@@ -7,6 +7,7 @@ import ConAgua.Final.BufAbi
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.ProgIRef
+import ConAgua.Checker.AsmXOk
 import ConAgua.Checker.ProgWf
 public import ConAgua.Checker.ProgTab
 public import ConAguaAsm.Checker
@@ -276,7 +277,7 @@ theorem threadsAcc_runs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm₀ :
         have hbc : BufCall checkerTab frozenIdsL parOwnedL B (t.dm i) (t.ra i) :=
           ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
             hH.hcs24, hH.hcs8⟩
-        have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerProgI_wf MODE PLO PHI OUT HDRF
+        have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerProgI_wf MODE PLO PHI OUT HDRF
           CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
           (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
           (by rw [hcx]; exact hr) checker_bufMinOk
@@ -316,7 +317,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
