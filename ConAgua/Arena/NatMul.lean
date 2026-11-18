@@ -1307,11 +1307,36 @@ theorem mulWin_step (n : Nat) (ihw : MulWinSpec p n) (ihm : KaraMidSpec p n) :
 end rec
 
 section mulFn
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
-  (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_mul" = some natMul)
+variable (p : Prog) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
+  (hps : p.lookup "sub_row" = some subRow) (hpt : p.lookup "nat_trim" = some natTrim)
+  (hpu : p.lookup "kara_sum" = some karaSum) (hpp : p.lookup "kara_prods" = some karaProds)
+  (hpm : p.lookup "kara_mid" = some karaMid) (hpw : p.lookup "mul_win" = some mulWin)
+  (hpn : p.lookup "nat_mul" = some natMul)
 
-set_option maxHeartbeats 2000000 in
-include hph hpt hpn in
+include hpz hpr hps hpt hpu hpp hpm hpw in
+/-- **`mul_win`, `kara_prods` and `kara_mid` meet their specs** at every fuel: by induction on
+the fuel, the recursive calls by the induction hypothesis. -/
+theorem mulWin_spec (n : Nat) : MulWinSpec p n ∧ KaraProdsSpec p n ∧ KaraMidSpec p n := by
+  induction n with
+  | zero =>
+    refine ⟨?_, ?_, ?_⟩
+    · intro s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _; rw [invoke_eq _ hpw]; simp only [callFn, mulWin, mulWinG]
+      vcgen [exec] <;> grind
+    · intro s₀ _ _ _ _ _ _ _ _ _ _ _ _ _ _; rw [invoke_eq _ hpp]; simp only [callFn, karaProds]
+      vcgen [exec] <;> grind
+    · intro s₀ _ _ _ _ _ _ _ _ _ _ _; rw [invoke_eq _ hpm]; simp only [callFn, karaMid]
+      vcgen [exec] <;> grind
+  | succ n ih =>
+    exact ⟨mulWin_step p hpr hpm hpw n ih.1 ih.2.2, karaProds_step p hpz hpp n ih.1,
+      karaMid_step p hpz hpr hps hpt hpu hpm n ih.1 ih.2.1⟩
+
+/-- `nat_mul`'s frame: the zeroing and the product write the window at the top and above it. -/
+theorem nm_agree (p0 p1 p2 : Array Word) (t w s T : Nat) (h2 : Off p2 p0 t w) (h1 : OffB p1 p2 t w s)
+    (hT : T ≤ t) (hs : T ≤ s) : Agree p1 p0 T := fun j hj =>
+  (h1 j (by omega) (Or.inl (by omega))).trans (h2 j (Or.inl (by omega)))
+
+set_option maxHeartbeats 4000000 in
+include hpz hpr hps hpt hpu hpp hpm hpw hpn in
 /-- `nat_mul` appends `a * b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
 theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
@@ -1325,7 +1350,35 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
-  sorry
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
+  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
+  clear hok
+  replace ha := ha.1
+  replace hb := hb.1
+  rw [invoke_eq _ hpn]
+  simp only [callFn, natMul, natMulG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hw := (mulWin_spec p hpz hpr hps hpt hpu hpp hpm hpw n).1
+    unfold MulWinSpec at hw
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      mulZeros_spec p hpz n, hw, natTrim_spec p hpt n]
+    all_goals clear hw
+    all_goals (try simp only [LocEq] at *)
+    all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, List.headD_cons, UInt64.toNat_zero])
+    all_goals split_clear_locs
+    all_goals (try and_intros)
+    all_goals (try have hag := nm_agree _ _ _ _ _ _ s₀.mem.top.toNat (by with_reducible assumption) (by with_reducible assumption) (by grind [Mem.top_eq]) (by grind [Mem.top_eq]))
+    all_goals first
+      | (grind (splits := 20) [arena_grind, lang_grind, winop_grind, Mem.top_eq]; done)
+      | (trace_state; sorry)
 
 end mulFn
 
