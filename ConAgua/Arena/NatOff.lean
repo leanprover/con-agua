@@ -73,4 +73,37 @@ theorem Off.symm (p q : Array Word) (o n : Nat) (h : Off p q o n) : Off q p o n 
 theorem Off.mono (p q : Array Word) (o i n : Nat) (h : Off p q o i) (hi : i ≤ n) : Off p q o n :=
   fun j hj => h j (by omega)
 
+theorem Agree.trans (p q r : Array Word) (t t' : Nat) (h : Agree p q t') (h' : Agree q r t)
+    (ht : t ≤ t') : Agree p r t := fun j hj => (h j (by omega)).trans (h' j hj)
+
+/-- `p` and `q` agree below `s` off the window `[o, o + w)`: the frame of `nat_mul`'s window
+product (`NatMul.lean`), which writes its window and scratch space from `s` up. -/
+def OffB (p q : Array Word) (o w s : Nat) : Prop := ∀ j, j < s → (j < o ∨ o + w ≤ j) → p[j]? = q[j]?
+
+theorem OffB.of_off (p q : Array Word) (o w s : Nat) (h : Off p q o w) : OffB p q o w s :=
+  fun j _ hj => h j hj
+
+theorem OffB.of_agree (p q : Array Word) (o w s : Nat) (h : Agree p q s) : OffB p q o w s :=
+  fun j hj _ => h j hj
+
+theorem OffB.trans (p q r : Array Word) (o w s : Nat) (h : OffB p q o w s) (h' : OffB q r o w s) :
+    OffB p r o w s := fun j hj hw => (h j hj hw).trans (h' j hj hw)
+
+theorem OffB.widen (p q : Array Word) (o w s t m : Nat) (h : OffB p q o w s) (h1 : t ≤ o)
+    (h2 : o + w ≤ t + m) : OffB p q t m s := fun j hj hw => h j hj (by omega)
+
+theorem OffB.agree (p q : Array Word) (o w s t : Nat) (h : OffB p q o w s) (h1 : t ≤ o) (h2 : t ≤ s) :
+    Agree p q t := fun j hj => h j (by omega) (Or.inl (by omega))
+
+theorem Off.agree (p q : Array Word) (o w t : Nat) (h : Off p q o w) (h1 : t ≤ o) : Agree p q t :=
+  fun j hj => h j (Or.inl (by omega))
+
+theorem OffB.pv_disj (p q : Array Word) (o w s o' l : Nat) (h : OffB p q o w s) (hs : o' + l ≤ s)
+    (hl : o' + l ≤ o ∨ o + w ≤ o') : pv p o' l = pv q o' l := by
+  induction l with
+  | zero => rfl
+  | succ l ih =>
+    have := ih (by omega) (by omega)
+    simp only [pv, this, h (o' + l) (by omega) (by omega)]
+
 end L.Arena

@@ -996,6 +996,70 @@ theorem rowsLoop_step_spec (hpr : p.lookup "mul_row" = some mulRow) (n : Nat) (s
 
 end win
 
+/-! ## The recursion: `mul_win`, `kara_prods`, `kara_mid` -/
+
+/-- `k = ceil(la / 2)`, Karatsuba's split. -/
+def kh (la : Word) : Nat := la.toNat - la.toNat / 2
+
+/-- The positions of a Karatsuba step, as numbers (no word wraps below `2^41`). -/
+theorem kara_pos (s la lb oa ob : Word) (hs : s.toNat < 2 ^ 41) (hla : la.toNat < 2 ^ 41)
+    (hlb : lb.toNat < 2 ^ 41) (hoa : oa.toNat < 2 ^ 41) (hob : ob.toNat < 2 ^ 41)
+    (h1 : la.toNat / 2 < lb.toNat) (h2 : lb.toNat ≤ la.toNat) :
+    (la - la >>> 1).toNat = kh la ∧ ((2 : Word) * (la - la >>> 1)).toNat = 2 * kh la ∧
+    (s + (2 : Word) * (la - la >>> 1)).toNat = s.toNat + 2 * kh la ∧
+    (la + lb - (2 : Word) * (la - la >>> 1)).toNat = la.toNat + lb.toNat - 2 * kh la ∧
+    (s + la + lb).toNat = s.toNat + la.toNat + lb.toNat ∧
+    (s + la + lb + (la - la >>> 1) + (1 : Word)).toNat = s.toNat + la.toNat + lb.toNat + kh la + 1 ∧
+    (s + la + lb + (la - la >>> 1) + (1 : Word) + (la - la >>> 1) + (1 : Word)).toNat =
+      s.toNat + la.toNat + lb.toNat + 2 * kh la + 2 ∧
+    (s + la + lb + (la - la >>> 1) + (1 : Word) + (la - la >>> 1) + (1 : Word) + (2 : Word) * (la - la >>> 1) + (2 : Word)).toNat =
+      s.toNat + la.toNat + lb.toNat + 4 * kh la + 4 ∧
+    (s + la + lb + (2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = s.toNat + la.toNat + lb.toNat + 2 * kh la + 2 ∧
+    ((la - la >>> 1) + (1 : Word)).toNat = kh la + 1 ∧ ((2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = 2 * kh la + 2 ∧
+    (oa + (la - la >>> 1)).toNat = oa.toNat + kh la ∧ (la - (la - la >>> 1)).toNat = la.toNat - kh la ∧
+    (ob + (la - la >>> 1)).toNat = ob.toNat + kh la ∧ (lb - (la - la >>> 1)).toNat = lb.toNat - kh la ∧
+    kh la ≤ la.toNat ∧ kh la ≤ lb.toNat ∧ la.toNat - kh la ≤ kh la := by
+  have e0 : (la >>> 1).toNat = la.toNat / 2 := by
+    rw [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; rfl
+  have ek : (la - la >>> 1).toNat = kh la := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [e0]; omega)), e0]; rfl
+  have hk : kh la = la.toNat - la.toNat / 2 := rfl
+  have hkl : kh la ≤ lb.toNat := by omega
+  have hka : kh la ≤ la.toNat := by omega
+  generalize la - la >>> 1 = k at ek ⊢
+  generalize kh la = K at *
+  have e2 : ((2 : Word) * k).toNat = 2 * K := by
+    rw [UInt64.toNat_mul, ek]; simp only [UInt64.toNat_ofNat]; omega
+  have a1 : (s + la).toNat = s.toNat + la.toNat := toNat_add_of_lt _ _ (by omega)
+  have a2 : (s + la + lb).toNat = s.toNat + la.toNat + lb.toNat := by
+    rw [toNat_add_of_lt _ _ (by omega), a1]
+  have a3 : (s + la + lb + k).toNat = s.toNat + la.toNat + lb.toNat + K := by
+    rw [toNat_add_of_lt _ _ (by omega), a2, ek]
+  have a4 : (s + la + lb + k + (1 : Word)).toNat = s.toNat + la.toNat + lb.toNat + K + 1 := by
+    rw [toNat_add_of_lt _ _ (by simp; omega), a3]; simp
+  have a5 : (s + la + lb + k + (1 : Word) + k).toNat = s.toNat + la.toNat + lb.toNat + 2 * K + 1 := by
+    rw [toNat_add_of_lt _ _ (by omega), a4, ek]; omega
+  have a6 : (s + la + lb + k + (1 : Word) + k + (1 : Word)).toNat =
+      s.toNat + la.toNat + lb.toNat + 2 * K + 2 := by
+    rw [toNat_add_of_lt _ _ (by simp; omega), a5]; simp <;> omega
+  have a7 : (s + la + lb + k + (1 : Word) + k + (1 : Word) + (2 : Word) * k).toNat =
+      s.toNat + la.toNat + lb.toNat + 4 * K + 2 := by
+    rw [toNat_add_of_lt _ _ (by omega), a6, e2]; omega
+  have a8 : (s + la + lb + (2 : Word) * k).toNat = s.toNat + la.toNat + lb.toNat + 2 * K := by
+    rw [toNat_add_of_lt _ _ (by omega), a2, e2]
+  have b1 : (la + lb).toNat = la.toNat + lb.toNat := toNat_add_of_lt _ _ (by omega)
+  refine ⟨ek, e2, ?_, ?_, a2, a4, a6, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hka, hkl, by omega⟩
+  · rw [toNat_add_of_lt _ _ (by omega), e2]
+  · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), b1, e2]
+  · rw [toNat_add_of_lt _ _ (by rw [a7]; simp; omega), a7]; simp <;> omega
+  · rw [toNat_add_of_lt _ _ (by rw [a8]; simp; omega), a8]; simp <;> omega
+  · rw [toNat_add_of_lt _ _ (by simp; omega), ek]; simp
+  · rw [toNat_add_of_lt _ _ (by simp; omega), e2]; simp
+  · rw [toNat_add_of_lt _ _ (by omega), ek]
+  · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
+  · rw [toNat_add_of_lt _ _ (by omega), ek]
+  · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
+
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_mul" = some natMul)

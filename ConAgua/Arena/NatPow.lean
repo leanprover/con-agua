@@ -38,9 +38,6 @@ namespace L.Arena
 
 /-! ## Frames and the exponent -/
 
-theorem Agree.trans (p q r : Array Word) (t t' : Nat) (h : Agree p q t') (h' : Agree q r t)
-    (ht : t ≤ t') : Agree p r t := fun j hj => (h j (by omega)).trans (h' j hj)
-
 
 /-- A one-limb slice just written. -/
 theorem pv_set_one (p : Array Word) (o j l : Nat) (v : Word) (hl : l = 1) (hj : j = o)
