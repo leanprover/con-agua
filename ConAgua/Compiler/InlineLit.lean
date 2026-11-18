@@ -24,15 +24,15 @@ evaluate it again. So the inliner's output is a literal, checked one function at
   compiled code); `idx_lit_eq name : p`, where the correctness theorem needs it,
   `name_eq : Prog.idxTree p = some name` (one kernel check over the names). The literals below
   hold for any tree.
-* `inl_round_fns name : S t p lo hi` declares, for the functions `lo ≤ i < hi` of `p`,
-  `name.f<i> : FunDecl`, the literal of `inlFn (envOf S t p) fdᵢ` (computed by compiled code; the
+* `inl_round_fns name : S ex t p lo hi` declares, for the functions `lo ≤ i < hi` of `p`,
+  `name.f<i> : FunDecl`, the literal of `inlFn (envOf S ex t p) fdᵢ` (computed by compiled code; the
   function's own declaration term if inlining does not change it), and
-  `name.f<i>_eq : inlFn (envOf S t p) fdᵢ = name.f<i>`, checked by the kernel (`inlLitBatch`
+  `name.f<i>_eq : inlFn (envOf S ex t p) fdᵢ = name.f<i>`, checked by the kernel (`inlLitBatch`
   functions per check), so that a large program's checks are spread over modules.
-* `inl_round name : S t p` declares the rest and `name : Prog := [(f₀, name.f0), …]` (compiled
-  code runs it as `inlRound S t p`, `name.impl`);
-* `inl_round_eq name : S t p`, in a module of its own (the modules that compile the literal do not
-  wait for it), `name_eq : inlRound S t p = name`, from the per-function equations by congruence
+* `inl_round name : S ex t p` declares the rest and `name : Prog := [(f₀, name.f0), …]` (compiled
+  code runs it as `inlRound S ex t p`, `name.impl`);
+* `inl_round_eq name : S ex t p`, in a module of its own (the modules that compile the literal do not
+  wait for it), `name_eq : inlRound S ex t p = name`, from the per-function equations by congruence
   (`inlRound_cons`), without evaluation.
 
 The constant byte strings of the literal (`ldc`, `rom` sources, `scan8` class tables) are the
@@ -204,12 +204,14 @@ meta unsafe def declInlFns (name : Name) (envE : Lean.Expr) (elems : Array Lean.
   if todo.isEmpty then return
   -- `p` and its round, by compiled code (from `viaE`, a compiled term equal to `p`)
   let p ← evalProg viaE
-  let some envV := envE.getAppArgs[1]? | throwError "inl_round: unexpected environment {envE}"
+  let some envV := envE.getAppArgs[2]? | throwError "inl_round: unexpected environment {envE}"
   let some t ← (evalExpr (Option NTree) (mkApp (mkConst ``Option [0]) (mkConst ``NTree))
     (mkApp2 (mkConst ``Option.some [0]) (mkConst ``NTree) envV) : MetaM (Option NTree)) | unreachable!
   let some sV := envE.getAppArgs[0]? | unreachable!
   let s ← evalExpr Nat (mkConst ``Nat) sV
-  let q := (inlRound s t p).map (·.2)
+  let some exV := envE.getAppArgs[1]? | unreachable!
+  let ex ← evalExpr (List Nat) (mkApp (mkConst ``List [0]) (mkConst ``Nat)) exV
+  let q := (inlRound s ex t p).map (·.2)
   let rom ← romConsts
   let b := max 1 (inlLitBatch.get (← getOptions))
   let mut batch : Array (Name × Lean.Expr) := #[]
@@ -253,16 +255,19 @@ where
       addDecl (.thmDecl { name := eqs[j]!.1.appendAfter "_eq", levelParams := [], type := tys[j]!, value := pj })
       if j < k then h := mkApp3 (mkConst ``And.right) tys[j]! (tail (j + 1)) h
 
-/-- The terms `S`, `t`, `p` and `envOf S t p`. -/
-meta def elabRoundArgs (sS tS pS : Syntax) : TermElabM (Lean.Expr × Lean.Expr × Lean.Expr × Lean.Expr) := do
+/-- The terms `S`, `ex`, `t`, `p` and `envOf S ex t p`. -/
+meta def elabRoundArgs (sS exS tS pS : Syntax) :
+    TermElabM (Lean.Expr × Lean.Expr × Lean.Expr × Lean.Expr × Lean.Expr) := do
   let sE ← elabTermEnsuringType sS (mkConst ``Nat)
+  let exE ← elabTermEnsuringType exS (mkApp (mkConst ``List [0]) (mkConst ``Nat))
   let tE ← elabTermEnsuringType tS (mkConst ``NTree)
   let pE ← elabTermEnsuringType pS (mkConst ``Prog)
   synthesizeSyntheticMVarsNoPostponing
   let sE ← instantiateMVars sE
+  let exE ← instantiateMVars exE
   let tE ← instantiateMVars tE
   let pE ← instantiateMVars pE
-  return (sE, tE, pE, mkApp3 (mkConst ``envOf) sE tE pE)
+  return (sE, exE, tE, pE, mkApp4 (mkConst ``envOf) sE exE tE pE)
 
 /-- The term to evaluate `p` with: `via e`, else `p` itself. -/
 meta def elabVia (pE : Lean.Expr) : Option Syntax → TermElabM Lean.Expr
@@ -272,22 +277,22 @@ meta def elabVia (pE : Lean.Expr) : Option Syntax → TermElabM Lean.Expr
     synthesizeSyntheticMVarsNoPostponing
     instantiateMVars e
 
-syntax (name := inlRoundFns) "inl_round_fns " ident " : " term:max term:max term:max (" via " term:max)? num num : command
+syntax (name := inlRoundFns) "inl_round_fns " ident " : " term:max term:max term:max term:max (" via " term:max)? num num : command
 
 @[command_elab inlRoundFns] meta unsafe def elabInlRoundFns : CommandElab := fun stx => do
-  let `(inl_round_fns $n:ident : $sS $tS $pS $[via $v?]? $lo $hi) := stx | throwUnsupportedSyntax
+  let `(inl_round_fns $n:ident : $sS $exS $tS $pS $[via $v?]? $lo $hi) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
-    let (_, _, pE, envE) ← elabRoundArgs sS tS pS
+    let (_, _, _, pE, envE) ← elabRoundArgs sS exS tS pS
     declInlFns name envE (← listElemsW pE) lo.getNat hi.getNat (← elabVia pE (v?.map (·.raw)))
 
-syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max term:max term:max (" via " term:max)? : command
+syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max term:max term:max term:max (" via " term:max)? : command
 
 @[command_elab inlRoundCmd] meta unsafe def elabInlRound : CommandElab := fun stx => do
-  let `($[$doc?:docComment]? inl_round $n:ident : $sS $tS $pS $[via $v?]?) := stx | throwUnsupportedSyntax
+  let `($[$doc?:docComment]? inl_round $n:ident : $sS $exS $tS $pS $[via $v?]?) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
-    let (sE, tE, pE, envE) ← elabRoundArgs sS tS pS
+    let (sE, exE, tE, pE, envE) ← elabRoundArgs sS exS tS pS
     let elems ← listElemsW pE
     declInlFns name envE elems 0 elems.size (← elabVia pE (v?.map (·.raw)))
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) funDeclTy
@@ -302,20 +307,20 @@ syntax (name := inlRoundCmd) (docComment)? "inl_round " ident " : " term:max ter
     -- compiled code runs `name` as the round itself (the literal's functions are not compiled)
     let implN := name ++ `impl
     withExporting <| addAndCompile (.defnDecl (mkDefinitionValEx implN [] progT
-      (mkApp3 (mkConst ``inlRound) sE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
+      (mkApp4 (mkConst ``inlRound) sE exE tE (← elabVia pE (v?.map (·.raw)))) .opaque .safe []))
     match Compiler.implementedByAttr.setParam (← getEnv) name implN with
     | .ok env => setEnv env
     | .error msg => throwError "inl_round: {msg}"
 
-/-- `inl_round_eq name : S t p` (after `inl_round name : S t p`): `name_eq : inlRound S t p = name`,
+/-- `inl_round_eq name : S ex t p` (after `inl_round name : S ex t p`): `name_eq : inlRound S ex t p = name`,
 from the per-function equations by congruence (`inlRound_cons`), without evaluation. -/
-syntax (name := inlRoundEqCmd) "inl_round_eq " ident " : " term:max term:max term:max : command
+syntax (name := inlRoundEqCmd) "inl_round_eq " ident " : " term:max term:max term:max term:max : command
 
 @[command_elab inlRoundEqCmd] meta unsafe def elabInlRoundEq : CommandElab := fun stx => do
-  let `(inl_round_eq $n:ident : $sS $tS $pS) := stx | throwUnsupportedSyntax
+  let `(inl_round_eq $n:ident : $sS $exS $tS $pS) := stx | throwUnsupportedSyntax
   let name := (← getCurrNamespace) ++ n.getId
   liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
-    let (sE, tE, pE, envE) ← elabRoundArgs sS tS pS
+    let (sE, exE, tE, pE, envE) ← elabRoundArgs sS exS tS pS
     let elems ← listElemsW pE
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) funDeclTy
     let progT := mkConst ``Prog
@@ -329,7 +334,7 @@ syntax (name := inlRoundEqCmd) "inl_round_eq " ident " : " term:max term:max ter
       pf := mkAppN (mkConst ``inlRound_cons) #[envE, fE, fdE, fi, tl, lit, hi, pf]
       lit := mkApp3 (mkConst ``List.cons [0]) elemTy (mkApp4 (mkConst ``Prod.mk [0, 0]) (mkConst ``String) funDeclTy fE fi) lit
       tl := mkApp3 (mkConst ``List.cons [0]) elemTy elems[i]! tl
-    let lhs := mkApp3 (mkConst ``inlRound) sE tE pE
+    let lhs := mkApp4 (mkConst ``inlRound) sE exE tE pE
     addDecl (.thmDecl { name := name.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progT lhs (mkConst name),
                         value := pf })
 

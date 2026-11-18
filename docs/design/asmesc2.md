@@ -143,3 +143,18 @@ output disjoint from the operands.
 Correctness: the product fuzzer, 2100 of 2100 agree with master (the sizes from 48 limbs up run
 Karatsuba, and so `sub_row`). `diff-e2e.py --refs`: 740 agree, 0 REFDIFF. The regenerated
 `checker.s` is byte-identical to the measured one.
+
+## Step 4: the inliner leaves the hand-written functions alone
+
+A body in `checkerX` only runs where the function is called. The inliner (`Compiler/Inline.lean`)
+replaces calls of small leaves by their bodies, so for small hand-written leaves (the coming
+`add_n`, `sub_n`, …) the asm would be dead code. So `envOf`, `inlRound` and `inlineProg` take an
+exclusion list `ex : List Nat` of name codes, and `envOf S ex t p g` is `none` when `nameCode g`
+is in `ex`. The correctness theorems (`envOf_sound`, `inlineProg_run`, `inlineProg_lookup`) hold
+for every `ex`. Excluding a function only keeps a call as a call. `inl_round`, `inl_round_fns`
+and `inl_round_eq` (`InlineLit.lean`) take `ex` after `S`.
+
+The checker's list is `checkerXKeys` (`Checker/AsmKeys.lean`, a module with no bodies or proofs,
+so that the inlined program does not depend on them). `checkerX_keys` states that it is
+`checkerX`'s keys. With `mul_row` and `sub_row`, which are too large to be inlined anyway, the
+change does nothing: `checker.s` is unchanged (`asm_file.py --check`).
