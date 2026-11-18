@@ -605,20 +605,24 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt
 }
 
 /-- `div_recip(d)`: the reciprocal `⌊(2^128 - 1) / d⌋ - 2^64` of a normalised `d` (Möller and
-Granlund's `v`), by restoring division of `(2^64 - 1 - d) · 2^64 + 2^64 - 1` by `d`. Only the
-speed of `div_2by1` depends on it. -/
+Granlund's `v`): the tangent of `1/x` at `3/4` (from below, about 3 bits), five Newton steps
+`v := v + e + ⌊v e / 2^64⌋` with `e` the top word of `2^128 - d (2^64 + v)` (from below, at most
+2 under), then `div_2by1` of `(2^64 - 1 - d) · 2^64 + 2^64 - 1` by `d` with that estimate. Only
+the speed of `div_2by1` depends on the estimate. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divRecip : FunDecl := lfn (d) locals (u, q, t, j) {
-  u := 0 - 1 - d;
-  j := 64;
-  while 0 < j {
-    j -= 1;
-    t := u >> 63;
-    u := (u << 1) | 1;
-    q := q << 1;
-    if t != 0 || d <= u { u := u - d; q := q | 1 }
+@[no_expose] def divRecip : FunDecl := lfn (d) locals (v, t, l, h, e, j, k) {
+  t := 0 - 1 - d;
+  t := t + mulhi(t, 0xC71C71C71C71C71C);
+  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
+  k := 5;
+  for j < k {
+    l := d * v;
+    h := d + mulhi(d, v);
+    e := 0 - h - u64(l != 0);
+    v := v + e + mulhi(v, e)
   };
-  return q
+  (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
+  return v
 }
 
 /-- `div_2by1(u1, u0, d, v)`: `(q, r)` with `u1 · 2^64 + u0 = q · d + r`, `r < d`, for `u1 < d`

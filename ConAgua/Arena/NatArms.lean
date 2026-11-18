@@ -980,7 +980,7 @@ def natArmProg : Prog := storeProg ++
    ("gcd_step", gcdStep), ("nat_gcd", natGcd), ("nat_gcd_lit", natGcdLit),
    ("nat_bin_op_result", natBinOpResultL)]
 
-/- `6 - 1 = 5`, `7 % 8 = 7`, `7 * 5 = 35` (at pool offset 9) and `35 / 5 = 7`: three nodes, and
+/- `6 - 1 = 5`, `7 % 8 = 7`, `7 * 5 = 35` (at pool offset 8) and `35 / 5 = 7`: three nodes, and
 the quotient finds `7`'s node again. -/
 #guard
   let m : Mem := Mem.ofWords [(POOL, #[5, 7, 6, 8] ++ Array.replicate 60 0), (CTL, #[4] ++ Array.replicate 63 0),
@@ -993,7 +993,7 @@ the quotient finds `7`'s node again. -/
   match go m "nat_pred_lit" [2, 1] with
   | some (h₁, m) => match go m "nat_mod_lit" [1, 1, 3, 1] with
     | some (h₂, m) => match go m "nat_mul_lit" [1, 1, 0, 1] with
-      | some (h₃, m) => match go m "nat_div_lit" [9, 1, 0, 1] with
+      | some (h₃, m) => match go m "nat_div_lit" [8, 1, 0, 1] with
         | some (h₄, _) => [h₁, h₂, h₃, h₄] == [0x20000000, 0x20000001, 0x20000002, 0x20000001]
         | none => false
       | none => false
