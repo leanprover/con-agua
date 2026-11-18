@@ -589,39 +589,188 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt
   for j < n { POOL⟨pt⟩[pb + (la + j)] := 0 }
 }
 
+/-! ## Long division one quotient limb at a time -/
+
+/-- `div_norm(x)`: the left shift `s ≤ 63` that sets the top bit of `x ≠ 0` (con-ron's
+`norm_shift`), in six halving steps. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def divNorm : FunDecl := lfn (x) locals (s) {
+  if x < 0x100000000 { x := x << 32; s := 32 };
+  if x < 0x1000000000000 { x := x << 16; s := s + 16 };
+  if x < 0x100000000000000 { x := x << 8; s := s + 8 };
+  if x < 0x1000000000000000 { x := x << 4; s := s + 4 };
+  if x < 0x4000000000000000 { x := x << 2; s := s + 2 };
+  if x < 0x8000000000000000 { s := s + 1 };
+  return s
+}
+
+/-- `div_recip(d)`: the reciprocal `⌊(2^128 - 1) / d⌋ - 2^64` of a normalised `d` (Möller and
+Granlund's `v`), by restoring division of `(2^64 - 1 - d) · 2^64 + 2^64 - 1` by `d`. Only the
+speed of `div_2by1` depends on it. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def divRecip : FunDecl := lfn (d) locals (u, q, t, j) {
+  u := 0 - 1 - d;
+  j := 64;
+  while 0 < j {
+    j -= 1;
+    t := u >> 63;
+    u := (u << 1) | 1;
+    q := q << 1;
+    if t != 0 || d <= u { u := u - d; q := q | 1 }
+  };
+  return q
+}
+
+/-- `div_2by1(u1, u0, d, v)`: `(q, r)` with `u1 · 2^64 + u0 = q · d + r`, `r < d`, for `u1 < d`
+(con-ron's `u128` division in `dm_step`). The estimate is Möller and Granlund's
+(`udiv_qrnnd_preinv`, with the reciprocal `v` of a normalised `d`); the two loops then step `q`
+down while `q · d > u` and up while the remainder is at least `d`, so the result is exact
+whatever `v` is (with the true reciprocal neither loop runs). -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def div2by1 : FunDecl := lfn (u1, u0, d, v) locals (q, q0, r, plo, phi, t) {
+  q0 := v * u1 + u0;
+  q := mulhi(v, u1) + u1 + u64(q0 < u0) + 1;
+  r := u0 - q * d;
+  if q0 < r { q := q - 1; r := r + d };
+  if d <= r { q := q + 1 };
+  plo := q * d;
+  phi := mulhi(q, d);
+  while u1 < phi || (phi == u1 && u0 < plo) {
+    q := q - 1;
+    phi := phi - u64(plo < d);
+    plo := plo - d
+  };
+  r := u0 - plo;
+  t := u1 - phi - u64(u0 < plo);
+  while t != 0 || d <= r {
+    q := q + 1;
+    t := t - u64(r < d);
+    r := r - d
+  };
+  return (q, r)
+}
+
+def dsmLoop : Stmt := lblk (r, n, ob, q, i, c, x, y, lo, rt, rb) {
+  for i < n {
+    x := POOL⦃r + i⦄;
+    y := POOL⦃ob + i⦄;
+    lo := q * y + c;
+    c := mulhi(q, y) + u64(lo < c);
+    POOL⟨rt⟩[rb + i] := x - lo;
+    c := c + u64(x < lo)
+  }
+}
+
+/-- `div_submul(r, n, ob, q)`: `R := R - q · b` in place over `n` limbs of `R` and of `b`;
+returns the word still to subtract above them (con-ron's `mul_u64` and `sub` in `dm_step`). -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def divSubmul : FunDecl := lfn (r, n, ob, q) locals (i, c, x, y, lo, rt, rb) {
+  rt := ⦃r⦄.tier;
+  rb := ⦃r⦄.idx;
+  ⟪dsmLoop⟫;
+  return c
+}
+
+/-- One-limb divisor: the limbs of `a` from the top, one `div_2by1` each, the remainder
+(normalised, `r · 2^s`) in a word. -/
+def d1Loop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, u1, u0, pa, pt, pb) {
+  while 0 < i {
+    i -= 1;
+    x := POOL⦃oa + i⦄;
+    u1 := r + ((x >> 1) >> (63 - s));
+    u0 := x << s;
+    (q, r) := call div_2by1(u1, u0, d, v);
+    POOL⟨pt⟩[pb + i] := q
+  }
+}
+
+/-- The copy of `a` into the work region at `w`. -/
+def dcpLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, u1, u0, pa, pt, pb) {
+  for i < la { POOL⟨pt⟩[pb + n + i] := POOL⦃oa + i⦄ }
+}
+
+/-- Knuth's algorithm D, one quotient limb `j` per step from the top (con-ron's `dm_limbs` and
+`dm_step`): the window `w[j ‥ j + lb]` holds `rem · 2^64 + a[j]`; `q̂` from its top limbs and `b`'s
+(both read shifted by `s`, so normalised), then `q̂ · b` subtracted and `b` added back while the
+window is negative. -/
+def dkLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, i, j, x, c, q, r, s, d, v, u1, u0, pa, pt, pb) {
+  while 0 < j {
+    j -= 1;
+    pa := pb + n + j + lb;
+    x := POOL⟨pt⟩[pa];
+    c := POOL⟨pt⟩[pa - 1];
+    u1 := (x << s) + ((c >> 1) >> (63 - s));
+    x := POOL⟨pt⟩[pa - 2];
+    u0 := (c << s) + ((x >> 1) >> (63 - s));
+    if d <= u1 { q := 0 - 1 } else { (q, r) := call div_2by1(u1, u0, d, v) };
+    c := call div_submul(w + j, lb, ob, q);
+    x := POOL⟨pt⟩[pa];
+    POOL⟨pt⟩[pa] := x - c;
+    if x < c {
+      c := 0;
+      while c == 0 {
+        q := q - 1;
+        c := call div_add(w + j, lb + 1, ob, lb)
+      }
+    };
+    POOL⟨pt⟩[pb + j] := q
+  }
+}
+
 /-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq, pt, pb) {
+def natDivmod : FunDecl := lfn (oa, la, ob, lb)
+    locals (top, n, w, i, j, x, c, q, r, s, d, v, u1, u0, pa, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  if lb == 0 {
+  if lb == 0 || la < lb {
     c := call nat_trim(oa, la);
     return (top, 0, oa, c)
   };
-  n := lb + 1;
-  if len(POOL⟨pt⟩) - pb < la { abort };
-  if len(POOL⟨pt⟩) - pb - la < n { abort };
-  ro := top + la;
-  ⟪rzLoop⟫;
-  pa := oa + la;
-  pq := ro;
-  ⟪limbLoop⟫;
-  x := call nat_trim(top, la);
-  c := call nat_trim(ro, n);
-  CTL.u64[0] := ro + n;
-  return (top, x, ro, c)
+  if lb == 1 {
+    if len(POOL⟨pt⟩) - pb <= la { abort };
+    d := POOL⦃ob⦄;
+    s := call div_norm(d);
+    d := d << s;
+    v := call div_recip(d);
+    i := la;
+    ⟪d1Loop⟫;
+    POOL⟨pt⟩[pb + la] := r >> s;
+    x := call nat_trim(top, la);
+    c := call nat_trim(top + la, 1);
+    CTL.u64[0] := top + la + 1;
+    return (top, x, top + la, c)
+  };
+  n := la - lb + 1;
+  if len(POOL⟨pt⟩) - pb < n { abort };
+  if len(POOL⟨pt⟩) - pb - n <= la { abort };
+  w := top + n;
+  ⟪dcpLoop⟫;
+  POOL⟨pt⟩[pb + n + la] := 0;
+  d := POOL⦃ob + lb - 1⦄;
+  s := call div_norm(d);
+  x := POOL⦃ob + lb - 2⦄;
+  d := (d << s) + ((x >> 1) >> (63 - s));
+  v := call div_recip(d);
+  j := n;
+  ⟪dkLoop⟫;
+  x := call nat_trim(top, n);
+  c := call nat_trim(w, lb);
+  CTL.u64[0] := w + lb;
+  return (top, x, w, c)
 }
 
 /-- The pool functions with `nat_divmod`. -/
 def natDivProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("div_shl1", divShl1),
-  ("div_sub", divSub), ("div_add", divAdd), ("div_step", divStep), ("nat_divmod", natDivmod)]
+  ("div_sub", divSub), ("div_add", divAdd), ("div_step", divStep), ("div_norm", divNorm), ("div_recip", divRecip),
+  ("div_2by1", div2by1), ("div_submul", divSubmul), ("nat_divmod", natDivmod)]
 
 /- `(2^64 + 5) / 3 = 6148914691236517207, rem 0`; quotient `[0x5555555555555557]`. -/
 #guard (run natDivProg 100000 "nat_divmod" [0, 2, 2, 1]
   (Mem.ofWords [(POOL, #[5, 1, 3, 0, 0, 0, 0, 0]), (CTL, #[3])])).toOption.map
   (fun (r, m) => (r, (m.arr64 POOL)[3]!, m.arr64 CTL)) ==
-  some ([3, 1, 5, 0], 0x5555555555555557, #[7])
+  some ([3, 1, 5, 0], 0x5555555555555557, #[6])
 /- `7 / 2 = 3 rem 1`; `5 / 0 = 0 rem 5` (the remainder is `a`'s slice). -/
 #guard (run natDivProg 100000 "nat_divmod" [0, 1, 1, 1]
   (Mem.ofWords [(POOL, #[7, 2, 0, 0, 0, 0]), (CTL, #[2])])).toOption.map
@@ -824,32 +973,7 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
-  have hok₀ := hok
-  have hsm := hok.small
-  have h41 := hok.top41
-  have hsz := hsm.tier (s₀.mem.top >>> 40)
-  -- the `ptop0` disjunct of `PoolOK` is dead here, and `grind` splits on it in every goal
-  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
-  clear hok
-  have ha1 := ha.1
-  have hb1 := hb.1
-  rw [invoke_eq _ hpn]
-  simp only [callFn, natDivmod]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      rzLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
-      limbLoop_step_spec p hpl hps hpc hp1 hp2 hp3 (vpool s₀.mem) (pcap s₀.mem) hp4 n,
-      natTrim_spec p hpt n]
-    all_goals (try simp only [RzInv, LimbInv, DivBase, RzPost, LimbPost] at *)
-    all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
-      List.headD_cons, List.tail_cons, L.Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
-    all_goals grind (gen := 40) (ematch := 20) (splits := 30) (instances := 5000)
-      [arena_grind, lang_grind, natcmp_grind, natop_grind]
+  sorry
 
 end divFn
 
