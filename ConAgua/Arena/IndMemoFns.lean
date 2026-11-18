@@ -145,7 +145,7 @@ def imFns : List FnName :=
    "lv_sub_int", "lv_subsimp", "lv_subst", "lv_substl", "lv_zero", "lv_zero_where_zero", "lvl_eq",
    "lvl_eq_c", "lvl_eq_fueled", "lvl_eq_rec", "lvl_eq_true", "lvls_eq", "lvls_eq_c", "lvls_eq_rec",
    "m2c_and", "m2c_and2", "m2c_arms", "m2c_check", "m2c_const_view", "m2c_ctor", "m2c_eta",
-   "m2c_eta2", "m2c_head", "m2c_k", "m2c_k2", "m2c_pre", "mac_hi", "major_to_ctor", "major_to_ctor_rescue", "ctor_view", "prepare_major_whnf", "is_nat_succ_app", "matches_pin",
+   "m2c_eta2", "m2c_head", "m2c_k", "m2c_k2", "m2c_pre", "mul_row", "sub_row", "mul_zeros", "kara_sum", "kara_prods", "kara_mid", "mul_win", "major_to_ctor", "major_to_ctor_rescue", "ctor_view", "prepare_major_whnf", "is_nat_succ_app", "matches_pin",
    "max_find", "max_push", "member_field_copy", "member_names_copy", "memo_get", "memo_push",
    "mk_app", "mk_app_n", "mk_app_n_from", "mk_forall", "mk_lam", "mk_let", "mk_proj", "n_idxs_copy",
    "nanon_find", "nanon_push", "nat_add", "nat_add_lit", "nat_ap1", "nat_ap2", "nat_beq_lit",
