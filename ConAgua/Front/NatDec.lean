@@ -361,9 +361,15 @@ def natDecProg : Prog := L.Arena.natMulProg ++ [("dec_chunk", decChunk), ("nat_m
   ("nat_dec_chunks", natDecChunks), ("nat_dec_split", natDecSplit), ("nat_dec_big", natDecBig),
   ("nat_dec", natDec)]
 
+/-- `natDecW` for `#eval`: `callF` as a run at fuel `2 ^ 64`. -/
+def natDecWEval (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
+  if c < d ∧ decBase < d - c then callW natDecProg (2 ^ 64) "nat_dec_big" [c, d] m
+  else natChunksW b m c d
+
 /-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts; a
-long literal is `nat_dec_big`'s run in `natDecProg` (`callF`). -/
-noncomputable def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
+long literal is `nat_dec_big`'s run in `natDecProg` (`callF`). Evaluated as `natDecWEval`. -/
+@[implemented_by natDecWEval]
+def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
   if c < d ∧ decBase < d - c then callF natDecProg "nat_dec_big" m [c, d] else natChunksW b m c d
 
 /- `12345678901234567890123` (23 digits, two chunks) at pool top 1: limbs

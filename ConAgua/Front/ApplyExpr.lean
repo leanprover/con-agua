@@ -522,6 +522,7 @@ def exprProg : Prog := frontProg ++
    ("node_let", nodeLet), ("node_proj", nodeProj), ("node_const", nodeConst),
    ("node_lit", nodeLit), ("node_lit_str", nodeLitStr), ("expr_node", exprNode),
    ("apply_expr", applyExpr), ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec),
+   ("nat_dec_chunks", natDecChunks),
    ("byte_in", L.Scan.Str.byteIn), ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4),
    ("hex3", L.Scan.Str.hex3), ("esc_sur", L.Front.Unescape.escSur),
    ("esc_one", L.Front.Unescape.escOne), ("utf8_put", L.Front.Unescape.utf8Put),
