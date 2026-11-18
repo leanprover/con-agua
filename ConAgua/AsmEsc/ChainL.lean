@@ -1,8 +1,6 @@
 module
 
-public import ConAgua.Arena.NatLeaf
 public import ConAgua.AsmEsc.Chain1
-public import ConAgua.AsmEsc.Chain2
 import all ConAgua.Arena.NatLeaf
 
 @[expose] public section

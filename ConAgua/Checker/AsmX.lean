@@ -3,7 +3,6 @@ module
 public import ConAgua.AsmEsc.SubRowAsm
 public import ConAgua.AsmEsc.DivSubmulAsm
 public import ConAgua.AsmEsc.Chain1
-public import ConAgua.AsmEsc.Chain2
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.AsmKeys
 
