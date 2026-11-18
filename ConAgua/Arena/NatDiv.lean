@@ -3,9 +3,12 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatSub
 meta import ConAgua.Arena.NatAdd
+meta import ConAgua.Arena.NatDivWord
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.NatDivWord
+import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr
@@ -590,69 +593,6 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq, pt
 }
 
 /-! ## Long division one quotient limb at a time -/
-
-/-- `div_norm(x)`: the left shift `s ≤ 63` that sets the top bit of `x ≠ 0` (con-ron's
-`norm_shift`), in six halving steps. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divNorm : FunDecl := lfn (x) locals (s) {
-  if x < 0x100000000 { x := x << 32; s := 32 };
-  if x < 0x1000000000000 { x := x << 16; s := s + 16 };
-  if x < 0x100000000000000 { x := x << 8; s := s + 8 };
-  if x < 0x1000000000000000 { x := x << 4; s := s + 4 };
-  if x < 0x4000000000000000 { x := x << 2; s := s + 2 };
-  if x < 0x8000000000000000 { s := s + 1 };
-  return s
-}
-
-/-- `div_recip(d)`: the reciprocal `⌊(2^128 - 1) / d⌋ - 2^64` of a normalised `d` (Möller and
-Granlund's `v`): the tangent of `1/x` at `3/4` (from below, about 3 bits), five Newton steps
-`v := v + e + ⌊v e / 2^64⌋` with `e` the top word of `2^128 - d (2^64 + v)` (from below, at most
-2 under), then `div_2by1` of `(2^64 - 1 - d) · 2^64 + 2^64 - 1` by `d` with that estimate. Only
-the speed of `div_2by1` depends on the estimate. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divRecip : FunDecl := lfn (d) locals (v, t, l, h, e, j, k) {
-  t := 0 - 1 - d;
-  t := t + mulhi(t, 0xC71C71C71C71C71C);
-  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
-  k := 5;
-  for j < k {
-    l := d * v;
-    h := d + mulhi(d, v);
-    e := 0 - h - u64(l != 0);
-    v := v + e + mulhi(v, e)
-  };
-  (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
-  return v
-}
-
-/-- `div_2by1(u1, u0, d, v)`: `(q, r)` with `u1 · 2^64 + u0 = q · d + r`, `r < d`, for `u1 < d`
-(con-ron's `u128` division in `dm_step`). The estimate is Möller and Granlund's
-(`udiv_qrnnd_preinv`, with the reciprocal `v` of a normalised `d`); the two loops then step `q`
-down while `q · d > u` and up while the remainder is at least `d`, so the result is exact
-whatever `v` is (with the true reciprocal neither loop runs). -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def div2by1 : FunDecl := lfn (u1, u0, d, v) locals (q, q0, r, plo, phi, t) {
-  q0 := v * u1 + u0;
-  q := mulhi(v, u1) + u1 + u64(q0 < u0) + 1;
-  r := u0 - q * d;
-  if q0 < r { q := q - 1; r := r + d };
-  if d <= r { q := q + 1 };
-  plo := q * d;
-  phi := mulhi(q, d);
-  while u1 < phi || (phi == u1 && u0 < plo) {
-    q := q - 1;
-    phi := phi - u64(plo < d);
-    plo := plo - d
-  };
-  r := u0 - plo;
-  t := u1 - phi - u64(u0 < plo);
-  while t != 0 || d <= r {
-    q := q + 1;
-    t := t - u64(r < d);
-    r := r - d
-  };
-  return (q, r)
-}
 
 def dsmLoop : Stmt := lblk (r, n, ob, q, i, c, x, y, lo, rt, rb) {
   for i < n {
