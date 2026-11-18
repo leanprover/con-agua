@@ -188,6 +188,32 @@ master `acf6a18d5`; `M` master, `LL` the compiled leaves, `LA` the leaves in asm
 Fuzzer 2100/2100 and `diff-e2e --refs` 740/0 for LL and LA. New forms when they land: `adcq`
 and `sbbq` with a memory operand, `sbbq %r, %r`, `incq`, `decq`.
 
+## Step 5b: the add/sub leaves wired in (after linleaf #308)
+
+The L sides are in `ConAgua/AsmEsc/ChainL.lean`: `addN_spec`, `subN_spec` (`Chain2Spec`) and
+`add1_spec`, `sub1_spec` (`Chain1Spec`) against linleaf's landed bodies. One loop lemma serves all
+four: `chLoop_run`, over any per-limb step, with the model `gRows` (`ch{2,1}Rows_eq`). Each leaf
+adds a body step lemma and its carry-word identity (`add_word` … `sub1_word`, `cw_tac`). The
+four keys are in `checkerXKeys`, and the template bodies `chain{2,1}Asm checkerTab f sub` are in
+`checkerX`, proved in `AsmXOk`.
+
+New parser forms (`Parse.lean`, check-asm's `SUFFIXED` gains `sbb`), all of them used in
+`checker.s`, so the check-asm gate covers each one:
+* `add_n`: `adcq (%rbx,%r13,8), %rax`-style `adcq MEM, %r` (memory operand), `incq`, `decq`;
+* `sub_n`: `sbbq MEM, %r`;
+* `add_1`: `adcq %r, %r`; `sub_1`: `sbbq %r, %r`;
+* all four: `incq %r13`, `decq %rcx` (they keep the carry flag across the loop).
+
+Measured on the landed tree (base master `35c9d8d8f`, with div_submul):
+
+| | master | leaves in asm |
+|---|---:|---:|
+| gf3 instructions | 44.67 G | 40.93 G (−8.37 %) |
+| gf3 wall (10 paired rounds) | 1.989 s | 1.904 s (−4.15 % [−5.58, −2.72], p = 0.004) |
+
+Fuzzers: products 2100/2100 and divisions 540/540, with the same verdicts as master.
+`diff-e2e --refs`: 740 agree, 0 REFDIFF.
+
 ## Step 6: hand-written `div_submul`
 
 `ConAgua/AsmEsc/DivSubmulAsm.lean` (`divSubmulAsm`): `R := R - q·b` on the `n + 1` limbs at `r`,
