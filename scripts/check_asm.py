@@ -20,7 +20,7 @@ import os
 # `movzx`/`movsx`/`jcc`/`cmovcc`/`setcc`/`call`/`jmp`/`ret`/`lea` are deliberately absent: their
 # trailing letter (if any) is part of the mnemonic (a condition code, or an embedded width code
 # compared verbatim), not an elidable size suffix.
-SUFFIXED = {"mov", "add", "adc", "sub", "and", "or", "xor", "cmp", "test", "not", "neg", "inc", "dec",
+SUFFIXED = {"mov", "add", "adc", "sub", "sbb", "and", "or", "xor", "cmp", "test", "not", "neg", "inc", "dec",
             "imul", "mul", "shl", "shr", "sar", "rol", "ror", "rcl", "rcr", "push", "pop"}
 
 

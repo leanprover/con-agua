@@ -107,6 +107,127 @@ theorem ev_subRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.sub (.reg (rr
   simp only [Width.bits, StatusFlags.cf_from_result, cf_cmp]
   rfl
 
+/-- The carry flag as a number. -/
+abbrev cfN (st : StatusFlags) : Nat := if st.cf then 1 else 0
+
+/-- The carry flag as a word. -/
+abbrev cfW (st : StatusFlags) : BitVec 64 := if st.cf then 1 else 0
+
+omit [Host] in
+theorem cf_adc (a b : BitVec 64) (c : Bool) :
+    (BitVec.unsigned (a + b + BitVec.ofNat 64 c.toNat) != a.unsigned + b.unsigned + (c.toNat : Int)) =
+      decide (2 ^ 64 ≤ b.toNat + a.toNat + (if c then 1 else 0)) := by
+  have := a.isLt; have := b.isLt
+  cases c <;> simp only [BitVec.unsigned_eq, BitVec.toNat_add, Bool.toNat_false, Bool.toNat_true,
+    BitVec.toNat_ofNat, Bool.false_eq_true, reduceIte] <;>
+    (rw [Bool.eq_iff_iff, bne_iff_ne, decide_eq_true_iff]; omega)
+
+omit [Host] in
+theorem adc_val (a b : BitVec 64) (st : StatusFlags) :
+    a + b + BitVec.ofNat 64 st.cf.toNat = b + a + cfW st := by
+  cases h : st.cf <;> simp [cfW, h, BitVec.add_comm]
+
+/-- `adc d, [b + 8 i]`, with the carry. -/
+theorem ev_adcRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.adc (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, st.cf = decide (2 ^ 64 ≤ (s.regs.get64 d).toNat + v.toNat + cfN s.status) →
+      Ev Q { s with
+        regs := s.regs.set64 d (s.regs.get64 d + v.toBitVec + cfW s.status),
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  refine ev_of_regs (h _ ?_) ?_
+  · simp only [Width.bits, StatusFlags.cf_from_result, cf_adc]; rfl
+  · simp only [Width.bits, adc_val]
+
+omit [Host] in
+theorem cf_sbb (a b : BitVec 64) (c : Bool) :
+    (BitVec.unsigned (b - a - BitVec.ofNat 64 c.toNat) != b.unsigned - a.unsigned - (c.toNat : Int)) =
+      decide (b.toNat < a.toNat + (if c then 1 else 0)) := by
+  have := a.isLt; have := b.isLt
+  cases c <;> simp only [BitVec.unsigned_eq, BitVec.toNat_sub, Bool.toNat_false, Bool.toNat_true,
+    BitVec.toNat_ofNat, Bool.false_eq_true, reduceIte] <;>
+    (rw [Bool.eq_iff_iff, bne_iff_ne, decide_eq_true_iff]; omega)
+
+omit [Host] in
+theorem sbb_val (a b : BitVec 64) (st : StatusFlags) :
+    b - a - BitVec.ofNat 64 st.cf.toNat = b - a - cfW st := by
+  cases h : st.cf <;> simp [cfW, h]
+
+/-- `sbb d, [b + 8 i]`, with the borrow. -/
+theorem ev_sbbRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.sbb (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, st.cf = decide ((s.regs.get64 d).toNat < v.toNat + cfN s.status) →
+      Ev Q { s with
+        regs := s.regs.set64 d (s.regs.get64 d - v.toBitVec - cfW s.status),
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  refine ev_of_regs (h _ ?_) ?_
+  · simp only [Width.bits, StatusFlags.cf_from_result, cf_sbb]; rfl
+  · simp only [Width.bits, sbb_val]
+
+/-- `adc d, r`, with the carry. -/
+theorem ev_adcRRc {d r : Reg64} (hk : Host.prog[k]? = some (i64 (.adc (.reg (rr d)) (oR r))))
+    (h : ∀ st : StatusFlags, st.cf = decide (2 ^ 64 ≤ (s.regs.get64 d).toNat + (s.regs.get64 r).toNat + cfN s.status) →
+      Ev Q { s with
+        regs := s.regs.set64 d (s.regs.get64 d + s.regs.get64 r + cfW s.status),
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  refine ev_of_regs (h _ ?_) ?_
+  · simp only [Width.bits, StatusFlags.cf_from_result, cf_adc]
+  · simp only [Width.bits, adc_val]
+
+/-- `sbb d, r`, with the borrow. -/
+theorem ev_sbbRRc {d r : Reg64} (hk : Host.prog[k]? = some (i64 (.sbb (.reg (rr d)) (oR r))))
+    (h : ∀ st : StatusFlags, st.cf = decide ((s.regs.get64 d).toNat < (s.regs.get64 r).toNat + cfN s.status) →
+      Ev Q { s with
+        regs := s.regs.set64 d (s.regs.get64 d - s.regs.get64 r - cfW s.status),
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  refine ev_of_regs (h _ ?_) ?_
+  · simp only [Width.bits, StatusFlags.cf_from_result, cf_sbb]
+  · simp only [Width.bits, sbb_val]
+
+/-- `inc r`: the carry flag stays. -/
+theorem ev_incR {r : Reg64} (hk : Host.prog[k]? = some (i64 (.inc (.reg (rr r)))))
+    (h : ∀ st : StatusFlags, st.cf = s.status.cf →
+      Ev Q { s with regs := s.regs.set64 r (s.regs.get64 r + 1), status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  exact h _ (by simp [StatusFlags.cf_from_result])
+
+/-- `dec r`: the carry flag stays; the zero flag says whether the result is zero. -/
+theorem ev_decR {r : Reg64} (hk : Host.prog[k]? = some (i64 (.dec (.reg (rr r)))))
+    (h : ∀ st : StatusFlags, st.cf = s.status.cf → st.zf = decide (s.regs.get64 r - 1 = 0) →
+      Ev Q { s with regs := s.regs.set64 r (s.regs.get64 r - 1), status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  exact h _ (by simp [StatusFlags.cf_from_result])
+    (by simp only [StatusFlags.zf_from_result, BitVec.zero_eq]; rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff]; rfl)
+
+/-- `add r, imm`, with the carry. -/
+theorem ev_addRIc {r : Reg64} {i : Int} (hk : Host.prog[k]? = some (i64 (.add (.reg (rr r)) (oI i))))
+    (h : ∀ st : StatusFlags,
+      st.cf = decide (2 ^ 64 ≤ (s.regs.get64 r).toNat + (Int64.ofInt i).toBitVec.toNat) →
+      Ev Q { s with regs := s.regs.set64 r (s.regs.get64 r + (Int64.ofInt i).toBitVec), status := st }
+        (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  refine ev_of_regs (h _ ?_) ?_
+  · simp only [Width.bits, StatusFlags.cf_from_result, BitVec.truncate_eq_setWidth, BitVec.setWidth_eq]
+    rw [BitVec.add_comm]; first | exact cf_add' _ _ | exact cf_add _ _
+  · simp [BitVec.add_comm]
+
 /-- `lea d, [b + 8 i]`. -/
 theorem ev_leaX {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.lea (rr d) (mbi b i .W64))))
     (h : Ev Q { s with regs := s.regs.set64 d (s.regs.get64 b + s.regs.get64 i * 8) } (at_ (k + 1))) :

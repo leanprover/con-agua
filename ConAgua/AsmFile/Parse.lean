@@ -25,7 +25,8 @@ The subset, one item per line (no leading or trailing blanks, no comments):
 * Empty lines.
 
 Instructions (operation size 64 bits, except the byte source of `movzbq` and `movl`; 64-bit
-addresses): `movq addq adcq subq andq orq xorq` (`SRC, DST`; `adcq` adds the carry flag too), `cmpq B, A`, `imulq B, A` (two operands),
+addresses): `movq addq adcq subq sbbq andq orq xorq` (`SRC, DST`; `adcq` adds the carry flag too,
+`sbbq` subtracts it), `incq X`, `decq X` (they keep the carry flag), `cmpq B, A`, `imulq B, A` (two operands),
 `movl MEM, %R32` and `movl %R32, MEM` (a 4-byte load, zero-extended into the 64-bit register, and a
 4-byte store of the register's low half; `%R32` one of the sixteen 32-bit register names),
 `mulq X`, `shlq shrq sarq` (`$INT` or `%cl`, then `DST`), `lea MEM, %R`, `cmovCC X, %R`,
@@ -166,6 +167,9 @@ def instr (line : String) : P Instr := do
   | "movq" => let (a, b) ← two args; return i64 (.mov (← rm b) (← opnd a))
   | "addq" => let (a, b) ← two args; return i64 (.add (← rm b) (← opnd a))
   | "adcq" => let (a, b) ← two args; return i64 (.adc (← rm b) (← opnd a))
+  | "sbbq" => let (a, b) ← two args; return i64 (.sbb (← rm b) (← opnd a))
+  | "incq" => return i64 (.inc (← rm (← one args)))
+  | "decq" => return i64 (.dec (← rm (← one args)))
   | "subq" => let (a, b) ← two args; return i64 (.sub (← rm b) (← opnd a))
   | "andq" => let (a, b) ← two args; return i64 (.and (← rm b) (← opnd a))
   | "orq" => let (a, b) ← two args; return i64 (.or (← rm b) (← opnd a))
