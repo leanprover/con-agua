@@ -82,13 +82,9 @@ def natGcdProg : Prog := natDivProg ++ [("gcd_step", gcdStep), ("nat_gcd", natGc
   (Mem.ofWords [(POOL, (#[5] ++ Array.replicate 40 0)), (CTL, #[1])])).toOption.map (·.1) == some [0, 1]
 
 section gcd
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
-  (hp1 : p.lookup "div_shl1" = some divShl1) (hp2 : p.lookup "div_sub" = some divSub)
-  (hp3 : p.lookup "div_add" = some divAdd) (hp4 : p.lookup "div_step" = some divStep)
-  (hpt : p.lookup "nat_trim" = some natTrim) (hpd : p.lookup "nat_divmod" = some natDivmod)
+variable (p : Prog) (hf : DivFns p)
 
-include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hf in
 /-- `gcd_step` returns `(b % a, a)` as two normalised slices in use; the memory grew. -/
 theorem gcdStep_spec (hpg : p.lookup "gcd_step" = some gcdStep) (n : Nat) (s₀ : St)
     (oa la ob lb : Word) (hok : PoolOK s₀.mem) (ha : SliceOK s₀.mem oa la)
@@ -108,7 +104,7 @@ theorem gcdStep_spec (hpg : p.lookup "gcd_step" = some gcdStep) (n : Nat) (s₀ 
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
-        natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n] <;>
+        natDivmod_spec p hf n] <;>
       -- depth, not search: four results set four locals
       finish (gen := 20)
 
@@ -127,7 +123,7 @@ def GcdPost (G : Nat) (m₀ : Mem) (r : Sig) (s' : St) : Prop :=
   Norm (vpool s'.mem) (s'.loc 2).toNat (s'.loc 3).toNat ∧
   pv (vpool s'.mem) (s'.loc 2).toNat (s'.loc 3).toNat = G
 
-include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hf in
 theorem gcdLoop_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ : Mem) (n : Nat)
     (s₀ : St) (h : GcdInv G m₀ s₀) :
     ⦃fun s => s = s₀⦄ exec p n gcdLoop ⦃fun r s' => GcdPost G m₀ r s'; ⊤⦄ := by
@@ -138,16 +134,16 @@ theorem gcdLoop_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ 
     rw [exec, step_while (w := gcdLoop) rfl]
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        gcdStep_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg n] <;>
+        gcdStep_spec p hf hpg n] <;>
       finish [GcdInv, GcdPost]
 
-include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hf in
 theorem gcdLoop_step_spec (hpg : p.lookup "gcd_step" = some gcdStep) (G : Nat) (m₀ : Mem)
     (n : Nat) (s₀ : St) (h : GcdInv G m₀ s₀) :
     ⦃fun s => s = s₀⦄ step p (exec p n) gcdLoop ⦃fun r s' => GcdPost G m₀ r s'; ⊤⦄ :=
-  Triple.step_exec (gcdLoop_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg G m₀ (n + 1) s₀ h)
+  Triple.step_exec (gcdLoop_spec p hf hpg G m₀ (n + 1) s₀ h)
 
-include hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hf in
 /-- `nat_gcd` returns a normalised slice `(o, l)` in use that denotes `Nat.gcd a b`; the memory
 grew. -/
 theorem natGcd_spec (hpg : p.lookup "gcd_step" = some gcdStep)
@@ -170,7 +166,7 @@ theorem natGcd_spec (hpg : p.lookup "gcd_step" = some gcdStep)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalArgs,
-        gcdLoop_step_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hpg
+        gcdLoop_step_spec p hf hpg
           (Nat.gcd (pv (vpool s₀.mem) oa.toNat la.toNat)
             (pv (vpool s₀.mem) ob.toNat lb.toNat)) s₀.mem n] <;>
       finish [GcdInv, GcdPost]

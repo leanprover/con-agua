@@ -15,6 +15,9 @@ import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp
 import all ConAgua.Arena.NatDiv
+import all ConAgua.Arena.NatDivKstep
+import all ConAgua.Arena.NatDivSubmul
+import all ConAgua.Arena.NatDivWord
 import all ConAgua.Arena.NatGcd
 import all ConAgua.Arena.NatMul
 import all ConAgua.Arena.NatPow
@@ -304,13 +307,13 @@ theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
       rfl rfl rfl "nat_mul_lit" "nat_mul" _ rfl natMul_top n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
   div := fun n s₀ a₀ hR oa la ob lb ha hb _ hnb hmode =>
     natDivLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
+      divFns_arms rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
   mod := fun n s₀ a₀ hR oa la ob lb ha hb _ hnb hmode =>
     natModLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
+      divFns_arms rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
   gcd := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode =>
     natGcdLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
+      divFns_arms rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
   land := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode =>
     topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
       "nat_land_lit" "nat_land" _ rfl natLand_top n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
