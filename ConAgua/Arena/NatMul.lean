@@ -1147,6 +1147,163 @@ theorem karaProds_step (n : Nat) (ih : MulWinSpec p n) : KaraProdsSpec p (n + 1)
     | (with_reducible apply kp_frame <;> first | (with_reducible assumption) | omega)
     | grind (splits := 4) [arena_grind, lang_grind, winop_grind]
 
+/-- The spec of `kara_mid` at fuel `n` (`K = kh la`, `a = a0 + a1 B^K`, `b = b0 + b1 B^K`). -/
+def KaraMidSpec (n : Nat) : Prop := ∀ (s₀ : St) (oa la ob lb sc : Word),
+    pcap s₀.mem < 2 ^ 64 → sc.toNat ≤ pcap s₀.mem →
+    oa.toNat + la.toNat ≤ sc.toNat → ob.toNat + lb.toNat ≤ sc.toNat →
+    la.toNat / 2 < lb.toNat → lb.toNat ≤ la.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "kara_mid" [oa, la, ob, lb, sc]
+    ⦃fun r s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ Agree (vpool s'.mem) (vpool s₀.mem) sc.toNat ∧
+      sc.toNat + la.toNat + lb.toNat + 4 * kh la + 4 < 2 ^ 41 ∧ (r.headD 0).toNat ≤ 2 * kh la + 2 ∧
+      pv (vpool s'.mem) sc.toNat (2 * kh la) =
+        pv (vpool s₀.mem) oa.toNat (kh la) * pv (vpool s₀.mem) ob.toNat (kh la) ∧
+      pv (vpool s'.mem) (sc.toNat + 2 * kh la) (la.toNat + lb.toNat - 2 * kh la) =
+        pv (vpool s₀.mem) (oa.toNat + kh la) (la.toNat - kh la) *
+          pv (vpool s₀.mem) (ob.toNat + kh la) (lb.toNat - kh la) ∧
+      pv (vpool s'.mem) (sc.toNat + la.toNat + lb.toNat + 2 * kh la + 2) (r.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat (kh la) * pv (vpool s₀.mem) (ob.toNat + kh la) (lb.toNat - kh la) +
+          pv (vpool s₀.mem) (oa.toNat + kh la) (la.toNat - kh la) * pv (vpool s₀.mem) ob.toNat (kh la); ⊤⦄
+
+/-- `kara_mid`'s frame: its seven writers all work above `s`. -/
+theorem kmid_frame (p0 p1 p2 p3 p4 p5 p6 p7 : Array Word)
+    (s o1 w1 t1 o2 w2 o3 w3 o4 w4 o5 w5 t5 o6 w6 o7 w7 : Nat)
+    (h1 : OffB p1 p0 o1 w1 t1) (h2 : Off p2 p1 o2 w2) (h3 : Off p3 p2 o3 w3) (h4 : Off p4 p3 o4 w4)
+    (h5 : OffB p5 p4 o5 w5 t5) (h6 : Off p6 p5 o6 w6) (h7 : Off p7 p6 o7 w7)
+    (c1 : s ≤ o1) (c1' : s ≤ t1) (c2 : s ≤ o2) (c3 : s ≤ o3) (c4 : s ≤ o4) (c5 : s ≤ o5)
+    (c5' : s ≤ t5) (c6 : s ≤ o6) (c7 : s ≤ o7) : Agree p7 p0 s := fun j hj =>
+  (h7 j (by omega)).trans <| (h6 j (by omega)).trans <| (h5 j (by omega) (by omega)).trans <|
+    (h4 j (by omega)).trans <| (h3 j (by omega)).trans <| (h2 j (by omega)).trans <|
+      h1 j (by omega) (by omega)
+
+set_option maxHeartbeats 4000000 in
+include hpz hpr hps hpt hpu hpm in
+theorem karaMid_step (n : Nat) (ihw : MulWinSpec p n) (ihp : KaraProdsSpec p n) :
+    KaraMidSpec p (n + 1) := by
+  intro s₀ oa la ob lb sc hs h2 ha hb h1 hl
+  unfold MulWinSpec at ihw
+  unfold KaraProdsSpec at ihp
+  have hC := pcap_eq s₀.mem hs
+  obtain ⟨e1, e2, e3, e4, e5, e6, e7, e8, -, e10, e11, e12, e13, e14, e15, hk1, hk2, hk3⟩ :=
+    kara_pos sc la lb oa ob (by omega) (by omega) (by omega) (by omega) (by omega) h1 hl
+  rw [invoke_eq _ hpm]
+  simp only [callFn, karaMid]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, mulZeros_spec p hpz n,
+    karaSum_spec p hpz hpr hpu n, subRow_spec p hps n, natTrim_spec p hpt n, ihw, ihp]
+  all_goals clear ihw ihp
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals first
+    | (with_reducible apply kmid_frame <;> first | (with_reducible assumption) | omega)
+    | omega
+    | grind (splits := 4) [arena_grind, lang_grind, winop_grind]
+
+/-- The halving step's frame: the two halves' windows lie in the whole window. -/
+theorem halve_frame (p0 p1 p2 : Array Word) (o w s a b : Nat) (h1 : OffB p1 p0 o w s)
+    (h2 : OffB p2 p1 a b s) (ha : o ≤ a) (hb : a + b ≤ o + w) : OffB p2 p0 o w s :=
+  OffB.trans _ _ _ _ _ _ (OffB.widen _ _ _ _ _ _ _ h2 ha hb) h1
+
+/-- An `OffB` pass at an offset inside a larger window, lifted to that window. -/
+theorem offb_lift (p q : Array Word) (o k w s X : Nat) (hk : k ≤ w) (hs : o + w ≤ s)
+    (hoff : OffB p q (o + k) (w - k) s) (h : pv p (o + k) (w - k) = pv q (o + k) (w - k) + X) :
+    pv p o w = pv q o w + wt k * X := by
+  have e1 := pv_append p o k (w - k); have e2 := pv_append q o k (w - k)
+  rw [show k + (w - k) = w by omega] at e1 e2
+  rw [e1, e2, h, OffB.pv_disj p q (o + k) (w - k) s o k hoff (by omega) (Or.inl (Nat.le_refl _))]
+  grind
+
+/-- The halving step's value: `a = a0 + a1 B^k`, both halves accumulated. -/
+theorem halve_val (p0 p1 p2 : Array Word) (o w oa la ob lb s k o' w' oa' la' : Nat)
+    (h1 : OffB p1 p0 o w s) (v1 : pv p1 o w = pv p0 o w + pv p0 oa k * pv p0 ob lb)
+    (h2 : OffB p2 p1 o' w' s) (v2 : pv p2 o' w' = pv p1 o' w' + pv p1 oa' la' * pv p1 ob lb)
+    (ho' : o' = o + k) (hw' : w' = w - k) (hoa' : oa' = oa + k) (hla' : la' = la - k)
+    (hk : k ≤ w) (hkl : k ≤ la) (hs : o + w ≤ s) (ha : oa + la ≤ s) (hb : ob + lb ≤ s)
+    (hda : oa + la ≤ o ∨ o + w ≤ oa) (hdb : ob + lb ≤ o ∨ o + w ≤ ob) :
+    pv p2 o w = pv p0 o w + pv p0 oa la * pv p0 ob lb := by
+  subst ho' hw' hoa' hla'
+  have l2 := offb_lift p2 p1 o k w s _ hk hs h2 v2
+  rw [OffB.pv_disj p1 p0 o w s (oa + k) (la - k) h1 (by omega) (by omega),
+    OffB.pv_disj p1 p0 o w s ob lb h1 hb hdb] at l2
+  have e := pv_append p0 oa k (la - k)
+  rw [show k + (la - k) = la by omega] at e
+  rw [l2, v1, e]
+  grind
+
+/-- The Karatsuba step's frame: three additions inside the window, `kara_mid` above it. -/
+theorem kara_frame (p0 p1 p2 p3 p4 : Array Word) (o w s a3 b3 a4 b4 : Nat) (h1 : Agree p1 p0 s)
+    (h2 : Off p2 p1 o w) (h3 : Off p3 p2 a3 b3) (h4 : Off p4 p3 a4 b4) (hs : o + w ≤ s)
+    (c3 : o ≤ a3) (c3' : a3 + b3 ≤ o + w) (c4 : o ≤ a4) (c4' : a4 + b4 ≤ o + w) :
+    OffB p4 p0 o w s := fun j hj hw =>
+  (h4 j (by omega)).trans <| (h3 j (by omega)).trans <| (h2 j hw).trans <| h1 j hj
+
+/-- The Karatsuba step's value: `z0 + z1 B^K + z2 B^2K = (a0 + a1 B^K)(b0 + b1 B^K)`. -/
+theorem kara_val (p0 p1 p2 p3 p4 : Array Word) (o w oa la ob lb s K z0l o3 w3 sp l o4 w4 z2p n2 : Nat)
+    (g0 : Agree p1 p0 s)
+    (h2 : Off p2 p1 o w) (v2 : pv p2 o w = pv p1 o w + pv p1 s z0l * (1 : Word).toNat)
+    (h3 : Off p3 p2 o3 w3) (v3 : pv p3 o3 w3 = pv p2 o3 w3 + pv p2 sp l * (1 : Word).toNat)
+    (h4 : Off p4 p3 o4 w4) (v4 : pv p4 o4 w4 = pv p3 o4 w4 + pv p3 z2p n2 * (1 : Word).toNat)
+    (m0 : pv p1 s (2 * K) = pv p0 oa K * pv p0 ob K)
+    (m2 : pv p1 (s + 2 * K) (la + lb - 2 * K) =
+      pv p0 (oa + K) (la - K) * pv p0 (ob + K) (lb - K))
+    (m1 : pv p1 (s + la + lb + 2 * K + 2) l =
+      pv p0 oa K * pv p0 (ob + K) (lb - K) + pv p0 (oa + K) (la - K) * pv p0 ob K)
+    (ez : z0l = 2 * K) (e3 : o3 = o + K) (e3' : w3 = w - K) (esp : sp = s + la + lb + 2 * K + 2)
+    (e4 : o4 = o + 2 * K) (e4' : w4 = w - 2 * K) (ez2 : z2p = s + 2 * K) (en2 : n2 = la + lb - 2 * K)
+    (hs : o + w ≤ s) (hw : la + lb ≤ w) (hkl : K ≤ la) (hkb : K ≤ lb) :
+    pv p4 o w = pv p0 o w + pv p0 oa la * pv p0 ob lb := by
+  subst ez e3 e3' esp e4 e4' ez2 en2
+  simp only [UInt64.toNat_one] at v2 v3 v4
+  have l3 := off_lift p3 p2 o K w _ (by omega) h3 v3
+  have l4 := off_lift p4 p3 o (2 * K) w _ (by omega) h4 v4
+  rw [Off.pv_disj p2 p1 o w (s + la + lb + 2 * K + 2) l h2 (by omega)] at l3
+  rw [Off.pv_disj p3 p2 (o + K) (w - K) (s + 2 * K) (la + lb - 2 * K) h3 (by omega),
+    Off.pv_disj p2 p1 o w (s + 2 * K) (la + lb - 2 * K) h2 (by omega)] at l4
+  rw [Agree.pv p1 p0 s o w g0 hs, m0] at v2
+  rw [m1] at l3
+  rw [m2] at l4
+  have ea := pv_append p0 oa K (la - K)
+  have eb := pv_append p0 ob K (lb - K)
+  rw [show K + (la - K) = la by omega] at ea
+  rw [show K + (lb - K) = lb by omega] at eb
+  have ew : wt (2 * K) = wt K * wt K := wt_add K K (2 * K) (by omega)
+  rw [l4.2, l3.2, v2, ea, eb, ew]
+  grind
+
+set_option maxHeartbeats 4000000 in
+include hpr hpm hpw in
+theorem mulWin_step (n : Nat) (ihw : MulWinSpec p n) (ihm : KaraMidSpec p n) :
+    MulWinSpec p (n + 1) := by
+  intro s₀ oa la ob lb o w sc hs h2 ha hb ho hda hdb
+  unfold MulWinSpec at ihw
+  unfold KaraMidSpec at ihm
+  have hC := pcap_eq s₀.mem hs
+  have e0 : (la >>> 1).toNat = la.toNat / 2 := by
+    rw [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; rfl
+  rw [invoke_eq _ hpw]
+  simp only [callFn, mulWin, mulWinG]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, mulRow_spec p hpr n, mulRow_at_spec p hpr n,
+    rowsLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) hpr n, ihw, ihm]
+  all_goals clear ihw ihm
+  all_goals (try simp only [LocEq, RowsInv, RowsPost, WinArgs] at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, List.headD_cons])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals (try have hkp := kara_pos sc la lb oa ob (by omega) (by omega) (by omega) (by omega) (by omega) (by grind) (by grind))
+  all_goals first
+    | omega
+    | (with_reducible apply OffB.of_off; assumption)
+    | (with_reducible apply halve_frame <;> first | (with_reducible assumption) | grind)
+    | (with_reducible apply halve_val <;> first | (with_reducible assumption) | grind)
+    | (with_reducible apply kara_frame <;> first | (with_reducible assumption) | grind)
+    | (with_reducible apply kara_val <;> first | (with_reducible assumption) | grind)
+    | grind (splits := 4) [arena_grind, lang_grind, winop_grind]
+
 end rec
 
 section mulFn
