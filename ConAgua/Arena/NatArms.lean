@@ -235,13 +235,9 @@ section divmod
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
-  (hpl : p.lookup "nat_limb" = some natLimb)
-  (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
-  (hp1 : p.lookup "div_shl1" = some divShl1) (hp2 : p.lookup "div_sub" = some divSub)
-  (hp3 : p.lookup "div_add" = some divAdd) (hp4 : p.lookup "div_step" = some divStep)
-  (hpt : p.lookup "nat_trim" = some natTrim) (hpd : p.lookup "nat_divmod" = some natDivmod)
+  (hf : DivFns p)
 
-include hpool hgrow hI hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hpool hgrow hI hf in
 theorem natDivLit_refines (hg : p.lookup "nat_div_lit" = some natDivLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
     (hb : SliceOK s₀.mem ob lb) (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat)
@@ -263,10 +259,10 @@ theorem natDivLit_refines (hg : p.lookup "nat_div_lit" = some natDivLit) (n : Na
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
-        natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
+        natDivmod_spec p hf n, hI a₀ n] <;>
       finish [litArm]
 
-include hpool hgrow hI hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd in
+include hpool hgrow hI hf in
 theorem natModLit_refines (hg : p.lookup "nat_mod_lit" = some natModLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
     (hb : SliceOK s₀.mem ob lb) (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat)
@@ -288,7 +284,7 @@ theorem natModLit_refines (hg : p.lookup "nat_mod_lit" = some natModLit) (n : Na
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
-        natDivmod_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd n, hI a₀ n] <;>
+        natDivmod_spec p hf n, hI a₀ n] <;>
       finish [litArm]
 
 end divmod
@@ -664,14 +660,10 @@ section gcd
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
-  (hpl : p.lookup "nat_limb" = some natLimb)
-  (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
-  (hp1 : p.lookup "div_shl1" = some divShl1) (hp2 : p.lookup "div_sub" = some divSub)
-  (hp3 : p.lookup "div_add" = some divAdd) (hp4 : p.lookup "div_step" = some divStep)
-  (hpt : p.lookup "nat_trim" = some natTrim) (hpd : p.lookup "nat_divmod" = some natDivmod)
+  (hf : DivFns p)
   (hps' : p.lookup "gcd_step" = some gcdStep) (hpg : p.lookup "nat_gcd" = some natGcd)
 
-include hpool hgrow hI hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg in
+include hpool hgrow hI hf hps' hpg in
 theorem natGcdLit_refines (hg : p.lookup "nat_gcd_lit" = some natGcdLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
     (hb : SliceOK s₀.mem ob lb) (hna : Norm (vpool s₀.mem) oa.toNat la.toNat)
@@ -693,7 +685,7 @@ theorem natGcdLit_refines (hg : p.lookup "nat_gcd_lit" = some natGcdLit) (n : Na
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalArgs, setLoc, setLocs,
-        natGcd_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg n, hI a₀ n] <;>
+        natGcd_spec p hf hps' hpg n, hI a₀ n] <;>
       finish [natGcdArm]
 
 end gcd
@@ -970,9 +962,9 @@ def natArmProg : Prog := storeProg ++
    ("nat_land_lit", topLit "nat_land"), ("nat_lor_lit", topLit "nat_lor"),
    ("nat_xor_lit", topLit "nat_xor"), ("nat_shl_lit", natShlLit),
    ("nat_shr_lit", topLit "nat_shr"),
-   ("nat_pow", natPow), ("pow_nat", powNatL), ("limb_push", limbPushL), ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
-   ("div_step", divStep), ("div_norm", divNorm), ("div_recip", divRecip), ("div_2by1", div2by1),
-   ("div_submul", divSubmul), ("nat_divmod", natDivmod),
+   ("nat_pow", natPow), ("pow_nat", powNatL), ("limb_push", limbPushL), ("pow_refused", powRefusedL), ("shift_left_refused", shiftLeftRefusedL), ("div_add", divAdd),
+   ("div_norm", divNorm), ("div_recip", divRecip), ("div_2by1", div2by1),
+   ("div_submul", divSubmul), ("div_kstep", divKstep), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
    ("nat_mod_lit", natModLit),
    ("nat_cmp", natCmp), ("const_find", constFind), ("const_push", constPush),
@@ -1116,21 +1108,24 @@ theorem natShlLit_refinesA : ArmRefinesS "nat_shl_lit" natShlArm :=
 theorem natShrLit_refinesA : ArmRefinesA "nat_shr_lit" natShrArm :=
   topLit_refinesA "nat_shr_lit" "nat_shr" _ rfl natShr_top
 
+/-- `natArmProg` has `nat_divmod` and its callees. -/
+theorem divFns_arms : DivFns natArmProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 /-- **`nat_div_lit` refines the `Nat.div` arm.** -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.div"]
 theorem natDivLit_refinesA : ArmRefinesA "nat_div_lit" natDivArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb _ hnb hmode =>
     natDivLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl
-      rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms divFns_arms rfl
+      n s₀ a₀ hR oa la ob lb ha hb hnb hmode
 
 /-- **`nat_mod_lit` refines the `Nat.mod` arm.** -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.mod"]
 theorem natModLit_refinesA : ArmRefinesA "nat_mod_lit" natModArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb _ hnb hmode =>
     natModLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl
-      rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb hmode
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms divFns_arms rfl
+      n s₀ a₀ hR oa la ob lb ha hb hnb hmode
 
 /-- **`nat_pred_lit` refines the `Nat.pred` arm.** -/
 @[refines_part ConRon.Arena.natLitToConstructor "n - 1"]
@@ -1229,7 +1224,7 @@ theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
 theorem natGcdLit_refinesA : ArmRefinesA "nat_gcd_lit" natGcdArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode =>
     natGcdLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
-      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl
-      rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms divFns_arms rfl
+      rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
 
 end L.Arena
