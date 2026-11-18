@@ -3,7 +3,7 @@ module
 public import ConAgua.Front.Apply
 public import ConAgua.Front.ExprIface
 public import ConAgua.Arena.ExprMk
-public import ConAgua.Front.NatDec
+public import ConAgua.Front.NatDecBig
 public import ConAgua.Front.Preserve
 public import ConAgua.Front.Unescape
 public import ConAgua.Arena.BVarStore
@@ -388,8 +388,20 @@ theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (h : natDecW b m c d = some (r, m')) : r.headD 0 = m.top := by
   unfold natDecW at h
   split at h
-  · sorry
-  · exact natChunksW_top b m m' c d r h
+  · split at h
+    · rcases hF : callF natDecProg "nat_dec_big" m [c, d] with _ | ⟨r₀, m₀⟩
+      · rw [hF, decPair_none] at h; cases h
+      rw [hF, decPair_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      exact natDecW_big_top hF
+    · rw [decPair_none] at h; cases h
+  · rcases hC : natChunksW b m c d with _ | ⟨r₀, m₀⟩
+    · rw [hC, decPair_none] at h; cases h
+    rw [hC, decPair_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, -⟩ := h
+    exact natChunksW_top b m m₀ c d r₀ hC
 grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
 
 /-! ## The nodes -/
@@ -521,9 +533,8 @@ def exprProg : Prog := frontProg ++
    ("expr_get", exprGet), ("expr_fresh", exprFresh), ("expr_put", exprPut), ("ls_put", lsPut), ("node_bin", nodeBin),
    ("node_let", nodeLet), ("node_proj", nodeProj), ("node_const", nodeConst),
    ("node_lit", nodeLit), ("node_lit_str", nodeLitStr), ("expr_node", exprNode),
-   ("apply_expr", applyExpr), ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec),
-   ("nat_dec_chunks", natDecChunks),
-   ("byte_in", L.Scan.Str.byteIn), ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4),
+   ("apply_expr", applyExpr)] ++ natDecProg ++
+  [("byte_in", L.Scan.Str.byteIn), ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4),
    ("hex3", L.Scan.Str.hex3), ("esc_sur", L.Front.Unescape.escSur),
    ("esc_one", L.Front.Unescape.escOne), ("utf8_put", L.Front.Unescape.utf8Put),
    ("str_put_esc", L.Front.Unescape.strPutEsc)]
@@ -641,6 +652,7 @@ structure ExprLookups (p : Prog) : Prop where
   dec_chunk : p.lookup "dec_chunk" = some decChunk
   nat_mad : p.lookup "nat_mad" = some natMad
   nat_dec : p.lookup "nat_dec" = some natDec
+  dec_agree : ∀ g ∈ natDecFns, p.lookup g = natDecProg.lookup g
   no_st8 : p.noSt8 = true
 
 section specs
@@ -731,7 +743,7 @@ l_model nodeProj_spec (p : Prog) (hE : ExprLookups p)
 /-- **`node_lit`** (generated): `litW`, the decimal digits `[c, d)` into the pool, interned. -/
 l_model nodeLit_spec (p : Prog) (hE : ExprLookups p) (b : Array UInt8)
   fns [hE.node_lit ↦ litW]
-  specs [natDec_specW p b hE.dec_chunk hE.nat_mad hE.nat_dec n,
+  specs [natDec_specW p b hE.nat_dec hE.dec_agree n,
     internLit_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match hE.lit_find hE.lit_push
       hE.intern_lit n]
   pre [s₀.mem.arr8 IN = b ∧ pcap s₀.mem < 2 ^ 63 ∧ s₀.mem.top.toNat ≤ pcap s₀.mem]

@@ -361,16 +361,30 @@ def natDecProg : Prog := L.Arena.natMulProg ++ [("dec_chunk", decChunk), ("nat_m
   ("nat_dec_chunks", natDecChunks), ("nat_dec_split", natDecSplit), ("nat_dec_big", natDecBig),
   ("nat_dec", natDec)]
 
+/-- `nat_dec`'s two results, `return (o, l)`. -/
+def decPair : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
+  | none => none
+
+@[lang_grind =] theorem decPair_none : decPair none = none := rfl
+@[lang_grind =] theorem decPair_some (r : List Word) (m : Mem) :
+    decPair (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
+
 /-- `natDecW` for `#eval`: `callF` as a run at fuel `2 ^ 64`. -/
 def natDecWEval (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
-  if c < d ∧ decBase < d - c then callW natDecProg (2 ^ 64) "nat_dec_big" [c, d] m
-  else natChunksW b m c d
+  decPair (if c < d ∧ decBase < d - c then
+      (if m.arr8 IN = b then callW natDecProg (2 ^ 64) "nat_dec_big" [c, d] m else none)
+    else natChunksW b m c d)
 
 /-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts; a
-long literal is `nat_dec_big`'s run in `natDecProg` (`callF`). Evaluated as `natDecWEval`. -/
+long literal is `nat_dec_big`'s run in `natDecProg` (`callF`, `CallF.lean`: the same at every
+fuel, in every program that binds `natDecProg`'s functions alike), on the input `b` (the spec's
+precondition). Evaluated as `natDecWEval`. -/
 @[implemented_by natDecWEval]
 def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
-  if c < d ∧ decBase < d - c then callF natDecProg "nat_dec_big" m [c, d] else natChunksW b m c d
+  decPair (if c < d ∧ decBase < d - c then
+      (if m.arr8 IN = b then callF natDecProg "nat_dec_big" m [c, d] else none)
+    else natChunksW b m c d)
 
 /- `12345678901234567890123` (23 digits, two chunks) at pool top 1: limbs
 `[4807115922877859019, 669]` at 1, the top moves to 3. -/
@@ -502,14 +516,6 @@ theorem natDecChunks_specW (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c 
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         decLoop_step_spec p b hpc hpm n] <;> finish [natChunksW, rdW]
-
-include hpc hpm in
-/-- **`nat_dec(c, d)`'s model equation.** -/
-theorem natDec_specW (hpn : p.lookup "nat_dec" = some natDec) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c d : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_dec" [c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ natDecW b s₀.mem c d = some (r, s'.mem); ⊤⦄ := by
-  sorry
 
 end specs
 

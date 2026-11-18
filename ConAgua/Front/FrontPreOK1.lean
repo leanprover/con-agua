@@ -197,8 +197,21 @@ theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
     (h : natDecW b m c d = some (r, m')) : DK m m' := by
   unfold natDecW at h
   split at h
-  · sorry
-  · exact natChunksW_dk h
+  · split at h
+    · rcases hF : callF natDecProg "nat_dec_big" m [c, d] with _ | ⟨r₀, m₀⟩
+      · rw [hF, decPair_none] at h; cases h
+      rw [hF, decPair_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      have hF' := natDecBig_frame hF
+      exact ⟨hF'.arr _ (by decide) (by decide), hF'.arr _ (by decide) (by decide)⟩
+    · rw [decPair_none] at h; cases h
+  · rcases hC : natChunksW b m c d with _ | ⟨r₀, m₀⟩
+    · rw [hC, decPair_none] at h; cases h
+    rw [hC, decPair_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact natChunksW_dk hC
 
 theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' → DK m m' := by

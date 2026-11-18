@@ -176,11 +176,17 @@ theorem frontAllProg_scan : ScanLookups frontAllProg := by
 
 theorem frontAllProg_front : FrontLookups frontAllProg := by constructor <;> rfl
 
+theorem frontAllProg_decAgree : ∀ g ∈ natDecFns, frontAllProg.lookup g = natDecProg.lookup g := by
+  intro g hg
+  simp only [natDecFns, natDecProg, L.Arena.natMulProg, L.Arena.natProg, List.map_cons, List.map_nil,
+    List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at hg
+  rcases hg with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+
 theorem frontAllProg_expr : ExprLookups frontAllProg := by
   refine ⟨frontAllProg_front, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    frontAllProg_noSt8⟩ <;> rfl
+    frontAllProg_decAgree, frontAllProg_noSt8⟩ <;> rfl
 
 theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by
   unfold DeclFieldLookups declFieldLookupsFns; repeat (first | exact ProgHas.nil | refine ProgHas.cons rfl ?_)

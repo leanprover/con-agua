@@ -1,6 +1,6 @@
 module
 
-import ConAgua.Front.NatDecLink
+import ConAgua.Front.NatDecBigVal
 import ConAgua.Front.UnescapeLink
 public import ConAgua.Front.StateDR
 public import Std.Tactic.BVDecide.Normalize.Prop

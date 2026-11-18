@@ -920,12 +920,6 @@ theorem big_init {m : Mem} {k : Word} (hok : PoolOK m) (hk1 : 1 ≤ k.toNat) (hk
     rw [Mem.arr64_set64_ne _ _ _ _ _ hne, Mem.size_arr64_set64, Mem.size_arr64_set64, Mem.size_arr64_set64]
     exact hroom
 
-theorem big_run {n : Nat} {m m' : Mem} {c d : Word} {r : List Word}
-    (h : callW natDecProg n "nat_dec_big" [c, d] m = some (r, m')) : bigW natDecProg n m c d = some (r, m') := by
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (natDecBig_spec natDecProg rfl n ⟨m, Locals.init []⟩ c d) h
-  exact hW
-
 /-- **`nat_dec_big(c, d)`** on a literal longer than `decBase`: its value appended at the old top. -/
 theorem big_val (b : Array UInt8) (n : Nat) (m m' : Mem) (c d : Word) (r : List Word)
     (hok : PoolOK m) (hb : m.arr8 IN = b) (hcd : c ≤ d) (hbig : decBase < d - c)
@@ -972,5 +966,39 @@ theorem big_val (b : Array UInt8) (n : Nat) (m m' : Mem) (c d : Word) (r : List 
   refine ⟨by simp, hgF, by simpa using hsF, by simpa using hNF hN₅, ?_⟩
   show pv _ m.top.toNat (r₅.tail.headD 0).toNat = _
   rw [hvF]; exact hv₅
+
+/-! ## `nat_dec` -/
+
+/-- **What `nat_dec(c, d)` does**, on digits `[c, d)`: the pool grows by the normalised limbs of
+their decimal value, at the old top. -/
+theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+    (hp : PoolOK m) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
+    (h : natDecW b m c d = some (r, m')) :
+    ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
+      Norm (vpool m') m.top.toNat l.toNat ∧
+      pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
+  unfold natDecW at h
+  split at h
+  · rename_i hc
+    split at h
+    · rename_i hb
+      rcases hF : callF natDecProg "nat_dec_big" m [c, d] with _ | ⟨r₀, m₀⟩
+      · rw [hF, decPair_none] at h; cases h
+      rw [hF, decPair_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨n, hn⟩ := callF_run hF
+      obtain ⟨hr, hg, hs, hN, hv⟩ := big_val b n m m₀ c d r₀ hp hb hcd hc.2 hdig hn
+      refine ⟨r₀.tail.headD 0, ?_, hg, hs, hN, hv⟩
+      rw [hr]; rfl
+    · rw [decPair_none] at h; cases h
+  · rcases hC : natChunksW b m c d with _ | ⟨r₀, m₀⟩
+    · rw [hC, decPair_none] at h; cases h
+    rw [hC, decPair_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨l, rfl, hg, hs, hN, hv⟩ := natChunksW_val b m m₀ c d r₀ hp hcd hdig hC
+    exact ⟨l, rfl, hg, hs, hN, hv⟩
+
 
 end L.Front
