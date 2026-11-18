@@ -4,12 +4,12 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatSub
 meta import ConAgua.Arena.NatAdd
 meta import ConAgua.Arena.NatDivWord
-meta import ConAgua.Arena.NatDivSubmul
+meta import ConAgua.Arena.NatDivKstep
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.NatSub
 public import ConAgua.Arena.NatOff
-public import ConAgua.Arena.NatDivSubmul
+public import ConAgua.Arena.NatDivKstep
 public import ConAgua.Arena.NatDivWord
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
@@ -59,99 +59,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-! ## The in-place passes -/
-
-def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y, rt, rb) {
-  for i < n {
-    x := POOL⦃r + i⦄;
-    y := call nat_limb(ob, lb, i);
-    POOL⟨rt⟩[rb + i] := x + y + c;
-    c := call add_carry(x, y, c)
-  }
-}
-
-/-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y, rt, rb) {
-  rt := ⦃r⦄.tier;
-  rb := ⦃r⦄.idx;
-  ⟪daddLoop⟫;
-  return c
-}
-
-
-section passes
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (P0 : Array Word) (C : Nat)
-
-/-- The invariant of `div_add`'s pass. -/
-def DAddInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
-  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∧
-  s.loc 8 = s.loc 0 >>> 40 ∧ s.loc 9 = s.loc 0 &&& 1099511627775 ∧
-  (s.mem.arr64 (tierA POOL (s.loc 8))).size ≤ 2 ^ 40 ∧ (s.loc 8).toNat ≤ 1 ∧ (s.loc 0).toNat < 2 ^ 41 ∧
-  (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 5).toNat ≤ 1 ∧
-  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
-  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat + (s.loc 5).toNat * wt (s.loc 4).toNat =
-    pv P0 (s.loc 0).toNat (s.loc 4).toNat + xv P0 (s.loc 2).toNat (s.loc 3).toNat (s.loc 4).toNat
-
-def DAddPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
-  (s'.loc 5).toNat ≤ 1 ∧ Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat + (s'.loc 5).toNat * wt (s₀.loc 1).toNat =
-    pv P0 (s₀.loc 0).toNat (s₀.loc 1).toNat + xv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat (s₀.loc 1).toNat
-
--- the virtual pool's extra `P0.size` conjunct pushes the step past the default budget
-set_option maxHeartbeats 2000000 in
-include hpl hpc in
-theorem daddLoop_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
-    ⦃fun s => s = s₀⦄ exec p n daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [DAddInv, DAddPost] at h ⊢
-    rw [exec, step_while (w := daddLoop) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, natLimb_spec p hpl n,
-      addCarry_spec p hpc n]
-    all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals grind (splits := 20) [arena_grind, lang_grind, DAddInv, DAddPost]
-
-include hpl hpc in
-theorem daddLoop_step_spec (n : Nat) (s₀ : St) (h : DAddInv P0 C s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) daddLoop ⦃fun r s' => DAddPost P0 C s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (daddLoop_spec p hpl hpc P0 C (n + 1) s₀ h)
-
-end passes
-
-section passFns
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry)
-
-include hpl hpc in
-theorem divAdd_spec (hp : p.lookup "div_add" = some divAdd) (n : Nat) (s₀ : St)
-    (r k ob lb : Word) (hs : pcap s₀.mem < 2 ^ 64)
-    (hr : r.toNat + k.toNat ≤ pcap s₀.mem) (hb : ob.toNat + lb.toNat ≤ r.toNat) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "div_add" [r, k, ob, lb]
-    ⦃fun res s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
-      pcap s'.mem = pcap s₀.mem ∧ (res.headD 0).toNat ≤ 1 ∧
-      Off (vpool s'.mem) (vpool s₀.mem) r.toNat k.toNat ∧
-      pv (vpool s'.mem) r.toNat k.toNat + (res.headD 0).toNat * wt k.toNat =
-        pv (vpool s₀.mem) r.toNat k.toNat + xv (vpool s₀.mem) ob.toNat lb.toNat k.toNat; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, divAdd]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc,
-        daddLoop_step_spec p hpl hpc (vpool s₀.mem) (pcap s₀.mem) n] <;>
-      finish [DAddInv, DAddPost]
-
-end passFns
 
 /-! ## Arithmetic of the long division -/
 
@@ -302,33 +209,6 @@ grind_pattern [arena_grind] SliceOK.top0 => SliceOK m o 0
 
 
 /-! ## `nat_divmod(oa, la, ob, lb)` -/
-
-/-- The correction (con-ron's `dm_correct`): while the window is negative (`c` the borrow), one
-decrement of `q` and one addition of `b`; the carry out of the addition ends it. -/
-def dcLoop : Stmt := lblk (wj, lb, ob, s, d, v, x, c, q, u1, u0, r) {
-  while c != 0 {
-    q := q - 1;
-    c := call div_add(wj, lb + 1, ob, lb);
-    c := u64(c == 0)
-  }
-}
-
-/-- `div_kstep(wj, lb, ob, s, d, v)`: one step of Knuth's algorithm D on the window of `lb + 1`
-limbs at `wj` (con-ron's `dm_step` for `|b| ≥ 2`): the estimate from the window's top three limbs
-read shifted by `s` against `d`, `b`'s top two limbs shifted by `s`; then `div_submul` and the
-correction. Returns the quotient digit; the window is left holding the remainder. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def divKstep : FunDecl := lfn (wj, lb, ob, s, d, v) locals (x, c, q, u1, u0, r) {
-  x := POOL⦃wj + lb⦄;
-  c := POOL⦃wj + lb - 1⦄;
-  u1 := (x << s) + ((c >> 1) >> (63 - s));
-  x := POOL⦃wj + lb - 2⦄;
-  u0 := (c << s) + ((x >> 1) >> (63 - s));
-  if d <= u1 { q := 0 - 1 } else { (q, r) := call div_2by1(u1, u0, d, v) };
-  c := call div_submul(wj, lb, ob, q);
-  ⟪dcLoop⟫;
-  return q
-}
 
 /-- One-limb divisor: the limbs of `a` from the top, one `div_2by1` each, the remainder
 (normalised, `r · 2^s`) in a word. -/
