@@ -14,9 +14,9 @@ import all ConAgua.Arena.NatMul
 # The checker's hand-written bodies meet the compiler's contract
 
 `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`: in every layout of `checkerTab`, each body
-of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`), at the
-function as `checkerProgI` declares it (`checkerProgI_mulRow`: the inliner leaves `mul_row`, which
-calls nothing, as it is).
+of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`, `subRowAsm_sim`), at the
+function as `checkerProgI` declares it (`checkerProgI_mulRow`, `checkerProgI_subRow`: the inliner
+leaves these functions, which call nothing, as they are).
 -/
 
 namespace L.Checker
@@ -28,6 +28,13 @@ theorem checkerTab_poolL : SmallOff (checkerTab.len64 (0 : ArrId)) := by decide 
 theorem checkerTab_poolB : SmallOff (checkerTab.base64 (0 : ArrId)) := by decide +kernel
 
 theorem nameCode_mul_row : nameCode "mul_row" = mulRowCode := by decide
+
+theorem nameCode_sub_row : nameCode "sub_row" = subRowCode := by decide
+
+theorem checkerProgI_subRow : checkerProgI.lookup "sub_row" = some subRow := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "sub_row" = some subRow by chk_lk]
+  rfl
 
 theorem checkerProgI_mulRow : checkerProgI.lookup "mul_row" = some mulRow := by
   rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
@@ -47,6 +54,17 @@ theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
     cases hlk
     rw [← hT] at hcode
     exact mulRowAsm_sim checkerProgI G hG checkerProgI_mulRow (by rw [hT]; exact checkerTab_pool)
+      (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "sub_row" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_sub_row.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_subRow] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact subRowAsm_sim checkerProgI G hG checkerProgI_subRow (by rw [hT]; exact checkerTab_pool)
       (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
   · cases hl
 
