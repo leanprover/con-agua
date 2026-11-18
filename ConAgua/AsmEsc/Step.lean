@@ -11,7 +11,7 @@ import Kraken.X64.WP.Basic
 
 The compiler's step lemmas (`ConAgua/Compiler/Step.lean`, `StepGen.lean`) cover the forms the code
 generator emits. Hand-written bodies (`AsmTab`) use a few more: `add`/`sub` of two registers with
-their carry, `adc`, `add r, [b + 8 i]` with its carry, `lea d, [b + 8 i]`.
+their carry, `adc`, `add`/`sub r, [b + 8 i]` with the carry or borrow, `lea d, [b + 8 i]`.
 Each is one lemma in the same continuation-passing style.
 -/
 
@@ -91,6 +91,21 @@ theorem ev_addRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.add (.reg (rr
   · simp only [Width.bits, StatusFlags.cf_from_result]
     rw [BitVec.add_comm]; first | exact cf_add' _ _ | exact cf_add _ _
   · simp [BitVec.add_comm]
+
+/-- `sub d, [b + 8 i]`, with the borrow. -/
+theorem ev_subRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.sub (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, st.cf = decide ((s.regs.get64 d).toNat < v.toNat) →
+      Ev Q { s with regs := s.regs.set64 d (s.regs.get64 d - v.toBitVec), status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  refine h _ ?_
+  simp only [Width.bits, StatusFlags.cf_from_result, cf_cmp]
+  rfl
 
 /-- `lea d, [b + 8 i]`. -/
 theorem ev_leaX {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.lea (rr d) (mbi b i .W64))))
