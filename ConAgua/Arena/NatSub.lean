@@ -33,63 +33,66 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-! ## The borrow -/
-
-/-- The borrow out of the word subtraction `x - y - c`. -/
-def sbbHi (x y c : Word) : Nat := if x.toNat < y.toNat + c.toNat then 1 else 0
-
-/-- `x - y - c = low word - borrow · 2^64`, as an equation the ring solver sees. -/
-theorem sbb_split (x y c : Word) (hc : c.toNat ≤ 1) :
-    (x - y - c).toNat + y.toNat + c.toNat = x.toNat + sbbHi x y c * 2 ^ 64 := by
-  simp only [sbbHi]
-  have hx := x.toNat_lt; have hy := y.toNat_lt
-  split
-  · simp only [UInt64.toNat_sub, Nat.one_mul]; omega
-  · simp only [UInt64.toNat_sub, Nat.zero_mul, Nat.add_zero]; omega
-grind_pattern [arena_grind] sbb_split => sbbHi x y c
-
-theorem sbbHi_le (x y c : Word) : sbbHi x y c ≤ 1 := by
-  simp only [sbbHi]; split <;> omega
-grind_pattern [arena_grind] sbbHi_le => sbbHi x y c
-
-/-- The borrow out of `x - y - c` for a borrow-in `c ≤ 1` (the two `overflowing_sub`s of
-`sub_from`, `ron/nat.rs:288-296`). -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def subBorrow : FunDecl := lfn (x, y, c) locals (d) {
-  if x < y { return 1 };
-  d := x - y;
-  if d < c { return 1 };
-  return 0
-}
-
 /-! ## `nat_sub(oa, la, ob, lb)` -/
 
-def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
+/-- The limbs both operands have (`i < n`, `n = min la lb`): `x - y - c` and its borrow. -/
+def subRowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, d, pt, pb, ta, qa, tb, qb) {
   for i < n {
-    x := call nat_limb(oa, la, i);
-    y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x - y - c;
-    c := call sub_borrow(x, y, c)
+    x := POOL⟨ta⟩[qa + i];
+    y := POOL⟨tb⟩[qb + i];
+    d := x - y;
+    POOL⟨pt⟩[pb + i] := d - c;
+    c := u64(x < y) + u64(d < c)
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The rest of `a` (`i < n`, `n = la`): `x - c` and its borrow. -/
+def subTailLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, d, pt, pb, ta, qa, tb, qb) {
+  for i < n {
+    x := POOL⟨ta⟩[qa + i];
+    POOL⟨pt⟩[pb + i] := x - c;
+    c := u64(x < c)
+  }
+}
+
+/-- The rest of `b` (`i < n`, `n = lb`): a nonzero limb means `a < b`. -/
+def subHighLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, d, pt, pb, ta, qa, tb, qb) {
+  for i < n {
+    if POOL⟨tb⟩[qb + i] != 0 { c := 1 }
+  }
+}
+
+/-- The slices resolved to tier and index once, then the common limbs, the rest of `a` (with the
+borrow) and the rest of `b` (any nonzero limb is a borrow). A borrow out means `a < b`: the result
+is `0`; otherwise it has at most `la` limbs, trimmed. No call but `nat_trim`, which the inliner
+inlines: the compiled function is a leaf (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
+def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, d, pt, pb, ta, qa, tb, qb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
   n := la;
   if la < lb { n := lb };
   if len(POOL⟨pt⟩) - pb < n { abort };
-  ⟪subLoop⟫;
-  if c != 0 { n := 0 } else { n := call nat_trim(top, n) };
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
+  n := la;
+  if lb < la { n := lb };
+  ⟪subRowLoop⟫;
+  n := la;
+  ⟪subTailLoop⟫;
+  n := lb;
+  ⟪subHighLoop⟫;
+  if c != 0 { n := 0 } else { n := call nat_trim(top, la) };
   CTL.u64[0] := top + n;
   return n
 }
 
 /-- The pool functions with `nat_sub`. -/
-def natSubProg : Prog := natProg ++ [("sub_borrow", subBorrow), ("nat_sub", natSub)]
+def natSubProg : Prog := natProg ++ [("nat_sub", natSub)]
 
 /- `2^64 - 1 = [max]`: operands `[0, 1]` at 0 and `[1]` at 2, top 3. -/
 #guard (run natSubProg 100 "nat_sub" [0, 2, 2, 1]

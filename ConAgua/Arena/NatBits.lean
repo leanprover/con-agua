@@ -72,74 +72,100 @@ def xorF : Word → Word → Word := fun a b => a ^^^ b
 @[arena_grind =] theorem orF_eq (a b : Word) : orF a b = a ||| b := rfl
 @[arena_grind =] theorem xorF_eq (a b : Word) : xorF a b = a ^^^ b := rfl
 
-/-- One pass: limb `i` of the result is the operand limbs (zero-extended) combined bitwise. The
-three loops are the same shape (`AddInv`'s, without a carry); only the combining operator
-differs, so each needs its own `Stmt` (L has no higher-order operator parameter). -/
-def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  for i < n {
-    x := call nat_limb(oa, la, i);
-    y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x & y
+/-- One pass over the limbs both operands have (`i < lb`, `lb` set to `min la lb`): limb `i` of
+the result is the operand limbs combined bitwise. Each operator needs its own `Stmt` (L has no
+higher-order operator parameter). -/
+def andLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i] & POOL⟨tb⟩[qb + i];
+    POOL⟨pt⟩[pb + i] := x
   }
 }
 
-def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  for i < n {
-    x := call nat_limb(oa, la, i);
-    y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x | y
+def orLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i] | POOL⟨tb⟩[qb + i];
+    POOL⟨pt⟩[pb + i] := x
   }
 }
 
-def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y, pt, pb) {
-  for i < n {
-    x := call nat_limb(oa, la, i);
-    y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x ^ y
+def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i] ^ POOL⟨tb⟩[qb + i];
+    POOL⟨pt⟩[pb + i] := x
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The rest of the longer operand `a` (`i < lb`, `lb` set to `la`), copied (`lor`, `xor`). -/
+def copyLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i];
+    POOL⟨pt⟩[pb + i] := x
+  }
+}
+
+/-- The slices resolved to tier and index once, one pass over the common limbs, `nat_trim`. No
+call but `nat_trim`, which the inliner inlines: the compiled function is a leaf (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
+def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, pt, pb, ta, qa, tb, qb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  n := la;
-  if lb < la { n := lb };
-  if len(POOL⟨pt⟩) - pb < n { abort };
+  if la < lb { lb := la };
+  if len(POOL⟨pt⟩) - pb < lb { abort };
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
   ⟪andLoop⟫;
-  n := call nat_trim(top, n);
+  n := call nat_trim(top, lb);
   CTL.u64[0] := top + n;
   return n
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The operands swapped so that `a` is the longer, the slices resolved to tier and index once,
+one pass over the common limbs, the rest of `a` copied, `nat_trim`. No call but `nat_trim`, which
+the inliner inlines: the compiled function is a leaf (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
+def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  if la < lb { x := oa; oa := ob; ob := x; x := la; la := lb; lb := x };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  n := la;
-  if la < lb { n := lb };
-  if len(POOL⟨pt⟩) - pb < n { abort };
+  if len(POOL⟨pt⟩) - pb < la { abort };
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
   ⟪orLoop⟫;
-  n := call nat_trim(top, n);
+  lb := la;
+  ⟪copyLoop⟫;
+  n := call nat_trim(top, la);
   CTL.u64[0] := top + n;
   return n
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The operands swapped so that `a` is the longer, the slices resolved to tier and index once,
+one pass over the common limbs, the rest of `a` copied, `nat_trim`. No call but `nat_trim`, which
+the inliner inlines: the compiled function is a leaf (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y, pt, pb) {
+def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, pt, pb, ta, qa, tb, qb) {
+  if la < lb { x := oa; oa := ob; ob := x; x := la; la := lb; lb := x };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  n := la;
-  if la < lb { n := lb };
-  if len(POOL⟨pt⟩) - pb < n { abort };
+  if len(POOL⟨pt⟩) - pb < la { abort };
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
   ⟪xorLoop⟫;
-  n := call nat_trim(top, n);
+  lb := la;
+  ⟪copyLoop⟫;
+  n := call nat_trim(top, la);
   CTL.u64[0] := top + n;
   return n
 }

@@ -138,18 +138,22 @@ grind_pattern [natop_grind] shr_big_b => pv P oa la / 2 ^ pv Q ob lb, Norm Q ob 
 
 /-! ## `nat_shr(oa, la, ob, lb)` -/
 
-/-- One pass over the shifted slice `(oa, n)` (`oa` already moved past the skipped limbs). -/
-def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb) {
-  for i < n {
-    y := call nat_limb(oa, n, i + 1);
-    POOL⟨pt⟩[pb + i] := (x >> b) | ((y << 1) << (63 - b));
+/-- One pass over the shifted slice `(oa, n)` (`oa` already moved past the skipped limbs, its
+tier and index in `ta`, `qa`), but its last limb: limb `i` of the result is `x >> b` with the low
+bits of limb `i + 1` (`rb = 63 - b`). -/
+def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb, ta, qa, rb) {
+  for i < w {
+    y := POOL⟨ta⟩[qa + i + 1];
+    POOL⟨pt⟩[pb + i] := (x >> b) | ((y << 1) << rb);
     x := y
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The slice resolved to tier and index once, one pass, the last limb, `nat_trim`. No call but
+`nat_trim`, which the inliner inlines: the compiled function is a leaf (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, pb) {
+def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, pb, ta, qa, rb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
@@ -161,8 +165,13 @@ def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, 
       oa := oa + w;
       n := la - w;
       if len(POOL⟨pt⟩) - pb < n { abort };
-      x := POOL⦃oa⦄;
+      ta := ⦃oa⦄.tier;
+      qa := ⦃oa⦄.idx;
+      rb := 63 - b;
+      x := POOL⟨ta⟩[qa];
+      w := n - 1;
       ⟪shrLoop⟫;
+      POOL⟨pt⟩[pb + w] := x >> b;
       n := call nat_trim(top, n)
     }
   } else {

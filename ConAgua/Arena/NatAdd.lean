@@ -33,16 +33,16 @@ namespace L.Arena
 /-! ## `nat_trim(o, n)`: the length of `(o, n)` without its trailing zero limbs -/
 
 def trimLoop : Stmt := lblk (o, n) {
-  while 0 < n {
-    if POOL⦃o + n - 1⦄ != 0 { return n };
-    n -= 1
-  }
+  while 0 < n && POOL⦃o + n - 1⦄ == 0 { n -= 1 }
 }
 
-/-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
+/-- No `return` inside the loop: the inliner (`Compiler/Inline.lean`) inlines `nat_trim` into its
+callers only then, which leaves `nat_add` and the other passes without a call, so the compiler
+keeps their locals in registers (lane linleaf).
+con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
 @[no_expose] def natTrim : FunDecl := lfn (o, n) {
   ⟪trimLoop⟫;
-  return 0
+  return n
 }
 
 section trim
@@ -114,27 +114,50 @@ The result slice starts at the old top `CTL[0]`. One pass of ripple carry over
   return 0
 }
 
-def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb) {
-  for i < n {
-    x := call nat_limb(oa, la, i);
-    y := call nat_limb(ob, lb, i);
-    POOL⟨pt⟩[pb + i] := x + y + c;
-    c := call add_carry(x, y, c)
+/-- The limbs both operands have (`i < lb`, the shorter): `x + y + c` and its carry. -/
+def addRowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i];
+    y := POOL⟨tb⟩[qb + i];
+    x := x + c;
+    c := u64(x < c);
+    x := x + y;
+    c := c + u64(x < y);
+    POOL⟨pt⟩[pb + i] := x
   }
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The limbs only the longer operand has (`i < lb`, `lb` set to `la`): `x + c` and its carry. -/
+def addTailLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y, pt, pb, ta, qa, tb, qb) {
+  for i < lb {
+    x := POOL⟨ta⟩[qa + i];
+    x := x + c;
+    c := u64(x < c);
+    POOL⟨pt⟩[pb + i] := x
+  }
+}
+
+/-- The operands swapped so that `a` is the longer, the slices resolved to tier and index once,
+then two passes (the common limbs, the longer operand's rest), the carry limb, `nat_trim`. No call
+but `nat_trim`, which the inliner inlines: the compiled function is a leaf and keeps its hot
+locals in registers (lane linleaf).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb) {
+def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y, pt, pb, ta, qa, tb, qb) {
+  if la < lb { x := oa; oa := ob; ob := x; x := la; la := lb; lb := x };
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  n := la;
-  if la < lb { n := lb };
-  if len(POOL⟨pt⟩) - pb <= n { abort };
-  ⟪addLoop⟫;
-  POOL⟨pt⟩[pb + n] := c;
-  n := call nat_trim(top, n + 1);
+  if len(POOL⟨pt⟩) - pb <= la { abort };
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  tb := ⦃ob⦄.tier;
+  qb := ⦃ob⦄.idx;
+  ⟪addRowLoop⟫;
+  lb := la;
+  ⟪addTailLoop⟫;
+  POOL⟨pt⟩[pb + la] := c;
+  n := call nat_trim(top, la + 1);
   CTL.u64[0] := top + n;
   return n
 }

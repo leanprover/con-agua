@@ -81,15 +81,34 @@ theorem hashN_tstep (m : Mem) (o i : Word) (k : Nat) (hk : k = i.toNat + 1)
   subst hk; rw [hashN, tpool_res m o i h]
 grind_pattern [arena_grind] hashN_tstep => hashN (tpool m) o.toNat k, prd m (o + i)
 
-/-- The loop over a resolved slice (`sliceRes`): `POOL⟨t⟩[x + i]` is limb `i` of `(o, l)`. -/
-def hashLoop : Stmt := lblk (o, l, i, h, t, x) {
-  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * ⟪fnvPrime⟫ }
+/-- Four limbs per round while at least four are left (`x` and `l` move on): the loop costs one
+test and one fuel unit per four limbs. -/
+def hashLoop4 : Stmt := lblk (o, l, i, h, t, x, q) {
+  while 4 <= l {
+    h := (h ^ POOL⟨t⟩[x]) * q;
+    h := (h ^ POOL⟨t⟩[x + 1]) * q;
+    h := (h ^ POOL⟨t⟩[x + 2]) * q;
+    h := (h ^ POOL⟨t⟩[x + 3]) * q;
+    x += 4;
+    l -= 4
+  }
 }
 
-/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
-@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x) {
+/-- The last up to three limbs. -/
+def hashLoop : Stmt := lblk (o, l, i, h, t, x, q) {
+  for i < l { h := (h ^ POOL⟨t⟩[x + i]) * q }
+}
+
+/-- The slice resolved (`sliceRes`), then the limbs four at a time. Its size (more than the
+inliner's 80 nodes, `Compiler/Inline.lean`) keeps it a function of its own, which the compiler
+compiles as a leaf with its locals in registers; inlined into `intern_lit` they were on the stack
+(lane linleaf).
+con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
+@[no_expose] def litHash : FunDecl := lfn (o, l) locals (i, h, t, x, q) {
   h := ⟪fnvBasis⟫;
   ⟪sliceRes 0 1 4 5⟫;
+  q := ⟪fnvPrime⟫;
+  ⟪hashLoop4⟫;
   ⟪hashLoop⟫;
   return h
 }
