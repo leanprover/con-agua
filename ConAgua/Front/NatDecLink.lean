@@ -6,7 +6,6 @@ import ConAgua.Scan.LeafLink
 import ConAgua.Scan.Link
 import ConAgua.Census.Attr
 import all ConAgua.Front.Fields
-import ConAgua.Arena.NatCmpFacts
 
 @[expose] public section
 
@@ -16,8 +15,9 @@ import ConAgua.Arena.NatCmpFacts
 The facts about the models of `ConAgua.Front.NatDec`, by hand: the chunk loop reads the decimal
 value of its digits (`chunkN_val`), the multiply-add pass multiplies (`madW_val`), the chunk loop
 keeps the slice normalised and denoting the digits read so far (`decW_val`); and con-leche's
-`readNatAt` at a digit run is that decimal value (`readNatAt_decN`). `natDec_spec`: on a literal
-the scanner accepted (`NatValR`), `nat_dec(c, d)` appends the normalised limbs of its value.
+`readNatAt` at a digit run is that decimal value (`readNatAt_decN`). `natChunksW_val`: on digits
+`[c, d)`, `nat_dec_chunks(c, d)` appends the normalised limbs of their value (the long literals:
+`NatDecBigVal.lean`).
 -/
 
 open Std.WP
@@ -323,18 +323,18 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (ht : top.toNat < 2 ^ 41)
 theorem rdW_ctl_top (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
   simp [rdW, Mem.top]
 
-/-- **What `nat_dec(c, d)` does**, on digits `[c, d)`: the pool grows by the normalised limbs of
+/-- **What `nat_dec_chunks(c, d)` does**, on digits `[c, d)`: the pool grows by the normalised limbs of
 their decimal value, at the old top. -/
-theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+theorem natChunksW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (hp : PoolOK m) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
-    (h : natDecW b m c d = some (r, m')) :
+    (h : natChunksW b m c d = some (r, m')) :
     ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
       Norm (vpool m') m.top.toNat l.toNat ∧
       pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
   have hsm := hp.small
   have h41 := hp.top41
   have hin := hp.inTier
-  unfold natDecW at h
+  unfold natChunksW at h
   rw [rdW_ctl_top] at h
   split at h
   · cases h

@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Arena.Pins
 import Std.Tactic.BVDecide.Normalize.BitVec
 import all ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.RecLayout.CVDec
