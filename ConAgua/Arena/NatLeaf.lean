@@ -809,9 +809,9 @@ end sub1
 /-! ## The bitwise leaves and `copy_n` -/
 
 /-- The first `k` limbs of two windows of `p` combined limb by limb with `f`. -/
-def bw (f : Word → Word → Word) (p : Array Word) (oa ob : Nat) : Nat → Nat
+def bwv (f : Word → Word → Word) (p : Array Word) (oa ob : Nat) : Nat → Nat
   | 0 => 0
-  | k + 1 => bw f p oa ob k + (f (p[oa + k]?.getD 0) (p[ob + k]?.getD 0)).toNat * wt k
+  | k + 1 => bwv f p oa ob k + (f (p[oa + k]?.getD 0) (p[ob + k]?.getD 0)).toNat * wt k
 
 /-- One step of a bitwise leaf's loop, in the shape of its verification condition. -/
 theorem bitn_step_goal (op : BinOp) (m : Mem) (P0 : Array Word) (o oa ob i T6 T7 T8 T9 T10 T11 : Word)
@@ -828,10 +828,10 @@ theorem bitn_step_goal (op : BinOp) (m : Mem) (P0 : Array Word) (o oa ob i T6 T7
     (hb10 : (T11 + i).toNat < (m.arr64 (tierA POOL T10)).size)
     (hb6 : (T7 + i).toNat < (m.arr64 (tierA POOL T6)).size)
     (hoff : Off (vpool m) P0 o.toNat i.toNat)
-    (ih : pv (vpool m) o.toNat i.toNat = bw (BinOp.eval op) P0 oa.toNat ob.toNat i.toNat) :
+    (ih : pv (vpool m) o.toNat i.toNat = bwv (BinOp.eval op) P0 oa.toNat ob.toNat i.toNat) :
     pv (vpool (m.set64 (tierA POOL T6) (T7 + i)
         (BinOp.eval op (m.arr64 (tierA POOL T8))[(T9 + i).toNat] (m.arr64 (tierA POOL T10))[(T11 + i).toNat])))
-        o.toNat (i + 1).toNat = bw (BinOp.eval op) P0 oa.toNat ob.toNat (i + 1).toNat := by
+        o.toNat (i + 1).toNat = bwv (BinOp.eval op) P0 oa.toNat ob.toNat (i + 1).toNat := by
   subst h6 h7 h8 h9 h10 h11
   have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
   have hvs := vpool_size m
@@ -839,7 +839,7 @@ theorem bitn_step_goal (op : BinOp) (m : Mem) (P0 : Array Word) (o oa ob i T6 T7
     ld_off m P0 ob i o (by omega) (by omega) hP0 hs10 hb10 hoff hdb,
     st_win m o i _ (by omega) (by omega) hs6 hb6, hi1,
     pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega), ih]
-  simp only [bw, Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < P0.size),
+  simp only [bwv, Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < P0.size),
     Array.getElem?_eq_getElem (by omega : ob.toNat + i.toNat < P0.size), Option.getD_some]
 
 /-- One step of `copy_n`'s loop, in the shape of its verification condition. -/
@@ -881,13 +881,13 @@ def BitNInv (op : BinOp) (P0 : Array Word) (C : Nat) (s : St) : Prop :=
   (s.mem.arr64 (tierA POOL (s.loc 10))).size ≤ 2 ^ 40 ∧
   (s.loc 4).toNat ≤ (s.loc 3).toNat ∧
   Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 4).toNat ∧
-  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat = bw (BinOp.eval op) P0 (s.loc 1).toNat (s.loc 2).toNat (s.loc 4).toNat
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 4).toNat = bwv (BinOp.eval op) P0 (s.loc 1).toNat (s.loc 2).toNat (s.loc 4).toNat
 
 def BitNPost (op : BinOp) (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 3).toNat ∧
-  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat = bw (BinOp.eval op) P0 (s₀.loc 1).toNat (s₀.loc 2).toNat (s₀.loc 3).toNat
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat = bwv (BinOp.eval op) P0 (s₀.loc 1).toNat (s₀.loc 2).toNat (s₀.loc 3).toNat
 
 theorem bitNLoop_spec (op : BinOp) (n : Nat) (s₀ : St) (h : BitNInv op P0 C s₀) :
     ⦃fun s => s = s₀⦄ exec p n (bitNLoop op) ⦃fun r s' => BitNPost op P0 C s₀ r s'; ⊤⦄ := by
@@ -923,7 +923,7 @@ theorem bitN_spec (op : BinOp) (f : FnName) (hp : p.lookup f = some (bitNG op)) 
     invoke p (exec p n) f [o, oa, ob, k]
     ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
       Off (vpool s'.mem) (vpool s₀.mem) o.toNat k.toNat ∧
-      pv (vpool s'.mem) o.toNat k.toNat = bw (BinOp.eval op) (vpool s₀.mem) oa.toNat ob.toNat k.toNat; ⊤⦄ := by
+      pv (vpool s'.mem) o.toNat k.toNat = bwv (BinOp.eval op) (vpool s₀.mem) oa.toNat ob.toNat k.toNat; ⊤⦄ := by
   have h1 := pcap_tier s₀.mem (o >>> 40) hs
   have h2 := pcap_tier s₀.mem (oa >>> 40) hs
   have h3 := pcap_tier s₀.mem (ob >>> 40) hs
@@ -940,7 +940,7 @@ theorem bitN_spec (op : BinOp) (f : FnName) (hp : p.lookup f = some (bitNG op)) 
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval.eq_4, BinOp.eval.eq_8,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq, bw]
+    all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq, bwv]
 
 end bitn
 

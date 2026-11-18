@@ -146,16 +146,16 @@ def natBitsProg : Prog :=
 
 /-- Within both lengths, the zero-extended combine is the plain one. -/
 theorem bv_bw (f : Word → Word → Word) (p : Array Word) (oa la ob lb k : Nat) (ha : k ≤ la)
-    (hb : k ≤ lb) : bv f p oa la ob lb k = bw f p oa ob k := by
+    (hb : k ≤ lb) : bv f p oa la ob lb k = bwv f p oa ob k := by
   induction k with
   | zero => rfl
-  | succ k ih => simp only [bv, bw, ih (by omega) (by omega), lvW, show k < la by omega,
+  | succ k ih => simp only [bv, bwv, ih (by omega) (by omega), lvW, show k < la by omega,
       show k < lb by omega, ite_true]
 
 /-- Past `b`'s end, `f x 0 = x` passes `a`'s limbs through. -/
 theorem bv_tail_a (f : Word → Word → Word) (hf : ∀ x, f x 0 = x) (p : Array Word)
     (oa la ob lb j : Nat) (hl : lb ≤ la) (hj : lb + j ≤ la) :
-    bv f p oa la ob lb (lb + j) = bw f p oa ob lb + wt lb * pv p (oa + lb) j := by
+    bv f p oa la ob lb (lb + j) = bwv f p oa ob lb + wt lb * pv p (oa + lb) j := by
   induction j with
   | zero => rw [Nat.add_zero, bv_bw f p oa la ob lb lb hl (Nat.le_refl _)]; simp [pv]
   | succ j ih =>
@@ -166,7 +166,7 @@ theorem bv_tail_a (f : Word → Word → Word) (hf : ∀ x, f x 0 = x) (p : Arra
 /-- Past `a`'s end, `f 0 y = y` passes `b`'s limbs through. -/
 theorem bv_tail_b (f : Word → Word → Word) (hf : ∀ y, f 0 y = y) (p : Array Word)
     (oa la ob lb j : Nat) (hl : la ≤ lb) (hj : la + j ≤ lb) :
-    bv f p oa la ob lb (la + j) = bw f p oa ob la + wt la * pv p (ob + la) j := by
+    bv f p oa la ob lb (la + j) = bwv f p oa ob la + wt la * pv p (ob + la) j := by
   induction j with
   | zero => rw [Nat.add_zero, bv_bw f p oa la ob lb la (Nat.le_refl _) hl]; simp [pv]
   | succ j ih =>
@@ -192,7 +192,7 @@ theorem bit_core_a (op : BinOp) (hf : ∀ x, BinOp.eval op x 0 = x) (m0 m1 m2 : 
     (hT41 : T.toNat < 2 ^ 41) (hl : lb.toNat ≤ la.toNat) (hz : oa.toNat + la.toNat ≤ T.toNat)
     (h1 : Off (vpool m1) (vpool m0) T.toNat lb.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + lb).toNat (la - lb).toNat)
-    (e1 : pv (vpool m1) T.toNat lb.toNat = bw (BinOp.eval op) (vpool m0) oa.toNat ob.toNat lb.toNat)
+    (e1 : pv (vpool m1) T.toNat lb.toNat = bwv (BinOp.eval op) (vpool m0) oa.toNat ob.toNat lb.toNat)
     (e2 : pv (vpool m2) (T + lb).toNat (la - lb).toNat = pv (vpool m1) (oa + lb).toNat (la - lb).toNat) :
     pv (vpool m2) T.toNat n.toNat =
       bv (BinOp.eval op) (vpool m0) oa.toNat la.toNat ob.toNat lb.toNat n.toNat := by
@@ -213,7 +213,7 @@ theorem bit_core_b (op : BinOp) (hf : ∀ y, BinOp.eval op 0 y = y) (m0 m1 m2 : 
     (hT41 : T.toNat < 2 ^ 41) (hl : la.toNat ≤ lb.toNat) (hz : ob.toNat + lb.toNat ≤ T.toNat)
     (h1 : Off (vpool m1) (vpool m0) T.toNat la.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + la).toNat (lb - la).toNat)
-    (e1 : pv (vpool m1) T.toNat la.toNat = bw (BinOp.eval op) (vpool m0) oa.toNat ob.toNat la.toNat)
+    (e1 : pv (vpool m1) T.toNat la.toNat = bwv (BinOp.eval op) (vpool m0) oa.toNat ob.toNat la.toNat)
     (e2 : pv (vpool m2) (T + la).toNat (lb - la).toNat = pv (vpool m1) (ob + la).toNat (lb - la).toNat) :
     pv (vpool m2) T.toNat n.toNat =
       bv (BinOp.eval op) (vpool m0) oa.toNat la.toNat ob.toNat lb.toNat n.toNat := by
@@ -285,7 +285,7 @@ def AndCorePost (s₀ : St) (r : Sig) (s' : St) : Prop :=
   r = .normal ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ PFrame s₀.mem s'.mem ∧
   pcap s'.mem = pcap s₀.mem ∧ Agree (vpool s'.mem) (vpool s₀.mem) (s₀.loc 4).toNat ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat =
-    bw (BinOp.eval .and) (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat (s₀.loc 5).toNat
+    bwv (BinOp.eval .and) (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 2).toNat (s₀.loc 5).toNat
 
 include hpn in
 theorem andCore_spec (n : Nat) (s₀ : St) (h : AndCorePre s₀) :
@@ -364,7 +364,7 @@ theorem xorF_eval : xorF = BinOp.eval .xor := by funext a b; rfl
 
 /-- `land`'s value: `and_n` over the shorter length is the zero-extended combine there. -/
 theorem land_val (p : Array Word) (oa la ob lb n : Word) (hn : n = if lb < la then lb else la) :
-    bw (BinOp.eval .and) p oa.toNat ob.toNat n.toNat =
+    bwv (BinOp.eval .and) p oa.toNat ob.toNat n.toNat =
       bv (BinOp.eval .and) p oa.toNat la.toNat ob.toNat lb.toNat
         (if lb.toNat < la.toNat then lb.toNat else la.toNat) := by
   subst hn
