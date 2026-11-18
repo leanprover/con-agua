@@ -66,8 +66,12 @@ Their specs follow `mul_row`'s window style (`Off`, `pv`); the window lemmas (`w
 `add_n` over the shorter operand's limbs and `add_1` over the rest of the longer one (two `if`
 arms instead of swapping the operands: a swap of four locals made `simp_all` time out on the
 `setLoc` chains), stores the carry limb and trims. `nat_sub` trims `b` first when it is longer
-than `a` (the inputs need not be normalised; still longer means `a < b`), then `sub_n` and
-`sub_1`; a borrow out means `a < b` and the result `0`. `nat_trim` loops `while 0 < n &&
+than `a` (the inputs need not be normalised; still longer means `a < b`), then its core block
+`subCore` runs `sub_n` and `sub_1`; a borrow out means `a < b` and the result `0`. `subCore` has
+its own lemma (`subCore_spec`): proved inside the function's spec, the trim/borrow paths took
+`simp_all` 3.5 min at 8M heartbeats; split, NatSub elaborates in 9 s with no heartbeat override.
+The leaves allow the output window to be the first operand's (`o = oa`, in place): each limb is
+read before it is written, and the specs' disjointness is `oa + n ≤ o ∨ o ≤ oa`. `nat_trim` loops `while 0 < n &&
 POOL⦃o + n - 1⦄ == 0`, so the inliner inlines it, and the inlined `nat_add`/`nat_sub` are
 call-free.
 
@@ -75,3 +79,16 @@ The callers' proofs compose the leaf specs through lemmas in the shape of the go
 (`add_goal`, `add_agree_goal`, `add_grows`, `room_le`; `sub_goal_ok`, `sub_goal_bor`,
 `sub_goal_short`, `sub_agree_goal`, `sub_grows`), applied with `with_reducible apply` and the
 metavariables fixed by `case h2/h1/e1/e2 => with_reducible assumption` first.
+
+Proof cost (elaboration, `lake env lean`): NatLeaf 8 s, NatAdd 60 s, NatSub 9 s.
+
+### Measurements of the landing (master `acf6a18d5`, with `mul_row`/`sub_row` in hand asm)
+
+Exact `instructions:u`: gf3 53.582 G → 44.675 G (−16.6 %); Init 202.647 G → 202.649 G
+(+0.001 %). Per function on gf3 (perf sampling): `nat_add` 7.02 → 3.13 G, `nat_sub` 3.07 → 1.35 G;
+the inlinable `nat_trim` also makes `lor` (5.87 → 4.49 G), `xor` (4.31 → 3.39 G), `shr`
+(3.14 → 2.48 G) and `land` (2.02 → 1.48 G) call-free. Verdicts: `diff-e2e.py --refs` 740 agree,
+REFDIFF 0; the bignum fuzzer 3315/3315.
+
+Candidates for hand asm (compiled cost per limb, from `checker.s`): `add_n` ≈ 38, `add_1` ≈ 26,
+`sub_n` ≈ 36, `sub_1` ≈ 24; a hand-written body needs about 4–8.
