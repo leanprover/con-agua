@@ -48,6 +48,8 @@ import all ConAgua.Front.IndFields
 import all ConAgua.Front.Line
 import all ConAgua.Front.LineRec
 import all ConAgua.Front.NatDec
+import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatMul
 import all ConAgua.Front.Unescape
 import all ConAgua.L.Examples
 import all ConAgua.Scan.Key
