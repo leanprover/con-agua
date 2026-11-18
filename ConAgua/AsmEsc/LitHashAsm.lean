@@ -207,6 +207,7 @@ theorem litHashAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
     FnSimAt p G sk n "lit_hash" litHash kf := by
   intro vs σ d ra Q hlen hra hargs hlo8 hhi h15 hmem h14 hok herr habrt hexh
   have hlo : G.lo ≤ d.regs.rsp.toNat := by omega
+  rw [litHash_nparams] at hlen
   obtain ⟨o, l, rfl⟩ : ∃ o l, vs = [o, l] := by
     match vs, hlen with
     | [o, l], _ => exact ⟨o, l, rfl⟩

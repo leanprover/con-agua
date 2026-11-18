@@ -194,6 +194,8 @@ theorem sliceRes_run (p : Prog) (K : Stmt → M Sig) (S : St)
 theorem exec_succ_run (p : Prog) (F : Nat) (s : Stmt) :
     (exec p (F + 1) s).run = L.Compiler.stepRun p (exec p F) s := rfl
 
+theorem litHash_nparams : litHash.nparams = 2 := by rfl
+
 theorem litHash_body : litHash.body =
     .seq (.set 3 (.const fnvBasis)) (.seq (sliceRes 0 1 4 5) (.seq (.set 6 (.const fnvPrime))
       (.seq hashLoop8 (.seq hashTail (.ret [.var 3]))))) := by
