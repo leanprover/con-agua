@@ -8,7 +8,6 @@ public import ConAgua.Arena.NatOff
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.LocNF
 import ConAgua.L.Records
 import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr

@@ -112,7 +112,7 @@ tier array is an `oob` abort anyway; the check only fails early.)
 
 ## Proof
 
-`ConAgua/Arena/NatMul.lean`, 379 → ~1 350 lines; no `sorry`, no axiom. New shared file
+`ConAgua/Arena/NatMul.lean`, 379 → 1 376 lines (`NatOff.lean` 108 lines); no `sorry`, no axiom. New shared file
 `ConAgua/Arena/NatOff.lean`: `Off` (moved unchanged from `NatDiv.lean`, which imports it) and the
 new `OffB` (agree below `s` off a window: `mul_win`'s frame), `Off.pv_disj`, `OffB.pv_disj`,
 `Off.mono`, `Agree.trans` (moved from `NatPow.lean`). New `grind` attribute `winop_grind`
@@ -153,3 +153,12 @@ whole inside `try`, silently; `repeat (obtain ⟨_, _⟩ := ‹_ ∧ _›)` neve
 anonymous hypothesis is not cleared); a step lemma with a variable that is not in its conclusion
 leaves a metavariable after `apply` (state such premises over the conclusion's variables only,
 or close them by `with_reducible assumption`); `pkill -f <pattern>` killed the calling shell.
+
+## Landing measurements (the final binary)
+
+The landed `checker.s` (`karaT = 48`), same method: per product 2.34 M / 18.8 M / 175 M / 528 M
+instructions at 256² / 1024² / 4096² / 8192² (master 5.75 M / 85.9 M / 1 376 M / 5 503 M), 1.7-1.8×
+on the unbalanced shapes; gf3 99.67 G instructions (−32.1 %), Init +1.7 M (+0.001 %). Wall time of
+this second run (6 rounds, a build running on the machine): gf3 −39.6 % (±5.6 %, Wilcoxon p =
+0.031), Init −3.8 % (±10.6 %, p = 0.44, no change). The first run (quiet machine) is the table
+above. `scripts/diff-e2e.py --parallel 16`: 740 agree, 0 unsound.
