@@ -152,6 +152,7 @@ the slice, which is normalised and denotes `v`. -/
 structure Appended (m m' : Mem) (l : Word) (v : Nat) : Prop where
   grows : Grows m m'
   top : m'.top = m.top + l
+  fits : m.top.toNat + l.toNat ≤ pcap m'
   norm : Norm (vpool m') m.top.toNat l.toNat
   val : pv (vpool m') m.top.toNat l.toNat = v
 
@@ -164,19 +165,19 @@ theorem mul_callW {n : Nat} {m m' : Mem} {oa la ob lb : Word} {r : List Word} (h
     (ha : SliceOK m oa la) (hb : SliceOK m ob lb)
     (h : callW natDecProg n "nat_mul" [oa, la, ob, lb] m = some (r, m')) :
     Appended m m' (r.headD 0) (pv (vpool m) oa.toNat la.toNat * pv (vpool m) ob.toNat lb.toNat) := by
-  obtain ⟨s', rfl, -, hf, -, -, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', rfl, -, hf, -, hfit, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natMul_spec natDecProg rfl rfl rfl n ⟨m, Locals.init []⟩ oa la ob lb hok ha hb) h
-  exact ⟨hg, pframe_top hok.ctl hf, hN, hv⟩
+  exact ⟨hg, pframe_top hok.ctl hf, hfit, hN, hv⟩
 
 /-- **`nat_add` in `natDecProg`**, from its spec. -/
 theorem add_callW {n : Nat} {m m' : Mem} {oa la ob lb : Word} {r : List Word} (hok : PoolOK m)
     (ha : SliceOK m oa la) (hb : SliceOK m ob lb)
     (h : callW natDecProg n "nat_add" [oa, la, ob, lb] m = some (r, m')) :
     Appended m m' (r.headD 0) (pv (vpool m) oa.toNat la.toNat + pv (vpool m) ob.toNat lb.toNat) := by
-  obtain ⟨s', rfl, -, hf, -, -, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+  obtain ⟨s', rfl, -, hf, -, hfit, -, hv, hN, hg⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (natAdd_spec natDecProg rfl rfl rfl rfl n ⟨m, Locals.init []⟩
       oa la ob lb hok ha hb) h
-  exact ⟨hg, pframe_top hok.ctl hf, hN, hv⟩
+  exact ⟨hg, pframe_top hok.ctl hf, hfit, hN, hv⟩
 
 /-- **`nat_dec_chunks` in `natDecProg`**: the chunk loop's value. -/
 theorem chunks_callW {n : Nat} {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
@@ -326,5 +327,185 @@ theorem copy_down {m m₄ : Mem} {os ls : Word} (hok : PoolOK m) (hg : Grows m m
     exact hN hl
   · rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩]
     exact pv_congr' _ _ _ _ _ (fun i hi => by rw [hget i hi])
+
+/-! ## The power table -/
+
+/-- Entry `t` of the power table at `tbl`: the slice's address and length. -/
+def tblA (m : Mem) (tbl t : Word) : Word := prd m (tbl + t + t)
+def tblL (m : Mem) (tbl t : Word) : Word := prd m (tbl + t + t + 1)
+
+/-- **The power table** at `tbl`, room for `K` entries below the top, the first `i` filled:
+entry `t` a normalised slice in use, above the table, denoting `10^(19 · 2^t)`. -/
+structure TblOK (m : Mem) (tbl K i : Word) : Prop where
+  room : tbl.toNat + 2 * K.toNat ≤ m.top.toNat
+  le : i.toNat ≤ K.toNat
+  above : ∀ t : Word, t < i → tbl.toNat + 2 * K.toNat ≤ (tblA m tbl t).toNat
+  slice : ∀ t : Word, t < i → SliceOK m (tblA m tbl t) (tblL m tbl t)
+  norm : ∀ t : Word, t < i → Norm (vpool m) (tblA m tbl t).toNat (tblL m tbl t).toNat
+  val : ∀ t : Word, t < i →
+    pv (vpool m) (tblA m tbl t).toNat (tblL m tbl t).toNat = 10 ^ (19 * 2 ^ t.toNat)
+
+theorem tbl_idx {tbl K t : Word} (h : tbl.toNat + 2 * K.toNat < 2 ^ 64) (ht : t.toNat < K.toNat) :
+    (tbl + t + t).toNat = tbl.toNat + 2 * t.toNat ∧ (tbl + t + t + 1).toNat = tbl.toNat + 2 * t.toNat + 1 := by
+  have e1 : (tbl + t).toNat = tbl.toNat + t.toNat := by rw [UInt64.toNat_add]; omega
+  have e2 : (tbl + t + t).toNat = tbl.toNat + 2 * t.toNat := by rw [UInt64.toNat_add, e1]; omega
+  refine ⟨e2, ?_⟩
+  rw [UInt64.toNat_add, e2]; simp only [UInt64.reduceToNat]; omega
+
+theorem TblOK.grows {m m' : Mem} {tbl K i : Word} (hok : PoolOK m) (hg : Grows m m')
+    (h : TblOK m tbl K i) : TblOK m' tbl K i := by
+  have h41 := hok.top41
+  have hroom := h.room
+  have hle := h.le
+  have eA : ∀ t : Word, t < i → tblA m' tbl t = tblA m tbl t ∧ tblL m' tbl t = tblL m tbl t := by
+    intro t ht
+    have ht' := UInt64.lt_iff_toNat_lt.mp ht
+    obtain ⟨e1, e2⟩ := tbl_idx (tbl := tbl) (K := K) (t := t) (by omega) (by omega)
+    exact ⟨prd_grows hok hg (by rw [e1]; omega), prd_grows hok hg (by rw [e2]; omega)⟩
+  refine ⟨by have := hg.le; omega, hle, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_⟩
+  · rw [(eA t ht).1]; exact h.above t ht
+  · rw [(eA t ht).1, (eA t ht).2]; exact (h.slice t ht).grows hg
+  · rw [(eA t ht).1, (eA t ht).2]
+    exact (Grows.norm hg (h.slice t ht).le).mpr (h.norm t ht)
+  · rw [(eA t ht).1, (eA t ht).2, Grows.pv hg (h.slice t ht).le]; exact h.val t ht
+
+/-! ## `nat_dec_split` -/
+
+theorem _root_.L.Arena.Grows.arr8 {m m' : Mem} (hg : Grows m m') (a : ArrId) : m'.arr8 a = m.arr8 a := by
+  simp only [Mem.arr8, hg.frame.bytes, Mem.bytes_set64]
+
+/-- What `nat_dec_split` (and `nat_dec`) post: the decimal value of `[c, d)` appended at the old
+top, normalised. -/
+def DecPost (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word) : Prop :=
+  r = [m.top, r.tail.headD 0] ∧ Grows m m' ∧ SliceOK m' m.top (r.tail.headD 0) ∧
+    Norm (vpool m') m.top.toNat (r.tail.headD 0).toNat ∧
+    pv (vpool m') m.top.toNat (r.tail.headD 0).toNat = decN b c.toNat (d.toNat - c.toNat)
+
+theorem split_run {n : Nat} {m m' : Mem} {c d tbl k : Word} {r : List Word}
+    (h : callW natDecProg n "nat_dec_split" [c, d, tbl, k] m = some (r, m')) :
+    splitW natDecProg n m c d tbl k = some (r, m') := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natDecSplit_spec natDecProg rfl n ⟨m, Locals.init []⟩ c d tbl k) h
+  exact hW
+
+/-- **`nat_dec_split(c, d, tbl, k)`**: on digits `[c, d)` and a full power table of `k` entries,
+the value of the digits appended at the old top. -/
+theorem split_val (b : Array UInt8) : ∀ (n : Nat) (m m' : Mem) (c d tbl k : Word) (r : List Word),
+    PoolOK m → m.arr8 IN = b → c ≤ d → Digits b c.toNat (d.toNat - c.toNat) → TblOK m tbl k k →
+    callW natDecProg n "nat_dec_split" [c, d, tbl, k] m = some (r, m') → DecPost b m m' c d r := by
+  intro n
+  induction n with
+  | zero => intro m m' c d tbl k r _ _ _ _ _ h; rw [callW_zero] at h; cases h
+  | succ n ih =>
+  intro m m' c d tbl k r hok hb hcd hdig hT h
+  have hW := split_run h
+  rw [splitW.eq_2] at hW
+  have h41 := hok.top41
+  have hcd' := UInt64.le_iff_toNat_le.mp hcd
+  have hdc : (d - c).toNat = d.toNat - c.toNat := UInt64.toNat_sub_of_le _ _ hcd
+  split at hW
+  · -- the chunk loop
+    rcases hC : callW natDecProg n "nat_dec_chunks" [c, d] m with _ | ⟨r₁, m₁⟩
+    · rw [hC, splitW.k_nat_dec_chunks.eq_1] at hW; cases hW
+    rw [hC, splitW.k_nat_dec_chunks.eq_2] at hW
+    cases hW
+    obtain ⟨l, rfl, hg, hs, hN, hv⟩ := chunks_callW hok hb hcd hdig hC
+    exact ⟨rfl, hg, hs, hN, hv⟩
+  · rename_i hbig
+    have hbig' : decBase.toNat < d.toNat - c.toNat := by
+      rw [← hdc]; exact UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hbig)
+    have hb38 : 38 ≤ decBase.toNat := by decide
+    rcases hL : splitW.loop1 natDecProg (n + 1) m (d - c) 0 19 with _ | ⟨t, dd, m₀⟩
+    · rw [hL, splitW.k_loop1.eq_1] at hW; cases hW
+    obtain ⟨hm0, hI⟩ := splitLoop_val (n + 1) m 0 19 t dd m₀ ⟨by simp, by rw [hdc]; simp; omega⟩ hL
+    rw [hL, hm0] at hW
+    by_cases hkt : k ≤ t
+    · rw [splitW.k_loop1.abort1 _ _ _ _ _ _ _ _ _ hkt] at hW; cases hW
+    rw [splitW.k_loop1.arm1 _ _ _ _ _ _ _ _ _ hkt] at hW
+    have hpow := hI.pow
+    have hhalf := hI.half
+    rw [hdc] at hhalf
+    have hmd : (d - dd).toNat = d.toNat - dd.toNat := UInt64.toNat_sub_of_le _ _
+      (UInt64.le_iff_toNat_le.mpr (by omega))
+    -- the high part
+    rcases hH : callW natDecProg n "nat_dec_split" [c, d - dd, tbl, k] m with _ | ⟨r₁, m₁⟩
+    · rw [hH, splitW.k_nat_dec_split.eq_1] at hW; cases hW
+    rw [hH, splitW.k_nat_dec_split.eq_2] at hW
+    obtain ⟨hr₁, hg₁, hs₁, hN₁, hv₁⟩ := ih m m₁ c (d - dd) tbl k r₁ hok hb
+      (UInt64.le_iff_toNat_le.mpr (by omega))
+      (digits_mono _ _ _ _ hdig (by omega)) hT hH
+    have hok₁ := hok.grows hg₁
+    -- the low part
+    rcases hLo : callW natDecProg n "nat_dec_split" [d - dd, d, tbl, k] m₁ with _ | ⟨r₂, m₂⟩
+    · rw [hLo, splitW.k_nat_dec_split_2.eq_1] at hW; cases hW
+    rw [hLo, splitW.k_nat_dec_split_2.eq_2] at hW
+    have hdig₂ : Digits b (d - dd).toNat (d.toNat - (d - dd).toNat) := by
+      have := digits_shift b c.toNat (d.toNat - c.toNat - dd.toNat) dd.toNat
+        (by rw [show d.toNat - c.toNat - dd.toNat + dd.toNat = d.toNat - c.toNat by omega]; exact hdig)
+      rw [show c.toNat + (d.toNat - c.toNat - dd.toNat) = d.toNat - dd.toNat by omega] at this
+      rw [hmd, show d.toNat - (d.toNat - dd.toNat) = dd.toNat by omega]
+      exact this
+    obtain ⟨hr₂, hg₂, hs₂, hN₂, hv₂⟩ := ih m₁ m₂ (d - dd) d tbl k r₂ hok₁ (by rw [hg₁.arr8]; exact hb)
+      (UInt64.le_iff_toNat_le.mpr (by omega)) hdig₂ (hT.grows hok hg₁) hLo
+    have hok₂ := hok₁.grows hg₂
+    have hT₂ := (hT.grows hok hg₁).grows hok₁ hg₂
+    have hkt' : t < k := UInt64.lt_iff_toNat_lt.mpr (by have := UInt64.not_le.mp hkt; exact UInt64.lt_iff_toNat_lt.mp this)
+    -- the product with the table's entry `t`
+    rcases hM : callW natDecProg n "nat_mul" [r₁.headD 0, r₁.tail.headD 0,
+        rdW (m₂.arr64 (tierA POOL ((tbl + t + t) >>> 40))) (tbl + t + t &&& 1099511627775),
+        rdW (m₂.arr64 (tierA POOL ((tbl + t + t + 1) >>> 40))) (tbl + t + t + 1 &&& 1099511627775)] m₂
+      with _ | ⟨r₃, m₃⟩
+    · rw [hM, splitW.k_nat_mul.eq_1] at hW; cases hW
+    rw [hM, splitW.k_nat_mul.eq_2] at hW
+    replace hM : callW natDecProg n "nat_mul" [r₁.headD 0, r₁.tail.headD 0, tblA m₂ tbl t, tblL m₂ tbl t] m₂ =
+      some (r₃, m₃) := hM
+    have hs₁' : SliceOK m₂ (r₁.headD 0) (r₁.tail.headD 0) := by
+      rw [hr₁]; exact hs₁.grows hg₂
+    have hA₃ := mul_callW hok₂ hs₁' (hT₂.slice t hkt') hM
+    have hok₃ := hok₂.grows hA₃.grows
+    -- the sum with the low part
+    have hop : rdW (m₂.arr64 CTL) 0 = m₂.top := by simp [rdW, Mem.top]
+    rw [hop] at hW
+    rcases hS : callW natDecProg n "nat_add" [m₂.top, r₃.headD 0, r₂.headD 0, r₂.tail.headD 0] m₃
+      with _ | ⟨r₄, m₄⟩
+    · rw [hS, splitW.k_nat_add.eq_1] at hW; cases hW
+    have hos : rdW (m₃.arr64 CTL) 0 = m₃.top := by simp [rdW, Mem.top]
+    rw [hS, hos, splitW.k_nat_add.eq_2] at hW
+    have hs₂' : SliceOK m₃ (r₂.headD 0) (r₂.tail.headD 0) := by rw [hr₂]; exact hs₂.grows hA₃.grows
+    have hA₄ := add_callW hok₃ (SliceOK.fresh hA₃.grows hA₃.top) hs₂' hS
+    have htop0 : rdW (m.arr64 CTL) 0 = m.top := by simp [rdW, Mem.top]
+    rw [htop0] at hW
+    cases hW
+    have hok₄ := hok₃.grows hA₄.grows
+    have hg₄ : Grows m m₄ := Grows.trans _ _ _ (Grows.trans _ _ _ (Grows.trans _ _ _ hg₁ hg₂) hA₃.grows) hA₄.grows
+    have h41₄ := hok₄.top41
+    have hl₃ := hA₃.grows.le
+    have hl₂ := hg₂.le
+    have hl₁ := hg₁.le
+    have hend : m₃.top.toNat + (r₄.headD 0).toNat = m₄.top.toNat := by
+      have hfit := hA₄.fits
+      have hp4 : pcap m₄ = 2 ^ 41 - 1 := pcap_of_small m₄ hok₄.small
+      rw [hA₄.top, UInt64.toNat_add]
+      rw [Nat.mod_eq_of_lt (by omega)]
+    obtain ⟨hgF, hsF, hNF, hvF⟩ := copy_down (os := m₃.top) (ls := r₄.headD 0) hok hg₄ (by omega) hend
+    refine ⟨by simp, hgF, by simpa using hsF, by simpa using hNF hA₄.norm, ?_⟩
+    simp only [List.tail_cons, List.headD_cons]
+    rw [hvF, hA₄.val, hA₃.val]
+    -- the operands' values
+    have e1 : pv (vpool m₂) (r₁.headD 0).toNat (r₁.tail.headD 0).toNat =
+        decN b c.toNat ((d - dd).toNat - c.toNat) := by
+      rw [hr₁]; simp only [List.headD_cons, List.tail_cons]
+      rw [Grows.pv hg₂ hs₁.le, hv₁]
+    have e2 : pv (vpool m₂) (tblA m₂ tbl t).toNat (tblL m₂ tbl t).toNat = 10 ^ dd.toNat := by
+      rw [hT₂.val t hkt', hpow]
+    have e3 : pv (vpool m₃) (r₂.headD 0).toNat (r₂.tail.headD 0).toNat =
+        decN b (d - dd).toNat (d.toNat - (d - dd).toNat) := by
+      rw [hr₂]; simp only [List.headD_cons, List.tail_cons]
+      rw [Grows.pv hA₃.grows hs₂.le, hv₂]
+    rw [e1, e2, e3, hmd, show d.toNat - (d.toNat - dd.toNat) = dd.toNat by omega]
+    have := decN_append b c.toNat (d.toNat - dd.toNat - c.toNat) dd.toNat
+    rw [show d.toNat - dd.toNat - c.toNat + dd.toNat = d.toNat - c.toNat by omega,
+      show c.toNat + (d.toNat - dd.toNat - c.toNat) = d.toNat - dd.toNat by omega] at this
+    rw [this]
 
 end L.Front
