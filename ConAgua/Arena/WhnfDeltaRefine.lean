@@ -189,7 +189,6 @@ structure WhnfDeltaProg' (p : Prog) : Prop extends WhnfDeltaProg p where
   baseRow' : p.lookup "base_row_get" = some baseRowGetL
   predLit : p.lookup "nat_pred_lit" = some natPredLit
   natLimb' : p.lookup "nat_limb" = some natLimb
-  subBorrow' : p.lookup "sub_borrow" = some subBorrow
   natTrim' : p.lookup "nat_trim" = some natTrim
   addCarry' : p.lookup "add_carry" = some addCarry
   natAdd' : p.lookup "nat_add" = some natAdd

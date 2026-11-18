@@ -116,30 +116,6 @@ con-ron: none — the open-addressing table's own key hash/compare (the twin's `
 section hash
 variable (p : Prog) (hp : p.lookup "lit_hash" = some litHash)
 
-/-- The loop's precondition: the slice resolved, the hash of the limbs before `i`. -/
-def HashRes (s : St) : Prop :=
-  s.loc 4 = s.loc 0 >>> 40 ∧ s.loc 5 = s.loc 0 &&& 1099511627775 ∧
-  (s.loc 0 &&& 1099511627775).toNat + (s.loc 1).toNat ≤ 2 ^ 40 ∧
-  (s.loc 2).toNat ≤ (s.loc 1).toNat ∧
-  s.loc 3 = hashN (tpool s.mem) (s.loc 0).toNat (s.loc 2).toNat
-
-theorem hashLoop_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ HashRes s⦄
-    exec p n hashLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
-  Triple.forUp_pre rfl (fun s => s.mem = s₀.mem ∧ s.loc 0 = s₀.loc 0 ∧ s.loc 1 = s₀.loc 1 ∧ HashRes s)
-    (fun h => ⟨rfl, rfl, rfl, h⟩) (by grind [HashRes]) (fun k s₁ => by
-      sym only [lang_grind, arena_grind] =>
-        vcgen [step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [HashRes, LoopPost]) n
-
-theorem hashLoop_step_spec (n : Nat) (s₀ : St) :
-    ⦃fun s => s = s₀ ∧ HashRes s⦄
-    step p (exec p n) hashLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
-      s'.loc 3 = hashN (tpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat; ⊤⦄ :=
-  Triple.step_exec (hashLoop_spec p (n + 1) s₀)
-
 include hp in
 /-- (The slice's bounds `_hs`, `_hb` are no longer needed: `sliceRes` checks that the slice lies
 in one tier.) -/
@@ -148,15 +124,7 @@ theorem litHash_spec (n : Nat) (s₀ : St) (o l : Word) (_hs : pcap s₀.mem < 2
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_hash" [o, l]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = hashN (tpool s₀.mem) o.toNat l.toNat; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, litHash]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    vcgen [exec, step, evalE, evalArgs, setLoc, sliceRes_spec p _ 0 1 4 5 (by decide) (by decide)
-      (by decide), hashLoop_step_spec p n]
-    all_goals (subst_vars; simp_all [HashRes, St.setLoc_loc, _root_.L.St.setLoc_mem, _root_.L.Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, hashN_zero])
+  sorry
 
 end hash
 

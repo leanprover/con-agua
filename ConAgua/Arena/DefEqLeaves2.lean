@@ -308,7 +308,6 @@ structure NatPredProg (p : Prog) : Prop where
   np : p.lookup "nat_pred" = some natPredL
   npl : p.lookup "nat_pred_lit" = some natPredLit
   limb : p.lookup "nat_limb" = some natLimb
-  sbb : p.lookup "sub_borrow" = some subBorrow
   trim : p.lookup "nat_trim" = some natTrim
   sub : p.lookup "nat_sub" = some natSub
   lhash : p.lookup "lit_hash" = some litHash
@@ -322,10 +321,9 @@ section predhw
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpecW p R)
-  (hpl : p.lookup "nat_limb" = some natLimb) (hps : p.lookup "sub_borrow" = some subBorrow)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_sub" = some natSub)
 
-include hpool hgrow hI hpl hps hpt hpn in
+include hpool hgrow hI hpt hpn in
 /-- `natPredLit_refines` (`NatArms.lean`) with a handle word result. -/
 theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la)
@@ -348,7 +346,7 @@ theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (
   | succ n =>
     sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        natSub_spec p hpl hps hpt hpn n, hI a₀ n] <;>
+        natSub_spec p hpt hpn n, hI a₀ n] <;>
       finish (gen := 20) [natPredArm]
 
 end predhw
@@ -465,7 +463,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n :
           (fun m m' a h hg => h.grow hg)
           (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
             s₀.mem)
-          hp.limb hp.sbb hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl.1 hS.mode) hc2
+          hp.trim hp.sub hp.npl n s₀ a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl.1 hS.mode) hc2
       rw [hpv] at hok hK hres'
       have hrun : (natPred? (decE e)).run a₀ = (natPredArm N).run a₀ := by
         obtain ⟨N', rfl⟩ : ∃ N', N = N' + 1 := ⟨N - 1, by omega⟩

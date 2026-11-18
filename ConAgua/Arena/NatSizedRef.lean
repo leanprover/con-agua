@@ -214,7 +214,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpl hpc hpt hpa n,
+    vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpt hpa n,
       litNatSized_refines p R hpool hI hz hsr hls n (a₀ := a₀)]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *)
