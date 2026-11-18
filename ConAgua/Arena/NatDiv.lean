@@ -428,6 +428,9 @@ def D1Post (Pg : Array Word) (C b0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop
   Agree (vpool s'.mem) Pg (s₀.loc 3).toNat ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   s'.loc 8 = s₀.loc 8 ∧ s'.loc 9 = s₀.loc 9 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧
+  (s₀.loc 3).toNat < 2 ^ 41 ∧ (s'.mem.arr64 (tierA POOL (s₀.loc 11))).size ≤ 2 ^ 40 ∧
+  (s₀.loc 12).toNat + (s₀.loc 1).toNat + 1 ≤ (s'.mem.arr64 (tierA POOL (s₀.loc 11))).size ∧
+  (s₀.loc 8).toNat ≤ 63 ∧ (s₀.loc 9).toNat = b0 * sh (s₀.loc 8).toNat ∧
   (s'.loc 7).toNat < (s₀.loc 9).toNat ∧ sh (s₀.loc 8).toNat ∣ (s'.loc 7).toNat ∧
   pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * sh (s₀.loc 8).toNat =
     pv (vpool s'.mem) (s₀.loc 3).toNat (s₀.loc 1).toNat * (s₀.loc 9).toNat + (s'.loc 7).toNat
@@ -508,6 +511,11 @@ theorem d1Loop_spec (n : Nat) (s₀ : St) (h : D1Inv Pg C b0 s₀) :
       | (grind (splits := 20) [arena_grind, lang_grind]; done)
       | (apply d1_step_goal Pg C b0 _ _ h <;> grind)
 
+include hp2 in
+theorem d1Loop_step_spec (n : Nat) (s₀ : St) (h : D1Inv Pg C b0 s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) d1Loop ⦃fun r s' => D1Post Pg C b0 s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (d1Loop_spec p hp2 Pg C b0 (n + 1) s₀ h)
+
 end d1
 
 /-- The functions `nat_divmod` calls, transitively, as the program `p` binds them. -/
@@ -542,6 +550,111 @@ theorem div_short (P : Array Word) (oa la ob lb : Nat) (hl : la < lb) (hn : Norm
 theorem mod_short (P : Array Word) (oa la ob lb : Nat) (hl : la < lb) (hn : Norm P ob lb) :
     pv P oa la % pv P ob lb = pv P oa la := Nat.mod_eq_of_lt (pv_lt_of_short P oa la ob lb hl hn)
 
+/-- A left shift that does not overflow multiplies. -/
+theorem shl_mul (x s : Word) (hs : s.toNat ≤ 63) (h : x.toNat * sh s.toNat < 2 ^ 64) :
+    (x <<< s).toNat = x.toNat * sh s.toNat := by
+  rw [shl_lo x s (by omega)]; exact Nat.mod_eq_of_lt h
+grind_pattern [arena_grind] shl_mul => (x <<< s).toNat, x.toNat * sh s.toNat
+
+/-- A right shift by `s ≤ 63` divides by `2^s`. -/
+theorem shr_div (r s : Word) (hs : s.toNat ≤ 63) : (r >>> s).toNat = r.toNat / sh s.toNat := by
+  rw [UInt64.toNat_shiftRight, Nat.mod_eq_of_lt (by omega : s.toNat < 64),
+    Nat.shiftRight_eq_div_pow]; rfl
+grind_pattern [arena_grind] shr_div => (r >>> s).toNat, sh s.toNat
+
+/-- A tier-decoded load of a one-limb slice in the pool is the slice's value. -/
+theorem ld_pv1 (m : Mem) (x : Word) (h : (x &&& 1099511627775).toNat < (m.arr64 (tierA POOL (x >>> 40))).size)
+    (h' : x.toNat < 2 ^ 41) :
+    (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat].toNat = pv (vpool m) x.toNat 1 := by
+  rw [vpool_ld m x h (by rw [vpool_size]; exact h'), pv_one _ _ (by rw [vpool_size]; exact h')]
+grind_pattern [arena_grind] ld_pv1 => (m.arr64 (tierA POOL (x >>> 40)))[(x &&& 1099511627775).toNat], vpool m
+
+/-- The one-limb division's result: `A · 2^s = Q · (b0 · 2^s) + R` with `R` a multiple of `2^s`
+below `b0 · 2^s`. -/
+theorem d1_quot (A Q D b0 S R : Nat) (h : A * S = Q * D + R) (hD : D = b0 * S) (hd : S ∣ R)
+    (hr : R < D) : A / b0 = Q := by
+  obtain ⟨t, rfl⟩ := hd
+  subst hD
+  have hS : 0 < S := Nat.pos_of_ne_zero (by rintro rfl; simp at hr)
+  have h1 : A = Q * b0 + t := by
+    apply Nat.eq_of_mul_eq_mul_right hS; grind
+  have h2 : t < b0 := by
+    apply Nat.lt_of_mul_lt_mul_left (a := S); grind
+  apply div_of_bounds <;> grind
+grind_pattern [natop_grind] d1_quot => A * S, Q * D, S ∣ R, b0 * S
+
+theorem d1_rem (A Q D b0 S R : Nat) (h : A * S = Q * D + R) (hD : D = b0 * S) (hd : S ∣ R)
+    (hr : R < D) : A % b0 = R / S := by
+  have hq := d1_quot A Q D b0 S R h hD hd hr
+  obtain ⟨t, rfl⟩ := hd
+  subst hD
+  have hS : 0 < S := Nat.pos_of_ne_zero (by rintro rfl; simp at hr)
+  have h1 : A = Q * b0 + t := by
+    apply Nat.eq_of_mul_eq_mul_right hS; grind
+  have h2 : t < b0 := by
+    apply Nat.lt_of_mul_lt_mul_left (a := S); grind
+  rw [Nat.mul_div_cancel_left _ hS, mod_of_bounds A b0 Q (by omega) (by omega)]; omega
+grind_pattern [natop_grind] d1_rem => A * S, Q * D, S ∣ R, b0 * S
+
+/-- The quotient of `div_mod1`, in the shape of its verification condition (`s` the state after
+the loop, `rs` the trim of the quotient). -/
+theorem d1_quot_goal (m₀ : Mem) (s : St) (rs : List Word) (oa la ob : Word)
+    (h11 : s.loc 11 = s.loc 3 >>> 40) (h12 : s.loc 12 = s.loc 3 &&& 1099511627775)
+    (hT : (s.loc 3).toNat < 2 ^ 41) (hs : (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40)
+    (hst : (s.loc 12 + s.loc 1).toNat < (s.mem.arr64 (tierA POOL (s.loc 11))).size)
+    (hk : (s.loc 12).toNat + (s.loc 1).toNat < 2 ^ 40) (hla : s.loc 1 = la)
+    (htr : pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)))
+        (s.loc 3).toNat (rs.headD 0).toNat =
+      pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)))
+        (s.loc 3).toNat (s.loc 1).toNat)
+    (heq : pv (vpool m₀) oa.toNat la.toNat * sh (s.loc 8).toNat =
+      pv (vpool s.mem) (s.loc 3).toNat la.toNat * (s.loc 9).toNat + (s.loc 7).toNat)
+    (hD : (s.loc 9).toNat = pv (vpool m₀) ob.toNat 1 * sh (s.loc 8).toNat)
+    (hdv : sh (s.loc 8).toNat ∣ (s.loc 7).toNat) (hr : (s.loc 7).toNat < (s.loc 9).toNat) :
+    pv (vpool ((s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)).set64
+        CTL 0 (s.loc 3 + s.loc 1 + 1))) (s.loc 3).toNat (rs.headD 0).toNat =
+      pv (vpool m₀) oa.toNat la.toNat / pv (vpool m₀) ob.toNat 1 := by
+  rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, htr]
+  rw [h11, h12] at hst ⊢
+  rw [h11] at hs
+  rw [h12, tag_idx_toNat] at hk
+  rw [vpool_stidx s.mem (s.loc 3) (s.loc 1) _ hT hst hs (by rw [tag_idx_toNat]; omega),
+    pv_set_above (k := (s.loc 1).toNat) (j := (s.loc 3 + s.loc 1).toNat)
+      (h := by rw [UInt64.toNat_add]; omega), hla]
+  exact (d1_quot _ _ _ _ _ _ heq hD hdv hr).symm
+
+/-- The remainder of `div_mod1`, likewise (`rs` the trim of the remainder limb). -/
+theorem d1_rem_goal (m₀ : Mem) (s : St) (rs : List Word) (oa la ob : Word)
+    (h11 : s.loc 11 = s.loc 3 >>> 40) (h12 : s.loc 12 = s.loc 3 &&& 1099511627775)
+    (hT : (s.loc 3).toNat < 2 ^ 41) (hs : (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40)
+    (hst : (s.loc 12 + s.loc 1).toNat < (s.mem.arr64 (tierA POOL (s.loc 11))).size)
+    (hk : (s.loc 12).toNat + (s.loc 1).toNat < 2 ^ 40) (hla : s.loc 1 = la)
+    (hs63 : (s.loc 8).toNat ≤ 63)
+    (htr : pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)))
+        (s.loc 3 + s.loc 1).toNat (rs.headD 0).toNat =
+      pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)))
+        (s.loc 3 + s.loc 1).toNat 1)
+    (heq : pv (vpool m₀) oa.toNat la.toNat * sh (s.loc 8).toNat =
+      pv (vpool s.mem) (s.loc 3).toNat la.toNat * (s.loc 9).toNat + (s.loc 7).toNat)
+    (hD : (s.loc 9).toNat = pv (vpool m₀) ob.toNat 1 * sh (s.loc 8).toNat)
+    (hdv : sh (s.loc 8).toNat ∣ (s.loc 7).toNat) (hr : (s.loc 7).toNat < (s.loc 9).toNat) :
+    pv (vpool ((s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)).set64
+        CTL 0 (s.loc 3 + s.loc 1 + 1))) (s.loc 3 + s.loc 1).toNat (rs.headD 0).toNat =
+      pv (vpool m₀) oa.toNat la.toNat % pv (vpool m₀) ob.toNat 1 := by
+  rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, htr]
+  rw [h11, h12] at hst ⊢
+  rw [h11] at hs
+  rw [h12, tag_idx_toNat] at hk
+  have hvs := vpool_size s.mem
+  have e : (s.loc 3 + s.loc 1).toNat = (s.loc 3).toNat + (s.loc 1).toNat := by
+    rw [UInt64.toNat_add]; omega
+  rw [vpool_stidx s.mem (s.loc 3) (s.loc 1) _ hT hst hs (by rw [tag_idx_toNat]; omega),
+    pv_one _ _ (by rw [Array.size_set!, hvs]; omega)]
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem_setIfInBounds_self]
+  rw [shr_div _ _ hs63]
+  exact (d1_rem _ _ _ _ _ _ heq hD hdv hr).symm
+
+set_option maxHeartbeats 4000000 in
 include hf in
 /-- `div_mod1`: `nat_divmod` for a one-limb divisor `b ≠ 0`. -/
 theorem divMod1_spec (n : Nat) (s₀ : St) (oa la ob : Word) (hok : PoolOK s₀.mem)
@@ -558,7 +671,39 @@ theorem divMod1_spec (n : Nat) (s₀ : St) (oa la ob : Word) (hok : PoolOK s₀.
       Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat 1; ⊤⦄ := by
-  sorry
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
+  clear hok
+  have ha1 := ha.1
+  have hb1 := hb.1
+  rw [invoke_eq _ hf.mod1]
+  simp only [callFn, divMod1]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      divNorm_spec p hf.norm n, divRecip_spec p hf.d2by1 hf.recip n,
+      d1Loop_step_spec p hf.d2by1 (vpool s₀.mem) (pcap s₀.mem) (pv (vpool s₀.mem) ob.toNat 1) n,
+      natTrim_spec p hf.trim n]
+    all_goals (try simp only [D1Inv, D1Post] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, L.Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
+      Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
+    all_goals (try and_intros)
+    all_goals (try simp only [vpool_size] at *)
+    all_goals (try exact Agree.refl _ _)
+    all_goals (try exact True.intro)
+    all_goals (try exact Nat.dvd_zero _)
+    all_goals (try (grind (splits := 20) [arena_grind, lang_grind]; done))
+    all_goals (try (rw [shl_mul _ _ (by grind) (by grind)]; exact Nat.dvd_mul_left _ _))
+    all_goals first
+      | (apply d1_quot_goal <;> grind)
+      | (apply d1_rem_goal <;> grind)
 
 include hf in
 /-- `div_modk`: `nat_divmod` for `2 ≤ lb ≤ la`. -/
