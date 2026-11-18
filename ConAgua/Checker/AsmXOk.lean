@@ -11,6 +11,7 @@ import all ConAgua.Arena.NatDivSubmul
 import all ConAgua.Arena.NatLeaf
 import all ConAgua.Front.NatDec
 import all ConAgua.Arena.NatCmp
+import all ConAgua.Arena.Store
 import ConAgua.AsmEsc.ChainL
 import ConAgua.AsmEsc.BitAsmSim
 
@@ -21,7 +22,7 @@ import ConAgua.AsmEsc.BitAsmSim
 
 `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`: in every layout of `checkerTab`, each body
 of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`,
-`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, `bitAsm_sim`, `copyAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
+`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, `bitAsm_sim`, `copyAsm_sim`, `litHashAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
 `addN_spec`, `subN_spec`, `add1_spec`, `sub1_spec`), at the function as `checkerProgI` declares it
 (`checkerProgI_mulRow` …: the inliner leaves these functions, which call nothing, as they are).
 -/
@@ -123,6 +124,13 @@ theorem nameCode_copy_n : nameCode "copy_n" = copyNCode := by decide
 theorem checkerProgI_copyN : checkerProgI.lookup "copy_n" = some copyN := by
   rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
     show checkerProg.lookup "copy_n" = some copyN by chk_lk]
+  rfl
+
+theorem nameCode_lit_hash : nameCode "lit_hash" = litHashCode := by decide
+
+theorem checkerProgI_litHash : checkerProgI.lookup "lit_hash" = some L.Arena.litHash := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "lit_hash" = some L.Arena.litHash by chk_lk]
   rfl
 
 theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
@@ -279,6 +287,17 @@ theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
     exact copyAsm_sim checkerProgI G hG _ _ (copyN_spec _ checkerProgI_copyN) rfl rfl
       (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
       kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "lit_hash" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_lit_hash.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_litHash] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact litHashAsm_sim checkerProgI G hG checkerProgI_litHash (by rw [hT]; exact checkerTab_pool)
+      (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
   · cases hl
 
 end L.Checker
