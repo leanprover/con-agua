@@ -56,9 +56,18 @@ abbrev copyNCode : Nat := 124869068680590
 /-- `nameCode "lit_hash"`, as a literal (`nameCode_lit_hash`). -/
 abbrev litHashCode : Nat := 7808905953357831252
 
+/-- `nameCode "shl_n"`, as a literal (`nameCode_shl_n`). -/
+abbrev shlNCode : Nat := 485871001881
+
+/-- `nameCode "shr_n"`, as a literal (`nameCode_shr_n`). -/
+abbrev shrNCode : Nat := 485871398175
+
+/-- `nameCode "zero_n"`, as a literal (`nameCode_zero_n`). -/
+abbrev zeroNCode : Nat := 124868899064211
+
 /-- **The name codes of the hand-written functions.** -/
 def checkerXKeys : List Nat :=
   [mulRowCode, subRowCode, divSubmulCode, addNCode, add1Code, subNCode, sub1Code, natMadCode, natCmpCode, andNCode, orNCode, xorNCode,
-   copyNCode, litHashCode]
+   copyNCode, litHashCode, shlNCode, shrNCode, zeroNCode]
 
 end L.Checker

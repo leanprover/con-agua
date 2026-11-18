@@ -157,7 +157,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1831 functions, 0 of them stubs.
+1833 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1558,7 +1558,6 @@ def checkerProg : Prog := [
   ("nat_ind_ok", L.Arena.natIndOkL),
   ("nat_land", L.Arena.natLand),
   ("nat_land_lit", L.Arena.topLit "nat_land"),
-  ("nat_limb", L.Arena.natLimb),
   ("nat_lit_supported", L.Arena.natLitSupportedL),
   ("nat_lit_to_ctor", L.Arena.natLitToCtorL),
   ("nat_lor", L.Arena.natLor),
@@ -1934,6 +1933,8 @@ def checkerProg : Prog := [
   ("scratch_enter", L.Arena.scratchEnter),
   ("scratch_reset", L.Arena.scratchReset),
   ("shift_left_refused", L.Arena.shiftLeftRefusedL),
+  ("shl_n", L.Arena.shlN),
+  ("shr_n", L.Arena.shrN),
   ("size_bytes", L.Arena.sizeBytesL),
   ("skip_braced", L.Examples.skipBraced),
   ("skip_digits", L.Scan.Leaves.skipDigits),
@@ -2160,6 +2161,7 @@ def checkerProg : Prog := [
   ("wscoped_bfast", L.Arena.wscopedBFastL),
   ("xor_n", L.Arena.xorN),
   ("zero_find", L.Arena.zeroFind),
+  ("zero_n", L.Arena.zeroN),
   ("zero_push", L.Arena.zeroPush),
   ("pre_apply_decl", preFn preTree (L.Front.applyDecl)),
   ("pre_apply_dline", preFn preTree (L.Front.applyDLine)),

@@ -30,7 +30,8 @@ too, `sbbq` subtracts it), `incq X`, `decq X` (they keep the carry flag), `cmpq 
 `imulq B, A` (two operands),
 `movl MEM, %R32` and `movl %R32, MEM` (a 4-byte load, zero-extended into the 64-bit register, and a
 4-byte store of the register's low half; `%R32` one of the sixteen 32-bit register names),
-`mulq X`, `shlq shrq sarq` (`$INT` or `%cl`, then `DST`), `lea MEM, %R`, `cmovCC X, %R`,
+`mulq X`, `shlq shrq sarq` (`$INT` or `%cl`, then `DST`), `shld shrd` (`$INT` or `%cl`, then
+`%R`, then `DST`: the double shifts, as Kraken's printer spells them), `lea MEM, %R`, `cmovCC X, %R`,
 `movzbq MEM, %R`, `pushq X`, `popq X`, `jCC NAME`, `jmp NAME`, `call NAME`, `ret`.
 Operands: `%R` (the sixteen 64-bit registers), `$INT`, `NAME` (branch targets only), and memory
 `INT(%B)`, `(%B)`, `INT(%B,%I,S)`, `(%B,%I,S)` with `S ∈ {1, 2, 4, 8}`. `INT` is decimal with an
@@ -180,6 +181,12 @@ def instr (line : String) : P Instr := do
   | "mulq" => return i64 (.mul (← rm (← one args)))
   | "shlq" => let (a, b) ← two args; return i64 (.shl (← rm b) (← count a))
   | "shrq" => let (a, b) ← two args; return i64 (.shr (← rm b) (← count a))
+  | "shld" => match args with
+    | [c, r, d] => return i64 (.shld (← rm d) (← reg r) (← count c))
+    | _ => throw s!"expected three operands, got {args.length}"
+  | "shrd" => match args with
+    | [c, r, d] => return i64 (.shrd (← rm d) (← reg r) (← count c))
+    | _ => throw s!"expected three operands, got {args.length}"
   | "sarq" => let (a, b) ← two args; return i64 (.sar (← rm b) (← count a))
   | "lea" => let (a, b) ← two args; return i64 (.lea (← reg b) (← mem a))
   | "movl" =>

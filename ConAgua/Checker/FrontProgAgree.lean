@@ -119,7 +119,7 @@ def frontFns : List FnName :=
    "inst_recs", "decl_push", "lp_put", "hex_val", "hex3", "hints_num", "scan_rules", "esc_sur", "lit_hash", "nstr_find", "nstr_push", "der_b",
    "intern_app", "intern_lam", "intern_forall", "intern_letE", "intern_proj", "ls_find", "ls_push", "const_find", "const_push", "dec_chunk", "nat_mad", "nat_dec_chunks", "nat_dec_split", "nat_dec_big",
    "nat_mul", "mul_zeros", "mul_row", "sub_row", "kara_sum", "kara_prods", "kara_mid",
-   "mul_win", "nat_add", "add_n", "add_1", "nat_limb", "nat_trim", "lit_find",
+   "mul_win", "nat_add", "add_n", "add_1", "nat_trim", "lit_find",
    "lit_push", "lit_find_str", "lit_push_str", "d_member", "ind_member", "vi_np_go", "ifl_alloc", "vi_map_go", "vi_listed_go", "ifl_contains", "store_fuel", "vi_order",
    "vi_recs", "ind_type", "ind_ctor", "ind_rec", "scan_rule", "nstr_match", "app_find", "app_push", "lam_find", "lam_push", "forall_find", "forall_push",
    "letE_find", "letE_push", "proj_find", "proj_push", "ls_match", "lit_match", "lit_match_str", "hints_val", "str_code", "ind_slot", "ind_num", "ind_bool",

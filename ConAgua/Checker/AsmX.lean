@@ -6,6 +6,7 @@ public import ConAgua.AsmEsc.Chain1
 public import ConAgua.AsmEsc.NatMadAsm
 public import ConAgua.AsmEsc.NatCmpAsm
 public import ConAgua.AsmEsc.BitAsm
+public import ConAgua.AsmEsc.ShiftAsm
 public import ConAgua.AsmEsc.LitHashAsm
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.AsmKeys
@@ -36,6 +37,8 @@ proof's per-function contract (`checkerX_ok`, `AsmXOk.lean`).
   and `copyAsm`, `ConAgua/AsmEsc/BitAsm.lean` (proofs in `BitAsmSim.lean`).
 * `lit_hash` (`L.Arena.litHash`, the hash of a literal's limbs): `litHashAsm`,
   `ConAgua/AsmEsc/LitHashAsm.lean`.
+* `shl_n`, `shr_n`, `zero_n` (linleaf's shift and zeroing leaves): `shlAsm` (`shld`), `shrAsm`
+  (`shrd`), `zeroAsm`, `ConAgua/AsmEsc/ShiftAsm.lean` (proofs in `ShiftAsmSim.lean`).
 -/
 
 namespace L.Checker
@@ -51,7 +54,8 @@ def checkerX : AsmTab :=
    (natMadCode, natMadAsm checkerTab), (natCmpCode, natCmpAsm checkerTab),
    (andNCode, bitAsm checkerTab "and_n" .and), (orNCode, bitAsm checkerTab "or_n" .or),
    (xorNCode, bitAsm checkerTab "xor_n" .xor), (copyNCode, copyAsm checkerTab "copy_n"),
-   (litHashCode, litHashAsm checkerTab)]
+   (litHashCode, litHashAsm checkerTab),
+   (shlNCode, shlAsm checkerTab), (shrNCode, shrAsm checkerTab), (zeroNCode, zeroAsm checkerTab)]
 
 /-- The inliner's exclusion list is `checkerX`'s keys. -/
 theorem checkerX_keys : checkerX.map (·.1) = checkerXKeys := rfl

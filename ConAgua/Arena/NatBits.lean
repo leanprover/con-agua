@@ -20,17 +20,14 @@ import ConAgua.Front.Preserve
 # Bitwise `Nat` ops on the limb pool: `land`, `lor`, `xor`
 
 `nat_land`/`nat_lor`/`nat_xor` (con-ron's `land`/`lor`/`xor` and their `*_from` loops,
-`ron/nat.rs:658-703`): one pass combining limb `i` of each operand (zero-extended past the
-shorter one, con-ron's `limb`, reused from `nat_add` as `nat_limb`), then `nat_trim`. `land`'s
-result has `min la lb` limbs (reading only that far, so the loop never needs the zero
-extension in practice, but uses the same callee for one shared loop shape); `lor`/`xor` have
-`max la lb`. Inputs need not be normalised; the output is.
+`ron/nat.rs:658-703`): the leaf `and_n`/`or_n`/`xor_n` combines the limbs both operands have,
+`copy_n` copies the rest of the longer one (`lor`, `xor`), then `nat_trim`. `land`'s result has
+`min la lb` limbs, `lor`/`xor` have `max la lb`. Inputs need not be normalised; the output is.
 
-The model `bv` is `xv` with a combining function instead of a single read: `xv`'s own shape
-(`DESIGN.md`, "Loop bodies must be straight-line") carries over, so the loop proof is the house
-form, same as `nat_add`'s. Whether packing a limb-wise combine into the pool matches `Nat.land`/
-`Nat.lor`/`Nat.xor` on the full value is `NatOpRefine.lean`'s job (deferred, as `Norm`/pv bounds
-are for comparison).
+The model `bv` is `xv` with a combining function instead of a single read (the zero-extended
+combine); the leaves' `bwv` is the plain one, and `bv_bw`, `bv_tail_a`, `bv_tail_b` relate them.
+Whether packing a limb-wise combine into the pool matches `Nat.land`/`Nat.lor`/`Nat.xor` on the
+full value is `NatOpRefine.lean`'s job (deferred, as `Norm`/pv bounds are for comparison).
 -/
 
 set_option experimental.vcgen true
