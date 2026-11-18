@@ -125,6 +125,20 @@ instructions) is the multiplier's constant.
 bigmul, against 202 881.1 M on master (+0.001 %). The paired wall ratio is 1.015 against bigmul
 (CI 0.985–1.030, p = 0.63) and 1.001 against master (p = 0.31). There is no regression.
 
+**On the landed tree** (master `3867a4bab` with bigmul, merged; the same method, master against
+the branch):
+
+| fixture | master | bigdec | wall bigdec/master | 95 % CI | p |
+|---|---:|---:|---:|---:|---:|
+| 10^4 digits | 126.5 M | 126.9 M | 0.979 | 0.970–1.003 | 0.11 |
+| 3·10^4 | 168.5 M | 158.7 M | 1.007 | 0.985–1.021 | 0.38 |
+| 10^5 | 642.9 M | 410.7 M | 0.806 | 0.790–0.826 | 0.016 |
+| 2·10^5 | 2 202.9 M | 1 013.9 M | 0.562 | 0.534–0.633 | 0.016 |
+| 10^6 | 52 054 M (1.635 s) | 11 763 M (0.375 s) | 0.229 | 0.228–0.230 | 0.016 |
+
+Init (5 rounds): `init435` costs 202 882.8 M instructions on both, and the wall ratio is 0.93
+(p = 0.13). `init-prelude` is unchanged. `diff-e2e --refs`: 740 agree, REFDIFF 0.
+
 ## What went wrong
 
 * `bench.py` without `--no-build` builds the worktree it runs in, here halfway through an
