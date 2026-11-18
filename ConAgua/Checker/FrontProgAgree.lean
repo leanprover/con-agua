@@ -12,7 +12,7 @@ public meta import ConAgua.Front.FrontRun
 /-!
 # `checkerProg` agrees with `frontAllProg` on what `front_run` reaches (lane `pipeline`)
 
-The 254 functions reachable from `front_run` in `checkerProg` (`frontFns`): each is bound in
+The 263 functions reachable from `front_run` in `checkerProg` (`frontFns`): each is bound in
 `checkerProg` as in `L.Front.frontAllProg`, one lookup each, by position (`front_agree`, below). `frontAllProg` binds three more functions that `checkerProg` does not
 (`validate`, `str_put`, `apply_ind_line`: nothing reachable from `check` calls them), so the
 lookup bundles of `frontRun_refines` do not hold at `checkerProg`; `FrontProg.lean` transfers the
@@ -117,7 +117,8 @@ def frontFns : List FnName :=
    "mk_lam", "mk_forall", "mk_let", "mk_proj", "ls_put", "intern_ls", "intern_const", "nat_dec", "intern_lit", "intern_lit_str", "rec_decl_obj", "decl_code",
    "if_reset", "ifr_alloc", "ind_obj", "vi_unsafe", "vi_nparams", "vi_map", "vi_listed", "ifl_nodup", "vi_tail", "dind_alloc", "inst_types", "inst_ctors",
    "inst_recs", "decl_push", "lp_put", "hex_val", "hex3", "hints_num", "scan_rules", "esc_sur", "lit_hash", "nstr_find", "nstr_push", "der_b",
-   "intern_app", "intern_lam", "intern_forall", "intern_letE", "intern_proj", "ls_find", "ls_push", "const_find", "const_push", "dec_chunk", "nat_mad", "lit_find",
+   "intern_app", "intern_lam", "intern_forall", "intern_letE", "intern_proj", "ls_find", "ls_push", "const_find", "const_push", "dec_chunk", "nat_mad", "nat_dec_chunks", "nat_dec_split", "nat_dec_big",
+   "nat_mul", "mac_hi", "nat_add", "nat_limb", "add_carry", "nat_trim", "lit_find",
    "lit_push", "lit_find_str", "lit_push_str", "d_member", "ind_member", "vi_np_go", "ifl_alloc", "vi_map_go", "vi_listed_go", "ifl_contains", "store_fuel", "vi_order",
    "vi_recs", "ind_type", "ind_ctor", "ind_rec", "scan_rule", "nstr_match", "app_find", "app_push", "lam_find", "lam_push", "forall_find", "forall_push",
    "letE_find", "letE_push", "proj_find", "proj_push", "ls_match", "lit_match", "lit_match_str", "hints_val", "str_code", "ind_slot", "ind_num", "ind_bool",

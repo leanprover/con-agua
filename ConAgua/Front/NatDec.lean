@@ -210,7 +210,7 @@ words `(address, length)` each; `t < k`) plus the low part `[d - dd, d)`, by `na
 `nat_add`; the sum is copied down to the old top. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `frontend/nat_decimal.rs` `read_split`); the twin computes on `Nat`
 @[no_expose] def natDecSplit : FunDecl :=
-  lfn (c, d, tbl, k) locals (n, t, dd, m, top, oh, lh, ol, ll, po, pl, op, lp, os, ls, pt, pb) {
+  lfn (c, d, tbl, k) locals (n, t, dd, m, top, oh, lh, ol, ll, po, pl, op, lp, os, ls, pt, pb, si) {
   n := d - c;
   if n <= ⟪decBase⟫ {
     (oh, lh) := call nat_dec_chunks(c, d);
@@ -231,7 +231,8 @@ words `(address, length)` each; `t < k`) plus the low part `[d - dd, d)`, by `na
   ls := call nat_add(op, lp, ol, ll);
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
-  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, ⦃os⦄.idx, ls);
+  si := ⦃os⦄.idx;
+  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, si, ls);
   CTL.u64[0] := top + ls;
   return (top, ls)
 }
@@ -264,7 +265,8 @@ the old top. -/
     i += 1
   };
   (o, l) := call nat_dec_split(c, d, top, k);
-  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, ⦃o⦄.idx, l);
+  s := ⦃o⦄.idx;
+  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, s, l);
   CTL.u64[0] := top + l;
   return (top, l)
 }
