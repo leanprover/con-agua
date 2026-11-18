@@ -194,6 +194,20 @@ theorem addn_step_goal (m : Mem) (P0 : Array Word) (o oa ob i c T8 T9 T10 T11 T1
   generalize wt i.toNat = W at *
   grind
 
+open Lean Elab Tactic Meta in
+/-- Split the conjunctions among the hypotheses, then clear every `s.loc = t` among them (the
+unfolded `LocEq`s, once `simp_all` has used them to name the callers' locals): `grind` would case
+on the `Locals.init` lists in them. -/
+elab "split_clear_locs" : tactic => do
+  liftMetaTactic fun g => do
+    let mut g ← g.casesAnd
+    for d in (← g.getDecl).lctx do
+      if d.isImplementationDetail then continue
+      let t ← instantiateMVars d.type
+      if t.isAppOfArity ``Eq 3 && (t.getArg! 0).isConstOf ``L.Locals then
+        try g ← g.clear d.fvarId catch _ => pure ()
+    return [g]
+
 /-! ## The leaves -/
 
 /-- `P[o + i] := A[oa + i] + B[ob + i] + carry` for `i < n`; the carry in `c ≤ 1`, the carry out. -/

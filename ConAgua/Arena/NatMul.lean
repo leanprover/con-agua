@@ -980,20 +980,6 @@ theorem kara_pos (s la lb oa ob : Word) (hs : s.toNat < 2 ^ 41) (hla : la.toNat 
   · rw [toNat_add_of_lt _ _ (by omega), ek]
   · rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), ek]
 
-open Lean Elab Tactic Meta in
-/-- Split the conjunctions among the hypotheses, then clear every `s.loc = t` among them (the
-unfolded `LocEq`s, once `simp_all` has used them to name the callers' locals): `grind` would case
-on the `Locals.init` lists in them. -/
-elab "split_clear_locs" : tactic => do
-  liftMetaTactic fun g => do
-    let mut g ← g.casesAnd
-    for d in (← g.getDecl).lctx do
-      if d.isImplementationDetail then continue
-      let t ← instantiateMVars d.type
-      if t.isAppOfArity ``Eq 3 && (t.getArg! 0).isConstOf ``L.Locals then
-        try g ← g.clear d.fvarId catch _ => pure ()
-    return [g]
-
 section rec
 variable (p : Prog) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
   (hps : p.lookup "sub_row" = some subRow) (hpt : p.lookup "nat_trim" = some natTrim)
