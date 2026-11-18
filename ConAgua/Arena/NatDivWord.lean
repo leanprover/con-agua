@@ -51,6 +51,23 @@ namespace L.Arena
   return s
 }
 
+/-- `div_recip`'s start: the tangent of `1/x` at `3/4`. -/
+def rcpInit : Stmt := lblk (d, v, t, l, h, e, j, k) {
+  t := 0 - 1 - d;
+  t := t + mulhi(t, 0xC71C71C71C71C71C);
+  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 }
+}
+
+/-- `div_recip`'s five Newton steps. -/
+def rcpLoop : Stmt := lblk (d, v, t, l, h, e, j, k) {
+  for j < k {
+    l := d * v;
+    h := d + mulhi(d, v);
+    e := 0 - h - u64(l != 0);
+    v := v + e + mulhi(v, e)
+  }
+}
+
 /-- `div_recip(d)`: the reciprocal `⌊(2^128 - 1) / d⌋ - 2^64` of a normalised `d` (Möller and
 Granlund's `v`): the tangent of `1/x` at `3/4` (from below, about 3 bits), five Newton steps
 `v := v + e + ⌊v e / 2^64⌋` with `e` the top word of `2^128 - d (2^64 + v)` (from below, at most
@@ -58,16 +75,9 @@ Granlund's `v`): the tangent of `1/x` at `3/4` (from below, about 3 bits), five 
 the speed of `div_2by1` depends on the estimate. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def divRecip : FunDecl := lfn (d) locals (v, t, l, h, e, j, k) {
-  t := 0 - 1 - d;
-  t := t + mulhi(t, 0xC71C71C71C71C71C);
-  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
+  ⟪rcpInit⟫;
   k := 5;
-  for j < k {
-    l := d * v;
-    h := d + mulhi(d, v);
-    e := 0 - h - u64(l != 0);
-    v := v + e + mulhi(v, e)
-  };
+  ⟪rcpLoop⟫;
   (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
   return v
 }
@@ -251,6 +261,44 @@ theorem d2Est_spec (n : Nat) (s₀ : St) :
 theorem St.restore (s s₀ : St) (h : s.mem = s₀.mem) : ({ mem := s.mem, loc := s₀.loc } : St) = s₀ := by
   cases s₀; simp_all
 
+/-- The Newton loop touches neither the memory nor `d`. -/
+def RcpInv (m : Mem) (D : Word) (s : St) : Prop := s.mem = m ∧ s.loc 0 = D
+
+def RcpPost (m : Mem) (D : Word) (r : Sig) (s' : St) : Prop := r = .normal ∧ s'.mem = m ∧ s'.loc 0 = D
+
+theorem rcpLoop_spec (m : Mem) (D : Word) (n : Nat) (s₀ : St) (h : RcpInv m D s₀) :
+    ⦃fun s => s = s₀⦄ exec p n rcpLoop ⦃fun r s' => RcpPost m D r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [RcpInv, RcpPost] at h ⊢
+    rw [exec, step_while (w := rcpLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ih]
+    all_goals clear ih
+    all_goals (try simp only [RcpInv, RcpPost, St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff,
+      reduceIte] at *)
+    all_goals grind
+
+/-- The tangent touches neither the memory nor `d`. -/
+theorem rcpInit_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) rcpInit
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ s'.loc 0 = s₀.loc 0; ⊤⦄ := by
+  unfold rcpInit
+  vcgen [step, evalE, evalC, setLoc] <;>
+    simp only [St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff, reduceIte] <;> trivial
+
+theorem rcpLoop_step_spec (m : Mem) (D : Word) (n : Nat) (s₀ : St) (h : RcpInv m D s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) rcpLoop ⦃fun r s' => RcpPost m D r s'; ⊤⦄ :=
+  Triple.step_exec (rcpLoop_spec p m D (n + 1) s₀ h)
+
+/-- `div_recip`'s final `div_2by1` divides `(2^64 - 1 - d) · 2^64 + 2^64 - 1` by `d ≥ 2^63`: its
+high word is below `d`. -/
+theorem recip_hi_lt (d : Word) (hd : 2 ^ 63 ≤ d.toNat) : (0 - 1 - d).toNat < d.toNat := by
+  have h1 : (0 - 1 : Word).toNat = 2 ^ 64 - 1 := rfl
+  have := d.toNat_lt
+  rw [UInt64.toNat_sub_of_le _ _ (by simp only [UInt64.le_iff_toNat_le, h1]; omega), h1]
+  omega
+
 end loops
 
 section specs
@@ -296,7 +344,20 @@ theorem divRecip_spec (n : Nat) (s₀ : St) (d : Word) (hd : 2 ^ 63 ≤ d.toNat)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "div_recip" [d]
     ⦃fun _ s' => s' = s₀; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpr]
+  simp only [callFn, divRecip]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rcpInit_spec p n,
+      rcpLoop_step_spec p s₀.mem d n,
+      div2by1_spec p hp2 n]
+    all_goals (try simp only [RcpInv, RcpPost, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
+      St.setLocs_nil, BinOp.eval, Nat.reduceEqDiff, reduceIte, Locals.init, List.getD_cons_zero] at *)
+    all_goals first
+      | (apply St.restore; simp_all)
+      | (obtain ⟨-, -, h0⟩ := ‹_ = Sig.normal ∧ _ ∧ (_ : St).loc 0 = d›; rw [h0]; exact recip_hi_lt d hd)
+      | simp_all
 
 end specs
 
