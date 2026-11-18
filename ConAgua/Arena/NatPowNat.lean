@@ -103,9 +103,10 @@ section powNat
 variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
   (hpn : p.lookup "nat_pow" = some natPow) (hps : p.lookup "nat_shl" = some natShl)
+  (hpz : p.lookup "zero_n" = some zeroN) (hpsn : p.lookup "shl_n" = some shlN)
   (hpp : p.lookup "pow_nat" = some powNatL) (hlp : p.lookup "limb_push" = some limbPushL)
 
-include hph hpt hpm hpn hps hpp hlp in
+include hph hpt hpm hpn hps hpz hpsn hpp hlp in
 /-- **`pow_nat` returns a normalised slice `(o, l)` in use that denotes `a ^ e`** (`e < 2^32`); the
 memory grew. -/
 theorem powNat_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.mem)
@@ -127,7 +128,7 @@ theorem powNat_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        powTwoLoop_step_spec p n, natPow_spec p hph hpt hpm hpn n, natShl_spec p hpt hps n,
+        powTwoLoop_step_spec p n, natPow_spec p hph hpt hpm hpn n, natShl_spec p hpz hpsn hpt hps n,
         limbPush_spec p hlp n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq, PtPost] at *)

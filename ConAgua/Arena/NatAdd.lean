@@ -138,7 +138,7 @@ def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
 /-- The pool functions, as one `#eval`-able program. -/
 def natProg : Prog :=
   [("nat_limb", natLimb), ("nat_trim", natTrim), ("and_n", andN), ("or_n", orN), ("xor_n", xorN),
-   ("copy_n", copyN), ("add_n", addN),
+   ("copy_n", copyN), ("shl_n", shlN), ("shr_n", shrN), ("zero_n", zeroN), ("add_n", addN),
    ("add_1", add1), ("nat_add", natAdd)]
 
 /- `(2^128 - 1) + 1 = 2^128`: limbs `[max, max]` at 0 and `[1]` at 2, top 3; the sum is

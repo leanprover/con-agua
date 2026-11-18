@@ -41,44 +41,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-! ## Word facts -/
-
-/-- The low `s` bits of `x`, as a named function (an atom to `grind`). -/
-def lowb (x s : Nat) : Nat := x % 2 ^ s
-
-theorem lowb_lt (x s : Nat) : lowb x s < sh s := Nat.mod_lt _ (Nat.two_pow_pos _)
-grind_pattern [arena_grind] lowb_lt => lowb x s
-
-@[arena_grind =] theorem lowb_zero (s : Nat) : lowb 0 s = 0 := Nat.zero_mod _
-
-theorem shr_hi (y b : Word) (hb : b.toNat < 64) :
-    ((y <<< 1) <<< (63 - b)).toNat = (y.toNat % 2 ^ b.toNat) * 2 ^ (64 - b.toNat) := by
-  have h63 : (63 - b).toNat = 63 - b.toNat := by grind
-  rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftLeft, h63]
-  simp only [Nat.shiftLeft_eq, UInt64.toNat_one]
-  rw [Nat.mod_eq_of_lt (by omega : 63 - b.toNat < 64), Nat.mod_eq_of_lt (by omega : 1 < 64)]
-  rw [Nat.mod_mul_mod, Nat.mul_assoc, ← Nat.pow_add, show 1 + (63 - b.toNat) = 64 - b.toNat by omega]
-  have : 2 ^ 64 = 2 ^ b.toNat * 2 ^ (64 - b.toNat) := by rw [← Nat.pow_add]; congr 1; omega
-  rw [this, Nat.mul_mod_mul_right]
-
-/-- The digit equation of one limb of the right shift. -/
-theorem shr_split (x y b : Word) (hb : b.toNat < 64) :
-    ((x >>> b) ||| ((y <<< 1) <<< (63 - b))).toNat * sh b.toNat + lowb x.toNat b.toNat =
-      x.toNat + lowb y.toNat b.toNat * 2 ^ 64 := by
-  rw [UInt64.toNat_or, shr_hi y b hb, UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hb,
-    Nat.shiftRight_eq_div_pow]
-  have hlt : x.toNat / 2 ^ b.toNat < 2 ^ (64 - b.toNat) := by
-    apply Nat.div_lt_of_lt_mul
-    rw [← Nat.pow_add, show b.toNat + (64 - b.toNat) = 64 by omega]; exact x.toNat_lt
-  rw [← Nat.shiftLeft_eq, Nat.or_comm, ← Nat.shiftLeft_add_eq_or_of_lt hlt, Nat.shiftLeft_eq]
-  simp only [sh, lowb]
-  have h2 : 2 ^ (64 - b.toNat) * 2 ^ b.toNat = 2 ^ 64 := by rw [← Nat.pow_add]; congr 1; omega
-  have := Nat.div_add_mod x.toNat (2 ^ b.toNat)
-  rw [Nat.add_mul, Nat.mul_assoc, h2]
-  rw [Nat.mul_comm (x.toNat / 2 ^ b.toNat)]
-  omega
-grind_pattern [arena_grind] shr_split => (x >>> b) ||| ((y <<< 1) <<< (63 - b))
-
 /-! ## The division at the end -/
 
 /-- The shift that skips `w < la` limbs: the quotient is what the loop computed. -/
@@ -138,18 +100,19 @@ grind_pattern [natop_grind] shr_big_b => pv P oa la / 2 ^ pv Q ob lb, Norm Q ob 
 
 /-! ## `nat_shr(oa, la, ob, lb)` -/
 
-/-- One pass over the shifted slice `(oa, n)` (`oa` already moved past the skipped limbs). -/
-def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y, pt, pb) {
-  for i < n {
-    y := call nat_limb(oa, n, i + 1);
-    POOL⟨pt⟩[pb + i] := (x >> b) | ((y << 1) << (63 - b));
-    x := y
-  }
+/-- The shift proper over the slice `(oa, n)` (`oa` already moved past the skipped limbs, `n ≥ 1`):
+`shr_n` over its first `n - 1` limbs (each with the low bits of the next), its last limb shifted
+alone. Locals `(oa, la, ob, lb, top, n, w, b, c, pt, pb)`. -/
+def shrCore : Stmt := lblk (oa, la, ob, lb, top, n, w, b, c, pt, pb) {
+  c := call shr_n(top, oa, n - 1, b);
+  POOL⟨pt⟩[pb + (n - 1)] := POOL⦃oa + (n - 1)⦄ >> b
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
+/-- The amount `b` (one limb at most) splits into `w = b >> 6` whole limbs to skip and `b & 63`
+bits; `shrCore` shifts what is left, `nat_trim`. The pass is a leaf (`NatLeaf.lean`).
+con-ron: ConRon/Arena/Core.lean:1152-1185 ConRon.Arena.natBinOpResult -/
 @[no_expose, l_impl ConRon.Arena.natBinOpResult]
-def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, pb) {
+def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, c, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
@@ -161,8 +124,7 @@ def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y, pt, 
       oa := oa + w;
       n := la - w;
       if len(POOL⟨pt⟩) - pb < n { abort };
-      x := POOL⦃oa⦄;
-      ⟪shrLoop⟫;
+      ⟪shrCore⟫;
       n := call nat_trim(top, n)
     }
   } else {
@@ -190,63 +152,153 @@ def natShrProg : Prog := natProg ++ [("nat_shr", natShr)]
   (Mem.ofWords [(POOL, #[1, 0, 1, 0]), (CTL, #[3])])).toOption.map (fun (r, m) => (r, m.arr64 CTL)) ==
   some ([0], #[3])
 
-section shr
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb) (Pg : Array Word) (C : Nat)
+/-- The shift's last limb on its own: `L >> b` times `2^b`, plus `L`'s low bits, is `L`. -/
+theorem shr_last (L b : Word) (hb : b.toNat < 64) :
+    (L >>> b).toNat * sh b.toNat + lowb L.toNat b.toNat = L.toNat := by
+  rw [UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hb, Nat.shiftRight_eq_div_pow]
+  simp only [sh, lowb]
+  have := Nat.div_add_mod L.toNat (2 ^ b.toNat)
+  rw [Nat.mul_comm]; omega
 
-/-- The invariant of the pass over the shifted slice `(oa, n)`: `x` is limb `i`, and the result
-so far times `2^s`, plus the low bits of limb `0`, is the first `i` limbs plus the low bits of
-limb `i`, weighted. -/
-def ShrInv (Pg : Array Word) (C : Nat) (s : St) : Prop :=
-  C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
-  Agree (vpool s.mem) Pg (s.loc 4).toNat ∧
-  (s.loc 4).toNat + (s.loc 5).toNat ≤ C ∧ (s.loc 0).toNat + (s.loc 5).toNat ≤ (s.loc 4).toNat ∧
-  s.loc 11 = s.loc 4 >>> 40 ∧ s.loc 12 = s.loc 4 &&& 1099511627775 ∧
-  (s.loc 12).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 11))).size ∧
-  (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧ (s.loc 4).toNat < 2 ^ 41 ∧
-  (s.loc 7).toNat < 64 ∧ (s.loc 8).toNat ≤ (s.loc 5).toNat ∧
-  (s.loc 9).toNat = lv Pg (s.loc 0).toNat (s.loc 5).toNat (s.loc 8).toNat ∧
-  pv (vpool s.mem) (s.loc 4).toNat (s.loc 8).toNat * sh (s.loc 7).toNat +
-      lowb (lv Pg (s.loc 0).toNat (s.loc 5).toNat 0) (s.loc 7).toNat =
-    xv Pg (s.loc 0).toNat (s.loc 5).toNat (s.loc 8).toNat +
-      lowb (s.loc 9).toNat (s.loc 7).toNat * wt (s.loc 8).toNat
+/-- `shrCore`'s value, in the shape of its goal: `shr_n` wrote the first `n - 1` limbs at `T`
+(`m1`), the last limb is limb `n - 1` of the slice shifted alone. -/
+theorem shr_core_goal (m0 m1 : Mem) (T oa n b Tt Ti : Word) (hTt : Tt = T >>> 40)
+    (hTi : Ti = T &&& 1099511627775) (hn : 1 ≤ n.toNat) (hT41 : T.toNat < 2 ^ 41)
+    (ha : oa.toNat + n.toNat ≤ T.toNat) (hb : b.toNat < 64)
+    (hc1 : pcap m1 < 2 ^ 64)
+    (hst : (Ti + (n - 1)).toNat < (m1.arr64 (tierA POOL Tt)).size)
+    (hld : ((oa + (n - 1)) &&& 1099511627775).toNat <
+      (m1.arr64 (tierA POOL ((oa + (n - 1)) >>> 40))).size)
+    (h1 : Off (vpool m1) (vpool m0) T.toNat (n - 1).toNat)
+    (e1 : pv (vpool m1) T.toNat (n - 1).toNat * sh b.toNat +
+        lowb ((vpool m0)[oa.toNat]?.getD 0).toNat b.toNat =
+      pv (vpool m0) oa.toNat (n - 1).toNat +
+        lowb ((vpool m0)[oa.toNat + (n - 1).toNat]?.getD 0).toNat b.toNat * wt (n - 1).toNat) :
+    pv (vpool (m1.set64 (tierA POOL Tt) (Ti + (n - 1))
+        ((m1.arr64 (tierA POOL ((oa + (n - 1)) >>> 40)))[((oa + (n - 1)) &&& 1099511627775).toNat] >>> b)))
+        T.toNat n.toNat * sh b.toNat + lowb (lv (vpool m0) oa.toNat n.toNat 0) b.toNat =
+      pv (vpool m0) oa.toNat n.toNat := by
+  have hsz : (m1.arr64 (tierA POOL Tt)).size ≤ 2 ^ 40 := Nat.le_of_lt (pcap_tier m1 Tt hc1)
+  subst hTt hTi
+  have hk : (n - 1).toNat = n.toNat - 1 :=
+    UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
+  have hok : (oa + (n - 1)).toNat = oa.toNat + (n.toNat - 1) := by
+    rw [UInt64.toNat_add, hk]; exact Nat.mod_eq_of_lt (by omega)
+  have hvs0 := vpool_size m0
+  have hvs1 := vpool_size m1
+  have hTn : T.toNat + (n.toNat - 1) < 2 ^ 41 := by
+    have := win_lt m1 T (n - 1) hT41 (by omega) hsz hst; omega
+  have eL : (m1.arr64 (tierA POOL ((oa + (n - 1)) >>> 40)))[((oa + (n - 1)) &&& 1099511627775).toNat] =
+      (vpool m0)[oa.toNat + (n.toNat - 1)]'(by omega) := by
+    rw [vpool_ld m1 (oa + (n - 1)) hld (by omega)]
+    have := h1 (oa.toNat + (n.toNat - 1)) (Or.inl (by omega))
+    simp only [Array.getElem?_eq_getElem (by omega : oa.toNat + (n.toNat - 1) < (vpool m1).size),
+      Array.getElem?_eq_getElem (by omega : oa.toNat + (n.toNat - 1) < (vpool m0).size),
+      Option.some.injEq] at this
+    simp only [hok]; exact this
+  rw [eL, st_win m1 T (n - 1) _ hT41 (by omega) hsz hst, hk]
+  rw [hk] at e1
+  have hn1 : n.toNat = (n.toNat - 1) + 1 := by omega
+  rw [pv_set_succ (vpool m1) T.toNat (n.toNat - 1) n.toNat (T.toNat + (n.toNat - 1)) _ hn1 rfl (by omega),
+    pv_succ (vpool m0) oa.toNat (n.toNat - 1) n.toNat (oa.toNat + (n.toNat - 1)) hn1 rfl (by omega)]
+  have hlv : lv (vpool m0) oa.toNat n.toNat 0 = ((vpool m0)[oa.toNat]?.getD 0).toNat := by
+    simp [lv]; omega
+  rw [hlv]
+  rw [Array.getElem?_eq_getElem (by omega : oa.toNat + (n.toNat - 1) < (vpool m0).size),
+    Option.getD_some] at e1
+  have hl := shr_last (vpool m0)[oa.toNat + (n.toNat - 1)] b hb
+  generalize (vpool m0)[oa.toNat + (n.toNat - 1)] = L at *
+  generalize pv (vpool m1) T.toNat (n.toNat - 1) = A at *
+  generalize pv (vpool m0) oa.toNat (n.toNat - 1) = B at *
+  generalize wt (n.toNat - 1) = W at *
+  generalize sh b.toNat = S at *
+  generalize lowb ((vpool m0)[oa.toNat]?.getD 0).toNat b.toNat = L0 at *
+  generalize (L >>> b).toNat = Q at *
+  generalize lowb L.toNat b.toNat = Lo at *
+  grind
 
-def ShrPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
-  r = .normal ∧ PFrame s₀.mem s'.mem ∧
-  pcap s'.mem = C ∧ Agree (vpool s'.mem) Pg (s₀.loc 4).toNat ∧
-  s'.loc 0 = s₀.loc 0 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 6 = s₀.loc 6 ∧
-  s'.loc 7 = s₀.loc 7 ∧
+
+/-- The pool below `T` is kept by `shrCore`. -/
+theorem shr_core_agree (m0 m1 : Mem) (T k v Tt Ti : Word) (hTt : Tt = T >>> 40)
+    (hTi : Ti = T &&& 1099511627775) (hT41 : T.toNat < 2 ^ 41) (hk41 : k.toNat < 2 ^ 41)
+    (hc1 : pcap m1 < 2 ^ 64)
+    (hst : (Ti + k).toNat < (m1.arr64 (tierA POOL Tt)).size)
+    (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat) :
+    Agree (vpool (m1.set64 (tierA POOL Tt) (Ti + k) v)) (vpool m0) T.toNat := by
+  have hsz : (m1.arr64 (tierA POOL Tt)).size ≤ 2 ^ 40 := Nat.le_of_lt (pcap_tier m1 Tt hc1)
+  subst hTt hTi
+  rw [st_win m1 T k v hT41 hk41 hsz hst]
+  intro j hj
+  rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds_ne (by omega)]
+  exact h1 j (Or.inl hj)
+
+section shrCoreSec
+variable (p : Prog) (hps : p.lookup "shr_n" = some shrN)
+
+/-- `shrCore`'s precondition: locals `(oa, la, ob, lb, top, n, w, b, c, pt, pb)`, the slice
+`(oa, n)` below the top, room for `n ≥ 1` limbs in the top's tier. -/
+def ShrCorePre (s : St) : Prop :=
+  pcap s.mem < 2 ^ 64 ∧ (s.loc 4).toNat < 2 ^ 41 ∧ (s.loc 0).toNat + (s.loc 5).toNat ≤ (s.loc 4).toNat ∧
+  1 ≤ (s.loc 5).toNat ∧ (s.loc 7).toNat < 64 ∧
+  s.loc 9 = s.loc 4 >>> 40 ∧ s.loc 10 = s.loc 4 &&& 1099511627775 ∧
+  (s.loc 10).toNat + (s.loc 5).toNat ≤ (s.mem.arr64 (tierA POOL (s.loc 9))).size ∧
+  (s.loc 4).toNat + (s.loc 5).toNat ≤ pcap s.mem
+
+def ShrCorePost (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
+  s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+  Agree (vpool s'.mem) (vpool s₀.mem) (s₀.loc 4).toNat ∧
   pv (vpool s'.mem) (s₀.loc 4).toNat (s₀.loc 5).toNat * sh (s₀.loc 7).toNat +
-      lowb (lv Pg (s₀.loc 0).toNat (s₀.loc 5).toNat 0) (s₀.loc 7).toNat =
-    pv Pg (s₀.loc 0).toNat (s₀.loc 5).toNat
+      lowb (lv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 5).toNat 0) (s₀.loc 7).toNat =
+    pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 5).toNat
 
-set_option maxHeartbeats 2000000 in
-include hpl in
-theorem shrLoop_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄ exec p n shrLoop ⦃fun r s' => ShrPost Pg C s₀ r s'; ⊤⦄ := by
-  induction n generalizing s₀ with
-  | zero => vcgen [exec] <;> grind
-  | succ n ih =>
-    simp only [ShrInv, ShrPost] at h ⊢
-    rw [exec, step_while (w := shrLoop) rfl]
-    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n]
-    all_goals clear ih
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, BinOp.eval,
-      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals grind (splits := 20) [arena_grind, lang_grind, ShrInv, ShrPost]
+include hps in
+theorem shrCore_spec (n : Nat) (s₀ : St) (h : ShrCorePre s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) shrCore ⦃fun r s' => ShrCorePost s₀ r s'; ⊤⦄ := by
+  simp only [ShrCorePre, ShrCorePost] at h ⊢
+  obtain ⟨hs, hT41, ha, hn, hb, h9, h10, hroom, hcap⟩ := h
+  have hsz := pcap_tier s₀.mem (s₀.loc 9) hs
+  unfold shrCore
+  vcgen [step, evalE, evalArgs, setLoc, setLocs, ld64, st64, shrN_spec p hps n]
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try dsimp only at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    BinOp.eval.eq_1, BinOp.eval.eq_2, BinOp.eval.eq_4, BinOp.eval.eq_8, reduceIte, Nat.reduceEqDiff])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals first
+    | (grind (splits := 10) [arena_grind, lang_grind]; done)
+    | (with_reducible apply shr_core_goal
+       case h1 => with_reducible assumption
+       case e1 => with_reducible assumption
+       all_goals grind)
+    | (with_reducible apply shr_core_agree
+       case h1 => with_reducible assumption
+       all_goals grind)
 
-include hpl in
-theorem shrLoop_step_spec (n : Nat) (s₀ : St) (h : ShrInv Pg C s₀) :
-    ⦃fun s => s = s₀⦄ step p (exec p n) shrLoop ⦃fun r s' => ShrPost Pg C s₀ r s'; ⊤⦄ :=
-  Triple.step_exec (shrLoop_spec p hpl Pg C (n + 1) s₀ h)
+end shrCoreSec
 
-end shr
+/-- `nat_shr`'s result: the trimmed `n` limbs `shrCore` wrote are the quotient (`shr_small`). -/
+theorem shr_final (m : Mem) (P Q : Array Word) (T T' X n n' r R w k : Word) (oa la ob lb o : Nat)
+    (hX : X = T) (hR : R = r) (hT : T' = T) (hn : n' = n)
+    (et : pv (vpool m) T'.toNat r.toNat = pv (vpool m) T'.toNat n'.toNat)
+    (hk : pv Q ob lb = k.toNat) (ho : o = oa + (k >>> 6).toNat)
+    (hl : n.toNat = la - (k >>> 6).toNat) (hw : (k >>> 6).toNat < la)
+    (h : pv (vpool m) T.toNat n.toNat * sh (k &&& 63).toNat +
+        lowb (lv P o n.toNat 0) (k &&& 63).toNat = pv P o n.toNat) :
+    pv (vpool (m.set64 CTL 0 w)) X.toNat R.toNat = pv P oa la / 2 ^ pv Q ob lb := by
+  subst X R T' n'
+  rw [vpool_ctl, et]
+  exact (shr_small P Q (vpool m) oa la ob lb o n.toNat T.toNat n.toNat k hk ho hl hw h).symm
 
 section shrFn
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
+variable (p : Prog) (hps : p.lookup "shr_n" = some shrN)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_shr" = some natShr)
 
-set_option maxHeartbeats 0 in
-include hpl hpt hpn in
+-- the whole function's paths (the amount's three cases, the room check, `nat_trim`) in one
+-- declaration: about 16 s, over the default budget (it had none before the leaf split)
+set_option maxHeartbeats 1000000 in
+include hps hpt hpn in
 /-- `nat_shr` appends `a / 2^b` (`b` normalised), normalised, at the old top and moves the top
 past it; nothing below the old top changes, and no other array but `CTL[0]`. -/
 theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
@@ -270,20 +322,27 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   clear hok
   replace ha := ha.1
   replace hb := hb.1
+  have hs : pcap s₀.mem < 2 ^ 64 := by omega
   rw [invoke_eq _ hpn]
   simp only [callFn, natShr]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      shrLoop_step_spec p hpl (vpool s₀.mem) (pcap s₀.mem) n, natTrim_spec p hpt n]
-    all_goals (try simp only [ShrInv, ShrPost] at *)
-    all_goals (try subst_vars)
-    -- `setLoc` lemmas, not unfolding; no `and_intros` (one `grind` per goal)
-    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, L.Locals.init_nil,
-      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
-      Nat.reduceEqDiff, UInt64.toNat_zero] at *)
-    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
+      shrCore_spec p hps n, natTrim_spec p hpt n]
+    all_goals (try simp only [LocEq, ShrCorePre, ShrCorePost] at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval.eq_1,
+      BinOp.eval.eq_2, BinOp.eval.eq_4, BinOp.eval.eq_8, Cmp.eval, reduceIte, Nat.reduceEqDiff,
+      UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
+    all_goals split_clear_locs
+    all_goals (try and_intros)
+    all_goals first
+      | (with_reducible apply shr_final
+         case h => with_reducible assumption
+         case et => with_reducible assumption
+         all_goals first | rfl | grind [arena_grind, natop_grind, Mem.top_eq])
+      | (grind (splits := 10) [arena_grind, lang_grind, natop_grind, Mem.top_eq, vpool_ctl, Norm]; done)
 
 end shrFn
 
