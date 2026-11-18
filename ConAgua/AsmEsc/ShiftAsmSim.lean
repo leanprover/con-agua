@@ -2,7 +2,6 @@ module
 
 public import ConAgua.AsmEsc.ShiftAsm
 public import ConAgua.AsmEsc.ShiftL
-public import ConAgua.AsmEsc.BitAsmSim
 import Kraken.X64.Registers
 
 @[expose] public section
