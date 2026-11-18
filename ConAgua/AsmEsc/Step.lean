@@ -144,6 +144,52 @@ theorem ev_adcRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.adc (.reg (rr
   · simp only [Width.bits, StatusFlags.cf_from_result, cf_adc]; rfl
   · simp only [Width.bits, adc_val]
 
+
+/-- `and d, [b + 8 i]` (the flags are not used afterwards). -/
+theorem ev_andRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.and (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, Ev Q { s with
+        regs := s.regs.set64 d (BinOp.and.eval (UInt64.ofBitVec (s.regs.get64 d)) v).toBitVec,
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  intro _
+  exact ev_of_regs (h _) rfl
+
+/-- `or d, [b + 8 i]` (the flags are not used afterwards). -/
+theorem ev_orRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.or (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, Ev Q { s with
+        regs := s.regs.set64 d (BinOp.or.eval (UInt64.ofBitVec (s.regs.get64 d)) v).toBitVec,
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  intro _
+  exact ev_of_regs (h _) rfl
+
+/-- `xor d, [b + 8 i]` (the flags are not used afterwards). -/
+theorem ev_xorRS {d b i : Reg64} (hk : Host.prog[k]? = some (i64 (.xor (.reg (rr d)) (oM (mbi b i .W64)))))
+    {v : Word} (hv : rdW s.dmem (s.regs.get64 b + s.regs.get64 i * 8) = some v)
+    (h : ∀ st : StatusFlags, Ev Q { s with
+        regs := s.regs.set64 d (BinOp.xor.eval (UInt64.ofBitVec (s.regs.get64 d)) v).toBitVec,
+        status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  run_instr
+  rw [addr_sib8]
+  simp only [rdW, Option.map_eq_some_iff] at hv
+  obtain ⟨j, hj, rfl⟩ := hv
+  simp only [hj, Effects.All]
+  intro _
+  exact ev_of_regs (h _) rfl
+
 omit [Host] in
 theorem cf_sbb (a b : BitVec 64) (c : Bool) :
     (BitVec.unsigned (b - a - BitVec.ofNat 64 c.toNat) != b.unsigned - a.unsigned - (c.toNat : Int)) =

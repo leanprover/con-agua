@@ -322,3 +322,36 @@ Correctness:
 `div_add`, so the add-back runs the hand-written leaves. The division microbenchmark is unchanged
 by #314 (per extra 2048÷1024-limb division 157.747 M before and 157.748 M after): the add-back
 step is rare.
+
+## Step 10: the bitwise and copy templates
+
+`ConAgua/AsmEsc/BitAsm.lean` (programs) and `BitAsmSim.lean` (proofs):
+* `bitAsm tab f op` serves linleaf's `bitNG op` (`and_n`, `or_n`, `xor_n`): it computes
+  `P[o + i] := A[oa + i] op B[ob + i]` and returns `0`;
+* `copyAsm tab f` serves `copy_n`.
+
+Up front: each window inside its tier and the fuel, else `ca_exhausted`. `n = 0` returns `0`.
+The loops are 6 and 5 instructions per limb (load, `and`/`or`/`xor` from memory, store, `add`,
+`cmp`, `jb`).
+
+L side: `BitL.lean`.
+* `BitSpec` and `CopySpec`, proved for the landed bodies by `bitN_spec` and `copyN_spec`.
+* One loop lemma without a carry: `g0Loop_run` over the model `g0Rows`.
+
+Machine side: `b_step`, `b_loop`, `b_exit`, `bitAsm_sim`, and the `cp_*` lemmas with
+`copyAsm_sim`. New step lemmas: `ev_andRS`, `ev_orRS`, `ev_xorRS` (memory operand) in
+`AsmEsc/Step.lean`, and `ev_bitOpS` over the three. The forms `andq`/`orq`/`xorq MEM, %r` were
+already in the parser and are now used in `checker.s`, so the check-asm gate covers them.
+
+Measured on the landed tree (base master `fbf177187`, linleaf's bitwise group #316):
+* gf3: 37.37 G → 32.56 G instructions (−12.87 %); wall −8.3 % [−12.7, −4.0], p = 0.006;
+* Init unchanged;
+* `B1k` (180 `land`/`lor`/`xor` of 1000-limb operands, each computed twice): −12.5 k instructions
+  per operation (the operands are built by `Nat.sub`, which dominates).
+
+Correctness:
+* `BF`: 228 `Nat.land`/`lor`/`xor` checks, each the correct result `= true` and the result plus
+  one `= false`, on random, all-ones and sparse operands of mixed lengths from 1 to 1000 limbs.
+  All accepted, as on master.
+* Product fuzzer 2100 and division fuzzer 540: the same verdicts as master.
+* `diff-e2e --refs`: 740 agree, 0 REFDIFF.
