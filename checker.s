@@ -143375,7 +143375,7 @@ cmpq 8(%rsp), %rax
 jae .Lca_nat_dec_1E
 movq 8(%rsp), %rax
 subq (%rsp), %rax
-cmpq $4864, %rax
+cmpq $7296, %rax
 jbe .Lca_nat_dec_1E
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
@@ -143557,6 +143557,9 @@ jb ca_exhausted
 call ca_f_nat_dec_split
 movq %rax, 72(%rsp)
 movq %rdi, 80(%rsp)
+movq $1099511627775, %rax
+andq 72(%rsp), %rax
+movq %rax, 88(%rsp)
 movq 24(%rsp), %rcx
 andq $1, %rcx
 shlq $3, %rcx
@@ -143565,10 +143568,10 @@ movq 1504(%rcx), %rax
 cmpq 80(%rsp), %rax
 jb ca_error
 subq 80(%rsp), %rax
-cmpq $0, %rax
+cmpq 88(%rsp), %rax
 jb ca_error
 movq 32(%rcx), %rcx
-movq $0, %rax
+movq 88(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
 movq %rax, %rcx
@@ -143592,15 +143595,15 @@ shlq $3, %rax
 addq %rcx, %rax
 movq %rax, 104(%rsp)
 cmpq 104(%rsp), %rcx
-jae .Lca_nat_dec_big_2222222222222221X
-.Lca_nat_dec_big_2222222222222221L:
+jae .Lca_nat_dec_big_22222222222222221X
+.Lca_nat_dec_big_22222222222222221L:
 movq (%rcx), %rax
 movq %rax, (%rdx)
 addq $8, %rcx
 addq $8, %rdx
 cmpq 104(%rsp), %rcx
-jb .Lca_nat_dec_big_2222222222222221L
-.Lca_nat_dec_big_2222222222222221X:
+jb .Lca_nat_dec_big_22222222222222221L
+.Lca_nat_dec_big_22222222222222221X:
 movq 16(%rsp), %rax
 addq 80(%rsp), %rax
 movq %rax, 35264(%r15)
@@ -143776,9 +143779,9 @@ ret
 ca_f_nat_dec_split:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $352, %rax
+cmpq $360, %rax
 jb ca_exhausted
-subq $176, %rsp
+subq $184, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -143787,13 +143790,13 @@ movq $0, 40(%rsp)
 movq 8(%rsp), %rax
 subq (%rsp), %rax
 movq %rax, 32(%rsp)
-cmpq $4864, 32(%rsp)
+cmpq $7296, 32(%rsp)
 ja .Lca_nat_dec_split_21E
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-addq $176, %rsp
+addq $184, %rsp
 jmp ca_f_nat_dec_chunks
 jmp .Lca_nat_dec_split_21X
 .Lca_nat_dec_split_21E:
@@ -143898,6 +143901,9 @@ movq %rax, 152(%rsp)
 movq $1099511627775, %rax
 andq 64(%rsp), %rax
 movq %rax, 160(%rsp)
+movq $1099511627775, %rax
+andq 136(%rsp), %rax
+movq %rax, 168(%rsp)
 movq 152(%rsp), %rcx
 andq $1, %rcx
 shlq $3, %rcx
@@ -143906,10 +143912,10 @@ movq 1504(%rcx), %rax
 cmpq 144(%rsp), %rax
 jb ca_error
 subq 144(%rsp), %rax
-cmpq $0, %rax
+cmpq 168(%rsp), %rax
 jb ca_error
 movq 32(%rcx), %rcx
-movq $0, %rax
+movq 168(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
 movq %rax, %rcx
@@ -143931,17 +143937,17 @@ movq %rax, %rdx
 movq 144(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
-movq %rax, 168(%rsp)
-cmpq 168(%rsp), %rcx
-jae .Lca_nat_dec_split_222222222222222221X
-.Lca_nat_dec_split_222222222222222221L:
+movq %rax, 176(%rsp)
+cmpq 176(%rsp), %rcx
+jae .Lca_nat_dec_split_2222222222222222221X
+.Lca_nat_dec_split_2222222222222222221L:
 movq (%rcx), %rax
 movq %rax, (%rdx)
 addq $8, %rcx
 addq $8, %rdx
-cmpq 168(%rsp), %rcx
-jb .Lca_nat_dec_split_222222222222222221L
-.Lca_nat_dec_split_222222222222222221X:
+cmpq 176(%rsp), %rcx
+jb .Lca_nat_dec_split_2222222222222222221L
+.Lca_nat_dec_split_2222222222222222221X:
 movq 64(%rsp), %rax
 addq 144(%rsp), %rax
 movq %rax, 35264(%r15)
@@ -143952,7 +143958,7 @@ jmp .Lca_nat_dec_split_0R
 movq $0, %rax
 movq $0, %rdi
 .Lca_nat_dec_split_0R:
-addq $176, %rsp
+addq $184, %rsp
 ret
 ca_f_nat_div_lit:
 movq %rsp, %rax
@@ -225401,7 +225407,7 @@ cmpq 8(%rsp), %rax
 jae .Lca_pre_nat_dec_1E
 movq 8(%rsp), %rax
 subq (%rsp), %rax
-cmpq $4864, %rax
+cmpq $7296, %rax
 jbe .Lca_pre_nat_dec_1E
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
@@ -225583,6 +225589,9 @@ jb ca_exhausted
 call ca_f_pre_nat_dec_split
 movq %rax, 72(%rsp)
 movq %rdi, 80(%rsp)
+movq $1099511627775, %rax
+andq 72(%rsp), %rax
+movq %rax, 88(%rsp)
 movq 24(%rsp), %rcx
 andq $1, %rcx
 shlq $3, %rcx
@@ -225591,10 +225600,10 @@ movq 1504(%rcx), %rax
 cmpq 80(%rsp), %rax
 jb ca_error
 subq 80(%rsp), %rax
-cmpq $0, %rax
+cmpq 88(%rsp), %rax
 jb ca_error
 movq 32(%rcx), %rcx
-movq $0, %rax
+movq 88(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
 movq %rax, %rcx
@@ -225618,15 +225627,15 @@ shlq $3, %rax
 addq %rcx, %rax
 movq %rax, 104(%rsp)
 cmpq 104(%rsp), %rcx
-jae .Lca_pre_nat_dec_big_2222222222222221X
-.Lca_pre_nat_dec_big_2222222222222221L:
+jae .Lca_pre_nat_dec_big_22222222222222221X
+.Lca_pre_nat_dec_big_22222222222222221L:
 movq (%rcx), %rax
 movq %rax, (%rdx)
 addq $8, %rcx
 addq $8, %rdx
 cmpq 104(%rsp), %rcx
-jb .Lca_pre_nat_dec_big_2222222222222221L
-.Lca_pre_nat_dec_big_2222222222222221X:
+jb .Lca_pre_nat_dec_big_22222222222222221L
+.Lca_pre_nat_dec_big_22222222222222221X:
 movq 16(%rsp), %rax
 addq 80(%rsp), %rax
 movq %rax, 35264(%r15)
@@ -225801,9 +225810,9 @@ ret
 ca_f_pre_nat_dec_split:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $352, %rax
+cmpq $360, %rax
 jb ca_exhausted
-subq $176, %rsp
+subq $184, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -225812,13 +225821,13 @@ movq $0, 40(%rsp)
 movq 8(%rsp), %rax
 subq (%rsp), %rax
 movq %rax, 32(%rsp)
-cmpq $4864, 32(%rsp)
+cmpq $7296, 32(%rsp)
 ja .Lca_pre_nat_dec_split_21E
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-addq $176, %rsp
+addq $184, %rsp
 jmp ca_f_pre_nat_dec_chunks
 jmp .Lca_pre_nat_dec_split_21X
 .Lca_pre_nat_dec_split_21E:
@@ -225923,6 +225932,9 @@ movq %rax, 152(%rsp)
 movq $1099511627775, %rax
 andq 64(%rsp), %rax
 movq %rax, 160(%rsp)
+movq $1099511627775, %rax
+andq 136(%rsp), %rax
+movq %rax, 168(%rsp)
 movq 152(%rsp), %rcx
 andq $1, %rcx
 shlq $3, %rcx
@@ -225931,10 +225943,10 @@ movq 1504(%rcx), %rax
 cmpq 144(%rsp), %rax
 jb ca_error
 subq 144(%rsp), %rax
-cmpq $0, %rax
+cmpq 168(%rsp), %rax
 jb ca_error
 movq 32(%rcx), %rcx
-movq $0, %rax
+movq 168(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
 movq %rax, %rcx
@@ -225956,17 +225968,17 @@ movq %rax, %rdx
 movq 144(%rsp), %rax
 shlq $3, %rax
 addq %rcx, %rax
-movq %rax, 168(%rsp)
-cmpq 168(%rsp), %rcx
-jae .Lca_pre_nat_dec_split_222222222222222221X
-.Lca_pre_nat_dec_split_222222222222222221L:
+movq %rax, 176(%rsp)
+cmpq 176(%rsp), %rcx
+jae .Lca_pre_nat_dec_split_2222222222222222221X
+.Lca_pre_nat_dec_split_2222222222222222221L:
 movq (%rcx), %rax
 movq %rax, (%rdx)
 addq $8, %rcx
 addq $8, %rdx
-cmpq 168(%rsp), %rcx
-jb .Lca_pre_nat_dec_split_222222222222222221L
-.Lca_pre_nat_dec_split_222222222222222221X:
+cmpq 176(%rsp), %rcx
+jb .Lca_pre_nat_dec_split_2222222222222222221L
+.Lca_pre_nat_dec_split_2222222222222222221X:
 movq 64(%rsp), %rax
 addq 144(%rsp), %rax
 movq %rax, 35264(%r15)
@@ -225977,7 +225989,7 @@ jmp .Lca_pre_nat_dec_split_0R
 movq $0, %rax
 movq $0, %rdi
 .Lca_pre_nat_dec_split_0R:
-addq $176, %rsp
+addq $184, %rsp
 ret
 ca_f_pre_next_member:
 movq %rsp, %rax
