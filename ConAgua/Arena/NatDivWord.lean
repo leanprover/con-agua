@@ -9,6 +9,7 @@ import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.Logic
+import ConAgua.L.For
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -38,16 +39,31 @@ open scoped Lean.Order
 
 namespace L.Arena
 
+/-- `div_norm`'s first halving step. -/
+def nrmFirst : Stmt := lblk (x, s) {
+  if x < 0x100000000 { x := x << 32; s := 32 }
+}
+
+/-- A middle halving step of `div_norm`: shift by `k` below `c = 2^(64 - k)`. -/
+def nrmStep (c k : Word) : Stmt := lblk (x, s) {
+  if x < ⟪c⟫ { x := x << ⟪k⟫; s := s + ⟪k⟫ }
+}
+
+/-- `div_norm`'s last step: count the top bit. -/
+def nrmLast : Stmt := lblk (x, s) {
+  if x < 0x8000000000000000 { s := s + 1 }
+}
+
 /-- `div_norm(x)`: the left shift `s ≤ 63` that sets the top bit of `x ≠ 0` (con-ron's
 `norm_shift`), in six halving steps. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def divNorm : FunDecl := lfn (x) locals (s) {
-  if x < 0x100000000 { x := x << 32; s := 32 };
-  if x < 0x1000000000000 { x := x << 16; s := s + 16 };
-  if x < 0x100000000000000 { x := x << 8; s := s + 8 };
-  if x < 0x1000000000000000 { x := x << 4; s := s + 4 };
-  if x < 0x4000000000000000 { x := x << 2; s := s + 2 };
-  if x < 0x8000000000000000 { s := s + 1 };
+  ⟪nrmFirst⟫;
+  ⟪nrmStep 0x1000000000000 16⟫;
+  ⟪nrmStep 0x100000000000000 8⟫;
+  ⟪nrmStep 0x1000000000000000 4⟫;
+  ⟪nrmStep 0x4000000000000000 2⟫;
+  ⟪nrmLast⟫;
   return s
 }
 
@@ -75,12 +91,24 @@ Granlund's `v`): the tangent of `1/x` at `3/4` (from below, about 3 bits), five 
 the speed of `div_2by1` depends on the estimate. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def divRecip : FunDecl := lfn (d) locals (v, t, l, h, e, j, k) {
-  ⟪rcpInit⟫;
+  t := 0 - 1 - d;
+  t := t + mulhi(t, 0xC71C71C71C71C71C);
+  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
   k := 5;
   ⟪rcpLoop⟫;
   (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
   return v
 }
+
+/-- `div_recip` after the tangent. -/
+def rcpTail : Stmt := lblk (d, v, t, l, h, e, j, k) {
+  k := 5;
+  ⟪rcpLoop⟫;
+  (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
+  return v
+}
+
+private theorem divRecip_body : divRecip.body = rcpInit.snoc rcpTail := rfl
 
 /-- `div_2by1`'s estimate (Möller and Granlund's, with two corrections). -/
 def d2Est : Stmt := lblk (u1, u0, d, v, q, q0, r, plo, phi, t) {
@@ -116,7 +144,11 @@ down while `q · d > u` and up while the remainder is at least `d`, so the resul
 whatever `v` is (with the true reciprocal neither loop runs). -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def div2by1 : FunDecl := lfn (u1, u0, d, v) locals (q, q0, r, plo, phi, t) {
-  ⟪d2Est⟫;
+  q0 := v * u1 + u0;
+  q := mulhi(v, u1) + u1 + u64(q0 < u0) + 1;
+  r := u0 - q * d;
+  if q0 < r { q := q - 1; r := r + d };
+  if d <= r { q := q + 1 };
   plo := q * d;
   phi := mulhi(q, d);
   ⟪d2Down⟫;
@@ -126,7 +158,66 @@ whatever `v` is (with the true reciprocal neither loop runs). -/
   return (q, r)
 }
 
+/-- `div_2by1` after the estimate. -/
+def d2Tail : Stmt := lblk (u1, u0, d, v, q, q0, r, plo, phi, t) {
+  plo := q * d;
+  phi := mulhi(q, d);
+  ⟪d2Down⟫;
+  r := u0 - plo;
+  t := u1 - phi - u64(u0 < plo);
+  ⟪d2Up⟫;
+  return (q, r)
+}
+
+private theorem div2by1_body : div2by1.body = d2Est.snoc d2Tail := rfl
+
 /-! ## `div_2by1`'s loops -/
+
+example : divNorm = (lfn (x) locals (s) {
+  if x < 0x100000000 { x := x << 32; s := 32 };
+  if x < 0x1000000000000 { x := x << 16; s := s + 16 };
+  if x < 0x100000000000000 { x := x << 8; s := s + 8 };
+  if x < 0x1000000000000000 { x := x << 4; s := s + 4 };
+  if x < 0x4000000000000000 { x := x << 2; s := s + 2 };
+  if x < 0x8000000000000000 { s := s + 1 };
+  return s
+}) := rfl
+example : divRecip = (lfn (d) locals (v, t, l, h, e, j, k) {
+  t := 0 - 1 - d;
+  t := t + mulhi(t, 0xC71C71C71C71C71C);
+  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
+  k := 5;
+  for j < k {
+    l := d * v;
+    h := d + mulhi(d, v);
+    e := 0 - h - u64(l != 0);
+    v := v + e + mulhi(v, e)
+  };
+  (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
+  return v
+}) := rfl
+example : div2by1 = (lfn (u1, u0, d, v) locals (q, q0, r, plo, phi, t) {
+  q0 := v * u1 + u0;
+  q := mulhi(v, u1) + u1 + u64(q0 < u0) + 1;
+  r := u0 - q * d;
+  if q0 < r { q := q - 1; r := r + d };
+  if d <= r { q := q + 1 };
+  plo := q * d;
+  phi := mulhi(q, d);
+  while u1 < phi || (phi == u1 && u0 < plo) {
+    q := q - 1;
+    phi := phi - u64(plo < d);
+    plo := plo - d
+  };
+  r := u0 - plo;
+  t := u1 - phi - u64(u0 < plo);
+  while t != 0 || d <= r {
+    q := q + 1;
+    t := t - u64(r < d);
+    r := r - d
+  };
+  return (q, r)
+}) := rfl
 
 section loops
 variable (p : Prog)
@@ -323,11 +414,13 @@ theorem div2by1_spec (n : Nat) (s₀ : St) (u1 u0 d v : Word) (hlt : u1.toNat < 
       (r.headD 0).toNat * d.toNat + (r.tail.headD 0).toNat = u1.toNat * 2 ^ 64 + u0.toNat ∧
       (r.tail.headD 0).toNat < d.toNat; ⊤⦄ := by
   rw [invoke_eq _ hp2]
-  simp only [callFn, div2by1]
+  simp only [callFn, div2by1_body]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, d2Est_spec p n,
+    simp only [exec, step_snoc]
+    unfold d2Tail
+    vcgen [ step, evalE, evalC, evalArgs, setLoc, setLocs, d2Est_spec p n,
       d2Down_step_spec p s₀.mem d.toNat (u1.toNat * 2 ^ 64 + u0.toNat) n,
       d2Up_step_spec p s₀.mem d.toNat (u1.toNat * 2 ^ 64 + u0.toNat) n]
     all_goals (try simp only [D2DownInv, D2DownPost, D2UpInv, D2UpPost, St.setLoc_loc, St.setLoc_mem,
@@ -345,11 +438,13 @@ theorem divRecip_spec (n : Nat) (s₀ : St) (d : Word) (hd : 2 ^ 63 ≤ d.toNat)
     invoke p (exec p n) "div_recip" [d]
     ⦃fun _ s' => s' = s₀; ⊤⦄ := by
   rw [invoke_eq _ hpr]
-  simp only [callFn, divRecip]
+  simp only [callFn, divRecip_body]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rcpInit_spec p n,
+    simp only [exec, step_snoc]
+    unfold rcpTail
+    vcgen [ step, evalE, evalC, evalArgs, setLoc, setLocs, rcpInit_spec p n,
       rcpLoop_step_spec p s₀.mem d n,
       div2by1_spec p hp2 n]
     all_goals (try simp only [RcpInv, RcpPost, St.setLoc_loc, St.setLoc_mem, St.setLocs_cons,
