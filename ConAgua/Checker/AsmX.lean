@@ -5,6 +5,7 @@ public import ConAgua.AsmEsc.DivSubmulAsm
 public import ConAgua.AsmEsc.Chain1
 public import ConAgua.AsmEsc.NatMadAsm
 public import ConAgua.AsmEsc.NatCmpAsm
+public import ConAgua.AsmEsc.BitAsm
 public import ConAgua.Checker.ProgTab
 public import ConAgua.Checker.AsmKeys
 
@@ -42,7 +43,9 @@ def checkerX : AsmTab :=
    (divSubmulCode, divSubmulAsm checkerTab),
    (addNCode, chain2Asm checkerTab "add_n" false), (add1Code, chain1Asm checkerTab "add_1" false),
    (subNCode, chain2Asm checkerTab "sub_n" true), (sub1Code, chain1Asm checkerTab "sub_1" true),
-   (natMadCode, natMadAsm checkerTab), (natCmpCode, natCmpAsm checkerTab)]
+   (natMadCode, natMadAsm checkerTab), (natCmpCode, natCmpAsm checkerTab),
+   (andNCode, bitAsm checkerTab "and_n" .and), (orNCode, bitAsm checkerTab "or_n" .or),
+   (xorNCode, bitAsm checkerTab "xor_n" .xor), (copyNCode, copyAsm checkerTab "copy_n")]
 
 /-- The inliner's exclusion list is `checkerX`'s keys. -/
 theorem checkerX_keys : checkerX.map (·.1) = checkerXKeys := rfl
