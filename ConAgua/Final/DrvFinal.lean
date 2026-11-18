@@ -12,7 +12,6 @@ public import ConAgua.Checker.AsmX
 import ConAgua.Checker.ProgWf
 import ConAgua.Checker.CheckARun
 public import ConAgua.Checker.ProgI
-public import ConAgua.Checker.ProgTab
 public import ConAguaAsm.Checker
 import all ConAgua.Checker.Entry
 import ConAgua.Checker.DefnArmT

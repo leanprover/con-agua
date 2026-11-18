@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Compiler.StepGen
+public import ConAgua.Compiler.Step
 import Kraken.X64.Registers
 import Kraken.X64.WP.Basic
 

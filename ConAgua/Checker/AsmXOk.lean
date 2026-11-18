@@ -6,7 +6,6 @@ import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Compiler.InlineCorrect
-import ConAgua.Compiler.WFFast
 import all ConAgua.Arena.NatMul
 
 @[expose] public section
