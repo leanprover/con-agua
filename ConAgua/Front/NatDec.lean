@@ -1,9 +1,9 @@
 module
 
-public import ConAgua.Arena.SlotGrow
 public import ConAgua.Front.Fields
 public import Std.Data.DTreeMap.Internal.Operations
 import Std.WP.Triple.SpecLemmas
+public import ConAgua.Arena.CallF
 import ConAgua.Arena.GrindAttr
 import ConAgua.Census.Attr
 import ConAgua.L.GrindAttr
@@ -11,6 +11,7 @@ import Std.Tactic.BVDecide.Normalize.BitVec
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 meta import ConAgua.Arena.SlotGrow
+meta import ConAgua.Arena.NatMul
 meta import ConAgua.Front.Fields
 meta import Std.Data.DTreeMap.Internal.Operations
 meta import Std.WP.Triple.SpecLemmas
@@ -26,25 +27,36 @@ meta import Std.WP.Tactic
 /-!
 # Decimal `Nat` literals into the limb pool: `nat_dec(c, d)`
 
-con-ron's `frontend/nat_decimal.rs` (`from_decimal`, `from_decimal_go`, `mul_add_small`): the
-digits `[c, d)` of the input are read nineteen at a time (`10^19 < 2^64`), and each chunk is
-folded into the limbs by one multiply-add pass, `limbs := limbs * 10^k + chunk`. In L the limbs
-are a slice at the pool top that grows in place:
+con-ron's `frontend/nat_decimal.rs` (`from_decimal`, `read_chunks`, `read_split`,
+`power_table`, `mul_add_small`). A literal of at most `decBase` digits is read nineteen at a time
+(`10^19 < 2^64`), and each chunk is folded into the limbs by one multiply-add pass,
+`limbs := limbs * 10^k + chunk`. In L the limbs are a slice at the pool top that grows in place:
 
 * `dec_chunk(i, k)`: the value `ch` of the `k ≤ 19` digits at `i`, and `pw = 10^k`.
 * `nat_mad(o, n, w, y)`: the slice `(o, n)` becomes `(o, n) * w + y` in place, the carry out is
   returned (Rust's `u128` accumulator as the low word `x * w + y` and the high word
-  `mulhi(x, w) + u64(lo < y)`). This is the helper lane `nat` has no copy of yet
-  (`mul_add_small`); it belongs with `NatMul.lean`.
-* `nat_dec(c, d)`: the chunk loop; a non-zero carry is one more limb at the end (abort when the
-  pool is full); then the top moves past the slice, which is returned as `(top, n)`.
+  `mulhi(x, w) + u64(lo < y)`).
+* `nat_dec_chunks(c, d)`: the chunk loop; a non-zero carry is one more limb at the end (abort
+  when the pool is full); then the top moves past the slice, which is returned as `(top, n)`.
 
 The limbs are normalised throughout (no leading zero limb is ever written: the carry limb is
 non-zero, and a product of a normalised slice by `10^k ≥ 1` keeps its top limb non-zero).
 
-Each L function's spec is an equation about a named model (`chunkN`, `madW`, `decW`); the
-facts about the models are proved by hand below them, and `natDec_spec` relates the result to
-con-leche's `readNatAt` on a literal the scanner accepted (`NatValR`).
+A longer literal is divided and conquered, `O(M(n) log n)` with `M` the cost of `nat_mul`:
+
+* `nat_dec_big(c, d)`: the table of `P[t] = 10^(19 · 2^t)` (by squaring with `nat_mul`; its
+  index of `(address, length)` pairs at the old top), then `nat_dec_split`, whose result is
+  copied down to the old top.
+* `nat_dec_split(c, d, tbl, k)`: at most `decBase` digits by `nat_dec_chunks`; otherwise
+  `hi · P[t] + lo` (`nat_mul`, `nat_add`) for the low part of exactly `dd = 19 · 2^t` digits,
+  the largest with `4 dd ≤ d - c`, the sum copied down to the top it started from.
+* `nat_dec(c, d)`: the dispatch.
+
+The chunk loop's L functions have specs that are equations about named models (`chunkN`, `madW`,
+`decW`, `natChunksW`), with facts proved by hand in `NatDecLink.lean`. The long path's model is
+`nat_dec_big`'s run in `natDecProg` (`callF`; `NatDecBig.lean` has the generated models over
+`callW`, and `NatDecBigVal.lean` their values). `natDecW_val` relates the result to con-leche's
+`readNatAt` on a literal the scanner accepted (`NatValR`).
 -/
 
 set_option experimental.vcgen true
@@ -56,6 +68,9 @@ open L.Arena
 namespace L.Front
 
 open L.Scan.Utf8 (byteW)
+
+/-- The longest literal `nat_dec` reads by the chunk loop alone (measured, docs/design/bigdec.md). -/
+abbrev decBase : Word := 7296
 
 /-! ## `dec_chunk(i, k)` -/
 
@@ -184,9 +199,7 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy, pt, pb) {
 }
 
 /-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
--- con-leche: ConLeche/Frontend/Scan/Fast.lean:103-112 ConLeche.Frontend.readNat
-@[no_expose, l_impl ConLeche.Frontend.readNat64 ConLeche.Frontend.readNat]
-def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
+@[no_expose] def natDecChunks : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
   top := CTL.u64[0];
   pt := ⦃top⦄.tier;
   pb := ⦃top⦄.idx;
@@ -195,6 +208,90 @@ def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy, pt, pb) {
   ⟪decLoop⟫;
   CTL.u64[0] := top + n;
   return (top, n)
+}
+
+/-! ## Long literals: divide and conquer (`nat_dec_split`, `nat_dec_big`) -/
+
+/-- `nat_dec_split(c, d, tbl, k)`: the value of the digits `[c, d)` appended at the pool top,
+`(top, len)`. At most `decBase` digits: the chunk loop. Longer: with `dd = 19 · 2^t` the largest
+with `4 dd ≤ len`, the high part `[c, d - dd)` times `10^dd` (the table's entry `t` at `tbl`, two
+words `(address, length)` each; `t < k`) plus the low part `[d - dd, d)`, by `nat_mul` and
+`nat_add`; the sum is copied down to the old top. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `frontend/nat_decimal.rs` `read_split`); the twin computes on `Nat`
+@[no_expose] def natDecSplit : FunDecl :=
+  lfn (c, d, tbl, k) locals (n, t, dd, m, top, oh, lh, ol, ll, po, pl, op, lp, os, ls, pt, pb, si) {
+  n := d - c;
+  if n <= ⟪decBase⟫ {
+    (oh, lh) := call nat_dec_chunks(c, d);
+    return (oh, lh)
+  };
+  dd := 19;
+  while dd + dd <= n - dd - dd { dd := dd + dd; t += 1 };
+  if k <= t { abort };
+  m := d - dd;
+  top := CTL.u64[0];
+  (oh, lh) := call nat_dec_split(c, m, tbl, k);
+  (ol, ll) := call nat_dec_split(m, d, tbl, k);
+  po := POOL⦃tbl + t + t⦄;
+  pl := POOL⦃tbl + t + t + 1⦄;
+  op := CTL.u64[0];
+  lp := call nat_mul(oh, lh, po, pl);
+  os := CTL.u64[0];
+  ls := call nat_add(op, lp, ol, ll);
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  si := ⦃os⦄.idx;
+  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, si, ls);
+  CTL.u64[0] := top + ls;
+  return (top, ls)
+}
+
+/-- `nat_dec_big(c, d)`: the power table `10^(19 · 2^t)` for every `t` with `4 · 19 · 2^t ≤ d - c`
+(and `t = 0`), by squaring with `nat_mul`, then `nat_dec_split`; the result is copied down to
+the old top. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `frontend/nat_decimal.rs` `power_table`); the twin computes on `Nat`
+@[no_expose] def natDecBig : FunDecl := lfn (c, d) locals (top, pt, pb, n, k, dd, i, o, l, s, r) {
+  top := CTL.u64[0];
+  pt := ⦃top⦄.tier;
+  pb := ⦃top⦄.idx;
+  n := d - c;
+  k := 1;
+  dd := 19;
+  while dd + dd <= n - dd - dd { dd := dd + dd; k += 1 };
+  if len(POOL⟨pt⟩) < pb + k + k + 1 { abort };
+  POOL⟨pt⟩[pb + k + k] := 10000000000000000000;
+  POOL⟨pt⟩[pb] := top + k + k;
+  POOL⟨pt⟩[pb + 1] := 1;
+  CTL.u64[0] := top + k + k + 1;
+  i := 1;
+  while i < k {
+    o := POOL⟨pt⟩[pb + i + i - 2];
+    l := POOL⟨pt⟩[pb + i + i - 1];
+    s := CTL.u64[0];
+    r := call nat_mul(o, l, o, l);
+    POOL⟨pt⟩[pb + i + i] := s;
+    POOL⟨pt⟩[pb + i + i + 1] := r;
+    i += 1
+  };
+  (o, l) := call nat_dec_split(c, d, top, k);
+  s := ⦃o⦄.idx;
+  copy!(POOL.u64⟨pt⟩, pb, POOL.u64⟨pt⟩, s, l);
+  CTL.u64[0] := top + l;
+  return (top, l)
+}
+
+/-- `nat_dec(c, d)`: at most `decBase` digits by the chunk loop, longer ones by
+`nat_dec_big`.
+con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:103-112 ConLeche.Frontend.readNat
+@[no_expose, l_impl ConLeche.Frontend.readNat64 ConLeche.Frontend.readNat]
+def natDec : FunDecl := lfn (c, d) locals (o, l) {
+  if c < d && ⟪decBase⟫ < d - c {
+    (o, l) := call nat_dec_big(c, d)
+  } else {
+    (o, l) := call nat_dec_chunks(c, d)
+  };
+  return (o, l)
 }
 
 /-- The chunk length at `i`: at most nineteen digits. -/
@@ -265,13 +362,40 @@ def finK (top : Word) : Option (Mem × Word) → Option (List Word × Mem)
 @[lang_grind =] theorem finK_some (top n : Word) (m₁ : Mem) :
     finK top (some (m₁, n)) = some ([top, n], m₁.set64 CTL 0 (top + n)) := rfl
 
-/-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts. -/
-def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
+/-- The model of `nat_dec_chunks(c, d)`: the result and the memory, `none` where it aborts. -/
+def natChunksW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
   if m.len64 (tierA POOL (rdW (m.arr64 CTL) 0 >>> 40)) < (rdW (m.arr64 CTL) 0 &&& 1099511627775) then none
   else finK (rdW (m.arr64 CTL) 0) (decW b m (rdW (m.arr64 CTL) 0) 0 c d)
 
-/-- The three functions, as one `#eval`-able program. -/
-def natDecProg : Prog := [("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec)]
+/-- The functions of `nat_dec`, with the pool's `nat_mul` and `nat_add`, as one program. -/
+def natDecProg : Prog := L.Arena.natMulProg ++ [("dec_chunk", decChunk), ("nat_mad", natMad),
+  ("nat_dec_chunks", natDecChunks), ("nat_dec_split", natDecSplit), ("nat_dec_big", natDecBig),
+  ("nat_dec", natDec)]
+
+/-- `nat_dec`'s two results, `return (o, l)`. -/
+def decPair : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
+  | none => none
+
+@[lang_grind =] theorem decPair_none : decPair none = none := rfl
+@[lang_grind =] theorem decPair_some (r : List Word) (m : Mem) :
+    decPair (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
+
+/-- `natDecW` for `#eval`: `callF` as a run at fuel `2 ^ 64`. -/
+def natDecWEval (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
+  decPair (if c < d ∧ decBase < d - c then
+      (if m.arr8 IN = b then callW natDecProg (2 ^ 64) "nat_dec_big" [c, d] m else none)
+    else natChunksW b m c d)
+
+/-- **The model of `nat_dec(c, d)`**: the result and the memory, `none` where it aborts; a
+long literal is `nat_dec_big`'s run in `natDecProg` (`callF`, `CallF.lean`: the same at every
+fuel, in every program that binds `natDecProg`'s functions alike), on the input `b` (the spec's
+precondition). Evaluated as `natDecWEval`. -/
+@[implemented_by natDecWEval]
+def natDecW (b : Array UInt8) (m : Mem) (c d : Word) : Option (List Word × Mem) :=
+  decPair (if c < d ∧ decBase < d - c then
+      (if m.arr8 IN = b then callF natDecProg "nat_dec_big" m [c, d] else none)
+    else natChunksW b m c d)
 
 /- `12345678901234567890123` (23 digits, two chunks) at pool top 1: limbs
 `[4807115922877859019, 669]` at 1, the top moves to 3. -/
@@ -293,7 +417,7 @@ def natDecProg : Prog := [("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_de
 section specs
 variable (p : Prog) (b : Array UInt8)
   (hpc : p.lookup "dec_chunk" = some decChunk) (hpm : p.lookup "nat_mad" = some natMad)
-  (hpd : p.lookup "nat_dec" = some natDec)
+  (hpd : p.lookup "nat_dec_chunks" = some natDecChunks)
 
 theorem chunkLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -391,18 +515,18 @@ theorem decLoop_step_spec (n : Nat) (s₀ : St) :
 
 include hpc hpm hpd in
 /-- **`nat_dec(c, d)`'s model equation.** -/
-theorem natDec_specW (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c d : Word) :
+theorem natDecChunks_specW (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (c d : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_dec" [c, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ natDecW b s₀.mem c d = some (r, s'.mem); ⊤⦄ := by
+    invoke p (exec p n) "nat_dec_chunks" [c, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ natChunksW b s₀.mem c d = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hpd]
-  simp only [callFn, natDec]
+  simp only [callFn, natDecChunks]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        decLoop_step_spec p b hpc hpm n] <;> finish [natDecW, rdW]
+        decLoop_step_spec p b hpc hpm n] <;> finish [natChunksW, rdW]
 
 end specs
 

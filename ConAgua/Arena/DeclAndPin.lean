@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.DeclBase
-import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.BitVec

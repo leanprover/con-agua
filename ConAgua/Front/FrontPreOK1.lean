@@ -185,13 +185,33 @@ theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m
         (DK.tset64 _ _ _ _)).trans (ih _ _ h))
     | (rename_i ih; exact (madW_dk _ _ _ _ _ _).trans (ih _ _ h))
 
-theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
-    (h : natDecW b m c d = some (r, m')) : DK m m' := by
-  unfold natDecW at h
+theorem natChunksW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : natChunksW b m c d = some (r, m')) : DK m m' := by
+  unfold natChunksW at h
   split at h; cases h
   rcases hL : decW b m (rdW (m.arr64 CTL) 0) 0 c d with _ | ⟨m₁, k⟩ <;> simp only [hL, finK, reduceCtorEq] at h
   cases h
   exact (decW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
+
+theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : natDecW b m c d = some (r, m')) : DK m m' := by
+  unfold natDecW at h
+  split at h
+  · split at h
+    · rcases hF : callF natDecProg "nat_dec_big" m [c, d] with _ | ⟨r₀, m₀⟩
+      · rw [hF, decPair_none] at h; cases h
+      rw [hF, decPair_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      have hF' := natDecBig_frame hF
+      exact ⟨hF'.arr _ (by decide) (by decide), hF'.arr _ (by decide) (by decide)⟩
+    · rw [decPair_none] at h; cases h
+  · rcases hC : natChunksW b m c d with _ | ⟨r₀, m₀⟩
+    · rw [hC, decPair_none] at h; cases h
+    rw [hC, decPair_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact natChunksW_dk hC
 
 theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' → DK m m' := by

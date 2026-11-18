@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Front.IndApply
 import ConAgua.L.ModelGen
-public import ConAgua.Arena.LevelEquiv
 public import ConAgua.Front.IndAlloc
 public import ConAgua.Arena.IndView
 public import ConAgua.Front.ApplyDecl

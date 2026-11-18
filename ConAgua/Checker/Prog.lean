@@ -70,9 +70,6 @@ public import ConAgua.Arena.NatArms
 public import ConAgua.Arena.NatBits
 public import ConAgua.Arena.NatCmp
 public import ConAgua.Arena.NatDiv
-public import ConAgua.Arena.NatDivKstep
-public import ConAgua.Arena.NatDivSubmul
-public import ConAgua.Arena.NatDivWord
 public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.NatMul
 public import ConAgua.Arena.NatPow
@@ -156,7 +153,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1819 functions, 0 of them stubs.
+1821 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -166,7 +163,7 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := []
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (96; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's bytes (99; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
   "apply_decl",
@@ -222,6 +219,9 @@ def preNames : List String := [
   "match_lit",
   "match_word",
   "nat_dec",
+  "nat_dec_big",
+  "nat_dec_chunks",
+  "nat_dec_split",
   "next_member",
   "node_const",
   "node_lit",
@@ -268,9 +268,10 @@ def preNames : List String := [
 
 def preTree : NTree := nameTree preNames
 
-/-- The functions reachable from `front_run` that are not copied (139): the copies call them
+/-- The functions reachable from `front_run` that are not copied (151): the copies call them
 unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
 def preShared : List String := [
+  "add_carry",
   "app_find",
   "app_push",
   "apply_level",
@@ -332,6 +333,9 @@ def preShared : List String := [
   "intern_sort",
   "intern_succ",
   "intern_zero",
+  "kara_mid",
+  "kara_prods",
+  "kara_sum",
   "lam_find",
   "lam_push",
   "letE_find",
@@ -359,13 +363,20 @@ def preShared : List String := [
   "mk_lam",
   "mk_let",
   "mk_proj",
+  "mul_row",
+  "mul_win",
+  "mul_zeros",
   "name_fresh",
   "name_get",
   "name_put",
   "name_rec_pre",
   "nanon_find",
   "nanon_push",
+  "nat_add",
+  "nat_limb",
   "nat_mad",
+  "nat_mul",
+  "nat_trim",
   "nnum_find",
   "nnum_push",
   "node_bin",
@@ -386,6 +397,7 @@ def preShared : List String := [
   "sort_push",
   "store_fuel",
   "sub_bit",
+  "sub_row",
   "succ_find",
   "succ_push",
   "utf8_put",
@@ -861,10 +873,7 @@ def checkerProg : Prog := [
   ("der_bv", L.Arena.derBv),
   ("dind_alloc", L.Front.Ind.dindAlloc),
   ("dind_copy", L.Arena.dindCopy),
-  ("div_2by1", L.Arena.div2by1),
   ("div_add", L.Arena.divAdd),
-  ("div_kstep", L.Arena.divKstep),
-  ("div_mod1", L.Arena.divMod1),
   ("div_mod_cert_applied", L.Ind.divModCertAppliedL),
   ("div_mod_cert_guard", L.Ind.divModCertGuardL),
   ("div_mod_cert_proofs", L.Ind.divModCertProofsL),
@@ -877,10 +886,9 @@ def checkerProg : Prog := [
   ("div_mod_pin_guard", L.Ind.divModPinGuardL),
   ("div_mod_slot", L.Ind.divModSlot),
   ("div_mod_type_pins", L.Ind.divModTypePinsL),
-  ("div_modk", L.Arena.divModK),
-  ("div_norm", L.Arena.divNorm),
-  ("div_recip", L.Arena.divRecip),
-  ("div_submul", L.Arena.divSubmul),
+  ("div_shl1", L.Arena.divShl1),
+  ("div_step", L.Arena.divStep),
+  ("div_sub", L.Arena.divSub),
   ("dlp_copy", L.Arena.dlpCopy),
   ("dp_clear", L.Arena.memoClearG L.Ind.dpSch),
   ("dp_find", L.Arena.memoFindG L.Ind.dpSch),
@@ -1516,6 +1524,9 @@ def checkerProg : Prog := [
   ("nat_ble_lit", L.Arena.natBleLit),
   ("nat_cmp", L.Arena.natCmp),
   ("nat_dec", L.Front.natDec),
+  ("nat_dec_big", L.Front.natDecBig),
+  ("nat_dec_chunks", L.Front.natDecChunks),
+  ("nat_dec_split", L.Front.natDecSplit),
   ("nat_div_lit", L.Arena.natDivLit),
   ("nat_div_mod_names", L.Ind.natDivModNamesL),
   ("nat_divmod", L.Arena.natDivmod),
@@ -2189,6 +2200,9 @@ def checkerProg : Prog := [
   ("pre_match_lit", preFn preTree (L.Scan.Lit.matchLit)),
   ("pre_match_word", preFn preTree (L.Scan.Values.matchWord)),
   ("pre_nat_dec", preFn preTree (L.Front.natDec)),
+  ("pre_nat_dec_big", preFn preTree (L.Front.natDecBig)),
+  ("pre_nat_dec_chunks", preFn preTree (L.Front.natDecChunks)),
+  ("pre_nat_dec_split", preFn preTree (L.Front.natDecSplit)),
   ("pre_next_member", preFn preTree (L.Scan.Member.nextMember)),
   ("pre_node_const", preFn preTree (L.Front.nodeConst)),
   ("pre_node_lit", preFn preTree (L.Front.nodeLit)),
