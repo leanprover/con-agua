@@ -49,6 +49,57 @@ round is a lemma in the goal's shape (`hash_round8`, explicit rewrites), the tai
 
 Verdicts: `diff-e2e.py --refs` 740 agree, 0 REFDIFF.
 
+Wall time (12 paired interleaved rounds, load 35–58, unpinned): gf3 2.689 s → 2.302 s (medians),
+mean −5.3 % [−19.1, +10.8], Wilcoxon p = 0.42: not significant on this machine; Init +0.9 %
+[−7.7, +10.3], p = 0.91 (no change expected).
+
+## Step 2: hand-written `lit_hash`
+
+**Code** (`ConAgua/AsmEsc/LitHashAsm.lean`, `litHashAsm`). `l = 0` returns the offset basis at
+once. Otherwise, up front: decode the tag (tier bit, 40-bit index `x`), then `x + l < 2^40`, the
+window inside the tier (`len - x ≥ l`, no wrap) and `l` units of fuel; any failed check goes to
+`ca_exhausted`, which the contract always allows (L's own `sliceRes` abort for a slice crossing a
+tier becomes exhaustion there). The loop is 5 instructions per limb:
+
+```
+.L: xorq (%rdi), %rax; imulq %rsi, %rax; addq $8, %rdi; decq %r8; jne .L
+```
+
+(`rdi` the address of the next limb, `r8` the limbs left, `rsi` the FNV prime). The loop is
+latency-bound (`xor` + `imul` per limb), so unrolling it would save instructions but hardly time.
+
+**Forms.** None new: `xorq (%rdi), %rax` (ALU with a memory operand at offset 0), `imulq %r, %r`,
+`decq` and `jne` were all parsed and in `checker.s` already; the check-asm gate passes.
+
+**Proof** (standard axioms only; each file elaborates in about 1.5 s, under 1 GB).
+* `ConAgua/AsmEsc/LitHashL.lean` (263 lines). The model `lhRows A x h r` (one FNV step per word of
+  the tier array, from index `x`), `lhRows_add`. `hB8_run` (one round of `hashLoop8`), `hl8_run`
+  and `hT_run` (the two loops, by induction on the rounds or limbs left), `sliceRes_run`, and
+  `litHash_run`: at fuel `F > l`, with the window in its tier below `2^40` (or `l = 0`), the run
+  returns `lhRows` of the window and leaves the state unchanged.
+* `ConAgua/AsmEsc/LitHashAsm.lean` (330 lines). `lh_step` (one loop iteration: a load through
+  `MemRel.get64` at the pointer, `xor`, `imul`, the pointer and count steps, the branch),
+  `lh_loop` (induction on the limbs left), `lh_tail` (the return), and `litHashAsm_sim`
+  (prologue and composition): `FnSimAt p G sk n "lit_hash" litHash kf`.
+* `ConAgua/Checker/AsmKeys.lean` (`litHashCode`), `AsmX.lean` (`checkerX`), `AsmXOk.lean`
+  (`nameCode_lit_hash`, `checkerProgI_litHash`, the arm of `checkerX_ok`).
+
+**Measured** (base master `6a44a928c` + step 1; the landed `checker.s` gives the same counts as
+the prototype up to 3 M instructions, `decq` instead of `subq $1`):
+
+| | master | step 1 | step 2 |
+|---|---:|---:|---:|
+| gf3 instructions | 32.556 G | 28.756 G | 26.104 G (−9.2 % vs step 1, −19.8 % vs master) |
+| Init instructions | 202.647 G | 202.635 G | 202.593 G (−0.03 % vs master) |
+
+Wall, gf3 (30 paired interleaved rounds pinned to CPUs 92–93, load about 40, means of the paired
+log ratios with 95 % intervals, Wilcoxon signed-rank, normal approximation): step 1 against master
+−1.7 % [−9.8, +7.1], p = 0.75; step 2 against step 1 −6.7 % [−13.8, +0.9], p = 0.11; both against
+master −8.3 % [−14.8, −1.4], p = 0.013 (medians 2.081 s → 2.087 s → 2.021 s). The machine is too
+loaded for the per-step differences; instructions are the measure here.
+
+Verdicts: `diff-e2e.py --refs` 740 agree, 0 REFDIFF (references from the verdict cache).
+
 ## What went wrong
 
 * Scratch proofs in a **non-module** file (plain `import ConAgua.Arena.Store`) blew up: a
