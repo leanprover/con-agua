@@ -362,7 +362,7 @@ def cdFns : List FnName :=
     "nat_beq_lit", "nat_bin_op_of_name", "nat_bin_op_result", "nat_ble_lit", "nat_cmp", "nat_div_lit", "nat_div_mod_names",
     "nat_divmod", "nat_eq_be", "nat_eq_bl", "nat_eq_ctx", "nat_eq_disp", "nat_eq_list2",
     "nat_eq_list3", "nat_eq_list4", "nat_eq_mu", "nat_eq_po", "nat_eq_pr", "nat_eq_un", "nat_gcd",
-    "nat_gcd_lit", "nat_ind_ok", "nat_land", "and_n", "nat_land_lit", "nat_limb", "nat_lit_supported", "nat_lit_to_ctor", "nat_lor", "or_n", "copy_n", "nat_lor_lit", "nat_mod_lit", "nat_mul",
+    "nat_gcd_lit", "nat_ind_ok", "nat_land", "and_n", "nat_land_lit", "nat_lit_supported", "nat_lit_to_ctor", "nat_lor", "or_n", "copy_n", "nat_lor_lit", "nat_mod_lit", "nat_mul",
     "nat_mul_lit", "nat_one", "nat_op_bool_ctors", "nat_op_cod", "nat_op_deps",
     "nat_op_deps_stored", "nat_op_equations", "nat_op_guard", "nat_op_name",
     "nat_op_names", "nat_op_pins", "nat_op_pins_a", "nat_op_pins_b", "nat_op_pins_c",

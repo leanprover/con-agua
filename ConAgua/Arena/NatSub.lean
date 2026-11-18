@@ -19,11 +19,10 @@ import ConAgua.Front.Preserve
 # Truncated subtraction on the limb pool: `nat_sub`
 
 `nat_sub(oa, la, ob, lb)` is Lean's `a - b` (`0` when `a < b`), con-ron's `sub`/`sub_from`
-(`ron/nat.rs:270-300`). con-ron compares first (`cmp`) and runs the ripple borrow only when
-`a > b`; here the ripple borrow runs over `max la lb` limbs (`nat_add`'s loop shape, with
-`nat_limb` for both operands) and the borrow out of the top limb decides: `1` means `a < b`,
-and the result is `0`. This needs neither normalised inputs nor `nat_cmp`, and the loop is
-`nat_add`'s with a borrow instead of a carry, so the proof is too.
+(`ron/nat.rs:270-300`). con-ron compares first (`cmp`) and subtracts only when `a > b`; here `b`
+is trimmed when it is longer than `a` (still longer: `a < b`), then the leaves `sub_n` and `sub_1`
+(`NatLeaf.lean`) subtract, and the borrow out of the top limb decides: `1` means `a < b`, and the
+result is `0`. This needs neither normalised inputs nor `nat_cmp`.
 -/
 
 set_option experimental.vcgen true

@@ -121,3 +121,14 @@ Measured on master `a98d69362e` (add/sub already in hand asm): gf3 40.932 G → 
 Compiled per-limb cost (asm, inlined into `nat_lor`): `or_n`'s loop 32 instructions per limb (two
 tiered loads and a store at ≈ 7 each, spilled locals, the loop's 5), `copy_n`'s 22: candidates for
 hand asm.
+
+## 6. The shift leaves
+
+`shl_n(o, oa, n, s, c)` (`P[o+i] := (A[i] << s) | c`, carry `(A[i] >> 1) >> (63 - s)`, `63 - s`
+computed once), `shr_n(o, oa, n, s)` (`P[o+i] := (A[i] >> s) | ((A[i+1] << 1) << (63 - s))`, reads
+`n + 1` limbs), `zero_n(o, n)`. `nat_shl` is `zero_n` over the skipped limbs, `shl_n`, the carry on
+top (`shlCore`); `nat_shr` is `shr_n` over all but the last limb of the shifted slice and the last
+limb shifted alone (`shrCore`). The right shift's word facts (`lowb`, `shr_split`) moved to
+NatLeaf. Each function's spec composes its core block's lemma and a final lemma (`shl_final`,
+`shr_final`, the latter through the existing `shr_small`). NatShl 23 s and NatShr 16 s, each
+with a commented 1M heartbeat budget (before: 8M and unlimited); NatLeaf 9 s.
