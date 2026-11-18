@@ -269,13 +269,13 @@ whose low `lb` limbs end as the remainder. -/
   if len(POOL⟨pt⟩) - pb < n { abort };
   if len(POOL⟨pt⟩) - pb - n <= la { abort };
   w := top + n;
-  ⟪dcpLoop⟫;
-  POOL⟨pt⟩[pb + (n + la)] := 0;
   d := POOL⦃ob + lb - 1⦄;
   s := call div_norm(d);
   x := POOL⦃ob + lb - 2⦄;
   d := (d << s) + ((x >> 1) >> (63 - s));
   v := call div_recip(d);
+  ⟪dcpLoop⟫;
+  POOL⟨pt⟩[pb + (n + la)] := 0;
   j := n;
   ⟪dkLoop⟫;
   x := call nat_trim(top, n);
@@ -423,7 +423,7 @@ theorem Same.set_succ {p q : Array Word} {o o' n : Nat} (h : Same p q o o' n) (j
   intro k hk
   rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
   by_cases e : j = o + k
-  · simp only [e, ite_true, if_pos (show o + k < p.size by omega)]
+  · simp only [e, ite_true, show o + k < p.size by omega]
     have : k = n := by omega
     subst this; exact hv.symm
   · simp only [e, ite_false]; exact h k (by omega)
@@ -550,8 +550,7 @@ theorem d1Loop_spec (n : Nat) (s₀ : St) (h : D1Inv Pg C b0 s₀) :
     all_goals (try simp only [D1Inv] at ⊢)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
-      List.headD_cons, List.tail_cons, Cmp.eval, Cmp.evalW, BinOp.eval, Nat.reduceEqDiff,
-      reduceIte, decide_eq_true_eq] at *)
+      Cmp.eval, BinOp.eval, Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals (try and_intros)
     all_goals first
       | (grind (splits := 20) [arena_grind, lang_grind]; done)
@@ -593,6 +592,7 @@ def DcpPost (Pg : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :
   r = .normal ∧ PFrame s₀.mem s'.mem ∧ KBase Pg C s' ∧
   s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
   s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧ s'.loc 6 = s₀.loc 6 ∧
+  s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧
   s'.loc 14 = s₀.loc 14 ∧ s'.loc 15 = s₀.loc 15 ∧
   Same (vpool s'.mem) Pg (s₀.loc 6).toNat (s₀.loc 0).toNat (s₀.loc 1).toNat
 
@@ -795,7 +795,7 @@ theorem dk_vals (Pg : Array Word) (C : Nat) (s sk : St) (rs : List Word)
   rw [dk_store Pg C s sk rs _ h hj hst]
   obtain ⟨⟨_, hPg, _, hag, _, _, _, _, _, hT, h41, _, h6, hn, hlb, hoa, hob⟩, hjn, _, _, _, _,
     hR, _⟩ := h
-  obtain ⟨hk0, hk1, hk2, hk3, hk4, hk5, hk6, hk8, _, _, _, hoff, hq, hrem⟩ := hst
+  obtain ⟨_, _, _, hk3, hk4, hk5, hk6, hk8, _, _, _, hoff, hq, hrem⟩ := hst
   have hj0 : 0 < (s.loc 8).toNat := hj
   have hvs := vpool_size s.mem
   have hvs' := vpool_size sk.mem
@@ -809,7 +809,7 @@ theorem dk_vals (Pg : Array Word) (C : Nat) (s sk : St) (rs : List Word)
     Agree.pv _ _ _ _ _ hag hob
   rw [hb] at hq hrem
   have hbpos : 0 < pv Pg (s.loc 2).toNat (s.loc 3).toNat := by omega
-  simp only [hk0, hk2, hk3, hk4, hk5, hk6, e8]
+  simp only [hk3, hk4, hk5, hk6, e8]
   refine ⟨?_, hq, ?_⟩
   · rw [pv_set_below _ _ _ _ _ (by omega), pv_drop_top _ _ _ ?_, hrem]
     have := Nat.mod_lt (pv (vpool s.mem) ((s.loc 6).toNat + ((s.loc 8).toNat - 1))
@@ -902,6 +902,13 @@ theorem dkLoop_spec (hpl : p.lookup "nat_limb" = some natLimb)
     all_goals (try simp only [DkStep])
     all_goals (try and_intros)
     all_goals grind [lang_grind, arena_grind]
+
+theorem dkLoop_step_spec (hpl : p.lookup "nat_limb" = some natLimb)
+    (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+    (hp2 : p.lookup "div_2by1" = some div2by1) (hpm : p.lookup "div_submul" = some divSubmul)
+    (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s₀ : St) (h : DkInv Pg C s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) dkLoop ⦃fun r s' => DkPost Pg C s₀ r s'; ⊤⦄ :=
+  Triple.step_exec (dkLoop_spec p Pg C hpl hpc hpa hp2 hpm hpk (n + 1) s₀ h)
 
 end dk
 
@@ -1015,7 +1022,7 @@ theorem d1_rem_goal (m₀ : Mem) (s : St) (rs : List Word) (oa la ob : Word)
     (h11 : s.loc 11 = s.loc 3 >>> 40) (h12 : s.loc 12 = s.loc 3 &&& 1099511627775)
     (hT : (s.loc 3).toNat < 2 ^ 41) (hs : (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40)
     (hst : (s.loc 12 + s.loc 1).toNat < (s.mem.arr64 (tierA POOL (s.loc 11))).size)
-    (hk : (s.loc 12).toNat + (s.loc 1).toNat < 2 ^ 40) (hla : s.loc 1 = la)
+    (hk : (s.loc 12).toNat + (s.loc 1).toNat < 2 ^ 40)
     (hs63 : (s.loc 8).toNat ≤ 63)
     (htr : pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + s.loc 1) (s.loc 7 >>> s.loc 8)))
         (s.loc 3 + s.loc 1).toNat (rs.headD 0).toNat =
@@ -1092,6 +1099,182 @@ theorem divMod1_spec (n : Nat) (s₀ : St) (oa la ob : Word) (hok : PoolOK s₀.
       | (apply d1_quot_goal <;> grind)
       | (apply d1_rem_goal <;> grind)
 
+/-- `b`'s top two limbs read shifted by `s` (`div_modk`'s `d`): `⌊b 2^s / 2^(64 (lb - 1))⌋`, and
+at least `2^63` when the top limb shifted is. -/
+theorem kd_val (m : Mem) (P : Array Word) (ob lb s : Word) (hlb : 2 ≤ lb.toNat)
+    (hob : ob.toNat + lb.toNat < 2 ^ 41) (hs : s.toNat ≤ 63)
+    (hl1 : ((ob + lb - 1) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((ob + lb - 1) >>> 40))).size)
+    (hl2 : ((ob + lb - 2) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((ob + lb - 2) >>> 40))).size)
+    (hfit : (m.arr64 (tierA POOL ((ob + lb - 1) >>> 40)))[((ob + lb - 1) &&& 1099511627775).toNat].toNat *
+      sh s.toNat < 2 ^ 64)
+    (hb : pv (vpool m) ob.toNat lb.toNat = pv P ob.toNat lb.toNat) :
+    ((m.arr64 (tierA POOL ((ob + lb - 1) >>> 40)))[((ob + lb - 1) &&& 1099511627775).toNat] <<< s +
+      ((m.arr64 (tierA POOL ((ob + lb - 2) >>> 40)))[((ob + lb - 2) &&& 1099511627775).toNat] >>> 1 >>>
+        (63 - s))).toNat =
+      pv P ob.toNat lb.toNat * sh s.toNat / wt (lb.toNat - 1) := by
+  have hvs := vpool_size m
+  have e1 : (ob + lb - 1).toNat = ob.toNat + lb.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega),
+      UInt64.toNat_add, UInt64.toNat_one]; omega
+  have e2 : (ob + lb - 2).toNat = ob.toNat + lb.toNat - 2 := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega),
+      UInt64.toNat_add]; simp; omega
+  rw [vpool_ld m _ hl1 (by omega), vpool_ld m _ hl2 (by omega)] at *
+  simp only [e1, e2] at *
+  generalize hx1 : (vpool m)[ob.toNat + lb.toNat - 1] = x1 at *
+  generalize hx2 : (vpool m)[ob.toNat + lb.toNat - 2] = x2 at *
+  have hdec : pv (vpool m) ob.toNat lb.toNat =
+      pv (vpool m) ob.toNat (lb.toNat - 2) + wt (lb.toNat - 2) * (x2.toNat + 2 ^ 64 * x1.toNat) := by
+    have h1 := pv_succ (vpool m) ob.toNat (lb.toNat - 1) lb.toNat (ob.toNat + lb.toNat - 1)
+      (by omega) (by omega) (by omega)
+    have h2 := pv_succ (vpool m) ob.toNat (lb.toNat - 2) (lb.toNat - 1) (ob.toNat + lb.toNat - 2)
+      (by omega) (by omega) (by omega)
+    rw [h1, h2, hx1, hx2, wt_succ (lb.toNat - 2) (lb.toNat - 1) (by omega)]
+    grind
+  rw [← hb, hdec, show lb.toNat - 1 = lb.toNat - 2 + 1 by omega,
+    top2_div _ _ _ _ _ (pv_lt_wt _ _ _) hs]
+  have hlo := shl_hi x2 s (by omega)
+  have hlt := shl_hi_lt' x2 s (by omega)
+  have hhi := shl_mul x1 s hs hfit
+  have hroom := mod_shift_room x1.toNat s.toNat hs
+  rw [Nat.mod_eq_of_lt hfit] at hroom
+  rw [UInt64.toNat_add, hhi, hlo, Nat.mod_eq_of_lt (by rw [← hlo]; omega)]; rfl
+
+/-- The shifted top word of `b` (`div_modk`'s `d`) as numbers. -/
+theorem kd_word (x1 x2 s : Word) (hs : s.toNat ≤ 63) (hfit : x1.toNat * sh s.toNat < 2 ^ 64) :
+    ((x1 <<< s) + ((x2 >>> 1) >>> (63 - s))).toNat =
+      x1.toNat * sh s.toNat + x2.toNat * sh s.toNat / 2 ^ 64 := by
+  have hlo := shl_hi x2 s (by omega)
+  have hlt := shl_hi_lt' x2 s (by omega)
+  have hhi := shl_mul x1 s hs hfit
+  have hroom := mod_shift_room x1.toNat s.toNat hs
+  rw [Nat.mod_eq_of_lt hfit] at hroom
+  rw [UInt64.toNat_add, hhi, hlo, Nat.mod_eq_of_lt (by rw [← hlo]; omega)]; rfl
+
+theorem kd_ge (x1 x2 s : Word) (hs : s.toNat ≤ 63) (hfit : x1.toNat * sh s.toNat < 2 ^ 64)
+    (hn : 2 ^ 63 ≤ x1.toNat * sh s.toNat) : 2 ^ 63 ≤ ((x1 <<< s) + ((x2 >>> 1) >>> (63 - s))).toNat := by
+  rw [kd_word x1 x2 s hs hfit]; omega
+
+theorem kd_pos (x1 x2 s : Word) (hs : s.toNat ≤ 63) (hfit : x1.toNat * sh s.toNat < 2 ^ 64)
+    (hn : 2 ^ 63 ≤ x1.toNat * sh s.toNat) : 0 < ((x1 <<< s) + ((x2 >>> 1) >>> (63 - s))).toNat := by
+  have := kd_ge x1 x2 s hs hfit hn; omega
+
+/-- `b`'s top limb, loaded, is nonzero. -/
+theorem kd_top_pos (m : Mem) (ob lb : Word) (hlb : 2 ≤ lb.toNat) (hob : ob.toNat + lb.toNat < 2 ^ 41)
+    (hl1 : ((ob + lb - 1) &&& 1099511627775).toNat < (m.arr64 (tierA POOL ((ob + lb - 1) >>> 40))).size)
+    (hn : Norm (vpool m) ob.toNat lb.toNat) :
+    0 < (m.arr64 (tierA POOL ((ob + lb - 1) >>> 40)))[((ob + lb - 1) &&& 1099511627775).toNat].toNat := by
+  have hvs := vpool_size m
+  have e1 : (ob + lb - 1).toNat = ob.toNat + (lb.toNat - 1) := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; simp; omega),
+      UInt64.toNat_add, UInt64.toNat_one]; omega
+  rw [vpool_ld m _ hl1 (by omega)]
+  simp only [e1]
+  have := hn (by omega)
+  rw [Array.getElem?_eq_getElem (by omega)] at this
+  simp only [Option.getD_some] at this
+  rcases Nat.eq_zero_or_pos (vpool m)[ob.toNat + (lb.toNat - 1)].toNat with h0 | h0
+  · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) this
+  · exact h0
+
+theorem Same.pv_off {p q : Array Word} {o o' n : Nat} (h : Same p q o o' n) (k j : Nat)
+    (hk : k + j ≤ n) : L.Arena.pv p (o + k) j = L.Arena.pv q (o' + k) j := by
+  induction j with
+  | zero => rfl
+  | succ j ih =>
+    simp only [L.Arena.pv, ih (by omega)]
+    have := h (k + j) (by omega)
+    rw [show o + k + j = o + (k + j) by omega, show o' + k + j = o' + (k + j) by omega, this]
+
+/-- The zero limb on top of the copy, as a store into the virtual pool at `w + la`. -/
+theorem kinit_store (P : Array Word) (s : St) (hk : KBase P (pcap s.mem) s) :
+    vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0) =
+      (vpool s.mem).set! ((s.loc 6).toNat + (s.loc 1).toNat) 0 := by
+  obtain ⟨_, _, _, _, h14, h15, hroom, hsz, _, hT, h41, _, h6, _⟩ := hk
+  have hroom' := hroom
+  rw [h15, tag_idx_toNat] at hroom'
+  have e : (s.loc 5 + s.loc 1).toNat = (s.loc 5).toNat + (s.loc 1).toNat := by
+    rw [UInt64.toNat_add]; omega
+  rw [h14] at hsz hroom hroom'
+  rw [h14, h15, vpool_stidx s.mem (s.loc 4) (s.loc 5 + s.loc 1) 0 hT
+    (by rw [UInt64.toNat_add, e, tag_idx_toNat]; omega) hsz (by rw [tag_idx_toNat, e]; omega)]
+  congr 1
+  rw [UInt64.toNat_add, e]; omega
+
+/-- The first window of Knuth's loop: `a`'s top `lb - 1` limbs and a zero limb. -/
+theorem kinit_R (P : Array Word) (s : St) (hk : KBase P (pcap s.mem) s)
+    (hsame : Same (vpool s.mem) P (s.loc 6).toNat (s.loc 0).toNat (s.loc 1).toNat) :
+    pv (vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0))
+        ((s.loc 6).toNat + (s.loc 5).toNat) (s.loc 3).toNat =
+      pv P ((s.loc 0).toNat + (s.loc 5).toNat) ((s.loc 3).toNat - 1) := by
+  rw [kinit_store P s hk]
+  obtain ⟨_, hP, _, _, _, _, _, _, _, hT, h41, _, h6, hn, hlb, _⟩ := hk
+  have hvs := vpool_size s.mem
+  have e3 : (s.loc 3).toNat = (s.loc 3).toNat - 1 + 1 := by omega
+  conv => lhs; rw [e3]
+  rw [pv_set_succ (vpool s.mem) _ ((s.loc 3).toNat - 1) _ _ _ rfl (by omega) (by omega),
+    hsame.pv_off _ _ (by omega)]
+  simp
+
+theorem kinit_same (P : Array Word) (s : St) (hk : KBase P (pcap s.mem) s)
+    (hsame : Same (vpool s.mem) P (s.loc 6).toNat (s.loc 0).toNat (s.loc 1).toNat) :
+    Same (vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0)) P
+      (s.loc 6).toNat (s.loc 0).toNat (s.loc 5).toNat := by
+  rw [kinit_store P s hk]
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, hn, hlb, _⟩ := hk
+  exact (hsame.set_above _ _ (by omega)).mono (by omega)
+
+theorem kinit_lt (P : Array Word) (s : St) (ob lb : Word) (hk : KBase P (pcap s.mem) s)
+    (hsame : Same (vpool s.mem) P (s.loc 6).toNat (s.loc 0).toNat (s.loc 1).toNat)
+    (h2 : s.loc 2 = ob) (h3 : s.loc 3 = lb) (hn : Norm P ob.toNat lb.toNat) :
+    pv (vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0))
+        ((s.loc 6).toNat + (s.loc 5).toNat) (s.loc 3).toNat < pv P ob.toNat lb.toNat := by
+  rw [kinit_R P s hk hsame]
+  have hl := hk.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1
+  subst h2 h3
+  have := pv_lt_wt P ((s.loc 0).toNat + (s.loc 5).toNat) ((s.loc 3).toNat - 1)
+  have := pv_ge_wt P (s.loc 2).toNat (s.loc 3).toNat (by omega) hn
+  omega
+
+theorem kinit_eq (P : Array Word) (s : St) (hk : KBase P (pcap s.mem) s)
+    (hsame : Same (vpool s.mem) P (s.loc 6).toNat (s.loc 0).toNat (s.loc 1).toNat) (b : Nat) :
+    pv P (s.loc 0).toNat (s.loc 1).toNat =
+      pv P (s.loc 0).toNat (s.loc 5).toNat + wt (s.loc 5).toNat *
+        (pv (vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0))
+            ((s.loc 4).toNat + (s.loc 5).toNat) ((s.loc 5).toNat - (s.loc 5).toNat) * b +
+          pv (vpool (s.mem.set64 (tierA POOL (s.loc 14)) (s.loc 15 + (s.loc 5 + s.loc 1)) 0))
+            ((s.loc 6).toNat + (s.loc 5).toNat) (s.loc 3).toNat) := by
+  rw [kinit_R P s hk hsame]
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, hn, hlb, _⟩ := hk
+  rw [Nat.sub_self, show pv _ _ 0 = 0 from rfl, Nat.zero_mul, Nat.zero_add, ← pv_append,
+    show (s.loc 5).toNat + ((s.loc 3).toNat - 1) = (s.loc 1).toNat by omega]
+
+/-- The results of `div_modk`, from Knuth's loop's post (`a = Q b + R`, `R < b`; `sd` the state
+after the loop, `rs` the trim). -/
+theorem kfin_q (sd : St) (rs : List Word) (A b : Nat)
+    (htr : pv (vpool sd.mem) (sd.loc 4).toNat (rs.headD 0).toNat =
+      pv (vpool sd.mem) (sd.loc 4).toNat (sd.loc 5).toNat)
+    (heq : A = pv (vpool sd.mem) (sd.loc 4).toNat (sd.loc 5).toNat * b +
+      pv (vpool sd.mem) (sd.loc 6).toNat (sd.loc 3).toNat)
+    (hR : pv (vpool sd.mem) (sd.loc 6).toNat (sd.loc 3).toNat < b) :
+    pv (vpool (sd.mem.set64 CTL 0 (sd.loc 6 + sd.loc 3))) (sd.loc 4).toNat (rs.headD 0).toNat =
+      A / b := by
+  rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, htr]
+  exact (div_of_bounds _ _ _ (by omega) (by omega)).symm
+
+theorem kfin_r (sd : St) (rs : List Word) (A b : Nat)
+    (htr : pv (vpool sd.mem) (sd.loc 6).toNat (rs.headD 0).toNat =
+      pv (vpool sd.mem) (sd.loc 6).toNat (sd.loc 3).toNat)
+    (heq : A = pv (vpool sd.mem) (sd.loc 4).toNat (sd.loc 5).toNat * b +
+      pv (vpool sd.mem) (sd.loc 6).toNat (sd.loc 3).toNat)
+    (hR : pv (vpool sd.mem) (sd.loc 6).toNat (sd.loc 3).toNat < b) :
+    pv (vpool (sd.mem.set64 CTL 0 (sd.loc 6 + sd.loc 3))) (sd.loc 6).toNat (rs.headD 0).toNat =
+      A % b := by
+  rw [vpool_set64_ne _ _ _ _ ⟨by decide, by decide⟩, htr]
+  rw [mod_of_bounds _ _ (pv (vpool sd.mem) (sd.loc 4).toNat (sd.loc 5).toNat) (by omega) (by omega)]
+  omega
+
+set_option maxHeartbeats 8000000 in
 include hf in
 /-- `div_modk`: `nat_divmod` for `2 ≤ lb ≤ la`. -/
 theorem divModK_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
@@ -1108,7 +1291,53 @@ theorem divModK_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
-  sorry
+  have hok₀ := hok
+  have hsm := hok.small
+  have h41 := hok.top41
+  have hsz := hsm.tier (s₀.mem.top >>> 40)
+  have hok2 := hok.ctl; have hok3 := hok.cap; have hok4 := hok.top; have hok6 := hok.inTier
+  clear hok
+  have ha1 := ha.1
+  have hb1 := hb.1
+  rw [invoke_eq _ hf.modk]
+  simp only [callFn, divModK]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      divNorm_spec p hf.norm n, divRecip_spec p hf.d2by1 hf.recip n,
+      dcpLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) n,
+      dkLoop_step_spec p (vpool s₀.mem) (pcap s₀.mem) hf.limb hf.carry hf.add hf.d2by1 hf.submul
+        hf.kstep n,
+      natTrim_spec p hf.trim n]
+    all_goals (try simp only [DcpInv, DcpPost, DkInv, DkPost, KBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      List.headD_cons, List.tail_cons, L.Locals.init_nil,
+      Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval, reduceIte,
+      Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
+    all_goals (try and_intros)
+    all_goals (try simp only [vpool_size] at *)
+    all_goals (try exact Agree.refl _ _)
+    all_goals (try exact True.intro)
+    all_goals (try exact Same.zero _ _ _ _)
+    all_goals first
+      | (grind (splits := 20) [arena_grind, lang_grind]; done)
+      | apply kd_val
+      | apply kd_pos
+      | apply kd_ge
+      | apply kd_top_pos
+      | apply kinit_same
+      | apply kinit_lt
+      | apply kinit_eq
+      | apply kfin_q
+      | apply kfin_r
+      | skip
+    all_goals (try (grind (splits := 20) [arena_grind, lang_grind]; done))
+    all_goals (try (grind (splits := 20) [arena_grind, lang_grind, kd_val, kd_pos]; done))
+    all_goals (try simp only [KBase])
+    all_goals (try and_intros)
+    all_goals grind (splits := 20) [arena_grind, lang_grind]
 
 set_option maxHeartbeats 4000000 in
 include hf in
