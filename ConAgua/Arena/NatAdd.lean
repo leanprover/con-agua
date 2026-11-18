@@ -353,7 +353,6 @@ theorem addCore_spec (n : Nat) (s₀ : St) (h : AddCorePre s₀) :
        case h2 => with_reducible assumption
        case h1 => with_reducible assumption
        all_goals grind)
-    | (trace_state; sorry)
 
 end addCore
 
