@@ -16,3 +16,8 @@ register_grind_attr natcmp_grind
 lemmas of the right shift, the powers of two `sh`). Kept apart from `arena_grind` for the same
 reason as `natcmp_grind`: in `nat_divmod`'s limb loop they made hundreds of useless instances. -/
 register_grind_attr natop_grind
+
+/-- The `grind` vocabulary of the in-place window passes (`NatOff.lean`, `NatMul.lean`): a slice
+off a pass's window keeps its value. Kept apart from `arena_grind`: the patterns pair every frame
+with every `pv` term. -/
+register_grind_attr winop_grind

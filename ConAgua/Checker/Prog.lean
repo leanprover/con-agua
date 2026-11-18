@@ -153,7 +153,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1809 functions, 0 of them stubs.
+1815 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -1303,6 +1303,9 @@ def checkerProg : Prog := [
   ("iw_pool", L.Stubs.iwPool),
   ("iw_reset", L.Ind.iwReset),
   ("iw_to_spn", L.Arena.iwToSpnL),
+  ("kara_mid", L.Arena.karaMid),
+  ("kara_prods", L.Arena.karaProds),
+  ("kara_sum", L.Arena.karaSum),
   ("key_at", L.Scan.Key.keyAt),
   ("key_at_g1", L.Scan.Key.keyAtG1),
   ("key_at_g2", L.Scan.Key.keyAtG2),
@@ -1457,7 +1460,6 @@ def checkerProg : Prog := [
   ("ma_clear", L.Arena.memoClearG L.Ind.maSch),
   ("ma_find", L.Arena.memoFindG L.Ind.maSch),
   ("ma_put", L.Arena.memoPutG L.Ind.maSch),
-  ("mac_hi", L.Arena.macHi),
   ("major_to_ctor", L.Arena.majorToCtorL),
   ("major_to_ctor_rescue", L.Arena.majorToCtorRescueL),
   ("match_dlit", L.Front.Fields.matchDlit),
@@ -1485,6 +1487,9 @@ def checkerProg : Prog := [
   ("mk_let", L.Arena.mkLet),
   ("mk_proj", L.Arena.mkProj),
   ("mk_target_major", L.Ind.mkTargetMajor),
+  ("mul_row", L.Arena.mulRow),
+  ("mul_win", L.Arena.mulWin),
+  ("mul_zeros", L.Arena.mulZeros),
   ("n_idxs_copy", L.Ind.nIdxsCopy),
   ("name_fresh", L.Front.nameFresh),
   ("name_get", L.Front.nameGet),
@@ -1993,6 +1998,7 @@ def checkerProg : Prog := [
   ("sub_bit", L.Front.LineRec.subBitF),
   ("sub_borrow", L.Arena.subBorrow),
   ("sub_rec", L.Front.LineRec.subRec),
+  ("sub_row", L.Arena.subRow),
   ("sub_val", L.Front.LineRec.subValF),
   ("subst_const0", L.Ind.substConst0L),
   ("subst_const0_list", L.Ind.substConst0ListL),

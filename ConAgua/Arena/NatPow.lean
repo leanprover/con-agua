@@ -38,9 +38,6 @@ namespace L.Arena
 
 /-! ## Frames and the exponent -/
 
-theorem Agree.trans (p q r : Array Word) (t t' : Nat) (h : Agree p q t') (h' : Agree q r t)
-    (ht : t ≤ t') : Agree p r t := fun j hj => (h j (by omega)).trans (h' j hj)
-
 
 /-- A one-limb slice just written. -/
 theorem pv_set_one (p : Array Word) (o j l : Nat) (v : Word) (hl : l = 1) (hj : j = o)
@@ -188,7 +185,7 @@ def natPowProg : Prog := natMulProg ++ [("nat_pow", natPow)]
   (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!, m.arr64 CTL)) == some ([33, 1], 1, #[34])
 
 section pow
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
 
 /-- The invariant of the square-and-multiply loop: the accumulator `(o, l)` is a normalised
@@ -230,7 +227,7 @@ theorem powLoop_step_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowI
 end pow
 
 section powFn
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
   (hpn : p.lookup "nat_pow" = some natPow)
 
