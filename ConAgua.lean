@@ -54,6 +54,7 @@ public import ConAgua.Scan.LineLink
 public import ConAgua.Scan.ValidatorLink
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.NatOff
 public import ConAgua.Arena.NatBits
 public import ConAgua.Arena.NatGrindAttr
 public import ConAgua.Arena.NatCmpFacts
@@ -66,6 +67,10 @@ public import ConAgua.Arena.NatShl
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatPow
 public import ConAgua.Arena.NatDiv
+public import ConAgua.Arena.NatDivFacts
+public import ConAgua.Arena.NatDivKstep
+public import ConAgua.Arena.NatDivSubmul
+public import ConAgua.Arena.NatDivWord
 public import ConAgua.Arena.NatBitsNat
 public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.Store

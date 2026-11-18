@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Pool
 import ConAgua.Arena.GrindAttr
+import ConAgua.Arena.NatGrindAttr
 
 @[expose] public section
 
@@ -65,9 +66,7 @@ theorem Off.pv_disj (p q : Array Word) (o k o' l : Nat) (h : Off p q o k) (hl : 
   induction l with
   | zero => rfl
   | succ l ih => simp only [pv, ih (by omega), h (o' + l) (by omega)]
-
-theorem Off.symm (p q : Array Word) (o n : Nat) (h : Off p q o n) : Off q p o n :=
-  fun j hj => (h j hj).symm
+grind_pattern [winop_grind] Off.pv_disj => Off p q o k, pv p o' l
 
 /-- A frame of a smaller region is one of a larger region. -/
 theorem Off.mono (p q : Array Word) (o i n : Nat) (h : Off p q o i) (hi : i ≤ n) : Off p q o n :=
@@ -83,20 +82,11 @@ def OffB (p q : Array Word) (o w s : Nat) : Prop := ∀ j, j < s → (j < o ∨ 
 theorem OffB.of_off (p q : Array Word) (o w s : Nat) (h : Off p q o w) : OffB p q o w s :=
   fun j _ hj => h j hj
 
-theorem OffB.of_agree (p q : Array Word) (o w s : Nat) (h : Agree p q s) : OffB p q o w s :=
-  fun j hj _ => h j hj
-
 theorem OffB.trans (p q r : Array Word) (o w s : Nat) (h : OffB p q o w s) (h' : OffB q r o w s) :
     OffB p r o w s := fun j hj hw => (h j hj hw).trans (h' j hj hw)
 
 theorem OffB.widen (p q : Array Word) (o w s t m : Nat) (h : OffB p q o w s) (h1 : t ≤ o)
     (h2 : o + w ≤ t + m) : OffB p q t m s := fun j hj hw => h j hj (by omega)
-
-theorem OffB.agree (p q : Array Word) (o w s t : Nat) (h : OffB p q o w s) (h1 : t ≤ o) (h2 : t ≤ s) :
-    Agree p q t := fun j hj => h j (by omega) (Or.inl (by omega))
-
-theorem Off.agree (p q : Array Word) (o w t : Nat) (h : Off p q o w) (h1 : t ≤ o) : Agree p q t :=
-  fun j hj => h j (Or.inl (by omega))
 
 theorem OffB.pv_disj (p q : Array Word) (o w s o' l : Nat) (h : OffB p q o w s) (hs : o' + l ≤ s)
     (hl : o' + l ≤ o ∨ o + w ≤ o') : pv p o' l = pv q o' l := by
@@ -105,5 +95,6 @@ theorem OffB.pv_disj (p q : Array Word) (o w s o' l : Nat) (h : OffB p q o w s) 
   | succ l ih =>
     have := ih (by omega) (by omega)
     simp only [pv, this, h (o' + l) (by omega) (by omega)]
+grind_pattern [winop_grind] OffB.pv_disj => OffB p q o w s, pv p o' l
 
 end L.Arena
