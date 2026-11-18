@@ -398,7 +398,7 @@ theorem addN_spec (hp : p.lookup "add_n" = some addN) (n : Nat) (s₀ : St) (o o
     all_goals (try simp only [AddNInv, AddNPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
@@ -582,7 +582,7 @@ theorem add1_spec (hp : p.lookup "add_1" = some add1) (n : Nat) (s₀ : St) (o o
     all_goals (try simp only [Add1Inv, Add1Post] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
@@ -668,7 +668,7 @@ theorem subN_spec (hp : p.lookup "sub_n" = some subN) (n : Nat) (s₀ : St) (o o
     all_goals (try simp only [SubNInv, SubNPost] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
@@ -748,7 +748,7 @@ theorem sub1_spec (hp : p.lookup "sub_1" = some sub1) (n : Nat) (s₀ : St) (o o
     all_goals (try simp only [Sub1Inv, Sub1Post] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem,
-      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
+      L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval,
       reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retOr, Sig.retVal] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
