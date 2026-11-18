@@ -79,6 +79,9 @@ import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp
 import all ConAgua.Arena.NatDiv
+import all ConAgua.Arena.NatDivKstep
+import all ConAgua.Arena.NatDivSubmul
+import all ConAgua.Arena.NatDivWord
 import all ConAgua.Arena.NatGcd
 import all ConAgua.Arena.NatMul
 import all ConAgua.Arena.NatSized
