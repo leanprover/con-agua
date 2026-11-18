@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.NatDivSubmul
 public import ConAgua.AsmEsc.MulRowL
-import ConAgua.Arena.Pool
 import all ConAgua.Arena.NatDivSubmul
 
 @[expose] public section
