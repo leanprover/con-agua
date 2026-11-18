@@ -9,7 +9,7 @@ import ConAgua.Arena.GrindAttr
 # Word arithmetic for the limb pool: high words of products and sums
 
 Pure Lean facts about `UInt64` that the multiply loop needs, each as an equation over a named
-function (`mulHiN`, `macHiN`, `adcHi`) with a `grind` pattern, so that the ring solver sees the
+function (`mulHiN`, `adcHi`) with a `grind` pattern, so that the ring solver sees the
 digit equation `low + high · 2^64 = …` directly.
 -/
 
@@ -39,14 +39,6 @@ theorem mulhi_toNat (x y : Word) : (UInt64.ofNat (x.toNat * y.toNat / 2 ^ 64)).t
   exact Nat.div_lt_of_lt_mul (by omega)
 grind_pattern [arena_grind] mulhi_toNat => UInt64.ofNat (x.toNat * y.toNat / 2 ^ 64)
 
-/-- The high word of `x * y + t + c`, as a number. -/
-def macHiN (x y t c : Word) : Nat := (x.toNat * y.toNat + t.toNat + c.toNat) / 2 ^ 64
-
-theorem mac_split (x y t c : Word) :
-    (x * y + t + c).toNat + macHiN x y t c * 2 ^ 64 = x.toNat * y.toNat + t.toNat + c.toNat := by
-  have := mulHiN_le x y
-  simp only [macHiN, UInt64.toNat_add, UInt64.toNat_mul]; omega
-grind_pattern [arena_grind] mac_split => macHiN x y t c
 
 
 end L.Arena

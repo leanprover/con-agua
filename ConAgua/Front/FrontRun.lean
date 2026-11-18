@@ -182,7 +182,7 @@ theorem frontAllProg_decAgree : ∀ g ∈ natDecFns, frontAllProg.lookup g = nat
   intro g hg
   simp only [natDecFns, natDecProg, L.Arena.natMulProg, L.Arena.natProg, List.map_cons, List.map_nil,
     List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at hg
-  rcases hg with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+  repeat (rcases hg with rfl | hg; · rfl)
 
 theorem frontAllProg_expr : ExprLookups frontAllProg := by
   refine ⟨frontAllProg_front, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
