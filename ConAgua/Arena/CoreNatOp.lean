@@ -11,6 +11,7 @@ import all ConAgua.Arena.NatPowNat
 import all ConAgua.Arena.ConsLib
 import all ConAgua.Arena.ConstStore
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.NatArms
 import all ConAgua.Arena.NatBits
 import all ConAgua.Arena.NatCmp

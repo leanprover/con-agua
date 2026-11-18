@@ -74,6 +74,7 @@ public import ConAgua.Arena.NatDivKstep
 public import ConAgua.Arena.NatDivSubmul
 public import ConAgua.Arena.NatDivWord
 public import ConAgua.Arena.NatGcd
+public import ConAgua.Arena.NatLeaf
 public import ConAgua.Arena.NatMul
 public import ConAgua.Arena.NatPow
 public import ConAgua.Arena.NatShl
@@ -156,7 +157,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1825 functions, 0 of them stubs.
+1828 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -274,7 +275,8 @@ def preTree : NTree := nameTree preNames
 /-- The functions reachable from `front_run` that are not copied (151): the copies call them
 unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
 def preShared : List String := [
-  "add_carry",
+  "add_1",
+  "add_n",
   "app_find",
   "app_push",
   "apply_level",
@@ -376,7 +378,6 @@ def preShared : List String := [
   "nanon_find",
   "nanon_push",
   "nat_add",
-  "nat_limb",
   "nat_mad",
   "nat_mul",
   "nat_trim",
@@ -443,7 +444,9 @@ def checkerProg : Prog := [
   ("abstract1_fast", L.Checker.abstract1FastA),
   ("abstract_prefix", L.Ind.abstractPrefix),
   ("abstract_prefix_list", L.Ind.abstractPrefixList),
+  ("add_1", L.Arena.add1),
   ("add_carry", L.Arena.addCarry),
+  ("add_n", L.Arena.addN),
   ("all_level_params_defined", L.Ind.allLevelParamsDefinedL),
   ("alpd_go", L.Ind.alpdGo),
   ("alpd_ls", L.Ind.alpdLs),
@@ -2020,8 +2023,9 @@ def checkerProg : Prog := [
   ("stuck_irrel", L.Arena.stuckIrrelL),
   ("stuck_rest", L.Arena.stuckRestL),
   ("stuck_str", L.Arena.stuckStrL),
+  ("sub_1", L.Arena.sub1),
   ("sub_bit", L.Front.LineRec.subBitF),
-  ("sub_borrow", L.Arena.subBorrow),
+  ("sub_n", L.Arena.subN),
   ("sub_rec", L.Front.LineRec.subRec),
   ("sub_row", L.Arena.subRow),
   ("sub_val", L.Front.LineRec.subValF),

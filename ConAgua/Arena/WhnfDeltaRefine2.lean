@@ -16,6 +16,7 @@ public import ConAgua.Arena.StoreDenIntern
 import all ConAgua.Arena.WhnfDelta
 import all ConAgua.Arena.ConsLib
 import all ConAgua.Arena.NatAdd
+import all ConAgua.Arena.NatLeaf
 import all ConAgua.Arena.Refine
 import all ConAgua.Arena.Store
 import ConAgua.Front.NatDecLink
