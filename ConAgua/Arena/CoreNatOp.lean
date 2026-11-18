@@ -296,7 +296,7 @@ theorem cmpArmP {g : FnName} {arm : Nat → Nat → AM (Option EIdx)} (hg : g �
 theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
   pow := fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natPowLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
+      rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
   add := fun n s₀ a₀ hR hmx oa la ob lb ha hb _ _ hmode =>
     natAddLit_refines natArmProg rfl rfl rfl rfl rfl (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀)
       (internLit_armsP m₀) rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hmode
@@ -326,7 +326,7 @@ theorem natArmsR_pool (m₀ : Mem) : NatArmsR (ArenaP m₀) where
       "nat_xor_lit" "nat_xor" _ rfl natXor_top n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode
   shl := fun n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode =>
     natShlLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
-      rfl rfl rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
+      rfl rfl rfl rfl rfl rfl rfl n s₀ a₀ hR hmx oa la ob lb ha hb hna hnb hmode
   shr := fun n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode =>
     topLit_refines natArmProg (ArenaP m₀) (arenaP_pool m₀) (arenaP_grow m₀) (internLit_armsP m₀)
       "nat_shr_lit" "nat_shr" _ rfl natShr_top n s₀ a₀ hR oa la ob lb ha hb hna hnb hmode

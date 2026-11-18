@@ -98,12 +98,6 @@ The result slice starts at the old top `CTL[0]`. One pass of ripple carry over
 `n = max la lb` limbs (a missing limb reads as `0`, con-ron's `limb`), the carry limb, then
 `nat_trim`. Inputs need not be normalised; the output is. -/
 
-/-- Limb `i` of the slice `(o, l)`, `0` past its end (con-ron's `limb`, `ron/nat.rs:112`). -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def natLimb : FunDecl := lfn (o, l, i) {
-  if i < l { return POOL⦃o + i⦄ };
-  return 0
-}
 
 /-- `add_n` over the limbs both operands have, `add_1` over the rest of the longer one, the carry
 limb at `n`, the longer operand's length. -/
@@ -137,8 +131,8 @@ def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
 
 /-- The pool functions, as one `#eval`-able program. -/
 def natProg : Prog :=
-  [("nat_limb", natLimb), ("nat_trim", natTrim), ("and_n", andN), ("or_n", orN), ("xor_n", xorN),
-   ("copy_n", copyN), ("add_n", addN),
+  [("nat_trim", natTrim), ("and_n", andN), ("or_n", orN), ("xor_n", xorN),
+   ("copy_n", copyN), ("shl_n", shlN), ("shr_n", shrN), ("zero_n", zeroN), ("add_n", addN),
    ("add_1", add1), ("nat_add", natAdd)]
 
 /- `(2^128 - 1) + 1 = 2^128`: limbs `[max, max]` at 0 and `[1]` at 2, top 3; the sum is
@@ -155,24 +149,6 @@ def natProg : Prog :=
 /- No room: `abort`. -/
 #guard (run natProg 100 "nat_add" [0, 1, 0, 1] (Mem.ofWords [(POOL, #[5, 0]), (CTL, #[1])])).toOption.isNone
 
-section add
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-
-include hpl in
-theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
-    (hb : o.toNat + l.toNat ≤ pcap s₀.mem) (hs : pcap s₀.mem < 2 ^ 64) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "nat_limb" [o, l, i]
-    ⦃fun r s' => s' = s₀ ∧
-      (r.headD 0).toNat = lv (vpool s₀.mem) o.toNat l.toNat i.toNat; ⊤⦄ := by
-  rw [invoke_eq _ hpl]
-  simp only [callFn, natLimb]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, evalArgs, ld64] <;> finish
-
-end add
 
 /-- The pool below `T` is kept: `add_n` and `add_1` wrote only at `T` and above, and so does the
 carry limb. -/
