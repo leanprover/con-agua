@@ -152,8 +152,8 @@ theorem b_loop (TA TB TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTB : G.t
     have := n.toNat_lt
     exact ih s' (j + 1) (by rw [L.toNat_add_one_of_lt (by omega)]; omega) g1 g2 g3 g4 g5 g6 g7 g8 g9
 
-/-- `.Z`: the result `0`, the return. -/
 omit hop in
+/-- `.Z`: the result `0`, the return. -/
 theorem b_exit {ra : Word} (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra) (hlo : G.lo ≤ d.regs.rsp.toNat)
     (hhi : d.regs.rsp.toNat + 8 ≤ G.hi) (s : MachineData) (hF : MrFr G d s)
     (hok : ∀ s', s'.dmem = s.dmem → s'.regs.rsp.toNat = d.regs.rsp.toNat + 8 →
