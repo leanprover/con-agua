@@ -171,6 +171,25 @@ def Chain2Spec (p : Prog) (f : FnName) (sub : Bool) : Prop :=
         (oa &&& idxMask) (ob &&& idxMask) (o &&& idxMask) n.toNat σ.mem 0 c
       .ok ([bw R.2], { σ with mem := R.1 })
 
+/-- A `ret` from a state that kept the entry state's frame: the return address is where it was. -/
+theorem frame_ret [Host] {G : L.Compiler.Layout} (hG : G.Ok) {d s : MachineData} {ra : Word} {k : Nat}
+    {Q : MachineState → Prop} (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+    (hlo : G.lo ≤ d.regs.rsp.toNat) (hhi : d.regs.rsp.toNat + 8 ≤ G.hi) (hF : MrFr G d s)
+    (hk : Host.prog[k]? = some (i64 .ret))
+    (hc : ∀ s', s'.dmem = s.dmem → s'.regs.rsp.toNat = d.regs.rsp.toNat + 8 → s'.regs.rbp = d.regs.rbp →
+      s'.regs.r15 = d.regs.r15 → s'.regs.r14 = s.regs.r14 → s'.regs.rax = s.regs.rax →
+      Ev Q s' (Int64.ofBitVec ra.toBitVec)) :
+    Ev Q s (at_ k) := by
+  have hh := hG.hi_le
+  refine ev_ret hk (ra := ra) ?_ ?_
+  · have e : d.regs.rsp.toBitVec = A d.regs.rsp.toNat := by simp [A]
+    rw [hF.rsp, e, rdW_of_pres hG hF.pres hlo (Nat.le_refl _) hhi]
+    exact hra
+  · refine hc _ rfl ?_ ?_ ?_ rfl rfl <;>
+      simp only [Reg64s.set64_rsp, Reg64s.rsp_mk, Reg64s.rbp_mk, Reg64s.r15_mk, hF.rsp, hF.rbp, hF.r15]
+    simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, UInt64.toNat_toBitVec]
+    rw [show (8 : BitVec 64).toNat = 8 from rfl]; omega
+
 section
 variable [Host] {G : L.Compiler.Layout} (hG : G.Ok) {kf : Nat} {f : FnName} {sub : Bool}
   (hc : Code (chain2Asm G.tab f sub) kf) {d : MachineData} {Q : MachineState → Prop}
@@ -291,6 +310,33 @@ theorem c2_step (TA TB TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTB : G.
     · rw [haO']; exact hpres
     · rw [haO']; exact hm'
     · rw [hcf3, hcf2, hcf1]
+
+/-- The limbs from `.L`, by induction on the limbs left. -/
+theorem c2_loop (TA TB TO : TieredArray) (hTA : G.tab.dom64 TA = true) (hTB : G.tab.dom64 TB = true)
+    (hTO : G.tab.dom64 TO = true) (qa qb ob n : Word) (R14 : UInt64) (m0 : Mem) (c0 : Bool)
+    (hqa : qa.toNat + n.toNat ≤ G.s (G.tab.pos64 TA)) (hqb : qb.toNat + n.toNat ≤ G.s (G.tab.pos64 TB))
+    (hoa : ob.toNat + n.toNat ≤ G.s (G.tab.pos64 TO))
+    (hE : ∀ s', MrFr G d s' → MemRel G (ch2Rows sub TA TB TO qa qb ob n.toNat m0 0 c0).1 s'.dmem →
+      s'.status.cf = (ch2Rows sub TA TB TO qa qb ob n.toNat m0 0 c0).2 → s'.regs.rdx = 0 →
+      s'.regs.r14 = R14 → Ev Q s' (at_ (kf + 53))) :
+    ∀ (r : Nat) (s : MachineData) (j : Word), n.toNat = j.toNat + r → MrFr G d s →
+      MemRel G (ch2Rows sub TA TB TO qa qb ob j.toNat m0 0 c0).1 s.dmem →
+      s.status.cf = (ch2Rows sub TA TB TO qa qb ob j.toNat m0 0 c0).2 →
+      s.regs.rsi = UInt64.ofNat (G.b (G.tab.pos64 TA) + 8 * qa.toNat) →
+      s.regs.rbx = UInt64.ofNat (G.b (G.tab.pos64 TB) + 8 * qb.toNat) →
+      s.regs.rdi = UInt64.ofNat (G.b (G.tab.pos64 TO) + 8 * ob.toNat) →
+      s.regs.r13 = j → s.regs.rcx = n - j → s.regs.rdx = 0 → s.regs.r14 = R14 →
+      j.toNat < n.toNat → Ev Q s (at_ (kf + 46)) := by
+  intro r
+  induction r with
+  | zero => intro s j hr _ _ _ _ _ _ _ _ _ _ hj; omega
+  | succ r ih =>
+    intro s j hr hF hm hcf h1 h2 h3 h4 h5 h6 h7 hj
+    refine c2_step hG hc TA TB TO hTA hTB hTO qa qb ob n R14 m0 c0 hqa hqb hoa s j hF hm hcf h1 h2 h3 h4 h5
+      h6 h7 hj ?_ hE
+    intro s' g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11
+    have := n.toNat_lt
+    exact ih s' (j + 1) (by rw [L.toNat_add_one_of_lt (by omega)]; omega) g1 g2 g3 g4 g5 g6 g7 g8 g9 g10 g11
 
 end
 
