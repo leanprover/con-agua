@@ -4,6 +4,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.Word
+public import ConAgua.Arena.NatOff
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -279,6 +280,56 @@ def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", 
   some ([2], #[3, 1, 5, 15, 5, 0], #[5])
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 0]
   (Mem.ofWords [(POOL, #[3, 1, 0, 0]), (CTL, #[2])])).toOption.map (·.1) == some [0]
+
+/-! ## The passes' specs -/
+
+section passes
+variable (p : Prog) (P0 : Array Word) (C : Nat)
+
+/-- The tier facts of a window pass over `[o, o + n)` reading `[oa, oa + la)`: locals `o`, `n`,
+`oa`, `la` at `0`-`3`, the decoded tiers and indices at `ot`, `ob`, `qt`, `qb`. -/
+def WinBase (P0 : Array Word) (C : Nat) (ot ob qt qb : Nat) (s : St) : Prop :=
+  C < 2 ^ 64 ∧ P0.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ C ∧ (s.loc 2).toNat + (s.loc 3).toNat ≤ C ∧
+  (s.loc 3).toNat ≤ (s.loc 1).toNat ∧
+  ((s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 0).toNat ∨
+    (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 2).toNat) ∧
+  s.loc ot = s.loc 0 >>> 40 ∧ s.loc ob = s.loc 0 &&& 1099511627775 ∧
+  s.loc qt = s.loc 2 >>> 40 ∧ s.loc qb = s.loc 2 &&& 1099511627775 ∧
+  (s.mem.arr64 (tierA POOL (s.loc ot))).size ≤ 2 ^ 40 ∧
+  (s.mem.arr64 (tierA POOL (s.loc qt))).size ≤ 2 ^ 40
+
+/-- `mul_row`'s row loop: locals `(o, n, oa, la, y, i, c, x, t, lo, hi, ot, ob, qt, qb)`. -/
+def MRowInv (P0 : Array Word) (C : Nat) (s : St) : Prop :=
+  WinBase P0 C 11 12 13 14 s ∧ (s.loc 5).toNat ≤ (s.loc 3).toNat ∧
+  Off (vpool s.mem) P0 (s.loc 0).toNat (s.loc 5).toNat ∧
+  pv (vpool s.mem) (s.loc 0).toNat (s.loc 5).toNat + (s.loc 6).toNat * wt (s.loc 5).toNat =
+    pv P0 (s.loc 0).toNat (s.loc 5).toNat + pv P0 (s.loc 2).toNat (s.loc 5).toNat * (s.loc 4).toNat
+
+def MRowPost (P0 : Array Word) (C : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 3 ∧
+  s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧ s'.loc 13 = s₀.loc 13 ∧ s'.loc 14 = s₀.loc 14 ∧
+  Off (vpool s'.mem) P0 (s₀.loc 0).toNat (s₀.loc 3).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 0).toNat (s₀.loc 3).toNat + (s'.loc 6).toNat * wt (s₀.loc 3).toNat =
+    pv P0 (s₀.loc 0).toNat (s₀.loc 3).toNat + pv P0 (s₀.loc 2).toNat (s₀.loc 3).toNat * (s₀.loc 4).toNat
+
+set_option maxHeartbeats 2000000 in
+theorem mrowLoop_spec (n : Nat) (s₀ : St) (h : MRowInv P0 C s₀) :
+    ⦃fun s => s = s₀⦄ exec p n mrowLoop ⦃fun r s' => MRowPost P0 C s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [MRowInv, WinBase, MRowPost] at h ⊢
+    rw [exec, step_while (w := mrowLoop) rfl]
+    vcgen [step, evalE, evalC, setLoc, setLocs, ld64, st64, ih]
+    all_goals clear ih
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals grind (splits := 20) [arena_grind, lang_grind]
+
+end passes
 
 section mulFn
 variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
