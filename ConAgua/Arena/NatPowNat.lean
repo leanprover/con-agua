@@ -100,7 +100,7 @@ theorem limbPush_spec (p : Prog) (hp : p.lookup "limb_push" = some limbPushL) (n
     all_goals grind (gen := 20) [lang_grind, arena_grind, natop_grind, Grows.push1, PoolOK.grows]
 
 section powNat
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
   (hpn : p.lookup "nat_pow" = some natPow) (hps : p.lookup "nat_shl" = some natShl)
   (hpp : p.lookup "pow_nat" = some powNatL) (hlp : p.lookup "limb_push" = some limbPushL)

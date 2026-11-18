@@ -21,15 +21,23 @@ import Std.WP.Triple.SpecLemmas
 /-!
 # `Nat.mul` on the limb pool
 
-`nat_mul` (con-ron's `mul`/`mul_from`/`mul_u64`/`mul_u64_from`, `ron/nat.rs:490-545`) as the
-in-place schoolbook product: zero the first `la` limbs at the top, then for each limb `y` of `b`
-one multiply-accumulate pass of `a * y` into the result at offset `j`, then `nat_trim`. The
-Rust builds `a * b[j]` and shift-adds it (only `Vec::push`, for its Aeneas proof); in L the
-in-place form needs no second buffer.
+`nat_mul` (con-ron's `mul`/`mul_win`, `ron/nat.rs:523-675`): zero `la + lb` limbs at the top,
+accumulate `a * b` into them with `mul_win`, then `nat_trim`. `mul_win(oa, la, ob, lb, o, n, s)`
+adds the product of two pool windows into the window `[o, o + n)` in place, with scratch space
+from `s` up: the longer window first; schoolbook rows (`mul_row`, one per limb of the shorter)
+below `karaT` limbs; an operand at least twice as long as the other is halved, both halves
+accumulating into the window; otherwise Karatsuba (`kara_mid`: `kara_prods` for `z0`, `z2`,
+`kara_sum` for the sums, their product, two `sub_row`s), then three in-place additions.
+`O(n^1.585)` limb products for `n × n` (DESIGN: docs/design/bigmul.md).
 
-The `u128` accumulator `t` of con-ron's `mul_u64_from` is a word pair: the low word is the
-wrapping `x * y + t + c`, the high word `mac_hi(x, y, t, c)`, which uses L's `mulhi` and
-comparisons as words (`u64(a < b)`).
+The multiply-accumulate of `mul_row` is inline: the low word is the wrapping `x * y + t + c`,
+the high word `mulhi(x, y) + u64(lo < t) + u64(lo + c < c)` (con-ron's `u128` accumulator).
+
+Every in-place pass aborts when a carry or borrow would leave its window, and `mul_win` aborts
+unless its window holds `la + lb` limbs: the sums always fit, and the proofs (partial
+correctness) need no bound on them. The frames: `Off` for a pass (it changes only its window),
+`OffB` for `mul_win` (its window and its scratch from `s` up). The specs of the recursive
+functions are proved together by induction on the fuel (`mulWin_spec`).
 -/
 
 set_option experimental.vcgen true
@@ -38,35 +46,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- `mac_hi(x, y, t, c)`: the high word of `x * y + t + c` (con-ron's `u128` accumulator `t` in
-`mul_u64_from`). Straight-line: `mulhi` and two carries as `u64(…)` words. -/
--- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
-@[no_expose] def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi) {
-  lo := x * y + t;
-  hi := mulhi(x, y) + u64(lo < t);
-  lo := lo + c;
-  return hi + u64(lo < c)
-}
-
-section mac
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
-
-set_option maxHeartbeats 2000000 in
-include hph in
-theorem macHi_spec (n : Nat) (s₀ : St) (x y t c : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "mac_hi" [x, y, t, c]
-    ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat = macHiN x y t c; ⊤⦄ := by
-  rw [invoke_eq _ hph]
-  simp only [callFn, macHi]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalArgs, setLoc] <;>
-      finish [macHiN]
-
-end mac
 
 /-! ## The in-place passes: `mul_row`, `sub_row`, `mul_zeros`
 
@@ -283,11 +262,11 @@ def karaT : Word := 48
 def natMul : FunDecl := natMulG karaT
 
 /-- The pool functions with `nat_mul`. -/
-def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
+def natMulProg : Prog := natProg ++ [("mul_row", mulRow), ("sub_row", subRow),
   ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul)]
 
 /-- `natMulProg` at another threshold (tests). -/
-def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow),
+def natMulProgT (T : Word) : Prog := natProg ++ [("mul_row", mulRow),
   ("sub_row", subRow), ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWinG T),
   ("nat_mul", natMulG T)]
 
@@ -410,14 +389,7 @@ theorem mrow_step_goal (m : Mem) (P0 : Array Word) (o oa y i c T11 T12 T13 T14 :
   generalize wt i.toNat = W at *
   grind
 
-/-- A window pass's value, from its changed prefix to the whole window. -/
-theorem win_close (p q : Array Word) (o i n X : Nat) (hoff : Off p q o i) (hi : i ≤ n)
-    (h : pv p o i = pv q o i + X) : pv p o n = pv q o n + X := by
-  have e1 := pv_append p o i (n - i); have e2 := pv_append q o i (n - i)
-  rw [show i + (n - i) = n by omega] at e1 e2
-  rw [e1, e2, Off.pv_disj p q o i (o + i) (n - i) hoff (Or.inr (Nat.le_refl _)), h]; omega
-
-/-- `win_close` without the sum, for `grind`: a pass's changed prefix and the whole window. -/
+/-- A pass's changed prefix and the whole window, for `grind`. -/
 theorem off_split (p q : Array Word) (o i n : Nat) (hoff : Off p q o i) (hi : i ≤ n) :
     pv p o n + pv q o i = pv q o n + pv p o i := by
   have e1 := pv_append p o i (n - i); have e2 := pv_append q o i (n - i)
@@ -1000,35 +972,35 @@ end win
 /-! ## The recursion: `mul_win`, `kara_prods`, `kara_mid` -/
 
 /-- `k = ceil(la / 2)`, Karatsuba's split. -/
-def kh (la : Word) : Nat := la.toNat - la.toNat / 2
+def khalf (la : Word) : Nat := la.toNat - la.toNat / 2
 
 /-- The positions of a Karatsuba step, as numbers (no word wraps below `2^41`). -/
 theorem kara_pos (s la lb oa ob : Word) (hs : s.toNat < 2 ^ 41) (hla : la.toNat < 2 ^ 41)
     (hlb : lb.toNat < 2 ^ 41) (hoa : oa.toNat < 2 ^ 41) (hob : ob.toNat < 2 ^ 41)
     (h1 : la.toNat / 2 < lb.toNat) (h2 : lb.toNat ≤ la.toNat) :
-    (la - la >>> 1).toNat = kh la ∧ ((2 : Word) * (la - la >>> 1)).toNat = 2 * kh la ∧
-    (s + (2 : Word) * (la - la >>> 1)).toNat = s.toNat + 2 * kh la ∧
-    (la + lb - (2 : Word) * (la - la >>> 1)).toNat = la.toNat + lb.toNat - 2 * kh la ∧
+    (la - la >>> 1).toNat = khalf la ∧ ((2 : Word) * (la - la >>> 1)).toNat = 2 * khalf la ∧
+    (s + (2 : Word) * (la - la >>> 1)).toNat = s.toNat + 2 * khalf la ∧
+    (la + lb - (2 : Word) * (la - la >>> 1)).toNat = la.toNat + lb.toNat - 2 * khalf la ∧
     (s + la + lb).toNat = s.toNat + la.toNat + lb.toNat ∧
-    (s + la + lb + (la - la >>> 1) + (1 : Word)).toNat = s.toNat + la.toNat + lb.toNat + kh la + 1 ∧
+    (s + la + lb + (la - la >>> 1) + (1 : Word)).toNat = s.toNat + la.toNat + lb.toNat + khalf la + 1 ∧
     (s + la + lb + (la - la >>> 1) + (1 : Word) + (la - la >>> 1) + (1 : Word)).toNat =
-      s.toNat + la.toNat + lb.toNat + 2 * kh la + 2 ∧
+      s.toNat + la.toNat + lb.toNat + 2 * khalf la + 2 ∧
     (s + la + lb + (la - la >>> 1) + (1 : Word) + (la - la >>> 1) + (1 : Word) + (2 : Word) * (la - la >>> 1) + (2 : Word)).toNat =
-      s.toNat + la.toNat + lb.toNat + 4 * kh la + 4 ∧
-    (s + la + lb + (2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = s.toNat + la.toNat + lb.toNat + 2 * kh la + 2 ∧
-    ((la - la >>> 1) + (1 : Word)).toNat = kh la + 1 ∧ ((2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = 2 * kh la + 2 ∧
-    (oa + (la - la >>> 1)).toNat = oa.toNat + kh la ∧ (la - (la - la >>> 1)).toNat = la.toNat - kh la ∧
-    (ob + (la - la >>> 1)).toNat = ob.toNat + kh la ∧ (lb - (la - la >>> 1)).toNat = lb.toNat - kh la ∧
-    kh la ≤ la.toNat ∧ kh la ≤ lb.toNat ∧ la.toNat - kh la ≤ kh la := by
+      s.toNat + la.toNat + lb.toNat + 4 * khalf la + 4 ∧
+    (s + la + lb + (2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = s.toNat + la.toNat + lb.toNat + 2 * khalf la + 2 ∧
+    ((la - la >>> 1) + (1 : Word)).toNat = khalf la + 1 ∧ ((2 : Word) * (la - la >>> 1) + (2 : Word)).toNat = 2 * khalf la + 2 ∧
+    (oa + (la - la >>> 1)).toNat = oa.toNat + khalf la ∧ (la - (la - la >>> 1)).toNat = la.toNat - khalf la ∧
+    (ob + (la - la >>> 1)).toNat = ob.toNat + khalf la ∧ (lb - (la - la >>> 1)).toNat = lb.toNat - khalf la ∧
+    khalf la ≤ la.toNat ∧ khalf la ≤ lb.toNat ∧ la.toNat - khalf la ≤ khalf la := by
   have e0 : (la >>> 1).toNat = la.toNat / 2 := by
     rw [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; rfl
-  have ek : (la - la >>> 1).toNat = kh la := by
+  have ek : (la - la >>> 1).toNat = khalf la := by
     rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [e0]; omega)), e0]; rfl
-  have hk : kh la = la.toNat - la.toNat / 2 := rfl
-  have hkl : kh la ≤ lb.toNat := by omega
-  have hka : kh la ≤ la.toNat := by omega
+  have hk : khalf la = la.toNat - la.toNat / 2 := rfl
+  have hkl : khalf la ≤ lb.toNat := by omega
+  have hka : khalf la ≤ la.toNat := by omega
   generalize la - la >>> 1 = k at ek ⊢
-  generalize kh la = K at *
+  generalize khalf la = K at *
   have e2 : ((2 : Word) * k).toNat = 2 * K := by
     rw [UInt64.toNat_mul, ek]; simp only [UInt64.toNat_ofNat]; omega
   have a1 : (s + la).toNat = s.toNat + la.toNat := toNat_add_of_lt _ _ (by omega)
@@ -1147,7 +1119,7 @@ theorem karaProds_step (n : Nat) (ih : MulWinSpec p n) : KaraProdsSpec p (n + 1)
     | (with_reducible apply kp_frame <;> first | (with_reducible assumption) | omega)
     | grind (splits := 4) [arena_grind, lang_grind, winop_grind]
 
-/-- The spec of `kara_mid` at fuel `n` (`K = kh la`, `a = a0 + a1 B^K`, `b = b0 + b1 B^K`). -/
+/-- The spec of `kara_mid` at fuel `n` (`K = khalf la`, `a = a0 + a1 B^K`, `b = b0 + b1 B^K`). -/
 def KaraMidSpec (n : Nat) : Prop := ∀ (s₀ : St) (oa la ob lb sc : Word),
     pcap s₀.mem < 2 ^ 64 → sc.toNat ≤ pcap s₀.mem →
     oa.toNat + la.toNat ≤ sc.toNat → ob.toNat + lb.toNat ≤ sc.toNat →
@@ -1155,15 +1127,15 @@ def KaraMidSpec (n : Nat) : Prop := ∀ (s₀ : St) (oa la ob lb sc : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "kara_mid" [oa, la, ob, lb, sc]
     ⦃fun r s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧ Agree (vpool s'.mem) (vpool s₀.mem) sc.toNat ∧
-      sc.toNat + la.toNat + lb.toNat + 4 * kh la + 4 < 2 ^ 41 ∧ (r.headD 0).toNat ≤ 2 * kh la + 2 ∧
-      pv (vpool s'.mem) sc.toNat (2 * kh la) =
-        pv (vpool s₀.mem) oa.toNat (kh la) * pv (vpool s₀.mem) ob.toNat (kh la) ∧
-      pv (vpool s'.mem) (sc.toNat + 2 * kh la) (la.toNat + lb.toNat - 2 * kh la) =
-        pv (vpool s₀.mem) (oa.toNat + kh la) (la.toNat - kh la) *
-          pv (vpool s₀.mem) (ob.toNat + kh la) (lb.toNat - kh la) ∧
-      pv (vpool s'.mem) (sc.toNat + la.toNat + lb.toNat + 2 * kh la + 2) (r.headD 0).toNat =
-        pv (vpool s₀.mem) oa.toNat (kh la) * pv (vpool s₀.mem) (ob.toNat + kh la) (lb.toNat - kh la) +
-          pv (vpool s₀.mem) (oa.toNat + kh la) (la.toNat - kh la) * pv (vpool s₀.mem) ob.toNat (kh la); ⊤⦄
+      sc.toNat + la.toNat + lb.toNat + 4 * khalf la + 4 < 2 ^ 41 ∧ (r.headD 0).toNat ≤ 2 * khalf la + 2 ∧
+      pv (vpool s'.mem) sc.toNat (2 * khalf la) =
+        pv (vpool s₀.mem) oa.toNat (khalf la) * pv (vpool s₀.mem) ob.toNat (khalf la) ∧
+      pv (vpool s'.mem) (sc.toNat + 2 * khalf la) (la.toNat + lb.toNat - 2 * khalf la) =
+        pv (vpool s₀.mem) (oa.toNat + khalf la) (la.toNat - khalf la) *
+          pv (vpool s₀.mem) (ob.toNat + khalf la) (lb.toNat - khalf la) ∧
+      pv (vpool s'.mem) (sc.toNat + la.toNat + lb.toNat + 2 * khalf la + 2) (r.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat (khalf la) * pv (vpool s₀.mem) (ob.toNat + khalf la) (lb.toNat - khalf la) +
+          pv (vpool s₀.mem) (oa.toNat + khalf la) (la.toNat - khalf la) * pv (vpool s₀.mem) ob.toNat (khalf la); ⊤⦄
 
 /-- `kara_mid`'s frame: its seven writers all work above `s`. -/
 theorem kmid_frame (p0 p1 p2 p3 p4 p5 p6 p7 : Array Word)
@@ -1306,8 +1278,15 @@ theorem mulWin_step (n : Nat) (ihw : MulWinSpec p n) (ihm : KaraMidSpec p n) :
 
 end rec
 
+/-- The callees of `nat_mul` but `nat_trim`, as one hypothesis (an equation, so that a concrete
+program proves it by `rfl`). -/
+def MulFns (p : Prog) : Prop :=
+  (p.lookup "mul_zeros", p.lookup "mul_row", p.lookup "sub_row", p.lookup "kara_sum",
+    p.lookup "kara_prods", p.lookup "kara_mid", p.lookup "mul_win") =
+  (some mulZeros, some mulRow, some subRow, some karaSum, some karaProds, some karaMid, some mulWin)
+
 section mulFn
-variable (p : Prog) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
+variable (p : Prog) (hph : MulFns p) (hpz : p.lookup "mul_zeros" = some mulZeros) (hpr : p.lookup "mul_row" = some mulRow)
   (hps : p.lookup "sub_row" = some subRow) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpu : p.lookup "kara_sum" = some karaSum) (hpp : p.lookup "kara_prods" = some karaProds)
   (hpm : p.lookup "kara_mid" = some karaMid) (hpw : p.lookup "mul_win" = some mulWin)
@@ -1336,7 +1315,7 @@ theorem nm_agree (p0 p1 p2 : Array Word) (t w s T : Nat) (h2 : Off p2 p0 t w) (h
   (h1 j (by omega) (Or.inl (by omega))).trans (h2 j (Or.inl (by omega)))
 
 set_option maxHeartbeats 4000000 in
-include hpz hpr hps hpt hpu hpp hpm hpw hpn in
+include hph hpt hpn in
 /-- `nat_mul` appends `a * b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
 theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
@@ -1350,6 +1329,8 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       pv (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat * pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       Norm (vpool s'.mem) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+  simp only [MulFns, Prod.mk.injEq] at hph
+  obtain ⟨hpz, hpr, hps, hpu, hpp, hpm, hpw⟩ := hph
   have hok₀ := hok
   have hsm := hok.small
   have h41 := hok.top41

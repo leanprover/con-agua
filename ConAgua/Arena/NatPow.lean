@@ -185,7 +185,7 @@ def natPowProg : Prog := natMulProg ++ [("nat_pow", natPow)]
   (fun (r, m) => (r, (m.arr64 POOL)[r[0]!.toNat]!, m.arr64 CTL)) == some ([33, 1], 1, #[34])
 
 section pow
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
 
 /-- The invariant of the square-and-multiply loop: the accumulator `(o, l)` is a normalised
@@ -227,7 +227,7 @@ theorem powLoop_step_spec (A : Nat) (m₀ : Mem) (n : Nat) (s₀ : St) (h : PowI
 end pow
 
 section powFn
-variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : MulFns p)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpm : p.lookup "nat_mul" = some natMul)
   (hpn : p.lookup "nat_pow" = some natPow)
 

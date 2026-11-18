@@ -414,7 +414,7 @@ section pow
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
-  (hph : p.lookup "mac_hi" = some macHi) (hpt : p.lookup "nat_trim" = some natTrim)
+  (hph : MulFns p) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpm : p.lookup "nat_mul" = some natMul) (hpn : p.lookup "nat_pow" = some natPow)
 
 /-- A power whose exponent is known to be `0` (`grind` does not rewrite an exponent by an equation). -/
@@ -963,7 +963,7 @@ def natBinOpResultL : FunDecl := lfn (op, oa, la, ob, lb) locals (h) {
 
 /-- The pool functions, the `lit` store, and one L arm per operation. -/
 def natArmProg : Prog := storeProg ++
-  [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
+  [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mul_row", mulRow), ("sub_row", subRow),
    ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),
