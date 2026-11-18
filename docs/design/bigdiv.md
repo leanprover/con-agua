@@ -74,6 +74,46 @@ See "Final measurements" below. Two methods were used:
 * End to end: `scripts/bench.py`, interleaved randomised rounds, on gf3 (con-ron's
   `_tmp/gf3/gf3.ndjson`) and `Init` (init435).
 
+## Final measurements
+Micro, `instructions:u` per operation above a `Nat.add` of the same operands. The same
+numbers come back on every run.
+
+| case | K | master 0549cf2e | bigdiv | ratio |
+|---|---:|---:|---:|---:|
+| 1÷1 limb | 2000 | 24 319 | ≈ 0 (−207) | — |
+| 2÷1 | 1000 | 45 843 | 462 | 99× |
+| 8÷1 | 500 | 171 306 | 636 | 269× |
+| 8÷4 | 500 | 387 171 | 2 379 | 163× |
+| 32÷16 | 100 | 4.82 M | 20 533 | 235× |
+| 128÷64 | 10 | 71.5 M | 284 k | 252× |
+| 512÷256 | 2 | 1 120 M | 3.60 M | 311× |
+| 9532÷13 | 2 | 1 068 M | 7.82 M | 137× |
+| mod 64÷2 | 100 | 1.83 M | 14 258 | 128× |
+| gcd, 1 limb | 500 | 941 k | 22 947 | 41× |
+| gcd, Fibonacci 2 limbs | 50 | 2.49 M | 42 307 | 59× |
+| gcd, Fibonacci 16 limbs | 2 | 1 476 M | 1.91 M | 773× |
+
+For comparison, con-ron's own bench measures one 9532÷13-limb `div_mod` at 15.4 M instructions
+(DESIGN #158). The prototype with the 64-step bit-serial reciprocal measured 926 for the 1÷1
+case and 66 082 for the one-limb gcd.
+
+End to end, `scripts/bench.py`:
+* Setup: 10 interleaved randomised rounds, cpu 60, load about 1; master `0549cf2e`
+  (bigmul and bigdec included) against this branch.
+* Wall statistics: paired per-round differences, with a t-interval and a Wilcoxon signed-rank
+  test (normal approximation).
+
+| fixture | master instr | bigdiv instr | Δ instr | wall Δ, mean [95 % CI] | Wilcoxon |
+|---|---:|---:|---:|---:|---:|
+| gf3 | 99 666 M | 97 957 M | −1.71 % | −1.78 % [−1.88, −1.68] | W+ = 0, p ≈ 0.005 |
+| Init | 202 883 M | 202 647 M | −0.12 % | −0.04 % [−0.89, +0.82] | p ≈ 0.80 (no change) |
+
+con-ron (de06320f) on gf3: 50 965 M instructions, 5.03 s.
+
+Division is a small part of gf3 (its one `Nat.div` is in `rep1`) and of Init. The remaining
+gap to con-ron on gf3 is in multiplication and the bitwise passes, not division. Peak RSS is
+unchanged.
+
 ## Proof notes
 * Pure facts are in `NatDivFacts.lean`:
   * `top2_div`: the top two words of `V·2^s` read from the top limbs.
