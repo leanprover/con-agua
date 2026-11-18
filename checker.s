@@ -74632,106 +74632,63 @@ movq $0, %rax
 addq $72, %rsp
 ret
 ca_f_div_submul:
-subq $96, %rsp
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+andq %rax, %rdi
+movq %r9, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r9
+movq %rax, %r11
+subq %rdi, %r11
+cmpq %r8, %r11
+jb ca_exhausted
+movq %rax, %r11
+subq %r9, %r11
+cmpq %r8, %r11
+jb ca_exhausted
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r8, %rax
+jbe ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+movq 1504(%r15,%rdx,8), %rax
+subq %r9, %rax
+jb ca_exhausted
+cmpq %r8, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rbx
+lea (%rbx,%r9,8), %rbx
+subq %r8, %r14
+jb ca_exhausted
 movq $0, %r13
 movq $0, %r12
-movq %rdi, %rax
-shrq $40, %rax
-movq %rax, 72(%rsp)
-movq $1099511627775, %rax
-andq %rdi, %rax
-movq %rax, 80(%rsp)
-.Lca_div_submul_221H:
-cmpq %r8, %r13
-jae .Lca_div_submul_221X
-lea (%rdi,%r13,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%rdi,%r13,1), %rsi
-movq $1099511627775, %rcx
-andq %rcx, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-lea (%r9,%r13,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%r9,%r13,1), %r11
-movq $1099511627775, %rcx
-andq %rcx, %r11
-cmpq 1504(%r15,%rax,8), %r11
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r11,8), %r11
-movq %r10, %rbx
-imulq %r11, %rbx
-addq %r12, %rbx
-movq %r10, %rax
-movq %r11, %rcx
-mulq %rcx
-movq %rdx, %rax
-cmpq %r12, %rbx
 movq $0, %rcx
-movq $1, %rdx
-cmovb %rdx, %rcx
-addq %rcx, %rax
-movq %rax, %r12
-movq 80(%rsp), %rax
-addq %r13, %rax
-movq %rax, 88(%rsp)
-movq %rsi, %rax
-subq %rbx, %rax
-movq %rax, %rdx
-movq 88(%rsp), %rax
-movq 72(%rsp), %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-cmpq %rbx, %rsi
-movq $0, %rax
-movq $1, %rcx
-cmovb %rcx, %rax
-addq %rax, %r12
+cmpq $0, %r8
+je .Lasm_div_submul_T
+.Lasm_div_submul_L:
+movq %r10, %rax
+mulq (%rbx,%r13,8)
+addq %r12, %rax
+adcq %rcx, %rdx
+movq (%rdi,%r13,8), %r11
+subq %rax, %r11
+adcq %rcx, %rdx
+movq %r11, (%rdi,%r13,8)
+movq %rdx, %r12
 addq $1, %r13
-subq $1, %r14
-jb ca_exhausted
-jmp .Lca_div_submul_221H
-.Lca_div_submul_221X:
-lea (%rdi,%r8,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%rdi,%r8,1), %rsi
-movq $1099511627775, %rcx
-andq %rcx, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 80(%rsp), %rax
-addq %r8, %rax
-movq %rax, 88(%rsp)
-movq %rsi, %rax
-subq %r12, %rax
-movq %rax, %rdx
-movq 88(%rsp), %rax
-movq 72(%rsp), %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-cmpq %r12, %rsi
+cmpq %r8, %r13
+jb .Lasm_div_submul_L
+.Lasm_div_submul_T:
+movq (%rdi,%r13,8), %r11
+subq %r12, %r11
+movq %r11, (%rdi,%r13,8)
 movq $0, %rax
-movq $1, %rcx
-cmovb %rcx, %rax
-jmp .Lca_div_submul_0R
-.Lca_div_submul_0Z:
-movq $0, %rax
-.Lca_div_submul_0R:
-addq $96, %rsp
+adcq %rcx, %rax
 ret
 ca_f_dlp_copy:
 movq %rsp, %rax
