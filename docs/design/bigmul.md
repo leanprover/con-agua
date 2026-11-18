@@ -40,7 +40,60 @@ with four argument copies) and loads the operand through its decoded tier and in
 
 ## Measurements
 
-(below)
+Method. Microbenchmark: Lean files of theorems `Nat.land (Nat.mul (Nat.pow 3 k) (Nat.pow 5 k')) 255
+= r := by decide +kernel` (`k`, `k'` chosen for the limb counts; `R` theorems with distinct
+exponents per file), exported with lean4export (v4.35.0-rc3), and the same with `Nat.add` in
+place of `Nat.mul` (the pows alone); `perf stat -e instructions:u` of the checker on each
+(nearly deterministic). Per product: `(mul − base) / R`. Generator: `_tmp/bigmul-bench/mb/`
+(`gen.py`, `mk.sh`, `instr.sh`). End to end: `scripts/bench.py --no-conron --no-ref --reps 6`
+(interleaved, randomized), paired differences with a t interval and the exact Wilcoxon
+signed-rank test (`_tmp/bigmul-bench/tools/paired.py`).
+
+Per product, `instructions:u` (master → this lane, T = 48):
+
+| operands | master | new | |
+|---|---:|---:|---:|
+| 256 × 256 | 5.75 M | 2.33 M | 2.5× |
+| 512 × 512 | 21.4 M | 6.00 M | 3.6× |
+| 1024 × 1024 | 85.9 M | 18.8 M | 4.6× |
+| 2048 × 2048 | 344 M | 57.6 M | 6.0× |
+| 4096 × 4096 | 1 376 M | 174 M | 7.9× |
+| 8192 × 8192 | 5 503 M | 527 M | 10.4× |
+| 13 × 9519 (gf3's shape) | 9.93 M | 5.72 M | 1.7× |
+| 64 × 4096 | 21.3 M | 11.8 M | 1.8× |
+| 100 × 1000 | 9.07 M | 5.11 M | 1.8× |
+
+Doubling `n` costs ×3.0 (master ×4.0): `n^1.585`. Every fixture from 8 × 8 to 96 × 96 limbs
+is also below master in total (the fixed cost dominates there).
+
+Threshold: `checker.s` patched at `mul_win`'s comparison, `T ∈ {8, 12, 16, 24, 32, 48, 64, 96}`,
+balanced 16–8192 limbs and the unbalanced fixtures (fixture totals, M instructions):
+
+| fixture | 16 | 32 | 48 | 64 | 96 |
+|---|---:|---:|---:|---:|---:|
+| 112² | — | 1 492.8 | 1 492.8 | 1 497.0 | 1 497.0 |
+| 192² | — | 1 457.5 | 1 457.5 | 1 459.6 | 1 459.6 |
+| 1024² | 1 521 | 1 496 | 1 490 | 1 490 | 1 499 |
+| 8192² | 2 707 | 2 479 | 2 426 | 2 426 | 2 507 |
+| 13 × 9519 | 3 416 | 3 120 | 3 083 | 3 083 | 3 251 |
+
+48 is never worse than 32 or 64. (con-ron's 64 is for its own code; L's is measured.)
+
+End to end (6 interleaved rounds, master `d44857b7a` vs this lane at T = 48):
+
+| fixture | master | new | paired difference (95 % CI) | Wilcoxon p |
+|---|---:|---:|---:|---:|
+| gf3, instructions | 146.72 G | 99.67 G | −32.1 % (±0.00 %) | 0.031 (min. for n = 6) |
+| gf3, wall | 6.94 s | 3.85 s | −44.7 % (±0.8 %) | 0.031 |
+| Init, instructions | 202.881 G | 202.883 G | +0.001 % | 0.031 |
+| Init, wall | 14.86 s | 14.77 s | +0.7 % (±3.3 %) | 0.84 |
+
+gf3's products are `13 × 9519`, below the threshold: its gain is the swap (master ran 9519
+rows of 13 limbs) and the inline multiply-accumulate. After the change `mul_row` is 57 % of gf3.
+
+**Follow-up (out of scope, the compiler):** `mul_row`'s inner loop costs about 52 instructions
+per limb product (master's was about 95); con-ron's is about 16. Every local lives on the
+stack in the generated code; that is the codegen gap, not the algorithm.
 
 ## Proof
 

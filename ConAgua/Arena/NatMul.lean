@@ -8,6 +8,8 @@ public import ConAgua.Arena.NatOff
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
+import ConAgua.L.LocNF
+import ConAgua.L.Records
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
@@ -286,6 +288,108 @@ def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", 
 section passes
 variable (p : Prog) (P0 : Array Word) (C : Nat)
 
+/-- The inline multiply-accumulate of `mul_row`: the low word `x * y + t + c` and the high word
+`mulhi(x, y) + u64(lo < t) + u64(lo + c < c)` are `x * y + t + c` (the high word cannot
+overflow: `(2^64 - 1)^2 + 2 (2^64 - 1) < 2^128`). -/
+theorem mac_inl (x y t c : Word) :
+    (x * y + t + c).toNat +
+        (UInt64.ofNat (x.toNat * y.toNat / 2 ^ 64) + Cmp.ult.evalW (x * y + t) t +
+          Cmp.ult.evalW (x * y + t + c) c).toNat * 2 ^ 64 =
+      x.toNat * y.toNat + t.toNat + c.toNat := by
+  have hm := mul_split x y
+  have hl := mulHiN_le x y
+  have hx := x.toNat_lt; have hy := y.toNat_lt; have ht := t.toNat_lt; have hc := c.toNat_lt
+  have hh : (UInt64.ofNat (x.toNat * y.toNat / 2 ^ 64)).toNat = mulHiN x y := mulhi_toNat x y
+  simp only [mulHiN] at hm hh
+  generalize x.toNat * y.toNat = P at *
+  simp only [Cmp.evalW, Cmp.eval, decide_eq_true_eq, UInt64.lt_iff_toNat_lt]
+  have e1 : (x * y + t).toNat = ((x * y).toNat + t.toNat) % 2 ^ 64 := UInt64.toNat_add _ _
+  have e2 : (x * y + t + c).toNat = ((x * y + t).toNat + c.toNat) % 2 ^ 64 := UInt64.toNat_add _ _
+  split <;> split <;>
+    simp only [UInt64.toNat_add, UInt64.toNat_ofNat, UInt64.toNat_one, UInt64.toNat_zero, hh] <;>
+    omega
+
+/-- Word sums of positions below `2^41` do not wrap. -/
+theorem w_add (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
+  rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt h
+
+/-- Positions inside a window pass: `T + i < 2^41` once the store at `⦃T⦄.idx + i` is in bounds. -/
+theorem win_lt (m : Mem) (T i : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    T.toNat + i.toNat < 2 ^ 41 := by
+  have := tag_idx_lt T; have := tag_split T; have := tag_tier_le T hT
+  rw [w_add _ _ (by omega)] at hb; omega
+
+/-- A load at `⦃T⦄.tier`, `⦃T⦄.idx + i` that succeeds reads the virtual pool at `T + i`. -/
+theorem ld_win (m : Mem) (T i : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    (m.arr64 (tierA POOL (T >>> 40)))[((T &&& 1099511627775) + i).toNat] =
+      (vpool m)[T.toNat + i.toNat]'(by rw [vpool_size]; exact win_lt m T i hT hi hs hb) := by
+  have hk : (T &&& 1099511627775).toNat + i.toNat < 2 ^ 40 := by
+    have := tag_idx_lt T; rw [w_add _ _ (by omega)] at hb; omega
+  have hk2 : (T.toNat + i.toNat) < 2 ^ 41 := by
+    have := tag_split T; have := tag_tier_le T hT; omega
+  rw [vpool_ldidx m T i hT hb hs hk (by rw [vpool_size, w_add _ _ (by omega)]; omega)]
+  simp only [w_add T i (by omega)]
+
+/-- A store at `⦃T⦄.tier`, `⦃T⦄.idx + i` that succeeds writes the virtual pool at `T + i`. -/
+theorem st_win (m : Mem) (T i v : Word) (hT : T.toNat < 2 ^ 41) (hi : i.toNat < 2 ^ 41)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hb : ((T &&& 1099511627775) + i).toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    vpool (m.set64 (tierA POOL (T >>> 40)) ((T &&& 1099511627775) + i) v) =
+      (vpool m).set! (T.toNat + i.toNat) v := by
+  have hk : (T &&& 1099511627775).toNat + i.toNat < 2 ^ 40 := by
+    have := tag_idx_lt T; rw [w_add _ _ (by omega)] at hb; omega
+  rw [vpool_stidx m T i v hT hb hs hk, w_add T i (by omega)]
+
+/-- One step of `mul_row`'s row loop, in the shape of its verification condition. -/
+theorem mrow_step_goal (m : Mem) (P0 : Array Word) (o oa y i c T11 T12 T13 T14 : Word)
+    (h11 : T11 = o >>> 40) (h12 : T12 = o &&& 1099511627775)
+    (h13 : T13 = oa >>> 40) (h14 : T14 = oa &&& 1099511627775)
+    (hP0 : P0.size = 2 ^ 41) (ho : o.toNat + i.toNat < 2 ^ 41) (hoa : oa.toNat + i.toNat < 2 ^ 41)
+    (hdis : oa.toNat + i.toNat < o.toNat ∨ o.toNat ≤ oa.toNat)
+    (hs11 : (m.arr64 (tierA POOL T11)).size ≤ 2 ^ 40) (hs13 : (m.arr64 (tierA POOL T13)).size ≤ 2 ^ 40)
+    (hb13 : (T14 + i).toNat < (m.arr64 (tierA POOL T13)).size)
+    (hb11 : (T12 + i).toNat < (m.arr64 (tierA POOL T11)).size)
+    (hoff : Off (vpool m) P0 o.toNat i.toNat)
+    (ih : pv (vpool m) o.toNat i.toNat + c.toNat * wt i.toNat =
+      pv P0 o.toNat i.toNat + pv P0 oa.toNat i.toNat * y.toNat) :
+    pv (vpool (m.set64 (tierA POOL T11) (T12 + i)
+        ((m.arr64 (tierA POOL T13))[(T14 + i).toNat] * y + (m.arr64 (tierA POOL T11))[(T12 + i).toNat] + c)))
+        o.toNat (i + 1).toNat +
+      (UInt64.ofNat ((m.arr64 (tierA POOL T13))[(T14 + i).toNat].toNat * y.toNat / 2 ^ 64) +
+          Cmp.ult.evalW ((m.arr64 (tierA POOL T13))[(T14 + i).toNat] * y +
+            (m.arr64 (tierA POOL T11))[(T12 + i).toNat]) (m.arr64 (tierA POOL T11))[(T12 + i).toNat] +
+          Cmp.ult.evalW ((m.arr64 (tierA POOL T13))[(T14 + i).toNat] * y +
+            (m.arr64 (tierA POOL T11))[(T12 + i).toNat] + c) c).toNat * wt (i + 1).toNat =
+    pv P0 o.toNat (i + 1).toNat + pv P0 oa.toNat (i + 1).toNat * y.toNat := by
+  subst h11 h12 h13 h14
+  have hi1 : (i + 1).toNat = i.toNat + 1 := w_add i 1 (by simp; omega)
+  have ex := ld_win m oa i (by omega) (by omega) hs13 hb13
+  have et := ld_win m o i (by omega) (by omega) hs11 hb11
+  have hvs := vpool_size m
+  have ex' : (vpool m)[oa.toNat + i.toNat]'(by omega) = P0[oa.toNat + i.toNat]'(by omega) := by
+    have := hoff (oa.toNat + i.toNat) (by omega)
+    simp only [Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < (vpool m).size),
+      Array.getElem?_eq_getElem (by omega : oa.toNat + i.toNat < P0.size), Option.some.injEq] at this
+    exact this
+  have et' : (vpool m)[o.toNat + i.toNat]'(by omega) = P0[o.toNat + i.toNat]'(by omega) :=
+    Off.get _ _ _ _ _ hoff (by omega) (by omega) (by omega)
+  rw [st_win m o i _ (by omega) (by omega) hs11 hb11, ex, et, ex', et']
+  have hmac := mac_inl P0[oa.toNat + i.toNat] y P0[o.toNat + i.toNat] c
+  generalize (UInt64.ofNat _ + _ + _ : Word) = c' at hmac ⊢
+  rw [hi1, pv_set_succ (vpool m) o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) _ rfl rfl (by omega),
+    pv_succ P0 o.toNat i.toNat (i.toNat + 1) (o.toNat + i.toNat) rfl rfl (by omega),
+    pv_succ P0 oa.toNat i.toNat (i.toNat + 1) (oa.toNat + i.toNat) rfl rfl (by omega),
+    wt_succ i.toNat (i.toNat + 1) rfl]
+  generalize pv (vpool m) o.toNat i.toNat = A at *
+  generalize pv P0 o.toNat i.toNat = B at *
+  generalize pv P0 oa.toNat i.toNat = D at *
+  generalize wt i.toNat = W at *
+  grind
+
 /-- The tier facts of a window pass over `[o, o + n)` reading `[oa, oa + la)`: locals `o`, `n`,
 `oa`, `la` at `0`-`3`, the decoded tiers and indices at `ot`, `ob`, `qt`, `qb`. -/
 def WinBase (P0 : Array Word) (C : Nat) (ot ob qt qb : Nat) (s : St) : Prop :=
@@ -327,7 +431,15 @@ theorem mrowLoop_spec (n : Nat) (s₀ : St) (h : MRowInv P0 C s₀) :
     all_goals clear ih
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
-    all_goals grind (splits := 20) [arena_grind, lang_grind]
+    all_goals (try simp only [MRowInv, MRowPost, WinBase] at *)
+    all_goals (try subst_vars)
+    all_goals (try and_intros)
+    all_goals (try dsimp (config := { decide := true }) only [L.St.setLoc_mem, St.setLoc, reduceIte] at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval, Mem.size64_set64,
+      Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+    all_goals first
+      | (with_reducible apply mrow_step_goal <;> grind [pcap_eq])
+      | grind (splits := 8) [arena_grind, lang_grind]
 
 end passes
 
