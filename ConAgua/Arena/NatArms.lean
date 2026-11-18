@@ -315,10 +315,10 @@ section pred
 variable (p : Prog) (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
   (hI : InternSpec p R)
-  (hpl : p.lookup "nat_limb" = some natLimb) (hps : p.lookup "sub_borrow" = some subBorrow)
+  (hps : p.lookup "sub_n" = some subN) (hp1 : p.lookup "sub_1" = some sub1)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_sub" = some natSub)
 
-include hpool hgrow hI hpl hps hpt hpn in
+include hpool hgrow hI hps hp1 hpt hpn in
 theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n : Nat) (s₀ : St)
     (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la)
     (hmode : ModeOK s₀.mem) :
@@ -339,7 +339,7 @@ theorem natPredLit_refines (hg : p.lookup "nat_pred_lit" = some natPredLit) (n :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [evalE_tagE, evalE_idxAE, evalE_idxGE, exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      natSub_spec p hpl hps hpt hpn n, hI a₀ n]
+      natSub_spec p hps hp1 hpt hpn n, hI a₀ n]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, Cmp.eval, BinOp.eval,
       Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
     all_goals grind (gen := 20) [lang_grind, arena_grind, natop_grind, natPredArm]
@@ -956,7 +956,7 @@ def natBinOpResultL : FunDecl := lfn (op, oa, la, ob, lb) locals (h) {
 
 /-- The pool functions, the `lit` store, and one L arm per operation. -/
 def natArmProg : Prog := storeProg ++
-  [("sub_borrow", subBorrow), ("nat_sub", natSub), ("mul_row", mulRow), ("sub_row", subRow),
+  [("sub_n", subN), ("sub_1", sub1), ("nat_sub", natSub), ("mul_row", mulRow), ("sub_row", subRow),
    ("mul_zeros", mulZeros), ("kara_sum", karaSum), ("kara_prods", karaProds), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul),
    ("nat_land", natLand), ("nat_lor", natLor), ("nat_xor", natXor), ("nat_shl", natShl),
    ("nat_shr", natShr),

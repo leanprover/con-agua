@@ -33,7 +33,7 @@ def leafC : List Word :=
 
 /-- The functions of `loopFns` that leave the pins and the core's memos alone. -/
 def leafFns : List FnName :=
-  ["ab_find", "ab_fvb", "add_carry", "alpd_ls", "and_block_named", "and_pin_ok",
+  ["ab_find", "ab_fvb", "add_1", "add_carry", "add_n", "alpd_ls", "and_block_named", "and_pin_ok",
    "and_rescue_slots", "apd_find", "app_count", "app_count_at", "app_fill", "app_fill_n",
    "app_find", "app_hole", "app_push", "b_eq", "base_row_get", "basis_name_hit",
    "basis_name_hit_go", "basis_name_unreserved", "basis_names_error", "bb_go", "bb_memo",
@@ -196,7 +196,7 @@ def leafFns : List FnName :=
    "stream_nested_bvars", "stream_nested_dom", "stream_nested_ok", "stream_nested_pins",
    "stream_rules_shape", "string_of_list_ty_ok", "string_ty_ok", "strip_lams", "strip_pis",
    "struct_ctor_resid_ok", "struct_elim_level", "struct_proj_arg_p", "struct_proj_bodies",
-   "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "sub_borrow",
+   "struct_proj_bodies_go", "struct_proj_ps", "struct_ps_at", "struct_ps_at_go", "sub_1", "sub_n",
    "sub_row", "subst_const0", "subst_const0_list", "subst_const0_pairs", "subst_const_all",
    "subst_pw_at", "succ_find", "succ_push", "sum_rules", "sum_rules_go", "ta_clear", "ta_find",
    "ta_put", "target_abs", "target_abs_const", "target_abs_go", "target_abs_node",

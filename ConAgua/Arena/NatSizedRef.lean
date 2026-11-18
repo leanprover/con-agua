@@ -136,8 +136,8 @@ theorem natSizeRefused_spec (p : Prog) (hz : p.lookup "size_bytes" = some sizeBy
     all_goals grind
 
 section refine
-variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
-  (hpc : p.lookup "add_carry" = some addCarry) (hpt : p.lookup "nat_trim" = some natTrim)
+variable (p : Prog) (hpN : p.lookup "add_n" = some addN)
+  (hp1 : p.lookup "add_1" = some add1) (hpt : p.lookup "nat_trim" = some natTrim)
   (hpa : p.lookup "nat_add" = some natAdd) (hpn : p.lookup "nat_add_lit" = some natAddLit)
   (R : Mem → AState → Prop)
   (hpool : ∀ m a, R m a → PoolOK m)
@@ -191,7 +191,7 @@ theorem litNatSized_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.m
       | (apply NatRes.refusedSize; rw [hrun, ite_eq_left]; apply Classical.byContradiction; intro hc; simp_all)
       | (refine NatRes.ofIntern (pv (vpool s₀.mem) o.toNat l.toNat) _ rfl ?_ ?_ ?_ ?_ <;> (try rw [hrun, ite_eq_right]) <;> simp_all [Locals.init])
 
-include hpl hpc hpt hpa hpn hz hsr hls hpool hgrow hI in
+include hpN hp1 hpt hpa hpn hz hsr hls hpool hgrow hI in
 /-- **`nat_add_lit` refines `natBinOpResult`'s `Nat.add` arm** (`litNatSized (a + b)`): a handle word
 where the arena arm interns the sum, the sentinel where it refuses it (`NatRes`). -/
 @[refines_part ConRon.Arena.natBinOpResult "Nat.add"]
@@ -214,7 +214,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpl hpc hpt hpa n,
+    vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpN hp1 hpt hpa n,
       litNatSized_refines p R hpool hI hz hsr hls n (a₀ := a₀)]
     all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
       Locals.init_cons_zero, Locals.init_cons_succ, reduceIte] at *)
