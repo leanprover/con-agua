@@ -160,8 +160,38 @@ def zerosLoop : Stmt := lblk (o, n, i, ot, ob) {
 
 /-! ## `mul_win`: the window product, accumulated in place -/
 
+/-- `kara_mid(oa, la, ob, lb, s)`: the three products of a Karatsuba step on `a = a0 + a1 B^k`,
+`b = b0 + b1 B^k` (`k = ceil(la / 2)`, `la / 2 < lb ≤ la`), into the scratch block from `s`:
+`z0 = a0 b0` at `[s, s + 2k)`, `z2 = a1 b1` at `[s + 2k, s + la + lb)`, the sums `a0 + a1` and
+`b0 + b1` (`k + 1` limbs each) above them, and `z1 = (a0 + a1)(b0 + b1) - z0 - z2` at
+`sp = s + la + lb + 2k + 2`, of the length it returns (trimmed). The scratch of its own products
+starts at `s2 = sp + 2k + 2`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def karaMid : FunDecl := lfn (oa, la, ob, lb, s) locals (k, z2, n2, sa, sb, sp, s2, u) {
+  k := la - (la >> 1);
+  z2 := s + 2 * k;
+  n2 := la + lb - 2 * k;
+  sa := s + la + lb;
+  sb := sa + k + 1;
+  sp := sb + k + 1;
+  s2 := sp + 2 * k + 2;
+  if ⟪2 ^ 41⟫ <= s2 { abort };
+  u := call mul_zeros(s, s2 - s);
+  u := call mul_win(oa, k, ob, k, s, 2 * k, s2);
+  u := call mul_win(oa + k, la - k, ob + k, lb - k, z2, n2, s2);
+  u := call mul_row(sa, k + 1, oa, k, 1);
+  u := call mul_row(sa, k + 1, oa + k, la - k, 1);
+  u := call mul_row(sb, k + 1, ob, k, 1);
+  u := call mul_row(sb, k + 1, ob + k, lb - k, 1);
+  u := call mul_win(sa, k + 1, sb, k + 1, sp, 2 * k + 2, s2);
+  u := call sub_row(sp, 2 * k + 2, s, 2 * k);
+  u := call sub_row(sp, 2 * k + 2, z2, n2);
+  u := call nat_trim(sp, 2 * k + 2);
+  return u
+}
+
 /-- The schoolbook rows: one `mul_row` per limb of the shorter operand `b`. -/
-def rowsLoop : Stmt := lblk (oa, la, ob, lb, o, n, s, k, z2, n2, sa, sb, sp, s2, l, u, j, y) {
+def rowsLoop : Stmt := lblk (oa, la, ob, lb, o, n, s, k, l, u, j, y) {
   for j < lb {
     y := POOL⦃ob + j⦄;
     u := call mul_row(o + j, n - j, oa, la, y)
@@ -172,12 +202,10 @@ def rowsLoop : Stmt := lblk (oa, la, ob, lb, o, n, s, k, z2, n2, sa, sb, sp, s2,
 `a = P[oa, oa + la)` and `b = P[ob, ob + lb)` (con-ron's `mul_win`), with scratch space from `s`
 up. Below `T` limbs in the shorter window: schoolbook rows; an operand at least twice as long
 as the other is halved, both halves accumulating into the window; otherwise Karatsuba at
-`k = ceil(la / 2)`: `z0 = a0 b0` and `z2 = a1 b1` into zeroed scratch, the sums `a0 + a1`,
-`b0 + b1` and their product `s` too, `z1 = s - z0 - z2` in place in `s`, then
-`P[o, o + n) += z0 + z1 B^k + z2 B^2k`. -/
+`k = ceil(la / 2)` (`kara_mid`), then `P[o, o + n) += z0 + z1 B^k + z2 B^2k`. -/
 -- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 @[no_expose] def mulWinG (T : Word) : FunDecl :=
-  lfn (oa, la, ob, lb, o, n, s) locals (k, z2, n2, sa, sb, sp, s2, l, u, j, y) {
+  lfn (oa, la, ob, lb, o, n, s) locals (k, l, u, j, y) {
   if n < la + lb { abort };
   if la < lb {
     u := call mul_win(ob, lb, oa, la, o, n, s);
@@ -194,31 +222,16 @@ as the other is halved, both halves accumulating into the window; otherwise Kara
     return 0
   };
   k := la - (la >> 1);
-  z2 := s + 2 * k;
-  n2 := la + lb - 2 * k;
-  sa := z2 + n2;
-  sb := sa + k + 1;
-  sp := sb + k + 1;
-  s2 := sp + 2 * k + 2;
-  u := call mul_zeros(s, s2 - s);
-  u := call mul_win(oa, k, ob, k, s, 2 * k, s2);
-  u := call mul_win(oa + k, la - k, ob + k, lb - k, z2, n2, s2);
-  u := call mul_row(sa, k + 1, oa, k, 1);
-  u := call mul_row(sa, k + 1, oa + k, la - k, 1);
-  u := call mul_row(sb, k + 1, ob, k, 1);
-  u := call mul_row(sb, k + 1, ob + k, lb - k, 1);
-  u := call mul_win(sa, k + 1, sb, k + 1, sp, 2 * k + 2, s2);
-  u := call sub_row(sp, 2 * k + 2, s, 2 * k);
-  u := call sub_row(sp, 2 * k + 2, z2, n2);
-  l := call nat_trim(sp, 2 * k + 2);
+  l := call kara_mid(oa, la, ob, lb, s);
   u := call mul_row(o, n, s, 2 * k, 1);
-  u := call mul_row(o + k, n - k, sp, l, 1);
-  u := call mul_row(o + 2 * k, n - 2 * k, z2, n2, 1);
+  u := call mul_row(o + k, n - k, s + la + lb + 2 * k + 2, l, 1);
+  u := call mul_row(o + 2 * k, n - 2 * k, s + 2 * k, la + lb - 2 * k, 1);
   return 0
 }
 
-/-- The Karatsuba threshold: below this many limbs in the shorter operand, schoolbook. -/
-def karaT : Word := 32
+/-- The Karatsuba threshold: below this many limbs in the shorter operand, schoolbook (measured,
+docs/design/bigmul.md). -/
+def karaT : Word := 48
 
 /-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat` -/
 @[no_expose] def mulWin : FunDecl := mulWinG karaT
@@ -248,11 +261,12 @@ def natMul : FunDecl := natMulG karaT
 
 /-- The pool functions with `nat_mul`. -/
 def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow), ("sub_row", subRow),
-  ("mul_zeros", mulZeros), ("mul_win", mulWin), ("nat_mul", natMul)]
+  ("mul_zeros", mulZeros), ("kara_mid", karaMid), ("mul_win", mulWin), ("nat_mul", natMul)]
 
 /-- `natMulProg` at another threshold (tests). -/
 def natMulProgT (T : Word) : Prog := natProg ++ [("mac_hi", macHi), ("mul_row", mulRow),
-  ("sub_row", subRow), ("mul_zeros", mulZeros), ("mul_win", mulWinG T), ("nat_mul", natMulG T)]
+  ("sub_row", subRow), ("mul_zeros", mulZeros), ("kara_mid", karaMid), ("mul_win", mulWinG T),
+  ("nat_mul", natMulG T)]
 
 /- `(2^64 - 1)^2 = 2^128 - 2^65 + 1`: limbs `[1, 2^64 - 2]`. -/
 #guard (run natMulProg 1000 "nat_mul" [0, 1, 0, 1]
