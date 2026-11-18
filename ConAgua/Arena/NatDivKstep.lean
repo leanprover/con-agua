@@ -247,6 +247,147 @@ theorem kEst_spec (T B : Nat) (n : Nat) (s₀ : St) (hs : pcap s₀.mem < 2 ^ 64
 end est
 
 
+/-! ## The correction loop -/
+
+/-- The correction's invariant over the entry memory `m0`: the window `A` (in place) and `q`
+keep `A + q b = T + c · wt (lb + 1)`, `c ≤ 1`, and `q ≥ ⌊T / b⌋`. -/
+def DcInv (m0 : Mem) (wj lb ob : Word) (T B : Nat) (s : St) : Prop :=
+  pcap m0 < 2 ^ 64 ∧ wj.toNat + lb.toNat + 1 ≤ pcap m0 ∧ ob.toNat + lb.toNat ≤ wj.toNat ∧
+  0 < B ∧ B = pv (vpool m0) ob.toNat lb.toNat ∧
+  s.loc 0 = wj ∧ s.loc 1 = lb ∧ s.loc 2 = ob ∧
+  PFrame m0 s.mem ∧ pcap s.mem = pcap m0 ∧ Off (vpool s.mem) (vpool m0) wj.toNat (lb.toNat + 1) ∧
+  (s.loc 7).toNat ≤ 1 ∧ T / B ≤ (s.loc 8).toNat ∧
+  pv (vpool s.mem) wj.toNat (lb.toNat + 1) + (s.loc 8).toNat * B =
+    T + (s.loc 7).toNat * wt (lb.toNat + 1)
+
+def DcPost (m0 : Mem) (wj lb : Word) (T B : Nat) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame m0 s'.mem ∧ pcap s'.mem = pcap m0 ∧
+  Off (vpool s'.mem) (vpool m0) wj.toNat (lb.toNat + 1) ∧
+  (s'.loc 8).toNat = T / B ∧ pv (vpool s'.mem) wj.toNat (lb.toNat + 1) = T % B
+
+/-- One correction: the window was negative (`c = 1`), so `q b > T` and `q - 1 ≥ ⌊T / b⌋`; adding
+`b` back with carry `C` leaves the borrow `1 - C`. -/
+theorem dc_arith (A A' Q C B T W : Nat) (heq : A + Q * B = T + W) (hA : A < W) (hB : 0 < B)
+    (hadd : A' + C * W = A + B) (hC : C ≤ 1) :
+    1 ≤ Q ∧ T / B ≤ Q - 1 ∧ A' + (Q - 1) * B = T + (if C = 0 then 1 else 0) * W := by
+  have h1 : T < Q * B := by omega
+  have h2 : T / B < Q := (Nat.div_lt_iff_lt_mul hB).mpr h1
+  have h3 : (Q - 1) * B = Q * B - B := Nat.sub_one_mul Q B
+  have h4 : B ≤ Q * B := Nat.le_mul_of_pos_left B (Nat.lt_of_le_of_lt (Nat.zero_le _) h2)
+  have h5 : 1 ≤ Q := Nat.lt_of_le_of_lt (Nat.zero_le _) h2
+  have h6 : T / B ≤ Q - 1 := Nat.le_sub_one_of_lt h2
+  refine ⟨h5, h6, ?_⟩
+  rw [h3]
+  clear h2 h5 h6
+  generalize Q * B = P at *
+  rcases Nat.lt_or_ge C 1 with hc | hc
+  · have : C = 0 := by omega
+    subst this; simp only [↓reduceIte, Nat.one_mul, Nat.zero_mul] at hadd ⊢; omega
+  · have : C = 1 := by omega
+    subst this; simp only [Nat.one_ne_zero, ↓reduceIte, Nat.zero_mul, Nat.one_mul] at hadd ⊢; omega
+
+/-- The correction ends (`c = 0`): `A + q b = T` with `q ≥ ⌊T / b⌋` pins `q` and the remainder. -/
+theorem dc_exit (A Q B T : Nat) (heq : A + Q * B = T) (hq : T / B ≤ Q) (hB : 0 < B) :
+    Q = T / B ∧ A = T % B := by
+  have h1 : Q ≤ T / B := (Nat.le_div_iff_mul_le hB).mpr (by omega)
+  have h2 : Q = T / B := by omega
+  refine ⟨h2, ?_⟩
+  have := Nat.div_add_mod T B
+  subst h2
+  have : B * (T / B) = T / B * B := Nat.mul_comm _ _
+  omega
+
+/-- The correction's step, in the shape of its verification condition. -/
+theorem dc_step_goal (m0 : Mem) (wj lb ob : Word) (T B : Nat) (s1 s : St) (rs : List Word)
+    (h : DcInv m0 wj lb ob T B s1) (hc : (s1.loc 7 != 0) = true)
+    (hp : LocEq s (s1.setLoc 8 (s1.loc 8 - 1)) ∧ PFrame s1.mem s.mem ∧ pcap s.mem = pcap s1.mem ∧
+      (rs.headD 0).toNat ≤ 1 ∧
+      Off (vpool s.mem) (vpool s1.mem) (s1.loc 0).toNat (s1.loc 1 + 1).toNat ∧
+      pv (vpool s.mem) (s1.loc 0).toNat (s1.loc 1 + 1).toNat +
+          (rs.headD 0).toNat * wt (s1.loc 1 + 1).toNat =
+        pv (vpool s1.mem) (s1.loc 0).toNat (s1.loc 1 + 1).toNat +
+          xv (vpool s1.mem) (s1.loc 2).toNat (s1.loc 1).toNat (s1.loc 1 + 1).toNat) :
+    pcap m0 < 2 ^ 64 ∧ wj.toNat + lb.toNat + 1 ≤ pcap m0 ∧ ob.toNat + lb.toNat ≤ wj.toNat ∧
+      0 < B ∧ B = pv (vpool m0) ob.toNat lb.toNat ∧
+      s.loc 0 = wj ∧ s.loc 1 = lb ∧ s.loc 2 = ob ∧
+      PFrame m0 s.mem ∧ pcap s.mem = pcap m0 ∧ Off (vpool s.mem) (vpool m0) wj.toNat (lb.toNat + 1) ∧
+      UInt64.toNat (if (rs.headD 0 == 0) = true then 1 else 0) ≤ 1 ∧
+      T / B ≤ UInt64.toNat (s.loc 8) ∧
+      pv (vpool s.mem) wj.toNat (lb.toNat + 1) + UInt64.toNat (s.loc 8) * B =
+        T + UInt64.toNat (if (rs.headD 0 == 0) = true then 1 else 0) * wt (lb.toNat + 1) := by
+  obtain ⟨hs, hw, hb, hB, hBd, h0, h1, h2, hF, hcap, hO, hc1, hq, heq⟩ := h
+  obtain ⟨hL, hF', hcap', hcar, hO', hadd⟩ := hp
+  subst h0 h1 h2
+  have l0 : s.loc 0 = s1.loc 0 := by rw [LocEq.loc hL 0]; simp [St.setLoc_loc]
+  have l1 : s.loc 1 = s1.loc 1 := by rw [LocEq.loc hL 1]; simp [St.setLoc_loc]
+  have l2 : s.loc 2 = s1.loc 2 := by rw [LocEq.loc hL 2]; simp [St.setLoc_loc]
+  have l8 : s.loc 8 = s1.loc 8 - 1 := by rw [LocEq.loc hL 8]; simp [St.setLoc_loc]
+  have hpc := pcap_eq _ hs
+  have hl1 : (s1.loc 1 + 1).toNat = (s1.loc 1).toNat + 1 := by
+    rw [UInt64.toNat_add, UInt64.toNat_one, Nat.mod_eq_of_lt (by omega)]
+  rw [hl1] at hO' hadd
+  rw [xv_full _ _ _ _ (by omega), Off.pv_below _ _ _ _ _ _ hO hb, ← hBd] at hadd
+  have hc7 : (s1.loc 7).toNat = 1 := by
+    have : s1.loc 7 ≠ 0 := by simpa using hc
+    have : (s1.loc 7).toNat ≠ 0 := fun h => this (UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm))
+    omega
+  rw [hc7, Nat.one_mul] at heq
+  have hA := pv_lt_wt (vpool s1.mem) (s1.loc 0).toNat ((s1.loc 1).toNat + 1)
+  obtain ⟨hQ, hq', heq'⟩ := dc_arith _ _ _ _ _ _ _ heq hA hB hadd hcar
+  have hq1 : (s1.loc 8 - 1).toNat = (s1.loc 8).toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_one]; exact hQ),
+      UInt64.toNat_one]
+  have hite : UInt64.toNat (if (rs.headD 0 == 0) = true then 1 else 0) =
+      if (rs.headD 0).toNat = 0 then 1 else 0 := by
+    by_cases h0 : rs.headD 0 = 0
+    · rw [h0]; rfl
+    · have : (rs.headD 0).toNat ≠ 0 := fun h => h0 (UInt64.toNat_inj.mp (h.trans UInt64.toNat_zero.symm))
+      simp only [beq_iff_eq, h0, this, ↓reduceIte, UInt64.toNat_zero]
+  rw [l0, l1, l2, l8, hq1, hite]
+  refine ⟨hs, hw, hb, hB, hBd, rfl, rfl, rfl, PFrame.trans hF hF', hcap'.trans hcap,
+    Off.trans _ _ _ _ _ hO' hO, by split <;> simp, hq', heq'⟩
+
+section loop
+variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
+  (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
+
+include hpl hpc hpa in
+theorem dcLoop_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : St)
+    (h : DcInv m0 wj lb ob T B s₀) :
+    ⦃fun s => s = s₀⦄ exec p n dcLoop ⦃fun r s' => DcPost m0 wj lb T B r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    simp only [DcInv, DcPost] at h ⊢
+    rw [exec, step_while (w := dcLoop) rfl]
+    vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs, ih,
+      divAdd_spec p hpl hpc hpa n]
+    all_goals clear ih
+    all_goals (try subst_vars)
+    all_goals (try simp only [DcInv, DcPost, Expr.pval, Cond.pval, St.setLoc_loc, L.St.setLoc_mem,
+      St.setLocs_nil, St.setLocs_cons, Cmp.eval, Cmp.evalW, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte] at *)
+    all_goals first
+      | exact dc_step_goal m0 wj lb ob T B _ _ _ h ‹_› ‹_›
+      | (obtain ⟨hs, hw, hb, hB, hBd, h0, h1, h2, hF, hcap, hO, hc1, hq, heq⟩ := h
+         subst h0 h1 h2
+         have hpc := pcap_eq _ hs
+         first
+           | (rename_i hc0
+              simp only [bne_iff_ne, ne_eq, Decidable.not_not] at hc0
+              rw [hc0, UInt64.toNat_zero, Nat.zero_mul, Nat.add_zero] at heq
+              have := dc_exit _ _ _ _ heq hq hB
+              first | exact this.1 | exact this.2)
+           | grind)
+
+include hpl hpc hpa in
+theorem dcLoop_step_spec (m0 : Mem) (wj lb ob : Word) (T B : Nat) (n : Nat) (s₀ : St)
+    (h : DcInv m0 wj lb ob T B s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) dcLoop ⦃fun r s' => DcPost m0 wj lb T B r s'; ⊤⦄ :=
+  Triple.step_exec (dcLoop_spec p hpl hpc hpa m0 wj lb ob T B (n + 1) s₀ h)
+
+end loop
+
 section kstep
 variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
   (hpc : p.lookup "add_carry" = some addCarry) (hpa : p.lookup "div_add" = some divAdd)
@@ -271,7 +412,24 @@ theorem divKstep_spec (hpk : p.lookup "div_kstep" = some divKstep) (n : Nat) (s�
         pv (vpool s₀.mem) wj.toNat (lb.toNat + 1) / pv (vpool s₀.mem) ob.toNat lb.toNat ∧
       pv (vpool s'.mem) wj.toNat (lb.toNat + 1) =
         pv (vpool s₀.mem) wj.toNat (lb.toNat + 1) % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpk]
+  simp only [callFn, divKstep_body]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    simp only [exec, step_snoc]
+    unfold kTail
+    vcgen [step, L.evalE_spec, L.evalC_spec, evalArgs, setLoc, setLocs,
+      kEst_spec p hp2 (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1)) (pv (vpool s₀.mem) ob.toNat lb.toNat) n,
+      divSubmul_spec p hpm n,
+      dcLoop_step_spec p hpl hpc hpa s₀.mem wj lb ob (pv (vpool s₀.mem) wj.toNat (lb.toNat + 1))
+        (pv (vpool s₀.mem) ob.toNat lb.toNat) n]
+    all_goals (try simp only [KEstPost, DcInv, DcPost, Expr.pval, Cond.pval, St.setLoc_loc,
+      L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons, Cmp.eval, Cmp.evalW, BinOp.eval,
+      Nat.reduceEqDiff, reduceIte, List.headD_cons, Locals.init, List.getD_cons_zero,
+      List.getD_cons_succ, Sig.retVal, Sig.retOr] at *)
+    all_goals trace_state
+    all_goals sorry
 
 end kstep
 
