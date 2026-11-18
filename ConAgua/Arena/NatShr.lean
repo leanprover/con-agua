@@ -3,7 +3,6 @@ module
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatAdd
-public import ConAgua.Arena.NatShiftFacts
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
