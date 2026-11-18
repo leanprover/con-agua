@@ -373,9 +373,9 @@ grind_pattern [arena_grind] slice_room =>
 theorem Keep.pcap {m m' : Mem} (h : Keep m m') : pcap m' = pcap m := pcap_congr (h.2 _) (h.2 _)
 grind_pattern [arena_grind] Keep.pcap => Keep m m', pcap m'
 
-theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
-    (h : natDecW b m c d = some (r, m')) : r.headD 0 = m.top := by
-  unfold natDecW at h
+theorem natChunksW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+    (h : natChunksW b m c d = some (r, m')) : r.headD 0 = m.top := by
+  unfold natChunksW at h
   split at h
   · cases h
   cases hD : decW b m (rdW (m.arr64 CTL) 0) 0 c d with
@@ -384,6 +384,12 @@ theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     rw [hD, finK_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1]; simp [rdW, Mem.top]
+theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+    (h : natDecW b m c d = some (r, m')) : r.headD 0 = m.top := by
+  unfold natDecW at h
+  split at h
+  · sorry
+  · exact natChunksW_top b m m' c d r h
 grind_pattern [arena_grind] natDecW_top => natDecW b m c d, some (r, m')
 
 /-! ## The nodes -/

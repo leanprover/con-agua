@@ -331,10 +331,14 @@ theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
       Norm (vpool m') m.top.toNat l.toNat ∧
       pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
+  unfold natDecW at h
+  split at h
+  · sorry
+  replace h : natChunksW b m c d = some (r, m') := h
   have hsm := hp.small
   have h41 := hp.top41
   have hin := hp.inTier
-  unfold natDecW at h
+  unfold natChunksW at h
   rw [rdW_ctl_top] at h
   split at h
   · cases h

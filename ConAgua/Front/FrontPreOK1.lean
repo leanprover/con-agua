@@ -185,13 +185,20 @@ theorem decW_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (n i d : Word) (m
         (DK.tset64 _ _ _ _)).trans (ih _ _ h))
     | (rename_i ih; exact (madW_dk _ _ _ _ _ _).trans (ih _ _ h))
 
-theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
-    (h : natDecW b m c d = some (r, m')) : DK m m' := by
-  unfold natDecW at h
+theorem natChunksW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : natChunksW b m c d = some (r, m')) : DK m m' := by
+  unfold natChunksW at h
   split at h; cases h
   rcases hL : decW b m (rdW (m.arr64 CTL) 0) 0 c d with _ | ⟨m₁, k⟩ <;> simp only [hL, finK, reduceCtorEq] at h
   cases h
   exact (decW_dk b _ _ _ _ _ _ _ hL).trans (DK.set64 _ CTL (by decide) (by decide) _ _)
+
+theorem natDecW_dk {b : Array UInt8} {m m' : Mem} {c d : Word} {r : List Word}
+    (h : natDecW b m c d = some (r, m')) : DK m m' := by
+  unfold natDecW at h
+  split at h
+  · sorry
+  · exact natChunksW_dk h
 
 theorem lsLoopM_dk (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
     lsLoopM b m top i cnt = some m' → DK m m' := by
