@@ -264,3 +264,23 @@ Measured (base master `b0c36f046`, with the add/sub leaves):
 * gf3, Init, and the division microbenchmark (`D2k1k`, `D2k1kW`) unchanged (±0.0001 %);
 * correctness: products fuzzer 2100 and division fuzzer 540 (both read large decimal literals),
   with the same verdicts as master; `diff-e2e --refs` 740 agree, 0 REFDIFF.
+
+## Step 8: measured and skipped (`nat_cmp`, `div_2by1`, `div_recip`)
+
+**`nat_cmp`.** The function is a leaf and is not inlined: `checker.s` keeps an out-of-line copy,
+called from `nat_beq_lit` and `nat_ble_lit` only, and putting its key in the exclusion list changes
+no call site. A hand-written body (8 instructions per limb against about 40) was wired in unproved
+for the measurement, against master `397623e1f`: gf3 +0.000003 % and Init −0.00002 % instructions.
+The limb loop only runs on two equal-length literals, and producing such a literal costs far more
+than comparing it (reading a 1000-limb decimal literal is about 25 M instructions, comparing it
+about 40 k). Skipped; the body was not kept.
+
+**`div_2by1`, `div_recip`.** Kraken models no `div` instruction, so a hand-written body would be
+the same reciprocal algorithm with tighter register use, saving at most their own cost.
+Instruction samples (`perf record -e instructions:u`, master `397623e1f`):
+* division microbenchmark `D2k1kW`: `div_2by1` and `div_recip` together are about 140 k of
+  1.6 G instructions (< 0.01 %; `div_submul` is the hot spot, 15 % of cycles);
+* bigdiv's one-limb gcd (`g1`, 500 gcds at 22.7 k instructions each): about 1.1 M of the
+  gcds' 11.4 M, so a hand-written pair would save at most about 5 % of a one-limb gcd;
+* gf3 and Init: nothing measurable.
+Skipped, since the gain is small.
