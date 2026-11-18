@@ -108,6 +108,7 @@ def rcpTail : Stmt := lblk (d, v, t, l, h, e, j, k) {
   return v
 }
 
+/-- The body is the tangent then the rest (`rfl`: the function text stays as written). -/
 private theorem divRecip_body : divRecip.body = rcpInit.snoc rcpTail := rfl
 
 /-- `div_2by1`'s estimate (Möller and Granlund's, with two corrections). -/
@@ -169,55 +170,10 @@ def d2Tail : Stmt := lblk (u1, u0, d, v, q, q0, r, plo, phi, t) {
   return (q, r)
 }
 
+/-- The body is the estimate then the rest (`rfl`: the function text stays as written). -/
 private theorem div2by1_body : div2by1.body = d2Est.snoc d2Tail := rfl
 
 /-! ## `div_2by1`'s loops -/
-
-example : divNorm = (lfn (x) locals (s) {
-  if x < 0x100000000 { x := x << 32; s := 32 };
-  if x < 0x1000000000000 { x := x << 16; s := s + 16 };
-  if x < 0x100000000000000 { x := x << 8; s := s + 8 };
-  if x < 0x1000000000000000 { x := x << 4; s := s + 4 };
-  if x < 0x4000000000000000 { x := x << 2; s := s + 2 };
-  if x < 0x8000000000000000 { s := s + 1 };
-  return s
-}) := rfl
-example : divRecip = (lfn (d) locals (v, t, l, h, e, j, k) {
-  t := 0 - 1 - d;
-  t := t + mulhi(t, 0xC71C71C71C71C71C);
-  if 0x1C71C71C71C71C71 < t { v := t - 0x1C71C71C71C71C71 };
-  k := 5;
-  for j < k {
-    l := d * v;
-    h := d + mulhi(d, v);
-    e := 0 - h - u64(l != 0);
-    v := v + e + mulhi(v, e)
-  };
-  (v, t) := call div_2by1(0 - 1 - d, 0 - 1, d, v);
-  return v
-}) := rfl
-example : div2by1 = (lfn (u1, u0, d, v) locals (q, q0, r, plo, phi, t) {
-  q0 := v * u1 + u0;
-  q := mulhi(v, u1) + u1 + u64(q0 < u0) + 1;
-  r := u0 - q * d;
-  if q0 < r { q := q - 1; r := r + d };
-  if d <= r { q := q + 1 };
-  plo := q * d;
-  phi := mulhi(q, d);
-  while u1 < phi || (phi == u1 && u0 < plo) {
-    q := q - 1;
-    phi := phi - u64(plo < d);
-    plo := plo - d
-  };
-  r := u0 - plo;
-  t := u1 - phi - u64(u0 < plo);
-  while t != 0 || d <= r {
-    q := q + 1;
-    t := t - u64(r < d);
-    r := r - d
-  };
-  return (q, r)
-}) := rfl
 
 section loops
 variable (p : Prog)
@@ -348,7 +304,7 @@ theorem d2Est_spec (n : Nat) (s₀ : St) :
   vcgen [step, evalE, evalC, setLoc] <;>
     simp only [St.setLoc_loc, St.setLoc_mem, Nat.reduceEqDiff, reduceIte] <;> trivial
 
-/-- `div_2by1` restores the caller's locals and keeps the memory. -/
+/-- A call that keeps the memory returns the caller's state (`callFn` restores the locals). -/
 theorem St.restore (s s₀ : St) (h : s.mem = s₀.mem) : ({ mem := s.mem, loc := s₀.loc } : St) = s₀ := by
   cases s₀; simp_all
 
@@ -392,6 +348,102 @@ theorem recip_hi_lt (d : Word) (hd : 2 ^ 63 ≤ d.toNat) : (0 - 1 - d).toNat < d
 
 end loops
 
+/-! ## `div_norm`'s steps -/
+
+section norm
+variable (p : Prog)
+
+/-- After a step with threshold `2^a`: `x_cur = x · 2^s ≥ 2^a`, `s ≤ a`. -/
+def NrmInv (X a : Nat) (s : St) : Prop :=
+  (s.loc 0).toNat = X * 2 ^ (s.loc 1).toNat ∧ 2 ^ a ≤ (s.loc 0).toNat ∧ (s.loc 1).toNat ≤ a
+
+/-- At the end: `x · 2^s` is a word with its top bit set, `s ≤ 63`. -/
+def NrmFin (X : Nat) (s : St) : Prop :=
+  (s.loc 1).toNat ≤ 63 ∧ X * 2 ^ (s.loc 1).toNat < 2 ^ 64 ∧ 2 ^ 63 ≤ X * 2 ^ (s.loc 1).toNat
+
+/-- A shift by `b` of a word below `2^(64 - b)` does not wrap. -/
+theorem shl_toNat_of_lt (x k : Word) (a b : Nat) (hk : k.toNat = b) (hab : a + b = 64)
+    (hx : x.toNat < 2 ^ a) : (x <<< k).toNat = x.toNat * 2 ^ b := by
+  have hb : b < 64 ∨ b = 64 := by omega
+  rw [UInt64.toNat_shiftLeft, hk, Nat.shiftLeft_eq]
+  rcases hb with hb | hb
+  · rw [Nat.mod_eq_of_lt hb, Nat.mod_eq_of_lt]
+    calc x.toNat * 2 ^ b < 2 ^ a * 2 ^ b := Nat.mul_lt_mul_of_pos_right hx (Nat.two_pow_pos _)
+      _ = 2 ^ 64 := by rw [← Nat.pow_add, hab]
+  · subst hb
+    have : a = 0 := by omega
+    subst this
+    have : x.toNat = 0 := by omega
+    simp [this]
+
+/-- The shifting arm of a middle step. -/
+theorem nrm_shift (x s k : Word) (X a b : Nat) (hk : k.toNat = b) (hab : a + b = 64) (hba : b ≤ a)
+    (hx : x.toNat = X * 2 ^ s.toNat) (hlo : 2 ^ (a - b) ≤ x.toNat) (hs : s.toNat ≤ a - b)
+    (hlt : x.toNat < 2 ^ a) :
+    (x <<< k).toNat = X * 2 ^ (s + k).toNat ∧ 2 ^ a ≤ (x <<< k).toNat ∧ (s + k).toNat ≤ a := by
+  have hsk : (s + k).toNat = s.toNat + b := by
+    rw [UInt64.toNat_add, hk, Nat.mod_eq_of_lt (by omega)]
+  rw [shl_toNat_of_lt x k a b hk hab hlt, hsk, hx, Nat.pow_add, Nat.mul_assoc]
+  refine ⟨rfl, ?_, by omega⟩
+  rw [← Nat.mul_assoc, ← hx]
+  calc 2 ^ a = 2 ^ (a - b) * 2 ^ b := by rw [← Nat.pow_add]; congr 1; omega
+    _ ≤ x.toNat * 2 ^ b := Nat.mul_le_mul_right _ hlo
+
+theorem nrmFirst_spec (n : Nat) (s₀ : St) (X : Nat) (h0 : s₀.loc 1 = 0) (hX : (s₀.loc 0).toNat = X)
+    (hpos : 0 < X) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) nrmFirst
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ NrmInv X 32 s'; ⊤⦄ := by
+  unfold nrmFirst
+  vcgen [step, evalE, evalC, setLoc]
+  all_goals (try simp only [NrmInv, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+  · rename_i hlt
+    have hlt' : (s₀.loc 0).toNat < 2 ^ 32 := UInt64.lt_iff_toNat_lt.mp hlt
+    rw [shl_toNat_of_lt (s₀.loc 0) 32 32 32 rfl rfl hlt', show (32 : Word).toNat = 32 from rfl, hX]
+    exact ⟨rfl, Nat.le_mul_of_pos_left _ hpos, Nat.le_refl _⟩
+  · rename_i hge
+    have hge' : 2 ^ 32 ≤ (s₀.loc 0).toNat := Nat.le_of_not_lt fun h => hge (UInt64.lt_iff_toNat_lt.mpr h)
+    rw [h0, show (0 : Word).toNat = 0 from rfl, Nat.pow_zero, Nat.mul_one]
+    exact ⟨hX, hge', Nat.zero_le _⟩
+
+theorem nrmStep_spec (c k : Word) (a b : Nat) (hc : c.toNat = 2 ^ a) (hk : k.toNat = b)
+    (hab : a + b = 64) (hba : b ≤ a) (X n : Nat) (s₀ : St) (h : NrmInv X (a - b) s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) (nrmStep c k)
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ NrmInv X a s'; ⊤⦄ := by
+  unfold nrmStep
+  vcgen [step, evalE, evalC, setLoc]
+  all_goals (try simp only [NrmInv, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+    Nat.reduceEqDiff, reduceIte, decide_eq_true_eq] at *)
+  · rename_i hlt
+    exact nrm_shift _ _ _ X a b hk hab hba h.1 h.2.1 h.2.2 (hc ▸ UInt64.lt_iff_toNat_lt.mp hlt)
+  · rename_i hge
+    have hge' : 2 ^ a ≤ (s₀.loc 0).toNat :=
+      hc ▸ Nat.le_of_not_lt fun h => hge (UInt64.lt_iff_toNat_lt.mpr h)
+    exact ⟨h.1, hge', by omega⟩
+
+theorem nrmLast_spec (n : Nat) (s₀ : St) (X : Nat) (h : NrmInv X 62 s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) nrmLast
+    ⦃fun r s' => r = .normal ∧ s'.mem = s₀.mem ∧ NrmFin X s'; ⊤⦄ := by
+  unfold nrmLast
+  vcgen [step, evalE, evalC, setLoc]
+  all_goals (try simp only [NrmInv, NrmFin, St.setLoc_loc, St.setLoc_mem, Cmp.eval, BinOp.eval,
+    reduceIte, decide_eq_true_eq] at *)
+  · rename_i hlt
+    have hlt' : (s₀.loc 0).toNat < 2 ^ 63 := UInt64.lt_iff_toNat_lt.mp hlt
+    obtain ⟨hx, hlo, hs⟩ := h
+    have hs1 : (s₀.loc 1 + 1).toNat = (s₀.loc 1).toNat + 1 := by
+      rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl, Nat.mod_eq_of_lt (by omega)]
+    rw [hs1, Nat.pow_succ, ← Nat.mul_assoc, ← hx]
+    omega
+  · rename_i hge
+    have hge' : 2 ^ 63 ≤ (s₀.loc 0).toNat := Nat.le_of_not_lt fun h => hge (UInt64.lt_iff_toNat_lt.mpr h)
+    obtain ⟨hx, -, hs⟩ := h
+    have := (s₀.loc 0).toNat_lt
+    rw [← hx]
+    omega
+
+end norm
+
 section specs
 variable (p : Prog) (hpn : p.lookup "div_norm" = some divNorm)
   (hp2 : p.lookup "div_2by1" = some div2by1) (hpr : p.lookup "div_recip" = some divRecip)
@@ -403,7 +455,22 @@ theorem divNorm_spec (n : Nat) (s₀ : St) (x : Word) (hx : 0 < x.toNat) :
     invoke p (exec p n) "div_norm" [x]
     ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat ≤ 63 ∧ x.toNat * sh (r.headD 0).toNat < 2 ^ 64 ∧
       2 ^ 63 ≤ x.toNat * sh (r.headD 0).toNat; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpn]
+  simp only [callFn, divNorm]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalArgs, nrmFirst_spec p n _ x.toNat,
+      nrmStep_spec p 0x1000000000000 16 48 16 rfl rfl rfl (by decide) x.toNat n,
+      nrmStep_spec p 0x100000000000000 8 56 8 rfl rfl rfl (by decide) x.toNat n,
+      nrmStep_spec p 0x1000000000000000 4 60 4 rfl rfl rfl (by decide) x.toNat n,
+      nrmStep_spec p 0x4000000000000000 2 62 2 rfl rfl rfl (by decide) x.toNat n,
+      nrmLast_spec p n _ x.toNat]
+    all_goals first
+      | (apply St.restore; simp_all)
+      | (simp only [NrmFin, sh, Sig.retVal, Sig.retOr, List.headD_cons] at *; grind)
+      | rfl
+      | exact hx
 
 include hp2 in
 /-- `div_2by1(u1, u0, d, v)` for `u1 < d`: `(q, r)` with `q d + r = u1 2^64 + u0`, `r < d`. -/
