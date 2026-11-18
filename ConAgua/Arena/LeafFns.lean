@@ -33,7 +33,7 @@ def leafC : List Word :=
 
 /-- The functions of `loopFns` that leave the pins and the core's memos alone. -/
 def leafFns : List FnName :=
-  ["ab_find", "ab_fvb", "add_1", "add_n", "alpd_ls", "and_block_named", "and_pin_ok",
+  ["ab_find", "ab_fvb", "add_1", "add_n", "alpd_ls", "and_block_named", "and_n", "and_pin_ok",
    "and_rescue_slots", "apd_find", "app_count", "app_count_at", "app_fill", "app_fill_n",
    "app_find", "app_hole", "app_push", "b_eq", "base_row_get", "basis_name_hit",
    "basis_name_hit_go", "basis_name_unreserved", "basis_names_error", "bb_go", "bb_memo",
@@ -79,7 +79,7 @@ def leafFns : List FnName :=
    "class_read_slot_motive", "class_read_slots_snoc", "class_rec_of", "class_rec_ty_ok_guards",
    "class_rule_check_domains", "class_seeds", "class_slot_is_minor", "cons_block_ctors",
    "cons_block_inds", "cons_block_recs_temp", "cons_sum_ctors", "const_e", "const_find",
-   "const_named", "const_push", "consts_resolve_all", "consts_resolve_ffast", "cr_leaf",
+   "const_named", "const_push", "consts_resolve_all", "consts_resolve_ffast", "copy_n", "cr_leaf",
    "cr_lit_pins", "crf_go", "crm_clear", "crm_find", "crm_put", "ct_clear", "ct_find", "ct_put",
    "ctl_get", "ctor_family", "ctor_head_against", "ctor_info_rec", "ctor_member", "ctor_target",
    "ctor_target_for", "ctor_view", "ctors_have_name", "ctors_lps_ok", "ctors_params_ok",
@@ -165,7 +165,7 @@ def leafFns : List FnName :=
    "nest_pos_hole_kind", "nest_res_head", "nest_seed_of", "nest_seed_of_go", "nest_seeds_fuel",
    "nest_walk_stack", "nnum_find", "nnum_push", "no_clear", "no_find", "no_put", "not_proof_fast",
    "nstr_find", "nstr_match", "nstr_push", "num_ctors_of", "of_reduce_ax_ok", "of_reduce_op",
-   "of_reduce_pin_a", "opa_go", "open_pis_at_fvars", "param_find", "param_levels",
+   "of_reduce_pin_a", "opa_go", "open_pis_at_fvars", "or_n", "param_find", "param_levels",
    "param_levels_go", "param_push", "peel_pis", "peel_pis_w", "ph_app", "pi_binders",
    "pi_doms_mention_any", "pi_doms_occ", "pi_residual", "pi_result", "pi_result_f",
    "pi_sort_tele_len", "pin_agrees", "pin_at", "pin_found", "pin_link_go", "pin_link_ok",
@@ -208,7 +208,7 @@ def leafFns : List FnName :=
    "ue_mentions_go", "unfoldable_head", "unresolved_consts_error", "unwrap_id_defs", "unwrap_step",
    "view_ls", "view_ls_len", "wc_clear", "wc_find", "wc_put", "wh_clear", "wh_find", "wh_put",
    "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_cheap_keys",
-   "whnf_core_store_keys", "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_find",
+   "whnf_core_store_keys", "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_find", "xor_n",
    "zero_find", "zero_push"]
 
 /-- `leafFns` as a tree of name codes (membership of a name by evaluating its code's lookup). -/

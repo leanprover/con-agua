@@ -157,7 +157,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1827 functions, 0 of them stubs.
+1831 functions, 0 of them stubs.
 -/
 
 namespace L.Checker
@@ -450,6 +450,7 @@ def checkerProg : Prog := [
   ("alpd_go", L.Ind.alpdGo),
   ("alpd_ls", L.Ind.alpdLs),
   ("and_block_named", L.Arena.andBlockNamed),
+  ("and_n", L.Arena.andN),
   ("and_pin_ok", L.Arena.andPinOkL),
   ("and_rescue_slots", L.Arena.andRescueSlotsL),
   ("apd_clear", L.Arena.memoClearG L.Ind.apdSch),
@@ -804,6 +805,7 @@ def checkerProg : Prog := [
   ("const_val_at", L.Arena.constValAtL),
   ("consts_resolve_all", L.Ind.constsResolveAllL),
   ("consts_resolve_ffast", L.Stubs.constsResolveFFastL),
+  ("copy_n", L.Arena.copyN),
   ("cr_leaf", L.Stubs.crLeaf),
   ("cr_lit_pins", L.Stubs.crLitPins),
   ("crf_go", L.Stubs.crfGo),
@@ -1707,6 +1709,7 @@ def checkerProg : Prog := [
   ("open_pis_at_fvars", L.Ind.openPisAtFvarsL),
   ("open_pis_at_fvars_f", L.Stubs.openPisAtFvarsFL),
   ("opf_go", L.Stubs.opfGo),
+  ("or_n", L.Arena.orN),
   ("par_compact", L.Arena.parCompactL),
   ("param_find", L.Arena.paramFind),
   ("param_levels", L.Ind.paramLevelsL),
@@ -2155,6 +2158,7 @@ def checkerProg : Prog := [
   ("ws_node", L.Arena.wsNode),
   ("ws_put", L.Arena.memoPutG L.Arena.wsSch),
   ("wscoped_bfast", L.Arena.wscopedBFastL),
+  ("xor_n", L.Arena.xorN),
   ("zero_find", L.Arena.zeroFind),
   ("zero_push", L.Arena.zeroPush),
   ("pre_apply_decl", preFn preTree (L.Front.applyDecl)),
