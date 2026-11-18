@@ -144911,7 +144911,7 @@ ret
 ca_f_nat_dec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $216, %rax
+cmpq $48, %rax
 jb ca_exhausted
 subq $40, %rsp
 movq %rdi, (%rsp)
@@ -145163,7 +145163,11 @@ movq $0, %rdi
 addq $112, %rsp
 ret
 ca_f_nat_dec_chunks:
-subq $168, %rsp
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $224, %rax
+jb ca_exhausted
+subq $136, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq $0, 24(%rsp)
@@ -145195,20 +145199,24 @@ movq $19, 40(%rsp)
 jmp .Lca_nat_dec_chunks_222221621X
 .Lca_nat_dec_chunks_222221621E:
 .Lca_nat_dec_chunks_222221621X:
-movq $0, %r13
-movq $0, %rbx
-movq $0, %r13
-movq $0, %r13
-movq $0, %rbx
-movq 32(%rsp), %rsi
-movq 40(%rsp), %r9
-movq $1, %r12
+movq $0, 120(%rsp)
+movq $0, 104(%rsp)
+movq $0, 120(%rsp)
+movq $0, 120(%rsp)
+movq $0, 104(%rsp)
+movq 32(%rsp), %rax
+movq %rax, 88(%rsp)
+movq 40(%rsp), %rax
+movq %rax, 96(%rsp)
+movq $1, 112(%rsp)
 .Lca_nat_dec_chunks_22222162212221H:
-cmpq %r9, %r13
+movq 120(%rsp), %rax
+cmpq 96(%rsp), %rax
 jae .Lca_nat_dec_chunks_22222162212221X
-movq %rbx, %rax
+movq 104(%rsp), %rax
 imulq $10, %rax
-lea (%rsi,%r13,1), %rcx
+movq 88(%rsp), %rcx
+addq 120(%rsp), %rcx
 cmpq 1488(%r15), %rcx
 jae ca_error
 movq 16(%r15), %rdx
@@ -145216,71 +145224,26 @@ movzbq (%rdx,%rcx,1), %rcx
 subq $48, %rcx
 andq $255, %rcx
 addq %rcx, %rax
-movq %rax, %rbx
-imulq $10, %r12
-addq $1, %r13
+movq %rax, 104(%rsp)
+movq 112(%rsp), %rax
+imulq $10, %rax
+movq %rax, 112(%rsp)
+addq $1, 120(%rsp)
 subq $1, %r14
 jb ca_exhausted
 jmp .Lca_nat_dec_chunks_22222162212221H
 .Lca_nat_dec_chunks_22222162212221X:
-movq %rbx, %rax
+movq 104(%rsp), %rax
 movq %rax, 48(%rsp)
-movq %r12, %rax
+movq 112(%rsp), %rax
 movq %rax, 56(%rsp)
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 16(%rsp), %rsi
-movq 24(%rsp), %r9
-movq 56(%rsp), %rbx
-movq 48(%rsp), %r12
-movq %rsi, %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq %rsi, %rdi
-.Lca_nat_dec_chunks_2222216222122221H:
-cmpq %r9, %r13
-jae .Lca_nat_dec_chunks_2222216222122221X
-lea (%rsi,%r13,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%rsi,%r13,1), %r11
-movq $1099511627775, %rcx
-andq %rcx, %r11
-cmpq 1504(%r15,%rax,8), %r11
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r11,8), %r11
-movq %r11, %r10
-imulq %rbx, %r10
-addq %r12, %r10
-movq %r11, %rax
-movq %rbx, %rcx
-mulq %rcx
-movq %rdx, %rax
-cmpq %r12, %r10
-movq $0, %rcx
-movq $1, %rdx
-cmovb %rdx, %rcx
-addq %rcx, %rax
-movq %rax, %r12
-movq %rdi, %rax
-addq %r13, %rax
-movq %r10, %rdx
-movq %r8, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 16(%rsp), %rdi
+movq 24(%rsp), %r8
+movq 56(%rsp), %r9
+movq 48(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_dec_chunks_2222216222122221H
-.Lca_nat_dec_chunks_2222216222122221X:
-movq %r12, %rax
+call ca_f_nat_mad
 movq %rax, 64(%rsp)
 cmpq $0, 64(%rsp)
 je .Lca_nat_dec_chunks_222221622221E
@@ -145320,12 +145283,12 @@ jmp .Lca_nat_dec_chunks_0R
 movq $0, %rax
 movq $0, %rdi
 .Lca_nat_dec_chunks_0R:
-addq $168, %rsp
+addq $136, %rsp
 ret
 ca_f_nat_dec_split:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $360, %rax
+cmpq $192, %rax
 jb ca_exhausted
 subq $184, %rsp
 movq %rdi, (%rsp)
@@ -147861,58 +147824,40 @@ movq $0, %rax
 addq $56, %rsp
 ret
 ca_f_nat_mad:
-subq $80, %rsp
-movq $0, %r13
-movq %rdi, %rsi
-shrq $40, %rsi
-movq $1099511627775, %r11
-andq %rdi, %r11
-.Lca_nat_mad_221H:
-cmpq %r8, %r13
-jae .Lca_nat_mad_221X
-lea (%rdi,%r13,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%rdi,%r13,1), %r12
-movq $1099511627775, %rcx
-andq %rcx, %r12
-cmpq 1504(%r15,%rax,8), %r12
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r12, %rbx
-imulq %r9, %rbx
-addq %r10, %rbx
-movq %r12, %rax
-movq %r9, %rcx
-mulq %rcx
-movq %rdx, %rax
-cmpq %r10, %rbx
-movq $0, %rcx
-movq $1, %rdx
-cmovb %rdx, %rcx
-addq %rcx, %rax
-movq %rax, %r10
-movq %r11, %rax
-addq %r13, %rax
-movq %rbx, %rdx
-movq %rsi, %rcx
+cmpq $0, %r8
+je .Lasm_nat_mad_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
-subq $1, %r14
+andq %rax, %rdi
+movq %rax, %r11
+subq %rdi, %r11
+cmpq %r8, %r11
 jb ca_exhausted
-jmp .Lca_nat_mad_221H
-.Lca_nat_mad_221X:
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r8, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r8, %r14
+jb ca_exhausted
+movq $0, %r13
+movq $0, %rcx
+.Lasm_nat_mad_L:
+movq (%rdi,%r13,8), %rax
+mulq %r9
+addq %r10, %rax
+adcq %rcx, %rdx
+movq %rax, (%rdi,%r13,8)
+movq %rdx, %r10
+addq $1, %r13
+cmpq %r8, %r13
+jb .Lasm_nat_mad_L
+.Lasm_nat_mad_Z:
 movq %r10, %rax
-jmp .Lca_nat_mad_0R
-.Lca_nat_mad_0Z:
-movq $0, %rax
-.Lca_nat_mad_0R:
-addq $80, %rsp
 ret
 ca_f_nat_mod_lit:
 movq %rsp, %rax
@@ -226924,7 +226869,7 @@ ret
 ca_f_pre_nat_dec:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $216, %rax
+cmpq $48, %rax
 jb ca_exhausted
 subq $40, %rsp
 movq %rdi, (%rsp)
@@ -227176,7 +227121,11 @@ movq $0, %rdi
 addq $112, %rsp
 ret
 ca_f_pre_nat_dec_chunks:
-subq $168, %rsp
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $224, %rax
+jb ca_exhausted
+subq $136, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq $0, 24(%rsp)
@@ -227208,91 +227157,50 @@ movq $19, 40(%rsp)
 jmp .Lca_pre_nat_dec_chunks_222221621X
 .Lca_pre_nat_dec_chunks_222221621E:
 .Lca_pre_nat_dec_chunks_222221621X:
-movq $0, %r13
-movq $0, %rbx
-movq $0, %r13
-movq $0, %r13
-movq $0, %rbx
-movq 32(%rsp), %rsi
-movq 40(%rsp), %r9
-movq $1, %r12
+movq $0, 120(%rsp)
+movq $0, 104(%rsp)
+movq $0, 120(%rsp)
+movq $0, 120(%rsp)
+movq $0, 104(%rsp)
+movq 32(%rsp), %rax
+movq %rax, 88(%rsp)
+movq 40(%rsp), %rax
+movq %rax, 96(%rsp)
+movq $1, 112(%rsp)
 .Lca_pre_nat_dec_chunks_22222162212221H:
-cmpq %r9, %r13
+movq 120(%rsp), %rax
+cmpq 96(%rsp), %rax
 jae .Lca_pre_nat_dec_chunks_22222162212221X
-movq %rbx, %rax
+movq 104(%rsp), %rax
 imulq $10, %rax
-lea (%rsi,%r13,1), %rcx
+movq 88(%rsp), %rcx
+addq 120(%rsp), %rcx
 cmpq $15700, %rcx
 jae ca_error
 movzbq 19360(%r15,%rcx,1), %rcx
 subq $48, %rcx
 andq $255, %rcx
 addq %rcx, %rax
-movq %rax, %rbx
-imulq $10, %r12
-addq $1, %r13
+movq %rax, 104(%rsp)
+movq 112(%rsp), %rax
+imulq $10, %rax
+movq %rax, 112(%rsp)
+addq $1, 120(%rsp)
 subq $1, %r14
 jb ca_exhausted
 jmp .Lca_pre_nat_dec_chunks_22222162212221H
 .Lca_pre_nat_dec_chunks_22222162212221X:
-movq %rbx, %rax
+movq 104(%rsp), %rax
 movq %rax, 48(%rsp)
-movq %r12, %rax
+movq 112(%rsp), %rax
 movq %rax, 56(%rsp)
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 16(%rsp), %rsi
-movq 24(%rsp), %r9
-movq 56(%rsp), %rbx
-movq 48(%rsp), %r12
-movq %rsi, %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq %rsi, %rdi
-.Lca_pre_nat_dec_chunks_2222216222122221H:
-cmpq %r9, %r13
-jae .Lca_pre_nat_dec_chunks_2222216222122221X
-lea (%rsi,%r13,1), %rax
-shrq $40, %rax
-andq $1, %rax
-lea (%rsi,%r13,1), %r11
-movq $1099511627775, %rcx
-andq %rcx, %r11
-cmpq 1504(%r15,%rax,8), %r11
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r11,8), %r11
-movq %r11, %r10
-imulq %rbx, %r10
-addq %r12, %r10
-movq %r11, %rax
-movq %rbx, %rcx
-mulq %rcx
-movq %rdx, %rax
-cmpq %r12, %r10
-movq $0, %rcx
-movq $1, %rdx
-cmovb %rdx, %rcx
-addq %rcx, %rax
-movq %rax, %r12
-movq %rdi, %rax
-addq %r13, %rax
-movq %r10, %rdx
-movq %r8, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 16(%rsp), %rdi
+movq 24(%rsp), %r8
+movq 56(%rsp), %r9
+movq 48(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_pre_nat_dec_chunks_2222216222122221H
-.Lca_pre_nat_dec_chunks_2222216222122221X:
-movq %r12, %rax
+call ca_f_nat_mad
 movq %rax, 64(%rsp)
 cmpq $0, 64(%rsp)
 je .Lca_pre_nat_dec_chunks_222221622221E
@@ -227332,12 +227240,12 @@ jmp .Lca_pre_nat_dec_chunks_0R
 movq $0, %rax
 movq $0, %rdi
 .Lca_pre_nat_dec_chunks_0R:
-addq $168, %rsp
+addq $136, %rsp
 ret
 ca_f_pre_nat_dec_split:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $360, %rax
+cmpq $192, %rax
 jb ca_exhausted
 subq $184, %rsp
 movq %rdi, (%rsp)
