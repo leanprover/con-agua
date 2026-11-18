@@ -5,15 +5,12 @@ import ConAgua.Census.Attr
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatOff
 import ConAgua.Arena.NatDivFacts
-import ConAgua.Arena.Word
 import ConAgua.Arena.GrindAttr
-import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
-import ConAgua.L.For
 
 @[expose] public section
 

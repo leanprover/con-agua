@@ -5,10 +5,8 @@ import ConAgua.Census.Attr
 public import ConAgua.L.Notation
 public import ConAgua.Arena.NatShiftFacts
 public import ConAgua.Arena.Word
-import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.L.Logic
 import ConAgua.L.For
 import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic

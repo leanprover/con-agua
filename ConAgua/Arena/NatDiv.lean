@@ -6,11 +6,7 @@ meta import ConAgua.Arena.NatAdd
 meta import ConAgua.Arena.NatDivWord
 meta import ConAgua.Arena.NatDivKstep
 import ConAgua.Census.Attr
-public import ConAgua.Arena.NatShiftFacts
-public import ConAgua.Arena.NatSub
-public import ConAgua.Arena.NatOff
 public import ConAgua.Arena.NatDivKstep
-public import ConAgua.Arena.NatDivWord
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
@@ -21,7 +17,6 @@ import Std.Tactic.BVDecide.Normalize.Prop
 import Std.WP.Tactic
 import Std.WP.Triple.SpecLemmas
 import ConAgua.Front.Preserve
-import ConAgua.L.For
 
 @[expose] public section
 

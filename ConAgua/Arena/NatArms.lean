@@ -10,6 +10,7 @@ public import ConAgua.Arena.NatPowNat
 public import ConAgua.Arena.NatSizedRef
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatShl
+public import ConAgua.Arena.NatSub
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
 import ConAgua.L.GrindAttr

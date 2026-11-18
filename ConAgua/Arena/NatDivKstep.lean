@@ -7,7 +7,6 @@ import ConAgua.Census.Attr
 public import ConAgua.Arena.NatDivSubmul
 public import ConAgua.Arena.NatDivWord
 import ConAgua.Arena.NatDivFacts
-import ConAgua.Arena.Word
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
 import ConAgua.Arena.NatGrindAttr

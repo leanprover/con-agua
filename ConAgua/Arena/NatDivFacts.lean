@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.NatShiftFacts
-public import ConAgua.Arena.NatCmpFacts
 public import ConAgua.Arena.Word
 
 @[expose] public section
