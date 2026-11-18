@@ -508,4 +508,147 @@ theorem split_val (b : Array UInt8) : ∀ (n : Nat) (m m' : Mem) (c d tbl k : Wo
       show c.toNat + (d.toNat - dd.toNat - c.toNat) = d.toNat - dd.toNat by omega] at this
     rw [this]
 
+/-! ## Writes into the table -/
+
+/-- A read of the top's tier at index `i`, in bounds, is the virtual pool at `top's tier base + i`. -/
+theorem rdW_tier (m : Mem) (T i : Word) (hT : T.toNat < 2 ^ 41)
+    (hs : (m.arr64 (tierA POOL (T >>> 40))).size ≤ 2 ^ 40)
+    (hi : i.toNat < (m.arr64 (tierA POOL (T >>> 40))).size) :
+    rdW (m.arr64 (tierA POOL (T >>> 40))) i =
+      (vpool m)[(T >>> 40).toNat * 2 ^ 40 + i.toNat]?.getD 0 := by
+  have ht : (T >>> 40).toNat ≤ 1 := tag_tier_le _ hT
+  have hv : (T >>> 40).toNat * 2 ^ 40 + i.toNat < (vpool m).size := by rw [vpool_size]; omega
+  rw [Array.getElem?_eq_getElem hv, ← vpool_ldt m _ i ht hi hs hv]
+  simp [rdW, hi]
+
+/-- **A pool word written above the old top** (index `i` of the top's tier, the address
+`T + j`): the pool still grew, and the virtual pool has the word. -/
+theorem Grows.poke {m m₁ : Mem} (hok : PoolOK m) (hg : Grows m m₁) (i v : Word) (j : Nat)
+    (hi : i.toNat = m.top.toNat % 2 ^ 40 + j)
+    (hb : i.toNat < (m₁.arr64 (tierA POOL (m.top >>> 40))).size) :
+    Grows m (m₁.set64 (tierA POOL (m.top >>> 40)) i v) ∧
+      vpool (m₁.set64 (tierA POOL (m.top >>> 40)) i v) = (vpool m₁).set! (m.top.toNat + j) v := by
+  have h41 := hok.top41
+  have ok1 := hok.grows hg
+  have ht : (m.top >>> 40).toNat ≤ 1 := tag_tier_le _ h41
+  have hs : (m₁.arr64 (tierA POOL (m.top >>> 40))).size ≤ 2 ^ 40 := Nat.le_of_lt (ok1.small.tier _)
+  have hsplit := tag_split m.top
+  have hidx := tag_idx_toNat m.top
+  have hv : vpool (m₁.set64 (tierA POOL (m.top >>> 40)) i v) = (vpool m₁).set! (m.top.toNat + j) v := by
+    rw [vpool_set64t m₁ _ i v ht hb hs]; congr 1; omega
+  have hpf : PFrame m₁ (m₁.set64 (tierA POOL (m.top >>> 40)) i v) := PFrame.set64 _ _ _ (PFrame.refl m₁)
+  have htop : (m₁.set64 (tierA POOL (m.top >>> 40)) i v).top = m₁.top := hpf.top
+  refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, hv⟩
+  · rw [htop]; exact hg.frame.trans hpf
+  · rw [hv]; exact Agree.set _ _ _ _ _ hg.agree (by omega)
+  · rw [htop]; exact hg.le
+  · rw [htop, hpf.pcap]; exact hg.cap
+  · rw [hpf.pcap]; exact hg.pcapEq
+  · rw [htop]; exact hg.tier
+  · rw [htop, hpf.tsize]; exact hg.inn
+
+/-- `SliceOK` reads only the top and `PT0`. -/
+theorem SliceOK.congr {m m' : Mem} {o l : Word} (h : SliceOK m o l) (ht : m'.top = m.top)
+    (hp : m'.ptop0 = m.ptop0) : SliceOK m' o l := by
+  unfold SliceOK at h ⊢; rw [ht, hp]; exact h
+
+theorem pv_set_out (p : Array Word) (x : Nat) (v : Word) (o l : Nat) (h : x < o ∨ o + l ≤ x) :
+    pv (p.set! x v) o l = pv p o l := by
+  apply pv_congr'
+  intro i hi
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  rw [if_neg (by omega)]
+
+theorem norm_set_out (p : Array Word) (x : Nat) (v : Word) (o l : Nat) (h : x < o ∨ o + l ≤ x) :
+    Norm (p.set! x v) o l ↔ Norm p o l := by
+  unfold Norm
+  simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  constructor <;> intro hn hl <;> have := hn hl
+  · rwa [if_neg (by omega)] at this
+  · rwa [if_neg (by omega)]
+
+/-- `tblA`/`tblL` as reads of the virtual pool. -/
+theorem tbl_vpool (m : Mem) (tbl t : Word) (h : tbl.toNat + 2 * t.toNat + 1 < 2 ^ 41) :
+    tblA m tbl t = (vpool m)[tbl.toNat + 2 * t.toNat]?.getD 0 ∧
+      tblL m tbl t = (vpool m)[tbl.toNat + 2 * t.toNat + 1]?.getD 0 := by
+  have e0 : (tbl + t).toNat = tbl.toNat + t.toNat := by rw [UInt64.toNat_add]; omega
+  have e1 : (tbl + t + t).toNat = tbl.toNat + 2 * t.toNat := by rw [UInt64.toNat_add, e0]; omega
+  have e2 : (tbl + t + t + 1).toNat = tbl.toNat + 2 * t.toNat + 1 := by
+    rw [UInt64.toNat_add, e1]; simp only [UInt64.reduceToNat]; omega
+  unfold tblA tblL
+  rw [← vpool_getD m _ (by omega), ← vpool_getD m _ (by omega), e1, e2]
+  exact ⟨rfl, rfl⟩
+
+/-- **The table grows by one entry**: after `nat_mul` appended the square `(s, l)` at `s`, the
+top of `mi`, the entry `i` written at `T + 2i`, `T + 2i + 1`. -/
+theorem TblOK.push {mi m₁ m₂ : Mem} {T K i s l : Word} (hok : PoolOK mi) (h : TblOK mi T K i)
+    (hiK : i < K) (hA : Appended mi m₁ l (10 ^ (19 * 2 ^ i.toNat))) (hs : s = mi.top)
+    (h2 : vpool m₂ = ((vpool m₁).set! (T.toNat + 2 * i.toNat) s).set! (T.toNat + 2 * i.toNat + 1) l)
+    (htop : m₂.top = m₁.top) (hp0 : m₂.ptop0 = m₁.ptop0) : TblOK m₂ T K (i + 1) := by
+  have h41 := hok.top41
+  have hroom := h.room
+  have hle := h.le
+  have hiK' := UInt64.lt_iff_toNat_lt.mp hiK
+  have hok₁ := hok.grows hA.grows
+  have h41₁ := hok₁.top41
+  have hT₁ := h.grows hok hA.grows
+  have hle1 := hA.grows.le
+  have hi1 : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp only [UInt64.reduceToNat]; omega
+  -- reads of the new table
+  have rd2 : ∀ x, x < 2 ^ 41 → (vpool m₂)[x]?.getD 0 =
+      if x = T.toNat + 2 * i.toNat + 1 then l
+      else if x = T.toNat + 2 * i.toNat then s else (vpool m₁)[x]?.getD 0 := by
+    intro x hx
+    rw [h2]
+    simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_setIfInBounds, vpool_size]
+    by_cases e1 : x = T.toNat + 2 * i.toNat + 1
+    · subst e1; simp [show T.toNat + 2 * i.toNat + 1 < 2 ^ 41 by omega]
+    · by_cases e2 : x = T.toNat + 2 * i.toNat
+      · subst e2; simp [show T.toNat + 2 * i.toNat < 2 ^ 41 by omega]
+      · simp [Ne.symm e1, Ne.symm e2, e1, e2]
+  have eOld : ∀ t : Word, t < i → tblA m₂ T t = tblA m₁ T t ∧ tblL m₂ T t = tblL m₁ T t := by
+    intro t ht
+    have ht' := UInt64.lt_iff_toNat_lt.mp ht
+    obtain ⟨a2, l2⟩ := tbl_vpool m₂ T t (by omega)
+    obtain ⟨a1, l1⟩ := tbl_vpool m₁ T t (by omega)
+    rw [a2, l2, a1, l1, rd2 _ (by omega), rd2 _ (by omega), if_neg (by omega), if_neg (by omega),
+      if_neg (by omega), if_neg (by omega)]
+    exact ⟨rfl, rfl⟩
+  have eNew : tblA m₂ T i = s ∧ tblL m₂ T i = l := by
+    obtain ⟨a2, l2⟩ := tbl_vpool m₂ T i (by omega)
+    rw [a2, l2, rd2 _ (by omega), rd2 _ (by omega), if_neg (by omega), if_pos rfl, if_pos rfl]
+    exact ⟨rfl, rfl⟩
+  -- a slice above the table reads the same
+  have hout : ∀ o ln : Nat, T.toNat + 2 * K.toNat ≤ o →
+      (T.toNat + 2 * i.toNat + 1 < o ∨ o + ln ≤ T.toNat + 2 * i.toNat + 1) ∧
+      (T.toNat + 2 * i.toNat < o ∨ o + ln ≤ T.toNat + 2 * i.toNat) := by
+    intro o ln ho; omega
+  have hpv : ∀ o ln : Nat, T.toNat + 2 * K.toNat ≤ o → pv (vpool m₂) o ln = pv (vpool m₁) o ln := by
+    intro o ln ho
+    rw [h2, pv_set_out _ _ _ _ _ (hout o ln ho).1, pv_set_out _ _ _ _ _ (hout o ln ho).2]
+  have hnm : ∀ o ln : Nat, T.toNat + 2 * K.toNat ≤ o → (Norm (vpool m₂) o ln ↔ Norm (vpool m₁) o ln) := by
+    intro o ln ho
+    rw [h2, norm_set_out _ _ _ _ _ (hout o ln ho).1, norm_set_out _ _ _ _ _ (hout o ln ho).2]
+  have hsT : T.toNat + 2 * K.toNat ≤ s.toNat := by rw [hs]; exact hroom
+  have hcase : ∀ t : Word, t < i + 1 → t < i ∨ t = i := by
+    intro t ht
+    have := UInt64.lt_iff_toNat_lt.mp ht
+    rcases Nat.lt_or_ge t.toNat i.toNat with h1 | h1
+    · exact .inl (UInt64.lt_iff_toNat_lt.mpr h1)
+    · exact .inr (UInt64.toNat_inj.mp (by omega))
+  refine ⟨by rw [htop]; omega, by omega, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_, fun t ht => ?_⟩
+  · rcases hcase t ht with ht | rfl
+    · rw [(eOld t ht).1]; exact hT₁.above t ht
+    · rw [eNew.1]; exact hsT
+  · rcases hcase t ht with ht | rfl
+    · rw [(eOld t ht).1, (eOld t ht).2]; exact SliceOK.congr (hT₁.slice t ht) htop hp0
+    · rw [eNew.1, eNew.2, hs]; exact SliceOK.congr (SliceOK.fresh hA.grows hA.top) htop hp0
+  · rcases hcase t ht with ht | rfl
+    · rw [(eOld t ht).1, (eOld t ht).2, hnm _ _ (hT₁.above t ht)]; exact hT₁.norm t ht
+    · rw [eNew.1, eNew.2, hnm _ _ hsT, hs]; exact hA.norm
+  · rcases hcase t ht with ht | rfl
+    · rw [(eOld t ht).1, (eOld t ht).2, hpv _ _ (hT₁.above t ht)]; exact hT₁.val t ht
+    · rw [eNew.1, eNew.2, hpv _ _ hsT, hs, hA.val]
+
 end L.Front
