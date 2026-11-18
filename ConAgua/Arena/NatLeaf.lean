@@ -5,6 +5,7 @@ meta import ConAgua.Layout
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.Arena.NatOff
+public import ConAgua.Arena.NatShiftFacts
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatGrindAttr
@@ -207,6 +208,44 @@ elab "split_clear_locs" : tactic => do
         try g ← g.clear d.fvarId catch _ => pure ()
     return [g]
 
+/-! ## The right shift's word facts -/
+
+/-- The low `s` bits of `x`, as a named function (an atom to `grind`). -/
+def lowb (x s : Nat) : Nat := x % 2 ^ s
+
+theorem lowb_lt (x s : Nat) : lowb x s < sh s := Nat.mod_lt _ (Nat.two_pow_pos _)
+grind_pattern [arena_grind] lowb_lt => lowb x s
+
+@[arena_grind =] theorem lowb_zero (s : Nat) : lowb 0 s = 0 := Nat.zero_mod _
+
+theorem shr_hi (y b : Word) (hb : b.toNat < 64) :
+    ((y <<< 1) <<< (63 - b)).toNat = (y.toNat % 2 ^ b.toNat) * 2 ^ (64 - b.toNat) := by
+  have h63 : (63 - b).toNat = 63 - b.toNat := by grind
+  rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftLeft, h63]
+  simp only [Nat.shiftLeft_eq, UInt64.toNat_one]
+  rw [Nat.mod_eq_of_lt (by omega : 63 - b.toNat < 64), Nat.mod_eq_of_lt (by omega : 1 < 64)]
+  rw [Nat.mod_mul_mod, Nat.mul_assoc, ← Nat.pow_add, show 1 + (63 - b.toNat) = 64 - b.toNat by omega]
+  have : 2 ^ 64 = 2 ^ b.toNat * 2 ^ (64 - b.toNat) := by rw [← Nat.pow_add]; congr 1; omega
+  rw [this, Nat.mul_mod_mul_right]
+
+/-- The digit equation of one limb of the right shift. -/
+theorem shr_split (x y b : Word) (hb : b.toNat < 64) :
+    ((x >>> b) ||| ((y <<< 1) <<< (63 - b))).toNat * sh b.toNat + lowb x.toNat b.toNat =
+      x.toNat + lowb y.toNat b.toNat * 2 ^ 64 := by
+  rw [UInt64.toNat_or, shr_hi y b hb, UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hb,
+    Nat.shiftRight_eq_div_pow]
+  have hlt : x.toNat / 2 ^ b.toNat < 2 ^ (64 - b.toNat) := by
+    apply Nat.div_lt_of_lt_mul
+    rw [← Nat.pow_add, show b.toNat + (64 - b.toNat) = 64 by omega]; exact x.toNat_lt
+  rw [← Nat.shiftLeft_eq, Nat.or_comm, ← Nat.shiftLeft_add_eq_or_of_lt hlt, Nat.shiftLeft_eq]
+  simp only [sh, lowb]
+  have h2 : 2 ^ (64 - b.toNat) * 2 ^ b.toNat = 2 ^ 64 := by rw [← Nat.pow_add]; congr 1; omega
+  have := Nat.div_add_mod x.toNat (2 ^ b.toNat)
+  rw [Nat.add_mul, Nat.mul_assoc, h2]
+  rw [Nat.mul_comm (x.toNat / 2 ^ b.toNat)]
+  omega
+grind_pattern [arena_grind] shr_split => (x >>> b) ||| ((y <<< 1) <<< (63 - b))
+
 /-! ## The leaves -/
 
 /-- `P[o + i] := A[oa + i] + B[ob + i] + carry` for `i < n`; the carry in `c ≤ 1`, the carry out. -/
@@ -350,9 +389,68 @@ def copyNLoop : Stmt := lblk (o, oa, n, i, x, pt, pb, ta, qa) {
   return 0
 }
 
+/-! ## The shift leaves and `zero_n` -/
+
+/-- `P[o + i] := (A[oa + i] << s) | c`, `c := A[oa + i] >> (64 - s)` (as `(x >> 1) >> (63 - s)`,
+which is `0` for `s = 0`) for `i < n`, `s < 64`; the carry out. -/
+def shlNLoop : Stmt := lblk (o, oa, n, s, c, i, x, rs, pt, pb, ta, qa) {
+  for i < n {
+    x := POOL⟨ta⟩[qa + i];
+    POOL⟨pt⟩[pb + i] := (x << s) | c;
+    c := (x >> 1) >> rs
+  }
+}
+
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def shlN : FunDecl := lfn (o, oa, n, s, c) locals (i, x, rs, pt, pb, ta, qa) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  rs := 63 - s;
+  ⟪shlNLoop⟫;
+  return c
+}
+
+/-- `P[o + i] := (A[oa + i] >> s) | (A[oa + i + 1] << (64 - s))` for `i < n`, `s < 64`: reads the
+`n + 1` limbs `A[oa, oa + n]`. -/
+def shrNLoop : Stmt := lblk (o, oa, n, s, i, x, y, rs, pt, pb, ta, qa) {
+  for i < n {
+    y := POOL⟨ta⟩[qa + (i + 1)];
+    POOL⟨pt⟩[pb + i] := (x >> s) | ((y << 1) << rs);
+    x := y
+  }
+}
+
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def shrN : FunDecl := lfn (o, oa, n, s) locals (i, x, y, rs, pt, pb, ta, qa) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  ta := ⦃oa⦄.tier;
+  qa := ⦃oa⦄.idx;
+  rs := 63 - s;
+  x := POOL⟨ta⟩[qa];
+  ⟪shrNLoop⟫;
+  return 0
+}
+
+/-- `P[o + i] := 0` for `i < n`. -/
+def zeroNLoop : Stmt := lblk (o, n, i, pt, pb) {
+  for i < n { POOL⟨pt⟩[pb + i] := 0 }
+}
+
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
+@[no_expose] def zeroN : FunDecl := lfn (o, n) locals (i, pt, pb) {
+  pt := ⦃o⦄.tier;
+  pb := ⦃o⦄.idx;
+  ⟪zeroNLoop⟫;
+  return 0
+}
+
 /-- The leaves, as one program. -/
 def natLeafProg : Prog := [("add_n", addN), ("add_1", add1), ("sub_n", subN), ("sub_1", sub1),
-  ("and_n", andN), ("or_n", orN), ("xor_n", xorN), ("copy_n", copyN)]
+  ("and_n", andN), ("or_n", orN), ("xor_n", xorN), ("copy_n", copyN), ("shl_n", shlN), ("shr_n", shrN),
+  ("zero_n", zeroN)]
 
 /- `[max, 1] + [1, 2] + 1 = [1, 4]`, carry 0; `[max] + 1 = [0]`, carry 1. -/
 #guard (run natLeafProg 100 "add_n" [4, 0, 2, 2, 1]
@@ -372,6 +470,16 @@ def natLeafProg : Prog := [("add_n", addN), ("add_1", add1), ("sub_n", subN), ("
 #guard (run natLeafProg 100 "copy_n" [2, 0, 2]
   (Mem.ofWords [(POOL, #[5, 7, 0, 0])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
   some ([0], #[5, 7, 5, 7])
+/- `[3, 1] << 1 = [6, 2]`, carry 0; `[0, 6, 2] >> 1` over 2 limbs is `[0, 3]`. -/
+#guard (run natLeafProg 100 "shl_n" [2, 0, 2, 1, 0]
+  (Mem.ofWords [(POOL, #[3, 1, 0, 0])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
+  some ([0], #[3, 1, 6, 2])
+#guard (run natLeafProg 100 "shr_n" [3, 0, 2, 1]
+  (Mem.ofWords [(POOL, #[0, 6, 2, 9, 9])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
+  some ([0], #[0, 6, 2, 0, 3])
+#guard (run natLeafProg 100 "zero_n" [1, 2]
+  (Mem.ofWords [(POOL, #[5, 7, 7])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
+  some ([0], #[5, 0, 0])
 #guard (run natLeafProg 100 "sub_1" [1, 0, 1, 1]
   (Mem.ofWords [(POOL, #[0, 7])])).toOption.map (fun (r, m) => (r, m.arr64 POOL)) ==
   some ([1], #[0, 0xFFFFFFFFFFFFFFFF])

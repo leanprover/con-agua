@@ -41,44 +41,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-! ## Word facts -/
-
-/-- The low `s` bits of `x`, as a named function (an atom to `grind`). -/
-def lowb (x s : Nat) : Nat := x % 2 ^ s
-
-theorem lowb_lt (x s : Nat) : lowb x s < sh s := Nat.mod_lt _ (Nat.two_pow_pos _)
-grind_pattern [arena_grind] lowb_lt => lowb x s
-
-@[arena_grind =] theorem lowb_zero (s : Nat) : lowb 0 s = 0 := Nat.zero_mod _
-
-theorem shr_hi (y b : Word) (hb : b.toNat < 64) :
-    ((y <<< 1) <<< (63 - b)).toNat = (y.toNat % 2 ^ b.toNat) * 2 ^ (64 - b.toNat) := by
-  have h63 : (63 - b).toNat = 63 - b.toNat := by grind
-  rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftLeft, h63]
-  simp only [Nat.shiftLeft_eq, UInt64.toNat_one]
-  rw [Nat.mod_eq_of_lt (by omega : 63 - b.toNat < 64), Nat.mod_eq_of_lt (by omega : 1 < 64)]
-  rw [Nat.mod_mul_mod, Nat.mul_assoc, ← Nat.pow_add, show 1 + (63 - b.toNat) = 64 - b.toNat by omega]
-  have : 2 ^ 64 = 2 ^ b.toNat * 2 ^ (64 - b.toNat) := by rw [← Nat.pow_add]; congr 1; omega
-  rw [this, Nat.mul_mod_mul_right]
-
-/-- The digit equation of one limb of the right shift. -/
-theorem shr_split (x y b : Word) (hb : b.toNat < 64) :
-    ((x >>> b) ||| ((y <<< 1) <<< (63 - b))).toNat * sh b.toNat + lowb x.toNat b.toNat =
-      x.toNat + lowb y.toNat b.toNat * 2 ^ 64 := by
-  rw [UInt64.toNat_or, shr_hi y b hb, UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hb,
-    Nat.shiftRight_eq_div_pow]
-  have hlt : x.toNat / 2 ^ b.toNat < 2 ^ (64 - b.toNat) := by
-    apply Nat.div_lt_of_lt_mul
-    rw [← Nat.pow_add, show b.toNat + (64 - b.toNat) = 64 by omega]; exact x.toNat_lt
-  rw [← Nat.shiftLeft_eq, Nat.or_comm, ← Nat.shiftLeft_add_eq_or_of_lt hlt, Nat.shiftLeft_eq]
-  simp only [sh, lowb]
-  have h2 : 2 ^ (64 - b.toNat) * 2 ^ b.toNat = 2 ^ 64 := by rw [← Nat.pow_add]; congr 1; omega
-  have := Nat.div_add_mod x.toNat (2 ^ b.toNat)
-  rw [Nat.add_mul, Nat.mul_assoc, h2]
-  rw [Nat.mul_comm (x.toNat / 2 ^ b.toNat)]
-  omega
-grind_pattern [arena_grind] shr_split => (x >>> b) ||| ((y <<< 1) <<< (63 - b))
-
 /-! ## The division at the end -/
 
 /-- The shift that skips `w < la` limbs: the quotient is what the loop computed. -/
