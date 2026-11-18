@@ -147191,31 +147191,6 @@ movq $0, %rax
 .Lca_nat_land_lit_0R:
 addq $56, %rsp
 ret
-ca_f_nat_limb:
-subq $32, %rsp
-cmpq %r8, %r9
-jae .Lca_nat_limb_1E
-lea (%rdi,%r9,1), %rcx
-shrq $40, %rcx
-andq $1, %rcx
-lea (%rdi,%r9,1), %rax
-movq $1099511627775, %rdx
-andq %rdx, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-jmp .Lca_nat_limb_0R
-jmp .Lca_nat_limb_1X
-.Lca_nat_limb_1E:
-.Lca_nat_limb_1X:
-movq $0, %rax
-jmp .Lca_nat_limb_0R
-.Lca_nat_limb_0Z:
-movq $0, %rax
-.Lca_nat_limb_0R:
-addq $32, %rsp
-ret
 ca_f_nat_lit_supported:
 movq %rsp, %rax
 subq 8(%r15), %rax
@@ -151261,7 +151236,7 @@ ret
 ca_f_nat_shl:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $120, %rax
+cmpq $224, %rax
 jb ca_exhausted
 subq $112, %rsp
 movq %rdi, (%rsp)
@@ -151478,7 +151453,7 @@ ret
 ca_f_nat_shr:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $136, %rax
+cmpq $248, %rax
 jb ca_exhausted
 subq $128, %rsp
 movq %rdi, (%rsp)
@@ -194203,6 +194178,111 @@ movq $0, %rax
 .Lca_shift_left_refused_0R:
 addq $48, %rsp
 ret
+ca_f_shl_n:
+cmpq $63, %r10
+ja ca_exhausted
+cmpq $0, %r9
+je .Lasm_shl_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
+jb ca_exhausted
+cmpq %r9, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r9, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r9, %r14
+jb ca_exhausted
+movq $0, %r13
+movq %r10, %rcx
+movq (%rsi,%r13,8), %rdx
+movq %rdx, %rax
+shlq %cl, %rax
+orq %r11, %rax
+movq %rax, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r9, %r13
+jae .Lasm_shl_n_T
+.Lasm_shl_n_L:
+movq (%rsi,%r13,8), %rax
+movq %rax, %r8
+shld %cl, %rdx, %rax
+movq %rax, (%rdi,%r13,8)
+movq %r8, %rdx
+addq $1, %r13
+cmpq %r9, %r13
+jb .Lasm_shl_n_L
+.Lasm_shl_n_T:
+shrq $1, %rdx
+movq $63, %rcx
+subq %r10, %rcx
+shrq %cl, %rdx
+movq %rdx, %rax
+ret
+.Lasm_shl_n_Z:
+movq %r11, %rax
+ret
+ca_f_shr_n:
+cmpq $63, %r10
+ja ca_exhausted
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
+jb ca_exhausted
+cmpq %r9, %rax
+jbe ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r9, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r9, %r14
+jb ca_exhausted
+movq $0, %r13
+movq %r10, %rcx
+movq (%rsi,%r13,8), %rdx
+movq %rdi, %r11
+subq $8, %r11
+cmpq $0, %r9
+je .Lasm_shr_n_Z
+.Lasm_shr_n_L:
+movq %rdx, %rax
+addq $1, %r13
+movq (%rsi,%r13,8), %rdx
+shrd %cl, %rdx, %rax
+movq %rax, (%r11,%r13,8)
+cmpq %r9, %r13
+jb .Lasm_shr_n_L
+.Lasm_shr_n_Z:
+movq $0, %rax
+ret
 ca_f_size_bytes:
 cmpq $0, %rdi
 jne .Lca_size_bytes_1E
@@ -218076,6 +218156,33 @@ movq $0, %r8
 movq $0, %r9
 .Lca_zero_find_0R:
 addq $88, %rsp
+ret
+ca_f_zero_n:
+cmpq $0, %r8
+je .Lasm_zero_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
+andq $1, %rcx
+andq %rax, %rdi
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r8, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r8, %r14
+jb ca_exhausted
+movq $0, %r13
+movq $0, %rdx
+.Lasm_zero_n_L:
+movq %rdx, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r8, %r13
+jb .Lasm_zero_n_L
+.Lasm_zero_n_Z:
+movq $0, %rax
 ret
 ca_f_zero_push:
 subq $216, %rsp
