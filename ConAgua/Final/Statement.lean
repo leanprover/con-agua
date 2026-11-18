@@ -50,8 +50,10 @@ This file holds what the statements share: `ACCEPT`, the loaded memory `loadMem`
   committed file sits at `k0` (`hcode : Code checkerFile k0`), where `checkerFile` is the code of
   `checker.s` as the trusted parser reads it (`include_asm`, `ConAgua/AsmFile/Parse.lean`,
   `Include.lean`, `Term.lean`) and the kernel checked `checkerFile_eq : checkerFile = checkerStub
-  ++ compileProg checkerTab checkerProgI "check"` (`checkerProgI`: `checkerProg` with its small
-  leaves inlined, a kernel-checked literal that refines it, `Checker/ProgIRef.lean`) and `checkerStub_eq` (the parallel mode's entries,
+  ++ compileProgX checkerX checkerTab checkerProgI "check"` (`checkerProgI`: `checkerProg` with its small
+  leaves inlined, a kernel-checked literal that refines it, `Checker/ProgIRef.lean`; `checkerX`: the
+  hand-written bodies of some of its functions, each proved against the compiler's per-function
+  contract, `Checker/AsmX.lean`, `Checker/AsmXOk.lean`) and `checkerStub_eq` (the parallel mode's entries,
   the driver among them, and the setup stub); so neither the Lean compiler and runtime that
   computed the code nor the printer that wrote the file is trusted. What reads the file is:
   `include_asm` runs the **compiled** Lean code of `parseAsmFile`, of `programTerm`/`labelExpr`

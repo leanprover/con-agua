@@ -96,6 +96,12 @@ def AsmOk [Host] (p : Prog) (G : Layout) (X : AsmTab) : Prop :=
 
 theorem AsmOk.nil [Host] (p : Prog) (G : Layout) : AsmOk p G [] := fun _ _ h => by simp at h
 
+/-- `AsmOk` in every layout of the table `tab` (the final theorems build their layouts). -/
+def AsmOkT (p : Prog) (tab : Tab) (X : AsmTab) : Prop :=
+  ∀ [Host] (G : Layout), G.Ok → G.tab = tab → AsmOk p G X
+
+theorem AsmOkT.nil (p : Prog) (tab : Tab) : AsmOkT p tab [] := fun G _ _ => AsmOk.nil p G
+
 theorem bv_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : x.toBitVec - 8 = A (x.toNat - 8) := by
   apply BitVec.eq_of_toNat_eq
   simp [A, BitVec.toNat_sub]

@@ -178,11 +178,12 @@ attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s
 /-- **The sequential driver**: from `ca_start`, the machine returns to the caller with the
 callee-saved registers restored, and if it reports `rdx = 0` with `rax = ACCEPT`, the driver's
 two L runs accepted (`DrvAccepts`). -/
-theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true) (hio : abiIO tab = true)
+theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true)
     (hwf : Prog.wf tab q = true) (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId)
     (hw : Nat) (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng)
     (hngh : phi.id < tab.ng) (hp : seqParamsOk tab out hdrf ctlf hw = true) (k0 : Nat)
-    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProg tab q "check")) k0)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (b pb : ByteArray) (dm : MachineData) (ra : Word) (hc : AbiCall b pb dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
@@ -318,7 +319,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
       hra0]; rfl
   rsimp
   rw [e1, hsa0, Int.toNat_zero, Nat.add_zero, show Int.toNat 8 = 8 from rfl]
-  refine ev_seq (abiA0_outcome q p hq tab hok hio hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
+  refine ev_seq (abiA0_outcome q p hq tab hok hAX hio hwf mode plo phi out hdrf ctlf hw fz own hngm k0 hcode fd hentry hnp
     b pb _ (UInt64.ofBitVec (at_ (K + 18 + 1)).toBitVec) ?_) ?_
   · have hneedN : ((abiNeed tab).toUInt64).toNat = abiNeed tab :=
       UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
@@ -424,7 +425,7 @@ theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : ab
   · rsimp; rw [e2]; exact hmsp
   rsimp
   rw [e2]
-  refine ev_seq (abiS_outcome q p hq tab hok hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh hp k0 hcode fd
+  refine ev_seq (abiS_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh hp k0 hcode fd
     hentry hnp (base := base) (blen := abiNeed tab) (inp := dm.regs.rdi.toNat) (n := b.size) (pins := dm.regs.rdx.toNat)
     (np := pb.size) m1 _ (UInt64.ofBitVec (at_ (K + 28 + 1)).toBitVec) ?_ ?_) ?_
   · have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by

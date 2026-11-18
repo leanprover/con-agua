@@ -7,7 +7,7 @@ public import ConAgua.Compiler.WF
 /-!
 # Inlining small leaves (an L → L pass before the code generator)
 
-`inlineProg S R t p` replaces, in every function of `p`, each call `xs := g(args)` of a **leaf**
+`inlineProg S ex t R p` replaces, in every function of `p`, each call `xs := g(args)` of a **leaf**
 `g` (a function whose body makes no call) of at most `S` nodes by `g`'s body, `R` times over
 (round `r + 1` sees the leaves that round `r` made). The body runs on the caller's frame, its
 locals shifted past the caller's (`Stmt.sh`), and its exits become assignments to `xs`
@@ -260,21 +260,25 @@ def Prog.idxTree (p : Prog) : Option NTree := Prog.idxTreeFrom 0 p
 /-- A leaf of at most `S` nodes. -/
 def leafOk (S : Nat) (fd : FunDecl) : Bool := !Stmt.calls fd.body && decide (Stmt.size fd.body ≤ S)
 
-/-- The callees of one round: the leaves of `p` of at most `S` nodes, found through `t`. -/
-def envOf (S : Nat) (t : NTree) (p : Prog) : Env := fun g =>
-  match t.find (nameCode g) with
+/-- The callees of one round: the leaves of `p` of at most `S` nodes, found through `t`, except the
+functions whose name codes are in `ex` (those with a hand-written body, `AsmTab`: their calls stay
+calls). -/
+def envOf (S : Nat) (ex : List Nat) (t : NTree) (p : Prog) : Env := fun g =>
+  let c := nameCode g
+  if ex.contains c then none else
+  match t.find c with
   | some i => match p[i]? with
     | some (_, fd) => if leafOk S fd then some fd else none
     | none => none
   | none => none
 
 /-- One round. -/
-def inlRound (S : Nat) (t : NTree) (p : Prog) : Prog :=
-  p.map fun x => (x.1, inlFn (envOf S t p) x.2)
+def inlRound (S : Nat) (ex : List Nat) (t : NTree) (p : Prog) : Prog :=
+  p.map fun x => (x.1, inlFn (envOf S ex t p) x.2)
 
 /-- `R` rounds. -/
-def inlineProg (S : Nat) (t : NTree) : Nat → Prog → Prog
+def inlineProg (S : Nat) (ex : List Nat) (t : NTree) : Nat → Prog → Prog
   | 0, p => p
-  | r + 1, p => inlineProg S t r (inlRound S t p)
+  | r + 1, p => inlineProg S ex t r (inlRound S ex t p)
 
 end L.Compiler

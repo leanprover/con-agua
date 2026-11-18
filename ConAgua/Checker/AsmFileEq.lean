@@ -12,7 +12,7 @@ meta import ConAgua.AsmFile.Eq
 /-!
 # The committed file is the compiler's output
 
-`checkerFile_eq : checkerFile = checkerStub ++ compileProg checkerTab checkerProg "check"`: the code
+`checkerFile_eq : checkerFile = checkerStub ++ compileProgX checkerX checkerTab checkerProgI "check"`: the code
 of `checker.s` (`checkerFile`, read by the trusted parser, `ConAguaAsm/Checker.lean`) is the
 entry stub `checkerStub` (`ConAgua/Checker/AsmStub.lean`; lane `abi`'s `abiStub checkerTab`:
 `checkerStub_eq`, `ConAgua/Checker/AsmStubEq.lean`) followed by the compiled checker.

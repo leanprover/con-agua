@@ -10,7 +10,7 @@ import ConAgua.L.LocNF
 /-!
 # The inliner is correct
 
-`inlineProg_run`: a run of `inlineProg S t R p` (`Compiler/Inline.lean`; `t` the name tree of `p`)
+`inlineProg_run`: a run of `inlineProg S ex t R p` (`Compiler/Inline.lean`; `t` the name tree of `p`)
 that does not run out of fuel is a run of `p` with `R` more units of fuel: the same results and
 memory, or the same error. One round is one unit: an inlined body runs at its caller's level of
 fuel, one above where the call ran it, and it is a leaf, so it never goes deeper.
@@ -1531,10 +1531,13 @@ theorem idxTreeFrom_spec : ∀ (i : Nat) (p : Prog) (t : NTree), Prog.idxTreeFro
       · have : (g == f) = false := by simpa using hgf
         simp [List.lookup_cons, this, h2]
 
-theorem envOf_sound {S : Nat} {t : NTree} {p : Prog} (ht : Prog.idxTree p = some t) :
-    ∀ g fd, envOf S t p g = some fd → p.lookup g = some fd := by
+theorem envOf_sound {S : Nat} {ex : List Nat} {t : NTree} {p : Prog} (ht : Prog.idxTree p = some t) :
+    ∀ g fd, envOf S ex t p g = some fd → p.lookup g = some fd := by
   intro g fd h
   unfold envOf at h
+  simp only at h
+  split at h
+  · cases h
   split at h
   · rename_i j hj
     obtain ⟨-, fd', h1, h2⟩ := idxTreeFrom_spec 0 p t ht g j hj
@@ -1551,32 +1554,33 @@ theorem idxTreeFrom_map (F : FunDecl → FunDecl) : ∀ (i : Nat) (p : Prog),
   | _, [] => rfl
   | i, (f, fd) :: p => by simp only [List.map_cons, Prog.idxTreeFrom, idxTreeFrom_map F (i + 1) p]
 
-theorem idxTree_inlRound (S : Nat) (t : NTree) (p : Prog) : Prog.idxTree (inlRound S t p) = Prog.idxTree p :=
+theorem idxTree_inlRound (S : Nat) (ex : List Nat) (t : NTree) (p : Prog) :
+    Prog.idxTree (inlRound S ex t p) = Prog.idxTree p :=
   idxTreeFrom_map _ 0 p
 
-theorem lookup_inlRound (S : Nat) (t : NTree) (p : Prog) (g : FnName) :
-    (inlRound S t p).lookup g = (p.lookup g).map (inlFn (envOf S t p)) :=
+theorem lookup_inlRound (S : Nat) (ex : List Nat) (t : NTree) (p : Prog) (g : FnName) :
+    (inlRound S ex t p).lookup g = (p.lookup g).map (inlFn (envOf S ex t p)) :=
   lookup_map_snd _ g p
 
-/-- **The inliner is correct**: a run of `inlineProg S t R p` (`t` the name tree of `p`) that does not
+/-- **The inliner is correct**: a run of `inlineProg S ex t R p` (`t` the name tree of `p`) that does not
 run out of fuel is a run of `p`, with `R` more units of fuel: the same results and the same
 memory, or the same error. -/
-theorem inlineProg_run {S : Nat} {t : NTree} : ∀ (R : Nat) (p : Prog), Prog.idxTree p = some t →
+theorem inlineProg_run {S : Nat} {ex : List Nat} {t : NTree} : ∀ (R : Nat) (p : Prog), Prog.idxTree p = some t →
     ∀ (N : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : Except Err (List Word × Mem)),
-    L.run (inlineProg S t R p) N f vs m = r → r ≠ .error .outOfFuel → L.run p (N + R) f vs m = r
+    L.run (inlineProg S ex t R p) N f vs m = r → r ≠ .error .outOfFuel → L.run p (N + R) f vs m = r
   | 0, _, _, _, _, _, _, _, h, _ => h
   | R + 1, p, ht, N, f, vs, m, r, h, hr => by
-    have h1 := inlineProg_run R (inlRound S t p) (by rw [idxTree_inlRound, ht]) N f vs m r h hr
+    have h1 := inlineProg_run R (inlRound S ex t p) (by rw [idxTree_inlRound, ht]) N f vs m r h hr
     rw [show N + (R + 1) = (N + R) + 1 by omega]
-    exact round_run (envOf_sound ht) (lookup_inlRound S t p) (N + R) f vs m r h1 hr
+    exact round_run (envOf_sound ht) (lookup_inlRound S ex t p) (N + R) f vs m r h1 hr
 
 /-- The inlined program has the original's functions, with the same parameter counts. -/
-theorem inlineProg_lookup {S : Nat} {t : NTree} : ∀ (R : Nat) (p : Prog) (f : FnName) (fd : FunDecl),
-    p.lookup f = some fd → ∃ fd', (inlineProg S t R p).lookup f = some fd' ∧ fd'.nparams = fd.nparams
+theorem inlineProg_lookup {S : Nat} {ex : List Nat} {t : NTree} : ∀ (R : Nat) (p : Prog) (f : FnName) (fd : FunDecl),
+    p.lookup f = some fd → ∃ fd', (inlineProg S ex t R p).lookup f = some fd' ∧ fd'.nparams = fd.nparams
   | 0, _, _, fd, h => ⟨fd, h, rfl⟩
   | R + 1, p, f, fd, h => by
-    obtain ⟨E, o, -, -, -, hnp⟩ := inlFn_body (envOf S t p) fd
-    obtain ⟨fd', h1, h2⟩ := inlineProg_lookup R (inlRound S t p) f _ (by rw [lookup_inlRound, h]; rfl)
+    obtain ⟨E, o, -, -, -, hnp⟩ := inlFn_body (envOf S ex t p) fd
+    obtain ⟨fd', h1, h2⟩ := inlineProg_lookup R (inlRound S ex t p) f _ (by rw [lookup_inlRound, h]; rfl)
     exact ⟨fd', h1, h2.trans hnp⟩
 
 end L.Compiler.Inl
