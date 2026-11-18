@@ -36,6 +36,18 @@ namespace L.Arena
 
 /-! ## `nat_sub(oa, la, ob, lb)` -/
 
+/-- The subtraction proper, `b` of length `n` (`b` trimmed if it was longer than `a`): `sub_n` over
+`b`'s limbs, `sub_1` over the rest of `a`, the result trimmed, or `0` on a borrow out or if `b` is
+still longer. -/
+def subCore : Stmt := lblk (oa, la, ob, lb, top, n, c, pt, pb) {
+  if n <= la {
+    c := call sub_n(top, oa, ob, n, 0);
+    c := call sub_1(top + n, oa + n, la - n, c);
+    n := 0;
+    if c == 0 { n := call nat_trim(top, la) }
+  } else { n := 0 }
+}
+
 /-- `sub_n` over `b`'s limbs, `sub_1` over the rest of `a`; a borrow out means `a < b` and the
 result is `0`. If `b` is longer than `a`, it is trimmed first (the inputs need not be normalised):
 still longer, `a < b`. The passes are leaves (`NatLeaf.lean`).
@@ -50,12 +62,7 @@ def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, c, pt, pb) {
   if len(POOL⟨pt⟩) - pb < n { abort };
   n := lb;
   if la < lb { n := call nat_trim(ob, lb) };
-  if n <= la {
-    c := call sub_n(top, oa, ob, n, 0);
-    c := call sub_1(top + n, oa + n, la - n, c);
-    n := 0;
-    if c == 0 { n := call nat_trim(top, la) }
-  } else { n := 0 };
+  ⟪subCore⟫;
   CTL.u64[0] := top + n;
   return n
 }
@@ -122,43 +129,42 @@ theorem sub_words (m0 m1 m2 : Mem) (T x y k l c1 v : Word)
 
 /-- No borrow: the result is `a - b` (`b` read at its trimmed length `k`, of the same value as at
 its length `K`). -/
-theorem sub_goal_ok (m0 m1 m2 : Mem) (T X x y k l c1 v r R K : Word) (hX : X = T) (hR : R = r)
-    (hv : v = 0)
+theorem sub_core_ok (m0 m1 m2 : Mem) (T x y k l c1 v r K c0 : Word) (hc0 : c0 = 0) (hv : v = 0)
     (hT41 : T.toNat < 2 ^ 41) (hk41 : k.toNat < 2 ^ 41)
     (hk : k.toNat ≤ l.toNat) (hx : x.toNat + l.toNat ≤ T.toNat)
     (hK : pv (vpool m0) y.toNat k.toNat = pv (vpool m0) y.toNat K.toNat)
     (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat)
-    (e1 : pv (vpool m1) T.toNat k.toNat + pv (vpool m0) y.toNat K.toNat + 0 =
+    (e1 : pv (vpool m1) T.toNat k.toNat + pv (vpool m0) y.toNat K.toNat + c0.toNat =
       pv (vpool m0) x.toNat k.toNat + c1.toNat * wt k.toNat)
     (e2 : pv (vpool m2) (T + k).toNat (l - k).toNat + c1.toNat =
       pv (vpool m1) (x + k).toNat (l - k).toNat + v.toNat * wt (l - k).toNat)
     (et : pv (vpool m2) T.toNat r.toNat = pv (vpool m2) T.toNat l.toNat) :
-    pv (vpool (m2.set64 CTL 0 (T + r))) X.toNat R.toNat =
-      pv (vpool m0) x.toNat l.toNat - pv (vpool m0) y.toNat K.toNat := by
+    pv (vpool m2) T.toNat r.toNat = pv (vpool m0) x.toNat l.toNat - pv (vpool m0) y.toNat K.toNat := by
+  subst hc0
   rw [← hK] at e1
-  subst X R
   have e := sub_words m0 m1 m2 T x y k l c1 v hT41 hk41 hk hx h1 h2 e1 e2
-  rw [vpool_set64_ne _ _ _ _ (by decide), et, ← hK]
+  rw [et, ← hK]
   have hv0 : v.toNat = 0 := by simp [hv]
   rw [hv0, Nat.zero_mul, Nat.add_zero] at e
   omega
 
 /-- A borrow: `a < b`, the result `0` is `a - b`. -/
-theorem sub_goal_bor (m0 m1 m2 : Mem) (P : Array Word) (T X x y k l c1 v K R : Word) (hR : R = 0)
+theorem sub_core_bor (m0 m1 m2 : Mem) (P : Array Word) (T X x y k l c1 v K R c0 : Word) (hc0 : c0 = 0) (hR : R = 0)
     (hv0 : v ≠ 0) (hv1 : v.toNat ≤ 1)
     (hT41 : T.toNat < 2 ^ 41) (hk41 : k.toNat < 2 ^ 41)
     (hk : k.toNat ≤ l.toNat) (hx : x.toNat + l.toNat ≤ T.toNat)
     (hK : pv (vpool m0) y.toNat k.toNat = pv (vpool m0) y.toNat K.toNat)
     (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat)
-    (e1 : pv (vpool m1) T.toNat k.toNat + pv (vpool m0) y.toNat K.toNat + 0 =
+    (e1 : pv (vpool m1) T.toNat k.toNat + pv (vpool m0) y.toNat K.toNat + c0.toNat =
       pv (vpool m0) x.toNat k.toNat + c1.toNat * wt k.toNat)
     (e2 : pv (vpool m2) (T + k).toNat (l - k).toNat + c1.toNat =
       pv (vpool m1) (x + k).toNat (l - k).toNat + v.toNat * wt (l - k).toNat) :
     pv P X.toNat R.toNat = pv (vpool m0) x.toNat l.toNat - pv (vpool m0) y.toNat K.toNat := by
-  rw [← hK] at e1
+  subst hc0
   subst hR
+  rw [← hK] at e1
   have e := sub_words m0 m1 m2 T x y k l c1 v hT41 hk41 hk hx h1 h2 e1 e2
   have hv : v.toNat = 1 := by
     have : v.toNat ≠ 0 := fun h => hv0 (UInt64.toNat_inj.mp (by simpa using h))
@@ -170,7 +176,7 @@ theorem sub_goal_bor (m0 m1 m2 : Mem) (P : Array Word) (T X x y k l c1 v K R : W
   omega
 
 /-- `b` longer than `a` even trimmed: `a < b`, the result `0` is `a - b`. -/
-theorem sub_goal_short (m0 : Mem) (P : Array Word) (X x y k l K R : Word) (hR : R = 0)
+theorem sub_core_short (m0 : Mem) (P : Array Word) (X x y k l K R : Word) (hR : R = 0)
     (hn : Norm (vpool m0) y.toNat k.toNat) (hl : l.toNat < k.toNat)
     (hK : pv (vpool m0) y.toNat k.toNat = pv (vpool m0) y.toNat K.toNat) :
     pv P X.toNat R.toNat = pv (vpool m0) x.toNat l.toNat - pv (vpool m0) y.toNat K.toNat := by
@@ -181,15 +187,13 @@ theorem sub_goal_short (m0 : Mem) (P : Array Word) (X x y k l K R : Word) (hR : 
   omega
 
 /-- The pool below `T` is kept: `sub_n` and `sub_1` wrote only at `T` and above. -/
-theorem sub_agree_goal (m0 m1 m2 : Mem) (T X k l w : Word) (hX : X = T)
+theorem sub_core_agree (m0 m1 m2 : Mem) (T k l : Word)
     (hT41 : T.toNat < 2 ^ 41) (hk41 : k.toNat < 2 ^ 41)
     (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
     (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat) :
-    Agree (vpool (m2.set64 CTL 0 w)) (vpool m0) X.toNat := by
-  subst X
+    Agree (vpool m2) (vpool m0) T.toNat := by
   have hTk : (T + k).toNat = T.toNat + k.toNat := w_add T k (by omega)
   rw [hTk] at h2
-  rw [vpool_set64_ne _ _ _ _ (by decide)]
   intro j hj
   exact (h2 j (Or.inl (by omega))).trans (h1 j (Or.inl hj))
 
@@ -204,32 +208,79 @@ theorem room_le' (m : Mem) (a : TieredArray) (i n r k : Word) (hin : i.toNat ≤
   rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega)), hs] at h'
   omega
 
-/-- `nat_sub`'s pool grew: the passes wrote only at the old top and above, then the top moved
-past the result. -/
-theorem sub_grows (m0 m1 m2 : Mem) (T k l r : Word) (hok : PoolOK m0) (hT0 : m0.top = T)
-    (hf1 : PFrame m0 m1) (hf2 : PFrame m1 m2) (hk41 : k.toNat < 2 ^ 41)
-    (hroom : (T &&& 1099511627775).toNat + r.toNat ≤ (m0.arr64 (tierA POOL (T >>> 40))).size)
-    (h1 : Off (vpool m1) (vpool m0) T.toNat k.toNat)
-    (h2 : Off (vpool m2) (vpool m1) (T + k).toNat (l - k).toNat) :
+/-- A pool function's last step: it wrote only the pool (`PFrame`) and kept it below the old top
+`T`, then moved the top past its `r` result limbs: the pool grew. -/
+theorem grows_ctl (m0 m2 : Mem) (T r : Word) (hok : PoolOK m0) (hT0 : m0.top = T)
+    (hf : PFrame m0 m2) (ha : Agree (vpool m2) (vpool m0) T.toNat)
+    (hroom : (T &&& 1099511627775).toNat + r.toNat ≤ (m0.arr64 (tierA POOL (T >>> 40))).size) :
     Grows m0 (m2.set64 CTL 0 (T + r)) := by
   subst hT0
-  have h41 := hok.top41
-  have hTk : (m0.top + k).toNat = m0.top.toNat + k.toNat := w_add m0.top k (by omega)
-  rw [hTk] at h2
-  exact Grows.write m0 _ r hok (hf1.trans hf2)
-    (fun j hj => (h2 j (Or.inl (by omega))).trans (h1 j (Or.inl hj))) hroom
+  exact Grows.write m0 m2 r hok hf ha hroom
 
-/-- Nothing written, the top kept. -/
-theorem sub_grows0 (m0 : Mem) (T z : Word) (hok : PoolOK m0) (hT0 : m0.top = T) (hz : z = 0) :
-    Grows m0 (m0.set64 CTL 0 (T + z)) := by
-  subst hT0 hz
-  exact Grows.write m0 m0 0 hok (PFrame.refl m0) (Agree.refl _ _) (by have := hok.inTier; simpa using this)
+theorem vpool_ctl (m : Mem) (w : Word) : vpool (m.set64 CTL 0 w) = vpool m :=
+  vpool_set64_ne _ _ _ _ (by decide)
+
+section subCore
+variable (p : Prog) (hps : p.lookup "sub_n" = some subN) (hp1 : p.lookup "sub_1" = some sub1)
+  (hpt : p.lookup "nat_trim" = some natTrim)
+
+/-- `subCore`'s precondition: locals `(oa, la, ob, lb, top, n, c, pt, pb)`, the operands below
+the top, `n` `b`'s trimmed length. -/
+def SubCorePre (s : St) : Prop :=
+  pcap s.mem < 2 ^ 64 ∧ (s.loc 4).toNat < 2 ^ 41 ∧ (s.loc 4).toNat + (s.loc 1).toNat ≤ pcap s.mem ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 4).toNat ∧
+  (s.loc 2).toNat + (s.loc 3).toNat ≤ (s.loc 4).toNat ∧ (s.loc 5).toNat ≤ (s.loc 3).toNat ∧
+  pv (vpool s.mem) (s.loc 2).toNat (s.loc 5).toNat = pv (vpool s.mem) (s.loc 2).toNat (s.loc 3).toNat ∧
+  ((s.loc 1).toNat < (s.loc 5).toNat → Norm (vpool s.mem) (s.loc 2).toNat (s.loc 5).toNat)
+
+def SubCorePost (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ s'.loc 4 = s₀.loc 4 ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = pcap s₀.mem ∧
+  Agree (vpool s'.mem) (vpool s₀.mem) (s₀.loc 4).toNat ∧ (s'.loc 5).toNat ≤ (s₀.loc 1).toNat ∧
+  pv (vpool s'.mem) (s₀.loc 4).toNat (s'.loc 5).toNat =
+    pv (vpool s₀.mem) (s₀.loc 0).toNat (s₀.loc 1).toNat - pv (vpool s₀.mem) (s₀.loc 2).toNat (s₀.loc 3).toNat ∧
+  Norm (vpool s'.mem) (s₀.loc 4).toNat (s'.loc 5).toNat
+
+include hps hp1 hpt in
+theorem subCore_spec (n : Nat) (s₀ : St) (h : SubCorePre s₀) :
+    ⦃fun s => s = s₀⦄ step p (exec p n) subCore ⦃fun r s' => SubCorePost s₀ r s'; ⊤⦄ := by
+  simp only [SubCorePre, SubCorePost] at h ⊢
+  obtain ⟨hs, hT41, hroom, ha, hb, hn, hK, hN⟩ := h
+  unfold subCore
+  vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs,
+    subN_spec p hps n, sub1_spec p hp1 n, natTrim_spec p hpt n]
+  all_goals (try simp only [LocEq] at *)
+  all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+    BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff])
+  all_goals split_clear_locs
+  all_goals (try and_intros)
+  all_goals first
+    | (grind (splits := 10) [arena_grind, lang_grind, Norm]; done)
+    | (with_reducible apply sub_core_ok
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       case e1 => with_reducible assumption
+       case e2 => with_reducible assumption
+       all_goals (first | rfl | (with_reducible assumption) | grind))
+    | (with_reducible apply sub_core_bor
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       case e1 => with_reducible assumption
+       case e2 => with_reducible assumption
+       all_goals (first | rfl | (with_reducible assumption) | grind))
+    | (with_reducible apply sub_core_short
+       case hK => with_reducible assumption
+       all_goals (first | (with_reducible assumption) | grind))
+    | (with_reducible apply sub_core_agree
+       case h2 => with_reducible assumption
+       case h1 => with_reducible assumption
+       all_goals grind)
+
+end subCore
 
 section subFn
 variable (p : Prog) (hps : p.lookup "sub_n" = some subN) (hp1 : p.lookup "sub_1" = some sub1)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_sub" = some natSub)
 
-set_option maxHeartbeats 8000000 in
 include hps hp1 hpt hpn in
 /-- `nat_sub` appends `a - b` (truncated), normalised, at the old top and moves the top past it;
 nothing below the old top changes, and no other array but `CTL[0]`. -/
@@ -259,37 +310,15 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      subN_spec p hps n, sub1_spec p hp1 n, natTrim_spec p hpt n]
-    all_goals (try simp only [LocEq] at *)
-    all_goals (try simp_all only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
+      subCore_spec p hps hp1 hpt n, natTrim_spec p hpt n]
+    all_goals (try simp only [LocEq, SubCorePre, SubCorePost] at *)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_nil, St.setLocs_cons,
       L.Locals.init_nil, Locals.init_cons_zero, Locals.init_cons_succ, BinOp.eval, Cmp.eval,
-      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero])
-    all_goals split_clear_locs
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals first
-      | (grind (splits := 20) [arena_grind, lang_grind, Mem.top_eq]; done)
-      | (with_reducible apply sub_goal_ok
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         case e1 => with_reducible assumption
-         case e2 => with_reducible assumption
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply sub_goal_bor
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         case e1 => with_reducible assumption
-         case e2 => with_reducible assumption
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply sub_goal_short
-         case hn => with_reducible assumption
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply sub_agree_goal
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply sub_grows
-         case h2 => with_reducible assumption
-         case h1 => with_reducible assumption
+      | (grind (splits := 10) [arena_grind, lang_grind, Mem.top_eq, vpool_ctl, Norm]; done)
+      | (with_reducible apply grows_ctl
          case hroom =>
            first
              | grind [Mem.top_eq]
@@ -297,9 +326,7 @@ theorem natSub_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
                 case hr => with_reducible assumption
                 case h => assumption
                 all_goals grind [Mem.top_eq])
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
-      | (with_reducible apply sub_grows0
-         all_goals first | rfl | (with_reducible assumption) | grind [Mem.top_eq, Sig.retVal])
+         all_goals grind [Mem.top_eq, vpool_ctl])
 
 end subFn
 
