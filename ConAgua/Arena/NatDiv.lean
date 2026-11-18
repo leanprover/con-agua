@@ -127,16 +127,6 @@ theorem pv_set_below (p : Array Word) (o k j : Nat) (v : Word) (h : j < o) :
     simp [show j ≠ o + k by omega]
 grind_pattern [arena_grind] pv_set_below => pv (p.set! j v) o k
 
-/-- The limb loop's exit: the pointer is back at the slice's start, all limbs done. -/
-theorem pv_exit (p : Array Word) (pa oa : Nat) (i la : Word) (h : ¬ i < la)
-    (hi : i.toNat ≤ la.toNat) (hpa : pa + i.toNat = oa + la.toNat) :
-    pv p pa i.toNat = pv p oa la.toNat := by
-  have : i.toNat = la.toNat := by
-    have : ¬ i.toNat < la.toNat := fun h' => h (UInt64.lt_iff_toNat_lt.mpr h')
-    omega
-  rw [this, show pa = oa by omega]
-grind_pattern [natop_grind] pv_exit => pv p pa i.toNat, pv p oa la.toNat, i < la
-
 theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
   have h2 := h.ctl
   have hf : PFrame (m.set64 CTL 0 m.top) m := by
