@@ -305,3 +305,89 @@ theorem ds_tail (TR : TieredArray) (hTR : G.tab.dom64 TR = true) (rb n : Word) {
 end
 
 end L.AsmEsc
+
+namespace L.AsmEsc
+
+open L L.Arena L.Compiler
+
+/-- **The hand-written `div_submul` meets the compiler's per-function contract**, for any table in
+which `POOL` (0) is a tiered word array with small descriptor offsets, at every fuel. -/
+theorem divSubmulAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
+    (hp : p.lookup "div_submul" = some divSubmul) (hdom : G.tab.dom64 (tier1 0) = true)
+    (hoffL : SmallOff (G.tab.len64 (0 : ArrId))) (hoffB : SmallOff (G.tab.base64 (0 : ArrId)))
+    (kf : Nat) (hc : Code (divSubmulAsm G.tab) kf) (sk : NTree) (n : Nat) :
+    FnSimAt p G sk n "div_submul" divSubmul kf := by
+  intro vs σ d ra Q hlen hra hargs hlo8 hhi h15 hmem h14 hok herr habrt hexh
+  have hlo : G.lo ≤ d.regs.rsp.toNat := by omega
+  rw [divSubmul_nparams] at hlen
+  obtain ⟨r, nn, ob, q, rfl⟩ : ∃ r nn ob q, vs = [r, nn, ob, q] := by
+    match vs, hlen with
+    | [r, nn, ob, q], _ => exact ⟨r, nn, ob, q, rfl⟩
+  have hA := hargs.1 (by simp [argRegs])
+  have hrdi : d.regs.rdi = r := UInt64.toBitVec_inj.mp (hA 0 (by simp))
+  have hr8 : d.regs.r8 = nn := UInt64.toBitVec_inj.mp (hA 1 (by simp))
+  have hr9 : d.regs.r9 = ob := UInt64.toBitVec_inj.mp (hA 2 (by simp))
+  have hr10 : d.regs.r10 = q := UInt64.toBitVec_inj.mp (hA 3 (by simp))
+  have hh := hG.hi_le
+  have hnr : Stmt.nret divSubmul.body = 1 := by rw [divSubmul_body]; rfl
+  refine ev_label (ds_code hc (i := 0) rfl) ?_
+  refine ev_movRI (ds_code hc (i := 1) rfl) ?_
+  refine ev_movRR (ds_code hc (i := 2) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (ds_code hc (i := 3) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (ds_code hc (i := 4) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (ds_code hc (i := 5) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_movRR (ds_code hc (i := 6) rfl) ?_
+  refine ev_shiftR (n := 40) (op := .shr) (by decide) (Or.inr rfl) (ds_code hc (i := 7) rfl) fun st => ?_
+  refine ev_aluRI (op := .and) (w := 1) rfl (ds_code hc (i := 8) rfl) fun st => ?_
+  refine ev_aluOp (op := .and) (v := idxMask) rfl (ds_code hc (i := 9) rfl) (Or.inr (Or.inr ⟨.rax, rfl, by rs⟩))
+    fun st => ?_
+  refine ev_gen (fun s1 => s1.regs.rcx = (r >>> 40) &&& 1 ∧ s1.regs.rdi = r &&& idxMask ∧
+      s1.regs.rdx = (ob >>> 40) &&& 1 ∧ s1.regs.r9 = ob &&& idxMask ∧ s1.regs.rax = idxMask ∧
+      s1.regs.r8 = nn ∧ s1.regs.r10 = q ∧ s1.regs.r14 = d.regs.r14 ∧ s1.regs.r15 = d.regs.r15 ∧
+      s1.regs.rsp = d.regs.rsp ∧ s1.regs.rbp = d.regs.rbp ∧ s1.dmem = d.dmem)
+    (by refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rs [hrdi, hr8, hr9, hr10, BinOp.eval]
+        all_goals rfl)
+    fun s1 ⟨g1, g2, g3, g4, g5, g6, g7, g9, g10, g11, g12, g13⟩ => ?_
+  have hTR := G.tab.dom64_tierA hdom (r >>> 40)
+  have hTB := G.tab.dom64_tierA hdom (ob >>> 40)
+  have heA := hG.end64 _ (G.tab.pos64_lt hTR)
+  have heB := hG.end64 _ (G.tab.pos64_lt hTB)
+  have hm1 : MemRel G σ.mem s1.dmem := by rw [g13]; exact hmem
+  have h15' : s1.regs.r15.toNat = G.T := by rw [g10]; exact h15
+  have hdA := pool_desc hm1 hdom (r >>> 40) (r := .rcx) (by rs [g1]) h15'
+  have hdB := pool_desc hm1 hdom (ob >>> 40) (r := .rdx) (by rs [g3]) h15'
+  have hszA := hmem.size64 _ hTR
+  have hszB := hmem.size64 _ hTB
+  generalize hSA : G.s (G.tab.pos64 (tierA 0 (r >>> 40))) = SA at *
+  generalize hSB : G.s (G.tab.pos64 (tierA 0 (ob >>> 40))) = SB at *
+  generalize hBA : G.b (G.tab.pos64 (tierA 0 (r >>> 40))) = BA at *
+  generalize hBB : G.b (G.tab.pos64 (tierA 0 (ob >>> 40))) = BB at *
+  have hSAn : (UInt64.ofNat SA).toNat = SA := L.toNat_ofNat_of_lt (by omega)
+  have hSBn : (UInt64.ofNat SB).toNat = SB := L.toNat_ofNat_of_lt (by omega)
+  have hsub : ∀ (S : Nat) (w : Word), S < 2 ^ 64 → w.toNat ≤ S →
+      ((UInt64.ofNat S).toBitVec - w.toBitVec).toNat = S - w.toNat := by
+    intro S w h1 h2
+    rw [BitVec.toNat_sub, UInt64.toNat_toBitVec, show (UInt64.ofNat S).toBitVec.toNat = S from
+      L.toNat_ofNat_of_lt h1]
+    have := w.toNat_lt; omega
+  have hrb : (r &&& idxMask).toNat < 2 ^ 40 := by
+    rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+  have hqb : (ob &&& idxMask).toNat < 2 ^ 40 := by
+    rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+  have hmask : (idxMask : Word).toNat = 2 ^ 40 - 1 := rfl
+  have hX : ∀ s', s'.regs.rbp = d.regs.rbp → s'.dmem = s1.dmem → Ev Q s' (label exhaustedL) :=
+    fun s' e1 e2 => hexh _ ⟨e1, by rw [e2, g13]; exact Pres.refl _ _⟩
+  -- the indices stay below `2^40`
+  refine ev_movRR (ds_code hc (i := 10) rfl) ?_
+  refine ev_subRR (ds_code hc (i := 11) rfl) fun _ _ => ?_
+  refine ev_cmpRO (ds_code hc (i := 12) rfl) (v := nn) (Or.inr (Or.inr ⟨.r8, rfl, by rs [g6]⟩)) ?_
+  refine ev_jcc (ds_code hc (i := 13) rfl) (fun _ => hX _ (by rs [g12]) rfl) (fun hcc1 => ?_)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not] at hcc1
+  rs [g2, g5] at hcc1
+  rw [BitVec.toNat_sub] at hcc1
+  simp only [UInt64.toNat_toBitVec, hmask] at hcc1
+  have hr40 : (r &&& idxMask).toNat + nn.toNat < 2 ^ 40 := by omega
+  sorry
+
+end L.AsmEsc
