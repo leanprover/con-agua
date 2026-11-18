@@ -323,18 +323,14 @@ theorem decW_val (b : Array UInt8) (c d top : Word) (ht : top.toNat < 2 ^ 41)
 theorem rdW_ctl_top (m : Mem) : rdW (m.arr64 CTL) 0 = m.top := by
   simp [rdW, Mem.top]
 
-/-- **What `nat_dec(c, d)` does**, on digits `[c, d)`: the pool grows by the normalised limbs of
+/-- **What `nat_dec_chunks(c, d)` does**, on digits `[c, d)`: the pool grows by the normalised limbs of
 their decimal value, at the old top. -/
-theorem natDecW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
+theorem natChunksW_val (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
     (hp : PoolOK m) (hcd : c ≤ d) (hdig : Digits b c.toNat (d.toNat - c.toNat))
-    (h : natDecW b m c d = some (r, m')) :
+    (h : natChunksW b m c d = some (r, m')) :
     ∃ l, r = [m.top, l] ∧ Grows m m' ∧ SliceOK m' m.top l ∧
       Norm (vpool m') m.top.toNat l.toNat ∧
       pv (vpool m') m.top.toNat l.toNat = decN b c.toNat (d.toNat - c.toNat) := by
-  unfold natDecW at h
-  split at h
-  · sorry
-  replace h : natChunksW b m c d = some (r, m') := h
   have hsm := hp.small
   have h41 := hp.top41
   have hin := hp.inTier
