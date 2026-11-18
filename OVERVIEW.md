@@ -422,9 +422,10 @@ the results and the final memory, or `rdx = 2` for an error, with the error's
 code in `rax` (an abort's own code, `0` for any other error). It is proved once,
 for every well-formed program. It also allows a table of hand-written function
 bodies in place of compiled ones (`compileProgX`), each proved against the same
-per-function contract as the compiled code (`AsmOk`). The checker has one, the
-bignum multiply-accumulate row `mul_row`
-([`mulRowAsm_sim`](ConAgua/AsmEsc/MulRowAsm.lean)), listed in
+per-function contract as the compiled code (`AsmOk`). The checker has two, the
+bignum rows `mul_row` (multiply-accumulate,
+[`mulRowAsm_sim`](ConAgua/AsmEsc/MulRowAsm.lean)) and `sub_row` (subtract,
+[`subRowAsm_sim`](ConAgua/AsmEsc/SubRowAsm.lean)), listed in
 [`Checker/AsmX.lean`](ConAgua/Checker/AsmX.lean).
 
 ### 4.3 Kraken
