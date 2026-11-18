@@ -7,6 +7,7 @@ meta import ConAgua.Arena.NatDivWord
 meta import ConAgua.Arena.NatDivKstep
 import ConAgua.Census.Attr
 public import ConAgua.Arena.NatDivKstep
+public import ConAgua.Arena.NatAdd
 import ConAgua.Arena.NatDivFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Arena.NatCmpFacts
