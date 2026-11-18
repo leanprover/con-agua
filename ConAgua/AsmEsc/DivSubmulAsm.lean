@@ -462,6 +462,44 @@ theorem divSubmulAsm_sim [Host] (p : Prog) (G : L.Compiler.Layout) (hG : G.Ok)
       hr13 hr12 hrcx fun s'' e1 e2 e3 e4 e5 e6 e7 => ?_
     refine hok _ _ s'' hrun e1 rfl e2 e3 e4 e5 ?_ e7
     rw [hnr]; exact resOut_zero' e6
-  sorry
+  refine ev_cmpRO (ds_code hc (i := 37) rfl) (v := 0) (Or.inl rfl) ?_
+  have hrdi0 : (UInt64.ofNat BA).toBitVec + (r &&& idxMask).toBitVec * 8 =
+      (UInt64.ofNat (BA + 8 * (r &&& idxMask).toNat)).toBitVec := by
+    have := addr_idx BA 0 (r &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  have hrbx0 : (UInt64.ofNat BB).toBitVec + (ob &&& idxMask).toBitVec * 8 =
+      (UInt64.ofNat (BB + 8 * (ob &&& idxMask).toNat)).toBitVec := by
+    have := addr_idx BB 0 (ob &&& idxMask) (by omega)
+    simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add] at this
+    rw [this]; rfl
+  refine ev_jcc (ds_code hc (i := 38) rfl) (fun hcc => ?_) (fun hcc => ?_)
+  · simp only [CondCode.interp, cmpFlags_zf, beq_iff_eq] at hcc
+    rs [g6] at hcc
+    have hn0 : nn = 0 := UInt64.toBitVec_inj.mp hcc
+    subst hn0
+    refine ev_lbl (Code.label hc (i := 52) rfl) ?_
+    refine hT _ ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_
+    all_goals try rs [g1, g2, g3, g4, g5, g6, g7, g9, g10, g11, g12, g13]
+    · show (d.regs.r14 - 0).toNat ≤ _; simp
+    · exact Pres.refl _ _
+    · simpa [dsRows] using hmem
+    · apply UInt64.toBitVec_inj.mp; rw [hBA]; exact hrdi0
+    · simp [dsRows]
+    · rfl
+  simp only [CondCode.interp, cmpFlags_zf, beq_eq_false_iff_ne] at hcc
+  rs [g6] at hcc
+  have hnz : nn ≠ 0 := fun h => hcc (by rw [h])
+  refine ds_row (d := d) hG hc _ _ hTR hTB (r &&& idxMask) (ob &&& idxMask) q nn (d.regs.r14 - nn) σ.mem
+    (by omega) (by omega) hT nn.toNat _ 0 (by simp) ⟨?_, ?_, ?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    (by have := L.toNat_ne_zero_of_ne _ hnz; simp only [UInt64.toNat_zero]; omega)
+  all_goals try rs [g1, g2, g3, g4, g5, g6, g7, g9, g10, g11, g12, g13]
+  · show (d.regs.r14 - nn).toNat ≤ _; omega
+  · exact Pres.refl _ _
+  · simpa [dsRows] using hmem
+  · apply UInt64.toBitVec_inj.mp; rw [hBA]; exact hrdi0
+  · apply UInt64.toBitVec_inj.mp; rw [hBB]; exact hrbx0
+  · simp [dsRows]
+  · rfl
 
 end L.AsmEsc
