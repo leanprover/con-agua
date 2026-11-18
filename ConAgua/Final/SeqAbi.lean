@@ -134,7 +134,7 @@ theorem abiS_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : a
     (Nat.le_refl _) (by omega) hSE (Nat.le_refl _)
   have hm0 := seq_memRel (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp hfit dm.regs hc.hbase m dm.dmem hm
   have hcs := hc.hcs
-  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG hwf _ hcC fd hentry []
+  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG [] (AsmOk.nil _ _) hwf _ hcC fd hentry []
     (by simp [hnp]) rfl (seqMem m mode plo phi out hdrf ctlf hw dm.regs.rsi dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
     (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
   · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, h12, h13⟩, hfr, hout⟩

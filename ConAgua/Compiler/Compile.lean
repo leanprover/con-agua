@@ -2158,20 +2158,36 @@ def trampoline (tab : Tab) (entry : FnName) (c np : Nat) : Program :=
    .label okL] ++ loadRes { tab, fn := entry, nl := 0, brk := okL } 0 c (tab.nres - c) ++
   [movRI .rdx 0, jmpL finishL]
 
-/-- Every function of `p`, with the result counts `t` and the leaves without a stack check `sk`. -/
-def compileFns (tab : Tab) (t sk : NTree) (p : Prog) : Program :=
-  p.flatMap fun (f, fd) => compileFn tab t sk f fd
+/-- Hand-written bodies: a function whose name has the code `c` (`nameCode`) gets the code `X.lookup c`
+instead of `compileFn`'s. Each body keeps its L function (the L-level proofs are about that) and is
+proved against the per-function contract of the compiler proof (`FnSimAt`, `AsmOk`). -/
+abbrev AsmTab := List (Nat × Program)
+
+/-- The code of function `f`: its hand-written body in `X`, or else the compiled one. -/
+def fnCode (X : AsmTab) (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) : Program :=
+  match X.lookup (nameCode f) with
+  | some c => c
+  | none => compileFn tab t sk f fd
+
+/-- Every function of `p`, with the result counts `t` and the leaves without a stack check `sk`
+(the bodies of `X` in place of the compiled ones). -/
+def compileFns (X : AsmTab) (tab : Tab) (t sk : NTree) (p : Prog) : Program :=
+  p.flatMap fun (f, fd) => fnCode X tab t sk f fd
 
 /-- The number of parameters of the entry function. -/
 def entryNp (p : Prog) (entry : FnName) : Nat := ((p.lookup entry).map (·.nparams)).getD 0
 
 /-- The whole program, with the result counts `t` and the leaves without a stack check `sk`: the
 trampoline, then every function. -/
-def compileProgT (tab : Tab) (t sk : NTree) (p : Prog) (entry : FnName) : Program :=
-  trampoline tab entry (nrOf t tab entry) (entryNp p entry) ++ compileFns tab t sk p
+def compileProgT (X : AsmTab) (tab : Tab) (t sk : NTree) (p : Prog) (entry : FnName) : Program :=
+  trampoline tab entry (nrOf t tab entry) (entryNp p entry) ++ compileFns X tab t sk p
 
-/-- The whole program: the trampoline, then every function. -/
+/-- The whole program, with the hand-written bodies `X`: the trampoline, then every function. -/
+def compileProgX (X : AsmTab) (tab : Tab) (p : Prog) (entry : FnName) : Program :=
+  compileProgT X tab (Prog.nrt p) (Prog.skt p entry) p entry
+
+/-- The whole program: the trampoline, then every function, all compiled. -/
 def compileProg (tab : Tab) (p : Prog) (entry : FnName) : Program :=
-  compileProgT tab (Prog.nrt p) (Prog.skt p entry) p entry
+  compileProgX [] tab p entry
 
 end L.Compiler

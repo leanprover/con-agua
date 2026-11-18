@@ -37,7 +37,8 @@ theorem Refines.outcome {q p : Prog} (hq : Refines q p) {G : Layout} {N : Nat} {
 /-- **`compile_correct_frame` for a program `q` that refines `p`**: `q` is compiled, the outcome is
 `p`'s run with `abiInl` more units of fuel. -/
 theorem compile_correct_frame_ref [Host] (q p : Prog) (hq : Refines q p) (entry : FnName) (G : Layout) (hG : G.Ok)
-    (hwf : Prog.wf G.tab q = true) (k0 : Nat) (hcode : Code (compileProg G.tab q entry) k0)
+    (X : AsmTab) (hX : AsmOk q G X)
+    (hwf : Prog.wf G.tab q = true) (k0 : Nat) (hcode : Code (compileProgX X G.tab q entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
     (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
     (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
@@ -60,7 +61,7 @@ theorem compile_correct_frame_ref [Host] (q p : Prog) (hq : Refines q p) (entry 
   obtain ⟨fd', hl', hnp⟩ := hq.lookup entry fd hentry
   exact eventually_weaken _ _ _ _ (fun _ ⟨h1, h2, h3, h4, h5, h6, h7, h8⟩ =>
       ⟨h1, h2, h3, h4, h5, h6, h7, h8.imp_right hq.outcome⟩)
-    (compile_correct_frame q entry G hG hwf k0 hcode fd' hl' args (by rw [hnp]; exact hargs) hnargs m N d ra hT hN
+    (compile_correct_frame q entry G hG X hX hwf k0 hcode fd' hl' args (by rw [hnp]; exact hargs) hnargs m N d ra hT hN
       hmem hroom htop hargv hra hcs hcs24 hcs8 hsv hsv64)
 
 end L.Compiler

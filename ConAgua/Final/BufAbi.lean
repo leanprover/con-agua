@@ -683,7 +683,7 @@ theorem abiB_go [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTab
     (Nat.le_refl _) (by omega) hTE (Nat.le_refl _)
   have hcs := hc.hcs
   rw [hbase, hblen, hbuf] at hcs
-  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG hwf _ hcC fd hentry []
+  refine eventually_weaken _ _ _ _ ?_ (compile_correct_frame_ref q p hq "check" _ hG [] (AsmOk.nil _ _) hwf _ hcC fd hentry []
     (by simp [hnp]) rfl (bufMemG fz own plo phi mode B r dm.regs.rdx) abiFuelM _ ra ?_ ?_ ?_ ?_ ?_
     (fun i h => absurd h (by simp)) ?_ ?_ ?_ ?_ ?_ ?_)
   · intro st ⟨hpc, hsp, hbp, h14, h15, ⟨hbx, hr12, hr13⟩, hfr, hout⟩

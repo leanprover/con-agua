@@ -14,7 +14,7 @@ import Std.Tactic.BVDecide.Normalize.Prop
 # Function bodies
 
 `funSim`: from `ExecSim p G sk n` (statements under `exec p n`), every function of `p` simulates its
-calls (`FunSim p G n`): stack check, frame, parameter copy, zeroed locals, body, epilogue.
+calls (`FnSimAt`, `FunSim`): stack check, frame, parameter copy, zeroed locals, body, epilogue.
 -/
 
 namespace L.Compiler
@@ -801,10 +801,12 @@ theorem sim_fnBody (t : NTree)
         (by simpa [top, Reg64s.set64] using h5)
     · rfl
 
-theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
+/-- The compiled code of every function meets the per-function contract. -/
+theorem funSimC (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
     (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body)
     (hsk : ∀ g, 8 * skOf sk g + 8 < maxOff) (n : Nat)
-    (hE : ExecSim p G sk n) : FunSim p G t sk n := by
+    (hE : ExecSim p G sk n) : ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd →
+      Code (compileFn G.tab t sk f fd) kf → FnSimAt p G sk n f fd kf := by
   intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hlo hhi h15 hmem hfuel hKret hKerr hKabrt hKexh
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
@@ -985,6 +987,18 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   refine H _ _ (by simpa only [List.append_assoc, List.cons_append, List.nil_append] using c1.tail.tail.tail.tail)
     (by omega) (fun _ => by omega) (by simp) (by simp) (by simp) (by simp) (by simp) (by simp)
     (by intro r hr; have hne := allocRegs_ne hr; simp only [rget_set]; simp [hne.1])
+
+/-- Every function's code meets the per-function contract: a hand-written body by `AsmOk`, a
+compiled one by `funSimC`. -/
+theorem funSim {X : AsmTab} (hX : AsmOk p G X) (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (t : NTree)
+    (hTree : ∀ g fd, p.lookup g = some fd → nrOf t G.tab g = Stmt.nret fd.body)
+    (hsk : ∀ g, 8 * skOf sk g + 8 < maxOff) (n : Nat)
+    (hE : ExecSim p G sk n) : FunSim p G X t sk n := by
+  intro f fd kf hlk hkf
+  dsimp only [fnCode] at hkf
+  split at hkf
+  · exact (hX f _ ‹_›).2 sk n fd kf hlk hkf
+  · exact funSimC hG hTab p hwfp t hTree hsk n hE f fd kf hlk hkf
 end
 
 end L.Compiler

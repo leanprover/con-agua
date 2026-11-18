@@ -82,11 +82,11 @@ theorem tailCode_some {ctx : Ctx} {s u : Stmt} {code : Program} (h : tailCode ct
 
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
-  (p : Prog) {sk : NTree}
+  (p : Prog) {sk : NTree} {X : AsmTab}
 include hG hTab
 
-theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf) (s u : Stmt) :
+theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G X t sk n) (hX : AsmOk p G X)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (fnCode X G.tab t sk f fd) kf) (s u : Stmt) :
     SimSTail p G sk (stepRun p (exec p n)) (· ≤ n) s u := by
   intro ctx F k code hT hF htc hc hwf hN htmp σ d Q hI hfa hP hK
   obtain ⟨xs, f, args, es, Fw, rfl, rfl, hFw, rfl, hnd, hxl, hnr, hreg, rfl⟩ := tailCode_some htc
@@ -142,7 +142,7 @@ theorem sim_tail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
     refine ev_addRI hc2.tail.tail.head fun st2 => ?_
     refine ev_jmp hc2.tail.tail.tail.head ?_
     obtain ⟨kf, hkf⟩ := hProg f fd hlk
-    rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _ _), Nat.add_zero]
+    rw [Code.label (i := 0) hkf (fnCode_head p hX _ _ _ _ _), Nat.add_zero]
     -- the return address above the frame
     obtain ⟨ra, hra⟩ : ∃ ra, rdW s1.dmem (A (top s1 F)) = some ra := Option.isSome_iff_exists.mp
       (isSome_rdW fun j hj => by rw [A_add]; exact hI1.mem.stack _ ⟨by simp only [top]; omega, by simp only [top]; omega⟩)
