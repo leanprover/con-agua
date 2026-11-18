@@ -394,7 +394,7 @@ theorem natDecW_top (b : Array UInt8) (m m' : Mem) (c d : Word) (r : List Word)
       rw [hF, decPair_some] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, -⟩ := h
-      exact natDecW_big_top hF
+      exact natDecW_big_top (r := r₀) (m' := m₀) hF
     · rw [decPair_none] at h; cases h
   · rcases hC : natChunksW b m c d with _ | ⟨r₀, m₀⟩
     · rw [hC, decPair_none] at h; cases h
