@@ -1211,7 +1211,7 @@ it is.
 
 `scripts/e2e.py` assembles the checker, runs it on con-leche's e2e fixtures and
 the arena tests (777 inputs), and compares each verdict with two references:
-the twin compiled by Lean (`e2e-ref`) and con-ron's Rust binary
+the twin compiled by Lean (`con-ron-lean-twin`) and con-ron's Rust binary
 ([how](https://github.com/leanprover/con-agua/blob/master/scripts/e2e.py#L2-L25)).
 `scripts/diff-e2e.py` needs no Lean: it runs the built binary on the 730 of
 these inputs that have a verdict pinned by con-leche and compares accept versus
@@ -1223,7 +1223,7 @@ Seven of them, the `nat_size_limit_*` fixtures, are pinned at a maximum
 (§2.1), so their verdicts are not comparable with the pinned ones, and
 `scripts/diff-e2e.py` skips them.
 `scripts/diff-e2e.py --refs` also compares the verdicts with con-ron's and
-e2e-ref's (and a reject or decline with con-ron's). These cover what the theorem does not: the harness
+con-ron-lean-twin's (and a reject or decline with con-ron's). These cover what the theorem does not: the harness
 and completeness.
 
 ### 10.4 The gates

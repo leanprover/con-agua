@@ -28,6 +28,9 @@ that input prints. Per module this script takes, in order:
   3. else (a module compiled before logs were kept, or by a plain `lake`): `lake lean FILE`, which
      elaborates it once with the module's setup and options against the built imports (four at a time),
      and its output, which then goes into the log store too.
+A module with no trace at all (not among the targets `build` built, e.g. one only an exe reaches) is
+first built with `scripts/lake build` (its imports may be unbuilt, and a plain `lake lean` that has to
+restore or build them fails: concurrent builds in one tree, read-only cache hard links); then 1.
 """
 import json
 import os
@@ -197,6 +200,25 @@ def main():
             continue
         how[why] = how.get(why, 0) + 1
         logs[rel] = msgs
+    # A module with no trace is outside the targets the build gate built (e.g. `ConAgua/E2E/Ref.lean`,
+    # only reached by an exe): its imports may be unbuilt too, and parallel `lake lean`s would then
+    # build the same imports at once in one tree and fail. Build those modules first, once, with the
+    # wrapper (cache hits, and their logs come with the build); elaborate only what is still unknown.
+    untraced = [r for r in todo if known_log(ROOT, r)[1] == "no trace"]
+    if untraced:
+        print(f"lean_warnings: building {len(untraced)} untraced module(s) first", file=sys.stderr, flush=True)
+        subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build",
+                        *[r[:-len(".lean")].replace("/", ".") for r in untraced]], cwd=ROOT,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        still = []
+        for rel in todo:
+            msgs, why = known_log(ROOT, rel)
+            if msgs is None:
+                still.append(rel)
+            else:
+                how[why] = how.get(why, 0) + 1
+                logs[rel] = msgs
+        todo = still
     with ThreadPoolExecutor(ELAB_JOBS) as ex:
         for rel, msgs in zip(todo, ex.map(lambda r: elaborate(ROOT, r), todo)):
             how["elaborated"] = how.get("elaborated", 0) + 1

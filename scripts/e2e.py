@@ -14,7 +14,7 @@ Steps (all in _tmp/e2e/<checkout name>/):
    `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
    lays out a fixed partition of one region, lane `abi`: no capacity retries).
 3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
-   `check` and `check_np`, the reference `e2e-ref` (the twin at the program's pin list; with and
+   `check` and `check_np`, the reference `con-ron-lean-twin` (the twin at the program's pin list; with and
    without the prelude), and `L.run` (`e2e-l run`) on small fixtures; classify.
 4. **Report** `docs/e2e.md` (and `--csv` appends a line to `docs/e2e.csv`).
 
@@ -649,7 +649,7 @@ def report(res, asm, compiled, clashes, args, t0):
     # classes
     for entry in ENTRIES:
         cnt = collections.Counter(r[entry]["class"] for r in res)
-        lines += [f"## `{entry}` against `e2e-ref{' --no-prelude' if entry == 'check_np' else ''}`", "",
+        lines += [f"## `{entry}` against `con-ron-lean-twin{' --no-prelude' if entry == 'check_np' else ''}`", "",
                   "| class | fixtures |", "|---|---:|"]
         lines += [f"| {k} | {v} |" for k, v in sorted(cnt.items())]
         miss = collections.Counter(r[entry]["l"][len("missing "):] for r in res if r[entry]["class"] == "missing")
@@ -788,20 +788,20 @@ def conron_report(res):
     rs = [r for r in res if "conron" in r]
     if not rs:
         return []
-    lines = ["## `check` against both references: `e2e-ref` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
+    lines = ["## `check` against both references: `con-ron-lean-twin` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
              "`con-ron --jobs=1 --pins P FILE` at the vendored revision (exit codes: 0 accept, 1 reject, 2 decline, "
-             f"3 error; `P`: the same pin list as the others, `natOpPinSets.take {PIN_VARIANTS}` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `e2e-ref FILE --pins={PIN_VARIANTS}`, and the compiled `check`. Accept is the "
+             f"3 error; `P`: the same pin list as the others, `natOpPinSets.take {PIN_VARIANTS}` (all of it, as `pins.bin`) in its `con-ron-pins/1` format), `con-ron-lean-twin FILE --pins={PIN_VARIANTS}`, and the compiled `check`. Accept is the "
              "verdict compared.", "",
-             "| con-ron | e2e-ref | L `check` | fixtures |", "|---|---|---|---:|"]
+             "| con-ron | con-ron-lean-twin | L `check` | fixtures |", "|---|---|---|---:|"]
     def acc(v):
         return "accept" if v == "accept" else ("–" if v in ("timeout", "memout", "crash") or v.startswith("missing") else "no")
     cnt = collections.Counter((r["conron"], r["check"]["ref"].split(" ")[0], acc(r["check"]["l"])) for r in rs)
     lines += [f"| {a} | {b} | {c} | {n} |" for (a, b, c), n in sorted(cnt.items(), key=lambda x: -x[1])]
     three = sum(1 for r in rs if acc(r["conron"]) == acc(r["check"]["ref"].split(" ")[0]) == acc(r["check"]["l"]) != "–")
     bad = [r for r in rs if acc(r["conron"]) != acc(r["check"]["ref"].split(" ")[0]) and "–" not in (acc(r["conron"]), acc(r["check"]["ref"].split(" ")[0]))]
-    lines += ["", f"* All three agree on accept/not on **{three}** of {len(rs)} fixtures; con-ron and `e2e-ref` "
+    lines += ["", f"* All three agree on accept/not on **{three}** of {len(rs)} fixtures; con-ron and `con-ron-lean-twin` "
               f"disagree on **{len(bad)}**" + (":" if bad else ".")]
-    lines += [f"  * `{r['id']}`: con-ron {r['conron']}, e2e-ref {r['check']['ref']}" for r in bad[:30]]
+    lines += [f"  * `{r['id']}`: con-ron {r['conron']}, con-ron-lean-twin {r['check']['ref']}" for r in bad[:30]]
     ps = [r for r in rs if r.get("perf") and r["perf"]["L"] and r["perf"]["con-ron"]]
     if ps:
         import math
@@ -860,7 +860,7 @@ def main():
         log("building")
         # only what e2e needs (not the whole proof tree)
         lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins",
-             "e2e-l", "e2e-ref", *([] if args.no_diff else ["e2e-diff"]))
+             "e2e-l", "con-ron-lean-twin", *([] if args.no_diff else ["e2e-diff"]))
     prog = os.path.join(WORK, "checker.prog")
     if args.text_dump:
         # the old path: every binding of the lanes' modules, through text (no `checkerProg` needed)
@@ -930,11 +930,11 @@ def main():
             if ck in cache:
                 ref, where = cache[ck]
             else:
-                st, out, rc = guard.run3([os.path.join(BIN, "e2e-ref"), path] + (["--no-prelude"] if entry == "check_np" else []) + [f"--pins={npins}"], T_REF, stderr=True)
+                st, out, rc = guard.run3([os.path.join(BIN, "con-ron-lean-twin"), path] + (["--no-prelude"] if entry == "check_np" else []) + [f"--pins={npins}"], T_REF, stderr=True)
                 ref, where = ref_verdict(next((l for l in out.splitlines() if l.startswith("verdict ")), ""), st)
                 if ref == "crash":
                     # never cached: a transient failure must not outlive the binary that caused it
-                    log(f"e2e-ref crashed on {fid} (exit {rc}): {out[-300:]!r}")
+                    log(f"con-ron-lean-twin crashed on {fid} (exit {rc}): {out[-300:]!r}")
                 elif st == "ok":
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
@@ -977,7 +977,7 @@ def main():
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
                 r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
                              "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
-                             "e2e-ref": perf_instr(guard, [os.path.join(BIN, "e2e-ref"), path, f"--pins={npins}"])}
+                             "con-ron-lean-twin": perf_instr(guard, [os.path.join(BIN, "con-ron-lean-twin"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:
             st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
                                  str(min(max_id(path) + 2, DIFF_BIG_WORDS))], T_DIFF, env=env)

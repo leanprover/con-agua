@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Benchmark harness: the compiled L checker against con-ron and e2e-ref (lane `compopt`).
+"""Benchmark harness: the compiled L checker against con-ron, con-leche and the twin (lane `compopt`).
 
-Runs every *system* (one or more compiled L binaries, `con-ron --jobs=1`, `e2e-ref`) on a fixture
+Runs every *system* (one or more compiled L binaries, `con-ron --jobs=1`, `con-leche --jobs=1`,
+`con-ron-lean-twin`: con-ron's Lean model compiled by Lean, `lakefile.toml`) on a fixture
 set with INTERLEAVED repetitions: per round, the fixtures in random order and per fixture the
 systems in random order, so that drifting machine load hits every system alike. Reports per
 fixture and as geometric means (over the fixtures every system accepts):
 * `instructions:u` (`perf stat`; nearly deterministic, the primary measure on this shared machine),
 * cycles (`cycles:u` + `cycles:k`, median: less sensitive to preemption on a loaded machine than wall),
-* wall time: median and spread ((max - min) / median) over the rounds,
+* wall time: median and spread ((max - min) / median) over the rounds; the JSON also has the mean
+  and its 95 % t-interval half-width (`wall_mean`, `wall_ci`),
 * peak RSS (max over the rounds).
 
 A warm-up round (not counted) fixes each system's verdict; L binaries that disagree on a
@@ -20,7 +22,12 @@ Systems:
                       checkout's compiled check>` (printed by `checker.s`'s generator
                       `ConAgua/Checker/AsmEmit.lean`, as `scripts/e2e.py` does).
   --asm NAME=PATH.s   as --bin, but assemble the `.s` file first (with main.c).
-  --no-conron / --no-ref   leave out con-ron / e2e-ref.
+  --leche PATH        the con-leche binary (default: `LECHE` below, the build at the revision
+                      `vendor/UPSTREAM` pins, when present); run as `con-leche --jobs=1 -- FILE`,
+                      in its default (verified) mode with its own embedded pins. Its `Nat`
+                      arithmetic is Lean's, i.e. GMP.
+  --no-conron / --no-leche / --no-twin   leave out con-ron / con-leche / con-ron-lean-twin
+                      (`--no-ref` is the old spelling of `--no-twin`).
 
 Fixtures: `--set quick|default|full|init` (below), `--only REGEX` (filters the set; with `--set all`,
 every e2e fixture), or explicit ids/paths as positional arguments (an id is `e2e/NAME.ndjson` or
@@ -28,9 +35,10 @@ every e2e fixture), or explicit ids/paths as positional arguments (an id is `e2e
 
 `--reps 0` (verdicts only) is gone: bench.py is for performance work. Verdict checks are
 `scripts/diff-e2e.py` (the shipped binary against con-leche's expectations; `--refs` adds con-ron and
-e2e-ref with cached reference verdicts; `--bin` takes a candidate binary): PLAN.md, "Verdict checks".
+con-ron-lean-twin with cached reference verdicts; `--bin` takes a candidate binary): PLAN.md, "Verdict checks".
 
-Usage: scripts/bench.py [--set S] [--reps N] [--cpus LIST] [--bin NAME=PATH]… [--json OUT] [FIXTURE…]
+Usage: scripts/bench.py [--set S] [--reps N] [--cpus LIST] [--bin NAME=PATH]… [--leche PATH | --no-leche]
+                       [--json OUT] [FIXTURE…]
 
 Every run has a timeout; `--cpus` pins every run with `taskset -c LIST` (pick a few
 idle cores; the runs are sequential, so one or two cores suffice).
@@ -55,6 +63,8 @@ import e2e  # noqa: E402  (fixture lists, the reference verdicts, the con-ron bi
 WORK = os.path.join(ROOT, "_tmp", "bench", os.path.basename(ROOT))
 BIN = os.path.join(ROOT, ".lake", "build", "bin")
 TIMEOUT = 600
+# con-leche built at the pinned revision (docs/design/lechebench.md: the recipe)
+LECHE = os.environ.get("CA_LECHE", os.path.join(ROOT, "_tmp", "ref", "con-leche-bin", "600d3b58", "con-leche"))
 
 # Fixtures every system accepts (the 2026-10-23 e2e run): small/medium ones measure the fixed
 # cost (prelude, pins) and the frontend; the big ones the kernel.
@@ -75,7 +85,7 @@ DEFAULT = QUICK + [
     "arena/good/perf/beta-ladder.ndjson",
     "e2e/complete_c04a_restart_70.ndjson",  # 9 MB, ~43G instructions
 ]
-# where con-ron or e2e-ref are slow (e2e-ref up to ~130G instructions)
+# where con-ron or the twin are slow (con-ron-lean-twin up to ~130G instructions)
 FULL = DEFAULT + [
     # L ~1.47T instructions, ~60 s: 98% in `rf_find` (the banked `rf` memo's bank is shifted out
     # of the hash)
@@ -158,7 +168,7 @@ class System:
                     return v
             return {"accept": "accept", "ok 1": "reject-front",
                     "exhausted": "exhausted"}.get(out, "other " + out[:40])
-        if self.kind == "con-ron":
+        if self.kind in ("con-ron", "con-leche"):  # both: 0 accept, 1 reject, 2 decline, 3 error
             return {0: "accept", 1: "reject", 2: "decline", 3: "error"}.get(rc, f"exit {rc}")
         return e2e.ref_verdict(out, "ok")[0]
 
@@ -197,6 +207,12 @@ def resolve(ids):
     return out
 
 
+# two-sided 95 % Student t quantiles by degrees of freedom (larger: 1.96 is close enough)
+T95 = dict(enumerate([12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201,
+                      2.179, 2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086, 2.080, 2.074,
+                      2.069, 2.064, 2.060, 2.056, 2.052, 2.048, 2.045, 2.042], start=1))
+
+
 def gmean(xs):
     xs = [x for x in xs if x]
     return math.exp(sum(math.log(x) for x in xs) / len(xs)) if xs else float("nan")
@@ -212,11 +228,13 @@ def main():
     ap.add_argument("--bin", action="append", default=[], metavar="NAME=PATH")
     ap.add_argument("--asm", action="append", default=[], metavar="NAME=PATH.s")
     ap.add_argument("--no-conron", action="store_true")
-    ap.add_argument("--no-ref", action="store_true")
+    ap.add_argument("--no-twin", "--no-ref", dest="no_ref", action="store_true")
+    ap.add_argument("--leche", default=None, metavar="PATH", help=f"con-leche binary (default {LECHE} if present)")
+    ap.add_argument("--no-leche", action="store_true")
     ap.add_argument("--no-wall", action="store_true", help="one counted round, instructions only")
     ap.add_argument("--json", default=None, help="write all measurements here")
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (e2e-ref, e2e-l)")
+    ap.add_argument("--no-build", action="store_true", help="do not build the tools it needs (con-ron-lean-twin, e2e-l)")
     args = ap.parse_args()
     if args.reps == 0:
         sys.exit("bench.py --reps 0 no longer checks verdicts; use scripts/diff-e2e.py [--refs] (PLAN.md, 'Verdict checks')")
@@ -225,7 +243,7 @@ def main():
     os.makedirs(e2e.WORK, exist_ok=True)
     if not args.no_build:
         e2e.lake("build", "ConAgua.E2E.Check", "ConAgua.Checker.Prog", "ConAgua.Compiler.Abi", "ConRon.Dump.Pins", "e2e-l",
-                 "e2e-ref")  # fixtures are unpacked there (shared with scripts/e2e.py)
+                 "con-ron-lean-twin")  # fixtures are unpacked there (shared with scripts/e2e.py)
 
     ids = args.fixtures or ([f[0] for f in e2e.fixtures()] if args.set == "all" else SETS[args.set])
     if args.only:
@@ -252,8 +270,15 @@ def main():
         if not os.path.exists(e2e.CON_RON):
             sys.exit(f"no con-ron at {e2e.CON_RON} (--no-conron to skip)")
         systems.append(System("con-ron", "con-ron", lambda f: [e2e.CON_RON, "--jobs=1", "--pins", cpins, f]))
+    leche = args.leche or (LECHE if os.path.exists(LECHE) else None)
+    if args.leche and not os.path.exists(args.leche):
+        sys.exit(f"no con-leche at {args.leche}")
+    if leche and not args.no_leche:
+        leche = os.path.abspath(leche)
+        systems.append(System("con-leche", "con-leche", lambda f: [leche, "--jobs=1", "--", f]))
     if not args.no_ref:
-        systems.append(System("e2e-ref", "ref", lambda f: [os.path.join(BIN, "e2e-ref"), f, f"--pins={npins}"]))
+        systems.append(System("con-ron-lean-twin", "ref",
+                              lambda f: [os.path.join(BIN, "con-ron-lean-twin"), f, f"--pins={npins}"]))
 
     # warm-up: verdicts
     verdict = {}
@@ -293,7 +318,10 @@ def main():
         ins = [m["instr"] for m in ms if m["instr"] is not None]
         cys = [m["cycles"] for m in ms if m.get("cycles")]
         med = statistics.median(ws)
+        mean = statistics.fmean(ws)
+        ci = (T95.get(len(ws) - 1, 1.96) * statistics.stdev(ws) / math.sqrt(len(ws))) if len(ws) > 1 else None
         return {"wall": med, "spread": (max(ws) - min(ws)) / med if med else 0,
+                "wall_mean": mean, "wall_ci": ci,
                 "instr": statistics.median(ins) if ins else None,
                 "cycles": statistics.median(cys) if cys else None, "rss": rss[(fid, n)],
                 "verdict": verdict[(fid, n)]}

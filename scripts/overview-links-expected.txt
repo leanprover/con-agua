@@ -2486,7 +2486,7 @@
     14     `check_np`: `e2e-l asm` (checks `Prog.wf`). Each linked with `cc main.c` (the entry stub
     15     lays out a fixed partition of one region, lane `abi`: no capacity retries).
     16  3. **Run** every fixture (con-leche's e2e fixtures and the arena tests) through the compiled
-    17     `check` and `check_np`, the reference `e2e-ref` (the twin at the program's pin list; with and
+    17     `check` and `check_np`, the reference `con-ron-lean-twin` (the twin at the program's pin list; with and
     18     without the prelude), and `L.run` (`e2e-l run`) on small fixtures; classify.
     19  4. **Report** `docs/e2e.md` (and `--csv` appends a line to `docs/e2e.csv`).
     20  
@@ -2526,7 +2526,7 @@
     28  The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
     29  fixtures).
     30  
-    31  `--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
+    31  `--refs` also runs con-ron (`--jobs=1`) and `con-ron-lean-twin` on every fixture and reports REFDIFF where either
     32  one's accept/not-accept differs from the checker's, or where the checker rejects or declines and con-ron
     33  does not say the same (the full differential of PLAN.md's "Verdict checks");
     34  it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
@@ -2534,8 +2534,8 @@
     36  fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
     37  first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
     38  never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
-    39  (`--no-cache` ignores the cache.) The references: `.lake/build/bin/e2e-ref`, built (`scripts/lake build
-    40  e2e-ref`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
+    39  (`--no-cache` ignores the cache.) The references: `.lake/build/bin/con-ron-lean-twin`, built (`scripts/lake build
+    40  con-ron-lean-twin`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
     41  stale one; con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`, refused when its
     42  checkout is not at `vendor/UPSTREAM`'s con-ron revision or the binary is older than that commit.
     43  

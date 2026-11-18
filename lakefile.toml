@@ -226,10 +226,13 @@ name = "con-ron-lean"
 srcDir = "vendor/con-ron"
 root = "ConRon.Arena.Exe"
 
-# The e2e lane's reference at the program's own pin list, optionally without the prelude
-# (`ConAgua/E2E/Ref.lean`).
+# The twin compiled by Lean again, as the e2e references run it (`ConAgua/E2E/Ref.lean`):
+# `con-ron-lean-twin FILE [--no-prelude] [--pins=N]`, the whole file as one buffer, at
+# `natOpPinSets.take N`, printing `verdict CODE MESSAGE`. Not `con-ron-lean` above: that takes all
+# pins or none, has no `--no-prelude` (the reference of `scripts/e2e.py`'s `check_np` entry) and
+# writes its messages to stderr.
 [[lean_exe]]
-name = "e2e-ref"
+name = "con-ron-lean-twin"
 root = "ConAgua.E2E.Ref"
 
 # The e2e lane's runner: compile (`asm`) or interpret (`run`) an assembled program file

@@ -28,7 +28,7 @@ accept versus not-accept, and a reject/decline that differs from con-leche's is 
 The run is green when every fixture agrees; the exit code is 0 then, 1 otherwise (2: usage, missing
 fixtures).
 
-`--refs` also runs con-ron (`--jobs=1`) and `e2e-ref` on every fixture and reports REFDIFF where either
+`--refs` also runs con-ron (`--jobs=1`) and `con-ron-lean-twin` on every fixture and reports REFDIFF where either
 one's accept/not-accept differs from the checker's, or where the checker rejects or declines and con-ron
 does not say the same (the full differential of PLAN.md's "Verdict checks");
 it replaces `bench.py --reps 0`, which no longer checks verdicts. The references' verdicts depend only
@@ -36,8 +36,8 @@ on the fixture and the reference binary, so they are cached in `_tmp/bench/verdi
 fixture's content hash and the hash of the reference binary (and, for con-ron, its pins file): after the
 first run, `--refs` costs about as much as the plain run, until a twin sync changes a binary. Timeouts are
 never cached. A fixture expecting 124 gets T_LOOP seconds on every system.
-(`--no-cache` ignores the cache.) The references: `.lake/build/bin/e2e-ref`, built (`scripts/lake build
-e2e-ref`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
+(`--no-cache` ignores the cache.) The references: `.lake/build/bin/con-ron-lean-twin`, built (`scripts/lake build
+con-ron-lean-twin`) when it is missing or older than `vendor/UPSTREAM` or `pins.bin`, so a twin bump never meets a
 stale one; con-ron at `$CON_RON` or `_tmp/ref/con-ron-integrate/target/release/con-ron`, refused when its
 checkout is not at `vendor/UPSTREAM`'s con-ron revision or the binary is older than that commit.
 
@@ -62,7 +62,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 # Fixtures that genuinely need longer than the default `--timeout` under load (seconds, checker and
-# references): stack_fuel_offset takes ~80 s in the checker and over 120 s in e2e-ref (5.4 GB).
+# references): stack_fuel_offset takes ~80 s in the checker and over 120 s in con-ron-lean-twin (5.4 GB).
 ALLOW = {"e2e/stack_fuel_offset.ndjson": 900}
 T_LOOP = 10  # seconds for a fixture whose expected verdict is 124 (a non-terminating input)
 
@@ -168,7 +168,7 @@ def file_hash(path):
 
 
 def fresh_e2e_ref(ref_bin):
-    """Build e2e-ref when it is missing or older than the twin pins (`vendor/UPSTREAM`, rewritten by
+    """Build con-ron-lean-twin when it is missing or older than the twin pins (`vendor/UPSTREAM`, rewritten by
     every twin bump) or `pins.bin`: a reference built before a bump decides the old twin's way and
     shows false REFDIFFs (8 of them after ronsync4, docs/design/recoffs.md §6). The verdict cache is
     keyed by the binary's hash, so a rebuilt reference starts a fresh cache. Lake decides what the
@@ -179,11 +179,11 @@ def fresh_e2e_ref(ref_bin):
     if os.access(ref_bin, os.X_OK) and os.path.getmtime(ref_bin) >= newest:
         return
     why = "not built" if not os.path.exists(ref_bin) else "older than vendor/UPSTREAM or pins.bin"
-    print(f"diff-e2e --refs: e2e-ref is {why}: scripts/lake build e2e-ref", file=sys.stderr, flush=True)
-    r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", "e2e-ref"], cwd=ROOT,
+    print(f"diff-e2e --refs: con-ron-lean-twin is {why}: scripts/lake build con-ron-lean-twin", file=sys.stderr, flush=True)
+    r = subprocess.run([os.path.join(ROOT, "scripts", "lake"), "build", "con-ron-lean-twin"], cwd=ROOT,
                        capture_output=True, text=True)
     if r.returncode != 0 or not os.access(ref_bin, os.X_OK):
-        sys.exit(f"diff-e2e --refs: building e2e-ref failed; a stale reference would report false "
+        sys.exit(f"diff-e2e --refs: building con-ron-lean-twin failed; a stale reference would report false "
                  f"REFDIFFs, so no run:\n{r.stdout[-3000:]}\n{r.stderr[-3000:]}")
 
 
@@ -207,13 +207,13 @@ def conron_matches_pin(con_ron):
 
 
 class Refs:
-    """con-ron and e2e-ref as verdict sources, with the on-disk verdict cache (see the docstring)."""
+    """con-ron and con-ron-lean-twin as verdict sources, with the on-disk verdict cache (see the docstring)."""
 
     def __init__(self, use_cache):
         import e2e  # noqa: PLC0415  (only `--refs` needs it)
         self.e2e = e2e
         npins = e2e.PIN_VARIANTS
-        self.ref_bin = os.path.join(ROOT, ".lake", "build", "bin", "e2e-ref")
+        self.ref_bin = os.path.join(ROOT, ".lake", "build", "bin", "con-ron-lean-twin")
         fresh_e2e_ref(self.ref_bin)
         if not os.access(e2e.CON_RON, os.X_OK):
             sys.exit(f"diff-e2e --refs: {e2e.CON_RON} is not built (con-ron: DESIGN.md, lane integrate)")
@@ -224,7 +224,7 @@ class Refs:
             e2e.write_conron_pins(self.pins, npins)
         self.npins = npins
         self.ident = {"con-ron": f"con-ron-{file_hash(e2e.CON_RON)[:16]}-{file_hash(self.pins)[:8]}",
-                      "e2e-ref": f"e2e-ref-{file_hash(self.ref_bin)[:16]}-p{npins}"}
+                      "con-ron-lean-twin": f"con-ron-lean-twin-{file_hash(self.ref_bin)[:16]}-p{npins}"}
         self.dir = os.path.join(ROOT, "_tmp", "bench", "verdict-cache")
         self.use_cache, self.data, self.lock, self.dirty, self.hits = use_cache, {}, threading.Lock(), set(), 0
         for k, ident in self.ident.items():
@@ -285,7 +285,7 @@ def main():
     ap.add_argument("--tests", default=None,
                     help="con-leche's tests/ (default: $CON_LECHE_TESTS, else the pinned revision read from git)")
     ap.add_argument("--only", default=None, help="regex on fixture ids")
-    ap.add_argument("--refs", action="store_true", help="also compare with con-ron and e2e-ref (cached)")
+    ap.add_argument("--refs", action="store_true", help="also compare with con-ron and con-ron-lean-twin (cached)")
     ap.add_argument("--no-cache", action="store_true", help="with --refs: ignore the cached reference verdicts")
     ap.add_argument("--log", default=None, help="write one line per fixture here")
     a = ap.parse_args()
@@ -326,7 +326,7 @@ def main():
                     return res
                 fid, want, rc, out, cls, dt, mb = res
                 acc = rc == 0
-                vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in ("con-ron", "e2e-ref")}
+                vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in ("con-ron", "con-ron-lean-twin")}
                 bad = [f"{n} {v}" for n, v in vs.items() if (v == "accept") != acc]
                 # the checker's reject/decline must be con-ron's (its labels follow the twin)
                 if rc in (1, 2) and vs["con-ron"] != {1: "reject", 2: "decline"}[rc]:
@@ -368,7 +368,7 @@ def main():
                and r_[2] != r_[1])
     print(f"  (kind differs: {kind}, the checker's 1/2 against con-leche's 2/1)")
     if refs:
-        print(f"  references  con-ron + e2e-ref, {refs.hits} of {2 * len(results)} verdicts from the cache")
+        print(f"  references  con-ron + con-ron-lean-twin, {refs.hits} of {2 * len(results)} verdicts from the cache")
     for c in ("UNSOUND", "INCOMPLETE", "CRASH", "TIMEOUT") + (("REFDIFF",) if refs else ()):
         print(f"  {c:<11} {counts.get(c, 0)}")
     slow = sorted(results, key=lambda r_: -r_[5])[:3]

@@ -10,7 +10,7 @@ public import ConAgua.E2E.Ser
 
 The checker is `L.Checker.checkerProg` (`ConAgua/Checker/Prog.lean`, entry `check()` in
 `ConAgua/Checker/Entry.lean`). The e2e runs add two test entries here: `check_np()`, the pipeline
-without the two prelude stages (its reference is `e2e-ref --no-prelude`), and `e2e_front()`, the
+without the two prelude stages (its reference is `con-ron-lean-twin --no-prelude`), and `e2e_front()`, the
 stages before the fold (`e2e-diff`'s starting state). `writeChecker` writes both as the program
 file `scripts/e2e.py` compiles (`Ser.lean`'s format).
 -/
@@ -20,7 +20,7 @@ namespace L.E2E
 open L
 
 /-- `check_np()`: the pipeline without the prelude, the index and every job in one run (a test entry). -/
--- con-ron: none — the e2e lane's partial pipeline (no prelude), reference `e2e-ref --no-prelude`
+-- con-ron: none — the e2e lane's partial pipeline (no prelude), reference `con-ron-lean-twin --no-prelude`
 @[no_expose] def checkNpL : FunDecl := lfn () locals (r, z, cnt) {
   z := call pb_check();
   z := call intern_reserved_pins();
@@ -34,7 +34,7 @@ open L
 }
 
 /-- `e2e_front()`: the stages before the fold (`e2e-diff`'s starting state, `ConAgua/E2E/Diff.lean`). -/
--- con-ron: none — the e2e lane's test entry (the first stages of `e2e-ref --no-prelude`)
+-- con-ron: none — the e2e lane's test entry (the first stages of `con-ron-lean-twin --no-prelude`)
 @[no_expose] def e2eFrontL : FunDecl := lfn () locals (r, z) {
   z := call pb_check();
   z := call intern_reserved_pins();
