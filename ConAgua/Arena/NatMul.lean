@@ -858,6 +858,40 @@ theorem mulZeros_spec (hp : p.lookup "mul_zeros" = some mulZeros) (n : Nat) (s�
     all_goals (try and_intros)
     all_goals grind (splits := 8) [arena_grind, lang_grind, LocEq]
 
+/-- A window pass at an offset inside a larger window, lifted to that window. -/
+theorem off_lift (p q : Array Word) (o k w X : Nat) (hk : k ≤ w)
+    (hoff : Off p q (o + k) (w - k)) (h : pv p (o + k) (w - k) = pv q (o + k) (w - k) + X) :
+    Off p q o w ∧ pv p o w = pv q o w + wt k * X := by
+  refine ⟨fun j hj => hoff j (by omega), ?_⟩
+  have e1 := pv_append p o k (w - k); have e2 := pv_append q o k (w - k)
+  rw [show k + (w - k) = w by omega] at e1 e2
+  rw [e1, e2, h, Off.pv_disj p q (o + k) (w - k) o k hoff (Or.inl (Nat.le_refl _))]
+  grind
+
+set_option maxHeartbeats 2000000 in
+/-- `mul_row` on the window `[o + k, o + w)` of the window `[o, o + w)`: `P[o, o + w) += a y B^k`. -/
+theorem mulRow_at_spec (hp : p.lookup "mul_row" = some mulRow) (n : Nat) (s₀ : St) (o k w oa la y : Word)
+    (hs : pcap s₀.mem < 2 ^ 64) (hk : k.toNat ≤ w.toNat) (ho : o.toNat + w.toNat ≤ pcap s₀.mem)
+    (ha : oa.toNat + la.toNat ≤ pcap s₀.mem)
+    (hd : oa.toNat + la.toNat ≤ o.toNat + k.toNat ∨ o.toNat + w.toNat ≤ oa.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mul_row" [o + k, w - k, oa, la, y]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PFrame s₀.mem s'.mem ∧
+      Off (vpool s'.mem) (vpool s₀.mem) o.toNat w.toNat ∧
+      pv (vpool s'.mem) o.toNat w.toNat =
+        pv (vpool s₀.mem) o.toNat w.toNat + wt k.toNat * (pv (vpool s₀.mem) oa.toNat la.toNat * y.toNat); ⊤⦄ := by
+  have hC := pcap_eq s₀.mem hs
+  have e1 : (o + k).toNat = o.toNat + k.toNat := w_add o k (by omega)
+  have e2 : (w - k).toNat = w.toNat - k.toNat := UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr hk)
+  have hw := mulRow_spec p hp n s₀ (o + k) (w - k) oa la y hs (by omega) ha (by omega)
+  rw [e1, e2] at hw
+  vcgen [hw]
+  all_goals
+    rename_i h
+    obtain ⟨h1, h2, h3, h4⟩ := h
+    have := off_lift _ (vpool s₀.mem) o.toNat k.toNat w.toNat _ hk h3 h4
+    first | exact h1 | exact h2 | exact this.1 | exact this.2
+
 end passFns
 
 section mulFn
