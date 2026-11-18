@@ -410,7 +410,7 @@ fixed-capacity array and a length word. Its meaning is a Lean function into
 optimisation beyond a few local ones (§8.1) and a bounds-check analysis (§8.7). Before it, one L → L pass inlines
 small leaf functions into their callers (§8.6); what the compiler compiles is
 `checkerProgI`, which refines `checkerProg`.
-[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L776-L799)
+[`compile_correct`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L778-L802)
 is a forward simulation against Kraken's semantics: from `ca_enter`, with L's
 memory `m` laid out as the layout `G` describes (`MemRel`), 32 mapped bytes
 past the table (where the trampoline saves registers) and `N` units of fuel,
@@ -420,7 +420,9 @@ args m` says
 ([`OutcomeRel`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Compiler/Main.lean#L29-L33)):
 the results and the final memory, or `rdx = 2` for an error, with the error's
 code in `rax` (an abort's own code, `0` for any other error). It is proved once,
-for every well-formed program.
+for every well-formed program. It also allows a table of hand-written function
+bodies in place of compiled ones (`compileProgX`), each proved against the same
+per-function contract as the compiled code (`AsmOk`); the checker uses none.
 
 ### 4.3 Kraken
 

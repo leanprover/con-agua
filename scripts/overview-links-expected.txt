@@ -511,31 +511,32 @@
     15  so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
     16  -/
 
-== ConAgua/Compiler/Main.lean#L776-L799
-   776  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
-   777  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
-   778  registers the compiled functions use. -/
-   779  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-   780      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
-   781      (fd : FunDecl) (hentry : p.lookup entry = some fd)
-   782      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
-   783      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
-   784      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
-   785      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
-   786      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
-   787      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
-   788      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
-   789      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
-   790        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
-   791      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
-   792      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
-   793        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
-   794      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
-   795      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
-   796          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-   797          CalleeKept d.regs st.data.regs ∧
-   798          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
-   799        d (label enterL) :=
+== ConAgua/Compiler/Main.lean#L778-L802
+   778  /-- **The end-to-end compiler theorem** (`compile_correct_frame` without the memory frame): the
+   779  caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
+   780  registers the compiled functions use. -/
+   781  theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+   782      (X : AsmTab) (hX : AsmOk p G X)
+   783      (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProgX X G.tab p entry) k0)
+   784      (fd : FunDecl) (hentry : p.lookup entry = some fd)
+   785      (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+   786      (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+   787      (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+   788      (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+   789      (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+   790      (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+   791      (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+   792      (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+   793        (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+   794      (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64)
+   795      (hsv : ∀ x, G.tabEnd ≤ x → x < G.tabEnd + 32 → (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧
+   796        ¬ G.InArr x ∧ (x < d.regs.rsp.toNat - 24 ∨ d.regs.rsp.toNat + 8 ≤ x))
+   797      (hsv64 : G.tabEnd + 32 < 2 ^ 64) :
+   798      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+   799          st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+   800          CalleeKept d.regs st.data.regs ∧
+   801          (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+   802        d (label enterL) :=
 
 == ConAgua/Compiler/Main.lean#L29-L33
     29  /-- What the harness sees after `ca_enter` returns, against L's result. -/

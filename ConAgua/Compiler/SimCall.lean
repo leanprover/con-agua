@@ -60,11 +60,11 @@ def ArgsIn (G : Layout) (d : MachineData) (vs : List Word) : Prop :=
     (d.regs.rsp.toNat + 8 ≤ d.regs.rsi.toNat ∨ d.regs.rsi.toNat + 8 * vs.length ≤ G.lo) ∧
     d.regs.rsi.toNat + 8 * vs.length < 2 ^ 64)
 
-/-- The simulation of every call of a function of `p` under `exec p n`, with fewer than `n` units
-of machine fuel. The caller leaves room for the frame of a callee without a stack check
-(`skOf sk f`) below the return address. -/
-def FunSim [Host] (p : Prog) (G : Layout) (t sk : NTree) (n : Nat) : Prop :=
-  ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code (compileFn G.tab t sk f fd) kf →
+/-- The per-function contract: the simulation of every call of `f` (declared `fd`), whose code
+starts at directive `kf`, under `exec p n`, with fewer than `n` units of machine fuel. The caller
+leaves room for the frame of a callee without a stack check (`skOf sk f`) below the return
+address. -/
+def FnSimAt [Host] (p : Prog) (G : Layout) (sk : NTree) (n : Nat) (f : FnName) (fd : FunDecl) (kf : Nat) : Prop :=
   ∀ (vs : List Word) (σ : St) (d : MachineData) (ra : Word) (Q : MachineState → Prop),
     vs.length = fd.nparams →
     rdW d.dmem (A d.regs.rsp.toNat) = some ra → ArgsIn G d vs →
@@ -80,6 +80,21 @@ def FunSim [Host] (p : Prog) (G : Layout) (t sk : NTree) (n : Nat) : Prop :=
       GPost G d.regs.rsp.toNat d d' → d'.regs.rbx = k → Ev Q d' (label abortL)) →
     (∀ d', GPost G d.regs.rsp.toNat d d' → Ev Q d' (label exhaustedL)) →
     Ev Q d (at_ kf)
+
+/-- The simulation of every call of a function of `p` under `exec p n` (`FnSimAt`), at its code
+(`fnCode X`: hand-written in `X`, or compiled). -/
+def FunSim [Host] (p : Prog) (G : Layout) (X : AsmTab) (t sk : NTree) (n : Nat) : Prop :=
+  ∀ (f : FnName) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code (fnCode X G.tab t sk f fd) kf →
+    FnSimAt p G sk n f fd kf
+
+/-- What a table of hand-written bodies must satisfy: each body of a function `f` starts with
+`f`'s entry label and meets the per-function contract `FnSimAt` at every fuel, wherever it sits. -/
+def AsmOk [Host] (p : Prog) (G : Layout) (X : AsmTab) : Prop :=
+  ∀ (f : FnName) (c : Program), X.lookup (nameCode f) = some c →
+    c[0]? = some (.label (fnL f)) ∧
+    ∀ (sk : NTree) (n : Nat) (fd : FunDecl) (kf : Nat), p.lookup f = some fd → Code c kf → FnSimAt p G sk n f fd kf
+
+theorem AsmOk.nil [Host] (p : Prog) (G : Layout) : AsmOk p G [] := fun _ _ h => by simp at h
 
 theorem bv_sub8 (x : UInt64) (h : 8 ≤ x.toNat) : x.toBitVec - 8 = A (x.toNat - 8) := by
   apply BitVec.eq_of_toNat_eq
@@ -405,7 +420,7 @@ theorem zeroRes_length (i n : Nat) : (zeroRes i n).length = n := by
   | succ n ih => simp [zeroRes, ih]
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree}
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog) {sk : NTree} {X : AsmTab}
 include hG hTab
 
 omit hG hTab in
@@ -848,10 +863,17 @@ theorem compileFn_head (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
     (compileFn tab t sk f fd)[0]? = some (.label (fnL f)) := by
   dsimp only [compileFn]; split <;> (try split) <;> rfl
 
+omit hG hTab in
+theorem fnCode_head {X : AsmTab} (hX : AsmOk p G X) (tab : Tab) (t sk : NTree) (f : FnName) (fd : FunDecl) :
+    (fnCode X tab t sk f fd)[0]? = some (.label (fnL f)) := by
+  dsimp only [fnCode]; split
+  · exact (hX f _ ‹_›).1
+  · exact compileFn_head tab t sk f fd
+
 /-- A call, from the state `s1` with the arguments in place: fuel, `call`, the results into the
 locals. -/
-theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf)
+theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G X t sk n) (hX : AsmOk p G X)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (fnCode X G.tab t sk f fd) kf)
     (xs : List Var) (f : FnName) (args : List Expr) (fd : FunDecl) (hlk : p.lookup f = some fd)
     (ctx : Ctx) (F : Nat) (hT : ctx.tab = G.tab) (hF : 8 * F + 8 < maxOff) (hal : ctx.alloc = [])
     (htn : ctx.treg = none) (hxs : xs.all (· < ctx.nl) = true) (hxl : xs.length ≤ G.tab.nres) (hN : NrOk p G sk ctx (.call xs f args))
@@ -872,7 +894,7 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
     (hK : Conts G ctx F d (stepRun p (exec p n) (.call xs f args) σ) kend Q) :
     Ev Q s1 (at_ k1) := by
   obtain ⟨kf, hkf⟩ := hProg f fd hlk
-  have hlf := Code.label (i := 0) hkf (compileFn_head _ _ _ _ _)
+  have hlf := Code.label (i := 0) hkf (fnCode_head p hX _ _ _ _ _)
   have hF' := hF; simp only [maxOff] at hF'
   have hsp := hI1.hi
   have hhi := hG.hi_le
@@ -995,8 +1017,8 @@ theorem sim_callTail (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       rw [bv_sub8 _ hsp8, h4] at hG'
       exact hK.exh d' (hS1.trans_g ⟨hG'.rbp, hchain.trans (hG'.mem.mono (by simp only [top]; omega))⟩)
 
-theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
-    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab t sk f fd) kf)
+theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G X t sk n) (hX : AsmOk p G X)
+    (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (fnCode X G.tab t sk f fd) kf)
     (xs : List Var) (f : FnName) (args : List Expr) :
     SimS p G sk (stepRun p (exec p n)) (· ≤ n) (.call xs f args) := by
   intro ctx F path k hT hF hc hwf hN htmp σ d Q hI hfa hP hK
@@ -1029,7 +1051,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       htmp σ d Q hI hfa ?_ (fun s1 he hR1 => herr s1 _ he hR1)
     intro vs s1 hvs hR1 hI1 hregs
     have hvl := evalArgsP_length hvs
-    exact sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d s1 Q _ vs hvs
+    exact sim_callTail hG hTab p t n hFun hX hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d s1 Q _ vs hvs
       (by rw [hvl, hfd]) hc.right hI hP (hR1.spost hI.lo) hR1.r14 hI1 (by rw [hR1.rsp]; omega)
       (fun _ i hi => hregs i hi) (fun h => absurd h (by omega)) _
       (by simp only [List.length_append, List.length_cons]; omega) hK
@@ -1052,7 +1074,7 @@ theorem sim_call (t : NTree) (n : Nat) (hFun : FunSim p G t sk n)
       simp only [UInt64.toNat_ofBitVec, A, BitVec.toNat_ofNat]; omega
     have hS2 : SPost G F d { s1 with regs := s1.regs.set64 .rsi (A (s1.regs.rsp.toNat + 8 * ctx.nl)) } :=
       (hE1.spost hI.lo).trans ⟨by simp, by simp, by simp, by simp, Pres.refl _ _⟩
-    refine sim_callTail hG hTab p t n hFun hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d _ Q _ vs hvs
+    refine sim_callTail hG hTab p t n hFun hX hProg xs f args fd hlk ctx F hT hF hal htn hxs hxl hN σ d _ Q _ vs hvs
       (by rw [hvl, hfd]) hcR.tail hI hP hS2 (by simp [hE1.r14]) (hI1.of_regs0 hal rfl (by simp) (by simp))
       (by simp only [Reg64s.set64_rsi]; rw [hE1.rsp]; omega) (fun h => absurd h (by omega)) (fun _ => ⟨?_, ?_, ?_⟩) _ (by simp only [List.length_append, List.length_cons]; omega) hK
     · intro i hi

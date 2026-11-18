@@ -172,7 +172,7 @@ theorem abi_start_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (ho
     exact hd.union (stores_only dm.regs dm.regs.r8.toNat (abiVals tab) s.dmem 0 (by simp; omega))
       (Nat.le_refl _) (by omega) (Nat.le_refl _) (by simpa using hTE)
   refine eventually_weaken _ _ _ _ ?_
-    (compile_correct_frame_ref q p hq "check" _ (abiLayout_ok hok (abiCall_geom hc hneed)) hwf
+    (compile_correct_frame_ref q p hq "check" _ (abiLayout_ok hok (abiCall_geom hc hneed)) [] (AsmOk.nil _ _) hwf
       (k0 + (abiStub tab).length) hcode.right fd hentry [] (by simp [hnp]) rfl m0 abiFuelM s1 ra
       hH.hT hH.hN hm hH.hroom hH.htop (fun i h => absurd h (by simp)) hH.hra hH.hcs hH.hcs24 hH.hcs8
       hH.hsv hH.hsv64)

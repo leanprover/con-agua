@@ -149,7 +149,8 @@ theorem skOf_skt_lt {p : Prog} {tab : Tab} (entry : FnName)
     omega
 
 theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+    (X : AsmTab) (hX : AsmOk p G X)
+    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProgX X G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
     (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
     (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
@@ -177,16 +178,16 @@ theorem enter_core [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
   have hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true :=
     fun f fd hl => hfds (f, fd) (mem_of_lookup hl)
   have hcode' : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) (entryNp p entry) ++
-      compileFns G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 := hcode
+      compileFns X G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 := hcode
   have hProg : ∀ f fd, p.lookup f = some fd →
-      ∃ kf, Code (compileFn G.tab (Prog.nrt p) (Prog.skt p entry) f fd) kf :=
+      ∃ kf, Code (fnCode X G.tab (Prog.nrt p) (Prog.skt p entry) f fd) kf :=
     fun f fd hl => code_of_lookup p _ hcode'.right hl
   have hTree : ∀ g fd, p.lookup g = some fd → nrOf (Prog.nrt p) G.tab g = Stmt.nret fd.body :=
     fun g fd hl => nrOf_nrt hnd G.tab hl
   have hsk := skOf_skt_lt entry (tab := G.tab) fun f fd hm => hfds (f, fd) hm
-  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hwfp (Prog.nrt p) hTree hsk hProg N
+  obtain ⟨_, hFun⟩ := execSim_all hG hTab p hX hwfp (Prog.nrt p) hTree hsk hProg N
   obtain ⟨kf, hkf⟩ := hProg entry fd hentry
-  have hlF : label (fnL entry) = at_ kf := by rw [Code.label (i := 0) hkf (compileFn_head _ _ _ _ _)]; rfl
+  have hlF : label (fnL entry) = at_ kf := by rw [Code.label (i := 0) hkf (fnCode_head p hX _ _ _ _ _)]; rfl
   -- the entry's result count
   have hc0 : nrOf (Prog.nrt p) G.tab entry = Stmt.nret fd.body := hTree entry fd hentry
   have hnr : Stmt.nret fd.body ≤ G.tab.nres := by
@@ -667,7 +668,8 @@ the 24 bytes below `rsp` and those 32 bytes is the caller's (`MemFrame`). Beside
 `compile_correct`'s premises, the 32 bytes past the table must be mapped and apart from the L stack,
 the arrays and the caller's 32 bytes of machine stack. -/
 theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+    (X : AsmTab) (hX : AsmOk p G X)
+    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProgX X G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
     (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
     (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
@@ -697,7 +699,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   have hnp : entryNp p entry = fd.nparams := by simp [entryNp, hentry]
   have ht : Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) fd.nparams) k0 := by
     have h := (show Code (trampoline G.tab entry (nrOf (Prog.nrt p) G.tab entry) (entryNp p entry) ++
-      compileFns G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 from hcode).left
+      compileFns X G.tab (Prog.nrt p) (Prog.skt p entry) p) k0 from hcode).left
     rwa [hnp] at h
   have hsave0 : 0 ≤ G.tab.save fd.nparams := by simp only [Tab.save, Tab.args]; omega
   have hsaveS : G.tab.save fd.nparams + 32 < 2 ^ 31 := by simp only [Tab.save, Tab.args]; omega
@@ -754,7 +756,7 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
   have hout : ∀ x, G.T ≤ x → x < G.tabEnd → dm1.get? (A x) = d.dmem.get? (A x) := fun x h1 h2 =>
     hO.same x (by omega) (Or.inl h2)
   refine ev_congr (j := k0 + 5) ?_ (by omega)
-  refine eventually_weaken _ _ _ _ ?_ (enter_core p entry G hG hwf k0 hcode fd hentry args hargs hnargs m N
+  refine eventually_weaken _ _ _ _ ?_ (enter_core p entry G hG X hX hwf k0 hcode fd hentry args hargs hnargs m N
     { d with dmem := dm1 } ra hT hN (hmem.only' hG hO fun x h1 h2 => ⟨fun h => by
       simp only [Layout.InTab] at h; omega, (hsv x h1 h2).2.2.1⟩)
     hroom (by rw [← htop]; exact rdW_congr fun j hj => by rw [A_add]; exact hout _ (by omega) (by
@@ -777,7 +779,8 @@ theorem compile_correct_frame [Host] (p : Prog) (entry : FnName) (G : Layout) (h
 caller's `rsp`, `rbp`, `r14`, `r15`, `rbx`, `r12`, `r13` are restored on every path, whatever
 registers the compiled functions use. -/
 theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
-    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+    (X : AsmTab) (hX : AsmOk p G X)
+    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProgX X G.tab p entry) k0)
     (fd : FunDecl) (hentry : p.lookup entry = some fd)
     (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
     (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
@@ -798,7 +801,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
       d (label enterL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨h1, h2, h3, h4, h5, h6, _, h7⟩ => ⟨h1, h2, h3, h4, h5, h6, h7⟩)
-    (compile_correct_frame p entry G hG hwf k0 hcode fd hentry args hargs hnargs m N d ra hT hN hmem
+    (compile_correct_frame p entry G hG X hX hwf k0 hcode fd hentry args hargs hnargs m N d ra hT hN hmem
       hroom htop hargv hra hcs hcs24 hcs8 hsv hsv64)
 
 end L.Compiler
