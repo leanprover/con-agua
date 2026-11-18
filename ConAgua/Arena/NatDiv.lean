@@ -323,6 +323,193 @@ def natDivProg : Prog := natProg ++ [("div_add", divAdd), ("div_norm", divNorm),
     (CTL, #[4])])).toOption.map
   (fun (r, m) => (r, (m.arr64 POOL)[4]!)) == some ([4, 1, 5, 0], 0xFFFFFFFFFFFFFFFF)
 
+/-- The remainder of the one-limb loop plus the high bits of the next limb shifted by `s` stay
+below the normalised divisor: both are multiples of `2^s`. -/
+theorem d1_hi_lt (r x s d : Word) (hs : s.toNat ≤ 63) (hr : r.toNat < d.toNat)
+    (hdr : sh s.toNat ∣ r.toNat) (hdd : sh s.toNat ∣ d.toNat) :
+    r.toNat + ((x >>> 1) >>> (63 - s)).toNat < d.toNat := by
+  have h2 := shl_hi_lt' x s (by omega)
+  obtain ⟨a, ha⟩ := hdr
+  obtain ⟨c, hc⟩ := hdd
+  have hac : a < c := by
+    rw [ha, hc] at hr; exact Nat.lt_of_mul_lt_mul_left hr
+  have : r.toNat + sh s.toNat ≤ d.toNat := by
+    rw [ha, hc]
+    have : sh s.toNat * a + sh s.toNat = sh s.toNat * (a + 1) := by grind
+    rw [this]; exact Nat.mul_le_mul_left _ hac
+  omega
+
+theorem d1_u1_lt (r x s d : Word) (hs : s.toNat ≤ 63) (hr : r.toNat < d.toNat)
+    (hdr : sh s.toNat ∣ r.toNat) (hdd : sh s.toNat ∣ d.toNat) :
+    (r + ((x >>> 1) >>> (63 - s))).toNat < d.toNat := by
+  have h := d1_hi_lt r x s d hs hr hdr hdd
+  have hd := d.toNat_lt
+  rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
+  exact h
+
+/-- What one `div_2by1` of the one-limb loop gives: the dividend is `r · 2^64 + x · 2^s`, and the
+new remainder is again a multiple of `2^s`. -/
+theorem d1_facts (q d r' r x s : Word)
+    (h : q.toNat * d.toNat + r'.toNat =
+        (r + ((x >>> 1) >>> (63 - s))).toNat * 2 ^ 64 + (x <<< s).toNat ∧ r'.toNat < d.toNat)
+    (hs : s.toNat ≤ 63) (hr : r.toNat < d.toNat) (hdr : sh s.toNat ∣ r.toNat)
+    (hdd : sh s.toNat ∣ d.toNat) :
+    q.toNat * d.toNat + r'.toNat = r.toNat * 2 ^ 64 + x.toNat * sh s.toNat ∧
+      sh s.toNat ∣ r'.toNat := by
+  have hu := d1_u1_lt r x s d hs hr hdr hdd
+  have hd := d.toNat_lt
+  have h1 := shl_hi x s (by omega)
+  have h0 := shl_lo x s (by omega)
+  have hh := d1_hi_lt r x s d hs hr hdr hdd
+  have e1 : (r + ((x >>> 1) >>> (63 - s))).toNat = r.toNat + x.toNat * sh s.toNat / 2 ^ 64 := by
+    rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega), h1]; rfl
+  have hdm := Nat.div_add_mod (x.toNat * sh s.toNat) (2 ^ 64)
+  have hU : q.toNat * d.toNat + r'.toNat = r.toNat * 2 ^ 64 + x.toNat * sh s.toNat := by
+    rw [h.1, e1, h0]; simp only [sh] at *; grind
+  refine ⟨hU, ?_⟩
+  have hS : sh s.toNat ∣ 2 ^ 64 := ⟨2 ^ (64 - s.toNat), by simp only [sh, ← Nat.pow_add]; congr 1; omega⟩
+  have h3 : sh s.toNat ∣ r.toNat * 2 ^ 64 + x.toNat * sh s.toNat :=
+    Nat.dvd_add (Nat.dvd_mul_right_of_dvd hdr _) (Nat.dvd_mul_left _ _)
+  have h4 : sh s.toNat ∣ q.toNat * d.toNat := Nat.dvd_mul_left_of_dvd hdd _
+  rw [← hU] at h3
+  exact (Nat.dvd_add_right h4).mp h3
+
+/-- Writing a limb at the start of a slice and prepending it. -/
+theorem pv_set_cons (p : Array Word) (o o' k k' j : Nat) (v : Word) (hj : j = o) (ho : o' = o + 1)
+    (hk : k' = k + 1) (h : o < p.size) :
+    pv (p.set! j v) o k' = v.toNat + 2 ^ 64 * pv p o' k :=
+  pv_set_cons_off p p o o' k k' j (o + k') 0 v (Off.refl p (o + k') 0) hj ho hk (by omega) h
+grind_pattern [natop_grind] pv_set_cons => pv (p.set! j v) o k', pv p o' k
+
+/-- `div_2by1` as the one-limb loop calls it: the dividend `r · 2^64 + x · 2^s` (`r` a multiple
+of `2^s` below `d`), and the new remainder again a multiple of `2^s`. -/
+theorem div2by1_d1_spec (p : Prog) (hp2 : p.lookup "div_2by1" = some div2by1) (n : Nat) (s₀ : St)
+    (r x s d v : Word) (hs : s.toNat ≤ 63) (hr : r.toNat < d.toNat)
+    (hdr : sh s.toNat ∣ r.toNat) (hdd : sh s.toNat ∣ d.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "div_2by1" [BinOp.add.eval r (BinOp.shr.eval (BinOp.shr.eval x 1)
+      (BinOp.sub.eval 63 s)), BinOp.shl.eval x s, d, v]
+    ⦃fun res s' => s' = s₀ ∧
+      (res.headD 0).toNat * d.toNat + (res.tail.headD 0).toNat =
+        r.toNat * 2 ^ 64 + x.toNat * sh s.toNat ∧
+      sh s.toNat ∣ (res.tail.headD 0).toNat ∧ (res.tail.headD 0).toNat < d.toNat; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s' res s'' hs' hrun
+  obtain ⟨h1, h2, h3⟩ := M.of_run (P := fun s => s = s₀) hs' hrun
+    (div2by1_spec p hp2 n s₀ _ (x <<< s) d v (d1_u1_lt r x s d hs hr hdr hdd))
+  have := d1_facts _ _ _ _ _ _ ⟨h2, h3⟩ hs hr hdr hdd
+  exact ⟨h1, this.1, this.2, h3⟩
+
+section d1
+variable (p : Prog) (hp2 : p.lookup "div_2by1" = some div2by1) (Pg : Array Word) (C b0 : Nat)
+
+/-- The one-limb loop: the top `la - i` limbs of `a`, scaled by `2^s`, are the quotient limbs
+written so far times `d = b0 · 2^s` plus the remainder `r` (a multiple of `2^s`, below `d`). -/
+def D1Inv (Pg : Array Word) (C b0 : Nat) (s : St) : Prop :=
+  C < 2 ^ 63 ∧ Pg.size = 2 ^ 41 ∧ pcap s.mem = C ∧
+  Agree (vpool s.mem) Pg (s.loc 3).toNat ∧
+  s.loc 11 = s.loc 3 >>> 40 ∧ s.loc 12 = s.loc 3 &&& 1099511627775 ∧
+  (s.loc 12).toNat + (s.loc 1).toNat + 1 ≤ (s.mem.arr64 (tierA POOL (s.loc 11))).size ∧
+  (s.mem.arr64 (tierA POOL (s.loc 11))).size ≤ 2 ^ 40 ∧ (s.loc 11).toNat ≤ 1 ∧
+  (s.loc 3).toNat < 2 ^ 41 ∧ (s.loc 3).toNat + (s.loc 1).toNat + 1 ≤ C ∧
+  (s.loc 3).toNat + (s.loc 1).toNat + 1 ≤ 2 ^ 41 ∧
+  (s.loc 0).toNat + (s.loc 1).toNat ≤ (s.loc 3).toNat ∧
+  (s.loc 8).toNat ≤ 63 ∧ (s.loc 9).toNat = b0 * sh (s.loc 8).toNat ∧
+  sh (s.loc 8).toNat ∣ (s.loc 9).toNat ∧
+  (s.loc 4).toNat ≤ (s.loc 1).toNat ∧ (s.loc 7).toNat < (s.loc 9).toNat ∧
+  sh (s.loc 8).toNat ∣ (s.loc 7).toNat ∧
+  pv Pg ((s.loc 0).toNat + (s.loc 4).toNat) ((s.loc 1).toNat - (s.loc 4).toNat) *
+      sh (s.loc 8).toNat =
+    pv (vpool s.mem) ((s.loc 3).toNat + (s.loc 4).toNat) ((s.loc 1).toNat - (s.loc 4).toNat) *
+      (s.loc 9).toNat + (s.loc 7).toNat
+
+def D1Post (Pg : Array Word) (C b0 : Nat) (s₀ : St) (r : Sig) (s' : St) : Prop :=
+  r = .normal ∧ PFrame s₀.mem s'.mem ∧ pcap s'.mem = C ∧
+  Agree (vpool s'.mem) Pg (s₀.loc 3).toNat ∧
+  s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+  s'.loc 8 = s₀.loc 8 ∧ s'.loc 9 = s₀.loc 9 ∧ s'.loc 11 = s₀.loc 11 ∧ s'.loc 12 = s₀.loc 12 ∧
+  (s'.loc 7).toNat < (s₀.loc 9).toNat ∧ sh (s₀.loc 8).toNat ∣ (s'.loc 7).toNat ∧
+  pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * sh (s₀.loc 8).toNat =
+    pv (vpool s'.mem) (s₀.loc 3).toNat (s₀.loc 1).toNat * (s₀.loc 9).toNat + (s'.loc 7).toNat
+
+/-- One step of the one-limb loop, in the shape of its verification condition: `s` the state
+before the step (the invariant `h`), `rs` what `div_2by1` returned. -/
+theorem d1_step_goal (Pg : Array Word) (C b0 : Nat) (s : St) (rs : List Word)
+    (h : D1Inv Pg C b0 s) (hi : 0 < s.loc 4)
+    (hlx : ((s.loc 0 + (s.loc 4 - 1)) &&& 1099511627775).toNat <
+      (s.mem.arr64 (tierA POOL ((s.loc 0 + (s.loc 4 - 1)) >>> 40))).size)
+    (h2 : (rs.headD 0).toNat * (s.loc 9).toNat + (rs.tail.headD 0).toNat =
+      (s.loc 7).toNat * 2 ^ 64 +
+        (s.mem.arr64 (tierA POOL ((s.loc 0 + (s.loc 4 - 1)) >>> 40)))[((s.loc 0 + (s.loc 4 - 1)) &&&
+          1099511627775).toNat].toNat * sh (s.loc 8).toNat) :
+    pv Pg ((s.loc 0).toNat + (s.loc 4 - 1).toNat) ((s.loc 1).toNat - (s.loc 4 - 1).toNat) *
+        sh (s.loc 8).toNat =
+      pv (vpool (s.mem.set64 (tierA POOL (s.loc 11)) (s.loc 12 + (s.loc 4 - 1)) (rs.headD 0)))
+          ((s.loc 3).toNat + (s.loc 4 - 1).toNat) ((s.loc 1).toNat - (s.loc 4 - 1).toNat) *
+        (s.loc 9).toNat + (rs.tail.headD 0).toNat := by
+  obtain ⟨_, hPg, _, hag, h11, h12, hroom, hsz, _, hT, _, h41, hoa, _, _, _, hil, _, _, ih⟩ := h
+  have hroom' := hroom
+  rw [h12, tag_idx_toNat] at hroom'
+  have hvs := vpool_size s.mem
+  have hi0 : 0 < (s.loc 4).toNat := hi
+  have hi1' : (1 : Word) ≤ s.loc 4 := by
+    rw [UInt64.le_iff_toNat_le, UInt64.toNat_one]; omega
+  have hi1 : (s.loc 4 - 1).toNat = (s.loc 4).toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ hi1', UInt64.toNat_one]
+  have hlt : (s.loc 0).toNat + ((s.loc 4).toNat - 1) < (s.loc 3).toNat := by omega
+  have hoi : (s.loc 0 + (s.loc 4 - 1)).toNat = (s.loc 0).toNat + ((s.loc 4).toNat - 1) := by
+    rw [UInt64.toNat_add, hi1]; exact Nat.mod_eq_of_lt (by omega)
+  have ex : (s.mem.arr64 (tierA POOL ((s.loc 0 + (s.loc 4 - 1)) >>> 40)))[((s.loc 0 +
+      (s.loc 4 - 1)) &&& 1099511627775).toNat] = Pg[(s.loc 0).toNat + ((s.loc 4).toNat - 1)] := by
+    rw [vpool_ld s.mem _ hlx (by rw [hoi, hvs]; omega)]
+    simp only [hoi]
+    exact Agree.get _ _ _ _ hag hlt (by omega) (by omega)
+  rw [ex] at h2
+  rw [h11, h12, vpool_stidx s.mem (s.loc 3) (s.loc 4 - 1) _ hT (by rw [← h11, ← h12]; grind) (by grind)
+    (by rw [tag_idx_toNat]; omega)]
+  have hti : (s.loc 3 + (s.loc 4 - 1)).toNat = (s.loc 3).toNat + ((s.loc 4).toNat - 1) := by
+    rw [UInt64.toNat_add, hi1]; exact Nat.mod_eq_of_lt (by omega)
+  rw [hti, hi1,
+    pv_set_cons (vpool s.mem) _ ((s.loc 3).toNat + (s.loc 4).toNat)
+      ((s.loc 1).toNat - (s.loc 4).toNat) _ _ _ rfl (by omega) (by omega) (by omega),
+    pv_cons Pg _ ((s.loc 0).toNat + (s.loc 4).toNat) ((s.loc 1).toNat - (s.loc 4).toNat) _
+      (by omega) (by omega) (by omega)]
+  generalize pv Pg ((s.loc 0).toNat + (s.loc 4).toNat) ((s.loc 1).toNat - (s.loc 4).toNat) = A at *
+  generalize pv (vpool s.mem) ((s.loc 3).toNat + (s.loc 4).toNat)
+    ((s.loc 1).toNat - (s.loc 4).toNat) = Q at *
+  generalize Pg[(s.loc 0).toNat + ((s.loc 4).toNat - 1)].toNat = X at *
+  generalize (rs.headD 0).toNat = q at *
+  generalize (rs.tail.headD 0).toNat = r' at *
+  generalize sh (s.loc 8).toNat = S at *
+  generalize (s.loc 9).toNat = D at *
+  generalize (s.loc 7).toNat = R at *
+  grind
+
+include hp2 in
+theorem d1Loop_spec (n : Nat) (s₀ : St) (h : D1Inv Pg C b0 s₀) :
+    ⦃fun s => s = s₀⦄ exec p n d1Loop ⦃fun r s' => D1Post Pg C b0 s₀ r s'; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    have h' := h
+    simp only [D1Inv] at h'
+    simp only [D1Post]
+    rw [exec, step_while (w := d1Loop) rfl]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, div2by1_d1_spec p hp2 n]
+    all_goals clear ih
+    all_goals (try simp only [D1Post] at *)
+    all_goals (try simp only [D1Inv] at ⊢)
+    all_goals (try subst_vars)
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil,
+      List.headD_cons, List.tail_cons, Cmp.eval, Cmp.evalW, BinOp.eval, Nat.reduceEqDiff,
+      reduceIte, decide_eq_true_eq] at *)
+    all_goals (try and_intros)
+    all_goals first
+      | (grind (splits := 20) [arena_grind, lang_grind]; done)
+      | (apply d1_step_goal Pg C b0 _ _ h <;> grind)
+
+end d1
+
 /-- The functions `nat_divmod` calls, transitively, as the program `p` binds them. -/
 structure DivFns (p : Prog) : Prop where
   limb : p.lookup "nat_limb" = some natLimb
@@ -340,6 +527,56 @@ structure DivFns (p : Prog) : Prop where
 
 section specs
 variable (p : Prog) (hf : DivFns p)
+
+/-- A dividend shorter than the normalised divisor is below it. -/
+theorem pv_lt_of_short (P : Array Word) (oa la ob lb : Nat) (hl : la < lb) (hn : Norm P ob lb) :
+    pv P oa la < pv P ob lb := by
+  have h1 := pv_lt_wt P oa la
+  have h2 := pv_ge_wt P ob lb (by omega) hn
+  have h3 : wt la ≤ wt (lb - 1) := Nat.pow_le_pow_right (by decide) (by omega)
+  omega
+
+theorem div_short (P : Array Word) (oa la ob lb : Nat) (hl : la < lb) (hn : Norm P ob lb) :
+    pv P oa la / pv P ob lb = 0 := Nat.div_eq_of_lt (pv_lt_of_short P oa la ob lb hl hn)
+
+theorem mod_short (P : Array Word) (oa la ob lb : Nat) (hl : la < lb) (hn : Norm P ob lb) :
+    pv P oa la % pv P ob lb = pv P oa la := Nat.mod_eq_of_lt (pv_lt_of_short P oa la ob lb hl hn)
+
+include hf in
+/-- `div_mod1`: `nat_divmod` for a one-limb divisor `b ≠ 0`. -/
+theorem divMod1_spec (n : Nat) (s₀ : St) (oa la ob : Word) (hok : PoolOK s₀.mem)
+    (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob 1)
+    (hnb : Norm (vpool s₀.mem) ob.toNat 1) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "div_mod1" [oa, la, ob]
+    ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
+      SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat / pv (vpool s₀.mem) ob.toNat 1 ∧
+      SliceOK s'.mem (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) ∧
+      Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat 1; ⊤⦄ := by
+  sorry
+
+include hf in
+/-- `div_modk`: `nat_divmod` for `2 ≤ lb ≤ la`. -/
+theorem divModK_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
+    (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hnb : Norm (vpool s₀.mem) ob.toNat lb.toNat) (h2 : 2 ≤ lb.toNat) (hl : lb.toNat ≤ la.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "div_modk" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧ PoolOK s'.mem ∧ Grows s₀.mem s'.mem ∧
+      SliceOK s'.mem (r.headD 0) (r.tail.headD 0) ∧
+      Norm (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat / pv (vpool s₀.mem) ob.toNat lb.toNat ∧
+      SliceOK s'.mem (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) ∧
+      Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
+      pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
+        pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
+  sorry
 
 set_option maxHeartbeats 4000000 in
 include hf in
@@ -359,7 +596,21 @@ theorem natDivmod_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK 
       Norm (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat ∧
       pv (vpool s'.mem) (r.tail.tail.headD 0).toNat (r.tail.tail.tail.headD 0).toNat =
         pv (vpool s₀.mem) oa.toNat la.toNat % pv (vpool s₀.mem) ob.toNat lb.toNat; ⊤⦄ := by
-  sorry
+  have hcap := hok.cap
+  have htop := hok.top
+  have ha1 := ha.1
+  have hb1 := hb.1
+  rw [invoke_eq _ hf.divmod]
+  simp only [callFn, natDivmod]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      natTrim_spec p hf.trim n, divMod1_spec p hf n, divModK_spec p hf n]
+    all_goals (try simp only [St.setLoc_loc, L.St.setLoc_mem, List.headD_cons, List.tail_cons,
+      Locals.init_cons_zero, Locals.init_cons_succ, Cmp.eval,
+      reduceIte, Nat.reduceEqDiff, UInt64.toNat_zero, Sig.retVal, Sig.retOr] at *)
+    all_goals grind [arena_grind, lang_grind, natcmp_grind, natop_grind, div_short, mod_short]
 
 end specs
 
