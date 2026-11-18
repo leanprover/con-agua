@@ -12,6 +12,7 @@ import all ConAgua.Arena.NatLeaf
 import all ConAgua.Front.NatDec
 import all ConAgua.Arena.NatCmp
 import ConAgua.AsmEsc.ChainL
+import ConAgua.AsmEsc.BitAsmSim
 
 @[expose] public section
 
@@ -20,7 +21,7 @@ import ConAgua.AsmEsc.ChainL
 
 `checkerX_ok : AsmOkT checkerProgI checkerTab checkerX`: in every layout of `checkerTab`, each body
 of `checkerX` starts with its function's label and meets `FnSimAt` (`mulRowAsm_sim`,
-`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
+`subRowAsm_sim`, `divSubmulAsm_sim`, `natMadAsm_sim`, `natCmpAsm_sim`, `bitAsm_sim`, `copyAsm_sim`, and `chain2Asm_sim`/`chain1Asm_sim` with the leaves' L sides
 `addN_spec`, `subN_spec`, `add1_spec`, `sub1_spec`), at the function as `checkerProgI` declares it
 (`checkerProgI_mulRow` …: the inliner leaves these functions, which call nothing, as they are).
 -/
@@ -94,6 +95,34 @@ theorem nameCode_nat_cmp : nameCode "nat_cmp" = natCmpCode := by decide
 theorem checkerProgI_natCmp : checkerProgI.lookup "nat_cmp" = some natCmp := by
   rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
     show checkerProg.lookup "nat_cmp" = some natCmp by chk_lk]
+  rfl
+
+theorem nameCode_and_n : nameCode "and_n" = andNCode := by decide
+
+theorem checkerProgI_andN : checkerProgI.lookup "and_n" = some andN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "and_n" = some andN by chk_lk]
+  rfl
+
+theorem nameCode_or_n : nameCode "or_n" = orNCode := by decide
+
+theorem checkerProgI_orN : checkerProgI.lookup "or_n" = some orN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "or_n" = some orN by chk_lk]
+  rfl
+
+theorem nameCode_xor_n : nameCode "xor_n" = xorNCode := by decide
+
+theorem checkerProgI_xorN : checkerProgI.lookup "xor_n" = some xorN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "xor_n" = some xorN by chk_lk]
+  rfl
+
+theorem nameCode_copy_n : nameCode "copy_n" = copyNCode := by decide
+
+theorem checkerProgI_copyN : checkerProgI.lookup "copy_n" = some copyN := by
+  rw [← checkerProgI_inline, inlineProg, inlineProg, lookup_inlRound,
+    show checkerProg.lookup "copy_n" = some copyN by chk_lk]
   rfl
 
 theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
@@ -202,6 +231,54 @@ theorem checkerX_ok : AsmOkT checkerProgI checkerTab checkerX := by
     rw [← hT] at hcode
     exact natCmpAsm_sim checkerProgI G hG checkerProgI_natCmp (by rw [hT]; exact checkerTab_pool)
       (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB) kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "and_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_and_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_andN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact bitAsm_sim checkerProgI G hG _ .and (Or.inl rfl) _ (bitN_spec .and _ _ checkerProgI_andN) rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "or_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_or_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_orN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact bitAsm_sim checkerProgI G hG _ .or (Or.inr (Or.inl rfl)) _ (bitN_spec .or _ _ checkerProgI_orN) rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "xor_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_xor_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_xorN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact bitAsm_sim checkerProgI G hG _ .xor (Or.inr (Or.inr rfl)) _ (bitN_spec .xor _ _ checkerProgI_xorN) rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
+  split at hl
+  · rename_i hk
+    cases hl
+    have hf : f = "copy_n" := nameCode_inj ((beq_iff_eq.mp hk).trans nameCode_copy_n.symm)
+    subst hf
+    refine ⟨rfl, fun sk n fd kf hlk hcode => ?_⟩
+    rw [checkerProgI_copyN] at hlk
+    cases hlk
+    rw [← hT] at hcode
+    exact copyAsm_sim checkerProgI G hG _ _ (copyN_spec _ checkerProgI_copyN) rfl rfl
+      (by rw [hT]; exact checkerTab_pool) (by rw [hT]; exact checkerTab_poolL) (by rw [hT]; exact checkerTab_poolB)
+      kf hcode sk n
   · cases hl
 
 end L.Checker

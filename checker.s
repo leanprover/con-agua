@@ -28973,61 +28973,54 @@ movq $0, %rax
 addq $48, %rsp
 ret
 ca_f_and_n:
-subq $104, %rsp
-movq %rdi, (%rsp)
-movq %r8, 8(%rsp)
-movq %r9, 16(%rsp)
-movq $0, %r13
-movq (%rsp), %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq (%rsp), %rsi
-movq 8(%rsp), %r11
-shrq $40, %r11
-movq $1099511627775, %r9
-andq 8(%rsp), %r9
-movq 16(%rsp), %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq 16(%rsp), %rdi
-.Lca_and_n_2222221H:
-cmpq %r10, %r13
-jae .Lca_and_n_2222221X
-movq %r11, %rax
-andq $1, %rax
-lea (%r9,%r13,1), %r12
-cmpq 1504(%r15,%rax,8), %r12
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r8, %rcx
+cmpq $0, %r10
+je .Lasm_and_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-lea (%rdi,%r13,1), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-andq %rax, %r12
-movq %rsi, %rax
-addq %r13, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
-subq $1, %r14
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq %r9, %r12
+shrq $40, %r12
+andq $1, %r12
+andq %rax, %r9
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
 jb ca_exhausted
-jmp .Lca_and_n_2222221H
-.Lca_and_n_2222221X:
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%r12,8), %rax
+subq %r9, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%r12,8), %rbx
+lea (%rbx,%r9,8), %rbx
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r10, %r14
+jb ca_exhausted
+movq $0, %r13
+.Lasm_and_n_L:
+movq (%rsi,%r13,8), %rax
+andq (%rbx,%r13,8), %rax
+movq %rax, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r10, %r13
+jb .Lasm_and_n_L
+.Lasm_and_n_Z:
 movq $0, %rax
-jmp .Lca_and_n_0R
-.Lca_and_n_0Z:
-movq $0, %rax
-.Lca_and_n_0R:
-addq $104, %rsp
 ret
 ca_f_and_pin_ok:
 movq %rsp, %rax
@@ -64509,44 +64502,42 @@ movq $0, %rax
 addq $40, %rsp
 ret
 ca_f_copy_n:
-movq $0, %r13
-movq %rdi, %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq %rdi, %rsi
-movq %r8, %r11
-shrq $40, %r11
-movq $1099511627775, %r10
-andq %r8, %r10
-.Lca_copy_n_22221H:
-cmpq %r9, %r13
-jae .Lca_copy_n_22221X
-movq %r11, %rax
-andq $1, %rax
-lea (%r10,%r13,1), %r12
-cmpq 1504(%r15,%rax,8), %r12
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %rsi, %rax
-addq %r13, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
+cmpq $0, %r9
+je .Lasm_copy_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
-subq $1, %r14
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
 jb ca_exhausted
-jmp .Lca_copy_n_22221H
-.Lca_copy_n_22221X:
+cmpq %r9, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r9, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r9, %r14
+jb ca_exhausted
+movq $0, %r13
+.Lasm_copy_n_L:
+movq (%rsi,%r13,8), %rax
+movq %rax, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r9, %r13
+jb .Lasm_copy_n_L
+.Lasm_copy_n_Z:
 movq $0, %rax
-jmp .Lca_copy_n_0R
-.Lca_copy_n_0Z:
-movq $0, %rax
-.Lca_copy_n_0R:
 ret
 ca_f_cr_leaf:
 movq %rsp, %rax
@@ -112983,59 +112974,17 @@ ret
 ca_f_intern_lit:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $384, %rax
+cmpq $328, %rax
 jb ca_exhausted
-subq $120, %rsp
+subq $64, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq (%rsp), %rax
-movq %rax, 64(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 72(%rsp)
-movq $-3750763034362895579, %rax
-movq %rax, 88(%rsp)
-movq 64(%rsp), %rax
-shrq $40, %rax
-movq %rax, 96(%rsp)
-movq $1099511627775, %rax
-andq 64(%rsp), %rax
-movq %rax, 104(%rsp)
-movq $1099511627776, %rax
-subq 104(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_lit_122222E
-movq $560, %rax
-movq %rax, %rbx
-jmp ca_abort
-jmp .Lca_intern_lit_122222X
-.Lca_intern_lit_122222E:
-.Lca_intern_lit_122222521H:
-movq 80(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_lit_122222521X
-movq 96(%rsp), %rcx
-andq $1, %rcx
-movq 104(%rsp), %rax
-addq 80(%rsp), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq 88(%rsp), %rax
-movq $1099511628211, %rcx
-imulq %rcx, %rax
-movq %rax, 88(%rsp)
-addq $1, 80(%rsp)
+movq (%rsp), %rdi
+movq 8(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_intern_lit_122222521H
-.Lca_intern_lit_122222521X:
-movq 88(%rsp), %rax
+call ca_f_lit_hash
 movq %rax, 16(%rsp)
-.Lca_intern_lit_122222X:
 movq $0, %rdi
 movq (%rsp), %r8
 movq 8(%rsp), %r9
@@ -113107,64 +113056,22 @@ jmp .Lca_intern_lit_0R
 .Lca_intern_lit_0Z:
 movq $0, %rax
 .Lca_intern_lit_0R:
-addq $120, %rsp
+addq $64, %rsp
 ret
 ca_f_intern_lit_str:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $384, %rax
+cmpq $328, %rax
 jb ca_exhausted
-subq $120, %rsp
+subq $64, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq (%rsp), %rax
-movq %rax, 64(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 72(%rsp)
-movq $-3750763034362895579, %rax
-movq %rax, 88(%rsp)
-movq 64(%rsp), %rax
-shrq $40, %rax
-movq %rax, 96(%rsp)
-movq $1099511627775, %rax
-andq 64(%rsp), %rax
-movq %rax, 104(%rsp)
-movq $1099511627776, %rax
-subq 104(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_lit_str_122222E
-movq $560, %rax
-movq %rax, %rbx
-jmp ca_abort
-jmp .Lca_intern_lit_str_122222X
-.Lca_intern_lit_str_122222E:
-.Lca_intern_lit_str_122222521H:
-movq 80(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_lit_str_122222521X
-movq 96(%rsp), %rcx
-andq $1, %rcx
-movq 104(%rsp), %rax
-addq 80(%rsp), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq 88(%rsp), %rax
-movq $1099511628211, %rcx
-imulq %rcx, %rax
-movq %rax, 88(%rsp)
-addq $1, 80(%rsp)
+movq (%rsp), %rdi
+movq 8(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_intern_lit_str_122222521H
-.Lca_intern_lit_str_122222521X:
-movq 88(%rsp), %rax
+call ca_f_lit_hash
 movq %rax, 16(%rsp)
-.Lca_intern_lit_str_122222X:
 movq $0, %rdi
 movq (%rsp), %r8
 movq 8(%rsp), %r9
@@ -113236,64 +113143,22 @@ jmp .Lca_intern_lit_str_0R
 .Lca_intern_lit_str_0Z:
 movq $0, %rax
 .Lca_intern_lit_str_0R:
-addq $120, %rsp
+addq $64, %rsp
 ret
 ca_f_intern_ls:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $440, %rax
+cmpq $384, %rax
 jb ca_exhausted
-subq $120, %rsp
+subq $64, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq $0, 80(%rsp)
-movq (%rsp), %rax
-movq %rax, 64(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 72(%rsp)
-movq $-3750763034362895579, %rax
-movq %rax, 88(%rsp)
-movq 64(%rsp), %rax
-shrq $40, %rax
-movq %rax, 96(%rsp)
-movq $1099511627775, %rax
-andq 64(%rsp), %rax
-movq %rax, 104(%rsp)
-movq $1099511627776, %rax
-subq 104(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_ls_122222E
-movq $560, %rax
-movq %rax, %rbx
-jmp ca_abort
-jmp .Lca_intern_ls_122222X
-.Lca_intern_ls_122222E:
-.Lca_intern_ls_122222521H:
-movq 80(%rsp), %rax
-cmpq 72(%rsp), %rax
-jae .Lca_intern_ls_122222521X
-movq 96(%rsp), %rcx
-andq $1, %rcx
-movq 104(%rsp), %rax
-addq 80(%rsp), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq 88(%rsp), %rax
-movq $1099511628211, %rcx
-imulq %rcx, %rax
-movq %rax, 88(%rsp)
-addq $1, 80(%rsp)
+movq (%rsp), %rdi
+movq 8(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_intern_ls_122222521H
-.Lca_intern_ls_122222521X:
-movq 88(%rsp), %rax
+call ca_f_lit_hash
 movq %rax, 16(%rsp)
-.Lca_intern_ls_122222X:
 movq $0, %rdi
 movq (%rsp), %r8
 movq 8(%rsp), %r9
@@ -113365,7 +113230,7 @@ jmp .Lca_intern_ls_0R
 .Lca_intern_ls_0Z:
 movq $0, %rax
 .Lca_intern_ls_0R:
-addq $120, %rsp
+addq $64, %rsp
 ret
 ca_f_intern_ls_iw:
 movq %rsp, %rax
@@ -113682,60 +113547,18 @@ ret
 ca_f_intern_nstr:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $408, %rax
+cmpq $352, %rax
 jb ca_exhausted
-subq $128, %rsp
+subq $72, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
-movq $0, 88(%rsp)
-movq $0, 88(%rsp)
-movq $0, 88(%rsp)
-movq 8(%rsp), %rax
-movq %rax, 72(%rsp)
-movq 16(%rsp), %rax
-movq %rax, 80(%rsp)
-movq $-3750763034362895579, %rax
-movq %rax, 96(%rsp)
-movq 72(%rsp), %rax
-shrq $40, %rax
-movq %rax, 104(%rsp)
-movq $1099511627775, %rax
-andq 72(%rsp), %rax
-movq %rax, 112(%rsp)
-movq $1099511627776, %rax
-subq 112(%rsp), %rax
-cmpq 80(%rsp), %rax
-jae .Lca_intern_nstr_1122222E
-movq $560, %rax
-movq %rax, %rbx
-jmp ca_abort
-jmp .Lca_intern_nstr_1122222X
-.Lca_intern_nstr_1122222E:
-.Lca_intern_nstr_1122222521H:
-movq 88(%rsp), %rax
-cmpq 80(%rsp), %rax
-jae .Lca_intern_nstr_1122222521X
-movq 104(%rsp), %rcx
-andq $1, %rcx
-movq 112(%rsp), %rax
-addq 88(%rsp), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq 96(%rsp), %rax
-movq $1099511628211, %rcx
-imulq %rcx, %rax
-movq %rax, 96(%rsp)
-addq $1, 88(%rsp)
+movq 8(%rsp), %rdi
+movq 16(%rsp), %r8
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_intern_nstr_1122222521H
-.Lca_intern_nstr_1122222521X:
-movq 96(%rsp), %rax
+call ca_f_lit_hash
 movq %rax, 24(%rsp)
-.Lca_intern_nstr_1122222X:
 movq 24(%rsp), %rax
 xorq (%rsp), %rax
 movq $1099511628211, %rcx
@@ -113816,7 +113639,7 @@ jmp .Lca_intern_nstr_0R
 .Lca_intern_nstr_0Z:
 movq $0, %rax
 .Lca_intern_nstr_0R:
-addq $128, %rsp
+addq $72, %rsp
 ret
 ca_f_intern_param:
 movq %rsp, %rax
@@ -128256,15 +128079,15 @@ movq $0, %rax
 addq $96, %rsp
 ret
 ca_f_lit_hash:
-subq $56, %rsp
-movq $0, %r13
-movq $-3750763034362895579, %r12
-movq %rdi, %rsi
-shrq $40, %rsi
-movq $1099511627775, %rbx
-andq %rdi, %rbx
+subq $64, %rsp
+movq $0, %r11
+movq $-3750763034362895579, %r13
+movq %rdi, %rbx
+shrq $40, %rbx
+movq $1099511627775, %r12
+andq %rdi, %r12
 movq $1099511627776, %rax
-subq %rbx, %rax
+subq %r12, %rax
 cmpq %r8, %rax
 jae .Lca_lit_hash_2122E
 movq $560, %rax
@@ -128273,31 +128096,119 @@ jmp ca_abort
 jmp .Lca_lit_hash_2122X
 .Lca_lit_hash_2122E:
 .Lca_lit_hash_2122X:
-.Lca_lit_hash_221H:
-cmpq %r8, %r13
-jae .Lca_lit_hash_221X
-movq %rsi, %rcx
+movq $1099511628211, %rsi
+.Lca_lit_hash_2221H:
+cmpq $8, %r8
+jb .Lca_lit_hash_2221X
+movq %rbx, %rcx
 andq $1, %rcx
-lea (%rbx,%r13,1), %rax
+cmpq 1504(%r15,%rcx,8), %r12
+jae ca_error
+movq 32(%r15,%rcx,8), %rax
+movq (%rax,%r12,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 1(%r12), %rax
 cmpq 1504(%r15,%rcx,8), %rax
 jae ca_error
 movq 32(%r15,%rcx,8), %rdx
 movq (%rdx,%rax,8), %rax
-xorq %r12, %rax
-movq $1099511628211, %rcx
-imulq %rcx, %rax
-movq %rax, %r12
-addq $1, %r13
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 2(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 3(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 4(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 5(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 6(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+movq %rbx, %rcx
+andq $1, %rcx
+lea 7(%r12), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+addq $8, %r12
+subq $8, %r8
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_lit_hash_221H
-.Lca_lit_hash_221X:
-movq %r12, %rax
+jmp .Lca_lit_hash_2221H
+.Lca_lit_hash_2221X:
+.Lca_lit_hash_22221H:
+cmpq %r8, %r11
+jae .Lca_lit_hash_22221X
+movq %rbx, %rcx
+andq $1, %rcx
+lea (%r12,%r11,1), %rax
+cmpq 1504(%r15,%rcx,8), %rax
+jae ca_error
+movq 32(%r15,%rcx,8), %rdx
+movq (%rdx,%rax,8), %rax
+xorq %r13, %rax
+imulq %rsi, %rax
+movq %rax, %r13
+addq $1, %r11
+subq $1, %r14
+jb ca_exhausted
+jmp .Lca_lit_hash_22221H
+.Lca_lit_hash_22221X:
+movq %r13, %rax
 jmp .Lca_lit_hash_0R
 .Lca_lit_hash_0Z:
 movq $0, %rax
 .Lca_lit_hash_0R:
-addq $56, %rsp
+addq $64, %rsp
 ret
 ca_f_lit_major_to_ctor:
 movq %rsp, %rax
@@ -147269,7 +147180,11 @@ movq $0, %rax
 addq $40, %rsp
 ret
 ca_f_nat_land:
-subq $176, %rsp
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $208, %rax
+jb ca_exhausted
+subq $96, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -147298,74 +147213,28 @@ movq 1504(%r15,%rax,8), %rax
 subq 64(%rsp), %rax
 cmpq 40(%rsp), %rax
 jb ca_error
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 32(%rsp), %rbx
-movq (%rsp), %r12
-movq 16(%rsp), %rax
-movq %rax, 88(%rsp)
-movq 40(%rsp), %r11
-movq %rbx, %r10
-shrq $40, %r10
-movq $1099511627775, %r9
-andq %rbx, %r9
-movq %r12, %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq %r12, %rdi
-movq 88(%rsp), %rax
-shrq $40, %rax
-movq %rax, 152(%rsp)
-movq $1099511627775, %rax
-andq 88(%rsp), %rax
-movq %rax, 160(%rsp)
-.Lca_nat_land_2222221222222221H:
-cmpq %r11, %r13
-jae .Lca_nat_land_2222221222222221X
-movq %r8, %rax
-andq $1, %rax
-lea (%rdi,%r13,1), %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 152(%rsp), %rcx
-andq $1, %rcx
-movq 160(%rsp), %rax
-addq %r13, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-andq %rax, %rsi
-movq %r9, %rax
-addq %r13, %rax
-movq %rsi, %rdx
-movq %r10, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 32(%rsp), %rdi
+movq (%rsp), %r8
+movq 16(%rsp), %r9
+movq 40(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_land_2222221222222221H
-.Lca_nat_land_2222221222222221X:
-movq $0, 48(%rsp)
-movq 32(%rsp), %rbx
-movq 40(%rsp), %r12
+call ca_f_and_n
+movq %rax, 48(%rsp)
+movq 32(%rsp), %rax
+movq %rax, 72(%rsp)
+movq 40(%rsp), %rax
+movq %rax, 80(%rsp)
 .Lca_nat_land_22222221221H:
-cmpq $0, %r12
+cmpq $0, 80(%rsp)
 jbe .Lca_nat_land_22222221221X
-lea (%rbx,%r12,1), %rcx
+movq 72(%rsp), %rcx
+addq 80(%rsp), %rcx
 subq $1, %rcx
 shrq $40, %rcx
 andq $1, %rcx
-lea (%rbx,%r12,1), %rax
+movq 72(%rsp), %rax
+addq 80(%rsp), %rax
 subq $1, %rax
 movq $1099511627775, %rdx
 andq %rdx, %rax
@@ -147375,12 +147244,12 @@ movq 32(%r15,%rcx,8), %rdx
 movq (%rdx,%rax,8), %rax
 cmpq $0, %rax
 jne .Lca_nat_land_22222221221X
-subq $1, %r12
+subq $1, 80(%rsp)
 subq $1, %r14
 jb ca_exhausted
 jmp .Lca_nat_land_22222221221H
 .Lca_nat_land_22222221221X:
-movq %r12, %rax
+movq 80(%rsp), %rax
 movq %rax, 40(%rsp)
 movq 32(%rsp), %rax
 addq 40(%rsp), %rax
@@ -147390,12 +147259,12 @@ jmp .Lca_nat_land_0R
 .Lca_nat_land_0Z:
 movq $0, %rax
 .Lca_nat_land_0R:
-addq $176, %rsp
+addq $96, %rsp
 ret
 ca_f_nat_land_lit:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $240, %rax
+cmpq $64, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -147694,7 +147563,11 @@ movq $0, %rax
 addq $64, %rsp
 ret
 ca_f_nat_lor:
-subq $176, %rsp
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $208, %rax
+jb ca_exhausted
+subq $96, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -147726,223 +147599,59 @@ jb ca_error
 movq 8(%rsp), %rax
 cmpq 24(%rsp), %rax
 jae .Lca_nat_lor_2222221E
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 32(%rsp), %r8
-movq (%rsp), %rbx
-movq 16(%rsp), %rdi
-movq 8(%rsp), %r12
-movq %r8, %r11
-shrq $40, %r11
-movq $1099511627775, %r10
-andq %r8, %r10
-movq %rbx, %r9
-shrq $40, %r9
-movq $1099511627775, %rax
-andq %rbx, %rax
-movq %rax, 144(%rsp)
-movq %rdi, %rax
-shrq $40, %rax
-movq %rax, 152(%rsp)
-movq $1099511627775, %rax
-andq %rdi, %rax
-movq %rax, 160(%rsp)
-.Lca_nat_lor_222222141222222221H:
-cmpq %r12, %r13
-jae .Lca_nat_lor_222222141222222221X
-movq %r9, %rax
-andq $1, %rax
-movq 144(%rsp), %rsi
-addq %r13, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 152(%rsp), %rcx
-andq $1, %rcx
-movq 160(%rsp), %rax
-addq %r13, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-orq %rax, %rsi
-movq %r10, %rax
-addq %r13, %rax
-movq %rsi, %rdx
-movq %r11, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 32(%rsp), %rdi
+movq (%rsp), %r8
+movq 16(%rsp), %r9
+movq 8(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_lor_222222141222222221H
-.Lca_nat_lor_222222141222222221X:
-movq $0, 48(%rsp)
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq 32(%rsp), %r8
+call ca_f_or_n
+movq %rax, 48(%rsp)
+movq 32(%rsp), %rdi
+addq 8(%rsp), %rdi
+movq 16(%rsp), %r8
 addq 8(%rsp), %r8
-movq 16(%rsp), %rbx
-addq 8(%rsp), %rbx
-movq 24(%rsp), %rdi
-subq 8(%rsp), %rdi
-movq %r8, %rsi
-shrq $40, %rsi
-movq $1099511627775, %r11
-andq %r8, %r11
-movq %rbx, %r10
-shrq $40, %r10
-movq $1099511627775, %r9
-andq %rbx, %r9
-.Lca_nat_lor_2222221422222221H:
-cmpq %rdi, %r12
-jae .Lca_nat_lor_2222221422222221X
-movq %r10, %rax
-andq $1, %rax
-lea (%r9,%r12,1), %r13
-cmpq 1504(%r15,%rax,8), %r13
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r13,8), %r13
-movq %r11, %rax
-addq %r12, %rax
-movq %r13, %rdx
-movq %rsi, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r12
+movq 24(%rsp), %r9
+subq 8(%rsp), %r9
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_lor_2222221422222221H
-.Lca_nat_lor_2222221422222221X:
-movq $0, 48(%rsp)
+call ca_f_copy_n
+movq %rax, 48(%rsp)
 jmp .Lca_nat_lor_2222221X
 .Lca_nat_lor_2222221E:
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 32(%rsp), %r8
-movq (%rsp), %rbx
-movq 16(%rsp), %rdi
-movq 24(%rsp), %r12
-movq %r8, %r11
-shrq $40, %r11
-movq $1099511627775, %r10
-andq %r8, %r10
-movq %rbx, %r9
-shrq $40, %r9
-movq $1099511627775, %rax
-andq %rbx, %rax
-movq %rax, 144(%rsp)
-movq %rdi, %rax
-shrq $40, %rax
-movq %rax, 152(%rsp)
-movq $1099511627775, %rax
-andq %rdi, %rax
-movq %rax, 160(%rsp)
-.Lca_nat_lor_222222151222222221H:
-cmpq %r12, %r13
-jae .Lca_nat_lor_222222151222222221X
-movq %r9, %rax
-andq $1, %rax
-movq 144(%rsp), %rsi
-addq %r13, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 152(%rsp), %rcx
-andq $1, %rcx
-movq 160(%rsp), %rax
-addq %r13, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-orq %rax, %rsi
-movq %r10, %rax
-addq %r13, %rax
-movq %rsi, %rdx
-movq %r11, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 32(%rsp), %rdi
+movq (%rsp), %r8
+movq 16(%rsp), %r9
+movq 24(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_lor_222222151222222221H
-.Lca_nat_lor_222222151222222221X:
-movq $0, 48(%rsp)
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq 32(%rsp), %r8
+call ca_f_or_n
+movq %rax, 48(%rsp)
+movq 32(%rsp), %rdi
+addq 24(%rsp), %rdi
+movq (%rsp), %r8
 addq 24(%rsp), %r8
-movq (%rsp), %rbx
-addq 24(%rsp), %rbx
-movq 8(%rsp), %rdi
-subq 24(%rsp), %rdi
-movq %r8, %rsi
-shrq $40, %rsi
-movq $1099511627775, %r11
-andq %r8, %r11
-movq %rbx, %r10
-shrq $40, %r10
-movq $1099511627775, %r9
-andq %rbx, %r9
-.Lca_nat_lor_2222221522222221H:
-cmpq %rdi, %r12
-jae .Lca_nat_lor_2222221522222221X
-movq %r10, %rax
-andq $1, %rax
-lea (%r9,%r12,1), %r13
-cmpq 1504(%r15,%rax,8), %r13
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r13,8), %r13
-movq %r11, %rax
-addq %r12, %rax
-movq %r13, %rdx
-movq %rsi, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r12
+movq 8(%rsp), %r9
+subq 24(%rsp), %r9
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_lor_2222221522222221H
-.Lca_nat_lor_2222221522222221X:
-movq $0, 48(%rsp)
+call ca_f_copy_n
+movq %rax, 48(%rsp)
 .Lca_nat_lor_2222221X:
-movq 32(%rsp), %r8
-movq 40(%rsp), %rbx
+movq 32(%rsp), %rax
+movq %rax, 72(%rsp)
+movq 40(%rsp), %rax
+movq %rax, 80(%rsp)
 .Lca_nat_lor_22222221221H:
-cmpq $0, %rbx
+cmpq $0, 80(%rsp)
 jbe .Lca_nat_lor_22222221221X
-lea (%r8,%rbx,1), %rcx
+movq 72(%rsp), %rcx
+addq 80(%rsp), %rcx
 subq $1, %rcx
 shrq $40, %rcx
 andq $1, %rcx
-lea (%r8,%rbx,1), %rax
+movq 72(%rsp), %rax
+addq 80(%rsp), %rax
 subq $1, %rax
 movq $1099511627775, %rdx
 andq %rdx, %rax
@@ -147952,12 +147661,12 @@ movq 32(%r15,%rcx,8), %rdx
 movq (%rdx,%rax,8), %rax
 cmpq $0, %rax
 jne .Lca_nat_lor_22222221221X
-subq $1, %rbx
+subq $1, 80(%rsp)
 subq $1, %r14
 jb ca_exhausted
 jmp .Lca_nat_lor_22222221221H
 .Lca_nat_lor_22222221221X:
-movq %rbx, %rax
+movq 80(%rsp), %rax
 movq %rax, 40(%rsp)
 movq 32(%rsp), %rax
 addq 40(%rsp), %rax
@@ -147967,12 +147676,12 @@ jmp .Lca_nat_lor_0R
 .Lca_nat_lor_0Z:
 movq $0, %rax
 .Lca_nat_lor_0R:
-addq $176, %rsp
+addq $96, %rsp
 ret
 ca_f_nat_lor_lit:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $240, %rax
+cmpq $64, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -152709,7 +152418,11 @@ movq $0, %rax
 addq $40, %rsp
 ret
 ca_f_nat_xor:
-subq $176, %rsp
+movq %rsp, %rax
+subq 8(%r15), %rax
+cmpq $208, %rax
+jb ca_exhausted
+subq $96, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
@@ -152741,223 +152454,59 @@ jb ca_error
 movq 8(%rsp), %rax
 cmpq 24(%rsp), %rax
 jae .Lca_nat_xor_2222221E
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 32(%rsp), %r8
-movq (%rsp), %rbx
-movq 16(%rsp), %rdi
-movq 8(%rsp), %r12
-movq %r8, %r11
-shrq $40, %r11
-movq $1099511627775, %r10
-andq %r8, %r10
-movq %rbx, %r9
-shrq $40, %r9
-movq $1099511627775, %rax
-andq %rbx, %rax
-movq %rax, 144(%rsp)
-movq %rdi, %rax
-shrq $40, %rax
-movq %rax, 152(%rsp)
-movq $1099511627775, %rax
-andq %rdi, %rax
-movq %rax, 160(%rsp)
-.Lca_nat_xor_222222141222222221H:
-cmpq %r12, %r13
-jae .Lca_nat_xor_222222141222222221X
-movq %r9, %rax
-andq $1, %rax
-movq 144(%rsp), %rsi
-addq %r13, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 152(%rsp), %rcx
-andq $1, %rcx
-movq 160(%rsp), %rax
-addq %r13, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %rax, %rsi
-movq %r10, %rax
-addq %r13, %rax
-movq %rsi, %rdx
-movq %r11, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 32(%rsp), %rdi
+movq (%rsp), %r8
+movq 16(%rsp), %r9
+movq 8(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_xor_222222141222222221H
-.Lca_nat_xor_222222141222222221X:
-movq $0, 48(%rsp)
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq 32(%rsp), %r8
+call ca_f_xor_n
+movq %rax, 48(%rsp)
+movq 32(%rsp), %rdi
+addq 8(%rsp), %rdi
+movq 16(%rsp), %r8
 addq 8(%rsp), %r8
-movq 16(%rsp), %rbx
-addq 8(%rsp), %rbx
-movq 24(%rsp), %rdi
-subq 8(%rsp), %rdi
-movq %r8, %rsi
-shrq $40, %rsi
-movq $1099511627775, %r11
-andq %r8, %r11
-movq %rbx, %r10
-shrq $40, %r10
-movq $1099511627775, %r9
-andq %rbx, %r9
-.Lca_nat_xor_2222221422222221H:
-cmpq %rdi, %r12
-jae .Lca_nat_xor_2222221422222221X
-movq %r10, %rax
-andq $1, %rax
-lea (%r9,%r12,1), %r13
-cmpq 1504(%r15,%rax,8), %r13
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r13,8), %r13
-movq %r11, %rax
-addq %r12, %rax
-movq %r13, %rdx
-movq %rsi, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r12
+movq 24(%rsp), %r9
+subq 8(%rsp), %r9
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_xor_2222221422222221H
-.Lca_nat_xor_2222221422222221X:
-movq $0, 48(%rsp)
+call ca_f_copy_n
+movq %rax, 48(%rsp)
 jmp .Lca_nat_xor_2222221X
 .Lca_nat_xor_2222221E:
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq $0, %r13
-movq 32(%rsp), %r8
-movq (%rsp), %rbx
-movq 16(%rsp), %rdi
-movq 24(%rsp), %r12
-movq %r8, %r11
-shrq $40, %r11
-movq $1099511627775, %r10
-andq %r8, %r10
-movq %rbx, %r9
-shrq $40, %r9
-movq $1099511627775, %rax
-andq %rbx, %rax
-movq %rax, 144(%rsp)
-movq %rdi, %rax
-shrq $40, %rax
-movq %rax, 152(%rsp)
-movq $1099511627775, %rax
-andq %rdi, %rax
-movq %rax, 160(%rsp)
-.Lca_nat_xor_222222151222222221H:
-cmpq %r12, %r13
-jae .Lca_nat_xor_222222151222222221X
-movq %r9, %rax
-andq $1, %rax
-movq 144(%rsp), %rsi
-addq %r13, %rsi
-cmpq 1504(%r15,%rax,8), %rsi
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%rsi,8), %rsi
-movq 152(%rsp), %rcx
-andq $1, %rcx
-movq 160(%rsp), %rax
-addq %r13, %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %rax, %rsi
-movq %r10, %rax
-addq %r13, %rax
-movq %rsi, %rdx
-movq %r11, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
+movq 32(%rsp), %rdi
+movq (%rsp), %r8
+movq 16(%rsp), %r9
+movq 24(%rsp), %r10
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_xor_222222151222222221H
-.Lca_nat_xor_222222151222222221X:
-movq $0, 48(%rsp)
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq $0, %r12
-movq 32(%rsp), %r8
+call ca_f_xor_n
+movq %rax, 48(%rsp)
+movq 32(%rsp), %rdi
+addq 24(%rsp), %rdi
+movq (%rsp), %r8
 addq 24(%rsp), %r8
-movq (%rsp), %rbx
-addq 24(%rsp), %rbx
-movq 8(%rsp), %rdi
-subq 24(%rsp), %rdi
-movq %r8, %rsi
-shrq $40, %rsi
-movq $1099511627775, %r11
-andq %r8, %r11
-movq %rbx, %r10
-shrq $40, %r10
-movq $1099511627775, %r9
-andq %rbx, %r9
-.Lca_nat_xor_2222221522222221H:
-cmpq %rdi, %r12
-jae .Lca_nat_xor_2222221522222221X
-movq %r10, %rax
-andq $1, %rax
-lea (%r9,%r12,1), %r13
-cmpq 1504(%r15,%rax,8), %r13
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r13,8), %r13
-movq %r11, %rax
-addq %r12, %rax
-movq %r13, %rdx
-movq %rsi, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r12
+movq 8(%rsp), %r9
+subq 24(%rsp), %r9
 subq $1, %r14
 jb ca_exhausted
-jmp .Lca_nat_xor_2222221522222221H
-.Lca_nat_xor_2222221522222221X:
-movq $0, 48(%rsp)
+call ca_f_copy_n
+movq %rax, 48(%rsp)
 .Lca_nat_xor_2222221X:
-movq 32(%rsp), %r8
-movq 40(%rsp), %rbx
+movq 32(%rsp), %rax
+movq %rax, 72(%rsp)
+movq 40(%rsp), %rax
+movq %rax, 80(%rsp)
 .Lca_nat_xor_22222221221H:
-cmpq $0, %rbx
+cmpq $0, 80(%rsp)
 jbe .Lca_nat_xor_22222221221X
-lea (%r8,%rbx,1), %rcx
+movq 72(%rsp), %rcx
+addq 80(%rsp), %rcx
 subq $1, %rcx
 shrq $40, %rcx
 andq $1, %rcx
-lea (%r8,%rbx,1), %rax
+movq 72(%rsp), %rax
+addq 80(%rsp), %rax
 subq $1, %rax
 movq $1099511627775, %rdx
 andq %rdx, %rax
@@ -152967,12 +152516,12 @@ movq 32(%r15,%rcx,8), %rdx
 movq (%rdx,%rax,8), %rax
 cmpq $0, %rax
 jne .Lca_nat_xor_22222221221X
-subq $1, %rbx
+subq $1, 80(%rsp)
 subq $1, %r14
 jb ca_exhausted
 jmp .Lca_nat_xor_22222221221H
 .Lca_nat_xor_22222221221X:
-movq %rbx, %rax
+movq 80(%rsp), %rax
 movq %rax, 40(%rsp)
 movq 32(%rsp), %rax
 addq 40(%rsp), %rax
@@ -152982,12 +152531,12 @@ jmp .Lca_nat_xor_0R
 .Lca_nat_xor_0Z:
 movq $0, %rax
 .Lca_nat_xor_0R:
-addq $176, %rsp
+addq $96, %rsp
 ret
 ca_f_nat_xor_lit:
 movq %rsp, %rax
 subq 8(%r15), %rax
-cmpq $240, %rax
+cmpq $64, %rax
 jb ca_exhausted
 subq $56, %rsp
 movq %rdi, (%rsp)
@@ -163945,61 +163494,54 @@ movq $0, %rdi
 addq $136, %rsp
 ret
 ca_f_or_n:
-subq $104, %rsp
-movq %rdi, (%rsp)
-movq %r8, 8(%rsp)
-movq %r9, 16(%rsp)
-movq $0, %r13
-movq (%rsp), %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq (%rsp), %rsi
-movq 8(%rsp), %r11
-shrq $40, %r11
-movq $1099511627775, %r9
-andq 8(%rsp), %r9
-movq 16(%rsp), %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq 16(%rsp), %rdi
-.Lca_or_n_2222221H:
-cmpq %r10, %r13
-jae .Lca_or_n_2222221X
-movq %r11, %rax
-andq $1, %rax
-lea (%r9,%r13,1), %r12
-cmpq 1504(%r15,%rax,8), %r12
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r8, %rcx
+cmpq $0, %r10
+je .Lasm_or_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-lea (%rdi,%r13,1), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-orq %rax, %r12
-movq %rsi, %rax
-addq %r13, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
-subq $1, %r14
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq %r9, %r12
+shrq $40, %r12
+andq $1, %r12
+andq %rax, %r9
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
 jb ca_exhausted
-jmp .Lca_or_n_2222221H
-.Lca_or_n_2222221X:
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%r12,8), %rax
+subq %r9, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%r12,8), %rbx
+lea (%rbx,%r9,8), %rbx
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r10, %r14
+jb ca_exhausted
+movq $0, %r13
+.Lasm_or_n_L:
+movq (%rsi,%r13,8), %rax
+orq (%rbx,%r13,8), %rax
+movq %rax, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r10, %r13
+jb .Lasm_or_n_L
+.Lasm_or_n_Z:
 movq $0, %rax
-jmp .Lca_or_n_0R
-.Lca_or_n_0Z:
-movq $0, %rax
-.Lca_or_n_0R:
-addq $104, %rsp
 ret
 ca_f_par_compact:
 subq $56, %rsp
@@ -218538,61 +218080,54 @@ movq $0, %rax
 addq $40, %rsp
 ret
 ca_f_xor_n:
-subq $104, %rsp
-movq %rdi, (%rsp)
-movq %r8, 8(%rsp)
-movq %r9, 16(%rsp)
-movq $0, %r13
-movq (%rsp), %rbx
-shrq $40, %rbx
-movq $1099511627775, %rsi
-andq (%rsp), %rsi
-movq 8(%rsp), %r11
-shrq $40, %r11
-movq $1099511627775, %r9
-andq 8(%rsp), %r9
-movq 16(%rsp), %r8
-shrq $40, %r8
-movq $1099511627775, %rdi
-andq 16(%rsp), %rdi
-.Lca_xor_n_2222221H:
-cmpq %r10, %r13
-jae .Lca_xor_n_2222221X
-movq %r11, %rax
-andq $1, %rax
-lea (%r9,%r13,1), %r12
-cmpq 1504(%r15,%rax,8), %r12
-jae ca_error
-movq 32(%r15,%rax,8), %rcx
-movq (%rcx,%r12,8), %r12
-movq %r8, %rcx
+cmpq $0, %r10
+je .Lasm_xor_n_Z
+movq $1099511627775, %rax
+movq %rdi, %rcx
+shrq $40, %rcx
 andq $1, %rcx
-lea (%rdi,%r13,1), %rax
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rdx
-movq (%rdx,%rax,8), %rax
-xorq %rax, %r12
-movq %rsi, %rax
-addq %r13, %rax
-movq %r12, %rdx
-movq %rbx, %rcx
-andq $1, %rcx
-cmpq 1504(%r15,%rcx,8), %rax
-jae ca_error
-movq 32(%r15,%rcx,8), %rcx
-movq %rdx, (%rcx,%rax,8)
-addq $1, %r13
-subq $1, %r14
+andq %rax, %rdi
+movq %r8, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+andq %rax, %r8
+movq %r9, %r12
+shrq $40, %r12
+andq $1, %r12
+andq %rax, %r9
+movq 1504(%r15,%rdx,8), %rax
+subq %r8, %rax
 jb ca_exhausted
-jmp .Lca_xor_n_2222221H
-.Lca_xor_n_2222221X:
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rdx,8), %rsi
+lea (%rsi,%r8,8), %rsi
+movq 1504(%r15,%r12,8), %rax
+subq %r9, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%r12,8), %rbx
+lea (%rbx,%r9,8), %rbx
+movq 1504(%r15,%rcx,8), %rax
+subq %rdi, %rax
+jb ca_exhausted
+cmpq %r10, %rax
+jb ca_exhausted
+movq 32(%r15,%rcx,8), %rcx
+lea (%rcx,%rdi,8), %rdi
+subq %r10, %r14
+jb ca_exhausted
+movq $0, %r13
+.Lasm_xor_n_L:
+movq (%rsi,%r13,8), %rax
+xorq (%rbx,%r13,8), %rax
+movq %rax, (%rdi,%r13,8)
+addq $1, %r13
+cmpq %r10, %r13
+jb .Lasm_xor_n_L
+.Lasm_xor_n_Z:
 movq $0, %rax
-jmp .Lca_xor_n_0R
-.Lca_xor_n_0Z:
-movq $0, %rax
-.Lca_xor_n_0R:
-addq $104, %rsp
 ret
 ca_f_zero_find:
 subq $88, %rsp
