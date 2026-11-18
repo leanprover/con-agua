@@ -436,7 +436,7 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
   obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres⟩ := triple_of_callW
     (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
       (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
-      (natPredLit_instP p hp s₀.mem)
+      (natPredLit_instP p hp s₀.mem) hp.subN' hp.sub1'
       hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs hC.mode) h
   have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
   exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr
