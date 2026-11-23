@@ -90,9 +90,8 @@ same in both files. Both files are read into one store. The verdict line and
 the exit status are as above; two files that are not two different paths are a
 usage error (exit 3, no verdict line). The compared run is sequential: `--jobs`
 does not combine with it
-([docs/deviations.md](docs/deviations.md), D51). The final theorems (§2) are
-about the flat run and the threaded mode; no final theorem covers `--compare`
-yet.
+([docs/deviations.md](docs/deviations.md), D51). Its accept is covered by its
+own final theorems (§2.1, "The compared run").
 
 Every way the checker says no is an L `abort` with a code: the low two bits
 are the class (`1` reject, `2` decline, `0` other), the rest a reason, whose
@@ -194,6 +193,27 @@ as con-leche's model theorem is: they take `[ConLeche.SetTheory V]` (a model
 of ZF⁻ with an ω-chain of Grothendieck universes), which cannot be
 instantiated inside Lean, so they give their conclusion only given such a
 model. The accept and verdict theorems take no such model.
+
+**The compared run.** The harness calls `ca_compare` for `--compare`, the
+challenge's bytes as `ca_start`'s input and the solution's as two stack
+arguments
+([`CmpCall`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpAbi.lean#L32-L45)).
+[`checkerFile_compare_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L83-L88)
+says that every run returns, and that an accept means
+[`TwinComparesAccepts bC bS`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CompareTwin.lean#L56-L68):
+con-ron's compared run from the twin's start state, both files parsed into one
+store, the solution prepared and checked, then the challenge prepared, its holes
+read as the axioms of their statements (`sideRecordsGo`), and checked with the
+solution `solutionOf IS recsC`. Its corollaries
+([`checkerFile_compare_model`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L97-L108),
+[`checkerFile_compare_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L118-L125))
+are con-ron's `model_exists_compare` and `no_False_compare` in con-leche's
+terms: the challenge's prepared records, each hole the axiom of its statement,
+have a model in every set theory, and a challenge that declares a theorem of
+type `False` is not accepted, whatever the solution; nothing is concluded about
+the solution. The theorems take no hypothesis about the harness beyond the call:
+the solution's jobs run on a worker region inside the caller's region and are
+part of the proved driver. A reject or decline of `--compare` claims nothing.
 
 `TwinAccepts` is not trivially true: given a set-theory model, some input is
 not accepted

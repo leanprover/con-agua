@@ -271,8 +271,8 @@ static int run_main(int argc, char **argv) {
    as a FILE is. Sequential only. The two files are read as FILE is (`read_input`), the region is
    ca_cmp_region_size bytes, and `ca_compare` is called once, the challenge's bytes in the first
    two arguments (as `ca_start`'s input), the solution's in the last two (on the stack). The
-   verdict line and the exit status are `print_verdict`'s. No final theorem covers this call
-   yet: the theorems above are about `ca_start` and the threaded entries. */
+   verdict line and the exit status are `print_verdict`'s. Its accept is covered by
+   `checkerFile_compare_accepts` (ConAgua/Final/Compare.lean; the call is as `CmpCall` states). */
 extern ca_res ca_compare(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
                          void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
 extern const uint64_t ca_cmp_region_size;

@@ -259,6 +259,69 @@
     36  /-- info: 'ConLeche.Frontend.parseChunks_jsonWithTheoremFalse' depends on axioms: [propext, Classical.choice, Quot.sound] -/
     37  #guard_msgs in #print axioms ConLeche.Frontend.parseChunks_jsonWithTheoremFalse
 
+== ConAgua/Final/CmpAbi.lean#L32-L45
+    32  structure CmpCall (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) : Prop
+    33      extends AbiCall bC pb dm ra where
+    34    hsa : rdW dm.dmem (A (dm.regs.rsp.toNat + 8)) = some sa
+    35    hsn : rdW dm.dmem (A (dm.regs.rsp.toNat + 16)) = some (UInt64.ofNat bS.size)
+    36    hS : ∀ i (h : i < bS.size), dm.dmem.get? (A (sa.toNat + i)) = some bS[i]
+    37    hSEnd : sa.toNat + bS.size < 2 ^ 64
+    38    hSDisj : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size →
+    39      (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    40      ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + bC.size) ∧
+    41      ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) ∧
+    42      (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x)
+    43    hsEnd : dm.regs.rsp.toNat + 24 < 2 ^ 64
+    44    hsArgs : ∀ x, dm.regs.rsp.toNat + 8 ≤ x → x < dm.regs.rsp.toNat + 24 →
+    45      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+
+== ConAgua/Final/Compare.lean#L83-L88
+    83  theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+    84      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    85      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+    86      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    87          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS))
+    88        dm (label abiCompareL) :=
+
+== ConAgua/Final/CompareTwin.lean#L56-L68
+    56  def TwinComparesAccepts (bC bS : ByteArray) : Prop :=
+    57    ∃ (pins : List NatOpPinSet) (sA sB sC sC' sD sE sF sG sH sI : AState) (pre : PreludeIx)
+    58      (rC rS : ParseResultD) (dsS dsC : Array IDeclaration) (recsC : List IDeclaration)
+    59      (ipins : List INatOpPinSet) (IS IC : IStreamIndex),
+    60      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    61      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    62      parseChunks [bC] sB = .ok (.ok rC, sC) ∧
+    63      parseChunks [bS] sC = .ok (.ok rS, sC') ∧
+    64      preparePrelude pre rS.decls sC' = .ok (dsS, sD) ∧
+    65      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
+    66      SeqAcceptsJ .verified ipins none dsS sE IS sF ∧
+    67      preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
+    68      sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
+
+== ConAgua/Final/Compare.lean#L97-L108
+    97  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
+    98      (k0 : Nat) (hcode : Code checkerFile k0)
+    99      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   100      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+   101      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   102          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+   103            ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
+   104              ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
+   105              Nonempty (ConLeche.Model V (ConLeche.streamEnv
+   106                ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
+   107                  ConLeche.Cached.sideRecord)))))
+   108        dm (label abiCompareL) :=
+
+== ConAgua/Final/Compare.lean#L118-L125
+   118  theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   119      (k0 : Nat) (hcode : Code checkerFile k0)
+   120      (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
+   121      (h64 : System.Platform.numBits = 64)
+   122      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+   123      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   124          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   125        dm (label abiCompareL) :=
+
 == ConAgua/Audit/Final.lean#L47-L50
     47  theorem twinAccepts_not_trivial (V : Type w) [ConLeche.SetTheory V] :
     48      ∃ b : ByteArray, ¬ TwinAccepts [b] :=
@@ -606,17 +669,17 @@
    169        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.ds.size := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  
-   102  /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
-   103  (`CheckerCd`). -/
-   104  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
-   105      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-   106      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-   107      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
-   108      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-   109      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-   110      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-   111      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
+   101    dnOf_inj ho.drv.state.wf
+   102  
+   103  /-- `Quot`'s universe name has a handle under the record decoder after the stages. -/
+   104  theorem StagesOut.quotDn {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+   105      {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) : L.Ind.QuotDn (dnOf sE.store) := by
+   106    obtain ⟨k, hk, hd⟩ := ho.quot
+   107    exact ⟨k, by simp [dnOf, hk, hd]⟩
+   108  
+   109  /-- The jobs' program facts after the stages, from `CheckerCdG`. -/
+   110  theorem jobProg_of_out (hCd : CheckerCdG) {sE : AState} {ds : Array IDeclaration}
+   111      {ipins : List INatOpPinSet} {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins)
 
 == ConAgua/Arena/Verdict.lean#L54-L55
     54  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
@@ -1806,13 +1869,13 @@
     53      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
 == ConAgua/Checker/BuildStage.lean#L347-L353
-   347  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
-   348      (hsz : ∀ s, sz s < 2 ^ 64) :
-   349      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
-   350        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
-   351        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
-   352          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-   353          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+   347    r7 : R7 (ConAgua.Final.loadMem b pb sz) m₇ pb ds ipins sE
+   348    build : BuildR (dnOf sE.store) ds m sF I
+   349    frozen : FrozenR m I
+   350    fsize : I.firsts.size = ds.size
+   351    grow : BKeep m₇ m
+   352    frame : MemFrame biA biC m₇ m
+   353    bytes : m.bytes = m₇.bytes
 
 == ConAgua/Checker/Pipeline.lean#L74-L77
     74  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
@@ -2319,17 +2382,17 @@
    192        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  
-   102  /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
-   103  (`CheckerCd`). -/
-   104  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
-   105      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-   106      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-   107      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
-   108      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-   109      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-   110      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-   111      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
+   101    dnOf_inj ho.drv.state.wf
+   102  
+   103  /-- `Quot`'s universe name has a handle under the record decoder after the stages. -/
+   104  theorem StagesOut.quotDn {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+   105      {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) : L.Ind.QuotDn (dnOf sE.store) := by
+   106    obtain ⟨k, hk, hd⟩ := ho.quot
+   107    exact ⟨k, by simp [dnOf, hk, hd]⟩
+   108  
+   109  /-- The jobs' program facts after the stages, from `CheckerCdG`. -/
+   110  theorem jobProg_of_out (hCd : CheckerCdG) {sE : AState} {ds : Array IDeclaration}
+   111      {ipins : List INatOpPinSet} {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins)
 
 == main.c#L169-L187
    169  /* `--jobs=N` (N > 1), the threaded mode.
