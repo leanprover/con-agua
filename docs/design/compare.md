@@ -260,3 +260,14 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
 * 23:15 start (branch `compare2` from `compare-land2` 6a6e84fbb). 23:20 the twin statements
   (15cf26fa7), sent to the coordinator. 23:22 helpers H1 `compare2-verdict`, H2
   `compare2-freeze`, H3 `compare2-abi` (briefs `_tmp/compare2/brief-*.md`).
+* 23:35–23:50 helpers' plans. H1: `JwGuard` is dischargeable (the twin's `justifyWhy` runs ok on L's
+  abort path; the names read back denote: the record's name, and the cone's culprit by a
+  `coneGo` induction; the mates need a new store-level fact `CvMatesDen`); `JobGs` loses its
+  `JwGuard` conjunct. H2: the 9 rows appended to `frozen` with extents `CTL[224] · 2 · count`
+  (the mates' slices are in the frozen `EREC` image; the walks' memos are fine on a fresh worker);
+  `frozen.length` 63 → 72, `hdrW` 136 → 154; mode 7 = `check_c3(1)`. H3: **no new driver stubs**:
+  the threaded harness calls the existing mode entries `ca_start_a4`, `ca_start_a5` and a new
+  `ca_start_a7` (one directive more), whose machine theorems (`abiMode_outcome`,
+  `abiModeM_outcome`) exist; the cost is three trusted first returns and the region carried
+  between the calls (harness facts of `ThreadsAcc.next`'s kind) instead of ~250 lines of stub
+  proof.
