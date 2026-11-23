@@ -124,7 +124,7 @@ theorem high_ne_accept {k : Word} (hk : k.toNat < 2 ^ 63) : (9223372036854775808
 
 /-- **The compared run's L runs at the checker accept ⇒ the twin's compared run accepts.** -/
 theorem cmpAccepts_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : CmpAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL bC bS pb) :
+    (h : CmpAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL bC bS pb) :
     TwinComparesAccepts bC bS := by
   obtain ⟨hbC, hpb, rs4, m4, h4, hor4⟩ := h
   have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
@@ -172,8 +172,8 @@ theorem cmpAccepts_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
       abiSz checkerTab (stxArr g) = abiSz checkerTab (tixArr g) := by
     intro g hg
     rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
-  obtain ⟨c, ⟨m9, hF6, -, rfl⟩, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO
-    (by simp [cmpM6, Mem.setG]) abiFuel hN rs6 _ h6
+  obtain ⟨c, ⟨m9, hF6, -, rfl⟩, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO 6 0
+    (Or.inl ⟨rfl, rfl⟩) (by simp [cmpM6, Mem.setG]) abiFuel hN rs6 _ h6
   have hc63 : c.toNat < 2 ^ 63 := by
     obtain ⟨m6', ⟨m2, m3, dsC, sG, res, m4', m5', h, -⟩, -⟩ := hF6
     have := h.count.1
@@ -192,7 +192,7 @@ theorem cmpAccepts_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
   have hhi : (rs6.getD 0 0 - 9223372036854775808) = c := by
     rw [L.getD_zero, hres6, UInt64.add_comm, UInt64.add_sub_cancel]
   obtain ⟨m2, m3, dsC, sG, res, m4', I, a', hS6, hI, s7, hCJ⟩ := cmpCJobs_twin hpb PS hF ⟨s'', hSJ⟩ hF6 hb9
-    (w := seqMem (parCompactMem m9 0) MODE PLO PHI OUT HDRF CTLF 138 0 (rs6.getD 0 0 - 9223372036854775808))
+    (w := seqMem (parCompactMem m9 0) MODE PLO PHI OUT HDRF CTLF hdrHw 0 (rs6.getD 0 0 - 9223372036854775808))
     (fun a ha => by
       rw [seqMem_arr64]
       have h1 : ¬ (a = ↑OUT ∨ a = ↑CTLF) := by

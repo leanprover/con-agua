@@ -539,10 +539,9 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
     simp only [fzOK, he.1, he.2, hF.size, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,
       decide_eq_true_eq] at hk
     obtain ⟨⟨⟨hld, hcp⟩, h10⟩, h11⟩ := hk
-    have hn61 : n < 63 := by have : frozen.length = 63 := by decide
-                             omega
+    have hfl := frozen_length
     rw [toNat_hdr _ (by omega)] at h10 h11
-    have hW' : hdrW = 136 := by decide
+    have hW' := hdrW_eq
     -- the offsets
     have hO : c ≠ 0 → (fzOff m n).toNat = hdrW + fzSum m n ∧
         (fzOff m n).toNat + (fzEv m (fzAt n).e).toNat ≤ (m.arr64 OUT).size ∧
@@ -606,7 +605,6 @@ theorem pcGo_good (m : Mem) (c : Word) (hW : hdrW ≤ (m.arr64 OUT).size)
 
 /-! ## The memory after `par_compact` -/
 
-theorem frozen_length : frozen.length = 63 := by decide
 
 /-- **`par_compact` writes only `OUT`.** -/
 theorem parCompactMem_out (m : Mem) (c : Word) : OutFrame m (parCompactMem m c) := by
@@ -627,12 +625,15 @@ theorem parCompactOK_hdr {m : Mem} {c : Word} (h : parCompactOK m c = true) :
     hdrW ≤ (m.arr64 OUT).size := by
   simp only [parCompactOK, Bool.and_eq_true] at h
   have h1 := h.1.1.1
-  rw [frozen_length, show (63 : Nat) = 62 + 1 from rfl, pcOK_range_succ, Bool.and_eq_true] at h1
+  obtain ⟨k, hk⟩ : ∃ k, frozen.length = k + 1 := ⟨_, frozen_length⟩
+  have hk' : k = frozen.length - 1 := by omega
+  have hfl := frozen_length
+  rw [hk, pcOK_range_succ, Bool.and_eq_true] at h1
   have h2 := h1.2
   simp only [fzOK, Bool.and_eq_true, decide_eq_true_eq] at h2
   have h3 := h2.2
   rw [toNat_hdr _ (by omega), (OutFrame.pcGo c _ m _).size] at h3
-  have : hdrW = 136 := by decide
+  have  := hdrW_eq
   omega
 
 theorem getD_pcTail_lo (M : Mem) (o : Word) (h : 9 < (M.arr64 OUT).size) :
@@ -706,7 +707,7 @@ theorem parCompactMem_img {m : Mem} {c : Word} (h : parCompactOK m c = true) (hc
   have hg := pcGo_good m c hW (fun _ => hlt) frozen.length (Nat.le_refl _) h.1.1.1
   have ho := hg.1 hc |>.1 i (by omega)
   refine ⟨ho, fun t ht => ?_⟩
-  have : hdrW = 136 := by decide
+  have  := hdrW_eq
   rw [parCompactMem, getD_pcTail_hi _ _ _ (by omega), ho]
   exact hg.2.2 hc i hi t ht
 

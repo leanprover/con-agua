@@ -85,7 +85,8 @@ def fzSrcs : List TieredArray := tier0s
    SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC,
    FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, LSREC, LSSLOT, ADER, LADER,
    FADER, LEDER, PJDER, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP, PINS, EIXA, EIXS, EIXN, TIXA, TIXS,
-   TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP]
+   TIXN, EREC, FIRSTS, L.Front.DECL, L.Front.DLP, SIXA, SIXS, SIXN, STXA, STXS, STXN, MATA, MATS,
+   MATN]
 
 theorem frozen_srcs : (frozen.drop 1).map (fun e => (e.2.src : TieredArray)) = fzSrcs := by decide
 
@@ -126,7 +127,12 @@ theorem frozen_drop1 : frozen.drop 1 =
      (EREC, ⟨EREC, fzCtl 129⟩),
      (FIRSTS, ⟨FIRSTS, fzDecl⟩),
      (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
-     (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] := by
+     (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] ++
+    [(SIXA, ⟨SIXA, fzSolExt nanonCS.ca.toNat⟩), (SIXS, ⟨SIXS, fzSolExt nstrCS.ca.toNat⟩),
+     (SIXN, ⟨SIXN, fzSolExt nnumCS.ca.toNat⟩), (STXA, ⟨STXA, fzSolExt nanonCS.ca.toNat⟩),
+     (STXS, ⟨STXS, fzSolExt nstrCS.ca.toNat⟩), (STXN, ⟨STXN, fzSolExt nnumCS.ca.toNat⟩),
+     (MATA, ⟨MATA, fzSolExt nanonCS.ca.toNat⟩), (MATS, ⟨MATS, fzSolExt nstrCS.ca.toNat⟩),
+     (MATN, ⟨MATN, fzSolExt nnumCS.ca.toNat⟩)] := by
   simp only [frozen, List.cons_append, List.drop_succ_cons, List.drop_zero, List.nil_append,
     List.append_assoc]
 
@@ -169,7 +175,7 @@ theorem truncFrozen_ra (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, c
   have := truncFrozen_mem m (x := ra) (z := ⟨ra, .bin .mul (fzCtl ca) (fzC w)⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_flatMap]
-    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
+    exact .inl (.inl (.inl (.inl (.inr ⟨_, h, by simp⟩)))))
   rw [this, fzExt_mulC]
 
 theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, ca) ∈ fzStores) :
@@ -177,7 +183,7 @@ theorem truncFrozen_sa (m : Mem) {ra sa : ArrId} {w ca : Nat} (h : (ra, sa, w, c
   have := truncFrozen_mem m (x := sa) (z := ⟨sa, fzSlotExt sa⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_flatMap]
-    exact .inl (.inl (.inl (.inr ⟨_, h, by simp⟩))))
+    exact .inl (.inl (.inl (.inl (.inr ⟨_, h, by simp⟩)))))
   rw [this, fzExt_slot]
 
 theorem truncFrozen_col (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzCols) :
@@ -185,7 +191,7 @@ theorem truncFrozen_col (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzCols
   have := truncFrozen_mem m (x := c) (z := ⟨c, fzCtl ca⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_map]
-    exact .inl (.inr ⟨_, h, rfl⟩))
+    exact .inl (.inl (.inr ⟨_, h, rfl⟩)))
   rw [this, fzExt_ctl]
 
 theorem truncFrozen_pcol (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzPCols) :
@@ -194,7 +200,7 @@ theorem truncFrozen_pcol (m : Mem) {c : ArrId} {ca : Nat} (h : (c, ca) ∈ fzPCo
   have := truncFrozen_mem m (x := c) (z := ⟨c, fzPExt ca⟩) (by
     rw [frozen_drop1]
     simp only [List.mem_append, List.mem_map]
-    exact .inl (.inl (.inr ⟨_, h, rfl⟩)))
+    exact .inl (.inl (.inl (.inr ⟨_, h, rfl⟩))))
   rw [this, fzExt_pext]
 
 theorem truncFrozen_pins (m : Mem) : (truncFrozen m).arr64 PINS = (m.arr64 PINS).extract 0 73 := by

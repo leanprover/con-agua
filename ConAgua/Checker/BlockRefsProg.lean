@@ -373,6 +373,7 @@ theorem tailRefS_checker (bs : List UInt8) (hr : RomOK bs) (hpre : bs = romData 
       (mem_of_tree armMcTree.eq (by decide +kernel)) h hM)
 
 set_option maxRecDepth 20000 in
+set_option maxHeartbeats 400000 in
 /-- **`check_block`'s callees' contracts at the substituted checker program** (from
 `stream_nested_ok`'s step `SnoSim`, the tail's last hypothesis). -/
 theorem cbRefs_checker (bs : List UInt8) (hr : RomOK bs)

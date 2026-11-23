@@ -87,7 +87,7 @@ theorem checkerFile_accepts_regs [Host]
       ⟨hpc, hr, fun h0 h1 => drvAccepts_twin b pb h64 (h h0 h1),
         fun hd hk => drvErr_twin b pb h64 _ seqVerdicts_proved (h2 hd) hk⟩)
     (drv_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT
-      HDRF CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
+      HDRF CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) checker_seqParamsOk k0
       (code_of_checkerFile_par hcode) L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm ra hc)
 
 /-- **The final theorem for the committed file `checker.s`** (called at the driver `ca_start`,

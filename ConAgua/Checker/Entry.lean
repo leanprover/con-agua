@@ -160,7 +160,8 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
   if MODE == 2 { r := call check_b(); return r };
   if MODE == 4 { r := call check_c1(); return r };
   if MODE == 5 { r := call check_c2(); return r };
-  if MODE == 6 { r := call check_c3(); return r };
+  if MODE == 6 { r := call check_c3(0); return r };
+  if MODE == 7 { r := call check_c3(1); return r };
   abort
 }
 
@@ -237,6 +238,8 @@ def entryProg : Prog :=
    ("fz_50", fzF 50), ("fz_51", fzF 51), ("fz_52", fzF 52), ("fz_53", fzF 53), ("fz_54", fzF 54),
    ("fz_55", fzF 55), ("fz_56", fzF 56), ("fz_57", fzF 57), ("fz_58", fzF 58),
    ("fz_59", fzF 59), ("fz_60", fzF 60), ("fz_61", fzF 61), ("fz_62", fzF 62), ("fz_63", fzF 63),
+   ("fz_64", fzF 64), ("fz_65", fzF 65), ("fz_66", fzF 66), ("fz_67", fzF 67), ("fz_68", fzF 68),
+   ("fz_69", fzF 69), ("fz_70", fzF 70), ("fz_71", fzF 71),
    ("cap_check", capCheckL),
    -- the parse's large cons tables sized from the input length (`Checker/Presize.lean`)
    ("presize_tables", presizeTablesL), ("pow2_at_least", pow2AtLeastL),

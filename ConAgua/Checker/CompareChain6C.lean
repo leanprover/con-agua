@@ -39,8 +39,8 @@ theorem cntAt_self (m : Mem) (h : 0 < (m.arr64 L.Front.DECL).size) :
     CntAt ((m.arr64 L.Front.DECL)[0]'h) m := fun _ => rfl
 
 set_option experimental.vcgen true in
-/-- **`check_c3()` from its steps**: on a return, the final memory is the frozen buffer's (header
-only, `par_compact(0)`) after the flag's store on a memory `F c` (`c` the challenge's count, read
+/-- **`check_c3(k)` from its steps**: on a return, the final memory is the frozen buffer's
+(`par_compact(k)`: the header only for `k = 0`) after the flag's store on a memory `F c` (`c` the challenge's count, read
 after the preparation), and the result is `2^63 + c`. -/
 theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
     (hpc : p.lookup "par_compact" = some parCompactL)
@@ -53,9 +53,9 @@ theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
     (h5 : StageSpecC p "solution_of" Q4 Q5)
     (h6 : StageSpecC p "build_index" Q5 G)
     (hG : ∀ c m, G c m → F c (m.set64 CTL 224 1))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_c3" []
-    ⦃fun r s' => Q0 s₀.mem → ∃ c, PostPC 0 (F c) s'.mem ∧ r.headD 0 = (9223372036854775808 : Word) + c;
+    (k : Word) (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_c3" [k]
+    ⦃fun r s' => Q0 s₀.mem → ∃ c, PostPC k (F c) s'.mem ∧ r.headD 0 = (9223372036854775808 : Word) + c;
       ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkC3L]

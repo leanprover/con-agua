@@ -35,21 +35,31 @@ theorem StageSpecC.mono {p : Prog} {f : FnName} {Pre Pre' Post Post' : Word → 
   triple_post (h n hn s₀ c) fun _ _ ⟨hl, hP⟩ => ⟨hl, fun hp => h2 _ _ (hP (h1 _ _ hp))⟩
 
 set_option experimental.vcgen true in
-/-- **`check`'s dispatch to mode `6`**: with the mode word `6`, `check` is `check_c3()`. -/
-theorem check_dispatch6 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
-    (P : Word → Mem → Prop)
-    (hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c3" []
+/-- **`check`'s dispatch to modes `6` and `7`**: with the mode word `6` (resp. `7`), `check` is
+`check_c3(0)` (resp. `check_c3(1)`). -/
+theorem check_dispatch67 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
+    (md k : Word) (hmk : (md = 6 ∧ k = 0) ∨ (md = 7 ∧ k = 1)) (P : Word → Mem → Prop)
+    (hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c3" [k]
       ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check" []
-    ⦃fun r s' => s₀.mem.glob MODE = 6 → P (r.headD 0) s'.mem; ⊤⦄ := by
+    ⦃fun r s' => s₀.mem.glob MODE = md → P (r.headD 0) s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
-    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
-    (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c2" [] ·)]
-  all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
-    St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
-  all_goals grind [lang_grind]
+  rcases hmk with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
+      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+      (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c2" [] ·),
+      (L.invoke_loc p (exec p n) "check_c3" [1] ·)]
+    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
+    all_goals grind [lang_grind]
+  · vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
+      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+      (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c2" [] ·),
+      (L.invoke_loc p (exec p n) "check_c3" [0] ·)]
+    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
+    all_goals grind [lang_grind]
 
 /-- **Mode `6`'s end** before `par_compact(0)`: the challenge's index build (`G6`), then the flag. -/
 def F6 {bC bS : ByteArray} (PS : PhaseS bC bS) (m : Mem) (c : Word) (m9 : Mem) : Prop :=
@@ -63,10 +73,11 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
     (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
     (hk6 : Keep6 m PS.pre) (hsz : ∀ s, sz s < 2 ^ 64) (hpb : pb.size < 2 ^ 63)
     (hsz6 : ∀ g ≤ 2, sz (sixArr g) = sz (eixArr g) ∧ sz (stxArr g) = sz (tixArr g))
-    {M : Mem} (hO : OutEq m M) (hmode : M.glob MODE = 6)
+    {M : Mem} (hO : OutEq m M) (md k : Word) (hmk : (md = 6 ∧ k = 0) ∨ (md = 7 ∧ k = 1))
+    (hmode : M.glob MODE = md)
     (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
     (hrun : L.run checkerProg N "check" [] M = .ok (rs, m')) :
-    ∃ c, PostPC 0 (F6 PS m c) m' ∧ rs.headD 0 = (9223372036854775808 : Word) + c := by
+    ∃ c, PostPC k (F6 PS m c) m' ∧ rs.headD 0 = (9223372036854775808 : Word) + c := by
   have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
   have hc3 : checkerProg.lookup "check_c3" = some checkC3L := by chk_lk
   have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
@@ -92,13 +103,13 @@ theorem checkC3_run {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : Phas
   | succ n =>
     have hn : n ≤ 2 ^ 62 := by omega
     let s₀ : St := { mem := M, loc := Locals.init [] }
-    let P : Word → Mem → Prop := fun x m'' => ∃ c, PostPC 0 (F6 PS m c) m'' ∧ x = 9223372036854775808 + c
-    have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c3" []
+    let P : Word → Mem → Prop := fun x m'' => ∃ c, PostPC k (F6 PS m c) m'' ∧ x = 9223372036854775808 + c
+    have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c3" [k]
         ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
       triple_post (checkC3_of_stages hc3 hpc checkerProg_fz h1 h2 h3 h4 h5 h6
-        (F := F6 PS m) (fun c x hx => ⟨x, hx, rfl⟩) n hn s₁)
+        (F := F6 PS m) (fun c x hx => ⟨x, hx, rfl⟩) k n hn s₁)
         fun _ _ h e => h (by rw [e]; exact ⟨hO, hO.bytes⟩)
-    exact run_post (Q := fun x m'' => s₀.mem.glob MODE = 6 → P (x.headD 0) m'') hrun
-      (check_dispatch6 hlc n s₀ P hC) hmode
+    exact run_post (Q := fun x m'' => s₀.mem.glob MODE = md → P (x.headD 0) m'') hrun
+      (check_dispatch67 hlc n s₀ md k hmk P hC) hmode
 
 end L.Checker

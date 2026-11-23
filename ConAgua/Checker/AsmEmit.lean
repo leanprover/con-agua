@@ -29,7 +29,7 @@ open L.Compiler L.Checker
 def main (args : List String) : IO Unit := do
   let out := args.headD "checker.s"
   let code := compileProgX checkerX checkerTab checkerProgI "check"
-  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF 138 L.Arena.frozenIdsL
+  IO.FS.writeFile out (asmTextAbiPar checkerTab L.Arena.MODE L.Arena.PLO L.Arena.PHI L.Arena.OUT L.Arena.HDRF L.Arena.CTLF L.Arena.hdrHw L.Arena.frozenIdsL
       L.Arena.parOwnedL (code ++ (cmpStub checkerTab L.Arena.MODE L.Arena.OUT L.Arena.parOwnedL ++ ctaStub checkerTab L.Arena.MODE)) ++
     tabSymbols checkerTab ++ cmpSymbols checkerTab L.Arena.parOwnedL ++
     ".globl ca_compare\n.globl ca_start_a4\n.globl ca_start_a5\n.globl ca_start_a7\n.globl ca_diag\nca_diag: .quad -1\n")
