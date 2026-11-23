@@ -4,6 +4,7 @@ public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.ThreadsFinal
 public import ConAgua.Checker.CompareChain5
 import ConAgua.Front.Preserve
+import ConAgua.Checker.CmpHdrKeep
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.AsmFinal
 import all ConAgua.Checker.Entry
@@ -131,5 +132,22 @@ theorem checker_cmpBufOk (bC bS pb : ByteArray) (h64 : System.Platform.numBits =
   rcases Nat.lt_or_gt_of_ne hne with h | h
   · exact .inl (hord i hi i' hi' h)
   · exact .inr (.inl (hord i' hi' i hi h))
+
+/-- **A job keeps the header** (`CmpGuard`'s second half, for the checker): `check` with the mode
+word `2` stores into neither the header nor the seed (`check_mode2_hk`). -/
+theorem checker_cmpHdrKeep : CmpHdrKeep checkerProg MODE PLO PHI frozenIdsL parOwnedL := by
+  intro B r j rs r' h _
+  have h' : L.run checkerProg abiFuel "check" [] (bufMem B r j) = .ok (rs, r') := by rw [bufMem_eq]; exact h
+  have hk := run_post (Q := fun _ m'' => (bufMem B r j).glob MODE = 2 → HkFr (bufMem B r j) m'')
+    h' (check_mode2_hk abiFuel _) rfl
+  have e : frozenIdsL[0] = (HDRF : TieredArray) := rfl
+  rw [e, hk.1, bufMem_hdr]
+
+/-- **`CmpGuard` for the checker**. -/
+theorem checker_cmpGuard (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (hbC : bC.size < 2 ^ 63) (hbS : bS.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63) :
+    CmpGuard checkerTab checkerProg MODE PLO PHI OUT frozenIdsL parOwnedL bC bS pb :=
+  ⟨fun _ _ _ _ h4 hge4 h5 hge5 => checker_cmpBufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5,
+    checker_cmpHdrKeep⟩
 
 end ConAgua.Final
