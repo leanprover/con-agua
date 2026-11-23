@@ -151,6 +151,7 @@ structure SolR (m : Mem) (J : ISolution) : Prop where
   next : (ctlW m SNEXTC).toNat = J.idx.next
   size : (ctlW m SCNTC).toNat = J.idx.firsts.size
   mates : ∀ n : NIdx, J.mates[n]? = matList m n.word.toUInt64
+  mates_dec : ∀ w : Word, (matRow m w).1 ≠ 0 → (matList m w).isSome
   /-- A row's counter and position words are below `2^32` (the index build's capacity). -/
   rows : ∀ w : Word, (solRow m w).1.toNat < 2 ^ 32 ∧ (solTbl m w).1.toNat < 2 ^ 32
 
@@ -158,6 +159,80 @@ structure SolR (m : Mem) (J : ISolution) : Prop where
 def OptSolR (m : Mem) : Option ISolution → Prop
   | none => ctlW m SOLC = 0
   | some J => ctlW m SOLC = 1 ∧ SolR m J
+
+/-- `SolR`'s arrays: the solution's rows and the mates' rows, `210‥218`. -/
+def solArrs : List TieredArray := [SIXA, SIXS, SIXN, STXA, STXS, STXN, MATA, MATS, MATN]
+
+/-- `OptSolR`'s control words. -/
+def solCtl : List Word := [SOLC, SNEXTC, SCNTC]
+
+theorem six_mem (g : Nat) : (sixArr g : TieredArray) ∈ solArrs := by
+  unfold sixArr; split <;> (try split) <;> decide
+theorem stx_mem (g : Nat) : (stxArr g : TieredArray) ∈ solArrs := by
+  unfold stxArr; split <;> (try split) <;> decide
+theorem mat_mem (g : Nat) : (matArr g : TieredArray) ∈ solArrs := by
+  unfold matArr; split <;> (try split) <;> decide
+
+theorem solArrs_arr {b : TieredArray} (h : b ∈ solArrs) : 210 ≤ b.arr ∧ b.arr ≤ 218 ∧ b.hi = false := by
+  simp only [solArrs, List.mem_cons, List.not_mem_nil, or_false] at h
+  rcases h with h | h | h | h | h | h | h | h | h <;> subst h <;> decide
+
+/-- **`SolR` across a frame that may grow the record pool**: every array the frame names is not
+`SolR`'s, every control word not `SolR`'s, and the record pool only grows. -/
+theorem SolR.growF {A : List TieredArray} {C : List Word} {m m' : Mem} {J : ISolution}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ∉ solArrs) (hC : ∀ x ∈ C, x ∉ solCtl)
+    (hg : ErecGrow m m') (h : SolR m J) : SolR m' J := by
+  have hx := hg.ext
+  have he : ∀ b ∈ solArrs, m'.arr64 b = m.arr64 b := fun b hb =>
+    hf.arr b (fun hm => hA b hm hb) (fun e => by subst e; revert hb; decide)
+  have hc : ∀ x ∈ solCtl, rdW (m'.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x hx =>
+    hf.ctl x (fun hm => hC x hm hx)
+  have hr : ∀ w, solRow m' w = solRow m w := fun w => by simp only [solRow, he _ (six_mem _)]
+  have ht : ∀ w, solTbl m' w = solTbl m w := fun w => by simp only [solTbl, he _ (stx_mem _)]
+  have hm : ∀ w, matRow m' w = matRow m w := fun w => by simp only [matRow, he _ (mat_mem _)]
+  have hl : ∀ w, matList m' w = matList m w := fun w => by
+    unfold matList
+    rw [hm]
+    split
+    · rfl
+    · rename_i c
+      obtain ⟨xs, hxs⟩ := Option.isSome_iff_exists.mp (h.mates_dec w c)
+      unfold matList at hxs; simp only [c, ite_false] at hxs
+      rw [hxs, hx.hslice? hxs]
+  refine ⟨fun n => ?_, fun n => ?_, ?_, ?_, fun n => by rw [h.mates n, hl], fun w hw => ?_,
+    fun w => by rw [hr, ht]; exact h.rows w⟩
+  · have := h.base n; rw [hr]
+    rw [this]; split
+    · rfl
+    · cases e : J.idx.base.idx[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decCI this.2.symm]
+  · have := h.btbl n; rw [ht]
+    rw [this]; split
+    · rfl
+    · cases e : J.idx.base.tbls[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decTbl this.2.symm]
+  · rw [ctlW, hc _ (by decide)]; exact h.next
+  · rw [ctlW, hc _ (by decide)]; exact h.size
+  · rw [hl]; rw [hm] at hw; exact h.mates_dec w hw
+
+/-- **`OptSolR` across such a frame.** -/
+theorem OptSolR.growF {A : List TieredArray} {C : List Word} {m m' : Mem} {J : Option ISolution}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ∉ solArrs) (hC : ∀ x ∈ C, x ∉ solCtl)
+    (hg : ErecGrow m m') (h : OptSolR m J) : OptSolR m' J := by
+  have h0 : rdW (m'.arr64 CTL) SOLC = rdW (m.arr64 CTL) SOLC := hf.ctl _ (fun hm => hC _ hm (by decide))
+  cases J with
+  | none => simp only [OptSolR, ctlW] at h ⊢; rw [h0, h]
+  | some J => simp only [OptSolR, ctlW] at h ⊢; exact ⟨by rw [h0, h.1], h.2.growF hf hA hC hg⟩
 
 /-! ## The memos of the walks -/
 

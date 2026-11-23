@@ -81,3 +81,4 @@ public import ConAgua.Arena.IotaFrameIface
 public import ConAgua.Arena.IotaFrameModels
 public import ConAgua.Arena.IotaFrameRef
 public import ConAgua.Arena.IotaRelModels
+public import ConAgua.Arena.JustifyIface
