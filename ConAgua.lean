@@ -105,6 +105,7 @@ public import ConAgua.Arena.JustifyRef7
 public import ConAgua.Arena.CmpVMates
 public import ConAgua.Arena.CmpVRoots
 public import ConAgua.Arena.CmpVCone
+public import ConAgua.Verdict.CmpVModes
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.CompareChain
 public import ConAgua.Checker.CompareTwinFacts

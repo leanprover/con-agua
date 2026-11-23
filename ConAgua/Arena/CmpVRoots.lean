@@ -19,12 +19,11 @@ import ConRon.Bridge.Frontend.Lines
 /-!
 # The needs walks read back exactly (lane compare2, helper compare2-verdict)
 
-con-ron's `Bridge/Modular/Roots.lean` (8021ddac), its first part: the twin's needs walks
-(`needsGo`, `NeedsSt.expr/exprs/rule/rules/const/table`, `pinFootprint`) list exactly the names
-upstream's list, read back (`XRel`: the memo and the list). The vendored module does not build at
-this pin past this part (its modular-reach half), and nothing else in con-ron imports it; the part
-the compared run's verdict needs (`Arena/CmpVCone.lean`: every listed handle denotes) is carried
-here unchanged, in a namespace of its own.
+The twin's needs walks (`needsGo`, `NeedsSt.expr/exprs/rule/rules/const/table`, `pinFootprint`)
+list exactly the names upstream's do, read back (`XRel`). This is
+`vendor/con-ron/ConRon/Bridge/Modular/Roots.lean` lines 38-593 unchanged (namespace `CmpV`), the
+closure of what `Arena/CmpVCone.lean` uses; not imported because that module fails to build at
+our pin from line 796 on (its modular-reach half). Delete when the vendored module builds.
 -/
 
 namespace ConRon.Bridge.CmpV
