@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.PipeRest
 public import ConAgua.Checker.PreLoopWSStages
+public import ConAgua.Front.FrontPreOK1
 public import ConAgua.Checker.ParEntryA
 public import ConAgua.Checker.PresizeStage
 import ConAgua.Checker.CheckARun
@@ -147,28 +148,42 @@ theorem stash_stateDR {m : Mem} {st : StateD} {pre : Array IDeclaration}
 
 /-! ## The challenge's `front_run`, with its parse state -/
 
-/-- **`front_run` from `R4`, keeping the parse state**: `frontStage_checker`'s statement with the
-parse state's relation (`StateDR`, at the twin's final parse state `st` after the prelude's
-records), which `cmp_stash` needs to empty the id tables. -/
-theorem frontStageS_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
-    (hb : b.size < 2 ^ 63) (sz : TieredArray → Nat) (pre : PreludeIx) (a : AState) :
-    RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb sz) m pb pre a) fun r m =>
+/-- **`DLP` kept up to the top of `m₀`**: its words `1 ‥ dtop m₀` are `m₀`'s, its top is at least
+`m₀`'s (what the solution's parse leaves of the challenge's records' pool). -/
+def DLPKeep (m₀ m : Mem) : Prop :=
+  (∀ j, 0 < j → j ≤ dtop m₀ → (m.arr64 DLP)[j]? = (m₀.arr64 DLP)[j]?) ∧ dtop m₀ ≤ dtop m
+
+theorem DLPKeep.refl (m : Mem) : DLPKeep m m := ⟨fun _ _ _ => rfl, Nat.le_refl _⟩
+
+theorem DLPKeep.grow {m₀ m m' : Mem} (h : DLPKeep m₀ m) (hg : DGrow m m') : DLPKeep m₀ m' :=
+  ⟨fun j h0 hj => (hg.dlp j h0 (Nat.le_trans hj h.2)).trans (h.1 j h0 hj), Nat.le_trans h.2 hg.top⟩
+
+/-- **`front_run` from `R4` at the memory `m₀`, keeping the parse state and `DLP`**: `frontStage_checker`'s
+statement with the parse state's relation (`StateDR`, at the twin's final parse state `st` after
+the prelude's records), which `cmp_stash` needs to empty the id tables, and what the run keeps
+of `m₀` (`DLPKeep`, the bytes and sizes, the stage's write set). -/
+theorem frontStageD_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
+    (hb : b.size < 2 ^ 63) (sz : TieredArray → Nat) (pre : PreludeIx) (a : AState) (m₀ : Mem) :
+    RelSpec checkerProg "front_run" (fun m => m = m₀ ∧ R4 (loadMem b pb sz) m pb pre a) fun r m =>
       r.headD 0 = 0 → ∃ (rc : ParseResultD) (a' : AState) (st : StateD), parseChunks [b] a = .ok (.ok rc, a') ∧
-        R5 (loadMem b pb sz) m pb pre rc a' ∧ StateDR m (st.pre pre.decls) ∧ rc.decls = st.decls := by
-  intro n _hn s₀ h4
+        R5 (loadMem b pb sz) m pb pre rc a' ∧ StateDR m (st.pre pre.decls) ∧ rc.decls = st.decls ∧
+        DLPKeep m₀ m ∧ L.Keep m₀ m ∧ MemFrame stageA_front_run stageC_front_run m₀ m := by
+  intro n _hn s₀ ⟨hm₀, h4⟩
   have hm : s₀.mem.arr8 IN = b.data := by rw [h4.since.keep.arr8]; exact loadMem_in b pb sz
-  refine triple_post (triple_and (triple_and (L.Front.frontRunOK_checker pre.decls b h64 hb n s₀ hm
-    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode)
+  refine triple_post (triple_and (triple_and (L.Front.frontRunOKK_checker (DLPKeep s₀.mem)
+    (fun _ _ h hg => h.grow hg) pre.decls b h64 hb n s₀ hm
+    a h4.arena h4.sdr h4.twin.ok h4.twin.off h4.twin.pins h4.rok h4.mode (DLPKeep.refl _))
     (stage_since n (preLoop_mem "front_run" (by decide +kernel)) s₀))
     (stageFrame_front_run n s₀)) fun r s' ⟨⟨hpost, hl, hk, hpf⟩, hsf⟩ => ⟨hl, fun h0 => ?_⟩
-  obtain ⟨st, a', hp, hA, hD, hto, hM, hR⟩ := hpost h0
+  obtain ⟨st, a', hp, hA, hD, hto, hM, hR, hKp⟩ := hpost h0
+  subst hm₀
   have hu : b.size < USize.size := by
     rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega
   have hcp : parseChunks [b] a = .ok (.ok (.ofState st), a') := by
     have := ConAgua.Front.ChunkBridge.parseChunks_single b hu
     rw [this]; exact hp
   obtain ⟨hstep, -, -⟩ := ConRon.Bridge.Frontend.parseChunks_run h4.twin.ok h4.twin.off h4.twin.pins hcp
-  refine ⟨_, a', st, hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_, hM⟩, hD, rfl⟩
+  refine ⟨_, a', st, hcp, ⟨h4.since.step hk hpf, hA, hD.decls, ?_, ?_, ?_, ?_, ?_, hM⟩, hD, rfl, hKp, hk, hsf⟩
   · rw [hsf.ctl 240 (stageC_front_run_off _ (by decide))]; exact h4.np
   · rw [hstep.pins]
     exact h4.pf.frame hsf stageA_front_run_pins (by decide +kernel) (by decide +kernel)
@@ -183,6 +198,17 @@ theorem frontStageS_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArr
       (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
       (not_mem_of_toNat (Z := [73, 75, 129, 200, 130]) (by decide +kernel) _ (by decide))
   · exact fun x hx => hR x (by simpa [ParseResultD.ofState] using hx)
+
+/-- **`front_run` from `R4`, keeping the parse state** (`frontStageD_checker`). -/
+theorem frontStageS_checker (h64 : System.Platform.numBits = 64) (b pb : ByteArray)
+    (hb : b.size < 2 ^ 63) (sz : TieredArray → Nat) (pre : PreludeIx) (a : AState) :
+    RelSpec checkerProg "front_run" (fun m => R4 (loadMem b pb sz) m pb pre a) fun r m =>
+      r.headD 0 = 0 → ∃ (rc : ParseResultD) (a' : AState) (st : StateD), parseChunks [b] a = .ok (.ok rc, a') ∧
+        R5 (loadMem b pb sz) m pb pre rc a' ∧ StateDR m (st.pre pre.decls) ∧ rc.decls = st.decls :=
+  fun n hn s₀ h4 => triple_post (frontStageD_checker h64 b pb hb sz pre a s₀.mem n hn s₀ ⟨rfl, h4⟩)
+    fun _ _ ⟨hl, h⟩ => ⟨hl, fun h0 => by
+      obtain ⟨rc, a', st, h1, h2, h3, h4, -⟩ := h h0
+      exact ⟨rc, a', st, h1, h2, h3, h4⟩⟩
 
 /-! ## Mode `4`'s end -/
 
