@@ -231,3 +231,11 @@ flat runs' (D52).
 * **Open, not blocking:** the challenge's job driver (`Checker/CompareJobs.lean`, `*_seqR`) repeats the
   `vcgen` parts of the flat `*_seqO` ones; deriving the flat ones from it would rebuild the flat
   chain, left for a later cleanup.
+
+## 6. Checks before the final landing
+
+* `scripts/gates.sh` all 16 steps OK on `compare-land2` d68fb96e5 (master merged; H11: 26 unused
+  imports, 5 warnings, 3 anchors).
+* `diff-e2e --refs --parallel 16 --tests` at con-leche bc667610 (con-ron 8021ddac, con-ron-lean-twin
+  at this branch): **766/766 agree** (447 accepted, 319 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF
+  0; 7 skipped (`--max-nat-size`, D49).
