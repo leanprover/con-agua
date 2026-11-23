@@ -226,12 +226,12 @@ theorem ruleReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
   rcases c3 : callW p n "iota_parts_at" [qj + CI.cv, erRd m1 (qj + CI.ctorNparams), mI, rP, rw] m1 with
     _ | ⟨q3, m3⟩
   · rw [c3, ruleReadsW.k_iota_parts_at.none] at hW; cases hW
-  obtain ⟨x3, a3, h3, ⟨hT3, hg3, hd3⟩, hA3⟩ := iotaPartsAt_rel PF n dn vis feR (qj + CI.cv)
+  obtain ⟨x3, a3, h3, ⟨hS3, hg3, hd3⟩, hA3⟩ := iotaPartsAt_rel PF n dn vis feR (qj + CI.cv)
     (erRd m1 (qj + CI.ctorNparams)) mI rP rw cvj rl m1 m3 a1 q3 c3
-    ⟨hI1.stageT, hA1, hcvj, hrl1⟩
+    ⟨hI1.stageT, hA1, k1.ok.state, hcvj, hrl1, ⟨_, hcvjP⟩, ⟨_, ConRon.Bridge.denoteRule_ext hrlP k1.ext⟩⟩
   obtain ⟨k3, hpa⟩ := ConRon.Bridge.Inductives.iotaPartsAt_run (env := env) (fe := fe) k1.ok hcvjP
     (ConRon.Bridge.denoteRule_ext hrlP k1.ext) h3
-  have hI3 := hI1.step hT3.stage hA3 k3
+  have hI3 := hI1.step hS3 hA3 k3
   rw [StateT.run_bind, h3, except_ok_bind]
   rcases x3 with _ | ⟨pp, pd⟩
   · simp only [decOIPD] at hd3
