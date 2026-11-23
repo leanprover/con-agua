@@ -296,6 +296,127 @@ theorem irSlEq (P : IotaRelProg p) {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {
     ⟨irMapDecI ws1 ws2 hl1 hl2, fun e => by rw [e]⟩
   by_cases e : ws1 = ws2 <;> simp [e, hinj]
 
+/-- `decIPAt 0` at seven words, unfolded. -/
+theorem irDecIP {m : Mem} {w1 w2 w3 w4 w5 w6 w7 : Word} {x : IIotaParts}
+    (h : decIPAt 0 m [w1, w2, w3, w4, w5, w6, w7] x) :
+    decHL m w1.toNat w2.toNat = some x.fieldDoms ∧ w1.toNat + w2.toNat ≤ iwTop m ∧
+    decHL m w3.toNat w4.toNat = some x.idx ∧ w3.toNat + w4.toNat ≤ iwTop m ∧
+    HW w5 ∧ decI w5 = x.us ∧
+    decHL m w6.toNat w7.toNat = some x.params ∧ w6.toNat + w7.toNat ≤ iwTop m := by
+  obtain ⟨⟨h1, h1b⟩, ⟨h2, h2b⟩, ⟨h3, h3e⟩, ⟨h4, h4b⟩⟩ := h
+  exact ⟨h1, h1b, h2, h2b, h3, h3e, h4, h4b⟩
+
+/-- **`iota_parts_rel(vis, cnP, q, r, IIotaParts', IIotaParts, pdO, pdL)` refines
+`iotaPartsRel feR cnP cv rl p' p pd`**. -/
+@[refines ConRon.Arena.iotaPartsRel]
+theorem iotaPartsRel_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
+    {cnP q rw a1 a2 a3 a4 a5 a6 a7 b1 b2 b3 b4 b5 b6 b7 pdO pdL : Word} {r : List Word}
+    {cv : IConstantVal} {rl : IRecRule} {x y : IIotaParts} {pd : List EIdx}
+    (hc : callW p n "iota_parts_rel" [vis, cnP, q, rw, a1, a2, a3, a4, a5, a6, a7,
+      b1, b2, b3, b4, b5, b6, b7, pdO, pdL] m = some (r, m'))
+    (hS : StageR vis feR m a) (hok : ConRon.Bridge.CheckOK false env fe a)
+    (hx : decIPAt 0 m [a1, a2, a3, a4, a5, a6, a7] x) (hy : decIPAt 0 m [b1, b2, b3, b4, b5, b6, b7] y)
+    (hcv : decCV (erecP m) q.toNat = some cv) (hrl : decRule (erecP m) rw.toNat = some rl)
+    (hpd : decHL m pdO.toNat pdL.toNat = some pd) (hpdb : pdO.toNat + pdL.toNat ≤ iwTop m) :
+    ∃ b a', (iotaPartsRel feR cnP.toNat cv rl x y pd).run a = .ok (b, a') ∧ StageR vis feR m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (iotaPartsRel_specW p P.ipr n _ vis cnP q rw a1 a2 a3 a4 a5 a6 a7 b1 b2 b3 b4 b5 b6 b7 pdO pdL) hc
+  rcases n with _ | n
+  · rw [iotaPartsRelW.eq_1] at hW; cases hW
+  rw [iotaPartsRelW.arm1] at hW
+  obtain ⟨xf, xfb, xi, xib, xu, xue, xp, xpb⟩ := irDecIP hx
+  obtain ⟨yf, yfb, yi, yib, yu, yue, yp, ypb⟩ := irDecIP hy
+  have hsz := hS.iw.iwSize
+  have hT := hS.iw.iw
+  have z0 : ∀ {mm : Mem} {b : Bool}, b = false → decW0B mm [0] b := fun h => by subst h; simp [decW0B]
+  simp only [iotaPartsRel]
+  -- the indices
+  rcases c1 : callW p n "sl_eq" [a3, a4, b3, b4] m with _ | ⟨r1, m1⟩
+  · rw [c1, iotaPartsRelW.k_sl_eq.none] at hW; cases hW
+  obtain ⟨hm1, e1⟩ := irSlEq P c1 xi (by omega) yi (by omega)
+  subst m1
+  by_cases hi : x.idx ≠ y.idx
+  · rw [c1, iotaPartsRelW.k_sl_eq.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [e1]; simp [hi])] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨false, a, by simp [hi]; rfl, hS, IWGrow.refl _, z0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+  have hi : x.idx = y.idx := Classical.not_not.mp hi
+  have hz1 : r1.headD 0 ≠ 0 := by rw [e1]; simp [hi]
+  simp only [hi, beq_self_eq_true, ite_true]
+  -- the levels
+  by_cases hu : a5 ≠ b5
+  · rw [c1, iotaPartsRelW.k_sl_eq.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz1 hu] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have : (x.us == y.us) = false := by
+      rw [← xue, ← yue, decI_beq _ _ xu yu]; simp [hu]
+    exact ⟨false, a, by simp only [this, Bool.false_eq_true, ite_false]; rfl, hS, IWGrow.refl _, z0 rfl,
+      ConRon.Bridge.CoreStep.refl hok⟩
+  have hu : a5 = b5 := Classical.not_not.mp hu
+  rw [c1, iotaPartsRelW.k_sl_eq.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz1 hu] at hW
+  have : (x.us == y.us) = true := by rw [← xue, ← yue, hu]; exact beq_self_eq_true _
+  simp only [this, ite_true]
+  -- the parameters
+  rcases c2 : callW p n "sl_eq" [a6, a7, b6, b7] m with _ | ⟨r2, m2⟩
+  · rw [c2, iotaPartsRelW.k_sl_eq_2.none] at hW; cases hW
+  obtain ⟨hm2, e2⟩ := irSlEq P c2 xp (by omega) yp (by omega)
+  subst m2
+  by_cases hp : x.params ≠ y.params
+  · rw [c2, iotaPartsRelW.k_sl_eq_2.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [e2]; simp [hp])] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨false, a, by simp [hp]; rfl, hS, IWGrow.refl _, z0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+  have hp : x.params = y.params := Classical.not_not.mp hp
+  rw [c2, iotaPartsRelW.k_sl_eq_2.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by rw [e2]; simp [hp])] at hW
+  simp only [hp, beq_self_eq_true, ite_true]
+  -- the fields' domains up to levels
+  rcases c3 : callW p n "list_lvl_eq" [a1, a2, b1, b2] m with _ | ⟨r3, m3⟩
+  · rw [c3, iotaPartsRelW.k_list_lvl_eq.none] at hW; cases hW
+  obtain ⟨b3, a3', h3, hS3, hg3, hd3, k3⟩ := listLvlEq_rel P P.lle c3 hS hok xf xfb yf yfb
+  rw [StateT.run_bind, h3, except_ok_bind]
+  by_cases hz3 : r3.headD 0 ≠ 0
+  · rw [c3, iotaPartsRelW.k_list_lvl_eq.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz3] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hb3 : b3 = true := by rw [← hd3.1]; exact bne_iff_ne.mpr hz3
+    subst hb3
+    exact ⟨true, a3', rfl, hS3, hg3, by simp [decW0B], k3⟩
+  have hz3 : r3.headD 0 = 0 := Classical.not_not.mp hz3
+  have hb3 : b3 = false := by have := hd3.1; rw [hz3] at this; simpa using this.symm
+  subst hb3
+  simp only [Bool.false_eq_true, ite_false]
+  -- the rule's fire kind
+  have hrl3 : decRule (erecP m3) rw.toNat = some rl := ArrExt.decRule hg3.ext hrl
+  rcases decRule_fireE (erRdOK m3) hrl3 with ⟨hf0, hfp⟩ | ⟨hf0, lvls, hfl, -⟩
+  rotate_left
+  · rw [c3, iotaPartsRelW.k_list_lvl_eq.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz3 hf0] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a3', ?_, hS3, hg3, z0 rfl, k3⟩
+    rcases hfl with hfl | ⟨pins, hfl⟩ <;> rw [hfl] <;> rfl
+  rw [c3, iotaPartsRelW.k_list_lvl_eq.arm3 _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz3 hf0] at hW
+  rw [hfp]
+  dsimp only
+  rcases c4 : callW p n "params_ann_eq" [vis, cnP, q, pdO, pdL] m3 with _ | ⟨r4, m4⟩
+  · rw [c4, iotaPartsRelW.k_params_ann_eq.none] at hW; cases hW
+  obtain ⟨b4, a4, h4, hS4, hg4, hd4, k4⟩ := paramsAnnEq_rel P c4 hS3 k3.ok (ArrExt.decCV hg3.ext hcv)
+    (decHL_grow' hg3 hpdb hpd) (Nat.le_trans hpdb hg3.iw)
+  rw [StateT.run_bind, h4, except_ok_bind]
+  by_cases hz4 : r4.headD 0 = 0
+  · rw [c4, iotaPartsRelW.k_params_ann_eq.arm1 _ _ _ _ _ _ _ _ _ hz4] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hb4 : b4 = false := by have := hd4.1; rw [hz4] at this; simpa using this.symm
+    subst hb4
+    exact ⟨false, a4, rfl, hS4, hg3.trans hg4, z0 rfl, k3.trans k4⟩
+  rw [c4, iotaPartsRelW.k_params_ann_eq.arm2 _ _ _ _ _ _ _ _ _ hz4] at hW
+  have hb4 : b4 = true := by rw [← hd4.1]; exact bne_iff_ne.mpr hz4
+  subst hb4
+  simp only [ite_true]
+  rcases c5 : callW p n "list_ann_eq" [vis, a1, a2, b1, b2] m4 with _ | ⟨r5, m5⟩
+  · rw [c5, iotaPartsRelW.k_list_ann_eq.none] at hW; cases hW
+  rw [c5, iotaPartsRelW.k_list_ann_eq.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have g34 := hg3.trans hg4
+  obtain ⟨b5, a5', h5, hS5, hg5, hd5, k5⟩ := listAnnEq_rel P P.lae c5 hS4 k4.ok
+    (decHL_grow' g34 xfb xf) (Nat.le_trans xfb g34.iw) (decHL_grow' g34 yfb yf) (Nat.le_trans yfb g34.iw)
+  exact ⟨b5, a5', h5, hS5, g34.trans hg5, hd5, k3.trans (k4.trans k5)⟩
+
 end lists
 
 end L.Ind
