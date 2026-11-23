@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.NeedsRef
 import ConAgua.Arena.RecLayout.RuleDec
 import ConAgua.Arena.RecLayout.CIDec
+import ConAgua.Arena.RecLayout.TblDec
 import all ConAgua.Arena.Needs
 
 @[expose] public section
@@ -165,6 +166,77 @@ theorem needsRules_ref {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {x : 
   obtain ⟨y, ey, hy, hf⟩ := needsRulesLoop P (n + 1) m _ o l 0 x rs e hS hx
     (by rw [UInt64.le_iff_toNat_le]; simp) (by simpa using hrs)
   exact ⟨y, ey, hy, (hS.ndFrame hf).1, hf⟩
+
+/-- **`needs_table(t)` refines `NeedsSt.table`** at the table record `t` decodes to. -/
+@[refines ConRon.Arena.NeedsSt.table]
+theorem needsTable_ref {n : Nat} {m m' : Mem} {t : Word} {r : List Word} {x : NeedsSt}
+    {tb : IProjTable} (hc : callW p n "needs_table" [t] m = some (r, m'))
+    (hS : StageR vis fe m a) (hx : NdR m x) (ht : decTbl (erecP m) t.toNat = some tb) :
+    ∃ y, (x.table tb).run a = .ok (y, a) ∧ NdR m' y ∧ StageR vis fe m' a ∧
+      MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsTable_specW p P.table n _ t) hc
+  obtain ⟨w1, e1, -, -, w2, e2, -, hbs⟩ := decTbl_rd (erRdOK m) ht
+  rcases n with _ | n
+  · rw [needsTableW.eq_1] at hW; cases hW
+  rw [needsTableW.arm1] at hW
+  replace hW := opt_some hW (needsTableW.k_needs_name.none _ _ _)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  rw [needsTableW.k_needs_name.arm1] at hW
+  obtain ⟨hy1, f1⟩ := needsName_step P c1 hx w1
+  rw [erRd_nd f1] at hW
+  replace hW := opt_some hW (needsTableW.k_needs_name_2.none _ _ _)
+  obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+  rw [needsTableW.k_needs_name_2.arm1] at hW
+  obtain ⟨hy2, f2⟩ := needsName_step P c2 hy1 w2
+  have hrd2 : erRd m2 = erRd m := by rw [erRd_nd f2, erRd_nd f1]
+  rw [hrd2] at hW
+  replace hW := opt_some hW (needsTableW.k_needs_exprs.none _)
+  obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+  rw [needsTableW.k_needs_exprs.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hS2 := ((hS.ndFrame f1).1.ndFrame f2).1
+  rw [UInt64.add_assoc, show ProjTbl.bodiesOff + 1 = ProjTbl.bodiesLen from rfl] at c3
+  rw [← erecP_nd (f1.trans f2)] at hbs
+  obtain ⟨y3, e3, hy3, hS3, f3⟩ := needsExprs_ref P c3 hS2 hy2 hbs
+  refine ⟨y3, ?_, hy3, hS3, f1.trans (f2.trans f3)⟩
+  simp only [NeedsSt.table, e1, e2]
+  exact e3
+
+/-- **`needs_reset()` refines `NeedsSt.empty`**: from any memo relation, the memo cleared and the
+stack emptied. -/
+@[refines ConRon.Arena.NeedsSt.empty]
+theorem needsReset_ref {n : Nat} {m m' : Mem} {r : List Word} {mp : Std.HashMap EIdx Bool}
+    (hc : callW p n "needs_reset" [] m = some (r, m')) (hM : ndMR m mp)
+    (hctl : NTOPC.toNat < (m.arr64 CTL).size) :
+    NdR m' NeedsSt.empty ∧ MemFrame ndA ndC m m' := by
+  refine ⟨?_, nd_frame P (by decide) hc⟩
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsReset_specW p P.reset n _) hc
+  rcases n with _ | n
+  · rw [needsResetW.eq_1] at hW; cases hW
+  rw [needsResetW.arm1] at hW
+  replace hW := opt_some hW (needsResetW.k_nd_clear.none _)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  rw [needsResetW.k_nd_clear.arm1] at hW
+  obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
+  rw [← e]
+  obtain ⟨s1, rfl, -, h0, hm1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (memoClearG_spec ndSch p "nd_clear" P.nd_clear n _) c1
+  dsimp only at hm1 h0
+  have hcl := memoRG_clear ndSch ndSch_wf bmKey (fun w : Word => w != 0) m mp hM h0
+  rw [← hm1] at hcl
+  have hs := memoRG_frame ndSch ndSch_wf bmKey (fun w : Word => w != 0) [] [NTOPC] (by simp)
+    (by decide) _ _ (MemFrame.setCtl s1.mem NTOPC 0) _ hcl
+  have hsz : NTOPC.toNat < (s1.mem.arr64 CTL).size := by
+    rw [hm1, (mclearG_frame ndSch m).size]; exact hctl
+  have hT : ctlW (s1.mem.set64 CTL NTOPC 0) NTOPC = 0 := by
+    simp only [ctlW, rdW_set64, hsz, and_self, ite_true]
+  refine ⟨⟨hs, ?_, ?_, ?_⟩, ?_⟩
+  · simp [naccList, hT, NeedsSt.empty]
+  · intro i hi; rw [hT] at hi; simp at hi
+  · rw [hT]; simp
+  · rw [Mem.size64_set64]; exact hsz
 
 end steps
 
