@@ -99,14 +99,16 @@ structure MatesR (m : Mem) (M : Std.HashMap NIdx (List NIdx)) : Prop where
   get : ∀ n : NIdx, M[n]? = matList m n.word.toUInt64
   ok : ∀ w, (matRow m w).1 ≠ 0 →
     (matRow m w).1.toNat - 1 + (matRow m w).2.toNat ≤ erTop m ∧ (matList m w).isSome
+  /-- An empty row has length `0`. -/
+  z : ∀ w, (matRow m w).1 = 0 → (matRow m w).2 = 0
 
 /-- Zero rows hold the empty map. -/
 theorem MatesR.zero {m : Mem} (hz : ∀ g ≤ 2, ∀ j, rdN (m.arr64 (matArr g)) j = 0) : MatesR m ∅ := by
-  have h0 : ∀ w, (matRow m w).1 = 0 := fun w => by
+  have h0 : ∀ w, (matRow m w).1 = 0 ∧ (matRow m w).2 = 0 := fun w => by
     unfold matRow; split
-    · rename_i h; exact hz _ h.1 _
-    · rfl
-  exact ⟨fun n => by simp [matList, h0], fun w hw => absurd (h0 w) hw⟩
+    · rename_i h; exact ⟨hz _ h.1 _, hz _ h.1 _⟩
+    · exact ⟨rfl, rfl⟩
+  exact ⟨fun n => by simp [matList, (h0 _).1], fun w hw => absurd (h0 w).1 hw, fun w _ => (h0 w).2⟩
 
 /-- `MatesR` across a growth of the record pool that keeps the rows. -/
 theorem MatesR.grow {m m' : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M)
@@ -120,7 +122,7 @@ theorem MatesR.grow {m m' : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR 
       obtain ⟨xs, hxs⟩ := Option.isSome_iff_exists.mp (h.ok w c).2
       unfold matList at hxs; simp only [c, ite_false] at hxs
       rw [hxs, hx.hslice? hxs]
-  refine ⟨fun n => by rw [h.get n, hl], fun w hw => ?_⟩
+  refine ⟨fun n => by rw [h.get n, hl], fun w hw => ?_, fun w hw => by rw [hr] at hw ⊢; exact h.z w hw⟩
   rw [hr] at hw ⊢; rw [hl]
   exact ⟨Nat.le_trans (h.ok w hw).1 hg.top, (h.ok w hw).2⟩
 
@@ -152,7 +154,7 @@ theorem MatesR.set {m : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M)
   have hrow : ∀ x, ¬ (rowTag x ≤ 2 ∧ rowTier x = 0 ∧ rowTag x = rowTag b ∧ rowIx x = rowIx b) →
       matList (matSetM m b (d + 1) k) x = matList m x := fun x hx => by
     unfold matList; rw [matRow_matSet x ht h0 hbd, ite_eq_right hx, hP]
-  refine ⟨fun n => ?_, fun w hw => ?_⟩
+  refine ⟨fun n => ?_, fun w hw => ?_, fun w hw => ?_⟩
   · rw [Std.HashMap.getElem?_insert]
     by_cases e : n.word.toUInt64 = b
     · have : (decI b : NIdx) = n := by rw [← e]; exact decI_word n
@@ -172,6 +174,10 @@ theorem MatesR.set {m : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M)
       rw [this, hnew]; refine ⟨?_, rfl⟩; dsimp only; rw [htp, hd1]; omega
     · rw [ite_eq_right hs] at hw ⊢
       rw [hrow w hs, htp]; exact h.ok w hw
+  · rw [matRow_matSet w ht h0 hbd] at hw ⊢
+    by_cases hs : rowTag w ≤ 2 ∧ rowTier w = 0 ∧ rowTag w = rowTag b ∧ rowIx w = rowIx b
+    · rw [ite_eq_left hs] at hw; exact absurd hw hne
+    · rw [ite_eq_right hs] at hw ⊢; exact h.z w hw
 
 /-! ## The copies -/
 
@@ -300,5 +306,35 @@ theorem block_names_dec {P : Array Word} {t : Nat} : ∀ (k bo : Nat) (block : L
       refine ⟨by simp; omega, ?_⟩
       simp only [nmP, List.getElem_cons_succ, show bo + (j + 1) = bo + 1 + j by omega] at h2 h3 h4 h5 ⊢
       exact ⟨h2, h3, h4, h5⟩
+
+/-! ## Slices -/
+
+theorem sd_hslice_succ {k : IdxKind} (a : Nat → Option Word) (off n : Nat) :
+    (hslice? a off (n + 1) : Option (List (Idx k))) = (do
+      let x ← hd? a off
+      let xs ← hslice? a (off + 1) n
+      pure (x :: xs)) := by
+  simp only [hslice?, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
+  congr 1; funext x; congr 1
+  apply congrArg (fun f => List.mapM f (List.range n))
+  funext j
+  simp only [Function.comp]
+  congr 1
+  omega
+
+/-- A slice whose words are the handles of `xs` decodes to `xs`. -/
+theorem hslice_of {k : IdxKind} {a : Nat → Option Word} : ∀ (xs : List (Idx k)) (o : Nat),
+    (∀ j (hj : j < xs.length), ∃ w, a (o + j) = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = xs[j]) →
+    hslice? a o xs.length = some xs
+  | [], o, _ => rfl
+  | x :: xs, o, h => by
+    rw [List.length_cons, sd_hslice_succ]
+    obtain ⟨w, hw, h32, hx⟩ := h 0 (by simp)
+    have h1 : (hd? a o : Option (Idx k)) = some x := by
+      simp only [hd?, Nat.add_zero] at hw ⊢; rw [hw]; simp [h32, hx]
+    have h2 := hslice_of xs (o + 1) (fun j hj => by
+      obtain ⟨w', hw', h', e⟩ := h (j + 1) (by simp; omega)
+      exact ⟨w', by rw [show o + 1 + j = o + (j + 1) by omega]; exact hw', h', by simpa using e⟩)
+    simp [h1, h2]
 
 end L.Arena
