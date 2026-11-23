@@ -24,9 +24,10 @@ here: it changes the memo and pushes onto the stack. `needs_reset` starts a fres
 
 **Lists.** A list of names or expressions the twin reads off a record (`caps.all`, a rule's pins,
 a table's bodies, the rules) is an `EREC` slice of the record; `natOpDeps` is `nat_op_deps`' `IW`
-slice. The twin's recursions over a list with a cursor (`nidxAppend`, `NeedsSt.exprs`,
-`NeedsSt.rules`) are loops. `pinFootprint`'s list is pushed onto the stack as it is built (the
-twin's `x.names (← pinFootprint n)` appends it in the same order).
+slice. The recursions over a list with a cursor (`nidxAppend`, `NeedsSt.exprs`, `NeedsSt.rules`,
+recursive in the Rust too) are loops in L: they do the same steps in the same order.
+`pinFootprint`'s list is pushed onto the stack as it is built (the twin's
+`x.names (← pinFootprint n)` appends it in the same order).
 
 **Fuel.** `needs_go` takes the twin's fuel as its first argument (`CWF` at the top, `needs_expr`)
 and aborts at `0`, where the twin fails with `.internal`. Every error of these functions is of
@@ -89,7 +90,8 @@ def needsNamesIwL : FunDecl := lfn (o, l) locals (i, u) {
 
 /-- `lit_needs(h)`: the names the literal `h` reads, pushed: the literal guards' ten names
 (`litGuardNames`, the pins `1, 2, 3, 5‥10, 12`, all read first as the twin builds its list), a
-numeral's the first three. The literal's kind is read off its node (`e_view` has checked it). -/
+numeral's the first three. The literal's kind is read off its node (`e_view` has checked it; a
+string's kind is `1`). -/
 -- con-ron: ConRon/Arena/Needs.lean:39-46 ConRon.Arena.litNeeds
 @[no_expose, l_impl ConRon.Arena.litNeeds]
 def litNeedsL : FunDecl := lfn (h) locals (a, b, c, d, f, g, k, i, j, q, t, x, u) {
@@ -99,7 +101,7 @@ def litNeedsL : FunDecl := lfn (h) locals (a, b, c, d, f, g, k, i, j, q, t, x, u
   u := call needs_name(a); u := call needs_name(b); u := call needs_name(c);
   t := ⟦h⟧.tier;
   x := ⟦h⟧.idx;
-  if LIT⟨t, x⟩.kind == 0 { return 0 };
+  if LIT⟨t, x⟩.kind != 1 { return 0 };
   u := call needs_name(d); u := call needs_name(f); u := call needs_name(g);
   u := call needs_name(k); u := call needs_name(i); u := call needs_name(j);
   u := call needs_name(q);

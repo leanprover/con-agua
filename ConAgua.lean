@@ -88,3 +88,6 @@ public import ConAgua.Arena.NeedsModels
 public import ConAgua.Arena.JustifySide
 public import ConAgua.Arena.JustifySideModels
 public import ConAgua.Arena.Justify
+public import ConAgua.Arena.NeedsRef
+public import ConAgua.Arena.NeedsRef2
+public import ConAgua.Arena.NeedsRef3
