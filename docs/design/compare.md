@@ -76,3 +76,16 @@ the driver stub and its machine proof, the harness, the final theorems.
 **Perf plan.** Self-compare of Init (a copy of `init435.ndjson` under a second name: the same
 path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, against con-ron
 8021ddac `--compare --jobs=1`; the flat Init run against master (expected: one load per record).
+
+## 1. Progress log
+
+* 16:15 start (worktree, reading). 17:00 stage 0 sent to the coordinator.
+* 17:00–17:10 the interface (`Arena/JustifyIface.lean`): the arrays `SIXA‥CWK` (210‥222, declared
+  outside the checker's table until the wiring, so no full rebuild now), the control words
+  `CTL[224‥228]` (not globals: `MemFrame` covers `CTL` but says nothing about globals, so a
+  relation reading a global would not survive the existing frame lemmas), `SolR`/`OptSolR` and
+  their frame (`SolR.growF`), `NeedsR`, `ConeR`, the memo schemas, `sol_find`/`sol_find_table`
+  refining `ISolution.find?`/`findTable?`.
+* 17:10 helpers started: `compare-needs` (H1, Needs.lean), `compare-cone` (H2, the comparison,
+  the cone, `checkJustified`), `compare-side` (H3, the move, the side records, the mates);
+  briefs `_tmp/compare/brief-*.md`.
