@@ -90,7 +90,9 @@ same in both files. Both files are read into one store. The verdict line and
 the exit status are as above; two files that are not two different paths are a
 usage error (exit 3, no verdict line). The compared run is sequential: `--jobs`
 does not combine with it
-([docs/deviations.md](docs/deviations.md), D51).
+([docs/deviations.md](docs/deviations.md), D51). The final theorems (§2) are
+about the flat run and the threaded mode; no final theorem covers `--compare`
+yet.
 
 Every way the checker says no is an L `abort` with a code: the low two bits
 are the class (`1` reject, `2` decline, `0` other), the rest a reason, whose
