@@ -65,7 +65,7 @@ theorem matArr_inj {g g' : Nat} (h : g ≤ 2) (h' : g' ≤ 2) (e : (matArr g : T
 
 /-- **The row after `mates_set`**: the rows of `w`'s tag and index are the new words, every other
 row kept. -/
-theorem matRow_matSet {m : Mem} {w o l : Word} (x : Word) (ht : rowTag w ≤ 2) (h0 : rowTier w = 0)
+theorem matRow_matSet {m : Mem} {w o l : Word} (x : Word) (ht : rowTag w ≤ 2) (_h0 : rowTier w = 0)
     (hb : rowIx w + 1 < (m.arr64 (matArr (rowTag w))).size) :
     matRow (matSetM m w o l) x = if rowTag x ≤ 2 ∧ rowTier x = 0 ∧ rowTag x = rowTag w ∧
       rowIx x = rowIx w then (o, l) else matRow m x := by
@@ -171,5 +171,93 @@ theorem MatesR.set {m : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M)
       rw [this, hnew]; refine ⟨?_, rfl⟩; dsimp only; rw [htp, hd1]; omega
     · rw [ite_eq_right hs] at hw ⊢
       rw [hrow w hs, htp]; exact h.ok w hw
+
+/-! ## The copies -/
+
+/-- What a copy loop has done up to `i`: `EREC[d‥d + i)` written by `v`, the rest of `EREC` and
+every other array kept. -/
+structure CpInv (m₀ m : Mem) (d : Nat) (v : Nat → Word) (i : Nat) : Prop where
+  other : ∀ b, b ≠ (EREC : TieredArray) → m.arr64 b = m₀.arr64 b
+  size : (m.arr64 EREC).size = (m₀.arr64 EREC).size
+  out : ∀ x, (x < d ∨ d + i ≤ x) → rdN (m.arr64 EREC) x = rdN (m₀.arr64 EREC) x
+  done : ∀ j < i, rdN (m.arr64 EREC) (d + j) = v j
+
+theorem CpInv.start (m : Mem) (d : Nat) (v : Nat → Word) : CpInv m m d v 0 :=
+  ⟨fun _ _ => rfl, rfl, fun _ _ => rfl, fun _ h => absurd h (Nat.not_lt_zero _)⟩
+
+theorem CpInv.step {m₀ m : Mem} {d : Nat} {v : Nat → Word} {i : Nat} (h : CpInv m₀ m d v i)
+    {dw iw : Word} (_hd : dw.toNat = d) (_hi : iw.toNat = i) (hb : d + i < (m₀.arr64 EREC).size)
+    (hdi : (dw + iw).toNat = d + i) {x : Word} (hx : x = v i) :
+    CpInv m₀ (m.set64 EREC (dw + iw) x) d v (i + 1) := by
+  refine ⟨fun b hb' => by rw [Mem.arr64_set64_ne _ _ _ _ _ hb']; exact h.other b hb',
+    by rw [Mem.size_arr64_set64]; exact h.size, fun y hy => ?_, fun j hj => ?_⟩
+  · rw [rdN_set64, hdi, ite_eq_right (by omega)]; exact h.out y (by omega)
+  · rw [rdN_set64, hdi]
+    by_cases e : j = i
+    · subst e; rw [ite_eq_left ⟨rfl, rfl, by rw [h.size]; exact hb⟩, hx]
+    · rw [ite_eq_right (by omega)]; exact h.done j (by omega)
+
+theorem copyPrev_ok {m₀ : Mem} {d s l : Word} (hdl : d.toNat + l.toNat ≤ (m₀.arr64 EREC).size)
+    (hsz : (m₀.arr64 EREC).size < 2 ^ 64) (hsl : s.toNat + l.toNat ≤ d.toNat) :
+    ∀ n (m : Mem) (i : Word) (m' : Mem),
+      CpInv m₀ m d.toNat (fun j => rdN (m₀.arr64 EREC) (s.toNat + j)) i.toNat → i ≤ l →
+      sdCopyPrevW.loop1 n m d s l i = some m' →
+      CpInv m₀ m' d.toNat (fun j => rdN (m₀.arr64 EREC) (s.toNat + j)) l.toNat := by
+  intro n
+  induction n with
+  | zero => intro m i m' _ _ h; rw [sdCopyPrevW.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m i m' hI hle h
+    rw [sdCopyPrevW.loop1.eq_2] at h
+    have hl64 := UInt64.toNat_lt l
+    by_cases g : i < l
+    · rw [ite_eq_left g] at h
+      have gi := UInt64.lt_iff_toNat_lt.mp g
+      have e1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hdi : (d + i).toNat = d.toNat + i.toNat := by
+        rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+      have hsi : (s + i).toNat = s.toNat + i.toNat := by
+        rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+      simp only [tierA_zero] at h
+      have hx : rdW (m.arr64 EREC) (s + i) = rdN (m₀.arr64 EREC) (s.toNat + i.toNat) := by
+        rw [rdW_rdN, hsi]; exact hI.out _ (.inl (by omega))
+      exact ih _ _ _ (by rw [e1]; exact hI.step rfl rfl (by omega) hdi hx)
+        (UInt64.le_iff_toNat_le.mpr (by rw [e1]; omega)) h
+    · rw [ite_eq_right g] at h; cases h
+      have : i = l := UInt64.le_antisymm hle (UInt64.not_lt.mp g)
+      subst this; exact hI
+
+/-- The name word `sd_copy_names` copies for member `j` of the block at `bo`. -/
+def nameW (m : Mem) (bo j : Word) : Word :=
+  rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (bo + j) + (CI.cv + CV.name)) &&& 4294967295
+
+theorem copyNames_ok {m₀ : Mem} {d bo bl : Word} (hdl : d.toNat + bl.toNat ≤ (m₀.arr64 EREC).size)
+    (hsz : (m₀.arr64 EREC).size < 2 ^ 64) :
+    ∀ n (m : Mem) (j : Word) (m' : Mem),
+      CpInv m₀ m d.toNat (fun i => nameW m₀ bo (UInt64.ofNat i)) j.toNat → j ≤ bl →
+      sdCopyNamesW.loop1 n m d bo bl j = some m' →
+      CpInv m₀ m' d.toNat (fun i => nameW m₀ bo (UInt64.ofNat i)) bl.toNat := by
+  intro n
+  induction n with
+  | zero => intro m i m' _ _ h; rw [sdCopyNamesW.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m i m' hI hle h
+    have hl64 := UInt64.toNat_lt bl
+    by_cases g : i < bl
+    · rw [sdCopyNamesW.loop1.arm1 _ _ _ _ _ _ g] at h
+      have gi := UInt64.lt_iff_toNat_lt.mp g
+      have e1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hdi : (d + i).toNat = d.toNat + i.toNat := by
+        rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+      have hP : m.arr64 DLP = m₀.arr64 DLP := hI.other _ (by decide)
+      simp only [tierA_zero] at h
+      have hx : rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (bo + i) + (CI.cv + CV.name)) &&& 4294967295 =
+          nameW m₀ bo (UInt64.ofNat i.toNat) := by simp only [nameW, hP, UInt64.ofNat_toNat]
+      exact ih _ _ _ (by rw [e1]; exact hI.step rfl rfl (by omega) hdi hx)
+        (UInt64.le_iff_toNat_le.mpr (by rw [e1]; omega)) h
+    · have : ¬ i < bl := g
+      rw [sdCopyNamesW.loop1.eq_2, ite_eq_right this] at h; cases h
+      have : i = bl := UInt64.le_antisymm hle (UInt64.not_lt.mp g)
+      subst this; exact hI
 
 end L.Arena
