@@ -165,3 +165,69 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
 * 20:55 **step landing 1** (`compare-land` 91e5c9aef, #325, master 2165b2ead): everything above up to
   modes 4–5 and the machine building blocks; H8 made the gates green (55 unused imports, a name
   clash `recOK_congr`, `leafFns` regenerated, an anchor).
+* Later: H9 (no "kept" premise; `CmpHdrKeep`, `cmpSJobs_twin`, `checker_cmpGuard`), H10 (the guard under
+  the setup stub's size checks; `checkerFile_compare_runs_regs`), H6c (mode 6, `checkC3_run`; the job
+  lemmas over `FoldOn`/`StagesOut`), H6d (`JobM` at `J = some`, the challenge's jobs by a `J = some`
+  list induction mirroring con-ron's `pooledAcceptsJ_bridge`, `cmpAccepts_twin`) merged; the lead's
+  `Final/CompareTwin.lean` and the end-to-end theorems in `Final/Compare.lean`. 0 `sorry`.
+  (The times in this log after about 18:30 are approximate.)
+
+## 2. What is mirrored
+
+| con-ron (8021ddac) | L |
+|---|---|
+| `compare_json` (`driver/compare_json.rs`): one store, the challenge's parse, the solution's, its preparation, the pins, its check phase, the challenge's preparation, side records, `solution_of`, its check phase with the solution | `check_c1`‥`check_c3` (`Checker/CompareEntry.lean`) and the driver `ca_compare` (`Compiler/AbiCmp.lean`): the solution's jobs on a worker region over the frozen buffer (`ca_check_b`), the challenge's in place (`ca_check_seq`) |
+| `freeze_tier`/`thaw_tier` (the index handed back) | the index's rows moved to the solution's rows `SIX*`/`STX*` (`index_to_solution`), so the challenge's index is built from empty in the flat arrays |
+| `Needs.lean` (15 functions) | `Arena/Needs.lean`, generated models, `NeedsRef*.lean` |
+| `Justify.lean` (`builtinAxiomName` … `checkRecord`, `recordCheck`/`recordJob`/`runJob`/`checkJobList` at `J`) | `Arena/Justify.lean`, `JustifySide.lean`, `JustifyIface.lean` (`ISolution.find?`, `findTable?`), `record_job`'s branch on `CTL[224]`; refinements `JustifyRef1‥7`, `JustifySideRef*`, `Jobs.lean` at `J` |
+| the usage checks (two files, two different files) | `main.c` `run_compare`, exit 3 |
+| `model_exists_compare`, `no_False_compare` (twin side: `stagesC_model`, `stagesC_no_False`) | `checkerFile_compare_model`, `checkerFile_compare_no_False` (through `twinComparesAccepts_model`/`_no_False`) |
+
+Loops where the Rust has loops (the cone walk, the side records, `solution_of`, the move); the
+Rust's cursor recursions over lists are loops too (same behaviour, less stack); `needsGo` and
+`matesInsert` recurse as the Rust does. Not mirrored: the messages (D16), `--jobs` (D51), the
+move instead of the tier's move (D52), `--olean --compare` and the modular modes (D44, D50).
+
+## 3. Final statements (new; no existing headline statement changed)
+
+`Final/CompareTwin.lean`: `SeqAcceptsJ`, `TwinComparesAccepts` (the text in the coordinator message
+of 20:15 and in the file), `twinComparesAccepts_model`, `twinComparesAccepts_no_False`.
+`Final/CmpAbi.lean`: `CmpCall` (`AbiCall` of the challenge and the pins, plus the solution's buffer
+`sa`/`bS.size` as the two stack arguments, apart from the region, the other buffers and the stack
+window). `Final/Compare.lean`: `checkerFile_compare_runs_regs` (the machine theorem at the L level),
+`checkerFile_compare_accepts(_regs)`, `checkerFile_compare_model`, `checkerFile_compare_no_False`;
+all pinned at propext, Classical.choice, Quot.sound. Changed: `Final/Abi.lean`'s `abi_harness` and
+`abi_start_outcome` take `AbiCallM` (`AbiCall` without the zero region; callers pass `hc.toM`);
+`code_of_checkerFile_par` is a prefix lemma (the file has a tail). No trusted fact or axiom was
+added; unlike the threaded mode, no harness hypothesis either.
+
+## 4. Performance
+
+`Init` (`init435.ndjson`, its hard link under a second name for the solution), one thread,
+`perf stat -e instructions:u`, `time -f "%e %M"`, load below 1, two rounds for the flat runs
+(identical to ±0.0001 %), 2026-11-23 20:20; master = `d84b7c756` (before step 1), con-ron = 8021ddac.
+
+| run | instructions:u | wall | peak RSS |
+|---|---:|---:|---:|
+| flat `Init`, master | 202 631.66 M | 14.64 s | 626 MB |
+| flat `Init`, compare | 202 631.83 M (+0.0001 %) | 14.77 s | 628 MB |
+| `--compare` `Init` with itself | 408 327 M | 29.39 s | 1 259 MB |
+| con-ron `--jobs=1 --compare`, same | 333 863 M | 28.93 s | 368 MB |
+
+The compared run costs 2.015 flat runs (con-ron 2.016) and 1.016 con-ron's wall; its RSS is two
+flat runs' (D52).
+
+## 5. What went wrong
+
+* **The buffer's "kept" premise** (above): an early machine design needed a fact the L proofs
+  cannot give; replaced by chaining the solution's workers like in-place jobs (H9). Two helper
+  shifts went into it.
+* **Helper context.** The chain took four shifts (H6, H6b, H6c, H6d), the cone two (H2, H2b); the
+  hand-overs worked.
+* **Integration fallout** after the wiring: the closure lists, `import all` in the whole-program
+  checks, the dispatch proofs, a `maxRecDepth` in the generated `checkerProg` (its list grew past
+  the code generator's default), name clashes between helpers' files (`pinW_frame`, `rdW_dw`,
+  `recOK_congr`), 55 unused imports, a stale `leafFns`.
+* **Open, not blocking:** the challenge's job driver (`Checker/CompareJobs.lean`, `*_seqR`) repeats the
+  `vcgen` parts of the flat `*_seqO` ones; deriving the flat ones from it would rebuild the flat
+  chain, left for a later cleanup.
