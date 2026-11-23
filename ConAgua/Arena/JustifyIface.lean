@@ -1,8 +1,8 @@
 module
 
 public import ConAgua.Arena.Env
-public import ConAgua.Arena.Globals
 public import ConAgua.Arena.MemoLib
+public import ConAgua.Arena.MemoLibRel
 public import ConRon.Arena.Justify
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
@@ -24,17 +24,17 @@ In L:
   check phase (con-ron's `thaw_tier` handing the index back): the rows `SIXA`/`SIXS`/`SIXN`
   (constants) and `STXA`/`STXS`/`STXN` (tables), in `EIX*`'s and `TIX*`'s encoding (by the
   persistent name handle's index `i`, words `2 i`, `2 i + 1`: the counter (resp. the record
-  position) plus one, and the record's `EREC` address); `SNEXT` its `next`, `SCNT` its record
+  position) plus one, and the record's `EREC` address); `CTL[225]` its `next`, `CTL[226]` its record
   count (`firsts.size`). The records stay in `EREC`'s tier 0, which only grows.
 * **The record mates** (`ISolution.mates`, a map from a name to a list of names): rows
   `MATA`/`MATS`/`MATN` by the name handle's index, words `2 i`, `2 i + 1` = the slice's `EREC`
   address plus one (`0`: no entry) and its length; the slice holds the names' handles.
-* **The flag** `SOL`: `1` while the challenge's jobs run (`J = some sol`), `0` otherwise (the
+* **The flag** `CTL[224]`: `1` while the challenge's jobs run (`J = some sol`), `0` otherwise (the
   flat run, the solution's jobs): `record_job` reads it.
 * **A needs walk's state** (`NeedsSt`): its `seen` map is the memo `ndSch` (`NDM`, keys the
-  expression handles, value `1`), its names the stack `NACC[0‥NTOP)`.
+  expression handles, value `1`), its names the stack `NACC[0‥CTL[227])`.
 * **The cone walk's state** (`coneGo`): `seen` the memo `csSch` (`CSM`, keys the name handles),
-  the work list the stack `CWK[0‥CTOP)`, its head on top.
+  the work list the stack `CWK[0‥CTL[228])`, its head on top.
 
 `SolR m J` relates the rows to the twin's `ISolution`; `sol_find`, `sol_find_table` refine
 `ISolution.find?`, `ISolution.findTable?`.
@@ -75,21 +75,27 @@ abbrev MATN : ArrId := 218
 abbrev NDM : ArrId := 219
 /-- `coneGo`'s `seen` memo (`csSch`; min 3). -/
 abbrev CSM : ArrId := 220
-/-- `NeedsSt.acc`: a needs walk's names, `NACC[0‥NTOP)`. -/
+/-- `NeedsSt.acc`: a needs walk's names, `NACC[0‥CTL[227])`. -/
 abbrev NACC : ArrId := 221
-/-- `coneGo`'s work list, as a stack `CWK[0‥CTOP)`, its head on top. -/
+/-- `coneGo`'s work list, as a stack `CWK[0‥CTL[228])`, its head on top. -/
 abbrev CWK : ArrId := 222
 
-/-- `1` while the challenge's jobs run with the solution, else `0`. -/
-abbrev SOL : L.GVar := ⟨4⟩
-/-- The solution index's `next` counter. -/
-abbrev SNEXT : L.GVar := ⟨5⟩
-/-- The solution index's record count (`firsts.size`). -/
-abbrev SCNT : L.GVar := ⟨6⟩
-/-- The top of `NACC`. -/
-abbrev NTOP : L.GVar := ⟨7⟩
-/-- The top of `CWK`. -/
-abbrev CTOP : L.GVar := ⟨12⟩
+/-! The walks' words are control words, not globals: `MemFrame` (every frame lemma) covers `CTL`
+and says nothing about globals. -/
+
+/-- `CTL[224]`: `1` while the challenge's jobs run with the solution, else `0`. -/
+def SOLC : Word := 224
+/-- `CTL[225]`: the solution index's `next` counter. -/
+def SNEXTC : Word := 225
+/-- `CTL[226]`: the solution index's record count (`firsts.size`). -/
+def SCNTC : Word := 226
+/-- `CTL[227]`: the top of `NACC`. -/
+def NTOPC : Word := 227
+/-- `CTL[228]`: the top of `CWK`. -/
+def CTOPC : Word := 228
+
+/-- The control word `c`. -/
+abbrev ctlW (m : Mem) (c : Word) : Word := rdW (m.arr64 CTL) c
 
 /-! ## The arrays by name tag -/
 
@@ -129,7 +135,7 @@ def matList (m : Mem) (w : Word) : Option (List NIdx) :=
 /-! ## The relation -/
 
 /-- **The solution** `J` in L's memory: the rows are the solution index's `base.idx`/`base.tbls`
-(as `IndexR`'s `base`/`btbl`, at the solution's arrays), `SNEXT` its `next`, `SCNT` its
+(as `IndexR`'s `base`/`btbl`, at the solution's arrays), `CTL[225]` its `next`, `CTL[226]` its
 `firsts.size`, the mates' rows its `mates`. -/
 structure SolR (m : Mem) (J : ISolution) : Prop where
   base : ∀ n : NIdx,
@@ -142,16 +148,16 @@ structure SolR (m : Mem) (J : ISolution) : Prop where
       (if (solTbl m n.word.toUInt64).1 = 0 then none
        else some ((solTbl m n.word.toUInt64).1.toNat - 1,
          decTbl (erecP m) (solTbl m n.word.toUInt64).2.toNat))
-  next : (m.glob SNEXT).toNat = J.idx.next
-  size : (m.glob SCNT).toNat = J.idx.firsts.size
+  next : (ctlW m SNEXTC).toNat = J.idx.next
+  size : (ctlW m SCNTC).toNat = J.idx.firsts.size
   mates : ∀ n : NIdx, J.mates[n]? = matList m n.word.toUInt64
   /-- A row's counter and position words are below `2^32` (the index build's capacity). -/
   rows : ∀ w : Word, (solRow m w).1.toNat < 2 ^ 32 ∧ (solTbl m w).1.toNat < 2 ^ 32
 
-/-- **The run's solution**: `SOL = 0` and none, or `SOL = 1` and `SolR`. -/
+/-- **The run's solution**: `CTL[224] = 0` and none, or `CTL[224] = 1` and `SolR`. -/
 def OptSolR (m : Mem) : Option ISolution → Prop
-  | none => m.glob SOL = 0
-  | some J => m.glob SOL = 1 ∧ SolR m J
+  | none => ctlW m SOLC = 0
+  | some J => ctlW m SOLC = 1 ∧ SolR m J
 
 /-! ## The memos of the walks -/
 
@@ -160,6 +166,48 @@ def ndSch : MemoSch := ⟨NDM, 220⟩
 
 /-- `coneGo`'s `seen` memo: `CSM`, stamp and count `CTL[222]`, `CTL[223]`. -/
 def csSch : MemoSch := ⟨CSM, 222⟩
+
+/-- The cone's memo keys: a name handle word, second word `0`. -/
+def nmKey : MemoKey NIdx where
+  dk k1 _ := decI k1
+  ek x := (x.word.toUInt64, 0)
+  ok k1 k2 := k1.toNat < 2 ^ 32 ∧ k2 = 0
+  ek_dk k1 k2 h := by simp only [decI_word_self k1 h.1, h.2]
+  ok_tomb k1 k2 h e := by subst e; exact absurd h.1 (by decide)
+
+theorem ndSch_wf : ndSch.WF := ⟨by decide, by decide⟩
+theorem csSch_wf : csSch.WF := ⟨by decide, by decide⟩
+
+/-- `needsGo`'s `seen` map in `NDM` (value word `≠ 0`: `true`). -/
+abbrev ndMR (m : Mem) (mp : Std.HashMap EIdx Bool) : Prop :=
+  MemoRG ndSch bmKey (fun w : Word => w != 0) m mp
+
+/-- `coneGo`'s `seen` map in `CSM`. -/
+abbrev csMR (m : Mem) (mp : Std.HashMap NIdx Bool) : Prop :=
+  MemoRG csSch nmKey (fun w : Word => w != 0) m mp
+
+/-- The names `NACC[0‥CTL[227])`, in order. -/
+def naccList (m : Mem) : List NIdx :=
+  (List.range (ctlW m NTOPC).toNat).map fun i => decI (rdN (m.arr64 NACC) i)
+
+/-- **A needs walk's state** `x` in L: its `seen` map in `NDM`, its names `NACC[0‥CTL[227])`, each a
+handle word, the top within `NACC`. -/
+structure NeedsR (m : Mem) (x : NeedsSt) : Prop where
+  seen : ndMR m x.seen
+  acc : naccList m = x.acc
+  words : ∀ i < (ctlW m NTOPC).toNat, (rdN (m.arr64 NACC) i).toNat < 2 ^ 32
+  room : (ctlW m NTOPC).toNat ≤ (m.arr64 NACC).size
+
+/-- The cone walk's work list `CWK[0‥CTL[228])`, its head on top (`CWK[CTL[228] - 1]` first). -/
+def cwkList (m : Mem) : List NIdx :=
+  (List.range (ctlW m CTOPC).toNat).reverse.map fun i => decI (rdN (m.arr64 CWK) i)
+
+/-- **The cone walk's state** in L: `seen` in `CSM`, the work list on the stack `CWK`. -/
+structure ConeR (m : Mem) (seen : Std.HashMap NIdx Bool) (work : List NIdx) : Prop where
+  seen : csMR m seen
+  work : cwkList m = work
+  words : ∀ i < (ctlW m CTOPC).toNat, (rdN (m.arr64 CWK) i).toNat < 2 ^ 32
+  room : (ctlW m CTOPC).toNat ≤ (m.arr64 CWK).size
 
 /-! ## The row access (L plumbing) -/
 
@@ -244,7 +292,7 @@ name `w` below its `next` counter, `(0, 0)` otherwise. -/
 def solFindL : FunDecl := lfn (w) locals (c, p) {
   (c, p) := call sol_row_get(w);
   if c == 0 { return (0, 0) };
-  if c - 1 < SNEXT { return (1, p) };
+  if c - 1 < CTL.u64[⟪SNEXTC⟫] { return (1, p) };
   return (0, 0)
 }
 
@@ -258,7 +306,7 @@ def solFindTableL : FunDecl := lfn (w) locals (f, q, r, p) {
   if f == 0 { return 0 };
   (r, p) := call sol_tbl_get(w);
   if r == 0 { return 0 };
-  if r - 1 < SCNT { return p + 1 };
+  if r - 1 < CTL.u64[⟪SCNTC⟫] { return p + 1 };
   return 0
 }
 
@@ -325,15 +373,15 @@ end rows
 
 /-! ## What the lookups return -/
 
-/-- A hit of name `w` in the solution's index: a row below `SNEXT`. -/
+/-- A hit of name `w` in the solution's index: a row below `CTL[225]`. -/
 def solHit (m : Mem) (w : Word) : Prop :=
-  (solRow m w).1 ≠ 0 ∧ (solRow m w).1 - 1 < m.glob SNEXT
+  (solRow m w).1 ≠ 0 ∧ (solRow m w).1 - 1 < ctlW m SNEXTC
 
 instance (m : Mem) (w : Word) : Decidable (solHit m w) := by unfold solHit; infer_instance
 
 /-- A table row of name `w` at one of the solution's records. -/
 def solTblHit (m : Mem) (w : Word) : Prop :=
-  (solTbl m w).1 ≠ 0 ∧ (solTbl m w).1 - 1 < m.glob SCNT
+  (solTbl m w).1 ≠ 0 ∧ (solTbl m w).1 - 1 < ctlW m SCNTC
 
 instance (m : Mem) (w : Word) : Decidable (solTblHit m w) := by unfold solTblHit; infer_instance
 
@@ -376,7 +424,7 @@ theorem SolR.find_eq (h : SolR m J) {w : Word} (hw : w.toNat < 2 ^ 32) :
       rw [← hci]
       dsimp only
       rw [← h.next]
-      by_cases l : UInt64.toNat (solRow m w).fst - 1 < (m.glob SNEXT).toNat
+      by_cases l : UInt64.toNat (solRow m w).fst - 1 < (ctlW m SNEXTC).toNat
       · rw [ite_eq_left l, ite_eq_left ⟨b0, (sub1_lt_iff b0).mpr l⟩]
       · rw [ite_eq_right l, ite_eq_right (fun e => l ((sub1_lt_iff b0).mp e.2))]
 
@@ -426,7 +474,7 @@ theorem SolR.findTable_eq (h : SolR m J) {w : Word} (hw : w.toNat < 2 ^ 32) :
         rw [← hti]
         dsimp only
         rw [← h.size]
-        by_cases l : UInt64.toNat (solTbl m w).fst - 1 < (m.glob SCNT).toNat
+        by_cases l : UInt64.toNat (solTbl m w).fst - 1 < (ctlW m SCNTC).toNat
         · rw [ite_eq_left l, ite_eq_left ⟨b0, (sub1_lt_iff b0).mpr l⟩]
         · rw [ite_eq_right l, ite_eq_right (fun e => l ((sub1_lt_iff b0).mp e.2))]
   · simp [hh]
@@ -515,8 +563,8 @@ theorem solFind_spec (hg : p.lookup "sol_row_get" = some solRowGetL)
       solRowGet_spec p hg n]
     all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, List.headD_cons, List.tail_cons, Locals.init_cons_zero, Cmp.eval, BinOp.eval,
-      beq_iff_eq] at *
-    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, solFindRes, solHit, SNEXT]
+      beq_iff_eq, rd64_rdWC] at *
+    all_goals simp_all [LocEq, Sig.retVal, Sig.retOr, solFindRes, solHit, SNEXTC, ctlW]
 
 /-- **`sol_find` refines `ISolution.find?`**: a hit returns `1` and a record decoding to the
 twin's constant, a miss `0`. -/
@@ -554,9 +602,9 @@ theorem solFindTable_spec (hg : p.lookup "sol_row_get" = some solRowGetL)
       solFind_spec p hg hf n, solTblGet_spec p ht n]
     all_goals simp only [Cond.pval, Expr.pval, St.setLoc_loc, L.St.setLoc_mem, St.setLocs_cons,
       St.setLocs_nil, List.headD_cons, List.tail_cons, Locals.init_cons_zero, Cmp.eval, BinOp.eval,
-      beq_iff_eq] at *
+      beq_iff_eq, rd64_rdWC] at *
     all_goals (by_cases hh : solHit s₀.mem w <;>
-      simp_all [LocEq, Sig.retVal, Sig.retOr, solFindRes, solTblRes, solTblHit, Locals.init_cons_zero, SCNT])
+      simp_all [LocEq, Sig.retVal, Sig.retOr, solFindRes, solTblRes, solTblHit, Locals.init_cons_zero, SCNTC, ctlW])
     all_goals (intro hx; exact absurd hx (UInt64.not_lt.mpr ‹_›))
 
 /-- **`sol_find_table` refines `ISolution.findTable?`**: `0` for none, else the table record's
