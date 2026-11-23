@@ -246,8 +246,9 @@ theorem cda_ref {p : Prog} (hX : AxArmProg p) (hq : KnotStageProg p) (hcl : Leaf
   rw [ep2] at eq2
   simp only [eq2, decide_false, Bool.false_eq_true, ite_false]
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' hcvd hCr1 (allow := 0)
-  rw [show ((0 : Word) != 0) = false from rfl] at hcc
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' hcvd hCr1 (allow := 0) (allowRd := 0)
+    (allowSorry := 1)
+  rw [show ((0 : Word) != 0) = false from rfl, show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclAxiomE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_
   rw [checkDeclAxiomE.k_check_constant_val.arm1]
@@ -443,7 +444,7 @@ theorem cdt_ref {p : Prog} (hX : ThmArmProg p) (hq : KnotStageProg p) (hcl : Lea
   have hcv1' : decCV (erecP m1) (q + CI.cv).toNat = some cv := by rw [hq1]; exact hcv1
   -- the constant check
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1'
-    hcvd hCr1 (allow := 0)
+    hcvd hCr1 (allow := 0) (allowRd := 0) (allowSorry := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclThmE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_

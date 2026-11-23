@@ -40,7 +40,7 @@ theorem worker_foldOK
     (hnd : ((ConLeche.Cached.recsConsts (dsP.take k)).map (·.name)).Nodup) (hw : WorkerOK s₁ a) :
     ∃ env, FoldOK env (I.view k) (AM.st enterScratch a) := by
   rw [show AM.st enterScratch a = AState.mk a.store.enableScratch Memos.empty a.caches a.pins from rfl]
-  exact ⟨_, view_foldOK hpinsOK hpersPins hI hpI hk hP hnd ⟨EStore.enableScratch_wf hw.state.wf⟩
+  exact ⟨_, view_foldOK hpinsOK hpersPins hI hpI hk hP.envWF hnd ⟨EStore.enableScratch_wf hw.state.wf⟩
     (hw.pext.trans (PExt.enterScratch hw.state.wf)) (CacheOK.of_empty hw.caches) hw.pins⟩
 
 section pool
@@ -94,7 +94,7 @@ theorem pool_walk (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP 
       have hF := worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI htk' hPt hndt hw
       obtain ⟨a', hj, hr'⟩ := H.hstep t r r' a htk hr hcall hF
       obtain ⟨hw', env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
-        H.hpI hw htk htk' hdk hPt hndt hj
+        H.hpI hw htk htk' hdk hPt.envWF hndt hj
       obtain ⟨⟨a'', hl'⟩, hds⟩ := ih r' a' hr' hw' hrest fun x hx => hl x (List.mem_cons_of_mem _ hx)
       refine ⟨⟨a'', ?_⟩, fun x hx => ?_⟩
       · rw [checkJobList_cons_ok htk hj]; exact hl'

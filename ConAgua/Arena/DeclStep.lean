@@ -129,8 +129,6 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
 /-- `check_decl_kind(i, vis, bo, bl)`: `checkDeclKind` on record `i` (an inductive block's records
 already copied into `EREC`: the slice `(bo, bl)`, `check_decl`'s). -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
   k := DECL.u64[1 + 8 * i];

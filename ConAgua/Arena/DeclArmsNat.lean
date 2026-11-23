@@ -187,7 +187,6 @@ def natOpDepsL : FunDecl :=
 
 /-- `nat_op_deps_stored(vis, o, l)`: every name of the slice is stored, as a constant of any kind. -/
 -- con-ron: ConRon/Arena/Core.lean:1187-1196 ConRon.Arena.natOpDepsStored
--- con-ron: CHANGED since de06320f — `ConRon.Arena.natOpDepsStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpDepsStored]
 def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
   if l == 0 { return 1 };
@@ -1046,7 +1045,6 @@ def eqStoredL : FunDecl := lfn (vis) locals (en, f, r) {
 /-- `div_mod_env_guard(vis2, c)`: the dependency guard, the operation's own pinned type, the
 pinned `Eq` basis, the `Bool` constructors at `Bool`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:537-547 ConRon.Arena.divModEnvGuard
--- con-ron: CHANGED since de06320f — `ConRon.Arena.divModEnvGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.divModEnvGuard]
 def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, e, n) {
   g := call nat_op_guard(vis2, c);
@@ -1213,7 +1211,6 @@ variant records; no variant left declines. The pin guard, then the certificates'
 attempt, each a boolean decision (the guards short-circuit, as the twin's). The `tried` list only
 feeds the message and is not kept. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:686-714 ConRon.Arena.checkDivModPinLoop
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDivModPinLoop`, `ConRon.Arena.unsupported` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDivModPinLoop]
 def checkDivModPinLoopL : FunDecl := lfn (vis, c, value, po, pl) locals (ps, g, r) {
   if pl == 0 { fail R_UNSUPPORTED_NAT_DIV_MOD };

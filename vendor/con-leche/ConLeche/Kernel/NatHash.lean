@@ -51,7 +51,18 @@ replaced by `@[extern "lean_nat_hash"] opaque natHash`, see the module
 header): all 64-bit words of a big number mixed.  Only for `n ≥ 2^64`,
 which is an mpz object, as upstream's `lean_nat_big_hash` (`natHash` in
 `Kernel/Expr.lean` answers below). -/
-@[extern "lean_nat_big_hash"]
+-- con-agua patch: no `native/nat_hash.c` here (our `lakefile.toml` compiles no C, and the
+-- nightly-2026-10-20 runtime does not export `lean_nat_big_hash`): the compiled code is this Lean
+-- fold over the 64-bit words (quadratic in the size, as the module doc says; only our tools'
+-- compiled code runs it). To the proofs `natBigHash` stays an opaque function of the number.
+def natBigHashImpl (n : @& Nat) : UInt64 :=
+  go n 11 (n.log2 / 64 + 1)
+where
+  go (m : Nat) (h : UInt64) : Nat → UInt64
+    | 0 => h
+    | f + 1 => if m = 0 then h else go (m >>> 64) (mixHash h (UInt64.ofNat m)) f
+
+@[implemented_by natBigHashImpl]
 opaque natBigHash (n : @& Nat) : UInt64
 
 end ConLeche

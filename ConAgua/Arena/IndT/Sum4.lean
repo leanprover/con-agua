@@ -248,7 +248,7 @@ theorem ctor_ref (hP : SumProg p) (hV : CcvProg p) (hcr : CrfF p) (hCS : CcvSims
     fun m' hg => (rec3CVExt_of_trunc (hcv.stab (OMono.decCVp _) m' hg)).2
   have dta : ∀ m', IWGrow m0 m' → decCVp m' cvTaw.toNat = some cvTa :=
     fun m' hg => (rec3CVExt_of_trunc (hta.stab (OMono.decCVp _) m' hg)).2
-  refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) (allow := 0) hV hq hApd hCrk hcr hCS (by omega)
+  refine RefE.bindE (fun _ => rfl) id (ccv_ref (n := m) (allow := 0) (allowRd := 0) (allowSorry := 0) hV hq hApd hCrk hcr hCS (by omega)
     hC.stageT (rec2DecCV_erecP (DecB.get (OMono.decCVp _) hcv) hcvx) hcvCP
     hA.cr.crOK) fun ⟨u1, m1⟩ _ a1 hr1 hP1 => ?_
   obtain ⟨c1, F₁, hF₁⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core

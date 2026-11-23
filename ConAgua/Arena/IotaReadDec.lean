@@ -15,7 +15,7 @@ result words, their lists `IW` slices (`off, len`), as `strip_pis` answers its d
 
 * `IotaRec` — seven words `[preO, preL, minO, minL, us, parO, parL]`: the rule prefix (handles),
   the minor premises' positions (numbers), the major's level list (a handle), its parameters
-  (handles). `Option IotaRec` is `ok` then the seven (`iota_rec_of`, `iota_rec_major`).
+  (handles). `Option IotaRec` is `ok` then the seven (`iota_rec_of`, `iota_read_major`).
 * `IIotaParts` — seven words `[fdO, fdL, idxO, idxL, us, parO, parL]`: the fields' domains, the
   indices, the levels, the parameters. `Option IIotaParts` is `ok` then the seven
   (`iota_parts_of_at`); `Option (IIotaParts × List EIdx)` is `ok`, the seven, then the
@@ -34,7 +34,7 @@ The L functions and their signatures (the helpers of the port implement them):
 | `iotaFrame cv mI rP` | `iota_frame(q, mI, rP)` | `→ (ok, preO, preL, domO, domL, body, u)` |
 | `isMinorAt pre mot q` | `is_minor_at(preO, preL, mot, q)` | `→ b` |
 | `minorsFrom pre mot q` | `minors_from(preO, preL, mot, q)` | `→ (o, l)` |
-| `iotaRecMajor pre doms nIdx rP k` | `iota_rec_major(preO, preL, domO, domL, nIdx, rP, k)` | `→ (ok, IotaRec)` |
+| `iotaRecMajor pre doms nIdx rP k` | `iota_read_major(preO, preL, domO, domL, nIdx, rP, k)` | `→ (ok, IotaRec)` |
 | `iotaRecOf cv mI rP` | `iota_rec_of(q, mI, rP)` | `→ (ok, IotaRec)` |
 | `iotaPartsOfAt rr rP nIdx i rl` | `iota_parts_of_at(IotaRec…, rP, nIdx, i, r)` | `→ (ok, IIotaParts)` |
 | `iotaPartsAt cvj cnP mI rP rl` | `iota_parts_at(qj, cnP, mI, rP, r)` | `→ (ok, IIotaParts, pdO, pdL)` |

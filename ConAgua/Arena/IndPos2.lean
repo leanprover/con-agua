@@ -475,8 +475,6 @@ def nestCtorsL : FunDecl :=
 /-- Part of `nestFrame`: the stack grown by the group's holes (each `{key, base := hi, nIdx}`, its
 index count its instantiated former's binder count, `piBinders`), and the group's own names. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1056-1079 ConRon.Arena.nestFrame
--- con-ron: CHANGED since de06320f — `ConRon.Arena.nestFrame` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.nestFrame`, `ConRon.Arena.familyKeyChecks` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.nestFrame]
 def nestFrameGrpL : FunDecl :=
     lfn (hi, us, dsOff, dsLen, grpOff, grpLen, accPOff, accPLen, accNOff, accNLen) locals
@@ -495,8 +493,6 @@ def nestFrameGrpL : FunDecl :=
 
 /-- Part of `nestFrame`: the holes, the container's WHOLE recorded group, interned in order. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1056-1079 ConRon.Arena.nestFrame
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.nestFrame`, `ConRon.Arena.familyKeyChecks` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since de06320f — `ConRon.Arena.nestFrame` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.nestFrame]
 def nestFrameHolesL : FunDecl := lfn (hi, grpOff, grpLen, accOff, accLen) locals (hv, r0, r1) {
   if grpLen == 0 { return (accOff, accLen) };
@@ -511,8 +507,6 @@ def nestFrameHolesL : FunDecl := lfn (hi, grpOff, grpLen, accOff, accLen) locals
 /-- `nest_frame(vis, ctx, fuel, progOff, progLen, hi, us, dsOff, dsLen, nPc, grpOff, grpLen,
 ns)`: a container frame, at the instantiation `(us, ds)`. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1056-1079 ConRon.Arena.nestFrame
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.nestFrame`, `ConRon.Arena.familyKeyChecks` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since de06320f — `ConRon.Arena.nestFrame` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.nestFrame]
 def nestFrameL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, hi, us, dsOff, dsLen, nPc, grpOff, grpLen, ns) locals

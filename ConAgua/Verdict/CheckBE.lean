@@ -130,7 +130,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
         rw [checkJobList_cons_ok htk hrj] at hl
         obtain ⟨htk', hdk⟩ := H.hden t htk
         obtain ⟨hw₁, env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
-          H.hI H.hpI hw htk htk' hdk hPt hndt hrj
+          H.hI H.hpI hw htk htk' hdk hPt.envWF hndt hrj
         have := ih (t + 1) a₁ a' hw₁ (PrefixOK.step H.hpush htk' hPt hd hndt) (by omega) hl
         rwa [show t + 1 + c = t + (c + 1) by omega] at this
   have h0 : PrefixOK pinsP dsP 0 ∧ ((ConLeche.Cached.recsConsts (dsP.take 0)).map (·.name)).Nodup := by

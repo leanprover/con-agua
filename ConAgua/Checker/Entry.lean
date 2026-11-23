@@ -116,7 +116,6 @@ and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`
 not scan). -/
 -- con-ron: ConRon/Arena/Main.lean:142-174 ConRon.Arena.runPipelineHead
 -- con-ron: ConRon/Arena/Checker.lean:101-111 ConRon.Arena.checkStream
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkStream` changed; re-check the L code and its proofs, then delete this line
 @[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
   z := call cap_check();
   z := call pb_check();
@@ -140,7 +139,6 @@ entries would remain; between two calls they are empty already, every job ending
 the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
 -- con-ron: ConRon/Arena/Checker.lean:65-73 ConRon.Arena.AState.worker
 -- con-ron: ConRon/Arena/Pooled.lean:33-46 ConRon.Arena.PooledAccepts
--- con-ron: CHANGED since de06320f — `ConRon.Arena.PooledAccepts` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.AState.worker] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);

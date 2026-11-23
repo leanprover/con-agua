@@ -40,6 +40,8 @@ import all ConAgua.Arena.ImaxStore
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.IotaFrame
+import all ConAgua.Arena.IotaRel
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndSum

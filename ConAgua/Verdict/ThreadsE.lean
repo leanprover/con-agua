@@ -418,7 +418,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
       obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
-        H.hpI hw hj' hx' hdk hP hnd hrj
+        H.hpI hw hj' hx' hdk hP.envWF hnd hrj
       exact ErrClaimV.cons_ok hj' hrj
         (ih r' a' hR' hw' hrest fun c hc' => hc c (List.mem_cons_of_mem _ hc'))
   have hW := walk cs r₀ PA.sF.worker (hstart r₀ hz hI) (WorkerOK.start hst) hruns hcs
