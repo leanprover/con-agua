@@ -317,6 +317,72 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
         · rw [hbo]; omega
         · rw [hbo, hso]; omega
 
+/-- **The compared run's driver on the machine**: from `ca_compare`, called as `CmpCall` says, the
+machine returns to the caller with the callee-saved registers restored; `rdx = 0`, `rax = ACCEPT`
+means the runs accepted (`CmpAccepts`), `rdx = 2` that one failed with the code in `rax`
+(`CmpErr`). `CmpGuard`: the L-level facts the proof needs (the buffer's geometry after mode `5`,
+the jobs keep the frozen arrays). -/
+set_option profiler true in
+set_option profiler.threshold 2000 in
+theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true) (hwf : Prog.wf tab q = true)
+    (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray)
+    (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
+    (hdisj : ∀ a ∈ own, a ∉ fz) (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
+      (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra)
+    (hG : CmpGuard tab p mode plo phi out fz own bC bS pb) :
+    Ev (CmpPost dm ra (CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)
+      (CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)) dm (label abiCompareL) := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  have hcodeO : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
+      (abiStub tab ++ compileProgX X tab q "check")) k0 := by
+    have h := hcode
+    rw [← List.append_assoc (abiStub tab), ← List.append_assoc] at h
+    exact h.left
+  obtain ⟨Kc, hC⟩ : ∃ Kc, Code (cmpStubL tab mode out own) Kc :=
+    ⟨_, by have h := hcode.right.right.right; rwa [cmpStub_lit] at h⟩
+  obtain ⟨base, hbase⟩ : ∃ base, dm.regs.r8.toNat = base := ⟨_, rfl⟩
+  obtain ⟨rsp0, hrsp0⟩ : ∃ rsp0, dm.regs.rsp.toNat = rsp0 := ⟨_, rfl⟩
+  have hfits := hc.hfits
+  have hcs8 := hc.hcs8
+  have hcs24 := hc.hcs24
+  have hsEnd := hc.hsEnd
+  have hn := abiNeed_ge hok
+  have hab : abiSlot = 2 ^ 35 := rfl
+  rw [Code.label (i := 21) hC rfl]
+  refine ev_label (hC.get (i := 21) rfl) ?_
+  refine ev_movRI (hC.get (i := 22) rfl) ?_
+  refine ev_cmpRO (r := .r9) (o := oR .rax) (v := (cmpNeed tab own).toUInt64) (hC.get (i := 23) rfl)
+    (Or.inr (Or.inr ⟨.rax, rfl, rfl⟩)) ?_
+  refine ev_jcc (hC.get (i := 24) rfl) (fun hlt => ?_) (fun hge => ?_)
+  · -- declined
+    rw [Code.label (i := 118) hC rfl]
+    refine ev_label (hC.get (i := 118) rfl) ?_
+    refine ev_movRI (hC.get (i := 119) rfl) ?_
+    refine ev_movRI (hC.get (i := 120) rfl) ?_
+    refine ev_ret (hC.get (i := 121) rfl) (ra := ra)
+      (by rsimp; rw [toBitVec_eq_A]; exact hc.hra) ?_
+    refine Eventually.done _ ⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, fun h => ?_, fun h => ?_⟩ <;> dsimp only at * <;>
+      (try rsimp at *)
+    · simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
+      omega
+    · exact absurd h (by decide)
+    · exact absurd h (by decide)
+  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
+    UInt64.toNat_toBitVec, Nat.not_lt] at hge
+  have hge' : cmpNeed tab own ≤ dm.regs.r9.toNat := by
+    have e : ((cmpNeed tab own).toUInt64).toNat = cmpNeed tab own :=
+      UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+    rw [e] at hge; exact hge
+  have hneedC := hge'
+  simp only [cmpNeed, L.Compiler.cmpW] at hneedC
+  sorry
+
 end
 
 end ConAgua.Final
