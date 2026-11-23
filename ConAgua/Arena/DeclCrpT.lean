@@ -676,7 +676,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   -- the opaque check
   refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_opaque_val.none ..) id
     (checkOpaqueVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage
-      (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1) (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
+      (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1) (hg3.ext _ _ hwv) hwvl ⟨_, hcA⟩ hP3.crOK)
     fun ⟨r4, m4⟩ ci4 a4 hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   dsimp only at hP4 hr4 hci4
   subst r4 ci4

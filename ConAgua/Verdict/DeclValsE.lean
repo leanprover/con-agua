@@ -28,6 +28,9 @@ public import ConLeche.Verify.Shift
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IlpRd
 import ConAgua.Arena.RecInfoW
+import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.IndReal
+import ConAgua.Arena.IndRealMemoCr
 
 @[expose] public section
 
@@ -62,20 +65,22 @@ structure CcvProg (p : Prog) : Prop where
   nodup : p.lookup "sl_nodup" = some slNodup
   basis : BasisProg p
   vg : p.lookup "value_guards" = some valueGuardsL
+  pa : p.lookup "pin_at" = some pinAtL
 
 /-- **The model of `check_constant_val`, both outcomes**: the callees outside the verdict closure
 with `Option` models through those models, the gates `all_level_params_defined`,
-`consts_resolve_ffast` and the core through `callE`. -/
+`consts_resolve_ffast` and the core through `callE`. (Heartbeats 10× the default: the three
+reserved-name guards; it timed out at 400000.) -/
 l_model checkConstantVal_specE (p : Prog) (hp : CcvProg p)
   fns [hp.val.ccv ↦ checkConstantValE]
-  specs [callW_spec p n "env_find", callW_spec p n "nat_op_name",
+  specs [callW_spec p n "env_find", callW_spec p n "nat_op_name", pinAt_specW p hp.pa n,
     callW_spec p n "erec_alloc", callW_spec p n "erec_put",
     callW_spec p n "lit_shape_ok",
     cvLps_specW p hp.val.cvg.alloc hp.val.cvg.copy hp.val.cvg.eti hp.val.cvg.lps n,
     slNodup_spec p hp.cont hp.nodup n, lbbF_spec p hp.val.cvg.bvb n, hffF_spec p hp.val.cvg.hf n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
-  heartbeats 400000 unified
+  heartbeats 4000000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 /-- **The model of `check_defn_val`, both outcomes**: its callees through their runs. -/
@@ -248,6 +253,46 @@ theorem ccvSims_of {p : Prog} (hp : StrLitProg p) (hcl : LitShapeClosed p)
       fun cv' x hx => ConRon.Bridge.denoteCV_ext hx ((emono_litShapeOk ci).run hrun), ?_⟩
     rw [R.res]; unfold decBool; simp
 
+/-- `apdF_okT` with the twin state named: the run ends at the state it starts from
+(`apdEntry_ok`), which the value guards' message (`readName`) needs. -/
+theorem apdF_okT_keep (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l e : Word)
+    (he : H e) (lps : List NIdx) (a₀ : AState) :
+    RelW apdF [o, l, e]
+      (fun m a => StageT dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧
+        (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) ∧ a = a₀)
+      (allLevelParamsDefined lps (decI e))
+      (fun m m' a r x => KeepPostT dn vis fe decW0B m m' a r x ∧ a = a₀) := by
+  intro m m' a r h ⟨hT, hdec, ⟨ks, hks⟩, ha⟩
+  obtain ⟨n, hc⟩ := callF_run h
+  rcases n with _ | n
+  · rw [callW_zero] at hc; cases hc
+  obtain ⟨s', hs', -, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (allLevelParamsDefined_spec_raw apdP apdP_prog.eview apdP_prog.lsnode apdP_prog.find
+      apdP_prog.put apdP_prog.clear apdP_prog.lmem apdP_prog.lnode apdP_prog.lapd apdP_prog.ls
+      apdP_prog.go apdP_prog.entry n ⟨m, Locals.init []⟩ o l e) hc
+  subst hs'
+  obtain ⟨b, hrun, hr, hS', hg, mp, hM⟩ := apdEntry_ok n hT.stage
+    (ApdEnv.of_den hT.twin.den hT.twin.nwf) o l e _ lps ks hks hdec he
+    (apdMR_clear hT.twin.memos.walk) hm
+  have hf := apdF_frame h
+  refine ⟨b, a, hrun, ⟨⟨hS', hT.twin.apd hf hM, ?_⟩, hg, L.Ind.decW0B_of hr⟩, ha⟩
+  rw [pinW_frame hf (by decide)]; exact hT.flag
+
+/-- `crfF_okT` with the twin state named: the run ends at the state it starts from
+(`constsResolveFFast_keepsSt`). -/
+theorem crfF_okT_keep (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
+    (a₀ : AState) :
+    RelW crfF [vis, e] (fun m a => StageT dn vis fe m a ∧ CrMemo m ∧ a = a₀) (constsResolveFFast fe (decI e))
+      (fun m m' a r x => (KeepPostT dn vis fe decW0B m m' a r x ∧ CrMemo m') ∧ a = a₀) := by
+  intro m m' a r h ⟨hT, hCr, ha⟩
+  subst ha
+  have hf := crfF_frame h
+  obtain ⟨x, a', hrun, ⟨hS', hg, hd⟩, hCr', rfl⟩ := relW_callF (P := crfP)
+    (L.Stubs.constsResolveFFast_keepsSt crfP_prog (vis := vis) (fe := fe) e he a).refAM
+    m m' a r h ⟨hT.stage, hCr, rfl⟩
+  exact ⟨x, _, hrun, ⟨⟨⟨hS', hT.twin.frame hf (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide), by rw [pinW_frame hf (by decide)]; exact hT.flag⟩, hg, hd⟩, hCr'⟩, rfl⟩
+
 /-- **`check_constant_val` refines `checkConstantVal .verified`, both outcomes**, under `StageT`:
 the duplicate guard, the certified-operation name, the literal shape of a fresh
 `axiomInfo cv` record (`ccv_rec`, `CcvSims.lit`), the universe parameters, the closedness walks,
@@ -255,11 +300,12 @@ the consts-resolve site (`uce_errClaim_lo`), then the type's sort by the core. -
 theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p)
     (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} (hC : CcvSims p dn) {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q allow : Word} {cv : IConstantVal}
+    {n : Nat} (hn : n ≤ 2 ^ 62) {m : Mem} {q allow allowRd allowSorry : Word} {cv : IConstantVal}
     {c : ConLeche.ConstantVal} (hS : StageT dn vis fe m a) (hqd : decCV (erecP m) q.toNat = some cv)
     (hden : Frontend.denoteCV a.store cv = some c)
     (hCr : L.Stubs.CrOK m) :
-    RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow) (checkConstantVal V fe cv (allow != 0)) a
+    RefE (VerdictCtxU p) (checkConstantValE p n m vis q allow allowRd allowSorry)
+      (checkConstantVal V fe cv (allow != 0) (allowRd != 0) (allowSorry != 0)) a
       (fun v _ a' => CcvPost dn vis fe m v.2 a') := by
   obtain ⟨wx, hwx, hwxl, hname⟩ := decCV_name hqd
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
@@ -291,15 +337,68 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     (hname ▸ hC.natOp n vis fe m a wx hS.stage hwxl) fun r3 x3 m3 a3 h3 hrun3 ⟨hm3, ha3, hx3⟩ => ?_
   subst m3 a3
   by_cases hb3 : r3.headD 0 ≠ 0 ∧ allow = 0
-  · rw [checkConstantValE.k_nat_op_name.abort1 p _ _ _ _ _ _ _ _ hb3]
+  · rw [checkConstantValE.k_nat_op_name.abort1 p _ _ _ _ _ _ _ _ _ _ hb3]
     have hx : x3 = true := hx3.mp hb3.1
     subst hx
     refine RefE.ite_pos (by simp [hb3.2]) fun _ => ?_
     exact ErrClaim.bind_right (L.Front.Ind.readName_run a _ _ hnm) (ErrClaim.fail_abort _ _ rfl)
-  rw [checkConstantValE.k_nat_op_name.arm1 p _ _ _ _ _ _ _ _ hb3]
+  rw [checkConstantValE.k_nat_op_name.arm1 p _ _ _ _ _ _ _ _ _ _ hb3]
   refine RefE.ite_neg (fun hc => hb3 ?_) ?_
   · simp only [Bool.and_eq_true, Bool.not_eq_true', bne_eq_false_iff_eq] at hc
     exact ⟨hx3.mpr hc.1, hc.2⟩
+  -- the compiler-trust names (`reduceOpNames`, pin slots `43`, `44`)
+  refine RefE.onlySim (fun _ => checkConstantValE.k_pin_at.none ..) (fun _ _ h => h) fun r4 m4 h4 => ?_
+  obtain ⟨hm4, hr4, hl4, hrun4⟩ := pinAtW_ok h4 hS.stage.check.pins
+  subst m4 r4
+  rw [checkConstantValE.k_pin_at.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_pin_at_2.none ..) (fun _ _ h => h) fun r5 m5 h5 => ?_
+  obtain ⟨hm5, hr5, hl5, hrun5⟩ := pinAtW_ok h5 hS.stage.check.pins
+  subst m5 r5
+  have hnames : (reduceOpNames).run a =
+      .ok ([decI (pinW m (1 + (43 : Word).toNat)), decI (pinW m (1 + (44 : Word).toNat))], a) := by
+    simp only [reduceOpNames, reduceNatName, reduceBoolName, pinReduceNat, pinReduceBool,
+      StateT.run_bind, show PIN_REDUCE_NAT = (43 : Word).toNat from rfl,
+      show PIN_REDUCE_BOOL = (44 : Word).toNat from rfl, hrun4, L.Arena.except_ok_bind, hrun5]
+    rfl
+  refine RefE.bind_right hnames ?_
+  have hb43 := decI_beq (k := .name) wx (pinW m (1 + (43 : Word).toNat)) hwxl hl4
+  have hb44 := decI_beq (k := .name) wx (pinW m (1 + (44 : Word).toNat)) hwxl hl5
+  have hcont : ([decI (pinW m (1 + (43 : Word).toNat)), decI (pinW m (1 + (44 : Word).toNat))] :
+      List NIdx).contains (decI wx) = decide (wx = pinW m (1 + (43 : Word).toNat) ∨
+        wx = pinW m (1 + (44 : Word).toNat)) := by
+    simp only [List.contains_cons, List.contains_nil, Bool.or_false, hb43, hb44]
+    by_cases h1 : wx = pinW m (1 + (43 : Word).toNat) <;> by_cases h2 : wx = pinW m (1 + (44 : Word).toNat) <;>
+      simp [h1, h2]
+  rw [hname, hcont]
+  by_cases hb5 : (wx = pinW m (1 + (43 : Word).toNat) ∨ wx = pinW m (1 + (44 : Word).toNat)) ∧ allowRd = 0
+  · rw [checkConstantValE.k_pin_at_2.abort1 p _ _ _ _ _ _ _ _ _ _ hb5.1 hb5.2]
+    refine RefE.ite_pos (by simpa [hb5.2] using hb5.1) fun _ => ?_
+    exact ErrClaim.bind_right (L.Front.Ind.readName_run a _ _ (by rw [← hname]; exact hnm))
+      (ErrClaim.fail_abort _ _ rfl)
+  refine RefE.ite_neg (fun hc => hb5 (by simpa using hc)) ?_
+  have hj : checkConstantValE.k_pin_at_2 p n vis q allowRd allowSorry wx wt (pinW m (1 + (43 : Word).toNat))
+      (.ok ([pinW m (1 + (44 : Word).toNat)], m)) = checkConstantValE.j1 p n vis q allowSorry wx wt m := by
+    by_cases hor : wx = pinW m (1 + (43 : Word).toNat) ∨ wx = pinW m (1 + (44 : Word).toNat)
+    · exact checkConstantValE.k_pin_at_2.arm1 p _ _ _ _ _ _ _ _ _ _ hor (fun h => hb5 ⟨hor, h⟩)
+    · exact checkConstantValE.k_pin_at_2.arm2 p _ _ _ _ _ _ _ _ _ _ hor
+  simp only [List.headD_cons] at hj ⊢
+  rw [hj]
+  -- `sorryAx`'s name (pin slot `13`)
+  rw [checkConstantValE.j1.arm1]
+  refine RefE.onlySim (fun _ => checkConstantValE.k_pin_at_3.none ..) (fun _ _ h => h) fun r6 m6 h6 => ?_
+  obtain ⟨hm6, hr6, hl6, hrun6⟩ := pinAtW_ok h6 hS.stage.check.pins
+  subst m6 r6
+  refine RefE.bind_right (x := pinSorryAx)
+    (by simpa only [pinSorryAx, show PIN_SORRY_AX = (13 : Word).toNat from rfl] using hrun6) ?_
+  have hb13 := decI_beq (k := .name) wx (pinW m (1 + (13 : Word).toNat)) hwxl hl6
+  rw [hb13]
+  by_cases hb6 : wx = pinW m (1 + (13 : Word).toNat) ∧ allowSorry = 0
+  · rw [checkConstantValE.k_pin_at_3.abort1 p _ _ _ _ _ _ _ _ hb6]
+    refine RefE.ite_pos (by simpa [hb6.2] using hb6.1) fun _ => ?_
+    exact ErrClaim.bind_right (L.Front.Ind.readName_run a _ _ (by rw [← hname]; exact hnm))
+      (ErrClaim.fail_abort _ _ rfl)
+  rw [checkConstantValE.k_pin_at_3.arm1 p _ _ _ _ _ _ _ _ hb6]
+  refine RefE.ite_neg (fun hc => hb6 (by simpa using hc)) ?_
   -- the fresh `axiomInfo cv` record
   refine RefE.onlySim (fun _ => checkConstantValE.k_erec_alloc.none ..) (fun _ _ h => h) fun r4 m4 h4 => ?_
   rw [checkConstantValE.k_erec_alloc.arm1]
@@ -388,9 +487,9 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     rw [decHL_grow (hg6.trans hg7) (by omega), hdec11]
   have hst7 : a7.store = a10.store := (hffF_store hrun7).trans (lbbF_store hrun6)
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h8 => nvl hG.nv (by decide +kernel) h8)
-    (fun b h8 => apdF_okT dn vis fe (r11.headD 0) (r11.tail.headD 0) wt hwtl cv.levelParams m7 b.2 a7 b.1
-      (apdF_of_callW hap h8) ⟨hS7, hdec7, by rw [hst7]; exact hlpsN⟩)
-    fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8, _⟩ => ?_
+    (fun b h8 => apdF_okT_keep dn vis fe (r11.headD 0) (r11.tail.headD 0) wt hwtl cv.levelParams a7 m7 b.2
+      a7 b.1 (apdF_of_callW hap h8) ⟨hS7, hdec7, by rw [hst7]; exact hlpsN, rfl⟩)
+    fun r8 m8 x8 a8 h8 _ ⟨⟨hS8, hg8, hx8, _⟩, ha8⟩ => ?_
   have h8' := apdF_of_callW hap (callW_of_callE h8)
   have hCr8 := CrOK.frame hCr7 (apdF_frame h8') (by decide) (by decide)
   have hA8 : AFr m m8 := fun hA => absOK_apdF h8' (hA7 hA) hS8
@@ -399,10 +498,13 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     (fun hb8 => by rw [← hx8] at hb8; simpa using hb8) fun _ _ => ?_
   -- `consts_resolve_ffast(vis, t)`
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
-    (fun b h9 => crfF_okT dn vis fe wt hwtl m8 b.2 a8 b.1 (crfF_of_callW hcrf h9) ⟨hS8, hCr8.crMemo⟩)
-    fun r9 m9' x9 a9 h9 _ ⟨⟨hS9, hg9', hx9, _⟩, hCr9'⟩ => ?_
+    (fun b h9 => crfF_okT_keep dn vis fe wt hwtl a8 m8 b.2 a8 b.1 (crfF_of_callW hcrf h9)
+      ⟨hS8, hCr8.crMemo, rfl⟩)
+    fun r9 m9' x9 a9 h9 _ ⟨⟨⟨hS9, hg9', hx9, _⟩, hCr9'⟩, ha9⟩ => ?_
   have hA9' : AFr m m9' := fun hA =>
     absOK_crfF' (crfF_of_callW hcrf (callW_of_callE h9)) (hA8 hA) hCr9'.crOK hS9
+  have hnm9 : denoteN a9.store.ns (decI wx) = some c.name := by
+    rw [ha9, ha8, hst7, ← hname]; exact (ConRon.Bridge.denoteCV_inv hden').1
   dsimp only [checkConstantValE.k_consts_resolve_ffast]
   refine RefE.splitNot (fun hb9 => by rw [← hx9]; simpa using hb9)
     (fun hb9 => by rw [← hx9] at hb9; simpa using hb9) (fun _ _ => ?_) fun _ _ => ?_
@@ -410,7 +512,8 @@ theorem ccv_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap : ApdF p
     rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, wt, 0] m9' with e10 | ⟨r10, m10⟩ <;>
       dsimp only [checkConstantValE.k_unresolved_consts_error]
     · obtain ⟨M9, hC9⟩ := hS9.core
-      exact fun hG => uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 "type"
+      exact fun hG => ErrClaim.bind_right (L.Front.Ind.readName_run a9 _ _ hnm9)
+        (uce_errClaim_lo hG.uce hG.nv hC9 hwtl (by decide) h10 _)
     · exact RefE.of_cls0 rfl
   -- the type's type
   refine RefE.bindCall (fun _ => rfl)
@@ -453,10 +556,13 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} (n : Nat) {m : Mem}
     {q v : Word} {cv : IConstantVal} (hS : StageT dn vis fe m a)
     (hqd : decCV (erecP m) q.toNat = some cv) (hv : v.toNat < 2 ^ 32)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
+    (hcvd : ∃ c, Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (valueGuardsE p n m vis q v) (valueGuards fe cv (decI v)) a
       (fun w _ a' => CcvPost dn vis fe m w.2 a') := by
   obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hqd
+  obtain ⟨cP, hcP⟩ := hcvd
+  have hlps := denoteCV_lps hcP
+  have hnm : denoteN a.store.ns cv.name = some cP.name := (ConRon.Bridge.denoteCV_inv hcP).1
   cases n with
   | zero => rw [valueGuardsE.eq_1]; exact RefE.of_cls0 rfl
   | succ n =>
@@ -500,9 +606,9 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
   -- `all_level_params_defined(o, l, v)`
   have hst7 : a7.store = a.store := (hffF_store hrun7).trans (lbbF_store hrun6)
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h8 => nvl hG.nv (by decide +kernel) h8)
-    (fun b h8 => apdF_okT dn vis fe (r11.headD 0) (r11.tail.headD 0) v hv cv.levelParams m11 b.2 a7 b.1
-      (apdF_of_callW hap h8) ⟨hT11, hdec11, by rw [hst7]; exact hlps⟩)
-    fun r8 m8 x8 a8 h8 _ ⟨hS8, hg8, hx8, _⟩ => ?_
+    (fun b h8 => apdF_okT_keep dn vis fe (r11.headD 0) (r11.tail.headD 0) v hv cv.levelParams a7 m11 b.2 a7
+      b.1 (apdF_of_callW hap h8) ⟨hT11, hdec11, by rw [hst7]; exact hlps, rfl⟩)
+    fun r8 m8 x8 a8 h8 _ ⟨⟨hS8, hg8, hx8, _⟩, ha8⟩ => ?_
   have h8' := apdF_of_callW hap (callW_of_callE h8)
   have hCr8 := CrOK.frame hCr11 (apdF_frame h8') (by decide) (by decide)
   have hA8 : AFr m m8 := fun hA => absOK_apdF h8' (hA11 hA) hS8
@@ -511,17 +617,20 @@ theorem vg_ref {p : Prog} (_hP : CcvProg p) (hap : ApdF p) (hcrf : L.Ind.CrfF p)
     (fun hb8 => by rw [← hx8] at hb8; simpa using hb8) fun _ _ => ?_
   -- `consts_resolve_ffast(vis, v)`
   refine RefE.bindCall (fun _ => rfl) (fun hG _ h9 => nvl hG.nv (by decide +kernel) h9)
-    (fun b h9 => crfF_okT dn vis fe v hv m8 b.2 a8 b.1 (crfF_of_callW hcrf h9) ⟨hS8, hCr8.crMemo⟩)
-    fun r9 m9' x9 a9 h9 _ ⟨⟨hS9, hg9', hx9, _⟩, hCr9'⟩ => ?_
+    (fun b h9 => crfF_okT_keep dn vis fe v hv a8 m8 b.2 a8 b.1 (crfF_of_callW hcrf h9)
+      ⟨hS8, hCr8.crMemo, rfl⟩)
+    fun r9 m9' x9 a9 h9 _ ⟨⟨⟨hS9, hg9', hx9, _⟩, hCr9'⟩, ha9⟩ => ?_
   have hA9' : AFr m m9' := fun hA =>
     absOK_crfF' (crfF_of_callW hcrf (callW_of_callE h9)) (hA8 hA) hCr9'.crOK hS9
+  have hnm9 : denoteN a9.store.ns cv.name = some cP.name := by rw [ha9, ha8, hst7]; exact hnm
   dsimp only [valueGuardsE.k_consts_resolve_ffast]
   refine RefE.splitNot (fun hb9 => by rw [← hx9]; simpa using hb9)
     (fun hb9 => by rw [← hx9] at hb9; simpa using hb9) (fun _ _ => ?_) fun _ _ => ?_
   · rcases h10 : callE p (n + 1) "unresolved_consts_error" [vis, v, 1] m9' with e10 | ⟨r10, m10⟩ <;>
       dsimp only [valueGuardsE.k_unresolved_consts_error]
     · obtain ⟨M9, hC9⟩ := hS9.core
-      exact fun hG => uce_errClaim_lo hG.uce hG.nv hC9 hv (by decide) h10 "value"
+      exact fun hG => ErrClaim.bind_right (L.Front.Ind.readName_run a9 _ _ hnm9)
+        (uce_errClaim_lo hG.uce hG.nv hC9 hv (by decide) h10 _)
     · exact RefE.of_cls0 rfl
   exact RefE.ret rfl ⟨hS9, hg0.trans (hg11.trans (hg8.trans hg9')), hCr9'.crOK, hA9'⟩
 
@@ -534,7 +643,7 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
     {cv : IConstantVal} {wv : Word} {hint : ConLeche.ReducibilityHint} (hS : StageT dn vis fe m a)
     (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + CI.defnValue.toNat) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
+    (hcvd : ∃ c, Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkDefnValE p n m vis c) (checkDefnVal V fe cv (decI wv) hint) a
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .defnInfo cv (decI wv) hint) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
@@ -554,7 +663,7 @@ theorem checkDefnVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkDefnValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hcvd hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkDefnValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -588,7 +697,7 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
     {cv : IConstantVal} {wv : Word} (hS : StageT dn vis fe m a)
     (hcv : decCV (erecP m) (c.toNat + CI.cv.toNat) = some cv) (hwv : erecP m (c.toNat + CI.defnValue.toNat) = some wv)
     (hwvl : wv.toNat < 2 ^ 32)
-    (hlps : ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks) (hCr : L.Stubs.CrOK m) :
+    (hcvd : ∃ c, Frontend.denoteCV a.store cv = some c) (hCr : L.Stubs.CrOK m) :
     RefE (VerdictCtxU p) (checkOpaqueValE p n m vis c) (checkOpaqueVal V fe cv (decI wv)) a
       (fun w y a' => CcvPost dn vis fe m w.2 a' ∧ w.1 = c ∧ y = .axiomInfo cv) := by
   obtain ⟨wt, hwt, hwtl, hty⟩ := (decCV_words hcv).2.2
@@ -608,7 +717,7 @@ theorem checkOpaqueVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (h
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => checkOpaqueValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨m, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
-    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hlps hCr)
+    (vg_ref hP hap hcrf n hS (by rw [e1]; exact hcv) hwvl hcvd hCr)
     fun r1 s1 y1 a1 _ _ _ hP1 => ?_
   rw [checkOpaqueValE.k_value_guards.arm1]
   have hS1 := hP1.stage
@@ -710,19 +819,19 @@ theorem checkThmVal_ref {p : Prog} (hP : CcvProg p) (hq : KnotStageProg p) (hap 
     (fun hb => by subst hb; simpa using hr4) fun _ hb => ?_
   subst hb
   -- the parameters' names read back at the guards: the prefix extends the store
-  have hlps4 : ∃ ks, cv.levelParams.mapM (denoteN a4.store.ns) = some ks := by
+  have hcvd4 : ∃ c, Frontend.denoteCV a4.store cv = some c := by
     obtain ⟨env, cP, henv, hck, hcvd, hws⟩ := hpre
     obtain ⟨hck2, hx02⟩ := thmPrefix_ext henv hck hcvd hws (by rw [hty]; exact hrun1) hrun2
     obtain ⟨-, hst4, -⟩ := ConRon.Bridge.AM.of_run (P := fun t => t = a2) rfl hrun4
       (ConRon.Bridge.Core.lvlEq?_spec a2 _ _ hck2)
     rw [hst4]
-    exact denoteCV_lps (ConRon.Bridge.denoteCV_ext hcvd hx02)
+    exact ⟨_, ConRon.Bridge.denoteCV_ext hcvd hx02⟩
   have hg14 := hg1.trans (hg2.trans hg4)
   -- the value's guards
   refine RefE.bindRun (s₀ := ⟨s4.mem, Locals.init []⟩) (fun _ => checkThmValE.k_value_guards.none ..)
     (valueGuards_specE p hP n ⟨s4.mem, Locals.init []⟩ vis (c + CI.cv) wv) (fun hG => hG.nv) id
     (vg_ref hP hap hcrf n hS4 (by rw [e1]; exact ArrExt.decCV (L.Ind.IWGrow.ext hg14) hcv)
-      hwvl hlps4 hCr4)
+      hwvl hcvd4 hCr4)
     fun r5 s5 y5 a5 _ _ _ hP5 => ?_
   rw [checkThmValE.k_value_guards.arm1]
   have hS5 := hP5.stage

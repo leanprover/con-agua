@@ -168,7 +168,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     (fun _ => checkDeclDefnE.k_check_defn_val.none ..)
     (checkDefnVal_specE p hX.ccv.val n _ vis q) (fun _ => trivial) id
     (checkDefnVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1)
-      (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
+      (hg3.ext _ _ hwv) hwvl ⟨_, hcA⟩ hP3.crOK)
     fun r4 s4 ci4 a4 h4 _ hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   rw [checkDeclDefnE.k_check_defn_val.arm1]
   dsimp only at hr4 hP4
