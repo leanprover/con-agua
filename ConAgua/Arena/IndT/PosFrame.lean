@@ -9,7 +9,6 @@ import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.WordOff
 import ConAgua.Arena.RefWalk

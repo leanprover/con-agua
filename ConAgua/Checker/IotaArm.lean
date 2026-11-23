@@ -7,8 +7,6 @@ public import ConAgua.Checker.IotaArmTrees
 import ConAgua.Checker.LoopProg
 import ConAgua.Checker.LoopProgTac
 import ConAgua.Arena.IndArm
-import ConAgua.Checker.IndArmTests
-import ConAgua.Arena.RecGenSpec.ClassFeR
 meta import ConAgua.Checker.LoopProg
 meta import ConAgua.Checker.LoopProgTac
 import all ConAgua.Arena.Abs1

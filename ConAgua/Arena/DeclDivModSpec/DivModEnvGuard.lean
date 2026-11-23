@@ -3,10 +3,8 @@ module
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclNatDeps
 public import ConAgua.Rom.CIReadSpec
 import all ConAgua.Arena.DeclArmsNat
-import ConAgua.L.WordOff
 
 @[expose] public section
 

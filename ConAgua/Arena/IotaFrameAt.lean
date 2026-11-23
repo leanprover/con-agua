@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.IotaFrameCtor
-import ConAgua.Arena.RecLayout.RuleDec
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.RecClassSpec.IhW
 import ConAgua.L.WordOff
 

@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IotaFrameFrame
 import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.L.WordOff
 
 @[expose] public section
 

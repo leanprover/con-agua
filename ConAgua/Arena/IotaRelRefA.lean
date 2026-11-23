@@ -5,7 +5,6 @@ public import ConAgua.Arena.IndPosSpec.NtyLook
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.RecLayout.CIDec
 public import ConAgua.Arena.DeclCanonLvl
-import ConAgua.Arena.DefEqLeaves2
 public import ConRon.Bridge.Inductives.Rel
 import ConRon.Bridge.Core.Walks.Spine
 import ConRon.Bridge.Inductives.Run

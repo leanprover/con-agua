@@ -2,8 +2,6 @@ module
 
 public import ConAgua.Arena.IotaFrameMajor
 import ConAgua.Arena.RecLayout.RuleDec
-import ConAgua.Arena.RecLayout.CIDec
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.RecGenSpec.DecNLAt
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.IndSumSpec.DecHLTake

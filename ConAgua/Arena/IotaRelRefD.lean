@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IotaRelRefL
 public import ConAgua.Arena.IotaFrameIface
-public import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.EnvDenote
 import ConAgua.Arena.IndexLoops
@@ -11,7 +10,6 @@ public import ConAgua.Arena.IndT.RecsTemp
 public import ConAgua.Arena.IndInstallSpec.PapW
 public import ConAgua.Arena.StageFlags
 public import ConAgua.Arena.IndPartsSpec.PlW
-import ConAgua.Arena.IndDeclConstsFire
 import ConRon.Bridge.Inductives.Install
 
 @[expose] public section

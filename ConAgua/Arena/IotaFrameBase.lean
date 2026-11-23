@@ -1,12 +1,7 @@
 module
 
 public import ConAgua.Arena.IotaFrameModels
-public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-public import ConAgua.Arena.IndRealSpine
-public import ConAgua.Arena.RecClass
 public import ConAgua.Arena.IndDeclConstsDrop
-public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealMemo
 public import ConAgua.Arena.IndRealIlpL

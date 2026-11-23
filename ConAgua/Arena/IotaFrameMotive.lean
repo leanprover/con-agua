@@ -1,9 +1,8 @@
 module
 
-public import ConAgua.Arena.IotaFrameBase
 public import ConAgua.Arena.IotaFrameRef
+public import ConAgua.Arena.IotaFrameBase
 import ConAgua.Arena.RecClassSpec.CloseLams
-import ConAgua.Arena.FormerSortRef
 import ConRon.Bridge.Checker.PooledOleans
 
 @[expose] public section

@@ -1,14 +1,8 @@
 module
 
 public import ConAgua.Arena.IotaFrameMinors
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.IndSumSpec.StructProjArgP
 import ConAgua.Arena.IndPosSpec.DpGoW
-import ConAgua.Arena.LiftRefine
-import ConAgua.Arena.Keeps
-import ConAgua.Arena.WriteSets
-import ConAgua.L.WordOff
 
 @[expose] public section
 

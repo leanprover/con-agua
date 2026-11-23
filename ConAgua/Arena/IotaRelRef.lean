@@ -3,7 +3,6 @@ module
 public import ConAgua.Arena.IotaRelModels
 public import ConAgua.Arena.IotaFrameRef
 public import ConAgua.Arena.CoreLevels
-public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.IndRealBle
 public import ConRon.Bridge.Inductives.IotaRead
 import all ConAgua.Arena.CoreLevels

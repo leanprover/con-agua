@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.IotaFrameAt
-public import ConAgua.Arena.StageTLift
 public import ConAgua.Arena.TwinStep
 public import ConRon.Bridge.Inductives.Run
 import ConRon.Bridge.Inductives.Rel
@@ -11,7 +10,6 @@ import ConRon.Bridge.Checker.Inv
 import ConRon.Bridge.Checker.Canon
 import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
-import ConAgua.Arena.IlpRd
 
 @[expose] public section
 

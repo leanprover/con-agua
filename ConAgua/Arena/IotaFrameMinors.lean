@@ -2,9 +2,6 @@ module
 
 public import ConAgua.Arena.IotaFrameMinor
 import ConAgua.Arena.RecClassSpec.Classes
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndCopy2
-import ConAgua.L.WordOff
 
 @[expose] public section
 

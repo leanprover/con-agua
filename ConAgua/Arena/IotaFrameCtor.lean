@@ -2,12 +2,9 @@ module
 
 public import ConAgua.Arena.IotaFrameParts
 import ConAgua.Arena.RecLayout.RuleDec
-import ConAgua.Arena.ErecRd
 import ConAgua.Arena.RecCheckSpec.ErToIwWStage
 import ConAgua.Arena.IndSumSpec.ParamLevels
 import ConAgua.Arena.IndPosSpec.DpGoW
-import ConAgua.Arena.IndMaster
-import ConAgua.Arena.IndCopy2
 import ConAgua.L.WordOff
 
 @[expose] public section

@@ -2,7 +2,6 @@ module
 
 public import ConAgua.Arena.IotaFrameMotive
 import ConAgua.Arena.RecLayout.CIDec
-import ConAgua.Arena.ErecRd
 import ConAgua.L.WordOff
 
 @[expose] public section
