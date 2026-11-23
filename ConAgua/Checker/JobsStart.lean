@@ -3,6 +3,7 @@ module
 public import ConAgua.Checker.BuildStage
 import ConRon.Bridge.Stages
 import ConRon.Bridge.Checker.Install
+import ConAgua.Checker.RomProgInit
 public import ConAgua.Arena.Jobs
 
 @[expose] public section
@@ -36,13 +37,20 @@ theorem PhaseA.twin {b : ByteArray} (PA : PhaseA b) :
     ConRon.Bridge.tablesSpec hdrv hpp hoff hpd hden PA.idx
   exact ⟨hx, hp⟩
 
+/-- **The solution's flag after the index build** is the loaded memory's `0`: neither the stages
+before the loop (`preLoopC`) nor the index build (`biC`) write `CTL[224]`. -/
+theorem FoldAt.c224 {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (h : FoldAt b pb sz PA m₇ m) : rdW (m.arr64 CTL) 224 = 0 := by
+  rw [h.frame.ctl _ (not_mem_biC (by decide)), h.r7.since.frame.ctl _ (by decide)]
+  exact loadMem_rd b pb sz CTL 224
+
 /-- **The jobs' start**: after the index build and the cache flush, `JobR` at the index state
 with its caches emptied (the twin's worker state, `AState.worker`: the scratch tier and memos as
 every job's `enterScratch` leaves them, `Arena/JobStart.lean`). -/
 @[refines ConRon.Arena.AState.worker]
 theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
     (h : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m) :
-    JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } := by
+    JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m) { PA.sF with caches := Caches.empty } := by
   have hB := h.build
   have hS := hB.stage
   have hF := flushMem_frame m
@@ -60,7 +68,8 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
     hB.idx.frameLo hA0 hC0 hF, hS.check.env.ownBelow.frameLo hA0 hC0 hF,
     by rw [stampW_frameLo hC0 hF]; exact hS.check.env.stamp, declsF_frameLo hA0 hF hB.decls,
     iwOK_frameLo hA0 hC0 hF hS.iw, ?_, pinSetsR_frameLo hA0 hC0 hF ?_, ?_, ?_,
-    hB.memos.frameLo hA0 hC0 hF, h.fsize, h.frozen.frameLo hC0 hF⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
+    hB.memos.frameLo hA0 hC0 hF, h.fsize, h.frozen.frameLo hC0 hF,
+    JSol.none (by rw [hC0.ctl hF (by decide)]; exact h.c224)⟩, ⟨hB.drv.state.wf⟩, hB.off, rfl⟩
   · rw [hC0.ctl hF (by decide), h.grow.ctl130]; exact h7.c130
   · exact PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
       (h.frame.ctl _ (not_mem_biC (by decide)))
@@ -77,7 +86,7 @@ theorem FoldAt.jobR {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
 
 /-- **The jobs' memory half after the index build**, before the flush, at the index state. -/
 theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (h : FoldAt b pb sz PA m₇ m) : JobM PA.ipins (dnOf PA.sE.store) PA.ds PA.I m PA.sF := by
+    (h : FoldAt b pb sz PA m₇ m) : JobM PA.ipins (dnOf PA.sE.store) PA.ds none PA.I m PA.sF := by
   have hB := h.build
   have hS := hB.stage
   have hF : MemFrame [] [] m m := MemFrame.refl _ _ _
@@ -91,7 +100,7 @@ theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
   refine ⟨hS.check.arena, hS.check.core, hS.check.pins, hS.check.mode,
     hB.idx, hS.check.env.ownBelow, hS.check.env.stamp, hB.decls, hS.iw, ?_,
     PinSetsR.grow h7.pinSets h.grow.grow (h.frame.ctl _ (not_mem_biC (by decide)))
-      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize, h.frozen⟩
+      (h.frame.ctl _ (not_mem_biC (by decide))), ?_, ?_, hB.memos, h.fsize, h.frozen, JSol.none h.c224⟩
   · rw [h.grow.ctl130]; exact h7.c130
   · refine ⟨?_, ?_, ?_, h.grow.memos ?_, fun k x hk => ?_⟩
     · rw [hsz]; have := hcaps.2.2.2.2.2.2.1; omega
@@ -106,8 +115,8 @@ theorem FoldAt.jobM {b pb : ByteArray} {sz : TieredArray → Nat} {PA : PhaseA b
 
 /-- **`JobR` across a memory with the same word arrays** (the globals, the byte arrays). -/
 theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {I : IStreamIndex} {M M' : Mem} {a : AState}
-    (h : JobR pins dn ds I M a) (hf : MemFrame [] [] M M') : JobR pins dn ds I M' a := by
+    {ds : Array IDeclaration} {J : Option ISolution} {I : IStreamIndex} {M M' : Mem} {a : AState}
+    (h : JobR pins dn ds J I M a) (hf : MemFrame [] [] M M') : JobR pins dn ds J I M' a := by
   have hA : LoArr [] := loArr_nil
   have hC : LoCtl [] := fun _ h => absurd h (by simp)
   refine ⟨⟨⟨ArenaR.frame_ext [] _ (by simp) (by simp) _ _ hf _ h.arena.base,
@@ -118,13 +127,14 @@ theorem _root_.L.Arena.JobR.frame0 {pins : List INatOpPinSet} {dn : NIdx → Opt
     by rw [stampW_frameLo hC hf]; exact h.stamp, declsF_frameLo hA hf h.decls, iwOK_frameLo hA hC hf h.iw,
     by rw [hC.ctl hf (by decide)]; exact h.top1, pinSetsR_frameLo hA hC hf h.pinsets,
     h.mem.frameLo hA hC hf fun k x e => ?_, by rw [pinW_frame hf (by simp)]; exact h.flag,
-    h.memos.frameLo hA hC hf, h.fsize, h.frozen.frameLo hC hf⟩, h.state, h.off, h.caches⟩
+    h.memos.frameLo hA hC hf, h.fsize, h.frozen.frameLo hC hf, h.jsol.frameLo hA hC hf⟩, h.state, h.off,
+    h.caches⟩
   exact h.mem.dnN k x e
 
 /-- `JobR` reads no global. -/
 theorem _root_.L.Arena.JobR.setGlob {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {I : IStreamIndex} {M : Mem} {a : AState}
-    (h : JobR pins dn ds I M a) (g : GVar → Word) : JobR pins dn ds I ⟨M.bytes, M.words, g⟩ a :=
+    {ds : Array IDeclaration} {J : Option ISolution} {I : IStreamIndex} {M : Mem} {a : AState}
+    (h : JobR pins dn ds J I M a) (g : GVar → Word) : JobR pins dn ds J I ⟨M.bytes, M.words, g⟩ a :=
   h.frame0 ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
 
 end L.Checker
