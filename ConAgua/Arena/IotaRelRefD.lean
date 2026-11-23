@@ -4,6 +4,8 @@ public import ConAgua.Arena.IotaRelRefL
 public import ConAgua.Arena.IotaFrameIface
 public import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Checker.Basis
+import ConRon.Bridge.EnvDenote
+import ConAgua.Arena.IndexLoops
 
 @[expose] public section
 
@@ -410,7 +412,7 @@ theorem denoteCI_rec_rules {st : EStore} {cv : IConstantVal} {mI rP : Nat} {k : 
 theorem recReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
     (hf : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
     (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
-    (hAr : AbsKeep p "rules_read") {n : Nat}
+    {n : Nat}
     {m m' : Mem} {a : AState} {ciw : Word} {r : List Word} {ci : IConstantInfo}
     {cP : ConLeche.ConstantInfo}
     (hc : callW p n "rec_reads" [vis, ciw] m = some (r, m')) (hI : RInv dn vis feR env fe E m a)
@@ -470,6 +472,103 @@ theorem recReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
     (ArrExt.decCV hg1.ext hcv) (decOIR_lit hd1) (fun r0 e => hrel r0 e) (ArrExt.decRules hg1.ext hrs)
     (ConRon.Bridge.denoteRules_ext k1.ext _ _ hrsP)
   exact ⟨b2, a2, h2, hI2, hg1.trans hg2, hd2, k1.trans k2⟩
+
+/-- The `j`-th constant record of a decoded `IW` slice of records. -/
+theorem irRecAt {m : Mem} {o l j : Word} {recs : List IConstantInfo}
+    (h : decPL m (decCI (erecP m)) o.toNat l.toNat = some recs) (hb : o.toNat + l.toNat ≤ iwTop m)
+    (hT : iwTop m ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64) (hj : j < l) :
+    decCI (erecP m) (rdW (m.arr64 IW) (o + j)).toNat = some (recs[j.toNat]'(by
+      rw [decPL_length (m := m) h]; exact UInt64.lt_iff_toNat_lt.mp hj)) ∧
+    recs.drop j.toNat = recs[j.toNat]'(by rw [decPL_length (m := m) h]; exact UInt64.lt_iff_toNat_lt.mp hj) ::
+      recs.drop (j + 1).toNat := by
+  have hj' : j.toNat < l.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  obtain ⟨v, hv, hx, hf⟩ := decPL_get' h j.toNat hj'
+  have hlt : o.toNat + j.toNat < 2 ^ 64 := by omega
+  obtain ⟨hr, hvlt⟩ := iwN_rdW hv hlt
+  have e : (o + j) = UInt64.ofNat (o.toNat + j.toNat) := UInt64.toNat_inj.mp (by
+    rw [UInt64.toNat_add]; simp)
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
+  refine ⟨by rw [e, hr]; simpa [Nat.mod_eq_of_lt hvlt] using hf, ?_⟩
+  rw [hj1, List.drop_eq_getElem_cons]
+
+/-- **`recs_read`'s loop from record `j`** refines `recsRead` on the records from `j` on. -/
+theorem recsRead_loop (P : IotaRelProg p) (PF : IotaFrameProg p)
+    (hrc : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
+    {o l : Word} {recs : List IConstantInfo} :
+    ∀ (k : Nat) (m m' : Mem) (a : AState) (j : Word) (r : List Word) (rsP : List ConLeche.ConstantInfo),
+      recsReadW.loop1 p k m vis o l j = some (r, m') → RInv dn vis feR env fe E m a →
+      decPL m (decCI (erecP m)) o.toNat l.toNat = some recs → o.toNat + l.toNat ≤ iwTop m →
+      Frontend.denoteCIList a.store (recs.drop j.toNat) = some rsP → j ≤ l →
+      ∃ b a', (recsRead feR (recs.drop j.toNat)).run a = .ok (b, a') ∧
+        RInv dn vis feR env fe E m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
+        ConRon.Bridge.CoreStep env fe a a'
+  | 0, m, m', a, j, r, _, hW, _, _, _, _, _ => by rw [recsReadW.loop1.eq_1] at hW; cases hW
+  | k + 1, m, m', a, j, r, rsP, hW, hI, hrs, hb, hrsP, hj => by
+    by_cases hc : j < l
+    · rw [recsReadW.loop1.arm1 _ _ _ _ _ _ _ hc] at hW
+      obtain ⟨hci, hdrop⟩ := irRecAt hrs hb hI.stage.iw.iw hI.stage.iw.iwSize hc
+      rw [hdrop] at hrsP ⊢
+      simp only [Frontend.denoteCIList] at hrsP
+      obtain ⟨cP, hcP⟩ : ∃ cP, Frontend.denoteCI a.store (recs[j.toNat]'(by
+          rw [decPL_length (m := m) hrs]; exact UInt64.lt_iff_toNat_lt.mp hc)) = some cP := by
+        cases e : Frontend.denoteCI a.store (recs[j.toNat]'(by
+          rw [decPL_length (m := m) hrs]; exact UInt64.lt_iff_toNat_lt.mp hc)) with
+        | none => rw [e] at hrsP; simp at hrsP
+        | some y => exact ⟨y, rfl⟩
+      obtain ⟨restP, hrestP⟩ : ∃ restP, Frontend.denoteCIList a.store (recs.drop (j + 1).toNat) = some restP := by
+        cases e : Frontend.denoteCIList a.store (recs.drop (j + 1).toNat) with
+        | none => rw [hcP, e] at hrsP; simp at hrsP
+        | some y => exact ⟨y, rfl⟩
+      rcases c1 : callW p k "rec_reads" [vis, rdW (m.arr64 IW) (o + j)] m with _ | ⟨r1, m1⟩
+      · rw [c1, recsReadW.k_rec_reads.eq_1] at hW; cases hW
+      obtain ⟨b1, a1, h1, hI1, hg1, hd1, k1⟩ := recReads_rel P PF hrc hfr hrr' hAk c1 hI hci hcP
+      simp only [recsRead]
+      rw [StateT.run_bind, h1, except_ok_bind]
+      by_cases hz : r1.headD 0 = 0
+      · rw [c1, recsReadW.k_rec_reads.arm1 _ _ _ _ _ _ _ _ hz] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hb1 : b1 = false := by have := hd1.1; rw [hz] at this; simpa using this.symm
+        subst hb1
+        exact ⟨false, a1, rfl, hI1, hg1, by simp [decW0B], k1⟩
+      rw [c1, recsReadW.k_rec_reads.arm2 _ _ _ _ _ _ _ _ hz] at hW
+      have hb1 : b1 = true := by rw [← hd1.1]; exact bne_iff_ne.mpr hz
+      subst hb1
+      simp only [ite_true]
+      have hj1 : j + 1 ≤ l := by
+        rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; have := UInt64.lt_iff_toNat_lt.mp hc
+        simp; have := l.toNat_lt; omega
+      obtain ⟨b2, a2, h2, hI2, hg2, hd2, k2⟩ := recsRead_loop P PF hrc hfr hrr' hAk k m1 m' a1 (j + 1) r
+        restP hW hI1 (decPL_ci_grow hg1 hb hrs) (Nat.le_trans hb hg1.iw)
+        (ConRon.Bridge.denoteCIList_mono k1.ext _ _ hrestP) hj1
+      exact ⟨b2, a2, h2, hI2, hg1.trans hg2, hd2, k1.trans k2⟩
+    rw [recsReadW.loop1.arm2 _ _ _ _ _ _ _ hc] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hj' : j = l := UInt64.le_antisymm hj (UInt64.not_lt.mp hc)
+    subst hj'
+    rw [List.drop_eq_nil_of_le (by rw [decPL_length (m := m) hrs]; exact Nat.le_refl _)]
+    exact ⟨true, a, rfl, hI, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hI.check⟩
+
+/-- **`recs_read(vis, o, l)` refines `recsRead feR recs`** (an `IW` slice of constant records). -/
+@[refines ConRon.Arena.recsRead]
+theorem recsRead_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
+    (hf : p.lookup "recs_read" = some recsReadL)
+    (hrc : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel") {n : Nat}
+    {m m' : Mem} {a : AState} {o l : Word} {r : List Word} {recs : List IConstantInfo}
+    {rsP : List ConLeche.ConstantInfo}
+    (hc : callW p n "recs_read" [vis, o, l] m = some (r, m')) (hI : RInv dn vis feR env fe E m a)
+    (hrs : decPL m (decCI (erecP m)) o.toNat l.toNat = some recs) (hb : o.toNat + l.toNat ≤ iwTop m)
+    (hrsP : Frontend.denoteCIList a.store recs = some rsP) :
+    ∃ b a', (recsRead feR recs).run a = .ok (b, a') ∧
+      RInv dn vis feR env fe E m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (recsRead_specW p hf n _ vis o l) hc
+  rcases n with _ | n
+  · rw [recsReadW.eq_1] at hW; cases hW
+  rw [recsReadW.arm1] at hW
+  simpa using recsRead_loop P PF hrc hfr hrr' hAk (n + 1) m _ a 0 r rsP hW hI hrs hb
+    (by simpa using hrsP) UInt64.zero_le
 
 end rule
 
