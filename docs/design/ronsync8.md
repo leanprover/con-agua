@@ -127,7 +127,9 @@ is outside the final theorems' trusted base. To the proofs, `natBigHash` stays a
   write sets (`Checker/IotaArmClosed.lean`, 9 s, 1.4 GB). The tree builds with zero `sorry`; the
   axiom guards are unchanged.
 * `con-ron-lean-twin` hung on `nat_size_ok`: the first `natBigHash` fold (`>>> 64` per word) is
-  quadratic, and the twin hashes huge `Nat.pow` results. It now splits in halves (`O(n log n)`).
+  quadratic, and the twin hashes `2^16777216` thousands of times; a fold in halves still copied the
+  number per level. It now mixes three words read in constant time (the lowest, the highest, the
+  bit length): weaker than upstream's C, but only our Lean tools run it.
   con-ron #171 removed `--pins` (every run decodes the embedded pins, all four variants), so
   `e2e.py`, `diff-e2e.py --refs` and `bench.py` call it without the flag.
 

@@ -52,21 +52,14 @@ header): all 64-bit words of a big number mixed.  Only for `n ≥ 2^64`,
 which is an mpz object, as upstream's `lean_nat_big_hash` (`natHash` in
 `Kernel/Expr.lean` answers below). -/
 -- con-agua patch: no `native/nat_hash.c` here (our `lakefile.toml` compiles no C, and the
--- nightly-2026-10-20 runtime does not export `lean_nat_big_hash`): the compiled code is this Lean
--- fold over the 64-bit words, low to high, split in halves so that it costs `O(n log n)` (a
--- word-by-word `>>> 64` would be quadratic). Only our tools' compiled code runs it. To the
--- proofs `natBigHash` stays an opaque function of the number.
+-- nightly-2026-10-20 runtime does not export `lean_nat_big_hash`). Lean has no word access to a
+-- big `Nat`, and a fold over all its words copies the number at each step (the twin hashes
+-- `2^16777216` thousands of times on `nat_size_ok`), so the compiled code mixes three words it
+-- reads in constant time: the lowest, the highest and the bit length. Equal numbers hash
+-- equally, which is all the proofs use (`natBigHash` stays opaque to them); only our Lean tools'
+-- compiled code runs it (con-ron-lean-twin, romgen, ...), never `checker`.
 def natBigHashImpl (n : @& Nat) : UInt64 :=
-  go n (n.log2 / 64 + 1) 11
-where
-  /-- Mix the `k` words of `m` (`m < 2^(64 k)`) into `h`, the low half first. -/
-  go (m : Nat) (k : Nat) (h : UInt64) : UInt64 :=
-    if hk : k ≤ 1 then mixHash h (UInt64.ofNat m)
-    else
-      let lo := k / 2
-      go (m >>> (64 * lo)) (k - lo) (go (m % 2 ^ (64 * lo)) lo h)
-  termination_by k
-  decreasing_by all_goals omega
+  mixHash (mixHash (UInt64.ofNat n) (UInt64.ofNat (n >>> (n.log2 - 63)))) (UInt64.ofNat n.log2)
 
 @[implemented_by natBigHashImpl]
 opaque natBigHash (n : @& Nat) : UInt64
