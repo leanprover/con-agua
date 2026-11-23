@@ -27,7 +27,7 @@ def fvarTypeDL : FunDecl := lfn (e) locals (g, x, y, z) {
   return y
 }
 
-/-- con-ron: ConRon/Arena/CheckerBase.lean:160-168 ConRon.Arena.fvarTypeDs -/
+/-- con-ron: ConRon/Arena/CheckerBase.lean:161-169 ConRon.Arena.fvarTypeDs -/
 @[no_expose, l_impl ConRon.Arena.fvarTypeDs]
 def fvarTypeDsL : FunDecl := lfn (o, l) locals (q, k, t) {
   q := call iw_alloc(l);

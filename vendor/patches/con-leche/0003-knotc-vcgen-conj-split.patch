@@ -3,11 +3,11 @@ each _hit lemma: vcgen splits a conjunction post into one VC per conjunct since 
 (vendor/README.md, "Toolchain switch" 3).
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
-index adde0c6019ae0e016bff99929d459bd4348fe76b..051e1e77ab9ff1bb462f7c0aeeebe932b5c264f0 100644
+index 3cbda1124ec1fd107ed5b04cb608042aa8e721d7..63a2567194e2422dd947100c42d4720c34917e40 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
-@@ -85,6 +85,14 @@ theorem CSOK.whnf_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-   exact ⟨⟨F, hrun⟩, whnf_WScoped henv F hrun hw⟩
+@@ -84,6 +84,14 @@ theorem CSOK.whnf_hit {s : CState} {d : Nat} {i r : Expr}
+   exact ⟨F, hall d hw.to_wscopedB⟩
  grind_pattern [conleche_grind] CSOK.whnf_hit =>
    CSOK mode eager env s, s.whnfC[i]?, Runs ((fueledFns mode eager env).whnf d i) r
 +-- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
@@ -19,10 +19,10 @@ index adde0c6019ae0e016bff99929d459bd4348fe76b..051e1e77ab9ff1bb462f7c0aeeebe932
 +grind_pattern [conleche_grind] CSOK.whnf_hit_ws =>
 +  CSOK mode eager env s, s.whnfC[i]?, Expr.WScoped d r
  
- /-- A body answer is a whnf answer one fuel up. -/
- theorem Runs.whnf_of_body {d : Nat} {i r : Expr}
-@@ -132,6 +140,14 @@ theorem CSOK.infer_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-   exact ⟨⟨F, hrun⟩, inferTypeCore_WScoped henv F hrun hw⟩
+ /-- The answer of that hit is well scoped.  A lemma of its own, with its
+ own trigger: `vcgen` proves a post's conjuncts one at a time, and the
+@@ -141,6 +149,14 @@ theorem CSOK.infer_hit {s : CState} {d : Nat} {i r : Expr}
+   exact ⟨F, hall d hw.to_wscopedB⟩
  grind_pattern [conleche_grind] CSOK.infer_hit =>
    CSOK mode eager env s, s.inferC[i]?, Runs ((fueledFns mode eager env).infer d i) r
 +-- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
@@ -34,10 +34,10 @@ index adde0c6019ae0e016bff99929d459bd4348fe76b..051e1e77ab9ff1bb462f7c0aeeebe932
 +grind_pattern [conleche_grind] CSOK.infer_hit_ws =>
 +  CSOK mode eager env s, s.inferC[i]?, Expr.WScoped d r
  
- /-- A body answer is an infer answer one fuel up. -/
- theorem Runs.infer_of_body {d : Nat} {i r : Expr}
-@@ -180,6 +196,14 @@ theorem CSOK.inferIO_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-   exact ⟨⟨F, hrun⟩, inferTypeIO_WScoped henv F hrun hw⟩
+ /-- The answer of that hit is well scoped.  A lemma of its own, with its
+ own trigger: `vcgen` proves a post's conjuncts one at a time, and the
+@@ -199,6 +215,14 @@ theorem CSOK.inferIO_hit {s : CState} {d : Nat} {i r : Expr}
+   exact ⟨F, hall d hw.to_wscopedB⟩
  grind_pattern [conleche_grind] CSOK.inferIO_hit =>
    CSOK mode eager env s, s.inferIOC[i]?, Runs ((fueledFns mode eager env).inferIO d i) r
 +-- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
@@ -49,5 +49,5 @@ index adde0c6019ae0e016bff99929d459bd4348fe76b..051e1e77ab9ff1bb462f7c0aeeebe932
 +grind_pattern [conleche_grind] CSOK.inferIO_hit_ws =>
 +  CSOK mode eager env s, s.inferIOC[i]?, Expr.WScoped d r
  
- /-- An io body answer is an io-slot answer one fuel up. -/
- theorem Runs.inferIO_of_body {d : Nat} {i r : Expr}
+ /-- The answer of that hit is well scoped.  A lemma of its own, with its
+ own trigger: `vcgen` proves a post's conjuncts one at a time, and the

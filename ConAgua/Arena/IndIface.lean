@@ -713,7 +713,7 @@ end erec
 }
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
--- con-ron: ConRon/Arena/CheckerBase.lean:38-43 ConRon.Arena.nameNodup
+-- con-ron: ConRon/Arena/CheckerBase.lean:39-44 ConRon.Arena.nameNodup
 @[no_expose, l_impl ConRon.Arena.nameNodup]
 def slNodup : FunDecl := lfn (o, l) locals (b, r) {
   if l == 0 { return 1 };

@@ -2,13 +2,7 @@ module
 
 public import ConLeche.Kernel.Name
 public import ConLeche.Kernel.Exclusive
-/- `withPtrEq` is `public` but not `@[expose]`, and its whole point here
-is that it is *definitionally* `k ()` — which is what `Expr.beqMemo_eq`
-proves.  `import all` makes that body visible **in this module only**;
-that theorem is the public relay, so no importer needs it, and the
-executed `Expr.beq` stays the plain `decide (· = ·)` that the kernel
-can still reduce. -/
-public import ConLeche.Util.PtrEq
+public import ConLeche.Kernel.NatHash
 
 /-!
 # Kernel expressions
@@ -88,7 +82,7 @@ before the structural step, at every node — `level.cpp:125` is `kind` →
 `hash` → `is_eqp` → structural.  The children start over with the
 pointer, the parameter with `Name.decEqPtr`. -/
 def Level.decEqPtr (a b : Level) : Decidable (a = b) :=
-  ConLeche.ptrDecEq a b fun _ =>
+  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
     if hh : a.hashData = b.hashData then
       match a, b with
       | .zero, .zero => isTrue rfl
@@ -143,7 +137,7 @@ instance : LawfulBEq Level where
 inductive Literal where
   | natVal (n : Nat)
   | strVal (s : String)
-  deriving Repr, Inhabited, Hashable
+  deriving Repr, Inhabited
 
 /-- The specification of literal equality: the structural decision. -/
 def Literal.decEq : (a b : Literal) → Decidable (a = b)
@@ -163,10 +157,10 @@ the literal's hash (`Expr.beqMemo`, `enterBeq`).  A memo hit on a
 literal that was found again in a new node is then one pointer test,
 not a walk over the number's words. -/
 @[inline] def Literal.decEqPtr (a b : Literal) : Decidable (a = b) :=
-  ConLeche.ptrDecEq a b fun _ =>
+  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
     match a, b with
     | .natVal n, .natVal m =>
-      match ConLeche.ptrDecEq n m (fun _ => Nat.decEq n m) with
+      match ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq n m (fun _ => Nat.decEq n m) with
       | isTrue h => isTrue (by rw [h])
       | isFalse h => isFalse (fun e => h (Literal.natVal.inj e))
     | .strVal s, .strVal t =>
@@ -179,6 +173,40 @@ not a walk over the number's words. -/
 
 /-- Every literal equality runs `Literal.decEqPtr`. -/
 instance : DecidableEq Literal := Literal.decEq
+
+/-- `2^64`: from it on `natHash` calls the C.  `@[noinline]`: the compiler
+emits a `Nat` literal of 2^32 or more as `lean_cstr_to_nat("…")`, a GMP
+decimal parse and an allocation at every evaluation, and it inlines a
+plain top-level constant too (lean4#16007); as a `@[noinline]` constant
+it is parsed once.  (A shift test, `n >>> 64 == 0`, has no parse but
+allocates the shifted `Nat` for a big `n`: +18 % instructions on the
+big-literal walk of C20's ck318.) -/
+@[noinline] def natHashWordBound : Nat := 18446744073709551616
+
+/-- **The hash of a `Nat` literal** (task #598): lean4#16146's
+`Literal.natHash`, the number itself below `2^64`, all its 64-bit words
+mixed above (fixes lean4#15686).  `Hashable Nat` is `n mod 2^64` alone,
+so literals that agree in their low 64 bits shared one hash (DESIGN
+#598).  Below `2^64` the hash is computed here (by the inline scalar
+comparison and conversion); above, by the vendored C `natBigHash`
+(`Kernel/NatHash.lean`; at the bump to a toolchain that ships
+lean4#16146 this definition becomes
+`@[extern "lean_nat_hash"] opaque natHash (n : @& Nat) : UInt64`, the
+runtime's own hash, and the C and `natHashWordBound` go).  An `Expr` node
+computes it once, at construction (the computed field `Expr.data`).  The
+`.olean` reader never reads Lean's stored hashes
+(`Frontend/Olean/Region.lean`), so this hash is ours alone; it is
+upstream's value all the same. -/
+def natHash (n : Nat) : UInt64 :=
+  if n < natHashWordBound then UInt64.ofNat n else natBigHash n
+
+/-- A literal's hash: `natHash` for numbers, the string's own hash
+(`lean_string_hash`, over all its bytes) for strings. -/
+def Literal.hash : Literal → UInt64
+  | .natVal n => natHash n
+  | .strVal s => Hashable.hash s
+
+instance : Hashable Literal := ⟨Literal.hash⟩
 
 /-- Does the level mention a parameter (the official kernel's
 `level.has_param`)?  There is no interned level table here, so this is
@@ -947,7 +975,7 @@ on equal addresses only, where the runtime pointer test answers
 to the structural `decEq`, which `decEqPtr` does not exist yet to
 replace.  Code outside the equality uses `ptrDec`. -/
 @[inline] def ptrDecStruct (a b : Expr) : Decidable (a = b) :=
-  ConLeche.ptrDecEq a b (fun _ => decEq a b)
+  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b (fun _ => decEq a b)
 
 /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
 addresses are the filter; the stored objects, tested by identity, are
@@ -1249,10 +1277,10 @@ memoised descent.  What both `==` (`beq_eq_beqMemo`) and every
     (fun h => by subst h; simp)
 
 /-- The executed equality decides `a = b`: `withPtrEq a b k h` is
-*defined* as `k ()`, the word guard cannot reject an equal pair, and
-`beqDec` is a decision of `a = b`. -/
+`k ()` (`ConLeche.withPtrEq_eq`), the word guard cannot reject an equal
+pair, and `beqDec` is a decision of `a = b`. -/
 theorem beqMemo_iff (a b : Expr) : beqMemo a b = true ↔ a = b := by
-  show (if a.data == b.data then @decide (a = b) (beqDec a b) else false) = true ↔ a = b
+  rw [beqMemo, ConLeche.withPtrEq_eq]
   by_cases h : a = b
   · subst h; simp
   · simp [h]
@@ -1277,7 +1305,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
 a fallback that compiled code would run is `decEqPtr`, never the
 structural walk. -/
 @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=
-  ConLeche.ptrDecEq a b (fun _ => inferInstance)
+  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b (fun _ => inferInstance)
 
 /-- The executed equality is the specification. -/
 theorem beqMemo_eq (a b : Expr) : beqMemo a b = decide (a = b) := by

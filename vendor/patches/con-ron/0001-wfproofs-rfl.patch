@@ -2,7 +2,7 @@ Tbl.node?_push_eq: simp only leaves X = X differing in an instance on nightly-20
 closes it (vendor/README.md, "ConRonArena").
 
 diff --git a/vendor/con-ron/ConRon/Arena/WFProofs.lean b/vendor/con-ron/ConRon/Arena/WFProofs.lean
-index 6aaa1cdb99747377148a76d78367684a94dfb685..09f551e47c40e60803ccd19c52ff7e96c2ec74e0 100644
+index d10a72f3ac66bcdd2e69822991f13255a1b70d5e..7dfb5c7cefe9ffd40f2630897e6f60b8085d50ba 100644
 --- a/vendor/con-ron/ConRon/Arena/WFProofs.lean
 +++ b/vendor/con-ron/ConRon/Arena/WFProofs.lean
 @@ -1272,7 +1272,7 @@ theorem Tbl.size_push (t : Tbl α ι δ) (a : α) (d : δ) (i : ι) :

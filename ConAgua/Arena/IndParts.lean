@@ -888,8 +888,10 @@ def blockLargeElimAllowed : FunDecl := lfn (p, nested) locals (nz, n, large, k) 
 /-- `check_ind_decl(vis, boff, blen, nP)`: the `.indDecl block nP` arm of `checkDeclKind`
 (`@[l_impl ConRon.Arena.checkDeclKind]`, one arm of it): the declared parameter count
 (`ind_params_ok`), then the one route (`read_block`, `check_block`), or the reader's reason. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vis2) {
   pOk := call ind_params_ok(nP, boff, blen);

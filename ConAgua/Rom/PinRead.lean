@@ -261,7 +261,7 @@ def internPinSetsL : FunDecl := lfn (q) locals (c, o) {
 `allPinsOff`, then the variant list right after them. The twin first writes the run's maximum
 `Nat` size into the pins; the run's maximum is the default, which `intern_reserved_pins` wrote to
 `PINS[72]` already, so there is nothing to write. -/
--- con-ron: ConRon/Arena/Checker.lean:124-162 ConRon.Arena.internAllPins
+-- con-ron: ConRon/Arena/Checker.lean:130-168 ConRon.Arena.internAllPins
 @[no_expose, l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;

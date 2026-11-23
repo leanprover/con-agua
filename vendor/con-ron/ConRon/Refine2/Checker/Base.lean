@@ -762,14 +762,14 @@ end MemoWalks
 hypothesis: that walk's statement (`mentions_const_ls`) is
 `Refine2/Inductives/StructParts.lean`'s, a module ABOVE this one (the
 Inductives tier imports the checker's base), so it cannot be named here. -/
-theorem unresolved_consts_error_of {pers st lst} {e : arena.handle.EIdx} {o}
+theorem unresolved_consts_error_of {pers st lst} {e : arena.handle.EIdx} {rw : alloc.vec.Vec Std.U32} {o}
     {w : String}
     (hM : ∀ {st lst} (t : arena.handle.NIdx), AStateRel₀ pers st lst → AStateInv pers st →
       Lockstep.LS pers (fun a b => b = id a)
         (arena.inductives.struct_parts.mentions_const pers st t e) lst
         (mentionsConst (absNIdx t) (absEIdx e)))
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hrun : arena.checker_base.unresolved_consts_error pers st e = ok o) :
+    (hrun : arena.checker_base.unresolved_consts_error pers st rw e = ok o) :
     SimRel₀ (fun r v => absAErrKind r = lAErrKind v) pers lst o
       (unresolvedConstsError w (absEIdx e)) := by
   have hS : ∀ {st lst}, AStateRel₀ pers st lst → AStateInv pers st →
@@ -786,22 +786,22 @@ DECLINES (`notImplemented`) and anything else REJECTS (`invalid`), and the
 claim is that the two agree on WHICH — messages are never compared
 (DESIGN §3.1).  `unresolved_consts_error_of` at `mentions_const_ls`
 (`Checker/Leaves.lean`, moved down from `Inductives/StructParts.lean`). -/
-theorem unresolved_consts_error_refines {pers st lst} {e : arena.handle.EIdx} {o}
+theorem unresolved_consts_error_refines {pers st lst} {e : arena.handle.EIdx} {rw : alloc.vec.Vec Std.U32} {o}
     {w : String}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
-    (hrun : arena.checker_base.unresolved_consts_error pers st e = ok o) :
+    (hrun : arena.checker_base.unresolved_consts_error pers st rw e = ok o) :
     SimRel₀ (fun r v => absAErrKind r = lAErrKind v) pers lst o
       (unresolvedConstsError w (absEIdx e)) :=
   unresolved_consts_error_of (fun _ hrel hinv => mentions_const_ls hrel hinv) hrel hinv hrun
 
 open Lockstep in
 @[lockstep] theorem unresolved_consts_error_ls {pers st lst}
-    {e : arena.handle.EIdx}
+    {e : arena.handle.EIdx} {rw : alloc.vec.Vec Std.U32}
     {w : String}
     (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st) :
     LS pers (fun r v => absAErrKind r = lAErrKind v)
-      (arena.checker_base.unresolved_consts_error pers st e) lst
+      (arena.checker_base.unresolved_consts_error pers st rw e) lst
       (unresolvedConstsError w (absEIdx e)) :=
   LS.ofSimRel₀ fun _ h => unresolved_consts_error_refines hrel hinv h
 
@@ -846,10 +846,10 @@ open Lockstep in
 /-- `unresolved_consts_error_l` ⊑ `unresolvedConstsErrorL` — the string-literal
 guard (at a fresh memo) ahead of `unresolved_consts_error`, at the kind. -/
 @[lockstep] theorem unresolved_consts_error_l_ls {pers st lst}
-    {e : arena.handle.EIdx} {strOk : Bool} {w : String}
+    {e : arena.handle.EIdx} {rw : alloc.vec.Vec Std.U32} {strOk : Bool} {w : String}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) :
     LS pers (fun r v => absAErrKind r = lAErrKind v)
-      (arena.checker_base.unresolved_consts_error_l pers st strOk e) lst
+      (arena.checker_base.unresolved_consts_error_l pers st strOk rw e) lst
       (unresolvedConstsErrorL strOk w (absEIdx e)) := by
   rw [arena.checker_base.unresolved_consts_error_l, unresolvedConstsErrorL]
   lockstep
@@ -858,10 +858,10 @@ open Lockstep in
 /-- `unresolved_consts_fail` ⊑ `throw (unresolvedConstsErrorL fe.strLit where_ e)` — the
 failing arm every front door spells. -/
 @[lockstep] theorem unresolved_consts_fail_ls {α β : Type} {R : α → β → Prop}
-    {pers st lst} {rf lf} {e : arena.handle.EIdx} {w : String}
+    {pers st lst} {rf lf} {e : arena.handle.EIdx} {rw : alloc.vec.Vec Std.U32} {w : String}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hctx : CoreCtx pers rf lf) :
-    LS pers R (arena.checker_base.unresolved_consts_fail α pers st rf e) lst
+    LS pers R (arena.checker_base.unresolved_consts_fail α pers st rf rw e) lst
       (unresolvedConstsFailSpec (α := β) lf w (absEIdx e)) := by
   rw [arena.checker_base.unresolved_consts_fail, unresolvedConstsFailSpec, hctx.strLit]
   lockstep
@@ -1092,32 +1092,58 @@ open Lockstep in
       (checkConstantValGuardsRestSpec (absIConstantVal cv)) :=
   LS.ofSim₀ fun _ h => check_constant_val_guards_rest_refines hrel hinv h
 
+/-- `check_constant_val_reserved` is `check_constant_val_guards`'s tail past the
+operation-name test: the two reserved names, then the guards past them. -/
+theorem check_constant_val_reserved_refines {pers st lst}
+    {cv : arena.env.IConstantVal} {allowReduce allowSorry : Bool} {o}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hrun : arena.checker_base.check_constant_val_reserved pers st cv allowReduce allowSorry
+      = ok o) :
+    Sim₀ (fun _ : Unit => ()) pers lst o
+      (checkConstantValReservedSpec (absIConstantVal cv) allowReduce allowSorry) := by
+  refine Lockstep.LS.toSim₀ ?_ hrun
+  rw [arena.checker_base.check_constant_val_reserved]
+  unfold checkConstantValReservedSpec
+  lockstep
+
+open Lockstep in
+@[lockstep] theorem check_constant_val_reserved_ls {pers st lst}
+    {cv : arena.env.IConstantVal} {allowReduce allowSorry : Bool}
+    (hrel : AStateRel₀ pers st lst)
+    (hinv : AStateInv pers st) :
+    LS pers (fun a b => b = (fun _ : Unit => ()) a)
+      (arena.checker_base.check_constant_val_reserved pers st cv allowReduce allowSorry) lst
+      (checkConstantValReservedSpec (absIConstantVal cv) allowReduce allowSorry) :=
+  LS.ofSim₀ fun _ h => check_constant_val_reserved_refines hrel hinv h
+
 /-- `check_constant_val_guards` is `checkConstantVal`'s guard prefix — the
 syntactic tests, the operation name allowed only at a definition. -/
 theorem check_constant_val_guards_refines {pers st lst} {rf lf}
-    {cv : arena.env.IConstantVal} {allowOp : Bool} {o}
+    {cv : arena.env.IConstantVal} {allowOp allowReduce allowSorry : Bool} {o}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hfe : IFEnvRel pers rf lf) (hfinv : IFEnvInv rf)
-    (hrun : arena.checker_base.check_constant_val_guards pers st rf cv allowOp = ok o) :
+    (hrun : arena.checker_base.check_constant_val_guards pers st rf cv allowOp allowReduce
+      allowSorry = ok o) :
     Sim₀ (fun _ : Unit => ()) pers lst o
-      (checkConstantValGuardsSpec lf (absIConstantVal cv) allowOp) := by
+      (checkConstantValGuardsSpec lf (absIConstantVal cv) allowOp allowReduce allowSorry) := by
   have hfeI : IFEnvRelI pers rf lf := ⟨hfe, hfinv⟩
   have hctx := IFEnvInv.coreCtx hfe hfinv
   refine Lockstep.LS.toSim₀ ?_ hrun
   rw [arena.checker_base.check_constant_val_guards]
-  try unfold checkConstantValGuardsSpec
+  unfold checkConstantValGuardsSpec
   lockstep
 
 open Lockstep in
 @[lockstep] theorem check_constant_val_guards_ls {pers st lst}
     {rf lf}
-    {cv : arena.env.IConstantVal} {allowOp : Bool}
+    {cv : arena.env.IConstantVal} {allowOp allowReduce allowSorry : Bool}
     (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st)
     (hfe : IFEnvRelI pers rf lf) :
     LS pers (fun a b => b = (fun _ : Unit => ()) a)
-      (arena.checker_base.check_constant_val_guards pers st rf cv allowOp) lst
-      (checkConstantValGuardsSpec lf (absIConstantVal cv) allowOp) :=
+      (arena.checker_base.check_constant_val_guards pers st rf cv allowOp allowReduce
+        allowSorry) lst
+      (checkConstantValGuardsSpec lf (absIConstantVal cv) allowOp allowReduce allowSorry) :=
   LS.ofSim₀ fun _ h => check_constant_val_guards_refines hrel hinv hfe.rel hfe.inv h
 
 /-- `check_constant_val_tail` is `checkConstantVal`'s tail: the level-parameter
@@ -1133,7 +1159,7 @@ theorem check_constant_val_tail_refines {pers st lst} {rf lf}
   have hctx := IFEnvInv.coreCtx hfe hfinv
   refine Lockstep.LS.toSim₀ ?_ hrun
   rw [arena.checker_base.check_constant_val_tail]
-  try unfold checkConstantValTailSpec
+  unfold checkConstantValTailSpec
   lockstep
 
 open Lockstep in
@@ -1151,12 +1177,15 @@ open Lockstep in
 /-- **`check_constant_val` ⊑ `checkConstantVal`** — the common per-declaration
 constant check, whole, at the caller's `allowOp`. -/
 theorem check_constant_val_refines {pers st lst} {rf lf}
-    {mode : kernel.env.CheckMode} {cv : arena.env.IConstantVal} {allowOp : Bool} {o}
+    {mode : kernel.env.CheckMode} {cv : arena.env.IConstantVal}
+    {allowOp allowReduce allowSorry : Bool} {o}
     (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
     (hfe : IFEnvRel pers rf lf) (hfinv : IFEnvInv rf)
-    (hrun : arena.checker_base.check_constant_val pers st mode rf cv allowOp = ok o) :
+    (hrun : arena.checker_base.check_constant_val pers st mode rf cv allowOp allowReduce
+      allowSorry = ok o) :
     Sim₀ (fun _ : Unit => ()) pers lst o
-      (checkConstantVal (ConRon.Refine.absMode mode) lf (absIConstantVal cv) allowOp) := by
+      (checkConstantVal (ConRon.Refine.absMode mode) lf (absIConstantVal cv) allowOp allowReduce
+        allowSorry) := by
   have hfeI : IFEnvRelI pers rf lf := ⟨hfe, hfinv⟩
   have hctx := IFEnvInv.coreCtx hfe hfinv
   refine Lockstep.LS.toSim₀ ?_ hrun
@@ -1168,13 +1197,15 @@ open Lockstep in
 @[lockstep] theorem check_constant_val_ls {pers st lst}
     {rf lf}
     {mode : kernel.env.CheckMode}
-    {cv : arena.env.IConstantVal} {allowOp : Bool}
+    {cv : arena.env.IConstantVal} {allowOp allowReduce allowSorry : Bool}
     (hrel : AStateRel₀ pers st lst)
     (hinv : AStateInv pers st)
     (hfe : IFEnvRelI pers rf lf) :
     LS pers (fun a b => b = (fun _ : Unit => ()) a)
-      (arena.checker_base.check_constant_val pers st mode rf cv allowOp) lst
-      (checkConstantVal (ConRon.Refine.absMode mode) lf (absIConstantVal cv) allowOp) :=
+      (arena.checker_base.check_constant_val pers st mode rf cv allowOp allowReduce allowSorry)
+        lst
+      (checkConstantVal (ConRon.Refine.absMode mode) lf (absIConstantVal cv) allowOp allowReduce
+        allowSorry) :=
   LS.ofSim₀ fun _ h => check_constant_val_refines hrel hinv hfe.rel hfe.inv h
 
 /-! ## The free variables' types -/
@@ -1360,7 +1391,7 @@ theorem value_guards_tail_refines {pers st lst} {rf lf}
   have hctx := IFEnvInv.coreCtx hfe hfinv
   refine Lockstep.LS.toSim₀ ?_ hrun
   rw [arena.decl_check.value_guards_tail]
-  try unfold valueGuardsTailSpec
+  unfold valueGuardsTailSpec
   lockstep
 
 open Lockstep in

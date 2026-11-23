@@ -280,10 +280,14 @@ theorem instLPSet_specA (f : Nat → Expr → Expr) (s₀ : AState) (h : EIdx) (
         s'.pins = s₀.pins ∧ s'.memos.instLPLC = s₀.memos.instLPLC ∧
         s'.memos.instLPLsC = s₀.memos.instLPLsC ∧
         MemoOK f s'.memos.instLPC s'.store; ⊤⦄ := by
-  vcgen [instLPSet]
-  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
-  all_goals subst_vars
-  all_goals first | rfl | exact MemoOK.insert hm rfl hk hr
+  vcgen [instLPSet] <;> subst_vars
+  all_goals first
+    | exact rfl
+    | exact MemoOK.insert hm rfl hk hr
+    | exact ⟨rfl, rfl, rfl, rfl, MemoOK.insert hm rfl hk hr⟩
+    | exact ⟨rfl, rfl, rfl, MemoOK.insert hm rfl hk hr⟩
+    | exact ⟨rfl, rfl, MemoOK.insert hm rfl hk hr⟩
+    | exact ⟨rfl, MemoOK.insert hm rfl hk hr⟩
 
 /-! ### Theorem 1 for `instLPGo` -/
 
@@ -344,11 +348,15 @@ theorem instLPGo_specS (ks : List ConLeche.Name) (us : List Level) :
     intro s₀ h hok hm hml hmls hcl hcls hden
     dsimp only
     sym only [bridge_grind, denoteEView, opt2, opt3, instLPFn_cutoff, view_eq_viewAt,
-        scratchOn_eq_lss, → Std.le_trans] =>  -- con-agua patch (lean4#15487): store-order chains the split VCs lost
+        scratchOn_eq_lss] =>
       vcgen [instLPGo_succ, instLPArmFVar, instLPArmApp, instLPArmLam,
         instLPArmForallE, instLPArmLet, instLPArmProj, ih.run,
         substLMemoAt_spec, substLsMemoAt_spec,
-        instLPSet_specA (f := instLPFn ks us)] <;> finish
+        instLPSet_specA (f := instLPFn ks us)] <;>
+      -- `gen := 16`: the `letE` arm's `RelE` goal (three children, the intern and the memo
+      -- insert after them) reaches the default term generation 8 since `vcgen` proves the
+      -- post's conjuncts one goal at a time (lean4#15487, v4.36.0; task #161)
+      finish (gen := 16)
 
 /-- con-leche: ConLeche/Kernel/ExprOps.lean:2566-2605 Expr.instLPGo — the walk
 at every substitution, as the entry's `vcgen` list takes it. -/
@@ -400,7 +408,6 @@ sibling readback tables framed. -/
         ReadNCacheOK s'.caches.readNC s'.store; ⊤⦄ := by
   dsimp only
   vcgen [readNameM]
-  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
   all_goals (subst_vars; first | rfl | grind [ReadNCacheOK])
 
 /-- con-leche: ConLeche/Kernel/Name.lean:34-37 Name — and `readNamesM`, whose

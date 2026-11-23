@@ -492,22 +492,14 @@ theorem towerBodyAVPos_wellDenoted {w : Nat} (hw : w ≠ 0) :
     · -- the inner application `.psigma [w,w] F`
       rw [WellDenoted_app]
       exact ⟨trivial, hok.1,
-        ⟨w + 1, univ w,
-          fun A => piR (w + 1) (psigmaFibreSpace V w A)
-            fun _ => (univ w : V),
-          hbv ▸ psigmaV_rr_mem (V := V) w, hA, fun h => absurd h hvac,
-          fun _ => IsTy_univ w⟩⟩
+        appliesTo_of_mem_piR (hbv ▸ psigmaV_rr_mem (V := V) w) (IsTy_univ w) hA⟩
     · -- the fibre λ
       rw [WellDenoted_lam]
-      refine ⟨hok.1, hok.2.1,
-        fun x hx => towerBodyAVPos_wellDenoted hw (hok.2.2.2 x hx),
-        ⟨fun _ => (univ w : V), fun x hx => ?_, fun _ _ => IsTy_univ w⟩⟩
-      rw [hG x hx]
-      exact towerSet_univ_teleOfFields (hb.2 x hx)
+      exact ⟨hok.1, hok.2.1,
+        fun x hx => towerBodyAVPos_wellDenoted hw (hok.2.2.2 x hx)⟩
     · -- the outer application's kind slot
-      refine ⟨w + 1, psigmaFibreSpace V w (interp V ρ F),
-        fun _ => (univ w : V), ?_, ?_, fun h => absurd h hvac,
-        fun _ => IsTy_piR _ _ _⟩
+      refine appliesTo_of_mem_piR (v := w + 1) (A := psigmaFibreSpace V w (interp V ρ F))
+        (B := fun _ => (univ w : V)) ?_ (IsTy_piR _ _ _) ?_
       · show SetTheory.app (interp V ρ (.const .psigma [w, w]))
             (interp V ρ F) ∈ˢ _
         rw [hbv]
@@ -555,6 +547,135 @@ theorem towerPath_of_spineFit {w : Nat} : ∀ {ab : List Term} {ρ : Nat → V} 
     .succ (fun x _ => towerEnds_mkPisAV ab (cons x ρ) w) h.1 (towerPath_of_spineFit h.2)
   | [], _, _ :: _, h => h.elim
   | _ :: _, _, [], h => h.elim
+
+/-- The universes are distinct. -/
+theorem univ_inj {n m : Nat} (h : (univ n : V) = univ m) : n = m := by
+  have key : ∀ {a b : Nat}, a < b → (univ a : V) ≠ univ b := by
+    intro a b hab he
+    have hm : (univ a : V) ∈ˢ univ b := univ_mono (V := V) hab _ (univ_mem_univ a)
+    rw [← he] at hm
+    exact not_mem_self _ hm
+  rcases Nat.lt_trichotomy n m with hl | rfl | hl
+  · exact absurd h (key hl)
+  · rfl
+  · exact absurd h.symm (key hl)
+
+/-- **Two Π-towers over sorts of one value agree along a fit** (task #443), each read at its own
+valuation: a spine fitting the one fits the other, and they end in one sort.  Off a fit nothing
+is claimed: over an empty domain a function space is a truth value whatever its fibres. -/
+theorem spineFit_of_mkPisAV_eq : ∀ {ab ab' : List Term} {ρ ρ' : Nat → V} {vs : List V}
+    {n n' : Nat}, ab.length = ab'.length →
+    interp V ρ (mkPisAV ab (.sort n)) = interp V ρ' (mkPisAV ab' (.sort n')) →
+    SpineFit ρ ab vs → SpineFit ρ' ab' vs ∧ n = n'
+  | [], [], _, _, [], _, _, _, h, _ => ⟨trivial, univ_inj h⟩
+  | A :: ab, A' :: ab', ρ, ρ', v :: vs, n, n', hl, h, hfit => by
+    have hpath := towerPath_of_spineFit (w := n) hfit
+    have hstrict := hpath.strict
+    have hpi : interp V ρ (mkPisAV (A :: ab) (.sort n))
+        = piV (interp V ρ A) fun x => interp V (cons x ρ) (mkPisAV ab (.sort n)) := rfl
+    have hpi' : interp V ρ' (mkPisAV (A' :: ab') (.sort n'))
+        = piV (interp V ρ' A') fun x => interp V (cons x ρ') (mkPisAV ab' (.sort n')) := rfl
+    rw [hpi, hpi'] at h
+    rw [hpi] at hstrict
+    have hB : ∀ x, x ∈ˢ interp V ρ A →
+        ∃ y, y ∈ˢ interp V (cons x ρ) (mkPisAV ab (.sort n)) :=
+      fun x _ => (towerEnds_mkPisAV ab (cons x ρ) n).nonempty
+    have hne := piV_nonempty hB
+    have h₁ := piV_eq_piSet_of hstrict hne
+    have h₂ := piV_eq_piSet_of (h ▸ hstrict) (h ▸ hne)
+    have hs : piSet (interp V ρ A) (fun x => interp V (cons x ρ) (mkPisAV ab (.sort n)))
+        = piSet (interp V ρ' A') (fun x => interp V (cons x ρ') (mkPisAV ab' (.sort n'))) := by
+      rw [← h₁, ← h₂, h]
+    obtain ⟨hv', hf⟩ := piSet_inj hs hB hfit.1
+    obtain ⟨hrest, hn⟩ := spineFit_of_mkPisAV_eq (by simpa using hl) hf hfit.2
+    exact ⟨⟨hv', hrest⟩, hn⟩
+  | [], _ :: _, _, _, _, _, _, hl, _, _ => nomatch hl
+  | _ :: _, [], _, _, _, _, _, hl, _, _ => nomatch hl
+  | [], [], _, _, _ :: _, _, _, _, _, hfit => hfit.elim
+  | _ :: _, _ :: _, _, _, [], _, _, _, _, hfit => hfit.elim
+
+/-- **Two Π-towers over sorts of one value have one set of fits**, ending in one sort where
+there is one. -/
+theorem spineFit_iff_of_mkPisAV_eq {ab ab' : List Term} {ρ ρ' : Nat → V} {n n' : Nat}
+    (hl : ab.length = ab'.length)
+    (h : interp V ρ (mkPisAV ab (.sort n)) = interp V ρ' (mkPisAV ab' (.sort n'))) (vs : List V) :
+    (SpineFit ρ ab vs ↔ SpineFit ρ' ab' vs) ∧ (SpineFit ρ ab vs → n = n') :=
+  ⟨⟨fun hf => (spineFit_of_mkPisAV_eq hl h hf).1,
+    fun hf => (spineFit_of_mkPisAV_eq hl.symm h.symm hf).1⟩,
+   fun hf => (spineFit_of_mkPisAV_eq hl h hf).2⟩
+
+/-- **A Π-tower over a sort with no fit is the unit**: its first domain is empty, or every
+fibre over it is again such a tower, a truth value. -/
+theorem mkPisAV_sort_eq_unitSet : ∀ {ab : List Term} {ρ : Nat → V} {n : Nat},
+    (∀ vs, ¬ SpineFit ρ ab vs) → interp V ρ (mkPisAV ab (.sort n)) = unitSet
+  | [], _, _, h => absurd trivial (h [])
+  | A :: ab, ρ, n, h => by
+    have hB : ∀ x, x ∈ˢ interp V ρ A → interp V (cons x ρ) (mkPisAV ab (.sort n)) = unitSet :=
+      fun x hx => mkPisAV_sort_eq_unitSet fun vs hvs => h (x :: vs) ⟨hx, hvs⟩
+    show piV (interp V ρ A) (fun x => interp V (cons x ρ) (mkPisAV ab (.sort n))) = unitSet
+    rw [piV_eq_zero fun x hx => by rw [hB x hx]; exact mem_univZero.mpr fun _ h => h, piR_zero]
+    exact truthVal_eq_unitSet fun x hx => ⟨pt, by rw [hB x hx]; exact pt_mem_unitSet⟩
+
+/-- **Two Π-towers over sorts of one value, each read at its own valuation, agree stage by
+stage where one of them has a fit**: their first domains are one, and so are their fibres over
+it (`piSet_inj`, the towers strict along the fit). -/
+theorem mkPisAV_cons_eq {A A' : Term} {ab ab' : List Term} {ρ ρ' : Nat → V} {n n' : Nat}
+    (h : interp V ρ (mkPisAV (A :: ab) (.sort n)) = interp V ρ' (mkPisAV (A' :: ab') (.sort n')))
+    {vs : List V} (hfit : SpineFit ρ (A :: ab) vs) :
+    interp V ρ A = interp V ρ' A' ∧ ∀ x, x ∈ˢ interp V ρ A →
+      interp V (cons x ρ) (mkPisAV ab (.sort n))
+        = interp V (cons x ρ') (mkPisAV ab' (.sort n')) := by
+  have hstrict := (towerPath_of_spineFit (w := n) hfit).strict
+  have hpi : interp V ρ (mkPisAV (A :: ab) (.sort n))
+      = piV (interp V ρ A) fun x => interp V (cons x ρ) (mkPisAV ab (.sort n)) := rfl
+  have hpi' : interp V ρ' (mkPisAV (A' :: ab') (.sort n'))
+      = piV (interp V ρ' A') fun x => interp V (cons x ρ') (mkPisAV ab' (.sort n')) := rfl
+  rw [hpi, hpi'] at h
+  rw [hpi] at hstrict
+  have hB : ∀ x, x ∈ˢ interp V ρ A → ∃ y, y ∈ˢ interp V (cons x ρ) (mkPisAV ab (.sort n)) :=
+    fun x _ => (towerEnds_mkPisAV ab (cons x ρ) n).nonempty
+  have hne := piV_nonempty hB
+  have h₁ := piV_eq_piSet_of hstrict hne
+  have h₂ := piV_eq_piSet_of (h ▸ hstrict) (h ▸ hne)
+  have hs : piSet (interp V ρ A) (fun x => interp V (cons x ρ) (mkPisAV ab (.sort n)))
+      = piSet (interp V ρ' A') (fun x => interp V (cons x ρ') (mkPisAV ab' (.sort n'))) := by
+    rw [← h₁, ← h₂, h]
+  have hB' : ∀ x, x ∈ˢ interp V ρ' A' → ∃ y, y ∈ˢ interp V (cons x ρ') (mkPisAV ab' (.sort n')) :=
+    fun x _ => (towerEnds_mkPisAV ab' (cons x ρ') n').nonempty
+  exact ⟨SetTheory.ext fun y => ⟨fun hy => (piSet_inj hs hB hy).1,
+    fun hy => (piSet_inj hs.symm hB' hy).1⟩, fun x hx => (piSet_inj hs hB hx).2⟩
+
+/-- **Two Π-towers over sorts of one value agree past a common fit of their prefixes**, each
+read at its own valuation: where a fit of the rest exists, the towers are strict along it and
+their fibres agree stage by stage (`piSet_inj`); where none exists on either side, both rests
+are the unit. -/
+theorem mkPisAV_tail_eq : ∀ {pre pre' ab ab' : List Term} {ρ ρ' : Nat → V} {vs : List V}
+    {n n' : Nat}, pre.length = pre'.length → ab.length = ab'.length →
+    interp V ρ (mkPisAV (pre ++ ab) (.sort n)) = interp V ρ' (mkPisAV (pre' ++ ab') (.sort n')) →
+    SpineFit ρ pre vs → SpineFit ρ' pre' vs →
+    interp V (consList vs ρ) (mkPisAV ab (.sort n))
+      = interp V (consList vs ρ') (mkPisAV ab' (.sort n'))
+  | [], [], _, _, _, _, [], _, _, _, _, h, _, _ => h
+  | A :: pre, A' :: pre', ab, ab', ρ, ρ', v :: vs, n, n', hl, hl', h, hfit, hfit' => by
+    have hlen : (pre ++ ab).length = (pre' ++ ab').length := by
+      simp only [List.length_append]; simp at hl; omega
+    have hv : interp V (cons v ρ) (mkPisAV (pre ++ ab) (.sort n))
+        = interp V (cons v ρ') (mkPisAV (pre' ++ ab') (.sort n')) := by
+      by_cases hws : ∃ ws, SpineFit (cons v ρ) (pre ++ ab) ws
+      · obtain ⟨ws, hws⟩ := hws
+        exact (mkPisAV_cons_eq h (vs := v :: ws) ⟨hfit.1, hws⟩).2 v hfit.1
+      · have hws' : ¬ ∃ ws, SpineFit (cons v ρ') (pre' ++ ab') ws := by
+          rintro ⟨ws, hw⟩
+          have hfull : SpineFit ρ' (A' :: pre' ++ ab') (v :: ws) := ⟨hfit'.1, hw⟩
+          exact hws ⟨ws, (spineFit_of_mkPisAV_eq (by simpa using hlen.symm) h.symm hfull).1.2⟩
+        rw [mkPisAV_sort_eq_unitSet fun ws h' => hws ⟨ws, h'⟩,
+          mkPisAV_sort_eq_unitSet fun ws h' => hws' ⟨ws, h'⟩]
+    exact mkPisAV_tail_eq (ρ := cons v ρ) (ρ' := cons v ρ') (by simpa using hl) hl' hv hfit.2
+      hfit'.2
+  | [], _ :: _, _, _, _, _, _, _, _, hl, _, _, _, _ => nomatch hl
+  | _ :: _, [], _, _, _, _, _, _, _, hl, _, _, _, _ => nomatch hl
+  | [], [], _, _, _, _, _ :: _, _, _, _, _, _, hfit, _ => hfit.elim
+  | _ :: _, _ :: _, _, _, _, _, [], _, _, _, _, _, hfit, _ => hfit.elim
 
 /-- A Π-tower over a sort that a walk reads above `0`, along a fit, is above `0`. -/
 theorem sort_ne_zero_of_walk {ab : List Term} {ρ : Nat → V} {vs : List V} {w w' : Nat}
@@ -738,10 +859,7 @@ theorem mkLamsAV_wellDenoted {b T : Term} :
   | d :: ds, ρ, h => by
     show WellDenoted V ρ (.lam d (mkLamsAV ds b))
     rw [WellDenoted_lam]
-    refine ⟨h.1, h.2.1, fun a ha => mkLamsAV_wellDenoted (h.2.2 a ha),
-      ⟨fun a => interp V (cons a ρ) (mkPisAV ds T),
-       fun a ha => mkLamsAV_mem (h.2.2 a ha),
-       fun a ha => underTowerOk_res_IsTy (h.2.2 a ha)⟩⟩
+    exact ⟨h.1, h.2.1, fun a ha => mkLamsAV_wellDenoted (h.2.2 a ha)⟩
 
 
 /-!
@@ -1034,10 +1152,11 @@ theorem mkTowerGoPos_wellDenoted {w : Nat} (hw : w ≠ 0) :
           refine ⟨trivial, ?_, ?_⟩
           · rw [WellDenoted_liftN, hshift]
             exact hok.1
-          · exact piV_slot hm0 (by rw [interp_liftN, hshift]; exact hAm) (IsTy_univ w)
+          · exact appliesTo_of_mem_piV hm0 (IsTy_univ w)
+              (by rw [interp_liftN, hshift]; exact hAm)
         · -- the fibre λ
           rw [WellDenoted_lam]
-          refine ⟨?_, ?_, ?_, ?_⟩
+          refine ⟨?_, ?_, ?_⟩
           · rw [WellDenoted_liftN, hshift]
             exact hok.1
           · rw [hA]; exact hok.2.1
@@ -1045,30 +1164,26 @@ theorem mkTowerGoPos_wellDenoted {w : Nat} (hw : w ≠ 0) :
             rw [hA] at hx
             rw [WellDenoted_liftN, ← cons_shiftE, hshift]
             exact towerBodyAV_wellDenoted (hok.2.2.2 x hx)
-          · refine ⟨fun _ => (univ w : V), fun x hx => ?_, fun _ _ => IsTy_univ w⟩
-            rw [hA] at hx
-            rw [hBfun x, towerBodyAV_interp (fun _ => hb.2 x hx)]
-            exact towerSet_univ_teleOfFields (hb.2 x hx)
         · -- the second application's kind slot
-          show ∃ v A B, SetTheory.app (interp V (consList bs (cons b ρp))
+          show AppliesTo (SetTheory.app (interp V (consList bs (cons b ρp))
                 (.const .psigmaMk [w, w]))
               (interp V (consList bs (cons b ρp))
-                (F.liftN (Fs.length + 1))) ∈ˢ piR v A B ∧ _
+                (F.liftN (Fs.length + 1)))) _
           rw [hA, hBv]
-          exact piV_slot hm1 hBm IsTy_piV
+          exact appliesTo_of_mem_piV hm1 IsTy_piV hBm
       · -- the third application's kind slot
-        show ∃ v A B, SetTheory.app (SetTheory.app
+        show AppliesTo (SetTheory.app (SetTheory.app
               (interp V (consList bs (cons b ρp))
                 (.const .psigmaMk [w, w]))
               (interp V (consList bs (cons b ρp))
                 (F.liftN (Fs.length + 1))))
             (interp V (consList bs (cons b ρp))
               (.lam (F.liftN (Fs.length + 1))
-                ((towerBodyAV w Fs).liftN (Fs.length + 1) 1))) ∈ˢ piR v A B ∧ _
+                ((towerBodyAV w Fs).liftN (Fs.length + 1) 1)))) _
         rw [hA, hBv, interp_bvar, hval]
-        exact piV_slot hm2 hsp.1 hok.2.1
+        exact appliesTo_of_mem_piV hm2 hok.2.1 hsp.1
     · -- the outer application's kind slot
-      show ∃ v A B, SetTheory.app (SetTheory.app (SetTheory.app
+      show AppliesTo (SetTheory.app (SetTheory.app (SetTheory.app
           (interp V (consList bs (cons b ρp))
             (.const .psigmaMk [w, w]))
           (interp V (consList bs (cons b ρp))
@@ -1076,10 +1191,10 @@ theorem mkTowerGoPos_wellDenoted {w : Nat} (hw : w ≠ 0) :
           (interp V (consList bs (cons b ρp))
             (.lam (F.liftN (Fs.length + 1))
               ((towerBodyAV w Fs).liftN (Fs.length + 1) 1))))
-        (interp V (consList bs (cons b ρp)) (.bvar Fs.length)) ∈ˢ piR v A B ∧ _
+        (interp V (consList bs (cons b ρp)) (.bvar Fs.length))) _
       rw [hA, hBv, interp_bvar, hval]
-      exact piV_slot hm3 hrm (by
-        rw [hfib]; exact IsTy_of_mem_univ (towerSet_univ_teleOfFields (hb.2 b hsp.1)))
+      exact appliesTo_of_mem_piV hm3 (by
+        rw [hfib]; exact IsTy_of_mem_univ (towerSet_univ_teleOfFields (hb.2 b hsp.1))) hrm
 
 /-- **The tupler is graded** (`WellDenoted`), both regimes. -/
 theorem mkTowerGo_wellDenoted {w : Nat} {Fs : List Term} {ρp : Nat → V}

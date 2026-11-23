@@ -72,7 +72,7 @@ else a `Nat` literal's three). -/
 }
 
 /-- `crf_go(vis, f, h)`: the memoized walk at fuel `f`. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:114-152 ConRon.Arena.constsResolveFGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:115-153 ConRon.Arena.constsResolveFGo
 @[no_expose, l_impl ConRon.Arena.constsResolveFGo]
 def crfGo : FunDecl := lfn (vis, f, h) locals (fd, j, d, g, x, y, w, r, a, b, q) {
   if f == 0 { abort };
@@ -103,7 +103,7 @@ def crfGo : FunDecl := lfn (vis, f, h) locals (fd, j, d, g, x, y, w, r, a, b, q)
 }
 
 /-- `consts_resolve_ffast(vis, e)`: `constsResolveFFast fe e`, `1`/`0`. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:154-158 ConRon.Arena.constsResolveFFast
+-- con-ron: ConRon/Arena/CheckerBase.lean:155-159 ConRon.Arena.constsResolveFFast
 @[no_expose, l_impl ConRon.Arena.constsResolveFFast]
 def constsResolveFFastL : FunDecl := lfn (vis, e) locals (z, r) {
   z := call crm_clear();
@@ -130,7 +130,7 @@ the twin's `.internal`; the children at `f - 1`), the node viewed first and the 
 the view (a literal of kind `≠ 0` is a string), short-circuiting. The twin's visited set is
 dropped: a node it has visited and finished answered `false` (a `true` ends the walk), which is
 what a second walk of it answers too. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:189-222 ConRon.Arena.hasStrLitGo
+-- con-ron: ConRon/Arena/CheckerBase.lean:190-223 ConRon.Arena.hasStrLitGo
 @[no_expose, l_impl ConRon.Arena.hasStrLitGo]
 def hasStrLitGoL : FunDecl := lfn (f, h) locals (g, x, y, z, t, i, r) {
   if f == 0 { abort };
@@ -194,8 +194,8 @@ always aborts. `w` names the twin's `where_` (`0` "type", `1` "value", `2` "type
 `w ≤ 1`: without the String support declarations (the string-literal flag `CTL[161]`), a string literal in `e` (`has_str_lit_go`)
 declines. Then a term mentioning `sorryAx` (pin 13, `ue_mentions_go`: the twin's `mentionsConst`)
 declines, anything else rejects. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:177-187 ConRon.Arena.unresolvedConstsError
--- con-ron: ConRon/Arena/CheckerBase.lean:224-237 ConRon.Arena.unresolvedConstsErrorL
+-- con-ron: ConRon/Arena/CheckerBase.lean:178-188 ConRon.Arena.unresolvedConstsError
+-- con-ron: ConRon/Arena/CheckerBase.lean:225-238 ConRon.Arena.unresolvedConstsErrorL
 @[no_expose, l_impl ConRon.Arena.unresolvedConstsError ConRon.Arena.unresolvedConstsErrorL]
 def unresolvedConstsErrL : FunDecl := lfn (vis, e, w) locals (r, sa, m) {
   if w <= 1 {

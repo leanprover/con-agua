@@ -71,7 +71,7 @@ theorem boolCtorTyped_runsB {env2 : Env} {fe2 : IFEnv} {n : NIdx}
 environment prerequisites, read at the extended environment.
 
 **Proof:** `natOpGuard_runsB`,
-`natOpDeps_run` + `natOpStoredOkAll_runs`, the `Eq` presence test
+`natOpStoredOk_run` (the operation's own pinned type), the `Eq` presence test
 (`eqStored_run`), and the two `Bool`
 constructors' types (`RunsB.matchTyAnd`, `RunsB.matchTy`) against the interned
 `.const Bool []`. -/
@@ -92,11 +92,7 @@ theorem divModEnvGuard_run {env2 : Env} {fe2 : IFEnv} {cn : NIdx}
   refine RunsB.bindB (natOpGuard_runsB hok hp hie hn) fun {s1} hs1 => ?_
   obtain ⟨st1, hp1, hie1, hn1⟩ := tr hs1
   refine RunsB.guard st1 (by simp) fun _ => ?_
-  refine RunsB.bind fun {ds s2} g2 => ?_
-  obtain rfl := natOpDeps_state hp1 g2
-  obtain ⟨-, -, -, -, hds⟩ := natOpDeps_run st1 hp1 hn1 g2
-  refine ⟨Frontend.IStepS.refl st1, ?_⟩
-  refine RunsB.bindB (natOpStoredOkAll_runs ds _ st1 hp1 hie1 hds) fun {s3} hs3 => ?_
+  refine RunsB.bindB (natOpStoredOk_run st1 hp1 hie1 hn1) fun {s3} hs3 => ?_
   obtain ⟨st3, hp3, hie3, -⟩ := tr (hs1.trans hs3)
   refine RunsB.guard st3 (by simp) fun _ => ?_
   refine RunsB.bindB (eqStored_run st3 hp3 hie3) fun {s4} hs4 => ?_
@@ -478,7 +474,7 @@ theorem divModTypePins_run {ps : INatOpPinSet} {psP : NatOpPinSet} {cn : NIdx}
 /-- con-leche: ConLeche/Kernel/Checker.lean:155-222 divModCertStmts — **the
 interned statements denote con-leche's**, statement by statement: each
 hypothesis list and each equation. -/
-def StmtsDenote (st : EStore) : List (List EIdx × EIdx) → List (List Expr × Expr) → Prop
+@[expose] def StmtsDenote (st : EStore) : List (List EIdx × EIdx) → List (List Expr × Expr) → Prop
   | [], [] => True
   | (hs, e) :: r, (xs, x) :: r' =>
     Frontend.denoteEList st hs = some xs ∧ denoteE st e = some x ∧ StmtsDenote st r r'

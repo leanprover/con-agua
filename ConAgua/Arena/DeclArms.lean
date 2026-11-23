@@ -49,7 +49,8 @@ open L.Front (DECL)
 value): the fresh name, a certified operation's name only where `allowOp`, a
 literal's name only at its shape (`lit_shape_ok` of a fresh `axiomInfo` record of `cv`), the
 universe parameters, the type's guards, then the type's sort. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:241-272 ConRon.Arena.checkConstantVal
+-- con-ron: ConRon/Arena/CheckerBase.lean:242-282 ConRon.Arena.checkConstantVal
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl :=
     lfn (vis, q, allowOp) locals (n, t, f, r, c, a, ez, o, l, d, b, h, u, st) {
@@ -91,7 +92,8 @@ returns it unpushed: the arm runs its pinned gates and pushes last. -/
 
 /-- `value_guards(vis, q, v)`: `valueGuards fe cv v` (`q` the constant value): no loose bound
 variable, no free variable, declared universe parameters, resolving constants. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:832-848 ConRon.Arena.valueGuards
+-- con-ron: ConRon/Arena/DeclCheck.lean:821-837 ConRon.Arena.valueGuards
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.valueGuards` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.valueGuards]
 def valueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
   b := call loose_bvars_bounded_fast(4000000000, 0, v);
@@ -108,7 +110,7 @@ def valueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c, u) {
 
 /-- `check_defn_val(vis, p)`: `checkDefnVal fe cv v hint`: the value's guards, its type against the
 declared one; returns the record. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:850-863 ConRon.Arena.checkDefnVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:839-852 ConRon.Arena.checkDefnVal
 @[no_expose, l_impl ConRon.Arena.checkDefnVal]
 def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d) {
   v := EREC⦃p + ⟪CI.defnValue⟫⦄;
@@ -122,7 +124,7 @@ def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d) {
 
 /-- `check_thm_val(vis, p)`: `checkThmVal`: the type a proposition, the value's guards and type;
 returns the record (stored by its statement). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:865-883 ConRon.Arena.checkThmVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:854-872 ConRon.Arena.checkThmVal
 @[no_expose, l_impl ConRon.Arena.checkThmVal]
 def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d) {
   v := EREC⦃p + ⟪CI.defnValue⟫⦄;
@@ -141,7 +143,7 @@ def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d)
 
 /-- `check_opaque_val(vis, p)`: `checkOpaqueVal`: `check_defn_val`'s text (the record `p` is an
 `axiomInfo`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:885-897 ConRon.Arena.checkOpaqueVal
+-- con-ron: ConRon/Arena/DeclCheck.lean:874-886 ConRon.Arena.checkOpaqueVal
 @[no_expose, l_impl ConRon.Arena.checkOpaqueVal]
 def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d) {
   v := EREC⦃p + ⟪CI.defnValue⟫⦄;
@@ -385,7 +387,7 @@ def reducePinGuardL : FunDecl := lfn (vis, c) locals (p, b) {
 /-- `check_reduce_pin_pre(vis, c, v)`: `checkReducePinPre` at the view without the opaque: the
 element guard, the pin's guards, the value against the pin, the identity certificate `v x ≡ x`
 (its failure an `.internal` error: `abort`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:758-783 ConRon.Arena.checkReducePinPre
+-- con-ron: ConRon/Arena/DeclCheck.lean:747-772 ConRon.Arena.checkReducePinPre
 @[no_expose, l_impl ConRon.Arena.checkReducePinPre]
 def checkReducePinPreL : FunDecl := lfn (vis, c, v) locals (e, pa, x, ax) {
   e := call reduce_elem_ok(vis, c);
@@ -407,7 +409,7 @@ def checkReducePinPreL : FunDecl := lfn (vis, c, v) locals (e, pa, x, ax) {
 the extended view (the stored constant's type, `reduce_stored_ok`) and popped (`env_pop_temp`),
 the literal flags set back (`env_set_flags`), then `check_reduce_pin_pre` at `vis`; returns the
 view. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:785-805 ConRon.Arena.checkReducePin
+-- con-ron: ConRon/Arena/DeclCheck.lean:774-794 ConRon.Arena.checkReducePin
 @[no_expose, l_impl ConRon.Arena.checkReducePin]
 def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, fn, fs, w, st, v2, z) {
   (rc, rq) := call env_row_get(c);
@@ -425,7 +427,7 @@ def checkReducePinL : FunDecl := lfn (vis, p, c, v) locals (rc, rq, fn, fs, w, s
 /-! ## The quotient records -/
 
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:901-908 ConRon.Arena.installBasisDecl
+-- con-ron: ConRon/Arena/DeclCheck.lean:890-897 ConRon.Arena.installBasisDecl
 @[no_expose, l_impl ConRon.Arena.installBasisDecl]
 def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
   n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
@@ -438,7 +440,7 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
 /-- `check_quot_record(vis, k, q)`: `checkQuotRecord fe k cv` (`k` the slot, `QuotKind.slot`: `0`
 type, `1` ctor, `2` lift, `3` ind, `4` sound; `q` the constant value): compared with the slot's
 pin, the slots it needs stored, installed at its own names (`quot_at`). -/
--- con-ron: ConRon/Arena/DeclCheck.lean:910-922 ConRon.Arena.checkQuotRecord
+-- con-ron: ConRon/Arena/DeclCheck.lean:899-911 ConRon.Arena.checkQuotRecord
 @[no_expose, l_impl ConRon.Arena.checkQuotRecord]
 def checkQuotRecordL : FunDecl := lfn (vis, k, q) locals (e, r, w) {
   e := call quot_pin_hit(k, q);
@@ -459,7 +461,9 @@ def checkQuotRecordL : FunDecl := lfn (vis, k, q) locals (e, r, w) {
 quotient package's record (`check_quot_record`, slot `4`); else the constant check and the five
 recognised axioms: the standard two, `Lean.trustCompiler`, the `ofReduce*` pair; `propext`/`choice`
 of another shape and every other axiom decline; `sorryAx` is skipped. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
   p := call erec_ci(i, 0);
@@ -498,7 +502,8 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
 /-- `check_structural_nat_pin_at_fe2(w, n)`: the structural-`Nat` gate's reads at the extended
 view `w`: `natOpGuard` and the dependencies' storage (both computed before either is tested, as
 the twin's `g && d`), then the stored definition's value. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:40-53 ConRon.Arena.checkStructuralNatPinAtFe2
+-- con-ron: ConRon/Arena/CheckDecl.lean:41-53 ConRon.Arena.checkStructuralNatPinAtFe2
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkStructuralNatPinAtFe2` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructuralNatPinAtFe2]
 def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, dov, dl, d, f, r) {
   g := call nat_op_guard(w, n);
@@ -536,7 +541,9 @@ def checkStructuralNatPinL : FunDecl :=
 name allowed), the definition check, then for a `natOpNames` member the structural-`Nat` gate,
 for a `natDivModNames` member the pin gate over the ROM's variants (`rom_pin_sets()`), and the
 push. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, pl, w) {
   p := call erec_ci(i, 1);
@@ -558,7 +565,9 @@ def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, p
 }
 
 /-- `check_decl_thm(i, vis)`: the `.thmDecl` arm. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
@@ -571,7 +580,9 @@ def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
 /-- `check_decl_opaque(i, vis)`: the `.opaqueDecl` arm: the opaque check, then for
 `Lean.reduceNat`/`Lean.reduceBool` (`reduceOpNames`, pin slots `43`, `44`) the pin gate, and the
 push. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
   p := call erec_ci(i, 0);
@@ -591,7 +602,9 @@ def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
 
 /-- `check_decl_quot(i, vis)`: the `.quotDecl` arm: `check_quot_record` at the record's slot
 (`DECL` word 7: `1` type, `2` ctor, `3` lift, else ind). -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
+-- con-ron: CHANGED since de06320f — `ConRon.Arena.checkDeclKind` changed; re-check the L code and its proofs, then delete this line
+-- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkDeclKind`, `ConRon.Arena.blockReadsAt` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, w) {
   kw := DECL.u64[7 + 8 * i];
