@@ -20,7 +20,7 @@ open L.Arena
 /-- **`is_minor_at` refines `isMinorAt`**. -/
 @[refines ConRon.Arena.isMinorAt]
 theorem isMinorAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (fe : IFEnv)
-    (preO preL mot q : Word) (pre : List EIdx) (hmot : mot.toNat < 2 ^ 32) (hq : q.toNat < 2 ^ 32) :
+    (preO preL mot q : Word) (pre : List EIdx) (hq : q.toNat < 2 ^ 32) :
     RelW (fun m args => callW p n "is_minor_at" args m) [preO, preL, mot, q]
       (fun m a => StageR vis fe m a ∧ decHL m preO.toNat preL.toNat = some pre ∧
         preO.toNat + preL.toNat ≤ iwTop m)
