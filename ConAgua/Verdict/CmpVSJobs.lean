@@ -48,11 +48,12 @@ open L L.Arena L.Rom L.Compiler ConRon.Bridge
 
 local notation "VM" => ConLeche.CheckMode.verified
 
-/-- **The jobs' error claims at the checker for any twin prefix** (`jobG_checker` at `StagesOut`). -/
-theorem jobG_ofOut {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
-    {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) (pb : ByteArray)
+/-- **The jobs' error claims at the checker for any record decoder** that is injective and gives
+`Quot`'s universe name a handle (`jobG_checker` without the stages). -/
+theorem jobG_ofDn {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} (hinj : L.Ind.DnInj dn) (hq : L.Ind.QuotDn dn) (pb : ByteArray)
     (hpb : pb.size < 2 ^ 63) (hpre : PbPre pb) :
-    JobG ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg) := by
+    JobG ipins dn ds (Prog.subPB pb.data.toList checkerProg) := by
   have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
   have H := indArmProgs_checker _ hr hpre
   have hnv := checkerProg_nvPB pb.data.toList
@@ -65,8 +66,15 @@ theorem jobG_ofOut {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpP
       (checkerProg_thmArmPB _ hr hpre) (checkerProg_opqArmPB _ hr hpre) (checkerProg_quotArmPB _)
       (checkerProg_knotStagePB _) (checkerProg_leafClosedPB _) (checkerProg_apdPB _)
       (checkerProg_crKeepPB _) (checkerProg_crfPB _) (checkerProg_ccvSimsPB _ _)
-      (checkerProg_quotSimsPB _ hr hpre ho.quotDn) ho.dnInj hG)
-    (indArmSpecE_checker _ hr hpre (cbRefs_checker _ hr hpre (snoSim_checker _)) _ ho.dnInj) hnv
+      (checkerProg_quotSimsPB _ hr hpre hq) hinj hG)
+    (indArmSpecE_checker _ hr hpre (cbRefs_checker _ hr hpre (snoSim_checker _)) _ hinj) hnv
+
+/-- **The jobs' error claims at the checker for any twin prefix** (`jobG_checker` at `StagesOut`). -/
+theorem jobG_ofOut {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) (pb : ByteArray)
+    (hpb : pb.size < 2 ^ 63) (hpre : PbPre pb) :
+    JobG ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg) :=
+  jobG_ofDn ho.dnInj ho.quotDn pb hpb hpre
 
 /-- A job list failing on a prefix fails with the rest after it. -/
 theorem twinFailsV_checkJobList_append {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
