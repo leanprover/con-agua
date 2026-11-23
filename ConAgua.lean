@@ -121,3 +121,9 @@ public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
 public import ConAgua.Checker.CmpSJobs
 public import ConAgua.Final.Compare
+public import ConAgua.Checker.CompareTwinC
+public import ConAgua.Checker.CompareChain6S
+public import ConAgua.Checker.CompareChain6C
+public import ConAgua.Checker.CompareChain6R
+public import ConAgua.Checker.CompareChain6B
+public import ConAgua.Checker.CompareChain6Run
