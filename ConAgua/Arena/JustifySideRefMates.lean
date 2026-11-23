@@ -843,4 +843,45 @@ theorem solutionOf_ref {p : Prog} (hP : MatesProg p) {n : Nat} {cnt : Word} {m m
       simpa using this
   · rw [solutionOfW.abort1 _ _ _ _ c] at hw; cases hw
 
+/-! ## The solution -/
+
+/-- **The solution's index part across the mates' writers.** -/
+theorem SolIdxR.keep {m m' : Mem} {I : IStreamIndex} (h : SolIdxR m I) (hk : MKeep m m') :
+    SolIdxR m' I := by
+  have hx := hk.grow.ext
+  have hs : ∀ g, m'.arr64 (sixArr g) = m.arr64 (sixArr g) := fun g => hk.frame.arr _
+    (by unfold sixArr; split <;> (try split) <;> decide) (by unfold sixArr; split <;> (try split) <;> decide)
+  have ht : ∀ g, m'.arr64 (stxArr g) = m.arr64 (stxArr g) := fun g => hk.frame.arr _
+    (by unfold stxArr; split <;> (try split) <;> decide) (by unfold stxArr; split <;> (try split) <;> decide)
+  have hr : ∀ w, solRow m' w = solRow m w := fun w => by simp only [solRow, hs]
+  have hb : ∀ w, solTbl m' w = solTbl m w := fun w => by simp only [solTbl, ht]
+  refine ⟨fun n => ?_, fun n => ?_, ?_, ?_, fun w => by rw [hr, hb]; exact h.rows w⟩
+  · have := h.base n; rw [hr, this]; split
+    · rfl
+    · cases e : I.base.idx[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decCI this.2.symm]
+  · have := h.btbl n; rw [hb, this]; split
+    · rfl
+    · cases e : I.base.tbls[n]? with
+      | none => rw [e] at this; simp_all
+      | some y =>
+        rw [e] at this
+        simp only [Option.map_some, ite_eq_right_of_eq_false _ _ (eq_false ‹_›), Option.some.injEq,
+          Prod.mk.injEq] at this
+        rw [← this.2, hx.decTbl this.2.symm]
+  · rw [ctlW, hk.frame.ctl _ (by decide)]; exact h.next
+  · rw [ctlW, hk.frame.ctl _ (by decide)]; exact h.size
+
+/-- **The solution in L** (`solutionOf`): the moved index (`index_to_solution`, `SolIdxR`) and the
+record mates (`solution_of`, `MatesR`). -/
+@[refines ConRon.Arena.solutionOf]
+theorem solR_of {m m' : Mem} {I : IStreamIndex} {ds : List IDeclaration} (hI : SolIdxR m I)
+    (hM : MatesR m' (recordMatesGo ∅ ds)) (hk : MKeep m m') : SolR m' (solutionOf I ds) :=
+  SolR.ofIdx (hI.keep hk) hM.get (fun w hw => (hM.ok w hw).2)
+
 end L.Arena
