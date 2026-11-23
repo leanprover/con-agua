@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Final.DrvAbi
+public import ConAgua.Compiler.AbiCmp
 public import ConAgua.Checker.ParDriverTwin
 import ConAgua.Checker.BlockRefsProg
 import ConAgua.Checker.AsmFinal
