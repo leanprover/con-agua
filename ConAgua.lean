@@ -87,3 +87,4 @@ public import ConAgua.Arena.Needs
 public import ConAgua.Arena.NeedsModels
 public import ConAgua.Arena.JustifySide
 public import ConAgua.Arena.JustifySideModels
+public import ConAgua.Arena.Justify
