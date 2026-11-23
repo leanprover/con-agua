@@ -563,6 +563,40 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         obtain ⟨hbS, -⟩ := hsz5.resolve_left (by rw [h2]; decide)
         obtain ⟨e, he, hk⟩ := err_of_entryOut hout5 h2
         exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inl ⟨e, he, hk.symm⟩⟩⟩
+    -- mode 5 returned `2^63 + k`: its memory `m5`, the jobs
+    have hout' := hout5.resolve_left (by rw [hrdx5]; decide)
+    obtain ⟨hbS, -⟩ := hsz5.resolve_left (by rw [hrdx5]; decide)
+    rcases hres5 : cmpRun p ((cmpIn m4 bS).setG mode 5) with e | ⟨rs5, m5⟩
+    · rw [hres5] at hout'
+      cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx5] at hout'; exact absurd hout'.1 (by decide))
+    rw [hres5] at hout'
+    obtain ⟨-, hRes5, hMem5⟩ := hout'
+    have hrax5 : s2.regs.rax = rs5.getD 0 0 := hRes5.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+    have hge5' : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hge5
+    obtain ⟨hBok, hkeep⟩ := hG rs4 m4 rs5 m5 hres4 hres5 hge5'
+    have hk63 : (rs5.getD 0 0 - 9223372036854775808).toNat < 2 ^ 63 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hge5')]
+      have := (rs5.getD 0 0).toNat_lt; simp at this ⊢; omega
+    have hsa2 : (BinOp.add.eval (cmpSave tab).toUInt64 s2.regs.r15).toNat = base + abiNeed tab := by
+      simp only [BinOp.eval, UInt64.toNat_add, cmpSave, hf2.r15, Nat.toUInt64]
+      rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+      omega
+    refine ev_binO (op := .sub) (o := oR .rcx) (v := 9223372036854775808) rfl (hC.get (i := 58) rfl)
+      (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st6 => ?_
+    refine ev_movRR (hC.get (i := 59) rfl) ?_
+    refine ev_movRI (hC.get (i := 60) rfl) ?_
+    refine ev_binO (op := .add) (o := oR .r15) rfl (hC.get (i := 61) rfl)
+      (Or.inr (Or.inr ⟨.r15, rfl, rfl⟩)) fun st7 => ?_
+    refine ev_movMR (hC.get (i := 62) rfl) ⟨by decide, by decide⟩ ?_ ?_
+    · rsimp; rw [hsa2]; exact isSome_rdW fun j hj => by rw [A_add]; exact hf2.map _ (by omega) (by omega)
+    refine ev_movRI (hC.get (i := 63) rfl) ?_
+    refine ev_movMR (hC.get (i := 64) rfl) ⟨by decide, by decide⟩ ?_ ?_
+    · rsimp; rw [hsa2]
+      exact isSome_rdW fun j hj => by rw [A_add]; exact isSome_get?_storeInt (hf2.map _ (by omega) (by omega))
+    rsimp
+    rw [hsa2]
+    refine ev_congr (j := Kc + 65) ?_ (by omega)
+    rw [← Code.label (i := 65) hC rfl]
     sorry
   sorry
 
