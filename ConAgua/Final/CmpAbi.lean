@@ -1,0 +1,172 @@
+module
+
+public import ConAgua.Final.CmpStub
+public import ConAgua.Final.DrvAbi
+public import ConAgua.Final.BufChain
+public import ConAgua.Final.BufAbi
+public import ConAgua.Final.SeqAbi
+public import ConAgua.Compiler.AbiCmp
+import Kraken.X64.Registers
+
+@[expose] public section
+
+/-!
+# The compared run's driver `ca_compare`: the calls and what a run means (lane compare)
+
+`ca_compare(c, c_len, pins, pins_len, base, base_len, s, s_len)` (`ConAgua/Compiler/AbiCmp.lean`)
+runs `check` on one region `R = [base, base + abiNeed)` in modes `4`, `5`, `6`, the solution's
+jobs on a worker region `W = [base + cmpW, base + cmpNeed)` (`ca_check_b`, one call per job), and
+the challenge's jobs in place (`ca_check_seq`). Here: how the harness calls it (`CmpCall`), the
+L-level facts about `check` the machine proof needs and cannot see (`CmpGuard`: the buffer's
+geometry after mode `5` and that the jobs leave the frozen arrays alone; the lead discharges them
+at the L level), and what an accepting or failing run means (`CmpAccepts`, `CmpErr`). The theorem:
+`ConAgua/Final/CmpOutcome.lean`.
+-/
+
+namespace ConAgua.Final
+
+open L L.Compiler L.Arena
+
+/-- **How the harness calls `ca_compare`**: `ca_start`'s six arguments as `AbiCall` says (the
+challenge's bytes `bC` as the input, the pin data `pb`, a zero region), and on the machine stack
+past the return address the solution's buffer `sa` and its length; the buffer holds `bS`, is in
+the address space, apart from the region, from both other buffers and from the stack window. -/
+structure CmpCall (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) : Prop
+    extends AbiCall bC pb dm ra where
+  hsa : rdW dm.dmem (A (dm.regs.rsp.toNat + 8)) = some sa
+  hsn : rdW dm.dmem (A (dm.regs.rsp.toNat + 16)) = some (UInt64.ofNat bS.size)
+  hS : ∀ i (h : i < bS.size), dm.dmem.get? (A (sa.toNat + i)) = some bS[i]
+  hSEnd : sa.toNat + bS.size < 2 ^ 64
+  hSDisj : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size →
+    (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + bC.size) ∧
+    ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) ∧
+    (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x)
+  hsEnd : dm.regs.rsp.toNat + 24 < 2 ^ 64
+
+/-- A run of `check` with the final theorems' fuel. -/
+abbrev cmpRun (p : Prog) (m : Mem) : Except Err (List Word × Mem) := L.run p abiFuel "check" [] m
+
+/-- Mode `4`'s memory: the loaded memory of the challenge's bytes with the mode word `4`. -/
+def cmpM4 (tab : Tab) (mode : GVar) (bC pb : ByteArray) : Mem := (loadMem bC pb (abiSz tab)).setG mode 4
+
+/-- Mode `5`'s memory: mode `4`'s final memory with the input replaced by the solution's bytes and
+the mode word `5`. -/
+def cmpM5 (mode : GVar) (m4 : Mem) (bS : ByteArray) : Mem := (cmpIn m4 bS).setG mode 5
+
+/-- The frozen buffer mode `5` leaves: the first `OUT[1]` words of `out`. -/
+def cmpBuf (out : ArrId) (m : Mem) : Array Word := (m.arr64 out).extract 0 ((m.arr64 out).getD 1 0).toNat
+
+/-- **The buffer's geometry** (`BufGeom`'s L-level part): its length word inside `out`, its
+header and entries inside it, the entries pairwise apart (or empty). -/
+def CmpBufOk (fz : List TieredArray) (out : ArrId) (m : Mem) : Prop :=
+  ((m.arr64 out).getD 1 0).toNat ≤ (m.arr64 out).size ∧
+  (∀ i < fz.length, 9 + 2 * i < (cmpBuf out m).size) ∧
+  (∀ i < fz.length, (bufEntry (cmpBuf out m) i).1 + (bufEntry (cmpBuf out m) i).2 ≤ (cmpBuf out m).size) ∧
+  (∀ i < fz.length, ∀ i' < fz.length, i ≠ i' →
+    (bufEntry (cmpBuf out m) i).1 + (bufEntry (cmpBuf out m) i).2 ≤ (bufEntry (cmpBuf out m) i').1 ∨
+    (bufEntry (cmpBuf out m) i').1 + (bufEntry (cmpBuf out m) i').2 ≤ (bufEntry (cmpBuf out m) i).1 ∨
+    (bufEntry (cmpBuf out m) i).2 = 0 ∨ (bufEntry (cmpBuf out m) i').2 = 0)
+
+/-- A job's final memory `r` keeps the frozen arrays: each is the buffer's image. -/
+def CmpKept (fz : List TieredArray) (B : Array Word) (r : Mem) : Prop :=
+  ∀ i (h : i < fz.length), r.arr64 fz[i] = bufImg B i
+
+/-- **What the machine proof needs of `check` and cannot see** (L-level; for `checkerProg` a lemma,
+not an assumption of the final theorem): after modes `4` and `5` (`5` returning `2^63 + k`), the
+buffer's geometry holds, and every job's run on it keeps the frozen arrays. -/
+def CmpGuard (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
+    (bC bS pb : ByteArray) : Prop :=
+  ∀ rs4 m4 rs5 m5, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) →
+    cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) → 2 ^ 63 ≤ (rs5.getD 0 0).toNat →
+    CmpBufOk fz out m5 ∧ ∀ r j rs r', cmpRun p (bufMemG fz own plo phi mode (cmpBuf out m5) r j) = .ok (rs, r') →
+      CmpKept fz (cmpBuf out m5) r'
+
+/-- The jobs `j < n` of the solution, from the worker memories `rm`: each accepts and ends in the
+next. -/
+def CmpJobs (p : Prog) (mode plo phi : GVar) (fz own : List TieredArray) (B : Array Word) (rm : Nat → Mem)
+    (n : Nat) : Prop :=
+  ∀ j < n, ∃ rs, cmpRun p (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) = .ok (rs, rm (j + 1)) ∧
+    rs.getD 0 0 = ACCEPT
+
+/-- **What an accepting compared run means** (`9223372036854775808 = 2^63`): the buffers below
+`2^63` bytes; mode `4` returns `ACCEPT` or `2^63 + _`; then mode `5` (from mode `4`'s memory with
+the solution's bytes) returns `ACCEPT` or `2^63 + k`; then the jobs `j < k` on the buffer, from
+the zero worker memory, each accepting; mode `6` from mode `5`'s memory returns `ACCEPT` or
+`2^63 + k'`; then `ca_check_seq`'s run for `[0, k')` accepts. -/
+def CmpAccepts (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (bC bS pb : ByteArray) : Prop :=
+  bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs4 m4, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) ∧
+    (rs4.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ bS.size < 2 ^ 63 ∧
+      ∃ rs5 m5, cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧
+      (rs5.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
+        ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧
+        CmpJobs p mode plo phi fz own (cmpBuf out m5) rm (rs5.getD 0 0 - 9223372036854775808).toNat ∧
+        ∃ rs6 m6, cmpRun p (m5.setG mode 6) = .ok (rs6, m6) ∧
+        (rs6.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs6.getD 0 0).toNat ∧ ∃ rs7 m7,
+          cmpRun p (seqMem m6 mode plo phi out hdrf ctlf hw 0 (rs6.getD 0 0 - 9223372036854775808)) =
+            .ok (rs7, m7) ∧ rs7.getD 0 0 = ACCEPT))))))
+
+/-- **What a failing compared run means**: the same sequence up to one run that fails with an
+error of code `k`. -/
+def CmpErr (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (bC bS pb : ByteArray) (k : Word) : Prop :=
+  bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+  ((∃ e, cmpRun p (cmpM4 tab mode bC pb) = .error e ∧ e.code = k) ∨
+   ∃ rs4 m4, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) ∧ 2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧
+    bS.size < 2 ^ 63 ∧
+    ((∃ e, cmpRun p (cmpM5 mode m4 bS) = .error e ∧ e.code = k) ∨
+     ∃ rs5 m5, cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧ 2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
+      ∃ rm : Nat → Mem, rm 0 = zeroMem tab ∧
+      ((∃ j < (rs5.getD 0 0 - 9223372036854775808).toNat, CmpJobs p mode plo phi fz own (cmpBuf out m5) rm j ∧
+          ∃ e, cmpRun p (bufMemG fz own plo phi mode (cmpBuf out m5) (rm j) (UInt64.ofNat j)) = .error e ∧
+            e.code = k) ∨
+       (CmpJobs p mode plo phi fz own (cmpBuf out m5) rm (rs5.getD 0 0 - 9223372036854775808).toNat ∧
+        ((∃ e, cmpRun p (m5.setG mode 6) = .error e ∧ e.code = k) ∨
+         ∃ rs6 m6, cmpRun p (m5.setG mode 6) = .ok (rs6, m6) ∧ 2 ^ 63 ≤ (rs6.getD 0 0).toNat ∧
+          ∃ e, cmpRun p (seqMem m6 mode plo phi out hdrf ctlf hw 0 (rs6.getD 0 0 - 9223372036854775808)) =
+            .error e ∧ e.code = k)))))
+
+/-! ## A memory relation survives a change outside its cells -/
+
+/-- `MemRel` reads the table's bytes, the byte arrays' bytes and the word arrays' words: a memory
+that agrees there (and has every byte the old one has) holds the same L memory. -/
+theorem MemRel.congrW {G : L.Compiler.Layout} (hG : G.Ok) {m : Mem} {d d' : DataMem} (hm : MemRel G m d)
+    (hgrow : ∀ y, (d.get? y).isSome → (d'.get? y).isSome)
+    (htab : ∀ x, G.InTab x → d'.get? (A x) = d.get? (A x))
+    (h8 : ∀ p < G.tab.nb, ∀ x, G.In8 p x → d'.get? (A x) = d.get? (A x))
+    (h64 : ∀ p, G.tab.nb ≤ p → p < G.tab.nb + G.tab.nw → ∀ i < G.s p,
+      rdW d' (A (G.b p + 8 * i)) = rdW d (A (G.b p + 8 * i))) :
+    MemRel G m d' := by
+  have hte := hG.tab_end
+  have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := G.tab.rom_length_le
+  have hcell : ∀ off, off + 8 ≤ 16 + 24 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres +
+      8 * G.tab.ng → rdW d' (A (G.T + off)) = rdW d (A (G.T + off)) := fun off h =>
+    rdW_congr fun j hj => by
+      rw [A_add]; exact htab _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩
+  exact {
+    size8 := hm.size8
+    size64 := hm.size64
+    get8 := fun c hc i hi => by
+      have hs := hm.size8 c hc
+      have hp := G.tab.pos8_lt hc
+      rw [h8 _ hp _ ⟨by omega, by omega⟩, hm.get8 c hc i hi]
+    get64 := fun c hc i hi => by
+      have hs := hm.size64 c hc
+      have hp := G.tab.pos64_lt hc
+      rw [h64 _ hp.1 hp.2 i (by omega)]; exact hm.get64 c hc i hi
+    limit := by rw [hcell 8 (by omega)]; exact hm.limit
+    base := fun c hc => (by rw [hcell _ (by simp only [Tab.dbase]; omega)]; exact hm.base c hc)
+    «len» := fun c hc => (by rw [hcell _ (by simp only [Tab.dlen]; omega)]; exact hm.len c hc)
+    len32 := fun c h1 h2 => (by rw [hcell _ (by simp only [Tab.dlen32]; omega)]; exact hm.len32 c h1 h2)
+    rom := fun i hi => by
+      rw [htab _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩]; exact hm.rom i hi
+    stack := fun x hx => hgrow _ (hm.stack x hx)
+    res := fun x hx => hgrow _ (hm.res x hx)
+    glob := fun g hg => by
+      rw [← hm.glob g hg]
+      refine rdW_congr fun j hj => ?_
+      rw [A_add]
+      exact htab _ (Layout.InGlob.tab (Layout.inGlob_cell hg j hj)) }
+
+end ConAgua.Final
