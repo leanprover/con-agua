@@ -6,6 +6,8 @@ import ConAgua.Checker.PrepProgExt
 import ConAgua.Checker.PrepProgHoist
 import ConAgua.Checker.PrepRef
 import ConAgua.Checker.PreLoopWSPart2
+import ConAgua.Checker.TwinCaches
+public import ConAgua.Arena.JustifySideRefMates
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
@@ -138,6 +140,62 @@ theorem prepStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m
         P6.keep.np P6.decls.room hdsz P6.stage.check.arena.base P6.keep.seen P6.keep.nix
         P6.stage.iw P6.stage.check.pins)
   exact ⟨s.mem, ds', a', hQ, ⟨hr, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, hfr⟩⟩
+
+theorem checkerProg_sideProg : SideProg checkerProg :=
+  ⟨by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk,
+    by chk_lk⟩
+
+theorem checkerProg_matesProg : MatesProg checkerProg :=
+  ⟨by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk, by chk_lk⟩
+
+theorem stageA_prep_facts : ∀ b ∈ stageA_prepare_prelude,
+    b.arr = 33 ∨ b.arr = 34 ∨ b.arr = 67 ∨ b.arr = 75 ∨ b.arr = 76 ∨ b.arr = 200 := by decide
+
+theorem stageC_prep_facts : ∀ x ∈ stageC_prepare_prelude,
+    x = 34 ∨ x = 35 ∨ x = 73 ∨ x = 74 ∨ x = 75 ∨ x = 76 ∨ x = 200 := by
+  intro x hx; simp only [stageC_prepare_prelude, List.mem_cons, List.not_mem_nil, or_false] at hx
+  exact hx
+
+theorem envArrs_ge : ∀ b ∈ envArrs, 129 ≤ b.arr := by decide
+
+/-- **The stage relation after the challenge's preparation**, at its twin state. -/
+theorem PrepPost.stage {pre : PreludeIx} {rC : ParseResultD} {a : AState} {m2 m3 : Mem}
+    {ds' : Array IDeclaration} {a' : AState} (h : PrepPost pre rC a m2 m3 ds' a')
+    (hS : L.Ind.StageR 0 (fe0 a.pins) m2 a) : L.Ind.StageR 0 (fe0 a.pins) m3 a' := by
+  have hc : a'.caches = a.caches := ((TwinCaches.keeps_preparePrelude pre rC.decls).run h.run).1
+  have hA : ∀ b ∈ stageA_prepare_prelude, b.arr < 42 ∨ 46 < b.arr := fun b hb => by
+    have := stageA_prep_facts b hb; omega
+  have hE : ∀ b ∈ stageA_prepare_prelude, b ∉ envArrs := fun b hb he => by
+    have := stageA_prep_facts b hb; have := envArrs_ge b he; have := envArrs_le b he; omega
+  have hEC : ∀ x ∈ stageC_prepare_prelude, x ∉ envCtl := fun x hx he => by
+    rcases stageC_prep_facts x hx with e | e | e | e | e | e | e <;> subst e <;> revert he <;> decide
+  have hCA : AvoidA 96 128 stageA_prepare_prelude := by
+    unfold AvoidA; intro b hb; have := stageA_prep_facts b hb; omega
+  have hCC : AvoidC 96 128 stageC_prepare_prelude := by
+    unfold AvoidC; intro x hx
+    rcases stageC_prep_facts x hx with e | e | e | e | e | e | e <;> subst e <;> decide
+  have h0 : (0 : Word) ∉ stageC_prepare_prelude := fun hx => by
+    rcases stageC_prep_facts _ hx with e | e | e | e | e | e | e <;> revert e <;> decide
+  have h1 : (1 : Word) ∉ stageC_prepare_prelude := fun hx => by
+    rcases stageC_prep_facts _ hx with e | e | e | e | e | e | e <;> revert e <;> decide
+  refine ⟨⟨⟨h.arena, DerR.congrSt h.pers h.scr (DerR.frameM _ _ _ _ h.frame hA _
+      hS.check.arena.der)⟩, ?_, h.pins, hS.check.env.frame hE hEC h.frame,
+    hS.check.mode.frame h.frame h0 h1⟩, h.iw⟩
+  rw [hc]; exact hS.check.core.frame hCA hCC h.frame
+
+/-- `DECL` after the preparation holds the prepared records. -/
+theorem PrepPost.declsF {pre : PreludeIx} {rC : ParseResultD} {a : AState} {m2 m3 : Mem}
+    {ds' : Array IDeclaration} {a' : AState} (h : PrepPost pre rC a m2 m3 ds' a')
+    (hD : DeclsF (m2.arr64 L.Front.DECL) (m2.arr64 L.Front.DLP) (pre.decls ++ rC.decls)) :
+    DeclsF (m3.arr64 L.Front.DECL) (m3.arr64 L.Front.DLP) ds' := by
+  refine ⟨by rw [h.dsize]; exact hD.dsize, by rw [h.dlp]; exact hD.psize,
+    by simpa [rdW] using h.cnt, ?_, by rw [h.dlp]; exact hD.ptop, fun i hi => (h.recs i hi).1,
+    fun i hi b' nP e => by
+      have h1 := (h.recs i hi).1
+      rw [e] at h1
+      obtain ⟨h6, h4, -⟩ := h1
+      rw [← h4]; exact ((h.recs i hi).2.2 h6).2.2⟩
+  rw [h.dsize]; have := hD.room; have := h.le; omega
 
 end steps
 
