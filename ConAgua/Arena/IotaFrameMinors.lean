@@ -48,7 +48,7 @@ theorem decW0B_false {m : Mem} {r : List Word} {b : Bool} (h : decW0B m r b) (h0
     b = false := by
   have := h.1; rw [h0] at this; simpa using this.symm
 
-theorem decW0B_true {m : Mem} {r : List Word} {b : Bool} (h : decW0B m r b) (h0 : r.headD 0 ≠ 0) :
+theorem decW0B_true_im {m : Mem} {r : List Word} {b : Bool} (h : decW0B m r b) (h0 : r.headD 0 ≠ 0) :
     b = true := by
   have := h.1; rw [bne_iff_ne.mpr h0] at this; exact this.symm
 
@@ -100,7 +100,7 @@ theorem minorsFrom_loop {p : Prog} (P : IotaFrameProg p) (vis : Word) (fe : IFEn
       rw [hj1] at hrun
       exact ⟨xs, a', hstep _ _ hrun, hS', hg', hd', hb'⟩
     · rw [h1, minorsFromW.k_is_minor_at.arm1 _ _ _ _ _ _ _ _ _ _ h0, minorsFromW.j1.eq_1] at hl
-      have hbt := decW0B_true hb1 h0
+      have hbt := decW0B_true_im hb1 h0
       subst hbt
       have hc1 : (c + 1).toNat = c.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
