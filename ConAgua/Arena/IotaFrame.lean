@@ -20,6 +20,12 @@ aborts, where the twin's fuel runs out (`.internal`). The callees take `CWF` exp
 (`get_app_fn_f`, `get_app_args_f`, `pi_result_f`, `lift_entry`, `instantiate_lift_fast`,
 `inst_lp_fast`).
 
+**Counts.** The three entries `rule_reads` calls (`iota_rec_of`, `iota_parts_of_at`,
+`iota_parts_at`) abort at a count word (`mI`, `rP`, `nIdx`, `cnP`, a rule's `nfields`) of `2^32` or
+more (a fixed capacity: the words' arithmetic below then cannot wrap). The list loops abort at a handle word of
+`2^32` or more from a callee (`lift_entry`, `intern_bvar`: the handle capacity), as the other slice
+builders do.
+
 **Lists.** The twin's list recursions (`minorsFrom`, `liftFieldDoms`, `liftIdxArgs`,
 `iotaBVars`) are loops filling a fresh `IW` slice allocated up front (its length the input's,
 or `preL - q` for `minorsFrom`'s positions, of which the answer is a prefix), so that the
@@ -146,6 +152,7 @@ type, `(ok, IotaRec)`: the frame, the motive the body applies (a variable), `iot
 @[no_expose, l_impl ConRon.Arena.iotaRecOf]
 def iotaRecOfL : FunDecl := lfn (q, mI, rP) locals
     (nI, ok, po, pl, dO, dL, body, u, hd, g, k, y, z, r1, r2, r3, r4, r5, r6, r7) {
+  if 4294967296 <= mI || 4294967296 <= rP { abort };
   nI := mI - rP;
   if mI < rP { nI := 0 };
   (ok, po, pl, dO, dL, body, u) := call iota_frame(q, mI, rP);
@@ -167,6 +174,7 @@ def liftFieldDomsL : FunDecl := lfn (amt, fo, fl) locals (o, j, d) {
   j := 0;
   while j < fl {
     d := call lift_entry(IW.u64[fo + j], amt, j, ⟪CWF⟫);
+    if 4294967296 <= d { abort };
     IW.u64[o + j] := d;
     j := j + 1
   };
@@ -184,6 +192,7 @@ def liftIdxArgsL : FunDecl := lfn (amt, nT, nF, ao, al) locals (o, j, b, c) {
   while j < al {
     b := call expr_drop_vars(nT, IW.u64[ao + j]);
     c := call lift_entry(b, amt, nF, ⟪CWF⟫);
+    if 4294967296 <= c { abort };
     IW.u64[o + j] := c;
     j := j + 1
   };
@@ -198,6 +207,7 @@ rule's record). -/
 @[no_expose, l_impl ConRon.Arena.iotaPartsOfAt]
 def iotaPartsOfAtL : FunDecl := lfn (preO, preL, minO, minL, us, parO, parL, rP, nIdx, i, r) locals
     (qq, d, ok, fdo, fdl, inner, amt, fo, fl, tn, tb, ao, al, io, il) {
+  if 4294967296 <= rP || 4294967296 <= nIdx || 4294967296 <= EREC⦃r + ⟪Rule.nfields⟫⦄ { abort };
   if minL <= i { return (0, 0, 0, 0, 0, 0, 0, 0) };
   qq := IW.u64[minO + i];
   d := call expr_get_d(preO, preL, qq);
@@ -289,6 +299,8 @@ rule's levels. -/
 @[no_expose, l_impl ConRon.Arena.iotaPartsAt]
 def iotaPartsAtL : FunDecl := lfn (qj, cnP, mI, rP, r) locals
     (lo, ll, lvls, paO, paL, ty, ok, pdO, pdL, cb, x1, x2, x3, x4, x5, x6, x7, x8, x9) {
+  if 4294967296 <= cnP || 4294967296 <= mI || 4294967296 <= rP { abort };
+  if 4294967296 <= EREC⦃r + ⟪Rule.nfields⟫⦄ { abort };
   (lo, ll) := call cv_lps(qj);
   lvls := call ctor_levels_at(r, lo, ll);
   (paO, paL) := call iota_params_at(r, rP, cnP);
