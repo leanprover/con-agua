@@ -246,7 +246,71 @@ theorem cta_pool [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm : MachineDa
   · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
     exact (hf t ht).2.2.2.2
 
-/-! ## The harness's facts -/
+/-! ## The harness's facts
+
+`CmpThreadsRun` is the chain `CmpTRun4` ⊂ `CmpTRun5` ⊂ `CmpTRunS` ⊂ `CmpTRun7` ⊂ `CmpTRunC`: the
+harness's facts up to each call, which the threaded verdict (`Final/CmpThreadsVerdict.lean`)
+reuses for the calls before a failing one. -/
+
+/-- The challenge's driver call (`ca_start_a4`) and its return. -/
+structure CmpTRun4 [Host] (bC pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState) : Prop where
+  call₄ : AbiCall bC pb dm₄ ra₄
+  ret₄ : FirstReturn dm₄ (label abiStartA4L) ra₄ st₄
+
+/-- Then the solution's driver call (`ca_start_a5`), on the same region and pin data, holding what
+the first call left, and its return. -/
+structure CmpTRun5 [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) : Prop extends CmpTRun4 bC pb dm₄ ra₄ st₄ where
+  rdx₄ : st₄.data.regs.rdx = 0
+  rax₄ : 9223372036854775808 ≤ st₄.data.regs.rax.toNat
+  call₅ : AbiCallM bS pb dm₅ ra₅
+  same₅ : dm₅.regs.r8 = dm₄.regs.r8 ∧ dm₅.regs.r9 = dm₄.regs.r9 ∧ dm₅.regs.rdx = dm₄.regs.rdx
+  /-- the region, the challenge's buffer and the pin data as the first call left them -/
+  keep₅ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
+    (dm₄.regs.rdi.toNat ≤ x ∧ x < dm₄.regs.rdi.toNat + bC.size) ∨
+    (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
+    dm₅.dmem.get? (A x) = st₄.data.dmem.get? (A x)
+  ret₅ : FirstReturn dm₅ (label abiStartA5L) ra₅ st₅
+
+/-- Then the solution's buffer `BS`. -/
+structure CmpTRunS [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) : Prop
+    extends CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ where
+  rdx₅ : st₅.data.regs.rdx = 0
+  rax₅ : 9223372036854775808 ≤ st₅.data.regs.rax.toNat
+  /-- the solution's buffer: `OUT`'s first `len` words, `len` its word `1` -/
+  bufwS : ∀ i (h : i < BS.size), rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8 * i)) = some BS[i]
+  buflenS : ∃ w, rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8)) = some w ∧ w.toNat = BS.size
+
+/-- Then the solution's pool `thsS` (every call accepting, every job index below `kS` claimed),
+and the challenge's index call (`ca_start_a7`), on the same region and pin data, holding what the
+second call left, and its return. -/
+structure CmpTRun7 [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+    (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) : Prop
+    extends CmpTRunS bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS where
+  thrS : ThreadsAcc dm₅ st₅ BS thsS
+  coverS : ∀ j : Word, j < st₅.data.regs.rax - 9223372036854775808 →
+    ∃ t ∈ thsS, ∃ i < t.n, (t.dm i).regs.rdx = j
+  call₇ : AbiCallM bS pb dm₇ ra₇
+  same₇ : dm₇.regs.r8 = dm₄.regs.r8 ∧ dm₇.regs.r9 = dm₄.regs.r9 ∧ dm₇.regs.rdx = dm₄.regs.rdx
+  /-- the region, the solution's buffer and the pin data as the second call left them -/
+  keep₇ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
+    (dm₅.regs.rdi.toNat ≤ x ∧ x < dm₅.regs.rdi.toNat + bS.size) ∨
+    (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
+    dm₇.dmem.get? (A x) = st₅.data.dmem.get? (A x)
+  ret₇ : FirstReturn dm₇ (label abiStartA7L) ra₇ st₇
+
+/-- Then the challenge's buffer `BC`. -/
+structure CmpTRunC [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+    (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) : Prop
+    extends CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ where
+  rdx₇ : st₇.data.regs.rdx = 0
+  rax₇ : 9223372036854775808 ≤ st₇.data.regs.rax.toNat
+  /-- the challenge's buffer -/
+  bufwC : ∀ i (h : i < BC.size), rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8 * i)) = some BC[i]
+  buflenC : ∃ w, rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8)) = some w ∧ w.toNat = BC.size
 
 /-- **What the threaded compared harness does** (trusted; the module doc lists it): `ca_start_a4`
 at `dm₄` (the challenge `bC`, the pin data `pb`, a zero region) returning at `st₄`;
@@ -258,44 +322,8 @@ buffer `BC` and its threads `thsC`, likewise. -/
 structure CmpThreadsRun [Host] (bC bS pb : ByteArray)
     (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
     (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
-    (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) (thsC : List ThreadM) : Prop where
-  /-- the challenge's driver call -/
-  call₄ : AbiCall bC pb dm₄ ra₄
-  ret₄ : FirstReturn dm₄ (label abiStartA4L) ra₄ st₄
-  rdx₄ : st₄.data.regs.rdx = 0
-  rax₄ : 9223372036854775808 ≤ st₄.data.regs.rax.toNat
-  /-- the solution's driver call, on the same region and pin data -/
-  call₅ : AbiCallM bS pb dm₅ ra₅
-  same₅ : dm₅.regs.r8 = dm₄.regs.r8 ∧ dm₅.regs.r9 = dm₄.regs.r9 ∧ dm₅.regs.rdx = dm₄.regs.rdx
-  /-- the region, the challenge's buffer and the pin data as the first call left them -/
-  keep₅ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
-    (dm₄.regs.rdi.toNat ≤ x ∧ x < dm₄.regs.rdi.toNat + bC.size) ∨
-    (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
-    dm₅.dmem.get? (A x) = st₄.data.dmem.get? (A x)
-  ret₅ : FirstReturn dm₅ (label abiStartA5L) ra₅ st₅
-  rdx₅ : st₅.data.regs.rdx = 0
-  rax₅ : 9223372036854775808 ≤ st₅.data.regs.rax.toNat
-  /-- the solution's buffer: `OUT`'s first `len` words, `len` its word `1` -/
-  bufwS : ∀ i (h : i < BS.size), rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8 * i)) = some BS[i]
-  buflenS : ∃ w, rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8)) = some w ∧ w.toNat = BS.size
-  /-- the solution's pool -/
-  thrS : ThreadsAcc dm₅ st₅ BS thsS
-  coverS : ∀ j : Word, j < st₅.data.regs.rax - 9223372036854775808 →
-    ∃ t ∈ thsS, ∃ i < t.n, (t.dm i).regs.rdx = j
-  /-- the challenge's index call, on the same region and pin data -/
-  call₇ : AbiCallM bS pb dm₇ ra₇
-  same₇ : dm₇.regs.r8 = dm₄.regs.r8 ∧ dm₇.regs.r9 = dm₄.regs.r9 ∧ dm₇.regs.rdx = dm₄.regs.rdx
-  /-- the region, the solution's buffer and the pin data as the second call left them -/
-  keep₇ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
-    (dm₅.regs.rdi.toNat ≤ x ∧ x < dm₅.regs.rdi.toNat + bS.size) ∨
-    (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
-    dm₇.dmem.get? (A x) = st₅.data.dmem.get? (A x)
-  ret₇ : FirstReturn dm₇ (label abiStartA7L) ra₇ st₇
-  rdx₇ : st₇.data.regs.rdx = 0
-  rax₇ : 9223372036854775808 ≤ st₇.data.regs.rax.toNat
-  /-- the challenge's buffer -/
-  bufwC : ∀ i (h : i < BC.size), rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8 * i)) = some BC[i]
-  buflenC : ∃ w, rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8)) = some w ∧ w.toNat = BC.size
+    (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) (thsC : List ThreadM) : Prop
+    extends CmpTRunC bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC where
   /-- the challenge's pool -/
   thrC : ThreadsAcc dm₇ st₇ BC thsC
   coverC : ∀ j : Word, j < st₇.data.regs.rax - 9223372036854775808 →
@@ -406,6 +434,79 @@ theorem cta_a7 [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bS pb : ByteArra
     checkerTab_abiIO checkerProgI_wf MODE (by decide) 7 abiStartA7L k _ hC
     (code_of_checkerFile_par hcode).right L.Checker.checkL checkerProg_lookup_check (by decide) bS pb dm ra hc hm
 
+/-! ## The runs up to each phase -/
+
+/-- **Up to the solution's buffer**: both driver calls ran ok (the L runs of modes `4` and `5`,
+each returning `2^63` or more), the memory `m5` in the region at `st₅`. -/
+theorem cmpT_upToS [Host] (k0 : Nat) (hcode : Code checkerFile k0) {bC bS pb : ByteArray}
+    {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
+    {st₅ : MachineState} (hR5 : CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅) (h0 : st₅.data.regs.rdx = 0) :
+    bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+      RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
+      ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
+        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
+        st₅.data.regs.rax = rs5.getD 0 0 ∧
+        MemRel (abiLayout checkerTab dm₅.regs.r8.toNat dm₅.regs.rdi.toNat bS.size dm₅.regs.rdx.toNat pb.size)
+          m5 st₅.data.dmem := by
+  have hn : 1 ≤ checkerTab.nres := by decide
+  obtain ⟨h58, h59, h5x⟩ := hR5.same₅
+  obtain ⟨hbC, hpb, hRR₄, rs4, m4, h4, hrax4, hM4⟩ :=
+    cta_ret hn (hR5.ret₄ _ (cta_a4 k0 hcode bC pb dm₄ ra₄ hR5.call₄) (fun s h => h.1.1)) hR5.rdx₄
+  have hge4 : 2 ^ 63 ≤ (rs4.getD 0 0).toNat := by rw [← hrax4]; exact hR5.rax₄
+  have hE5 := cta_a5 k0 hcode bS pb dm₅ ra₅ hR5.call₅ (m := m4) (inp0 := dm₄.regs.rdi.toNat) (n0 := bC.size)
+    (fun hneed => by
+      rw [h58, h5x]
+      rw [h59] at hneed
+      exact memRel_carry checkerTab_abiOk hneed hM4 hR5.keep₅)
+  obtain ⟨hbS, -, hRR₅, rs5, m5, h5, hrax5, hM5⟩ := cta_ret hn (hR5.ret₅ _ hE5 (fun s h => h.1.1)) h0
+  exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, rs4, m4, rs5, m5, h4, hge4, h5, hrax5, hM5⟩
+
+/-- **Up to the challenge's buffer**: as `cmpT_upToS`, the solution's pool at the L level (as
+`cmpThreads_twinPooled` takes it), and mode `7`'s run ok, the memory `m7` in the region at `st₇`. -/
+theorem cmpT_upToC [Host] (k0 : Nat) (hcode : Code checkerFile k0) (h64 : System.Platform.numBits = 64)
+    {bC bS pb : ByteArray}
+    {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
+    {st₅ : MachineState} {BS : Array Word} {thsS : List ThreadM} {dm₇ : MachineData} {ra₇ : Word}
+    {st₇ : MachineState} (hR7 : CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇)
+    (h0 : st₇.data.regs.rdx = 0) :
+    bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+      RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
+      RegsRestored dm₇.regs st₇.data.regs ∧
+      (∀ t ∈ thsS, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
+      ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
+        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
+        2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
+        ∃ thsS' : List (Mem × List (Word × Nat × Mem)),
+          (∀ t ∈ thsS', (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m5.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
+            ThreadRuns (cmpBuf OUT m5) t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs5.getD 0 0 - 9223372036854775808) ∧
+          (∀ j : Word, j < rs5.getD 0 0 - 9223372036854775808 → ∃ t ∈ thsS', ∃ c ∈ t.2, c.1 = j) ∧
+          (∀ t ∈ thsS', (t.2.map (·.1)).Pairwise (· < ·)) ∧
+          ∃ rs7 m7, cmpRun checkerProg (cmpM7 MODE m5 bS) = .ok (rs7, m7) ∧
+            st₇.data.regs.rax = rs7.getD 0 0 ∧
+            MemRel (abiLayout checkerTab dm₇.regs.r8.toNat dm₇.regs.rdi.toNat bS.size dm₇.regs.rdx.toNat pb.size)
+              m7 st₇.data.dmem := by
+  have hn : 1 ≤ checkerTab.nres := by decide
+  obtain ⟨h58, h59, h5x⟩ := hR7.same₅
+  obtain ⟨h78, h79, h7x⟩ := hR7.same₇
+  obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, rs4, m4, rs5, m5, h4, hge4, h5, hrax5, hM5⟩ :=
+    cmpT_upToS k0 hcode hR7.toCmpTRun5 hR7.rdx₅
+  have hge5 : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hR7.rax₅
+  have hok5 := checker_cmpBufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5
+  -- the solution's pool
+  have hBS := cta_bufEq hM5 hok5 hR7.bufwS hR7.buflenS
+  obtain ⟨thsS', hthS, hcovS, hincS, hRRS⟩ :=
+    cta_pool k0 hcode dm₅ st₅ BS thsS hR7.thrS hR7.coverS hM5 hok5 hBS hrax5
+  -- the challenge's index call
+  have hE7 := cta_a7 k0 hcode bS pb dm₇ ra₇ hR7.call₇ (m := m5) (inp0 := dm₅.regs.rdi.toNat) (n0 := bS.size)
+    (fun hneed => by
+      rw [h78, h7x]
+      rw [h79] at hneed
+      rw [h58, h5x] at hM5
+      exact memRel_carry checkerTab_abiOk hneed hM5 hR7.keep₇)
+  obtain ⟨-, -, hRR₇, rs7, m7, h7, hrax7, hM7⟩ := cta_ret hn (hR7.ret₇ _ hE7 (fun s h => h.1.1)) h0
+  exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hthS, hcovS,
+    hincS, rs7, m7, h7, hrax7, hM7⟩
+
 /-! ## The theorem -/
 
 set_option linter.constructorNameAsVariable false in
@@ -423,36 +524,8 @@ theorem checkerFile_compare_threads_accept_regs [Host] (k0 : Nat) (hcode : Code 
       RegsRestored dm₇.regs st₇.data.regs ∧
       (∀ t ∈ thsS, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
       (∀ t ∈ thsC, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) := by
-  have hn : 1 ≤ checkerTab.nres := by decide
-  obtain ⟨h58, h59, h5x⟩ := hR.same₅
-  obtain ⟨h78, h79, h7x⟩ := hR.same₇
-  -- the challenge's driver call
-  obtain ⟨hbC, hpb, hRR₄, rs4, m4, h4, hrax4, hM4⟩ :=
-    cta_ret hn (hR.ret₄ _ (cta_a4 k0 hcode bC pb dm₄ ra₄ hR.call₄) (fun s h => h.1.1)) hR.rdx₄
-  have hge4 : 2 ^ 63 ≤ (rs4.getD 0 0).toNat := by rw [← hrax4]; exact hR.rax₄
-  -- the solution's driver call
-  have hE5 := cta_a5 k0 hcode bS pb dm₅ ra₅ hR.call₅ (m := m4) (inp0 := dm₄.regs.rdi.toNat) (n0 := bC.size)
-    (fun hneed => by
-      rw [h58, h5x]
-      rw [h59] at hneed
-      exact memRel_carry checkerTab_abiOk hneed hM4 hR.keep₅)
-  obtain ⟨hbS, -, hRR₅, rs5, m5, h5, hrax5, hM5⟩ :=
-    cta_ret hn (hR.ret₅ _ hE5 (fun s h => h.1.1)) hR.rdx₅
-  have hge5 : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hR.rax₅
-  have hok5 := checker_cmpBufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5
-  -- the solution's pool
-  have hBS := cta_bufEq hM5 hok5 hR.bufwS hR.buflenS
-  obtain ⟨thsS', hthS, hcovS, hincS, hRRS⟩ :=
-    cta_pool k0 hcode dm₅ st₅ BS thsS hR.thrS hR.coverS hM5 hok5 hBS hrax5
-  -- the challenge's index call
-  have hE7 := cta_a7 k0 hcode bS pb dm₇ ra₇ hR.call₇ (m := m5) (inp0 := dm₅.regs.rdi.toNat) (n0 := bS.size)
-    (fun hneed => by
-      rw [h78, h7x]
-      rw [h79] at hneed
-      rw [h58, h5x] at hM5
-      exact memRel_carry checkerTab_abiOk hneed hM5 hR.keep₇)
-  obtain ⟨-, -, hRR₇, rs7, m7, h7, hrax7, hM7⟩ :=
-    cta_ret hn (hR.ret₇ _ hE7 (fun s h => h.1.1)) hR.rdx₇
+  obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hthS, hcovS,
+    hincS, rs7, m7, h7, hrax7, hM7⟩ := cmpT_upToC k0 hcode h64 hR.toCmpTRun7 hR.rdx₇
   have hge7 : 2 ^ 63 ≤ (rs7.getD 0 0).toNat := by rw [← hrax7]; exact hR.rax₇
   have hok7 := checker_cmp7BufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5 h7 hge7
   -- the challenge's pool
