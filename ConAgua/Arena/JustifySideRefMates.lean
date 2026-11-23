@@ -438,7 +438,7 @@ set_option maxHeartbeats 800000 in
 /-- **One block member's mates written** (`mates_insert`'s body at member name `b`): its row
 becomes a fresh slice of its old list followed by the block's names `ns`. -/
 theorem member_step {p : Prog} (hP : MatesProg p) {n : Nat} {m : Mem} {M : Std.HashMap NIdx (List NIdx)}
-    {bo bl : Word} {ns : List NIdx} (hM : MatesR m M) (hI : MInv m) (hbl : bl.toNat < 2 ^ 62)
+    {bo bl : Word} {ns : List NIdx} (hM : MatesR m M) (hI : MInv m) (hbl : bl.toNat < 2 ^ 63)
     (hns : ns.length = bl.toNat)
     (hnm : ∀ i (hi : i < bl.toNat), (decI (nameW m bo (UInt64.ofNat i)) : NIdx) = ns[i]'(by omega))
     {b : Word} (hb32 : b.toNat < 2 ^ 32)
@@ -636,7 +636,7 @@ theorem matesInsert_cons (M : Std.HashMap NIdx (List NIdx)) (ns : List NIdx) (c 
 /-- **`mates_insert(bo, bl, j)` refines `matesInsert`** over the block's members from `j`: the
 block `block` (its names in `DLP`, `nameW`), `ns` its names. -/
 theorem matesInsert_ok {p : Prog} (hP : MatesProg p) {m₀ : Mem} {bo bl : Word}
-    {block : List IConstantInfo} (hbl : bl.toNat < 2 ^ 62) (hlen : block.length = bl.toNat)
+    {block : List IConstantInfo} (hbl : bl.toNat < 2 ^ 63) (hlen : block.length = bl.toNat)
     (hnm : ∀ i (hi : i < bl.toNat), (decI (nameW m₀ bo (UInt64.ofNat i)) : NIdx) =
       (block[i]'(by omega)).name) :
     ∀ n (m m' : Mem) (x j : Word) (M : Std.HashMap NIdx (List NIdx)),
