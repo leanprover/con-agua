@@ -1,10 +1,9 @@
 module
 
 public import ConAgua.Arena.JustifyIface
-public import ConAgua.Arena.StubNames
-public import ConAgua.Arena.DeclArmsNat
 meta import ConAgua.Arena.JustifyIface
 meta import ConAgua.Arena.IndIface
+import ConAgua.Arena.IndIface
 import ConAgua.Census.Attr
 
 @[expose] public section

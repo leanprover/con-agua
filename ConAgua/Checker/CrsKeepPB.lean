@@ -1,13 +1,8 @@
 module
 
-public import ConAgua.Checker.Prog
-public import ConAgua.Arena.Jobs
-public import ConAgua.Arena.JobsCrs
-public import ConAgua.Checker.JobsClosed
+public import ConAgua.Arena.JustifyRef7
 public import ConAgua.Checker.ArmsT
 public import ConAgua.Checker.IndLeaves
-import ConAgua.Arena.CoreErec
-import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.JobsClosed
 meta import ConAgua.Checker.ArmsT

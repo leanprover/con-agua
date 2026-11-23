@@ -1,10 +1,7 @@
 module
 
 public import ConAgua.Arena.JustifyIface
-public import ConAgua.Arena.DeclStep
 import ConAgua.Census.Attr
-import ConAgua.Layout
-import ConAgua.L.Notation
 
 @[expose] public section
 

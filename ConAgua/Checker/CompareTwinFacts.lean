@@ -5,7 +5,6 @@ public import ConAgua.Checker.CompareChain
 import ConAgua.Checker.TwinCaches
 import ConAgua.Checker.TwinShapeFront
 import ConAgua.Checker.TwinShapeQuot
-import ConAgua.Checker.TwinPins
 import ConRon.Bridge.Compare.Stages
 import ConRon.Bridge.Checker.Pins
 import ConRon.Bridge.Frontend.Prepare

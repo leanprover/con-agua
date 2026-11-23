@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Checker.FrontReset
-public import ConAgua.Checker.PrepProgHoist
 public import ConAgua.Checker.HoistRefBase
 public import ConAgua.Checker.CompareEntry
 public import ConAgua.Front.ApplyDeclRefine
@@ -76,7 +75,7 @@ theorem _root_.L.Front.DeclsF.prefix {D P : Array Word} {ds es : Array IDeclarat
     exact DeclAtF_mono D _ P P i _ (fun j hj _ => hw j hj) (fun _ _ _ => rfl) (Nat.le_refl _) rfl hx
 
 /-- `RecOK` at another records' array that agrees on record `r`'s words. -/
-theorem recOK_congr {D D' P : Array Word} {r : Nat} (h : RecOK D P r)
+theorem recOK_congr_rows {D D' P : Array Word} {r : Nat} (h : RecOK D P r)
     (hD : ∀ j, 0 < j → j < 1 + 8 * r + 8 → D'[j]? = D[j]?) : RecOK D' P r := by
   have hw : ∀ k, k < 8 → dw D' r k = dw D r k := fun k hk => by
     simp only [dw]; rw [hD _ (by omega) (by omega)]
@@ -93,7 +92,7 @@ theorem get?_copy64 {d s : ArrId} (hds : d ≠ s) (m : Mem) (n : Nat) (hn : n < 
   have hsz := size_copy64 m d 0 s 0 n d
   have h1 := getD_copy64 hds n m 0 0 (by simp; omega) (by simp; omega) j
   simp only [UInt64.toNat_zero, Nat.zero_le, Nat.zero_add, Nat.sub_zero, true_and] at h1
-  rw [if_pos ⟨hj, by omega⟩] at h1
+  rw [ite_eq_left ⟨hj, by omega⟩] at h1
   rw [Array.getElem?_eq_getElem (by omega), Array.getElem?_eq_getElem (by omega)]
   simp only [Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem (show j < (m.arr64 s).size by omega),
     Array.getElem?_eq_getElem (show j < ((m.copy64 d 0 s 0 n).arr64 d).size by omega),
@@ -142,7 +141,7 @@ theorem cmpStash_spec (p : Prog) (hp : p.lookup "cmp_stash" = some cmpStashL) (h
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr,
       (frontReset_spec p hpp n ·)]
-    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+    all_goals (try simp only [L.St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval] at *)
     case vc1 => grind [lang_grind]
     all_goals rename_i _ hD0 hlt _ h240 _ _ _ hb _ hpost

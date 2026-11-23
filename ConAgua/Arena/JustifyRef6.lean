@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.JustifyRef5
+import ConAgua.Arena.RecLayout.CIDec
 import ConRon.Bridge.Pers
 import all ConAgua.Arena.Justify
 

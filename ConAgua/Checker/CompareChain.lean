@@ -2,14 +2,10 @@ module
 
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.PipeRest
-public import ConAgua.Checker.PreLoopWSStages
 public import ConAgua.Front.FrontPreOK1
-public import ConAgua.Checker.ParEntryA
 public import ConAgua.Checker.PresizeStage
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
 import ConAgua.Checker.PrepProgHoist
@@ -59,7 +55,7 @@ theorem Since.setIn {b b' pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
   simp only [Mem.setIn, loadMem] at e ⊢
   by_cases ha : a = IN
   · simp [ha]
-  · simp only [ha, if_false] at e ⊢; exact e
+  · simp only [ha, ite_false] at e ⊢; exact e
 
 /-! ## The stash's memory -/
 
@@ -123,7 +119,7 @@ theorem stash_of {m : Mem} {ds : Array IDeclaration} (hD : DeclsF (m.arr64 DECL)
     rw [stashM_cdecl, stashM0_cdecl, size_copy64]
   rw [stashM_dlp]
   refine ⟨hD.congr (by rw [hsz]; exact hcs) (by rw [hsz, ← hn]; exact hok.2.1) rfl hcp
-    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr (hR x hx) fun j _ hj => hcp j (by omega)⟩
+    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr_rows (hR x hx) fun j _ hj => hcp j (by omega)⟩
 
 
 /-! ## The parse state after the stash -/
@@ -244,7 +240,7 @@ theorem stash_R4 {bC bS pb : ByteArray} {sz : TieredArray → Nat} {m m' : Mem} 
       (by simp) (by simp) (by simp) (by simp) (by simp) (by simp)
   · intro x hx
     simp only [setIn_arr64, hm, stashM_decl, stashM_dlp, stashM0_decl]
-    exact recOK_congr (h5.rok x (by simp; omega)) fun j hj _ => by
+    exact recOK_congr_rows (h5.rok x (by simp; omega)) fun j hj _ => by
       simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; split <;> first | omega | rfl
   · exact (h5.mode.frame hsf (by decide +kernel) (by decide +kernel)).frame (memFrame_setIn _ _)
       (by simp) (by simp)
@@ -294,7 +290,7 @@ theorem checkC1_of_stages {p : Prog} (hp : p.lookup "check_c1" = some checkC1L)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true,
       bne_iff_ne, ne_eq, Decidable.not_not] at *)
     all_goals clear h1 h2 h2p h3 h4 h5 h6 hp
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]

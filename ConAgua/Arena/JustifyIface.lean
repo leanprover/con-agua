@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.Env
-public import ConAgua.Arena.MemoLib
-public import ConAgua.Arena.MemoLibRel
 public import ConRon.Arena.Justify
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr

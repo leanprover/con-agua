@@ -1,6 +1,5 @@
 module
 
-public import ConAgua.Checker.Entry
 public import ConAgua.Arena.JustifyIface
 
 @[expose] public section
