@@ -4,6 +4,7 @@ public import ConAgua.Arena.JustifySideModels
 public import ConAgua.Arena.Pins
 public import ConAgua.Arena.IndSumSpec.MentionsConst
 public import ConAgua.Arena.IndRealFvt
+public import ConAgua.Checker.HoistRefBase
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -250,12 +251,59 @@ theorem rdW_dw (D : Array Word) (k x : Word) (j : Nat) (hx : x.toNat = 1 + j) (h
     rw [UInt64.toNat_add, UInt64.toNat_mul, hx]; simp; omega
   simp only [rdW, dw, e]
 
+/-- **`DECL` across the side records**: the same size, every word kept but value records' kind
+words (`2`, `3`, `4`), which may become `1`. -/
+def KindStep (D D' : Array Word) : Prop :=
+  D'.size = D.size ∧ ∀ i, rdN D' i = rdN D i ∨
+    (i % 8 = 1 ∧ (rdN D i = 2 ∨ rdN D i = 3 ∨ rdN D i = 4) ∧ rdN D' i = 1)
+
+theorem KindStep.refl (D : Array Word) : KindStep D D := ⟨rfl, fun _ => .inl rfl⟩
+
+theorem KindStep.trans {D₁ D₂ D₃ : Array Word} (h₁ : KindStep D₁ D₂) (h₂ : KindStep D₂ D₃) :
+    KindStep D₁ D₃ := by
+  refine ⟨h₂.1.trans h₁.1, fun i => ?_⟩
+  rcases h₁.2 i with e1 | ⟨m1, k1, n1⟩ <;> rcases h₂.2 i with e2 | ⟨m2, k2, n2⟩
+  · exact .inl (e2.trans e1)
+  · rw [e1] at k2; exact .inr ⟨m2, k2, n2⟩
+  · rw [e2]; exact .inr ⟨m1, k1, n1⟩
+  · rw [n1] at k2; simp at k2
+
+theorem KindStep.set {D : Array Word} {k : Nat} (h : rdN D (1 + 8 * k) = 2 ∨ rdN D (1 + 8 * k) = 3 ∨
+    rdN D (1 + 8 * k) = 4) : KindStep D (D.set! (1 + 8 * k) 1) := by
+  refine ⟨by simp, fun i => ?_⟩
+  by_cases e : i = 1 + 8 * k
+  · subst e
+    by_cases hb : 1 + 8 * k < D.size
+    · exact .inr ⟨by omega, h, by simp [rdN, hb]⟩
+    · exact .inl (by simp [rdN, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, hb,
+        Array.getElem?_eq_none (Nat.le_of_not_lt hb)])
+  · exact .inl (by simp [rdN, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Ne.symm e])
+
+/-- A record's `RecOK` survives a `KindStep`. -/
+theorem KindStep.recOK {D D' P : Array Word} (h : KindStep D D') {r : Nat}
+    (hr : L.Checker.RecOK D P r) : L.Checker.RecOK D' P r := by
+  have hw : ∀ c, 0 < c → c < 8 → dw D' r c = dw D r c := fun c c0 c8 => by
+    rcases h.2 (1 + 8 * r + c) with e | ⟨hm, -, -⟩
+    · exact e
+    · omega
+  have h1 := hw 1 (by decide) (by decide); have h2 := hw 2 (by decide) (by decide)
+  have h3 := hw 3 (by decide) (by decide); have h4 := hw 4 (by decide) (by decide)
+  have h5 := hw 5 (by decide) (by decide)
+  rcases h.2 (1 + 8 * r) with e | ⟨-, k, n⟩
+  · have e0 : dw D' r 0 = dw D r 0 := e
+    simp only [L.Checker.RecOK, e0, h1, h2, h3, h4, h5]; exact hr
+  · have e0 : dw D' r 0 = 1 := n
+    have k0 : dw D r 0 ≠ 6 := by
+      have : dw D r 0 = rdN D (1 + 8 * r) := rfl; rw [this]; rcases k with k | k | k <;> rw [k] <;> decide
+    simp only [L.Checker.RecOK, e0, h1, h2, h4, h5]
+    exact ⟨fun _ => by rw [← h1, ← h4, ← h5, h1, h4, h5]; exact hr.1 k0, fun c => by cases c⟩
+
 /-- What `side_record`'s run keeps and makes: the twin's record, `DECL` with it, the stage
 relation, the `mc` memo, the frame. -/
 def SideOK (vis : Word) (fe : IFEnv) (a : AState) (ds : Array IDeclaration) (k : Nat)
     (m m' : Mem) (d' : IDeclaration) : Prop :=
   DeclsF (m'.arr64 DECL) (m'.arr64 DLP) (ds.set! k d') ∧ StageR vis fe m' a ∧ (∃ mp, mcMR m' mp) ∧
-    MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m'
+    MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m' ∧ KindStep (m.arr64 DECL) (m'.arr64 DECL)
 
 theorem decl_ne_ctl : (DECL : TieredArray) ≠ CTL := by decide
 
@@ -296,7 +344,7 @@ theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' :
     · have := sideRecordVal_run (d := d) (v := v) (sa := default) (c := false) hb
         (fun h => by cases h) (fun h => by cases h)
       simpa [sideRes] using this
-    · exact ⟨by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _⟩
+    · exact ⟨by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _, KindStep.refl _⟩
   rw [ite_eq_right c1] at h
   have hb0 : (ρ1.headD 0 != 0) = false := by simpa using c1
   rw [hb0] at hb
@@ -328,7 +376,7 @@ theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' :
     obtain ⟨-, rfl⟩ := h
     have hc3 : (ρ3.headD 0 != 0) = true := by simpa using c3
     rw [hc3] at hrun
-    refine ⟨_, hrun, ?_, ?_, ?_, ?_⟩
+    refine ⟨_, hrun, ?_, ?_, ?_, ?_, ?_⟩
     · have e1 : (1 + 8 * k).toNat = 1 + 8 * k.toNat := by
         rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
       have hA := hD.setAxiom hk hcv
@@ -341,11 +389,18 @@ theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' :
       exact ⟨mp, memoRG_frame mcSch mcSch_wf bmKey _ [DECL] [] (by decide) (by simp) _ _
         (MemFrame.set64 _ _ decl_ne_ctl _ _) mp hmp⟩
     · exact (hf3.mono (by simp) (by simp)).trans ((MemFrame.set64 _ _ decl_ne_ctl _ _).mono (by simp) (by simp))
+    · have e1 : (1 + 8 * k).toNat = 1 + 8 * k.toNat := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+      rw [Mem.arr64_set64_same, e1, hdl]
+      apply KindStep.set
+      have : rdW (m.arr64 DECL) (1 + 8 * k) = rdN (m.arr64 DECL) (1 + 8 * k.toNat) := by
+        simp only [rdW, rdN, e1]
+      rw [← this]; exact hkind
   · rw [ite_eq_right c3, sideRecordW.j1.arm1] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨-, rfl⟩ := h
     have hc3 : (ρ3.headD 0 != 0) = false := by simpa using c3
     rw [hc3] at hrun
-    refine ⟨_, hrun, ?_, hS3, hM3, hf3.mono (by simp) (by simp)⟩
+    refine ⟨_, hrun, ?_, hS3, hM3, hf3.mono (by simp) (by simp), by rw [hdl]; exact KindStep.refl _⟩
     simp only [sideRes, Bool.false_eq_true, ite_false]
     rw [hdl, hdp, hset]; exact hD
 
@@ -369,7 +424,8 @@ theorem sideRecord_ok {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' : 
     intro c hc c2 c3 c4 hpure
     rw [sideRecordW.arm2 _ _ _ _ (by rw [e1, hc]; simp [c2, c3, c4])] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
-    refine ⟨ds[k.toNat], by rw [hpure]; rfl, by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _⟩
+    refine ⟨ds[k.toNat], by rw [hpure]; rfl, by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _,
+      KindStep.refl _⟩
   generalize hd : ds[k.toNat] = d at hr hset pass ⊢
   cases d with
   | axiomDecl cv => exact pass 1 hr.1 (by decide) (by decide) (by decide) rfl
@@ -407,15 +463,17 @@ theorem sideRecordsLoop_ok {p : Prog} (hP : SideProg p) {cnt : Word} {vis : Word
       out.length = k.toNat → k.toNat ≤ ds.size →
       DeclsF (m.arr64 DECL) (m.arr64 DLP) (out ++ ds.toList.drop k.toNat).toArray →
       StageR vis fe m a → (∃ mp, mcMR m mp) → MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m₀ m →
+      KindStep (m₀.arr64 DECL) (m.arr64 DECL) →
       sideRecordsW.loop1 p n m cnt k = some m' →
       ∃ res, (sideRecordsGo out (ds.toList.drop k.toNat)).run a = .ok (res, a) ∧
         DeclsF (m'.arr64 DECL) (m'.arr64 DLP) res.toArray ∧ StageR vis fe m' a ∧
-        (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m₀ m' := by
+        (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m₀ m' ∧
+        KindStep (m₀.arr64 DECL) (m'.arr64 DECL) := by
   intro n
   induction n with
-  | zero => intro m m' k out _ _ _ _ _ _ h; rw [sideRecordsW.loop1.eq_1] at h; cases h
+  | zero => intro m m' k out _ _ _ _ _ _ _ h; rw [sideRecordsW.loop1.eq_1] at h; cases h
   | succ n ih =>
-    intro m m' k out hl hle hD hS hmc hf h
+    intro m m' k out hl hle hD hS hmc hf hK h
     rw [sideRecordsW.loop1.eq_2] at h
     by_cases g : k < cnt
     · rw [ite_eq_left g] at h
@@ -429,13 +487,13 @@ theorem sideRecordsLoop_ok {p : Prog} (hP : SideProg p) {cnt : Word} {vis : Word
         (sideRecord_specW p hP.side_record n _ k) h1
       rw [e1] at w1
       have hk' : k.toNat < (out ++ ds.toList.drop k.toNat).toArray.size := by simp; omega
-      obtain ⟨d', hrun, hD1, hS1, hmc1, hf1⟩ := sideRecord_ok hP hS hmc hD hk' w1
+      obtain ⟨d', hrun, hD1, hS1, hmc1, hf1, hK1⟩ := sideRecord_ok hP hS hmc hD hk' w1
       rw [cur_get hl hlt] at hrun
       rw [cur_set hl hlt] at hD1
       have e : (k + 1).toNat = k.toNat + 1 := by
         rw [UInt64.toNat_add]; have := UInt64.toNat_lt cnt; simp; omega
       obtain ⟨res, hgo, hR⟩ := ih m₁ m' (k + 1) (out ++ [d']) (by simp [hl, e]) (by rw [e]; omega)
-        (by rw [e]; exact hD1) hS1 hmc1 (hf.trans hf1) h
+        (by rw [e]; exact hD1) hS1 hmc1 (hf.trans hf1) (hK.trans hK1) h
       refine ⟨res, ?_, hR⟩
       rw [e] at hgo
       rw [List.drop_eq_getElem_cons (by simpa using hlt)]
@@ -445,7 +503,7 @@ theorem sideRecordsLoop_ok {p : Prog} (hP : SideProg p) {cnt : Word} {vis : Word
       have e : k.toNat = ds.size := by
         have := UInt64.not_lt.mp g; have := UInt64.le_iff_toNat_le.mp this; omega
       rw [e, List.drop_of_length_le (by simp)] at hD ⊢
-      exact ⟨out, rfl, by simpa using hD, hS, hmc, hf⟩
+      exact ⟨out, rfl, by simpa using hD, hS, hmc, hf, hK⟩
 
 /-- **`side_records(cnt)` refines `sideRecordsGo`** over the front's `cnt` records: a returning
 run is the twin's (which keeps the state), and `DECL` holds its result. -/
@@ -456,7 +514,8 @@ theorem sideRecords_ref {p : Prog} (hP : SideProg p) {n : Nat} {cnt : Word} {m m
     (hmc : ∃ mp, mcMR m mp) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hcnt : cnt.toNat = ds.size) :
     ∃ res, (sideRecordsGo [] ds.toList).run a = .ok (res, a) ∧
       DeclsF (m'.arr64 DECL) (m'.arr64 DLP) res.toArray ∧ StageR vis fe m' a ∧
-      (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m' := by
+      (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m' ∧
+      KindStep (m.arr64 DECL) (m'.arr64 DECL) := by
   obtain ⟨s', e', -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (sideRecords_specW p hP.side_records n _ cnt) hc
   rw [e'] at hw
@@ -469,7 +528,15 @@ theorem sideRecords_ref {p : Prog} (hP : SideProg p) {n : Nat} {cnt : Word} {m m
     rw [hl] at hw; simp only [sideRecordsW.k_loop1, Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨-, rfl⟩ := hw
     have := sideRecordsLoop_ok hP hcnt (n + 1) m m₁ 0 [] rfl (Nat.zero_le _) (by simpa using hD) hS hmc
-      (MemFrame.refl _ _ _) hl
+      (MemFrame.refl _ _ _) (KindStep.refl _) hl
     simpa using this
+
+/-- **After the side records**: every record's `RecOK` kept, `DECL`'s size and `DLP` unchanged. -/
+theorem sideRecords_recOK {m m' : Mem} (hK : KindStep (m.arr64 DECL) (m'.arr64 DECL))
+    (hf : MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m') :
+    (∀ x, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x → L.Checker.RecOK (m'.arr64 DECL) (m'.arr64 DLP) x) ∧
+      (m'.arr64 DECL).size = (m.arr64 DECL).size ∧ m'.arr64 DLP = m.arr64 DLP := by
+  have hp : m'.arr64 DLP = m.arr64 DLP := hf.arr _ (by decide) (by decide)
+  exact ⟨fun x hx => by rw [hp]; exact hK.recOK hx, hK.1, hp⟩
 
 end L.Arena
