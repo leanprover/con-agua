@@ -391,4 +391,144 @@ theorem erecP_lo {m : Mem} {i : Nat} (h : i < erTop m) (h40 : i < 2 ^ 40) :
   have a2 : i % 2 ^ 40 = i := Nat.mod_eq_of_lt h40
   simp only [erecP, a1, a2, h, ite_true, show i < 2 ^ 64 by omega]
 
+/-! ## One member -/
+
+/-- What the mates' writers keep: only the record pool's tier 0, its top and the mates' rows
+change, the pool only grows. -/
+structure MKeep (m m' : Mem) : Prop where
+  frame : MemFrame [EREC, MATA, MATS, MATN] [129] m m'
+  grow : ErecGrow m m'
+
+theorem MKeep.refl (m : Mem) : MKeep m m :=
+  ⟨MemFrame.refl _ _ _, ⟨Nat.le_refl _, fun _ _ => rfl, Nat.le_refl _, fun _ _ => rfl⟩⟩
+
+theorem MKeep.trans {m₁ m₂ m₃ : Mem} (h₁ : MKeep m₁ m₂) (h₂ : MKeep m₂ m₃) : MKeep m₁ m₃ :=
+  ⟨h₁.frame.trans h₂.frame, ⟨Nat.le_trans h₁.grow.top h₂.grow.top,
+    fun i hi => (h₂.grow.get i (Nat.lt_of_lt_of_le hi h₁.grow.top)).trans (h₁.grow.get i hi),
+    Nat.le_trans h₁.grow.top1 h₂.grow.top1,
+    fun i hi => (h₂.grow.get1 i (Nat.lt_of_lt_of_le hi h₁.grow.top1)).trans (h₁.grow.get1 i hi)⟩⟩
+
+/-- The pool's shape the mates' writers need: the scratch tier off, `EREC` within `2^40` words,
+its tier-0 top within it. -/
+structure MInv (m : Mem) : Prop where
+  off : rdW (m.arr64 CTL) 1 = 0
+  size : (m.arr64 EREC).size ≤ 2 ^ 40
+  top : erTop m ≤ (m.arr64 EREC).size
+  ctl : 228 < (m.arr64 CTL).size
+
+theorem get_of_rdN {a b : Array Word} {i : Nat} (hs : a.size = b.size) (h : rdN a i = rdN b i) :
+    a[i]? = b[i]? := by
+  by_cases hi : i < b.size
+  · simp only [rdN] at h; rw [Array.getElem?_eq_getElem (by omega), Array.getElem?_eq_getElem hi] at *
+    simpa using h
+  · rw [Array.getElem?_eq_none (by omega), Array.getElem?_eq_none (by omega)]
+
+theorem matArr_ne (g : Nat) : (matArr g : TieredArray) ≠ EREC ∧ (matArr g : TieredArray) ≠ tier1 EREC ∧
+    (matArr g : TieredArray) ≠ CTL ∧ (matArr g : TieredArray) ≠ DLP ∧ (matArr g : TieredArray) ≠ DECL := by
+  unfold matArr; split <;> (try split) <;> decide
+
+theorem matSetM_other {m : Mem} {w o l : Word} {b : TieredArray} (hb : b ≠ matArr (rowTag w)) :
+    (matSetM m w o l).arr64 b = m.arr64 b := by
+  simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ hb, Mem.arr64_set64_ne _ _ _ _ _ hb]
+
+theorem rdN_get {a : Array Word} {i : Nat} (h : i < a.size) : a[i]? = some (rdN a i) := by
+  simp [rdN, h]
+
+set_option maxHeartbeats 800000 in
+/-- **One block member's mates written** (`mates_insert`'s body at member name `b`): its row
+becomes a fresh slice of its old list followed by the block's names `ns`. -/
+theorem member_step {p : Prog} (hP : MatesProg p) {n : Nat} {m : Mem} {M : Std.HashMap NIdx (List NIdx)}
+    {bo bl : Word} {ns : List NIdx} (hM : MatesR m M) (hI : MInv m) (hbl : bl.toNat < 2 ^ 62)
+    (hns : ns.length = bl.toNat)
+    (hnm : ∀ i (hi : i < bl.toNat), (decI (nameW m bo (UInt64.ofNat i)) : NIdx) = ns[i]'(by omega))
+    {b : Word} (hb32 : b.toNat < 2 ^ 32)
+    {ρ1 ρ2 ρ3 ρ4 ρ5 : List Word} {μ1 μ2 μ3 μ4 μ5 : Mem}
+    (h1 : callW p n "mates_get" [b] m = some (ρ1, μ1))
+    (h2 : callW p n "erec_alloc" [ρ1.tail.headD 0 + bl] μ1 = some (ρ2, μ2))
+    (h5 : (ρ1.headD 0 ≠ 0 → callW p n "sd_copy_prev" [ρ2.headD 0, ρ1.headD 0 - 1, ρ1.tail.headD 0] μ2 =
+      some (ρ5, μ5)) ∧ (ρ1.headD 0 = 0 → μ5 = μ2))
+    (h3 : callW p n "sd_copy_names" [ρ2.headD 0 + ρ1.tail.headD 0, bo, bl] μ5 = some (ρ3, μ3))
+    (h4 : callW p n "mates_set" [b, ρ2.headD 0 + 1, ρ1.tail.headD 0 + bl] μ3 = some (ρ4, μ4)) :
+    MatesR μ4 (M.insert (decI b) (M.getD (decI b) [] ++ ns)) ∧ MInv μ4 ∧ MKeep m μ4 := by
+  -- mates_get
+  obtain ⟨t1, e1, hm1, -, hr1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (matesGet_spec p hP.mates_get n _ b) h1
+  simp only at hm1 hr1
+  have em1 : μ1 = m := e1 ▸ hm1
+  clear e1 hm1; subst μ1; subst hr1
+  simp only [List.headD_cons, List.tail_cons] at h2 h5 h3 h4
+  generalize ho : (matRow m b).1 = o at h2 h5 h3 h4
+  generalize hl : (matRow m b).2 = l at h2 h5 h3 h4
+  -- erec_alloc
+  obtain ⟨t2, e2, -, hw2⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (L.Ind.erecAlloc_specW p hP.erec_alloc n _ (l + bl)) h2
+  rw [e2] at hw2; simp only [L.Ind.erAllocW, hI.off, ite_true] at hw2
+  split at hw2; · cases hw2
+  split at hw2; · cases hw2
+  rename_i c1 c2
+  obtain ⟨hd2, hμ2⟩ := Prod.mk.inj (Option.some.inj hw2)
+  subst μ2
+  generalize hd : rdW (m.arr64 CTL) 129 = d at hd2 c1 c2
+  have hdtop : d.toNat = erTop m := by rw [← hd]; rfl
+  simp only [← hd2, List.headD_cons] at h5 h3 h4
+  have hsz := hI.size
+  have hlen : (Mem.len64 m EREC).toNat = (m.arr64 EREC).size := by
+    simp [Mem.len64]; omega
+  have c1' : d.toNat ≤ (m.arr64 EREC).size := by
+    have := UInt64.not_lt.mp c1; have := UInt64.le_iff_toNat_le.mp this; omega
+  -- the old list's length
+  have hlb : l.toNat ≤ erTop m := by
+    by_cases o0 : o = 0
+    · have := hM.z b (by rw [ho]; exact o0); rw [hl] at this; subst this; simp
+    · have := (hM.ok b (by rw [ho]; exact o0)).1; rw [ho, hl] at this; omega
+  have hlbl : (l + bl).toNat = l.toNat + bl.toNat := by
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by have := hI.top; omega)
+  have c2' : l.toNat + bl.toNat ≤ (m.arr64 EREC).size - d.toNat := by
+    have := UInt64.not_lt.mp c2
+    have := UInt64.le_iff_toNat_le.mp this
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp c1), hlen, hlbl] at this; omega
+  have hm2 : L.Ind.erAllocMem m (l + bl) = m.set64 CTL 129 (d + (l + bl)) := by
+    simp [L.Ind.erAllocMem, hI.off, hd]
+  rw [← hμ2, hm2] at h5
+  generalize hM2 : m.set64 CTL 129 (d + (l + bl)) = m2 at h5
+  have m2a : ∀ x : TieredArray, x ≠ CTL → m2.arr64 x = m.arr64 x := fun x hx => by
+    rw [← hM2, Mem.arr64_set64_ne _ _ _ _ _ hx]
+  have m2c : ∀ x : Word, x ≠ 129 → rdW (m2.arr64 CTL) x = rdW (m.arr64 CTL) x := fun x hx => by
+    rw [← hM2, rdW_set64]; simp [Ne.symm hx]
+  have m2s : ∀ x, (m2.arr64 x).size = (m.arr64 x).size := fun x => by rw [← hM2, size_set64_any]
+  have hdl : (d + l).toNat = d.toNat + l.toNat := by rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have hdk : (d + (l + bl)).toNat = d.toNat + l.toNat + bl.toNat := by
+    rw [UInt64.toNat_add, hlbl, Nat.mod_eq_of_lt (by omega)]; omega
+  have m2t : erTop m2 = d.toNat + l.toNat + bl.toNat := by
+    simp only [erTop, ← hM2, rdW_set64]
+    simp only [show (129 : Word).toNat < (m.arr64 CTL).size by have := hI.ctl; simp; omega, and_self,
+      ite_true, hdk]
+  -- the old list
+  have hE2 : m2.arr64 EREC = m.arr64 EREC := m2a _ (by decide)
+  have hC5 : CpInv m2 μ5 d.toNat (fun j => rdN (m.arr64 EREC) (o.toNat - 1 + j)) l.toNat := by
+    by_cases o0 : o = 0
+    · rw [h5.2 o0]
+      have := hM.z b (by rw [ho]; exact o0); rw [hl] at this; subst this
+      exact CpInv.start _ _ _
+    · have ho1 : (1 : Word) ≤ o := UInt64.le_iff_toNat_le.mpr (by
+        have : o.toNat ≠ 0 := fun h => o0 (UInt64.toNat_inj.mp (by simpa using h))
+        simp; omega)
+      have hc := copyPrev_call hP (h5.1 o0) (by rw [m2s]; omega) (by rw [m2s]; omega)
+        (by have := (hM.ok b (by rw [ho]; exact o0)).1; rw [ho, hl] at this
+            rw [UInt64.toNat_sub_of_le _ _ ho1]; simp; omega)
+      rw [hE2] at hc
+      rwa [UInt64.toNat_sub_of_le _ _ ho1, show (1 : Word).toNat = 1 from rfl] at hc
+  -- the names
+  have hC3 := copyNames_call hP h3 (by rw [hdl, hC5.size, m2s]; omega) (by rw [hC5.size, m2s]; omega)
+  rw [hdl] at hC3
+  have hP5 : μ5.arr64 DLP = m.arr64 DLP := by rw [hC5.other _ (by decide), m2a _ (by decide)]
+  have hnw : ∀ i, nameW μ5 bo i = nameW m bo i := fun i => by simp only [nameW, hP5]
+  -- mates_set
+  obtain ⟨t4, e4, -, ht0, htg, hm4, hbd⟩ := triple_of_callW (s₀ := ⟨μ3, Locals.init []⟩)
+    (matesSet_spec p hP.mates_set n _ b (d + 1) (l + bl)) h4
+  simp only at hm4 hbd
+  have em4 : μ4 = matSetM μ3 b (d + 1) (l + bl) := e4 ▸ hm4
+  clear e4 hm4; subst em4
+  sorry
+
 end L.Arena
