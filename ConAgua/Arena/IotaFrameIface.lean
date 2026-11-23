@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameMajor
+public import ConAgua.Arena.IotaFrameParts
 
 @[expose] public section
 
@@ -32,13 +32,14 @@ theorem iotaRecOf_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
 
 /-- **`iota_parts_of_at(IotaRec, rP, nIdx, i, r)` refines `iotaPartsOfAt rr rP nIdx i rl`** (the
 frame's seven words as decoded by `decIRAt 0`, `r` the rule's record in `EREC`). -/
+@[refines ConRon.Arena.iotaPartsOfAt]
 theorem iotaPartsOfAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (fe : IFEnv)
     (r1 r2 r3 r4 r5 r6 r7 rP nIdx i r : Word) (rr : IotaRec) (rl : IRecRule) :
     RelW (fun m args => callW p n "iota_parts_of_at" args m) [r1, r2, r3, r4, r5, r6, r7, rP, nIdx, i, r]
       (fun m a => StageR vis fe m a ∧ decIRAt 0 m [r1, r2, r3, r4, r5, r6, r7] rr ∧
         decRule (erecP m) r.toNat = some rl)
       (iotaPartsOfAt rr rP.toNat nIdx.toNat i.toNat rl) (KeepPost vis fe decOIP) := by
-  sorry
+  exact iotaPartsOfAt_rel' P n vis fe r1 r2 r3 r4 r5 r6 r7 rP nIdx i r rr rl
 
 /-- **`iota_parts_at(qj, cnP, mI, rP, r)` refines `iotaPartsAt cvj cnP mI rP rl`** (`qj` the
 constructor's constant value, `r` the rule's record, both in `EREC`). -/
