@@ -5,6 +5,7 @@ public import ConAgua.Arena.Jobs
 public import ConAgua.Arena.JobsCrs
 public import ConAgua.Checker.JobsClosed
 public import ConAgua.Checker.ArmsT
+public import ConAgua.Checker.CrsKeepPB
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.JobsClosed
@@ -180,7 +181,7 @@ import all ConAgua.Arena.NatSized
 substituted checker program, by `crsSpec_of` (`Arena/JobsCrs.lean`): the comparisons' write set
 (`ConeProg.cmpClosed`, one kernel check per chunk, `prog_all`), the lookups, the arms' facts
 (`Checker/ArmsT.lean`) and `check_record_sol`'s write set (`checkerProg_crsW`). The route's kept
-memory `CrsKeep` (semantic facts on the models) is taken as a hypothesis.
+memory `CrsKeep` from `Checker/CrsKeepPB.lean` (`checkerProg_crsKeepPB`).
 -/
 
 namespace L.Checker
@@ -262,19 +263,20 @@ theorem checkerProg_coneProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop r
     checkerProg_leafClosedPB bs, (checkerProg_knotTopPB bs).knot.instLP, (checkerProg_knotTopPB bs).knot.hcl,
     (checkerProg_knotTopPB bs).knot.ls, checkerProg_coreStagePB bs, checkerProg_rulesPB bs]
 
-/-- **`check_record_sol`'s program facts at the checker**, given the route's kept memory. -/
-theorem checkerProg_crsProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
-    (hkeep : L.Arena.CrsKeep (Prog.subPB bs checkerProg)) : L.Arena.CrsProg (Prog.subPB bs checkerProg) :=
+/-- **`check_record_sol`'s program facts at the checker.** -/
+theorem checkerProg_crsProgPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length) :
+    L.Arena.CrsProg (Prog.subPB bs checkerProg) :=
   ⟨checkerProg_coneProgPB bs hr hpre, by chk_lk, by chk_lk, by chk_lk, by chk_lk,
-    checkerProg_axArmPB bs hr hpre, checkerProg_bnoPB bs hr hpre, checkerProg_leafClosedPB bs, hkeep⟩
+    checkerProg_axArmPB bs hr hpre, checkerProg_bnoPB bs hr hpre, checkerProg_leafClosedPB bs,
+    checkerProg_crsKeepPB bs⟩
 
 /-- **What `record_job` takes of `check_record_sol` at the checker** (`CrsSpec`), given `check_decl`'s
-program facts and the route's kept memory. -/
+program facts. -/
 theorem checkerProg_crsSpecPB (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
     {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration}
-    (hcdP : CdProg pins dn ds (Prog.subPB bs checkerProg))
-    (hkeep : L.Arena.CrsKeep (Prog.subPB bs checkerProg)) : CrsSpec pins dn ds (Prog.subPB bs checkerProg) :=
-  crsSpec_of (checkerProg_crsProgPB bs hr hpre hkeep) hcdP (checkerProg_knotStagePB bs)
+    (hcdP : CdProg pins dn ds (Prog.subPB bs checkerProg)) :
+    CrsSpec pins dn ds (Prog.subPB bs checkerProg) :=
+  crsSpec_of (checkerProg_crsProgPB bs hr hpre) hcdP (checkerProg_knotStagePB bs)
     (checkerProg_apdPB bs) (checkerProg_crKeepPB bs) (checkerProg_crfPB bs) (checkerProg_ccvSimsPB bs dn)
     (let ⟨F, h, hc⟩ := checkerProg_crsW; ⟨F, h, closedW_subPB bs hc⟩)
 

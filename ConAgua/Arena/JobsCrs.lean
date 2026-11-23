@@ -30,7 +30,7 @@ theorem crsSpec_of {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
   ref hFD hLD {N} hN {m} {a} {vis} {fe} {i} {J} {envS} {matesU} hi hok hR hS hF hden hPD hIM hJ hWM
       hsol hm hnx := by
     have hM := crs_ref P hP hFD hLD hq hap hkp hcrf hC hN hi hok hR hS hF hden hPD hIM hJ hsol hm hWM hnx
-    have hs := checkRecordSol_specE p P.crs hP.cd.cd hP.cd.ckd P.cj P.ax.ccv N ⟨m, Locals.init []⟩ i vis
+    have hs := checkRecordSol_specE p P.crs P.cj N ⟨m, Locals.init []⟩ i vis
     rcases c : callE p N "check_record_sol" [i, vis] m with e | ⟨r, m'⟩
     · exact fun hG => RefE.run_err hs hG.1.nv ⟨hG.1.cd, hG.2⟩ hM c
     · obtain ⟨s', rfl, -, y, a', hr, hR'⟩ := RefE.run_ok hs hM c
