@@ -156,6 +156,153 @@ theorem cvSliceW {m M : Mem} {q : Word} {cv : IConstantVal}
     (erRdOK M).rd _ _ (by rw [rd_off_toNat (erRdOK m) h2]; exact hx _ _ h2)
   rw [e1, e2]; exact hs
 
+section tbl
+variable {p : Prog}
+
+theorem IProjTable.eq_iff (t t' : IProjTable) :
+    t = t' ↔ (t.structName = t'.structName ∧ t.levelParams = t'.levelParams ∧
+      t.numParams = t'.numParams ∧ t.ctor = t'.ctor ∧ t.numFields = t'.numFields ∧
+      t.bodies.toList = t'.bodies.toList) := by
+  obtain ⟨a, b, c, d, e, f⟩ := t
+  obtain ⟨a', b', c', d', e', f'⟩ := t'
+  simp only [IProjTable.mk.injEq, Array.toList_inj]
+
+/-- **`tbl_eq(q, r)` is the tables' equality** (`decTbl` at both). -/
+theorem tblEq_ok (hP : JfCmpProg p) {n : Nat} {m m' : Mem} {q r : Word} {res : List Word}
+    {t t' : IProjTable} (hq : decTbl (erecP m) q.toNat = some t) (hr : decTbl (erecP m) r.toNat = some t')
+    (h : callW p n "tbl_eq" [q, r] m = some (res, m')) :
+    m' = m ∧ (res.headD 0 ≠ 0 ↔ t = t') := by
+  have hK := hP.pl.canon
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (tblEq_specW p hP.te n _ q r) h
+  obtain ⟨hn1, en1, hl1, ep1, hc1, ec1, ef1, hb1⟩ := decTbl_rd (erRdOK m) hq
+  obtain ⟨hn2, en2, hl2, ep2, hc2, ec2, ef2, hb2⟩ := decTbl_rd (erRdOK m) hr
+  rw [IProjTable.eq_iff, en1, en2, ec1, ec2, ep1, ep2, ef1, ef2, decI_inj_iff hn1 hn2,
+    decI_inj_iff hc1 hc2]
+  have tn : ∀ a b : Word, a.toNat = b.toNat ↔ a = b := fun a b => UInt64.toNat_inj
+  simp only [tn]
+  cases n with
+  | zero => simp [tblEqW] at hW
+  | succ n =>
+  simp only [tblEqW] at hW
+  by_cases g1 : erRd m (q + ProjTbl.structName) ≠ erRd m (r + ProjTbl.structName)
+  · rw [ite_eq_left g1] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    exact ⟨e.symm, by simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_and]; exact fun h => absurd h g1⟩
+  rw [ite_eq_right g1] at hW
+  have g1' := Classical.not_not.mp g1
+  cases h1 : callW p n "er_sl_eq" [erRd m (q + ProjTbl.lpsOff), erRd m (q + ProjTbl.lpsLen),
+      erRd m (r + ProjTbl.lpsOff), erRd m (r + ProjTbl.lpsLen)] m with
+  | none => rw [h1] at hW; simp [tblEqW.k_er_sl_eq] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨s1, rfl, -, hm1, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erSlEq_spec p hK n _ _ _ _ _) h1
+  rw [h1] at hW; simp only [tblEqW.k_er_sl_eq] at hW
+  rw [erSlEqB_ok (erRdOK m) hl1 hl2] at hb
+  simp only at hm1
+  subst hm1
+  by_cases g2 : r1.headD 0 = 0
+  · rw [ite_eq_left g2] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    have : ¬ t.levelParams = t'.levelParams := fun hh => by rw [hb, hh] at g2; simp at g2
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_and]
+    exact fun _ hh => absurd hh this
+  rw [ite_eq_right g2] at hW
+  have g2' : t.levelParams = t'.levelParams := Classical.byContradiction fun hh => by
+    rw [hb] at g2; simp [hh] at g2
+  by_cases g3 : erRd s1.mem (q + ProjTbl.numParams) ≠ erRd s1.mem (r + ProjTbl.numParams)
+  · rw [ite_eq_left g3] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_and]
+    exact fun _ _ hh => absurd hh g3
+  rw [ite_eq_right g3] at hW
+  by_cases g4 : erRd s1.mem (q + ProjTbl.ctor) ≠ erRd s1.mem (r + ProjTbl.ctor)
+  · rw [ite_eq_left g4] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_and]
+    exact fun _ _ _ hh => absurd hh g4
+  rw [ite_eq_right g4] at hW
+  by_cases g5 : erRd s1.mem (q + ProjTbl.numFields) ≠ erRd s1.mem (r + ProjTbl.numFields)
+  · rw [ite_eq_left g5] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    simp only [List.headD_cons, ne_eq, not_true_eq_false, false_iff, not_and]
+    exact fun _ _ _ _ hh => absurd hh g5
+  rw [ite_eq_right g5] at hW
+  cases h2 : callW p n "er_sl_eq" [erRd s1.mem (q + ProjTbl.bodiesOff), erRd s1.mem (q + ProjTbl.bodiesLen),
+      erRd s1.mem (r + ProjTbl.bodiesOff), erRd s1.mem (r + ProjTbl.bodiesLen)] s1.mem with
+  | none => rw [h2] at hW; simp [tblEqW.k_er_sl_eq_2] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  obtain ⟨s2, rfl, -, hm2, hbb⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (erSlEq_spec p hK n _ _ _ _ _) h2
+  rw [h2] at hW; simp only [tblEqW.k_er_sl_eq_2, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, e⟩ := hW
+  simp only at hm2
+  rw [erSlEqB_ok (erRdOK _) hb1 hb2] at hbb
+  refine ⟨by rw [← e, hm2], ?_⟩
+  simp only [List.headD_cons, hbb, g1', g2', Classical.not_not.mp g3, Classical.not_not.mp g4,
+    Classical.not_not.mp g5, true_and]
+  by_cases hh : t.bodies.toList = t'.bodies.toList <;> simp [hh]
+
+theorem sub1_toNat {a : Word} (h : a ≠ 0) : (a - 1).toNat = a.toNat - 1 := by
+  have : a.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simp [e]))
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+
+/-- **`tbl_beq_p(a, b)` is `tableBeqP`** of two lookups' tables (`tblFound`: a record's address
+plus one, `0` for none). -/
+theorem tblBeqP_ok (hP : JfCmpProg p) {n : Nat} {m m' : Mem} {a b : Word} {res : List Word}
+    (hda : a ≠ 0 → ∃ t, decTbl (erecP m) (a.toNat - 1) = some t)
+    (hdb : b ≠ 0 → ∃ t, decTbl (erecP m) (b.toNat - 1) = some t)
+    (h : callW p n "tbl_beq_p" [a, b] m = some (res, m')) :
+    m' = m ∧ (res.headD 0 ≠ 0 ↔ tableBeqP (tblFound m a) (tblFound m b) = true) := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (tblBeqP_specW p hP.tb n _ a b) h
+  cases n with
+  | zero => simp [tblBeqPW] at hW
+  | succ n =>
+  simp only [tblBeqPW] at hW
+  by_cases ha : a = 0
+  · rw [ite_eq_left ha] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    by_cases hb : b = 0
+    · simp [tblFound, ha, hb, tableBeqP]
+    · obtain ⟨t, ht⟩ := hdb hb
+      simp [tblFound, ha, hb, ht, tableBeqP]
+  rw [ite_eq_right ha] at hW
+  obtain ⟨ta, hta⟩ := hda ha
+  by_cases hb : b = 0
+  · rw [ite_eq_left hb] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨e.symm, ?_⟩
+    simp [tblFound, ha, hb, hta, tableBeqP]
+  rw [ite_eq_right hb] at hW
+  obtain ⟨tb, htb⟩ := hdb hb
+  cases h1 : callW p n "tbl_eq" [a - 1, b - 1] m with
+  | none => rw [h1] at hW; simp [tblBeqPW.k_tbl_eq] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hW; simp only [tblBeqPW.k_tbl_eq, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, e⟩ := hW
+  obtain ⟨hm1, hb1⟩ := tblEq_ok hP (by rw [sub1_toNat ha]; exact hta) (by rw [sub1_toNat hb]; exact htb) h1
+  refine ⟨by rw [← e, hm1], ?_⟩
+  simp only [List.headD_cons, tblFound, ha, hb, ↓reduceIte, hta, htb, tableBeqP, beq_iff_eq]
+  exact hb1
+
+end tbl
+
 section cb
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
