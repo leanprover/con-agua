@@ -240,10 +240,12 @@ def biFns : List FnName :=
 names_tree biTree : biFns
 
 /-- The arrays `build_index` may write: all but the pins, the records `DECL`, their pool `DLP`,
-the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`) and the preparation's memos
-`HSEEN`, `HNIX`. -/
+the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`), the preparation's memos
+`HSEEN`, `HNIX`, and the compared run's arrays `210‥222` (the solution's rows, the mates, the
+walks' memos and stacks, `Arena/JustifyIface.lean`). -/
 def biA : List TieredArray := checkerWordArrays.filter fun b =>
-  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
+  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX &&
+    !(210 ≤ b.arr && b.arr ≤ 222)
 
 /-- The `CTL` words `build_index` may write: all but the pin sets' words, the solution's flag
 (`CTL[224]`, `Arena/JustifyIface.lean`), the preparation's memo stamps (`CTL[73]`, `CTL[75]`) and the
@@ -253,7 +255,7 @@ def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 &
 
 /-- The arrays of `biA`, as a test. -/
 def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL &&
-  b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
+  b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX && !(210 ≤ b.arr && b.arr ≤ 222)
 
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151 &&
@@ -262,7 +264,7 @@ def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toN
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h
   simp only [biA, List.mem_filter, Bool.and_eq_true]
-  exact ⟨h.1.1.1.1.1.1, by simp only [h, and_self]⟩
+  exact ⟨h.1.1.1.1.1.1.1, by simp only [h, and_self]⟩
 
 theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [biPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
