@@ -249,4 +249,229 @@ theorem coneEntry_ok {n : Nat} {m m' : Mem} {a : AState} {w : Word} {r : List Wo
 
 end ce
 
+/-- **`StageT` across a frame** that writes none of the core's memos and stamps and not the pins
+(its `StageR` given). -/
+theorem _root_.L.Ind.StageT.of_fr {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} {A : List TieredArray} {C : List Word} (hT : StageT dn vis fe m a)
+    (hS : StageR vis fe m' a) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ [(ILMEMO : TieredArray), ABMEMO, WSM, FLM, LSM, LPMEMO, LPLMEMO, LPLSMEMO, HBM, PINS],
+      b ∉ A)
+    (hC' : ∀ x ∈ C, 214 < x.toNat) :
+    StageT dn vis fe m' a :=
+  have hC : ∀ x ∈ ([50, 48, 152, 154, 156, 54, 56, 58, 214] : List Word), x ∉ C := by
+    intro x hx hm
+    have := hC' x hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp at this
+  ⟨hS, hT.twin.frame hf ⟨hA _ (by simp), hA _ (by simp)⟩ ⟨hC _ (by simp), hC _ (by simp)⟩
+    ⟨hA _ (by simp), hA _ (by simp), hA _ (by simp)⟩ ⟨hC _ (by simp), hC _ (by simp), hC _ (by simp)⟩
+    ⟨hA _ (by simp), hA _ (by simp), hA _ (by simp)⟩ ⟨hC _ (by simp), hC _ (by simp), hC _ (by simp)⟩
+    (hA _ (by simp)) (hC _ (by simp)),
+    by simp only [pinW, hf.arr PINS (hA _ (by simp)) (by decide)]; exact hT.flag⟩
+
+theorem hiCtl {x : Word} (h : 214 < x.toNat ∧ x.toNat < 1000) :
+    ∀ y ∈ [x], 131 ≤ y.toNat ∧ y.toNat ≠ 133 ∧ y.toNat ≠ 134 ∧ y.toNat ≠ 135 ∧
+      (y.toNat < 160 ∨ 172 ≤ y.toNat) := by
+  intro y hy; simp only [List.mem_singleton] at hy; subst hy; omega
+
+theorem solCtl_not {x : Word} (h : x.toNat < 224 ∨ 226 < x.toNat) : ∀ y ∈ [x], y ∉ solCtl := by
+  intro y hy hm
+  simp only [List.mem_singleton] at hy; subst hy
+  simp only [solCtl, List.mem_cons, List.not_mem_nil, or_false] at hm
+  rcases hm with rfl | rfl | rfl <;> simp [SOLC, SNEXTC, SCNTC] at h
+
+theorem hiCtl' {x : Word} (h : 214 < x.toNat ∧ x.toNat < 1000) : ∀ y ∈ [x], 214 < y.toNat := by
+  intro y hy; simp only [List.mem_singleton] at hy; subst hy; omega
+
+/-! ## `cone_go` -/
+
+/-- **The stack's pop**: a nonempty stack's top word is the work list's head, a handle word; the
+rest is the stack below it. -/
+theorem CnR.pop {m : Mem} {seen : Std.HashMap NIdx Bool} {work : List NIdx} (hC : CnR m seen work)
+    (h0 : rdW (m.arr64 CTL) CTOPC ≠ 0) :
+    HW (rdW ((m.set64 CTL CTOPC (rdW (m.arr64 CTL) CTOPC - 1)).arr64 CWK)
+      (rdW (m.arr64 CTL) CTOPC - 1)) ∧
+    ∃ rest, work = decI (rdW ((m.set64 CTL CTOPC (rdW (m.arr64 CTL) CTOPC - 1)).arr64 CWK)
+      (rdW (m.arr64 CTL) CTOPC - 1)) :: rest ∧
+      CnR (m.set64 CTL CTOPC (rdW (m.arr64 CTL) CTOPC - 1)) seen rest := by
+  generalize hh : rdW (m.arr64 CTL) CTOPC = h at h0 ⊢
+  have hf := MemFrame.setCtl m CTOPC (h - 1)
+  have hW : (m.set64 CTL CTOPC (h - 1)).arr64 CWK = m.arr64 CWK := hf.arr _ (by simp) (by decide)
+  obtain ⟨k, hk, hk1⟩ := ndFuel_pred h0
+  have hsz := hC.ctl
+  have htop : ctlW (m.set64 CTL CTOPC (h - 1)) CTOPC = h - 1 := by
+    simp only [ctlW, rdW_set64, hsz, and_self, ite_true]
+  have hH : (ctlW m CTOPC).toNat = k + 1 := by simp only [ctlW, hh, hk]
+  rw [hW]
+  have hwr : rdW (m.arr64 CWK) (h - 1) = rdN (m.arr64 CWK) k := by
+    show rdN _ (h - 1).toNat = _; rw [hk1]
+  rw [hwr]
+  refine ⟨hC.rel.words k (by omega), cwkList (m.set64 CTL CTOPC (h - 1)), ?_, ⟨⟨?_, rfl, ?_, ?_⟩, ?_⟩⟩
+  · rw [← hC.rel.work]
+    simp only [cwkList, htop, hk1, hW, hH, List.range_succ, List.reverse_append, List.reverse_cons,
+      List.reverse_nil, List.nil_append, List.cons_append, List.map_cons]
+  · exact memoRG_frame csSch csSch_wf nmKey _ [] [CTOPC] (by simp) (by decide) _ _ hf _ hC.rel.seen
+  · intro i hi; rw [htop, hk1] at hi; rw [hW]; exact hC.rel.words i (by omega)
+  · rw [htop, hk1, hW]; have := hC.rel.room; omega
+  · rw [Mem.size64_set64]; exact hsz
+
+section cg
+variable {p : Prog} (P : ConeProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+include P
+
+/-- **`cone_go`'s loop refines `coneGo`**: from the stack `work` and the memo `seen`, the twin's
+walk at the fuel `f` runs, `(0, _)` exactly for its `none`; the context kept, a needs walk's and
+the cone's state related after. -/
+theorem coneGo_loop {J : ISolution} : ∀ (k : Nat) (m m' : Mem) (a : AState) (f : Word)
+    (r : List Word) (seen : Std.HashMap NIdx Bool) (work : List NIdx),
+    coneGoW.loop1 p k m f vis (rdW (m.arr64 CTL) CTOPC) = some (r, m') →
+    ConeT dn vis fe J m a → CnR m seen work → (∃ x, NdR m x) →
+    ∃ y a', (ConRon.Arena.coneGo J fe f.toNat seen work).run a = .ok (y, a') ∧
+      ConeT dn vis fe J m' a' ∧ IWGrow m m' ∧ (∃ x, NdR m' x) ∧ (∃ s w, CnR m' s w) ∧
+      (r.headD 0 = 0 ↔ y.1 = none) := by
+  intro k
+  induction k with
+  | zero => intro m m' a f r seen work h; rw [coneGoW.loop1.eq_1] at h; cases h
+  | succ k ih =>
+  intro m m' a f r seen work h hC hW hN
+  by_cases h0 : rdW (m.arr64 CTL) CTOPC = 0
+  · rw [coneGoW.loop1.arm2 _ _ _ _ _ _ h0] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have hw : work = [] := by
+      rw [← hW.rel.work]; simp [cwkList, ctlW, h0]
+    subst hw
+    exact ⟨(none, f.toNat, seen), a, by simp [ConRon.Arena.coneGo]; rfl, hC, IWGrow.refl _, hN,
+      ⟨_, _, hW⟩, by simp⟩
+  rw [coneGoW.loop1.arm1 _ _ _ _ _ _ h0] at h
+  obtain ⟨hw, rest, rfl, hW1⟩ := hW.pop h0
+  generalize hm1 : m.set64 CTL CTOPC (rdW (m.arr64 CTL) CTOPC - 1) = m1 at h hw hW1
+  generalize hn' : rdW (m1.arr64 CWK) (rdW (m.arr64 CTL) CTOPC - 1) = w at h hw hW1 ⊢
+  have hf1 : MemFrame [] [CTOPC] m m1 := by rw [← hm1]; exact MemFrame.setCtl m CTOPC _
+  have hC1 : ConeT dn vis fe J m1 a :=
+    ⟨hC.T.of_fr (hC.T.stage.frame_hi hf1 (by simp) (hiCtl (by decide)) (by simp) (by decide)).1 hf1
+      (by decide) (hiCtl' (by decide)), hC.ok, hC.rd,
+      hC.sol.growF hf1 (by simp) (by simp [solCtl, CTOPC, SOLC, SNEXTC, SCNTC])
+        (iwGrow_frame hf1 (by simp) (by decide)).erecGrow, hC.fden, hC.sden⟩
+  have hN1 : ∃ x, NdR m1 x := let ⟨x, hx⟩ := hN; ⟨x, hx.frame hf1 (by simp) (by simp; decide)⟩
+  have hg1 : IWGrow m m1 := iwGrow_frame hf1 (by simp) (by decide)
+  -- `cs_find(w, 0)`
+  replace h := opt_some h (coneGoW.k_cs_find.eq_1 ..)
+  obtain ⟨⟨r2, m2⟩, c2, h⟩ := h
+  obtain ⟨s2, hs2, hs, hne2, hr2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (memoFindG_spec csSch p "cs_find" P.csf k _ w 0) c2
+  subst hs; simp only at hs2; subst hs2
+  have hk : nmKey.ok w 0 := ⟨hw, rfl⟩
+  by_cases hhit : r2.headD 0 ≠ 0
+  · -- seen: the rest
+    rw [coneGoW.k_cs_find.arm3 _ _ _ _ _ _ _ hhit, coneGoW.j1.arm1] at h
+    rw [hr2] at hhit
+    have hs := memoRG_hit csSch nmKey _ _ seen hW1.rel.seen w 0 (by rw [← hr2]; exact hne2) hhit hk
+    obtain ⟨y, a', e, hC', hg', hN', hW', hr⟩ := ih _ _ a f r seen rest h hC1 hW1 hN1
+    refine ⟨y, a', ?_, hC', hg1.trans hg', hN', hW', hr⟩
+    have hc : seen.contains (decI w) = true := by
+      rw [Std.HashMap.contains_eq_isSome_getElem?]; simp only [nmKey] at hs; rw [hs]; rfl
+    unfold ConRon.Arena.coneGo
+    simp only [hc, ↓reduceIte]
+    exact e
+  have hmiss : r2.headD 0 = 0 := Classical.not_not.mp hhit
+  have hs := memoRG_miss csSch nmKey _ _ seen hW1.rel.seen w 0 hk (by rw [← hr2]; exact hne2)
+    (by rw [← hr2]; exact hmiss)
+  have hc : seen.contains (decI w) = false := by
+    rw [Std.HashMap.contains_eq_isSome_getElem?]; simp only [nmKey] at hs; rw [hs]; rfl
+  by_cases hf0 : f = 0
+  · rw [coneGoW.k_cs_find.arm1 _ _ _ _ _ _ _ hmiss hf0] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    subst hf0
+    exact ⟨(some (decI w), 0, seen), a, by simp [ConRon.Arena.coneGo, hc]; rfl, hC1, hg1, hN1,
+      ⟨_, _, hW1⟩, by simp⟩
+  rw [coneGoW.k_cs_find.arm2 _ _ _ _ _ _ _ hmiss hf0] at h
+  obtain ⟨fk, hfk, hfk1⟩ := ndFuel_pred hf0
+  -- `cone_entry(w, vis)`
+  replace h := opt_some h (coneGoW.k_cone_entry.eq_1 ..)
+  obtain ⟨⟨r3, m3⟩, c3, h⟩ := h
+  obtain ⟨y3, a3, hrun3, hC3, hg3, hf3, hr3, hN3, hy3⟩ := coneEntry_ok P c3 hC1 hw hN1
+  have hW3 : CnR m3 seen rest := hW1.coneFrame hf3
+  have hrun' : (ConRon.Arena.coneGo J fe f.toNat seen (decI w :: rest)).run a =
+      (match y3 with
+        | none => pure (some (decI w), fk + 1, seen)
+        | some ns => ConRon.Arena.coneGo J fe fk (seen.insert (decI w) true) (ns ++ rest) :
+        AM (Option NIdx × Nat × Std.HashMap NIdx Bool)).run a3 := by
+    rw [hfk]
+    simp only [ConRon.Arena.coneGo, hc, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hrun3,
+      except_ok_bind]
+    cases y3 <;> rfl
+  by_cases e3 : r3.headD 0 = 0
+  · rw [coneGoW.k_cone_entry.arm1 _ _ _ _ _ _ _ e3] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have e3' := hr3.mp e3
+    subst e3'
+    exact ⟨_, a3, hrun', hC3, hg1.trans hg3, hN3, ⟨_, _, hW3⟩, by simp⟩
+  rw [coneGoW.k_cone_entry.arm2 _ _ _ _ _ _ _ e3] at h
+  obtain ⟨ns, rfl⟩ := Option.ne_none_iff_exists'.mp (fun e => e3 (hr3.mpr e))
+  obtain ⟨sn, hx3⟩ := hy3 ns rfl
+  simp only at hrun'
+  -- `cs_find(w, 0)`, `cs_put(w, 0, 1, …)`
+  replace h := opt_some h (coneGoW.k_cs_find_2.eq_1 ..)
+  obtain ⟨⟨r4, m4⟩, c4, h⟩ := h
+  obtain ⟨s4, hs4, hs, hne4, hr4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (memoFindG_spec csSch p "cs_find" P.csf k _ w 0) c4
+  subst hs; simp only at hs4; subst hs4
+  rw [coneGoW.k_cs_find_2.arm1] at h
+  replace h := opt_some h (coneGoW.k_cs_put.eq_1 ..)
+  obtain ⟨⟨r5, m5⟩, c5, h⟩ := h
+  obtain ⟨s5, rfl, -, hput⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (memoPutG_spec csSch p "cs_put" P.csp k _ w 0 1 _ _) c5
+  rw [hr4, ← msetG_eq csSch m3 w 0 1 (by rw [← hr4]; exact hne4)] at hput
+  have hf5 := msetG_frame csSch csSch_wf _ _ w 0 1 hput
+  have hseen5 := memoRG_set csSch csSch_wf nmKey (fun w : Word => w != 0) _ seen hW3.rel.seen w 0 1
+    hk _ hput
+  have hW5 : CnR s5.mem (seen.insert (decI w) true) rest := by
+    have hK : s5.mem.arr64 CWK = m3.arr64 CWK := hf5.arr _ (by decide) (by decide)
+    have hT : ctlW s5.mem CTOPC = ctlW m3 CTOPC := hf5.ctl _ (by decide)
+    refine ⟨⟨hseen5, ?_, ?_, ?_⟩, by rw [hf5.size]; exact hW3.ctl⟩
+    · rw [← hW3.rel.work]; simp only [cwkList, hK, hT]
+    · intro i hi; rw [hK]; exact hW3.rel.words i (by rw [← hT]; exact hi)
+    · rw [hK, hT]; exact hW3.rel.room
+  have hx5 : NdR s5.mem ⟨sn, ns⟩ := hx3.frame hf5 (by decide) (by decide)
+  have hg5 : IWGrow m3 s5.mem := iwGrow_frame hf5 (by decide) (by decide)
+  have hC5 : ConeT dn vis fe J s5.mem a3 :=
+    ⟨hC3.T.of_fr (hC3.T.stage.frame_hi hf5 (by decide) (hiCtl (by decide)) (by decide) (by decide)).1 hf5
+      (by decide) (hiCtl' (by decide)), hC3.ok, hC3.rd,
+      hC3.sol.growF hf5 (by decide) (solCtl_not (by decide)) hg5.erecGrow, hC3.fden, hC3.sden⟩
+  -- `cone_push`, the loop
+  rw [coneGoW.k_cs_put.arm1] at h
+  replace h := opt_some h (coneGoW.k_cone_push.eq_1 ..)
+  obtain ⟨⟨r6, m6⟩, c6, h⟩ := h
+  rw [coneGoW.k_cone_push.arm1, coneGoW.j1.arm1] at h
+  obtain ⟨hW6, hf6⟩ := conePush_ok P.cp c6 hW5 hx5
+  have hg6 : IWGrow s5.mem m6 := iwGrow_frame hf6 (by decide) (by decide)
+  have hC6 : ConeT dn vis fe J m6 a3 :=
+    ⟨hC5.T.of_fr (hC5.T.stage.frame_hi hf6 (by decide) (hiCtl (by decide)) (by decide) (by decide)).1 hf6
+      (by decide) (hiCtl' (by decide)), hC5.ok, hC5.rd,
+      hC5.sol.growF hf6 (by decide) (solCtl_not (by decide)) hg6.erecGrow, hC5.fden, hC5.sden⟩
+  have hN6 : ∃ x, NdR m6 x := ⟨_, hx5.frame hf6 (by decide) (by decide)⟩
+  obtain ⟨y, a', e, hC', hg', hN', hW', hr⟩ := ih _ _ a3 (f - 1) r _ _ h hC6 hW6 hN6
+  rw [hfk1] at e
+  exact ⟨y, a', by rw [hrun']; exact e, hC', hg1.trans (hg3.trans (hg5.trans (hg6.trans hg'))), hN',
+    hW', hr⟩
+
+/-- **`cone_go(f, vis)` refines `coneGo`** at the fuel `f`, from the memo `seen` and the stack
+`work`: `(0, _)` exactly for the twin's `none`. -/
+@[refines ConRon.Arena.coneGo]
+theorem coneGo_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {f : Word} {r : List Word}
+    {seen : Std.HashMap NIdx Bool} {work : List NIdx}
+    (h : callW p n "cone_go" [f, vis] m = some (r, m'))
+    (hC : ConeT dn vis fe J m a) (hW : CnR m seen work) (hN : ∃ x, NdR m x) :
+    ∃ y a', (ConRon.Arena.coneGo J fe f.toNat seen work).run a = .ok (y, a') ∧
+      ConeT dn vis fe J m' a' ∧ IWGrow m m' ∧ (∃ x, NdR m' x) ∧ (∃ s w, CnR m' s w) ∧
+      (r.headD 0 = 0 ↔ y.1 = none) := by
+  obtain ⟨s', rfl, -, hW'⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (coneGo_specW p P.cg n _ f vis) h
+  rcases n with _ | n
+  · rw [coneGoW.eq_1] at hW'; cases hW'
+  rw [coneGoW.arm1] at hW'
+  exact coneGo_loop P _ _ _ a f r seen work hW' hC hW hN
+
+end cg
+
 end L.Arena
