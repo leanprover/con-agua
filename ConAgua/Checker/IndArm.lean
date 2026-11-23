@@ -12,6 +12,7 @@ import ConAgua.Checker.IndMemoClosed
 import ConAgua.Checker.CrLeaves
 import ConAgua.Checker.LoopDecl
 import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.IotaArm
 public import ConAgua.Arena.IndInstallSpec.ConsRecsTFSimOf
 public import ConAgua.Arena.IndInstallSpec.OfClosed
 public import ConAgua.Arena.IndInstallSpec.ShapeCVOfDecB
@@ -305,7 +306,7 @@ theorem indArmSpec_checker (bs : List UInt8) (hr : RomOK bs)
     (hR : ∀ dn, DnInj dn → CbRefs (VerdictCtxU (Prog.subPB bs checkerProg)) (Prog.subPB bs checkerProg) dn) :
     ∀ dn, DnInj dn → IndArmSpec (Prog.subPB bs checkerProg) dn := by
   have H := indArmProgs_checker bs hr hpre
-  exact indArmSpec_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc⟩
+  exact indArmSpec_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc, iotaArmProg_checker bs⟩
     (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
 
 end L.Checker
