@@ -337,6 +337,8 @@ structure BuildR (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) 
   quotDn : L.Rom.NamesDn dn a L.Rom.quotNames
   memos : IndMemos m
   fsize : (m.arr64 FIRSTS).size < 2 ^ 64
+  /-- The next counter is below `2^32` (`idx_consts`' capacity). -/
+  nextLt : I.next < 2 ^ 32
 
 theorem getD_headD (l : List Word) : l.getD 0 0 = l.headD 0 ∧ l.getD 1 0 = l.tail.headD 0 := by
   rcases l with _ | ⟨x, _ | ⟨y, _⟩⟩ <;> simp
@@ -504,9 +506,9 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
   | some q4 =>
   obtain ⟨ρ4, m4⟩ := q4
   rw [h4, bW_some] at hw
-  obtain ⟨s4, hs4, -, -, hI4, hf4⟩ := triple_of_callW
+  obtain ⟨s4, hs4, -, -, hI4, hf4, hnx4⟩ := triple_of_callW
     (idxConsts_spec p hP.idx_consts hP.base_row_get hP.base_row_set n ⟨s3.mem, Locals.init []⟩
-      _ _ hI3 hDL (by have := hS3.iw.ctl; simp only at this ⊢; omega) hS3.iw.iwSize) h4
+      _ _ hI3 hDL (by have := hS3.iw.ctl; simp only at this ⊢; omega) hS3.iw.iwSize hR.nextLt) h4
   subst hs4
   have hS4 : StageR 0 (bEnv (insC { I with firsts := I.firsts.push I.next } (AM.res (declConstants d) a)).base a.pins 0 0) s4.mem
       (AM.st (declConstants d) a) :=
@@ -583,7 +585,8 @@ theorem idxAdd_ref {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration
     by rw [hpin5, hpin3]; exact (hT5.twin.frame hf6 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).bEnv0 _, by rw [pinW_frame hf6 (by decide)]; exact hT5.pin,
     hI6, by rw [eD6, eP6]; exact hR.decls, hR.front, hdrv5, hoff5, fun x hx => ?_,
     (hR.quotDn.ext hx3).ext hx5, hM5.frame hf6
-      (fun b hb => by simp [TixA] at hb; rcases hb with rfl | rfl | rfl <;> decide) (by simp), by rw [eF6]; exact hR.fsize⟩
+      (fun b hb => by simp [TixA] at hb; rcases hb with rfl | rfl | rfl <;> decide) (by simp), by rw [eF6]; exact hR.fsize,
+    by simpa [addRes, insC] using hnx4⟩
   obtain ⟨hpx, dx, hdx⟩ := hR.recs x hx
   exact ⟨hpx, dx, ConRon.Bridge.denoteDecl_pext (ConRon.Bridge.PExt.of_ext (hx3.trans hx5)) hpx hdx⟩
 
@@ -713,7 +716,7 @@ theorem buildIndex_refines {dn : NIdx → Option ConLeche.Name} {ds : Array IDec
       hR₁.front, hR₁.drv, hR₁.off, hR₁.recs, hR₁.quotDn,
       hR₁.memos.frame hf2 (fun b hb => by simp at hb)
         (fun x hx => by simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl | rfl <;> decide),
-      by rw [hf2.arr _ (by simp) (by decide)]; exact hR₁.fsize⟩
+      by rw [hf2.arr _ (by simp) (by decide)]; exact hR₁.fsize, by simpa [frozenAt] using hR₁.nextLt⟩
 
 end idx
 

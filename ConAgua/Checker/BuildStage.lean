@@ -272,7 +272,7 @@ theorem buildR_of_out {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s
     by rw [ha _ (by decide), ha _ (by decide)]; exact h7.decls, ?_, hdrv, hoff, ?_, ?_,
     (since_indMemos hS hctl).frame hf (fun b hb => by simp at hb) (fun x hx => by
       simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
-      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_⟩
+      rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_, ?_⟩
   · intro i hi b' nP e
     exact ho.front i hi b' nP e
   · intro x hx
@@ -287,6 +287,7 @@ theorem buildR_of_out {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
   · rw [ha _ (by decide), hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+  · show (0 : Nat) < 2 ^ 32; decide
 
 /-- **The index build's start**, for the flat run (`buildR_of_out`). -/
 theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)

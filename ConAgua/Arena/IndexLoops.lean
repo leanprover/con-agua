@@ -152,6 +152,8 @@ memory changed only in the index rows and `CTL[128]`. -/
 structure IcInv (m₀ : Mem) (I : IStreamIndex) (cs : List IConstantInfo) (j : Nat) (m : Mem) : Prop where
   idx : IndexR m (insC I (cs.take j))
   frame : MemFrame EixA [128] m₀ m
+  /-- The next counter stays below `2^32` (`idx_consts` aborts from `2^32 - 2` on). -/
+  nlt : (insC I (cs.take j)).next < 2 ^ 32
 
 /-- One iteration's memory step keeps the invariant. -/
 theorem IcInv.step {m₀ m : Mem} {I : IStreamIndex} {cs : List IConstantInfo} {j : Nat} {o : Word}
@@ -186,7 +188,7 @@ theorem IcInv.step {m₀ m : Mem} {I : IStreamIndex} {cs : List IConstantInfo} {
   have hn := h.idx.next
   have hnx' : (insC I (cs.take j)).next < 2 ^ 32 - 2 := by rw [← hn]; omega
   have hst := IndexR.insertConst h.idx hci hw hnx' hset (by rw [h.frame.size CTL]; exact hc)
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
   · rw [take_succ_of cs j hx, insC_snoc]; exact hst
   · have hf1 : MemFrame EixA [] m (if (baseRow m w).1 = 0 then
         baseSet m w (rdW (m.arr64 CTL) 128 + 1) q else m) := by
@@ -195,6 +197,9 @@ theorem IcInv.step {m₀ m : Mem} {I : IStreamIndex} {cs : List IConstantInfo} {
       · exact MemFrame.refl _ _ _
     exact (h.frame.trans (hf1.mono (fun _ h => h) (by simp))).trans
       ((MemFrame.setCtl _ 128 _).mono (by simp) (by simp))
+  · rw [take_succ_of cs j hx, insC_snoc]
+    simp only [insC1]
+    omega
 
 /-- The loop's step, closed: from the invariant at `j` and one iteration's memory, the invariant
 at `j + 1`. -/
@@ -358,21 +363,23 @@ theorem idxConsts_spec (hp : p.lookup "idx_consts" = some idxConstsL)
     (hs : p.lookup "base_row_set" = some baseRowSetL) (n : Nat) (s₀ : St) {I : IStreamIndex}
     {cs : List IConstantInfo} (o l : Word) (hI : IndexR s₀.mem I)
     (hL : decPL s₀.mem (fun q => decCI (erecP s₀.mem) q) o.toNat l.toNat = some cs)
-    (hc : 128 < (s₀.mem.arr64 CTL).size) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
+    (hc : 128 < (s₀.mem.arr64 CTL).size) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
+    (hn : I.next < 2 ^ 32) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "idx_consts" [o, l]
     ⦃fun r s' => LocEq s' s₀ ∧ r = [0] ∧ IndexR s'.mem (insC I cs) ∧
-      MemFrame EixA [128] s₀.mem s'.mem; ⊤⦄ := by
+      MemFrame EixA [128] s₀.mem s'.mem ∧ (insC I cs).next < 2 ^ 32; ⊤⦄ := by
   have hl : cs.length = l.toNat := L.Ind.decPL_length (m := s₀.mem) hL
   rw [← hl] at hL
-  have hI0 : IcInv s₀.mem I cs 0 s₀.mem := ⟨by simpa [insC_nil] using hI, MemFrame.refl _ _ _⟩
+  have hI0 : IcInv s₀.mem I cs 0 s₀.mem :=
+    ⟨by simpa [insC_nil] using hI, MemFrame.refl _ _ _, by simpa [insC_nil] using hn⟩
   rw [invoke_eq _ hp]
   simp only [callFn, idxConstsL_eq]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalArgs, setLoc, idxConstsLoop_step_spec p hg hs (I := I) hL hl hc hsz n]
-    all_goals simp only [St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
+    all_goals try simp only [St.setLoc_loc, L.St.setLoc_mem, Locals.init_cons_zero, Locals.init_cons_succ,
       Sig.retVal, LocEq, ite_true] at *
     all_goals first
       | decide
@@ -380,6 +387,7 @@ theorem idxConsts_spec (hp : p.lookup "idx_consts" = some idxConstsL)
       | exact hI0
       | (rename_i h; simpa [List.take_length] using h.idx)
       | (rename_i h; exact h.frame)
+      | (rename_i h; have := h.nlt; rwa [List.take_length] at this)
 
 theorem idxTablesLoop_spec (hg : p.lookup "tbl_base_get" = some tblBaseGetL)
     (hs : p.lookup "tbl_base_set" = some tblBaseSetL) {m₀ : Mem} {I : IStreamIndex}
