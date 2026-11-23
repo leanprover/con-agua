@@ -132,3 +132,8 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   `cmp_outcome`) and H5 (`compare-integ`: the tree building again, `JobM` with `J`) started;
   18:25 H6 (`compare-chain`: the L-level chain, `CmpAccepts → TwinComparesAccepts`).
 * `WalkMem` (the walks' memos between jobs) added to the interface for H2b and H5.
+* 18:45 H5 done, merged: the tree builds again (except `AsmFileEq`, H4's), the job relation takes
+  `J` (`JSol J m`: the flag/rows, and at `J = some` `WalkMem` and the counter bound), `recordJob_ref`
+  at both branches (`crs_ref` through `CrsSpec`, `Arena/JobsCrs.lean`, `Checker/CrsProgPB.lean`),
+  four write sets narrowed (no job writes the solution's rows), the threaded path at `J = none`
+  only. Open: `CrsKeep` (given to H7, `compare-keep`).
