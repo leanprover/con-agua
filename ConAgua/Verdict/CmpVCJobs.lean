@@ -33,7 +33,8 @@ relation (`checkJobs_seqER`, `checkB_seqER`, `checkMode2_seqER`), whatever that 
 `cmpCJobs_err`: after mode `6`, the challenge's jobs at the solution (`J = some`) failing with a
 class other than `0` are the twin's job list failing with that class (`checkJobs_ref` under
 `JobGJ`, the fold's prefix a mixed run, `job_specC`, as `pool_walkJ`); `cmpV_cjob`: the same from
-the driver's runs (`CmpErr`'s last arm), as `TwinCompareVerdict.jobsC`.
+the driver's runs (`CmpErr`'s last arm), as `TwinCompareVerdict.jobsC`. `cmpErr_twin`: every
+arm of `CmpErr` at a class other than `0` claims `TwinCompareVerdict` (as `drvErr_twin`).
 -/
 
 set_option experimental.vcgen true
@@ -342,5 +343,26 @@ theorem cmpV_cjob (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     rfl rfl (by rw [← hhi]; rfl) (by rw [seqMem_arr64]; simp) h7 hk
   obtain ⟨⟨hA, hB, hC⟩, hCS, hDS⟩ := PS.pfx
   exact TwinCompareVerdict.jobsC hA hB hC hCS hDS PS.pinsR ⟨s'', PS.idx, hSJ⟩ hS6.prep.run hS6.run hI hCJ
+
+/-- **The compared run's failure is the twin's**: `CmpErr` (the sequential driver's L runs, the
+last one failing with the code `k`) with a code of class other than `0` gives
+`TwinCompareVerdict bC bS` at that class: mode `4` (`cmpV_a4`), mode `5` (`cmpV_a5`), a solution
+job (`cmpV_sjob`), mode `6` (class `0`, `cmpV_a6`), the challenge's jobs (`cmpV_cjob`). -/
+theorem cmpErr_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64) (k : Word)
+    (h : CmpErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL bC bS pb k)
+    (hk : k &&& 3 ≠ 0) : TwinCompareVerdict bC bS (k &&& 3) := by
+  obtain ⟨hbC, hpb, h⟩ := h
+  rcases h with ⟨e, he, rfl⟩ | ⟨rs4, m4, h4, hge4, hbS, h⟩
+  · exact cmpV_a4 bC bS pb h64 hbC hpb e he hk
+  rcases h with ⟨e, he, rfl⟩ | ⟨rs5, m5, h5, hge5, rm, hrm0, h⟩
+  · exact cmpV_a5 bC bS pb h64 hbC hbS hpb rs4 m4 h4 hge4 e he hk
+  rcases h with ⟨j, hj, hjobs, e, he, rfl⟩ | ⟨hjobs, h⟩
+  · exact cmpV_sjob bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5 hrm0 hj hjobs he hk
+  rcases h with ⟨e, he, rfl⟩ | ⟨rs6, m6, h6, -, e, he, rfl⟩
+  · exact absurd (cmpV_a6 (by simp [cmpM6, Mem.setG]) he) hk
+  · exact cmpV_cjob bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5 hrm0 hjobs h6 he hk
+
+/-- info: 'L.Checker.cmpErr_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms cmpErr_twin
 
 end L.Checker
