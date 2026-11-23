@@ -5,6 +5,7 @@ public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.RecClass
+public import ConAgua.Arena.IndDeclConstsDrop
 
 @[expose] public section
 
@@ -49,5 +50,6 @@ structure IotaFrameProg (p : Prog) : Prop where
   strip : StripProg p
   lift : LiftProg p
   lift_entry : p.lookup "lift_entry" = some liftEntry
+  drop : DropProg p
 
 end L.Ind
