@@ -34,7 +34,7 @@ theorem iotaRecOf_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
       (fun m m' a r x => KeepPost vis fe decOIR m m' a r x ∧ AbsOK m') := by
   intro m m' a r hc ⟨hS, hA, hcv⟩
   obtain ⟨x, a', hrun, hK⟩ := iotaRecOf_rel' P n vis fe q mI rP cv m m' a r hc ⟨hS, hcv⟩
-  exact ⟨x, a', hrun, hK, sorry⟩
+  exact ⟨x, a', hrun, hK, iota_afr P (by decide) hc hA⟩
 
 /-- **`iota_parts_of_at(IotaRec, rP, nIdx, i, r)` refines `iotaPartsOfAt rr rP nIdx i rl`** (the
 frame's seven words as decoded by `decIRAt 0`, `r` the rule's record in `EREC`). -/
@@ -49,7 +49,7 @@ theorem iotaPartsOfAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
   intro m m' a r0 hc ⟨hS, hA, hrr, hrl⟩
   obtain ⟨x, a', hrun, hK⟩ :=
     iotaPartsOfAt_rel' P n vis fe r1 r2 r3 r4 r5 r6 r7 rP nIdx i r rr rl m m' a r0 hc ⟨hS, hrr, hrl⟩
-  exact ⟨x, a', hrun, hK, sorry⟩
+  exact ⟨x, a', hrun, hK, iota_afr P (by decide) hc hA⟩
 
 /-- **`iota_parts_at(qj, cnP, mI, rP, r)` refines `iotaPartsAt cvj cnP mI rP rl`** (`qj` the
 constructor's constant value, `r` the rule's record, both in `EREC`), under `StageT`: it calls the
