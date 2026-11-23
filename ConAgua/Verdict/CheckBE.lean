@@ -221,7 +221,9 @@ theorem checkMode2_seqE {b pb : ByteArray}
           (hs ▸ hctlf))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
-      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
+      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
+      (callE_spec checkerProg n "check_c3" [] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)

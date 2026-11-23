@@ -233,7 +233,9 @@ theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
         (checkB_thrE hE n (by omega) a j hj hF s₁ (hs ▸ hR) (hs ▸ hlo) (hs ▸ hhi))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
-      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
+      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
+      (callE_spec checkerProg n "check_c3" [] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
