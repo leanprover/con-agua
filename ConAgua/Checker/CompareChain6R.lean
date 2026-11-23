@@ -459,6 +459,21 @@ theorem _root_.L.Arena.IndMemos.side {m m' : Mem} (h : IndMemos m)
     L.Ind.I1Memo.frame hi hf (by decide) (by simp [L.Ind.mcSch]),
     L.Arena.CrOK.frame hcr hf (by decide) (by simp [L.Ind.mcSch])⟩
 
+/-- **A step keeps the bytes** (the checker stores no byte). -/
+theorem StageSpecC.keepB {f : FnName} {Pre Post : Word → Mem → Prop}
+    (h : StageSpecC checkerProg f Pre Post) (B : Mem → Prop) (hB : ∀ m m', L.Keep m m' → B m → B m') :
+    StageSpecC checkerProg f (fun c m' => Pre c m' ∧ B m') (fun c m' => Post c m' ∧ B m') := by
+  intro n hn s₀ c
+  exact triple_post (Triple.keep checkerProg_noSt8 (h n hn s₀ c)) fun _ _ ⟨⟨hl, hP⟩, hk, _⟩ =>
+    ⟨hl, fun ⟨h1, h2⟩ => ⟨hP h1, hB _ _ hk h2⟩⟩
+
+theorem StageSpec.keepB {f : FnName} {Pre : Mem → Prop} {Post : List Word → Mem → Prop}
+    (h : StageSpec checkerProg f Pre Post) (B : Mem → Prop) (hB : ∀ m m', L.Keep m m' → B m → B m') :
+    StageSpec checkerProg f (fun m' => Pre m' ∧ B m') (fun r m' => Post r m' ∧ B m') := by
+  intro n hn s₀
+  exact triple_post (Triple.keep checkerProg_noSt8 (h n hn s₀)) fun _ _ ⟨⟨hl, hP⟩, hk, _⟩ =>
+    ⟨hl, fun ⟨h1, h2⟩ => ⟨hP h1, hB _ _ hk h2⟩⟩
+
 end steps
 
 end L.Checker

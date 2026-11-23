@@ -5,6 +5,7 @@ import ConAgua.Checker.RomProgInit
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Stages
 import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.RomProg0
 
 @[expose] public section
 
@@ -123,6 +124,43 @@ theorem buildR6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) 
     subst hx
     have hd' : ConRon.Arena.denoteN sG.store.ns k = some (ConLeche.Name.str .anonymous "u") := hd
     exact ⟨k, by simp [dnOf, hk, hd'], hd'⟩
+
+/-- After the challenge's index build, at the count `c`. -/
+def G6 (PS : PhaseS bC bS) (m : Mem) (c : Word) (m6 : Mem) : Prop :=
+  ∃ m2 m3 dsC sG res m4 m5, Side6 PS m c m2 m3 dsC sG res m4 ∧
+    MatesR m5 (recordMatesGo ∅ res.toArray.toList) ∧ MInv m5 ∧ MKeep m4 m5 ∧
+    ∃ I a', buildIndex res.toArray sG = .ok (.ok I, a') ∧ BuildR (dnOf sG.store) res.toArray m6 a' I ∧
+      FrozenR m6 I ∧ I.firsts.size = res.toArray.size ∧ BKeep m5 m6 ∧ MemFrame biA biC m5 m6 ∧
+      m6.bytes = m5.bytes
+
+/-- **`build_index(c)`, as a step**: the challenge's index build (`buildIndex_refines` from
+`buildR6`). -/
+theorem buildStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
+    (hk6 : Keep6 m PS.pre) (hsz : ∀ s, sz s < 2 ^ 64) (hpb : pb.size < 2 ^ 63) :
+    StageSpecC checkerProg "build_index" (fun c m5 => Q65 PS m c m5 ∧ m5.bytes = m.bytes) (G6 PS m) := by
+  intro n _ s₀ c
+  apply M.triple_of_run
+  rintro s rs s' rfl hrun
+  obtain ⟨F, hF0, hcl⟩ := checkerProg_biW
+  obtain ⟨hfr, hby⟩ := M.of_run (P := fun x => x = s) rfl hrun (invoke_memFrame hcl n hF0 [c] s)
+  obtain ⟨hl, -⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec checkerProg n "build_index" [c] s)
+  refine ⟨hl, fun ⟨⟨m2, m3, dsC, sG, res, m4, h, hMt, hMI, hK⟩, hbytes⟩ => ?_⟩
+  obtain ⟨hS5, -⟩ := h.stage5 hK hMI
+  have hpin : pinW s.mem 0 = pinW m 0 := by
+    rw [pinW_frame hK.frame (by decide), pinW_frame h.frameM (not_mem_A64 (by decide))]
+  have hPF : PinsFull s.mem sG.pins := hS5.check.pins.full (by rw [hpin]; exact hF.build.pin)
+  have hcnt : c.toNat = res.toArray.size := by simpa using h.count.1
+  have hPB : s.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    show s.mem.bytes L.Rom.PB = _
+    rw [hbytes, hF.bytes, ← Mem.arr8, hF.r7.since.keep.arr8]
+    exact loadMem_pb bS pb sz
+  rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ hPB] at hrun
+  obtain ⟨I, a', hI, hR', hFz, hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
+    (buildIndex_refines (checkerProg_idxProgPB pb.data.toList
+      (by simpa [RomOK] using hpb) hF.r7.since.pbpre) c hcnt n s sG hPF
+      (by have := hS5.iw.ctl; omega)
+      (fun _ hf hl => buildR6 hF hst hk6 hsz h hK hMI hf hl))).2
+  exact ⟨m2, m3, dsC, sG, res, m4, s.mem, h, hMt, hMI, hK, I, a', hI, hR', hFz, hsz', hG, hfr, hby⟩
 
 end build
 
