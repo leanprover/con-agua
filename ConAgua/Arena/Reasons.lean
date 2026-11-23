@@ -492,5 +492,7 @@ abbrev R_THE_STATEMENT_OF : L.Word := 949
 abbrev R_THE_TOLERATED_AXIOM : L.Word := 953
 /-- reject: two context records store a name of …'s record (of …) -/
 abbrev R_TWO_CONTEXT_RECORDS : L.Word := 957
+/-- reject: … is not justified by the solution: … -/
+abbrev R_NOT_JUSTIFIED_BY : L.Word := 961
 
 end L.Arena

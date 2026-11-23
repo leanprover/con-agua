@@ -241,4 +241,5 @@ static const char *const reasons[] = {
   "the statement of … reads a name the context does not store before it",
   "the tolerated axiom's name, not an axiom: …",
   "two context records store a name of …'s record (of …)",
+  "… is not justified by the solution: …",
 };
