@@ -1,12 +1,9 @@
 module
 
 public import ConAgua.Checker.PhaseBReads
-public import ConAgua.Arena.FreezeBuf
 meta import ConAgua.Checker.PhaseBReads
 import ConAgua.Checker.LoopProgTac
 meta import ConAgua.Checker.LoopProgTac
-public import ConAgua.Checker.Prog
-public import ConAgua.Arena.Jobs
 meta import ConAgua.Checker.Prog
 meta import ConAgua.Arena.Jobs
 import all ConAgua.Arena.Abs1
@@ -168,6 +165,7 @@ import all ConAgua.Scan.Str
 import all ConAgua.Scan.Utf8
 import all ConAgua.Scan.Values
 import all ConAgua.Arena.NatSized
+public import ConAgua.Arena.Globals
 
 @[expose] public section
 

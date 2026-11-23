@@ -3,7 +3,6 @@ module
 public import ConAgua.Checker.CompareChain6B
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
-import ConAgua.Checker.RomProgInit
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
 import ConAgua.Checker.CheckARun

@@ -2,11 +2,12 @@ module
 
 public import ConAgua.Checker.CompareChain5
 public import ConAgua.Arena.JustifySideRefMove
-import ConAgua.Arena.FreezeTrunc
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import ConRon.Bridge.Checker.Install
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

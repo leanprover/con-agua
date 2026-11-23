@@ -5,14 +5,15 @@ import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.PrepProgExt
 import ConAgua.Checker.PrepProgHoist
 import ConAgua.Checker.PrepRef
-import ConAgua.Checker.PreLoopWSPart2
 import ConAgua.Checker.TwinCaches
-public import ConAgua.Arena.IndSumSpec.McGoStep
 import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.JustifySideRefMates
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+public import ConAgua.Checker.CompareChain6S
+public import ConAgua.Arena.JustifySideRefSide
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

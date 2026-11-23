@@ -275,13 +275,13 @@
     44    hsArgs : ∀ x, dm.regs.rsp.toNat + 8 ≤ x → x < dm.regs.rsp.toNat + 24 →
     45      x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
 
-== ConAgua/Final/Compare.lean#L83-L88
-    83  theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-    84      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    85      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
-    86      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    87          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS))
-    88        dm (label abiCompareL) :=
+== ConAgua/Final/Compare.lean#L84-L89
+    84  theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+    85      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    86      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+    87      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    88          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS))
+    89        dm (label abiCompareL) :=
 
 == ConAgua/Final/CompareTwin.lean#L56-L68
     56  def TwinComparesAccepts (bC bS : ByteArray) : Prop :=
@@ -298,29 +298,29 @@
     67      preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
     68      sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
 
-== ConAgua/Final/Compare.lean#L97-L108
-    97  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
-    98      (k0 : Nat) (hcode : Code checkerFile k0)
-    99      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   100      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
-   101      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   102          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-   103            ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
-   104              ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
-   105              Nonempty (ConLeche.Model V (ConLeche.streamEnv
-   106                ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
-   107                  ConLeche.Cached.sideRecord)))))
-   108        dm (label abiCompareL) :=
+== ConAgua/Final/Compare.lean#L98-L109
+    98  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
+    99      (k0 : Nat) (hcode : Code checkerFile k0)
+   100      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   101      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+   102      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   103          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+   104            ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
+   105              ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
+   106              Nonempty (ConLeche.Model V (ConLeche.streamEnv
+   107                ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
+   108                  ConLeche.Cached.sideRecord)))))
+   109        dm (label abiCompareL) :=
 
-== ConAgua/Final/Compare.lean#L118-L125
-   118  theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
-   119      (k0 : Nat) (hcode : Code checkerFile k0)
-   120      (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
-   121      (h64 : System.Platform.numBits = 64)
-   122      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
-   123      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-   124          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
-   125        dm (label abiCompareL) :=
+== ConAgua/Final/Compare.lean#L119-L126
+   119  theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+   120      (k0 : Nat) (hcode : Code checkerFile k0)
+   121      (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
+   122      (h64 : System.Platform.numBits = 64)
+   123      (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
+   124      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+   125          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
+   126        dm (label abiCompareL) :=
 
 == ConAgua/Audit/Final.lean#L47-L50
     47  theorem twinAccepts_not_trivial (V : Type w) [ConLeche.SetTheory V] :

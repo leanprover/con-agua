@@ -3,12 +3,13 @@ module
 public import ConAgua.Checker.CompareChain5
 import ConAgua.Checker.TwinCaches
 import ConAgua.Checker.TwinShapeFront
-import ConAgua.Checker.TwinShapeQuot
 import ConRon.Bridge.Compare.Stages
 import ConRon.Bridge.Compare.Side
 import ConRon.Bridge.Frontend.Prepare
 import ConRon.Bridge.Checker.Index
 import ConRon.Bridge.Specs
+import ConRon.Bridge.Checker.Install
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

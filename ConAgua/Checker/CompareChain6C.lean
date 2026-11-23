@@ -1,13 +1,12 @@
 module
 
-public import ConAgua.Checker.CompareChain6S
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
-import ConAgua.Checker.CheckARun
+public import ConAgua.Checker.CompareEntry
 meta import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.LoopProgTac
+public import ConAgua.Checker.ParEntryA
 
 @[expose] public section
 
@@ -68,8 +67,8 @@ theorem checkC3_of_stages {p : Prog} (hp : p.lookup "check_c3" = some checkC3L)
       (h1 n hn' · ·), (h2 n hn' ·), (h3 n hn' ·), (h4 n hn' · ·), (h5 n hn' · ·), (h6 n hn' · ·),
       (parCompact_spec hpc hfz n · ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false,
-      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, BinOp.eval, ite_true,
+      UInt64.toNat_zero] at *)
     all_goals clear h1 h2 h3 h4 h5 h6 hfz hp hpc
     all_goals (try simp only [SOLC] at *)
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero, PostPC, cntAt_self]

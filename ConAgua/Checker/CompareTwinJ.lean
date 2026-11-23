@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Arena.PoolJobsJ
+public import ConAgua.Arena.Jobs
 import ConRon.Bridge.Compare.Stages
 import ConRon.Bridge.Compare.Side
 import ConRon.Bridge.Checker.Index

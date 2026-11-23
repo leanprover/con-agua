@@ -198,15 +198,15 @@ model. The accept and verdict theorems take no such model.
 challenge's bytes as `ca_start`'s input and the solution's as two stack
 arguments
 ([`CmpCall`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpAbi.lean#L32-L45)).
-[`checkerFile_compare_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L83-L88)
+[`checkerFile_compare_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L84-L89)
 says that every run returns, and that an accept means
 [`TwinComparesAccepts bC bS`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CompareTwin.lean#L56-L68):
 con-ron's compared run from the twin's start state, both files parsed into one
 store, the solution prepared and checked, then the challenge prepared, its holes
 read as the axioms of their statements (`sideRecordsGo`), and checked with the
 solution `solutionOf IS recsC`. Its corollaries
-([`checkerFile_compare_model`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L97-L108),
-[`checkerFile_compare_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L118-L125))
+([`checkerFile_compare_model`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L98-L109),
+[`checkerFile_compare_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L119-L126))
 are con-ron's `model_exists_compare` and `no_False_compare` in con-leche's
 terms: the challenge's prepared records, each hole the axiom of its statement,
 have a model in every set theory, and a challenge that declares a theorem of

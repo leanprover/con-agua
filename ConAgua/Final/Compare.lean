@@ -4,6 +4,7 @@ public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CmpChain
 public import ConAgua.Final.CmpChainC
 public import ConAgua.Final.CompareTwin
+public import ConAgua.Final.ThreadsFinal
 import ConAgua.Checker.AsmFinal
 import ConAgua.Checker.ProgIRef
 import ConAgua.Checker.AsmXOk

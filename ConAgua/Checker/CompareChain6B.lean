@@ -4,8 +4,9 @@ public import ConAgua.Checker.CompareChain6R
 import ConAgua.Checker.RomProgInit
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Stages
-import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.RomProg0
+public import ConAgua.Checker.CompareTwinC
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

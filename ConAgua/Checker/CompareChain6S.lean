@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Checker.CompareChain6
-public import ConAgua.Checker.CompareTwinC
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

@@ -1,10 +1,11 @@
 module
 
 public import ConAgua.Final.CmpLoop
-import ConAgua.Compiler.Sim32
 import ConAgua.Final.DrvAbi
 import ConAgua.Final.SeqAbi
 import Kraken.X64.Registers
+public import ConAgua.Final.CmpOutcome
+public import ConAgua.Final.CmpAbi
 
 @[expose] public section
 

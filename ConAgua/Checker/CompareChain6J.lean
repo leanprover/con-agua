@@ -1,8 +1,9 @@
 module
 
 public import ConAgua.Checker.CompareChain6Run
-public import ConAgua.Checker.CompareJobs
 import ConAgua.Checker.RomProgInit
+import ConAgua.Checker.JobsStart
+import ConAgua.Arena.IWFrame
 
 @[expose] public section
 

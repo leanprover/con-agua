@@ -1,8 +1,10 @@
 module
 
-public import ConAgua.Arena.PoolJobs
 public import ConRon.Bridge.Compare.Pooled
 import ConLeche.Semantics.DeclWF
+import ConAgua.Arena.Jobs
+public import ConAgua.Arena.Refine
+import ConRon.Bridge.Specs
 
 @[expose] public section
 

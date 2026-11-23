@@ -12,6 +12,8 @@ import ConAgua.Checker.ArmsT
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.AsmFinal
 import all ConAgua.Checker.Entry
+import ConAgua.Checker.CompareJobs
+import ConAgua.Arena.JobStart
 
 @[expose] public section
 
