@@ -248,7 +248,7 @@ class Refs:
 
     def cmd(self, name, path):
         if name == "con-ron":
-            return [self.e2e.CON_RON, "--jobs=1", "--pins", self.pins, path]
+            return [self.e2e.CON_RON, "--jobs=1", path]  # the embedded pins: every variant (`--pins` gone, con-ron #171)
         return [self.ref_bin, path, f"--pins={self.npins}"]
 
     def verdict(self, name, fid, path, want, timeout):

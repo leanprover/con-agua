@@ -53,14 +53,20 @@ which is an mpz object, as upstream's `lean_nat_big_hash` (`natHash` in
 `Kernel/Expr.lean` answers below). -/
 -- con-agua patch: no `native/nat_hash.c` here (our `lakefile.toml` compiles no C, and the
 -- nightly-2026-10-20 runtime does not export `lean_nat_big_hash`): the compiled code is this Lean
--- fold over the 64-bit words (quadratic in the size, as the module doc says; only our tools'
--- compiled code runs it). To the proofs `natBigHash` stays an opaque function of the number.
+-- fold over the 64-bit words, low to high, split in halves so that it costs `O(n log n)` (a
+-- word-by-word `>>> 64` would be quadratic). Only our tools' compiled code runs it. To the
+-- proofs `natBigHash` stays an opaque function of the number.
 def natBigHashImpl (n : @& Nat) : UInt64 :=
-  go n 11 (n.log2 / 64 + 1)
+  go n (n.log2 / 64 + 1) 11
 where
-  go (m : Nat) (h : UInt64) : Nat → UInt64
-    | 0 => h
-    | f + 1 => if m = 0 then h else go (m >>> 64) (mixHash h (UInt64.ofNat m)) f
+  /-- Mix the `k` words of `m` (`m < 2^(64 k)`) into `h`, the low half first. -/
+  go (m : Nat) (k : Nat) (h : UInt64) : UInt64 :=
+    if hk : k ≤ 1 then mixHash h (UInt64.ofNat m)
+    else
+      let lo := k / 2
+      go (m >>> (64 * lo)) (k - lo) (go (m % 2 ^ (64 * lo)) lo h)
+  termination_by k
+  decreasing_by all_goals omega
 
 @[implemented_by natBigHashImpl]
 opaque natBigHash (n : @& Nat) : UInt64

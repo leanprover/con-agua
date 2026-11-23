@@ -269,7 +269,7 @@ def main():
     if not args.no_conron:
         if not os.path.exists(e2e.CON_RON):
             sys.exit(f"no con-ron at {e2e.CON_RON} (--no-conron to skip)")
-        systems.append(System("con-ron", "con-ron", lambda f: [e2e.CON_RON, "--jobs=1", "--pins", cpins, f]))
+        systems.append(System("con-ron", "con-ron", lambda f: [e2e.CON_RON, "--jobs=1", f]))
     leche = args.leche or (LECHE if os.path.exists(LECHE) else None)
     if args.leche and not os.path.exists(args.leche):
         sys.exit(f"no con-leche at {args.leche}")

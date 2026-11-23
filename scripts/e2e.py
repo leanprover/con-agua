@@ -969,14 +969,14 @@ def main():
             if ck in cache:
                 cr = cache[ck]
             else:
-                st, out, rc = guard.run3([CON_RON, "--jobs=1", "--pins", conron_pins, path], T_CONRON)
+                st, out, rc = guard.run3([CON_RON, "--jobs=1", path], T_CONRON)
                 cr = {0: "accept", 1: "reject", 2: "decline", 3: "error"}.get(rc, f"exit {rc}") if st == "ok" else st
                 if st == "ok":
                     cache[ck] = cr
             r["conron"] = cr
             if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
                 r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
-                             "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path]),
+                             "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", path]),
                              "con-ron-lean-twin": perf_instr(guard, [os.path.join(BIN, "con-ron-lean-twin"), path, f"--pins={npins}"])}
         if not args.no_diff and fid in diff_set:
             st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
