@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameCtor
+public import ConAgua.Arena.IotaFrameAt
 public import ConAgua.Arena.StageTLift
 
 @[expose] public section
@@ -52,16 +52,20 @@ theorem iotaPartsOfAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
   exact ⟨x, a', hrun, hK, iota_afr P (by decide) hc hA⟩
 
 /-- **`iota_parts_at(qj, cnP, mI, rP, r)` refines `iotaPartsAt cvj cnP mI rP rl`** (`qj` the
-constructor's constant value, `r` the rule's record, both in `EREC`), under `StageT`: it calls the
-core walks `inst_lp_fast` and `instantiate_lift_fast`. -/
+constructor's constant value, `r` the rule's record, both in `EREC`). It calls the core walk
+`inst_lp_fast` after `ctor_levels_at` and `iota_params_at` intern, so it starts from `StageT` and
+the twin's `StateOK` with the record's denotations (the interning steps' `PStep`s keep `TwinOK`);
+the arm restores `StageT` after it as after the other two (`iotaPartsAt_run`'s `CoreStep`). -/
 @[refines ConRon.Arena.iotaPartsAt]
 theorem iotaPartsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (qj cnP mI rP r : Word) (cvj : IConstantVal) (rl : IRecRule) :
     RelW (fun m args => callW p n "iota_parts_at" args m) [qj, cnP, mI, rP, r]
-      (fun m a => StageT dn vis fe m a ∧ AbsOK m ∧ decCV (erecP m) qj.toNat = some cvj ∧
-        decRule (erecP m) r.toNat = some rl)
+      (fun m a => StageT dn vis fe m a ∧ AbsOK m ∧ ConRon.Bridge.StateOK a ∧
+        decCV (erecP m) qj.toNat = some cvj ∧ decRule (erecP m) r.toNat = some rl ∧
+        (∃ c, ConRon.Arena.Frontend.denoteCV a.store cvj = some c) ∧
+        (∃ R, ConRon.Arena.Frontend.denoteRule a.store rl = some R))
       (iotaPartsAt cvj cnP.toNat mI.toNat rP.toNat rl)
-      (fun m m' a r x => KeepPostT dn vis fe decOIPD m m' a r x ∧ AbsOK m') := by
+      (fun m m' a r x => KeepPost vis fe decOIPD m m' a r x ∧ AbsOK m') := by
   sorry
 
 end L.Ind
