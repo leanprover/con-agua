@@ -107,6 +107,7 @@ public import ConAgua.Arena.CmpVRoots
 public import ConAgua.Arena.CmpVCone
 public import ConAgua.Verdict.CmpVModes
 public import ConAgua.Verdict.CmpVSJobs
+public import ConAgua.Verdict.CmpVCJobs
 public import ConAgua.Checker.CmpVerdictNv
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.CompareChain
