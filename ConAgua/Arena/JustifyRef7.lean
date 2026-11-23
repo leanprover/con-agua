@@ -54,21 +54,22 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-! ## The program, the guard, the kept memory -/
 
-/-- The route's callees through their runs. -/
-def crsCalls : List FnName := ["erec_ci", "justify_why", "basis_names_ok", "env_push"]
+/-- `check_justified`'s callees through their runs. -/
+def crsCalls : List FnName :=
+  ["erec_ci", "justify_why", "check_constant_val", "basis_names_ok", "env_push"]
 
 /-- **What the route keeps** (program facts, decided on the concrete program from the write
-sets): each callee is a frame of a step's write set and keeps the inductive stage's memos; all but
-the walk (`justify_why`, which re-relates them) keep the walks' memory. -/
+sets; `Checker/CrsKeepPB.lean`): each callee of `check_justified` is a frame of a step's write
+set and keeps the inductive stage's memos; all but the walk (`justify_why`, which re-relates them)
+keep the walks' memory, and so does `check_decl`. The models call `check_constant_val` and
+`check_decl` through their runs (`callE`): an ok model result is not one of the call (a class-`0`
+error leaves a unified model free). -/
 structure CrsKeep (p : Prog) : Prop where
   calls : ∀ f ∈ crsCalls, ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
     callW p n f vs m = some (r, m') →
     MemFrame stepA stepC m m' ∧ (IndMemos m → IndMemos m') ∧ (f ≠ "justify_why" → WalkMem m → WalkMem m')
-  ccv : ∀ (n : Nat) (m : Mem) (vis q x y z v : Word) (m' : Mem),
-    checkConstantValE p n m vis q x y z = .ok (v, m') →
-    MemFrame stepA stepC m m' ∧ (IndMemos m → IndMemos m') ∧ (WalkMem m → WalkMem m')
-  cd : ∀ (n : Nat) (m : Mem) (i vis v : Word) (m' : Mem), checkDeclE p n m i vis = .ok (v, m') →
-    WalkMem m → WalkMem m'
+  cd : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    callW p n "check_decl" vs m = some (r, m') → WalkMem m → WalkMem m'
 
 /-- **What the refinements of this file need of a program.** -/
 structure CrsProg (p : Prog) : Prop where
@@ -331,15 +332,15 @@ theorem cjs_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L
   have hcc := ccv_ref P.ax.ccv hq hap hkp hcrf hC hn' hC2.T hcv2 hcvd2 hIM2.cr (allow := 0)
     (allowRd := 0) (allowSorry := 0)
   rw [show ((0 : Word) != 0) = false from rfl] at hcc
-  rcases hx3 : checkConstantValE p n m2 vis (q + CI.cv) 0 0 0 with e3 | ⟨r3, m3⟩
-  · rw [checkJustifiedE.k_check_constant_val.none]
-    rw [hx3] at hcc
-    exact fun hG => ErrClaim.bind_left (hcc hG.vctx)
-  rw [hx3] at hcc
-  obtain ⟨u3, a3, hrun3, hP3⟩ := hcc
-  refine RefE.bind_right hrun3 ?_
+  refine RefE.bindRun (s₀ := ⟨m2, Locals.init []⟩)
+    (fun _ => checkJustifiedE.k_check_constant_val.none ..)
+    (checkConstantVal_specE p P.ax.ccv n _ vis (q + CI.cv) 0 0 0) (fun hG => hG.vctx.nv)
+    (fun hG => hG.vctx) hcc fun r3 s3 u3 a3 h3 _ hrun3 hP3 => ?_
   rw [checkJustifiedE.k_check_constant_val.arm1]
-  obtain ⟨hf3, hI3, hK3⟩ := P.keep.ccv n m2 vis (q + CI.cv) 0 0 0 r3 m3 hx3
+  dsimp only at hP3
+  generalize s3.mem = m3 at h3 hP3 ⊢
+  obtain ⟨hf3, hI3, hK3⟩ :=
+    P.keep.calls "check_constant_val" (by decide) n _ m2 r3 m3 (callW_of_callE h3)
   obtain ⟨hstep3, -⟩ := ConRon.Bridge.checkConstantVal_bridge_of_fold
     ConRon.Bridge.CoreSpec.of_core hFo2 hcvd2 hrun3
   have hFo3 := hFo2.ofCore hstep3
@@ -398,7 +399,7 @@ theorem cjs_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L
   have hfr : MemFrame stepA stepC m m5 := hf1.trans (hf2.trans (hf3.trans (hf4.trans hf5)))
   refine RefE.ret rfl ⟨⟨hR.of_step hS5 hfr hgrow.ext,
     leaf_memos P.leaf (leaf_mem _ rfl) c5 hT4.twin.memos, hI5 (hI4 (hI3 hIM2)), hgrow⟩,
-    hK5 (by decide) (hK4 (by decide) (hK3 hWM2))⟩
+    hK5 (by decide) (hK4 (by decide) (hK3 (by decide) hWM2))⟩
 
 end cj
 
@@ -448,11 +449,13 @@ theorem crs_ref (hP : CdProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLps
   by_cases e1 : r1.headD 0 = 0
   · rw [checkRecordSolE.k_justifiable.arm1 _ _ _ _ _ _ e1, hr.mp e1]
     have hcd := cd_ref hP hFD hLD (N := n) (by omega) hi hok hR hS hF hden hPD hIM
-    rcases hx : checkDeclE p n m1 i vis with e | ⟨v, m'⟩
-    · rw [hx] at hcd; exact fun hG => hcd hG.1
-    rw [hx] at hcd
-    obtain ⟨y', a', hrun, hpost⟩ := hcd
-    exact ⟨y', a', hrun, hpost, P.keep.cd n m1 i vis v m' hx hWM⟩
+    have hs := checkDecl_specE p hP.cd.cd hP.cd.ckd n ⟨m1, Locals.init []⟩ i vis
+    rcases c : callE p n "check_decl" [i, vis] m1 with e | ⟨r, m'⟩
+    · rw [checkRecordSolE.k_check_decl.none]
+      exact fun hG => RefE.run_err hs hG.2.vctx.nv hG.1 hcd c
+    rw [checkRecordSolE.k_check_decl.arm1]
+    obtain ⟨s', rfl, -, y', a', hrun, hpost⟩ := RefE.run_ok hs hcd c
+    exact ⟨y', a', hrun, hpost, P.keep.cd n _ m1 r s'.mem (callW_of_callE c) hWM⟩
   rw [checkRecordSolE.k_justifiable.arm2 _ _ _ _ _ _ e1]
   obtain ⟨cv, rfl⟩ := Option.ne_none_iff_exists'.mp (fun h => e1 (hr.mpr h))
   have hd := hax cv rfl

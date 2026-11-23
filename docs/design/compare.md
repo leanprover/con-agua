@@ -132,3 +132,14 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   `cmp_outcome`) and H5 (`compare-integ`: the tree building again, `JobM` with `J`) started;
   18:25 H6 (`compare-chain`: the L-level chain, `CmpAccepts → TwinComparesAccepts`).
 * `WalkMem` (the walks' memos between jobs) added to the interface for H2b and H5.
+* 18:45 H5 done, merged: the tree builds again (except `AsmFileEq`, H4's), the job relation takes
+  `J` (`JSol J m`: the flag/rows, and at `J = some` `WalkMem` and the counter bound), `recordJob_ref`
+  at both branches (`crs_ref` through `CrsSpec`, `Arena/JobsCrs.lean`, `Checker/CrsProgPB.lean`),
+  four write sets narrowed (no job writes the solution's rows), the threaded path at `J = none`
+  only. Open: `CrsKeep` (given to H7, `compare-keep`).
+* 19:05 first step landing prepared: the L code of `--compare`, the wiring, the refinements of
+  every new function (zero `sorry`), the job relation at `J`, the harness and the driver stub
+  (unproved), H4's machine-level building blocks (`Final/CmpStub`, `CmpAbi`, `CmpOutcome`,
+  `CmpLoop`, built, zero `sorry`). `Final/CmpMain.lean` (the driver theorem, one `sorry`, work in
+  progress) is not built (`scripts/modules_unbuilt.txt`). OVERVIEW and `main.c` say that no final
+  theorem covers `--compare` yet.

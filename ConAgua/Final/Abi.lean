@@ -51,6 +51,37 @@ structure AbiCall (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
   hcs24 : 24 ≤ dm.regs.rsp.toNat
   hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
 
+/-- **`AbiCall` on a mapped region** (not necessarily zero): how the compared run's driver calls the
+setup stub again on a region that holds an L memory (`ConAgua/Final/CmpStub.lean`). -/
+structure AbiCallM (b pb : ByteArray) (dm : MachineData) (ra : Word) : Prop where
+  hin : ∀ i (h : i < b.size), dm.dmem.get? (A (dm.regs.rdi.toNat + i)) = some b[i]
+  hn : dm.regs.rsi.toNat = b.size
+  hpins : ∀ i (h : i < pb.size), dm.dmem.get? (A (dm.regs.rdx.toNat + i)) = some pb[i]
+  hnp : dm.regs.rcx.toNat = pb.size
+  hmap : ∀ x, dm.regs.r8.toNat ≤ x → x < dm.regs.r8.toNat + dm.regs.r9.toNat → (dm.dmem.get? (A x)).isSome
+  hfits : dm.regs.r8.toNat + dm.regs.r9.toNat < 2 ^ 64
+  hinEnd : dm.regs.rdi.toNat + b.size < 2 ^ 64
+  hpinsEnd : dm.regs.rdx.toNat + pb.size < 2 ^ 64
+  hinDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
+    x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+  hpinsDisj : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+    x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
+  hbufDisj : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + b.size →
+    ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+  hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra
+  hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+    (dm.dmem.get? (A x)).isSome ∧ (x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x) ∧
+    ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + b.size) ∧
+    ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size)
+  hcs24 : 24 ≤ dm.regs.rsp.toNat
+  hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64
+
+/-- A zero region is mapped. -/
+theorem AbiCall.toM {b pb : ByteArray} {dm : MachineData} {ra : Word} (hc : AbiCall b pb dm ra) :
+    AbiCallM b pb dm ra :=
+  ⟨hc.hin, hc.hn, hc.hpins, hc.hnp, fun x h1 h2 => by rw [hc.hzero x h1 h2]; rfl, hc.hfits, hc.hinEnd,
+    hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj, hc.hra, hc.hcs, hc.hcs24, hc.hcs8⟩
+
 /-- A word of zero bytes reads as `0`. -/
 theorem rdW_of_zero {d : DataMem} {x : Nat} (_hx : x + 8 ≤ 2 ^ 64)
     (h : ∀ j < 8, d.get? (A (x + j)) = some 0) : rdW d (A x) = some 0 := by
@@ -224,12 +255,17 @@ theorem abiCall_geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Wor
     AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
   ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
 
+theorem AbiCallM.geom {tab : Tab} {b pb : ByteArray} {dm : MachineData} {ra : Word}
+    (hc : AbiCallM b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) :
+    AbiGeom tab dm.regs.r8.toNat dm.regs.r9.toNat dm.regs.rdi.toNat b.size dm.regs.rdx.toNat pb.size :=
+  ⟨hneed, hc.hfits, hc.hinEnd, hc.hpinsEnd, hc.hinDisj, hc.hpinsDisj, hc.hbufDisj⟩
+
 /-- **The trampoline's premises after the stub** (`HarnessCall` at the partition layout), and the
 caller's registers back from the state after the stub's: the stub ran on a memory `d` that
 differs from the caller's only inside the region (`ca_start_a`, `ca_start_a0`: the mode word
 written). -/
 theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {dm : MachineData}
-    {ra : Word} (hc : AbiCall b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) (d : DataMem)
+    {ra : Word} (hc : AbiCallM b pb dm ra) (hneed : abiNeed tab ≤ dm.regs.r9.toNat) (d : DataMem)
     (hd : Only dm.regs.r8.toNat (dm.regs.r8.toNat + dm.regs.r9.toNat) dm.dmem d) (s1 : MachineData)
     (hs1 : s1.dmem = stores dm.regs dm.regs.r8.toNat d 0 (abiVals tab))
     (hrdi : s1.regs.rdi = dm.regs.r8) (hrsi : s1.regs.rsi.toNat = abiFuelM)
@@ -287,7 +323,7 @@ theorem abi_harness {tab : Tab} (hok : abiTabOk tab = true) {b pb : ByteArray} {
     · rw [hsp]; exact hc.hcs8
     · intro x h1 h2
       simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at h1 h2
-      refine ⟨honly.grows _ (by rw [hc.hzero x (by omega) (by omega)]; rfl), ?_, ?_, ?_⟩
+      refine ⟨honly.grows _ (hc.hmap x (by omega) (by omega)), ?_, ?_, ?_⟩
       · intro ⟨h3, h4⟩
         simp only [abiLayout_lo, abiLayout_hi, abiSlot, abiStack] at h3 h4; omega
       · rintro ⟨p, hp, hx⟩

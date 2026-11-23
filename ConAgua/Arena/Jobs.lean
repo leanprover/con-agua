@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndexBuild
 public import ConRon.Bridge.Checker.Pooled
 public import ConRon.Bridge.Compare.Record
 public import ConAgua.Arena.JustifyIface
+public import ConAgua.Arena.JustifyRef7
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk
 import ConAgua.Checker.NoVerdictTree
@@ -125,14 +126,15 @@ theorem SolR.frameX {A : List TieredArray} {C : List Word} {m m' : Mem} {J : ISo
   · rw [hl]; rw [hm] at hw; exact h.mates_dec w hw
 
 /-- **The run's solution in a job's memory**: `OptSolR` (the flag `CTL[224]`, the solution's rows),
-and with a solution the walks' memos (`WalkMem`). -/
+and with a solution the walks' memos (`WalkMem`) and the cone's fuel in range (the solution's
+`next + 1` a word). -/
 structure JSol (J : Option ISolution) (m : Mem) : Prop where
   sol : OptSolR m J
-  walk : J.isSome → WalkMem m
+  walk : ∀ J', J = some J' → WalkMem m ∧ J'.idx.next + 1 < 2 ^ 64
 
 /-- The flat run's: the flag is `0`. -/
 theorem JSol.none {m : Mem} (h : rdW (m.arr64 CTL) 224 = 0) : JSol none m :=
-  ⟨h, fun h => absurd h (by simp)⟩
+  ⟨h, fun _ h => nomatch h⟩
 
 /-- **`JSol` across a frame** that writes neither the solution's rows, nor its control words, nor
 the walks' memos, and whose record pool extends. -/
@@ -141,8 +143,9 @@ theorem JSol.frameX {A : List TieredArray} {C : List Word} {m m' : Mem} {J : Opt
     (hA : ∀ b ∈ A, b ∉ solArrs ∧ b ≠ (NDM : TieredArray) ∧ b ≠ (CSM : TieredArray))
     (hC : ∀ x ∈ C, x ∉ solCtl ∧ x ≠ 220 ∧ x ≠ 222)
     (hx : ArrExt (erecP m) (erecP m')) (h : JSol J m) : JSol J m' := by
-  refine ⟨?_, fun hs => (h.walk hs).frame hf (fun hm => (hA _ hm).2.1 rfl) (fun hm => (hA _ hm).2.2 rfl)
-    (fun hm => (hC _ hm).2.1 rfl) (fun hm => (hC _ hm).2.2 rfl)⟩
+  refine ⟨?_, fun J' e => ⟨(h.walk J' e).1.frame hf (fun hm => (hA _ hm).2.1 rfl)
+    (fun hm => (hA _ hm).2.2 rfl) (fun hm => (hC _ hm).2.1 rfl) (fun hm => (hC _ hm).2.2 rfl),
+    (h.walk J' e).2⟩⟩
   have h0 : rdW (m'.arr64 CTL) SOLC = rdW (m.arr64 CTL) SOLC :=
     hf.ctl _ (fun hm => (hC _ hm).1 (by decide))
   have h1 := h.sol
@@ -772,7 +775,7 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
     (hf0 : MemFrame (apA ++ cdA) (apC ++ cdC) m₀ m)
     (hg : L.Ind.IWGrow m₀ m) (hC : CheckR m₁ a' v x)
     (hf : MemFrame scrArrs (flushCtl ++ (0 :: resetCtl)) m m₁)
-    (hS0 : OptSolR m₀ J) (hW : J.isSome → WalkMem m) :
+    (hS0 : OptSolR m₀ J) (hW : ∀ J', J = some J' → WalkMem m ∧ J'.idx.next + 1 < 2 ^ 64) :
     JobM pins dn ds J I (m₁.set64 CTL 130 0) a' := by
   have hA := loArr_scr
   have hCl := loCtl_drop
@@ -823,8 +826,8 @@ theorem JobM.ofDrop {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Na
       rcases List.mem_append.mp hx with h | h
       · have := hCl x h; omega
       · simp only [List.mem_singleton] at h; subst h; decide
-    refine ⟨?_, fun hs => (hW hs).frame hF1 (hA.not_hi (by decide)) (hA.not_hi (by decide))
-      (fun h => by have := hlo _ h; simp at this) (fun h => by have := hlo _ h; simp at this)⟩
+    refine ⟨?_, fun J' e => ⟨(hW J' e).1.frame hF1 (hA.not_hi (by decide)) (hA.not_hi (by decide))
+      (fun h => by have := hlo _ h; simp at this) (fun h => by have := hlo _ h; simp at this), (hW J' e).2⟩⟩
     exact hS0.growF hF0 (fun b hb => by
         rcases List.mem_append.mp hb with h | h
         · rcases List.mem_append.mp h with h | h
@@ -895,7 +898,8 @@ structure CrsSpec (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name
       (∃ x, Frontend.denoteDecl a.store (dsAt ds i) = some x) →
       (∃ pinsP, ConRon.Bridge.PinsDenote a.store pins pinsP) → IndMemos m →
       SolR m J → WalkMem m → IFEnvOK envS (SolView J) a → MatesDen a.store J.mates matesU →
-      RefE (JobG pins dn ds p) (callE p N "check_record_sol" [i, vis] m)
+      J.idx.next + 1 < 2 ^ 64 →
+      RefE (JobG pins dn ds p ∧ CrsG p J fe ds i a) (callE p N "check_record_sol" [i, vis] m)
         (checkRecord V pins (some J) fe (dsAt ds i)) a
         (fun v x a' => CdPost pins ds m (v.1.headD 0) x v.2 a' ∧ WalkMem v.2)
   wr : ∃ F, "check_record_sol" ∈ F ∧ closedA p cdA cdC F = true
@@ -904,6 +908,41 @@ structure CrsSpec (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name
 def CrsFor (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
     (ds : Array IDeclaration) (p : Prog) (J : Option ISolution) : Prop :=
   J.isSome → CrsSpec pins dn ds p
+
+/-- **What a job's error claims assume of the run's solution**, at the job's start `a` (nothing
+without one): the justification's verdict context and no-verdict closure (`CrsG`), and at an axiom
+record the twin's justification guard (`JwGuard`) at the state the `And` pin leaves after the
+bracket's entry (the state `check_record_sol` starts from). -/
+def JobGs (p : Prog) (J : Option ISolution) (I : IStreamIndex) (ds : Array IDeclaration) (k : Nat)
+    (a : AState) : Prop :=
+  match J with
+  | none => True
+  | some J => VerdictCtxU p ∧ closedNV p jfNvFns = true ∧
+      ∀ cv, ds[k]? = some (.axiomDecl cv) → ∀ a₁ b a₄, enterScratch.run a = .ok ((), a₁) →
+        (andPinOk (.axiomDecl cv)).run a₁ = .ok (b, a₄) →
+        JwGuard J (I.view k) (.axiomDecl cv) cv a₄
+
+/-- A job's error guard: the jobs' (`JobG`) and the solution's (`JobGs`). -/
+abbrev JobGJ (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+    (p : Prog) (J : Option ISolution) (I : IStreamIndex) (k : Nat) (a : AState) : Prop :=
+  JobG pins dn ds p ∧ JobGs p J I ds k a
+
+/-- The jobs' loop's error guard: the solution's at every job. -/
+abbrev JobGL (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration)
+    (p : Prog) (J : Option ISolution) (I : IStreamIndex) : Prop :=
+  JobG pins dn ds p ∧ ∀ k a, JobGs p J I ds k a
+
+/-- The flat loop's guard is the jobs'. -/
+theorem JobGL.none {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
+    {ds : Array IDeclaration} {p : Prog} {I : IStreamIndex} (h : JobG pins dn ds p) :
+    JobGL pins dn ds p none I := ⟨h, fun _ _ => trivial⟩
+
+/-- A weaker guard (the error branch's assumption) refines alike. -/
+theorem RefE.jobsGuard {α β : Type} {G G' : Prop} {x : Except Err α} {T : AM β} {a : AState}
+    {R : α → β → AState → Prop} (hG : G → G') (h : RefE G' x T a R) : RefE G x T a R := by
+  cases x with
+  | ok v => exact h
+  | error e => exact fun g => h (hG g)
 
 /-! ## `record_job` -/
 
@@ -918,13 +957,14 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     (hF : ∃ env, ConRon.Bridge.FoldOK env (I.view k.toNat) (AM.st enterScratch a))
     (hden : ∀ x ∈ ds.toList, ConRon.Bridge.PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d)
     (hPD : ConRon.Bridge.PinsDenote a.store pins pinsP) :
-    RefE (JobG pins dn ds p) (recordJobE p N m k) (recordJob V pins J I k.toNat ds[k.toNat])
+    RefE (JobGJ pins dn ds p J I k.toNat a) (recordJobE p N m k) (recordJob V pins J I k.toNat ds[k.toNat])
       a (fun v _ a' => JobPost pins dn ds J I a v.2 a') := by
   rcases N with _ | n
   · exact RefE.of_cls0 Err.cls_outOfFuel
-  have hnv : ∀ {f : FnName}, f ∈ L.Checker.nvFns → JobG pins dn ds p → ∀ {T : AM Unit} {b : AState}
+  have hnv : ∀ {f : FnName}, f ∈ L.Checker.nvFns → JobGJ pins dn ds p J I k.toNat a →
+      ∀ {T : AM Unit} {b : AState}
       {vs : List Word} {m₀ : Mem} {e : Err}, callE p n f vs m₀ = .error e → ErrClaim T b e :=
-    fun hf hG _ _ _ _ _ c => ErrClaim.of_callE_nv hG.nv hf c
+    fun hf hG _ _ _ _ _ c => ErrClaim.of_callE_nv hG.1.nv hf c
   obtain ⟨hpd, d, hd⟩ := hden _ (Array.getElem_mem_toList hk)
   obtain ⟨env, hF1⟩ := hF
   have hx1 := ConRon.Bridge.PExt.enterScratch hJ.state.wf
@@ -1041,9 +1081,10 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     ⟨pinsP, ConRon.Bridge.PinsDenote.pmono hpx4 pins pinsP hpp hPD⟩
   -- after the record's check (`check_decl` or `check_record_sol`): `scratch_drop`
   have tail : ∀ (r5 : List Word) (m5 : Mem) (y : IFEnv) (a5 : AState),
-      CdPost pins ds m4 (r5.headD 0) y m5 a5 → MemFrame cdA cdC m4 m5 → (J.isSome → WalkMem m5) →
+      CdPost pins ds m4 (r5.headD 0) y m5 a5 → MemFrame cdA cdC m4 m5 →
+      (∀ J', J = some J' → WalkMem m5 ∧ J'.idx.next + 1 < 2 ^ 64) →
       (checkRecord V pins J (I.view k.toNat) ds[k.toNat]).run a4 = .ok (y, a5) →
-      RefE (JobG pins dn ds p) (recordJobE.k_check_record_sol p n (.ok (r5, m5))) dropScratch a5
+      RefE (JobGJ pins dn ds p J I k.toNat a) (recordJobE.k_check_record_sol p n (.ok (r5, m5))) dropScratch a5
         (fun v _ a' => JobPost pins dn ds J I a v.2 a') := by
     intro r5 m5 y a5 hP5 hfr5 hW5 hrun5
     -- the twin's record check, accepted
@@ -1095,14 +1136,14 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     have h1 := cd_ref hP.cd hFD hLD (N := n) (by omega) hk hok4 hR4 hT4 ⟨env, hF4⟩ hden4 hPD4 hS4.memos
     rw [e0] at h1
     refine RefE.bindRun (K := recordJobE.k_check_record_sol p n) (fun _ => rfl)
-      (checkDecl_specE p hP.cd.cd.cd hP.cd.cd.ckd n ⟨m4, Locals.init []⟩ k 0) (fun hG => hG.nv)
-      (fun hG => hG.cd) h1 ?_
+      (checkDecl_specE p hP.cd.cd.cd hP.cd.cd.ckd n ⟨m4, Locals.init []⟩ k 0) (fun hG => hG.1.nv)
+      (fun hG => hG.1.cd) h1 ?_
     intro r5 s5 y a5 c5 _ hrun5 hP5
     obtain ⟨F, hF0, hcl⟩ := hP.cdW
     obtain ⟨s5', hs5', hfr5, -⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (invoke_memFrame hcl n hF0 [k, 0] ⟨m4, Locals.init []⟩) (callW_of_callE c5)
     rw [hs5'] at hfr5
-    exact tail r5 s5.mem y a5 hP5 hfr5 (fun h => absurd h (by simp)) hrun5
+    exact tail r5 s5.mem y a5 hP5 hfr5 (fun _ h => nomatch h) hrun5
   | some J =>
     -- `check_record_sol` (the flag is `1`)
     have hcs := hcrs rfl
@@ -1111,9 +1152,19 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     rw [recordJobE.k_and_pin_ok.arm1 _ _ _ _ _ hz h224]
     obtain ⟨envS, matesU, -, hall⟩ := hrec
     obtain ⟨hie, hmd⟩ := hall a4 hok4 hpx4
+    obtain ⟨hWM4, hnx⟩ := hS4.jsol.walk J rfl
     have h1 := hcs.ref hFD hLD (N := n) (by omega) hk hok4 hR4 hT4 ⟨env, hF4⟩ hden4 hPD4 hS4.memos
-      hS4.jsol.sol.2 (hS4.jsol.walk rfl) hie hmd
+      hS4.jsol.sol.2 hWM4 hie hmd hnx
     rw [e0] at h1
+    -- the solution's guard at the `And` pin's state
+    have he1 : enterScratch.run a = .ok ((), a1) := by rw [← ha1]; exact enterScratch_run a
+    replace h1 := RefE.jobsGuard (G := JobGJ pins dn ds p (some J) I k.toNat a) (fun hG => by
+      obtain ⟨hG1, hv, hjn, hjw⟩ := hG
+      refine ⟨hG1, hv, hjn, fun cv hcv => ?_⟩
+      have hcv' : ds[k.toNat] = .axiomDecl cv := by
+        rw [Array.getElem?_eq_getElem hk] at hcv; exact Option.some.inj hcv
+      rw [hcv'] at hrun4
+      exact hjw cv hcv _ _ _ he1 hrun4) h1
     rcases c5 : callE p n "check_record_sol" [k, 0] m4 with e | ⟨r5, m5⟩
     · rw [c5] at h1; rw [recordJobE.k_check_record_sol.none]; exact RefE.bind_left h1
     rw [c5] at h1
@@ -1122,7 +1173,7 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
     obtain ⟨s5', hs5', hfr5, -⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
       (invoke_memFrame hcl n hF0 [k, 0] ⟨m4, Locals.init []⟩) (callW_of_callE c5)
     rw [hs5'] at hfr5
-    exact RefE.bind_right hrun5 (tail r5 m5 y a5 hP5 hfr5 (fun _ => hW5) hrun5)
+    exact RefE.bind_right hrun5 (tail r5 m5 y a5 hP5 hfr5 (fun J' e => by cases e; exact ⟨hW5, hnx⟩) hrun5)
 
 /-- **`record_job(k)` refines `recordJob` of record `k`, both outcomes**: from the job relation and
 con-ron's fold invariant at the view of position `k` (as `RecordSpec` takes it), an ok run is the
@@ -1137,13 +1188,13 @@ theorem recordJob_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPin
     (hF : ∃ env, ConRon.Bridge.FoldOK env (I.view k.toNat) (AM.st enterScratch a))
     (hden : ∀ x ∈ ds.toList, ConRon.Bridge.PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d)
     (hPD : ConRon.Bridge.PinsDenote a.store pins pinsP) :
-    RefE (JobG pins dn ds p) (callE p N "record_job" [k] m) (recordJob V pins J I k.toNat ds[k.toNat])
+    RefE (JobGJ pins dn ds p J I k.toNat a) (callE p N "record_job" [k] m) (recordJob V pins J I k.toNat ds[k.toNat])
       a (fun v _ a' => JobPost pins dn ds J I a v.2 a') := by
-  have hM : RefE (JobG pins dn ds p) (recordJobE p N m k) (recordJob V pins J I k.toNat ds[k.toNat]) a
+  have hM : RefE (JobGJ pins dn ds p J I k.toNat a) (recordJobE p N m k) (recordJob V pins J I k.toNat ds[k.toNat]) a
       (fun v _ a' => JobPost pins dn ds J I a v.2 a') :=
     recordJobE_ref hP hFD hLD hdn hpp hN hk hJ hrec hcrs hF hden hPD
   rcases c : callE p N "record_job" [k] m with e | ⟨r, m'⟩
-  · exact fun hG => RefE.run_err (recordJob_specE p hP.record_job N ⟨m, Locals.init []⟩ k) hG.nv hG hM c
+  · exact fun hG => RefE.run_err (recordJob_specE p hP.record_job N ⟨m, Locals.init []⟩ k) hG.1.nv hG hM c
   · obtain ⟨s', rfl, -, y, a', hr, hR⟩ :=
       RefE.run_ok (recordJob_specE p hP.record_job N ⟨m, Locals.init []⟩ k) hM c
     exact ⟨y, a', hr, hR⟩
@@ -1190,7 +1241,7 @@ theorem checkJobsLoop_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatO
       (∀ (t : Nat) (a' : AState), j.toNat ≤ t → t < hi.toNat →
         checkJobList V pins J I ds (List.range' j.toNat (t - j.toNat)) a = .ok (.ok (), a') →
         ∃ env, ConRon.Bridge.FoldOK env (I.view t) (AM.st enterScratch a')) →
-      RefC (JobG pins dn ds p) (checkJobsE.loop1 p n m j hi)
+      RefC (JobGL pins dn ds p J I) (checkJobsE.loop1 p n m j hi)
         (fun m' => ∃ a', checkJobList V pins J I ds (List.range' j.toNat (hi.toNat - j.toNat)) a =
           .ok (.ok (), a') ∧ JobPost pins dn ds J I a₀ m' a')
         (ErrClaimV (checkJobList V pins J I ds (List.range' j.toNat (hi.toNat - j.toNat))) a) := by
@@ -1221,7 +1272,7 @@ theorem checkJobsLoop_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatO
       | error e =>
         rw [checkJobsE.k_record_job.none]
         rw [hc] at hr
-        exact fun hg => checkJobList_cons_err hjk (hr hg)
+        exact fun hg => checkJobList_cons_err hjk (hr ⟨hg.1, hg.2 _ _⟩)
       | ok q =>
         obtain ⟨r, m₁⟩ := q
         rw [checkJobsE.k_record_job.arm1]
@@ -1323,7 +1374,7 @@ theorem checkJobs_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPin
     (hG : ∀ (t : Nat) (a' : AState), j.toNat ≤ t → t < hi.toNat →
         checkJobList V pins J I ds (List.range' j.toNat (t - j.toNat)) a = .ok (.ok (), a') →
         ∃ env, ConRon.Bridge.FoldOK env (I.view t) (AM.st enterScratch a')) :
-    RefC (JobG pins dn ds p) (checkJobsE p n m j hi)
+    RefC (JobGL pins dn ds p J I) (checkJobsE p n m j hi)
       (fun v => ∃ a', checkJobList V pins J I ds (List.range' j.toNat (hi.toNat - j.toNat)) a =
         .ok (.ok (), a') ∧ JobPost pins dn ds J I a₀ v.2 a')
       (ErrClaimV (checkJobList V pins J I ds (List.range' j.toNat (hi.toNat - j.toNat))) a) := by

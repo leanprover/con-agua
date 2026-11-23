@@ -150,7 +150,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
       obtain ⟨htk', -⟩ := H.hden t (by omega)
       exact worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI htk' hP hnd hw')
   have h' := RefC.run_err (checkJobs_specE p hJP.check_jobs n ⟨s₂.mem, Locals.init []⟩ 0 hi)
-    (fun e h0 => ErrClaimV.of_cls0 h0) trivial hJG h hc
+    (fun e h0 => ErrClaimV.of_cls0 h0) trivial (JobGL.none hJG) h hc
   simp only [UInt64.toNat_zero, Nat.sub_zero, hhi, ← List.range_eq_range'] at h'
   exact fun hk => twinFailsV_of_sameEnter sameEnter_worker.symm (h' hk)
 
