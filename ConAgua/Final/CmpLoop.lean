@@ -46,7 +46,9 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
     (dm : MachineData) (ra sa : Word) {nS base rsp0 : Nat} (B : Array Word) (k : Nat) (hk : k < 2 ^ 63)
     (hgeo : CmpGeo tab own base dm.regs.r9.toNat rsp0 (base + abiSlot * abiSlot64 tab out) B.size)
     (hg : BufGeom tab fz own B (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (workerNeed own))
-    (hkeep : ∀ r (j : Word) rs r', cmpRun p (bufMemG fz own plo phi mode B r j) = .ok (rs, r') → CmpKept fz B r')
+    (hkeep : ∀ (rm : Nat → Mem) (j : Nat) rs r', rm 0 = zeroMem tab → CmpJobs p mode plo phi fz own B rm j → j < k →
+      cmpRun p (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) = .ok (rs, r') → rs.getD 0 0 = ACCEPT →
+      CmpKept fz B r')
     (hrsp0 : dm.regs.rsp.toNat = rsp0)
     (d5 : DataMem) (Acc : Prop) (Err : Word → Prop)
     (hErr : ∀ rm : Nat → Mem, rm 0 = zeroMem tab → ∀ j < k, CmpJobs p mode plo phi fz own B rm j → ∀ e,
@@ -278,7 +280,7 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         simp only [Bool.not_eq_false', beq_iff_eq] at heq
         exact UInt64.toBitVec_inj.mp heq
       -- the job accepted: the next job's start
-      have hkept := hkeep _ _ _ _ hres
+      have hkept := hkeep rm j _ _ h0 hjobs hjk' hres hacc
       have hag0 := hag.wrW (y := rsp0) (v := (at_ (Kc + 65 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)).toBitVec)
         (by omega) (fun x h1 h2 => .inl ⟨by omega, by omega⟩)
         (by omega) (by omega)

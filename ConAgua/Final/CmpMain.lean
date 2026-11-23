@@ -571,7 +571,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     obtain ⟨-, hRes5, hMem5⟩ := hout'
     have hrax5 : s2.regs.rax = rs5.getD 0 0 := hRes5.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
     have hge5' : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hge5
-    obtain ⟨hBok, hkeep⟩ := hG rs4 m4 rs5 m5 hres4 hres5 hge5'
+    obtain ⟨hBok, hkeep⟩ := hG rs4 m4 rs5 m5 hres4 hge4' hres5 hge5'
     have hk63 : (rs5.getD 0 0 - 9223372036854775808).toNat < 2 ^ 63 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hge5')]
       have := (rs5.getD 0 0).toNat_lt; simp at this ⊢; omega
@@ -611,7 +611,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       fun x h1 h2 => by have := (hc.hSDisj x h1 h2).1; rwa [hbase] at this
     refine cmp_loop q p hq hok hAX hwf hnres plo phi hdrf ctlf hw fz hngm hngl hngh h12 h13 h23 hfzl k0 hcodeO fd
       hentry hnp hmo hdisj hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
-      (fun r j rs r' h => hkeep r j rs r' h) hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
+      hkeep hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
       (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
     · intro rm h0 j hj hjobs e he
       exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,

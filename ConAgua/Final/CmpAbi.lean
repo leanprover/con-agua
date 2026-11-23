@@ -74,22 +74,27 @@ def CmpBufOk (fz : List TieredArray) (out : ArrId) (m : Mem) : Prop :=
 def CmpKept (fz : List TieredArray) (B : Array Word) (r : Mem) : Prop :=
   ∀ i (h : i < fz.length), r.arr64 fz[i] = bufImg B i
 
-/-- **What the machine proof needs of `check` and cannot see** (L-level; for `checkerProg` a lemma,
-not an assumption of the final theorem): after modes `4` and `5` (`5` returning `2^63 + k`), the
-buffer's geometry holds, and every job's run on it keeps the frozen arrays. -/
-def CmpGuard (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
-    (bC bS pb : ByteArray) : Prop :=
-  ∀ rs4 m4 rs5 m5, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) →
-    cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) → 2 ^ 63 ≤ (rs5.getD 0 0).toNat →
-    CmpBufOk fz out m5 ∧ ∀ r j rs r', cmpRun p (bufMemG fz own plo phi mode (cmpBuf out m5) r j) = .ok (rs, r') →
-      CmpKept fz (cmpBuf out m5) r'
-
 /-- The jobs `j < n` of the solution, from the worker memories `rm`: each accepts and ends in the
 next. -/
 def CmpJobs (p : Prog) (mode plo phi : GVar) (fz own : List TieredArray) (B : Array Word) (rm : Nat → Mem)
     (n : Nat) : Prop :=
   ∀ j < n, ∃ rs, cmpRun p (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) = .ok (rs, rm (j + 1)) ∧
     rs.getD 0 0 = ACCEPT
+
+/-- **What the machine proof needs of `check` and cannot see** (L-level; for `checkerProg` a lemma,
+not an assumption of the final theorem): after modes `4` and `5` (`4` returning `2^63`, `5`
+returning `2^63 + k`), the buffer's geometry holds, and the worker memory after each accepting
+job `j < k` of the chain the machine runs (from the zero memory, the jobs before it accepting)
+keeps the frozen arrays. (Not over every worker memory: the jobs' tiered stores write tier `0`
+or `1` by a runtime word, so the frozen arrays are kept only under the job relation.) -/
+def CmpGuard (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
+    (bC bS pb : ByteArray) : Prop :=
+  ∀ rs4 m4 rs5 m5, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) → 2 ^ 63 ≤ (rs4.getD 0 0).toNat →
+    cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) → 2 ^ 63 ≤ (rs5.getD 0 0).toNat →
+    CmpBufOk fz out m5 ∧ ∀ (rm : Nat → Mem) (j : Nat) rs r', rm 0 = zeroMem tab →
+      CmpJobs p mode plo phi fz own (cmpBuf out m5) rm j → j < (rs5.getD 0 0 - 9223372036854775808).toNat →
+      cmpRun p (bufMemG fz own plo phi mode (cmpBuf out m5) (rm j) (UInt64.ofNat j)) = .ok (rs, r') →
+      rs.getD 0 0 = ACCEPT → CmpKept fz (cmpBuf out m5) r'
 
 /-- **What an accepting compared run means** (`9223372036854775808 = 2^63`): the buffers below
 `2^63` bytes; mode `4` returns `ACCEPT` or `2^63 + _`; then mode `5` (from mode `4`'s memory with
