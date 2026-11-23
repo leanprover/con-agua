@@ -59,8 +59,8 @@ l_model minorsFrom_specW (p : Prog) (hf : p.lookup "minors_from" = some minorsFr
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
-l_model iotaRecMajor_specW (p : Prog) (hf : p.lookup "iota_rec_major" = some iotaRecMajorL)
-  fns [hf ↦ iotaRecMajorW list]
+l_model iotaReadMajor_specW (p : Prog) (hf : p.lookup "iota_read_major" = some iotaReadMajorL)
+  fns [hf ↦ iotaReadMajorW list]
   specs [callW_spec p n "minors_from", callW_spec p n "expr_get_d", callW_spec p n "get_app_fn_f",
     callW_spec p n "e_view", callW_spec p n "get_app_args_f", callW_spec p n "expr_drop_vars_list"]
   grind [arena_grind] fold [tierW, idxW]
@@ -69,7 +69,7 @@ l_model iotaRecMajor_specW (p : Prog) (hf : p.lookup "iota_rec_major" = some iot
 l_model iotaRecOf_specW (p : Prog) (hf : p.lookup "iota_rec_of" = some iotaRecOfL)
   fns [hf ↦ iotaRecOfW list]
   specs [callW_spec p n "iota_frame", callW_spec p n "get_app_fn_f", callW_spec p n "e_view",
-    callW_spec p n "iota_rec_major"]
+    callW_spec p n "iota_read_major"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
