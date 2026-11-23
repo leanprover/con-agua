@@ -427,6 +427,83 @@ theorem pinFootprintNat_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x
     refine ⟨_, hrun, ?_, hS', hg', hf'⟩
     simpa [hp14, List.append_assoc] using hy
 
+
+/-- **`pin_footprint(n)` refines `pinFootprint`**: the twin's footprint list pushed. -/
+@[refines ConRon.Arena.pinFootprint]
+theorem pinFootprint_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x : NeedsSt}
+    (hc : callW p n "pin_footprint" [w] m = some (r, m')) (hS : StageR vis fe m a)
+    (hx : NdR m x) (hw : HW w) :
+    ∃ fp, (pinFootprint (decI w)).run a = .ok (fp, a) ∧ NdR m' ⟨x.seen, x.acc ++ fp⟩ ∧
+      StageR vis fe m' a ∧ IWGrow m m' ∧ MemFrame ndAW ndCW m m' := by
+  have Q := P.toNeedsProg
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinFootprint_specW p Q.pf n _ w) hc
+  rcases n with _ | n
+  · rw [pinFootprintW.eq_1] at hW; cases hW
+  rw [pinFootprintW.arm1] at hW
+  replace hW := opt_some hW (pinFootprintW.k_nat_op_name.none ..)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  obtain ⟨s1, rfl, -, hn⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (non_spec p Q.nat_op_name Q.pin_range_has Q.pin_at n _ w) c1
+  obtain ⟨e1, -, hi⟩ := nonW_iff hn
+  have hF := hS.check.pins.full (nonW_flag hn)
+  dsimp only at e1 hi
+  rw [← e1] at hW
+  have hops := natOps_contains hF hw
+  have hdms := natDms_contains hF hw
+  have hnames : (pinFootprint (decI w)).run a = (if
+      ([(decI (pinW m 15) : NIdx), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18),
+        decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)].contains (decI w) ||
+       (dmsL m).contains (decI w)) = true then
+      (do let xs ← pinFootprintNat (decI w) (dmsL m); pinFootprintReduce (decI w) xs)
+      else pinFootprintReduce (decI w) []).run a := by
+    simp only [pinFootprint, StateT.run_bind, natOpNames_run hF, natDivModNames_run hF,
+      except_ok_bind]
+  by_cases h0 : r1.headD 0 ≠ 0
+  · rw [pinFootprintW.k_nat_op_name.arm1 _ _ _ _ _ h0] at hW
+    replace hW := opt_some hW (pinFootprintW.k_pin_footprint_nat.none ..)
+    obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+    rw [pinFootprintW.k_pin_footprint_nat.arm1, pinFootprintW.j1.arm1] at hW
+    obtain ⟨xs, ex, hx2, hS2, hg2, hf2⟩ := pinFootprintNat_ref P c2 hS hx hF hw
+    replace hW := opt_some hW (pinFootprintW.k_pin_footprint_reduce.none ..)
+    obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+    rw [pinFootprintW.k_pin_footprint_reduce.arm1] at hW
+    obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [← e]
+    have hF2 : PinsFull m2 a.pins := hF.frame hf2 (by decide)
+    obtain ⟨ys, ey, hy, f3⟩ := pinFootprintReduce_ref Q c3 hS2 hx2 hF2 hw xs
+    obtain ⟨i, h1, h2, h3⟩ := hi.mp h0
+    have hc : ([(decI (pinW m 15) : NIdx), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18),
+        decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)].contains (decI w) ||
+       (dmsL m).contains (decI w)) = true := by
+      rcases Nat.lt_or_ge i 21 with hl | hl
+      · rw [hops.mpr ⟨i, h1, hl, h3⟩]; rfl
+      · rw [hdms.mpr ⟨i, hl, h2, h3⟩]; simp
+    refine ⟨xs ++ ys, ?_, by simpa [List.append_assoc] using hy, (hS2.ndFrame f3).1,
+      hg2.trans (hS2.ndFrame f3).2, hf2.trans (ndFrame_w f3)⟩
+    rw [hnames]; simp only [hc, ite_true]
+    rw [StateT.run_bind, ex, except_ok_bind]
+    exact ey
+  · have h0' : r1.headD 0 = 0 := Classical.not_not.mp h0
+    rw [pinFootprintW.k_nat_op_name.arm2 _ _ _ _ _ h0', pinFootprintW.j1.arm1] at hW
+    replace hW := opt_some hW (pinFootprintW.k_pin_footprint_reduce.none ..)
+    obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+    rw [pinFootprintW.k_pin_footprint_reduce.arm1] at hW
+    obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [← e]
+    obtain ⟨ys, ey, hy, f3⟩ := pinFootprintReduce_ref Q c3 hS hx hF hw []
+    have hc : ([(decI (pinW m 15) : NIdx), decI (pinW m 16), decI (pinW m 17), decI (pinW m 18),
+        decI (pinW m 19), decI (pinW m 20), decI (pinW m 21)].contains (decI w) ||
+       (dmsL m).contains (decI w)) = false := by
+      have n1 : ¬ ∃ i, 14 ≤ i ∧ i < 29 ∧ pinW m (1 + i) = w := fun h => h0 (hi.mpr h)
+      have a1 : ¬ _ := mt hops.mp (fun ⟨i, h1, h2, h3⟩ => n1 ⟨i, h1, by omega, h3⟩)
+      have a2 : ¬ _ := mt hdms.mp (fun ⟨i, h1, h2, h3⟩ => n1 ⟨i, by omega, h2, h3⟩)
+      simp only [Bool.not_eq_true] at a1 a2
+      rw [a1, a2]; rfl
+    refine ⟨ys, ?_, by simpa using hy, (hS.ndFrame f3).1, (hS.ndFrame f3).2, ndFrame_w f3⟩
+    rw [hnames]; simp only [hc, Bool.false_eq_true, ite_false]
+    simpa using ey
+
 end fp
 
 end L.Arena
