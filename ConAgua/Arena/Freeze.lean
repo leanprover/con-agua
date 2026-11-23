@@ -119,9 +119,11 @@ def frozen : List (ArrId × Fz) :=
    (FIRSTS, ⟨FIRSTS, fzDecl⟩),
    (L.Front.DECL, ⟨L.Front.DECL, .bin .add (fzC 1) (.bin .mul (fzC 8) fzDecl)⟩),
    (L.Front.DLP, ⟨L.Front.DLP, .bin .add (fzC 1) (.ld64 L.Front.DLP (fzC 0))⟩)] ++
-  [SIXA, SIXS, SIXN, STXA, STXS, STXN, MATA, MATS, MATN].zip
-    [nanonCS, nstrCS, nnumCS, nanonCS, nstrCS, nnumCS, nanonCS, nstrCS, nnumCS] |>.map
-    fun (a, C) => (a, ⟨a, fzSolExt C.ca.toNat⟩)
+  [(SIXA, ⟨SIXA, fzSolExt nanonCS.ca.toNat⟩), (SIXS, ⟨SIXS, fzSolExt nstrCS.ca.toNat⟩),
+   (SIXN, ⟨SIXN, fzSolExt nnumCS.ca.toNat⟩), (STXA, ⟨STXA, fzSolExt nanonCS.ca.toNat⟩),
+   (STXS, ⟨STXS, fzSolExt nstrCS.ca.toNat⟩), (STXN, ⟨STXN, fzSolExt nnumCS.ca.toNat⟩),
+   (MATA, ⟨MATA, fzSolExt nanonCS.ca.toNat⟩), (MATS, ⟨MATS, fzSolExt nstrCS.ca.toNat⟩),
+   (MATN, ⟨MATN, fzSolExt nnumCS.ca.toNat⟩)]
 
 /-- The ids entry 2 maps into the buffer: the header, then the frozen arrays. -/
 def frozenIds : List TieredArray := ↑HDRF :: frozen.map (fun x => ↑x.1)
