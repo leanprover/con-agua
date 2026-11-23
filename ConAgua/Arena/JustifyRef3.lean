@@ -1,11 +1,9 @@
 module
 
-public import ConAgua.Arena.JustifyRef2
+public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.IndRealNames
 public import ConAgua.Arena.QuotAtT
-public import ConAgua.Arena.LeafFns
-import ConAgua.Arena.IndLibSpec
-import ConAgua.Arena.RecLayout.CVDec
+import ConAgua.Arena.Checker
 import ConRon.Bridge.Rel
 import ConRon.Bridge.Grind
 import ConRon.Bridge.Frontend.Shared

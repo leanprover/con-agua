@@ -2,14 +2,10 @@ module
 
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.PipeRest
-public import ConAgua.Checker.PreLoopWSStages
 public import ConAgua.Front.FrontPreOK1
-public import ConAgua.Checker.ParEntryA
 public import ConAgua.Checker.PresizeStage
 import ConAgua.Checker.CheckARun
-import ConAgua.Checker.PipeFinal
 meta import ConAgua.Checker.LoopProgTac
-import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
 import ConAgua.Checker.PrepProgHoist
@@ -123,7 +119,7 @@ theorem stash_of {m : Mem} {ds : Array IDeclaration} (hD : DeclsF (m.arr64 DECL)
     rw [stashM_cdecl, stashM0_cdecl, size_copy64]
   rw [stashM_dlp]
   refine ⟨hD.congr (by rw [hsz]; exact hcs) (by rw [hsz, ← hn]; exact hok.2.1) rfl hcp
-    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr (hR x hx) fun j _ hj => hcp j (by omega)⟩
+    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr_rows (hR x hx) fun j _ hj => hcp j (by omega)⟩
 
 
 /-! ## The parse state after the stash -/
@@ -244,7 +240,7 @@ theorem stash_R4 {bC bS pb : ByteArray} {sz : TieredArray → Nat} {m m' : Mem} 
       (by simp) (by simp) (by simp) (by simp) (by simp) (by simp)
   · intro x hx
     simp only [setIn_arr64, hm, stashM_decl, stashM_dlp, stashM0_decl]
-    exact recOK_congr (h5.rok x (by simp; omega)) fun j hj _ => by
+    exact recOK_congr_rows (h5.rok x (by simp; omega)) fun j hj _ => by
       simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; split <;> first | omega | rfl
   · exact (h5.mode.frame hsf (by decide +kernel) (by decide +kernel)).frame (memFrame_setIn _ _)
       (by simp) (by simp)

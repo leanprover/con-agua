@@ -1,14 +1,11 @@
 module
 
-public import ConAgua.Arena.DeclCheckT
 public import ConAgua.Arena.IndexBuild
 public import ConRon.Bridge.Checker.Pooled
 public import ConRon.Bridge.Compare.Record
-public import ConAgua.Arena.JustifyIface
 public import ConAgua.Arena.JustifyRef7
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk
-import ConAgua.Checker.NoVerdictTree
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen

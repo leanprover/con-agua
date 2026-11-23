@@ -1,8 +1,6 @@
 module
 
 public import ConAgua.Arena.Jobs
-public import ConAgua.Arena.JustifyRef7
-import ConAgua.Arena.JustifyModels
 
 @[expose] public section
 

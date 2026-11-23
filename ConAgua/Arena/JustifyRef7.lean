@@ -1,16 +1,13 @@
 module
 
 public import ConAgua.Arena.JustifyRef6
-public import ConAgua.Arena.DeclAxQuotT
 public import ConAgua.Arena.DeclCheckT
 public import ConRon.Bridge.Compare.Cone
 public import ConAgua.Arena.JustifySideRefSide
 public import ConAgua.Arena.JustifySide
 public import ConAgua.Arena.RefWalk
 import ConAgua.Arena.StubNamesRefine
-import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.DeclStepSpec
-import ConAgua.Arena.InferFieldSort
 public import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Checker.Arms
 import ConRon.Bridge.Checker.Base

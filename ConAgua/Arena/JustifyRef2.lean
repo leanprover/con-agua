@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.JustifyRef1
+public import ConAgua.Arena.JustifyModels
 import all ConAgua.Arena.Justify
 
 @[expose] public section

@@ -1,11 +1,6 @@
 module
 
 public import ConAgua.Arena.JustifyIface
-public import ConAgua.Arena.CheckerL
-public import ConAgua.Arena.IndIface
-public import ConAgua.Arena.NAnonStore
-public import ConAgua.Arena.NStrStore
-public import ConAgua.Arena.NNumStore
 import ConAgua.Census.Attr
 
 @[expose] public section

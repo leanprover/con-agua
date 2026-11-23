@@ -2,11 +2,10 @@ module
 
 public import ConAgua.Arena.Justify
 public import ConAgua.Arena.WhnfBase
+public import ConAgua.L.ErrSpec
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 public import ConAgua.Checker.NoVerdictTree
-public import ConAgua.Verdict.DeclValsE
-public import ConAgua.Arena.CheckerT
 import ConAgua.L.ModelGen
 import ConAgua.Arena.Verdict
 public import Std.WP.Tactic

@@ -2,8 +2,6 @@ module
 
 public import ConAgua.Arena.NeedsModels
 public import ConAgua.Arena.IndRealFvt
-public import ConAgua.Arena.Frame
-import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.WhnfCoreProj

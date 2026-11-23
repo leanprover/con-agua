@@ -1,7 +1,9 @@
 module
 
 public import ConAgua.Final.CmpOutcome
-import ConAgua.Compiler.Sim32
+public import ConAgua.Final.CmpAbi
+import ConAgua.Final.BufAbi
+import ConAgua.Final.DrvAbi
 import Kraken.X64.Registers
 
 @[expose] public section
