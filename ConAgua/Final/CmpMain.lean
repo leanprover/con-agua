@@ -348,7 +348,7 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
 machine returns to the caller with the callee-saved registers restored; `rdx = 0`, `rax = ACCEPT`
 means the runs accepted (`CmpAccepts`), `rdx = 2` that one failed with the code in `rax`
 (`CmpErr`). `CmpGuard`: the L-level facts the proof needs (the buffer's geometry after mode `5`,
-every job keeps the header); `hnd`, `hdom`: the frozen arrays are distinct and in the table. -/
+every job keeps the header), only for buffers below `2^63` bytes (the setup stub checks it); `hnd`, `hdom`: the frozen arrays are distinct and in the table. -/
 theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
     {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true) (hwf : Prog.wf tab q = true)
     (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray)
@@ -361,7 +361,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra)
-    (hG : CmpGuard tab p mode plo phi out fz own bC bS pb) :
+    (hG : bC.size < 2 ^ 63 → bS.size < 2 ^ 63 → pb.size < 2 ^ 63 → CmpGuard tab p mode plo phi out fz own bC bS pb) :
     Ev (CmpPost dm ra (CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)
       (CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)) dm (label abiCompareL) := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
@@ -599,6 +599,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     obtain ⟨-, hRes5, hMem5⟩ := hout'
     have hrax5 : s2.regs.rax = rs5.getD 0 0 := hRes5.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
     have hge5' : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hge5
+    have hG := hG hbC hbS hpb
     have hBok := hG.1 rs4 m4 rs5 m5 hres4 hge4' hres5 hge5'
     have hk63 : (rs5.getD 0 0 - 9223372036854775808).toNat < 2 ^ 63 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hge5')]
@@ -941,7 +942,7 @@ theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk 
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra)
-    (hG : CmpGuard tab p mode plo phi out fz own bC bS pb) :
+    (hG : bC.size < 2 ^ 63 → bS.size < 2 ^ 63 → pb.size < 2 ^ 63 → CmpGuard tab p mode plo phi out fz own bC bS pb) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb) ∧
         (st.data.regs.rdx = 2 → CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb st.data.regs.rax))
