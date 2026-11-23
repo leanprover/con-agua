@@ -888,10 +888,9 @@ def blockLargeElimAllowed : FunDecl := lfn (p, nested) locals (nz, n, large, k) 
 /-- `check_ind_decl(vis, boff, blen, nP)`: the `.indDecl block nP` arm of `checkDeclKind`
 (`@[l_impl ConRon.Arena.checkDeclKind]`, one arm of it): the declared parameter count
 (`ind_params_ok`), then the one route (`read_block`, `check_block`), or the reader's reason. -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
-def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vis2) {
+def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, reads, vis0, vis2) {
   pOk := call ind_params_ok(nP, boff, blen);
   if pOk == 0 { fail R_NUMBER_OF_PARAMETERS };
   (e, pNew) := call read_block(nP, boff, blen);
@@ -909,7 +908,10 @@ def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (pOk, e, pNew, vi
     if e == ⟪R_INDUCTIVE_BLOCK_CARRIES⟫ { fail R_INDUCTIVE_BLOCK_CARRIES };
     abort
   };
-  vis2 := call check_block(vis, boff, blen, pNew);
+  -- the ι reading rule before the block's check, its verdict after it
+  (reads, vis0) := call block_reads_at(vis, pNew);
+  vis2 := call check_block(vis0, boff, blen, pNew);
+  if reads == 0 { fail R_THE_RECURSOR_S_MINOR };
   return vis2
 }
 
@@ -945,7 +947,8 @@ def indPartsFns : Prog :=
 
 /-- Stubs for the functions of OTHER modules this module calls. -/
 def indPartsForeign : Prog :=
-  [("member_idx_at", stub 4), ("param_levels", stub 2), ("check_block", stub 4)]
+  [("member_idx_at", stub 4), ("param_levels", stub 2), ("check_block", stub 4),
+   ("block_reads_at", stub 2)]
 
 /-! ## A few runnable tests (no stub on their path) -/
 

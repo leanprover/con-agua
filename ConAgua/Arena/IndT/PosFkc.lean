@@ -53,6 +53,7 @@ structure FkcProg (p : Prog) : Prop where
   ft : FtProg p
   csa : p.lookup "check_spine_at" = some checkSpineAtL
   fkc : p.lookup "family_key_check" = some familyKeyCheckL
+  fkcs : p.lookup "family_key_checks" = some familyKeyChecksL
 
 set_option experimental.vcgen true in
 /-- **`check_spine_at`'s unified model**: `e_view`, `instantiate1_fast` lifted, the core's
@@ -74,6 +75,15 @@ l_model fkcE_spec (p : Prog) (hP : FkcProg p)
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 4000000 unified
+  nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
+
+set_option experimental.vcgen true in
+/-- **`family_key_checks`'s unified model**: the group mate's name read off its record,
+`family_key_check` through its call, the recursion. -/
+l_model fkcsE_spec (p : Prog) (hP : FkcProg p)
+  fns [hP.fkcs ↦ fkcsE]
+  grind [arena_grind] fold [tierW, idxW]
+  extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
 local notation "V" => ConLeche.CheckMode.verified

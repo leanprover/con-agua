@@ -103,6 +103,8 @@ def fixtures(tests, work):
     """[(id, path, expected exit code)] for every fixture with an expectation."""
     out, missing = [], []
     for want, rel in expectations(os.path.join(tests, "e2e-expected.txt")):
+        if rel.startswith("-"):
+            continue  # a run with arguments (`--compare`): not ported (`not_ported`)
         src = os.path.join(tests, "e2e", rel)
         if not os.path.exists(src) and os.path.exists(src + ".gz"):
             dst = os.path.join(work, "e2e", rel)
@@ -118,6 +120,17 @@ def fixtures(tests, work):
         src = os.path.join(arena, rel)
         (out if os.path.exists(src) else missing).append(("arena/" + rel, src, want))
     return out, missing
+
+
+def not_ported(tests):
+    """con-leche's argument rows (`<exit> --<arguments>` in `e2e-expected.txt`): the `--compare`
+    pairs, which the checker does not run yet (lane `compare` ports `--compare`)."""
+    out = []
+    for line in open(os.path.join(tests, "e2e-expected.txt"), encoding="utf-8"):
+        w = line.split()
+        if len(w) >= 2 and w[0].isdigit() and w[1].startswith("-"):
+            out.append(" ".join(w[1:]))
+    return out
 
 
 def run(binary, jobs, timeout, fid, path, want):
@@ -235,7 +248,7 @@ class Refs:
 
     def cmd(self, name, path):
         if name == "con-ron":
-            return [self.e2e.CON_RON, "--jobs=1", "--pins", self.pins, path]
+            return [self.e2e.CON_RON, "--jobs=1", path]  # the embedded pins: every variant (`--pins` gone, con-ron #171)
         return [self.ref_bin, path, f"--pins={self.npins}"]
 
     def verdict(self, name, fid, path, want, timeout):
@@ -308,6 +321,8 @@ def main():
             for fid, _, _ in missing:
                 print(f"MISSING {fid}")
             return 2
+        for args in not_ported(a.tests):
+            print(f"NOT PORTED {args}: the checker has no {args.split()[0]} yet (lane compare)")
         fl = flagged(a.tests)
         skipped = [f for f in fx if f[0].startswith("e2e/") and f[0][4:] in fl]
         fx = [f for f in fx if f not in skipped]

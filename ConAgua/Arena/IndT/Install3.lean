@@ -141,8 +141,8 @@ theorem cbt_ref (hP : CstProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AS
     rw [L.toNat_add_of_not_lt hov, UInt64.toNat_ofNat_of_lt' hnb]
   unfold ConRon.Arena.checkBlockTele
   -- `check_constant_val`
-  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _ 0)
-    (fun hG => hG.nv) id (ccv_ref (allow := 0) hV hq hApd hCrk hcr hCS hn hC.stageT
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (checkConstantVal_specE p hV n _ vis _ 0 0 0)
+    (fun hG => hG.nv) id (ccv_ref (allow := 0) (allowRd := 0) (allowSorry := 0) hV hq hApd hCrk hcr hCS hn hC.stageT
       (rec2DecCV_erecP hcvm hcvx) hcvP hA.cr.crOK)
     fun r1 s1 u1 a1 _ _ hr1 hP1 => ?_
   dsimp only [cbtE.k_check_constant_val]

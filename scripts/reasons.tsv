@@ -208,3 +208,36 @@ R_THE_KERNEL_REFUSED_TO	reject	the kernel refused to evaluate `Nat.pow` because 
 R_THE_KERNEL_REFUSED_TO_EVALUATE	reject	the kernel refused to evaluate `Nat.pow` because the result would exceed the maximum numeral size; raise it with --max-nat-size
 R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT	reject	the kernel refused to evaluate `Nat.shiftLeft` because its second argument does not fit in a 32-bit unsigned integer
 R_THE_RECURSOR_S_RULE_FOR_IS_NOT	reject	the recursor 's rule for is not written as a function of the recursor's leading arguments and the constructor's fields
+R_A_CONTEXT_RECORD	decline	a context record reads … (sorryAx)
+R_THE_INDUCTIVE_GROUP	decline	the inductive group of …, read from …: a group the recogniser does not read
+R_A_COMPILER_TRUST	reject	a compiler-trust name, not an opaque constant: …
+R_A_CONTEXT_RECORD_DECLARES	reject	a context record declares one of its names twice
+R_A_CONTEXT_RECORD_READS	reject	a context record reads … of …, which is unsafe or partial
+R_A_RECORD_READ	reject	a record read from module … stores …, which the context reads from module …
+R_IMPORT_CYCLE_2	reject	import cycle: …
+R_MODULE_DECLARES_A	reject	module … declares …, a compiler-trust name, as neither an opaque constant nor an axiom
+R_MODULE_DECLARES_A_NAME	reject	module … declares …, a name the checker reserves
+R_MODULE_DECLARES_WHICH	reject	module … declares …, which the module … it loads stores
+R_MODULE_OF_THE	reject	module … of the module system imports …, which is not
+R_MODULE_READS_WHICH	reject	module … reads …, which …
+R_MODULE_A_RECORD	reject	module …: a record of its private part stores …, which its private part does not hold
+R_MODULE_ITS_EXPORTED	reject	module …: its exported part holds …, its private part does not
+R_MODULE_ITS_EXPORTED_PART	reject	module …: its exported part ….olean does not read on its own (an exported part must not point outside its file, into its .olean.server or .olean.private), in …
+R_MODULE_NO_OLEAN	reject	module …: no .olean on the search path
+R_MODULE_THE_GROUP	reject	module …: the group of … lacks a member or a constructor
+R_MODULE_2	reject	module …: …
+R_MODULE_IS_NOT	reject	module …: … is not an inductive type
+R_MODULES_AND_STORE	reject	modules … and … store different constants named …, and both are loaded
+R_NAME_CAPTURE_MODULE	reject	name capture: module … reads …, which … declares
+R_THE_CONTEXT_RECORDS	reject	the context records … and … read each other (through …)
+R_THE_GROUP_READ	reject	the group read for … from … does not declare it
+R_THE_IMPORT_DOES	reject	the import … → … does not go to a smaller rank
+R_THE_LOADED_MODULES	reject	the loaded modules … store …, not as one constant (not proofs of one statement)
+R_THE_MODULE_IS	reject	the module … is loaded by the imports added to its header: the solution's closure holds the challenge
+R_THE_RECORD_OF	reject	the record of …, read from …: …
+R_THE_RECORD_READ	reject	the record read for … from … does not declare it
+R_THE_RECORD_OF_MODULE	reject	the record … of module … is malformed (a free or loose bound variable, an undeclared universe parameter, a nested rule's datum, a table's bodies or a literal's shape)
+R_THE_RECURSOR_S_MINOR	reject	the recursor's minor premise does not state the constructor's fields, indices and parameters as the constructor's type does
+R_THE_STATEMENT_OF	reject	the statement of … reads a name the context does not store before it
+R_THE_TOLERATED_AXIOM	reject	the tolerated axiom's name, not an axiom: …
+R_TWO_CONTEXT_RECORDS	reject	two context records store a name of …'s record (of …)

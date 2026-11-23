@@ -602,7 +602,7 @@ def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (rc, cv, r, r
   if rcsLen == 0 { return (0, 0) };
   rc := IW.u64[rcsOff];
   cv := IW.u64[rc];
-  r := call check_constant_val(vis, cv, 0);
+  r := call check_constant_val(vis, cv, 0, 0, 0);
   (ro, rl) := call class_stream_recs(vis, rcsOff + 1, rcsLen - 1);
   (qo, ql) := call sl_cons(cv, ro, rl);
   return (qo, ql)

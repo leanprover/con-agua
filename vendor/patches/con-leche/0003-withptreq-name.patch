@@ -1,0 +1,26 @@
+The withPtrEq shim (0001) at Kernel/Name.lean's two call sites, which upstream (#604, v4.36.0) now spells
+`ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq`: our `ConLeche.withPtrEq` in place of the root one,
+unsafe on nightly-2026-10-20 (vendor/README.md).
+
+diff --git a/vendor/con-leche/ConLeche/Kernel/Name.lean b/vendor/con-leche/ConLeche/Kernel/Name.lean
+index 3e6eaf6090b118dcd18fe55da128e8da3910fc57..8d95a038c4c46443e9980b08ca5c24b8fffa1975 100644
+--- a/vendor/con-leche/ConLeche/Kernel/Name.lean
++++ b/vendor/con-leche/ConLeche/Kernel/Name.lean
+@@ -71,7 +71,7 @@ almost always by their hashes.  The component comparison is
+ pointer-first too (`lean_string_eq` tests `s1 == s2`; the `Nat`
+ component goes through `ConLeche.ptrDecEq`, `withPtrEqDecEq`). -/
+ def Name.decEqPtr (a b : Name) : Decidable (a = b) :=
+-  ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
++  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
+     if hh : a.hashData = b.hashData then
+       match a, b with
+       | .anonymous, .anonymous => isTrue rfl
+@@ -82,7 +82,7 @@ def Name.decEqPtr (a b : Name) : Decidable (a = b) :=
+           | isFalse hp => isFalse (fun e => hp (Name.str.inj e).1)
+         else isFalse (fun e => hs (Name.str.inj e).2)
+       | .num p n, .num q m =>
+-        match ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq n m (fun _ => Nat.decEq n m) with
++        match ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq n m (fun _ => Nat.decEq n m) with
+         | isTrue hn =>
+           match Name.decEqPtr p q with
+           | isTrue hp => isTrue (by rw [hp, hn])

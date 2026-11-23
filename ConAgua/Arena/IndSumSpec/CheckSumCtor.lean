@@ -70,7 +70,7 @@ theorem iarSim {v : Word} {fe : IFEnv} (n : Nat) (m : Mem)
 theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (resSort : LIdx)
     (isProp large : Bool) (cvC : IConstantVal) (nF : Nat) (cvTa : IConstantVal) :
     checkSumCtor V fe₀ fe T lps nP nIdx resSort isProp large cvC nF cvTa = (do
-      checkConstantVal V fe cvC false
+      checkConstantVal V fe cvC false false false
       let (_, cbody) ← unwrapOr (← stripPis (nP + nF) cvC.type)
         (.notImplemented "direct sum: constructor telescope")
       unless ← structCtorResidOk T lps nP nF nIdx cbody do

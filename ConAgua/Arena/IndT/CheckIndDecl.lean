@@ -24,6 +24,11 @@ import all Init.Data.List.Control
 import ConAgua.Arena.IndT.ArmMemos
 import ConAgua.Arena.IndT.Lift
 import ConAgua.Arena.ExceptOpt
+public import ConAgua.Arena.IotaRelRefD
+public import ConAgua.Arena.IotaRelRefK
+import ConRon.Bridge.Inductives.IotaRead
+import ConAgua.Arena.IndKindEnvProof
+import ConAgua.Arena.IndT.Pass
 
 @[expose] public section
 
@@ -56,7 +61,8 @@ set_option experimental.vcgen true in
 verdict closure) lifted; `check_block` through its run. -/
 l_model cidE_spec (p : Prog) (P : CidProg p)
   fns [P.cid ↦ cidE]
-  specs [callW_spec p n "ind_params_ok", callW_spec p n "read_block"]
+  specs [callW_spec p n "ind_params_ok", callW_spec p n "read_block",
+    callW_spec p n "block_reads_at"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -315,11 +321,44 @@ theorem decCIsR_rP {a : Nat → Option Word} {o l : Nat} {block : List IConstant
   obtain ⟨q, -, hq⟩ := hj
   exact decCI_recInfo_rP hq
 
+/-- The program facts of the ι reading rule (`blockReadsAt_rel`): the lookups, the `AbsKeep` of
+its callees outside the readings' frame, `recs_read` keeping the own rows' counters, and
+`block_reads_at` keeping the stage's memos (`BrMem`, `IotaRelRefK.lean`). -/
+structure IotaArmProg (p : Prog) : Prop where
+  rel : IotaRelProg p
+  frame : IotaFrameProg p
+  blk : BlockProg p
+  cb : CbrtLook p
+  ef : EnvFlagsProg p
+  ia : p.lookup "iw_alloc" = some iwAlloc
+  r3 : p.lookup "rec3" = some rec3
+  cp : p.lookup "iw_copy" = some iwCopy
+  sn : p.lookup "sl_snoc" = some slSnoc
+  pt : p.lookup "env_pop_temp" = some envPopTempL
+  pa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll
+  esf : p.lookup "env_set_flags" = some envSetFlagsL
+  bra : p.lookup "block_reads_at" = some blockReadsAtL
+  rs : p.lookup "recs_read" = some recsReadL
+  rc : p.lookup "rec_reads" = some recReadsL
+  fr : p.lookup "rules_read" = some rulesReadL
+  rr : p.lookup "rule_reads" = some ruleReadsL
+  kIpr : AbsKeep p "iota_parts_rel"
+  kBk : AbsKeep p "block_constants"
+  kBr : AbsKeep p "block_recs"
+  kCb : AbsKeep p "cons_block_recs_temp"
+  kGp : AbsKeep p "gen_rec_check_pop_all"
+  kEs : AbsKeep p "env_set_flags"
+  own : ∀ (k : Nat) (vs : List Word) (m₀ : Mem) (r₀ : List Word) (m₁ : Mem),
+    callW p k "recs_read" vs m₀ = some (r₀, m₁) → ownC m₁ = ownC m₀
+  bri : ∀ (n : Nat) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    callW p n "block_reads_at" vs m = some (r, m') → BrMem m → BrMem m'
+
 /-- The program facts `cid_ref` takes beyond `CidProg`: the core's write set and the level cache
-(`read_block`'s refinement). -/
+(`read_block`'s refinement), the ι reading rule's. -/
 structure CidProg2 (p : Prog) : Prop extends CidProg p where
   hcl : CoreStageClosed p
   hL : LvlCacheProg p
+  iota : IotaArmProg p
 
 section sims
 variable {p : Prog}
@@ -432,14 +471,51 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} {dn : NIdx → Option ConLeche.Name}
   obtain ⟨bsP, hpP, hdP⟩ := hq4
   rw [cidE.k_read_block.arm1 _ _ _ _ _ _ _ hr41]
   dsimp only
-  rw [← bind_pure (ConRon.Arena.checkBlock _ _ _ _)]
+  -- the ι reading rule (`blockReadsAt_rel`), at the entry index
+  have I := P.iota
+  refine RefE.bindLift (fun _ => cidE.k_block_reads_at.none ..) fun r5 m5 c5 => ?_
+  have hrel4 : ConRon.Bridge.Inductives.EnvRel env fe a4.store :=
+    (ConRon.Bridge.Inductives.EnvRel.ofCheck hfold.check hfold.gate hfold.envWF).mono hps4.ext
+  obtain ⟨⟨reads, fe₀⟩, a5, h5, hS5, hg5, hd5, hA5⟩ := blockReadsAt_rel I.rel I.frame I.blk I.cb I.ef
+    I.ia I.r3 I.cp I.sn I.pt I.pa I.esf I.bra I.rs I.rc I.fr I.rr I.kIpr I.kBk I.kBr I.kCb I.kGp
+    I.kEs I.own c5 hC4 hA4 hrel4 hq4' hsl4 (Classical.choose_spec hIM4.stage.ma) hdP
+  refine ⟨_, _, h5, ?_⟩
+  dsimp only at hS5 hd5 ⊢
+  rw [cidE.k_block_reads_at.arm1]
+  obtain ⟨c5', hrel5, x5, pn5, -⟩ :=
+    ConRon.Bridge.Inductives.blockReadsAt_bridge hchk4 hrel4 hdP h5
+  have hfeq := L.Arena.blockReadsAt_feq h5
+  dsimp only at c5' hrel5 hfeq
+  have hBr : BrMem m5 := I.bri _ _ _ _ _ c5 ⟨hIM4.stage, hIM4.cr⟩
+  have hIM5 : IndMemos m5 := ⟨hBr.stage, hA5.i1, hBr.cr⟩
+  have hC5 : StageC dn (r5.tail.headD 0) fe₀ env m5 a5 := StageC.ofView hC4 hS5 hA5 c5' x5
+  have epins : a5.pins = a.pins := pn5.trans hps4.pins
+  have hpp : ConRon.Bridge.PersPins a5 := by
+    obtain ⟨q1, q2, q3, q4, q5⟩ := hfold.persPins
+    exact ⟨by rw [epins]; exact q1, by rw [epins]; exact q2, by rw [epins]; exact q3,
+      by rw [epins]; exact q4, by rw [epins]; exact q5⟩
+  have hfold5 : ConRon.Bridge.FoldOK env fe₀ a5 :=
+    ⟨c5', hfold.envWF, by rw [hfeq.1]; exact hfold.tblShape, hpp,
+      ⟨fun k => by rw [hfeq.2.1 k, hfeq.1]; exact hfold.coh.1 k,
+        fun k => by rw [hfeq.2.2.2, hfeq.1]; exact hfold.coh.2 k⟩,
+      ConRon.Bridge.Inductives.GR.FEq.gate hfeq hfold.gate⟩
+  -- `check_block` at the index the pops gave back
   refine RefE.bindE (fun _ => cidE.k_check_block.none ..) id
-    (hbr n (by omega) vis o l _ fe env s4.mem a4 a bs bsP block blockP hC4 hfold
-      hps4.ext (by rw [hps4.pins]) hq4' hsl4 hblk4 hb hbP4 hdP
+    (hbr n (by omega) _ o l _ fe₀ env m5 a5 a5 bs bsP block blockP hC5 hfold5
+      (ConRon.Arena.Ext.refl _) rfl (hq4'.grow (decBS_mono _) hg5) (hsl4.grow' hq4' hg5)
+      (hblk4.grow (decEBlk_mono _ _ _) hg5) hb (ConRon.Bridge.denoteCIList_mono x5 _ _ hbP4)
+      (ConRon.Bridge.Inductives.dShape_ext x5 _ _ hdP)
       (ConLeche.readBlock_declared (except_toOption_eq_some.mp hpP)) hlpd
-      (readBlock_nP_lt (decCIsR_rP hdec) hrun4) hIM4 hA4) fun v y a5 _ hR => ?_
-  rw [cidE.k_check_block.arm1]
-  exact RefE.ret rfl (hR.pre hg4)
+      (readBlock_nP_lt (decCIsR_rP hdec) hrun4) hIM5 hA5) fun v y a6 _ hR => ?_
+  -- the verdict of the reading rule, after the block's check
+  refine RefE.ofArms (fun h => cidE.k_check_block.abort1 (hc1 := h) ..)
+    (fun h => cidE.k_check_block.arm1 (hc1 := h) ..)
+    (RefE.guardIf (by decide) (fun h => by rw [← hd5.1, h]; rfl)
+      (fun h => by
+        have e := hd5.1
+        rw [h] at e
+        simpa using e) fun _ _ => ?_)
+  exact RefE.ret rfl (hR.pre (hg4.trans hg5))
 
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDeclKind`** under `StageT` and the
 twin's fold invariant: the ok half of `cid_ref`, from the call's run. -/

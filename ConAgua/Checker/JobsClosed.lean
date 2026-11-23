@@ -39,6 +39,8 @@ import all ConAgua.Arena.ImaxStore
 import all ConAgua.Arena.IndIface
 import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
+import all ConAgua.Arena.IotaFrame
+import all ConAgua.Arena.IotaRel
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndSum
@@ -299,7 +301,9 @@ def cdFns : List FnName :=
     "er_sl_eq", "er_slice_eq", "er_to_iw", "erase_each", "erase_fvar_tys", "erec_alloc", "erec_ci",
     "erec_push", "erec_put", "eta_cert", "eta_cert_body", "eta_cert_ty", "eta_ctor_shape",
     "eta_fab_args", "eta_projs", "eta_rescue_table", "expr_drop_vars", "expr_drop_vars_list",
-    "expr_get_d", "expr_view_ok", "fab_scope_ok", "family_key_check", "family_telescope",
+    "expr_get_d", "expr_view_ok", "fab_scope_ok", "family_key_check", "family_key_checks",
+    -- the ι reading rule (ronsync8)
+    "pi_tele", "motive_level", "iota_frame", "is_minor_at", "minors_from", "iota_read_major", "iota_rec_of", "lift_field_doms", "lift_idx_args", "iota_parts_of_at", "ctor_levels_at", "iota_bvars", "iota_params_at", "iota_parts_at_body", "iota_parts_at", "expr_lvl_eq", "name_opt_param", "name_auto_param", "name_out_param", "name_semi_out_param", "name_missing", "ann_witness", "ann_ident_body", "ann_ident_val", "ann_ident", "ann_eq", "list_lvl_eq", "list_ann_eq", "params_ann_eq", "iota_parts_rel", "rule_reads", "rules_read", "rec_reads", "recs_read", "block_reads_at", "block_constants", "block_ctors", "block_formers", "block_ctors_go", "block_ctors_groups", "block_formers_go", "family_telescope",
     "field_doms_resolve", "find_pinned", "find_pinned_cv", "find_proj", "find_rule", "find_table",
     "fire_levels_at", "fl_clear", "fl_find", "fl_go", "fl_node", "fl_put", "flush_caches",
     "fm_clear", "fm_find", "fm_put", "forall_find", "forall_push", "former_def_headed",
@@ -366,7 +370,7 @@ def cdFns : List FnName :=
     "nat_mul_lit", "nat_one", "nat_op_bool_ctors", "nat_op_cod", "nat_op_deps",
     "nat_op_deps_stored", "nat_op_equations", "nat_op_guard", "nat_op_name",
     "nat_op_names", "nat_op_pins", "nat_op_pins_a", "nat_op_pins_b", "nat_op_pins_c",
-    "nat_op_stored_ok", "nat_op_stored_ok_all", "nat_op_ty_pinned", "nat_pow",
+    "nat_op_stored_ok", "nat_op_ty_pinned", "nat_pow",
     "nat_pow_lit", "nat_pred", "nat_pred_lit", "nat_shl", "shl_n", "zero_n", "nat_shl_lit", "nat_shr", "shr_n", "nat_shr_lit",
     "limb_push", "lit_nat_sized", "nat_size_refused", "pow_nat", "pow_refused", "shift_left_refused", "size_bytes",
     "nat_sub", "sub_n", "sub_1", "nat_sub_lit", "nat_succ_lit", "nat_succ_ok", "nat_trim", "nat_var", "nat_xor", "xor_n", "copy_n",

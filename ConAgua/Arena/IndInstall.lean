@@ -224,7 +224,7 @@ def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
   cvT := IW.u64[ms];
   k := nP + IW.u64[ms + 1];
   if k < nP { abort };
-  z := call check_constant_val(vis, cvT, 0);
+  z := call check_constant_val(vis, cvT, 0, 0, 0);
   (cvTa, s) := call check_sum_tele(k, cvT);
   (ok, bsOff, bsLen, body) := call strip_pis(k, EREC⦃cvTa + ⟪CV.type⟫⦄);
   if ok == 0 { abort };
@@ -711,7 +711,7 @@ def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u,
   (dO, dL) := call declined_at_definition();
   hit := call sl_contains(dO, dL, EREC⦃cvT⦄);
   if hit != 0 { fail R_THIS_FAMILY_STORED };
-  u := call check_constant_val(vis, cvT, 0);
+  u := call check_constant_val(vis, cvT, 0, 0, 0);
   k := nP + IW.u64[ms + 1];
   if k < nP { abort };
   cvR := call reduced_former(vis, cvT, k);

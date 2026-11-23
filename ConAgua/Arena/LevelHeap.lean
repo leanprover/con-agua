@@ -165,7 +165,7 @@ theorem lvA_eq (m : Mem) (p : Word) : lvA m p = (lvNodeW m p).tail.headD 0 := rf
 theorem lvB_eq (m : Mem) (p : Word) : lvB m p = (lvNodeW m p).tail.tail.headD 0 := rfl
 attribute [level_grind =] lvG_eq lvA_eq lvB_eq
 
-/-- con-leche: ConLeche/Kernel/Expr.lean:132-133 ConLeche.Level.beq -/
+/-- con-leche: ConLeche/Kernel/Expr.lean:126-127 ConLeche.Level.beq -/
 @[no_expose, l_impl ConLeche.Level.beq]
 def lvEq : FunDecl := lfn (p, q) locals (g, a, b, h, c, d, x) {
   if p == q { return 1 };

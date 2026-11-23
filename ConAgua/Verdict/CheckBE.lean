@@ -51,7 +51,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
       ∀ a, phaseBS a = true → X.arr64 a = m.arr64 a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
     ⦃fun _ _ => True;
-      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
+      ErrClaimV (checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
   rintro s e ⟨rfl, hy, X, hfx, hsX, hXm⟩ hrun
   rw [hy] at hrun
@@ -103,7 +103,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
   have hseq : ∀ (c t : Nat) (a a' : AState), WorkerOK PA.sF a →
       (PrefixOK pinsP dsP t ∧ ((ConLeche.Cached.recsConsts (dsP.take t)).map (·.name)).Nodup) →
       t + c ≤ PA.ds.size →
-      checkJobList VM PA.ipins PA.I PA.ds (List.range' t c) a = .ok (.ok (), a') →
+      checkJobList VM PA.ipins none PA.I PA.ds (List.range' t c) a = .ok (.ok (), a') →
       WorkerOK PA.sF a' ∧ PrefixOK pinsP dsP (t + c) ∧
         ((ConLeche.Cached.recsConsts (dsP.take (t + c))).map (·.name)).Nodup := by
     intro c
@@ -117,12 +117,12 @@ theorem checkJobs_seqE {b pb : ByteArray}
       intro t a a' hw ⟨hPt, hndt⟩ hle hl
       have htk : t < PA.ds.size := by omega
       rw [List.range'_succ] at hl
-      cases hrj : recordJob VM PA.ipins PA.I t PA.ds[t] a with
+      cases hrj : recordJob VM PA.ipins none PA.I t PA.ds[t] a with
       | error ce =>
-        have e1 : (checkJobList VM PA.ipins PA.I PA.ds (t :: List.range' (t + 1) c)) a =
+        have e1 : (checkJobList VM PA.ipins none PA.I PA.ds (t :: List.range' (t + 1) c)) a =
             .ok (.error (ce, t), AState.abandoned) := by
           simp only [checkJobList, runJob, Array.getElem?_eq_getElem htk, hrj]
-        rw [show (checkJobList VM PA.ipins PA.I PA.ds (t :: List.range' (t + 1) c)) a = _ from hl] at e1
+        rw [show (checkJobList VM PA.ipins none PA.I PA.ds (t :: List.range' (t + 1) c)) a = _ from hl] at e1
         cases e1
       | ok v =>
         obtain ⟨u, a₁⟩ := v
@@ -130,7 +130,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
         rw [checkJobList_cons_ok htk hrj] at hl
         obtain ⟨htk', hdk⟩ := H.hden t htk
         obtain ⟨hw₁, env', F, hd⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd
-          H.hI H.hpI hw htk htk' hdk hPt hndt hrj
+          H.hI H.hpI hw htk htk' hdk hPt.envWF hndt hrj
         have := ih (t + 1) a₁ a' hw₁ (PrefixOK.step H.hpush htk' hPt hd hndt) (by omega) hl
         rwa [show t + 1 + c = t + (c + 1) by omega] at this
   have h0 : PrefixOK pinsP dsP 0 ∧ ((ConLeche.Cached.recsConsts (dsP.take 0)).map (·.name)).Nodup := by
@@ -165,7 +165,7 @@ theorem checkB_seqE {b pb : ByteArray}
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun _ _ => True;
-      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
+      ErrClaimV (checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
   have hhi'' : s₀.mem.glob ⟨11⟩ = hi := hhi'
@@ -205,7 +205,7 @@ theorem checkMode2_seqE {b pb : ByteArray}
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
     ⦃fun _ _ => True;
-      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
+      ErrClaimV (checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
   cases n with
@@ -213,7 +213,7 @@ theorem checkMode2_seqE {b pb : ByteArray}
   | succ n =>
     have hB : ⦃fun s => s.mem = s₀.mem⦄ invoke checkerProg (exec checkerProg n) "check_b" []
         ⦃fun _ _ => True;
-          ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
+          ErrClaimV (checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size)) PA.sF.worker⦄ := by
       apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
       intro s₁ e hs hrun
       exact M.of_run_err (P := fun x => x = s₁) rfl hrun

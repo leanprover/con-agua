@@ -141,7 +141,7 @@ theorem threads_twinAcceptsPooled (hCd : CheckerCd)
     recCall_stepE hJP hFD hLD hdn hrec hpp (by omega) hden hPD
   have hstep : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →
       (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
-      ∃ a', recordJob .verified PA.ipins PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by
+      ∃ a', recordJob .verified PA.ipins none PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by
     intro k r r' a hk hR ⟨n, rs, hn, hrun, hkept⟩ hfo
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI⟩ := runThr hJP.check_jobs hRS hsz n hn a (UInt64.ofNat k)

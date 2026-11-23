@@ -114,8 +114,8 @@ entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check
 /-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
 and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`1` if a line did
 not scan). -/
--- con-ron: ConRon/Arena/Main.lean:137-169 ConRon.Arena.runPipelineHead
--- con-ron: ConRon/Arena/Checker.lean:97-106 ConRon.Arena.checkStream
+-- con-ron: ConRon/Arena/Main.lean:142-174 ConRon.Arena.runPipelineHead
+-- con-ron: ConRon/Arena/Checker.lean:101-111 ConRon.Arena.checkStream
 @[no_expose] def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
   z := call cap_check();
   z := call pb_check();
@@ -137,8 +137,8 @@ the core caches flushed (the worker's empty caches: in place, the index build's 
 entries would remain; between two calls they are empty already, every job ending in
 `scratch_drop`), then the jobs `PLO‥PHI-1` (`PHI` at most the number of records), in order, from
 the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`. -/
--- con-ron: ConRon/Arena/Checker.lean:64-71 ConRon.Arena.AState.worker
--- con-ron: ConRon/Arena/Pooled.lean:33-45 ConRon.Arena.PooledAccepts
+-- con-ron: ConRon/Arena/Checker.lean:65-73 ConRon.Arena.AState.worker
+-- con-ron: ConRon/Arena/Pooled.lean:33-46 ConRon.Arena.PooledAccepts
 @[no_expose, l_impl ConRon.Arena.AState.worker] def checkBL : FunDecl := lfn () locals (z, n) {
   if INIT == 0 {
     n := len(CTLF.u64);
@@ -195,7 +195,7 @@ Lane `induct`'s callers pass the walk fuel first (`abstract1_fast(fuel, e, d, k)
 constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
 `4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
 binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
--- con-ron: ConRon/Arena/CheckerBase.lean:288-301 ConRon.Arena.indParamsOk
+-- con-ron: ConRon/Arena/CheckerBase.lean:298-311 ConRon.Arena.indParamsOk
 @[no_expose, l_impl ConRon.Arena.indParamsOk]
 def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
   j := 0;

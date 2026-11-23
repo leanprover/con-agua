@@ -79,7 +79,7 @@ variable (pins dn ds I a₀) in
 def RecStep (p : Prog) : Prop :=
   ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobRel pins dn ds I a₀ r a →
     RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-    ∃ a', recordJob VM pins I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds I a₀ r' a'
+    ∃ a', recordJob VM pins none I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds I a₀ r' a'
 
 /-- A `check_jobs(j, j + 1)` loop that returns is one `record_job(j)` call. -/
 theorem checkJobsLoop_one {p : Prog} {n : Nat} {m q : Mem} {j : Word} (hj : j.toNat + 1 < 2 ^ 64)
@@ -110,7 +110,7 @@ theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = 
     ⦃fun s => x = j ∧ y = j + 1 ∧ s.mem.glob INIT ≠ 0 ∧ ∃ Y, FlushOK Y ∧ s.mem = flushMem Y ∧
       ThrAt pins dn ds I a₀ bs Y a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
-    ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+    ⦃fun _ s' => (∃ a', recordJob VM pins none I j.toNat ds[j.toNat] a = .ok ((), a') ∧
       ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
   apply M.triple_of_run
   rintro s rs s' ⟨hxj, hyj, hg, Y, hfy, hsY, X, hJ, hPB, hYX⟩ hrun
@@ -178,7 +178,7 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
     (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-    ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+    ⦃fun _ s' => (∃ a', recordJob VM pins none I j.toNat ds[j.toNat] a = .ok ((), a') ∧
       ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
@@ -222,7 +222,7 @@ theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some c
     (hmode : s₀.mem.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
-    ⦃fun _ s' => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+    ⦃fun _ s' => (∃ a', recordJob VM pins none I j.toNat ds[j.toNat] a = .ok ((), a') ∧
       ThrAt pins dn ds I a₀ bs s'.mem a') ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
@@ -248,9 +248,9 @@ theorem runThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some che
     (hmode : w.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem w) a)
     (hlo : w.glob PLO = j) (hhi : w.glob PHI = j + 1) {rs : List Word} {w' : Mem}
     (hrun : L.run checkerProg n "check" [] w = .ok (rs, w')) :
-    (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+    (∃ a', recordJob VM pins none I j.toNat ds[j.toNat] a = .ok ((), a') ∧
       ThrAt pins dn ds I a₀ bs w' a') ∧ w'.glob INIT ≠ 0 :=
-  run_post (Q := fun _ m => (∃ a', recordJob VM pins I j.toNat ds[j.toNat] a = .ok ((), a') ∧
+  run_post (Q := fun _ m => (∃ a', recordJob VM pins none I j.toNat ds[j.toNat] a = .ok ((), a') ∧
       ThrAt pins dn ds I a₀ bs m a') ∧ m.glob INIT ≠ 0) hrun
     (checkThr hck hS hds n hn a j hj hF _ hmode hR hlo hhi)
 

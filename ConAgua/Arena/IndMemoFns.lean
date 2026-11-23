@@ -156,7 +156,7 @@ def imFns : List FnName :=
    "nat_op_bool_ctors", "nat_op_cod", "nat_op_deps", "nat_op_deps_stored", "nat_op_equations",
    "nat_op_guard", "nat_op_name", "nat_op_names", "nat_op_pins", "nat_op_pins_a",
    "nat_op_pins_b", "nat_op_pins_c", "nat_op_stored", "nat_op_stored_ok",
-   "nat_op_stored_ok_all", "nat_op_ty_pinned", "nat_pow", "nat_pow_lit", "nat_pred", "nat_pred_lit",
+   "nat_op_ty_pinned", "nat_pow", "nat_pow_lit", "nat_pred", "nat_pred_lit",
    "limb_push", "lit_nat_sized", "nat_size_refused", "pow_nat", "pow_refused", "shift_left_refused", "size_bytes",
    "nat_shl", "shl_n", "zero_n", "nat_shl_lit", "nat_shr", "shr_n", "nat_shr_lit", "nat_sub", "sub_n", "sub_1", "nat_sub_lit", "nat_succ_lit",
    "nat_succ_ok", "nat_trim", "nat_var", "nat_xor", "xor_n", "copy_n", "nat_xor_lit", "nat_zero_ok", "nest_holes",

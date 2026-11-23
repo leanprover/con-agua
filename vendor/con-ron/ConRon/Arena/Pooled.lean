@@ -30,8 +30,9 @@ jobs increase: Theorem 1 inducts in fold order, and a job's start state is reach
 through the jobs its worker ran before it, whose specifications need the fold up
 to their own, smaller, positions. -/
 
-/-- con-leche: ConLeche/Driver/CheckPool.lean:199-227 checkPool — **the pooled
-check, accepted**: the index of `ds` built from `s`, ending in `s'`; and `parts`,
+/-- con-leche: ConLeche/Driver/CheckPool.lean:211-239 checkPool — **the pooled
+check, accepted** (the cited `Jobs ds justify` at `justify = none`, no solution):
+the index of `ds` built from `s`, ending in `s'`; and `parts`,
 one job list per worker, each drawn from the positions of `ds`, together covering
 them, each strictly increasing (the pool claims off one monotone counter), each accepted by `checkJobList` from `s'.worker`.  The twin of the Rust's
 `PoolAccepts` (`Refine2/Checker/Phased.lean`). -/
@@ -42,6 +43,18 @@ def PooledAccepts (mode : CheckMode) (pins : List INatOpPinSet)
     (∀ t < ds.size, ∃ w ∈ parts, t ∈ w) ∧
     (∀ w ∈ parts, ∀ t ∈ w, t < ds.size) ∧
     (∀ w ∈ parts, w.Pairwise (· < ·)) ∧
-    (∀ w ∈ parts, ∃ s'', checkJobList mode pins I ds w s'.worker = .ok (.ok (), s''))
+    (∀ w ∈ parts, ∃ s'', checkJobList mode pins none I ds w s'.worker = .ok (.ok (), s''))
+
+/-- con-leche: ConLeche/Driver/CheckPool.lean:211-239 checkPool — **the pooled check with a
+solution, accepted**: `PooledAccepts` with every job at the solution `J` (the cited `Jobs ds
+justify`, `J.side`): a compared run's challenge, checked with its solution. -/
+def PooledAcceptsJ (mode : CheckMode) (pins : List INatOpPinSet) (J : Option ISolution)
+    (ds : Array IDeclaration) (s : AState) (I : IStreamIndex) (s' : AState) : Prop :=
+  ∃ (parts : List (List Nat)),
+    buildIndex ds s = .ok (.ok I, s') ∧
+    (∀ t < ds.size, ∃ w ∈ parts, t ∈ w) ∧
+    (∀ w ∈ parts, ∀ t ∈ w, t < ds.size) ∧
+    (∀ w ∈ parts, w.Pairwise (· < ·)) ∧
+    (∀ w ∈ parts, ∃ s'', checkJobList mode pins J I ds w s'.worker = .ok (.ok (), s''))
 
 end ConRon.Arena

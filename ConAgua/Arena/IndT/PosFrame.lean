@@ -9,18 +9,18 @@ import ConAgua.Arena.IndPosSpec.Snoc
 import all ConRon.Bridge.Inductives.Positivity
 import ConAgua.Arena.IndPosSpec.Grow
 import ConAgua.Arena.IndRealAbsPos
-import ConAgua.Arena.IndRealAbsSim
 import ConAgua.Checker.NoVerdictTree
 import ConAgua.L.WordOff
+import ConAgua.Arena.RefWalk
 
 @[expose] public section
 
 /-!
 # `nest_frame` refines `nestFrame`, both outcomes (lane `indstaget`, helper `indstaget-pos`)
 
-`frameRef_step`, on the unified model `nfrE`, its twin side con-ron's `nestFrame_spec`'s: the group's
-head name (`internNNode_run`), the instantiation (`internConstE_run`, `mkAppN_run`) typed
-(`inferC_rsim`; its error from `CoreStubsE`), the group's constructors (`ngc_ref`), the frame's holes
+`fkcs_ref`: `family_key_checks` refines `familyKeyChecks` (every group mate's family at the key,
+typed). `frameRef_step`, on the unified model `nfrE`, its twin side con-ron's `nestFrame_spec`'s: the
+group mates' families at the key (`fkcs_ref`), the group's constructors (`ngc_ref`), the frame's holes
 (`frameHoles_run`), the constructors walked (the block's `CtorsRef` at `n`).
 -/
 
@@ -34,19 +34,83 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-- The head of `nestFrame`'s group (its first step). -/
-def nestHeadT (grp : List (NIdx × EIdx)) : AM NIdx :=
-  match grp with
-  | [] => internNNode .anonymous
-  | (c, _) :: _ => pure c
+section fkcs
+variable {p : Prog} (hq : KnotStageProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+  {fe : IFEnv} {env : ConLeche.Env} (henv : ConLeche.EnvWF env) {G : Prop}
+
+include hq henv in
+/-- **`family_key_checks` refines `familyKeyChecks .verified`, both outcomes** (twin side: con-ron's
+`familyKeyChecks_specF`'s proof): each group mate's name read off its record (`GrpAt.head`), its
+family at the key (`fkc_ref`), the rest of the group; induction on the fuel. -/
+@[refines ConRon.Arena.familyKeyChecks]
+theorem fkcs_ref (hP : FkcProg p) (hIlpf : IlpfF p) (hGnv : G → closedNV p _root_.L.Checker.nvFns = true)
+    (hGc : G → CoreStubsE p) (hGw : G → WhnfTopE p) (d us dO dL : Word) (ds : List EIdx)
+    (usP : List ConLeche.Level) (dsP : List ConLeche.Expr) (hlH : H us)
+    (hwds : ∀ x ∈ dsP, ConLeche.Expr.WScoped d.toNat x) (k : Nat) (hk62 : k ≤ 2 ^ 62) :
+    ∀ (m : Mem) (a : AState) (gO gL : Word) (grp : List (NIdx × EIdx))
+      (grpP : List (ConLeche.Name × ConLeche.Expr)),
+    StageC dn vis fe env m a → AbsOK m →
+    decHL m dO.toNat dL.toNat = some ds → dO.toNat + dL.toNat ≤ iwTop m →
+    gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
+    ConRon.Bridge.Inductives.dGrp a.store grp = some grpP →
+    denoteLs a.store.lss (decI us) = some usP → Frontend.denoteEList a.store ds = some dsP →
+    RefE G (fkcsE p k m vis d us dO dL gO gL)
+      (ConRon.Arena.familyKeyChecks V fe d.toNat (decI us) ds (grp.map (·.1))) a
+      (fun v _ a' => InsAt dn vis fe env m a v.2 a' ∧ (PosMR m → PosMR v.2)) := by
+  induction k with
+  | zero => intros; rw [fkcsE.eq_1]; exact RefE.of_cls0 Err.cls_outOfFuel
+  | succ k ih =>
+  intro m a gO gL grp grpP hC hA hds hdsb hgl hgb hgrp hgrpP husP hdsP
+  have hS := hC.stage
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
+  cases grp with
+  | nil =>
+    have hl0 : gL = 0 := UInt64.toNat_inj.mp (by simpa using hgl)
+    rw [fkcsE.arm1 p k m vis d us dO dL gO gL hl0]
+    exact RefE.ret rfl ⟨InsAt.refl hC hA, id⟩
+  | cons x grp =>
+  have hl0 : gL ≠ 0 := fun h => by subst h; simp at hgl
+  simp only [List.length_cons] at hgl hgb
+  rw [fkcsE.arm2 p k m vis d us dO dL gO gL hl0]
+  obtain ⟨w, cw, tw, hrw, -, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
+  rw [UInt64.ofNat_toNat] at hrw
+  rw [hrw, hrc]
+  -- the head's denotation, the rest's
+  simp only [ConRon.Bridge.Inductives.dGrp, List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hgrpP
+  rcases hx : ConRon.Bridge.Inductives.dGE a.store x with _ | y; · rw [hx] at hgrpP; simp at hgrpP
+  rcases hxs : grp.mapM (ConRon.Bridge.Inductives.dGE a.store) with _ | ys; · rw [hx, hxs] at hgrpP; simp at hgrpP
+  simp only [ConRon.Bridge.Inductives.dGE, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hx
+  obtain ⟨cP, hcP, -⟩ := hx
+  simp only [List.map_cons, ConRon.Arena.familyKeyChecks]
+  -- the head's family at the key
+  have hR1 := fkc_ref hq henv hP hIlpf hGnv hGc hGw d k (by omega) hC hA hcH hlH hds (.inr hdsb)
+    (by rw [hcd]; exact hcP) husP hdsP hwds
+  rw [hcd] at hR1
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => fkcsE.k_family_key_check.none ..)
+    (fkcE_spec p hP k _ vis d cw us dO dL) hGnv id hR1 fun r1 s1 _ a1 _ _ _ ⟨k1, hP1⟩ => ?_
+  rw [fkcsE.k_family_key_check.arm1]
+  dsimp only at k1 hP1
+  -- the rest of the group
+  have e1 : (gO + 1).toNat = gO.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e2 : (gL - 1).toNat = grp.length := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+  have hR2 := ih (by omega) s1.mem a1 (gO + 1) (gL - 1) grp ys k1.stage k1.abs (k1.decHL hds hdsb)
+    (k1.top hdsb) e2 (by rw [e1]; exact k1.top (by omega))
+    (by rw [e1]; exact hgrp.tail.grow (by omega) k1.grow)
+    (ConRon.Bridge.Inductives.dGrp_ext k1.core.ext _ _ hxs)
+    (ConRon.Bridge.denoteLs_ext husP k1.core.ext) (ConRon.Bridge.denoteEList_ext k1.core.ext _ _ hdsP)
+  exact RefE.lastE (K := fkcsE.k_family_key_checks p) (f := fun v => (0, v.2)) (fun _ => rfl) (fun _ => rfl) id hR2
+    fun v _ a2 _ ⟨k2, hP2⟩ => ⟨k1.trans k2, fun hPm => hP2 (hP1 hPm)⟩
+
+end fkcs
 
 section steps
 variable {p : Prog} (hq : KnotStageProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   {env : ConLeche.Env} (henv : ConLeche.EnvWF env)
 
 include hq henv in
-/-- **`nest_frame` refines `nestFrame`, both outcomes**, at L fuel `n + 1`: the group's head name, the
-family at the key typed (`fkc_ref`), the frame's stack entries (`fgW_ok`), the group's constructors
+/-- **`nest_frame` refines `nestFrame`, both outcomes**, at L fuel `n + 1`: every group mate's family
+at the key typed (`fkcs_ref`), the frame's stack entries (`fgW_ok`), the group's constructors
 (`ngc_ref`), the holes, the constructors walked (the block's `CtorsRef` at `n`). -/
 theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Nat) (hn : n ≤ 2 ^ 62)
     (ih : NbRef p dn vis fe env n) : FrameRef p dn vis fe env (n + 1) := by
@@ -56,108 +120,19 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   have hS := hC.stage
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.iw.iw hS.iw.iwSize
   obtain ⟨-, -, hfind, -, -, -⟩ := ConRon.Bridge.Inductives.dCtx_fields hctx
-  -- the group's head name
-  suffices hJ : ∀ rn m1, (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
-      some (rn, m1) → RefE (NbG p) (nfrE.j1 p n vis ctx fu po pl hi us dO dL nPc gO gL ns (rn.headD 0) m1)
-        (nestFrame V fe c fu.toNat prog hi.toNat (decI us) ds nPc.toNat grp NS) a
-        (fun v x a' => FramePost dn vis fe env a m v.1 v.2 x a') by
-    by_cases h0 : gL = 0
-    · rw [nfrE.arm1 p n m vis ctx fu po pl hi us dO dL nPc gO gL ns h0]
-      cases h1 : callE p n "intern_nanon" [] m with
-      | error e1 =>
-        rw [nfrE.k_intern_nanon.none]
-        exact fun hG => ErrClaim.of_callE_nv hG.nv (_root_.L.Checker.nv_mem (by decide +kernel)) h1
-      | ok q1 =>
-      obtain ⟨rn, m1⟩ := q1
-      obtain ⟨s1, hs1, -, hna⟩ := triple_of_callW (naF_spec p L.na n ⟨m, Locals.init []⟩ []) (callW_of_callE h1)
-      simp only at hna
-      rw [hs1] at hna
-      rw [nfrE.k_intern_nanon.arm1]
-      exact hJ rn m1 (by rw [ite_eq_left h0]; exact hna)
-    · rw [nfrE.arm2 p n m vis ctx fu po pl hi us dO dL nPc gO gL ns h0]
-      exact hJ _ _ (by rw [ite_eq_right h0])
-  intro rn m1 hX
-  have hhn : (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
-        none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
-      (if gL = 0 then naF m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
-        some (rn, m1) ∧ StageR vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ AFr m m1 ∧ H (rn.headD 0) ∧
-      (nestHeadT grp).run a = .ok (decI (rn.headD 0), a1) := by
-    by_cases h0 : gL = 0
-    · rw [ite_eq_left h0]
-      have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
-      subst this
-      rcases hst : naF m [] with _ | ⟨rn, m1⟩; · exact Or.inl rfl
-      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := naF_ok dn vis fe m m1 a rn hst hS
-      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.of_frame (naF_frame hst) (by simp [tier1, NAREC, NASLOT]) (by simp),
-        naF_afr hst, hxH, by rw [hxd]; exact hrun⟩
-    · rw [ite_eq_right h0]
-      obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
-        cases grp with
-        | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) h0
-        | cons x grp' => exact ⟨x, grp', rfl⟩
-      simp only [List.length_cons] at hgb
-      obtain ⟨w, cw, tw, hrw, hw1, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
-      rw [UInt64.ofNat_toNat] at hrw
-      rw [hrw, hrc]
-      exact Or.inr ⟨[cw], m, a, rfl, hS, IWGrow.refl _, MFr.refl _ _ _, AFr.refl _, hcH,
-        by simp only [List.headD_cons]; rw [hcd]; rfl⟩
-  rcases hhn with hnone | ⟨rn', m1', a1, hrn, hS1, hg1, hf1, hfa1, hrnH, hrun1⟩
-  · rw [hnone] at hX; cases hX
-  rw [hX] at hrn
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hrn)
-  -- its twin side: a pure step, the name denoting the group's head
-  have hhnP : PStep a a1 ∧ denoteN a1.store.ns (decI (rn.headD 0)) = some (grpP.headD default).1 := by
-    cases grp with
-    | nil =>
-      simp only [dGrp, List.mapM_nil, Option.pure_def, Option.some.injEq] at hgrpP
-      subst hgrpP
-      simp only [nestHeadT] at hrun1
-      obtain ⟨p, hd⟩ := ConRon.Bridge.Inductives.internNNode_run hC.check.state
-        (by intro c hc; simp [NNodeView.children] at hc) hrun1
-      exact ⟨p, by rw [hd]; rfl⟩
-    | cons x grp' =>
-      simp only [nestHeadT] at hrun1
-      obtain ⟨hr, hs⟩ := ConRon.Bridge.AM.pure_ok hrun1
-      rw [hs, hr]
-      simp only [dGrp, List.mapM_cons, Option.bind_eq_bind, Option.pure_def] at hgrpP
-      rcases hx : ConRon.Bridge.Inductives.dGE a.store x with _ | y; · rw [hx] at hgrpP; simp at hgrpP
-      rcases hxs : grp'.mapM (ConRon.Bridge.Inductives.dGE a.store) with _ | ys; · rw [hx, hxs] at hgrpP; simp at hgrpP
-      simp only [hx, hxs, Option.bind_some, Option.some.injEq] at hgrpP
-      subst hgrpP
-      simp only [ConRon.Bridge.Inductives.dGE, Option.bind_eq_some_iff, Option.map_eq_some_iff] at hx
-      obtain ⟨cP, hcP, tyP, htyP, rfl⟩ := hx
-      exact ⟨PStep.refl hC.check.state, hcP⟩
-  obtain ⟨p1, hhn'⟩ := hhnP
-  have hA1 : AbsOK m1 := hfa1 hA
-  have hrnb : ¬ 4294967296 ≤ rn.headD 0 := by
-    have : ¬ (4294967296 : Word).toNat ≤ (rn.headD 0).toNat := by simpa using hrnH
-    exact fun e => this (UInt64.le_iff_toNat_le.mp e)
-  rw [nfrE.j1.arm1 p n vis ctx fu po pl hi us dO dL nPc gO gL ns _ m1 hrnb]
-  rw [ConRon.Bridge.Inductives.nestFrame_eq]
-  refine RefE.bind_right (x := nestHeadT grp) hrun1 ?_
-  have hC1 : StageC dn vis fe env m1 a1 := hC.of_pstep hS1 hA1 p1
-  have c1 := p1.toCore hC.check
-  -- the family at the key, typed
-  have hdsD1 : decHL m1 dO.toNat dL.toNat = some ds := (hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _)
-  have hR2 := fkc_ref hq henv (G := NbG p) hFk hIlpf (fun hG => hG.nv) (fun hG => hG.core) (fun hG => hG.whnf)
-    hi n hn hC1 hA1 hrnH hus hdsD1 (.inr (by have := hg1.iw; omega)) hhn' (ConRon.Bridge.denoteLs_ext husP p1.ext)
-    (ConRon.Bridge.denoteEList_ext p1.ext _ _ hdsP) hwds
-  have hsp2 := fkcE_spec p hFk n ⟨m1, Locals.init []⟩ vis hi (rn.headD 0) us dO dL
-  cases h2 : callE p n "family_key_check" [vis, hi, rn.headD 0, us, dO, dL] m1 with
-  | error e2 =>
-    rw [nfrE.k_family_key_check.none]
-    exact RefE.bind_left fun hG => RefE.run_err hsp2 hG.nv hG hR2 h2
-  | ok q2 =>
-  obtain ⟨r2, m2⟩ := q2
-  rw [nfrE.k_family_key_check.arm1]
-  obtain ⟨s2, hs2, -, u2, a2, hrun2, k2, hP2⟩ := RefE.run_ok hsp2 hR2 h2
-  dsimp only at k2 hP2
-  rw [hs2] at k2 hP2
-  refine RefE.bind_right hrun2 ?_
+  rw [nfrE.arm1, ConRon.Bridge.Inductives.nestFrame_eq]
+  -- every group mate's family at the key, typed
+  have hR2 := fkcs_ref hq henv (G := NbG p) hFk hIlpf (fun hG => hG.nv) (fun hG => hG.core) (fun hG => hG.whnf)
+    hi us dO dL ds usP dsP hus hwds n hn m a gO gL grp grpP hC hA (hds.get (OMono.decHL _ _)) hdsb hgl hgb hgrp
+    hgrpP husP hdsP
+  refine RefE.bindRun (s₀ := ⟨m, Locals.init []⟩) (fun _ => rfl) (fkcsE_spec p hFk n _ vis hi us dO dL gO gL)
+    (fun hG => hG.nv) id hR2 fun r2 s2 u2 a2 _ _ hrun2 ⟨k2, hP2⟩ => ?_
+  dsimp only [nfrE.k_family_key_checks]
+  generalize s2.mem = m2 at k2 hP2 ⊢
   have hS2 := k2.stage.stage
   have hA2 := k2.abs
-  have hg12 := hg1.trans k2.grow
-  have hx02 := p1.ext.trans k2.core.ext
+  have hg12 := k2.grow
+  have hx02 := k2.core.ext
   -- the stack grown and the names
   cases h5 : callE p n "nest_frame_grp" [hi, us, dO, dL, gO, gL, po, pl, 0, 0] m2 with
   | error e5 =>
@@ -171,7 +146,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
   rw [hs5] at hfg
   rw [nfrE.k_nest_frame_grp.arm1]
   obtain ⟨fr, hrunF, hS5, hg5, hP5, hN5, hNb5⟩ := fgW_ok dn vis fe hi us dO dL ds hus n m2 m5 a2 gO gL po pl 0 0 grp
-    prog [] r5 hfg hS2 (hds.grow (OMono.decHL _ _) hg12) hgl (by have := hg12.iw; omega) (hgrp.grow hgb hg12)
+    prog [] r5 hfg hS2 (hds.grow (OMono.decHL _ _) hg12) hgl (k2.top hgb) (hgrp.grow hgb hg12)
     (hW.hs.grow hg12) (by simp [decHL, hslice?]) (by simp)
   simp only [List.nil_append] at hN5
   obtain ⟨-, hfrP⟩ := ConRon.Bridge.Inductives.frameEntries_run hi.toNat (fun c ty => rfl) grp grpP a2 a2 fr
@@ -271,7 +246,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
       by have := (hg6.trans hg7).iw; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
     hcl6 (by have := hg7.iw; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
-    (((hP2 (hP.fr hf1)).fr
+    (((hP2 hP).fr
       (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr hM6 |>.fr
       (fhW_mfr _ _ _ _ _ _ _ _ _ hfh)) hA7
     hc (dCtx_ext _ hx07 _ _ hctx) hprog2 hpre (ConRon.Bridge.Inductives.dCtors_ext p6.ext _ _ hvc) hvcl
@@ -296,7 +271,7 @@ theorem frameRef_step (L : NbLook p) (hFk : FkcProg p) (hIlpf : IlpfF p) (n : Na
       (prog ++ fr) (hi.toNat + grp.length)
       (decI us) ds (grp.map (·.1)) holes ctors NS []).run a7 = .ok (x, a8) := by simpa using hrun8
   refine RefE.bind_right e8 (RefE.ret rfl ⟨hpost.stage, hg17.trans hpost.grow, by simpa using hpost.ns, hpost.pos,
-    hpost.abs, (c1.trans k2.core).trans ((p57.toCore k2.stage.check).trans hpost.core)⟩)
+    hpost.abs, k2.core.trans ((p57.toCore k2.stage.check).trans hpost.core)⟩)
 
 end steps
 

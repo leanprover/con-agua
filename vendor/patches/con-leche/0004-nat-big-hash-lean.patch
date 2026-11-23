@@ -1,0 +1,29 @@
+con-leche #598's `natBigHash` (`Kernel/NatHash.lean`) is `@[extern "lean_nat_big_hash"]`, the C of
+`native/nat_hash.c` (upstream's `lakefile.lean` compiles it; our `lakefile.toml` compiles no C, and the
+nightly-2026-10-20 runtime does not export the symbol: every executable failed to link). Here it is
+`@[implemented_by]` a Lean mix of the lowest word, the highest word and the bit length (constant
+time: Lean has no word access); the proofs see the same opaque function.
+
+diff --git a/vendor/con-leche/ConLeche/Kernel/NatHash.lean b/vendor/con-leche/ConLeche/Kernel/NatHash.lean
+index 8d89a9e3d9a9baf22141172260b09329bbf28b99..d4912e8ea78249ca3ed2614957d1bdc121269512 100644
+--- a/vendor/con-leche/ConLeche/Kernel/NatHash.lean
++++ b/vendor/con-leche/ConLeche/Kernel/NatHash.lean
+@@ -51,7 +51,17 @@ replaced by `@[extern "lean_nat_hash"] opaque natHash`, see the module
+ header): all 64-bit words of a big number mixed.  Only for `n ≥ 2^64`,
+ which is an mpz object, as upstream's `lean_nat_big_hash` (`natHash` in
+ `Kernel/Expr.lean` answers below). -/
+-@[extern "lean_nat_big_hash"]
++-- con-agua patch: no `native/nat_hash.c` here (our `lakefile.toml` compiles no C, and the
++-- nightly-2026-10-20 runtime does not export `lean_nat_big_hash`). Lean has no word access to a
++-- big `Nat`, and a fold over all its words copies the number at each step (the twin hashes
++-- `2^16777216` thousands of times on `nat_size_ok`), so the compiled code mixes three words it
++-- reads in constant time: the lowest, the highest and the bit length. Equal numbers hash
++-- equally, which is all the proofs use (`natBigHash` stays opaque to them); only our Lean tools'
++-- compiled code runs it (con-ron-lean-twin, romgen, ...), never `checker`.
++def natBigHashImpl (n : @& Nat) : UInt64 :=
++  mixHash (mixHash (UInt64.ofNat n) (UInt64.ofNat (n >>> (n.log2 - 63)))) (UInt64.ofNat n.log2)
++
++@[implemented_by natBigHashImpl]
+ opaque natBigHash (n : @& Nat) : UInt64
+ 
+ end ConLeche

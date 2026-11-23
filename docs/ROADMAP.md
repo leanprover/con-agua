@@ -37,6 +37,14 @@ Not measured or planned yet; recorded so they are not lost.
   in a browser or any Wasm runtime, with a trusted base of the Wasm engine instead of the x64
   assembler/linker and C harness.
 
+* **A string literal's constructor spine as a loop** (lane ronsync8, after con-ron #169).
+  `str_cons_spine` (`Arena/StrLit.lean`) recurses once per character, as the twin's
+  `strLitConsSpine` (a `foldr`) does, so a literal's length is L's call depth; con-ron #169 made
+  the Rust a loop from the last code point down (the twin unchanged, `spineOnto` proving the loop).
+  In L a long literal reaches the stack's capacity and aborts (never an accept). Port it when an
+  input needs it: a backward walk over the literal's UTF-8 bytes (or the code points collected
+  first) consing onto the spine so far, its model proved against `spineOnto`'s shape.
+
 ## Known limits
 
 * **`2^30` `app` nodes and `2^26` other nodes per table and tier** (con-ron task #133, lane

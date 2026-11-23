@@ -90,7 +90,7 @@ theorem poolHyps_of_phaseA {b : ByteArray} (PA : PhaseA b) {σ : Type} (Rel : σ
       PinsDenote PA.sF.store PA.ipins pinsP ∧
       ((∀ (k : Nat) (r r' : σ) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →
         (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
-        ∃ a', recordJob VM PA.ipins PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a') →
+        ∃ a', recordJob VM PA.ipins none PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a') →
       PoolHyps (pins := PA.ipins) (pinsP := pinsP) (ds := PA.ds) (dsP := dsP) (I := PA.I)
         (s₁ := PA.sF) Rel Call) := by
   obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
@@ -151,7 +151,7 @@ theorem checkJobs_seq {b pb : ByteArray}
     (hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a)
     {rs : List Word} {s' : St}
     (hrun : (invoke checkerProg (exec checkerProg n) "check_jobs" [0, hi]).run s = .ok (rs, s')) :
-    ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+    ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
       .ok (.ok (), s'') := by
   let p := Prog.subPB pb.data.toList checkerProg
   have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
@@ -242,7 +242,7 @@ theorem checkJobs_seqT {b pb : ByteArray}
     ⦃fun s => x = 0 ∧ y = hi ∧ ∃ X, FlushOK X ∧ s.mem = flushMem X ∧
       ∀ a, phaseBS a = true → X.arr64 a = m.arr64 a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
-    ⦃fun _ _ => ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+    ⦃fun _ _ => ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
       .ok (.ok (), s''); ⊤⦄ := by
   apply M.triple_of_run
   rintro s rs s' ⟨rfl, rfl, X, hfx, hsX, hXm⟩ hrun
@@ -274,7 +274,7 @@ theorem checkB_seq {b pb : ByteArray}
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
-      ∃ s'', checkJobList VM PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
         .ok (.ok (), s''); ⊤⦄ := by
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo

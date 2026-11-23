@@ -426,5 +426,71 @@ abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE : L.Word := 817
 abbrev R_THE_KERNEL_REFUSED_TO_EVALUATE_NAT : L.Word := 821
 /-- reject: the recursor 's rule for is not written as a function of the recursor's leading arguments and the constructor's fields -/
 abbrev R_THE_RECURSOR_S_RULE_FOR_IS_NOT : L.Word := 825
+/-- decline: a context record reads … (sorryAx) -/
+abbrev R_A_CONTEXT_RECORD : L.Word := 830
+/-- decline: the inductive group of …, read from …: a group the recogniser does not read -/
+abbrev R_THE_INDUCTIVE_GROUP : L.Word := 834
+/-- reject: a compiler-trust name, not an opaque constant: … -/
+abbrev R_A_COMPILER_TRUST : L.Word := 837
+/-- reject: a context record declares one of its names twice -/
+abbrev R_A_CONTEXT_RECORD_DECLARES : L.Word := 841
+/-- reject: a context record reads … of …, which is unsafe or partial -/
+abbrev R_A_CONTEXT_RECORD_READS : L.Word := 845
+/-- reject: a record read from module … stores …, which the context reads from module … -/
+abbrev R_A_RECORD_READ : L.Word := 849
+/-- reject: import cycle: … -/
+abbrev R_IMPORT_CYCLE_2 : L.Word := 853
+/-- reject: module … declares …, a compiler-trust name, as neither an opaque constant nor an axiom -/
+abbrev R_MODULE_DECLARES_A : L.Word := 857
+/-- reject: module … declares …, a name the checker reserves -/
+abbrev R_MODULE_DECLARES_A_NAME : L.Word := 861
+/-- reject: module … declares …, which the module … it loads stores -/
+abbrev R_MODULE_DECLARES_WHICH : L.Word := 865
+/-- reject: module … of the module system imports …, which is not -/
+abbrev R_MODULE_OF_THE : L.Word := 869
+/-- reject: module … reads …, which … -/
+abbrev R_MODULE_READS_WHICH : L.Word := 873
+/-- reject: module …: a record of its private part stores …, which its private part does not hold -/
+abbrev R_MODULE_A_RECORD : L.Word := 877
+/-- reject: module …: its exported part holds …, its private part does not -/
+abbrev R_MODULE_ITS_EXPORTED : L.Word := 881
+/-- reject: module …: its exported part ….olean does not read on its own (an exported part must not point outside its file, into its .olean.server or .olean.private), in … -/
+abbrev R_MODULE_ITS_EXPORTED_PART : L.Word := 885
+/-- reject: module …: no .olean on the search path -/
+abbrev R_MODULE_NO_OLEAN : L.Word := 889
+/-- reject: module …: the group of … lacks a member or a constructor -/
+abbrev R_MODULE_THE_GROUP : L.Word := 893
+/-- reject: module …: … -/
+abbrev R_MODULE_2 : L.Word := 897
+/-- reject: module …: … is not an inductive type -/
+abbrev R_MODULE_IS_NOT : L.Word := 901
+/-- reject: modules … and … store different constants named …, and both are loaded -/
+abbrev R_MODULES_AND_STORE : L.Word := 905
+/-- reject: name capture: module … reads …, which … declares -/
+abbrev R_NAME_CAPTURE_MODULE : L.Word := 909
+/-- reject: the context records … and … read each other (through …) -/
+abbrev R_THE_CONTEXT_RECORDS : L.Word := 913
+/-- reject: the group read for … from … does not declare it -/
+abbrev R_THE_GROUP_READ : L.Word := 917
+/-- reject: the import … → … does not go to a smaller rank -/
+abbrev R_THE_IMPORT_DOES : L.Word := 921
+/-- reject: the loaded modules … store …, not as one constant (not proofs of one statement) -/
+abbrev R_THE_LOADED_MODULES : L.Word := 925
+/-- reject: the module … is loaded by the imports added to its header: the solution's closure holds the challenge -/
+abbrev R_THE_MODULE_IS : L.Word := 929
+/-- reject: the record of …, read from …: … -/
+abbrev R_THE_RECORD_OF : L.Word := 933
+/-- reject: the record read for … from … does not declare it -/
+abbrev R_THE_RECORD_READ : L.Word := 937
+/-- reject: the record … of module … is malformed (a free or loose bound variable, an undeclared universe parameter, a nested rule's datum, a table's bodies or a literal's shape) -/
+abbrev R_THE_RECORD_OF_MODULE : L.Word := 941
+/-- reject: the recursor's minor premise does not state the constructor's fields, indices and parameters as the constructor's type does -/
+abbrev R_THE_RECURSOR_S_MINOR : L.Word := 945
+/-- reject: the statement of … reads a name the context does not store before it -/
+abbrev R_THE_STATEMENT_OF : L.Word := 949
+/-- reject: the tolerated axiom's name, not an axiom: … -/
+abbrev R_THE_TOLERATED_AXIOM : L.Word := 953
+/-- reject: two context records store a name of …'s record (of …) -/
+abbrev R_TWO_CONTEXT_RECORDS : L.Word := 957
 
 end L.Arena

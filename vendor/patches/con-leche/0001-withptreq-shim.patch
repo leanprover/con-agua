@@ -3,41 +3,63 @@ as ConLeche/Util/PtrEq.lean, and use it at the three call sites; withPtrEqDecEq'
 in Kernel/PtrDecEq.lean (ConLeche.ptrDecEq, since con-leche #578 the one caller of withPtrEqDecEq). Toolchain nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 1).
 
 diff --git a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
-index 5831e72b372b48ab1d9e59e53a12f27d926b7a23..aa990a407aeadd185f54be205825ac1c0eb593be 100644
+index 30b7273c1bf4c5da18da7075d8c76773fb1e9ad0..db8ba784ea12fade07d8794c2568908677887346 100644
 --- a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
 +++ b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
-@@ -5,7 +5,7 @@ public import Std.Sync.Mutex
- /- `withPtrEq` is `public` but not `@[expose]`; `sameB_eq` below needs
- its body (it is *defined* as `k ()`).  `import all` makes it visible in
- this module only. -/
--import all Init.Util
-+public import ConLeche.Util.PtrEq
+@@ -300,7 +300,7 @@ structure Cur where
+ driver sends the very tables round 0 was sent, so the pointer test
+ answers; behind it is one pass over the tables (`Prior`'s `LawfulBEq`). -/
+ @[inline] def Cur.is (x : Cur) (P : Prior) (c0 : Ctr) : Bool :=
+-  x.c0.beq c0 && sameB withPtrEq x.P P
++  x.c0.beq c0 && sameB ConLeche.withPtrEq x.P P
  
- /-!
- # The rounds parse driver: owner threads (task #329)
-@@ -118,7 +118,7 @@ the type's own lawful comparison (for the finished tables, entry by
- entry with the kernel's pointer-first equalities, `Prior`'s
- `LawfulBEq`; for bytes, `memcmp`). -/
- @[inline] def sameB {α : Type} [BEq α] [LawfulBEq α] (a b : α) : Bool :=
--  withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
-+  ConLeche.withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
- 
- theorem sameB_eq {α : Type} [BEq α] [LawfulBEq α] (a b : α) : sameB a b = (a == b) := by rfl
- 
+ theorem Cur.is_eq {x : Cur} {P c0} (h : x.is P c0 = true) : x.c0 = c0 ∧ x.P = P := by
+   simp only [Cur.is, Bool.and_eq_true, sameB_iff ConLeche.withPtrEq_eq] at h
+@@ -431,7 +431,7 @@ def gather {β : Type} {Q : Nat → ByteArray → β → Prop} (bs : Array ByteA
+       | none => none
+     | some x =>
+       if hx : x.ok && x.c == acc.size &&
+-          (match bs[acc.size]? with | some b => sameB withPtrEq x.b b | none => false) then
++          (match bs[acc.size]? with | some b => sameB ConLeche.withPtrEq x.b b | none => false) then
+         gather bs rs dflt (acc.push x.v) (gather_push hacc fun hb => by
+           simp only [Bool.and_eq_true, beq_iff_eq, Array.getElem?_eq_getElem hb, sameB_iff ConLeche.withPtrEq_eq] at hx
+           obtain ⟨⟨hok, hcc⟩, hbb⟩ := hx
 diff --git a/vendor/con-leche/ConLeche/Kernel/Expr.lean b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-index 97bf655eeda8e9a701b0c8f963ff43174f432c3f..db9b6bb27b450a1d4e38cc0fddfb5da230e4dd29 100644
+index 758160738f63a77a2306df7d6cafb477aee462c5..1177c85e25a2c4fadfea8fb73634e38c71ad3dab 100644
 --- a/vendor/con-leche/ConLeche/Kernel/Expr.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/Expr.lean
-@@ -8,7 +8,7 @@ proves.  `import all` makes that body visible **in this module only**;
- that theorem is the public relay, so no importer needs it, and the
- executed `Expr.beq` stays the plain `decide (· = ·)` that the kernel
- can still reduce. -/
--import all Init.Util
-+public import ConLeche.Util.PtrEq
+@@ -82,7 +82,7 @@ before the structural step, at every node — `level.cpp:125` is `kind` →
+ `hash` → `is_eqp` → structural.  The children start over with the
+ pointer, the parameter with `Name.decEqPtr`. -/
+ def Level.decEqPtr (a b : Level) : Decidable (a = b) :=
+-  ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
++  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
+     if hh : a.hashData = b.hashData then
+       match a, b with
+       | .zero, .zero => isTrue rfl
+@@ -157,10 +157,10 @@ the literal's hash (`Expr.beqMemo`, `enterBeq`).  A memo hit on a
+ literal that was found again in a new node is then one pointer test,
+ not a walk over the number's words. -/
+ @[inline] def Literal.decEqPtr (a b : Literal) : Decidable (a = b) :=
+-  ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
++  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b fun _ =>
+     match a, b with
+     | .natVal n, .natVal m =>
+-      match ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq n m (fun _ => Nat.decEq n m) with
++      match ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq n m (fun _ => Nat.decEq n m) with
+       | isTrue h => isTrue (by rw [h])
+       | isFalse h => isFalse (fun e => h (Literal.natVal.inj e))
+     | .strVal s, .strVal t =>
+@@ -975,7 +975,7 @@ on equal addresses only, where the runtime pointer test answers
+ to the structural `decEq`, which `decEqPtr` does not exist yet to
+ replace.  Code outside the equality uses `ptrDec`. -/
+ @[inline] def ptrDecStruct (a b : Expr) : Decidable (a = b) :=
+-  ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq a b (fun _ => decEq a b)
++  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b (fun _ => decEq a b)
  
- /-!
- # Kernel expressions
-@@ -1245,7 +1245,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
+ /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
+ addresses are the filter; the stored objects, tested by identity, are
+@@ -1273,7 +1273,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
  memoised descent.  What both `==` (`beq_eq_beqMemo`) and every
  `DecidableEq` use (`decEqPtr`, `decEq_eq_decEqPtr`) run. -/
  @[inline] def beqMemo (a b : Expr) : Bool :=
@@ -46,26 +68,36 @@ index 97bf655eeda8e9a701b0c8f963ff43174f432c3f..db9b6bb27b450a1d4e38cc0fddfb5da2
      (fun h => by subst h; simp)
  
  /-- The executed equality decides `a = b`: `withPtrEq a b k h` is
+@@ -1305,7 +1305,7 @@ pure model.  The memo tables' hit validation (`Cached/ExprOpsC.lean`);
+ a fallback that compiled code would run is `decEqPtr`, never the
+ structural walk. -/
+ @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=
+-  ConLeche.ptrDecEq withPtrEq ConLeche.withPtrEq_eq a b (fun _ => inferInstance)
++  ConLeche.ptrDecEq ConLeche.withPtrEq ConLeche.withPtrEq_eq a b (fun _ => inferInstance)
+ 
+ /-- The executed equality is the specification. -/
+ theorem beqMemo_eq (a b : Expr) : beqMemo a b = decide (a = b) := by
 diff --git a/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean b/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
-index 32041dd6e1d8b579c2d47d4018795e97adbd1fb1..d4db9e28461774eeb7a2b8eb6c3856b15381d035 100644
+index b89e089d0776fb45839c120a2155e168b96601f3..5bf833506f5deb3a6deee38d283fa38e1ec92e33 100644
 --- a/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
 +++ b/vendor/con-leche/ConLeche/Kernel/PtrDecEq.lean
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,7 @@
  module
  
--public import Init.Util
-+public import ConLeche.Util.PtrEq
+ public import Init.Util
++public import ConLeche.Util.PtrEq  -- con-agua patch: the safe `withPtrEq` (nightly-2026-10-20)
  
  /-!
  # The pointer-first decision, behind one name
-@@ -27,6 +27,6 @@ namespace ConLeche
- /-- `withPtrEqDecEq a b k`: the pointer test, then `k ()`. -/
- @[inline] def ptrDecEq {α : Type u} (a b : α) (k : Unit → Decidable (a = b)) :
-     Decidable (a = b) :=
--  withPtrEqDecEq a b k
-+  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b k
+@@ -31,7 +32,7 @@ namespace ConLeche
+ /-- `withPtrEq` is `k ()`: the equation `withPtrEqDecEq` asks for, and
+ what a proof about a `withPtrEq` call rewrites with. -/
+ theorem withPtrEq_eq {α : Type u} (a b : α) (k : Unit → Bool) (h : a = b → k () = true) :
+-    withPtrEq a b k h = k () := rfl
++    ConLeche.withPtrEq a b k h = k () := rfl  -- con-agua patch: our shim (`Util/PtrEq.lean`)
  
- end ConLeche
+ /-- `withPtrEqDecEq ptrEq hw a b k`: the pointer test `ptrEq`, then `k ()`. -/
+ @[inline] def ptrDecEq {α : Type u}
 diff --git a/vendor/con-leche/ConLeche/Util/PtrEq.lean b/vendor/con-leche/ConLeche/Util/PtrEq.lean
 new file mode 100644
 index 0000000000000000000000000000000000000000..d4e0fd15c75748076e3ae69569ad61120735b342

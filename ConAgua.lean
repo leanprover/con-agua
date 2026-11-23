@@ -76,3 +76,8 @@ public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.Store
 public import ConAgua.Arena.IndexRel
 public import ConAgua.Checker.ArmsT
+public import ConAgua.Arena.IotaReadDec
+public import ConAgua.Arena.IotaFrameIface
+public import ConAgua.Arena.IotaFrameModels
+public import ConAgua.Arena.IotaFrameRef
+public import ConAgua.Arena.IotaRelModels

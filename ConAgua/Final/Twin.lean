@@ -12,6 +12,7 @@ public import ConRon.Bridge.Stages
 public import ConLeche.Verify.Cached.DeclPushes
 import ConRon.Bridge.Inductives.Decl
 import ConLeche.Model.Denotes
+import ConLeche.Model.OfEnvModelM
 import ConLeche.Model.Fold
 import ConLeche.Verify.Frontend.FileFalse
 import all ConRon.Bridge.Frontend.Prepare
@@ -60,7 +61,7 @@ every record's job in fold order on one worker made from `s'`, accepted. -/
 def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
     (s : AState) (I : IStreamIndex) (s' : AState) : Prop :=
   ∃ s'' : AState, buildIndex ds s = .ok (.ok I, s') ∧
-    checkJobList mode pins I ds (List.range ds.size) s'.worker = .ok (.ok (), s'')
+    checkJobList mode pins none I ds (List.range ds.size) s'.worker = .ok (.ok (), s'')
 
 /-- One worker is a pool. -/
 theorem pooledAccepts_of_seq {mode : CheckMode} {pins : List INatOpPinSet}
@@ -96,7 +97,7 @@ theorem twinAccepts_pure {chunks : List ByteArray}
       ConLeche.Frontend.parseChunks chunks = .ok rc ∧
       checkDeclsPure .verified (fueledOps .verified F) pins
         (ConLeche.Frontend.preparePrelude preC rc.decls).toList =
-        .ok (ConLeche.Cached.streamEnv (ConLeche.Frontend.preparePrelude preC rc.decls).toList) := by
+        .ok (ConLeche.streamEnv (ConLeche.Frontend.preparePrelude preC rc.decls).toList) := by
   obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, I, hA, hB, hC, hD, hE, hF⟩ := h
   have hk : CoreSpec ConRon.Arena.checkFuel := CoreSpec.of_core
   have hind : IndSpec := ConRon.Bridge.Inductives.indSpec_of_bridge

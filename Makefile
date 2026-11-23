@@ -14,7 +14,7 @@ checker: main.c checker.s pins.bin reasons.h
 
 # A smoke test: the prelude (a small export) is accepted (exit 0), a malformed line is not
 # (exit 3, `ok 1`).
-PRELUDE = vendor/con-leche/pins/leanprover-lean4-v4.35.0.prelude.ndjson
+PRELUDE = vendor/con-leche/pins/leanprover-lean4-v4.36.0.prelude.ndjson
 check: checker
 	./checker $(PRELUDE)
 	printf 'not json\n' > checker-smoke.ndjson

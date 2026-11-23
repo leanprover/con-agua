@@ -208,7 +208,7 @@ def checkSumCtorL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvC, nF, cvTa)
   locals (u1, ok1, bso1, bsl1, cbody, resOk, cqOk, cqOff, cqLen, cqBody, tqOk, tqOff, tqLen, tqBody,
     tdOff, tdLen, u2, u3) {
-  u1 := call check_constant_val(vis, cvC, 0);
+  u1 := call check_constant_val(vis, cvC, 0, 0, 0);
   (ok1, bso1, bsl1, cbody) := call strip_pis(nP + nF, EREC⦃cvC + ⟪CV.type⟫⦄);
   if ok1 == 0 { fail R_DIRECT_SUM_CONSTRUCTOR_TELESCOPE };
   resOk := call struct_ctor_resid_ok(T, lpsOff, lpsLen, nP, nF, nIdx, cbody);

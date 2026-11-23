@@ -16,7 +16,7 @@ public import ConRon.Arena.Frontend.Olean.Reads
 namespace ConRon.Arena.Frontend.Olean
 
 open ConLeche
-open ConLeche.Frontend.Olean (Region CEntryF OLeanLevel ModFiles Part)
+open ConLeche.Frontend.Olean (Region CEntryF CKindF OLeanLevel ModFiles Part)
 
 /-- con-leche: ConLeche/Frontend/Olean/View.lean:87-92 parseView
 `unless importsPre f.exported.bytes == some d.imports do none`, with `d`. -/
@@ -109,13 +109,22 @@ def readStmts (pk : OleanPins) (f : ModFiles) (level : OLeanLevel) (cs : List Na
   | none => pure none
   | some (r, _) => stmtsAt pk r cs
 
-/-- con-leche: ConLeche/Frontend/Olean/View.lean:164-167 undecodable
+/-- con-leche: ConLeche/Frontend/Olean/View.lean:169-174 readKinds
+**The kinds of the constants at some positions of a view**, their expressions left out. -/
+def readKinds (pk : OleanPins) (f : ModFiles) (level : OLeanLevel) (cs : List Nat) :
+    AM (Option (List (CKindF NIdx Unit))) := do
+  match f.viewRegion level with
+  | none => pure none
+  | some (r, _) =>
+    (cs.mapM (m := OptionT AM) fun c => OptionT.mk (kindNamesAt pk r c)).run
+
+/-- con-leche: ConLeche/Frontend/Olean/View.lean:178-181 undecodable
 The module's files do not decode. -/
 def undecodable (m : Name) : CheckError :=
   .internal s!"module {m}: malformed .olean data (an object of the wrong shape, or a \
     pointer that does not point below its object)"
 
-/-- con-leche: ConLeche/Frontend/Olean/View.lean:169-181 viewError
+/-- con-leche: ConLeche/Frontend/Olean/View.lean:183-195 viewError
 Why a view does not read. -/
 def viewError (pk : OleanPins) (m : Name) (f : ModFiles) (level : OLeanLevel) : AM CheckError := do
   match f.viewRegion level with

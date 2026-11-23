@@ -3,10 +3,8 @@ module
 public import ConAgua.Arena.DeclDivModSpec.BoolCtorTyped
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.ModelGen
-import ConAgua.Arena.DeclNatDeps
 public import ConAgua.Rom.CIReadSpec
 import all ConAgua.Arena.DeclArmsNat
-import ConAgua.L.WordOff
 
 @[expose] public section
 
@@ -39,7 +37,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Pro
 /-- **`div_mod_env_guard` is its model `egW`** (generated). -/
 l_model eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvGuardL)
   fns [hp ↦ egW list]
-  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps", callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "bool_ctor_typed", callW_spec p n "eq_stored"]
+  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_stored_ok", callW_spec p n "pin_at", callW_spec p n "rom_ci", callW_spec p n "bool_ctor_typed", callW_spec p n "eq_stored"]
   grind [arena_grind] heartbeats 3200000 bind ntBW
 
 theorem DmProg7.ty (hD : DmProg7 p) : NatTyProg p := hD.toDmProg6.toDmProg5.toDmProg2.toNatEqProg.toNatTyProg
@@ -98,23 +96,17 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     rfl
   rw [ite_eq_right z1] at hw
   have hx1 := decW0B_true hd1 z1
-  -- the dependencies
-  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hw⟩ :=
-    (natOpDeps_ref hT.toNatGuardProg.toNatLitProg.toNatCvProg.toNatGateProg (vis := vis) (fe := fe) c).bind_
-      ⟨hS1, hc⟩ hw
-  unfold decRL at hd2
-  simp only [Nat.zero_add, L.getD_zero, L.getD_one] at hd2
-  replace hw := ntBW_some hw; obtain ⟨r3, m3, h3, hw⟩ := hw
-  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := okAll_ref hT (vis := vis) (fe := fe) (r2.headD 0) (r2.tail.headD 0) x2
-    k m2 a2 r3 m3 hS2 hd2.1 hd2.2 h3
-  have hG3 : IWGrow m m3 := hg1.trans (hg2.trans hg3)
+  -- the operation's own pinned type
+  obtain ⟨r3, m3, x3, a3, hrun3, ⟨hS3, hg3, hd3⟩, hw⟩ :=
+    (natOpStoredOk_ref hT (vis := vis) (fe := fe) c).bind_ ⟨hS1, hc⟩ hw
+  have hG3 : IWGrow m m3 := hg1.trans hg3
   by_cases z3 : r3.headD 0 = 0
   · rw [ite_eq_left z3] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
     have hx3 := decW0B_false hd3 z3
     refine ⟨false, a3, ?_, hS3, hG3, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun3, hx3,
       Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
   rw [ite_eq_right z3] at hw
@@ -129,7 +121,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx4 := decW0B_false hd4 z4
     refine ⟨false, a4, ?_, hS4, hG6, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun3, hx3, hrun4,
       hx4, Bool.not_false, Bool.not_true, eq_self, ite_true, ite_false, Bool.false_eq_true]
     rfl
   rw [ite_eq_right z4] at hw
@@ -146,7 +138,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
     obtain ⟨rfl, rfl⟩ := hw
     have hx8 := decW0B_false hd8 z8
     refine ⟨false, a8, ?_, hS8, hG8, decW0B_of_false _⟩
-    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
+    simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun3, hx3, hrun4,
       hx4, hrun7, hrun8, hx8, Bool.not_false, Bool.not_true, eq_self, ite_true,
       ite_false, Bool.false_eq_true]
     rfl
@@ -159,7 +151,7 @@ theorem eg_ref (hD : DmProg7 p) (c : Word) :
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   obtain ⟨rfl, rfl⟩ := hw
   refine ⟨x10, a10, ?_, hS10, hG8.trans (hg9.trans hg10), hd10⟩
-  simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun2, hrun3, hx3, hrun4,
+  simp only [divModEnvGuard, boolTrueName, boolFalseName, StateT.run_bind, hrun1, L.Arena.except_ok_bind, hx1, hrun3, hx3, hrun4,
     hx4, hrun7, hrun8, hx8, hrun9, Bool.not_true, ite_false, Bool.false_eq_true]
   exact hrun10
 

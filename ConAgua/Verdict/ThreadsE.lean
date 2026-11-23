@@ -80,10 +80,10 @@ theorem flushCaches_specNV (n : Nat) (s₀ : St) :
 state. -/
 theorem ErrClaimV.cons_ok {pins : List INatOpPinSet} {I : IStreamIndex} {ds : Array IDeclaration}
     {t : Nat} (ht : t < ds.size) {rest : List Nat} {a a₁ : AState} {e : Err}
-    (h : recordJob VM pins I t ds[t] a = .ok ((), a₁))
-    (hr : ErrClaimV (checkJobList VM pins I ds rest) a₁ e) :
-    ErrClaimV (checkJobList VM pins I ds (t :: rest)) a e := fun hk => by
-  have e1 : (checkJobList VM pins I ds (t :: rest)).run a = (checkJobList VM pins I ds rest).run a₁ :=
+    (h : recordJob VM pins none I t ds[t] a = .ok ((), a₁))
+    (hr : ErrClaimV (checkJobList VM pins none I ds rest) a₁ e) :
+    ErrClaimV (checkJobList VM pins none I ds (t :: rest)) a e := fun hk => by
+  have e1 : (checkJobList VM pins none I ds (t :: rest)).run a = (checkJobList VM pins none I ds rest).run a₁ :=
     checkJobList_cons_ok ht h
   unfold TwinFailsV; rw [e1]; exact hr hk
 
@@ -99,7 +99,7 @@ def CjStepE (p : Prog) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (j : Word), n ≤ 2 ^ 62 → j.toNat < ds.size →
     JobRel pins dn ds I a₀ m a → (∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) →
     ∀ {e : Err}, callE p n "check_jobs" [j, j + 1] m = .error e →
-    ErrClaimV (checkJobList VM pins I ds [j.toNat]) a e
+    ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a e
 
 variable {pins dn ds I a₀} in
 /-- `CjStepE` from the jobs' program facts and their error claims (`JobG`), by `checkJobs_ref`. -/
@@ -140,7 +140,7 @@ theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerPro
     ⦃fun s => x = j ∧ y = j + 1 ∧ ∃ Y, FlushOK Y ∧ s.mem = flushMem Y ∧
       ThrAt pins dn ds I a₀ bs Y a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
   apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
   rintro s e ⟨hxj, hyj, Y, hfy, hsY, X, hJ, hPB, hYX⟩ hrun
   rw [hxj, hyj] at hrun
@@ -174,7 +174,7 @@ theorem checkB_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
     (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
   have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs
@@ -219,14 +219,14 @@ theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
     (hmode : s₀.mem.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem s₀.mem) a)
     (hlo : s₀.mem.glob PLO = j) (hhi : s₀.mem.glob PHI = j + 1) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
-    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins I ds [j.toNat]) a⦄ := by
+    ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
   cases n with
   | zero => vcgen [exec] <;> simp [ErrClaimV.of_cls0]
   | succ n =>
     have hB : ⦃fun s => s.mem = s₀.mem⦄ invoke checkerProg (exec checkerProg n) "check_b" []
-        ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins I ds [j.toNat]) a⦄ := by
+        ⦃fun _ _ => True; ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a⦄ := by
       apply M.triple_of_run' (fun _ _ _ _ _ => trivial)
       intro s₁ e hs hrun
       exact M.of_run_err (P := fun x => x = s₁) rfl hrun
@@ -248,7 +248,7 @@ theorem runThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
     (hmode : w.glob MODE = 2) (hR : ThrAt pins dn ds I a₀ bs (seedMem w) a)
     (hlo : w.glob PLO = j) (hhi : w.glob PHI = j + 1) {e : Err}
     (hrun : L.run checkerProg n "check" [] w = .error e) :
-    ErrClaimV (checkJobList VM pins I ds [j.toNat]) a e := by
+    ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a e := by
   simp only [L.run] at hrun
   cases hq : (invoke checkerProg (exec checkerProg n) "check" []).run ⟨w, Locals.init []⟩ with
   | ok x => rw [hq] at hrun; cases hrun
@@ -349,7 +349,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
     cjStepE_of hJP hFD hLD hdn hrec hpp hsz hden hPD hJG'
   have hstep : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →
       (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
-      ∃ a', recordJob .verified PA.ipins PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by
+      ∃ a', recordJob .verified PA.ipins none PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by
     intro k r r' a hk hR ⟨n, rs, hn, hrun, hkept⟩ hfo
     have hk' : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
     obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI⟩ := runThr hJP.check_jobs hRS hsz n hn a (UInt64.ofNat k)
@@ -400,7 +400,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
   have walk : ∀ (cs : List (Word × Nat × Mem)) (r : Mem) (a : AState), Rel r a → WorkerOK PA.sF a →
       ThreadFails B j n e r cs →
       (∀ c ∈ cs, c.1 < j) →
-      ErrClaimV (checkJobList VM PA.ipins PA.I PA.ds (cs.map (·.1.toNat) ++ [j.toNat])) a e := by
+      ErrClaimV (checkJobList VM PA.ipins none PA.I PA.ds (cs.map (·.1.toNat) ++ [j.toNat])) a e := by
     intro cs
     induction cs with
     | nil =>
@@ -418,7 +418,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
       obtain ⟨hP, hnd⟩ := hpre j'.toNat (by omega)
       obtain ⟨hx', hdk⟩ := H.hden _ hj'
       obtain ⟨hw', -⟩ := job_spec H.hrec H.hpp H.hpinsOK H.hpersPins H.hpins H.hpd H.hI
-        H.hpI hw hj' hx' hdk hP hnd hrj
+        H.hpI hw hj' hx' hdk hP.envWF hnd hrj
       exact ErrClaimV.cons_ok hj' hrj
         (ih r' a' hR' hw' hrest fun c hc' => hc c (List.mem_cons_of_mem _ hc'))
   have hW := walk cs r₀ PA.sF.worker (hstart r₀ hz hI) (WorkerOK.start hst) hruns hcs

@@ -146,11 +146,11 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   rw [ewn]
   -- the constant check, a certified operation's name allowed
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1'
-    hcvd hCr1 (allow := 1)
+    hcvd hCr1 (allow := 1) (allowRd := 0) (allowSorry := 0)
   rw [show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩)
     (fun _ => checkDeclDefnE.k_check_constant_val.none ..)
-    (checkConstantVal_specE p hX.ccv n _ vis (q + CI.cv) 1) (fun hG => hG.nv) id hcc
+    (checkConstantVal_specE p hX.ccv n _ vis (q + CI.cv) 1 0 0) (fun hG => hG.nv) id hcc
     fun r3 s3 _ a3 h3 _ hrun3 hP3 => ?_
   rw [checkDeclDefnE.k_check_constant_val.arm1]
   dsimp only at hP3
@@ -168,7 +168,7 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
     (fun _ => checkDeclDefnE.k_check_defn_val.none ..)
     (checkDefnVal_specE p hX.ccv.val n _ vis q) (fun _ => trivial) id
     (checkDefnVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1)
-      (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
+      (hg3.ext _ _ hwv) hwvl ⟨_, hcA⟩ hP3.crOK)
     fun r4 s4 ci4 a4 h4 _ hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   rw [checkDeclDefnE.k_check_defn_val.arm1]
   dsimp only at hr4 hP4

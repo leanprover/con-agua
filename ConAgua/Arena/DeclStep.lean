@@ -128,7 +128,7 @@ so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` clear
 
 /-- `check_decl_kind(i, vis, bo, bl)`: `checkDeclKind` on record `i` (an inductive block's records
 already copied into `EREC`: the slice `(bo, bl)`, `check_decl`'s). -/
--- con-ron: ConRon/Arena/CheckDecl.lean:74-152 ConRon.Arena.checkDeclKind
+-- con-ron: ConRon/Arena/CheckDecl.lean:74-158 ConRon.Arena.checkDeclKind
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
   k := DECL.u64[1 + 8 * i];
@@ -148,7 +148,7 @@ def checkDeclKindL : FunDecl := lfn (i, vis, bo, bl) locals (k, np, v) {
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`: an inductive block's records copied into
 `EREC` (`ind_block_to_erec`), the declaration's own checks (`check_decl_kind`), the caches flushed,
 then the reserved names' check (`basis_names_ok`; its failure `basis_names_error`'s reason). -/
--- con-ron: ConRon/Arena/CheckDecl.lean:154-167 ConRon.Arena.checkDecl
+-- con-ron: ConRon/Arena/CheckDecl.lean:160-173 ConRon.Arena.checkDecl
 @[no_expose, l_impl ConRon.Arena.checkDecl]
 def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v, z, ok, e) {
   k := DECL.u64[1 + 8 * i];

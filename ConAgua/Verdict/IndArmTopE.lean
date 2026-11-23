@@ -3,6 +3,7 @@ module
 public import ConAgua.Verdict.TopE
 import ConAgua.Arena.IndT.CheckIndDecl
 import ConAgua.Checker.IndArm
+import ConAgua.Checker.IotaArm
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.ArmsT
 import ConAgua.Checker.LoopProg
@@ -70,7 +71,7 @@ theorem indArmSpecE_checker (bs : List UInt8) (hr : RomOK bs)
   have hnv := checkerProg_nvPB bs
   have hU : UceProg (Prog.subPB bs checkerProg) :=
     ⟨checkerProg_uceLookupsPB bs⟩
-  exact indArmSpecE_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc⟩
+  exact indArmSpecE_of ⟨H.cid, checkerProg_coreStagePB bs, H.lc, iotaArmProg_checker bs⟩
     (blockRefS_checker bs hR) (closedW_subPB bs checkerProg_armCid) armCid_frame
     ⟨⟨hnv, checkerProg_coreStubsEPB bs⟩, hU⟩
 

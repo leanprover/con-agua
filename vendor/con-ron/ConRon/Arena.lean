@@ -52,15 +52,23 @@ public import ConRon.Arena.Inductives.BlockRec
 public import ConRon.Arena.Inductives.ClassRead
 public import ConRon.Arena.Inductives.BlockInstall
 public import ConRon.Arena.Inductives.RecCheck
+public import ConRon.Arena.Inductives.IotaRead
 public import ConRon.Arena.Inductives.GenRec
 public import ConRon.Arena.Inductives.StreamRecs
 public import ConRon.Arena.Inductives.BlockTail
 public import ConRon.Arena.CheckDecl
 public import ConRon.Arena.Install
 public import ConRon.Arena.StreamIndex
+public import ConRon.Arena.Needs
+public import ConRon.Arena.Justify
 public import ConRon.Arena.InductivesTest
 public import ConRon.Arena.Checker
 public import ConRon.Arena.CheckerTest
 public import ConRon.Arena.Frontend.NatOpGround
+public import ConRon.Arena.Frontend.Compare
+public import ConRon.Arena.Frontend.Olean.Present
+public import ConRon.Arena.Modular.Graph
+public import ConRon.Arena.Modular.Worker
+public import ConRon.Arena.Modular.CompareModule
 -- the driver: no proof imports it, so the root does, to keep it in `lake build`
 public import ConRon.Arena.Main

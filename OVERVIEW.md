@@ -127,9 +127,9 @@ input. The theorem takes no set-theory model: a record's job is checked at the
 stream index's view of its position, and con-ron's Theorem 1 obtains the fold
 invariant there from con-leche's model-free fact that the pure fold keeps the
 environment well formed
-([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L304-L306)).
+([`foldlM_checkDecl_envWF`](https://github.com/leanprover/con-agua/blob/master/vendor/con-leche/ConLeche/Semantics/DeclWF.lean#L306-L308)).
 
-[`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L76-L86)
+[`TwinAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L77-L87)
 is the stages con-ron's binary runs, from the twin's start state: intern the
 reserved names, parse the built-in prelude, parse the input, prepare the
 records, intern the pins, then the check phase, at some pin list. The pins
@@ -138,7 +138,7 @@ default, 134 217 728 bytes
 ([`maxNatSizeDefault`](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/CoreState.lean#L147-L149));
 the checker has no `--max-nat-size` flag, which con-ron's binary has. The check
 phase is
-[`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L58-L63):
+[`SeqAccepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L59-L64):
 the stream index (`buildIndex`, which reads every record off once, with no
 inference), then every record's job, in order, on one worker; a job checks its
 record at the index's view of the record's position.
@@ -158,7 +158,7 @@ parsed records (prepared with some prelude, at some pin list), and the accepted
 environment has a model in every `ConLeche.SetTheory V`; and a file in
 `jsonWithTheoremFalse`'s shape is never accepted. Their glue is con-ron's
 capstone, restated on the vendored Theorem 1
-([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L88-L108)).
+([`twinAccepts_pure`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L89-L109)).
 A fourth variant,
 [`checkerFile_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/EndToEnd.lean#L77-L85),
 adds that the caller's callee-saved registers (System V: `rsp`, `rbp`, `rbx`,
@@ -209,7 +209,7 @@ not accepted
   `TwinAccepts` holds at the pin list it decoded; con-leche's theorems hold at
   every pin list. The prelude is not an assumption either: con-leche's
   `preparePrelude` puts its records into the checked stream
-  ([the module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L46-L48)).
+  ([the module doc](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Twin.lean#L47-L49)).
 * **Capacities and fuel are not assumptions.** The stub gives every word
   array `2^32` words and each entry's run `2^62 - 1` units of fuel; the refinement holds
   at every capacity and every fuel below `2^62`
@@ -467,7 +467,7 @@ it is proved from a word model that keeps the errors (`l_model … unified`:
 through the twin's `bind` and at a reject or decline site the L guard is the
 twin's failure condition. Functions whose call closure aborts only with class
 `0` (1479 of 1790) claim nothing, by a check of the program text
-([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L233-L234)).
+([`checkerProg_nv`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/NoVerdictClosed.lean#L235-L236)).
 
 ### 4.5 The composition
 
@@ -493,8 +493,8 @@ runs the jobs.
 
 Entry 1's function, beside the twin function it cites
 ([L](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L114-L133),
-[the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L161-L196),
-[its check phase](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Checker.lean#L97-L106)):
+[the twin](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Main.lean#L166-L203),
+[its check phase](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Checker.lean#L101-L111)):
 
 ```
 def checkAL : FunDecl := lfn (c) locals (r, z, cnt) {
@@ -1083,7 +1083,7 @@ the instructions.
 con-ron runs the records' jobs on worker threads that share the stream index and
 the persistent tier read-only; each worker runs the jobs it claimed, in
 increasing order, on one state it threads through them
-([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Pooled.lean#L20-L45)).
+([con-ron's pool, as the twin states it](https://github.com/leanprover/con-agua/blob/master/vendor/con-ron/ConRon/Arena/Pooled.lean#L20-L46)).
 con-agua does the same with two entry points and a frozen buffer; the
 sequential driver `ca_start` runs the same two entries one after the other
 ([`check` and its entries](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L105-L112)).
@@ -1139,7 +1139,7 @@ covers this mode for the committed file: if the harness behaves as
 `ThreadsRun` says (§2.3), every call accepts and the threads claim every job
 index, each thread in increasing order, then the twin's pipeline accepts `b`
 with the check phase as con-ron's pool
-([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L38-L46)),
+([`TwinAcceptsPooled`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/TwinPooled.lean#L39-L47)),
 and the model and no-`False` corollaries follow as in §2.1. Its pieces: entry
 1's run with the frozen buffer it leaves, a fresh worker's start state over the
 buffer and a zero region, and one job per call of entry 2, each a sequential
@@ -1201,7 +1201,7 @@ sections:
 (to be fixed, or intent unclear),
 [Deliberate](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L40-L67)
 (by design, with the reason), and
-[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L69-L98).
+[Fixed](https://github.com/leanprover/con-agua/blob/master/docs/deviations.md#L70-L99).
 Each row says what the twin does, what L does, and the effect: completeness (L
 declines where the twin accepts), performance, or none. No deviation may lose
 soundness, and the theorem would not let one through: it is about the L code as
