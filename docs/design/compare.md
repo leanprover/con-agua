@@ -271,3 +271,10 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   `abiModeM_outcome`) exist; the cost is three trusted first returns and the region carried
   between the calls (harness facts of `ThreadsAcc.next`'s kind) instead of ~250 lines of stub
   proof.
+* H1: the justification guard discharged (0edecae38, merged): `JwGuard` is no hypothesis anywhere;
+  `CrsG` is program-only; the cone's culprit denotes (`Arena/CmpVCone.lean`), the mates by
+  `CvMatesDen` (`Arena/CmpVMates.lean`). Debt: `Arena/CmpVRoots.lean` carries con-ron's
+  `Bridge/Modular/Roots.lean` needs-walk lemmas (the vendored module's modular half does not build
+  at our pin, so it cannot be imported); to be deleted when it does.
+* H3: the harness and `ca_start_a7` wired (5114a9f40); `CmpThreadsRun` and the threaded accept,
+  model, no-`False` theorems drafted (fb0ead731), sent to the coordinator.
