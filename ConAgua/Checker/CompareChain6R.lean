@@ -7,6 +7,7 @@ import ConAgua.Checker.PrepProgHoist
 import ConAgua.Checker.PrepRef
 import ConAgua.Checker.PreLoopWSPart2
 import ConAgua.Checker.TwinCaches
+public import ConAgua.Arena.IndSumSpec.McGoStep
 public import ConAgua.Arena.JustifySideRefMates
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
@@ -79,6 +80,15 @@ structure Prep6 (pre : PreludeIx) (rC : ParseResultD) (sF : AState) (m2 : Mem) :
   decls : DeclsF (m2.arr64 L.Front.DECL) (m2.arr64 L.Front.DLP) (pre.decls ++ rC.decls)
   rok : ∀ x < (pre.decls ++ rC.decls).size, RecOK (m2.arr64 L.Front.DECL) (m2.arr64 L.Front.DLP) x
   keep : Keep6 m2 pre
+  memos : IndMemos m2
+
+theorem moveA_memos : ∀ b ∈ (([OUT] : List TieredArray) ++ moveA),
+    b ≠ ILFM ∧ b ≠ L.Stubs.CRM ∧ (b.arr < 201 ∨ 208 < b.arr) := by
+  intro b hb
+  rcases List.mem_append.mp hb with h | h
+  · simp only [List.mem_singleton] at h; subst h; decide
+  · obtain ⟨-, h1 | h1⟩ := moveA_facts b h <;>
+      exact ⟨fun e => by subst e; revert h1; decide, fun e => by subst e; revert h1; decide, by omega⟩
 
 theorem prep6_of (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
     (hk6 : Keep6 m PS.pre) {m2 : Mem} (h : Q62 PS m m2) : Prep6 PS.pre PS.rC PS.sF m2 := by
@@ -89,9 +99,13 @@ theorem prep6_of (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
   have hD1 : (m1.arr64 L.Front.DECL).size < 2 ^ 63 := by
     rw [hf'.size]; exact hF.build.decls.dsize
   obtain ⟨hD, hR⟩ := restore_of hst1.decls hst1.rok hok hD1
-  refine ⟨(stage_moved hF hO hI hf).frame_front (restoreM_frame m1) |>.1, hD, hR, ?_⟩
-  exact (hk6.frame hf' (by decide) (by decide) (by decide) (by decide) (by decide)).frame
-    (restoreM_frame m1) (by decide) (by decide) (by simp) (by simp) (by simp)
+  refine ⟨(stage_moved hF hO hI hf).frame_front (restoreM_frame m1) |>.1, hD, hR, ?_, ?_⟩
+  · exact (hk6.frame hf' (by decide) (by decide) (by decide) (by decide) (by decide)).frame
+      (restoreM_frame m1) (by decide) (by decide) (by simp) (by simp) (by simp)
+  · refine ((hF.build.memos.frame hf' moveA_memos fun x hx => ?_).frame (restoreM_frame m1)
+      (by decide) (by simp))
+    simp only [moveC, SNEXTC, SCNTC, List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl | rfl <;> decide
 
 /-- What `prepare_prelude` leaves (`preparePrelude_refines`' post, from the memory `m2` before it). -/
 structure PrepPost (pre : PreludeIx) (rC : ParseResultD) (a : AState) (m2 m3 : Mem)
@@ -196,6 +210,42 @@ theorem PrepPost.declsF {pre : PreludeIx} {rC : ParseResultD} {a : AState} {m2 m
       obtain ⟨h6, h4, -⟩ := h1
       rw [← h4]; exact ((h.recs i hi).2.2 h6).2.2⟩
   rw [h.dsize]; have := hD.room; have := h.le; omega
+
+/-- `IndMemos` after the preparation. -/
+theorem PrepPost.memos {pre : PreludeIx} {rC : ParseResultD} {a : AState} {m2 m3 : Mem}
+    {ds' : Array IDeclaration} {a' : AState} (h : PrepPost pre rC a m2 m3 ds' a') (hM : IndMemos m2) :
+    IndMemos m3 :=
+  hM.frame h.frame (fun b hb => by
+      have := stageA_prep_facts b hb
+      exact ⟨fun e => by subst e; revert this; decide, fun e => by subst e; revert this; decide, by omega⟩)
+    (fun x hx => by rcases stageC_prep_facts x hx with e | e | e | e | e | e | e <;> subst e <;> decide)
+
+/-- After the side records, at the count `c`. -/
+def Q64 (PS : PhaseS bC bS) (m : Mem) (c : Word) (m4 : Mem) : Prop :=
+  ∃ m3 m2 dsC sG, Q62 PS m m2 ∧ PrepPost PS.pre PS.rC PS.sF m2 m3 dsC sG ∧ CntAt c m3 ∧
+    ∃ res, (sideRecordsGo [] dsC.toList).run sG = .ok (res, sG) ∧
+      DeclsF (m4.arr64 L.Front.DECL) (m4.arr64 L.Front.DLP) res.toArray ∧
+      L.Ind.StageR 0 (fe0 PS.sF.pins) m4 sG ∧ (∃ mp, L.Ind.mcMR m4 mp) ∧
+      MemFrame [L.Front.DECL, L.Ind.MCM] [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1] m3 m4 ∧
+      KindStep (m3.arr64 L.Front.DECL) (m4.arr64 L.Front.DECL)
+
+/-- **`side_records(c)`, as a step** (`sideRecords_ref`). -/
+theorem sideStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
+    (hk6 : Keep6 m PS.pre) :
+    StageSpecC checkerProg "side_records" (fun c m3 => Q63 PS m m3 ∧ CntAt c m3) (Q64 PS m) := by
+  intro n _ s₀ c
+  refine triple_post (callW_spec checkerProg n "side_records" [c] s₀) fun _ s' ⟨hl, hc⟩ =>
+    ⟨hl, fun ⟨⟨m2, dsC, sG, hQ, hP⟩, hcnt⟩ => ?_⟩
+  have P6 := prep6_of hF hst hk6 hQ
+  have hS3 := hP.stage P6.stage
+  have hD3 := hP.declsF P6.decls
+  have hM3 := hP.memos P6.memos
+  have hD0 : 0 < (s₀.mem.arr64 L.Front.DECL).size := by have := hD3.room; omega
+  have hc' : c.toNat = dsC.size := by
+    have := hD3.count; rw [hcnt hD0]; simpa [hD0] using this
+  obtain ⟨res, hr, h1, h2, h3, h4, h5⟩ := sideRecords_ref checkerProg_sideProg hc hS3 hM3.stage.mc hD3 hc'
+  have hp : PS.sF.pins = PS.sF.pins := rfl
+  exact ⟨s₀.mem, m2, dsC, sG, hQ, hP, hcnt, res, hr, h1, by rw [← hP.pinsEq] at h2 ⊢; exact h2, h3, h4, h5⟩
 
 end steps
 
