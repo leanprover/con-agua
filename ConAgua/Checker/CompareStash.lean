@@ -76,7 +76,7 @@ theorem _root_.L.Front.DeclsF.prefix {D P : Array Word} {ds es : Array IDeclarat
     exact DeclAtF_mono D _ P P i _ (fun j hj _ => hw j hj) (fun _ _ _ => rfl) (Nat.le_refl _) rfl hx
 
 /-- `RecOK` at another records' array that agrees on record `r`'s words. -/
-theorem recOK_congr {D D' P : Array Word} {r : Nat} (h : RecOK D P r)
+theorem recOK_congrW {D D' P : Array Word} {r : Nat} (h : RecOK D P r)
     (hD : ∀ j, 0 < j → j < 1 + 8 * r + 8 → D'[j]? = D[j]?) : RecOK D' P r := by
   have hw : ∀ k, k < 8 → dw D' r k = dw D r k := fun k hk => by
     simp only [dw]; rw [hD _ (by omega) (by omega)]

@@ -151,6 +151,6 @@ theorem restore_of {m : Mem} {ds : Array IDeclaration} (hD : DeclsF (m.arr64 CDE
   have hsz : ((restoreM m).arr64 DECL).size = (m.arr64 DECL).size := size_copy64 _ _ _ _ _ _ _
   rw [restoreM_dlp]
   refine ⟨hD.congr (by rw [hsz]; exact hds) (by rw [hsz, ← hn]; exact hok.2.1) rfl hcp
-    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr (hR x hx) fun j _ hj => hcp j (by omega)⟩
+    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congrW (hR x hx) fun j _ hj => hcp j (by omega)⟩
 
 end L.Checker
