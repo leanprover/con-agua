@@ -176,6 +176,167 @@ theorem needsName_step {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x : Ne
   · obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
     rw [← e]; exact hx.push hw ‹_›
 
+omit P in
+/-- The record pool across the walk's writes. -/
+theorem erecP_nd {m m' : Mem} (hf : MemFrame ndA ndC m m') : erecP m' = erecP m := by
+  have h0 : m'.arr64 EREC = m.arr64 EREC := hf.arr _ (by decide) (by decide)
+  have h1 : m'.arr64 (tier1 EREC) = m.arr64 (tier1 EREC) := hf.arr _ (by decide) (by decide)
+  have t0 : erTop m' = erTop m := by simp only [erTop]; rw [hf.ctl _ (by simp [ndC, NTOPC])]
+  have t1 : erecTop1 m' = erecTop1 m := by simp only [erecTop1]; rw [hf.ctl _ (by simp [ndC, NTOPC])]
+  funext i; simp only [erecP, h0, h1, t0, t1]
+
+omit P in
+/-- The work pool across the walk's writes. -/
+theorem iwA_nd {m m' : Mem} (hf : MemFrame ndA ndC m m') : iwA m' = iwA m := by
+  simp only [iwA]; rw [hf.arr _ (by decide) (by decide)]
+
+/-- **`needs_names`' loop**: from cursor `i`, the names of the slice pushed in order. -/
+theorem needsNamesLoop : ∀ (n : Nat) (m m' : Mem) (o l i : Word) (x : NeedsSt) (ns : List NIdx),
+    needsNamesW.loop1 p n m o l i = some m' → NdR m x → i ≤ l →
+    hslice? (erecP m) (o.toNat + i.toNat) (l.toNat - i.toNat) = some ns →
+    NdR m' ⟨x.seen, x.acc ++ ns⟩ ∧ MemFrame ndA ndC m m'
+  | 0, _, _, _, _, _, _, _, hW, _, _, _ => by rw [needsNamesW.loop1.eq_1] at hW; cases hW
+  | n + 1, m, m', o, l, i, x, ns, hW, hx, hil, hns => by
+    by_cases hlt : i < l
+    · rw [needsNamesW.loop1.arm1 _ _ _ _ _ _ hlt] at hW
+      have hi1 : (i + 1).toNat = i.toNat + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; have := l.toNat_lt
+        rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+      have hk : l.toNat - i.toNat = (l.toNat - (i + 1).toNat) + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+      rw [hk, hslice?_succ] at hns
+      cases e1 : (hd? (erecP m) (o.toNat + i.toNat) : Option NIdx) with
+      | none => rw [e1] at hns; cases hns
+      | some w =>
+      cases e2 : (hslice? (erecP m) (o.toNat + i.toNat + 1) (l.toNat - (i + 1).toNat) : Option (List NIdx)) with
+      | none => rw [e1, e2] at hns; cases hns
+      | some ns' =>
+      rw [e1, e2] at hns
+      simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.some.injEq] at hns
+      subst hns
+      obtain ⟨wd, hwd, hwlt, rfl⟩ := hd?_some e1
+      have hoi : (o + i).toNat = o.toNat + i.toNat := by
+        have : o.toNat + i.toNat < 2 ^ 64 := by
+          rcases Nat.lt_or_ge (o.toNat + i.toNat) (2 ^ 64) with h | h
+          · exact h
+          · simp [erecP, show ¬ o.toNat + i.toNat < 2 ^ 64 by omega] at hwd
+        rw [UInt64.toNat_add]; omega
+      have hrd : erRd m (o + i) = wd := (erRd_of_erecP (by rw [hoi]; exact hwd)).1
+      rw [hrd] at hW
+      rcases c1 : callW p n "needs_name" [wd] m with _ | ⟨r1, m1⟩
+      · rw [c1, needsNamesW.k_needs_name.eq_1] at hW; cases hW
+      rw [c1, needsNamesW.k_needs_name.arm1] at hW
+      obtain ⟨hx1, hf1⟩ := needsName_step P c1 hx hwlt
+      have hs1 : hslice? (erecP m1) (o.toNat + (i + 1).toNat) (l.toNat - (i + 1).toNat) =
+          some ns' := by rw [erecP_nd hf1, hi1, ← Nat.add_assoc, ← hi1]; exact e2
+      obtain ⟨hx2, hf2⟩ := needsNamesLoop n m1 m' o l (i + 1) _ ns' hW hx1
+        (by rw [UInt64.le_iff_toNat_le, hi1]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega) hs1
+      refine ⟨?_, hf1.trans hf2⟩
+      simpa [NeedsSt.name] using hx2
+    · rw [needsNamesW.loop1.arm2 _ _ _ _ _ _ hlt] at hW
+      cases hW
+      have hle : l.toNat - i.toNat = 0 := by
+        have := UInt64.le_iff_toNat_le.mp hil; have := UInt64.not_lt.mp hlt
+        have := UInt64.le_iff_toNat_le.mp this; omega
+      rw [hle] at hns
+      simp only [hslice?, List.range_zero, List.mapM_nil, Option.pure_def, Option.some.injEq] at hns
+      subst hns
+      exact ⟨by simpa using hx, MemFrame.refl _ _ _⟩
+
+/-- **`needs_names_iw`' loop**: from cursor `i`, the names of the slice pushed in order. -/
+theorem needsNamesIwLoop : ∀ (n : Nat) (m m' : Mem) (o l i : Word) (x : NeedsSt) (ns : List NIdx),
+    needsNamesIwW.loop1 p n m o l i = some m' → NdR m x → (m.arr64 IW).size < 2 ^ 64 → i ≤ l →
+    hslice? (iwA m) (o.toNat + i.toNat) (l.toNat - i.toNat) = some ns →
+    NdR m' ⟨x.seen, x.acc ++ ns⟩ ∧ MemFrame ndA ndC m m'
+  | 0, _, _, _, _, _, _, _, hW, _, _, _, _ => by rw [needsNamesIwW.loop1.eq_1] at hW; cases hW
+  | n + 1, m, m', o, l, i, x, ns, hW, hx, hsz, hil, hns => by
+    by_cases hlt : i < l
+    · rw [needsNamesIwW.loop1.arm1 _ _ _ _ _ _ hlt] at hW
+      have hi1 : (i + 1).toNat = i.toNat + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; have := l.toNat_lt
+        rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+      have hk : l.toNat - i.toNat = (l.toNat - (i + 1).toNat) + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+      rw [hk, hslice?_succ] at hns
+      cases e1 : (hd? (iwA m) (o.toNat + i.toNat) : Option NIdx) with
+      | none => rw [e1] at hns; cases hns
+      | some w =>
+      cases e2 : (hslice? (iwA m) (o.toNat + i.toNat + 1) (l.toNat - (i + 1).toNat) : Option (List NIdx)) with
+      | none => rw [e1, e2] at hns; cases hns
+      | some ns' =>
+      rw [e1, e2] at hns
+      simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.some.injEq] at hns
+      subst hns
+      obtain ⟨wd, hwd, hwlt, rfl⟩ := hd?_some e1
+      have hoi : (o + i).toNat = o.toNat + i.toNat := by
+        have : o.toNat + i.toNat < 2 ^ 64 := by
+          rcases Nat.lt_or_ge (o.toNat + i.toNat) (2 ^ 64) with h | h
+          · exact h
+          · have := (Array.getElem?_eq_some_iff.mp (show (m.arr64 IW)[o.toNat + i.toNat]? = some wd from hwd)).1
+            omega
+        rw [UInt64.toNat_add]; omega
+      have hrd : rdW (m.arr64 IW) (o + i) = wd := by
+        simp only [iwA, aread] at hwd; simp only [rdW, hoi, hwd, Option.getD_some]
+      rw [hrd] at hW
+      rcases c1 : callW p n "needs_name" [wd] m with _ | ⟨r1, m1⟩
+      · rw [c1, needsNamesIwW.k_needs_name.eq_1] at hW; cases hW
+      rw [c1, needsNamesIwW.k_needs_name.arm1] at hW
+      obtain ⟨hx1, hf1⟩ := needsName_step P c1 hx hwlt
+      have hs1 : hslice? (iwA m1) (o.toNat + (i + 1).toNat) (l.toNat - (i + 1).toNat) =
+          some ns' := by rw [iwA_nd hf1, hi1, ← Nat.add_assoc, ← hi1]; exact e2
+      obtain ⟨hx2, hf2⟩ := needsNamesIwLoop n m1 m' o l (i + 1) _ ns' hW hx1 (by rw [hf1.size]; exact hsz)
+        (by rw [UInt64.le_iff_toNat_le, hi1]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega) hs1
+      refine ⟨?_, hf1.trans hf2⟩
+      simpa [NeedsSt.name] using hx2
+    · rw [needsNamesIwW.loop1.arm2 _ _ _ _ _ _ hlt] at hW
+      cases hW
+      have hle : l.toNat - i.toNat = 0 := by
+        have := UInt64.le_iff_toNat_le.mp hil; have := UInt64.not_lt.mp hlt
+        have := UInt64.le_iff_toNat_le.mp this; omega
+      rw [hle] at hns
+      simp only [hslice?, List.range_zero, List.mapM_nil, Option.pure_def, Option.some.injEq] at hns
+      subst hns
+      exact ⟨by simpa using hx, MemFrame.refl _ _ _⟩
+
+omit P in
+theorem names_eq (x : NeedsSt) (ns : List NIdx) : x.names ns = ⟨x.seen, x.acc ++ ns⟩ := by
+  simp [NeedsSt.names, nidxAppend]
+
+/-- **`needs_names(o, l)` refines `NeedsSt.names`** over the `EREC` slice's names. -/
+theorem needsNames_step {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {x : NeedsSt}
+    {ns : List NIdx} (hc : callW p n "needs_names" [o, l] m = some (r, m')) (hx : NdR m x)
+    (hns : hslice? (erecP m) o.toNat l.toNat = some ns) :
+    NdR m' (x.names ns) ∧ MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsNames_specW p P.names n _ o l) hc
+  rcases n with _ | n
+  · rw [needsNamesW.eq_1] at hW; cases hW
+  rw [needsNamesW.arm1] at hW
+  rcases e : needsNamesW.loop1 p (n + 1) m o l 0 with _ | m1
+  · rw [e, needsNamesW.k_loop1.eq_1] at hW; cases hW
+  rw [e, needsNamesW.k_loop1.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  rw [names_eq]
+  exact needsNamesLoop P (n + 1) m _ o l 0 x ns e hx (by rw [UInt64.le_iff_toNat_le]; simp) (by simpa using hns)
+
+/-- **`needs_names_iw(o, l)` pushes the `IW` slice's names** (`nidxAppend` at the slice). -/
+theorem needsNamesIw_step {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {x : NeedsSt}
+    {ns : List NIdx} (hc : callW p n "needs_names_iw" [o, l] m = some (r, m')) (hx : NdR m x)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hns : hslice? (iwA m) o.toNat l.toNat = some ns) :
+    NdR m' ⟨x.seen, nidxAppend x.acc ns 0 ns.length⟩ ∧ MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsNamesIw_specW p P.names_iw n _ o l) hc
+  rcases n with _ | n
+  · rw [needsNamesIwW.eq_1] at hW; cases hW
+  rw [needsNamesIwW.arm1] at hW
+  rcases e : needsNamesIwW.loop1 p (n + 1) m o l 0 with _ | m1
+  · rw [e, needsNamesIwW.k_loop1.eq_1] at hW; cases hW
+  rw [e, needsNamesIwW.k_loop1.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  simp only [nidxAppend, List.drop_zero, Nat.sub_zero, List.take_length]
+  exact needsNamesIwLoop P (n + 1) m _ o l 0 x ns e hx hsz (by rw [UInt64.le_iff_toNat_le]; simp)
+    (by simpa using hns)
+
 end steps
 
 end L.Arena
