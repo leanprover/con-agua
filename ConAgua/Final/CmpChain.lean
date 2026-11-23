@@ -7,6 +7,9 @@ import ConAgua.Front.Preserve
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.AsmFinal
 import all ConAgua.Checker.Entry
+import ConAgua.Checker.BlockRefsProg
+import ConAgua.Checker.DefnArmT
+import ConAgua.Checker.IndArm
 
 @[expose] public section
 
@@ -21,6 +24,14 @@ entry 1's does (`entry1_buf`).
 namespace ConAgua.Final
 
 open L L.Compiler L.Checker L.Arena
+
+/-- **`check_decl`'s program facts at every injective record decoder** (`CheckerCdG`; the
+flat run's `checkerCd_proved` at any decoder). -/
+theorem checkerCdG_proved : L.Checker.CheckerCdG := fun pb _ dn _ hpb hpre hdn =>
+  have hr : L.Rom.RomOK pb.data.toList := by simpa [L.Rom.RomOK] using hpb
+  ⟨L.Checker.checkerProg_defnLoopPB _ hr hpre,
+    L.Checker.indArmSpec_checker _ hr hpre
+      (L.Checker.cbRefs_checker _ hr hpre (L.Checker.snoSim_checker _)) dn hdn⟩
 
 /-- A run of `check` keeps every word array's size. -/
 theorem run_check_size {N : Nat} {m : Mem} {rs : List Word} {m' : Mem}

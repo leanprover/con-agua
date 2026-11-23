@@ -82,6 +82,47 @@ local notation "VM" => ConLeche.CheckMode.verified
 /-- **The pool's twin facts at an accepting phase A** (con-ron's `pooledAccepts_bridge`): the
 driver state after the index build, its pins and records denoting, the index denoting, for any
 worker step `hstep`. -/
+theorem poolHyps_of_out {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {I : IStreamIndex} {sF : AState}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF))
+    {σ : Type} (Rel : σ → AState → Prop) (Call : Nat → σ → σ → Prop) :
+    ∃ (pinsP : List ConLeche.NatOpPinSet) (dsP : List ConLeche.Declaration),
+      StateOK sF ∧ (ConRon.Bridge.RecordSpec ipins pinsP) ∧ PersPinSets ipins ∧
+      (∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl sF.store x = some d) ∧
+      PinsDenote sF.store ipins pinsP ∧
+      ((∀ (k : Nat) (r r' : σ) (a : AState) (hk : k < ds.size), Rel r a → Call k r r' →
+        (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
+        ∃ a', recordJob VM ipins none I k ds[k] a = .ok ((), a') ∧ Rel r' a') →
+      PoolHyps (pins := ipins) (pinsP := pinsP) (ds := ds) (dsP := dsP) (I := I)
+        (s₁ := sF) Rel Call) := by
+  have hoff := ho.off
+  have hst := ho.drv
+  have hpp := ho.pp
+  have hipins := ho.pinsDn
+  have hpps := ho.pps
+  have hpd := ho.pd
+  obtain ⟨dsP, hden⟩ := ho.den
+  obtain ⟨hst', hx, hp', -, hI, hpI⟩ := buildIndex_run constsSpec tablesSpec hst hpp hoff hpd hden hidx
+  have hx' := PExt.of_ext hx
+  obtain ⟨hlen, hget⟩ := denoteDecls_getElem hden
+  have hden' : ∀ (i : Nat) (hi : i < ds.size), ∃ hi' : i < dsP.length,
+      Frontend.denoteDecl sF.store ds[i] = some dsP[i] :=
+    fun i hi => by
+      obtain ⟨hi', h⟩ := hget i (by simpa using hi)
+      exact ⟨hi', Frontend.denoteDecl_ext hx (by simpa using h)⟩
+  have hrec : RecordSpec ipins pins :=
+    recordSpec (CoreSpec.of_core) ConRon.Bridge.Inductives.indSpec_of_bridge
+  have hPD := PinsDenote.mono hx ipins pins hipins
+  refine ⟨pins, _, hst'.state, hrec, hpps, fun x hx'' => ⟨hpd x hx'', ?_⟩, hPD, fun hstep =>
+    { hrec := hrec, hpush := kernelPushes _, hpp := hpps,
+      hpinsOK := hst.pins.pmono hpp hx' hp', hpersPins := hpp.mono hp', hpins := hPD,
+      hpd := hpd, hlen := by simpa using hlen, hden := hden', hI := hI, hpI := hpI,
+      hstep := hstep }⟩
+  obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx''
+  obtain ⟨_, hd⟩ := hden' i (by simpa using hi)
+  exact ⟨_, by simpa using hd⟩
+
+/-- `poolHyps_of_out` at a phase A. -/
 theorem poolHyps_of_phaseA {b : ByteArray} (PA : PhaseA b) {σ : Type} (Rel : σ → AState → Prop)
     (Call : Nat → σ → σ → Prop) :
     ∃ (pinsP : List ConLeche.NatOpPinSet) (dsP : List ConLeche.Declaration),
@@ -92,29 +133,8 @@ theorem poolHyps_of_phaseA {b : ByteArray} (PA : PhaseA b) {σ : Type} (Rel : σ
         (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
         ∃ a', recordJob VM PA.ipins none PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a') →
       PoolHyps (pins := PA.ipins) (pinsP := pinsP) (ds := PA.ds) (dsP := dsP) (I := PA.I)
-        (s₁ := PA.sF) Rel Call) := by
-  obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
-  obtain ⟨hoff, hst, hpp, hipins, hpps, hpd, rc, preC, -, hden⟩ :=
-    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
-  obtain ⟨hst', hx, hp', -, hI, hpI⟩ := buildIndex_run constsSpec tablesSpec hst hpp hoff hpd hden PA.idx
-  have hx' := PExt.of_ext hx
-  obtain ⟨hlen, hget⟩ := denoteDecls_getElem hden
-  have hden' : ∀ (i : Nat) (hi : i < PA.ds.size), ∃ hi' : i < (ConLeche.Frontend.preparePrelude preC rc.decls).toList.length,
-      Frontend.denoteDecl PA.sF.store PA.ds[i] = some (ConLeche.Frontend.preparePrelude preC rc.decls).toList[i] :=
-    fun i hi => by
-      obtain ⟨hi', h⟩ := hget i (by simpa using hi)
-      exact ⟨hi', Frontend.denoteDecl_ext hx (by simpa using h)⟩
-  have hrec : RecordSpec PA.ipins PA.pins :=
-    recordSpec (CoreSpec.of_core) ConRon.Bridge.Inductives.indSpec_of_bridge
-  have hPD := PinsDenote.mono hx PA.ipins PA.pins hipins
-  refine ⟨PA.pins, _, hst'.state, hrec, hpps, fun x hx'' => ⟨hpd x hx'', ?_⟩, hPD, fun hstep =>
-    { hrec := hrec, hpush := kernelPushes _, hpp := hpps,
-      hpinsOK := hst.pins.pmono hpp hx' hp', hpersPins := hpp.mono hp', hpins := hPD,
-      hpd := hpd, hlen := by simpa using hlen, hden := hden', hI := hI, hpI := hpI,
-      hstep := hstep }⟩
-  obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx''
-  obtain ⟨_, hd⟩ := hden' i (by simpa using hi)
-  exact ⟨_, by simpa using hd⟩
+        (s₁ := PA.sF) Rel Call) :=
+  poolHyps_of_out PA.out PA.idx Rel Call
 
 /-! ## The jobs on the sequential driver's memory -/
 
@@ -143,19 +163,21 @@ theorem callE_of_run {p : Prog} {n : Nat} {f : FnName} {vs : List Word} {s : St}
 /-- **The sequential driver's jobs**: a returning `check_jobs(0, k)` (`k` the number of records)
 on a memory that agrees with the flushed memory after the index build on every array the jobs
 name means the twin's jobs over every record accept from the index state's worker. -/
-theorem checkJobs_seq {b pb : ByteArray}
-    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (hF : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m)
-    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
-    {n : Nat} (hn : n ≤ 2 ^ 62) {s : St} {hi : Word} (hhi : hi.toNat = PA.ds.size)
+theorem checkJobs_seqO {b pb : ByteArray}
+    {sz : TieredArray → Nat} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF))
+    (hF : FoldOn b pb sz ds ipins sE I sF m₇ m) (hfok : FlushOK m)
+    (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
+    {n : Nat} (hn : n ≤ 2 ^ 62) {s : St} {hi : Word} (hhi : hi.toNat = ds.size)
     (hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a)
     {rs : List Word} {s' : St}
     (hrun : (invoke checkerProg (exec checkerProg n) "check_jobs" [0, hi]).run s = .ok (rs, s')) :
-    ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+    ∃ s'', checkJobList VM ipins none I ds (List.range ds.size) sF.worker =
       .ok (.ok (), s'') := by
   let p := Prog.subPB pb.data.toList checkerProg
-  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
-    hF.jobR hfok
+  have hJ0 : JobR ipins (dnOf sE.store) ds none I (flushMem m) { sF with caches := Caches.empty } :=
+    hF.jobR (ho.built hidx).1 hfok
   have hby : (flushMem m).bytes = m₇.bytes := by rw [flushMem_bytes, hF.bytes]
   generalize flushMem m = F at hJ0 hag hby
   -- the flushed memory with the run's globals
@@ -183,23 +205,19 @@ theorem checkJobs_seq {b pb : ByteArray}
   have hch := checkJobsLoop_chain (n + 1) (by omega) s₂.mem 0 q hl
   simp only [UInt64.toNat_zero, Nat.sub_zero, hhi] at hch
   -- the twin's side
-  obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
-    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds none PA.I { PA.sF with caches := Caches.empty }) (RecCall p)
-  have hpx := PA.pfx
-  obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
-  obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
-    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
-  have hFD : FrontDecls PA.ds := frontDecls_of_prefix PA.pfx
-  have hLD : DeclsLpsDn (dnOf PA.sE.store) PA.ds := declsLpsDn_dnOf hpd ⟨_, hden0⟩
-  have hdn : DnPers (dnOf PA.sE.store) := fun k x hk => by
+  obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_out ho hidx
+    (JobRel ipins (dnOf sE.store) ds none I { sF with caches := Caches.empty }) (RecCall p)
+  have hFD : FrontDecls ds := ho.front
+  have hLD : DeclsLpsDn (dnOf sE.store) ds := declsLpsDn_dnOf ho.pd ho.den
+  have hdn : DnPers (dnOf sE.store) := fun k x hk => by
     simp only [dnOf] at hk; split at hk
     · assumption
     · cases hk
-  have hds : PA.ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
+  have hds : ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
   have H := hH (recCall_stepE (J := none) hJP hFD hLD hdn hpp hds hden hPD hrec (fun h => absurd h (by simp)))
-  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I s₂.mem { PA.sF with caches := Caches.empty } :=
+  have hJ : JobR ipins (dnOf sE.store) ds none I s₂.mem { sF with caches := Caches.empty } :=
     hJ0.setGlob _
-  obtain ⟨-, hacc⟩ := pool_twin H hst [(s₂.mem, List.range PA.ds.size)]
+  obtain ⟨-, hacc⟩ := pool_twin H hst [(s₂.mem, List.range ds.size)]
     (fun t ht => by
       rw [List.mem_singleton] at ht; subst ht
       exact ⟨_, ⟨hJ, PExt.of_ext (Ext.refl _), rfl⟩, sameEnter_worker.symm⟩)
@@ -234,15 +252,17 @@ theorem clearsOK_words : ∀ (l : List MemoSch) {m₁ m₂ : Mem}, m₁.words = 
 
 /-- **`check_jobs` after the flush**, as a triple: from a memory that is the flush of one agreeing
 with `m` on every array the jobs name. -/
-theorem checkJobs_seqT {b pb : ByteArray}
-    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (hF : FoldAt b pb sz PA m₇ m)
-    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (x y : Word) :
+theorem checkJobs_seqTO {b pb : ByteArray}
+    {sz : TieredArray → Nat} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF))
+    (hF : FoldOn b pb sz ds ipins sE I sF m₇ m)
+    (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = ds.size) (x y : Word) :
     ⦃fun s => x = 0 ∧ y = hi ∧ ∃ X, FlushOK X ∧ s.mem = flushMem X ∧
       ∀ a, phaseBS a = true → X.arr64 a = m.arr64 a⦄
     invoke checkerProg (exec checkerProg n) "check_jobs" [x, y]
-    ⦃fun _ _ => ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+    ⦃fun _ _ => ∃ s'', checkJobList VM ipins none I ds (List.range ds.size) sF.worker =
       .ok (.ok (), s''); ⊤⦄ := by
   apply M.triple_of_run
   rintro s rs s' ⟨rfl, rfl, X, hfx, hsX, hXm⟩ hrun
@@ -255,7 +275,7 @@ theorem checkJobs_seqT {b pb : ByteArray}
     exact clearsOK_words _ (m₁ := m₂) (m₂ := m) rfl (clearsOK_agree hc _ hAg hfx)
   have hA2 := flushMem_agree hAg hc
   have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
-  exact checkJobs_seq hF hfok hJP hn hhi (fun a ha => by
+  exact checkJobs_seqO ho hidx hF hfok hJP hn hhi (fun a ha => by
     rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]) hrun
 
 theorem checkerProg_flushProg : FlushProg checkerProg := by
@@ -265,16 +285,18 @@ theorem checkerProg_flushProg : FlushProg checkerProg := by
 build on every array the jobs name, with the range `[0, k)` (`k` the number of records) and an
 empty seed `CTLF`, a run that returns `ACCEPT` means the twin's jobs over every record accept from
 the index state's worker. -/
-theorem checkB_seq {b pb : ByteArray}
-    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (hF : FoldAt b pb sz PA m₇ m)
-    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+theorem checkB_seqO {b pb : ByteArray}
+    {sz : TieredArray → Nat} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF))
+    (hF : FoldOn b pb sz ds ipins sE I sF m₇ m)
+    (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = ds.size) (s₀ : St)
     (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a)
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
     ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
-      ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      ∃ s'', checkJobList VM ipins none I ds (List.range ds.size) sF.worker =
         .ok (.ok (), s''); ⊤⦄ := by
   have hl : (UInt64.toNat (s₀.mem.len64 CTLF)) = 0 := by simp [Mem.len64, hctlf]
   have hlo' : s₀.mem.glob ⟨9⟩ = 0 := hlo
@@ -284,7 +306,7 @@ theorem checkB_seq {b pb : ByteArray}
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hJ := checkJobs_seqT hF hJP n (by omega) hi hhi
+    have hJ := checkJobs_seqTO ho hidx hF hJP n (by omega) hi hhi
     have hFl := flushCaches_spec checkerProg checkerProg_flushProg n
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
@@ -300,5 +322,32 @@ theorem checkB_seq {b pb : ByteArray}
       first
         | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, fun a ha => hw a ha⟩
         | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all)
+
+/-! ## At a phase A -/
+
+theorem checkJobs_seq {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m) (hfok : FlushOK m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    {n : Nat} (hn : n ≤ 2 ^ 62) {s : St} {hi : Word} (hhi : hi.toNat = PA.ds.size)
+    (hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a)
+    {rs : List Word} {s' : St}
+    (hrun : (invoke checkerProg (exec checkerProg n) "check_jobs" [0, hi]).run s = .ok (rs, s')) :
+    ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      .ok (.ok (), s'') :=
+  checkJobs_seqO PA.out PA.idx hF.on hfok hJP hn hhi hag hrun
+
+theorem checkB_seq {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+    ⦃fun r _ => r.headD 0 = ConAgua.Final.ACCEPT →
+      ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+        .ok (.ok (), s''); ⊤⦄ :=
+  checkB_seqO PA.out PA.idx hF.on hJP n hn hi hhi s₀ hw hlo hhi' hctlf
 
 end L.Checker

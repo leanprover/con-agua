@@ -39,23 +39,25 @@ open L L.Arena L.Rom
 universe w
 
 /-- **Entry 2 in place, `check` with the mode word `2`**: `check_b` (as `checkB_seq`). -/
-theorem checkMode2_seq {b pb : ByteArray}
-    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
-    (hF : FoldAt b pb sz PA m₇ m)
-    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
-    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+theorem checkMode2_seqO {b pb : ByteArray}
+    {sz : TieredArray → Nat} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m : Mem}
+    (ho : StagesOut sE ds ipins pins) (hidx : buildIndex ds sE = .ok (.ok I, sF))
+    (hF : FoldOn b pb sz ds ipins sE I sF m₇ m)
+    (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = ds.size) (s₀ : St)
     (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a) (hmode : s₀.mem.glob MODE = 2)
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
     ⦃fun r _ => r.headD 0 = ACCEPT →
-      ∃ s'', checkJobList .verified PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      ∃ s'', checkJobList .verified ipins none I ds (List.range ds.size) sF.worker =
         .ok (.ok (), s''); ⊤⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hB := checkB_seq hF hJP n (by omega) hi hhi
+    have hB := checkB_seqO ho hidx hF hJP n (by omega) hi hhi
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
@@ -69,6 +71,52 @@ theorem checkMode2_seq {b pb : ByteArray}
       | (simp_all (config := { decide := true }); done)
       | (simp_all [St.setLoc]; done)
 
+/-- `checkMode2_seqO` at a phase A. -/
+theorem checkMode2_seq {b pb : ByteArray}
+    {sz : TieredArray → Nat} {PA : PhaseA b} {m₇ m : Mem}
+    (hF : FoldAt b pb sz PA m₇ m)
+    (hJP : JobProg PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg))
+    (n : Nat) (hn : n ≤ 2 ^ 62) (hi : Word) (hhi : hi.toNat = PA.ds.size) (s₀ : St)
+    (hw : ∀ a, phaseBS a = true → s₀.mem.arr64 a = m.arr64 a) (hmode : s₀.mem.glob MODE = 2)
+    (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun r _ => r.headD 0 = ACCEPT →
+      ∃ s'', checkJobList .verified PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+        .ok (.ok (), s''); ⊤⦄ :=
+  checkMode2_seqO PA.out PA.idx hF.on hJP n hn hi hhi s₀ hw hmode hlo hhi' hctlf
+
+/-- **`check_decl`'s program facts at any record decoder** (`CheckerCd` at every record
+decoder that is injective, every pin list and every record array): what `CheckerCd`'s proof
+uses. -/
+def CheckerCdG : Prop :=
+  ∀ (pb : ByteArray) (ipins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
+    (ds : Array IDeclaration), pb.size < 2 ^ 63 → PbPre pb → L.Ind.DnInj dn →
+    (∀ cv v hh, ArmSpecT ipins dn ds (Prog.subPB pb.data.toList checkerProg)
+      "check_decl_defn" (.defnDecl cv v hh)) ∧
+    IndArmSpec (Prog.subPB pb.data.toList checkerProg) dn
+
+/-- The record decoder after the stages is injective. -/
+theorem StagesOut.dnInj {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) : L.Ind.DnInj (dnOf sE.store) :=
+  dnOf_inj ho.drv.state.wf
+
+/-- `Quot`'s universe name has a handle under the record decoder after the stages. -/
+theorem StagesOut.quotDn {sE : AState} {ds : Array IDeclaration} {ipins : List INatOpPinSet}
+    {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins) : L.Ind.QuotDn (dnOf sE.store) := by
+  obtain ⟨k, hk, hd⟩ := ho.quot
+  exact ⟨k, by simp [dnOf, hk, hd]⟩
+
+/-- The jobs' program facts after the stages, from `CheckerCdG`. -/
+theorem jobProg_of_out (hCd : CheckerCdG) {sE : AState} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {pins : List ConLeche.NatOpPinSet} (ho : StagesOut sE ds ipins pins)
+    {pb : ByteArray} (hpb : pb.size < 2 ^ 63) (hpre : PbPre pb) :
+    JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg) :=
+  have hr : RomOK pb.data.toList := by simpa [RomOK] using hpb
+  let ⟨hdf, hind⟩ := hCd pb ipins (dnOf sE.store) ds hpb hpre ho.dnInj
+  checkerProg_jobProgPB pb.data.toList hr hpre
+    (checkerProg_cdProgPB pb.data.toList hr hpre ho.dnInj ho.quotDn hdf hind)
+    (checkerProg_canonPB _)
+
 /-- **What `check_decl`'s program facts still take** (`checkerProg_cdProgPB`): the definition
 arm's claim and the inductive arm's, at every phase A and every pin buffer `pb` that starts with the
 ROM, at the program with `pb` substituted (`Final/DrvFinal.lean`'s `checkerCd_proved`). -/
@@ -77,6 +125,10 @@ def CheckerCd : Prop :=
     (∀ cv v hh, ArmSpecT PA.ipins (dnOf PA.sE.store) PA.ds (Prog.subPB pb.data.toList checkerProg)
       "check_decl_defn" (.defnDecl cv v hh)) ∧
     IndArmSpec (Prog.subPB pb.data.toList checkerProg) (dnOf PA.sE.store)
+
+/-- `CheckerCdG` gives `CheckerCd`. -/
+theorem CheckerCdG.cd (h : CheckerCdG) : CheckerCd := fun _ pb PA hpb hpre =>
+  h pb PA.ipins (dnOf PA.sE.store) PA.ds hpb hpre (dnOf_inj PA.out.drv.state.wf)
 
 /-- The record decoder of a phase A is injective. -/
 theorem PhaseA.dnInj {b : ByteArray} (PA : PhaseA b) : L.Ind.DnInj (dnOf PA.sE.store) := by
