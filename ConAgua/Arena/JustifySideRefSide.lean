@@ -160,4 +160,73 @@ theorem mentionsConst_fr (p : Prog) (hv : p.lookup "e_view" = some eView)
   rw [hrun', hbb]
   exact ⟨rfl, ⟨mp1, hM1⟩, hS', hfall⟩
 
+/-! ## A record made an axiom -/
+
+/-- `sideRecord`'s result for a value record: itself, or the axiom of its statement. -/
+def sideRes (d : IDeclaration) (cv : IConstantVal) (b c : Bool) : IDeclaration :=
+  if b then d else if c then .axiomDecl cv else d
+
+theorem sideRecordVal_run {a : AState} {d : IDeclaration} {cv : IConstantVal} {v : EIdx} {b : Bool}
+    (hb : (builtinAxiomName cv.name).run a = .ok (b, a)) {sa : NIdx} {c : Bool}
+    (hs : b = false → pinSorryAx.run a = .ok (sa, a))
+    (hm : b = false → (mentionsConst sa v).run a = .ok (c, a)) :
+    (sideRecordVal d cv v).run a = .ok (sideRes d cv b c, a) := by
+  have hb' : builtinAxiomName cv.name a = .ok (b, a) := hb
+  show sideRecordVal d cv v a = _
+  cases b with
+  | true => simp only [sideRecordVal, bind, StateT.bind, hb', Except.bind, ite_true, sideRes]; rfl
+  | false =>
+    have hs' : pinSorryAx a = .ok (sa, a) := hs rfl
+    have hm' : mentionsConst sa v a = .ok (c, a) := hm rfl
+    cases c <;> simp only [sideRecordVal, bind, StateT.bind, hb', hs', hm', Except.bind, sideRes,
+      Bool.false_eq_true, ite_true, ite_false] <;> rfl
+
+theorem dw_set! {D : Array Word} {i j q : Nat} (v : Word) (hj : j < 8) :
+    dw (D.set! (1 + 8 * q) v) i j = if i = q ∧ j = 0 ∧ 1 + 8 * q < D.size then v else dw D i j := by
+  simp only [dw, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  by_cases h : i = q ∧ j = 0
+  · obtain ⟨rfl, rfl⟩ := h
+    by_cases hb : 1 + 8 * i < D.size
+    · simp [hb]
+    · simp [hb, Array.getElem?_eq_none (Nat.le_of_not_lt hb)]
+  · have : ¬ (1 + 8 * q = 1 + 8 * i + j) := by omega
+    simp only [this, ite_false]
+    rw [ite_eq_right (fun c => h ⟨c.1, c.2.1⟩)]
+
+/-- **A value record's kind word set to `1`**: the records decode with record `k` the axiom of
+its statement. -/
+theorem DeclsF.setAxiom {D P : Array Word} {ds : Array IDeclaration} (hD : DeclsF D P ds) {k : Nat}
+    (hk : k < ds.size) {cv : IConstantVal} (hcv : CVAt D P k cv) :
+    DeclsF (D.set! (1 + 8 * k) 1) P (ds.set k (.axiomDecl cv)) := by
+  have hb : 1 + 8 * k < D.size := by have := hD.room; omega
+  have hdw : ∀ i j, j < 8 → dw (D.set! (1 + 8 * k) 1) i j = if i = k ∧ j = 0 then 1 else dw D i j :=
+    fun i j hj => by rw [dw_set! 1 hj]; simp [hb]
+  have hcv' : CVAt (D.set! (1 + 8 * k) 1) P k cv := by
+    obtain ⟨c1, c2, c3, c4⟩ := hcv
+    simp only [CVAt, hdw k 1 (by decide), hdw k 2 (by decide), hdw k 3 (by decide),
+      hdw k 4 (by decide), show ¬ (1 = 0) from by decide, show ¬ (2 = 0) from by decide,
+      show ¬ (3 = 0) from by decide, show ¬ (4 = 0) from by decide, and_false, ite_false]
+    exact ⟨c1, c2, c3, c4⟩
+  refine ⟨by simp; exact hD.dsize, hD.psize, ?_, by simp; exact hD.room, hD.ptop, fun i hi => ?_,
+    fun i hi b nP he => ?_⟩
+  · simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.size_set]
+    rw [ite_eq_right (by omega)]; exact hD.count
+  · simp only [Array.size_set] at hi
+    by_cases e : i = k
+    · subst e; simp only [Array.getElem_set_self]
+      exact ⟨by rw [hdw _ _ (by decide)]; simp, hcv'⟩
+    · rw [Array.getElem_set_ne (by omega) (by omega) (Ne.symm e)]
+      have hr := hD.recs i (by omega)
+      have hc : ∀ j, j < 8 → dw (D.set! (1 + 8 * k) 1) i j = dw D i j := fun j hj => by
+        rw [hdw i j hj]; simp [e]
+      have h0 := hc 0 (by decide); have h1 := hc 1 (by decide); have h2 := hc 2 (by decide)
+      have h3 := hc 3 (by decide); have h4 := hc 4 (by decide); have h5 := hc 5 (by decide)
+      have h6 := hc 6 (by decide); have h7 := hc 7 (by decide)
+      cases hx : ds[i] <;> rw [hx] at hr <;> simp_all [DeclAtF, DeclAt, CVAt, L.Front.IndDeclAt]
+  · simp only [Array.size_set] at hi
+    by_cases e : i = k
+    · subst e; simp at he
+    · rw [Array.getElem_set_ne (by omega) (by omega) (Ne.symm e)] at he
+      exact hD.npb i (by omega) b nP he
+
 end L.Arena
