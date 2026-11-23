@@ -3,6 +3,14 @@ module
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.PipeRest
 public import ConAgua.Checker.PreLoopWSStages
+public import ConAgua.Checker.ParEntryA
+public import ConAgua.Checker.PresizeStage
+import ConAgua.Checker.CheckARun
+import ConAgua.Checker.PipeFinal
+meta import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.LoopProgTac
+import all ConAgua.Checker.Entry
+import all ConAgua.Checker.CompareEntry
 import ConAgua.Checker.PrepProgHoist
 import ConAgua.Front.ChunkBridge
 import ConAgua.Front.FrontRunRef
@@ -212,5 +220,135 @@ theorem stash_R4 {bC bS pb : ByteArray} {sz : TieredArray → Nat} {m m' : Mem} 
       simp only [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; split <;> first | omega | rfl
   · exact (h5.mode.frame hsf (by decide +kernel) (by decide +kernel)).frame (memFrame_setIn _ _)
       (by simp) (by simp)
+
+/-! ## `check` in mode `4` -/
+
+set_option experimental.vcgen true in
+/-- **`check`'s dispatch to mode `4`**: with the mode word `4`, `check` is `check_c1()` from the
+same memory. -/
+theorem check_dispatch4 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
+    (P : Word → Mem → Prop)
+    (hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c1" []
+      ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check" []
+    ⦃fun r s' => s₀.mem.glob MODE = 4 → P (r.headD 0) s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
+    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+    (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [] ·)]
+  all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+    St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
+  all_goals grind [lang_grind]
+
+set_option experimental.vcgen true in
+/-- **`check_c1()` from its stages**: the six stage specs of entry 1 up to `front_run` and
+`cmp_stash`'s; on a result other than `1` (a line that did not scan), the memory after satisfies
+`cmp_stash`'s postcondition and the result is `2^63`. -/
+theorem checkC1_of_stages {p : Prog} (hp : p.lookup "check_c1" = some checkC1L)
+    {Q0 Q1 Q2 Q2p Q3 Q4 Q5 Q6 : Mem → Prop}
+    (h1 : StageSpec p "cap_check" Q0 fun _ => Q1)
+    (h2 : StageSpec p "pb_check" Q1 fun _ => Q2)
+    (h2p : StageSpec p "presize_tables" Q2 fun _ => Q2p)
+    (h3 : StageSpec p "intern_reserved_pins" Q2p fun _ => Q3)
+    (h4 : StageSpec p "builtin_prelude" Q3 fun _ => Q4)
+    (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
+    (h6 : StageSpec p "cmp_stash" Q5 fun _ => Q6)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_c1" []
+    ⦃fun r s' => Q0 s₀.mem → r.headD 0 ≠ 1 → Q6 s'.mem ∧ r.headD 0 = 9223372036854775808; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkC1L]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hn' : n ≤ 2 ^ 62 := by omega
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·)]
+    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false,
+      bne_iff_ne, ne_eq, Decidable.not_not] at *)
+    all_goals clear h1 h2 h2p h3 h4 h5 h6 hp
+    all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
+
+/-- **The twin's compared run up to the challenge's parse**, from the driver's start state. -/
+def CmpPfx1 (bC : ByteArray) (sA : AState) (pre : PreludeIx) (sB : AState) (rC : ParseResultD)
+    (sC : AState) : Prop :=
+  internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks [bC] sB = .ok (.ok rC, sC)
+
+/-- After the challenge's `front_run`: the twin's stages so far, `R5` and the parse state. -/
+def Q5S (bC pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
+  ∃ sA pre sB rC sC, CmpPfx1 bC sA pre sB rC sC ∧ R5 (loadMem bC pb sz) m pb pre rC sC ∧
+    ∃ st : StateD, StateDR m (st.pre pre.decls) ∧ rC.decls = st.decls
+
+/-- **Mode `4`'s end** at the memory `m` it leaves: the twin's stages up to the challenge's parse
+ran, `R4` holds at the loaded memory of the solution's bytes `bS` once the input is `bS`, and
+`CDECL` holds the challenge's records. -/
+def CmpAt4 (bC bS pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
+  ∃ sA pre sB rC sC, CmpPfx1 bC sA pre sB rC sC ∧ R4 (loadMem bS pb sz) (m.setIn bS.data) pb pre sC ∧
+    Stash m pre rC
+
+/-- `cmp_stash` as a stage of mode `4`. -/
+theorem stashStage_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) :
+    StageSpec checkerProg "cmp_stash" (Q5S bC pb sz) fun _ => CmpAt4 bC bS pb sz := by
+  intro n _ s₀
+  refine triple_post (triple_and (triple_and (cmpStash_spec checkerProg (by chk_lk)
+    checkerProg_prepProg n s₀) (stage_since n (preLoop_mem "cmp_stash" (by decide +kernel)) s₀))
+    (stageFrame_cmp_stash n s₀)) fun _ s' ⟨⟨⟨hl, hok, hm⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
+  rintro ⟨sA, pre, sB, rC, sC, hpx, h5, st, hsd, hrc⟩
+  obtain ⟨h4, hst⟩ := stash_R4 (bS := bS) h5 hsd hok hk hpf hsf hm
+  exact ⟨sA, pre, sB, rC, sC, hpx, h4, hst⟩
+
+/-- **Mode `4` in L**: a run of `check` from the loaded memory of the challenge's bytes `bC` with
+the mode word `4` that returns anything but `1` (a line that did not scan) returns `2^63`, and its
+final memory is mode `4`'s end (`CmpAt4`) for any solution bytes `bS`. -/
+theorem checkC1_run (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK bC pb sz)
+    (N : Nat) (hN : N < 2 ^ 62) (rs : List Word) (m' : Mem)
+    (hrun : L.run checkerProg N "check" [] (loadMemM bC pb sz 4) = .ok (rs, m'))
+    (hr : rs.headD 0 ≠ 1) :
+    rs.headD 0 = 9223372036854775808 ∧ CmpAt4 bC bS pb sz m' := by
+  let r := checkerRels bC pb sz
+  obtain ⟨-, -, -, s4, -, -, -⟩ := stageSpecs_of_rels checkerRels checker_capStage
+    checker_pbStage checker_irpStage checker_preludeStage checker_frontStage checker_prepareStage
+    checker_pinsStage bC pb sz hin
+  have s1 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
+    (fun _ => capStage_setG bC pb sz hin.2.2.2 4) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+  have s2 := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
+    (fun _ => pbStage_setG bC pb sz hin.2.2.1 4) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+  have s2p := presizeStage bC pb sz 4 (p := checkerProg) (by chk_lk) (by chk_lk) (by chk_lk)
+    (by chk_lk) (by chk_lk)
+  have s3 : StageSpec checkerProg "intern_reserved_pins" (PsPre bC pb sz 4)
+      (fun _ => Q3 bC r) := StageSpec.of_rel (X := Unit) (fun _ => _) (fun _ => _)
+    (fun _ => irpStage_ps bC pb sz 4 hin.2.2.1) fun m hm => ⟨(), hm, fun _ _ h => h⟩
+  have s5 : StageSpec checkerProg "front_run" (Q4 bC r) (fun r m => r.headD 0 = 0 → Q5S bC pb sz m) :=
+    StageSpec.of_rel (fun x : AState × PreludeIx × AState => (R4 (loadMem bC pb sz) · pb x.2.1 x.2.2)) _
+      (fun x => frontStageS_checker hin.1 bC pb hin.2.1 sz x.2.1 x.2.2)
+      fun m ⟨sA, pre, sB, hA, hB, hR⟩ => ⟨(sA, pre, sB), hR, fun _ _ h h0 => by
+        obtain ⟨rc, sC, st, hC, hR', hsd, hrc⟩ := h h0
+        exact ⟨sA, pre, sB, rc, sC, ⟨hA, hB, hC⟩, hR', st, hsd, hrc⟩⟩
+  have s6 := stashStage_checker bC bS pb sz
+  have hc1 : checkerProg.lookup "check_c1" = some checkC1L := by chk_lk
+  have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
+  have hmode : (loadMemM bC pb sz 4).glob MODE = 4 := by simp [loadMemM, Mem.setG]
+  let P : Word → Mem → Prop := fun x m'' => x ≠ 1 → CmpAt4 bC bS pb sz m'' ∧ x = 9223372036854775808
+  cases N with
+  | zero =>
+    exfalso
+    refine run_post (Q := fun _ _ => False) hrun ?_
+    rw [invoke_eq _ hlc]
+    simp only [callFn]
+    vcgen [exec] <;> grind
+  | succ n =>
+    have hn : n ≤ 2 ^ 62 := by omega
+    let s₀ : St := { mem := loadMemM bC pb sz 4, loc := Locals.init [] }
+    have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c1" []
+        ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
+      triple_post (checkC1_of_stages (Q0 := (· = loadMemM bC pb sz 4)) hc1 s1 s2 s2p s3 s4 s5 s6 n hn s₁)
+        fun _ _ h e => h e
+    have H := run_post (Q := fun x m'' => s₀.mem.glob MODE = 4 → P (x.headD 0) m'') hrun
+      (check_dispatch4 hlc n s₀ P hC)
+    obtain ⟨h4, hv⟩ := H hmode hr
+    exact ⟨hv, h4⟩
 
 end L.Checker
