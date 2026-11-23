@@ -195,7 +195,7 @@ theorem dw_set! {D : Array Word} {i j q : Nat} (v : Word) (hj : j < 8) :
 
 /-- **A value record's kind word set to `1`**: the records decode with record `k` the axiom of
 its statement. -/
-theorem DeclsF.setAxiom {D P : Array Word} {ds : Array IDeclaration} (hD : DeclsF D P ds) {k : Nat}
+theorem _root_.L.Front.DeclsF.setAxiom {D P : Array Word} {ds : Array IDeclaration} (hD : DeclsF D P ds) {k : Nat}
     (hk : k < ds.size) {cv : IConstantVal} (hcv : CVAt D P k cv) :
     DeclsF (D.set! (1 + 8 * k) 1) P (ds.set k (.axiomDecl cv)) := by
   have hb : 1 + 8 * k < D.size := by have := hD.room; omega
@@ -228,5 +228,125 @@ theorem DeclsF.setAxiom {D P : Array Word} {ds : Array IDeclaration} (hD : Decls
     · subst e; simp at he
     · rw [Array.getElem_set_ne (by omega) (by omega) (Ne.symm e)] at he
       exact hD.npb i (by omega) b nP he
+
+/-! ## `side_record` -/
+
+/-- The lookups the side records take. -/
+structure SideProg (p : Prog) : Prop where
+  side_record : p.lookup "side_record" = some sideRecordL
+  side_records : p.lookup "side_records" = some sideRecordsL
+  builtin : p.lookup "builtin_axiom_name" = some builtinAxiomNameL
+  pin_at : p.lookup "pin_at" = some pinAtL
+  e_view : p.lookup "e_view" = some eView
+  mc_find : p.lookup "mc_find" = some (memoFindG mcSch)
+  mc_put : p.lookup "mc_put" = some (memoPutG mcSch)
+  mc_go : p.lookup "mentions_const_go" = some mentionsConstGoL
+  mc_clear : p.lookup "mc_clear" = some (memoClearG mcSch)
+  mentions : p.lookup "mentions_const" = some mentionsConstL
+
+theorem rdW_dw (D : Array Word) (k x : Word) (j : Nat) (hx : x.toNat = 1 + j) (hj : j < 8)
+    (hk : k.toNat < 2 ^ 60) : rdW D (x + 8 * k) = dw D k.toNat j := by
+  have e : (x + 8 * k).toNat = 1 + 8 * k.toNat + j := by
+    rw [UInt64.toNat_add, UInt64.toNat_mul, hx]; simp; omega
+  simp only [rdW, dw, e]
+
+/-- What `side_record`'s run keeps and makes: the twin's record, `DECL` with it, the stage
+relation, the `mc` memo, the frame. -/
+def SideOK (vis : Word) (fe : IFEnv) (a : AState) (ds : Array IDeclaration) (k : Nat)
+    (m m' : Mem) (d' : IDeclaration) : Prop :=
+  DeclsF (m'.arr64 DECL) (m'.arr64 DLP) (ds.set! k d') ∧ StageR vis fe m' a ∧ (∃ mp, mcMR m' mp) ∧
+    MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m'
+
+theorem decl_ne_ctl : (DECL : TieredArray) ≠ CTL := by decide
+
+/-- `side_record` on a value record (kind `2`, `3`, `4`). -/
+theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' : Mem} {x : Word}
+    {vis : Word} {fe : IFEnv} {a : AState} {ds : Array IDeclaration} {d : IDeclaration}
+    {cv : IConstantVal} {v : EIdx}
+    (hS : StageR vis fe m a) (hmc : ∃ mp, mcMR m mp) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hk : k.toNat < ds.size) (hd : ds[k.toNat] = d) (hcv : CVAt (m.arr64 DECL) (m.arr64 DLP) k.toNat cv)
+    (hv : decI (dw (m.arr64 DECL) k.toNat 5) = v)
+    (hkind : rdW (m.arr64 DECL) (1 + 8 * k) = 2 ∨ rdW (m.arr64 DECL) (1 + 8 * k) = 3 ∨
+      rdW (m.arr64 DECL) (1 + 8 * k) = 4)
+    (h : sideRecordW p (n + 1) m k = some (x, m')) :
+    ∃ d', (sideRecordVal d cv v).run a = .ok (d', a) ∧ SideOK vis fe a ds k.toNat m m' d' := by
+  have hk60 : k.toNat < 2 ^ 60 := by have := hD.room; have := hD.dsize; omega
+  rw [sideRecordW.arm1 _ _ _ _ hkind] at h
+  have e2 := rdW_dw (m.arr64 DECL) k 2 1 rfl (by decide) hk60
+  have e6 := rdW_dw (m.arr64 DECL) k 6 5 rfl (by decide) hk60
+  rw [e2] at h
+  cases h1 : callW p n "builtin_axiom_name" [dw (m.arr64 DECL) k.toNat 1 &&& 4294967295] m with
+  | none => rw [h1] at h; simp at h
+  | some q1 =>
+  obtain ⟨ρ1, μ1⟩ := q1
+  rw [h1, L.Ind.bW_some] at h
+  obtain ⟨s1, es1, hm1, -, hb⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (builtinAxiomName_refines p hP.builtin n _ a hS.check.pins _ (mask_lt _)) h1
+  simp only at hm1
+  have e1 : μ1 = m := es1 ▸ hm1
+  clear es1 hm1; subst μ1
+  rw [decI_mask, hcv.1] at hb
+  have hset : ds.set! k.toNat d = ds := by
+    rw [Array.set!_eq_setIfInBounds, Array.setIfInBounds, dite_eq_left hk, ← hd]; simp
+  by_cases c1 : ρ1.headD 0 ≠ 0
+  · rw [ite_eq_left c1] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    have hb1 : (ρ1.headD 0 != 0) = true := by simpa using c1
+    rw [hb1] at hb
+    refine ⟨d, ?_, ?_⟩
+    · have := sideRecordVal_run (d := d) (v := v) (sa := default) (c := false) hb
+        (fun h => by cases h) (fun h => by cases h)
+      simpa [sideRes] using this
+    · exact ⟨by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _⟩
+  rw [ite_eq_right c1] at h
+  have hb0 : (ρ1.headD 0 != 0) = false := by simpa using c1
+  rw [hb0] at hb
+  cases h2 : callW p n "pin_at" [13] m with
+  | none => rw [h2] at h; simp at h
+  | some q2 =>
+  obtain ⟨ρ2, μ2⟩ := q2
+  rw [h2, L.Ind.bW_some] at h
+  obtain ⟨s2, es2, hm2, -, hlt2, hpin⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_refines p hP.pin_at n _ a hS.check.pins 13) h2
+  simp only at hm2
+  have e2' : μ2 = m := es2 ▸ hm2
+  clear es2 hm2; subst μ2
+  rw [e6] at h
+  cases h3 : callW p n "mentions_const" [ρ2.headD 0, dw (m.arr64 DECL) k.toNat 5 &&& 4294967295] m with
+  | none => rw [h3] at h; simp at h
+  | some q3 =>
+  obtain ⟨ρ3, μ3⟩ := q3
+  rw [h3, L.Ind.bW_some] at h
+  obtain ⟨hmc3, hM3, hS3, hf3⟩ := mentionsConst_fr p hP.e_view hP.mc_find hP.mc_put hP.mc_go
+    hP.mc_clear hP.mentions h3 (mask_lt _) hlt2 hS hmc
+  rw [decE_eq, decI_mask, hv] at hmc3
+  have hpin' : pinSorryAx.run a = .ok (decI (ρ2.headD 0), a) := hpin
+  have hrun := sideRecordVal_run (d := d) hb (fun _ => hpin') (fun _ => hmc3)
+  have hdl : μ3.arr64 DECL = m.arr64 DECL := hf3.arr _ (by decide) (by decide)
+  have hdp : μ3.arr64 DLP = m.arr64 DLP := hf3.arr _ (by decide) (by decide)
+  by_cases c3 : ρ3.headD 0 ≠ 0
+  · rw [ite_eq_left c3, sideRecordW.j1.arm1] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    have hc3 : (ρ3.headD 0 != 0) = true := by simpa using c3
+    rw [hc3] at hrun
+    refine ⟨_, hrun, ?_, ?_, ?_, ?_⟩
+    · have e1 : (1 + 8 * k).toNat = 1 + 8 * k.toNat := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+      have hA := hD.setAxiom hk hcv
+      have hds : ds.set! k.toNat (sideRes d cv false true) = ds.set k.toNat (.axiomDecl cv) hk := by
+        simp [sideRes, Array.set!_eq_setIfInBounds, Array.setIfInBounds, hk]
+      rw [Mem.arr64_set64_same, e1, hdl, Mem.arr64_set64_ne _ _ _ _ _ (by decide), hdp, hds]
+      exact hA
+    · exact (L.Ind.StageR.frame_front hS3 (MemFrame.set64 _ _ decl_ne_ctl _ _)).1
+    · obtain ⟨mp, hmp⟩ := hM3
+      exact ⟨mp, memoRG_frame mcSch mcSch_wf bmKey _ [DECL] [] (by decide) (by simp) _ _
+        (MemFrame.set64 _ _ decl_ne_ctl _ _) mp hmp⟩
+    · exact (hf3.mono (by simp) (by simp)).trans ((MemFrame.set64 _ _ decl_ne_ctl _ _).mono (by simp) (by simp))
+  · rw [ite_eq_right c3, sideRecordW.j1.arm1] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    have hc3 : (ρ3.headD 0 != 0) = false := by simpa using c3
+    rw [hc3] at hrun
+    refine ⟨_, hrun, ?_, hS3, hM3, hf3.mono (by simp) (by simp)⟩
+    simp only [sideRes, Bool.false_eq_true, ite_false]
+    rw [hdl, hdp, hset]; exact hD
 
 end L.Arena
