@@ -53,6 +53,12 @@ structure IotaRelProg (p : Prog) : Prop where
   aiv : p.lookup "ann_ident_val" = some annIdentValL
   ai : p.lookup "ann_ident" = some annIdentL
   aeq : p.lookup "ann_eq" = some annEqL
+  lle : p.lookup "list_lvl_eq" = some listLvlEqL
+  lae : p.lookup "list_ann_eq" = some listAnnEqL
+  pae : p.lookup "params_ann_eq" = some paramsAnnEqL
+  ipr : p.lookup "iota_parts_rel" = some iotaPartsRelL
+  sleq : p.lookup "sl_eq" = some slEq
+  strip : StripProg p
 
 section ann
 variable {p : Prog} {env : ConLeche.Env} {fe feR : IFEnv} {vis : Word}

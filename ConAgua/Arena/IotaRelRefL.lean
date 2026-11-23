@@ -1,6 +1,9 @@
 module
 
 public import ConAgua.Arena.IotaRelRefA
+public import ConAgua.Arena.IlpRd
+public import ConAgua.Arena.IndPartsSpec.EqW
+public import ConAgua.Arena.RecLayout.RuleDec
 
 @[expose] public section
 
@@ -224,6 +227,74 @@ theorem listAnnEq_rel (P : IotaRelProg p) (hf : p.lookup "list_ann_eq" = some li
   rw [listAnnEqW.arm1] at hW
   simpa using listAnnEq_loop P hf (n + 1) m _ a 0 r hW hS hok ha hab hb hbb UInt64.zero_le
     UInt64.zero_le
+
+/-- **`params_ann_eq(vis, cnP, q, pdO, pdL)` refines `paramsAnnEq feR cnP cv pd`**. -/
+@[refines ConRon.Arena.paramsAnnEq]
+theorem paramsAnnEq_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
+    {cnP q pdO pdL : Word} {r : List Word} {cv : IConstantVal} {pd : List EIdx}
+    (hc : callW p n "params_ann_eq" [vis, cnP, q, pdO, pdL] m = some (r, m'))
+    (hS : StageR vis feR m a) (hok : ConRon.Bridge.CheckOK false env fe a)
+    (hcv : decCV (erecP m) q.toNat = some cv)
+    (hpd : decHL m pdO.toNat pdL.toNat = some pd) (hpdb : pdO.toNat + pdL.toNat ≤ iwTop m) :
+    ∃ b a', (paramsAnnEq feR cnP.toNat cv pd).run a = .ok (b, a') ∧ StageR vis feR m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (paramsAnnEq_specW p P.pae n _ vis cnP q pdO pdL) hc
+  rcases n with _ | n
+  · rw [paramsAnnEqW.eq_1] at hW; cases hW
+  rw [paramsAnnEqW.arm1] at hW
+  obtain ⟨-, -, -, -, hty, hhw⟩ := decCV_rd (erRdOK m) hcv
+  rcases c1 : callW p n "strip_pis" [cnP, erRd m (q + CV.type)] m with _ | ⟨r1, m1⟩
+  · rw [c1, paramsAnnEqW.k_strip_pis.none] at hW; cases hW
+  obtain ⟨x1, a1, h1, hS1, hg1, hd1⟩ :=
+    stripF_pis_ok vis feR cnP _ hhw m m1 a r1 (stripF_of_callW P.strip c1) hS
+  have ha1 : a1 = a := stripPis_st _ _ _ _ _ h1
+  subst ha1
+  simp only [paramsAnnEq]
+  rw [hty, StateT.run_bind, h1, except_ok_bind]
+  rcases x1 with _ | ⟨rd, rest⟩
+  · simp only [decOLE] at hd1
+    rw [c1, paramsAnnEqW.k_strip_pis.arm1 _ _ _ _ _ _ _ hd1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨false, a1, rfl, hS1, hg1, by simp [decW0B], ConRon.Bridge.CoreStep.refl hok⟩
+  obtain ⟨h1w, ⟨hrd, hrdb⟩, -⟩ := hd1
+  rw [c1, paramsAnnEqW.k_strip_pis.arm2 _ _ _ _ _ _ _ (by rw [h1w]; decide)] at hW
+  dsimp only
+  rcases c2 : callW p n "list_ann_eq" [vis, r1.tail.headD 0, r1.tail.tail.headD 0, pdO, pdL] m1
+    with _ | ⟨r2, m2⟩
+  · rw [c2, paramsAnnEqW.k_list_ann_eq.none] at hW; cases hW
+  rw [c2, paramsAnnEqW.k_list_ann_eq.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  rw [L.getD_one, L.getD_two] at hrd hrdb
+  obtain ⟨b2, a2, h2, hS2, hg2, hd2, k2⟩ := listAnnEq_rel P P.lae c2 hS1 hok hrd hrdb
+    (decHL_grow' hg1 hpdb hpd) (Nat.le_trans hpdb hg1.iw)
+  exact ⟨b2, a2, h2, hS2, hg1.trans hg2, hd2, k2⟩
+
+theorem irMapDecI : ∀ (ws1 ws2 : List Word), (∀ w ∈ ws1, w.toNat < 2 ^ 32) → (∀ w ∈ ws2, w.toNat < 2 ^ 32) →
+    ws1.map (decI : Word → EIdx) = ws2.map decI → ws1 = ws2
+  | [], [], _, _, _ => rfl
+  | [], _ :: _, _, _, h => by simp at h
+  | _ :: _, [], _, _, h => by simp at h
+  | x :: xs, y :: ys, h1, h2, h => by
+    simp only [List.map_cons, List.cons.injEq] at h
+    rw [decI_inj (h1 x (by simp)) (h2 y (by simp)) h.1,
+      irMapDecI xs ys (fun w hw => h1 w (by simp [hw])) (fun w hw => h2 w (by simp [hw])) h.2]
+
+/-- `sl_eq` on two decoded `IW` handle slices: the memory kept, `1` iff the lists are equal. -/
+theorem irSlEq (P : IotaRelProg p) {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
+    {xs ys : List EIdx} (hc : callW p n "sl_eq" [o1, l1, o2, l2] m = some (r, m'))
+    (h1 : decHL m o1.toNat l1.toNat = some xs) (hb1 : o1.toNat + l1.toNat < 2 ^ 64)
+    (h2 : decHL m o2.toNat l2.toNat = some ys) (hb2 : o2.toNat + l2.toNat < 2 ^ 64) :
+    m' = m ∧ r.headD 0 = if xs = ys then 1 else 0 := by
+  obtain ⟨s', hs', -, hm, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (slEq_spec p P.sleq n _ o1 l1 o2 l2) hc
+  refine ⟨hs' ▸ hm, ?_⟩
+  obtain ⟨ws1, hw1, rfl, hl1⟩ := slR_of_decHL m _ _ _ h1 hb1
+  obtain ⟨ws2, hw2, rfl, hl2⟩ := slR_of_decHL m _ _ _ h2 hb2
+  simp only [UInt64.ofNat_toNat] at hw1 hw2
+  rw [eqW_ok n m _ _ _ _ _ ws1 ws2 hw1 hw2 hW]
+  have hinj : ws1.map (decI : Word → EIdx) = ws2.map decI ↔ ws1 = ws2 :=
+    ⟨irMapDecI ws1 ws2 hl1 hl2, fun e => by rw [e]⟩
+  by_cases e : ws1 = ws2 <;> simp [e, hinj]
 
 end lists
 
