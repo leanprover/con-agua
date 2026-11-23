@@ -161,3 +161,55 @@ over the whole tree before the first build, so no theorem failed for it; the rem
 were the ported functions' proofs, which no rung can produce. Yield 0, as in ronsync3, ronsync4
 and ronsync6. The ladder was not needed as a compile-pass tool either: the helpers' first
 milestones restated by hand, and the build failures were few (11 modules at the first full build).
+
+## 6. Checks
+
+* `gates.sh`: all 16 OK. `provenance.py check --strict`: every citation exact at con-ron
+  8021ddac, con-leche bc667610; 0 markers left (39 at the bump). `bump-con-ron.sh --check` ok.
+  `asm_file.py --check`: `checker.s` and `pins.bin` up to date (`pins/` moved only by a file
+  rename, so `pins.bin` did not change).
+* `diff-e2e --refs --no-cache --tests` at con-leche bc667610 (con-ron 8021ddac built in
+  `_tmp/ref/con-ron-8021`; con-ron-lean-twin at this branch): **748/748 agree** (441 accepted,
+  307 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF 0; 18 NOT PORTED (`--compare`), 7 SKIPPED
+  (D49). con-leche's expectations grew from 740 to 748 file rows plus the 18 argument rows; the
+  new rows are #622's ι-rule rejects, #501's reserved names, #580's `succ` tower, `lit_hash_low_bits`.
+* `e2e.py --latest ''` (that con-ron): 827 fixtures, all agree with con-ron-lean-twin (482
+  accept, 57 decline, 286 reject, 2 time out in both).
+* Census: 100 %, zero `sorry` sources (the 2 bad links of `topLitS` were there before).
+
+## 7. Performance
+
+Against master `6896d49c1`, both binaries `make` from the committed files, `Init`
+(`_tmp/fixtures/init/init435.ndjson`). The wall rounds ran while the helpers built (load up to
+3.8).
+
+| | master | ronsync8 | Δ |
+|---|---:|---:|---:|
+| `Init`, `instructions:u`, one thread (`perf stat`, 2 runs each, identical to ±0.00 %) | 202 593 M | 202 631 M | **+0.019 %** |
+| `Init`, peak RSS, one thread | 628 MB | 628 MB | 0 % |
+| `Init`, peak RSS, `--jobs=16` | 765 MB | 765 MB | 0 % |
+| `Init` wall, one thread (12 interleaved paired rounds, Wilcoxon) | 14.78 s | 14.90 s | mean +0.85 % [+0.26, +1.44], p = 0.012 |
+| `Init` wall, `--jobs=16` (same rounds) | 2.57 s | 2.56 s | mean −0.14 % [−2.13, +1.85], p = 0.155 |
+
+The ι reading rule is the only new work on `Init`'s path: it runs once per inductive block (each
+recursor's rules read off its type and through its constructor). Upstream measured +0.23–0.26 %
+`instructions:u` on its three inductive-heaviest fixtures and ≈ 0 on `Init` (#164, +0.025 %),
+which matches L's +0.019 %. The one-thread wall difference (+0.85 %) is larger than the
+instruction count, and those rounds ran under load. No regression in memory.
+
+## 8. What went wrong
+
+* **Helper context.** The ι port took five helpers in sequence (iota → iota2 → iota3 for phase 1,
+  iotarel → cid for phase 2 and the arm). Each ran out of context after 4–15 proofs; the
+  hand-overs worked, but a helper cannot write to `_tmp/ronsync8/` (the sandbox guard), so the
+  hand-overs sat in their worktrees until the lead copied them.
+* **`natBigHash`.** con-leche's new C hash broke every executable's link. The first Lean
+  replacement (a word fold) hung `con-ron-lean-twin` on `nat_size_ok`, and a halving fold was no
+  better. A constant-time mix fixed it. Two full rebuilds of the tree went into this.
+* **Integration lists by hand.** The new functions had to go into the closure lists, and their
+  modules needed `import all` in every whole-program check. Each was found by one failing build
+  round and fixed by hand. The per-function `#eval` of `wsChk` (which function fails) was the
+  quickest diagnosis; `loop_fns.py`/`leaf_fns.py`/`phaseb_fns.py` regenerate the lists and
+  should be run right after the program is regenerated.
+* **The `--pins` reference flag.** con-ron #171 removed `--pins`, and the first `--refs` run
+  cached "error" verdicts for all 748 fixtures. `--no-cache` replaced them.
