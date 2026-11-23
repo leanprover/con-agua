@@ -158,6 +158,9 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
   if MODE == 1 { r := call check_a(1); return r };
   if MODE == 3 { r := call check_a(0); return r };
   if MODE == 2 { r := call check_b(); return r };
+  if MODE == 4 { r := call check_c1(); return r };
+  if MODE == 5 { r := call check_c2(); return r };
+  if MODE == 6 { r := call check_c3(); return r };
   abort
 }
 

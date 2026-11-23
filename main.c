@@ -2,6 +2,7 @@
 
    build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
    usage:  checker [--jobs=N] FILE
+           checker --compare [--] CHALLENGE SOLUTION
 
    The default path is the one the final theorem covers (`checkerFile_accepts`,
    ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
@@ -244,14 +245,17 @@ static int run_jobs(int jobs, uint8_t *in, uint64_t in_len, const uint8_t *pins,
   return print_verdict(first.r);
 }
 
+static int run_compare(const char *prog, int argc, char **argv);
+
 static int run_main(int argc, char **argv) {
   int jobs = 0;
+  if (argc > 1 && strcmp(argv[1], "--compare") == 0) return run_compare(argv[0], argc - 2, argv + 2);
   if (argc > 1 && strncmp(argv[1], "--jobs=", 7) == 0) {
     jobs = atoi(argv[1] + 7);
     if (jobs < 1) { fprintf(stderr, "bad --jobs\n"); return 3; }
     argv++; argc--;
   }
-  if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE\n", argv[0]); return 3; }
+  if (argc != 2) { fprintf(stderr, "usage: %s [--jobs=N] FILE\n       %s --compare [--] CHALLENGE SOLUTION\n", argv[0], argv[0]); return 3; }
   uint64_t in_len;
   uint8_t *in = read_input(argv[1], &in_len);
   uint8_t *region = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
@@ -260,6 +264,36 @@ static int run_main(int argc, char **argv) {
   advise_huge(region + ca_w0, ca_nw);
   if (jobs > 1) return run_jobs(jobs, in, in_len, pins, sizeof pins, region);
   return print_verdict(ca_start(in, in_len, pins, sizeof pins, region, ca_region_size));
+}
+
+/* `--compare [--] CHALLENGE SOLUTION`: CHALLENGE checked with its axioms other than the built-in
+   ones, and its declarations whose value uses `sorryAx`, justified by SOLUTION, which is checked
+   as a FILE is. Sequential only. The two files are read as FILE is (`read_input`), the region is
+   ca_cmp_region_size bytes, and `ca_compare` is called once, the challenge's bytes in the first
+   two arguments (as `ca_start`'s input), the solution's in the last two (on the stack). The
+   verdict line and the exit status are `print_verdict`'s. The theorem for this call is
+   `checkerFile_compare_accepts` (ConAgua/Final/Compare.lean). */
+extern ca_res ca_compare(const uint8_t *c, uint64_t c_len, const uint8_t *pins, uint64_t pins_len,
+                         void *base, uint64_t base_len, const uint8_t *s, uint64_t s_len);
+extern const uint64_t ca_cmp_region_size;
+
+static int compare_usage(const char *prog, const char *why) {
+  fprintf(stderr, "%s: --compare takes %s, a challenge and its solution\n", prog, why);
+  return 3;
+}
+
+static int run_compare(const char *prog, int argc, char **argv) {
+  if (argc > 0 && strcmp(argv[0], "--") == 0) { argv++; argc--; }
+  if (argc != 2) return compare_usage(prog, "two files");
+  if (strcmp(argv[0], argv[1]) == 0) return compare_usage(prog, "two different files");
+  uint64_t c_len, s_len;
+  uint8_t *c = read_input(argv[0], &c_len);
+  uint8_t *s = read_input(argv[1], &s_len);
+  uint8_t *region = mmap(0, ca_cmp_region_size, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+  if (region == MAP_FAILED) fail("mmap", strerror(errno));
+  advise_huge(region + ca_w0, ca_nw);
+  return print_verdict(ca_compare(c, c_len, pins, sizeof pins, region, ca_cmp_region_size, s, s_len));
 }
 
 /* Every path flushes the verdict line before exiting: a flush that fails is status 3 (the

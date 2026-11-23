@@ -85,6 +85,14 @@ public import ConAgua.Arena.JustifyIface
 public import ConAgua.Checker.CompareEntry
 public import ConAgua.Arena.Needs
 public import ConAgua.Arena.NeedsModels
+public import ConAgua.Arena.JustifySide
+public import ConAgua.Arena.JustifySideModels
+public import ConAgua.Arena.Justify
+public import ConAgua.Arena.NeedsRef
+public import ConAgua.Arena.NeedsRef2
+public import ConAgua.Arena.NeedsRef3
 public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.JustifyRef1
 public import ConAgua.Arena.JustifyRef2
+public import ConAgua.Arena.JustifySideRefMove
+public import ConAgua.Arena.JustifySideRefSide

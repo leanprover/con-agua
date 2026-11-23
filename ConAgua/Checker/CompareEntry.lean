@@ -35,10 +35,6 @@ namespace L.Checker
 
 open L L.Arena L.Front
 
-/-- The records of the first parse, kept across the second (`cmp_stash`): word `0` the count,
-then the records as `DECL` holds them. -/
-abbrev CDECL : ArrId := 223
-
 /-- `cmp_stash()`: `DECL` (the prelude's records, then the challenge's) copied to `CDECL`; `DECL`
 cut back to the prelude's `CTL[240]` records; the id tables emptied (`front_reset`). -/
 -- con-ron: none — L keeps one parse result in `DECL`; the twin's driver holds two `ParseResultD` values
