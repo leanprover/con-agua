@@ -597,7 +597,23 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     rw [hsa2]
     refine ev_congr (j := Kc + 65) ?_ (by omega)
     rw [← Code.label (i := 65) hC rfl]
-    sorry
+    obtain ⟨hBw, hBwords⟩ := cmp_buf_words hok hp hMem5 hBok.1
+    obtain ⟨-, -, h2o, hlto⟩ := cmp_out_pos hok hp base 0 0 0 0
+    have hslot : abiSlot * abiSlot64 tab out + abiSlot ≤ abiNeed tab := by
+      rw [abiNeed_eq, ← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hlto
+    have h2s : abiSlot * 2 ≤ abiSlot * abiSlot64 tab out := Nat.mul_le_mul_left _ h2o
+    have hwd : abiWords = 2 ^ 32 := rfl
+    have hgeoB : CmpGeo tab own base dm.regs.r9.toNat rsp0 (base + abiSlot * abiSlot64 tab out)
+        (cmpBuf out m5).size := ⟨hfits, hge', hcsW, hcs24, hcs8, by omega, by omega, by omega⟩
+    have hgB : BufGeom tab fz own (cmpBuf out m5) (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
+        (workerNeed own) :=
+      ⟨Nat.le_refl _, by simp only [L.Compiler.cmpW]; omega, by omega, hBok.2.1, hBok.2.2.1, hBok.2.2.2,
+        fun x h1 h2 => .inl (by simp only [L.Compiler.cmpW]; omega)⟩
+    refine cmp_loop q p hq hok hAX hwf hnres plo phi hdrf ctlf hw fz hngm hngl hngh h12 h13 h23 hfzl k0 hcodeO fd
+      hentry hnp hmo hdisj hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
+      (fun r j rs r' h => hkeep r j rs r' h) hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
+      (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
+    all_goals sorry
   sorry
 
 end
