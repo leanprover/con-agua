@@ -256,6 +256,25 @@ structure ConeR (m : Mem) (seen : Std.HashMap NIdx Bool) (work : List NIdx) : Pr
   words : ∀ i < (ctlW m CTOPC).toNat, (rdN (m.arr64 CWK) i).toNat < 2 ^ 32
   room : (ctlW m CTOPC).toNat ≤ (m.arr64 CWK).size
 
+/-- **The walks' memory between two jobs**: their `seen` memos related to some map (so that a
+walk's first `clear` starts it empty) and their stack tops inside `CTL`. Established by the driver
+(the region's zeros), kept by every job (no job outside the walks writes `NDM`, `CSM` or
+`CTL[220‥223]`). -/
+structure WalkMem (m : Mem) : Prop where
+  nd : ∃ mp, ndMR m mp
+  cs : ∃ mp, csMR m mp
+  ntop : NTOPC.toNat < (m.arr64 CTL).size
+  ctop : CTOPC.toNat < (m.arr64 CTL).size
+
+/-- **`WalkMem` across a frame** that writes neither memo's array nor its stamp word. -/
+theorem WalkMem.frame {A : List TieredArray} {C : List Word} {m m' : Mem} (h : WalkMem m)
+    (hf : MemFrame A C m m') (hA1 : (NDM : TieredArray) ∉ A) (hA2 : (CSM : TieredArray) ∉ A)
+    (hC1 : (220 : Word) ∉ C) (hC2 : (222 : Word) ∉ C) : WalkMem m' := by
+  obtain ⟨⟨mp, hn⟩, ⟨mq, hc⟩, h1, h2⟩ := h
+  exact ⟨⟨mp, memoRG_frame ndSch ndSch_wf bmKey _ A C hA1 hC1 m m' hf mp hn⟩,
+    ⟨mq, memoRG_frame csSch csSch_wf nmKey _ A C hA2 hC2 m m' hf mq hc⟩,
+    by rw [hf.size]; exact h1, by rw [hf.size]; exact h2⟩
+
 /-! ## The row access (L plumbing) -/
 
 /-- `sol_row_get(w)`: the solution's constant row of name handle `w`. -/
