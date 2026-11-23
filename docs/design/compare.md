@@ -89,3 +89,18 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
 * 17:10 helpers started: `compare-needs` (H1, Needs.lean), `compare-cone` (H2, the comparison,
   the cone, `checkJustified`), `compare-side` (H3, the move, the side records, the mates);
   briefs `_tmp/compare/brief-*.md`.
+* 17:15–17:40 the compared run's entries (`Checker/CompareEntry.lean`: modes 4, 5, 6, `cmp_stash`,
+  `cmp_restore`), the driver stub `ca_compare` (`Compiler/AbiCmp.lean`, code only, emitted after
+  the compiled code), the harness (`run_compare`). Wiring commit: the arrays as table rows
+  (`SIXA`‥`CWK`, `CDECL`, 210‥223), `record_job`'s branch on `CTL[224]`, `check`'s dispatch on
+  modes 4–6, the new arrays in `parOwned` (not frozen: the solution's rows are read only by the
+  challenge's jobs, which run in place; so the frozen buffer's header is unchanged).
+* Helpers' first milestones merged: H1 (15 Needs functions + generated models; Option models:
+  every Needs error is `.internal`, class 0; the list recursions are loops), H3 (the move as three
+  loops over `2 · count` of the name stores, the side records in place (kind word to axiom), the
+  mates, `builtin_axiom_name`), H2 (the comparisons, the cone as a loop over a stack, `justify_why`,
+  `check_justified`, `check_record_sol`; reason `R_NOT_JUSTIFIED_BY`). Reviewed against the twin
+  line by line: faithful.
+* Design changes from stage 0: the move is over the name stores' counts, not over the solution's
+  records (H3: re-walking `decl_constants` would allocate again and needs an invariant tying rows to
+  records; the stores' counts bound every row through `IndexKeysIn`, `FreezeTrunc.lean`).
