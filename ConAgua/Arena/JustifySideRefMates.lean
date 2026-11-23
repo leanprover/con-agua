@@ -7,6 +7,7 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Arena.JustifySideModels
 import all ConAgua.Arena.JustifyIface
+import ConAgua.Arena.DeclAndPinInd
 
 @[expose] public section
 
@@ -28,7 +29,7 @@ open ConRon.Arena
 
 namespace L.Arena
 
-open L.Front (DECL DLP DeclsF DeclAtF DeclAt CVAt dw)
+open L.Front (DECL DLP DeclsF DeclAtF DeclAt CVAt dw decCIs trunc IndDeclAt)
 
 /-! ## `mates_set` -/
 
@@ -259,5 +260,45 @@ theorem copyNames_ok {m₀ : Mem} {d bo bl : Word} (hdl : d.toNat + bl.toNat ≤
       rw [sdCopyNamesW.loop1.eq_2, ite_eq_right this] at h; cases h
       have : i = bl := UInt64.le_antisymm hle (UInt64.not_lt.mp g)
       subst this; exact hI
+
+/-! ## A block's names in `DLP` -/
+
+/-- Member `j`'s name word of the block at `bo` (record pointers into the pool `P`). -/
+def nmP (P : Array Word) (bo j : Nat) : Word := rdN P ((rdN P (bo + j)).toNat + CI.cv.toNat)
+
+theorem block_names_dec {P : Array Word} {t : Nat} : ∀ (k bo : Nat) (block : List IConstantInfo),
+    decCIs (trunc P t) bo k = some block → 0 < bo → (∀ j < k, rdN P (bo + j) ≠ 0) →
+    block.length = k ∧ ∀ j (hj : j < k), ∃ h : j < block.length,
+      (decI (nmP P bo j) : NIdx) = block[j].name ∧ (nmP P bo j).toNat < 2 ^ 32 ∧
+      (rdN P (bo + j)).toNat + CI.cv.toNat < P.size ∧ bo + j < P.size := by
+  intro k
+  induction k with
+  | zero => intro bo block h _ _; rw [L.Arena.decCIs_zero] at h; cases h; simp
+  | succ k ih =>
+    intro bo block h hbo hp
+    rw [L.Arena.decCIs_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨c, ⟨v, hv, hc⟩, cs, hcs, rfl⟩ := h
+    obtain ⟨hl, hall⟩ := ih (bo + 1) cs hcs (by omega) (fun j hj => by
+      have := hp (j + 1) (by omega); rwa [show bo + (j + 1) = bo + 1 + j by omega] at this)
+    obtain ⟨w0, hw0, rfl⟩ : ∃ w, (trunc P t)[bo]? = some w ∧ w.toNat = v := by
+      simpa [nat?, aread_apply] using hv
+    obtain ⟨hP0, -⟩ := trunc_get_some hw0 (by omega)
+    obtain ⟨w, hw, hw32, hname⟩ := decCI_name hc
+    have hr0 : rdN P bo = w0 := by simp [rdN, hP0]
+    have hne : w0 ≠ 0 := by have := hp 0 (by omega); simpa [hr0] using this
+    have hcv : 0 < CI.cv.toNat := by decide
+    obtain ⟨hPw, -⟩ := trunc_get_some (i := w0.toNat + CI.cv.toNat) (by simpa [aread_apply] using hw) (by omega)
+    refine ⟨by simp [hl], fun j hj => ?_⟩
+    rcases j with _ | j
+    · refine ⟨by simp, ?_⟩
+      simp only [nmP, Nat.add_zero, hr0, List.getElem_cons_zero]
+      have hrw : rdN P (w0.toNat + CI.cv.toNat) = w := by simp [rdN, hPw]
+      rw [hrw]
+      exact ⟨hname.symm, hw32, (Array.getElem?_eq_some_iff.mp hPw).1, (Array.getElem?_eq_some_iff.mp hP0).1⟩
+    · obtain ⟨h1, h2, h3, h4, h5⟩ := hall j (by omega)
+      refine ⟨by simp; omega, ?_⟩
+      simp only [nmP, List.getElem_cons_succ, show bo + (j + 1) = bo + 1 + j by omega] at h2 h3 h4 h5 ⊢
+      exact ⟨h2, h3, h4, h5⟩
 
 end L.Arena
