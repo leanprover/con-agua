@@ -34,6 +34,7 @@ open L.Arena
 
 /-- `pi_tele(e)`: a `∀`-telescope's binder count and its body, `(n, body)`; aborts at `CWF`
 binders (the twin's fuel). -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:55-66 ConRon.Arena.piTele
 @[no_expose, l_impl ConRon.Arena.piTele]
 def piTeleL : FunDecl := lfn (e) locals (n, h, g, x, y, z) {
   n := 0;
@@ -51,6 +52,7 @@ def piTeleL : FunDecl := lfn (e) locals (n, h, g, x, y, z) {
 /-- `motive_level(preO, preL, nIdx, body)`: the sort level of the motive the body applies,
 `(1, u)`, or `(0, 0)`: the body's head a prefix variable (below the `nIdx` indices and the major)
 whose domain ends in `Sort u`. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:68-89 ConRon.Arena.motiveLevel?
 @[no_expose, l_impl ConRon.Arena.motiveLevel?]
 def motiveLevelL : FunDecl := lfn (preO, preL, nIdx, body) locals (hd, g, k, y, z, d, r, u) {
   hd := call get_app_fn_f(⟪CWF⟫, body);
@@ -68,6 +70,7 @@ def motiveLevelL : FunDecl := lfn (preO, preL, nIdx, body) locals (hd, g, k, y, 
 /-- `iota_frame(q, mI, rP)`: a recursor's frame, `(ok, pre.off, pre.len, doms.off, doms.len, body,
 u)` (`q` the recursor's constant value): its first `rP` binders, the `mI - rP` index binders and
 the major's domains, the body after them, the sort level of the motive the body applies. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:91-105 ConRon.Arena.iotaFrame
 @[no_expose, l_impl ConRon.Arena.iotaFrame]
 def iotaFrameL : FunDecl := lfn (q, mI, rP) locals (nI, ok, po, pl, rest, dO, dL, body, u) {
   (ok, po, pl, rest) := call strip_pis(rP, EREC⦃q + ⟪CV.type⟫⦄);
@@ -83,6 +86,7 @@ def iotaFrameL : FunDecl := lfn (q, mI, rP) locals (nI, ok, po, pl, rest, dO, dL
 
 /-- `is_minor_at(preO, preL, mot, q)`: whether the prefix binder at `q` is a minor premise of the
 motive at position `mot`: its conclusion headed by that motive's variable. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:107-118 ConRon.Arena.isMinorAt
 @[no_expose, l_impl ConRon.Arena.isMinorAt]
 def isMinorAtL : FunDecl := lfn (preO, preL, mot, q) locals (d, tn, tb, hd, g, k, y, z) {
   d := call expr_get_d(preO, preL, q);
@@ -97,6 +101,7 @@ def isMinorAtL : FunDecl := lfn (preO, preL, mot, q) locals (d, tn, tb, hd, g, k
 /-- `minors_from(preO, preL, mot, q)`: the positions from `q` on whose binders `is_minor_at`
 accepts, in order, as a fresh `IW` slice `(off, len)` (the room for `preL - q` positions
 allocated first). -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:120-129 ConRon.Arena.minorsFrom
 @[no_expose, l_impl ConRon.Arena.minorsFrom]
 def minorsFromL : FunDecl := lfn (preO, preL, mot, q) locals (o, c, j, b) {
   if preL <= q { return (0, 0) };
@@ -117,6 +122,7 @@ def minorsFromL : FunDecl := lfn (preO, preL, mot, q) locals (o, c, j, b) {
 /-- `iota_rec_major(preO, preL, domO, domL, nIdx, rP, k)`: `iota_rec_of` past the motive's head
 `k`: the minor premises, then the major's type at a constant head (its levels, its leading
 arguments with the index variables dropped), `(ok, IotaRec)`. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:144-160 ConRon.Arena.iotaRecMajor
 @[no_expose, l_impl ConRon.Arena.iotaRecMajor]
 def iotaRecMajorL : FunDecl := lfn (preO, preL, domO, domL, nIdx, rP, k) locals
     (mot, mo, ml, dom, dh, g, n, us, z, ao, al, t, po, pl) {
@@ -136,6 +142,7 @@ def iotaRecMajorL : FunDecl := lfn (preO, preL, domO, domL, nIdx, rP, k) locals
 
 /-- `iota_rec_of(q, mI, rP)`: what every rule of the recursor (constant value `q`) reads off its
 type, `(ok, IotaRec)`: the frame, the motive the body applies (a variable), `iota_rec_major`. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:162-176 ConRon.Arena.iotaRecOf
 @[no_expose, l_impl ConRon.Arena.iotaRecOf]
 def iotaRecOfL : FunDecl := lfn (q, mI, rP) locals
     (nI, ok, po, pl, dO, dL, body, u, hd, g, k, y, z, r1, r2, r3, r4, r5, r6, r7) {
@@ -152,6 +159,7 @@ def iotaRecOfL : FunDecl := lfn (q, mI, rP) locals
 
 /-- `lift_field_doms(amt, fo, fl)`: field `j`'s domain lifted by `amt` above its own `j` binders,
 for each `j`, as a fresh `IW` slice. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:188-196 ConRon.Arena.liftFieldDoms
 @[no_expose, l_impl ConRon.Arena.liftFieldDoms]
 def liftFieldDomsL : FunDecl := lfn (amt, fo, fl) locals (o, j, d) {
   if fl == 0 { return (0, 0) };
@@ -167,6 +175,7 @@ def liftFieldDomsL : FunDecl := lfn (amt, fo, fl) locals (o, j, d) {
 
 /-- `lift_idx_args(amt, nT, nF, ao, al)`: each argument with the `nT` binders behind it dropped,
 then lifted by `amt` above the `nF` fields, as a fresh `IW` slice. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:198-209 ConRon.Arena.liftIdxArgs
 @[no_expose, l_impl ConRon.Arena.liftIdxArgs]
 def liftIdxArgsL : FunDecl := lfn (amt, nT, nF, ao, al) locals (o, j, b, c) {
   if al == 0 { return (0, 0) };
@@ -185,6 +194,7 @@ def liftIdxArgsL : FunDecl := lfn (amt, nT, nF, ao, al) locals (o, j, b, c) {
 at its frame: the `i`-th minor premise, its first `nfields` binders the fields (lifted past the
 later prefix), its conclusion's first `nIdx` arguments the indices; `(ok, IIotaParts)` (`r` the
 rule's record). -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:211-230 ConRon.Arena.iotaPartsOfAt
 @[no_expose, l_impl ConRon.Arena.iotaPartsOfAt]
 def iotaPartsOfAtL : FunDecl := lfn (preO, preL, minO, minL, us, parO, parL, rP, nIdx, i, r) locals
     (qq, d, ok, fdo, fdl, inner, amt, fo, fl, tn, tb, ao, al, io, il) {
@@ -208,6 +218,7 @@ def iotaPartsOfAtL : FunDecl := lfn (preO, preL, minO, minL, us, parO, parL, rP,
 /-- `ctor_levels_at(r, lpsO, lpsL)`: the levels the rule `r`'s constructor is used at, interned:
 the rule's recorded levels (`nested`, `levels`), else the constructor's own parameters (`IW`
 slice `(lpsO, lpsL)`). -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:234-242 ConRon.Arena.ctorLevelsAt
 @[no_expose, l_impl ConRon.Arena.ctorLevelsAt]
 def ctorLevelsAtL : FunDecl := lfn (r, lpsO, lpsL) locals (o, l, us) {
   if EREC⦃r + ⟪Rule.fire⟫⦄ != 0 {
@@ -220,6 +231,7 @@ def ctorLevelsAtL : FunDecl := lfn (r, lpsO, lpsL) locals (o, l, us) {
 }
 
 /-- `iota_bvars(rP, n)`: `bvar (rP - 1 - i)` for `i < n`, as a fresh `IW` slice. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:244-252 ConRon.Arena.iotaBVars
 @[no_expose, l_impl ConRon.Arena.iotaBVars]
 def iotaBVarsL : FunDecl := lfn (rP, n) locals (o, i, b) {
   if n == 0 { return (0, 0) };
@@ -236,6 +248,7 @@ def iotaBVarsL : FunDecl := lfn (rP, n) locals (o, i, b) {
 
 /-- `iota_params_at(r, rP, cnP)`: the parameters the rule `r` applies its constructor to: a
 nested rule's recorded pins (copied to `IW`), else the prefix's first `min cnP rP` variables. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:254-261 ConRon.Arena.iotaParamsAt
 @[no_expose, l_impl ConRon.Arena.iotaParamsAt]
 def iotaParamsAtL : FunDecl := lfn (r, rP, cnP) locals (o, l, k) {
   if EREC⦃r + ⟪Rule.fire⟫⦄ == 1 {
@@ -251,6 +264,7 @@ def iotaParamsAtL : FunDecl := lfn (r, rP, cnP) locals (o, l, k) {
 /-- `iota_parts_at_body(cnP, mI, rP, r, lvls, parO, parL, pdO, pdL, ctorBody)`: `iota_parts_at`
 past the parameters: the constructor's body at the rule's parameters, its next `nfields`
 binders, the indices behind the parameters, the shape guard; `(ok, IIotaParts, pdO, pdL)`. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:263-282 ConRon.Arena.iotaPartsAtBody
 @[no_expose, l_impl ConRon.Arena.iotaPartsAtBody]
 def iotaPartsAtBodyL : FunDecl := lfn (cnP, mI, rP, r, lvls, parO, parL, pdO, pdL, ctorBody) locals
     (body, ok, fo, fl, concl, ao, al, io, il) {
@@ -271,6 +285,7 @@ def iotaPartsAtBodyL : FunDecl := lfn (cnP, mI, rP, r, lvls, parO, parL, pdO, pd
 value `qj`, `cnP` parameters): its type at the rule's levels, instantiated at the rule's
 parameters; `(ok, IIotaParts, pdO, pdL)`, the last the constructor's parameter domains at the
 rule's levels. -/
+-- con-ron: ConRon/Arena/Inductives/IotaRead.lean:284-298 ConRon.Arena.iotaPartsAt
 @[no_expose, l_impl ConRon.Arena.iotaPartsAt]
 def iotaPartsAtL : FunDecl := lfn (qj, cnP, mI, rP, r) locals
     (lo, ll, lvls, paO, paL, ty, ok, pdO, pdL, cb, x1, x2, x3, x4, x5, x6, x7, x8, x9) {
