@@ -127,3 +127,8 @@ public import ConAgua.Checker.CompareChain6C
 public import ConAgua.Checker.CompareChain6R
 public import ConAgua.Checker.CompareChain6B
 public import ConAgua.Checker.CompareChain6Run
+public import ConAgua.Arena.PoolJobsJ
+public import ConAgua.Checker.CompareJobs
+public import ConAgua.Checker.CompareTwinJ
+public import ConAgua.Checker.CompareChain6J
+public import ConAgua.Final.CmpChainC
