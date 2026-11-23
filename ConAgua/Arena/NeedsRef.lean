@@ -788,6 +788,117 @@ theorem needsGo_run : ∀ (n : Nat) (m m' : Mem) (f h : Word) (r : List Word) (x
       simp only [hmiss, StateT.run_bind, e2, except_ok_bind]
       rfl
 
+/-- **`needs_go(f, h)` refines `needsGo`** (the call): the twin's `.ok` run from the walk's state
+`x`, the state after related, the stage kept, only the walk's state written. -/
+@[refines ConRon.Arena.needsGo]
+theorem needsGo_ref {n : Nat} {m m' : Mem} {f h : Word} {r : List Word} {x : NeedsSt}
+    (hc : callW p n "needs_go" [f, h] m = some (r, m')) (hS : StageR vis fe m a) (hx : NdR m x)
+    (hh : HW h) :
+    ∃ y, (needsGo x.seen x.acc f.toNat (decE h)).run a = .ok (y, a) ∧ NdP m' y ∧
+      StageR vis fe m' a ∧ MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsGo_specW p P.go n _ f h) hc
+  obtain ⟨y, e, hy, hf⟩ := needsGo_run P n m _ f h r x hW hS hx hh
+  exact ⟨y, e, hy, (hS.ndFrame hf).1, hf⟩
+
+/-- **`needs_expr(e)` refines `NeedsSt.expr`.** -/
+@[refines ConRon.Arena.NeedsSt.expr]
+theorem needsExpr_ref {n : Nat} {m m' : Mem} {e : Word} {r : List Word} {x : NeedsSt}
+    (hc : callW p n "needs_expr" [e] m = some (r, m')) (hS : StageR vis fe m a) (hx : NdR m x)
+    (he : HW e) :
+    ∃ y, (x.expr (decE e)).run a = .ok (y, a) ∧ NdR m' y ∧ StageR vis fe m' a ∧
+      MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsExpr_specW p P.expr n _ e) hc
+  rcases n with _ | n
+  · rw [needsExprW.eq_1] at hW; cases hW
+  rw [needsExprW.arm1] at hW
+  replace hW := opt_some hW (needsExprW.k_needs_go.eq_1 _)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  rw [needsExprW.k_needs_go.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨y, ey, hy, hS', hf⟩ := needsGo_ref P c1 hS hx he
+  refine ⟨⟨y.1, y.2⟩, ?_, hy, hS', hf⟩
+  have hw : (CWF : Word).toNat = coreWalkFuel := by decide
+  rw [hw] at ey
+  simp only [NeedsSt.expr, StateT.run_bind, ey, except_ok_bind]
+  rfl
+
+/-- **`needs_exprs`' loop**: from cursor `i`, the slice's expressions, in order. -/
+theorem needsExprsLoop : ∀ (n : Nat) (m m' : Mem) (o l i : Word) (x : NeedsSt) (es : List EIdx),
+    needsExprsW.loop1 p n m o l i = some m' → StageR vis fe m a → NdR m x → i ≤ l →
+    hslice? (erecP m) (o.toNat + i.toNat) (l.toNat - i.toNat) = some es →
+    ∃ y, (x.exprs es).run a = .ok (y, a) ∧ NdR m' y ∧ MemFrame ndA ndC m m'
+  | 0, _, _, _, _, _, _, _, hW, _, _, _, _ => by rw [needsExprsW.loop1.eq_1] at hW; cases hW
+  | n + 1, m, m', o, l, i, x, es, hW, hS, hx, hil, hes => by
+    by_cases hlt : i < l
+    · rw [needsExprsW.loop1.arm1 _ _ _ _ _ _ hlt] at hW
+      have hi1 : (i + 1).toNat = i.toNat + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; have := l.toNat_lt
+        rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+      have hk : l.toNat - i.toNat = (l.toNat - (i + 1).toNat) + 1 := by
+        have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+      rw [hk, hslice?_succ] at hes
+      cases e1 : (hd? (erecP m) (o.toNat + i.toNat) : Option EIdx) with
+      | none => rw [e1] at hes; cases hes
+      | some w =>
+      cases e2 : (hslice? (erecP m) (o.toNat + i.toNat + 1) (l.toNat - (i + 1).toNat) : Option (List EIdx)) with
+      | none => rw [e1, e2] at hes; cases hes
+      | some es' =>
+      rw [e1, e2] at hes
+      simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.some.injEq] at hes
+      subst hes
+      obtain ⟨wd, hwd, hwlt, rfl⟩ := hd?_some e1
+      have hoi : (o + i).toNat = o.toNat + i.toNat := by
+        have : o.toNat + i.toNat < 2 ^ 64 := by
+          rcases Nat.lt_or_ge (o.toNat + i.toNat) (2 ^ 64) with h | h
+          · exact h
+          · simp [erecP, show ¬ o.toNat + i.toNat < 2 ^ 64 by omega] at hwd
+        rw [UInt64.toNat_add]; omega
+      have hrd : erRd m (o + i) = wd := (erRd_of_erecP (by rw [hoi]; exact hwd)).1
+      rw [hrd] at hW
+      replace hW := opt_some hW (needsExprsW.k_needs_expr.eq_1 _ _ _ _ _)
+      obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+      rw [needsExprsW.k_needs_expr.arm1] at hW
+      obtain ⟨y1, ey1, hy1, hS1, hf1⟩ := needsExpr_ref P c1 hS hx hwlt
+      have hs1 : hslice? (erecP m1) (o.toNat + (i + 1).toNat) (l.toNat - (i + 1).toNat) =
+          some es' := by rw [erecP_nd hf1, hi1, ← Nat.add_assoc, ← hi1]; exact e2
+      obtain ⟨y2, ey2, hy2, hf2⟩ := needsExprsLoop n m1 m' o l (i + 1) y1 es' hW hS1 hy1
+        (by rw [UInt64.le_iff_toNat_le, hi1]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega) hs1
+      refine ⟨y2, ?_, hy2, hf1.trans hf2⟩
+      rw [decE_eq] at ey1
+      simp only [NeedsSt.exprs, StateT.run_bind, ey1, except_ok_bind]
+      exact ey2
+    · rw [needsExprsW.loop1.arm2 _ _ _ _ _ _ hlt] at hW
+      cases hW
+      have hle : l.toNat - i.toNat = 0 := by
+        have := UInt64.le_iff_toNat_le.mp hil; have := UInt64.not_lt.mp hlt
+        have := UInt64.le_iff_toNat_le.mp this; omega
+      rw [hle] at hes
+      simp only [hslice?, List.range_zero, List.mapM_nil, Option.pure_def, Option.some.injEq] at hes
+      subst hes
+      exact ⟨x, rfl, hx, MemFrame.refl _ _ _⟩
+
+/-- **`needs_exprs(o, l)` refines `NeedsSt.exprs`** over the `EREC` slice's expressions. -/
+@[refines ConRon.Arena.NeedsSt.exprs]
+theorem needsExprs_ref {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {x : NeedsSt}
+    {es : List EIdx} (hc : callW p n "needs_exprs" [o, l] m = some (r, m'))
+    (hS : StageR vis fe m a) (hx : NdR m x) (hes : hslice? (erecP m) o.toNat l.toNat = some es) :
+    ∃ y, (x.exprs es).run a = .ok (y, a) ∧ NdR m' y ∧ StageR vis fe m' a ∧
+      MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsExprs_specW p P.exprs n _ o l) hc
+  rcases n with _ | n
+  · rw [needsExprsW.eq_1] at hW; cases hW
+  rw [needsExprsW.arm1] at hW
+  rcases e : needsExprsW.loop1 p (n + 1) m o l 0 with _ | m1
+  · rw [e, needsExprsW.k_loop1.eq_1] at hW; cases hW
+  rw [e, needsExprsW.k_loop1.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨y, ey, hy, hf⟩ := needsExprsLoop P (n + 1) m _ o l 0 x es e hS hx
+    (by rw [UInt64.le_iff_toNat_le]; simp) (by simpa using hes)
+  exact ⟨y, ey, hy, (hS.ndFrame hf).1, hf⟩
+
 end steps
 
 end L.Arena
