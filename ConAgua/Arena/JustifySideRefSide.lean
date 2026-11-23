@@ -349,4 +349,37 @@ theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' :
     simp only [sideRes, Bool.false_eq_true, ite_false]
     rw [hdl, hdp, hset]; exact hD
 
+/-- **`side_record(k)` refines `sideRecord` of record `k`**: a returning run is the twin's step
+(which keeps the state), `DECL` holding its result at `k`. -/
+theorem sideRecord_ok {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' : Mem} {x : Word}
+    {vis : Word} {fe : IFEnv} {a : AState} {ds : Array IDeclaration}
+    (hS : StageR vis fe m a) (hmc : ∃ mp, mcMR m mp) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hk : k.toNat < ds.size) (h : sideRecordW p n m k = some (x, m')) :
+    ∃ d', (sideRecord ds[k.toNat]).run a = .ok (d', a) ∧ SideOK vis fe a ds k.toNat m m' d' := by
+  rcases n with _ | n
+  · simp [sideRecordW] at h
+  have hk60 : k.toNat < 2 ^ 60 := by have := hD.room; have := hD.dsize; omega
+  have e1 := rdW_dw (m.arr64 DECL) k 1 0 rfl (by decide) hk60
+  have hr := hD.recs k.toNat hk
+  have hset : ds.set! k.toNat ds[k.toNat] = ds := by
+    rw [Array.set!_eq_setIfInBounds, Array.setIfInBounds, dite_eq_left hk]; simp
+  have pass : ∀ (c : Word), dw (m.arr64 DECL) k.toNat 0 = c → c ≠ 2 → c ≠ 3 → c ≠ 4 →
+      sideRecord ds[k.toNat] = pure ds[k.toNat] →
+      ∃ d', (sideRecord ds[k.toNat]).run a = .ok (d', a) ∧ SideOK vis fe a ds k.toNat m m' d' := by
+    intro c hc c2 c3 c4 hpure
+    rw [sideRecordW.arm2 _ _ _ _ (by rw [e1, hc]; simp [c2, c3, c4])] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    refine ⟨ds[k.toNat], by rw [hpure]; rfl, by rw [hset]; exact hD, hS, hmc, MemFrame.refl _ _ _⟩
+  generalize hd : ds[k.toNat] = d at hr hset pass ⊢
+  cases d with
+  | axiomDecl cv => exact pass 1 hr.1 (by decide) (by decide) (by decide) rfl
+  | quotDecl q cv => exact pass 5 hr.1 (by decide) (by decide) (by decide) rfl
+  | indDecl b nP => exact pass 6 hr.1 (by decide) (by decide) (by decide) rfl
+  | defnDecl cv v hh =>
+    exact sideRecord_val hP hS hmc hD hk hd hr.2.1 hr.2.2.1 (.inl (by rw [e1, hr.1])) h
+  | thmDecl cv v =>
+    exact sideRecord_val hP hS hmc hD hk hd hr.2.1 hr.2.2 (.inr (.inl (by rw [e1, hr.1]))) h
+  | opaqueDecl cv v =>
+    exact sideRecord_val hP hS hmc hD hk hd hr.2.1 hr.2.2 (.inr (.inr (by rw [e1, hr.1]))) h
+
 end L.Arena
