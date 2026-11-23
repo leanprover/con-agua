@@ -83,9 +83,9 @@ variable {p : Prog} (P : RnProg p) {dn : NIdx → Option ConLeche.Name} {vis : W
 include P
 
 /-- **`rec_names`' recursion**: from a base state `m₀` (the stage at `m₀`, the region
-`[d, d + l)` above its top), the names `ms` of the slice `(o, l)` (decoded at the base),
-interned `str "rec"` by the twin (`recNames`), written to `EREC[d‥d + l)`; the stage with the
-twin's invariants kept, every other record word kept. -/
+`[d, d + l)` above its top), the names `ms` of the slice `(o, l)` (decoded at the base, its end at
+most `2 ^ 64`), interned `str "rec"` by the twin (`recNames`), written to `EREC[d‥d + l)`; the stage
+with the twin's invariants kept, every other record word kept. -/
 theorem recNames_loop {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a₀) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (d o l : Word) (r : List Word) (ms : List NIdx)
       (L : List ConLeche.Name) (out : List NIdx),
@@ -94,7 +94,7 @@ theorem recNames_loop {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a�
     hslice? (erecP m₀) o.toNat l.toNat = some ms →
     Frontend.denoteNList a.store.ns ms = some L →
     erTopOf m₀ d ≤ erOff d → erOff d + l.toNat ≤ erTopOf m d → d.toNat + l.toNat < 2 ^ 41 →
-    o.toNat + l.toNat < 2 ^ 64 →
+    o.toNat + l.toNat ≤ 2 ^ 64 →
     ∃ rn a', (ConRon.Arena.recNames out ms).run a = .ok (out ++ rn, a') ∧
       StageT dn vis fe m' a' ∧ ConRon.Bridge.Frontend.IStepS a a' ∧ IWGrow m₀ m' ∧
       MemFrame quotA quotC m₀ m' ∧ MemFrame rnA nrC m m' ∧ erTopOf m' d = erTopOf m d ∧
@@ -189,7 +189,6 @@ theorem recNames_loop {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a�
       exact erecP_putMem_self (by rw [htop1]; exact hlt0) hb
     -- the rest
     have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
     have hbit : (d + 1).toNat / 2 ^ 40 % 2 = d.toNat / 2 ^ 40 % 2 := by
       rw [hd1]; unfold erOff at hdt; omega
     have hTop : ∀ m' : Mem, erTopOf m' (d + 1) = erTopOf m' d := fun m' => by
@@ -205,10 +204,19 @@ theorem recNames_loop {m₀ : Mem} {a₀ : AState} (h₀ : StageR vis fe m₀ a�
     subst e3
     obtain ⟨rn, a', hrun', hT', hst', hg', hfq', hfr', htop', hsl', hout'⟩ :=
       ih _ m3 a1 (d + 1) (o + 1) (l - 1) r3 ms' Ly (out ++ [n1]) h3 hT2 st1.ok hfq2 hg2
-        (by rw [ho1, hl1]; exact hxs)
+        (by
+          rcases Nat.eq_zero_or_pos k with hk0 | hk0
+          · subst hk0; rw [hl1]; simp only [hslice?, List.range_zero, List.mapM_nil] at hxs ⊢; exact hxs
+          · have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+            rw [ho1, hl1]; exact hxs)
         (ConRon.Bridge.denoteNListE_ext st1.ext _ _ hLy)
         (by rw [hTop, hoff1]; omega) (by rw [hTop, htop2, hoff1, hl1]; omega)
-        (by rw [hd1, hl1]; omega) (by rw [ho1, hl1]; omega)
+        (by rw [hd1, hl1]; omega)
+        (by
+          rcases Nat.eq_zero_or_pos k with hk0 | hk0
+          · rw [hl1, hk0]; exact Nat.le_of_lt (UInt64.toNat_lt _)
+          · have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+            rw [ho1, hl1]; omega)
     refine ⟨n1 :: rn, a', ?_, hT', st1.trans hst', hg', hfq', ?_, ?_, ?_, ?_⟩
     · simp only [ConRon.Arena.recNames, StateT.run_bind, hrun1]
       simpa using hrun'
