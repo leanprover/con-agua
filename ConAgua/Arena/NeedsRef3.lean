@@ -208,7 +208,7 @@ abbrev dmsL (m : Mem) : List NIdx :=
   [decI (pinW m 22), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25), decI (pinW m 26),
    decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)]
 
-theorem pinW_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+theorem ndPinW_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (PINS : TieredArray) ∉ A) (i : Nat) : pinW m' i = pinW m i := by
   simp only [pinW]; rw [hf.arr _ hA (by decide)]
 
@@ -290,7 +290,7 @@ theorem pinFootprintNat_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x
     (run_memFrame P.closedDeps (f := "nat_op_deps") (by decide) (run_of_callW c1)).1
   have hx1 := NdR.frame hf1 (by decide) (by decide) hx
   have hF1 := hF.frame hf1 (by decide)
-  have hp1 := pinW_frame hf1 (by decide)
+  have hp1 := ndPinW_frame hf1 (by decide)
   replace hW := opt_some hW (pinFootprintNatW.k_pin_at.none ..)
   obtain ⟨⟨q1, n1⟩, d1, hW⟩ := hW
   rw [pinFootprintNatW.k_pin_at.arm1] at hW
@@ -362,7 +362,7 @@ theorem pinFootprintNat_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x
   have hS14 := (hS11.ndFrame f3).1
   have hF14 := hF11.frame f3 (by decide)
   have hp14 : ∀ i, pinW n14 i = pinW m i := fun i => by
-    rw [pinW_frame f3 (by decide), pinW_frame f11 (by decide), hp1]
+    rw [ndPinW_frame f3 (by decide), ndPinW_frame f11 (by decide), hp1]
   replace hW := opt_some hW (pinFootprintNatW.k_pin_at_11.none ..)
   obtain ⟨⟨q15, n15⟩, d15, hW⟩ := hW
   rw [pinFootprintNatW.k_pin_at_11.arm1] at hW

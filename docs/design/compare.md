@@ -104,3 +104,36 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
 * Design changes from stage 0: the move is over the name stores' counts, not over the solution's
   records (H3: re-walking `decl_constants` would allocate again and needs an invariant tying rows to
   records; the stores' counts bound every row through `IndexKeysIn`, `FreezeTrunc.lean`).
+* 17:50 first binary with `--compare` (WIP, unproved wiring): `diff-e2e --tests` at con-leche
+  bc667610: **766/766 agree** (the 748 file rows plus the 18 argument rows, which
+  `diff-e2e.py` now runs: `arg_rows`), UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0.
+* First measurements (one run each, load ≈ 1; `_tmp/compare/perf1.sh`):
+
+  | run | instructions:u | wall | peak RSS |
+  |---|---:|---:|---:|
+  | flat `Init`, master `d84b7c756` | 202 631.7 M | 14.52 s | 627 MB |
+  | flat `Init`, compare | 202 631.8 M (+0.0001 %) | 14.77 s | 628 MB |
+  | `--compare` `Init` against itself, compare | 408 327 M | 29.23 s | 1 259 MB |
+  | con-ron 8021ddac `--jobs=1 --compare`, same | 333 863 M | 28.87 s | 367 MB |
+  | con-ron 8021ddac `--jobs=1`, flat `Init` | 165 590 M | 14.17 s | 388 MB |
+
+  The compared run costs 2.015 flat runs (con-ron: 2.016). Its peak RSS is twice the flat run's:
+  the solution's jobs run on the worker region over a copy of the frozen arrays, and both stay
+  resident (con-ron moves its tier to the workers and drops them).
+* 18:00–18:25 helpers' results. H1 (Needs, 15 functions) done, zero `sorry`; H3 (move, side records,
+  mates) done, zero `sorry`; H2 then H2b (the comparisons, the cone, `justify_why`,
+  `check_justified`, `check_record_sol` = `crs_ref`) done, zero `sorry`, with three facts left to
+  discharge on the checker: `ConeProg.cmpClosed` (a closure check), `CrsKeep` (semantic frames
+  stated on the models), and the solution counter's bound. The rejection claims of
+  `check_justified` take the guard `JwGuard` (the twin's message reads names back; only the error
+  branch needs it; it matters only for a compare verdict theorem).
+* 18:05 H4 (`compare-abi`: the file equation with the tail, `CmpCall`, `CmpGuard` as a premise
+  (L-level: the buffer's geometry after mode 5, the workers keep the frozen arrays), `CmpAccepts`,
+  `cmp_outcome`) and H5 (`compare-integ`: the tree building again, `JobM` with `J`) started;
+  18:25 H6 (`compare-chain`: the L-level chain, `CmpAccepts → TwinComparesAccepts`).
+* `WalkMem` (the walks' memos between jobs) added to the interface for H2b and H5.
+* 18:45 H5 done, merged: the tree builds again (except `AsmFileEq`, H4's), the job relation takes
+  `J` (`JSol J m`: the flag/rows, and at `J = some` `WalkMem` and the counter bound), `recordJob_ref`
+  at both branches (`crs_ref` through `CrsSpec`, `Arena/JobsCrs.lean`, `Checker/CrsProgPB.lean`),
+  four write sets narrowed (no job writes the solution's rows), the threaded path at `J = none`
+  only. Open: `CrsKeep` (given to H7, `compare-keep`).

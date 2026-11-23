@@ -138,7 +138,7 @@ theorem threads_twinAcceptsPooled (hCd : CheckerCd)
     · assumption
     · cases hk
   have hRS : RecStep PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀ p :=
-    recCall_stepE hJP hFD hLD hdn hrec hpp (by omega) hden hPD
+    recCall_stepE (J := none) hJP hFD hLD hdn hpp (by omega) hden hPD hrec (fun h => absurd h (by simp))
   have hstep : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →
       (∃ env, FoldOK env (PA.I.view k) (AM.st enterScratch a)) →
       ∃ a', recordJob .verified PA.ipins none PA.I k PA.ds[k] a = .ok ((), a') ∧ Rel r' a' := by

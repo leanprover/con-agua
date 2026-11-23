@@ -54,6 +54,11 @@ import all ConAgua.Arena.InstList
 import all ConAgua.Arena.InstListSpec
 import all ConAgua.Arena.IotaFrame
 import all ConAgua.Arena.IotaRel
+import all ConAgua.Arena.JustifyIface
+import all ConAgua.Arena.Needs
+import all ConAgua.Arena.Justify
+import all ConAgua.Arena.JustifySide
+import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LamStore
 import all ConAgua.Arena.LetStore

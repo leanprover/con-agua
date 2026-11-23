@@ -40,6 +40,11 @@ import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IotaFrame
 import all ConAgua.Arena.IotaRel
+import all ConAgua.Arena.JustifyIface
+import all ConAgua.Arena.Needs
+import all ConAgua.Arena.Justify
+import all ConAgua.Arena.JustifySide
+import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndSum

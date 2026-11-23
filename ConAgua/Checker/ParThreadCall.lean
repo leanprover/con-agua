@@ -46,8 +46,8 @@ local notation "VM" => ConLeche.CheckMode.verified
 
 /-- **`JobR` across the core caches' flush.** -/
 theorem _root_.L.Arena.JobR.flush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
-    {ds : Array IDeclaration} {I : IStreamIndex} {M : Mem} {a : AState}
-    (h : JobR pins dn ds I M a) (hfok : FlushOK M) : JobR pins dn ds I (flushMem M) a := by
+    {ds : Array IDeclaration} {J : Option ISolution} {I : IStreamIndex} {M : Mem} {a : AState}
+    (h : JobR pins dn ds J I M a) (hfok : FlushOK M) : JobR pins dn ds J I (flushMem M) a := by
   have hF := flushMem_frame M
   have hA : LoArr [] := loArr_nil
   have hC : LoCtl flushCtl := loCtl_flush
@@ -58,7 +58,8 @@ theorem _root_.L.Arena.JobR.flush {pins : List INatOpPinSet} {dn : NIdx → Opti
     by rw [stampW_frameLo hC hF]; exact h.stamp, declsF_frameLo hA hF h.decls, iwOK_frameLo hA hC hF h.iw,
     by rw [hC.ctl hF (by decide)]; exact h.top1, pinSetsR_frameLo hA hC hF h.pinsets,
     h.mem.frameLo hA hC hF fun k x e => h.mem.dnN k x e, by rw [pinW_frame hF (by simp)]; exact h.flag,
-    h.memos.frameLo hA hC hF, h.fsize, h.frozen.frameLo hC hF⟩, h.state, h.off, h.caches⟩
+    h.memos.frameLo hA hC hF, h.fsize, h.frozen.frameLo hC hF, h.jsol.frameLo hA hC hF⟩, h.state, h.off,
+    h.caches⟩
   have := h.core.flush hfok
   rw [h.caches]; exact this
 
@@ -72,14 +73,14 @@ variable (pins dn ds I a₀ bs) in
 /-- **What a thread's memory `w` stands for** at the twin's state `a`: a memory `X` with the jobs'
 relation at `a` (from `a₀`) and the ROM, whose arrays of `thrS` are `w`'s. -/
 def ThrAt (w : Mem) (a : AState) : Prop :=
-  ∃ X, JobRel pins dn ds I a₀ X a ∧ X.arr8 PB = bs.toArray ∧ ∀ t, thrS t = true → w.arr64 t = X.arr64 t
+  ∃ X, JobRel pins dn ds none I a₀ X a ∧ X.arr8 PB = bs.toArray ∧ ∀ t, thrS t = true → w.arr64 t = X.arr64 t
 
 variable (pins dn ds I a₀) in
 /-- **`record_job` calls as the pool's step** (`recCall_stepE`'s conclusion). -/
 def RecStep (p : Prog) : Prop :=
-  ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobRel pins dn ds I a₀ r a →
+  ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobRel pins dn ds none I a₀ r a →
     RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-    ∃ a', recordJob VM pins none I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds I a₀ r' a'
+    ∃ a', recordJob VM pins none I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds none I a₀ r' a'
 
 /-- A `check_jobs(j, j + 1)` loop that returns is one `record_job(j)` call. -/
 theorem checkJobsLoop_one {p : Prog} {n : Nat} {m q : Mem} {j : Word} (hj : j.toNat + 1 < 2 ^ 64)
@@ -124,7 +125,7 @@ theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = 
     rw [flushOK_eq] at hfy ⊢
     exact clearsOK_words _ (m₁ := X₂) (m₂ := X) rfl (clearsOK_agree hc _ hAg0 hfy)
   obtain ⟨a₁, ⟨hJR, hx, hp⟩, hSE⟩ := hJ
-  have hJF : JobRel pins dn ds I a₀ (flushMem X) a := ⟨a₁, ⟨hJR.flush hfx, hx, hp⟩, hSE⟩
+  have hJF : JobRel pins dn ds none I a₀ (flushMem X) a := ⟨a₁, ⟨hJR.flush hfx, hx, hp⟩, hSE⟩
   have hA2 := flushMem_agree hAg0 hc
   have hw2 : (flushMem X₂).words = (flushMem X).words := flushMem_words rfl
   let s₂ : St := ⟨⟨(flushMem X).bytes, (flushMem X).words, s.mem.glob⟩, s.loc⟩
@@ -159,7 +160,7 @@ theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = 
   obtain ⟨r1, hr1⟩ := checkJobsLoop_one hj1 hl
   have hcall : RecCall (Prog.subPB bs checkerProg) j.toNat s₂.mem s₂'.mem :=
     ⟨n, r1, by omega, by rw [UInt64.ofNat_toNat]; exact hr1⟩
-  have hJ2 : JobRel pins dn ds I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
+  have hJ2 : JobRel pins dn ds none I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
   obtain ⟨a', hrec, hJ'⟩ := hS j.toNat s₂.mem s₂'.mem a hj hJ2 hcall hF
   exact ⟨a', hrec, s₂'.mem, hJ', hPB', fun t ht => hAg'.1 t ht⟩
 
@@ -233,7 +234,10 @@ theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some c
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hB · · · ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [] ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLocs_cons,
       Cmp.eval, beq_iff_eq, St.setLocs_nil] at *)
     all_goals first

@@ -175,25 +175,24 @@ l_model justifyWhy_specW (p : Prog) (hf : p.lookup "justify_why" = some justifyW
 
 /-! ## The check of one record, with a solution: unified models -/
 
-/-- **`check_justified`'s unified model**: `check_constant_val` by its unified model, every other
-callee lifted but `justify_why`, through its run. -/
+/-- **`check_justified`'s unified model**: `check_constant_val` and `justify_why` through their
+runs (`callE`: the kept memory, `CrsKeep`, is a fact of the call), every other callee lifted. -/
 l_model checkJustified_specE (p : Prog) (hf : p.lookup "check_justified" = some checkJustifiedL)
-    (hc : CcvProg p)
   fns [hf ↦ checkJustifiedE]
-  specs [callW_spec p n "erec_ci", checkConstantVal_specE p hc n,
+  specs [callW_spec p n "erec_ci",
     callW_spec p n "basis_names_ok", callW_spec p n "basis_names_error", callW_spec p n "env_push"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
 
-/-- **`check_record_sol`'s unified model**: `check_decl` and `check_justified` by their unified
-models, `justifiable` through its run. -/
+/-- **`check_record_sol`'s unified model**: `check_justified` by its unified model, `check_decl`
+and `justifiable` through their runs (`callE`: the kept memory, `CrsKeep`, is a fact of the
+call). -/
 l_model checkRecordSol_specE (p : Prog) (hf : p.lookup "check_record_sol" = some checkRecordSolL)
-    (hd : p.lookup "check_decl" = some checkDeclL) (hk : p.lookup "check_decl_kind" = some checkDeclKindL)
-    (hj : p.lookup "check_justified" = some checkJustifiedL) (hc : CcvProg p)
+    (hj : p.lookup "check_justified" = some checkJustifiedL)
   fns [hf ↦ checkRecordSolE]
-  specs [checkDecl_specE p hd hk n, checkJustified_specE p hj hc n]
+  specs [checkJustified_specE p hj n]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
