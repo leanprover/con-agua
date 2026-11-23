@@ -436,18 +436,16 @@ theorem cta_a7 [Host] (k0 : Nat) (hcode : Code checkerFile k0) (bS pb : ByteArra
 
 /-! ## The runs up to each phase -/
 
-/-- **Up to the solution's buffer**: both driver calls ran ok (the L runs of modes `4` and `5`,
-each returning `2^63` or more), the memory `m5` in the region at `st₅`. -/
-theorem cmpT_upToS [Host] (k0 : Nat) (hcode : Code checkerFile k0) {bC bS pb : ByteArray}
+/-- **The solution's driver call's return**: mode `4`'s run ok (returning `2^63` or more), and
+`ca_start_a5`'s post at `st₅` for mode `5`'s run from its memory `m4`. -/
+theorem cmpT_post5 [Host] (k0 : Nat) (hcode : Code checkerFile k0) {bC bS pb : ByteArray}
     {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
-    {st₅ : MachineState} (hR5 : CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅) (h0 : st₅.data.regs.rdx = 0) :
-    bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
-      RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
-      ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
-        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
-        st₅.data.regs.rax = rs5.getD 0 0 ∧
-        MemRel (abiLayout checkerTab dm₅.regs.r8.toNat dm₅.regs.rdi.toNat bS.size dm₅.regs.rdx.toNat pb.size)
-          m5 st₅.data.dmem := by
+    {st₅ : MachineState} (hR5 : CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅) :
+    bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ RegsRestored dm₄.regs st₄.data.regs ∧
+      ∃ rs4 m4, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
+        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧
+        EntryPost (abiLayout checkerTab dm₅.regs.r8.toNat dm₅.regs.rdi.toNat bS.size dm₅.regs.rdx.toNat pb.size)
+          dm₅ ra₅ (cmpRun checkerProg (cmpM5 MODE m4 bS)) st₅ ∧ SizesPost bS pb st₅ := by
   have hn : 1 ≤ checkerTab.nres := by decide
   obtain ⟨h58, h59, h5x⟩ := hR5.same₅
   obtain ⟨hbC, hpb, hRR₄, rs4, m4, h4, hrax4, hM4⟩ :=
@@ -458,34 +456,48 @@ theorem cmpT_upToS [Host] (k0 : Nat) (hcode : Code checkerFile k0) {bC bS pb : B
       rw [h58, h5x]
       rw [h59] at hneed
       exact memRel_carry checkerTab_abiOk hneed hM4 hR5.keep₅)
-  obtain ⟨hbS, -, hRR₅, rs5, m5, h5, hrax5, hM5⟩ := cta_ret hn (hR5.ret₅ _ hE5 (fun s h => h.1.1)) h0
+  exact ⟨hbC, hpb, hRR₄, rs4, m4, h4, hge4, hR5.ret₅ _ hE5 (fun s h => h.1.1)⟩
+
+/-- **Up to the solution's buffer**: both driver calls ran ok (the L runs of modes `4` and `5`,
+the first returning `2^63` or more), the memory `m5` in the region at `st₅`. -/
+theorem cmpT_upToS [Host] (k0 : Nat) (hcode : Code checkerFile k0) {bC bS pb : ByteArray}
+    {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
+    {st₅ : MachineState} (hR5 : CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅) (h0 : st₅.data.regs.rdx = 0) :
+    bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+      RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
+      ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
+        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
+        st₅.data.regs.rax = rs5.getD 0 0 ∧
+        MemRel (abiLayout checkerTab dm₅.regs.r8.toNat dm₅.regs.rdi.toNat bS.size dm₅.regs.rdx.toNat pb.size)
+          m5 st₅.data.dmem := by
+  obtain ⟨hbC, hpb, hRR₄, rs4, m4, h4, hge4, hP5⟩ := cmpT_post5 k0 hcode hR5
+  obtain ⟨hbS, -, hRR₅, rs5, m5, h5, hrax5, hM5⟩ := cta_ret (by decide) hP5 h0
   exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, rs4, m4, rs5, m5, h4, hge4, h5, hrax5, hM5⟩
 
-/-- **Up to the challenge's buffer**: as `cmpT_upToS`, the solution's pool at the L level (as
-`cmpThreads_twinPooled` takes it), and mode `7`'s run ok, the memory `m7` in the region at `st₇`. -/
-theorem cmpT_upToC [Host] (k0 : Nat) (hcode : Code checkerFile k0) (h64 : System.Platform.numBits = 64)
+/-- The solution's pool at the L level, as `cmpThreads_twinPooled` takes it. -/
+def CmpTPoolS (m5 : Mem) (rs5 : List Word) (thsS' : List (Mem × List (Word × Nat × Mem))) : Prop :=
+  (∀ t ∈ thsS', (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m5.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
+    ThreadRuns (cmpBuf OUT m5) t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs5.getD 0 0 - 9223372036854775808) ∧
+  (∀ j : Word, j < rs5.getD 0 0 - 9223372036854775808 → ∃ t ∈ thsS', ∃ c ∈ t.2, c.1 = j) ∧
+  (∀ t ∈ thsS', (t.2.map (·.1)).Pairwise (· < ·))
+
+/-- **The challenge's index call's return**: as `cmpT_upToS`, mode `5` returning `2^63` or more,
+the solution's pool at the L level, and `ca_start_a7`'s post at `st₇` for mode `7`'s run from
+mode `5`'s memory `m5`. -/
+theorem cmpT_post7 [Host] (k0 : Nat) (hcode : Code checkerFile k0) (h64 : System.Platform.numBits = 64)
     {bC bS pb : ByteArray}
     {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
     {st₅ : MachineState} {BS : Array Word} {thsS : List ThreadM} {dm₇ : MachineData} {ra₇ : Word}
-    {st₇ : MachineState} (hR7 : CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇)
-    (h0 : st₇.data.regs.rdx = 0) :
+    {st₇ : MachineState} (hR7 : CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇) :
     bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
       RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
-      RegsRestored dm₇.regs st₇.data.regs ∧
       (∀ t ∈ thsS, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
       ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
         2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
         2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
-        ∃ thsS' : List (Mem × List (Word × Nat × Mem)),
-          (∀ t ∈ thsS', (∀ b ∈ parOwnedL, t.1.arr64 b = zeros (m5.arr64 b).size) ∧ t.1.glob INIT = 0 ∧
-            ThreadRuns (cmpBuf OUT m5) t.1 t.2 ∧ ∀ c ∈ t.2, c.1 < rs5.getD 0 0 - 9223372036854775808) ∧
-          (∀ j : Word, j < rs5.getD 0 0 - 9223372036854775808 → ∃ t ∈ thsS', ∃ c ∈ t.2, c.1 = j) ∧
-          (∀ t ∈ thsS', (t.2.map (·.1)).Pairwise (· < ·)) ∧
-          ∃ rs7 m7, cmpRun checkerProg (cmpM7 MODE m5 bS) = .ok (rs7, m7) ∧
-            st₇.data.regs.rax = rs7.getD 0 0 ∧
-            MemRel (abiLayout checkerTab dm₇.regs.r8.toNat dm₇.regs.rdi.toNat bS.size dm₇.regs.rdx.toNat pb.size)
-              m7 st₇.data.dmem := by
-  have hn : 1 ≤ checkerTab.nres := by decide
+        ∃ thsS' : List (Mem × List (Word × Nat × Mem)), CmpTPoolS m5 rs5 thsS' ∧
+          EntryPost (abiLayout checkerTab dm₇.regs.r8.toNat dm₇.regs.rdi.toNat bS.size dm₇.regs.rdx.toNat pb.size)
+            dm₇ ra₇ (cmpRun checkerProg (cmpM7 MODE m5 bS)) st₇ ∧ SizesPost bS pb st₇ := by
   obtain ⟨h58, h59, h5x⟩ := hR7.same₅
   obtain ⟨h78, h79, h7x⟩ := hR7.same₇
   obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, rs4, m4, rs5, m5, h4, hge4, h5, hrax5, hM5⟩ :=
@@ -503,9 +515,34 @@ theorem cmpT_upToC [Host] (k0 : Nat) (hcode : Code checkerFile k0) (h64 : System
       rw [h79] at hneed
       rw [h58, h5x] at hM5
       exact memRel_carry checkerTab_abiOk hneed hM5 hR7.keep₇)
-  obtain ⟨-, -, hRR₇, rs7, m7, h7, hrax7, hM7⟩ := cta_ret hn (hR7.ret₇ _ hE7 (fun s h => h.1.1)) h0
-  exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hthS, hcovS,
-    hincS, rs7, m7, h7, hrax7, hM7⟩
+  exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', ⟨hthS, hcovS, hincS⟩,
+    hR7.ret₇ _ hE7 (fun s h => h.1.1)⟩
+
+/-- **Up to the challenge's buffer**: as `cmpT_post7`, mode `7`'s run ok, the memory `m7` in the
+region at `st₇`. -/
+theorem cmpT_upToC [Host] (k0 : Nat) (hcode : Code checkerFile k0) (h64 : System.Platform.numBits = 64)
+    {bC bS pb : ByteArray}
+    {dm₄ : MachineData} {ra₄ : Word} {st₄ : MachineState} {dm₅ : MachineData} {ra₅ : Word}
+    {st₅ : MachineState} {BS : Array Word} {thsS : List ThreadM} {dm₇ : MachineData} {ra₇ : Word}
+    {st₇ : MachineState} (hR7 : CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇)
+    (h0 : st₇.data.regs.rdx = 0) :
+    bC.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
+      RegsRestored dm₄.regs st₄.data.regs ∧ RegsRestored dm₅.regs st₅.data.regs ∧
+      RegsRestored dm₇.regs st₇.data.regs ∧
+      (∀ t ∈ thsS, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
+      ∃ rs4 m4 rs5 m5, cmpRun checkerProg (cmpM4 checkerTab MODE bC pb) = .ok (rs4, m4) ∧
+        2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ cmpRun checkerProg (cmpM5 MODE m4 bS) = .ok (rs5, m5) ∧
+        2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
+        ∃ thsS' : List (Mem × List (Word × Nat × Mem)), CmpTPoolS m5 rs5 thsS' ∧
+          ∃ rs7 m7, cmpRun checkerProg (cmpM7 MODE m5 bS) = .ok (rs7, m7) ∧
+            st₇.data.regs.rax = rs7.getD 0 0 ∧
+            MemRel (abiLayout checkerTab dm₇.regs.r8.toNat dm₇.regs.rdi.toNat bS.size dm₇.regs.rdx.toNat pb.size)
+              m7 st₇.data.dmem := by
+  obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hS, hP7⟩ :=
+    cmpT_post7 k0 hcode h64 hR7
+  obtain ⟨-, -, hRR₇, rs7, m7, h7, hrax7, hM7⟩ := cta_ret (by decide) hP7 h0
+  exact ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hS,
+    rs7, m7, h7, hrax7, hM7⟩
 
 /-! ## The theorem -/
 
@@ -524,8 +561,8 @@ theorem checkerFile_compare_threads_accept_regs [Host] (k0 : Nat) (hcode : Code 
       RegsRestored dm₇.regs st₇.data.regs ∧
       (∀ t ∈ thsS, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) ∧
       (∀ t ∈ thsC, ∀ i < t.n, RegsRestored (t.dm i).regs (t.st i).data.regs) := by
-  obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS', hthS, hcovS,
-    hincS, rs7, m7, h7, hrax7, hM7⟩ := cmpT_upToC k0 hcode h64 hR.toCmpTRun7 hR.rdx₇
+  obtain ⟨hbC, hbS, hpb, hRR₄, hRR₅, hRR₇, hRRS, rs4, m4, rs5, m5, h4, hge4, h5, hge5, thsS',
+    ⟨hthS, hcovS, hincS⟩, rs7, m7, h7, hrax7, hM7⟩ := cmpT_upToC k0 hcode h64 hR.toCmpTRun7 hR.rdx₇
   have hge7 : 2 ^ 63 ≤ (rs7.getD 0 0).toNat := by rw [← hrax7]; exact hR.rax₇
   have hok7 := checker_cmp7BufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5 h7 hge7
   -- the challenge's pool
