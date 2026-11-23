@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameMinors
+public import ConAgua.Arena.IotaFrameMajor
 
 @[expose] public section
 
@@ -22,12 +22,13 @@ open L.Arena
 
 /-- **`iota_rec_of(q, mI, rP)` refines `iotaRecOf cv mI rP`** (`q` the recursor's constant value
 in `EREC`). -/
+@[refines ConRon.Arena.iotaRecOf]
 theorem iotaRecOf_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (fe : IFEnv)
     (q mI rP : Word) (cv : IConstantVal) :
     RelW (fun m args => callW p n "iota_rec_of" args m) [q, mI, rP]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
       (iotaRecOf cv mI.toNat rP.toNat) (KeepPost vis fe decOIR) := by
-  sorry
+  exact iotaRecOf_rel' P n vis fe q mI rP cv
 
 /-- **`iota_parts_of_at(IotaRec, rP, nIdx, i, r)` refines `iotaPartsOfAt rr rP nIdx i rl`** (the
 frame's seven words as decoded by `decIRAt 0`, `r` the rule's record in `EREC`). -/

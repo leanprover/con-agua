@@ -43,10 +43,12 @@ theorem stripF_len {tg : Word} {m m' : Mem} {k e : Word} {r : List Word}
 theorem headD_drop3 (r : List Word) : (r.drop 3).headD 0 = r.tail.tail.tail.headD 0 := by
   rcases r with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
 
-/-- `iotaFrame`'s answer as `(ok, pre.off, pre.len, doms.off, doms.len, body, u)`. -/
-def decOF (m : Mem) (r : List Word) : Option (List EIdx × List EIdx × EIdx × LIdx) → Prop
+/-- `iotaFrame`'s answer as `(ok, pre.off, pre.len, doms.off, doms.len, body, u)` (`pre.len` the
+count `rP` asked for). -/
+def decOF (rP : Word) (m : Mem) (r : List Word) : Option (List EIdx × List EIdx × EIdx × LIdx) → Prop
   | none => r.headD 0 = 0
-  | some (pre, doms, body, u) => r.headD 0 = 1 ∧ decRL (fun m => decHL m) 1 m r pre ∧
+  | some (pre, doms, body, u) => r.headD 0 = 1 ∧ r.tail.tail.headD 0 = rP ∧
+      decRL (fun m => decHL m) 1 m r pre ∧
       decRL (fun m => decHL m) 3 m r doms ∧ HW (r.getD 5 0) ∧ decE (r.getD 5 0) = body ∧
       HW (r.getD 6 0) ∧ decI (r.getD 6 0) = u
 
@@ -56,7 +58,7 @@ theorem iotaFrame_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
     (q mI rP : Word) (cv : IConstantVal) (hmI : mI.toNat < 2 ^ 32) (hrP : rP.toNat < 2 ^ 32) :
     RelW (fun m args => callW p n "iota_frame" args m) [q, mI, rP]
       (fun m a => StageR vis fe m a ∧ decCV (erecP m) q.toNat = some cv)
-      (iotaFrame cv mI.toNat rP.toNat) (KeepPost vis fe decOF) := by
+      (iotaFrame cv mI.toNat rP.toNat) (KeepPost vis fe (decOF rP)) := by
   intro m m' a r hc ⟨hS, hcv⟩
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (iotaFrame_specW p P.iota_frame n _ q mI rP) hc
@@ -138,7 +140,7 @@ theorem iotaFrame_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   obtain ⟨h31, hu1, hu2⟩ := hd3
   rw [if_neg (by rw [h31]; decide)] at hj
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
-  refine ⟨_, a3, rfl, hS3, hg, rfl, ?_, ?_, hbody.1, hbody.2, hu1, hu2⟩
+  refine ⟨_, a3, rfl, hS3, hg, rfl, hpl, ?_, ?_, hbody.1, hbody.2, hu1, hu2⟩
   · exact decRL_hl_grow (hg2.trans hg3) (by simpa [decRL] using hpre)
   · exact decRL_hl_grow hg3 (by simpa [decRL] using hdoms)
 
