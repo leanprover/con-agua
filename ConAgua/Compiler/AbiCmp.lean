@@ -114,6 +114,19 @@ def cmpStub (tab : Tab) (mode : GVar) (out : ArrId) (own : List TieredArray) : P
    i64 (.push (oR .rsi)), i64 .ret,
    .label abiCmpDeclineL, movRI .rax 0, movRI .rdx 1, i64 .ret]
 
+/-- The entry of mode `7` (`ca_start_a7`, lane compare2: the threaded compared run). -/
+def abiStartA7L : Label := "ca_start_a7"
+
+/-- **The threaded compared run's entry** (lane compare2), after `cmpStub` in the file: mode `7`'s
+entry, as the entries of modes `4`, `5`, `6` (the mode word, then the setup stub). The threaded
+harness calls `ca_start_a4` (the challenge's bytes), `ca_start_a5` (the solution's), the solution's
+jobs on its threads, `ca_start_a7` (the solution's bytes again), the challenge's jobs on its
+threads; every call on the same region `[base, base + abiNeed)`, as the previous call left it. -/
+def ctaStub (tab : Tab) (mode : GVar) : Program :=
+  [.label abiStartA7L,
+   movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
+   movRI .rax 7, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL]
+
 /-- The compared run's symbols for the harness: the region size it needs. -/
 def cmpSymbols (tab : Tab) (own : List TieredArray) : String :=
   s!".section .rodata\n.globl ca_cmp_region_size\nca_cmp_region_size: .quad {cmpNeed tab own}\n"

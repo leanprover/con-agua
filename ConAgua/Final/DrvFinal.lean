@@ -53,8 +53,10 @@ theorem code_of_checkerFile_cmp [Host] {k0 : Nat} (hcode : Code checkerFile k0) 
     Code (parStub checkerTab MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL ++
       (abiStub checkerTab ++ (compileProgX checkerX checkerTab checkerProgI "check" ++
         cmpStub checkerTab MODE OUT parOwnedL))) k0 := by
-  rw [checkerFile_eq, checkerStub_eq, checkerTail_eq, List.append_assoc] at hcode
-  exact hcode
+  rw [checkerFile_eq, checkerStub_eq, checkerTail_eq, List.append_assoc,
+    ← List.append_assoc (compileProgX checkerX checkerTab checkerProgI "check"),
+    ← List.append_assoc (abiStub checkerTab), ← List.append_assoc] at hcode
+  exact hcode.left
 
 theorem checker_seqParamsOk : seqParamsOk checkerTab OUT HDRF CTLF 138 = true := by decide +kernel
 
