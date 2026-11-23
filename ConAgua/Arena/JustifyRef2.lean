@@ -18,6 +18,12 @@ open ConRon.Arena
 
 namespace L.Arena
 
+/-- **The cone walk's state with room for its top word**: `ConeR` and the control word `CTL[228]`
+inside `CTL` (as the needs walk's `NdR`). -/
+structure CnR (m : Mem) (seen : Std.HashMap NIdx Bool) (work : List NIdx) : Prop where
+  rel : ConeR m seen work
+  ctl : CTOPC.toNat < (m.arr64 CTL).size
+
 /-! ## `cone_push` -/
 
 /-- **`cone_push`'s loop**: from height `h` with `k` names left, the names `NACC[k-1] … NACC[0]`
