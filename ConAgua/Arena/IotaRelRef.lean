@@ -504,7 +504,140 @@ theorem exprLvlEq_run (hev : p.lookup "e_view" = some eView) (hL : LvlCacheProg 
         rw [StateT.run_bind, viewBind_run', ConRon.Bridge.viewBind_of_view hv1 (Or.inr rfl), except_ok_bind,
           StateT.run_bind, viewBind_run', ConRon.Bridge.viewBind_of_view hv2 (Or.inr rfl), except_ok_bind]
         exact hrec
-    sorry
+    have eapp : (Idx.tag (decE x) == ETag.app) = false := by
+      rw [tb ETag.app 4 rfl (by decide)]; simp only [irOfNat4]; simp only [not_or] at h456; simpa using h456.1
+    have ebind : (Idx.tag (decE x) == ETag.lam || Idx.tag (decE x) == ETag.forallE) = false := by
+      rw [tb ETag.lam 5 rfl (by decide), tb ETag.forallE 6 rfl (by decide)]
+      simp only [irOfNat5, irOfNat6]; simp only [not_or] at h456; simp [h456.2.1, h456.2.2]
+    by_cases h7 : tagW x = 7
+    · rw [exprLvlEqW.arm6 _ _ _ _ _ _ hf0 hxy htg h2 h3 h456 h7] at hW
+      rcases c1 : callW p n "e_view" [x] m with _ | ⟨r1, m1⟩
+      · rw [c1, exprLvlEqW.k_e_view_7.eq_1] at hW; cases hW
+      rw [c1, exprLvlEqW.k_e_view_7.eq_2] at hW
+      obtain ⟨hm1, v1, hv1, hr1, ht1⟩ := eView_callW_view hev hR c1
+      subst m1
+      obtain ⟨rfl, ha1, hb1, hc1⟩ := irVR_let hr1 (by rw [ht1, h7])
+      rcases c2 : callW p n "e_view" [y] m with _ | ⟨r2, m2⟩
+      · rw [c2, exprLvlEqW.k_e_view_8.eq_1] at hW; cases hW
+      obtain ⟨hm2, v2, hv2, hr2, ht2⟩ := eView_callW_view hev hR c2
+      subst m2
+      obtain ⟨rfl, ha2, hb2, hc2⟩ := irVR_let hr2 (by rw [ht2, ← htg, h7])
+      rw [c2, exprLvlEqW.k_e_view_8.arm1] at hW
+      have el : (Idx.tag (decE x) == ETag.letE) = true := by
+        rw [tb ETag.letE 7 rfl (by decide)]; simpa [irOfNat7] using h7
+      simp only [e1, e2, es, ec, eapp, ebind, el, Bool.false_eq_true, ite_false, ite_true]
+      rw [StateT.run_bind, viewLet_run', irViewLet hv1, except_ok_bind, StateT.run_bind,
+        viewLet_run', irViewLet hv2, except_ok_bind]
+      dsimp only
+      rcases c3 : exprLvlEqW p n m (r1.tail.headD 0) (r2.tail.headD 0) (fu - 1) with _ | ⟨r3, m3⟩
+      · rw [c3, exprLvlEqW.k_expr_lvl_eq_3.eq_1] at hW; cases hW
+      obtain ⟨b3, a3, h3r, hS3, hg3, hd3, hc3⟩ := exprLvlEq_run hev hL n _ _ _ _ _ _ _ c3 hS hok ha1 ha2
+      rw [hk1] at h3r
+      rw [StateT.run_bind, h3r, except_ok_bind]
+      by_cases hz : r3.headD 0 = 0
+      · rw [c3, exprLvlEqW.k_expr_lvl_eq_3.arm1 _ _ _ _ _ _ _ _ _ hz] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hb3 : b3 = false := by have := hd3.1; rw [hz] at this; simpa using this.symm
+        subst hb3
+        exact ⟨false, a3, rfl, hS3, hg3, by simp [decW0B], hc3⟩
+      rw [c3, exprLvlEqW.k_expr_lvl_eq_3.arm2 _ _ _ _ _ _ _ _ _ hz] at hW
+      have hb3 : b3 = true := by rw [← hd3.1]; exact bne_iff_ne.mpr hz
+      subst hb3
+      rcases c4 : exprLvlEqW p n m3 (r1.tail.tail.headD 0) (r2.tail.tail.headD 0) (fu - 1) with _ | ⟨r4, m4⟩
+      · rw [c4, exprLvlEqW.k_expr_lvl_eq_4.none] at hW; cases hW
+      obtain ⟨b4, a4, h4r, hS4, hg4, hd4, hc4⟩ :=
+        exprLvlEq_run hev hL n _ _ _ _ _ _ _ c4 hS3 hc3.ok hb1 hb2
+      rw [hk1] at h4r
+      simp only [ite_true]
+      rw [StateT.run_bind, h4r, except_ok_bind]
+      by_cases hz4 : r4.headD 0 = 0
+      · rw [c4, exprLvlEqW.k_expr_lvl_eq_4.eq_2, ite_eq_left hz4] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hb4 : b4 = false := by have := hd4.1; rw [hz4] at this; simpa using this.symm
+        subst hb4
+        exact ⟨false, a4, rfl, hS4, hg3.trans hg4, by simp [decW0B], hc3.trans hc4⟩
+      rw [c4, exprLvlEqW.k_expr_lvl_eq_4.eq_2, ite_eq_right hz4] at hW
+      have hb4 : b4 = true := by rw [← hd4.1]; exact bne_iff_ne.mpr hz4
+      subst hb4
+      rcases c5 : exprLvlEqW p n m4 (r1.tail.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) (fu - 1)
+        with _ | ⟨r5, m5⟩
+      · rw [c5, exprLvlEqW.k_expr_lvl_eq_2.none] at hW; cases hW
+      obtain ⟨b5, a5, h5r, hS5, hg5, hd5, hc5⟩ :=
+        exprLvlEq_run hev hL n _ _ _ _ _ _ _ c5 hS4 hc4.ok hc1 hc2
+      rw [hk1] at h5r
+      rw [c5, exprLvlEqW.k_expr_lvl_eq_2.arm1] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨b5, a5, by simpa using h5r, hS5, hg3.trans (hg4.trans hg5), hd5,
+        hc3.trans (hc4.trans hc5)⟩
+    have el : (Idx.tag (decE x) == ETag.letE) = false := by
+      rw [tb ETag.letE 7 rfl (by decide)]; simpa [irOfNat7] using h7
+    by_cases h9 : tagW x = 9
+    · rw [exprLvlEqW.arm7 _ _ _ _ _ _ hf0 hxy htg h2 h3 h456 h7 h9] at hW
+      rcases c1 : callW p n "e_view" [x] m with _ | ⟨r1, m1⟩
+      · rw [c1, exprLvlEqW.k_e_view_9.eq_1] at hW; cases hW
+      rw [c1, exprLvlEqW.k_e_view_9.eq_2] at hW
+      obtain ⟨hm1, v1, hv1, hr1, ht1⟩ := eView_callW_view hev hR c1
+      subst m1
+      obtain ⟨rfl, hn1, hc1⟩ := irVR_proj hr1 (by rw [ht1, h9])
+      rcases c2 : callW p n "e_view" [y] m with _ | ⟨r2, m2⟩
+      · rw [c2, exprLvlEqW.k_e_view_10.eq_1] at hW; cases hW
+      obtain ⟨hm2, v2, hv2, hr2, ht2⟩ := eView_callW_view hev hR c2
+      subst m2
+      obtain ⟨rfl, hn2, hc2⟩ := irVR_proj hr2 (by rw [ht2, ← htg, h9])
+      rw [c2, exprLvlEqW.k_e_view_10.eq_2] at hW
+      have ep : (Idx.tag (decE x) == ETag.proj) = true := by
+        rw [tb ETag.proj 9 rfl (by decide)]; simpa [irOfNat9] using h9
+      simp only [e1, e2, es, ec, eapp, ebind, el, ep, Bool.false_eq_true, ite_false, ite_true]
+      rw [StateT.run_bind, viewProj_run', irViewProj hv1, except_ok_bind, StateT.run_bind,
+        viewProj_run', irViewProj hv2, except_ok_bind]
+      dsimp only
+      by_cases hne1 : r1.tail.headD 0 ≠ r2.tail.headD 0
+      · rw [ite_eq_left hne1] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have : (decI (r1.tail.headD 0) == (decI (r2.tail.headD 0) : NIdx)) = false := by
+          simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hne1 (decI_inj hn1 hn2 e)
+        refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hok⟩
+        simp only [this, Bool.false_eq_true, ite_false]; rfl
+      rw [ite_eq_right hne1] at hW
+      have heq1 : r1.tail.headD 0 = r2.tail.headD 0 := Classical.not_not.mp hne1
+      by_cases hne2 : r1.tail.tail.headD 0 ≠ r2.tail.tail.headD 0
+      · rw [ite_eq_left hne2] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have : ((r1.tail.tail.headD 0).toNat == (r2.tail.tail.headD 0).toNat) = false := by
+          simp only [beq_eq_false_iff_ne, ne_eq]; exact fun e => hne2 (UInt64.toNat_inj.mp e)
+        refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hok⟩
+        simp only [heq1, beq_self_eq_true, ite_true, this, Bool.false_eq_true, ite_false]; rfl
+      rw [ite_eq_right hne2] at hW
+      have heq2 : r1.tail.tail.headD 0 = r2.tail.tail.headD 0 := Classical.not_not.mp hne2
+      rcases c5 : exprLvlEqW p n m (r1.tail.tail.tail.headD 0) (r2.tail.tail.tail.headD 0) (fu - 1)
+        with _ | ⟨r5, m5⟩
+      · rw [c5, exprLvlEqW.k_expr_lvl_eq_2.none] at hW; cases hW
+      obtain ⟨b5, a5, h5r, hS5, hg5, hd5, hc5⟩ :=
+        exprLvlEq_run hev hL n _ _ _ _ _ _ _ c5 hS hok hc1 hc2
+      rw [hk1] at h5r
+      rw [c5, exprLvlEqW.k_expr_lvl_eq_2.arm1] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨b5, a5, ?_, hS5, hg5, hd5, hc5⟩
+      simp only [heq1, heq2, beq_self_eq_true, ite_true]; exact h5r
+    have ep : (Idx.tag (decE x) == ETag.proj) = false := by
+      rw [tb ETag.proj 9 rfl (by decide)]; simpa [irOfNat9] using h9
+    rw [exprLvlEqW.arm8 _ _ _ _ _ _ hf0 hxy htg h2 h3 h456 h7 h9] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hok⟩
+    simp only [e1, e2, es, ec, eapp, ebind, el, ep, Bool.false_eq_true, ite_false, ite_true]; rfl
+
+/-- **`expr_lvl_eq(x, y, fu)` refines `lvlEq fu x y`** (the call; `exprLvlEq_run` on the model). -/
+@[refines ConRon.Arena.lvlEq]
+theorem exprLvlEq_rel (hf : p.lookup "expr_lvl_eq" = some exprLvlEqL)
+    (hev : p.lookup "e_view" = some eView) (hL : LvlCacheProg p) {n : Nat} {m m' : Mem}
+    {a : AState} {x y fu : Word} {r : List Word}
+    (hc : callW p n "expr_lvl_eq" [x, y, fu] m = some (r, m')) (hS : StageR vis feR m a)
+    (hok : ConRon.Bridge.CheckOK false env fe a) (hx : HW x) (hy : HW y) :
+    ∃ b a', (lvlEq fu.toNat (decE x) (decE y)).run a = .ok (b, a') ∧ StageR vis feR m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (exprLvlEq_specW p hf n _ x y fu) hc
+  exact exprLvlEq_run hev hL n _ _ _ _ _ _ _ hW hS hok hx hy
 
 end lvleq
 
