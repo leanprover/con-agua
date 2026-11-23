@@ -104,3 +104,19 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
 * Design changes from stage 0: the move is over the name stores' counts, not over the solution's
   records (H3: re-walking `decl_constants` would allocate again and needs an invariant tying rows to
   records; the stores' counts bound every row through `IndexKeysIn`, `FreezeTrunc.lean`).
+* 17:50 first binary with `--compare` (WIP, unproved wiring): `diff-e2e --tests` at con-leche
+  bc667610: **766/766 agree** (the 748 file rows plus the 18 argument rows, which
+  `diff-e2e.py` now runs: `arg_rows`), UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0.
+* First measurements (one run each, load ≈ 1; `_tmp/compare/perf1.sh`):
+
+  | run | instructions:u | wall | peak RSS |
+  |---|---:|---:|---:|
+  | flat `Init`, master `d84b7c756` | 202 631.7 M | 14.52 s | 627 MB |
+  | flat `Init`, compare | 202 631.8 M (+0.0001 %) | 14.77 s | 628 MB |
+  | `--compare` `Init` against itself, compare | 408 327 M | 29.23 s | 1 259 MB |
+  | con-ron 8021ddac `--jobs=1 --compare`, same | 333 863 M | 28.87 s | 367 MB |
+  | con-ron 8021ddac `--jobs=1`, flat `Init` | 165 590 M | 14.17 s | 388 MB |
+
+  The compared run costs 2.015 flat runs (con-ron: 2.016). Its peak RSS is twice the flat run's:
+  the solution's jobs run on the worker region over a copy of the frozen arrays, and both stay
+  resident (con-ron moves its tier to the workers and drops them).
