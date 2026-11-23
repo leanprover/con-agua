@@ -1,6 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameIface
+public import ConAgua.Arena.IotaFrameBase
 public import ConAgua.Arena.IotaFrameRef
 import ConAgua.Arena.RecClassSpec.CloseLams
 import ConAgua.Arena.FormerSortRef

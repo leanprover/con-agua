@@ -1,10 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameModels
-public import ConAgua.Arena.StripTeleSpec
-public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
-public import ConAgua.Arena.IndRealSpine
-public import ConAgua.Arena.RecClass
+public import ConAgua.Arena.IotaFrameMinors
 
 @[expose] public section
 
@@ -15,8 +11,7 @@ The refinements of the three functions `rule_reads`/`rec_reads` call (`iota_rec_
 `iota_parts_of_at`, `iota_parts_at`), each a `RelW` of its run under `StageR` with the record
 in memory decoded (`decCV`, `decRule` over `erecP`), the results decoding the twin's by
 `IotaReadDec`'s `decOIR`/`decOIP`/`decOIPD` (`KeepPost`: the stage kept, the pool grown).
-`IotaFrameProg` names what the proofs need of the program; it gains fields as the proofs land
-(callers only pass it on).
+`IotaFrameProg` (`IotaFrameBase.lean`) names what the proofs need of the program.
 -/
 
 open ConRon.Arena
@@ -24,32 +19,6 @@ open ConRon.Arena
 namespace L.Ind
 
 open L.Arena
-
-/-- What the phase-1 refinements need of a program. -/
-structure IotaFrameProg (p : Prog) : Prop where
-  pi_tele : p.lookup "pi_tele" = some piTeleL
-  motive_level : p.lookup "motive_level" = some motiveLevelL
-  iota_frame : p.lookup "iota_frame" = some iotaFrameL
-  is_minor_at : p.lookup "is_minor_at" = some isMinorAtL
-  minors_from : p.lookup "minors_from" = some minorsFromL
-  iota_read_major : p.lookup "iota_read_major" = some iotaReadMajorL
-  iota_rec_of : p.lookup "iota_rec_of" = some iotaRecOfL
-  lift_field_doms : p.lookup "lift_field_doms" = some liftFieldDomsL
-  lift_idx_args : p.lookup "lift_idx_args" = some liftIdxArgsL
-  iota_parts_of_at : p.lookup "iota_parts_of_at" = some iotaPartsOfAtL
-  ctor_levels_at : p.lookup "ctor_levels_at" = some ctorLevelsAtL
-  iota_bvars : p.lookup "iota_bvars" = some iotaBVarsL
-  iota_params_at : p.lookup "iota_params_at" = some iotaParamsAtL
-  iota_parts_at_body : p.lookup "iota_parts_at_body" = some iotaPartsAtBodyL
-  iota_parts_at : p.lookup "iota_parts_at" = some iotaPartsAtL
-  e_view : p.lookup "e_view" = some eView
-  gaf : GafF p
-  pir : PirF p
-  bvar_find : p.lookup "bvar_find" = some bvarFind
-  bvar_push : p.lookup "bvar_push" = some bvarPush
-  intern_bvar : p.lookup "intern_bvar" = some internBVar
-  expr_get_d : p.lookup "expr_get_d" = some exprGetD
-  strip : StripProg p
 
 /-- **`iota_rec_of(q, mI, rP)` refines `iotaRecOf cv mI rP`** (`q` the recursor's constant value
 in `EREC`). -/

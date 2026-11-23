@@ -22,7 +22,9 @@ aborts, where the twin's fuel runs out (`.internal`). The callees take `CWF` exp
 
 **Counts.** The three entries `rule_reads` calls (`iota_rec_of`, `iota_parts_of_at`,
 `iota_parts_at`) abort at a count word (`mI`, `rP`, `nIdx`, `cnP`, a rule's `nfields`) of `2^32` or
-more (a fixed capacity: the words' arithmetic below then cannot wrap).
+more (a fixed capacity: the words' arithmetic below then cannot wrap). The list loops abort at a handle word of
+`2^32` or more from a callee (`lift_entry`, `intern_bvar`: the handle capacity), as the other slice
+builders do.
 
 **Lists.** The twin's list recursions (`minorsFrom`, `liftFieldDoms`, `liftIdxArgs`,
 `iotaBVars`) are loops filling a fresh `IW` slice allocated up front (its length the input's,
@@ -172,6 +174,7 @@ def liftFieldDomsL : FunDecl := lfn (amt, fo, fl) locals (o, j, d) {
   j := 0;
   while j < fl {
     d := call lift_entry(IW.u64[fo + j], amt, j, ⟪CWF⟫);
+    if 4294967296 <= d { abort };
     IW.u64[o + j] := d;
     j := j + 1
   };
@@ -189,6 +192,7 @@ def liftIdxArgsL : FunDecl := lfn (amt, nT, nF, ao, al) locals (o, j, b, c) {
   while j < al {
     b := call expr_drop_vars(nT, IW.u64[ao + j]);
     c := call lift_entry(b, amt, nF, ⟪CWF⟫);
+    if 4294967296 <= c { abort };
     IW.u64[o + j] := c;
     j := j + 1
   };
