@@ -147,7 +147,7 @@ def nvFns : List L.FnName :=
    "intern_nstr", "intern_param", "intern_pin_sets", "intern_proj", "intern_reserved_pins",
    "intern_sort", "intern_succ", "intern_zero", "io_clear", "io_find", "io_neutral", "io_put",
    "iota_bvars", "iota_certs_full_parts", "iota_frame", "iota_no_cert", "iota_params_at",
-   "iota_parts_at", "iota_parts_at_body", "iota_parts_of_at", "iota_parts_rel", "iota_rec_major",
+   "iota_parts_at", "iota_parts_at_body", "iota_parts_of_at", "iota_parts_rel", "iota_read_major",
    "iota_rec_of", "is_eager_reduce", "is_minor_at", "is_nat_succ_app", "is_nat_zero",
    "is_proof_fast", "is_str_lit", "iw_alloc", "iw_copy", "iw_pool", "iw_reset", "iw_to_spn",
    "kara_mid", "kara_prods", "kara_sum", "key_at", "key_at_g1", "key_at_g2", "key_at_g3",

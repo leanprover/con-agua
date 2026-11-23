@@ -42,7 +42,8 @@ theorem eView_forall {p : Prog} (hp : p.lookup "e_view" = some eView) {n : Nat}
 
 /-- `Option (Nat × EIdx)`-free decoder of `pi_tele`'s `(n, body)`. -/
 def decNE (_m : Mem) (r : List Word) (x : Nat × EIdx) : Prop :=
-  (r.headD 0).toNat = x.1 ∧ HW (r.tail.headD 0) ∧ decE (r.tail.headD 0) = x.2
+  (r.headD 0).toNat = x.1 ∧ HW (r.tail.headD 0) ∧ decE (r.tail.headD 0) = x.2 ∧
+    (r.headD 0).toNat < coreWalkFuel
 
 theorem piTele_tag (h : Word) (hh : HW h) :
     ((decE h).tag == ETag.forallE) = decide (tagW h = 6) :=
@@ -127,6 +128,9 @@ theorem piTele_rel {p : Prog} (hf : p.lookup "pi_tele" = some piTeleL)
     (by decide) hl
   have := hrun (UInt64.not_le.mp hcw)
   simp only [UInt64.toNat_zero, Nat.sub_zero] at this
-  exact ⟨_, a, this, hS, IWGrow.refl _, rfl, hh', rfl⟩
+  refine ⟨_, a, this, hS, IWGrow.refl _, rfl, hh', rfl, ?_⟩
+  have := UInt64.not_le.mp hcw
+  rw [UInt64.lt_iff_toNat_lt, CWF_eq] at this
+  exact this
 
 end L.Ind
