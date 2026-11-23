@@ -437,7 +437,7 @@ theorem Side6.stage5 {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : A
 
 /-- **`IndMemos` across the side records**: `mentions_const`'s memo from the side records, the
 others by the frame. -/
-theorem _root_.L.Ind.IndMemos.side {m m' : Mem} (h : IndMemos m)
+theorem _root_.L.Arena.IndMemos.side {m m' : Mem} (h : IndMemos m)
     (hf : MemFrame [L.Front.DECL, L.Ind.MCM] [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1] m m')
     (hmc : ∃ mp, L.Ind.mcMR m' mp) : IndMemos m' := by
   have hM : L.Ind.MFr [L.Ind.MCM] [216, 217] m m' :=
