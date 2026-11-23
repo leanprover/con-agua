@@ -42,6 +42,8 @@ structure DGrow (m m' : Mem) : Prop where
   decl : ∀ j, 0 < j → j < 1 + 8 * dcnt m → (m'.arr64 DECL)[j]? = (m.arr64 DECL)[j]?
   dlp : ∀ j, 0 < j → j ≤ dtop m → (m'.arr64 DLP)[j]? = (m.arr64 DLP)[j]?
   new : ∀ x, dcnt m ≤ x → x < dcnt m' → NewOK (m'.arr64 DECL) x
+  /-- The pool's top does not move down. -/
+  top : dtop m ≤ dtop m'
 
 /-- `DECL` and `DLP` unchanged. -/
 def DK (m m' : Mem) : Prop := m'.arr64 DECL = m.arr64 DECL ∧ m'.arr64 DLP = m.arr64 DLP
@@ -53,7 +55,7 @@ theorem DK.trans {m₁ m₂ m₃ : Mem} (h₁ : DK m₁ m₂) (h₂ : DK m₂ m�
 
 theorem DK.grow {m m' : Mem} (h : DK m m') : DGrow m m' :=
   ⟨fun j _ _ => by rw [h.1], fun j _ _ => by rw [h.2],
-    fun x h1 h2 => by simp only [dcnt, h.1] at h1 h2; omega⟩
+    fun x h1 h2 => by simp only [dcnt, h.1] at h1 h2; omega, by simp only [dtop, h.2]; omega⟩
 
 theorem DK.ofFrame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hd : (DECL : TieredArray) ∉ A := by tapart) (hq : (DLP : TieredArray) ∉ A := by tapart) : DK m m' :=
@@ -324,7 +326,14 @@ theorem declCvW_grow (b : Array UInt8) (m m' : Mem) (st : StateD) (hD : StateDR 
   have hcnt' : dcnt m' = dcnt m + 1 := by
     rw [show dcnt m' = (rdW (m₁.arr64 DECL) 0 + 1).toNat by unfold dcnt; rw [G4]; rfl, hc1, hcnt]
   have hm'P : m'.arr64 DLP = m₁.arr64 DLP := G1.1 DLP (by decide) (by decide)
-  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => ?_⟩
+  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => ?_, ?_⟩
+  rotate_right
+  · obtain ⟨-, -, F3, -, -, -, F7⟩ := lpLoopM_facts b (rdW (m.arr64 DLP) 0) m (lps + 1) 0 m₁
+      hP (by rw [hrd]; simp; omega) hps
+    simp only [dtop, hm'P, F7, Option.getD_some]
+    rw [← hrd, UInt64.toNat_add]
+    try simp only [UInt64.toNat_zero, Nat.add_zero] at F3
+    omega
   · rw [G5 j h1 (by omega), hm'D]
   · rw [hm'P]; exact F4 j h1 (by simp only [dtop] at h2; rw [hrd]; omega)
   · have hx : x = (rdW (m₁.arr64 DECL) 0).toNat := by omega

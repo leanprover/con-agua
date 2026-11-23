@@ -159,20 +159,21 @@ include hP h64 hsize
 /-- **The driver's loop, both outcomes**: from position `i` under the invariant, a `0` result is
 `finishFrom`'s acceptance with the invariant after; a failure of class `≠ 0` ends `finishFrom`
 with that class. -/
-theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD) (a : AState)
-    (lineNo : Nat), FrontInvOK D b m a st → ln.toNat ≤ i.toNat → ln.toNat = lineNo →
+theorem loop_ref (K : Mem → Prop) (hK : ∀ m m', K m → DGrow m m' → K m') :
+    ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD) (a : AState)
+    (lineNo : Nat), FrontInvOK D b m a st → K m → ln.toNat ≤ i.toNat → ln.toNat = lineNo →
     RefC (FrontRunG p b) (frontRunE.loop1 p n m i.toUInt64 ln)
       (fun x => x.1 = 0 → ∃ st' a', (finishFrom st b i lineNo).run a = .ok (.ok (.ofState st'), a') ∧
-        FrontInvOK D b x.2 a' st')
+        FrontInvOK D b x.2 a' st' ∧ K x.2)
       (ErrClaimV (finishFrom st b i lineNo) a) := by
   intro n
   induction n with
   | zero =>
-    intro i m ln st a lineNo _ _ _
+    intro i m ln st a lineNo _ _ _ _
     simp only [frontRunE.loop1]
     exact fun _ hk => absurd Err.cls_outOfFuel hk
   | succ n ih =>
-  intro i m ln st a lineNo hI hln hlnN
+  intro i m ln st a lineNo hI hKm hln hlnN
   have hm : m.arr8 IN = b.data := hI.1.1
   have hsz : m.len8 IN0 = UInt64.ofNat b.data.size := by
     show UInt64.ofNat (m.arr8 IN).size = _; rw [hm]
@@ -180,7 +181,7 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
   rotate_left
   · rw [frontRunE.loop1.arm3 _ _ _ _ _ hlt]
     intro _
-    refine ⟨st, a, finishFrom_end st b i lineNo a fun hi => hlt ?_, hI⟩
+    refine ⟨st, a, finishFrom_end st b i lineNo a fun hi => hlt ?_, hI, hKm⟩
     rw [hsz]; exact (ConAgua.Scan.RecordsLink.lt_usize_iff b h64 hsize i).mp hi
   obtain ⟨f, hj, hf⟩ : ∃ f, frontRunE.loop1 p (n + 1) m i.toUInt64 ln = frontRunE.j1 p n i.toUInt64 ln f m ∧
       (f != 0) = (lineNo == 0) := by
@@ -234,7 +235,7 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
       have := congrArg UInt64.toNat (hq.trans hnx)
       simpa [USize.toNat_toUInt64] using this
     subst hq0
-    exact ⟨st', _, finishFrom_last st b i lineNo a r st' _ hi hsc hpl hrun, hInv⟩
+    exact ⟨st', _, finishFrom_last st b i lineNo a r st' _ hi hsc hpl hrun, hInv, hK _ _ hKm hpost.grow⟩
   by_cases hle : nx ≤ i.toUInt64
   · rw [frontRunE.k_front_line.arm3 _ _ _ _ _ _ h0 hnx hle]
     exact fun h => absurd h hln1
@@ -243,7 +244,7 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
   have hiq : i < q := by rw [ConAgua.Scan.lt_toUInt64_iff, hq]; exact UInt64.not_le.mp hle
   have hnext := finishFrom_next st b i lineNo a r q st' _ hi hsc hq0 hiq hpl hrun
   have hqi := USize.lt_iff_toNat_lt.mp hiq
-  have hR' := ih q m1 (ln + 1) st' _ (lineNo + 1) hInv (by rw [UInt64.toNat_add]; simp; omega)
+  have hR' := ih q m1 (ln + 1) st' _ (lineNo + 1) hInv (hK _ _ hKm hpost.grow) (by rw [UInt64.toNat_add]; simp; omega)
     (by rw [UInt64.toNat_add]; simp; omega)
   simp only [List.tail_cons, List.headD_cons]
   rw [← hq]
@@ -251,18 +252,17 @@ theorem loop_ref : ∀ (n : Nat) (i : USize) (m : Mem) (ln : Word) (st : StateD)
   obtain ⟨st'', a'', h1, h2⟩ := hx h0
   exact ⟨st'', a'', by rw [hnext]; exact h1, h2⟩
 
-/-- **`front_run`, both outcomes**: from a memory holding `b`, related to `a₀` and the blank parse
-state after the prelude's records `D`, a `0` result is `parseBytes b`'s acceptance with the
-driver's invariant after; a failure of class `≠ 0` claims that `parseBytes b` fails with that
-class. -/
-theorem frontRun_ref (hpi : p.lookup "front_init" = some frontInit) (n : Nat) {m : Mem}
+/-- **`front_run`, both outcomes, with a fact `K` of the memory that every line's growth keeps
+(`DGrow`)**. -/
+theorem frontRun_refK (K : Mem → Prop) (hK : ∀ m m', K m → DGrow m m' → K m')
+    (hpi : p.lookup "front_init" = some frontInit) (n : Nat) {m : Mem}
     {a₀ : AState}
     (h₀ : m.arr8 IN = b.data ∧ ArenaD m a₀ ∧ StateDR m (StateD.blank.pre D) ∧
       ConRon.Bridge.StateOK a₀ ∧ a₀.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a₀ ∧
-      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) :
+      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) (hKm : K m) :
     RefC (FrontRunG p b) (frontRunE p n m)
       (fun x => x.1 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
-        FrontInvOK D b x.2 a' st')
+        FrontInvOK D b x.2 a' st' ∧ K x.2)
       (ErrClaimV (parseBytes b) a₀) := by
   cases n with
   | zero => exact fun _ hk => absurd Err.cls_outOfFuel hk
@@ -276,11 +276,30 @@ theorem frontRun_ref (hpi : p.lookup "front_init" = some frontInit) (n : Nat) {m
   obtain ⟨st₀, a₁, hrun, hI⟩ := initKW_inv_ok D b m _ a₀ h₀ hK1
   have hu : parseBytes b = (StateD.init >>= fun st => finishFrom st b 0 0) :=
     parseBytes_eq b (by rw [show USize.size = 2 ^ 64 by simp [USize.size, h64]]; omega)
-  have hR := loop_ref hP D b h64 hsize (n + 1) 0 s1.mem 0 st₀ a₁ 0 hI (by simp) (by simp)
+  have hR := loop_ref hP D b h64 hsize K hK (n + 1) 0 s1.mem 0 st₀ a₁ 0 hI
+    (hK _ _ hKm (initKW_dk m s1.mem hK1).grow) (by simp) (by simp)
   refine RefC.mono hR (fun x hx h0 => ?_) (fun e _ h hk => ?_)
   · obtain ⟨st', a', h1, h2⟩ := hx h0
     exact ⟨st', a', by rw [hu, StateT.run_bind, hrun]; exact h1, h2⟩
   · rw [hu]; exact ConAgua.Final.TwinFailsV.bind_ok hrun (h hk)
+
+
+/-- **`front_run`, both outcomes**: from a memory holding `b`, related to `a₀` and the blank parse
+state after the prelude's records `D`, a `0` result is `parseBytes b`'s acceptance with the
+driver's invariant after; a failure of class `≠ 0` claims that `parseBytes b` fails with that
+class. -/
+theorem frontRun_ref (hpi : p.lookup "front_init" = some frontInit) (n : Nat) {m : Mem}
+    {a₀ : AState}
+    (h₀ : m.arr8 IN = b.data ∧ ArenaD m a₀ ∧ StateDR m (StateD.blank.pre D) ∧
+      ConRon.Bridge.StateOK a₀ ∧ a₀.store.scratchOn = false ∧ ConRon.Bridge.PinsOK a₀ ∧
+      (∀ x < D.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) ∧ ModeOK m) :
+    RefC (FrontRunG p b) (frontRunE p n m)
+      (fun x => x.1 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
+        FrontInvOK D b x.2 a' st')
+      (ErrClaimV (parseBytes b) a₀) :=
+  RefC.mono (frontRun_refK hP D b h64 hsize (fun _ => True) (fun _ _ _ _ => trivial) hpi n h₀ trivial)
+    (fun x hx h0 => by obtain ⟨st', a', h1, h2, -⟩ := hx h0; exact ⟨st', a', h1, h2⟩)
+    (fun _ _ h => h)
 
 end loop
 
@@ -334,6 +353,29 @@ theorem frontRunOK_checker (D : Array IDeclaration) (b : ByteArray)
         ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩)) fun _ _ ⟨_, h⟩ h0 => by
     obtain ⟨st', a', h1, ⟨-, h2, h3, h4, hM⟩, h5, -⟩ := h h0
     exact ⟨st', a', h1, h2, h3, h4, hM, h5⟩
+
+/-- **`frontRunOK_checker` with a fact `K` of the memory that every line's growth keeps** (`DGrow`:
+the records and the pool's words up to its top stay, the top does not move down). -/
+theorem frontRunOKK_checker (K : Mem → Prop) (hK : ∀ m m', K m → DGrow m m' → K m')
+    (D : Array IDeclaration) (b : ByteArray)
+    (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
+    (hm : s₀.mem.arr8 IN = b.data) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
+    (hD : StateDR s₀.mem (StateD.blank.pre D)) (hok : ConRon.Bridge.StateOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀)
+    (hR : ∀ x < D.size, L.Checker.RecOK (s₀.mem.arr64 DECL) (s₀.mem.arr64 DLP) x)
+    (hmode : ModeOK s₀.mem) (hKm : K s₀.mem) :
+    ⦃fun s => s = s₀⦄
+    invoke L.Checker.checkerProg (exec L.Checker.checkerProg n) "front_run" []
+    ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
+      ArenaD s'.mem a' ∧ StateDR s'.mem (st'.pre D) ∧ TwinOK a' st' ∧ ModeOK s'.mem ∧
+      (∀ x < D.size + st'.decls.size, L.Checker.RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
+      K s'.mem; ⊤⦄ := by
+  rw [L.Checker.checkerProg_front_run n]
+  exact triple_post (RefC.triple (frontRun_specE frontAllProg rfl n s₀)
+      (frontRun_refK frontAllProg_line D b h64 hsize K hK rfl n
+        ⟨hm, hA, hD, hok, hoff, hpins, hR, hmode⟩ hKm)) fun _ _ ⟨_, h⟩ h0 => by
+    obtain ⟨st', a', h1, ⟨⟨-, h2, h3, h4, hM⟩, h5, -⟩, hk⟩ := h h0
+    exact ⟨st', a', h1, h2, h3, h4, hM, h5, hk⟩
 
 /-- **`front_run` of the checker's program refines the twin's streaming parse of one chunk**
 (`parseChunks [b]`, the checker statement's form; `parseChunks_single`). -/

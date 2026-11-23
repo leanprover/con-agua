@@ -4,6 +4,7 @@ public import ConAgua.Checker.LoopStage
 public import ConAgua.Arena.IndexBuild
 import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.Checker.TwinShapeQuot
+import ConAgua.Checker.TwinCaches
 import ConAgua.Checker.RomProgInit
 import ConRon.Bridge.Checker.Pool
 import ConRon.Bridge.Stages
@@ -202,19 +203,47 @@ theorem since_coreMemos (hctl : 220 ≤ (m.arr64 CTL).size) : CoreMemos m :=
 
 end zero
 
-/-- **The index build's start**: after the stages up to `intern_all_pins` (memory `m`) and the
-literal names' writes (`str_lit_names`, memory `m'`), the memory is `BuildR` at the empty stream
-index, at the twin's state after the stages. -/
-theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
-    {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
-    {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
+/-- **The twin's facts after the stages before the index build** (the flat run's: `stages_frame`,
+`StagesOut.flat`; the compared run's solution: `stagesC_frame`): what the index build and the jobs
+use of the stages. -/
+structure StagesOut (sE : AState) (ds : Array IDeclaration) (ipins : List INatOpPinSet)
+    (pins : List ConLeche.NatOpPinSet) : Prop where
+  off : sE.store.scratchOn = false
+  drv : ConRon.Bridge.DriverOK sE
+  pp : ConRon.Bridge.PersPins sE
+  pinsDn : ConRon.Bridge.PinsDenote sE.store ipins pins
+  pps : ConRon.Bridge.PersPinSets ipins
+  pd : ∀ x ∈ ds.toList, ConRon.Bridge.PersDecl x
+  den : ∃ dsP, ConRon.Bridge.denoteDecls sE.store ds.toList = some dsP
+  caches : sE.caches = (AState.init EStore.empty).caches
+  front : L.Arena.FrontDecls ds
+  quot : ∃ k : NIdx, k.isPersistent = true ∧ ConRon.Arena.denoteN sE.store.ns k = some (ConLeche.Name.str .anonymous "u")
+
+/-- The flat run's `StagesOut`. -/
+theorem StagesOut.flat {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
+    {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
+    {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState}
+    (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE) : StagesOut sE ds ipins pins := by
+  obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
+  obtain ⟨hoff, hdrv, hpp, hpdn, hpps, hpd, _rc, _preC, -, hden⟩ :=
+    ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  exact ⟨hoff, hdrv, hpp, hpdn, hpps, hpd, ⟨_, hden⟩, (prefix_caches ⟨hA, hB, hC, hD, hE⟩).1,
+    frontDecls_of_prefix ⟨hA, hB, hC, hD, hE⟩, prefix_quotU ⟨hA, hB, hC, hD, hE⟩⟩
+
+/-- **The index build's start**: after the stages up to `intern_all_pins` (memory `m`, the twin's
+facts after them `StagesOut`) and the literal names' writes (`str_lit_names`, memory `m'`), the
+memory is `BuildR` at the empty stream index, at the twin's state after the stages. -/
+theorem buildR_of_out {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
+    {ds : Array IDeclaration} {pins : List ConLeche.NatOpPinSet}
     {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
-    (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+    (ho : StagesOut sE ds ipins pins)
     (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) {m' : Mem}
     (hf : MemFrame [] litCtl m m') (hl : (pinLits m).map (·.word.toUInt64) = litWords m') :
     BuildR (dnOf sE.store) ds m' sE {} := by
-  obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
-  obtain ⟨hoff, hdrv, -, -, -, hpd, _rc, _preC, -, hden⟩ := ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
+  have hoff := ho.off
+  have hdrv := ho.drv
+  have hpd := ho.pd
+  obtain ⟨_dsP, hden⟩ := ho.den
   have hS := h7.since
   have hctl : 220 ≤ (m.arr64 CTL).size := by
     have := hS.caps.2.1
@@ -228,7 +257,7 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
       ⟨sz63 _ (by decide), sz63 _ (by decide), sz63 _ (by decide), since_coreMemos hS hctl,
         fun k x hk => by simp only [dnOf] at hk; split at hk <;> simp_all⟩
   have hS0 : L.Ind.StageR 0 bEnvZ m sE :=
-    ⟨⟨h7.arena, core_of_R7 ⟨hA, hB, hC, hD, hE⟩ h7, ⟨fun _ => h7.pinsFull⟩, since_envR hS, h7.mode⟩, h7.iw⟩
+    ⟨⟨h7.arena, core_of_R7' ho.caches h7, ⟨fun _ => h7.pinsFull⟩, since_envR hS, h7.mode⟩, h7.iw⟩
   have hE' : EnvR m' 0 (bEnv ({} : IStreamIndex).base sE.pins 0 0) := by
     have := (since_envR hS).relits hf (L := drvLits sE.pins) (by rw [← pinLits_drv h7.pinsFull]; exact hl)
     rwa [bEnvZ_relits] at this
@@ -245,7 +274,7 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
       simp only [litCtl, List.mem_cons, List.not_mem_nil, or_false] at hx
       rcases hx with h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide), ?_⟩
   · intro i hi b' nP e
-    exact frontDecls_of_prefix ⟨hA, hB, hC, hD, hE⟩ i hi b' nP e
+    exact ho.front i hi b' nP e
   · intro x hx
     refine ⟨hpd x hx, ?_⟩
     obtain ⟨-, hget⟩ := ConRon.Bridge.denoteDecls_getElem hden
@@ -253,11 +282,22 @@ theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s,
     obtain ⟨_, hd⟩ := hget i hi
     exact ⟨_, hd⟩
   · intro x hx
-    obtain ⟨k, hk, hd⟩ := prefix_quotU ⟨hA, hB, hC, hD, hE⟩
+    obtain ⟨k, hk, hd⟩ := ho.quot
     simp only [quotNames, List.mem_singleton] at hx
     subst hx
     exact ⟨k, by simp [dnOf, hk, hd], hd⟩
   · rw [ha _ (by decide), hS.frame.size, loadMem_arr, Array.size_replicate]; exact hsz _
+
+/-- **The index build's start**, for the flat run (`buildR_of_out`). -/
+theorem buildR_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} (hsz : ∀ s, sz s < 2 ^ 64)
+    {sA : AState} {pre : PreludeIx} {sB : AState} {rc : ParseResultD} {sC : AState}
+    {ds : Array IDeclaration} {sD : AState} {pins : List ConLeche.NatOpPinSet}
+    {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
+    (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+    (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) {m' : Mem}
+    (hf : MemFrame [] litCtl m m') (hl : (pinLits m).map (·.word.toUInt64) = litWords m') :
+    BuildR (dnOf sE.store) ds m' sE {} :=
+  buildR_of_out hsz (StagesOut.flat hpx) h7 hf hl
 
 /-! ## The index build at the checker's program -/
 
