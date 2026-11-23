@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Final.ThreadsFinal
-public import ConAgua.Final.CmpThreadsL
+public import ConAgua.Checker.CmpThreadsS
 public import ConAgua.Final.CmpOutcome
 public import ConAgua.Final.ParAbi
 import ConAgua.Final.CmpStub
