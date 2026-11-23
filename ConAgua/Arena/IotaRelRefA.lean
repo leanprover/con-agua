@@ -52,6 +52,7 @@ structure IotaRelProg (p : Prog) : Prop where
   lvn : p.lookup "lv_node" = some lvNode
   aiv : p.lookup "ann_ident_val" = some annIdentValL
   ai : p.lookup "ann_ident" = some annIdentL
+  aeq : p.lookup "ann_eq" = some annEqL
 
 section ann
 variable {p : Prog} {env : ConLeche.Env} {fe feR : IFEnv} {vis : Word}
@@ -511,6 +512,293 @@ theorem annIdent_rel (P : IotaRelProg p) {k : Nat} {m m' : Mem} {a : AState}
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨x2, a2, h2, hS2, hg2, hd2, k2⟩ := annIdentVal_rel P c2 hS hok hsl hvw
   exact ⟨x2, a2, by rw [hv]; exact h2, hS2, hg2, hd2, k2⟩
+
+/-- `view_ls_len` on a stored list `us` of a constant view: the length word is the twin's. -/
+theorem irLsLen (P : IotaRelProg p) {n : Nat} {m m1 : Mem} {a : AState} {us : Word} {r : List Word}
+    (hR : ArenaR m a) (hus : HW us) {ls : List ConLeche.Level}
+    (hdl : denoteLs a.store.lss (decI us) = some ls)
+    (h : callW p n "view_ls_len" [us] m = some (r, m1)) :
+    m1 = m ∧ (r.tail.headD 0).toNat = ls.length := by
+  obtain ⟨hm, hr⟩ := irViewLsLen P h
+  obtain ⟨-, hlen⟩ := lsNode_len hR hus hdl
+  exact ⟨hm, by rw [hr]; simpa using hlen⟩
+
+theorem irLen1 {w : Word} {k : Nat} (h : w.toNat = k) :
+    (w = 1 ↔ k = 1) := by
+  constructor
+  · rintro rfl; simp at h; omega
+  · intro e; subst e; exact UInt64.toNat_inj.mp (by simp [h])
+
+/-- **`ann_eq(vis, s, c, fu)` refines `annEq feR fu s c`**. -/
+theorem annEq_run (P : IotaRelProg p) :
+    ∀ (n : Nat) (m m' : Mem) (a : AState) (sw cw fu : Word) (r : List Word),
+      annEqW p n m vis sw cw fu = some (r, m') → StageR vis feR m a →
+      ConRon.Bridge.CheckOK false env fe a → HW sw → HW cw →
+      ∃ b a', (annEq feR fu.toNat (decE sw) (decE cw)).run a = .ok (b, a') ∧ StageR vis feR m' a' ∧
+        IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a'
+  | 0, m, m', a, sw, cw, fu, r, hW, _, _, _, _ => by rw [annEqW.eq_1] at hW; cases hW
+  | n + 1, m, m', a, sw, cw, fu, r, hW, hS, hok, hs, hcw => by
+    by_cases hf0 : fu = 0
+    · rw [annEqW.abort1 _ _ _ _ _ _ _ hf0] at hW; cases hW
+    obtain ⟨k, hk⟩ : ∃ k, fu.toNat = k + 1 :=
+      ⟨fu.toNat - 1, by have : fu.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h)); omega⟩
+    have hk1 : (fu - 1).toNat = k := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    have z0 : ∀ {mm : Mem} {x : Bool}, x = false → decW0B mm [0] x := fun h => by subst h; simp [decW0B]
+    rw [hk, annEq]
+    rw [annEqW.arm1 _ _ _ _ _ _ _ hf0] at hW
+    rcases c0 : callW p n "expr_lvl_eq" [sw, cw, CWF] m with _ | ⟨r0, m0⟩
+    · rw [c0, annEqW.k_expr_lvl_eq.none] at hW; cases hW
+    obtain ⟨b0, a0, h0, hS0, hg0, hd0, k0⟩ := exprLvlEq_rel P.ele P.ev P.lvl c0 hS hok hs hcw
+    rw [CWF_eq] at h0
+    rw [StateT.run_bind, h0, except_ok_bind]
+    by_cases hz0 : r0.headD 0 ≠ 0
+    · rw [c0, annEqW.k_expr_lvl_eq.arm1 _ _ _ _ _ _ _ _ hz0] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      have hb0 : b0 = true := by rw [← hd0.1]; exact bne_iff_ne.mpr hz0
+      subst hb0
+      exact ⟨true, a0, rfl, hS0, hg0, by simp [decW0B], k0⟩
+    have hz0 : r0.headD 0 = 0 := Classical.not_not.mp hz0
+    have hb0 : b0 = false := by have := hd0.1; rw [hz0] at this; simpa using this.symm
+    subst hb0
+    simp only [Bool.false_eq_true, ite_false]
+    have hR0 := hS0.check.arena.base
+    have tc := irTagB cw hcw
+    by_cases hc4 : tagW cw ≠ 4
+    · rw [c0, annEqW.k_expr_lvl_eq.arm2 _ _ _ _ _ _ _ _ hz0 hc4] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨false, a0, ?_, hS0, hg0, z0 rfl, k0⟩
+      simp only [tc ETag.app 4 rfl (by decide), irOfNat4, hc4, decide_false, Bool.false_eq_true,
+        ite_false]; rfl
+    have hc4 : tagW cw = 4 := Classical.not_not.mp hc4
+    rw [c0, annEqW.k_expr_lvl_eq.arm3 _ _ _ _ _ _ _ _ hz0 hc4] at hW
+    simp only [tc ETag.app 4 rfl (by decide), irOfNat4, hc4, decide_true, ite_true]
+    -- `c = f x`
+    rcases c1 : callW p n "e_view" [cw] m0 with _ | ⟨r1, m1⟩
+    · rw [c1, annEqW.k_e_view.none] at hW; cases hW
+    obtain ⟨hm1, v1, hv1, hr1, ht1⟩ := eView_callW_view P.ev hR0 c1
+    subst m1
+    obtain ⟨hf1, hx1, hv1'⟩ := irVR_two hr1 (by rw [ht1, hc4]; simp)
+    have hv1a : v1 = .app (decE (r1.tail.headD 0)) (decE (r1.tail.tail.headD 0)) := by
+      rcases hv1' with ⟨-, h⟩ | ⟨g, -⟩ | ⟨g, -⟩
+      · exact h
+      · rw [ht1, hc4] at g; exact absurd g (by decide)
+      · rw [ht1, hc4] at g; exact absurd g (by decide)
+    subst hv1a
+    rw [StateT.run_bind, viewApp_run', irViewApp hv1, except_ok_bind]
+    dsimp only
+    have tf := irTagB _ hf1
+    by_cases hf4 : tagW (r1.tail.headD 0) = 4
+    · -- `f = g a`, `g` a constant: `optParam`/`autoParam`
+      rw [c1, annEqW.k_e_view.arm1 _ _ _ _ _ _ _ hf4] at hW
+      simp only [tf ETag.app 4 rfl (by decide), irOfNat4, hf4, decide_true, ite_true]
+      rcases c2 : callW p n "e_view" [r1.tail.headD 0] m0 with _ | ⟨r2, m2⟩
+      · rw [c2, annEqW.k_e_view_2.none] at hW; cases hW
+      obtain ⟨hm2, v2, hv2, hr2, ht2⟩ := eView_callW_view P.ev hR0 c2
+      subst m2
+      obtain ⟨hg2, ha2, hv2'⟩ := irVR_two hr2 (by rw [ht2, hf4]; simp)
+      have hv2a : v2 = .app (decE (r2.tail.headD 0)) (decE (r2.tail.tail.headD 0)) := by
+        rcases hv2' with ⟨-, h⟩ | ⟨g, -⟩ | ⟨g, -⟩
+        · exact h
+        · rw [ht2, hf4] at g; exact absurd g (by decide)
+        · rw [ht2, hf4] at g; exact absurd g (by decide)
+      subst hv2a
+      rw [StateT.run_bind, viewApp_run', irViewApp hv2, except_ok_bind]
+      dsimp only
+      have tg := irTagB _ hg2
+      by_cases hg3 : tagW (r2.tail.headD 0) ≠ 3
+      · rw [c2, annEqW.k_e_view_2.arm1 _ _ _ _ _ _ _ hg3] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        refine ⟨false, a0, ?_, hS0, hg0, z0 rfl, k0⟩
+        simp only [tg ETag.const 3 rfl (by decide), irOfNat3, hg3, decide_false, Bool.false_eq_true,
+          ite_false]; rfl
+      have hg3 : tagW (r2.tail.headD 0) = 3 := Classical.not_not.mp hg3
+      rw [c2, annEqW.k_e_view_2.arm2 _ _ _ _ _ _ _ hg3] at hW
+      simp only [tg ETag.const 3 rfl (by decide), irOfNat3, hg3, decide_true, ite_true]
+      rcases c3 : callW p n "e_view" [r2.tail.headD 0] m0 with _ | ⟨r3, m3⟩
+      · rw [c3, annEqW.k_e_view_3.none] at hW; cases hW
+      obtain ⟨hm3, v3, hv3, hr3, ht3⟩ := eView_callW_view P.ev hR0 c3
+      subst m3
+      obtain ⟨rfl, hn3, hu3⟩ := irVR_const hr3 (by rw [ht3, hg3])
+      rw [c3, annEqW.k_e_view_3.arm1] at hW
+      have tw : (decE (r2.tail.headD 0)).tag = ETag.const := by rw [decE_tag _ hg2, hg3]; rfl
+      rw [StateT.run_bind, viewConst_run', irViewConst tw hv3, except_ok_bind]
+      dsimp only
+      obtain ⟨ls, hdl⟩ := const_lvls_den k0.ok.state.wf hv3
+      rw [StateT.run_bind, viewLsLen_run', ConRon.Bridge.Core.viewLen_of_denoteLs hdl, except_ok_bind]
+      dsimp only
+      rcases c4 : callW p n "view_ls_len" [r3.tail.tail.headD 0] m0 with _ | ⟨r4, m4⟩
+      · rw [c4, annEqW.k_view_ls_len.none] at hW; cases hW
+      obtain ⟨hm4, hl4⟩ := irLsLen P hR0 hu3 hdl c4
+      subst m4
+      by_cases h1 : r4.tail.headD 0 ≠ 1
+      · rw [c4, annEqW.k_view_ls_len.arm1 _ _ _ _ _ _ _ _ _ h1] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        refine ⟨false, a0, ?_, hS0, hg0, z0 rfl, k0⟩
+        have : ls.length ≠ 1 := fun e => h1 ((irLen1 hl4).mpr e)
+        rcases ls with _ | ⟨l, _ | ⟨l', ls⟩⟩
+        · rfl
+        · exact absurd rfl this
+        · rfl
+      have h1 : r4.tail.headD 0 = 1 := Classical.not_not.mp h1
+      rw [c4, annEqW.k_view_ls_len.arm2 _ _ _ _ _ _ _ _ _ h1] at hW
+      obtain ⟨l, rfl⟩ : ∃ l, ls = [l] := by
+        have := (irLen1 hl4).mp h1
+        rcases ls with _ | ⟨l, _ | ⟨l', ls⟩⟩ <;> simp at this
+        exact ⟨l, rfl⟩
+      simp only [List.length_singleton]
+      rcases c5 : callW p n "name_opt_param" [] m0 with _ | ⟨r5, m5⟩
+      · rw [c5, annEqW.k_name_opt_param.none] at hW; cases hW
+      rw [c5, annEqW.k_name_opt_param.arm1] at hW
+      obtain ⟨a5, h5, hS5, hg5, hl5⟩ := nameOptParam_rel P.nop P.na P.nr c5 hS0
+      obtain ⟨k5, -⟩ := ConRon.Bridge.Inductives.topName_run k0.ok h5
+      rw [StateT.run_bind, h5, except_ok_bind]
+      rcases c6 : callW p n "name_auto_param" [] m5 with _ | ⟨r6, m6⟩
+      · rw [c6, annEqW.k_name_auto_param.none] at hW; cases hW
+      obtain ⟨a6, h6, hS6, hg6, hl6⟩ := nameAutoParam_rel P.nap P.na P.nr c6 hS5
+      obtain ⟨k6, -⟩ := ConRon.Bridge.Inductives.topName_run k5.ok h6
+      rw [StateT.run_bind, h6, except_ok_bind]
+      rw [decI_beq _ _ hn3 hl5, decI_beq _ _ hn3 hl6]
+      by_cases hno : r3.tail.headD 0 ≠ r5.headD 0 ∧ r3.tail.headD 0 ≠ r6.headD 0
+      · rw [c6, annEqW.k_name_auto_param.arm1 _ _ _ _ _ _ _ _ _ _ hno] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        refine ⟨false, a6, ?_, hS6, hg0.trans (hg5.trans hg6), z0 rfl, k0.trans (k5.trans k6)⟩
+        simp only [hno.1, hno.2, decide_false, Bool.or_false, Bool.false_eq_true, ite_false]; rfl
+      rw [c6, annEqW.k_name_auto_param.arm2 _ _ _ _ _ _ _ _ _ _ hno] at hW
+      have hor : (decide (r3.tail.headD 0 = r5.headD 0) || decide (r3.tail.headD 0 = r6.headD 0)) = true := by
+        by_cases e : r3.tail.headD 0 = r5.headD 0
+        · rw [e]; exact Bool.or_eq_true_iff.mpr (.inl (decide_eq_true rfl))
+        · have : r3.tail.headD 0 = r6.headD 0 :=
+            Classical.byContradiction fun e' => hno ⟨e, e'⟩
+          rw [this]; exact Bool.or_eq_true_iff.mpr (.inr (decide_eq_true rfl))
+      simp only [hor, ite_true]
+      rcases c7 : callW p n "ann_ident" [vis, r3.tail.headD 0, 2] m6 with _ | ⟨r7, m7⟩
+      · rw [c7, annEqW.k_ann_ident.none] at hW; cases hW
+      obtain ⟨b7, a7, h7, hS7, hg7, hd7, k7⟩ := annIdent_rel P c7 hS6 k6.ok hn3
+      rw [show (2 : Word).toNat = 2 from rfl] at h7
+      rw [StateT.run_bind, h7, except_ok_bind]
+      by_cases hz7 : r7.headD 0 = 0
+      · rw [c7, annEqW.k_ann_ident.arm1 _ _ _ _ _ _ _ _ hz7] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hb7 : b7 = false := by have := hd7.1; rw [hz7] at this; simpa using this.symm
+        subst hb7
+        exact ⟨false, a7, rfl, hS7, hg0.trans (hg5.trans (hg6.trans hg7)), z0 rfl,
+          k0.trans (k5.trans (k6.trans k7))⟩
+      rw [c7, annEqW.k_ann_ident.arm2 _ _ _ _ _ _ _ _ hz7] at hW
+      have hb7 : b7 = true := by rw [← hd7.1]; exact bne_iff_ne.mpr hz7
+      subst hb7
+      simp only [ite_true]
+      rcases c8 : annEqW p n m7 vis sw (r2.tail.tail.headD 0) (fu - 1) with _ | ⟨r8, m8⟩
+      · rw [c8, annEqW.k_ann_eq.none] at hW; cases hW
+      rw [c8, annEqW.k_ann_eq.arm1] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      obtain ⟨b8, a8, h8, hS8, hg8, hd8, k8⟩ := annEq_run P n _ _ _ _ _ _ _ c8 hS7 k7.ok hs ha2
+      rw [hk1] at h8
+      exact ⟨b8, a8, h8, hS8, hg0.trans (hg5.trans (hg6.trans (hg7.trans hg8))), hd8,
+        k0.trans (k5.trans (k6.trans (k7.trans k8)))⟩
+    -- `f` a constant: `outParam`/`semiOutParam`
+    simp only [tf ETag.app 4 rfl (by decide), irOfNat4, hf4, decide_false, Bool.false_eq_true, ite_false]
+    by_cases hf3 : tagW (r1.tail.headD 0) ≠ 3
+    · rw [c1, annEqW.k_e_view.arm3 _ _ _ _ _ _ _ hf4 hf3] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨false, a0, ?_, hS0, hg0, z0 rfl, k0⟩
+      simp only [tf ETag.const 3 rfl (by decide), irOfNat3, hf3, decide_false, Bool.false_eq_true,
+        ite_false]; rfl
+    have hf3 : tagW (r1.tail.headD 0) = 3 := Classical.not_not.mp hf3
+    rw [c1, annEqW.k_e_view.arm2 _ _ _ _ _ _ _ hf4 hf3] at hW
+    simp only [tf ETag.const 3 rfl (by decide), irOfNat3, hf3, decide_true, ite_true]
+    rcases c3 : callW p n "e_view" [r1.tail.headD 0] m0 with _ | ⟨r3, m3⟩
+    · rw [c3, annEqW.k_e_view_4.none] at hW; cases hW
+    obtain ⟨hm3, v3, hv3, hr3, ht3⟩ := eView_callW_view P.ev hR0 c3
+    subst m3
+    obtain ⟨rfl, hn3, hu3⟩ := irVR_const hr3 (by rw [ht3, hf3])
+    rw [c3, annEqW.k_e_view_4.arm1] at hW
+    have tw : (decE (r1.tail.headD 0)).tag = ETag.const := by rw [decE_tag _ hf1, hf3]; rfl
+    rw [StateT.run_bind, viewConst_run', irViewConst tw hv3, except_ok_bind]
+    dsimp only
+    obtain ⟨ls, hdl⟩ := const_lvls_den k0.ok.state.wf hv3
+    rw [StateT.run_bind, viewLsLen_run', ConRon.Bridge.Core.viewLen_of_denoteLs hdl, except_ok_bind]
+    dsimp only
+    rcases c4 : callW p n "view_ls_len" [r3.tail.tail.headD 0] m0 with _ | ⟨r4, m4⟩
+    · rw [c4, annEqW.k_view_ls_len_2.none] at hW; cases hW
+    obtain ⟨hm4, hl4⟩ := irLsLen P hR0 hu3 hdl c4
+    subst m4
+    by_cases h1 : r4.tail.headD 0 ≠ 1
+    · rw [c4, annEqW.k_view_ls_len_2.arm1 _ _ _ _ _ _ _ _ _ h1] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨false, a0, ?_, hS0, hg0, z0 rfl, k0⟩
+      have : ls.length ≠ 1 := fun e => h1 ((irLen1 hl4).mpr e)
+      rcases ls with _ | ⟨l, _ | ⟨l', ls⟩⟩
+      · rfl
+      · exact absurd rfl this
+      · rfl
+    have h1 : r4.tail.headD 0 = 1 := Classical.not_not.mp h1
+    rw [c4, annEqW.k_view_ls_len_2.arm2 _ _ _ _ _ _ _ _ _ h1] at hW
+    obtain ⟨l, rfl⟩ : ∃ l, ls = [l] := by
+      have := (irLen1 hl4).mp h1
+      rcases ls with _ | ⟨l, _ | ⟨l', ls⟩⟩ <;> simp at this
+      exact ⟨l, rfl⟩
+    simp only [List.length_singleton]
+    rcases c5 : callW p n "name_out_param" [] m0 with _ | ⟨r5, m5⟩
+    · rw [c5, annEqW.k_name_out_param.none] at hW; cases hW
+    rw [c5, annEqW.k_name_out_param.arm1] at hW
+    obtain ⟨a5, h5, hS5, hg5, hl5⟩ := nameOutParam_rel P.nout P.na P.nr c5 hS0
+    obtain ⟨k5, -⟩ := ConRon.Bridge.Inductives.topName_run k0.ok h5
+    rw [StateT.run_bind, h5, except_ok_bind]
+    rcases c6 : callW p n "name_semi_out_param" [] m5 with _ | ⟨r6, m6⟩
+    · rw [c6, annEqW.k_name_semi_out_param.none] at hW; cases hW
+    obtain ⟨a6, h6, hS6, hg6, hl6⟩ := nameSemiOutParam_rel P.nsop P.na P.nr c6 hS5
+    obtain ⟨k6, -⟩ := ConRon.Bridge.Inductives.topName_run k5.ok h6
+    rw [StateT.run_bind, h6, except_ok_bind]
+    rw [decI_beq _ _ hn3 hl5, decI_beq _ _ hn3 hl6]
+    by_cases hno : r3.tail.headD 0 ≠ r5.headD 0 ∧ r3.tail.headD 0 ≠ r6.headD 0
+    · rw [c6, annEqW.k_name_semi_out_param.arm1 _ _ _ _ _ _ _ _ _ _ hno] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      refine ⟨false, a6, ?_, hS6, hg0.trans (hg5.trans hg6), z0 rfl, k0.trans (k5.trans k6)⟩
+      simp only [hno.1, hno.2, decide_false, Bool.or_false, Bool.false_eq_true, ite_false]; rfl
+    rw [c6, annEqW.k_name_semi_out_param.arm2 _ _ _ _ _ _ _ _ _ _ hno] at hW
+    have hor : (decide (r3.tail.headD 0 = r5.headD 0) || decide (r3.tail.headD 0 = r6.headD 0)) = true := by
+      by_cases e : r3.tail.headD 0 = r5.headD 0
+      · rw [e]; exact Bool.or_eq_true_iff.mpr (.inl (decide_eq_true rfl))
+      · have : r3.tail.headD 0 = r6.headD 0 :=
+          Classical.byContradiction fun e' => hno ⟨e, e'⟩
+        rw [this]; exact Bool.or_eq_true_iff.mpr (.inr (decide_eq_true rfl))
+    simp only [hor, ite_true]
+    rcases c7 : callW p n "ann_ident" [vis, r3.tail.headD 0, 1] m6 with _ | ⟨r7, m7⟩
+    · rw [c7, annEqW.k_ann_ident_2.none] at hW; cases hW
+    obtain ⟨b7, a7, h7, hS7, hg7, hd7, k7⟩ := annIdent_rel P c7 hS6 k6.ok hn3
+    rw [show (1 : Word).toNat = 1 from rfl] at h7
+    rw [StateT.run_bind, h7, except_ok_bind]
+    by_cases hz7 : r7.headD 0 = 0
+    · rw [c7, annEqW.k_ann_ident_2.arm1 _ _ _ _ _ _ _ _ hz7] at hW
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      have hb7 : b7 = false := by have := hd7.1; rw [hz7] at this; simpa using this.symm
+      subst hb7
+      exact ⟨false, a7, rfl, hS7, hg0.trans (hg5.trans (hg6.trans hg7)), z0 rfl,
+        k0.trans (k5.trans (k6.trans k7))⟩
+    rw [c7, annEqW.k_ann_ident_2.arm2 _ _ _ _ _ _ _ _ hz7] at hW
+    have hb7 : b7 = true := by rw [← hd7.1]; exact bne_iff_ne.mpr hz7
+    subst hb7
+    simp only [ite_true]
+    rcases c8 : annEqW p n m7 vis sw (r1.tail.tail.headD 0) (fu - 1) with _ | ⟨r8, m8⟩
+    · rw [c8, annEqW.k_ann_eq.none] at hW; cases hW
+    rw [c8, annEqW.k_ann_eq.arm1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    obtain ⟨b8, a8, h8, hS8, hg8, hd8, k8⟩ := annEq_run P n _ _ _ _ _ _ _ c8 hS7 k7.ok hs hx1
+    rw [hk1] at h8
+    exact ⟨b8, a8, h8, hS8, hg0.trans (hg5.trans (hg6.trans (hg7.trans hg8))), hd8,
+      k0.trans (k5.trans (k6.trans (k7.trans k8)))⟩
+
+/-- **`ann_eq(vis, s, c, fu)` refines `annEq feR fu s c`** (the call). -/
+@[refines ConRon.Arena.annEq]
+theorem annEq_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState} {sw cw fu : Word}
+    {r : List Word} (hc : callW p n "ann_eq" [vis, sw, cw, fu] m = some (r, m'))
+    (hS : StageR vis feR m a) (hok : ConRon.Bridge.CheckOK false env fe a) (hs : HW sw) (hcw : HW cw) :
+    ∃ b a', (annEq feR fu.toNat (decE sw) (decE cw)).run a = .ok (b, a') ∧ StageR vis feR m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (annEq_specW p P.aeq n _ vis sw cw fu) hc
+  exact annEq_run P n _ _ _ _ _ _ _ hW hS hok hs hcw
 
 end ann
 
