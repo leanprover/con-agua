@@ -48,37 +48,9 @@ open scoped Lean.Order
 
 set_option experimental.vcgen true
 
-/-! ## The arrays and the globals
+/-! ## The arrays and the control words
 
-Declared here until the comparison is wired into `check`; then they move into the checker's
-table (`ConAgua/Layout.lean`) and `Arena/Globals.lean` under the same names and numbers. -/
-
-/-- The solution's constant rows of `anonymous` names (the moved stream index). -/
-abbrev SIXA : ArrId := 210
-/-- The solution's constant rows of `str` names. -/
-abbrev SIXS : ArrId := 211
-/-- The solution's constant rows of `num` names. -/
-abbrev SIXN : ArrId := 212
-/-- The solution's table rows of `anonymous` names. -/
-abbrev STXA : ArrId := 213
-/-- The solution's table rows of `str` names. -/
-abbrev STXS : ArrId := 214
-/-- The solution's table rows of `num` names. -/
-abbrev STXN : ArrId := 215
-/-- The record mates' rows of `anonymous` names. -/
-abbrev MATA : ArrId := 216
-/-- The record mates' rows of `str` names. -/
-abbrev MATS : ArrId := 217
-/-- The record mates' rows of `num` names. -/
-abbrev MATN : ArrId := 218
-/-- `needsGo`'s `seen` memo (`ndSch`; min 3). -/
-abbrev NDM : ArrId := 219
-/-- `coneGo`'s `seen` memo (`csSch`; min 3). -/
-abbrev CSM : ArrId := 220
-/-- `NeedsSt.acc`: a needs walk's names, `NACC[0‥CTL[227])`. -/
-abbrev NACC : ArrId := 221
-/-- `coneGo`'s work list, as a stack `CWK[0‥CTL[228])`, its head on top. -/
-abbrev CWK : ArrId := 222
+The arrays `SIXA`‥`CWK` (`210`‥`222`) are rows of the checker's table (`ConAgua/Layout.lean`). -/
 
 /-! The walks' words are control words, not globals: `MemFrame` (every frame lemma) covers `CTL`
 and says nothing about globals. -/

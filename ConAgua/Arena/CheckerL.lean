@@ -26,7 +26,9 @@ so that the assembled program (`Checker/Prog.lean`) does not wait for them.
 * `record_job(k)`: `recordJob`: the scratch bracket, the view of position `k` (`CTL[134]` its
   first counter, `CTL[135]` the position, the literal flags `CTL[160]`, `CTL[161]` by `from_le`
   against the thresholds), a fresh own layer (the stamp `CTL[133]` bumped,
-  `vis = 0`), the `And` pin, then `check_decl(k, 0)`; the tier-1 records dropped with the bracket.
+  `vis = 0`), the `And` pin, then `checkRecord` at the run's solution: `check_decl(k, 0)` when
+  the flag `CTL[224]` is `0` (`J = none`, every flat run), `check_record_sol(k, 0)` otherwise
+  (`J = some sol`, the challenge's jobs of `--compare`, `Arena/JustifyIface.lean`); the tier-1 records dropped with the bracket.
 * `check_jobs(j, hi)`: the jobs `j‥hi - 1` in order (`checkJobList` over a range).
 -/
 
@@ -198,7 +200,7 @@ def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v, c) {
   CTL.u64[161] := z;
   ok := call and_pin_ok(k);
   if ok == 0 { fail L.Arena.R_AND_MUST_BE };
-  v := call check_decl(k, 0);
+  if CTL.u64[224] != 0 { v := call check_record_sol(k, 0) } else { v := call check_decl(k, 0) };
   z := call scratch_drop();
   CTL.u64[130] := 0;
   return 0
