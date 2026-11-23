@@ -65,11 +65,11 @@ Patches at the first vendoring:
 |---|---|
 | `con-leche/0001-withptreq-shim.patch` | `ConLeche.withPtrEq` shim and its three call sites, `withPtrEqDecEq`'s new signature |
 | `con-leche/0002-discc3-grind-finish.patch` | `iotaRecC_spec`: one lemma passed to `finish` |
-| `con-leche/0003-knotc-vcgen-conj-split.patch` | five `CSOK.*_hit_ws` companion lemmas (the `vcgen` ∧-split) |
-| `con-leche/0004-withptreq-name.patch` | the shim at `Kernel/Name.lean`'s two `ptrDecEq` sites (upstream #604's spelling; ronsync8). The former 0004 (`DiscC4`'s ∧-split lemmas) went: upstream has them since v4.36.0 |
+| `con-leche/0004-withptreq-name.patch` | the shim at `Kernel/Name.lean`'s two `ptrDecEq` sites (upstream #604's spelling; ronsync8). The former 0003/0004 (`KnotC`'s, `DiscC4`'s ∧-split `*_hit_ws` lemmas) went: upstream has them since v4.36.0 |
 | `con-ron/0001-wfproofs-rfl.patch` | `Tbl.node?_push_eq`: a trailing `rfl` |
 | `con-ron/0002-bridge-toolchain.patch` | the 31 `ConRon.Bridge` files (three toolchain changes, see "ConRonBridge") |
 | `con-ron/0003-modular-graph-do.patch` | `Bridge/Modular/Graph.lean`'s `graphOf_run`: one bind fewer before a `fail` (the `do` elaborator, as 0002; ronsync8) |
+| `con-ron/0004-checker-base-do.patch` | `Bridge/Checker/Base.lean`'s `checkConstantVal_bridge`: `try replace` (as 0002; split out at ronsync8, upstream rewrote the file) |
 
 ## Toolchain switch: nightly-2026-09-21 → nightly-2026-10-20 (Kraken fork)
 

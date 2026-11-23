@@ -84,14 +84,6 @@ theorem CSOK.whnf_hit {s : CState} {d : Nat} {i r : Expr}
   exact ⟨F, hall d hw.to_wscopedB⟩
 grind_pattern [conleche_grind] CSOK.whnf_hit =>
   CSOK mode eager env s, s.whnfC[i]?, Runs ((fueledFns mode eager env).whnf d i) r
--- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
--- postcondition's `∧`, so the `WScoped` VC no longer contains the `Runs` term
--- that triggers `CSOK.whnf_hit`; this conjunct gets its own trigger.
-theorem CSOK.whnf_hit_ws (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-    (hs : CSOK mode eager env s) (hl : s.whnfC[i]? = some r) (hw : Expr.WScoped d i) :
-    Expr.WScoped d r := (CSOK.whnf_hit henv hs hl hw).2
-grind_pattern [conleche_grind] CSOK.whnf_hit_ws =>
-  CSOK mode eager env s, s.whnfC[i]?, Expr.WScoped d r
 
 /-- The answer of that hit is well scoped.  A lemma of its own, with its
 own trigger: `vcgen` proves a post's conjuncts one at a time, and the
@@ -149,14 +141,6 @@ theorem CSOK.infer_hit {s : CState} {d : Nat} {i r : Expr}
   exact ⟨F, hall d hw.to_wscopedB⟩
 grind_pattern [conleche_grind] CSOK.infer_hit =>
   CSOK mode eager env s, s.inferC[i]?, Runs ((fueledFns mode eager env).infer d i) r
--- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
--- postcondition's `∧`, so the `WScoped` VC no longer contains the `Runs` term
--- that triggers `CSOK.infer_hit`; this conjunct gets its own trigger.
-theorem CSOK.infer_hit_ws (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-    (hs : CSOK mode eager env s) (hl : s.inferC[i]? = some r) (hw : Expr.WScoped d i) :
-    Expr.WScoped d r := (CSOK.infer_hit henv hs hl hw).2
-grind_pattern [conleche_grind] CSOK.infer_hit_ws =>
-  CSOK mode eager env s, s.inferC[i]?, Expr.WScoped d r
 
 /-- The answer of that hit is well scoped.  A lemma of its own, with its
 own trigger: `vcgen` proves a post's conjuncts one at a time, and the
@@ -215,14 +199,6 @@ theorem CSOK.inferIO_hit {s : CState} {d : Nat} {i r : Expr}
   exact ⟨F, hall d hw.to_wscopedB⟩
 grind_pattern [conleche_grind] CSOK.inferIO_hit =>
   CSOK mode eager env s, s.inferIOC[i]?, Runs ((fueledFns mode eager env).inferIO d i) r
--- con-agua patch (nightly-2026-10-06+, lean4#15487): `vcgen` now splits the
--- postcondition's `∧`, so the `WScoped` VC no longer contains the `Runs` term
--- that triggers `CSOK.inferIO_hit`; this conjunct gets its own trigger.
-theorem CSOK.inferIO_hit_ws (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}
-    (hs : CSOK mode eager env s) (hl : s.inferIOC[i]? = some r) (hw : Expr.WScoped d i) :
-    Expr.WScoped d r := (CSOK.inferIO_hit henv hs hl hw).2
-grind_pattern [conleche_grind] CSOK.inferIO_hit_ws =>
-  CSOK mode eager env s, s.inferIOC[i]?, Expr.WScoped d r
 
 /-- The answer of that hit is well scoped.  A lemma of its own, with its
 own trigger: `vcgen` proves a post's conjuncts one at a time, and the

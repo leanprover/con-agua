@@ -54,7 +54,7 @@ open L.Arena
 /-- **A recursor's frame** `x`, the seven words of `r` from word `i` on. -/
 def decIRAt (i : Nat) (m : Mem) (r : List Word) (x : IotaRec) : Prop :=
   decRL (fun m => decHL m) i m r x.pre ∧ decRL (fun m => decNL m) (i + 2) m r x.minors ∧
-    decW0L m (r.drop (i + 4)) x.us ∧ decRL (fun m => decHL m) (i + 5) m r x.params
+    ((r.getD (i + 4) 0).toNat < 2 ^ 32 ∧ decI (r.getD (i + 4) 0) = x.us) ∧ decRL (fun m => decHL m) (i + 5) m r x.params
 
 /-- `Option IotaRec` as `(ok, IotaRec)`. -/
 def decOIR (m : Mem) (r : List Word) : Option IotaRec → Prop
@@ -64,7 +64,7 @@ def decOIR (m : Mem) (r : List Word) : Option IotaRec → Prop
 /-- **A rule's parts** `x`, the seven words of `r` from word `i` on. -/
 def decIPAt (i : Nat) (m : Mem) (r : List Word) (x : IIotaParts) : Prop :=
   decRL (fun m => decHL m) i m r x.fieldDoms ∧ decRL (fun m => decHL m) (i + 2) m r x.idx ∧
-    decW0L m (r.drop (i + 4)) x.us ∧ decRL (fun m => decHL m) (i + 5) m r x.params
+    ((r.getD (i + 4) 0).toNat < 2 ^ 32 ∧ decI (r.getD (i + 4) 0) = x.us) ∧ decRL (fun m => decHL m) (i + 5) m r x.params
 
 /-- `Option IIotaParts` as `(ok, IIotaParts)`. -/
 def decOIP (m : Mem) (r : List Word) : Option IIotaParts → Prop
