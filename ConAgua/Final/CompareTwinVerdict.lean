@@ -29,6 +29,9 @@ index ran ok, and some worker's list of the challenge's jobs fails with the solu
 
 `twinCompareRun_of_accepts`: `TwinComparesAccepts` is `twinCompareRun` accepting, so at one pin
 list the two are exclusive (`twinCompareVerdict_not_accepts`).
+
+The constructors `TwinCompareVerdict.prelude`, `.frontC`, `.frontS`, `.indexS`, `.jobsS`,
+`.indexC`, `.jobsC` build it from the stage that failed and the stages before it, which ran ok.
 -/
 
 namespace ConAgua.Final
@@ -132,5 +135,134 @@ theorem twinCompareVerdict_not_accepts {pins : List NatOpPinSet} {bC bS : ByteAr
   rcases h with ⟨ce, hce, -⟩ | ⟨ce, i, a', hce, -⟩
   · rw [hacc] at hce; cases hce
   · rw [hacc] at hce; cases hce
+
+/-! ## From the stage that failed -/
+
+section stages
+variable {bC bS : ByteArray} {c : L.Word}
+
+/-- A check phase's stream index failing ends it. -/
+theorem TwinFailsV.checkStreamJ_index {mode : CheckMode} {pins : List INatOpPinSet}
+    {J : Option ISolution} {ds : Array IDeclaration} {a : AState} (h : TwinFailsV (buildIndex ds) a c) :
+    TwinFailsV (checkStreamJ mode pins J ds) a c := by
+  rcases h with ⟨ce, hce, hc⟩ | ⟨ce, i, a', hce, hc⟩
+  · exact .inl ⟨ce, by show checkStreamJ mode pins J ds a = _; simp only [checkStreamJ, show buildIndex ds a = _ from hce], hc⟩
+  · exact .inr ⟨ce, i, a', by show checkStreamJ mode pins J ds a = _; simp only [checkStreamJ, show buildIndex ds a = _ from hce], hc⟩
+
+/-- A check phase's jobs failing, after its stream index, end it. -/
+theorem TwinFailsV.checkStreamJ_jobs {mode : CheckMode} {pins : List INatOpPinSet}
+    {J : Option ISolution} {ds : Array IDeclaration} {a a₁ : AState} {I : IStreamIndex}
+    (hI : buildIndex ds a = .ok (.ok I, a₁))
+    (h : TwinFailsV (checkJobList mode pins J I ds (List.range ds.size)) a₁.worker c) :
+    TwinFailsV (checkStreamJ mode pins J ds) a c := by
+  rcases h with ⟨ce, hce, hc⟩ | ⟨ce, i, a', hce, hc⟩
+  · exact .inl ⟨ce, by
+      show checkStreamJ mode pins J ds a = _
+      simp only [checkStreamJ, hI, show checkJobList mode pins J I ds (List.range ds.size) a₁.worker = _ from hce], hc⟩
+  · exact .inr ⟨ce, i, a₁, by
+      show checkStreamJ mode pins J ds a = _
+      simp only [checkStreamJ, hI, show checkJobList mode pins J I ds (List.range ds.size) a₁.worker = _ from hce], hc⟩
+
+/-- **The built-in prelude failed.** -/
+theorem TwinCompareVerdict.prelude {sA : AState}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (h : TwinFailsV builtinPreludeE sA c) : TwinCompareVerdict bC bS c :=
+  ⟨[], TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV h)⟩
+
+/-- **The challenge's parse failed.** -/
+theorem TwinCompareVerdict.frontC {sA sB : AState} {pre : PreludeIx}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (h : TwinFailsV (parseChunks [bC]) sB c) : TwinCompareVerdict bC bS c :=
+  ⟨[], TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV h))⟩
+
+/-- **The solution's parse failed**, after the challenge's. -/
+theorem TwinCompareVerdict.frontS {sA sB sC : AState} {pre : PreludeIx} {rC : ParseResultD}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (hC : parseChunks [bC] sB = .ok (.ok rC, sC))
+    (h : TwinFailsV (parseChunks [bS]) sC c) : TwinCompareVerdict bC bS c :=
+  ⟨[], TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
+    (TwinFailsV.of_thenV h)))⟩
+
+/-- **The solution's stream index failed** (at the pin list `pins`). -/
+theorem TwinCompareVerdict.indexS {pins : List NatOpPinSet} {sA sB sC sC' sD sE : AState}
+    {pre : PreludeIx} {rC rS : ParseResultD} {dsS : Array IDeclaration} {ipins : List INatOpPinSet}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (hC : parseChunks [bC] sB = .ok (.ok rC, sC))
+    (hCS : parseChunks [bS] sC = .ok (.ok rS, sC'))
+    (hDS : preparePrelude pre rS.decls sC' = .ok (dsS, sD))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
+    (h : TwinFailsV (buildIndex dsS) sE c) : TwinCompareVerdict bC bS c :=
+  ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
+    (TwinFailsV.of_thenV_ok hCS (TwinFailsV.bind_ok (v := dsS) hDS (TwinFailsV.bind_ok (v := ipins) hE
+      (TwinFailsV.of_thenV (TwinFailsV.checkStreamJ_index h)))))))⟩
+
+/-- **The solution's jobs failed** (at the pin list `pins`): every solution record's job, in
+order, on the index state's worker, without a solution. -/
+theorem TwinCompareVerdict.jobsS {pins : List NatOpPinSet} {sA sB sC sC' sD sE sF : AState}
+    {pre : PreludeIx} {rC rS : ParseResultD} {dsS : Array IDeclaration} {ipins : List INatOpPinSet}
+    {IS : IStreamIndex}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (hC : parseChunks [bC] sB = .ok (.ok rC, sC))
+    (hCS : parseChunks [bS] sC = .ok (.ok rS, sC'))
+    (hDS : preparePrelude pre rS.decls sC' = .ok (dsS, sD))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
+    (hIS : buildIndex dsS sE = .ok (.ok IS, sF))
+    (h : TwinFailsV (checkJobList .verified ipins none IS dsS (List.range dsS.size)) sF.worker c) :
+    TwinCompareVerdict bC bS c :=
+  ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
+    (TwinFailsV.of_thenV_ok hCS (TwinFailsV.bind_ok (v := dsS) hDS (TwinFailsV.bind_ok (v := ipins) hE
+      (TwinFailsV.of_thenV (TwinFailsV.checkStreamJ_jobs hIS h)))))))⟩
+
+/-- **The challenge's stream index failed** (at the pin list `pins`), after the solution's check
+phase accepted and the challenge's records were prepared and read with the solution. -/
+theorem TwinCompareVerdict.indexC {pins : List NatOpPinSet} {sA sB sC sC' sD sE sF sG sH : AState}
+    {pre : PreludeIx} {rC rS : ParseResultD} {dsS dsC : Array IDeclaration}
+    {recsC : List IDeclaration} {ipins : List INatOpPinSet} {IS : IStreamIndex}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (hC : parseChunks [bC] sB = .ok (.ok rC, sC))
+    (hCS : parseChunks [bS] sC = .ok (.ok rS, sC'))
+    (hDS : preparePrelude pre rS.decls sC' = .ok (dsS, sD))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
+    (hFS : SeqAcceptsJ .verified ipins none dsS sE IS sF)
+    (hDC : preparePrelude pre rC.decls sF = .ok (dsC, sG))
+    (hside : sideRecordsGo [] dsC.toList sG = .ok (recsC, sH))
+    (h : TwinFailsV (buildIndex recsC.toArray) sH c) : TwinCompareVerdict bC bS c := by
+  obtain ⟨sF', hIS, hJS⟩ := hFS
+  exact ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
+    (TwinFailsV.of_thenV_ok hCS (TwinFailsV.bind_ok (v := dsS) hDS (TwinFailsV.bind_ok (v := ipins) hE
+      (TwinFailsV.of_thenV_ok (checkStreamJ_run_ok hIS hJS) (TwinFailsV.bind_ok (v := dsC) hDC
+        (TwinFailsV.bind_ok (v := recsC) hside
+          (TwinFailsV.of_thenV (TwinFailsV.checkStreamJ_index h))))))))))⟩
+
+/-- **The challenge's jobs failed** (at the pin list `pins`): every challenge record's job, in
+order, on the index state's worker, with the solution `solutionOf IS recsC`. -/
+theorem TwinCompareVerdict.jobsC {pins : List NatOpPinSet} {sA sB sC sC' sD sE sF sG sH sI : AState}
+    {pre : PreludeIx} {rC rS : ParseResultD} {dsS dsC : Array IDeclaration}
+    {recsC : List IDeclaration} {ipins : List INatOpPinSet} {IS IC : IStreamIndex}
+    (hA : internReservedPins (AState.init EStore.empty) = .ok ((), sA))
+    (hB : builtinPreludeE sA = .ok (.ok pre, sB))
+    (hC : parseChunks [bC] sB = .ok (.ok rC, sC))
+    (hCS : parseChunks [bS] sC = .ok (.ok rS, sC'))
+    (hDS : preparePrelude pre rS.decls sC' = .ok (dsS, sD))
+    (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
+    (hFS : SeqAcceptsJ .verified ipins none dsS sE IS sF)
+    (hDC : preparePrelude pre rC.decls sF = .ok (dsC, sG))
+    (hside : sideRecordsGo [] dsC.toList sG = .ok (recsC, sH))
+    (hIC : buildIndex recsC.toArray sH = .ok (.ok IC, sI))
+    (h : TwinFailsV (checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray
+      (List.range recsC.toArray.size)) sI.worker c) : TwinCompareVerdict bC bS c := by
+  obtain ⟨sF', hIS, hJS⟩ := hFS
+  exact ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
+    (TwinFailsV.of_thenV_ok hCS (TwinFailsV.bind_ok (v := dsS) hDS (TwinFailsV.bind_ok (v := ipins) hE
+      (TwinFailsV.of_thenV_ok (checkStreamJ_run_ok hIS hJS) (TwinFailsV.bind_ok (v := dsC) hDC
+        (TwinFailsV.bind_ok (v := recsC) hside
+          (TwinFailsV.of_thenV (TwinFailsV.checkStreamJ_jobs hIC h))))))))))⟩
+
+end stages
 
 end ConAgua.Final
