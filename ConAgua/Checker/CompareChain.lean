@@ -39,6 +39,8 @@ open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
 open scoped Lean.Order
 
+set_option experimental.vcgen true
+
 /-! ## The input replaced -/
 
 theorem setIn_arr64 (m : Mem) (x : Array UInt8) (a : TieredArray) : (m.setIn x).arr64 a = m.arr64 a := rfl

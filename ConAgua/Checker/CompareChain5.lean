@@ -31,6 +31,8 @@ open ConRon.Arena ConRon.Arena.Frontend
 open Std.WP
 open scoped Lean.Order
 
+set_option experimental.vcgen true
+
 /-! ## The challenge's records across the solution's stages -/
 
 theorem mapM_isSome {α β : Type} {f : α → Option β} :
