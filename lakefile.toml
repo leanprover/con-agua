@@ -174,12 +174,16 @@ leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 # Theorem 1 (DESIGN.md §8.2): the bridge from the arena twin to con-leche's
 # pure checker. Imports ConRonArena + ConLeche only, no Aeneas/Mathlib. Its
 # eighty-odd modules are siblings, not all reachable from the root, hence the
-# glob (as in con-ron's own lakefile).
+# glob (as in con-ron's own lakefile). Not `ConRon.Bridge.Modular.+` (con-ron #166, the modular
+# modes L does not have, deviation D50; nothing else imports it): its run-style proofs meet the new
+# `do` elaborator of our toolchain at every `pure () >>=` (ronsync8), for no theorem L uses.
 [[lean_lib]]
 name = "ConRonBridge"
 srcDir = "vendor/con-ron"
 roots = ["ConRon.Bridge"]
-globs = ["ConRon.Bridge.+"]
+globs = ["ConRon.Bridge", "ConRon.Bridge.Axioms","ConRon.Bridge.Checker","ConRon.Bridge.Core","ConRon.Bridge.EnvDenote","ConRon.Bridge.ExprOps","ConRon.Bridge.Frontend","ConRon.Bridge.GrindAttr","ConRon.Bridge.Grind","ConRon.Bridge.Inductives","ConRon.Bridge.Pers","ConRon.Bridge.Rel","ConRon.Bridge.Specs","ConRon.Bridge.SpecsL","ConRon.Bridge.Stages","ConRon.Bridge.StateOK","ConRon.Bridge.StoreBind","ConRon.Bridge.StoreNested",
+  "ConRon.Bridge.Checker.+", "ConRon.Bridge.Compare.+", "ConRon.Bridge.Core.+", "ConRon.Bridge.ExprOps.+",
+  "ConRon.Bridge.Frontend.+", "ConRon.Bridge.Inductives.+"]
 leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 
 # Baseline for the compiled-L measurement (DESIGN.md, "The compiler"): con-leche's compiled
