@@ -615,7 +615,9 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       hentry hnp hmo hdisj hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
       (fun r j rs r' h => hkeep r j rs r' h) hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
       (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
-    · sorry
+    · intro rm h0 j hj hjobs e he
+      exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,
+        .inl ⟨j, hj, hjobs, e, he, rfl⟩⟩⟩⟩
     · sorry
     · exact ((hf2.regs (s' := { s2 with regs := _, status := st7 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
           cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl).wr (by omega)
