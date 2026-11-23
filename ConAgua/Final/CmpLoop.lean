@@ -13,7 +13,8 @@ import Kraken.X64.Registers
 count `k` (save word `6`), the driver calls `ca_check_b(OUT, OUT[1], j, W, workerNeed)`
 (`abiB_outcome`); a call that does not accept ends the run with its result (to the exit), an
 accepting one is the next job's start (the worker memory it ends with, `RegionRel`, and the region
-`R` as mode `5` left it, `CmpAgree`); at `j = k`, on to `ca_cmp_after`.
+`R` as mode `5` left it but the buffer, which holds the job's frozen arrays, `CmpAgree` at
+`bufNext`); at `j = k`, on to `ca_cmp_after`.
 -/
 
 namespace ConAgua.Final
@@ -42,27 +43,26 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
     (hmo : bufMinOk tab fz own = true) (hdisj : ∀ a ∈ own, a ∉ fz)
+    (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
     {Kc : Nat} (hC : Code (cmpStubL tab mode out own) Kc)
     (dm : MachineData) (ra sa : Word) {nS base rsp0 : Nat} (B : Array Word) (k : Nat) (hk : k < 2 ^ 63)
     (hgeo : CmpGeo tab own base dm.regs.r9.toNat rsp0 (base + abiSlot * abiSlot64 tab out) B.size)
     (hg : BufGeom tab fz own B (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (workerNeed own))
-    (hkeep : ∀ (rm : Nat → Mem) (j : Nat) rs r', rm 0 = zeroMem tab → CmpJobs p mode plo phi fz own B rm j → j < k →
-      cmpRun p (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) = .ok (rs, r') → rs.getD 0 0 = ACCEPT →
-      CmpKept fz B r')
+    (hBok : BufOk fz.length B) (hh : CmpHdrKeep p mode plo phi fz own)
     (hrsp0 : dm.regs.rsp.toNat = rsp0)
     (d5 : DataMem) (Acc : Prop) (Err : Word → Prop)
     (hErr : ∀ rm : Nat → Mem, rm 0 = zeroMem tab → ∀ j < k, CmpJobs p mode plo phi fz own B rm j → ∀ e,
-      cmpRun p (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) = .error e → Err e.code)
+      cmpRun p (bufMemG fz own plo phi mode (bufSeq fz B rm j) (rm j) (UInt64.ofNat j)) = .error e → Err e.code)
     (hAfter : ∀ (rm : Nat → Mem) (s : MachineData), rm 0 = zeroMem tab → CmpJobs p mode plo phi fz own B rm k →
       CmpFrame tab dm ra sa nS base rsp0 s →
-      CmpAgree B (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (base + cmpNeed tab own)
+      CmpAgree (bufSeq fz B rm k) (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (base + cmpNeed tab own)
         (base + abiNeed tab) (base + abiNeed tab + 64) rsp0 d5 s.dmem →
       Ev (CmpPost dm ra Acc Err) s (label abiCmpAfterL)) :
     ∀ n j (rm : Nat → Mem) (s : MachineData), j + n = k → rm 0 = zeroMem tab →
       CmpJobs p mode plo phi fz own B rm j → CmpFrame tab dm ra sa nS base rsp0 s →
       rdW s.dmem (A (base + abiNeed tab + 48)) = some (UInt64.ofNat k) →
       rdW s.dmem (A (base + abiNeed tab + 56)) = some (UInt64.ofNat j) →
-      CmpAgree B (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (base + cmpNeed tab own)
+      CmpAgree (bufSeq fz B rm j) (base + abiSlot * abiSlot64 tab out) (base + cmpW tab) (base + cmpNeed tab own)
         (base + abiNeed tab) (base + abiNeed tab + 64) rsp0 d5 s.dmem →
       RegionRel tab (base + cmpW tab) own (rm j) s.dmem →
       Ev (CmpPost dm ra Acc Err) s (label abiCmpLoopL) := by
@@ -110,6 +110,9 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
   | succ n ih =>
     intro j rm s hjk h0 hjobs hf hsk hsj hag hreg
     have hjk' : j < k := by omega
+    have hBs := bufSeq_size fz B rm j
+    have hgj : BufGeom tab fz own (bufSeq fz B rm j) (base + abiSlot * abiSlot64 tab out) (base + cmpW tab)
+        (workerNeed own) := hg.of_ok (bufSeq_ok hBok hh j hjobs j (Nat.le_refl _)) hBs
     rw [Code.label (i := 65) hC rfl]
     refine ev_label (hC.get (i := 65) rfl) ?_
     refine ev_movRI (hC.get (i := 66) rfl) ?_
@@ -176,13 +179,14 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         · omega
         · exact .inr h2
     refine ev_seq (abiB_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
-      hfzl k0 hcode fd hentry hnp B (rm j) _ (UInt64.ofBitVec (at_ (Kc + 77 + 1)).toBitVec) ?_ ?_ hmo) ?_
+      hfzl k0 hcode fd hentry hnp (bufSeq fz B rm j) (rm j) _ (UInt64.ofBitVec (at_ (Kc + 77 + 1)).toBitVec) ?_ ?_ hmo) ?_
     · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> dsimp only <;> (try rsimp)
-      · rw [hbufN', hWN, hwN]; exact hg
+      · rw [hbufN', hWN, hwN]; exact hgj
       · intro i hi
+        rw [hBs] at hi
         rw [hbufN', rdW_wrW_A (by omega) (by omega) (by
           rcases hwr (base + abiSlot * abiSlot64 tab out + 8 * i) (by omega) (by omega) with h | h <;> omega)]
-        exact hag.words i hi
+        exact hag.words i (by rw [hBs]; exact hi)
       · intro x h1 h2
         rw [hWN, hwN] at *
         exact isSome_get?_storeInt (hf.map x (by simp only [L.Compiler.cmpW] at h1; omega)
@@ -211,23 +215,23 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
       generalize st.data = s1 at *
       -- the save area and everything below `W` but the buffer are in none of the call's layout's parts
       have hnot : ∀ x, x < base + abiNeed tab + 64 →
-          ¬ (base + abiSlot * abiSlot64 tab out ≤ x ∧ x < base + abiSlot * abiSlot64 tab out + 8 * B.size) →
-          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) B (base + L.Compiler.cmpW tab) fz own).InStack x ∧
-          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) B (base + L.Compiler.cmpW tab) fz own).InArr x ∧
-          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) B (base + L.Compiler.cmpW tab) fz own).InTab x ∧
-          x < (bufLayout tab (base + abiSlot * abiSlot64 tab out) B (base + L.Compiler.cmpW tab) fz own).tabEnd := by
+          ¬ (base + abiSlot * abiSlot64 tab out ≤ x ∧ x < base + abiSlot * abiSlot64 tab out + 8 * (bufSeq fz B rm j).size) →
+          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) (bufSeq fz B rm j) (base + L.Compiler.cmpW tab) fz own).InStack x ∧
+          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) (bufSeq fz B rm j) (base + L.Compiler.cmpW tab) fz own).InArr x ∧
+          ¬ (bufLayout tab (base + abiSlot * abiSlot64 tab out) (bufSeq fz B rm j) (base + L.Compiler.cmpW tab) fz own).InTab x ∧
+          x < (bufLayout tab (base + abiSlot * abiSlot64 tab out) (bufSeq fz B rm j) (base + L.Compiler.cmpW tab) fz own).tabEnd := by
         intro x h1 h2
         refine ⟨fun h => ?_, fun h => ?_, fun h => ?_, ?_⟩
-        · have := (buf_inStack h).region hg (by omega); simp only [L.Compiler.cmpW] at this; omega
-        · rcases buf_part hok hg (.inr (.inl h)) with h | h
+        · have := (buf_inStack h).region hgj (by omega); simp only [L.Compiler.cmpW] at this; omega
+        · rcases buf_part hok hgj (.inr (.inl h)) with h | h
           · simp only [L.Compiler.cmpW] at h; omega
           · exact h2 h
-        · have := (buf_inTab hok h).1.region hg (by omega); simp only [L.Compiler.cmpW] at this; omega
+        · have := (buf_inTab hok h).1.region hgj (by omega); simp only [L.Compiler.cmpW] at this; omega
         · simp only [Layout.tabEnd, bufLayout_T, L.Compiler.cmpW]; omega
       have hsv1 : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 64 →
           s1.dmem.get? (A x) = s.dmem.get? (A x) := by
         intro x h1 h2
-        obtain ⟨q1, q2, q3, q4⟩ := hnot x h2 (by omega)
+        obtain ⟨q1, q2, q3, q4⟩ := hnot x h2 (by rw [hBs]; omega)
         rw [hfr.same x (by omega) q1 q2 q3 (by rcases hwr x (by omega) (by omega) with h | h <;> omega)
           (Or.inl q4), get?_wrW_A (by omega) (by omega) (by rcases hwr x (by omega) (by omega) with h | h <;> omega)]
       have hgrow1 : ∀ y, (s.dmem.get? y).isSome → (s1.dmem.get? y).isSome :=
@@ -257,7 +261,7 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         simp only [Bool.not_eq_false', beq_iff_eq] at hz0
         exact UInt64.toBitVec_inj.mp hz0
       have hout' := hout.resolve_left (by rw [hrdx0]; decide)
-      rcases hres : L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B (rm j) (UInt64.ofNat j)) with e | ⟨rs, r'⟩
+      rcases hres : L.run p abiFuel "check" [] (bufMemG fz own plo phi mode (bufSeq fz B rm j) (rm j) (UInt64.ofNat j)) with e | ⟨rs, r'⟩
       · rw [hres] at hout'
         cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx0] at hout'; exact absurd hout'.1 (by decide))
       rw [hres] at hout'
@@ -280,13 +284,12 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         simp only [Bool.not_eq_false', beq_iff_eq] at heq
         exact UInt64.toBitVec_inj.mp heq
       -- the job accepted: the next job's start
-      have hkept := hkeep rm j _ _ h0 hjobs hjk' hres hacc
       have hag0 := hag.wrW (y := rsp0) (v := (at_ (Kc + 65 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)).toBitVec)
         (by omega) (fun x h1 h2 => .inl ⟨by omega, by omega⟩)
         (by omega) (by omega)
-      have hag1 := hag0.job hok hg (by simp only [cmpNeed, L.Compiler.cmpW]; omega) (fun x h1 h2 => ⟨fun ⟨h3, h4⟩ => by
-          simp only [L.Compiler.cmpW] at h3; omega, by omega⟩)
-        hfr hMem hkept
+      have hag1 := hag0.job hok hnd hdom hgj (by simp only [cmpNeed, L.Compiler.cmpW]; omega) (fun x h1 h2 => ⟨fun ⟨h3, h4⟩ => by
+          simp only [L.Compiler.cmpW] at h3; omega, by rw [hBs] at h2; omega⟩)
+        hfr hMem
       have hreg1 : RegionRel tab (base + L.Compiler.cmpW tab) own r' s1.dmem := RegionRel.of_memRel hdisj hMem
       have hsa1 : (BinOp.add.eval (cmpSave tab).toUInt64 s1.regs.r15).toNat = base + abiNeed tab := by
         simp only [BinOp.eval, UInt64.toNat_add, cmpSave, hf1.r15, Nat.toUInt64]
@@ -310,15 +313,22 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         simp only [BitVec.toNat_add, UInt64.toNat_toBitVec, UInt64.toNat_ofNat_of_lt' (show j < 2 ^ 64 by omega),
           UInt64.toNat_ofNat_of_lt' (show j + 1 < 2 ^ 64 by omega), h1]
         omega
+      have hcg : ∀ i ≤ j, bufSeq fz B (fun i => if i ≤ j then rm i else r') i = bufSeq fz B rm i :=
+        fun i hi => bufSeq_congr i fun i' hi' => by simp only [show i' ≤ j by omega, ite_true]
+      have hnext : bufSeq fz B (fun i => if i ≤ j then rm i else r') (j + 1) = bufNext fz (bufSeq fz B rm j) r' := by
+        show bufNext fz (bufSeq fz B _ j) (if j + 1 ≤ j then rm (j + 1) else r') = _
+        rw [hcg j (Nat.le_refl _), ite_eq_right (by omega)]
       refine ih (j + 1) (fun i => if i ≤ j then rm i else r') _ (by omega) (by simp [h0]) ?_ ?_ ?_ ?_ ?_ ?_
       · intro i hi
         by_cases hij : i < j
         · obtain ⟨rs', h1, h2⟩ := hjobs i hij
           refine ⟨rs', ?_, h2⟩
+          rw [hcg i (by omega)]
           simp only [show i ≤ j by omega, show i + 1 ≤ j by omega, ite_true]
           exact h1
         · obtain rfl : i = j := by omega
           refine ⟨rs, ?_, hacc⟩
+          rw [hcg i (Nat.le_refl _)]
           simp only [Nat.le_refl, ite_true, show ¬ i + 1 ≤ i by omega, ite_false]
           exact hres
       · exact (hf1.regs (s' := { s1 with regs := _, status := st4 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
@@ -328,7 +338,9 @@ theorem cmp_loop (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         rw [rdW_wrW_A (by omega) (by omega) (by omega)]; exact hsk1
       · show rdW (wrW s1.dmem (A (base + abiNeed tab + 56)) _) _ = _
         rw [rdW_wrW_same, hj1]
-      · exact hag1.wrW (by omega) (fun x h1 h2 => .inr ⟨by omega, by omega⟩) (by omega) (by omega)
+      · rw [hnext]
+        exact hag1.wrW (by omega) (fun x h1 h2 => .inr ⟨by omega, by omega⟩) (by rw [bufNext_size, hBs]; omega)
+          (by rw [bufNext_size, hBs]; omega)
       · simp only [show ¬ j + 1 ≤ j by omega, ite_false]
         exact hreg1.transfer hok (Nat.le_refl _) fun x h1 h2 => by
           simp only [L.Compiler.cmpW] at h1 h2

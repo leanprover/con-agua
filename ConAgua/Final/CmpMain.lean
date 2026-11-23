@@ -240,7 +240,8 @@ theorem cmp_buf_words (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
   simp only [cmpBuf, Array.getElem_extract, Nat.zero_add]
 
 omit [Host] in
-/-- **After the jobs, the region still holds mode `5`'s memory** (`CmpAgree`, `MemRel.congrW`). -/
+/-- **After the jobs, the region holds mode `5`'s memory with the buffer the jobs left**
+(`CmpAgree`, `MemRel.congrM`). -/
 theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
     (hp : seqParamsOk tab out hdrf ctlf hw = true) {base blen rsp0 sa n pins np : Nat} {m5 : Mem}
     {d5 d : DataMem} (hneedC : cmpNeed tab own ≤ blen) (hfit : base + blen < 2 ^ 64)
@@ -249,9 +250,10 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
     (hSa : ∀ x, sa ≤ x → x < sa + n → (x < base ∨ base + blen ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x))
     (hPa : ∀ x, pins ≤ x → x < pins + np → (x < base ∨ base + blen ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x))
     (hwin : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + blen ≤ x)
-    (hA : CmpAgree (cmpBuf out m5) (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
+    {Bk : Array Word} (hBk : Bk.size = (cmpBuf out m5).size)
+    (hA : CmpAgree Bk (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
       (base + cmpNeed tab own) (base + abiNeed tab) (base + abiNeed tab + 64) rsp0 d5 d) :
-    MemRel (abiLayout tab base sa n pins np) m5 d := by
+    MemRel (abiLayout tab base sa n pins np) (cmpSetOut out m5 Bk) d := by
   obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
   obtain ⟨hbo, hso, h2, hlt⟩ := cmp_out_pos hok hp base sa n pins np
   obtain ⟨hBs, hBw⟩ := cmp_buf_words hok hp hm hlen
@@ -273,13 +275,14 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
         refine Classical.byContradiction fun hn => ?_
         simp only [not_or, Nat.not_lt, Nat.not_le] at hn
         rcases hwin x hn.1 hn.2 with h | h <;> omega)
-      (fun ⟨h3, _⟩ => by omega) hb
+      (fun ⟨h3, _⟩ => by omega) (by rw [hBk]; exact hb)
   -- outside the region and the window: unchanged
   have hout : ∀ x, x < 2 ^ 64 → (x < base ∨ base + blen ≤ x) → (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) →
       d.get? (A x) = d5.get? (A x) := fun x hx h1 h2 =>
     hA.same x hx (fun ⟨h3, h4⟩ => by simp only [cmpNeed, L.Compiler.cmpW] at h3 h4; omega) h2 (fun ⟨h3, h4⟩ => by omega)
-      (fun ⟨h3, h4⟩ => by omega)
-  refine MemRel.congrW hG hm hA.grows (fun x hx => ?_) (fun q hq x hx => ?_) (fun q hq1 hq2 i hi => ?_)
+      (fun ⟨h3, h4⟩ => by rw [hBk] at h4; omega)
+  refine MemRel.congrM hG hm rfl rfl (cmpSetOut_size out m5 Bk) hA.grows (fun x hx => ?_) (fun q hq x hx => ?_)
+    (fun c hc i hi => ?_)
   · have ht := hx.2
     simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at ht
     have := hx.1
@@ -298,11 +301,33 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
       have := hG.end8 1 (by simp [hnb])
       simp only [abiLayout_b8_1, abiLayout_s8_1] at this
       exact hout x (by omega) h1 h2
-  · simp only [abiLayout_tab] at hq1 hq2
-    by_cases hc : q = tab.pos64 (TieredArray.t0 out) ∧ i < (cmpBuf out m5).size
-    · obtain ⟨rfl, hi'⟩ := hc
-      rw [hbo, hA.words i hi', hBw i hi']
-    · refine rdW_congr fun j hj => ?_
+  · simp only [abiLayout_tab] at hc
+    rw [cmpSetOut_size] at hi
+    by_cases hc' : c = TieredArray.t0 out ∧ i < (cmpBuf out m5).size
+    · obtain ⟨rfl, hi'⟩ := hc'
+      simp only [abiLayout_tab]
+      rw [hbo, hA.words i (by rw [hBk]; exact hi')]
+      congr 1
+      rw [cmpSetOut_get]
+      simp only [ite_eq_left (show i < Bk.size by omega), Array.getD_eq_getD_getElem?,
+        Array.getElem?_eq_getElem (show i < Bk.size by omega), Option.getD_some]
+    · have hv : ((cmpSetOut out m5 Bk).arr64 c)[i]'(by rw [cmpSetOut_size]; exact hi) = (m5.arr64 c)[i] := by
+        by_cases hqo : c = TieredArray.t0 out
+        · subst hqo
+          have hi' : ¬ i < (cmpBuf out m5).size := fun h => hc' ⟨rfl, h⟩
+          rw [cmpSetOut_get]; simp only [ite_eq_right (show ¬ i < Bk.size by omega)]
+        · simp only [cmpSetOut_ne out m5 Bk hqo]
+      rw [hv, ← hm.get64 _ hc i hi]
+      have hq12 := tab.pos64_lt hc
+      have hwq := tab.wAt_pos64 hc
+      have hsq := hm.size64 c hc
+      simp only [abiLayout_tab] at hsq ⊢
+      have hc'' : ¬ (tab.pos64 c = tab.pos64 (TieredArray.t0 out) ∧ i < (cmpBuf out m5).size) := by
+        rintro ⟨e, h⟩
+        exact hc' ⟨by rw [← hwq, e, tab.wAt_pos64 dout], h⟩
+      generalize tab.pos64 c = q at hq12 hsq hc''
+      obtain ⟨hq1, hq2⟩ := hq12
+      refine rdW_congr fun j hj => ?_
       rw [A_add]
       have hin : (abiLayout tab base sa n pins np).In64 q ((abiLayout tab base sa n pins np).b q + 8 * i + j) :=
         ⟨by omega, by omega⟩
@@ -311,7 +336,7 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
       by_cases hq : q = tab.pos64 (TieredArray.t0 out)
       · subst hq
         rw [hbo] at h3 h4
-        exact hc ⟨rfl, by omega⟩
+        exact hc'' ⟨rfl, by omega⟩
       · refine hG.arr64_disj q ⟨by simp [abiLayout_tab]; omega, by simp [abiLayout_tab]; omega⟩
           (tab.pos64 (TieredArray.t0 out)) ⟨hpo.1, hpo.2⟩ hq _ hin ⟨?_, ?_⟩
         · rw [hbo]; omega
@@ -321,14 +346,15 @@ theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : N
 machine returns to the caller with the callee-saved registers restored; `rdx = 0`, `rax = ACCEPT`
 means the runs accepted (`CmpAccepts`), `rdx = 2` that one failed with the code in `rax`
 (`CmpErr`). `CmpGuard`: the L-level facts the proof needs (the buffer's geometry after mode `5`,
-the jobs keep the frozen arrays). -/
+every job keeps the header); `hnd`, `hdom`: the frozen arrays are distinct and in the table. -/
 theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
     {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true) (hwf : Prog.wf tab q = true)
     (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray)
     (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
     (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
-    (hdisj : ∀ a ∈ own, a ∉ fz) (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hdisj : ∀ a ∈ own, a ∉ fz) (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
+    (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -571,7 +597,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     obtain ⟨-, hRes5, hMem5⟩ := hout'
     have hrax5 : s2.regs.rax = rs5.getD 0 0 := hRes5.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
     have hge5' : 2 ^ 63 ≤ (rs5.getD 0 0).toNat := by rw [← hrax5]; exact hge5
-    obtain ⟨hBok, hkeep⟩ := hG rs4 m4 rs5 m5 hres4 hge4' hres5 hge5'
+    have hBok := hG.1 rs4 m4 rs5 m5 hres4 hge4' hres5 hge5'
     have hk63 : (rs5.getD 0 0 - 9223372036854775808).toNat < 2 ^ 63 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simpa using hge5')]
       have := (rs5.getD 0 0).toNat_lt; simp at this ⊢; omega
@@ -605,13 +631,14 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         (cmpBuf out m5).size := ⟨hfits, hge', hcsW, hcs24, hcs8, by omega, by omega, by omega⟩
     have hgB : BufGeom tab fz own (cmpBuf out m5) (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
         (workerNeed own) :=
-      ⟨Nat.le_refl _, by simp only [L.Compiler.cmpW]; omega, by omega, hBok.2.1, hBok.2.2.1, hBok.2.2.2,
+      ⟨Nat.le_refl _, by simp only [L.Compiler.cmpW]; omega, by omega,
+        fun i hi => by have := hBok.2.hdr i hi; have := hBok.2.ent 0 (by omega); omega, hBok.2.ent, hBok.2.disj,
         fun x h1 h2 => .inl (by simp only [L.Compiler.cmpW]; omega)⟩
     have hS0 : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
       fun x h1 h2 => by have := (hc.hSDisj x h1 h2).1; rwa [hbase] at this
     refine cmp_loop q p hq hok hAX hwf hnres plo phi hdrf ctlf hw fz hngm hngl hngh h12 h13 h23 hfzl k0 hcodeO fd
-      hentry hnp hmo hdisj hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
-      hkeep hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
+      hentry hnp hmo hdisj hnd hdom hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
+      hBok.2 hG.2 hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
       (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
     · intro rm h0 j hj hjobs e he
       exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,
@@ -641,7 +668,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
           fun x h1 h2 => by rcases hpR x h1 h2 with h | h <;> omega,
           fun x h1 h2 => (hc.hSDisj x h1 h2).2.2.1⟩
       rw [hpbE] at hMem5
-      have hMem5' := cmp_agree_memRel hok hp hge' hfits hG5 hMem5 hBok.1 hSa hPa hcsW hag3
+      have hMem5' := cmp_agree_memRel hok hp hge' hfits hG5 hMem5 hBok.1 hSa hPa hcsW (bufSeq_size _ _ _ _) hag3
       refine ev_congr (j := Kc + 90) ?_ (by omega)
       refine cmp_modeM q p hq hok hAX hio hwf hngm _ hcodeO.right fd hentry hnp hC 90 14 6 abiStartA6L
         (fun t ht => match t, ht with | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl | 4, _ => rfl | 5, _ => rfl | 6, _ => rfl | 7, _ => rfl | 8, _ => rfl | _ + 9, h => absurd h (by omega))
@@ -649,7 +676,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         dm ra sa (nS := bS.size) ⟨m5.arr8 IN⟩ ⟨m5.arr8 Rom.PB⟩ hin5.symm hgeoB hside (by rw [hpb5, hc.hnp])
         (by rw [hin5]; exact hc.hSEnd) (by rw [hpb5]; exact hc.hpinsEnd)
         (fun x h1 h2 => ?_) (fun x h1 h2 => ?_) _ _ s3 hf3 (fun i hi => ?_) (fun i hi => ?_)
-        (m := m5) (inp0 := sa.toNat) (n0 := bS.size) (by rw [hpb5]; exact hG5)
+        (m := cmpSetOut out m5 (bufSeq fz (cmpBuf out m5) rm (rs5.getD 0 0 - 9223372036854775808).toNat)) (inp0 := sa.toNat) (n0 := bS.size) (by rw [hpb5]; exact hG5)
         (fun x h1 h2 => (hSa x h1 h2).2) (by rw [hpb5]; exact hMem5') ?_
       · rw [hin5] at h2
         obtain ⟨q1, q2⟩ := hSa x h1 h2
@@ -662,7 +689,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         simp only [abiLayout_tab, hpPB, abiLayout_b8_1] at hg
         exact hg
       intro s4 hf4 hsame4 hout6 hsz6
-      rw [cmpIn_self] at hout6
+      erw [cmpIn_self] at hout6
       simp only [hin5, hpb5] at hout6
       refine ev_congr (cmp_okGe (i := 99) hC rfl rfl rfl rfl rfl s4 (fun s' hm hr hbad => ?_)
         (fun hrdx6 hge6 st8 => ?_)) (by omega)
@@ -673,7 +700,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         refine hexit s' (hf4.regs hm fun r _ h2 _ _ _ _ _ _ => hr r h2) (fun h0' hacc => ?_) (fun h2 => ?_)
         · rw [erdx] at h0'; rw [erax] at hacc
           have hout' := hout6.resolve_left (by rw [h0']; decide)
-          rcases hres : cmpRun p (m5.setG mode 6) with e | ⟨rs6, m6⟩
+          rcases hres : cmpRun p ((cmpSetOut out m5 (bufSeq fz (cmpBuf out m5) rm (rs5.getD 0 0 - 9223372036854775808).toNat)).setG mode 6) with e | ⟨rs6, m6⟩
           · rw [hres] at hout'
             cases e <;> simp only [OutcomeRel] at hout' <;> (rw [h0'] at hout'; exact absurd hout'.1 (by decide))
           rw [hres] at hout'
@@ -687,7 +714,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
             .inr ⟨hjobs, .inl ⟨e, he, hk.symm⟩⟩⟩⟩⟩
       -- mode 6 returned `2^63 + k'`: `ca_check_seq` for `[0, k')`
       have hout' := hout6.resolve_left (by rw [hrdx6]; decide)
-      rcases hres6 : cmpRun p (m5.setG mode 6) with e | ⟨rs6, m6⟩
+      rcases hres6 : cmpRun p ((cmpSetOut out m5 (bufSeq fz (cmpBuf out m5) rm (rs5.getD 0 0 - 9223372036854775808).toNat)).setG mode 6) with e | ⟨rs6, m6⟩
       · rw [hres6] at hout'
         cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx6] at hout'; exact absurd hout'.1 (by decide))
       rw [hres6] at hout'
@@ -906,7 +933,8 @@ theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk 
     (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
     (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
-    (hdisj : ∀ a ∈ own, a ∉ fz) (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hdisj : ∀ a ∈ own, a ∉ fz) (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
+    (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -918,7 +946,7 @@ theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk 
       dm (label abiCompareL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h1, h2⟩ => ⟨hpc, h1, h2⟩)
     (cmp_outcome_regs q p hq tab hok hAX hio hwf hnres mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13
-      h23 hfzl hp hmo hdisj hcn k0 hcode fd hentry hnp bC bS pb sa dm ra hc hG)
+      h23 hfzl hp hmo hdisj hnd hdom hcn k0 hcode fd hentry hnp bC bS pb sa dm ra hc hG)
 
 end
 
