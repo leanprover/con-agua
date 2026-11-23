@@ -3,6 +3,7 @@ module
 public import ConAgua.Final.Twin
 public import ConRon.Bridge.Compare.Stages
 public import ConRon.Arena.Justify
+public import ConRon.Arena.Pooled
 import ConRon.Bridge.Inductives.Decl
 import ConLeche.Model.OfEnvModelM
 import ConRon.Bridge.Specs
@@ -83,6 +84,60 @@ theorem pooled_of_seqJ {mode : CheckMode} {pins : List INatOpPinSet} {J : Option
   · rw [List.mem_singleton] at hw; subst hw; exact List.pairwise_lt_range
   · rw [List.mem_singleton] at hw; subst hw; exact ⟨s'', hJ⟩
 
+/-- **The twin accepts the comparison with both check phases as con-ron's pool** (`--jobs`): as
+`TwinComparesAccepts`, the solution's check phase `PooledAccepts` (no solution) and the
+challenge's `PooledAcceptsJ` with the solution (`ConRon/Arena/Pooled.lean`): each a family of job
+lists, one per worker, covering every record position, each increasing, each accepted from the
+index state's worker. -/
+def TwinComparesAcceptsPooled (bC bS : ByteArray) : Prop :=
+  ∃ (pins : List NatOpPinSet) (sA sB sC sC' sD sE sF sG sH sI : AState) (pre : PreludeIx)
+    (rC rS : ParseResultD) (dsS dsC : Array IDeclaration) (recsC : List IDeclaration)
+    (ipins : List INatOpPinSet) (IS IC : IStreamIndex),
+    internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    parseChunks [bC] sB = .ok (.ok rC, sC) ∧
+    parseChunks [bS] sC = .ok (.ok rS, sC') ∧
+    preparePrelude pre rS.decls sC' = .ok (dsS, sD) ∧
+    internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
+    PooledAccepts .verified ipins dsS sE IS sF ∧
+    preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
+    sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
+    PooledAcceptsJ .verified ipins (some (solutionOf IS recsC)) recsC.toArray sH IC sI
+
+/-- The sequential comparison is the pool with one worker per phase. -/
+theorem TwinComparesAccepts.pooled {bC bS : ByteArray} (h : TwinComparesAccepts bC bS) :
+    TwinComparesAcceptsPooled bC bS := by
+  obtain ⟨pins, sA, sB, sC, sC', sD, sE, sF, sG, sH, sI, pre, rC, rS, dsS, dsC, recsC, ipins, IS, IC,
+    hA, hB, hC, hCS, hDS, hE, hFS, hDC, hside, hFC⟩ := h
+  exact ⟨pins, sA, sB, sC, sC', sD, sE, sF, sG, sH, sI, pre, rC, rS, dsS, dsC, recsC, ipins, IS, IC,
+    hA, hB, hC, hCS, hDS, hE, pooledAccepts_of_seq hFS, hDC, hside, pooled_of_seqJ hFC⟩
+
+/-- con-ron: proof/ConRon/MainTheorem/Stages.lean model_exists_compare — **the challenge of a
+pooled comparison has a model** (`twinComparesAccepts_model` for the pool). -/
+theorem twinComparesAcceptsPooled_model (V : Type w) [SetTheory V] {bC bS : ByteArray}
+    (h : TwinComparesAcceptsPooled bC bS) :
+    ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
+      ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
+      Nonempty (Model V (ConLeche.streamEnv
+        ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map ConLeche.Cached.sideRecord))) := by
+  obtain ⟨pins, sA, sB, sC, sC', sD, sE, sF, sG, sH, sI, pre, rC, rS, dsS, dsC, recsC, ipins, IS, IC,
+    hA, hB, hC, hCS, hDS, hE, hFS, hDC, hside, hFC⟩ := h
+  have hk : CoreSpec ConRon.Arena.checkFuel := CoreSpec.of_core
+  have hind : IndSpec := ConRon.Bridge.Inductives.indSpec_of_bridge
+  obtain ⟨-, rcC, preC, dsP, hclC, rfl, -, ⟨hmod⟩⟩ :=
+    ConRon.Bridge.stagesC_model V hk hind hA hB hC hCS hDS hE hFS hDC hside hFC
+  exact ⟨rcC, preC, hclC, ⟨ConLeche.Model.Model.ofEnvModelM hmod⟩⟩
+
+/-- con-ron: proof/ConRon/MainTheorem/Stages.lean no_False_compare — **no `False` in the challenge
+of a pooled comparison** (`twinComparesAccepts_no_False` for the pool). -/
+theorem twinComparesAcceptsPooled_no_False (V : Type w) [SetTheory V] {bC bS : ByteArray}
+    (hfalse : jsonWithTheoremFalse [bC]) (h : TwinComparesAcceptsPooled bC bS) : False := by
+  obtain ⟨pins, sA, sB, sC, sC', sD, sE, sF, sG, sH, sI, pre, rC, rS, dsS, dsC, recsC, ipins, IS, IC,
+    hA, hB, hC, hCS, hDS, hE, hFS, hDC, hside, hFC⟩ := h
+  have hk : CoreSpec ConRon.Arena.checkFuel := CoreSpec.of_core
+  have hind : IndSpec := ConRon.Bridge.Inductives.indSpec_of_bridge
+  exact ConRon.Bridge.stagesC_no_False V hk hind hfalse hA hB hC hCS hDS hE hFS hDC hside hFC
+
 /-- con-ron: proof/ConRon/MainTheorem/Stages.lean model_exists_compare — **the challenge has a
 model**: con-leche's parser reads the challenge, and its prepared records, each hole the axiom of
 its statement, denote a stream whose environment has a model in every set theory. Nothing is
@@ -119,5 +174,11 @@ theorem twinComparesAccepts_no_False (V : Type w) [SetTheory V] {bC bS : ByteArr
 
 /-- info: 'ConAgua.Final.twinComparesAccepts_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms twinComparesAccepts_no_False
+
+/-- info: 'ConAgua.Final.twinComparesAcceptsPooled_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms twinComparesAcceptsPooled_model
+
+/-- info: 'ConAgua.Final.twinComparesAcceptsPooled_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms twinComparesAcceptsPooled_no_False
 
 end ConAgua.Final
