@@ -148,8 +148,8 @@ def arg_rows(tests, work):
 
 def run(binary, jobs, timeout, fid, path, want):
     """Run one fixture; the verdict class, the last stdout line, wall seconds and peak RSS (MB)."""
-    # an argument row (`arg_rows`) runs as given, sequentially
-    cmd = [binary] + (path if isinstance(path, list) else ([f"--jobs={jobs}"] if jobs > 1 else []) + [path])
+    # an argument row (`arg_rows`) runs as given, after `--jobs=N` too (the threaded compared run)
+    cmd = [binary] + ([f"--jobs={jobs}"] if jobs > 1 else []) + (path if isinstance(path, list) else [path])
     timeout = max(timeout, ALLOW.get(fid, 0))
     if want == 124:  # con-leche's verdict is the timeout itself: no need to wait the full budget
         timeout = min(timeout, T_LOOP)
