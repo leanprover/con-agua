@@ -90,7 +90,9 @@ same in both files. Both files are read into one store. The verdict line and
 the exit status are as above; two files that are not two different paths are a
 usage error (exit 3, no verdict line). The compared run is sequential: `--jobs`
 does not combine with it
-([docs/deviations.md](docs/deviations.md), D51).
+([docs/deviations.md](docs/deviations.md), D51). The final theorems (§2) are
+about the flat run and the threaded mode; no final theorem covers `--compare`
+yet.
 
 Every way the checker says no is an L `abort` with a code: the low two bits
 are the class (`1` reject, `2` decline, `0` other), the rest a reason, whose
@@ -492,7 +494,7 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L104-L110)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L116-L122)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 

@@ -52,7 +52,7 @@ theorem conePush_loop : ∀ (n : Nat) (m : Mem) (k h h' : Word) (m' : Mem),
     · rw [conePushW.loop1.abort1 _ _ _ _ hk hl] at e; cases e
     rw [conePushW.loop1.arm1 _ _ _ _ hk hl] at e
     have hl' : h.toNat < (m.arr64 CWK).size % 2 ^ 64 := by
-      simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le, UInt64.toNat_ofNat] at hl; exact hl
+      simp only [Mem.len64, UInt64.le_iff_toNat_le, Nat.not_le] at hl; exact hl
     have hlt : h.toNat < (m.arr64 CWK).size :=
       Nat.lt_of_lt_of_le hl' (Nat.mod_le _ _)
     have hlt2 : h.toNat + 1 < 2 ^ 64 :=
@@ -77,14 +77,14 @@ theorem conePush_loop : ∀ (n : Nat) (m : Mem) (k h h' : Word) (m' : Mem),
     · subst hih
       have c1 : ¬ (h.toNat + 1 ≤ h.toNat ∧ h.toNat < h.toNat + 1 + (k.toNat - 1)) := by omega
       have c2 : h.toNat ≤ h.toNat ∧ h.toNat < h.toNat + k.toNat := by omega
-      simp only [c1, c2, ↓reduceIte, true_and, hlt, and_self, hw, Nat.sub_self, Nat.sub_zero]
+      simp only [c1, c2, ↓reduceIte, hlt, and_self, hw, Nat.sub_self, Nat.sub_zero]
     · have c3 : (h = h ∧ h.toNat = i ∧ i < (m.arr64 CWK).size) ↔ False := by
         constructor
         · rintro ⟨-, e, -⟩; exact hih e.symm
         · intro f; exact f.elim
       by_cases hi : h.toNat + 1 ≤ i ∧ i < h.toNat + 1 + (k.toNat - 1)
       · have hi' : h.toNat ≤ i ∧ i < h.toNat + k.toNat := by omega
-        rw [if_pos hi, if_pos hi']
+        rw [ite_eq_left hi, ite_eq_left hi']
         rw [show k.toNat - 1 - 1 - (i - (h.toNat + 1)) = k.toNat - 1 - (i - h.toNat) by omega]
       · have hi' : ¬ (h.toNat ≤ i ∧ i < h.toNat + k.toNat) := by omega
         simp only [hi, hi', ↓reduceIte, true_and]

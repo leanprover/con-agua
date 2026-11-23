@@ -164,7 +164,11 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
   have hcnt : dcnt m = (rdW (m.arr64 DECL) 0).toNat := rfl
   have hcnt' : dcnt m' = dcnt m + 1 := by
     rw [show dcnt m' = (rdW (m.arr64 DECL) 0 + 1).toNat by unfold dcnt; rw [G4]; rfl, hc1, hcnt]
-  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => ?_⟩
+  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => ?_, ?_⟩
+  rotate_right
+  · show topN m DLP ≤ topN m' DLP
+    have e : topN m' DLP = topN m₄ DLP := by simp only [topN, wd, hm'P]
+    rw [e]; omega
   · rw [G5 j h1 (by omega), hdecl4]
   · have h2' : j ≤ topN m DLP := h2
     rw [hm'P]; exact getElem?_of_wd hs4 (by omega) (hkeep j h1 h2')
@@ -181,7 +185,8 @@ theorem installW_grow {b : ByteArray} {n : Nat} {m m' : Mem} (a : AState) {st : 
 theorem DGrow.ofDK {m m₁ m' : Mem} (hk : DK m m₁) (hg : DGrow m₁ m') : DGrow m m' := by
   have hc : dcnt m₁ = dcnt m := by simp only [dcnt, hk.1]
   have ht : dtop m₁ = dtop m := by simp only [dtop, hk.2]
-  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => hg.new x (by omega) h2⟩
+  refine ⟨fun j h1 h2 => ?_, fun j h1 h2 => ?_, fun x h1 h2 => hg.new x (by omega) h2, by
+    have := hg.top; omega⟩
   · rw [hg.decl j h1 (by omega), hk.1]
   · rw [hg.dlp j h1 (by omega), hk.2]
 

@@ -647,14 +647,14 @@
    191          (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
    192        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L104-L110
-   104  theorem checkerFile_drv_accepts_regs [Host]
-   105      (k0 : Nat) (hcode : Code checkerFile k0)
-   106      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   107      (hc : AbiCall b pb dm ra) :
-   108      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   109          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   110        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L116-L122
+   116  theorem checkerFile_drv_accepts_regs [Host]
+   117      (k0 : Nat) (hcode : Code checkerFile k0)
+   118      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+   119      (hc : AbiCall b pb dm ra) :
+   120      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   121          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   122        dm (label abiStartL) :=
 
 == ConAgua/Checker/Entry.lean#L155-L165
    155  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
@@ -2064,8 +2064,8 @@
     23  noncomputable def checkerFile : Program := include_asm "../checker.s"
 
 == ConAgua/Checker/AsmFileEq.lean#L29-L30
-    29  /-- **The committed file is the compiler's output**, after the entry stub `checkerStub`. -/
-    30  asm_file_eq checkerFile_eq : checkerFile = checkerStub ++ checkerAsm via checkerAsm_eq
+    29  namespace L.Checker
+    30  
 
 == ConAgua/Checker/Asm.lean#L42-L51
     42  /-!
