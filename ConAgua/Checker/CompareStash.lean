@@ -92,7 +92,7 @@ theorem get?_copy64 {d s : ArrId} (hds : d ≠ s) (m : Mem) (n : Nat) (hn : n < 
   have hsz := size_copy64 m d 0 s 0 n d
   have h1 := getD_copy64 hds n m 0 0 (by simp; omega) (by simp; omega) j
   simp only [UInt64.toNat_zero, Nat.zero_le, Nat.zero_add, Nat.sub_zero, true_and] at h1
-  rw [if_pos ⟨hj, by omega⟩] at h1
+  rw [ite_eq_left ⟨hj, by omega⟩] at h1
   rw [Array.getElem?_eq_getElem (by omega), Array.getElem?_eq_getElem (by omega)]
   simp only [Array.getD_eq_getD_getElem?, Array.getElem?_eq_getElem (show j < (m.arr64 s).size by omega),
     Array.getElem?_eq_getElem (show j < ((m.copy64 d 0 s 0 n).arr64 d).size by omega),
@@ -141,7 +141,7 @@ theorem cmpStash_spec (p : Prog) (hp : p.lookup "cmp_stash" = some cmpStashL) (h
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr,
       (frontReset_spec p hpp n ·)]
-    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+    all_goals (try simp only [L.St.setLoc_mem,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval] at *)
     case vc1 => grind [lang_grind]
     all_goals rename_i _ hD0 hlt _ h240 _ _ _ hb _ hpost

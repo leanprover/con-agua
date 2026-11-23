@@ -55,7 +55,7 @@ theorem Since.setIn {b b' pb : ByteArray} {sz : TieredArray → Nat} {m : Mem}
   simp only [Mem.setIn, loadMem] at e ⊢
   by_cases ha : a = IN
   · simp [ha]
-  · simp only [ha, if_false] at e ⊢; exact e
+  · simp only [ha, ite_false] at e ⊢; exact e
 
 /-! ## The stash's memory -/
 
@@ -290,7 +290,7 @@ theorem checkC1_of_stages {p : Prog} (hp : p.lookup "check_c1" = some checkC1L)
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       (h1 n hn' ·), (h2 n hn' ·), (h2p n hn' ·), (h3 n hn' ·), (h4 n hn' ·), (h5 n hn' ·), (h6 n hn' ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
-      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, ite_true,
       bne_iff_ne, ne_eq, Decidable.not_not] at *)
     all_goals clear h1 h2 h2p h3 h4 h5 h6 hp
     all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
