@@ -26,8 +26,9 @@ theorem crsSpec_of {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     (hC : CcvSims p dn) (hW : ∃ F, "check_record_sol" ∈ F ∧ closedA p cdA cdC F = true) :
     CrsSpec pins dn ds p where
   ref hFD hLD {N} hN {m} {a} {vis} {fe} {i} {J} {envS} {matesU} hi hok hR hS hF hden hPD hIM hJ hWM
-      hsol hm hnx := by
-    have hM := crs_ref P hP hFD hLD hq hap hkp hcrf hC hN hi hok hR hS hF hden hPD hIM hJ hsol hm hWM hnx
+      hsol hm hcm hnx := by
+    have hM := crs_ref P hP hFD hLD hq hap hkp hcrf hC hN hi hok hR hS hF hden hPD hIM hJ hsol hm hcm
+      hWM hnx
     have hs := checkRecordSol_specE p P.crs P.cj N ⟨m, Locals.init []⟩ i vis
     rcases c : callE p N "check_record_sol" [i, vis] m with e | ⟨r, m'⟩
     · exact fun hG => RefE.run_err hs hG.1.nv ⟨hG.1.cd, hG.2⟩ hM c

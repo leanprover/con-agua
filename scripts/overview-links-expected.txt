@@ -16,7 +16,7 @@
      2  
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
      4     usage:  checker [--jobs=N] FILE
-     5             checker --compare [--] CHALLENGE SOLUTION
+     5             checker [--jobs=N] --compare [--] CHALLENGE SOLUTION
      6  
      7     The default path is the one the final theorem covers (`checkerFile_accepts`,
      8     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
@@ -71,6 +71,23 @@
     94    printf("error%s%s\n", sep, msg);
     95    return 3;
     96  }
+
+== main.c#L349-L363
+   349  static int run_compare_jobs(int jobs, uint8_t *c, uint64_t c_len, uint8_t *s, uint64_t s_len) {
+   350    uint8_t *base = mmap(0, ca_region_size, PROT_READ | PROT_WRITE,
+   351                         MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+   352    if (base == MAP_FAILED) fail("mmap", strerror(errno));
+   353    advise_huge(base + ca_w0, ca_nw);
+   354    ca_res r = ca_start_a4(c, c_len, pins, sizeof pins, base, ca_region_size);
+   355    if (!high(r)) return print_verdict(r);
+   356    r = ca_start_a5(s, s_len, pins, sizeof pins, base, ca_region_size);
+   357    if (!high(r)) return print_verdict(r);
+   358    r = cmp_phase(base, r.rax - (1ull << 63), jobs);
+   359    if (!accepted(r)) return print_verdict(r);
+   360    r = ca_start_a7(s, s_len, pins, sizeof pins, base, ca_region_size);
+   361    if (!high(r)) return print_verdict(r);
+   362    return print_verdict(cmp_phase(base, r.rax - (1ull << 63), jobs));
+   363  }
 
 == ConAgua/Compiler/Main.lean#L30-L33
     30  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
@@ -283,20 +300,20 @@
     88          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS))
     89        dm (label abiCompareL) :=
 
-== ConAgua/Final/CompareTwin.lean#L56-L68
-    56  def TwinComparesAccepts (bC bS : ByteArray) : Prop :=
-    57    ∃ (pins : List NatOpPinSet) (sA sB sC sC' sD sE sF sG sH sI : AState) (pre : PreludeIx)
-    58      (rC rS : ParseResultD) (dsS dsC : Array IDeclaration) (recsC : List IDeclaration)
-    59      (ipins : List INatOpPinSet) (IS IC : IStreamIndex),
-    60      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
-    61      builtinPreludeE sA = .ok (.ok pre, sB) ∧
-    62      parseChunks [bC] sB = .ok (.ok rC, sC) ∧
-    63      parseChunks [bS] sC = .ok (.ok rS, sC') ∧
-    64      preparePrelude pre rS.decls sC' = .ok (dsS, sD) ∧
-    65      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
-    66      SeqAcceptsJ .verified ipins none dsS sE IS sF ∧
-    67      preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
-    68      sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
+== ConAgua/Final/CompareTwin.lean#L57-L69
+    57  def TwinComparesAccepts (bC bS : ByteArray) : Prop :=
+    58    ∃ (pins : List NatOpPinSet) (sA sB sC sC' sD sE sF sG sH sI : AState) (pre : PreludeIx)
+    59      (rC rS : ParseResultD) (dsS dsC : Array IDeclaration) (recsC : List IDeclaration)
+    60      (ipins : List INatOpPinSet) (IS IC : IStreamIndex),
+    61      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    62      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    63      parseChunks [bC] sB = .ok (.ok rC, sC) ∧
+    64      parseChunks [bS] sC = .ok (.ok rS, sC') ∧
+    65      preparePrelude pre rS.decls sC' = .ok (dsS, sD) ∧
+    66      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
+    67      SeqAcceptsJ .verified ipins none dsS sE IS sF ∧
+    68      preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
+    69      sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
 
 == ConAgua/Final/Compare.lean#L98-L109
     98  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
@@ -321,6 +338,64 @@
    124      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
    125          ¬ (st.data.regs.rdx = 0 ∧ st.data.regs.rax = ACCEPT))
    126        dm (label abiCompareL) :=
+
+== ConAgua/Final/CmpThreads.lean#L578-L584
+   578  theorem checkerFile_compare_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   579      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   580      (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   581      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+   582      (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) (thsC : List ThreadM)
+   583      (hR : CmpThreadsRun bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC thsC) :
+   584      TwinComparesAcceptsPooled bC bS :=
+
+== ConAgua/Final/CmpThreads.lean#L322-L331
+   322  structure CmpThreadsRun [Host] (bC bS pb : ByteArray)
+   323      (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   324      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+   325      (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) (thsC : List ThreadM) : Prop
+   326      extends CmpTRunC bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC where
+   327    /-- the challenge's pool -/
+   328    thrC : ThreadsAcc dm₇ st₇ BC thsC
+   329    coverC : ∀ j : Word, j < st₇.data.regs.rax - 9223372036854775808 →
+   330      ∃ t ∈ thsC, ∃ i < t.n, (t.dm i).regs.rdx = j
+   331  
+
+== ConAgua/Final/CompareTwin.lean#L92-L105
+    92  def TwinComparesAcceptsPooled (bC bS : ByteArray) : Prop :=
+    93    ∃ (pins : List NatOpPinSet) (sA sB sC sC' sD sE sF sG sH sI : AState) (pre : PreludeIx)
+    94      (rC rS : ParseResultD) (dsS dsC : Array IDeclaration) (recsC : List IDeclaration)
+    95      (ipins : List INatOpPinSet) (IS IC : IStreamIndex),
+    96      internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
+    97      builtinPreludeE sA = .ok (.ok pre, sB) ∧
+    98      parseChunks [bC] sB = .ok (.ok rC, sC) ∧
+    99      parseChunks [bS] sC = .ok (.ok rS, sC') ∧
+   100      preparePrelude pre rS.decls sC' = .ok (dsS, sD) ∧
+   101      internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
+   102      PooledAccepts .verified ipins dsS sE IS sF ∧
+   103      preparePrelude pre rC.decls sF = .ok (dsC, sG) ∧
+   104      sideRecordsGo [] dsC.toList sG = .ok (recsC, sH) ∧
+   105      PooledAcceptsJ .verified ipins (some (solutionOf IS recsC)) recsC.toArray sH IC sI
+
+== ConAgua/Final/CmpThreadsVerdict.lean#L233-L237
+   233  theorem checkerFile_compare_threads_verdict_of [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   234      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   235      (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState) (k : Word)
+   236      (hV : CmpThreadVerdicts) (hF : CmpThreadsFail bC bS pb dm₄ ra₄ st₄ k) (hk : k &&& 3 ≠ 0) :
+   237      TwinCompareVerdictPooled bC bS (k &&& 3) := by
+
+== ConAgua/Final/CmpThreadsVerdict.lean#L72-L83
+    72  def CmpThreadsFail [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    73      (k : Word) : Prop :=
+    74    (CmpTRun4 bC pb dm₄ ra₄ st₄ ∧ st₄.data.regs.rdx = 2 ∧ k = st₄.data.regs.rax) ∨
+    75    (∃ dm₅ ra₅ st₅, CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ ∧ st₅.data.regs.rdx = 2 ∧
+    76      k = st₅.data.regs.rax) ∨
+    77    (∃ dm₅ ra₅ st₅ BS thsS t i, CmpTRunS bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS ∧
+    78      CmpTPoolFail dm₅ st₅ BS thsS t i ∧ k = (t.st i).data.regs.rax) ∨
+    79    (∃ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇, CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ ∧
+    80      st₇.data.regs.rdx = 2 ∧ k = st₇.data.regs.rax) ∨
+    81    (∃ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC thsC t i,
+    82      CmpTRunC bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC ∧
+    83      CmpTPoolFail dm₇ st₇ BC thsC t i ∧ k = (t.st i).data.regs.rax)
 
 == ConAgua/Audit/Final.lean#L47-L50
     47  theorem twinAccepts_not_trivial (V : Type w) [ConLeche.SetTheory V] :
@@ -545,6 +620,141 @@
     64    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
     65    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 
+== ConAgua/Final/CmpThreads.lean#L256-L331
+   256  structure CmpTRun4 [Host] (bC pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState) : Prop where
+   257    call₄ : AbiCall bC pb dm₄ ra₄
+   258    ret₄ : FirstReturn dm₄ (label abiStartA4L) ra₄ st₄
+   259  
+   260  /-- Then the solution's driver call (`ca_start_a5`), on the same region and pin data, holding what
+   261  the first call left, and its return. -/
+   262  structure CmpTRun5 [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   263      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) : Prop extends CmpTRun4 bC pb dm₄ ra₄ st₄ where
+   264    rdx₄ : st₄.data.regs.rdx = 0
+   265    rax₄ : 9223372036854775808 ≤ st₄.data.regs.rax.toNat
+   266    call₅ : AbiCallM bS pb dm₅ ra₅
+   267    same₅ : dm₅.regs.r8 = dm₄.regs.r8 ∧ dm₅.regs.r9 = dm₄.regs.r9 ∧ dm₅.regs.rdx = dm₄.regs.rdx
+   268    /-- the region, the challenge's buffer and the pin data as the first call left them -/
+   269    keep₅ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
+   270      (dm₄.regs.rdi.toNat ≤ x ∧ x < dm₄.regs.rdi.toNat + bC.size) ∨
+   271      (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
+   272      dm₅.dmem.get? (A x) = st₄.data.dmem.get? (A x)
+   273    ret₅ : FirstReturn dm₅ (label abiStartA5L) ra₅ st₅
+   274  
+   275  /-- Then the solution's buffer `BS`. -/
+   276  structure CmpTRunS [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   277      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) : Prop
+   278      extends CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ where
+   279    rdx₅ : st₅.data.regs.rdx = 0
+   280    rax₅ : 9223372036854775808 ≤ st₅.data.regs.rax.toNat
+   281    /-- the solution's buffer: `OUT`'s first `len` words, `len` its word `1` -/
+   282    bufwS : ∀ i (h : i < BS.size), rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8 * i)) = some BS[i]
+   283    buflenS : ∃ w, rdW st₅.data.dmem (A (outAddr dm₅.regs.r8.toNat + 8)) = some w ∧ w.toNat = BS.size
+   284  
+   285  /-- Then the solution's pool `thsS` (every call accepting, every job index below `kS` claimed),
+   286  and the challenge's index call (`ca_start_a7`), on the same region and pin data, holding what the
+   287  second call left, and its return. -/
+   288  structure CmpTRun7 [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   289      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+   290      (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) : Prop
+   291      extends CmpTRunS bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS where
+   292    thrS : ThreadsAcc dm₅ st₅ BS thsS
+   293    coverS : ∀ j : Word, j < st₅.data.regs.rax - 9223372036854775808 →
+   294      ∃ t ∈ thsS, ∃ i < t.n, (t.dm i).regs.rdx = j
+   295    call₇ : AbiCallM bS pb dm₇ ra₇
+   296    same₇ : dm₇.regs.r8 = dm₄.regs.r8 ∧ dm₇.regs.r9 = dm₄.regs.r9 ∧ dm₇.regs.rdx = dm₄.regs.rdx
+   297    /-- the region, the solution's buffer and the pin data as the second call left them -/
+   298    keep₇ : ∀ x, (dm₄.regs.r8.toNat ≤ x ∧ x < dm₄.regs.r8.toNat + dm₄.regs.r9.toNat) ∨
+   299      (dm₅.regs.rdi.toNat ≤ x ∧ x < dm₅.regs.rdi.toNat + bS.size) ∨
+   300      (dm₄.regs.rdx.toNat ≤ x ∧ x < dm₄.regs.rdx.toNat + pb.size) →
+   301      dm₇.dmem.get? (A x) = st₅.data.dmem.get? (A x)
+   302    ret₇ : FirstReturn dm₇ (label abiStartA7L) ra₇ st₇
+   303  
+   304  /-- Then the challenge's buffer `BC`. -/
+   305  structure CmpTRunC [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   306      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+   307      (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) : Prop
+   308      extends CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ where
+   309    rdx₇ : st₇.data.regs.rdx = 0
+   310    rax₇ : 9223372036854775808 ≤ st₇.data.regs.rax.toNat
+   311    /-- the challenge's buffer -/
+   312    bufwC : ∀ i (h : i < BC.size), rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8 * i)) = some BC[i]
+   313    buflenC : ∃ w, rdW st₇.data.dmem (A (outAddr dm₇.regs.r8.toNat + 8)) = some w ∧ w.toNat = BC.size
+   314  
+   315  /-- **What the threaded compared harness does** (trusted; the module doc lists it): `ca_start_a4`
+   316  at `dm₄` (the challenge `bC`, the pin data `pb`, a zero region) returning at `st₄`;
+   317  `ca_start_a5` at `dm₅` (the solution `bS`, the same pin data and region, holding what the first
+   318  call left) returning at `st₅`; the solution's buffer `BS` and its threads `thsS`, whose calls all
+   319  accept and claim every job index below `kS`; `ca_start_a7` at `dm₇` (the solution again, the same
+   320  pin data and region, holding what the second call left) returning at `st₇`; the challenge's
+   321  buffer `BC` and its threads `thsC`, likewise. -/
+   322  structure CmpThreadsRun [Host] (bC bS pb : ByteArray)
+   323      (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+   324      (dm₅ : MachineData) (ra₅ : Word) (st₅ : MachineState) (BS : Array Word) (thsS : List ThreadM)
+   325      (dm₇ : MachineData) (ra₇ : Word) (st₇ : MachineState) (BC : Array Word) (thsC : List ThreadM) : Prop
+   326      extends CmpTRunC bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC where
+   327    /-- the challenge's pool -/
+   328    thrC : ThreadsAcc dm₇ st₇ BC thsC
+   329    coverC : ∀ j : Word, j < st₇.data.regs.rax - 9223372036854775808 →
+   330      ∃ t ∈ thsC, ∃ i < t.n, (t.dm i).regs.rdx = j
+   331  
+
+== ConAgua/Final/CmpThreads.lean#L39-L57
+    39  **What the theorem trusts of the harness** (the hypotheses of `CmpThreadsRun`; beyond them what
+    40  `ThreadsRun` trusts of each pool, `Final/ThreadsFinal.lean`, and what `Final/Statement.lean`
+    41  lists):
+    42  
+    43  * **The three driver calls**: `ca_start_a4` is called as `AbiCall` says (the challenge's bytes,
+    44    the pin data, a zero region); `ca_start_a5` and `ca_start_a7` as `AbiCallM` says (the solution's
+    45    bytes, the same pin data, the same region, which now holds what the previous call left), each on
+    46    the same region `[base, base + len)` (`r8`, `r9`) with the same pin buffer (`rdx`) as the first.
+    47  * **First return** (`FirstReturn`) for each of them and for each thread's calls.
+    48  * **The region carries over**: at `ca_start_a5`'s call, the region, the challenge's buffer and the
+    49    pin data hold the bytes they held at `ca_start_a4`'s return (nothing runs in between); at
+    50    `ca_start_a7`'s call, the region, the solution's buffer and the pin data hold the bytes they held
+    51    at `ca_start_a5`'s return (in between, the threads write only their own regions, and the buffer
+    52    is read-only: `mprotect`, route A).
+    53  * **Each pool** as `ThreadsRun`'s (`ThreadsAcc`, and every job index below `k` claimed): the
+    54    buffer `OUT`'s first `len` words at the phase's driver return, `len` its word `1`.
+    55  * The verdicts: every driver call returns `rdx = 0`, `rax ≥ 2^63`; every thread's call
+    56    `rdx = 0`, `rax = ACCEPT`.
+    57  -/
+
+== ConAgua/Final/CmpThreadsVerdict.lean#L72-L83
+    72  def CmpThreadsFail [Host] (bC bS pb : ByteArray) (dm₄ : MachineData) (ra₄ : Word) (st₄ : MachineState)
+    73      (k : Word) : Prop :=
+    74    (CmpTRun4 bC pb dm₄ ra₄ st₄ ∧ st₄.data.regs.rdx = 2 ∧ k = st₄.data.regs.rax) ∨
+    75    (∃ dm₅ ra₅ st₅, CmpTRun5 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ ∧ st₅.data.regs.rdx = 2 ∧
+    76      k = st₅.data.regs.rax) ∨
+    77    (∃ dm₅ ra₅ st₅ BS thsS t i, CmpTRunS bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS ∧
+    78      CmpTPoolFail dm₅ st₅ BS thsS t i ∧ k = (t.st i).data.regs.rax) ∨
+    79    (∃ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇, CmpTRun7 bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ ∧
+    80      st₇.data.regs.rdx = 2 ∧ k = st₇.data.regs.rax) ∨
+    81    (∃ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC thsC t i,
+    82      CmpTRunC bC bS pb dm₄ ra₄ st₄ dm₅ ra₅ st₅ BS thsS dm₇ ra₇ st₇ BC ∧
+    83      CmpTPoolFail dm₇ st₇ BC thsC t i ∧ k = (t.st i).data.regs.rax)
+
+== ConAgua/Final/CmpThreadsVerdict.lean#L47-L66
+    47  structure CmpTPoolFail [Host] (dm : MachineData) (st : MachineState) (B : Array Word) (ths : List ThreadM)
+    48      (t : ThreadM) (i : Nat) : Prop where
+    49    calls : ∀ i' ≤ i, BufCallH B (t.dm i') (t.ra i') ∧
+    50      (t.dm i').regs.rdi.toNat = outAddr dm.regs.r8.toNat ∧ (t.dm i').regs.rcx.toNat = t.base ∧
+    51      (t.dm i').regs.r8.toNat = t.blen
+    52    zero : ∀ x, t.base ≤ x → x < t.base + t.blen → (t.dm 0).dmem.get? (A x) = some 0
+    53    ret : ∀ i' ≤ i, FirstReturn (t.dm i') (label abiCheckBL) (t.ra i') (t.st i')
+    54    acc : ∀ i' < i, (t.st i').data.regs.rdx = 0 ∧ (t.st i').data.regs.rax = ACCEPT
+    55    rdx : (t.st i).data.regs.rdx = 2
+    56    /-- route A: the buffer's words at each accepting call's return -/
+    57    kept : ∀ i' < i, ∀ q (h : q < B.size),
+    58      rdW (t.st i').data.dmem (A (outAddr dm.regs.r8.toNat + 8 * q)) = some B[q]
+    59    next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
+    60      (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
+    61    claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st.data.regs.rax - 9223372036854775808
+    62    /-- the thread's earlier calls claimed smaller job indices -/
+    63    before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
+    64    /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
+    65    others : ThreadsAcc dm st B ths
+    66    below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
+
 == ConAgua/Compiler/Main.lean#L29-L33
     29  /-- What the harness sees after `ca_enter` returns, against L's result. -/
     30  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
@@ -710,14 +920,14 @@
    191          (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
    192        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L116-L122
-   116  theorem checkerFile_drv_accepts_regs [Host]
-   117      (k0 : Nat) (hcode : Code checkerFile k0)
-   118      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   119      (hc : AbiCall b pb dm ra) :
-   120      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   121          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   122        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L118-L124
+   118  theorem checkerFile_drv_accepts_regs [Host]
+   119      (k0 : Nat) (hcode : Code checkerFile k0)
+   120      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+   121      (hc : AbiCall b pb dm ra) :
+   122      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   123          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   124        dm (label abiStartL) :=
 
 == ConAgua/Checker/Entry.lean#L155-L165
    155  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
@@ -2479,7 +2689,7 @@
     37  | D28b | `Arena/StubNames.lean` `name_rec`, `name_rec_i`, `intern_ls_iw` | `internNNode (.str n "rec")`, `.str n s!"rec_{i}"`, `internLsNode us` take the key as a value | the string (3, or 4 + digits words) / the level list is written at the pool top (`pool_room`) and stays there even when the node exists | performance (memory: a few pool words per block member / recursor / level list built) | stubs | as D24: pop the top on a hit |
     38  | D37 | `Arena/Scratch.lean` `scratch_reset`, `Arena/MemoLib.lean` `memoClearG` | `ron/hashmap2.rs` `clear_fit`: at each per-declaration / per-call reset the table is re-made at twice a decaying high-water mark of its entries | the scratch cons tables keep their largest size (the epoch bump empties them); the memos cleared by `memoClearG` return to their default region (`MN0` slots), regions grown within a stamp stay resident. `inst_list`'s memo (`ilSch`) clears with `memoClearFitG`, the twin's policy with the default region as its floor (the twin's floor is 32 slots) | performance (a round past 3/4 of the default region grows it in place; outside `ilSch` a handful of such rounds per run on the perf fixtures and `Init`, docs/design/d37.md; memory stays resident) | unassigned | the scratch tables: a decaying high-water mark per table, shrinking the slot count at reset; the other memos: `memoClearFitG` (with the fast-path test in the caller) where a measurement shows growth |
 
-== docs/deviations.md#L40-L67
+== docs/deviations.md#L40-L69
     40  ## Deliberate
     41  
     42  | id | where (L) | twin | L | effect | owner | proposed fix |
@@ -2508,12 +2718,13 @@
     65  | D48 | `Arena/DeclStep.lean` `check_decl`, `Arena/IndParts.lean` `check_ind_decl` | `fail (← basisNamesError d)`, `match ← readBlock … with \| .error e => fail e`: a failure at an error value computed at run time | L aborts with constant codes only: the computed reason word is matched against the reasons its producer returns (`basis_names_error`'s three, `read_block`'s ten), each branch `fail R_k`; an unmatched word aborts with code `0` (unreachable) | none (the same message at every reachable branch) | ronsync3 | by design: `abort` takes a constant code (the model generator reads the code from the statement) |
     66  | D46 | `Arena/Infer.lean` `proj_guard_rows_at` | `projGuardRowsAt`'s rows carry `Nat` depths up to `numParams + idx` | aborts when the word sum `np + i` (parameter count plus field index) wraps (a capacity guard) | none: never accepts more; cannot trigger on real inputs (both are word-sized counts) | ronsync3-ind | by design: the rows' depths and the opened `fvar` indices are the twin's `Nat`s |
     67  | D49 | `main.c`; `Rom/PinRead.lean` `intern_all_pins`; the final statements (`TwinAccepts`, `TwinVerdict`: `internAllPins pins maxNatSizeDefault`) | con-ron's binary takes `--max-nat-size=N` (con-leche's flag) and runs `internAllPins pins N`; con-leche's tests run seven `nat_size_limit_*` fixtures at `--max-nat-size=16` (`E2E_FLAGS`) | no such flag: every run is at the default maximum, 134 217 728 bytes (`PINS[72]`, written by `intern_reserved_pins`) | at the default, every verdict is con-ron's; the seven fixtures are not comparable with their pinned verdicts (`diff-e2e.py` skips them) | ronsync3 | by design, as `--olean` (D44): the checker need not take every option of the twin, and the driver stays simple (`main.c` passes no run parameter); porting the flag would make the maximum a parameter of the final theorems and add a trusted fact about `main.c` |
+    68  | D50 | the whole checker (`main.c`, `Checker/Entry.lean`, `Final/Twin.lean`): no modular modes | con-ron #166/#170 (con-leche #460–#629) runs `--check-graph`, `--olean --module M`, `--olean --modular` (with `--compare`), `--schedule-commands` and a simple `--schedule`: the import graph checked once, then each module against only its imports (`Arena/Modular/*`, `Arena/Frontend/Olean/{Levels,Index,Group,Present}`) | none of these options: L reads one export stream (D44) | none on a stream input; a modular run is not available | ronsync8 | by design, as `--olean` (D44) and `--max-nat-size` (D49): every modular mode reads `.olean` files, and the driver stays simple |
+    69  | D52 | `Checker/CompareEntry.lean` (mode 5), `Compiler/AbiCmp.lean` | con-ron's solution's check phase moves its persistent tier to the workers (`freeze_tier`) and back (`thaw_tier`), copying nothing | the solution's jobs read a copy of the frozen arrays (`par_compact(1)`, the parallel mode's buffer) on a separate worker region, which stays resident until the run ends | none on verdicts; on `Init` against itself the compared run's peak RSS is 1.26 GB, con-ron's 0.37 GB, and its instruction count is the same share of two flat runs as con-ron's | compare | by design: the driver's region must stay the twin's driver state (`sF`) while the solution's jobs run, and in-place jobs leave memos and caches the challenge's preparation would read; the buffer route reuses the parallel mode's proved entries |
 
-== docs/deviations.md#L70-L99
-    70  | D52 | `Checker/CompareEntry.lean` (mode 5), `Compiler/AbiCmp.lean` | con-ron's solution's check phase moves its persistent tier to the workers (`freeze_tier`) and back (`thaw_tier`), copying nothing | the solution's jobs read a copy of the frozen arrays (`par_compact(1)`, the parallel mode's buffer) on a separate worker region, which stays resident until the run ends | none on verdicts; on `Init` against itself the compared run's peak RSS is 1.26 GB, con-ron's 0.37 GB, and its instruction count is the same share of two flat runs as con-ron's | compare | by design: the driver's region must stay the twin's driver state (`sF`) while the solution's jobs run, and in-place jobs leave memos and caches the challenge's preparation would read; the buffer route reuses the parallel mode's proved entries |
-    71  
-    72  ## Fixed
-    73  
+== docs/deviations.md#L71-L101
+    71  ## Fixed
+    72  
+    73  - **D51** (fixed by lane compare2): `--compare` takes `--jobs=N` (before or after `--compare`), as con-ron: for N > 1 the harness drives the mode entries (`ca_start_a4`, `ca_start_a5`, the new `ca_start_a7`) and runs both check phases on the flat threaded mode's pool (`run_pool`), covered by `checkerFile_compare_threads_accept` and `checkerFile_compare_threads_verdict_of` under `CmpThreadsRun` (`Final/CmpThreads.lean`).
     74  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
     75  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
     76  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
@@ -2540,6 +2751,8 @@
     97  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
     98  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
     99  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
+   100  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost); four since con-leche #578 (`romgen pins.bin 4`, lane ronsync5).
+   101  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
 
 == scripts/e2e.py#L2-L25
      2  """End-to-end differential testing of the L checker (lane `e2e`, DESIGN.md "End-to-end runs").

@@ -102,6 +102,12 @@ public import ConAgua.Arena.JustifyRef4
 public import ConAgua.Arena.JustifyRef5
 public import ConAgua.Arena.JustifyRef6
 public import ConAgua.Arena.JustifyRef7
+public import ConAgua.Arena.CmpVMates
+public import ConAgua.Arena.CmpVRoots
+public import ConAgua.Arena.CmpVCone
+public import ConAgua.Verdict.CmpVModes
+public import ConAgua.Verdict.CmpVSJobs
+public import ConAgua.Checker.CmpVerdictNv
 public import ConAgua.Checker.CompareStash
 public import ConAgua.Checker.CompareChain
 public import ConAgua.Checker.CompareTwinFacts
@@ -122,6 +128,10 @@ public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
 public import ConAgua.Checker.CmpSJobs
 public import ConAgua.Final.Compare
+public import ConAgua.Final.CmpThreadsL
+public import ConAgua.Checker.CmpThreadsS
+public import ConAgua.Final.CmpThreads
+public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Checker.CompareChain6S
 public import ConAgua.Checker.CompareChain6C

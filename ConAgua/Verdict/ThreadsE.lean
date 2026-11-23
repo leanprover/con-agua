@@ -120,7 +120,7 @@ theorem cjStepE_of {pinsP : List ConLeche.NatOpPinSet} {p : Prog}
       cases h3
       exact hF)
   have h' := RefC.run_err (checkJobs_specE p hP.check_jobs n ⟨m, Locals.init []⟩ j (j + 1))
-    (fun e h0 => ErrClaimV.of_cls0 h0) trivial (JobGL.none hG) h hc
+    (fun e h0 => ErrClaimV.of_cls0 h0) trivial (JobGJ.none hG) h hc
   rw [e1, Nat.add_sub_cancel_left, List.range'_one] at h'
   exact fun hk => twinFailsV_of_sameEnter hS (h' hk)
 
