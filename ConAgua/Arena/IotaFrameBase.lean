@@ -33,21 +33,25 @@ def iotaRA : List TieredArray := checkerWordArrays.filter fun b => memoFreeA [b]
 /-- The `CTL` words they may write: all but the memos' epoch words (`memoFreeC`). -/
 def iotaRC : List Word := ((List.range 1024).map UInt64.ofNat).filter fun x => memoFreeC [x]
 
-/-- The call closure of `iota_rec_of` and `iota_parts_of_at` (computed from the program's call
-graph); `IotaFrameProg.rclosed` says it writes only `iotaRA`, `iotaRC`, so the walk memos are kept
+/-- The call closure of `iota_rec_of`, `iota_parts_of_at` and `iota_parts_at`'s callees but the core
+walks (`cv_lps`, `ctor_levels_at`, `iota_params_at`; computed from the program's call graph); `IotaFrameProg.rclosed` says it writes only `iotaRA`, `iotaRC`, so the walk memos are kept
 (`iota_afr`). -/
 def iotaRFns : List FnName :=
-  ["app_count", "app_fill", "app_find", "app_push", "bvar_find", "bvar_push", "der_b", "der_bv",
-   "e_view", "expr_drop_vars", "expr_drop_vars_list", "expr_get_d", "forall_find", "forall_push",
-   "get_app_args", "get_app_args_f", "get_app_fn", "get_app_fn_f", "if_clear", "if_find", "if_put",
-   "inst_app", "inst_entry", "inst_forall", "inst_go", "inst_lam", "inst_let", "inst_proj",
-   "instantiate1_fast", "intern_app", "intern_bvar", "intern_forall", "intern_lam", "intern_letE",
-   "intern_proj", "intern_sort", "iota_frame", "iota_parts_of_at", "iota_read_major",
-   "iota_rec_of", "is_minor_at", "iw_alloc", "iw_copy", "lam_find", "lam_push", "letE_find",
-   "letE_push", "lf_clear", "lf_find", "lf_put", "lift_app", "lift_entry", "lift_field_doms",
-   "lift_forall", "lift_go", "lift_idx_args", "lift_lam", "lift_let", "lift_proj", "minors_from",
-   "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "motive_level", "pi_result",
-   "pi_result_f", "pi_tele", "pin_word", "proj_find", "proj_push", "sl_cons", "sort_find",
+  ["app_count", "app_fill", "app_find", "app_push", "bvar_find", "bvar_push", "ctor_levels_at",
+   "cv_lps", "der_b", "der_bv", "e_view", "er_copy", "er_to_iw", "expr_drop_vars",
+   "expr_drop_vars_list", "expr_get_d", "forall_find", "forall_push", "get_app_args",
+   "get_app_args_f", "get_app_fn", "get_app_fn_f", "if_clear", "if_find", "if_put", "inst_app",
+   "inst_entry", "inst_forall", "inst_go", "inst_lam", "inst_let", "inst_proj",
+   "instantiate1_fast", "intern_app", "intern_bvar", "intern_forall", "intern_lam",
+   "intern_letE", "intern_ls", "intern_ls_iw", "intern_param", "intern_proj", "intern_sort",
+   "iota_bvars", "iota_frame", "iota_params_at", "iota_parts_of_at", "iota_read_major",
+   "iota_rec_of", "is_minor_at", "iw_alloc", "iw_copy", "iw_pool", "lam_find", "lam_push",
+   "letE_find", "letE_push", "lf_clear", "lf_find", "lf_put", "lift_app", "lift_entry",
+   "lift_field_doms", "lift_forall", "lift_go", "lift_idx_args", "lift_lam", "lift_let",
+   "lift_proj", "limbs_eq", "lit_hash", "ls_find", "ls_match", "ls_push", "minors_from",
+   "mk_app", "mk_forall", "mk_lam", "mk_let", "mk_proj", "motive_level", "param_find",
+   "param_levels", "param_levels_go", "param_push", "pi_result", "pi_result_f", "pi_tele",
+   "pin_word", "pool_room", "proj_find", "proj_push", "sl_cons", "sl_get", "sort_find",
    "sort_push", "spn_to_iw", "strip_pis"]
 
 /-- What the phase-1 refinements need of a program. -/
@@ -91,6 +95,8 @@ structure IotaFrameProg (p : Prog) : Prop where
   intern_param : p.lookup "intern_param" = some internParam
   param_levels_go : p.lookup "param_levels_go" = some paramLevelsGoL
   param_levels : p.lookup "param_levels" = some paramLevelsL
+  cv_lps : p.lookup "cv_lps" = some cvLps
+  ilpf : IlpfF p
   /-- The reading functions' write set: no walk memo (decided on the concrete program). -/
   rclosed : closedA p iotaRA iotaRC iotaRFns = true
 
