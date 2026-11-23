@@ -6,6 +6,13 @@ public import ConAgua.Arena.IndT.Lift
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.EnvDenote
 import ConAgua.Arena.IndexLoops
+public import ConAgua.Arena.IndDeclConstsBlock
+public import ConAgua.Arena.IndT.RecsTemp
+public import ConAgua.Arena.IndInstallSpec.PapW
+public import ConAgua.Arena.StageFlags
+public import ConAgua.Arena.IndPartsSpec.PlW
+import ConAgua.Arena.IndDeclConstsFire
+import ConRon.Bridge.Inductives.Install
 
 @[expose] public section
 
@@ -569,6 +576,126 @@ theorem recsRead_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
   rw [recsReadW.arm1] at hW
   simpa using recsRead_loop P PF hrc hfr hrr' hAk (n + 1) m _ a 0 r rsP hW hI hrs hb
     (by simpa using hrsP) UInt64.zero_le
+
+/-- **`block_reads_at(vis, p)` refines `blockReadsAt fe bs`**, from `StageC` at the entry index:
+the block's constants pushed in place (`cons_block_recs_temp`), every recursor read
+(`recsRead_rel` under `RInv` at the pushed index), the pushes undone and the flags set back. -/
+@[refines ConRon.Arena.blockReadsAt]
+theorem blockReadsAt_rel (P : IotaRelProg p) (PF : IotaFrameProg p) (hP : BlockProg p)
+    (hCb : CbrtLook p) (hEF : EnvFlagsProg p) (hia : p.lookup "iw_alloc" = some iwAlloc)
+    (hr3 : p.lookup "rec3" = some rec3) (hcp : p.lookup "iw_copy" = some iwCopy)
+    (hsn : p.lookup "sl_snoc" = some slSnoc) (hpt : p.lookup "env_pop_temp" = some envPopTempL)
+    (hpa : p.lookup "gen_rec_check_pop_all" = some genRecCheckPopAll)
+    (hesf : p.lookup "env_set_flags" = some envSetFlagsL)
+    (hf : p.lookup "block_reads_at" = some blockReadsAtL)
+    (hrs : p.lookup "recs_read" = some recsReadL)
+    (hrc : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
+    (hAb : AbsKeep p "block_constants") (hAr : AbsKeep p "block_recs")
+    (hAc : AbsKeep p "cons_block_recs_temp") (hOw : ∀ (k : Nat) (vs : List Word) (m₀ : Mem) (r₀ : List Word) (m₁ : Mem),
+      callW p k "recs_read" vs m₀ = some (r₀, m₁) → ownC m₁ = ownC m₀) {n : Nat}
+    {m m' : Mem} {a : AState} {pp : Word} {r : List Word} {bs : BlockShape}
+    {pP : ConLeche.BlockShape} {mp : Std.HashMap EIdx Bool}
+    (hc : callW p n "block_reads_at" [vis, pp] m = some (r, m'))
+    (hC : StageC dn vis fe env m a) (hA : AbsOK m)
+    (hrel : ConRon.Bridge.Inductives.EnvRel env fe a.store)
+    (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsl : ShapeSl m pp) (hmp : maMR m mp)
+    (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some pP) :
+    ∃ x a', (blockReadsAt fe bs).run a = .ok (x, a') ∧ StageR (r.tail.headD 0) x.2 m' a' ∧
+      IWGrow m m' ∧ decW0B m' r x.1 := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (blockReadsAt_specW p hf n _ vis pp) hc
+  rcases n with _ | n
+  · rw [blockReadsAtW.eq_1] at hW; cases hW
+  rw [blockReadsAtW.arm1] at hW
+  have hT := hC.stageT.twin
+  have hok := hC.check
+  -- the block's constants
+  rcases c1 : callW p n "block_constants" [pp] m with _ | ⟨r1, m1⟩
+  · rw [c1, blockReadsAtW.k_block_constants.none] at hW; cases hW
+  rw [c1, blockReadsAtW.k_block_constants.arm1] at hW
+  rcases n with _ | n
+  · exact (callW_zero_false c1).elim
+  obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (bk_spec p hP.bk (n + 1) _ pp) c1
+  obtain ⟨cis, a1, h1, hd1, hb1, hS1, hg1⟩ := bkW_ok hP hC.stage hq hsl.1 hmp hT.readL hT.den.sort hW1
+  obtain ⟨p1, -, hcs⟩ := ConRon.Bridge.Inductives.blockConstants_run hok.state hok.pins hok.caches.readL hsh h1
+  have k1 : ConRon.Bridge.CheckOK false env fe a1 := ConRon.Bridge.CheckOK.monoF hok p1.ok p1.ext p1.cframe p1.pins
+  have hA1 := hAb _ _ _ _ _ c1 hA
+  -- the recursors
+  have hqt : decBS (truncM m) pp.toNat = some bs := hq
+  obtain ⟨-, hrecs, -⟩ := decBS_some hqt
+  obtain ⟨o, l, ho, hl, hdr, hob⟩ := partsAt decRS_mono hrecs
+  obtain ⟨hoW, ho2⟩ := iwRd (o := pp) (w := 2) (by simpa using ho)
+  obtain ⟨hlW, hl3⟩ := iwRd (o := pp) (w := 3) (by simpa [Nat.add_assoc] using hl)
+  have e2 : rdW (s1.mem.arr64 IW) (pp + 2) = o := by
+    rw [rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp at ho2 ⊢; omega)]; exact UInt64.toNat_inj.mp hoW
+  have e3 : rdW (s1.mem.arr64 IW) (pp + 3) = l := by
+    rw [rdW_iw_grow hg1 (by rw [UInt64.toNat_add]; simp at hl3 ⊢; omega)]; exact UInt64.toNat_inj.mp hlW
+  rw [e2, e3] at hW
+  rcases c2 : callW p (n + 1) "block_recs" [pp, o, l] s1.mem with _ | ⟨r2, m2⟩
+  · rw [c2, blockReadsAtW.k_block_recs.none] at hW; cases hW
+  rw [c2, blockReadsAtW.k_block_recs.arm1] at hW
+  obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (dbrs_spec hP.toRecsProg (n + 1) _ pp o l) c2
+  obtain ⟨recs, a2, h2, hd2, hb2, hS2, hg2⟩ := brsW_ok hP.toRecsProg pp bs vis fe (n + 1) _ _ a1 o l bs.recs _
+    hS1 (hq.grow (decBS_mono _) hg1) (PSlR0.grow decRS_mono ⟨hdr, hob⟩ hg1) hW2
+  obtain ⟨p2, -, hrecsP⟩ := ConRon.Bridge.Inductives.blockRecs_run bs.recs pP.recs k1.state k1.pins
+    (ConRon.Bridge.Inductives.dShape_ext p1.ext _ _ hsh)
+    (ConRon.Bridge.Inductives.dRec_ext.list p1.ext _ _ (ConRon.Bridge.Inductives.dShape_inv hsh).2.1) h2
+  have k2 : ConRon.Bridge.CheckOK false env fe a2 := ConRon.Bridge.CheckOK.monoF k1 p2.ok p2.ext p2.cframe p2.pins
+  have hA2 := hAr _ _ _ _ _ c2 hA1
+  have hcs2 := ConRon.Bridge.denoteCIList_mono p2.ext _ _ hcs
+  have hrel2 : ConRon.Bridge.Inductives.EnvRel env fe a2.store := hrel.mono (p1.ext.trans p2.ext)
+  -- the pushes
+  rcases c3 : callW p (n + 1) "cons_block_recs_temp" [r1.headD 0, r1.tail.headD 0, vis, 0, 0] s2.mem
+    with _ | ⟨r3, m3⟩
+  · rw [c3, blockReadsAtW.k_cons_block_recs_temp.none] at hW; cases hW
+  rw [c3, blockReadsAtW.k_cons_block_recs_temp.arm1] at hW
+  obtain ⟨hS3, hg3, hpv3, cs3, hcs3, hpop3⟩ := cbrt_call hCb hEF hEF.rowGet hia hr3 hcp hsn c3 hS2
+    (decPL_ci_grow hg2 hb1 hd1) (Nat.le_trans hb1 hg2.iw)
+  have hA3 := hAc _ _ _ _ _ c3 hA2
+  have hE := ConRon.Bridge.Inductives.BT.consBlockRecsTemp_ok k2.state cis _ fe env [] hcs2
+    (hrel2.ifenv) hrel2.gate hrel2.stored
+  generalize hfrr : ConRon.Arena.consBlockRecsTemp cis fe [] = FR at hS3 hpv3 hE
+  obtain ⟨feR, prevs⟩ := FR
+  have hI3 : RInv dn (r3.headD 0) feR env fe _ m3 a2 :=
+    ⟨hS3, k2, hE, hA3, fun k x e => (p1.ext.trans p2.ext).lss.ls.ns k x (hC.mem.dnN k x e)⟩
+  -- the recursors read
+  rcases c4 : callW p (n + 1) "recs_read" [r3.headD 0, r2.headD 0, r2.tail.headD 0] m3 with _ | ⟨r4, m4⟩
+  · rw [c4, blockReadsAtW.k_recs_read.none] at hW; cases hW
+  rw [c4, blockReadsAtW.k_recs_read.arm1] at hW
+  obtain ⟨b4, a4, h4, hI4, hg4, hd4, k4⟩ := recsRead_rel P PF hrs hrc hfr hrr' hAk c4 hI3
+    (decPL_ci_grow hg3 hb2 hd2) (Nat.le_trans hb2 hg3.iw) hrecsP
+  -- the pushes undone
+  rcases c5 : callW p (n + 1) "gen_rec_check_pop_all" [r3.headD 0, r3.tail.headD 0, r3.tail.tail.headD 0] m4
+    with _ | ⟨r5, m5⟩
+  · rw [c5, blockReadsAtW.k_gen_rec_check_pop_all.none] at hW; cases hW
+  rw [c5, blockReadsAtW.k_gen_rec_check_pop_all.arm1] at hW
+  obtain ⟨s5, rfl, -, hS5, hg5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (genRecCheckPopAll_refines hEF.rowSet hpt hpa (n + 1) _ a4 (r3.headD 0) feR _ _ prevs cs3 hI4.stage
+      (hpv3.grow hg4) (hcs3.grow hg4) (by rw [hOw _ _ _ _ _ c4]; exact hpop3)) c5
+  -- the flags set back
+  rcases c6 : callW p (n + 1) "env_set_flags" [rdW (m.arr64 CTL) 160, rdW (m.arr64 CTL) 161] s5.mem
+    with _ | ⟨r6, m6⟩
+  · rw [c6, blockReadsAtW.k_env_set_flags.none] at hW; cases hW
+  rw [c6, blockReadsAtW.k_env_set_flags.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨s6, hs6, -, hm6, hE6⟩ := triple_of_callW (s₀ := ⟨s5.mem, Locals.init []⟩)
+    (envSetFlags_refines hesf (n + 1) _ (r5.headD 0) _ _ hS5.check.env
+      (show 161 < (s5.mem.arr64 CTL).size by have := hS5.iw.ctl; omega)) c6
+  have hE0 := hC.stage.check.env
+  rw [← hE0.natLit, ← hE0.strLit] at hE6
+  rw [hm6] at hs6 hE6
+  obtain ⟨hS6, hg6⟩ := StageR.of_flags hS5 hE6
+  rw [hs6] at hS6 hg6
+  refine ⟨(b4, (prevs.foldr (fun (x : NIdx × Option IConstantInfo) acc => acc.popTemp x.1 x.2) feR).setFlags
+    fe.natLit fe.strLit), a4, ?_, by simpa using hS6, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans hg6)))), ?_⟩
+  · simp only [blockReadsAt]
+    rw [StateT.run_bind, h1, except_ok_bind, StateT.run_bind, h2, except_ok_bind, hfrr]
+    dsimp only
+    rw [StateT.run_bind, h4, except_ok_bind]
+    rfl
+  · exact ⟨hd4.1, hd4.2⟩
 
 end rule
 
