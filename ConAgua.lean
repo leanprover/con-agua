@@ -105,3 +105,4 @@ public import ConAgua.Arena.JustifyRef7
 public import ConAgua.Arena.JobsCrs
 public import ConAgua.Checker.CrsProgPB
 public import ConAgua.Checker.CrsKeepPB
+public import ConAgua.Checker.AsmTailEq
