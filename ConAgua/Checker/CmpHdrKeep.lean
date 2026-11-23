@@ -235,7 +235,7 @@ theorem check_mode2_hk (n : Nat) (s₀ : St) :
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [·] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [] ·)]
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [·] ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLocs_cons, St.setLocs_nil, Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | (simp_all (config := { decide := true }); done)

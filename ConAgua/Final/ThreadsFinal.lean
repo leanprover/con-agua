@@ -88,7 +88,7 @@ theorem entry1_buf (b pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK
   have hBm : B = bufOf m := by rw [hB, bufOf, hm₁, (parCompactMem_hdr hok).2.1]
   have hs := bufOf_size hok hlt
   have hoffs := buf_offs hok hlt
-  have hFl : frozen.length = 63 := frozen_length
+  have hFl := frozen_length
   have hL : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
   refine ⟨by rw [hlen, hF.size, hs.2]; exact hoffs.2, by rw [hlen, hs.2]; omega,
     fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
@@ -278,7 +278,7 @@ theorem threadsAcc_runs [Host] (k0 : Nat) (hcode : Code checkerFile k0) (dm₀ :
           ⟨⟨hH.need, hH.fits, hH.bend, hhdr, hent', hdisj, hH.apart⟩, hH.hB, hH.hmap, hH.hra, hH.hcs,
             hH.hcs24, hH.hcs8⟩
         have hEv := abiB_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerProgI_wf MODE PLO PHI OUT HDRF
-          CTLF 138 frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+          CTLF hdrHw frozenIdsL parOwnedL (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
           (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) B r (t.dm i) (t.ra i) hbc
           (by rw [hcx]; exact hr) checker_bufMinOk
         rw [hdi, hcx] at hEv
@@ -317,7 +317,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hc := code_of_checkerFile_par hcode
   have hnres : 1 ≤ checkerTab.nres := by decide
   -- entry 1
-  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF 138
+  have hE := abiA_outcome checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok checkerTab_abiIO checkerProgI_wf MODE PLO PHI OUT HDRF CTLF hdrHw
     frozenIdsL parOwnedL (by decide) k0 hc L.Checker.checkL checkerProg_lookup_check (by decide) b pb dm₀ ra₀ hR.call₀
   obtain ⟨⟨-, hRR₀, -, hout₀⟩, hsz⟩ := hR.ret₀ _ hE (fun s h => h.1.1)
   have hne : st₀.data.regs.rdx ≠ 1 := by rw [hR.rdx₀]; decide
@@ -350,7 +350,7 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
     simp only [abiLayout_tab] at this
     rw [abiLayout_b64 _ _ _ _ _ _ hOUTp, abiOff_slot (by rw [checkerTab.wAt_pos64 hOUT]; decide)] at this
     simpa only [outAddr, abiSlot64] using this
-  have hH : hdrW = 136 := by decide
+  have hH := hdrW_eq
   have hBsz : B.size = ((m₁.arr64 OUT).getD 1 0).toNat := by
     obtain ⟨w, hw, hwB⟩ := hR.buflen
     have h1 := hget 1 (by omega)
@@ -370,8 +370,8 @@ theorem threadsRun_twinAcceptsPooled_regs [Host] (k0 : Nat) (hcode : Code checke
   have hhdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size := by
     intro i hi
     have : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
-    have : frozen.length = 63 := frozen_length
-    have := h126; have : hdrW = 136 := by decide
+    have  := frozen_length
+    have := h126; have  := hdrW_eq
     omega
   have hdisj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
       (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨

@@ -48,11 +48,11 @@ theorem checkerFile_compare_runs_regs [Host] (k0 : Nat) (hcode : Code checkerFil
     (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra) :
     Ev (CmpPost dm ra
-        (CmpAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL bC bS pb)
-        (CmpErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL bC bS pb))
+        (CmpAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL bC bS pb)
+        (CmpErr checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL bC bS pb))
       dm (label abiCompareL) :=
   cmp_outcome_regs checkerProgI checkerProg checkerProgI_refines checkerTab checkerTab_abiOk checkerX_ok
-    checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT HDRF CTLF 138 frozenIdsL parOwnedL
+    checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide +kernel)
     checker_seqParamsOk checker_bufMinOk parOwnedL_not_frozen (by decide +kernel)
     (fun a ha => List.all_eq_true.mp frozenIdsL_dom a ha) (by decide +kernel) k0

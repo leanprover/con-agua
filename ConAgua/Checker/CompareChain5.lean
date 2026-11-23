@@ -289,7 +289,7 @@ theorem check_dispatch5 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Na
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
     (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
-    (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c3" [] ·)]
+    (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c3" [·] ·)]
   all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
     St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
   all_goals grind [lang_grind]
