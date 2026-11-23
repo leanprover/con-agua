@@ -171,8 +171,7 @@ milestones restated by hand, and the build failures were few (11 modules at the 
 * `diff-e2e --refs --no-cache --tests` at con-leche bc667610 (con-ron 8021ddac built in
   `_tmp/ref/con-ron-8021`; con-ron-lean-twin at this branch): **748/748 agree** (441 accepted,
   307 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF 0; 18 NOT PORTED (`--compare`), 7 SKIPPED
-  (D49). con-leche's expectations grew from 740 to 748 file rows plus the 18 argument rows; the
-  new rows are #622's ι-rule rejects, #501's reserved names, #580's `succ` tower, `lit_hash_low_bits`.
+  (D49). con-leche's expectations grew from 740 to 748 file rows, plus the 18 argument rows.
 * `e2e.py --latest ''` (that con-ron): 827 fixtures, all agree with con-ron-lean-twin (482
   accept, 57 decline, 286 reject, 2 time out in both).
 * Census: 100 %, zero `sorry` sources (the 2 bad links of `topLitS` were there before).
