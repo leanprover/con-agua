@@ -85,3 +85,4 @@ public import ConAgua.Arena.JustifyIface
 public import ConAgua.Arena.JustifySide
 public import ConAgua.Arena.JustifySideModels
 public import ConAgua.Arena.JustifySideRefMove
+public import ConAgua.Arena.JustifySideRefSide

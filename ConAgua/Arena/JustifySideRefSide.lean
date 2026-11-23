@@ -382,4 +382,94 @@ theorem sideRecord_ok {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' : 
   | opaqueDecl cv v =>
     exact sideRecord_val hP hS hmc hD hk hd hr.2.1 hr.2.2 (.inr (.inr (by rw [e1, hr.1]))) h
 
+/-! ## `side_records` -/
+
+theorem cur_get {out : List IDeclaration} {ds : Array IDeclaration} {k : Nat} (hl : out.length = k)
+    (hk : k < ds.size) :
+    (out ++ ds.toList.drop k).toArray[k]'(by simp; omega) = ds[k] := by
+  simp only [List.getElem_toArray]
+  rw [List.getElem_append_right (by omega)]
+  simp [hl]
+
+theorem cur_set {out : List IDeclaration} {ds : Array IDeclaration} {k : Nat} (hl : out.length = k)
+    (hk : k < ds.size) (d' : IDeclaration) :
+    (out ++ ds.toList.drop k).toArray.set! k d' = (out ++ [d'] ++ ds.toList.drop (k + 1)).toArray := by
+  apply Array.toList_inj.mp
+  rw [Array.set!_eq_setIfInBounds, Array.toList_setIfInBounds]
+  simp only [List.toList_toArray]
+  rw [List.set_append_right _ _ (by omega), hl, Nat.sub_self]
+  rw [List.drop_eq_getElem_cons (by simpa using hk)]
+  simp
+
+theorem sideRecordsLoop_ok {p : Prog} (hP : SideProg p) {cnt : Word} {vis : Word} {fe : IFEnv}
+    {a : AState} {ds : Array IDeclaration} (hcnt : cnt.toNat = ds.size) {m₀ : Mem} :
+    ∀ (n : Nat) (m m' : Mem) (k : Word) (out : List IDeclaration),
+      out.length = k.toNat → k.toNat ≤ ds.size →
+      DeclsF (m.arr64 DECL) (m.arr64 DLP) (out ++ ds.toList.drop k.toNat).toArray →
+      StageR vis fe m a → (∃ mp, mcMR m mp) → MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m₀ m →
+      sideRecordsW.loop1 p n m cnt k = some m' →
+      ∃ res, (sideRecordsGo out (ds.toList.drop k.toNat)).run a = .ok (res, a) ∧
+        DeclsF (m'.arr64 DECL) (m'.arr64 DLP) res.toArray ∧ StageR vis fe m' a ∧
+        (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m₀ m' := by
+  intro n
+  induction n with
+  | zero => intro m m' k out _ _ _ _ _ _ h; rw [sideRecordsW.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m m' k out hl hle hD hS hmc hf h
+    rw [sideRecordsW.loop1.eq_2] at h
+    by_cases g : k < cnt
+    · rw [ite_eq_left g] at h
+      have hlt : k.toNat < ds.size := by rw [← hcnt]; exact g
+      cases h1 : callW p n "side_record" [k] m with
+      | none => rw [h1] at h; simp at h
+      | some q =>
+      obtain ⟨ρ, m₁⟩ := q
+      rw [h1, L.Ind.bW_some] at h
+      obtain ⟨s1, e1, -, w1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+        (sideRecord_specW p hP.side_record n _ k) h1
+      rw [e1] at w1
+      have hk' : k.toNat < (out ++ ds.toList.drop k.toNat).toArray.size := by simp; omega
+      obtain ⟨d', hrun, hD1, hS1, hmc1, hf1⟩ := sideRecord_ok hP hS hmc hD hk' w1
+      rw [cur_get hl hlt] at hrun
+      rw [cur_set hl hlt] at hD1
+      have e : (k + 1).toNat = k.toNat + 1 := by
+        rw [UInt64.toNat_add]; have := UInt64.toNat_lt cnt; simp; omega
+      obtain ⟨res, hgo, hR⟩ := ih m₁ m' (k + 1) (out ++ [d']) (by simp [hl, e]) (by rw [e]; omega)
+        (by rw [e]; exact hD1) hS1 hmc1 (hf.trans hf1) h
+      refine ⟨res, ?_, hR⟩
+      rw [e] at hgo
+      rw [List.drop_eq_getElem_cons (by simpa using hlt)]
+      simp only [sideRecordsGo, StateT.run_bind, Array.getElem_toList, hrun]
+      exact hgo
+    · rw [ite_eq_right g] at h; cases h
+      have e : k.toNat = ds.size := by
+        have := UInt64.not_lt.mp g; have := UInt64.le_iff_toNat_le.mp this; omega
+      rw [e, List.drop_of_length_le (by simp)] at hD ⊢
+      exact ⟨out, rfl, by simpa using hD, hS, hmc, hf⟩
+
+/-- **`side_records(cnt)` refines `sideRecordsGo`** over the front's `cnt` records: a returning
+run is the twin's (which keeps the state), and `DECL` holds its result. -/
+@[refines ConRon.Arena.sideRecordsGo ConRon.Arena.sideRecord ConRon.Arena.sideRecordVal]
+theorem sideRecords_ref {p : Prog} (hP : SideProg p) {n : Nat} {cnt : Word} {m m' : Mem}
+    {r : List Word} {vis : Word} {fe : IFEnv} {a : AState} {ds : Array IDeclaration}
+    (hc : callW p n "side_records" [cnt] m = some (r, m')) (hS : StageR vis fe m a)
+    (hmc : ∃ mp, mcMR m mp) (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds) (hcnt : cnt.toNat = ds.size) :
+    ∃ res, (sideRecordsGo [] ds.toList).run a = .ok (res, a) ∧
+      DeclsF (m'.arr64 DECL) (m'.arr64 DLP) res.toArray ∧ StageR vis fe m' a ∧
+      (∃ mp, mcMR m' mp) ∧ MemFrame [DECL, MCM] [mcSch.cs, mcSch.cs + 1] m m' := by
+  obtain ⟨s', e', -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (sideRecords_specW p hP.side_records n _ cnt) hc
+  rw [e'] at hw
+  rcases n with _ | n
+  · simp [sideRecordsW] at hw
+  simp only [sideRecordsW] at hw
+  cases hl : sideRecordsW.loop1 p (n + 1) m cnt 0 with
+  | none => rw [hl] at hw; simp [sideRecordsW.k_loop1] at hw
+  | some m₁ =>
+    rw [hl] at hw; simp only [sideRecordsW.k_loop1, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨-, rfl⟩ := hw
+    have := sideRecordsLoop_ok hP hcnt (n + 1) m m₁ 0 [] rfl (Nat.zero_le _) (by simpa using hD) hS hmc
+      (MemFrame.refl _ _ _) hl
+    simpa using this
+
 end L.Arena
