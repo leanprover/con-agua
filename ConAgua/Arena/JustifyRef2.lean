@@ -25,6 +25,7 @@ written at `CWK[h‥h + k)`, nothing else. -/
 theorem conePush_loop : ∀ (n : Nat) (m : Mem) (k h h' : Word) (m' : Mem),
     conePushW.loop1 n m k h = some (h', m') →
     h'.toNat = h.toNat + k.toNat ∧ MemFrame [CWK] [] m m' ∧
+    (h.toNat ≤ (m.arr64 CWK).size → h'.toNat ≤ (m.arr64 CWK).size) ∧
     ∀ i, rdN (m'.arr64 CWK) i = if h.toNat ≤ i ∧ i < h.toNat + k.toNat then
       rdN (m.arr64 NACC) (k.toNat - 1 - (i - h.toNat)) else rdN (m.arr64 CWK) i := by
   intro n
@@ -37,7 +38,7 @@ theorem conePush_loop : ∀ (n : Nat) (m : Mem) (k h h' : Word) (m' : Mem),
       simp only [Option.some.injEq, Prod.mk.injEq] at e
       obtain ⟨rfl, rfl⟩ := e
       subst hk
-      refine ⟨by simp, MemFrame.refl _ _ _, fun i => ?_⟩
+      refine ⟨by simp, MemFrame.refl _ _ _, id, fun i => ?_⟩
       split
       · rename_i hc; simp at hc; omega
       · rfl
@@ -55,9 +56,11 @@ theorem conePush_loop : ∀ (n : Nat) (m : Mem) (k h h' : Word) (m' : Mem),
       rw [UInt64.toNat_add]; simp; omega
     have hk1 : (k - 1).toNat = k.toNat - 1 := by
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    obtain ⟨e1, hf, hr⟩ := ih _ _ _ _ _ e
+    obtain ⟨e1, hf, hro, hr⟩ := ih _ _ _ _ _ e
     refine ⟨by rw [e1, hh1, hk1]; omega,
-      (MemFrame.set64 m CWK (by decide) _ _).trans hf, fun i => ?_⟩
+      (MemFrame.set64 m CWK (by decide) _ _).trans hf, fun _ => ?_, fun i => ?_⟩
+    · have := hro (by rw [hh1, L.Mem.size64_set64]; omega)
+      rwa [L.Mem.size64_set64] at this
     rw [hr i, hh1, hk1]
     simp only [rdN_set64]
     have hne : ¬ ((NACC : TieredArray) = CWK) := by decide
