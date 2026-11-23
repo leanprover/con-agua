@@ -102,6 +102,15 @@ structure NeedsProg (p : Prog) : Prop where
   /-- The walk writes only its own arrays and control words (decided on the concrete program). -/
   closed : closedA p ndA ndC ndFns = true
 
+/-! ## Continuations -/
+
+/-- A continuation that passes `none` on returned `some`: its argument was `some`. -/
+theorem opt_some {α β : Type} {K : Option α → Option β} {x : Option α} {y : β} (h : K x = some y)
+    (hK : K none = none) : ∃ q, x = some q ∧ K (some q) = some y := by
+  cases x with
+  | none => rw [hK] at h; cases h
+  | some q => exact ⟨q, rfl, h⟩
+
 section steps
 variable {p : Prog} (P : NeedsProg p) {vis : Word} {fe : IFEnv} {a : AState}
 include P
@@ -336,6 +345,120 @@ theorem needsNamesIw_step {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} {x
   simp only [nidxAppend, List.drop_zero, Nat.sub_zero, List.take_length]
   exact needsNamesIwLoop P (n + 1) m _ o l 0 x ns e hx hsz (by rw [UInt64.le_iff_toNat_le]; simp)
     (by simpa using hns)
+
+/-! ## `lit_needs` -/
+
+/-- A `pin_at(k)` call under the stage: the memory kept, a handle, the twin's `pinAt k`. -/
+theorem pinCall {n : Nat} {m m' : Mem} {k : Word} {r : List Word}
+    (hc : callW p n "pin_at" [k] m = some (r, m')) (hS : StageR vis fe m a) :
+    m = m' ∧ HW (r.headD 0) ∧ (pinAt k.toNat).run a = .ok (decI (r.headD 0), a) := by
+  obtain ⟨s', rfl, hm, -, hlt, hrun⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinAt_refines p P.pin_at n _ a hS.check.pins k) hc
+  exact ⟨hm.symm, hlt, hrun⟩
+
+omit P in
+/-- A literal `e_view` returned for: the view checks passed. -/
+theorem viewOK_lit {m : Mem} {h : Word} (hne : eViewW m h ≠ []) (hg : tagW h = 8) :
+    viewOK m h LIT := by
+  unfold eViewW at hne
+  simp only [hg] at hne
+  refine ⟨fun hc => hne (by simp [hc]), UInt64.not_le.mp fun hle => hne (by simp [hle])⟩
+
+omit P in
+/-- The literal's kind word across the walk's writes. -/
+theorem tfld_nd {m m' : Mem} (hf : MemFrame ndA ndC m m') (t i f : Word) :
+    tfld m' LIT t i f = tfld m LIT t i f := by
+  simp only [tfld]; rw [hf.tier _ (by decide) (by decide) (by decide)]
+
+/-- **`lit_needs(h)` refines `litNeeds`** at the literal `h` views as (`e_view` returned its
+words, tag `8`). -/
+theorem litNeeds_step {n : Nat} {m m' : Mem} {h : Word} {r : List Word} {x : NeedsSt}
+    {l : ConLeche.Literal} (hc : callW p n "lit_needs" [h] m = some (r, m'))
+    (hS : StageR vis fe m a) (hx : NdR m x) (hh : HW h) (hne : eViewW m h ≠ []) (hg : tagW h = 8)
+    (hv : a.store.view (decE h) = some (.lit l)) :
+    ∃ acc, (litNeeds l x.acc).run a = .ok (acc, a) ∧ NdR m' ⟨x.seen, acc⟩ ∧
+      MemFrame ndA ndC m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (litNeeds_specW p P.lit n _ h) hc
+  rcases n with _ | n
+  · rw [litNeedsW.eq_1] at hW; cases hW
+  rw [litNeedsW.arm1] at hW
+  replace hW := opt_some hW rfl; obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW; rw [litNeedsW.k_pin_at.arm1] at hW
+  obtain ⟨rfl, w1, e1⟩ := pinCall P c1 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW; rw [litNeedsW.k_pin_at_2.arm1] at hW
+  obtain ⟨rfl, w2, e2⟩ := pinCall P c2 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW; rw [litNeedsW.k_pin_at_3.arm1] at hW
+  obtain ⟨rfl, w3, e3⟩ := pinCall P c3 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW; rw [litNeedsW.k_pin_at_4.arm1] at hW
+  obtain ⟨rfl, w4, e4⟩ := pinCall P c4 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r5, m5⟩, c5, hW⟩ := hW; rw [litNeedsW.k_pin_at_5.arm1] at hW
+  obtain ⟨rfl, w5, e5⟩ := pinCall P c5 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r6, m6⟩, c6, hW⟩ := hW; rw [litNeedsW.k_pin_at_6.arm1] at hW
+  obtain ⟨rfl, w6, e6⟩ := pinCall P c6 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r7, m7⟩, c7, hW⟩ := hW; rw [litNeedsW.k_pin_at_7.arm1] at hW
+  obtain ⟨rfl, w7, e7⟩ := pinCall P c7 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r8, m8⟩, c8, hW⟩ := hW; rw [litNeedsW.k_pin_at_8.arm1] at hW
+  obtain ⟨rfl, w8, e8⟩ := pinCall P c8 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r9, m9⟩, c9, hW⟩ := hW; rw [litNeedsW.k_pin_at_9.arm1] at hW
+  obtain ⟨rfl, w9, e9⟩ := pinCall P c9 hS
+  replace hW := opt_some hW rfl; obtain ⟨⟨r10, m10⟩, c10, hW⟩ := hW; rw [litNeedsW.k_pin_at_10.arm1] at hW
+  obtain ⟨rfl, w10, e10⟩ := pinCall P c10 hS
+  have hG : litGuardNames.run a = .ok ([decI (r1.headD 0), decI (r2.headD 0), decI (r3.headD 0),
+      decI (r4.headD 0), decI (r5.headD 0), decI (r6.headD 0), decI (r7.headD 0),
+      decI (r8.headD 0), decI (r9.headD 0), decI (r10.headD 0)], a) := by
+    simp only [litGuardNames, pinNat, pinNatZero, pinNatSucc, pinString, pinStringOfList, pinList,
+      pinListNil, pinListCons, pinChar, pinCharOfNat, StateT.run_bind]
+    simp only [PIN_NAT, PIN_NAT_ZERO, PIN_NAT_SUCC, PIN_STRING, PIN_STRING_OF_LIST, PIN_LIST,
+      PIN_LIST_NIL, PIN_LIST_CONS, PIN_CHAR, PIN_CHAR_OF_NAT] at *
+    simp only [UInt64.reduceToNat] at e1 e2 e3 e4 e5 e6 e7 e8 e9 e10
+    simp only [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, except_ok_bind]; rfl
+  replace hW := opt_some hW rfl; obtain ⟨⟨q1, n1⟩, d1, hW⟩ := hW; rw [litNeedsW.k_needs_name.arm1] at hW
+  obtain ⟨hx1, f1⟩ := needsName_step P d1 hx w1
+  replace hW := opt_some hW rfl; obtain ⟨⟨q2, n2⟩, d2, hW⟩ := hW; rw [litNeedsW.k_needs_name_2.arm1] at hW
+  obtain ⟨hx2, f2⟩ := needsName_step P d2 hx1 w2
+  replace hW := opt_some hW rfl; obtain ⟨⟨q3, n3⟩, d3, hW⟩ := hW
+  obtain ⟨hx3, f3⟩ := needsName_step P d3 hx2 w3
+  have hf3 := f1.trans (f2.trans f3)
+  have hR := hS.check.arena.base
+  obtain ⟨hstr, hnat⟩ := view_lit_kind m a hR h hh (viewOK_lit hne hg) hg
+  rw [← tfld_nd hf3] at hstr hnat
+  by_cases hk : tfld n3 LIT (tierW h) (idxW h) 0 = 1
+  · obtain ⟨str, hs⟩ := hstr hk
+    rw [hv] at hs; cases hs
+    rw [litNeedsW.k_needs_name_3.arm2 _ _ _ _ _ _ _ _ _ _ _ _ hk] at hW
+    replace hW := opt_some hW rfl; obtain ⟨⟨q4, n4⟩, d4, hW⟩ := hW; rw [litNeedsW.k_needs_name_4.arm1] at hW
+    obtain ⟨hx4, f4⟩ := needsName_step P d4 hx3 w4
+    replace hW := opt_some hW rfl; obtain ⟨⟨q5, n5⟩, d5, hW⟩ := hW; rw [litNeedsW.k_needs_name_5.arm1] at hW
+    obtain ⟨hx5, f5⟩ := needsName_step P d5 hx4 w5
+    replace hW := opt_some hW rfl; obtain ⟨⟨q6, n6⟩, d6, hW⟩ := hW; rw [litNeedsW.k_needs_name_6.arm1] at hW
+    obtain ⟨hx6, f6⟩ := needsName_step P d6 hx5 w6
+    replace hW := opt_some hW rfl; obtain ⟨⟨q7, n7⟩, d7, hW⟩ := hW; rw [litNeedsW.k_needs_name_7.arm1] at hW
+    obtain ⟨hx7, f7⟩ := needsName_step P d7 hx6 w7
+    replace hW := opt_some hW rfl; obtain ⟨⟨q8, n8⟩, d8, hW⟩ := hW; rw [litNeedsW.k_needs_name_8.arm1] at hW
+    obtain ⟨hx8, f8⟩ := needsName_step P d8 hx7 w8
+    replace hW := opt_some hW rfl; obtain ⟨⟨q9, n9⟩, d9, hW⟩ := hW; rw [litNeedsW.k_needs_name_9.arm1] at hW
+    obtain ⟨hx9, f9⟩ := needsName_step P d9 hx8 w9
+    replace hW := opt_some hW rfl; obtain ⟨⟨q10, n10⟩, d10, hW⟩ := hW
+    rw [litNeedsW.k_needs_name_10.arm1] at hW
+    obtain ⟨hx10, f10⟩ := needsName_step P d10 hx9 w10
+    obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [← e]
+    refine ⟨x.acc ++ [decI (r1.headD 0), decI (r2.headD 0), decI (r3.headD 0),
+      decI (r4.headD 0), decI (r5.headD 0), decI (r6.headD 0), decI (r7.headD 0),
+      decI (r8.headD 0), decI (r9.headD 0), decI (r10.headD 0)], ?_, ?_, hf3.trans (f4.trans (f5.trans (f6.trans (f7.trans (f8.trans (f9.trans f10))))))⟩
+    · simp only [litNeeds, StateT.run_bind, hG, except_ok_bind]; rfl
+    · simpa [NeedsSt.name, nidxAppend] using hx10
+  · rw [litNeedsW.k_needs_name_3.arm1 _ _ _ _ _ _ _ _ _ _ _ _ hk] at hW
+    obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [← e]
+    obtain ⟨l', hl', hns⟩ := hnat hk
+    rw [hv] at hl'; cases hl'
+    cases l with
+    | strVal str => exact absurd rfl (hns str)
+    | natVal N =>
+    refine ⟨x.acc ++ [decI (r1.headD 0), decI (r2.headD 0), decI (r3.headD 0)], ?_, ?_, hf3⟩
+    · simp only [litNeeds, StateT.run_bind, hG, except_ok_bind]; rfl
+    · simpa [NeedsSt.name, nidxAppend] using hx3
 
 end steps
 
