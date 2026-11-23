@@ -2,7 +2,14 @@ module
 
 public import ConAgua.Checker.CompareTwinFacts
 import ConAgua.Arena.GrindAttr
+import ConAgua.Checker.RomProgInit
+import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.L.GrindAttr
+import all ConAgua.Checker.Entry
+import all ConAgua.Checker.CompareEntry
+import ConAgua.Checker.CheckARun
+meta import ConAgua.Checker.LoopProgTac
+import ConAgua.Checker.LoopProgTac
 
 @[expose] public section
 
@@ -182,5 +189,196 @@ theorem pinsStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hp
       ⟨rfl, PinsPre.cmp hpx, h6⟩, fun _ m' ⟨⟨pins, ipins, sE, hE, h7⟩, hf⟩ =>
         ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, pins, ipins, sE, hpx, hE, h7,
           hst.frame hf (by decide +kernel) (by decide +kernel)⟩⟩
+
+/-! ## The solution's index build -/
+
+/-- **The compared run's twin up to the solution's index**: `TwinComparesAccepts`' first states. -/
+structure PhaseS (bC bS : ByteArray) where
+  pins : List ConLeche.NatOpPinSet
+  sA : AState
+  pre : PreludeIx
+  sB : AState
+  rC : ParseResultD
+  sC : AState
+  rS : ParseResultD
+  sC' : AState
+  dsS : Array IDeclaration
+  sD : AState
+  ipins : List INatOpPinSet
+  sE : AState
+  IS : IStreamIndex
+  sF : AState
+  pfx : CmpPfx2 bC bS sA pre sB rC sC rS sC' dsS sD
+  pinsR : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE)
+  idx : buildIndex dsS sE = .ok (.ok IS, sF)
+
+/-- **What an index build leaves** (`FoldAt` at explicit twin values): `R7` at the memory `m₇`
+before the build, `BuildR` at the built index after it, the record pool's prefix kept, and the
+build's write set. -/
+structure FoldOn (b pb : ByteArray) (sz : TieredArray → Nat) (ds : Array IDeclaration)
+    (ipins : List INatOpPinSet) (sE : AState) (I : IStreamIndex) (sF : AState) (m₇ m : Mem) : Prop where
+  r7 : R7 (loadMem b pb sz) m₇ pb ds ipins sE
+  build : BuildR (dnOf sE.store) ds m sF I
+  frozen : FrozenR m I
+  fsize : I.firsts.size = ds.size
+  grow : BKeep m₇ m
+  frame : MemFrame biA biC m₇ m
+  bytes : m.bytes = m₇.bytes
+
+/-- After the solution's index build: the twin's phase, `FoldOn` and the challenge's records. -/
+def FS (bC bS pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
+  ∃ (PS : PhaseS bC bS) (m₇ : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
+    Stash m PS.pre PS.rC
+
+theorem buildStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+    (hsz : ∀ s, sz s < 2 ^ 64) :
+    ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+      ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+      ⦃fun _ s' => LocEq s' s₀ ∧ (QS7 bC bS pb sz s₀.mem →
+        (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+        FS bC bS pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+  intro n _ s₀ cnt
+  apply M.triple_of_run
+  rintro s rs s' rfl hrun
+  obtain ⟨F, hF0, hcl⟩ := checkerProg_biW
+  obtain ⟨hfr, hby⟩ := M.of_run (P := fun x => x = s) rfl hrun (invoke_memFrame hcl n hF0 [cnt] s)
+  obtain ⟨hl, -⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec checkerProg n "build_index" [cnt] s)
+  refine ⟨hl, fun hQ hc => ?_⟩
+  have hD : s'.mem.arr64 L.Front.DECL = s.mem.arr64 L.Front.DECL :=
+    hfr.arr _ (fun h => by simp [biA] at h) (by decide)
+  refine ⟨?_, hD⟩
+  obtain ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, pins, ipins, sE, hpx, hE, h7, hst⟩ := hQ
+  have hctl : 220 ≤ (s.mem.arr64 CTL).size := by
+    have := h7.since.caps.2.1
+    rw [h7.since.frame.size]; simp only [ctlMin] at this; omega
+  have hD0 : 0 < (s.mem.arr64 L.Front.DECL).size := by
+    have := h7.since.caps.2.2.1; rw [h7.since.frame.size]; exact this
+  have hcnt : cnt.toNat = dsS.size := by
+    rw [hc hD0]; have := h7.decls.count; simpa [hD0] using this
+  have hPB : s.mem.arr8 L.Rom.PB = pb.data.toList.toArray := by
+    rw [h7.since.keep.arr8]; exact loadMem_pb bS pb sz
+  rw [← L.Rom.invoke_subPB (bs := pb.data.toList) checkerProg_noSt8PB n _ _ hPB] at hrun
+  obtain ⟨I, a', hI, hR', hFz, hsz', hG⟩ := (M.of_run (P := fun x => x = s) rfl hrun
+    (buildIndex_refines (checkerProg_idxProgPB pb.data.toList
+      (by simpa [RomOK] using hpb) h7.since.pbpre) cnt hcnt n s sE h7.pinsFull (by omega)
+      (fun _ hf hl => buildR_of_out hsz (StagesOut.cmp hpx hE) h7 hf hl))).2
+  exact ⟨⟨pins, sA, pre, sB, rC, sC, rS, sC', dsS, sD, ipins, sE, I, a', hpx, hE, hI⟩, s.mem,
+    ⟨h7, hR', hFz, hsz', hG, hfr, hby⟩, hst.frame hfr (by simp [biA]) (by simp [biA])⟩
+
+/-! ## `check` in mode `5` -/
+
+set_option experimental.vcgen true in
+/-- **`check`'s dispatch to mode `5`**: with the mode word `5`, `check` is `check_c2()`. -/
+theorem check_dispatch5 {p : Prog} (hp : p.lookup "check" = some checkL) (n : Nat) (s₀ : St)
+    (P : Word → Mem → Prop)
+    (hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke p (exec p n) "check_c2" []
+      ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check" []
+    ⦃fun r s' => s₀.mem.glob MODE = 5 → P (r.headD 0) s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
+    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+    (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c3" [] ·)]
+  all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+    St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
+  all_goals grind [lang_grind]
+
+set_option experimental.vcgen true in
+/-- **`check_c2()` from its stages**: the solution's `front_run`, `prepare_prelude`,
+`intern_all_pins`, the index build (with its count `DECL[0]`, keeping `DECL`) and
+`par_compact(1)`; on a result other than `1` the final memory is the frozen buffer's after an
+index build that ended in `F`, and the result is `2^63 + DECL[0]`. -/
+theorem checkC2_of_stages {p : Prog} (hp : p.lookup "check_c2" = some checkC2L)
+    (hpc : p.lookup "par_compact" = some parCompactL)
+    (hfz : ∀ i < frozen.length, p.lookup (fzName i) = some (fzF i))
+    {Q4 Q5 Q6 Q7 : Mem → Prop} {F : Mem → Prop}
+    (h5 : StageSpec p "front_run" Q4 fun r m => r.headD 0 = 0 → Q5 m)
+    (h6 : StageSpec p "prepare_prelude" Q5 fun _ => Q6)
+    (h7 : StageSpec p "intern_all_pins" Q6 fun _ => Q7)
+    (h8 : ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+      ⦃fun s => s = s₀⦄ invoke p (exec p n) "build_index" [cnt]
+      ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 s₀.mem →
+        (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+        F s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄)
+    (n : Nat) (hn : n ≤ 2 ^ 62) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_c2" []
+    ⦃fun r s' => Q4 s₀.mem → r.headD 0 ≠ 1 → PostPC 1 F s'.mem ∧
+      ∀ h : 0 < (s'.mem.arr64 L.Front.DECL).size,
+        r.headD 0 = (9223372036854775808 : Word) + (s'.mem.arr64 L.Front.DECL)[0];
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkC2L]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hn' : n ≤ 2 ^ 62 := by omega
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      (h5 n hn' ·), (h6 n hn' ·), (h7 n hn' ·), (h8 n hn' · ·), (parCompact_stage hpc hfz · F n ·)]
+    all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
+      St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval, ite_true, ite_false, Nat.reduceEqDiff,
+      UInt64.toNat_zero, bne_iff_ne, ne_eq, Decidable.not_not] at *)
+    all_goals clear h5 h6 h7 h8 hfz hp hpc
+    -- gen/ematch raised as in `checkA_of_stages`
+    all_goals grind (gen := 30) (ematch := 40) [lang_grind, Locals.init_cons_zero]
+
+/-- **Mode `5`'s end** at its final memory `m'`: the frozen buffer's memory of a memory `m` after
+the solution's index build (`FS`: the compared run's twin up to the solution's index, `FoldOn`, the
+challenge's records in `CDECL`). -/
+def CmpAt5 (bC bS pb : ByteArray) (sz : TieredArray → Nat) (m' : Mem) : Prop :=
+  PostPC 1 (FS bC bS pb sz) m'
+
+/-- **Mode `5` in L**: from mode `4`'s end (`CmpAt4`, at its memory `m4`), a run of `check` from
+`m4` with the input replaced by the solution's bytes `bS` and the mode word `5` that returns
+anything but `1` (a line that did not scan) ends in mode `5`'s end (`CmpAt5`) and returns
+`2^63 + |dsS|`, the solution's prepared records' count. -/
+theorem checkC2_run (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : InputsOK bS pb sz)
+    (N : Nat) (hN : N < 2 ^ 62) (m4 : Mem) (h4 : CmpAt4 bC bS pb sz m4) (rs : List Word) (m' : Mem)
+    (hrun : L.run checkerProg N "check" [] ((m4.setIn bS.data).setG MODE 5) = .ok (rs, m'))
+    (hr : rs.headD 0 ≠ 1) :
+    ∃ (PS : PhaseS bC bS) (m₇ m : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
+      Stash m PS.pre PS.rC ∧ parCompactOK m 1 = true ∧ m' = parCompactMem m 1 ∧
+      rs.headD 0 = 9223372036854775808 + UInt64.ofNat PS.dsS.size := by
+  have s5 := frontStageC_checker bC bS pb sz hin.1 hin.2.1
+  have s6 := prepareStageC_checker bC bS pb sz
+  have s7 := pinsStageC_checker bC bS pb sz hin.2.2.1
+  have s8 := buildStageC_checker bC bS pb sz hin.2.2.1 hin.2.2.2
+  have hc2 : checkerProg.lookup "check_c2" = some checkC2L := by chk_lk
+  have hlc : checkerProg.lookup "check" = some checkL := by chk_lk
+  have hpc : checkerProg.lookup "par_compact" = some parCompactL := by chk_lk
+  let M5 := (m4.setIn bS.data).setG MODE 5
+  have hmode : M5.glob MODE = 5 := by simp [M5, Mem.setG]
+  have hQ4 : QS4 bC bS pb sz M5 := by
+    obtain ⟨sA, pre, sB, rC, sC, hpx, hR4, hst⟩ := h4
+    exact ⟨sA, pre, sB, rC, sC, hpx, hR4.frame0 (memFrame_setG _ _ _) rfl, ⟨hst.decls, hst.rok⟩⟩
+  let P : Word → Mem → Prop := fun x m'' => x ≠ 1 → PostPC 1 (FS bC bS pb sz) m'' ∧
+    ∀ h : 0 < (m''.arr64 L.Front.DECL).size, x = (9223372036854775808 : Word) + (m''.arr64 L.Front.DECL)[0]
+  cases N with
+  | zero =>
+    exfalso
+    refine run_post (Q := fun _ _ => False) hrun ?_
+    rw [invoke_eq _ hlc]
+    simp only [callFn]
+    vcgen [exec] <;> grind
+  | succ n =>
+    have hn : n ≤ 2 ^ 62 := by omega
+    let s₀ : St := { mem := M5, loc := Locals.init [] }
+    have hC : ∀ s₁ : St, ⦃fun s => s = s₁⦄ invoke checkerProg (exec checkerProg n) "check_c2" []
+        ⦃fun r s' => s₁.mem = s₀.mem → P (r.headD 0) s'.mem; ⊤⦄ := fun s₁ =>
+      triple_post (checkC2_of_stages hc2 hpc checkerProg_fz s5 s6 s7 s8 n hn s₁)
+        fun _ _ h e => h (by rw [e]; exact hQ4)
+    have H := run_post (Q := fun x m'' => s₀.mem.glob MODE = 5 → P (x.headD 0) m'') hrun
+      (check_dispatch5 hlc n s₀ P hC)
+    obtain ⟨⟨m, ⟨PS, m₇, hF, hst⟩, hok, rfl⟩, hval⟩ := H hmode hr
+    refine ⟨PS, m₇, m, hF, hst, hok, rfl, ?_⟩
+    have hFo := parCompactMem_out m 1
+    have hD0 : 0 < (m.arr64 L.Front.DECL).size := by have := hF.build.decls.room; omega
+    have eD : (parCompactMem m 1).arr64 L.Front.DECL = m.arr64 L.Front.DECL := hFo.arr _ (by decide)
+    have hD0' : 0 < ((parCompactMem m 1).arr64 L.Front.DECL).size := by rw [eD]; exact hD0
+    have hc := hF.build.decls.count
+    rw [Array.getElem?_eq_getElem hD0, Option.getD_some] at hc
+    have key : ∀ (A B : Array Word) (e : A = B) (h1 : 0 < A.size) (h2 : 0 < B.size), A[0] = B[0] := by
+      intro A B e _ _; subst e; rfl
+    rw [hval hD0', key _ _ eD hD0' hD0, ← hc, UInt64.ofNat_toNat]
 
 end L.Checker
