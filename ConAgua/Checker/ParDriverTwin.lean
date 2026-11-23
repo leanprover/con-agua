@@ -59,7 +59,10 @@ theorem checkMode2_seq {b pb : ByteArray}
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·)]
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [] ·)]
     all_goals (try simp only [St.setLoc_loc, St.setLocs_cons,
       Cmp.eval, reduceIte, beq_iff_eq, Sig.retVal, Sig.retOr, St.setLocs_nil, List.headD_cons] at *)
     all_goals first

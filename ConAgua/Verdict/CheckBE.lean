@@ -68,7 +68,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
   have hw2 : (flushMem m₂).words = (flushMem m).words := flushMem_words rfl
   have hag : ∀ a, phaseBS a = true → s.mem.arr64 a = (flushMem m).arr64 a := fun a ha => by
     rw [hsX, hA2.1 a ha]; show (flushMem m₂).words a = (flushMem m).words a; rw [hw2]
-  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m)
+  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m)
       { PA.sF with caches := Caches.empty } := hF.jobR hfok
   have hby : (flushMem m).bytes = m₇.bytes := by rw [flushMem_bytes, hF.bytes]
   generalize flushMem m = F at hJ0 hag hby
@@ -85,7 +85,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
   -- the twin's side
   let a₀ : AState := { PA.sF with caches := Caches.empty }
   obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
-    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀) (RecCall p)
+    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds none PA.I a₀) (RecCall p)
   obtain ⟨hA, hB, hC, hD, hE⟩ := PA.pfx
   obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
     ConRon.Bridge.stages_frame (chunks := [b]) hA hB hC hD hE
@@ -96,8 +96,8 @@ theorem checkJobs_seqE {b pb : ByteArray}
     · assumption
     · cases hk
   have hds : PA.ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
-  have H := hH (recCall_stepE hJP hFD hLD hdn hrec hpp hds hden hPD)
-  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I s₂.mem a₀ := hJ0.setGlob _
+  have H := hH (recCall_stepE (J := none) hJP hFD hLD hdn hpp hds hden hPD hrec (fun h => absurd h (by simp)))
+  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I s₂.mem a₀ := hJ0.setGlob _
   have hw0 : WorkerOK PA.sF a₀ := ⟨⟨hst.wf⟩, PExt.of_ext (Ext.refl _), rfl, rfl⟩
   -- the jobs before a job accepted in order: the fold's prefix, a worker state
   have hseq : ∀ (c t : Nat) (a a' : AState), WorkerOK PA.sF a →
@@ -141,7 +141,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
     rw [List.take_zero, List.eq_nil_of_length_eq_zero h0]
     exact List.nodup_nil
   have hden' : ∀ x ∈ PA.ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a₀.store x = some d := hden
-  have h := checkJobs_ref (I := PA.I) hJP hFD hLD hdn hrec hpp hden' hPD (hi := hi) (j := 0)
+  have h := checkJobs_ref (J := none) (I := PA.I) hJP hFD hLD hdn hpp hden' hPD hrec (fun h => absurd h (by simp)) (hi := hi) (j := 0)
     (by omega) hn ⟨hJ, PExt.of_ext (Ext.refl _), rfl⟩
     (fun t a' _ h2 h3 => by
       simp only [UInt64.toNat_zero, Nat.sub_zero] at h3 h2
@@ -150,7 +150,7 @@ theorem checkJobs_seqE {b pb : ByteArray}
       obtain ⟨htk', -⟩ := H.hden t (by omega)
       exact worker_foldOK H.hpinsOK H.hpersPins H.hI H.hpI htk' hP hnd hw')
   have h' := RefC.run_err (checkJobs_specE p hJP.check_jobs n ⟨s₂.mem, Locals.init []⟩ 0 hi)
-    (fun e h0 => ErrClaimV.of_cls0 h0) trivial hJG h hc
+    (fun e h0 => ErrClaimV.of_cls0 h0) trivial (JobGL.none hJG) h hc
   simp only [UInt64.toNat_zero, Nat.sub_zero, hhi, ← List.range_eq_range'] at h'
   exact fun hk => twinFailsV_of_sameEnter sameEnter_worker.symm (h' hk)
 
@@ -221,7 +221,9 @@ theorem checkMode2_seqE {b pb : ByteArray}
           (hs ▸ hctlf))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
-      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
+      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
+      (callE_spec checkerProg n "check_c3" [] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)

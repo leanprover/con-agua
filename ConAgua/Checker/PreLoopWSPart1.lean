@@ -47,6 +47,9 @@ import all ConAgua.Arena.InstList
 import all ConAgua.Arena.InstListSpec
 import all ConAgua.Arena.IotaFrame
 import all ConAgua.Arena.IotaRel
+import all ConAgua.Arena.Justify
+import all ConAgua.Arena.JustifyIface
+import all ConAgua.Arena.JustifySide
 import all ConAgua.Arena.Knot
 import all ConAgua.Arena.LamStore
 import all ConAgua.Arena.LetStore
@@ -84,6 +87,7 @@ import all ConAgua.Arena.NatShl
 import all ConAgua.Arena.NatShr
 import all ConAgua.Arena.NatSized
 import all ConAgua.Arena.NatSub
+import all ConAgua.Arena.Needs
 import all ConAgua.Arena.ParamStore
 import all ConAgua.Arena.Pins
 import all ConAgua.Arena.Prelude
@@ -122,6 +126,7 @@ import all ConAgua.Arena.WhnfProj
 import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
+import all ConAgua.Checker.CompareEntry
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist
 import all ConAgua.Checker.Prelude

@@ -97,7 +97,7 @@ variable (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (ds : A
 the scratch entry) and con-ron's fold invariant at the record's view. -/
 def CjStepE (p : Prog) : Prop :=
   ∀ (n : Nat) (m : Mem) (a : AState) (j : Word), n ≤ 2 ^ 62 → j.toNat < ds.size →
-    JobRel pins dn ds I a₀ m a → (∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) →
+    JobRel pins dn ds none I a₀ m a → (∃ env, FoldOK env (I.view j.toNat) (AM.st enterScratch a)) →
     ∀ {e : Err}, callE p n "check_jobs" [j, j + 1] m = .error e →
     ErrClaimV (checkJobList VM pins none I ds [j.toNat]) a e
 
@@ -113,14 +113,14 @@ theorem cjStepE_of {pinsP : List ConLeche.NatOpPinSet} {p : Prog}
   rw [← hS.st] at hF
   have e1 : (j + 1).toNat = j.toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
-  have h := checkJobs_ref (I := I) hP hFD hLD hdn hrec hpp hden hPD (hi := j + 1) (j := j) (by rw [e1]; omega) hn hJP
+  have h := checkJobs_ref (J := none) (I := I) hP hFD hLD hdn hpp hden hPD hrec (fun h => absurd h (by simp)) (hi := j + 1) (j := j) (by rw [e1]; omega) hn hJP
     (fun t a' h1 h2 h3 => by
       obtain rfl : t = j.toNat := by omega
       rw [Nat.sub_self, List.range'_zero] at h3
       cases h3
       exact hF)
   have h' := RefC.run_err (checkJobs_specE p hP.check_jobs n ⟨m, Locals.init []⟩ j (j + 1))
-    (fun e h0 => ErrClaimV.of_cls0 h0) trivial hG h hc
+    (fun e h0 => ErrClaimV.of_cls0 h0) trivial (JobGL.none hG) h hc
   rw [e1, Nat.add_sub_cancel_left, List.range'_one] at h'
   exact fun hk => twinFailsV_of_sameEnter hS (h' hk)
 
@@ -164,7 +164,7 @@ theorem checkJobs_thrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerPro
     show (flushMem X).bytes L.Rom.PB = _
     rw [flushMem_bytes]; exact hPB
   rw [← L.Rom.invoke_subPB (bs := bs) checkerProg_noSt8PB n _ _ (s := s₂) hPB₂] at hrun₂
-  have hJ2 : JobRel pins dn ds I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
+  have hJ2 : JobRel pins dn ds none I a₀ s₂.mem a := ⟨a₁, ⟨(hJR.flush hfx).setGlob _, hx, hp⟩, hSE⟩
   exact hE n s₂.mem a j hn hj hJ2 hF (L.Front.callE_of_run_err hrun₂)
 
 /-- **`check_b` on a thread's memory, error half of `checkB_thr`.** -/
@@ -233,7 +233,9 @@ theorem checkThrE (hE : CjStepE pins dn ds I a₀ (Prog.subPB bs checkerProg))
         (checkB_thrE hE n (by omega) a j hj hF s₁ (hs ▸ hR) (hs ▸ hlo) (hs ▸ hhi))
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
-      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·)]
+      (callE_spec checkerProg n "check_a" [1] ·), (callE_spec checkerProg n "check_a" [0] ·),
+      (callE_spec checkerProg n "check_c1" [] ·), (callE_spec checkerProg n "check_c2" [] ·),
+      (callE_spec checkerProg n "check_c3" [] ·)]
     all_goals (try simp only [Cmp.eval, beq_iff_eq] at *)
     all_goals first
       | exact ErrClaimV.of_cls0 (by decide)
@@ -344,7 +346,7 @@ theorem threads_twinVerdictPooled (hCd : CheckerCd)
     · assumption
     · cases hk
   have hRS : RecStep PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀ p :=
-    recCall_stepE hJP hFD hLD hdn hrec hpp (by omega) hden hPD
+    recCall_stepE (J := none) hJP hFD hLD hdn hpp (by omega) hden hPD hrec (fun h => absurd h (by simp))
   have hCE : CjStepE PA.ipins (dnOf PA.sE.store) PA.ds PA.I a₀ p :=
     cjStepE_of hJP hFD hLD hdn hrec hpp hsz hden hPD hJG'
   have hstep : ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < PA.ds.size), Rel r a → Call k r r' →

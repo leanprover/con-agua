@@ -456,8 +456,8 @@ theorem top_tier0_of {m : Mem} {a : AState} (h : ArenaR m a) (hmode : ModeOK m)
 extent, given the scratch flag off and the stream index's keys in the store. -/
 theorem JobM.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name}
     {ds : Array IDeclaration} {I : IStreamIndex} {m : Mem} {a : AState}
-    (h : JobM pins dn ds I m a) (hoff : a.store.scratchOn = false) (hk : IndexKeysIn m I) :
-    JobM pins dn ds I (truncFrozen m) a := by
+    (h : JobM pins dn ds none I m a) (hoff : a.store.scratchOn = false) (hk : IndexKeysIn m I) :
+    JobM pins dn ds none I (truncFrozen m) a := by
   have htop := top_tier0_of h.arena.base h.mode hoff
   have hK := keepNF_trunc m
   have hD : (rdW (m.arr64 L.Front.DECL) 0).toNat = I.firsts.size := by
@@ -467,6 +467,7 @@ theorem JobM.trunc {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Nam
     by simp only [stampW, truncFrozen_ctl]; exact h.stamp, DeclsF.trunc h.decls, IWOK.trunc h.iw,
     by rw [truncFrozen_ctl]; exact h.top1, PinSetsR.trunc h.pinsets, h.mem.trunc,
     by rw [pinW_trunc]; exact h.flag, h.memos.trunc, h.fsize,
-    h.frozen.congr (fun x _ => by rw [truncFrozen_ctl])⟩
+    h.frozen.congr (fun x _ => by rw [truncFrozen_ctl]),
+    JSol.none (by rw [truncFrozen_ctl]; exact h.jsol.sol)⟩
 
 end L.Arena

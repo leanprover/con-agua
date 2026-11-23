@@ -11,65 +11,66 @@
      3  con-ron	8021ddac6f26edab6c5d61c2cc1133f159fa8c4f	https://github.com/leanprover/con-ron.git
      4  con-leche	bc6676101c488e21ce71a317b33905534d497e14	https://github.com/leanprover/con-leche.git
 
-== main.c#L1-L43
+== main.c#L1-L44
      1  /* The harness for the compiled checker: the trusted C side of the end-to-end theorem.
      2  
      3     build:  make   (cc -std=gnu23 -O2 -pthread -o checker main.c checker.s; Makefile)
      4     usage:  checker [--jobs=N] FILE
-     5  
-     6     The default path is the one the final theorem covers (`checkerFile_accepts`,
-     7     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
-     8     It maps FILE (the input) read-only, or reads it whole into a buffer if it is not a regular
-     9     file (`read_input`); the theorem is about the bytes the buffer holds, so a file that another
-    10     process changes during the run is outside it. It maps one zero region of ca_region_size
-    11     bytes and calls, once,
-    12  
-    13       ca_start(in, in_len, pins, pins_len, region, region_len)
-    14  
-    15     with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
-    16     entry 1 (the stages and the stream index), then entry 2 over every record's job, in place;
-    17     the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
-    18     and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
-    19     2 declined, 3 error):
-    20       accept         0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
-    21       rejected: M    1  rdx = 2, class 1: the checker aborted where the twin fails as invalid
-    22       declined: M    2  rdx = 2, class 2: the checker aborted where the twin fails as not
-    23                         implemented
-    24       error: M       3  rdx = 2, class 0: any other abort (a capacity of the checker, a check the
-    25                         twin does not make, an out-of-bounds access); claims nothing
-    26       exhausted      3  rdx = 1: fuel, stack or region ran out
-    27       ok R           3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
-    28                         line, which con-leche reports as an error too)
-    29     On an abort, rax is its code: the class in bits 0-1, the reason in bits 2 and up, whose
-    30     message M is reasons[reason] (reasons.h, generated from the twin's own messages; reason 0
-    31     prints no message). The classes are proved (`checkerFile_accepts`): rdx = 2 with class 1 or 2
-    32     means the twin's pipeline fails on the input with `invalid` resp. `notImplemented`; the
-    33     messages are not part of the theorem.
-    34     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
-    35     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
-    36     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
-    37  
-    38     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
-    39     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
-    40     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
-    41     threaded run prints the verdict of the failing job with the smallest index, which is what the
-    42     sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
-    43     `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean): the failing call and the jobs below it. */
+     5             checker --compare [--] CHALLENGE SOLUTION
+     6  
+     7     The default path is the one the final theorem covers (`checkerFile_accepts`,
+     8     ConAgua/Final/EndToEnd.lean; the call is as `AbiCall` in ConAgua/Final/Abi.lean states it).
+     9     It maps FILE (the input) read-only, or reads it whole into a buffer if it is not a regular
+    10     file (`read_input`); the theorem is about the bytes the buffer holds, so a file that another
+    11     process changes during the run is outside it. It maps one zero region of ca_region_size
+    12     bytes and calls, once,
+    13  
+    14       ca_start(in, in_len, pins, pins_len, region, region_len)
+    15  
+    16     with the pin data `pins` built into the binary (below). `ca_start` is the sequential driver:
+    17     entry 1 (the stages and the stream index), then entry 2 over every record's job, in place;
+    18     the entry stubs lay out everything else inside the region. The verdict is one line on stdout,
+    19     and the exit status follows the Lean kernel arena's convention (0 accepted, 1 rejected,
+    20     2 declined, 3 error):
+    21       accept         0  rdx = 0 and rax = ACCEPT (0x414343455054): the only accept
+    22       rejected: M    1  rdx = 2, class 1: the checker aborted where the twin fails as invalid
+    23       declined: M    2  rdx = 2, class 2: the checker aborted where the twin fails as not
+    24                         implemented
+    25       error: M       3  rdx = 2, class 0: any other abort (a capacity of the checker, a check the
+    26                         twin does not make, an out-of-bounds access); claims nothing
+    27       exhausted      3  rdx = 1: fuel, stack or region ran out
+    28       ok R           3  rdx = 0 and any other rax R, in decimal (1: the frontend rejected a malformed
+    29                         line, which con-leche reports as an error too)
+    30     On an abort, rax is its code: the class in bits 0-1, the reason in bits 2 and up, whose
+    31     message M is reasons[reason] (reasons.h, generated from the twin's own messages; reason 0
+    32     prints no message). The classes are proved (`checkerFile_accepts`): rdx = 2 with class 1 or 2
+    33     means the twin's pipeline fails on the input with `invalid` resp. `notImplemented`; the
+    34     messages are not part of the theorem.
+    35     A failure of the harness itself (usage, a file that cannot be read, no memory) prints a
+    36     message on stderr and exits with status 3 and no verdict line. A crash (e.g. a page of the
+    37     region the kernel cannot supply) prints nothing and ends with a signal. None is an accept.
+    38  
+    39     With --jobs=N for N > 1, the threaded mode, `run_jobs` below: its accept is covered by
+    40     `checkerFile_threads_accept` (ConAgua/Final/EndToEnd.lean), under the hypotheses
+    41     `ThreadsRun` (ConAgua/Final/ThreadsFinal.lean) states about this harness's threads. A failing
+    42     threaded run prints the verdict of the failing job with the smallest index, which is what the
+    43     sequential run prints; a reject or decline is covered by `checkerFile_threads_verdict`, under
+    44     `ThreadsFail` (ConAgua/Final/ThreadsVerdict.lean): the failing call and the jobs below it. */
 
-== main.c#L83-L95
-    83  /* Prints the verdict line and returns the exit status (the table above). */
-    84  static int print_verdict(ca_res r) {
-    85    if (accepted(r)) { printf("accept\n"); return 0; }
-    86    if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
-    87    if (r.rdx == 1) { printf("exhausted\n"); return 3; }
-    88    uint64_t cls = r.rax & 3, why = r.rax >> 2;
-    89    const char *msg = why < sizeof reasons / sizeof *reasons ? reasons[why] : "unknown reason";
-    90    const char *sep = why ? ": " : "";
-    91    if (cls == 1) { printf("rejected%s%s\n", sep, msg); return 1; }
-    92    if (cls == 2) { printf("declined%s%s\n", sep, msg); return 2; }
-    93    printf("error%s%s\n", sep, msg);
-    94    return 3;
-    95  }
+== main.c#L84-L96
+    84  /* Prints the verdict line and returns the exit status (the table above). */
+    85  static int print_verdict(ca_res r) {
+    86    if (accepted(r)) { printf("accept\n"); return 0; }
+    87    if (r.rdx == 0) { printf("ok %llu\n", (unsigned long long)r.rax); return 3; }
+    88    if (r.rdx == 1) { printf("exhausted\n"); return 3; }
+    89    uint64_t cls = r.rax & 3, why = r.rax >> 2;
+    90    const char *msg = why < sizeof reasons / sizeof *reasons ? reasons[why] : "unknown reason";
+    91    const char *sep = why ? ": " : "";
+    92    if (cls == 1) { printf("rejected%s%s\n", sep, msg); return 1; }
+    93    if (cls == 2) { printf("declined%s%s\n", sep, msg); return 2; }
+    94    printf("error%s%s\n", sep, msg);
+    95    return 3;
+    96  }
 
 == ConAgua/Compiler/Main.lean#L30-L33
     30  def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
@@ -318,26 +319,26 @@
     11  #
     12  # Usage: scripts/check-asm.sh (from anywhere in the repo; rebuilds the emitters it needs).
 
-== main.c#L148-L166
-   148  /* The input: a nonempty regular file is mapped read-only;
-   149     anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
-   150     The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
-   151     another process changes during the run changes them (and one truncated faults: a crash). */
-   152  static uint8_t *read_input(const char *path, uint64_t *n) {
-   153    int fd = open(path, O_RDONLY);
-   154    if (fd < 0) fail(path, strerror(errno));
-   155    struct stat st;
-   156    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
-   157      uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-   158      if (buf != MAP_FAILED) {
-   159        close(fd);
-   160        in_mapped = 1;
-   161        *n = st.st_size;
-   162        return buf;
-   163      }
-   164    }
-   165    return slurp(fd, path, n);
-   166  }
+== main.c#L149-L167
+   149  /* The input: a nonempty regular file is mapped read-only;
+   150     anything else (a pipe, a terminal, an empty file) or a file mmap refuses is read with `slurp`.
+   151     The bytes `b` the theorem talks about are whatever the buffer holds: a mapped file that
+   152     another process changes during the run changes them (and one truncated faults: a crash). */
+   153  static uint8_t *read_input(const char *path, uint64_t *n) {
+   154    int fd = open(path, O_RDONLY);
+   155    if (fd < 0) fail(path, strerror(errno));
+   156    struct stat st;
+   157    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
+   158      uint8_t *buf = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+   159      if (buf != MAP_FAILED) {
+   160        close(fd);
+   161        in_mapped = 1;
+   162        *n = st.st_size;
+   163        return buf;
+   164      }
+   165    }
+   166    return slurp(fd, path, n);
+   167  }
 
 == ConAgua/Final/ThreadsFinal.lean#L146-L181
    146  /-- **The threads' accepting calls** (trusted; the module doc lists it): for entry 1 at `dm₀`
@@ -605,17 +606,17 @@
    169        rs.headD 0 = 9223372036854775808 + UInt64.ofNat PA.ds.size := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
-   102      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-   103      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-   104      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
-   105      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-   106      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-   107      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-   108      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
-   109      (hctlf : (w.arr64 CTLF).size = 0)
-   110      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
-   111      TwinAccepts [b] := by
+   101  
+   102  /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
+   103  (`CheckerCd`). -/
+   104  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
+   105      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+   106      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+   107      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
+   108      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+   109      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
+   110      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
+   111      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
 
 == ConAgua/Arena/Verdict.lean#L54-L55
     54  def ErrClaim {α : Type} (T : AM α) (a : AState) (e : Err) : Prop :=
@@ -629,8 +630,8 @@
    249    | .error e => G → ErrClaim T a e
 
 == ConAgua/Checker/NoVerdictClosed.lean#L235-L236
-   235  theorem checkerProg_nv : closedNV checkerProg nvFns = true :=
-   236    closedNV_of_all nvTree.eq checkerProg_nvChk
+   235  open L.Compiler
+   236  
 
 == ConAgua/Final/DrvAbi.lean#L181-L192
    181  theorem drv_outcome [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
@@ -646,24 +647,27 @@
    191          (st.data.regs.rdx = 2 → DrvErr tab p mode plo phi out hdrf ctlf hw b pb st.data.regs.rax))
    192        dm (label abiStartL) := by
 
-== ConAgua/Final/DrvFinal.lean#L104-L110
-   104  theorem checkerFile_drv_accepts_regs [Host]
-   105      (k0 : Nat) (hcode : Code checkerFile k0)
-   106      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
-   107      (hc : AbiCall b pb dm ra) :
-   108      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
-   109          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
-   110        dm (label abiStartL) :=
+== ConAgua/Final/DrvFinal.lean#L116-L122
+   116  theorem checkerFile_drv_accepts_regs [Host]
+   117      (k0 : Nat) (hcode : Code checkerFile k0)
+   118      (b pb : ByteArray) (h64 : System.Platform.numBits = 64) (dm : MachineData) (ra : Word)
+   119      (hc : AbiCall b pb dm ra) :
+   120      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ RegsRestored dm.regs st.data.regs ∧
+   121          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
+   122        dm (label abiStartL) :=
 
-== ConAgua/Checker/Entry.lean#L155-L162
+== ConAgua/Checker/Entry.lean#L155-L165
    155  /-- `check()`: one of the parallel mode's entries, by the mode word; any other mode aborts. -/
    156  -- con-ron: none — the dispatch on the mode word the entry stubs write (`Compiler/Abi.lean`)
    157  @[no_expose] def checkL : FunDecl := lfn () locals (r) {
    158    if MODE == 1 { r := call check_a(1); return r };
    159    if MODE == 3 { r := call check_a(0); return r };
    160    if MODE == 2 { r := call check_b(); return r };
-   161    abort
-   162  }
+   161    if MODE == 4 { r := call check_c1(); return r };
+   162    if MODE == 5 { r := call check_c2(); return r };
+   163    if MODE == 6 { r := call check_c3(); return r };
+   164    abort
+   165  }
 
 == ConAgua/Checker/Entry.lean#L114-L133
    114  /-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
@@ -1801,14 +1805,14 @@
     52    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     53      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
-== ConAgua/Checker/BuildStage.lean#L307-L313
-   307  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
-   308      (hsz : ∀ s, sz s < 2 ^ 64) :
-   309      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
-   310        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
-   311        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
-   312          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-   313          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+== ConAgua/Checker/BuildStage.lean#L347-L353
+   347  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+   348      (hsz : ∀ s, sz s < 2 ^ 64) :
+   349      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+   350        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+   351        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
+   352          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+   353          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
 
 == ConAgua/Checker/Pipeline.lean#L74-L77
     74  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`
@@ -2060,8 +2064,8 @@
     23  noncomputable def checkerFile : Program := include_asm "../checker.s"
 
 == ConAgua/Checker/AsmFileEq.lean#L29-L30
-    29  /-- **The committed file is the compiler's output**, after the entry stub `checkerStub`. -/
-    30  asm_file_eq checkerFile_eq : checkerFile = checkerStub ++ checkerAsm via checkerAsm_eq
+    29  namespace L.Checker
+    30  
 
 == ConAgua/Checker/Asm.lean#L42-L51
     42  /-!
@@ -2243,7 +2247,7 @@
    109  `check_a(1)`: the stages, the stream index and `par_compact` (the frozen buffer in `OUT`,
    110  `Arena/Freeze.lean`), returning `2^63 + k` for `k` records (jobs); `3` (the sequential driver's
    111  entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
-   112  `ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1` over the frozen arrays. -/
+   112  `ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1`; `4`‥`6` `--compare`'s runs. -/
 
 == ConAgua/Checker/Entry.lean#L114-L133
    114  /-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
@@ -2315,38 +2319,38 @@
    192        dm (label abiStartL) := by
 
 == ConAgua/Checker/ParDriverTwin.lean#L101-L111
-   101  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
-   102      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
-   103      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
-   104      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
-   105      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
-   106      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
-   107      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
-   108      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
-   109      (hctlf : (w.arr64 CTLF).size = 0)
-   110      (h₂ : L.run checkerProg N₂ "check" [] w = .ok (rs₂, m₂)) (hacc : rs₂.headD 0 = ACCEPT) :
-   111      TwinAccepts [b] := by
+   101  
+   102  /-- **The driver's two runs accept ⇒ the twin accepts**, given `check_decl`'s program facts
+   103  (`CheckerCd`). -/
+   104  theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
+   105      (sz : TieredArray → Nat) (hin : InputsOK b pb sz)
+   106      (N₁ : Nat) (hN₁ : N₁ < 2 ^ 62) (rs₁ : List Word) (m₁ : Mem)
+   107      (h₁ : L.run checkerProg N₁ "check" [] (loadMemM b pb sz 3) = .ok (rs₁, m₁))
+   108      (hge : 9223372036854775808 ≤ (rs₁.headD 0).toNat)
+   109      (N₂ : Nat) (hN₂ : N₂ ≤ 2 ^ 62) (w : Mem) (rs₂ : List Word) (m₂ : Mem)
+   110      (hw : ∀ a, phaseBS a = true → w.arr64 a = m₁.arr64 a) (hmode : w.glob MODE = 2)
+   111      (hlo : w.glob PLO = 0) (hhi : w.glob PHI = rs₁.headD 0 - 9223372036854775808)
 
-== main.c#L168-L186
-   168  /* `--jobs=N` (N > 1), the threaded mode.
-   169  
-   170     Entry 1 (`ca_start_a`) runs the stages and the stream index in the region. On success
-   171     (rdx = 0, rax = 2^63 + k for k records, one job each) it has written the frozen buffer into
-   172     `OUT`, whose word 1 is the buffer's length in words. The buffer stays where it is: the rest of
-   173     the region is unmapped around it and the buffer is made read-only, so a write to it faults and
-   174     kills the process, which is never an accept (route A). N threads then each map their own zero
-   175     region of ca_worker_size bytes and claim job indices from one atomic counter, calling
-   176     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
-   177     the region as the previous call left it.
-   178  
-   179     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
-   180     out each of 0, 1, 2, ... once, in order, so each thread's claims increase: `ThreadsRun`'s
-   181     `incr`) and a stop flag that only shortens a failing run. Each thread has its own region and
-   182     its own result slot; main combines the slots after joining every thread. Accept iff no slot
-   183     holds a failure: every call that thread made accepted, and the threads drain the counter past
-   184     k unless one fails. Otherwise the verdict is that of the failing job with the smallest index:
-   185     the indices are claimed in order and a thread finishes the job it holds, so every lower job
-   186     has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
+== main.c#L169-L187
+   169  /* `--jobs=N` (N > 1), the threaded mode.
+   170  
+   171     Entry 1 (`ca_start_a`) runs the stages and the stream index in the region. On success
+   172     (rdx = 0, rax = 2^63 + k for k records, one job each) it has written the frozen buffer into
+   173     `OUT`, whose word 1 is the buffer's length in words. The buffer stays where it is: the rest of
+   174     the region is unmapped around it and the buffer is made read-only, so a write to it faults and
+   175     kills the process, which is never an accept (route A). N threads then each map their own zero
+   176     region of ca_worker_size bytes and claim job indices from one atomic counter, calling
+   177     `ca_check_b(buf, len, j, region, region_len)` for each claimed j, one call after the other on
+   178     the region as the previous call left it.
+   179  
+   180     Concurrency: the threads share only the read-only buffer, the claim counter (fetch_add hands
+   181     out each of 0, 1, 2, ... once, in order, so each thread's claims increase: `ThreadsRun`'s
+   182     `incr`) and a stop flag that only shortens a failing run. Each thread has its own region and
+   183     its own result slot; main combines the slots after joining every thread. Accept iff no slot
+   184     holds a failure: every call that thread made accepted, and the threads drain the counter past
+   185     k unless one fails. Otherwise the verdict is that of the failing job with the smallest index:
+   186     the indices are claimed in order and a thread finishes the job it holds, so every lower job
+   187     has been run, and accepted, when the threads are joined (`ThreadFail`'s `below`). */
 
 == ConAgua/Final/EndToEnd.lean#L157-L160
    157  theorem checkerFile_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
@@ -2443,36 +2447,36 @@
     67  | D49 | `main.c`; `Rom/PinRead.lean` `intern_all_pins`; the final statements (`TwinAccepts`, `TwinVerdict`: `internAllPins pins maxNatSizeDefault`) | con-ron's binary takes `--max-nat-size=N` (con-leche's flag) and runs `internAllPins pins N`; con-leche's tests run seven `nat_size_limit_*` fixtures at `--max-nat-size=16` (`E2E_FLAGS`) | no such flag: every run is at the default maximum, 134 217 728 bytes (`PINS[72]`, written by `intern_reserved_pins`) | at the default, every verdict is con-ron's; the seven fixtures are not comparable with their pinned verdicts (`diff-e2e.py` skips them) | ronsync3 | by design, as `--olean` (D44): the checker need not take every option of the twin, and the driver stays simple (`main.c` passes no run parameter); porting the flag would make the maximum a parameter of the final theorems and add a trusted fact about `main.c` |
 
 == docs/deviations.md#L70-L99
-    70  ## Fixed
+    70  | D52 | `Checker/CompareEntry.lean` (mode 5), `Compiler/AbiCmp.lean` | con-ron's solution's check phase moves its persistent tier to the workers (`freeze_tier`) and back (`thaw_tier`), copying nothing | the solution's jobs read a copy of the frozen arrays (`par_compact(1)`, the parallel mode's buffer) on a separate worker region, which stays resident until the run ends | none on verdicts; on `Init` against itself the compared run's peak RSS is 1.26 GB, con-ron's 0.37 GB, and its instruction count is the same share of two flat runs as con-ron's | compare | by design: the driver's region must stay the twin's driver state (`sF`) while the solution's jobs run, and in-place jobs leave memos and caches the challenge's preparation would read; the buffer route reuses the parallel mode's proved entries |
     71  
-    72  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
-    73  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
-    74  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
-    75  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
-    76  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
-    77  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
-    78  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
-    79  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
-    80  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
-    81  - **F3** (fixed by lane strlit): `strVal` lines.
-    82  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
-    83  - **F5** (fixed by lane front2): expression and declaration lines.
-    84  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
-    85  - **F7** (fixed by lane romload): pin data as an input.
-    86  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
-    87  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
-    88  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
-    89  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
-    90  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
-    91  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
-    92  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
-    93  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
-    94  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
-    95  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
-    96  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
-    97  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
-    98  - **D5** (fixed by lane harness): the harness loaded a 1-variant pin buffer; the binary now embeds `pins.bin` = `romgen pins.bin 3`, all three of con-leche's `natOpPinSets` variants, as con-ron embeds them (18 more e2e accepts, none lost); four since con-leche #578 (`romgen pins.bin 4`, lane ronsync5).
-    99  - **D41** (retired by lane scanfast-p3): `fast_line`, a recogniser of lean4export's canonical byte form tried before the generic scanner, coupled the checker to the exporter's exact output; the single pass `line_rec` (`Front/LineRec.lean`) reads each line once, in any member order and spacing, as con-ron's `scan_line_loop` does.
+    72  ## Fixed
+    73  
+    74  - **D19** (fixed by lane ronsync2, the twin bump to con-ron `01ecb31c`): an inductive's capabilities no longer carry `sortZ` (con-leche task #480: the never-zero facts are computed at use), so the ROM reader interns no `PropWhen` name.
+    75  - **D40** (fixed by lane d40): the `replace_fvars` memo (`rfSch`, banked per call) kept its entries for the whole run (`rf_clear` was never called); now the outermost `replace_fvars` (caller's generation `0`) clears it on return, where the twin drops its per-call map (docs/design/d40.md).
+    76  - **D4** (fixed by lane consync, helper consync-pins): con-ron ed864140 retired `orElseAttempt` (its task #129): an error inside a pin-variant attempt is the run's error in the twin too, and L's loop is the twin's boolean decision loop (`check_div_mod_pin_loop`); the attempt flag `ATT` and the `fail R` class masking are gone.
+    77  - **D21, D22, D29** (fixed by lane consync, the twin bump to con-ron `ed864140`): the projection tables left the constants (con-leche task #362): no reserved table name is interned any more (`proj_table_name` is gone; tables are keyed on the structure name in the environment's table component, `find_table`), and no constant is a projection table (the ROM reader has no kind `6` to refuse).
+    78  - **D39** (fixed by lane epochwrap): `scratch_reset` aborted after `2^30` resets (the slot base `B = CTL[62]` at `2^62`); now at `B ≥ 2^62` it vacates the 19 scratch slot tables (the growth's zero loop `kzeroLs`) and restarts `B` at `0`, as con-ron's `HashMap2::clear` at `EPOCH_MAX` (docs/design/epochwrap.md).
+    79  - **D35** (fixed by lane tierswitch): every store keeps one word array per tier (tier `t` of array `a` is the word array `tierA a t`, `ld64t`/`st64t`): records `ra⟨t⟩[i * w + f]`, slot tables `sa⟨t⟩` (one KSTP formula per tier array), derived and level-parameter columns `col⟨t⟩[i]`, as con-ron's per-tier `Tbl`s (docs/design/tierswitch.md).
+    80  - **D1** (fixed by decls3 landing 4 and lane integrate): `and_pin_ok`'s inductive arm landed (kind `6`) and `rom_and_pin` got L code, so the real `And` block is accepted.
+    81  - **F1** (fixed by lane twinaudit): id tables dense + sparse (`IdTable`); ids past the end no longer abort (`e2e/rounds_huge_gaps`).
+    82  - **F2** (fixed by lane front2): strings with escapes (`Unescape.lean`, `str_put_esc`).
+    83  - **F3** (fixed by lane strlit): `strVal` lines.
+    84  - **F4** (fixed by `nat_dec`, `ApplyExpr.lean`): `natVal` past 18 digits.
+    85  - **F5** (fixed by lane front2): expression and declaration lines.
+    86  - **F6** (fixed by lanes indproofs/indproofs2, landing 6): inductive lines in the front.
+    87  - **F7** (fixed by lane romload): pin data as an input.
+    88  - **F8** (fixed by lane decls): the readback's `EMemo` mirrored with back references.
+    89  - **F9** (fixed by lane decls3): uncached `lvl_eq` in lane induct's code, now `lvl_eq_c`.
+    90  - **F10** (fixed by lane whnf): the eager mode-memo take/put banks, via the eager key bit.
+    91  - **F11** (fixed by lane libs): dropping the scratch tier cost O(capacity); epoch slots.
+    92  - **F12** (fixed in place by lanes indproofs, decls2, indproofs2): `sl_get` out of range, `check_block_agree` on an empty rest, `pin_in` on an empty table, `class_read` wrapping.
+    93  - **F13** (fixed by lane whnf2): uncached `lvls_eq` in `iota_rec_at`, now `lvls_eq_c`.
+    94  - **F14** (fixed by lane indproofs2): uncached `lvls_eq` in `target_class_match` (was D7), now `lvls_eq_c`.
+    95  - **F15** (fixed by helper whnf4-d23): D23, `lp_go`/`inst_lp_core` could not cut off at a parameter-free node (L's derived words kept only the two ranges), so the walk descended into parameter-free subterms and `inst_lp_core` read `ls_node(us)` for a parameter-free `e`. Now the level-parameter bit is mirrored per node (`LpCol.lean`: bit 30 of the five `XDER` words; columns 55‥61 for `succ`/`max`/`imax`/level lists/`sort`/`const`/`fvar`, written when the node is pushed; `ArenaR`'s `*Hp`/`*Lp` fields, `DerR`'s `bvP`/`zlP`), read by `der_b`'s third result (`derLW_ok`), and `lp_go`/`inst_lp_core` test it first, as `instLPGo`/`instLPFast`.
+    96  - **F16** (fixed by lane defeq2): D25, `lvl_live` checked `imax` arguments with `lv_node` (a level read before a knot call was not known to read back after it). Now `PoolGrew.lvl` (the level tables only grow) rides in `CoreAfter` and `lvl_den_later` reads the level back; L mirrors the twin again.
+    97  - **F17** (lane slotgrow): the cons tables (`SLOT` … `NNSLOT`) were fixed at their whole array and `X_push` aborted at 3/4 load; now they grow like con-ron's `HashMap2` (double and rehash, here at 1/2 load from 8 slots per tier, `SlotGrow.lean`), so a large slot array no longer costs memory or page faults up front.
+    98  - **D18/D24** (`hoist_ok`, fixed by lane front3): the ground hoist `hoistNatOpGround` in L (`Checker/Hoist.lean`); `prepare_prelude` reorders instead of aborting (`e2e/natop_order`, `natop_before_ble`).
+    99  - **F18** (lane memlay): the cons tables and the memos grew at load 1/2 (no row had recorded it); now at 3/4, con-ron's `HashMap2` load factor (`LOAD_NUM/LOAD_DEN`).
 
 == scripts/e2e.py#L2-L25
      2  """End-to-end differential testing of the L checker (lane `e2e`, DESIGN.md "End-to-end runs").

@@ -41,6 +41,11 @@ import all ConAgua.Arena.IndInstall
 import all ConAgua.Arena.IndParts
 import all ConAgua.Arena.IotaFrame
 import all ConAgua.Arena.IotaRel
+import all ConAgua.Arena.JustifyIface
+import all ConAgua.Arena.Needs
+import all ConAgua.Arena.Justify
+import all ConAgua.Arena.JustifySide
+import all ConAgua.Checker.CompareEntry
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndSum
@@ -165,8 +170,9 @@ import all ConAgua.Arena.NatSized
 # The jobs' write sets at the checker's program
 
 `JobProg`'s `apW` and `cdW` (`Arena/Jobs.lean`): `and_pin_ok` and `check_decl`, with their
-call closures (`apFns`, 143 functions; `cdFns`, 1328), store only where `apA`/`apC` and
-`cdA`/`cdC` allow. As `Checker/CoreErec.lean`: the function sets as name trees, the store sets as
+call closures (`apFns`, 143 functions; `cdFns`, 1458, with `check_record_sol`'s closure:
+`checkerProg_crsW`), store only where `apA`/`apC` and `cdA`/`cdC` allow. As
+`Checker/CoreErec.lean`: the function sets as name trees, the store sets as
 predicates, one kernel check per chunk of the program's functions (`prog_all`), composed by
 `closedW_of_all`.
 -/
@@ -201,9 +207,9 @@ def apFns : List FnName :=
     "sort_push", "stk_pool", "stk_push", "succ_find", "succ_push", "view_ls", "zero_find",
     "zero_push"]
 
-/-- `check_decl`'s call closure in the checker's program. -/
+/-- `check_decl`'s and `check_record_sol`'s call closures in the checker's program. -/
 def cdFns : List FnName :=
-  ["check_decl", "close_lams_go", "close_telescope_go", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved", "block_names_unreserved", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
+  ["check_decl", "check_record_sol", "close_lams_go", "close_telescope_go", "formers_lps_ok", "ctors_params_ok", "ctors_lps_ok", "check_decl_kind", "basis_names_ok", "basis_names_error", "basis_name_unreserved", "block_names_unreserved", "nat_ind_at_cv", "nat_zero_at_cv", "nat_succ_at_cv",
     "ab_clear", "ab_find", "ab_fvb", "ab_node", "ab_put", "abs_app", "abs_entry", "abs_forall",
     "abs_go", "abs_lam", "abs_let", "abs_proj", "abstract1_fast", "abstract_prefix",
     "abstract_prefix_list", "all_level_params_defined", "alpd_go", "alpd_ls",
@@ -454,7 +460,14 @@ def cdFns : List FnName :=
     "whnf", "whnf_app", "whnf_app_iota", "whnf_core", "whnf_core_app", "whnf_core_app2", "whnf_core_lookup_at", "whnf_core_store_chain", "whnf_core_store_keys",
     "whnf_core_store_cheap_keys", "whnf_stuck", "whnf_core_step", "whnf_core_step_proj", "whnf_loop", "whnf_step", "whnf_telescope", "whnf_top",
     "whnf_walk_fuel", "wk_clear", "wk_find", "wk_put", "ws_clear", "ws_find", "ws_go", "ws_node",
-    "ws_put", "wscoped_bfast", "zero_find", "zero_push"]
+    "ws_put", "wscoped_bfast", "zero_find", "zero_push",
+    "builtin_axiom_name", "check_justified", "cone_entry", "cone_go", "cone_push", "copy_b",
+    "cs_clear", "cs_find", "cs_put", "entry_needs", "is_stmt_kind", "justifiable", "justify_why",
+    "levels_renaming", "lit_needs", "mates_get", "nd_clear", "nd_find", "nd_put", "needs_const",
+    "needs_expr", "needs_exprs", "needs_go", "needs_name", "needs_names", "needs_names_iw",
+    "needs_reset", "needs_rule", "needs_rules", "needs_table", "pin_footprint",
+    "pin_footprint_nat", "pin_footprint_reduce", "rec_names", "refines_b", "same_cv_up_to_levels",
+    "sol_find", "sol_find_table", "sol_row_get", "sol_tbl_get", "tbl_beq_p", "tbl_eq"]
 
 names_tree apTree : apFns
 names_tree cdTree : cdFns
@@ -470,11 +483,12 @@ def apPc (x : Word) : Bool :=
     x.toNat != 58 && x.toNat != 152 && x.toNat != 154 && x.toNat != 156 && x.toNat != 214 && apQ x
 
 /-- The arrays of `cdA`, as a test. -/
-def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b && b != PINS
+def cdPa (b : TieredArray) : Bool := checkerWordArrays.contains b && !IdxArr b && b != PINS && !SolArr b
 
 /-- The `CTL` words of `cdC`, as a test. -/
 def cdPc (x : Word) : Bool :=
-  decide (x.toNat < 1024) && ((decide (x.toNat < 162) || decide (173 < x.toNat)) && x.toNat != 128)
+  decide (x.toNat < 1024) && ((decide (x.toNat < 162) || decide (173 < x.toNat)) && x.toNat != 128 &&
+    x.toNat != 224 && x.toNat != 225 && x.toNat != 226)
 
 theorem apPa_mem (b : TieredArray) (h : apPa b = true) : b ∈ apA := by
   simp only [apPa, Bool.and_eq_true, bne_iff_ne, ne_eq, List.contains_iff_mem] at h
@@ -490,12 +504,12 @@ theorem apPc_mem (x : Word) (h : apPc x = true) : x ∈ apC := by
 theorem cdPa_mem (b : TieredArray) (h : cdPa b = true) : b ∈ cdA := by
   simp only [cdPa, Bool.and_eq_true, List.contains_iff_mem] at h
   simp only [cdA, List.mem_filter, Bool.and_eq_true]
-  exact ⟨h.1.1, h.1.2, h.2⟩
+  exact ⟨h.1.1.1, ⟨h.1.1.2, h.1.2⟩, h.2⟩
 
 theorem cdPc_mem (x : Word) (h : cdPc x = true) : x ∈ cdC := by
   simp only [cdPc, Bool.and_eq_true, decide_eq_true_eq] at h
   simp only [cdC, List.mem_filter, List.mem_map, List.mem_range]
-  exact ⟨x.toNat, ⟨h.1, by rw [Bool.and_eq_true]; exact h.2⟩, UInt64.ofNat_toNat⟩
+  exact ⟨x.toNat, ⟨h.1, by simp only [Bool.and_eq_true]; exact h.2⟩, UInt64.ofNat_toNat⟩
 
 /-- Every function of the checker passes `and_pin_ok`'s per-function check. -/
 prog_all checkerProg_apChk : checkerProg (wsChk CTL apPa apPc apTree)
@@ -510,5 +524,10 @@ theorem checkerProg_apW : ∃ F, "and_pin_ok" ∈ F ∧ closedA checkerProg apA 
 /-- **`check_decl`'s write set.** -/
 theorem checkerProg_cdW : ∃ F, "check_decl" ∈ F ∧ closedA checkerProg cdA cdC F = true :=
   ⟨cdFns, List.mem_cons_self, closedW_of_all cdTree.eq cdPa_mem cdPc_mem checkerProg_cdChk⟩
+
+/-- **`check_record_sol`'s write set** (`CrsSpec.wr`): `check_decl`'s. -/
+theorem checkerProg_crsW : ∃ F, "check_record_sol" ∈ F ∧ closedA checkerProg cdA cdC F = true :=
+  ⟨cdFns, List.mem_cons_of_mem _ List.mem_cons_self,
+    closedW_of_all cdTree.eq cdPa_mem cdPc_mem checkerProg_cdChk⟩
 
 end L.Checker

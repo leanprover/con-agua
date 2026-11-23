@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 from arr_names import arr_term
 from lean_module import modularize, body_modules
 STAGES = ["cap_check", "pb_check", "intern_reserved_pins", "builtin_prelude", "front_run",
-          "prepare_prelude", "intern_all_pins"]
+          "prepare_prelude", "intern_all_pins", "cmp_stash"]
 # the stages' modules `PreLoopWSPart<k>` (each a whole-program check per stage, ~5 s; built in
 # parallel, lnext2 §3), by stage
-STAGE_PARTS = [["cap_check", "pb_check", "intern_reserved_pins", "intern_all_pins"],
+STAGE_PARTS = [["cap_check", "pb_check", "intern_reserved_pins", "intern_all_pins", "cmp_stash"],
                ["builtin_prelude"], ["front_run", "prepare_prelude"]]
 assert sorted(sum(STAGE_PARTS, [])) == sorted(STAGES)
 LEAN = r'''import ConAgua.Checker.Prog

@@ -334,7 +334,7 @@ variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds : A
 
 /-- **Cutting `CTL` to its seed keeps the jobs' memory half**: no relation reads a `CTL` word from
 256 on. -/
-theorem JobM.cut {t : Mem} (h : JobM pins dn ds I t a) : JobM pins dn ds I (ctlCut t) a := by
+theorem JobM.cut {t : Mem} (h : JobM pins dn ds none I t a) : JobM pins dn ds none I (ctlCut t) a := by
   have hf := ctlCut_frame t
   have hC : ∀ x ∈ hiC (t.arr64 CTL).size, 256 ≤ x.toNat := fun _ hx => hiC_ge hx
   have hn : ∀ k : Nat, k < 256 → (UInt64.ofNat k : Word) ∉ hiC (t.arr64 CTL).size := fun k hk hx => by
@@ -363,7 +363,8 @@ theorem JobM.cut {t : Mem} (h : JobM pins dn ds I t a) : JobM pins dn ds I (ctlC
         ⟨hn 54 (by decide), hn 56 (by decide), hn 58 (by decide)⟩ (by simp) (hn 214 (by decide)), h.mem.dnN⟩,
     by rw [pinW_frame hf (by simp)]; exact h.flag,
     h.memos.frame hf (fun b hb => (hA b hb).elim) (fun x hx => by have := hC x hx; omega), h.fsize,
-    h.frozen.frame (fun x hx => not_mem_frozenCtl (.inr (by have := hC x hx; omega))) hf⟩
+    h.frozen.frame (fun x hx => not_mem_frozenCtl (.inr (by have := hC x hx; omega))) hf,
+    JSol.none (by rw [hf.ctl 224 (hn 224 (by decide))]; exact h.jsol.sol)⟩
 
 theorem freshZ_idx : ∀ b ∈ freshZ, ¬ (b.hi = false ∧ ((129 ≤ b.arr ∧ b.arr ≤ 134) ∨ b.arr = 137)) := by
   decide
@@ -402,9 +403,9 @@ theorem IndMemos.fresh {m : Mem} (h : IndMemos (cutT m)) : IndMemos (freshMem m)
 /-- **The jobs' relation at a thread's fresh memory**: from the memory half at the truncated memory
 (`JobM.trunc`), the store its own `dropScratch` and well formed with the scratch flag off, the jobs'
 relation holds at `freshMem m`, at the state with empty walk memos and caches. -/
-theorem JobM.fresh {m : Mem} (h : JobM pins dn ds I (truncFrozen m) a) (hw : StoreWF a.store)
+theorem JobM.fresh {m : Mem} (h : JobM pins dn ds none I (truncFrozen m) a) (hw : StoreWF a.store)
     (hoff : a.store.scratchOn = false) :
-    JobR pins dn ds I (freshMem m) { a with memos := Memos.empty, caches := Caches.empty } := by
+    JobR pins dn ds none I (freshMem m) { a with memos := Memos.empty, caches := Caches.empty } := by
   have hd := estore_dropScratch_self hw hoff
   have hC := h.cut
   have hf := fresh_frame m
@@ -427,7 +428,7 @@ theorem JobM.fresh {m : Mem} (h : JobM pins dn ds I (truncFrozen m) a) (hw : Sto
     ⟨by rw [fresh_size]; exact hC.mem.erec, by rw [fresh_size]; exact hC.mem.spn,
       by rw [fresh_size]; exact hC.mem.bstk, CoreMemos.fresh hC.mem.memos, hC.mem.dnN⟩,
     by simp only [pinW, hk PINS (by decide)]; exact hC.flag, IndMemos.fresh hC.memos, hC.fsize,
-    hC.frozen.congr (fun x _ => by rw [fresh_ctl])⟩,
+    hC.frozen.congr (fun x _ => by rw [fresh_ctl]), JSol.none (by rw [fresh_ctl]; exact hC.jsol.sol)⟩,
     ⟨hw⟩, hoff, rfl⟩
 
 end main

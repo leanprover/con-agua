@@ -122,20 +122,34 @@ def fixtures(tests, work):
     return out, missing
 
 
-def not_ported(tests):
-    """con-leche's argument rows (`<exit> --<arguments>` in `e2e-expected.txt`): the `--compare`
-    pairs, which the checker does not run yet (lane `compare` ports `--compare`)."""
+def arg_rows(tests, work):
+    """con-leche's argument rows (`<exit> --<arguments>` in `e2e-expected.txt`, the `--compare`
+    pairs and their usage errors): [(id, argument list, expected exit code)], every `.ndjson`
+    argument a fixture of `tests/e2e` (decompressed into `work` if it is kept gzipped)."""
     out = []
     for line in open(os.path.join(tests, "e2e-expected.txt"), encoding="utf-8"):
         w = line.split()
         if len(w) >= 2 and w[0].isdigit() and w[1].startswith("-"):
-            out.append(" ".join(w[1:]))
+            args = []
+            for a in w[1:]:
+                if a.endswith(".ndjson"):
+                    src = os.path.join(tests, "e2e", a)
+                    if not os.path.exists(src) and os.path.exists(src + ".gz"):
+                        dst = os.path.join(work, "e2e", a)
+                        os.makedirs(os.path.dirname(dst), exist_ok=True)
+                        with gzip.open(src + ".gz") as fi, open(dst, "wb") as fo:
+                            shutil.copyfileobj(fi, fo)
+                        src = dst
+                    a = src
+                args.append(a)
+            out.append(("args/" + " ".join(w[1:]), args, int(w[0])))
     return out
 
 
 def run(binary, jobs, timeout, fid, path, want):
     """Run one fixture; the verdict class, the last stdout line, wall seconds and peak RSS (MB)."""
-    cmd = [binary] + ([f"--jobs={jobs}"] if jobs > 1 else []) + [path]
+    # an argument row (`arg_rows`) runs as given, sequentially
+    cmd = [binary] + (path if isinstance(path, list) else ([f"--jobs={jobs}"] if jobs > 1 else []) + [path])
     timeout = max(timeout, ALLOW.get(fid, 0))
     if want == 124:  # con-leche's verdict is the timeout itself: no need to wait the full budget
         timeout = min(timeout, T_LOOP)
@@ -247,13 +261,16 @@ class Refs:
                 self.data[k] = {}
 
     def cmd(self, name, path):
+        if isinstance(path, list):  # an argument row: con-ron only
+            return [self.e2e.CON_RON, "--jobs=1"] + path
         if name == "con-ron":
             return [self.e2e.CON_RON, "--jobs=1", path]  # the embedded pins: every variant (`--pins` gone, con-ron #171)
         return [self.ref_bin, path, f"--pins={self.npins}"]
 
     def verdict(self, name, fid, path, want, timeout):
         """'accept', 'reject', 'decline', 'error', 'timeout', or something odd."""
-        fh = file_hash(path)
+        fh = file_hash(path) if not isinstance(path, list) else \
+            "args:" + ",".join(file_hash(x) if os.path.isfile(x) else x for x in path)
         with self.lock:
             v = self.data[name].get(fh)
             if v is not None:
@@ -321,17 +338,17 @@ def main():
             for fid, _, _ in missing:
                 print(f"MISSING {fid}")
             return 2
-        for args in not_ported(a.tests):
-            print(f"NOT PORTED {args}: the checker has no {args.split()[0]} yet (lane compare)")
         fl = flagged(a.tests)
         skipped = [f for f in fx if f[0].startswith("e2e/") and f[0][4:] in fl]
         fx = [f for f in fx if f not in skipped]
         for fid, _, _ in sorted(skipped):
             print(f"SKIPPED    {fid}: con-leche runs it with {fl[fid[4:]]}, which the checker does not take")
+        fx += arg_rows(a.tests, work)
         if a.only:
             fx = [f for f in fx if re.search(a.only, f[0])]
         # largest first, so the long runs do not form the tail
-        fx.sort(key=lambda f: -os.path.getsize(f[1]))
+        fx.sort(key=lambda f: -sum(os.path.getsize(x) for x in (f[1] if isinstance(f[1], list) else [f[1]])
+                                    if os.path.isfile(x)))
         t0 = time.monotonic()
         results = []
         with cf.ThreadPoolExecutor(max_workers=a.parallel) as ex:
@@ -341,7 +358,8 @@ def main():
                     return res
                 fid, want, rc, out, cls, dt, mb = res
                 acc = rc == 0
-                vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in ("con-ron", "con-ron-lean-twin")}
+                names = ("con-ron",) if isinstance(f[1], list) else ("con-ron", "con-ron-lean-twin")
+                vs = {n: refs.verdict(n, fid, f[1], want, a.timeout) for n in names}
                 bad = [f"{n} {v}" for n, v in vs.items() if (v == "accept") != acc]
                 # the checker's reject/decline must be con-ron's (its labels follow the twin)
                 if rc in (1, 2) and vs["con-ron"] != {1: "reject", 2: "decline"}[rc]:

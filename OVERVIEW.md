@@ -59,13 +59,14 @@ abort reasons, generated from [`scripts/reasons.tsv`](scripts/reasons.tsv).
 
 ```
 ./checker [--jobs=N] FILE.ndjson
+./checker --compare [--] CHALLENGE.ndjson SOLUTION.ndjson
 ```
 
 `FILE.ndjson` is a `lean4export` export. `--jobs=N` with `N > 1` checks the
 declaration bodies on `N` threads (§9.3); without it the check is sequential.
 The checker prints one verdict line and exits with status 0 only on accept
-([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L43),
-[`print_verdict`](https://github.com/leanprover/con-agua/blob/master/main.c#L83-L95)):
+([the usage text](https://github.com/leanprover/con-agua/blob/master/main.c#L1-L44),
+[`print_verdict`](https://github.com/leanprover/con-agua/blob/master/main.c#L84-L96)):
 
 | exit | line | meaning |
 |---:|---|---|
@@ -77,6 +78,21 @@ The checker prints one verdict line and exits with status 0 only on accept
 | 3 | `ok R` | the run stopped early: `ok 1` is a line the parser did not accept |
 | 3 | none | a failure of the harness itself (bad usage, a file it cannot read, no memory), with a message on stderr |
 | signal | none | a crash, for instance a page the kernel cannot supply |
+
+`--compare` checks the export `CHALLENGE.ndjson` with its holes justified by
+`SOLUTION.ndjson`, as con-ron's and con-leche's `--compare` do: the solution is
+checked as a `FILE.ndjson` is, then the challenge, where every axiom other than
+the built-in ones, and every definition, theorem or opaque constant whose value
+uses `sorryAx` (read as the axiom of its statement), must be justified by a
+constant of the solution with the same name and the same statement up to a
+renaming of level parameters, whose type reads only constants that are the
+same in both files. Both files are read into one store. The verdict line and
+the exit status are as above; two files that are not two different paths are a
+usage error (exit 3, no verdict line). The compared run is sequential: `--jobs`
+does not combine with it
+([docs/deviations.md](docs/deviations.md), D51). The final theorems (§2) are
+about the flat run and the threaded mode; no final theorem covers `--compare`
+yet.
 
 Every way the checker says no is an L `abort` with a code: the low two bits
 are the class (`1` reject, `2` decline, `0` other), the rest a reason, whose
@@ -224,7 +240,7 @@ not accepted
 | **the assembler, linker and loader** | that the bytes executed are the instructions of `checker.s` at the addresses `Host` describes | [`scripts/check-asm.sh`](https://github.com/leanprover/con-agua/blob/master/scripts/check-asm.sh#L1-L12) assembles and disassembles the file and compares every instruction with what Kraken's printer meant; branch and call targets are not compared, so label resolution is trusted |
 | **the assembler-file parser** | `include_asm`, which turns `checker.s` into the term `checkerFile` | it prints the code back and compares it with the file; Kraken's independent parser must read the file the same way (§8.4) |
 | **the C harness** | [`main.c`](main.c): reads the input, maps the region, calls `ca_start` as `AbiCall` says with the embedded pin data, reads `rdx` and `rax` | review; about two hundred lines with no checker logic. That its callee-saved registers survive each call is proved (`RegsRestored`, §2.1), for the threaded entries too (§9.3) |
-| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L148-L166) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
+| **reading the file** | that the bytes `b` are the file's | the theorem is about whatever bytes the buffer holds; [`read_input`](https://github.com/leanprover/con-agua/blob/master/main.c#L149-L167) maps a regular file read-only and reads anything else (a pipe) until end of file; a file that another process changes during the run is outside the theorem |
 | **the operating system** | `mmap` of a `MAP_NORESERVE` region of about 6 TiB of address space, whose pages become real when touched | a page the kernel cannot supply kills the process (a signal or the OOM killer), which is never an accept |
 | **Lean's kernel, and con-leche's own assumptions** | as for con-leche and con-ron | their documentation |
 
@@ -478,14 +494,17 @@ the layout and enters the trampoline, so `compile_correct` gives one L run of
 the program, §8.6); if that returns `2^63 + k`, it calls entry 2 in place, a
 second L run in mode 2 on the memory the first left; if the machine reports
 accept, both L runs did.
-[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L104-L110)
+[`checkerFile_drv_accepts_regs`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/DrvFinal.lean#L116-L122)
 composes it with `drv_twinAccepts` for the committed file, and
 `EndToEnd.lean` states the four final theorems from it, and the threaded mode's three.
 
 The runs of `check` are the twin's binary in miniature: `check` dispatches on
-the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L155-L162)),
+the mode word ([`checkL`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Entry.lean#L155-L165)),
 entry 1 runs the stages and builds the stream index (quoted in §5.1), entry 2
-runs the jobs.
+runs the jobs, and modes 4, 5 and 6 are the three runs of `--compare` (§1.2):
+the challenge's parse; the solution's parse, preparation and index; and the
+challenge's preparation, side records and index with the solution's index moved
+aside ([`check_c1`‥`check_c3`](ConAgua/Checker/CompareEntry.lean)).
 
 ## 5. L in detail
 
@@ -891,7 +910,7 @@ from memory related to the twin's state before the stage, a returning call ends
 in memory related to the state after the twin's stage. The stages are proved at
 the checker's program and chained into entry 1's run; the last one, the
 stream index's build, is
-[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L307-L313).
+[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L347-L353).
 The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
 proves its refinement at every twin fuel at least the L fuel
 ([`InputsOK`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L74-L77) bounds only the sizes; the fuel is free).
@@ -1129,7 +1148,7 @@ rest of the region around the buffer, makes the buffer read-only, releases the
 input buffer, and starts `N` threads; each maps its own zero region and claims
 job indices from one atomic counter, calling `ca_check_b` for each, until a
 call does not accept
-([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L168-L186)).
+([the harness](https://github.com/leanprover/con-agua/blob/master/main.c#L169-L187)).
 Accept iff every call accepted; otherwise the verdict is that of the failing
 job with the smallest index, as the sequential run reports it. L has no atomics: each call is an ordinary
 sequential L run, and the claiming is the harness's.

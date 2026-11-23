@@ -230,7 +230,8 @@ unrenamed (`PreSimProg`, `ConAgua/Checker/PreludeSim.lean`). -/
 def preShared : List String := [
   {shared_names}]
 
-/-- **The checker.** -/
+set_option maxRecDepth 100000 in
+/-- **The checker.** (The code generator recurses once per list cell: `maxRecDepth`.) -/
 def checkerProg : Prog := [
 {entries}]
 

@@ -121,14 +121,17 @@ def frozenIds : List TieredArray := ↑HDRF :: frozen.map (fun x => ↑x.1)
 
 /-- **The worker's own arrays**: every word array phase B (`check_b`'s call closure) touches that
 is not frozen: `CTL`, the pool's tier 1 and `PT0`, the memos and caches, the env index's tier 1, the walk stacks and
-scratch heaps, the stores' tier-1 arrays. Entry 2 gives them slots in the worker region; any
+scratch heaps, the stores' tier-1 arrays, and the comparison's arrays (`SIXA`‥`CWK`: the solution's
+rows are read only by the challenge's jobs, which run in place, so in a worker region they stay
+zero and unread; the walks' memos and stacks are the job's own). Entry 2 gives them slots in the worker region; any
 other array gets no memory (an access is out of bounds, an error). `Checker/ParOwned.lean` checks
 the list against the program. -/
 def parOwned : List TieredArray :=
   tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
     INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, SPN, BSTK, WSM,
     FLM, LSM, LVS, Stubs.CRM, LH, Ind.IW, LMEMO, ILFM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM,
-    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET] ++
+    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, SIXA, SIXS, SIXN,
+    STXA, STXS, STXN, MATA, MATS, MATN, NDM, CSM, NACC, CWK] ++
   tier1s [POOL, EREC, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN] ++
   ((fzStores.flatMap (fun (x : ArrId × ArrId × Nat × Nat) => [tier1 x.1, tier1 x.2.1]) ++
     fzPCols.map (fun (x : ArrId × Nat) => tier1 x.1) ++
@@ -195,7 +198,8 @@ def parOwnedL : List TieredArray :=
   tier0s [CTL, BMEMO, IMEMO, FRMEMO, ABMEMO, ILMEMO, LPMEMO, LPLMEMO, LPLSMEMO, PT0, WCM, WKM, WH,
     INM, IOM, DEM, CTM, CV, RRM, LQ, LSQ, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, SPN, BSTK, WSM,
     FLM, LSM, LVS, Stubs.CRM, LH, Ind.IW, LMEMO, ILFM, Ind.MAM, Ind.NOM, Ind.DPM, Ind.RFM,
-    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET] ++
+    Ind.RAM, Ind.TAM, Ind.HBM, Ind.MCM, L.Rom.RSTK, L.Rom.RMEMO, L.Rom.RSET, SIXA, SIXS, SIXN,
+    STXA, STXS, STXN, MATA, MATS, MATN, NDM, CSM, NACC, CWK] ++
   tier1s [POOL, EREC, OIXA, OIXS, OIXN, OTXA, OTXS, OTXN, REC, SLOT, AREC, ASLOT, SREC, SSLOT, ZREC, ZSLOT, MREC, MSLOT,
     IREC, ISLOT, PREC, PSLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT, BREC, BSLOT, FVREC,
     FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, NAREC, NASLOT, NSREC, NSSLOT, NNREC,

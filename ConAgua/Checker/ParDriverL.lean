@@ -154,7 +154,7 @@ theorem checkJobs_seq {b pb : ByteArray}
     ∃ s'', checkJobList VM PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
       .ok (.ok (), s'') := by
   let p := Prog.subPB pb.data.toList checkerProg
-  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
+  have hJ0 : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I (flushMem m) { PA.sF with caches := Caches.empty } :=
     hF.jobR hfok
   have hby : (flushMem m).bytes = m₇.bytes := by rw [flushMem_bytes, hF.bytes]
   generalize flushMem m = F at hJ0 hag hby
@@ -184,7 +184,7 @@ theorem checkJobs_seq {b pb : ByteArray}
   simp only [UInt64.toNat_zero, Nat.sub_zero, hhi] at hch
   -- the twin's side
   obtain ⟨pinsP, dsP, hst, hrec, hpp, hden, hPD, hH⟩ := poolHyps_of_phaseA PA
-    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds PA.I { PA.sF with caches := Caches.empty }) (RecCall p)
+    (JobRel PA.ipins (dnOf PA.sE.store) PA.ds none PA.I { PA.sF with caches := Caches.empty }) (RecCall p)
   have hpx := PA.pfx
   obtain ⟨hA, hB, hC, hD, hE⟩ := hpx
   obtain ⟨-, -, -, -, -, hpd, _rc, _preC, -, hden0⟩ :=
@@ -196,8 +196,8 @@ theorem checkJobs_seq {b pb : ByteArray}
     · assumption
     · cases hk
   have hds : PA.ds.size < 2 ^ 64 := by rw [← hhi]; exact UInt64.toNat_lt hi
-  have H := hH (recCall_stepE hJP hFD hLD hdn hrec hpp hds hden hPD)
-  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds PA.I s₂.mem { PA.sF with caches := Caches.empty } :=
+  have H := hH (recCall_stepE (J := none) hJP hFD hLD hdn hpp hds hden hPD hrec (fun h => absurd h (by simp)))
+  have hJ : JobR PA.ipins (dnOf PA.sE.store) PA.ds none PA.I s₂.mem { PA.sF with caches := Caches.empty } :=
     hJ0.setGlob _
   obtain ⟨-, hacc⟩ := pool_twin H hst [(s₂.mem, List.range PA.ds.size)]
     (fun t ht => by

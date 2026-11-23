@@ -67,7 +67,8 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     (h : hNatOpGroundW p n m ord cw = some (r, m')) :
     ∃ res, (hoistNatOpGround IDeclaration.usedConsts ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧ OrdR m' r res.1 ∧
       ArenaR m' a ∧ IWOK m' ∧ IWGrow m m' ∧ r.toNat + cw.toNat ≤ iwTop m' ∧ PinsR m' a.pins ∧
-      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m' := by
+      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] m m' ∧ (∃ s, SeenR m' s) ∧
+      (∃ idx, NixR m' idx) := by
   have hsz := hI.iwSize
   have htsz : iwTop m ≤ (m.arr64 IW).size := hI.iw
   cases n with
@@ -183,7 +184,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have hempty : T.isEmpty = true :=
       tgt_isEmpty T _ hT₅.2 (fun j _ hj => (hav.mp hav0) j (Nat.zero_le _) hj)
     refine ⟨(ds, #[]), by rw [hrun0, hempty]; rfl, hc, hE₅.ordR, hE₅.arena, hE₅.iwok,
-      hgrow₅, by have := hgrow₅.iw; omega, hP₅, hfrm₅⟩
+      hgrow₅, by have := hgrow₅.iw; omega, hP₅, hfrm₅, hE₅.seen, ⟨_, hE₅.nix⟩⟩
   · rw [hNatOpGroundW.k_hoist_any.arm2 _ _ _ _ _ _ _ hav0] at h
     have hne : T.isEmpty = false := by
       cases e : T.isEmpty with
@@ -210,7 +211,7 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     have hP' : m'.arr64 DLP = m₅.arr64 DLP := hf'.1 DLP (by decide) (by decide)
     refine ⟨applyHoist ds T, by rw [hrun0, hne]; rfl, by rw [hres1]; simp [hlen],
       ?_, ?_, hI', hgrow₅.trans hgrow', hout', hP₅.congr (hf'.1 PINS (by decide) (by decide)),
-      hfrm₅.trans (hf'.mono (by simp) (by simp))⟩
+      hfrm₅.trans (hf'.mono (by simp) (by simp)), ?_, ?_⟩
     · intro k hk
       have hk' : k < cw.toNat := by rw [hres1] at hk; simpa [hlen] using hk
       have hkk := hget k hk'
@@ -223,6 +224,10 @@ theorem hNatOpGround_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a :
     · have hA5 : ∀ b ∈ ([IW] : List TieredArray), InHigh b := by decide
       have hC5 : ∀ x ∈ ([200] : List Word), 64 ≤ x.toNat := by simp
       exact ArenaR.frame_ext _ _ hA5 hC5 m₅ m' hf' a hE₅.arena
+    · obtain ⟨s, hs⟩ := hE₅.seen
+      exact ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ [IW] [200] (by decide) (by decide) m₅ m' hf' _ hs⟩
+    · exact ⟨_, memoRV_frame hnSch hnSch_wf nmKey _ [IW] [200] (by decide) (by decide) m₅ m' hf'
+        (fun _ _ h => h) _ hE₅.nix⟩
 
 /-- **`hoist_nat_op_ground(ord, c)` refines `hoistNatOpGround`** (its first component; the second,
 `movedNames`, is dropped by `preparePrelude` and not computed: docs/deviations.md D30). When L
@@ -239,7 +244,8 @@ theorem hoistNatOpGround_refines (p : Prog) (hp : HoistProg p) (hx : HoistExt p)
     ⦃fun r s' => ∃ res, (hoistNatOpGround IDeclaration.usedConsts ds).run a = .ok (res, a) ∧ res.1.size = cw.toNat ∧
       OrdR s'.mem (r.headD 0) res.1 ∧ ArenaR s'.mem a ∧ IWOK s'.mem ∧ IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat + cw.toNat ≤ iwTop s'.mem ∧ PinsR s'.mem a.pins ∧
-      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] s₀.mem s'.mem; ⊤⦄ :=
+      MemFrame [IW, HSEEN, HNIX] [73, 74, 75, 76, 200] s₀.mem s'.mem ∧ (∃ s, SeenR s'.mem s) ∧
+      (∃ idx, NixR s'.mem idx); ⊤⦄ :=
   triple_post (hoistNatOpGround_spec p hp hx n s₀ ord cw) (fun r s' h =>
     hNatOpGround_ok p hx n s₀.mem s'.mem a ds ord cw (r.headD 0) hA hseen hnix hO hc hc60 hI hord hP h.2)
 

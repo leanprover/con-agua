@@ -45,12 +45,11 @@ theorem preLoopC_avoidCore : AvoidC 96 128 preLoopC := by
 /-- **The core tier at the loop's start**: the twin's caches are `AState.init`'s (lane `pipeline`'s
 `prefix_caches`), the core's memos the loaded memory's zeros (lane `inits`' `cachesEmpty_refines`),
 which no stage before the loop writes (`CoreRM.frame` over `preLoopA`, `preLoopC`). -/
-theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {pre : PreludeIx}
-    {sB : AState} {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
-    {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
-    (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+theorem core_of_R7' {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
+    (hc : sE.caches = (AState.init EStore.empty).caches)
     (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) : CoreR m sE.caches := by
-  rw [(prefix_caches hpx).1]
+  rw [hc]
   have hctl : 120 ≤ sz CTL := by
     have := h7.since.caps.2.1
     rw [loadMem_arr] at this; simp only [Array.size_replicate, ctlMin] at this; omega
@@ -59,5 +58,12 @@ theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {
     ⟨fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
   exact ⟨M, (hM.frame (fun _ h => by simp at h) (fun _ h => by simp at h) hf0).frame
     preLoopA_avoidCore preLoopC_avoidCore h7.since.frame⟩
+
+theorem core_of_R7 {b pb : ByteArray} {sz : TieredArray → Nat} {sA : AState} {pre : PreludeIx}
+    {sB : AState} {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
+    {pins : List ConLeche.NatOpPinSet} {ipins : List INatOpPinSet} {sE : AState} {m : Mem}
+    (hpx : TwinPrefix b sA pre sB rc sC ds sD pins ipins sE)
+    (h7 : R7 (ConAgua.Final.loadMem b pb sz) m pb ds ipins sE) : CoreR m sE.caches :=
+  core_of_R7' (prefix_caches hpx).1 h7
 
 end L.Checker

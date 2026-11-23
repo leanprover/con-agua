@@ -202,6 +202,22 @@ declare_arrays checkerArrays
     Arena.OUT : word := 240
   | /-- The frozen buffer's header, as entry 2 sees it. -/ Arena.HDRF : word min 4 := 241
   | /-- The seed of `CTL`, as entry 2 sees it. -/ Arena.CTLF : word := 242
+  -- the comparison with a solution (`Arena/JustifyIface.lean`, `Checker/CompareEntry.lean`)
+  | /-- The solution's constant rows of `anonymous` names (the moved stream index). -/
+    Arena.SIXA : word := 210
+  | /-- The solution's constant rows of `str` names. -/ Arena.SIXS : word := 211
+  | /-- The solution's constant rows of `num` names. -/ Arena.SIXN : word := 212
+  | /-- The solution's table rows of `anonymous` names. -/ Arena.STXA : word := 213
+  | /-- The solution's table rows of `str` names. -/ Arena.STXS : word := 214
+  | /-- The solution's table rows of `num` names. -/ Arena.STXN : word := 215
+  | /-- The record mates' rows of `anonymous` names (`ISolution.mates`). -/ Arena.MATA : word := 216
+  | /-- The record mates' rows of `str` names. -/ Arena.MATS : word := 217
+  | /-- The record mates' rows of `num` names. -/ Arena.MATN : word := 218
+  | /-- `needsGo`'s `seen` memo (`ndSch`). -/ Arena.NDM : word min 3 := 219
+  | /-- `coneGo`'s `seen` memo (`csSch`). -/ Arena.CSM : word min 3 := 220
+  | /-- `NeedsSt.acc`: a needs walk's names (top `CTL[227]`). -/ Arena.NACC : word := 221
+  | /-- `coneGo`'s work list, as a stack (top `CTL[228]`). -/ Arena.CWK : word := 222
+  | /-- The first parse's records, kept across the second (`cmp_stash`). -/ Checker.CDECL : word := 223
 
 /-- **The checker's word arrays**: tier 0 of every word array of the table and tier 1 of every
 tiered one. Write sets "every array but …" are filters of this list. -/

@@ -109,7 +109,7 @@ region's zero; no entry leaves it) aborts; `1` (`ca_start_a`, entry 1) is
 `check_a(1)`: the stages, the stream index and `par_compact` (the frozen buffer in `OUT`,
 `Arena/Freeze.lean`), returning `2^63 + k` for `k` records (jobs); `3` (the sequential driver's
 entry 1) is `check_a(0)`, the same with the buffer's header only; `2` (`ca_check_b`,
-`ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1` over the frozen arrays. -/
+`ca_check_seq`, entry 2) is `check_b`: the jobs `PLO‥PHI-1`; `4`‥`6` `--compare`'s runs. -/
 
 /-- `check_a(c)`: `check`'s stages, then the stream index and the frozen buffer (`c ≠ 0`: header
 and images; `c = 0`: the header only); returns `2^63 + k` for the `k` records (`1` if a line did
@@ -158,6 +158,9 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
   if MODE == 1 { r := call check_a(1); return r };
   if MODE == 3 { r := call check_a(0); return r };
   if MODE == 2 { r := call check_b(); return r };
+  if MODE == 4 { r := call check_c1(); return r };
+  if MODE == 5 { r := call check_c2(); return r };
+  if MODE == 6 { r := call check_c3(); return r };
   abort
 }
 
