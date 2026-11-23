@@ -143,3 +143,13 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   `CmpLoop`, built, zero `sorry`). `Final/CmpMain.lean` (the driver theorem, work in progress) is
   not in this landing (it stays on H4's branch). OVERVIEW and `main.c` say that no final
   theorem covers `--compare` yet.
+* 19:40 H4 done, merged: `cmp_outcome(_regs)` (`Final/CmpMain.lean`): from `CmpCall` (`AbiCall` plus the
+  solution's buffer as the two stack arguments), the L-level premise `CmpGuard` and `cmpNeed < 2^64`,
+  every run of `ca_compare` returns to the caller with the callee-saved registers restored, and
+  `rdx = 0, rax = ACCEPT` means `CmpAccepts` (the chain of L runs), `rdx = 2` means `CmpErr`. The
+  setup stub on a region holding an L memory (`memRel_restub`), the worker loop (`cmp_loop`), the
+  file equation with the tail. `AbiCall` became `AbiCallM` in the setup stub's theorem (callers
+  pass `hc.toM`); no other Final statement changed. 0 `sorry`.
+* H6 (modes 4, 5; the stage lemmas generalised: `StagesOut`, `pinsStage_gen`, `buildR_of_out`) done
+  and merged; H6b continues (mode 6, the jobs, the composition, the guard). H8 makes the gates green
+  for a first step landing.
