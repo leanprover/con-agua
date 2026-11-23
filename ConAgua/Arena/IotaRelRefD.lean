@@ -385,6 +385,92 @@ theorem rulesRead_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
   simpa using rulesRead_loop P PF hrr' hAk (n + 1) m _ a 0 r rulesP hW hI hcv hrr hrrP hrs
     (by simpa using hrsP) UInt64.zero_le
 
+theorem decOIR_lit {m : Mem} {r : List Word} {x : Option IotaRec} (h : decOIR m r x) :
+    decOIR m [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.tail.tail.headD 0] x := by
+  cases x with
+  | none => simpa [decOIR] using h
+  | some x =>
+    simp only [decOIR, decIRAt, decRL] at h ⊢
+    simp only [irHeadD, irTailGetD, List.getD_cons_zero, List.getD_cons_succ, Nat.zero_add]
+    simpa [irHeadD, List.head?_eq_getElem?] using h
+
+theorem denoteCI_rec_rules {st : EStore} {cv : IConstantVal} {mI rP : Nat} {k : Bool}
+    {rules : List IRecRule} {c : ConLeche.ConstantInfo}
+    (hd : Frontend.denoteCI st (.recInfo cv mI rP k rules) = some c) :
+    ∃ rs, Frontend.denoteRules st rules = some rs := by
+  simp only [Frontend.denoteCI] at hd
+  cases h2 : Frontend.denoteRules st rules with
+  | none => rw [h2] at hd; split at hd <;> simp_all
+  | some ys => exact ⟨ys, rfl⟩
+
+/-- **`rec_reads(vis, ci)` refines `recReads feR ci`** (the constant record `ci` in `EREC`). -/
+@[refines ConRon.Arena.recReads]
+theorem recReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
+    (hf : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
+    (hAr : AbsKeep p "rules_read") {n : Nat}
+    {m m' : Mem} {a : AState} {ciw : Word} {r : List Word} {ci : IConstantInfo}
+    {cP : ConLeche.ConstantInfo}
+    (hc : callW p n "rec_reads" [vis, ciw] m = some (r, m')) (hI : RInv dn vis feR env fe E m a)
+    (hci : decCI (erecP m) ciw.toNat = some ci) (hcP : Frontend.denoteCI a.store ci = some cP) :
+    ∃ b a', (recReads feR ci).run a = .ok (b, a') ∧
+      RInv dn vis feR env fe E m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (recReads_specW p hf n _ vis ciw) hc
+  rcases n with _ | n
+  · rw [recReadsW.eq_1] at hW; cases hW
+  have hsp := decCI_rec_rd (erRdOK m) hci
+  by_cases h5 : erRd m ciw ≠ 5
+  · rw [recReadsW.arm1 _ _ _ _ _ h5] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨true, a, ?_, hI, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hI.check⟩
+    have hnr := hsp.2 h5
+    cases ci with
+    | recInfo cv mI rP isK rules => exact absurd rfl (hnr cv mI rP isK rules)
+    | _ => rfl
+  have h5 : erRd m ciw = 5 := Classical.not_not.mp h5
+  rw [recReadsW.arm2 _ _ _ _ _ h5] at hW
+  obtain ⟨cv, rules, rfl, -, hrs⟩ := hsp.1 h5
+  have hcv : decCV (erecP m) (ciw + CI.cv).toNat = some cv := decCI_cv_rd (erRdOK m) hci
+  obtain ⟨cvP, hcvP⟩ := denoteCI_cv hcP
+  obtain ⟨rulesP, hrsP⟩ := denoteCI_rec_rules hcP
+  simp only [recReads]
+  rcases c1 : callW p n "iota_rec_of" [ciw + CI.cv, erRd m (ciw + CI.recMajor), erRd m (ciw + CI.recPrefix)] m
+    with _ | ⟨r1, m1⟩
+  · rw [c1, recReadsW.k_iota_rec_of.none] at hW; cases hW
+  rw [c1, recReadsW.k_iota_rec_of.arm1] at hW
+  obtain ⟨x1, a1, h1, ⟨hS1, hg1, hd1⟩, hA1⟩ := iotaRecOf_rel PF n vis feR (ciw + CI.cv)
+    (erRd m (ciw + CI.recMajor)) (erRd m (ciw + CI.recPrefix)) cv m m1 a r1 c1 ⟨hI.stage, hI.abs, hcv⟩
+  obtain ⟨k1, hrel⟩ := ConRon.Bridge.Inductives.iotaRecOf_run (env := env) (fe := fe) hI.check hcvP h1
+  have hI1 := hI.step hS1 hA1 k1
+  rw [StateT.run_bind, h1, except_ok_bind]
+  rcases c2 : callW p n "rules_read" [vis, ciw + CI.cv, r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0,
+      r1.tail.tail.tail.headD 0, r1.tail.tail.tail.tail.headD 0, r1.tail.tail.tail.tail.tail.headD 0,
+      r1.tail.tail.tail.tail.tail.tail.headD 0, r1.tail.tail.tail.tail.tail.tail.tail.headD 0,
+      erRd m (ciw + CI.recMajor), erRd m (ciw + CI.recPrefix), erRd m1 (ciw + CI.recRulesOff),
+      erRd m1 (ciw + CI.recRulesLen)] m1 with _ | ⟨r2, m2⟩
+  · rw [c2, recReadsW.k_rules_read.none] at hW; cases hW
+  rw [c2, recReadsW.k_rules_read.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨-, -, -, -, -, o, cnt, ho, hcnt, -⟩ := decCI_recInfo_iff.mp hci
+  have e1 : erRd m1 (ciw + CI.recRulesOff) = erRd m (ciw + CI.recRulesOff) := by
+    obtain ⟨w, hw, -⟩ := nat?_word ho
+    have ea := rd_off_toNat (erRdOK m) hw
+    rw [← ea] at hw
+    rw [erRd_of _ w hw, erRd_of _ w (hg1.ext _ _ hw)]
+  have e2 : erRd m1 (ciw + CI.recRulesLen) = erRd m (ciw + CI.recRulesLen) := by
+    obtain ⟨w, hw, -⟩ := nat?_word hcnt
+    have ea := rd_off_toNat (erRdOK m) hw
+    rw [← ea] at hw
+    rw [erRd_of _ w hw, erRd_of _ w (hg1.ext _ _ hw)]
+  rw [e1, e2] at c2
+  obtain ⟨b2, a2, h2, hI2, hg2, hd2, k2⟩ := rulesRead_rel P PF hfr hrr' hAk c2 hI1
+    (ArrExt.decCV hg1.ext hcv) (decOIR_lit hd1) (fun r0 e => hrel r0 e) (ArrExt.decRules hg1.ext hrs)
+    (ConRon.Bridge.denoteRules_ext k1.ext _ _ hrsP)
+  exact ⟨b2, a2, h2, hI2, hg1.trans hg2, hd2, k1.trans k2⟩
+
 end rule
 
 end L.Ind
