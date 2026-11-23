@@ -4,6 +4,8 @@ public import ConAgua.Arena.IotaRelRefN
 public import ConAgua.Arena.IndPosSpec.NtyLook
 public import ConAgua.Arena.IndPosSpec.EnvFindWHit
 public import ConAgua.Arena.RecLayout.CIDec
+public import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.DefEqLeaves2
 public import ConRon.Bridge.Inductives.Rel
 import ConRon.Bridge.Core.Walks.Spine
 import ConRon.Bridge.Inductives.Run
@@ -47,6 +49,9 @@ structure IotaRelProg (p : Prog) : Prop where
   bvp : p.lookup "bvar_push" = some bvarPush
   ibv : p.lookup "intern_bvar" = some internBVar
   aib : p.lookup "ann_ident_body" = some annIdentBodyL
+  lvn : p.lookup "lv_node" = some lvNode
+  aiv : p.lookup "ann_ident_val" = some annIdentValL
+  ai : p.lookup "ann_ident" = some annIdentL
 
 section ann
 variable {p : Prog} {env : ConLeche.Env} {fe feR : IFEnv} {vis : Word}
@@ -354,6 +359,158 @@ theorem annIdentBody_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
   obtain ⟨x4, a4, h4, hS4, hg4, hd4, k4⟩ := annWitness_rel P c4 hS3 k3.ok hD1
   exact ⟨x4, a4, h4, hS4, hg3.trans hg4, hd4, k3.trans k4⟩
+
+/-- **`ann_ident_val(vis, lpsO, lpsL, arity, v)` refines `annIdentVal feR lps arity v`** (the level
+parameters the `EREC` slice `(lpsO, lpsL)`). -/
+theorem annIdentVal_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
+    {lo ll ar v : Word} {r : List Word} {lps : List NIdx}
+    (hc : callW p n "ann_ident_val" [vis, lo, ll, ar, v] m = some (r, m'))
+    (hS : StageR vis feR m a) (hok : ConRon.Bridge.CheckOK false env fe a)
+    (hl : hslice? (erecP m) lo.toNat ll.toNat = some lps) (hv : HW v) :
+    ∃ x a', (annIdentVal feR lps ar.toNat (decE v)).run a = .ok (x, a') ∧
+      StageR vis feR m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (annIdentVal_specW p P.aiv n _ vis lo ll ar v) hc
+  rcases n with _ | n
+  · rw [annIdentValW.eq_1] at hW; cases hW
+  have hR := hS.check.arena.base
+  have tb := irTagB v hv
+  obtain ⟨hlen, hget⟩ := hslice?_get hl
+  have r0 : ∀ {mm : Mem} {x : Bool}, x = false → decW0B mm [0] x := fun h => by subst h; simp [decW0B]
+  simp only [annIdentVal, hlen, irNatBeq ll 1 (by decide), show UInt64.ofNat 1 = 1 from rfl]
+  by_cases hl1 : ll ≠ 1
+  · rw [annIdentValW.arm1 _ _ _ _ _ _ _ _ hl1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+    simp only [hl1, decide_false, Bool.false_eq_true, ite_false]; rfl
+  have hl1 : ll = 1 := Classical.not_not.mp hl1
+  simp only [hl1, decide_true, ite_true]
+  by_cases ht5 : tagW v ≠ 5
+  · rw [annIdentValW.arm2 _ _ _ _ _ _ _ _ hl1 ht5] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+    simp only [tb ETag.lam 5 rfl (by decide), irOfNat5, ht5, decide_false, Bool.false_eq_true,
+      ite_false]; rfl
+  have ht5 : tagW v = 5 := Classical.not_not.mp ht5
+  rw [annIdentValW.arm3 _ _ _ _ _ _ _ _ hl1 ht5] at hW
+  simp only [tb ETag.lam 5 rfl (by decide), irOfNat5, ht5, decide_true, ite_true]
+  rcases c1 : callW p n "e_view" [v] m with _ | ⟨r1, m1⟩
+  · rw [c1, annIdentValW.k_e_view.none] at hW; cases hW
+  obtain ⟨hm1, v1, hv1, hr1, ht1⟩ := eView_callW_view P.ev hR c1
+  subst m1
+  obtain ⟨hty, hb1, hv1'⟩ := irVR_two hr1 (by rw [ht1, ht5]; simp)
+  have hv1l : v1 = .lam (decE (r1.tail.headD 0)) (decE (r1.tail.tail.headD 0)) := by
+    rcases hv1' with ⟨g, -⟩ | ⟨-, h⟩ | ⟨g, -⟩
+    · rw [ht1, ht5] at g; exact absurd g (by decide)
+    · exact h
+    · rw [ht1, ht5] at g; exact absurd g (by decide)
+  subst hv1l
+  rw [StateT.run_bind, viewBind_run', ConRon.Bridge.viewBind_of_view hv1 (Or.inl rfl), except_ok_bind]
+  dsimp only
+  have tt := irTagB _ hty
+  by_cases ht2 : tagW (r1.tail.headD 0) ≠ 2
+  · rw [c1, annIdentValW.k_e_view.arm1 _ _ _ _ _ _ _ ht2] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+    simp only [tt ETag.sort 2 rfl (by decide), irOfNat2, ht2, decide_false, Bool.false_eq_true,
+      ite_false]; rfl
+  have ht2 : tagW (r1.tail.headD 0) = 2 := Classical.not_not.mp ht2
+  rw [c1, annIdentValW.k_e_view.arm2 _ _ _ _ _ _ _ ht2] at hW
+  simp only [tt ETag.sort 2 rfl (by decide), irOfNat2, ht2, decide_true, ite_true]
+  rcases c2 : callW p n "e_view" [r1.tail.headD 0] m with _ | ⟨r2, m2⟩
+  · rw [c2, annIdentValW.k_e_view_2.none] at hW; cases hW
+  obtain ⟨hm2, v2, hv2, hr2, ht2'⟩ := eView_callW_view P.ev hR c2
+  subst m2
+  obtain ⟨rfl, hu2⟩ := viewR_sort hr2 (by rw [ht2', ht2])
+  rw [c2, annIdentValW.k_e_view_2.arm1] at hW
+  have tw : (decE (r1.tail.headD 0)).tag = ETag.sort := by rw [decE_tag _ hty, ht2]; rfl
+  rw [StateT.run_bind, viewSort_run', irViewSort tw hv2, except_ok_bind]
+  dsimp only
+  rcases c3 : callW p n "lv_node" [r2.tail.headD 0] m with _ | ⟨r3, m3⟩
+  · rw [c3, annIdentValW.k_lv_node.none] at hW; cases hW
+  obtain ⟨s3, hs3, hseq, hne3, hr3⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (lvNode_spec p P.lvn n _ _) c3
+  subst hseq
+  simp only at hs3 hr3 hne3
+  subst m3
+  rw [hr3] at hne3
+  obtain ⟨lv, hrunL, henc⟩ := lvView hR hu2 hne3
+  rw [StateT.run_bind, hrunL, except_ok_bind]
+  rw [← hr3] at henc
+  cases lv with
+  | param q =>
+    simp only [lvEnc] at henc
+    subst henc
+    rw [c3, annIdentValW.k_lv_node.arm2 _ _ _ _ _ _ _ _ rfl] at hW
+    simp only [List.tail_cons, List.headD_cons] at hW
+    dsimp only
+    obtain ⟨w0, hw0, hw0', hg0⟩ := hget 0 (by rw [hl1]; decide)
+    have he0 : erRd m lo = w0 := erRd_of lo w0 (by simpa using hw0)
+    have hg0' : lps.getD 0 default = decI w0 := by simp [List.getD, hg0]
+    rcases c4 : callW p n "ann_ident_body"
+      [vis, erRd m lo, q.word.toUInt64, ar, r1.tail.tail.headD 0] m with _ | ⟨r4, m4⟩
+    · rw [c4, annIdentValW.k_ann_ident_body.none] at hW; cases hW
+    rw [c4, annIdentValW.k_ann_ident_body.arm1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    rw [he0] at c4
+    obtain ⟨x4, a4, h4, hS4, hg4, hd4, k4⟩ :=
+      annIdentBody_rel P c4 hS hok hw0' (idx_word_lt32 q) hb1
+    rw [decI_word] at h4
+    exact ⟨x4, a4, by rw [hg0']; exact h4, hS4, hg4, hd4, k4⟩
+  | zero | succ _ | max _ _ | imax _ _ =>
+    simp only [lvEnc] at henc
+    rw [c3, annIdentValW.k_lv_node.arm1 _ _ _ _ _ _ _ _ (by rw [henc]; simp)] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨false, a, rfl, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+
+/-- **`ann_ident(vis, n, arity)` refines `annIdent feR n arity`.** -/
+theorem annIdent_rel (P : IotaRelProg p) {k : Nat} {m m' : Mem} {a : AState}
+    {nw ar : Word} {r : List Word}
+    (hc : callW p k "ann_ident" [vis, nw, ar] m = some (r, m'))
+    (hS : StageR vis feR m a) (hok : ConRon.Bridge.CheckOK false env fe a) (hn : HW nw) :
+    ∃ x a', (annIdent feR (decI nw) ar.toNat).run a = .ok (x, a') ∧
+      StageR vis feR m' a' ∧ IWGrow m m' ∧ decW0B m' r x ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (annIdent_specW p P.ai k _ vis nw ar) hc
+  rcases k with _ | k
+  · rw [annIdentW.eq_1] at hW; cases hW
+  rw [annIdentW.arm1] at hW
+  have r0 : ∀ {mm : Mem} {x : Bool}, x = false → decW0B mm [0] x := fun h => by subst h; simp [decW0B]
+  rcases c1 : callW p k "env_find" [nw, vis] m with _ | ⟨r1, m1⟩
+  · rw [c1, annIdentW.k_env_find.none] at hW; cases hW
+  obtain ⟨hm1, hr1⟩ := irEnvFind P c1
+  subst m1; subst hr1
+  have hE := hS.check.env
+  simp only [annIdent]
+  by_cases hf0 : (findRes m vis nw).headD 0 = 0
+  · rw [c1, annIdentW.k_env_find.arm1 _ _ _ _ _ _ hf0] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+    rw [findRes_miss hE hn hf0]; rfl
+  obtain ⟨hfind, ci, hci⟩ := findRes_hit hE hn hf0
+  rw [hfind, hci]
+  have hsp := decCI_splitE hci
+  by_cases hk1 : erRd m ((findRes m vis nw).tail.headD 0) ≠ 1
+  · rw [c1, annIdentW.k_env_find.arm2 _ _ _ _ _ _ hf0 hk1] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    refine ⟨false, a, ?_, hS, IWGrow.refl _, r0 rfl, ConRon.Bridge.CoreStep.refl hok⟩
+    have hnd := hsp.2.1 hk1
+    cases ci with
+    | defnInfo cv v h => exact absurd rfl (hnd cv v h)
+    | _ => rfl
+  have hk1 : erRd m ((findRes m vis nw).tail.headD 0) = 1 := Classical.not_not.mp hk1
+  rw [c1, annIdentW.k_env_find.arm3 _ _ _ _ _ _ hf0 hk1] at hW
+  obtain ⟨cv, v, hint, rfl, hcv, hv, hvw⟩ := hsp.1 hk1
+  obtain ⟨-, -, hsl, -, -, -⟩ := decCV_rd_ci (erRdOK m) hcv
+  dsimp only
+  rcases c2 : callW p k "ann_ident_val" [vis, erRd m ((findRes m vis nw).tail.headD 0 + (CI.cv + CV.lpsOff)),
+      erRd m ((findRes m vis nw).tail.headD 0 + (CI.cv + CV.lpsLen)), ar,
+      erRd m ((findRes m vis nw).tail.headD 0 + CI.defnValue)] m with _ | ⟨r2, m2⟩
+  · rw [c2, annIdentW.k_ann_ident_val.none] at hW; cases hW
+  rw [c2, annIdentW.k_ann_ident_val.arm1] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨x2, a2, h2, hS2, hg2, hd2, k2⟩ := annIdentVal_rel P c2 hS hok hsl hvw
+  exact ⟨x2, a2, by rw [hv]; exact h2, hS2, hg2, hd2, k2⟩
 
 end ann
 
