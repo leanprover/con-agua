@@ -3,10 +3,15 @@ module
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.ThreadsFinal
 public import ConAgua.Checker.CompareChain5
+import ConAgua.Checker.CmpSJobs
 import ConAgua.Front.Preserve
+import ConAgua.Checker.CmpHdrKeep
 import ConAgua.Checker.CheckARun
 import ConAgua.Checker.AsmFinal
 import all ConAgua.Checker.Entry
+import ConAgua.Checker.BlockRefsProg
+import ConAgua.Checker.DefnArmT
+import ConAgua.Checker.IndArm
 
 @[expose] public section
 
@@ -21,6 +26,14 @@ entry 1's does (`entry1_buf`).
 namespace ConAgua.Final
 
 open L L.Compiler L.Checker L.Arena
+
+/-- **`check_decl`'s program facts at every injective record decoder** (`CheckerCdG`; the
+flat run's `checkerCd_proved` at any decoder). -/
+theorem checkerCdG_proved : L.Checker.CheckerCdG := fun pb _ dn _ hpb hpre hdn =>
+  have hr : L.Rom.RomOK pb.data.toList := by simpa [L.Rom.RomOK] using hpb
+  ⟨L.Checker.checkerProg_defnLoopPB _ hr hpre,
+    L.Checker.indArmSpec_checker _ hr hpre
+      (L.Checker.cbRefs_checker _ hr hpre (L.Checker.snoSim_checker _)) dn hdn⟩
 
 /-- A run of `check` keeps every word array's size. -/
 theorem run_check_size {N : Nat} {m : Mem} {rs : List Word} {m' : Mem}
@@ -42,7 +55,7 @@ theorem pc1_buf (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).s
     (B : Array Word) (hB : B = ((parCompactMem m 1).arr64 OUT).extract 0
       (((parCompactMem m 1).arr64 OUT).getD 1 0).toNat) :
     (((parCompactMem m 1).arr64 OUT).getD 1 0).toNat ≤ ((parCompactMem m 1).arr64 OUT).size ∧
-      hdrW ≤ (((parCompactMem m 1).arr64 OUT).getD 1 0).toNat ∧
+      hdrW ≤ (((parCompactMem m 1).arr64 OUT).getD 1 0).toNat ∧ bufEntry B 0 = (0, hdrW) ∧
       (∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size) ∧
       (∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i < i' →
         (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1) := by
@@ -55,7 +68,7 @@ theorem pc1_buf (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).s
   have hFl : frozen.length = 63 := frozen_length
   have hL : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
   refine ⟨by rw [hlen, hF.size, hs.2]; exact hoffs.2, by rw [hlen, hs.2]; omega,
-    fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
+    by rw [hBm]; exact bufEntry_zero hok hlt, fun i hi => hBm ▸ buf_entries_inside hok hlt hi, fun i hi i' hi' hii => ?_⟩
   rw [hBm]
   obtain ⟨c, rfl⟩ : ∃ c, i' = c + 1 := ⟨i' - 1, by omega⟩
   obtain ⟨he', ho'⟩ := bufEntry_succ hok hlt (i := c) (by omega)
@@ -93,6 +106,17 @@ theorem checker_modes45 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
   obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
   exact ⟨hA4, checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr5⟩
 
+/-- **The buffer's geometry after `par_compact(1)`** (`CmpBufOk`). -/
+theorem pc1_cmpBufOk (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
+    CmpBufOk frozenIdsL OUT (parCompactMem m 1) := by
+  obtain ⟨hlen, hhdr, he0, hin, hord⟩ := pc1_buf m hok hlt (cmpBuf OUT (parCompactMem m 1)) rfl
+  have hL : frozenIdsL.length = 64 := by rw [frozenIdsL_eq]; simp [frozen_length]
+  have hH : hdrW = 136 := by decide
+  refine ⟨hlen, by rw [he0], fun i hi => by rw [he0]; simp only; omega, hin, fun i hi i' hi' hne => ?_⟩
+  rcases Nat.lt_or_gt_of_ne hne with h | h
+  · exact .inl (hord i hi i' hi' h)
+  · exact .inr (.inl (hord i' hi' i hi h))
+
 /-- **The buffer's geometry after mode `5`** (`CmpGuard`'s first half, for the checker). -/
 theorem checker_cmpBufOk (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     (hbC : bC.size < 2 ^ 63) (hbS : bS.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63)
@@ -111,14 +135,72 @@ theorem checker_cmpBufOk (bC bS pb : ByteArray) (h64 : System.Platform.numBits =
     rw [e4]
     simp only [cmpM4, loadMem, Mem.setG, Array.size_replicate]
     have := abiSz_le checkerTab_abiOk OUT; simp only [abiWords] at this; omega
-  obtain ⟨hlen, hhdr, hin, hord⟩ := pc1_buf m hok hlt _ rfl
-  have hsize : (cmpBuf OUT (parCompactMem m 1)).size = (((parCompactMem m 1).arr64 OUT).getD 1 0).toNat := by
-    simp only [cmpBuf, Array.size_extract]; omega
-  have hL : frozenIdsL.length = 64 := by rw [frozenIdsL_eq]; simp [frozen_length]
-  have hH : hdrW = 136 := by decide
-  refine ⟨hlen, fun i hi => by rw [hsize]; omega, hin, fun i hi i' hi' hne => ?_⟩
-  rcases Nat.lt_or_gt_of_ne hne with h | h
-  · exact .inl (hord i hi i' hi' h)
-  · exact .inr (.inl (hord i' hi' i hi h))
+  exact pc1_cmpBufOk m hok hlt
+
+/-- **A job keeps the header** (`CmpGuard`'s second half, for the checker): `check` with the mode
+word `2` stores into neither the header nor the seed (`check_mode2_hk`). -/
+theorem checker_cmpHdrKeep : CmpHdrKeep checkerProg MODE PLO PHI frozenIdsL parOwnedL := by
+  intro B r j rs r' h _
+  have h' : L.run checkerProg abiFuel "check" [] (bufMem B r j) = .ok (rs, r') := by rw [bufMem_eq]; exact h
+  have hk := run_post (Q := fun _ m'' => (bufMem B r j).glob MODE = 2 → HkFr (bufMem B r j) m'')
+    h' (check_mode2_hk abiFuel _) rfl
+  have e : frozenIdsL[0] = (HDRF : TieredArray) := rfl
+  rw [e, hk.1, bufMem_hdr]
+
+/-- **`CmpGuard` for the checker**. -/
+theorem checker_cmpGuard (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    (hbC : bC.size < 2 ^ 63) (hbS : bS.size < 2 ^ 63) (hpb : pb.size < 2 ^ 63) :
+    CmpGuard checkerTab checkerProg MODE PLO PHI OUT frozenIdsL parOwnedL bC bS pb :=
+  ⟨fun _ _ _ _ h4 hge4 h5 hge5 => checker_cmpBufOk bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5,
+    checker_cmpHdrKeep⟩
+
+/-- **The solution's jobs of the compared run accept ⇒ the twin's job list accepts** (one worker,
+`J = none`). After mode `5` (the solution's index build, `FoldOn`, then `par_compact(1)`: `m5`),
+the jobs `j < k` on the buffer as the jobs before left it, from the zero region (`CmpJobs`), with
+`k` the number of the solution's records. -/
+theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS) {m₇ m m5 : Mem}
+    (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
+    (hok : parCompactOK m 1 = true) (hm5 : m5 = parCompactMem m 1) {rm : Nat → Mem} {k : Nat}
+    (hj : CmpJobs checkerProg MODE PLO PHI frozenIdsL parOwnedL (cmpBuf OUT m5) rm k)
+    (h0 : rm 0 = zeroMem checkerTab) (hk : k = PS.dsS.size) :
+    ∃ s'', ConRon.Arena.checkJobList .verified PS.ipins none PS.IS PS.dsS (List.range k) PS.sF.worker =
+      .ok (.ok (), s'') := by
+  subst hm5 hk
+  have ho := StagesOut.cmp PS.pfx PS.pinsR
+  have hJP := jobProg_of_out checkerCdG_proved ho (ds := PS.dsS) hpb hF.r7.since.pbpre
+  have hsz : ∀ t, (m.arr64 t).size = abiSz checkerTab t := fun t => by
+    rw [hF.frame.size, hF.r7.since.frame.size]; simp [loadMem, Mem.arr64]
+  have hlt : (m.arr64 OUT).size < 2 ^ 64 := by
+    rw [hsz]; have := abiSz_le checkerTab_abiOk OUT; simp only [abiWords] at this; omega
+  have hB := (pc1_cmpBufOk m hok hlt).2
+  have hB0 : cmpBuf OUT (parCompactMem m 1) = bufOf m := by
+    simp only [cmpBuf]; rw [bufOf, (parCompactMem_hdr hok).2.1]
+  have hBs := bufSeq_ok hB checker_cmpHdrKeep _ hj
+  have hN : abiFuel ≤ 2 ^ 62 := by simp [abiFuel]
+  refine sjobs_chainO ho PS.idx hF hJP hok hlt (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0 rm
+    (fun b hb => by rw [h0, hsz]; simp [zeroMem, Mem.arr64, zeros]) (by rw [h0]; rfl) fun j hjk => ?_
+  obtain ⟨rs, hr, -⟩ := hj j hjk
+  have hr' : L.run checkerProg abiFuel "check" []
+      (bufMem (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm j) (rm j) (UInt64.ofNat j)) =
+      .ok (rs, rm (j + 1)) := by rw [bufMem_eq]; exact hr
+  refine ⟨abiFuel, rs, hN, hr', fun k' hk' h1 => ?_⟩
+  have hBj := hBs j (by omega)
+  have hL : frozenIdsL.length = frozen.length + 1 := by rw [frozenIdsL_eq]; simp
+  have hi : k' + 1 < frozenIdsL.length := by omega
+  have hent := hBj.ent (k' + 1) hi
+  have he := bufNext_entry hBj (checker_cmpHdrKeep _ _ _ _ _ hr) hi
+  have hs : ((rm (j + 1)).arr64 frozenIdsL[k' + 1]).size =
+      (bufEntry (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm j) (k' + 1)).2 := by
+    rw [run_check_size hr', frozenIdsL_get hk', bufMem_frozen _ _ _ hk' h1]
+    simp only [bufImg, Array.size_extract]; omega
+  have := bufNext_img hBj hi he hs
+  rw [frozenIdsL_get hk'] at this
+  exact this.symm
+
+/-- info: 'ConAgua.Final.cmpSJobs_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms cmpSJobs_twin
+
+/-- info: 'ConAgua.Final.checker_cmpGuard' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms checker_cmpGuard
 
 end ConAgua.Final

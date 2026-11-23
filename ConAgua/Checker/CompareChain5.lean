@@ -234,19 +234,6 @@ structure PhaseS (bC bS : ByteArray) where
   pinsR : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE)
   idx : buildIndex dsS sE = .ok (.ok IS, sF)
 
-/-- **What an index build leaves** (`FoldAt` at explicit twin values): `R7` at the memory `m₇`
-before the build, `BuildR` at the built index after it, the record pool's prefix kept, and the
-build's write set. -/
-structure FoldOn (b pb : ByteArray) (sz : TieredArray → Nat) (ds : Array IDeclaration)
-    (ipins : List INatOpPinSet) (sE : AState) (I : IStreamIndex) (sF : AState) (m₇ m : Mem) : Prop where
-  r7 : R7 (loadMem b pb sz) m₇ pb ds ipins sE
-  build : BuildR (dnOf sE.store) ds m sF I
-  frozen : FrozenR m I
-  fsize : I.firsts.size = ds.size
-  grow : BKeep m₇ m
-  frame : MemFrame biA biC m₇ m
-  bytes : m.bytes = m₇.bytes
-
 /-- After the solution's index build: the twin's phase, `FoldOn` and the challenge's records. -/
 def FS (bC bS pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
   ∃ (PS : PhaseS bC bS) (m₇ : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
