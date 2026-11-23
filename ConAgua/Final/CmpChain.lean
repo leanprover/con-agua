@@ -113,7 +113,7 @@ theorem checker_modes45 (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 
 theorem pc1_cmpBufOk (m : Mem) (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
     CmpBufOk frozenIdsL OUT (parCompactMem m 1) := by
   obtain ⟨hlen, hhdr, he0, hin, hord⟩ := pc1_buf m hok hlt (cmpBuf OUT (parCompactMem m 1)) rfl
-  have hL : frozenIdsL.length = 64 := by rw [frozenIdsL_eq]; simp [frozen_length]
+  have hL := frozenIdsL_length
   have hH := hdrW_eq
   refine ⟨hlen, by rw [he0], fun i hi => by rw [he0]; simp only; omega, hin, fun i hi i' hi' hne => ?_⟩
   rcases Nat.lt_or_gt_of_ne hne with h | h
