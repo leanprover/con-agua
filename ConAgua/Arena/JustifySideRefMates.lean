@@ -748,4 +748,99 @@ theorem block_of_rec {D P : Array Word} {ds : Array IDeclaration} (hD : DeclsF D
     simp only [nameW, hP, rdW_rdN, e1, e2, nmP]
   rw [this, decI_mask]; exact hname
 
+theorem sd_kind6 {D P : Array Word} {x : Nat} {d : IDeclaration} (h : DeclAtF D P x d)
+    (h6 : dw D x 0 = 6) : ∃ b nP, d = .indDecl b nP := by
+  cases d with
+  | indDecl b nP => exact ⟨b, nP, rfl⟩
+  | _ => simp only [DeclAtF, DeclAt] at h; rw [h.1] at h6; cases h6
+
+theorem recordMatesGo_other (M : Std.HashMap NIdx (List NIdx)) (d : IDeclaration)
+    (ds : List IDeclaration) (h : ∀ b nP, d ≠ .indDecl b nP) :
+    recordMatesGo M (d :: ds) = recordMatesGo M ds := by
+  cases d <;> first | rfl | exact absurd rfl (h _ _)
+
+theorem solutionOfLoop_ok {p : Prog} (hP : MatesProg p) {cnt : Word} {ds : Array IDeclaration}
+    {m₀ : Mem} (hcnt : cnt.toNat = ds.size) (hD : DeclsF (m₀.arr64 DECL) (m₀.arr64 DLP) ds)
+    (hR : ∀ x < ds.size, L.Checker.RecOK (m₀.arr64 DECL) (m₀.arr64 DLP) x) :
+    ∀ n (m m' : Mem) (k : Word) (M : Std.HashMap NIdx (List NIdx)),
+      MatesR m M → MInv m → MKeep m₀ m → k.toNat ≤ ds.size →
+      solutionOfW.loop1 p n m cnt k = some m' →
+      MatesR m' (recordMatesGo M (ds.toList.drop k.toNat)) ∧ MInv m' ∧ MKeep m₀ m' := by
+  intro n
+  induction n with
+  | zero => intro m m' k M _ _ _ _ h; rw [solutionOfW.loop1.eq_1] at h; cases h
+  | succ n ih =>
+    intro m m' k M hM hI hK hk h
+    by_cases g : k < cnt
+    · have gk : k.toNat < ds.size := by rw [← hcnt]; exact UInt64.lt_iff_toNat_lt.mp g
+      have hk60 : k.toNat < 2 ^ 60 := by have := hD.room; have := hD.dsize; omega
+      have hDm : m.arr64 DECL = m₀.arr64 DECL := hK.frame.arr _ (by decide) (by decide)
+      have hPm : m.arr64 DLP = m₀.arr64 DLP := hK.frame.arr _ (by decide) (by decide)
+      have e0 := sd_rdW_dw (m.arr64 DECL) k 1 0 rfl (by decide) hk60
+      have e2 := sd_rdW_dw (m.arr64 DECL) k 3 2 rfl (by decide) hk60
+      have e3 := sd_rdW_dw (m.arr64 DECL) k 4 3 rfl (by decide) hk60
+      have ek : (k + 1).toNat = k.toNat + 1 := by
+        rw [UInt64.toNat_add]; have := UInt64.toNat_lt cnt; simp; omega
+      rw [List.drop_eq_getElem_cons (by simpa using gk)]
+      simp only [Array.getElem_toList]
+      by_cases k6 : dw (m₀.arr64 DECL) k.toNat 0 = 6
+      · obtain ⟨block, nP, he⟩ := sd_kind6 (hD.recs k.toNat gk) k6
+        rw [solutionOfW.loop1.arm1 _ _ _ _ _ g (by rw [e0, hDm, k6])] at h
+        rw [e2, e3, hDm] at h
+        cases h1 : callW p n "mates_insert" [dw (m₀.arr64 DECL) k.toNat 2, dw (m₀.arr64 DECL) k.toNat 3, 0] m with
+        | none => rw [h1] at h; simp at h
+        | some q =>
+        obtain ⟨ρ, μ⟩ := q
+        rw [h1, L.Ind.bW_some, solutionOfW.j1.arm1] at h
+        obtain ⟨t, et, -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+          (matesInsert_specW p hP.mates_insert n _ _ _ 0) h1
+        rw [et] at hw; simp only at hw
+        obtain ⟨hlen, hbl, hnm⟩ := block_of_rec hD gk (hR _ gk) he hPm
+        obtain ⟨hM1, hI1, hK1⟩ := matesInsert_ok hP (m₀ := m) hbl hlen (fun i hi => hnm i (by omega))
+          n m μ _ 0 M hM hI (MKeep.refl m) (UInt64.zero_le) hw
+        have := ih μ m' (k + 1) _ hM1 hI1 (hK.trans hK1) (by rw [ek]; omega) h
+        rw [he, ek] at *
+        simpa [recordMatesGo] using this
+      · rw [solutionOfW.loop1.arm2 _ _ _ _ _ g (by rw [e0, hDm]; exact k6), solutionOfW.j1.arm1] at h
+        have := ih m m' (k + 1) M hM hI hK (by rw [ek]; omega) h
+        rw [ek] at this
+        rw [recordMatesGo_other _ _ _ (fun b nP e => by
+          have hr := hD.recs k.toNat gk; rw [e] at hr; exact k6 hr.1)]
+        exact this
+    · rw [solutionOfW.loop1.arm3 _ _ _ _ _ g] at h; cases h
+      have : k.toNat = ds.size := by
+        have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp g); omega
+      rw [this, List.drop_of_length_le (by simp)]
+      exact ⟨by simpa [recordMatesGo] using hM, hI, hK⟩
+
+/-- **`solution_of(cnt)` refines `solutionOf`'s record mates** (`recordMatesGo ∅` over the
+front's `cnt` records): from empty rows, a returning run leaves the twin's map in the rows
+(`MatesR`), only the record pool's tier 0, its top and the rows changed. -/
+@[refines ConRon.Arena.recordMatesGo ConRon.Arena.matesInsert]
+theorem solutionOf_ref {p : Prog} (hP : MatesProg p) {n : Nat} {cnt : Word} {m m' : Mem}
+    {r : List Word} {ds : Array IDeclaration}
+    (hc : callW p n "solution_of" [cnt] m = some (r, m'))
+    (hD : DeclsF (m.arr64 DECL) (m.arr64 DLP) ds)
+    (hR : ∀ x < ds.size, L.Checker.RecOK (m.arr64 DECL) (m.arr64 DLP) x) (hcnt : cnt.toNat = ds.size)
+    (hz : ∀ g ≤ 2, ∀ j, rdN (m.arr64 (matArr g)) j = 0)
+    (hsz : (m.arr64 EREC).size ≤ 2 ^ 40) (htop : erTop m ≤ (m.arr64 EREC).size)
+    (hctl : 228 < (m.arr64 CTL).size) :
+    MatesR m' (recordMatesGo ∅ ds.toList) ∧ MInv m' ∧ MKeep m m' := by
+  obtain ⟨t, et, -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (solutionOf_specW p hP.solution_of n _ cnt) hc
+  rw [et] at hw; simp only at hw
+  rcases n with _ | n
+  · rw [solutionOfW.eq_1] at hw; cases hw
+  by_cases c : rdW (m.arr64 CTL) 1 = 0
+  · rw [solutionOfW.arm1 _ _ _ _ c] at hw
+    cases e : solutionOfW.loop1 p (n + 1) m cnt 0 with
+    | none => rw [e] at hw; simp [solutionOfW.k_loop1] at hw
+    | some m₁ =>
+      rw [e, solutionOfW.k_loop1.arm1] at hw
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+      have := solutionOfLoop_ok hP hcnt hD hR (n + 1) m m₁ 0 ∅ (MatesR.zero hz) ⟨c, hsz, htop, hctl⟩
+        (MKeep.refl m) (Nat.zero_le _) e
+      simpa using this
+  · rw [solutionOfW.abort1 _ _ _ _ c] at hw; cases hw
+
 end L.Arena
