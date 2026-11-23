@@ -247,15 +247,29 @@ structure R7 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (ipins : Lis
   /-- The tier-1 record pool's top is still zero. -/
   c130 : rdW (m.arr64 CTL) 130 = 0
 
-theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
-    (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
-    (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
+/-- **The twin's facts `internAllPins` starts from** (`prefix4_facts` for the flat run). -/
+structure PinsPre (a : AState) : Prop where
+  ok : ConRon.Bridge.StateOK a
+  off : a.store.scratchOn = false
+  pins : ConRon.Bridge.PinsOK a
+  pers : ConRon.Bridge.PersPins a
+  max : a.pins.maxNatSize = maxNatSizeDefault
+
+theorem PinsPre.of4 {b : ByteArray} {sA : AState} {pre : PreludeIx} {sB : AState}
+    {rc : ParseResultD} {sC : AState} {ds : Array IDeclaration} {sD : AState}
+    (h : TwinPrefix4 b sA pre sB rc sC ds sD) : PinsPre sD :=
+  let ⟨a, b, c, d, e⟩ := prefix4_facts h
+  ⟨a, b, c, d, e⟩
+
+/-- **Stage `intern_all_pins`** from the twin's facts before it (`PinsPre`). -/
+theorem pinsStage_gen (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+    (ds : Array IDeclaration) (a : AState) (hf : PinsPre a) :
     RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb sz) m pb ds a) fun _ m =>
       ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧
         R7 (loadMem b pb sz) m pb ds ipins a' := by
   intro n _hn s₀ h6
   have hc := CapsOK.keep h6.since.keep h6.since.caps
-  obtain ⟨hok, hoff, hpins, hpp, hmax⟩ := prefix4_facts hpx
+  obtain ⟨hok, hoff, hpins, hpp, hmax⟩ := hf
   have hbs : s₀.mem.arr8 PB = pb.data.toList.toArray := by
     rw [h6.since.keep.arr8]; exact loadMem_pb b pb sz
   refine triple_post (triple_and (triple_and (checkerProg_internAllPins_PB pb.data.toList
@@ -285,5 +299,13 @@ theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : p
       rw [hpfr.ctl 130 (by decide), hpfr.arr (tier1 EREC) (by decide) (by decide)]; exact h6.iw.er1
     · have := hc'.1 (tier1 EREC) (by decide); omega
   · rw [hpfr.ctl 130 (by decide)]; exact h6.c130
+
+theorem pinsStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+    (sA : AState) (pre : PreludeIx) (sB : AState) (rc : ParseResultD) (sC : AState)
+    (ds : Array IDeclaration) (a : AState) (hpx : TwinPrefix4 b sA pre sB rc sC ds a) :
+    RelSpec checkerProg "intern_all_pins" (fun m => R6 (loadMem b pb sz) m pb ds a) fun _ m =>
+      ∃ pins ipins a', internAllPins pins maxNatSizeDefault a = .ok (ipins, a') ∧
+        R7 (loadMem b pb sz) m pb ds ipins a' :=
+  pinsStage_gen b pb sz hpb ds a (PinsPre.of4 hpx)
 
 end L.Checker
