@@ -212,16 +212,18 @@ theorem checkJobsLoop_chain {p : Prog} {hi : Word} :
       exact .nil m
 
 /-- **`record_job` calls as the pool's step**, from the job relation (`JobPost` from `a₀`) and the
-facts `recordJob_ref` takes, at `a₀`. -/
+facts `recordJob_ref` takes, at `a₀`, at the run's solution `J`. -/
 theorem recCall_step {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
-    {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {p : Prog} {I : IStreamIndex}
+    {dn : NIdx → Option ConLeche.Name} {ds : Array IDeclaration} {p : Prog} {J : Option ISolution}
+    {I : IStreamIndex}
     (hP : JobProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLpsDn dn ds) (hdn : DnPers dn)
-    (hrec : RecordSpec pins pinsP) (hpp : PersPinSets pins) (hds : ds.size < 2 ^ 64)
+    (hpp : PersPinSets pins) (hds : ds.size < 2 ^ 64)
     {a₀ : AState} (hden : ∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a₀.store x = some d)
-    (hPD : PinsDenote a₀.store pins pinsP) :
-    ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobPost pins dn ds I a₀ r a →
+    (hPD : PinsDenote a₀.store pins pinsP) (hrec : JobSpec pins pinsP J a₀)
+    (hcrs : CrsFor pins dn ds p J) :
+    ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobPost pins dn ds J I a₀ r a →
       RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-      ∃ a', recordJob V pins none I k ds[k] a = .ok ((), a') ∧ JobPost pins dn ds I a₀ r' a' := by
+      ∃ a', recordJob V pins J I k ds[k] a = .ok ((), a') ∧ JobPost pins dn ds J I a₀ r' a' := by
   intro k r r' a hk ⟨hJ, hx, hp⟩ ⟨n, rs, hn, hc⟩ hF
   have hkw : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt (Nat.lt_trans hk hds)
   have hden' : ∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d :=
@@ -230,11 +232,12 @@ theorem recCall_step {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinS
       exact ⟨h1, d, denoteDecl_pext hx h1 h2⟩
   have hPD' := PinsDenote.pmono hx pins pinsP hpp hPD
   have hk' : (UInt64.ofNat k).toNat < ds.size := by rw [hkw]; exact hk
-  have hr := recordJob_ref hP hFD hLD hdn hrec hpp (N := n) hn hk' hJ (by rw [hkw]; exact hF) hden' hPD'
+  have hr := recordJob_ref hP hFD hLD hdn hpp (N := n) hn hk' hJ (hrec.pmono hx) hcrs (by rw [hkw]; exact hF)
+    hden' hPD'
   rw [hc] at hr
   obtain ⟨u, a₁, hrun, hJ₁, hx₁, hp₁⟩ := hr
   refine ⟨a₁, ?_, hJ₁, hx.trans hx₁, hp₁.trans hp⟩
-  have e : recordJob V pins none I (UInt64.ofNat k).toNat ds[(UInt64.ofNat k).toNat] = recordJob V pins none I k ds[k] := by
+  have e : recordJob V pins J I (UInt64.ofNat k).toNat ds[(UInt64.ofNat k).toNat] = recordJob V pins J I k ds[k] := by
     simp only [hkw]
   rw [← e]; cases u; exact hrun
 

@@ -120,3 +120,15 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   The compared run costs 2.015 flat runs (con-ron: 2.016). Its peak RSS is twice the flat run's:
   the solution's jobs run on the worker region over a copy of the frozen arrays, and both stay
   resident (con-ron moves its tier to the workers and drops them).
+* 18:00–18:25 helpers' results. H1 (Needs, 15 functions) done, zero `sorry`; H3 (move, side records,
+  mates) done, zero `sorry`; H2 then H2b (the comparisons, the cone, `justify_why`,
+  `check_justified`, `check_record_sol` = `crs_ref`) done, zero `sorry`, with three facts left to
+  discharge on the checker: `ConeProg.cmpClosed` (a closure check), `CrsKeep` (semantic frames
+  stated on the models), and the solution counter's bound. The rejection claims of
+  `check_justified` take the guard `JwGuard` (the twin's message reads names back; only the error
+  branch needs it; it matters only for a compare verdict theorem).
+* 18:05 H4 (`compare-abi`: the file equation with the tail, `CmpCall`, `CmpGuard` as a premise
+  (L-level: the buffer's geometry after mode 5, the workers keep the frozen arrays), `CmpAccepts`,
+  `cmp_outcome`) and H5 (`compare-integ`: the tree building again, `JobM` with `J`) started;
+  18:25 H6 (`compare-chain`: the L-level chain, `CmpAccepts → TwinComparesAccepts`).
+* `WalkMem` (the walks' memos between jobs) added to the interface for H2b and H5.
