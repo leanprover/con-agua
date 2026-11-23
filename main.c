@@ -327,10 +327,7 @@ extern ca_res ca_start_a4(const uint8_t *in, uint64_t in_len, const uint8_t *pin
                           void *base, uint64_t base_len);
 extern ca_res ca_start_a5(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                           void *base, uint64_t base_len);
-#ifndef CA_START_A7
-#define CA_START_A7 ca_start_a7
-#endif
-extern ca_res CA_START_A7(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
+extern ca_res ca_start_a7(const uint8_t *in, uint64_t in_len, const uint8_t *pins, uint64_t pins_len,
                           void *base, uint64_t base_len);
 extern const uint64_t ca_cmp_region_size;
 
@@ -360,7 +357,7 @@ static int run_compare_jobs(int jobs, uint8_t *c, uint64_t c_len, uint8_t *s, ui
   if (!high(r)) return print_verdict(r);
   r = cmp_phase(base, r.rax - (1ull << 63), jobs);
   if (!accepted(r)) return print_verdict(r);
-  r = CA_START_A7(s, s_len, pins, sizeof pins, base, ca_region_size);
+  r = ca_start_a7(s, s_len, pins, sizeof pins, base, ca_region_size);
   if (!high(r)) return print_verdict(r);
   return print_verdict(cmp_phase(base, r.rax - (1ull << 63), jobs));
 }
