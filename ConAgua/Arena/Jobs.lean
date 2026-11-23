@@ -4,6 +4,7 @@ public import ConAgua.Arena.IndexBuild
 public import ConRon.Bridge.Checker.Pooled
 public import ConRon.Bridge.Compare.Record
 public import ConAgua.Arena.JustifyRef7
+public import ConAgua.Arena.CmpVMates
 import ConAgua.Census.Attr
 import ConAgua.Arena.RefWalk
 import ConAgua.Arena.GrindAttr
@@ -158,13 +159,15 @@ open ConRon.Bridge (RecordSpec RecordSpecC IFEnvOK SolView MatesDen) in
 /-- **What a job's twin side takes of the run's solution**, at the job's state `a`: without one,
 con-ron's `RecordSpec`; with one, `RecordSpecC` against the solution's environment `envS` and the
 mates `matesU`, whose index's view (`SolView`) and mates denote at every persistent extension of
-`a` (con-ron's `job_specC` takes them from `solView_ok` and `MatesRel`). -/
+`a` (con-ron's `job_specC` takes them from `solView_ok` and `MatesRel`), every mate handle denoting
+(`CvMatesDen`, for the verdict: the cone's culprit reads back). -/
 def JobSpec (pins : List INatOpPinSet) (pinsP : List ConLeche.NatOpPinSet) :
     Option ISolution → AState → Prop
   | none, _ => RecordSpec pins pinsP
   | some J, a => ∃ envS matesU, RecordSpecC pins pinsP J envS matesU ∧
       ∀ s : AState, ConRon.Bridge.StateOK s → ConRon.Bridge.PExt a.store s.store →
-        IFEnvOK envS (SolView J) s ∧ MatesDen s.store J.mates matesU
+        IFEnvOK envS (SolView J) s ∧ MatesDen s.store J.mates matesU ∧
+          ConRon.Bridge.CvMatesDen s.store J.mates
 
 /-- `JobSpec` at a persistent extension. -/
 theorem JobSpec.pmono {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinSet}
@@ -196,7 +199,7 @@ theorem JobSpec.keep {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinS
   | none => obtain ⟨h1, h2, h3, -⟩ := h hF hPD hd hrc; exact ⟨h1, h2, h3⟩
   | some J =>
     obtain ⟨envS, matesU, hC, hall⟩ := h
-    obtain ⟨h1, h2⟩ := hall s hok hx
+    obtain ⟨h1, h2, -⟩ := hall s hok hx
     obtain ⟨h1, h2, h3, -⟩ := hC hF hPD hd h1 h2 hrc
     exact ⟨h1, h2, h3⟩
 
@@ -1148,7 +1151,7 @@ theorem recordJobE_ref {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPi
       have := hS4.jsol.sol.1; simp only [ctlW, SOLC] at this; rw [this]; decide
     rw [recordJobE.k_and_pin_ok.arm1 _ _ _ _ _ hz h224]
     obtain ⟨envS, matesU, -, hall⟩ := hrec
-    obtain ⟨hie, hmd⟩ := hall a4 hok4 hpx4
+    obtain ⟨hie, hmd, -⟩ := hall a4 hok4 hpx4
     obtain ⟨hWM4, hnx⟩ := hS4.jsol.walk J rfl
     have h1 := hcs.ref hFD hLD (N := n) (by omega) hk hok4 hR4 hT4 ⟨env, hF4⟩ hden4 hPD4 hS4.memos
       hS4.jsol.sol.2 hWM4 hie hmd hnx

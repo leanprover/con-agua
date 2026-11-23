@@ -70,6 +70,8 @@ theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
   have hIS' := hIS.pmono hpIS hxFI
   have hmates := (solutionOf_mates (I := PC.IS) hoC.drv.state.wf hdenC
     (fun x hx => hoC.pd x hx)).mono hxGI
+  have hcvm : CvMatesDen sI.store (solutionOf PC.IS PC.recsC).mates :=
+    (cvMatesDen_solutionOf hdenC (fun x hx => hoC.pd x hx)).ext hxGI
   obtain ⟨hlen, hget⟩ := denoteDecls_getElem hdenC
   have hden' : ∀ (i : Nat) (hi : i < PC.recsC.toArray.size), ∃ hi' : i < dsP.length,
       Frontend.denoteDecl sI.store PC.recsC.toArray[i] = some dsP[i] := fun i hi => by
@@ -80,7 +82,8 @@ theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
     recordSpecC CoreSpec.of_core ConRon.Bridge.Inductives.indSpec_of_bridge
   have hPD := PinsDenote.mono hxGI PC.ipins PC.pins hoC.pinsDn
   refine ⟨PC.pins, dsP, dsSP, _, hstI.state,
-    ⟨_, _, hrec, fun s hs hx => ⟨solView_ok hIS' hpIS hndS hs hx, (hmates.pmono hx).toDen hs.wf⟩⟩,
+    ⟨_, _, hrec, fun s hs hx => ⟨solView_ok hIS' hpIS hndS hs hx, (hmates.pmono hx).toDen hs.wf,
+      (hcvm.pmono hx)⟩⟩,
     hoC.pps, fun x hx => ⟨hoC.pd x hx, ?_⟩, hPD, fun hstep =>
     { hrec := hrec, hpp := hoC.pps, hpinsOK := hoC.drv.pins.pmono hoC.pp (PExt.of_ext hxGI) hpI',
       hpersPins := hoC.pp.mono hpI', hpins := hPD, hpd := hoC.pd, hden := hden', hI := hI,
