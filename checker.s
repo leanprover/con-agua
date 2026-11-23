@@ -117116,6 +117116,30 @@ movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
 movq %r10, 24(%rsp)
 movq %r11, 32(%rsp)
+movq $4294967296, %rax
+cmpq 8(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+cmpq 16(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+cmpq 24(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+movq 32(%rsp), %rdx
+addq $1, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+movq 32(%rsp), %rcx
+addq $1, %rcx
+movq $1099511627775, %r11
+andq %r11, %rcx
+cmpq 2648(%r15,%rdx,8), %rcx
+jae ca_error
+movq 1176(%r15,%rdx,8), %r11
+movq (%r11,%rcx,8), %rcx
+cmpq %rcx, %rax
+jbe ca_error
 movq (%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
@@ -117167,7 +117191,7 @@ movq %rdi, 96(%rsp)
 movq %r8, 104(%rsp)
 movq %r9, 112(%rsp)
 cmpq $0, 88(%rsp)
-jne .Lca_iota_parts_at_222221E
+jne .Lca_iota_parts_at_22222221E
 movq $0, %rax
 movq %rax, 192(%rsp)
 movq $0, %rax
@@ -117203,9 +117227,9 @@ movq %rcx, 35080(%r15)
 movq 264(%rsp), %rcx
 movq %rcx, 35088(%r15)
 jmp .Lca_iota_parts_at_0R
-jmp .Lca_iota_parts_at_222221X
-.Lca_iota_parts_at_222221E:
-.Lca_iota_parts_at_222221X:
+jmp .Lca_iota_parts_at_22222221X
+.Lca_iota_parts_at_22222221E:
+.Lca_iota_parts_at_22222221X:
 movq 8(%rsp), %rax
 movq %rax, 192(%rsp)
 movq 16(%rsp), %rax
@@ -117612,9 +117636,30 @@ movq 72(%rsi), %rax
 movq %rax, 72(%rsp)
 movq 80(%rsi), %rax
 movq %rax, 80(%rsp)
+movq $4294967296, %rax
+cmpq 56(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+cmpq 64(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+movq 80(%rsp), %rdx
+addq $1, %rdx
+shrq $40, %rdx
+andq $1, %rdx
+movq 80(%rsp), %rcx
+addq $1, %rcx
+movq $1099511627775, %r11
+andq %r11, %rcx
+cmpq 2648(%r15,%rdx,8), %rcx
+jae ca_error
+movq 1176(%r15,%rdx,8), %r11
+movq (%r11,%rcx,8), %rcx
+cmpq %rcx, %rax
+jbe ca_error
 movq 24(%rsp), %rax
 cmpq 72(%rsp), %rax
-ja .Lca_iota_parts_of_at_1E
+ja .Lca_iota_parts_of_at_21E
 movq $0, %rax
 movq %rax, 208(%rsp)
 movq $0, %rax
@@ -117642,9 +117687,9 @@ movq %rcx, 35064(%r15)
 movq 264(%rsp), %rcx
 movq %rcx, 35072(%r15)
 jmp .Lca_iota_parts_of_at_0R
-jmp .Lca_iota_parts_of_at_1X
-.Lca_iota_parts_of_at_1E:
-.Lca_iota_parts_of_at_1X:
+jmp .Lca_iota_parts_of_at_21X
+.Lca_iota_parts_of_at_21E:
+.Lca_iota_parts_of_at_21X:
 movq 16(%rsp), %rax
 addq 72(%rsp), %rax
 cmpq 2856(%r15), %rax
@@ -117667,8 +117712,6 @@ movq 80(%rsp), %rdi
 addq $1, %rdi
 movq $1099511627775, %rcx
 andq %rcx, %rdi
-cmpq 2648(%r15,%rax,8), %rdi
-jae ca_error
 movq 1176(%r15,%rax,8), %rcx
 movq (%rcx,%rdi,8), %rdi
 movq 96(%rsp), %r8
@@ -117680,7 +117723,7 @@ movq %rdi, 112(%rsp)
 movq %r8, 120(%rsp)
 movq %r9, 128(%rsp)
 cmpq $0, 104(%rsp)
-jne .Lca_iota_parts_of_at_22221E
+jne .Lca_iota_parts_of_at_222221E
 movq $0, %rax
 movq %rax, 208(%rsp)
 movq $0, %rax
@@ -117708,19 +117751,19 @@ movq %rcx, 35064(%r15)
 movq 264(%rsp), %rcx
 movq %rcx, 35072(%r15)
 jmp .Lca_iota_parts_of_at_0R
-jmp .Lca_iota_parts_of_at_22221X
-.Lca_iota_parts_of_at_22221E:
-.Lca_iota_parts_of_at_22221X:
+jmp .Lca_iota_parts_of_at_222221X
+.Lca_iota_parts_of_at_222221E:
+.Lca_iota_parts_of_at_222221X:
 movq 56(%rsp), %rax
 subq 88(%rsp), %rax
 movq %rax, 136(%rsp)
 movq 56(%rsp), %rax
 cmpq 88(%rsp), %rax
-jae .Lca_iota_parts_of_at_2222221E
+jae .Lca_iota_parts_of_at_22222221E
 movq $0, 136(%rsp)
-jmp .Lca_iota_parts_of_at_2222221X
-.Lca_iota_parts_of_at_2222221E:
-.Lca_iota_parts_of_at_2222221X:
+jmp .Lca_iota_parts_of_at_22222221X
+.Lca_iota_parts_of_at_22222221E:
+.Lca_iota_parts_of_at_22222221X:
 movq 136(%rsp), %rdi
 movq 112(%rsp), %r8
 movq 120(%rsp), %r9
@@ -117744,12 +117787,12 @@ movq %rax, 176(%rsp)
 movq %rdi, 184(%rsp)
 movq 64(%rsp), %rax
 cmpq 184(%rsp), %rax
-jae .Lca_iota_parts_of_at_22222222221E
+jae .Lca_iota_parts_of_at_222222222221E
 movq 64(%rsp), %rax
 movq %rax, 184(%rsp)
-jmp .Lca_iota_parts_of_at_22222222221X
-.Lca_iota_parts_of_at_22222222221E:
-.Lca_iota_parts_of_at_22222222221X:
+jmp .Lca_iota_parts_of_at_222222222221X
+.Lca_iota_parts_of_at_222222222221E:
+.Lca_iota_parts_of_at_222222222221X:
 movq 136(%rsp), %rdi
 movq 160(%rsp), %r8
 movq 80(%rsp), %rax
@@ -119453,16 +119496,22 @@ subq $248, %rsp
 movq %rdi, (%rsp)
 movq %r8, 8(%rsp)
 movq %r9, 16(%rsp)
+movq $4294967296, %rax
+cmpq 8(%rsp), %rax
+jbe ca_error
+movq $4294967296, %rax
+cmpq 16(%rsp), %rax
+jbe ca_error
 movq 8(%rsp), %rax
 subq 16(%rsp), %rax
 movq %rax, 24(%rsp)
 movq 8(%rsp), %rax
 cmpq 16(%rsp), %rax
-jae .Lca_iota_rec_of_21E
+jae .Lca_iota_rec_of_221E
 movq $0, 24(%rsp)
-jmp .Lca_iota_rec_of_21X
-.Lca_iota_rec_of_21E:
-.Lca_iota_rec_of_21X:
+jmp .Lca_iota_rec_of_221X
+.Lca_iota_rec_of_221E:
+.Lca_iota_rec_of_221X:
 movq (%rsp), %rdi
 movq 8(%rsp), %r8
 movq 16(%rsp), %r9
@@ -119478,7 +119527,7 @@ movq %r11, 72(%rsp)
 movq 35064(%r15), %rcx
 movq %rcx, 80(%rsp)
 cmpq $0, 32(%rsp)
-jne .Lca_iota_rec_of_2221E
+jne .Lca_iota_rec_of_22221E
 movq $0, %rax
 movq %rax, 184(%rsp)
 movq $0, %rax
@@ -119506,9 +119555,9 @@ movq %rcx, 35064(%r15)
 movq 240(%rsp), %rcx
 movq %rcx, 35072(%r15)
 jmp .Lca_iota_rec_of_0R
-jmp .Lca_iota_rec_of_2221X
-.Lca_iota_rec_of_2221E:
-.Lca_iota_rec_of_2221X:
+jmp .Lca_iota_rec_of_22221X
+.Lca_iota_rec_of_22221E:
+.Lca_iota_rec_of_22221X:
 movq $4000000000, %rdi
 movq 72(%rsp), %r8
 subq $1, %r14
@@ -119520,7 +119569,7 @@ shrq $26, %rax
 andq $31, %rax
 movzbq 4460(%r15,%rax,1), %rax
 cmpq $0, %rax
-je .Lca_iota_rec_of_222221E
+je .Lca_iota_rec_of_2222221E
 movq $0, %rax
 movq %rax, 184(%rsp)
 movq $0, %rax
@@ -119548,9 +119597,9 @@ movq %rcx, 35064(%r15)
 movq 240(%rsp), %rcx
 movq %rcx, 35072(%r15)
 jmp .Lca_iota_rec_of_0R
-jmp .Lca_iota_rec_of_222221X
-.Lca_iota_rec_of_222221E:
-.Lca_iota_rec_of_222221X:
+jmp .Lca_iota_rec_of_2222221X
+.Lca_iota_rec_of_2222221E:
+.Lca_iota_rec_of_2222221X:
 movq 88(%rsp), %rdi
 subq $1, %r14
 jb ca_exhausted
@@ -127921,6 +127970,9 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_lift_entry
 movq %rax, 40(%rsp)
+movq $4294967296, %rax
+cmpq 40(%rsp), %rax
+jbe ca_error
 movq 40(%rsp), %rax
 movq 24(%rsp), %rcx
 addq 32(%rsp), %rcx
@@ -128346,6 +128398,9 @@ subq $1, %r14
 jb ca_exhausted
 call ca_f_lift_entry
 movq %rax, 64(%rsp)
+movq $4294967296, %rax
+cmpq 64(%rsp), %rax
+jbe ca_error
 movq 64(%rsp), %rax
 movq 40(%rsp), %rcx
 addq 48(%rsp), %rcx
