@@ -265,6 +265,126 @@ theorem ruleReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
   exact ⟨b4, a4, h4, hI3.step hS4 (hAk _ _ _ _ _ c4 hA3) k4, g13.trans hg4, hd4,
     k1.trans (k3.trans k4)⟩
 
+/-- The `j`-th rule of a decoded rule run, at L's address `ro + Rule.size * j`. -/
+theorem irRuleAt {R : Nat → Option Word} {rd : Word → Word} (hR : RdOK R rd) {ro rl j : Word}
+    {rules : List IRecRule} (h : decRules R ro.toNat rl.toNat = some rules) (hj : j < rl) :
+    ∃ x, decRule R (ro + Rule.size * j).toNat = some x ∧
+      rules.drop j.toNat = x :: rules.drop (j + 1).toNat := by
+  obtain ⟨hlen, hget⟩ := decRules_get h
+  have hj' : j.toNat < rl.toNat := UInt64.lt_iff_toNat_lt.mp hj
+  have hx := hget j.toNat hj'
+  rw [List.getElem?_eq_getElem (by omega)] at hx
+  obtain ⟨w, hw⟩ : ∃ w, R (ro.toNat + Rule.size.toNat * j.toNat) = some w := by
+    have := decRule_ctor hx
+    try simp only [ctor_add] at this
+    cases e : R (ro.toNat + Rule.size.toNat * j.toNat) with
+    | none => simp [hd?, e] at this
+    | some w => exact ⟨w, rfl⟩
+  have hlt := hR.lt _ _ hw
+  have e : (ro + Rule.size * j).toNat = ro.toNat + Rule.size.toNat * j.toNat := by
+    rw [UInt64.toNat_add, UInt64.toNat_mul]
+    have : Rule.size.toNat * j.toNat < 2 ^ 64 := by omega
+    rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt hlt]
+  have hj1 : (j + 1).toNat = j.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; have := rl.toNat_lt; omega
+  refine ⟨_, by rw [e]; exact hx, ?_⟩
+  rw [hj1, List.drop_eq_getElem_cons (by omega)]
+
+/-- **`rules_read`'s loop from rule `i`** refines `rulesRead` on the rules from `i` on. -/
+theorem rulesRead_loop (P : IotaRelProg p) (PF : IotaFrameProg p)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
+    {q rok r1 r2 r3 r4 r5 r6 r7 mI rP ro rl : Word} {cv : IConstantVal} {cvP : ConLeche.ConstantVal}
+    {rr : Option IotaRec} {rules : List IRecRule} :
+    ∀ (k : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word) (rulesP : List ConLeche.RecRule),
+      rulesReadW.loop1 p k m vis q rok r1 r2 r3 r4 r5 r6 r7 mI rP ro rl i = some (r, m') →
+      RInv dn vis feR env fe E m a → decCV (erecP m) q.toNat = some cv →
+      decOIR m [rok, r1, r2, r3, r4, r5, r6, r7] rr →
+      (∀ r0, rr = some r0 →
+        ∃ x, ConRon.Bridge.Inductives.iotaRecP cvP mI.toNat rP.toNat = some x ∧
+          ConRon.Bridge.Inductives.RecRel a.store r0 x) →
+      decRules (erecP m) ro.toNat rl.toNat = some rules →
+      Frontend.denoteRules a.store (rules.drop i.toNat) = some rulesP → i ≤ rl →
+      ∃ b a', (rulesRead feR cv rr mI.toNat rP.toNat (rules.drop i.toNat) i.toNat).run a = .ok (b, a') ∧
+        RInv dn vis feR env fe E m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
+        ConRon.Bridge.CoreStep env fe a a'
+  | 0, m, m', a, i, r, _, hW, _, _, _, _, _, _, _ => by rw [rulesReadW.loop1.eq_1] at hW; cases hW
+  | k + 1, m, m', a, i, r, rulesP, hW, hI, hcv, hrr, hrrP, hrs, hrsP, hi => by
+    by_cases hc : i < rl
+    · rw [rulesReadW.loop1.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc] at hW
+      obtain ⟨x, hx, hdrop⟩ := irRuleAt (erRdOK m) hrs hc
+      rw [hdrop] at hrsP ⊢
+      simp only [Frontend.denoteRules] at hrsP
+      obtain ⟨xP, hxP⟩ : ∃ xP, Frontend.denoteRule a.store x = some xP := by
+        cases e : Frontend.denoteRule a.store x with
+        | none => rw [e] at hrsP; simp at hrsP
+        | some y => exact ⟨y, rfl⟩
+      obtain ⟨restP, hrestP⟩ : ∃ restP, Frontend.denoteRules a.store (rules.drop (i + 1).toNat) = some restP := by
+        cases e : Frontend.denoteRules a.store (rules.drop (i + 1).toNat) with
+        | none => rw [hxP, e] at hrsP; simp at hrsP
+        | some y => exact ⟨y, rfl⟩
+      rcases c1 : callW p k "rule_reads" [vis, q, rok, r1, r2, r3, r4, r5, r6, r7, mI, rP, i,
+          ro + Rule.size * i] m with _ | ⟨r1', m1⟩
+      · rw [c1, rulesReadW.k_rule_reads.eq_1] at hW; cases hW
+      obtain ⟨b1, a1, h1, hI1, hg1, hd1, k1⟩ := ruleReads_rel P PF hrr' hAk c1 hI hcv hrr hrrP hx hxP
+      simp only [rulesRead]
+      rw [StateT.run_bind, h1, except_ok_bind]
+      by_cases hz : r1'.headD 0 = 0
+      · rw [c1, rulesReadW.k_rule_reads.arm1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz] at hW
+        obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hb1 : b1 = false := by have := hd1.1; rw [hz] at this; simpa using this.symm
+        subst hb1
+        exact ⟨false, a1, rfl, hI1, hg1, by simp [decW0B], k1⟩
+      rw [c1, rulesReadW.k_rule_reads.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hz] at hW
+      have hb1 : b1 = true := by rw [← hd1.1]; exact bne_iff_ne.mpr hz
+      subst hb1
+      simp only [ite_true]
+      have hi1 : i + 1 ≤ rl := by
+        rw [UInt64.le_iff_toNat_le, UInt64.toNat_add]; have := UInt64.lt_iff_toNat_lt.mp hc
+        simp; have := rl.toNat_lt; omega
+      have hj1 : (i + 1).toNat = i.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; have := UInt64.lt_iff_toNat_lt.mp hc; have := rl.toNat_lt; omega
+      obtain ⟨b2, a2, h2, hI2, hg2, hd2, k2⟩ := rulesRead_loop P PF hrr' hAk k m1 m' a1 (i + 1) r restP hW hI1
+        (ArrExt.decCV hg1.ext hcv) (decOIR_grow hg1 hrr)
+        (fun r0 e => by
+          obtain ⟨x0, h0, h0'⟩ := hrrP r0 e
+          exact ⟨x0, h0, h0'.mono k1.ext⟩)
+        (ArrExt.decRules hg1.ext hrs) (ConRon.Bridge.denoteRules_ext k1.ext _ _ hrestP) hi1
+      rw [hj1] at h2
+      rw [hj1]
+      exact ⟨b2, a2, h2, hI2, hg1.trans hg2, hd2, k1.trans k2⟩
+    rw [rulesReadW.loop1.arm2 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hc] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hi' : i = rl := UInt64.le_antisymm hi (UInt64.not_lt.mp hc)
+    subst hi'
+    rw [List.drop_eq_nil_of_le (by rw [decRules_length hrs]; exact Nat.le_refl _)]
+    exact ⟨true, a, rfl, hI, IWGrow.refl _, by simp [decW0B], ConRon.Bridge.CoreStep.refl hI.check⟩
+
+/-- **`rules_read(vis, q, ok, IotaRec, mI, rP, ro, rl)` refines `rulesRead … rules 0`**. -/
+@[refines ConRon.Arena.rulesRead]
+theorem rulesRead_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
+    (hf : p.lookup "rules_read" = some rulesReadL)
+    (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel") {n : Nat}
+    {m m' : Mem} {a : AState} {q rok r1 r2 r3 r4 r5 r6 r7 mI rP ro rl : Word} {r : List Word}
+    {cv : IConstantVal} {cvP : ConLeche.ConstantVal} {rr : Option IotaRec} {rules : List IRecRule}
+    {rulesP : List ConLeche.RecRule}
+    (hc : callW p n "rules_read" [vis, q, rok, r1, r2, r3, r4, r5, r6, r7, mI, rP, ro, rl] m = some (r, m'))
+    (hI : RInv dn vis feR env fe E m a) (hcv : decCV (erecP m) q.toNat = some cv)
+    (hrr : decOIR m [rok, r1, r2, r3, r4, r5, r6, r7] rr)
+    (hrrP : ∀ r0, rr = some r0 →
+      ∃ x, ConRon.Bridge.Inductives.iotaRecP cvP mI.toNat rP.toNat = some x ∧
+        ConRon.Bridge.Inductives.RecRel a.store r0 x)
+    (hrs : decRules (erecP m) ro.toNat rl.toNat = some rules)
+    (hrsP : Frontend.denoteRules a.store rules = some rulesP) :
+    ∃ b a', (rulesRead feR cv rr mI.toNat rP.toNat rules 0).run a = .ok (b, a') ∧
+      RInv dn vis feR env fe E m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧ ConRon.Bridge.CoreStep env fe a a' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (rulesRead_specW p hf n _ vis q rok r1 r2 r3 r4 r5 r6 r7 mI rP ro rl) hc
+  rcases n with _ | n
+  · rw [rulesReadW.eq_1] at hW; cases hW
+  rw [rulesReadW.arm1] at hW
+  simpa using rulesRead_loop P PF hrr' hAk (n + 1) m _ a 0 r rulesP hW hI hcv hrr hrrP hrs
+    (by simpa using hrsP) UInt64.zero_le
+
 end rule
 
 end L.Ind
