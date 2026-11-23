@@ -618,7 +618,52 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     · intro rm h0 j hj hjobs e he
       exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,
         .inl ⟨j, hj, hjobs, e, he, rfl⟩⟩⟩⟩
-    · sorry
+    · -- after the jobs: mode 6
+      intro rm s3 h0 hjobs hf3 hag3
+      rw [Code.label (i := 89) hC rfl]
+      refine ev_label (hC.get (i := 89) rfl) ?_
+      have hIN : (m5.arr8 IN).size = bS.size := by
+        have := hMem5.size8 _ hdIN; simp only [abiLayout_tab, hpIN, abiLayout_s8_0] at this; exact this
+      have hPB5 : (m5.arr8 Rom.PB).size = pb.size := by
+        have := hMem5.size8 _ hdPB; simp only [abiLayout_tab, hpPB, abiLayout_s8_1] at this; rw [this]; exact hpbE
+      have hpb5 : (⟨m5.arr8 Rom.PB⟩ : ByteArray).size = pb.size := hPB5
+      have hin5 : (⟨m5.arr8 IN⟩ : ByteArray).size = bS.size := hIN
+      have hSa : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size →
+          (x < base ∨ base + dm.regs.r9.toNat ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) := fun x h1 h2 => by
+        obtain ⟨q1, -, -, q4⟩ := hc.hSDisj x h1 h2
+        rw [hbase] at q1; rw [hrsp0] at q4; exact ⟨q1, q4⟩
+      have hPa : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size →
+          (x < base ∨ base + dm.regs.r9.toNat ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) := fun x h1 h2 => by
+        refine ⟨hpR x h1 h2, Classical.byContradiction fun hn => ?_⟩
+        simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+        exact (hcs x (by omega) (by omega)).2.2.2 ⟨h1, h2⟩
+      have hG5 : (abiLayout tab base sa.toNat bS.size dm.regs.rdx.toNat pb.size).Ok :=
+        abiLayout_ok hok ⟨Nat.le_refl _, by omega, hc.hSEnd, hc.hpinsEnd,
+          fun x h1 h2 => by rcases (hSa x h1 h2).1 with h | h <;> omega,
+          fun x h1 h2 => by rcases hpR x h1 h2 with h | h <;> omega,
+          fun x h1 h2 => (hc.hSDisj x h1 h2).2.2.1⟩
+      rw [hpbE] at hMem5
+      have hMem5' := cmp_agree_memRel hok hp hge' hfits hG5 hMem5 hBok.1 hSa hPa hcsW hag3
+      refine ev_congr (j := Kc + 90) ?_ (by omega)
+      refine cmp_modeM q p hq hok hAX hio hwf hngm _ hcodeO.right fd hentry hnp hC 90 14 6 abiStartA6L
+        (fun t ht => match t, ht with | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl | 4, _ => rfl | 5, _ => rfl | 6, _ => rfl | 7, _ => rfl | 8, _ => rfl | _ + 9, h => absurd h (by omega))
+        (fun t ht => match t, ht with | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl | 4, _ => rfl | 5, _ => rfl | 6, _ => rfl | _ + 7, h => absurd h (by omega))
+        dm ra sa (nS := bS.size) ⟨m5.arr8 IN⟩ ⟨m5.arr8 Rom.PB⟩ hin5.symm hgeoB hside (by rw [hpb5, hc.hnp])
+        (by rw [hin5]; exact hc.hSEnd) (by rw [hpb5]; exact hc.hpinsEnd)
+        (fun x h1 h2 => ?_) (fun x h1 h2 => ?_) _ _ s3 hf3 (fun i hi => ?_) (fun i hi => ?_)
+        (m := m5) (inp0 := sa.toNat) (n0 := bS.size) (by rw [hpb5]; exact hG5)
+        (fun x h1 h2 => (hSa x h1 h2).2) (by rw [hpb5]; exact hMem5') ?_
+      · rw [hin5] at h2
+        obtain ⟨q1, q2⟩ := hSa x h1 h2
+        exact ⟨q1, q2, by rw [hpb5]; exact (hc.hSDisj x h1 h2).2.2.1⟩
+      · rw [hpb5] at h2; exact hPa x h1 h2
+      · have hg := hMem5'.get8 _ hdIN i hi
+        simp only [abiLayout_tab, hpIN, abiLayout_b8_0] at hg
+        exact hg
+      · have hg := hMem5'.get8 _ hdPB i hi
+        simp only [abiLayout_tab, hpPB, abiLayout_b8_1] at hg
+        exact hg
+      · sorry
     · exact ((hf2.regs (s' := { s2 with regs := _, status := st7 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
           cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl).wr (by omega)
           hside (by omega) (by omega)).wr (by omega) hside (by omega) (by omega)
