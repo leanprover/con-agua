@@ -8,6 +8,7 @@ import ConAgua.Checker.PrepRef
 import ConAgua.Checker.PreLoopWSPart2
 import ConAgua.Checker.TwinCaches
 public import ConAgua.Arena.IndSumSpec.McGoStep
+import ConAgua.Arena.IndPosSpec.FgW
 public import ConAgua.Arena.JustifySideRefMates
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
@@ -433,6 +434,30 @@ theorem Side6.stage5 {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : A
     rcases hb with rfl | rfl | rfl | rfl <;> decide
   · simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
     subst hx; decide
+
+/-- **`IndMemos` across the side records**: `mentions_const`'s memo from the side records, the
+others by the frame. -/
+theorem _root_.L.Ind.IndMemos.side {m m' : Mem} (h : IndMemos m)
+    (hf : MemFrame [L.Front.DECL, L.Ind.MCM] [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1] m m')
+    (hmc : ∃ mp, L.Ind.mcMR m' mp) : IndMemos m' := by
+  have hM : L.Ind.MFr [L.Ind.MCM] [216, 217] m m' :=
+    ⟨_, _, hf, fun b hb => by
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+        rcases hb with rfl | rfl
+        · exact .inl (by decide)
+        · exact .inr (.inr (by simp)),
+      fun x hx => by
+        simp only [L.Ind.mcSch, List.mem_cons, List.not_mem_nil, or_false] at hx
+        rcases hx with rfl | rfl
+        · exact .inr (.inr (by simp))
+        · exact .inr (.inr (by simp))⟩
+  obtain ⟨⟨hp, ⟨a, ha⟩, -, ⟨c, hc⟩⟩, hi, hcr⟩ := h
+  exact ⟨⟨hp.mfr hM (by simp [L.Ind.PosAv]; decide), ⟨a, L.Arena.memoRG_frame L.Ind.maSch L.Ind.maSch_wf _ _ _ _
+      (by decide) (by simp [L.Ind.mcSch, L.Ind.maSch]) _ _ hf a ha⟩, hmc,
+    ⟨c, L.Arena.memoRG_frame L.Ind.taSch L.Ind.taSch_wf _ _ _ _ (by decide)
+      (by simp [L.Ind.mcSch, L.Ind.taSch]) _ _ hf c hc⟩⟩,
+    L.Ind.I1Memo.frame hi hf (by decide) (by simp [L.Ind.mcSch]),
+    L.Arena.CrOK.frame hcr hf (by decide) (by simp [L.Ind.mcSch])⟩
 
 end steps
 
