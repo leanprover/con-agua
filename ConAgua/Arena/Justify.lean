@@ -150,19 +150,23 @@ than a compiler-trust operation (pin slots `43`, `44`) whose statement, as a fre
 it copies. -/
 -- con-ron: ConRon/Arena/Justify.lean:132-145 ConRon.Arena.refinesB
 @[no_expose, l_impl ConRon.Arena.refinesB]
-def refinesBL : FunDecl := lfn (c, d) locals (e, s, n, a, b, x, ez) {
+def refinesBL : FunDecl := lfn (c, d) locals (e, s, n, t, a, b, x, ez) {
   e := call copy_b(d, c);
   if e != 0 { return 1 };
   if EREC⦃c⦄ != 0 { return 0 };
   s := call is_stmt_kind(d);
   if s == 0 { return 0 };
   n := EREC⦃d + ⟪CI.cv + CV.name⟫⦄;
+  t := EREC⦃d + ⟪CI.cv + CV.type⟫⦄;
   a := call pin_at(43);
   b := call pin_at(44);
   if n == a || n == b { return 0 };
   x := call erec_alloc(⟪CI.axiomSize⟫);
   ez := call erec_put(x, 0);
-  ez := call er_copy_er(x + ⟪CI.cv⟫, d + ⟪CI.cv⟫, ⟪CV.size⟫);
+  ez := call erec_put(x + ⟪CI.cv + CV.name⟫, n);
+  ez := call erec_put(x + ⟪CI.cv + CV.lpsOff⟫, EREC⦃d + ⟪CI.cv + CV.lpsOff⟫⦄);
+  ez := call erec_put(x + ⟪CI.cv + CV.lpsLen⟫, EREC⦃d + ⟪CI.cv + CV.lpsLen⟫⦄);
+  ez := call erec_put(x + ⟪CI.cv + CV.type⟫, t);
   e := call copy_b(x, c);
   return e
 }

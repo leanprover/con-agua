@@ -4,6 +4,8 @@ public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.PinListRef
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclBasisNames
+import ConAgua.Verdict.DeclValsE
+import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.RecLayout.CIDec
 import ConRon.Bridge.Specs
 import all ConAgua.Arena.Justify
@@ -42,6 +44,8 @@ structure JfCmpProg (p : Prog) : Prop where
   rb : p.lookup "refines_b" = some refinesBL
   rf : p.lookup "reserved_from" = some reservedFrom
   rc : p.lookup "reserved_contains" = some reservedContains
+  pa : p.lookup "pin_at" = some pinAtL
+  rcp : RecProg p
 
 section lr
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -327,6 +331,196 @@ theorem copyB_sim (hP : JfCmpProg p) (n : Nat) {m : Mem} {a : AState} {d c : Wor
     simp only [List.headD_cons, hb6]
     by_cases h : x = ci <;> simp [h]
 
+/-- **`refines_b(c, d)` refines `refinesB ci ci'`** (`c` the input's record, `d` the solution's): a
+copy (`copy_b`), or the input's an axiom (kind word `0`) and the solution's a statement kind
+(`is_stmt_kind`) not at a compiler-trust name (pin slots `43`, `44`, the twin's `reduceOpNames`),
+whose statement as a fresh axiom record (`ccv_rec`'s stores) the input copies. -/
+theorem refinesB_sim (hP : JfCmpProg p) (n : Nat) {m : Mem} {a : AState} {c d : Word}
+    {ci ci' : IConstantInfo} {C C' : ConLeche.ConstantInfo}
+    (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a)
+    (hc : decCI (erecP m) c.toNat = some ci) (hd : decCI (erecP m) d.toNat = some ci')
+    (hdc : Frontend.denoteCI a.store ci = some C) (hdd : Frontend.denoteCI a.store ci' = some C') :
+    Sim (callW p n "refines_b" [c, d] m) (ConRon.Arena.refinesB ci ci') a
+      (fun r b m' a' => CmpPost dn vis fe m a r b m' a') := by
+  intro r m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (refinesB_specW p hP.rb n _ c d) h
+  cases n with
+  | zero => simp [refinesBW] at hW
+  | succ n =>
+  simp only [refinesBW] at hW
+  -- `copy_b(d, c)`
+  cases h1 : callW p n "copy_b" [d, c] m with
+  | none => rw [h1] at hW; simp [refinesBW.k_copy_b] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨b1, a1, hrun1, hT1, hg1, hok1, hr1, hx1, hb1⟩ := copyB_sim hP n hT hok hr hd hc hdd hdc r1 m1 h1
+  rw [h1] at hW; simp only [refinesBW.k_copy_b] at hW
+  by_cases h0 : r1.headD 0 ≠ 0
+  · rw [ite_eq_left h0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    have hb : b1 = true := hb1.mp h0
+    refine ⟨true, a1, ?_, ?_⟩
+    · simp only [ConRon.Arena.refinesB, StateT.run_bind, hrun1, except_ok_bind, hb, ↓reduceIte]; rfl
+    · rw [← e]; exact ⟨hT1, hg1, hok1, hr1, hx1, by simp⟩
+  rw [ite_eq_right h0] at hW
+  have hb : b1 = false := by
+    cases hq : b1
+    · rfl
+    · exact absurd (hb1.mpr hq) h0
+  have hc1 : decCI (erecP m1) c.toNat = some ci := ArrExt.decCI hg1.ext hc
+  have hd1 : decCI (erecP m1) d.toNat = some ci' := ArrExt.decCI hg1.ext hd
+  have hrun1' : (ConRon.Arena.refinesB ci ci').run a = (match ci with
+      | .axiomInfo _ =>
+        if ci'.isStmtKind = true then
+          (do let rs ← reduceOpNames
+              if rs.contains ci'.toConstantVal.name = true then pure false
+              else ConRon.Arena.copyB (.axiomInfo ci'.toConstantVal) ci : AM Bool)
+        else pure false
+      | _ => pure false : AM Bool).run a1 := by
+    simp only [ConRon.Arena.refinesB, StateT.run_bind, hrun1, except_ok_bind, hb,
+      Bool.false_eq_true, ↓reduceIte]
+    cases ci <;> rfl
+  have hk := kindW hc1
+  by_cases hax : erRd m1 c ≠ 0
+  · rw [ite_eq_left hax] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨false, a1, ?_, ?_⟩
+    · rw [hrun1']
+      have : ciKindQ ci ≠ 0 := by rw [← hk]; exact fun h => hax (UInt64.toNat_inj.mp h)
+      cases ci <;> simp_all [ciKindQ] <;> rfl
+    · rw [← e]; exact ⟨hT1, hg1, hok1, hr1, hx1, by simp⟩
+  rw [ite_eq_right hax] at hW
+  obtain ⟨cv0, rfl⟩ : ∃ cv0, ci = .axiomInfo cv0 := by
+    have : ciKindQ ci = 0 := by rw [← hk]; simp at hax; rw [hax]; rfl
+    cases ci <;> simp_all [ciKindQ]
+  simp only at hrun1'
+  -- `is_stmt_kind(d)`
+  cases h2 : callW p n "is_stmt_kind" [d] m1 with
+  | none => rw [h2] at hW; simp [refinesBW.k_is_stmt_kind] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  obtain ⟨e2, hk2⟩ := isStmtKind_ok hP hd1 h2
+  subst m2
+  rw [h2] at hW; simp only [refinesBW.k_is_stmt_kind] at hW
+  by_cases hz : r2.headD 0 = 0
+  · rw [ite_eq_left hz] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    have hk' : ci'.isStmtKind = false := by rw [hz] at hk2; simpa using hk2
+    refine ⟨false, a1, by rw [hrun1', hk']; rfl, ?_⟩
+    rw [← e]; exact ⟨hT1, hg1, hok1, hr1, hx1, by simp⟩
+  rw [ite_eq_right hz] at hW
+  have hk' : ci'.isStmtKind = true := hk2.mp hz
+  rw [hk'] at hrun1'
+  simp only [↓reduceIte] at hrun1'
+  have hF1 : PinsFull m1 a1.pins := hT1.stage.check.pins.full hT1.flag
+  simp only [StateT.run_bind, reduceOpNames_run hF1, except_ok_bind] at hrun1'
+  obtain ⟨hnw, hnde, -, -, -⟩ := decCV_rd_ci (erRdOK m1) (decCI_cv hd1)
+  -- `pin_at(43)`, `pin_at(44)`
+  cases h3 : callW p n "pin_at" [43] m1 with
+  | none => rw [h3] at hW; simp [refinesBW.k_pin_at] at hW
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  obtain ⟨s3, rfl, -, hW3⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩) (pinAt_specW p hP.pa n _ 43) h3
+  rw [h3] at hW; simp only [refinesBW.k_pin_at] at hW
+  simp only [pinAtW, hT1.flag, ↓reduceIte] at hW3
+  have e43 : rdW (m1.arr64 PINS) (1 + 43) = pinW m1 44 := rfl
+  rw [ite_eq_right (by decide), ite_eq_right (by decide)] at hW3
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW3
+  obtain ⟨rfl, e3⟩ := hW3
+  cases h4 : callW p n "pin_at" [44] s3.mem with
+  | none => rw [h4] at hW; simp [refinesBW.k_pin_at_2] at hW
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩) (pinAt_specW p hP.pa n _ 44) h4
+  rw [h4] at hW; simp only [refinesBW.k_pin_at_2] at hW
+  rw [← e3] at hW4
+  simp only [pinAtW, hT1.flag, ↓reduceIte] at hW4
+  rw [ite_eq_right (by decide), ite_eq_right (by decide)] at hW4
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW4
+  obtain ⟨rfl, e4⟩ := hW4
+  have e44 : rdW (m1.arr64 PINS) (1 + 44) = pinW m1 45 := rfl
+  simp only [List.headD_cons, e43, e44] at hW
+  have hp44 : (pinW m1 44).toNat < 2 ^ 32 := hF1.names_lt 43 (by decide)
+  have hp45 : (pinW m1 45).toNat < 2 ^ 32 := hF1.names_lt 44 (by decide)
+  have hcond : (erRd m1 (d + (CI.cv + CV.name)) = pinW m1 44 ∨
+      erRd m1 (d + (CI.cv + CV.name)) = pinW m1 45) ↔
+      ((List.range' 44 2).map (fun j => (decI (pinW m1 j) : NIdx))).contains ci'.toConstantVal.name = true := by
+    rw [hnde]
+    simp only [List.range', List.map_cons, List.map_nil, List.contains_cons, List.contains_nil,
+      Bool.or_false, Bool.or_eq_true, beq_iff_eq, decI_inj_iff hnw hp44, decI_inj_iff hnw hp45]
+  by_cases hpin : erRd m1 (d + (CI.cv + CV.name)) = pinW m1 44 ∨
+      erRd m1 (d + (CI.cv + CV.name)) = pinW m1 45
+  · rw [ite_eq_left hpin] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    refine ⟨false, a1, by rw [hrun1', ite_eq_left (hcond.mp hpin)]; rfl, ?_⟩
+    rw [← e, ← e4]; exact ⟨hT1, hg1, hok1, hr1, hx1, by simp⟩
+  rw [ite_eq_right hpin] at hW
+  rw [ite_eq_right (mt hcond.mpr hpin)] at hrun1'
+  -- the fresh `axiomInfo` record of `ci'`'s statement
+  have hm4 : s4.mem = m1 := by rw [← e4]
+  rw [hm4] at hW
+  have hcv1 := decCI_cv hd1
+  obtain ⟨w0, hw0, -, -⟩ := decCV_name hcv1
+  have hq : (d + CI.cv).toNat = d.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hw0)
+  have hqd : decCV (erecP m1) (d + CI.cv).toNat = some ci'.toConstantVal := by rw [hq]; exact hcv1
+  cases h5 : callW p n "erec_alloc" [CI.axiomSize] m1 with
+  | none => rw [h5] at hW; simp [refinesBW.k_erec_alloc] at hW
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  rw [h5] at hW; simp only [refinesBW.k_erec_alloc] at hW
+  cases h6 : callW p n "erec_put" [r5.headD 0, 0] m5 with
+  | none => rw [h6] at hW; simp [refinesBW.k_erec_put] at hW
+  | some x6 =>
+  obtain ⟨r6, m6⟩ := x6
+  rw [h6] at hW; simp only [refinesBW.k_erec_put] at hW
+  cases h7 : callW p n "erec_put" [r5.headD 0 + (CI.cv + CV.name), erRd m1 (d + (CI.cv + CV.name))] m6 with
+  | none => rw [h7] at hW; simp [refinesBW.k_erec_put_2] at hW
+  | some x7 =>
+  obtain ⟨r7, m7⟩ := x7
+  rw [h7] at hW; simp only [refinesBW.k_erec_put_2] at hW
+  cases h8 : callW p n "erec_put" [r5.headD 0 + (CI.cv + CV.lpsOff), erRd m7 (d + (CI.cv + CV.lpsOff))] m7 with
+  | none => rw [h8] at hW; simp [refinesBW.k_erec_put_3] at hW
+  | some x8 =>
+  obtain ⟨r8, m8⟩ := x8
+  rw [h8] at hW; simp only [refinesBW.k_erec_put_3] at hW
+  cases h9 : callW p n "erec_put" [r5.headD 0 + (CI.cv + CV.lpsLen), erRd m8 (d + (CI.cv + CV.lpsLen))] m8 with
+  | none => rw [h9] at hW; simp [refinesBW.k_erec_put_4] at hW
+  | some x9 =>
+  obtain ⟨r9, m9⟩ := x9
+  rw [h9] at hW; simp only [refinesBW.k_erec_put_4] at hW
+  cases h10 : callW p n "erec_put" [r5.headD 0 + (CI.cv + CV.type), erRd m1 (d + (CI.cv + CV.type))] m9 with
+  | none => rw [h10] at hW; simp [refinesBW.k_erec_put_5] at hW
+  | some x10 =>
+  obtain ⟨r10, m10⟩ := x10
+  rw [h10] at hW; simp only [refinesBW.k_erec_put_5] at hW
+  have h8' := h8; rw [show d + (CI.cv + CV.lpsOff) = d + CI.cv + CV.lpsOff from (UInt64.add_assoc _ _ _).symm] at h8'
+  have h9' := h9; rw [show d + (CI.cv + CV.lpsLen) = d + CI.cv + CV.lpsLen from (UInt64.add_assoc _ _ _).symm] at h9'
+  obtain ⟨hT10, hg10, -, hx10⟩ := ccv_rec hP.rcp hT1 hqd
+    (by rw [show (CI.cv + CV.name : Word) = CI.cv by decide]) (by rw [UInt64.add_assoc])
+    h5 h6 h7 h8' h9' h10
+  -- `copy_b(x, c)`
+  cases h11 : callW p n "copy_b" [r5.headD 0, c] m10 with
+  | none => rw [h11] at hW; simp [refinesBW.k_copy_b_2] at hW
+  | some x11 =>
+  obtain ⟨r11, m11⟩ := x11
+  rw [h11] at hW; simp only [refinesBW.k_copy_b_2, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, e⟩ := hW
+  have hcv' := ConRon.Bridge.denoteCI_toConstantVal hdd
+  have hda : Frontend.denoteCI a1.store (.axiomInfo ci'.toConstantVal) =
+      some (.axiomInfo C'.toConstantVal) := by
+    simp only [Frontend.denoteCI, ConRon.Bridge.denoteCV_ext hcv' hx1, Option.map_some]
+  have hc10 : decCI (erecP m10) c.toNat = some (.axiomInfo cv0) :=
+    ArrExt.decCI hg10.ext (ArrExt.decCI hg1.ext hc)
+  obtain ⟨b11, a11, hrun11, hT11, hg11, hok11, hr11, hx11, hb11⟩ :=
+    copyB_sim hP n hT10 hok1 hr1 hx10 hc10 hda (ConRon.Bridge.denoteCI_ext hdc hx1) r11 m11 h11
+  refine ⟨b11, a11, by rw [hrun1']; exact hrun11, ?_⟩
+  rw [← e]
+  exact ⟨hT11, hg1.trans (hg10.trans hg11), hok11, hr11, hx1.trans hx11, by simpa using hb11⟩
 end cb
 
 end L.Arena

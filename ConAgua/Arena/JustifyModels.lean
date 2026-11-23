@@ -124,7 +124,7 @@ l_model copyB_specW (p : Prog) (hf : p.lookup "copy_b" = some copyBL)
 l_model refinesB_specW (p : Prog) (hf : p.lookup "refines_b" = some refinesBL)
   fns [hf ↦ refinesBW list]
   specs [callW_spec p n "copy_b", callW_spec p n "is_stmt_kind", callW_spec p n "pin_at",
-    callW_spec p n "erec_alloc", callW_spec p n "erec_put", callW_spec p n "er_copy_er"]
+    callW_spec p n "erec_alloc", callW_spec p n "erec_put"]
   grind [arena_grind] fold [tierW, idxW, erRd]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
 
