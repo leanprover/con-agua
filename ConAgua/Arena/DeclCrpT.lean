@@ -661,8 +661,8 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
       wv := (erRdOK m1).at _ rfl hwv
   rw [exn, exv]
   -- the constant check
-  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' hcvd hCr1 (allow := 0)
-  rw [show ((0 : Word) != 0) = false from rfl] at hcc
+  have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1' hcvd hCr1 (allow := 0) (allowRd := 1) (allowSorry := 0)
+  rw [show ((0 : Word) != 0) = false from rfl, show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_constant_val.none ..) id hcc
     fun ⟨r3, m3⟩ _ a3 hrun3 hP3 => ?_
   rw [checkDeclOpaqueE.k_check_constant_val.arm1]
@@ -676,7 +676,7 @@ theorem cdo_ref {p : Prog} (hX : OpqArmProg p) (hq : KnotStageProg p) (hcl : Lea
   -- the opaque check
   refine RefE.bindE (fun _ => checkDeclOpaqueE.k_check_opaque_val.none ..) id
     (checkOpaqueVal_ref hX.ccv hq hap hkp hcrf hn' hP3.stage
-      (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1) (hg3.ext _ _ hwv) hwvl (denoteCV_lps hcA) hP3.crOK)
+      (ArrExt.decCV (L.Ind.IWGrow.ext hg3) hcv1) (hg3.ext _ _ hwv) hwvl ⟨_, hcA⟩ hP3.crOK)
     fun ⟨r4, m4⟩ ci4 a4 hrun4 ⟨hP4, hr4, hci4⟩ => ?_
   dsimp only at hP4 hr4 hci4
   subst r4 ci4
