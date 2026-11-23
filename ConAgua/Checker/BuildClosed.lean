@@ -239,15 +239,18 @@ def biFns : List FnName :=
 
 names_tree biTree : biFns
 
-/-- The arrays `build_index` may write. -/
-def biA : List TieredArray := checkerWordArrays.filter fun b => b != PINS && b != L.Front.DECL
+/-- The arrays `build_index` may write: all but the pins, the records `DECL`, their pool `DLP` and
+the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`). -/
+def biA : List TieredArray := checkerWordArrays.filter fun b =>
+  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL
 
 /-- The `CTL` words `build_index` may write: all but the pin sets' words and the solution's flag
 (`CTL[224]`, `Arena/JustifyIface.lean`). -/
 def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 && x != 224).map UInt64.ofNat
 
 /-- The arrays of `biA`, as a test. -/
-def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL
+def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL &&
+  b != L.Front.DLP && b != CDECL
 
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151 &&
@@ -256,7 +259,7 @@ def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toN
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h
   simp only [biA, List.mem_filter, Bool.and_eq_true]
-  exact ⟨h.1.1, h.1.2, h.2⟩
+  exact ⟨h.1.1.1.1, ⟨⟨h.1.1.1.2, h.1.1.2⟩, h.1.2⟩, h.2⟩
 
 theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [biPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
