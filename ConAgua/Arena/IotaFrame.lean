@@ -119,12 +119,12 @@ def minorsFromL : FunDecl := lfn (preO, preL, mot, q) locals (o, c, j, b) {
   return (o, c)
 }
 
-/-- `iota_rec_major(preO, preL, domO, domL, nIdx, rP, k)`: `iota_rec_of` past the motive's head
+/-- `iota_read_major(preO, preL, domO, domL, nIdx, rP, k)`: `iota_rec_of` past the motive's head
 `k`: the minor premises, then the major's type at a constant head (its levels, its leading
 arguments with the index variables dropped), `(ok, IotaRec)`. -/
 -- con-ron: ConRon/Arena/Inductives/IotaRead.lean:144-160 ConRon.Arena.iotaRecMajor
 @[no_expose, l_impl ConRon.Arena.iotaRecMajor]
-def iotaRecMajorL : FunDecl := lfn (preO, preL, domO, domL, nIdx, rP, k) locals
+def iotaReadMajorL : FunDecl := lfn (preO, preL, domO, domL, nIdx, rP, k) locals
     (mot, mo, ml, dom, dh, g, n, us, z, ao, al, t, po, pl) {
   mot := rP + nIdx - k;
   if rP + nIdx < k { mot := 0 };
@@ -141,7 +141,7 @@ def iotaRecMajorL : FunDecl := lfn (preO, preL, domO, domL, nIdx, rP, k) locals
 }
 
 /-- `iota_rec_of(q, mI, rP)`: what every rule of the recursor (constant value `q`) reads off its
-type, `(ok, IotaRec)`: the frame, the motive the body applies (a variable), `iota_rec_major`. -/
+type, `(ok, IotaRec)`: the frame, the motive the body applies (a variable), `iota_read_major`. -/
 -- con-ron: ConRon/Arena/Inductives/IotaRead.lean:162-176 ConRon.Arena.iotaRecOf
 @[no_expose, l_impl ConRon.Arena.iotaRecOf]
 def iotaRecOfL : FunDecl := lfn (q, mI, rP) locals
@@ -153,7 +153,7 @@ def iotaRecOfL : FunDecl := lfn (q, mI, rP) locals
   hd := call get_app_fn_f(⟪CWF⟫, body);
   if ⟦hd⟧.tag != 0 { return (0, 0, 0, 0, 0, 0, 0, 0) };
   (g, k, y, z) := call e_view(hd);
-  (ok, r1, r2, r3, r4, r5, r6, r7) := call iota_rec_major(po, pl, dO, dL, nI, rP, k);
+  (ok, r1, r2, r3, r4, r5, r6, r7) := call iota_read_major(po, pl, dO, dL, nI, rP, k);
   return (ok, r1, r2, r3, r4, r5, r6, r7)
 }
 
@@ -305,7 +305,7 @@ def iotaPartsAtL : FunDecl := lfn (qj, cnP, mI, rP, r) locals
 /-- This module's functions. -/
 def iotaFrameFns : Prog :=
   [("pi_tele", piTeleL), ("motive_level", motiveLevelL), ("iota_frame", iotaFrameL),
-   ("is_minor_at", isMinorAtL), ("minors_from", minorsFromL), ("iota_rec_major", iotaRecMajorL),
+   ("is_minor_at", isMinorAtL), ("minors_from", minorsFromL), ("iota_read_major", iotaReadMajorL),
    ("iota_rec_of", iotaRecOfL), ("lift_field_doms", liftFieldDomsL),
    ("lift_idx_args", liftIdxArgsL), ("iota_parts_of_at", iotaPartsOfAtL),
    ("ctor_levels_at", ctorLevelsAtL), ("iota_bvars", iotaBVarsL),
