@@ -201,8 +201,8 @@ theorem rm_ref (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} {nP ms : Wor
   -- `check_constant_val`
   have hcvx : CVExt s2.mem (UInt64.ofNat c : Word).toNat := CVExt.of_dec hcvm2
   refine RefE.bindRun (s₀ := ⟨s2.mem, Locals.init []⟩) (fun _ => rfl)
-    (checkConstantVal_specE p hV n _ vis _ 0) (fun hG => hG.nv) id
-    (ccv_ref (allow := 0) hV hq hap hkp hcrf hCS (by omega) hC2.stageT
+    (checkConstantVal_specE p hV n _ vis _ 0 0 0) (fun hG => hG.nv) id
+    (ccv_ref (allow := 0) (allowRd := 0) (allowSorry := 0) hV hq hap hkp hcrf hCS (by omega) hC2.stageT
       (rec2DecCV_erecP hcvm2 hcvx) hcvP hA2.cr.crOK)
     fun r4 s4 u4 a4 _ _ hr4 hP4 => ?_
   obtain ⟨c4, F₄, hF₄⟩ := ConRon.Bridge.checkConstantVal_bridge ConRon.Bridge.CoreSpec.of_core

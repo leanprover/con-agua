@@ -146,11 +146,11 @@ theorem cdf_ref {p : Prog} (hX : DefnProgT p) (hq : KnotStageProg p) (hcl : Leaf
   rw [ewn]
   -- the constant check, a certified operation's name allowed
   have hcc := ccv_ref hX.ccv hq hap hkp hcrf hC hn' hT1 hcv1'
-    hcvd hCr1 (allow := 1)
+    hcvd hCr1 (allow := 1) (allowRd := 0) (allowSorry := 0)
   rw [show ((1 : Word) != 0) = true from rfl] at hcc
   refine RefE.bindRun (s₀ := ⟨m1, Locals.init []⟩)
     (fun _ => checkDeclDefnE.k_check_constant_val.none ..)
-    (checkConstantVal_specE p hX.ccv n _ vis (q + CI.cv) 1) (fun hG => hG.nv) id hcc
+    (checkConstantVal_specE p hX.ccv n _ vis (q + CI.cv) 1 0 0) (fun hG => hG.nv) id hcc
     fun r3 s3 _ a3 h3 _ hrun3 hP3 => ?_
   rw [checkDeclDefnE.k_check_constant_val.arm1]
   dsimp only at hP3
