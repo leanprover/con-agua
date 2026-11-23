@@ -9,6 +9,7 @@ public import ConAgua.Arena.IndDeclConstsDrop
 public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.IndRealAbs
 public import ConAgua.Arena.IndRealMemo
+public import ConAgua.Arena.IndRealIlpL
 
 @[expose] public section
 
@@ -33,9 +34,10 @@ def iotaRA : List TieredArray := checkerWordArrays.filter fun b => memoFreeA [b]
 /-- The `CTL` words they may write: all but the memos' epoch words (`memoFreeC`). -/
 def iotaRC : List Word := ((List.range 1024).map UInt64.ofNat).filter fun x => memoFreeC [x]
 
-/-- The call closure of `iota_rec_of`, `iota_parts_of_at` and `iota_parts_at`'s callees but the core
-walks (`cv_lps`, `ctor_levels_at`, `iota_params_at`; computed from the program's call graph); `IotaFrameProg.rclosed` says it writes only `iotaRA`, `iotaRC`, so the walk memos are kept
-(`iota_afr`). -/
+/-- The call closure of `iota_rec_of`, `iota_parts_of_at` and of `iota_parts_at`'s callees but the
+core walks (`cv_lps`, `ctor_levels_at`, `iota_params_at`), computed from the program's call graph;
+`IotaFrameProg.rclosed` says it writes only `iotaRA`, `iotaRC`, so the walk memos and the pins are
+kept (`iota_afr`). -/
 def iotaRFns : List FnName :=
   ["app_count", "app_fill", "app_find", "app_push", "bvar_find", "bvar_push", "ctor_levels_at",
    "cv_lps", "der_b", "der_bv", "e_view", "er_copy", "er_to_iw", "expr_drop_vars",

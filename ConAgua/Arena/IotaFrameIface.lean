@@ -1,7 +1,6 @@
 module
 
-public import ConAgua.Arena.IotaFrameAt
-public import ConAgua.Arena.StageTLift
+public import ConAgua.Arena.IotaFrameTwin
 
 @[expose] public section
 
@@ -65,7 +64,7 @@ theorem iotaPartsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (dn : NIdx �
         (∃ c, ConRon.Arena.Frontend.denoteCV a.store cvj = some c) ∧
         (∃ R, ConRon.Arena.Frontend.denoteRule a.store rl = some R))
       (iotaPartsAt cvj cnP.toNat mI.toNat rP.toNat rl)
-      (fun m m' a r x => KeepPost vis fe decOIPD m m' a r x ∧ AbsOK m') := by
-  sorry
+      (fun m m' a r x => KeepPost vis fe decOIPD m m' a r x ∧ AbsOK m') :=
+  iotaPartsAt_rel' P n dn vis fe qj cnP mI rP r cvj rl
 
 end L.Ind

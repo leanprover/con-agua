@@ -7,6 +7,11 @@ public import ConRon.Bridge.Inductives.Run
 import ConRon.Bridge.Inductives.Rel
 import ConRon.Bridge.Checker.Basis
 import ConRon.Bridge.Pers
+import ConRon.Bridge.Checker.Inv
+import ConRon.Bridge.Checker.Canon
+import ConAgua.Arena.RecLayout.CIDec
+import ConAgua.Arena.RecCheckSpec.ErToIwWStage
+import ConAgua.Arena.IlpRd
 
 @[expose] public section
 
@@ -70,6 +75,8 @@ theorem L.Arena.TwinOK.of_pstep {dn : NIdx → Option ConLeche.Name} {m : L.Mem}
 
 namespace L.Ind
 
+open L.Arena
+open Std.WP
 open ConRon.Bridge ConRon.Bridge.Inductives
 
 /-! ## The twin steps -/
@@ -129,5 +136,171 @@ theorem iotaParamsAt_pstep {s s' : AState} {rl : IRecRule} {rP cnP : Nat} {r : L
     exact PStep.refl hok
   | plain => rw [hfr] at hrun; exact iotaBVars_pstep rP _ _ 0 rfl hok hrun
   | levels lvls => rw [hfr] at hrun; exact iotaBVars_pstep rP _ _ 0 rfl hok hrun
+
+/-! ## `StageT` across the interning callees -/
+
+theorem iotaRC_not {x : Word} (hx : memoFreeC [x] = false) : x ∉ iotaRC := fun h => by
+  have := (List.mem_filter.mp h).2; simp_all
+
+section
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`StageT` across a call of a reading function** whose twin op is a `PStep`: the memory
+frame (`iotaRFns`' write set) keeps the core memos and the pins. -/
+theorem StageT.of_iotaStep {p : Prog} (P : IotaFrameProg p) {f : FnName} (hf : f ∈ iotaRFns)
+    {n : Nat} {args r : List Word} {m m' : Mem} {a a' : AState}
+    (hc : callW p n f args m = some (r, m')) (hT : StageT dn vis fe m a)
+    (hS : StageR vis fe m' a') (hp : PStep a a') : StageT dn vis fe m' a' := by
+  have hfr := (run_memFrame P.rclosed hf (run_of_callW hc)).1
+  have hP : m'.arr64 PINS = m.arr64 PINS := hfr.arr PINS (by decide) (by decide)
+  refine ⟨hS, (L.Arena.TwinOK.frame hfr (by decide)
+    ⟨iotaRC_not (by decide), iotaRC_not (by decide)⟩ (by decide)
+    ⟨iotaRC_not (by decide), iotaRC_not (by decide), iotaRC_not (by decide)⟩ (by decide)
+    ⟨iotaRC_not (by decide), iotaRC_not (by decide), iotaRC_not (by decide)⟩ hT.twin (by decide)
+    (iotaRC_not (by decide))).of_pstep hp, by simp only [pinW, hP]; exact hT.flag⟩
+
+end
+
+theorem getD_succ_tailW (r : List Word) (i : Nat) : r.getD (i + 1) 0 = r.tail.getD i 0 := by
+  cases r <;> simp
+
+theorem getD_zero_headW (r : List Word) : r.getD 0 0 = r.headD 0 := by
+  cases r <;> simp
+
+/-- `decOIPD` reads the first ten words only. -/
+theorem decOIPD_ten {m : Mem} {r : List Word} {x : Option (IIotaParts × List EIdx)}
+    (h : decOIPD m r x) :
+    decOIPD m [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.tail.tail.headD 0, r.tail.tail.tail.tail.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.tail.tail.tail.tail.headD 0,
+      r.tail.tail.tail.tail.tail.tail.tail.tail.tail.headD 0] x := by
+  rcases x with _ | ⟨x, pd⟩
+  · exact h
+  · simp only [decOIPD, decIPAt, decRL, getD_succ_tailW, getD_zero_headW, List.tail_cons,
+      List.headD_cons, Nat.reduceAdd] at h ⊢
+    exact h
+
+/-! ## `iota_parts_at` -/
+
+open ConRon.Arena.Frontend in
+/-- **`iota_parts_at` refines `iotaPartsAt`** (`IotaFrameIface.iotaPartsAt_rel`'s proof). -/
+theorem iotaPartsAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (qj cnP mI rP r : Word)
+    (cvj : IConstantVal) (rl : IRecRule) :
+    RelW (fun m args => callW p n "iota_parts_at" args m) [qj, cnP, mI, rP, r]
+      (fun m a => StageT dn vis fe m a ∧ AbsOK m ∧ StateOK a ∧
+        decCV (erecP m) qj.toNat = some cvj ∧ decRule (erecP m) r.toNat = some rl ∧
+        (∃ c, denoteCV a.store cvj = some c) ∧ (∃ R, denoteRule a.store rl = some R))
+      (iotaPartsAt cvj cnP.toNat mI.toNat rP.toNat rl)
+      (fun m m' a r x => KeepPost vis fe decOIPD m m' a r x ∧ AbsOK m') := by
+  intro m m' a r0 hc ⟨hT, hA, hok, hcv, hrl, ⟨c, hc'⟩, ⟨R, hR⟩⟩
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (iotaPartsAt_specW p P.iota_parts_at n _ qj cnP mI rP r) hc
+  rcases n with _ | n
+  · simp [iotaPartsAtW] at hW
+  simp only [iotaPartsAtW] at hW
+  by_cases g1 : 4294967296 ≤ cnP ∨ 4294967296 ≤ mI ∨ 4294967296 ≤ rP
+  · rw [if_pos g1] at hW; cases hW
+  rw [if_neg g1] at hW
+  by_cases g2 : 4294967296 ≤ erRd m (r + Rule.nfields)
+  · rw [if_pos g2] at hW; cases hW
+  rw [if_neg g2] at hW
+  -- `cv_lps`
+  rcases h1 : callW p n "cv_lps" [qj] m with _ | ⟨q1, m1⟩
+  · rw [h1] at hW; simp [iotaPartsAtW.k_cv_lps] at hW
+  rw [h1] at hW
+  simp only [iotaPartsAtW.k_cv_lps] at hW
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (cvLps_spec p (P.strip.get "iw_alloc") P.er_copy P.er_to_iw P.cv_lps n _ qj) h1
+  rw [hs1] at hW1
+  obtain ⟨hS1, hg1, -, hlp1, hlt1⟩ := cvLpsW_stage hW1 hT.stage hcv
+  have hT1 : StageT dn vis fe m1 a := StageT.of_iotaStep P (by decide) h1 hT hS1 (PStep.refl hok)
+  have hA1 : AbsOK m1 := iota_afr P (by decide) h1 hA
+  have hrl1 := hg1.ext.decRule hrl
+  have hcv1 := hg1.ext.decCV hcv
+  -- `ctor_levels_at`
+  rcases h2 : callW p n "ctor_levels_at" [r, q1.headD 0, q1.tail.headD 0] m1 with _ | ⟨q2, m2⟩
+  · rw [h2] at hW; simp [iotaPartsAtW.k_ctor_levels_at] at hW
+  rw [h2] at hW
+  simp only [iotaPartsAtW.k_ctor_levels_at] at hW
+  obtain ⟨lv, a2, hrun2, hS2, hg2, hH2, hd2⟩ := ctorLevelsAt_rel P n vis fe r _ _ rl cvj.levelParams
+    m1 m2 a q2 h2 ⟨hS1, hrl1, hlp1, by omega⟩
+  obtain ⟨-, hlpD, -⟩ := ConRon.Bridge.denoteCV_inv hc'
+  obtain ⟨-, hfD, -, -⟩ := ConRon.Bridge.denoteRule_inv hR
+  have hp2 : PStep a a2 := ctorLevelsAt_pstep hok hfD hlpD hrun2
+  have hT2 : StageT dn vis fe m2 a2 := StageT.of_iotaStep P (by decide) h2 hT1 hS2 hp2
+  have hA2 : AbsOK m2 := iota_afr P (by decide) h2 hA1
+  -- `iota_params_at`
+  rcases h3 : callW p n "iota_params_at" [r, rP, cnP] m2 with _ | ⟨q3, m3⟩
+  · rw [h3] at hW; simp [iotaPartsAtW.k_iota_params_at] at hW
+  rw [h3] at hW
+  simp only [iotaPartsAtW.k_iota_params_at] at hW
+  have hrl2 := hg2.ext.decRule hrl1
+  obtain ⟨params, a3, hrun3, hS3, hg3, hd3⟩ :=
+    iotaParamsAt_rel P n vis fe r rP cnP rl m2 m3 a2 q3 h3 ⟨hS2, hrl2⟩
+  have hp3 : PStep a2 a3 := iotaParamsAt_pstep hp2.ok hrun3
+  have hT3 : StageT dn vis fe m3 a3 := StageT.of_iotaStep P (by decide) h3 hT2 hS3 hp3
+  have hA3 : AbsOK m3 := iota_afr P (by decide) h3 hA2
+  simp only [decRL, Nat.zero_add, L.getD_zero, L.getD_one] at hd3
+  obtain ⟨hpar3, hparb3⟩ := hd3
+  -- `inst_lp_fast`
+  rcases h4 : callW p n "inst_lp_fast"
+      [CWF, q1.headD 0, q1.tail.headD 0, q2.headD 0, erRd m3 (qj + CV.type)] m3 with _ | ⟨q4, m4⟩
+  · rw [h4] at hW; simp [iotaPartsAtW.k_inst_lp_fast] at hW
+  rw [h4] at hW
+  simp only [iotaPartsAtW.k_inst_lp_fast] at hW
+  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (ilpfF_spec p P.ilpf n _ _) h4
+  rw [hs4] at hW4
+  have hg23 := hg2.trans hg3
+  have hcv3 := hg23.ext.decCV hcv1
+  obtain ⟨-, -, -, -, hty, htyH⟩ := decCV_rd (erRdOK m3) hcv3
+  have hlp3 : decHL m3 (q1.headD 0).toNat (q1.tail.headD 0).toNat = some cvj.levelParams :=
+    decHL_grow' hg23 (by omega) hlp1
+  obtain ⟨ty, a4, hrun4, ⟨hT4, hg4, hty4⟩, hA4⟩ := ilpfF_okTA (dn := dn) (vis := vis) (fe := fe)
+    CWF _ _ _ _ hH2 htyH cvj.levelParams m3 m4 a3 q4 hW4 ⟨hT3, hA3, hlp3⟩
+  rw [CWF_eq, ← hty, hd2] at hrun4
+  unfold iotaPartsAt
+  rw [StateT.run_bind, hrun2, except_ok_bind, StateT.run_bind, hrun3, except_ok_bind,
+    StateT.run_bind, hrun4, except_ok_bind]
+  -- `strip_pis`
+  rcases h5 : callW p n "strip_pis" [cnP, q4.headD 0] m4 with _ | ⟨q5, m5⟩
+  · rw [h5] at hW; simp [iotaPartsAtW.k_strip_pis] at hW
+  rw [h5] at hW
+  simp only [iotaPartsAtW.k_strip_pis] at hW
+  have hs5 := stripF_of_callW P.strip h5
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hd5⟩ :=
+    stripF_pis_ok vis fe _ _ hty4.1 m4 m5 a4 q5 hs5 hT4.stage
+  have hA5 : AbsOK m5 := AFr.of_frame (stripF_frame hs5) (by decide) (by decide) hA4
+  rw [hty4.2] at hrun5
+  rw [StateT.run_bind, hrun5, except_ok_bind]
+  have hg15 := hg1.trans (hg23.trans (hg4.trans hg5))
+  rcases x5 with _ | ⟨pd, cb⟩
+  · simp only [decOLE] at hd5
+    rw [if_pos hd5] at hW
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    exact ⟨none, a5, rfl, ⟨hS5, hg15, rfl⟩, hA5⟩
+  obtain ⟨h51, hpd, hcb⟩ := hd5
+  rw [if_neg (by rw [h51]; decide)] at hW
+  dsimp only
+  simp only [decW0E, headD_drop3] at hcb
+  -- `iota_parts_at_body`
+  rcases h6 : callW p n "iota_parts_at_body" [cnP, mI, rP, r, q2.headD 0, q3.headD 0,
+      q3.tail.headD 0, q5.tail.headD 0, q5.tail.tail.headD 0, q5.tail.tail.tail.headD 0] m5 with
+    _ | ⟨q6, m6⟩
+  · rw [h6] at hW; simp [iotaPartsAtW.k_iota_parts_at_body] at hW
+  rw [h6] at hW
+  simp only [iotaPartsAtW.k_iota_parts_at_body] at hW
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hg35 := hg4.trans hg5
+  have hrl5 := (hg3.trans hg35).ext.decRule hrl2
+  simp only [decRL, L.getD_one, L.getD_two, Nat.reduceAdd] at hpd
+  obtain ⟨x6, a6, hrun6, ⟨hS6, hg6, hd6⟩, hA6⟩ := iotaPartsAtBody_rel P n vis fe cnP mI rP r
+    (q2.headD 0) (q3.headD 0) (q3.tail.headD 0) (q5.tail.headD 0) (q5.tail.tail.headD 0) _ rl
+    params pd hcb.1 m5 _ a5 q6 h6
+    ⟨hS5, hA5, hrl5, decHL_grow' hg35 hparb3 hpar3, Nat.le_trans hparb3 hg35.iw, hpd.1, hpd.2, hH2⟩
+  rw [hcb.2, hd2] at hrun6
+  exact ⟨x6, a6, hrun6, ⟨hS6, hg15.trans hg6, decOIPD_ten hd6⟩, hA6⟩
 
 end L.Ind
