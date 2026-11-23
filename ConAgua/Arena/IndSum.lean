@@ -169,7 +169,6 @@ cqLen, cqBody)`: the second half of `checkSumCtor` (split off to keep each L fun
 constructor's field telescope, the opened residual's shape, the pre-block field/index resolution,
 and the per-field universe bound. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-129 ConRon.Arena.checkSumCtor
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkSumCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkSumCtor]
 def checkSumCtorTailL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, nF, cqOff, cqLen, cqBody)
@@ -204,7 +203,6 @@ cvTa)`: one constructor's type (the ordinary constant check — stored AS DECLAR
 shape, the parameter pins against the opened type-former telescope); the rest is
 `check_sum_ctor_tail`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-129 ConRon.Arena.checkSumCtor
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkSumCtor` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkSumCtor]
 def checkSumCtorL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvC, nF, cvTa)

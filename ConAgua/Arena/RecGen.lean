@@ -597,7 +597,6 @@ def classRecsRulesOkL : FunDecl := lfn (visR, pO, pL, g, recClsOff, recClsLen, c
 
 /-- `class_stream_recs(vis, rcs.off, rcs.len)`: the stream's recursor constants, checked. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:680-688 ConRon.Arena.classStreamRecs
--- con-ron: CHANGED since de06320f — `ConRon.Arena.classStreamRecs` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.classStreamRecs]
 def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (rc, cv, r, ro, rl, qo, ql) {
   if rcsLen == 0 { return (0, 0) };

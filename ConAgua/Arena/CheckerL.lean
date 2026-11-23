@@ -175,14 +175,11 @@ def fromLeL : FunDecl := lfn (o, c) locals () {
 /-! ## The jobs -/
 
 /-- `record_job(k)`: `recordJob` of record `k` at the view of position `k`: the bracket, the view
-(`IStreamIndex.view`), a fresh own layer, `recordCheck` (the `And` pin, then `check_decl` at
-`vis = 0`), the bracket closed (the job's own records, `EREC`'s tier 1, with it). -/
+(`IStreamIndex.view`), a fresh own layer, `recordCheck` at the solution `J = none` (the `And` pin,
+then `check_decl` at `vis = 0`: the twin's `checkRecord` at `none` is `checkDecl`), the bracket closed (the job's own records, `EREC`'s tier 1, with it). -/
 -- con-ron: ConRon/Arena/StreamIndex.lean:107-114 ConRon.Arena.IStreamIndex.view
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.recordCheck`, `ConRon.Arena.checkRecord` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Justify.lean:323-331 ConRon.Arena.recordCheck
--- con-ron: CHANGED since de06320f — `ConRon.Arena.recordCheck` changed; re-check the L code and its proofs, then delete this line
 -- con-ron: ConRon/Arena/Justify.lean:333-341 ConRon.Arena.recordJob
--- con-ron: CHANGED since de06320f — `ConRon.Arena.recordJob` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.IStreamIndex.view ConRon.Arena.recordCheck ConRon.Arena.recordJob]
 def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v, c) {
   z := call scratch_enter();
@@ -207,11 +204,9 @@ def recordJobL : FunDecl := lfn (k) locals (z, st, ok, v, c) {
   return 0
 }
 
-/-- `check_jobs(j, hi)`: the jobs `j‥hi - 1`, in order (`checkJobList` over that range, from the
-worker's state). -/
+/-- `check_jobs(j, hi)`: the jobs `j‥hi - 1`, in order (`checkJobList` at the solution `J = none`
+over that range, from the worker's state). -/
 -- con-ron: ConRon/Arena/Checker.lean:89-99 ConRon.Arena.checkJobList
--- con-ron: CHANGED since de06320f — below `ConRon.Arena.checkJobList`, `ConRon.Arena.runJob` changed; re-check the L code and its proofs, then delete this line
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkJobList` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkJobList]
 def checkJobsL : FunDecl := lfn (j, hi) locals (z) {
   for j < hi {

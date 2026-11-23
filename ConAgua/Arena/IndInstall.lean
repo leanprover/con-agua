@@ -218,7 +218,6 @@ def blockIsRec : FunDecl := lfn (p) locals (namesO, namesL, b) {
 /-- `check_block_tele(vis, nP, ms)`: one member's type former (at its telescope) — the constant
 check, the telescope and the result sort (`nP + nIdx` past `2^64` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:111-124 ConRon.Arena.checkBlockTele
--- con-ron: CHANGED since de06320f — `ConRon.Arena.checkBlockTele` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkBlockTele]
 def checkBlockTele : FunDecl := lfn (vis, nP, ms) locals
     (cvT, z, cvTa, s, ok, bsOff, bsLen, body, srt, k) {
@@ -704,7 +703,6 @@ does not show one (`former_def_headed`), and the family is not one declined at a
 declared type checked, reduced (`reduced_former`) and the two compared, a fresh member record with
 `cvT` the reduct; else `ms` itself. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:156-173 ConRon.Arena.reduceMember
--- con-ron: CHANGED since de06320f — `ConRon.Arena.reduceMember` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.reduceMember]
 def reduceMember : FunDecl := lfn (vis, ms, nP) locals (cvT, dh, dO, dL, hit, u, k, cvR, eq, q) {
   cvT := IW.u64[ms];
