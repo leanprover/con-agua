@@ -106,3 +106,7 @@ public import ConAgua.Arena.JobsCrs
 public import ConAgua.Checker.CrsProgPB
 public import ConAgua.Checker.CrsKeepPB
 public import ConAgua.Checker.AsmTailEq
+public import ConAgua.Final.CmpStub
+public import ConAgua.Final.CmpAbi
+public import ConAgua.Final.CmpOutcome
+public import ConAgua.Final.CmpLoop

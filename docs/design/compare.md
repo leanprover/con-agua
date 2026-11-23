@@ -137,3 +137,9 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   at both branches (`crs_ref` through `CrsSpec`, `Arena/JobsCrs.lean`, `Checker/CrsProgPB.lean`),
   four write sets narrowed (no job writes the solution's rows), the threaded path at `J = none`
   only. Open: `CrsKeep` (given to H7, `compare-keep`).
+* 19:05 first step landing prepared: the L code of `--compare`, the wiring, the refinements of
+  every new function (zero `sorry`), the job relation at `J`, the harness and the driver stub
+  (unproved), H4's machine-level building blocks (`Final/CmpStub`, `CmpAbi`, `CmpOutcome`,
+  `CmpLoop`, built, zero `sorry`). `Final/CmpMain.lean` (the driver theorem, one `sorry`, work in
+  progress) is not built (`scripts/modules_unbuilt.txt`). OVERVIEW and `main.c` say that no final
+  theorem covers `--compare` yet.
