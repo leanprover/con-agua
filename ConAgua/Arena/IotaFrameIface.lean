@@ -49,6 +49,7 @@ structure IotaFrameProg (p : Prog) : Prop where
   bvar_push : p.lookup "bvar_push" = some bvarPush
   intern_bvar : p.lookup "intern_bvar" = some internBVar
   expr_get_d : p.lookup "expr_get_d" = some exprGetD
+  strip : StripProg p
 
 /-- **`iota_rec_of(q, mI, rP)` refines `iotaRecOf cv mI rP`** (`q` the recursor's constant value
 in `EREC`). -/
