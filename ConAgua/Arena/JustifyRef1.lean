@@ -2,10 +2,10 @@ module
 
 public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.PinListRef
-import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclBasisNames
-import ConAgua.Verdict.DeclValsE
+import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclStepGo
+import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.RecLayout.CIDec
 import ConRon.Bridge.Specs
 import ConRon.Bridge.Compare.Justify

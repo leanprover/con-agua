@@ -7,7 +7,6 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Arena.JustifySideModels
 import all ConAgua.Arena.JustifyIface
-import ConAgua.Arena.DeclAndPinInd
 
 @[expose] public section
 

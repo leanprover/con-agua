@@ -162,3 +162,6 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
   buffer's header unchanged (a closure fact: no phase-B function stores to `HDRF`/`CTLF`). Helper
   H9 (`compare-redesign`) rewrites `CmpJobs`/`cmp_loop`/`cmp_outcome` and the solution's job chain
   accordingly; H6b does mode 6.
+* 20:55 **step landing 1** (`compare-land` 91e5c9aef, #325, master 2165b2ead): everything above up to
+  modes 4–5 and the machine building blocks; H8 made the gates green (55 unused imports, a name
+  clash `recOK_congr`, `leafFns` regenerated, an anchor).

@@ -1805,14 +1805,14 @@
     52    ∀ (n : Nat), n ≤ 2 ^ 62 → ∀ (s₀ : St), Pre s₀.mem → ⦃fun s => s = s₀⦄ invoke p (exec p n) f []
     53      ⦃fun r s' => LocEq s' s₀ ∧ Post r s'.mem; ⊤⦄
 
-== ConAgua/Checker/BuildStage.lean#L307-L313
-   307  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
-   308      (hsz : ∀ s, sz s < 2 ^ 64) :
-   309      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
-   310        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
-   311        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
-   312          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
-   313          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
+== ConAgua/Checker/BuildStage.lean#L347-L353
+   347  theorem buildStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
+   348      (hsz : ∀ s, sz s < 2 ^ 64) :
+   349      ∀ n, n ≤ 2 ^ 62 → ∀ (s₀ : St) (cnt : Word),
+   350        ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "build_index" [cnt]
+   351        ⦃fun _ s' => LocEq s' s₀ ∧ (Q7 b (checkerRels b pb sz) s₀.mem →
+   352          (∀ h : 0 < (s₀.mem.arr64 L.Front.DECL).size, cnt = (s₀.mem.arr64 L.Front.DECL)[0]) →
+   353          FoldA b pb sz s'.mem ∧ s'.mem.arr64 L.Front.DECL = s₀.mem.arr64 L.Front.DECL); ⊤⦄ := by
 
 == ConAgua/Checker/Pipeline.lean#L74-L77
     74  /-- What every stage may assume of the inputs: a 64-bit platform, both buffers below `2^63`

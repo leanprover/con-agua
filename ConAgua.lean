@@ -118,6 +118,8 @@ public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CompareTwin
 public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
+public import ConAgua.Checker.CmpHdrKeep
+public import ConAgua.Checker.CmpSJobs
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Checker.CompareChain6S
 public import ConAgua.Checker.CompareChain6C

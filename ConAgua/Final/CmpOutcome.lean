@@ -1,6 +1,8 @@
 module
 
-public import ConAgua.Final.CmpAbi
+public import ConAgua.Compiler.AbiCmp
+public import ConAgua.Final.Statement
+import ConAgua.Compiler.Main
 import ConAgua.L.Logic
 import Kraken.X64.Registers
 
@@ -13,7 +15,7 @@ import Kraken.X64.Registers
 return address and the four buffer words past the setup stub's region (`cmpSave`), calls the mode
 entries `4` (`abiMode_outcome`, a zero region), `5` and `6` (`abiModeM_outcome`, the region holding
 the run before's memory), between them the jobs of the solution, one `ca_check_b` call each, on
-the worker region `W` (`abiB_outcome`; `R` left alone: `CmpAgree`), and finally `ca_check_seq`
+the worker region `W` (`abiB_outcome`; `R` left alone but the buffer: `CmpAgree`), and finally `ca_check_seq`
 (`abiS_outcome`). It returns to the caller with the callee-saved registers restored; `rdx = 0`,
 `rax = ACCEPT` means `CmpAccepts`, `rdx = 2` means `CmpErr` with the code in `rax`.
 -/

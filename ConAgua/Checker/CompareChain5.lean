@@ -1,11 +1,11 @@
 module
 
 public import ConAgua.Checker.CompareTwinFacts
+public import ConAgua.Checker.ParEntryA
 import ConAgua.Arena.GrindAttr
 import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.HoistWalkRef
 import ConAgua.Checker.HoistClosureL
-import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry

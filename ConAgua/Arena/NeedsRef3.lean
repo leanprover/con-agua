@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.NeedsRef2
-public import ConAgua.Arena.DeclNatSpec
 public import ConAgua.Arena.DeclNatDeps
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.StubNamesRefine

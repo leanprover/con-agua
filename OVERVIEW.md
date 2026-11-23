@@ -910,7 +910,7 @@ from memory related to the twin's state before the stage, a returning call ends
 in memory related to the state after the twin's stage. The stages are proved at
 the checker's program and chained into entry 1's run; the last one, the
 stream index's build, is
-[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L307-L313).
+[`buildStage_checker`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/BuildStage.lean#L347-L353).
 The twin's mutual recursion (whnf, defeq, infer) runs on fuel; the L side
 proves its refinement at every twin fuel at least the L fuel
 ([`InputsOK`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Checker/Pipeline.lean#L74-L77) bounds only the sizes; the fuel is free).

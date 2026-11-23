@@ -1,7 +1,6 @@
 module
 
 public import ConAgua.Arena.JustifySideModels
-public import ConAgua.Arena.Pins
 public import ConAgua.Arena.IndSumSpec.MentionsConst
 public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Checker.HoistRefBase
