@@ -93,18 +93,18 @@ theorem motiveLevel_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) 
   rw [← hd1, ← decE_eq, tb]
   simp only [motiveLevelW.k_get_app_fn_f] at hW
   by_cases g0 : tagW (r1.headD 0) ≠ 0
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     refine ⟨none, a1, ?_, hS1, hgr1, rfl⟩
-    rw [if_neg (by simpa using g0)]; rfl
-  rw [if_neg g0] at hW
+    rw [ite_eq_right (by simpa using g0)]; rfl
+  rw [ite_eq_right g0] at hW
   have g0 : tagW (r1.headD 0) = 0 := Classical.not_not.mp g0
   -- `e_view` at the `bvar`
   rcases h2 : callW p n "e_view" [r1.headD 0] m1 with _ | ⟨r2, m2⟩
   · rw [h2] at hW; simp [motiveLevelW.k_e_view] at hW
   rw [h2] at hW
   obtain ⟨rfl, hv2⟩ := eView_bvar P.e_view hS1.check.arena.base g0 h2
-  rw [if_pos (by simpa using g0)]
+  rw [ite_eq_left (by simpa using g0)]
   rw [StateT.run_bind, viewBVar_run', hv2, except_ok_bind]
   dsimp only
   simp only [motiveLevelW.k_e_view] at hW
@@ -113,19 +113,19 @@ theorem motiveLevel_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) 
   have hn2 : (nIdx + 1 + preL).toNat = nIdx.toNat + 1 + preL.toNat := by
     rw [UInt64.toNat_add, hn1]; simp; omega
   by_cases c1 : w < nIdx + 1
-  · rw [if_pos c1] at hW
+  · rw [ite_eq_left c1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have : ¬ nIdx.toNat + 1 ≤ w.toNat := by rw [UInt64.lt_iff_toNat_lt, hn1] at c1; omega
     exact ⟨none, a1, by simp [this]; rfl, hS1, hgr1, rfl⟩
-  rw [if_neg c1] at hW
+  rw [ite_eq_right c1] at hW
   have c1' : nIdx.toNat + 1 ≤ w.toNat := by rw [UInt64.lt_iff_toNat_lt, hn1] at c1; omega
   by_cases c2 : nIdx + 1 + preL ≤ w
-  · rw [if_pos c2] at hW
+  · rw [ite_eq_left c2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have : ¬ w.toNat < nIdx.toNat + 1 + pre.length := by
       rw [UInt64.le_iff_toNat_le, hn2] at c2; omega
     exact ⟨none, a1, by simp [c1', this]; rfl, hS1, hgr1, rfl⟩
-  rw [if_neg c2] at hW
+  rw [ite_eq_right c2] at hW
   have c2' : w.toNat < nIdx.toNat + 1 + pre.length := by
     rw [UInt64.le_iff_toNat_le, hn2] at c2; omega
   simp only [c1', c2', ite_true]
@@ -169,10 +169,10 @@ theorem motiveLevel_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) 
   rw [← hd4, ← decE_eq, ts]
   have hg := hgr1.trans (hgr3.trans hgr4)
   by_cases g2 : tagW (r4.headD 0) ≠ 2
-  · rw [if_pos g2] at hW
+  · rw [ite_eq_left g2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    exact ⟨none, a4, by rw [if_neg (by simpa using g2)]; rfl, hS4, hg, rfl⟩
-  rw [if_neg g2] at hW
+    exact ⟨none, a4, by rw [ite_eq_right (by simpa using g2)]; rfl, hS4, hg, rfl⟩
+  rw [ite_eq_right g2] at hW
   have g2 : tagW (r4.headD 0) = 2 := Classical.not_not.mp g2
   rcases h5 : callW p (n + 1) "e_view" [r4.headD 0] m4 with _ | ⟨r5, m5⟩
   · rw [h5] at hW; simp [motiveLevelW.k_e_view_2] at hW
@@ -180,6 +180,6 @@ theorem motiveLevel_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) 
   obtain ⟨rfl, hv5, hh5⟩ := eView_sort P.e_view hS4.check.arena.base hx4 g2 h5
   simp only [motiveLevelW.k_e_view_2] at hW
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-  rw [if_pos (by simpa using g2), StateT.run_bind, viewSort_run', hv5, except_ok_bind]
+  rw [ite_eq_left (by simpa using g2), StateT.run_bind, viewSort_run', hv5, except_ok_bind]
   exact ⟨some _, a4, rfl, hS4, hg, rfl, hh5, rfl⟩
 end L.Ind

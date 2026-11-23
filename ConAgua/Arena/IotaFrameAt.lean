@@ -66,11 +66,11 @@ theorem iotaPartsAtBody_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wo
   simp only [iotaPartsAtBodyW.k_strip_pis] at hW
   rcases x2 with _ | ⟨fd, concl⟩
   · simp only [decOLE] at hd2
-    rw [if_pos hd2] at hW
+    rw [ite_eq_left hd2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     exact ⟨none, a2, rfl, ⟨hS2, hg1.trans hg2, rfl⟩, hA2⟩
   obtain ⟨h21, hfd, hconcl⟩ := hd2
-  rw [if_neg (by rw [h21]; decide)] at hW
+  rw [ite_eq_right (by rw [h21]; decide)] at hW
   dsimp only
   simp only [decW0E, headD_drop3] at hconcl
   -- `get_app_args_f`
@@ -93,13 +93,13 @@ theorem iotaPartsAtBody_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wo
       iotaPartsAtBodyW.j1 p cnP mI rP lvls parO parL pdO pdL (q2.tail.headD 0) (q2.tail.tail.headD 0)
         io il m3 = some (r0, s'.mem) := by
     by_cases c : q3.tail.headD 0 < cnP
-    · rw [if_pos c] at hW
+    · rw [ite_eq_left c] at hW
       refine ⟨_, 0, ?_, ?_, hW⟩
       · have : x3.drop cnP.toNat = [] := by
           rw [List.drop_eq_nil_of_le]; rw [UInt64.lt_iff_toNat_lt] at c; omega
         rw [this]; simp [decHL, hslice?]
       · rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega), UInt64.toNat_zero]; omega
-    · rw [if_neg c] at hW
+    · rw [ite_eq_right c] at hW
       refine ⟨_, _, ?_, ?_, hW⟩
       · have c' : cnP.toNat ≤ (q3.tail.headD 0).toNat := by
           have : ¬ _ := fun h => c (UInt64.lt_iff_toNat_lt.mpr h); omega
@@ -116,35 +116,35 @@ theorem iotaPartsAtBody_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wo
   have hg13 := hg1.trans (hg2.trans hg3)
   have hilen := decHL_length _ hidx
   by_cases g1 : parL ≠ cnP
-  · rw [if_pos g1] at hj
+  · rw [ite_eq_left g1] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     have : ¬ params.length = cnP.toNat := by
       rw [hplen]; exact fun h => g1 (UInt64.toNat_inj.mp h)
-    exact ⟨none, a3, by rw [if_neg this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
-  rw [if_neg g1] at hj
+    exact ⟨none, a3, by rw [ite_eq_right this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
+  rw [ite_eq_right g1] at hj
   have g1' : params.length = cnP.toNat := by rw [hplen, Classical.not_not.mp g1]
-  rw [if_pos g1']
+  rw [ite_eq_left g1']
   by_cases g2 : mI < rP
-  · rw [if_pos g2] at hj
+  · rw [ite_eq_left g2] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     have : ¬ rP.toNat ≤ mI.toNat := by rw [UInt64.lt_iff_toNat_lt] at g2; omega
-    exact ⟨none, a3, by rw [if_neg this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
-  rw [if_neg g2] at hj
+    exact ⟨none, a3, by rw [ite_eq_right this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
+  rw [ite_eq_right g2] at hj
   have g2' : rP.toNat ≤ mI.toNat := by
     have : ¬ _ := fun h => g2 (UInt64.lt_iff_toNat_lt.mpr h); omega
-  rw [if_pos g2']
+  rw [ite_eq_left g2']
   have hmr : (mI - rP).toNat = mI.toNat - rP.toNat :=
     UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)
   by_cases g3 : il ≠ mI - rP
-  · rw [if_pos g3] at hj
+  · rw [ite_eq_left g3] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     have : ¬ (x3.drop cnP.toNat).length = mI.toNat - rP.toNat := by
       rw [hilen, ← hmr]; exact fun h => g3 (UInt64.toNat_inj.mp h)
-    exact ⟨none, a3, by rw [if_neg this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
-  rw [if_neg g3] at hj
+    exact ⟨none, a3, by rw [ite_eq_right this]; rfl, ⟨hS3, hg13, rfl⟩, hA3⟩
+  rw [ite_eq_right g3] at hj
   have g3' : (x3.drop cnP.toNat).length = mI.toNat - rP.toNat := by
     rw [hilen, ← hmr, Classical.not_not.mp g3]
-  rw [if_pos g3']
+  rw [ite_eq_left g3']
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
   refine ⟨_, a3, rfl, ⟨hS3, hg13, rfl, ⟨?_, ⟨hidx, hil⟩, ⟨hlv, rfl⟩, ?_⟩, ?_⟩, hA3⟩
   · have := decRL_hl_grow hg3 hfd

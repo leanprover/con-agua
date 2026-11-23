@@ -236,7 +236,7 @@ theorem annIdentBody_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
     show UInt64.ofNat 1 = 1 from rfl, irOfNat2]
   by_cases ha1 : ar = 1
   · subst ha1
-    simp only [eq_self_iff_true, decide_true, ite_true]
+    simp only [decide_true, ite_true]
     by_cases ht0 : tagW b ≠ 0
     · rw [annIdentBodyW.arm1 _ _ _ _ _ _ _ _ rfl ht0] at hW
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
@@ -276,7 +276,7 @@ theorem annIdentBody_rel (P : IotaRelProg p) {n : Nat} {m m' : Mem} {a : AState}
     simp only [ha2, decide_false, Bool.false_eq_true, ite_false]; rfl
   have ha2 : ar = 2 := Classical.not_not.mp ha2
   subst ha2
-  simp only [eq_self_iff_true, decide_true, ite_true]
+  simp only [decide_true, ite_true]
   by_cases ht5 : tagW b ≠ 5
   · rw [annIdentBodyW.arm3 _ _ _ _ _ _ _ _ ha1 rfl ht5] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)

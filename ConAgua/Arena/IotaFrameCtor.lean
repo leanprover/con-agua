@@ -42,7 +42,7 @@ theorem ctorLevelsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word)
   · simp [ctorLevelsAtW] at hW
   simp only [ctorLevelsAtW] at hW
   rcases decRule_fireE (erRdOK m) hrl with ⟨h0, hf⟩ | ⟨h0, lvls, hf, hsl⟩
-  · rw [if_neg (by simpa using h0)] at hW
+  · rw [ite_eq_right (by simpa using h0)] at hW
     rcases h1 : callW p n "param_levels" [lpsO, lpsL] m with _ | ⟨q1, m1⟩
     · rw [h1] at hW; simp [ctorLevelsAtW.k_intern_ls_iw] at hW
     rw [h1] at hW
@@ -58,7 +58,7 @@ theorem ctorLevelsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word)
     unfold ctorLevelsAt
     rw [hf]
     exact AM.run_of_ok _ _ hok
-  rw [if_pos h0] at hW
+  rw [ite_eq_left h0] at hW
   rcases h1 : callW p n "er_to_iw" [erRd m (r + Rule.lvlsOff), erRd m (r + Rule.lvlsLen)] m with
     _ | ⟨q1, m1⟩
   · rw [h1] at hW; simp [ctorLevelsAtW.k_er_to_iw] at hW
@@ -127,7 +127,7 @@ theorem iotaBVars_loop {p : Prog} (P : IotaFrameProg p) (vis : Word) (fe : IFEnv
       (hS1.set_iw _ _) hg2 (by omega) (by rw [iwTop_set64IW]; have := hg1.iw; omega) hps2
     rw [hi1] at hrun
     refine ⟨decI (r1.headD 0) :: xs, a', ?_, hS', hg', by simpa using hd', hb'⟩
-    rw [iotaBVars.eq_def, if_pos hi']
+    rw [iotaBVars.eq_def, ite_eq_left hi']
     rw [hri] at hrun1
     have hrun1' : (internBVarE (rP.toNat - 1 - i.toNat)).run a = .ok (decE (r1.headD 0), a1) := hrun1
     rw [StateT.run_bind, hrun1', except_ok_bind, StateT.run_bind, hrun, except_ok_bind]
@@ -137,7 +137,7 @@ theorem iotaBVars_loop {p : Prog} (P : IotaFrameProg p) (vis : Word) (fe : IFEnv
     have hin' : ¬ i.toNat < nn.toNat := fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)
     have hjf : i.toNat = nn.toNat := by omega
     refine ⟨[], a, ?_, hS, hg, by rw [← hjf]; simpa using hps, hb⟩
-    rw [iotaBVars.eq_def, if_neg hin']; rfl
+    rw [iotaBVars.eq_def, ite_eq_right hin']; rfl
 
 /-- **`iota_bvars` refines `iotaBVars … 0`** (at most `rP` variables). -/
 @[refines ConRon.Arena.iotaBVars]
@@ -152,12 +152,12 @@ theorem iotaBVars_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   · simp [iotaBVarsW] at hW
   simp only [iotaBVarsW] at hW
   by_cases hq : nn = 0
-  · rw [if_pos hq] at hW
+  · rw [ite_eq_left hq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hq
     refine ⟨[], a, ?_, hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
-    rw [iotaBVars.eq_def, if_neg (by simp)]; rfl
-  rw [if_neg hq] at hW
+    rw [iotaBVars.eq_def, ite_eq_right (by simp)]; rfl
+  rw [ite_eq_right hq] at hW
   rcases ha : callW p n "iw_alloc" [nn] m with _ | ⟨r1, m1⟩
   · rw [ha] at hW; simp [iotaBVarsW.k_iw_alloc] at hW
   rw [ha] at hW
@@ -190,7 +190,7 @@ theorem iotaParamsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word)
   simp only [iotaParamsAtW] at hW
   obtain ⟨-, -, -, -, hn1, -, -, -⟩ := decRule_rd (erRdOK m) hrl
   by_cases h1 : erRd m (r + Rule.fire) = 1
-  · rw [if_pos h1] at hW
+  · rw [ite_eq_left h1] at hW
     obtain ⟨lv, pins, hf, -, hsl⟩ := hn1 h1
     rcases h2 : callW p n "er_to_iw" [erRd m (r + Rule.pinsOff), erRd m (r + Rule.pinsLen)] m with
       _ | ⟨q1, m1⟩
@@ -205,14 +205,14 @@ theorem iotaParamsAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word)
     refine ⟨pins, a, ?_, hS1, hg1, by simpa using hd1,
       by show (q1.headD 0).toNat + (q1.tail.headD 0).toNat ≤ _; omega⟩
     unfold iotaParamsAt; rw [hf]; rfl
-  rw [if_neg h1] at hW
+  rw [ite_eq_right h1] at hW
   have hnn := decRule_notNested (erRdOK m) hrl h1
   obtain ⟨k, hk, hj⟩ : ∃ k : Word, k.toNat = min cnP.toNat rP.toNat ∧
       iotaParamsAtW.j1 p n rP k m = some (r0, s'.mem) := by
     by_cases c : rP < cnP
-    · rw [if_pos c] at hW
+    · rw [ite_eq_left c] at hW
       exact ⟨rP, by rw [UInt64.lt_iff_toNat_lt] at c; omega, hW⟩
-    · rw [if_neg c] at hW
+    · rw [ite_eq_right c] at hW
       exact ⟨cnP, by have : ¬ _ := fun h => c (UInt64.lt_iff_toNat_lt.mpr h); omega, hW⟩
   simp only [iotaParamsAtW.j1] at hj
   rcases h2 : callW p n "iota_bvars" [rP, k] m with _ | ⟨q1, m1⟩

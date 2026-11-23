@@ -201,11 +201,11 @@ theorem iotaPartsAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat)
   · simp [iotaPartsAtW] at hW
   simp only [iotaPartsAtW] at hW
   by_cases g1 : 4294967296 ≤ cnP ∨ 4294967296 ≤ mI ∨ 4294967296 ≤ rP
-  · rw [if_pos g1] at hW; cases hW
-  rw [if_neg g1] at hW
+  · rw [ite_eq_left g1] at hW; cases hW
+  rw [ite_eq_right g1] at hW
   by_cases g2 : 4294967296 ≤ erRd m (r + Rule.nfields)
-  · rw [if_pos g2] at hW; cases hW
-  rw [if_neg g2] at hW
+  · rw [ite_eq_left g2] at hW; cases hW
+  rw [ite_eq_right g2] at hW
   -- `cv_lps`
   rcases h1 : callW p n "cv_lps" [qj] m with _ | ⟨q1, m1⟩
   · rw [h1] at hW; simp [iotaPartsAtW.k_cv_lps] at hW
@@ -278,11 +278,11 @@ theorem iotaPartsAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat)
   have hg15 := hg1.trans (hg23.trans (hg4.trans hg5))
   rcases x5 with _ | ⟨pd, cb⟩
   · simp only [decOLE] at hd5
-    rw [if_pos hd5] at hW
+    rw [ite_eq_left hd5] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     exact ⟨none, a5, rfl, ⟨hS5, hg15, rfl⟩, hA5⟩
   obtain ⟨h51, hpd, hcb⟩ := hd5
-  rw [if_neg (by rw [h51]; decide)] at hW
+  rw [ite_eq_right (by rw [h51]; decide)] at hW
   dsimp only
   simp only [decW0E, headD_drop3] at hcb
   -- `iota_parts_at_body`

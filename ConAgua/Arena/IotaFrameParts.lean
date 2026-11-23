@@ -61,8 +61,8 @@ theorem iotaPartsOfAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wor
   · simp [iotaPartsOfAtW] at hW
   simp only [iotaPartsOfAtW] at hW
   by_cases hbig : 4294967296 ≤ rP ∨ 4294967296 ≤ nIdx ∨ 4294967296 ≤ erRd m (r + Rule.nfields)
-  · rw [if_pos hbig] at hW; cases hW
-  rw [if_neg hbig] at hW
+  · rw [ite_eq_left hbig] at hW; cases hW
+  rw [ite_eq_right hbig] at hW
   have hrP : rP.toNat < 2 ^ 32 := by
     have := fun h => hbig (Or.inl (UInt64.le_iff_toNat_le.mpr h)); simp at this; omega
   have hnI : nIdx.toNat < 2 ^ 32 := by
@@ -73,13 +73,13 @@ theorem iotaPartsOfAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wor
   have hml := decNL_length m hmin
   unfold iotaPartsOfAt
   by_cases hi : r4 ≤ i
-  · rw [if_pos hi] at hW
+  · rw [ite_eq_left hi] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have : ¬ i.toNat < rr.minors.length := by rw [hml]; rw [UInt64.le_iff_toNat_le] at hi; omega
-    exact ⟨none, a, by rw [if_neg this]; rfl, hS, IWGrow.refl _, rfl⟩
-  rw [if_neg hi] at hW
+    exact ⟨none, a, by rw [ite_eq_right this]; rfl, hS, IWGrow.refl _, rfl⟩
+  rw [ite_eq_right hi] at hW
   have hi' : i.toNat < r4.toNat := by rw [UInt64.le_iff_toNat_le] at hi; omega
-  rw [if_pos (by rw [hml]; exact hi')]
+  rw [ite_eq_left (by rw [hml]; exact hi')]
   dsimp only
   have hqq := decNL_rdW hmin hi' (by omega)
   generalize hqw : rdW (m.arr64 IW) (r3 + i) = qq at hW hqq
@@ -110,11 +110,11 @@ theorem iotaPartsOfAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wor
   simp only [iotaPartsOfAtW.k_strip_pis] at hW
   rcases x2 with _ | ⟨fd, inner⟩
   · simp only [decOLE] at hd2
-    rw [if_pos hd2] at hW
+    rw [ite_eq_left hd2] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     exact ⟨none, a2, rfl, hS2, hg1.trans hg2, rfl⟩
   obtain ⟨h21, hfd, hinner⟩ := hd2
-  rw [if_neg (by rw [h21]; decide)] at hW
+  rw [ite_eq_right (by rw [h21]; decide)] at hW
   dsimp only
   simp only [decW0E, headD_drop3] at hinner
   simp only [decRL, L.getD_one, L.getD_two, Nat.reduceAdd] at hfd
@@ -122,9 +122,9 @@ theorem iotaPartsOfAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wor
       iotaPartsOfAtW.j1 p (n + 1) r5 r6 r7 nIdx r (q2.tail.headD 0) (q2.tail.tail.headD 0)
         (q2.tail.tail.tail.headD 0) amt m2 = some (r0, s'.mem) := by
     by_cases c : rP < qq
-    · rw [if_pos c] at hW
+    · rw [ite_eq_left c] at hW
       exact ⟨0, by rw [UInt64.lt_iff_toNat_lt] at c; simp; omega, hW⟩
-    · rw [if_neg c] at hW
+    · rw [ite_eq_right c] at hW
       refine ⟨_, ?_, hW⟩
       have c' : ¬ rP.toNat < qq.toNat := fun h => c (UInt64.lt_iff_toNat_lt.mpr h)
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
@@ -166,9 +166,9 @@ theorem iotaPartsOfAt_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Wor
       iotaPartsOfAtW.j2 p (n + 1) r5 r6 r7 r amt (q3.headD 0) (q3.tail.headD 0) (q4.headD 0)
         (q5.headD 0) al m5 = some (r0, s'.mem) := by
     by_cases c : nIdx < q5.tail.headD 0
-    · rw [if_pos c] at hj
+    · rw [ite_eq_left c] at hj
       exact ⟨nIdx, by rw [UInt64.lt_iff_toNat_lt] at c; omega, hj⟩
-    · rw [if_neg c] at hj
+    · rw [ite_eq_right c] at hj
       exact ⟨_, by have : ¬ _ := fun h => c (UInt64.lt_iff_toNat_lt.mpr h); omega, hj⟩
   simp only [iotaPartsOfAtW.j2] at hj
   -- `lift_idx_args`

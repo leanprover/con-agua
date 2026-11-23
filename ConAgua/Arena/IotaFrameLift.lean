@@ -152,13 +152,13 @@ theorem liftFieldDoms_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
   · simp [liftFieldDomsW] at hW
   simp only [liftFieldDomsW] at hW
   by_cases hq : fl = 0
-  · rw [if_pos hq] at hW
+  · rw [ite_eq_left hq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hq
     have : fd = [] := by simpa [decHL, hslice?] using hfd.symm
     subst this
     exact ⟨[], a, rfl, hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
-  rw [if_neg hq] at hW
+  rw [ite_eq_right hq] at hW
   rcases ha : callW p n "iw_alloc" [fl] m with _ | ⟨r1, m1⟩
   · rw [ha, liftFieldDomsW.k_iw_alloc.none] at hW; cases hW
   rw [ha, liftFieldDomsW.k_iw_alloc.arm1] at hW
@@ -257,13 +257,13 @@ theorem liftIdxArgs_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) 
   · simp [liftIdxArgsW] at hW
   simp only [liftIdxArgsW] at hW
   by_cases hq : al = 0
-  · rw [if_pos hq] at hW
+  · rw [ite_eq_left hq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hq
     have : as = [] := by simpa [decHL, hslice?] using has.symm
     subst this
     exact ⟨[], a, rfl, hS, IWGrow.refl _, by simp [decHL, hslice?], by simp⟩
-  rw [if_neg hq] at hW
+  rw [ite_eq_right hq] at hW
   rcases ha : callW p n "iw_alloc" [al] m with _ | ⟨r1, m1⟩
   · rw [ha, liftIdxArgsW.k_iw_alloc.none] at hW; cases hW
   rw [ha, liftIdxArgsW.k_iw_alloc.arm1] at hW

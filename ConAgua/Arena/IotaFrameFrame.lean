@@ -77,11 +77,11 @@ theorem iotaFrame_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   simp only [iotaFrameW.k_strip_pis] at hW
   rcases x1 with _ | ⟨pre, rest⟩
   · simp only [decOLE] at hd1
-    rw [if_pos hd1] at hW
+    rw [ite_eq_left hd1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     exact ⟨none, a1, rfl, hS1, hg1, rfl⟩
   obtain ⟨h11, hpre, hrest⟩ := hd1
-  rw [if_neg (by rw [h11]; decide)] at hW
+  rw [ite_eq_right (by rw [h11]; decide)] at hW
   have hpl : r1.tail.tail.headD 0 = rP := stripF_len hs1 (by rw [h11]; decide)
   have hnI : (if mI < rP then (0 : Word) else mI - rP).toNat = mI.toNat - rP.toNat := by
     split
@@ -109,11 +109,11 @@ theorem iotaFrame_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   simp only [iotaFrameW.k_strip_pis_2] at hj
   rcases x2 with _ | ⟨doms, body⟩
   · simp only [decOLE] at hd2
-    rw [if_pos hd2] at hj
+    rw [ite_eq_left hd2] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     exact ⟨none, a2, rfl, hS2, hg1.trans hg2, rfl⟩
   obtain ⟨h21, hdoms, hbody⟩ := hd2
-  rw [if_neg (by rw [h21]; decide)] at hj
+  rw [ite_eq_right (by rw [h21]; decide)] at hj
   simp only [decW0E, headD_drop3] at hbody
   -- the motive's level
   rcases h3 : callW p n "motive_level" [r1.tail.headD 0, r1.tail.tail.headD 0, nI,
@@ -134,11 +134,11 @@ theorem iotaFrame_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   have hg := hg1.trans (hg2.trans hg3)
   rcases x3 with _ | u
   · simp only [decOL] at hd3
-    rw [if_pos hd3] at hj
+    rw [ite_eq_left hd3] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     exact ⟨none, a3, rfl, hS3, hg, rfl⟩
   obtain ⟨h31, hu1, hu2⟩ := hd3
-  rw [if_neg (by rw [h31]; decide)] at hj
+  rw [ite_eq_right (by rw [h31]; decide)] at hj
   obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
   refine ⟨_, a3, rfl, hS3, hg, rfl, hpl, ?_, ?_, hbody.1, hbody.2, hu1, hu2⟩
   · exact decRL_hl_grow (hg2.trans hg3) (by simpa [decRL] using hpre)

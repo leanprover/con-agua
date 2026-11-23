@@ -54,10 +54,10 @@ theorem iotaReadMajor_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
   obtain ⟨mot, hmot, hj⟩ : ∃ mot : Word, mot.toNat = rP.toNat + nIdx.toNat - k.toNat ∧
       iotaReadMajorW.j1 p n preO preL domO domL nIdx mot m = some (r, s'.mem) := by
     by_cases c : rP + nIdx < k
-    · rw [if_pos c] at hW
+    · rw [ite_eq_left c] at hW
       refine ⟨0, ?_, hW⟩
       rw [UInt64.lt_iff_toNat_lt, hrn] at c; simp; omega
-    · rw [if_neg c] at hW
+    · rw [ite_eq_right c] at hW
       refine ⟨_, ?_, hW⟩
       have c' : ¬ (rP + nIdx).toNat < k.toNat := fun h => c (UInt64.lt_iff_toNat_lt.mpr h)
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega), hrn]
@@ -104,17 +104,17 @@ theorem iotaReadMajor_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
   rw [← hd3, ← decE_eq, tc]
   have hg13 := hg2.trans hg3
   by_cases g3 : tagW (r3.headD 0) ≠ 3
-  · rw [if_pos g3] at hj
+  · rw [ite_eq_left g3] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
-    exact ⟨none, a3, by rw [if_neg (by simpa using g3)]; rfl, hS3, hg1.trans hg13, rfl⟩
-  rw [if_neg g3] at hj
+    exact ⟨none, a3, by rw [ite_eq_right (by simpa using g3)]; rfl, hS3, hg1.trans hg13, rfl⟩
+  rw [ite_eq_right g3] at hj
   have g3 : tagW (r3.headD 0) = 3 := Classical.not_not.mp g3
   -- `e_view` at the `const`
   rcases h4 : callW p (n + 1) "e_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩
   · rw [h4] at hj; simp [iotaReadMajorW.k_e_view] at hj
   rw [h4] at hj
   obtain ⟨rfl, hv4, hu4⟩ := eView_const P.e_view hS3.check.arena.base g3 h4
-  rw [if_pos (by simpa using g3), StateT.run_bind, viewConst_run', hv4, except_ok_bind]
+  rw [ite_eq_left (by simpa using g3), StateT.run_bind, viewConst_run', hv4, except_ok_bind]
   dsimp only
   simp only [iotaReadMajorW.k_e_view] at hj
   -- `get_app_args_f`
@@ -134,10 +134,10 @@ theorem iotaReadMajor_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word
       iotaReadMajorW.j2 p (n + 1) preO preL nIdx (r1.headD 0) (r1.tail.headD 0) (r4.tail.tail.headD 0)
         (r5.headD 0) t m5 = some (r, s'.mem) := by
     by_cases c : r5.tail.headD 0 < nIdx
-    · rw [if_pos c] at hj
+    · rw [ite_eq_left c] at hj
       refine ⟨0, ?_, hj⟩
       have := UInt64.lt_iff_toNat_lt.mp c; simp; omega
-    · rw [if_neg c] at hj
+    · rw [ite_eq_right c] at hj
       refine ⟨_, ?_, hj⟩
       have : ¬ _ := fun h => c (UInt64.lt_iff_toNat_lt.mpr h)
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]; omega
@@ -205,8 +205,8 @@ theorem iotaRecOf_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (
   · simp [iotaRecOfW] at hW
   simp only [iotaRecOfW] at hW
   by_cases hbig : 4294967296 ≤ mI ∨ 4294967296 ≤ rP
-  · rw [if_pos hbig] at hW; cases hW
-  rw [if_neg hbig] at hW
+  · rw [ite_eq_left hbig] at hW; cases hW
+  rw [ite_eq_right hbig] at hW
   have hmI : mI.toNat < 2 ^ 32 := by
     have := fun h => hbig (Or.inl (UInt64.le_iff_toNat_le.mpr h)); simp at this; omega
   have hrP : rP.toNat < 2 ^ 32 := by
@@ -214,9 +214,9 @@ theorem iotaRecOf_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (
   obtain ⟨nI, hnI, hj⟩ : ∃ nI : Word, nI.toNat = mI.toNat - rP.toNat ∧
       iotaRecOfW.j1 p n q mI rP nI m = some (r, s'.mem) := by
     by_cases c : mI < rP
-    · rw [if_pos c] at hW
+    · rw [ite_eq_left c] at hW
       exact ⟨0, by rw [UInt64.lt_iff_toNat_lt] at c; simp; omega, hW⟩
-    · rw [if_neg c] at hW
+    · rw [ite_eq_right c] at hW
       refine ⟨_, ?_, hW⟩
       have c' : ¬ mI.toNat < rP.toNat := fun h => c (UInt64.lt_iff_toNat_lt.mpr h)
       rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)]
@@ -232,11 +232,11 @@ theorem iotaRecOf_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (
   simp only [iotaRecOfW.k_iota_frame] at hj
   rcases x1 with _ | ⟨pre, doms, body, u⟩
   · simp only [decOF] at hd1
-    rw [if_pos hd1] at hj
+    rw [ite_eq_left hd1] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
     exact ⟨none, a1, rfl, hS1, hg1, rfl⟩
   obtain ⟨h11, hpl1, hpre, hdoms, hb1, hb2, -⟩ := hd1
-  rw [if_neg (by rw [h11]; decide)] at hj
+  rw [ite_eq_right (by rw [h11]; decide)] at hj
   dsimp only
   simp only [decRL, L.getD_one, L.getD_two, L.getD_three, L.getD_four, Nat.reduceAdd] at hpre hdoms
   have e5 : r1.getD 5 0 = r1.tail.tail.tail.tail.tail.headD 0 := by
@@ -257,16 +257,16 @@ theorem iotaRecOf_rel' {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (
     decE_tag_beq _ hx3 0 (by decide)
   rw [← hd3, ← decE_eq, tb]
   by_cases g0 : tagW (r3.headD 0) ≠ 0
-  · rw [if_pos g0] at hj
+  · rw [ite_eq_left g0] at hj
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hj)
-    exact ⟨none, a3, by rw [if_neg (by simpa using g0)]; rfl, hS3, hg1.trans hg3, rfl⟩
-  rw [if_neg g0] at hj
+    exact ⟨none, a3, by rw [ite_eq_right (by simpa using g0)]; rfl, hS3, hg1.trans hg3, rfl⟩
+  rw [ite_eq_right g0] at hj
   have g0 : tagW (r3.headD 0) = 0 := Classical.not_not.mp g0
   rcases h4 : callW p n "e_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩
   · rw [h4] at hj; simp [iotaRecOfW.k_e_view] at hj
   rw [h4] at hj
   obtain ⟨rfl, hv4⟩ := eView_bvar P.e_view hS3.check.arena.base g0 h4
-  rw [if_pos (by simpa using g0), StateT.run_bind, viewBVar_run', hv4, except_ok_bind]
+  rw [ite_eq_left (by simpa using g0), StateT.run_bind, viewBVar_run', hv4, except_ok_bind]
   dsimp only
   simp only [iotaRecOfW.k_e_view] at hj
   -- `iota_read_major`

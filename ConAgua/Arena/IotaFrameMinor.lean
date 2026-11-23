@@ -72,23 +72,23 @@ theorem isMinorAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
   rw [← hd3, ← decE_eq, tb]
   have hg := hg1.trans (hg2.trans hg3)
   by_cases g0 : tagW (r3.headD 0) ≠ 0
-  · rw [if_pos g0] at hW
+  · rw [ite_eq_left g0] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
-    exact ⟨false, a3, by rw [if_neg (by simpa using g0)]; rfl, hS3, hg, by simp, by simp⟩
-  rw [if_neg g0] at hW
+    exact ⟨false, a3, by rw [ite_eq_right (by simpa using g0)]; rfl, hS3, hg, by simp, by simp⟩
+  rw [ite_eq_right g0] at hW
   have g0 : tagW (r3.headD 0) = 0 := Classical.not_not.mp g0
   rcases h4 : callW p (n + 1) "e_view" [r3.headD 0] m3 with _ | ⟨r4, m4⟩
   · rw [h4] at hW; simp [isMinorAtW.k_e_view] at hW
   rw [h4] at hW
   obtain ⟨rfl, hv4⟩ := eView_bvar P.e_view hS3.check.arena.base g0 h4
-  rw [if_pos (by simpa using g0), StateT.run_bind, viewBVar_run', hv4, except_ok_bind]
+  rw [ite_eq_left (by simpa using g0), StateT.run_bind, viewBVar_run', hv4, except_ok_bind]
   dsimp only
   simp only [isMinorAtW.k_e_view] at hW
   by_cases c1 : mot < q
-  · rw [if_pos c1] at hW
+  · rw [ite_eq_left c1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have c1' : mot.toNat < q.toNat := UInt64.lt_iff_toNat_lt.mp c1
-    rw [if_pos c1']
+    rw [ite_eq_left c1']
     have hq1 : (1 : Word) ≤ q := by rw [UInt64.le_iff_toNat_le]; simp; omega
     have hs1 : (q - 1).toNat = q.toNat - 1 := by rw [UInt64.toNat_sub_of_le _ _ hq1]; simp
     have hm1 : mot ≤ q - 1 := by rw [UInt64.le_iff_toNat_le, hs1]; omega
@@ -100,18 +100,18 @@ theorem isMinorAt_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (f
       exact Nat.mod_eq_of_lt (by simp only [coreWalkFuel] at hx2; omega)
     refine ⟨_, a3, rfl, hS3, hg, ?_, ?_⟩
     · by_cases h : r4.tail.headD 0 = r2.headD 0 + (q - 1 - mot)
-      · rw [if_pos h]
+      · rw [ite_eq_left h]
         have : (r4.tail.headD 0).toNat = x2.1 + (q.toNat - 1 - mot.toNat) := by rw [h, e]
         rw [this, beq_self_eq_true]; rfl
-      · rw [if_neg h]
+      · rw [ite_eq_right h]
         have : (r4.tail.headD 0).toNat ≠ x2.1 + (q.toNat - 1 - mot.toNat) := by
           rw [← e]; exact fun h' => h (UInt64.toNat_inj.mp h')
         rw [beq_eq_false_iff_ne.mpr this]; rfl
     · split <;> simp
-  · rw [if_neg c1] at hW
+  · rw [ite_eq_right c1] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have c1' : ¬ mot.toNat < q.toNat := fun h => c1 (UInt64.lt_iff_toNat_lt.mpr h)
-    rw [if_neg c1']
+    rw [ite_eq_right c1']
     exact ⟨false, a3, rfl, hS3, hg, by simp, by simp⟩
 
 end L.Ind

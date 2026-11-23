@@ -88,7 +88,7 @@ theorem minorsFrom_loop {p : Prog} (P : IotaFrameProg p) (vis : Word) (fe : IFEn
         (minorsFrom pre mot.toNat j.toNat).run a =
           .ok ((if b then j.toNat :: xs' else xs'), a2) := by
       intro xs' a2 h2
-      rw [minorsFrom.eq_def, if_pos (by omega), StateT.run_bind, hrun1, except_ok_bind,
+      rw [minorsFrom.eq_def, ite_eq_left (by omega), StateT.run_bind, hrun1, except_ok_bind,
         StateT.run_bind, h2, except_ok_bind]
       cases b <;> rfl
     by_cases h0 : r1.headD 0 = 0
@@ -124,7 +124,7 @@ theorem minorsFrom_loop {p : Prog} (P : IotaFrameProg p) (vis : Word) (fe : IFEn
     have hj' : ¬ j.toNat < pre.length := by
       rw [hlen]; exact fun h => hj (UInt64.lt_iff_toNat_lt.mpr h)
     refine ⟨[], a, ?_, hS, hg, by simpa using hps, by omega⟩
-    rw [minorsFrom.eq_def, if_neg hj']; rfl
+    rw [minorsFrom.eq_def, ite_eq_right hj']; rfl
 
 /-- **`minors_from` refines `minorsFrom`**: the positions as a fresh `IW` slice of numbers. -/
 @[refines ConRon.Arena.minorsFrom]
@@ -142,12 +142,12 @@ theorem minorsFrom_rel {p : Prog} (P : IotaFrameProg p) (n : Nat) (vis : Word) (
   · simp [minorsFromW] at hW
   simp only [minorsFromW] at hW
   by_cases hq : preL ≤ q
-  · rw [if_pos hq] at hW
+  · rw [ite_eq_left hq] at hW
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
     have : ¬ q.toNat < pre.length := by rw [hlen]; rw [UInt64.le_iff_toNat_le] at hq; omega
     refine ⟨[], a, ?_, hS, IWGrow.refl _, rfl, by simp⟩
-    rw [minorsFrom.eq_def, if_neg this]; rfl
-  rw [if_neg hq] at hW
+    rw [minorsFrom.eq_def, ite_eq_right this]; rfl
+  rw [ite_eq_right hq] at hW
   have hq' : q.toNat < preL.toNat := by
     rw [UInt64.not_le, UInt64.lt_iff_toNat_lt] at hq; exact hq
   rcases ha : callW p n "iw_alloc" [preL - q] m with _ | ⟨r1, m1⟩
