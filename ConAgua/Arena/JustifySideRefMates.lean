@@ -623,4 +623,98 @@ theorem member_step {p : Prog} (hP : MatesProg p) {n : Nat} {m : Mem} {M : Std.H
       by simp only [erecTop1, h4c]; exact hgrow.top1,
       fun i hi => by rw [hm4o _ (matArr_ne _).2.1.symm]; exact hgrow.get1 i hi⟩
 
+/-! ## `mates_insert` -/
+
+theorem nidxAppend_all (acc ns : List NIdx) : nidxAppend acc ns 0 ns.length = acc ++ ns := by
+  simp [nidxAppend]
+
+theorem matesInsert_cons (M : Std.HashMap NIdx (List NIdx)) (ns : List NIdx) (c : IConstantInfo)
+    (cs : List IConstantInfo) :
+    matesInsert M ns (c :: cs) = matesInsert (M.insert c.name (M.getD c.name [] ++ ns)) ns cs := by
+  simp [matesInsert, nidxAppend_all]
+
+/-- **`mates_insert(bo, bl, j)` refines `matesInsert`** over the block's members from `j`: the
+block `block` (its names in `DLP`, `nameW`), `ns` its names. -/
+theorem matesInsert_ok {p : Prog} (hP : MatesProg p) {m₀ : Mem} {bo bl : Word}
+    {block : List IConstantInfo} (hbl : bl.toNat < 2 ^ 62) (hlen : block.length = bl.toNat)
+    (hnm : ∀ i (hi : i < bl.toNat), (decI (nameW m₀ bo (UInt64.ofNat i)) : NIdx) =
+      (block[i]'(by omega)).name) :
+    ∀ n (m m' : Mem) (x j : Word) (M : Std.HashMap NIdx (List NIdx)),
+      MatesR m M → MInv m → MKeep m₀ m → j ≤ bl →
+      matesInsertW p n m bo bl j = some (x, m') →
+      MatesR m' (matesInsert M (block.map (·.name)) (block.drop j.toNat)) ∧ MInv m' ∧ MKeep m₀ m' := by
+  intro n
+  induction n with
+  | zero => intro m m' x j M _ _ _ _ h; rw [matesInsertW.eq_1] at h; cases h
+  | succ n ih =>
+    intro m m' x j M hM hI hK hj h
+    have hns : (block.map (·.name)).length = bl.toNat := by simp [hlen]
+    have hP0 : m.arr64 DLP = m₀.arr64 DLP := hK.frame.arr _ (by decide) (by decide)
+    have hnw : ∀ i, nameW m bo i = nameW m₀ bo i := fun i => by simp only [nameW, hP0]
+    by_cases g : bl ≤ j
+    · rw [matesInsertW.arm1 _ _ _ _ _ _ g] at h
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have : j = bl := UInt64.le_antisymm hj g
+      subst this
+      rw [List.drop_of_length_le (by omega)]
+      exact ⟨by simpa [matesInsert] using hM, hI, hK⟩
+    rw [matesInsertW.arm2 _ _ _ _ _ _ g] at h
+    have gj : j.toNat < bl.toNat := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp g)
+    generalize hb : rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (bo + j) + (CI.cv + CV.name)) &&& 4294967295 = b at h
+    have hbn : b = nameW m bo j := hb.symm
+    cases h1 : callW p n "mates_get" [b] m with
+    | none => rw [h1] at h; simp at h
+    | some q1 =>
+    obtain ⟨ρ1, μ1⟩ := q1
+    rw [h1, L.Ind.bW_some] at h
+    cases h2 : callW p n "erec_alloc" [ρ1.tail.headD 0 + bl] μ1 with
+    | none => rw [h2] at h; simp at h
+    | some q2 =>
+    obtain ⟨ρ2, μ2⟩ := q2
+    rw [h2, L.Ind.bW_some] at h
+    -- the old list's copy, or none
+    obtain ⟨ρ5, μ5, h5, hj1⟩ : ∃ ρ5 μ5, ((ρ1.headD 0 ≠ 0 →
+        callW p n "sd_copy_prev" [ρ2.headD 0, ρ1.headD 0 - 1, ρ1.tail.headD 0] μ2 = some (ρ5, μ5)) ∧
+        (ρ1.headD 0 = 0 → μ5 = μ2)) ∧
+        matesInsertW.j1 p n bo bl j b (ρ1.tail.headD 0) (ρ2.headD 0) μ5 = some (x, m') := by
+      by_cases c : ρ1.headD 0 ≠ 0
+      · rw [ite_eq_left c] at h
+        cases h5 : callW p n "sd_copy_prev" [ρ2.headD 0, ρ1.headD 0 - 1, ρ1.tail.headD 0] μ2 with
+        | none => rw [h5] at h; simp at h
+        | some q5 =>
+          obtain ⟨ρ5, μ5⟩ := q5
+          rw [h5, L.Ind.bW_some] at h
+          exact ⟨ρ5, μ5, ⟨fun _ => rfl, fun e => absurd e c⟩, h⟩
+      · rw [ite_eq_right c] at h
+        exact ⟨[], μ2, ⟨fun e => absurd e c, fun _ => rfl⟩, h⟩
+    rw [matesInsertW.j1.arm1] at hj1
+    cases h3 : callW p n "sd_copy_names" [ρ2.headD 0 + ρ1.tail.headD 0, bo, bl] μ5 with
+    | none => rw [h3] at hj1; simp at hj1
+    | some q3 =>
+    obtain ⟨ρ3, μ3⟩ := q3
+    rw [h3, L.Ind.bW_some] at hj1
+    cases h4 : callW p n "mates_set" [b, ρ2.headD 0 + 1, ρ1.tail.headD 0 + bl] μ3 with
+    | none => rw [h4] at hj1; simp at hj1
+    | some q4 =>
+    obtain ⟨ρ4, μ4⟩ := q4
+    rw [h4, L.Ind.bW_some] at hj1
+    cases hr : matesInsertW p n μ4 bo bl (j + 1) with
+    | none => rw [hr, matesInsertW.k_mates_insert.none] at hj1; cases hj1
+    | some q =>
+    obtain ⟨y, m₁⟩ := q
+    rw [hr, matesInsertW.k_mates_insert.arm1] at hj1
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hj1)
+    have hb32 : b.toNat < 2 ^ 32 := by rw [← hb]; exact mask_lt _
+    obtain ⟨hM4, hI4, hK4⟩ := member_step hP hM hI hbl hns
+      (fun i hi => by rw [hnw, hnm i hi]; simp) hb32 h1 h2 h5 h3 h4
+    have e1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have := ih μ4 m₁ y (j + 1) _ hM4 hI4 (hK.trans hK4)
+      (UInt64.le_iff_toNat_le.mpr (by rw [e1]; omega)) hr
+    rw [e1] at this
+    rw [List.drop_eq_getElem_cons (by omega), matesInsert_cons]
+    have hname : (decI b : NIdx) = (block[j.toNat]'(by omega)).name := by
+      rw [hbn, hnw, ← hnm j.toNat gj]; simp
+    rw [← hname]
+    exact this
+
 end L.Arena
