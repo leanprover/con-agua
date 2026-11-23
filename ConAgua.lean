@@ -120,3 +120,4 @@ public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CompareTwinC
 public import ConAgua.Checker.CompareChain6S
+public import ConAgua.Checker.CompareChain6C
