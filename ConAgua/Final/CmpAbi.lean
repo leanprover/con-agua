@@ -169,4 +169,80 @@ theorem MemRel.congrW {G : L.Compiler.Layout} (hG : G.Ok) {m : Mem} {d d' : Data
       rw [A_add]
       exact htab _ (Layout.InGlob.tab (Layout.inGlob_cell hg j hj)) }
 
+/-! ## The region `R` across the solution's jobs -/
+
+/-- **What the jobs leave of the memory `d5` after mode `5`**: every byte the same but in the
+worker region `[wlo, whi)`, the stack window around `rsp0`, the save area `[slo, shi)` and the
+buffer at `buf`; the buffer's words still `B`; every byte `d5` has. -/
+structure CmpAgree (B : Array Word) (buf wlo whi slo shi rsp0 : Nat) (d5 d : DataMem) : Prop where
+  grows : ∀ y, (d5.get? y).isSome → (d.get? y).isSome
+  same : ∀ x < 2 ^ 64, ¬ (wlo ≤ x ∧ x < whi) → (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) → ¬ (slo ≤ x ∧ x < shi) →
+    ¬ (buf ≤ x ∧ x < buf + 8 * B.size) → d.get? (A x) = d5.get? (A x)
+  words : ∀ i (h : i < B.size), rdW d (A (buf + 8 * i)) = some B[i]
+
+/-- **A job keeps `CmpAgree`**: `ca_check_b`'s run on the worker region `[wb, wb + blen)` inside
+`[wlo, whi)` changes only its layout's cells, the stack window and its save area (`MemFrame`); its
+frozen arrays are the buffer's (`MemRel`) and the job kept them (`CmpKept`), so the buffer's words
+are still `B`. -/
+theorem CmpAgree.job {tab : Tab} (hok : abiTabOk tab = true) {fz own : List TieredArray} {B : Array Word}
+    {buf wb blen wlo whi slo shi rsp0 : Nat} (hg : BufGeom tab fz own B buf wb blen)
+    (hW : wlo ≤ wb ∧ wb + blen ≤ whi)
+    (hbuf : ∀ x, buf ≤ x → x < buf + 8 * B.size → ¬ (wlo ≤ x ∧ x < whi) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x))
+    {d5 d d' : DataMem} {r' : Mem}
+    (hfr : MemFrame (bufLayout tab buf B wb fz own) rsp0 d d')
+    (hm : MemRel (bufLayout tab buf B wb fz own) r' d') (hkept : CmpKept fz B r')
+    (hA : CmpAgree B buf wlo whi slo shi rsp0 d5 d) : CmpAgree B buf wlo whi slo shi rsp0 d5 d' := by
+  have hbend := hg.bend
+  -- a byte outside the worker region and the window is in none of the layout's parts
+  have hout : ∀ x < 2 ^ 64, ¬ (wlo ≤ x ∧ x < whi) → (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) →
+      ¬ (bufLayout tab buf B wb fz own).InArr x → d'.get? (A x) = d.get? (A x) := by
+    intro x hx hw hwin hA'
+    refine hfr.same x hx (fun h => ?_) hA' (fun h => ?_) (by omega) ?_
+    · have h' := (buf_inStack h).region hg (by omega)
+      exact hw ⟨by omega, by omega⟩
+    · have h' := (buf_inTab hok h).1.region hg (by omega)
+      exact hw ⟨by omega, by omega⟩
+    · refine Classical.byContradiction fun hn => ?_
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+      have := buf_save hok hg hn.1 hn.2
+      exact hw ⟨by omega, by omega⟩
+  refine ⟨fun y hy => hfr.grows y (hA.grows y hy), fun x hx hw hwin hs hb => ?_, fun i hi => ?_⟩
+  · rw [hout x hx hw hwin fun h => ?_]
+    · exact hA.same x hx hw hwin hs hb
+    · obtain ⟨p, hp1, hp2, h⟩ := buf_inArr h
+      rcases buf_in64 hok hg hp1 h with ⟨e, he, h1, h2⟩ | ⟨-, k, hk, hsl⟩
+      · have := hg.ent e (idxOf?_lt he); exact hb ⟨by omega, by omega⟩
+      · have := own_region hg (idxOf?_lt hk) (hsl.imp (fun h => h.2) (fun h => h.2))
+        exact hw ⟨by omega, by omega⟩
+  · by_cases hin : ∃ j < 8, (bufLayout tab buf B wb fz own).InArr (buf + 8 * i + j)
+    · obtain ⟨j, hj, h⟩ := hin
+      obtain ⟨p, hp1, hp2, h⟩ := buf_inArr h
+      rcases buf_in64 hok hg hp1 h with ⟨e, he, h1, h2⟩ | ⟨-, k, hk, hsl⟩
+      · obtain ⟨hdom, hpos⟩ := tab.dom64_wAt hp1 hp2
+        have hent := hg.ent e (idxOf?_lt he)
+        obtain ⟨hel, hfe, -⟩ := List.idxOf?_eq_some_iff.mp he
+        have hs := hm.size64 _ hdom
+        simp only [bufLayout_tab, hpos] at hs
+        rw [bufLayout_s64 _ _ _ _ _ _ hp1] at hs
+        simp only [bufL, he] at hs
+        have ht : i - (bufEntry B e).1 < (r'.arr64 (tab.wAt p)).size := by rw [hs]; omega
+        have hg64 := hm.get64 _ hdom (i - (bufEntry B e).1) ht
+        simp only [bufLayout_tab, hpos] at hg64
+        rw [bufLayout_b64 _ _ _ _ _ _ hp1] at hg64
+        simp only [bufB, he] at hg64
+        rw [show buf + 8 * (bufEntry B e).1 + 8 * (i - (bufEntry B e).1) = buf + 8 * i by omega] at hg64
+        rw [hg64]
+        have hk := hkept e hel
+        rw [hfe] at hk
+        simp only [hk, bufImg, Array.getElem_extract]
+        congr 2; omega
+      · have := own_region hg (idxOf?_lt hk) (hsl.imp (fun h => h.2) (fun h => h.2))
+        exact absurd ⟨by omega, by omega⟩ (hbuf (buf + 8 * i + j) (by omega) (by omega)).1
+    · simp only [not_exists, not_and] at hin
+      rw [← hA.words i hi]
+      refine rdW_congr fun j hj => ?_
+      rw [A_add]
+      have := hbuf (buf + 8 * i + j) (by omega) (by omega)
+      exact hout _ (by omega) this.1 this.2 (hin j hj)
+
 end ConAgua.Final
