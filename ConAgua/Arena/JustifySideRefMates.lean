@@ -529,6 +529,98 @@ theorem member_step {p : Prog} (hP : MatesProg p) {n : Nat} {m : Mem} {M : Std.H
   simp only at hm4 hbd
   have em4 : μ4 = matSetM μ3 b (d + 1) (l + bl) := e4 ▸ hm4
   clear e4 hm4; subst em4
-  sorry
+  have hA3 : ∀ x : TieredArray, x ≠ EREC → x ≠ CTL → μ3.arr64 x = m.arr64 x := fun x h1 h2 => by
+    rw [hC3.other x h1, hC5.other x h1, m2a x h2]
+  have hC3c : μ3.arr64 CTL = m2.arr64 CTL := by rw [hC3.other _ (by decide), hC5.other _ (by decide)]
+  have hE3s : (μ3.arr64 EREC).size = (m.arr64 EREC).size := by rw [hC3.size, hC5.size, m2s]
+  have hrows : ∀ w, matRow μ3 w = matRow m w := fun w => by
+    simp only [matRow, hA3 _ (matArr_ne _).1 (matArr_ne _).2.2.1]
+  have t3 : erTop μ3 = d.toNat + l.toNat + bl.toNat := by simp only [erTop, hC3c]; exact m2t
+  have hgrow : ErecGrow m μ3 := ⟨by rw [t3, ← hdtop]; omega, fun i hi => by
+      rw [← hdtop] at hi
+      apply get_of_rdN (by rw [hE3s])
+      rw [hC3.out i (.inl (by omega)), hC5.out i (.inl hi), hE2],
+    by simp only [erecTop1, hC3c, m2c 130 (by decide)]; exact Nat.le_refl _,
+    fun i _ => by rw [hA3 _ (by decide) (by decide)]⟩
+  have hM3 := hM.grow hrows hgrow
+  have hgd : M.getD (decI b) [] = (matList m b).getD [] := by
+    have := hM.get (decI b); rw [decI_word_self _ hb32] at this
+    simp only [Std.HashMap.getD_eq_getD_getElem?, this]
+  -- the new slice
+  have hnew : ∀ (prev : List NIdx) (_hpl0 : prev.length = l.toNat),
+      (∀ j (hj : j < l.toNat), ∃ w, erecP m (o.toNat - 1 + j) = some w ∧ w.toNat < 2 ^ 32 ∧
+        decI w = prev[j]'(by omega)) →
+      hslice? (erecP μ3) d.toNat (l + bl).toNat = some (prev ++ ns) := by
+    intro prev hpl hpw
+    rw [hlbl, ← hpl, ← hns, ← List.length_append]
+    apply hslice_of
+    intro j hj
+    simp only [List.length_append, hpl, hns] at hj
+    have hin : d.toNat + j < (μ3.arr64 EREC).size := by
+      rw [hE3s]; have := c2'; have := c1'; have := hpl; have := hns; omega
+    refine ⟨rdN (μ3.arr64 EREC) (d.toNat + j), ?_, ?_⟩
+    · rw [erecP_lo (by rw [t3]; omega) (by omega)]; exact rdN_get hin
+    by_cases jl : j < l.toNat
+    · obtain ⟨w, hw, hw32, hdw⟩ := hpw j jl
+      have hok : o.toNat - 1 + l.toNat ≤ erTop m := by
+        by_cases o0 : o = 0
+        · have := hM.z b (by rw [ho]; exact o0); rw [hl] at this; subst this; simp at jl
+        · have := (hM.ok b (by rw [ho]; exact o0)).1; rw [ho, hl] at this; omega
+      have hlo : erecP m (o.toNat - 1 + j) = (m.arr64 EREC)[o.toNat - 1 + j]? :=
+        erecP_lo (by omega) (by have := hI.top; omega)
+      rw [hlo] at hw
+      have hv : rdN (μ3.arr64 EREC) (d.toNat + j) = w := by
+        rw [hC3.out _ (.inl (by omega)), hC5.done j jl]
+        simp only [rdN, hw, Option.getD_some]
+      rw [hv]; refine ⟨hw32, ?_⟩
+      rw [List.getElem_append_left (by omega)]; exact hdw
+    · have hv : rdN (μ3.arr64 EREC) (d.toNat + j) = nameW m bo (UInt64.ofNat (j - l.toNat)) := by
+        have := hC3.done (j - l.toNat) (by omega)
+        rw [show d.toNat + l.toNat + (j - l.toNat) = d.toNat + j by omega] at this
+        rw [this, hnw]
+      rw [hv]; refine ⟨mask_lt _, ?_⟩
+      rw [List.getElem_append_right (by omega)]
+      simp only [hpl]
+      exact hnm _ (by omega)
+  have hprev : hslice? (erecP μ3) d.toNat (l + bl).toNat = some (M.getD (decI b) [] ++ ns) := by
+    rw [hgd]
+    by_cases o0 : o = 0
+    · have hl0 := hM.z b (by rw [ho]; exact o0); rw [hl] at hl0; subst hl0
+      have : matList m b = none := by simp [matList, ho, o0]
+      rw [this]
+      exact hnew [] rfl (fun j hj => absurd hj (by simp))
+    · obtain ⟨prev, hpv⟩ := Option.isSome_iff_exists.mp (hM.ok b (by rw [ho]; exact o0)).2
+      rw [hpv]
+      have hpv' := hpv; simp only [matList, ho, hl, o0, ite_false] at hpv'
+      obtain ⟨hplen, hget⟩ := hslice?_get hpv'
+      refine hnew prev hplen (fun j hj => ?_)
+      obtain ⟨w, hw, h32, hx⟩ := hget j hj
+      refine ⟨w, hw, h32, ?_⟩
+      rw [List.getElem?_eq_getElem (by omega)] at hx; exact (Option.some.inj hx).symm
+  have hMR := hM3.set hb32 htg ht0 hbd (by omega) hprev (by rw [t3, hlbl]; omega)
+  -- the shape and the frame
+  have hm4o : ∀ x : TieredArray, x ≠ matArr (rowTag b) → (matSetM μ3 b (d + 1) (l + bl)).arr64 x = μ3.arr64 x :=
+    fun x hx => matSetM_other hx
+  have h4c := hm4o _ (matArr_ne _).2.2.1.symm
+  have h4e := hm4o _ (matArr_ne _).1.symm
+  refine ⟨hMR, ⟨?_, ?_, ?_, ?_⟩, ⟨⟨fun x hx hx' => ?_, fun x hx => ?_, fun x => ?_⟩, ?_⟩⟩
+  · rw [h4c, hC3c, m2c 1 (by decide)]; exact hI.off
+  · rw [h4e, hE3s]; exact hI.size
+  · rw [show erTop (matSetM μ3 b (d + 1) (l + bl)) = erTop μ3 by simp only [erTop, h4c], t3, h4e, hE3s]
+    omega
+  · simp only [matSetM, size_set64_any]; rw [hC3c, m2s]; exact hI.ctl
+  · have hne : x ≠ matArr (rowTag b) := fun e => by
+      apply hx; rw [e]; unfold matArr; split <;> (try split) <;> simp
+    rw [hm4o x hne, hA3 x (fun e => hx (by simp [e])) hx']
+  · rw [h4c, hC3c]; exact m2c x (fun e => hx (by simp [e]))
+  · simp only [matSetM, size_set64_any]
+    by_cases e : x = EREC
+    · subst e; exact hE3s
+    · by_cases e' : x = CTL
+      · subst e'; rw [hC3c, m2s]
+      · rw [hA3 x e e']
+  · exact ⟨by simp only [erTop, h4c]; exact hgrow.top, fun i hi => by rw [h4e]; exact hgrow.get i hi,
+      by simp only [erecTop1, h4c]; exact hgrow.top1,
+      fun i hi => by rw [hm4o _ (matArr_ne _).2.1.symm]; exact hgrow.get1 i hi⟩
 
 end L.Arena
