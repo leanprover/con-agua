@@ -117,6 +117,20 @@ def StashOK (m : Mem) : Prop :=
   (rdW (m.arr64 DECL) 0).toNat < 2 ^ 59 ∧ (stashN m).toNat ≤ (m.arr64 CDECL).size ∧
     (stashN m).toNat ≤ (m.arr64 DECL).size ∧ ResetOK (stashM0 m)
 
+theorem stash_eqs (m : Mem) (hD0 : 0 < (m.arr64 DECL).size) (h240 : 240 < (m.arr64 CTL).size) :
+    stashN m = (1 : Word) + (8 : Word) * (m.arr64 DECL)[0] ∧ ∀ h : 240 < ((m.copy64 CDECL 0 DECL 0
+      ((1 : Word) + (8 : Word) * (m.arr64 DECL)[0]).toNat).arr64 CTL).size,
+    stashM0 m = (m.copy64 CDECL 0 DECL 0 ((1 : Word) + (8 : Word) * (m.arr64 DECL)[0]).toNat).set64 DECL 0
+      (getElem ((m.copy64 CDECL 0 DECL 0 ((1 : Word) + (8 : Word) * (m.arr64 DECL)[0]).toNat).arr64 CTL) 240 h) := by
+  have eN : stashN m = (1 : Word) + (8 : Word) * (m.arr64 DECL)[0] := by
+    simp only [stashN, rdW_eq _ 0 0 rfl hD0]
+  refine ⟨eN, fun h => ?_⟩
+  have e240 : (m.copy64 CDECL 0 DECL 0 ((1 : Word) + (8 : Word) * (m.arr64 DECL)[0]).toNat).arr64 CTL =
+      m.arr64 CTL := arr64_copy64_ne _ _ _ _ _ _ (by decide)
+  simp only [stashM0, eN, rdW_eq _ 240 240 rfl h240]
+  congr 1
+  simp only [e240]
+
 theorem cmpStash_spec (p : Prog) (hp : p.lookup "cmp_stash" = some cmpStashL) (hpp : PrepProg p)
     (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "cmp_stash" []
@@ -130,6 +144,55 @@ theorem cmpStash_spec (p : Prog) (hp : p.lookup "cmp_stash" = some cmpStashL) (h
       (frontReset_spec p hpp n ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc, Cmp.eval, BinOp.eval] at *)
-    all_goals sorry
+    case vc1 => grind [lang_grind]
+    all_goals rename_i _ hD0 hlt _ h240 _ _ _ hb _ hpost
+    all_goals simp only [ite_true] at hb hpost
+    all_goals obtain ⟨-, hok, hm⟩ := hpost
+    all_goals obtain ⟨eN, eM⟩ := stash_eqs s₀.mem (by simpa using hD0) (by simpa [L.St.setLoc_mem] using h240)
+    case vc2 =>
+      have hD0' : 0 < (s₀.mem.arr64 DECL).size := by simpa using hD0
+      have hb1 := hb.1
+      have hb2 := hb.2
+      simp only [UInt64.toNat_zero, Nat.zero_add] at hb1 hb2
+      refine ⟨by rw [rdW_eq _ 0 0 rfl hD0']; simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt,
+        by rw [eN]; exact hb1, by rw [eN]; exact hb2, by rw [eM (by simpa [L.St.setLoc_mem] using h240)]; exact hok⟩
+    case vc3 => rw [hm, stashM, eM (by simpa [L.St.setLoc_mem] using h240)]; rfl
+
+/-! ## `cmp_restore()` -/
+
+/-- The number of words `cmp_restore` copies back. -/
+def restoreN (m : Mem) : Word := 1 + 8 * rdW (m.arr64 CDECL) 0
+
+/-- **The memory after `cmp_restore()`**. -/
+def restoreM (m : Mem) : Mem := m.copy64 DECL 0 CDECL 0 (restoreN m).toNat
+
+/-- What a returning `cmp_restore` has checked. -/
+def RestoreOK (m : Mem) : Prop :=
+  (rdW (m.arr64 CDECL) 0).toNat < 2 ^ 59 ∧ (restoreN m).toNat ≤ (m.arr64 DECL).size ∧
+    (restoreN m).toNat ≤ (m.arr64 CDECL).size
+
+theorem restoreN_eq (m : Mem) (hD0 : 0 < (m.arr64 CDECL).size) :
+    restoreN m = (1 : Word) + (8 : Word) * (m.arr64 CDECL)[0] := by
+  simp only [restoreN, rdW_eq _ 0 0 rfl hD0]
+
+theorem cmpRestore_spec (p : Prog) (hp : p.lookup "cmp_restore" = some cmpRestoreL) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cmp_restore" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ RestoreOK s₀.mem ∧ s'.mem = restoreM s₀.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, cmpRestoreL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr]
+    all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc, Cmp.eval, BinOp.eval] at *)
+    case vc1 => grind [lang_grind]
+    all_goals rename_i hD0 hlt _ _ _ hb
+    all_goals simp only [ite_true, UInt64.toNat_zero, Nat.zero_add] at hb
+    all_goals have hD0' : 0 < (s₀.mem.arr64 CDECL).size := by simpa using hD0
+    all_goals have eN := restoreN_eq s₀.mem hD0'
+    case vc2 =>
+      refine ⟨by rw [rdW_eq _ 0 0 rfl hD0']; simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt,
+        by rw [eN]; exact hb.1, by rw [eN]; exact hb.2⟩
+    case vc3 => rw [restoreM, eN]; rfl
 
 end L.Checker
