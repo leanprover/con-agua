@@ -97,3 +97,8 @@ public import ConAgua.Arena.JustifyRef2
 public import ConAgua.Arena.JustifySideRefMove
 public import ConAgua.Arena.JustifySideRefSide
 public import ConAgua.Arena.JustifySideRefMates
+public import ConAgua.Arena.JustifyRef3
+public import ConAgua.Arena.JustifyRef4
+public import ConAgua.Arena.JustifyRef5
+public import ConAgua.Arena.JustifyRef6
+public import ConAgua.Arena.JustifyRef7
