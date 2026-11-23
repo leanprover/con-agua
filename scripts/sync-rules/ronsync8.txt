@@ -1,0 +1,13 @@
+# Re-proof ladder rules of the sync con-ron de06320f -> 8021ddac, con-leche 600d3b58 -> bc667610
+# (upstream tasks #161-#173). Written by lane ronsync8 (docs/design/ronsync8.md) as it restates.
+# Format: scripts/reproof-ladder.py, class Rules.
+#
+# Mechanical changes of the sync: the solution `J : Option ISolution` threaded through the fold
+# (#165/#619): `checkJobList`, `runJob`, `recordJob`, `recordCheck` take it after `pins`; on the
+# flat path it is `none` (applied to the whole tree once at stage 3a, also as a rule here).
+# `checkConstantVal` takes three flags (#501: allowOp, allowReduce, allowSorry).
+
+vocab_hook vocab_attr.py
+
+[codemod]
+sub \b(checkJobList|runJob|recordJob|recordCheck) (\S+) (\S+) (I\b|PA\.I\b) ==> "\1 \2 \3 none \4"

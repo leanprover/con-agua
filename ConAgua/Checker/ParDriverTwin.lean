@@ -48,7 +48,7 @@ theorem checkMode2_seq {b pb : ByteArray}
     (hlo : s₀.mem.glob PLO = 0) (hhi' : s₀.mem.glob PHI = hi) (hctlf : (s₀.mem.arr64 CTLF).size = 0) :
     ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
     ⦃fun r _ => r.headD 0 = ACCEPT →
-      ∃ s'', checkJobList .verified PA.ipins PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
+      ∃ s'', checkJobList .verified PA.ipins none PA.I PA.ds (List.range PA.ds.size) PA.sF.worker =
         .ok (.ok (), s''); ⊤⦄ := by
   rw [invoke_eq _ checkerProg_lookup_check']
   simp only [callFn, checkL]
@@ -121,7 +121,7 @@ theorem drv_twinAccepts (hCd : CheckerCd) (b pb : ByteArray)
     have e : (9223372036854775808 : Word) + UInt64.ofNat PA.ds.size - 9223372036854775808 =
         UInt64.ofNat PA.ds.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
     rw [hres, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-  obtain ⟨s'', hB⟩ : ∃ s'', checkJobList .verified PA.ipins PA.I PA.ds (List.range PA.ds.size)
+  obtain ⟨s'', hB⟩ : ∃ s'', checkJobList .verified PA.ipins none PA.I PA.ds (List.range PA.ds.size)
       PA.sF.worker = .ok (.ok (), s'') := by
     simp only [L.run] at h₂
     cases e : (invoke checkerProg (exec checkerProg N₂) "check" []).run ⟨w, Locals.init []⟩ with

@@ -36,7 +36,7 @@ theorem SameEnter.st {a a' : AState} (h : SameEnter a a') :
 
 theorem recordJob_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
     {I : IStreamIndex} {k : Nat} {d : IDeclaration} {a a' : AState} (h : SameEnter a a') :
-    recordJob mode pins I k d a = recordJob mode pins I k d a' := by
+    recordJob mode pins none I k d a = recordJob mode pins none I k d a' := by
   have e := h.st
   simp only [AM.st, enterScratch_run] at e
   have e1 := enterScratch_run a
@@ -46,19 +46,19 @@ theorem recordJob_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSe
 
 theorem checkJobList_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
     {I : IStreamIndex} {ds : Array IDeclaration} {a a' : AState} (h : SameEnter a a') :
-    ∀ {l : List Nat}, l ≠ [] → checkJobList mode pins I ds l a = checkJobList mode pins I ds l a'
+    ∀ {l : List Nat}, l ≠ [] → checkJobList mode pins none I ds l a = checkJobList mode pins none I ds l a'
   | [], hl => absurd rfl hl
   | t :: rest, _ => by
-    have hr : runJob mode pins I ds t a = runJob mode pins I ds t a' := by
+    have hr : runJob mode pins none I ds t a = runJob mode pins none I ds t a' := by
       simp only [runJob]
       split
       · rw [recordJob_sameEnter h]
       · rfl
-    show (match runJob mode pins I ds t a with
-      | .ok (.ok (), s') => checkJobList mode pins I ds rest s'
+    show (match runJob mode pins none I ds t a with
+      | .ok (.ok (), s') => checkJobList mode pins none I ds rest s'
       | .ok (.error e, s') => .ok (.error e, s')
-      | .error e => .error e) = (match runJob mode pins I ds t a' with
-      | .ok (.ok (), s') => checkJobList mode pins I ds rest s'
+      | .error e => .error e) = (match runJob mode pins none I ds t a' with
+      | .ok (.ok (), s') => checkJobList mode pins none I ds rest s'
       | .ok (.error e, s') => .ok (.error e, s')
       | .error e => .error e)
     rw [hr]
@@ -72,8 +72,8 @@ theorem sameEnter_worker {a : AState} : SameEnter a.worker { a with caches := Ca
 /-- An accepting list from one state accepts from a state that enters alike. -/
 theorem checkJobList_ok_of_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
     {I : IStreamIndex} {ds : Array IDeclaration} {a a' s' : AState} {l : List Nat}
-    (h : SameEnter a a') (hr : checkJobList mode pins I ds l a = .ok (.ok (), s')) :
-    ∃ s'', checkJobList mode pins I ds l a' = .ok (.ok (), s'') := by
+    (h : SameEnter a a') (hr : checkJobList mode pins none I ds l a = .ok (.ok (), s')) :
+    ∃ s'', checkJobList mode pins none I ds l a' = .ok (.ok (), s'') := by
   rcases l with _ | ⟨t, rest⟩
   · exact ⟨a', rfl⟩
   · exact ⟨s', by rw [← checkJobList_sameEnter h (by simp)]; exact hr⟩
@@ -81,12 +81,12 @@ theorem checkJobList_ok_of_sameEnter {mode : ConLeche.CheckMode} {pins : List IN
 /-- A failing list from one state fails alike from a state that enters alike. -/
 theorem twinFailsV_of_sameEnter {mode : ConLeche.CheckMode} {pins : List INatOpPinSet}
     {I : IStreamIndex} {ds : Array IDeclaration} {a a' : AState} {l : List Nat} {c : Word}
-    (h : SameEnter a a') (hf : TwinFailsV (checkJobList mode pins I ds l) a c) :
-    TwinFailsV (checkJobList mode pins I ds l) a' c := by
+    (h : SameEnter a a') (hf : TwinFailsV (checkJobList mode pins none I ds l) a c) :
+    TwinFailsV (checkJobList mode pins none I ds l) a' c := by
   rcases l with _ | ⟨t, rest⟩
   · rcases hf with ⟨ce, he, -⟩ | ⟨ce, i, a'', he, -⟩ <;> cases he
-  · have e : (checkJobList mode pins I ds (t :: rest)).run a' =
-        (checkJobList mode pins I ds (t :: rest)).run a :=
+  · have e : (checkJobList mode pins none I ds (t :: rest)).run a' =
+        (checkJobList mode pins none I ds (t :: rest)).run a :=
       (checkJobList_sameEnter h (by simp)).symm
     unfold TwinFailsV; rw [e]; exact hf
 
@@ -108,7 +108,7 @@ theorem recCall_stepE {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPin
     (hPD : PinsDenote a₀.store pins pinsP) :
     ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobRel pins dn ds I a₀ r a →
       RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-      ∃ a', recordJob V pins I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds I a₀ r' a' := by
+      ∃ a', recordJob V pins none I k ds[k] a = .ok ((), a') ∧ JobRel pins dn ds I a₀ r' a' := by
   intro k r r' a hk ⟨a₁, hJ, hS⟩ hc hF
   rw [← hS.st] at hF
   obtain ⟨a', hrun, hJ'⟩ := recCall_step hP hFD hLD hdn hrec hpp hds hden hPD k r r' a₁ hk hJ hc hF

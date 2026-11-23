@@ -132,7 +132,7 @@ theorem TwinFailsV.checkStream_index {mode : CheckMode} {pins : List INatOpPinSe
 theorem TwinFailsV.checkStream_jobs {mode : CheckMode} {pins : List INatOpPinSet}
     {ds : Array IDeclaration} {a a₁ : AState} {I : IStreamIndex}
     (hI : buildIndex ds a = .ok (.ok I, a₁))
-    (h : TwinFailsV (checkJobList mode pins I ds (List.range ds.size)) a₁.worker c) :
+    (h : TwinFailsV (checkJobList mode pins none I ds (List.range ds.size)) a₁.worker c) :
     TwinFailsV (checkStream mode pins ds) a c := by
   rcases h with ⟨ce, hce, hc⟩ | ⟨ce, i, a', hce, hc⟩
   · exact .inl ⟨ce, by show checkStream mode pins ds a = _; simp only [checkStream, hI]; exact hce, hc⟩
@@ -176,7 +176,7 @@ theorem TwinVerdict.jobs {pins : List NatOpPinSet} {sA sB sC sD sE sF : AState}
     (hD : preparePrelude pre r.decls sC = .ok (ds, sD))
     (hE : internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE))
     (hF : buildIndex ds sE = .ok (.ok I, sF))
-    (h : TwinFailsV (checkJobList .verified ipins I ds (List.range ds.size)) sF.worker c) :
+    (h : TwinFailsV (checkJobList .verified ipins none I ds (List.range ds.size)) sF.worker c) :
     TwinVerdict chunks c :=
   ⟨pins, TwinFailsV.bind_ok (v := ()) hA (TwinFailsV.of_thenV_ok hB (TwinFailsV.of_thenV_ok hC
     (TwinFailsV.bind_ok (v := ds) hD (TwinFailsV.bind_ok (v := ipins) hE
@@ -200,7 +200,7 @@ def TwinVerdictPooled (chunks : List ByteArray) (c : L.Word) : Prop :=
     internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
     buildIndex ds sE = .ok (.ok I, sF) ∧
     (∀ t ∈ w, t < ds.size) ∧
-    TwinFailsV (checkJobList .verified ipins I ds w) sF.worker c
+    TwinFailsV (checkJobList .verified ipins none I ds w) sF.worker c
 
 theorem TwinVerdict.pooled {chunks : List ByteArray} {c : L.Word} (h : TwinVerdict chunks c) :
     TwinVerdictPooled chunks c := .inl h

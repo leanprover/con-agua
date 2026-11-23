@@ -45,21 +45,30 @@ open L.Front (DECL)
 
 /-! ## The constant check -/
 
-/-- `check_constant_val(vis, q, allowOp)`: `checkConstantVal fe cv allowOp` (`q` the constant
-value): the fresh name, a certified operation's name only where `allowOp`, a
+/-- `check_constant_val(vis, q, allowOp, allowReduce, allowSorry)`: `checkConstantVal fe cv allowOp
+allowReduce allowSorry` (`q` the constant value): the fresh name, a certified operation's name
+only where `allowOp`, a compiler-trust name (`reduceOpNames`, pin slots `43`, `44`) only where
+`allowReduce`, `sorryAx`'s (pin slot `13`) only where `allowSorry`, a
 literal's name only at its shape (`lit_shape_ok` of a fresh `axiomInfo` record of `cv`), the
 universe parameters, the type's guards, then the type's sort. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:242-282 ConRon.Arena.checkConstantVal
 -- con-ron: CHANGED since de06320f — `ConRon.Arena.checkConstantVal` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkConstantVal]
 def checkConstantValL : FunDecl :=
-    lfn (vis, q, allowOp) locals (n, t, f, r, c, a, ez, o, l, d, b, h, u, st) {
+    lfn (vis, q, allowOp, allowReduce, allowSorry) locals (n, t, f, r, c, a, ez, o, l, d, b, h, u, st) {
   n := EREC⦃q⦄;
   t := EREC⦃q + ⟪CV.type⟫⦄;
   (f, r) := call env_find(n, vis);
   if f != 0 { fail R_DUPLICATE_DECLARATION_2 };
   c := call nat_op_name(n);
   if c != 0 && allowOp == 0 { fail R_A_CERTIFIED_NAT };
+  a := call pin_at(43);
+  b := call pin_at(44);
+  if n == a || n == b {
+    if allowReduce == 0 { fail R_A_COMPILER_TRUST }
+  };
+  a := call pin_at(13);
+  if n == a && allowSorry == 0 { fail R_THE_TOLERATED_AXIOM };
   a := call erec_alloc(⟪CI.axiomSize⟫);
   ez := call erec_put(a, 0);
   ez := call erec_put(a + ⟪CI.cv + CV.name⟫, n);
@@ -473,7 +482,7 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
     w := call check_quot_record(vis, 4, p + ⟪CI.cv⟫);
     return w
   };
-  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0, 0, 1);
   e := call std_axiom_ok(vis, p + ⟪CI.cv⟫);
   if e != 0 { w := call env_push(vis, p); return w };
   s := call pin_at(42);
@@ -548,7 +557,7 @@ push. -/
 def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, pl, w) {
   p := call erec_ci(i, 1);
   n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
-  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 1);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 1, 0, 0);
   p := call check_defn_val(vis, p);
   v := vis;
   (no, nl) := call nat_op_names();
@@ -571,7 +580,7 @@ def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, v, no, nl, c, po, p
 @[no_expose, l_impl ConRon.Arena.checkDeclKind]
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
-  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0, 0, 0);
   p := call check_thm_val(vis, p);
   w := call env_push(vis, p);
   return w
@@ -588,7 +597,7 @@ def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, u, a, b, w) {
   p := call erec_ci(i, 0);
   n := EREC⦃p + ⟪CI.cv + CV.name⟫⦄;
   v := EREC⦃p + ⟪CI.defnValue⟫⦄;
-  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0);
+  z := call check_constant_val(vis, p + ⟪CI.cv⟫, 0, 1, 0);
   p := call check_opaque_val(vis, p);
   u := vis;
   a := call pin_at(43);

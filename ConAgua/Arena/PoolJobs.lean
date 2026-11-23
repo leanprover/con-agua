@@ -66,7 +66,7 @@ structure PoolHyps : Prop where
   hpI : PersIFBase I.base
   hstep : ∀ (k : Nat) (r r' : σ) (a : AState) (hk : k < ds.size), Rel r a → Call k r r' →
     (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-    ∃ a', recordJob V pins I k ds[k] a = .ok ((), a') ∧ Rel r' a'
+    ∃ a', recordJob V pins none I k ds[k] a = .ok ((), a') ∧ Rel r' a'
 
 variable {Rel Call}
 
@@ -78,7 +78,7 @@ theorem pool_walk (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP 
     ∀ (l : List Nat) (r : σ) (a : AState), Rel r a → WorkerOK s₁ a → JobChain Call r l →
       (∀ x ∈ l, x < ds.size ∧ PrefixOK pinsP dsP x ∧
         ((ConLeche.Cached.recsConsts (dsP.take x)).map (·.name)).Nodup) →
-      (∃ a', checkJobList V pins I ds l a = .ok (.ok (), a')) ∧
+      (∃ a', checkJobList V pins none I ds l a = .ok (.ok (), a')) ∧
       ∀ x ∈ l, ∃ (hx : x < dsP.length) (env' : ConLeche.Env) (F : Nat),
         ConLeche.checkDecl V (ConLeche.fueledOps V F) pinsP
           (ConLeche.Cached.streamEnv (dsP.take x)) dsP[x] = .ok env' := by
@@ -173,7 +173,7 @@ theorem pool_twin (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP 
     (hrange : ∀ t ∈ ths, ∀ k ∈ t.2, k < ds.size) (hcov : ∀ k < ds.size, ∃ t ∈ ths, k ∈ t.2) :
     (∀ k ≤ ds.size, PrefixOK pinsP dsP k ∧
       ((ConLeche.Cached.recsConsts (dsP.take k)).map (·.name)).Nodup) ∧
-    ∀ t ∈ ths, ∃ s'', checkJobList V pins I ds t.2 s₁.worker = .ok (.ok (), s'') := by
+    ∀ t ∈ ths, ∃ s'', checkJobList V pins none I ds t.2 s₁.worker = .ok (.ok (), s'') := by
   have main := pool_prefix H hst ths hstart hchain hinc ds.size (Nat.le_refl _) hcov
   refine ⟨main, fun th hth => ?_⟩
   exact (pool_walk H th.2 th.1 s₁.worker (hstart th hth) (WorkerOK.start hst) (hchain th hth)
@@ -221,7 +221,7 @@ theorem recCall_step {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinS
     (hPD : PinsDenote a₀.store pins pinsP) :
     ∀ (k : Nat) (r r' : Mem) (a : AState) (hk : k < ds.size), JobPost pins dn ds I a₀ r a →
       RecCall p k r r' → (∃ env, FoldOK env (I.view k) (AM.st enterScratch a)) →
-      ∃ a', recordJob V pins I k ds[k] a = .ok ((), a') ∧ JobPost pins dn ds I a₀ r' a' := by
+      ∃ a', recordJob V pins none I k ds[k] a = .ok ((), a') ∧ JobPost pins dn ds I a₀ r' a' := by
   intro k r r' a hk ⟨hJ, hx, hp⟩ ⟨n, rs, hn, hc⟩ hF
   have hkw : (UInt64.ofNat k).toNat = k := UInt64.toNat_ofNat_of_lt (Nat.lt_trans hk hds)
   have hden' : ∀ x ∈ ds.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl a.store x = some d :=
@@ -234,7 +234,7 @@ theorem recCall_step {pins : List INatOpPinSet} {pinsP : List ConLeche.NatOpPinS
   rw [hc] at hr
   obtain ⟨u, a₁, hrun, hJ₁, hx₁, hp₁⟩ := hr
   refine ⟨a₁, ?_, hJ₁, hx.trans hx₁, hp₁.trans hp⟩
-  have e : recordJob V pins I (UInt64.ofNat k).toNat ds[(UInt64.ofNat k).toNat] = recordJob V pins I k ds[k] := by
+  have e : recordJob V pins none I (UInt64.ofNat k).toNat ds[(UInt64.ofNat k).toNat] = recordJob V pins none I k ds[k] := by
     simp only [hkw]
   rw [← e]; cases u; exact hrun
 

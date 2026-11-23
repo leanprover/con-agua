@@ -60,7 +60,7 @@ every record's job in fold order on one worker made from `s'`, accepted. -/
 def SeqAccepts (mode : CheckMode) (pins : List INatOpPinSet) (ds : Array IDeclaration)
     (s : AState) (I : IStreamIndex) (s' : AState) : Prop :=
   ∃ s'' : AState, buildIndex ds s = .ok (.ok I, s') ∧
-    checkJobList mode pins I ds (List.range ds.size) s'.worker = .ok (.ok (), s'')
+    checkJobList mode pins none I ds (List.range ds.size) s'.worker = .ok (.ok (), s'')
 
 /-- One worker is a pool. -/
 theorem pooledAccepts_of_seq {mode : CheckMode} {pins : List INatOpPinSet}
