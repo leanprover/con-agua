@@ -8,6 +8,7 @@ public import ConAgua.Arena.RecClass
 public import ConAgua.Arena.IndDeclConstsDrop
 public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.IndRealAbs
+public import ConAgua.Arena.IndRealMemo
 
 @[expose] public section
 
@@ -78,6 +79,7 @@ structure IotaFrameProg (p : Prog) : Prop where
   lift_entry : p.lookup "lift_entry" = some liftEntry
   drop : DropProg p
   gaa : GaaF p
+  i1l : I1lF p
   er_copy : p.lookup "er_copy" = some erCopy
   er_to_iw : p.lookup "er_to_iw" = some erToIw
   il : IlF p
