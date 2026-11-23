@@ -200,6 +200,123 @@ theorem cmp_modeM (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
         hRR hsv1 fun y hy => hfr.grows _ (isSome_get?_storeInt hy)
     exact hk s1 hf1 hsame hout hsz
 
+omit [Host] in
+/-- `out`'s array in the stub's layout: at its slot (`abiSlot64`), `abiWords` long. -/
+theorem cmp_out_pos (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) (base inp n pins np : Nat) :
+    (abiLayout tab base inp n pins np).b (tab.pos64 (TieredArray.t0 out)) = base + abiSlot * abiSlot64 tab out ∧
+    (abiLayout tab base inp n pins np).s (tab.pos64 (TieredArray.t0 out)) = abiWords ∧
+    2 ≤ abiSlot64 tab out ∧ abiSlot64 tab out < tab.nslot := by
+  obtain ⟨hnb, -, -⟩ := abiTabOk_spec hok
+  obtain ⟨h2, hlt, he⟩ := seq_out_slot hok hp
+  obtain ⟨dout, -⟩ := seqParamsOk_spec hp
+  have hw := tab.wAt_pos64 dout
+  have htb := (seqParamsOk_tbl hp).1
+  refine ⟨?_, ?_, by omega, by omega⟩
+  · rw [abiLayout_b64 _ _ _ _ _ _ h2, abiOff_slot (by rw [hw]; exact htb), Tab.slotOf_eq hnb, he]
+  · rw [abiLayout_s64 _ _ _ _ _ _ h2, hw]; simp only [abiSz]; rw [show tab.tbl64 (TieredArray.t0 out) = none from htb]
+
+omit [Host] in
+/-- **The buffer's words** in a memory that holds `m` in the stub's layout. -/
+theorem cmp_buf_words (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) {base inp n pins np : Nat} {m : Mem} {d : DataMem}
+    (hm : MemRel (abiLayout tab base inp n pins np) m d)
+    (hlen : ((m.arr64 out).getD 1 0).toNat ≤ (m.arr64 out).size) :
+    (cmpBuf out m).size ≤ abiWords ∧ ∀ i (h : i < (cmpBuf out m).size),
+      rdW d (A (base + abiSlot * abiSlot64 tab out + 8 * i)) = some (cmpBuf out m)[i] := by
+  obtain ⟨dout, -⟩ := seqParamsOk_spec hp
+  obtain ⟨hb, hs, -, -⟩ := cmp_out_pos hok hp base inp n pins np
+  have hsz := hm.size64 _ dout
+  simp only [abiLayout_tab] at hsz
+  rw [hs] at hsz
+  have hbs : (cmpBuf out m).size = ((m.arr64 out).getD 1 0).toNat := by
+    simp only [cmpBuf, Array.size_extract]; omega
+  refine ⟨by rw [hbs]; change _ ≤ (m.arr64 (TieredArray.t0 out)).size at hlen; omega, fun i hi => ?_⟩
+  have hi' : i < (m.arr64 (TieredArray.t0 out)).size := by rw [hbs] at hi; change _ ≤ (m.arr64 (TieredArray.t0 out)).size at hlen; omega
+  have := hm.get64 _ dout i hi'
+  simp only [abiLayout_tab] at this
+  rw [hb] at this
+  rw [this]
+  simp only [cmpBuf, Array.getElem_extract, Nat.zero_add]
+
+omit [Host] in
+/-- **After the jobs, the region still holds mode `5`'s memory** (`CmpAgree`, `MemRel.congrW`). -/
+theorem cmp_agree_memRel (hok : abiTabOk tab = true) {hdrf ctlf : ArrId} {hw : Nat}
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) {base blen rsp0 sa n pins np : Nat} {m5 : Mem}
+    {d5 d : DataMem} (hneedC : cmpNeed tab own ≤ blen) (hfit : base + blen < 2 ^ 64)
+    (hG : (abiLayout tab base sa n pins np).Ok) (hm : MemRel (abiLayout tab base sa n pins np) m5 d5)
+    (hlen : ((m5.arr64 out).getD 1 0).toNat ≤ (m5.arr64 out).size)
+    (hSa : ∀ x, sa ≤ x → x < sa + n → (x < base ∨ base + blen ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x))
+    (hPa : ∀ x, pins ≤ x → x < pins + np → (x < base ∨ base + blen ≤ x) ∧ (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x))
+    (hwin : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + blen ≤ x)
+    (hA : CmpAgree (cmpBuf out m5) (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
+      (base + cmpNeed tab own) (base + abiNeed tab) (base + abiNeed tab + 64) rsp0 d5 d) :
+    MemRel (abiLayout tab base sa n pins np) m5 d := by
+  obtain ⟨hnb, htab, hneed64⟩ := abiTabOk_spec hok
+  obtain ⟨hbo, hso, h2, hlt⟩ := cmp_out_pos hok hp base sa n pins np
+  obtain ⟨hBs, hBw⟩ := cmp_buf_words hok hp hm hlen
+  obtain ⟨dout, -⟩ := seqParamsOk_spec hp
+  have hpo := (tab.pos64_lt dout)
+  have hn := abiNeed_ge hok
+  simp only [cmpNeed, L.Compiler.cmpW] at hneedC
+  have hab : abiSlot = 2 ^ 35 := rfl
+  have hwd : abiWords = 2 ^ 32 := rfl
+  have hslot : abiSlot * abiSlot64 tab out + abiSlot ≤ abiNeed tab := by
+    rw [abiNeed_eq, ← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hlt
+  have h2s : abiSlot * 2 ≤ abiSlot * abiSlot64 tab out := Nat.mul_le_mul_left _ h2
+  -- inside the stub's part of the region, off the buffer: unchanged
+  have hreg : ∀ x, base ≤ x → x < base + abiNeed tab →
+      ¬ (base + abiSlot * abiSlot64 tab out ≤ x ∧ x < base + abiSlot * abiSlot64 tab out + 8 * (cmpBuf out m5).size) →
+      d.get? (A x) = d5.get? (A x) := fun x h1 h2 hb =>
+    hA.same x (by omega) (fun ⟨h3, _⟩ => by simp only [L.Compiler.cmpW] at h3; omega)
+      (by
+        refine Classical.byContradiction fun hn => ?_
+        simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+        rcases hwin x hn.1 hn.2 with h | h <;> omega)
+      (fun ⟨h3, _⟩ => by omega) hb
+  -- outside the region and the window: unchanged
+  have hout : ∀ x, x < 2 ^ 64 → (x < base ∨ base + blen ≤ x) → (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) →
+      d.get? (A x) = d5.get? (A x) := fun x hx h1 h2 =>
+    hA.same x hx (fun ⟨h3, h4⟩ => by simp only [cmpNeed, L.Compiler.cmpW] at h3 h4; omega) h2 (fun ⟨h3, h4⟩ => by omega)
+      (fun ⟨h3, h4⟩ => by omega)
+  refine MemRel.congrW hG hm hA.grows (fun x hx => ?_) (fun q hq x hx => ?_) (fun q hq1 hq2 i hi => ?_)
+  · have ht := hx.2
+    simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs] at ht
+    have := hx.1
+    simp only [abiLayout_T] at this
+    exact hreg x this (by omega) (fun ⟨h3, _⟩ => by omega)
+  · unfold Layout.In8 at hx
+    simp only [abiLayout_tab] at hq
+    rcases (by omega : q = 0 ∨ q = 1) with rfl | rfl
+    · simp only [abiLayout_b8_0, abiLayout_s8_0] at hx
+      obtain ⟨h1, h2⟩ := hSa x hx.1 hx.2
+      have := hG.end8 0 (by simp [hnb])
+      simp only [abiLayout_b8_0, abiLayout_s8_0] at this
+      exact hout x (by omega) h1 h2
+    · simp only [abiLayout_b8_1, abiLayout_s8_1] at hx
+      obtain ⟨h1, h2⟩ := hPa x hx.1 hx.2
+      have := hG.end8 1 (by simp [hnb])
+      simp only [abiLayout_b8_1, abiLayout_s8_1] at this
+      exact hout x (by omega) h1 h2
+  · simp only [abiLayout_tab] at hq1 hq2
+    by_cases hc : q = tab.pos64 (TieredArray.t0 out) ∧ i < (cmpBuf out m5).size
+    · obtain ⟨rfl, hi'⟩ := hc
+      rw [hbo, hA.words i hi', hBw i hi']
+    · refine rdW_congr fun j hj => ?_
+      rw [A_add]
+      have hin : (abiLayout tab base sa n pins np).In64 q ((abiLayout tab base sa n pins np).b q + 8 * i + j) :=
+        ⟨by omega, by omega⟩
+      have hb := abiLayout_in64_bounds hok (by omega) hq2 hin
+      refine hreg _ (by omega) hb.2 fun ⟨h3, h4⟩ => ?_
+      by_cases hq : q = tab.pos64 (TieredArray.t0 out)
+      · subst hq
+        rw [hbo] at h3 h4
+        exact hc ⟨rfl, by omega⟩
+      · refine hG.arr64_disj q ⟨by simp [abiLayout_tab]; omega, by simp [abiLayout_tab]; omega⟩
+          (tab.pos64 (TieredArray.t0 out)) ⟨hpo.1, hpo.2⟩ hq _ hin ⟨?_, ?_⟩
+        · rw [hbo]; omega
+        · rw [hbo, hso]; omega
+
 end
 
 end ConAgua.Final

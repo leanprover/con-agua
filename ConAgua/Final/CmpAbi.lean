@@ -43,6 +43,8 @@ structure CmpCall (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Wo
     ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) ∧
     (x < dm.regs.rsp.toNat - 24 ∨ dm.regs.rsp.toNat + 8 ≤ x)
   hsEnd : dm.regs.rsp.toNat + 24 < 2 ^ 64
+  hsArgs : ∀ x, dm.regs.rsp.toNat + 8 ≤ x → x < dm.regs.rsp.toNat + 24 →
+    x < dm.regs.r8.toNat ∨ dm.regs.r8.toNat + dm.regs.r9.toNat ≤ x
 
 /-- A run of `check` with the final theorems' fuel. -/
 abbrev cmpRun (p : Prog) (m : Mem) : Except Err (List Word × Mem) := L.run p abiFuel "check" [] m
