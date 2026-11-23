@@ -115,3 +115,4 @@ public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.CmpOutcome
 public import ConAgua.Final.CmpLoop
 public import ConAgua.Final.CmpMain
+public import ConAgua.Final.CompareTwin
