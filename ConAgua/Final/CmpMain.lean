@@ -373,12 +373,12 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       omega
     · exact absurd h (by decide)
     · exact absurd h (by decide)
-  simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Reg64s.get64_r9, Reg64s.set64_rax,
-    UInt64.toNat_toBitVec, Nat.not_lt] at hge
+  rsimp at hge
+  rw [interp_c] at hge
   have hge' : cmpNeed tab own ≤ dm.regs.r9.toNat := by
-    have e : ((cmpNeed tab own).toUInt64).toNat = cmpNeed tab own :=
-      UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
-    rw [e] at hge; exact hge
+    simp only [decide_eq_false_iff_not, UInt64.lt_iff_toNat_lt, Nat.not_lt] at hge
+    rw [show ((cmpNeed tab own).toUInt64).toNat = cmpNeed tab own from UInt64.toNat_ofNat_of_lt' hcn] at hge
+    exact hge
   have hneedC := hge'
   simp only [cmpNeed, L.Compiler.cmpW] at hneedC
   sorry
