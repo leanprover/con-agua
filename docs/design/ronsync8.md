@@ -73,3 +73,36 @@ rule), the rest the port's re-proofs.
 * 14:40–15:00 stage 3a, the first two full builds; the stage 0 message was sent.
 * 14:50 helpers `ronsync8-iota` (the ι reading rule) and `ronsync8-decl` (#501, #462, #443,
   `J = none`) started; the briefs are `_tmp/ronsync8/brief-{common,iota,decl}.md`.
+* 15:00–15:40 helpers' first milestones. `ronsync8-decl` (#501, #462, #443, `J = none`) finished
+  with zero `sorry`. `ronsync8-iota` wrote the L code of all 35 ι functions, their generated
+  models and the arm, proved four refinements, and handed over when its context ran out. Its
+  successor `ronsync8-iota2` took phase 1. A third helper, `ronsync8-iotarel`, took phase 2 (the
+  comparisons, `block_reads_at`, `cid_ref`).
+* Integration fallout, fixed by the lead:
+  * a name clash (`iota_rec_major` was taken: now `iota_read_major`);
+  * con-leche #598's `natBigHash` is C (`native/nat_hash.c`), which our `lakefile.toml` does not
+    compile and our runtime does not export, so every executable failed to link. Patch
+    con-leche/0004 makes it `@[implemented_by]` a Lean fold;
+  * the whole-program kernel checks need `import all` of the two ι modules;
+  * the closure lists (`loopFns`, `JobsClosed`, `PhaseBReads`) needed the 35 names;
+  * `nvFns` and `PreLoopWS` were regenerated.
+* `diff-e2e --tests` at con-leche bc667610 with the regenerated binary: **748/748 agree**
+  (441 accepted, 307 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0. 18 NOT PORTED: con-leche's new
+  argument rows `--compare -- C S`, for lane compare; `diff-e2e.py` now names them instead of
+  failing on them. 7 SKIPPED (`--max-nat-size`, D49).
+
+## 5. Statement changes (Final/*)
+
+All are mechanical and follow the twin. No headline statement changed (`TwinAccepts`,
+`TwinVerdict`, `TwinAcceptsPooled`, `TwinVerdictPooled`, the `Final/Checker*` theorems).
+
+| declaration | before | after |
+|---|---|---|
+| `Final/Twin.lean` `SeqAccepts` (def) | `checkJobList mode pins I ds (List.range ds.size) s'.worker = …` | `checkJobList mode pins none I ds …` |
+| `Final/Twin.lean` `twinAccepts_pure` | `… = .ok (ConLeche.Cached.streamEnv …)` | `… = .ok (ConLeche.streamEnv …)` (upstream moved the definition, unchanged) |
+| `Final/TwinPooled.lean` `twinAcceptsPooled_pure` | `ConLeche.Cached.streamEnv` | `ConLeche.streamEnv` |
+| `Final/TwinVerdict.lean` `TwinFailsV.checkStream_jobs` | `TwinFailsV (checkJobList mode pins I ds …)` | `… pins none I ds …` |
+| `Final/TwinVerdict.lean` `TwinVerdict.jobs` | `checkJobList .verified ipins I ds (List.range ds.size)` | `… ipins none I …` |
+| `Final/TwinVerdict.lean` (pooled jobs lemma) | `checkJobList .verified ipins I ds w` | `… ipins none I ds w` |
+
+`Audit/*`, `E2E/*`: unchanged.
