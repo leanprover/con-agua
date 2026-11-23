@@ -609,11 +609,39 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         (workerNeed own) :=
       ⟨Nat.le_refl _, by simp only [L.Compiler.cmpW]; omega, by omega, hBok.2.1, hBok.2.2.1, hBok.2.2.2,
         fun x h1 h2 => .inl (by simp only [L.Compiler.cmpW]; omega)⟩
+    have hS0 : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+      fun x h1 h2 => by have := (hc.hSDisj x h1 h2).1; rwa [hbase] at this
     refine cmp_loop q p hq hok hAX hwf hnres plo phi hdrf ctlf hw fz hngm hngl hngh h12 h13 h23 hfzl k0 hcodeO fd
       hentry hnp hmo hdisj hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
       (fun r j rs r' h => hkeep r j rs r' h) hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
       (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
-    all_goals sorry
+    · sorry
+    · sorry
+    · exact ((hf2.regs (s' := { s2 with regs := _, status := st7 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
+          cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl).wr (by omega)
+          hside (by omega) (by omega)).wr (by omega) hside (by omega) (by omega)
+    · dsimp only
+      rw [show Int.toNat 48 = 48 from rfl, show Int.toNat 56 = 56 from rfl]
+      rw [rdW_wrW_A (by omega) (by omega) (by omega), rdW_wrW_same, hrax5]
+      congr 1
+      simp only [BinOp.eval, UInt64.ofBitVec_toBitVec, UInt64.ofNat_toNat]
+    · dsimp only
+      rw [show Int.toNat 56 = 56 from rfl, rdW_wrW_same]; rfl
+    · have hag0 : CmpAgree (cmpBuf out m5) (base + abiSlot * abiSlot64 tab out) (base + L.Compiler.cmpW tab)
+          (base + cmpNeed tab own) (base + abiNeed tab) (base + abiNeed tab + 64) rsp0 s2.dmem s2.dmem :=
+        ⟨fun y h => h, fun _ _ _ _ _ _ => rfl, hBwords⟩
+      exact (hag0.wrW (by omega) (fun x h1 h2 => .inr ⟨by omega, by omega⟩) (by omega) (by omega)).wrW (by omega)
+        (fun x h1 h2 => .inr ⟨by omega, by omega⟩) (by omega) (by omega)
+    · refine regionRel_zero hok (Nat.le_refl _) (by simp only [L.Compiler.cmpW]; omega) _ fun x h1 h2 => ?_
+      simp only [L.Compiler.cmpW] at h1 h2
+      rw [get?_wrW_A (by omega) (by omega) (by omega), get?_wrW_A (by omega) (by omega) (by omega)]
+      have hw : x < rsp0 - 24 ∨ rsp0 + 8 ≤ x := by rcases hside with h | h <;> omega
+      rw [hsame2 x (by omega) (.inr (by omega)) (fun ⟨h3, h4⟩ => by rcases hS0 x h3 h4 with h | h <;> omega)
+          (fun ⟨h3, h4⟩ => by rw [hpbE] at h4; rcases hpR x h3 h4 with h | h <;> omega) hw,
+        hsame1 x (by omega) (.inr (by omega)) (fun ⟨h3, h4⟩ => by rcases hinR x h3 h4 with h | h <;> omega)
+          (fun ⟨h3, h4⟩ => by rcases hpR x h3 h4 with h | h <;> omega) hw,
+        honly.same x (by omega) (by omega)]
+      exact hz x (by omega) (by omega)
   sorry
 
 end
