@@ -6,6 +6,7 @@ public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
 public import ConAgua.Arena.IndRealSpine
 public import ConAgua.Arena.RecClass
 public import ConAgua.Arena.IndDeclConstsDrop
+public import ConAgua.Arena.IndRealFvt
 
 @[expose] public section
 
@@ -51,5 +52,6 @@ structure IotaFrameProg (p : Prog) : Prop where
   lift : LiftProg p
   lift_entry : p.lookup "lift_entry" = some liftEntry
   drop : DropProg p
+  gaa : GaaF p
 
 end L.Ind
