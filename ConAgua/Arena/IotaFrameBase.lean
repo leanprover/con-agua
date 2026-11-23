@@ -53,5 +53,16 @@ structure IotaFrameProg (p : Prog) : Prop where
   lift_entry : p.lookup "lift_entry" = some liftEntry
   drop : DropProg p
   gaa : GaaF p
+  er_copy : p.lookup "er_copy" = some erCopy
+  er_to_iw : p.lookup "er_to_iw" = some erToIw
+  il : IlF p
+  iw_copy : p.lookup "iw_copy" = some iwCopy
+  sl_cons : p.lookup "sl_cons" = some slCons
+  sl_get : p.lookup "sl_get" = some slGet
+  param_find : p.lookup "param_find" = some paramFind
+  param_push : p.lookup "param_push" = some paramPush
+  intern_param : p.lookup "intern_param" = some internParam
+  param_levels_go : p.lookup "param_levels_go" = some paramLevelsGoL
+  param_levels : p.lookup "param_levels" = some paramLevelsL
 
 end L.Ind
