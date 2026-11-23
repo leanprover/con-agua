@@ -153,3 +153,12 @@ path twice is a usage error), one thread, `instructions:u`, peak RSS, wall, agai
 * H6 (modes 4, 5; the stage lemmas generalised: `StagesOut`, `pinsStage_gen`, `buildR_of_out`) done
   and merged; H6b continues (mode 6, the jobs, the composition, the guard). H8 makes the gates green
   for a first step landing.
+* 20:05 **What went wrong: the buffer's "kept" premise.** H4's machine theorem needed every solution
+  worker to leave the frozen buffer as it found it (as the threaded mode assumes, by `mprotect`,
+  route A). At the L level that is a tier-0 invariant the job proofs never state (check_decl's
+  write set includes tier 0 of every store). Instead of a new trusted fact or that invariant, the
+  workers are now treated as the in-place jobs are: each runs on the buffer as the previous one left
+  it, the relation to the twin is carried by the job relation, and the machine only needs the
+  buffer's header unchanged (a closure fact: no phase-B function stores to `HDRF`/`CTLF`). Helper
+  H9 (`compare-redesign`) rewrites `CmpJobs`/`cmp_loop`/`cmp_outcome` and the solution's job chain
+  accordingly; H6b does mode 6.
