@@ -3,6 +3,9 @@ module
 public import ConAgua.Arena.JustifyRef5
 import ConAgua.Arena.RecLayout.CIDec
 import ConRon.Bridge.Pers
+public import ConAgua.Arena.CmpVCone
+import ConRon.Bridge.Checker.Inv
+import ConRon.Bridge.Compare.Justify
 import all ConAgua.Arena.Justify
 
 @[expose] public section
@@ -14,9 +17,10 @@ The solution's constant of the statement's name (`sol_find`), the statements com
 (`same_cv_up_to_levels`), the type's names (`needs_reset`, `needs_expr`), then the cone from an
 empty memo (`cs_clear`) over those names (`cone_push`, `cone_go` at the fuel `CTL[225] + 1`).
 
-`0` is the twin's `none`, an accept. A nonzero result is a twin `some` *if the twin runs*: its
-message reads a name back (`readNameM`), which for the cone's culprit (code `3`) needs that name
-to denote; that is the rejection claim's guard (`JwRuns`, `check_justified`), not proved here.
+`0` is the twin's `none`, an accept. A nonzero result is a twin `some`, and the twin runs: its
+message reads a name back (`readNameM`), the statement's (it denotes) or the cone's culprit (it
+denotes by `coneGo_den`, `Arena/CmpVCone.lean`, given the solution's mates denoting,
+`CvMatesDen`).
 -/
 
 noncomputable section
@@ -33,6 +37,16 @@ theorem some_of_msg {α : Type} {x : AM α} {g : α → String} {a a' : AState} 
     y.isSome := by
   obtain ⟨s, a1, -, h2⟩ := ConRon.Bridge.AM.bind_ok h
   cases h2; rfl
+
+/-- A message built from a denoting name read back runs, the store kept. -/
+theorem msg_ok {β : Type} {g : ConLeche.Name → β} {a0 a : AState} {h : NIdx} {nm : ConLeche.Name}
+    (hx : Ext a0.store a.store) (hd : denoteN a.store.ns h = some nm) :
+    ∃ y a', (readNameM h >>= fun s => pure (g s) : AM β).run a = .ok (y, a') ∧
+      Ext a0.store a'.store := by
+  obtain ⟨x, s', hr, hs⟩ := ConRon.Bridge.CmpV.readNameM_ok hd
+  refine ⟨g x, s', ?_, hs ▸ hx⟩
+  simp only [StateT.run_bind, show (readNameM h).run a = _ from hr, except_ok_bind]
+  rfl
 
 /-- **The walks' memory from the walks' states.** -/
 theorem WalkMem.of_walks {m : Mem} (hN : ∃ x, NdR m x) (hW : ∃ s w, CnR m s w) : WalkMem m := by
@@ -57,7 +71,13 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
     ∃ a', ConeT dn vis fe J m' a' ∧ IWGrow m m' ∧ WalkMem m' ∧
       (r.headD 0 = 0 → (ConRon.Arena.justifyWhy J fe ci.toConstantVal).run a = .ok (none, a')) ∧
       (r.headD 0 ≠ 0 → ∀ y a'', (ConRon.Arena.justifyWhy J fe ci.toConstantVal).run a = .ok (y, a'') →
-        y.isSome) := by
+        y.isSome) ∧
+      (r.headD 0 ≠ 0 → ∀ {env envS : ConLeche.Env}
+        {matesU : Std.HashMap ConLeche.Name (Array ConLeche.Name)},
+        ConRon.Bridge.CheckOK false env fe a → ConRon.Bridge.IFEnvOK envS (ConRon.Bridge.SolView J) a →
+        ConRon.Bridge.MatesDen a.store J.mates matesU → ConRon.Bridge.CvMatesDen a.store J.mates →
+        ∃ y a'', (ConRon.Arena.justifyWhy J fe ci.toConstantVal).run a = .ok (y, a'') ∧
+          Ext a.store a''.store) := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (justifyWhy_specW p P.jw n _ vis (x + CI.cv)) h
   rcases n with _ | n
@@ -81,9 +101,13 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
   · rw [justifyWhyW.k_sol_find.arm1 _ _ _ _ _ _ e1] at hW
     obtain ⟨rfl, e⟩ := Prod.mk.inj (Option.some.inj hW)
     subst e
-    refine ⟨a, hC, IWGrow.refl _, hWM, fun h => absurd h (by decide), fun _ y a'' hy => ?_⟩
-    simp only [ConRon.Arena.justifyWhy, hs1n.mpr e1] at hy
-    exact some_of_msg hy
+    refine ⟨a, hC, IWGrow.refl _, hWM, fun h => absurd h (by decide), fun _ y a'' hy => ?_,
+      fun _ env envS matesU _ _ _ _ => ?_⟩
+    · simp only [ConRon.Arena.justifyWhy, hs1n.mpr e1] at hy
+      exact some_of_msg hy
+    · simp only [ConRon.Arena.justifyWhy, hs1n.mpr e1]
+      obtain ⟨C, hdc⟩ := hden
+      exact msg_ok (Ext.refl _) (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).1
   rw [justifyWhyW.k_sol_find.arm2 _ _ _ _ _ _ e1] at hW
   obtain ⟨ci', hci'⟩ := Option.ne_none_iff_exists'.mp (fun h => e1 (hs1n.mp h))
   obtain ⟨-, hd⟩ := (hs1s ci').mp hci'
@@ -123,9 +147,13 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
     subst e
     have hb : b2 = false := by
       cases hq : b2; rfl; exact absurd (hb2.mpr hq) (by simpa using e2)
-    refine ⟨a2, hC2, hg2, hWM2, fun h => absurd h (by decide), fun _ y a'' hy => ?_⟩
-    rw [hrun2', hb] at hy
-    exact some_of_msg hy
+    refine ⟨a2, hC2, hg2, hWM2, fun h => absurd h (by decide), fun _ y a'' hy => ?_,
+      fun _ env envS matesU _ _ _ _ => ?_⟩
+    · rw [hrun2', hb] at hy
+      exact some_of_msg hy
+    · rw [hrun2', hb]
+      exact msg_ok hx2 (ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv
+        (ConRon.Bridge.denoteCI_toConstantVal hdc)).1 hx2)
   rw [justifyWhyW.k_same_cv_up_to_levels.arm2 _ _ _ _ _ _ e2] at hW
   have hb : b2 = true := hb2.mp e2
   rw [hb] at hrun2'
@@ -209,7 +237,8 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
     · rw [justifyWhyW.k_cone_go.arm1 _ _ _ e7] at hW; exact (Prod.mk.inj (Option.some.inj hW)).2
     · rw [justifyWhyW.k_cone_go.arm2 _ _ _ e7] at hW; exact (Prod.mk.inj (Option.some.inj hW)).2
   subst hm7
-  refine ⟨a7, hC7, hg, WalkMem.of_walks hN7 hW7, fun h0 => ?_, fun h0 y a'' hy => ?_⟩
+  refine ⟨a7, hC7, hg, WalkMem.of_walks hN7 hW7, fun h0 => ?_, fun h0 y a'' hy => ?_,
+    fun h0 env envS matesU hck hsol hm hcm => ?_⟩
   · by_cases e7 : r7.headD 0 = 0
     · rw [hrun2', StateT.run_bind, e4, except_ok_bind, StateT.run_bind, hrun7,
         except_ok_bind]
@@ -227,6 +256,26 @@ theorem justifyWhy_ok {J : ISolution} {n : Nat} {m m' : Mem} {a : AState} {x : W
         except_ok_bind] at hy
       simp only [hk] at hy
       exact some_of_msg hy
+  · by_cases e7 : r7.headD 0 = 0
+    · rw [justifyWhyW.k_cone_go.arm1 _ _ _ e7] at hW
+      obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact absurd rfl h0
+    · obtain ⟨k, hk⟩ := Option.ne_none_iff_exists'.mp (fun e => e7 (hr7.mpr e))
+      -- the twin's walk from the statements' comparison: a renaming step, the type's names denote
+      obtain ⟨hst2, -⟩ := ConRon.Bridge.sameCvUpToLevels_run hck.state hck.readOK
+        (ConRon.Bridge.denoteCI_toConstantVal hdc) (ConRon.Bridge.denoteCI_toConstantVal hdd) hrun2
+      have hck2 := hst2.checkOK hck
+      have hty2 := ConRon.Bridge.denote_ext (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdc)).2.2
+        hst2.ext
+      obtain ⟨-, hx4⟩ := ConRon.Bridge.CmpV.expr_exact hck2.state hck2.pins
+        (ConRon.Bridge.CmpV.XRel.empty a2.store) hty2 e4
+      obtain ⟨hst7, hd7⟩ := ConRon.Bridge.CmpV.coneGo_den _ _ _ a2 a7 y7 hck2 (hsol.mono hst2.ext)
+        (hm.mono hst2.ok.wf hst2.ext) (hcm.ext hst2.ext)
+        (ConRon.Bridge.CmpV.allDen_of_denoteNList hx4.2) hrun7
+      obtain ⟨nm, hnm⟩ := hd7 k hk
+      rw [hrun2', StateT.run_bind, e4, except_ok_bind, StateT.run_bind, hrun7, except_ok_bind]
+      simp only [hk]
+      exact msg_ok (hst2.ext.trans hst7.ext) hnm
 
 end jw
 

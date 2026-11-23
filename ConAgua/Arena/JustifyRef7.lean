@@ -23,11 +23,12 @@ import all ConAgua.Arena.Justify
 `justify_why` in front); `check_record_sol(i, vis)` the twin's `checkRecord` with a solution
 (`crs_ref`, in `cd_ref`'s shape).
 
-**The guard of the rejection by the justification** (`JwGuard`): L rejects a statement the
-solution does not justify with `R_NOT_JUSTIFIED_BY`; the twin rejects it with a message that reads
-names back (the culprit of the cone among them, `readNameM`), which fails `.internal` on a name
-that does not denote. That every name of the cone denotes is not proved: the rejection's claim
-takes the twin's justification and label running as a guard, in `RefE`'s error branch only.
+**The rejection by the justification**: L rejects a statement the solution does not justify with
+`R_NOT_JUSTIFIED_BY`; the twin rejects it with a message that reads names back (the statement's,
+the culprit of the cone, `readNameM`), which would fail `.internal` on a name that does not
+denote. Every one of them denotes (`justifyWhy_ok`'s run, from the solution's mates denoting,
+`CvMatesDen`), so the twin's justification and label run (`JwGuard`) and the rejection is the
+twin's.
 
 **The memory the route keeps** (`CrsKeep`): the frames of the route's callees on the step's write
 set (`stepA`, `stepC`), the inductive stage's memos and the walks' memory (`WalkMem`) across
@@ -80,19 +81,17 @@ structure CrsProg (p : Prog) : Prop where
   leaf : LeafClosed p
   keep : CrsKeep p
 
-/-- **The guard of the rejection by the justification**: the twin's justification of `cv` runs
-from `a`, and so does the record's label after it (the twin's message reads names back). -/
+/-- **The rejection by the justification runs in the twin**: the twin's justification of `cv`
+runs from `a`, and so does the record's label after it (the twin's message reads names back). -/
 def JwGuard (J : ISolution) (fe : IFEnv) (pd : IDeclaration) (cv : IConstantVal) (a : AState) :
     Prop :=
   ∃ y a₁ l a₂, (justifyWhy J fe cv).run a = .ok (y, a₁) ∧ (declLabel pd).run a₁ = .ok (l, a₂)
 
-/-- **What the route's errors assume**, beside the job's: the constant check's context, the
-no-verdict closure of the justification's functions, the justification's guard at an axiom. -/
-structure CrsG (p : Prog) (J : ISolution) (fe : IFEnv) (ds : Array IDeclaration) (i : Word)
-    (a : AState) : Prop where
+/-- **What the route's errors assume of the program**, beside the job's: the constant check's
+context, the no-verdict closure of the justification's functions. -/
+structure CrsG (p : Prog) : Prop where
   vctx : VerdictCtxU p
   nv : closedNV p jfNvFns = true
-  jw : ∀ cv, ds[i.toNat]? = some (.axiomDecl cv) → JwGuard J fe (.axiomDecl cv) cv a
 
 theorem solCtl_not' : ∀ x ∈ ([129, 130] : List Word), x ∉ solCtl := by
   intro x hx hm
@@ -263,9 +262,10 @@ theorem cjs_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L
     (hcvd : Frontend.denoteCV a.store cv = some c) (hF : ∃ env, ConRon.Bridge.FoldOK env fe a)
     (hIM : IndMemos m) (hJ : SolR m J)
     (hsol : ConRon.Bridge.IFEnvOK envS (ConRon.Bridge.SolView J) a)
-    (hm : ConRon.Bridge.MatesDen a.store J.mates matesU) (hWM : WalkMem m)
+    (hm : ConRon.Bridge.MatesDen a.store J.mates matesU)
+    (hcm : ConRon.Bridge.CvMatesDen a.store J.mates) (hWM : WalkMem m)
     (hnx : J.idx.next + 1 < 2 ^ 64) :
-    RefE (CrsG p J fe ds i a) (checkJustifiedE p n m i vis)
+    RefE (CrsG p) (checkJustifiedE p n m i vis)
       (checkJustified V J fe (.axiomDecl cv) cv) a
       (fun v x a' => CdPost pins ds m v.1 x v.2 a' ∧ WalkMem v.2) := by
   have hdecl := hR.decls.recs i.toNat hi
@@ -302,13 +302,17 @@ theorem cjs_ref (hq : KnotStageProg p) (hap : ApdF p) (hkp : CrKeep p) (hcrf : L
   · rw [checkJustifiedE.k_justify_why.none]
     exact fun hG => ErrClaim.of_callE_nv hG.nv (jfNv_mem (by decide)) c2
   have d2 := callW_of_callE c2
-  obtain ⟨a2, hC2, hg2, hWM2, h0, hne⟩ := justifyWhy_ok P.cone d2 hC1 hci1 hden1 hWM1 hnx
+  obtain ⟨a2, hC2, hg2, hWM2, h0, hne, hjr⟩ := justifyWhy_ok P.cone d2 hC1 hci1 hden1 hWM1 hnx
   obtain ⟨hf2, hI2, -⟩ := P.keep.calls "justify_why" (by decide) n _ m1 r2 m2 d2
   have hIM2 : IndMemos m2 := hI2 hIM1
   by_cases e2 : r2.headD 0 ≠ 0
   · rw [checkJustifiedE.k_justify_why.abort1 _ _ _ _ _ _ e2]
     intro hG
-    obtain ⟨y, a₁, l, a₂, hjw, hdl⟩ := hG.jw cv (by rw [Array.getElem?_eq_getElem hi, hd])
+    obtain ⟨y, a₁, l, a₂, hjw, hdl⟩ : JwGuard J fe (.axiomDecl cv) cv a := by
+      obtain ⟨y, a₁, hjw, hx1⟩ := hjr e2 hFo.check hsol hm hcm
+      obtain ⟨l, a₂, hdl, -⟩ := msg_ok (g := fun s => s!"axiom {s}") hx1
+        (ConRon.Bridge.denoteN_ext (ConRon.Bridge.denoteCV_inv hcvd).1 hx1)
+      exact ⟨y, a₁, l, a₂, hjw, by simpa only [declLabel] using hdl⟩
     obtain ⟨why, rfl⟩ := Option.isSome_iff_exists.mp (hne e2 y a₁ hjw)
     refine ErrClaim.bind_right hjw ?_
     refine ErrClaim.bind_right hdl ?_
@@ -422,9 +426,10 @@ theorem crs_ref (hP : CdProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLps
     (hPD : ∃ pinsP, ConRon.Bridge.PinsDenote a.store pins pinsP) (hIM : IndMemos m)
     {J : ISolution} {envS : ConLeche.Env} {matesU : Std.HashMap ConLeche.Name (Array ConLeche.Name)}
     (hJ : SolR m J) (hsol : ConRon.Bridge.IFEnvOK envS (ConRon.Bridge.SolView J) a)
-    (hm : ConRon.Bridge.MatesDen a.store J.mates matesU) (hWM : WalkMem m)
+    (hm : ConRon.Bridge.MatesDen a.store J.mates matesU)
+    (hcm : ConRon.Bridge.CvMatesDen a.store J.mates) (hWM : WalkMem m)
     (hnx : J.idx.next + 1 < 2 ^ 64) :
-    RefE (CdG pins dn ds p ∧ CrsG p J fe ds i a) (checkRecordSolE p N m i vis)
+    RefE (CdG pins dn ds p ∧ CrsG p) (checkRecordSolE p N m i vis)
       (checkRecord V pins (some J) fe (dsAt ds i)) a
       (fun v x a' => CdPost pins ds m v.1 x v.2 a' ∧ WalkMem v.2) := by
   have hds : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
@@ -463,7 +468,7 @@ theorem crs_ref (hP : CdProg pins dn ds p) (hFD : FrontDecls ds) (hLD : DeclsLps
   obtain ⟨c, hc, -⟩ := hx
   rw [hd]
   exact RefE.weakenG (fun hG => hG.2)
-    (cjs_ref P hq hap hkp hcrf hC (by omega) hS hR hi hd' hc hF hIM hJ hsol hm hWM hnx)
+    (cjs_ref P hq hap hkp hcrf hC (by omega) hS hR hi hd' hc hF hIM hJ hsol hm hcm hWM hnx)
 
 end crs
 
