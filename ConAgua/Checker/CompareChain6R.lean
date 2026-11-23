@@ -353,6 +353,87 @@ theorem matesStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ 
     h.stage.iw.er hctl
   exact ⟨m2, m3, dsC, sG, res, s₀.mem, h, h1, h2, h3⟩
 
+/-- The arrays written from the move's end to the side records' (`cmp_restore`, the preparation,
+the side records). -/
+def A14 : List TieredArray :=
+  ([L.Front.DECL] : List TieredArray) ++ stageA_prepare_prelude ++ ([L.Front.DECL, L.Ind.MCM] : List TieredArray)
+
+/-- The control words written from the move's end to the side records'. -/
+def C14 : List Word := stageC_prepare_prelude ++ [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1]
+
+theorem A14_arr : ∀ b ∈ A14, b.arr = 67 ∨ b.arr = 208 ∨ b.arr = 33 ∨ b.arr = 34 ∨ b.arr = 75 ∨
+    b.arr = 76 ∨ b.arr = 200 := by
+  intro b hb
+  simp only [A14, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hb
+  rcases hb with (h | h) | h | h
+  · subst h; decide
+  · have := stageA_prep_facts b h; omega
+  · subst h; decide
+  · subst h; decide
+
+theorem C14_val : ∀ x ∈ C14, x = 34 ∨ x = 35 ∨ x = 73 ∨ x = 74 ∨ x = 75 ∨ x = 76 ∨ x = 200 ∨
+    x = 216 ∨ x = 217 := by
+  intro x hx
+  simp only [C14, List.mem_append] at hx
+  rcases hx with h | h
+  · rcases stageC_prep_facts x h with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  · simp only [L.Ind.mcSch, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with h | h <;> subst h <;> decide
+
+/-- **From the move's end to the side records'**: the move's memory and the frame. -/
+theorem Side6.from1 {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
+    {res : List IDeclaration} {m4 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) :
+    ∃ m1, Q61 PS m m1 ∧ m2 = restoreM m1 ∧ MemFrame A14 C14 m1 m4 := by
+  obtain ⟨m1, hQ, -, rfl⟩ := h.q62
+  refine ⟨m1, hQ, rfl, ?_⟩
+  have e3 := (restoreM_frame m1).mono (A' := A14) (C' := C14) (by simp [A14]) (by simp)
+  have e4 := h.prep.frame.mono (A' := A14) (C' := C14) (fun b hb => by simp [A14, hb]) (fun x hx => by simp [C14, hx])
+  have e5 := h.frame.mono (A' := A14) (C' := C14) (by simp [A14]) (by simp [C14])
+  exact (e3.trans e4).trans e5
+
+/-- **The empty index after the side records** (the rows untouched since the move). -/
+theorem Side6.idx {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
+    {res : List IDeclaration} {m4 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) : IndexR m4 {} := by
+  obtain ⟨m1, ⟨m0, -, -, hI, -⟩, -, hf⟩ := h.from1
+  have hx : erecP m4 = erecP m1 :=
+    erecP_congr' (hf.arr _ (fun h => by have := A14_arr _ h; simp [EREC] at this) (by decide))
+      (hf.arr _ (fun h => by have := A14_arr _ h; simp [EREC] at this) (by decide))
+      (hf.ctl _ (fun h => by rcases C14_val _ h with e | e | e | e | e | e | e | e | e <;> revert e <;> decide))
+      (hf.ctl _ (fun h => by rcases C14_val _ h with e | e | e | e | e | e | e | e | e <;> revert e <;> decide))
+  refine hI.grow (fun b _ hb => hf.arr b (fun h => by have := A14_arr _ h; omega)
+    (fun e => by subst e; simp [CTL] at hb))
+    (hf.ctl _ (fun h => by rcases C14_val _ h with e | e | e | e | e | e | e | e | e <;> revert e <;> decide))
+    (by rw [hx]; exact fun _ _ h => h)
+
+/-- `IWOK` across the mates (the record pool's tier 0 grows inside its bounds, `MInv`). -/
+theorem _root_.L.Ind.IWOK.mates {m4 m5 : Mem} (h : L.Ind.IWOK m4) (hK : MKeep m4 m5) (hI : MInv m5) : L.Ind.IWOK m5 := by
+  have f := hK.frame
+  have eIW : m5.arr64 L.Ind.IW = m4.arr64 L.Ind.IW := f.arr _ (by decide) (by decide)
+  have eE1 : m5.arr64 (tier1 EREC) = m4.arr64 (tier1 EREC) := f.arr _ (by decide) (by decide)
+  have c200 : rdW (m5.arr64 CTL) 200 = rdW (m4.arr64 CTL) 200 := f.ctl _ (by decide)
+  have c130 : rdW (m5.arr64 CTL) 130 = rdW (m4.arr64 CTL) 130 := f.ctl _ (by decide)
+  have hsE : (m5.arr64 EREC).size = (m4.arr64 EREC).size := f.size _
+  have hsC : (m5.arr64 CTL).size = (m4.arr64 CTL).size := f.size _
+  refine ⟨?_, hI.top, by rw [eIW]; exact h.iwSize, by rw [hsE]; exact h.erSize, by rw [hsC]; exact h.ctl,
+    ?_, by rw [eE1]; exact h.er1Size, by rw [hsE]; exact h.erCap, by rw [eE1]; exact h.er1Cap⟩
+  · simp only [L.Ind.iwTop, eIW, c200]; exact h.iw
+  · simp only [erecTop1, eE1, c130]; exact h.er1
+
+/-- **The stage relation and the empty index after the mates.** -/
+theorem Side6.stage5 {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
+    {res : List IDeclaration} {m4 m5 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) (hK : MKeep m4 m5)
+    (hMI : MInv m5) : L.Ind.StageR 0 (fe0 PS.sF.pins) m5 sG ∧ IndexR m5 {} := by
+  have hI5 : IndexR m5 {} := h.idx.grow (fun b _ hb => hK.frame.arr b (fun hm => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
+      rcases hm with rfl | rfl | rfl | rfl <;> revert hb <;> decide)
+      (fun e => by subst e; simp [CTL] at hb)) (hK.frame.ctl _ (by decide)) hK.grow.ext
+  refine ⟨h.stage.frameG hK.frame (fun b hb => ?_) (fun x hx => ?_) hK.grow.ext hI5
+    (h.stage.iw.mates hK hMI), hI5⟩
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+    rcases hb with rfl | rfl | rfl | rfl <;> decide
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    subst hx; decide
+
 end steps
 
 end L.Checker
