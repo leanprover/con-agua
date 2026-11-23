@@ -2,6 +2,8 @@ module
 
 public import ConAgua.Final.CmpLoop
 import ConAgua.Compiler.Sim32
+import ConAgua.Final.DrvAbi
+import ConAgua.Final.SeqAbi
 import Kraken.X64.Registers
 
 @[expose] public section
