@@ -592,7 +592,8 @@ theorem blockReadsAt_rel (P : IotaRelProg p) (PF : IotaFrameProg p) (hP : BlockP
     (hrc : p.lookup "rec_reads" = some recReadsL) (hfr : p.lookup "rules_read" = some rulesReadL)
     (hrr' : p.lookup "rule_reads" = some ruleReadsL) (hAk : AbsKeep p "iota_parts_rel")
     (hAb : AbsKeep p "block_constants") (hAr : AbsKeep p "block_recs")
-    (hAc : AbsKeep p "cons_block_recs_temp") (hOw : ∀ (k : Nat) (vs : List Word) (m₀ : Mem) (r₀ : List Word) (m₁ : Mem),
+    (hAc : AbsKeep p "cons_block_recs_temp") (hAg : AbsKeep p "gen_rec_check_pop_all")
+    (hAe : AbsKeep p "env_set_flags") (hOw : ∀ (k : Nat) (vs : List Word) (m₀ : Mem) (r₀ : List Word) (m₁ : Mem),
       callW p k "recs_read" vs m₀ = some (r₀, m₁) → ownC m₁ = ownC m₀) {n : Nat}
     {m m' : Mem} {a : AState} {pp : Word} {r : List Word} {bs : BlockShape}
     {pP : ConLeche.BlockShape} {mp : Std.HashMap EIdx Bool}
@@ -602,7 +603,7 @@ theorem blockReadsAt_rel (P : IotaRelProg p) (PF : IotaFrameProg p) (hP : BlockP
     (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsl : ShapeSl m pp) (hmp : maMR m mp)
     (hsh : ConRon.Bridge.Inductives.dShape a.store bs = some pP) :
     ∃ x a', (blockReadsAt fe bs).run a = .ok (x, a') ∧ StageR (r.tail.headD 0) x.2 m' a' ∧
-      IWGrow m m' ∧ decW0B m' r x.1 := by
+      IWGrow m m' ∧ decW0B m' r x.1 ∧ AbsOK m' := by
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (blockReadsAt_specW p hf n _ vis pp) hc
   rcases n with _ | n
@@ -687,6 +688,7 @@ theorem blockReadsAt_rel (P : IotaRelProg p) (PF : IotaFrameProg p) (hP : BlockP
   rw [← hE0.natLit, ← hE0.strLit] at hE6
   rw [hm6] at hs6 hE6
   obtain ⟨hS6, hg6⟩ := StageR.of_flags hS5 hE6
+  have hA6 := hAe _ _ _ _ _ c6 (hAg _ _ _ _ _ c5 hI4.abs)
   rw [hs6] at hS6 hg6
   refine ⟨(b4, (prevs.foldr (fun (x : NIdx × Option IConstantInfo) acc => acc.popTemp x.1 x.2) feR).setFlags
     fe.natLit fe.strLit), a4, ?_, by simpa using hS6, hg1.trans (hg2.trans (hg3.trans (hg4.trans (hg5.trans hg6)))), ?_⟩
@@ -695,7 +697,7 @@ theorem blockReadsAt_rel (P : IotaRelProg p) (PF : IotaFrameProg p) (hP : BlockP
     dsimp only
     rw [StateT.run_bind, h4, except_ok_bind]
     rfl
-  · exact ⟨hd4.1, hd4.2⟩
+  · exact ⟨⟨hd4.1, hd4.2⟩, hA6⟩
 
 end rule
 
