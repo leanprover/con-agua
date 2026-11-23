@@ -29,7 +29,7 @@ open ConRon.Arena ConRon.Arena.Frontend
 a frame that writes only index rows, the record pool, arrays `EnvR` does not read, `CTL[128]`,
 `CTL[129]` and control words `EnvR` does not read, whose record pool extends and whose index rows
 are `I`'s. -/
-theorem EnvR.rebaseG {m m' : Mem} {vis : Word} {fe : IFEnv} {I : IStreamIndex} {A : List TieredArray}
+theorem _root_.L.Arena.EnvR.rebaseG {m m' : Mem} {vis : Word} {fe : IFEnv} {I : IStreamIndex} {A : List TieredArray}
     {C : List Word} (h : EnvR m vis fe) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, b ∈ IdxA ∨ b = EREC ∨ b ∉ envArrs) (hC : ∀ x ∈ C, x = 128 ∨ x = 129 ∨ x ∉ envCtl)
     (hx : ArrExt (erecP m) (erecP m')) (hI : IndexR m' I) :
@@ -87,5 +87,74 @@ theorem EnvR.rebaseG {m m' : Mem} {vis : Word} {fe : IFEnv} {I : IStreamIndex} {
   · rw [litWords_congr (fun i hi => hc _ (by revert hi; revert i; decide) (by revert hi; revert i; decide)
       (by revert hi; revert i; decide))]
     exact h.lits
+
+/-- **The stage relation across a frame of high arrays and control words** that writes, of what
+`EnvR` reads, only the index rows, the record pool and `CTL[128]`, `CTL[129]` (`EnvR.rebaseG`), the
+work pool's relation given after it. -/
+theorem _root_.L.Ind.StageR.frameG {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} {I : IStreamIndex}
+    {A : List TieredArray} {C : List Word} (hS : L.Ind.StageR vis fe m a) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, InHigh b ∧ (b.arr < 96 ∨ 129 ≤ b.arr) ∧ (b ∈ IdxA ∨ b = EREC ∨ b ∉ envArrs))
+    (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 128 ≤ x.toNat) ∧ (x = 128 ∨ x = 129 ∨ x ∉ envCtl))
+    (hx : ArrExt (erecP m) (erecP m')) (hI : IndexR m' I) (hiw : L.Ind.IWOK m') :
+    L.Ind.StageR vis (fe.rebase I.base) m' a := by
+  refine ⟨⟨⟨?_, ?_⟩, hS.check.core.frame (fun b hb => by have := hA b hb; simp only [InHigh] at this; omega)
+      (fun x hx => by have := hC x hx; omega) hf,
+    hS.check.pins.frame (fun b hb => by have := hA b hb; simp only [InHigh] at this; omega) hf,
+    hS.check.env.rebaseG hf (fun b hb => (hA b hb).2.2) (fun x hx => (hC x hx).2.2) hx hI,
+    hS.check.mode.frame hf (fun h => by have := hC _ h; simp at this) (fun h => by have := hC _ h; simp at this)⟩,
+    hiw⟩
+  · exact ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a
+      hS.check.arena.base
+  · exact DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [InHigh] at this; omega) a
+      hS.check.arena.der
+
+/-! ## After the move -/
+
+theorem envArrs_le : ∀ b ∈ envArrs, b.arr ≤ 148 := by decide
+
+theorem mem_idxA {b : TieredArray} (h0 : b.hi = false) (h1 : 129 ≤ b.arr) (h2 : b.arr ≤ 134) : b ∈ IdxA := by
+  obtain ⟨n, hi⟩ := b
+  simp only at h0 h1 h2; subst h0
+  have : n = 129 ∨ n = 130 ∨ n = 131 ∨ n = 132 ∨ n = 133 ∨ n = 134 := by omega
+  rcases this with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+theorem moveA_facts : ∀ b ∈ moveA, b.hi = false ∧ ((129 ≤ b.arr ∧ b.arr ≤ 134) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215)) := by
+  decide
+
+/-- A high array past `EnvR`'s, for `StageR.frameG`. -/
+theorem frameG_hi {b : TieredArray} (h0 : b.hi = false) (h1 : 149 ≤ b.arr) :
+    InHigh b ∧ (b.arr < 96 ∨ 129 ≤ b.arr) ∧ (b ∈ IdxA ∨ b = EREC ∨ b ∉ envArrs) :=
+  ⟨⟨h0, by omega⟩, .inr (by omega), .inr (.inr fun h => by have := envArrs_le b h; omega)⟩
+
+/-- An index row, for `StageR.frameG`. -/
+theorem frameG_idx {b : TieredArray} (h0 : b.hi = false) (h1 : 129 ≤ b.arr) (h2 : b.arr ≤ 134) :
+    InHigh b ∧ (b.arr < 96 ∨ 129 ≤ b.arr) ∧ (b ∈ IdxA ∨ b = EREC ∨ b ∉ envArrs) :=
+  ⟨⟨h0, by omega⟩, .inr h1, .inl (mem_idxA h0 h1 h2)⟩
+
+
+/-- The builder's environment of the empty index at the pins `P`. -/
+abbrev fe0 (P : Pins) : IFEnv := bEnv ({} : IStreamIndex).base P 0 0
+
+/-- **The stage relation after the move**, at the empty index's environment: from the solution's
+index build (`FoldOn`), a memory that agrees but in `OUT` (`OutEq`), and the move's frame. -/
+theorem stage_moved {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array IDeclaration}
+    {ipins : List INatOpPinSet} {sE : AState} {I : IStreamIndex} {sF : AState} {m₇ m m0 m1 : Mem}
+    (hF : FoldOn b pb sz ds ipins sE I sF m₇ m) (hO : OutEq m m0) (hI : IndexR m1 {})
+    (hf : MemFrame moveA moveC m0 m1) : L.Ind.StageR 0 (fe0 sF.pins) m1 sF := by
+  have hf' : MemFrame (([OUT] : List TieredArray) ++ moveA) moveC m m1 :=
+    (hO.memFrame.mono (by simp) (by simp)).trans (hf.mono (fun b hb => List.mem_append_right _ hb) (by simp))
+  have hiw : L.Ind.IWOK m1 := IWOK.frame hf' (by decide) (by decide) (by decide) (by decide)
+    hF.build.stage.iw (by decide) (by decide)
+  have hx : erecP m1 = erecP m :=
+    erecP_congr' (hf'.arr _ (by decide) (by decide)) (hf'.arr _ (by decide) (by decide))
+      (hf'.ctl _ (by decide)) (hf'.ctl _ (by decide))
+  refine hF.build.stage.frameG hf' (fun b hb => ?_) (fun x hx => by
+      simp only [moveC, SNEXTC, SCNTC, List.mem_cons, List.not_mem_nil, or_false] at hx
+      rcases hx with rfl | rfl | rfl <;> decide) (by rw [hx]; exact fun _ _ h => h) hI hiw
+  rcases List.mem_append.mp hb with h | h
+  · simp only [List.mem_singleton] at h; subst h; exact frameG_hi (by decide) (by decide)
+  · obtain ⟨h0, h1 | h1⟩ := moveA_facts b h
+    · exact frameG_idx h0 h1.1 h1.2
+    · exact frameG_hi h0 (by omega)
 
 end L.Checker
