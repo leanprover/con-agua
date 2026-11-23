@@ -220,14 +220,22 @@ theorem PrepPost.memos {pre : PreludeIx} {rC : ParseResultD} {a : AState} {m2 m3
       exact ⟨fun e => by subst e; revert this; decide, fun e => by subst e; revert this; decide, by omega⟩)
     (fun x hx => by rcases stageC_prep_facts x hx with e | e | e | e | e | e | e <;> subst e <;> decide)
 
+/-- What the steps up to the side records leave, at the count `c`. -/
+structure Side6 (PS : PhaseS bC bS) (m : Mem) (c : Word) (m2 m3 : Mem) (dsC : Array IDeclaration)
+    (sG : AState) (res : List IDeclaration) (m4 : Mem) : Prop where
+  q62 : Q62 PS m m2
+  prep : PrepPost PS.pre PS.rC PS.sF m2 m3 dsC sG
+  cnt : CntAt c m3
+  run : (sideRecordsGo [] dsC.toList).run sG = .ok (res, sG)
+  decls : DeclsF (m4.arr64 L.Front.DECL) (m4.arr64 L.Front.DLP) res.toArray
+  stage : L.Ind.StageR 0 (fe0 PS.sF.pins) m4 sG
+  mc : ∃ mp, L.Ind.mcMR m4 mp
+  frame : MemFrame [L.Front.DECL, L.Ind.MCM] [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1] m3 m4
+  kind : KindStep (m3.arr64 L.Front.DECL) (m4.arr64 L.Front.DECL)
+
 /-- After the side records, at the count `c`. -/
 def Q64 (PS : PhaseS bC bS) (m : Mem) (c : Word) (m4 : Mem) : Prop :=
-  ∃ m3 m2 dsC sG, Q62 PS m m2 ∧ PrepPost PS.pre PS.rC PS.sF m2 m3 dsC sG ∧ CntAt c m3 ∧
-    ∃ res, (sideRecordsGo [] dsC.toList).run sG = .ok (res, sG) ∧
-      DeclsF (m4.arr64 L.Front.DECL) (m4.arr64 L.Front.DLP) res.toArray ∧
-      L.Ind.StageR 0 (fe0 PS.sF.pins) m4 sG ∧ (∃ mp, L.Ind.mcMR m4 mp) ∧
-      MemFrame [L.Front.DECL, L.Ind.MCM] [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1] m3 m4 ∧
-      KindStep (m3.arr64 L.Front.DECL) (m4.arr64 L.Front.DECL)
+  ∃ m2 m3 dsC sG res, Side6 PS m c m2 m3 dsC sG res m4
 
 /-- **`side_records(c)`, as a step** (`sideRecords_ref`). -/
 theorem sideStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) (hst : Stash m PS.pre PS.rC)
@@ -245,7 +253,105 @@ theorem sideStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m
     have := hD3.count; rw [hcnt hD0]; simpa [hD0] using this
   obtain ⟨res, hr, h1, h2, h3, h4, h5⟩ := sideRecords_ref checkerProg_sideProg hc hS3 hM3.stage.mc hD3 hc'
   have hp : PS.sF.pins = PS.sF.pins := rfl
-  exact ⟨s₀.mem, m2, dsC, sG, hQ, hP, hcnt, res, hr, h1, by rw [← hP.pinsEq] at h2 ⊢; exact h2, h3, h4, h5⟩
+  exact ⟨m2, s₀.mem, dsC, sG, res, hQ, hP, hcnt, hr, h1, by rw [← hP.pinsEq] at h2 ⊢; exact h2, h3, h4, h5⟩
+
+/-- The arrays mode `6` writes before the mates. -/
+def A64 : List TieredArray :=
+  ([OUT] : List TieredArray) ++ moveA ++ ([L.Front.DECL] : List TieredArray) ++ stageA_prepare_prelude ++
+    ([L.Front.DECL, L.Ind.MCM] : List TieredArray)
+
+/-- The control words mode `6` writes before the mates. -/
+def C64 : List Word := moveC ++ stageC_prepare_prelude ++ [L.Ind.mcSch.cs, L.Ind.mcSch.cs + 1]
+
+theorem A64_arr : ∀ b ∈ A64, (129 ≤ b.arr ∧ b.arr ≤ 134) ∨ (210 ≤ b.arr ∧ b.arr ≤ 215) ∨
+    b.arr = 240 ∨ b.arr = 67 ∨ b.arr = 208 ∨ b.arr = 33 ∨ b.arr = 34 ∨ b.arr = 75 ∨ b.arr = 76 ∨
+    b.arr = 200 := by
+  intro b hb
+  simp only [A64, List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hb
+  rcases hb with (((h | h) | h) | h) | h | h
+  · subst h; decide
+  · have := moveA_facts b h; omega
+  · subst h; decide
+  · have := stageA_prep_facts b h; omega
+  · subst h; decide
+  · subst h; decide
+
+theorem C64_val : ∀ x ∈ C64, x = 225 ∨ x = 226 ∨ x = 128 ∨ x = 34 ∨ x = 35 ∨ x = 73 ∨ x = 74 ∨
+    x = 75 ∨ x = 76 ∨ x = 200 ∨ x = 216 ∨ x = 217 := by
+  intro x hx
+  simp only [C64, List.mem_append] at hx
+  rcases hx with (h | h) | h
+  · simp only [moveC, SNEXTC, SCNTC, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with rfl | rfl | rfl <;> decide
+  · rcases stageC_prep_facts x h with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  · simp only [L.Ind.mcSch, List.mem_cons, List.not_mem_nil, or_false] at h
+    rcases h with h | h <;> subst h <;> decide
+
+/-- **Mode `6`'s frame up to the side records**, from the solution's index build's memory. -/
+theorem Side6.frameM {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
+    {res : List IDeclaration} {m4 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) : MemFrame A64 C64 m m4 := by
+  obtain ⟨m1, ⟨m0, hO, -, -, hf⟩, -, rfl⟩ := h.q62
+  have e1 := hO.memFrame.mono (A' := A64) (C' := C64) (by simp [A64]) (by simp)
+  have e2 := hf.mono (A' := A64) (C' := C64) (fun b hb => by simp [A64, hb]) (fun x hx => by simp [C64, hx])
+  have e3 := (restoreM_frame m1).mono (A' := A64) (C' := C64) (by simp [A64]) (by simp)
+  have e4 := h.prep.frame.mono (A' := A64) (C' := C64) (fun b hb => by simp [A64, hb]) (fun x hx => by simp [C64, hx])
+  have e5 := h.frame.mono (A' := A64) (C' := C64) (by simp [A64]) (by simp [C64])
+  exact (((e1.trans e2).trans e3).trans e4).trans e5
+
+theorem OutEq.refl (m : Mem) : OutEq m m := ⟨fun _ _ => rfl, fun _ => rfl, rfl⟩
+
+/-- The records' count after the side records is the count the steps were called with. -/
+theorem Side6.count {c : Word} {m2 m3 : Mem} {dsC : Array IDeclaration} {sG : AState}
+    {res : List IDeclaration} {m4 : Mem} (h : Side6 PS m c m2 m3 dsC sG res m4) :
+    c.toNat = res.length ∧ res.length = dsC.size := by
+  have h4 := h.decls.count
+  have h0 : 0 < (m3.arr64 L.Front.DECL).size := by
+    have := h.decls.room; rw [h.kind.1] at this; omega
+  have hk : rdN (m4.arr64 L.Front.DECL) 0 = rdN (m3.arr64 L.Front.DECL) 0 := by
+    rcases h.kind.2 0 with e | ⟨e, -⟩
+    · exact e
+    · simp at e
+  have hc := h.cnt h0
+  have h3 := h.prep.cnt
+  simp only [rdN] at hk
+  simp only [rdW, UInt64.toNat_zero] at h3
+  rw [hk] at h4
+  simp only [List.size_toArray] at h4
+  refine ⟨?_, by rw [← h4, h3]⟩
+  rw [hc, ← h4]; simp [h0]
+
+/-- After the mates, at the count `c`. -/
+def Q65 (PS : PhaseS bC bS) (m : Mem) (c : Word) (m5 : Mem) : Prop :=
+  ∃ m2 m3 dsC sG res m4, Side6 PS m c m2 m3 dsC sG res m4 ∧
+    MatesR m5 (recordMatesGo ∅ res.toArray.toList) ∧ MInv m5 ∧ MKeep m4 m5
+
+/-- **`solution_of(c)`, as a step** (`solutionOf_ref`). -/
+theorem matesStep6 (hF : FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m) :
+    StageSpecC checkerProg "solution_of" (Q64 PS m) (Q65 PS m) := by
+  intro n _ s₀ c
+  refine triple_post (callW_spec checkerProg n "solution_of" [c] s₀) fun _ s' ⟨hl, hc⟩ =>
+    ⟨hl, fun ⟨m2, m3, dsC, sG, res, h⟩ => ?_⟩
+  obtain ⟨hcr, hrd⟩ := h.count
+  have hfr := h.frameM
+  have hR3 : ∀ x < res.toArray.size, RecOK (m3.arr64 L.Front.DECL) (m3.arr64 L.Front.DLP) x :=
+    fun x hx => (h.prep.recs x (by simp at hx; omega)).2
+  have hR := sideRecords_recOK h.kind h.frame
+  have hz : ∀ g ≤ 2, ∀ j, rdN (s₀.mem.arr64 (matArr g)) j = 0 := by
+    intro g _ j
+    have hg : 216 ≤ (matArr g : TieredArray).arr ∧ (matArr g : TieredArray).arr ≤ 218 := by
+      unfold matArr; split <;> (try split) <;> decide
+    have hn : (matArr g : TieredArray) ∉ A64 := fun hm => by have := A64_arr _ hm; omega
+    rw [hfr.arr _ hn (fun e => by rw [e] at hg; simp [CTL] at hg),
+      cmp_zero6 hF (OutEq.refl m) (by omega)]
+    exact rdN_replicate _ _
+  have hctl : 228 < (s₀.mem.arr64 CTL).size := by
+    rw [hfr.size, hF.sizeAt]
+    have := hF.r7.since.caps.2.1; rw [loadMem_arr, Array.size_replicate] at this
+    simp only [ctlMin] at this; omega
+  obtain ⟨h1, h2, h3⟩ := solutionOf_ref checkerProg_matesProg hc h.decls
+    (fun x hx => hR.1 x (hR3 x hx)) (by rw [hcr]; simp) hz (Nat.le_of_lt h.stage.iw.erCap)
+    h.stage.iw.er hctl
+  exact ⟨m2, m3, dsC, sG, res, s₀.mem, h, h1, h2, h3⟩
 
 end steps
 
