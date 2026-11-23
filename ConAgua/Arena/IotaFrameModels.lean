@@ -5,6 +5,7 @@ public import ConAgua.Arena.WhnfBase
 public import ConAgua.Arena.GrindAttr
 public import ConAgua.L.GrindAttr
 import ConAgua.L.ModelGen
+import ConAgua.Arena.Verdict
 public import Std.WP.Tactic
 import all ConAgua.Arena.IotaFrame
 
