@@ -322,8 +322,6 @@ machine returns to the caller with the callee-saved registers restored; `rdx = 0
 means the runs accepted (`CmpAccepts`), `rdx = 2` that one failed with the code in `rax`
 (`CmpErr`). `CmpGuard`: the L-level facts the proof needs (the buffer's geometry after mode `5`,
 the jobs keep the frozen arrays). -/
-set_option profiler true in
-set_option profiler.threshold 2000 in
 theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
     {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true) (hwf : Prog.wf tab q = true)
     (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray)
@@ -753,10 +751,24 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         rw [hrax6]; rfl
       refine ev_congr (j := Kc + 109) ?_ (by omega)
       rw [← Code.label (i := 109) hC rfl]
+      rw [hrax6] at hout7
+      have hsub : BinOp.sub.eval (rs6.getD 0 0) 9223372036854775808 = rs6.getD 0 0 - 9223372036854775808 := rfl
+      rw [hsub] at hout7
       refine hexit s5 hf5 (fun h0' hacc => ?_) (fun h2 => ?_)
       · have hout' := hout7.resolve_left (by rw [h0']; decide)
-        sorry
-      · sorry
+        rcases hres7 : L.run p abiFuel "check" [] (seqMem m6 mode plo phi out hdrf ctlf hw 0
+            (rs6.getD 0 0 - 9223372036854775808)) with e | ⟨rs7, m7⟩
+        · rw [hres7] at hout'
+          cases e <;> simp only [OutcomeRel] at hout' <;> (rw [h0'] at hout'; exact absurd hout'.1 (by decide))
+        rw [hres7] at hout'
+        obtain ⟨-, hRes, -⟩ := hout'
+        have hrax : s5.regs.rax = rs7.getD 0 0 := hRes.1 0 (by simp only [seqLayout_tab]; omega) (by decide)
+        exact ⟨hbC, hpb, rs4, m4, hres4, .inr ⟨hge4', hbS, rs5, m5, hres5, .inr ⟨hge5', rm, h0, hjobs,
+          rs6, m6, hres6, .inr ⟨hge6', rs7, m7, hres7, by rw [← hrax]; exact hacc⟩⟩⟩⟩
+      · obtain ⟨e, he, hk⟩ := err_of_entryOut hout7 h2
+        exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,
+          .inr ⟨hjobs, .inr ⟨rs6, m6, hres6, hge6', e, he, hk.symm⟩⟩⟩⟩⟩
+
     · exact ((hf2.regs (s' := { s2 with regs := _, status := st7 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
           cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl).wr (by omega)
           hside (by omega) (by omega)).wr (by omega) hside (by omega) (by omega)
@@ -782,8 +794,141 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
           (fun ⟨h3, h4⟩ => by rcases hpR x h3 h4 with h | h <;> omega) hw,
         honly.same x (by omega) (by omega)]
       exact hz x (by omega) (by omega)
-  sorry
+  -- the prologue: the save area, the return address popped, `r15 := base`, `r9 := abiNeed`
+  have hsa0 : (BinOp.add.eval (cmpSave tab).toUInt64 dm.regs.r8).toNat = base + abiNeed tab := by
+    simp only [BinOp.eval, UInt64.toNat_add, cmpSave, hbase, Nat.toUInt64]
+    rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
+    omega
+  have hsvR : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 48 → x < rsp0 - 24 ∨ rsp0 + 24 ≤ x := by
+    intro x h1 h2
+    rcases hside with h | h
+    · omega
+    · refine Classical.byContradiction fun hn => ?_
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+      by_cases hx : x < rsp0 + 8
+      · rcases (hcs x (by omega) hx).2.1 with h' | h' <;> omega
+      · have := hc.hsArgs x (by omega) (by omega); rw [hbase] at this; omega
+  have hmap0 : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 48 → (dm.dmem.get? (A x)).isSome :=
+    fun x h1 h2 => by rw [hz x (by omega) (by omega)]; rfl
+  refine ev_movRI (hC.get (i := 25) rfl) ?_
+  refine ev_binO (op := .add) (o := oR .r8) rfl (hC.get (i := 26) rfl)
+    (Or.inr (Or.inr ⟨.r8, rfl, rfl⟩)) fun st0 => ?_
+  refine ev_movMR (hC.get (i := 27) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]; exact isSome_rdW fun j hj => by rw [A_add]; exact hmap0 _ (by omega) (by omega)
+  refine ev_pop (hC.get (i := 28) rfl) (v := ra) ?_ ?_
+  · rsimp; rw [hsa0, toBitVec_eq_A dm.regs.rsp, hrsp0, show Int.toNat 0 = 0 from rfl, Nat.add_zero,
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega)]
+    rw [← hrsp0]; exact hc.hra
+  refine ev_movMR (hC.get (i := 29) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by rw [A_add]; exact isSome_get?_storeInt (hmap0 _ (by omega) (by omega))
+  have hr8 : (dm.regs.rsp.toBitVec + 8).toNat = rsp0 + 8 := by
+    simp only [BitVec.toNat_add, UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl, hrsp0]; omega
+  have hr8' : ({ toBitVec := dm.regs.rsp.toBitVec + 8 } : UInt64).toNat = rsp0 + 8 := hr8
+  refine ev_movRM (hC.get (i := 30) rfl) ⟨by decide, by decide⟩ (v := sa) ?_ ?_
+  · rsimp; rw [hsa0, hr8]
+    rw [show Int.toNat 0 = 0 from rfl, show Int.toNat 8 = 8 from rfl,
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab + 8) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega)]
+    have := hc.hsa; rw [hrsp0] at this; exact this
+  refine ev_movMR (hC.get (i := 31) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by rw [A_add]; exact isSome_get?_storeInt (isSome_get?_storeInt (hmap0 _ (by omega) (by omega)))
+  refine ev_movRM (hC.get (i := 32) rfl) ⟨by decide, by decide⟩ (v := UInt64.ofNat bS.size) ?_ ?_
+  · rsimp; rw [hsa0, hr8]
+    rw [show Int.toNat 0 = 0 from rfl, show Int.toNat 8 = 8 from rfl, show Int.toNat 16 = 16 from rfl,
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab + 16) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab + 8) (by omega) (by omega) with h | h <;> omega),
+      rdW_wrW_A (by omega) (by omega) (by rcases hsvR (base + abiNeed tab) (by omega) (by omega) with h | h <;> omega)]
+    have := hc.hsn; rw [hrsp0] at this; exact this
+  refine ev_movMR (hC.get (i := 33) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by
+      rw [A_add]; exact isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (hmap0 _ (by omega) (by omega))))
+  refine ev_movMR (hC.get (i := 34) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by
+      rw [A_add]; exact isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt
+        (hmap0 _ (by omega) (by omega)))))
+  refine ev_movMR (hC.get (i := 35) rfl) ⟨by decide, by decide⟩ ?_ ?_
+  · rsimp; rw [hsa0]
+    exact isSome_rdW fun j hj => by
+      rw [A_add]; exact isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt
+        (isSome_get?_storeInt (hmap0 _ (by omega) (by omega))))))
+  refine ev_movRR (hC.get (i := 36) rfl) ?_
+  refine ev_movRI (hC.get (i := 37) rfl) ?_
+  rsimp
+  rw [hsa0]
+  simp only [show Int.toNat 0 = 0 from rfl, show Int.toNat 8 = 8 from rfl, show Int.toNat 16 = 16 from rfl,
+    show Int.toNat 24 = 24 from rfl, show Int.toNat 32 = 32 from rfl, show Int.toNat 40 = 40 from rfl, Nat.add_zero]
+  have hW : ∀ o (v : BitVec 64) (d : DataMem), o + 8 ≤ 48 → ∀ o', o' + 8 ≤ 48 → (o' + 8 ≤ o ∨ o + 8 ≤ o') →
+      rdW (wrW d (A (base + abiNeed tab + o)) v) (A (base + abiNeed tab + o')) = rdW d (A (base + abiNeed tab + o')) :=
+    fun o v d ho o' ho' h => rdW_wrW_A (by omega) (by omega) (by omega)
+  refine key4 _ ⟨?_, ?_, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_, fun x h1 h2 => ?_, fun x h1 h2 => ?_⟩
+    rfl rfl rfl rfl rfl ?_ ?_
+  · rsimp; exact hbase
+  · exact hr8'
+  · dsimp only
+    rw [show base + abiNeed tab = base + abiNeed tab + 0 from rfl, hW 40 _ _ (by omega) 0 (by omega) (by omega),
+      hW 32 _ _ (by omega) 0 (by omega) (by omega), hW 24 _ _ (by omega) 0 (by omega) (by omega),
+      hW 16 _ _ (by omega) 0 (by omega) (by omega), hW 8 _ _ (by omega) 0 (by omega) (by omega)]
+    rw [Nat.add_zero, rdW_wrW_same]
+  · dsimp only
+    rw [hW 40 _ _ (by omega) 8 (by omega) (by omega), hW 32 _ _ (by omega) 8 (by omega) (by omega),
+      hW 24 _ _ (by omega) 8 (by omega) (by omega), hW 16 _ _ (by omega) 8 (by omega) (by omega), rdW_wrW_same]
+  · dsimp only
+    rw [hW 40 _ _ (by omega) 16 (by omega) (by omega), hW 32 _ _ (by omega) 16 (by omega) (by omega),
+      hW 24 _ _ (by omega) 16 (by omega) (by omega), rdW_wrW_same]
+  · dsimp only
+    rw [hW 40 _ _ (by omega) 24 (by omega) (by omega), hW 32 _ _ (by omega) 24 (by omega) (by omega), rdW_wrW_same]
+  · dsimp only
+    rw [hW 40 _ _ (by omega) 32 (by omega) (by omega), rdW_wrW_same]
+  · dsimp only
+    rw [rdW_wrW_same]
+  · dsimp only
+    rcases (hcs x h1 h2).2.1 with h | h <;>
+    exact isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt
+        (isSome_get?_storeInt (isSome_get?_storeInt (hcs x h1 h2).1)))))
+  · dsimp only
+    exact isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt
+        (isSome_get?_storeInt (isSome_get?_storeInt (by rw [hz x h1 h2]; rfl))))))
+  · rsimp; exact UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+  · dsimp only
+    refine ⟨fun y hy => isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt (isSome_get?_storeInt
+      (isSome_get?_storeInt (isSome_get?_storeInt hy))))), fun x hx h => ?_⟩
+    rw [get?_wrW_A (by omega) hx (by omega), get?_wrW_A (by omega) hx (by omega), get?_wrW_A (by omega) hx (by omega),
+      get?_wrW_A (by omega) hx (by omega), get?_wrW_A (by omega) hx (by omega), get?_wrW_A (by omega) hx (by omega)]
+
+/-- **The compared run's driver on the machine** (without the registers). -/
+theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X) (hio : abiIO tab = true) (hwf : Prog.wf tab q = true)
+    (hnres : 1 ≤ tab.nres) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat) (fz own : List TieredArray)
+    (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
+    (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
+    (hdisj : ∀ a ∈ own, a ∉ fz) (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
+      (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (bC bS pb : ByteArray) (sa : Word) (dm : MachineData) (ra : Word) (hc : CmpCall bC bS pb sa dm ra)
+    (hG : CmpGuard tab p mode plo phi out fz own bC bS pb) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+        (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb) ∧
+        (st.data.regs.rdx = 2 → CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb st.data.regs.rax))
+      dm (label abiCompareL) :=
+  eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h1, h2⟩ => ⟨hpc, h1, h2⟩)
+    (cmp_outcome_regs q p hq tab hok hAX hio hwf hnres mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13
+      h23 hfzl hp hmo hdisj hcn k0 hcode fd hentry hnp bC bS pb sa dm ra hc hG)
 
 end
+
+
+
+/-- info: 'ConAgua.Final.cmp_outcome_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms cmp_outcome_regs
+
+/-- info: 'ConAgua.Final.cmp_outcome' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms cmp_outcome
+
 
 end ConAgua.Final
