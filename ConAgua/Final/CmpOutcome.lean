@@ -295,6 +295,84 @@ theorem cmp_okGe {Kc i : Nat} (hC : Code (cmpStubL tab mode out own) Kc)
     rsimp at hge
     exact hgood hrdx0 (by simpa using hge) _
 
+/-- **The driver's geometry**: the region `[base, base + blen)` in the address space and large
+enough (`cmpNeed`), the stack window around `rsp0` apart from it, the buffer (`nB` words at `buf`)
+inside the setup stub's part of it. -/
+structure CmpGeo (tab : Tab) (own : List TieredArray) (base blen rsp0 buf nB : Nat) : Prop where
+  fits : base + blen < 2 ^ 64
+  need : cmpNeed tab own ≤ blen
+  win : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + blen ≤ x
+  r24 : 24 ≤ rsp0
+  r8 : rsp0 + 8 < 2 ^ 64
+  bufLo : base + 2 ^ 31 ≤ buf
+  bufHi : buf + 8 * nB ≤ base + abiNeed tab
+  buf16 : buf + 16 ≤ base + abiNeed tab
+
+omit [Host] in
+/-- `a + r` as the code computes it (`movRI`, then `add r15`). -/
+theorem toNat_add_reg (a : Nat) (b : UInt64) (h : a + b.toNat < 2 ^ 64) :
+    (UInt64.ofBitVec ((a.toUInt64).toBitVec + b.toBitVec)).toNat = a + b.toNat := by
+  simp only [UInt64.toNat_ofBitVec, BitVec.toNat_add, UInt64.toNat_toBitVec, Nat.toUInt64,
+    UInt64.toNat_ofNat_of_lt' (show a < 2 ^ 64 by omega)]
+  omega
+
+omit [Host] in
+/-- `a + r` as the code computes it, as a bit vector. -/
+theorem toNat_add_reg' (a : Nat) (b : UInt64) (h : a + b.toNat < 2 ^ 64) :
+    ((a.toUInt64).toBitVec + b.toBitVec).toNat = a + b.toNat := by
+  simp only [BitVec.toNat_add, UInt64.toNat_toBitVec, Nat.toUInt64,
+    UInt64.toNat_ofNat_of_lt' (show a < 2 ^ 64 by omega)]
+  omega
+
+omit [Host] in
+/-- **The frame after a call** made from a frame (the return address pushed at `rsp0`): the callee
+restored the caller's registers and left the save area alone. -/
+theorem CmpFrame.ret {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {s st : MachineData}
+    (hf : CmpFrame tab dm ra sa nS base rsp0 s) (hfit : base + abiNeed tab + 64 < 2 ^ 64)
+    (hr8 : rsp0 + 8 < 2 ^ 64) {R : Reg64s} (hRsp : R.rsp.toNat = rsp0)
+    (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → r ≠ .rsi → r ≠ .rdi → r ≠ .r8 → r ≠ .r9 → r ≠ .r11 → r ≠ .rsp →
+      R.get64 r = s.regs.get64 r) (hrr : RegsRestored R st.regs)
+    (hsave : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 64 → st.dmem.get? (A x) = s.dmem.get? (A x))
+    (hgrow : ∀ y, (s.dmem.get? y).isSome → (st.dmem.get? y).isSome) : CmpFrame tab dm ra sa nS base rsp0 st := by
+  obtain ⟨hsp, hbp, h14, h15, hbx, h12, h13⟩ := hrr
+  have e : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → r ≠ .rsi → r ≠ .rdi → r ≠ .r8 → r ≠ .r9 → r ≠ .r11 → r ≠ .rsp →
+      UInt64.ofBitVec (R.get64 r) = UInt64.ofBitVec (s.regs.get64 r) := fun r a b c d e f g h i => by
+    rw [hR r a b c d e f g h i]
+  have e15 := e .r15 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have ebp := e .rbp (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have e14 := e .r14 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have ebx := e .rbx (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have e12 := e .r12 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  have e13 := e .r13 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  simp only [Reg64s.get64_r15, Reg64s.get64_rbp, Reg64s.get64_r14, Reg64s.get64_rbx, Reg64s.get64_r12,
+    Reg64s.get64_r13, UInt64.ofBitVec_toBitVec] at e15 ebp e14 ebx e12 e13
+  have hsv : ∀ o, o + 8 ≤ 64 → rdW st.dmem (A (base + abiNeed tab + o)) = rdW s.dmem (A (base + abiNeed tab + o)) :=
+    fun o ho => rdW_congr fun j hj => by rw [A_add]; exact hsave _ (by omega) (by omega)
+  refine ⟨by rw [h15, e15]; exact hf.r15, by rw [hsp, hRsp], by rw [hbp, ebp]; exact hf.rbp,
+    by rw [h14, e14]; exact hf.r14, by rw [hbx, ebx]; exact hf.rbx, by rw [h12, e12]; exact hf.r12,
+    by rw [h13, e13]; exact hf.r13,
+    by rw [show base + abiNeed tab = base + abiNeed tab + 0 by rfl, hsv 0 (by omega)]; exact hf.sv0,
+    by rw [hsv 8 (by omega)]; exact hf.sv1, by rw [hsv 16 (by omega)]; exact hf.sv2,
+    by rw [hsv 24 (by omega)]; exact hf.sv3, by rw [hsv 32 (by omega)]; exact hf.sv4,
+    by rw [hsv 40 (by omega)]; exact hf.sv5, fun x h1 h2 => hgrow _ (hf.win x h1 h2),
+    fun x h1 h2 => hgrow _ (hf.map x h1 h2)⟩
+
+omit [Host] in
+/-- A store into the save area past its first six words keeps the frame. -/
+theorem CmpFrame.wr {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {s : MachineData}
+    (hf : CmpFrame tab dm ra sa nS base rsp0 s) (hfit : base + abiNeed tab + 64 < 2 ^ 64)
+    (hwin : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24) {y : Nat} {v : BitVec 64}
+    (hy : base + abiNeed tab + 48 ≤ y) (hy' : y + 8 ≤ base + abiNeed tab + 64) :
+    CmpFrame tab dm ra sa nS base rsp0 { s with dmem := wrW s.dmem (A y) v } := by
+  have hsv : ∀ o, o + 8 ≤ 48 → rdW (wrW s.dmem (A y) v) (A (base + abiNeed tab + o)) =
+      rdW s.dmem (A (base + abiNeed tab + o)) := fun o ho => rdW_wrW_A (by omega) (by omega) (by omega)
+  refine ⟨hf.r15, hf.rsp, hf.rbp, hf.r14, hf.rbx, hf.r12, hf.r13,
+    by rw [show base + abiNeed tab = base + abiNeed tab + 0 by rfl]; dsimp only; rw [hsv 0 (by omega)]; exact hf.sv0,
+    by dsimp only; rw [hsv 8 (by omega)]; exact hf.sv1, by dsimp only; rw [hsv 16 (by omega)]; exact hf.sv2,
+    by dsimp only; rw [hsv 24 (by omega)]; exact hf.sv3, by dsimp only; rw [hsv 32 (by omega)]; exact hf.sv4,
+    by dsimp only; rw [hsv 40 (by omega)]; exact hf.sv5, fun x h1 h2 => isSome_get?_storeInt (hf.win x h1 h2),
+    fun x h1 h2 => isSome_get?_storeInt (hf.map x h1 h2)⟩
+
 end
 
 end ConAgua.Final

@@ -245,4 +245,21 @@ theorem CmpAgree.job {tab : Tab} (hok : abiTabOk tab = true) {fz own : List Tier
       have := hbuf (buf + 8 * i + j) (by omega) (by omega)
       exact hout _ (by omega) this.1 this.2 (hin j hj)
 
+/-- A store into the stack window or the save area keeps `CmpAgree`. -/
+theorem CmpAgree.wrW {B : Array Word} {buf wlo whi slo shi rsp0 : Nat} {d5 d : DataMem}
+    (hA : CmpAgree B buf wlo whi slo shi rsp0 d5 d) {y : Nat} {v : BitVec 64} (hy8 : y + 8 ≤ 2 ^ 64)
+    (hex : ∀ x, y ≤ x → x < y + 8 → (rsp0 - 24 ≤ x ∧ x < rsp0 + 8) ∨ (slo ≤ x ∧ x < shi))
+    (hbuf : y + 8 ≤ buf ∨ buf + 8 * B.size ≤ y) (hbend : buf + 8 * B.size ≤ 2 ^ 64) :
+    CmpAgree B buf wlo whi slo shi rsp0 d5 (wrW d (A y) v) := by
+  refine ⟨fun z hz => isSome_get?_storeInt (hA.grows z hz), fun x hx hw hwin hs hb => ?_, fun i hi => ?_⟩
+  · rw [get?_wrW_A hy8 hx ?_]
+    · exact hA.same x hx hw hwin hs hb
+    · refine Classical.byContradiction fun hn => ?_
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+      rcases hex x hn.1 hn.2 with h | h
+      · omega
+      · exact hs h
+  · rw [rdW_wrW_A hy8 (by omega) (by omega)]
+    exact hA.words i hi
+
 end ConAgua.Final
