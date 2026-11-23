@@ -23,6 +23,76 @@ namespace L.Arena
 
 open L.Ind L.Stubs
 
+/-! ## `cone_push` -/
+
+/-- **`cone_push()` is the cited `ns ++ work`**: the needs walk's names `NACC[0‥CTL[227])` on top
+of the stack, `NACC[0]` the new top; only the stack and its top written. -/
+theorem conePush_ok {p : Prog} (hp : p.lookup "cone_push" = some conePushL) {n : Nat} {m m' : Mem}
+    {r : List Word} {seen : Std.HashMap NIdx Bool} {work : List NIdx} {x : NeedsSt}
+    (h : callW p n "cone_push" [] m = some (r, m')) (hC : CnR m seen work) (hx : NdR m x) :
+    CnR m' seen (x.acc ++ work) ∧ MemFrame [CWK] [CTOPC] m m' := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (conePush_specW p hp n _) h
+  rcases n with _ | n
+  · rw [conePushW.eq_1] at hW; cases hW
+  rw [conePushW.arm1] at hW
+  cases e : conePushW.loop1 (n + 1) m (rdW (m.arr64 CTL) NTOPC) (rdW (m.arr64 CTL) CTOPC) with
+  | none => rw [e, conePushW.k_loop1.none] at hW; cases hW
+  | some q =>
+  obtain ⟨h', m1⟩ := q
+  rw [e, conePushW.k_loop1.arm1] at hW
+  obtain ⟨-, e'⟩ := Prod.mk.inj (Option.some.inj hW)
+  rw [← e']
+  obtain ⟨eh, hf, hro, hrd⟩ := conePush_loop (n + 1) m _ _ h' m1 e
+  have hsz : CTOPC.toNat < (m1.arr64 CTL).size := by rw [hf.size]; exact hC.ctl
+  have htop : ctlW (m1.set64 CTL CTOPC h') CTOPC = h' := by
+    simp only [ctlW, rdW_set64, hsz, and_self, ite_true]
+  have hf2 : MemFrame [CWK] [CTOPC] m (m1.set64 CTL CTOPC h') :=
+    (hf.mono (fun _ h => h) (by simp)).trans (MemFrame.setCtl m1 CTOPC h' |>.mono (by simp) (fun _ h => h))
+  have hWk : (m1.set64 CTL CTOPC h').arr64 CWK = m1.arr64 CWK := (MemFrame.setCtl m1 CTOPC h').arr _ (by simp) (by decide)
+  generalize hK : (rdW (m.arr64 CTL) NTOPC).toNat = K at eh hrd
+  generalize hH : (rdW (m.arr64 CTL) CTOPC).toNat = H at eh hrd hro
+  have hacc := hx.rel.acc
+  have hwork := hC.rel.work
+  have hlenA : x.acc.length = K := by rw [← hacc]; simp [naccList, ctlW, hK]
+  have hlenW : work.length = H := by rw [← hwork]; simp [cwkList, ctlW, hH]
+  refine ⟨⟨⟨memoRG_frame csSch csSch_wf nmKey _ [CWK] [CTOPC] (by decide) (by decide) _ _ hf2 _ hC.rel.seen,
+    ?_, ?_, ?_⟩, by rw [Mem.size64_set64, hf.size]; exact hC.ctl⟩, hf2⟩
+  · apply List.ext_getElem
+    · simp [cwkList, htop, eh, hlenA, hlenW]; omega
+    intro j h1 h2
+    have h2' : j < K + H := by simpa [hlenA, hlenW] using h2
+    simp only [cwkList, htop, hWk, List.getElem_map, List.getElem_reverse, List.getElem_range,
+      List.length_range] at h1 ⊢
+    rw [eh] at h1 ⊢
+    rw [hrd]
+    by_cases hj : j < K
+    · rw [List.getElem_append_left (by rw [hlenA]; exact hj)]
+      have c : H ≤ H + K - 1 - j ∧ H + K - 1 - j < H + K := by omega
+      rw [ite_eq_left_of_eq_true _ _ (eq_true c), show K - 1 - (H + K - 1 - j - H) = j by omega]
+      have : x.acc[j]'(by omega) = (naccList m)[j]'(by rw [hacc, hlenA]; exact hj) := by
+        simp only [hacc]
+      rw [this]; simp [naccList]
+    · rw [List.getElem_append_right (by rw [hlenA]; omega)]
+      have c : ¬ (H ≤ H + K - 1 - j ∧ H + K - 1 - j < H + K) := by omega
+      rw [ite_eq_right_of_eq_false _ _ (eq_false c)]
+      have : work[j - x.acc.length]'(by rw [hlenA, hlenW]; omega) =
+          (cwkList m)[j - K]'(by rw [hwork, hlenW]; omega) := by
+        simp only [hwork, hlenA]
+      rw [this]
+      simp only [cwkList, ctlW, hH, List.getElem_map, List.getElem_reverse, List.getElem_range,
+        List.length_range]
+      congr 2; omega
+  · intro i hi
+    have htop' : rdW ((m1.set64 CTL CTOPC h').arr64 CTL) CTOPC = h' := htop
+    simp only [ctlW, htop', eh] at hi
+    rw [hWk, hrd]
+    split
+    · exact hx.rel.words _ (by simp only [ctlW, hK]; omega)
+    · exact hC.rel.words _ (by simp only [ctlW, hH]; omega)
+  · have htop' : rdW ((m1.set64 CTL CTOPC h').arr64 CTL) CTOPC = h' := htop
+    simp only [ctlW, htop', hWk]; rw [hf.size CWK]
+    exact hro (by have := hC.rel.room; simp only [ctlW, hH] at this; exact this)
+
 section ce
 variable {p : Prog} (P : ConeProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 include P
