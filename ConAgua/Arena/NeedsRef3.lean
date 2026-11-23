@@ -247,7 +247,7 @@ theorem pinFootprintNat_run {m : Mem} {a : AState} {w : Word} (hF : PinsFull m a
       · simp [h]
       · simp [h]
       · rw [h]; simp
-    rw [ite_eq_left_of_eq_true (eq_true hc)]
+    simp only [eq_true hc, ite_true]
     simp only [hb, ite_true, StateT.run_bind, p29, p30, p31, except_ok_bind]
     simp; rfl
   · have hb : (decide (w = pinW m 20) || decide (w = pinW m 21) || (dmsL m).contains (decI w)) =
@@ -255,7 +255,7 @@ theorem pinFootprintNat_run {m : Mem} {a : AState} {w : Word} (hF : PinsFull m a
       simp only [not_or] at hc
       have h3 : (dmsL m).contains (decI w) = false := by simpa using hc.2.2
       rw [h3]; simp [hc.1, hc.2.1]
-    rw [ite_eq_right_of_eq_false (eq_false hc)]
+    simp only [eq_false hc, ite_false]
     simp only [hb, Bool.false_eq_true, ite_false]
     simp; rfl
 
@@ -371,7 +371,61 @@ theorem pinFootprintNat_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x
   obtain ⟨⟨q16, n16⟩, d16, hW⟩ := hW
   obtain ⟨rfl, v16⟩ := pinCallF Q d16 hS14 hF14 (by decide)
   simp only [UInt64.reduceToNat, Nat.reduceAdd, hp14] at v15 v16
-  sorry
+  have hfa : MemFrame ndA ndC m1 n14 := f11.trans f3
+  have hxs : NdR n14 ⟨x.seen, x.acc ++ ((depsW m w).map decI ++
+      [decI (pinW m 2), decI (pinW m 3), decI (pinW m 4)])⟩ := by
+    have tk : List.take (depsW m w).length ((depsW m w).map decI : List NIdx) =
+        (depsW m w).map decI := List.take_of_length_le (by simp)
+    simpa [NeedsSt.name, nidxAppend, List.append_assoc, tk] using hx14
+  have hfin : ∀ {mf : Mem}, MemFrame ndA ndC n14 mf →
+      StageR vis fe mf a ∧ IWGrow m mf ∧ MemFrame ndAW ndCW m mf := fun {mf} hf => by
+    have ht := hfa.trans hf
+    exact ⟨(hS1.ndFrame ht).1, hg1.trans (hS1.ndFrame ht).2,
+      (hf1.mono (by simp [ndAW]) (by simp [ndCW])).trans (ndFrame_w ht)⟩
+  have hrun := pinFootprintNat_run (a := a) hF hw
+  have hdms := natDms_contains hF hw
+  by_cases hne : w ≠ q15.headD 0 ∧ w ≠ q16.headD 0
+  · rw [pinFootprintNatW.k_pin_at_12.arm1 _ _ _ _ _ _ hne] at hW
+    replace hW := opt_some hW (pinFootprintNatW.k_pin_range_has.none ..)
+    obtain ⟨⟨q17, m17⟩, d17, hW⟩ := hW
+    rw [pinFootprintNatW.k_pin_range_has.arm1] at hW
+    obtain ⟨s17, rfl, -, hW17⟩ := triple_of_callW (s₀ := ⟨n14, Locals.init []⟩)
+      (prh_spec p Q.pin_range_has Q.pin_at n _ w 21 29) d17
+    obtain ⟨e17, -, hi17⟩ := prhW_iff n _ _ w 21 29 _ (by decide) hW17
+    simp only [UInt64.reduceToNat, hp14] at hi17
+    rw [v15, v16] at hne
+    by_cases hr0 : q17.headD 0 = 0
+    · rw [hr0] at hW
+      have em := pfnTail0 hW
+      rw [← e17] at em
+      have hc : ¬ (w = pinW m 20 ∨ w = pinW m 21 ∨ (dmsL m).contains (decI w) = true) := by
+        rintro (h | h | h)
+        · exact hne.1 h
+        · exact hne.2 h
+        · exact (hi17.mpr (hdms.mp h)) hr0
+      simp only [eq_false hc, ite_false] at hrun
+      obtain ⟨hS', hg', hf'⟩ := hfin (MemFrame.refl ndA ndC n14)
+      rw [em]
+      exact ⟨_, hrun, hxs, hS', hg', hf'⟩
+    · rw [← e17] at hW
+      obtain ⟨hy, ft⟩ := pfnTail Q hW hr0 hS14 hxs hF14
+      have hc : w = pinW m 20 ∨ w = pinW m 21 ∨ (dmsL m).contains (decI w) = true :=
+        .inr (.inr (hdms.mpr (hi17.mp hr0)))
+      simp only [eq_true hc, ite_true] at hrun
+      obtain ⟨hS', hg', hf'⟩ := hfin ft
+      refine ⟨_, hrun, ?_, hS', hg', hf'⟩
+      simpa [hp14, List.append_assoc] using hy
+  · rw [pinFootprintNatW.k_pin_at_12.arm2 _ _ _ _ _ _ hne] at hW
+    obtain ⟨hy, ft⟩ := pfnTail Q hW (by decide) hS14 hxs hF14
+    rw [v15, v16] at hne
+    have hc : w = pinW m 20 ∨ w = pinW m 21 ∨ (dmsL m).contains (decI w) = true := by
+      rcases Classical.em (w = pinW m 20) with h | h
+      · exact .inl h
+      · exact .inr (.inl (Classical.not_not.mp fun h' => hne ⟨h, h'⟩))
+    simp only [eq_true hc, ite_true] at hrun
+    obtain ⟨hS', hg', hf'⟩ := hfin ft
+    refine ⟨_, hrun, ?_, hS', hg', hf'⟩
+    simpa [hp14, List.append_assoc] using hy
 
 end fp
 
