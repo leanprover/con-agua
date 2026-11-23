@@ -127,7 +127,7 @@ theorem ruleReads_rel (P : IotaRelProg p) (PF : IotaFrameProg p)
     {rlP : ConLeche.RecRule}
     (hc : callW p n "rule_reads" [vis, q, rok, r1, r2, r3, r4, r5, r6, r7, mI, rP, i, rw] m = some (r, m'))
     (hI : RInv dn vis feR env fe E m a)
-    (hcv : decCV (erecP m) q.toNat = some cv) (hcvP : Frontend.denoteCV a.store cv = some cvP)
+    (hcv : decCV (erecP m) q.toNat = some cv)
     (hrr : decOIR m [rok, r1, r2, r3, r4, r5, r6, r7] rr)
     (hrrP : ∀ r0, rr = some r0 →
       ∃ x, ConRon.Bridge.Inductives.iotaRecP cvP mI.toNat rP.toNat = some x ∧
