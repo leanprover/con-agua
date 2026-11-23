@@ -8,6 +8,7 @@ import ConAgua.Verdict.DeclValsE
 import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.RecLayout.CIDec
 import ConRon.Bridge.Specs
+import ConRon.Bridge.Compare.Justify
 import all ConAgua.Arena.Justify
 
 @[expose] public section
@@ -142,6 +143,18 @@ theorem levelsRenaming_ok (hP : JfCmpProg p) {n : Nat} {m m' : Mem} {a : AState}
   simp only [levelsRenaming, hl', beq_self_eq_true, hb2, Bool.true_and, ← hnd4, bne_iff_ne, ne_eq, List.headD_cons]
 
 end lr
+
+/-- A decoded constant value's slice words, read in any extension of the record pool. -/
+theorem cvSliceW {m M : Mem} {q : Word} {cv : IConstantVal}
+    (h : decCV (erecP m) q.toNat = some cv) (hx : ArrExt (erecP m) (erecP M)) :
+    hslice? (erecP m) (erRd M (q + CV.lpsOff)).toNat (erRd M (q + CV.lpsLen)).toNat =
+      some cv.levelParams := by
+  obtain ⟨w1, w2, h1, h2, hs⟩ := decCV_slice h
+  have e1 : erRd M (q + CV.lpsOff) = w1 :=
+    (erRdOK M).rd _ _ (by rw [rd_off_toNat (erRdOK m) h1]; exact hx _ _ h1)
+  have e2 : erRd M (q + CV.lpsLen) = w2 :=
+    (erRdOK M).rd _ _ (by rw [rd_off_toNat (erRdOK m) h2]; exact hx _ _ h2)
+  rw [e1, e2]; exact hs
 
 section cb
 variable {p : Prog} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -521,6 +534,142 @@ theorem refinesB_sim (hP : JfCmpProg p) (n : Nat) {m : Mem} {a : AState} {c d : 
   refine ⟨b11, a11, by rw [hrun1']; exact hrun11, ?_⟩
   rw [← e]
   exact ⟨hT11, hg1.trans (hg10.trans hg11), hok11, hr11, hx1.trans hx11, by simpa using hb11⟩
+/-- **`same_cv_up_to_levels(x + CI.cv, y + CI.cv)` refines `sameCvUpToLevels cv cv'`** (`x` the
+input's record, `y` the solution's): the slices compared (`er_sl_eq`), at equal ones the values
+(`cv_eq`); else a renaming (`levels_renaming`) and the solution's at the input's names (`cv_at_lps`
+into a fresh value) compared. -/
+theorem sameCv_sim (hP : JfCmpProg p) (n : Nat) {m : Mem} {a : AState} {x y : Word}
+    {cx cy : IConstantInfo} {C C' : ConLeche.ConstantInfo}
+    (hT : StageT dn vis fe m a) (hok : ConRon.Bridge.StateOK a) (hr : ConRon.Bridge.ReadOK a)
+    (hx : decCI (erecP m) x.toNat = some cx) (hy : decCI (erecP m) y.toNat = some cy)
+    (hdx : Frontend.denoteCI a.store cx = some C) (hdy : Frontend.denoteCI a.store cy = some C') :
+    Sim (callW p n "same_cv_up_to_levels" [x + CI.cv, y + CI.cv] m)
+      (ConRon.Arena.sameCvUpToLevels cx.toConstantVal cy.toConstantVal) a
+      (fun r b m' a' => CmpPost dn vis fe m a r b m' a') := by
+  have hK := hP.pl.canon
+  have hQ := hP.pl.basis.rules.toQuotAtProg
+  intro r m' h
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (sameCvUpToLevels_specW p hP.sc n _ (x + CI.cv) (y + CI.cv)) h
+  cases n with
+  | zero => simp [sameCvUpToLevelsW] at hW
+  | succ n =>
+  simp only [sameCvUpToLevelsW] at hW
+  have hcx := decCI_cv hx
+  have hcy := decCI_cv hy
+  obtain ⟨wx, hwx, -, -⟩ := decCV_name hcx
+  obtain ⟨wy, hwy, -, -⟩ := decCV_name hcy
+  have hqx : (x + CI.cv).toNat = x.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwx)
+  have hqy : (y + CI.cv).toNat = y.toNat + CI.cv.toNat := off_add_toNat rfl (erecP_lt64 hwy)
+  rw [← hqx] at hcx; rw [← hqy] at hcy
+  obtain ⟨-, ox, lx, -, -, ex1, ex2, -, -, -, -, -, hslx⟩ := cvFields (erRdOK m) hcx
+  obtain ⟨-, oy, ly, -, -, ey1, ey2, -, -, -, -, -, hsly⟩ := cvFields (erRdOK m) hcy
+  rw [← ex1, ← ex2] at hslx; rw [← ey1, ← ey2] at hsly
+  have hrunT := fun b a' (hb : (ConRon.Arena.sameCvUpToLevels cx.toConstantVal cy.toConstantVal).run a = .ok (b, a')) =>
+    ConRon.Bridge.sameCvUpToLevels_run hok hr (ConRon.Bridge.denoteCI_toConstantVal hdx)
+      (ConRon.Bridge.denoteCI_toConstantVal hdy) hb
+  cases h1 : callW p n "er_sl_eq" [erRd m (x + CI.cv + CV.lpsOff), erRd m (x + CI.cv + CV.lpsLen),
+      erRd m (y + CI.cv + CV.lpsOff), erRd m (y + CI.cv + CV.lpsLen)] m with
+  | none => rw [h1] at hW; simp [sameCvUpToLevelsW.k_er_sl_eq] at hW
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  obtain ⟨s1, rfl, -, hm1, hb1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (erSlEq_spec p hK n _ _ _ _ _) h1
+  rw [h1] at hW; simp only [sameCvUpToLevelsW.k_er_sl_eq] at hW
+  rw [erSlEqB_ok (erRdOK m) hslx hsly] at hb1
+  simp only at hm1
+  subst hm1
+  by_cases heq : cx.toConstantVal.levelParams = cy.toConstantVal.levelParams
+  · rw [ite_eq_left (by rw [hb1]; simp [heq])] at hW
+    cases h2 : callW p n "cv_eq" [x + CI.cv, y + CI.cv] s1.mem with
+    | none => rw [h2] at hW; simp [sameCvUpToLevelsW.k_cv_eq] at hW
+    | some x2 =>
+    obtain ⟨r2, m2⟩ := x2
+    obtain ⟨s2, rfl, -, hm2, hb2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+      (cvEq_spec' p hK n _ _ _) h2
+    rw [h2] at hW; simp only [sameCvUpToLevelsW.k_cv_eq, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    simp only at hm2
+    rw [cvEqB_ok (erRdOK _) hcx hcy] at hb2
+    have hrun : (ConRon.Arena.sameCvUpToLevels cx.toConstantVal cy.toConstantVal).run a =
+        .ok (decide (cx.toConstantVal = cy.toConstantVal), a) := by
+      simp only [ConRon.Arena.sameCvUpToLevels, heq, beq_self_eq_true, ↓reduceIte]; rfl
+    refine ⟨_, a, hrun, ?_⟩
+    rw [← e, hm2]
+    refine ⟨hT, IWGrow.refl _, hok, hr, Ext.refl _, ?_⟩
+    simp only [List.headD_cons, hb2]
+    by_cases h : cx.toConstantVal = cy.toConstantVal <;> simp [h]
+  rw [ite_eq_right (by rw [hb1]; simp [heq])] at hW
+  have hne : (cx.toConstantVal.levelParams == cy.toConstantVal.levelParams) = false := by simpa using heq
+  -- `levels_renaming`
+  cases h2 : callW p n "levels_renaming" [x + CI.cv, y + CI.cv] s1.mem with
+  | none => rw [h2] at hW; simp [sameCvUpToLevelsW.k_levels_renaming] at hW
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  obtain ⟨hT2, hg2, he2, hrd2, hb2⟩ := levelsRenaming_ok hP hT hx hy h2
+  rw [h2] at hW; simp only [sameCvUpToLevelsW.k_levels_renaming] at hW
+  by_cases hz : r2.headD 0 = 0
+  · rw [ite_eq_left hz] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, e⟩ := hW
+    have hlr : levelsRenaming cx.toConstantVal.levelParams cy.toConstantVal.levelParams = false := by
+      cases hn : levelsRenaming cx.toConstantVal.levelParams cy.toConstantVal.levelParams
+      · rfl
+      · exact absurd (hb2.mpr hn) (by rw [hz]; simp)
+    refine ⟨false, a, ?_, ?_⟩
+    · simp only [ConRon.Arena.sameCvUpToLevels, hne, hlr, Bool.false_eq_true, ↓reduceIte]; rfl
+    · rw [← e]; exact ⟨hT2, hg2, hok, hr, Ext.refl _, by simp⟩
+  rw [ite_eq_right hz] at hW
+  have hlr := hb2.mp hz
+  -- `erec_alloc(CV.size)`
+  cases h3 : callW p n "erec_alloc" [CV.size] m2 with
+  | none => rw [h3] at hW; simp [sameCvUpToLevelsW.k_erec_alloc] at hW
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at hW; simp only [sameCvUpToLevelsW.k_erec_alloc] at hW
+  have hA := callW_erecAlloc hQ.erAlloc h3
+  have hqf3 := callW_quotFrame hQ.quot (by decide) h3
+  obtain ⟨hT3, hg3, hoff, htop, hr41⟩ := erAlloc_stageT hA hT2
+  -- `cv_at_lps(d, y + CI.cv, x's names)`
+  have hcx2 : decCV (erecP m2) (x + CI.cv).toNat = some cx.toConstantVal := by rw [he2]; exact hcx
+  have hcy3 : decCV (erecP m3) (y.toNat + CI.cv.toNat) = some cy.toConstantVal :=
+    ArrExt.decCV hg3.ext (by rw [he2, ← hqy]; exact hcy)
+  have hsl := cvSliceW hcx2 hg3.ext
+  have hps := (ConRon.Bridge.denoteCV_inv (ConRon.Bridge.denoteCI_toConstantVal hdx)).2.1
+  cases h4 : callW p n "cv_at_lps" [r3.headD 0, y + CI.cv, erRd m3 (x + CI.cv + CV.lpsOff),
+      erRd m3 (x + CI.cv + CV.lpsLen)] m3 with
+  | none => rw [h4] at hW; simp [sameCvUpToLevelsW.k_cv_at_lps] at hW
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4] at hW; simp only [sameCvUpToLevelsW.k_cv_at_lps] at hW
+  obtain ⟨cv', a4, hrun4, hT4, hg4, -, hdec4, -, -, -, -⟩ :=
+    cvAtLps_sim hQ n hT2.stage hT3 hok hqf3 hg3 (d := r3.headD 0) (c := y)
+      (by rw [hoff]; exact Nat.le_refl _) (by rw [htop, hoff]; exact Nat.le_refl _) hr41 hcy3 hsl hps r4 m4 h4
+  -- `cv_eq(d, x + CI.cv)`
+  cases h5 : callW p n "cv_eq" [r3.headD 0, x + CI.cv] m4 with
+  | none => rw [h5] at hW; simp [sameCvUpToLevelsW.k_cv_eq] at hW
+  | some x5 =>
+  obtain ⟨r5, m5⟩ := x5
+  obtain ⟨s5, rfl, -, hm5, hb5⟩ := triple_of_callW (s₀ := ⟨m4, Locals.init []⟩)
+    (cvEq_spec' p hK n _ _ _) h5
+  rw [h5] at hW; simp only [sameCvUpToLevelsW.k_cv_eq, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, e⟩ := hW
+  simp only at hm5
+  have hcx4 : decCV (erecP m4) (x + CI.cv).toNat = some cx.toConstantVal :=
+    ArrExt.decCV hg4.ext hcx2
+  rw [cvEqB_ok (erRdOK _) hdec4 hcx4] at hb5
+  have hrun : (ConRon.Arena.sameCvUpToLevels cx.toConstantVal cy.toConstantVal).run a =
+      .ok (decide (cv' = cx.toConstantVal), a4) := by
+    simp only [ConRon.Arena.sameCvUpToLevels, hne, hlr, Bool.false_eq_true, ↓reduceIte,
+      StateT.run_bind, hrun4, except_ok_bind]
+    rfl
+  obtain ⟨hst, -⟩ := hrunT _ _ hrun
+  refine ⟨_, a4, hrun, ?_⟩
+  rw [← e, hm5]
+  refine ⟨hT4, hg2.trans hg4, hst.ok, hst.read, hst.ext, ?_⟩
+  simp only [List.headD_cons, hb5]
+  by_cases h : cv' = cx.toConstantVal <;> simp [h]
+
 end cb
 
 end L.Arena
