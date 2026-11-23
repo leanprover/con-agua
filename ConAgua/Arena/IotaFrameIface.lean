@@ -3,6 +3,8 @@ module
 public import ConAgua.Arena.IotaFrameModels
 public import ConAgua.Arena.StripTeleSpec
 public import ConAgua.Arena.IndPartsSpec.IndPartsProg2
+public import ConAgua.Arena.IndRealSpine
+public import ConAgua.Arena.RecClass
 
 @[expose] public section
 
@@ -41,6 +43,12 @@ structure IotaFrameProg (p : Prog) : Prop where
   iota_parts_at_body : p.lookup "iota_parts_at_body" = some iotaPartsAtBodyL
   iota_parts_at : p.lookup "iota_parts_at" = some iotaPartsAtL
   e_view : p.lookup "e_view" = some eView
+  gaf : GafF p
+  pir : PirF p
+  bvar_find : p.lookup "bvar_find" = some bvarFind
+  bvar_push : p.lookup "bvar_push" = some bvarPush
+  intern_bvar : p.lookup "intern_bvar" = some internBVar
+  expr_get_d : p.lookup "expr_get_d" = some exprGetD
 
 /-- **`iota_rec_of(q, mI, rP)` refines `iotaRecOf cv mI rP`** (`q` the recursor's constant value
 in `EREC`). -/
