@@ -5,6 +5,7 @@ public import ConAgua.Arena.IndRealFvt
 public import ConAgua.Arena.Frame
 import ConAgua.Arena.DefEqMidQuick
 import ConAgua.Arena.CoreErec
+import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.WhnfCoreProj
 import all ConAgua.Arena.Needs
 
@@ -50,7 +51,7 @@ theorem ndC_stage : ∀ x ∈ ndC, 131 ≤ x.toNat ∧ x.toNat ≠ 133 ∧ x.toN
   rcases hx with rfl | rfl | rfl <;> simp
 
 /-- **The stage across the walk's writes.** -/
-theorem StageR.ndFrame {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} (hS : StageR vis fe m a)
+theorem _root_.L.Ind.StageR.ndFrame {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState} (hS : StageR vis fe m a)
     (hf : MemFrame ndA ndC m m') : StageR vis fe m' a ∧ IWGrow m m' :=
   hS.frame_hi hf ndA_stage ndC_stage (by simp [ndA]; decide) (by simp [ndC, NTOPC])
 
@@ -459,6 +460,333 @@ theorem litNeeds_step {n : Nat} {m m' : Mem} {h : Word} {r : List Word} {x : Nee
     refine ⟨x.acc ++ [decI (r1.headD 0), decI (r2.headD 0), decI (r3.headD 0)], ?_, ?_, hf3⟩
     · simp only [litNeeds, StateT.run_bind, hG, except_ok_bind]; rfl
     · simpa [NeedsSt.name, nidxAppend] using hx3
+
+/-! ## The memo -/
+
+/-- An `nd_find(h, 0)` call: the probe, the memory kept. -/
+theorem ndFind_call {n : Nat} {m m' : Mem} {h : Word} {r : List Word}
+    (hc : callW p n "nd_find" [h, 0] m = some (r, m')) :
+    m = m' ∧ r ≠ [] ∧ r = mfindG ndSch m h 0 := by
+  obtain ⟨s', rfl, hs, hne, hr⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (memoFindG_spec ndSch p "nd_find" P.nd_find n _ h 0) hc
+  subst hs
+  exact ⟨rfl, hne, hr⟩
+
+omit P in
+/-- **The memo's insert** (`s.insert h true`): the stack kept. -/
+theorem NdR.memoSet {m m' : Mem} {x : NeedsSt} (hx : NdR m x) {h : Word} (hh : HW h)
+    (hs : msetG ndSch m h 0 1 = some m') :
+    NdR m' ⟨x.seen.insert (decE h) true, x.acc⟩ ∧ MemFrame ndA ndC m m' := by
+  have hf := msetG_frame ndSch ndSch_wf m m' h 0 1 hs
+  have hseen := memoRG_set ndSch ndSch_wf bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0 1
+    ⟨hh, rfl⟩ m' hs
+  have hN : m'.arr64 NACC = m.arr64 NACC := hf.arr _ (by decide) (by decide)
+  have hT : ctlW m' NTOPC = ctlW m NTOPC := hf.ctl _ (by decide)
+  refine ⟨⟨⟨hseen, ?_, ?_, ?_⟩, ?_⟩, ?_⟩
+  · rw [← hx.rel.acc]; simp only [naccList, hN, hT]
+  · intro i hi; rw [hN]; exact hx.rel.words i (by rw [← hT]; exact hi)
+  · rw [hN, hT]; exact hx.rel.room
+  · rw [hf.size]; exact hx.ctl
+  exact hf.mono (by simp [ndA, ndSch]) (by simp [ndC, ndSch])
+
+/-- **The walk's last steps** (`j1`: probe again, insert): the node into the memo. -/
+theorem ndJoin {n : Nat} {m m' : Mem} {h : Word} {r : List Word} {x : NeedsSt}
+    (hW : needsGoW.j1 p n h m = some (r, m')) (hx : NdR m x) (hh : HW h) :
+    NdR m' ⟨x.seen.insert (decE h) true, x.acc⟩ ∧ MemFrame ndA ndC m m' := by
+  rw [needsGoW.j1.arm1] at hW
+  replace hW := opt_some hW (needsGoW.k_nd_find_2.none _ _ _); obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  rw [needsGoW.k_nd_find_2.arm1] at hW
+  obtain ⟨rfl, hne, rfl⟩ := ndFind_call P c1
+  replace hW := opt_some hW (needsGoW.k_lit_needs.none _); obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+  rw [needsGoW.k_lit_needs.arm1] at hW
+  obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨s', rfl, -, hput⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (memoPutG_spec ndSch p "nd_put" P.nd_put n _ h 0 1 _ _) c2
+  rw [← msetG_eq ndSch m h 0 1 hne] at hput
+  exact hx.memoSet hh hput
+
+/-! ## `needs_go` -/
+
+omit P in
+theorem ndFuel_pred {f : Word} (hf0 : f ≠ 0) : ∃ k, f.toNat = k + 1 ∧ (f - 1).toNat = k := by
+  have h0 : f.toNat ≠ 0 := fun h => hf0 (UInt64.toNat_inj.mp (by simpa using h))
+  refine ⟨f.toNat - 1, by omega, ?_⟩
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+
+/-- A view the walk records in its memo (not a leaf, not a constant). -/
+def ndCompound : ENodeView → Prop
+  | .bvar _ | .sort _ | .lit _ | .const _ _ => False
+  | _ => True
+
+omit P in
+theorem needsGo_hit {seen : Std.HashMap EIdx Bool} {acc : List NIdx} {k : Nat} {h : EIdx}
+    {v : ENodeView} (hv : a.store.view h = some v) (hc : ndCompound v) {b : Bool}
+    (hs : seen[h]? = some b) : (needsGo seen acc (k + 1) h).run a = .ok ((seen, acc), a) := by
+  cases v <;> simp only [ndCompound] at hc <;>
+    simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hs] <;> rfl
+
+/-- The twin's walk state as a pair. -/
+abbrev NdP (m : Mem) (y : Std.HashMap EIdx Bool × List NIdx) : Prop := NdR m ⟨y.1, y.2⟩
+
+/-- **`needs_go(f, h)` refines `needsGo`** (its model at every fuel): from the stage and the walk's
+state `x`, a returning run is the twin's `.ok` run from `x`, the state after related, the run
+writing only the walk's state. -/
+theorem needsGo_run : ∀ (n : Nat) (m m' : Mem) (f h : Word) (r : List Word) (x : NeedsSt),
+    needsGoW p n m f h = some (r, m') → StageR vis fe m a → NdR m x → HW h →
+    ∃ y, (needsGo x.seen x.acc f.toNat (decE h)).run a = .ok (y, a) ∧ NdP m' y ∧
+      MemFrame ndA ndC m m'
+  | 0, _, _, _, _, _, _, hW, _, _, _ => by rw [needsGoW.eq_1] at hW; cases hW
+  | n + 1, m, m', f, h, r, x, hW, hS, hx, hh => by
+    by_cases hf0 : f = 0
+    · rw [needsGoW.abort1 _ _ _ _ _ hf0] at hW; cases hW
+    obtain ⟨k, hk, hk1⟩ := ndFuel_pred hf0
+    rw [hk]
+    rw [needsGoW.arm1 _ _ _ _ _ hf0] at hW
+    replace hW := opt_some hW (needsGoW.k_e_view.none _ _ _ _); obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+    obtain ⟨s1, rfl, hs1, hne, rfl⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (eView_spec p P.e_view n _ h) c1
+    subst hs1
+    dsimp only at hW c1 hne
+    have hR := hS.check.arena.base
+    obtain ⟨v, hv, hr⟩ := eViewW_ok m a hR h hne
+    have hg := eViewW_head m h hne
+    cases v with
+    | fvar i ty =>
+      obtain ⟨g1, -, hy, ety⟩ := hr
+      rw [L.getD_two] at hy ety
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      rw [needsGoW.k_nd_find.arm2 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit) g1] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y1, e1, hy1, f1⟩ := needsGo_run n m m3 (f - 1) _ r3 x c3 hS hx hy
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy1 hh
+      refine ⟨(y1.1.insert (decE h) true, y1.2), ?_, hz, f1.trans fz⟩
+      rw [hk1, ety] at e1
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [bmKey] at hmiss
+      simp only [hmiss, StateT.run_bind, e1, except_ok_bind]
+      rfl
+    | bvar i =>
+      rw [needsGoW.k_e_view.arm1 _ _ _ _ _ _ (Or.inl hr.1)] at hW
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨(x.seen, x.acc), by
+        simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind] <;> rfl,
+        hx, MemFrame.refl _ _ _⟩
+    | sort u =>
+      rw [needsGoW.k_e_view.arm1 _ _ _ _ _ _ (Or.inr hr.1)] at hW
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      exact ⟨(x.seen, x.acc), by
+        simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind] <;> rfl,
+        hx, MemFrame.refl _ _ _⟩
+    | lit l =>
+      have g1 : (eViewW m h).headD 0 = 8 := hr
+      rw [needsGoW.k_e_view.arm2 _ _ _ _ _ _ (by rw [g1]; decide) g1] at hW
+      replace hW := opt_some hW (needsGoW.k_lit_needs.none _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      rw [needsGoW.k_lit_needs.arm1] at hW
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      obtain ⟨acc, e1, hy, f1⟩ := litNeeds_step P c2 hS hx hh hne (by rw [← hg, g1]) hv
+      refine ⟨(x.seen, acc), ?_, hy, f1⟩
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, e1]
+      rfl
+    | const c us =>
+      obtain ⟨g1, hc, ec, -, -⟩ := hr
+      rw [L.getD_one] at hc ec
+      rw [needsGoW.k_e_view.arm3 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide) g1] at hW
+      replace hW := opt_some hW (needsGoW.k_lit_needs.none _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      rw [needsGoW.k_lit_needs.arm1] at hW
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+      obtain ⟨hy, f1⟩ := needsName_step P c2 hx hc
+      refine ⟨(x.seen, x.acc ++ [c]), ?_, by rw [← ec]; exact hy, f1⟩
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind] <;> rfl
+    | app t b =>
+      obtain ⟨g1, ht, et, hb, eb⟩ := hr
+      rw [L.getD_one] at ht et; rw [L.getD_two] at hb eb
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      simp only [bmKey] at hmiss
+      rw [needsGoW.k_nd_find.arm3 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit)
+        (by rw [g1]; decide) (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go_2.none _ _ _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go_2.arm1] at hW
+      obtain ⟨y1, e1, hy1, f1⟩ := needsGo_run n m m3 (f - 1) _ r3 x c3 hS hx ht
+      have hS1 := (hS.ndFrame f1).1
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y2, e2, hy2, f2⟩ := needsGo_run n m3 m4 (f - 1) _ r4 ⟨y1.1, y1.2⟩ c4 hS1 hy1 hb
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy2 hh
+      refine ⟨(y2.1.insert (decE h) true, y2.2), ?_, hz, f1.trans (f2.trans fz)⟩
+      rw [hk1, et] at e1; rw [hk1, eb] at e2
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [hmiss, StateT.run_bind, e1, except_ok_bind]
+      simp only [e2, except_ok_bind]
+      rfl
+    | lam t b =>
+      obtain ⟨g1, ht, et, hb, eb⟩ := hr
+      rw [L.getD_one] at ht et; rw [L.getD_two] at hb eb
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      simp only [bmKey] at hmiss
+      rw [needsGoW.k_nd_find.arm3 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit)
+        (by rw [g1]; decide) (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go_2.none _ _ _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go_2.arm1] at hW
+      obtain ⟨y1, e1, hy1, f1⟩ := needsGo_run n m m3 (f - 1) _ r3 x c3 hS hx ht
+      have hS1 := (hS.ndFrame f1).1
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y2, e2, hy2, f2⟩ := needsGo_run n m3 m4 (f - 1) _ r4 ⟨y1.1, y1.2⟩ c4 hS1 hy1 hb
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy2 hh
+      refine ⟨(y2.1.insert (decE h) true, y2.2), ?_, hz, f1.trans (f2.trans fz)⟩
+      rw [hk1, et] at e1; rw [hk1, eb] at e2
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [hmiss, StateT.run_bind, e1, except_ok_bind]
+      simp only [e2, except_ok_bind]
+      rfl
+    | forallE t b =>
+      obtain ⟨g1, ht, et, hb, eb⟩ := hr
+      rw [L.getD_one] at ht et; rw [L.getD_two] at hb eb
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      simp only [bmKey] at hmiss
+      rw [needsGoW.k_nd_find.arm3 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit)
+        (by rw [g1]; decide) (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go_2.none _ _ _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go_2.arm1] at hW
+      obtain ⟨y1, e1, hy1, f1⟩ := needsGo_run n m m3 (f - 1) _ r3 x c3 hS hx ht
+      have hS1 := (hS.ndFrame f1).1
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y2, e2, hy2, f2⟩ := needsGo_run n m3 m4 (f - 1) _ r4 ⟨y1.1, y1.2⟩ c4 hS1 hy1 hb
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy2 hh
+      refine ⟨(y2.1.insert (decE h) true, y2.2), ?_, hz, f1.trans (f2.trans fz)⟩
+      rw [hk1, et] at e1; rw [hk1, eb] at e2
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [hmiss, StateT.run_bind, e1, except_ok_bind]
+      simp only [e2, except_ok_bind]
+      rfl
+    | letE t v b =>
+      obtain ⟨g1, ht, et, hv2, ev, hb, eb⟩ := hr
+      rw [L.getD_one] at ht et; rw [L.getD_two] at hv2 ev; rw [L.getD_three] at hb eb
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      simp only [bmKey] at hmiss
+      rw [needsGoW.k_nd_find.arm4 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit)
+        (by rw [g1]; decide) (by rw [g1]; decide) g1] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go_3.none _ _ _ _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go_3.arm1] at hW
+      obtain ⟨y1, e1, hy1, f1⟩ := needsGo_run n m m3 (f - 1) _ r3 x c3 hS hx ht
+      have hS1 := (hS.ndFrame f1).1
+      replace hW := opt_some hW (needsGoW.k_needs_go_4.none _ _ _ _ _)
+      obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW
+      rw [needsGoW.k_needs_go_4.arm1] at hW
+      obtain ⟨y2, e2, hy2, f2⟩ := needsGo_run n m3 m4 (f - 1) _ r4 ⟨y1.1, y1.2⟩ c4 hS1 hy1 hv2
+      have hS2 := (hS1.ndFrame f2).1
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r5, m5⟩, c5, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y3, e3, hy3, f3⟩ := needsGo_run n m4 m5 (f - 1) _ r5 ⟨y2.1, y2.2⟩ c5 hS2 hy2 hb
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy3 hh
+      refine ⟨(y3.1.insert (decE h) true, y3.2), ?_, hz, f1.trans (f2.trans (f3.trans fz))⟩
+      rw [hk1, et] at e1; rw [hk1, ev] at e2; rw [hk1, eb] at e3
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [hmiss, StateT.run_bind, e1, except_ok_bind]
+      simp only [e2, except_ok_bind, e3]
+      rfl
+    | proj sn i e =>
+      obtain ⟨g1, hsn, esn, -, he, ee⟩ := hr
+      rw [L.getD_one] at hsn esn; rw [L.getD_three] at he ee
+      rw [needsGoW.k_e_view.arm4 _ _ _ _ _ _ (by rw [g1]; decide) (by rw [g1]; decide)
+        (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_nd_find.eq_1 _ _ _ _ _ _ _ _)
+      obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+      obtain ⟨rfl, hne2, rfl⟩ := ndFind_call P c2
+      by_cases hhit : (mfindG ndSch m h 0).headD 0 ≠ 0
+      · rw [needsGoW.k_nd_find.arm1 _ _ _ _ _ _ _ _ _ _ hhit] at hW
+        obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+        have hs := memoRG_hit ndSch bmKey _ m x.seen hx.rel.seen h 0 hne2 hhit ⟨hh, rfl⟩
+        exact ⟨(x.seen, x.acc), needsGo_hit hv trivial hs, hx, MemFrame.refl _ _ _⟩
+      have hmiss := memoRG_miss ndSch bmKey (fun w : Word => w != 0) m x.seen hx.rel.seen h 0
+        ⟨hh, rfl⟩ hne2 (Classical.not_not.mp hhit)
+      simp only [bmKey] at hmiss
+      rw [needsGoW.k_nd_find.arm5 _ _ _ _ _ _ _ _ _ _ (Classical.not_not.mp hhit)
+        (by rw [g1]; decide) (by rw [g1]; decide) (by rw [g1]; decide)] at hW
+      replace hW := opt_some hW (needsGoW.k_needs_go_4.none _ _ _ _ _)
+      obtain ⟨⟨r3, m3⟩, c3, hW⟩ := hW
+      rw [needsGoW.k_needs_go_4.arm1] at hW
+      obtain ⟨hy1, f1⟩ := needsName_step P c3 hx hsn
+      have hS1 := (hS.ndFrame f1).1
+      replace hW := opt_some hW (needsGoW.k_needs_go.none _ _ _)
+      obtain ⟨⟨r4, m4⟩, c4, hW⟩ := hW
+      rw [needsGoW.k_needs_go.arm1] at hW
+      obtain ⟨y2, e2, hy2, f2⟩ := needsGo_run n m3 m4 (f - 1) _ r4 _ c4 hS1 hy1 he
+      obtain ⟨hz, fz⟩ := ndJoin P hW hy2 hh
+      refine ⟨(y2.1.insert (decE h) true, y2.2), ?_, hz, f1.trans (f2.trans fz)⟩
+      rw [hk1, ee] at e2
+      simp only [NeedsSt.name, esn] at e2
+      simp only [needsGo, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+      simp only [hmiss, StateT.run_bind, e2, except_ok_bind]
+      rfl
 
 end steps
 
