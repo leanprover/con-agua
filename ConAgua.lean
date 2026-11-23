@@ -84,3 +84,6 @@ public import ConAgua.Arena.IotaRelModels
 public import ConAgua.Arena.JustifyIface
 public import ConAgua.Arena.Needs
 public import ConAgua.Arena.NeedsModels
+public import ConAgua.Arena.NeedsRef
+public import ConAgua.Arena.NeedsRef2
+public import ConAgua.Arena.NeedsRef3

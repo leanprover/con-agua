@@ -504,6 +504,108 @@ theorem pinFootprint_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x : 
     rw [hnames]; simp only [hc, Bool.false_eq_true, ite_false]
     simpa using ey
 
+
+omit P in
+theorem ci_name_cv (ci : IConstantInfo) : ci.name = ci.toConstantVal.name := by
+  cases ci <;> rfl
+
+/-- **`needs_const(c)` refines `NeedsSt.const`** at the constant record `c` decodes to. -/
+@[refines ConRon.Arena.NeedsSt.const]
+theorem needsConst_ref {n : Nat} {m m' : Mem} {c : Word} {r : List Word} {x : NeedsSt}
+    {ci : IConstantInfo} (hc : callW p n "needs_const" [c] m = some (r, m'))
+    (hS : StageR vis fe m a) (hx : NdR m x) (hci : decCI (erecP m) c.toNat = some ci) :
+    ∃ y, (x.const ci).run a = .ok (y, a) ∧ NdR m' y ∧ StageR vis fe m' a ∧ IWGrow m m' ∧
+      MemFrame ndAW ndCW m m' := by
+  have Q := P.toNeedsProg
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (needsConst_specW p Q.const n _ c) hc
+  have hR := erRdOK m
+  obtain ⟨wn, en, -, -, wt, et⟩ := decCV_rd_ci hR (decCI_cv hci)
+  have hsplit := decCI_splitE hci
+  have hrec := decCI_rec_rd hR hci
+  rcases n with _ | n
+  · rw [needsConstW.eq_1] at hW; cases hW
+  rw [needsConstW.arm1] at hW
+  replace hW := opt_some hW (needsConstW.k_needs_expr.none ..)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  obtain ⟨y1, e1, hy1, hS1, f1⟩ := needsExpr_ref Q c1 hS hx wt
+  have e1' : (x.expr ci.toConstantVal.type).run a = .ok (y1, a) := by rw [et]; exact e1
+  have hr1 : erRd m1 = erRd m := erRd_nd f1
+  -- the kind's arms, then the footprint
+  have tail : ∀ (y2 : NeedsSt) (m2 : Mem), NdR m2 y2 → MemFrame ndA ndC m m2 →
+      needsConstW.j1 p n c m2 = some (r, s'.mem) →
+      ∃ y, (do let fp ← pinFootprint ci.name; pure (y2.names fp) : AM NeedsSt).run a = .ok (y, a) ∧
+        NdR s'.mem y ∧ StageR vis fe s'.mem a ∧ IWGrow m s'.mem ∧ MemFrame ndAW ndCW m s'.mem := by
+    intro y2 m2 hy2 f2 hj
+    rw [needsConstW.j1.arm1, erRd_nd f2] at hj
+    replace hj := opt_some hj (needsConstW.k_pin_footprint.none ..)
+    obtain ⟨⟨r3, m3⟩, c3, hj⟩ := hj
+    rw [needsConstW.k_pin_footprint.arm1] at hj
+    obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hj)
+    rw [← e]
+    obtain ⟨fp, efp, hy3, hS3, hg3, f3⟩ := pinFootprint_ref P c3 (hS.ndFrame f2).1 hy2 wn
+    refine ⟨y2.names fp, ?_, by rw [names_eq]; exact hy3, hS3,
+      (hS.ndFrame f2).2.trans hg3, (ndFrame_w f2).trans f3⟩
+    rw [ci_name_cv, en, StateT.run_bind, efp, except_ok_bind]
+    rfl
+  by_cases k1 : erRd m c = 1
+  · obtain ⟨cv, v, hint, rfl, -, ev, wv⟩ := hsplit.1 k1
+    rw [needsConstW.k_needs_expr.arm1 _ _ _ _ _ (by rw [hr1]; exact k1)] at hW
+    replace hW := opt_some hW (needsConstW.k_needs_expr_2.none ..)
+    obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+    rw [needsConstW.k_needs_expr_2.arm1] at hW
+    rw [hr1] at c2
+    obtain ⟨y2, e2, hy2, -, f2⟩ := needsExpr_ref Q c2 hS1 hy1 wv
+    have e2' : (y1.expr v).run a = .ok (y2, a) := by rw [ev]; exact e2
+    obtain ⟨y, ey, rest⟩ := tail y2 m2 hy2 (f1.trans f2) hW
+    refine ⟨y, ?_, rest⟩
+    simp only [NeedsSt.const, StateT.run_bind, e1', except_ok_bind, e2'] at ey ⊢
+    exact ey
+  by_cases k5 : erRd m c = 5
+  · obtain ⟨cv, rules, rfl, -, hrs⟩ := hrec.1 k5
+    rw [needsConstW.k_needs_expr.arm2 _ _ _ _ _ (by rw [hr1]; exact k1)
+      (by rw [hr1]; exact k5)] at hW
+    replace hW := opt_some hW (needsConstW.k_needs_expr_2.none ..)
+    obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+    rw [needsConstW.k_needs_expr_2.arm1] at hW
+    rw [hr1] at c2
+    rw [← erecP_nd f1] at hrs
+    obtain ⟨y2, e2, hy2, -, f2⟩ := needsRules_ref Q c2 hS1 hy1 hrs
+    obtain ⟨y, ey, rest⟩ := tail y2 m2 hy2 (f1.trans f2) hW
+    refine ⟨y, ?_, rest⟩
+    simp only [NeedsSt.const, StateT.run_bind, e1', except_ok_bind, e2] at ey ⊢
+    exact ey
+  by_cases k3 : erRd m c = 3
+  · obtain ⟨cv, caps, rfl, -⟩ := hsplit.2.2.1 k3
+    obtain ⟨-, -, -, -, hall, -⟩ := decCI_indInfo_rd hR hci
+    rw [needsConstW.k_needs_expr.arm3 _ _ _ _ _ (by rw [hr1]; exact k1)
+      (by rw [hr1]; exact k5) (by rw [hr1]; exact k3)] at hW
+    replace hW := opt_some hW (needsConstW.k_needs_expr_2.none ..)
+    obtain ⟨⟨r2, m2⟩, c2, hW⟩ := hW
+    rw [needsConstW.k_needs_expr_2.arm1] at hW
+    rw [hr1, UInt64.add_assoc, show CI.indCaps + Caps.allOff + 1 = CI.indCaps + Caps.allLen from rfl]
+      at c2
+    rw [← erecP_nd f1] at hall
+    obtain ⟨hy2, f2⟩ := needsNames_step Q c2 hy1 hall
+    obtain ⟨y, ey, rest⟩ := tail _ m2 hy2 (f1.trans f2) hW
+    refine ⟨y, ?_, rest⟩
+    simp only [NeedsSt.const, StateT.run_bind, e1', except_ok_bind] at ey ⊢
+    exact ey
+  · rw [needsConstW.k_needs_expr.arm4 _ _ _ _ _ (by rw [hr1]; exact k1)
+      (by rw [hr1]; exact k5) (by rw [hr1]; exact k3)] at hW
+    obtain ⟨y, ey, rest⟩ := tail y1 m1 hy1 f1 hW
+    refine ⟨y, ?_, rest⟩
+    have n1 := hsplit.2.1 k1
+    have n5 := hrec.2 k5
+    have n3 := hsplit.2.2.2.1 k3
+    cases ci with
+    | defnInfo cv v h => exact absurd rfl (n1 cv v h)
+    | recInfo cv a b c rs => exact absurd rfl (n5 cv a b c rs)
+    | indInfo cv caps => exact absurd rfl (n3 cv caps)
+    | _ =>
+      simp only [NeedsSt.const, StateT.run_bind, e1', except_ok_bind] at ey ⊢
+      exact ey
+
 end fp
 
 end L.Arena
