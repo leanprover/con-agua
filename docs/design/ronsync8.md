@@ -106,3 +106,10 @@ All are mechanical and follow the twin. No headline statement changed (`TwinAcce
 | `Final/TwinVerdict.lean` (pooled jobs lemma) | `checkJobList .verified ipins I ds w` | `… ipins none I ds w` |
 
 `Audit/*`, `E2E/*`: unchanged.
+
+**`natBigHash` (patch con-leche/0004).** The `@[implemented_by]` fold is compiled only into
+Lean executables that link con-leche's `Kernel/Expr` (e.g. `romgen`, `romtest`, `census`, `e2e-l`,
+`e2e-diff`, `con-ron-lean`, `con-ron-lean-twin`, the benches) and into elaboration-time evaluation.
+It is not part of `checker`: `checker.s` is the L compiler's output for `checkerProg`, which has no
+Lean runtime code. `main.c` and `pins.bin` (unchanged by this sync) do not involve it either. So it
+is outside the final theorems' trusted base. To the proofs, `natBigHash` stays an opaque function.
