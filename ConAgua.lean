@@ -87,3 +87,4 @@ public import ConAgua.Arena.Needs
 public import ConAgua.Arena.NeedsModels
 public import ConAgua.Arena.JustifyModels
 public import ConAgua.Arena.JustifyRef1
+public import ConAgua.Arena.JustifyRef2
