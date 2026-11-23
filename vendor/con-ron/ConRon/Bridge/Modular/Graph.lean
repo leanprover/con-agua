@@ -474,11 +474,8 @@ theorem graphOf_run {pk : OleanPins} {F : FS} {sp : Roots} (hsp : sp.bare = sp)
     exfalso
     simp only [hv] at h
     obtain ⟨_, _, _, h'⟩ := AM.bind_ok h
-    -- con-agua patch: the new `do` elaborator leaves one bind fewer before the `fail`
-    first
-      | exact fail_not_ok h'
-      | (obtain ⟨_, _, _, h''⟩ := AM.bind_ok h'
-         exact fail_not_ok h'')
+    obtain ⟨_, _, _, h''⟩ := AM.bind_ok h'
+    exact fail_not_ok h''
   | none =>
   simp only [hv] at h
   obtain ⟨hv', hs⟩ := AM.pure_ok h

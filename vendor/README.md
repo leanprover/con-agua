@@ -68,8 +68,11 @@ Patches at the first vendoring:
 | `con-leche/0004-withptreq-name.patch` | the shim at `Kernel/Name.lean`'s two `ptrDecEq` sites (upstream #604's spelling; ronsync8). The former 0003/0004 (`KnotC`'s, `DiscC4`'s ∧-split `*_hit_ws` lemmas) went: upstream has them since v4.36.0 |
 | `con-ron/0001-wfproofs-rfl.patch` | `Tbl.node?_push_eq`: a trailing `rfl` |
 | `con-ron/0002-bridge-toolchain.patch` | the 31 `ConRon.Bridge` files (three toolchain changes, see "ConRonBridge") |
-| `con-ron/0003-modular-graph-do.patch` | `Bridge/Modular/Graph.lean`'s `graphOf_run`: one bind fewer before a `fail` (the `do` elaborator, as 0002; ronsync8) |
-| `con-ron/0004-checker-base-do.patch` | `Bridge/Checker/Base.lean`'s `checkConstantVal_bridge`: `try replace` (as 0002; split out at ronsync8, upstream rewrote the file) |
+| `con-ron/0003-checker-base-do.patch` | `Bridge/Checker/Base.lean`'s `checkConstantVal_bridge`: `try replace` (as 0002; split out at ronsync8, upstream rewrote the file) |
+
+`ConRon.Bridge.Modular.*` (con-ron #166, the modular modes; deviation D50) is not built (`lakefile.toml`'s
+`ConRonBridge` globs): nothing else imports it, and its run-style proofs meet our toolchain's `do`
+elaborator at every `pure () >>=` (ronsync8).
 
 ## Toolchain switch: nightly-2026-09-21 → nightly-2026-10-20 (Kraken fork)
 

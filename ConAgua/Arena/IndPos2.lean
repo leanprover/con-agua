@@ -167,6 +167,18 @@ def familyKeyCheckL : FunDecl := lfn (vis, d, c, us, dO, dL) locals
   return 0
 }
 
+/-- `family_key_checks(vis, d, us, ds.off, ds.len, gO, gL)`: every family of the group slice
+`gO`/`gL` (records whose first word is the family's name: the twin's `grp.map (·.1)`) at the key,
+typed (`family_key_check`), in order. -/
+-- con-ron: ConRon/Arena/Inductives/Positivity.lean:274-283 ConRon.Arena.familyKeyChecks
+@[no_expose, l_impl ConRon.Arena.familyKeyChecks]
+def familyKeyChecksL : FunDecl := lfn (vis, d, us, dO, dL, gO, gL) locals (u) {
+  if gL == 0 { return 0 };
+  u := call family_key_check(vis, d, IW.u64[IW.u64[gO]], us, dO, dL);
+  u := call family_key_checks(vis, d, us, dO, dL, gO + 1, gL - 1);
+  return 0
+}
+
 /-! ## `nestInstType`: the container's former -/
 
 /-- Part of `nestInstType`: the instantiated, parameter-applied type `ty` (the container's
@@ -504,11 +516,9 @@ ns)`: a container frame, at the instantiation `(us, ds)`. -/
 @[no_expose, l_impl ConRon.Arena.nestFrame]
 def nestFrameL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, hi, us, dsOff, dsLen, nPc, grpOff, grpLen, ns) locals
-      (hn, zz, prog2Off, prog2Len, namesOff, namesLen, ctorsOff, ctorsLen, holesOff,
+      (zz, prog2Off, prog2Len, namesOff, namesLen, ctorsOff, ctorsLen, holesOff,
         holesLen, hiTot, outsOff, outsLen, nsOut2) {
-  if grpLen == 0 { hn := call intern_nanon() } else { hn := IW.u64[IW.u64[grpOff]] };
-  if 4294967296 <= hn { abort };
-  zz := call family_key_check(vis, hi, hn, us, dsOff, dsLen);
+  zz := call family_key_checks(vis, hi, us, dsOff, dsLen, grpOff, grpLen);
   (prog2Off, prog2Len, namesOff, namesLen) :=
     call nest_frame_grp(hi, us, dsOff, dsLen, grpOff, grpLen, progOff, progLen, 0, 0);
   (ctorsOff, ctorsLen) := call nest_group_ctors(vis, nPc, namesOff, namesLen, 0, 0);
@@ -939,6 +949,7 @@ def indPos2Fns : Prog :=
    ("nest_ds_closed", nestDsClosedL),
    ("reduced_former", reducedFormerL), ("family_telescope", familyTelescopeL),
    ("check_spine_at", checkSpineAtL), ("family_key_check", familyKeyCheckL),
+   ("family_key_checks", familyKeyChecksL),
    ("nest_inst_type_ty", nestInstTypeTyL), ("nest_inst_type", nestInstTypeL),
    ("nest_res_head", nestResHeadL), ("nest_ctor_nf", nestCtorNfL),
    ("nest_block_of", nestBlockOfL), ("nest_frame_mates_go", nestFrameMatesGoL),

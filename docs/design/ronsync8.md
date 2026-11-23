@@ -45,3 +45,31 @@ Hand specs: 1 (`check_a`). Theorems with a positional `⟨…⟩` of ≥ 5 parts
 **Kind of sync**: an L-code sync (≈ 30 ported, ≈ 10 changed functions) plus one mechanical
 statement change (`J = none`). Ladder estimate: 10–20 % of the failing theorems (the `none`
 rule), the rest the port's re-proofs.
+
+## 1. Stage 3a: the interface
+
+* **Reasons**: `scripts/reasons.py --add` appended 33 twin messages (most of them are the
+  modular and `--compare` readers' messages, which L never raises). Three apply to L:
+  `R_A_COMPILER_TRUST`, `R_THE_TOLERATED_AXIOM`, `R_THE_RECURSOR_S_MINOR`.
+* **`check_constant_val(vis, q, allowOp, allowReduce, allowSorry)`** (#501): `reduceOpNames` is
+  pin slots `43`/`44`, `sorryAx` is pin `13`. The flags at the 8 call sites are the twin's:
+  defn `T,F,F`, thm `F,F,F`, opaque `F,T,F`, axiom `F,F,T`, and `F,F,F` at the four inductive
+  sites.
+* **`J = none`** (#165/#619): a regex rule (`scripts/sync-rules/ronsync8.txt`) inserts `none`
+  after `pins` in every `checkJobList`/`runJob`/`recordJob`/`recordCheck`; it was applied to the
+  whole tree once.
+* **The ι rule's records** (`Arena/IotaReadDec.lean`): `IotaRec` and `IIotaParts` are each seven
+  result words (`IW` slices for the lists), with decoders `decOIR`/`decOIP`/`decOIPD` and their
+  grow lemmas, plus the table of L names and signatures.
+
+## 2. Progress log
+
+* 14:32 start; 14:35 bump (`468feaed1`); the conflicts in the toolchain patches were resolved
+  to upstream's text. con-leche/0001 (the `withPtrEq` shim) is kept and extended to
+  `Kernel/Name.lean`. The ∧-split lemma patches (DiscC4, KnotC) went: upstream has those lemmas
+  since v4.36.0. `checkConstantVal_bridge`'s `try replace` is now its own patch (0003).
+  `ConRon.Bridge.Modular.*` (#166) is not built: its run-style proofs meet our `do` elaborator
+  at every `pure () >>=`, nothing imports it, and L has no modular modes (D50).
+* 14:40–15:00 stage 3a, the first two full builds; the stage 0 message was sent.
+* 14:50 helpers `ronsync8-iota` (the ι reading rule) and `ronsync8-decl` (#501, #462, #443,
+  `J = none`) started; the briefs are `_tmp/ronsync8/brief-{common,iota,decl}.md`.

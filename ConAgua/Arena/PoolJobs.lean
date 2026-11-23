@@ -81,7 +81,7 @@ theorem pool_walk (H : PoolHyps (pins := pins) (pinsP := pinsP) (ds := ds) (dsP 
       (∃ a', checkJobList V pins none I ds l a = .ok (.ok (), a')) ∧
       ∀ x ∈ l, ∃ (hx : x < dsP.length) (env' : ConLeche.Env) (F : Nat),
         ConLeche.checkDecl V (ConLeche.fueledOps V F) pinsP
-          (ConLeche.Cached.streamEnv (dsP.take x)) dsP[x] = .ok env' := by
+          (ConLeche.streamEnv (dsP.take x)) dsP[x] = .ok env' := by
   intro l
   induction l with
   | nil => intro r a _ _ _ _; exact ⟨⟨a, rfl⟩, fun x hx => absurd hx (by simp)⟩

@@ -509,15 +509,14 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, e, z, w, a, b) {
 }
 
 /-- `check_structural_nat_pin_at_fe2(w, n)`: the structural-`Nat` gate's reads at the extended
-view `w`: `natOpGuard` and the dependencies' storage (both computed before either is tested, as
+view `w`: `natOpGuard` and the operation's own pinned type (`natOpStoredOk`; both computed before either is tested, as
 the twin's `g && d`), then the stored definition's value. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:41-53 ConRon.Arena.checkStructuralNatPinAtFe2
 -- con-ron: CHANGED since de06320f — `ConRon.Arena.checkStructuralNatPinAtFe2` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.checkStructuralNatPinAtFe2]
-def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, dov, dl, d, f, r) {
+def checkStructuralNatPinAtFe2L : FunDecl := lfn (w, n) locals (g, d, f, r) {
   g := call nat_op_guard(w, n);
-  (dov, dl) := call nat_op_deps(n);
-  d := call nat_op_stored_ok_all(w, dov, dl);
+  d := call nat_op_stored_ok(w, n);
   if g == 0 || d == 0 { fail R_NONSTANDARD_STRUCTURAL_NAT_OPERATION };
   (f, r) := call env_find(n, w);
   if f == 0 { abort };

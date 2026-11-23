@@ -12,6 +12,7 @@ public import ConRon.Bridge.Stages
 public import ConLeche.Verify.Cached.DeclPushes
 import ConRon.Bridge.Inductives.Decl
 import ConLeche.Model.Denotes
+import ConLeche.Model.OfEnvModelM
 import ConLeche.Model.Fold
 import ConLeche.Verify.Frontend.FileFalse
 import all ConRon.Bridge.Frontend.Prepare
@@ -96,7 +97,7 @@ theorem twinAccepts_pure {chunks : List ByteArray}
       ConLeche.Frontend.parseChunks chunks = .ok rc ∧
       checkDeclsPure .verified (fueledOps .verified F) pins
         (ConLeche.Frontend.preparePrelude preC rc.decls).toList =
-        .ok (ConLeche.Cached.streamEnv (ConLeche.Frontend.preparePrelude preC rc.decls).toList) := by
+        .ok (ConLeche.streamEnv (ConLeche.Frontend.preparePrelude preC rc.decls).toList) := by
   obtain ⟨pins, sA, sB, sC, sD, sE, sF, pre, r, ds, ipins, I, hA, hB, hC, hD, hE, hF⟩ := h
   have hk : CoreSpec ConRon.Arena.checkFuel := CoreSpec.of_core
   have hind : IndSpec := ConRon.Bridge.Inductives.indSpec_of_bridge
