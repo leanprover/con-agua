@@ -2,7 +2,8 @@ module
 
 public import ConAgua.Arena.NeedsRef2
 public import ConAgua.Arena.DeclNatSpec
-import ConAgua.Arena.DeclNatDeps
+public import ConAgua.Arena.DeclNatDeps
+import ConAgua.Arena.CoreErec
 import ConAgua.Arena.StubNamesRefine
 import ConAgua.Arena.RecLayout.CIDec
 import ConAgua.Arena.RecLayout.CapsDec
@@ -68,6 +69,54 @@ theorem pinCallF {n : Nat} {m m' : Mem} {k : Word} {r : List Word}
   rw [pinAt_run hF _ hk] at hrun
   have := (Except.ok.inj hrun)
   exact ⟨hm, decI_inj hw (hF.names_lt _ hk) (Prod.mk.inj this).1.symm⟩
+
+
+/-- `pin_footprint_nat`'s tail at a nonzero flag: `Bool` and its constructors pushed. -/
+theorem pfnTail {n : Nat} {mm m' : Mem} {r' : Word} {r : List Word} {x : NeedsSt}
+    (hj : pinFootprintNatW.j1 p n r' mm = some (r, m')) (hr : r' ≠ 0) (hS : StageR vis fe mm a)
+    (hx : NdR mm x) (hF : PinsFull mm a.pins) :
+    NdR m' ⟨x.seen, x.acc ++ [decI (pinW mm 30), decI (pinW mm 31), decI (pinW mm 32)]⟩ ∧
+      MemFrame ndA ndC mm m' := by
+  have lt := hF.names_lt
+  rw [pinFootprintNatW.j1.arm1 _ _ _ _ hr] at hj
+  replace hj := opt_some hj (pinFootprintNatW.k_pin_at_13.none ..)
+  obtain ⟨⟨q1, m1⟩, d1, hj⟩ := hj
+  rw [pinFootprintNatW.k_pin_at_13.arm1] at hj
+  obtain ⟨rfl, v1⟩ := pinCallF P d1 hS hF (by decide)
+  replace hj := opt_some hj (pinFootprintNatW.k_pin_at_14.none ..)
+  obtain ⟨⟨q2, m2⟩, d2, hj⟩ := hj
+  rw [pinFootprintNatW.k_pin_at_14.arm1] at hj
+  obtain ⟨rfl, v2⟩ := pinCallF P d2 hS hF (by decide)
+  replace hj := opt_some hj (pinFootprintNatW.k_pin_at_15.none ..)
+  obtain ⟨⟨q3, m3⟩, d3, hj⟩ := hj
+  rw [pinFootprintNatW.k_pin_at_15.arm1] at hj
+  obtain ⟨rfl, v3⟩ := pinCallF P d3 hS hF (by decide)
+  simp only [UInt64.reduceToNat, Nat.reduceAdd] at v1 v2 v3
+  replace hj := opt_some hj (pinFootprintNatW.k_needs_name_4.none ..)
+  obtain ⟨⟨q4, m4⟩, d4, hj⟩ := hj
+  rw [pinFootprintNatW.k_needs_name_4.arm1] at hj
+  rw [v1] at d4
+  obtain ⟨hx4, f4⟩ := needsName_step P d4 hx (lt 29 (by decide))
+  replace hj := opt_some hj (pinFootprintNatW.k_needs_name_5.none ..)
+  obtain ⟨⟨q5, m5⟩, d5, hj⟩ := hj
+  rw [pinFootprintNatW.k_needs_name_5.arm1] at hj
+  rw [v2] at d5
+  obtain ⟨hx5, f5⟩ := needsName_step P d5 hx4 (lt 30 (by decide))
+  replace hj := opt_some hj (pinFootprintNatW.k_needs_name_6.none ..)
+  obtain ⟨⟨q6, m6⟩, d6, hj⟩ := hj
+  rw [pinFootprintNatW.k_needs_name_6.arm1, pinFootprintNatW.j2.arm1] at hj
+  rw [v3] at d6
+  obtain ⟨hx6, f6⟩ := needsName_step P d6 hx5 (lt 31 (by decide))
+  obtain ⟨-, e⟩ := Prod.mk.inj (Option.some.inj hj)
+  rw [← e]
+  exact ⟨by simpa [NeedsSt.name] using hx6, f4.trans (f5.trans f6)⟩
+
+omit P in
+/-- `pin_footprint_nat`'s tail at a zero flag: nothing more. -/
+theorem pfnTail0 {n : Nat} {mm m' : Mem} {r : List Word}
+    (hj : pinFootprintNatW.j1 p n 0 mm = some (r, m')) : m' = mm := by
+  rw [pinFootprintNatW.j1.arm2 _ _ _ _ rfl, pinFootprintNatW.j2.arm1] at hj
+  exact (Prod.mk.inj (Option.some.inj hj)).2.symm
 
 /-- **`pin_footprint_reduce(n)` refines `pinFootprintReduce`**: the element type of a
 compiler-trust operation pushed (the twin appends it to `xs`). -/
@@ -152,5 +201,178 @@ theorem pinFootprintReduce_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word}
     rfl
 
 end steps
+
+
+/-- The div/mod names on a filled table (`natDivModNames`' list). -/
+abbrev dmsL (m : Mem) : List NIdx :=
+  [decI (pinW m 22), decI (pinW m 23), decI (pinW m 24), decI (pinW m 25), decI (pinW m 26),
+   decI (pinW m 27), decI (pinW m 28), decI (pinW m 29)]
+
+theorem pinW_frame {A : List TieredArray} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (PINS : TieredArray) ∉ A) (i : Nat) : pinW m' i = pinW m i := by
+  simp only [pinW]; rw [hf.arr _ hA (by decide)]
+
+theorem PinsFull.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {ps : Pins}
+    (hf : MemFrame A C m m') (hA : (PINS : TieredArray) ∉ A) (h : PinsFull m ps) : PinsFull m' ps :=
+  PinsFull.congr (hf.arr _ hA (by decide)) h
+
+
+/-- The twin's `pinFootprintNat` on a filled table. -/
+theorem pinFootprintNat_run {m : Mem} {a : AState} {w : Word} (hF : PinsFull m a.pins) (hw : HW w) :
+    (pinFootprintNat (decI w) (dmsL m)).run a = .ok (
+      (if w = pinW m 20 ∨ w = pinW m 21 ∨ (dmsL m).contains (decI w) = true then
+        (depsW m w).map decI ++ [decI (pinW m 2), decI (pinW m 3), decI (pinW m 4)] ++
+          [decI (pinW m 30), decI (pinW m 31), decI (pinW m 32)]
+       else (depsW m w).map decI ++ [decI (pinW m 2), decI (pinW m 3), decI (pinW m 4)]), a) := by
+  have lt := hF.names_lt
+  have b20 : ((decI w : NIdx) == decI (pinW m 20)) = decide (w = pinW m 20) :=
+    ndBeq hw (lt 19 (by decide))
+  have b21 : ((decI w : NIdx) == decI (pinW m 21)) = decide (w = pinW m 21) :=
+    ndBeq hw (lt 20 (by decide))
+  simp only [pinFootprintNat, StateT.run_bind, natOpDeps_run hF hw, except_ok_bind,
+    litGuardNames_run hF, natBeqName, natBleName, pinNatBeq, pinNatBle, PIN_NAT_BEQ, PIN_NAT_BLE,
+    boolName, boolTrueName, boolFalseName, pinBool, pinBoolTrue, pinBoolFalse, PIN_BOOL,
+    PIN_BOOL_TRUE, PIN_BOOL_FALSE, nidxAppend]
+  have p19 := pinAt_run hF 19 (by decide)
+  have p20 := pinAt_run hF 20 (by decide)
+  have p29 := pinAt_run hF 29 (by decide)
+  have p30 := pinAt_run hF 30 (by decide)
+  have p31 := pinAt_run hF 31 (by decide)
+  simp only [Nat.reduceAdd] at p19 p20 p29 p30 p31
+  simp only [p19, p20, except_ok_bind, b20, b21, Nat.sub_zero, List.drop_zero]
+  by_cases hc : w = pinW m 20 ∨ w = pinW m 21 ∨ (dmsL m).contains (decI w) = true
+  · have hb : (decide (w = pinW m 20) || decide (w = pinW m 21) || (dmsL m).contains (decI w)) =
+        true := by
+      rcases hc with h | h | h
+      · simp [h]
+      · simp [h]
+      · rw [h]; simp
+    rw [ite_eq_left_of_eq_true (eq_true hc)]
+    simp only [hb, ite_true, StateT.run_bind, p29, p30, p31, except_ok_bind]
+    simp; rfl
+  · have hb : (decide (w = pinW m 20) || decide (w = pinW m 21) || (dmsL m).contains (decI w)) =
+        false := by
+      simp only [not_or] at hc
+      have h3 : (dmsL m).contains (decI w) = false := by simpa using hc.2.2
+      rw [h3]; simp [hc.1, hc.2.1]
+    rw [ite_eq_right_of_eq_false (eq_false hc)]
+    simp only [hb, Bool.false_eq_true, ite_false]
+    simp; rfl
+
+section fp
+variable {p : Prog} (P : NeedsFpProg p) {vis : Word} {fe : IFEnv} {a : AState}
+include P
+
+/-- **`pin_footprint_nat(n)` refines `pinFootprintNat`** (with the twin's `natDivModNames`): the
+operation's dependencies, the `Nat` basis, and `Bool` for the comparisons and the division,
+pushed. -/
+@[refines ConRon.Arena.pinFootprintNat]
+theorem pinFootprintNat_ref {n : Nat} {m m' : Mem} {w : Word} {r : List Word} {x : NeedsSt}
+    (hc : callW p n "pin_footprint_nat" [w] m = some (r, m')) (hS : StageR vis fe m a)
+    (hx : NdR m x) (hF : PinsFull m a.pins) (hw : HW w) :
+    ∃ xs, (pinFootprintNat (decI w) (dmsL m)).run a = .ok (xs, a) ∧
+      NdR m' ⟨x.seen, x.acc ++ xs⟩ ∧ StageR vis fe m' a ∧ IWGrow m m' ∧ MemFrame ndAW ndCW m m' := by
+  have Q := P.toNeedsProg
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinFootprintNat_specW p Q.pfn n _ w) hc
+  have lt := hF.names_lt
+  rcases n with _ | n
+  · rw [pinFootprintNatW.eq_1] at hW; cases hW
+  rw [pinFootprintNatW.arm1] at hW
+  replace hW := opt_some hW (pinFootprintNatW.k_nat_op_deps.none _ _ _)
+  obtain ⟨⟨r1, m1⟩, c1, hW⟩ := hW
+  rw [pinFootprintNatW.k_nat_op_deps.arm1] at hW
+  obtain ⟨deps, a1, hd, hS1, hg1, hdec⟩ := natOpDeps_ref (vis := vis) (fe := fe) P.nat w n m a r1 m1
+    ⟨hS, hw⟩ c1
+  rw [natOpDeps_run hF hw] at hd
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Except.ok.inj hd)
+  have hf1 : MemFrame [IW] [200] m m1 :=
+    (run_memFrame P.closedDeps (f := "nat_op_deps") (by decide) (run_of_callW c1)).1
+  have hx1 := NdR.frame hf1 (by decide) (by decide) hx
+  have hF1 := hF.frame hf1 (by decide)
+  have hp1 := pinW_frame hf1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at.none ..)
+  obtain ⟨⟨q1, n1⟩, d1, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at.arm1] at hW
+  obtain ⟨rfl, v1⟩ := pinCallF Q d1 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_2.none ..)
+  obtain ⟨⟨q2, n2⟩, d2, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_2.arm1] at hW
+  obtain ⟨rfl, v2⟩ := pinCallF Q d2 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_3.none ..)
+  obtain ⟨⟨q3, n3⟩, d3, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_3.arm1] at hW
+  obtain ⟨rfl, v3⟩ := pinCallF Q d3 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_4.none ..)
+  obtain ⟨⟨q4, n4⟩, d4, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_4.arm1] at hW
+  obtain ⟨rfl, v4⟩ := pinCallF Q d4 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_5.none ..)
+  obtain ⟨⟨q5, n5⟩, d5, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_5.arm1] at hW
+  obtain ⟨rfl, v5⟩ := pinCallF Q d5 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_6.none ..)
+  obtain ⟨⟨q6, n6⟩, d6, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_6.arm1] at hW
+  obtain ⟨rfl, v6⟩ := pinCallF Q d6 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_7.none ..)
+  obtain ⟨⟨q7, n7⟩, d7, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_7.arm1] at hW
+  obtain ⟨rfl, v7⟩ := pinCallF Q d7 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_8.none ..)
+  obtain ⟨⟨q8, n8⟩, d8, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_8.arm1] at hW
+  obtain ⟨rfl, v8⟩ := pinCallF Q d8 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_9.none ..)
+  obtain ⟨⟨q9, n9⟩, d9, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_9.arm1] at hW
+  obtain ⟨rfl, v9⟩ := pinCallF Q d9 hS1 hF1 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_10.none ..)
+  obtain ⟨⟨q10, n10⟩, d10, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_10.arm1] at hW
+  obtain ⟨rfl, v10⟩ := pinCallF Q d10 hS1 hF1 (by decide)
+  simp only [UInt64.reduceToNat, Nat.reduceAdd, hp1] at v1 v2 v3 v4 v5 v6 v7 v8 v9 v10
+  replace hW := opt_some hW (pinFootprintNatW.k_needs_names_iw.none ..)
+  obtain ⟨⟨q11, n11⟩, d11, hW⟩ := hW
+  rw [pinFootprintNatW.k_needs_names_iw.arm1] at hW
+  have hns : hslice? (iwA m1) (r1.headD 0).toNat (r1.tail.headD 0).toNat =
+      some (((depsW m w).map decI : List NIdx)) := by
+    have g0 : r1.getD 0 0 = r1.headD 0 := by cases r1 <;> rfl
+    have := hdec.1; simp only [decHL, g0, Nat.zero_add, L.getD_one] at this
+    exact this
+  obtain ⟨hx11, f11⟩ := needsNamesIw_step Q d11 hx1 hS1.iw.iwSize hns
+  have hS11 := (hS1.ndFrame f11).1
+  have hF11 := hF1.frame f11 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_needs_name.none ..)
+  obtain ⟨⟨q12, n12⟩, d12, hW⟩ := hW
+  rw [pinFootprintNatW.k_needs_name.arm1] at hW
+  rw [v1] at d12
+  obtain ⟨hx12, f12⟩ := needsName_step Q d12 hx11 (lt 1 (by decide))
+  replace hW := opt_some hW (pinFootprintNatW.k_needs_name_2.none ..)
+  obtain ⟨⟨q13, n13⟩, d13, hW⟩ := hW
+  rw [pinFootprintNatW.k_needs_name_2.arm1] at hW
+  rw [v2] at d13
+  obtain ⟨hx13, f13⟩ := needsName_step Q d13 hx12 (lt 2 (by decide))
+  replace hW := opt_some hW (pinFootprintNatW.k_needs_name_3.none ..)
+  obtain ⟨⟨q14, n14⟩, d14, hW⟩ := hW
+  rw [pinFootprintNatW.k_needs_name_3.arm1] at hW
+  rw [v3] at d14
+  obtain ⟨hx14, f14⟩ := needsName_step Q d14 hx13 (lt 3 (by decide))
+  have f3 := f12.trans (f13.trans f14)
+  have hS14 := (hS11.ndFrame f3).1
+  have hF14 := hF11.frame f3 (by decide)
+  have hp14 : ∀ i, pinW n14 i = pinW m i := fun i => by
+    rw [pinW_frame f3 (by decide), pinW_frame f11 (by decide), hp1]
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_11.none ..)
+  obtain ⟨⟨q15, n15⟩, d15, hW⟩ := hW
+  rw [pinFootprintNatW.k_pin_at_11.arm1] at hW
+  obtain ⟨rfl, v15⟩ := pinCallF Q d15 hS14 hF14 (by decide)
+  replace hW := opt_some hW (pinFootprintNatW.k_pin_at_12.none ..)
+  obtain ⟨⟨q16, n16⟩, d16, hW⟩ := hW
+  obtain ⟨rfl, v16⟩ := pinCallF Q d16 hS14 hF14 (by decide)
+  simp only [UInt64.reduceToNat, Nat.reduceAdd, hp14] at v15 v16
+  sorry
+
+end fp
 
 end L.Arena
