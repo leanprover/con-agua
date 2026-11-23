@@ -83,3 +83,5 @@ public import ConAgua.Arena.IotaFrameRef
 public import ConAgua.Arena.IotaRelModels
 public import ConAgua.Arena.JustifyIface
 public import ConAgua.Checker.CompareEntry
+public import ConAgua.Arena.Needs
+public import ConAgua.Arena.NeedsModels
