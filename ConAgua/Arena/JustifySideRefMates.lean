@@ -337,4 +337,58 @@ theorem hslice_of {k : IdxKind} {a : Nat → Option Word} : ∀ (xs : List (Idx 
       exact ⟨w', by rw [show o + 1 + j = o + (j + 1) by omega]; exact hw', h', by simpa using e⟩)
     simp [h1, h2]
 
+/-! ## The calls -/
+
+/-- The lookups the record mates take. -/
+structure MatesProg (p : Prog) : Prop where
+  solution_of : p.lookup "solution_of" = some solutionOfL
+  mates_insert : p.lookup "mates_insert" = some matesInsertL
+  mates_get : p.lookup "mates_get" = some matesGetL
+  mates_set : p.lookup "mates_set" = some matesSetL
+  erec_alloc : p.lookup "erec_alloc" = some L.Ind.erecAlloc
+  copy_prev : p.lookup "sd_copy_prev" = some sdCopyPrevL
+  copy_names : p.lookup "sd_copy_names" = some sdCopyNamesL
+
+theorem copyPrev_call {p : Prog} (hP : MatesProg p) {n : Nat} {m m' : Mem} {d s l : Word} {r : List Word}
+    (h : callW p n "sd_copy_prev" [d, s, l] m = some (r, m'))
+    (hdl : d.toNat + l.toNat ≤ (m.arr64 EREC).size) (hsz : (m.arr64 EREC).size < 2 ^ 64)
+    (hsl : s.toNat + l.toNat ≤ d.toNat) :
+    CpInv m m' d.toNat (fun j => rdN (m.arr64 EREC) (s.toNat + j)) l.toNat := by
+  obtain ⟨s', e', -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (sdCopyPrev_specW p hP.copy_prev n _ d s l) h
+  rw [e'] at hw; simp only at hw
+  rcases n with _ | n
+  · simp [sdCopyPrevW] at hw
+  rw [sdCopyPrevW.arm1] at hw
+  cases e : sdCopyPrevW.loop1 (n + 1) m d s l 0 with
+  | none => rw [e, sdCopyPrevW.k_loop1.eq_1] at hw; cases hw
+  | some m₁ =>
+    rw [e, sdCopyPrevW.k_loop1.arm1] at hw
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    exact copyPrev_ok hdl hsz hsl _ _ _ _ (CpInv.start _ _ _) (UInt64.zero_le) e
+
+theorem copyNames_call {p : Prog} (hP : MatesProg p) {n : Nat} {m m' : Mem} {d bo bl : Word}
+    {r : List Word} (h : callW p n "sd_copy_names" [d, bo, bl] m = some (r, m'))
+    (hdl : d.toNat + bl.toNat ≤ (m.arr64 EREC).size) (hsz : (m.arr64 EREC).size < 2 ^ 64) :
+    CpInv m m' d.toNat (fun i => nameW m bo (UInt64.ofNat i)) bl.toNat := by
+  obtain ⟨s', e', -, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (sdCopyNames_specW p hP.copy_names n _ d bo bl) h
+  rw [e'] at hw; simp only at hw
+  rcases n with _ | n
+  · simp [sdCopyNamesW] at hw
+  rw [sdCopyNamesW.eq_2] at hw
+  cases e : sdCopyNamesW.loop1 (n + 1) m d bo bl 0 with
+  | none => rw [e] at hw; simp [sdCopyNamesW.k_loop1] at hw
+  | some m₁ =>
+    rw [e, sdCopyNamesW.k_loop1.arm1] at hw
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hw)
+    exact copyNames_ok hdl hsz _ _ _ _ (CpInv.start _ _ _) (UInt64.zero_le) e
+
+/-- A tier-0 record-pool word below the top and `2^40`, as `erecP` reads it. -/
+theorem erecP_lo {m : Mem} {i : Nat} (h : i < erTop m) (h40 : i < 2 ^ 40) :
+    erecP m i = (m.arr64 EREC)[i]? := by
+  have a1 : i / 2 ^ 40 % 2 = 0 := by rw [Nat.div_eq_of_lt h40]
+  have a2 : i % 2 ^ 40 = i := Nat.mod_eq_of_lt h40
+  simp only [erecP, a1, a2, h, ite_true, show i < 2 ^ 64 by omega]
+
 end L.Arena
