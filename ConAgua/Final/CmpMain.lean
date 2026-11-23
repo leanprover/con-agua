@@ -541,7 +541,29 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       simp only [not_or, Nat.not_lt, Nat.not_le] at hn
       exact (hcs x (by omega) (by omega)).2.2.1 ⟨h1, h2⟩
     · rw [hpbE]; exact hMem4
-    · sorry
+    intro s2 hf2 hsame2 hout5 hsz5
+    have hge4' : 2 ^ 63 ≤ (rs4.getD 0 0).toNat := by rw [← hrax4]; exact hge4
+    refine ev_congr (cmp_okGe (i := 53) hC rfl rfl rfl rfl rfl s2 (fun s' hm hr hbad => ?_) (fun hrdx5 hge5 st5 => ?_)) (by omega)
+    · have erax : s'.regs.rax = s2.regs.rax := by
+        have := hr .rax (by decide); simpa using congrArg UInt64.ofBitVec this
+      have erdx : s'.regs.rdx = s2.regs.rdx := by
+        have := hr .rdx (by decide); simpa using congrArg UInt64.ofBitVec this
+      refine hexit s' (hf2.regs hm fun r _ h2 _ _ _ _ _ _ => hr r h2) (fun h0 hacc => ?_) (fun h2 => ?_)
+      · rw [erdx] at h0; rw [erax] at hacc
+        have hout' := hout5.resolve_left (by rw [h0]; decide)
+        obtain ⟨hbS, -⟩ := hsz5.resolve_left (by rw [h0]; decide)
+        rcases hres : cmpRun p ((cmpIn m4 bS).setG mode 5) with e | ⟨rs5, m5⟩
+        · rw [hres] at hout'
+          cases e <;> simp only [OutcomeRel] at hout' <;> (rw [h0] at hout'; exact absurd hout'.1 (by decide))
+        rw [hres] at hout'
+        obtain ⟨-, hRes, -⟩ := hout'
+        have hrax : s2.regs.rax = rs5.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+        exact ⟨hbC, hpb, rs4, m4, hres4, .inr ⟨hge4', hbS, rs5, m5, hres, .inl (by rw [← hrax]; exact hacc)⟩⟩
+      · rw [erdx] at h2; rw [erax]
+        obtain ⟨hbS, -⟩ := hsz5.resolve_left (by rw [h2]; decide)
+        obtain ⟨e, he, hk⟩ := err_of_entryOut hout5 h2
+        exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inl ⟨e, he, hk.symm⟩⟩⟩
+    sorry
   sorry
 
 end
