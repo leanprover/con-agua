@@ -239,3 +239,24 @@ flat runs' (D52).
 * `diff-e2e --refs --parallel 16 --tests` at con-leche bc667610 (con-ron 8021ddac, con-ron-lean-twin
   at this branch): **766/766 agree** (447 accepted, 319 not), UNSOUND/INCOMPLETE/CRASH/TIMEOUT/REFDIFF
   0; 7 skipped (`--max-nat-size`, D49).
+
+## 7. compare2: threads and verdicts (lane compare2, 2026-11-23/24)
+
+The user's answers (2026-11-23): the statements of §3 approved; `--compare` takes `--jobs` like
+con-ron (D51 removed), the threaded compared run proved as the flat threaded mode is; the compare
+verdict theorem (reject/decline lines) required in the first landing, sequential and threaded.
+
+**Design.** The threaded compared run: `ca_compare_a` (modes 4, the descriptor swap, 5: the
+solution's frozen buffer) → the flat mode's worker threads (`ca_check_b`, unchanged, route A) →
+`ca_compare_b` (mode 7 = mode 6 with `par_compact(1)`, on the driver region as the first call
+left it: the challenge's frozen buffer) → the same worker threads at `J = some`. The challenge's
+jobs read the solution's rows (`SIX*`, `STX*`, `MAT*`), so they move from the owned arrays to the
+frozen ones, their extents gated by the flag `CTL[224]` (empty in the flat buffer and the
+solution's). The sequential driver `ca_compare` stays. Twin side: `TwinComparesAcceptsPooled`
+(con-ron's `PooledAccepts`/`PooledAcceptsJ`), `twinCompareRun` (con-ron's `compareJsonTail`
+order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
+
+### Progress log
+* 23:15 start (branch `compare2` from `compare-land2` 6a6e84fbb). 23:20 the twin statements
+  (15cf26fa7), sent to the coordinator. 23:22 helpers H1 `compare2-verdict`, H2
+  `compare2-freeze`, H3 `compare2-abi` (briefs `_tmp/compare2/brief-*.md`).
