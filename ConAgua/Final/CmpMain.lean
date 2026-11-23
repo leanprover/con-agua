@@ -381,6 +381,110 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     exact hge
   have hneedC := hge'
   simp only [cmpNeed, L.Compiler.cmpW] at hneedC
+  have hcs := hc.hcs
+  have hz := hc.hzero
+  rw [hbase, hrsp0] at hcs
+  rw [hbase] at hz hfits
+  rw [hrsp0] at hcs8 hcs24 hsEnd
+  have hside : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24 := by
+    rcases Nat.lt_or_ge (rsp0 - 24) base with h | h
+    · by_cases h' : rsp0 + 8 ≤ base
+      · exact .inl h'
+      · exfalso; rcases (hcs base (by omega) (by omega)).2.1 with h2 | h2 <;> omega
+    · rcases (hcs (rsp0 - 24) (by omega) (by omega)).2.1 with h2 | h2
+      · omega
+      · exact .inr h2
+  -- mode 4: the call of `ca_start_a4` from a state with the frame
+  have key4 : ∀ s0 : MachineData, CmpFrame tab dm ra sa bS.size base rsp0 s0 →
+      s0.regs.rdi = dm.regs.rdi → s0.regs.rsi = dm.regs.rsi → s0.regs.rdx = dm.regs.rdx →
+      s0.regs.rcx = dm.regs.rcx → s0.regs.r8 = dm.regs.r8 → s0.regs.r9.toNat = abiNeed tab →
+      Only (base + abiNeed tab) (base + abiNeed tab + 48) dm.dmem s0.dmem →
+      Ev (CmpPost dm ra (CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)
+        (CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)) s0 (at_ (Kc + 38)) := by
+    intro s0 hf0 hdi hsi hdx hcx h8 h9 honly
+    have e1 : s0.regs.rsp.toBitVec - 8 = A rsp0 := by
+      rw [toBitVec_eq_A, hf0.rsp, A_sub8 _ (by omega) (by omega)]; rfl
+    have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
+      show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
+    refine ev_call (hC.get (i := 38) rfl) ?_ ?_
+    · rw [e1]; exact isSome_rdW fun j hj => by rw [A_add]; exact hf0.win _ (by omega) (by omega)
+    rw [e1]
+    refine ev_seq (abiMode_outcome q p hq tab hok hAX hio hwf mode hngm 4 abiStartA4L Kc _
+      (Code.label (i := 0) hC rfl) (hC.get (i := 0) rfl) (hC.get (i := 1) rfl) (hC.get (i := 2) rfl)
+      (hC.get (i := 3) rfl) (hC.get (i := 4) rfl) (hC.get (i := 5) rfl) (hC.get (i := 6) rfl)
+      hcodeO.right fd hentry hnp bC pb _ (UInt64.ofBitVec (at_ (Kc + 38 + 1)).toBitVec) ?_) ?_
+    · refine hc.toAbiCall.shrink _ _ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ <;> dsimp only <;> (try rsimp)
+      · exact hdi
+      · exact hsi
+      · exact hdx
+      · exact hcx
+      · exact h8
+      · exact UInt64.toBitVec_inj.mp (by rw [toBitVec_eq_A dm.regs.rsp, hrsp0])
+      · rw [h9]; omega
+      · exact fun y hy => isSome_get?_storeInt (honly.grows y hy)
+      · intro x hx h1 h2
+        rw [hbase, h9] at h1
+        rw [hrsp0] at h2
+        rw [get?_wrW_A (by omega) hx (by omega), honly.same x hx (by omega)]
+      · rw [hrsp0, rdW_wrW_same]
+    intro st ⟨⟨hpc, hRR, hfr, hout⟩, hsz⟩
+    dsimp only at hRR hfr hout
+    simp only [Reg64s.set64_rsp, hdi, hdx, h8, hbase, hA0] at hfr hout
+    rw [hpc]
+    simp only [Int64.ofBitVec_toBitVec]
+    unfold SizesPost at hsz
+    generalize st.data = s1 at *
+    have hcsW : ∀ x, rsp0 - 24 ≤ x → x < rsp0 + 8 → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+      fun x h1 h2 => (hcs x h1 h2).2.1
+    -- outside the stub's part of the region, the buffers, the window and the save area: the caller's
+    have hsame1 : ∀ x < 2 ^ 64, (x < base ∨ base + abiNeed tab ≤ x) →
+        ¬ (dm.regs.rdi.toNat ≤ x ∧ x < dm.regs.rdi.toNat + bC.size) →
+        ¬ (dm.regs.rdx.toNat ≤ x ∧ x < dm.regs.rdx.toNat + pb.size) → (x < rsp0 - 24 ∨ rsp0 + 8 ≤ x) →
+        s1.dmem.get? (A x) = s0.dmem.get? (A x) := by
+      intro x hx hreg hi hp hw
+      obtain ⟨q1, q2, q3⟩ := abiLayout_out hok (blen := abiNeed tab) (Nat.le_refl _) hreg hi hp
+      rw [hfr.same x hx q1 q2 q3 (by omega) (by
+        rcases hreg with h | h
+        · left; simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs]; omega
+        · right; simp only [Layout.tabEnd, abiLayout_T, abiLayout_tab, abiLayout_nargs]; omega),
+        get?_wrW_A (by omega) hx (by omega)]
+    have hinR : ∀ x, dm.regs.rdi.toNat ≤ x → x < dm.regs.rdi.toNat + bC.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+      fun x h1 h2 => by have := hc.hinDisj x h1 h2; rwa [hbase] at this
+    have hpR : ∀ x, dm.regs.rdx.toNat ≤ x → x < dm.regs.rdx.toNat + pb.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
+      fun x h1 h2 => by have := hc.hpinsDisj x h1 h2; rwa [hbase] at this
+    have hsv1 : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 64 → s1.dmem.get? (A x) = s0.dmem.get? (A x) :=
+      fun x h1 h2 => hsame1 x (by omega) (.inr h1) (fun ⟨h3, h4⟩ => by rcases hinR x h3 h4 with h | h <;> omega)
+        (fun ⟨h3, h4⟩ => by rcases hpR x h3 h4 with h | h <;> omega) (by rcases hside with h | h <;> omega)
+    have hf1 : CmpFrame tab dm ra sa bS.size base rsp0 s1 :=
+      hf0.ret (by omega) (by omega) (by rsimp; exact hA0) (fun r h1 h2 h3 h4 h5 h6 h7 h8 h9 => by
+          cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | exact absurd rfl h4 |
+            exact absurd rfl h5 | exact absurd rfl h6 | exact absurd rfl h7 | exact absurd rfl h8 | exact absurd rfl h9 | rfl)
+        hRR hsv1 fun y hy => hfr.grows _ (isSome_get?_storeInt hy)
+    have hexit := fun (s' : MachineData) (hf' : CmpFrame tab dm ra sa bS.size base rsp0 s') hacc herr =>
+      cmp_exit hC dm ra sa (by omega) ⟨hcs24, hcs8⟩ hrsp0
+        (CmpAccepts tab p mode plo phi out hdrf ctlf hw fz own bC bS pb)
+        (CmpErr tab p mode plo phi out hdrf ctlf hw fz own bC bS pb) s' hf' hacc herr
+    refine cmp_okGe (i := 39) hC rfl rfl rfl rfl rfl s1 (fun s' hm hr hbad => ?_) (fun hrdx hge4 st4 => ?_)
+    · have erax : s'.regs.rax = s1.regs.rax := by
+        have := hr .rax (by decide); simpa using congrArg UInt64.ofBitVec this
+      have erdx : s'.regs.rdx = s1.regs.rdx := by
+        have := hr .rdx (by decide); simpa using congrArg UInt64.ofBitVec this
+      refine hexit s' (hf1.regs hm fun r _ h2 _ _ _ _ _ _ => hr r h2) (fun h0 hacc => ?_) (fun h2 => ?_)
+      · rw [erdx] at h0; rw [erax] at hacc
+        have hout' := hout.resolve_left (by rw [h0]; decide)
+        obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [h0]; decide)
+        rcases hres : L.run p abiFuel "check" [] ((loadMem bC pb (abiSz tab)).setG mode 4) with e | ⟨rs4, m4⟩
+        · rw [hres] at hout'
+          cases e <;> simp only [OutcomeRel] at hout' <;> (rw [h0] at hout'; exact absurd hout'.1 (by decide))
+        rw [hres] at hout'
+        obtain ⟨-, hRes, -⟩ := hout'
+        have hrax : s1.regs.rax = rs4.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+        exact ⟨hb, hpb, rs4, m4, hres, .inl (by rw [← hrax]; exact hacc)⟩
+      · rw [erdx] at h2; rw [erax]
+        obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [h2]; decide)
+        obtain ⟨e, he, hk⟩ := err_of_entryOut hout h2
+        exact ⟨hb, hpb, .inl ⟨e, he, hk.symm⟩⟩
+    sorry
   sorry
 
 end
