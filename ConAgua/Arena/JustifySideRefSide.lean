@@ -245,7 +245,7 @@ structure SideProg (p : Prog) : Prop where
   mc_clear : p.lookup "mc_clear" = some (memoClearG mcSch)
   mentions : p.lookup "mentions_const" = some mentionsConstL
 
-theorem rdW_dw (D : Array Word) (k x : Word) (j : Nat) (hx : x.toNat = 1 + j) (hj : j < 8)
+theorem sd_rdW_dw (D : Array Word) (k x : Word) (j : Nat) (hx : x.toNat = 1 + j) (hj : j < 8)
     (hk : k.toNat < 2 ^ 60) : rdW D (x + 8 * k) = dw D k.toNat j := by
   have e : (x + 8 * k).toNat = 1 + 8 * k.toNat + j := by
     rw [UInt64.toNat_add, UInt64.toNat_mul, hx]; simp; omega
@@ -320,8 +320,8 @@ theorem sideRecord_val {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' :
     ∃ d', (sideRecordVal d cv v).run a = .ok (d', a) ∧ SideOK vis fe a ds k.toNat m m' d' := by
   have hk60 : k.toNat < 2 ^ 60 := by have := hD.room; have := hD.dsize; omega
   rw [sideRecordW.arm1 _ _ _ _ hkind] at h
-  have e2 := rdW_dw (m.arr64 DECL) k 2 1 rfl (by decide) hk60
-  have e6 := rdW_dw (m.arr64 DECL) k 6 5 rfl (by decide) hk60
+  have e2 := sd_rdW_dw (m.arr64 DECL) k 2 1 rfl (by decide) hk60
+  have e6 := sd_rdW_dw (m.arr64 DECL) k 6 5 rfl (by decide) hk60
   rw [e2] at h
   cases h1 : callW p n "builtin_axiom_name" [dw (m.arr64 DECL) k.toNat 1 &&& 4294967295] m with
   | none => rw [h1] at h; simp at h
@@ -414,7 +414,7 @@ theorem sideRecord_ok {p : Prog} (hP : SideProg p) {n : Nat} {k : Word} {m m' : 
   rcases n with _ | n
   · simp [sideRecordW] at h
   have hk60 : k.toNat < 2 ^ 60 := by have := hD.room; have := hD.dsize; omega
-  have e1 := rdW_dw (m.arr64 DECL) k 1 0 rfl (by decide) hk60
+  have e1 := sd_rdW_dw (m.arr64 DECL) k 1 0 rfl (by decide) hk60
   have hr := hD.recs k.toNat hk
   have hset : ds.set! k.toNat ds[k.toNat] = ds := by
     rw [Array.set!_eq_setIfInBounds, Array.setIfInBounds, dite_eq_left hk]; simp

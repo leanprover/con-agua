@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.JustifySideRefSide
+public import ConAgua.Arena.JustifySideRefMove
 import ConAgua.Census.Attr
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
@@ -55,5 +56,120 @@ theorem matesSet_spec (p : Prog) (hp : p.lookup "mates_set" = some matesSetL) (n
       Locals.init_cons_succ, Locals.init_cons_zero, MATA, MATS, MATN, rowIx, Mem.size_arr64_set64]
     all_goals (try rfl)
     all_goals (have := UInt64.lt_iff_toNat_lt.mp (idxW_lt w); simp [Nat.shiftLeft_eq] at *; omega)
+
+theorem matArr_inj {g g' : Nat} (h : g ≤ 2) (h' : g' ≤ 2) (e : (matArr g : TieredArray) = matArr g') :
+    g = g' := by
+  unfold matArr at e
+  rcases (by omega : g = 0 ∨ g = 1 ∨ g = 2) with a | a | a <;>
+  rcases (by omega : g' = 0 ∨ g' = 1 ∨ g' = 2) with b | b | b <;> simp [a, b, MATA, MATS, MATN] at e <;> omega
+
+/-- **The row after `mates_set`**: the rows of `w`'s tag and index are the new words, every other
+row kept. -/
+theorem matRow_matSet {m : Mem} {w o l : Word} (x : Word) (ht : rowTag w ≤ 2) (h0 : rowTier w = 0)
+    (hb : rowIx w + 1 < (m.arr64 (matArr (rowTag w))).size) :
+    matRow (matSetM m w o l) x = if rowTag x ≤ 2 ∧ rowTier x = 0 ∧ rowTag x = rowTag w ∧
+      rowIx x = rowIx w then (o, l) else matRow m x := by
+  have e1 : (idxW w <<< 1).toNat = rowIx w := ixW_toNat w
+  have e2 : ((idxW w <<< 1) + 1).toNat = rowIx w + 1 := ixW_succ w
+  have ev := rowIx_even x; have ev' := rowIx_even w
+  unfold matRow
+  by_cases hx : rowTag x ≤ 2 ∧ rowTier x = 0
+  · simp only [hx, and_self, ite_true, true_and]
+    simp only [matSetM, rdN_set64, size_set64_any, e1, e2]
+    by_cases hs : rowTag x = rowTag w ∧ rowIx x = rowIx w
+    · rw [ite_eq_left hs]; rw [hs.1, hs.2]
+      simp [show rowIx w + 1 ≠ rowIx w by omega, hb, Nat.lt_of_succ_lt hb, Mem.size_arr64_set64]
+    · rw [ite_eq_right hs]
+      by_cases ha : (matArr (rowTag x) : TieredArray) = matArr (rowTag w)
+      · have hg := matArr_inj hx.1 ht ha
+        have hi : rowIx x ≠ rowIx w := fun e => hs ⟨hg, e⟩
+        simp only [ha]
+        simp [show rowIx w ≠ rowIx x by omega, show rowIx w + 1 ≠ rowIx x by omega,
+          show rowIx w ≠ rowIx x + 1 by omega, show rowIx w + 1 ≠ rowIx x + 1 by omega]
+      · simp [ha]
+  · simp only [hx, ite_false]
+    rw [ite_eq_right (fun c => hx ⟨c.1, c.2.1⟩)]
+
+/-! ## The mates in L -/
+
+/-- **The record mates' rows hold the map `M`**: every name's list is its row's slice, and every
+non-empty row is a decoded slice below the record pool's tier-0 top. -/
+structure MatesR (m : Mem) (M : Std.HashMap NIdx (List NIdx)) : Prop where
+  get : ∀ n : NIdx, M[n]? = matList m n.word.toUInt64
+  ok : ∀ w, (matRow m w).1 ≠ 0 →
+    (matRow m w).1.toNat - 1 + (matRow m w).2.toNat ≤ erTop m ∧ (matList m w).isSome
+
+/-- Zero rows hold the empty map. -/
+theorem MatesR.zero {m : Mem} (hz : ∀ g ≤ 2, ∀ j, rdN (m.arr64 (matArr g)) j = 0) : MatesR m ∅ := by
+  have h0 : ∀ w, (matRow m w).1 = 0 := fun w => by
+    unfold matRow; split
+    · rename_i h; exact hz _ h.1 _
+    · rfl
+  exact ⟨fun n => by simp [matList, h0], fun w hw => absurd (h0 w) hw⟩
+
+/-- `MatesR` across a growth of the record pool that keeps the rows. -/
+theorem MatesR.grow {m m' : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M)
+    (hr : ∀ w, matRow m' w = matRow m w) (hg : ErecGrow m m') : MatesR m' M := by
+  have hx := hg.ext
+  have hl : ∀ w, matList m' w = matList m w := fun w => by
+    unfold matList; rw [hr]
+    split
+    · rfl
+    · rename_i c
+      obtain ⟨xs, hxs⟩ := Option.isSome_iff_exists.mp (h.ok w c).2
+      unfold matList at hxs; simp only [c, ite_false] at hxs
+      rw [hxs, hx.hslice? hxs]
+  refine ⟨fun n => by rw [h.get n, hl], fun w hw => ?_⟩
+  rw [hr] at hw ⊢; rw [hl]
+  exact ⟨Nat.le_trans (h.ok w hw).1 hg.top, (h.ok w hw).2⟩
+
+/-- **One member's row written** (`mates_set(b, d + 1, k)`), its slice `(d, k)` decoding to `xs`
+below the top. -/
+theorem MatesR.set {m : Mem} {M : Std.HashMap NIdx (List NIdx)} (h : MatesR m M) {b d k : Word}
+    (hb32 : b.toNat < 2 ^ 32) (ht : rowTag b ≤ 2) (h0 : rowTier b = 0)
+    (hbd : rowIx b + 1 < (m.arr64 (matArr (rowTag b))).size)
+    (hd : d.toNat + 1 < 2 ^ 64) {xs : List NIdx} (hs : hslice? (erecP m) d.toNat k.toNat = some xs)
+    (htop : d.toNat + k.toNat ≤ erTop m) :
+    MatesR (matSetM m b (d + 1) k) (M.insert (decI b) xs) := by
+  have hP : erecP (matSetM m b (d + 1) k) = erecP m := by
+    have ha : ∀ g, (matArr g : TieredArray) ≠ EREC ∧ (matArr g : TieredArray) ≠ tier1 EREC ∧
+        (matArr g : TieredArray) ≠ CTL := fun g => by
+      unfold matArr; split <;> (try split) <;> decide
+    apply erecP_congr'
+    · simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ (ha _).1.symm, Mem.arr64_set64_ne _ _ _ _ _ (ha _).1.symm]
+    · simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.1.symm, Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.1.symm]
+    · simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.2.symm, Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.2.symm]
+    · simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.2.symm, Mem.arr64_set64_ne _ _ _ _ _ (ha _).2.2.symm]
+  have htp : erTop (matSetM m b (d + 1) k) = erTop m := by
+    simp only [erTop]; congr 2
+    have : (matArr (rowTag b) : TieredArray) ≠ CTL := by unfold matArr; split <;> (try split) <;> decide
+    simp only [matSetM]; rw [Mem.arr64_set64_ne _ _ _ _ _ this.symm, Mem.arr64_set64_ne _ _ _ _ _ this.symm]
+  have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hne : d + 1 ≠ 0 := fun e => by have := congrArg UInt64.toNat e; rw [hd1] at this; simp at this
+  have hnew : matList (matSetM m b (d + 1) k) b = some xs := by
+    unfold matList; rw [matRow_matSet b ht h0 hbd]; simp [ht, h0, hne, hP, hd1, hs]
+  have hrow : ∀ x, ¬ (rowTag x ≤ 2 ∧ rowTier x = 0 ∧ rowTag x = rowTag b ∧ rowIx x = rowIx b) →
+      matList (matSetM m b (d + 1) k) x = matList m x := fun x hx => by
+    unfold matList; rw [matRow_matSet x ht h0 hbd, ite_eq_right hx, hP]
+  refine ⟨fun n => ?_, fun w hw => ?_⟩
+  · rw [Std.HashMap.getElem?_insert]
+    by_cases e : n.word.toUInt64 = b
+    · have : (decI b : NIdx) = n := by rw [← e]; exact decI_word n
+      simp only [this, beq_self_eq_true, ite_true, e, hnew]
+    · have hnb : (decI b == n) = false := by
+        rw [nidx_beq, decI_word_self _ hb32]; simp [e]
+      rw [hnb]; simp only [Bool.false_eq_true, ite_false]
+      rw [h.get n, hrow]
+      rintro ⟨t1, t2, t3, t4⟩
+      exact e (row_inj (idx_word_lt32 n) hb32 t1 ht t3 (by rw [t2, h0]) t4)
+  · rw [matRow_matSet w ht h0 hbd] at hw ⊢
+    by_cases hs : rowTag w ≤ 2 ∧ rowTier w = 0 ∧ rowTag w = rowTag b ∧ rowIx w = rowIx b
+    · rw [ite_eq_left hs] at hw ⊢
+      have : matList (matSetM m b (d + 1) k) w = matList (matSetM m b (d + 1) k) b := by
+        unfold matList; rw [matRow_matSet w ht h0 hbd, matRow_matSet b ht h0 hbd, ite_eq_left hs]
+        simp [ht, h0]
+      rw [this, hnew]; refine ⟨?_, rfl⟩; dsimp only; rw [htp, hd1]; omega
+    · rw [ite_eq_right hs] at hw ⊢
+      rw [hrow w hs, htp]; exact h.ok w hw
 
 end L.Arena
