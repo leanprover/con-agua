@@ -56,7 +56,8 @@ set_option experimental.vcgen true in
 verdict closure) lifted; `check_block` through its run. -/
 l_model cidE_spec (p : Prog) (P : CidProg p)
   fns [P.cid ↦ cidE]
-  specs [callW_spec p n "ind_params_ok", callW_spec p n "read_block"]
+  specs [callW_spec p n "ind_params_ok", callW_spec p n "read_block",
+    callW_spec p n "block_reads_at"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE] unified
   nv [closedNV p _root_.L.Checker.nvFns = true, _root_.L.Checker.nv_mem]
@@ -432,14 +433,9 @@ theorem cid_ref (P : CidProg2 p) {G : Prop} {dn : NIdx → Option ConLeche.Name}
   obtain ⟨bsP, hpP, hdP⟩ := hq4
   rw [cidE.k_read_block.arm1 _ _ _ _ _ _ _ hr41]
   dsimp only
-  rw [← bind_pure (ConRon.Arena.checkBlock _ _ _ _)]
-  refine RefE.bindE (fun _ => cidE.k_check_block.none ..) id
-    (hbr n (by omega) vis o l _ fe env s4.mem a4 a bs bsP block blockP hC4 hfold
-      hps4.ext (by rw [hps4.pins]) hq4' hsl4 hblk4 hb hbP4 hdP
-      (ConLeche.readBlock_declared (except_toOption_eq_some.mp hpP)) hlpd
-      (readBlock_nP_lt (decCIsR_rP hdec) hrun4) hIM4 hA4) fun v y a5 _ hR => ?_
-  rw [cidE.k_check_block.arm1]
-  exact RefE.ret rfl (hR.pre hg4)
+  -- TODO(ronsync8-iota): `block_reads_at` (`blockReadsAt_refinesC`), then `check_block` at the
+  -- view it gives back, then the verdict
+  sorry
 
 /-- **`check_ind_decl` refines the `.indDecl` arm of `checkDeclKind`** under `StageT` and the
 twin's fold invariant: the ok half of `cid_ref`, from the call's run. -/

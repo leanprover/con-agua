@@ -75,15 +75,6 @@ l_model depsStored_specW (p : Prog) (hp : p.lookup "nat_op_deps_stored" = some n
   specs [callW_spec p n "env_find", callW_spec p n "nat_op_deps_stored"]
   grind [arena_grind] finish [ntBW] gen 20 bind ntBW
 
-theorem natOpDepsStored_cons (fe : IFEnv) (n : NIdx) (ns : List NIdx) :
-    natOpDepsStored fe (n :: ns) = (match fe.find? n with
-      | some ci => if defnMono ci = true then natOpDepsStored fe ns else pure false
-      | none => pure false) := by
-  simp only [natOpDepsStored]
-  cases fe.find? n with
-  | none => rfl
-  | some ci => cases ci <;> simp [defnMono]
-
 section stored
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
 
@@ -149,7 +140,7 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     replace hw := ntBW_some hw; obtain ⟨r1, m1, h1, hw⟩ := hw
     obtain ⟨rfl, hfd⟩ := envFind_call hN.toMasterProg (rdW (m.arr64 IW) o) hwlt hS.check.env h1
     subst hn
-    rw [natOpDepsStored_cons]
+    simp only [natOpDepsStored]
     cases hf : fe.find? (decI (rdW (m1.arr64 IW) o)) with
     | none =>
       rw [hf] at hfd
@@ -160,39 +151,18 @@ theorem depsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
       exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
     | some ci =>
       rw [hf] at hfd
-      obtain ⟨hr1, hci⟩ := hfd
+      obtain ⟨hr1, -⟩ := hfd
       rw [ite_eq_right (by rw [hr1]; decide)] at hw
-      simp only [erRd_foldN] at hw
-      rcases defnMono_words hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
-      · simp only [ne_eq, hne, not_false_eq_true, ite_true, Option.some.injEq, Prod.mk.injEq] at hw
+      cases h2 : callW p k "nat_op_deps_stored" [vis, o + 1, l - 1] m1 with
+      | none => rw [h2] at hw; simp at hw
+      | some q2 =>
+        obtain ⟨r2, m2⟩ := q2
+        rw [h2, bW_some] at hw
+        simp only [Option.some.injEq, Prod.mk.injEq] at hw
         obtain ⟨rfl, rfl⟩ := hw
-        simp only [hdm]
-        exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-      · simp only [ne_eq, hk1, not_true_eq_false, ite_false] at hw
-        by_cases h3 : erRd m1 (r1.tail.headD 0 + (CI.cv + CV.lpsLen)) = 0
-        rotate_left
-        · simp only [h3, not_false_eq_true, ite_true] at hw
-          simp only [Option.some.injEq, Prod.mk.injEq] at hw
-          obtain ⟨rfl, rfl⟩ := hw
-          have hdm : defnMono ci = false := by
-            cases h : defnMono ci
-            · rfl
-            · exact absurd (hiff.mp h) (by simpa using h3)
-          simp only [hdm]
-          exact ⟨false, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
-        · simp only [h3, not_true_eq_false, ite_false] at hw
-          have hdm : defnMono ci = true := hiff.mpr h3
-          simp only [hdm, ite_true]
-          cases h2 : callW p k "nat_op_deps_stored" [vis, o + 1, l - 1] m1 with
-          | none => rw [h2] at hw; simp at hw
-          | some q2 =>
-            obtain ⟨r2, m2⟩ := q2
-            rw [h2, bW_some] at hw
-            simp only [Option.some.injEq, Prod.mk.injEq] at hw
-            obtain ⟨rfl, rfl⟩ := hw
-            obtain ⟨x, a', hrun, hK⟩ := ih (o + 1) (l - 1) k m1 a r2 m2 hS hrest h2
-            refine ⟨x, a', hrun, hK.1, hK.2.1, ?_⟩
-            simpa [decW0B] using hK.2.2
+        obtain ⟨x, a', hrun, hK⟩ := ih (o + 1) (l - 1) k m1 a r2 m2 hS hrest h2
+        refine ⟨x, a', hrun, hK.1, hK.2.1, ?_⟩
+        simpa [decW0B] using hK.2.2
 
 theorem natOpDepsStored_ref (hN : NatGateProg p) (o l : Word) (ns : List NIdx) :
     CallRef p "nat_op_deps_stored" [vis, o, l]

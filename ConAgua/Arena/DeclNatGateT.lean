@@ -181,8 +181,7 @@ end cert
 l_model snpFe2_specE (p : Prog)
   (hf : p.lookup "check_structural_nat_pin_at_fe2" = some checkStructuralNatPinAtFe2L)
   fns [hf ↦ snpFe2E]
-  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps",
-    callW_spec p n "nat_op_stored_ok_all", callW_spec p n "env_find"]
+  specs [callW_spec p n "nat_op_guard", callW_spec p n "nat_op_stored_ok", callW_spec p n "env_find"]
   grind [arena_grind] fold [tierW, idxW]
   extra [ld64_rdW_specE, ld64_rdW_specT, evalE_tld, tld, evalE_cnt, tcntM, evalE_tierE, evalE_idxE, evalE_idxAE, evalE_idxGE, evalE_tagE]
   heartbeats 400000 unified
@@ -237,21 +236,14 @@ theorem snpFe2_ref (hN : NatSubProg' p) (hcl : LeafClosed p) (hF2 : Fe2Closed p)
   refine RefE.bindSim (fun _ => rfl) (natOpGuard_ref hGd n k m a · · ⟨hS, hn⟩ ·)
     fun r1 x1 m1 a1 h1 hrun1 ⟨hS1, hg1, hd1⟩ => ?_
   dsimp only [snpFe2E.k_nat_op_guard]
-  refine RefE.bindSim (fun _ => rfl) (natOpDeps_ref hG n k m1 a1 · · ⟨hS1, hn⟩ ·)
-    fun r2 ds m2 a2 h2 hrun2 ⟨hS2, hg2, hd2⟩ => ?_
-  dsimp only [snpFe2E.k_nat_op_deps]
-  obtain ⟨hdh2, hb2⟩ := decRL0 hd2
-  refine RefE.bindSim (fun _ => rfl)
-    (okAll_ref hT (r2.headD 0) (r2.tail.headD 0) ds k m2 a2 · · hS2 hdh2 hb2 ·)
+  refine RefE.bindSim (fun _ => rfl) (natOpStoredOk_ref hT n k m1 a1 · · ⟨hS1, hn⟩ ·)
     fun r3 x3 m3 a3 h3 hrun3 ⟨hS3, hg3, hd3⟩ => ?_
-  dsimp only [snpFe2E.k_nat_op_stored_ok_all]
+  dsimp only [snpFe2E.k_nat_op_stored_ok]
   have hfr : MemFrame leafA leafC m m3 :=
-    ((callW_leafFrame hcl (leaf_mem _ (by decide)) h1).trans
-      (callW_leafFrame hcl (leaf_mem _ (by decide)) h2)).trans
+    (callW_leafFrame hcl (leaf_mem _ (by decide)) h1).trans
       (callW_leafFrame hcl (leaf_mem _ (by decide)) h3)
   have hown : ownC m3 = ownC m :=
-    ((callW_fe2_ownC hF2 (by simp [fe2Fns]) h3).trans (callW_fe2_ownC hF2 (by simp [fe2Fns]) h2)).trans
-      (callW_fe2_ownC hF2 (by simp [fe2Fns]) h1)
+    (callW_fe2_ownC hF2 (by simp [fe2Fns]) h3).trans (callW_fe2_ownC hF2 (by simp [fe2Fns]) h1)
   have e1 := hd1.1
   have e3 := hd3.1
   refine RefE.guard rfl (fun e => by grind) (fun hb => by grind) fun _ _ => ?_
@@ -279,7 +271,7 @@ theorem snpFe2_ref (hN : NatSubProg' p) (hcl : LeafClosed p) (hF2 : Fe2Closed p)
   obtain ⟨wv, -, hk5, hwl, hwd⟩ := decCI_defn_val hci
   have e5 : erRd m4 (q + CI.defnValue) = wv := (erRdOK m4).at _ rfl hk5
   rw [e5]
-  exact RefE.ret rfl ⟨hS3, (hg1.trans hg2).trans hg3, hwl, hwd, hfr, hown⟩
+  exact RefE.ret rfl ⟨hS3, hg1.trans hg3, hwl, hwd, hfr, hown⟩
 
 /-- **`StageC` across a leaf frame to another stage**: the stage relation and `CheckOK` after given,
 the memory's half of `TwinOK` by the frame. -/
