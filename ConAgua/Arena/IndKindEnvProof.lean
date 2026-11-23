@@ -9,6 +9,7 @@ import ConRon.Bridge.Inductives.BlockInstall
 import ConRon.Bridge.Inductives.RecCheck
 import ConRon.Bridge.Inductives.StreamRecs
 import ConRon.Bridge.Inductives.Install
+import ConRon.Bridge.Inductives.IotaRead
 import ConLeche.Verify.Inductives.PositivityInv
 import ConLeche.Verify.Inductives.BlockWF
 import ConLeche.Verify.Inductives.BlockInv
@@ -55,6 +56,28 @@ theorem EnvGrowDen.trans {st : EStore} {a b c : IFEnv} (h1 : EnvGrowDen st a b)
     (h2 : EnvGrowDen st b c) : EnvGrowDen st a c :=
   ⟨fun n ci h => (h2.find n ci h).elim (fun h => h1.find n ci h) .inr,
    fun n t h => (h2.tbl n t h).elim (fun h => h1.tbl n t h) .inr⟩
+
+/-- The ι reading rule's driver gives back an index that answers as its input (the pushes
+undone, the flags set back). -/
+theorem blockReadsAt_feq {fe : IFEnv} {p : ConRon.Arena.BlockShape} {s s' : AState} {r : Bool × IFEnv}
+    (h : ConRon.Arena.blockReadsAt fe p s = .ok (r, s')) : GR.FEq r.2 fe := by
+  simp only [ConRon.Arena.blockReadsAt] at h
+  obtain ⟨cs, s₁, h1, h2⟩ := AM.bind_ok h
+  obtain ⟨recs, s₂, h3, h4⟩ := AM.bind_ok h2
+  obtain ⟨ok, s₃, h5, h6⟩ := AM.bind_ok h4
+  obtain ⟨rfl, rfl⟩ := AM.pure_ok h6
+  obtain ⟨news, hn, hpop⟩ := BT.consBlockRecsTemp_pop cs fe []
+  rw [List.nil_append] at hn
+  simp only [hn]
+  exact hpop
+
+/-- `EnvGrowDen` from an index that answers as another. -/
+theorem EnvGrowDen.ofFEqL {st : EStore} {fe' a b : IFEnv} (he : GR.FEq b a)
+    (h : EnvGrowDen st b fe') : EnvGrowDen st a fe' :=
+  ⟨fun n ci hc => (h.find n ci hc).imp_left (fun h' => by rw [← he.find? n]; exact h'),
+   fun n t ht => (h.tbl n t ht).imp_left (fun h' => by
+     simp only [IFEnv.findTable?] at h' ⊢
+     rw [← he.find? n, ← he.rawTable? n]; exact h')⟩
 
 theorem EnvGrowDen.ofFEq {st : EStore} {fe a b : IFEnv} (he : GR.FEq a b)
     (h : EnvGrowDen st fe b) : EnvGrowDen st fe a :=
@@ -477,8 +500,18 @@ theorem indKindEnv : IndKindEnv := by
   simp only [ROp] at hr2
   obtain ⟨q, hq, hrel⟩ := hr2
   have hq' := toOption_eq_some hq
-  exact checkBlock_grow CoreSpec.of_core c2.ok hok.envWF
-    (EnvRel.ofCheck hok.check hok.gate hok.envWF |>.mono hext12) (hok.gate)
-    (denoteCIList_mono c2.ext _ _ hb₁) hrel (ConLeche.readBlock_declared hq') h4
+  -- the ι reading rule, at the input index with the block pushed; the pops give it back
+  obtain ⟨⟨reads, fe₀⟩, s₃, h5, h6⟩ := AM.bind_ok h4
+  have hfeq := blockReadsAt_feq h5
+  obtain ⟨c3, hrel3, x3, -, -⟩ := blockReadsAt_bridge c2.ok
+    (EnvRel.ofCheck hok.check hok.gate hok.envWF |>.mono hext12) hrel h5
+  obtain ⟨fe'', s₄, h7, h8⟩ := AM.bind_ok h6
+  cases reads with
+  | false => exact absurd h8 (fun h => AM.fail_ok h)
+  | true =>
+  obtain ⟨rfl, rfl⟩ := AM.pure_ok h8
+  exact EnvGrowDen.ofFEqL hfeq (checkBlock_grow CoreSpec.of_core c3 hok.envWF hrel3
+    (GR.FEq.gate hfeq hok.gate) (denoteCIList_mono (c2.ext.trans x3) _ _ hb₁) (dShape_ext x3 _ _ hrel)
+    (ConLeche.readBlock_declared hq') h7)
 
 end L.Arena

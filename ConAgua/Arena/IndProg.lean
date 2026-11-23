@@ -10,6 +10,7 @@ public import ConAgua.Arena.RecGen
 public import ConAgua.Arena.RecCheck
 public import ConAgua.Arena.IndStream
 public import ConAgua.Arena.IndDeclConsts
+public import ConAgua.Arena.IotaRel
 
 @[expose] public section
 
@@ -26,6 +27,7 @@ namespace L.Ind
 
 def indProg : Prog :=
   indPartsFns ++ indInstallFns ++ indSumFns ++ indPosFns ++ indPos2Fns ++ recClassFns ++
-    recGenFns ++ recCheckFns ++ indStreamFns ++ indDeclConstsFns ++ libFns ++ stubFns ++ masterFns
+    recGenFns ++ recCheckFns ++ indStreamFns ++ indDeclConstsFns ++ iotaFrameFns ++ iotaRelFns ++
+    libFns ++ stubFns ++ masterFns
 
 end L.Ind
