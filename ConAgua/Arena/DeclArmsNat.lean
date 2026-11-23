@@ -12,7 +12,7 @@ meta import ConAgua.Arena.Pins
 
 The twin's structural-`Nat` gate (`Core.lean`: `natOpNames`, `natDivModNames`, `natOpDeps`,
 `natOpGuard`, `natOpStoredOk`, `natOpEquations`, `substConst0`, `substConstAll`;
-`DeclCheck.lean`: `natOpStoredOkAll`, `substConst0Pairs`, `certifyNatEqs`) and the
+`DeclCheck.lean`: `substConst0Pairs`, `certifyNatEqs`) and the
 `Nat.div`-family pin gate (`DeclCheck.lean`: `divModCertStmts` and its eleven pieces,
 `divModCertApplied`, the guards, `checkDivModCerts`, `checkDivModPinAt`, `checkDivModPinLoop`,
 `checkDivModPin`), on lane `induct`'s conventions.
@@ -185,8 +185,7 @@ def natOpDepsL : FunDecl :=
 
 /-! ## The structural gate -/
 
-/-- `nat_op_deps_stored(vis, o, l)`: every name of the slice is stored as a level-monomorphic
-definition. -/
+/-- `nat_op_deps_stored(vis, o, l)`: every name of the slice is stored, as a constant of any kind. -/
 -- con-ron: ConRon/Arena/Core.lean:1187-1196 ConRon.Arena.natOpDepsStored
 -- con-ron: CHANGED since de06320f — `ConRon.Arena.natOpDepsStored` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.natOpDepsStored]
@@ -194,8 +193,6 @@ def natOpDepsStoredL : FunDecl := lfn (vis, o, l) locals (f, r, e) {
   if l == 0 { return 1 };
   (f, r) := call env_find(IW.u64[o], vis);
   if f == 0 { return 0 };
-  if EREC⦃r⦄ != 1 { return 0 };
-  if EREC⦃r + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
   e := call nat_op_deps_stored(vis, o + 1, l - 1);
   return e
 }
@@ -305,18 +302,6 @@ def natOpStoredOkL : FunDecl := lfn (vis, n) locals (f, r, e) {
   if EREC⦃r⦄ != 1 { return 0 };
   if EREC⦃r + ⟪CI.cv + CV.lpsLen⟫⦄ != 0 { return 0 };
   e := call nat_op_ty_pinned(vis, n, EREC⦃r + ⟪CI.cv + CV.type⟫⦄);
-  return e
-}
-
-/-- `nat_op_stored_ok_all(vis, o, l)`. -/
--- con-ron: ConRon/Arena/DeclCheck.lean:163-171 ConRon.Arena.natOpStoredOkAll
--- con-ron: CHANGED since de06320f — `ConRon.Arena.natOpStoredOkAll` is gone upstream; re-check the L code and its proofs, then delete this line
-@[no_expose, l_impl ConRon.Arena.natOpStoredOkAll]
-def natOpStoredOkAllL : FunDecl := lfn (vis, o, l) locals (e) {
-  if l == 0 { return 1 };
-  e := call nat_op_stored_ok(vis, IW.u64[o]);
-  if e == 0 { return 0 };
-  e := call nat_op_stored_ok_all(vis, o + 1, l - 1);
   return e
 }
 
@@ -1058,16 +1043,15 @@ def eqStoredL : FunDecl := lfn (vis) locals (en, f, r) {
   return f
 }
 
-/-- `div_mod_env_guard(vis2, c)`: the dependency guard, the pinned dependencies, the pinned `Eq`
-basis, the `Bool` constructors at `Bool`. -/
+/-- `div_mod_env_guard(vis2, c)`: the dependency guard, the operation's own pinned type, the
+pinned `Eq` basis, the `Bool` constructors at `Bool`. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:537-547 ConRon.Arena.divModEnvGuard
 -- con-ron: CHANGED since de06320f — `ConRon.Arena.divModEnvGuard` changed; re-check the L code and its proofs, then delete this line
 @[no_expose, l_impl ConRon.Arena.divModEnvGuard]
-def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, o, l, e, n) {
+def divModEnvGuardL : FunDecl := lfn (vis2, c) locals (g, e, n) {
   g := call nat_op_guard(vis2, c);
   if g == 0 { return 0 };
-  (o, l) := call nat_op_deps(c);
-  g := call nat_op_stored_ok_all(vis2, o, l);
+  g := call nat_op_stored_ok(vis2, c);
   if g == 0 { return 0 };
   e := call eq_stored(vis2);
   if e == 0 { return 0 };
@@ -1286,7 +1270,7 @@ def declArmsNatFns : Prog :=
    ("bool_ctor_ok", boolCtorOkL), ("nat_op_bool_ctors", natOpBoolCtorsL),
    ("nat_op_guard", natOpGuardL), ("nat_op_cod", natOpCodL),
    ("nat_op_ty_pinned", natOpTyPinnedL), ("nat_op_stored_ok", natOpStoredOkL),
-   ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
+   ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
    ("nat_eq_list2", natEqList2), ("nat_eq_list3", natEqList3), ("nat_eq_list4", natEqList4),
    ("nat_eq_pr", natEqPr), ("nat_eq_un", natEqUn), ("nat_eq_mu", natEqMu), ("nat_eq_po", natEqPo),
    ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL),

@@ -39,7 +39,7 @@ def declNvList : List FnName :=
    "scratch_drop", "and_pin_ok", "rom_ci", "rom_basis_decls",
    "ci_to_cv", "ci_canon_eq", "cv_canon_eq", "std_axiom_ok", "trust_compiler_ok",
    "of_reduce_ax_ok", "sl_contains", "nat_op_names", "nat_op_guard", "nat_op_deps",
-   "nat_op_stored_ok_all", "nat_div_mod_names", "rom_pin_sets", "ind_block_to_erec",
+   "nat_div_mod_names", "rom_pin_sets", "ind_block_to_erec",
    "quot_pin_hit", "pin_word", "iw_reset"]
 
 theorem declNv_mem : ∀ f ∈ declNvList, f ∈ L.Checker.nvFns :=

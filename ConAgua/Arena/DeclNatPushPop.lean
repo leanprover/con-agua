@@ -96,7 +96,7 @@ theorem setFlags_stage {p : Prog} (hP : EnvFlagsProg p) {k : Nat} {vis x y : Wor
 def fe2Fns : List FnName :=
   ["check_div_mod_pin_at_fe2", "env_find", "base_row_get", "env_row_get", "div_mod_env_guard",
    "bool_ctor_typed", "const_e", "intern_const", "const_push", "const_find", "pin_word", "pin_at",
-   "ci_to_cv", "eq_stored", "nat_op_stored_ok_all", "nat_op_stored_ok", "nat_op_ty_pinned",
+   "ci_to_cv", "eq_stored", "nat_op_stored_ok", "nat_op_ty_pinned",
    "nat_op_cod", "e_view", "nat_op_deps", "iw_alloc", "nat_op_pins", "nat_op_pins_c",
    "nat_op_pins_b", "nat_op_pins_a", "nat_op_guard", "nat_op_bool_ctors", "bool_ctor_ok",
    "sl_contains", "nat_div_mod_names", "nat_op_deps_stored", "nat_lit_supported", "nat_succ_ok",
