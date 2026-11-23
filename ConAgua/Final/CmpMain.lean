@@ -48,7 +48,7 @@ theorem cmp_modeM (q p : Prog) (hq : Refines q p) (hok : abiTabOk tab = true)
       [.label lab, movRI .rax (abiNeed tab).toUInt64, i64 (.cmp (.reg (rr .r9)) (oR .rax)), jccL .c abiSetupL,
        movRI .rax w, movMR (mb .r8 (tab.globOff mode)) .rax, jmpL abiSetupL][t]?)
     (dm : MachineData) (ra sa : Word) {nS base rsp0 : Nat} (bs pb : ByteArray) (hnS : nS = bs.size)
-    (hgeo : CmpGeo tab own base dm.regs.r9.toNat rsp0 0 0)
+    {buf0 nB0 : Nat} (hgeo : CmpGeo tab own base dm.regs.r9.toNat rsp0 buf0 nB0)
     (hside : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24)
     (hnP : dm.regs.rcx.toNat = pb.size)
     (hSend : sa.toNat + bs.size < 2 ^ 64) (hPend : dm.regs.rdx.toNat + pb.size < 2 ^ 64)
@@ -484,7 +484,64 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
         obtain ⟨hb, hpb⟩ := hsz.resolve_left (by rw [h2]; decide)
         obtain ⟨e, he, hk⟩ := err_of_entryOut hout h2
         exact ⟨hb, hpb, .inl ⟨e, he, hk.symm⟩⟩
-    sorry
+    -- mode 4 returned `2^63 + _`: its memory `m4`
+    have hout' := hout.resolve_left (by rw [hrdx]; decide)
+    obtain ⟨hbC, hpb⟩ := hsz.resolve_left (by rw [hrdx]; decide)
+    rcases hres4 : L.run p abiFuel "check" [] ((loadMem bC pb (abiSz tab)).setG mode 4) with e | ⟨rs4, m4⟩
+    · rw [hres4] at hout'
+      cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx] at hout'; exact absurd hout'.1 (by decide))
+    rw [hres4] at hout'
+    obtain ⟨-, hRes4, hMem4⟩ := hout'
+    have hrax4 : s1.regs.rax = rs4.getD 0 0 := hRes4.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+    have hio' := hio
+    simp only [abiIO, Bool.and_eq_true, beq_iff_eq] at hio'
+    obtain ⟨⟨⟨hdIN, hpIN⟩, hdPB⟩, hpPB⟩ := hio'
+    have hPBs : (m4.arr8 Rom.PB).size = pb.size := by
+      have := hMem4.size8 _ hdPB; simp only [abiLayout_tab, hpPB, abiLayout_s8_1] at this; exact this
+    have hcx : dm.regs.rcx.toNat = (⟨m4.arr8 Rom.PB⟩ : ByteArray).size := by rw [hc.hnp]; exact hPBs.symm
+    have hpbE : (⟨m4.arr8 Rom.PB⟩ : ByteArray).size = pb.size := hPBs
+    have hgeoM : CmpGeo tab own base dm.regs.r9.toNat rsp0 (base + abiSlot * abiSlot64 tab out) 0 := by
+      obtain ⟨-, -, h2, hlt⟩ := cmp_out_pos hok hp base 0 0 0 0
+      have hslot : abiSlot * abiSlot64 tab out + abiSlot ≤ abiNeed tab := by
+        rw [abiNeed_eq, ← Nat.mul_succ]; exact Nat.mul_le_mul_left _ hlt
+      have h2s : abiSlot * 2 ≤ abiSlot * abiSlot64 tab out := Nat.mul_le_mul_left _ h2
+      exact ⟨hfits, hge', hcsW, hcs24, hcs8, by omega, by omega, by omega⟩
+    refine cmp_modeM q p hq hok hAX hio hwf hngm _ hcodeO.right fd hentry hnp hC 44 7 5 abiStartA5L
+      (fun t ht => match t, ht with | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl | 4, _ => rfl | 5, _ => rfl | 6, _ => rfl | 7, _ => rfl | 8, _ => rfl | _ + 9, h => absurd h (by omega))
+      (fun t ht => match t, ht with | 0, _ => rfl | 1, _ => rfl | 2, _ => rfl | 3, _ => rfl | 4, _ => rfl | 5, _ => rfl | 6, _ => rfl | _ + 7, h => absurd h (by omega))
+      dm ra sa bS ⟨m4.arr8 Rom.PB⟩ rfl hgeoM hside hcx hc.hSEnd (by rw [hpbE]; exact hc.hpinsEnd)
+      (fun x h1 h2 => ?_) (fun x h1 h2 => ?_) _ _ _
+      (hf1.regs rfl fun r _ h2 _ _ _ _ _ _ => by cases r <;> first | exact absurd rfl h2 | rfl) (fun i hi => ?_)
+      (fun i hi => ?_) (m := m4) (inp0 := dm.regs.rdi.toNat) (n0 := bC.size) ?_ (fun x h1 h2 => ?_) ?_ ?_
+    · -- hSg
+      obtain ⟨q1, q2, q3, q4⟩ := hc.hSDisj x h1 h2
+      rw [hbase] at q1
+      exact ⟨q1, by rw [hrsp0] at q4; omega, by rw [hpbE]; exact q3⟩
+    · -- hPg
+      rw [hpbE] at h2
+      refine ⟨hpR x h1 h2, ?_⟩
+      refine Classical.byContradiction fun hn => ?_
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+      exact (hcs x (by omega) (by omega)).2.2.2 ⟨h1, h2⟩
+    · -- the solution's bytes
+      obtain ⟨q1, q2, q3, q4⟩ := hc.hSDisj (sa.toNat + i) (by omega) (by omega)
+      rw [hbase] at q1; rw [hrsp0] at q4
+      rw [hsame1 _ (by have := hc.hSEnd; omega) (by rcases q1 with h | h <;> omega) q2 q3 q4,
+        honly.same _ (by have := hc.hSEnd; omega) (by rcases q1 with h | h <;> omega)]
+      exact hc.hS i hi
+    · -- the pin data as mode 4 left it
+      have hg := hMem4.get8 _ hdPB i hi
+      simp only [abiLayout_tab, hpPB, abiLayout_b8_1] at hg
+      exact hg
+    · rw [hpbE]
+      exact abiLayout_ok hok ⟨Nat.le_refl _, by omega, hc.hinEnd, hc.hpinsEnd,
+        fun x h1 h2 => by rcases hinR x h1 h2 with h | h <;> omega,
+        fun x h1 h2 => by rcases hpR x h1 h2 with h | h <;> omega, hc.hbufDisj⟩
+    · refine Classical.byContradiction fun hn => ?_
+      simp only [not_or, Nat.not_lt, Nat.not_le] at hn
+      exact (hcs x (by omega) (by omega)).2.2.1 ⟨h1, h2⟩
+    · rw [hpbE]; exact hMem4
+    · sorry
   sorry
 
 end
