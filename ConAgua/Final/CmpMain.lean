@@ -663,6 +663,99 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
       · have hg := hMem5'.get8 _ hdPB i hi
         simp only [abiLayout_tab, hpPB, abiLayout_b8_1] at hg
         exact hg
+      intro s4 hf4 hsame4 hout6 hsz6
+      rw [cmpIn_self] at hout6
+      simp only [hin5, hpb5] at hout6
+      refine ev_congr (cmp_okGe (i := 99) hC rfl rfl rfl rfl rfl s4 (fun s' hm hr hbad => ?_)
+        (fun hrdx6 hge6 st8 => ?_)) (by omega)
+      · have erax : s'.regs.rax = s4.regs.rax := by
+          have := hr .rax (by decide); simpa using congrArg UInt64.ofBitVec this
+        have erdx : s'.regs.rdx = s4.regs.rdx := by
+          have := hr .rdx (by decide); simpa using congrArg UInt64.ofBitVec this
+        refine hexit s' (hf4.regs hm fun r _ h2 _ _ _ _ _ _ => hr r h2) (fun h0' hacc => ?_) (fun h2 => ?_)
+        · rw [erdx] at h0'; rw [erax] at hacc
+          have hout' := hout6.resolve_left (by rw [h0']; decide)
+          rcases hres : cmpRun p (m5.setG mode 6) with e | ⟨rs6, m6⟩
+          · rw [hres] at hout'
+            cases e <;> simp only [OutcomeRel] at hout' <;> (rw [h0'] at hout'; exact absurd hout'.1 (by decide))
+          rw [hres] at hout'
+          obtain ⟨-, hRes, -⟩ := hout'
+          have hrax : s4.regs.rax = rs6.getD 0 0 := hRes.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+          exact ⟨hbC, hpb, rs4, m4, hres4, .inr ⟨hge4', hbS, rs5, m5, hres5, .inr ⟨hge5', rm, h0, hjobs,
+            rs6, m6, hres, .inl (by rw [← hrax]; exact hacc)⟩⟩⟩
+        · rw [erdx] at h2; rw [erax]
+          obtain ⟨e, he, hk⟩ := err_of_entryOut hout6 h2
+          exact ⟨hbC, hpb, .inr ⟨rs4, m4, hres4, hge4', hbS, .inr ⟨rs5, m5, hres5, hge5', rm, h0,
+            .inr ⟨hjobs, .inl ⟨e, he, hk.symm⟩⟩⟩⟩⟩
+      -- mode 6 returned `2^63 + k'`: `ca_check_seq` for `[0, k')`
+      have hout' := hout6.resolve_left (by rw [hrdx6]; decide)
+      rcases hres6 : cmpRun p (m5.setG mode 6) with e | ⟨rs6, m6⟩
+      · rw [hres6] at hout'
+        cases e <;> simp only [OutcomeRel] at hout' <;> (rw [hrdx6] at hout'; exact absurd hout'.1 (by decide))
+      rw [hres6] at hout'
+      obtain ⟨-, hRes6, hMem6⟩ := hout'
+      have hrax6 : s4.regs.rax = rs6.getD 0 0 := hRes6.1 0 (by simp only [abiLayout_tab]; omega) (by decide)
+      have hge6' : 2 ^ 63 ≤ (rs6.getD 0 0).toNat := by rw [← hrax6]; exact hge6
+      refine ev_binO (op := .sub) (o := oR .rcx) (v := 9223372036854775808) rfl (hC.get (i := 104) rfl)
+        (Or.inr (Or.inr ⟨.rcx, rfl, rfl⟩)) fun st9 => ?_
+      refine ev_movRR (hC.get (i := 105) rfl) ?_
+      refine ev_movRI (hC.get (i := 106) rfl) ?_
+      refine ev_movRR (hC.get (i := 107) rfl) ?_
+      have e1 : s4.regs.rsp.toBitVec - 8 = A rsp0 := by
+        rw [toBitVec_eq_A, hf4.rsp, A_sub8 _ (by omega) (by omega)]; rfl
+      have hA0 : ({ toBitVec := A rsp0 } : UInt64).toNat = rsp0 := by
+        show (A rsp0).toNat = rsp0; simp only [A, BitVec.toNat_ofNat]; omega
+      refine ev_call (hC.get (i := 108) rfl) ?_ ?_
+      · rsimp; rw [e1]; exact isSome_rdW fun j hj => by rw [A_add]; exact hf4.win _ (by omega) (by omega)
+      rsimp
+      rw [e1]
+      refine ev_seq (abiS_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh hp k0
+        hcodeO fd hentry hnp (base := base) (blen := abiNeed tab) (inp := sa.toNat) (n := bS.size)
+        (pins := dm.regs.rdx.toNat) (np := pb.size) m6 _ (UInt64.ofBitVec (at_ (Kc + 108 + 1)).toBitVec) ?_ ?_) ?_
+      · refine ⟨Nat.le_refl _, by omega, ?_, fun x h1 h2 => ?_, ?_, fun x h1 h2 => ?_, ?_, ?_⟩ <;> dsimp only <;>
+          (try rsimp)
+        · exact hf4.r15
+        · exact isSome_get?_storeInt (hf4.map x h1 (by omega))
+        · rw [hA0, rdW_wrW_same]
+        · rw [hA0] at h1 h2
+          exact ⟨isSome_get?_storeInt (hf4.win x h1 h2), by rcases hcsW x h1 h2 with h | h <;> omega⟩
+        · rw [hA0]; omega
+        · rw [hA0]; omega
+      · dsimp only
+        refine hMem6.only' hG5 (Only.wrW (x := rsp0) (by omega)) fun x h1 h2 => ?_
+        obtain ⟨-, q2, q3⟩ := abiLayout_out hok (blen := abiNeed tab) (base := base) (inp := sa.toNat)
+          (n := bS.size) (pins := dm.regs.rdx.toNat) (np := pb.size) (x := x) (Nat.le_refl _)
+          (by rcases hside with h | h <;> omega) (fun ⟨h3, h4⟩ => by rcases (hSa x h3 h4).2 with h | h <;> omega)
+          (fun ⟨h3, h4⟩ => by rcases (hPa x h3 h4).2 with h | h <;> omega)
+        exact ⟨q3, q2⟩
+      intro st ⟨hpc, hRR, hfr, hout7⟩
+      dsimp only at hRR hfr hout7
+      simp only [hA0] at hfr
+      rw [hpc]
+      simp only [Int64.ofBitVec_toBitVec]
+      generalize st.data = s5 at *
+      have hsv5 : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 64 →
+          s5.dmem.get? (A x) = s4.dmem.get? (A x) := by
+        intro x h1 h2
+        obtain ⟨q1, q2, q3⟩ := seq_out (base := base) (out := out) (hdrf := hdrf) (ctlf := ctlf) (hw := hw) hok hp
+          (blen := abiNeed tab) (Nat.le_refl _) (x := x) (Or.inr h1)
+        rw [hfr.same x (by omega) q1 q2 q3 (by rcases hside with h | h <;> omega)
+          (Or.inr (by simp only [Layout.tabEnd, seqLayout_T, seqLayout_tab, seqLayout_nargs]; omega)),
+          get?_wrW_A (by omega) (by omega) (by rcases hside with h | h <;> omega)]
+      have hf5 : CmpFrame tab dm ra sa bS.size base rsp0 s5 :=
+        hf4.ret (by omega) (by omega) (by rsimp; exact hA0) (fun r h1 h2 h3 h4 h5 h6 h7 h8 h9 => by
+            cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | exact absurd rfl h4 |
+              exact absurd rfl h5 | exact absurd rfl h6 | exact absurd rfl h7 | exact absurd rfl h8 | exact absurd rfl h9 | rfl)
+          hRR hsv5 fun y hy => hfr.grows _ (isSome_get?_storeInt hy)
+      have hseq : seqMem m6 mode plo phi out hdrf ctlf hw (UInt64.ofBitVec (0 : Word).toBitVec)
+          (BinOp.sub.eval s4.regs.rax 9223372036854775808) =
+          seqMem m6 mode plo phi out hdrf ctlf hw 0 (rs6.getD 0 0 - 9223372036854775808) := by
+        rw [hrax6]; rfl
+      refine ev_congr (j := Kc + 109) ?_ (by omega)
+      rw [← Code.label (i := 109) hC rfl]
+      refine hexit s5 hf5 (fun h0' hacc => ?_) (fun h2 => ?_)
+      · have hout' := hout7.resolve_left (by rw [h0']; decide)
+        sorry
       · sorry
     · exact ((hf2.regs (s' := { s2 with regs := _, status := st7 }) rfl fun r h1 h2 h3 _ _ _ _ _ => by
           cases r <;> first | exact absurd rfl h1 | exact absurd rfl h2 | exact absurd rfl h3 | rfl).wr (by omega)
