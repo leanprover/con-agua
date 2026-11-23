@@ -328,8 +328,8 @@ omit [Host] in
 /-- **The frame after a call** made from a frame (the return address pushed at `rsp0`): the callee
 restored the caller's registers and left the save area alone. -/
 theorem CmpFrame.ret {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {s st : MachineData}
-    (hf : CmpFrame tab dm ra sa nS base rsp0 s) (hfit : base + abiNeed tab + 64 < 2 ^ 64)
-    (hr8 : rsp0 + 8 < 2 ^ 64) {R : Reg64s} (hRsp : R.rsp.toNat = rsp0)
+    (hf : CmpFrame tab dm ra sa nS base rsp0 s) (_hfit : base + abiNeed tab + 64 < 2 ^ 64)
+    (_hr8 : rsp0 + 8 < 2 ^ 64) {R : Reg64s} (hRsp : R.rsp.toNat = rsp0)
     (hR : ∀ r, r ≠ .rax → r ≠ .rcx → r ≠ .rdx → r ≠ .rsi → r ≠ .rdi → r ≠ .r8 → r ≠ .r9 → r ≠ .r11 → r ≠ .rsp →
       R.get64 r = s.regs.get64 r) (hrr : RegsRestored R st.regs)
     (hsave : ∀ x, base + abiNeed tab ≤ x → x < base + abiNeed tab + 64 → st.dmem.get? (A x) = s.dmem.get? (A x))
@@ -361,7 +361,7 @@ omit [Host] in
 /-- A store into the save area past its first six words keeps the frame. -/
 theorem CmpFrame.wr {dm : MachineData} {ra sa : Word} {nS base rsp0 : Nat} {s : MachineData}
     (hf : CmpFrame tab dm ra sa nS base rsp0 s) (hfit : base + abiNeed tab + 64 < 2 ^ 64)
-    (hwin : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24) {y : Nat} {v : BitVec 64}
+    (_hwin : rsp0 + 8 ≤ base ∨ base + dm.regs.r9.toNat ≤ rsp0 - 24) {y : Nat} {v : BitVec 64}
     (hy : base + abiNeed tab + 48 ≤ y) (hy' : y + 8 ≤ base + abiNeed tab + 64) :
     CmpFrame tab dm ra sa nS base rsp0 { s with dmem := wrW s.dmem (A y) v } := by
   have hsv : ∀ o, o + 8 ≤ 48 → rdW (wrW s.dmem (A y) v) (A (base + abiNeed tab + o)) =
