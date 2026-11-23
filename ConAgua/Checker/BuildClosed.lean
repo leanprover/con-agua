@@ -239,36 +239,40 @@ def biFns : List FnName :=
 
 names_tree biTree : biFns
 
-/-- The arrays `build_index` may write: all but the pins, the records `DECL`, their pool `DLP` and
-the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`). -/
+/-- The arrays `build_index` may write: all but the pins, the records `DECL`, their pool `DLP`,
+the compared run's kept records `CDECL` (`Checker/CompareEntry.lean`) and the preparation's memos
+`HSEEN`, `HNIX`. -/
 def biA : List TieredArray := checkerWordArrays.filter fun b =>
-  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL
+  b != PINS && b != L.Front.DECL && b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
 
-/-- The `CTL` words `build_index` may write: all but the pin sets' words and the solution's flag
-(`CTL[224]`, `Arena/JustifyIface.lean`). -/
-def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 && x != 224).map UInt64.ofNat
+/-- The `CTL` words `build_index` may write: all but the pin sets' words, the solution's flag
+(`CTL[224]`, `Arena/JustifyIface.lean`), the preparation's memo stamps (`CTL[73]`, `CTL[75]`) and the
+prelude's record count (`CTL[240]`). -/
+def biC : List Word := ((List.range 1024).filter fun x => x != 150 && x != 151 && x != 224 &&
+  x != 73 && x != 75 && x != 240).map UInt64.ofNat
 
 /-- The arrays of `biA`, as a test. -/
 def biPa (b : TieredArray) : Bool := checkerWordArrays.contains b && b != PINS && b != L.Front.DECL &&
-  b != L.Front.DLP && b != CDECL
+  b != L.Front.DLP && b != CDECL && b != HSEEN && b != HNIX
 
 /-- The `CTL` words of `biC`, as a test. -/
 def biPc (x : Word) : Bool := decide (x.toNat < 1024) && x.toNat != 150 && x.toNat != 151 &&
-  x.toNat != 224
+  x.toNat != 224 && x.toNat != 73 && x.toNat != 75 && x.toNat != 240
 
 theorem biPa_mem (b : TieredArray) (h : biPa b = true) : b ∈ biA := by
   simp only [biPa, Bool.and_eq_true, List.contains_iff_mem] at h
   simp only [biA, List.mem_filter, Bool.and_eq_true]
-  exact ⟨h.1.1.1.1, ⟨⟨h.1.1.1.2, h.1.1.2⟩, h.1.2⟩, h.2⟩
+  exact ⟨h.1.1.1.1.1.1, by simp only [h, and_self]⟩
 
 theorem biPc_mem (x : Word) (h : biPc x = true) : x ∈ biC := by
   simp only [biPc, Bool.and_eq_true, bne_iff_ne, ne_eq, decide_eq_true_eq] at h
   simp only [biC, List.mem_filter, List.mem_map, List.mem_range]
-  refine ⟨x.toNat, ⟨h.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
+  refine ⟨x.toNat, ⟨h.1.1.1.1.1.1, ?_⟩, UInt64.ofNat_toNat⟩
   simp only [Bool.and_eq_true, bne_iff_ne, ne_eq]
-  exact ⟨⟨h.1.1.2, h.1.2⟩, h.2⟩
+  omega
 
-theorem not_mem_biC {x : Word} (h : x.toNat = 150 ∨ x.toNat = 151 ∨ x.toNat = 224) : x ∉ biC := by
+theorem not_mem_biC {x : Word} (h : x.toNat = 150 ∨ x.toNat = 151 ∨ x.toNat = 224 ∨ x.toNat = 73 ∨
+    x.toNat = 75 ∨ x.toNat = 240) : x ∉ biC := by
   intro hm
   simp only [biC, List.mem_map, List.mem_filter, List.mem_range] at hm
   obtain ⟨y, ⟨hy, hb⟩, rfl⟩ := hm

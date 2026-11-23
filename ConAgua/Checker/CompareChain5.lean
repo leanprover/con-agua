@@ -3,6 +3,8 @@ module
 public import ConAgua.Checker.CompareTwinFacts
 import ConAgua.Arena.GrindAttr
 import ConAgua.Checker.RomProgInit
+import ConAgua.Checker.HoistWalkRef
+import ConAgua.Checker.HoistClosureL
 import ConAgua.Checker.IndDeclConstsProg
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
@@ -129,6 +131,21 @@ theorem R4.frame0 {l m m' : Mem} {pb : ByteArray} {pre : PreludeIx} {a : AState}
     h.rok.frame hf (by simp) (by simp), h.mode.frame hf (by simp) (by simp)⟩
   rw [hf.ctl 240 (by simp)]; exact h.np
 
+/-- **What mode `6`'s preparation needs beyond the stage relation**: the prelude's record count
+`CTL[240]`, the hoist's memos well formed. -/
+structure Keep6 (m : Mem) (pre : PreludeIx) : Prop where
+  np : (rdW (m.arr64 CTL) 240).toNat = pre.decls.size
+  seen : ∃ s, SeenR m s
+  nix : ∃ idx, NixR m idx
+
+theorem Keep6.frame {A : List TieredArray} {C : List Word} {m m' : Mem} {pre : PreludeIx}
+    (h : Keep6 m pre) (hf : MemFrame A C m m') (h1 : (HSEEN : TieredArray) ∉ A)
+    (h2 : (HNIX : TieredArray) ∉ A) (c1 : (73 : Word) ∉ C) (c2 : (75 : Word) ∉ C) (c3 : (240 : Word) ∉ C) :
+    Keep6 m' pre := by
+  obtain ⟨hn, ⟨s, hs⟩, ⟨idx, hx⟩⟩ := h
+  exact ⟨by rw [hf.ctl 240 c3]; exact hn, ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ A C h1 c1 m m' hf _ hs⟩,
+    ⟨idx, memoRV_frame hnSch hnSch_wf nmKey _ A C h2 c2 m m' hf (fun _ _ h => h) idx hx⟩⟩
+
 /-! ## The memory predicates between mode `5`'s stages -/
 
 section preds
@@ -146,13 +163,13 @@ def QS5 (m : Mem) : Prop :=
 /-- After the solution's `prepare_prelude`. -/
 def QS6 (m : Mem) : Prop :=
   ∃ sA pre sB rC sC rS sC' dsS sD, CmpPfx2 bC bS sA pre sB rC sC rS sC' dsS sD ∧
-    R6 (loadMem bS pb sz) m pb dsS sD ∧ Stash m pre rC
+    R6 (loadMem bS pb sz) m pb dsS sD ∧ Stash m pre rC ∧ (rdW (m.arr64 CTL) 240).toNat = pre.decls.size
 
 /-- After `intern_all_pins`. -/
 def QS7 (m : Mem) : Prop :=
   ∃ sA pre sB rC sC rS sC' dsS sD pins ipins sE, CmpPfx2 bC bS sA pre sB rC sC rS sC' dsS sD ∧
     internAllPins pins maxNatSizeDefault sD = .ok (ipins, sE) ∧
-    R7 (loadMem bS pb sz) m pb dsS ipins sE ∧ Stash m pre rC
+    R7 (loadMem bS pb sz) m pb dsS ipins sE ∧ Stash m pre rC ∧ Keep6 m pre
 
 end preds
 
@@ -175,7 +192,8 @@ theorem prepareStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) 
       (fun n s₀ => stageFrame_prepare_prelude n s₀) x.1)
     fun m ⟨sA, pre, sB, rC, sC, rS, sC', hpx, hp, h5, hst⟩ => ⟨(m, pre, rS, sC'), ⟨rfl, h5⟩,
       fun _ m' ⟨⟨dsS, sD, hD, h6⟩, hf⟩ => ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, ⟨hpx, hp, hD⟩, h6,
-        hst.frame hf (by decide +kernel) (by decide +kernel)⟩⟩
+        hst.frame hf (by decide +kernel) (by decide +kernel),
+        by rw [hf.ctl 240 (stageC_prepare_prelude_off _ (by decide))]; exact h5.np⟩⟩
 
 theorem pinsStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63) :
     StageSpec checkerProg "intern_all_pins" (QS6 bC bS pb sz) fun _ => QS7 bC bS pb sz :=
@@ -187,10 +205,12 @@ theorem pinsStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hp
     (fun x n hn s₀ ⟨hm, hpp, h6⟩ =>
       ((pinsStage_gen bS pb sz hpb x.2.1 x.2.2 hpp).withFrame
         (fun n s₀ => stageFrame_intern_all_pins n s₀) x.1) n hn s₀ ⟨hm, h6⟩)
-    fun m ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, hpx, h6, hst⟩ => ⟨(m, dsS, sD),
+    fun m ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, hpx, h6, hst, hnp⟩ => ⟨(m, dsS, sD),
       ⟨rfl, PinsPre.cmp hpx, h6⟩, fun _ m' ⟨⟨pins, ipins, sE, hE, h7⟩, hf⟩ =>
         ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, pins, ipins, sE, hpx, hE, h7,
-          hst.frame hf (by decide +kernel) (by decide +kernel)⟩⟩
+          hst.frame hf (by decide +kernel) (by decide +kernel),
+          Keep6.frame ⟨hnp, h6.seen, h6.nix⟩ hf (by decide +kernel) (by decide +kernel)
+            (by decide +kernel) (by decide +kernel) (stageC_intern_all_pins_off _ (by decide))⟩⟩
 
 /-! ## The solution's index build -/
 
@@ -230,7 +250,7 @@ structure FoldOn (b pb : ByteArray) (sz : TieredArray → Nat) (ds : Array IDecl
 /-- After the solution's index build: the twin's phase, `FoldOn` and the challenge's records. -/
 def FS (bC bS pb : ByteArray) (sz : TieredArray → Nat) (m : Mem) : Prop :=
   ∃ (PS : PhaseS bC bS) (m₇ : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
-    Stash m PS.pre PS.rC
+    Stash m PS.pre PS.rC ∧ Keep6 m PS.pre
 
 theorem buildStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hpb : pb.size < 2 ^ 63)
     (hsz : ∀ s, sz s < 2 ^ 64) :
@@ -249,7 +269,7 @@ theorem buildStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (h
   have hD : s'.mem.arr64 L.Front.DECL = s.mem.arr64 L.Front.DECL :=
     hfr.arr _ (fun h => by simp [biA] at h) (by decide)
   refine ⟨?_, hD⟩
-  obtain ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, pins, ipins, sE, hpx, hE, h7, hst⟩ := hQ
+  obtain ⟨sA, pre, sB, rC, sC, rS, sC', dsS, sD, pins, ipins, sE, hpx, hE, h7, hst, hk6⟩ := hQ
   have hctl : 220 ≤ (s.mem.arr64 CTL).size := by
     have := h7.since.caps.2.1
     rw [h7.since.frame.size]; simp only [ctlMin] at this; omega
@@ -265,7 +285,8 @@ theorem buildStageC_checker (bC bS pb : ByteArray) (sz : TieredArray → Nat) (h
       (by simpa [RomOK] using hpb) h7.since.pbpre) cnt hcnt n s sE h7.pinsFull (by omega)
       (fun _ hf hl => buildR_of_out hsz (StagesOut.cmp hpx hE) h7 hf hl))).2
   exact ⟨⟨pins, sA, pre, sB, rC, sC, rS, sC', dsS, sD, ipins, sE, I, a', hpx, hE, hI⟩, s.mem,
-    ⟨h7, hR', hFz, hsz', hG, hfr, hby⟩, hst.frame hfr (by simp [biA]) (by simp [biA])⟩
+    ⟨h7, hR', hFz, hsz', hG, hfr, hby⟩, hst.frame hfr (by simp [biA]) (by simp [biA]),
+    hk6.frame hfr (by simp [biA]) (by simp [biA]) (not_mem_biC (by decide)) (not_mem_biC (by decide)) (not_mem_biC (by decide))⟩
 
 /-! ## `check` in mode `5` -/
 
@@ -339,7 +360,7 @@ theorem checkC2_run (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : Inp
     (hrun : L.run checkerProg N "check" [] ((m4.setIn bS.data).setG MODE 5) = .ok (rs, m'))
     (hr : rs.headD 0 ≠ 1) :
     ∃ (PS : PhaseS bC bS) (m₇ m : Mem), FoldOn bS pb sz PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m ∧
-      Stash m PS.pre PS.rC ∧ parCompactOK m 1 = true ∧ m' = parCompactMem m 1 ∧
+      Stash m PS.pre PS.rC ∧ Keep6 m PS.pre ∧ parCompactOK m 1 = true ∧ m' = parCompactMem m 1 ∧
       rs.headD 0 = 9223372036854775808 + UInt64.ofNat PS.dsS.size := by
   have s5 := frontStageC_checker bC bS pb sz hin.1 hin.2.1
   have s6 := prepareStageC_checker bC bS pb sz
@@ -371,8 +392,8 @@ theorem checkC2_run (bC bS pb : ByteArray) (sz : TieredArray → Nat) (hin : Inp
         fun _ _ h e => h (by rw [e]; exact hQ4)
     have H := run_post (Q := fun x m'' => s₀.mem.glob MODE = 5 → P (x.headD 0) m'') hrun
       (check_dispatch5 hlc n s₀ P hC)
-    obtain ⟨⟨m, ⟨PS, m₇, hF, hst⟩, hok, rfl⟩, hval⟩ := H hmode hr
-    refine ⟨PS, m₇, m, hF, hst, hok, rfl, ?_⟩
+    obtain ⟨⟨m, ⟨PS, m₇, hF, hst, hk6⟩, hok, rfl⟩, hval⟩ := H hmode hr
+    refine ⟨PS, m₇, m, hF, hst, hk6, hok, rfl, ?_⟩
     have hFo := parCompactMem_out m 1
     have hD0 : 0 < (m.arr64 L.Front.DECL).size := by have := hF.build.decls.room; omega
     have eD : (parCompactMem m 1).arr64 L.Front.DECL = m.arr64 L.Front.DECL := hFo.arr _ (by decide)

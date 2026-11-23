@@ -68,7 +68,8 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
         RecOK (m'.arr64 DECL) (m'.arr64 DLP) x) ∧
       ArenaR m' a' ∧ IWOK m' ∧ PinsR m' a'.pins ∧ m'.arr64 DLP = m.arr64 DLP ∧
       (m'.arr64 DECL).size = (m.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
-      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size := by
+      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size ∧
+      (∃ s, SeenR m' s) ∧ (∃ idx, NixR m' idx) := by
   -- the big frame of the passes (the store tier's arrays and `IW`; `CTL` words below 64)
   let A : List TieredArray := lowTierArrs ++ [(IW : TieredArray)]
   let C : List Word := (List.range 64).map UInt64.ofNat ++ [200]
@@ -233,7 +234,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
   | some rr =>
   obtain ⟨ord', m₆⟩ := rr
   rw [hho, pPrepW.k_hoist_nat_op_ground.arm1] at h
-  obtain ⟨res, hrunH, hres, hO₆, hA₆, hI₆, hG₆, hord₆, hP₆, hmf₆⟩ :=
+  obtain ⟨res, hrunH, hres, hO₆, hA₆, hI₆, hG₆, hord₆, hP₆, hmf₆, hS₆, hN₆⟩ :=
     hNatOpGround_ok p hx n m₅ m₆ a₁ (front ++ rest) ord c ord' hA₅ (seen_mf hmf₅ hseen)
       (nix_mf hmf₅ hnix) hO₅ hFR (by omega) hI₅ (by rw [htop₅]; omega) hP₅ hho
   -- the rewrite of `DECL`
@@ -285,7 +286,7 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
     rw [hfin, ← hD₇, ← hIW₇ i hi, ← hdw i hi k hk]
     simp only [dw, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
     rw [ite_eq_right (by omega)]
-  refine ⟨res.1, a₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hpe₁, hse₁, hpins₁, by rw [hres]; omega⟩
+  refine ⟨res.1, a₁, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, hpe₁, hse₁, hpins₁, by rw [hres]; omega, ?_, ?_⟩
   · simp only [preparePrelude, prepareD]
     rw [HoistTwin.run_bind, HoistTwin.run_bind, hrunF]
     simp only
@@ -316,6 +317,16 @@ theorem pPrepCore_ok (p : Prog) (hx : HoistExt p) (n : Nat) (m m' : Mem) (a : AS
       hA₇.fr.1 PINS (by decide) (by decide)]
   · rw [hfinP, hP₉, hP₆', hDLP₅]
   · rw [hfin]; simp [hD₉s]
+  · have hf : MemFrame [IW, DECL] [200] m₆ (m₉.set64 DECL 0 c) :=
+      ((hA₇.fr.mono (by simp) (by simp)).trans (hmf₉.mono (by simp) (by simp))).trans
+        ((MemFrame.set64 m₉ DECL (by decide) _ _).mono (by simp) (by simp))
+    obtain ⟨s, hs⟩ := hS₆
+    exact ⟨s, memoRG_frame hsSch hsSch_wf bmKey _ _ _ (by decide) (by decide) _ _ hf _ hs⟩
+  · have hf : MemFrame [IW, DECL] [200] m₆ (m₉.set64 DECL 0 c) :=
+      ((hA₇.fr.mono (by simp) (by simp)).trans (hmf₉.mono (by simp) (by simp))).trans
+        ((MemFrame.set64 m₉ DECL (by decide) _ _).mono (by simp) (by simp))
+    obtain ⟨idx, hn⟩ := hN₆
+    exact ⟨idx, memoRV_frame hnSch hnSch_wf nmKey _ _ _ (by decide) (by decide) _ _ hf (fun _ _ h => h) _ hn⟩
 
 
 /-- **`prepare_prelude()` refines `preparePrelude pre ds`**: from the prelude's records followed by
@@ -342,7 +353,8 @@ theorem preparePrelude_refines (p : Prog) (hp : PrepProg p) (hn : PrepExt p) (hh
         RecOK (s'.mem.arr64 DECL) (s'.mem.arr64 DLP) x) ∧
       ArenaR s'.mem a' ∧ IWOK s'.mem ∧ PinsR s'.mem a'.pins ∧ s'.mem.arr64 DLP = s₀.mem.arr64 DLP ∧
       (s'.mem.arr64 DECL).size = (s₀.mem.arr64 DECL).size ∧ a'.store.pers = a.store.pers ∧
-      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size; ⊤⦄ :=
+      a'.store.scr = a.store.scr ∧ a'.pins = a.pins ∧ ds'.size ≤ (pre.decls ++ ds).size ∧
+      (∃ s, SeenR s'.mem s) ∧ (∃ idx, NixR s'.mem idx); ⊤⦄ :=
   triple_post (preparePrelude_spec p hp hn hh hx n s₀) (fun r s' h =>
     ⟨h.1, pPrepCore_ok p hx n s₀.mem s'.mem a pre ds _ (r.headD 0) hD hns hnp hDsz hDsz' hA hseen
       hnix hI hP rfl h.2⟩)

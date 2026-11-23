@@ -153,6 +153,9 @@ structure R6 (l m : Mem) (pb : ByteArray) (ds : Array IDeclaration) (a : AState)
   mode : ModeOK m
   /-- The tier-1 record pool's top is still zero. -/
   c130 : rdW (m.arr64 CTL) 130 = 0
+  /-- The hoist's memos are well formed (a later preparation clears them). -/
+  seen : ∃ s, SeenR m s
+  nix : ∃ idx, NixR m idx
 
 theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre : PreludeIx)
     (rc : ParseResultD) (a : AState) :
@@ -182,11 +185,11 @@ theorem prepareStage_checker (b pb : ByteArray) (sz : TieredArray → Nat) (pre 
     ⟨fun _ => h5.pf.full⟩)
     (stage_since n (preLoop_mem "prepare_prelude" (by decide +kernel)) s₀))
     (stageFrame_prepare_prelude n s₀)) fun _ s' ⟨⟨⟨hl, hpost⟩, _, hk, hpf⟩, hsf⟩ => ⟨hl, ?_⟩
-  obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, hIW, -, hDLP, hDs, hpe, hse, hpins, hle⟩ := hpost
+  obtain ⟨ds', a', hrun, hcnt, hrecs, hAR, hIW, -, hDLP, hDs, hpe, hse, hpins, hle, hS', hN'⟩ := hpost
   refine ⟨ds', a', hrun, h5.since.step hk hpf,
     ⟨hAR, L.Front.DerR.congrSt hpe hse (DerR.frameM _ _ _ _ hsf (by decide +kernel) _ h5.arena.der)⟩, ?_, ?_, hIW,
     ModeOK.frame h5.mode hsf (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide))
-      (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide)), ?_⟩
+      (not_mem_of_toNat (Z := [0, 1]) (by decide +kernel) _ (by decide)), ?_, hS', hN'⟩
   rotate_right
   · rw [hsf.ctl 130 (not_mem_of_toNat (Z := [130]) (by decide +kernel) _ (by decide))]; exact h5.hz.c130
   · refine ⟨by rw [hDs]; have := hc.1 DECL (by decide); omega, by rw [hDLP]; exact h5.decls.psize,
