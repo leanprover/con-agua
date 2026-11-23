@@ -246421,6 +246421,13 @@ ca_cmp_decline:
 movq $0, %rax
 movq $1, %rdx
 ret
+ca_start_a7:
+movq $6768868458496, %rax
+cmpq %rax, %r9
+jb ca_setup
+movq $7, %rax
+movq %rax, 35496(%r8)
+jmp ca_setup
 .section .rodata
 .globl ca_rom
 .globl ca_rom_len
@@ -246452,5 +246459,8 @@ ca_npos: .quad 198
 .globl ca_cmp_region_size
 ca_cmp_region_size: .quad 10960756539392
 .globl ca_compare
+.globl ca_start_a4
+.globl ca_start_a5
+.globl ca_start_a7
 .globl ca_diag
 ca_diag: .quad -1
