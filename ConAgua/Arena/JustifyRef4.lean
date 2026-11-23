@@ -185,6 +185,7 @@ structure ConeProg (p : Prog) : Prop where
   ce : p.lookup "cone_entry" = some coneEntryL
   cp : p.lookup "cone_push" = some conePushL
   cg : p.lookup "cone_go" = some coneGoL
+  jw : p.lookup "justify_why" = some justifyWhyL
   srg : p.lookup "sol_row_get" = some solRowGetL
   sf : p.lookup "sol_find" = some solFindL
   stg : p.lookup "sol_tbl_get" = some solTblGetL

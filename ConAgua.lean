@@ -99,3 +99,4 @@ public import ConAgua.Arena.JustifySideRefSide
 public import ConAgua.Arena.JustifyRef3
 public import ConAgua.Arena.JustifyRef4
 public import ConAgua.Arena.JustifyRef5
+public import ConAgua.Arena.JustifyRef6
