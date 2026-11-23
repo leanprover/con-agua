@@ -122,4 +122,35 @@ theorem move_step {bC bS pb : ByteArray} {sz : TieredArray → Nat} (PS : PhaseS
   · have := hS7.caps.2.1; rw [hsize]; rw [loadMem_arr, Array.size_replicate] at this
     simp only [ctlMin] at this; omega
 
+/-! ## The challenge's records back -/
+
+theorem restoreM_dlp (m : Mem) : (restoreM m).arr64 DLP = m.arr64 DLP :=
+  arr64_copy64_ne _ _ _ _ _ _ (by decide)
+
+theorem restoreM_frame (m : Mem) : MemFrame [DECL] [] m (restoreM m) :=
+  (memFrame_copy64 m DECL (by decide) 0 CDECL 0 _).mono (by simp) (by simp)
+
+/-- **`cmp_restore` gives the challenge's records back** (`stash_of` the other way): `DECL` holds
+what `CDECL` held, over the same pool. -/
+theorem restore_of {m : Mem} {ds : Array IDeclaration} (hD : DeclsF (m.arr64 CDECL) (m.arr64 DLP) ds)
+    (hR : ∀ x < ds.size, RecOK (m.arr64 CDECL) (m.arr64 DLP) x) (hok : RestoreOK m)
+    (hds : (m.arr64 DECL).size < 2 ^ 63) :
+    DeclsF ((restoreM m).arr64 DECL) ((restoreM m).arr64 DLP) ds ∧
+      ∀ x < ds.size, RecOK ((restoreM m).arr64 DECL) ((restoreM m).arr64 DLP) x := by
+  have hc' : (rdW (m.arr64 CDECL) 0).toNat = ds.size := hD.count
+  have h59 := hok.1
+  rw [hc'] at h59
+  have hn : (restoreN m).toNat = 1 + 8 * ds.size := by
+    simp only [restoreN]
+    rw [UInt64.toNat_add, UInt64.toNat_mul, hc']
+    simp only [UInt64.toNat_one, UInt64.reduceToNat]
+    omega
+  have hcp : ∀ j, j < 1 + 8 * ds.size →
+      ((restoreM m).arr64 DECL)[j]? = (m.arr64 CDECL)[j]? := fun j hj =>
+    get?_copy64 (by decide) m _ (by rw [hn]; omega) hok.2.1 hok.2.2 j (by rw [hn]; exact hj)
+  have hsz : ((restoreM m).arr64 DECL).size = (m.arr64 DECL).size := size_copy64 _ _ _ _ _ _ _
+  rw [restoreM_dlp]
+  refine ⟨hD.congr (by rw [hsz]; exact hds) (by rw [hsz, ← hn]; exact hok.2.1) rfl hcp
+    (fun _ _ _ => rfl) (Nat.le_refl _) hD.ptop, fun x hx => recOK_congr (hR x hx) fun j _ hj => hcp j (by omega)⟩
+
 end L.Checker
