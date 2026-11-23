@@ -717,4 +717,35 @@ theorem matesInsert_ok {p : Prog} (hP : MatesProg p) {m₀ : Mem} {bo bl : Word}
     rw [← hname]
     exact this
 
+/-! ## `solution_of` -/
+
+theorem cvname_eq : (CI.cv + CV.name : Word) = CI.cv := by decide
+
+/-- The block of an inductive record, its names as `mates_insert` reads them. -/
+theorem block_of_rec {D P : Array Word} {ds : Array IDeclaration} (hD : DeclsF D P ds) {k : Nat}
+    (hk : k < ds.size) (hR : L.Checker.RecOK D P k) {block : List IConstantInfo} {nP : Nat}
+    (he : ds[k] = .indDecl block nP) {m : Mem} (hP : m.arr64 DLP = P) :
+    block.length = (dw D k 3).toNat ∧ (dw D k 3).toNat < 2 ^ 63 ∧
+      ∀ i (hi : i < block.length), (decI (nameW m (dw D k 2) (UInt64.ofNat i)) : NIdx) = block[i].name := by
+  have hr := hD.recs k hk
+  rw [he] at hr
+  obtain ⟨h6, -, t, -, hdec⟩ := hr
+  obtain ⟨hbo, hp, -⟩ := hR.2 h6
+  obtain ⟨hlen, hall⟩ := block_names_dec _ _ block hdec (by omega) (fun j hj => by
+    have := hp j hj; simpa [rdN] using this)
+  have hps := hD.psize
+  refine ⟨hlen, ?_, fun i hi => ?_⟩
+  · rcases Nat.eq_zero_or_pos (dw D k 3).toNat with h0 | h0
+    · rw [h0]; decide
+    · obtain ⟨-, -, -, -, h5⟩ := hall ((dw D k 3).toNat - 1) (by omega); omega
+  obtain ⟨hi', hname, -, hq, hbi⟩ := hall i (by omega)
+  have e1 : (dw D k 2 + UInt64.ofNat i).toNat = (dw D k 2).toNat + i := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by have := hbi; have := hps; simp only [UInt64.size] at *; omega)]; exact Nat.mod_eq_of_lt (by omega)
+  have e2 : (rdN P ((dw D k 2).toNat + i) + (CI.cv + CV.name)).toNat =
+      (rdN P ((dw D k 2).toNat + i)).toNat + CI.cv.toNat := by
+    rw [cvname_eq, UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have : nameW m (dw D k 2) (UInt64.ofNat i) = nmP P (dw D k 2).toNat i &&& 4294967295 := by
+    simp only [nameW, hP, rdW_rdN, e1, e2, nmP]
+  rw [this, decI_mask]; exact hname
+
 end L.Arena
