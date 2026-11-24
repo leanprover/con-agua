@@ -148,6 +148,12 @@ public import ConAgua.Checker.CmpThreadsC
 public import ConAgua.Checker.CmpSPhase
 public import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhaseThr
+public import ConAgua.Checker.C1Hdr
+public import ConAgua.Checker.C1ThrQ
+public import ConAgua.Arena.JobStartX
+public import ConAgua.Checker.C1Keep
+public import ConAgua.Checker.C1Switch
+public import ConAgua.Checker.C1Back
 public import ConAgua.Checker.CmpSeqW
 public import ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CmpSeqView
@@ -168,6 +174,7 @@ public import ConAgua.Final.Compare
 public import ConAgua.Checker.SeedReread
 public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CpThreadFail
+public import ConAgua.Final.C1Threads
 public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC

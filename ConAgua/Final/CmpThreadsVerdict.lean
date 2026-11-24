@@ -4,6 +4,7 @@ public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.ThreadsVerdict
 import ConAgua.Final.CpThreadFail
 import ConAgua.Verdict.CmpVSPhase
+import ConAgua.Checker.C1Hdr
 
 @[expose] public section
 
@@ -35,13 +36,14 @@ open L L.Compiler L.Checker L.Arena ConRon.Arena
 /-- **Stand-in (L level, lane compare2 H7)**: a thread whose solution calls over header S ran from
 a fresh region, and whose challenge calls over header C, continuing from the memory those left,
 ran and then failed on the challenge's job `j < c` with `e` of class other than `0`, its earlier
-challenge calls below `j`; threads `ths` as in `c1Thr_accepts_standin` (every solution job and
+challenge calls below `j`; threads `ths` as in `c1Thr_accepts` (every solution job and
 every challenge job below `j` claimed): the twin's threaded comparison fails with that class. -/
 theorem c1Thr_failC_standin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS bC bS)
     {m₇ m : Mem} (hF : FoldOn bS pb (abiSz checkerTab) PS.dsS PS.ipins PS.sE PS.IS PS.sF m₇ m)
     {c : Word} {m9 mS : Mem} (h6 : F6 PS m c m9) (hb9 : m9.bytes = m.bytes) (hV : CsViewS m m9 mS)
-    (B : Array Word) (hBS : CsFirst B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
-    (BC : Array Word) (hBC : CsFirst BC m9)
+    (B : Array Word) (hBS : HdrView B mS) (khi : Word) (hk : khi.toNat = PS.dsS.size)
+    (BC : Array Word) (hBC : HdrView BC m9)
+    (hext : ∀ i < frozen.length, fzExt mS (fzAt i) = fzExt m9 (fzAt i))
     (r₀ : Mem) (hz : ∀ b ∈ parOwnedL, r₀.arr64 b = zeros (mS.arr64 b).size) (hI0 : r₀.glob INIT = 0)
     (csS : List (Word × Nat × Mem)) (hS : ThreadRuns B r₀ csS) (hcsS : ∀ c' ∈ csS, c'.1 < khi)
     (hincS1 : (csS.map (·.1)).Pairwise (· < ·))
@@ -73,7 +75,7 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
     (t : ThreadM) (i : Nat) (hR : ThreadFail bC (some bS) pb dm₀ ra₀ st₀ B ths t i)
     (hk : (t.st i).data.regs.rax &&& 3 ≠ 0) :
     TwinCompareVerdictThr bC bS ((t.st i).data.regs.rax &&& 3) := by
-  obtain ⟨-, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hkC, hnov⟩ :=
+  obtain ⟨-, hpb, PS, m₇, m, c, m9, mS, hF, h6, hb9, hV, hsz, hS, hfS, hk2S, hL5, -, hC, hfC, hext, hkC, hnov⟩ :=
     (cmpEntry1_out k0 hcode bC bS pb h64 (solAddr dm₀) dm₀ ra₀ st₀ hR.call₀.cmp hR.ret₀ hR.rdx₀ hR.rax₀ B hR.bufw hR.buflen)
   have hL0 : (B.getD 5 0).toNat ≠ 0 := fun h => hL5 (UInt64.toNat_inj.mp (by rw [h]; rfl))
   obtain ⟨e, hrax, hcase⟩ := cpThreadFail_runs k0 hcode dm₀ B hS _ rfl hL0 hC (B.getD 2 0) rfl t i
@@ -97,7 +99,7 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   rcases hcase with ⟨hph, cs, hruns, hcs⟩ | ⟨hge, csS, csC, hRS, hcsS, hincS1, hruns, hcs⟩
   · -- the solution's job fails
     obtain ⟨m2, m3, dsC, sG, res, m4, I, a', h, hI, -⟩ := F6.jobM hF h6
-    exact cmpV_tjobSI hpb PS hF h6 hb9 h hI hV B hfS (B.getD 2 0) hk2S (zeroMem checkerTab)
+    exact cmpV_tjobSI hpb PS hF h6 hb9 h hI hV B (csFirst_hdrView hfS) (B.getD 2 0) hk2S (zeroMem checkerTab)
       (cp_zeroOwned fun b hb => (hsz b hb).1) rfl _ cs abiFuel e hruns hcs hph hk0
       (ths.map fun t => (zeroMem checkerTab, fS t)) (fun t' ht' => by
         obtain ⟨t, ht, rfl⟩ := List.mem_map.mp ht'
@@ -113,7 +115,7 @@ theorem cmpThreadFail_twin [Host] (k0 : Nat) (hcode : Code checkerFile k0)
   · -- the challenge's job fails, after the thread's solution calls
     have hcl := hR.claimed i (Nat.le_refl _)
     rw [hkC] at hcl
-    refine c1Thr_failC_standin hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S (B.extract (B.getD 5 0).toNat B.size) hfC
+    refine c1Thr_failC_standin hpb PS hF h6 hb9 hV B hfS (B.getD 2 0) hk2S (B.extract (B.getD 5 0).toNat B.size) hfC hext
       (zeroMem checkerTab) (cp_zeroOwned fun b hb => (hsz b hb).1) rfl csS hRS hcsS hincS1 _ csC abiFuel e hruns hcs
       (cp_sub_lt hcl hge hnov) hk0 (ths.map fun t => (zeroMem checkerTab, fS t, fC t)) (fun t' ht' => ?_)
       (fun j hj => hcovS j (cp_lt_of_lt_le' hj hge) hj) (fun j hj => ?_) (fun t' ht' => ?_) (fun t' ht' => ?_)
