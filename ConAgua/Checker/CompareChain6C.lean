@@ -4,6 +4,8 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CompareEntry
 meta import ConAgua.Checker.LoopProgTac
 public import ConAgua.Checker.ParEntryA

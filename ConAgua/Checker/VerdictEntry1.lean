@@ -104,7 +104,7 @@ theorem check_err_dispatchA {p : Prog} (hp : p.lookup "check" = some checkL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hA · ·),
-    (L.invoke_loc p (exec p n) "check_b" [] ·), (L.invoke_loc p (exec p n) "check_c1" [] ·),
+    (L.invoke_loc p (exec p n) "check_b" [] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_c1" [] ·),
     (L.invoke_loc p (exec p n) "check_c2" [] ·), (L.invoke_loc p (exec p n) "check_c3" [·] ·)]
   all_goals (try simp only at *)
   all_goals grind [lang_grind]

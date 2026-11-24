@@ -6,6 +6,8 @@ public import ConAgua.Checker.CompareEntry
 public import ConAgua.Front.ApplyDeclRefine
 public import ConAgua.Arena.FreezeSpec
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import Std.WP.Tactic

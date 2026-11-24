@@ -60,7 +60,7 @@ theorem checkMode2_seqO {b pb : ByteArray}
     have hB := checkB_seqO ho hidx hF hJP n (by omega) hi hhi
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hB,
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bs" [] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bc" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),

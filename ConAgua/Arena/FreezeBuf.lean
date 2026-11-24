@@ -59,7 +59,9 @@ theorem buf_offs (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^
       hdrW + fzSum m frozen.length ≤ (m.arr64 OUT).size := by
   have hW := parCompactOK_hdr hok
   simp only [parCompactOK, Bool.and_eq_true] at hok
-  exact (pcGo_good m 1 hW (fun _ => hlt) frozen.length (Nat.le_refl _) hok.1.1.1).1 one_ne_zero'
+  have := (pcGo_good m 1 0 (by simpa using hW) (by simp; have := hdrW_eq; omega) (fun _ => hlt) frozen.length
+    (Nat.le_refl _) hok.1.1.1).1 one_ne_zero'
+  simpa using this
 
 /-- **The buffer's length** is `hdrW` plus the extents. -/
 theorem bufOf_size (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64) :
@@ -130,14 +132,14 @@ theorem bufEntry_succ (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size 
     he.1, he.2, UInt64.toNat_ofNat_of_lt' (by rw [fzExt_eq]; exact UInt64.toNat_lt_size _)]
 
 /-- The extent of frozen entry `i` fits its source array. -/
-theorem fzExt_le_src (hok : parCompactOK m 1 = true) {i : Nat} (hi : i < frozen.length) :
+theorem fzExt_le_src {b : Word} (hok : parCompactOK m 1 b = true) {i : Nat} (hi : i < frozen.length) :
     fzExt m (fzAt i) ≤ (m.arr64 (fzAt i).src).size := by
   simp only [parCompactOK, Bool.and_eq_true] at hok
   have h1 := hok.1.1.1
   obtain ⟨k, hk⟩ : ∃ k, frozen.length = i + 1 + k := ⟨frozen.length - (i + 1), by omega⟩
   rw [hk, List.range_add, pcOK_append, Bool.and_eq_true, pcOK_range_succ, Bool.and_eq_true] at h1
   have h2 := h1.1.2
-  have hF := OutFrame.pcGo 1 (List.range i) m (UInt64.ofNat hdrW)
+  have hF := OutFrame.pcGo 1 b (List.range i) m (UInt64.ofNat hdrW)
   have hz := fzAt_ok hi
   have he := fzEv_congr hF.arr _ hz.1
   simp only [fzOK, he.1, hF.size, hF.arr _ (TieredArray.t0_ne hz.2), Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq,

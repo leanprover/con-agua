@@ -127,6 +127,8 @@ import all ConAgua.Arena.WhnfSpineArgs
 import all ConAgua.Arena.WhnfSpineRefine
 import all ConAgua.Arena.ZeroStore
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.Hoist
 import all ConAgua.Checker.Prelude

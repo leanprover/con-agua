@@ -5,6 +5,8 @@ import ConAgua.Arena.GrindAttr
 import ConAgua.L.GrindAttr
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import ConAgua.Checker.CheckARun
 meta import ConAgua.Checker.LoopProgTac
 import ConAgua.Checker.LoopProgTac
@@ -47,14 +49,14 @@ theorem check_dispatch67 {p : Prog} (hp : p.lookup "check" = some checkL) (n : N
   simp only [callFn, checkL]
   rcases hmk with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
   · vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
-      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
       (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c2" [] ·),
       (L.invoke_loc p (exec p n) "check_c3" [1] ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
       St.setLocs_cons, St.setLocs_nil, St.setLoc_loc] at *)
     all_goals grind [lang_grind]
   · vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
-      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
+      (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_b" [] ·),
       (L.invoke_loc p (exec p n) "check_c1" [] ·), (L.invoke_loc p (exec p n) "check_c2" [] ·),
       (L.invoke_loc p (exec p n) "check_c3" [0] ·)]
     all_goals (try simp only [Sig.retVal, Sig.retOr, L.St.setLoc_mem, List.headD_cons,
