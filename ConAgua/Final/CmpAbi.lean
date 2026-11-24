@@ -335,108 +335,85 @@ theorem bufSeq_ok {p : Prog} {mode plo phi : GVar} {fz own : List TieredArray} {
     obtain ⟨rs, hr, -⟩ := hj j (by omega)
     exact (ih (by omega)).next (hh _ _ _ _ _ hr)
 
-/-! ## The compared run with the chained buffer (lane compare2)
+/-! ## The compared run of lane compare2: `ca_start_ac`, `ca_start_c`
 
-`ca_start_c` and `ca_start_ac` run modes `4`, `5`, `7` on one region; mode `7` (`cmpM7`) on mode
-`5`'s final memory with the mode word `7`. After mode `7`, `OUT` holds the solution's buffer
-followed by the challenge's self-contained one, from the solution's header's word `5` on
-(`cmpTailC`); `cmpBuf out m7` is the whole (its word `1` the whole length). -/
+Both run modes `4` and `5` (the front, `CmpFront45`), then on mode `5`'s final memory with the
+mode word `7` (threaded: one frozen buffer with two headers) or `6` (sequential: the header only),
+the sequential run then entry 2 in place with the mode word `8` (the solution's jobs `[0, kS)`)
+and, on the memory that run left, `9` (the challenge's jobs `[0, kC)`). -/
 
-/-- Mode `7`'s memory: mode `5`'s final memory with the mode word `7`. -/
-def cmpM7 (mode : GVar) (m5 : Mem) : Mem := m5.setG mode 7
-
-/-- The challenge's buffer in the chained buffer `B`: from the solution's header's word `5` on. -/
-def cmpTailC (B : Array Word) : Array Word := B.extract (B.getD 5 0).toNat B.size
-
-/-- **The front**: modes `4`, `5` (the solution's bytes), `7` ran, each returning `2^63` or more,
-ending in `m5`, `m7` with the results `rs5`, `rs7` (`rs5[0] = 2^63 + kS`, `rs7[0] = 2^63 + kC`). -/
-def CmpFront (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (rs5 : List Word) (m5 : Mem)
-    (rs7 : List Word) (m7 : Mem) : Prop :=
+/-- **The front**: modes `4` and `5` (the solution's bytes) ran, each returning `2^63` or more, mode
+`5` ending in `m5` with the result `rs5` (`2^63 + kS`). -/
+def CmpFront45 (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (rs5 : List Word) (m5 : Mem) :
+    Prop :=
   bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ bS.size < 2 ^ 63 ∧
   ∃ rs4 m4, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) ∧ 2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧
-    cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧ 2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
-    cmpRun p (cmpM7 mode m5) = .ok (rs7, m7) ∧ 2 ^ 63 ≤ (rs7.getD 0 0).toNat
+    cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧ 2 ^ 63 ≤ (rs5.getD 0 0).toNat
 
-/-- **The front stops early with an accept**: a mode returned `ACCEPT`, the modes before it
-`2^63` or more. -/
-def CmpFrontAcc (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) : Prop :=
+/-- **The front stops with an accept**: mode `4` returns `ACCEPT`, or it returns `2^63` or more and
+mode `5` returns `ACCEPT`. -/
+def CmpFrontAcc45 (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) : Prop :=
   bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧ ∃ rs4 m4, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) ∧
     (rs4.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧ bS.size < 2 ^ 63 ∧
-      ∃ rs5 m5, cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧
-      (rs5.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
-        ∃ rs7 m7, cmpRun p (cmpM7 mode m5) = .ok (rs7, m7) ∧ rs7.getD 0 0 = ACCEPT))))
+      ∃ rs5 m5, cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧ rs5.getD 0 0 = ACCEPT))
 
-/-- **The front fails**: a mode's run fails with an error of code `k`, the modes before it
-returning `2^63` or more. -/
-def CmpFrontErr (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (k : Word) : Prop :=
+/-- **The front fails**: mode `4`'s run, or (mode `4` returning `2^63` or more) mode `5`'s, fails
+with an error of code `k`. -/
+def CmpFrontErr45 (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (k : Word) : Prop :=
   bC.size < 2 ^ 63 ∧ pb.size < 2 ^ 63 ∧
   ((∃ e, cmpRun p (cmpM4 tab mode bC pb) = .error e ∧ e.code = k) ∨
    ∃ rs4 m4, cmpRun p (cmpM4 tab mode bC pb) = .ok (rs4, m4) ∧ 2 ^ 63 ≤ (rs4.getD 0 0).toNat ∧
-    bS.size < 2 ^ 63 ∧
-    ((∃ e, cmpRun p (cmpM5 mode m4 bS) = .error e ∧ e.code = k) ∨
-     ∃ rs5 m5, cmpRun p (cmpM5 mode m4 bS) = .ok (rs5, m5) ∧ 2 ^ 63 ≤ (rs5.getD 0 0).toNat ∧
-      ∃ e, cmpRun p (cmpM7 mode m5) = .error e ∧ e.code = k))
+    bS.size < 2 ^ 63 ∧ ∃ e, cmpRun p (cmpM5 mode m4 bS) = .error e ∧ e.code = k)
 
-/-- **The jobs of both phases accept** (the sequential run): the solution's `kS` jobs on the
-chained buffer `B` as the jobs before left it (`CmpJobs`, the worker memories `rmS` from zero),
-then the challenge's `kC` jobs on its buffer `cmpTailC B` likewise (`rmC` from zero). -/
-def CmpJobs2 (tab : Tab) (p : Prog) (mode plo phi : GVar) (fz own : List TieredArray) (B : Array Word)
-    (kS kC : Nat) : Prop :=
-  ∃ rmS rmC : Nat → Mem, rmS 0 = zeroMem tab ∧ rmC 0 = zeroMem tab ∧
-    CmpJobs p mode plo phi fz own B rmS kS ∧ CmpJobs p mode plo phi fz own (cmpTailC B) rmC kC
+/-- **An accepting return of `ca_start_ac`** (`rdx = 0`, `rax = ACCEPT`): the front stopped with an
+accept, or mode `7` returned `ACCEPT`. -/
+def CmpAccT (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) : Prop :=
+  CmpFrontAcc45 tab p mode bC bS pb ∨ ∃ rs5 m5, CmpFront45 tab p mode bC bS pb rs5 m5 ∧
+    ∃ rs7 m7, cmpRun p (m5.setG mode 7) = .ok (rs7, m7) ∧ rs7.getD 0 0 = ACCEPT
 
-/-- **A job of either phase fails** with an error of code `k`, every job before it accepting:
-a solution job `j < kS`, or (all `kS` of them accepting) a challenge job `j < kC`. -/
-def CmpJobsErr (tab : Tab) (p : Prog) (mode plo phi : GVar) (fz own : List TieredArray) (B : Array Word)
-    (kS kC : Nat) (k : Word) : Prop :=
-  ∃ rmS rmC : Nat → Mem, rmS 0 = zeroMem tab ∧ rmC 0 = zeroMem tab ∧
-    ((∃ j < kS, CmpJobs p mode plo phi fz own B rmS j ∧
-        ∃ e, cmpRun p (bufMemG fz own plo phi mode (bufSeq fz B rmS j) (rmS j) (UInt64.ofNat j)) = .error e ∧
-          e.code = k) ∨
-     (CmpJobs p mode plo phi fz own B rmS kS ∧ ∃ j < kC, CmpJobs p mode plo phi fz own (cmpTailC B) rmC j ∧
-        ∃ e, cmpRun p (bufMemG fz own plo phi mode (bufSeq fz (cmpTailC B) rmC j) (rmC j) (UInt64.ofNat j)) =
-          .error e ∧ e.code = k))
+/-- **A failing return of `ca_start_ac`** (`rdx = 2`): the front, or mode `7`, failed with an error
+of code `k`. -/
+def CmpErrT (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (k : Word) : Prop :=
+  CmpFrontErr45 tab p mode bC bS pb k ∨ ∃ rs5 m5, CmpFront45 tab p mode bC bS pb rs5 m5 ∧
+    ∃ e, cmpRun p (m5.setG mode 7) = .error e ∧ e.code = k
 
-/-- **What an accepting sequential compared run means** (`ca_start_c`): the front stopped with
-an accept, or it ran (`kS`, `kC` from the results) and every job of both phases accepted. -/
-def CmpRunAcc (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
+/-- **A return of `ca_start_ac` with `rdx = 0`, `rax ≥ 2^63`** (the jobs' count `kS + kC` in `rax`,
+the memory `d`): the front, mode `7` returning `2^63 + kC`, `rax = 2^63 + kS + kC`, and the region at
+`base` holds mode `7`'s final memory in the stub's layout (the solution's bytes at `sa` as the
+input, the pin data at `pins`). -/
+def CmpHiT (tab : Tab) (p : Prog) (mode : GVar) (bC bS pb : ByteArray) (base sa pins : Nat) (rax : Word)
+    (d : DataMem) : Prop :=
+  ∃ rs5 m5 rs7 m7, CmpFront45 tab p mode bC bS pb rs5 m5 ∧ cmpRun p (m5.setG mode 7) = .ok (rs7, m7) ∧
+    2 ^ 63 ≤ (rs7.getD 0 0).toNat ∧
+    rax = 9223372036854775808 + ((rs5.getD 0 0 - 9223372036854775808) + (rs7.getD 0 0 - 9223372036854775808)) ∧
+    MemRel (abiLayout tab base sa bS.size pins pb.size) m7 d
+
+/-- **An accepting return of `ca_start_c`** (`rdx = 0`, `rax = ACCEPT`): the front stopped with an
+accept; or mode `6` returned `ACCEPT`; or it returned `2^63 + kC`, entry 2 in place with the mode
+word `8` over `[0, kS)` returned `ACCEPT`, and on the memory that run left, with the mode word
+`9` over `[0, kC)`, too. -/
+def CmpAccS (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (bC bS pb : ByteArray) : Prop :=
-  CmpFrontAcc tab p mode bC bS pb ∨ ∃ rs5 m5 rs7 m7, CmpFront tab p mode bC bS pb rs5 m5 rs7 m7 ∧
-    CmpJobs2 tab p mode plo phi fz own (cmpBuf out m7) (rs5.getD 0 0 - 9223372036854775808).toNat
-      (rs7.getD 0 0 - 9223372036854775808).toNat
+  CmpFrontAcc45 tab p mode bC bS pb ∨ ∃ rs5 m5, CmpFront45 tab p mode bC bS pb rs5 m5 ∧
+    ∃ rs6 m6, cmpRun p (m5.setG mode 6) = .ok (rs6, m6) ∧
+    (rs6.getD 0 0 = ACCEPT ∨ (2 ^ 63 ≤ (rs6.getD 0 0).toNat ∧
+      ∃ rs8 m8, cmpRun p (seqMemW m6 mode plo phi out hdrf ctlf hw 8 0 (rs5.getD 0 0 - 9223372036854775808)) =
+        .ok (rs8, m8) ∧ rs8.getD 0 0 = ACCEPT ∧
+      ∃ rs9 m9, cmpRun p (seqNext m8 mode plo phi 9 0 (rs6.getD 0 0 - 9223372036854775808)) = .ok (rs9, m9) ∧
+        rs9.getD 0 0 = ACCEPT))
 
-/-- **What a failing sequential compared run means** (`ca_start_c`): a mode of the front failed,
-or a job, with an error of code `k`. -/
-def CmpRunErr (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
+/-- **A failing return of `ca_start_c`** (`rdx = 2`): the front, mode `6`, the solution's jobs or
+(those accepting) the challenge's jobs failed with an error of code `k`. -/
+def CmpErrS (tab : Tab) (p : Prog) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
     (bC bS pb : ByteArray) (k : Word) : Prop :=
-  CmpFrontErr tab p mode bC bS pb k ∨ ∃ rs5 m5 rs7 m7, CmpFront tab p mode bC bS pb rs5 m5 rs7 m7 ∧
-    CmpJobsErr tab p mode plo phi fz own (cmpBuf out m7) (rs5.getD 0 0 - 9223372036854775808).toNat
-      (rs7.getD 0 0 - 9223372036854775808).toNat k
-
-/-- **The chained buffer's geometry after mode `7`** (L-level): its length word inside `out`; the
-solution's header's word `2` is `kS`, its word `5` the challenge's buffer's offset `LS` (past the
-header, inside the buffer); the solution's entries end by `LS`; both buffers' own geometry; the job
-count `kS + kC` below `2^63`. -/
-structure CmpBufOk2 (fz : List TieredArray) (out : ArrId) (m7 : Mem) (kS kC : Nat) : Prop where
-  len : ((m7.arr64 out).getD 1 0).toNat ≤ (m7.arr64 out).size
-  w5 : 5 < (cmpBuf out m7).size
-  w2 : ((cmpBuf out m7).getD 2 0).toNat = kS
-  ls0 : (cmpBuf out m7).getD 5 0 ≠ 0
-  lsLe : ((cmpBuf out m7).getD 5 0).toNat ≤ (cmpBuf out m7).size
-  entS : ∀ i < fz.length, (bufEntry (cmpBuf out m7) i).1 + (bufEntry (cmpBuf out m7) i).2 ≤
-    ((cmpBuf out m7).getD 5 0).toNat
-  okS : BufOk fz.length (cmpBuf out m7)
-  okC : BufOk fz.length (cmpTailC (cmpBuf out m7))
-  k63 : kS + kC < 2 ^ 63
-
-/-- **What the machine proof of the compared run needs of `check` and cannot see** (L-level; for
-`checkerProg` a lemma, not an assumption of the final theorem): after the front, the chained
-buffer's geometry (`CmpBufOk2`); and every job keeps the header (`CmpHdrKeep`). -/
-def CmpGuard2 (tab : Tab) (p : Prog) (mode plo phi : GVar) (out : ArrId) (fz own : List TieredArray)
-    (bC bS pb : ByteArray) : Prop :=
-  (∀ rs5 m5 rs7 m7, CmpFront tab p mode bC bS pb rs5 m5 rs7 m7 →
-    CmpBufOk2 fz out m7 (rs5.getD 0 0 - 9223372036854775808).toNat (rs7.getD 0 0 - 9223372036854775808).toNat) ∧
-  CmpHdrKeep p mode plo phi fz own
+  CmpFrontErr45 tab p mode bC bS pb k ∨ ∃ rs5 m5, CmpFront45 tab p mode bC bS pb rs5 m5 ∧
+    ((∃ e, cmpRun p (m5.setG mode 6) = .error e ∧ e.code = k) ∨
+     ∃ rs6 m6, cmpRun p (m5.setG mode 6) = .ok (rs6, m6) ∧ 2 ^ 63 ≤ (rs6.getD 0 0).toNat ∧
+      ((∃ e, cmpRun p (seqMemW m6 mode plo phi out hdrf ctlf hw 8 0 (rs5.getD 0 0 - 9223372036854775808)) =
+          .error e ∧ e.code = k) ∨
+       ∃ rs8 m8, cmpRun p (seqMemW m6 mode plo phi out hdrf ctlf hw 8 0 (rs5.getD 0 0 - 9223372036854775808)) =
+          .ok (rs8, m8) ∧ rs8.getD 0 0 = ACCEPT ∧
+        ∃ e, cmpRun p (seqNext m8 mode plo phi 9 0 (rs6.getD 0 0 - 9223372036854775808)) = .error e ∧ e.code = k))
 
 /-- `BufGeom` for another buffer of the same size with the same geometry. -/
 theorem BufGeom.of_ok {tab : Tab} {fz own : List TieredArray} {B B' : Array Word} {buf base blen : Nat}
