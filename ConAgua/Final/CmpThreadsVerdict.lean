@@ -38,7 +38,9 @@ structure CmpEntry1Fail [Host] (bC bS pb : ByteArray) (sa : Word) (dm₀ : Machi
   rdx₀ : st₀.data.regs.rdx = 2
 
 /-- **A thread's call `i` fails in a compared run** (trusted; the module doc lists it):
-`ThreadFail`'s facts, with the compared entry 1. -/
+`ThreadFail`'s facts, with the compared entry 1, and the thread's calls up to `i` claiming
+increasing indices (`ThreadFail` has only the earlier calls below call `i`: here the phase of each
+call decides which half of the region it uses, so the order among them matters). -/
 structure CmpThreadFail [Host] (bC bS pb : ByteArray) (sa : Word) (dm₀ : MachineData) (ra₀ : Word)
     (st₀ : MachineState) (B : Array Word) (ths : List ThreadM) (t : ThreadM) (i : Nat) : Prop where
   call₀ : CmpCall bC bS pb sa dm₀ ra₀
@@ -62,8 +64,8 @@ structure CmpThreadFail [Host] (bC bS pb : ByteArray) (sa : Word) (dm₀ : Machi
   next : ∀ i', i' < i → ∀ x, t.base ≤ x → x < t.base + t.blen →
     (t.dm (i' + 1)).dmem.get? (A x) = (t.st i').data.dmem.get? (A x)
   claimed : ∀ i' ≤ i, (t.dm i').regs.rdx < st₀.data.regs.rax - 9223372036854775808
-  /-- the thread's earlier calls claimed smaller job indices -/
-  before : ∀ i' < i, (t.dm i').regs.rdx < (t.dm i).regs.rdx
+  /-- the thread's claims increase (one monotone claim counter, as `ThreadsAcc`'s `incr`) -/
+  incr : ∀ i₁ i₂, i₁ < i₂ → i₂ ≤ i → (t.dm i₁).regs.rdx < (t.dm i₂).regs.rdx
   /-- the jobs below call `i`'s: each claimed by an accepting call of a thread of `ths` -/
   others : ThreadsAcc dm₀ st₀ B ths
   below : ∀ j < (t.dm i).regs.rdx, ∃ t' ∈ ths, ∃ i' < t'.n, (t'.dm i').regs.rdx = j
