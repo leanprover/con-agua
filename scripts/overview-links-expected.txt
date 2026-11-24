@@ -294,15 +294,15 @@
    118      extends AbiArgs b pb dm ra where
    119    hsol : ∀ bS, sol = some bS → SolArgs b bS pb dm
 
-== ConAgua/Final/Compare.lean#L54-L61
-    54  theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-    55      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    56      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
-    57      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    58          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS) ∧
-    59          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
-    60            TwinCompareVerdict bC bS (st.data.regs.rax &&& 3)))
-    61        dm (label (abiSeqL (some bS))) :=
+== ConAgua/Final/Compare.lean#L53-L60
+    53  theorem checkerFile_compare_accepts [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+    54      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    55      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
+    56      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    57          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinComparesAccepts bC bS) ∧
+    58          (st.data.regs.rdx = 2 → st.data.regs.rax &&& 3 ≠ 0 →
+    59            TwinCompareVerdict bC bS (st.data.regs.rax &&& 3)))
+    60        dm (label (abiSeqL (some bS))) :=
 
 == ConAgua/Final/CompareTwin.lean#L79-L85
     79  def TwinComparesAccepts (bC bS : ByteArray) : Prop :=
@@ -344,34 +344,34 @@
     70      TwinFailsV (checkJobList .verified ipins (some (solutionOf IS recsC)) IC recsC.toArray
     71        (List.range recsC.toArray.size)) sJ c)
 
-== ConAgua/Final/Compare.lean#L70-L81
-    70  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
-    71      (k0 : Nat) (hcode : Code checkerFile k0)
-    72      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    73      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
-    74      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
-    75          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
-    76            ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
-    77              ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
-    78              Nonempty (ConLeche.Model V (ConLeche.streamEnv
-    79                ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
-    80                  ConLeche.Cached.sideRecord)))))
-    81        dm (label (abiSeqL (some bS))) :=
+== ConAgua/Final/Compare.lean#L69-L80
+    69  theorem checkerFile_compare_model (V : Type w) [ConLeche.SetTheory V] [Host]
+    70      (k0 : Nat) (hcode : Code checkerFile k0)
+    71      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+    72      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra) :
+    73      Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
+    74          (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT →
+    75            ∃ (rcC : ConLeche.Frontend.ParseResultD) (preC : ConLeche.Frontend.PreludeIx),
+    76              ConLeche.Frontend.parseChunks [bC] = .ok rcC ∧
+    77              Nonempty (ConLeche.Model V (ConLeche.streamEnv
+    78                ((ConLeche.Frontend.preparePrelude preC rcC.decls).toList.map
+    79                  ConLeche.Cached.sideRecord)))))
+    80        dm (label (abiSeqL (some bS))) :=
 
-== ConAgua/Final/Compare.lean#L92-L98
-    92  theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
-    93      (k0 : Nat) (hcode : Code checkerFile k0)
-    94      (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
-    95      (h64 : System.Platform.numBits = 64)
-    96      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra)
-    97      (st : MachineState) (hret : FirstReturn dm (label (abiSeqL (some bS))) ra st)
-    98      (hrdx : st.data.regs.rdx = 0) (hacc : st.data.regs.rax = ACCEPT) : False :=
+== ConAgua/Final/Compare.lean#L91-L97
+    91  theorem checkerFile_compare_no_False (V : Type w) [ConLeche.SetTheory V] [Host]
+    92      (k0 : Nat) (hcode : Code checkerFile k0)
+    93      (bC bS pb : ByteArray) (hfalse : ConLeche.jsonWithTheoremFalse [bC])
+    94      (h64 : System.Platform.numBits = 64)
+    95      (dm : MachineData) (ra : Word) (hc : AbiCall bC (some bS) pb dm ra)
+    96      (st : MachineState) (hret : FirstReturn dm (label (abiSeqL (some bS))) ra st)
+    97      (hrdx : st.data.regs.rdx = 0) (hacc : st.data.regs.rax = ACCEPT) : False :=
 
-== ConAgua/Final/CmpThreads.lean#L117-L120
-   117  theorem checkerFile_compare_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
-   118      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-   119      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
-   120      (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooled bC bS :=
+== ConAgua/Final/CmpThreads.lean#L116-L119
+   116  theorem checkerFile_compare_threads_accept [Host] (k0 : Nat) (hcode : Code checkerFile k0)
+   117      (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
+   118      (dm₀ : MachineData) (ra₀ : Word) (st₀ : MachineState) (B : Array Word) (ths : List ThreadM)
+   119      (hR : ThreadsRun bC (some bS) pb dm₀ ra₀ st₀ B ths) : TwinComparesAcceptsPooled bC bS :=
 
 == ConAgua/Final/ThreadsFinal.lean#L217-L227
    217  structure ThreadsRun [Host] (b : ByteArray) (sol : Option ByteArray) (pb : ByteArray) (dm₀ : MachineData)
@@ -622,14 +622,14 @@
     64    thread's calls before `i` return `rdx = 0`, `rax = ACCEPT`, and call `i` returns `rdx = 2`
     65    (`ThreadFail`). The harness reports the code `k` it read from that call's `rax`.
 
-== ConAgua/Final/CmpThreads.lean#L28-L34
-    28  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun bC (some bS) pb`,
-    29  `Final/ThreadsFinal.lean`, and what `Final/Statement.lean` lists): entry 1's call (`AbiCall` with
-    30  the solution) and first return; the buffer `OUT`'s
-    31  first `len` words at entry 1's return, `len` its word `1`, in place and read-only for the threads;
-    32  each thread's region its own, zero at its first call and carried over between its calls; every
-    33  claimed index below `k`, every index below `k` claimed, each thread's claims increasing; entry 1
-    34  returns `rdx = 0`, `rax ≥ 2^63`, every call `rdx = 0`, `rax = ACCEPT`.
+== ConAgua/Final/CmpThreads.lean#L27-L33
+    27  **What the theorem trusts of the harness** (the hypotheses of `ThreadsRun bC (some bS) pb`,
+    28  `Final/ThreadsFinal.lean`, and what `Final/Statement.lean` lists): entry 1's call (`AbiCall` with
+    29  the solution) and first return; the buffer `OUT`'s
+    30  first `len` words at entry 1's return, `len` its word `1`, in place and read-only for the threads;
+    31  each thread's region its own, zero at its first call and carried over between its calls; every
+    32  claimed index below `k`, every index below `k` claimed, each thread's claims increasing; entry 1
+    33  returns `rdx = 0`, `rax ≥ 2^63`, every call `rdx = 0`, `rax = ACCEPT`.
 
 == ConAgua/Compiler/Main.lean#L29-L33
     29  /-- What the harness sees after `ca_enter` returns, against L's result. -/

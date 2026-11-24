@@ -4,7 +4,6 @@ public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CmpSeqTwin
 public import ConAgua.Final.CompareTwinSeq
 import ConAgua.Checker.CmpSeqProg
-import ConAgua.Checker.CmpCall
 
 @[expose] public section
 

@@ -5,7 +5,6 @@ public import ConAgua.Final.CmpEntry1
 import ConAgua.Final.CompareTwinThr
 public import ConAgua.Final.ThreadsFinal
 public import ConAgua.Final.CompareTwin
-import ConAgua.Checker.CmpCall
 
 @[expose] public section
 

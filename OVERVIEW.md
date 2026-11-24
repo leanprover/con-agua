@@ -211,7 +211,7 @@ runs, in place on a worker region, first the solution's jobs (mode `8`: the
 solution's rows and records are switched in, and the challenge's are kept in a
 stash) and then the challenge's jobs (mode `9`: the challenge's view comes back
 from the stash), each phase one `check_jobs` call over all its records.
-[`checkerFile_compare_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L54-L61)
+[`checkerFile_compare_accepts`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L53-L60)
 says that every run returns to the caller, at label `abiSeqL (some bS)`, and
 that an accept means
 [`TwinComparesAccepts bC bS`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CompareTwin.lean#L79-L85):
@@ -228,8 +228,8 @@ a stage of the twin fails with that class (`TwinCompareStagesFail`), or the
 solution's jobs fail, or they accept and the challenge's jobs then fail with it.
 `checkerFile_compare_accepts_regs` adds that the callee-saved registers are
 restored. The corollaries
-([`checkerFile_compare_model`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L70-L81),
-[`checkerFile_compare_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L92-L98))
+([`checkerFile_compare_model`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L69-L80),
+[`checkerFile_compare_no_False`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/Compare.lean#L91-L97))
 are con-ron's `model_exists_compare` and `no_False_compare` in con-leche's
 terms: the challenge's prepared records, each hole the axiom of its statement,
 have a model in every set theory, and a challenge that declares a theorem of
@@ -249,7 +249,7 @@ threaded mode's loop over all `kS + kC` job indices: `ca_check_b` sends an index
 below `kS` (header S's word `2`) to header S and every other one, less `kS`, to
 header C, both on the thread's one region: a thread claims its solution jobs
 first, and its challenge jobs continue on the region as those left it.
-[`checkerFile_compare_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L117-L120)
+[`checkerFile_compare_threads_accept`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L116-L119)
 says that if the harness behaves as
 [`ThreadsRun bC (some bS) pb`](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/ThreadsFinal.lean#L217-L227) says (§2.3), and
 every call accepts, the twin accepts the comparison as the threads run it: the
@@ -361,7 +361,7 @@ run and accepted. Nothing is assumed about the claiming covering every index.
 
 **The threaded compared run** (`--jobs=N --compare`) has the same set,
 `ThreadsRun bC (some bS) pb`
-([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L28-L34)):
+([listed in words](https://github.com/leanprover/con-agua/blob/master/ConAgua/Final/CmpThreads.lean#L27-L33)):
 entry 1 is `ca_start_ac`, called as `AbiCall bC (some bS)` says, in place of
 `ca_start_a`. The buffer, the threads' regions, the claim
 counter and the reported failure are as in the flat threaded run; which job
