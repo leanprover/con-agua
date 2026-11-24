@@ -126,6 +126,7 @@ public import ConAgua.Final.CmpOutcome
 public import ConAgua.Final.CmpLoop
 public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CmpA
+public import ConAgua.Final.CmpEntry1
 public import ConAgua.Final.CompareTwin
 public import ConAgua.Final.CompareTwinVerdict
 public import ConAgua.Final.CompareTwinI
