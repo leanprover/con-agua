@@ -123,7 +123,6 @@ public import ConAgua.Checker.AsmTailEq
 public import ConAgua.Final.CmpStub
 public import ConAgua.Final.CmpAbi
 public import ConAgua.Final.CmpOutcome
-public import ConAgua.Final.CmpLoop
 public import ConAgua.Final.CmpMain
 public import ConAgua.Final.CmpA
 public import ConAgua.Final.CmpEntry1
@@ -135,14 +134,13 @@ public import ConAgua.Final.CmpChain
 public import ConAgua.Checker.CompareChain6
 public import ConAgua.Checker.CmpHdrKeep
 public import ConAgua.Checker.CmpSJobs
-public import ConAgua.Final.Compare
 public import ConAgua.Checker.CmpThreadsPool
 public import ConAgua.Checker.CmpThreadsC
 public import ConAgua.Checker.CmpSPhase
 public import ConAgua.Checker.CmpSPhaseT
 public import ConAgua.Checker.CmpSPhaseThr
-public import ConAgua.Final.CmpThreadsL
-public import ConAgua.Checker.CmpThreadsS
+public import ConAgua.Final.CpThreads
+public import ConAgua.Final.CpThreadFail
 public import ConAgua.Final.CmpThreads
 public import ConAgua.Final.CmpThreadsVerdict
 public import ConAgua.Checker.CompareTwinC

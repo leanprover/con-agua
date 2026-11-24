@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Final.CmpA
-public import ConAgua.Final.ThreadsFinal
+public import ConAgua.Final.CpThreads
 public import ConAgua.Final.CompareTwinI
 public import ConAgua.Checker.CmpSPhaseThr
 public import ConAgua.Checker.CompareChain6Run
@@ -32,15 +32,6 @@ a stage failing).
 namespace ConAgua.Final
 
 open L L.Compiler L.Checker L.Arena
-
-/-- **A frozen buffer's header geometry** (one header of the compared run's buffer): the entries'
-words inside the buffer, every entry inside it, the entries pairwise apart (or empty). -/
-structure HdrOk (B : Array Word) : Prop where
-  hdr : ∀ i < frozenIdsL.length, 9 + 2 * i < B.size
-  ent : ∀ i < frozenIdsL.length, (bufEntry B i).1 + (bufEntry B i).2 ≤ B.size
-  disj : ∀ i < frozenIdsL.length, ∀ i' < frozenIdsL.length, i ≠ i' →
-    (bufEntry B i).1 + (bufEntry B i).2 ≤ (bufEntry B i').1 ∨
-    (bufEntry B i').1 + (bufEntry B i').2 ≤ (bufEntry B i).1 ∨ (bufEntry B i).2 = 0 ∨ (bufEntry B i').2 = 0
 
 /-- **What entry 1 of the compared run leaves** (L-level): the solution's preparation (`FoldOn`),
 the challenge's (`F6`, `c` its job count), the solution's jobs' view `mS` (`CsViewS`); the buffer

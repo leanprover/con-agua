@@ -24,9 +24,6 @@ import ConAgua.Arena.JobStart
   memory that keeps mode `6`'s final word arrays the jobs name, the range `[0, c)`, an empty seed)
   returning `ACCEPT` is the twin's challenge jobs accepting at the solution `solutionOf IS res`
   (`checkMode2_seqR`, then `pool_twinJ`, con-ron's `pooledAcceptsJ_bridge` with one worker).
-* `cmpAccepts_twin`: the compared run's L runs at the checker accepting (`CmpAccepts`) is the
-  twin's compared run accepting (`TwinComparesAccepts`): modes `4` and `5` (`checker_modes45`),
-  the solution's jobs (`cmpSJobs_twin`), mode `6` (`checkC3_run`), the challenge's jobs.
 -/
 
 namespace ConAgua.Final
@@ -111,9 +108,6 @@ theorem cmpCJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     (fun _ => checkerProg_crsSpecPB pb.data.toList hr hpre hcd))
   exact pool_twinJ H hst ⟨_, ⟨hJr, PExt.of_ext (Ext.refl _), rfl⟩, sameEnter_worker.symm⟩ hch
 
-theorem cmpM6_bytes (mode : GVar) (out : ArrId) (m5 : Mem) (B : Array Word) :
-    (cmpM6 mode out m5 B).bytes = m5.bytes := rfl
-
 /-- `2^63 + k` for `k < 2^63` is not `ACCEPT`. -/
 theorem high_ne_accept {k : Word} (hk : k.toNat < 2 ^ 63) : (9223372036854775808 : Word) + k ≠ ACCEPT := by
   intro e
@@ -121,92 +115,5 @@ theorem high_ne_accept {k : Word} (hk : k.toNat < 2 ^ 63) : (9223372036854775808
   rw [UInt64.toNat_add] at e2
   simp only [ACCEPT, UInt64.reduceToNat] at e2
   omega
-
-/-- **The compared run's L runs at the checker accept ⇒ the twin's compared run accepts.** -/
-theorem cmpAccepts_twin (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
-    (h : CmpAccepts checkerTab checkerProg MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL bC bS pb) :
-    TwinComparesAccepts bC bS := by
-  obtain ⟨hbC, hpb, rs4, m4, h4, hor4⟩ := h
-  have hsz : ∀ s, abiSz checkerTab s < 2 ^ 64 := fun s => by
-    have := abiSz_le checkerTab_abiOk s; simp only [abiWords] at this; omega
-  have hN : abiFuel < 2 ^ 62 := by simp [abiFuel]
-  rcases hor4 with hA4 | ⟨hge4, hbS, rs5, m5, h5, hor5⟩
-  · -- mode `4` returns `1` or `2^63`
-    exfalso
-    rw [L.getD_zero] at hA4
-    have hr : rs4.headD 0 ≠ 1 := by rw [hA4]; decide
-    have := (checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr).1
-    rw [hA4] at this; exact absurd this (by decide)
-  have hr4 : rs4.headD 0 ≠ 1 := fun e => by rw [L.getD_zero, e] at hge4; simp at hge4
-  obtain ⟨-, hA4⟩ := checkC1_run bC bS pb _ ⟨h64, hbC, hpb, hsz⟩ abiFuel hN rs4 m4 h4 hr4
-  rcases hor5 with hA5 | ⟨hge5, rm, hrm0, hjobs, rs6, m6, h6, hor6⟩
-  · -- mode `5` returns `1` or `2^63 + |dsS|`
-    exfalso
-    rw [L.getD_zero] at hA5
-    have hr : rs5.headD 0 ≠ 1 := by rw [hA5]; decide
-    obtain ⟨PS, m₇, m, hF, -, -, -, -, hres⟩ :=
-      checkC2_run bC bS pb _ ⟨h64, hbS, hpb, hsz⟩ abiFuel hN m4 hA4 rs5 m5 h5 hr
-    have hn : PS.dsS.size < 2 ^ 63 := by
-      have := hF.build.decls.room; have := hF.build.decls.dsize; omega
-    exact high_ne_accept (by rw [UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]; exact hn)
-      (hres.symm.trans hA5)
-  obtain ⟨-, PS, m₇, m, hF, hst, hk6, hok, rfl, hres5⟩ :=
-    checker_modes45 bC bS pb h64 hbC hbS hpb h4 hge4 h5 hge5
-  -- the solution's jobs
-  have hn : PS.dsS.size < 2 ^ 63 := by
-    have := hF.build.decls.room; have := hF.build.decls.dsize; omega
-  have hk : (rs5.getD 0 0 - 9223372036854775808).toNat = PS.dsS.size := by
-    have e : (9223372036854775808 : Word) + UInt64.ofNat PS.dsS.size - 9223372036854775808 =
-        UInt64.ofNat PS.dsS.size := by rw [UInt64.add_comm, UInt64.add_sub_cancel]
-    rw [L.getD_zero, hres5, e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
-  obtain ⟨s'', hSJ⟩ := cmpSJobs_twin hpb PS hF hok rfl hjobs hrm0 hk
-  rw [hk] at hSJ
-  -- mode `6`
-  have hO5 : OutEq m (parCompactMem m 1) := OutEq.of_out (parCompactMem_out m 1)
-  have hO : OutEq m (cmpM6 MODE OUT (parCompactMem m 1) (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm
-      (rs5.getD 0 0 - 9223372036854775808).toNat)) :=
-    (⟨fun a ha => by rw [cmpSetOut_ne _ _ _ ha]; exact hO5.arr a ha,
-      fun a => by rw [cmpSetOut_size]; exact hO5.size a, by rw [cmpSetOut_bytes]; exact hO5.bytes⟩ :
-      OutEq m (cmpSetOut OUT (parCompactMem m 1) _)).setG MODE 6
-  have hsz6 : ∀ g ≤ 2, abiSz checkerTab (sixArr g) = abiSz checkerTab (eixArr g) ∧
-      abiSz checkerTab (stxArr g) = abiSz checkerTab (tixArr g) := by
-    intro g hg
-    rcases (show g = 0 ∨ g = 1 ∨ g = 2 by omega) with rfl | rfl | rfl <;> exact ⟨by decide, by decide⟩
-  obtain ⟨c, ⟨m9, hF6, -, rfl⟩, hres6⟩ := checkC3_run PS hF hst hk6 hsz hpb hsz6 hO 6 0
-    (Or.inl ⟨rfl, rfl⟩) (by simp [cmpM6, Mem.setG]) abiFuel hN rs6 _ h6
-  have hc63 : c.toNat < 2 ^ 63 := by
-    obtain ⟨m6', ⟨m2, m3, dsC, sG, res, m4', m5', h, -⟩, -⟩ := hF6
-    have := h.count.1
-    have := h.decls.room; have := h.decls.dsize
-    simp only [List.size_toArray] at *
-    omega
-  rcases hor6 with hA6 | ⟨-, rs7, m7, h7, hacc⟩
-  · exfalso
-    rw [L.getD_zero] at hA6
-    exact high_ne_accept hc63 (hres6.symm.trans hA6)
-  -- the challenge's jobs
-  have hO9 : OutEq m9 (parCompactMem m9 0) := OutEq.of_out (parCompactMem_out m9 0)
-  have hb9 : m9.bytes = m.bytes := by
-    rw [← hO9.bytes, run_check_bytes h6, cmpM6_bytes]
-    exact hO5.bytes
-  have hhi : (rs6.getD 0 0 - 9223372036854775808) = c := by
-    rw [L.getD_zero, hres6, UInt64.add_comm, UInt64.add_sub_cancel]
-  obtain ⟨m2, m3, dsC, sG, res, m4', I, a', hS6, hI, s7, hCJ⟩ := cmpCJobs_twin hpb PS hF ⟨s'', hSJ⟩ hF6 hb9
-    (w := seqMem (parCompactMem m9 0) MODE PLO PHI OUT HDRF CTLF hdrHw 0 (rs6.getD 0 0 - 9223372036854775808))
-    (fun a ha => by
-      rw [seqMem_arr64]
-      have h1 : ¬ (a = ↑OUT ∨ a = ↑CTLF) := by
-        rintro (rfl | rfl) <;> revert ha <;> decide
-      have h2 : a ≠ ↑HDRF := by rintro rfl; revert ha; decide
-      simp only [h1, h2, ite_false]
-      exact hO9.arr a (fun e => h1 (.inl e)))
-    rfl rfl (by rw [← hhi]; rfl) (by rw [seqMem_arr64]; simp) h7 (by rw [← L.getD_zero]; exact hacc)
-  obtain ⟨⟨hA, hB, hC⟩, hCS, hDS⟩ := PS.pfx
-  exact ⟨PS.pins, PS.sA, PS.sB, PS.sC, PS.sC', PS.sD, PS.sE, PS.sF, sG, sG, a', PS.pre, PS.rC, PS.rS,
-    PS.dsS, dsC, res, PS.ipins, PS.IS, I, hA, hB, hC, hCS, hDS, PS.pinsR, ⟨s'', PS.idx, hSJ⟩,
-    hS6.prep.run, hS6.run, ⟨s7, hI, hCJ⟩⟩
-
-/-- info: 'ConAgua.Final.cmpAccepts_twin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms cmpAccepts_twin
 
 end ConAgua.Final
