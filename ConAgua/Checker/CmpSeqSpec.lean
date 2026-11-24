@@ -100,7 +100,7 @@ theorem cqBack_spec (p : Prog) {f : FnName} {c d : ArrId}
   | zero => vcgen [exec] <;> grind
   | succ n =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr]
-    all_goals simp only [UInt64.toNat_zero, Locals.init, Nat.zero_add, size_copy64,
+    all_goals simp only [UInt64.toNat_zero, Locals.init, Nat.zero_add,
       List.getD_cons_zero] at *
     all_goals first | exact rfl | grind
 
