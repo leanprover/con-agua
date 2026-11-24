@@ -255,18 +255,24 @@ def cqF0 : List FnName :=
 
 names_tree cqF0Tree : cqF0
 
-/-- The flag-`0` jobs' arrays: `cdA` but the walks' memos. -/
-def cqA : List TieredArray := cdA.filter fun b => b != (NDM : TieredArray) && b != (CSM : TieredArray)
+/-- The compared run's stash arrays (`223‥236`: the first parse's records, the solution's and the
+challenge's copies), which no job stores to. -/
+def cqStash (b : TieredArray) : Bool := decide (223 ≤ b.arr) && decide (b.arr ≤ 236)
+
+/-- The flag-`0` jobs' arrays: `cdA` but the walks' memos and the stash arrays. -/
+def cqA : List TieredArray := cdA.filter fun b => b != (NDM : TieredArray) && b != (CSM : TieredArray) &&
+  !cqStash b
 
 /-- The flag-`0` jobs' `CTL` words: `cdC` but the walks' memos' words `220‥223`. -/
 def cqC : List Word := cdC.filter fun x => decide (x.toNat < 220) || decide (223 < x.toNat)
 
-def cqPa (b : TieredArray) : Bool := cdPa b && b != (NDM : TieredArray) && b != (CSM : TieredArray)
+def cqPa (b : TieredArray) : Bool := cdPa b && b != (NDM : TieredArray) && b != (CSM : TieredArray) &&
+  !cqStash b
 def cqPc (x : Word) : Bool := cdPc x && (decide (x.toNat < 220) || decide (223 < x.toNat))
 
 theorem cqPa_mem (b : TieredArray) (h : cqPa b = true) : b ∈ cqA := by
   simp only [cqPa, Bool.and_eq_true] at h
-  exact List.mem_filter.mpr ⟨cdPa_mem b h.1.1, by simp only [Bool.and_eq_true]; exact ⟨h.1.2, h.2⟩⟩
+  exact List.mem_filter.mpr ⟨cdPa_mem b h.1.1.1, by simp only [Bool.and_eq_true]; exact ⟨⟨h.1.1.2, h.1.2⟩, h.2⟩⟩
 
 theorem cqPc_mem (x : Word) (h : cqPc x = true) : x ∈ cqC := by
   simp only [cqPc, Bool.and_eq_true] at h
@@ -285,13 +291,14 @@ theorem cq_not_cqC {x : Word} (h : x ∉ cdC ∨ (220 ≤ x.toNat ∧ x.toNat �
   · exact h this.1
   · have h2 := this.2; simp only [Bool.or_eq_true, decide_eq_true_eq] at h2; omega
 
-theorem cq_not_cqA {b : TieredArray} (h : b ∉ cdA ∨ b = (NDM : TieredArray) ∨ b = (CSM : TieredArray)) :
-    b ∉ cqA := fun hm => by
+theorem cq_not_cqA {b : TieredArray} (h : b ∉ cdA ∨ b = (NDM : TieredArray) ∨ b = (CSM : TieredArray) ∨
+    cqStash b = true) : b ∉ cqA := fun hm => by
   have := List.mem_filter.mp hm
-  rcases h with h | rfl | rfl
+  rcases h with h | rfl | rfl | h
   · exact h this.1
   · simp at this
   · simp at this
+  · have h2 := this.2; rw [h] at h2; simp at h2
 
 theorem cq_ctl_mem {x : Word} (h : cqPc x = true) : x ∈ cqC := cqPc_mem x h
 
