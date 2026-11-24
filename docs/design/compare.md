@@ -294,3 +294,14 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   their mode's frozen image, so the twin statements stay. One pool for both phases: the reported
   failure is the smallest failing index, and every solution index is below every challenge
   index, so the verdict is con-ron's.
+* H2: the challenge's threads at `J = some` (`cmpThreadsC_pooledJ`, `Checker/CmpThreadsC.lean`,
+  `CmpThreadsPool.lean`: the multi-worker pool with a solution; `JobM.truncJ`, `SolR.trunc`,
+  `JSol.fresh`) merged (d28e0d7b9; 0 `sorry`, the whole tree builds).
+* A' in detail (H3's hand-over, H3b, H4, H2): shrinking `OUT` for mode 7 would cost days (the
+  mode-6 chain's frames fix every array's size), so L does the chaining: mode 7 reads
+  `base := OUT[1]`, writes the challenge's buffer at `OUT[base‥)` (`par_compact` with a base;
+  0 for the flat run and mode 6), sets `OUT[5] := base` and `OUT[1] := base + LC`. Entry 2
+  (`ca_check_b`) gets a prologue: `j ≥ buf[2]` and `buf[5] ≠ 0` shift the buffer, the index and
+  the region to the second phase and its worker sub-region (`ca_worker_size = 2 · workerNeed`);
+  the flat path never shifts. The solution's jobs see the whole buffer, which agrees with mode
+  5's on its prefix except header words 1 and 5 (`BufAgreeS`).
