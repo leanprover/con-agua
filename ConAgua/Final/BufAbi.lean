@@ -1025,8 +1025,9 @@ theorem abiB_small [Host] (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : Arr
     (B : Array Word) (dm : MachineData) (ra : Word)
     (h5 : 5 < B.size) (hB : ∀ i (h : i < B.size), rdW dm.dmem (A (dm.regs.rdi.toNat + 8 * i)) = some B[i])
     (hge : B.getD 2 0 ≤ dm.regs.rdx) (hL : B.getD 5 0 ≠ 0) (hsmall : dm.regs.r8.toNat < 2 * workerNeed own)
-    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra) (hwn : 2 * workerNeed own < 2 ^ 64) :
-    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rdx = 1) dm (label abiCheckBL) := by
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra) (hwn : 2 * workerNeed own < 2 ^ 64)
+    (hsp8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) (G : L.Compiler.Layout) (res : Except Err (List Word × Mem)) :
+    Ev (fun st => EntryPost G dm ra res st ∧ st.data.regs.rdx = 1) dm (label abiCheckBL) := by
   have hcP := hcode.left
   simp only [parStub] at hcP
   have hX := hcP.right
@@ -1061,11 +1062,38 @@ theorem abiB_small [Host] (tab : Tab) (mode plo phi : GVar) (out hdrf ctlf : Arr
     refine ev_movRI (Code.get (i := 4) hcT rfl) ?_
     refine ev_movRI (Code.get (i := 5) hcT rfl) ?_
     refine ev_ret (Code.get (i := 6) hcT rfl) (ra := ra) (by simpa [Reg64s.set64_rax, Reg64s.set64_rdx] using hra) ?_
-    exact Eventually.done _ ⟨rfl, by simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]⟩
+    refine Eventually.done _ ⟨⟨rfl, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ⟨fun _ h => h, fun _ _ _ _ _ _ _ => rfl⟩, .inl ?_⟩, ?_⟩
+    · simp only [Reg64s.set64_rsp, Reg64s.set64_rax, Reg64s.set64_rdx, UInt64.toNat_ofBitVec, BitVec.toNat_add,
+        UInt64.toNat_toBitVec, show (8 : BitVec 64).toNat = 8 from rfl]
+      omega
+    all_goals simp [Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.set64_rsp]
   · exfalso
     simp only [CondCode.interp, cmpFlags_cf, decide_eq_false_iff_not, Nat.not_lt] at hge2
     rsimp at hge2
     rw [Nat.toUInt64, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hwn)] at hge2
     omega
+
+/-- **From `ca_check_b` on a region below `2 · workerNeed`** (the sequential driver's worker
+region): the run of `check` as `abiB_outcome`, or a decline (`rdx = 1`). -/
+theorem abiB_outcome_w [Host] (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk tab = true)
+    {X : AsmTab} (hAX : AsmOkT q tab X)
+    (hwf : Prog.wf tab q = true) (mode plo phi : GVar) (out hdrf ctlf : ArrId) (hw : Nat)
+    (fz own : List TieredArray) (hngm : mode.id < tab.ng) (hngl : plo.id < tab.ng) (hngh : phi.id < tab.ng)
+    (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20) (k0 : Nat)
+    (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++ (abiStub tab ++ compileProgX X tab q "check")) k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
+    (B : Array Word) (r : Mem) (dm : MachineData) (ra : Word) (hc : BufCall tab fz own B dm ra)
+    (hr : RegionRel tab dm.regs.rcx.toNat own r dm.dmem) (hmo : bufMinOk tab fz own = true)
+    (h5 : 5 < B.size) (hsmall : dm.regs.r8.toNat < 2 * workerNeed own) (hwn : 2 * workerNeed own < 2 ^ 64) :
+    Ev (EntryPost (bufLayout tab dm.regs.rdi.toNat B dm.regs.rcx.toNat fz own) dm ra
+        (L.run p abiFuel "check" [] (bufMemG fz own plo phi mode B r dm.regs.rdx)))
+      dm (label abiCheckBL) := by
+  by_cases hns : dm.regs.rdx < B.getD 2 0 ∨ B.getD 5 0 = 0
+  · exact abiB_outcome q p hq tab hok hAX hwf mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13 h23
+      hfzl k0 hcode fd hentry hnp B r dm ra hc hr hmo h5 hns
+  · simp only [not_or] at hns
+    exact eventually_weaken _ _ _ _ (fun _ h => h.1)
+      (abiB_small tab mode plo phi out hdrf ctlf hw fz own hcode B dm ra h5 hc.hB
+        (UInt64.not_lt.mp hns.1) hns.2 hsmall hc.hra hwn hc.hcs8 _ _)
 
 end ConAgua.Final

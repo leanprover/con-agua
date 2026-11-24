@@ -55,7 +55,8 @@ theorem checkerFile_compare_runs_regs [Host] (k0 : Nat) (hcode : Code checkerFil
     checkerTab_abiIO checkerProgI_wf (by decide) MODE PLO PHI OUT HDRF CTLF hdrHw frozenIdsL parOwnedL
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide +kernel)
     checker_seqParamsOk checker_bufMinOk parOwnedL_not_frozen (by decide +kernel)
-    (fun a ha => List.all_eq_true.mp frozenIdsL_dom a ha) (by decide +kernel) k0
+    (fun a ha => List.all_eq_true.mp frozenIdsL_dom a ha) (by decide +kernel) (by decide)
+    (by decide +kernel) k0
     (code_of_checkerFile_cmp hcode) L.Checker.checkL checkerProg_lookup_check (by decide)
     bC bS pb sa dm ra hc (checker_cmpGuard bC bS pb h64)
 

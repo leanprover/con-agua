@@ -357,7 +357,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
     (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
     (hdisj : ∀ a ∈ own, a ∉ fz) (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
-    (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hcn : cmpNeed tab own < 2 ^ 64) (hfz0 : 0 < fz.length) (hwn2 : 2 * workerNeed own < 2 ^ 64) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -641,7 +641,7 @@ theorem cmp_outcome_regs (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiT
     have hS0 : ∀ x, sa.toNat ≤ x → x < sa.toNat + bS.size → x < base ∨ base + dm.regs.r9.toNat ≤ x :=
       fun x h1 h2 => by have := (hc.hSDisj x h1 h2).1; rwa [hbase] at this
     refine cmp_loop q p hq hok hAX hwf hnres plo phi hdrf ctlf hw fz hngm hngl hngh h12 h13 h23 hfzl k0 hcodeO fd
-      hentry hnp hmo hdisj hnd hdom hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
+      hentry hnp hmo hdisj hnd hdom hfz0 hwn2 hC dm ra sa (nS := bS.size) (cmpBuf out m5) _ hk63 hgeoB hgB
       hBok.2 hG.2 hrsp0 s2.dmem _ _ ?_ ?_ (rs5.getD 0 0 - 9223372036854775808).toNat 0 (fun _ => zeroMem tab) _ (Nat.zero_add _) rfl
       (fun j hj => absurd hj (by omega)) ?_ ?_ ?_ ?_ ?_
     · intro rm h0 j hj hjobs e he
@@ -938,7 +938,7 @@ theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk 
     (h12 : plo ≠ phi) (h13 : plo ≠ mode) (h23 : phi ≠ mode) (hfzl : fz.length < 2 ^ 20)
     (hp : seqParamsOk tab out hdrf ctlf hw = true) (hmo : bufMinOk tab fz own = true)
     (hdisj : ∀ a ∈ own, a ∉ fz) (hnd : fz.Nodup) (hdom : ∀ a ∈ fz, tab.dom64 a = true)
-    (hcn : cmpNeed tab own < 2 ^ 64) (k0 : Nat)
+    (hcn : cmpNeed tab own < 2 ^ 64) (hfz0 : 0 < fz.length) (hwn2 : 2 * workerNeed own < 2 ^ 64) (k0 : Nat)
     (hcode : Code (parStub tab mode plo phi out hdrf ctlf hw fz own ++
       (abiStub tab ++ (compileProgX X tab q "check" ++ cmpStub tab mode out own))) k0)
     (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0)
@@ -950,7 +950,7 @@ theorem cmp_outcome (q p : Prog) (hq : Refines q p) (tab : Tab) (hok : abiTabOk 
       dm (label abiCompareL) :=
   eventually_weaken _ _ _ _ (fun _ ⟨hpc, _, h1, h2⟩ => ⟨hpc, h1, h2⟩)
     (cmp_outcome_regs q p hq tab hok hAX hio hwf hnres mode plo phi out hdrf ctlf hw fz own hngm hngl hngh h12 h13
-      h23 hfzl hp hmo hdisj hnd hdom hcn k0 hcode fd hentry hnp bC bS pb sa dm ra hc hG)
+      h23 hfzl hp hmo hdisj hnd hdom hcn hfz0 hwn2 k0 hcode fd hentry hnp bC bS pb sa dm ra hc hG)
 
 end
 
