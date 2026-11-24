@@ -364,3 +364,19 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   extents now read only words both headers share (a compare-mode word, the larger of the two
   record counts and declaration-pool tops), so the solution's view sees the solution rows too
   (it never reads them) and its record arrays up to the larger count.
+* Checks at compare2 c6d4a0e80 (binary final up to the pending header-S swap): `diff-e2e --refs`
+  766/766 agree (447 accepted, 319 not), REFDIFF/UNSOUND/INCOMPLETE/CRASH/TIMEOUT 0; `--jobs 4`
+  766/766 agree. Init self-compare, interleaved with con-ron 8021ddac (`scripts/perf-compare-threads.sh`,
+  2 rounds, load about 2):
+
+  | run | instructions:u | wall | peak RSS |
+  |---|---:|---:|---:|
+  | checker `--compare`, 1 thread (in place) | 407 589 M | 29.7–30.0 s | 1 018 MB |
+  | con-ron `--compare --jobs=1` | 333 863 M | 28.8–29.1 s | 362–368 MB |
+  | checker `--jobs=16 --compare` | 409 807–409 819 M | 5.15–5.25 s | 1 177 MB |
+  | con-ron `--compare --jobs=16` | 338 104–338 273 M | 5.31–5.38 s | 655–656 MB |
+
+  Wall at con-ron's (1.03× at 1 thread, 0.97× at 16); instructions 1.22× (the flat run's ratio).
+  Peak RSS is 2.8× con-ron's sequentially (flat: 641 MB against 388 MB); the compared run adds
+  about 380 MB over the flat one, where con-ron adds nothing. Not yet analysed: candidates are the
+  two phases' records and environment records in one store, and the stash copies.
