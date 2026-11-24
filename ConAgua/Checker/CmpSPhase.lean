@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Checker.CompareChain6J
+public import ConAgua.Checker.CmpSeqView
 import ConAgua.Arena.IWFrame
 import ConAgua.Arena.LevelInternRef
 
@@ -26,31 +27,6 @@ namespace L.Checker
 
 open L L.Arena L.Front L.Rom ConAgua.Final
 open ConRon.Arena ConRon.Arena.Frontend
-
-/-- The arrays header S's view replaces: the stream index's rows, `FIRSTS`, `DECL`, `DLP`. -/
-def csA : List TieredArray := [TIXA, TIXS, TIXN, EIXA, EIXS, EIXN, FIRSTS, L.Front.DECL, L.Front.DLP]
-
-/-- The `CTL` words header S's view replaces: the index's counter, the frozen index's words, the
-solution's flag. -/
-def csC : List Word := [128, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 224]
-
-theorem csA_arr {b : TieredArray} (h : b ∈ csA) : b.hi = false ∧ (b.arr = 67 ∨ b.arr = 68 ∨ (129 ≤ b.arr ∧ b.arr ≤ 137)) := by
-  simp only [csA, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-
-theorem csC_val {x : Word} (h : x ∈ csC) : x.toNat = 128 ∨ (162 ≤ x.toNat ∧ x.toNat ≤ 173) ∨ x.toNat = 224 := by
-  simp only [csC, List.mem_cons, List.not_mem_nil, or_false] at h
-  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
-
-theorem not_mem_csA {b : TieredArray} (h : b.hi = true ∨ (b.arr ≠ 67 ∧ b.arr ≠ 68 ∧ (b.arr < 129 ∨ 137 < b.arr))) : b ∉ csA :=
-  fun hm => by
-    have := csA_arr hm
-    rcases h with h | h
-    · rw [this.1] at h; cases h
-    · omega
-
-theorem not_mem_csC {x : Word} (h : x.toNat ≠ 128 ∧ x.toNat ≠ 224 ∧ (x.toNat < 162 ∨ 173 < x.toNat)) : x ∉ csC :=
-  fun hm => by have := csC_val hm; omega
 
 section
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {ds ds' : Array IDeclaration}
