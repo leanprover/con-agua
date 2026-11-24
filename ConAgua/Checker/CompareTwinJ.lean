@@ -30,10 +30,10 @@ open ConRon.Bridge ConRon.Bridge.Frontend
 
 local notation "VM" => ConLeche.CheckMode.verified
 
-/-- **The challenge's pool facts** (`stagesC_model`'s part before `pooledAcceptsJ_bridge`). -/
-theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
-    (hS : ∃ s'', checkJobList VM PC.ipins none PC.IS PC.dsS (List.range PC.dsS.size) PC.sF.worker =
-      .ok (.ok (), s''))
+/-- **The challenge's pool facts** (`stagesC_model`'s part before `pooledAcceptsJ_bridge`), from the
+solution's pooled check accepting. -/
+theorem poolHypsJ_ofP {bC bS : ByteArray} (PC : PhaseC bC bS)
+    (hPS : PooledAccepts VM PC.ipins PC.dsS PC.sE PC.IS PC.sF)
     {IC : IStreamIndex} {sI : AState} (hidx : buildIndex PC.recsC.toArray PC.sG = .ok (.ok IC, sI))
     {σ : Type} (Rel : σ → AState → Prop) (Call : Nat → σ → σ → Prop) :
     ∃ (pinsP : List ConLeche.NatOpPinSet) (dsP dsSP : List ConLeche.Declaration)
@@ -52,12 +52,7 @@ theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
   have ho := StagesOut.cmp PC.pfx PC.pinsR
   obtain ⟨dsSP, hdenS⟩ := ho.den
   obtain ⟨F, hpure⟩ := Arena.pooledAccepts_bridge CoreSpec.of_core
-    ConRon.Bridge.Inductives.indSpec_of_bridge ho.drv ho.off ho.pp ho.pps ho.pinsDn ho.pd hdenS
-    ⟨[List.range PC.dsS.size], PC.idx,
-      fun t ht => ⟨_, List.mem_singleton_self _, List.mem_range.mpr ht⟩,
-      fun w hw t ht => by rw [List.mem_singleton] at hw; subst hw; exact List.mem_range.mp ht,
-      fun w hw => by rw [List.mem_singleton] at hw; subst hw; exact List.pairwise_lt_range,
-      fun w hw => by rw [List.mem_singleton] at hw; subst hw; exact hS⟩
+    ConRon.Bridge.Inductives.indSpec_of_bridge ho.drv ho.off ho.pp ho.pps ho.pinsDn ho.pd hdenS hPS
   have hndS := pure_nodup hpure
   obtain ⟨-, hxF, -, -, hIS, hpIS⟩ :=
     buildIndex_run constsSpec tablesSpec ho.drv ho.pp ho.off ho.pd hdenS PC.idx
@@ -91,5 +86,30 @@ theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
   obtain ⟨i, hi, rfl⟩ := List.getElem_of_mem hx
   obtain ⟨_, hd⟩ := hden' i (by simpa using hi)
   exact ⟨_, by simpa using hd⟩
+
+/-- **The challenge's pool facts**, from the solution's jobs accepted by one worker in order (the
+sequential driver's). -/
+theorem poolHypsJ_of {bC bS : ByteArray} (PC : PhaseC bC bS)
+    (hS : ∃ s'', checkJobList VM PC.ipins none PC.IS PC.dsS (List.range PC.dsS.size) PC.sF.worker =
+      .ok (.ok (), s''))
+    {IC : IStreamIndex} {sI : AState} (hidx : buildIndex PC.recsC.toArray PC.sG = .ok (.ok IC, sI))
+    {σ : Type} (Rel : σ → AState → Prop) (Call : Nat → σ → σ → Prop) :
+    ∃ (pinsP : List ConLeche.NatOpPinSet) (dsP dsSP : List ConLeche.Declaration)
+      (matesU : Std.HashMap ConLeche.Name (Array ConLeche.Name)),
+      StateOK sI ∧ JobSpec PC.ipins pinsP (some (solutionOf PC.IS PC.recsC)) sI ∧
+      PersPinSets PC.ipins ∧
+      (∀ x ∈ PC.recsC.toArray.toList, PersDecl x ∧ ∃ d, Frontend.denoteDecl sI.store x = some d) ∧
+      PinsDenote sI.store PC.ipins pinsP ∧
+      ((∀ (k : Nat) (r r' : σ) (a : AState) (hk : k < PC.recsC.toArray.size), Rel r a → Call k r r' →
+        (∃ env, FoldOK env (IC.view k) (AM.st enterScratch a)) →
+        ∃ a', recordJob VM PC.ipins (some (solutionOf PC.IS PC.recsC)) IC k PC.recsC.toArray[k] a =
+          .ok ((), a') ∧ Rel r' a') →
+      PoolHypsJ (pins := PC.ipins) (pinsP := pinsP) (ds := PC.recsC.toArray) (dsP := dsP) (I := IC)
+        (s₁ := sI) (J := solutionOf PC.IS PC.recsC) (dsS := dsSP) (matesU := matesU) Rel Call) :=
+  poolHypsJ_ofP PC ⟨[List.range PC.dsS.size], PC.idx,
+      fun t ht => ⟨_, List.mem_singleton_self _, List.mem_range.mpr ht⟩,
+      fun w hw t ht => by rw [List.mem_singleton] at hw; subst hw; exact List.mem_range.mp ht,
+      fun w hw => by rw [List.mem_singleton] at hw; subst hw; exact List.pairwise_lt_range,
+      fun w hw => by rw [List.mem_singleton] at hw; subst hw; exact hS⟩ hidx Rel Call
 
 end L.Checker

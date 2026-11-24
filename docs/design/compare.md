@@ -294,3 +294,31 @@ order, `checkStreamJ`), `TwinCompareVerdict`, `TwinCompareVerdictPooled`.
   their mode's frozen image, so the twin statements stay. One pool for both phases: the reported
   failure is the smallest failing index, and every solution index is below every challenge
   index, so the verdict is con-ron's.
+* H2: the challenge's threads at `J = some` (`cmpThreadsC_pooledJ`, `Checker/CmpThreadsC.lean`,
+  `CmpThreadsPool.lean`: the multi-worker pool with a solution; `JobM.truncJ`, `SolR.trunc`,
+  `JSol.fresh`) merged (d28e0d7b9; 0 `sorry`, the whole tree builds).
+* A' in detail (H3's hand-over, H3b, H4, H2): shrinking `OUT` for mode 7 would cost days (the
+  mode-6 chain's frames fix every array's size), so L does the chaining: mode 7 reads
+  `base := OUT[1]`, writes the challenge's buffer at `OUT[base‥)` (`par_compact` with a base;
+  0 for the flat run and mode 6), sets `OUT[5] := base` and `OUT[1] := base + LC`. Entry 2
+  (`ca_check_b`) gets a prologue: `j ≥ buf[2]` and `buf[5] ≠ 0` shift the buffer, the index and
+  the region to the second phase and its worker sub-region (`ca_worker_size = 2 · workerNeed`);
+  the flat path never shifts. The solution's jobs see the whole buffer, which agrees with mode
+  5's on its prefix except header words 1 and 5 (`BufAgreeS`).
+* H1b: the challenge's threaded job failure at `J = some` (`cmpV_tjobC`, the error half of
+  `cmpThreadsC_pooledJ`) merged (463fa6d83). Every L-level verdict claim is now proved: modes 4,
+  5 (`cmpV_a4`, `cmpV_a5`), modes 6, 7 claim nothing (`cmpV_a67`, class 0), the solution's jobs
+  (`cmpV_sjob`, threaded `cmpV_tjobS`), the challenge's (`cmpV_cjob`, threaded `cmpV_tjobC`), and
+  `cmpErr_twin` for the sequential driver.
+* The user then asked for one frozen store image with two headers (the solution's terms not
+  duplicated) and an independent design review of the one-pool layout; the buffer/entry work
+  (H2b, H3b, H4) is on hold until it is decided.
+* **Decision (user, 2026-11-24): design (i)**, with an independent review's four amendments
+  (`_tmp/coordinator/compare-design-decision.md`): ONE frozen store image and two headers; both
+  phases' jobs start from the state after the challenge's index (`sI`); the solution's index
+  rows read through header S's `EIX*`/`TIX*` entries. The twin statements change accordingly
+  (`Final/CompareTwinI.lean`): `stagesCI_model` re-proves con-ron's `stagesC_model` with the
+  solution's pure fold at `sI` (`pooled_fold_records` is generic in its start state; its
+  hypotheses move from the solution's index state to `sI` by `Ext`/`PExt` monotonicity; checked
+  in Lean first, it went through at the first attempt). Helpers H2b (the compaction and the
+  headers), H4 (entry 2, `main.c`, the threaded theorems), H5 (the solution's phase at `sI`).
