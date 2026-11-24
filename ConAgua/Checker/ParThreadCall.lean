@@ -5,8 +5,11 @@ public import ConAgua.Checker.ParThreadReads
 public import ConAgua.Arena.FreezeBuf
 import ConAgua.Checker.CheckARun
 import ConAgua.L.Blocks
+import ConAgua.Checker.LoopProgTac
+meta import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import ConAgua.Arena.FreezeFreshBase
+public import ConAgua.Checker.SeedReread
 public import ConAgua.Arena.JobStart
 
 @[expose] public section
@@ -164,10 +167,10 @@ theorem checkJobs_thrT (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = 
   obtain ⟨a', hrec, hJ'⟩ := hS j.toNat s₂.mem s₂'.mem a hj hJ2 hcall hF
   exact ⟨a', hrec, s₂'.mem, hJ', hPB', fun t ht => hAg'.1 t ht⟩
 
-/-- **`check_b`'s first block**: on the first call (`INIT = 0`) the seed `CTLF` copied into `CTL`
-and `INIT := 1`; on later calls nothing. -/
+/-- **`check_b`'s first block and the seed re-read**: on the first call (`INIT = 0`) the seed
+`CTLF` copied into `CTL` and `INIT := 1`; on every call the seed's words `rrWs` (`seed_reread`). -/
 def seedMem (w : Mem) : Mem :=
-  if w.glob INIT = 0 then (w.copy64 CTL 0 CTLF 0 (w.len64 CTLF).toNat).setG INIT 1 else w
+  rereadMem (if w.glob INIT = 0 then (w.copy64 CTL 0 CTLF 0 (w.len64 CTLF).toNat).setG INIT 1 else w)
 
 /-- **`check_b` on a thread's memory**: from a memory whose `seedMem` is `ThrAt a`, with the range
 `[j, j + 1)`, a returning call runs record `j`'s job at `a` and leaves a memory `ThrAt` the state
@@ -183,13 +186,13 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
       ThrAt pins dn ds I a₀ bs s'.mem a' J) ∧ s'.mem.glob INIT ≠ 0; ⊤⦄ := by
   have hlo' : s₀.mem.glob ⟨9⟩ = j := hlo
   have hhi' : s₀.mem.glob ⟨11⟩ = j + 1 := hhi
-  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs
+  have hR0 : s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs (rereadMem
       { bytes := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).bytes,
         words := (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).words,
         glob := fun h => if h = ⟨10⟩ then 1
-          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h } a J := by
+          else (s₀.mem.copy64 CTL 0 CTLF 0 (UInt64.toNat (s₀.mem.len64 CTLF))).glob h }) a J := by
     intro h0; have := hR; simp only [seedMem, ite_eq_left h0] at this; exact this
-  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs s₀.mem a J := by
+  have hR1 : ¬ s₀.mem.glob ⟨10⟩ = 0 → ThrAt pins dn ds I a₀ bs (rereadMem s₀.mem) a J := by
     intro h0; have := hR; simp only [seedMem, ite_eq_right h0] at this; exact this
   rw [invoke_eq _ checkerProg_lookup_check_b]
   simp only [callFn, checkBL]
@@ -198,7 +201,8 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
   | succ n =>
     have hJ := checkJobs_thrT hck hS hds n (by omega) a j hj hF
     have hFl := flushCaches_spec checkerProg L.Checker.checkerProg_flushProg n
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·)]
+    have hRR := seedReread_spec checkerProg (by chk_lk) n
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · ·), (hFl ·), (hRR ·)]
     all_goals (try simp only [L.St.setLoc_mem, St.setLoc_loc,
       L.Locals.init_nil, Cmp.eval,
       reduceIte, beq_iff_eq, decide_eq_true_eq] at *)
@@ -212,7 +216,7 @@ theorem checkB_thr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR0 (by simp_all)⟩
           | exact ⟨_, hfx, by rw [L.St.setLocs_mem]; exact hm, hR1 (by simp_all)⟩
           | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp_all; done)
-          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob] at *; simp_all; done))
+          | (rw [L.St.setLocs_mem, hm, flushMem_glob]; simp only [Mem.copy64_glob, rereadMem_glob] at *; simp_all; done))
       | (rw [L.St.setLocs_mem]; simp_all; done)
 
 /-- **`check` with the mode word `2` on a thread's memory**: `check_b` (as `checkB_thr`). -/
@@ -276,7 +280,7 @@ theorem thrS_cases {b : TieredArray} (h : thrS b = true) :
     · exact ⟨k + 1, by omega, by omega, frozenIdsL_get (by omega)⟩
   · exact Or.inr h3
 
-theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = w := by
+theorem seedMem_of_ne {w : Mem} (h : w.glob INIT ≠ 0) : seedMem w = rereadMem w := by
   simp only [seedMem, ite_eq_right h]
 
 theorem truncList_bytes (m₀ : Mem) : ∀ (zs : List (ArrId × Fz)) (m : Mem),
@@ -292,13 +296,27 @@ theorem freshMem_arr8 (m : Mem) (b : ArrId) : (freshMem m).arr8 b = m.arr8 b := 
 arrays (but the header and the seed) the buffer's images, and the next call's memory
 `bufMem B r j` agree on `thrS`. -/
 theorem thr_next {r : Mem} (B : Array Word) (j : Word) (hI : r.glob INIT ≠ 0)
-    (hfz : ∀ k (hk : k < frozen.length), 1 ≤ k → r.arr64 frozen[k].1 = bufImg B (k + 1)) :
+    (hfz : ∀ k (hk : k < frozen.length), 1 ≤ k → r.arr64 frozen[k].1 = bufImg B (k + 1))
+    (hctl : UInt64.ofNat (bufImg B 1).size ≠ 0 →
+      ∀ k ∈ rrWs, (r.arr64 CTL).getD k 0 = (bufImg B 1).getD k 0) :
     ∀ t, thrS t = true → (seedMem (bufMem B r j)).arr64 t = r.arr64 t := by
   intro t ht
-  rw [seedMem_of_ne (by rw [bufMem_glob_init]; exact hI)]
+  rw [seedMem_of_ne (by rw [bufMem_glob_init]; exact hI),
+    rereadMem_arr _ (fun h => by
+      rw [bufMem_ctl, bufMem_ctlf]
+      exact hctl (by simpa only [Mem.len64, bufMem_ctlf] using h))]
   rcases thrS_cases ht with ⟨k, hk, h1, rfl⟩ | ho
   · rw [bufMem_frozen B r j hk h1, hfz k hk h1]
   · exact bufMem_owned B r j ho
+
+/-- **TEMP stand-in** (compare2-freeze, to be proved: `seed_reread` sets the words `rrWs` to the
+seed's, the flush keeps `CTL` words `≥ 128` (`flushMem_frame`), the jobs keep `128`, `162‥173`,
+`224` (`cq_jobs_keep`)): after a returning call on `bufMem B r j`, `CTL` holds the seed's words. -/
+theorem thr_ctl_next {B : Array Word} {r r' : Mem} {j : Word} {n : Nat} {rs : List Word}
+    (hrun : L.run checkerProg n "check" [] (bufMem B r j) = .ok (rs, r')) :
+    UInt64.ofNat (bufImg B 1).size ≠ 0 →
+      ∀ k ∈ rrWs, (r'.arr64 CTL).getD k 0 = (bufImg B 1).getD k 0 := by
+  sorry
 
 /-- **The first call**: from entry 1's memory `m` (the buffer `bufOf m`) and a region memory `r`
 with `INIT = 0` and every owned array zero (at its size in `m`), the memory after `check_b`'s seed
@@ -318,7 +336,18 @@ theorem thr_first {m : Mem} (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT)
   have hctl : W.arr64 CTL = zeros (m.arr64 CTL).size := by
     rw [← hW, bufMem_ctl]; exact hz CTL (by decide)
   rw [hlen]
+  have hsz : 256 ≤ (W.arr64 CTL).size := by rw [hctl]; simp [zeros, h256]
+  have hnoop : ∀ k ∈ rrWs, ((W.copy64 CTL 0 CTLF 0 256).arr64 CTL).getD k 0 =
+      ((W.copy64 CTL 0 CTLF 0 256).arr64 CTLF).getD k 0 := by
+    intro k hk
+    have hk' : k < 256 := by
+      simp only [rrWs, List.mem_cons, List.mem_append, List.mem_range'_1, List.mem_singleton] at hk
+      omega
+    rw [getD_copy64 (by decide) 256 W 0 0 (by simp) (by simp) k, arr64_copy64_ne _ _ _ _ _ _ (by decide)]
+    simp only [UInt64.toNat_zero, Nat.zero_le, true_and, Nat.zero_add, Nat.sub_zero]
+    rw [ite_eq_left ⟨hk', by omega⟩]
   intro b hb
+  rw [rereadMem_arr _ (fun _ k hk => hnoop k hk)]
   rw [show ∀ M : Mem, (M.setG INIT 1).arr64 b = M.arr64 b from fun _ => rfl]
   by_cases hbc : b = CTL
   · subst hbc

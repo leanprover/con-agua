@@ -125,7 +125,8 @@ theorem sjobs_failO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
     (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
     (hJG : JobG ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
     (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (Bs : Nat → Array Word) (hB0 : Bs 0 = bufOf m) (rm : Nat → Mem)
+    (Bs : Nat → Array Word) (hB0 : Bs 0 = bufOf m)
+    (hseed : ∀ k, bufImg (Bs (k + 1)) 1 = bufImg (Bs k) 1) (rm : Nat → Mem)
     (hz : ∀ b ∈ parOwnedL, (rm 0).arr64 b = zeros (m.arr64 b).size) (hI0 : (rm 0).glob INIT = 0)
     (j : Nat) (hj : j < ds.size)
     (hrun : ∀ i < j, ∃ n rs, n ≤ 2 ^ 62 ∧
@@ -169,7 +170,7 @@ theorem sjobs_failO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
     refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => ?_⟩⟩
     · have e : ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = ds[k] := by simp only [hk']
       rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
-    · rw [e2]; exact (thr_next (Bs (k + 1)) j hI hkept t ht).trans (hX t ht)
+    · rw [e2]; exact (thr_next (Bs (k + 1)) j hI hkept (by rw [hseed k]; exact thr_ctl_next hrun) t ht).trans (hX t ht)
   have H := hH hstep
   have hstart : Rel (0, rm 0) sF.worker := by
     intro j
@@ -227,7 +228,7 @@ theorem sjobs_failO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array ID
       obtain ⟨⟨a', hrj, X, hJ, hPB, hX⟩, hI'⟩ := runThr hJP.check_jobs hRS hsz n' hn' a (UInt64.ofNat i)
         (by rw [hi64]; exact hi) (by rw [hi64]; exact hfold _ a hi (by omega) hw) _ rfl (hR _) rfl rfl hr
       have hR' : Rel (i + 1, rm (i + 1)) a' :=
-        fun j => ⟨X, hJ, hPB, fun t ht => (thr_next (Bs (i + 1)) j hI' hkept t ht).trans (hX t ht)⟩
+        fun j => ⟨X, hJ, hPB, fun t ht => (thr_next (Bs (i + 1)) j hI' hkept (by rw [hseed i]; exact thr_ctl_next hr) t ht).trans (hX t ht)⟩
       have hrj' : recordJob VM ipins none I i ds[i] a = .ok ((), a') := by
         have e : ds[(UInt64.ofNat i).toNat]'(by rw [hi64]; exact hi) = ds[i] := by simp only [hi64]
         rw [← e]; simp only [hi64] at hrj ⊢; exact hrj
@@ -283,7 +284,7 @@ theorem cmpV_sjob (bC bS pb : ByteArray) (h64 : System.Platform.numBits = 64)
     rw [e, UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)]
   rw [hkS] at hj
   have hTF := sjobs_failO ho PS.idx hF hJP hJG hok hlt
-    (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0 rm
+    (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0 (bufSeq_seed_standin _ rm) rm
     (fun b hb => by rw [h0, hsz]; simp [ConAgua.Final.zeroMem, Mem.arr64, zeros]) (by rw [h0]; rfl) j hj
     (fun i hi => by
       obtain ⟨rs, hr, -⟩ := hjobs i hi

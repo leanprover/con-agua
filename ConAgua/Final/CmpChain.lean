@@ -51,6 +51,12 @@ theorem run_check_size {N : Nat} {m : Mem} {rs : List Word} {m' : Mem}
     exact (M.of_run (P := fun x => x = _) hs' hrun t).2.1)
   exact hk.2 a
 
+/-- **TEMP stand-in** (compare2-freeze; the old in-place sequential solution phase over the buffer
+sequence `bufSeq`, removed with it before landing): the seed's image is the same along the jobs. -/
+theorem bufSeq_seed_standin (B : Array Word) (rm : Nat → Mem) :
+    ∀ k, bufImg (bufSeq frozenIdsL B rm (k + 1)) 1 = bufImg (bufSeq frozenIdsL B rm k) 1 := by
+  sorry
+
 /-- **The frozen buffer's geometry** after `par_compact(1)` (`entry1_buf`'s argument at any
 memory): its length word inside `OUT`, at least the header long, the entries inside it and in
 increasing order. -/
@@ -173,7 +179,8 @@ theorem cmpSJobs_twin {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : Phas
     simp only [cmpBuf]; rw [bufOf, (parCompactMem_hdr hok).2.1]
   have hBs := bufSeq_ok hB checker_cmpHdrKeep _ hj
   have hN : abiFuel ≤ 2 ^ 62 := by simp [abiFuel]
-  refine sjobs_chainO ho PS.idx hF hJP hok hlt (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0 rm
+  refine sjobs_chainO ho PS.idx hF hJP hok hlt (bufSeq frozenIdsL (cmpBuf OUT (parCompactMem m 1)) rm) hB0
+    (bufSeq_seed_standin _ rm) rm
     (fun b hb => by rw [h0, hsz]; simp [zeroMem, Mem.arr64, zeros]) (by rw [h0]; rfl) fun j hjk => ?_
   obtain ⟨rs, hr, -⟩ := hj j hjk
   have hr' : L.run checkerProg abiFuel "check" []

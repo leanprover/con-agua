@@ -41,7 +41,8 @@ theorem sjobs_chainO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array I
     (hF : FoldOn b pb sz ds ipins sE I sF m₇ m)
     (hJP : JobProg ipins (dnOf sE.store) ds (Prog.subPB pb.data.toList checkerProg))
     (hok : parCompactOK m 1 = true) (hlt : (m.arr64 OUT).size < 2 ^ 64)
-    (Bs : Nat → Array Word) (hB0 : Bs 0 = bufOf m) (rm : Nat → Mem)
+    (Bs : Nat → Array Word) (hB0 : Bs 0 = bufOf m)
+    (hseed : ∀ k, bufImg (Bs (k + 1)) 1 = bufImg (Bs k) 1) (rm : Nat → Mem)
     (hz : ∀ b ∈ parOwnedL, (rm 0).arr64 b = zeros (m.arr64 b).size) (hI0 : (rm 0).glob INIT = 0)
     (hrun : ∀ j < ds.size, ∃ n rs, n ≤ 2 ^ 62 ∧
       L.run checkerProg n "check" [] (bufMem (Bs j) (rm j) (UInt64.ofNat j)) = .ok (rs, rm (j + 1)) ∧
@@ -80,7 +81,7 @@ theorem sjobs_chainO {b pb : ByteArray} {sz : TieredArray → Nat} {ds : Array I
     refine ⟨a', ?_, fun j => ⟨X, hJ, hPB, fun t ht => ?_⟩⟩
     · have e : ds[(UInt64.ofNat k).toNat]'(by rw [hk']; exact hk) = ds[k] := by simp only [hk']
       rw [← e]; simp only [hk'] at hrj ⊢; exact hrj
-    · rw [e2]; exact (thr_next (Bs (k + 1)) j hI hkept t ht).trans (hX t ht)
+    · rw [e2]; exact (thr_next (Bs (k + 1)) j hI hkept (by rw [hseed k]; exact thr_ctl_next hrun) t ht).trans (hX t ht)
   have H := hH hstep
   -- the one worker
   have hstart : Rel (0, rm 0) sF.worker := by

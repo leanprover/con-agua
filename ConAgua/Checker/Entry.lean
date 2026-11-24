@@ -132,6 +132,20 @@ not scan). -/
   return 9223372036854775808 + cnt
 }
 
+/-- `seed_reread()`: with a seed (`CTLF` nonempty; none in place), its phase words `CTL[128]`,
+`CTL[162‥173]`, `CTL[224]` (the stream index's counter, the frozen literal names, the solution's flag)
+copied into `CTL`: the compared run's second phase continues on the first phase's worker region with
+its own header's seed. -/
+-- con-ron: none — the compared run's one worker region (con-ron's workers keep two driver states)
+@[no_expose] def seedRereadL : FunDecl := lfn () locals () {
+  if len(CTLF.u64) != 0 {
+    CTL.u64[128] := CTLF.u64[128];
+    copy!(CTL.u64, 162, CTLF.u64, 162, 12);
+    CTL.u64[224] := CTLF.u64[224]
+  };
+  return 0
+}
+
 /-- `check_b()`: on the worker region's first call the seed (`CTL`) from the buffer; on every call
 the phase's words of the seed (`CTL[128]`, `CTL[162‥173]`, `CTL[224]`: the stream index's counter,
 the frozen literal names, the solution's flag; the compared run's second phase continues on the
@@ -148,11 +162,7 @@ the worker's state, as the pool's worker does (`checkJobList`); returns `ACCEPT`
     copy!(CTL.u64, 0, CTLF.u64, 0, n);
     INIT := 1
   };
-  if len(CTLF.u64) != 0 {
-    CTL.u64[128] := CTLF.u64[128];
-    copy!(CTL.u64, 162, CTLF.u64, 162, 12);
-    CTL.u64[224] := CTLF.u64[224]
-  };
+  z := call seed_reread();
   z := call flush_caches();
   if L.Front.DECL.u64[0] < PHI { abort };
   if PHI < PLO { abort };
@@ -233,7 +243,8 @@ def abortStub (n : Nat) : FunDecl := { nparams := n, nlocals := n, body := .abor
 
 /-- **The bindings `checkerProg` takes from here** (before any other module's). -/
 def entryProg : Prog :=
-  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("par_compact", parCompactL),
+  [("check", checkL), ("check_a", checkAL), ("check_b", checkBL), ("seed_reread", seedRereadL),
+   ("par_compact", parCompactL),
    -- the frozen buffer's image functions (`Arena/Freeze.lean`), one per frozen entry
    ("fz_0", fzF 0), ("fz_1", fzF 1), ("fz_2", fzF 2), ("fz_3", fzF 3), ("fz_4", fzF 4),
    ("fz_5", fzF 5), ("fz_6", fzF 6), ("fz_7", fzF 7), ("fz_8", fzF 8), ("fz_9", fzF 9),
