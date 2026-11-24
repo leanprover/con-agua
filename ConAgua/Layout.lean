@@ -218,6 +218,11 @@ declare_arrays checkerArrays
   | /-- `NeedsSt.acc`: a needs walk's names (top `CTL[227]`). -/ Arena.NACC : word := 221
   | /-- `coneGo`'s work list, as a stack (top `CTL[228]`). -/ Arena.CWK : word := 222
   | /-- The first parse's records, kept across the second (`cmp_stash`). -/ Checker.CDECL : word := 223
+  | /-- The solution's records, kept across the challenge's preparation (`cmp_sstash`). -/
+    Checker.SDECL : word := 224
+  | /-- The solution's index firsts (`cmp_sstash`). -/ Checker.SFIRSTS : word := 225
+  | /-- The solution's declaration pool (`cmp_sstash`). -/ Checker.SDLP : word := 226
+  | /-- The solution's `CTL[0‥256)` (`cmp_sstash`). -/ Checker.SCTL : word := 227
 
 /-- **The checker's word arrays**: tier 0 of every word array of the table and tier 1 of every
 tiered one. Write sets "every array but …" are filters of this list. -/

@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.JustifyIface
+public import ConAgua.Arena.FreezeCmp
 
 @[expose] public section
 
@@ -87,8 +88,23 @@ parse left them). -/
   z := call intern_all_pins();
   cnt := DECL.u64[0];
   z := call build_index(cnt);
-  z := call par_compact(1);
   return 9223372036854775808 + cnt
+}
+
+/-- `cmp_sstash()`: what the solution's jobs read and the challenge's preparation overwrites,
+kept: its records `DECL` in `SDECL`, its index firsts `FIRSTS` in `SFIRSTS`, its declaration pool
+`DLP` in `SDLP`, `CTL[0‥256)` in `SCTL`. -/
+-- con-ron: none — L keeps one driver state; the twin's driver holds the solution's `ParseResultD` and index
+@[no_expose] def cmpSStashL : FunDecl := lfn () locals (n) {
+  if 576460752303423488 <= DECL.u64[0] { abort };
+  n := 1 + 8 * DECL.u64[0];
+  copy!(SDECL.u64, 0, DECL.u64, 0, n);
+  n := DECL.u64[0];
+  copy!(SFIRSTS.u64, 0, FIRSTS.u64, 0, n);
+  n := 1 + DLP.u64[0];
+  copy!(SDLP.u64, 0, DLP.u64, 0, n);
+  copy!(SCTL.u64, 0, CTL.u64, 0, 256);
+  return 0
 }
 
 /-- `check_c3(c)`: the solution's index moved out, the challenge's records back and prepared, its
@@ -97,6 +113,7 @@ header only for mode `6`, `c = 0`, whose jobs run in place; header and images fo
 `c = 1`, whose jobs run on the threads' regions). -/
 -- con-ron: none — the Rust driver `compare_json` (h8S's thaw, h4, hside, hsol, h6, h7), which the twin states as premises
 @[no_expose] def checkC3L : FunDecl := lfn (c) locals (z, cnt) {
+  if c != 0 { z := call cmp_sstash() };
   cnt := DECL.u64[0];
   z := call index_to_solution(cnt);
   z := call cmp_restore();
@@ -106,13 +123,19 @@ header only for mode `6`, `c = 0`, whose jobs run in place; header and images fo
   z := call solution_of(cnt);
   z := call build_index(cnt);
   CTL.u64[⟪SOLC⟫] := 1;
-  z := call par_compact(c);
+  if c != 0 {
+    z := call par_compact(1, ⟪hdrWW⟫);
+    z := call cmp_hdr_s(z)
+  } else {
+    z := call par_compact(0, 0)
+  };
   return 9223372036854775808 + cnt
 }
 
 /-- The compared run's entry functions. -/
 def compareEntryProg : Prog :=
   [("cmp_stash", cmpStashL), ("cmp_restore", cmpRestoreL), ("check_c1", checkC1L),
-   ("check_c2", checkC2L), ("check_c3", checkC3L)]
+   ("check_c2", checkC2L), ("check_c3", checkC3L), ("cmp_sstash", cmpSStashL),
+   ("cmp_hdr_s", cmpHdrSL), ("fzs_60", fzsF 60), ("fzs_61", fzsF 61), ("fzs_62", fzsF 62)]
 
 end L.Checker
