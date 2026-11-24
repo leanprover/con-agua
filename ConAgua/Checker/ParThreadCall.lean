@@ -233,7 +233,7 @@ theorem checkThr (hck : (Prog.subPB bs checkerProg).lookup "check_jobs" = some c
     have hB := checkB_thr hck hS hds n (by omega) a j hj hF
     have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hB · · · ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bs" [] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bc" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),

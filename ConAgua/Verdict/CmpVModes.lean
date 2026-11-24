@@ -19,6 +19,8 @@ import ConAgua.Front.FrontRunRef
 import ConAgua.Final.CmpChain
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 
 @[expose] public section
 
@@ -178,7 +180,7 @@ theorem check_err_dispatchC {p : Prog} (hp : p.lookup "check" = some checkL) (n 
   rw [invoke_eq _ hp]
   simp only [callFn, checkL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (h1 ·), (h2 ·), (h3 · ·),
-    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_b" [] ·)]
+    (L.invoke_loc p (exec p n) "check_a" [·] ·), (L.invoke_loc p (exec p n) "check_bs" [] ·), (L.invoke_loc p (exec p n) "check_bc" [] ·), (L.invoke_loc p (exec p n) "check_b" [] ·)]
   all_goals (try simp only at *)
   all_goals grind [lang_grind]
 

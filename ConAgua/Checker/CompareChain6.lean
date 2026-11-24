@@ -6,6 +6,8 @@ import ConAgua.Checker.RomProgInit
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import ConRon.Bridge.Checker.Install
 import ConAgua.Arena.IWFrame
 

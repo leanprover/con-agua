@@ -11,6 +11,8 @@ public import ConAgua.Arena.JustifySideRefMates
 import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 public import ConAgua.Checker.CompareChain6S
 public import ConAgua.Arena.JustifySideRefSide
 import ConAgua.Arena.IWFrame

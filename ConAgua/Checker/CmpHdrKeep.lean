@@ -48,6 +48,8 @@ import all ConAgua.Arena.Needs
 import all ConAgua.Arena.Justify
 import all ConAgua.Arena.JustifySide
 import all ConAgua.Checker.CompareEntry
+import all ConAgua.Arena.FreezeCmp
+import all ConAgua.Checker.CmpSeqEntry
 import all ConAgua.Arena.IndPos
 import all ConAgua.Arena.IndPos2
 import all ConAgua.Arena.IndSum
@@ -232,7 +234,7 @@ theorem check_mode2_hk (n : Nat) (s₀ : St) :
     have hC := fun (s₁ : St) => invoke_frame checkerProg checkerProg_hkW hkFr_wframe n "check_b"
       check_b_mem_phaseBFns [] s₁
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hC ·),
-      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [·] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [·] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bs" [] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bc" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),
       (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [·] ·)]

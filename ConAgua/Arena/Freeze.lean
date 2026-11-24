@@ -151,16 +151,17 @@ def hdrW : Nat := 10 + 2 * frozen.length
 
 `fz_i(o, c, b)` for the prefix image of `src` with extent `e` in header entry `i` of the header at
 `OUT[b‥)` (`o` relative to `b`): writes `(o, e)` into the header and, if `c ≠ 0`, the image at
-`OUT[b+o‥b+o+e)`; returns `o + e`. Locals `o c b e`. -/
+`OUT[b+o‥b+o+e)`; returns `o + e`. Locals `o c b e d` (`d = b + o`). -/
 @[no_expose] def fzPreG (src : ArrId) (e : Expr) (i : Nat) : FunDecl :=
   let body : Stmt :=
     .seq (.set 3 e) <|
     .seq (.ite (.cmp .ne (.var 1) (fzC 0))
-      (.copy64 (.plain OUT) (.bin .add (.var 2) (.var 0)) (.plain src) (.const 0) (.var 3)) .skip) <|
+      (.seq (.set 4 (.bin .add (.var 2) (.var 0)))
+        (.copy64 (.plain OUT) (.var 4) (.plain src) (.const 0) (.var 3))) .skip) <|
     .seq (.st64 OUT (.bin .add (.var 2) (fzC (10 + 2 * i))) (.var 0)) <|
     .seq (.st64 OUT (.bin .add (.var 2) (fzC (11 + 2 * i))) (.var 3)) <|
     .ret [.bin .add (.var 0) (.var 3)]
-  { nparams := 3, nlocals := 4, body }
+  { nparams := 3, nlocals := 5, body }
 
 /-- The name of frozen entry `i`'s function. -/
 def fzName (i : Nat) : FnName := "fz_" ++ toString i
