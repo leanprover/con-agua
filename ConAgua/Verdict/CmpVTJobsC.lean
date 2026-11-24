@@ -216,8 +216,7 @@ theorem cmpV_tjobC {bC bS pb : ByteArray} (hpb : pb.size < 2 ^ 63) (PS : PhaseS 
     simpa using hcN c' hc
   · rw [List.mem_singleton.mp ht]; simpa using hjN
 
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'L.Checker.cmpV_tjobC' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'L.Checker.cmpV_tjobC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms cmpV_tjobC
 
 end L.Checker

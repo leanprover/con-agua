@@ -34,6 +34,9 @@ set_option experimental.vcgen true
 /-- The seed words `seed_reread` copies: `128`, `162‥173`, `224`. -/
 def rrWs : List Nat := 128 :: List.range' 162 12 ++ [224]
 
+/-- `CTL`'s words `rrWs` are the seed's. -/
+def CtlSeed (c f : Array Word) : Prop := ∀ k ∈ rrWs, c.getD k 0 = f.getD k 0
+
 /-- **The memory after `seed_reread()`.** -/
 def rereadMem (x : Mem) : Mem :=
   if x.len64 CTLF = 0 then x else
@@ -112,6 +115,49 @@ theorem rereadMem_arr (x : Mem)
   · subst ht; exact rereadMem_noop x h
   · exact rereadMem_ne x ht
 
+/-- **After the re-read `CTL` holds the seed's words `rrWs`** (with a seed, `CTL` past `224`). -/
+theorem rereadMem_rr (x : Mem) (h0 : x.len64 CTLF ≠ 0) (h1 : 224 < (x.arr64 CTL).size) :
+    ∀ k ∈ rrWs, ((rereadMem x).arr64 CTL).getD k 0 = (x.arr64 CTLF).getD k 0 := by
+  intro k hk
+  have hk' := (by decide : ∀ k ∈ rrWs, k = 128 ∨ (162 ≤ k ∧ k < 174) ∨ k = 224) k hk
+  have hc : (CTL : TieredArray) ≠ CTLF := by decide
+  have hr128 : rdW (x.arr64 CTLF) 128 = (x.arr64 CTLF).getD 128 0 := by
+    simp [rdW, Array.getD_eq_getD_getElem?]
+  have hr224 : rdW (x.arr64 CTLF) 224 = (x.arr64 CTLF).getD 224 0 := by
+    simp [rdW, Array.getD_eq_getD_getElem?]
+  simp only [rereadMem, ite_eq_right h0]
+  rw [getD_set64_same, getD_copy64 (by decide) 12 _ 162 162 (by simp) (by simp)]
+  simp only [L.Mem.size64_set64, getD_set64_same, Mem.arr64_set64_ne _ _ _ _ _ hc.symm,
+    show UInt64.toNat 224 = 224 from rfl, show UInt64.toNat 162 = 162 from rfl,
+    show UInt64.toNat 128 = 128 from rfl, size_copy64]
+  rcases hk' with rfl | hk2 | rfl
+  · rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_left ⟨rfl, by omega⟩, hr128]
+  · rw [ite_eq_right (by omega), ite_eq_left ⟨hk2.1, by omega, by omega⟩, show 162 + (k - 162) = k by omega]
+  · rw [ite_eq_left ⟨rfl, by omega⟩, hr224]
+
+/-- **`seed_reread()`'s bounds**: with a seed, it returns only with `CTL` and `CTLF` past `224`. -/
+theorem seedReread_bnd (p : Prog) (hp : p.lookup "seed_reread" = some seedRereadL) (n : Nat)
+    (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "seed_reread" []
+    ⦃fun _ _ => s₀.mem.len64 CTLF ≠ 0 → 224 < (s₀.mem.arr64 CTL).size ∧ 224 < (s₀.mem.arr64 CTLF).size;
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, seedRereadL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, warr]
+    all_goals simp only [Cmp.eval] at *
+    all_goals (try simp only [L.Mem.size64_set64, size_copy64, arr64_copy64_ne _ _ _ _ _ _
+      (show (CTLF : TieredArray) ≠ CTL by decide), Mem.arr64_set64_ne _ _ _ _ _
+      (show (CTLF : TieredArray) ≠ CTL by decide), show UInt64.toNat 224 = 224 from rfl] at *)
+    all_goals first
+      | assumption
+      | (intro _; exact ⟨by assumption, by assumption⟩)
+      | (intro h; simp_all)
+      | (exfalso; simp_all)
+
+
 /-- **`seed_reread()`'s spec.** -/
 theorem seedReread_spec (p : Prog) (hp : p.lookup "seed_reread" = some seedRereadL) (n : Nat)
     (s₀ : St) :
@@ -140,5 +186,17 @@ theorem seedReread_spec (p : Prog) (hp : p.lookup "seed_reread" = some seedRerea
         have := ‹¬(_ != _) = true›
         simpa only [bne_iff_ne, ne_eq, Decidable.not_not] using this
       rw [rereadMem_empty he]
+
+/-- **`seed_reread()`'s spec with its bounds.** -/
+theorem seedReread_spec' (p : Prog) (hp : p.lookup "seed_reread" = some seedRereadL) (n : Nat)
+    (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "seed_reread" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = rereadMem s₀.mem ∧
+      (s₀.mem.len64 CTLF ≠ 0 → 224 < (s₀.mem.arr64 CTL).size); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  have h1 := M.of_run (P := fun x => x = s₀) hs hrun (seedReread_spec p hp n s₀)
+  have h2 := M.of_run (P := fun x => x = s₀) hs hrun (seedReread_bnd p hp n s₀)
+  exact ⟨h1.1, h1.2.1, fun h => (h2 h).1⟩
 
 end L.Checker

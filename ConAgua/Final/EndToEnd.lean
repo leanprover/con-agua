@@ -212,20 +212,15 @@ theorem checkerFile_threads_no_False (V : Type w) [ConLeche.SetTheory V] [Host] 
 #guard_msgs in #print axioms checkerFile_model_exists
 /-- info: 'ConAgua.Final.checkerFile_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_no_False
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_threads_accept' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_accept
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_threads_regs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_regs
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_threads_verdict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_verdict
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_threads_model' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_model
--- TEMP (compare2-freeze): `sorryAx` from the stand-ins (thr_ctl_next, ...)
-/-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound] -/
+/-- info: 'ConAgua.Final.checkerFile_threads_no_False' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms checkerFile_threads_no_False
 
 end ConAgua.Final

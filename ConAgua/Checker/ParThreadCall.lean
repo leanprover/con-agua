@@ -10,6 +10,7 @@ meta import ConAgua.Checker.LoopProgTac
 import all ConAgua.Checker.Entry
 import ConAgua.Arena.FreezeFreshBase
 public import ConAgua.Checker.SeedReread
+import ConAgua.Checker.CmpSeqW
 public import ConAgua.Arena.JobStart
 
 @[expose] public section
@@ -305,8 +306,7 @@ arrays (but the header and the seed) the buffer's images, and the next call's me
 `bufMem B r j` agree on `thrS`. -/
 theorem thr_next {r : Mem} (B : Array Word) (j : Word) (hI : r.glob INIT ≠ 0)
     (hfz : ∀ k (hk : k < frozen.length), 1 ≤ k → r.arr64 frozen[k].1 = bufImg B (k + 1))
-    (hctl : UInt64.ofNat (bufImg B 1).size ≠ 0 →
-      ∀ k ∈ rrWs, (r.arr64 CTL).getD k 0 = (bufImg B 1).getD k 0) :
+    (hctl : UInt64.ofNat (bufImg B 1).size ≠ 0 → CtlSeed (r.arr64 CTL) (bufImg B 1)) :
     ∀ t, thrS t = true → (seedMem (bufMem B r j)).arr64 t = r.arr64 t := by
   intro t ht
   rw [seedMem_of_ne (by rw [bufMem_glob_init]; exact hI),
@@ -317,14 +317,79 @@ theorem thr_next {r : Mem} (B : Array Word) (j : Word) (hI : r.glob INIT ≠ 0)
   · rw [bufMem_frozen B r j hk h1, hfz k hk h1]
   · exact bufMem_owned B r j ho
 
-/-- **TEMP stand-in** (compare2-freeze, to be proved: `seed_reread` sets the words `rrWs` to the
-seed's, the flush keeps `CTL` words `≥ 128` (`flushMem_frame`), the jobs keep `128`, `162‥173`,
-`224` (`cq_jobs_keep`)): after a returning call on `bufMem B r j`, `CTL` holds the seed's words. -/
+/-- **The seed words through a call's steps**: the INIT block keeps `CTLF`, the re-read sets
+`CTL`'s words `rrWs` to the seed's, the flush keeps `CTL` from `128` on (`flushMem_frame`), the
+jobs keep `128`, `162‥173`, `224` (`cq_not_cdC`). -/
+theorem ctl_chain {M0 Mi Mr Mf Mj : Mem} (hi : Mi.arr64 CTLF = M0.arr64 CTLF) (hr : Mr = rereadMem Mi)
+    (hb : Mi.len64 CTLF ≠ 0 → 224 < (Mi.arr64 CTL).size) (hf : Mf = flushMem Mr)
+    (hj : MemFrame cdA cdC Mf Mj) :
+    M0.len64 CTLF ≠ 0 → CtlSeed (Mj.arr64 CTL) (M0.arr64 CTLF) := by
+  intro h0 k hk
+  have hl : Mi.len64 CTLF ≠ 0 := by simpa only [Mem.len64, hi] using h0
+  have hk' := (by decide : ∀ k ∈ rrWs, k = 128 ∨ (162 ≤ k ∧ k < 174) ∨ k = 224) k hk
+  have hk64 : k.toUInt64.toNat = k := by rcases hk' with rfl | h | rfl <;> simp <;> omega
+  have hg : ∀ a : Array Word, a.getD k 0 = rdW a k.toUInt64 := fun a => by
+    simp only [rdW, hk64, Array.getD_eq_getD_getElem?]
+  rw [hg, hj.ctl _ (cq_not_cdC (by rw [hk64]; rcases hk' with h | h | h <;> omega)), hf,
+    (flushMem_frame Mr).ctl _ (fun hm => by have := flushCtl_lt _ hm; rw [hk64] at this; omega),
+    ← hg, hr, rereadMem_rr Mi hl (hb hl) k hk, hi]
+
+/-- **`check_b`'s seed words**: with a seed, a returning call leaves `CTL`'s words `rrWs` the seed's. -/
+theorem checkB_ctlT (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check_b" []
+    ⦃fun _ s' => s₀.mem.len64 CTLF ≠ 0 → CtlSeed (s'.mem.arr64 CTL) (s₀.mem.arr64 CTLF); ⊤⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check_b]
+  simp only [callFn, checkBL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hFl := flushCaches_spec checkerProg L.Checker.checkerProg_flushProg n
+    have hRR := seedReread_spec' checkerProg (by chk_lk) n
+    obtain ⟨F, hF1, -, hcl⟩ := checkerProg_jobsW
+    have hJ := fun (x y : Word) => invoke_memFrame hcl n hF1 [x, y]
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, setG, ld64, warr, (hJ · · ·), (hFl ·), (hRR ·)]
+    all_goals
+      obtain ⟨-, hr, hb⟩ := ‹LocEq _ _ ∧ _ = rereadMem _ ∧ _›
+      obtain ⟨-, -, hf⟩ := ‹LocEq _ _ ∧ FlushOK _ ∧ _›
+      obtain ⟨hj, -⟩ := ‹MemFrame cdA cdC _ _ ∧ _›
+      simp only [L.St.setLocs_mem] at hf hj ⊢
+      refine ctl_chain ?_ hr hb hf hj ‹_›
+      first
+        | rfl
+        | exact arr64_copy64_ne _ _ _ _ _ _ (by decide)
+
+/-- **`check` with the mode word `2`: the seed words** (`checkB_ctlT`). -/
+theorem checkCtlT (n : Nat) (s₀ : St) (hmode : s₀.mem.glob MODE = 2) :
+    ⦃fun s => s = s₀⦄ invoke checkerProg (exec checkerProg n) "check" []
+    ⦃fun _ s' => s₀.mem.len64 CTLF ≠ 0 → CtlSeed (s'.mem.arr64 CTL) (s₀.mem.arr64 CTLF); ⊤⦄ := by
+  rw [invoke_eq _ checkerProg_lookup_check']
+  simp only [callFn, checkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hB := checkB_ctlT n
+    have hmode' : s₀.mem.glob ⟨8⟩ = 2 := hmode
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (hB ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [1] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bs" [] ·), (L.invoke_loc checkerProg (exec checkerProg n) "check_bc" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_a" [0] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c1" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c2" [] ·),
+      (L.invoke_loc checkerProg (exec checkerProg n) "check_c3" [·] ·)]
+    all_goals (try simp only [L.St.setLoc_mem, St.setLocs_cons,
+      Cmp.eval, beq_iff_eq, St.setLocs_nil] at *)
+    all_goals first
+      | (simp_all (config := { decide := true }); done)
+      | (simp_all [St.setLoc]; done)
+
+/-- **After a returning call on `bufMem B r j`, `CTL` holds the seed's words `rrWs`** (with a seed). -/
 theorem thr_ctl_next {B : Array Word} {r r' : Mem} {j : Word} {n : Nat} {rs : List Word}
     (hrun : L.run checkerProg n "check" [] (bufMem B r j) = .ok (rs, r')) :
-    UInt64.ofNat (bufImg B 1).size ≠ 0 →
-      ∀ k ∈ rrWs, (r'.arr64 CTL).getD k 0 = (bufImg B 1).getD k 0 := by
-  sorry
+    UInt64.ofNat (bufImg B 1).size ≠ 0 → CtlSeed (r'.arr64 CTL) (bufImg B 1) := by
+  intro hs
+  have h := run_post (Q := fun _ m => (bufMem B r j).len64 CTLF ≠ 0 →
+    CtlSeed (m.arr64 CTL) ((bufMem B r j).arr64 CTLF)) hrun (checkCtlT n _ rfl)
+  rw [bufMem_ctlf] at h
+  exact h (by simpa only [Mem.len64, bufMem_ctlf] using hs)
 
 /-- **The first call**: from entry 1's memory `m` (the buffer `bufOf m`) and a region memory `r`
 with `INIT = 0` and every owned array zero (at its size in `m`), the memory after `check_b`'s seed
